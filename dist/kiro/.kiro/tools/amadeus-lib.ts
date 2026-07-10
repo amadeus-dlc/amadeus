@@ -4650,21 +4650,23 @@ export function parseBoltDag(body: string): BoltDagParse {
 // "the conductor engaged the workflow this turn"; their presence in the turn
 // that answered the human disqualifies the turn from the conversational carve-out
 // (a conductor that ran the engine and then quit mid-loop must still be nudged).
+//
+// Steps (comments hoisted to module scope per cid:code-generation:bun-inbody-comment-da0):
+// - `text` is the command text to inspect: a Bash/Shell command, or (for
+//   harnesses that surface the tool by name) the tool name itself.
+// - Fast reject: no amadeus engine/state/workspace tool named at all -> not a
+//   workflow engagement (a chat turn that ran git/cat/ls etc.).
+// - Split on shell separators so a CHAINED command is judged per sub-command,
+//   not as one blob. Otherwise a read-only flag anywhere in the line
+//   (`... --status && amadeus-orchestrate report ...`) would wrongly exempt a
+//   mutating call elsewhere in the same line. Each segment is judged on its own.
 export function isEngineToolCall(name: string, input: unknown): boolean {
   const cmd =
     input !== null && typeof input === "object"
       ? String((input as Record<string, unknown>).command ?? "")
       : "";
-  // The command text to inspect: a Bash/Shell command, or (for harnesses that
-  // surface the tool by name) the tool name itself.
   const text = /^(bash|shell|execute_bash)$/i.test(name) ? cmd : name;
-  // Fast reject: no amadeus engine/state/workspace tool named at all -> not a
-  // workflow engagement (a chat turn that ran git/cat/ls etc.).
   if (!/amadeus-(orchestrate|state|jump|bolt|swarm)\b/.test(text)) return false;
-  // Split on shell separators so a CHAINED command is judged per sub-command,
-  // not as one blob. Otherwise a read-only flag anywhere in the line
-  // (`... --status && amadeus-orchestrate report ...`) would wrongly exempt a
-  // mutating call elsewhere in the same line. Each segment is judged on its own.
   const segments = text.split(/&&|\|\||[;|\n]/);
   for (const seg of segments) {
     if (isEngineEngagementSegment(seg)) return true;
@@ -4684,39 +4686,46 @@ export function isEngineToolCall(name: string, input: unknown): boolean {
 // recognise is treated as engagement (BLOCK), so an unrecognised mutating verb
 // can never leak through as "chat" - the conservative direction for loop
 // integrity.
+//
+// Branch notes (comments hoisted to module scope per
+// cid:code-generation:bun-inbody-comment-da0 — logic reads top to bottom):
+// - `hasReadOnlyFlag`: a PURE read-only query is a read-only flag present AND
+//   no mutating/advancing verb in the SAME segment. `next --status` is
+//   read-only; `report --status` (nonsensical, but) still has `report` so is
+//   engagement.
+// - amadeus-orchestrate: `next --status` is the read-only status query; a bare
+//   `next` (or any `report`) advances. So: advancing verb present ->
+//   engagement UNLESS the ONLY advancing token is `next` and it carries a
+//   read-only flag.
+// - amadeus-state: INVERTED enumeration (#758) — list the READ-ONLY
+//   subcommands (the amadeus-state.ts dispatch switch's pure reads:
+//   get / count / lookup) and treat every OTHER subcommand as engagement.
+//   Enumerating mutating verbs instead silently drifted as the tool grew
+//   (8 mutating verbs were missed), so the safe default must be structural:
+//   a verb added tomorrow is engagement the day it lands
+//   (fail-toward-engagement, t209). With no parseable subcommand, a flag-only
+//   usage query (--help / --version / --status) is read-only; anything else
+//   unrecognised is engagement — the conservative direction (the carve-out is
+//   allow-only, so falling through to the cap-bounded block can never trap a
+//   session).
+// - amadeus-jump / amadeus-bolt / amadeus-swarm: a read-only query
+//   (--help/--status) is not engagement; anything else mutates (jump moves the
+//   pointer, bolt forks/merges, swarm runs Construction) so counts as
+//   engagement.
 export function isEngineEngagementSegment(seg: string): boolean {
   if (!/amadeus-(orchestrate|state|jump|bolt|swarm)\b/.test(seg)) return false;
-  // A PURE read-only query: a read-only flag present AND no mutating/advancing
-  // verb in the SAME segment. `next --status` is read-only; `report --status`
-  // (nonsensical, but) still has `report` so is engagement.
   const hasReadOnlyFlag = /--status\b|--doctor\b|--help\b|--version\b/.test(seg);
   if (/amadeus-orchestrate\b/.test(seg)) {
     const advances = /\bnext\b|\breport\b/.test(seg);
     if (!advances) return false; // e.g. an orchestrate invocation with only a read-only flag
-    // `next --status` is the read-only status query; a bare `next` (or any
-    // `report`) advances. So: advancing verb present -> engagement UNLESS the
-    // ONLY advancing token is `next` and it carries a read-only flag.
     if (hasReadOnlyFlag && /\bnext\b/.test(seg) && !/\breport\b/.test(seg)) return false;
     return true;
   }
   if (/amadeus-state\b/.test(seg)) {
-    // INVERTED enumeration (#758): list the READ-ONLY subcommands — the
-    // amadeus-state.ts dispatch switch's pure reads (get / count / lookup) —
-    // and treat every OTHER subcommand as engagement. Enumerating mutating
-    // verbs instead silently drifted as the tool grew (8 mutating verbs were
-    // missed), so the safe default must be structural: a verb added tomorrow
-    // is engagement the day it lands (fail-toward-engagement, t209).
     const sub = seg.match(/amadeus-state(?:\.ts)?["']?(?:\s+--?\S+)*\s+([A-Za-z][A-Za-z-]*)/);
     if (sub) return !/^(?:get|count|lookup)$/.test(sub[1]);
-    // No parseable subcommand: a flag-only usage query (--help / --version /
-    // --status) is read-only; anything else unrecognised is engagement — the
-    // conservative direction (the carve-out is allow-only, so falling through
-    // to the cap-bounded block can never trap a session).
     return !hasReadOnlyFlag;
   }
-  // amadeus-jump / amadeus-bolt / amadeus-swarm: a read-only query (--help/--status)
-  // is not engagement; anything else mutates (jump moves the pointer, bolt forks/
-  // merges, swarm runs Construction) so counts as engagement.
   if (hasReadOnlyFlag) return false;
   return true;
 }
