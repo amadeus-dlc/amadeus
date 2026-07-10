@@ -298,18 +298,31 @@ function seedCompiledData(treeRoot: string, seedFrom: string): void {
   }
 }
 
+// The result of a buildTree run: the out-of-harness paths produced (for the
+// byte-diff) and the set of harness SOURCE files the build actually read (for
+// the unreferenced-source scan, #735).
+type BuildResult = { outsideHarness: string[]; readSources: Set<string> };
+
 // ---------------------------------------------------------------------------
 // Build one harness tree into `outRoot` (the dist/<name> dir). Returns the set
-// of paths the copy+generate steps produced, for the orphan scan.
-// `seedFrom` is the committed <harnessDir> tree the compiled-data seed is read
-// from (the same tree under --check; a pre-sweep stash under write).
+// of paths the copy+generate steps produced (for the orphan scan) plus the set
+// of harness SOURCE files the build actually read (for the unreferenced-source
+// scan). `seedFrom` is the committed <harnessDir> tree the compiled-data seed is
+// read from (the same tree under --check; a pre-sweep stash under write).
 // ---------------------------------------------------------------------------
-function buildTree(m: HarnessManifest, outRoot: string, seedFrom: string): string[] {
+function buildTree(m: HarnessManifest, outRoot: string, seedFrom: string): BuildResult {
   const harnessDir = m.harnessDir;
+  const harnessSrcRoot = join(HARNESS_ROOT, m.name);
   const treeRoot = join(outRoot, harnessDir);
   // Out-of-harness paths the build produced (memory tree + any emit output),
   // returned for checkHarness's byte-diff of files OUTSIDE <harnessDir>.
   const outsideHarness: string[] = [];
+  // Absolute paths of harness SOURCE files this build actually read: declared
+  // harnessFiles copies (below), emit's readHarnessSource inputs, and the
+  // require/import module graph (manifest.ts, onboarding.fills.ts, emit.ts)
+  // harvested from require.cache before returning. checkHarness diffs the harness
+  // source tree against this set to flag stale, unreferenced source (#735).
+  const readSources = new Set<string>();
 
   // 1. Copy core dirs with token substitution + rules rename. Manifest-declared
   //    frontmatter additions (harness-native fields, e.g. the Kiro IDE's
@@ -353,10 +366,10 @@ function buildTree(m: HarnessManifest, outRoot: string, seedFrom: string): strin
   // 2. Copy authored harness surfaces (token substitution on .md). projectRoot
   //    files land beside the harness dir (e.g. dist/kiro/AGENTS.md), the rest
   //    inside <harnessDir>/.
-  const harnessSrcRoot = join(HARNESS_ROOT, m.name);
   for (const { src, dst, projectRoot } of m.harnessFiles) {
     const srcPath = join(harnessSrcRoot, src);
     if (!existsSync(srcPath)) continue;
+    readSources.add(srcPath);
     const outPath = projectRoot ? join(outRoot, dst) : join(treeRoot, dst);
     mkdirSync(dirname(outPath), { recursive: true });
     writeFileSync(outPath, transform(srcPath, readFileSync(srcPath), harnessDir, m.rulesRename));
@@ -449,6 +462,14 @@ function buildTree(m: HarnessManifest, outRoot: string, seedFrom: string): strin
         repoRoot: REPO_ROOT,
         coreRoot: CORE_ROOT,
         harnessRoot: harnessSrcRoot,
+        // Records every harness-source read into readSources as it happens, so
+        // emit's authored inputs (codex's orchestrator SKILL.md etc.) count as
+        // referenced in the unreferenced-source scan (#735).
+        readHarnessSource: (relPath: string): string => {
+          const abs = join(harnessSrcRoot, relPath);
+          readSources.add(abs);
+          return readFileSync(abs, "utf-8");
+        },
         distRoot: outRoot,
         harnessDir,
         substituteToken: (s: string) => substituteToken(s, harnessDir),
@@ -456,7 +477,20 @@ function buildTree(m: HarnessManifest, outRoot: string, seedFrom: string): strin
       }).written,
     );
   }
-  return outsideHarness;
+
+  // Harvest the require/import module graph the build loaded from this harness's
+  // source dir (manifest.ts + its static imports: onboarding.fills.ts, and for
+  // codex emit.ts). loadManifest require()s manifest.ts before buildTree runs, so
+  // require.cache holds these by the time we snapshot; filter to this harness's
+  // source dir (the trailing separator keeps "kiro" from matching "kiro-ide").
+  // This is how the build-mechanism .ts files count as referenced WITHOUT a
+  // hardcoded list (FR-1.2): the module loader is the source of truth.
+  const modulePrefix = harnessSrcRoot + sep;
+  for (const key of Object.keys(require.cache ?? {})) {
+    if (key.startsWith(modulePrefix)) readSources.add(key);
+  }
+
+  return { outsideHarness, readSources };
 }
 
 // Run an in-tree tool (bun <treeRoot>/<rel> ...) with the harness env seams set
@@ -548,6 +582,18 @@ function writeHarness(name: string): void {
   }
 }
 
+// Pure diff for the unreferenced-source scan (#735): given every source file
+// discovered under a harness dir (`allSources`) and the set of paths the build
+// actually read (`readSources`), return the sources the build never read,
+// sorted. Both sides are absolute paths; membership is exact string equality.
+// Exported so a unit test can drive it directly without spawning a build.
+export function unreferencedSources(
+  allSources: string[],
+  readSources: ReadonlySet<string>,
+): string[] {
+  return allSources.filter((p) => !readSources.has(p)).sort();
+}
+
 // ---------------------------------------------------------------------------
 // check mode: build into a temp dir, diff byte-for-byte vs committed dist/<name>.
 // ---------------------------------------------------------------------------
@@ -558,7 +604,7 @@ function checkHarness(name: string): string[] {
   const problems: string[] = [];
   try {
     // Seed compile from the committed tree (untouched under --check).
-    const emitWritten = buildTree(m, tmp, committed);
+    const { outsideHarness: emitWritten, readSources } = buildTree(m, tmp, committed);
     const builtRoot = join(tmp, m.harnessDir);
     // Built → committed: MISSING / DIFFERS.
     const builtFiles = new Set<string>();
@@ -626,6 +672,22 @@ function checkHarness(name: string): string[] {
         problems.push(`ORPHAN in dist: ${name}/${rel}`);
       }
     }
+    // Source-side unreferenced scan (#735, layer 1 of the #719 two-layer
+    // masking): walk this harness's authored SOURCE tree
+    // (packages/framework/harness/<name>/) and flag every file the build never
+    // read. buildTree recorded the real read-set — declared harnessFiles + emit's
+    // readHarnessSource inputs + the require/import module graph — so a source
+    // file in neither is dead weight no other gate surfaces (the build only
+    // copies ENUMERATED source, so an unlisted stale file maps to nothing in dist
+    // and slips past every dist-side scan above).
+    const harnessSrcDir = join(HARNESS_ROOT, name);
+    if (existsSync(harnessSrcDir)) {
+      const allSources = [...walk(harnessSrcDir)];
+      for (const abs of unreferencedSources(allSources, readSources)) {
+        const rel = relative(harnessSrcDir, abs).split(sep).join("/");
+        problems.push(`UNREFERENCED in source: ${name}/${rel}`);
+      }
+    }
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }
@@ -634,49 +696,53 @@ function checkHarness(name: string): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// CLI
+// CLI — guarded by import.meta.main so importing this module (e.g. a unit test
+// pulling in unreferencedSources) does NOT run the packager. Direct `bun
+// scripts/package.ts …` invocation still runs it (import.meta.main is true).
 // ---------------------------------------------------------------------------
-const argv = process.argv.slice(2);
+if (import.meta.main) {
+  const argv = process.argv.slice(2);
 
-// `package.ts codex trust --project <abs-dir> [--hooks-json <abs-path>]` —
-// print the codex hook-trust entries with <PROJECT_DIR> substituted, for the
-// installer to paste into $CODEX_HOME/config.toml (the trust-seed.toml recipe).
-if (argv[0] === "codex" && argv[1] === "trust") {
-  const pIdx = argv.indexOf("--project");
-  if (pIdx === -1 || !argv[pIdx + 1]) {
-    console.error("usage: package.ts codex trust --project <abs-dir> [--hooks-json <abs-path>]");
-    process.exit(1);
+  // `package.ts codex trust --project <abs-dir> [--hooks-json <abs-path>]` —
+  // print the codex hook-trust entries with <PROJECT_DIR> substituted, for the
+  // installer to paste into $CODEX_HOME/config.toml (the trust-seed.toml recipe).
+  if (argv[0] === "codex" && argv[1] === "trust") {
+    const pIdx = argv.indexOf("--project");
+    if (pIdx === -1 || !argv[pIdx + 1]) {
+      console.error("usage: package.ts codex trust --project <abs-dir> [--hooks-json <abs-path>]");
+      process.exit(1);
+    }
+    const hIdx = argv.indexOf("--hooks-json");
+    const { trustEntries } = require(join(HARNESS_ROOT, "codex", "emit.ts")) as {
+      trustEntries: (project: string, hooksJson?: string) => string;
+    };
+    console.log(trustEntries(argv[pIdx + 1], hIdx !== -1 ? argv[hIdx + 1] : undefined));
+    process.exit(0);
   }
-  const hIdx = argv.indexOf("--hooks-json");
-  const { trustEntries } = require(join(HARNESS_ROOT, "codex", "emit.ts")) as {
-    trustEntries: (project: string, hooksJson?: string) => string;
-  };
-  console.log(trustEntries(argv[pIdx + 1], hIdx !== -1 ? argv[hIdx + 1] : undefined));
-  process.exit(0);
-}
 
-const check = argv.includes("--check");
-const named = argv.find((a) => !a.startsWith("--"));
-// Default targets are DISCOVERED from harness/ (one manifest = one harness); a
-// named target builds just that one.
-const targets = named ? [named] : discoverHarnessNames();
+  const check = argv.includes("--check");
+  const named = argv.find((a) => !a.startsWith("--"));
+  // Default targets are DISCOVERED from harness/ (one manifest = one harness); a
+  // named target builds just that one.
+  const targets = named ? [named] : discoverHarnessNames();
 
-// Only build harnesses that actually have a manifest. Discovery already
-// guarantees this, so the filter only matters for an explicit named target that
-// lacks a manifest — surface that as a skip rather than a crash.
-const present = targets.filter((n) => existsSync(join(HARNESS_ROOT, n, "manifest.ts")));
-const absent = targets.filter((n) => !present.includes(n));
-if (absent.length > 0) console.log(`(skipping harness(es) without a manifest: ${absent.join(", ")})`);
+  // Only build harnesses that actually have a manifest. Discovery already
+  // guarantees this, so the filter only matters for an explicit named target that
+  // lacks a manifest — surface that as a skip rather than a crash.
+  const present = targets.filter((n) => existsSync(join(HARNESS_ROOT, n, "manifest.ts")));
+  const absent = targets.filter((n) => !present.includes(n));
+  if (absent.length > 0) console.log(`(skipping harness(es) without a manifest: ${absent.join(", ")})`);
 
-if (check) {
-  let problems: string[] = [];
-  for (const n of present) problems = problems.concat(checkHarness(n));
-  if (problems.length > 0) {
-    console.error(`\npackage --check FAILED (${problems.length} problem(s)):`);
-    for (const p of problems.slice(0, 40)) console.error("  " + p);
-    process.exit(1);
+  if (check) {
+    let problems: string[] = [];
+    for (const n of present) problems = problems.concat(checkHarness(n));
+    if (problems.length > 0) {
+      console.error(`\npackage --check FAILED (${problems.length} problem(s)):`);
+      for (const p of problems.slice(0, 40)) console.error("  " + p);
+      process.exit(1);
+    }
+    console.log("package --check: all harness trees in sync with packages/framework/core + harness.");
+  } else {
+    for (const n of present) writeHarness(n);
   }
-  console.log("package --check: all harness trees in sync with packages/framework/core + harness.");
-} else {
-  for (const n of present) writeHarness(n);
 }
