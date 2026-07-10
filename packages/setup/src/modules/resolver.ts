@@ -10,8 +10,13 @@ export type Resolver = {
 };
 
 // ADR-003 endpoints. BR-F09 caps this module at 2 API calls per resolveVersion().
-const RELEASES_PATH = "/repos/amadeus-dlc/amadeus/releases";
-const TAGS_PATH = "/repos/amadeus-dlc/amadeus/tags";
+// FR-2 (#774): latest resolution pages up to 100 entries so a recent stable
+// release/tag is not missed behind GitHub's default 30-entry page.
+const RELEASES_PATH = "/repos/amadeus-dlc/amadeus/releases?per_page=100";
+const TAGS_PATH = "/repos/amadeus-dlc/amadeus/tags?per_page=100";
+// FR-1 (#774): exact resolution asks git for the ref directly, so it resolves a
+// real tag in one call regardless of how many tags exist.
+const GIT_REF_TAGS_PATH = "/repos/amadeus-dlc/amadeus/git/ref/tags";
 
 type RawEntry = Record<string, unknown>;
 
@@ -57,10 +62,17 @@ export function createResolver(http: Http): Resolver {
   return Object.freeze({
     async resolveVersion(spec: VersionSpec): Promise<Result<ResolvedVersion, ResolveError | FetchError>> {
       if (spec.kind === "exact") {
-        const tagNames = await fetchTagNames();
-        if (tagNames.type === "err") return tagNames;
-        const hit = parseAllStable(tagNames.value).find((candidate) => spec.admits(candidate));
-        return hit ? Result.ok(ResolvedVersion.fromTag(hit)) : Result.err(ResolveError.notFound(spec));
+        const tag = spec.exactTag();
+        if (tag === null) return Result.err(ResolveError.notFound(spec));
+        // BR-F09: a single git ref lookup. Existence of the ref is enough; a 404
+        // is the domain's not-found, any other FetchError propagates verbatim.
+        const ref = await http.getJson(`${GIT_REF_TAGS_PATH}/${tag}`);
+        if (ref.type === "err") {
+          return ref.error.status === 404 ? Result.err(ResolveError.notFound(spec)) : ref;
+        }
+        const parsed = SemVer.parse(tag);
+        if (parsed.type === "err") return Result.err(ResolveError.notFound(spec));
+        return Result.ok(ResolvedVersion.fromTag(parsed.value));
       }
 
       // spec.kind === "latest" — BR-F01: stable release first, stable tag fallback.

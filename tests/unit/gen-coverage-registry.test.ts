@@ -738,6 +738,7 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
   // a new spawning test still cannot land without a human edit here.
   const EXPECTED_NONE_TO_CLI = [
     "integration/t-sensor-fire-hardening.test.ts",
+    "integration/t-transition-guard-audit.test.ts",
     "integration/t102.test.ts",
     "integration/t104.test.ts",
     "integration/t105.test.ts",
@@ -800,7 +801,9 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "e2e/t-tui-custom-harness.serial.test.ts",
     "e2e/t-tui-render-colour.serial.test.ts",
     "unit/gen-coverage-registry.test.ts",
+    "unit/t-graph-dispatch-seam.test.ts",
     "unit/t-memory-seed.test.ts",
+    "unit/t-runtime-dispatch-seam.test.ts",
     "unit/t07-hook-audit-logger.test.ts",
     "unit/t08.test.ts",
     "unit/t09.test.ts",

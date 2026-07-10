@@ -26,8 +26,8 @@ import { Result } from "../../packages/setup/src/shared/result.ts";
 import { buildCodeloadFixture } from "../lib/setup-codeload-fixture.ts";
 import type { TarFixtureEntry } from "../lib/setup-tar-fixture.ts";
 
-const RELEASES_PATH = "/repos/amadeus-dlc/amadeus/releases";
-const TAGS_PATH = "/repos/amadeus-dlc/amadeus/tags";
+const RELEASES_PATH = "/repos/amadeus-dlc/amadeus/releases?per_page=100";
+const TAGS_PATH = "/repos/amadeus-dlc/amadeus/tags?per_page=100";
 const MANIFEST_RELATIVE_PATH = join("amadeus", ".installer", "amadeus-setup-manifest.json");
 
 function v1Entries(): TarFixtureEntry[] {
@@ -56,8 +56,10 @@ function fakeHttp(archive: Buffer, tag: string): Http {
   return {
     async getJson(path: string) {
       if (path === RELEASES_PATH) return Result.ok([{ tag_name: tag, draft: false, prerelease: false }]);
-      // --version resolves as an "exact" VersionSpec via the tags endpoint's
-      // "name" field rather than the releases endpoint's "tag_name".
+      // --version resolves as an "exact" VersionSpec via the git ref direct
+      // lookup (single object, not a listing) since #774.
+      if (path === `/repos/amadeus-dlc/amadeus/git/ref/tags/${tag}`)
+        return Result.ok({ ref: `refs/tags/${tag}`, object: { sha: "0".repeat(40), type: "commit" } });
       if (path === TAGS_PATH) return Result.ok([{ name: tag }]);
       throw new Error(`unexpected path in fixture: ${path}`);
     },

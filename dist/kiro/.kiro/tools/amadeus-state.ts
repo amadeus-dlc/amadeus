@@ -46,6 +46,7 @@ import {
   setField,
   setFieldStrict,
   setOrInsertField,
+  stageIndex,
   stagesInScope,
   updateIntentStatus,
   validScopes,
@@ -69,6 +70,30 @@ const VALID_CHECKBOX_STATES: CheckboxState[] = [
 
 function isCheckboxState(s: string): s is CheckboxState {
   return (VALID_CHECKBOX_STATES as readonly string[]).includes(s);
+}
+
+// `advance <completed> <next>` is a FORWARD-only transition: the caller has just
+// finished <completed> and hands off to the next in-scope stage. A 2-arg advance
+// whose <next> sits at or before <completed> in the stage graph would regress
+// Current Stage, demote a downstream [x], and mint forward-form PHASE_* events
+// for a backward move (a false audit trail). Backward / same-position moves are
+// jump's job. Re-derive the relationship from the graph indices and refuse
+// anything that is not strictly forward — this also keeps every emitted phase
+// event direction-correct, since a rejected backward advance never reaches the
+// PHASE_COMPLETED/VERIFIED/STARTED emission block.
+export function advanceDirectionCheck(
+  completedIdx: number,
+  nextIdx: number
+): { ok: true } | { ok: false; reason: string } {
+  if (nextIdx <= completedIdx) {
+    return {
+      ok: false,
+      reason:
+        `next stage index ${nextIdx} is at or before the completed stage index ${completedIdx}. ` +
+        `Backward / same-position transitions are jump's job — use 'amadeus-jump.ts execute'.`,
+    };
+  }
+  return { ok: true };
 }
 
 // Top-level dirs the artifact guard treats as "not source code" - the whole
@@ -936,7 +961,7 @@ function verifyStageArtifacts(
   }
 }
 
-function handleAdvance(args: string[]): void {
+export function handleAdvance(args: string[]): void {
   // Keep only the positional <completed-slug> [<next-slug>]; any flags are
   // filtered out so they are not misread as the next slug.
   const positional = args.filter((a) => !a.startsWith("--"));
@@ -1029,6 +1054,12 @@ function handleAdvance(args: string[]): void {
   const nextStage = findStageBySlug(nextSlug);
   if (!nextStage) error(`Unknown stage: ${nextSlug}`);
 
+  const dirCheck = advanceDirectionCheck(
+    stageIndex(completedSlug),
+    stageIndex(nextSlug)
+  );
+  if (!dirCheck.ok)
+    error(`Cannot advance from "${completedSlug}" to "${nextSlug}": ${dirCheck.reason}`);
   // Idempotency guard — if completedSlug is already [x] AND nextSlug has
   // already left pending with Current Stage pointing at it, this is a replay.
   // Skip the whole emission block and exit cleanly, rather than doubling
