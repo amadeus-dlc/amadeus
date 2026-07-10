@@ -15,5 +15,8 @@ export function createVersionSpec(kind: "latest" | "exact", exactVersion: SemVer
     describe(): string {
       return kind === "latest" ? "latest stable version" : `version ${exactVersion?.format() ?? "?"}`;
     },
+    exactTag(): `v${string}` | null {
+      return exactVersion?.format() ?? null;
+    },
   });
 }

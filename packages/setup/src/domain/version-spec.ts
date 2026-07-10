@@ -6,6 +6,9 @@ export type VersionSpec = {
   readonly kind: "latest" | "exact";
   admits(candidate: SemVer): boolean;
   describe(): string;
+  // The "v"-prefixed tag an exact spec resolves against (for direct git ref
+  // lookup); null for latest, which has no single target tag.
+  exactTag(): `v${string}` | null;
 };
 
 export namespace VersionSpec {

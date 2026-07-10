@@ -22,7 +22,7 @@ import { Result } from "../../packages/setup/src/shared/result.ts";
 import { buildCodeloadFixture } from "../lib/setup-codeload-fixture.ts";
 import type { TarFixtureEntry } from "../lib/setup-tar-fixture.ts";
 
-const RELEASES_PATH = "/repos/amadeus-dlc/amadeus/releases";
+const RELEASES_PATH = "/repos/amadeus-dlc/amadeus/releases?per_page=100";
 
 const CLAUDE_FIXTURE_ENTRIES: TarFixtureEntry[] = [
   { type: "file", name: "dist/claude/.claude/agents/amadeus-test-agent.md", content: Buffer.from("# test agent\n") },
