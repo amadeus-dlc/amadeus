@@ -10,7 +10,7 @@
 - B. istanbul 互換のフルサマリスキーマ(`coverage/coverage-summary.json`)— 消費者が自前ゲート1つの現状には過剰、将来必要になったら拡張
 - X. Other (please specify)
 
-[Answer]:
+[Answer]: A(選挙 2026-07-10、4票多数決)
 
 ## Q2. FR-2 ベースラインファイルのパスとスキーマ
 
@@ -18,7 +18,7 @@
 - B. 既存 `tests/.coverage-ratchet.json` に統合 — 既存 ratchet は「クラス別 covered-unit 件数」で意味・所有ツールが異なり(gen-coverage-registry.ts)、統合は両者の責務を濁す
 - X. Other (please specify)
 
-[Answer]:
+[Answer]: A(選挙 2026-07-10、4票多数決)
 
 ## Q3. FR-3/FR-5 判定+再生成コマンドの実装位置
 
@@ -26,7 +26,7 @@
 - B. `tests/run-tests.ts` にフラグ追加 — run-tests は「テスト実行+emit」の単一責務に保ち、判定・ベースライン管理を混ぜない方が既存構造に整合
 - X. Other (please specify)
 
-[Answer]:
+[Answer]: A(選挙 2026-07-10、4票多数決)
 
 ## Q4. FR-7 ドキュメントの掲載先
 
@@ -34,4 +34,4 @@
 - B. 新規ページを docs/reference/ に追加 — 1節で足りる分量にページ新設は過剰
 - X. Other (please specify)
 
-[Answer]:
+[Answer]: A(選挙 2026-07-10、4票多数決)

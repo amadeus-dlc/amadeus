@@ -668,3 +668,298 @@
 **Duration ms**: 42
 
 ---
+
+## Artifact Created
+**Timestamp**: 2026-07-10T03:39:24Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-2/amadeus/spaces/default/intents/260710-codecov-project-gate/construction/u734-coverage-project-gate/functional-design/business-logic-model.md
+**Context**: construction > u734-coverage-project-gate > functional-design > business-logic-model.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:39:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8ae9baa2
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260710-codecov-project-gate/construction/u734-coverage-project-gate/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T03:39:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8ae9baa2
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260710-codecov-project-gate/construction/u734-coverage-project-gate/functional-design/business-logic-model.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:39:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 795ea3b6
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260710-codecov-project-gate/construction/u734-coverage-project-gate/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T03:39:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 795ea3b6
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260710-codecov-project-gate/construction/u734-coverage-project-gate/functional-design/business-logic-model.md
+**Duration ms**: 41
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-10T03:39:59Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-2/amadeus/spaces/default/intents/260710-codecov-project-gate/construction/u734-coverage-project-gate/functional-design/business-rules.md
+**Context**: construction > u734-coverage-project-gate > functional-design > business-rules.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:39:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 92772de3
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260710-codecov-project-gate/construction/u734-coverage-project-gate/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T03:39:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: 92772de3
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260710-codecov-project-gate/construction/u734-coverage-project-gate/functional-design/business-rules.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:39:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: b16d41d2
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260710-codecov-project-gate/construction/u734-coverage-project-gate/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T03:39:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: b16d41d2
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260710-codecov-project-gate/construction/u734-coverage-project-gate/functional-design/business-rules.md
+**Duration ms**: 41
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-10T03:40:27Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-2/amadeus/spaces/default/intents/260710-codecov-project-gate/construction/u734-coverage-project-gate/functional-design/domain-entities.md
+**Context**: construction > u734-coverage-project-gate > functional-design > domain-entities.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:40:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: cd2af8c3
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260710-codecov-project-gate/construction/u734-coverage-project-gate/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T03:40:27Z
+**Event**: SENSOR_PASSED
+**Fire id**: cd2af8c3
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260710-codecov-project-gate/construction/u734-coverage-project-gate/functional-design/domain-entities.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:40:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: eb777051
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260710-codecov-project-gate/construction/u734-coverage-project-gate/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T03:40:27Z
+**Event**: SENSOR_PASSED
+**Fire id**: eb777051
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260710-codecov-project-gate/construction/u734-coverage-project-gate/functional-design/domain-entities.md
+**Duration ms**: 42
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-10T03:41:03Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-2/amadeus/spaces/default/intents/260710-codecov-project-gate/construction/functional-design/memory.md
+**Context**: construction > functional-design > memory.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:41:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: eef85350
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260710-codecov-project-gate/construction/functional-design/memory.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T03:41:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: eef85350
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260710-codecov-project-gate/construction/functional-design/memory.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:41:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8fda6946
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260710-codecov-project-gate/construction/functional-design/memory.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-10T03:41:03Z
+**Event**: SENSOR_FAILED
+**Fire id**: 8fda6946
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260710-codecov-project-gate/construction/functional-design/memory.md
+**Detail path**: amadeus/spaces/default/intents/260710-codecov-project-gate/.amadeus-sensors/functional-design/upstream-coverage-8fda6946.md
+**Findings count**: 1
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-10T03:41:32Z
+**Event**: WORKFLOW_PARKED
+**Stage**: functional-design
+**Timestamp**: 2026-07-10T03:41:32Z
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-10T03:42:04Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-10T03:42:04Z
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-10T03:43:35Z
+**Event**: WORKFLOW_PARKED
+**Stage**: functional-design
+**Timestamp**: 2026-07-10T03:43:35Z
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-10T03:44:17Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-2/amadeus/spaces/default/intents/260710-codecov-project-gate/construction/u734-coverage-project-gate/functional-design/business-logic-model.md
+**Context**: construction > u734-coverage-project-gate > functional-design > business-logic-model.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:44:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: 54f33ca9
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260710-codecov-project-gate/construction/u734-coverage-project-gate/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T03:44:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: 54f33ca9
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260710-codecov-project-gate/construction/u734-coverage-project-gate/functional-design/business-logic-model.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:44:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: bf99118d
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260710-codecov-project-gate/construction/u734-coverage-project-gate/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T03:44:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: bf99118d
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260710-codecov-project-gate/construction/u734-coverage-project-gate/functional-design/business-logic-model.md
+**Duration ms**: 41
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T03:44:33Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: fd-reviewer
+**Agent ID**: afd-reviewer-2f61b83707ad8c48
+**Message**: レビューを完了し、team-leadへ結果を送信しました。\n\n**判定: READY**(blocker/major指摘なし)\n\n`business-logic-model.md` の末尾に `## Review` セクションを追記しました(他2ファイルは無変更)。\n\n主な検証内容:\n- `tests/run-tests.ts:573-638`(`writeCoverageHtml`)、`.git
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-10T03:44:44Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-10T03:44:44Z
+
+---
