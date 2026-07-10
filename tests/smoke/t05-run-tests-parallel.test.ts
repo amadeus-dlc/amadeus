@@ -75,9 +75,14 @@
 
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { basename, dirname, join } from "node:path";
 import { REPO_ROOT } from "../harness/fixtures.ts";
+import {
+  type CoverageSourcePathContext,
+  normalizeCoverageSourcePath,
+} from "../lib/coverage-source-path.ts";
 
 // The runner lives at <repo>/tests/run-tests.sh. We invoke it with `bash` to
 // match how the suite (and the .sh) ran it — the runner is not chmod-dependent
@@ -154,6 +159,97 @@ afterAll(() => {
 });
 
 const PER_TEST_TIMEOUT = 120000;
+
+const runtimeTempRoots = [...new Set([tmpdir(), realpathSync(tmpdir())])];
+const coveragePathContext: CoverageSourcePathContext = {
+  repoRoot: REPO_ROOT,
+  tempRoots: runtimeTempRoots,
+};
+const CANONICAL_LIB = "packages/framework/core/tools/amadeus-lib.ts";
+
+describe("coverage source path normalization", () => {
+  for (const [harness, harnessDir, tempRoot] of [
+    ["claude", ".claude", tmpdir()],
+    ["codex", ".codex", realpathSync(tmpdir())],
+    ["kiro", ".kiro", tmpdir()],
+  ] as const) {
+    test(`folds packaged ${harnessDir} sources under the runtime temp root`, () => {
+      const source = join(
+        tempRoot,
+        `amadeus-pkg-${harness}-AbC123`,
+        harnessDir,
+        "tools",
+        "amadeus-lib.ts",
+      );
+      expect(normalizeCoverageSourcePath(source, coveragePathContext)).toBe(CANONICAL_LIB);
+    });
+  }
+
+  test("folds repository-relative harness prefixes via the generated-prefix table", () => {
+    expect(normalizeCoverageSourcePath(".claude/tools/amadeus-lib.ts", coveragePathContext)).toBe(
+      CANONICAL_LIB,
+    );
+    expect(
+      normalizeCoverageSourcePath("dist/codex/.codex/tools/amadeus-lib.ts", coveragePathContext),
+    ).toBe(CANONICAL_LIB);
+  });
+
+  test("folds Windows-separated packaged sources under an injected temp root", () => {
+    const context: CoverageSourcePathContext = {
+      repoRoot: "C:\\repo",
+      tempRoots: ["C:\\Users\\Ada\\AppData\\Local\\Temp"],
+    };
+    const source =
+      "C:\\Users\\Ada\\AppData\\Local\\Temp\\amadeus-pkg-codex-AbC123\\.codex\\tools\\amadeus-lib.ts";
+    expect(normalizeCoverageSourcePath(source, context)).toBe(CANONICAL_LIB);
+  });
+
+  test("keeps a repository fixture with a package-like directory name distinct", () => {
+    const source = join(
+      REPO_ROOT,
+      "fixtures",
+      "amadeus-pkg-codex-AbC123",
+      ".codex",
+      "tools",
+      "amadeus-lib.ts",
+    );
+    expect(normalizeCoverageSourcePath(source, coveragePathContext)).toBe(source);
+  });
+
+  test("keeps repository sources distinct when the repository root looks like a temp package", () => {
+    const repoRoot = "/tmp/amadeus-pkg-codex-AbC123";
+    const context: CoverageSourcePathContext = {
+      repoRoot,
+      tempRoots: ["/tmp"],
+    };
+    const source = `${repoRoot}/.codex/tools/amadeus-lib.ts`;
+    expect(normalizeCoverageSourcePath(source, context)).toBe(source);
+  });
+
+  test("keeps an absolute package-like path outside the runtime temp root distinct", () => {
+    const tempRoot = tmpdir();
+    const source = join(
+      dirname(tempRoot),
+      `${basename(tempRoot)}-outside`,
+      "amadeus-pkg-codex-AbC123",
+      ".codex",
+      "tools",
+      "amadeus-lib.ts",
+    );
+    expect(normalizeCoverageSourcePath(source, coveragePathContext)).toBe(source);
+  });
+
+  test("keeps a temp path whose package harness and harness directory disagree distinct", () => {
+    const source = join(
+      tmpdir(),
+      "amadeus-pkg-codex-AbC123",
+      ".claude",
+      "tools",
+      "amadeus-lib.ts",
+    );
+    expect(normalizeCoverageSourcePath(source, coveragePathContext)).toBe(source);
+  });
+});
 
 describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel.sh, plan 14 + MR8)", () => {
   // --- 1. Invalid --parallel values exit 2 with the error message ----------
@@ -427,6 +523,31 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
       const html = readFileSync(join(dir, "html", "index.html"), "utf-8");
       expect(html).toContain("Amadeus Coverage");
       expect(html).toContain("packages/framework/core/tools/amadeus-lib.ts");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, PER_TEST_TIMEOUT);
+
+  test("--coverage folds temporary packaged harness sources into canonical core paths", () => {
+    const tmpRoot = join(REPO_ROOT, "tmp");
+    mkdirSync(tmpRoot, { recursive: true });
+    const dir = mkdtempSync(join(tmpRoot, "t05-package-coverage-"));
+    try {
+      const r = run([
+        "--unit",
+        "--filter",
+        "t-package-unreferenced-source",
+        "--coverage",
+        "--coverage-dir",
+        dir,
+      ]);
+      expect(r.status).toBe(0);
+      const lcov = readFileSync(join(dir, "lcov.info"), "utf-8");
+      expect(lcov).toContain("SF:packages/framework/core/tools/amadeus-lib.ts");
+      expect(lcov).not.toContain("amadeus-pkg-codex-");
+      expect(lcov).toContain("SF:scripts/package.ts");
+      expect(lcov).toContain("SF:packages/framework/harness/codex/manifest.ts");
+      expect(lcov).toContain("SF:packages/framework/harness/kiro/manifest.ts");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
