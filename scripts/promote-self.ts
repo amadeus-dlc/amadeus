@@ -12,7 +12,6 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
-  statSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -26,9 +25,6 @@ type ManagedDir = {
 };
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const argv = process.argv.slice(2);
-const mode: Mode = argv.includes("--apply") ? "apply" : "check";
-const noBuild = argv.includes("--no-build");
 
 // amadeus/spaces/default/memory/ is deliberately NOT managed: workspace
 // memory is the hand-edited method source — practices-discovery writes to it
@@ -114,7 +110,7 @@ export function mergeScopeGrid(got: Buffer | null, want: Buffer): Buffer {
   }
 }
 
-function usage(): never {
+function printUsage(): void {
   console.error(
     [
       "usage: bun scripts/promote-self.ts [--check|--apply] [--no-build]",
@@ -124,11 +120,7 @@ function usage(): never {
       "  --no-build  skip the package.ts freshness step",
     ].join("\n"),
   );
-  process.exit(2);
 }
-
-if (argv.includes("--help") || argv.includes("-h")) usage();
-if (argv.includes("--check") && argv.includes("--apply")) usage();
 
 function run(cmd: string, args: string[]): void {
   const res = spawnSync(cmd, args, {
@@ -139,11 +131,17 @@ function run(cmd: string, args: string[]): void {
   if (res.status !== 0) process.exit(res.status ?? 1);
 }
 
+// Dirents carry lstat-level type info, so symlinks are never followed: a
+// dangling symlink (e.g. inside a preserved subtree like .claude/worktrees/)
+// is yielded as a plain entry instead of crashing on a follow-the-link stat.
 function* walk(dir: string): Generator<string> {
   if (!existsSync(dir)) return;
-  for (const entry of readdirSync(dir).sort()) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) yield* walk(full);
+  const entries = readdirSync(dir, { withFileTypes: true }).sort((a, b) =>
+    a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
+  );
+  for (const entry of entries) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) yield* walk(full);
     else yield full;
   }
 }
@@ -161,10 +159,10 @@ function isPreserved(rel: string): boolean {
   );
 }
 
-function buildExpected(): Map<string, Buffer> {
+function buildExpected(repoRoot: string): Map<string, Buffer> {
   const expected = new Map(managedFiles);
   for (const { src, dst } of managedDirs) {
-    const srcAbs = join(REPO_ROOT, src);
+    const srcAbs = join(repoRoot, src);
     if (!existsSync(srcAbs)) {
       throw new Error(`missing source directory: ${src}`);
     }
@@ -181,14 +179,14 @@ function managedRoots(): string[] {
   return managedDirs.map((d) => normalizeRel(d.dst));
 }
 
-function orphanedFiles(expected: Map<string, Buffer>): string[] {
+function orphanedFiles(expected: Map<string, Buffer>, repoRoot: string): string[] {
   const roots = managedRoots();
   const orphans: string[] = [];
   for (const root of roots) {
-    const abs = join(REPO_ROOT, root);
+    const abs = join(repoRoot, root);
     if (!existsSync(abs)) continue;
     for (const file of walk(abs)) {
-      const rel = normalizeRel(relative(REPO_ROOT, file));
+      const rel = normalizeRel(relative(repoRoot, file));
       if (isPreserved(rel)) continue;
       if (COMPOSED_SCOPE_RE.test(rel)) continue; // composed scope — runtime data, never in dist
       if (!expected.has(rel)) orphans.push(rel);
@@ -197,17 +195,17 @@ function orphanedFiles(expected: Map<string, Buffer>): string[] {
   return orphans;
 }
 
-function ensureActiveSpaceCursor(): void {
-  const cursor = join(REPO_ROOT, "amadeus", "active-space");
+function ensureActiveSpaceCursor(repoRoot: string): void {
+  const cursor = join(repoRoot, "amadeus", "active-space");
   if (existsSync(cursor)) return;
   mkdirSync(dirname(cursor), { recursive: true });
   writeFileSync(cursor, "default\n");
 }
 
-function check(expected: Map<string, Buffer>): string[] {
+function check(expected: Map<string, Buffer>, repoRoot: string): string[] {
   const problems: string[] = [];
   for (const [rel, want] of expected) {
-    const abs = join(REPO_ROOT, rel);
+    const abs = join(repoRoot, rel);
     if (!existsSync(abs)) {
       problems.push(`MISSING: ${rel}`);
       continue;
@@ -217,21 +215,21 @@ function check(expected: Map<string, Buffer>): string[] {
       if (!scopeGridInSync(got, want)) problems.push(`DIFFERS: ${rel}`);
     } else if (!got.equals(want)) problems.push(`DIFFERS: ${rel}`);
   }
-  for (const rel of orphanedFiles(expected)) problems.push(`ORPHAN: ${rel}`);
+  for (const rel of orphanedFiles(expected, repoRoot)) problems.push(`ORPHAN: ${rel}`);
   // The active-space cursor is a per-user runtime file (gitignored). --apply
   // ensure-creates it; mirror that here so a fresh checkout / CI (where no prior
   // /amadeus run has created it) self-heals the cursor instead of failing the
   // drift guard on a file that is intentionally never committed.
-  ensureActiveSpaceCursor();
+  ensureActiveSpaceCursor(repoRoot);
   return problems;
 }
 
-function apply(expected: Map<string, Buffer>): void {
-  for (const rel of orphanedFiles(expected)) {
-    rmSync(join(REPO_ROOT, rel), { force: true });
+function apply(expected: Map<string, Buffer>, repoRoot: string): void {
+  for (const rel of orphanedFiles(expected, repoRoot)) {
+    rmSync(join(repoRoot, rel), { force: true });
   }
   for (const [rel, bytes] of expected) {
-    const abs = join(REPO_ROOT, rel);
+    const abs = join(repoRoot, rel);
     mkdirSync(dirname(abs), { recursive: true });
     const out =
       SCOPE_GRID_RE.test(rel) && existsSync(abs)
@@ -239,12 +237,25 @@ function apply(expected: Map<string, Buffer>): void {
         : bytes;
     writeFileSync(abs, out);
   }
-  ensureActiveSpaceCursor();
+  ensureActiveSpaceCursor(repoRoot);
 }
 
-// Main flow is guarded so the exported scope-grid helpers can be imported by
-// tests without triggering a build or a check run.
-if (import.meta.main) {
+// Argv-parameterized handler exported as an in-process test seam. Returns the
+// process exit code instead of exiting so tests can drive check/apply against
+// a fixture repoRoot without spawning (spawned subprocesses are invisible to
+// bun --coverage).
+export function promoteSelfMain(argv: string[], repoRoot: string = REPO_ROOT): number {
+  if (argv.includes("--help") || argv.includes("-h")) {
+    printUsage();
+    return 2;
+  }
+  if (argv.includes("--check") && argv.includes("--apply")) {
+    printUsage();
+    return 2;
+  }
+  const mode: Mode = argv.includes("--apply") ? "apply" : "check";
+  const noBuild = argv.includes("--no-build");
+
   if (!noBuild) {
     if (mode === "apply") {
       run("bun", ["scripts/package.ts", "claude"]);
@@ -257,23 +268,29 @@ if (import.meta.main) {
 
   let expected: Map<string, Buffer>;
   try {
-    expected = buildExpected();
+    expected = buildExpected(repoRoot);
   } catch (err) {
     console.error(err instanceof Error ? err.message : String(err));
-    process.exit(1);
+    return 1;
   }
 
   if (mode === "apply") {
-    apply(expected);
+    apply(expected, repoRoot);
     console.log("promote-self: project-local self install updated");
-  } else {
-    const problems = check(expected);
-    if (problems.length > 0) {
-      console.error(`promote-self --check FAILED (${problems.length} problem(s)):`);
-      for (const p of problems.slice(0, 80)) console.error(`  ${p}`);
-      if (problems.length > 80) console.error(`  ... ${problems.length - 80} more`);
-      process.exit(1);
-    }
-    console.log("promote-self --check: project-local self install is in sync");
+    return 0;
   }
+
+  const problems = check(expected, repoRoot);
+  if (problems.length > 0) {
+    console.error(`promote-self --check FAILED (${problems.length} problem(s)):`);
+    for (const p of problems.slice(0, 80)) console.error(`  ${p}`);
+    if (problems.length > 80) console.error(`  ... ${problems.length - 80} more`);
+    return 1;
+  }
+  console.log("promote-self --check: project-local self install is in sync");
+  return 0;
 }
+
+// Main flow is guarded so the exported helpers can be imported by tests
+// without triggering a build or a check run.
+if (import.meta.main) process.exit(promoteSelfMain(process.argv.slice(2)));
