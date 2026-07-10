@@ -3975,6 +3975,10 @@
           "mechanism": "sdk"
         },
         {
+          "file": "tests/integration/t-transition-guard-audit.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t25.test.ts",
           "mechanism": "sdk"
         },
@@ -4224,6 +4228,10 @@
       "unitId": "amadeus-state advance",
       "minMechanism": "cli",
       "coveredBy": [
+        {
+          "file": "tests/integration/t-transition-guard-audit.test.ts",
+          "mechanism": "cli"
+        },
         {
           "file": "tests/integration/t47-failure-injection.test.ts",
           "mechanism": "cli"
