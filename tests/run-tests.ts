@@ -22,7 +22,18 @@ import { homedir, tmpdir } from "node:os";
 import { basename, delimiter, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildMeta, renderMeta, type MetaCounts } from "./lib/bun-junit-to-meta.ts";
-import { classifyTestSize, parseSizeAnnotation, SIZE_VALUES, type TestSize } from "./lib/test-size.ts";
+import {
+  beginObservation,
+  buildMeasuredRecord,
+  buildTestSizeReport,
+  classifyTestSize,
+  finishObservation,
+  parseSizeAnnotation,
+  SIZE_VALUES,
+  type SizeObservationSession,
+  type TestSize,
+  wallClockBackend,
+} from "./lib/test-size.ts";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(SCRIPT_DIR, "..");
@@ -51,6 +62,23 @@ interface ResultRow {
   tests: number;
   failed: number;
   duration: string;
+}
+
+// Dynamic test-size measurement (#684 Phase D / #699). Collects each executed
+// file's measured duration THROUGH an observation session (begin before spawn,
+// finish after exit) so the post-run report can derive per-file size floors and
+// wall-clock drift. Passed as an explicit argument from main() (not a module
+// global) so the collection path stays an isolatable seam. Advisory only —
+// nothing here affects a file's STATUS or the runner's exit code.
+interface SizeCollector {
+  readonly session: SizeObservationSession;
+  // Absolute test-file path → measured duration in seconds.
+  readonly durations: Map<string, number>;
+}
+
+// stderr note sink for the size-observation isolation wrappers.
+function sizeNote(msg: string): void {
+  process.stderr.write(`NOTE: ${msg}\n`);
 }
 
 function usage(): string {
@@ -682,7 +710,11 @@ async function runSpawnCapture(
   return { rc, output: Buffer.concat(chunks).toString("utf8") };
 }
 
-async function runBunTestFile(file: string, parallelMode = false): Promise<void> {
+async function runBunTestFile(
+  file: string,
+  collector: SizeCollector,
+  parallelMode = false,
+): Promise<void> {
   const base = basename(file);
   const name = base.replace(/\.test\.ts$/, "");
 
@@ -730,6 +762,9 @@ async function runBunTestFile(file: string, parallelMode = false): Promise<void>
     process.stdout.write(`  driver traces: ${displayLogDirPath(logDir)}/{sdk,tui,kiro-acp}-drive-*.ndjson\n`);
   }
 
+  // Open the observation window just before spawning the test process (#699).
+  beginObservation(collector.session, file, sizeNote);
+
   const run = await runSpawnCapture(
     BUN,
     [
@@ -761,6 +796,20 @@ async function runBunTestFile(file: string, parallelMode = false): Promise<void>
   // Preserve a duration even if a future Bun omits root time.
   if (meta.duration === "0") meta.duration = String(Math.max(0, (Date.now() - start) / 1000));
   writeMeta(name, meta);
+
+  // Close the observation window for the post-run dynamic-size report (#699).
+  // meta.duration is a string (renderMeta shape); parse it and hand the session
+  // a finite JUnit value or null (→ the backend's fallback measurement). The
+  // isolation wrapper degrades any backend fault to a note + null, so this can
+  // never affect STATUS or the runner's exit contract.
+  const junit = Number(meta.duration);
+  const measuredSeconds = finishObservation(
+    collector.session,
+    file,
+    Number.isFinite(junit) ? junit : null,
+    sizeNote,
+  );
+  if (measuredSeconds !== null) collector.durations.set(file, measuredSeconds);
 
   const status = meta.status;
   const body = run.output;
@@ -811,16 +860,17 @@ async function runFileBand(
   effectiveParallel: number,
   serialFiles: string[],
   parallelFiles: string[],
+  collector: SizeCollector,
 ): Promise<void> {
-  for (const file of serialFiles) await runBunTestFile(file, false);
+  for (const file of serialFiles) await runBunTestFile(file, collector, false);
   if (effectiveParallel <= 1) {
-    for (const file of parallelFiles) await runBunTestFile(file, false);
+    for (const file of parallelFiles) await runBunTestFile(file, collector, false);
     return;
   }
 
   const executing = new Set<Promise<void>>();
   for (const file of parallelFiles) {
-    const p = runBunTestFile(file, true).finally(() => {
+    const p = runBunTestFile(file, collector, true).finally(() => {
       executing.delete(p);
     });
     executing.add(p);
@@ -834,6 +884,7 @@ async function runFileBand(
 async function runFilesPartitioned(
   level: Level,
   effectiveParallel: number,
+  collector: SizeCollector,
   excludes: string[] = [],
 ): Promise<void> {
   const pinnedSerial = level === "smoke" || level === "unit";
@@ -851,22 +902,22 @@ async function runFilesPartitioned(
     }
   }
 
-  await runFileBand(effectiveParallel, serialFiles, parallelFiles);
-  await runFileBand(effectiveParallel, liveSerialFiles, liveParallelFiles);
+  await runFileBand(effectiveParallel, serialFiles, parallelFiles, collector);
+  await runFileBand(effectiveParallel, liveSerialFiles, liveParallelFiles, collector);
 }
 
-async function runTier(level: Level, label: string): Promise<void> {
+async function runTier(level: Level, label: string, collector: SizeCollector): Promise<void> {
   const effectiveParallel = level === "smoke" || level === "unit" ? 1 : args.parallel;
   process.stdout.write("\n");
   process.stdout.write(
     effectiveParallel > 1 ? `## ${label} (parallel=${effectiveParallel})\n` : `## ${label}\n`,
   );
-  await runFilesPartitioned(level, effectiveParallel);
+  await runFilesPartitioned(level, effectiveParallel, collector);
   await withStdoutLock(() => undefined);
   aggregateTierResults();
 }
 
-function printSummary(): void {
+function printSummary(collector: SizeCollector): void {
   process.stdout.write("\n==============================\n");
   process.stdout.write("SUMMARY\n");
   process.stdout.write("==============================\n");
@@ -881,11 +932,67 @@ function printSummary(): void {
   // exit == failed-file count). Any failure here is swallowed.
   try {
     printSizeMatrix();
+    reportDynamicSizes(collector);
   } catch {
     // size reporting is best-effort; never let it perturb the runner's contract
   }
   process.stdout.write("==============================\n");
   process.stdout.write(failedFiles > 0 ? "RESULT: FAIL\n" : "RESULT: PASS\n");
+}
+
+// Map an absolute test-file path to its scope tier (the directory), matching
+// printSizeMatrix's classification.
+function scopeOfFile(file: string): string {
+  const scopes = ["smoke", "unit", "integration", "e2e"] as const;
+  const relPath = relative(SCRIPT_DIR, file).replace(/\\/g, "/");
+  return (scopes as readonly string[]).find((s) => relPath.startsWith(`${s}/`)) ?? "other";
+}
+
+// Dynamic test-size report (#684 Phase D / #699). Builds a MeasuredTestRecord per
+// collected file (source + measured duration), aggregates them, writes the JSON
+// report to tests/logs/, and prints a wall-clock drift line. ADVISORY: this
+// never gates CI and, being inside printSummary's try/catch, never perturbs the
+// runner's exit-code contract. Only files that actually ran this invocation are
+// included, so a partial run (tier subset / --filter) reports only its subset.
+function reportDynamicSizes(collector: SizeCollector): void {
+  const records = [];
+  for (const [file, durationSeconds] of collector.durations) {
+    let source: string;
+    try {
+      source = readFileSync(file, "utf-8");
+    } catch (err) {
+      process.stderr.write(`NOTE: could not read ${testsRel(file)} for size report (${err}); excluded\n`);
+      continue;
+    }
+    records.push(
+      buildMeasuredRecord({
+        file: testsRel(file),
+        scope: scopeOfFile(file),
+        source,
+        durationSeconds,
+      }),
+    );
+  }
+  const report = buildTestSizeReport(records);
+
+  const logsDir = join(SCRIPT_DIR, "logs");
+  const reportPath = join(logsDir, "test-size-report.json");
+  try {
+    mkdirSync(logsDir, { recursive: true });
+    writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  } catch (err) {
+    // Do NOT let a write failure escape into printSummary's exit path; note and
+    // continue so the drift line below (pure, no I/O) still prints.
+    process.stderr.write(`NOTE: could not write ${displayLogDirPath(reportPath)} (${err})\n`);
+  }
+
+  process.stdout.write(`wall-clock drift: ${report.summary.driftCount} file(s)\n`);
+  for (const r of report.records) {
+    if (r.drift.kind !== "wall-clock") continue;
+    process.stdout.write(
+      `  ${r.file}: declared=${r.drift.declared} measured=${r.drift.measured} (${r.durationSeconds}s)\n`,
+    );
+  }
 }
 
 // Derived-size distribution (#684 / #696). Size (small/medium/large) is the
@@ -1014,22 +1121,29 @@ async function main(): Promise<number> {
   process.stdout.write("AI-DLC Testing Harness\n");
   process.stdout.write("======================\n");
 
-  if (args.runSmoke) await runTier("smoke", "Smoke Tests (structural)");
+  // Dynamic-size collector (#699), threaded through every file-running path so
+  // the post-run report reflects exactly the files that executed this run.
+  const sizeCollector: SizeCollector = {
+    session: wallClockBackend.openSession(),
+    durations: new Map(),
+  };
+
+  if (args.runSmoke) await runTier("smoke", "Smoke Tests (structural)", sizeCollector);
   if (args.runSmoke && failedFiles > 0) {
     process.stdout.write("\nSMOKE FAILURES DETECTED -- aborting before unit/integration levels\n");
     writeVerboseSummary();
-    printSummary();
+    printSummary(sizeCollector);
     return failedFiles;
   }
 
-  if (args.runUnit) await runTier("unit", "Unit Tests (single-component isolation)");
+  if (args.runUnit) await runTier("unit", "Unit Tests (single-component isolation)", sizeCollector);
 
   let preflightRan = false;
   if (needsLlm && !args.filter) {
     const preflight = join(SCRIPT_DIR, "integration", "t19.test.ts");
     if (existsSync(preflight)) {
       process.stdout.write("\n## Preflight Health Check (Claude CLI validation)\n");
-      await runBunTestFile(preflight, false);
+      await runBunTestFile(preflight, sizeCollector, false);
       preflightRan = true;
       aggregateTierResults();
 
@@ -1052,6 +1166,7 @@ async function main(): Promise<number> {
     await runFilesPartitioned(
       "integration",
       args.parallel,
+      sizeCollector,
       preflightRan ? ["t19.test.ts"] : [],
     );
     await withStdoutLock(() => undefined);
@@ -1073,14 +1188,14 @@ async function main(): Promise<number> {
       .map((f) => basename(f))
       .filter((b) => !b.startsWith("t-tui"));
 
-    await runFilesPartitioned("e2e", args.parallel, tuiExcludes);
+    await runFilesPartitioned("e2e", args.parallel, sizeCollector, tuiExcludes);
     await withStdoutLock(() => undefined);
     aggregateTierResults();
 
     const tuiPreflight = join(SCRIPT_DIR, "e2e", "t-tui-preflight.serial.test.ts");
     if (existsSync(tuiPreflight)) {
       process.stdout.write("\n## E2E TUI Capability Gate\n");
-      await runBunTestFile(tuiPreflight, false);
+      await runBunTestFile(tuiPreflight, sizeCollector, false);
       aggregateTierResults();
 
       const tuiPreflightFailed = resultRows.some(
@@ -1091,7 +1206,7 @@ async function main(): Promise<number> {
         process.stdout.write("  The terminal substrate is present but broken (e.g. node-pty under\n");
         process.stdout.write("  bun on Windows, microsoft/node-pty #748; or tmux capture empty).\n");
       } else {
-        await runFilesPartitioned("e2e", args.parallel, [
+        await runFilesPartitioned("e2e", args.parallel, sizeCollector, [
           ...nonTuiExcludes,
           "t-tui-preflight.serial.test.ts",
         ]);
@@ -1103,7 +1218,7 @@ async function main(): Promise<number> {
 
   writeVerboseSummary();
   combineCoverageReports();
-  printSummary();
+  printSummary(sizeCollector);
   if (coverageCombineFailed && failedFiles === 0) return 1;
   return failedFiles;
 }

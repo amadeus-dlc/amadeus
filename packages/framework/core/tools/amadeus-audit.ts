@@ -3,6 +3,7 @@ import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, stat
 import { dirname } from "node:path";
 import {
   acquireAuditLock,
+  auditBlockField,
   auditFilePath,
   errorMessage,
   isoTimestamp,
@@ -59,9 +60,17 @@ const VALID_EVENT_TYPES = new Set([
   // audit dir so the conductor's human-presence gate can open. The event carries
   // the issuer's (space, intent, shard, HUMAN_TURN timestamp) so the conductor
   // can verify the grounding HUMAN_TURN physically exists in the issuer shard —
-  // it is not self-asserted (checked by verifyDelegatedApproval; forgery-proof
-  // because HUMAN_TURN is only ever written by the UserPromptSubmit hook).
+  // it is not self-asserted (checked by verifyDelegatedProvenance). HUMAN_TURN is
+  // written only by the UserPromptSubmit hook in-process and refused at the audit
+  // CLI (presenceMintRejection), so no tool a model invokes can mint the grounding.
   "DELEGATED_APPROVAL",
+  // Delegated rejection provenance (#685): the reject-side mirror of
+  // DELEGATED_APPROVAL. A leader session, driven by a real human turn on its own
+  // ledger, records this into a REMOTE conductor intent's audit dir so the
+  // conductor's human-presence REJECT gate can open. Same issuer coordinates as
+  // DELEGATED_APPROVAL (verified by verifyDelegatedProvenance); verb-scoped so it
+  // can ONLY open a reject gate, never an approve gate.
+  "DELEGATED_REJECTION",
   // Artifact events (hook-emitted)
   "ARTIFACT_CREATED",
   "ARTIFACT_UPDATED",
@@ -160,6 +169,7 @@ const EVENT_HEADINGS: Record<string, string> = {
   GATE_REJECTED: "Gate Rejected",
   QUESTION_ANSWERED: "Question Answered",
   DELEGATED_APPROVAL: "Delegated Approval",
+  DELEGATED_REJECTION: "Delegated Rejection",
   ARTIFACT_CREATED: "Artifact Created",
   ARTIFACT_UPDATED: "Artifact Updated",
   ARTIFACT_REUSED: "Artifact Reused",
@@ -229,6 +239,25 @@ function jsonError(message: string): never {
   process.exit(1);
 }
 
+// --- Audit line-escaping seams (pure) ---
+
+// Escape CR/LF in a field value so a malicious or malformed input (e.g., a file
+// path containing '\n**Event**: FAKE\n') cannot forge an audit entry. Field
+// values are markdown, not prose — literal newlines are never semantically
+// meaningful here, and the audit trail is security-critical. Behaviour is
+// identical to the former inline `String(value).replace(/\r?\n/g, "\\n")`: a
+// lone CR (not followed by LF) is intentionally NOT matched.
+export function escapeAuditValue(value: string): string {
+  return String(value).replace(/\r?\n/g, "\\n");
+}
+
+// Inverse used by append-raw: interpret literal `\n` sequences in a body as
+// actual newlines. Behaviour is identical to the former inline
+// `body.replace(/\\n/g, "\n")`.
+export function unescapeAuditBody(body: string): string {
+  return body.replace(/\\n/g, "\n");
+}
+
 // --- Subcommand: append ---
 
 // Core append logic — throws on error instead of exiting. Safe for library callers.
@@ -288,11 +317,7 @@ export function appendAuditEntryUnlocked(
   block += `**Timestamp**: ${ts}\n`;
   block += `**Event**: ${eventType}\n`;
   for (const [key, value] of Object.entries(fields)) {
-    // Escape CR/LF in values so a malicious or malformed input (e.g., a file
-    // path containing '\n**Event**: FAKE\n') cannot forge an audit entry.
-    // Field values are markdown, not prose — literal newlines are never
-    // semantically meaningful here, and the audit trail is security-critical.
-    const safeValue = String(value).replace(/\r?\n/g, "\\n");
+    const safeValue = escapeAuditValue(value);
     block += `**${key}**: ${safeValue}\n`;
   }
   block += `\n---\n`;
@@ -306,22 +331,35 @@ export function appendAuditEntryUnlocked(
 // amadeus-log/amadeus-bolt — they import this and catch exceptions. The
 // main() caller below uses this same function but its catch block translates errors
 // via jsonError (which exits).
+//
+// CLI minting guard (#685 review): the general `append` entry must NOT mint a
+// presence/provenance event. It is enforced HERE (the CLI's append handler), not
+// in appendAuditEntry, so the trusted in-process writers (mint hook,
+// delegate-approval/rejection) that call appendAuditEntry directly are
+// unaffected. A throw matches the invalid-event contract main() already surfaces.
 export function handleAppend(
   eventType: string,
   fields: Record<string, string>,
   projectDir: string
 ): void {
+  const rejection = presenceMintRejection(eventType);
+  if (rejection) throw new Error(rejection);
   const result = appendAuditEntry(eventType, fields, projectDir);
   jsonSuccess(result);
 }
 
 // --- Subcommand: append-raw ---
-
-function handleAppendRaw(
+//
+// CLI minting guard (#685 review): reject a presence/provenance event smuggled
+// via the raw heading or an `**Event**:` line in the \n-expanded body, BEFORE
+// acquiring the lock or touching disk. Same rationale as handleAppend.
+export function handleAppendRaw(
   heading: string,
   body: string,
   projectDir: string
 ): void {
+  const rejection = rawPresenceMintRejection(heading, body.replace(/\\n/g, "\n"));
+  if (rejection) throw new Error(rejection);
   const ts = isoTimestamp();
 
   if (!acquireAuditLock(projectDir)) {
@@ -332,7 +370,7 @@ function handleAppendRaw(
     const path = ensureAuditFile(projectDir);
 
     // Interpret literal \n sequences in the body as actual newlines
-    const expandedBody = body.replace(/\\n/g, "\n");
+    const expandedBody = unescapeAuditBody(body);
 
     let block = `\n## ${heading}\n`;
     block += `**Timestamp**: ${ts}\n`;
@@ -695,6 +733,62 @@ function handleAuditMerge(args: string[], projectDir: string): void {
     fork_boundary: boundary,
     audit_timestamp: result.timestamp,
   });
+}
+
+// --- Presence/provenance CLI minting guard ---
+//
+// HUMAN_TURN, DELEGATED_APPROVAL and DELEGATED_REJECTION are the trust anchors of
+// the human-presence gate (#671/#685). A HUMAN_TURN proves a real human prompt;
+// the two delegations carry a leader's human-grounded gate decision into a remote
+// conductor's ledger. Their integrity rests entirely on WHO may write them: only
+// the UserPromptSubmit mint hook (HUMAN_TURN) and amadeus-state's delegate-approval
+// / delegate-rejection writers (the delegations), all via the IN-PROCESS
+// appendAuditEntry. The general audit CLI (`append` / `append-raw`) is a
+// general-purpose entry a model can invoke, so it must NOT be able to mint these
+// — otherwise a model could fabricate presence and open a gate it never earned.
+// The refusal lives at the CLI entry ONLY; appendAuditEntry itself stays open for
+// the trusted in-process writers. (This closes the CLI hole but not direct file
+// writes — see the residual-threat note near verifyDelegatedProvenance.)
+const PRESENCE_PROTECTED_EVENTS = new Set([
+  "HUMAN_TURN",
+  "DELEGATED_APPROVAL",
+  "DELEGATED_REJECTION",
+]);
+
+// The EVENT_HEADINGS values for the protected events — the `## <heading>` a forger
+// would pass to append-raw to reproduce the same block shape.
+const PRESENCE_PROTECTED_HEADINGS = new Set(
+  [...PRESENCE_PROTECTED_EVENTS].map((e) => EVENT_HEADINGS[e] ?? e)
+);
+
+// `append` guard: refuse a protected event type. Returns the error message to
+// surface (single-line so line coverage attributes cleanly), or null when clean.
+export function presenceMintRejection(eventType: string): string | null {
+  if (!PRESENCE_PROTECTED_EVENTS.has(eventType)) return null;
+  return `Refusing to append "${eventType}" via the general audit CLI: presence/provenance events are minted only by their trusted in-process writers (HUMAN_TURN by the UserPromptSubmit hook; DELEGATED_APPROVAL/DELEGATED_REJECTION by amadeus-state delegate-approval/delegate-rejection).`;
+}
+
+// `append-raw` guard: the block is a free-form heading + body, so a forger can
+// smuggle a protected event via EITHER the heading OR an `**Event**: <type>` line
+// in the body (after \n expansion). Reject both. Returns the error message, or
+// null when clean.
+// Each body line is parsed with the SAME canonical field parser the presence
+// consumers use (auditBlockField, which tolerates an optional leading "- "),
+// so the guard's grammar can never drift from what the gate actually accepts —
+// a dash-prefixed "- **Event**: HUMAN_TURN" line parses identically on both
+// sides. Per-line (not per-block) scanning also covers a body that smuggles a
+// "\n---\n" block separator to fabricate an entire standalone event block.
+export function rawPresenceMintRejection(heading: string, expandedBody: string): string | null {
+  if (PRESENCE_PROTECTED_HEADINGS.has(heading)) {
+    return `Refusing append-raw with heading "${heading}": it matches a presence/provenance event heading, which the general audit CLI may not mint.`;
+  }
+  for (const line of expandedBody.split("\n")) {
+    const ev = auditBlockField(line, "Event");
+    if (ev !== null && PRESENCE_PROTECTED_EVENTS.has(ev)) {
+      return `Refusing append-raw: body carries an Event line for "${ev}", a presence/provenance event the general audit CLI may not mint.`;
+    }
+  }
+  return null;
 }
 
 // --- CLI entry point ---

@@ -807,6 +807,7 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "unit/t100-memory-template-lifecycle.test.ts",
     "unit/t103.test.ts",
     "unit/t11.test.ts",
+    "unit/t112-delegated-approval.test.ts",
     "unit/t112-learnings-distribution-guard.test.ts",
     "unit/t114-orchestrate-next.test.ts",
     "unit/t115.test.ts",
