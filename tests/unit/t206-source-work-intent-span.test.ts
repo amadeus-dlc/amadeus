@@ -46,7 +46,11 @@ function git(args: string[]): string {
 }
 
 function initGitRepo(): void {
+  // Pin the initial branch to `main` (env-independent): CI runners leave
+  // init.defaultBranch at `master`, but the fixtures reference `main` explicitly
+  // (checkout/merge). symbolic-ref renames the unborn HEAD on every git version.
   git(["init", "-q"]);
+  git(["symbolic-ref", "HEAD", "refs/heads/main"]);
   git(["config", "user.email", "t206@example.com"]);
   git(["config", "user.name", "t206"]);
   git(["config", "commit.gpgsign", "false"]);
