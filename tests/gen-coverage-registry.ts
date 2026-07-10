@@ -101,8 +101,13 @@ const GRAPH_PATH = join(TOOLS_DIR, "amadeus-graph.ts");
 
 const REGISTRY_PATH =
   process.env.AMADEUS_COVERAGE_REGISTRY ?? join(TESTS_DIR, ".coverage-registry.json");
-const RATCHET_PATH =
-  process.env.AMADEUS_COVERAGE_RATCHET ?? join(TESTS_DIR, ".coverage-ratchet.json");
+// Read lazily (same seam shape as coverage-project-gate's totalsPath/
+// baselinePath) so in-process tests can retarget a single import at different
+// temp ratchets per case. The module-level snapshot serves generation.
+function ratchetPath(): string {
+  return process.env.AMADEUS_COVERAGE_RATCHET ?? join(TESTS_DIR, ".coverage-ratchet.json");
+}
+const RATCHET_PATH = ratchetPath();
 // tests/coverage-exclusions.json is reviewer-facing documentation of legit
 // L-CODE exclusions (import.meta.main shims, process.exit terminals, external-
 // binary spawn sites). This UNIT-surface generator does not read it — units are
@@ -1124,6 +1129,55 @@ export function ratchetJson(doc: RatchetDoc): string {
   return `${JSON.stringify(doc, null, 2)}\n`;
 }
 
+// Parse, don't validate (same shape as coverage-project-gate's parseTotalsText):
+// a successful parse yields a coveredByClass whose invariants (every unit class
+// present, non-negative integer counts) are proven. Anything else is a
+// MALFORMED diagnosis, never an unhandled crash.
+export type RatchetParseOutcome =
+  | { ok: true; coveredByClass: Record<UnitClass, number> }
+  | { ok: false; detail: string };
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
+export function parseRatchetText(text: string): RatchetParseOutcome {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch (err) {
+    return { ok: false, detail: `invalid JSON: ${(err as Error).message}` };
+  }
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    return {
+      ok: false,
+      detail: `expected a JSON object, got ${Array.isArray(raw) ? "array" : typeof raw}`,
+    };
+  }
+  const covered = (raw as Record<string, unknown>).coveredByClass;
+  if (typeof covered !== "object" || covered === null || Array.isArray(covered)) {
+    return {
+      ok: false,
+      detail: `coveredByClass must be an object, got ${
+        Array.isArray(covered) ? "array" : typeof covered
+      }`,
+    };
+  }
+  const rec = covered as Record<string, unknown>;
+  const coveredByClass = {} as Record<UnitClass, number>;
+  for (const c of UNIT_CLASSES) {
+    const v = rec[c];
+    if (!isNonNegativeInteger(v)) {
+      return {
+        ok: false,
+        detail: `coveredByClass.${c} must be a non-negative integer, got ${JSON.stringify(v)}`,
+      };
+    }
+    coveredByClass[c] = v;
+  }
+  return { ok: true, coveredByClass };
+}
+
 // ===========================================================================
 // ANTI-ROT GUARDS.
 // ===========================================================================
@@ -1240,17 +1294,29 @@ export function runCheck(): CheckResult {
   }
 
   // RATCHET: covered count per class must not drop below the committed baseline.
-  if (!existsSync(RATCHET_PATH)) {
+  const rp = ratchetPath();
+  if (!existsSync(rp)) {
     ok = false;
     messages.push(
-      `RATCHET FAILED: ${RATCHET_PATH} does not exist. ` +
+      `RATCHET FAILED: ${rp} does not exist. ` +
         `Generate it with: bun tests/gen-coverage-registry.ts`,
     );
   } else {
-    const baseline = JSON.parse(readFileSync(RATCHET_PATH, "utf-8")) as RatchetDoc;
+    const parsed = parseRatchetText(readFileSync(rp, "utf-8"));
+    if (!parsed.ok) {
+      ok = false;
+      messages.push(
+        `RATCHET FAILED [MALFORMED]: ${rp}: ${parsed.detail}. ` +
+          `The committed ratchet is corrupt (bad merge-conflict resolution or ` +
+          `hand edit). Regenerate it with a reviewed commit: ` +
+          `bun tests/gen-coverage-registry.ts`,
+      );
+      return { ok, messages };
+    }
+    const baseline = parsed.coveredByClass;
     const current = ratchetFromRows(rows).coveredByClass;
     for (const c of UNIT_CLASSES) {
-      const base = baseline.coveredByClass[c] ?? 0;
+      const base = baseline[c];
       const now = current[c] ?? 0;
       if (now < base) {
         ok = false;
