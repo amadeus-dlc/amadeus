@@ -60,6 +60,13 @@
     "slug": "gate-mechanics",
     "dirName": "260709-gate-mechanics",
     "scope": "bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f49f8-bff3-79ac-8d0f-c602c02057e9",
+    "slug": "source-unreferenced-chec",
+    "dirName": "260710-source-unreferenced-chec",
+    "scope": "bugfix",
     "status": "in-flight"
   },
   {

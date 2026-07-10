@@ -1,12 +1,12 @@
 # AI-DLC State Tracking
 
 ## Project Information
-- **Project**: gate-mechanics-batch: Bolt1=#685 delegate-rejection (remote conductor gate rejection via delegated provenance, symmetric to #671 delegate-approval; new delegate-rejection event, not DELEGATED_APPROVAL reuse). Bolt2=#670 assertNotSiblingWorktree blocks bolt --worktree from sibling worktree sessions. Both: falling-test regression required, 2 Bolt = 2 PR, codex review, human-approved merge.
+- **Project**: Issue #735: add source-side unreferenced-file check to package.ts --check (layer 1 of the #719 two-layer masking). Every file under packages/framework/harness/<name>/ must classify as manifest-referenced (core-derived / harnessFiles / authored-exempt) or FAIL the check gate; includes false-positive inventory (legitimate unreferenced files) and falling-test proof. Enhancement P2, user-approved bugs-only exception, base origin/main (post #737).
 - **Project Type**: Brownfield
 - **Scope**: bugfix
-- **Start Date**: 2026-07-09T11:45:23Z
+- **Start Date**: 2026-07-10T03:01:06Z
 - **State Version**: 7
-- **Active Agent**: amadeus-quality-agent
+- **Active Agent**: amadeus-developer-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**:
@@ -25,13 +25,12 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 7
-- **Completed**: 7
-- **In Progress**: none
+- **Completed**: 3
+- **In Progress**: reverse-engineering
 
 ## Runtime State
 - **Revision Count**: 0
 
-- **Skeleton Stance**: scope-dependent
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -59,9 +58,9 @@
 - [ ] approval-handoff — SKIP
 
 ### INCEPTION PHASE
-- [x] reverse-engineering — EXECUTE
+- [?] reverse-engineering — EXECUTE
 - [ ] practices-discovery — SKIP
-- [x] requirements-analysis — EXECUTE
+- [ ] requirements-analysis — EXECUTE
 - [ ] user-stories — SKIP
 - [ ] refined-mockups — SKIP
 - [ ] application-design — SKIP
@@ -74,8 +73,8 @@ Per unit: [TBD]
 - [ ] nfr-requirements — SKIP
 - [ ] nfr-design — SKIP
 - [ ] infrastructure-design — SKIP
-- [x] code-generation — EXECUTE
-- [x] build-and-test — EXECUTE
+- [ ] code-generation — EXECUTE
+- [ ] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
 
 ### OPERATION PHASE
@@ -88,13 +87,13 @@ Per unit: [TBD]
 - [ ] feedback-optimization — SKIP
 
 ## Current Status
-- **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: build-and-test
-- **Next Stage**: none
-- **Status**: Completed
-- **Last Updated**: 2026-07-10T01:45:13Z
+- **Lifecycle Phase**: INCEPTION
+- **Current Stage**: reverse-engineering
+- **Next Stage**: requirements-analysis
+- **Status**: Running
+- **Last Updated**: 2026-07-10T03:18:17Z
 
 ## Session Resume Point
-- **Last Completed Stage**: build-and-test
-- **Next Action**: Workflow complete
+- **Last Completed Stage**: state-init
+- **Next Action**: Execute reverse-engineering
 - **Pending Artifacts**: none
