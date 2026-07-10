@@ -552,7 +552,39 @@ function loadManifest(name: string): HarnessManifest {
 // ---------------------------------------------------------------------------
 // write mode: regenerate dist/<name> in place (clean-sweep).
 // ---------------------------------------------------------------------------
-function writeHarness(name: string): void {
+
+// The dist-tree rel paths (relative to `root`) that legitimately live OUTSIDE
+// the harness-dir subtree: emit-written files outside <harnessDir>, declared
+// projectRoot harnessFiles, and the projectRoot onboarding doc. This is the
+// single source of truth that check-mode's whole-tree orphan scan and write-
+// mode's post-sweep BOTH consume, so a freshly written tree always passes
+// --check (#771). `outsideHarness` are absolute paths under `root` (buildTree's
+// return); the harness-dir subtree is owned by its own orphan/sweep pass.
+//
+// Write mode's post-sweep deletes every dist/<name>/ file NOT in this set (and
+// not under the harness-dir subtree): its two rmSync only cleaned <harnessDir>/
+// and amadeus/, so a stale/renamed projectRoot output sitting directly under
+// dist/<name>/ (or in an undeclared subdir) would otherwise survive a regenerate
+// and then trip --check. Sharing this set with checkHarness keeps write and
+// check symmetric — write deletes exactly what check would flag as an orphan.
+export function expectedOutsideHarness(
+  m: HarnessManifest,
+  outsideHarness: string[],
+  root: string,
+): Set<string> {
+  const expected = new Set<string>();
+  const harnessSubtreePrefix = join(root, m.harnessDir) + sep;
+  for (const p of outsideHarness) {
+    if (p.startsWith(harnessSubtreePrefix)) continue;
+    expected.add(relative(root, p));
+  }
+  for (const { dst, projectRoot } of m.harnessFiles)
+    if (projectRoot) expected.add(relative(root, join(root, dst)));
+  if (m.onboarding?.projectRoot) expected.add(relative(root, join(root, m.onboarding.dst)));
+  return expected;
+}
+
+export function writeHarness(name: string): void {
   const m = loadManifest(name);
   const distDir = join(REPO_ROOT, "dist", name);
   const treeRoot = join(distDir, m.harnessDir);
@@ -575,7 +607,15 @@ function writeHarness(name: string): void {
     // beside the freshly emitted one — the harness-dir sweep above misses it.
     const memoryRoot = join(distDir, "amadeus");
     if (existsSync(memoryRoot)) rmSync(memoryRoot, { recursive: true, force: true });
-    buildTree(m, distDir, seedStash);
+    const { outsideHarness } = buildTree(m, distDir, seedStash);
+    const expected = expectedOutsideHarness(m, outsideHarness, distDir); // #771 post-sweep set
+    const harnessSubtreePrefix = m.harnessDir + sep;
+    for (const f of walk(distDir)) {
+      const rel = relative(distDir, f);
+      if (rel.startsWith(harnessSubtreePrefix)) continue;
+      if (expected.has(rel)) continue;
+      rmSync(f);
+    }
     console.log(`[${name}] regenerated dist/${name}/${m.harnessDir}`);
   } finally {
     rmSync(seedStash, { recursive: true, force: true });
@@ -641,31 +681,24 @@ export function checkHarness(name: string): string[] {
     }
     // Emit-owned files OUTSIDE <harnessDir> (codex: .agents/skills/, root
     // AGENTS.md). buildTree returns their tmp paths; diff each against committed.
-    const emitOutsideHarness = emitWritten.filter((p) => !p.startsWith(join(tmp, m.harnessDir) + "/"));
-    const committedEmitSet = new Set<string>();
+    const emitOutsideHarness = emitWritten.filter((p) => !p.startsWith(join(tmp, m.harnessDir) + sep));
     for (const builtPath of emitOutsideHarness) {
       const rel = relative(tmp, builtPath);
-      committedEmitSet.add(rel);
       const committedPath = join(committedDistRoot, rel);
       if (!existsSync(committedPath)) problems.push(`MISSING in dist: ${name}/${rel}`);
       else if (!readFileSync(committedPath).equals(readFileSync(builtPath)))
         problems.push(`DIFFERS: ${name}/${rel}`);
     }
     // Whole-tree orphan scan over dist/<name>/: EVERY committed file must belong
-    // to the build's expected output set, else it's a stale orphan. Expected set
-    // = harness-dir subtree (its own orphan pass above, with authoredExempt) +
-    // declared projectRoot outputs (harnessFiles + onboarding) + emit-written set
-    // (committedEmitSet: emit output + the relocated method tree). Walking the
+    // to the build's expected output set, else it's a stale orphan. The expected
+    // OUTSIDE-harness set (emit output + relocated method tree + declared
+    // projectRoot outputs) comes from expectedOutsideHarness — the same helper
+    // write-mode's post-sweep uses, keeping the two sides symmetric. Walking the
     // WHOLE tree — not the old hardcoded [".agents","amadeus"] roots — catches a
     // stale file sitting directly under dist/<name>/ or in an undeclared
     // subdirectory (typically a removed/renamed projectRoot output), which the
     // subtree- and root-specific scans above miss (#701).
-    const expectedRoot = new Set<string>(committedEmitSet);
-    for (const { dst, projectRoot } of m.harnessFiles) {
-      if (projectRoot) expectedRoot.add(relative(committedDistRoot, join(committedDistRoot, dst)));
-    }
-    if (m.onboarding?.projectRoot)
-      expectedRoot.add(relative(committedDistRoot, join(committedDistRoot, m.onboarding.dst)));
+    const expectedRoot = expectedOutsideHarness(m, emitWritten, tmp);
     const harnessSubtreePrefix = m.harnessDir + sep;
     if (existsSync(committedDistRoot)) {
       for (const f of walk(committedDistRoot)) {
