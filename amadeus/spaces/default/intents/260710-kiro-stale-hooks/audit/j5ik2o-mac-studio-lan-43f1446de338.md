@@ -723,3 +723,123 @@
 **Duration ms**: 49
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-10T02:06:56Z
+**Event**: WORKFLOW_PARKED
+**Stage**: requirements-analysis
+**Timestamp**: 2026-07-10T02:06:56Z
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-10T02:07:24Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-10T02:07:24Z
+
+---
+
+## Question Answered
+**Timestamp**: 2026-07-10T02:07:24Z
+**Event**: QUESTION_ANSWERED
+**Stage**: requirements-analysis
+**Details**: Q1=A (unanimous 6:0): delete 7 stale .kiro.hook + remove kiro CLI authoredExempt .kiro.hook regex; Q2=B (plurality 3:2:1): defer source-side unreferenced check to #735
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-10T02:07:24Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: requirements-analysis
+**Recovered**: true
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-10T02:07:24Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state approve requirements-analysis --project-dir /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/codex-engineer-1
+**Error**: Refusing to approve "requirements-analysis": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then approve. (autonomous Construction is exempt)
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-10T02:08:39Z
+**Event**: WORKFLOW_PARKED
+**Stage**: requirements-analysis
+**Timestamp**: 2026-07-10T02:08:39Z
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-10T02:09:00Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-10T02:09:00Z
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-10T02:09:00Z
+**Event**: GATE_APPROVED
+**Stage**: requirements-analysis
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-10T02:09:00Z
+**Event**: STAGE_COMPLETED
+**Stage**: requirements-analysis
+**Details**: Stage Requirements Analysis approved by gate
+
+---
+
+## Phase Completion
+**Timestamp**: 2026-07-10T02:09:00Z
+**Event**: PHASE_COMPLETED
+**From phase**: inception
+**To phase**: construction
+**Stages completed**: 5
+
+---
+
+## Phase Verification
+**Timestamp**: 2026-07-10T02:09:00Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: inception → construction
+
+---
+
+## Phase Start
+**Timestamp**: 2026-07-10T02:09:00Z
+**Event**: PHASE_STARTED
+**Phase**: construction
+**Scope**: bugfix
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-10T02:09:00Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Agent**: amadeus-developer-agent
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-10T02:11:36Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/codex-engineer-1/amadeus/spaces/default/intents/260710-kiro-stale-hooks/construction/u719-kiro-stale-hooks/code-generation/code-generation-plan.md
+**Context**: construction > u719-kiro-stale-hooks > code-generation > code-generation-plan.md
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-10T02:11:53Z
+**Event**: DECISION_RECORDED
+**Stage**: code-generation
+**Decision**: code-generation plan for u719-kiro-stale-hooks (7 steps: delete 7 hooks, remove exemption regex, dist/self sync, t148 regression asserts, falling proof, full verification, deslop)
+**Options**: Approve Plan,Request Changes
+
+---
