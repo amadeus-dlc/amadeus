@@ -197,6 +197,44 @@ from disk reds the gate.
 > tool) and integration (`tests/integration/t19.test.ts`, the live preflight
 > gate) — a level/file path, not a bare ID, disambiguates such collisions.
 
+## Project Coverage Gate
+
+`tests/coverage-project-gate.ts` is a self-hosted replacement for Codecov's
+project status. It runs in CI (the `coverage` job, right after
+`bun run coverage:ci`) and fails the build when whole-suite line coverage drops
+too far below a committed baseline.
+
+- **Population.** The gate's population is the **normalized LCOV total** the
+  runner emits at `coverage/coverage-totals.json` (`{ "schemaVersion": 1,
+  "hits": <int>, "lines": <int> }`), written from the same parse that produces
+  the coverage HTML report. It therefore counts *everything the LCOV counts* —
+  including `tests/**` and other paths Codecov's `ignore` list excludes. It is
+  the exact same number shown on the coverage HTML page.
+- **It deliberately diverges from the Codecov UI.** Because the population
+  differs from Codecov's (which honours `codecov.yml`'s `ignore`/`fixes`), the
+  gate's absolute percentage will **not** match the project % in the Codecov
+  UI. That is expected and fine: this gate's job is **before/after
+  consistency**, not absolute parity with any external tool. The absolute number
+  is only ever compared against the previous commit's number computed the same
+  way.
+- **Pass rule.** The build passes iff `current% >= baseline% − 0.02pp`. The
+  verdict is computed with exact integer (BigInt) arithmetic, never floating
+  point, so a coverage that lands exactly `0.02pp` below the baseline passes and
+  one hit below that fails (`DROP_EXCEEDED`). Missing emit, missing baseline, a
+  malformed file (wrong `schemaVersion`, negative/non-integer values, or
+  `hits > lines`), and an empty population (`lines == 0`) each fail with a
+  distinct reason code on stderr.
+- **Updating the baseline.** The baseline lives at
+  `tests/.coverage-project-baseline.json`. When a PR *improves* coverage, its
+  author regenerates the baseline **in that same PR** by running
+  `bun run coverage:ci` followed by `bun tests/coverage-project-gate.ts
+  --update` (which transcribes the measured `hits`/`lines` — never hand-write
+  the numbers). There is no automated bumping; the baseline only moves when a
+  human commits it.
+- **Lowering the baseline.** Intentionally *lowering* the baseline (accepting
+  less coverage) requires **explicit user approval recorded in the PR** — it is
+  a deliberate policy decision, not a routine refresh.
+
 ## Trigger Points
 
 | Trigger | Layer | Command | Where |

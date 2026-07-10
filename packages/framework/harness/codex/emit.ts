@@ -219,7 +219,7 @@ function tomlMultiline(s: string): string {
 // {path, content} list, then writes (or, under check, returns the diff).
 // ---------------------------------------------------------------------------
 export default function emit(ctx: EmitContext): EmitResult {
-  const { coreRoot, harnessRoot, distRoot, substituteToken } = ctx;
+  const { coreRoot, distRoot, substituteToken } = ctx;
   const DCODEX = join(distRoot, ".codex"); // dist/codex/.codex
   const SKILLS_DST = join(distRoot, ".agents", "skills");
 
@@ -313,7 +313,7 @@ export default function emit(ctx: EmitContext): EmitResult {
   for (const f of ["SKILL.md", "question-rendering.md"]) {
     emissions.push({
       path: join(SKILLS_DST, "amadeus", f),
-      content: () => readFileSync(join(harnessRoot, "skills", "amadeus", f), "utf-8"),
+      content: () => ctx.readHarnessSource(join("skills", "amadeus", f)),
     });
   }
   // (b) stage runners + init, generated, with the implicit-invocation guard

@@ -408,7 +408,72 @@ function cidMarker(slug: string, candidateId: string): string {
   return `<!-- cid:${slug}:${candidateId} -->`;
 }
 
-function handlePersist(args: string[], projectDir: string): void {
+// Preflight (before any side effect): reject a candidate_id used more than once
+// in a single persist call. The cid marker (cid:<slug>:<id>) is
+// destination-independent, so two learning selections sharing a candidate_id
+// would collide on one idempotency key even when routed to different method
+// files. Reject loudly, naming the cid and a per-destination re-numbering (e.g.
+// c1-project / c1-team), so a mid-loop failure can never leave a partial emit.
+function assertNoDuplicateCandidateIds(learnings: LearningSelection[]): void {
+  const byId = new Map<string, LearningSelection[]>();
+  for (const sel of learnings) {
+    const group = byId.get(sel.candidate_id);
+    if (group) group.push(sel);
+    else byId.set(sel.candidate_id, [sel]);
+  }
+  for (const [cid, group] of byId) {
+    if (group.length < 2) continue;
+    fail(
+      `duplicate candidate_id "${cid}" appears ${group.length} times in one persist call. ` +
+        `Candidate ids must be unique per call — the cid marker is destination-independent, ` +
+        `so distinct scopes still collide on one key. Re-number them, e.g. ` +
+        `${renumberSuggestions(cid, group).join(" / ")}.`,
+      1
+    );
+  }
+}
+
+// Per-destination re-numbering suggestions for a duplicated cid, de-collided
+// (project + team → c1-project / c1-team; two same-scope picks → c1-project /
+// c1-project-2).
+function renumberSuggestions(cid: string, group: LearningSelection[]): string[] {
+  const seen = new Map<string, number>();
+  return group.map((sel) => {
+    const base = `${cid}-${sel.scope}`;
+    const n = (seen.get(base) ?? 0) + 1;
+    seen.set(base, n);
+    return n === 1 ? base : `${base}-${n}`;
+  });
+}
+
+// Extract the practice body carried by the first line bearing `marker`, or null
+// when no such line exists. The written line is `- <text> (learned <date>)
+// <marker>`; strip the leading bullet, the trailing dated annotation, and the
+// marker so the comparison is against the human text alone — a same-text re-run
+// on a later day keeps its original date and must not read as a collision.
+function markerLineBody(content: string, marker: string): string | null {
+  for (const line of content.split("\n")) {
+    const idx = line.indexOf(marker);
+    if (idx === -1) continue;
+    let body = line.slice(0, idx).trimEnd();
+    body = body.replace(/\s*\(learned \d{4}-\d{2}-\d{2}\)\s*$/, "").trimEnd();
+    body = body.replace(/^\s*-\s+/, "");
+    return body;
+  }
+  return null;
+}
+
+// Head of a body string for a collision message — enough to identify the
+// existing line without dumping the whole thing.
+function bodyHead(s: string): string {
+  const head = s.slice(0, 60);
+  return s.length > 60 ? `${head}…` : head;
+}
+
+// Exported as the in-process test seam (gitHasSourceWork precedent): the CLI
+// integration tests spawn the shipped dist and cannot register bun coverage,
+// so unit tests import this directly.
+export function handlePersist(args: string[], projectDir: string): void {
   const flags = parseFlags(args);
   const slug = flags.slug;
   const selectionsJson = flags["selections-json"];
@@ -421,6 +486,14 @@ function handlePersist(args: string[], projectDir: string): void {
 
   const selFile = parseSelectionsFile(selectionsJson);
   const stageSlug = slug ?? selFile.stage_slug;
+
+  // Preflight (no disk touch, before the lock): a candidate_id reused within
+  // one call collides on a single destination-independent cid marker. Reject
+  // now so no lock is taken and no side effect starts.
+  const learnings = selFile.selections.filter(
+    (s): s is LearningSelection => s.type === "learning"
+  );
+  assertNoDuplicateCandidateIds(learnings);
 
   // ONE withAuditLock body — decide-inside-lock (plan §0.4). Re-read the
   // audit fresh INSIDE the lock; never reuse a pre-lock read.
@@ -439,10 +512,8 @@ function handlePersist(args: string[], projectDir: string): void {
       // (mirrors handlePracticesPromote's same-file write-and-emit
       // precedent). A confirmed learning is appended as a PRACTICE under the
       // orchestrator-routed heading in {project,team}.md — the relocated
-      // files the resolver reads. ---
-      const learnings = selFile.selections.filter(
-        (s): s is LearningSelection => s.type === "learning"
-      );
+      // files the resolver reads. `learnings` was filtered pre-lock (for the
+      // duplicate-cid preflight); reuse it. ---
 
       // Bucket destination files; load (or template) each once. ensureFile
       // returns { path, content } so callers never re-fetch from the Map.
@@ -460,6 +531,32 @@ function handlePersist(args: string[], projectDir: string): void {
         return { path, content: initial };
       };
 
+      // Preflight (before any write): a same-marker line whose body diverges
+      // from this selection's text is an id collision (two different learnings
+      // claiming one cid). Load each destination once and reject the whole call
+      // — no auto-suffix — naming the destination, the existing body's head, and
+      // the unique-cid fix. A same-body line is NOT a collision (it is the
+      // idempotent / recovery path handled below).
+      for (const sel of learnings) {
+        const bucket = ensureFile(sel.scope);
+        const marker = cidMarker(stageSlug, sel.candidate_id);
+        const existingBody = markerLineBody(bucket.content, marker);
+        if (existingBody !== null && existingBody !== sel.text) {
+          fail(
+            `marker collision for candidate_id "${sel.candidate_id}" in ${bucket.path}: ` +
+              `an existing line already carries this cid with different text ` +
+              `(existing: "${bodyHead(existingBody)}"; new: "${bodyHead(sel.text)}"). ` +
+              `Give this learning a unique candidate_id (e.g. ${sel.candidate_id}-2) and retry.`,
+            1
+          );
+        }
+      }
+
+      // Track (Stage, Candidate-ID) emit keys in-memory and combine with the
+      // static in-lock audit snapshot so this call emits at most one
+      // RULE_LEARNED per key even without re-reading the shards per selection.
+      const emittedKeys = new Set<string>();
+
       for (const sel of learnings) {
         const bucket = ensureFile(sel.scope);
         const path = bucket.path;
@@ -471,7 +568,10 @@ function handlePersist(args: string[], projectDir: string): void {
         // (KNOWLEDGE); normalise + ensure-exists it before the append.
         const heading = practiceHeading(sel.heading);
 
-        const hasRow = priorAuditRow(auditContent, "RULE_LEARNED", stageSlug, sel.candidate_id);
+        const emitKey = `${stageSlug} ${sel.candidate_id}`;
+        const hasRow =
+          priorAuditRow(auditContent, "RULE_LEARNED", stageSlug, sel.candidate_id) ||
+          emittedKeys.has(emitKey);
         const hasLine = content.includes(marker);
 
         // no-op: audit row AND line both present.
@@ -500,6 +600,7 @@ function handlePersist(args: string[], projectDir: string): void {
             },
             projectDir
           );
+          emittedKeys.add(emitKey);
           ruleLearned++;
         }
       }

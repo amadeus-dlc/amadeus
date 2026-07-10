@@ -18,12 +18,6 @@ ignore:
 
 coverage:
   status:
-    project:
-      default:
-        target: auto
-        threshold: 0.02
-        if_not_found: failure
-        informational: false
     patch:
       default:
         target: 100%
