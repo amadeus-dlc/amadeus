@@ -67,10 +67,10 @@ const FIXTURES = JSON.parse(
 // the scratch project seeds the per-intent shell + the state fixture into the
 // default record (so the cursor resolves) + the resolved audit SHARD (pinned
 // clone-id so the log-subagent shard gate passes and reads are deterministic).
-// NOTE: the Codex ADAPTER's OWN bookkeeping (codex-session.json) still lives at
-// <cwd>/amadeus-docs/.amadeus-hooks-health/ — that path is hardcoded in the harness
-// adapter (harness/codex/hooks/amadeus-codex-adapter.ts), NOT a core path helper,
-// so test 10 keeps seeding it there.
+// NOTE: the Codex ADAPTER's OWN bookkeeping (codex-session.json) lives under the
+// canonical hooksHealthDir() — the active intent's record root
+// (<record>/.amadeus-hooks-health/), the same health dir the core hooks maintain
+// (harness/codex/hooks/amadeus-codex-adapter.ts). So test 10 seeds it there.
 const PINNED_CLONE_ID = "testcloneid149";
 function pinnedShardName(): string {
   const host =
@@ -328,8 +328,10 @@ describe("t149 Codex hook adapter (live-captured payload fixtures)", () => {
   test("10: session-start reconciles an unclosed prior session as inferred SESSION_ENDED (D-4)", () => {
     const dir = scratchProject(true);
     try {
-      // Seed a heartbeat from a DIFFERENT prior session.
-      const health = join(dir, "amadeus-docs", ".amadeus-hooks-health");
+      // Seed a heartbeat from a DIFFERENT prior session under the canonical
+      // hooksHealthDir() (the active intent's record root), where the fixed
+      // adapter reconciles — NOT the legacy flat amadeus-docs/ path.
+      const health = join(seededRecordDir(dir), ".amadeus-hooks-health");
       mkdirSync(health, { recursive: true });
       writeFileSync(
         join(health, "codex-session.json"),
