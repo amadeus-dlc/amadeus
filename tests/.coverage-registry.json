@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 429,
+    "total": 431,
     "enumeratedByClass": {
-      "function": 210,
+      "function": 212,
       "audit": 72,
       "scope": 9,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 96,
+      "function": 98,
       "audit": 30,
       "scope": 9,
       "stage": 8,
@@ -1568,6 +1568,30 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:isEngineEngagementSegment",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t209-stop-hook-state-verb-carveout.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:isEngineToolCall",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t209-stop-hook-state-verb-carveout.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",

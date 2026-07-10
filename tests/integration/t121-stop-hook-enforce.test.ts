@@ -35,7 +35,7 @@
 //          now RUN-MODE aware (defaultBlockCap :131): 8 for autonomous
 //          Construction (AUTONOMOUS_BLOCK_CAP), 2 otherwise (INTERACTIVE_BLOCK_CAP)
 //   isConversationalStop() :599 / transcriptIsConversational() :490 /
-//          isEngineToolCall() :474: the tier-3 conversational carve-out reads
+//          isEngineToolCall() (amadeus-lib.ts, #758): the tier-3 conversational carve-out reads
 //          the harness transcript (Claude / Codex) and ALLOWS when the most
 //          recent human prompt was answered with NO workflow-engine call
 //
@@ -400,7 +400,7 @@ function seedTranscript(
  * isMeta re-prompt, an engine call with a specific command, plain text, ...).
  *
  * Entry kinds (the hook's transcriptIsConversational classifies them via
- * isEngineToolCall, amadeus-stop.ts:474/508):
+ * isEngineToolCall, hosted in amadeus-lib.ts since #758):
  *   - {kind:"human", text}        a genuine human prompt (the anchor the hook
  *                                 answers; string content).
  *   - {kind:"text"}               an assistant TEXT-only turn (no engine call).
