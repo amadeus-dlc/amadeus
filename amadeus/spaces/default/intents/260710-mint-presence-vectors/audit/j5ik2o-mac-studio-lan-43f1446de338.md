@@ -457,3 +457,114 @@
 **Message**: ## 再レビュー結果(iteration 2): **READY**\n\n### 実測した検証\n- `packages/framework/core/tools/amadeus-lib.ts:1544` — `return lastHuman > lastResolution && lastHuman !== -1;`(`humanActedSinceGate` 内、phantom HUMAN_TU
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-10T04:21:30Z
+**Event**: WORKFLOW_PARKED
+**Stage**: requirements-analysis
+**Timestamp**: 2026-07-10T04:21:30Z
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-10T04:22:05Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-10T04:22:05Z
+
+---
+
+## Question Answered
+**Timestamp**: 2026-07-10T04:22:05Z
+**Event**: QUESTION_ANSWERED
+**Stage**: requirements-analysis
+**Details**: Q1=A (4 votes): add D marker + generalize to marker-within-first-N-bytes detection, 4-marker catalog incl. defensive B; Q2=A: include stop.ts tier-3, extract shared single-definition catalog; Q3=A: keep past shards append-only, record contamination window in #755 close comment
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-10T04:22:15Z
+**Event**: WORKFLOW_PARKED
+**Stage**: requirements-analysis
+**Timestamp**: 2026-07-10T04:22:15Z
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-10T04:22:41Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-10T04:22:41Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-10T04:22:41Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: requirements-analysis
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-10T04:22:42Z
+**Event**: GATE_APPROVED
+**Stage**: requirements-analysis
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-10T04:22:42Z
+**Event**: STAGE_COMPLETED
+**Stage**: requirements-analysis
+**Details**: Stage Requirements Analysis approved by gate
+
+---
+
+## Phase Completion
+**Timestamp**: 2026-07-10T04:22:42Z
+**Event**: PHASE_COMPLETED
+**From phase**: inception
+**To phase**: construction
+**Stages completed**: 5
+
+---
+
+## Phase Verification
+**Timestamp**: 2026-07-10T04:22:42Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: inception → construction
+
+---
+
+## Phase Start
+**Timestamp**: 2026-07-10T04:22:42Z
+**Event**: PHASE_STARTED
+**Phase**: construction
+**Scope**: bugfix
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-10T04:22:42Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Agent**: amadeus-developer-agent
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-10T04:23:55Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/codex-engineer-1/amadeus/spaces/default/intents/260710-mint-presence-vectors/construction/u755-mint-presence-vectors/code-generation/code-generation-plan.md
+**Context**: construction > u755-mint-presence-vectors > code-generation > code-generation-plan.md
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-10T04:24:10Z
+**Event**: DECISION_RECORDED
+**Stage**: code-generation
+**Decision**: code-generation plan for u755 (7 steps: shared catalog in amadeus-lib, mint-presence generalization, tier-3 exclusion, dist sync, catalog-derived tests, falling proofs, verify+deslop)
+**Options**: Approve Plan,Request Changes
+
+---
