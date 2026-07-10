@@ -570,7 +570,7 @@ export function handleFinalize(
   // conductor passes only --claimed (then declined-unit accounting is a no-op).
   const allUnits = flags.units ? splitCsv(flags.units) : claimed.slice();
   const claimedFailure = claimedUnitsFailureEnvelope(batch, allUnits, claimed);
-  if (claimedFailure) return finishFinalizeInputFailure(claimedFailure, exit);
+  if (claimedFailure) { finishFinalizeInputFailure(claimedFailure, exit); return; }
   const claimedSet = new Set(claimed);
   const testFile = flags["test-file"];
   const checkCmd = flags["check-cmd"];

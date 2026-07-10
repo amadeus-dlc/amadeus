@@ -1,0 +1,258 @@
+{
+  "schemaVersion": 1,
+  "threshold": 15,
+  "entries": [
+    {
+      "path": "packages/framework/core/hooks/amadeus-statusline.ts",
+      "name": "main",
+      "ordinal": 0,
+      "ccn": 26
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-bolt.ts",
+      "name": "handleComplete",
+      "ordinal": 0,
+      "ccn": 21
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-bolt.ts",
+      "name": "handleDispatchEvent",
+      "ordinal": 0,
+      "ccn": 17
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-bolt.ts",
+      "name": "handleStart",
+      "ordinal": 0,
+      "ccn": 23
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-directive.ts",
+      "name": "validateDirective",
+      "ordinal": 0,
+      "ccn": 19
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-jump.ts",
+      "name": "handleExecute",
+      "ordinal": 0,
+      "ccn": 37
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-jump.ts",
+      "name": "handleResolve",
+      "ordinal": 0,
+      "ccn": 24
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-learnings.ts",
+      "name": "(anonymous)",
+      "ordinal": 4,
+      "ccn": 22
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-lib.ts",
+      "name": "(anonymous)",
+      "ordinal": 7,
+      "ccn": 18
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-lib.ts",
+      "name": "emitStageFrontmatter",
+      "ordinal": 0,
+      "ccn": 18
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-lib.ts",
+      "name": "scanPresenceLedger",
+      "ordinal": 0,
+      "ccn": 20
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-orchestrate.ts",
+      "name": "emitJumpDirective",
+      "ordinal": 0,
+      "ccn": 18
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-orchestrate.ts",
+      "name": "handleNext",
+      "ordinal": 0,
+      "ccn": 38
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-orchestrate.ts",
+      "name": "parseNextFlags",
+      "ordinal": 0,
+      "ccn": 29
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-runtime.ts",
+      "name": "compile",
+      "ordinal": 0,
+      "ccn": 30
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-runtime.ts",
+      "name": "handleFragmentFork",
+      "ordinal": 0,
+      "ccn": 17
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-runtime.ts",
+      "name": "summarize",
+      "ordinal": 0,
+      "ccn": 28
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-sensor-linter.ts",
+      "name": "probeEslintConfig",
+      "ordinal": 0,
+      "ccn": 16
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-sensor.ts",
+      "name": "decideOutcome",
+      "ordinal": 0,
+      "ccn": 19
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-sensor.ts",
+      "name": "handleFire",
+      "ordinal": 0,
+      "ccn": 25
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-stage-schema.ts",
+      "name": "validateStageFrontmatter",
+      "ordinal": 0,
+      "ccn": 38
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-state.ts",
+      "name": "(anonymous)",
+      "ordinal": 12,
+      "ccn": 28
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-state.ts",
+      "name": "handleDelegateApproval",
+      "ordinal": 0,
+      "ccn": 26
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-state.ts",
+      "name": "handleLookup",
+      "ordinal": 0,
+      "ccn": 18
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-state.ts",
+      "name": "handlePracticesPromote",
+      "ordinal": 0,
+      "ccn": 26
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-state.ts",
+      "name": "main",
+      "ordinal": 0,
+      "ccn": 30
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-swarm.ts",
+      "name": "handlePrepare",
+      "ordinal": 0,
+      "ccn": 19
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-utility.ts",
+      "name": "(anonymous)",
+      "ordinal": 62,
+      "ccn": 16
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-utility.ts",
+      "name": "blockBoltSlug",
+      "ordinal": 0,
+      "ccn": 65
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-utility.ts",
+      "name": "detectBuildSystem",
+      "ordinal": 0,
+      "ccn": 20
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-utility.ts",
+      "name": "detectFrameworks",
+      "ordinal": 0,
+      "ccn": 19
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-utility.ts",
+      "name": "detectWorkspace",
+      "ordinal": 0,
+      "ccn": 19
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-utility.ts",
+      "name": "handleIntentBirthStateBuild",
+      "ordinal": 0,
+      "ccn": 31
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-utility.ts",
+      "name": "handleRecompose",
+      "ordinal": 0,
+      "ccn": 42
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-utility.ts",
+      "name": "handleScopeChange",
+      "ordinal": 0,
+      "ccn": 36
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-utility.ts",
+      "name": "handleStatus",
+      "ordinal": 0,
+      "ccn": 27
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-worktree.ts",
+      "name": "handleCreate",
+      "ordinal": 0,
+      "ccn": 18
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-worktree.ts",
+      "name": "handleVerify",
+      "ordinal": 0,
+      "ccn": 26
+    },
+    {
+      "path": "packages/setup/src/internal/tar-archive-extractor.ts",
+      "name": "drain",
+      "ordinal": 0,
+      "ccn": 38
+    },
+    {
+      "path": "packages/setup/src/modules/reporter.ts",
+      "name": "renderError",
+      "ordinal": 0,
+      "ccn": 24
+    },
+    {
+      "path": "scripts/package.ts",
+      "name": "buildTree",
+      "ordinal": 0,
+      "ccn": 22
+    },
+    {
+      "path": "scripts/package.ts",
+      "name": "checkHarness",
+      "ordinal": 0,
+      "ccn": 34
+    }
+  ]
+}

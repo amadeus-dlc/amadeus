@@ -673,8 +673,8 @@ function producesArtifactsExist(
 // True when any non-doc file exists in the workspace - a file outside the
 // amadeus/ workspace tree and the harness dirs. Bounded shallow walk (one level
 // into each top-level dir is enough to detect src/<file>); avoids a full
-// recursive scan.
-function workspaceHasSourceFile(pd: string): boolean {
+// recursive scan. Exported as an in-process test seam (spawn-blindspot norm).
+export function workspaceHasSourceFile(pd: string): boolean {
   let entries: string[];
   try {
     entries = readdirSync(pd);
@@ -684,7 +684,7 @@ function workspaceHasSourceFile(pd: string): boolean {
   for (const entry of entries) {
     if (HARNESS_DOC_DIRS.has(entry)) continue;
     const p = join(pd, entry);
-    let st;
+    let st: ReturnType<typeof statSync>;
     try {
       st = statSync(p);
     } catch {
