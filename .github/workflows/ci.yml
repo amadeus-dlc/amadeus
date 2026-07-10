@@ -48,6 +48,15 @@ jobs:
       - name: Tests — smoke + unit + integration
         run: bun run test:ci
 
+      - name: Upload dynamic test-size report (#684 Phase D / #699, advisory)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: amadeus-test-size-report
+          path: tests/logs/test-size-report.json
+          if-no-files-found: warn
+          retention-days: 14
+
   coverage:
     name: Coverage Report
     runs-on: ubuntu-latest
