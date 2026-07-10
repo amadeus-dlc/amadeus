@@ -243,8 +243,7 @@ async function runUpgrade(parsed: ParsedCommand, ports: CliPorts): Promise<numbe
   const { inputs } = resolvedInputs;
 
   // REL-U02: detection and source classification happen before any network
-  // I/O, so all no-change refusal paths below never touch the network. FR-742:
-  // a present-but-corrupt manifest is surfaced loudly here.
+  // I/O, so all no-change refusal paths below never touch the network.
   const detected = await Installation.detect(inputs.target, ports.manifestIo);
   if (detected.type === "err") {
     console.error(reporter.renderError(detected.error));
