@@ -1,100 +1,119 @@
-# リバースエンジニアリング鮮度ポインタ
+# リバースエンジニアリング実施記録
 
-> このファイルは鮮度ポインタ(共有・last-writer-wins)であってベース点ではない。各 intent 固有の base/observed の真実源は `codekb/amadeus/re-scans/<intent>.md`(#707 新契約)。以下は最新 intent の記録で、旧 intent の節は参照用に温存する。
-
-## 実行メタデータ(最新: 260710-delegate-answer-consume)
+## 実行メタデータ(最新: 260710-source-unreferenced-check)
 
 - Date: 2026-07-10
-- Intent: `260710-delegate-answer-consume`(#736: 委任発行 grounding が interview 応答の QUESTION_ANSWERED に先食いされる)
-- Scope: `bugfix`(既存 presence 境界機構の欠陥修正)
-- Repository: `amadeus`(origin remote 由来、#693 で統一。物理チェックアウトは worktree `claude-engineer-1`)
-- Stage: `reverse-engineering`(2.1)
-- 手法: diff-refresh(project.md 是正事項 cid:reverse-engineering:c1)
-- Base commit: `24197d755a51712c1bfd6fa405f709c070c61f0d`(前 intent `260709-dynamic-test-size` の re-scan 記録の observed。真実源は `re-scans/260710-delegate-answer-consume.md`)
-- Observed commit: `5e9040cdabd72034f9bd704c5d22ca7dde247a6e`(現 HEAD、`git rev-parse HEAD` 実測)
-- Focus: #736 — 委任機構の presence 境界(`GATE_RESOLUTION_EVENTS` / `humanActedSinceGate` verb スコープ / thin alias / `verifyDelegatedProvenance`)、#685 verb-scoped provenance の既実装状況、回帰テスト状況(t112・t188)、dist 同期要件
-
-## 分析範囲(260710-delegate-answer-consume)
-
-差分区間 `24197d755..5e9040cda` の実体は **#685(verb-scoped provenance + `DELEGATED_REJECTION`)** の実装で、フォーカス3ファイル(`amadeus-lib.ts`/`amadeus-state.ts`/`amadeus-audit.ts`)はすべて改変済み(`amadeus-log.ts` は無変更)。#736 修正方式 B の verb スコープ足場は HEAD に既存だが、#736 の機構(QUESTION_ANSWERED が委任発行 grounding を先食い)は verb スコープと**直交**(QUESTION_ANSWERED は委任 type ではなく `GATE_RESOLUTION_EVENTS`(`amadeus-lib.ts:1506`)の resolution 要素)。回帰テストは未整備(t112 に交差ケース無し=実測ヒット0)、t188:325-348 が answer 側の 1-answer/turn 契約を pin。焦点面は現行コード直読で file:line を確定した。base/observed の真実源は `re-scans/260710-delegate-answer-consume.md`。
-
-## 合成方針(Architect 実施 / 260710-delegate-answer-consume)
-
-Developer スキャン結果を受け、9アーティファクトのうち2件を diff-refresh 更新した: `code-quality-assessment.md`(#736 観測面 3節 — O1 委任発行 grounding の QUESTION_ANSWERED 先食い[根本原因候補]・O2 回帰テスト未整備と t188 の 1-answer/turn 契約両立要件・O3 #685 verb 足場既実装と dist 同期義務)、`architecture.md`(「委任 presence 機構の verb-scoped 構造」節を追補 — 境界述語/消費側 verb-scoped/発行側 verb 無しの3層と非対称、#736 交差点)。残る7件(`api-documentation.md` / `business-overview.md` / `component-inventory.md` / `dependencies.md` / `technology-stack.md` / `code-structure.md`)は本 intent が presence 境界機構の観測に限局し、API 契約・ビジネス面・コンポーネント目録・依存マニフェスト・技術スタック・コード構造がいずれも不変(#685 は既存ファイル内の関数追加・シグネチャ拡張であり新規モジュール/依存を導入しない)のため温存。本ファイル `reverse-engineering-timestamp.md` は鮮度ポインタとして更新済み。以下の 260709-dynamic-test-size 以降の節は前 intent の記録であり参照用に温存する。
-
-## 実行メタデータ(260709-dynamic-test-size)
-
-- Date: 2026-07-09
-- Intent: `260709-dynamic-test-size`(#699 / #684 Phase D: テストランナーにおけるテストサイズの継続的動的計測)
-- Scope: `feature`(既存コードベースへの計測機構追加)
-- Repository: `amadeus`(origin remote 由来、#693 で統一。物理チェックアウトは worktree `claude-engineer-1`)
-- Stage: `reverse-engineering`(2.1)
-- 手法: diff-refresh(project.md 是正事項 cid:reverse-engineering:c1)
-- Base commit: `9a2f5c7205795a255f258628710820def2ab3f8c`(前 intent `260709-pbt-small-band` の観測コミット。本 intent に prior re-scan 記録なし → re-scans/ 内最新 observed を採用。真実源は `re-scans/260709-dynamic-test-size.md`)
-- Observed commit: `24197d755a51712c1bfd6fa405f709c070c61f0d`(現 HEAD、`git rev-parse HEAD` 実測)
-- Focus: #699 Phase D — runner の per-file wall-clock 永続化経路、`test-size.ts` 安定出力契約、drift guard、t112 copy 制約、CI(ubuntu-latest)artifact 配線、gen-coverage-registry 合流点
-
-## 分析範囲(260709-dynamic-test-size)
-
-`git diff --name-status 9a2f5c72..24197d755 -- ':!amadeus/' ':!dist/'` の実質コード差分は5ファイルのみ(`bun.lock`/`package.json`/`tests/helpers/arbitraries/semver.ts`[A]/`tests/integration/t92.test.ts`[M, #709 対応]/`tests/unit/setup-semver.pbt.test.ts`[A]、#721/#722 由来)で、いずれも #699 のフォーカス面(`run-tests.ts` 計測ライフサイクル・`test-size.ts` 分類契約・`t-test-size-drift`・`bun-junit-to-meta.ts`・t112 copy・CI・`gen-coverage-registry.ts`)に**非関与**。したがってフォーカス面は前回 codekb の理解がそのまま有効で、本スキャンは現行コードの直読で file:line を確定した。fast-check `^4.9.0` の devDependencies 追加のみ technology-stack へ反映。
-
-## 合成方針(Architect 実施 / 260709-dynamic-test-size)
-
-Developer スキャン結果を受け、9アーティファクトのうち4件を diff-refresh 更新した: `code-quality-assessment.md`(#699 観測面 4節 — 永続化経路不在・合流点/隔離契約・t112 copy 伝播/registry 直交・CI 配線)、`architecture.md`(テストピラミッド節へ「ランナー計測ライフサイクルと #699 Phase D の結合点」の3層構造を追補)、`technology-stack.md`(fast-check 追加を反映)、`code-structure.md`(新規 PBT 2ファイル + `tests/helpers/arbitraries/` ディレクトリの目録追記)。残る4件(`api-documentation.md` / `business-overview.md` / `component-inventory.md` / `dependencies.md`)は本 intent が計測機構の観測に限局し API 契約・ビジネス面・コンポーネント目録・依存マニフェストがいずれも不変のため温存(本ファイル `reverse-engineering-timestamp.md` は鮮度ポインタとして更新済み、5件目の更新)。以下の t92-worktree-hermeticity 以降の節は前 intent の記録であり参照用に温存する。
-
-## 実行メタデータ(260709-t92-worktree-hermeticity)
-
-- Date: 2026-07-09
-- Intent: `260709-t92-worktree-hermeticity`
+- Intent: `260710-source-unreferenced-chec`
 - Scope: `bugfix`
-- Repository: `amadeus`(origin remote 由来、#693 で統一。物理チェックアウトは worktree `claude-engineer-1`)
+- Repository: `/Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-3`(branch `intent/735-source-unreferenced-check`, base `origin/main`)
 - Stage: `reverse-engineering`(2.1)
 - 手法: diff-refresh(前回スキャンコミットからの差分更新。project.md 是正事項 cid:reverse-engineering:c1 に従う)
-- Base commit: `22e3eb5aa`(前回 intent `260709-packaging-repair-batch` のスキャン観測コミット)
-- Observed commit: `be205cfca`
-- Focus: #709(t92 test-44 の tsc 解決ヘルメチシティ — sensor-type-check の exit-code 伝播設計と環境依存 launcher の非対称、test 44 の install 済 node_modules へのシンボリックリンク前提)
-- ベースにした codekb: 本ディレクトリ `amadeus/spaces/default/codekb/amadeus/`(2026-07-09、intent `260709-packaging-repair-batch`、観測 `22e3eb5aa`)
+- Base commit(前回 codekb 観測コミット): `162553b99`(intent `260709-bug-zero-batch` の統合版、`codekb/amadeus/` 一本化後。前回 gate-mechanics スキャンもこのコミットを観測対象としており、実コード diff は0だった)
+- Observed commit: `584262c1a9b9d6beac11cb0b98d03f2fc001fba6`(現 HEAD、`origin/main` = #737 込みをマージ済み)
+- 差分規模: `git log 162553b99..HEAD` は38コミット。本日の main マージ群(#711/#712/#713/#714/#715/#716、#721/#722/#724/#725/#726、#732、#727=#670修正、#729=#685修正、#737=#719修正 等)を含み、今回は前回2スキャン(bug-zero-batch/gate-mechanics)と異なり**実コードに差分がある**。
+- Focus: Issue #735 が依存する理解面 — **packaging の入力集合と source 側 unreferenced 検査点**。`scripts/package.ts`(`checkHarness`/`buildTree`)、全 harness の `manifest.ts`(`harnessFiles`/`renames`/`authoredExempt`/`emit`)、#737(kiro CLI の stale `.kiro.hook` 削除 + vacuous exemption 除去)と #711(dist 全域 orphan scan)を重点読解。
+- ベースにした codekb: `amadeus/spaces/default/codekb/amadeus/`(2026-07-09、intent `260709-gate-mechanics` 版)
 
-## 分析範囲(260709-t92-worktree-hermeticity)
+## 再検証結果(本 intent の差分)
 
-`git diff --name-status 22e3eb5aa..be205cfca` の差分区間で、#701/#702 の正本(`scripts/package.ts`・`scripts/release-version-sync.ts`)が PR #711/#712 として修理・マージされたことを確認した(両バグは解消済み。code-quality-assessment.md に反映)。本 intent のフォーカス #709 は tsc 解決チェーンに限局するため、差分に依らず生産センサー `packages/framework/core/tools/amadeus-sensor-type-check.ts`(自己インストール `.claude/tools/` と `diff -q` 一致=ドリフトなし)とテスト `tests/integration/t92.test.ts` test 44・関連テスト(45/12/16・t202)を直接読解し file:line を確定した。依存マニフェスト・コード構造・技術スタックはこの差分区間・本フォーカスを通じて不変(実測)。
+38コミットのうち、前回 codekb(gate-mechanics 版)の記述を陳腐化させる主要変更と、#735 の理解面に新規に加える読解結果を記録する。
 
-## 合成方針(Architect 実施 / 260709-t92-worktree-hermeticity)
+### 前回 codekb を陳腐化させた変更(2バグとも出荷済みに)
 
-Developer スキャン結果を受け、9アーティファクトのうち `code-quality-assessment.md` に #709 の tsc 解決ヘルメチシティ所見を追記し、#701/#702 を PR #711/#712 マージ済みとして解決状態へ更新した。他 7 件(api-documentation / architecture / business-overview / code-structure / component-inventory / dependencies / technology-stack)は本 intent がテスト1件のヘルメチシティ修正に限局し依存・構造・スタックが不変のため温存。以下の「分析範囲(260709-packaging-repair-batch)」以降は前 intent の記録であり参照用に温存する。
+- **#685 delegate-rejection は解消済み(#729)**: 前回 codekb は「REJECT 側に delegate-approval 相当の遠隔委任機構が存在しない」と記録していたが、`14d1146e0`「fix #685: add DELEGATED_REJECTION ... (#729)」がマージ済み。現在 `amadeus-state.ts` の subcommand dispatch(L262-263)に `delegate-rejection` → `handleDelegateRejection` があり、`amadeus-audit.ts` の `VALID_EVENT_TYPES`(L73)と presence/provenance の trusted-writer 集合(L755)に `DELEGATED_REJECTION` が追加された。`humanActedSinceGate` は「`DELEGATED_APPROVAL` は approve のみ、`DELEGATED_REJECTION` は reject のみを開く」verb-scoped presence に分離されている(`amadeus-state.ts` L1444 近傍のコメント)。architecture.md・code-structure.md・api-documentation.md 等の #685「不在」記述は歴史的記録であり、以後は「#685 は fix 済み」を前提にする。
+- **#670 sibling-worktree guard は解消済み(#727)**: 前回 codekb は `assertNotSiblingWorktree` が sibling worktree を無条件拒否すると記録していたが、`20c2e9674`「fix #670: anchor amadeus-worktree write paths to the main checkout (#727)」がマージ済み。現在 `amadeus-worktree.ts` は無条件拒否をやめ、cwd を分類して write パスをメインチェックアウトへ**アンカー**する方式(戻り値 `{ cwdTop, mainCheckout }`、L116-123)。sibling dev worktree から呼んでも Bolt worktree はメインチェックアウトの sibling として作成/マージ/破棄される(冒頭コメント L12-13、分類コメント L133-137)。architecture.md・code-structure.md の #670「無条件拒否」記述は歴史的記録。
 
-## 分析範囲(260709-packaging-repair-batch)
+### #735 の理解面(新規読解)
 
-`git diff --name-status a1c79dc12..22e3eb5aa` で227ファイルの差分を確認した(A44 / D18 / M165)。大半は `amadeus/spaces/default/intents/`(工程記録)と `dist/`(再生成物)。codekb 観測面に効く実質差分は次の通り。
+- **build が読む「入力集合」の確定点**: `scripts/package.ts` の `buildTree`(L307)が、build がソースとして消費する集合を確定する。(1)`core/<coreDirs[].src>` を `walk()` で列挙(L322-344)、(2)`harness/<name>/<harnessFiles[].src>` を個別コピー(L357-363)、(3)onboarding skeleton(L370-376)、(4)`core/memory/` を `emitMemory`/`emitMemorySeed`(L382-395)、(5)`emit()` プラグイン(codex のみ、L446-458)。harness ソースは**ディレクトリ全体を walk せず `harnessFiles` に列挙された src だけ**をコピーする — したがって `harness/<name>/` 配下の未列挙ファイルは build から完全に不可視になる。
+- **source 側 unreferenced 検査は現状不在**: `checkHarness`(L554)の orphan 検出はすべて **dist 出力側**(committed dist vs 再ビルド dist)で働く(harness-dir orphan L574-582、dist 全域 orphan L605-628、#711 で追加)。`harness/<name>/` の authored ソースが manifest のどの行からも参照されない場合、それは dist に到達しないため dist orphan scan では検出できない。これが #735 が塞ごうとしているギャップ。
+- **#737 = このギャップの実害例**: kiro CLI harness に7個の `.kiro.hook` ソースファイルが manifest 未参照のまま残存し(dist へ出荷されず)、しかも kiro manifest の `authoredExempt` に「dist/kiro には元々存在しない」ファイル種別を除外する vacuous な regex `/^hooks\/[^/]+\.kiro\.hook$/` があった。#737 は7ファイルを削除し vacuous exemption を除去、`t148` に「CLI harness ソースに `.kiro.hook` が0個」の再注入ガードを追加した(`tests/smoke/t148-kiro-file-structure.test.ts`)。詳細は code-quality-assessment.md・code-structure.md「packaging」節を参照。
 
-- `packages/framework/core/tools/` の6ファイル(全 M): `amadeus-audit.ts`・`amadeus-bolt.ts`・`amadeus-lib.ts`・`amadeus-sensor-type-check.ts`・`amadeus-state.ts`・`amadeus-swarm.ts`。前 intent(bug-zero-batch)の修理と、delegated-approval provenance / sensor-type-check の tsc launcher 化などの反映。
-- `packages/setup/src/` の3ファイル(M): `domain/installation.ts`・`internal/tar-archive-extractor.ts`・`ports/http.ts`。
-- `tests/` の再編(PR #703 hermeticity 修正、class-B 14ファイル)と新規テスト群: `tests/lib/test-size.ts`、`tests/unit/setup-http.test.ts`、`tests/unit/t-test-size-drift.test.ts`、`tests/unit/t112-delegated-approval.test.ts`、`tests/unit/t202-hook-project-dir-worktree-marker.test.ts`、`tests/unit/t202-sensor-type-check-tsc-launcher.test.ts`。
-- `docs/`(glossary ja/en、04-stages/inception、12-state-machine)は参照のみで codekb 影響小。
+## 実行メタデータ(前回: 260709-bug-zero-batch、履歴として保持)
 
-本 intent が対象とする2バグの正本(`scripts/package.ts`・`scripts/release-version-sync.ts`)およびリリース配線(`.github/workflows/release.yml`・`packages/setup/.release-it.json`)は、この差分区間 `a1c79dc12..22e3eb5aa` では**変更されていない**(`git diff --name-status` で当該パスに差分なしを実測)。したがって #701/#702 はこの差分区間の前後を通じて存在し続けている既存欠陥であり、本スキャンは現行コードを直接読解して file:line を確定した。
+- Date: 2026-07-09
+- Intent: `260709-bug-zero-batch`
+- Scope: `bugfix`
+- Repository: `/Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-1`
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh(前回スキャンコミットからの差分更新。project.md 是正事項 cid:reverse-engineering:c1 に従う)
+- Base commit: `aff3b6671`(`amadeus/spaces/default/codekb/claude-leader/` の観測コミット、前回 intent `260709-framework-repair-batch` のスキャン)
+- Observed commit: `a1c79dc12df38a8363524116eff9d877677a7224`
+- Focus: 修理対象バグ6件 — #674(`amadeus-swarm.ts` finalize の merge-back/audit 分離)、#675(`amadeus-state.ts` reject の human-presence guard 欠落)、#676(`amadeus-bolt.ts` start + `amadeus-lib.ts` auditFilePath の bare fallback)、#677(`packages/setup/src/ports/http.ts` getJson の json() 未保護)、#678(`packages/setup/src/internal/tar-archive-extractor.ts` の PAX/GNU longname 状態)、#668(`amadeus-utility.ts`/`amadeus-lib.ts` の codekb-path `<repo>` セグメント導出)
+- ベースにした codekb: `amadeus/spaces/default/codekb/claude-leader/`(2026-07-09、intent `260709-framework-repair-batch`、対象バグ #656/#657/#641/#661)
 
-重点スキャン対象(すべて現 HEAD の実コードを直接読解):
+## 分析範囲
 
-- `scripts/package.ts` `checkHarness`(L554-624)— #701。orphan スキャンのルート集合が `[".agents", "amadeus"]` のハードコード2件のみ(L611)、projectRoot ファイルの diff(L586-592)は built→committed 方向のみで committed→built orphan 検査が無い。
-- `scripts/release-version-sync.ts`(L22 version 受理正規表現、L47-51 version.ts patch、L53-54 badge 正規表現、L34-45 patchFile の pattern 不一致 exit(1))— #702。
+`git diff --name-status aff3b6671..HEAD` で143ファイルの差分を確認した(19コミット、うち大半は `origin/claude-leader` ブランチのマージ)。主な変更内容は次の通り。
+
+- `modelOverride` → `model` へのエージェント frontmatter 改名(PR #669、114ファイル規模、`.claude`/`.codex`/`dist/*`/`packages/framework/core/agents/` の全複製箇所)。
+- `amadeus/spaces/default/codekb/claude-leader/` の新設(前回 intent `260709-framework-repair-batch` のスキャン結果、9ファイル)。
+- `amadeus/spaces/default/intents/260709-canonical-settings/`・`260709-framework-repair-batch/` の工程記録追加(ideation/requirements-analysis の memory・questions・requirements)。
+- `amadeus/spaces/default/memory/team.md` への §13 学習事項の複数追記(human-presence interim 運用、auto-gate-approval、blocker-election 等の運用ノルム)。
+
+この差分自体は本 intent(bug-zero-batch)が対象とする6バグのコード領域(`amadeus-swarm.ts`/`amadeus-state.ts`/`amadeus-bolt.ts`/`amadeus-lib.ts`/`packages/setup/src/ports/http.ts`/`packages/setup/src/internal/tar-archive-extractor.ts`)に変更を加えていない。したがって6バグはこの差分区間の前後を通じて存在し続けている欠陥である。
+
+重点スキャン対象は次の6ファイル/領域(すべて実コードを直接読解して確認)。
+
+- `packages/framework/core/tools/amadeus-swarm.ts` L484-631(`handleFinalize`)— #674
+- `packages/framework/core/tools/amadeus-state.ts` L1286-1487(`handleApprove`/`handleReject`)— #675
+- `packages/framework/core/tools/amadeus-bolt.ts` L180-239(`start` の `--worktree` パス)+ `amadeus-lib.ts` L1246-1271(`stateFilePath`/`auditFilePath`)— #676
+- `packages/setup/src/ports/http.ts` 全体(84行)— #677
+- `packages/setup/src/internal/tar-archive-extractor.ts` 全体(228行)— #678
+- `packages/framework/core/tools/amadeus-lib.ts` L495-524(`codekbRepoName`)+ `amadeus-utility.ts` L2690-2699(`codekb-path` ハンドラ)— #668
 
 ## 鮮度に関する注記
 
-前 intent(`260709-bug-zero-batch`、観測 `a1c79dc12`)の codekb は #674/#675/#676/#677/#678/#668 の6バグを主眼に書かれていた。それら6件は本差分区間で該当コアツールが Modified されており(bug-zero-batch ワークフロー完了済み)、本スキャンの重点ではないため状態確定は行わず、記述は前 intent の記録として温存する。本スキャンは新規フォーカス #701/#702 を追記し、コアツール6件・setup src 3件・tests 再編の差分レベル更新を各成果物に折り込んだ。
+ベースライン `amadeus/spaces/default/codekb/claude-leader/`(2026-07-09、intent `260709-framework-repair-batch`)は #656/#657/#641/#661 という前回バッチの4バグを主眼に書かれており、本 intent が対象とする6バグには一言も触れていない。本スキャンはこの前提を次のように更新した。
 
-## 合成方針(Architect 実施)
+- 対象バグ群を完全に入れ替えた(#656/#657/#641/#661 → #674/#675/#676/#677/#678/#668)。前回バッチの4件はこの codekb では扱わない。
+- 前回バッチのうち #656(`Installation.detect` が `LegacyLayout` を呼ばない)は、`upgrade.ts:192` で `Installation.detect` の evidence を `LegacyLayout.isUnsupported` に渡す配線が確認でき、解消済みと判断した。#657(`bunx tsc` の無条件使用)は `amadeus-sensor-type-check.ts:157,174` の時点でも変更が確認できず、未修理のまま残存している。#641・#661 は本スキャンの重点対象外のため状態未確認。これらは本 intent のスコープではないため、修理判断は行わず状態のみを記録する。
+- `packages/framework/core/`・`packages/setup/` の全体構造(one-core-many-harnesses、functional-domain-modeling-ts スタイル)自体は前回スキャン時点から変更なし。
 
-Developer スキャン結果を受け、9アーティファクト(business-overview / architecture / code-structure / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment / reverse-engineering-timestamp)を diff-refresh 方式で更新した。#701/#702 を code-quality-assessment.md に確認済み欠陥として追記、リリース契約と `package.ts --check` 契約を api-documentation.md に追補、コアツール/ setup src / tests 再編を architecture.md・component-inventory.md・code-structure.md に差分レベルで折り込んだ。依存マニフェスト変更はこの差分区間に現れず(実測)、technology-stack.md・dependencies.md・business-overview.md は変更不要と判断して温存した。
+## 合成方針(Architect 想定)
 
-## 更新した成果物(260709-packaging-repair-batch)
+Developer スキャン結果として、6アーティファクト構造(business-overview / architecture / code-structure / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment / reverse-engineering-timestamp の9ファイル)を diff-refresh 方式で更新した。前回バッチの4バグに関する記述は新しい6バグの記述に置き換え、全体構造・技術スタック・依存関係グラフのうち変更がない節(one-core-many-harnesses、Bun/TypeScript/Biome スタック、`release.yml` 一本化のバージョン運用)はベース(claude-leader 版)の記述をほぼ温存した。architecture.md に6バグそれぞれの相互作用図(シーケンス図)を新設し、原因コード位置・再現条件・修理時の波及範囲を code-structure.md・code-quality-assessment.md に集中して記述した。
 
-- `reverse-engineering-timestamp.md`(メタデータ更新)
-- `code-quality-assessment.md`(#701/#702 + PR #703 / test-size ガード)
-- `architecture.md`(コアツール差分・tests 再編)
-- `component-inventory.md`(コアツール6件 M・setup src 3件・新規テスト)
-- `code-structure.md`(tests 層目録・hermeticity 再編)
-- `api-documentation.md`(リリース契約・package.ts --check 契約)
-- 温存(変更なし): `technology-stack.md`・`dependencies.md`・`business-overview.md`
+## 更新した成果物
 
-未更新(差分に実質変更なし): `business-overview.md` / `api-documentation.md` / `technology-stack.md` / `dependencies.md`。
+- `business-overview.md`
+- `architecture.md`
+- `code-structure.md`
+- `api-documentation.md`
+- `component-inventory.md`
+- `technology-stack.md`
+- `dependencies.md`
+- `code-quality-assessment.md`
+- `reverse-engineering-timestamp.md`
+
+## 統合記録(AC-668-4、2026-07-09)
+
+- **統合**: #668 修正(PR #693)マージ後、分裂していた4ディレクトリ(`amadeus`(2026-07-07 stale)/ `installer-distribution`(2026-07-08)/ `claude-leader`(2026-07-09)/ `claude-engineer-1`(2026-07-09))を本ディレクトリ `codekb/amadeus/` に一本化した
+- **正の根拠**: スキャンの系譜は amadeus(7/7)→ installer-distribution(7/8、base 8510281ae)→ claude-leader(7/9、base aff3b6671)→ claude-engineer-1(7/9、base aff3b6671 の leader 版をベースに observed a1c79dc12)という差分リフレッシュの連鎖であり、最新の claude-engineer-1 版が累積 superset。本ディレクトリはその claude-engineer-1 版の git mv
+- **包含チェック**: 4ディレクトリとも同一の9ファイル構成でファイル単位の欠落なし(削除分は git 履歴から復元可能)
+- **以後**: `codekb-path` は #668 修正により安定名 `amadeus` を返す(このコミットで実測済み)ため、次回スキャンは本ディレクトリへの差分リフレッシュとなる
+
+## 本 intent(260710-source-unreferenced-check)で更新した成果物
+
+packaging 入力集合と source-unreferenced ギャップに焦点を絞った diff-refresh。既存の bug 別ナラティブ節(#674〜#678/#668/#685/#670)は歴史的記録として温存し、上部に #735 の新規節を追記、#685(#729)/#670(#727)の解消済みバナーを各所に付す形で更新した。
+
+- `architecture.md` — 「packaging 入力集合と source 側 unreferenced 検査」節を新設(build 入力の確定点・dist orphan scan の守備範囲・#735 のギャップ)。#685/#670 の解消済みバナーを追記。
+- `code-structure.md` — 「packaging 構造(`scripts/package.ts` / harness manifests)」節を新設(`buildTree`/`checkHarness` の段構成、全 harness の `harnessFiles`/`authoredExempt` 目録)。#685/#670 解消済みバナー。
+- `code-quality-assessment.md` — vacuous exemption アンチパターンと source-unreferenced ギャップを技術的負債として追記。#685/#670 解消済みバナー。
+- `component-inventory.md` — `scripts/package.ts`/`scripts/manifest-types.ts`/harness manifests のコンポーネント表を追記。
+- `api-documentation.md` — `scripts/package.ts`(write/`--check`)の CLI 契約を追記。#685/#670 解消済みバナー。
+- `dependencies.md` — packaging 依存グラフ(core/harness → package.ts → dist の入力集合)と `fast-check` 依存追加を追記。
+- `technology-stack.md` — `fast-check`(PBT、#722)、動的 test-size 計測(#732)、codecov 導入を追記。
+- `business-overview.md` — 本 intent の業務境界(source-unreferenced check)を追記。#685/#670 解消済みバナー。
+
+## 前 intent(260709-gate-mechanics)で更新した成果物(履歴)
+
+コード diff がないため全面リライトではなく、#685/#670 関連の新規節を追記する形の diff-refresh。
+
+- `architecture.md` — 「#685」「#670」の相互作用図(シーケンス図)を新設。旧6バグの図は保持(#675 は解消済みと明記)。
+- `code-structure.md` — gate resolution 系(`amadeus-state.ts`/`amadeus-lib.ts`)と `amadeus-worktree.ts` の該当関数表を追記。
+- `component-inventory.md` — human-presence gate コンポーネント表・worktree ガードコンポーネント表を追記。
+- `api-documentation.md` — `delegate-approval`/`reject` の現行契約と `amadeus-worktree create`/`bolt --worktree` の契約を追記。
+- `code-quality-assessment.md` — #685・#670 のリスク評価節を追記、#675 を解消済みとして更新。
+- `business-overview.md` — 本 intent の業務境界(2バグ)を追記。
+- `technology-stack.md`・`dependencies.md` — 変更なし(該当領域に新規依存・技術変更なし)、確認済みの旨のみ追記。
