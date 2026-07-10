@@ -13,7 +13,7 @@
 - C. 注入元(agmsg/Monitor 側)のマーカー規約を一本化し、分類器は単一 marker のまま(注入側全箇所の改修が必要でスコープ大、外来注入元には効かない)
 - X. Other (please specify)
 
-[Answer]:
+[Answer]: A — 選挙確定(2026-07-10、4票)。D マーカー追加+先頭 N バイト内 marker 検出へ一般化(4 marker カタログ、B も防御的包含)。
 
 ## Q2. stop.ts tier-3(transcriptIsConversational)の同根欠陥のスコープ
 
@@ -23,7 +23,7 @@
 - B. tier-3 は別 Issue へ分離し、本 intent は mint-presence のみ(最小スコープだが、カタログを 2 度定義することになり、後続修正時に drift リスク)
 - X. Other (please specify)
 
-[Answer]:
+[Answer]: A — 選挙確定(2026-07-10、4票)。tier-3 を本 intent に含め、注入マーカーカタログを共有定数(単一定義)へ抽出し mint-presence と stop.ts tier-3 の両方が消費する。
 
 ## Q3. 既存の phantom HUMAN_TURN 行(過去 shard の汚染)の扱い
 
@@ -33,4 +33,4 @@
 - B. 汚染 shard に注記行を追記する(append-only の範囲内だが、shard を消費する既存パーサへの影響確認が必要でコスト増)
 - X. Other (please specify)
 
-[Answer]:
+[Answer]: A — 選挙確定(2026-07-10、4票)。過去 shard は append-only 維持・改変しない。汚染期間の存在は #755 close コメントに記録する。
