@@ -4212,3 +4212,350 @@
 **Context**: construction > delegate-rejection > code-generation > code-summary.md
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T23:58:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: e92677a3
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T23:58:38Z
+**Event**: SENSOR_PASSED
+**Fire id**: e92677a3
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+**Duration ms**: 758
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T23:58:38Z
+**Event**: SENSOR_FIRED
+**Fire id**: b4d61a97
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T23:58:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: b4d61a97
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+**Duration ms**: 812
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T00:06:32Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: af542e89beb5175f1
+**Message**: gate-mechanics の2バグ修正 PR(#670=PR727、#685=PR729)を完成させる作業中で、#729 は rebase 後の CI と codex 再レビュー待ちです。次は CI 緑を確認して再レビュー依頼を送ります。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T00:14:59Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a6a9a2cfb48e24874
+**Message**: gate-mechanics の2バグ修正が目標で、#670(PR #727)と #685(PR #729)は両方 CI 全緑・codex レビュー待ちです。両 READY 後に leader の委任承認でステージを確定し build-and-test へ進みます。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T00:50:45Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a81949e9df30d0315
+**Message**: gate-mechanics の2バグ修正が進行中: #670(PR #727)と #685(PR #729)は実装・CI 全緑で、codex レビュー待ちです。両 READY 後に leader の委任承認でステージを確定し build-and-test へ進みます。
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T01:18:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9d203e53
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/tests/e2e/t06.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T01:18:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9d203e53
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/tests/e2e/t06.test.ts
+**Duration ms**: 840
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T01:18:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1b8c2e27
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/tests/e2e/t06.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T01:18:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1b8c2e27
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/tests/e2e/t06.test.ts
+**Duration ms**: 569
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T01:19:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: a90b3930
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/tests/e2e/t06.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T01:19:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: a90b3930
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/tests/e2e/t06.test.ts
+**Duration ms**: 756
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T01:19:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: b41bc7a2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/tests/e2e/t06.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T01:19:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: b41bc7a2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/tests/e2e/t06.test.ts
+**Duration ms**: 475
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T01:19:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: b581791f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/packages/framework/core/tools/amadeus-worktree.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T01:19:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: b581791f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/packages/framework/core/tools/amadeus-worktree.ts
+**Duration ms**: 812
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T01:19:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: cd594e75
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/packages/framework/core/tools/amadeus-worktree.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-10T01:19:59Z
+**Event**: SENSOR_FAILED
+**Fire id**: cd594e75
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/packages/framework/core/tools/amadeus-worktree.ts
+**Detail path**: amadeus/spaces/default/intents/260709-gate-mechanics/.amadeus-sensors/code-generation/type-check-cd594e75.md
+**Findings count**: 3
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T01:20:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: fdd4b8bb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/packages/framework/core/tools/amadeus-worktree.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T01:20:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: fdd4b8bb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/packages/framework/core/tools/amadeus-worktree.ts
+**Duration ms**: 806
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T01:20:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: c45d5ebd
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/packages/framework/core/tools/amadeus-worktree.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T01:20:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: c45d5ebd
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/packages/framework/core/tools/amadeus-worktree.ts
+**Duration ms**: 527
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T01:20:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: d9f75ff4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/packages/framework/core/tools/amadeus-worktree.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T01:20:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: d9f75ff4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/packages/framework/core/tools/amadeus-worktree.ts
+**Duration ms**: 824
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T01:20:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1f7dea95
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/packages/framework/core/tools/amadeus-worktree.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T01:20:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1f7dea95
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/packages/framework/core/tools/amadeus-worktree.ts
+**Duration ms**: 575
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T01:20:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: e94424a2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/packages/framework/core/tools/amadeus-worktree.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T01:20:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: e94424a2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/packages/framework/core/tools/amadeus-worktree.ts
+**Duration ms**: 811
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T01:20:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: e36a4a43
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/packages/framework/core/tools/amadeus-worktree.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T01:20:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: e36a4a43
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-670-sibling-guard/packages/framework/core/tools/amadeus-worktree.ts
+**Duration ms**: 589
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T01:25:58Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: a6cba1189f32ddf82
+**Message**: Review blocker addressed. Working tree clean, rebased onto latest origin/main, all checks green. Report follows.\n\n## 是正報告(PR #727 レビュー NOT-READY 対応)\n\n### (1) 変更ファイル(review-fix コミット `cb4c8106c`)\n- `pac
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-10T01:27:01Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-3/amadeus/spaces/default/intents/260709-gate-mechanics/construction/sibling-worktree-guard/code-generation/code-summary.md
+**Context**: construction > sibling-worktree-guard > code-generation > code-summary.md
+
+---

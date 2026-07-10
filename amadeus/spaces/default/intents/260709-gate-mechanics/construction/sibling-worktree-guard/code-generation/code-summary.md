@@ -35,6 +35,10 @@
 
 補足: CI 初回に coverage registry の stale 検出1件 → `bun tests/gen-coverage-registry.ts` で再生成後 PASS(t06 の covers claim 追加に伴う正常な再生成)。
 
+## レビュー是正履歴
+
+- **iter2(claude-engineer-4 NOT-READY、head cb4c8106c)**: read/write の anchor 非対称 — write 経路は main checkout へ anchor するのに `handleList` の boltsDir は raw pd 基準のままで、「sibling から create → 同 sibling から list」が空配列になる blocker(レビュアーが独立再現)。是正: 純 helper `resolveMainCheckout`(read-only、拒否なし)を抽出して write/read が共有、handleList の boltsDir を write と同じ `worktreeBaseDir` 規則で解決(P7 roof・非 git は pd 基準で不変)、list へ true-nest 拒否は持ち込まず Bolt worktree 内 list 成功を T7 で明示 assert、T6 を「sibling/main 双方の list が同一 slug/path/branch を返す」内容 assert に強化。落ちる実証: 是正前 T6/T7 赤(空配列)→ 是正後 7 pass。origin/main rebase 済み(競合なし)。
+
 ## 計画からの逸脱
 
 1. t06 fixture に state file シード追加(t02 と同じ既知手法 — active-intent カーソル解決のため)
