@@ -11,7 +11,10 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Cancel superseded runs on PR branches only. Main pushes must run to
+  # completion: a cancelled main run skips the coverage job, leaving no
+  # Codecov base report for that commit (#777).
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
