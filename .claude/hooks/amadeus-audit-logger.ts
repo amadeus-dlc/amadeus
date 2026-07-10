@@ -5,14 +5,14 @@
 // Receives JSON on stdin from Claude Code. No-op if no audit.md exists (no
 // active workflow in this cwd) to preserve the existing "only log when
 // relevant" behaviour.
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
 import {
-  auditFilePath,
   type ClaudeCodeHookInput,
   docsRoot,
   errorMessage,
+  hasActiveWorkflowAudit,
   hooksHealthDir,
   isClaudeCodeHookInput,
   isoTimestamp,
@@ -67,10 +67,11 @@ if (
   process.exit(0);
 }
 
-const auditFile = auditFilePath(projectDir);
-
-// Don't auto-create the audit trail — the orchestrator creates it at workflow start.
-if (!existsSync(auditFile)) process.exit(0);
+// Don't auto-create the audit trail — the orchestrator creates it at workflow
+// start. Gate on ANY per-clone shard of the active intent (glob-merge), NOT this
+// clone's own shard: a fresh clone / new worktree mints a new clone-id, so a bare
+// self-shard existsSync would drop every event until the engine's first append.
+if (!hasActiveWorkflowAudit(projectDir)) process.exit(0);
 
 // Extract the context breadcrumb: the path relative to the record root (the
 // per-intent record dir on the new layout, or the flat `amadeus-docs/` root).

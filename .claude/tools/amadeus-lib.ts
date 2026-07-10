@@ -1823,6 +1823,30 @@ export function readAllAuditShards(projectDir: string, intent?: string, space?: 
   return parts.join("\n");
 }
 
+// True iff the ACTIVE intent has any audit shard FILE on disk — the "is there an
+// active workflow rooted here?" guard the advisory hooks (audit-logger,
+// sensor-fire, log-subagent, validate-state) share. Resolves the active space +
+// intent (cursor / lone-intent → null = flat-legacy) and globs EVERY per-clone
+// `audit/*.md` shard, NOT just this process's own clone shard.
+//
+// A bare existsSync(auditFilePath(projectDir)) only tests the CALLER's own clone
+// shard name (`<host>-<clone>.md`), so a fresh clone / new worktree — which mints
+// a brand-new gitignored clone-id — reads FALSE and silently drops audit/sensor
+// events until the engine's first append, even though committed shards from other
+// clones sit right beside it. This mirrors the intent of the fix in
+// amadeus-runtime-compile.ts (glob-merge across shards).
+//
+// Existence, not content: the check is the presence of a shard FILE
+// (auditShards().length > 0), preserving the old existsSync(auditFilePath())
+// semantics — a freshly-created-but-still-empty shard already marks an active
+// workflow. Returns false only when NO shard exists at all (workflow fully absent
+// → hooks stay a no-op, the unchanged behaviour).
+export function hasActiveWorkflowAudit(projectDir: string): boolean {
+  const space = activeSpace(projectDir);
+  const intent = activeIntent(projectDir, space) ?? undefined;
+  return auditShards(projectDir, intent, space).length > 0;
+}
+
 export function worktreePath(projectDir: string, boltSlug: string): string {
   return join(projectDir, ".amadeus", "worktrees", `bolt-${boltSlug}`);
 }
