@@ -1667,6 +1667,18 @@ function printSlugs(stages: GraphStage[]): void {
   for (const s of stages) console.log(s.slug);
 }
 
+/**
+ * Resolve a subcommand handler by own-property lookup only. A bare
+ * `table[cmd]` walks the prototype chain, so inherited Object.prototype members
+ * (`constructor`, `toString`, `hasOwnProperty`, …) resolve to truthy functions
+ * and would be invoked as handlers. Gating on Object.hasOwn keeps those names
+ * on the Unknown-subcommand path (exit 1). Kept local to this tool rather than
+ * shared via amadeus-lib.ts to avoid cross-file churn with concurrent work.
+ */
+export function resolveOwnHandler<H>(table: Record<string, H>, cmd: string): H | undefined {
+  return Object.hasOwn(table, cmd) ? table[cmd] : undefined;
+}
+
 const COMMANDS: Record<string, Handler> = {
   artifacts: () => {
     for (const name of [...artifactsRegistry()].sort()) {
@@ -1883,8 +1895,8 @@ Common forms:
 See docs/reference/16-artifact-vocabulary.md for artifact rules.`);
 }
 
-async function main(): Promise<void> {
-  const [cmd, ...args] = process.argv.slice(2);
+export async function main(argv: string[] = process.argv.slice(2)): Promise<void> {
+  const [cmd, ...args] = argv;
   if (cmd === "--help" || cmd === "-h") {
     printHelp();
     return;
@@ -1898,7 +1910,7 @@ async function main(): Promise<void> {
     );
     process.exit(1);
   }
-  const handler = COMMANDS[cmd];
+  const handler = resolveOwnHandler(COMMANDS, cmd);
   if (!handler) {
     const available = Object.keys(COMMANDS).sort().join(", ");
     console.error(
