@@ -1525,15 +1525,29 @@ function cloneId(projectDir: string): string {
 // the gate1 GATE_APPROVED -> refused. Stale (human turn long ago, then a fabricated
 // approve) likewise has the last resolution after the human turn -> refused.
 //
-// Ordering is CHRONOLOGICAL (Timestamp, then buffer position as the tiebreak),
-// matching findAllEvents: readAllAuditShards concatenates per-clone shards in
-// FILENAME order, so the raw buffer is NOT time-ordered across shards (a second
-// shard appears after a re-clone or on another machine) and a raw-position scan
-// could rank an OLD resolution from a lexically-later shard above a fresh
-// HUMAN_TURN. Within one shard the timestamps are non-decreasing and the position
-// tiebreak preserves append order, which is what makes same-second events (the
-// common case: one human turn drives mint + gate + resolution inside one second)
-// resolve by execution order. Fail-open when no ledger exists (no presence
+// Ordering is CHRONOLOGICAL by Timestamp. Within one shard the append order is
+// authoritative (timestamps are non-decreasing and the buffer position preserves
+// it), which is what makes same-second events (the common case: one human turn
+// drives mint + gate + resolution inside one second) resolve by execution order.
+// ACROSS shards a raw-position scan is unsafe: readAllAuditShards concatenates
+// per-clone shards in FILENAME order (a second shard appears after a re-clone or
+// on another machine), which is NOT time order — an OLD resolution in a lexically-
+// later shard could outrank a fresh HUMAN_TURN.
+//
+// Fail-closed cross-shard same-second tie (#779, election E-779Q1 verdict A).
+// isoTimestamp is SECOND-granular (the audit-visible format is fixed and NOT
+// touched here), so a HUMAN_TURN and a consuming resolution emitted in the SAME
+// second but living in DIFFERENT shards have an ordering that filename-sort can
+// flip either way — a false-open when the sort happens to rank a consumed
+// HUMAN_TURN after its resolution. The presence predicates therefore treat any
+// same-second, cross-shard resolution as ordered AFTER a human act (the human
+// side loses the tie → consumed). Same-shard same-second order is UNCHANGED (the
+// buffer position is the real append order there). A cross-shard resolution at a
+// STRICTLY-EARLIER second still cannot mask a later human act (scenario G).
+// This is decided in the predicates (not the sort): a comparator that mixed
+// trusted same-shard order with the fail-closed cross-shard rule is not a
+// consistent total order (it can cycle), so the tie-break lives where the two
+// events being compared are known. Fail-open when no ledger exists (no presence
 // tracking yet on this harness).
 //
 // The resolution boundary is workflow-global (the most recent commit of ANY
@@ -1573,55 +1587,88 @@ function cloneId(projectDir: string): string {
 // the split the per-delegate slots key off.
 type PresenceEvent = {
   ts: string;
-  pos: number;
+  shard: number; // index of the origin shard (auditShards order); the tie-break key
+  pos: number; // append order WITHIN the origin shard (authoritative there only)
   human: boolean; // HUMAN_TURN or a verified delegation
   delegVerb?: "approve" | "reject"; // present iff this is a verified delegation
   res?: "gate" | "answer"; // present iff this is a resolution
 };
 
-// Parse + verify + chronologically order the ledger once. Returns null when no
+// Parse + verify the ledger once, tagging each event with its ORIGIN shard so the
+// predicates can apply the fail-closed cross-shard tie-break. Returns null when no
 // ledger exists at all (the fail-open signal). Delegations are verified here so
 // every downstream predicate shares one forgery-resistant view; an unverifiable
-// delegation is simply omitted.
+// delegation is simply omitted. Shards are read individually (not via the merged
+// buffer) precisely so shard boundaries survive — the merged buffer's block index
+// cannot tell which shard a same-second event came from. A shard that vanishes
+// between enumerate and read is skipped; the empty-merged-buffer fail-open signal
+// of readAllAuditShards (join by "\n") is preserved exactly — an empty buffer
+// means no ledger → no presence tracking → fail open. (These notes live up here
+// rather than inside the body: bun's lcov stamps in-body comment lines as
+// never-hit DA records, which the codecov patch gate counts as misses.)
 function scanPresenceLedger(projectDir: string): PresenceEvent[] | null {
-  const audit = readAllAuditShards(projectDir);
-  if (audit.length === 0) return null; // no ledger → no presence tracking → fail open
-  const blocks = audit.replace(/\r\n/g, "\n").split(/\n---\n/);
+  const shardPaths = auditShards(projectDir);
+  const contents: string[] = [];
+  for (const path of shardPaths) {
+    try {
+      contents.push(readFileSync(path, "utf-8"));
+    } catch {} // vanished between enumerate and read — skip (see doc above)
+  }
+  if (contents.join("\n").length === 0) return null;
   const events: PresenceEvent[] = [];
-  for (let i = 0; i < blocks.length; i++) {
-    const ev = auditBlockField(blocks[i], "Event");
-    if (!ev) continue;
-    const ts = auditBlockField(blocks[i], "Timestamp") ?? "";
-    if (ev === "HUMAN_TURN") {
-      events.push({ ts, pos: i, human: true });
-    } else if (ev === "DELEGATED_APPROVAL") {
-      if (verifyDelegatedProvenance(projectDir, blocks[i])) {
-        events.push({ ts, pos: i, human: true, delegVerb: "approve" });
+  for (let shard = 0; shard < contents.length; shard++) {
+    const blocks = contents[shard].replace(/\r\n/g, "\n").split(/\n---\n/);
+    for (let pos = 0; pos < blocks.length; pos++) {
+      const ev = auditBlockField(blocks[pos], "Event");
+      if (!ev) continue;
+      const ts = auditBlockField(blocks[pos], "Timestamp") ?? "";
+      if (ev === "HUMAN_TURN") {
+        events.push({ ts, shard, pos, human: true });
+      } else if (ev === "DELEGATED_APPROVAL") {
+        if (verifyDelegatedProvenance(projectDir, blocks[pos])) {
+          events.push({ ts, shard, pos, human: true, delegVerb: "approve" });
+        }
+      } else if (ev === "DELEGATED_REJECTION") {
+        if (verifyDelegatedProvenance(projectDir, blocks[pos])) {
+          events.push({ ts, shard, pos, human: true, delegVerb: "reject" });
+        }
+      } else if (ev === "GATE_APPROVED" || ev === "GATE_REJECTED") {
+        events.push({ ts, shard, pos, human: false, res: "gate" });
+      } else if (ev === "QUESTION_ANSWERED") {
+        events.push({ ts, shard, pos, human: false, res: "answer" });
       }
-    } else if (ev === "DELEGATED_REJECTION") {
-      if (verifyDelegatedProvenance(projectDir, blocks[i])) {
-        events.push({ ts, pos: i, human: true, delegVerb: "reject" });
-      }
-    } else if (ev === "GATE_APPROVED" || ev === "GATE_REJECTED") {
-      events.push({ ts, pos: i, human: false, res: "gate" });
-    } else if (ev === "QUESTION_ANSWERED") {
-      events.push({ ts, pos: i, human: false, res: "answer" });
     }
   }
-  events.sort((a, b) => {
-    if (a.ts !== b.ts) return a.ts < b.ts ? -1 : 1;
-    return a.pos - b.pos;
-  });
   return events;
 }
 
-// Index of the last event matching `pred`, or -1. Events are pre-sorted, so a
-// human act "opens the gate" iff its index is greater than the last consuming
-// resolution's index (nothing consuming followed it).
-function lastIndex(events: PresenceEvent[], pred: (e: PresenceEvent) => boolean): number {
-  let last = -1;
-  for (let i = 0; i < events.length; i++) if (pred(events[i])) last = i;
-  return last;
+// Does resolution `r` consume human act `h`? A resolution consumes a human act
+// when it is ordered at-or-after it. Same-shard order is authoritative (real
+// append order via pos); a strictly-later second consumes; a strictly-earlier
+// second does not. The #779 case: a same-second resolution in a DIFFERENT shard
+// has an ambiguous order, so it is treated as consuming (fail closed — the human
+// side loses the tie).
+function resolutionConsumesHuman(r: PresenceEvent, h: PresenceEvent): boolean {
+  if (r.ts !== h.ts) return r.ts > h.ts;
+  if (r.shard !== h.shard) return true; // same second, cross shard → fail closed
+  return r.pos > h.pos; // same shard → real append order
+}
+
+// True iff some human act (matching `isHuman`) is not consumed by ANY resolution
+// (matching `isResolution`) under the fail-closed ordering. This replaces the
+// pre-#779 "last human index > last resolution index" comparison: with a total
+// chronological order the two are equivalent, but the per-event consume relation
+// also encodes the fail-closed cross-shard same-second tie the sort could not.
+function humanActOutstanding(
+  events: PresenceEvent[],
+  isHuman: (e: PresenceEvent) => boolean,
+  isResolution: (e: PresenceEvent) => boolean,
+): boolean {
+  for (const h of events) {
+    if (!isHuman(h)) continue;
+    if (!events.some((r) => isResolution(r) && resolutionConsumesHuman(r, h))) return true;
+  }
+  return false;
 }
 
 // The approval-gate presence predicate. With a verb it is the #736/#685 gate
@@ -1650,16 +1697,19 @@ export function humanActedSinceGate(
   const events = scanPresenceLedger(projectDir);
   if (events === null) return true; // fail open
   if (verb === undefined) {
-    const lastResolution = lastIndex(events, (e) => e.res !== undefined);
-    const lastHuman = lastIndex(events, (e) => e.human);
-    return lastHuman > lastResolution && lastHuman !== -1;
+    return humanActOutstanding(events, (e) => e.human, (e) => e.res !== undefined);
   }
-  const lastAnyResolution = lastIndex(events, (e) => e.res !== undefined);
-  const lastHumanTurn = lastIndex(events, (e) => e.human && e.delegVerb === undefined);
-  if (lastHumanTurn > lastAnyResolution && lastHumanTurn !== -1) return true;
-  const lastGateResolution = lastIndex(events, (e) => e.res === "gate");
-  const lastMatchingDelegation = lastIndex(events, (e) => e.delegVerb === verb);
-  return lastMatchingDelegation > lastGateResolution && lastMatchingDelegation !== -1;
+  const humanTurnOutstanding = humanActOutstanding(
+    events,
+    (e) => e.human && e.delegVerb === undefined,
+    (e) => e.res !== undefined,
+  );
+  if (humanTurnOutstanding) return true;
+  return humanActOutstanding(
+    events,
+    (e) => e.delegVerb === verb,
+    (e) => e.res === "gate",
+  );
 }
 
 // Verify a delegated-provenance block (#671 DELEGATED_APPROVAL, #685
@@ -1740,12 +1790,17 @@ export function hasOpenGate(stateContent: string | null): boolean {
 export function humanActedSinceLastAnswer(projectDir: string): boolean {
   const events = scanPresenceLedger(projectDir);
   if (events === null) return true; // fail open
-  const lastAnyResolution = lastIndex(events, (e) => e.res !== undefined);
-  const lastHumanTurn = lastIndex(events, (e) => e.human && e.delegVerb === undefined);
-  if (lastHumanTurn > lastAnyResolution && lastHumanTurn !== -1) return true;
-  const lastAnswerResolution = lastIndex(events, (e) => e.res === "answer");
-  const lastDelegation = lastIndex(events, (e) => e.delegVerb !== undefined);
-  return lastDelegation > lastAnswerResolution && lastDelegation !== -1;
+  const humanTurnOutstanding = humanActOutstanding(
+    events,
+    (e) => e.human && e.delegVerb === undefined,
+    (e) => e.res !== undefined,
+  );
+  if (humanTurnOutstanding) return true;
+  return humanActOutstanding(
+    events,
+    (e) => e.delegVerb !== undefined,
+    (e) => e.res === "answer",
+  );
 }
 
 // Read a `**Field**: value` line from one audit block (tolerates an optional
