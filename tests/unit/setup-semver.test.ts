@@ -97,6 +97,18 @@ describe("SemVer#isLaterThan", () => {
     // identical prereleases are not later than each other
     expect(parseOk("1.0.0-rc.1").isLaterThan(parseOk("1.0.0-rc.1"))).toBe(false);
   });
+
+  test("a stable release is later than any prerelease of the same version (SemVer §11)", () => {
+    // comparePrerelease(a=non-null, b=null) → the stable side wins.
+    expect(parseOk("1.0.0-rc.1").isLaterThan(parseOk("1.0.0"))).toBe(false);
+    expect(parseOk("1.0.0").isLaterThan(parseOk("1.0.0-rc.1"))).toBe(true);
+  });
+
+  test("a larger set of prerelease identifiers is later when the prefix matches (SemVer §11)", () => {
+    // comparePrerelease: bId runs out first → the longer identifier list wins.
+    expect(parseOk("1.0.0-rc.1.1").isLaterThan(parseOk("1.0.0-rc.1"))).toBe(true);
+    expect(parseOk("1.0.0-rc.1").isLaterThan(parseOk("1.0.0-rc.1.1"))).toBe(false);
+  });
 });
 
 describe("SemVer#format", () => {
