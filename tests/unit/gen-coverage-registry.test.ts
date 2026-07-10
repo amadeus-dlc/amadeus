@@ -918,6 +918,7 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "e2e/t-tui-render-colour.serial.test.ts",
     "unit/gen-coverage-registry.test.ts",
     "unit/t-graph-dispatch-seam.test.ts",
+    "unit/t-batch3-orchestrate-spawn.test.ts",
     "unit/t-memory-seed.test.ts",
     "unit/t209-worktree-read-anchor.test.ts",
     "unit/t-runtime-dispatch-seam.test.ts",

@@ -15,8 +15,9 @@
 // regression guards for the SKILL.md cutover. Unit tier — no LLM, no model.
 //
 // SPAWN (not in-process): the whole contract is the argv-dispatch / process
-// boundary of amadeus-orchestrate.ts. `handleNext` is NOT exported (internal,
-// reached only through `main()` at :1965 via the `next` case at :1984). The
+// boundary of amadeus-orchestrate.ts. `handleNext` is exported as a coverage
+// seam (#750 batch3; t-batch3-orchestrate-seam drives it in-process), but this
+// file keeps testing through `main()`'s `next` dispatch at the CLI boundary. The
 // directive lands on stdout through `console.log`; errors land through the
 // composed sibling tools the non-happy-path branches shell out to
 // (amadeus-jump.ts resolve/execute, amadeus-utility.ts resolve-env-scope /

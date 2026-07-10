@@ -130,6 +130,20 @@ function parseFlags(
   return flags;
 }
 
+// Canonicalise a phase token (name or number) to its canonical name, or null.
+//
+// A bare PHASE_NUMBERS[lower] walks the prototype chain, so all-lowercase
+// Object.prototype members (`constructor`, `__proto__`) resolve to truthy
+// non-string values and slip past the `!canonical` guard. Object.hasOwn keeps
+// those names on the null path. Kept local to this tool (E-L17): the
+// PHASE_NUMBERS constant stays shared, but each site carries its own guard to
+// avoid cross-file churn; #833 tracks lifting the three copies.
+export function ownPhase(input: string): string | null {
+  const lower = input.toLowerCase();
+  if (Object.hasOwn(PHASE_NUMBERS, lower)) return PHASE_NUMBERS[lower];
+  return (PHASES as readonly string[]).includes(lower) ? lower : null;
+}
+
 // --- Subcommand: resolve ---
 
 export function handleResolve(args: string[]): void {
@@ -171,10 +185,7 @@ export function handleResolve(args: string[]): void {
       );
     }
   } else if (flags.phase) {
-    const phaseInput = flags.phase.toLowerCase();
-    const canonicalPhase =
-      PHASE_NUMBERS[phaseInput] ||
-      ((PHASES as readonly string[]).includes(phaseInput) ? phaseInput : null);
+    const canonicalPhase = ownPhase(flags.phase);
     if (!canonicalPhase) error(`Unknown phase: ${flags.phase}`);
 
     // The first EFFECTIVE-EXECUTE stage of the phase: walk the full graph in
