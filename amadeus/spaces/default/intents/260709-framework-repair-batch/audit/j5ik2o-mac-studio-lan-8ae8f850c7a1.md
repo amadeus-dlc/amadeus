@@ -5251,3 +5251,171 @@
 **Message**: PR #752はマージしていいですよ
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T03:57:48Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: acce9b33fe01ed91c
+**Message**: 修正が終わるまで手動照合で進めてください
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T03:57:54Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a43ea6e056e2579e3
+**Message**: norm PR #752はマージできる状態？
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T03:58:20Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: aa9dd06b2bd9777d2
+**Message**: PR #756、CI greenでレビューREADYならマージして
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T03:59:06Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a7b6ba66d212c3bc4
+**Message**: PR #756マージしてOK
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-10T04:00:00Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T04:02:15Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a7e063194b3589d44
+**Message**: 1
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T04:02:27Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a0ba9a33bf0d6cfa1
+**Message**: 1
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-10T04:02:30Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T04:03:22Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: ad98d07e303ef950c
+**Message**: CI が通ったらPR #756をマージして
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T04:04:01Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a430f8ca77942a7eb
+**Message**: PRとコミットメッセージも日本語にして
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T04:04:09Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a05d4712286754891
+**Message**: PRとコミットメッセージも日本語で
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T04:04:47Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: ac0b3fa584839f3dd
+**Message**: CIがgreenになったら報告して
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-10T04:05:04Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T04:06:12Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: aaba67915dea31c5c
+**Message**: PR #756がgreenになったらマージして
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T04:06:28Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: ad9c986ddd409b3a9
+**Message**: PR #756がgreenになったらマージして
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T04:07:41Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a49431f76b15996b0
+**Message**: PR #756とPR #759がgreenになったらマージして
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T04:08:14Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a65a1d7a6928c54c7
+**Message**: CIがgreenになったらPR #759をマージしてください
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-10T04:08:34Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T04:08:36Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: abced5df763d0985d
+**Message**: PR #759 が green になったらマージしてください
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T04:09:04Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a1398b50fc2dd9dcd
+**Message**: greenになったらまとめて承認確認して
+
+---
