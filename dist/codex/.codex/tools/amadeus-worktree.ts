@@ -100,18 +100,37 @@ function runGit(args: string[], cwd?: string): GitResult {
 
 // --- Worktree anchor resolution ---
 //
-// The write subcommands must operate on the MAIN checkout, even when invoked from
-// a sibling worktree (e.g. a conductor's dev worktree at `.claude/worktrees/<dev>/`).
-// `resolveWorktreeAnchor` classifies the caller's cwd relative to the main checkout
-// (resolved from `git rev-parse --git-common-dir`'s parent, canonicalised because
-// macOS symlinks `/var → /private/var`):
+// The MAIN checkout is the shared anchor for BOTH the write subcommands (which must
+// operate on it even when invoked from a sibling worktree) and the read-only `list`
+// namespace filter (which must find Bolt worktrees that live under it). Both go
+// through the one pure resolver below so the git-common-dir → main-checkout grammar
+// is defined once.
+//
+// `resolveMainCheckout` is a read-only git probe: it returns the caller cwd's own
+// toplevel and its main checkout (`git rev-parse --git-common-dir`'s parent,
+// canonicalised because macOS symlinks `/var → /private/var`), or null when the cwd
+// is not a git repo / the common dir can't be resolved. No rejection, no side
+// effects — callers decide what to do with the classification.
+function resolveMainCheckout(
+  gitCwd?: string
+): { cwdTop: string; mainCheckout: string } | null {
+  const top = runGit(["rev-parse", "--show-toplevel"], gitCwd);
+  if (!top.ok) return null;
+  const cwdTop = canonicalise(top.stdout.trim());
+  const common = runGit(["rev-parse", "--git-common-dir"], gitCwd);
+  if (!common.ok) return null;
+  const commonAbs = resolve(cwdTop, common.stdout.trim());
+  return { cwdTop, mainCheckout: canonicalise(dirname(commonAbs)) };
+}
+
+// `resolveWorktreeAnchor` classifies the WRITE caller's cwd for create/merge/discard:
 //
 //   - cwd IS the main checkout   → { gitCwd: repoCwd, anchored: false }. Byte-identical
 //       legacy behaviour: git ops and the worktree path keep the caller's RAW repoCwd,
 //       so no canonicalised path leaks into audit fields or output JSON.
 //   - cwd is a Bolt worktree     → rejected (true nesting: a Bolt worktree must not
-//       fork another). Same Bolt-detection as `handleList` (basename `bolt-*` AND
-//       parent is `<mainCheckout>/.amadeus/worktrees`).
+//       fork another). Bolt-detection matches `handleList`'s filter (basename `bolt-*`
+//       AND parent is `<mainCheckout>/.amadeus/worktrees`).
 //   - cwd is any other worktree  → { gitCwd: mainCheckout, anchored: true }. Every git
 //       op runs in the main checkout so the Bolt worktree lands as its sibling.
 //
@@ -121,25 +140,18 @@ function resolveWorktreeAnchor(repoCwd: string): {
   gitCwd: string;
   anchored: boolean;
 } {
-  const top = runGit(["rev-parse", "--show-toplevel"], repoCwd);
-  if (!top.ok) {
+  const resolved = resolveMainCheckout(repoCwd);
+  if (!resolved) {
     error("Not a git repository (or any of the parent directories).");
   }
-  const cwdTop = canonicalise(top.stdout.trim());
-
-  const common = runGit(["rev-parse", "--git-common-dir"], repoCwd);
-  if (!common.ok) {
-    error("Cannot resolve git common dir.");
-  }
-  const commonAbs = resolve(cwdTop, common.stdout.trim());
-  const mainCheckout = canonicalise(dirname(commonAbs));
+  const { cwdTop, mainCheckout } = resolved;
 
   if (cwdTop === mainCheckout) {
     // Main checkout: keep the raw repoCwd (see byte-identical note above).
     return { gitCwd: repoCwd, anchored: false };
   }
 
-  // True nesting: reject a call from inside a Bolt worktree.
+  // True nesting: reject a WRITE call from inside a Bolt worktree.
   const boltsDir = pathKey(join(mainCheckout, ".amadeus", "worktrees"));
   if (basename(cwdTop).startsWith("bolt-") && pathKey(dirname(cwdTop)) === boltsDir) {
     error(
@@ -151,19 +163,20 @@ function resolveWorktreeAnchor(repoCwd: string): {
   return { gitCwd: mainCheckout, anchored: true };
 }
 
-// Resolve the base dir the Bolt worktree path hangs under. A legacy single-repo
-// intent (repoCwd IS the projectDir) executed from a sibling worktree pins the
-// worktree under the MAIN checkout so it is a sibling of the main checkout, not
-// nested under the caller's cwd. Multi-repo (P7: repoCwd is a child repo dir,
-// != pd) keeps the workspace-roof anchor (worktreePath(pd)) unchanged.
+// Resolve the base dir the Bolt worktree namespace hangs under, shared by the write
+// paths and `list`. A legacy single-repo intent (the repo IS the projectDir) executed
+// from a sibling worktree pins the namespace at the MAIN checkout so worktrees are
+// siblings of it, not nested under the caller's cwd. Multi-repo (P7: the repo is a
+// child dir, != pd) and main-checkout runs keep the workspace-roof/pd anchor
+// (byte-identical). `legacySingleRepo` and `anchored` are computed by each caller
+// from the shared `resolveMainCheckout` classification.
 function worktreeBaseDir(
   pd: string,
-  repoCwd: string,
-  gitCwd: string,
-  anchored: boolean
+  mainCheckout: string,
+  anchored: boolean,
+  legacySingleRepo: boolean
 ): string {
-  const legacySingleRepo = pathKey(repoCwd) === pathKey(pd);
-  return anchored && legacySingleRepo ? gitCwd : pd;
+  return anchored && legacySingleRepo ? mainCheckout : pd;
 }
 
 function canonicalise(p: string): string {
@@ -245,7 +258,7 @@ function handleCreate(args: string[]): void {
     errorWithSlug(slug, `Base branch does not exist locally: ${flags.base}`);
   }
 
-  const wtPath = worktreePath(worktreeBaseDir(pd, repoCwd, gitCwd, anchored), slug);
+  const wtPath = worktreePath(worktreeBaseDir(pd, gitCwd, anchored, pathKey(repoCwd) === pathKey(pd)), slug);
   if (existsSync(wtPath)) {
     errorWithSlug(slug, `Worktree directory already exists: ${wtPath}`);
   }
@@ -332,7 +345,7 @@ function handleMerge(args: string[]): void {
     );
   }
 
-  const wtPath = worktreePath(worktreeBaseDir(pd, repoCwd, gitCwd, anchored), slug);
+  const wtPath = worktreePath(worktreeBaseDir(pd, gitCwd, anchored, pathKey(repoCwd) === pathKey(pd)), slug);
   const branchName = `bolt-${slug}`;
 
   // Rebase requires a remote for <target>. The remote-existence check is
@@ -550,7 +563,7 @@ function handleDiscard(args: string[]): void {
   const repoCwd = resolveRepoCwd(pd, flags, slug);
   const { gitCwd, anchored } = resolveWorktreeAnchor(repoCwd);
 
-  const wtPath = worktreePath(worktreeBaseDir(pd, repoCwd, gitCwd, anchored), slug);
+  const wtPath = worktreePath(worktreeBaseDir(pd, gitCwd, anchored, pathKey(repoCwd) === pathKey(pd)), slug);
   const branchName = `bolt-${slug}`;
   const dirExists = existsSync(wtPath);
   const branchExists = runGit([
@@ -617,15 +630,30 @@ function handleDiscard(args: string[]): void {
 // Usage: amadeus-worktree list
 //
 // Filters `git worktree list --porcelain` output to entries that are AIDLC
-// Bolt worktrees: parent path is `<projectDir>/.amadeus/worktrees/` AND the
-// basename starts with `bolt-`. Both conditions are required so an
-// unrelated worktree someone happens to name `bolt-other` outside our
-// namespace doesn't masquerade as a Bolt. Read-only — no audit emission.
+// Bolt worktrees: parent path is the bolts dir AND the basename starts with
+// `bolt-`. Both conditions are required so an unrelated worktree someone happens
+// to name `bolt-other` outside our namespace doesn't masquerade as a Bolt.
+// Read-only — no audit emission, no true-nest rejection (list works from anywhere,
+// including from inside a Bolt worktree).
+//
+// The bolts dir is anchored to the MAIN checkout by the SAME rule the write paths
+// use (`worktreeBaseDir` over the shared `resolveMainCheckout` classification): run
+// from a sibling worktree of a legacy single-repo intent, the namespace resolves at
+// the main checkout so `list` sees the Bolts that an anchored `create` produced.
+// Run from the main checkout, or a multi-repo intent (pd is the non-git workspace
+// roof), or outside a git repo — the pd anchor is kept (byte-identical), and the
+// non-git case lets `git worktree list` surface its existing error.
 function handleList(_args: string[]): void {
-  // No worktree-anchor resolution here — list is read-only and useful from
-  // anywhere. Run from current cwd's git context.
   const pd = resolveProjectDir(projectDir);
-  const boltsDir = pathKey(resolve(pd, ".amadeus", "worktrees"));
+  const here = resolveMainCheckout();
+  const pdRepo = resolveMainCheckout(pd);
+  const anchored = here !== null && here.cwdTop !== here.mainCheckout;
+  const legacySingleRepo =
+    here !== null &&
+    pdRepo !== null &&
+    pathKey(pdRepo.mainCheckout) === pathKey(here.mainCheckout);
+  const base = worktreeBaseDir(pd, here?.mainCheckout ?? pd, anchored, legacySingleRepo);
+  const boltsDir = pathKey(resolve(base, ".amadeus", "worktrees"));
 
   const r = runGit(["worktree", "list", "--porcelain"]);
   if (!r.ok) {

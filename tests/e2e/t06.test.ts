@@ -127,6 +127,7 @@ function commitFileIn(wt: string, name: string, content: string, msg: string): v
 interface CliResult {
   status: number;
   out: string; // combined stdout+stderr
+  stdout: string; // stdout only (the JSON contract)
 }
 
 /** Spawn `bun amadeus-worktree.ts <sub> ... --project-dir <projectDir>` from cwd. */
@@ -141,10 +142,24 @@ function run(
     [TOOL, sub, ...args, "--project-dir", projectDir],
     { cwd, encoding: "utf-8" },
   );
+  const stdout = res.stdout ?? "";
   return {
     status: res.status ?? -1,
-    out: `${res.stdout ?? ""}${res.stderr ?? ""}`,
+    out: `${stdout}${res.stderr ?? ""}`,
+    stdout,
   };
+}
+
+interface ListedBolt {
+  slug: string;
+  worktree_path: string;
+  branch: string;
+}
+
+/** Parse `amadeus-worktree list` stdout JSON into its sorted worktree array. */
+function listedBolts(stdout: string): ListedBolt[] {
+  const parsed = JSON.parse(stdout) as { worktrees: ListedBolt[] };
+  return [...parsed.worktrees].sort((a, b) => a.slug.localeCompare(b.slug));
 }
 
 /** Every `**Bolt slug**: <slug>` row across a record's audit shards (audit/*.md).
@@ -251,11 +266,36 @@ describe("t06 amadeus-worktree sibling anchoring (#670)", () => {
     expect(existsSync(wtPath(fixture, "d1"))).toBe(false);
   }, 30000);
 
-  test("T6: list succeeds from both a sibling and the main checkout (unchanged)", () => {
+  test("T6: list returns the same Bolt from a sibling and the main checkout (read/write symmetry)", () => {
     const fixture = freshFixture();
     const sibling = addSibling(fixture);
 
-    expect(run("list", sibling, sibling, []).status).toBe(0);
-    expect(run("list", fixture, fixture, []).status).toBe(0);
+    const created = run("create", sibling, sibling, ["--slug", "l1", "--base", "main"]);
+    expect(created.status).toBe(0);
+
+    const fromSibling = run("list", sibling, sibling, []);
+    const fromMain = run("list", fixture, fixture, []);
+    expect(fromSibling.status).toBe(0);
+    expect(fromMain.status).toBe(0);
+
+    // The anchored create put the Bolt under the MAIN checkout; BOTH list vantage
+    // points must report it with the SAME slug and worktree_path (the pre-fix bug
+    // returned [] from the sibling while main saw the Bolt).
+    const expected = [
+      { slug: "l1", worktree_path: wtPath(fixture, "l1"), branch: "bolt-l1" },
+    ];
+    expect(listedBolts(fromSibling.stdout)).toEqual(expected);
+    expect(listedBolts(fromMain.stdout)).toEqual(expected);
+  }, 30000);
+
+  test("T7: list from inside a Bolt worktree succeeds (read has no true-nest rejection)", () => {
+    const fixture = freshFixture();
+    const boltWt = addBoltWorktree(fixture, "l2");
+
+    // Read-only list from INSIDE a Bolt worktree: no rejection, and it still
+    // resolves the namespace to the main checkout so it sees the sibling Bolt.
+    const r = run("list", boltWt, boltWt, []);
+    expect(r.status).toBe(0);
+    expect(listedBolts(r.stdout).map((w) => w.slug)).toContain("l2");
   }, 30000);
 });
