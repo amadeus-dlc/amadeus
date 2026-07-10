@@ -172,6 +172,28 @@ describe("t179 Branch 0 exemption: --single -> not done", () => {
 });
 
 // ===========================================================================
+// Branch 0 exemption — --new-intent sets flags.newIntent (#750). The exclusion
+// list originally omitted it, so a fresh-latch bare `next --new-intent` was
+// swallowed into done and the new-work birth never fired. Adding !flags.newIntent
+// aligns the "none of its own flags set" contract with the flag set: even with a
+// fresh latch, `--new-intent` routes to the Branch 4a birth print (naming
+// intent-birth), never done.
+// ===========================================================================
+describe("t179 Branch 0 exemption: --new-intent -> not done", () => {
+  test("6: counter=N, latch{turn:N}, next --new-intent -> birth print, NOT done (newIntent exempts Branch 0)", () => {
+    proj = createTestProject();
+    seedStateFile(proj, MID_IDEATION);
+    seedLatch(proj, 3, 3);
+    const out = runNext(proj, ["--new-intent"]).out;
+    expect(out).not.toContain('"kind":"done"');
+    expect(out).not.toContain("nothing to advance");
+    // Routes to the new-work birth print (Branch 4a), not the guard.
+    expect(out).toContain('"kind":"print"');
+    expect(out).toContain("intent-birth");
+  });
+});
+
+// ===========================================================================
 // Branch 0 inert on the Claude/Codex path — with NO counter/latch files written
 // (no seam exists there), counter stays -1 (:907/:910 never set it), so the
 // :922 condition (counter>=0) is false and the guard falls through. A bare next
