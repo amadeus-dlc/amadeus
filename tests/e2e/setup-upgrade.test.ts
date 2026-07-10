@@ -58,6 +58,23 @@ function startFakeGitHubServer(
         res.end(archive);
         return;
       }
+      // Exact --version resolution goes through the git ref direct lookup
+      // (resolver.ts GIT_REF_TAGS_PATH) since #774/#802. Serve refs for tags the
+      // fixture knows and 404 the rest, mirroring the real API's not-found shape.
+      const refTag = url.pathname.match(/^\/repos\/amadeus-dlc\/amadeus\/git\/ref\/tags\/(.+)$/);
+      if (refTag) {
+        const tagName = decodeURIComponent(refTag[1]);
+        if (tags.some((t) => t.name === tagName)) {
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(
+            JSON.stringify({ ref: `refs/tags/${tagName}`, object: { sha: "0".repeat(40), type: "commit" } }),
+          );
+        } else {
+          res.writeHead(404, { "content-type": "application/json" });
+          res.end(JSON.stringify({ message: "Not Found" }));
+        }
+        return;
+      }
       res.writeHead(404);
       res.end("not found in fixture server");
     });
