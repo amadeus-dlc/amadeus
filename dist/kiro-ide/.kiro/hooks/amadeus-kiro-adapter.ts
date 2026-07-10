@@ -37,6 +37,7 @@ import {
   stateFilePath,
 } from "../tools/amadeus-lib.ts";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
+import { isSubagentTool, mapStateSyncInput } from "./amadeus-kiro-vocab.ts";
 import { existsSync, readFileSync } from "node:fs";
 
 const HOOKS_DIR = dirname(fileURLToPath(import.meta.url));
@@ -178,26 +179,24 @@ function buildForward(): Forward {
     }
 
     case "state-sync": {
-      // Kiro's todo_list is command-shaped. A `create` whose first task
-      // description carries the stage-protocol "[slug]" suffix maps to the
-      // Claude TaskUpdate in_progress transition the core hook keys on.
-      if ((kiro.tool_name ?? "") !== "todo_list") return null;
-      if ((ti.command as string) !== "create") return null;
-      const tasks = (ti.tasks as Array<{ task_description?: string }>) ?? [];
-      const desc = tasks[0]?.task_description ?? "";
-      if (!desc) return null;
+      // Dual vocabulary (#753): CLI `todo_list` (command-shaped create) or IDE
+      // `spec` (task-status shaped) — mapping lives in amadeus-kiro-vocab.ts,
+      // mirroring the canonicalTool() both-vocabularies pattern above.
+      const mapped = mapStateSyncInput(kiro.tool_name ?? "", ti);
+      if (mapped === null) return null;
       return {
         hook: "amadeus-sync-statusline.ts",
         input: {
           hook_event_name: "PostToolUse",
           tool_name: "TaskUpdate",
-          tool_input: { status: "in_progress", activeForm: desc },
+          tool_input: { status: mapped.status, activeForm: mapped.activeForm },
         },
       };
     }
 
     case "log-subagent": {
-      if ((kiro.tool_name ?? "") !== "subagent") return null;
+      // Dual vocabulary (#753): CLI `subagent` or IDE `invoke_sub_agent`.
+      if (!isSubagentTool(kiro.tool_name ?? "")) return null;
       const stages = (ti.stages as Array<{ role?: string }>) ?? [];
       const roles = [...new Set(stages.map((s) => s.role ?? "unknown"))].join(",");
       return {
