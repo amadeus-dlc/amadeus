@@ -1,5 +1,8 @@
 node_modules/
 .claude/settings.local.json
+# agmsg codex-driver delivery-mode marker: per-clone runtime state, written
+# next to .codex/hooks.json by ~/.agents/skills/agmsg (see #770).
+.codex/agmsg-delivery-mode
 .env
 .DS_Store
 ._*

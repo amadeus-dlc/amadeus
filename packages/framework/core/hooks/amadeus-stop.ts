@@ -93,6 +93,7 @@ import {
   errorMessage,
   getField,
   hooksHealthDir,
+  isMachineInjectedTurnText,
   isoTimestamp,
   parseCheckboxes,
   recordHookDrop,
@@ -634,7 +635,12 @@ function transcriptIsConversational(transcriptPath: string, format: "claude" | "
                   })
                   .join("")
               : "";
-        if (isInjectedHookFeedback(asText)) continue;
+        // Exclude the hook's own re-prompt AND any MACHINE-INJECTED turn (agmsg
+        // task-notifications / teammate-message deliveries, shared
+        // MACHINE_INJECTED_TURN_MARKERS catalog): neither is the human talking,
+        // so counting one as "the most recent genuine human prompt" would let a
+        // machine-driven turn masquerade as chat (#755).
+        if (isInjectedHookFeedback(asText) || isMachineInjectedTurnText(asText)) continue;
         // A genuine human prompt: string content, or an array with a text block.
         const isHuman =
           typeof content === "string" ||
@@ -662,8 +668,9 @@ function transcriptIsConversational(transcriptPath: string, format: "claude" | "
         // input_text blocks are the human prompt; tool output rides function_call_output.
         const content = payload.content;
         // Exclude the hook's own injected continuation (delivered as a user
-        // message on a re-prompt) so it is not mistaken for the human, mirroring
-        // the Claude reader's `Stop hook feedback:` guard.
+        // message on a re-prompt) AND any MACHINE-INJECTED turn (shared
+        // MACHINE_INJECTED_TURN_MARKERS catalog) so neither is mistaken for the
+        // human, mirroring the Claude reader (#755).
         const asText =
           typeof content === "string"
             ? content
@@ -675,7 +682,7 @@ function transcriptIsConversational(transcriptPath: string, format: "claude" | "
                   })
                   .join("")
               : "";
-        if (isInjectedHookFeedback(asText)) continue;
+        if (isInjectedHookFeedback(asText) || isMachineInjectedTurnText(asText)) continue;
         const isHuman =
           typeof content === "string" ||
           (Array.isArray(content) &&

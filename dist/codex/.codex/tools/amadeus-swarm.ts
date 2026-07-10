@@ -71,7 +71,7 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { join, resolve, sep } from "node:path";
+import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 import { appendAuditEntry } from "./amadeus-audit.ts";
@@ -101,6 +101,14 @@ interface UnitResult {
   reason?: FailureReason;
   detail?: string;
   tampered?: boolean;
+}
+
+interface FinalizeEnvelope {
+  batch: string;
+  units: UnitResult[];
+  converged: number;
+  failed: number;
+  merge_failures: { unit: string; detail: string }[];
 }
 
 // --- Sibling-tool composition (synchronous; these calls are quick) ----------
@@ -164,21 +172,49 @@ function checkConverged(cwd: string, checkCmd: string): boolean {
   return result.status === 0;
 }
 
-// Anti-tamper, re-derived from the worktree's own git fork (stateless): the
-// protected file's pristine bytes are its content at HEAD (the fork point), so a
-// worker edit shows as a working-tree change. `git diff --quiet HEAD -- <path>`
-// exits 0 when unchanged, 1 when changed; any other status (e.g. 128 — path not
-// tracked at HEAD) is not a confirmed tamper, so only status 1 trips the guard.
-function fileTampered(cwd: string, relPath: string): boolean {
-  const result = spawnSync("git", ["diff", "--quiet", "HEAD", "--", relPath], {
+export type FileTamperResult =
+  | { status: "clean" }
+  | { status: "tampered" }
+  | { status: "error"; detail: string };
+
+export function fileTamperResultForStatuses(
+  headStatus: number | null,
+  diffStatus: number | null,
+  relPath: string,
+): FileTamperResult {
+  if (headStatus !== 0) {
+    return { status: "error", detail: `protected test file is not tracked at HEAD: ${relPath}` };
+  }
+  if (diffStatus === 0) return { status: "clean" };
+  if (diffStatus === 1) return { status: "tampered" };
+  return {
+    status: "error",
+    detail: `could not compare protected test file against HEAD (git diff exit ${diffStatus}): ${relPath}`,
+  };
+}
+
+// Anti-tamper, re-derived from the worktree's own git fork (stateless). Git diff
+// exits 0 for both an unchanged tracked file and a path absent from HEAD, so the
+// HEAD object must be confirmed before interpreting diff status 0 as clean.
+function fileTampered(cwd: string, relPath: string): FileTamperResult {
+  const headPath = relPath.split(sep).join("/");
+  const head = spawnSync("git", ["cat-file", "-e", `HEAD:${headPath}`], {
     cwd,
     encoding: "utf-8",
     timeout: 60_000,
   });
-  return result.status === 1;
+  if (head.status !== 0) {
+    return fileTamperResultForStatuses(head.status, null, relPath);
+  }
+  const diff = spawnSync("git", ["diff", "--quiet", "HEAD", "--", relPath], {
+    cwd,
+    encoding: "utf-8",
+    timeout: 60_000,
+  });
+  return fileTamperResultForStatuses(head.status, diff.status, relPath);
 }
 
-interface Verdict {
+export interface Verdict {
   exists: boolean;
   converged: boolean;
   tampered: boolean;
@@ -188,7 +224,7 @@ interface Verdict {
 // Compute a unit's stateless verdict from on-disk state alone. Re-derives the
 // worktree path from (projectDir, unit) — no stored handle — so check and
 // finalize agree without sharing state.
-function verdictFor(
+export function verdictFor(
   unit: string,
   projectDir: string,
   checkCmd: string,
@@ -210,7 +246,9 @@ function verdictFor(
     if (!candidate.startsWith(root)) {
       confineError = `--test-file resolves outside the unit worktree: ${testFile}`;
     } else {
-      tampered = fileTampered(wt, testFile);
+      const tamperResult = fileTampered(wt, relative(wt, candidate));
+      if (tamperResult.status === "error") confineError = tamperResult.detail;
+      else tampered = tamperResult.status === "tampered";
     }
   }
   return { exists: true, converged, tampered, confineError };
@@ -481,7 +519,42 @@ function handleCheck(rest: string[]): void {
 
 // --- finalize ---------------------------------------------------------------
 
-function handleFinalize(rest: string[]): void {
+export function claimedUnitsOutsideBatch(
+  allUnits: readonly string[],
+  claimed: readonly string[],
+): string[] {
+  const allUnitSet = new Set(allUnits);
+  return [...new Set(claimed)].filter((unit) => !allUnitSet.has(unit));
+}
+
+export function claimedUnitsFailureEnvelope(
+  batch: string,
+  allUnits: readonly string[],
+  claimed: readonly string[],
+): FinalizeEnvelope | null {
+  const invalidClaimedUnits = claimedUnitsOutsideBatch(allUnits, claimed);
+  if (invalidClaimedUnits.length === 0) return null;
+  const units: UnitResult[] = invalidClaimedUnits.map((unit) => ({
+    unit,
+    status: "failed",
+    reason: "error",
+    detail: "claimed unit is not listed in --units",
+  }));
+  return { batch, units, converged: 0, failed: units.length, merge_failures: [] };
+}
+
+function finishFinalizeInputFailure(
+  envelope: FinalizeEnvelope,
+  exit: (code: number) => void,
+): void {
+  console.log(JSON.stringify(envelope, null, 2));
+  exit(2);
+}
+
+export function handleFinalize(
+  rest: string[],
+  exit: (code: number) => void = process.exit,
+): void {
   const { positional, flags } = parseArgs(rest);
   const projectDir = resolveProjectDir(flags["project-dir"]);
 
@@ -496,6 +569,8 @@ function handleFinalize(rest: string[]): void {
   // The universe of units in the batch; defaults to the claimed set when the
   // conductor passes only --claimed (then declined-unit accounting is a no-op).
   const allUnits = flags.units ? splitCsv(flags.units) : claimed.slice();
+  const claimedFailure = claimedUnitsFailureEnvelope(batch, allUnits, claimed);
+  if (claimedFailure) return finishFinalizeInputFailure(claimedFailure, exit);
   const claimedSet = new Set(claimed);
   const testFile = flags["test-file"];
   const checkCmd = flags["check-cmd"];
@@ -711,4 +786,4 @@ function main(): void {
   }
 }
 
-main();
+if (import.meta.main) main();
