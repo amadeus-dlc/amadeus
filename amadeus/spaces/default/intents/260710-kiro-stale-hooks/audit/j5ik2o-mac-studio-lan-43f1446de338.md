@@ -843,3 +843,191 @@
 **Options**: Approve Plan,Request Changes
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-10T02:12:01Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-10T02:12:01Z
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-10T02:12:40Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-10T02:12:40Z
+
+---
+
+## Question Answered
+**Timestamp**: 2026-07-10T02:12:40Z
+**Event**: QUESTION_ANSWERED
+**Stage**: code-generation
+**Details**: Approve Plan (leader delegate 2026-07-10T02:12)
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-10T02:12:46Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-utility
+**Command**: amadeus-utility set-status --stage kiro-stale-hooks --project-dir /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/codex-engineer-1
+**Error**: Unknown stage: kiro-stale-hooks
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T02:13:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9c32ffd8
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a4c5f9c79a76a74fe/packages/framework/harness/kiro/manifest.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T02:13:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9c32ffd8
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a4c5f9c79a76a74fe/packages/framework/harness/kiro/manifest.ts
+**Duration ms**: 861
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T02:13:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: be5ad139
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a4c5f9c79a76a74fe/packages/framework/harness/kiro/manifest.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T02:13:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: be5ad139
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a4c5f9c79a76a74fe/packages/framework/harness/kiro/manifest.ts
+**Duration ms**: 1063
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T02:14:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 65eae237
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a4c5f9c79a76a74fe/tests/smoke/t148-kiro-file-structure.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T02:14:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 65eae237
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a4c5f9c79a76a74fe/tests/smoke/t148-kiro-file-structure.test.ts
+**Duration ms**: 795
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T02:14:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: aaa617b2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a4c5f9c79a76a74fe/tests/smoke/t148-kiro-file-structure.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T02:14:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: aaa617b2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a4c5f9c79a76a74fe/tests/smoke/t148-kiro-file-structure.test.ts
+**Duration ms**: 457
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T02:15:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: 27f09e7e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a4c5f9c79a76a74fe/tests/smoke/t148-kiro-file-structure.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T02:15:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: 27f09e7e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a4c5f9c79a76a74fe/tests/smoke/t148-kiro-file-structure.test.ts
+**Duration ms**: 814
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T02:15:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: c8b2c7e0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a4c5f9c79a76a74fe/tests/smoke/t148-kiro-file-structure.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T02:15:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: c8b2c7e0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a4c5f9c79a76a74fe/tests/smoke/t148-kiro-file-structure.test.ts
+**Duration ms**: 458
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T02:19:42Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: a4c5f9c79a76a74fe
+**Message**: All Steps complete. Working tree is clean, single commit landed.\n\n## 最終レポート — bug #719 修正(code-generation)\n\n### 各 Step のチェック状況\n- **Step 1** ✅ stale `.kiro.hook` 7件を `git rm`。`amadeus-kiro-adapter.ts` 
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-10T02:20:45Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/codex-engineer-1/amadeus/spaces/default/intents/260710-kiro-stale-hooks/construction/u719-kiro-stale-hooks/code-generation/code-summary.md
+**Context**: construction > u719-kiro-stale-hooks > code-generation > code-summary.md
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T02:30:11Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a4ea4073b68693a26
+**Message**: ## レビュー結果: **READY**\n\n対象: `origin/bolt/719-kiro-stale-hooks` (HEAD `c6e1b504b`)、intent `260710-kiro-stale-hooks`\n\n### 実測した検証(すべて私自身が独立クローン `/private/tmp/.../scratchpad/review-719` で bolt ブランチをチェックアウトし
+
+---
