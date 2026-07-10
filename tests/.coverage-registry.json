@@ -2995,6 +2995,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/unit/t-sensor-fire-glob-norm.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/unit/t13-hook-input-robustness.test.ts",
           "mechanism": "cli"
         },

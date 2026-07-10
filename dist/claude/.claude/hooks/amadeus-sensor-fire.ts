@@ -191,7 +191,7 @@ const sensorTs = join(projectDir, harnessDir(), "tools", "amadeus-sensor.ts");
 for (const entry of applicableSensors) {
   if (!entry.matches) continue;
   const glob = new Bun.Glob(entry.matches);
-  if (!glob.match(filePath)) continue;
+  if (!glob.match(filePathNorm)) continue;
 
   // Spawn dispatcher (C1). Bare-script form (`bun <script> ...`)
   // matches the upstream dispatcher manifest's `command:` convention.
