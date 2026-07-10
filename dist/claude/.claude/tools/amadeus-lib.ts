@@ -1459,13 +1459,14 @@ function cloneId(projectDir: string): string {
 
 // --- Human presence at an approval/interview gate ---
 //
-// Ledger-event presence check (the marker-free design). A real human
-// is present for THIS gate-commit iff a HUMAN_TURN event appears AFTER the LAST
-// GATE RESOLUTION (GATE_APPROVED / GATE_REJECTED / QUESTION_ANSWERED) in ledger
-// append order. The prior resolution is the freshness boundary - this is the
-// consume-once semantics expressed as event order instead of a flag.
+// Ledger-event presence check (the marker-free design). "A real human acted at
+// this checkpoint this turn" is proven by scanning the append-only audit ledger
+// for a human act (HUMAN_TURN, or a verified delegated-provenance line) that a
+// consuming resolution has not yet followed. The prior resolution is the
+// freshness boundary — consume-once semantics expressed as event order instead
+// of a flag.
 //
-// Why the boundary is the prior RESOLUTION, not this gate's STAGE_AWAITING_APPROVAL
+// Why the boundary is a prior RESOLUTION, not this gate's STAGE_AWAITING_APPROVAL
 // (the live Kiro IDE spike, 2026-06-30, caught this): in the real flow ONE human
 // prompt drives the agent to BOTH open the gate AND approve it, so the human turn
 // PRECEDES this gate-open. A "human turn after gate-open" rule false-refuses every
@@ -1490,58 +1491,126 @@ function cloneId(projectDir: string): string {
 // gate), which is what makes a same-turn cascade across DIFFERENT stages refuse
 // correctly; there is no per-stage scoping.
 //
-// A delegated provenance line (#671 approval, #685 rejection) is a human act
-// ONLY when its grounding HUMAN_TURN is verified to physically exist in the
-// issuer shard. An unverifiable delegation is dropped entirely (not counted
-// as a human act, not counted as a resolution) so a forged block can neither
-// manufacture presence nor consume the freshness boundary.
+// Grounding vs resolution (#671 approval, #685 rejection). A delegated-provenance
+// line is a human act ONLY when its grounding HUMAN_TURN is verified to physically
+// exist in the issuer shard. An unverifiable delegation is dropped entirely (not
+// counted as a human act, not counted as a resolution) so a forged block can
+// neither manufacture presence nor consume any boundary.
+//
+// Per-delegate resolution slots (#736, election Q1=A / Q2=A). A HUMAN_TURN is a
+// local, single-use act: ANY resolution after it (GATE_APPROVED / GATE_REJECTED /
+// QUESTION_ANSWERED) consumes it — this is the t188 one-act-per-turn semantics and
+// is UNCHANGED. A delegation, by contrast, carries a REMOTE grounding and opens
+// exactly one KIND of gate, so it owns two independent slots:
+//   - its "gate slot" is consumed only by a GATE_APPROVED / GATE_REJECTED;
+//   - its "answer slot" is consumed only by a QUESTION_ANSWERED.
+// The #736 bug was that a QUESTION_ANSWERED (emitted by amadeus-log answer the
+// moment a delegate lands) consumed the delegation's GATE slot, so the very
+// delegate that authorised an approval could no longer satisfy the approve gate.
+// Scoping the answer to the answer slot and the gate to the gate slot fixes it
+// WITHOUT any new on-disk state — both boundaries are derived from one ledger scan.
 //
 // Verb scoping (#685): a DELEGATED_APPROVAL opens ONLY an approve gate and a
-// DELEGATED_REJECTION opens ONLY a reject gate — never each other. When a
-// verb is given, the off-verb delegation is ignored completely (neither a
-// human act nor a resolution boundary). When verb is omitted (the general
-// predicate — interview answers, delegate-issuance grounding), both verified
-// types count. This is the fix for the mixing bug where a verified approval
-// delegation falsely satisfied a reject gate.
-const GATE_RESOLUTION_EVENTS = new Set(["GATE_APPROVED", "GATE_REJECTED", "QUESTION_ANSWERED"]);
-export function humanActedSinceGate(
-  projectDir: string,
-  verb?: "approve" | "reject"
-): boolean {
+// DELEGATED_REJECTION opens ONLY a reject gate — never each other. When a verb is
+// given (the gate predicate below), an off-verb delegation is ignored for the
+// delegation branch. When verb is omitted (the general predicate — delegate-
+// issuance grounding at the two issuers), both verified types count and the
+// legacy uniform-resolution boundary is preserved so issuer grounding is unchanged.
+
+// One classified, chronologically-ordered ledger event. `delegVerb` is set only
+// for a VERIFIED delegation (unverifiable delegations are dropped during the
+// scan and never reach here). `res` classifies a resolution as a gate resolution
+// (GATE_APPROVED / GATE_REJECTED) or an answer resolution (QUESTION_ANSWERED),
+// the split the per-delegate slots key off.
+type PresenceEvent = {
+  ts: string;
+  pos: number;
+  human: boolean; // HUMAN_TURN or a verified delegation
+  delegVerb?: "approve" | "reject"; // present iff this is a verified delegation
+  res?: "gate" | "answer"; // present iff this is a resolution
+};
+
+// Parse + verify + chronologically order the ledger once. Returns null when no
+// ledger exists at all (the fail-open signal). Delegations are verified here so
+// every downstream predicate shares one forgery-resistant view; an unverifiable
+// delegation is simply omitted.
+function scanPresenceLedger(projectDir: string): PresenceEvent[] | null {
   const audit = readAllAuditShards(projectDir);
-  if (audit.length === 0) return true; // no ledger → no presence tracking → fail open
+  if (audit.length === 0) return null; // no ledger → no presence tracking → fail open
   const blocks = audit.replace(/\r\n/g, "\n").split(/\n---\n/);
-  const events: { ts: string; pos: number; human: boolean }[] = [];
+  const events: PresenceEvent[] = [];
   for (let i = 0; i < blocks.length; i++) {
     const ev = auditBlockField(blocks[i], "Event");
     if (!ev) continue;
-    const isHumanTurn = ev === "HUMAN_TURN";
-    let isDelegated = false;
-    if (ev === "DELEGATED_APPROVAL" && verb !== "reject") {
-      isDelegated = verifyDelegatedProvenance(projectDir, blocks[i]);
-    } else if (ev === "DELEGATED_REJECTION" && verb !== "approve") {
-      isDelegated = verifyDelegatedProvenance(projectDir, blocks[i]);
+    const ts = auditBlockField(blocks[i], "Timestamp") ?? "";
+    if (ev === "HUMAN_TURN") {
+      events.push({ ts, pos: i, human: true });
+    } else if (ev === "DELEGATED_APPROVAL") {
+      if (verifyDelegatedProvenance(projectDir, blocks[i])) {
+        events.push({ ts, pos: i, human: true, delegVerb: "approve" });
+      }
+    } else if (ev === "DELEGATED_REJECTION") {
+      if (verifyDelegatedProvenance(projectDir, blocks[i])) {
+        events.push({ ts, pos: i, human: true, delegVerb: "reject" });
+      }
+    } else if (ev === "GATE_APPROVED" || ev === "GATE_REJECTED") {
+      events.push({ ts, pos: i, human: false, res: "gate" });
+    } else if (ev === "QUESTION_ANSWERED") {
+      events.push({ ts, pos: i, human: false, res: "answer" });
     }
-    if (!GATE_RESOLUTION_EVENTS.has(ev) && !isHumanTurn && !isDelegated) continue;
-    events.push({
-      ts: auditBlockField(blocks[i], "Timestamp") ?? "",
-      pos: i,
-      human: isHumanTurn || isDelegated,
-    });
   }
   events.sort((a, b) => {
     if (a.ts !== b.ts) return a.ts < b.ts ? -1 : 1;
     return a.pos - b.pos;
   });
-  let lastResolution = -1;
-  let lastHuman = -1;
-  for (let i = 0; i < events.length; i++) {
-    if (events[i].human) lastHuman = i;
-    else lastResolution = i;
+  return events;
+}
+
+// Index of the last event matching `pred`, or -1. Events are pre-sorted, so a
+// human act "opens the gate" iff its index is greater than the last consuming
+// resolution's index (nothing consuming followed it).
+function lastIndex(events: PresenceEvent[], pred: (e: PresenceEvent) => boolean): number {
+  let last = -1;
+  for (let i = 0; i < events.length; i++) if (pred(events[i])) last = i;
+  return last;
+}
+
+// The approval-gate presence predicate. With a verb it is the #736/#685 gate
+// predicate (per-delegate GATE slot, verb-scoped); with no verb it is the general
+// predicate the delegate-issuance grounding relies on (legacy uniform boundary,
+// unchanged). The `verb` parameter shape is preserved for both callers.
+//
+// Verb-less branch (issuer grounding at the two delegate-issuance sites): ANY
+// human act (HUMAN_TURN or either verified delegation) after the last resolution
+// of ANY kind. Behaviour is identical to the pre-#736 code — a QUESTION_ANSWERED
+// still closes this boundary — so issuer grounding is not regressed.
+//
+// Verb branch (gate predicate, #736): true when EITHER a HUMAN_TURN sits after
+// the last resolution of any kind (local semantics, unchanged — one local turn,
+// consumed by any resolution incl. an answer), OR a verified verb-matching
+// delegation sits after the last GATE resolution (its GATE slot: a
+// QUESTION_ANSWERED does NOT consume it — the #736 fix).
+//
+// (These branch notes live up here rather than inside the body: bun's lcov
+// stamps in-body comment/blank lines as never-hit DA records, which the codecov
+// patch gate counts as misses.)
+export function humanActedSinceGate(
+  projectDir: string,
+  verb?: "approve" | "reject"
+): boolean {
+  const events = scanPresenceLedger(projectDir);
+  if (events === null) return true; // fail open
+  if (verb === undefined) {
+    const lastResolution = lastIndex(events, (e) => e.res !== undefined);
+    const lastHuman = lastIndex(events, (e) => e.human);
+    return lastHuman > lastResolution && lastHuman !== -1;
   }
-  // A human turn appears after the last gate resolution (or there is a human turn
-  // and no resolution yet) => a fresh human acted this turn => allow.
-  return lastHuman > lastResolution && lastHuman !== -1;
+  const lastAnyResolution = lastIndex(events, (e) => e.res !== undefined);
+  const lastHumanTurn = lastIndex(events, (e) => e.human && e.delegVerb === undefined);
+  if (lastHumanTurn > lastAnyResolution && lastHumanTurn !== -1) return true;
+  const lastGateResolution = lastIndex(events, (e) => e.res === "gate");
+  const lastMatchingDelegation = lastIndex(events, (e) => e.delegVerb === verb);
+  return lastMatchingDelegation > lastGateResolution && lastMatchingDelegation !== -1;
 }
 
 // Verify a delegated-provenance block (#671 DELEGATED_APPROVAL, #685
@@ -1608,12 +1677,26 @@ export function hasOpenGate(stateContent: string | null): boolean {
   return parseCheckboxes(stateContent).some((c) => c.state === "awaiting-approval");
 }
 
-// The interview path (handleAnswer) uses the SAME resolution-boundary check: a
-// QUESTION_ANSWERED is itself a gate resolution, so "a human turn since the last
-// resolution" gives one-answer-per-human-turn for free. Thin alias for call-site
-// readability; both paths share one definition so the predicate cannot drift.
+// The interview path (handleAnswer) answer predicate (#736, election Q2=A). It is
+// the mirror of the gate predicate: a delegation owns an ANSWER slot that only a
+// QUESTION_ANSWERED consumes, so a GATE_APPROVED / GATE_REJECTED landing on the
+// delegate does NOT block a subsequent answer. True when EITHER:
+//   - a HUMAN_TURN sits after the last resolution of any kind (local one-answer-
+//     per-turn semantics, unchanged — t188), OR
+//   - a verified delegation (either verb — the general verb-less acceptance range)
+//     sits after the last ANSWER resolution (its ANSWER slot).
+// A dedicated implementation, NOT an alias of humanActedSinceGate(pd): the general
+// (verb-less) gate predicate keeps the legacy uniform boundary for issuer
+// grounding, whereas the answer predicate needs the per-delegate answer slot.
 export function humanActedSinceLastAnswer(projectDir: string): boolean {
-  return humanActedSinceGate(projectDir);
+  const events = scanPresenceLedger(projectDir);
+  if (events === null) return true; // fail open
+  const lastAnyResolution = lastIndex(events, (e) => e.res !== undefined);
+  const lastHumanTurn = lastIndex(events, (e) => e.human && e.delegVerb === undefined);
+  if (lastHumanTurn > lastAnyResolution && lastHumanTurn !== -1) return true;
+  const lastAnswerResolution = lastIndex(events, (e) => e.res === "answer");
+  const lastDelegation = lastIndex(events, (e) => e.delegVerb !== undefined);
+  return lastDelegation > lastAnswerResolution && lastDelegation !== -1;
 }
 
 // Read a `**Field**: value` line from one audit block (tolerates an optional

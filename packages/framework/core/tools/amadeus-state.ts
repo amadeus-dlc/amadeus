@@ -1442,7 +1442,10 @@ function handleGateStart(args: string[]): void {
 // automatically instead of drifting between two hand-copied checks. The verb is
 // forwarded to humanActedSinceGate so delegated provenance is verb-scoped (#685):
 // a DELEGATED_APPROVAL opens ONLY approve, a DELEGATED_REJECTION opens ONLY
-// reject — a local HUMAN_TURN still opens either.
+// reject — a local HUMAN_TURN still opens either. Per-kind slots (#736): a
+// delegation's GATE slot is consumed only by GATE_APPROVED / GATE_REJECTED — an
+// interview QUESTION_ANSWERED no longer consumes it (a HUMAN_TURN is still
+// consumed by any resolution; see humanActedSinceGate for the full semantics).
 function assertHumanPresentForGateResolution(
   pd: string,
   content: string,
