@@ -260,6 +260,48 @@ describe("main — install, already-installed guard (BR-I07, REL-I02)", () => {
   });
 });
 
+describe("main — corrupt manifest is surfaced loudly, never treated as fresh (FR-742)", () => {
+  test("install exits 1 without touching the network when the manifest is present but unreadable", async () => {
+    let getJsonCalled = false;
+    const ports = fakePorts({
+      manifestIo: {
+        read: async () => ({ type: "err", error: { type: "malformed", detail: "manifest is not valid JSON: SyntaxError" } }),
+        write: () => unreachable("manifestIo.write"),
+      },
+      http: {
+        getJson: async () => {
+          getJsonCalled = true;
+          return unreachable("http.getJson");
+        },
+        downloadArchive: () => unreachable("http.downloadArchive"),
+      },
+    });
+    const exitCode = await main(["install", "--harness", "claude", "--target", NONEXISTENT_TARGET, "--yes"], ports);
+    expect(exitCode).toBe(1); // pre-fix: detect() reported 'none' and admitted the install, reaching the network
+    expect(getJsonCalled).toBe(false);
+  });
+
+  test("upgrade exits 1 without touching the network when the manifest is present but unreadable", async () => {
+    let getJsonCalled = false;
+    const ports = fakePorts({
+      manifestIo: {
+        read: async () => ({ type: "err", error: { type: "malformed", detail: "manifest is not valid JSON: SyntaxError" } }),
+        write: () => unreachable("manifestIo.write"),
+      },
+      http: {
+        getJson: async () => {
+          getJsonCalled = true;
+          return unreachable("http.getJson");
+        },
+        downloadArchive: () => unreachable("http.downloadArchive"),
+      },
+    });
+    const exitCode = await main(["upgrade", "--harness", "claude", "--target", NONEXISTENT_TARGET, "--yes"], ports);
+    expect(exitCode).toBe(1);
+    expect(getJsonCalled).toBe(false);
+  });
+});
+
 describe("main — install, interactive wizard abort (BR-I18)", () => {
   test("rejecting the wizard's confirmation exits 1 without touching any network/write port", async () => {
     const ports = fakePorts({

@@ -111,6 +111,29 @@ describe("UpgradeAssessment.of — version boundary (BR-U01~U04)", () => {
     }
     expect(assessment.isActionable()).toBe(false);
   });
+
+  // FR-747 (issue #747): upgrading from a prerelease to its release is a real
+  // upgrade, not a no-op. Before the fix isLaterThan ignored prereleases, so
+  // this resolved as downgrade-unsupported (a --version pin) instead of proceed.
+  test("FR-747: an explicit --version release newer than the installed prerelease -> proceed", () => {
+    const resolved = ResolvedVersion.fromTag(semver("1.0.0"));
+    const assessment = UpgradeAssessment.of(semver("1.0.0-rc.1"), resolved, exactSpec("1.0.0"));
+    const outcome = assessment.outcome();
+    expect(outcome.type).toBe("proceed");
+    if (outcome.type === "proceed") expect(outcome.to).toBe(resolved);
+    expect(assessment.isActionable()).toBe(true);
+  });
+
+  test("FR-747: an explicit --version prerelease older than the installed release -> downgrade-unsupported", () => {
+    const assessment = UpgradeAssessment.of(semver("1.0.0"), ResolvedVersion.fromTag(semver("1.0.0-rc.1")), exactSpec("1.0.0-rc.1"));
+    const outcome = assessment.outcome();
+    expect(outcome.type).toBe("downgrade-unsupported");
+    if (outcome.type === "downgrade-unsupported") {
+      expect(outcome.installed.format()).toBe("v1.0.0");
+      expect(outcome.requested.format()).toBe("v1.0.0-rc.1");
+    }
+    expect(assessment.isActionable()).toBe(false);
+  });
 });
 
 describe("UpgradeRefusal", () => {
@@ -212,7 +235,9 @@ describe("UpgradeSource.fromInstallation — routing (BR-U05~U09)", () => {
       mkdirSync(join(dir, ".claude"), { recursive: true });
       writeFileSync(join(dir, ".claude", "amadeus-runtime.ts"), "// legacy owned file\n");
       const manifestIo = createManifestIo(createFsRead(), createFsWrite());
-      const installation = await Installation.detect(dir, manifestIo);
+      const detected = await Installation.detect(dir, manifestIo);
+      if (detected.type === "err") throw new Error(`expected an ok installation, got err: ${detected.error.type}`);
+      const installation = detected.value;
       expect(installation.kind).toBe("manual-or-unknown"); // FR-656-1 precondition
 
       const result = UpgradeSource.fromInstallation(installation, true);

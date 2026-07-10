@@ -11,10 +11,17 @@ export type ManifestIo = {
 // BR-F11: manifest path is fixed relative to the install target.
 const MANIFEST_RELATIVE_PATH = join("amadeus", ".installer", "amadeus-setup-manifest.json");
 
+// FR-742: the absolute manifest path for a target — a pure derivation shared
+// by read/write here and by Installation.detect, which reports it when a
+// manifest is present but unreadable (so the user knows which file to fix).
+export function manifestPathFor(targetDir: string): string {
+  return join(targetDir, MANIFEST_RELATIVE_PATH);
+}
+
 export function createManifestIo(fsRead: FsRead, fsWrite: FsWrite): ManifestIo {
   return Object.freeze({
     async read(targetDir: string): Promise<Result<Manifest | null, ManifestError>> {
-      const path = join(targetDir, MANIFEST_RELATIVE_PATH);
+      const path = manifestPathFor(targetDir);
       const contents = await fsRead.readText(path);
       if (contents.type === "err") {
         if (contents.error.notFound) return Result.ok(null); // BR-F15: absent manifest is not an error
@@ -31,7 +38,7 @@ export function createManifestIo(fsRead: FsRead, fsWrite: FsWrite): ManifestIo {
     },
 
     async write(targetDir: string, manifest: Manifest): Promise<Result<void, ManifestError>> {
-      const path = join(targetDir, MANIFEST_RELATIVE_PATH);
+      const path = manifestPathFor(targetDir);
       const written = await fsWrite.writeText(path, JSON.stringify(manifest.toJSON(), null, 2));
       if (written.type === "err") return Result.err(ManifestError.io(written.error.detail));
       return Result.ok(undefined);

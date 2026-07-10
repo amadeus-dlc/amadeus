@@ -146,8 +146,14 @@ async function runInstall(parsed: ParsedCommand, ports: CliPorts): Promise<numbe
   const { inputs, mode } = resolvedInputs;
 
   // REL-I02: detection is the first I/O — an already-installed target is
-  // rejected before any network cost is paid.
-  const installation = await Installation.detect(inputs.target, ports.manifestIo);
+  // rejected before any network cost is paid. FR-742: a present-but-corrupt
+  // manifest is surfaced loudly here, never mistaken for a fresh target.
+  const detected = await Installation.detect(inputs.target, ports.manifestIo);
+  if (detected.type === "err") {
+    console.error(reporter.renderError(detected.error));
+    return 1;
+  }
+  const installation = detected.value;
   const admission = installation.admitsInstall(parsed.force);
   if (admission.type === "refuse-suggest-upgrade") {
     console.error(reporter.renderAlreadyInstalled(admission));
@@ -230,9 +236,14 @@ async function runUpgrade(parsed: ParsedCommand, ports: CliPorts): Promise<numbe
   const { inputs } = resolvedInputs;
 
   // REL-U02: detection and source classification happen before any network
-  // I/O, so all no-change refusal paths below never touch the network.
-  const installation = await Installation.detect(inputs.target, ports.manifestIo);
-  const sourceResult = UpgradeSource.fromInstallation(installation, parsed.force);
+  // I/O, so all no-change refusal paths below never touch the network. FR-742:
+  // a present-but-corrupt manifest is surfaced loudly here.
+  const detected = await Installation.detect(inputs.target, ports.manifestIo);
+  if (detected.type === "err") {
+    console.error(reporter.renderError(detected.error));
+    return 1;
+  }
+  const sourceResult = UpgradeSource.fromInstallation(detected.value, parsed.force);
   if (sourceResult.type === "err") {
     console.error(reporter.renderError(sourceResult.error));
     return 1;
