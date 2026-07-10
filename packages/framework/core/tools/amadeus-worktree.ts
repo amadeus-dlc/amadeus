@@ -323,14 +323,17 @@ export function handleCreate(
 //                        [--message <msg>] [--repo <name>] [--intent <dir>] [--space <name>]
 //
 // --repo (P7): the sibling repo the merge lands in — same resolution as `create`.
-function handleMerge(args: string[]): void {
+export function handleMerge(
+  args: string[],
+  explicitProjectDir?: string,
+): void {
   const flags = parseFlags(args);
   const slug = validateSlug(flags.slug);
   if (!flags.target) errorWithSlug(slug, "Missing --target <branch>");
   const strategy = validateStrategy(flags.strategy);
   const message = flags.message ?? `Bolt ${slug}`;
 
-  const pd = resolveProjectDir(projectDir);
+  const pd = resolveProjectDir(explicitProjectDir ?? projectDir);
   // P7: resolve the target sibling repo, then the worktree anchor. The merge runs
   // IN the main checkout (squash/merge/ff/commit/worktree-remove/branch-D); the
   // rebase still runs in the worktree (wtPath). When the caller runs from a sibling
@@ -566,10 +569,13 @@ function listConflictFiles(cwd?: string): string[] {
 // --repo (P7): the sibling repo the worktree was forked in — same resolution as
 // `create`. Idempotent: if neither directory nor branch exists, succeeds silently
 // without re-emitting audit.
-function handleDiscard(args: string[]): void {
+export function handleDiscard(
+  args: string[],
+  explicitProjectDir?: string,
+): void {
   const flags = parseFlags(args);
   const slug = validateSlug(flags.slug);
-  const pd = resolveProjectDir(projectDir);
+  const pd = resolveProjectDir(explicitProjectDir ?? projectDir);
   // P7: resolve the target sibling repo (or projectDir for legacy), then the
   // worktree anchor — the main checkout when the caller runs from a sibling worktree.
   const repoCwd = resolveRepoCwd(pd, flags, slug);
@@ -655,8 +661,11 @@ function handleDiscard(args: string[]): void {
 // Run from the main checkout, or a multi-repo intent (pd is the non-git workspace
 // roof), or outside a git repo — the pd anchor is kept (byte-identical), and the
 // non-git case lets `git worktree list` surface its existing error.
-function handleList(_args: string[]): void {
-  const pd = resolveProjectDir(projectDir);
+export function handleList(
+  _args: string[],
+  explicitProjectDir?: string,
+): void {
+  const pd = resolveProjectDir(explicitProjectDir ?? projectDir);
   const base = worktreeBaseDir(pd);
   const boltsDir = pathKey(resolve(base, ".amadeus", "worktrees"));
 

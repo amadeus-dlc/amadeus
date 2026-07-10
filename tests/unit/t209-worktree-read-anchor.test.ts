@@ -28,6 +28,12 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveWorktreeBaseDir } from "../../packages/framework/core/tools/amadeus-lib.ts";
+import {
+  handleCreate,
+  handleDiscard,
+  handleList,
+  handleMerge,
+} from "../../packages/framework/core/tools/amadeus-worktree.ts";
 import { REPO_ROOT, seedWorkspaceShell, seededStateFile } from "../harness/fixtures.ts";
 
 describe("t209 worktreeBaseDir anchor rule (#746) — pure seam", () => {
@@ -210,5 +216,69 @@ describe("t209 sibling swarm pipeline resolves the anchored worktree (#746)", ()
       unit: "u1",
       converged: true,
     });
+  });
+});
+
+// In-process seam for the WRITE handlers (norm: spawn-blindspot-seam-export).
+// The spawned origin repro above exercises the same call sites, but bun
+// --coverage cannot measure spawned subprocesses, so the #746 anchor call
+// sites inside handleMerge / handleDiscard / handleList would land uncovered.
+// These tests drive the exported handlers directly against the same fixture.
+function captureStdout(fn: () => void): string {
+  const orig = console.log;
+  let buf = "";
+  console.log = (...args: unknown[]) => {
+    buf += `${args.join(" ")}\n`;
+  };
+  try {
+    fn();
+  } finally {
+    console.log = orig;
+  }
+  return buf;
+}
+
+describe("t209 write-handler seam: merge/discard/list resolve the same anchor (#746)", () => {
+  test("merge squashes a Bolt worktree back onto the target from the main checkout", () => {
+    captureStdout(() =>
+      handleCreate(["--slug", "seam-m", "--base", "main"], scratch.clone),
+    );
+    const wt = join(scratch.clone, ".amadeus", "worktrees", "bolt-seam-m");
+    expect(existsSync(wt)).toBe(true);
+    git(wt, ["config", "user.email", "t209@example.com"]);
+    git(wt, ["config", "user.name", "t209"]);
+    writeFileSync(join(wt, "seam.txt"), "seam\n", "utf-8");
+    git(wt, ["add", "seam.txt"]);
+    git(wt, ["commit", "-q", "-m", "seam change"]);
+
+    captureStdout(() =>
+      handleMerge(
+        [
+          "--slug",
+          "seam-m",
+          "--target",
+          "main",
+          "--strategy",
+          "squash",
+          "--message",
+          "seam squash",
+        ],
+        scratch.clone,
+      ),
+    );
+    expect(git(scratch.clone, ["log", "-1", "--format=%s"])).toBe("seam squash");
+  });
+
+  test("discard of an unknown slug reports already-discarded without mutating git", () => {
+    const out = captureStdout(() =>
+      handleDiscard(["--slug", "seam-none"], scratch.clone),
+    );
+    expect(out).toContain("already-discarded");
+  });
+
+  test("list filters to bolt worktrees under the anchored base dir", () => {
+    const out = captureStdout(() => handleList([], scratch.clone));
+    const parsed = JSON.parse(out.trim()) as { worktrees: unknown[] };
+    expect(Array.isArray(parsed.worktrees)).toBe(true);
   });
 });
