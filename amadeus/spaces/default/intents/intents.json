@@ -103,5 +103,12 @@
     "dirName": "260710-kiro-stale-hooks",
     "scope": "bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019f49fc-0afa-7349-9d19-c6165c291d6c",
+    "slug": "codecov-project-gate",
+    "dirName": "260710-codecov-project-gate",
+    "scope": "refactor",
+    "status": "in-flight"
   }
 ]
