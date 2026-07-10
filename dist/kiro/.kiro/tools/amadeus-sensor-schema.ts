@@ -139,6 +139,13 @@ function requireExactValue<K extends "kind" | "default_severity">(
 // on (a) the required-fields presence loop, (b) the id-vs-filename
 // cross-check that needs both inputs, and (c) the optional-matches
 // gate. Cyclomatic complexity stays under the linter's complexity cap.
+//
+// timeout_seconds, when present, must be a positive integer. 0 is rejected
+// deliberately: spawnSync treats timeout: 0 as "no timeout" (Node's unlimited
+// semantics), which silently disables the budget cap and skews the
+// BUDGET_OVERRIDE branch. Negatives make spawnSync throw a RangeError at fire
+// time; validating here rejects the manifest before any SENSOR_FIRED emit, so
+// a bad budget can never orphan a fire.
 export function validateSensorManifest(
   obj: SensorManifest,
   file: string,
@@ -179,5 +186,13 @@ export function validateSensorManifest(
 
   if (obj.matches !== undefined) {
     requireNonEmptyString(obj, "matches", file);
+  }
+  if (obj.timeout_seconds !== undefined) {
+    if (!Number.isInteger(obj.timeout_seconds) || obj.timeout_seconds <= 0) {
+      throw new Error(
+        `${file}: timeout_seconds must be a positive integer ` +
+          `(got ${String(obj.timeout_seconds)})`,
+      );
+    }
   }
 }

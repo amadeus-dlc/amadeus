@@ -390,6 +390,10 @@
         {
           "file": "tests/e2e/t-tui-custom-harness.serial.test.ts",
           "mechanism": "tui"
+        },
+        {
+          "file": "tests/integration/t-sensor-fire-hardening.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
@@ -4212,8 +4216,16 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
+          "file": "tests/integration/t-sensor-fire-hardening.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t92.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t-sensor-fire-seam.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"

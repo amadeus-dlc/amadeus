@@ -121,6 +121,29 @@ function dispatchError(msg: string): never {
 	process.exit(1);
 }
 
+// Strip a `--project-dir <path>` flag from an argv slice, returning the value
+// and the remaining args. Sibling tools (amadeus-jump, amadeus-state) accept
+// the same flag; this dispatcher must honour it identically so a caller that
+// passes --project-dir sees the audit land under that root instead of silently
+// falling back to CLAUDE_PROJECT_DIR / cwd. Exported as a pure seam so the
+// contract is testable in-process.
+export function stripProjectDir(argv: string[]): {
+	projectDirArg?: string;
+	rest: string[];
+} {
+	let projectDirArg: string | undefined;
+	const rest: string[] = [];
+	for (let i = 0; i < argv.length; i++) {
+		if (argv[i] === "--project-dir" && i + 1 < argv.length) {
+			projectDirArg = argv[i + 1];
+			i++;
+		} else {
+			rest.push(argv[i]);
+		}
+	}
+	return { projectDirArg, rest };
+}
+
 // --- Sibling-script resolver ---
 //
 // Manifest `command:` is `bun <harness>/tools/amadeus-sensor-<id>.ts`. The
@@ -279,7 +302,7 @@ function presentConsumes(pd: string, slugs: string[]): string[] {
 // Step 4-8 — emit FIRED, spawn, decide outcome, write detail (if FAILED),
 //            emit terminal row.
 // Step 9 — exit 0.
-function handleFire(args: string[]): void {
+export function handleFire(args: string[], projectDirArg?: string): void {
 	const id = args[0];
 	if (!id || id.startsWith("--")) {
 		dispatchError("fire requires a sensor id as first positional arg");
@@ -347,7 +370,7 @@ function handleFire(args: string[]): void {
 
 	// Resolve the project dir once — used by the consume filter in step 2 and
 	// the detail-file path in step 3.
-	const projectDir = resolveProjectDir();
+	const projectDir = resolveProjectDir(projectDirArg);
 
 	// --- 2. Compute extra args for the per-sensor script ---
 	// Markdown sensors take --output-path; code sensors take --file-path.
@@ -443,15 +466,13 @@ function handleFire(args: string[]): void {
 
 	// --- 5. Spawn (no lock held). Wall-clock measured for branch a. ---
 	const startedAt = Date.now();
-	const result = spawnSync("bun", [ctx.scriptAbsPath, ...ctx.scriptArgs], {
-		encoding: "utf-8",
-		timeout: timeoutMs,
-		cwd: projectDir,
-	});
-	const elapsedMs = Date.now() - startedAt;
-
-	// --- 6. Decide outcome via the truth table ---
-	const outcome = decideOutcome(ctx, result, elapsedMs, timeoutMs);
+	const outcome = decideOutcomeOrScriptError(ctx, timeoutMs, startedAt, () =>
+		spawnSync("bun", [ctx.scriptAbsPath, ...ctx.scriptArgs], {
+			encoding: "utf-8",
+			timeout: timeoutMs,
+			cwd: projectDir,
+		}),
+	);
 
 	// --- 7. If FAILED: write detail file via wx-flag + rename ---
 	let finalOutcome = outcome;
@@ -465,7 +486,7 @@ function handleFire(args: string[]): void {
 			// Drop to script-error: bad-output equivalent — Note=detail-write-failed.
 			finalOutcome = {
 				kind: "passed",
-				durationMs: elapsedMs,
+				durationMs: outcome.durationMs,
 				note: `script-error: detail-write-failed: ${errorMessage(err)}`,
 			};
 		}
@@ -609,6 +630,42 @@ function decideOutcome(
 		durationMs: elapsedMs,
 		note: "script-error: unknown",
 	};
+}
+
+// scriptErrorOutcome — fold a synchronous spawn exception into the truth
+// table's script-error family (branch 0 shape: kind "passed" + a
+// `script-error: …` note → SENSOR_PASSED at emit time). A spawnSync that throws
+// before returning (e.g. an invalid-argument RangeError/TypeError) would
+// otherwise leave the SENSOR_FIRED row without its paired terminal row (an
+// orphan FIRED) and exit non-zero. Routing the throw through this outcome lets
+// the dispatcher always close the pair and exit 0.
+export function scriptErrorOutcome(err: unknown, elapsedMs: number): FireOutcome {
+	return {
+		kind: "passed",
+		durationMs: elapsedMs,
+		note: `script-error: spawn-threw: ${errorMessage(err)}`,
+	};
+}
+
+// decideOutcomeOrScriptError — run the injected spawn and classify its result
+// via decideOutcome, folding a synchronous spawn throw into scriptErrorOutcome.
+// The spawn is a thunk (not a call) so the single try boundary covers the throw;
+// injecting it also lets the throw/fold path be driven in-process (the real
+// spawnSync never throws for the shipped fire inputs once the manifest budget is
+// schema-validated, so the exception arm has no fixture-reachable trigger).
+export function decideOutcomeOrScriptError(
+	ctx: FireContext,
+	timeoutMs: number,
+	startedAt: number,
+	spawn: () => ReturnType<typeof spawnSync>,
+): FireOutcome {
+	let result: ReturnType<typeof spawnSync>;
+	try {
+		result = spawn();
+	} catch (err) {
+		return scriptErrorOutcome(err, Date.now() - startedAt);
+	}
+	return decideOutcome(ctx, result, Date.now() - startedAt, timeoutMs);
 }
 
 // --- Findings count read ---
@@ -803,9 +860,14 @@ Subcommands:
 }
 
 // --- main ---
-
-function main(): void {
-	const [cmd, ...args] = process.argv.slice(2);
+//
+// Strip --project-dir up front (same contract as amadeus-jump / amadeus-state)
+// so every subcommand sees a clean argv and fire can honour the flag. argv is a
+// parameter (defaulting to the real process args) so the dispatch can be driven
+// in-process by tests without a spawn (the exported seams register in lcov).
+export function main(argv: string[] = process.argv.slice(2)): void {
+	const { projectDirArg, rest } = stripProjectDir(argv);
+	const [cmd, ...args] = rest;
 	if (cmd === "--help" || cmd === "-h") {
 		printHelp();
 		return;
@@ -824,7 +886,7 @@ function main(): void {
 			handleDescribe(args);
 			return;
 		case "fire":
-			handleFire(args);
+			handleFire(args, projectDirArg);
 			return;
 		default:
 			process.stderr.write(
@@ -834,4 +896,9 @@ function main(): void {
 	}
 }
 
-main();
+// Guard the CLI entry so the module can be imported (exported seams are driven
+// in-process by tests) without executing main() / process.exit at load time.
+// Matches the sibling tools (amadeus-jump, amadeus-state).
+if (import.meta.main) {
+	main();
+}
