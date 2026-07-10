@@ -64,6 +64,7 @@ const preserved = [
   ".claude/worktrees/",
   ".codex/config.toml",
   ".codex/hooks.json",
+  ".codex/agmsg-delivery-mode",
   ".codex/local/",
 ];
 
