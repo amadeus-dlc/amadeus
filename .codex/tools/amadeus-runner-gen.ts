@@ -272,32 +272,27 @@ conductor runs the same forwarding loop as \`/amadeus\`.
 // Write (or refresh) every stage-runner dir from the RUNNABLE stage list (init
 // stages excluded — see isRunnableStage), plus the single `/amadeus-init` phase
 // wrapper and the `/amadeus-compose` composer shortcut. Idempotent: re-running
-// emits byte-identical SKILL.md files. Also PRUNES any stale init-phase
-// stage-runner dir (amadeus-state-init, amadeus-workspace-detection,
-// amadeus-workspace-scaffold) left by an earlier generation that emitted runners
-// for all 32 stages. Returns the slugs written.
-function handleWrite(): string[] {
+// emits byte-identical SKILL.md files. Also PRUNES every orphan stage-runner —
+// any skills/amadeus-<slug>/ carrying the runner signature whose slug is no
+// longer a runnable compiled stage (this includes the stale per-init-stage
+// runners of an earlier all-32 generation AND a runner left behind when the
+// graph drops a stage). Returns the slugs written.
+export function handleWrite(skillsDir: string = SKILLS_DIR): string[] {
   const slugs = stageSlugs();
   for (const node of runnableStages()) {
-    const dir = join(SKILLS_DIR, runnerDirName(node.slug));
+    const dir = join(skillsDir, runnerDirName(node.slug));
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, "SKILL.md"), renderStageRunner(node), "utf-8");
   }
   // Emit the init-phase wrapper.
-  const initDir = join(SKILLS_DIR, INIT_RUNNER_DIR);
+  const initDir = join(skillsDir, INIT_RUNNER_DIR);
   if (!existsSync(initDir)) mkdirSync(initDir, { recursive: true });
   writeFileSync(join(initDir, "SKILL.md"), renderInitRunner(), "utf-8");
   // Emit the composer shortcut.
-  const composeDir = join(SKILLS_DIR, COMPOSE_RUNNER_DIR);
+  const composeDir = join(skillsDir, COMPOSE_RUNNER_DIR);
   if (!existsSync(composeDir)) mkdirSync(composeDir, { recursive: true });
   writeFileSync(join(composeDir, "SKILL.md"), renderComposeRunner(), "utf-8");
-  // Prune stale per-init-stage runner dirs from an earlier all-32 generation.
-  for (const node of loadGraph()) {
-    if (isRunnableStage(node)) continue;
-    const staleDir = join(SKILLS_DIR, runnerDirName(node.slug));
-    const staleSkill = join(staleDir, "SKILL.md");
-    if (isRunnerSkill(staleSkill)) rmSync(staleDir, { recursive: true, force: true });
-  }
+  pruneOrphanRunners(skillsDir, slugs);
   return slugs;
 }
 
@@ -333,6 +328,31 @@ function onDiskRunnerSlugs(): string[] {
     }
   }
   return found;
+}
+
+// Remove every ORPHAN stage-runner under `skillsDir`: a `skills/amadeus-<slug>/`
+// dir carrying the runner signature (`isRunnerSkill`) whose slug is NOT in
+// `compiledSlugs` (the runnable compiled stage set). This is the on-disk scan
+// `onDiskRunnerSlugs`/`handleCheck` use, made into a pure prune so `write`
+// restores the exact set `check` asserts (check/write symmetry). Directories
+// without the `--stage`+`--single` marker — the /amadeus-init and
+// /amadeus-compose wrappers, scope-runners, and any hand-made non-runner skill —
+// are never counted as runners and so are never removed. Idempotent: a second
+// call finds no orphans and returns []. Returns the pruned slugs, sorted.
+export function pruneOrphanRunners(skillsDir: string, compiledSlugs: string[]): string[] {
+  if (!existsSync(skillsDir)) return [];
+  const compiledSet = new Set(compiledSlugs);
+  const removed: string[] = [];
+  for (const entry of readdirSync(skillsDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    if (!entry.name.startsWith("amadeus-")) continue;
+    const slug = entry.name.slice("amadeus-".length);
+    if (compiledSet.has(slug)) continue;
+    if (!isRunnerSkill(join(skillsDir, entry.name, "SKILL.md"))) continue;
+    rmSync(join(skillsDir, entry.name), { recursive: true, force: true });
+    removed.push(slug);
+  }
+  return removed.sort();
 }
 
 // Stage-runner drift guard (t129's mechanism): the on-disk runner set must be

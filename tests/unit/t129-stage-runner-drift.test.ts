@@ -280,14 +280,17 @@ describe("t129 stage-runner drift guard (migrated from t129-stage-runner-drift.s
   }, 30000);
 
   // ===========================================================================
-  // Test 6 — regenerating restores sync. In a SANDBOX, drift the tree (drop a
-  // runner AND add an orphan), confirm `check` is red, then `write` (regenerate +
-  // prune) and confirm `check` returns to exit 0 + the in-sync headline. Proves
-  // the guard is RESTORABLE by the generator, not just a one-way trip-wire.
+  // Test 6 — regenerating restores sync AND write PRUNES orphans (#785 FR-3). In
+  // a SANDBOX, drift the tree (drop a runner AND add an orphan stage-runner),
+  // confirm `check` is red, then `write` alone — WITHOUT a manual orphan rm —
+  // must restore exit 0: write regenerates the missing runner and prunes the
+  // orphan (check/write symmetry). A hand-made non-runner dir (no runner
+  // signature) must SURVIVE write, proving prune never over-reaches.
   // ===========================================================================
-  test("write regenerates the runner set and check returns to exit 0 [.sh test 7]", () => {
+  test("write regenerates and PRUNES orphans so check returns to exit 0 [.sh test 7 + #785]", () => {
     const { gen, skills } = newSandbox();
-    // Drift it two ways: delete a real runner AND add an orphan runner.
+    // Drift it two ways: delete a real runner AND add an orphan stage-runner
+    // (carries the `--stage … --single` signature for a slug not in the graph).
     rmSync(join(skills, "amadeus-functional-design"), { recursive: true, force: true });
     const orphanDir = join(skills, "amadeus-stale-dropped-stage");
     mkdirSync(orphanDir, { recursive: true });
@@ -296,16 +299,27 @@ describe("t129 stage-runner drift guard (migrated from t129-stage-runner-drift.s
       "---\nname: amadeus-stale-dropped-stage\ndescription: stale\n---\n# stale\nDrives `--stage stale-dropped-stage --single`.\n",
       "utf-8",
     );
+    // A hand-made NON-runner dir (no `--stage`/`--single` markers) — write must
+    // NOT delete it (prune targets only signature-carrying orphans).
+    const keepDir = join(skills, "amadeus-my-notes");
+    mkdirSync(keepDir, { recursive: true });
+    writeFileSync(
+      join(keepDir, "SKILL.md"),
+      "---\nname: amadeus-my-notes\ndescription: not a runner\n---\n# notes\n",
+      "utf-8",
+    );
     // Sanity: drift is genuinely red before regeneration.
     const drifted = runGen(gen, ["check"]);
     expect(drifted.status).toBe(1);
 
-    // Regenerate: write restores the missing runner; orphan removal — the .sh
-    // rm -rf'd the orphan before `write`, since write PRUNES only stale INIT-phase
-    // runners (handleWrite :225-231), not arbitrary orphans. Mirror that.
-    rmSync(orphanDir, { recursive: true, force: true });
+    // Regenerate: write restores the missing runner AND prunes the orphan — no
+    // manual rm. This is exactly the #785 fix (write previously pruned only stale
+    // init-phase runners, leaving arbitrary orphans behind).
     const wrote = runGen(gen, ["write"]);
     expect(wrote.status).toBe(0);
+    // The orphan is gone; the non-runner dir survives.
+    expect(existsSync(orphanDir)).toBe(false);
+    expect(existsSync(keepDir)).toBe(true);
 
     const r = runGen(gen, ["check"]);
     expect(r.status).toBe(0);
