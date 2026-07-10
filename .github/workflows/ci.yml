@@ -91,6 +91,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Install lizard (CCN measurement, pinned — the suite's complexity-gate tests spawn it)
+        run: pip install lizard==1.23.0
+
       - name: Generate coverage reports
         run: bun run coverage:ci
 
