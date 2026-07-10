@@ -1,6 +1,9 @@
 // t-package-write-sweep: regression guard for GitHub #771.
 //
 // covers: file:scripts/package.ts (writeHarness project-root post-sweep)
+// in-process by design: writeHarness/checkHarness are driven via direct import,
+// not a package.ts subprocess, because bun --coverage does not instrument spawned
+// children — a CLI-spawn test would leave the new sweep lines uncovered.
 //
 // WHAT. `package.ts <name>` (write mode) clean-swept only <harnessDir>/ and
 // amadeus/, never the project-root output layer directly under dist/<name>/. So
