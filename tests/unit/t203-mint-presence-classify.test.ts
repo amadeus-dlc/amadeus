@@ -192,13 +192,17 @@ describe("t203: isMachineInjectedTurnText classifies the shared catalog (#755)",
     expect(isMachineInjectedTurnText("")).toBe(false);
   });
 
-  test("a marker at offset>0 but within the 256-byte window is detected", () => {
-    const preamble = "x".repeat(40); // arbitrary non-marker leading text
-    expect(isMachineInjectedTurnText(`${preamble}<task-notification>`)).toBe(true);
+  test("ASCII prefix: marker start byte offset 255 is detected and 256 is not", () => {
+    const marker = MACHINE_INJECTED_TURN_MARKERS[0];
+    expect(isMachineInjectedTurnText(`${"x".repeat(255)}${marker}`)).toBe(true);
+    expect(isMachineInjectedTurnText(`${"x".repeat(256)}${marker}`)).toBe(false);
   });
 
-  test("a marker pushed beyond the 256-byte window is NOT detected (fail-open bound)", () => {
-    const filler = "x".repeat(256); // pushes the marker fully past the window
-    expect(isMachineInjectedTurnText(`${filler}<task-notification>`)).toBe(false);
+  test("multi-byte prefix: marker start UTF-8 byte offset 255 is detected and 256 is not", () => {
+    const marker = MACHINE_INJECTED_TURN_MARKERS[0];
+    const byte255Prefix = "あ".repeat(85);
+    const byte256Prefix = `${byte255Prefix}x`;
+    expect(isMachineInjectedTurnText(`${byte255Prefix}${marker}`)).toBe(true);
+    expect(isMachineInjectedTurnText(`${byte256Prefix}${marker}`)).toBe(false);
   });
 });

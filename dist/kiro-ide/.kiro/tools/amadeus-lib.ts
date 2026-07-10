@@ -332,21 +332,26 @@ export const MACHINE_INJECTED_TURN_MARKERS: readonly string[] = [
   "[SYSTEM NOTIFICATION - NOT USER INPUT]",
 ];
 
-// True when `text` opens as a machine-injected turn: any catalog marker within
-// the leading 256 chars (ASCII markers, so a byte window). #708's classifier
+// True when `text` opens as a machine-injected turn: any catalog marker whose
+// UTF-8 start byte offset is less than 256. #708's classifier
 // only matched a bare `startsWith("<task-notification>")` and so missed the
 // preamble-prefixed and teammate-message forms (#755): the measured marker
 // offsets are 0 (task-notification / preamble lines) and 39 (the `<teammate-
 // message` tag after the "Another Claude session sent a message:\n" preamble,
 // 3/3 in this session's conductor transcript), so N=256 is ~6x the largest
-// observed offset. A leading window (not a whole-body scan) keeps the fail-open
-// property intact: a human opening their prompt's first 256 bytes with one of
-// these fixed markers is a negligible risk, and the threat model is a MODEL
-// fabricating presence, not a human disowning their own input.
+// observed byte offset. The marker body may extend beyond byte 255; only its
+// start offset is bounded. A leading window (not a whole-body scan) keeps the
+// fail-open property intact: a human opening their prompt's first 256 bytes with
+// one of these fixed markers is a negligible risk, and the threat model is a
+// MODEL fabricating presence, not a human disowning their own input.
 export function isMachineInjectedTurnText(text: string): boolean {
-  const head = text.slice(0, 256);
+  const bytes = new TextEncoder().encode(text);
   for (const marker of MACHINE_INJECTED_TURN_MARKERS) {
-    if (head.includes(marker)) return true;
+    const markerBytes = new TextEncoder().encode(marker);
+    const lastStart = Math.min(256, bytes.length);
+    for (let start = 0; start < lastStart; start++) {
+      if (markerBytes.every((byte, offset) => bytes[start + offset] === byte)) return true;
+    }
   }
   return false;
 }

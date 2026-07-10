@@ -106,10 +106,25 @@ import {
 } from "../harness/fixtures.ts";
 import { MACHINE_INJECTED_TURN_MARKERS } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
-// A live-observed teammate-message injected turn, derived from the shared
-// catalog so a marker rename cannot leave a stale copy here (#755). The tier-3
-// carve-out must NOT count this as the human talking.
-const TEAMMATE_INJECTED_TURN = `${MACHINE_INJECTED_TURN_MARKERS[2]}\n${MACHINE_INJECTED_TURN_MARKERS[1]} from="researcher">start on task #1</teammate-message>`;
+// Live-observed machine-injected turns, derived from the shared catalog so a
+// marker rename cannot leave stale copies here (#755). The tier-3 carve-out
+// must NOT count any catalog form as the human talking.
+const MACHINE_INJECTED_TURNS: ReadonlyArray<readonly [string, string]> = [
+  ["task-notification", `${MACHINE_INJECTED_TURN_MARKERS[0]}\ntask-id: abc123\n...`],
+  [
+    "teammate-message tag",
+    `${MACHINE_INJECTED_TURN_MARKERS[1]} from="researcher">start on task #1</teammate-message>`,
+  ],
+  [
+    "teammate-message preamble",
+    `${MACHINE_INJECTED_TURN_MARKERS[2]}\n${MACHINE_INJECTED_TURN_MARKERS[1]} from="researcher">start on task #1</teammate-message>`,
+  ],
+  [
+    "system-notification preamble",
+    `${MACHINE_INJECTED_TURN_MARKERS[3]}\nAn event fired.\n${MACHINE_INJECTED_TURN_MARKERS[0]}event: build-done</task-notification>`,
+  ],
+];
+const TEAMMATE_INJECTED_TURN = MACHINE_INJECTED_TURNS[2][1];
 
 const BUN = process.execPath; // the bun running this test (mirrors t104)
 const REPO_ROOT = join(import.meta.dir, "..", "..");
@@ -1555,40 +1570,25 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
   }, 30000);
 
-  test("(j) a transcript whose only user turn is a machine-injected form is NOT conversational -> BLOCK (Claude)", () => {
-    const proj = makeProject();
-    seedActive(proj, "requirements-analysis");
-    // No genuine human prompt at all — just a machine-injected teammate-message
-    // turn answered with text. Excluded from human-prompt detection, so no anchor
-    // is found -> isConversationalStop returns false -> the cap-bounded block
-    // stands (a machine ping must never release the loop as if a human chatted).
-    const tp = seedTranscriptEntries(proj, "claude", [
-      { kind: "userText", text: TEAMMATE_INJECTED_TURN },
-      { kind: "text" },
-    ]);
-    const r = runHook(
-      proj,
-      JSON.stringify({ stop_hook_active: false, transcript_path: tp }),
-      "run-stage",
-    );
-    expect(r.rc).toBe(0);
-    expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-  }, 30000);
-
-  test("(j) Codex: a machine-injected form as the only user turn is NOT conversational -> BLOCK", () => {
-    const proj = makeProject();
-    seedActive(proj, "requirements-analysis");
-    // Same exclusion in the codex reader.
-    const tp = seedTranscriptEntries(proj, "codex", [
-      { kind: "userText", text: TEAMMATE_INJECTED_TURN },
-      { kind: "text" },
-    ]);
-    const r = runHook(
-      proj,
-      JSON.stringify({ stop_hook_active: false, transcript_path: tp }),
-      "run-stage",
-    );
-    expect(r.rc).toBe(0);
-    expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
-  }, 30000);
+  for (const [formName, injectedTurn] of MACHINE_INJECTED_TURNS) {
+    for (const format of ["claude", "codex"] as const) {
+      test(`(j) ${format}: ${formName} as the only user turn is NOT conversational -> BLOCK`, () => {
+        const proj = makeProject();
+        seedActive(proj, "requirements-analysis");
+        // No genuine human prompt at all. Excluding the machine turn leaves no
+        // anchor, so the cap-bounded BLOCK stands in both transcript readers.
+        const tp = seedTranscriptEntries(proj, format, [
+          { kind: "userText", text: injectedTurn },
+          { kind: "text" },
+        ]);
+        const r = runHook(
+          proj,
+          JSON.stringify({ stop_hook_active: false, transcript_path: tp }),
+          "run-stage",
+        );
+        expect(r.rc).toBe(0);
+        expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
+      }, 30000);
+    }
+  }
 });
