@@ -67,3 +67,31 @@
 4. #677: `getJson()` の `.json()` 呼び出しを try/catch で包み、パース失敗を `FetchError` に分類して `Result.err` を返すようにする。
 5. #678: 実際に PAX/GNU ヘッダがチャンク境界を跨ぐ tar.gz を用意した回帰テストを作成し、現状の実装が正しいことを実証するか、実際に破綻する入力を特定する。
 6. #668: `codekbRepoName()` の fallback を `basename(projectDir)` から、worktree を認識した実リポジトリ名の解決(例: `git rev-parse --show-toplevel` の親、または `.git` の `commondir` を辿る)に変更する。
+
+## Coverage CI 経路(260710-codecov-project-gate の対象)
+
+> 出典: `.github/workflows/ci.yml`・`codecov.yml`・`tests/run-tests.ts`・`tests/gen-coverage-registry.ts`・`tests/.coverage-ratchet.json`(2026-07-10, HEAD 98089faf 実測)。本 intent はこの経路へ「Codecov 非依存の自前 project ゲート」を追加する。
+
+### CI ジョブ DAG(`.github/workflows/ci.yml`)
+
+| ジョブ | 行 | 役割 | カバレッジ関与 |
+| --- | --- | --- | --- |
+| `check` | :20-58 | typecheck・lint・dist:check・promote:self:check・`test:ci` | なし |
+| `coverage` | :60-103 | `needs: [check]`。`bun run coverage:ci`(:82)で lcov 生成、`coverage/lcov.info` と `coverage/html` を artifact 化(:84-93)し Codecov へ OIDC 送信(:95-103、`fail_ci_if_error: true`) | **本 intent の入力元** |
+| `codecov-status` | :105-200 | `needs: [coverage]`, `if: always()`。`github-script`(:117)で外部 status を polling: `requiredChecks` 組立(:132-138、#717 が触る箇所)、`waitForCheck()` 最大60回×10秒(:144-178)、check-run/combined-status 両経路探索(:180-200) | Codecov status 待ち。**自前ゲートは polling 不要** |
+| `ci-success` | :202-225 | `needs: [check, coverage, codecov-status]`, `if: always()`。`require_result()`(:213-220)が各 `needs.<job>.result` を `success` と厳格比較、集約対象は3ジョブ(:222-224) | 集約ゲート |
+
+### 総カバレッジ% 算出箇所(`tests/run-tests.ts`)
+
+- per-file LCOV 生成: `bun test --coverage --coverage-reporter=lcov` を個別実行し `coverage/.parts/<safe-name>/` へ出力(:753-776)。
+- 結合 → 正規化 → 書き出し: `combineCoverageReports()`(:641-660)→ `normalizeCoverageReport()`(:503-563)→ `coverage/lcov.info`。正規化は harness 生成パス(`.claude/`・`.codex/`・`dist/*/.{claude,codex,kiro}/`)を `packages/framework/core/` へ再マップ(:488-501)。
+- 正規化後レコード: `SF` / `FNF` / `FNH` / `DA:<line>,<count>` / `LF`(=DA 行数, :557)/ `LH`(=count>0 の DA 行数, :558)/ `end_of_record`(:546-561)。
+- **総% は既に算出済み**: `writeCoverageHtml()`(:597-599, :627)が `totalHits/totalLines` から `Total line coverage: {pct}% ({totalHits}/{totalLines})` を HTML へ出力。ただし機械可読(stdout/JSON)な emit 経路は現状なし(:627 が唯一)。
+
+### ラチェット機構(`tests/gen-coverage-registry.ts` + `tests/.coverage-ratchet.json`)
+
+- ベースライン: `tests/.coverage-ratchet.json`(クラス別 covered ユニット**件数**、%ではない)。path は `AMADEUS_COVERAGE_RATCHET` env で上書き可(:104-105)。
+- 単調 fail-closed 判定: `runCheck()`(:1242-1266)が各クラスで `now < base` を検知して `ok=false`(増やせるが黙って減らせない)。
+- 更新: `writeAll()`(:1275-1278)が `--check` なし実行で registry+ratchet を再生成。人間がレビュー付きコミットで更新(:1259-1262 が手順案内)。
+- `--check` 実行契約: drift・空クラス・cross-check・ratchet を検査し失敗時 `process.exit(1)`(:1283-1290)。CI 直接ステップは無く、`tests/unit/gen-coverage-registry.test.ts` が `spawnSync`(:152, :267, :279)で **temp tree** に対し落ちる実証を行う。
+- **自前 project ゲートのベースライン運用テンプレート**: リポ内コミット済みファイル + 単調 fail-closed + env 差し替えでの落ちる実証、という同型が既に確立。

@@ -1,6 +1,21 @@
 # リバースエンジニアリング実施記録
 
+> このファイルはリポジトリ単位の**共有鮮度ポインタ**(last-writer-wins)であり、直近スキャンのメタデータを反映する。各 intent の差分ベース点は `re-scans/<intent-record>.md` に置かれ、このファイルからは導出しない(#707)。
+
 ## 実行メタデータ
+
+- Date: 2026-07-10
+- Intent: `260710-codecov-project-gate`
+- Scope: `refactor`
+- Repository: `/Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-2`
+- Stage: `reverse-engineering`(2.1)
+- 手法: per-intent re-scan(本 intent の `re-scans/` は初回のため差分ベースなし。base=none / observed=HEAD)
+- Base commit: `none`(初回 re-scan、差分ベースなし)
+- Observed commit: `98089faf175e1f39460821303d4682d8ab3cee06`
+- Focus: #734 選挙 A — 既存 Coverage Report ジョブの lcov から総カバレッジ% を自前算出し、main ベースライン比で fail-closed 判定する project ゲート(Codecov の project status 非依存)。重点ファイル: `.github/workflows/ci.yml`(coverage/codecov-status/ci-success)、`codecov.yml`、`tests/run-tests.ts`(総%算出)、`tests/gen-coverage-registry.ts` + `tests/.coverage-ratchet.json`(ラチェット前例)、`package.json`(coverage:ci)。
+- 詳細スキャン記録: `amadeus/spaces/default/intents/260710-codecov-project-gate/inception/reverse-engineering/developer-scan.md`、per-intent ベース点: `re-scans/260710-codecov-project-gate.md`
+
+## 前回スキャンメタデータ(参考・上書き前)
 
 - Date: 2026-07-09
 - Intent: `260709-bug-zero-batch`
