@@ -31,22 +31,28 @@ function contents(fromVersion: string, fromBadge: string): Record<string, string
   };
 }
 
+/** shields.io escapes a literal dash as `--` inside a path segment (#740). */
+const escapeBadge = (v: string): string => v.replaceAll("-", "--");
+
 describe("release-version-sync plan seam — FR-702-1 badge transitions", () => {
   // The four badge transitions FR-702-1 requires the symmetric regex to cover.
+  // Prerelease from-badges use the shields-escaped form the replacement writes
+  // (`0.2.0--beta.1`); the legacy unescaped form is covered separately below.
   const cases: Array<{ name: string; fromBadge: string; to: string }> = [
     { name: "stable -> stable", fromBadge: "0.1.1", to: "0.2.0" },
     { name: "stable -> prerelease", fromBadge: "0.1.1", to: "0.2.0-beta.1" },
-    { name: "prerelease -> prerelease", fromBadge: "0.2.0-beta.1", to: "0.2.0-beta.2" },
-    { name: "prerelease -> stable", fromBadge: "0.2.0-beta.1", to: "0.2.0" },
+    { name: "prerelease -> prerelease", fromBadge: "0.2.0--beta.1", to: "0.2.0-beta.2" },
+    { name: "prerelease -> stable", fromBadge: "0.2.0--beta.1", to: "0.2.0" },
   ];
 
   for (const c of cases) {
     test(`${c.name}: plan patches both surfaces to the target`, () => {
-      const result = planVersionSync(c.to, contents(c.fromBadge, c.fromBadge));
+      // version.ts holds the raw semver of the from-state (unescape the badge).
+      const result = planVersionSync(c.to, contents(c.fromBadge.replaceAll("--", "-"), c.fromBadge));
       expect(result.ok).toBe(true);
       if (!result.ok) return; // narrow for TS; the assert above already failed
       const byPath = Object.fromEntries(result.entries.map((e) => [e.relPath, e]));
-      expect(byPath[README_REL].next).toContain(`badge/version-${c.to}-blue`);
+      expect(byPath[README_REL].next).toContain(`badge/version-${escapeBadge(c.to)}-blue`);
       expect(byPath[VERSION_REL].next).toContain(`AMADEUS_VERSION = "${c.to}"`);
     });
   }
@@ -56,6 +62,51 @@ describe("release-version-sync plan seam — FR-702-1 badge transitions", () => 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     for (const e of result.entries) expect(e.changed).toBe(false);
+  });
+});
+
+describe("release-version-sync plan seam — #740 shields badge dash escaping", () => {
+  test("prerelease version writes a shields-escaped badge (`-` -> `--`)", () => {
+    const result = planVersionSync("0.2.0-rc.1", contents("0.1.1", "0.1.1"));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const byPath = Object.fromEntries(result.entries.map((e) => [e.relPath, e]));
+    expect(byPath[README_REL].next).toContain("badge/version-0.2.0--rc.1-blue");
+    // The raw (404-prone) form must NOT survive in the badge URL.
+    expect(byPath[README_REL].next).not.toContain("badge/version-0.2.0-rc.1-blue");
+    // version.ts keeps the raw semver — escaping is badge-only.
+    expect(byPath[VERSION_REL].next).toContain(`AMADEUS_VERSION = "0.2.0-rc.1"`);
+  });
+
+  test("re-running over an escaped prerelease badge is idempotent (no double escape)", () => {
+    const first = planVersionSync("0.2.0-rc.1", contents("0.1.1", "0.1.1"));
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    const afterFirst = Object.fromEntries(first.entries.map((e) => [e.relPath, e.next]));
+    const second = planVersionSync("0.2.0-rc.1", afterFirst);
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+    for (const e of second.entries) expect(e.changed).toBe(false);
+    const readme = second.entries.find((e) => e.relPath === README_REL);
+    expect(readme?.next).toContain("badge/version-0.2.0--rc.1-blue");
+    expect(readme?.next).not.toContain("0.2.0----rc.1");
+  });
+
+  test("a legacy unescaped prerelease badge is still accepted and gets escaped", () => {
+    const result = planVersionSync("0.2.0-rc.1", contents("0.2.0-rc.1", "0.2.0-rc.1"));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const readme = result.entries.find((e) => e.relPath === README_REL);
+    expect(readme?.changed).toBe(true);
+    expect(readme?.next).toContain("badge/version-0.2.0--rc.1-blue");
+  });
+
+  test("stable versions are untouched by escaping (non-regression)", () => {
+    const result = planVersionSync("0.2.0", contents("0.1.1", "0.1.1"));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const readme = result.entries.find((e) => e.relPath === README_REL);
+    expect(readme?.next).toContain("badge/version-0.2.0-blue");
   });
 });
 

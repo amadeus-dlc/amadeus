@@ -87,6 +87,9 @@ describe("t68 framework version sync (version.ts / CLI / README badge)", () => {
     // acceptance regex in scripts/release-version-sync.ts.
     const m = src.match(/badge\/version-([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)-blue/);
     expect(m).not.toBeNull();
-    expect((m as RegExpMatchArray)[1]).toBe(tsVersion);
+    // shields.io escapes a literal dash as `--` inside a path segment, so a
+    // prerelease badge carries `0.2.0--rc.1` for version `0.2.0-rc.1` (#740).
+    // Unescape before comparing against version.ts.
+    expect((m as RegExpMatchArray)[1].replaceAll("--", "-")).toBe(tsVersion);
   });
 });
