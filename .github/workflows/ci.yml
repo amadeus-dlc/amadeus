@@ -46,6 +46,12 @@ jobs:
       - name: Lint (biome)
         run: bun run lint
 
+      - name: Install lizard (CCN measurement, pinned)
+        run: pip install lizard==1.23.0
+
+      - name: Complexity gate (CCN baseline ratchet)
+        run: bun tests/complexity-gate.ts --check
+
       - name: Dist drift guard (dist/ regenerates byte-identically from core/ + harness/)
         run: bun run dist:check
 

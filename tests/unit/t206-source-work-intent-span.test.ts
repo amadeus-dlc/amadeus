@@ -28,9 +28,10 @@
 
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { gitHasSourceWork } from "../../dist/claude/.claude/tools/amadeus-state.ts";
+import { gitHasSourceWork, workspaceHasSourceFile } from "../../dist/claude/.claude/tools/amadeus-state.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -325,4 +326,35 @@ test("refuses (does not throw) when the state file is unreadable", () => {
   git(["add", "-A"]); // stages the state-file deletion + a new doc
   git(["commit", "-q", "-m", "doc: replace state file"]);
   expect(gitHasSourceWork(proj)).toBe(false);
+});
+
+// --- workspaceHasSourceFile: the FS-fallback half of the same guard ------------
+// (in-process for the same coverage reason as gitHasSourceWork above)
+
+test("workspaceHasSourceFile: harness/doc dirs alone are not source work", () => {
+  const dir = mkdtempSync(join(tmpdir(), "t206-fsprobe-"));
+  try {
+    mkdirSync(join(dir, "amadeus", "spaces"), { recursive: true });
+    writeFileSync(join(dir, "amadeus", "spaces", "notes.md"), "doc\n", "utf-8");
+    mkdirSync(join(dir, ".claude"), { recursive: true });
+    expect(workspaceHasSourceFile(dir)).toBe(false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("workspaceHasSourceFile: a root file or a nested src file counts; missing dir is false", () => {
+  const dir = mkdtempSync(join(tmpdir(), "t206-fsprobe-"));
+  try {
+    expect(workspaceHasSourceFile(join(dir, "does-not-exist"))).toBe(false);
+    mkdirSync(join(dir, "src"), { recursive: true });
+    expect(workspaceHasSourceFile(dir)).toBe(false); // empty src/ only
+    writeFileSync(join(dir, "src", "index.ts"), "export {};\n", "utf-8");
+    expect(workspaceHasSourceFile(dir)).toBe(true); // nested source file
+    rmSync(join(dir, "src"), { recursive: true, force: true });
+    writeFileSync(join(dir, "README.txt"), "root\n", "utf-8");
+    expect(workspaceHasSourceFile(dir)).toBe(true); // file at workspace root
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

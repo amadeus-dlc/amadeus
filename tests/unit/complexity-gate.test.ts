@@ -20,9 +20,12 @@ import {
   baselineMapOf,
   evaluateComplexity,
   functionKey,
+  main,
   parseBaselineText,
   parseLizardCsv,
   renderBaseline,
+  runCheck,
+  runUpdate,
   type KeyedFunctionRecord,
 } from "../complexity-gate.ts";
 
@@ -117,6 +120,8 @@ describe("parseBaselineText (parse, don't validate)", () => {
 
   test.each([
     ["invalid JSON", "{not json"],
+    ["non-object top level", JSON.stringify(42)],
+    ["non-object entry", JSON.stringify({ ...valid, entries: [42] })],
     ["wrong schemaVersion", JSON.stringify({ ...valid, schemaVersion: 2 })],
     ["non-integer threshold", JSON.stringify({ ...valid, threshold: "15" })],
     ["non-array entries", JSON.stringify({ ...valid, entries: {} })],
@@ -162,6 +167,20 @@ describe("parseLizardCsv / renderBaseline", () => {
       { path: "b.ts", name: "z", ordinal: 0, ccn: 30 },
     ]);
     expect(renderBaseline(records)).toBe(body);
+  });
+
+  test("renderBaseline orders same-path entries by name then ordinal", () => {
+    const records: KeyedFunctionRecord[] = [
+      { path: "a.ts", name: "g", ordinal: 1, ccn: 21 },
+      { path: "a.ts", name: "g", ordinal: 0, ccn: 20 },
+      { path: "a.ts", name: "f", ordinal: 0, ccn: 22 },
+    ];
+    const doc = JSON.parse(renderBaseline(records));
+    expect(doc.entries.map((e: { name: string; ordinal: number }) => `${e.name}:${e.ordinal}`)).toEqual([
+      "f:0",
+      "g:0",
+      "g:1",
+    ]);
   });
 });
 
@@ -322,4 +341,179 @@ describe("complexity-gate CLI (spawn boundary, M-contracts)", () => {
     expect(run.status).toBe(2);
     expect(run.stderr).toContain("usage: bun tests/complexity-gate.ts <--check | --update>");
   }, 30000);
+});
+
+// --- in-process: C-4 handlers (spawn-blindspot seam) ----------------------------
+// The spawned CLI runs above prove the M-contracts at the process boundary, but
+// bun --coverage cannot measure spawned subprocesses, so runCheck / runUpdate /
+// runLizard / main would land uncovered. These tests drive the exported handlers
+// directly against the same env seams (resolved at call time by design).
+
+function withGateEnv<T>(env: Record<string, string>, fn: () => T): T {
+  const keys = [
+    "AMADEUS_COMPLEXITY_ROOTS",
+    "AMADEUS_COMPLEXITY_BASELINE",
+    "AMADEUS_COMPLEXITY_LIZARD_CMD",
+  ];
+  const saved = new Map(keys.map((k) => [k, process.env[k]]));
+  for (const k of keys) delete process.env[k];
+  Object.assign(process.env, env);
+  try {
+    return fn();
+  } finally {
+    for (const [k, v] of saved) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  }
+}
+
+function silenced<T>(fn: () => T): { result: T; out: string; err: string } {
+  const origLog = console.log;
+  const origErr = console.error;
+  let out = "";
+  let err = "";
+  console.log = (...a: unknown[]) => {
+    out += `${a.join(" ")}\n`;
+  };
+  console.error = (...a: unknown[]) => {
+    err += `${a.join(" ")}\n`;
+  };
+  try {
+    return { result: fn(), out, err };
+  } finally {
+    console.log = origLog;
+    console.error = origErr;
+  }
+}
+
+describe("handlers in-process (runUpdate / runCheck / main)", () => {
+  test("runUpdate then runCheck is green on a clean fixture", () => {
+    const fx = fixtureProject({ "simple.ts": SIMPLE_FN });
+    withGateEnv(
+      { AMADEUS_COMPLEXITY_ROOTS: fx.root, AMADEUS_COMPLEXITY_BASELINE: fx.baseline },
+      () => {
+        const upd = silenced(() => runUpdate());
+        expect(upd.result).toBe(0);
+        expect(upd.out).toContain("Wrote ");
+        const chk = silenced(() => runCheck());
+        expect(chk.result).toBe(0);
+        expect(chk.out).toContain("complexity gate: OK");
+      },
+    );
+  });
+
+  test("runCheck surfaces NEW_VIOLATION and the warn band in-process", () => {
+    const fx = fixtureProject({ "simple.ts": SIMPLE_FN });
+    withGateEnv(
+      { AMADEUS_COMPLEXITY_ROOTS: fx.root, AMADEUS_COMPLEXITY_BASELINE: fx.baseline },
+      () => {
+        expect(silenced(() => runUpdate()).result).toBe(0);
+        writeFileSync(join(fx.root, "tangled.ts"), TANGLED_FN, "utf8");
+        const chk = silenced(() => runCheck());
+        expect(chk.result).toBe(1);
+        expect(chk.err).toContain("COMPLEXITY GATE FAILED [NEW_VIOLATION]");
+      },
+    );
+  });
+
+  test("runCheck reports RATCHET_REGRESSION in-process", () => {
+    const fx = fixtureProject({ "simple.ts": SIMPLE_FN, "tangled.ts": TANGLED_FN });
+    withGateEnv(
+      { AMADEUS_COMPLEXITY_ROOTS: fx.root, AMADEUS_COMPLEXITY_BASELINE: fx.baseline },
+      () => {
+        expect(silenced(() => runUpdate()).result).toBe(0);
+        const parsed = JSON.parse(readFileSync(fx.baseline, "utf8"));
+        parsed.entries[0].ccn -= 1;
+        writeFileSync(fx.baseline, JSON.stringify(parsed, null, 2), "utf8");
+        const chk = silenced(() => runCheck());
+        expect(chk.result).toBe(1);
+        expect(chk.err).toContain("COMPLEXITY GATE FAILED [RATCHET_REGRESSION]");
+        expect(chk.err).toContain("The baseline only ratchets down.");
+      },
+    );
+  });
+
+  test("runCheck fails closed on missing and malformed baselines in-process", () => {
+    const fx = fixtureProject({ "simple.ts": SIMPLE_FN });
+    withGateEnv(
+      { AMADEUS_COMPLEXITY_ROOTS: fx.root, AMADEUS_COMPLEXITY_BASELINE: fx.baseline },
+      () => {
+        const missing = silenced(() => runCheck());
+        expect(missing.result).toBe(1);
+        expect(missing.err).toContain("COMPLEXITY GATE FAILED [MISSING_BASELINE]");
+        writeFileSync(fx.baseline, "<<<<<<< conflict garbage", "utf8");
+        const malformed = silenced(() => runCheck());
+        expect(malformed.result).toBe(1);
+        expect(malformed.err).toContain("COMPLEXITY GATE FAILED [MALFORMED]");
+      },
+    );
+  });
+
+  test("runCheck and runUpdate fail closed when lizard cannot run in-process", () => {
+    const fx = fixtureProject({ "simple.ts": SIMPLE_FN });
+    withGateEnv(
+      {
+        AMADEUS_COMPLEXITY_ROOTS: fx.root,
+        AMADEUS_COMPLEXITY_BASELINE: fx.baseline,
+        AMADEUS_COMPLEXITY_LIZARD_CMD: "false",
+      },
+      () => {
+        for (const run of [runCheck, runUpdate]) {
+          const r = silenced(() => run());
+          expect(r.result).toBe(1);
+          expect(r.err).toContain("COMPLEXITY GATE FAILED [MEASUREMENT_FAILED]");
+        }
+      },
+    );
+    // Unspawnable binary: spawnSync reports `error` (ENOENT) rather than a
+    // non-zero exit — the other failed-measurement arm.
+    withGateEnv(
+      {
+        AMADEUS_COMPLEXITY_ROOTS: fx.root,
+        AMADEUS_COMPLEXITY_BASELINE: fx.baseline,
+        AMADEUS_COMPLEXITY_LIZARD_CMD: "no-such-lizard-binary-e2",
+      },
+      () => {
+        const r = silenced(() => runCheck());
+        expect(r.result).toBe(1);
+        expect(r.err).toContain("lizard could not be spawned");
+      },
+    );
+  });
+
+  test("main dispatches --check/--update, rejects unknown args, and formats throws", () => {
+    const fx = fixtureProject({ "simple.ts": SIMPLE_FN });
+    withGateEnv(
+      { AMADEUS_COMPLEXITY_ROOTS: fx.root, AMADEUS_COMPLEXITY_BASELINE: fx.baseline },
+      () => {
+        expect(silenced(() => main(["--update"])).result).toBe(0);
+        expect(silenced(() => main(["--check"])).result).toBe(0);
+        const usage = silenced(() => main([]));
+        expect(usage.result).toBe(2);
+        expect(usage.err).toContain("usage: bun tests/complexity-gate.ts <--check | --update>");
+        expect(silenced(() => main(["--check", "--update"])).result).toBe(2);
+      },
+    );
+    // UNEXPECTED: --update with the baseline path pointing at a directory makes
+    // writeFileSync throw; main catches and formats instead of crashing.
+    const fx2 = fixtureProject({ "simple.ts": SIMPLE_FN });
+    withGateEnv(
+      { AMADEUS_COMPLEXITY_ROOTS: fx2.root, AMADEUS_COMPLEXITY_BASELINE: fx2.root },
+      () => {
+        const r = silenced(() => main(["--update"]));
+        expect(r.result).toBe(1);
+        expect(r.err).toContain("COMPLEXITY GATE FAILED [UNEXPECTED]");
+      },
+    );
+  });
+
+  test("default env seams: the real repo measurement checks green against the committed baseline", () => {
+    // No env overrides: measurementRoots() maps the canonical MEASUREMENT_ROOTS,
+    // baselinePath() resolves tests/.complexity-baseline.json, lizardCommand()
+    // uses the pinned python3 -m lizard — the exact CI invocation, in-process.
+    const chk = silenced(() => runCheck());
+    expect(chk.result).toBe(0);
+    expect(chk.out).toContain("complexity gate: OK");
+  }, 60000);
 });
