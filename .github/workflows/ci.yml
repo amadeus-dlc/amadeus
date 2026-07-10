@@ -10,10 +10,14 @@ on:
   pull_request:
 
 concurrency:
-  group: ci-${{ github.ref }}
-  # Cancel superseded runs on PR branches only. Main pushes must run to
-  # completion: a cancelled main run skips the coverage job, leaving no
-  # Codecov base report for that commit (#777).
+  # Main pushes must all run to completion: a cancelled main run skips the
+  # coverage job, leaving no Codecov base report for that commit (#777).
+  # cancel-in-progress: false alone is not enough — a concurrency group holds
+  # at most one pending run, so a third consecutive push would still replace
+  # (cancel) the queued one. Keying the group by SHA on main gives every push
+  # its own group, so nothing can be cancelled or replaced. PR branches keep
+  # the ref-keyed group with supersede cancellation.
+  group: ci-${{ github.ref == 'refs/heads/main' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
