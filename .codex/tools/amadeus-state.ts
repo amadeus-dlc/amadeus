@@ -259,6 +259,9 @@ function main(): void {
       case "delegate-approval":
         handleDelegateApproval(args.slice(1));
         break;
+      case "delegate-rejection":
+        handleDelegateRejection(args.slice(1));
+        break;
       case "reject":
         handleReject(args.slice(1));
         break;
@@ -300,7 +303,7 @@ function main(): void {
         break;
       default:
         error(
-          `Unknown subcommand: ${subcommand}. Valid: get, set, set-skeleton-stance, checkbox, count, advance, finalize, complete-workflow, gate-start, approve, delegate-approval, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark`
+          `Unknown subcommand: ${subcommand}. Valid: get, set, set-skeleton-stance, checkbox, count, advance, finalize, complete-workflow, gate-start, approve, delegate-approval, delegate-rejection, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark`
         );
     }
   } catch (e) {
@@ -1295,9 +1298,12 @@ function handleGateStart(args: string[]): void {
 // a refusal (error() -> exit) leaves state untouched. Carve-outs FIRST:
 // autonomous Construction (swarm / Bolt) and the suite-wide test bypass never
 // require presence. Both handleApprove and handleReject route through this
-// single helper so a future presence-check refinement (e.g. #671's delegated
+// single helper so a presence-check refinement (e.g. #671/#685's delegated
 // provenance recognition inside humanActedSinceGate) applies to both verbs
-// automatically instead of drifting between two hand-copied checks.
+// automatically instead of drifting between two hand-copied checks. The verb is
+// forwarded to humanActedSinceGate so delegated provenance is verb-scoped (#685):
+// a DELEGATED_APPROVAL opens ONLY approve, a DELEGATED_REJECTION opens ONLY
+// reject — a local HUMAN_TURN still opens either.
 function assertHumanPresentForGateResolution(
   pd: string,
   content: string,
@@ -1308,7 +1314,7 @@ function assertHumanPresentForGateResolution(
     // skip the presence check — autonomous Construction has no human at the gate
   } else if (humanPresenceGuardDisabled()) {
     // skip — suite-wide deterministic off-switch (AMADEUS_SKIP_HUMAN_PRESENCE_GUARD)
-  } else if (!humanActedSinceGate(pd)) {
+  } else if (!humanActedSinceGate(pd, verb)) {
     // Ledger-event presence check: refuse unless a HUMAN_TURN event was appended
     // AFTER the last gate resolution (GATE_APPROVED / GATE_REJECTED /
     // QUESTION_ANSWERED) in ledger order - the boundary is the prior resolution,
@@ -1453,11 +1459,12 @@ function parseApproveFlags(args: string[]): { userInput?: string } {
 // HUMAN_TURN and every conductor gate is structurally stuck. This records a
 // DELEGATED_APPROVAL into the TARGET (conductor) intent's audit dir, grounded in
 // a REAL human turn on THIS (leader) session's own ledger. The conductor's gate
-// (humanActedSinceGate → verifyDelegatedApproval) accepts it ONLY after
+// (humanActedSinceGate → verifyDelegatedProvenance) accepts it ONLY after
 // confirming the referenced HUMAN_TURN physically exists in the issuer shard, so
-// a model cannot forge it (HUMAN_TURN is written only by the UserPromptSubmit
-// hook). Refuses when no fresh human turn backs this call, which is exactly what
-// stops an autopilot conductor from self-delegating its own gate open.
+// a model cannot forge it via any audit CLI (HUMAN_TURN minting is refused at the
+// `amadeus-audit append` entry; it is written only by the UserPromptSubmit hook
+// in-process). Refuses when no fresh human turn backs this call, which is exactly
+// what stops an autopilot conductor from self-delegating its own gate open.
 function handleDelegateApproval(args: string[]): void {
   const slug = args.find((a) => !a.startsWith("--"));
   if (!slug) {
@@ -1529,6 +1536,101 @@ function handleDelegateApproval(args: string[]): void {
   console.log(
     JSON.stringify({
       delegated: true,
+      stage: slug,
+      toIntent,
+      toSpace: toSpace ?? issuerSpace,
+      issuerIntent,
+      issuerShard,
+      issuerHumanTs,
+      timestamp: res.timestamp,
+    })
+  );
+}
+
+// delegate-rejection <slug> --to-intent <record-dir> [--to-space <space>] [--feedback <text>]
+//
+// Reject-side mirror of handleDelegateApproval (#685). The same agent-team
+// topology problem the approval path solves also blocks REJECTION: a remote
+// conductor's human-presence reject gate can never observe a local HUMAN_TURN,
+// so it is structurally stuck. This records a DELEGATED_REJECTION into the TARGET
+// (conductor) intent's audit dir, grounded in a REAL human turn on THIS (leader)
+// session's own ledger. The conductor's reject gate (humanActedSinceGate(pd,
+// "reject") → verifyDelegatedProvenance) accepts it ONLY after confirming the
+// referenced HUMAN_TURN physically exists in the issuer shard, so a model cannot
+// forge it. Verb-scoped: this can open ONLY a reject gate, never an approve gate
+// (FR-1.4). Refuses when no fresh human turn backs this call.
+function handleDelegateRejection(args: string[]): void {
+  const slug = args.find((a) => !a.startsWith("--"));
+  if (!slug) {
+    error(
+      "Usage: amadeus-state.ts delegate-rejection <slug> --to-intent <record-dir> [--to-space <space>] [--feedback <text>]"
+    );
+  }
+  const toIntent = getFlagValue(args, "--to-intent");
+  if (!toIntent) error("delegate-rejection requires --to-intent <conductor record dir name>");
+  const toSpace = getFlagValue(args, "--to-space");
+  const feedback = getFlagValue(args, "--feedback");
+  const pd = resolveProjectDir(projectDir);
+
+  // Grounding gate: a real human must have acted on THIS session since the last
+  // gate resolution. humanActedSinceGate (general predicate — no verb) reads the
+  // hook-written HUMAN_TURN ledger, unforgeable by any tool a model can call, so
+  // this is the anti-autopilot guard. Honour the same deterministic off-switch
+  // as the approve/reject paths so suite tests can bypass it.
+  if (!humanPresenceGuardDisabled() && !humanActedSinceGate(pd)) {
+    error(
+      "Refusing to delegate rejection: no real human turn on this session since the " +
+        "last gate resolution. Acknowledge the rejection as a human, then delegate."
+    );
+  }
+
+  // Issuer coordinates the conductor verifies against: this session's active
+  // intent record dir, its own audit shard, and the timestamp of the grounding
+  // HUMAN_TURN within that shard.
+  const issuerSpace = activeSpace(pd);
+  const issuerIntent = activeIntent(pd, issuerSpace);
+  if (!issuerIntent) {
+    error("delegate-rejection: no active intent on this (leader) session to ground the rejection");
+  }
+  const shardDir = auditShardDir(pd, issuerIntent, issuerSpace);
+  if (shardDir === null) error("delegate-rejection: cannot resolve this session's audit shard dir");
+  const issuerShard = auditShardName(pd);
+  let issuerHumanTs: string | null = null;
+  try {
+    const turns = findAllEvents(readFileSync(join(shardDir, issuerShard), "utf-8"), "HUMAN_TURN");
+    if (turns.length > 0) issuerHumanTs = turns[turns.length - 1].timestamp;
+  } catch {
+    // fall through to the guard below
+  }
+  if (!issuerHumanTs) {
+    error(
+      `delegate-rejection: no HUMAN_TURN in this session's own audit shard (${issuerShard}); ` +
+        "cannot ground the delegation"
+    );
+  }
+
+  // Target must be a real, locally-present intent record — never scaffold one here.
+  const targetRecord = recordDir(pd, toIntent, toSpace);
+  if (targetRecord === null || !existsSync(join(targetRecord, "amadeus-state.md"))) {
+    error(
+      `delegate-rejection: target intent record not found: ${toIntent}${toSpace ? ` (space ${toSpace})` : ""}`
+    );
+  }
+
+  const fields: Record<string, string> = {
+    Stage: slug,
+    "Issuer Space": issuerSpace,
+    "Issuer Intent": issuerIntent,
+    "Issuer Shard": issuerShard,
+    "Issuer Human Ts": issuerHumanTs,
+  };
+  if (feedback) fields.Feedback = feedback;
+  const res = appendAuditEntry("DELEGATED_REJECTION", fields, pd, toIntent, toSpace);
+
+  console.log(
+    JSON.stringify({
+      delegated: true,
+      verb: "reject",
       stage: slug,
       toIntent,
       toSpace: toSpace ?? issuerSpace,

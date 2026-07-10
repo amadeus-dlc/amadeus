@@ -247,7 +247,8 @@ describe("t81 amadeus-state practices-event — bolt-plan-marker-conflict overri
     // WORKFLOW_PARKED + WORKFLOW_UNPARKED (the park/unpark lifecycle, +2),
     // less TEST_RUN_MODE_ENABLED (removed, -1), plus HUMAN_TURN (+1), plus
     // RECOMPOSED (the adaptive composer's in-flight re-shape, +1), plus
-    // DELEGATED_APPROVAL (#671 delegated-approval provenance, +1) = 71.
+    // DELEGATED_APPROVAL (#671 delegated-approval provenance, +1) = 71, plus
+    // DELEGATED_REJECTION (#685 delegated-rejection provenance, +1) = 72.
     const auditSrc = readFileSync(
       join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-audit.ts"),
       "utf-8",
@@ -255,7 +256,7 @@ describe("t81 amadeus-state practices-event — bolt-plan-marker-conflict overri
     const block = auditSrc.match(/const VALID_EVENT_TYPES = new Set\(\[([\s\S]*?)\]\)/);
     expect(block).not.toBeNull();
     const count = (block ? block[1].match(/"[A-Z0-9_]+"/g) : null)?.length ?? -1;
-    expect(count).toBe(71);
+    expect(count).toBe(72);
   });
 
   // --- Test 4: milestone 8 write-failure path coexists (different Reason value) ---
