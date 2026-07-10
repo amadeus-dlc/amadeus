@@ -27,7 +27,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { evaluateGate, type LoadedTotals } from "../coverage-project-gate.ts";
+import { evaluateGate, type LoadedTotals, main, runCheck, runUpdate } from "../coverage-project-gate.ts";
 
 const __FILE_DIR = dirname(fileURLToPath(import.meta.url));
 const TESTS_DIR = join(__FILE_DIR, "..");
@@ -104,6 +104,18 @@ describe("evaluateGate: malformed / empty inputs", () => {
   test("invalid JSON text => MALFORMED", () => {
     const r = evaluateGate({ present: true, text: "{not json" }, present(totals(1, 2)));
     expect(r.kind === "fail" && r.reason).toBe("MALFORMED");
+  });
+
+  test("valid JSON that is not an object => MALFORMED", () => {
+    const r = evaluateGate({ present: true, text: "42" }, present(totals(1, 2)));
+    expect(r.kind === "fail" && r.reason).toBe("MALFORMED");
+    expect(r.kind === "fail" && r.detail).toContain("expected a JSON object");
+  });
+
+  test("malformed BASELINE (current fine) => MALFORMED naming the baseline side", () => {
+    const r = evaluateGate(present(totals(1, 2)), present({ schemaVersion: 9, hits: 1, lines: 2 }));
+    expect(r.kind === "fail" && r.reason).toBe("MALFORMED");
+    expect(r.kind === "fail" && r.detail).toContain("baseline:");
   });
 
   test("current lines == 0 => EMPTY_POPULATION", () => {
@@ -250,5 +262,105 @@ describe("process boundary: --update", () => {
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 5. In-process CLI plumbing — runCheck / runUpdate / main through the same
+// env seams, WITHOUT a spawn. bun --coverage does not instrument spawned
+// subprocesses, so these calls are what make the CLI wrapper lines count as
+// covered; the spawnSync suite above stays as the process-boundary proof.
+// ---------------------------------------------------------------------------
+function withEnvSeams<T>(env: Record<string, string | undefined>, fn: () => T): T {
+  const saved: Record<string, string | undefined> = {};
+  for (const key of Object.keys(env)) {
+    saved[key] = process.env[key];
+    if (env[key] === undefined) delete process.env[key];
+    else process.env[key] = env[key];
+  }
+  try {
+    return fn();
+  } finally {
+    for (const key of Object.keys(saved)) {
+      if (saved[key] === undefined) delete process.env[key];
+      else process.env[key] = saved[key];
+    }
+  }
+}
+
+describe("in-process CLI plumbing: runCheck / runUpdate / main", () => {
+  test("main(['--check']) returns 0 within threshold and 1 on a drop", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "cov-gate-ip-check-"));
+    try {
+      const totalsPath = join(tmp, "coverage-totals.json");
+      const baselinePath = join(tmp, "baseline.json");
+      writeFileSync(baselinePath, JSON.stringify(totals(1000, 1000)));
+      const seams = {
+        AMADEUS_COVERAGE_TOTALS: totalsPath,
+        AMADEUS_COVERAGE_PROJECT_BASELINE: baselinePath,
+      };
+      writeFileSync(totalsPath, JSON.stringify(totals(1000, 1000)));
+      expect(withEnvSeams(seams, () => main(["--check"]))).toBe(0);
+      writeFileSync(totalsPath, JSON.stringify(totals(900, 1000)));
+      expect(withEnvSeams(seams, () => main(["--check"]))).toBe(1);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  test("runCheck returns 1 for missing emit and missing baseline", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "cov-gate-ip-miss-"));
+    try {
+      const totalsPath = join(tmp, "coverage-totals.json");
+      const baselinePath = join(tmp, "baseline.json");
+      // Missing emit.
+      expect(
+        withEnvSeams(
+          { AMADEUS_COVERAGE_TOTALS: totalsPath, AMADEUS_COVERAGE_PROJECT_BASELINE: baselinePath },
+          () => runCheck(),
+        ),
+      ).toBe(1);
+      // Emit present, baseline missing.
+      writeFileSync(totalsPath, JSON.stringify(totals(1, 1)));
+      expect(
+        withEnvSeams(
+          { AMADEUS_COVERAGE_TOTALS: totalsPath, AMADEUS_COVERAGE_PROJECT_BASELINE: baselinePath },
+          () => runCheck(),
+        ),
+      ).toBe(1);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  test("runUpdate refuses on absent/malformed emit and transcribes on success", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "cov-gate-ip-upd-"));
+    try {
+      const totalsPath = join(tmp, "coverage-totals.json");
+      const baselinePath = join(tmp, "baseline.json");
+      const seams = {
+        AMADEUS_COVERAGE_TOTALS: totalsPath,
+        AMADEUS_COVERAGE_PROJECT_BASELINE: baselinePath,
+      };
+      expect(withEnvSeams(seams, () => runUpdate())).toBe(1); // absent
+      writeFileSync(totalsPath, JSON.stringify({ schemaVersion: 2, hits: 1, lines: 1 }));
+      expect(withEnvSeams(seams, () => runUpdate())).toBe(1); // malformed
+      writeFileSync(totalsPath, JSON.stringify(totals(42, 100)));
+      expect(withEnvSeams(seams, () => runUpdate())).toBe(0);
+      expect(JSON.parse(readFileSync(baselinePath, "utf8"))).toEqual({
+        schemaVersion: 1,
+        hits: 42,
+        lines: 100,
+      });
+      expect(withEnvSeams(seams, () => main(["--update"]))).toBe(0);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  test("main rejects no args / unknown args with usage (exit 2)", () => {
+    expect(main([])).toBe(2);
+    expect(main(["--frobnicate"])).toBe(2);
+    expect(main(["--check", "--update"])).toBe(2);
   });
 });

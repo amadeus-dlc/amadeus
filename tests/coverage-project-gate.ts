@@ -42,11 +42,16 @@ import { fileURLToPath } from "node:url";
 // ---------------------------------------------------------------------------
 const TESTS_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(TESTS_DIR, "..");
-const TOTALS_PATH =
-  process.env.AMADEUS_COVERAGE_TOTALS ?? join(REPO_ROOT, "coverage", "coverage-totals.json");
-const BASELINE_PATH =
-  process.env.AMADEUS_COVERAGE_PROJECT_BASELINE ??
-  join(TESTS_DIR, ".coverage-project-baseline.json");
+// Resolved at CALL time (not module load) so in-process tests can point a
+// single import at different temp trees per case via the env seams.
+function totalsPath(): string {
+  return process.env.AMADEUS_COVERAGE_TOTALS ?? join(REPO_ROOT, "coverage", "coverage-totals.json");
+}
+function baselinePath(): string {
+  return (
+    process.env.AMADEUS_COVERAGE_PROJECT_BASELINE ?? join(TESTS_DIR, ".coverage-project-baseline.json")
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Types.
@@ -177,12 +182,12 @@ const USAGE =
   "  --check   compare coverage/coverage-totals.json against the committed baseline (CI gate)\n" +
   "  --update  rewrite tests/.coverage-project-baseline.json from the current emit";
 
-function runCheck(): number {
-  const result = evaluateGate(load(TOTALS_PATH), load(BASELINE_PATH));
+export function runCheck(): number {
+  const result = evaluateGate(load(totalsPath()), load(baselinePath()));
   if (result.kind === "fail") {
     console.error(`PROJECT COVERAGE GATE FAILED [${result.reason}]: ${result.detail}`);
-    console.error(`  current emit:      ${TOTALS_PATH}`);
-    console.error(`  committed baseline: ${BASELINE_PATH}`);
+    console.error(`  current emit:      ${totalsPath()}`);
+    console.error(`  committed baseline: ${baselinePath()}`);
     return 1;
   }
   console.log(
@@ -192,11 +197,11 @@ function runCheck(): number {
   return 0;
 }
 
-function runUpdate(): number {
-  const current = load(TOTALS_PATH);
+export function runUpdate(): number {
+  const current = load(totalsPath());
   if (!current.present) {
     console.error(
-      `Cannot update baseline: coverage emit not found at ${TOTALS_PATH}. ` +
+      `Cannot update baseline: coverage emit not found at ${totalsPath()}. ` +
         "Run `bun run coverage:ci` first.",
     );
     return 1;
@@ -207,26 +212,25 @@ function runUpdate(): number {
     return 1;
   }
   writeFileSync(
-    BASELINE_PATH,
+    baselinePath(),
     `${JSON.stringify({ schemaVersion: 1, hits: parsed.totals.hits, lines: parsed.totals.lines }, null, 2)}\n`,
     "utf8",
   );
   console.log(
-    `Wrote ${BASELINE_PATH}: ${parsed.totals.hits}/${parsed.totals.lines} (${pct(parsed.totals).toFixed(4)}%)`,
+    `Wrote ${baselinePath()}: ${parsed.totals.hits}/${parsed.totals.lines} (${pct(parsed.totals).toFixed(4)}%)`,
   );
   return 0;
 }
 
-function main(): void {
-  const args = process.argv.slice(2);
+export function main(args: string[]): number {
   if (args.length === 1 && args[0] === "--check") {
-    process.exit(runCheck());
+    return runCheck();
   }
   if (args.length === 1 && args[0] === "--update") {
-    process.exit(runUpdate());
+    return runUpdate();
   }
   console.error(USAGE);
-  process.exit(2);
+  return 2;
 }
 
-if (import.meta.main) main();
+if (import.meta.main) process.exit(main(process.argv.slice(2)));
