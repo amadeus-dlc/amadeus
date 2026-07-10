@@ -73,6 +73,42 @@ describe("SemVer#isLaterThan", () => {
   test("edge case: equal versions are not later than each other", () => {
     expect(parseOk("1.2.3").isLaterThan(parseOk("1.2.3"))).toBe(false);
   });
+
+  // FR-747 (issue #747): at the same major.minor.patch, prerelease ordering
+  // (SemVer §11) decides — the release outranks its prerelease and prereleases
+  // order by their identifiers. Before the fix isLaterThan returned false for
+  // any same-triple pair, so a prerelease -> release upgrade looked like a
+  // no-op; these cases fail against that.
+  test("FR-747: a release is later than its prerelease at the same major.minor.patch", () => {
+    expect(parseOk("1.0.0").isLaterThan(parseOk("1.0.0-rc.1"))).toBe(true);
+    expect(parseOk("1.0.0-rc.1").isLaterThan(parseOk("1.0.0"))).toBe(false);
+  });
+
+  test("FR-747: prereleases order by their identifiers", () => {
+    expect(parseOk("1.0.0-rc.2").isLaterThan(parseOk("1.0.0-rc.1"))).toBe(true);
+    expect(parseOk("1.0.0-rc.1").isLaterThan(parseOk("1.0.0-rc.2"))).toBe(false);
+    // alphanumeric identifiers compare lexically (SemVer §11)
+    expect(parseOk("1.0.0-beta").isLaterThan(parseOk("1.0.0-alpha"))).toBe(true);
+    expect(parseOk("1.0.0-alpha").isLaterThan(parseOk("1.0.0-beta"))).toBe(false);
+    // numeric identifiers rank below alphanumeric ones (SemVer §11)
+    expect(parseOk("1.0.0-beta").isLaterThan(parseOk("1.0.0-2"))).toBe(true);
+    // a longer identifier set outranks a shorter prefix of it
+    expect(parseOk("1.0.0-rc.1.1").isLaterThan(parseOk("1.0.0-rc.1"))).toBe(true);
+    // identical prereleases are not later than each other
+    expect(parseOk("1.0.0-rc.1").isLaterThan(parseOk("1.0.0-rc.1"))).toBe(false);
+  });
+
+  test("a stable release is later than any prerelease of the same version (SemVer §11)", () => {
+    // comparePrerelease(a=non-null, b=null) → the stable side wins.
+    expect(parseOk("1.0.0-rc.1").isLaterThan(parseOk("1.0.0"))).toBe(false);
+    expect(parseOk("1.0.0").isLaterThan(parseOk("1.0.0-rc.1"))).toBe(true);
+  });
+
+  test("a larger set of prerelease identifiers is later when the prefix matches (SemVer §11)", () => {
+    // comparePrerelease: bId runs out first → the longer identifier list wins.
+    expect(parseOk("1.0.0-rc.1.1").isLaterThan(parseOk("1.0.0-rc.1"))).toBe(true);
+    expect(parseOk("1.0.0-rc.1").isLaterThan(parseOk("1.0.0-rc.1.1"))).toBe(false);
+  });
 });
 
 describe("SemVer#format", () => {

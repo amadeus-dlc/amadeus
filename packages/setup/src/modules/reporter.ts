@@ -1,6 +1,6 @@
 import type { ApplyResult } from "../domain/apply-result.ts";
 import type { UsageError } from "../domain/command.ts";
-import type { InstallAdmission } from "../domain/installation.ts";
+import type { InstallAdmission, InstallationError } from "../domain/installation.ts";
 import type { ManifestError } from "../domain/manifest.ts";
 import type { FetchError } from "../domain/payload.ts";
 import type { Plan, PlanAction, PlanRefusal } from "../domain/plan.ts";
@@ -10,7 +10,7 @@ import type { NextSteps, VerifyResult } from "../domain/verify-result.ts";
 
 // U3 widens this union with UpgradeRefusal (domain-entities.md); install-flow
 // alone only ever produces the first five members.
-export type ClassifiedError = UsageError | ResolveError | FetchError | ManifestError | PlanRefusal | UpgradeRefusal;
+export type ClassifiedError = UsageError | ResolveError | FetchError | ManifestError | PlanRefusal | UpgradeRefusal | InstallationError;
 
 // SEC-I04: every user-facing string lives here so its wording can be reviewed
 // in one place. cli.ts only ever calls console.log/error with these results —
@@ -105,6 +105,17 @@ export function renderWizardAborted(): string {
 }
 
 // SEC-I04: the one place that phrases a temp-directory setup failure.
+// FR-742 / E-B3b Q2=a: when --force reinstalls over an unreadable manifest,
+// the override is loud — the user sees what was wrong and that the manifest
+// will be rewritten by the install, never a silent swallow of the corruption.
+export function renderCorruptManifestForced(err: InstallationError): string {
+  return [
+    `WARNING: The installer manifest at ${err.path} exists but could not be read.`,
+    renderError(err.cause),
+    "--force: continuing anyway; the install will rewrite the manifest on success.",
+  ].join("\n");
+}
+
 export function renderTmpDirFailure(detail: string): string {
   return `could not prepare a temp directory: ${detail}`;
 }
@@ -160,6 +171,12 @@ export function renderError(err: ClassifiedError): string {
       return `Cannot downgrade: requested ${err.requested.format()} is older than the installed version ${err.installed.format()}.`;
     case "installed-newer-than-latest":
       return `The installed version (${err.installed.format()}) is newer than the latest resolved version (${err.latest.format()}). Pass --version to target a specific release.`;
+    case "corrupt-manifest":
+      return [
+        `The installer manifest at ${err.path} exists but could not be read.`,
+        renderError(err.cause),
+        "Re-run `amadeus-setup install --force` to reinstall over it, or remove/restore the manifest and try again.",
+      ].join("\n");
     default:
       return "An unexpected error occurred.";
   }

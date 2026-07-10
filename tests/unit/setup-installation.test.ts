@@ -10,17 +10,27 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Installation } from "../../packages/setup/src/domain/installation.ts";
+import type { InstallationError } from "../../packages/setup/src/domain/installation.ts";
 import { HarnessName } from "../../packages/setup/src/domain/harness.ts";
 import { Manifest, ManifestFiles } from "../../packages/setup/src/domain/manifest.ts";
 import { ResolvedVersion } from "../../packages/setup/src/domain/resolved-version.ts";
 import { SemVer } from "../../packages/setup/src/domain/semver.ts";
 import { createFsRead, createFsWrite } from "../../packages/setup/src/ports/fsops.ts";
-import { createManifestIo } from "../../packages/setup/src/modules/manifest-io.ts";
+import { createManifestIo, manifestPathFor } from "../../packages/setup/src/modules/manifest-io.ts";
 import type { ExtractedPayload } from "../../packages/setup/src/domain/payload.ts";
+import type { Result } from "../../packages/setup/src/shared/result.ts";
 
 function withTempDir<T>(fn: (dir: string) => Promise<T>): Promise<T> {
   const dir = mkdtempSync(join(tmpdir(), "amadeus-setup-installation-"));
   return fn(dir).finally(() => rmSync(dir, { recursive: true, force: true }));
+}
+
+// FR-742: detect now returns a Result — the corrupt-manifest case is a loud
+// err. Existing classification tests only care about the ok Installation, so
+// unwrap it here and fail the test loudly if detection erred unexpectedly.
+function detectOk(result: Result<Installation, InstallationError>): Installation {
+  if (result.type === "err") throw new Error(`expected an ok installation, got err: ${result.error.type}`);
+  return result.value;
 }
 
 function claudeHarness(): HarnessName {
@@ -33,7 +43,7 @@ describe("Installation.detect", () => {
   test("an empty target is kind 'none'", async () => {
     await withTempDir(async (dir) => {
       const manifestIo = createManifestIo(createFsRead(), createFsWrite());
-      const installation = await Installation.detect(dir, manifestIo);
+      const installation = detectOk(await Installation.detect(dir, manifestIo));
       expect(installation.kind).toBe("none");
     });
   });
@@ -64,7 +74,7 @@ describe("Installation.detect", () => {
       // asserts the all-present case; the missing-file case has its own test.
       writeFileSync(join(dir, "settings.json"), "{}\n");
 
-      const installation = await Installation.detect(dir, manifestIo);
+      const installation = detectOk(await Installation.detect(dir, manifestIo));
       expect(installation.kind).toBe("manifested");
       if (installation.kind === "manifested") expect(installation.manifest.sourceTag).toBe("v1.0.0");
     });
@@ -98,7 +108,7 @@ describe("Installation.detect", () => {
       // Deliberately do NOT write settings.json to disk: the manifest lists it
       // as required, but the file itself is gone.
 
-      const installation = await Installation.detect(dir, manifestIo);
+      const installation = detectOk(await Installation.detect(dir, manifestIo));
       expect(installation.kind).toBe("partial");
       if (installation.kind === "partial") expect(installation.missing).toContain("settings.json");
     });
@@ -109,7 +119,7 @@ describe("Installation.detect", () => {
       mkdirSync(join(dir, ".claude", "tools"), { recursive: true });
       mkdirSync(join(dir, ".claude", "amadeus-common"), { recursive: true });
       const manifestIo = createManifestIo(createFsRead(), createFsWrite());
-      const installation = await Installation.detect(dir, manifestIo);
+      const installation = detectOk(await Installation.detect(dir, manifestIo));
       expect(installation.kind).toBe("manual-or-unknown");
     });
   });
@@ -119,7 +129,7 @@ describe("Installation.detect", () => {
       mkdirSync(join(dir, ".claude", "tools"), { recursive: true });
       // amadeus-common deliberately absent
       const manifestIo = createManifestIo(createFsRead(), createFsWrite());
-      const installation = await Installation.detect(dir, manifestIo);
+      const installation = detectOk(await Installation.detect(dir, manifestIo));
       expect(installation.kind).toBe("partial");
       if (installation.kind === "partial") expect(installation.missing.length).toBeGreaterThan(0);
     });
@@ -130,7 +140,7 @@ describe("Installation.detect", () => {
       mkdirSync(join(dir, ".claude"), { recursive: true });
       writeFileSync(join(dir, ".claude", "settings.json"), "{}\n"); // unrelated content, not an Amadeus anchor
       const manifestIo = createManifestIo(createFsRead(), createFsWrite());
-      const installation = await Installation.detect(dir, manifestIo);
+      const installation = detectOk(await Installation.detect(dir, manifestIo));
       expect(installation.kind).toBe("none");
       expect(installation.admitsInstall(false).type).toBe("proceed"); // install can proceed without --force
     });
@@ -147,17 +157,61 @@ describe("Installation.detect", () => {
       // Legacy owned-file naming, no tools/ or amadeus-common/ anchor present.
       writeFileSync(join(dir, ".claude", "amadeus-runtime.ts"), "// legacy owned file\n");
       const manifestIo = createManifestIo(createFsRead(), createFsWrite());
-      const installation = await Installation.detect(dir, manifestIo);
+      const installation = detectOk(await Installation.detect(dir, manifestIo));
       expect(installation.kind).toBe("manual-or-unknown");
     });
   });
+
+  // FR-742 (issue #742): a manifest present on disk but not valid JSON is a
+  // loud detection error, not silently reported as 'none' (which would tell the
+  // user to run `install` and overwrite a real, if damaged, installation). The
+  // err carries the manifest path so the caller can point the user at it.
+  // Before the fix, detect() swallowed the read err and fell through to the
+  // evidence scan, returning kind 'none' — this case fails against that.
+  test("FR-742: a present-but-malformed manifest is a loud corrupt-manifest err, not kind 'none'", async () => {
+    await withTempDir(async (dir) => {
+      const manifestPath = manifestPathFor(dir);
+      mkdirSync(join(dir, ".claude", "tools"), { recursive: true }); // a real (if damaged) install exists on disk
+      const manifestIo = createManifestIo(createFsRead(), createFsWrite());
+      const written = await manifestIo.write(dir, buildClaudeManifest());
+      if (written.type === "err") throw new Error("fixture setup failed to write manifest");
+      writeFileSync(manifestPath, '{"schemaVersion": 1, "harness": '); // truncated mid-write: invalid JSON
+
+      const result = await Installation.detect(dir, manifestIo);
+      expect(result.type).toBe("err");
+      if (result.type === "err") {
+        expect(result.error.type).toBe("corrupt-manifest");
+        expect(result.error.path).toBe(manifestPath);
+        expect(result.error.cause.type).toBe("malformed");
+      }
+    });
+  });
 });
+
+function buildClaudeManifest(): Manifest {
+  const filesResult = ManifestFiles.fromEntries([{ path: "settings.json", class: "owned", required: false, md5: "aaa" }]);
+  if (filesResult.type === "err") throw new Error("fixture setup failed");
+  const semverResult = SemVer.parse("1.0.0");
+  if (semverResult.type === "err") throw new Error("fixture setup failed");
+  const fakePayload: ExtractedPayload = {
+    version: ResolvedVersion.fromRelease(semverResult.value),
+    harnessRoot: () => {
+      throw new Error("not used in this test");
+    },
+    availableHarnesses: () => HarnessName.all,
+  };
+  return Manifest.build(fakePayload, filesResult.value, {
+    installerPackageVersion: "0.1.0",
+    harness: claudeHarness(),
+    installStartedAt: "2026-07-08T12:00:00.000Z",
+  });
+}
 
 describe("Installation#admitsInstall (BR-I07~I09)", () => {
   test("kind 'none' always proceeds, even with force", async () => {
     await withTempDir(async (dir) => {
       const manifestIo = createManifestIo(createFsRead(), createFsWrite());
-      const installation = await Installation.detect(dir, manifestIo);
+      const installation = detectOk(await Installation.detect(dir, manifestIo));
       expect(installation.admitsInstall(false).type).toBe("proceed");
       expect(installation.admitsInstall(true).type).toBe("proceed");
     });
@@ -168,7 +222,7 @@ describe("Installation#admitsInstall (BR-I07~I09)", () => {
       mkdirSync(join(dir, ".claude", "tools"), { recursive: true });
       mkdirSync(join(dir, ".claude", "amadeus-common"), { recursive: true });
       const manifestIo = createManifestIo(createFsRead(), createFsWrite());
-      const installation = await Installation.detect(dir, manifestIo);
+      const installation = detectOk(await Installation.detect(dir, manifestIo));
       const admission = installation.admitsInstall(false);
       expect(admission.type).toBe("refuse-suggest-upgrade");
     });
@@ -179,7 +233,7 @@ describe("Installation#admitsInstall (BR-I07~I09)", () => {
       mkdirSync(join(dir, ".claude", "tools"), { recursive: true });
       mkdirSync(join(dir, ".claude", "amadeus-common"), { recursive: true });
       const manifestIo = createManifestIo(createFsRead(), createFsWrite());
-      const installation = await Installation.detect(dir, manifestIo);
+      const installation = detectOk(await Installation.detect(dir, manifestIo));
       expect(installation.admitsInstall(true).type).toBe("proceed-forced");
     });
   });

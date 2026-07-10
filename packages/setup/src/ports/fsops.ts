@@ -1,7 +1,8 @@
 import { createWriteStream } from "node:fs";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve, sep } from "node:path";
+import { basename, dirname, join, resolve, sep } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { ReadableStream as NodeWebReadableStream } from "node:stream/web";
@@ -58,14 +59,23 @@ function isEnoent(cause: unknown): boolean {
   return cause instanceof Error && "code" in cause && (cause as { code?: string }).code === "ENOENT";
 }
 
+// REL-F02: writeText commits through a same-directory temp file plus an atomic
+// rename, so a crash mid-write can never leave truncated content at the target
+// path — a reader sees either the previous file (or none) or the fully written
+// one, never a partial write. The temp file shares the target's directory so
+// the rename stays on one filesystem (a cross-device rename is not atomic).
 export function createFsWrite(): FsWrite {
   return Object.freeze({
     async writeText(path: string, content: string): Promise<Result<void, IoError>> {
+      const dir = dirname(path);
+      const tmpPath = join(dir, `.${basename(path)}.${randomUUID()}.tmp`);
       try {
-        await mkdir(dirname(path), { recursive: true });
-        await writeFile(path, content, "utf8");
+        await mkdir(dir, { recursive: true });
+        await writeFile(tmpPath, content, "utf8");
+        await rename(tmpPath, path);
         return Result.ok(undefined);
       } catch (cause) {
+        await rm(tmpPath, { force: true }).catch(() => undefined);
         return Result.err(IoError.of(`could not write ${path}: ${String(cause)}`));
       }
     },

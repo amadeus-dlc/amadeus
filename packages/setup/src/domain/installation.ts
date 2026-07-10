@@ -1,8 +1,9 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { allEngineDirNames } from "./engine-layout.ts";
-import type { Manifest } from "./manifest.ts";
-import type { ManifestIo } from "../modules/manifest-io.ts";
+import type { Manifest, ManifestError } from "./manifest.ts";
+import { manifestPathFor, type ManifestIo } from "../modules/manifest-io.ts";
+import { Result } from "../shared/result.ts";
 
 export type InstallationEvidence = {
   readonly paths: readonly string[];
@@ -21,27 +22,36 @@ export type Installation =
   | { readonly kind: "manual-or-unknown"; readonly evidence: InstallationEvidence; admitsInstall(force: boolean): InstallAdmission }
   | { readonly kind: "partial"; readonly missing: readonly string[]; admitsInstall(force: boolean): InstallAdmission };
 
+// FR-742: a manifest that is present but unreadable (malformed JSON, an
+// unsupported schema, or a genuine I/O failure) is a loud detection error,
+// never silently treated as "not installed" — the caller surfaces the manifest
+// path and reinstall/--force guidance and exits non-zero.
+export type InstallationError = { readonly type: "corrupt-manifest"; readonly path: string; readonly cause: ManifestError };
+
 export namespace Installation {
   // BR-I07/BR-I09: the detected kind decides admission, and this function is
   // the only place that decides it — cli/planner never branch on `kind`
   // themselves (Tell, Don't Ask).
-  export async function detect(target: string, manifestIo: ManifestIo): Promise<Installation> {
+  export async function detect(target: string, manifestIo: ManifestIo): Promise<Result<Installation, InstallationError>> {
     const manifestResult = await manifestIo.read(target);
-    if (manifestResult.type === "ok" && manifestResult.value !== null) {
+    if (manifestResult.type === "err") {
+      return Result.err({ type: "corrupt-manifest", path: manifestPathFor(target), cause: manifestResult.error });
+    }
+    if (manifestResult.value !== null) {
       const manifest = manifestResult.value;
       // FR-656-2: a readable manifest is not proof the installation is
       // intact — verify each manifest-listed required file still exists on
       // disk before trusting the manifest's own record unconditionally.
       const missingFiles = await missingRequiredFiles(target, manifest);
       if (missingFiles.length > 0) {
-        return partialInstallation(missingFiles);
+        return Result.ok(partialInstallation(missingFiles));
       }
-      return manifestedInstallation(manifest);
+      return Result.ok(manifestedInstallation(manifest));
     }
 
     const evidence = await scanEvidence(target);
     if (evidence.paths.length === 0) {
-      return noneInstallation();
+      return Result.ok(noneInstallation());
     }
 
     const missing: string[] = [];
@@ -54,12 +64,12 @@ export namespace Installation {
       // LegacyLayout.isUnsupported's condition (b) input contract, which
       // must be reachable for BR-U07's hard-refuse to fire.
       if (!evidence.anchors.toolsDir && !evidence.anchors.amadeusCommon && hasAmadeusPrefixedPath(evidence.paths)) {
-        return manualOrUnknownInstallation(evidence);
+        return Result.ok(manualOrUnknownInstallation(evidence));
       }
-      return partialInstallation(missing);
+      return Result.ok(partialInstallation(missing));
     }
 
-    return manualOrUnknownInstallation(evidence);
+    return Result.ok(manualOrUnknownInstallation(evidence));
   }
 }
 
