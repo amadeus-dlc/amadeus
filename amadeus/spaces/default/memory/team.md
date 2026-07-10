@@ -58,7 +58,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 - ノルム(memory 層のルール)は定期的に論理矛盾を監査する: 大量追加の直後・intent 完了の節目で、矛盾・重複・失効(暫定運用の期限切れ等)を棚卸しし、発見したら整理案を選挙にかけて再編する。矛盾したルールの放置はエージェントのパフォーマンス悪化要因として扱う (user decision 2026-07-09) <!-- cid:requirements-analysis:norm-consistency-review -->
 - ノルム整理で判断に迷う場合(矛盾か意図的な例外か不明、統合すると意味が変わりうる、暫定と恒久の境界が曖昧など)は、選挙で無理に決めず必ずユーザーへエスカレーションする (user decision 2026-07-09) <!-- cid:requirements-analysis:norm-review-escalation -->
-- ノルム変更(memory 層への追加・整理)がある程度溜まったら、leader は変更をまとめた PR を作成し、他メンバー(最低2名、codex を含む)のレビューを受けてから main へマージする(マージは従来どおり人間承認)。ノルムの逐次コミットは leader ブランチ上のチェックポイントとして行い、main への反映は必ずこの PR 経由とする (user decision 2026-07-09) <!-- cid:requirements-analysis:norm-changes-via-pr -->
+- ノルム変更(memory 層への追加・整理)がある程度溜まったら、leader は変更をまとめた PR を作成し、他メンバー最低2名(2026-07-10 改定: codex 退役により『codex を含む』要件を削除 — user decision)のレビューを受けてから main へマージする(マージは従来どおり人間承認)。ノルムの逐次コミットは leader ブランチ上のチェックポイントとして行い、main への反映は必ずこの PR 経由とする (user decision 2026-07-09) <!-- cid:requirements-analysis:norm-changes-via-pr -->
 
 - codex メンバーの手空き時の既定タスクは潜在バグ探索とする: leader が未踏領域を割ってディスパッチし、レビュー依頼が来たら探索を中断して最優先で対応する。探索は bughunt-file-only ルール(実測起票のみ・修正禁止・クロスレビュー必須)に従う (user decision 2026-07-09) (learned 2026-07-09) (updated by all-claude-team 2026-07-10: 『codex』は『手空きメンバー』に読み替えて存続) <!-- cid:requirements-analysis:requirements-analysis:codex-default-bughunt -->
 - Issue のラベルトリアージは自動発動とする: 起票者は起票時に種別(bug/enhancement/documentation)+ 優先度(P0-P3)の見立てを必ず付ける。leader は起票報告を受けるたびに未付与・不整合がないか確認し、あれば空いているメンバー(旧: codex — all-claude-team 2026-07-10 で読み替え)へトリアージを即ディスパッチする(ユーザーの指示を待たない)。優先度基準: P0=正しさ/安全性の破綻、P1=重要だが回避可、P2=通常、P3=いつか (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:auto-label-triage -->
