@@ -309,9 +309,7 @@ export default function emit(ctx: EmitContext): EmitResult {
     });
   }
 
-  // (a) authored orchestrator shell — verbatim from harness/codex/skills/amadeus/.
-  //     Read via ctx.readHarnessSource so these authored inputs are recorded in
-  //     the packager's unreferenced-source scan (#735) instead of reading dark.
+  // (a) authored orchestrator shell — verbatim from harness/codex/skills/amadeus/
   for (const f of ["SKILL.md", "question-rendering.md"]) {
     emissions.push({
       path: join(SKILLS_DST, "amadeus", f),

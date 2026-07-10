@@ -596,8 +596,11 @@ export function unreferencedSources(
 
 // ---------------------------------------------------------------------------
 // check mode: build into a temp dir, diff byte-for-byte vs committed dist/<name>.
+// Exported so a unit test can drive it in-process (bun --coverage does not
+// instrument spawned subprocesses, so the CLI-spawn integration test cannot
+// cover the build/record/scan lines — an in-process call does).
 // ---------------------------------------------------------------------------
-function checkHarness(name: string): string[] {
+export function checkHarness(name: string): string[] {
   const m = loadManifest(name);
   const committed = join(REPO_ROOT, "dist", name, m.harnessDir);
   const tmp = mkdtempSync(join(tmpdir(), `amadeus-pkg-${name}-`));
@@ -696,13 +699,14 @@ function checkHarness(name: string): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// CLI — guarded by import.meta.main so importing this module (e.g. a unit test
-// pulling in unreferencedSources) does NOT run the packager. Direct `bun
-// scripts/package.ts …` invocation still runs it (import.meta.main is true).
+// CLI. Extracted as a function returning the process exit code so a unit test can
+// drive every dispatch branch IN-PROCESS — bun --coverage does not instrument
+// spawned subprocesses, so the spawn-based integration test cannot cover these
+// lines. The import.meta.main guard at the bottom maps the return to
+// process.exit for a real `bun scripts/package.ts …` invocation and keeps the
+// dispatch from firing when the module is merely imported.
 // ---------------------------------------------------------------------------
-if (import.meta.main) {
-  const argv = process.argv.slice(2);
-
+export function runCli(argv: string[]): number {
   // `package.ts codex trust --project <abs-dir> [--hooks-json <abs-path>]` —
   // print the codex hook-trust entries with <PROJECT_DIR> substituted, for the
   // installer to paste into $CODEX_HOME/config.toml (the trust-seed.toml recipe).
@@ -710,14 +714,14 @@ if (import.meta.main) {
     const pIdx = argv.indexOf("--project");
     if (pIdx === -1 || !argv[pIdx + 1]) {
       console.error("usage: package.ts codex trust --project <abs-dir> [--hooks-json <abs-path>]");
-      process.exit(1);
+      return 1;
     }
     const hIdx = argv.indexOf("--hooks-json");
     const { trustEntries } = require(join(HARNESS_ROOT, "codex", "emit.ts")) as {
       trustEntries: (project: string, hooksJson?: string) => string;
     };
     console.log(trustEntries(argv[pIdx + 1], hIdx !== -1 ? argv[hIdx + 1] : undefined));
-    process.exit(0);
+    return 0;
   }
 
   const check = argv.includes("--check");
@@ -739,10 +743,13 @@ if (import.meta.main) {
     if (problems.length > 0) {
       console.error(`\npackage --check FAILED (${problems.length} problem(s)):`);
       for (const p of problems.slice(0, 40)) console.error("  " + p);
-      process.exit(1);
+      return 1;
     }
     console.log("package --check: all harness trees in sync with packages/framework/core + harness.");
-  } else {
-    for (const n of present) writeHarness(n);
+    return 0;
   }
+  for (const n of present) writeHarness(n);
+  return 0;
 }
+
+if (import.meta.main) process.exit(runCli(process.argv.slice(2)));
