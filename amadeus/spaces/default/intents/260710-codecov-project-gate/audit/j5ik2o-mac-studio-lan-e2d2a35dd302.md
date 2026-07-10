@@ -1064,3 +1064,380 @@
 **Base branch**: main
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-10T03:49:40Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-10T03:49:40Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T03:53:03Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a12679ef654fcc883
+**Message**: 自前 project カバレッジゲート実装(intent codecov-project-gate)を進行中で、現在 code-generation ステージの builder サブエージェントが bolt worktree で実装中です。完了報告が届き次第、差分検分と検証再実行を行いレビューへ進めます。
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:54:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: 35f2827f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/run-tests.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T03:54:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: 35f2827f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/run-tests.ts
+**Duration ms**: 778
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:54:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2672ae16
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/run-tests.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T03:54:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2672ae16
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/run-tests.ts
+**Duration ms**: 910
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:54:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1859c8dc
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/run-tests.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T03:54:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1859c8dc
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/run-tests.ts
+**Duration ms**: 830
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:54:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: d640b446
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/run-tests.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T03:54:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: d640b446
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/run-tests.ts
+**Duration ms**: 512
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:54:42Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7e098fec
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/run-tests.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T03:54:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7e098fec
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/run-tests.ts
+**Duration ms**: 733
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:54:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6bc1154e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/run-tests.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T03:54:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6bc1154e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/run-tests.ts
+**Duration ms**: 468
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:56:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: e1610407
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/coverage-project-gate.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T03:56:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: e1610407
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/coverage-project-gate.ts
+**Duration ms**: 845
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:56:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4ebcf853
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/coverage-project-gate.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T03:56:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4ebcf853
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/coverage-project-gate.ts
+**Duration ms**: 487
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:58:38Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9ea54f91
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/unit/coverage-project-gate.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T03:58:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9ea54f91
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/unit/coverage-project-gate.test.ts
+**Duration ms**: 1321
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:58:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: 66cf4e12
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/unit/coverage-project-gate.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T03:58:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: 66cf4e12
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/unit/coverage-project-gate.test.ts
+**Duration ms**: 957
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:58:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0e4303ce
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/unit/coverage-project-gate.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T03:58:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0e4303ce
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/unit/coverage-project-gate.test.ts
+**Duration ms**: 738
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:58:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6faefa54
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/unit/coverage-project-gate.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T03:58:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6faefa54
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/unit/coverage-project-gate.test.ts
+**Duration ms**: 447
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:58:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: eb618f37
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/unit/coverage-project-gate.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T03:58:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: eb618f37
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/unit/coverage-project-gate.test.ts
+**Duration ms**: 805
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T03:58:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3309d93d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/unit/coverage-project-gate.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T03:58:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3309d93d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-coverage-project-gate/tests/unit/coverage-project-gate.test.ts
+**Duration ms**: 474
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T04:02:48Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: cg-builder
+**Agent ID**: acg-builder-c3e12d5bc8bc8da1
+**Message**: 統合テストが全て通過しながら進行中です。これ以上ポーリングせず、Monitor がスイートの最終結果(`RESULT:` または `CI_SUITE_EXIT`)を通知するのを待ちます。完了通知が届き次第、最終検証を確認して報告します。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T04:04:16Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: cg-builder
+**Agent ID**: acg-builder-c3e12d5bc8bc8da1
+**Message**: まだ integration tier(t92)で実行中です。先ほど設定した Monitor が完了時に通知します。ポーリングを止めて待ちます。
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-10T04:08:16Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-10T04:08:16Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-10T04:10:03Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: cg-builder
+**Agent ID**: acg-builder-c3e12d5bc8bc8da1
+**Message**: Task complete. Final summary of the work delivered on branch `bolt-coverage-project-gate`:\n\n## 完了内容 (u734-coverage-project-gate)\n\n自己ホスト型プロジェクトカバレッジゲートを実装し、4つの論理コミットにまとめました。全5検証が実測 green です。\n\n**実装ステップ 
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-10T04:10:29Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-10T04:10:29Z
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-10T04:11:56Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-10T04:11:56Z
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-10T04:12:31Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-2/amadeus/spaces/default/intents/260710-codecov-project-gate/construction/u734-coverage-project-gate/code-generation/code-summary.md
+**Context**: construction > u734-coverage-project-gate > code-generation > code-summary.md
+
+---
