@@ -1,5 +1,48 @@
 # 依存関係
 
+## packaging の入力依存(intent 260710、#735)
+
+```mermaid
+flowchart TD
+  ManifestTypes["scripts/manifest-types.ts (HarnessManifest 契約)"]
+  Manifests["harness/&lt;name&gt;/manifest.ts (4 harness)"]
+  CoreTree["core/ (coreDirs.src で walk)"]
+  HarnessSrc["harness/&lt;name&gt;/ (harnessFiles.src で個別コピー)"]
+  Package["scripts/package.ts (buildTree/checkHarness)"]
+  Dist["dist/&lt;name&gt;/"]
+
+  ManifestTypes --> Manifests
+  Manifests --> Package
+  CoreTree --> Package
+  HarnessSrc --> Package
+  Package --> Dist
+```
+
+<!-- text fallback: scripts/package.ts は scripts/manifest-types.ts の HarnessManifest 契約を各 harness/<name>/manifest.ts が実装したデータとして require() し、core/(coreDirs で全 walk)と harness/<name>/(harnessFiles の列挙分のみ)を入力として dist/<name>/ を生成する。#735 の観点では、harnessFiles に列挙されない harness ソースは入力依存グラフに現れず build 不可視になる — この「参照されないソース」を検出する source 側の依存整合チェックが現状存在しない。 -->
+
+外部依存: 本 intent 区間(38コミット)で開発依存に **`fast-check ^4.9.0`**(PBT、#722)が追加された(`package.json` L32、`bun.lock`)。property-based test(setup の manifest roundtrip / semver / audit escape 等、#697 Phase B)と動的 test-size 計測(#732、`tests/lib/test-size.ts`)、codecov 導入(`codecov.yml`、`.github/workflows/ci.yml` 更新)が主な追加。packaging 自体の外部依存に変更はない。
+
+## 260709-gate-mechanics(前 intent、履歴)の内部依存(#685・#670)
+
+```mermaid
+flowchart TD
+  Lib["amadeus-lib.ts (humanActedSinceGate/verifyDelegatedApproval/auditShardDir)"]
+  State["amadeus-state.ts (handleApprove/handleDelegateApproval/handleReject)"]
+  Audit["amadeus-audit.ts (VALID_EVENT_TYPES)"]
+  Mint["amadeus-mint-presence.ts (HUMAN_TURN hook)"]
+  Worktree["amadeus-worktree.ts (assertNotSiblingWorktree)"]
+  Bolt["amadeus-bolt.ts (--worktree)"]
+
+  Lib -->|humanActedSinceGate/verifyDelegatedApproval| State
+  State -->|appendAuditEntry(DELEGATED_APPROVAL, ...)| Audit
+  Mint -->|HUMAN_TURN written to own shard| Lib
+  Bolt -->|--worktree 経路で create/release/merge を呼ぶ| Worktree
+```
+
+<!-- text fallback: amadeus-lib.ts's humanActedSinceGate and verifyDelegatedApproval are consumed by amadeus-state.ts's gate handlers (handleApprove, handleDelegateApproval, handleReject); handleDelegateApproval writes a DELEGATED_APPROVAL event whose validity as an event type is enforced by amadeus-audit.ts's VALID_EVENT_TYPES set. amadeus-mint-presence.ts (the UserPromptSubmit hook) is the sole writer of HUMAN_TURN events that humanActedSinceGate and verifyDelegatedApproval both read. amadeus-worktree.ts's assertNotSiblingWorktree is a separate, unrelated dependency chain reached both directly (amadeus-worktree.ts create) and via amadeus-bolt.ts's --worktree flag. #685 and #670 are independent defects in two unrelated subsystems that happen to be bundled in the same bugfix batch. -->
+
+外部依存に変更はない(前回スキャンの確認内容を維持)。#685 の修理(新規 delegated-rejection 機構)・#670 の修理(worktree 判定基準の追加)はいずれも既存モジュール内の分岐追加で完結し、新規パッケージ依存を要求しない見込み。
+
 ## 内部依存グラフ(既存 framework 配布経路、変更なし)
 
 ```mermaid
