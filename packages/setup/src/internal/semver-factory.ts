@@ -38,7 +38,6 @@ function comparePrerelease(a: string | null, b: string | null): number {
   if (a === null && b === null) return 0;
   if (a === null) return 1;
   if (b === null) return -1;
-
   const aIds = a.split(".");
   const bIds = b.split(".");
   for (let i = 0; i < Math.max(aIds.length, bIds.length); i++) {
@@ -47,7 +46,6 @@ function comparePrerelease(a: string | null, b: string | null): number {
     if (aId === undefined) return -1;
     if (bId === undefined) return 1;
     if (aId === bId) continue;
-
     const aNumeric = /^\d+$/.test(aId);
     const bNumeric = /^\d+$/.test(bId);
     if (aNumeric && bNumeric) return Number(aId) - Number(bId) > 0 ? 1 : -1;
