@@ -1,8 +1,8 @@
 import { spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { accessSync, appendFileSync, constants as fsConstants, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { accessSync, appendFileSync, constants as fsConstants, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
-import { basename, dirname, join, sep } from "node:path";
+import { basename, dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 // Type-only import for the lazy-loaded amadeus-graph.ts dependency. The
 // runtime require() below avoids the circular import (amadeus-graph.ts
@@ -1902,8 +1902,97 @@ export function hasActiveWorkflowAudit(projectDir: string): boolean {
   return auditShards(projectDir, intent, space).length > 0;
 }
 
+// --- Worktree anchor resolution (shared by read and write paths) ----------------
+//
+// The MAIN checkout is the shared anchor for the Bolt worktree namespace. A session
+// running from a sibling dev worktree of a legacy single-repo intent creates its Bolt
+// worktrees under the MAIN checkout (siblings of it, #670/#727), so every reader that
+// re-derives the location from (projectDir, slug) must apply the SAME anchor rule or
+// it looks in the wrong place (#746). This block is the single source of that rule:
+// the write subcommands (amadeus-worktree) and all read consumers of `worktreePath`
+// resolve the base through it, never re-implementing the semantics locally.
+
+// Read-only git probe: spawnSync git and classify the exit. No throw, no exit — a
+// missing git binary or a non-repo cwd surfaces as ok=false so callers stay total.
+function gitProbe(args: string[], cwd?: string): { ok: boolean; stdout: string } {
+  const r = spawnSync("git", args, {
+    cwd,
+    encoding: "utf-8",
+    env: { ...process.env, EDITOR: process.env.EDITOR ?? "false" },
+  });
+  return { ok: r.status === 0, stdout: (r.stdout ?? "").toString() };
+}
+
+// Canonicalise a path (macOS symlinks `/var → /private/var`), falling back to the
+// input when the path does not exist on disk.
+export function canonicalise(p: string): string {
+  try {
+    return realpathSync(p);
+  } catch {
+    return p;
+  }
+}
+
+// A comparable, canonicalised, platform-normalised key for a filesystem path.
+export function pathKey(p: string): string {
+  const normalised = canonicalise(resolve(p)).replace(/\\/g, "/");
+  return process.platform === "win32" ? normalised.toLowerCase() : normalised;
+}
+
+export interface MainCheckout {
+  cwdTop: string;
+  mainCheckout: string;
+}
+
+// Read-only git probe: return the caller cwd's own toplevel and its main checkout
+// (`git rev-parse --git-common-dir`'s parent, canonicalised), or null when the cwd is
+// not a git repo / the common dir can't be resolved. No rejection, no side effects.
+export function resolveMainCheckout(gitCwd?: string): MainCheckout | null {
+  const top = gitProbe(["rev-parse", "--show-toplevel"], gitCwd);
+  if (!top.ok) return null;
+  const cwdTop = canonicalise(top.stdout.trim());
+  const common = gitProbe(["rev-parse", "--git-common-dir"], gitCwd);
+  if (!common.ok) return null;
+  const commonAbs = resolve(cwdTop, common.stdout.trim());
+  return { cwdTop, mainCheckout: canonicalise(dirname(commonAbs)) };
+}
+
+// Pure anchor rule — no I/O. `here` is the SESSION cwd's probe, `pdRepo` the
+// projectDir's probe. Only a session running from a sibling worktree (`anchored`)
+// of a legacy single-repo intent (`legacySingleRepo`: the session and the projectDir
+// share one main checkout) anchors the namespace at that main checkout. Every other
+// context — main checkout, outside a git repo (null probe), or a multi-repo workspace
+// roof whose own repo differs — keeps projectDir (byte-identical to the old join).
+export function resolveWorktreeBaseDir(
+  projectDir: string,
+  here: MainCheckout | null,
+  pdRepo: MainCheckout | null,
+): string {
+  const anchored = here !== null && here.cwdTop !== here.mainCheckout;
+  const legacySingleRepo =
+    here !== null &&
+    pdRepo !== null &&
+    pathKey(pdRepo.mainCheckout) === pathKey(here.mainCheckout);
+  return anchored && legacySingleRepo ? here.mainCheckout : projectDir;
+}
+
+// Impure wrapper: run the read-only git probes (session cwd + projectDir) and apply
+// the pure anchor rule to get the base dir the Bolt worktree namespace hangs under.
+export function worktreeBaseDir(projectDir: string): string {
+  return resolveWorktreeBaseDir(
+    projectDir,
+    resolveMainCheckout(),
+    resolveMainCheckout(projectDir),
+  );
+}
+
 export function worktreePath(projectDir: string, boltSlug: string): string {
-  return join(projectDir, ".amadeus", "worktrees", `bolt-${boltSlug}`);
+  return join(
+    worktreeBaseDir(projectDir),
+    ".amadeus",
+    "worktrees",
+    `bolt-${boltSlug}`,
+  );
 }
 
 // --- Multi-repo: repos are siblings of the workspace ----------------------------

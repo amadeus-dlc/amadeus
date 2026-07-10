@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 431,
+    "total": 436,
     "enumeratedByClass": {
-      "function": 212,
+      "function": 217,
       "audit": 72,
       "scope": 9,
       "stage": 32,
@@ -1005,6 +1005,13 @@
     {
       "unitClass": "function",
       "unitId": "function:canonicalExportJson",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:canonicalise",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -2073,6 +2080,13 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:pathKey",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:PHASE_NUMBERS",
       "minMechanism": "none",
       "coveredBy": [],
@@ -2351,6 +2365,13 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:resolveMainCheckout",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:resolveOwnHandler",
       "minMechanism": "none",
       "coveredBy": [],
@@ -2421,6 +2442,13 @@
     {
       "unitClass": "function",
       "unitId": "function:resolveUniqueIntentDir",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:resolveWorktreeBaseDir",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -2823,6 +2851,13 @@
     {
       "unitClass": "function",
       "unitId": "function:worktreeAuditFilePath",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:worktreeBaseDir",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
