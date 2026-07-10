@@ -349,19 +349,11 @@ export function handleAppend(
 }
 
 // --- Subcommand: append-raw ---
-<<<<<<< HEAD
-
-export function handleAppendRaw(
-||||||| parent of cd8038550 (fix #685 review: forbid presence/provenance event minting via the general audit CLI (hook/state-tool in-process writers only))
-
-function handleAppendRaw(
-=======
 //
 // CLI minting guard (#685 review): reject a presence/provenance event smuggled
 // via the raw heading or an `**Event**:` line in the \n-expanded body, BEFORE
 // acquiring the lock or touching disk. Same rationale as handleAppend.
 export function handleAppendRaw(
->>>>>>> cd8038550 (fix #685 review: forbid presence/provenance event minting via the general audit CLI (hook/state-tool in-process writers only))
   heading: string,
   body: string,
   projectDir: string
