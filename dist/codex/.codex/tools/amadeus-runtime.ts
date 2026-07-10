@@ -313,7 +313,10 @@ function computeBoltDag(projectDir: string): BoltDag | undefined {
 
 // --- Compile core ---
 
-function compile(opts: CompileOptions): { skipped?: string; written?: string } {
+// Exported as the in-process test seam (gitHasSourceWork precedent): the CLI
+// integration tests spawn the shipped dist and cannot register bun coverage,
+// so unit tests import this directly.
+export function compile(opts: CompileOptions): { skipped?: string; written?: string } {
   const { projectDir } = opts;
 
   // Env-misconfig fallback per plan §97-102.
@@ -458,6 +461,15 @@ function compile(opts: CompileOptions): { skipped?: string; written?: string } {
     return null;
   };
 
+  // #761: the BoltInstance populator nulls the parent stage's completed_at (it
+  // becomes a per-Bolt field once instances[] attach), but an approved parent
+  // still captures learnings that land AFTER the last STATE_MERGED and BEFORE
+  // the parent STAGE_COMPLETED. Stash the parent completion here — keyed by
+  // slug, taken from entry.completed_at while it is still on the row — so the
+  // learnings populator can close the window on it instead of the (earlier)
+  // max instance merge time. null when the parent has no STAGE_COMPLETED.
+  const parentCompletedBySlug = new Map<string, string | null>();
+
   for (const stage of stages) {
     const phaseInfo = phaseMap.get(stage.stage_slug);
     if (phaseInfo?.phase !== "construction") continue;
@@ -547,6 +559,10 @@ function compile(opts: CompileOptions): { skipped?: string; written?: string } {
     // single-instance row builder above (lines 324-327) becomes inconsistent
     // and must be nulled. Gate-ritual surfaces that want per-Bolt provenance
     // attach it independently, not via this rollup.
+    // #761: capture the parent's own completion BEFORE it is nulled — this is
+    // the learnings window terminus for an approved parent (later than the last
+    // instance merge). null here if the parent has no STAGE_COMPLETED yet.
+    parentCompletedBySlug.set(stage.stage_slug, stage.completed_at);
     stage.started_at = null;
     stage.completed_at = null;
     stage.agent = null;
@@ -736,7 +752,19 @@ function compile(opts: CompileOptions): { skipped?: string; written?: string } {
         parentEnd,
         (out) => !worktrees.some((wt) => wt !== "" && out.startsWith(wt))
       );
-      // learnings_captured stays as the rollup left it (null on non-approved).
+      // #761: an approved instance-bearing parent captures learnings in its own
+      // [parentStart, parentCompleted) window. parentEnd (the max instance merge
+      // time) is the SENSOR window terminus and is deliberately NOT reused here:
+      // RULE_LEARNED / SENSOR_PROPOSED rows land after the last merge but before
+      // the parent STAGE_COMPLETED, so we close on the stashed parent completion.
+      // Non-approved parents keep the null the rollup left (no recount).
+      if (stage.outcome === "approved") {
+        stage.learnings_captured = countLearnings(
+          stage.stage_slug,
+          parentStart,
+          parentCompletedBySlug.get(stage.stage_slug) ?? null
+        );
+      }
     } else if (stage.started_at !== null) {
       stage.sensor_firings = pairFirings(
         stage.stage_slug,
