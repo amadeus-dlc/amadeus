@@ -137,7 +137,7 @@ function parseFlags(
 // non-string values and slip past the `!canonical` guard. Object.hasOwn keeps
 // those names on the null path. Kept local to this tool (E-L17): the
 // PHASE_NUMBERS constant stays shared, but each site carries its own guard to
-// avoid cross-file churn; a follow-up consolidation issue tracks the three copies.
+// avoid cross-file churn; #833 tracks lifting the three copies.
 export function ownPhase(input: string): string | null {
   const lower = input.toLowerCase();
   if (Object.hasOwn(PHASE_NUMBERS, lower)) return PHASE_NUMBERS[lower];

@@ -88,7 +88,7 @@ function isCheckboxState(s: string): s is CheckboxState {
 // non-string values and are mistaken for valid phases. Object.hasOwn keeps
 // those names on the null (valid:false) path. Kept local to this tool (E-L17):
 // the PHASE_NUMBERS constant stays shared, but each site carries its own guard
-// to avoid cross-file churn; a follow-up consolidation issue tracks the copies.
+// to avoid cross-file churn; #833 tracks lifting the copies.
 export function ownPhase(input: string): string | null {
   const lower = input.toLowerCase();
   if (Object.hasOwn(PHASE_NUMBERS, lower)) return PHASE_NUMBERS[lower];
