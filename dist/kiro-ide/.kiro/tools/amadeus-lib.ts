@@ -1600,19 +1600,20 @@ type PresenceEvent = {
 // every downstream predicate shares one forgery-resistant view; an unverifiable
 // delegation is simply omitted. Shards are read individually (not via the merged
 // buffer) precisely so shard boundaries survive — the merged buffer's block index
-// cannot tell which shard a same-second event came from.
+// cannot tell which shard a same-second event came from. A shard that vanishes
+// between enumerate and read is skipped; the empty-merged-buffer fail-open signal
+// of readAllAuditShards (join by "\n") is preserved exactly — an empty buffer
+// means no ledger → no presence tracking → fail open. (These notes live up here
+// rather than inside the body: bun's lcov stamps in-body comment lines as
+// never-hit DA records, which the codecov patch gate counts as misses.)
 function scanPresenceLedger(projectDir: string): PresenceEvent[] | null {
   const shardPaths = auditShards(projectDir);
   const contents: string[] = [];
   for (const path of shardPaths) {
     try {
       contents.push(readFileSync(path, "utf-8"));
-    } catch {
-      // a shard vanished between enumerate and read — skip it
-    }
+    } catch {} // vanished between enumerate and read — skip (see doc above)
   }
-  // Preserve the exact fail-open signal of readAllAuditShards (join by "\n"): an
-  // empty merged buffer means no ledger → no presence tracking → fail open.
   if (contents.join("\n").length === 0) return null;
   const events: PresenceEvent[] = [];
   for (let shard = 0; shard < contents.length; shard++) {
@@ -1698,8 +1699,6 @@ export function humanActedSinceGate(
   if (verb === undefined) {
     return humanActOutstanding(events, (e) => e.human, (e) => e.res !== undefined);
   }
-  // A HUMAN_TURN (local act) is consumed by ANY resolution; a verb-matching
-  // delegation owns its GATE slot (only a gate resolution consumes it — #736).
   const humanTurnOutstanding = humanActOutstanding(
     events,
     (e) => e.human && e.delegVerb === undefined,

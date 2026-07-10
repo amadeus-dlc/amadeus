@@ -92,6 +92,15 @@ describe("t208: presence cross-shard same-second tie-break (#779)", () => {
     expect(humanActedSinceLastAnswer(proj)).toBe(false);
   });
 
+  // An unreadable audit-dir entry (here: a DIRECTORY named *.md — readFileSync
+  // throws EISDIR) is skipped, not fatal: the predicates keep answering from the
+  // readable shards (scanPresenceLedger's vanished-shard tolerance).
+  test("an unreadable *.md entry in the audit dir is skipped, remaining shards still answer", () => {
+    writeShard(proj, "aaa-clone.md", block("HUMAN_TURN", "2026-07-10T12:00:02Z"));
+    mkdirSync(join(seededAuditDir(proj), "bbb-dir.md"), { recursive: true });
+    expect(humanActedSinceGate(proj)).toBe(true); // fresh HUMAN_TURN, no resolution
+  });
+
   // --- Non-regression: the unaffected cases keep their exact prior behaviour.
 
   test("same-shard order is UNCHANGED: HUMAN_TURN appended AFTER the resolution is still outstanding", () => {
