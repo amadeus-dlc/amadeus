@@ -560,6 +560,13 @@ function loadManifest(name: string): HarnessManifest {
 // mode's post-sweep BOTH consume, so a freshly written tree always passes
 // --check (#771). `outsideHarness` are absolute paths under `root` (buildTree's
 // return); the harness-dir subtree is owned by its own orphan/sweep pass.
+//
+// Write mode's post-sweep deletes every dist/<name>/ file NOT in this set (and
+// not under the harness-dir subtree): its two rmSync only cleaned <harnessDir>/
+// and amadeus/, so a stale/renamed projectRoot output sitting directly under
+// dist/<name>/ (or in an undeclared subdir) would otherwise survive a regenerate
+// and then trip --check. Sharing this set with checkHarness keeps write and
+// check symmetric — write deletes exactly what check would flag as an orphan.
 export function expectedOutsideHarness(
   m: HarnessManifest,
   outsideHarness: string[],
@@ -601,14 +608,7 @@ export function writeHarness(name: string): void {
     const memoryRoot = join(distDir, "amadeus");
     if (existsSync(memoryRoot)) rmSync(memoryRoot, { recursive: true, force: true });
     const { outsideHarness } = buildTree(m, distDir, seedStash);
-    // Post-sweep the project-root output layer: delete any dist/<name>/ file
-    // OUTSIDE the harness-dir subtree that isn't a legitimate output. The two
-    // rmSync above only cleaned <harnessDir>/ and amadeus/, so a stale/renamed
-    // projectRoot output sitting directly under dist/<name>/ (or in an undeclared
-    // subdir) would otherwise survive the regenerate and then trip --check. Uses
-    // the same expected set as checkHarness's whole-tree orphan scan, keeping the
-    // two sides symmetric so write-then-check is always exit 0 (#771).
-    const expected = expectedOutsideHarness(m, outsideHarness, distDir);
+    const expected = expectedOutsideHarness(m, outsideHarness, distDir); // #771 post-sweep set
     const harnessSubtreePrefix = m.harnessDir + sep;
     for (const f of walk(distDir)) {
       const rel = relative(distDir, f);
