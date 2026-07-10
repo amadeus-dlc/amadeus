@@ -4972,6 +4972,10 @@
         {
           "file": "tests/integration/t166-multi-repo-construction.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t207-worktree-base-freshness.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"

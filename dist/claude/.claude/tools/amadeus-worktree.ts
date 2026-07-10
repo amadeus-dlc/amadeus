@@ -41,14 +41,22 @@ const VALID_VERIFY_EVENTS = new Set([
   "WORKTREE_MERGED",
   "WORKTREE_DISCARDED",
 ]);
+const CREATE_BOOLEAN_FLAGS = new Set(["--allow-stale"]);
 
 // --- Flag parsing (mirrors amadeus-bolt.ts:30-46) ---
 
-function parseFlags(args: string[]): Record<string, string> {
+function parseFlags(
+  args: string[],
+  booleanFlags?: ReadonlySet<string>,
+): Record<string, string> {
   const flags: Record<string, string> = {};
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (!a.startsWith("--")) continue;
+    if (booleanFlags?.has(a)) {
+      flags[a.slice(2)] = "true";
+      continue;
+    }
     if (i + 1 >= args.length) {
       error(`${a} expects a value, got end of arguments.`);
     }
@@ -96,6 +104,39 @@ function runGit(args: string[], cwd?: string): GitResult {
     stderr: (r.stderr ?? "").toString(),
     code: r.status ?? 1,
   };
+}
+
+export function assertLocalBaseFresh({
+  base,
+  gitCwd,
+  allowStale,
+}: {
+  base: string;
+  gitCwd: string;
+  allowStale: boolean;
+}): void {
+  if (allowStale) return;
+  if (base.startsWith("origin/")) return;
+
+  const local = runGit(["rev-parse", "--verify", `refs/heads/${base}^{commit}`], gitCwd);
+  if (!local.ok) return;
+
+  const origin = runGit(["remote", "get-url", "origin"], gitCwd);
+  if (!origin.ok) return;
+
+  const remote = runGit(
+    ["rev-parse", "--verify", `refs/remotes/origin/${base}^{commit}`],
+    gitCwd,
+  );
+  if (!remote.ok) return;
+
+  const localSha = local.stdout.trim();
+  const remoteSha = remote.stdout.trim();
+  if (localSha === remoteSha) return;
+
+  throw new Error(
+    `Local base branch "${base}" differs from origin/${base}: local SHA ${localSha}, remote SHA ${remoteSha}. Run git fetch origin and fast-forward "${base}", or rerun with --allow-stale to intentionally use the local SHA.`,
+  );
 }
 
 // --- Worktree anchor resolution ---
@@ -234,18 +275,22 @@ function resolveRepoCwd(
 
 // --- Subcommand: create ---
 //
-// Usage: amadeus-worktree create --slug <slug> --base <branch> [--repo <name>]
+// Usage: amadeus-worktree create --slug <slug> --base <branch> [--allow-stale]
+//                              [--repo <name>]
 //                              [--intent <dir>] [--space <name>]
 //
 // --repo (P7): the sibling repo to fork the worktree inside (a multi-repo intent
 // requires it; a single-repo intent infers the lone repo; a legacy intent with no
 // recorded repos runs in the projectDir, today's behaviour).
-function handleCreate(args: string[]): void {
-  const flags = parseFlags(args);
+export function handleCreate(
+  args: string[],
+  explicitProjectDir?: string,
+): void {
+  const flags = parseFlags(args, CREATE_BOOLEAN_FLAGS);
   const slug = validateSlug(flags.slug);
   if (!flags.base) errorWithSlug(slug, "Missing --base <branch>");
 
-  const pd = resolveProjectDir(projectDir);
+  const pd = resolveProjectDir(explicitProjectDir ?? projectDir);
   // P7: resolve the target sibling repo (or the projectDir for a legacy single-repo
   // intent), then resolve the worktree anchor — the main checkout when the caller
   // runs from a sibling worktree, otherwise the caller's own repoCwd.
@@ -256,6 +301,16 @@ function handleCreate(args: string[]): void {
   const baseExists = runGit(["rev-parse", "--verify", flags.base], gitCwd);
   if (!baseExists.ok) {
     errorWithSlug(slug, `Base branch does not exist locally: ${flags.base}`);
+  }
+
+  try {
+    assertLocalBaseFresh({
+      base: flags.base,
+      gitCwd,
+      allowStale: flags["allow-stale"] === "true",
+    });
+  } catch (e) {
+    throw new Error(`[slug=${slug}] ${errorMessage(e)}`);
   }
 
   const wtPath = worktreePath(worktreeBaseDir(pd, gitCwd, anchored, pathKey(repoCwd) === pathKey(pd)), slug);
