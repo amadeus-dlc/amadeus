@@ -570,14 +570,24 @@ function coverageHtmlEscape(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function writeCoverageHtml(lcov: string): void {
-  interface Row {
-    source: string;
-    lines: number;
-    hits: number;
-  }
-  const rows: Row[] = [];
-  let current: Row | null = null;
+interface CoverageRow {
+  source: string;
+  lines: number;
+  hits: number;
+}
+
+interface CoverageTotals {
+  rows: CoverageRow[];
+  totalHits: number;
+  totalLines: number;
+}
+
+// Parse the normalized LCOV string into per-source rows (SF/LF/LH) and sum the
+// hit/line totals across every source. Single parse, shared by the HTML report
+// and the coverage-totals.json emit so the two can never disagree.
+function collectCoverageTotals(lcov: string): CoverageTotals {
+  const rows: CoverageRow[] = [];
+  let current: CoverageRow | null = null;
   for (const line of lcov.split(/\r?\n/)) {
     if (line.startsWith("SF:")) {
       current = { source: line.slice(3), lines: 0, hits: 0 };
@@ -596,6 +606,11 @@ function writeCoverageHtml(lcov: string): void {
 
   const totalLines = rows.reduce((sum, row) => sum + row.lines, 0);
   const totalHits = rows.reduce((sum, row) => sum + row.hits, 0);
+  return { rows, totalHits, totalLines };
+}
+
+function writeCoverageHtml(totals: CoverageTotals): void {
+  const { rows, totalHits, totalLines } = totals;
   const pct = (hits: number, lines: number): string => (lines === 0 ? "100.00" : ((hits / lines) * 100).toFixed(2));
   const tableRows = rows
     .sort((a, b) => a.source.localeCompare(b.source))
@@ -638,6 +653,18 @@ ${tableRows}
   );
 }
 
+// Emit coverage/coverage-totals.json from the same parsed totals the HTML report
+// uses. This is the machine-readable input the project coverage gate consumes
+// (tests/coverage-project-gate.ts). No percent field — the gate derives percent
+// itself via exact integer math from hits/lines.
+function writeCoverageTotalsJson(totals: CoverageTotals): void {
+  writeFileSync(
+    join(coverageRoot, "coverage-totals.json"),
+    `${JSON.stringify({ schemaVersion: 1, hits: totals.totalHits, lines: totals.totalLines }, null, 2)}\n`,
+    "utf8",
+  );
+}
+
 function combineCoverageReports(): void {
   if (!args.coverage) return;
   const combined = join(coverageRoot, "lcov.info");
@@ -655,7 +682,9 @@ function combineCoverageReports(): void {
   }
   const normalized = `${normalizeCoverageReport(chunks.join("\n").trim())}\n`;
   writeFileSync(combined, normalized, "utf8");
-  writeCoverageHtml(normalized);
+  const totals = collectCoverageTotals(normalized);
+  writeCoverageHtml(totals);
+  writeCoverageTotalsJson(totals);
   process.stdout.write(`Coverage report: ${displayLogDirPath(combined)}\n`);
 }
 
