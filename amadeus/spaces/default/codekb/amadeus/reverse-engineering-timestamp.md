@@ -2,7 +2,27 @@
 
 > このファイルは鮮度ポインタ(共有・last-writer-wins)であってベース点ではない。各 intent 固有の base/observed の真実源は `codekb/amadeus/re-scans/<intent>.md`(#707 新契約)。以下は最新 intent の記録で、旧 intent の節は参照用に温存する。
 
-## 実行メタデータ(最新: 260709-dynamic-test-size)
+## 実行メタデータ(最新: 260710-kiro-stale-hooks)
+
+- Date: 2026-07-10
+- Intent: `260710-kiro-stale-hooks`(#719 / P3: Kiro CLI が unshipped な stale `.kiro.hook` を source に保持し、orphan 免除がそれをマスクしている source hygiene バグ)
+- Scope: `bugfix`
+- Repository: `amadeus`(origin remote 由来、#693 で統一。物理チェックアウトは worktree `codex-engineer-1`)
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh(project.md 是正事項 cid:reverse-engineering:c1)。Developer(スキャン)→ Architect(合成)の2サブエージェント直列(cid:reverse-engineering:c3)。
+- Base commit: `24197d755a51712c1bfd6fa405f709c070c61f0d`(前 intent `260709-dynamic-test-size` の観測コミット。本 intent に prior re-scan 記録なし → re-scans/ 内最新 observed を base に採用。真実源は `re-scans/260710-kiro-stale-hooks.md`)
+- Observed commit: `e1a07fada340bb4691d8ce8d576cbf96345f9395`(現 HEAD、`git rev-parse HEAD` 実測)
+- Focus: #719 — kiro ハーネスの hook 出荷経路(`manifest.ts` / `agents/amadeus.json` adapter 登録)・`scripts/package.ts` の orphan 検査機構・2層マスキング(source 側検査機構の不在=1層目 + kiro CLI authoredExempt regex3 の空振り exemption=2層目)
+
+## 分析範囲(260710-kiro-stale-hooks)
+
+`git diff --name-status 24197d75..e1a07fad -- ':!amadeus/' ':!dist/'` の差分は13ファイルで、いずれも本フォーカス面(`harness/kiro*`・`scripts/package.ts`・harness `manifest.ts`)に**非関与**(監査エスケープ #204/#205 とテストサイズ動的計測系)。したがってフォーカス面は前回 codekb の理解がそのまま有効で、本スキャンは現行コードの直読で file:line を確定した(`scripts/package.ts:554-633`・`harness/kiro/manifest.ts`・`harness/kiro-ide/manifest.ts`・`harness/kiro/agents/amadeus.json`・`dist/kiro` 出荷実態・t147/t148)。詳細は `re-scans/260710-kiro-stale-hooks.md`。
+
+## 合成方針(Architect 実施 / 260710-kiro-stale-hooks)
+
+Developer スキャン結果を受け、9アーティファクトのうち2件を diff-refresh 更新した: `code-quality-assessment.md`(#719 の 2層マスキング drift-guard 穴を1節追加 — source 側 orphan 検査機構の不在=1層目・kiro CLI authoredExempt regex3 の空振り exemption=2層目、および #701 記述の stale 行番号を whole-tree 化 `:605-628` へ是正)、本ファイル `reverse-engineering-timestamp.md`(鮮度ポインタ更新)。残る7件(api-documentation / architecture / business-overview / code-structure / component-inventory / dependencies / technology-stack)は本 intent が source hygiene に限局し API 契約・アーキ・依存・構造・スタックがいずれも不変のため温存。以下の dynamic-test-size 以降の節は前 intent の記録であり参照用に温存する。
+
+## 実行メタデータ(260709-dynamic-test-size)
 
 - Date: 2026-07-09
 - Intent: `260709-dynamic-test-size`(#699 / #684 Phase D: テストランナーにおけるテストサイズの継続的動的計測)
