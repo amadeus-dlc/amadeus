@@ -1,5 +1,5 @@
 // covers: modules:setup-fsops-resolve
-// size: small
+// size: medium
 //
 // resolveUnderRootPath — SEC-F03 containment guard (#773). The guard resolves a
 // caller-supplied relPath under the TmpWrite root and rejects anything that
