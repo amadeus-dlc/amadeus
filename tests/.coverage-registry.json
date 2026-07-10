@@ -4962,6 +4962,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/e2e/t06.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/e2e/t10-halt-and-ask-discard.test.ts",
           "mechanism": "cli"
         },
@@ -5014,6 +5018,10 @@
       "coveredBy": [
         {
           "file": "tests/e2e/t03.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/e2e/t06.test.ts",
           "mechanism": "cli"
         },
         {
