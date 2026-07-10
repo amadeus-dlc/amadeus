@@ -48,6 +48,7 @@ const manifest: HarnessManifest = {
     { src: "agents/amadeus-architecture-reviewer-agent.json", dst: "agents/amadeus-architecture-reviewer-agent.json" },
     { src: "agents/amadeus-composer-agent.json", dst: "agents/amadeus-composer-agent.json" },
     { src: "hooks/amadeus-kiro-adapter.ts", dst: "hooks/amadeus-kiro-adapter.ts" },
+    { src: "hooks/amadeus-kiro-vocab.ts", dst: "hooks/amadeus-kiro-vocab.ts" },
     { src: "hooks/amadeus-audit-logger.kiro.hook", dst: "hooks/amadeus-audit-logger.kiro.hook" },
     { src: "hooks/amadeus-mint.kiro.hook", dst: "hooks/amadeus-mint.kiro.hook" },
     { src: "hooks/amadeus-block.kiro.hook", dst: "hooks/amadeus-block.kiro.hook" },
