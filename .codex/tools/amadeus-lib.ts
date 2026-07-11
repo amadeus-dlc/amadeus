@@ -1902,6 +1902,47 @@ export function hasActiveWorkflowAudit(projectDir: string): boolean {
   return auditShards(projectDir, intent, space).length > 0;
 }
 
+// True iff the ACTIVE intent's workflow has reached a terminal Completed state —
+// the "should advisory writers stay their hand?" guard. Resolves the active
+// space + intent, reads its amadeus-state.md `Status` field and treats
+// "Completed"/"Complete" as terminal (matching the statusline's own check).
+//
+// Appending audit events (e.g. SUBAGENT_COMPLETED) to a CLOSED workflow leaves
+// unpushed residue in every worktree that merely runs subagents after the intent
+// finished — a real operational nuisance (Issue #845). Existence of a shard
+// (hasActiveWorkflowAudit) is NOT enough: a completed intent still has shards on
+// disk. Returns false when no state file resolves or Status is absent/non-terminal
+// (the workflow is still Running → the unchanged append behaviour).
+export function activeWorkflowIsComplete(projectDir: string): boolean {
+  const space = activeSpace(projectDir);
+  const intent = activeIntent(projectDir, space) ?? undefined;
+  const stateFile = stateFilePath(projectDir, intent, space);
+  // A single read handles BOTH "no state file yet" (ENOENT — the common case
+  // when no workflow has written state) and an unreadable path: either throws,
+  // and a missing/unreadable state means "not terminal" → false. (No existsSync
+  // pre-check: the ENOENT throw is deterministic on every platform, so this
+  // branch is portably reachable — a directory read is NOT, it throws on macOS
+  // but Bun/Linux returns "".)
+  let content: string;
+  try {
+    content = readFileSync(stateFile, "utf-8");
+  } catch {
+    return false;
+  }
+  const status = getField(content, "Status");
+  return status === "Completed" || status === "Complete";
+}
+
+// Normalise a Claude Code hook's `agent_type` to a non-empty label. The field
+// arrives as an EMPTY STRING for generic Task agents, and `x ?? "unknown"` passes
+// the empty string straight through (`??` only substitutes null/undefined),
+// recording a blank "Agent Type". Fall back to "unknown" whenever the value is
+// missing OR blank (whitespace-only), keeping the original value verbatim
+// otherwise. (Issue #845 side-symptom.)
+export function normalizeAgentType(raw: string | null | undefined): string {
+  return raw?.trim() ? raw : "unknown";
+}
+
 // --- Worktree anchor resolution (shared by read and write paths) ----------------
 //
 // The MAIN checkout is the shared anchor for the Bolt worktree namespace. A session
