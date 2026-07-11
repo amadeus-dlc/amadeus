@@ -4873,6 +4873,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/unit/t211-workspace-scan-generalize.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/unit/t27.test.ts",
           "mechanism": "cli"
         }

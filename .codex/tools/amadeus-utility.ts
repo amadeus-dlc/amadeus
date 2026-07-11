@@ -1850,6 +1850,35 @@ function countFilesByLang(
   }
 }
 
+// Recurse language counts into every non-excluded, non-dot top-level directory
+// (capped depth). Issue #840: the old walk covered only SCAN_SOURCE_DIRS, so a
+// codebase whose sources live elsewhere (packages/, this very repo) counted zero
+// files and fell through to Greenfield / Unknown, downgrading bugfix
+// reverse-engineering to SKIP. Dot-directories stay excluded — they are
+// config/harness space, and counting them would flip a harness-only empty
+// project to Brownfield. `topSet` is already SCAN_EXCLUDE-filtered by the caller.
+// An entry can vanish between the caller's readdir and this lstat (TOCTOU), so
+// lstatSync is guarded; the single-line `catch { continue; }` keeps the guard on
+// executable lines (a bare `}` would be stamped DA:0 by bun --coverage's
+// load-only chunk and never re-stamped). Exported as an in-process seam so that
+// lstat-race branch is drivable without staging a real filesystem race.
+export function countLangsInTopDirs(
+  projectDir: string,
+  topSet: Set<string>,
+  langCounts: Record<string, number>
+): void {
+  for (const entry of topSet) {
+    if (entry.startsWith(".")) continue;
+    const full = join(projectDir, entry);
+    let st: import("node:fs").Stats;
+    try {
+      st = lstatSync(full);
+    } catch { continue; }
+    if (st.isSymbolicLink() || !st.isDirectory()) continue;
+    countFilesByLang(full, langCounts, 6);
+  }
+}
+
 function detectFrameworks(topEntries: Set<string>, projectDir: string): string[] {
   const fws: string[] = [];
   const has = (name: string) => topEntries.has(name);
@@ -1986,12 +2015,7 @@ export function detectWorkspace(projectDir: string): ScanResult {
     }
   }
 
-  // Recurse into known source dirs if present (capped depth)
-  for (const dirName of SCAN_SOURCE_DIRS) {
-    if (topSet.has(dirName)) {
-      countFilesByLang(join(projectDir, dirName), langCounts, 6);
-    }
-  }
+  countLangsInTopDirs(projectDir, topSet, langCounts);
 
   // Language list: primary = highest count; secondary = >= 20% of primary count
   const sortedLangs = Object.entries(langCounts).sort((a, b) => b[1] - a[1]);
