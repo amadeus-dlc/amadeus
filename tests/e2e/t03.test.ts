@@ -15,7 +15,7 @@
 // and the real git-merge / git-worktree-remove side effects the .sh relies on.
 //
 // FIXTURE: amadeus-worktree.ts asserts it runs from the main checkout
-// (assertNotSiblingWorktree, amadeus-worktree.ts:101) and runs real git, so each
+// (resolveWorktreeAnchor, amadeus-worktree.ts) and runs real git, so each
 // case needs an ACTUAL git repo on `main` with one commit plus an amadeus-docs/
 // dir. setupWorktreeFixture (tests/harness/fixtures.ts) builds exactly that;
 // the tool is spawned with cwd = the fixture so its HEAD / rev-parse resolves

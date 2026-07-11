@@ -28,7 +28,7 @@
 // (amadeus-lib.ts:148) and refuses if the dir is absent (amadeus-audit.ts:371). The
 // worktree is created with the real `amadeus-worktree.ts create` subcommand, which
 // runs `git worktree add` and asserts it is invoked from the main checkout
-// (assertNotSiblingWorktree). So each case needs an actual git repo on `main`
+// (resolveWorktreeAnchor). So each case needs an actual git repo on `main`
 // with one commit + an amadeus-docs/ dir + a seeded audit.md and state file. The
 // .sh built this with setup_worktree_fixture + a seeded state-mid-ideation.md +
 // `printf "# AI-DLC Audit Log\n" > audit.md`; setupWorktreeFixture

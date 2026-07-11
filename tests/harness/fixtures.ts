@@ -280,8 +280,8 @@ export function sedReplaceInFile(
 // Worktree fixtures — TS port of tests/lib/worktree-helpers.sh.
 //
 // amadeus-worktree.ts runs REAL `git worktree add/remove/list` and asserts it is
-// invoked from the main checkout (assertNotSiblingWorktree, amadeus-worktree.ts
-// :101). So a worktree-tier test needs an actual git repo on `main` with one
+// invoked from the main checkout (resolveWorktreeAnchor, amadeus-worktree.ts).
+// So a worktree-tier test needs an actual git repo on `main` with one
 // commit, plus the per-intent workspace shell for the audit emit. These helpers
 // build and tear that down, mirroring setup_worktree_fixture /
 // cleanup_worktree_fixture.
@@ -539,7 +539,7 @@ export function setupIntegrationProject(
 //
 // Why a fresh tmpdir root (not createTestProject's reuse): the journey's
 // construction beat forks git worktrees INSIDE the sibling repos, and
-// assertNotSiblingWorktree (amadeus-worktree.ts:112) is a STRUCTURAL git check
+// resolveWorktreeAnchor (amadeus-worktree.ts) is a STRUCTURAL git check
 // (`git rev-parse --show-toplevel` vs `dirname(--git-common-dir)`) keyed on the
 // target repo's cwd. Scaffolding under .claude/worktrees/ would leave the
 // spawned tool inside this very worktree's git tree; an os.tmpdir() root with

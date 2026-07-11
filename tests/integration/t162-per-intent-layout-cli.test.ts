@@ -26,7 +26,7 @@
 // Mechanism: cli. Full real-tool flow (git worktree + amadeus-worktree + amadeus-bolt
 // + amadeus-state + amadeus-audit as spawned subprocesses), asserting on the on-disk
 // per-intent record paths and process exit codes. cwd contract mirrors t49: every
-// worktree/bolt spawn runs with `cwd: proj` (assertNotSiblingWorktree checks CWD).
+// worktree/bolt spawn runs with `cwd: proj` (resolveWorktreeAnchor checks CWD).
 
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";

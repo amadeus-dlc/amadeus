@@ -14,7 +14,7 @@
 // git-worktree-add side effect the .sh relies on.
 //
 // FIXTURE: amadeus-worktree.ts asserts it runs from the main checkout
-// (assertNotSiblingWorktree, amadeus-worktree.ts:101) and runs real git, so each
+// (resolveWorktreeAnchor, amadeus-worktree.ts) and runs real git, so each
 // case needs an ACTUAL git repo on `main` with one commit plus an amadeus-docs/
 // dir. setupWorktreeFixture (tests/harness/fixtures.ts, ported this migration
 // from tests/lib/worktree-helpers.sh) builds exactly that; the tool is spawned

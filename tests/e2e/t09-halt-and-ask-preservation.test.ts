@@ -33,7 +33,7 @@
 //     still the latest WORKTREE_CREATED, untouched by fail).
 //
 // FIXTURE: amadeus-worktree.ts runs real git and asserts it is invoked from the
-// main checkout (assertNotSiblingWorktree, amadeus-worktree.ts:101). So the
+// main checkout (resolveWorktreeAnchor, amadeus-worktree.ts). So the
 // fixture is an ACTUAL git repo on `main` with one commit plus amadeus-docs/ —
 // setupWorktreeFixture (tests/harness/fixtures.ts, ported from
 // tests/lib/worktree-helpers.sh). The .sh additionally `mkdir -p amadeus-docs`;
