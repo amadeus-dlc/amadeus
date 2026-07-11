@@ -37,6 +37,7 @@ import {
   humanActedSinceGate,
   humanPresenceGuardDisabled,
   isAutonomousMode,
+  isMachineInjectedTurnText,
   stateFilePath,
 } from "../tools/amadeus-lib.ts";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
@@ -126,9 +127,16 @@ if (target === "verb-intercept") {
   // failure must not skip the mint, or a genuine approval gets refused). Gated on
   // workflow state existing (same self-gate as the core mint hook) so a prompt in
   // a project that never ran the framework does not scaffold audit shards.
+  // Classify the prompt through the SHARED lib predicate (the same catalog the
+  // core mint hook uses) BEFORE minting: a machine-injected turn (agmsg
+  // teammate-message / task-notification) must NOT scaffold a phantom HUMAN_TURN
+  // (#755/#811). Fail-open: a prompt-absent payload still mints (the core hook's
+  // contract).
   try {
     const cwd = kiro.cwd ?? process.cwd();
-    if (existsSync(stateFilePath(cwd))) {
+    const machineInjected =
+      typeof kiro.prompt === "string" && isMachineInjectedTurnText(kiro.prompt);
+    if (existsSync(stateFilePath(cwd)) && !machineInjected) {
       appendAuditEntry("HUMAN_TURN", {}, cwd);
     }
   } catch { /* presence best-effort - mint never blocks the turn */ }

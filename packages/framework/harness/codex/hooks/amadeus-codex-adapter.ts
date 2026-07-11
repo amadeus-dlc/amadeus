@@ -56,7 +56,7 @@ import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
-import { hooksHealthDir, stateFilePath } from "../tools/amadeus-lib.ts";
+import { hooksHealthDir, isMachineInjectedTurnText, stateFilePath } from "../tools/amadeus-lib.ts";
 
 const HOOKS_DIR = dirname(fileURLToPath(import.meta.url));
 const target = process.argv[2] ?? "";
@@ -74,6 +74,7 @@ interface CodexHookInput {
   agent_type?: string;
   agent_id?: string;
   stop_hook_active?: boolean;
+  prompt?: string;
 }
 
 let rawInput = "";
@@ -351,9 +352,16 @@ switch (target) {
     // in the active intent's audit shard (human-presence gate). Gated on workflow
     // state existing (same self-gate as the core mint hook) so a prompt in a
     // project that never ran the framework does not scaffold audit shards.
-    // Fail-open: a mint failure must never block the turn. Advisory, no stdout.
+    // Classify the prompt through the SHARED lib predicate (the same catalog the
+    // core mint hook uses) BEFORE minting: a machine-injected turn (agmsg
+    // teammate-message / task-notification) must NOT scaffold a phantom
+    // HUMAN_TURN (#755/#811). Fail-open: a prompt-absent payload still mints — the
+    // core hook's exact contract (amadeus-mint-presence.ts) — and a mint failure
+    // must never block the turn. Advisory, no stdout.
     try {
-      if (existsSync(stateFilePath(projectDir))) {
+      const machineInjected =
+        typeof codex.prompt === "string" && isMachineInjectedTurnText(codex.prompt);
+      if (existsSync(stateFilePath(projectDir)) && !machineInjected) {
         appendAuditEntry("HUMAN_TURN", {}, projectDir);
       }
     } catch {
