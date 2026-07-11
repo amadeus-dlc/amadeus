@@ -46,6 +46,7 @@ const manifest: HarnessManifest = {
   harnessFiles: [
     { src: "skills/amadeus/SKILL.md", dst: "skills/amadeus/SKILL.md" },
     { src: "skills/amadeus/question-rendering.md", dst: "skills/amadeus/question-rendering.md" },
+    { src: "skills/amadeus/issue-ref-contract.md", dst: "skills/amadeus/issue-ref-contract.md" },
     { src: "agents/amadeus.json", dst: "agents/amadeus.json" },
     { src: "agents/amadeus-architect-agent.json", dst: "agents/amadeus-architect-agent.json" },
     { src: "agents/amadeus-developer-agent.json", dst: "agents/amadeus-developer-agent.json" },

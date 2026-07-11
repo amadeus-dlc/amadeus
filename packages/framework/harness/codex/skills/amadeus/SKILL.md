@@ -104,6 +104,16 @@ When an intent is already active, `next` advances it (the engine is read-only an
 - **On a PLAN-RESHAPE signal, route through the compose verb - never forward the raw text.** A mid-flow freeform `next` with no verb advances the current stage, so a reshape request forwarded verbatim would silently run a stage instead of re-shaping the plan. Your first engine call becomes `bun .codex/tools/amadeus-orchestrate.ts next compose "<their words>"`, and the engine's with-state compose dispatch owns the flow from there - UNLESS the request names specific stages imperatively, in which case the fast path (see "Composing a workflow plan" below) skips the `next compose` call entirely and goes straight to marker, gate, verb. This does not weaken the verbatim rule: it is the same sanctioned pre-forward judgment step as the new-work offer, and everything after the judgment rides the deterministic verb. Never do this under autonomous Construction - an unattended run has no human to answer the gate. (The reshape gate needs an interactive session, like any compose gate here; the literal `$amadeus compose "<request>"` verb remains the documented reliable path on this harness.)
 - You switch between intents any time with `/amadeus intent <name>` (bare `/amadeus intent` lists them) — parallel to `/amadeus space <name>`.
 
+### GitHub Issue references as input
+
+The user's invocation text (a fresh Birth description, a continuation prompt, or the new-work text above) may name a GitHub Issue instead of, or alongside, prose. Resolve it before acting:
+
+- When the target repository context is resolvable (a single Git remote, or a repository the current session is already scoped to), treat a short reference (`#nnn`) as equivalent to that Issue's full URL (`https://github.com/<owner>/<repo>/issues/<nnn>`) — both name the same input.
+- Accept the explicit `owner/repo#nnn` form as-is; it names its own repository context regardless of the current remote.
+- When the repository context is ambiguous (multiple remotes, a fork whose upstream differs, or no Git repository at all) and the input is a bare `#nnn` with no `owner/repo` prefix, do not guess which repository it names — stop and ask the human which repository `#nnn` refers to before treating it as an Issue input.
+
+This equivalence governs how `#nnn` and Issue URLs are read as Intent input (e.g. during Birth or a continuation); it does not change engine routing or `next`/`report` argument parsing. See `issue-ref-contract.md` beside this file for the full contract.
+
 ### Composing a workflow plan (the adaptive composer)
 
 The engine can name a COMPOSER DISPATCH instead of a scope confirm: on `/amadeus compose "<task>"`, `--new-scope`, `--report <path>`, or when the human answers a cold-start compose offer with "compose", `next` emits a `print` whose message names the composer agent. Act on it like any dispatch: spawn the `amadeus-composer-agent` role with the message's instructions as the task (the harness resolves its persona; do not inject it in the prompt). The composer runs the read-only `detect` scan, reads the stock scopes, and returns a structured proposal: `{ mode: matched|custom, scopeName, grid, rationale[] }` with a reason for every SKIP.
