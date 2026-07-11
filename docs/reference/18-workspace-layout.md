@@ -1,5 +1,7 @@
 # Workspace Layout Decision
 
+> Languages: **English** | [日本語](18-workspace-layout.ja.md)
+
 ## Context
 
 GitHub issue #610 は、Amadeus repository の workspace/package layout を正規化するための課題である。従来は framework source of truth を root-level の `core/` と `harness/` に置き、setup/installer 系の作業だけを将来 `packages/setup/` に置く前提だった。
