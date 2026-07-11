@@ -1,12 +1,71 @@
 # コード品質評価
 
-> 本ページ先頭の「p3-cleanup-batch5(候補)の観測面」節が最新 intent `260710-p3-cleanup-batch5`(#811 #822 #830 #730 #819 #831)の候補記録。続く p3-cleanup-batch4 節(#757 #758 #753 #739 #740 #784 — 全6件 2026-07-10 修正着地済み、PR #823/#821/#817/#818/#814/#815)・core-repair-batch3 節(#746 ほか9件、2026-07-11)・複雑度ゲート導入節(intent 260710-complexity-gate)・ tools-dispatch-batch 節(#774 / #785 / #787 / #788 / #789)・ bughunt-fix-batch 節(#771/#773/#775/#776/#779)・swarm-worktree-batch 節(#738/#748/#746/#760)・learnings-audit-batch 節(#754 / #745 / #761)・mint-presence-vectors 節(#755)・packaging source-unreferenced 節(intent 260710、#735)・delegate-answer-consume 節(intent 260710、#736)・kiro-stale-hooks 節(#719 / P3 source hygiene)・dynamic-test-size 節(#699 / #684 Phase D)・t92-worktree-hermeticity 節(#709)・packaging-repair-batch 節(#701/#702 = PR #711/#712 解決済み)は前 intent の記録で、参照用に温存する。以降の「アーキテクチャ横断パターン」以下は `260709-bug-zero-batch`(#674〜#678/#668)の記録。
+> 本ページ先頭の「p2-repair-batch7 の観測面」節が最新 intent `260711-p2-repair-batch7`(restart-loss クラス5バグ — #834 #839 #844 #845 #849)の記録。続く p3-cleanup-batch5(候補)節(#811 #822 #830 #730 #819 #831)・p3-cleanup-batch4 節(#757 #758 #753 #739 #740 #784 — 全6件 2026-07-10 修正着地済み、PR #823/#821/#817/#818/#814/#815)・core-repair-batch3 節(#746 ほか9件、2026-07-11)・複雑度ゲート導入節(intent 260710-complexity-gate)・ tools-dispatch-batch 節(#774 / #785 / #787 / #788 / #789)・ bughunt-fix-batch 節(#771/#773/#775/#776/#779)・swarm-worktree-batch 節(#738/#748/#746/#760)・learnings-audit-batch 節(#754 / #745 / #761)・mint-presence-vectors 節(#755)・packaging source-unreferenced 節(intent 260710、#735)・delegate-answer-consume 節(intent 260710、#736)・kiro-stale-hooks 節(#719 / P3 source hygiene)・dynamic-test-size 節(#699 / #684 Phase D)・t92-worktree-hermeticity 節(#709)・packaging-repair-batch 節(#701/#702 = PR #711/#712 解決済み)は前 intent の記録で、参照用に温存する。以降の「アーキテクチャ横断パターン」以下は `260709-bug-zero-batch`(#674〜#678/#668)の記録。
 >
 > **既知のハウスキーピング債(観測のみ)**: 本ページ以下および `architecture.md` / `business-overview.md` / `api-documentation.md` には過去 intent 由来の未リラベルな「本 intent(…)」マーカーが複数併存している(business-overview の `260710-source-unreferenced-check` / `260709-bug-zero-batch`、architecture 冒頭の source-unreferenced 記述など)。correction c3-relabel の趣旨に照らせば全て履歴ラベル化すべきだが、本 bugfix diff-refresh のスコープ外(非サージカルな大量 churn になる)。本スキャンでは更新対象ファイルの直近マーカーのみリラベルし、残債はここに明示する。
 
+## p2-repair-batch7 の観測面 — restart-loss クラス5欠陥の現物照合(#834 #839 #844 #845 #849)
+
+現行コード基準 `37ad36a97`(observed HEAD、base `d8de2362b`=前回 batch5 RE observed からの diff-refresh、区間13コミット)で確定した、restart-loss クラス5件の現物照合。base/observed の真実源は本 intent の `inception/reverse-engineering/scan-notes.md`。
+
+**差分区間のフォーカス面変化(base→observed)**: 6フォーカスファイル中、変更は `amadeus-utility.ts`(#830/#855 の doctor Check1/3 を worktreeBaseDir に anchor する `5c5e042a2`)のみで、#844 の workspace-shell-ready ブロック(`:619-632`)には非関与。残る5ファイル(orchestrate / log-subagent / learnings / runtime / runtime-compile)は base 時点とバイト同一。**5欠陥はいずれも observed HEAD に未修正で現存**。区間で着地した周辺変更(#837 CCN ゲート・#855 doctor anchor・#856 coverage strip・#863 kiro adapter cwd・#865 lock 隔離+stamp guard 等)は本5欠陥のフォーカス面に非関与。
+
+**クラス分類**: 5件はいずれも**セッション再起動/fresh clone で失われる状態(runtime-graph・active-intent cursor・監査シャード)を跨いだ経路が非対称・不完全に配線された restart-loss 欠陥**。うち #839/#845/#849 は cid:symmetric-pair-review の「片側だけ実装された非対称」(emit⇔terminal・ゲート⇔素通し・read⇔self-heal)、#834 は運用回避策 cid:parked-intent-birth-workaround(#750)の恒久修正面、#844 は 2状態判定と誤誘導 fix 文言。いずれも**挙動欠陥であって構造変化を伴わない**。
+
+### #834 — orchestrate parked 短絡パスが `--new-intent` を検査しない(未修正・実在確認)
+
+- **欠陥**: `packages/framework/core/tools/amadeus-orchestrate.ts:1243-1259`(Branch 2.5、PARKED workflow、issue #367)。ガード条件(`:1243-1249`)は `stateContent && !flags.resume && !flags.stage && !flags.phase && Parked` のみで **`!flags.newIntent` を含まない**。`Parked At Stage === Current Stage` なら `parkedDirective` を emit して `return`(`:1252-1257`)。
+- **非対称**: `--new-intent` を処理する Branch 4a は後段 `:1357-1377`(`if (flags.newIntent) :1369`、`birthPrintDirective` emit `:1376`)。parked な active intent 上で `next --new-intent` を打つと Branch 2.5 が先に `parked` を emit して短絡し、新 intent birth(Branch 4a)へ到達できない。#832 面の roll-forward latch(`:1121-1151`、turn counter ベースの読み取り専用ガード)は別系統で不関与。
+- **restart-loss 由来**: 運用知識 cid:parked-intent-birth-workaround(#750 — active-intent cursor が parked を指すと `--new-intent` が握りつぶされ、cursor ファイル手動削除で回避)の恒久修正面。
+- **archive 参照解**: **なし**(新規修正)。archive `archive/main-before-restart-20260706-224926` を grep しても #834 相当のコミットは不在。切り分けは Issue 本文。
+- **修理の型**: Branch 2.5 ガードへ `!flags.newIntent`(および同様に短絡しうる compose/newScope/report は Branch 4c で後段処理される点)を足す方向。latch 面には触れない。
+
+### #839 — orchestrate トップレベル catch / error 分岐が ERROR_LOGGED 非配線(未修正・実在確認)
+
+- **欠陥**: `amadeus-orchestrate.ts:2913-2920` — `if (import.meta.main) { try { main(); } catch (e) { console.error(...); process.exit(1); } }`。未捕捉例外は **stderr 出力 + `process.exit(1)` のみ**で監査イベント ERROR_LOGGED を emit しない。error directive 構築子 `errorDirective`(`:236`)も JSON directive を作るだけで監査を書かず、全 `emit(errorDirective(...))` 呼び出し(`:1209`/`:1303`/`:1329` ほか)も同様。
+- **非対称の対照**: 兄弟 CLI は `amadeus-lib.ts:4353` `export function emitError`(コメント `:4333-4342`)経由で ERROR_LOGGED を `appendAuditEntry` 記録する。orchestrate は lib から `errorMessage` のみ import し `emitError` を import していない → orchestrate のクラッシュ/エラーは監査に痕跡を残さない(cid:symmetric-pair-review の emit⇔terminal クラスタ)。
+- **restart-loss 由来**: 再起動を跨いだ障害調査で、クラッシュした orchestrate 実行が監査シャードに痕跡を残さないため、restart 後に「何が落ちたか」を監査から復元できない。
+- **archive 参照解**: `460f56ba0`(`fix: エンジンの error directive と未捕捉例外を ERROR_LOGGED として audit へ自動記録（Issue #431）`、2026-07-05)。旧系譜パス `.agents/amadeus/tools/amadeus-orchestrate.ts`(+52 行)。
+- **修理の型**: `emitError`(lib)を import し、トップレベル catch と `errorDirective` 発火点で ERROR_LOGGED を記録する対称化。
+
+### #844 — utility doctor の workspace-shell-ready 2状態判定 + 一律 fix 文言(未修正・実在確認)
+
+- **欠陥**: `amadeus-utility.ts:619-632`(`handleDoctor` 「5. Workspace shell ready」)。`const shellReady = existsSync(harnessEngineDir) && existsSync(defaultMemoryDir)`(`:627`)の **pass/fail バイナリ判定**。fix 文言(`:631`)`copy the workspace shell from \`dist/<harness>/\` into your project root` は **harness engine dir と memory dir のどちらが欠けても一律**に出す。
+- **非対称の対照**: 同関数「6. Hook heartbeats」(コメント `:635-640`)は 3状態((a)未生成=advisory pass /(b)ディレクトリはあるが `.last` なし=fail /(c)`.last` あり=pass)で状態別の文言を出す。#844 は shell-ready を同様に細分化し、欠けている側を指す fix 文言にする面。
+- **restart-loss 由来**: 導入直後/fresh clone で workspace shell が部分的に欠けた状態を doctor が誤誘導する(どちらが欠けたか判別できない)。
+- **archive 参照解**: `a59590b32`(`fix: 導入直後の doctor / installer smoke の誤誘導を修正（Issue #573）`、2026-07-06)。旧系譜パス `.agents/amadeus/tools/amadeus-utility.ts`(+45 行)ほか `dev-scripts/evals/installer/check.ts`・`scripts/amadeus-install.ts`。
+- **修理の型**: shell-ready を欠落側別(engine/memory)の状態に細分化し、状態別 fix 文言を出す(heartbeat の3状態パターンと揃える)。
+
+### #845 — log-subagent 完了 intent ゲート不在 + agent_type 空文字素通し(未修正・実在確認)
+
+- **欠陥(2件)**: `packages/framework/core/hooks/amadeus-log-subagent.ts`(全61行)。
+  - **完了 intent ゲート不在**: `:48` `if (!hasActiveWorkflowAudit(projectDir)) process.exit(0);` — active な監査シャードが在れば発火するのみで intent の Status=Completed を除外するゲートがなく、完了済み intent へも SUBAGENT_COMPLETED を追記しうる。
+  - **agent_type 空文字素通し**: `:41` `const agentType = parsed.agent_type ?? "unknown";` — `??` は `null`/`undefined` のみ既定化し **空文字 `""` は素通し**。`:50-52` の fields は `"Agent Type": agentType` を**無条件**格納(`agentId :53`/`agentMessage :54` は truthy ガードありに対し agentType はガードなし)。空文字が `"Agent Type": ""` として監査に載る。
+- **restart-loss 由来**: 完了 intent の監査シャードが残存した状態で再起動後にサブエージェントが発火すると、閉じた intent へイベントを追記して監査整合を壊す。
+- **archive 参照解**: `a2202f58b`(`fix: log-subagent の完了ガードと agent_type 既定、parity 宣言（Issue #555、B003 + FR-4）`、2026-07-06)。旧系譜パス `.agents/amadeus/hooks/amadeus-log-subagent.ts`(+13 行)ほか `dev-scripts/evals/hooks-state-bugfix/check.ts`。
+- **修理の型**: Status=Completed 除外ゲートを追加し、agentType を truthy ガード(空文字も既定化 or 非格納)へ揃える。
+
+### #849 — learnings readRuntimeStageRow の3経路 hard fail(runtime-graph 欠落で自己修復せず)(未修正・実在確認)
+
+- **欠陥**: `packages/framework/core/tools/amadeus-learnings.ts:127-153` `readRuntimeStageRow` の3 hard-fail 経路: (1) runtime-graph.json 不在 `:129-130` / (2) malformed(parse 失敗 `:135-136`、非 object `:138-139`、stages 非配列 `:142-143`) / (3) stage 未発見 `:152`。呼び出しは `handleSurface` `:184`。
+- **restart-loss 由来(本丸)**: runtime-graph.json は `.gitignore` 対象の per-intent ランタイム生成物(`amadeus/spaces/*/intents/*/runtime-graph.json`)。セッション再起動/fresh clone で欠落した状態で §13 surface が走ると**自己修復せず hard-fail** する。
+- **self-heal 移植の seam**: コンパイル正本は `packages/framework/core/tools/amadeus-runtime.ts:319` `export function compile(opts: CompileOptions)`(runtime-graph.json を materialise)。PostToolUse フック `amadeus-runtime-compile.ts` はこれを `spawnSync` で発火するだけ(`:121` `const args = ["run", runtimeTs, "compile"]`)。#849 の自己修復は runtime.ts の `compile` を **in-process import** して、readRuntimeStageRow が不在時に再生成してから読む(フックのプロセス跨ぎではなく関数直呼び)。
+- **archive 参照解**: `a62efe182`(`fix: runtime-graph 登録経路の修正と surface の自己修復（Issue #558）`、2026-07-06)。旧系譜パス `.agents/amadeus/tools/amadeus-learnings.ts`(+64 行)・`.agents/amadeus/hooks/amadeus-runtime-compile.ts`(+11 行)ほか `dev-scripts/evals/{engine-e2e,hooks-state-bugfix}/check.ts`。
+- **修理の型**: readRuntimeStageRow に不在時 self-heal(`compile` in-process 呼び)を挟む。
+
+### archive 参照解の所在と移植注意(#834/#839/#844/#845/#849 横断)
+
+- archive ブランチ `archive/main-before-restart-20260706-224926`(tip `bc76b6303`、実在確認済)に4件の参照解(#834 は新規で参照解なし)。全参照解は**旧系譜パス `.agents/amadeus/{tools,hooks}/...`** で、現行正本は **`packages/framework/core/{tools,hooks}/...`**。移植時はパスを現行正本へ読み替え、`bun scripts/package.ts`(dist 再生成)+ `bun run promote:self`(セルフインストール昇格)を**同一コミット**で実施する(Mandated)。
+- 旧系譜には `dev-scripts/evals/` の check.ts が同梱されるが、現行のテスト機構は `tests/` 配下の Bun ランナー。eval check.ts をそのまま移植せず現行テスト様式へ写像する。
+
+### batch6(#841 tryEmitSwarm)との交差観測
+
+- #841(batch6)対象は `amadeus-orchestrate.ts` の `tryEmitSwarm`(定義 `:1703`、`readBoltDagBatches` 近傍 `:1717-1720`、呼び出し元 `:1643`/`:1669`)。#834(本 batch7)対象は同ファイル Branch 2.5(`:1243-1259`)。
+- **ファイル交差・リージョン非交差**(約450行離れる)。cid:code-generation:c6 は静的目録でなく先行 PR の実 diff でリージョン非交差を再評価する規律のため、batch6 の #841 PR が in-flight なら (a)着地待ち or (b)実 diff で非交差実測後に並行。他4欠陥(#839/#844/#845/#849)は #841 と別ファイル/別リージョンで交差なし。
+
 ## p3-cleanup-batch5(候補)の観測面 — 候補6欠陥の現物照合(#811 #822 #830 #730 #819 #831)
 
-現行コード基準 `d8de2362b`(base `58f3453ad`=前回 batch4 RE observed からの diff-refresh。現 HEAD `6279efe58` は intent birth checkpoint のみでフォーカスファイル無変更。介在16コミット、うち #751/#753/#746/#758 の4件のみフォーカス領域に触れたが**いずれも本候補6件の欠陥箇所は未修正**で行番号シフトのみ)で確定した、候補6件の現物照合。6件はいずれも**挙動欠陥であって構造変化を伴わず**。base/observed の真実源は本 intent の `inception/reverse-engineering/scan-notes.md`。
+現行コード基準 `d8de2362b`(base `58f3453ad`=前回 batch4 RE observed からの diff-refresh。現 HEAD `6279efe58` は intent birth checkpoint のみでフォーカスファイル無変更。介在16コミット、うち #751/#753/#746/#758 の4件のみフォーカス領域に触れたが**いずれも本候補6件の欠陥箇所は未修正**で行番号シフトのみ)で確定した、候補6件の現物照合。6件はいずれも**挙動欠陥であって構造変化を伴わず**。base/observed の真実源は当該 intent(260710-p3-cleanup-batch5)の `inception/reverse-engineering/scan-notes.md`。
 
 分類: 3件(#811/#822/#830)は「安全側/正しい対照実装が兄弟にあるのに片系統が非対称に素通しする」非対称欠陥、#730 は lcov merge union の DA 加算合成による false-red、#819/#831 は並列フレーク(それぞれ非ヘルメティックな実 eslint spawn / 時間・cursor 解決依存)。
 
