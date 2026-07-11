@@ -150,6 +150,10 @@ gate-start  →  [?] AwaitingApproval
 
 `Revision Count` は状態ファイルに存在し、各 `reject` でインクリメントされます。コンダクターはこれを使って revision-loop の脱出ハッチを検出します(デフォルトは skip を提案する前に3サイクル)。
 
+### Skeleton stance
+
+`amadeus-state set-skeleton-stance <on|off|scope-dependent>` は、コンダクターが分類した walking-skeleton スタンスを `Skeleton Stance` フィールドに記録します。`Revision Count` と同様、これは状態ファイルに存在するランタイムメタデータであり、イベントに乗らず**監査行(audit row)を発行しません**。したがって下記の監査イベントタクソノミー表には現れません。これは状態機械の遷移ではなく、次の `amadeus-orchestrate next` が読み取って遅延された Construction Bolt-1 ゲート(walking-skeleton ラダー)を解決するための値です。classify のラウンドトリップが、この intent のスコープがゲート付き walking-skeleton Bolt 1 を要するかどうかを永続化し、`scope-dependent` はスコープマッピングのデフォルト(greenfield → skeleton-on、incremental → skeleton-off)にフォールバックします。
+
 ---
 
 ## Session stream (hook-owned, independent)
