@@ -73,7 +73,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 ### 並行実装
 
-- Construction は Bolt を並行実装するが、**同時にアクティブな builder は 1 intent あたり最大2**とする(2026-07-11 user decision: レートリミット対策。「アクティブ」は実装作業中の builder を指し、レビュー待ち・waiver 待ち等の完了済み作業は枠外。新 builder の起動は既存 builder の完了後)。delivery-planning / units-generation では Bolt・Unit を独立に切り(相互依存が真に必要な箇所のみ直列)、code-generation は swarm(prepare → 並列 fan-out → check → finalize)による worktree 分離の並行実装を既定とする (user decision 2026-07-09) (amended 2026-07-11 user decision) <!-- cid:requirements-analysis:parallel-bolts -->
+- Construction は Bolt を並行実装するが、**同時にアクティブな builder は 1 intent あたり最大4**とする(2026-07-11 user decision: レートリミット対策で2に制限→同日ユーザー決定で4へ緩和。「アクティブ」は実装作業中の builder を指し、レビュー待ち・waiver 待ち等の完了済み作業は枠外。新 builder の起動は既存 builder の完了後)。delivery-planning / units-generation では Bolt・Unit を独立に切り(相互依存が真に必要な箇所のみ直列)、code-generation は swarm(prepare → 並列 fan-out → check → finalize)による worktree 分離の並行実装を既定とする (user decision 2026-07-09) (amended 2026-07-11 user decision ×2) <!-- cid:requirements-analysis:parallel-bolts -->
 
 ### ノルムの保守
 
