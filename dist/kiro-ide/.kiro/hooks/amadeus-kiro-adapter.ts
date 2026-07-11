@@ -34,6 +34,7 @@ import {
   humanActedSinceGate,
   humanPresenceGuardDisabled,
   isAutonomousMode,
+  isMachineInjectedTurnText,
   stateFilePath,
 } from "../tools/amadeus-lib.ts";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
@@ -81,10 +82,21 @@ if (!process.stdin.isTTY) {
 // self-gate as the core mint hook) so a prompt in a project that never ran the
 // framework does not scaffold audit shards. Fail-open (try/catch, exit 0) so a
 // mint failure never blocks the human's turn.
+//
+// Classify the prompt through the SHARED lib predicate (the same catalog the core
+// mint hook uses) BEFORE minting: a machine-injected turn must NOT scaffold a
+// phantom HUMAN_TURN (#755/#811). CONSTRAINT (#811): on the real Kiro IDE stdin is
+// empty (the race-to-2s above), so `kiro.prompt` is undefined and this guard is
+// INERT in production — it fails open (mints), the same fail-open the core hook
+// uses. The guard only bites when a payload actually carries a prompt body (e.g. a
+// Kiro CLI-style pipe), which is the case the contract test drives; a fully
+// payload-less UserPromptSubmit cannot be classified by any harness.
 if (target === "mint") {
   try {
     const pd = kiro.cwd ?? process.cwd();
-    if (existsSync(stateFilePath(pd))) {
+    const machineInjected =
+      typeof kiro.prompt === "string" && isMachineInjectedTurnText(kiro.prompt);
+    if (existsSync(stateFilePath(pd)) && !machineInjected) {
       appendAuditEntry("HUMAN_TURN", {}, pd);
     }
   } catch {
