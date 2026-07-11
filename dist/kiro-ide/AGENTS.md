@@ -4,9 +4,9 @@ This project uses AI-DLC (AI-Driven Development Life Cycle) for structured devel
 
 ## Prerequisites
 
-- **Kiro CLI ≥ 2.6**: the hooks/skills/agent features this install relies on (stop hook with blocking, preToolUse/postToolUse matchers, `.kiro/skills/` slash commands, workspace `chat.defaultAgent`) shipped in the 2.x line. Check with `kiro-cli --version`.
+- **Kiro IDE**, signed in: the hooks/skills/agent features this install relies on (blocking `agentStop` hook, preToolUse/postToolUse matchers, `.kiro/skills/` slash commands, workspace `chat.defaultAgent`) are registered as `.kiro/hooks/*.kiro.hook` files and appear in the IDE's Agent Hooks panel.
 - **bun**: Required for the CLI tools and hook scripts (state management, audit logging, orchestration engine). Install via `curl -fsSL https://bun.sh/install | bash`. `bun` must be on your PATH for the non-interactive shells the harness spawns — these source `~/.zshenv` (zsh) or `~/.bashrc` (bash), NOT `~/.zshrc`.
-- **Activation**: this install ships `.kiro/settings/cli.json` setting `chat.defaultAgent: "amadeus"`, so a plain `kiro-cli chat` in this project uses the AI-DLC agent and `/amadeus` just works. **Note: the workspace default takes precedence over any global default agent you have configured.** If you prefer your own default, delete that settings line and start sessions with `kiro-cli chat --agent amadeus` instead.
+- **Activation**: this install ships `.kiro/settings/cli.json` setting `chat.defaultAgent: "amadeus"`, so opening this project in Kiro IDE uses the AI-DLC agent by default and `/amadeus` just works in the chat panel. **Note: the workspace default takes precedence over any global default agent you have configured.** If you prefer your own default, delete that settings line and select the `amadeus` agent in the chat panel instead.
 - **Permissions**: the `amadeus` agent pre-approves ONLY `bun .kiro/tools/*` shell commands (plus read-only tools); everything else prompts. There is no blanket shell trust. In `--no-interactive` runs, tools that would prompt are auto-approved by the harness — prefer interactive sessions for gated workflows.
 - **Locking**: Audit log file locking is handled portably using mkdir-based locking in the system temp directory (no external dependencies).
 - **Hook permissions**: All 11 hooks are TypeScript (`.ts`) and run via `bun`. No executable bits required — works identically on macOS, Linux, and native Windows PowerShell.
@@ -33,15 +33,15 @@ This project uses AI-DLC (AI-Driven Development Life Cycle) for structured devel
 
 ## Documentation
 
-For full documentation, see `docs/guide/` (User Guide), `docs/harness-engineering/` (Harness Engineer Guide), and `docs/reference/` (Developer Reference); start at `docs/README.md`. The Kiro-specific guide (install, what differs, the live journey test) is `docs/guide/harnesses/kiro-cli.md`.
+For full documentation, see `docs/guide/` (User Guide), `docs/harness-engineering/` (Harness Engineer Guide), and `docs/reference/` (Developer Reference); start at `docs/README.md`. The Kiro-specific guide (install, what differs, the live journey test) is `docs/guide/harnesses/kiro-ide.md`.
 ## What's different on this harness
 
-This is the same AI-DLC core that ships to every harness — one deterministic engine, state machine, audit trail, and stage set, rendered onto Kiro CLI. On Kiro:
+This is the same AI-DLC core that ships to every harness — one deterministic engine, state machine, audit trail, and stage set, rendered onto Kiro IDE. On Kiro:
 
 - Approval gates and questions render as **numbered prose options** (no structured-question widget); the questions FILE with `[Answer]:` tags remains the source of truth.
 - There is **no statusline** and **no welcome message**; use `/amadeus --status` and the progress lines at gates.
 - Construction swarm runs as **subagent fan-out only** (`AMADEUS_USE_SWARM=1` is a loud no-op).
-- Session-end and pre-compaction audit events (`SESSION_ENDED`, `SESSION_COMPACTED`) are not emitted — Kiro has no hooks for those moments.
+- Pre-compaction audit events (`SESSION_COMPACTED`) are not emitted — the IDE has no hook for that moment (`SESSION_STARTED`/`SESSION_ENDED` fire on session start and stop via the `.kiro.hook` files).
 - **MCP servers**: none ship, and the Kiro MCP config mechanism is not configured here (the Claude distribution ships five; Kiro ships zero today).
 - A workflow's `amadeus/` workspace tree is harness-neutral: a project can move between Claude Code and Kiro IDE installs (supported but untested — keep both `.claude/` and `.kiro/` in sync via the framework's packaging if you do this).
 

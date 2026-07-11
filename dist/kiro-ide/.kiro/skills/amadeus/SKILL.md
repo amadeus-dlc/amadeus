@@ -11,7 +11,7 @@ description: >
   Or describe what you want to build and the scope will be auto-detected.
 ---
 
-# AI-DLC Orchestrator (Kiro CLI harness)
+# AI-DLC Orchestrator (Kiro IDE harness)
 
 ## Welcome
 
@@ -81,7 +81,7 @@ The orchestration engine emits seven kinds today: `run-stage`, `invoke-swarm`, `
 
 - **State sync is conductor-owned here.** This harness has no task-list hook: after each stage transition the state tools do all bookkeeping (`amadeus-state.ts advance/approve` etc. — same as everywhere), and the stage-protocol's TaskUpdate steps are satisfied by Kiro's `todo_list` tool when available — keep a task list for visibility, but know that state-file sync rides on the tools, not on a todo hook.
 - **Stage visibility**: there is no statusline. Surface position with the Part 4 progress line after every gate, and `/amadeus --status` on demand.
-- **Headless caveat**: under `kiro-cli chat --no-interactive` the stop-hook enforcement backstop does not fire; the loop above is the only forwarding discipline. Never end a turn mid-workflow without either a gate question or a completed `report`.
+- **Forwarding discipline**: the `amadeus-stop` hook (`agentStop`) provides the enforcement backstop, but the forwarding loop above is your primary discipline. Never end a turn mid-workflow without either a gate question or a completed `report`.
 
 ---
 
