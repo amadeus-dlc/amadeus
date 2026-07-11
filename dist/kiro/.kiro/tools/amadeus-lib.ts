@@ -3688,6 +3688,18 @@ export function _resetStageGraphForTests(): void {
   _stageGraph = null;
 }
 
+// Reset the process-global clone-id / audit-shard-name memoization so an
+// in-process test that mints a random clone id (unseeded fixture project)
+// cannot leak that token into a later test's audit emit. Resets BOTH caches
+// together to preserve write/reset symmetry: cloneId() populates _cloneId and
+// auditShardName() populates _auditShardName, so a single reset must clear the
+// pair. State-init only (no behaviour branch), mirroring the precedent set by
+// _resetScopeMappingForTests / _resetStageGraphForTests.
+export function _resetCloneIdForTests(): void {
+  _cloneId = null;
+  _auditShardName = null;
+}
+
 // Canonical scope names derived from .claude/scopes/*.md presence (via
 // loadScopeMapping's metadata source). Dropping a new amadeus-<name>.md file
 // automatically flows through every tool that validates scope arguments —

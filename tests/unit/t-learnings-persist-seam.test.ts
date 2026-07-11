@@ -7,13 +7,24 @@
 // Behavioural depth stays in t99; this file exists so the added lines register
 // in lcov (local-lcov-pre-push norm).
 
-import { describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { memoryDirFor } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
+import { _resetCloneIdForTests, auditShardName } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { handlePersist } from "../../dist/claude/.claude/tools/amadeus-learnings.ts";
 import { createTestProject, seededAuditShard, seededStateFile } from "../harness/fixtures.ts";
+
+// The clone-id / audit-shard-name caches are process-global (amadeus-lib.ts
+// _cloneId :1551 / _auditShardName :1893). An earlier in-process test that mints
+// a random token from an unseeded fixture (t133's makeProject) leaves that token
+// memoized, so persist's emit here lands on the wrong shard and ruleLearnedRows
+// reads 0 from the deterministic seededAuditShard (#877). Reset the pair before
+// each test so every case re-reads its own seeded .amadeus-clone-id.
+beforeEach(() => {
+  _resetCloneIdForTests();
+});
 
 // The active-intent cursor only resolves when the record carries a state file
 // (activeIntent checks for amadeus-state.md), so seed a minimal one — same as
@@ -160,6 +171,29 @@ describe("t-learnings-persist-seam (#754/#745 in-process)", () => {
     expect(proj).toContain("cid:user-stories:c1 ");
     expect(proj).toContain("cid:user-stories:c1x ");
     expect(ruleLearnedRows(pd)).toBe(2);
+  });
+});
+
+// #877 direct-call coverage for the reset seam itself: after auditShardName()
+// memoizes one project's token, a second project with a different seeded
+// clone-id keeps resolving the STALE cached token until _resetCloneIdForTests()
+// clears the pair — then it re-reads the new token. Drives both reset-body
+// assignments (_cloneId / _auditShardName) in-process so they register in lcov.
+describe("t-learnings-persist-seam — _resetCloneIdForTests clears the clone-id/shard cache (#877)", () => {
+  test("stale cached shard token survives until reset, then re-reads the new project", () => {
+    _resetCloneIdForTests();
+    const a = createTestProject();
+    writeFileSync(join(a, "amadeus", ".amadeus-clone-id"), "aaaaaaaaaaaa\n", "utf-8");
+    const shardA = auditShardName(a);
+    expect(shardA).toContain("aaaaaaaaaaaa");
+
+    const b = createTestProject();
+    writeFileSync(join(b, "amadeus", ".amadeus-clone-id"), "bbbbbbbbbbbb\n", "utf-8");
+    // No reset yet: the memoized token from A wins even though B seeds its own.
+    expect(auditShardName(b)).toBe(shardA);
+
+    _resetCloneIdForTests();
+    expect(auditShardName(b)).toContain("bbbbbbbbbbbb");
   });
 });
 
