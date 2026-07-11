@@ -12,9 +12,6 @@
 - Focus: `docs/`(#765 grep 0件、正準ページ `docs/reference/12-state-machine.md`)・`docs/reference/`(#764 grep 0件、正準ページ `docs/reference/03-orchestrator.md`)・`docs/reference/18-workspace-layout.md`(#763、`.ja.md` 欠落=全20ファイル中の唯一欠落)・`tests/`13ファイル14参照(#728、旧名 stale)。source 側の真実: `amadeus-state.ts:371/:445/:518`(set-skeleton-stance)・`amadeus-orchestrate.ts:321/:336/:375/:1427`(--new-intent)・`amadeus-worktree.ts:167`(resolveWorktreeAnchor)
 - 更新した成果物: `code-quality-assessment.md`(本 intent の documentation 4欠陥横断節を先頭新設 + 先頭バナーの「最新」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、本ファイル(鮮度ポインタ)、`re-scans/260711-docs-batch10.md`(per-intent re-scan 記録)。他成果物(architecture / business-overview / code-structure / api-documentation / component-inventory / technology-stack / dependencies)は base→observed で本 intent 観測面(docs/tests のコメント・ペア面)と無関係のため温存(churn 回避)。
 
-## 実行メタデータ(履歴: 260711-p3-cleanup-batch8)
-||||||| parent of 6180a589a (record-sync: batch9 RE codekb diffs + ledger entries for p2-repair-batch7 and docs-repair-batch9)
-## 実行メタデータ(履歴: 260711-p3-cleanup-batch8)
 ## 実行メタデータ(履歴: 260711-docs-repair-batch9)
 
 - Date: 2026-07-11
@@ -27,7 +24,6 @@
 - Focus: `harness/kiro-ide/skills/amadeus/SKILL.md:14,84`(#812)+ `question-rendering.md:1,11`(#812 同根候補)・`harness/kiro-ide/onboarding.fills.ts:1,15,17,26,30` + `manifest.ts:93`(#824)・`core/tools/amadeus-sensor-type-check.ts:4-5,89`(#680)・`core/tools/amadeus-lib.ts:2099,2430,2580` + `amadeus-worktree.ts:39,195` + `amadeus-state.ts:248,250`(#885)・`core/tools/amadeus-state.ts:101,114,1104,1333,1428,1670` + `amadeus-jump.ts`/`amadeus-orchestrate.ts`(#886)
 - 更新した成果物: `code-quality-assessment.md`(本 intent のフォーカス5欠陥現存確認節を先頭新設 + question-rendering.md localize 漏れの #812 未カバー候補記録 + 先頭バナー/batch5 節「本 intent」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、`architecture.md`(restart-loss 系統節「docs-repair-batch9 の観測面」新設 + core-repair-batch3 バナー「最新」降格・「本 intent」履歴ラベル化)、`code-structure.md`(restart-loss フォーカス面の区間構造変化節 = #880/#869 の flip 再構築を新設)、`component-inventory.md`(docs/harness 修理コンポーネント節新設)、本ファイル(鮮度ポインタ)。他成果物(business-overview / api-documentation / technology-stack / dependencies)は本 intent 観測面と無関係のため温存(churn 回避、cid:reverse-engineering:c1)。
 
-## 実行メタデータ(履歴: 260710-p3-cleanup-batch5)
 ## 実行メタデータ(履歴: 260711-p3-cleanup-batch8)
 
 - Date: 2026-07-11
