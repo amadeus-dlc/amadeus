@@ -37,9 +37,9 @@
 //   - .sh assertion 3  every excluded phase recorded `- **<Phase>**: Skipped`
 //       in `## Phase Progress` -> here: phaseProgressStatus(state, phase) ===
 //       "Skipped" for each excluded phase (same observable, exact line match).
-//       STRONGER: we also assert Initialization === "Active" and every
-//       NON-excluded post-init phase is NOT "Skipped" (the .sh only checked
-//       the excluded set; this pins the complement too).
+//       STRONGER: we also assert Initialization === "Verified" (init
+//       pre-crosses the initialization boundary — #836) (the .sh only checked
+//       the excluded set; this pins the Init row too).
 //
 // 9 scopes × 3 .sh asserts = 27 -> 27 expect()-bearing test() cases here
 // (one describe per scope, 3 test()s each).
@@ -271,9 +271,12 @@ describe("t39 amadeus-utility init — per-scope phase sequence (migrated from t
         for (const phase of excluded) {
           expect(phaseProgressStatus(s, cap(phase))).toBe("Skipped");
         }
-        // STRONGER (the .sh never checked the Init row): Initialization is
-        // always Active at init time (amadeus-utility.ts:2029). We deliberately
-        // do NOT assert the non-excluded post-init phases are non-Skipped: the
+        // STRONGER (the .sh never checked the Init row): init PRE-CROSSES the
+        // initialization → first-post-init boundary (it emits the PHASE_VERIFIED
+        // / PHASE_STARTED hand-off), so at init time initialization is Verified
+        // — NOT Active. (#836: the old Active froze the roll-up out of sync with
+        // the ledger for the whole run.) We deliberately do NOT assert the
+        // non-excluded post-init phases are non-Skipped: the
         // PHASE_SKIPPED audit count (driven by stagesInScope) and the Phase
         // Progress status (driven by the depth-adjustedMapping, line 2032)
         // legitimately DIVERGE for Minimal-depth scopes — e.g. security-patch
@@ -282,7 +285,7 @@ describe("t39 amadeus-utility init — per-scope phase sequence (migrated from t
         // stage. That divergence is outside this .sh's contract (it only
         // asserts the excluded set appears as Skipped), so asserting the
         // complement would over-reach past the original observable.
-        expect(phaseProgressStatus(s, "Initialization")).toBe("Active");
+        expect(phaseProgressStatus(s, "Initialization")).toBe("Verified");
       });
     });
   }
