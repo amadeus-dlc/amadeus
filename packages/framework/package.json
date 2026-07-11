@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Package-owned source layout for the Amadeus framework. Source lives here; root scripts/ and dist/ remain repository-level compatibility and distribution surfaces.",
   "scripts": {
+    "lint:check": "bunx @biomejs/biome check ../../tests/ ../../packages/setup/ ../../packages/framework/core/ ../../scripts/",
     "dist": "bun ../../scripts/package.ts",
     "dist:check": "bun ../../scripts/package.ts --check",
     "promote:self": "bun ../../scripts/promote-self.ts --apply",

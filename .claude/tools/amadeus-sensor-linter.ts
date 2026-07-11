@@ -2,8 +2,12 @@
 //
 // Owns the linter check itself; the dispatcher (amadeus-sensor.ts) routes a
 // SENSOR fire to this script via the manifest's `command:` field. Self-
-// contained: no imports from sibling tools. Wraps `bunx eslint --format
-// json --max-warnings -1 <path>` and prints the locked stdout JSON shape:
+// contained: no imports from sibling tools. Two detection tiers (Issue #538,
+// re-grounded per Issue #847): a workspace-declared `lint:check` npm script is
+// preferred (wrapped via `bun run lint:check` — makes gate-time fires reflect
+// the project's REAL linter, e.g. Biome, not just eslint); otherwise falls
+// back to wrapping `bunx eslint --format json --max-warnings -1 <path>`. Either
+// tier prints the locked stdout JSON shape:
 //
 //   {"pass": <bool>, "errorCount": <n>, "warningCount": <n>,
 //    "violations": [{file, line, column, rule, severity, message}, ...]}
@@ -44,7 +48,7 @@
 //   1   stdout JSON parse failed (dispatcher reclassifies via branch f)
 
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
 interface ESLintMessage {
@@ -136,6 +140,106 @@ function findProjectRoot(filePath: string): string | null {
 		if (parent === dir) return null;
 		dir = parent;
 	}
+}
+
+// --- lint:check script detection (Issue #538, re-grounded #847) -------------
+
+// Detection tier 1: a workspace that declares a `lint:check` script in its
+// package.json names its OWN linter entry point (any harness — Biome, eslint,
+// ruff — not just eslint). Wrapping that script keeps this sensor generic (no
+// workspace-specific paths hardcoded) while making gate-time SENSOR fires
+// reflect the project's REAL lint rules. Absent or unreadable package.json
+// falls through to the second tier (eslint detection below).
+export function detectLintScript(projectRoot: string): boolean {
+	try {
+		const pkg = JSON.parse(readFileSync(`${projectRoot}/package.json`, "utf-8"));
+		const script = pkg?.scripts?.["lint:check"];
+		return typeof script === "string" && script.length > 0;
+	} catch {
+		return false;
+	}
+}
+
+// Map the `lint:check` run's exit code + output onto the locked stdout JSON
+// shape. Exit 0 = pass; any non-zero = one error-severity violation carrying
+// the script's own diagnostic output (the harness's message rides through so
+// the SENSOR detail file shows the fix instructions). Pure — no I/O — so the
+// mapping is driven in-process for coverage.
+export function buildLintScriptOutput(
+	status: number,
+	stdout: string,
+	stderr: string,
+	filePath: string,
+): SensorOutput {
+	const pass = status === 0;
+	const output = `${stdout}${stderr}`.trim();
+	const violations: Violation[] = pass
+		? []
+		: [
+				{
+					file: filePath,
+					line: 0,
+					column: 0,
+					rule: "lint:check",
+					severity: "error",
+					message: output.slice(0, 4000) || `lint:check exited ${status}`,
+				},
+			];
+	return {
+		pass,
+		errorCount: pass ? 0 : 1,
+		warningCount: 0,
+		violations,
+		findings_count: pass ? 0 : 1,
+	};
+}
+
+// Result of the tier-1 run: the caller (main) performs the stdout write and
+// process.exit. Splitting the I/O out of the compute keeps the spawn + mapping
+// in-process testable (inject `spawn` to exercise the status=null branch).
+export interface LintScriptResult {
+	exitCode: number;
+	stdout: string;
+}
+
+// Run the workspace's `lint:check` script via the package runner. A spawn
+// failure (status null: signal kill / timeout) is conservative tool-unavailable
+// (exit 127), same as the eslint tier. `env: process.env` is passed explicitly
+// so the child inherits PATH/HOME deterministically under test harnesses.
+export function runLintScript(
+	projectRoot: string,
+	filePath: string,
+	spawn: typeof spawnSync = spawnSync,
+): LintScriptResult {
+	const result = spawn("bun", ["run", "lint:check"], {
+		encoding: "utf-8",
+		timeout: 120_000,
+		cwd: projectRoot,
+		env: process.env,
+	});
+	if (result.status === null) {
+		process.stderr.write("lint-script-unavailable\n");
+		return { exitCode: 127, stdout: "" };
+	}
+	const out = buildLintScriptOutput(
+		result.status,
+		result.stdout ?? "",
+		result.stderr ?? "",
+		filePath,
+	);
+	return { exitCode: 0, stdout: `${JSON.stringify(out)}\n` };
+}
+
+// Tier-1 gate: run the declared `lint:check` script when present, else null so
+// main() falls through to the eslint tier. Exported so the whole tier-1
+// decision (detect + run) is driven in-process.
+export function maybeRunLintTier(
+	projectRoot: string,
+	filePath: string,
+	spawn: typeof spawnSync = spawnSync,
+): LintScriptResult | null {
+	if (!detectLintScript(projectRoot)) return null;
+	return runLintScript(projectRoot, filePath, spawn);
 }
 
 // --- eslint subprocess wrappers ---------------------------------------------
@@ -297,7 +401,7 @@ function buildViolations(results: ESLintResult[]): Violation[] {
 
 // --- main -------------------------------------------------------------------
 
-function main(): void {
+export function main(): void {
 	const args = parseArgs(process.argv.slice(2));
 
 	if (!existsSync(args.filePath)) {
@@ -308,6 +412,18 @@ function main(): void {
 	const projectRoot =
 		findProjectRoot(args.filePath) ?? dirname(resolve(args.filePath));
 
+	// Detection tier 1 (Issue #538, re-grounded #847): a declared `lint:check`
+	// script wraps the workspace's own lint harness. When present, its result
+	// is authoritative and we never fall through to the eslint tier. Written as
+	// two single-statement guards (no block) so the tier's terminal
+	// `process.exit` has no trailing block-close line — that brace is
+	// structurally unreachable after the exit and would read as an uncovered
+	// line under bun --coverage (main runs only via CLI spawn).
+	const tier1 = maybeRunLintTier(projectRoot, args.filePath);
+	if (tier1?.stdout) process.stdout.write(tier1.stdout);
+	if (tier1) process.exit(tier1.exitCode);
+
+	// Detection tier 2 (legacy default): eslint.
 	// Probe order: tool first (cheap, ~1s for cached bunx), then config
 	// (~1s for --print-config). Both gates feed dispatcher branch b
 	// (PASSED Note=tool-unavailable) on non-zero.
