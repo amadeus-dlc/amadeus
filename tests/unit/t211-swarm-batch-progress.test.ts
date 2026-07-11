@@ -70,7 +70,17 @@ interface Directive {
 // with every upstream Construction stage completed and autonomy granted, so the
 // engine takes the swarm path. Skeleton Stance is recorded so the feature-scope
 // skeleton-gate stage upstream resolves a boolean gate rather than the sentinel.
-function autonomousCodegenState(): string {
+//
+// `current` selects which handleNext branch runs (both call tryEmitSwarm):
+//   - "code-generation": code-generation is in-flight ([-]) and IS the Current
+//     Stage, so handleNext takes the RE-ENTRY branch (tryEmitSwarm(currentSlug)).
+//   - "infrastructure-design": the prior stage is the Current Stage and COMPLETED
+//     ([x]) while code-generation is still pending ([ ]), so handleNext takes the
+//     ADVANCE branch — nextInScopeStage returns code-generation and
+//     tryEmitSwarm(next.slug) fires. This is the forward-path call site (#841
+//     codecov gap) the re-entry fixture never exercises.
+function autonomousCodegenState(current: "code-generation" | "infrastructure-design"): string {
+  const cgBox = current === "code-generation" ? "-" : " ";
   return `# AI-DLC State Tracking
 
 ## Project Information
@@ -94,12 +104,12 @@ function autonomousCodegenState(): string {
 - [x] nfr-requirements — EXECUTE
 - [x] nfr-design — EXECUTE
 - [x] infrastructure-design — EXECUTE
-- [-] code-generation — EXECUTE
+- [${cgBox}] code-generation — EXECUTE
 - [ ] build-and-test — EXECUTE
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: code-generation
+- **Current Stage**: ${current}
 - **Status**: Running
 `;
 }
@@ -130,11 +140,18 @@ function coverUnit(proj: string, unit: string): void {
   }
 }
 
-/** Seed a fresh autonomous code-generation project with a multi-batch DAG. */
-function seedSwarmProject(batches: string[][]): string {
+/**
+ * Seed a fresh autonomous code-generation project with a multi-batch DAG.
+ * `current` picks the handleNext branch: "code-generation" (re-entry, default) or
+ * "infrastructure-design" (advance — the forward-path call site).
+ */
+function seedSwarmProject(
+  batches: string[][],
+  current: "code-generation" | "infrastructure-design" = "code-generation",
+): string {
   const proj = createTestProject();
   tempDirs.push(proj);
-  writeFileSync(seededStateFile(proj), autonomousCodegenState());
+  writeFileSync(seededStateFile(proj), autonomousCodegenState(current));
   seedMultiBatchDag(proj, batches);
   return proj;
 }
@@ -175,5 +192,18 @@ describe("t211 tryEmitSwarm excludes completed batches (#841)", () => {
     // another invoke-swarm. Pre-fix this still emitted invoke-swarm for batch 1.
     expect(directive.kind).not.toBe("invoke-swarm");
     expect(directive.kind).toBe("run-stage");
+  });
+
+  test("c: advance path (next moves onto code-generation) also excludes completed batches", () => {
+    // The prior stage (infrastructure-design) is the COMPLETED Current Stage, so
+    // handleNext walks forward and tryEmitSwarm fires from the ADVANCE call site
+    // (next.slug), not the re-entry one. Same #841 contract: batch 1 covered must
+    // advance to batch 2. This pins the forward path the re-entry cases (a/b)
+    // never exercise (the codecov gap on the second tryEmitSwarm call site).
+    const proj = seedSwarmProject([["alpha"], ["beta"]], "infrastructure-design");
+    coverUnit(proj, "alpha");
+    const directive = runNext(proj);
+    expect(directive.kind).toBe("invoke-swarm");
+    expect(directive.units).toEqual(["beta"]);
   });
 });
