@@ -11,11 +11,18 @@
 // in-process handleFire() twin would lose the exit-code half AND the
 // process.exit(0) / lock-orphan-recovery behaviour the .sh relies on.
 //
-// SPAWN vs IN-PROCESS split: ALL 45 assertions are spawn-based. There is
+// SPAWN vs IN-PROCESS split: ALL 46 test cases are spawn-based. There is
 // no pure-function arm — every behaviour (argv validation exit codes,
 // truth-table branches, audit emission, concurrency, lock-orphan
 // recovery) is observed through the real CLI subprocess + the audit.md it
-// writes. So spawnCount = 45-worth-of-cases, inProcessCount = 0.
+// writes. So spawnCount = 46-worth-of-cases, inProcessCount = 0.
+//
+// #819 (case 15): the linter FAILED round-trip runs HERMETIC here — it fires
+// a FORK `linter` manifest whose per-sensor script is a findings-injection
+// stub (still a dispatcher spawn, but no real eslint). Cases 15 + 15b pin
+// BOTH poles of the flake symptom (Findings count 1 and 0). The REAL eslint
+// round-trip (equal-fidelity) lives in tests/e2e/t92-linter-eslint-roundtrip
+// .test.ts, on the --release tier off the frequently-run --ci gate.
 //
 // Tests 44-45 (Groups N + O) are additions beyond the original .sh's
 // plan-43, guarding the type-check status gate: test 44 covers the
@@ -113,6 +120,12 @@ const STUB_NAMES = [
   "amadeus-sensor-stub-slow.ts",
 ];
 const ARGV_STUB = "amadeus-sensor-stub-argv.ts";
+// Parameterised findings-injection stub (#819 hermetic case 15): emits
+// {pass:false, findings_count:N} where N = $AMADEUS_T92_FINDINGS. Lets the
+// linter FAILED round-trip pin BOTH poles of the #819 flake symptom
+// (Findings count 1<->0) with zero eslint spawn — the real eslint round-trip
+// itself is physically relocated to tests/e2e/ (the --release tier).
+const FINDINGS_STUB = "amadeus-sensor-stub-findings.ts";
 // Isolated dir holding the stub per-sensor scripts (populated in beforeAll).
 const STUB_SCRIPT_DIR = mkdtempSync(join(tmpdir(), "amadeus-t92-stubs-"));
 // Direct-spawn lock-orphan helper: a temp shim importing the real withAuditLock
@@ -159,6 +172,28 @@ beforeAll(() => {
       "const out = process.env.AMADEUS_T92_ARGV_OUT;",
       "if (out) writeFileSync(out, JSON.stringify(process.argv));",
       'process.stdout.write(JSON.stringify({ pass: true }) + "\\n");',
+      "process.exit(0);",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+  // Inline findings-injection stub (#819). Reads $AMADEUS_T92_FINDINGS (an
+  // integer) and emits {pass:false, findings_count:N} so the dispatcher's
+  // generic readFindingsCount(out.findings_count) transports EXACTLY N into
+  // the SENSOR_FAILED audit row's `Findings count` field. Exit 0 (sensor
+  // failure != CLI failure). This is the hermetic replacement for case 15's
+  // real eslint spawn: the injected N stands in for eslint's errorCount.
+  writeFileSync(
+    join(STUB_SCRIPT_DIR, FINDINGS_STUB),
+    [
+      "// @ts-nocheck",
+      "// t92 fixture: findings-injection stub. Emits {pass:false,",
+      "// findings_count:$AMADEUS_T92_FINDINGS} to pin the linter FAILED",
+      "// round-trip's Findings count deterministically (no eslint spawn).",
+      "const raw = process.env.AMADEUS_T92_FINDINGS;",
+      "const n = Number.parseInt(raw ?? \"\", 10);",
+      "const findings_count = Number.isFinite(n) && n >= 0 ? n : 0;",
+      'process.stdout.write(JSON.stringify({ pass: false, findings_count }) + "\\n");',
       "process.exit(0);",
       "",
     ].join("\n"),
@@ -638,6 +673,48 @@ function runFailedTsReal(
   expect(path).toBe(`${subdir}/sample.ts`);
 }
 
+/**
+ * Hermetic twin of runFailedTsReal for the linter FAILED round-trip (#819).
+ * Instead of firing the SHIPPED linter (which spawns real eslint — the
+ * non-hermetic fire:327 process whose Findings count flaked 1->0 under the
+ * -P 8 full-suite load), it fires a FORK `linter` manifest whose per-sensor
+ * script is the findings-injection stub. AMADEUS_T92_FINDINGS pins the
+ * transported count, so this asserts the SAME FAILED-round-trip contract
+ * (fired/failed pairing, id match, Findings count, detail path, output path)
+ * with zero eslint spawn. The real eslint round-trip is relocated to
+ * tests/e2e/t92-linter-eslint-roundtrip.test.ts (the --release tier).
+ */
+function runHermeticLinterFindings(injected: string): void {
+  const proj = makeProj();
+  writeFileSync(join(proj, "amadeus-docs", "code.ts"), "const unused = 42;\n", "utf-8");
+  const sensors = makeForkSensors(
+    "linter",
+    "bun .claude/tools/amadeus-sensor-stub-findings.ts",
+    "**/*.{ts,js}",
+  );
+  fire(["linter", "--stage", "code-generation", "--output-path", join(proj, "amadeus-docs", "code.ts")], {
+    CLAUDE_PROJECT_DIR: proj,
+    AMADEUS_SENSORS_DIR: sensors,
+    AMADEUS_T92_FINDINGS: injected,
+  });
+  const f = proj;
+  const fired = auditEventCount(f, "SENSOR_FIRED");
+  const failed = auditEventCount(f, "SENSOR_FAILED");
+  const firedId = auditField(f, "SENSOR_FIRED", "Fire id");
+  const failedId = auditField(f, "SENSOR_FAILED", "Fire id");
+  const findings = auditField(f, "SENSOR_FAILED", "Findings count");
+  const detailPath = auditField(f, "SENSOR_FAILED", "Detail path");
+  const path = auditField(f, "SENSOR_FAILED", "Output path");
+  expect(fired).toBe(1);
+  expect(failed).toBe(1);
+  expect(firedId).not.toBe("");
+  expect(firedId).toBe(failedId);
+  expect(findings).toBe(injected);
+  expect(detailPath).toBe(`${RP}/.amadeus-sensors/code-generation/linter-${firedId}.md`);
+  expect(existsSync(join(proj, detailPath))).toBe(true);
+  expect(path).toBe("amadeus-docs/code.ts");
+}
+
 describe("t92 Group C: FAILED real round-trip per sensor", () => {
   test("13: required-sections — failing markdown (0 H2s) -> Findings count=2", () => {
     runFailedMdReal(
@@ -657,10 +734,18 @@ describe("t92 Group C: FAILED real round-trip per sensor", () => {
     );
   });
 
-  // Real eslint spawn (manifest timeout_seconds=30) — override bun's 5s default.
-  test("15: linter — failing TS (no-unused-vars error) -> Findings count=1", () => {
-    runFailedTsReal("linter", "code-generation", join(FIXTURES_ROOT, "failing-linter"), "1");
-  }, 60000);
+  // #819 (case 15): the REAL eslint round-trip is PHYSICALLY MOVED to
+  // tests/e2e/t92-linter-eslint-roundtrip.test.ts (the --release tier). Root
+  // cause of the flake: fire:327 spawns a real eslint process whose Findings
+  // count intermittently read 1->0 under the -P 8 full-suite load. The --ci
+  // tier stays FULLY HERMETIC here by stubbing that spawn and injecting the
+  // findings count, pinning BOTH poles of the flake symptom (1 and 0).
+  test("15: linter — failing round-trip (hermetic stub, injected findings=1) -> Findings count=1", () => {
+    runHermeticLinterFindings("1");
+  });
+  test("15b: linter — failing round-trip (hermetic stub, injected findings=0) -> Findings count=0 (falling-proof, both directions)", () => {
+    runHermeticLinterFindings("0");
+  });
 
   // Real tsc spawn (manifest timeout_seconds=60) — generous headroom.
   test("16: type-check — failing TS (string->number) -> Findings count=1", () => {
