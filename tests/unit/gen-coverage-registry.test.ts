@@ -884,6 +884,7 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "integration/t175-space-create-memory-isolation.test.ts",
     "integration/t185-stage-artifact-guard.test.ts",
     "integration/t214-engine-error-logged.test.ts",
+    "integration/t215-docs-only-exemption.test.ts",
     "integration/t21b.test.ts",
     "integration/t31-help.test.ts",
     "integration/t33-hook-concurrency.test.ts",

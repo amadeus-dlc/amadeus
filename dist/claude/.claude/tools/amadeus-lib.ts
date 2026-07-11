@@ -910,6 +910,13 @@ export interface IntentRegistryEntry {
   scope?: string;
   repos?: string[];
   status: string;
+  // Issue #499/#848: a docs-only declaration exempts a workspace_requires stage's
+  // completion guard (verifyStageArtifacts in amadeus-state.ts) from requiring
+  // source work outside amadeus/ — for Intents whose produces are entirely
+  // record-internal documents. Written only via setIntentDocsOnly (never hand-
+  // edited); a declaration with empty/missing evidence is invalid (see
+  // docsOnlyDeclaration).
+  docsOnly?: { evidence: string };
 }
 
 // Does record dir `dirName` belong to registry row `entry`? The single shared
@@ -1283,6 +1290,68 @@ export function updateIntentStatus(
     writeFileAtomic(path, `${JSON.stringify(list, null, 2)}\n`);
   }
   return changed;
+}
+
+// Write a docs-only declaration to an intent's registry row (Issue #499/#848):
+// the tool-owned entry point for the docs-only exemption (declare-docs-only in
+// amadeus-state.ts is the sole caller — no prose or hand-edit path). Requires
+// non-empty evidence (a reference to the approval decision/audit event that
+// confirms the produces are record-internal documents only); throws otherwise
+// so an empty declaration never reaches the registry. Matches the row by record
+// DIR NAME (recordDirMatches, the same join every registry mutator uses). MUST
+// be called under the WORKSPACE audit lock. Returns matched=false when NO
+// registry row corresponds to `dirName` — the caller must surface that as an
+// error rather than a silent success (a declaration that lands nowhere exempts
+// nothing).
+export function setIntentDocsOnly(
+  projectDir: string,
+  dirName: string,
+  evidence: string,
+  space?: string,
+): { matched: boolean; changed: boolean } {
+  const trimmed = evidence.trim();
+  if (trimmed.length === 0) {
+    throw new Error("docs-only declaration requires non-empty --evidence.");
+  }
+  const sp = space ?? activeSpace(projectDir);
+  const path = intentsRegistryPath(projectDir, sp);
+  const list = readIntentRegistry(projectDir, sp);
+  let matched = false;
+  let changed = false;
+  for (const entry of list) {
+    if (!recordDirMatches(entry, dirName)) continue;
+    matched = true;
+    if (entry.docsOnly?.evidence !== trimmed) {
+      entry.docsOnly = { evidence: trimmed };
+      changed = true;
+    }
+    break;
+  }
+  if (changed) {
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileAtomic(path, `${JSON.stringify(list, null, 2)}\n`);
+  }
+  return { matched, changed };
+}
+
+// Read back a VALID docs-only declaration for `dirName`, or null when absent —
+// the read side verifyStageArtifacts's workspace_requires branch consults
+// before refusing. Evidence must be non-empty after trimming; a malformed row
+// (missing/blank evidence, e.g. from a hand-edited registry) is treated as NOT
+// declared so the guard falls back to its default refusal (#366's gap detection
+// stays intact for anything but a genuine declaration).
+export function docsOnlyDeclaration(
+  projectDir: string,
+  dirName: string,
+  space?: string,
+): { evidence: string } | null {
+  const sp = space ?? activeSpace(projectDir);
+  for (const entry of readIntentRegistry(projectDir, sp)) {
+    if (!recordDirMatches(entry, dirName)) continue;
+    const evidence = entry.docsOnly?.evidence?.trim();
+    return evidence && evidence.length > 0 ? { evidence } : null;
+  }
+  return null;
 }
 
 // Run the flat→per-intent migration if needed. Idempotent. Returns the new

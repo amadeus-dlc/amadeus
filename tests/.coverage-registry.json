@@ -20,23 +20,23 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 438,
+    "total": 442,
     "enumeratedByClass": {
-      "function": 219,
-      "audit": 72,
+      "function": 221,
+      "audit": 73,
       "scope": 9,
       "stage": 32,
       "hook": 11,
-      "subcommand": 88,
+      "subcommand": 89,
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 100,
-      "audit": 30,
+      "function": 102,
+      "audit": 31,
       "scope": 9,
       "stage": 8,
       "hook": 11,
-      "subcommand": 73,
+      "subcommand": 74,
       "render-surface": 7
     }
   },
@@ -185,6 +185,22 @@
         {
           "file": "tests/integration/t136.test.ts",
           "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "GUARD_EXEMPTED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t215-docs-only-exemption.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t-docs-only-exemption-seam.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
@@ -1252,6 +1268,22 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:docsOnlyDeclaration",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t215-docs-only-exemption.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t-docs-only-exemption-seam.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -2587,6 +2619,22 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:setIntentDocsOnly",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t215-docs-only-exemption.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t-docs-only-exemption-seam.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -4448,6 +4496,18 @@
       "coveredBy": [
         {
           "file": "tests/unit/t17.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-state declare-docs-only",
+      "minMechanism": "cli",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t215-docs-only-exemption.test.ts",
           "mechanism": "cli"
         }
       ],
