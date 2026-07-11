@@ -609,9 +609,8 @@ Each stage specifies its lead and supporting agents. To load a persona:
 3. Apply the agent's perspective when executing the stage
 
 ### For subagent stages:
-1. Include the agent persona context in the Task tool prompt
-2. Pass relevant prior artifacts as context
-3. Specify subagent_type from the stage metadata
+1. Call `Task` with the `subagent_type` named in the stage metadata — the named agent's persona and knowledge load automatically. Do NOT inject the persona text into the prompt.
+2. Pass relevant prior artifacts and workspace state as context in the prompt (subagents cannot see the conversation history).
 
 ### Multi-agent stages:
 Some stages use multiple agents (e.g., Feasibility uses amadeus-architect-agent + amadeus-aws-platform-agent + amadeus-compliance-agent). Every multi-agent stage in the shipped graph is `mode: inline`, so the support agents are perspectives the orchestrator adopts in its own context — load each support agent's file + knowledge the same way you loaded the lead (see "For inline stages" above), produce the lead's output first, then layer in each support perspective, then synthesise. Do NOT call `Task` for a support agent on an inline stage; `Task` is reserved for `mode: subagent` stages. Agents do NOT invoke each other — only the orchestrator delegates.
@@ -840,8 +839,7 @@ When a subagent completes its work, it MUST return a structured summary to the o
 To prevent context overflow in subagent calls:
 - **Current-unit only**: Pass only the design artifacts for the unit being implemented, not all units
 - **Summarize inception artifacts**: For CONSTRUCTION subagents, provide a 1-2 line summary of each inception artifact with its file path, rather than embedding full content. The subagent can Read specific files if needed.
-- **Always include**: Agent persona (agent.md), knowledge files, amadeus-state.md, and the specific task instructions
-- **Cap knowledge files**: If an agent has more than 3 knowledge files (including user-added custom files), include only the most relevant 3 and list the others by path
+- **Always include**: amadeus-state.md and the specific task instructions. The agent persona and knowledge files load automatically via the named `subagent_type` — do NOT inject them into the prompt.
 
 ### Subagent failure recovery
 If a Task tool call fails (timeout, error, or returns truncated/incomplete output):
