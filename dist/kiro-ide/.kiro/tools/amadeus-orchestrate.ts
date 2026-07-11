@@ -2992,13 +2992,16 @@ function main(): void {
     case "park":
       handlePark(subArgs, projectDir);
       break;
-    default:
-      // Unknown / missing subcommand — usage to stderr, exit 1. Matches the
-      // stderr-only usage shape the sibling tools use for a bad subcommand.
-      console.error(
-        `Unknown subcommand: ${subcommand ?? "(none)"}. Valid: next, report, park`,
-      );
+    default: {
+      // Unknown / missing subcommand — usage to stderr, exit 1. Mirror the
+      // sibling tools (amadeus-state.ts default -> error()): record an
+      // ERROR_LOGGED row before exiting so a bad subcommand leaves audit
+      // evidence, not just a stderr line (Issue #878). No-op pre-init.
+      const usage = `Unknown subcommand: ${subcommand ?? "(none)"}. Valid: next, report, park`;
+      recordEngineError(usage);
+      console.error(usage);
       process.exit(1);
+    }
   }
 }
 

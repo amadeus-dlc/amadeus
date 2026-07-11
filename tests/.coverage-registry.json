@@ -159,6 +159,10 @@
           "mechanism": "none"
         },
         {
+          "file": "tests/unit/t216-orchestrate-default-errlog.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/unit/t34.test.ts",
           "mechanism": "cli"
         }
