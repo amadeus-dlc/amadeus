@@ -17,8 +17,8 @@
 //   releaseAuditLock / withAuditLock — composite-keyed depth + exit handlers.
 //   WORKSPACE_LOCK_SENTINEL / DEFAULT_LOCK_STALE_MS (AMADEUS_LOCK_STALE_MS env).
 
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
@@ -34,17 +34,54 @@ import {
 
 const PD = "/tmp/amadeus-t161-project";
 
-// Clean any lock dirs this test family might leave under tmpdir() between cases.
+// #831: isolate THIS run's audit-lock dirs into a private base dir (see t76).
+// This also makes cleanLocks below SAFE: sweeping a per-run private dir only
+// drops this run's own locks, never a CONCURRENT run's — the previous
+// tmpdir()-wide sweep deleted every amadeus lock on the machine, interfering
+// with any other lock test running in parallel.
+const LOCK_BASE_DIR = mkdtempSync(join(tmpdir(), "amadeus-t161-locks-"));
+process.env.AMADEUS_LOCK_BASE_DIR = LOCK_BASE_DIR;
+
+// The base dir auditLockDir resolves to (the override this run set).
+function lockBase(): string {
+  return process.env.AMADEUS_LOCK_BASE_DIR ?? tmpdir();
+}
+
+// Clean any lock dirs this test family might leave under the run's lock base dir
+// between cases.
 function cleanLocks(): void {
-  for (const f of readdirSync(tmpdir())) {
-    if (f.startsWith(".amadeus-audit-") || f.includes(".amadeus-audit-")) {
-      try { rmSync(join(tmpdir(), f), { recursive: true, force: true }); } catch { /* ignore */ }
+  for (const f of readdirSync(lockBase())) {
+    if (f.includes(".amadeus-audit-")) {
+      try { rmSync(join(lockBase(), f), { recursive: true, force: true }); } catch { /* ignore */ }
     }
   }
 }
 
 beforeEach(cleanLocks);
 afterEach(cleanLocks);
+
+afterAll(() => {
+  delete process.env.AMADEUS_LOCK_BASE_DIR;
+  try { rmSync(LOCK_BASE_DIR, { recursive: true, force: true }); } catch { /* best-effort */ }
+});
+
+describe("t161 lock base dir override (#831)", () => {
+  test("auditLockDir honors AMADEUS_LOCK_BASE_DIR, falls back to tmpdir() when unset", () => {
+    const saved = process.env.AMADEUS_LOCK_BASE_DIR;
+    try {
+      // Override set → the lock dir lives under it.
+      process.env.AMADEUS_LOCK_BASE_DIR = "/tmp/amadeus-t161-custom-base";
+      expect(auditLockDir(PD, "auth-aaaaaaaa", "default").startsWith("/tmp/amadeus-t161-custom-base/")).toBe(true);
+      // Override unset → falls back to the OS temp dir.
+      delete process.env.AMADEUS_LOCK_BASE_DIR;
+      expect(auditLockDir(PD, "auth-aaaaaaaa", "default").startsWith(tmpdir())).toBe(true);
+    } finally {
+      // Restore the run's isolation override for the remaining cases.
+      if (saved === undefined) delete process.env.AMADEUS_LOCK_BASE_DIR;
+      else process.env.AMADEUS_LOCK_BASE_DIR = saved;
+    }
+  });
+});
 
 describe("t161 keying invariants", () => {
   test("intent-omitted hashes the __workspace__ sentinel, NOT a per-intent bucket", () => {

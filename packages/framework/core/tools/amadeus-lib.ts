@@ -2795,10 +2795,23 @@ export function auditLockIdentity(projectDir: string, intent?: string, space?: s
   return `${projectDir}\x00${sp}\x00${intent}`;
 }
 
+// The base directory the audit-lock dirs live under. Defaults to the OS temp
+// dir (a machine-global namespace shared by every process). Tunable via
+// AMADEUS_LOCK_BASE_DIR for tests/ops — same env-injection shape as
+// AMADEUS_LOCK_STALE_MS, not a test-only code branch. Concurrent test runs
+// point it at a per-run private dir so a 32-bit-hash collision between two
+// runs' distinct identities can't make one run's lock dir alias another's in
+// the shared tmpdir (#831).
+function lockBaseDir(): string {
+  const raw = process.env.AMADEUS_LOCK_BASE_DIR;
+  if (raw) return raw;
+  return tmpdir();
+}
+
 export function auditLockDir(projectDir: string, intent?: string, space?: string): string {
   const identity = auditLockIdentity(projectDir, intent, space);
   const hash = createHash("md5").update(identity).digest("hex").slice(0, 8);
-  return join(tmpdir(), `.amadeus-audit-${hash}.lock`);
+  return join(lockBaseDir(), `.amadeus-audit-${hash}.lock`);
 }
 
 // Owner stamp written into the lock dir on acquire. start-time uses the process
