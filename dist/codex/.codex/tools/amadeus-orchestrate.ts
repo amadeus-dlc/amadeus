@@ -1237,6 +1237,12 @@ export function handleNext(args: string[], projectDir: string | undefined): void
   //   1. SELF-DISABLE on explicit re-entry - a `--resume` / `--stage` / `--phase`
   //      next is a deliberate continuation, handled by the unpark branch below
   //      (resume) or the jump path (stage/phase), so it never re-emits `parked`.
+  //      `--new-intent` is likewise a deliberate re-entry: it births a BRAND-NEW
+  //      intent alongside the parked one, so the parked cursor must not swallow it
+  //      (issue #834 - the sister of the #750/#832 latch-face `--new-intent`
+  //      escape on a different code path). Without excluding it, a parked
+  //      active-intent cursor traps `next --new-intent` in `{"kind":"parked"}` and
+  //      it never reaches the Branch 4a birth print below.
   //   2. STALE-BY-PROGRESS - only emit `parked` while `Parked At Stage` still
   //      equals `Current Stage`. If the workflow has advanced past the parked
   //      slug (a stale marker), ignore it and fall through to the normal route.
@@ -1245,6 +1251,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
     !flags.resume &&
     !flags.stage &&
     !flags.phase &&
+    !flags.newIntent &&
     (getField(stateContent, "Parked") ?? "").trim().length > 0
   ) {
     const parkedAt = (getField(stateContent, "Parked At Stage") ?? "").trim();
