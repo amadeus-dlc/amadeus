@@ -22,6 +22,7 @@ import {
   errorMessage,
   findAllEvents,
   getField,
+  normalizeWorktreeSlug,
   pathKey,
   readAllAuditShards,
   resolveConstructionRepo,
@@ -192,14 +193,20 @@ function resolveWorktreeAnchor(repoCwd: string): {
 
 // --- Validation helpers ---
 
-function validateSlug(slug: string | undefined): string {
+// Exported for the in-process coverage seam (t220); production callers reach it
+// through main()'s handler dispatch. Record-side display names (Unnn-<slug>
+// form carrying uppercase) are accepted and derived artifacts (dir name, branch
+// name) are normalized to the lowercase canonical form via the shared choke
+// point (Issue #478 gap2 / #885).
+export function validateSlug(slug: string | undefined): string {
   if (!slug) error("Missing --slug <slug>");
-  if (!SLUG_RE.test(slug)) {
+  const normalized = normalizeWorktreeSlug(slug);
+  if (!SLUG_RE.test(normalized)) {
     error(
       `Invalid --slug: "${slug}". Must be kebab-case (lowercase letter then [a-z0-9-]).`
     );
   }
-  return slug;
+  return normalized;
 }
 
 function validateStrategy(strategy: string | undefined): string {

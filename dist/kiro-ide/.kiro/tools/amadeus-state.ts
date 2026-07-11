@@ -28,6 +28,7 @@ import {
   isoTimestamp,
   loadScopeMapping,
   nextInScopeStage,
+  normalizeWorktreeSlug,
   PHASE_NUMBERS,
   PHASES,
   parseCheckboxes,
@@ -293,12 +294,19 @@ function hasStageAuditEvent(
 
 const SLUG_RE = /^[a-z][a-z0-9-]*$/;
 
-function validateSlug(slug: string | undefined): string {
+// Exported for the in-process coverage seam (t220); production callers reach it
+// through main()'s handler dispatch. Record-side display names (Unnn-<slug>,
+// uppercase) are normalized to the lowercase canonical form and judged post-
+// normalization, so the full `bolt start --worktree` chain (state fork ->
+// audit-fork) stays consistent with worktreePath / worktree validateSlug
+// (Issue #478 gap2 / #885).
+export function validateSlug(slug: string | undefined): string {
   if (!slug) errorWithSlug("(missing)", `Missing --slug <slug>`);
-  if (!SLUG_RE.test(slug)) {
+  const normalized = normalizeWorktreeSlug(slug);
+  if (!SLUG_RE.test(normalized)) {
     errorWithSlug(slug, `Invalid --slug: "${slug}". Must be kebab-case (lowercase letter then [a-z0-9-]).`);
   }
-  return slug;
+  return normalized;
 }
 
 function errorWithSlug(slug: string, msg: string): never {

@@ -2096,12 +2096,23 @@ export function worktreeBaseDir(projectDir: string): string {
   );
 }
 
+// Slug inputs may arrive in the record's display casing (e.g. unit names like
+// "U101-registry-issues-field" per the Unnn-<slug> naming convention). Derived
+// artifacts (worktree dirs, branch names, audit shard paths) must be lowercase
+// kebab-case — on case-insensitive filesystems (macOS default) two casings
+// would collide silently, so ONE canonical lowercase form is used everywhere
+// (Issue #478 gap2 / #885). validateBoltSlug / the CLI validateSlug guards and
+// worktreePath all route through this single choke point.
+export function normalizeWorktreeSlug(slug: string): string {
+  return slug.toLowerCase();
+}
+
 export function worktreePath(projectDir: string, boltSlug: string): string {
   return join(
     worktreeBaseDir(projectDir),
     ".amadeus",
     "worktrees",
-    `bolt-${boltSlug}`,
+    `bolt-${normalizeWorktreeSlug(boltSlug)}`,
   );
 }
 
@@ -2584,8 +2595,11 @@ export function validateBoltSlug(slug: string): string | null {
   if (slug.length > BOLT_SLUG_MAX_LENGTH) {
     return `Bolt slug "${slug.slice(0, 32)}..." is ${slug.length} chars; max is ${BOLT_SLUG_MAX_LENGTH}`;
   }
-  if (!BOLT_SLUG_REGEX.test(slug)) {
-    return `Invalid Bolt slug "${slug}" — must match ${BOLT_SLUG_REGEX} (lowercase letter, then lowercase letters/digits/hyphens)`;
+  // Judge in the normalized form so an uppercase-bearing display name (Unnn-
+  // <slug>) is accepted; derived artifacts are lowercased at the same choke
+  // point (normalizeWorktreeSlug above). Issue #478 gap2 / #885.
+  if (!BOLT_SLUG_REGEX.test(normalizeWorktreeSlug(slug))) {
+    return `Invalid Bolt slug "${slug}" — must normalize to ${BOLT_SLUG_REGEX} (letter, then letters/digits/hyphens)`;
   }
   return null;
 }
