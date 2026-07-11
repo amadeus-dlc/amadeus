@@ -150,6 +150,10 @@ gate-start  →  [?] AwaitingApproval
 
 `Revision Count` lives in the state file and increments on each `reject`. The conductor uses this to detect the revision-loop escape hatch (default is 3 cycles before offering to skip).
 
+### Skeleton stance
+
+`amadeus-state set-skeleton-stance <on|off|scope-dependent>` records the conductor's classified walking-skeleton stance into the `Skeleton Stance` field. Like `Revision Count`, this is runtime metadata that lives in the state file — it rides no event and **emits no audit row**, so it does NOT appear in the audit event taxonomy below. It is not a state-machine transition; it is a value the next `amadeus-orchestrate next` reads to resolve the deferred Construction Bolt-1 gate (the walking-skeleton ladder): the classify round-trip persists whether this intent's scope warrants a gated walking-skeleton Bolt 1, with `scope-dependent` falling back to the scope-mapping default (greenfield → skeleton-on, incremental → skeleton-off).
+
 ---
 
 ## Session stream (hook-owned, independent)
