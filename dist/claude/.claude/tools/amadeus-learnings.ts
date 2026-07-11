@@ -37,6 +37,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node
 import { dirname, join } from "node:path";
 import { appendAuditEntryUnlocked } from "./amadeus-audit.ts";
 import { memoryDirFor } from "./amadeus-graph.ts";
+import { compile } from "./amadeus-runtime.ts";
 import {
   appendUnderHeading,
   errorMessage,
@@ -124,32 +125,59 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === "object";
 }
 
-function readRuntimeStageRow(projectDir: string, slug: string): RuntimeStageRow {
+// Resolve one stage row from runtime-graph.json, or null when the graph is
+// absent, malformed, or lacks the slug — every non-resolution funnels into the
+// caller's self-heal re-compile (a fresh compile rewrites the graph whole, so
+// distinguishing "missing" from "malformed" buys nothing here).
+function tryReadRuntimeStageRow(projectDir: string, slug: string): RuntimeStageRow | null {
   const path = runtimeGraphPath(projectDir);
-  if (!existsSync(path)) {
-    fail(`runtime-graph.json not found: ${path}`, 1);
-  }
+  if (!existsSync(path)) return null;
   let parsed: unknown;
   try {
     parsed = JSON.parse(readFileSync(path, "utf-8"));
-  } catch (e) {
-    fail(`runtime-graph.json is malformed: ${errorMessage(e)}`, 1);
+  } catch {
+    return null;
   }
-  if (!isRecord(parsed)) {
-    fail("runtime-graph.json is malformed: missing stages array", 1);
-  }
-  const stagesRaw: unknown = parsed.stages;
-  if (!Array.isArray(stagesRaw)) {
-    fail("runtime-graph.json is malformed: missing stages array", 1);
-  }
-  const stages: unknown[] = stagesRaw;
-  for (const raw of stages) {
+  if (!isRecord(parsed) || !Array.isArray(parsed.stages)) return null;
+  for (const raw of parsed.stages as unknown[]) {
     if (isRecord(raw) && raw.stage_slug === slug) {
       const memoryPath = typeof raw.memory_path === "string" ? raw.memory_path : undefined;
       return { stage_slug: slug, memory_path: memoryPath };
     }
   }
-  fail(`stage "${slug}" not found in runtime-graph.json`, 1);
+  return null;
+}
+
+// #849 self-heal: runtime-graph.json is a gitignored, machine-local generated
+// artifact, so a fresh clone / new worktree of an in-flight intent never carries
+// it and the PostToolUse compile hook can also miss a transition (hooks are
+// fail-open). Resolve the row directly; on any non-resolution (absent /
+// malformed / slug-missing), re-compile the graph ONCE in-process — a fresh
+// compile rewrites the graph whole from the audit log, so it heals both the
+// absent and the malformed cases — then re-resolve. A slug still missing after a
+// clean re-compile is a genuine inconsistency (not a stale graph), so fail with
+// a recovery procedure. compile() is invoked in-process (not spawned) for
+// determinism and so bun's coverage instrumentation sees the self-heal path.
+function readRuntimeStageRow(projectDir: string, slug: string): RuntimeStageRow {
+  const direct = tryReadRuntimeStageRow(projectDir, slug);
+  if (direct) return direct;
+
+  const recovery =
+    `Recovery: run \`bun ${harnessDir()}/tools/amadeus-runtime.ts compile\` in the workspace, ` +
+    `then verify --slug "${slug}" matches the state file's Current Stage.`;
+
+  try {
+    compile({ projectDir });
+  } catch (e) {
+    fail(
+      `stage "${slug}" not found in runtime-graph.json and re-compile failed: ${errorMessage(e)}. ${recovery}`,
+      1
+    );
+  }
+
+  const healed = tryReadRuntimeStageRow(projectDir, slug);
+  if (healed) return healed;
+  fail(`stage "${slug}" not found in runtime-graph.json even after re-compile. ${recovery}`, 1);
 }
 
 // The §13 ritual runs while the just-completed stage is still the Active
@@ -165,7 +193,10 @@ function assertActiveStage(stateContent: string, slug: string): void {
   }
 }
 
-function handleSurface(args: string[], projectDir: string): void {
+// Exported as the in-process test seam (handlePersist precedent): the CLI
+// integration tests spawn the shipped dist and cannot register bun coverage, so
+// unit tests import this directly to drive the #849 runtime-graph self-heal.
+export function handleSurface(args: string[], projectDir: string): void {
   const flags = parseFlags(args);
   const slug = flags.slug;
   if (!slug) {
