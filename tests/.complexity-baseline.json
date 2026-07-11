@@ -132,7 +132,13 @@
       "path": "packages/framework/core/tools/amadeus-state.ts",
       "name": "(anonymous)",
       "ordinal": 14,
-      "ccn": 28
+      "ccn": 30
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-state.ts",
+      "name": "(anonymous)",
+      "ordinal": 17,
+      "ccn": 16
     },
     {
       "path": "packages/framework/core/tools/amadeus-state.ts",

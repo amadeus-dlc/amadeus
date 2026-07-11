@@ -3,6 +3,7 @@ import {
   markPhaseVerified,
   PHASE_PROGRESS_FIELD,
   setPhaseProgress,
+  verifyPhaseCheckArtifact,
 } from "./amadeus-state.ts";
 import {
   type CheckboxState,
@@ -498,6 +499,17 @@ export function handleExecute(args: string[]): void {
     direction,
     crossesPhaseBoundary,
   );
+
+  // Phase-check artifact gate (#886). Every phase this forward jump closes WITH
+  // executed work is flipped Verified (applyClosedPhaseProgress) and emits
+  // PHASE_VERIFIED below — so each such phase must have its phase-check artifact
+  // on disk, the same gate advance / approve apply. verifyPhaseCheckArtifact
+  // no-ops for phases outside the required set; closing-with-no-work phases go
+  // Skipped (no artifact demanded), so gate only hasExecuted. Runs before
+  // writeStateFile → a refusal leaves the state file untouched.
+  for (const { phase, hasExecuted } of closedPhases) {
+    if (hasExecuted) verifyPhaseCheckArtifact(pd, phase);
+  }
 
   // Update state fields. Thread the (post-edit) state content so the Next
   // Stage projection honours suffix overrides + checkboxes - the advance
