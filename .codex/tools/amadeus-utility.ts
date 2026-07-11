@@ -392,6 +392,52 @@ export const PRACTICES_STALENESS_DAYS = 90;
 // covers a generous LLM Task call budget (Haiku 30s + retry + parse).
 export const MERGE_DISPATCH_TIMEOUT_SEC = 60;
 
+// A single doctor health-check row (structurally the element of handleDoctor's
+// results array).
+export interface DoctorCheck {
+  pass: boolean;
+  label: string;
+  fix?: string;
+}
+
+// Classify the workspace-shell readiness into the THREE states doctor reports
+// (#844), mirroring the hook-heartbeat fresh-install split further below:
+//   (a) harness engine dir missing -> a genuinely broken install. FAIL, and the
+//       fix must be executable: the shipped shell is no longer a dist/ tree the
+//       user hand-copies, so point at re-running the installer.
+//   (b) engine dir present but the default space's memory dir not yet seeded ->
+//       known-normal before the first intent birth (the memory shell lands with
+//       the installer, but a manual/partial harness-only copy leaves it absent
+//       until birth). Advisory PASS so a brand-new user is guided forward, not
+//       failed. The 2-state predicate this replaces failed here and mis-directed
+//       the user to copy from the retired dist/ tree.
+//   (c) both present -> ready. PASS with the canonical label (unchanged).
+// Pure over booleans (existence probed by the caller) + the harness dir name,
+// so it is driven in-process by the unit test — handleDoctor itself is
+// spawn-only (t83 header).
+export function classifyWorkspaceShellState(
+  harnessExists: boolean,
+  memoryExists: boolean,
+  harnessName: string,
+): DoctorCheck {
+  const readyLabel = `workspace shell ready (${harnessName}/ + amadeus/spaces/default/memory/)`;
+  if (!harnessExists) {
+    return {
+      pass: false,
+      label: readyLabel,
+      fix: "re-run the installer: `bunx @amadeus-dlc/setup install --target <workspace>`",
+    };
+  }
+  if (!memoryExists) {
+    return {
+      pass: true,
+      label:
+        "workspace shell pending first workflow — seeded at first intent birth (run your first /amadeus workflow)",
+    };
+  }
+  return { pass: true, label: readyLabel };
+}
+
 function handleDoctor(projectDir: string): void {
   const results: Array<{ pass: boolean; label: string; fix?: string }> = [];
   const isWindows = process.platform === "win32";
@@ -610,26 +656,20 @@ function handleDoctor(projectDir: string): void {
     });
   }
 
-  // 5. Workspace shell ready (P4: no --init artifact to check). With auto-birth
-  // there is no scaffolded amadeus-docs/ to verify; readiness is the SHIPPED SHELL
-  // the user copies from dist/: the harness engine dir (.claude/.kiro/.codex)
-  // present AND the default space's memory dir present (the source of truth the
-  // native include resolves). When both are present the first /amadeus auto-births
-  // with no ceremony; a missing piece means the dist/ copy was incomplete.
+  // 5. Workspace shell ready (P4: no --init artifact to check). Readiness is the
+  // SHIPPED SHELL: the harness engine dir (.claude/.kiro/.codex) present AND the
+  // default space's memory dir present (the source of truth the native include
+  // resolves). Three states — see classifyWorkspaceShellState (#844): engine dir
+  // missing = FAIL with an executable installer-rerun fix; memory not yet seeded
+  // = advisory PASS (known-normal before first intent birth); both present =
+  // PASS. Pin to the DEFAULT space explicitly: memoryDirFor() follows the
+  // active-space cursor, so pass DEFAULT_SPACE to keep this probe checking the
+  // always-shipped baseline rather than a (possibly absent) switched-to space.
+  // The harness includes are committed (generated-on-demand only for their
+  // pointer), so their presence is not part of shell-readiness.
   const harnessEngineDir = join(projectDir, harnessDir());
-  // Pin to the DEFAULT space explicitly: readiness is "did the dist/ shell copy
-  // in?", and `default` is the always-shipped space. memoryDirFor() now follows
-  // the active-space cursor, so pass DEFAULT_SPACE to keep this probe checking
-  // the shipped baseline rather than a (possibly absent) switched-to space. The
-  // harness includes are committed (generated-on-demand only for their pointer),
-  // so their presence is not part of shell-readiness.
   const defaultMemoryDir = memoryDirFor(projectDir, DEFAULT_SPACE);
-  const shellReady = existsSync(harnessEngineDir) && existsSync(defaultMemoryDir);
-  results.push({
-    pass: shellReady,
-    label: `workspace shell ready (${harnessDir()}/ + amadeus/spaces/default/memory/)`,
-    fix: `copy the workspace shell from \`dist/${harnessDir().replace(/^\./, "")}/\` into your project root`,
-  });
+  results.push(classifyWorkspaceShellState(existsSync(harnessEngineDir), existsSync(defaultMemoryDir), harnessDir()));
 
   // 6. Hook heartbeats
   // Three states:

@@ -73,11 +73,13 @@ const DOCTOR_HOOK_LABEL = "amadeus-audit-logger.ts present";
 const DOCTOR_HOOK_LABEL_2 = "amadeus-session-start.ts present";
 const DOCTOR_SETTINGS_LABEL = "settings.json present";
 // P4: the "amadeus-docs/ directory exists" row was retired. Doctor now checks the
-// SHIPPED workspace shell (.claude/ + amadeus/spaces/default/memory/) — the row
-// label substring is "workspace shell ready" (utility.ts:597), and its
-// remediation fix is "copy the workspace shell from `dist/claude/`" (utility.ts:598).
-const DOCTOR_SHELL_LABEL = "workspace shell ready";
-const DOCTOR_SHELL_FIX = "copy the workspace shell from";
+// SHIPPED workspace shell (.claude/ + amadeus/spaces/default/memory/) as a THREE-
+// state row (#844, classifyWorkspaceShellState): harness dir missing = FAIL,
+// harness present + memory not yet seeded = advisory PASS ("workspace shell
+// pending first workflow — seeded at first intent birth"), both present = PASS.
+// A harness-only project (memory absent) is the pre-first-birth NORMAL state, so
+// this row is advisory, not a failure, and carries no remediation.
+const DOCTOR_SHELL_PENDING = "workspace shell pending first workflow";
 const STOP_AFTER_DOCTOR = { toolName: "Bash", resultIncludes: DOCTOR_HEADER } as const;
 
 describe("t22 /amadeus --doctor (SDK port)", () => {
@@ -163,34 +165,34 @@ describe("t22 /amadeus --doctor (SDK port)", () => {
   );
 
   // -------------------------------------------------------------------------
-  // Without the shipped shell. Re-expresses .sh test 10 (already deterministic),
-  // migrated to the P4 readiness row.
+  // Harness present, memory not yet seeded. Re-expresses .sh test 10 (already
+  // deterministic), migrated to the P4 readiness row and #844's 3-state split.
   //
   // P4 retired the "amadeus-docs/ directory exists" row: with auto-birth there is
   // no scaffolded amadeus-docs/ to verify. Readiness is the SHIPPED SHELL — the
   // harness engine dir (.claude/) AND the default space's memory dir
-  // (amadeus/spaces/default/memory/) BOTH present (utility.ts:586-599). The row
-  // PASSes only when both exist; remove the default memory dir so the
-  // shell-ready row FAILS, the doctor exits non-zero, and the orchestrator's
-  // tool-failure handler prints the doctor stdout verbatim. The .sh grepped that
-  // prose for the SPECIFIC failing-check label; here we assert the new
-  // "workspace shell ready" label AND its "copy the workspace shell from"
-  // remediation against the Bash tool_result — the failing-check label is
-  // verbatim tool stdout, so this is the deterministic equivalent of the .sh grep.
+  // (amadeus/spaces/default/memory/). #844 makes this a THREE-state row: a
+  // harness-only project (memory absent) is the pre-first-birth NORMAL state, so
+  // the row is an advisory PASS carrying the "workspace shell pending first
+  // workflow" marker — NOT a failure, and no dist/-copy remediation. The .sh
+  // grepped the doctor prose for a SPECIFIC row label; here we assert that
+  // advisory marker against the Bash tool_result — the row label is verbatim tool
+  // stdout, so this is the deterministic equivalent of the .sh grep.
   // -------------------------------------------------------------------------
   test(
-    "doctor without the shipped shell surfaces the failing shell-ready label + remediation in the tool_result",
+    "doctor with harness present but memory unseeded surfaces the advisory pending row in the tool_result",
     async () => {
       const proj = setupIntegrationProject({ noAidlcDocs: true });
       try {
-        // Break the shipped shell so the readiness row FAILS: setupIntegrationProject
-        // always copies .claude/ + amadeus/spaces/default/memory/ (both present →
-        // the row would PASS). Removing the default memory dir leaves the row
-        // failing on a genuinely-incomplete shell (the dist/ copy was partial).
+        // Reach the advisory state: setupIntegrationProject always copies .claude/
+        // + amadeus/spaces/default/memory/ (both present → the row would PASS as
+        // ready). Removing the default memory dir leaves the harness present but
+        // memory unseeded — the pre-first-birth normal condition #844 reports as
+        // an advisory PASS.
         const memoryDir = join(proj, "amadeus", "spaces", "default", "memory");
         rmSync(memoryDir, { recursive: true, force: true });
         expect(existsSync(memoryDir)).toBe(false);
-        // And amadeus-docs/ is absent too (noAidlcDocs), so nothing masks the failure.
+        // And amadeus-docs/ is absent too (noAidlcDocs), so nothing masks the row.
         expect(readdirSync(proj)).not.toContain("amadeus-docs");
 
         const r = await driveAidlc("/amadeus --doctor", {
@@ -199,15 +201,14 @@ describe("t22 /amadeus --doctor (SDK port)", () => {
           stopAfterToolResult: STOP_AFTER_DOCTOR,
         });
 
-        // The doctor tool fired AND its verbatim result names the failing
-        // shell-ready check + its remediation. assertToolResultContains proves
-        // Bash fired (no vacuous pass) — the same guarantee the .sh's
-        // specific-label grep gave.
-        assertToolResultContains(r, "Bash", DOCTOR_SHELL_LABEL);
-        assertToolResultContains(r, "Bash", DOCTOR_SHELL_FIX);
+        // The doctor tool fired AND its verbatim result names the advisory
+        // pending-first-workflow row. assertToolResultContains proves Bash fired
+        // (no vacuous pass) — the same guarantee the .sh's specific-label grep
+        // gave.
+        assertToolResultContains(r, "Bash", DOCTOR_SHELL_PENDING);
 
         // And the report header is present in that same stdout — proving the
-        // failing label came from the doctor block, not stray prose.
+        // row label came from the doctor block, not stray prose.
         assertToolResultContains(r, "Bash", DOCTOR_HEADER);
       } finally {
         cleanupTestProject(proj);

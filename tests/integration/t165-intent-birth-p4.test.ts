@@ -415,19 +415,21 @@ describe("t164 doctor readiness against the shipped shell", () => {
     expect(r.out).not.toContain("run `/amadeus --init`");
   });
 
-  test("a project missing the default memory dir fails the shell-ready row", () => {
+  test("a project missing the default memory dir reports an advisory pending row, not a failure (#844)", () => {
     mkdirSync(join(proj, ".claude"), { recursive: true });
     // P9: createTestProject seeds the shipped shell INCLUDING
-    // amadeus/spaces/default/memory/; this case needs it ABSENT so the readiness
-    // row fails. Strip the seeded memory dir.
+    // amadeus/spaces/default/memory/; this case needs it ABSENT to reach the
+    // pre-first-birth state. Strip the seeded memory dir.
     rmSync(join(proj, "amadeus", "spaces", "default", "memory"), {
       recursive: true,
       force: true,
     });
     const r = util(["doctor"]);
-    // The row fails and points at copying the shell from dist/.
-    expect(r.out).toContain("workspace shell ready");
-    expect(r.out).toMatch(/copy the workspace shell from `dist\/claude\//);
+    // #844: harness present + memory not yet seeded is the NORMAL pre-first-birth
+    // state — an advisory PASS with the pending marker, NOT a failure, and with
+    // no retired dist/-copy remediation.
+    expect(r.out).toContain("workspace shell pending first workflow");
+    expect(r.out).not.toContain("copy the workspace shell from");
   });
 });
 
