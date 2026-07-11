@@ -147,19 +147,17 @@ export function verifyPhaseCheckArtifact(pd: string, phase: string): void {
   if (!PHASE_CHECK_REQUIRED_PHASES.has(phase)) return;
   const rec = recordDir(pd);
   if (rec === null) {
-    error(
-      `Refusing to verify the "${phase}" phase boundary: no active intent record resolves, ` +
-        `so there is nowhere to check for verification/phase-check-${phase}.md.`,
-    );
+    let msg = `Refusing to verify the "${phase}" phase boundary: no active intent record resolves, `;
+    msg += `so there is nowhere to check for verification/phase-check-${phase}.md.`;
+    error(msg);
   }
   const artifactPath = join(rec, "verification", `phase-check-${phase}.md`);
   if (!existsSync(artifactPath)) {
-    error(
-      `Refusing to complete the "${phase}" phase boundary: verification/phase-check-${phase}.md ` +
-        `does not exist under the intent's record directory. The phase-boundary protocol requires ` +
-        `a phase-check artifact before PHASE_VERIFIED. Produce verification/phase-check-${phase}.md ` +
-        `before completing. (expected: ${artifactPath})`,
-    );
+    let msg = `Refusing to complete the "${phase}" phase boundary: verification/phase-check-${phase}.md `;
+    msg += `does not exist under the intent's record directory. The phase-boundary protocol requires `;
+    msg += `a phase-check artifact before PHASE_VERIFIED. Produce verification/phase-check-${phase}.md `;
+    msg += `before completing. (expected: ${artifactPath})`;
+    error(msg);
   }
 }
 
