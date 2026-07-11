@@ -4757,6 +4757,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/unit/t211-doctor-shell-3state.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t27.test.ts",
           "mechanism": "cli"
         },
