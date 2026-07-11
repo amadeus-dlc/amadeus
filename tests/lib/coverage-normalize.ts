@@ -25,21 +25,67 @@ import {
   normalizeCoverageSourcePath,
 } from "./coverage-source-path.ts";
 
-// Classify every line of a source file as strippable (comment-only or blank) or
-// not. The scanner walks the file character-by-character tracking lexical state
-// — code, line/block comment, single/double-quoted string, template literal
-// (including `${ ... }` interpolation which re-enters code) — and marks a line
-// "code-bearing" the moment it sees a character that is code or string/template
-// content. Comment characters and whitespace never mark a line. A line with no
-// code-bearing character is therefore comment-only or blank, hence strippable.
+// The closing-only strip set (#876, ruling E-B8a = unconditional strip). A line
+// whose trimmed text is EXACTLY one of these strings is a lone closing-delimiter
+// line — a `}` / `)` / `]` run (optionally with a statement `;` and/or a
+// trailing `,`) that bears no executable logic of its own. bun --coverage does
+// not always stamp a positive DA on such a line even in an executing chunk, so
+// unioning merely-loaded chunks leaves a residual DA:<line>,0 that codecov
+// reports as an uncoverable false-red (the #870 catch-block `}` at DA:1931,0).
+//
+// The set is a source-text classification (never inferred from the DA count),
+// and it is closed: it is the base forms `}` `};` `})` `});` `]` `];` `)` `);`
+// plus each of those forms with a trailing comma. Adding a new symbol string is
+// a CONTRACT change that MUST be accompanied by a fixture in
+// tests/unit/coverage-comment-strip.test.ts (the closed-set enumeration test).
+const CLOSING_ONLY_LINES: ReadonlySet<string> = new Set([
+  "}",
+  "};",
+  "})",
+  "});",
+  "]",
+  "];",
+  ")",
+  ");",
+  "},",
+  "};,",
+  "}),",
+  "});,",
+  "],",
+  "];,",
+  "),",
+  ");,",
+]);
+
+// Classify every line of a source file as strippable (comment-only, blank, or a
+// lone closing-delimiter line) or not. The scanner walks the file
+// character-by-character tracking lexical state — code, line/block comment,
+// single/double-quoted string, template literal (including `${ ... }`
+// interpolation which re-enters code) — and marks a line "code-bearing" the
+// moment it sees a character that is code or string/template content. Comment
+// characters and whitespace never mark a line. A line with no code-bearing
+// character is therefore comment-only or blank, hence strippable.
 //
 // The template-literal state is what prevents a pseudo-comment line such as the
 // `// not a comment` text inside a backtick string from being mistaken for a
 // real comment: inside a template every character (the slashes included) counts
 // as string content and marks the line as code-bearing.
+//
+// Closing-only strip (#876): a code-bearing line whose trimmed text is exactly a
+// CLOSING_ONLY_LINES member is ALSO strippable — but only when that line's
+// content was consumed in code mode. A `}` that is template TEXT (or string
+// content) is recorded in `nonCodeLines` and preserved, keeping the existing
+// false-negative guard for template pseudo-syntax intact.
 export function computeStrippableLines(sourceText: string): Set<number> {
-  const totalLines = sourceText.split(/\r?\n/).length;
+  const rawLines = sourceText.split(/\r?\n/);
+  const totalLines = rawLines.length;
   const codeBearing = new Set<number>();
+  // Lines that had string or template content consumed on them. A closing-only
+  // line is stripped only when it is NOT here, so a `}` that is template text or
+  // string content is preserved. (Comment-only lines need no marking: they are
+  // never code-bearing, so they are stripped by the comment/blank branch and
+  // never reach the closing-only check.)
+  const nonCodeLines = new Set<number>();
 
   type Mode = "code" | "line-comment" | "block-comment" | "sq" | "dq" | "template";
   let mode: Mode = "code";
@@ -55,6 +101,7 @@ export function computeStrippableLines(sourceText: string): Set<number> {
   const n = sourceText.length;
   let i = 0;
   const markCode = () => codeBearing.add(line);
+  const markNonCode = () => nonCodeLines.add(line);
 
   while (i < n) {
     const c = sourceText[i];
@@ -77,7 +124,10 @@ export function computeStrippableLines(sourceText: string): Set<number> {
       continue;
     }
     if (escapeNext) {
+      // An escaped char is only reached inside a string/template, i.e. non-code
+      // content — never a lone closing delimiter.
       markCode();
+      markNonCode();
       escapeNext = false;
       i++;
       continue;
@@ -149,6 +199,7 @@ export function computeStrippableLines(sourceText: string): Set<number> {
       }
       case "sq": {
         markCode();
+        markNonCode();
         if (c === "\\") {
           escapeNext = true;
         } else if (c === "'") {
@@ -159,6 +210,7 @@ export function computeStrippableLines(sourceText: string): Set<number> {
       }
       case "dq": {
         markCode();
+        markNonCode();
         if (c === "\\") {
           escapeNext = true;
         } else if (c === '"') {
@@ -169,6 +221,7 @@ export function computeStrippableLines(sourceText: string): Set<number> {
       }
       case "template": {
         markCode();
+        markNonCode();
         if (c === "\\") {
           escapeNext = true;
           i++;
@@ -189,7 +242,17 @@ export function computeStrippableLines(sourceText: string): Set<number> {
 
   const strippable = new Set<number>();
   for (let ln = 1; ln <= totalLines; ln++) {
-    if (!codeBearing.has(ln)) strippable.add(ln);
+    if (!codeBearing.has(ln)) {
+      // Comment-only / blank line.
+      strippable.add(ln);
+      continue;
+    }
+    // Closing-only strip (#876): a code-bearing line whose trimmed text is a
+    // lone closing delimiter consumed in code mode. Template/string braces land
+    // in nonCodeLines and are preserved.
+    if (!nonCodeLines.has(ln) && CLOSING_ONLY_LINES.has(rawLines[ln - 1].trim())) {
+      strippable.add(ln);
+    }
   }
   return strippable;
 }
