@@ -66,6 +66,12 @@ if (!process.stdin.isTTY) {
   }
 }
 
+// The workspace the payload names — forwarded as the core-hook subprocess cwd so
+// resolveProjectDirFromHook resolves the SAME dir the engine wrote from (#822).
+// Without this the core hook inherits the adapter's launch dir (the main checkout
+// under a worktree session) and mis-resolves the record — symmetric to codex.
+const projectDir = kiro.cwd ?? process.cwd();
+
 // --- verb-intercept: the deterministic terminal-command seam (userPromptSubmit) ---
 //
 // A `/amadeus` command that leads with a workspace navigation verb
@@ -388,6 +394,7 @@ function runCore(hookFile: string, input: Record<string, unknown>): { stdout: st
     stdin: Buffer.from(JSON.stringify(input), "utf-8"),
     stdout: "pipe",
     stderr: "ignore",
+    cwd: projectDir,
   });
   return { stdout: r.stdout?.toString() ?? "", code: r.exitCode ?? 0 };
 }
