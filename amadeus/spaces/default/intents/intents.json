@@ -126,10 +126,24 @@
     "status": "in-flight"
   },
   {
+    "uuid": "019f4b5e-682b-7c9b-8362-0535f6f2a2d6",
+    "slug": "bughunt-fix-batch",
+    "dirName": "260710-bughunt-fix-batch",
+    "scope": "bugfix",
+    "status": "complete"
+  },
+  {
     "uuid": "019f4d86-78cd-7391-9230-dc3888dc5c34",
     "slug": "p3-cleanup-batch4",
     "dirName": "260710-p3-cleanup-batch4",
     "scope": "bugfix",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019f5081-f2aa-733f-b775-06083afca037",
+    "slug": "p3-repair-batch6",
+    "dirName": "260711-p3-repair-batch6",
+    "scope": "bugfix",
+    "status": "complete"
   }
 ]

@@ -65,6 +65,42 @@
 - #841(batch6)対象は `amadeus-orchestrate.ts` の `tryEmitSwarm`(定義 `:1703`、`readBoltDagBatches` 近傍 `:1717-1720`、呼び出し元 `:1643`/`:1669`)。#834(本 batch7)対象は同ファイル Branch 2.5(`:1243-1259`)。
 - **ファイル交差・リージョン非交差**(約450行離れる)。cid:code-generation:c6 は静的目録でなく先行 PR の実 diff でリージョン非交差を再評価する規律のため、batch6 の #841 PR が in-flight なら (a)着地待ち or (b)実 diff で非交差実測後に並行。他4欠陥(#839/#844/#845/#849)は #841 と別ファイル/別リージョンで交差なし。
 
+## p3-repair-batch6(履歴・全6件修正着地 2026-07-11)の観測面 — restart による過去修正喪失 regression 6件の現物照合(#841 #842 #836 #840 #847 #848)
+
+現行コード基準 `37ad36a97`(base `d8de2362b`=前回 batch5 RE observed からの diff-refresh、現 origin/main)で確定した、フォーカス6欠陥の現物照合。介在13コミットのうち `packages/framework/core/tools/` のコア tools 変更は `amadeus-lib.ts`/`amadeus-state.ts`/`amadeus-swarm.ts`/`amadeus-utility.ts` の4ファイルに限定され、**本 intent のフォーカス6欠陥が属する `amadeus-orchestrate.ts` / `amadeus-jump.ts` / `amadeus-sensor-linter.ts` / `amadeus-graph.ts` / `amadeus-stage-schema.ts`(および utility の一部関数)は本区間で未変更**。6件はいずれも**挙動欠陥であって構造変化を伴わず**。base/observed の真実源は本 intent の `inception/reverse-engineering/scan-notes.md`。
+
+**欠陥クラス = restart/reset による過去修正の喪失 regression**: 6件はいずれも本区間の新規回帰ではなく、より古い時点で **元修正が既に着地していたにもかかわらず、後の restart/reset により喪失し元修正前の状態へ逆戻りした既存欠陥**であり、現 observed で現存する。各欠陥は元修正コミット SHA と対で接地でき、「元修正との差分再接地」が Architect 合成/開発の一次材料になる(元修正: #486=`3eca83a56`, #481=`2c2c48a39`, #459=`765fe4f20`, #538=`c6597bf18`, #499=`c8ddabffc`)。うち #842(forward⇔backward 非対称 emit)・#836(init で書くが advance/approve で更新しない write⇔update 非対称)は team.md `symmetric-pair-review`(write⇔check / emit⇔terminal / fork⇔merge)クラスタの「対称対の片側喪失」に該当。
+
+### #841 — tryEmitSwarm が完了バッチを除外せず静的 batches[0] を無条件再提示【現存】
+
+- **現行 file:line**: `amadeus-orchestrate.ts:1703`(`tryEmitSwarm`)、欠陥本体 `:1717-1720`。`readBoltDagBatches` の返す静的トポロジ第1バッチ `batches[0]` を無条件採用し、`unitCovered` 等のカバレッジ判定で完了済みバッチを除外していない。`next` が毎回バッチ1を再提示しバッチ進行が手動追跡になる。
+- **元修正/喪失**: `3eca83a56`(#486「invoke-swarm を coverage ベースのバッチ進行へ」)が batches を走査し未カバー unit を含む最初のバッチを採るロジックを追加していたが、現行はこの走査が失われ `batches[0]` の静的採用へ逆戻り。
+
+### #842 — jump が backward でも PHASE_VERIFIED を emit・多相 forward の単一イベント化・PHASE_SKIPPED 不在【現存】
+
+- **現行 file:line**: `amadeus-jump.ts:432-447`(`execute` 内の phase 境界イベント emit ブロック)。ガードが `direction` を見ないため (a) **backward jump でも** PHASE_COMPLETED/PHASE_VERIFIED/PHASE_STARTED を emit(Verified ロールバック不可契約に反し前進 Verified を偽発行)、(b) 複数 phase を跨ぐ **forward jump が単一の from→to 対**しか出さず中間 phase を per-phase 列挙しない、(c) 実行済み stage を持たない phase の **PHASE_SKIPPED が皆無**、加えて同一トランザクションの Phase Progress 更新も欠落。
+- **元修正/喪失**: `2c2c48a39`(#481「jump の phase 境界に #479 の契約を適用」)が「per-phase 列挙 → forward のみ emit → work 有り=VERIFIED / work 無し=SKIPPED → 同一トランザクションで Progress 更新」を実装し `markPhaseVerified`/`PHASE_PROGRESS_FIELD` を export していたが、direction 分岐・per-phase 列挙・SKIPPED・Progress 更新が全て喪失。
+
+### #836 — delegate 承認フローで Phase Progress ロールアップが更新されない【現存】
+
+- **現行 file:line**: 更新コード自体が不在。`## Phase Progress` を**書く**のは init テンプレートのみ(`amadeus-utility.ts:2449` 見出し、生成ロジック `:2396-2414`)。`amadeus-state.ts` の `handleAdvance:1135` は `Lifecycle Phase` を `setField` 更新するのみ、`handleDelegateApproval:1655` は DELEGATED_APPROVAL audit を追記するのみで、advance/approve/delegate のいずれも `## Phase Progress` を更新しない。init テンプレートのコメント(`:2398-2399`)が約束する Active/Verified への flip を行うコードが存在せず、Progress は init 以降 stale(delegate 承認=本チームの主経路でも未更新)。
+- **write⇔update 非対称**: init で「書く」が advance/approve で「更新しない」片側欠落。#481 元修正(`2c2c48a39`)が jump 経路で `PHASE_PROGRESS_FIELD` を同一トランザクション更新していた痕跡があり、Progress 更新機構が過去に存在し喪失したことを示す。advance/approve 経路の Progress 更新は本 batch で新規配線が必要な可能性(要 Architect 合成確認)。
+
+### #840 — detectWorkspace の言語走査が SCAN_SOURCE_DIRS 限定で Greenfield 誤判定【現存】
+
+- **現行 file:line**: `amadeus-utility.ts:1917`(`detectWorkspace`)、欠陥本体 `:1949-1954`。定数 `SCAN_SOURCE_DIRS`(`src`,`app`,`lib`,`pages`,`components`,`tests`)は `:1762`。言語カウントの再帰対象が定型 source dir に限定され、`packages/`・`dev-scripts/`・`skills/` 等にコードを置く repo(本 repo 自身が該当)では `langCounts` が空 → `hasSourceFiles=false`(`:1977`)→ トップレベル framework config 等も無ければ `brownfield=false` で **Greenfield 誤判定** → bugfix scope の reverse-engineering が SKIP 降格。
+- **元修正/喪失**: `765fe4f20`(#459「workspace-detection の言語走査を全トップレベル dir へ一般化」)が「SCAN_EXCLUDE とドット始まりを除く全トップレベル dir を再帰対象へ」一般化していたが、現行は `SCAN_SOURCE_DIRS` 限定へ逆戻り。project.md Mandated(workspace 分類の CodeKB 根拠参照)の観点では、本現状が `technology-stack`/`code-structure` の workspace 分類根拠の現行限界。
+
+### #847 — sensor-linter が eslint ラップ専用に逆戻りし lint:check 2段検出が不在【現存】
+
+- **現行 file:line**: `amadeus-sensor-linter.ts`(全357行、冒頭ドキュメントコメント `:5-43`)が `bunx eslint` ラップ専用。`bunx eslint --version`/`--print-config`/`--format json` のみで、workspace の `package.json` が `lint:check` を宣言する場合にそれをラップする1段目が無い。よって Biome 等 eslint 非採用の repo(本 repo 自身)では常に 127 quiet PASS になり実 linter が gate で発火しない(`lint:check`/`bun run` の grep ヒット 0)。
+- **元修正/喪失**: `c6597bf18`(#538「linter sensor を 2 段検出化」)が「`lint:check` 宣言 → `bun run lint:check` ラップ、不在なら従来 eslint 検出」の2段検出を追加していたが、1段目(lint:check ラップ)が喪失し eslint 専用へ逆戻り。
+
+### #848 — docs-only intent の workspace_requires 免除経路(declare-docs-only / GUARD_EXEMPTED)が喪失【現存】
+
+- **現行 file:line**: 免除経路自体が不在(`declare-docs-only`/`GUARD_EXEMPTED`/`docsOnly` は tools 全域で 0 ヒット、実測済み)。拒否経路のみ現存: `amadeus-state.ts:952` `verifyStageArtifacts` の `:967-975` が `stage.workspace_requires && !workspaceHasWork(pd)` で無条件 `error()`(免除分岐なし)。型宣言・parse・serialize・graph 登録・schema 検査(`amadeus-lib.ts`/`amadeus-graph.ts`/`amadeus-stage-schema.ts`)はいずれも現存。
+- **元修正/喪失**: `c8ddabffc`(#498 #499 #501、B002=#499)が「registry の docsOnly 宣言で workspace_requires ガードを免除でき、免除発動を `GUARD_EXEMPTED` audit に記録。宣言なしの拒否経路は従来どおり」を追加していたが、declare-docs-only サブコマンド・GUARD_EXEMPTED audit・免除分岐が全て喪失し拒否経路のみ現存。
+
 ## p3-cleanup-batch5(候補)の観測面 — 候補6欠陥の現物照合(#811 #822 #830 #730 #819 #831)
 
 差分区間 `9738580ef..60f5e1edf`(observed HEAD `60f5e1edf`)で確定した、修理候補7件の現物照合。base/observed の真実源は当該 intent(`260711-p3-cleanup-batch8`)の `inception/reverse-engineering/scan-notes.md` および `re-scans/260711-p3-cleanup-batch8.md`。7件は**2クラスに分かれる**: (I) restart-loss 4件(#843/#846/#850/#851)= 旧 `.agents/`・`aidlc/` 系譜 → `packages/framework/` 移行の境界で復元漏れした既存欠陥(差分区間**外**)、(II) 区間内3件(#876/#877/#878)= 差分区間で導入・変更された面(それぞれ 要件見落とし由来 / テストインフラ由来 / #879 導入ギャップ)。
