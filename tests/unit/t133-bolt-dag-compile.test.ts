@@ -58,7 +58,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { AMADEUS_SRC, FIXTURES_DIR, toPortablePath } from "../harness/fixtures.ts";
+import { AMADEUS_SRC, FIXTURE_CLONE_ID, FIXTURES_DIR, toPortablePath } from "../harness/fixtures.ts";
 import { auditFilePath } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // P9: with no intent cursor seeded, the compile tool resolves the BARE space
@@ -119,6 +119,12 @@ function makeProject(): string {
     recursive: true,
   });
   cpSync(STATE_FIXTURE, join(recordRoot(proj), "amadeus-state.md"));
+  // Seed the per-clone token so auditFilePath() resolves a DETERMINISTIC shard
+  // instead of minting a random one that memoizes into the process-global
+  // _cloneId cache and contaminates later in-process tests (#877). Same value
+  // as the shared fixtures' FIXTURE_CLONE_ID so the shard path is predictable.
+  mkdirSync(join(proj, "amadeus"), { recursive: true });
+  writeFileSync(join(proj, "amadeus", ".amadeus-clone-id"), `${FIXTURE_CLONE_ID}\n`, "utf-8");
   // Seed the DETERMINISTIC audit shard the compile tool resolves
   // (auditFilePath -> the bare space record root's audit/<host>-<clone>.md) so
   // its readAllAuditShards() sees the WORKFLOW_STARTED header.
