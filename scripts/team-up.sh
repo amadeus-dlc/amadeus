@@ -20,6 +20,10 @@ set -euo pipefail
 # Env:
 #   CLAUDE_IDENTITY   identity for run-claude.sh (default: corporate-1)
 #   TEAM_SESSION      tmux session name (default: amadeus-team)
+#
+# With -c, members that have no prior conversation under the chosen identity
+# fall back to a fresh start (claude --continue exits with "No conversation
+# found to continue" otherwise, leaving a dead pane).
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 BASE="$HOME/worktrees/github.com/amadeus-dlc/amadeus"
@@ -49,15 +53,28 @@ if tmux has-session -t "$S" 2>/dev/null; then
   exit 0
 fi
 
+# True if the identity has at least one saved conversation for this worktree.
+# Claude Code stores history under CLAUDE_CONFIG_DIR/projects/<cwd with "/"
+# and "." mapped to "-">/<session>.jsonl.
+has_history() {
+  local munged="${1//\//-}"
+  munged="${munged//./-}"
+  ls "$HOME/.claude-$IDENTITY/projects/$munged"/*.jsonl >/dev/null 2>&1
+}
+
 member_cmd() {
-  local m="$1" wt="$BASE/$1"
+  local m="$1" wt="$BASE/$1" args="$CLAUDE_ARGS"
+  if [ "$args" = "--continue" ] && ! has_history "$wt"; then
+    echo "WARN: no $IDENTITY history for $m — starting fresh (dropping --continue)" >&2
+    args=""
+  fi
   if [ -f "$DELIVERY" ]; then
     bash "$DELIVERY" set monitor claude-code "$wt" >/dev/null 2>&1 ||
       echo "WARN: delivery.sh set monitor failed for $m (continuing)" >&2
   fi
   # keep the pane open after claude exits so crashes stay inspectable
   printf 'cd %q && mise trust -q 2>/dev/null; CLAUDE_IDENTITY=%q %q %s %q; exec $SHELL -l' \
-    "$wt" "$IDENTITY" "$REPO/scripts/run-claude.sh" "$CLAUDE_ARGS" "/agmsg mode monitor"
+    "$wt" "$IDENTITY" "$REPO/scripts/run-claude.sh" "$args" "/agmsg mode monitor"
 }
 
 for m in leader engineer-1 engineer-2 engineer-3 engineer-4 engineer-5 engineer-6; do
