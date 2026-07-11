@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// amadeus-kiro-adapter.ts — the Kiro CLI hook shim (AUTHORED shell file; the
+// amadeus-kiro-adapter.ts — the Kiro IDE hook shim (AUTHORED shell file; the
 // amadeus-*.ts hook bodies beside it are PACKAGED core, byte-shared with the
 // Claude Code harness).
 //
