@@ -2795,10 +2795,23 @@ export function auditLockIdentity(projectDir: string, intent?: string, space?: s
   return `${projectDir}\x00${sp}\x00${intent}`;
 }
 
+// The base directory the audit-lock dirs live under. Defaults to the OS temp
+// dir (a machine-global namespace shared by every process). Tunable via
+// AMADEUS_LOCK_BASE_DIR for tests/ops — same env-injection shape as
+// AMADEUS_LOCK_STALE_MS, not a test-only code branch. Concurrent test runs
+// point it at a per-run private dir so a 32-bit-hash collision between two
+// runs' distinct identities can't make one run's lock dir alias another's in
+// the shared tmpdir (#831).
+function lockBaseDir(): string {
+  const raw = process.env.AMADEUS_LOCK_BASE_DIR;
+  if (raw) return raw;
+  return tmpdir();
+}
+
 export function auditLockDir(projectDir: string, intent?: string, space?: string): string {
   const identity = auditLockIdentity(projectDir, intent, space);
   const hash = createHash("md5").update(identity).digest("hex").slice(0, 8);
-  return join(tmpdir(), `.amadeus-audit-${hash}.lock`);
+  return join(lockBaseDir(), `.amadeus-audit-${hash}.lock`);
 }
 
 // Owner stamp written into the lock dir on acquire. start-time uses the process
@@ -2814,13 +2827,56 @@ function ownerStampPath(lockDir: string): string {
   return join(lockDir, "owner.json");
 }
 
-function writeOwnerStamp(lockDir: string): void {
+// Records the owner stamp THIS process wrote at acquire, keyed by lock identity.
+// releaseAuditLock / the exit-handler consult it so a release only removes a dir
+// that STILL carries the stamp we wrote — the write⇔delete symmetry of the
+// acquire-side reaper's stampMatches (a fresh lock a colliding identity holds at
+// the same 32-bit-hashed path is never robbed). Cleared on release.
+const AUDIT_LOCK_OWNED_STAMPS = new Map<string, LockOwner>();
+
+function writeOwnerStamp(lockDir: string, key: string): void {
   const owner: LockOwner = { pid: process.pid, startedAtMs: lockAcquireEpochMs() };
   try {
     writeFileSync(ownerStampPath(lockDir), JSON.stringify(owner), "utf-8");
+    AUDIT_LOCK_OWNED_STAMPS.set(key, owner);
   } catch {
     // Best-effort: a missing stamp degrades the reaper to age-only on the next
     // waiter (it can't read a PID), never to incorrectness.
+  }
+}
+
+// True iff the lock dir currently on disk is one THIS process may remove on
+// release/exit — i.e. it still carries the exact stamp we wrote (pid +
+// startedAtMs), OR it is unstamped (our own dir whose best-effort stamp write
+// failed, or which we hold mid-lifecycle). A dir re-stamped by a colliding
+// identity (auditLockDir keys on md5[:8] = 32 bits, so distinct identities can
+// share a tmpdir path) carries a foreign stamp → refused, so releasing OUR
+// identity never destroys THEIR live lock. Symmetric to reapStaleLock's
+// "never rob a live holder" contract on the acquire side.
+function ownsLockDir(lockDir: string, key: string): boolean {
+  const disk = readOwnerStamp(lockDir);
+  // Unstamped: our own dir (stamp write is best-effort). A foreign live holder
+  // mid-acquire cannot be at this path — release is only called by the holder,
+  // and the holder's mkdir would have EEXIST'd against a foreign dir.
+  if (disk === null) return true;
+  const owned = AUDIT_LOCK_OWNED_STAMPS.get(key);
+  if (owned) return disk.pid === owned.pid && disk.startedAtMs === owned.startedAtMs;
+  // No recorded acquire in this process (a bare release): fall back to pid
+  // identity. A live releaser's pid is unique among running processes, so a
+  // matching on-disk pid proves we wrote the stamp.
+  return disk.pid === process.pid;
+}
+
+// Remove the lock dir ONLY if it still carries our owner stamp. Shared by
+// releaseAuditLock and the withAuditLock exit-handler so both honour the same
+// write⇔delete symmetry — neither ever destroys a colliding identity's live
+// lock at a shared (32-bit-hashed) tmpdir path.
+function removeLockDirIfOwned(lockDir: string, key: string): void {
+  if (!ownsLockDir(lockDir, key)) return;
+  try {
+    rmSync(lockDir, { recursive: true, force: true });
+  } catch {
+    // Lock dir may already be removed
   }
 }
 
@@ -3028,10 +3084,11 @@ export function acquireAuditLock(
   space?: string,
 ): boolean {
   const lockDir = auditLockDir(projectDir, intent, space);
+  const key = auditLockIdentity(projectDir, intent, space);
   for (let i = 0; i <= maxRetries; i++) {
     try {
       mkdirSync(lockDir);
-      writeOwnerStamp(lockDir);
+      writeOwnerStamp(lockDir, key);
       return true;
     } catch {
       // EEXIST: someone holds it. Before sleeping, try to reap a dead/stale
@@ -3040,7 +3097,7 @@ export function acquireAuditLock(
       if (reapStaleLock(lockDir)) {
         try {
           mkdirSync(lockDir);
-          writeOwnerStamp(lockDir);
+          writeOwnerStamp(lockDir, key);
           return true;
         } catch {
           // another waiter beat us to the freed dir — fall through to sleep
@@ -3057,11 +3114,13 @@ export function acquireAuditLock(
 export function releaseAuditLock(projectDir: string, intent?: string, space?: string): void {
   const lockDir = auditLockDir(projectDir, intent, space);
   const key = auditLockIdentity(projectDir, intent, space);
-  try {
-    rmSync(lockDir, { recursive: true, force: true });
-  } catch {
-    // Lock dir may already be removed
-  }
+  // Only remove the dir if it still carries OUR stamp. A colliding identity
+  // (md5[:8] hash collision) that re-acquired the same tmpdir path holds a
+  // foreign stamp — unconditionally rmSync'ing it here would destroy their live
+  // lock (the #831 flake: a parallel merge's release deletes a lock a colliding
+  // test planted, freeing a waiter that should have timed out).
+  removeLockDirIfOwned(lockDir, key);
+  AUDIT_LOCK_OWNED_STAMPS.delete(key);
   const handler = AUDIT_LOCK_EXIT_HANDLERS.get(key);
   if (handler) {
     process.off("exit", handler);
@@ -3138,10 +3197,9 @@ export function withAuditLock<T>(
     // Safety net: if the body calls process.exit (Bun skips `finally` in that
     // case), the on-exit handler releases the lock dir so the project isn't
     // poisoned for ~5s on the next invocation.
-    const onExit = () => {
-      const lockDir = auditLockDir(projectDir, intent, space);
-      try { rmSync(lockDir, { recursive: true, force: true }); } catch { /* already removed */ }
-    };
+    // Same owner-stamp guard as releaseAuditLock (via removeLockDirIfOwned):
+    // never destroy a colliding identity's live lock at a shared tmpdir path.
+    const onExit = () => removeLockDirIfOwned(auditLockDir(projectDir, intent, space), key);
     AUDIT_LOCK_EXIT_HANDLERS.set(key, onExit);
     process.on("exit", onExit);
   }

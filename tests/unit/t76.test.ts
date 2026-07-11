@@ -103,11 +103,13 @@ import {
   chmodSync,
   existsSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   readdirSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { auditLockDir } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
@@ -128,6 +130,18 @@ const STATE_TS = join(
   "tools",
   "amadeus-state.ts",
 );
+
+// #831: isolate THIS run's audit-lock dirs into a private base dir. The lock
+// dir is keyed by md5(identity)[:8] = 32 bits under a machine-global namespace
+// (os.tmpdir()). Under concurrent load a DIFFERENT test run's distinct identity
+// can 32-bit-collide with a lock this run plants; that run's cleanup rmSync then
+// deletes our planted lock, so a merge/fork that should time out acquires the
+// freed dir instead (the t76 test-5 / test-12 flake). Pointing AMADEUS_LOCK_BASE_DIR
+// at a per-run dir makes every bucket disjoint from any other run's, regardless
+// of hash collision. Spawned state subprocesses inherit the env, so they resolve
+// the same base dir the in-process plants use.
+const LOCK_BASE_DIR = mkdtempSync(join(tmpdir(), "amadeus-t76-locks-"));
+process.env.AMADEUS_LOCK_BASE_DIR = LOCK_BASE_DIR;
 
 const tempDirs: string[] = [];
 
@@ -155,6 +169,14 @@ afterAll(() => {
     }
     rmSync(d, { recursive: true, force: true });
   }
+  // Drop the per-run lock base dir (env still set above so auditLockDir resolves
+  // the same override during the tempDirs sweep), then unset the override.
+  delete process.env.AMADEUS_LOCK_BASE_DIR;
+  try {
+    rmSync(LOCK_BASE_DIR, { recursive: true, force: true });
+  } catch {
+    /* best-effort */
+  }
 });
 
 interface CliResult {
@@ -167,6 +189,10 @@ interface CliResult {
 function state(proj: string, ...args: string[]): CliResult {
   const res = spawnSync(BUN, [STATE_TS, "--project-dir", proj, ...args], {
     encoding: "utf-8",
+    // Pass the live env so the spawned tool inherits AMADEUS_LOCK_BASE_DIR (the
+    // #831 per-run lock isolation). Bun's spawnSync does NOT fold runtime
+    // process.env mutations into its default child env, so this must be explicit.
+    env: process.env,
   });
   const stdout = res.stdout ?? "";
   return {
@@ -453,7 +479,7 @@ describe("t76 amadeus-state fork (migrated from t76-state-fork-merge.sh, plan 16
         const child = spawn(
           BUN,
           [STATE_TS, "--project-dir", proj, "fork", "--slug", slug],
-          { stdio: "ignore" },
+          { stdio: "ignore", env: process.env },
         );
         child.on("exit", (code: number | null) => resolve(code ?? -1));
       });

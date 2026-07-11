@@ -17,8 +17,8 @@
 //   releaseAuditLock / withAuditLock — composite-keyed depth + exit handlers.
 //   WORKSPACE_LOCK_SENTINEL / DEFAULT_LOCK_STALE_MS (AMADEUS_LOCK_STALE_MS env).
 
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
@@ -34,17 +34,54 @@ import {
 
 const PD = "/tmp/amadeus-t161-project";
 
-// Clean any lock dirs this test family might leave under tmpdir() between cases.
+// #831: isolate THIS run's audit-lock dirs into a private base dir (see t76).
+// This also makes cleanLocks below SAFE: sweeping a per-run private dir only
+// drops this run's own locks, never a CONCURRENT run's — the previous
+// tmpdir()-wide sweep deleted every amadeus lock on the machine, interfering
+// with any other lock test running in parallel.
+const LOCK_BASE_DIR = mkdtempSync(join(tmpdir(), "amadeus-t161-locks-"));
+process.env.AMADEUS_LOCK_BASE_DIR = LOCK_BASE_DIR;
+
+// The base dir auditLockDir resolves to (the override this run set).
+function lockBase(): string {
+  return process.env.AMADEUS_LOCK_BASE_DIR ?? tmpdir();
+}
+
+// Clean any lock dirs this test family might leave under the run's lock base dir
+// between cases.
 function cleanLocks(): void {
-  for (const f of readdirSync(tmpdir())) {
-    if (f.startsWith(".amadeus-audit-") || f.includes(".amadeus-audit-")) {
-      try { rmSync(join(tmpdir(), f), { recursive: true, force: true }); } catch { /* ignore */ }
+  for (const f of readdirSync(lockBase())) {
+    if (f.includes(".amadeus-audit-")) {
+      try { rmSync(join(lockBase(), f), { recursive: true, force: true }); } catch { /* ignore */ }
     }
   }
 }
 
 beforeEach(cleanLocks);
 afterEach(cleanLocks);
+
+afterAll(() => {
+  delete process.env.AMADEUS_LOCK_BASE_DIR;
+  try { rmSync(LOCK_BASE_DIR, { recursive: true, force: true }); } catch { /* best-effort */ }
+});
+
+describe("t161 lock base dir override (#831)", () => {
+  test("auditLockDir honors AMADEUS_LOCK_BASE_DIR, falls back to tmpdir() when unset", () => {
+    const saved = process.env.AMADEUS_LOCK_BASE_DIR;
+    try {
+      // Override set → the lock dir lives under it.
+      process.env.AMADEUS_LOCK_BASE_DIR = "/tmp/amadeus-t161-custom-base";
+      expect(auditLockDir(PD, "auth-aaaaaaaa", "default").startsWith("/tmp/amadeus-t161-custom-base/")).toBe(true);
+      // Override unset → falls back to the OS temp dir.
+      delete process.env.AMADEUS_LOCK_BASE_DIR;
+      expect(auditLockDir(PD, "auth-aaaaaaaa", "default").startsWith(tmpdir())).toBe(true);
+    } finally {
+      // Restore the run's isolation override for the remaining cases.
+      if (saved === undefined) delete process.env.AMADEUS_LOCK_BASE_DIR;
+      else process.env.AMADEUS_LOCK_BASE_DIR = saved;
+    }
+  });
+});
 
 describe("t161 keying invariants", () => {
   test("intent-omitted hashes the __workspace__ sentinel, NOT a per-intent bucket", () => {
@@ -194,5 +231,64 @@ describe("t161 stale-lock reaper", () => {
     } finally {
       rmSync(realPd, { recursive: true, force: true });
     }
+  });
+});
+
+// #831 — the release owner-stamp guard. auditLockDir keys on md5[:8] = 32 bits,
+// so two distinct identities can share ONE tmpdir path. Before the guard,
+// releaseAuditLock did an UNCONDITIONAL rmSync, so a colliding identity's
+// release destroyed a live lock a different identity held at the same path
+// (the t76 test-12 flake: a parallel merge's release freed a waiter that should
+// have timed out). The guard removes the dir ONLY when it still carries our own
+// owner stamp (pid + startedAtMs), symmetric to the reaper's "never rob a live
+// holder" contract. These run in-process (the seam) so the new lines are covered.
+describe("t161 release owner-stamp guard (#831)", () => {
+  const INTENT = "guard-cccccccc";
+
+  test("release REMOVES a lock we acquired (normal path, no regression)", () => {
+    expect(acquireAuditLock(PD, 0, 1, INTENT, "default")).toBe(true);
+    const lockDir = auditLockDir(PD, INTENT, "default");
+    expect(existsSync(lockDir)).toBe(true);
+    releaseAuditLock(PD, INTENT, "default");
+    expect(existsSync(lockDir)).toBe(false);
+  });
+
+  test("release REFUSES to remove a lock re-stamped by a colliding identity", () => {
+    // We acquire (records our owned stamp). A colliding identity then re-stamps
+    // the shared path with ITS live owner (foreign pid) — modeled by overwriting
+    // owner.json. Our release must NOT delete the foreign-held lock.
+    expect(acquireAuditLock(PD, 0, 1, INTENT, "default")).toBe(true);
+    const lockDir = auditLockDir(PD, INTENT, "default");
+    const foreign = { pid: 999_999, startedAtMs: Math.floor(performance.timeOrigin + performance.now()) };
+    writeFileSync(join(lockDir, "owner.json"), JSON.stringify(foreign), "utf-8");
+    releaseAuditLock(PD, INTENT, "default");
+    expect(existsSync(lockDir)).toBe(true); // survived — the flake is closed
+    // Cleanup (test owns the fixture regardless of the guard).
+    rmSync(lockDir, { recursive: true, force: true });
+  });
+
+  test("release of a bare (unstamped) dir we hold still cleans it up", () => {
+    // Best-effort stamp write can fail; an unstamped dir at our own path is ours.
+    const lockDir = auditLockDir(PD, INTENT, "default");
+    mkdirSync(lockDir, { recursive: true }); // no owner.json
+    releaseAuditLock(PD, INTENT, "default");
+    expect(existsSync(lockDir)).toBe(false);
+  });
+
+  test("bare release (no in-process acquire) falls back to pid identity", () => {
+    const lockDir = auditLockDir(PD, INTENT, "default");
+    // Foreign pid, never acquired in this process → refuse.
+    mkdirSync(lockDir, { recursive: true });
+    writeFileSync(join(lockDir, "owner.json"), JSON.stringify({ pid: 999_999, startedAtMs: 0 }), "utf-8");
+    releaseAuditLock(PD, INTENT, "default");
+    expect(existsSync(lockDir)).toBe(true);
+    // Our own pid, never acquired → the live-pid fallback proves authorship → remove.
+    writeFileSync(
+      join(lockDir, "owner.json"),
+      JSON.stringify({ pid: process.pid, startedAtMs: Math.floor(performance.timeOrigin + performance.now()) }),
+      "utf-8",
+    );
+    releaseAuditLock(PD, INTENT, "default");
+    expect(existsSync(lockDir)).toBe(false);
   });
 });
