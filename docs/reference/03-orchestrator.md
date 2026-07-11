@@ -123,6 +123,14 @@ There is no separate scaffold command (the earlier `init` flag was retired; the 
 5. Auto-births only on a workspace with zero intents; with intents already present and no active cursor, the engine prompts the user to pick one (`/amadeus intent <slug>`) rather than birthing a duplicate. There is no re-init flag.
 6. When birth was reached via the auto-birth print, the conductor re-runs `next` and continues into the first post-Initialization stage; the explicit `/amadeus-init` packaging stops after Initialization so the user invokes `/amadeus` again to begin interactively.
 
+### `next --new-intent` -- Birth alongside an active intent
+
+Requests a fresh intent-birth directive while another intent is already active. The conductor uses it when it recognizes NEW WORK unrelated to the running intent, runs the SKILL.md new-work offer, and the human confirms. Rather than have the conductor construct the `intent-birth` command from prose, the engine emits the SAME birth `print` the fresh-start path uses, so the second and later intents carry the `--label` seam identically to the first. The new work's freeform description rides in the argument text; the scope comes from an explicit `--scope` (the active intent's scope never wins for the new birth), falling back to the resolved scope when no scope flag is passed.
+
+Relationship to the sister re-entry flags: `--resume` re-enters the EXISTING active intent (clearing a park marker if set — see below); `--new-intent` leaves the active intent untouched and births a BRAND-NEW one beside it; `--single` runs a single stage in isolation under a synthetic workflow id without touching any main pointer. The three are distinct re-entry moves over an existing workspace, not composable variants of one another.
+
+When the active intent is parked, `next --new-intent` still births the new intent — the parked cursor does not swallow the birth. A plain `next` over a parked workflow emits the terminal `parked` directive, but `--new-intent` is a deliberate re-entry and bypasses that path, so the new work begins even while the earlier intent stays parked.
+
 ### Resume (State File Exists)
 
 When the active intent's `amadeus-state.md` exists and the user invokes `/amadeus`, the engine's `next` detects the existing state, runs the resume/recovery guard, and emits an `ask` directive carrying the resume-options question. The conductor renders it via `AskUserQuestion` and feeds the choice back on `report --user-input`. The conductor does not branch on state-file existence itself; the guard logic below runs in the engine:
