@@ -43,8 +43,8 @@ function escapeRegex(s: string): string {
 	return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function main(): void {
-	const flags = parseFlags(process.argv.slice(2));
+export function main(argv: string[] = process.argv.slice(2)): void {
+	const flags = parseFlags(argv);
 
 	if (!flags.outputPath) {
 		fail("--output-path is required");
@@ -108,4 +108,7 @@ function main(): void {
 	process.exit(0);
 }
 
-main();
+// Guard the CLI entry so the module can be imported (the exported main seam is
+// driven in-process by tests) without executing main() / process.exit at load
+// time. Matches the sibling tools (amadeus-sensor, amadeus-learnings).
+if (import.meta.main) main();
