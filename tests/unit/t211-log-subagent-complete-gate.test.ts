@@ -161,10 +161,11 @@ describe("t211 log-subagent completion gate + agent_type normalization (#845)", 
     expect(activeWorkflowIsComplete(proj)).toBe(true);
   });
 
-  test("activeWorkflowIsComplete: unreadable state path → FALSE (catch branch)", () => {
-    // The state path exists but is a DIRECTORY: existsSync passes, readFileSync
-    // throws EISDIR → the defensive catch returns false (workflow not terminal).
-    mkdirSync(seededStateFile(proj), { recursive: true });
+  test("activeWorkflowIsComplete: no state file → FALSE (catch branch, ENOENT)", () => {
+    // A bare fixture has no amadeus-state.md, so readFileSync throws ENOENT —
+    // deterministically on EVERY platform (unlike a directory read, which throws
+    // on macOS but returns "" under Bun/Linux). This exercises the catch → false.
+    expect(existsSync(seededStateFile(proj))).toBe(false);
     expect(activeWorkflowIsComplete(proj)).toBe(false);
   });
 

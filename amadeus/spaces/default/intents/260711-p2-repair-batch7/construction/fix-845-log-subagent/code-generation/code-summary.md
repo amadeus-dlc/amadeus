@@ -58,8 +58,11 @@ repo 外 scratch に fixture intent を作り dist フックを spawn（`CLAUDE_
 判定ロジックは lib の exported 関数へ抽出済み。t211 の seam テスト(`activeWorkflowIsComplete` の Running/Completed/Complete/状態不在/読取失敗(catch)分岐、`normalizeAgentType` の非空/空/空白/undefined/null/前後空白保持)で in-process 被覆。フックの呼び出し配線行は spawn 経由のため bun --coverage 不可視（既知の spawn-blindspot; 判定ロジックは seam 側で被覆済み)。
 
 `dist/claude/.claude/tools/amadeus-lib.ts` の新規関数 lcov（DA)実測:
-- 対象 14 DA 行(1916–1928, 1937–1938）すべて hits>0、**未カバー 0**。
-- 当初 `} catch {` の構造行が DA:0 だったため、状態パスをディレクトリにして `readFileSync` を EISDIR で投げる catch 分岐テストを追加し解消（codecov/patch の構造的 false-red 予防)。
+- `activeWorkflowIsComplete` / `normalizeAgentType` の全 DA 行 hits>0、**未カバー 0**(catch の `return false;` = 1930 も hits=14)。
+
+### catch 分岐カバレッジのポータビリティ是正(#870 codecov/patch 赤対応)
+- 当初は `existsSync` ガード + try/catch とし、catch を「状態パスをディレクトリ化 → `readFileSync(dir)` が EISDIR throw」で被覆した。これは macOS ではカバーできたが、**CI(Linux)の lcov で catch 行が DA:0** になった — Bun の `readFileSync(dir)` は macOS で throw するが Bun/Linux では `""` を返すため、ディレクトリ注入が Linux で発火しない(プラットフォーム依存)。
+- 是正: `existsSync` 事前チェックを削除し、単一の try/catch が「状態ファイル不在(ENOENT)」と「読取不能」の両方を扱う形へ変更。**ENOENT は全プラットフォームで確実に throw する**ため、seam テストの「状態ファイル不在 → false」ケースが catch を移植性を持って被覆する。ローカル lcov 再実測で catch 行 hits=14 を確認。
 
 ## 同根棚卸し（grep、修正はスコープ外・記録のみ)
 

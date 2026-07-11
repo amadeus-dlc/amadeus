@@ -1917,7 +1917,12 @@ export function activeWorkflowIsComplete(projectDir: string): boolean {
   const space = activeSpace(projectDir);
   const intent = activeIntent(projectDir, space) ?? undefined;
   const stateFile = stateFilePath(projectDir, intent, space);
-  if (!existsSync(stateFile)) return false;
+  // A single read handles BOTH "no state file yet" (ENOENT — the common case
+  // when no workflow has written state) and an unreadable path: either throws,
+  // and a missing/unreadable state means "not terminal" → false. (No existsSync
+  // pre-check: the ENOENT throw is deterministic on every platform, so this
+  // branch is portably reachable — a directory read is NOT, it throws on macOS
+  // but Bun/Linux returns "".)
   let content: string;
   try {
     content = readFileSync(stateFile, "utf-8");
