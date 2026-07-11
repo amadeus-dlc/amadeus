@@ -196,3 +196,62 @@ describe("t161 stale-lock reaper", () => {
     }
   });
 });
+
+// #831 — the release owner-stamp guard. auditLockDir keys on md5[:8] = 32 bits,
+// so two distinct identities can share ONE tmpdir path. Before the guard,
+// releaseAuditLock did an UNCONDITIONAL rmSync, so a colliding identity's
+// release destroyed a live lock a different identity held at the same path
+// (the t76 test-12 flake: a parallel merge's release freed a waiter that should
+// have timed out). The guard removes the dir ONLY when it still carries our own
+// owner stamp (pid + startedAtMs), symmetric to the reaper's "never rob a live
+// holder" contract. These run in-process (the seam) so the new lines are covered.
+describe("t161 release owner-stamp guard (#831)", () => {
+  const INTENT = "guard-cccccccc";
+
+  test("release REMOVES a lock we acquired (normal path, no regression)", () => {
+    expect(acquireAuditLock(PD, 0, 1, INTENT, "default")).toBe(true);
+    const lockDir = auditLockDir(PD, INTENT, "default");
+    expect(existsSync(lockDir)).toBe(true);
+    releaseAuditLock(PD, INTENT, "default");
+    expect(existsSync(lockDir)).toBe(false);
+  });
+
+  test("release REFUSES to remove a lock re-stamped by a colliding identity", () => {
+    // We acquire (records our owned stamp). A colliding identity then re-stamps
+    // the shared path with ITS live owner (foreign pid) — modeled by overwriting
+    // owner.json. Our release must NOT delete the foreign-held lock.
+    expect(acquireAuditLock(PD, 0, 1, INTENT, "default")).toBe(true);
+    const lockDir = auditLockDir(PD, INTENT, "default");
+    const foreign = { pid: 999_999, startedAtMs: Math.floor(performance.timeOrigin + performance.now()) };
+    writeFileSync(join(lockDir, "owner.json"), JSON.stringify(foreign), "utf-8");
+    releaseAuditLock(PD, INTENT, "default");
+    expect(existsSync(lockDir)).toBe(true); // survived — the flake is closed
+    // Cleanup (test owns the fixture regardless of the guard).
+    rmSync(lockDir, { recursive: true, force: true });
+  });
+
+  test("release of a bare (unstamped) dir we hold still cleans it up", () => {
+    // Best-effort stamp write can fail; an unstamped dir at our own path is ours.
+    const lockDir = auditLockDir(PD, INTENT, "default");
+    mkdirSync(lockDir, { recursive: true }); // no owner.json
+    releaseAuditLock(PD, INTENT, "default");
+    expect(existsSync(lockDir)).toBe(false);
+  });
+
+  test("bare release (no in-process acquire) falls back to pid identity", () => {
+    const lockDir = auditLockDir(PD, INTENT, "default");
+    // Foreign pid, never acquired in this process → refuse.
+    mkdirSync(lockDir, { recursive: true });
+    writeFileSync(join(lockDir, "owner.json"), JSON.stringify({ pid: 999_999, startedAtMs: 0 }), "utf-8");
+    releaseAuditLock(PD, INTENT, "default");
+    expect(existsSync(lockDir)).toBe(true);
+    // Our own pid, never acquired → the live-pid fallback proves authorship → remove.
+    writeFileSync(
+      join(lockDir, "owner.json"),
+      JSON.stringify({ pid: process.pid, startedAtMs: Math.floor(performance.timeOrigin + performance.now()) }),
+      "utf-8",
+    );
+    releaseAuditLock(PD, INTENT, "default");
+    expect(existsSync(lockDir)).toBe(false);
+  });
+});
