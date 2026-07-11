@@ -23,10 +23,8 @@ import { homedir, tmpdir } from "node:os";
 import { basename, delimiter, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildMeta, renderMeta, type MetaCounts } from "./lib/bun-junit-to-meta.ts";
-import {
-  type CoverageSourcePathContext,
-  normalizeCoverageSourcePath,
-} from "./lib/coverage-source-path.ts";
+import { type CoverageSourcePathContext } from "./lib/coverage-source-path.ts";
+import { normalizeCoverageReport as normalizeCoverageReportImpl } from "./lib/coverage-normalize.ts";
 import {
   beginObservation,
   buildMeasuredRecord,
@@ -506,66 +504,12 @@ function coverageSafeName(file: string): string {
     .replace(/^_+|_+$/g, "") || "test";
 }
 
+// Thin adapter over lib/coverage-normalize.ts: binds the runner's source-path
+// context and repo root so the combine step keeps its original one-arg call
+// shape. The union + comment/blank strip logic lives in the lib so it can be
+// driven in-process by tests (run-tests.ts itself runs main() on import).
 function normalizeCoverageReport(body: string): string {
-  interface FileCoverage {
-    lines: Map<number, number>;
-    functionsFound: number;
-    functionsHit: number;
-  }
-  const files = new Map<string, FileCoverage>();
-  let current: FileCoverage | null = null;
-
-  const fileFor = (source: string): FileCoverage => {
-    const normalized = normalizeCoverageSourcePath(source, COVERAGE_SOURCE_PATH_CONTEXT);
-    let file = files.get(normalized);
-    if (!file) {
-      file = { lines: new Map(), functionsFound: 0, functionsHit: 0 };
-      files.set(normalized, file);
-    }
-    return file;
-  };
-
-  for (const line of body.split(/\r?\n/)) {
-    if (line.startsWith("SF:")) {
-      current = fileFor(line.slice(3));
-      continue;
-    }
-    if (!current) continue;
-    if (line.startsWith("DA:")) {
-      const [lineNoRaw, countRaw] = line.slice(3).split(",");
-      const lineNo = Number(lineNoRaw);
-      const count = Number(countRaw);
-      if (Number.isInteger(lineNo) && Number.isFinite(count)) {
-        current.lines.set(lineNo, (current.lines.get(lineNo) ?? 0) + count);
-      }
-      continue;
-    }
-    if (line.startsWith("FNF:")) {
-      current.functionsFound = Math.max(current.functionsFound, Number(line.slice(4)) || 0);
-      continue;
-    }
-    if (line.startsWith("FNH:")) {
-      current.functionsHit = Math.max(current.functionsHit, Number(line.slice(4)) || 0);
-    }
-  }
-
-  const out: string[] = [];
-  for (const [source, file] of [...files.entries()].sort(([a], [b]) => a.localeCompare(b))) {
-    const sortedLines = [...file.lines.entries()].sort(([a], [b]) => a - b);
-    out.push("TN:", `SF:${source}`);
-    if (file.functionsFound > 0 || file.functionsHit > 0) {
-      out.push(`FNF:${file.functionsFound}`, `FNH:${file.functionsHit}`);
-    }
-    for (const [lineNo, count] of sortedLines) {
-      out.push(`DA:${lineNo},${count}`);
-    }
-    out.push(
-      `LF:${sortedLines.length}`,
-      `LH:${sortedLines.filter(([, count]) => count > 0).length}`,
-      "end_of_record",
-    );
-  }
-  return out.join("\n");
+  return normalizeCoverageReportImpl(body, COVERAGE_SOURCE_PATH_CONTEXT, REPO_ROOT);
 }
 
 function coverageHtmlEscape(value: string): string {
