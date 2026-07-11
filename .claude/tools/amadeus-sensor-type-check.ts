@@ -2,7 +2,8 @@
 //
 // Owns the type-check itself; the dispatcher (amadeus-sensor.ts) routes a
 // SENSOR fire to this script via the manifest's `command:` field. Self-
-// contained: no imports from sibling tools. Wraps `tsc --project <tsconfig>
+// contained except a single import from amadeus-lib (`sensorsDir` — the
+// canonical sensors-path resolution). Wraps `tsc --project <tsconfig>
 // --noEmit --pretty false --incremental --tsBuildInfoFile <path under
 // amadeus-docs/.amadeus-sensors/>` (via resolveTscLauncher — the project's
 // own node_modules/.bin/tsc when present, else `bunx tsc`; see issue #657
