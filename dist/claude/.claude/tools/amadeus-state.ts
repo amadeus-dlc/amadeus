@@ -115,6 +115,52 @@ export function markPhaseVerified(content: string, phase: string): string {
   return setPhaseProgress(content, phase, "Verified");
 }
 
+// --- Phase-check artifact gate (Issue #886, restoring #464/#479) -------------
+//
+// A phase boundary's PHASE_VERIFIED / markPhaseVerified flip must not fire until
+// the phase it closes has written its verification/phase-check-<phase>.md — the
+// same "evidence before completion" principle as verifyStageArtifacts, at the
+// phase altitude. This gate was implemented in the pre-restart lineage
+// (8cf816138) and lost across the restart that rebuilt state.ts; only the
+// PHASE_VERIFIED flip wiring (#880/#836) was restored, leaving the boundary
+// completion ungated. Scoped to the 3 phases whose upstream stage definitions
+// actually produce a phase-check artifact (ideation's approval-handoff,
+// inception's delivery-planning, construction's ci-pipeline). Initialization and
+// Operation have no stage that ever writes one, so gating them would refuse
+// every ordinary workflow's first/terminal boundary with no way to satisfy it.
+const PHASE_CHECK_REQUIRED_PHASES: ReadonlySet<string> = new Set([
+  "ideation",
+  "inception",
+  "construction",
+]);
+
+// Refuse a phase-boundary completion when `phase` requires a phase-check
+// artifact and it is missing. No-op for phases outside
+// PHASE_CHECK_REQUIRED_PHASES. Honors the same AMADEUS_SKIP_ARTIFACT_GUARD
+// bypass as verifyStageArtifacts (the shared test/emergency seam the suite sets
+// globally) so it participates in one documented off-switch rather than a second
+// one. Callers invoke it BEFORE writeStateFile; error() exits, so a refusal
+// leaves the state file untouched (the in-memory content flips are discarded).
+// Exported so amadeus-jump.ts reuses the identical gate on its forward crossing.
+export function verifyPhaseCheckArtifact(pd: string, phase: string): void {
+  if (artifactGuardDisabled()) return;
+  if (!PHASE_CHECK_REQUIRED_PHASES.has(phase)) return;
+  const rec = recordDir(pd);
+  if (rec === null) {
+    let msg = `Refusing to verify the "${phase}" phase boundary: no active intent record resolves, `;
+    msg += `so there is nowhere to check for verification/phase-check-${phase}.md.`;
+    error(msg);
+  }
+  const artifactPath = join(rec, "verification", `phase-check-${phase}.md`);
+  if (!existsSync(artifactPath)) {
+    let msg = `Refusing to complete the "${phase}" phase boundary: verification/phase-check-${phase}.md `;
+    msg += `does not exist under the intent's record directory. The phase-boundary protocol requires `;
+    msg += `a phase-check artifact before PHASE_VERIFIED. Produce verification/phase-check-${phase}.md `;
+    msg += `before completing. (expected: ${artifactPath})`;
+    error(msg);
+  }
+}
+
 // `advance <completed> <next>` is a FORWARD-only transition: the caller has just
 // finished <completed> and hands off to the next in-scope stage. A 2-arg advance
 // whose <next> sits at or before <completed> in the stage graph would regress
@@ -1247,6 +1293,15 @@ export function handleAdvance(args: string[]): void {
   // Detect phase boundary (for PHASE_COMPLETED/VERIFIED/STARTED emissions)
   const crossesPhaseBoundary = completedStage.phase !== nextStage.phase;
 
+  // Phase-check artifact gate (#886). Same guard condition as the stage-artifact
+  // guard above: only enforce on the transition that ACTUALLY closes the phase
+  // (an approve-delegated / replay call is alreadyMarkedCompleted and already
+  // passed it). Runs before any state write; a refusal exits leaving the state
+  // file untouched (the markPhaseVerified flip below is discarded with it).
+  if (crossesPhaseBoundary && !alreadyMarkedCompleted) {
+    verifyPhaseCheckArtifact(pd, completedStage.phase);
+  }
+
   // 1. Mark completed-slug → [x] (idempotent)
   content = setCheckbox(content, completedSlug, "completed");
 
@@ -1386,6 +1441,16 @@ export function handleFinalize(args: string[]): void {
   const nextAfterNext = nextStage ? nextInScopeStage(nextStage.slug, scope, content) : null;
   const timestamp = isoTimestamp();
 
+  // Phase-check artifact gate (#886). finalize flips markPhaseVerified for the
+  // completed phase on BOTH the terminal branch (no next stage) and the
+  // boundary-crossing branch (next stage in a different phase) below — gate
+  // exactly those. A same-phase finalize closes no phase and is not gated.
+  // Guarded by !alreadyMarkedCompleted (an idempotent re-finalize already
+  // passed). Runs before writeStateFile so a refusal leaves the state untouched.
+  if (!alreadyMarkedCompleted && (!nextStage || completedStage.phase !== nextStage.phase)) {
+    verifyPhaseCheckArtifact(pd, completedStage.phase);
+  }
+
   // 4. Update state fields (but do NOT mark next stage [-] or set In Progress)
   if (nextStage) {
     content = setField(content, "Current Stage", nextStage.slug);
@@ -1471,6 +1536,11 @@ export function handleCompleteWorkflow(args: string[]): void {
   // before any mutation so a refusal leaves state untouched.
   if (!alreadyMarkedCompleted) {
     verifyStageArtifacts(pd, completedStage);
+    // Phase-check artifact gate (#886). complete-workflow always closes
+    // completedStage.phase (an implicit "phase → end" boundary) and flips it
+    // Verified below, so gate it the same way as advance's boundary block.
+    // Before any mutation → a refusal leaves the state untouched.
+    verifyPhaseCheckArtifact(pd, completedStage.phase);
   }
 
   // 1. Mark completed
@@ -1667,7 +1737,7 @@ function assertHumanPresentForGateResolution(
   }
 }
 
-function handleApprove(args: string[]): void {
+export function handleApprove(args: string[]): void {
   if (args.length < 1) error("Usage: amadeus-state.ts approve <slug> [--user-input <text>]");
   const slug = args[0];
   const { userInput } = parseApproveFlags(args.slice(1));
@@ -1702,6 +1772,21 @@ function handleApprove(args: string[]): void {
   // refusal (error() -> exit) leaves state untouched (same slot as the
   // artifact guard above).
   assertHumanPresentForGateResolution(pd, content, slug, "approve");
+
+  // Phase-check artifact gate (#886). approve marks the slug [x] and DELEGATES
+  // to handleAdvance / handleCompleteWorkflow, which see alreadyMarkedCompleted
+  // and skip their OWN phase-check gate — so without a check HERE the ordinary
+  // (approve) gate-completion path could cross a phase boundary with no
+  // phase-check artifact. Mirrors handleAdvance's crossesPhaseBoundary test: no
+  // next stage (the final stage) always counts, like complete-workflow's
+  // unconditional gate. Placed AFTER the human-presence guard (same ordering
+  // precedent) so an approve missing BOTH a human turn and the artifact reports
+  // human-absence first. Before any mutation → a refusal leaves state untouched.
+  const approveScope = getField(content, "Scope") ?? "";
+  const nextForPhaseGate = approveScope ? nextInScopeStage(slug, approveScope, content) : null;
+  if (!nextForPhaseGate || nextForPhaseGate.phase !== stage.phase) {
+    verifyPhaseCheckArtifact(pd, stage.phase);
+  }
 
   const timestamp = isoTimestamp();
 
