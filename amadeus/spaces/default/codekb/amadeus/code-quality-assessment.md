@@ -1,6 +1,7 @@
 # コード品質評価
 
 > 本ページ先頭の「docs-batch10(2026-07-12)の観測面」節が最新 intent `260711-docs-batch10`(#765 #764 #763 #728、documentation)の候補記録。続く p3-cleanup-batch8 節(#843 #846 #850 #851 #876 #877 #878、intent `260711-p3-cleanup-batch8`)・p2-repair-batch7 節(#834 #839 #844 #845 #849、intent `260711-p2-repair-batch7`)・p3-cleanup-batch5 節(#811 #822 #830 #730 #819 #831、intent `260710-p3-cleanup-batch5`)・p3-cleanup-batch4 節(#757 #758 #753 #739 #740 #784 — 全6件 2026-07-10 修正着地済み、PR #823/#821/#817/#818/#814/#815)・core-repair-batch3 節(#746 ほか9件、2026-07-11)・複雑度ゲート導入節(intent 260710-complexity-gate)・ tools-dispatch-batch 節(#774 / #785 / #787 / #788 / #789)・ bughunt-fix-batch 節(#771/#773/#775/#776/#779)・swarm-worktree-batch 節(#738/#748/#746/#760)・learnings-audit-batch 節(#754 / #745 / #761)・mint-presence-vectors 節(#755)・packaging source-unreferenced 節(intent 260710、#735)・delegate-answer-consume 節(intent 260710、#736)・kiro-stale-hooks 節(#719 / P3 source hygiene)・dynamic-test-size 節(#699 / #684 Phase D)・t92-worktree-hermeticity 節(#709)・packaging-repair-batch 節(#701/#702 = PR #711/#712 解決済み)は前 intent の記録で、参照用に温存する。以降の「アーキテクチャ横断パターン」以下は `260709-bug-zero-batch`(#674〜#678/#668)の記録。
+> 「docs-repair-batch9(2026-07-11)の観測面」節は履歴 intent `260711-docs-repair-batch9`(#812 #824 #680 #885 #886)の記録。続く p3-cleanup-batch5 節(#811 #822 #830 #730 #819 #831 — 候補記録)・p3-cleanup-batch4 節(#757 #758 #753 #739 #740 #784 — 全6件 2026-07-10 修正着地済み、PR #823/#821/#817/#818/#814/#815)・core-repair-batch3 節(#746 ほか9件、2026-07-11)・複雑度ゲート導入節(intent 260710-complexity-gate)・ tools-dispatch-batch 節(#774 / #785 / #787 / #788 / #789)・ bughunt-fix-batch 節(#771/#773/#775/#776/#779)・swarm-worktree-batch 節(#738/#748/#746/#760)・learnings-audit-batch 節(#754 / #745 / #761)・mint-presence-vectors 節(#755)・packaging source-unreferenced 節(intent 260710、#735)・delegate-answer-consume 節(intent 260710、#736)・kiro-stale-hooks 節(#719 / P3 source hygiene)・dynamic-test-size 節(#699 / #684 Phase D)・t92-worktree-hermeticity 節(#709)・packaging-repair-batch 節(#701/#702 = PR #711/#712 解決済み)は前 intent の記録で、参照用に温存する。以降の「アーキテクチャ横断パターン」以下は `260709-bug-zero-batch`(#674〜#678/#668)の記録。
 >
 > **既知のハウスキーピング債(観測のみ)**: 本ページ以下および `architecture.md` / `business-overview.md` / `api-documentation.md` には過去 intent 由来の未リラベルな「本 intent(…)」マーカーが複数併存している(business-overview の `260710-source-unreferenced-check` / `260709-bug-zero-batch`、architecture 冒頭の source-unreferenced 記述など)。correction c3-relabel の趣旨に照らせば全て履歴ラベル化すべきだが、本 bugfix diff-refresh のスコープ外(非サージカルな大量 churn になる)。本スキャンでは更新対象ファイルの直近マーカーのみリラベルし、残債はここに明示する。
 
@@ -14,6 +15,40 @@
 - **#728(S4/documentation)**: `tests/` 配下13ファイル・14参照が旧名 `assertNotSiblingWorktree` を stale 参照。product は `resolveWorktreeAnchor` へ改名済み(`amadeus-worktree.ts:167` 定義、旧名は source に**不在**=`grep` 0 件、実測)。コメントは行番号(`:101` / `:101-121` / `:112` / `:459->101` / `:162`)も stale で、現定義 `:167` と不一致。`tests/harness/fixtures.ts` のみ2参照(`:283` `:542`)、他12ファイルは各1参照。
 
 
+
+## docs-repair-batch9(2026-07-11)の観測面 — フォーカス5欠陥の現存確認(#812 #824 #680 #885 #886)
+
+現行 HEAD `13598b752`(base `b845478bb`=前回 bughunt-fix-batch observed からの diff-refresh、59コミット)で確定した、docs/harness 修理バッチ第9弾フォーカス5欠陥の現物照合。出典は本 intent(docs-repair-batch9)の `inception/reverse-engineering/scan-notes.md`(全 file:line 実測付き)。5欠陥の欠陥クラス分類: **byte-copy localize 漏れ2件**(#812 SKILL.md / #824 onboarding.fills.ts)+ **ヘッダ契約乖離1件**(#680 sensor self-contained)+ **restart-loss 2件**(#885 slug 正規化 / #886 phase-check ゲート、詳細は architecture.md「docs-repair-batch9 の観測面」節)。#812/#824/#680 の欠陥3ファイルは `b845478bb..HEAD` 区間内で**一切変更されず欠陥が区間を貫通して現存**、#885/#886 の lib/state/worktree は区間内で #880 flip 配線・#869 jump per-phase の行番号シフトを受けたが**欠陥自体(normalizeWorktreeSlug 喪失 / phase-check ゲート喪失)は未修復で残存**。
+
+### #812 — kiro-ide SKILL.md が kiro CLI 版の byte-copy(localize 漏れ・未修正)
+
+- **欠陥**: `diff harness/kiro/skills/amadeus/SKILL.md harness/kiro-ide/skills/amadeus/SKILL.md` → **IDENTICAL**(バイト同一 = 完全 byte-copy、localize 未実施)。kiro-ide 側に kiro CLI 固有記述が残存: `:14` 見出し `# AI-DLC Orchestrator (Kiro CLI harness)`(IDE ハーネスなのに「Kiro CLI harness」)、`:84` `under \`kiro-cli chat --no-interactive\` the stop-hook enforcement backstop does not fire`(CLI 固有 headless caveat)。`grep -c "Kiro CLI"` = 1 + `kiro-cli` 参照 :84。
+- **対照面**: kiro-ide skills 配下に `references/` サブディレクトリ不在(`find` で `skills`/`skills/amadeus` のみ)、kiro CLI 側も `SKILL.md` + `question-rendering.md` の2ファイルのみ。#812 の対照面は SKILL.md 本体に限定。
+- **修理の型**: kiro-ide SKILL.md を IDE ハーネス向けに localize(`:14` 見出し / `:84` CLI 固有 caveat の IDE 版差し替え)。SKILL.md は harness 中立でないため byte-copy 自体が誤り。
+
+### #824 — onboarding.fills.ts の kiro CLI 表記残存 + guide_pointer 誤指し(localize 部分漏れ・未修正)
+
+- **欠陥**: `diff harness/kiro/onboarding.fills.ts harness/kiro-ide/onboarding.fills.ts` → DIFFERS。kiro-ide 版は `:13`(`Kiro IDE harness`)/`:37`(`Kiro IDE installs`)の**2箇所のみ** localize 済で、残りに kiro CLI 表記が残存。`grep -noE "Kiro CLI|kiro-cli"` = 7残存: `Kiro CLI`×3(`:1` ヘッダコメント `harness/kiro/onboarding.fills.ts — Kiro CLI's …` = パス+名称とも誤り、`:15` `Kiro CLI ≥ 2.6`、`:30` `rendered onto Kiro CLI. On Kiro:`)、`kiro-cli`×4(`:15` `kiro-cli --version`、`:17` `kiro-cli chat`×2、`:26` guide_pointer 内)。
+- **guide_pointer 誤指し**: `:26` `guide_pointer` が kiro-ide 用ドキュメントを指すべきところ CLI 版 `docs/guide/harnesses/kiro-cli.md` を指す。差し替え先 `docs/guide/harnesses/kiro-ide.md` は **実在**(`kiro-ide.ja.md` も存在)= 受け皿あり。
+- **dist 伝播**: `manifest.ts:93` の `onboarding: { dst: "AGENTS.md", … fills: onboardingFills }` により生成物 `dist/kiro-ide/AGENTS.md` にも誤表記が伝播済み(`:7`/`:9`/`:36`/`:39`)。正本修正後は `scripts/package.ts` 再生成で dist 同期が必要。
+- **修理の型**: kiro-ide onboarding.fills.ts の残 7箇所 CLI 表記を IDE 版へ localize + guide_pointer を `kiro-ide.md` へ差し替え + dist 再生成。
+
+### #812 未カバー面候補 — question-rendering.md の localize 漏れ2箇所(新発見・同根)
+
+- **同根棚卸し**(`diff -rq harness/kiro/ harness/kiro-ide/`): localize 漏れは SKILL.md(#812)・**question-rendering.md**・onboarding.fills.ts(#824)の**3ファイル**に集中。`skills/amadeus/question-rendering.md` は kiro と **byte-identical** で `Kiro CLI` 表記2箇所残存: `:1` `Kiro CLI harness annex`、`:11` `Kiro CLI has no structured-question tool`。**#812 起票文が SKILL.md のみを対象にしている場合、question-rendering.md は同根の未カバー面**(SKILL 以外の annex の同一 localize 漏れクラスタ)。修理時に #812 スコープへ取り込むか別 Issue 化するかは requirements 判断。
+- **共有妥当の確認**(誤修正防止): `agents/*.json`(5)・`settings/cli.json` は byte-identical だが `Kiro CLI`/`kiro-cli` 出現 0 = ハーネス中立で共有妥当(localize 対象外)。
+
+### #680 — sensor-type-check.ts の self-contained ヘッダ主張と実 import の矛盾(ヘッダ契約乖離・未修正)
+
+- **欠陥**: `amadeus-sensor-type-check.ts:4-5` ヘッダが `// Self-contained: no imports from sibling tools.`(兄弟ツール非 import を明言)だが、`:89` `import { sensorsDir } from "./amadeus-lib.ts";`(同ディレクトリ兄弟ツール)で**主張と実態が矛盾**(self-contained 主張は虚偽)。他 import は node 標準のみ(`:86-88`)で矛盾は lib import 1件に起因。
+- **同型棚卸し**(全 sensor 5件): self-contained を明言するのは type-check と linter の2件のみ。`amadeus-sensor-linter.ts` は主張どおり兄弟 import ゼロで整合(主張 TRUE)。required-sections / schema / upstream-coverage は主張自体がなく整合。**矛盾は type-check.ts 単独**。
+- **修理の型(2択、requirements/architect 判断)**: (a) ヘッダ主張を実態(lib へ依存)に合わせて書き換える、(b) `sensorsDir` 依存を除去して主張を真にする。主張のない3 sensor は対象外(誤修正しないこと)。
+
+### #885 / #886 — restart-loss 2件(slug 正規化 / phase-check ゲート)
+
+- 両件とも restart 前旧系譜 `.agents/amadeus/tools/` の契約が現行正本 `packages/framework/core/tools/` へ未移植で喪失し、区間内の #880/#869 再構築でも復元されなかった **restart-loss** クラスタ。品質観点の欠陥形状(機能面だけ再構築し precondition/正規化を復元しない非対称)と旧系譜 vs 現行の file:line 対照は **architecture.md「docs-repair-batch9(2026-07-11)の観測面」節** に詳述。
+- **#885**: `normalizeWorktreeSlug` grep 0件。旧 `63314bc82`(#478 gap2)が lib/worktree/state の slug 境界を同一チョークポイントへ一本化し大文字混じり slug を寛容受理+小文字正規化していたが、現行は `amadeus-lib.ts:2099` worktreePath 無正規化 / `:2580` validateBoltSlug + `amadeus-worktree.ts:195` / `amadeus-state.ts:250` validateSlug が大文字を reject。batch8 #850 gap2 と同一 archive の分割で lib.ts 交差。
+- **#886**: `phase-check|PHASE_CHECK|verifyPhaseCheck` core 全域 0件。旧 `8cf816138` の `verifyPhaseCheckArtifact`(`verification/phase-check-<phase>.md` を PHASE_VERIFIED 前に強制)が現行 state.ts 4経路(advance :1104 / finalize :1333 / complete-workflow :1428 / approve :1670)+ jump のいずれからも呼ばれず、#880 flip 配線(`setPhaseProgress` :101 / `markPhaseVerified` :114)・#869 jump per-phase が flip のみ再構築し precondition 未復元。
 
 ## p2-repair-batch7 の観測面 — restart-loss クラス5欠陥の現物照合(#834 #839 #844 #845 #849)
 

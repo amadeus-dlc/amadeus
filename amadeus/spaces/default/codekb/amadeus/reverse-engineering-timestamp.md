@@ -12,6 +12,18 @@
 - Focus: `docs/`(#765 grep 0件、正準ページ `docs/reference/12-state-machine.md`)・`docs/reference/`(#764 grep 0件、正準ページ `docs/reference/03-orchestrator.md`)・`docs/reference/18-workspace-layout.md`(#763、`.ja.md` 欠落=全20ファイル中の唯一欠落)・`tests/`13ファイル14参照(#728、旧名 stale)。source 側の真実: `amadeus-state.ts:371/:445/:518`(set-skeleton-stance)・`amadeus-orchestrate.ts:321/:336/:375/:1427`(--new-intent)・`amadeus-worktree.ts:167`(resolveWorktreeAnchor)
 - 更新した成果物: `code-quality-assessment.md`(本 intent の documentation 4欠陥横断節を先頭新設 + 先頭バナーの「最新」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、本ファイル(鮮度ポインタ)、`re-scans/260711-docs-batch10.md`(per-intent re-scan 記録)。他成果物(architecture / business-overview / code-structure / api-documentation / component-inventory / technology-stack / dependencies)は base→observed で本 intent 観測面(docs/tests のコメント・ペア面)と無関係のため温存(churn 回避)。
 
+## 実行メタデータ(履歴: 260711-docs-repair-batch9)
+
+- Date: 2026-07-11
+- Intent: `260711-docs-repair-batch9`(docs/harness 修理バッチ第9弾 — #812 kiro-ide SKILL.md の kiro CLI 版 byte-copy / #824 onboarding.fills.ts の kiro CLI 表記残存 + guide_pointer 誤指し / #680 sensor-type-check の self-contained ヘッダと実 import の矛盾 / #885 normalizeWorktreeSlug 喪失 restart-loss / #886 phase-check ゲート喪失 restart-loss)
+- Scope: `bugfix`
+- Repository: `/Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/codex-engineer-1`(branch `intent/docs-repair-batch9`)
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh(project.md 是正 cid:reverse-engineering:c1)。base=`b845478bbf25a534a59f97f18e5a4a2a5a4e239c`(前回 bughunt-fix-batch RE observed。全 re-scan observed 候補の HEAD 祖先性を判定し最短距離59の最新祖先を採用)、observed=`13598b752b656cc9bbf5d931f8e3a6c34881fd1c`(現 HEAD = origin/main)。**#812/#824/#680 の欠陥3ファイルは区間内無変更で欠陥が区間を貫通して現存**、**#885/#886 の lib/state/worktree は区間内で #880(`c4304edf4` flip 配線)・#869(`aac1869e4` jump per-phase)の行番号シフトを受けたが欠陥自体(normalizeWorktreeSlug 喪失 / phase-check ゲート喪失)は未修復で残存**。Always-rerun-for-freshness は差分実測(区間内変更の有無 + 現行 file:line の grep 0件確認)で満たした。base/observed の真実源は本 intent の `inception/reverse-engineering/scan-notes.md`。
+- 実施体制: Developer(スキャン)→ Architect(合成)の2サブエージェント直列(cid:reverse-engineering:c3)
+- Focus: `harness/kiro-ide/skills/amadeus/SKILL.md:14,84`(#812)+ `question-rendering.md:1,11`(#812 同根候補)・`harness/kiro-ide/onboarding.fills.ts:1,15,17,26,30` + `manifest.ts:93`(#824)・`core/tools/amadeus-sensor-type-check.ts:4-5,89`(#680)・`core/tools/amadeus-lib.ts:2099,2430,2580` + `amadeus-worktree.ts:39,195` + `amadeus-state.ts:248,250`(#885)・`core/tools/amadeus-state.ts:101,114,1104,1333,1428,1670` + `amadeus-jump.ts`/`amadeus-orchestrate.ts`(#886)
+- 更新した成果物: `code-quality-assessment.md`(本 intent のフォーカス5欠陥現存確認節を先頭新設 + question-rendering.md localize 漏れの #812 未カバー候補記録 + 先頭バナー/batch5 節「本 intent」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、`architecture.md`(restart-loss 系統節「docs-repair-batch9 の観測面」新設 + core-repair-batch3 バナー「最新」降格・「本 intent」履歴ラベル化)、`code-structure.md`(restart-loss フォーカス面の区間構造変化節 = #880/#869 の flip 再構築を新設)、`component-inventory.md`(docs/harness 修理コンポーネント節新設)、本ファイル(鮮度ポインタ)。他成果物(business-overview / api-documentation / technology-stack / dependencies)は本 intent 観測面と無関係のため温存(churn 回避、cid:reverse-engineering:c1)。
+
 ## 実行メタデータ(履歴: 260711-p3-cleanup-batch8)
 
 - Date: 2026-07-11

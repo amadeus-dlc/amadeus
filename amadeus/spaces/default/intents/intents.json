@@ -145,5 +145,19 @@
     "dirName": "260711-p3-repair-batch6",
     "scope": "bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019f5085-0b7f-7ba1-bf1e-ccf71cbf9599",
+    "slug": "p2-repair-batch7",
+    "dirName": "260711-p2-repair-batch7",
+    "scope": "bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f519d-2d17-7d5c-ba0c-6548a60af66f",
+    "slug": "docs-repair-batch9",
+    "dirName": "260711-docs-repair-batch9",
+    "scope": "bugfix",
+    "status": "complete"
   }
 ]
