@@ -268,3 +268,57 @@ describe("t209 dist/kiro-ide adapter — both vocabularies fire end-to-end", () 
     }
   });
 });
+
+// #822: runCore must forward the PAYLOAD cwd to the core-hook subprocess
+// (symmetric to the codex adapter's `cwd: projectDir`). Under a worktree session
+// the hook SCRIPTS live in the main checkout (scriptHome) while the engine — and
+// the record it writes — is the worktree (payloadCwd). With NO CLAUDE_PROJECT_DIR
+// env the core hook resolves projectDir from process.cwd(), so it must inherit the
+// payload cwd; pre-fix runCore dropped cwd and synced the WRONG state file.
+function runAdapterFrom(
+  scriptHome: string,
+  processCwd: string,
+  target: string,
+  payload: unknown,
+): { stdout: string; code: number } {
+  const env = { ...process.env };
+  delete env.CLAUDE_PROJECT_DIR; // do not mask the cwd-derived resolution
+  const r = spawnSync(
+    "bun",
+    [join(scriptHome, ".kiro", "hooks", "amadeus-kiro-adapter.ts"), target],
+    {
+      cwd: processCwd,
+      input: JSON.stringify(payload),
+      encoding: "utf-8",
+      env,
+      timeout: 30_000,
+    },
+  );
+  return { stdout: r.stdout ?? "", code: r.status ?? -1 };
+}
+
+describe("t209 kiro-ide adapter — runCore forwards the payload cwd (#822)", () => {
+  test("11: state-sync resolves the payload workspace, not the adapter launch dir", () => {
+    const scriptHome = scratchProject(); // 'main checkout': scripts + marker + state
+    const payloadCwd = scratchProject(); // 'worktree': the real record the engine wrote from
+    try {
+      const r = runAdapterFrom(scriptHome, scriptHome, "state-sync", {
+        hook_event_name: "postToolUse",
+        cwd: payloadCwd,
+        tool_name: "todo_list",
+        tool_input: {
+          command: "create",
+          tasks: [{ task_description: "Running Intent Capture [intent-capture]" }],
+        },
+      });
+      expect(r.code).toBe(0);
+      const payloadState = readFileSync(seededStateFile(payloadCwd), "utf-8");
+      expect(/\*\*Current Stage\*\*:\s*intent-capture/.test(payloadState)).toBe(true);
+      const scriptState = readFileSync(seededStateFile(scriptHome), "utf-8");
+      expect(/\*\*Current Stage\*\*:\s*requirements-analysis/.test(scriptState)).toBe(true);
+    } finally {
+      rmSync(scriptHome, { recursive: true, force: true });
+      rmSync(payloadCwd, { recursive: true, force: true });
+    }
+  });
+});

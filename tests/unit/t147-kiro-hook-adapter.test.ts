@@ -129,12 +129,21 @@ function runAdapter(
   target: string,
   payload: unknown,
 ): { stdout: string; code: number } {
+  // The live-captured fixtures carry a placeholder `cwd: /tmp/example-project`.
+  // Since #822 the adapter FORWARDS the payload cwd as the core-hook subprocess
+  // cwd, so the payload must name the real scratch workspace (a real Kiro payload
+  // always names its actual cwd). Object payloads get cwd pinned to projectDir;
+  // string payloads (the malformed-stdin case) pass through untouched.
+  const body =
+    payload && typeof payload === "object"
+      ? { ...(payload as Record<string, unknown>), cwd: projectDir }
+      : payload;
   const r = spawnSync(
     "bun",
     [join(projectDir, ".kiro", "hooks", "amadeus-kiro-adapter.ts"), target],
     {
       cwd: projectDir,
-      input: typeof payload === "string" ? payload : JSON.stringify(payload),
+      input: typeof body === "string" ? body : JSON.stringify(body),
       encoding: "utf-8",
       env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir },
       timeout: 30_000,
@@ -426,6 +435,64 @@ describe("t147 Kiro hook adapter (live-captured payload fixtures)", () => {
       }
     } finally {
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+// #822: the adapter's runCore must forward the PAYLOAD cwd to the core-hook
+// subprocess (symmetric to the codex adapter's `cwd: projectDir`). Under a
+// worktree session the hook SCRIPTS live in the main checkout (scriptHome) while
+// the engine — and the record it writes — is the worktree (payloadCwd). With NO
+// CLAUDE_PROJECT_DIR env the core hook resolves projectDir from process.cwd(), so
+// it must inherit the payload cwd; pre-fix runCore dropped cwd and the core hook
+// synced the WRONG workspace's state file.
+function runAdapterFrom(
+  scriptHome: string,
+  processCwd: string,
+  target: string,
+  payload: unknown,
+): { stdout: string; code: number } {
+  const env = { ...process.env };
+  delete env.CLAUDE_PROJECT_DIR; // do not mask the cwd-derived resolution
+  const r = spawnSync(
+    "bun",
+    [join(scriptHome, ".kiro", "hooks", "amadeus-kiro-adapter.ts"), target],
+    {
+      cwd: processCwd,
+      input: typeof payload === "string" ? payload : JSON.stringify(payload),
+      encoding: "utf-8",
+      env,
+      timeout: 30_000,
+    },
+  );
+  return { stdout: r.stdout ?? "", code: r.status ?? -1 };
+}
+
+describe("t147 Kiro adapter — runCore forwards the payload cwd (#822)", () => {
+  test("14: state-sync resolves the payload workspace, not the adapter launch dir", () => {
+    const scriptHome = scratchProject(true); // 'main checkout': scripts + marker + state
+    const payloadCwd = scratchProject(true); // 'worktree': the real record the engine wrote from
+    try {
+      // Adapter launched from scriptHome (its process.cwd()), payload names payloadCwd.
+      const r = runAdapterFrom(scriptHome, scriptHome, "state-sync", {
+        hook_event_name: "PostToolUse",
+        cwd: payloadCwd,
+        tool_name: "todo_list",
+        tool_input: {
+          command: "create",
+          tasks: [{ task_description: "Running Intent Capture [intent-capture]" }],
+        },
+      });
+      expect(r.code).toBe(0);
+      // The payload workspace's state must be the one that syncs.
+      const payloadState = readFileSync(seededStateFile(payloadCwd), "utf-8");
+      expect(/\*\*Current Stage\*\*:\s*intent-capture/.test(payloadState)).toBe(true);
+      // And the launch-dir workspace must be left untouched (pre-fix it synced here).
+      const scriptState = readFileSync(seededStateFile(scriptHome), "utf-8");
+      expect(/\*\*Current Stage\*\*:\s*requirements-analysis/.test(scriptState)).toBe(true);
+    } finally {
+      rmSync(scriptHome, { recursive: true, force: true });
+      rmSync(payloadCwd, { recursive: true, force: true });
     }
   });
 });
