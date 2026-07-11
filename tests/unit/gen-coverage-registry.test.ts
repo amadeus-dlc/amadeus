@@ -922,6 +922,7 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "unit/t-memory-seed.test.ts",
     "unit/t209-worktree-read-anchor.test.ts",
     "unit/t210-adapter-mint-classifier.test.ts",
+    "unit/t210-doctor-worktree-anchor.test.ts",
     "unit/t-runtime-dispatch-seam.test.ts",
     "unit/t07-hook-audit-logger.test.ts",
     "unit/t08.test.ts",

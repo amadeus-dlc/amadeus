@@ -4753,6 +4753,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/unit/t210-doctor-worktree-anchor.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t27.test.ts",
           "mechanism": "cli"
         },
