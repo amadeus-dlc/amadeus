@@ -13,6 +13,7 @@ import {
   type CheckboxState,
   codekbDir,
   countCheckboxes,
+  docsOnlyDeclaration,
   emitError,
   errorMessage,
   extractMarkdownSection,
@@ -45,6 +46,7 @@ import {
   setCheckbox,
   setField,
   setFieldStrict,
+  setIntentDocsOnly,
   setOrInsertField,
   stageIndex,
   stagesInScope,
@@ -381,9 +383,12 @@ function main(): void {
       case "unpark":
         handleUnpark(args.slice(1));
         break;
+      case "declare-docs-only":
+        handleDeclareDocsOnly(args.slice(1));
+        break;
       default:
         error(
-          `Unknown subcommand: ${subcommand}. Valid: get, set, set-skeleton-stance, checkbox, count, advance, finalize, complete-workflow, gate-start, approve, delegate-approval, delegate-rejection, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark`
+          `Unknown subcommand: ${subcommand}. Valid: get, set, set-skeleton-stance, checkbox, count, advance, finalize, complete-workflow, gate-start, approve, delegate-approval, delegate-rejection, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark, declare-docs-only`
         );
     }
   } catch (e) {
@@ -554,6 +559,68 @@ function handleUnpark(_args: string[]): void {
     }
     writeStateFile(pd, content);
     console.log(JSON.stringify({ unparked: true, was_parked: wasParked }));
+  });
+}
+
+// declare-docs-only evidence check (Issue #499/#848): verified BEFORE any
+// registry write. The evidence must be "<DECISION_RECORDED|GATE_APPROVED>
+// <stage> [detail...]" AND the referenced event must actually exist for that
+// stage in the intent's audit shards. Uses the shared findAllEvents/auditField
+// readers so the match tracks the canonical audit format. The approvalEvents
+// Set is built INLINE (not a module-top const): the CLI dispatch runs at module
+// load, so a top-level const would hit the TDZ. Those are the human-approval
+// audit events evidence may reference — a free-form string must not exempt the
+// guard (self-attestation, the very bypass #366's detection exists to prevent).
+// Whitespace is split with a plain " " (not a /\s+/ literal): CLI --evidence
+// args are space-delimited, and a regex literal desyncs the complexity gate's
+// lizard TS lexer (function-boundary mis-detection).
+function verifyDocsOnlyEvidence(pd: string, evidence: string): void {
+  const approvalEvents = new Set(["DECISION_RECORDED", "GATE_APPROVED"]);
+  const [eventType, stage] = evidence.trim().split(" ").filter(Boolean);
+  if (!eventType || !stage || !approvalEvents.has(eventType)) {
+    error(
+      "Refusing to declare-docs-only: --evidence must reference a human-approval audit event as " +
+        '"<DECISION_RECORDED|GATE_APPROVED> <stage> [detail...]" (e.g. "DECISION_RECORDED requirements-analysis 2026-07-11T17:19Z").'
+    );
+  }
+  const audit = readAllAuditShards(pd);
+  const found =
+    audit.length > 0 &&
+    findAllEvents(audit, eventType).some((ev) => auditField(ev.block, "Stage") === stage);
+  if (!found) {
+    error(
+      `Refusing to declare-docs-only: no ${eventType} event for stage "${stage}" exists in this intent's audit trail. ` +
+        "Record the approval first (the gate transition / decision), then declare with a reference to it."
+    );
+  }
+}
+
+// declare-docs-only (Issue #499/#848): the sole write path for the docs-only
+// exemption. Writes the declaration to the active intent's registry row so a
+// later workspace_requires stage completion (verifyStageArtifacts) does not
+// require source work outside amadeus/. Under the WORKSPACE audit lock (the same
+// bucket setIntentDocsOnly's registry mutation needs).
+export function handleDeclareDocsOnly(args: string[]): void {
+  const flags = parseFlags(args);
+  const evidence = flags.evidence ?? "";
+  const pd = resolveProjectDir(projectDir);
+  withAuditLock(pd, () => {
+    const dirName = activeIntent(pd);
+    if (!dirName) {
+      error("Refusing to declare-docs-only: no active intent record resolves.");
+    }
+    if (evidence.trim().length === 0) {
+      error("Refusing to declare-docs-only: --evidence must be non-empty.");
+    }
+    verifyDocsOnlyEvidence(pd, evidence);
+    const { matched, changed } = setIntentDocsOnly(pd, dirName, evidence);
+    if (!matched) {
+      error(
+        `Refusing to declare-docs-only: no registry row in intents.json matches record dir "${dirName}". ` +
+          "A declaration that lands on no row exempts nothing - repair the registry entry first."
+      );
+    }
+    console.log(JSON.stringify({ declared: true, dirName, evidence: evidence.trim(), changed }));
   });
 }
 
@@ -1006,13 +1073,31 @@ function verifyStageArtifacts(
   }
 
   if (stage.workspace_requires && !workspaceHasWork(pd)) {
-    error(
-      `Refusing to complete "${stage.slug}": it is a code-producing stage ` +
-        `(workspace_requires) but no source work is evident outside the amadeus/ ` +
-        `workspace tree. In a git workspace this means no uncommitted change and no ` +
-        `code in the last commit; otherwise no source file exists. Planning docs alone ` +
-        `do not satisfy ${stage.name} - write the code to the workspace.`
-    );
+    // docs-only exemption (Issue #499/#848): a declared Intent (registry
+    // docsOnly, written only via `declare-docs-only`) has already had a human
+    // confirm its produces are record-internal documents only, so the
+    // workspace_requires refusal below does not apply. Emit GUARD_EXEMPTED so
+    // the exemption is auditable, then let completion proceed. No declaration
+    // (or an invalid one) falls through to the original refusal, preserving
+    // #366's gap detection.
+    const dirName = activeIntent(pd);
+    const declaration = dirName ? docsOnlyDeclaration(pd, dirName) : null;
+    if (declaration) {
+      emitAudit(pd, "GUARD_EXEMPTED", {
+        Stage: stage.slug,
+        Evidence: declaration.evidence,
+      });
+    } else {
+      error(
+        `Refusing to complete "${stage.slug}": it is a code-producing stage ` +
+          `(workspace_requires) but no source work is evident outside the amadeus/ ` +
+          `workspace tree. In a git workspace this means no uncommitted change and no ` +
+          `code in the last commit; otherwise no source file exists. Planning docs alone ` +
+          `do not satisfy ${stage.name} - write the code to the workspace. If this Intent's ` +
+          `produces are genuinely record-internal documents only, declare it first: ` +
+          `amadeus-state.ts declare-docs-only --evidence "<approval reference>".`
+      );
+    }
   }
 }
 
