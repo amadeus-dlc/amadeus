@@ -414,12 +414,14 @@ export function main(): void {
 
 	// Detection tier 1 (Issue #538, re-grounded #847): a declared `lint:check`
 	// script wraps the workspace's own lint harness. When present, its result
-	// is authoritative and we never fall through to the eslint tier.
+	// is authoritative and we never fall through to the eslint tier. Written as
+	// two single-statement guards (no block) so the tier's terminal
+	// `process.exit` has no trailing block-close line — that brace is
+	// structurally unreachable after the exit and would read as an uncovered
+	// line under bun --coverage (main runs only via CLI spawn).
 	const tier1 = maybeRunLintTier(projectRoot, args.filePath);
-	if (tier1) {
-		if (tier1.stdout) process.stdout.write(tier1.stdout);
-		process.exit(tier1.exitCode);
-	}
+	if (tier1?.stdout) process.stdout.write(tier1.stdout);
+	if (tier1) process.exit(tier1.exitCode);
 
 	// Detection tier 2 (legacy default): eslint.
 	// Probe order: tool first (cheap, ~1s for cached bunx), then config
