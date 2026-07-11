@@ -1,5 +1,10 @@
 import { appendAuditEntry } from "./amadeus-audit.ts";
 import {
+  markPhaseVerified,
+  PHASE_PROGRESS_FIELD,
+  setPhaseProgress,
+} from "./amadeus-state.ts";
+import {
   type CheckboxState,
   countCheckboxes,
   emitError,
@@ -45,6 +50,95 @@ function emitAudit(
   fields: Record<string, string>
 ): void {
   appendAuditEntry(eventType, fields, pd);
+}
+
+// --- Phase-boundary helpers (Issue #842) ---
+// A phase this jump closes, and whether it carried any executed ([x]) stage.
+type ClosedPhase = { phase: string; hasExecuted: boolean };
+
+// Enumerate the phases a FORWARD boundary-crossing jump CLOSES: the current
+// phase up to (not including) the target's phase, in canonical phase order
+// (PHASE_PROGRESS_FIELD insertion order) so a multi-phase jump closes each in
+// sequence. hasExecuted is judged from the ORIGINAL checkbox state (the [S]
+// marks this jump just applied do not affect [x]). Returns [] for a backward /
+// redo jump or a non-crossing jump — the callers then emit nothing and leave
+// Phase Progress untouched (Verified is monotonic on the append-only ledger).
+function enumerateClosedPhases(
+  graph: StageEntry[],
+  checkboxMap: Map<string, CheckboxState>,
+  currentStageForPhase: StageEntry | undefined,
+  targetStage: StageEntry,
+  direction: string,
+  crossesPhaseBoundary: boolean,
+): ClosedPhase[] {
+  if (!crossesPhaseBoundary || direction !== "forward" || !currentStageForPhase)
+    return [];
+  const order = Object.keys(PHASE_PROGRESS_FIELD);
+  const fromIdx = order.indexOf(currentStageForPhase.phase);
+  const toIdx = order.indexOf(targetStage.phase);
+  const closed: ClosedPhase[] = [];
+  for (let pi = fromIdx; pi >= 0 && pi < toIdx; pi++) {
+    const phase = order[pi];
+    const hasExecuted = graph.some(
+      (st) => st.phase === phase && checkboxMap.get(st.slug) === "completed",
+    );
+    closed.push({ phase, hasExecuted });
+  }
+  return closed;
+}
+
+// Flip each closed phase's Phase Progress roll-up field in the SAME transaction
+// as the audit emissions: Verified (had executed stages) or Skipped (none).
+function applyClosedPhaseProgress(
+  content: string,
+  closedPhases: ClosedPhase[],
+): string {
+  for (const { phase, hasExecuted } of closedPhases) {
+    content = hasExecuted
+      ? markPhaseVerified(content, phase)
+      : setPhaseProgress(content, phase, "Skipped");
+  }
+  return content;
+}
+
+// Emit the per-phase boundary events for a forward crossing: one PHASE_COMPLETED
+// plus VERIFIED (with-work) or SKIPPED (no-work) per closed phase, then a single
+// PHASE_STARTED for the target phase. A non-empty closedPhases list occurs only
+// for a forward crossing, so its length is the direction guard (backward / redo
+// / non-crossing jumps pass [] and emit nothing).
+function emitClosedPhaseEvents(
+  pd: string,
+  closedPhases: ClosedPhase[],
+  targetStage: StageEntry,
+  scope: string,
+  completedCount: number,
+  direction: string,
+): void {
+  for (const { phase, hasExecuted } of closedPhases) {
+    emitAudit(pd, "PHASE_COMPLETED", {
+      "From phase": phase,
+      "To phase": targetStage.phase,
+      "Stages completed": String(completedCount),
+      Details: `Phase boundary crossed via ${direction} jump`,
+    });
+    if (hasExecuted) {
+      emitAudit(pd, "PHASE_VERIFIED", {
+        "Phase boundary": `${phase} → ${targetStage.phase}`,
+        Details: "Traceability verification on jump",
+      });
+    } else {
+      emitAudit(pd, "PHASE_SKIPPED", {
+        Phase: phase,
+        Reason: `no executed stages when jumping to ${targetStage.slug}`,
+      });
+    }
+  }
+  if (closedPhases.length > 0) {
+    emitAudit(pd, "PHASE_STARTED", {
+      Phase: targetStage.phase,
+      Scope: scope,
+    });
+  }
 }
 
 // --- Direction derivation (single source of truth) ---
@@ -383,9 +477,27 @@ export function handleExecute(args: string[]): void {
   // Detect phase-boundary crossing. Jump asymmetry was a MAJOR finding —
   // advance emits PHASE_COMPLETED/VERIFIED/STARTED when crossing phases,
   // but jump did not. Now it does, matching the state machine contract.
+  //
+  // The crossing must honour the direction contract (Issue #842 / #481):
+  //   - forward: each phase being CLOSED is Verified (has [x] stages) or
+  //     Skipped (no [x] stages — PHASE_SKIPPED), enumerated one per phase in
+  //     canonical order, then a single PHASE_STARTED for the target phase.
+  //   - backward: NO phase events at all, and Phase Progress is never rolled
+  //     back — the audit ledger is append-only and Verified is monotonic;
+  //     rework is expressed by the stage-level resets above.
   const currentStageForPhase = findStageBySlug(currentSlug);
   const crossesPhaseBoundary =
     !!currentStageForPhase && currentStageForPhase.phase !== targetStage.phase;
+
+  // Phases this forward jump CLOSES (backward / non-crossing → empty list).
+  const closedPhases = enumerateClosedPhases(
+    graph,
+    checkboxMap,
+    currentStageForPhase,
+    targetStage,
+    direction,
+    crossesPhaseBoundary,
+  );
 
   // Update state fields. Thread the (post-edit) state content so the Next
   // Stage projection honours suffix overrides + checkboxes - the advance
@@ -418,6 +530,10 @@ export function handleExecute(args: string[]): void {
   }
   content = setField(content, "Last Completed Stage", lastCompleted);
 
+  // Phase Progress: each closed phase goes Verified/Skipped in the SAME
+  // transaction as the audit emissions below (empty for backward → no-op).
+  content = applyClosedPhaseProgress(content, closedPhases);
+
   // Atomic audit emissions (audit-first — throws before writeStateFile if any fail)
   try {
     // Per-stage STAGE_SKIPPED for every skipped stage (one event per [S] transition)
@@ -428,23 +544,20 @@ export function handleExecute(args: string[]): void {
       });
     }
 
-    // Phase boundary events (if crossing phases — matches advance's contract)
-    if (crossesPhaseBoundary && currentStageForPhase) {
-      emitAudit(pd, "PHASE_COMPLETED", {
-        "From phase": currentStageForPhase.phase,
-        "To phase": targetStage.phase,
-        "Stages completed": String(completedCount),
-        Details: `Phase boundary crossed via ${direction} jump`,
-      });
-      emitAudit(pd, "PHASE_VERIFIED", {
-        "Phase boundary": `${currentStageForPhase.phase} → ${targetStage.phase}`,
-        Details: "Traceability verification on jump",
-      });
-      emitAudit(pd, "PHASE_STARTED", {
-        Phase: targetStage.phase,
-        Scope: scope,
-      });
-    }
+    // Phase boundary events. Forward only: one PHASE_COMPLETED + (VERIFIED for
+    // a with-work phase | SKIPPED for a no-work phase) per closed phase, then a
+    // single PHASE_STARTED for the target phase — matching advance's per-boundary
+    // contract. Backward jumps emit NO phase events (Issue #842 — a backward
+    // jump abandons work-in-progress; it does not complete, verify, or skip any
+    // phase, and Verified never rolls back on the append-only ledger).
+    emitClosedPhaseEvents(
+      pd,
+      closedPhases,
+      targetStage,
+      scope,
+      completedCount,
+      direction,
+    );
 
     // The canonical STAGE_JUMPED event for the target itself
     emitAudit(pd, "STAGE_JUMPED", {

@@ -72,6 +72,47 @@ function isCheckboxState(s: string): s is CheckboxState {
   return (VALID_CHECKBOX_STATES as readonly string[]).includes(s);
 }
 
+// Phase Progress roll-up field labels. The "## Phase Progress" section renders
+// one bold-labelled line per phase (`- **Inception**: Verified`), while every
+// phase-boundary transition carries the lowercase `stage.phase` value. This
+// mapping keeps the two in sync. Declared at module top for the same TDZ reason
+// as the other shared constants. Object.keys() order is the canonical phase
+// order, so a multi-phase jump can enumerate the phases it closes in sequence.
+export const PHASE_PROGRESS_FIELD: Readonly<Record<string, string>> = {
+  initialization: "Initialization",
+  ideation: "Ideation",
+  inception: "Inception",
+  construction: "Construction",
+  operation: "Operation",
+};
+
+export type PhaseProgressStatus = "Pending" | "Active" | "Verified" | "Skipped";
+
+// setPhaseProgress flips one phase's Phase Progress roll-up field to a status,
+// keeping the "## Phase Progress" section in lock-step with the PHASE_* audit
+// emissions in the SAME transaction. The bug this guards against: a
+// PHASE_VERIFIED audit row fired while the field stayed at its prior value
+// (Active/Pending) forever, since nothing else ever revisits it. General form
+// so the four phase-transition sites (jump, advance, finalize, complete-workflow)
+// can all drive the roll-up through one seam. Defensive no-op for an unknown
+// phase name.
+export function setPhaseProgress(
+  content: string,
+  phase: string,
+  status: PhaseProgressStatus,
+): string {
+  const field = PHASE_PROGRESS_FIELD[phase];
+  if (!field) return content;
+  return setField(content, field, status);
+}
+
+// markPhaseVerified restores the pre-restart lineage contract: flip a phase's
+// roll-up field to "Verified". Thin wrapper over setPhaseProgress so callers
+// that only verify read at the intended altitude.
+export function markPhaseVerified(content: string, phase: string): string {
+  return setPhaseProgress(content, phase, "Verified");
+}
+
 // `advance <completed> <next>` is a FORWARD-only transition: the caller has just
 // finished <completed> and hands off to the next in-scope stage. A 2-arg advance
 // whose <next> sits at or before <completed> in the stage graph would regress
