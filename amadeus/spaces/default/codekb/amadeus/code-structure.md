@@ -1,5 +1,16 @@
 # コード構造
 
+## restart-loss フォーカス面の区間構造変化(intent 260711-docs-repair-batch9、2026-07-11)
+
+diff-refresh 区間 `b845478bb..13598b752`(59コミット)のうち、本 intent フォーカス5欠陥の面(#885 slug 境界 / #886 phase-check 境界)に関わる構造変化。出典は本 intent の `inception/reverse-engineering/scan-notes.md`(#885/#886 節の file:line 実測)。#812/#824/#680 の欠陥3ファイル(kiro-ide SKILL.md / onboarding.fills.ts / sensor-type-check.ts)は区間内**無変更**のため構造記録なし(欠陥のみ code-quality-assessment.md に記録)。
+
+| 区間コミット | 構造変化 | フォーカス面への関与 |
+| --- | --- | --- |
+| `c4304edf4`(#880) | `amadeus-state.ts` の Phase Progress roll-up 配線を advance/finalize/complete-workflow に導入。flip 本体 `setPhaseProgress`(`:101`)/ `markPhaseVerified`(`:114`、setPhaseProgress の薄いラッパ) | #886 の欠陥座標系を再構築した張本人。境界完了4経路(handleAdvance `:1104` / handleFinalize `:1333` / handleCompleteWorkflow `:1428` / handleApprove `:1670`)へ flip を配線したが `verifyPhaseCheckArtifact` precondition は復元せず(phase-check ゲート喪失は未修復) |
+| `aac1869e4`(#869) | `amadeus-jump.ts` / `amadeus-orchestrate.ts` に jump の per-phase VERIFIED/SKIPPED を再構築 | jump 経路にも phase-check ゲートを復元せず(grep `phase-check\|PHASE_CHECK\|verifyPhaseCheck` = 0件)。#886 の未復元面 |
+
+**含意**: #886 の phase-check ゲートは restart 前旧系譜(`8cf816138`)で `PHASE_CHECK_REQUIRED_PHASES` + `verifyPhaseCheckArtifact` として存在したが、restart 後の現行 `amadeus-state.ts` には不在。区間内の #880/#869 は境界イベントの flip/roll-up 構造を作り直したものの、旧系譜のゲート precondition を伴わない flip-only 再構築だった(旧系譜 vs 現行の詳細 file:line は architecture.md「docs-repair-batch9 の観測面」節)。#885 の slug 境界一本化(`normalizeWorktreeSlug`)は現行 `amadeus-lib.ts:2099`(worktreePath)/`:2580`(validateBoltSlug)・`amadeus-worktree.ts:195`・`amadeus-state.ts:250` の各 `validateSlug`/`SLUG_RE` が**個別実装のまま**で、旧系譜のチョークポイント一本化構造は現行に存在しない。
+
 ## ゲート系ツールの構造テンプレート(intent 260710-complexity-gate、2026-07-10)
 
 複雑度ゲート(feature スコープ)が踏襲する構造テンプレートは `tests/coverage-project-gate.ts`(#762、236行)で確立済み。段構成:
