@@ -278,8 +278,8 @@ function jsonError(message: string): never {
 
 // --- CLI entry point ---
 
-function main(): void {
-  const args = process.argv.slice(2);
+export function main(argv: string[] = process.argv.slice(2)): void {
+  const args = argv;
   const subcommand = args[0];
   const target = args[1];
 
@@ -302,4 +302,7 @@ function main(): void {
   }
 }
 
-main();
+// Guard the CLI entry so the module can be imported (the exported main seam is
+// driven in-process by tests) without executing main() / process.exit at load
+// time. Matches the sibling tools (amadeus-sensor, amadeus-learnings).
+if (import.meta.main) main();
