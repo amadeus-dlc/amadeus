@@ -4,7 +4,7 @@
 
 ## スキャンメタデータ
 
-- **base**: `d8de2362bfe850c4724bc45200eb4456c921d495` の短縮 `d8de2362b`(最新祖先 observed = 260710-p3-cleanup-batch5、`fix(orchestrate,jump,state): phase lookup のガード`、2026-07-11 07:59:19)
+- **base**: `d8de2362b24300c1f73d51392436141848bf8a6a` の短縮 `d8de2362b`(最新祖先 observed = 260710-p3-cleanup-batch5、`fix(orchestrate,jump,state): phase lookup のガード`、2026-07-11 07:59:19)
 - **observed**: `37ad36a97fe850c4724bc45200eb4456c921d495`(`git rev-parse HEAD` 実測、`intent/p2-repair-batch7` = origin/main ベース)
 - **date**: 2026-07-11
 - **intent**: `260711-p2-repair-batch7`(restart-loss クラス5バグ — #834 / #839 / #844 / #845 / #849)
