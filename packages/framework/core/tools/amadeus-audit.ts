@@ -446,7 +446,7 @@ function parseSlugFlag(args: string[], subcommand: string): string {
   return slug;
 }
 
-function handleAuditFork(args: string[], projectDir: string): void {
+export function handleAuditFork(args: string[], projectDir: string): void {
   const slug = parseSlugFlag(args, "audit-fork");
   // Pin the main-side audit shard AND the worktree mirror to ONE intent so
   // audit-fork/merge operate on the same record (the SAME selector the state
@@ -471,10 +471,18 @@ function handleAuditFork(args: string[], projectDir: string): void {
       `worktree directory not found at ${wtPath}; run amadeus-worktree create first`
     );
   }
+  // Re-entrancy (Issue #478 gap1): a checkout whose shard is a byte-prefix of
+  // (or identical to) the main shard is just an older committed snapshot of the
+  // SAME ledger — phase-PR workflows commit shards, so a re-created worktree
+  // checkout starts with one. Reforking over it loses nothing. A DIVERGED shard
+  // (not a prefix) is evidence of separate work and stays refused.
+  let reentrant = false;
   if (existsSync(wtAuditPath)) {
-    jsonError(
-      `worktree audit already exists at ${wtAuditPath}; refusing to overwrite (audit-fork is one-shot)`
-    );
+    const mainContent = readFileSync(mainAuditPath, "utf-8");
+    const wtContent = readFileSync(wtAuditPath, "utf-8");
+    const isPrefix = mainContent === wtContent || mainContent.startsWith(wtContent);
+    if (!isPrefix) jsonError(`worktree audit already exists at ${wtAuditPath} and has DIVERGED from the main shard; refusing to overwrite (audit-fork only re-enters over a committed prefix of the main audit)`);
+    reentrant = true;
   }
 
   // Byte-offset of main audit BEFORE the AUDIT_FORKED row lands. This is the
@@ -488,13 +496,16 @@ function handleAuditFork(args: string[], projectDir: string): void {
   // Audit-of-intent: emit BEFORE the disk copy. appendAuditEntry throws on
   // lock failure — audit-of-intent constraint preserved (no disk side effect
   // when emit fails).
+  const forkFields: Record<string, string> = {
+    "Bolt slug": slug,
+    "Source Audit Hash": sourceHash,
+    "Fork Boundary": String(boundary),
+  };
+  // Distinguish a re-entry fork from an initial one in the audit trail.
+  if (reentrant) forkFields.Reentrant = "true";
   const result = appendAuditEntry(
     "AUDIT_FORKED",
-    {
-      "Bolt slug": slug,
-      "Source Audit Hash": sourceHash,
-      "Fork Boundary": String(boundary),
-    },
+    forkFields,
     projectDir,
     intent,
     space,

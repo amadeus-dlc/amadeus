@@ -32,7 +32,7 @@
     },
     "coveredByClass": {
       "function": 102,
-      "audit": 31,
+      "audit": 32,
       "scope": 9,
       "stage": 8,
       "hook": 11,
@@ -66,8 +66,13 @@
       "unitClass": "audit",
       "unitId": "AUDIT_FORKED",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/unit/t219-audit-fork-reentrant-seam.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "audit",
