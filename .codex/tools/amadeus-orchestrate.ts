@@ -161,7 +161,70 @@ function emit(directive: Directive): void {
     );
     process.exit(1);
   }
+  // Issue #839: an error directive is EVIDENCE of a failed workflow step, so
+  // mirror the sibling CLIs' emitError ERROR_LOGGED contract — the engine was
+  // the only tool whose error exits left no audit trail (emit⇔terminal
+  // asymmetry). Recording is best-effort and happens BEFORE the stdout print so
+  // the directive JSON stays the sole stdout output and the exit code is
+  // untouched. Every `emit(errorDirective(...))` call site (30+) is covered by
+  // this single aggregation point, so no future error directive can slip the
+  // instrumentation.
+  if (directive.kind === "error") {
+    recordEngineError(directive.message);
+  }
   console.log(JSON.stringify(result.data));
+}
+
+// Type-only import for the lazy-loaded amadeus-audit.ts dependency. Same
+// pattern as amadeus-lib's emitError — the runtime cycle is broken by the
+// require() below; the type erases at compile time.
+import type { appendAuditEntry as AppendAuditEntry } from "./amadeus-audit.ts";
+
+// Re-entry guard mirroring amadeus-lib's emitError: if appending the audit row
+// itself fails and somehow routes back through here, we must not recurse.
+let _engineErrorInProgress = false;
+
+// Best-effort ERROR_LOGGED append for the engine (Issue #839). Mirrors
+// amadeus-lib's emitError contract WITHOUT the exit — this helper is void and
+// returns to its caller, because the error-directive path prints a directive
+// and keeps a non-error exit code while the top-level catch does its own
+// exit(1). No-op when no workflow state exists in the resolved project dir
+// (pre-init errors have no record to write to), and ANY recording failure is
+// swallowed: we are already on an error path and must neither hide nor amplify
+// the engine's own failure. Exported for in-process seam testing.
+export function recordEngineError(message: string): void {
+  if (_engineErrorInProgress) return;
+  _engineErrorInProgress = true;
+  try {
+    // Extract --project-dir straight from argv the way main() does, so this
+    // helper works even when it fires BEFORE/OUTSIDE main's flag parse (e.g.
+    // from the top-level catch on a malformed-state throw).
+    const rawArgs = process.argv.slice(2);
+    let projectDirFlag: string | undefined;
+    for (let i = 0; i < rawArgs.length; i++) {
+      if (rawArgs[i] === "--project-dir" && i + 1 < rawArgs.length) {
+        projectDirFlag = rawArgs[i + 1];
+      }
+    }
+    const pd = resolveProjectDir(projectDirFlag);
+    if (!existsSync(stateFilePath(pd))) return;
+    // Lazy require breaks the load-time cycle exactly like lib's emitError
+    // (amadeus-audit.ts imports from this module's dependency graph).
+    const audit = require("./amadeus-audit.ts") as { appendAuditEntry: typeof AppendAuditEntry };
+    audit.appendAuditEntry(
+      "ERROR_LOGGED",
+      {
+        Tool: "amadeus-orchestrate",
+        Command: rawArgs.join(" "),
+        Error: message,
+      },
+      pd,
+    );
+  } catch {
+    // Swallowed by contract — recording failure must not mask the original error.
+  } finally {
+    _engineErrorInProgress = false;
+  }
 }
 
 // --- Composing the sibling CLI tools (shell-out) ---
@@ -2939,14 +3002,25 @@ function main(): void {
   }
 }
 
-if (import.meta.main) {
+// Run main() under the top-level error boundary. Extracted from the
+// import.meta.main shim so the catch is drivable in-process (the shim body
+// itself only runs when spawned, which coverage cannot see through). Exported
+// for the seam test.
+export function runEngineMain(): void {
   try {
     main();
   } catch (e) {
     // Any uncaught read error (missing graph, malformed state) surfaces as a
     // non-zero exit with the message on stderr — never a half-emitted
-    // directive on stdout.
+    // directive on stdout. Best-effort ERROR_LOGGED first (Issue #839) so the
+    // failure leaves audit evidence, not just a conversation-log trace; the
+    // console.error + exit(1) below are unchanged.
+    recordEngineError(errorMessage(e));
     console.error(`amadeus-orchestrate: ${errorMessage(e)}`);
     process.exit(1);
   }
+}
+
+if (import.meta.main) {
+  runEngineMain();
 }

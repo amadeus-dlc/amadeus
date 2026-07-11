@@ -147,8 +147,16 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/integration/t214-engine-error-logged.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t47-failure-injection.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t214-engine-error-logged-seam.test.ts",
+          "mechanism": "none"
         },
         {
           "file": "tests/unit/t34.test.ts",
