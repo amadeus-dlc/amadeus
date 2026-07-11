@@ -1,8 +1,10 @@
 # コード品質評価
 
-> 本ページ先頭の「p2-repair-batch7 の観測面」節が最新 intent `260711-p2-repair-batch7`(restart-loss クラス5バグ — #834 #839 #844 #845 #849)の記録。続く p3-cleanup-batch5(候補)節(#811 #822 #830 #730 #819 #831)・p3-cleanup-batch4 節(#757 #758 #753 #739 #740 #784 — 全6件 2026-07-10 修正着地済み、PR #823/#821/#817/#818/#814/#815)・core-repair-batch3 節(#746 ほか9件、2026-07-11)・複雑度ゲート導入節(intent 260710-complexity-gate)・ tools-dispatch-batch 節(#774 / #785 / #787 / #788 / #789)・ bughunt-fix-batch 節(#771/#773/#775/#776/#779)・swarm-worktree-batch 節(#738/#748/#746/#760)・learnings-audit-batch 節(#754 / #745 / #761)・mint-presence-vectors 節(#755)・packaging source-unreferenced 節(intent 260710、#735)・delegate-answer-consume 節(intent 260710、#736)・kiro-stale-hooks 節(#719 / P3 source hygiene)・dynamic-test-size 節(#699 / #684 Phase D)・t92-worktree-hermeticity 節(#709)・packaging-repair-batch 節(#701/#702 = PR #711/#712 解決済み)は前 intent の記録で、参照用に温存する。以降の「アーキテクチャ横断パターン」以下は `260709-bug-zero-batch`(#674〜#678/#668)の記録。
+> 本ページ先頭の「p3-cleanup-batch8(2026-07-11)の観測面」節が最新 intent `260711-p3-cleanup-batch8`(#843 #846 #850 #851 #876 #877 #878)の候補記録。続く p2-repair-batch7 節(#834 #839 #844 #845 #849、intent `260711-p2-repair-batch7`)・p3-cleanup-batch5 節(#811 #822 #830 #730 #819 #831、intent `260710-p3-cleanup-batch5`)・p3-cleanup-batch4 節(#757 #758 #753 #739 #740 #784 — 全6件 2026-07-10 修正着地済み、PR #823/#821/#817/#818/#814/#815)・core-repair-batch3 節(#746 ほか9件、2026-07-11)・複雑度ゲート導入節(intent 260710-complexity-gate)・ tools-dispatch-batch 節(#774 / #785 / #787 / #788 / #789)・ bughunt-fix-batch 節(#771/#773/#775/#776/#779)・swarm-worktree-batch 節(#738/#748/#746/#760)・learnings-audit-batch 節(#754 / #745 / #761)・mint-presence-vectors 節(#755)・packaging source-unreferenced 節(intent 260710、#735)・delegate-answer-consume 節(intent 260710、#736)・kiro-stale-hooks 節(#719 / P3 source hygiene)・dynamic-test-size 節(#699 / #684 Phase D)・t92-worktree-hermeticity 節(#709)・packaging-repair-batch 節(#701/#702 = PR #711/#712 解決済み)は前 intent の記録で、参照用に温存する。以降の「アーキテクチャ横断パターン」以下は `260709-bug-zero-batch`(#674〜#678/#668)の記録。
 >
 > **既知のハウスキーピング債(観測のみ)**: 本ページ以下および `architecture.md` / `business-overview.md` / `api-documentation.md` には過去 intent 由来の未リラベルな「本 intent(…)」マーカーが複数併存している(business-overview の `260710-source-unreferenced-check` / `260709-bug-zero-batch`、architecture 冒頭の source-unreferenced 記述など)。correction c3-relabel の趣旨に照らせば全て履歴ラベル化すべきだが、本 bugfix diff-refresh のスコープ外(非サージカルな大量 churn になる)。本スキャンでは更新対象ファイルの直近マーカーのみリラベルし、残債はここに明示する。
+
+## p3-cleanup-batch8(2026-07-11)の観測面 — 修理7件の現物照合(#843 #846 #850 #851 #876 #877 #878)
 
 ## p2-repair-batch7 の観測面 — restart-loss クラス5欠陥の現物照合(#834 #839 #844 #845 #849)
 
@@ -64,6 +66,32 @@
 - **ファイル交差・リージョン非交差**(約450行離れる)。cid:code-generation:c6 は静的目録でなく先行 PR の実 diff でリージョン非交差を再評価する規律のため、batch6 の #841 PR が in-flight なら (a)着地待ち or (b)実 diff で非交差実測後に並行。他4欠陥(#839/#844/#845/#849)は #841 と別ファイル/別リージョンで交差なし。
 
 ## p3-cleanup-batch5(候補)の観測面 — 候補6欠陥の現物照合(#811 #822 #830 #730 #819 #831)
+
+差分区間 `9738580ef..60f5e1edf`(observed HEAD `60f5e1edf`)で確定した、修理候補7件の現物照合。base/observed の真実源は当該 intent(`260711-p3-cleanup-batch8`)の `inception/reverse-engineering/scan-notes.md` および `re-scans/260711-p3-cleanup-batch8.md`。7件は**2クラスに分かれる**: (I) restart-loss 4件(#843/#846/#850/#851)= 旧 `.agents/`・`aidlc/` 系譜 → `packages/framework/` 移行の境界で復元漏れした既存欠陥(差分区間**外**)、(II) 区間内3件(#876/#877/#878)= 差分区間で導入・変更された面(それぞれ 要件見落とし由来 / テストインフラ由来 / #879 導入ギャップ)。
+
+### restart-loss クラス(#843/#846/#850/#851、区間外)— E-L53 3点法で接地
+
+4件とも (a) archive 元修正コミットが実在し、(b) 現行正本コードで欠陥が現存し、(c) 喪失は差分区間の**外**(base `9738580ef` 時点で既に喪失済み)。archive 側は旧系譜パスのため、修理は現行正本パスへの**再適用**(旧パス直移植は不可)。
+
+| Issue | archive 元 SHA | 旧→現行正本パスの読み替え | 現行欠陥 file:line |
+|---|---|---|---|
+| #843 | `4d5a0f5a5` | 旧 `.agents/.../protocols/stage-protocol.md` → `packages/framework/core/amadeus-common/protocols/stage-protocol.md` | `:611-614`(subagent 節の persona 注入指示が残存)+ `:842-843` |
+| #846 | `657dc9267` | 旧 `.agents/amadeus/tools/` → `packages/framework/core/tools/` | `amadeus-sensor-required-sections.ts:229` / `amadeus-sensor-upstream-coverage.ts:111` / `amadeus-validate.ts:305`(末尾で無条件 `main()`。import しただけで CLI 発火) |
+| #850 | `63314bc82` | 旧 `.agents/amadeus/tools/amadeus-audit.ts` + `amadeus-lib.ts` → `packages/framework/core/tools/` | `amadeus-audit.ts:471-475`(wtAuditPath 存在のみで一律拒否、reentrant/DIVERGED 判定欠如)。lib gap2(slug 正規化一本化)は toLowerCase seam が `:746`/`:1828`/`:1980` に散在、単一正準関数化は未確認(functional-design で突き合わせ要) |
+| #851 | `589687a19` | 旧 `.agents/skills/amadeus/references/issue-ref-contract.md` → `packages/framework/harness/<name>/skills/amadeus/references/issue-ref-contract.md` | **不在**(全面 0 件、base でも不在)。同種サイドカー `question-rendering.md` の実配置は正本4面+dist4面+self-install2面=計10面。harness スコープは合成で確定要 |
+
+- **#846 の型**: `import.meta.main` ガード有無の不統一が既知アンチパターン。`amadeus-learnings.ts:916`(`if (import.meta.main) main();`)が正しい参照実装。3ファイルとも末尾の無条件 `main()` を同型へ是正する。
+- **restart-loss の系譜的含意**: 旧 `.agents/` / `aidlc/` → `packages/framework/` の移行境界で復元漏れした修正群が4件現存する。同型の restart-loss 再発検知の観点(移行時に archive 修正の再適用棚卸しを漏らさない)になる。
+
+### 区間内クラス(#876/#877/#878、区間内)
+
+- **#876 — `computeStrippableLines` が brace-only 行を strip しない(区間内新規)**: `tests/lib/coverage-normalize.ts`(base に不在の新規 +284行)。`computeStrippableLines`(`:40`)の code モードで `:117`(`{` を含む行を markCode)/ `:126-132`(`}` を含む行を markCode)/ `:135`(`;` `)` 等の非空白で markCode)が、brace-only 行(`}` `};` `});`)を全て code-bearing にマークする。`:190-193` の `!codeBearing.has(ln)` 判定で strippable から外れ、lcov 上で DA:0 の閉じ括弧行が strip されず未カバー扱いになりうる。区間内で導入された新規ロジックの欠陥(regression 候補、要件見落とし由来)。
+- **#877 — run-tests バッチ時の persist seam 分離不全(区間内新規)**: 現行ランナー `tests/run-tests.ts:692`(`runBunTestFile`)は `bun test <file>` を **1ファイル/1invocation** で実行し、複数ファイルを同一 bun プロセスにバッチ**しない**(unit tier は `pinnedSerial`+`effectiveParallel=1`)。よって #877 は手動 `bun test tests/unit`(ディレクトリ一括)や複数ファイル明示指定でのみ再現する。干渉相手 `tests/unit/t-learnings-persist-seam.test.ts`(新規)は `handlePersist` を in-process 直接 import(`:15`)し、`callPersist`(`:40-61`)で **`process.exit` と `process.stderr.write` をグローバルに monkey-patch**(復元は finally `:57-58`)。共有 `tests/harness/fixtures.ts` は `resetAidlcEnv()` で `process.env.AMADEUS_DEFAULT_SCOPE` を delete。**修理対象はランナーのバッチ構成ではなく、同一プロセス共有時の process-global 汚染耐性**(persist-seam の monkey-patch 残留 / fixtures の env 変異)に定める(テストインフラ由来)。
+- **#878 — orchestrate default 出口が recordEngineError 非配線(区間内、#879 の残存ギャップ)**: `packages/framework/core/tools/amadeus-orchestrate.ts:2995-3001` の `default:` ブロックが `console.error` + `process.exit(1)` で、throw しないため上位 catch を通らない。`recordEngineError` 定義は `:195`、配線は `runEngineMain`(`:3017`)の try/catch のみ。#879(= observed HEAD `60f5e1edf`、"record ERROR_LOGGED for orchestrate error exits #839")が recordEngineError を導入したが、**Unknown subcommand の default 出口は未配線のまま**残った(base `9738580ef` には recordEngineError 自体が不在)。修理は default 出口を recordEngineError 配線 or throw 化して runEngineMain catch へ流す2案が候補。構造面は architecture.md の同名節を参照。
+
+## p3-cleanup-batch5(履歴)の観測面 — 候補6欠陥の現物照合(#811 #822 #830 #730 #819 #831)
+
+現行コード基準 `d8de2362b`(base `58f3453ad`=前回 batch4 RE observed からの diff-refresh。現 HEAD `6279efe58` は intent birth checkpoint のみでフォーカスファイル無変更。介在16コミット、うち #751/#753/#746/#758 の4件のみフォーカス領域に触れたが**いずれも本候補6件の欠陥箇所は未修正**で行番号シフトのみ)で確定した、候補6件の現物照合。6件はいずれも**挙動欠陥であって構造変化を伴わず**。base/observed の真実源は当該 intent(260710-p3-cleanup-batch5)の `inception/reverse-engineering/scan-notes.md`。
 
 現行コード基準 `d8de2362b`(base `58f3453ad`=前回 batch4 RE observed からの diff-refresh。現 HEAD `6279efe58` は intent birth checkpoint のみでフォーカスファイル無変更。介在16コミット、うち #751/#753/#746/#758 の4件のみフォーカス領域に触れたが**いずれも本候補6件の欠陥箇所は未修正**で行番号シフトのみ)で確定した、候補6件の現物照合。6件はいずれも**挙動欠陥であって構造変化を伴わず**。base/observed の真実源は当該 intent(260710-p3-cleanup-batch5)の `inception/reverse-engineering/scan-notes.md`。
 
