@@ -376,6 +376,10 @@
       "minMechanism": "none",
       "coveredBy": [
         {
+          "file": "tests/e2e/t92-linter-eslint-roundtrip.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t92.test.ts",
           "mechanism": "cli"
         }
@@ -4278,6 +4282,10 @@
       "unitId": "amadeus-sensor fire",
       "minMechanism": "cli",
       "coveredBy": [
+        {
+          "file": "tests/e2e/t92-linter-eslint-roundtrip.test.ts",
+          "mechanism": "cli"
+        },
         {
           "file": "tests/integration/t-sensor-fire-hardening.test.ts",
           "mechanism": "cli"

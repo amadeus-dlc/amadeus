@@ -1001,6 +1001,7 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "unit/t97.test.ts",
     "unit/t208-hook-shard-guards.test.ts",
     "e2e/t113.test.ts",
+    "e2e/t92-linter-eslint-roundtrip.test.ts",
     "e2e/t122-stop-hook-e2e.test.ts",
     "e2e/t126-emitter-pairing-cofire.test.ts",
     "e2e/t53.test.ts",
