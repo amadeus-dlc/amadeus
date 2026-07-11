@@ -1197,6 +1197,15 @@ export function handleAdvance(args: string[]): void {
       });
     }
     if (crossesPhaseBoundary) {
+      // Phase Progress roll-up, in the SAME boundary branch as the PHASE_* audit
+      // so the ledger and the roll-up can never disagree (#836): close the
+      // completed stage's phase (→ Verified — it just went [x]) and enter the
+      // next stage's phase (→ Active). Content is written after this try; a
+      // failing emitAudit exits before writeStateFile, so the flip is discarded
+      // with the rest. Intermediate phases an advance skips over entirely were
+      // already stamped Skipped at init time.
+      content = markPhaseVerified(content, completedStage.phase);
+      content = setPhaseProgress(content, nextStage.phase, "Active");
       emitAudit(pd, "PHASE_COMPLETED", {
         "From phase": completedStage.phase,
         "To phase": nextStage.phase,
@@ -1236,7 +1245,7 @@ export function handleAdvance(args: string[]): void {
   });
 }
 
-function handleFinalize(args: string[]): void {
+export function handleFinalize(args: string[]): void {
   // Keep <completed-slug> positional; any flags are filtered out.
   const positional = args.filter((a) => !a.startsWith("--"));
   if (positional.length < 1)
@@ -1298,11 +1307,21 @@ function handleFinalize(args: string[]): void {
     content = setField(content, "Next Stage", nextAfterNext ? nextAfterNext.slug : "none");
     content = setField(content, "Lifecycle Phase", nextStage.phase.toUpperCase());
     content = setField(content, "Active Agent", nextStage.lead_agent);
+    // Phase Progress roll-up on a boundary-crossing finalize: close the
+    // completed phase (→ Verified) and enter the next (→ Active) — same
+    // transaction as the field updates (#836). Mirrors handleAdvance.
+    if (completedStage.phase !== nextStage.phase) {
+      content = markPhaseVerified(content, completedStage.phase);
+      content = setPhaseProgress(content, nextStage.phase, "Active");
+    }
   } else {
     content = setField(content, "Current Stage", "none");
     content = setField(content, "Next Stage", "none");
     content = setField(content, "Status", "Completed");
     content = setField(content, "In Progress", "none");
+    // Terminal finalize (no next stage): the final phase is now complete →
+    // Verified, in lock-step with Status: Completed (#836).
+    content = markPhaseVerified(content, completedStage.phase);
   }
   content = setField(content, "Last Completed Stage", completedSlug);
   content = setField(content, "Last Updated", timestamp);
@@ -1321,7 +1340,7 @@ function handleFinalize(args: string[]): void {
   });
 }
 
-function handleCompleteWorkflow(args: string[]): void {
+export function handleCompleteWorkflow(args: string[]): void {
   // Keep <completed-slug> positional and distinct from the --reason value.
   // --reason takes a value, so its argument is excluded from positionals too.
   const reasonIdx = args.indexOf("--reason");
@@ -1384,6 +1403,11 @@ function handleCompleteWorkflow(args: string[]): void {
   content = setField(content, "In Progress", "none");
   content = setField(content, "Next Stage", "none");
   content = setField(content, "Next Action", "Workflow complete");
+  // Phase Progress roll-up: the final stage's phase is now complete → Verified,
+  // in the same transaction as Status: Completed and the PHASE_VERIFIED audit
+  // below (#836). Earlier phases were flipped Verified/Skipped by their own
+  // boundary transitions (advance / init pre-cross); this closes the last one.
+  content = markPhaseVerified(content, completedStage.phase);
 
   // 4. Atomic audit emissions. Refuse silent fallback — matches handleAdvance.
   const scope = getField(content, "Scope");

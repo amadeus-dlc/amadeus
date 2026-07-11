@@ -2102,7 +2102,7 @@ function ensureWorkspaceDirs(projectDir: string): void {
 // the workflow to its first post-init stage — relocated here, now writing into
 // the BORN intent's record (the active-intent cursor set first makes the
 // default-resolving state/audit helpers resolve there).
-function handleIntentBirth(projectDir: string, flags: Record<string, string>): void {
+export function handleIntentBirth(projectDir: string, flags: Record<string, string>): void {
   // Default to poc when --scope is omitted. Matches the orchestrator's
   // ultimate fallback in SKILL.md and makes direct tool invocations
   // (`bun amadeus-utility.ts intent-birth`) work without extra flags.
@@ -2262,6 +2262,31 @@ function handleIntentBirth(projectDir: string, flags: Record<string, string>): v
   });
 }
 
+// Init-time Phase Progress status for one phase. Init PRE-CROSSES the
+// initialization → first-post-init boundary: when the first post-init stage
+// sits in a later phase, birth emits PHASE_COMPLETED/PHASE_VERIFIED/PHASE_STARTED
+// for that boundary and moves Current Stage/Lifecycle Phase into the post-init
+// phase (see the hand-off block in handleIntentBirthStateBuild). The roll-up
+// MUST mirror that emission or it desyncs from the ledger (#836's root symptom:
+// Initialization stayed Active forever because no later advance re-crosses that
+// boundary). So once crossed, initialization is Verified and the first post-init
+// phase is Active; every other phase is Pending (has EXECUTE work) or Skipped
+// (none). firstPostInitPhase is null only when birth does not cross out of
+// initialization, in which case initialization is still Active. Exported as a
+// pure seam so the branch logic is covered in-process (the birth handler itself
+// is spawn-driven — the coverage blindspot).
+export function initPhaseStatus(
+  phase: string,
+  firstPostInitPhase: string | null | undefined,
+  phaseHasExecute: boolean,
+): "Pending" | "Active" | "Verified" | "Skipped" {
+  const crossed =
+    !!firstPostInitPhase && firstPostInitPhase !== "initialization";
+  if (phase === "initialization") return crossed ? "Verified" : "Active";
+  if (crossed && phase === firstPostInitPhase) return "Active";
+  return phaseHasExecute ? "Pending" : "Skipped";
+}
+
 // The scope→stage state-build half of birth: the workspace detection + state
 // file authoring + routing audit emits the old --init ran after scaffolding.
 // Split out only so handleIntentBirth's lock body stays readable; it is called
@@ -2393,17 +2418,22 @@ function handleIntentBirthStateBuild(
 
   const projectDesc = flags.arguments || "[Project description]";
 
-  // Phase Progress — per-phase status. Initialization is always Active at init
-  // time. Other phases are Skipped if the adjusted scope mapping has zero
-  // EXECUTE stages for that phase, otherwise Pending. Pending phases flip to
-  // Active on their phase-boundary advance and to Verified at phase completion.
+  // Phase Progress — per-phase status. Init pre-crosses the initialization →
+  // first-post-init boundary (the PHASE_VERIFIED/PHASE_STARTED hand-off below),
+  // so at init time initialization is Verified and the first post-init phase is
+  // Active — NOT Initialization=Active/first-phase=Pending, which desynced the
+  // roll-up from the ledger and left Initialization Active for the whole run
+  // (#836). Later Pending phases flip to Active on their boundary advance and to
+  // Verified at phase completion; a phase with zero EXECUTE stages is Skipped.
+  // firstPostInitEntry is computed above; initPhaseStatus treats its phase (or
+  // undefined / "initialization") as "not crossed" and keeps initialization
+  // Active in that case.
   const phaseStatus = (phase: string): string => {
-    if (phase === "initialization") return "Active";
     const stagesInPhase = graph.filter((s) => s.phase === phase);
     const hasExecute = stagesInPhase.some(
       (s) => (adjustedMapping[s.slug] || scopeDef.stages[s.slug] || "SKIP") === "EXECUTE"
     );
-    return hasExecute ? "Pending" : "Skipped";
+    return initPhaseStatus(phase, firstPostInitEntry?.phase, hasExecute);
   };
   const phaseProgressLines = [
     `- **Initialization**: ${phaseStatus("initialization")}`,
