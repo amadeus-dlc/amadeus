@@ -82,6 +82,7 @@ import {
   validateBoltSlug,
   validScopes,
   worktreeAuditFilePath,
+  worktreeBaseDir,
   worktreePath,
   worktreeStateFilePath,
   writeSessionIntentUuid,
@@ -828,7 +829,7 @@ function handleDoctor(projectDir: string): void {
   // or absent — the issue 75 line 215 "fail-clean on no-worktrees" guarantee.
   // ---------------------------------------------------------------------------
   try {
-    const worktreesDir = join(projectDir, ".amadeus", "worktrees");
+    const worktreesDir = join(worktreeBaseDir(projectDir), ".amadeus", "worktrees");
     let observed = 0;
     let activeForks = 0;
     let preservedByAbort = 0;
@@ -995,7 +996,7 @@ function handleDoctor(projectDir: string): void {
   // STATE_MERGED never landed.
   // ---------------------------------------------------------------------------
   try {
-    const worktreesDir = join(projectDir, ".amadeus", "worktrees");
+    const worktreesDir = join(worktreeBaseDir(projectDir), ".amadeus", "worktrees");
     const orphan: string[] = [];
     let observed = 0;
 
