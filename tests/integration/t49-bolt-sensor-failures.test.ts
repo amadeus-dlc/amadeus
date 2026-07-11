@@ -18,7 +18,7 @@
 // spawned, exactly as the .sh ran it. spawnCount = all.
 //
 // IMPORTANT cwd contract (same as the .sh, t49:99-126): amadeus-worktree.ts's
-// assertNotSiblingWorktree (amadeus-worktree.ts:101-121) checks
+// resolveWorktreeAnchor (amadeus-worktree.ts) checks
 // `git rev-parse --show-toplevel` against `git rev-parse --git-common-dir`'s
 // parent — i.e. against CWD, not --project-dir. Running from this test's cwd
 // would trip the sibling-worktree refusal. So every worktree/bolt spawn runs

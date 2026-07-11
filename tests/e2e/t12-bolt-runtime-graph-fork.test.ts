@@ -33,7 +33,7 @@
 //
 // FIXTURE (mirrors make_bolt_fixture, t12:57-76): amadeus-worktree create runs a
 // real `git worktree add` and asserts it is invoked from the main checkout
-// (assertNotSiblingWorktree, amadeus-worktree.ts:101) — so each scenario needs an
+// (resolveWorktreeAnchor, amadeus-worktree.ts) — so each scenario needs an
 // actual git repo on `main` with one commit, a Construction-phase state file
 // (state-construction.md gives the phase/scope that lets Bolt operations run),
 // a present-but-empty audit.md, and the framework .gitignore set so worktree

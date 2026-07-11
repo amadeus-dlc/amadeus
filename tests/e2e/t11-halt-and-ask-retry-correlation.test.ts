@@ -25,7 +25,7 @@
 // spawnSync(BUN, [TOOL, ...]) and assert on the audit.md bytes + the info JSON.
 //
 // FIXTURE: amadeus-worktree.ts asserts it runs from the main checkout
-// (assertNotSiblingWorktree, amadeus-worktree.ts:162) and runs real git, so the
+// (resolveWorktreeAnchor, amadeus-worktree.ts) and runs real git, so the
 // case needs an ACTUAL git repo on `main` with one commit plus an amadeus-docs/
 // dir. setupWorktreeFixture (tests/harness/fixtures.ts) builds exactly that;
 // the tools are spawned with cwd = the fixture so `git rev-parse

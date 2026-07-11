@@ -65,7 +65,7 @@
 // create_test_project + seed state-construction.md + seed audit-sample.md, then
 // cleanup_test_project): each lifecycle gets a FRESH temp project. Lifecycles 2
 // and 5 init a REAL git repo on `main` + one commit so amadeus-worktree create can
-// `git worktree add` (assertNotSiblingWorktree + real git, amadeus-worktree.ts).
+// `git worktree add` (resolveWorktreeAnchor + real git, amadeus-worktree.ts).
 // NOTHING is written under tests/fixtures/**; all temp dirs cleaned in afterAll.
 
 import { afterAll, describe, expect, test } from "bun:test";
