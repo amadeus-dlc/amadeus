@@ -310,7 +310,7 @@ export default function emit(ctx: EmitContext): EmitResult {
   }
 
   // (a) authored orchestrator shell — verbatim from harness/codex/skills/amadeus/
-  for (const f of ["SKILL.md", "question-rendering.md"]) {
+  for (const f of ["SKILL.md", "question-rendering.md", "issue-ref-contract.md"]) {
     emissions.push({
       path: join(SKILLS_DST, "amadeus", f),
       content: () => ctx.readHarnessSource(join("skills", "amadeus", f)),

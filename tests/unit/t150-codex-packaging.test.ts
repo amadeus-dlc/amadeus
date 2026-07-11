@@ -175,9 +175,11 @@ describe("t150 dist/codex packaging parity + drift guard", () => {
           exists = false;
         }
         expect(exists).toBe(false);
-        // The orchestrator ships its question-rendering annex beside SKILL.md.
+        // The orchestrator ships its question-rendering + issue-ref-contract
+        // annexes beside SKILL.md.
         expect(readdirSync(join(skillsDir, d)).sort()).toEqual([
           "SKILL.md",
+          "issue-ref-contract.md",
           "question-rendering.md",
         ]);
       } else {

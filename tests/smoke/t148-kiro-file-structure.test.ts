@@ -61,6 +61,7 @@ describe("t148 dist/kiro file structure", () => {
     for (const f of [
       "skills/amadeus/SKILL.md",
       "skills/amadeus/question-rendering.md",
+      "skills/amadeus/issue-ref-contract.md",
       "hooks/amadeus-kiro-adapter.ts",
       "agents/amadeus.json",
       "agents/amadeus-developer-agent.json",
