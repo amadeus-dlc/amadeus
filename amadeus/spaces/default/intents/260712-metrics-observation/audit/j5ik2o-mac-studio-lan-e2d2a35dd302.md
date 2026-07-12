@@ -1605,3 +1605,11 @@
 **Message**: ## Review\n\n**Verdict:** NOT-READY\n**Reviewer:** architecture-reviewer (delegated)\n**Date:** 2026-07-12\n**Iteration:** 2 (incremental re-review of checkpoint `cc31e6290`)\n\nScope: same as iteration 1 — 
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-12T06:38:57Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-requirements
+**Timestamp**: 2026-07-12T06:38:57Z
+
+---
