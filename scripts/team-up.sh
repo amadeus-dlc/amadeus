@@ -25,8 +25,11 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 BASE="$HOME/worktrees/github.com/amadeus-dlc/amadeus"
-DELIVERY="$HOME/.agents/skills/agmsg/scripts/delivery.sh"
-CODEX_MONITOR="$HOME/.agents/skills/agmsg/scripts/drivers/types/codex/codex-monitor.sh"
+AGMSG_ROOT="${AGMSG_ROOT:-$HOME/.agents/skills/agmsg}"
+DELIVERY="${DELIVERY:-$AGMSG_ROOT/scripts/delivery.sh}"
+CODEX_MONITOR="${CODEX_MONITOR:-$AGMSG_ROOT/scripts/drivers/types/codex/codex-monitor.sh}"
+ROLE_RESUME="${ROLE_RESUME:-$AGMSG_ROOT/scripts/role-resume.sh}"
+TEAM_NAME="${AGMSG_TEAM:-amadeus}"
 IDENTITY="${CLAUDE_IDENTITY:-corporate-1}"
 RUNTIME="${TEAM_RUNTIME:-claude}"
 S="${TEAM_SESSION:-amadeus-team}"
@@ -98,7 +101,7 @@ codex_role() {
 }
 
 codex_member_cmd() {
-  local m="$1" wt="$BASE/$1" role prompt command="codex" resume_arg=""
+  local m="$1" wt="$BASE/$1" role prompt command="codex" resume_arg="" resume_uuid=""
   role="$(codex_role "$m")"
   prompt="\$agmsg actas $role"
 
@@ -106,13 +109,22 @@ codex_member_cmd() {
     echo "ERROR: missing Codex monitor launcher: $CODEX_MONITOR" >&2
     return 1
   }
+  [ -x "$ROLE_RESUME" ] || {
+    echo "ERROR: missing role resume resolver: $ROLE_RESUME" >&2
+    return 1
+  }
   if [ -f "$DELIVERY" ]; then
     AGMSG_CODEX_ROLE="$role" bash "$DELIVERY" set monitor codex "$wt" >/dev/null 2>&1 ||
       echo "WARN: delivery.sh set monitor failed for $m (continuing)" >&2
   fi
   if [ "$CONTINUE" = "1" ]; then
-    command="resume"
-    resume_arg="--last"
+    resume_uuid="$("$ROLE_RESUME" codex "$TEAM_NAME" "$role" "$wt")"
+    if [ -n "$resume_uuid" ]; then
+      command="resume"
+      resume_arg="$resume_uuid"
+    else
+      echo "WARN: no unique resumable thread for $role — starting fresh" >&2
+    fi
   fi
 
   # AGMSG_CODEX_ROLE disambiguates old role registrations that may coexist in
@@ -127,6 +139,10 @@ member_cmd() {
   codex) codex_member_cmd "$1" ;;
   esac
 }
+
+if [ "${TEAM_UP_LIB_ONLY:-0}" = "1" ]; then
+  return 0 2>/dev/null || exit 0
+fi
 
 for m in leader engineer-1 engineer-2 engineer-3 engineer-4 engineer-5 engineer-6; do
   [ -d "$BASE/$m" ] || { echo "ERROR: missing worktree $BASE/$m" >&2; exit 1; }
