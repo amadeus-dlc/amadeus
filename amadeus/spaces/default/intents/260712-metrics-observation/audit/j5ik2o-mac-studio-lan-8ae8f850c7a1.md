@@ -155,3 +155,15 @@
 **User Input**: Approve — AD-Q0 未決なし確認(6/6 全会一致: ADR D1-D4 全件代替案2つ以上、D2 既存 CI 出力再読で CI 時間非増を構造担保、D4 判別ユニオン Result 配列駆動 house 様式、循環なし)。成果物5点実在確認済み。Learnings: E-MO-AD 裁定 §13 採用0件で確定(6/6 — 既決様式・ガードレールの設計適用のみ)
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-12T06:10:44Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: units-generation
+**Issuer Space**: default
+**Issuer Intent**: 260709-framework-repair-batch
+**Issuer Shard**: j5ik2o-mac-studio-lan-8ae8f850c7a1.md
+**Issuer Human Ts**: 2026-07-12T05:46:52Z
+**User Input**: Approve — UG-Q0 分割未決なし確認(6/6 全会一致: U1∥U2 は契約固定+ファイル非交差の2層根拠、U3 直列、story-map 7/7 被覆・孤児なし、規模正当化・reuse 棚卸し参照)。成果物3点実在確認済み。Learnings: E-MO-UG 裁定 §13 採用0件で確定(6/6 — 既存分割・並行規範の適用のみ)
+
+---
