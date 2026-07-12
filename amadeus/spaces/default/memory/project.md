@@ -123,3 +123,6 @@
 
 ## Observability
 - Execution timeoutや処理上限は個別実行の停止guardでありservice SLOではない。Service SLOは実在する利用者向けservice/SLI・観測期間・目標値に基づく契約とし、runtime service/SLI不存在時にtimeoutや単発run成功をservice SLO達成へ昇格させず、根拠付きN/A/PENDINGとする。実在service SLOの省略根拠にはしない。 (learned 2026-07-12) <!-- cid:observability-setup:c3 -->
+
+## Incident Response
+- 承認済みincident要件の対象者・通知時機・応答時間・監査証跡を既存repository-nativeなPR/run recordが満たし、閲覧権限・保持・責任主体を実測できる場合は、相関可能なPR/run linkをDetect→Recover→Verify→Recordの正本として再利用し、要求外のcommunication/paging基盤を作らない。明示on-call/SLA/即時通知、secret exposure等の緊急経路、既存必須pagingを省略・置換する根拠にはしない。 (learned 2026-07-12) <!-- cid:incident-response:c3 -->
