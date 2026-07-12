@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runSnapshot, writeSnapshotAtomic, type CollectEnv, type Collector } from "../../scripts/metrics-snapshot.ts";
+import { collectors, defaultEnv, main, runSnapshot, writeSnapshotAtomic, type CollectEnv, type Collector } from "../../scripts/metrics-snapshot.ts";
 
 const roots: string[] = [];
 afterEach(() => { while (roots.length) rmSync(roots.pop()!, { recursive: true, force: true }); });
@@ -33,6 +33,58 @@ function cli(root: string, verb: "--write" | "--check") {
 }
 
 describe("t221 snapshot writer and real CLI", () => {
+  test("default environment and every collector read the repository fixture", () => {
+    const root = fixture();
+    const previousRoots = process.env.AMADEUS_COMPLEXITY_ROOTS;
+    process.env.AMADEUS_COMPLEXITY_ROOTS = join(root, "scripts");
+    try {
+      const env = defaultEnv(root);
+      expect(env.readFile(join(root, "coverage", "coverage-totals.json"))).toContain('"hits":5');
+      expect(env.listFiles(join(root, "missing"))).toEqual([]);
+      expect(env.listFiles(join(root, "tests"))).toContain(join(root, "tests", "unit", "x.test.ts"));
+      expect(env.exec(["git", "rev-parse", "HEAD"])).toHaveLength(40);
+      expect(collectors.map((collector) => collector.collect(env)).every((result) => result.ok)).toBe(true);
+    } finally {
+      if (previousRoots === undefined) delete process.env.AMADEUS_COMPLEXITY_ROOTS;
+      else process.env.AMADEUS_COMPLEXITY_ROOTS = previousRoots;
+    }
+  });
+  test("collector and command failures retain their boundary error", () => {
+    const root = fixture();
+    writeFileSync(join(root, "coverage", "coverage-totals.json"), '{"hits":"bad","lines":10}');
+    expect(collectors.find(({ name }) => name === "coverage")!.collect(defaultEnv(root))).toEqual({
+      ok: false,
+      name: "coverage",
+      error: "coverage/coverage-totals.json.hits must be finite",
+    });
+    expect(() => defaultEnv(root).exec(["git", "not-a-command"])).toThrow("not-a-command");
+  });
+  test("main writes success and failure to the matching process stream", () => {
+    const root = fixture();
+    const previousRoot = process.env.AMADEUS_METRICS_ROOT;
+    const previousComplexityRoots = process.env.AMADEUS_COMPLEXITY_ROOTS;
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const stdoutWrite = process.stdout.write;
+    const stderrWrite = process.stderr.write;
+    process.env.AMADEUS_METRICS_ROOT = root;
+    process.env.AMADEUS_COMPLEXITY_ROOTS = join(root, "scripts");
+    process.stdout.write = ((value: string) => { stdout.push(value); return true; }) as typeof process.stdout.write;
+    process.stderr.write = ((value: string) => { stderr.push(value); return true; }) as typeof process.stderr.write;
+    try {
+      expect(main(["--check"])).toBe(0);
+      expect(main([])).toBe(1);
+      expect(stdout.join("")).toContain("CHECK OK 6 collectors");
+      expect(stderr.join("")).toContain("Usage:");
+    } finally {
+      process.stdout.write = stdoutWrite;
+      process.stderr.write = stderrWrite;
+      if (previousRoot === undefined) delete process.env.AMADEUS_METRICS_ROOT;
+      else process.env.AMADEUS_METRICS_ROOT = previousRoot;
+      if (previousComplexityRoots === undefined) delete process.env.AMADEUS_COMPLEXITY_ROOTS;
+      else process.env.AMADEUS_COMPLEXITY_ROOTS = previousComplexityRoots;
+    }
+  });
   test("atomic writer creates distinct files for distinct captures", () => {
     const root = fixture();
     const env: CollectEnv = { repoRoot: root, readFile: () => "", listFiles: () => [], exec: () => "b".repeat(40) };

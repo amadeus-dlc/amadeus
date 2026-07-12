@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pushWithRetry } from "../../scripts/metrics-push-retry.ts";
+import { main, pushWithRetry, runGit } from "../../scripts/metrics-push-retry.ts";
 import { extractCiSnapshotWiring } from "../lib/ci-snapshot-wiring.ts";
 
 function git(cwd: string, args: string[]) {
@@ -25,6 +25,11 @@ function setup() {
 }
 
 describe("t222 real git retry boundary", () => {
+  test("main reports process success and failure", () => {
+    expect(main(() => ({ status: 0, output: "" }))).toBe(0);
+    expect(main(() => ({ status: 1, output: "denied" }))).toBe(1);
+    expect(runGit(["--version"])).toMatchObject({ status: 0, output: expect.stringContaining("git version") });
+  });
   test("repository workflow satisfies the snapshot wiring contract", () => {
     const yaml = readFileSync(join(import.meta.dir, "../../.github/workflows/ci.yml"), "utf8");
     const { job, uploadStep, ciSuccess } = extractCiSnapshotWiring(yaml);

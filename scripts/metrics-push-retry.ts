@@ -3,6 +3,10 @@ import { spawnSync } from "node:child_process";
 
 export interface GitResult { status: number; output: string }
 export type GitRunner = (args: string[]) => GitResult;
+export const runGit: GitRunner = (args) => {
+  const result = spawnSync("git", args, { encoding: "utf8" });
+  return { status: result.status ?? 1, output: `${result.stdout ?? ""}${result.stderr ?? ""}` };
+};
 export function isNonFastForward(output: string): boolean {
   return /non-fast-forward|\(fetch first\)/i.test(output);
 }
@@ -18,12 +22,9 @@ export function pushWithRetry(run: GitRunner, attempts = 3): number {
   }
   throw new Error("push retry exhausted");
 }
-export function main(): number {
+export function main(run: GitRunner = runGit): number {
   try {
-    const attempts = pushWithRetry((args) => {
-      const result = spawnSync("git", args, { encoding: "utf8" });
-      return { status: result.status ?? 1, output: `${result.stdout ?? ""}${result.stderr ?? ""}` };
-    });
+    const attempts = pushWithRetry(run);
     process.stdout.write(`metrics push succeeded after ${attempts} attempt(s)\n`);
     return 0;
   } catch (error) {
