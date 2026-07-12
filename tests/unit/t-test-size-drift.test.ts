@@ -134,6 +134,96 @@ describe("on-disk drift guard — every annotated test file honours its size", (
   });
 });
 
+// ─── Layer × size purity constraint (#684 FR-1 item c / FR-3) ────────────────
+//
+// The pyramid's rungs are TEST SIZE, not the runner tier / directory (see the
+// module header of lib/test-size.ts). Each scope (directory) has a MAX size it
+// may contain; a file measured above its scope's max is a purity violation:
+//   unit        → small only   (a unit test that spawns/touches fs has outgrown
+//                                the tier — remediate to Small or move it)
+//   integration → up to medium
+//   e2e         → large allowed (no ceiling)
+//   smoke       → EXCLUDED from the size axis. The 13 smoke files are structural
+//                 fail-fast gates that read files / spawn the runner to assert
+//                 existence, settings, and permissions, so they are inherently
+//                 medium; sizing them out (rather than grandfathering them) is
+//                 the FR-3 ruling (E-TP-RA Q3=A). Excluded === null below.
+// This constraint is the enforcement half of docs/reference/09-testing.md's
+// "Test Size and Layer Purity" section (write⇔check symmetry).
+//
+// KNOWN unit×non-Small files (FR-2 not yet remediated) are grandfathered in a
+// generated ratchet allowlist (tests/.test-size-purity-allowlist.json). The
+// allowlist must EXACTLY equal the live unit-non-Small set: a violation absent
+// from it fails (no un-grandfathered non-Small unit test), and an entry that is
+// no longer a violation also fails (the list only shrinks — ratchet, mirroring
+// the complexity-gate baseline #837). It is generated from classifyTestSize, not
+// hand-written.
+const MAX_SIZE_BY_SCOPE: Record<string, TestSize | null> = {
+  smoke: null, // sized OUT of the pyramid axis — see FR-3 above
+  unit: "small",
+  integration: "medium",
+  e2e: "large",
+};
+
+function scopeOf(relPath: string): string {
+  const scopes = ["smoke", "unit", "integration", "e2e"];
+  return scopes.find((s) => relPath.startsWith(`tests/${s}/`)) ?? "other";
+}
+
+interface PurityViolation {
+  readonly file: string;
+  readonly scope: string;
+  readonly size: TestSize;
+  readonly max: TestSize;
+}
+
+describe("layer × size purity — size is the pyramid axis, not the directory", () => {
+  const files = allTestFiles(TESTS_ROOT);
+
+  // One pass: every file measured against its scope's max size. Scopes whose max
+  // is null (smoke) or absent ("other") are skipped, so a medium smoke file is
+  // never a violation — that is the FR-3 exclusion, enforced structurally.
+  const violations: PurityViolation[] = [];
+  for (const f of files) {
+    const relPath = rel(f);
+    const scope = scopeOf(relPath);
+    const max = MAX_SIZE_BY_SCOPE[scope];
+    if (max === undefined || max === null) continue;
+    const size = classifyTestSize(readFileSync(f, "utf-8")).size;
+    if (SIZE_ORDER[size] > SIZE_ORDER[max]) {
+      violations.push({ file: relPath, scope, size, max });
+    }
+  }
+
+  const allowlist: string[] = JSON.parse(
+    readFileSync(join(TESTS_ROOT, ".test-size-purity-allowlist.json"), "utf-8"),
+  ).unitNonSmall;
+  const allowed = new Set(allowlist);
+  const liveUnitNonSmall = new Set(violations.filter((v) => v.scope === "unit").map((v) => v.file));
+
+  test("no test exceeds its scope's max size, except grandfathered unit files", () => {
+    const offenders = violations
+      .filter((v) => !(v.scope === "unit" && allowed.has(v.file)))
+      .map((v) => `${v.file}: ${v.size} > ${v.scope} max ${v.max}`)
+      .sort();
+    expect(offenders).toEqual([]);
+  });
+
+  test("the unit non-Small allowlist only shrinks — no stale or spurious entries (ratchet)", () => {
+    // An allowlist entry that is no longer a live unit×non-Small violation is
+    // dead weight — remediation must PRUNE it (the list only ratchets down), and
+    // a hand-added entry for a non-violating file is rejected the same way.
+    const stale = allowlist.filter((f) => !liveUnitNonSmall.has(f)).sort();
+    expect(stale).toEqual([]);
+  });
+
+  test("smoke tier is sized OUT of the pyramid axis (FR-3 structural-gate exclusion)", () => {
+    const smokeFiles = files.map((f) => rel(f)).filter((r) => scopeOf(r) === "smoke");
+    expect(smokeFiles.length).toBeGreaterThan(0); // the exclusion is meaningful
+    expect(MAX_SIZE_BY_SCOPE.smoke).toBeNull(); // and structural
+  });
+});
+
 function rel(p: string): string {
   return p.slice(p.indexOf("/tests/") + 1);
 }
