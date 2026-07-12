@@ -1613,3 +1613,36 @@
 **Timestamp**: 2026-07-12T06:38:57Z
 
 ---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-12T06:41:15Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-12T06:41:15Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-12T06:41:15Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: nfr-requirements
+**Recovered**: true
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-12T06:41:15Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state approve nfr-requirements --project-dir /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/engineer-2
+**Error**: Refusing to complete "nfr-requirements": none of its declared artifacts exist under the intent's record directory. The stage protocol requires Nfr Requirements to produce output before the gate. Produce the artifacts before completing. (declared: performance-requirements, security-requirements, scalability-requirements, reliability-requirements, tech-stack-decisions)
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-12T06:41:15Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --stage nfr-requirements --result approved
+**Error**: Transition rejected by amadeus-state.ts approve for "nfr-requirements": {"error":"Refusing to complete \"nfr-requirements\": none of its declared artifacts exist under the intent's record directory. The stage protocol requires Nfr Requirements to produce output before the gate. Produce the artifacts before completing. (declared: performance-requirements, security-requirements, scalability-requirements, reliability-requirements, tech-stack-decisions)"}
+
+---
