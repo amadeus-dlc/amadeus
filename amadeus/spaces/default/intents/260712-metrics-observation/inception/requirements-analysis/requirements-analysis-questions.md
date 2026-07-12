@@ -10,4 +10,4 @@ RE 実測: run-tests.ts の printSummary(:899)は Test files / assertions を st
 - B. **snapshot 側で SUMMARY stdout をパース**(run-tests 無改修だが、表示文言への結合 = 文言変更で silent 破損のリスク。loud-fail 契約(FR-4)でパース失敗は検出可能)
 - C. **tests collector を初期セットから除外**(スコープ縮小 — ギャップ解消を待たず出荷、バックログへ)
 - X. その他
-- [Answer]: (RA-Q1 選挙の裁定受領後に記入 — cid:election-answer-after-ruling)
+- [Answer]: A(E-MO-RA 裁定 6/6、2026-07-12T05:51Z 開票配信。git 検証根拠: writeCoverageTotalsJson = run-tests.ts:610 の既習様式・カウンタ :398-401 実在。選挙出典は agmsg 配信/開票 — cid:agmsg-git-evidence-split)
