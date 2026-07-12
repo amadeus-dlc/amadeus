@@ -167,3 +167,15 @@
 **User Input**: Approve — UG-Q0 分割未決なし確認(6/6 全会一致: U1∥U2 は契約固定+ファイル非交差の2層根拠、U3 直列、story-map 7/7 被覆・孤児なし、規模正当化・reuse 棚卸し参照)。成果物3点実在確認済み。Learnings: E-MO-UG 裁定 §13 採用0件で確定(6/6 — 既存分割・並行規範の適用のみ)
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-12T06:14:22Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: delivery-planning
+**Issuer Space**: default
+**Issuer Intent**: 260709-framework-repair-batch
+**Issuer Shard**: j5ik2o-mac-studio-lan-8ae8f850c7a1.md
+**Issuer Human Ts**: 2026-07-12T05:46:52Z
+**User Input**: Approve — DP-Q0 計画未決なし確認(6/6 全会一致: walking-skeleton 既定正適用・Bolt 1 単独ゲート→ラダー→Bolt 2→3 直列、run-tests.ts 交差の c6 再評価内蔵、外部依存新設ゼロ)。成果物5点実在確認済み(UG yaml DAG は 52756728a で遡及是正・diary 透明記録)。Learnings: E-MO-DP 裁定 §13 採用0件で確定(6/6 — 既定適用と行き違い是正の執行記録)
+
+---
