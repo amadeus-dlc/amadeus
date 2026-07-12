@@ -1,6 +1,18 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(最新: 260711-docs-batch10)
+## 実行メタデータ(最新: 260712-metrics-observation)
+
+- Date: 2026-07-12
+- Intent: `260712-metrics-observation`(既存計測経路 — CCN 分布・テスト数・カバレッジ% — の出力をコミット snapshot に保存する観測機構、#921)
+- Scope: `feature`
+- Repository: `/Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/engineer-2`(branch `intent/921-metrics-observation`)
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh(cid:reverse-engineering:c1、E-L63 の base 選定2則)。base=`13598b752b656cc9bbf5d931f8e3a6c34881fd1c`(前 intent `260711-docs-repair-batch9` の observed。全 re-scan observed の HEAD 祖先性を `git merge-base --is-ancestor` で判定し、祖先のうち距離最小=56 を採用。非祖先2件 `11c52f153`/`d6375bba6` は squash 別 SHA で除外)、observed=`c11554226542faabd2a6c694650ea26323745ed8`(`git rev-parse HEAD` 実測)。フォーカス面(snapshot 再利用 seam)は observed HEAD 実コード直読で file:line 確定、base→observed diff で ideation feasibility 前提の現存を検証。フォーカス面の export シグネチャは全て base と不変(実コード触は `tests/lib/coverage-normalize.ts` の #876 closing-only strip のみで export byte 同一)。base/observed の真実源は本 intent の `inception/reverse-engineering/scan-notes.md` および `re-scans/260712-metrics-observation.md`。
+- 実施体制: Developer(スキャン)→ Architect(合成)の2サブエージェント直列(cid:reverse-engineering:c3)
+- Focus: `tests/complexity-gate.ts`(CCN seam: `runLizard:151`/`MEASUREMENT_ROOTS:43`/`CCN_BLOCK_THRESHOLD:35`/`CCN_WARN_FLOOR:36`/`parseLizardCsv:128`/`evaluateComplexity:241`、`python3 -m lizard` spawn 前提)・`tests/run-tests.ts`(カバレッジ機械可読出力 `writeCoverageTotalsJson:610`→`coverage/coverage-totals.json`、`collectCoverageTotals:538` 非 export、テスト数は `printSummary:899` の stdout print のみ=機械可読 seam 不在)・`tests/lib/coverage-normalize.ts`(`normalizeCoverageReport:273`/`computeStrippableLines:79` export)・`.github/workflows/ci.yml`(`contents:read` :23-24)/`release.yml`(`contents:write` :48、GITHUB_TOKEN push 非トリガー前例 :15-16)・`scripts/package.ts`(dist コピー源 CORE/HARNESS のみ :57-58 = scripts/tests は C2 対象外)・`.gitignore`(`coverage/` :30)
+- 更新した成果物: `code-structure.md`(「計測 seam 台帳 — metrics-observation の観測面」節を先頭新設 = export 状況・非 export ギャップ・CI 権限前例・配置規約の seam 台帳)、本ファイル(鮮度ポインタ + 「最新: 260711-docs-batch10」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、`re-scans/260712-metrics-observation.md`(per-intent re-scan 記録)。他成果物(architecture / code-quality-assessment / business-overview / api-documentation / component-inventory / technology-stack / dependencies)は base→observed で本 intent 観測面(既存 seam の再利用面)と無関係、かつ挙動欠陥・構造変化を伴わないため温存(churn 回避、cid:reverse-engineering:c1)。テスト数の機械可読 seam 不在のみ既知ギャップとして functional-design へ持ち越し。
+
+## 実行メタデータ(履歴: 260711-docs-batch10)
 
 - Date: 2026-07-12
 - Intent: `260711-docs-batch10`(documentation 4件 — #765 `set-skeleton-stance` verb が `docs/` 全体で未記載 / #764 `orchestrate next --new-intent` フラグが `docs/reference/` で未記載 / #763 `docs/reference/18-workspace-layout.md` の `.ja.md` ペア欠落 / #728 `tests/` 13ファイル・14参照の `assertNotSiblingWorktree` stale コメント参照=product は `resolveWorktreeAnchor` へ改名済み)
