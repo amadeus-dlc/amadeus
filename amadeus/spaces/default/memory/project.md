@@ -114,3 +114,4 @@
 
 ## CI/CD
 - Snapshot jobはPR blocking集約外とするが、main上のjob失敗は赤く可視化する。適用時はjobの非blocking目的とloud-fail契約を成果物へ明記し、一般の必須CI gateを除外する根拠にはしない。 (learned 2026-07-12) <!-- cid:ci-pipeline:c3 -->
+- Code Generationで既存workflowへ実装済みなら、CI Pipelineで新規workflowを二重生成せず、既存workflowを唯一の正本として文書化・検証する。 (learned 2026-07-12) <!-- cid:ci-pipeline:c2 -->
