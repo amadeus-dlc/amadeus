@@ -1311,3 +1311,11 @@
 **Stage**: application-design
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-12T06:06:24Z
+**Event**: WORKFLOW_PARKED
+**Stage**: application-design
+**Timestamp**: 2026-07-12T06:06:24Z
+
+---
