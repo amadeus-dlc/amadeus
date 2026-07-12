@@ -59,13 +59,6 @@ claude | codex) ;;
   ;;
 esac
 
-if tmux has-session -t "$S" 2>/dev/null; then
-  echo "tmux session '$S' already exists — attaching instead." >&2
-  echo "(tear it down first with: scripts/team-up.sh --kill)" >&2
-  open -na Ghostty --args -e tmux attach -t "$S"
-  exit 0
-fi
-
 # True if the identity has at least one saved conversation for this worktree.
 # Claude Code stores history under CLAUDE_CONFIG_DIR/projects/<cwd with "/"
 # and "." mapped to "-">/<session>.jsonl.
@@ -142,6 +135,13 @@ member_cmd() {
 
 if [ "${TEAM_UP_LIB_ONLY:-0}" = "1" ]; then
   return 0 2>/dev/null || exit 0
+fi
+
+if tmux has-session -t "$S" 2>/dev/null; then
+  echo "tmux session '$S' already exists — attaching instead." >&2
+  echo "(tear it down first with: scripts/team-up.sh --kill)" >&2
+  open -na Ghostty --args -e tmux attach -t "$S"
+  exit 0
 fi
 
 for m in leader engineer-1 engineer-2 engineer-3 engineer-4 engineer-5 engineer-6; do
