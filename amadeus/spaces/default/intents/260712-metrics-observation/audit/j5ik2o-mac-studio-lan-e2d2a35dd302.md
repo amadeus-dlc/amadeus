@@ -1221,3 +1221,11 @@
 **Stage**: user-stories
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-12T05:59:18Z
+**Event**: WORKFLOW_PARKED
+**Stage**: user-stories
+**Timestamp**: 2026-07-12T05:59:18Z
+
+---
