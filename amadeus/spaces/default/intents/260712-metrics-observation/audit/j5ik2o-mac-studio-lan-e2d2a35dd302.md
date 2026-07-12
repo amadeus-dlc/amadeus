@@ -827,3 +827,11 @@
 **Stage**: rough-mockups
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-12T05:18:04Z
+**Event**: WORKFLOW_PARKED
+**Stage**: rough-mockups
+**Timestamp**: 2026-07-12T05:18:04Z
+
+---
