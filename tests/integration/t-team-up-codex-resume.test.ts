@@ -55,4 +55,13 @@ describe("team-up Codex resume", () => {
     expect(command).not.toContain("--codex-command resume");
     expect(result.stderr.toString()).toContain("starting fresh");
   });
+
+  test("starts fresh when the role resume resolver fails", () => {
+    const result = commandFor("engineer-3", "exit 1");
+    const command = result.stdout.toString();
+    expect(result.exitCode).toBe(0);
+    expect(command).toContain("--codex-command codex");
+    expect(command).not.toContain("--codex-command resume");
+    expect(result.stderr.toString()).toContain("role resume resolver failed");
+  });
 });

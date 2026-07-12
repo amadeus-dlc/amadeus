@@ -111,12 +111,15 @@ codex_member_cmd() {
       echo "WARN: delivery.sh set monitor failed for $m (continuing)" >&2
   fi
   if [ "$CONTINUE" = "1" ]; then
-    resume_uuid="$("$ROLE_RESUME" codex "$TEAM_NAME" "$role" "$wt")"
-    if [ -n "$resume_uuid" ]; then
-      command="resume"
-      resume_arg="$resume_uuid"
+    if resume_uuid="$("$ROLE_RESUME" codex "$TEAM_NAME" "$role" "$wt")"; then
+      if [ -n "$resume_uuid" ]; then
+        command="resume"
+        resume_arg="$resume_uuid"
+      else
+        echo "WARN: no unique resumable thread for $role — starting fresh" >&2
+      fi
     else
-      echo "WARN: no unique resumable thread for $role — starting fresh" >&2
+      echo "WARN: role resume resolver failed for $role — starting fresh" >&2
     fi
   fi
 
