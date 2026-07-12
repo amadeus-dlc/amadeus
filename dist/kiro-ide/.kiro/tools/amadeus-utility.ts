@@ -41,6 +41,7 @@ import {
   getField,
   holdsAuditLock,
   hooksHealthDir,
+  intentsDir,
   isoTimestamp,
   isPackageJson,
   codekbRepoName,
@@ -91,6 +92,7 @@ import {
   rulesSubdir,
 } from "./amadeus-lib.ts";
 import { validateStageFrontmatter } from "./amadeus-stage-schema.ts";
+import { PHASE_PROGRESS_FIELD } from "./amadeus-state.ts";
 import { AMADEUS_VERSION } from "./amadeus-version.ts";
 
 // ---------------------------------------------------------------------------
@@ -436,6 +438,89 @@ export function classifyWorkspaceShellState(
     };
   }
   return { pass: true, label: readyLabel };
+}
+
+// Check 8 (#882): a record whose Status has reached "Completed" while its
+// "## Phase Progress" roll-up still lists Pending/Active phases is internally
+// inconsistent — the phase-boundary Verified/Skipped flip never fired for those
+// phases. The three functions below split the check into pure judgment seams
+// (phaseProgressResidual, classifyPhaseProgressConsistency) plus the I/O
+// collector (checkPhaseProgressConsistency), so every branch is driven
+// in-process by the unit test — handleDoctor itself is spawn-only (t83 header),
+// and bun --coverage does not measure a spawned subprocess. Advisory PASS by
+// design: the historical pre-#880 records all carry this residue, so a FAIL
+// would make doctor exit 1 on every existing workspace. The single
+// `results.push(checkPhaseProgressConsistency(projectDir))` wiring line inside
+// handleDoctor is the only spawn-only line this check adds.
+
+// Residual phases for ONE intent. Empty ⇒ consistent. A non-Completed status is
+// never a residue (a Running intent's Active phase is normal), so the gate
+// returns [] before inspecting phases. Only Pending/Active count as residue;
+// Verified/Skipped are legitimate terminal phase states.
+export function phaseProgressResidual(
+  status: string,
+  phases: ReadonlyArray<{ phase: string; status: string }>,
+): string[] {
+  if (status !== "Completed") return [];
+  return phases
+    .filter((p) => p.status === "Pending" || p.status === "Active")
+    .map((p) => p.phase);
+}
+
+// Aggregate every intent's residue into ONE advisory DoctorCheck. Always
+// pass:true — the historical records that predate #880 all carry this residue,
+// so a FAIL would make doctor exit 1 on every existing workspace and break its
+// read-only-diagnostic contract (Cold-safe gate). Detection only.
+export function classifyPhaseProgressConsistency(
+  intents: ReadonlyArray<{ record: string; status: string; phases: ReadonlyArray<{ phase: string; status: string }> }>,
+): DoctorCheck {
+  const flagged = intents
+    .map((it) => ({ record: it.record, residue: phaseProgressResidual(it.status, it.phases) }))
+    .filter((r) => r.residue.length > 0);
+  if (flagged.length === 0) {
+    return {
+      pass: true,
+      label: "Phase Progress: all Completed intents reconciled (no Pending/Active residue)",
+    };
+  }
+  const detail = flagged.map((r) => `${r.record}: ${r.residue.join(", ")}`).join("; ");
+  return {
+    pass: true,
+    label: `Phase Progress: ${flagged.length} Completed intent(s) with Pending/Active phases (advisory — historical records predate #880): ${detail}`,
+  };
+}
+
+// I/O collector: read every space's every intent state file, parse Status +
+// each canonical phase status via getField (so a "Status: Completed" string in a
+// Project body never matches — only the `- **Status**:` line does), and classify.
+// Phase labels come from PHASE_PROGRESS_FIELD (no doctor-side hardcoded list);
+// flagged records are reported as <space>/<dirName>. dirName === null rows
+// (registry-only) and per-intent read failures are skipped so one unreadable
+// state never sinks the whole check. No outer catch: the query layer
+// (listSpaces/listIntents) swallows its own I/O errors and returns empty lists,
+// so nothing here can throw past the per-intent read guard. Runs across EVERY
+// space so a residue in a non-active space is still surfaced.
+export function checkPhaseProgressConsistency(projectDir: string): DoctorCheck {
+  const scanned: Array<{ record: string; status: string; phases: Array<{ phase: string; status: string }> }> = [];
+  for (const sp of listSpaces(projectDir)) {
+    for (const i of listIntents(projectDir, sp.name)) {
+      if (i.dirName === null) continue;
+      const statePath = join(intentsDir(projectDir, sp.name), i.dirName, "amadeus-state.md");
+      let content: string;
+      try {
+        content = readFileSync(statePath, "utf-8");
+      } catch {
+        continue;
+      }
+      const status = getField(content, "Status") ?? "";
+      const phases = Object.values(PHASE_PROGRESS_FIELD).map((label) => ({
+        phase: label,
+        status: getField(content, label) ?? "",
+      }));
+      scanned.push({ record: `${sp.name}/${i.dirName}`, status, phases });
+    }
+  }
+  return classifyPhaseProgressConsistency(scanned);
 }
 
 function handleDoctor(projectDir: string): void {
@@ -1706,6 +1791,8 @@ function handleDoctor(projectDir: string): void {
       fix: errorMessage(e),
     });
   }
+
+  results.push(checkPhaseProgressConsistency(projectDir));
 
   // Cold-safe gate: only emit audit when an audit trail already exists. On a
   // pristine project (no audit shard / flat audit.md) doctor prints its health
