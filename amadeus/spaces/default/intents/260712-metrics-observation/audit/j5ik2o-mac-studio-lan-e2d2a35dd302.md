@@ -587,3 +587,26 @@
 **Timestamp**: 2026-07-12T04:59:13Z
 
 ---
+
+## Error Logged
+**Timestamp**: 2026-07-12T05:02:04Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state
+**Error**: Unknown subcommand: undefined. Valid: get, set, set-skeleton-stance, checkbox, count, advance, finalize, complete-workflow, gate-start, approve, delegate-approval, delegate-rejection, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark, declare-docs-only
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-12T05:02:18Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-12T05:02:18Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-12T05:02:18Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: market-research
+
+---
