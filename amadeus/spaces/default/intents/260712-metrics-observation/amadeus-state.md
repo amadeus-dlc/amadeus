@@ -31,6 +31,8 @@
 ## Runtime State
 - **Revision Count**: 0
 
+- **Parked**: 2026-07-12T06:03:07Z
+- **Parked At Stage**: refined-mockups
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -91,7 +93,7 @@ Per unit: [TBD]
 - **Current Stage**: refined-mockups
 - **Next Stage**: application-design
 - **Status**: Running
-- **Last Updated**: 2026-07-12T06:02:30Z
+- **Last Updated**: 2026-07-12T06:03:07Z
 
 ## Session Resume Point
 - **Last Completed Stage**: user-stories
