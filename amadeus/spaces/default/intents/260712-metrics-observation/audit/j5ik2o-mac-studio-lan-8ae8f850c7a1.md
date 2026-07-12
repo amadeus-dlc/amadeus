@@ -23,3 +23,15 @@
 **User Input**: Approve — MR-Q0 未決質問ゼロ確認(6/6 全会一致: Q1/Q2 は出典付き既決照合、Q3 は #921 明示委譲の転記台帳)。成果物4点(competitive-analysis/market-trends/build-vs-buy/questions)実在確認済み(checkpoint 21c4667ec)。Learnings: E-MO-MR 裁定 §13 採用0件で確定(6/6 — diary 3エントリは前例様式踏襲・Evidence Standards 執行・既決委譲の執行で新規一般化なし)
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-12T05:07:47Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: feasibility
+**Issuer Space**: default
+**Issuer Intent**: 260709-framework-repair-batch
+**Issuer Shard**: j5ik2o-mac-studio-lan-8ae8f850c7a1.md
+**Issuer Human Ts**: 2026-07-12T04:47:57Z
+**User Input**: Approve — FS-Q0 未決質問ゼロ確認(6/6 全会一致: 外部前提5点の実測裏取りで feasibility:c1 充足、設計判断は #921 委譲の継承)。成果物4点(assessment/constraint-register/raid-log/questions)実在確認済み(checkpoint 770542f7c)。Learnings: E-MO-FS 裁定 §13 採用0件で確定(6/6 — c1/c2 執行+既存 cid ヒヤリハット自己是正で新規一般化なし)
+
+---
