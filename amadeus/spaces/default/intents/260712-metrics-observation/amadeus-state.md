@@ -62,7 +62,7 @@
 - [x] practices-discovery — EXECUTE
 - [x] requirements-analysis — EXECUTE
 - [x] user-stories — EXECUTE
-- [-] refined-mockups — EXECUTE
+- [?] refined-mockups — EXECUTE
 - [ ] application-design — EXECUTE
 - [ ] units-generation — EXECUTE
 - [ ] delivery-planning — EXECUTE
@@ -91,7 +91,7 @@ Per unit: [TBD]
 - **Current Stage**: refined-mockups
 - **Next Stage**: application-design
 - **Status**: Running
-- **Last Updated**: 2026-07-12T06:01:35Z
+- **Last Updated**: 2026-07-12T06:02:30Z
 
 ## Session Resume Point
 - **Last Completed Stage**: user-stories
