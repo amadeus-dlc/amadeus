@@ -203,3 +203,15 @@
 **User Input**: Approve — NFR 完了確認(6/6、GoA 勾配 1-2: reviewer iteration 2消費後の残2件是正を6名独立 grep 確認 — t222 具体名義務の U3 伝播・t152 :47-51 文字列検査様式)。留保転記: e2=是正コミット前の grep 棚卸しセルフチェック、e6=文字列検査様式の将来メンテ留意。Learnings: E-MO-NFR 裁定 §13 採用0件で確定(6/6 — 既存 cid 違反実例は PM 頻度材料)
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-12T06:53:48Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: nfr-design
+**Issuer Space**: default
+**Issuer Intent**: 260709-framework-repair-batch
+**Issuer Shard**: j5ik2o-mac-studio-lan-8ae8f850c7a1.md
+**Issuer Human Ts**: 2026-07-12T06:50:32Z
+**User Input**: Approve — NFR-design 完了確認(6/6、GoA 1×3/2×3: reviewer iteration 2 READY 予算内完結、R-1 .json.tmp glob 非合致の安全側・S-2 t222 (d) secrets 非出現の U3 伝播を6名独立確認)。留保転記: e2=PM 頻度観察→チェックリストノルム化条件付き提案、e3=伝播漏れ4例目で棚卸し拡張の自動再上程、e6=U3 NFR 面の配置変則性。Learnings: E-MO-ND 裁定 §13 採用0件で確定(6/6)
+
+---
