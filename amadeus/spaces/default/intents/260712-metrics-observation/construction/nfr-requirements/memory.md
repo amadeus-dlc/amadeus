@@ -16,3 +16,4 @@
 - 2026-07-12T06:46:00Z — Interpretation: product-lead 申し送り(1)「CI 時間の定量基準」を P-1/P-2 で解消 — 数値(timeout-minutes 5)は GitHub Actions の強制メカニズム由来(nfr-requirements:c3)で、P-2 は needs グラフ diff という機械検証に落とした。SC-1 の 16KB もテストアサートを強制メカニズムに指定。
 
 - 2026-07-12T06:55:00Z — Deviation: reviewer iteration 1 = NOT-READY — P-2 の「needs グラフ diff で機械検証」は実在しない機構の引用で、申し送り解消の偽クロージャ主張だった(P2/検証劇場クラス、私の起草ミス)。実在可能な強制メカニズム(ci.yml parse の unit テストを U3 新設+着地後実 run 確認)へ書き換え、SC-2/R-3 整合・SC-1 の U2 伝播・P-3 機構特定も是正。上の 06:46 エントリの「解消」記述は本エントリで訂正される。
+- 2026-07-12T07:00:00Z — Deviation: iteration 2 = 残2件 — (A) P-2 の新設テスト義務を U3 FD へ未伝播(同型の伝播漏れの反復 — SC-1 では正しく伝播したのに P-2 で欠落。私の系統的弱点として PM 材料申告) (B) 「parse」の曖昧性(構造 YAML パース=新規依存の危険)。是正: U3 business-rules #4 に t222-ci-snapshot-wiring.test.ts を具体名で新設義務化、方式は t152 :47-51 の文字列検査様式(依存ゼロ)に確定、P-2 と相互参照。
