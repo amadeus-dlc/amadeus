@@ -1266,3 +1266,11 @@
 **Stage**: refined-mockups
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-12T06:03:07Z
+**Event**: WORKFLOW_PARKED
+**Stage**: refined-mockups
+**Timestamp**: 2026-07-12T06:03:07Z
+
+---
