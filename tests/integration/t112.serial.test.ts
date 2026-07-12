@@ -61,6 +61,14 @@ const REAL_COVERAGE_NORMALIZE = join(
   "lib",
   "coverage-normalize.ts",
 );
+// run-tests.ts also imports lib/run-tests-totals.ts (the best-effort JSON
+// summary seam, #921). Keep the scratch runner's static import graph complete.
+const REAL_RUN_TESTS_TOTALS = join(
+  import.meta.dir,
+  "..",
+  "lib",
+  "run-tests-totals.ts",
+);
 // run-tests.ts also imports lib/test-size.ts (derived-size summary matrix,
 // #684/#696). A static import means the copied runner fails to load without it,
 // so the scratch tree must carry it too — same reason as bun-junit-to-meta.ts.
@@ -108,6 +116,7 @@ function driveRunner(nFail: number, nPass: number): { code: number; stdout: stri
   copyFileSync(REAL_GLUE, join(libDir, "bun-junit-to-meta.ts"));
   copyFileSync(REAL_COVERAGE_SOURCE_PATH, join(libDir, "coverage-source-path.ts"));
   copyFileSync(REAL_COVERAGE_NORMALIZE, join(libDir, "coverage-normalize.ts"));
+  copyFileSync(REAL_RUN_TESTS_TOTALS, join(libDir, "run-tests-totals.ts"));
   copyFileSync(REAL_SIZE, join(libDir, "test-size.ts"));
 
   // Distinct numeric stems keep glob ordering deterministic and avoid collisions

@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pushWithRetry } from "../../scripts/metrics-push-retry.ts";
+import { extractCiSnapshotWiring } from "../lib/ci-snapshot-wiring.ts";
 
 function git(cwd: string, args: string[]) {
   const result = spawnSync("git", args, { cwd, encoding: "utf8" });
@@ -24,6 +25,22 @@ function setup() {
 }
 
 describe("t222 real git retry boundary", () => {
+  test("repository workflow satisfies the snapshot wiring contract", () => {
+    const yaml = readFileSync(join(import.meta.dir, "../../.github/workflows/ci.yml"), "utf8");
+    const { job, uploadStep, ciSuccess } = extractCiSnapshotWiring(yaml);
+    expect(job).toContain("github.event_name == 'push' && github.ref == 'refs/heads/main'");
+    expect(job).toContain("contents: write");
+    expect(job).toContain("group: metrics-snapshot-main");
+    expect(job).toContain("queue: max");
+    expect(job).toContain("cancel-in-progress: false");
+    expect(job).toContain("timeout-minutes: 5");
+    expect(job).toContain("name: amadeus-coverage-report");
+    expect(job).not.toContain("secrets.");
+    expect(ciSuccess).not.toContain("metrics-snapshot");
+    expect(uploadStep).toContain("name: amadeus-coverage-report");
+    expect(uploadStep).toContain("coverage/coverage-totals.json");
+    expect(uploadStep).toContain("coverage/tests-totals.json");
+  });
   test("a remote advance immediately before first push causes NFF then retry succeeds", () => {
     const fixture = setup();
     try {

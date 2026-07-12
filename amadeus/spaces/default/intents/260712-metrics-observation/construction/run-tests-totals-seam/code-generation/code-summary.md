@@ -14,10 +14,32 @@
 
 ## テスト結果
 
-- unit: 7件 pass。
-- integration: 1件 pass。
+- unit: 3件 pass。
+- integration: 3件 pass。
 - typecheck: pass。
 
 ## 計画逸脱
 
-- なし。
+- rebase後に導入済みだったunit×Small ratchetとの交差により、計画でunitに置いていた実FS writer・runner source読込を既存integrationへ移した。`tests/unit/t220-run-tests-totals.test.ts` にはpureな4カウンタ写像契約を残し、高速unit価値を維持した。allowlist追加は行っていない。
+- `tests/run-tests.ts` の新しい静的importに追随し、既存 `t112.serial` scratch fixtureへ実 `run-tests-totals.ts` のコピーを追加した。runner本体の終了コード契約は変更していない。
+
+## Review — Iteration 2（rebase後・裁定A反映）
+
+**Verdict:** READY
+**Reviewer:** amadeus-architecture-reviewer-agent
+**Date:** 2026-07-12
+
+### Findings
+
+- Blocking findingなし。4カウンタのpure写像をSmall unitに残し、実FS・runner process・source読込境界をintegrationへ移した構成は裁定Aと一致する。
+- `tests/run-tests.ts` の静的import graphに対し、`tests/integration/t112.serial.test.ts` のscratch fixtureが実 `tests/lib/run-tests-totals.ts` をコピーするため、隔離runnerのload契約が復元されている。
+
+### 検証結果
+
+- focused（t220、t112を含む全対象）: 44 pass / 0 fail。
+- size purity (`tests/unit/t-test-size-drift.test.ts`): 16 pass / 0 fail。allowlist差分なし。
+- `git diff --check`: pass。正準full CIはconductor実測exit 0を確認済み。
+
+### 残存リスク
+
+- writer失敗は要件どおりbest-effortでrunnerを失敗させないため、stderrの通知を運用で見落とす可能性は残る。既存契約内の受容済みリスクである。
