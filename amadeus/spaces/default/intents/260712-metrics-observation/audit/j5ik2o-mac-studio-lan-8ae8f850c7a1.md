@@ -59,3 +59,15 @@
 **User Input**: Approve — TF-Q0 編成未決なし確認(6/6 全会一致: 現行ノルム転記正確、conductor e2 の割当根拠実績接地)。成果物4点(team-assessment/skill-matrix/mob-composition/questions)実在確認済み(checkpoint 3aa990307)。軽微修正: 口頭4 intent 措置の初出日付は 2026-07-11(次回 checkpoint で反映)。Learnings: E-MO-TF 裁定 §13 採用0件で確定(6/6 — 前例踏襲+現行化の執行事例)
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-12T05:19:26Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: rough-mockups
+**Issuer Space**: default
+**Issuer Intent**: 260709-framework-repair-batch
+**Issuer Shard**: j5ik2o-mac-studio-lan-8ae8f850c7a1.md
+**Issuer Human Ts**: 2026-07-12T04:47:57Z
+**User Input**: Approve — RM-Q0 モック未決なし確認(6/6 全会一致: PM4-2 充足 — verdict 3分岐/exit code/アトミック書き込み契約が正準、JSON 例示は design 委譲、complexity-gate 既習様式踏襲を file:line 対照)。成果物3点(wireframes/user-flow/questions)実在確認済み(checkpoint 32df746c0)。Learnings: E-MO-RM 裁定 §13 採用0件で確定(6/6 — PM4-2 執行事例で新規一般化なし)
+
+---
