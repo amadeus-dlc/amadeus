@@ -8,7 +8,7 @@
 |---|---|---|---|
 | CCN 分布・関数数 | `tests/complexity-gate.ts` の lizard 経路(#837 導入済み・CI 両ジョブに pip pin 済み) | `--check` 実行 0.35s(本 worktree)— 追加負荷は実質ゼロ | **高** |
 | カバレッジ% | `coverage:ci` の lcov.info(CI アーティファクト保存済み・正規化は #856 の coverage-normalize) | batch7 で lcov 直読の実務経路を4 PR 連続実証済み | **高** |
-| LOC・ファイル数 | `git ls-files`+静的走査(Bun 標準) | 対象 472 ファイル(core+scripts+tests、実測)— 走査は決定的 | **高** |
+| LOC・ファイル数 | `git ls-files`+静的走査(Bun 標準) | 対象 .ts 472 ファイル(core+scripts+tests、計測時点 2026-07-12 の実測 — HEAD 前進で増減する点に留意)— 走査は決定的 | **高** |
 | テスト数・assertion 数 | `tests/run-tests.ts` の SUMMARY 出力(Test files / assertions は毎 CI 実行で出力済み) | batch7 build-and-test で 4413 assertions 等を実測取得済みの実績 | **高** |
 | dist サイズ | `du`(生成物) | 12M(実測)— 取得は自明 | **高** |
 
