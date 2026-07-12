@@ -345,7 +345,12 @@ describe("t221 doctor CLI — Check 8 advisory line and exit-neutrality (#882)",
 
       // FR-2 exit-neutrality: the contradiction adds NO failure — both runs
       // exit with the SAME status (the fixtures differ only by the flagged
-      // record), and the flagged line is a ✓, never a ✗.
+      // record), and the flagged line is a ✓, never a ✗. Relative equality is
+      // the honest form of the "exit stays 0" acceptance criterion here: on a
+      // minimal fixture OTHER doctor checks legitimately fail (so the absolute
+      // status is not 0), while Check 8 itself can never contribute a failure
+      // — classifyPhaseProgressConsistency returns pass:true on every branch
+      // (asserted structurally in Layer 1b above).
       expect(resFlagged.status).toBe(resClean.status);
       expect(outFlagged).not.toContain("✗  Phase Progress");
     } finally {
