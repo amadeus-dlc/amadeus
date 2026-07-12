@@ -1,11 +1,28 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { extractCiSnapshotWiring } from "../lib/ci-snapshot-wiring.ts";
 
-const yaml = readFileSync(join(import.meta.dir, "../../.github/workflows/ci.yml"), "utf8");
-const job = yaml.split("  metrics-snapshot:")[1].split("\n  codecov-status:")[0];
-const coverageJob = yaml.split("  coverage:")[1].split("\n  metrics-snapshot:")[0];
-const uploadStep = coverageJob.split("      - name: Upload coverage artifact")[1].split("\n      - name: Upload coverage to Codecov")[0];
+const yaml = `  coverage:
+      - name: Upload coverage artifact
+        name: amadeus-coverage-report
+        path: |
+          coverage/coverage-totals.json
+          coverage/tests-totals.json
+      - name: Upload coverage to Codecov
+  metrics-snapshot:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    concurrency:
+      group: metrics-snapshot-main
+      queue: max
+      cancel-in-progress: false
+    timeout-minutes: 5
+    name: amadeus-coverage-report
+  codecov-status:
+  ci-success:
+    needs: [coverage]
+`;
+const { job, uploadStep, ciSuccess } = extractCiSnapshotWiring(yaml);
 describe("t222 CI snapshot wiring", () => {
   test("main push guard", () => expect(job).toContain("github.event_name == 'push' && github.ref == 'refs/heads/main'"));
   test("write permission", () => expect(job).toContain("contents: write"));
@@ -13,7 +30,7 @@ describe("t222 CI snapshot wiring", () => {
   test("five minute timeout", () => expect(job).toContain("timeout-minutes: 5"));
   test("named artifact", () => expect(job).toContain("name: amadeus-coverage-report"));
   test("no secrets", () => expect(job).not.toContain("secrets."));
-  test("ci-success does not depend on snapshot", () => expect(yaml.split("  ci-success:")[1]).not.toContain("metrics-snapshot"));
+  test("ci-success does not depend on snapshot", () => expect(ciSuccess).not.toContain("metrics-snapshot"));
   test("totals belong to the named coverage artifact upload step", () => {
     expect(uploadStep).toContain("name: amadeus-coverage-report");
     expect(uploadStep).toContain("coverage/coverage-totals.json");
