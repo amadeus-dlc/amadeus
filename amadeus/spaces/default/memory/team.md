@@ -185,6 +185,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - Issue のクローズは、PR の MERGED 状態と着地面の grep/実読の**出力を確認した後**にのみ行う — マージ通知・台帳記録だけを根拠にしない(E-L67 候補B 2026-07-11 採用 6/6。batch9 実測: 誤マージ通知起点の誤クローズ→reopen ヒヤリハット+以後5クローズで定型実践) <!-- cid:requirements-analysis:close-after-landing-verification -->
 - 並行 fan-out 直後にフルスイート統合検証を回すときは、ホスト負荷の収束を待つか並列度を落とす — 入れ子 spawn 型テスト(t05 planted-failure 等)は外側並列と重なるとタイムアウト予算を食い切り、負荷起因の偽赤で切り分けコストを生む(E-L71 2026-07-11 採用 全会一致、batch10 実測: 初回 FAIL→solo 28 pass→負荷収束後 PASS の3点対照。#912 の運用面) (learned 2026-07-11) <!-- cid:code-generation:fanout-load-settle-before-integration -->
 - mutating CLI verb へ --help プローブをしない — --help フラグを実装しない CLI では、既知の mutating verb への --help はただの余剰引数として無視され verb がそのまま実行される(park --help が既 park 状態へ再 park した実測 2026-07-12 00:01Z 監査記録; amadeus-orchestrate.ts:2947-2949 handlePark が _args を無視、:2992-2993 case park ディスパッチ)。未知 subcommand 経路は loud エラーで安全 — 危険なのは既知 verb 側。interface 調査は引数なし実行のエラー出力か README で行う(E-CG-L 2026-07-12 採用 4/6、doctor-consistency code-generation 実測) (learned 2026-07-12) <!-- cid:code-generation:no-help-probe-on-mutating-verbs -->
+- 検査機構の不在主張(「〜を検査するテストは存在しない」)は、ファイル名・ヘッダコメントの責務表示を根拠にせず、テスト名・関数名の全域 grep で反証確認してから書く — テストファイルは多責務同居がありうる(t174-docs-legacy-refs-gate が言語切替リンク検査 :256 を同居)。E-L38(引用の実在)・E-L56(列挙の完全性)と直交する「不在主張の反証確認」面を埋める(E-L76 2026-07-12 採用 6/6、test-pyramid requirements iteration 1 の誤 REVISE 実測 — conductor 反実測+レビュアー追認の2段確定) (learned 2026-07-12) <!-- cid:requirements-analysis:c4 -->
 
 ## Archived(失効ノルム)
 
