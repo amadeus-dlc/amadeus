@@ -1,5 +1,40 @@
 # コード構造
 
+## 計測 seam 台帳 — metrics-observation の観測面(intent 260712-metrics-observation、2026-07-12)
+
+既存計測経路(CCN 分布・テスト数・カバレッジ%)の出力をコミット snapshot に保存する観測機構(#921)が再利用する seam の export 状況・非 export ギャップ・CI 権限前例・配置規約。出典は本 intent の `inception/reverse-engineering/scan-notes.md` および `re-scans/260712-metrics-observation.md`(file:line は observed HEAD `c11554226` 直読)。base→observed(`13598b752`→`c11554226`、56コミット)でフォーカス面の export シグネチャは全て不変(実コード触は `tests/lib/coverage-normalize.ts` の #876 closing-only strip のみで export byte 同一)。
+
+### 計測 seam の export 状況(snapshot 入力面)
+
+| 計測軸 | seam | 所在(file:line) | export | snapshot 消費形態 |
+| --- | --- | --- | --- | --- |
+| CCN 生データ | `runLizard(): MeasurementOutcome` | `tests/complexity-gate.ts:151` | **export** | `records`(path/name/ccn/ordinal)を in-process import して分布導出。spawn 不要 |
+| CCN CSV 正規化 | `parseLizardCsv` / `assignOrdinals` | `tests/complexity-gate.ts:128` / `:141` | **export** | lizard 直叩きで自前パースする場合の再利用点 |
+| CCN 判定/表示 | `evaluateComplexity` / `baselineMapOf` / `renderBaseline` | `tests/complexity-gate.ts:241` / `:268` / `:223` | **export**(純関数) | baseline 突合・ラチェット表示 |
+| CCN 計測対象・閾値 | `MEASUREMENT_ROOTS` / `CCN_BLOCK_THRESHOLD`(15) / `CCN_WARN_FLOOR`(11) | `tests/complexity-gate.ts:43` / `:35` / `:36` | **export const** | 計測面・warn band 分類の定数 |
+| カバレッジ機械可読出力 | `writeCoverageTotalsJson()` → `coverage/coverage-totals.json`(`{schemaVersion:1,hits,lines}`) | `tests/run-tests.ts:610` / `:613` | 関数は非 export だが**出力 JSON が機械可読 seam** | %は hits/lines から整数導出。出力先 `coverage/` は **.gitignore 済み**(下記) |
+| カバレッジ lcov 正規化 | `normalizeCoverageReport` / `computeStrippableLines` | `tests/lib/coverage-normalize.ts:273` / `:79` | **export**(in-process 可) | lcov から SF/LF/LH 再導出する場合の再利用点。#876 で本体変更も export シグネチャ不変 |
+
+### 非 export ギャップ(唯一の設計判断持ち越し)
+
+- **テスト数の機械可読 seam は不在**(既知ギャップ、functional-design へ持ち越し)。`printSummary()`(`tests/run-tests.ts:899`)が `Test files:`(`:903`)/`Total assertions:`(`:905`)/`Failed files`(`:904`)/`Failed assertions`(`:906`)を **stdout へ print するのみ**で構造化 JSON 出力なし。集計カウンタ `totalFiles`/`failedFiles`/`totalTests`/`totalFailed`(`:398-401`、モジュールスコープ、**非 export**)は per-file `.meta`(`PASS/FAIL`/`TESTS`/`FAILED`、`:434`/`:458`)から積算。snapshot はランナー stdout 行のパースか `.meta` 集計、または seam 化のいずれかを要する。
+- カバレッジ内部集計 `collectCoverageTotals(lcov)`(`tests/run-tests.ts:538`、**非 export**)は lcov から `{rows,totalHits,totalLines}` を単一パースで導出し HTML と totals.json の共有源。snapshot がカバレッジ%を lcov から直接取るならこの関数相当を再導出するか `coverage-totals.json` を読む。
+
+### CI 権限前例(commit push を伴う workflow の踏襲元)
+
+| workflow | permissions | commit push 前例 | concurrency |
+| --- | --- | --- | --- |
+| `ci.yml` | `contents: read`(`:23-24`)、coverage job のみ `id-token: write`(`:81`、Codecov OIDC) | **push 不可**(read 権限) | main は SHA キーでキャンセル無効、PR は ref キーで supersede(`:12-21`) |
+| `release.yml` | `contents: write`(`:48`) | release-it が `github-actions[bot]`(`:101`)で bump コミット + tag を **main へ直 push**(`:97-114`)。**GITHUB_TOKEN の push は他 workflow を非トリガー**(`:15-16` コメント、CI ループ回避の設計前例) | `group: release-setup`、`cancel-in-progress: false`(`:43-45`) |
+
+含意: snapshot をコミットへ書く workflow は `contents: write` を要し、release.yml の bot commit + GITHUB_TOKEN 非トリガー前例を踏襲すれば CI ループを起こさない。
+
+### 配置規約(dist 同期 C2 スコープと gitignore)
+
+- dist コピー源は `CORE_ROOT=packages/framework/core`(`scripts/package.ts:57`)+ `HARNESS_ROOT=packages/framework/harness`(`:58`)配下のみ。**`scripts/` と `tests/` は dist へ一切コピーされない** → snapshot ツールをそこに置けば `dist:check`/`promote:self:check`(C2)の**対象外**(dist 再生成義務なし)。逆に `core/` 配置は C2 対象。
+- 既存兄弟 CLI 様式: `complexity-gate.ts`/`coverage-project-gate.ts` の `main(args): number` + `import.meta.main`(`complexity-gate.ts:372`/`:384`)。snapshot ツールはこの既習様式に揃える。
+- `metrics/` 相当ディレクトリは**不在**(snapshot 出力先は新規ディレクトリの設計判断)。`.gitignore` は `coverage/`(`:30`)を無視 → **snapshot 出力先を `coverage/` 配下にすると commit されない**(要注意)。metrics/snapshot 関連の無視エントリは無し。
+
 ## restart-loss フォーカス面の区間構造変化(intent 260711-docs-repair-batch9、2026-07-11)
 
 diff-refresh 区間 `b845478bb..13598b752`(59コミット)のうち、本 intent フォーカス5欠陥の面(#885 slug 境界 / #886 phase-check 境界)に関わる構造変化。出典は本 intent の `inception/reverse-engineering/scan-notes.md`(#885/#886 節の file:line 実測)。#812/#824/#680 の欠陥3ファイル(kiro-ide SKILL.md / onboarding.fills.ts / sensor-type-check.ts)は区間内**無変更**のため構造記録なし(欠陥のみ code-quality-assessment.md に記録)。
