@@ -11,7 +11,7 @@ afterEach(() => {
   for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
-function commandFor(member: string, resolverBody: string): Bun.SpawnSyncReturns<Buffer> {
+function commandFor(member: string, resolverBody: string) {
   const dir = mkdtempSync(join(tmpdir(), "amadeus-team-up-"));
   tempDirs.push(dir);
   const resolver = join(dir, "role-resume.sh");
