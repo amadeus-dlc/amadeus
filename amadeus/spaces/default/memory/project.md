@@ -120,3 +120,6 @@
 
 ## Provisioning
 - Provisioning inventoryでは実在対象とN/A対象を分離し、N/Aには人間決定・承認scope・上流成果物等の反証可能な不存在/非適用根拠を併記する。N/Aを未検証やPASSと表現せず、実在resourceや必須検査の省略理由にしない。 (learned 2026-07-12) <!-- cid:environment-provisioning:c3 -->
+
+## Observability
+- Execution timeoutや処理上限は個別実行の停止guardでありservice SLOではない。Service SLOは実在する利用者向けservice/SLI・観測期間・目標値に基づく契約とし、runtime service/SLI不存在時にtimeoutや単発run成功をservice SLO達成へ昇格させず、根拠付きN/A/PENDINGとする。実在service SLOの省略根拠にはしない。 (learned 2026-07-12) <!-- cid:observability-setup:c3 -->
