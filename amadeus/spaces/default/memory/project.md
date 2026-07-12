@@ -22,6 +22,7 @@
 
 <!-- プロジェクト固有の上書き。 -->
 
+- Version-controlled append-only生成物の誤りは、履歴rewrite・force push・branch protection緩和をせず、人間承認付き通常PRのgit revertで回復する。collector/schema defectなら修正test/codeとrevertを同一PRにし、一時入力異常のみ単独revertを許容する。conflict時は停止する。秘密漏洩等の緊急削除は別手順で扱う。 (learned 2026-07-12) <!-- cid:deployment-pipeline:c3 -->
 ## Code Style
 
 <!-- プロジェクト固有の上書き。 -->
