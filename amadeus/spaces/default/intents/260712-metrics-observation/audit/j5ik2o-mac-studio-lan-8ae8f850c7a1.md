@@ -179,3 +179,15 @@
 **User Input**: Approve — DP-Q0 計画未決なし確認(6/6 全会一致: walking-skeleton 既定正適用・Bolt 1 単独ゲート→ラダー→Bolt 2→3 直列、run-tests.ts 交差の c6 再評価内蔵、外部依存新設ゼロ)。成果物5点実在確認済み(UG yaml DAG は 52756728a で遡及是正・diary 透明記録)。Learnings: E-MO-DP 裁定 §13 採用0件で確定(6/6 — 既定適用と行き違い是正の執行記録)
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-12T06:28:27Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: functional-design
+**Issuer Space**: default
+**Issuer Intent**: 260709-framework-repair-batch
+**Issuer Shard**: j5ik2o-mac-studio-lan-8ae8f850c7a1.md
+**Issuer Human Ts**: 2026-07-12T05:46:52Z
+**User Input**: Approve — FD 完了確認(6/6 全会一致: architecture-reviewer iteration 1 NOT-READY 5件→iteration 2 残2件→処方 verbatim 是正を6名独立 grep で確認、house 様式準拠・責務分界・ループ防止設計)。Learnings: E-MO-FD 裁定 §13 採用0件で確定(6/6 — F4/c3 再発は既存 cid 実例、PM 頻度材料へ申告)
+
+---
