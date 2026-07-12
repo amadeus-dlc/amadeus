@@ -1455,3 +1455,11 @@
 **Stage**: functional-design
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-12T06:17:04Z
+**Event**: WORKFLOW_PARKED
+**Stage**: functional-design
+**Timestamp**: 2026-07-12T06:17:04Z
+
+---
