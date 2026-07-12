@@ -31,6 +31,8 @@
 ## Runtime State
 - **Revision Count**: 0
 
+- **Parked**: 2026-07-12T05:35:14Z
+- **Parked At Stage**: reverse-engineering
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -91,7 +93,7 @@ Per unit: [TBD]
 - **Current Stage**: reverse-engineering
 - **Next Stage**: practices-discovery
 - **Status**: Running
-- **Last Updated**: 2026-07-12T05:34:48Z
+- **Last Updated**: 2026-07-12T05:35:14Z
 
 ## Session Resume Point
 - **Last Completed Stage**: approval-handoff
