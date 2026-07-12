@@ -358,3 +358,11 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-12T04:52:23Z
+**Event**: WORKFLOW_PARKED
+**Stage**: market-research
+**Timestamp**: 2026-07-12T04:52:23Z
+
+---
