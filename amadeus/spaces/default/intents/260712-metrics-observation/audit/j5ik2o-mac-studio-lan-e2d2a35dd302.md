@@ -366,3 +366,216 @@
 **Timestamp**: 2026-07-12T04:52:23Z
 
 ---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-12T04:55:39Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-12T04:55:39Z
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-12T04:56:53Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/engineer-2/amadeus/spaces/default/intents/260712-metrics-observation/ideation/market-research/competitive-analysis.md
+**Context**: ideation > market-research > competitive-analysis.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-12T04:56:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 96aafa54
+**Sensor ID**: required-sections
+**Stage slug**: market-research
+**Output path**: amadeus/spaces/default/intents/260712-metrics-observation/ideation/market-research/competitive-analysis.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-12T04:56:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 96aafa54
+**Sensor ID**: required-sections
+**Stage slug**: market-research
+**Output path**: amadeus/spaces/default/intents/260712-metrics-observation/ideation/market-research/competitive-analysis.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-12T04:56:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0eee4f0f
+**Sensor ID**: upstream-coverage
+**Stage slug**: market-research
+**Output path**: amadeus/spaces/default/intents/260712-metrics-observation/ideation/market-research/competitive-analysis.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-12T04:56:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0eee4f0f
+**Sensor ID**: upstream-coverage
+**Stage slug**: market-research
+**Output path**: amadeus/spaces/default/intents/260712-metrics-observation/ideation/market-research/competitive-analysis.md
+**Duration ms**: 40
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-12T04:57:27Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/engineer-2/amadeus/spaces/default/intents/260712-metrics-observation/ideation/market-research/market-trends.md
+**Context**: ideation > market-research > market-trends.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-12T04:57:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: a571bf53
+**Sensor ID**: required-sections
+**Stage slug**: market-research
+**Output path**: amadeus/spaces/default/intents/260712-metrics-observation/ideation/market-research/market-trends.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-12T04:57:27Z
+**Event**: SENSOR_PASSED
+**Fire id**: a571bf53
+**Sensor ID**: required-sections
+**Stage slug**: market-research
+**Output path**: amadeus/spaces/default/intents/260712-metrics-observation/ideation/market-research/market-trends.md
+**Duration ms**: 44
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-12T04:57:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: 243cb724
+**Sensor ID**: upstream-coverage
+**Stage slug**: market-research
+**Output path**: amadeus/spaces/default/intents/260712-metrics-observation/ideation/market-research/market-trends.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-12T04:57:27Z
+**Event**: SENSOR_PASSED
+**Fire id**: 243cb724
+**Sensor ID**: upstream-coverage
+**Stage slug**: market-research
+**Output path**: amadeus/spaces/default/intents/260712-metrics-observation/ideation/market-research/market-trends.md
+**Duration ms**: 42
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-12T04:57:57Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/engineer-2/amadeus/spaces/default/intents/260712-metrics-observation/ideation/market-research/build-vs-buy.md
+**Context**: ideation > market-research > build-vs-buy.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-12T04:57:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3b12b769
+**Sensor ID**: required-sections
+**Stage slug**: market-research
+**Output path**: amadeus/spaces/default/intents/260712-metrics-observation/ideation/market-research/build-vs-buy.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-12T04:57:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3b12b769
+**Sensor ID**: required-sections
+**Stage slug**: market-research
+**Output path**: amadeus/spaces/default/intents/260712-metrics-observation/ideation/market-research/build-vs-buy.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-12T04:57:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7089ce06
+**Sensor ID**: upstream-coverage
+**Stage slug**: market-research
+**Output path**: amadeus/spaces/default/intents/260712-metrics-observation/ideation/market-research/build-vs-buy.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-12T04:57:57Z
+**Event**: SENSOR_FAILED
+**Fire id**: 7089ce06
+**Sensor ID**: upstream-coverage
+**Stage slug**: market-research
+**Output path**: amadeus/spaces/default/intents/260712-metrics-observation/ideation/market-research/build-vs-buy.md
+**Detail path**: amadeus/spaces/default/intents/260712-metrics-observation/.amadeus-sensors/market-research/upstream-coverage-7089ce06.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-12T04:58:20Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/engineer-2/amadeus/spaces/default/intents/260712-metrics-observation/ideation/market-research/market-research-questions.md
+**Context**: ideation > market-research > market-research-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-12T04:58:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: e58d2a83
+**Sensor ID**: required-sections
+**Stage slug**: market-research
+**Output path**: amadeus/spaces/default/intents/260712-metrics-observation/ideation/market-research/market-research-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-12T04:58:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: e58d2a83
+**Sensor ID**: required-sections
+**Stage slug**: market-research
+**Output path**: amadeus/spaces/default/intents/260712-metrics-observation/ideation/market-research/market-research-questions.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-12T04:58:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3cb86577
+**Sensor ID**: upstream-coverage
+**Stage slug**: market-research
+**Output path**: amadeus/spaces/default/intents/260712-metrics-observation/ideation/market-research/market-research-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-12T04:58:20Z
+**Event**: SENSOR_FAILED
+**Fire id**: 3cb86577
+**Sensor ID**: upstream-coverage
+**Stage slug**: market-research
+**Output path**: amadeus/spaces/default/intents/260712-metrics-observation/ideation/market-research/market-research-questions.md
+**Detail path**: amadeus/spaces/default/intents/260712-metrics-observation/.amadeus-sensors/market-research/upstream-coverage-3cb86577.md
+**Findings count**: 1
+
+---
