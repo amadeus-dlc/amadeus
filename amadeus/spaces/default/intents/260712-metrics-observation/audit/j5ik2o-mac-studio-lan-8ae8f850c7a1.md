@@ -191,3 +191,15 @@
 **User Input**: Approve — FD 完了確認(6/6 全会一致: architecture-reviewer iteration 1 NOT-READY 5件→iteration 2 残2件→処方 verbatim 是正を6名独立 grep で確認、house 様式準拠・責務分界・ループ防止設計)。Learnings: E-MO-FD 裁定 §13 採用0件で確定(6/6 — F4/c3 再発は既存 cid 実例、PM 頻度材料へ申告)
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-12T06:40:52Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: nfr-requirements
+**Issuer Space**: default
+**Issuer Intent**: 260709-framework-repair-batch
+**Issuer Shard**: j5ik2o-mac-studio-lan-8ae8f850c7a1.md
+**Issuer Human Ts**: 2026-07-12T06:36:35Z
+**User Input**: Approve — NFR 完了確認(6/6、GoA 勾配 1-2: reviewer iteration 2消費後の残2件是正を6名独立 grep 確認 — t222 具体名義務の U3 伝播・t152 :47-51 文字列検査様式)。留保転記: e2=是正コミット前の grep 棚卸しセルフチェック、e6=文字列検査様式の将来メンテ留意。Learnings: E-MO-NFR 裁定 §13 採用0件で確定(6/6 — 既存 cid 違反実例は PM 頻度材料)
+
+---
