@@ -6,7 +6,7 @@
 - **P-2: CI 総時間の実質非増** — snapshot job は既存 job と並行しない後段(needs: coverage)だが、ci-success 集約外(U3 設計判断)のため PR のクリティカルパスに影響ゼロ。main push run の壁時計増分は P-1 上限内。**合否の強制メカニズム(U3 で新設)**: ci.yml のテキストに対し (a) `ci-success.needs` に metrics-snapshot が含まれない (b) metrics-snapshot job に `if: push && main` ガードが存在する、の2点をアサートする unit テスト `tests/unit/t222-ci-snapshot-wiring.test.ts` を U3 で新設する(方式 = t152-windows-portability :47-51 の readFileSync+toContain 文字列検査様式 — 構造 YAML パーサの新規依存は導入しない。U3 functional-design business-rules #4 に伝播済み)。着地後の実 PR run で「metrics-snapshot job が PR に現れない」ことの実測確認も code-summary に記録する。
 - **P-3: 手動 `--write` はローカルで 10 秒以内**(強制メカニズム = bun test の per-test timeout 引数に 10_000 を指定した統合テスト — t76 の 30000 指定と同じ既習様式。lizard フル計測が支配項で、超過はテスト赤として検出)。
 
-## Review
+## Review(iteration 1 時点の記録 — 後続の是正+E-MO-NFR 6/6 承認により superseded。履歴として保存)
 
 **Verdict:** NOT-READY
 **Reviewer:** architecture-reviewer (delegated)
