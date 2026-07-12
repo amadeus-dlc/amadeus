@@ -737,3 +737,11 @@
 **Stage**: scope-definition
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-12T05:10:21Z
+**Event**: WORKFLOW_PARKED
+**Stage**: scope-definition
+**Timestamp**: 2026-07-12T05:10:21Z
+
+---
