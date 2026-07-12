@@ -116,3 +116,6 @@
 ## CI/CD
 - Snapshot jobはPR blocking集約外とするが、main上のjob失敗は赤く可視化する。適用時はjobの非blocking目的とloud-fail契約を成果物へ明記し、一般の必須CI gateを除外する根拠にはしない。 (learned 2026-07-12) <!-- cid:ci-pipeline:c3 -->
 - Code Generationで既存workflowへ実装済みなら、CI Pipelineで新規workflowを二重生成せず、既存workflowを唯一の正本として文書化・検証する。 (learned 2026-07-12) <!-- cid:ci-pipeline:c2 -->
+
+## Provisioning
+- Provisioning inventoryでは実在対象とN/A対象を分離し、N/Aには人間決定・承認scope・上流成果物等の反証可能な不存在/非適用根拠を併記する。N/Aを未検証やPASSと表現せず、実在resourceや必須検査の省略理由にしない。 (learned 2026-07-12) <!-- cid:environment-provisioning:c3 -->
