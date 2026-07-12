@@ -1463,3 +1463,27 @@
 **Timestamp**: 2026-07-12T06:17:04Z
 
 ---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-12T06:17:31Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-12T06:17:31Z
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-12T06:17:31Z
+**Event**: WORKFLOW_PARKED
+**Stage**: functional-design
+**Timestamp**: 2026-07-12T06:17:31Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-12T06:22:08Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: afea799a3f40bca88
+**Message**: ## Review\n\n**Verdict: NOT-READY**\n\n対象3ユニット(run-tests-totals-seam / metrics-snapshot-cli / ci-snapshot-job)の functional-design を精査した。house 様式準拠(class-free・判別ユニオン Result・スマートコンストラクタ)と後方互換シムの不在は問題なし。ただし 
+
+---

@@ -18,5 +18,5 @@ collect のみ実行し書き込みなし。verdict CHECK OK/FAILED。
 - coverage: coverage/coverage-totals.json を読む(不在 = fault)
 - loc: git ls-files + 行数走査(core/scripts/tests 別)
 - tests: coverage/tests-totals.json を読む(U1 契約4キー、不在 = fault)
-- test_pyramid: test-size 分類器で tier×size 集計
+- test_pyramid: **classifyTestSize(tests/lib/test-size.ts:49)による静的走査**(テストファイルを glob して tier×size を自己完結で集計 — reviewer F5 の二択のうち静的側。test-size-report.json(動的・部分実行で不完全)は読まない: 実行有無への依存と追加 fault 契約を作らないため)
 - dist_size: dist/ 再帰バイト合計
