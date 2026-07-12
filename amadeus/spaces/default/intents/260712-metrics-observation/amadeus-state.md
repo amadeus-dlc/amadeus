@@ -31,6 +31,7 @@
 ## Runtime State
 - **Revision Count**: 0
 
+- **Skeleton Stance**: scope-dependent
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -69,7 +70,7 @@
 
 ### CONSTRUCTION PHASE
 Per unit: [TBD]
-- [-] functional-design — EXECUTE
+- [?] functional-design — EXECUTE
 - [ ] nfr-requirements — EXECUTE
 - [ ] nfr-design — EXECUTE
 - [ ] infrastructure-design — EXECUTE
@@ -91,7 +92,7 @@ Per unit: [TBD]
 - **Current Stage**: functional-design
 - **Next Stage**: nfr-requirements
 - **Status**: Running
-- **Last Updated**: 2026-07-12T06:14:58Z
+- **Last Updated**: 2026-07-12T06:16:37Z
 
 ## Session Resume Point
 - **Last Completed Stage**: delivery-planning
