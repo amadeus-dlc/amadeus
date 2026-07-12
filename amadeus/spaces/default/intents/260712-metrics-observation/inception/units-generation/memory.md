@@ -14,3 +14,4 @@
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
 
 - 2026-07-12T06:16:00Z — Interpretation: 3ユニット(U1 seam / U2 CLI 本体 / U3 CI 配線)。U1∥U2 は契約固定+ファイル非交差で並行可、U3 は U2 直列。ストーリー全7がマップ済みで孤児なし。
+- 2026-07-12T06:14:00Z — Deviation: required-sections センサーが要求する fenced yaml DAG が初版に欠落(e6 実測指摘)。leader の approve 前追記指示と当方の approve 実行が行き違い(approve 06:10 台 vs FYI 06:11:02Z)、遡及追記で是正し checkpoint push。センサーは advisory のためゲート効力に影響なしだが、監査透明性のため経緯を本エントリに記録。
