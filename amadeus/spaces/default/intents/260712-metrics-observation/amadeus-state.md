@@ -64,7 +64,7 @@
 - [x] user-stories — EXECUTE
 - [x] refined-mockups — EXECUTE
 - [x] application-design — EXECUTE
-- [-] units-generation — EXECUTE
+- [?] units-generation — EXECUTE
 - [ ] delivery-planning — EXECUTE
 
 ### CONSTRUCTION PHASE
@@ -91,7 +91,7 @@ Per unit: [TBD]
 - **Current Stage**: units-generation
 - **Next Stage**: delivery-planning
 - **Status**: Running
-- **Last Updated**: 2026-07-12T06:08:08Z
+- **Last Updated**: 2026-07-12T06:08:52Z
 
 ## Session Resume Point
 - **Last Completed Stage**: application-design
