@@ -23,6 +23,7 @@
 <!-- プロジェクト固有の上書き。 -->
 
 - Version-controlled append-only生成物の誤りは、履歴rewrite・force push・branch protection緩和をせず、人間承認付き通常PRのgit revertで回復する。collector/schema defectなら修正test/codeとrevertを同一PRにし、一時入力異常のみ単独revertを許容する。conflict時は停止する。秘密漏洩等の緊急削除は別手順で扱う。 (learned 2026-07-12) <!-- cid:deployment-pipeline:c3 -->
+- Deployment Executionの結果は、N/A（反証可能な不存在/非適用根拠あり）、NOT EXECUTED（対象/操作を認識したが禁止または未実施。理由を併記）、PENDING（後続の実行・観測条件待ち。閉包条件を併記）、PASS（実行証跡に基づく検証成功）を相互代用せず分離する。必要な外部操作を省略した完了根拠には使わない。 (learned 2026-07-12) <!-- cid:deployment-execution:c3 -->
 ## Code Style
 
 <!-- プロジェクト固有の上書き。 -->
