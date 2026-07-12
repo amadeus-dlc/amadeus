@@ -1002,6 +1002,7 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "unit/t82-hold-merge-invariant.test.ts",
     "unit/t83-doctor-orphan-worktree.test.ts",
     "unit/t211-doctor-shell-3state.test.ts",
+    "unit/t221-doctor-phase-progress.test.ts",
     "unit/t84.test.ts",
     "unit/t85.test.ts",
     "unit/t94-sensor-fire-hook.test.ts",

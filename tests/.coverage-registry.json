@@ -4885,6 +4885,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/unit/t221-doctor-phase-progress.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t27.test.ts",
           "mechanism": "cli"
         },
