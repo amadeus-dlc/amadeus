@@ -71,3 +71,15 @@
 **User Input**: Approve — RM-Q0 モック未決なし確認(6/6 全会一致: PM4-2 充足 — verdict 3分岐/exit code/アトミック書き込み契約が正準、JSON 例示は design 委譲、complexity-gate 既習様式踏襲を file:line 対照)。成果物3点(wireframes/user-flow/questions)実在確認済み(checkpoint 32df746c0)。Learnings: E-MO-RM 裁定 §13 採用0件で確定(6/6 — PM4-2 執行事例で新規一般化なし)
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-12T05:25:19Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: approval-handoff
+**Issuer Space**: default
+**Issuer Intent**: 260709-framework-repair-batch
+**Issuer Shard**: j5ik2o-mac-studio-lan-8ae8f850c7a1.md
+**Issuer Human Ts**: 2026-07-12T04:47:57Z
+**User Input**: Approve — AH-Q0 ハンドオフ未決なし確認(6/6 全会一致: 結論5点上流遡及・委譲台帳6点・リスク4件代替緩和併記 c1・decision-log evidence-split・phase-check c2 様式、全票独立実測)。成果物3点+phase-check-ideation 実在確認済み(checkpoint f6369e789)。Learnings: E-MO-AH 裁定 §13 採用0件で確定(6/6 — 集約・様式執行事例で新規一般化なし)
+
+---
