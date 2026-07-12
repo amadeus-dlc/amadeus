@@ -1356,3 +1356,11 @@
 **Stage**: units-generation
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-12T06:09:02Z
+**Event**: WORKFLOW_PARKED
+**Stage**: units-generation
+**Timestamp**: 2026-07-12T06:09:02Z
+
+---
