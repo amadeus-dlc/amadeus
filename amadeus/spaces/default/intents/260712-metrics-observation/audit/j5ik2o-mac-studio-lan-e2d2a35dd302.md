@@ -306,3 +306,55 @@
 **Stage**: intent-capture
 
 ---
+
+## Question Answered
+**Timestamp**: 2026-07-12T04:45:44Z
+**Event**: QUESTION_ANSWERED
+**Stage**: intent-capture
+**Details**: 全5問 A 採用(既決照合)。出典: Issue #921 本文(クロスレビュー e4/e5 実在確認済み)+leader ディスパッチ 2026-07-12T04:33:32Z(ユーザー承認)+#734 選挙前例。未決の設計判断(メトリクス選定・保存形式・トリガー・可視化要否)は requirements/design へ委譲。delegate 44a5250c(answer トラック)を根拠に記録
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-12T04:45:53Z
+**Event**: GATE_APPROVED
+**Stage**: intent-capture
+**User Input**: Approve — delegate 44a5250c(E-MO-IC 裁定・学習0件、leader 発行)による委任承認
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-12T04:45:53Z
+**Event**: STAGE_COMPLETED
+**Stage**: intent-capture
+**Details**: Stage Intent Capture approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-12T04:45:53Z
+**Event**: STAGE_STARTED
+**Stage**: market-research
+**Agent**: amadeus-product-agent
+
+---
+
+## Session End
+**Timestamp**: 2026-07-12T04:47:51Z
+**Event**: SESSION_ENDED
+**Reason**: other
+
+---
+
+## Session Resume
+**Timestamp**: 2026-07-12T04:47:58Z
+**Event**: SESSION_RESUMED
+**Source**: resume
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-12T04:47:58Z
+**Event**: HUMAN_TURN
+
+---
