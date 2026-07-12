@@ -53,6 +53,31 @@ const managedFiles = new Map<string, Buffer>([
   ["CLAUDE.md", Buffer.from(CLAUDE_MD_CONTENT, "utf-8")],
 ]);
 
+const CODEX_AGENTS_MARKER = "# AI-DLC on Codex CLI\n";
+const AMADEUS_IMPORT = "@.agents/rules/amadeus.md\n\n";
+
+// Preserve the hand-authored project guidance before the Codex onboarding
+// marker, while replacing the generated suffix from dist on every promotion.
+// The root already imports the Amadeus rules, so strip the dist copy to avoid
+// loading the same method tree twice.
+export function composeRootAgents(existing: Buffer, codexDist: Buffer): Buffer {
+  const current = existing.toString("utf-8");
+  const generated = codexDist.toString("utf-8");
+  const markerAt = current.indexOf(CODEX_AGENTS_MARKER);
+  let prefix = markerAt >= 0 ? current.slice(0, markerAt) : `${current.trimEnd()}\n\n`;
+  let hasImport = false;
+  prefix = prefix.replaceAll(AMADEUS_IMPORT, () => {
+    if (hasImport) return "";
+    hasImport = true;
+    return AMADEUS_IMPORT;
+  });
+  const suffix = hasImport && generated.startsWith(AMADEUS_IMPORT)
+    ? generated.slice(AMADEUS_IMPORT.length)
+    : generated;
+  const separator = prefix.trimEnd().length > 0 ? "\n\n" : "";
+  return Buffer.from(`${prefix.trimEnd()}${separator}${suffix}`, "utf-8");
+}
+
 const preserved = [
   ".claude/CLAUDE.md",
   ".claude/settings.json",
@@ -116,7 +141,7 @@ function printUsage(): void {
       "usage: bun scripts/promote-self.ts [--check|--apply] [--no-build]",
       "",
       "  --check     verify project-local self install matches generated output (default)",
-      "  --apply     write .claude/, .codex/, .agents/, and CLAUDE.md",
+      "  --apply     write .claude/, .codex/, .agents/, AGENTS.md, and CLAUDE.md",
       "  --no-build  skip the package.ts freshness step",
     ].join("\n"),
   );
@@ -172,6 +197,11 @@ function buildExpected(repoRoot: string): Map<string, Buffer> {
       expected.set(dstRel, readFileSync(file));
     }
   }
+  const rootAgents = join(repoRoot, "AGENTS.md");
+  const distAgents = join(repoRoot, "dist", "codex", "AGENTS.md");
+  if (!existsSync(distAgents)) throw new Error("missing source file: dist/codex/AGENTS.md");
+  const existing = existsSync(rootAgents) ? readFileSync(rootAgents) : Buffer.alloc(0);
+  expected.set("AGENTS.md", composeRootAgents(existing, readFileSync(distAgents)));
   return expected;
 }
 
