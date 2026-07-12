@@ -26,7 +26,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, lstatSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { promoteSelfMain } from "../../scripts/promote-self.ts";
+import { composeRootAgents, promoteSelfMain } from "../../scripts/promote-self.ts";
 
 let root: string;
 
@@ -42,6 +42,8 @@ beforeEach(() => {
   write("dist/claude/.claude/tools/a.txt", "alpha\n");
   write("dist/codex/.codex/b.txt", "beta\n");
   write("dist/codex/.agents/c.txt", "gamma\n");
+  write("dist/codex/AGENTS.md", "@.agents/rules/amadeus.md\n\n# AI-DLC on Codex CLI\n\ngenerated\n");
+  write("AGENTS.md", "@.agents/rules/amadeus.md\n\n# Project rules\n");
   // Materialize an in-sync self install (also creates CLAUDE.md + cursor).
   expect(promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
   expect(promoteSelfMain(["--no-build"], root)).toBe(0);
@@ -60,6 +62,20 @@ const plantPreservedDangling = (): string => {
 };
 
 describe("t209 promote-self dangling-symlink resilience", () => {
+  test("root AGENTS keeps project guidance and replaces the generated suffix", () => {
+    const got = composeRootAgents(
+      Buffer.from("@.agents/rules/amadeus.md\n\n# Project rules\n\n# AI-DLC on Codex CLI\n\nstale\n"),
+      Buffer.from("@.agents/rules/amadeus.md\n\n# AI-DLC on Codex CLI\n\nfresh\n"),
+    ).toString("utf-8");
+    expect(got).toBe("@.agents/rules/amadeus.md\n\n# Project rules\n\n# AI-DLC on Codex CLI\n\nfresh\n");
+    expect(got.match(/@\.agents\/rules\/amadeus\.md/g)).toHaveLength(1);
+  });
+
+  test("root AGENTS keeps the dist import when no project guidance exists", () => {
+    const dist = Buffer.from("@.agents/rules/amadeus.md\n\n# AI-DLC on Codex CLI\n\nfresh\n");
+    expect(composeRootAgents(Buffer.alloc(0), dist)).toEqual(dist);
+  });
+
   test("--check passes with a dangling symlink under a preserved dir", () => {
     plantPreservedDangling();
     expect(promoteSelfMain(["--no-build"], root)).toBe(0);
