@@ -579,3 +579,11 @@
 **Findings count**: 1
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-12T04:59:13Z
+**Event**: WORKFLOW_PARKED
+**Stage**: market-research
+**Timestamp**: 2026-07-12T04:59:13Z
+
+---
