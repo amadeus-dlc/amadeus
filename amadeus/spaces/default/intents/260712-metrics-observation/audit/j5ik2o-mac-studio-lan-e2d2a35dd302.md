@@ -1747,3 +1747,11 @@
 **Stage**: nfr-design
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-12T06:51:33Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-design
+**Timestamp**: 2026-07-12T06:51:33Z
+
+---
