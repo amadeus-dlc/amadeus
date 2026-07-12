@@ -42,6 +42,76 @@ machine-checked index of what each test covers lives in
 from the `covers:` headers on disk), not in a hand-maintained table here — see
 [Test Registry](#test-registry) below.
 
+## Test Size and Layer Purity
+
+Two **independent** axes describe every test. Keeping them separate is what
+lets the suite stay fast without lying about coverage.
+
+- **Scope / tier** — the directory a test lives in (`smoke`, `unit`,
+  `integration`, `e2e`). It answers *how much of the system is wired together*.
+- **Size** — a test's dynamic runtime behaviour (`small`, `medium`, `large`):
+  does it stay in-process, or does it spawn a process, touch the filesystem,
+  wait on a timer, or open a socket. Size — **not** the directory — is the true
+  rung of the test pyramid (t_wada; Google SWE ch. 14).
+
+**Tier responsibilities (current).**
+
+- **smoke** — structural fail-fast gates: files exist, permissions, settings,
+  naming. Run on every local change; abort the run early on breakage.
+- **unit** — pure, in-process contracts: stage frontmatter, graph consistency,
+  hook logic, classifier/gate seams driven by direct function calls.
+- **integration** — cross-component contracts and live stage/CLI utilities with
+  deterministic fixtures.
+- **e2e** — full lifecycle, worktree, and rendered-terminal journeys, run before
+  releases.
+
+**Size is derived, not declared.** A file's size is computed by
+`classifyTestSize` in [`tests/lib/test-size.ts`](../../tests/lib/test-size.ts)
+— a deterministic static-signal proxy that scans the file's own source (after
+stripping comments) for four signal classes:
+
+| Signal class | Smallest size it forces |
+| --- | --- |
+| network (`node:net/http/…`, `WebSocket`, `fetch`, `.listen`) | large |
+| process spawn (`child_process`, `spawn*`, `Bun.spawn`, `node-pty`) | medium |
+| filesystem (`node:fs`, `readFileSync`, `mkdtempSync`, …) | medium |
+| timer / wait (`setTimeout`, `setInterval`, `Bun.sleep`) | medium |
+
+A file with none of these is `small`. The size ordering (`SIZE_ORDER`), the
+signal patterns, and the advisory wall-clock bands (`WALL_CLOCK_BANDS`, used by
+the runner's dynamic drift report) are all defined **once** in that module —
+this page deliberately does not restate the numeric thresholds; the code is the
+single source of truth. A file MAY pin its intended size with a `// size:`
+header, which the drift guard checks against the measured size.
+
+**Layer × size purity.** Each tier has a maximum size it may contain:
+
+| Tier | Max size | Rule |
+| --- | --- | --- |
+| unit | small | a `unit` test must stay in-process |
+| integration | medium | spawns / fs touches are expected; no network |
+| e2e | large | no ceiling |
+| smoke | — (excluded) | sized **out** of the pyramid axis |
+
+`smoke` is excluded on purpose: its files are structural gates that read files
+and spawn the runner to assert existence, settings, and permissions, so they
+are inherently `medium`. Sizing them out — rather than grandfathering them —
+keeps the axis honest.
+
+**Enforcement.** The rule above is not just prose. `tests/unit/t-test-size-drift.test.ts`
+measures every test file and fails CI when a test exceeds its tier's max size.
+Known, not-yet-remediated `unit`×non-small files are grandfathered in a
+generated ratchet allowlist (`tests/.test-size-purity-allowlist.json`); the
+allowlist must exactly equal the live violation set, so it can only **shrink**
+as files are remediated — a new non-small `unit` test, or a padded allowlist,
+turns the guard red. The allowlist is generated from `classifyTestSize`, never
+hand-authored.
+
+> **Refs.** The derived-size scheme and the purity ratchet come from #684 (the
+> test-pyramid initiative) and the #837 complexity-gate baseline pattern; the
+> FR-3 smoke-exclusion ruling is recorded in the intent's requirements. History
+> lives there — this section states only the current contract.
+
 ## Layer 1: Protocol (every change, no LLM, seconds)
 
 Verifies the orchestrator's structural correctness without invoking the LLM. If these pass, the protocol is internally consistent — stages reference valid files, inputs/outputs chain correctly, routing tables match stage files.
