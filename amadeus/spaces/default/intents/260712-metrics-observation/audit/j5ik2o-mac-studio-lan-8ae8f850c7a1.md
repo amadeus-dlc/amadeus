@@ -95,3 +95,15 @@
 **User Input**: Approve — RE 完了確認(6/6 全会一致: E-L63 明文則の模範執行 base=13598b752 祖先性判定表・距離最小56、seam 不在ギャップ(printSummary:899)は functional-design へ留保保存)。成果物実在確認済み(checkpoint fae00cf84)。Learnings: E-MO-RE 裁定 §13 採用0件で確定(6/6 — E-L63/c1/c3/E-L65 の執行事例で新規一般化なし)
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-12T05:44:39Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: practices-discovery
+**Issuer Space**: default
+**Issuer Intent**: 260709-framework-repair-batch
+**Issuer Shard**: j5ik2o-mac-studio-lan-8ae8f850c7a1.md
+**Issuer Human Ts**: 2026-07-12T04:47:57Z
+**User Input**: Approve — PD-Q0 ギャップ0・昇格0確認(6/6 全会一致: c1 証跡代用/c2 部分ドラフト執行、memory 層は本日ノルム PR 群で最新、先行 affirm 見送りは P2 実測主義で E-L62 留保)。成果物4点実在確認済み(checkpoint 9d497c450)。Learnings: E-MO-PD 裁定 §13 採用0件で確定(6/6 — c1/c2/P2 執行事例で新規一般化なし)
+
+---
