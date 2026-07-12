@@ -131,3 +131,15 @@
 **User Input**: Approve — US-Q0 未決なし確認(6/6 全会一致: user-stories:c1 の3エピック分割、全 AC Given/When/Then、FR-1〜6 網羅、FR-6 は開発者向け工程契約としてストーリー外整理)。成果物3点実在確認済み。Learnings: E-MO-US 裁定 §13 採用0件で確定(6/6 — c1 執行事例で新規一般化なし)
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-12T06:03:51Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: refined-mockups
+**Issuer Space**: default
+**Issuer Intent**: 260709-framework-repair-batch
+**Issuer Shard**: j5ik2o-mac-studio-lan-8ae8f850c7a1.md
+**Issuer Human Ts**: 2026-07-12T05:46:52Z
+**User Input**: Approve — RM2-Q0 未決なし確認(6/6 全会一致: 6 collector 契約精緻化・RA13 申し送り解消・no-help-probe/c1/アトミック契約の既決教訓適用)。成果物5点実在確認済み(questions は 49d9c636a で宣言名補完)。Learnings: E-MO-RM2 裁定 §13 採用0件で確定(6/6 — 既習様式・既存教訓の適用のみ)
+
+---
