@@ -35,3 +35,15 @@
 **User Input**: Approve — FS-Q0 未決質問ゼロ確認(6/6 全会一致: 外部前提5点の実測裏取りで feasibility:c1 充足、設計判断は #921 委譲の継承)。成果物4点(assessment/constraint-register/raid-log/questions)実在確認済み(checkpoint 770542f7c)。Learnings: E-MO-FS 裁定 §13 採用0件で確定(6/6 — c1/c2 執行+既存 cid ヒヤリハット自己是正で新規一般化なし)
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-12T05:12:41Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: scope-definition
+**Issuer Space**: default
+**Issuer Intent**: 260709-framework-repair-batch
+**Issuer Shard**: j5ik2o-mac-studio-lan-8ae8f850c7a1.md
+**Issuer Human Ts**: 2026-07-12T04:47:57Z
+**User Input**: Approve — SD-Q0 境界未決なし確認(6/6 全会一致: In/Out 全項が上流既決へ出典遡及、成功基準4点は測定可能で S2 検証劇場ゼロ/S3 loud fail を含む)。成果物3点(scope-document/intent-backlog/questions)実在確認済み(checkpoint 494232381)。Learnings: E-MO-SD 裁定 §13 採用0件で確定(6/6 — 導出・様式定着の執行事例で新規一般化なし)
+
+---
