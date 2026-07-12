@@ -143,3 +143,15 @@
 **User Input**: Approve — RM2-Q0 未決なし確認(6/6 全会一致: 6 collector 契約精緻化・RA13 申し送り解消・no-help-probe/c1/アトミック契約の既決教訓適用)。成果物5点実在確認済み(questions は 49d9c636a で宣言名補完)。Learnings: E-MO-RM2 裁定 §13 採用0件で確定(6/6 — 既習様式・既存教訓の適用のみ)
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-12T06:07:47Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: application-design
+**Issuer Space**: default
+**Issuer Intent**: 260709-framework-repair-batch
+**Issuer Shard**: j5ik2o-mac-studio-lan-8ae8f850c7a1.md
+**Issuer Human Ts**: 2026-07-12T05:46:52Z
+**User Input**: Approve — AD-Q0 未決なし確認(6/6 全会一致: ADR D1-D4 全件代替案2つ以上、D2 既存 CI 出力再読で CI 時間非増を構造担保、D4 判別ユニオン Result 配列駆動 house 様式、循環なし)。成果物5点実在確認済み。Learnings: E-MO-AD 裁定 §13 採用0件で確定(6/6 — 既決様式・ガードレールの設計適用のみ)
+
+---
