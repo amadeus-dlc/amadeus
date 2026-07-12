@@ -13,7 +13,9 @@ import type { OnboardingFills } from "../../../../scripts/onboarding.ts";
 const fills: OnboardingFills = {
   invoke: "$amadeus",
   slots: {
-    title_block: `# AI-DLC on Codex CLI
+    title_block: `@.agents/rules/amadeus.md
+
+# AI-DLC on Codex CLI
 
 This project uses AI-DLC (AI-Driven Development Life Cycle) under the OpenAI
 Codex CLI harness (minimum version 0.139.0). Invoke the orchestrator skill with

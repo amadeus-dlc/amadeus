@@ -222,6 +222,7 @@ export default function emit(ctx: EmitContext): EmitResult {
   const { coreRoot, distRoot, substituteToken } = ctx;
   const DCODEX = join(distRoot, ".codex"); // dist/codex/.codex
   const SKILLS_DST = join(distRoot, ".agents", "skills");
+  const RULES_DST = join(distRoot, ".agents", "rules");
 
   // The codex anchored transform: token/prefix substitution (.codex) THEN the
   // amadeus-rules rename — mirrors the packager's transform for prose the emit
@@ -299,6 +300,10 @@ export default function emit(ctx: EmitContext): EmitResult {
   emissions.push({ path: join(DCODEX, "rules", "default.rules"), content: emitDefaultRules });
   emissions.push({ path: join(DCODEX, "trust-seed.toml"), content: emitTrustSeed });
   emissions.push({ path: join(distRoot, "AGENTS.md"), content: emitAgentsMd });
+  emissions.push({
+    path: join(RULES_DST, "amadeus.md"),
+    content: () => ctx.readHarnessSource("rules-amadeus.md"),
+  });
 
   // 13 agent TOMLs from core/agents/*.md
   const agentsDir = join(coreRoot, "agents");
