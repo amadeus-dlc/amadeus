@@ -159,5 +159,12 @@
     "dirName": "260711-docs-repair-batch9",
     "scope": "bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019f549d-27db-7284-b7fe-b74314933049",
+    "slug": "metrics-observation",
+    "dirName": "260712-metrics-observation",
+    "scope": "feature",
+    "status": "in-flight"
   }
 ]
