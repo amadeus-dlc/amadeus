@@ -119,3 +119,15 @@
 **User Input**: Approve — requirements 完了確認(6/6 全会一致: E-MO-RA Q1=A 裁定の evidence-split 記入、委譲6点全消化、product-lead READY 出典11件独立再確認・捏造ゼロ)。Learnings: E-MO-RA13 裁定 §13 採用0件で確定(6/6 — E-DC-Q0 前例適用・選挙プロトコル執行・申し送り記録の執行事例、所見2点は nfr/design へ申し送り)
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-12T06:01:13Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: user-stories
+**Issuer Space**: default
+**Issuer Intent**: 260709-framework-repair-batch
+**Issuer Shard**: j5ik2o-mac-studio-lan-8ae8f850c7a1.md
+**Issuer Human Ts**: 2026-07-12T05:46:52Z
+**User Input**: Approve — US-Q0 未決なし確認(6/6 全会一致: user-stories:c1 の3エピック分割、全 AC Given/When/Then、FR-1〜6 網羅、FR-6 は開発者向け工程契約としてストーリー外整理)。成果物3点実在確認済み。Learnings: E-MO-US 裁定 §13 採用0件で確定(6/6 — c1 執行事例で新規一般化なし)
+
+---
