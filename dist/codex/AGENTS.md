@@ -1,3 +1,5 @@
+@.agents/rules/amadeus.md
+
 # AI-DLC on Codex CLI
 
 This project uses AI-DLC (AI-Driven Development Life Cycle) under the OpenAI
