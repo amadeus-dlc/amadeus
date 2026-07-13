@@ -23,6 +23,7 @@
 //      crash) and removed by --apply.
 //   5. Root CLAUDE.md inlines the preserved Claude onboarding file without
 //      importing AGENTS.md.
+//   6. A missing preserved Claude onboarding file fails closed.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
@@ -93,6 +94,11 @@ describe("t209 promote-self dangling-symlink resilience", () => {
     expect(got).toStartWith("## Project Instructions\n");
     expect(got).toContain("@.claude/rules/amadeus.md\n\n# Claude onboarding\n");
     expect(got).not.toContain("@AGENTS.md");
+  });
+
+  test("fails when the preserved Claude onboarding file is missing", () => {
+    rmSync(join(root, ".claude", "CLAUDE.md"));
+    expect(promoteSelfMain(["--no-build"], root)).toBe(1);
   });
 
   test("--check passes with a dangling symlink under a preserved dir", () => {
