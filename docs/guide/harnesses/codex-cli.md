@@ -80,9 +80,11 @@ implicit skill matching so 37 runner descriptions don't pollute the index).
 
 ## Harness differences vs Claude Code
 
-- **Gates** render via the `request_user_input` tool when the shipped config
-  flags enable it, with a numbered-prose fallback otherwise (answer with a
-  number or free text). Gate semantics live in the engine either way.
+- **Gates** always render as numbered prose (answer with a number or free text).
+  Codex's built-in question-tool replies are not exposed to the shipped
+  PostToolUse hooks, while a prose reply reaches the UserPromptSubmit adapter
+  and mints the auditable `HUMAN_TURN` required by the human-presence guard.
+  Gate semantics remain in the engine.
 - **No custom statusline** — workflow position rides the `update_plan` tool
   (the `task-progress` statusline item) and `$amadeus --status`.
 - **Git under the sandbox**: `workspace-write` keeps `.git` read-only

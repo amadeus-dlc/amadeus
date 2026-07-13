@@ -80,9 +80,11 @@
 
 ## Claude Code との相違点
 
-- **ゲート** は、同梱の設定フラグが有効にすると `request_user_input` ツール経由で
-  描画され、そうでなければ番号付きプロンプトのフォールバックになります(番号または
-  自由テキストで回答)。ゲートのセマンティクスはどちらの場合もエンジンにあります。
+- **ゲート** は常に番号付き prose で描画します(番号または自由テキストで回答)。
+  Codex の組み込み質問ツールへの回答は同梱の PostToolUse hook から観測できませんが、
+  prose への回答は UserPromptSubmit adapter に到達し、human-presence guard が要求する
+  監査可能な `HUMAN_TURN` を記録できます。ゲートのセマンティクスは引き続き
+  エンジンにあります。
 - **カスタムステータスラインなし** — ワークフローの位置は `update_plan` ツール
   (`task-progress` ステータスライン項目)と `$amadeus --status` に乗ります。
 - **サンドボックス下の Git**: `workspace-write` は設計上、サンドボックス内で
