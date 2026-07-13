@@ -82,7 +82,7 @@ claude_member_cmd() {
       echo "WARN: delivery.sh set monitor failed for $m (continuing)" >&2
   fi
   # keep the pane open after claude exits so crashes stay inspectable
-  printf 'cd %q && mise trust -q 2>/dev/null; CLAUDE_IDENTITY=%q %q %s %q; exec $SHELL -l' \
+  printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team CLAUDE_IDENTITY=%q %q %s %q; exec $SHELL -l' \
     "$wt" "$IDENTITY" "$REPO/scripts/run-claude.sh" "$args" "/agmsg mode monitor"
 }
 
@@ -125,7 +125,7 @@ codex_member_cmd() {
 
   # AGMSG_CODEX_ROLE disambiguates old role registrations that may coexist in
   # a reused worktree. Keep the pane open after Codex exits for inspection.
-  printf 'cd %q && mise trust -q 2>/dev/null; AGMSG_CODEX_ROLE=%q %q --project %q --codex-command %q -- %s %q; exec $SHELL -l' \
+  printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team AGMSG_CODEX_ROLE=%q %q --project %q --codex-command %q -- %s %q; exec $SHELL -l' \
     "$wt" "$role" "$CODEX_MONITOR" "$wt" "$command" "$resume_arg" "$prompt"
 }
 
