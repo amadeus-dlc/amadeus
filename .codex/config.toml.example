@@ -31,14 +31,10 @@ sandbox_mode = "workspace-write"
 network_access = true
 # writable_roots = ["/absolute/path/to/main-repo/.git"]
 
-# Gates (D-3 both-track): prose gates are the floor; these flags enable the
-# structured request_user_input tool (verified working at 0.137.0+; the
-# default-mode flag is under development and prints a warning banner).
-[tools]
-experimental_request_user_input = { enabled = true }
-
-[features]
-default_mode_request_user_input = true
+# Gates: Codex Amadeus deliberately uses numbered prose so UserPromptSubmit can
+# mint the HUMAN_TURN required by the human-presence audit guard. Do not enable a
+# question-widget path for Amadeus; built-in tool replies are not intercepted by
+# the shipped PostToolUse hooks.
 
 # Statusline (D-6): predefined item IDs only; task-progress is fed by the
 # update_plan tool, which the orchestrator skill keeps current per stage.

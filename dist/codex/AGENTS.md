@@ -54,7 +54,7 @@ For full documentation, see `docs/guide/` (User Guide), `docs/harness-engineerin
 
 This is the same AI-DLC core that ships to every harness, rendered onto Codex CLI. On Codex:
 
-- **Gates** render as structured questions via the `request_user_input` tool when the shipped config flags enable it, with a numbered-prose fallback otherwise. Gate semantics live in the engine either way.
+- **Gates** always render as numbered prose. Codex's built-in question-tool replies are not exposed to the shipped PostToolUse hooks, while a prose reply reaches the UserPromptSubmit adapter and mints the auditable `HUMAN_TURN` required by the human-presence guard. Gate semantics remain in the engine.
 - **No custom statusline and no welcome message**: workflow position rides the `update_plan` tool and `$amadeus --status`.
 - **Git under the sandbox**: `workspace-write` keeps `.git` read-only in-sandbox; interactive sessions auto-escalate and `.codex/rules/default.rules` pre-allows `git worktree`/`commit`/`add`. Headless runs need `writable_roots` (template in the shipped `config.toml.example`).
 - **Swarm floor** is `codex exec`-per-unit workers; `AMADEUS_USE_SWARM=1` has no Workflow tool here and loud-degrades (`SWARM_DEGRADED`).

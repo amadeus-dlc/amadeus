@@ -150,6 +150,10 @@ function scratchProject(distTree: string, installDir: string): string {
 }
 
 function humanTurnCount(dir: string): number {
+  return eventCount(dir, "HUMAN_TURN");
+}
+
+function eventCount(dir: string, event: string): number {
   const auditDir = seededAuditDir(dir);
   let names: string[];
   try {
@@ -162,7 +166,7 @@ function humanTurnCount(dir: string): number {
     .map((n) => readFileSync(join(auditDir, n), "utf-8"))
     .join("\n")
     .split("\n")
-    .filter((l) => l === "**Event**: HUMAN_TURN").length;
+    .filter((l) => l === `**Event**: ${event}`).length;
 }
 
 // Fire the shipped adapter's mint target with the given stdin. `stdin` is the raw
@@ -185,6 +189,17 @@ function mintPayload(dir: string, prompt: string): string {
     cwd: dir,
     prompt,
   });
+}
+
+function fireCodexState(dir: string, args: string[]): { rc: number; out: string } {
+  const env: NodeJS.ProcessEnv = { ...process.env, AMADEUS_SKIP_ARTIFACT_GUARD: "1" };
+  delete env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
+  const r = spawnSync(
+    "bun",
+    [join(dir, ".codex", "tools", "amadeus-state.ts"), ...args, "--project-dir", dir],
+    { cwd: dir, encoding: "utf-8", env, timeout: 30_000 },
+  );
+  return { rc: r.status ?? -1, out: `${r.stdout ?? ""}${r.stderr ?? ""}` };
 }
 
 describe("t210 non-claude adapters classify the UserPromptSubmit payload before minting (#811)", () => {
@@ -254,6 +269,42 @@ describe("t210 non-claude adapters classify the UserPromptSubmit payload before 
       });
     });
   }
+
+  test("Codex prose approval mints one HUMAN_TURN and advances without QUESTION_ANSWERED", () => {
+    const adapter = ADAPTERS[0];
+    const dir = scratchProject(adapter.distTree, adapter.installDir);
+    try {
+      const mintRc = fireMint(
+        dir,
+        adapter.adapterRel,
+        adapter.mintTarget,
+        mintPayload(dir, "Approve"),
+      );
+      expect(mintRc).toBe(0);
+      expect(eventCount(dir, "HUMAN_TURN")).toBe(1);
+      expect(eventCount(dir, "QUESTION_ANSWERED")).toBe(0);
+
+      const gate = fireCodexState(dir, ["gate-start", "requirements-analysis"]);
+      expect(gate.rc).toBe(0);
+
+      const approval = fireCodexState(dir, [
+        "approve",
+        "requirements-analysis",
+        "--user-input",
+        "Approve",
+      ]);
+      expect(approval.rc).toBe(0);
+      expect(eventCount(dir, "HUMAN_TURN")).toBe(1);
+      expect(eventCount(dir, "QUESTION_ANSWERED")).toBe(0);
+      expect(eventCount(dir, "GATE_APPROVED")).toBe(1);
+
+      const current = fireCodexState(dir, ["get", "Current Stage"]);
+      expect(current.rc).toBe(0);
+      expect(current.out.trim()).toBe("user-stories");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 
   // --- Cross-adapter source sync (#821-style): every adapter mint site routes --
   //     its prompt through the SHARED lib classifier — no marker/logic duplication.

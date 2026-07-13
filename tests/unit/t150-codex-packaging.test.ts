@@ -209,4 +209,41 @@ describe("t150 dist/codex packaging parity + drift guard", () => {
     }
     expect(r.stdout).not.toContain("<PROJECT_DIR>");
   });
+
+  test("9: Codex questions are prose-only and the shipped config does not enable request_user_input", () => {
+    const sourceSkill = readFileSync(
+      join(REPO_ROOT, "packages", "framework", "harness", "codex", "skills", "amadeus", "SKILL.md"),
+      "utf-8",
+    );
+    const sourceAnnex = readFileSync(
+      join(
+        REPO_ROOT,
+        "packages",
+        "framework",
+        "harness",
+        "codex",
+        "skills",
+        "amadeus",
+        "question-rendering.md",
+      ),
+      "utf-8",
+    );
+    const shippedSkill = readFileSync(
+      join(REPO_ROOT, "dist", "codex", ".agents", "skills", "amadeus", "SKILL.md"),
+      "utf-8",
+    );
+    const shippedAnnex = readFileSync(
+      join(REPO_ROOT, "dist", "codex", ".agents", "skills", "amadeus", "question-rendering.md"),
+      "utf-8",
+    );
+    const config = readFileSync(join(CODEX_DST, "config.toml.example"), "utf-8");
+
+    for (const prose of [sourceSkill, sourceAnnex, shippedSkill, shippedAnnex]) {
+      expect(prose).toContain("MUST NOT call `request_user_input`");
+      expect(prose).not.toContain("request_user_input when available");
+      expect(prose).not.toContain("when the tool is available");
+    }
+    expect(config).not.toContain("experimental_request_user_input");
+    expect(config).not.toContain("default_mode_request_user_input");
+  });
 });

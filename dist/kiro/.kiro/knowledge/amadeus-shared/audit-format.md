@@ -48,7 +48,7 @@ All event names follow `SUBJECT_PAST_VERB` — every event answers "what happene
 | `SESSION_RESUMED` | Existing Claude Code session resumed (source=resume) | Timestamp, Source | `hooks/amadeus-session-start.ts` |
 | `SESSION_COMPACTED` | Context compaction occurred | Timestamp, Current Stage, State Validity | `hooks/amadeus-validate-state.ts` (PreCompact) |
 | `SESSION_ENDED` | Claude Code session terminates | Timestamp, Reason | `hooks/amadeus-session-end.ts` |
-| `HUMAN_TURN` | A real human acted this turn: submitted a prompt or answered a question widget (the approval/interview gate requires one since the last gate resolution) | Timestamp | `hooks/amadeus-mint-presence.ts` (UserPromptSubmit + PostToolUse AskUserQuestion) + the per-harness prompt-submit adapters |
+| `HUMAN_TURN` | A real human acted this turn: submitted a prompt, or answered a question widget only on a harness with a trusted question-answer hook (the approval/interview gate requires one since the last gate resolution). Codex uses numbered prose so every answer returns through prompt submission. | Timestamp | `hooks/amadeus-mint-presence.ts` (UserPromptSubmit + PostToolUse AskUserQuestion where that hook is trusted) + the per-harness prompt-submit adapters |
 
 ### Initialization Events (3 events — fire IN ADDITION TO `STAGE_COMPLETED`)
 
