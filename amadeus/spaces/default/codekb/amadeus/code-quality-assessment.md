@@ -1,9 +1,47 @@
 # コード品質評価
 
-> 本ページ先頭の「docs-batch10(2026-07-12)の観測面」節が最新 intent `260711-docs-batch10`(#765 #764 #763 #728、documentation)の候補記録。続く p3-cleanup-batch8 節(#843 #846 #850 #851 #876 #877 #878、intent `260711-p3-cleanup-batch8`)・p2-repair-batch7 節(#834 #839 #844 #845 #849、intent `260711-p2-repair-batch7`)・p3-cleanup-batch5 節(#811 #822 #830 #730 #819 #831、intent `260710-p3-cleanup-batch5`)・p3-cleanup-batch4 節(#757 #758 #753 #739 #740 #784 — 全6件 2026-07-10 修正着地済み、PR #823/#821/#817/#818/#814/#815)・core-repair-batch3 節(#746 ほか9件、2026-07-11)・複雑度ゲート導入節(intent 260710-complexity-gate)・ tools-dispatch-batch 節(#774 / #785 / #787 / #788 / #789)・ bughunt-fix-batch 節(#771/#773/#775/#776/#779)・swarm-worktree-batch 節(#738/#748/#746/#760)・learnings-audit-batch 節(#754 / #745 / #761)・mint-presence-vectors 節(#755)・packaging source-unreferenced 節(intent 260710、#735)・delegate-answer-consume 節(intent 260710、#736)・kiro-stale-hooks 節(#719 / P3 source hygiene)・dynamic-test-size 節(#699 / #684 Phase D)・t92-worktree-hermeticity 節(#709)・packaging-repair-batch 節(#701/#702 = PR #711/#712 解決済み)は前 intent の記録で、参照用に温存する。以降の「アーキテクチャ横断パターン」以下は `260709-bug-zero-batch`(#674〜#678/#668)の記録。
+> **最新の品質観測は intent `260713-swarm-driver-migration`（2026-07-13）**。以下の過去 intent 節に残る「本 intent」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
+
+## swarm driver 契約の品質評価（2026-07-13、最新）
+
+### 現在確認できる強み
+
+- engine eligibility は autonomy、runtime graph、stage mode、walking-skeleton、成果物 coverage から決定される。#841 の「完了した batch 1 を再提示し続ける」欠陥は、`amadeus-orchestrate.ts:1792-1811` の最初の未完了 batch 選択で解消済みである。
+- referee は `prepare`／`check`／`finalize` を分離し、protected file の改竄、lying conductor、merge failure、baton return を real process／worktree で検証する既存 e2e を持つ。
+- packaging は `dist/<name>/` 全域の orphan scan（`scripts/package.ts:692-709`）と harness source-side unreferenced scan（`:711-725`）を持つ。過去の #701／#735 finding は解消済みである。
+- canonical source→4 harness `dist` の byte drift と、Claude／Codex self-install drift を決定的に検査する既存 gate がある。
+- Codex exec journey、Kiro ACP tool trace、Claude live journey という opt-in transport seam があり、live proof の土台を再利用できる。
+
+### 未解決 finding
+
+| ID | Finding | 影響 | 必要な検証 |
+| --- | --- | --- | --- |
+| SD-01 | `AMADEUS_SWARM_DRIVER` の製品実装0件 | 公開5値と既定 `auto` を解決できない | 有効値、不正値、harness mismatch、旧変数、設定競合の全 selector matrix |
+| SD-02 | driver 選択が harness skill prose に分散 | 同一入力から同一選択を機械保証できない | topology／capability 入力だけから決まる pure selector の unit test |
+| SD-03 | native capability probe がない | 明示 driver の保証と `auto` fallback の根拠を作れない | available／unavailable／malformed evidence、worker 起動前 hard error の integration test |
+| SD-04 | `invoke-swarm` が driver-neutral、監査は旧 degrade 2値のみ | requested／selected／reason／native evidence を再現できない | 全 swarm event の payload／correlation と secrets 非記録の audit test |
+| SD-05 | live AI worker を既存 swarm test が起動しない | driver 名や flag だけの偽対応を検出できない | 4 driver それぞれ2 Unit以上の native event／trace＋referee convergence |
+| SD-06 | Claude／Codex／Kiro の実行面が同一 subprocess 形ではない | 共通 dispatcher へ過剰抽象化すると live tool 境界を壊す | harness adapter 単位の command／env／cwd／stdin／trust 契約テスト |
+| SD-07 | `scripts/package.ts`／`amadeus-swarm.ts` 冒頭コメントに古い harness／旧変数前提が残る | 保守者が正本境界を誤解する | 実装時の正本コメント、docs、全 dist、self-install 同期確認 |
+
+### 完了判定上の stop-gate
+
+明示 driver が利用不能な場合に別方式で成功扱いした時点、または Agent Teams／Ultra Code／Codex Ultra／Kiro subagent のいずれかで2 Unit以上の native 証跡を機械判定できない時点で、この intent は完了扱いにできない。CLI flag／環境変数の受理、worker の自己申告、referee の convergence だけでは native driver 利用の証明にならない。
+
+### 既存 finding の訂正
+
+| 過去 finding | 2026-07-13 の現状 |
+| --- | --- |
+| #841 完了 batch 再提示 | 解決済み。未完了 batch の成果物 coverage 選択が実装済み |
+| #735 source-side unreferenced 不在 | 解決済み。`readSources` と harness source tree の差集合を検査 |
+| #701 dist root orphan blind spot | 解決済み。`dist/<name>/` の whole-tree scan を実装 |
+
+過去節は欠陥発見時の分析根拠として温存するが、上表の3件を現存問題として後続要件へ持ち込まない。
+
+> 「docs-batch10(2026-07-12)の観測面」節は履歴 intent `260711-docs-batch10`(#765 #764 #763 #728、documentation)の候補記録。続く p3-cleanup-batch8 節(#843 #846 #850 #851 #876 #877 #878、intent `260711-p3-cleanup-batch8`)・p2-repair-batch7 節(#834 #839 #844 #845 #849、intent `260711-p2-repair-batch7`)・p3-cleanup-batch5 節(#811 #822 #830 #730 #819 #831、intent `260710-p3-cleanup-batch5`)・p3-cleanup-batch4 節(#757 #758 #753 #739 #740 #784 — 全6件 2026-07-10 修正着地済み、PR #823/#821/#817/#818/#814/#815)・core-repair-batch3 節(#746 ほか9件、2026-07-11)・複雑度ゲート導入節(intent 260710-complexity-gate)・ tools-dispatch-batch 節(#774 / #785 / #787 / #788 / #789)・ bughunt-fix-batch 節(#771/#773/#775/#776/#779)・swarm-worktree-batch 節(#738/#748/#746/#760)・learnings-audit-batch 節(#754 / #745 / #761)・mint-presence-vectors 節(#755)・packaging source-unreferenced 節(intent 260710、#735)・delegate-answer-consume 節(intent 260710、#736)・kiro-stale-hooks 節(#719 / P3 source hygiene)・dynamic-test-size 節(#699 / #684 Phase D)・t92-worktree-hermeticity 節(#709)・packaging-repair-batch 節(#701/#702 = PR #711/#712 解決済み)は過去 intent の記録で、参照用に温存する。以降の「アーキテクチャ横断パターン」以下は `260709-bug-zero-batch`(#674〜#678/#668)の記録。
 > 「docs-repair-batch9(2026-07-11)の観測面」節は履歴 intent `260711-docs-repair-batch9`(#812 #824 #680 #885 #886)の記録。続く p3-cleanup-batch5 節(#811 #822 #830 #730 #819 #831 — 候補記録)・p3-cleanup-batch4 節(#757 #758 #753 #739 #740 #784 — 全6件 2026-07-10 修正着地済み、PR #823/#821/#817/#818/#814/#815)・core-repair-batch3 節(#746 ほか9件、2026-07-11)・複雑度ゲート導入節(intent 260710-complexity-gate)・ tools-dispatch-batch 節(#774 / #785 / #787 / #788 / #789)・ bughunt-fix-batch 節(#771/#773/#775/#776/#779)・swarm-worktree-batch 節(#738/#748/#746/#760)・learnings-audit-batch 節(#754 / #745 / #761)・mint-presence-vectors 節(#755)・packaging source-unreferenced 節(intent 260710、#735)・delegate-answer-consume 節(intent 260710、#736)・kiro-stale-hooks 節(#719 / P3 source hygiene)・dynamic-test-size 節(#699 / #684 Phase D)・t92-worktree-hermeticity 節(#709)・packaging-repair-batch 節(#701/#702 = PR #711/#712 解決済み)は前 intent の記録で、参照用に温存する。以降の「アーキテクチャ横断パターン」以下は `260709-bug-zero-batch`(#674〜#678/#668)の記録。
 >
-> **既知のハウスキーピング債(観測のみ)**: 本ページ以下および `architecture.md` / `business-overview.md` / `api-documentation.md` には過去 intent 由来の未リラベルな「本 intent(…)」マーカーが複数併存している(business-overview の `260710-source-unreferenced-check` / `260709-bug-zero-batch`、architecture 冒頭の source-unreferenced 記述など)。correction c3-relabel の趣旨に照らせば全て履歴ラベル化すべきだが、本 bugfix diff-refresh のスコープ外(非サージカルな大量 churn になる)。本スキャンでは更新対象ファイルの直近マーカーのみリラベルし、残債はここに明示する。
+> **履歴ラベルの読み方**: 本ページ以下および `architecture.md` / `business-overview.md` / `api-documentation.md` の「本 intent」は、各節見出しで明示した過去 intent 内の自己参照である。current view は各ファイル先頭の `260713-swarm-driver-migration` 節だけであり、過去節を最新状態として読まない。
 
 ## docs-batch10(2026-07-12)の観測面 — documentation 4欠陥の現物照合(#765 #764 #763 #728)
 

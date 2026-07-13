@@ -1,5 +1,23 @@
 # コード構造
 
+## swarm driver 変更面の配置境界（intent 260713-swarm-driver-migration、2026-07-13、最新）
+
+| 層 | 正本／生成物 | 現行責務 | 新 driver 契約での含意 |
+| --- | --- | --- | --- |
+| `packages/framework/core/tools/amadeus-orchestrate.ts` | 正本 | autonomy、runtime graph、未完了 batch、walking-skeleton から `invoke-swarm` eligibility を決定 | eligibility は維持。driver selector の自由判断を混ぜず、必要なら機械可読入力だけを渡す |
+| `packages/framework/core/tools/amadeus-directive.ts` | 正本 | `{kind, units, repo?}` の schema／parser | requested／selected／topology／capability を directive に載せるかは設計判断。現行は driver-neutral |
+| `packages/framework/harness/<name>/skills/amadeus/SKILL.md` | harness 正本 | live conductor の fan-out／retry 手順と現行 driver 選択 | driver 選択が prose に分散する現状。共通 selector の結果を harness adapter が実行する境界候補 |
+| `packages/framework/core/tools/amadeus-swarm.ts` | 正本 | `prepare`／`check`／`finalize`、worktree／Bolt、protected file、merge、swarm audit | AI dispatcher にしない。driver-aware audit payload と選択結果の受け口候補 |
+| `packages/framework/harness/{claude,codex,kiro,kiro-ide}/onboarding.fills.ts` と Codex `emit.ts` | harness 正本 | harness ごとの導入・設定・生成 | selector、必要な experimental flag、Ultra／trust／capability probe の利用者契約を同期する面 |
+| `scripts/package.ts` | build 正本 | core／harness から4 `dist` を生成し drift、whole-tree orphan、source-unreferenced を検査 | 正本変更後の唯一の生成経路。`dist/**` を直接編集しない |
+| `dist/<harness>/` | 生成物 | 配布可能な harness tree | `bun scripts/package.ts` でのみ同期 |
+| `scripts/promote-self.ts` → `.claude`／`.codex`／`.agents` | self-install 正本＋生成先 | Claude／Codex の project-local self-install | Claude／Codex 正本変更後に `bun run promote:self` と drift check が必要。Kiro は対象外 |
+| `tests/unit`／`tests/integration`／`tests/e2e` | 検証正本 | selector、directive、referee、配布、live transport | 決定的 matrix と opt-in live native proof を分離する |
+
+現行 `AMADEUS_SWARM_DRIVER` 実装は0件であり、追加先は既存の層境界を壊さず決める必要がある。最小構造は、core に deterministic selector と型、harness に capability probe／driver adapter、referee に監査用の選択結果を渡す形だが、これは現時点では設計仮説であり Application Design で確定する。
+
+> 以下は過去 intent の構造記録。冒頭の「本 intent」等は各見出しに記された履歴 intent を指し、今回 intent の current marker ではない。
+
 ## 計測 seam 台帳 — metrics-observation の観測面(intent 260712-metrics-observation、2026-07-12)
 
 既存計測経路(CCN 分布・テスト数・カバレッジ%)の出力をコミット snapshot に保存する観測機構(#921)が再利用する seam の export 状況・非 export ギャップ・CI 権限前例・配置規約。出典は本 intent の `inception/reverse-engineering/scan-notes.md` および `re-scans/260712-metrics-observation.md`(file:line は observed HEAD `c11554226` 直読)。base→observed(`13598b752`→`c11554226`、56コミット)でフォーカス面の export シグネチャは全て不変(実コード触は `tests/lib/coverage-normalize.ts` の #876 closing-only strip のみで export byte 同一)。

@@ -166,5 +166,12 @@
     "dirName": "260712-metrics-observation",
     "scope": "feature",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019f59b8-d24b-7000-8027-f432910b27cc",
+    "slug": "swarm-driver-migration",
+    "dirName": "260713-swarm-driver-migration",
+    "scope": "amadeus",
+    "status": "in-flight"
   }
 ]

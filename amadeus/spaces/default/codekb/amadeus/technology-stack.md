@@ -1,5 +1,21 @@
 # 技術スタック
 
+## multi-agent 実行スタック（intent 260713-swarm-driver-migration、2026-07-13、最新）
+
+| 実行面 | 現行技術 | プロセス境界 | 未解決の検証面 |
+| --- | --- | --- | --- |
+| Claude Code | live `Task`、Dynamic `Workflow` | live Claude session 内。現行 swarm は `claude -p` を起動しない | Agent Teams の team 実起動 event、Ultra Code workflow trace、各2 Unit以上 |
+| Codex | `codex exec --skip-git-repo-check -C <worktree> ... < /dev/null` | Unit ごとの別 AI CLI process | `gpt-5.6-sol` Ultra の明示設定と native multi-agent委譲 event、各2 Unit以上 |
+| Kiro CLI／IDE | live native `subagent` tool | live Kiro session 内。現行 swarm は `kiro-cli chat --no-interactive` を起動しない | subagent tool-call trace と最大並列／trust の事前検査 |
+| Referee | Bun／TypeScript、Git、shell convergence command | AI worker とは独立した deterministic subprocess | requested／selected driver と native trace の correlation |
+| Packaging | Bun `scripts/package.ts`、manifest、`scripts/promote-self.ts` | source→`dist`→Claude／Codex self-install | 4 harness 配布と project-local self-install の drift |
+
+基盤言語は TypeScript（ESM）、ランタイムと package manager は Bun、状態隔離と merge は Git、テストは `bun:test` と自作 runner を維持する。新 driver 契約のために cloud SDK／Responses API／永続 daemon を追加する計画はない。capability probe はローカル CLI／live tool の振る舞いを検査し、credential や provider 生レスポンスを保存しない。
+
+live proof は決定的 unit／integration suite と分離した opt-in e2e とする。既存の Codex exec journey、Kiro ACP trace、Claude SDK／TUI journey は transport substrate として再利用可能だが、native driver を識別する classifier は新設が必要である。
+
+> 以下は過去 intent の技術記録。導入予定と書かれた項目は当時の計画であり、今回 intent の current plan ではない。
+
 ## ランタイムと言語
 
 変更なし。TypeScript(ESM)を Bun ランタイム上で直接実行する構成を維持している。`packages/setup` は functional-domain-modeling-ts スタイル(class-free、type + companion namespace、frozen literal factory、判別ユニオン Result)を全面採用している点も変更なし。

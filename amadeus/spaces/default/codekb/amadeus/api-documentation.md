@@ -1,5 +1,45 @@
 # API ドキュメント
 
+## swarm driver 関連の現行 CLI／directive 契約（2026-07-13、最新）
+
+### `invoke-swarm` directive
+
+```typescript
+type InvokeSwarmDirective = {
+  kind: "invoke-swarm";
+  units: string[];
+  repo?: string;
+};
+```
+
+engine が返す外形は上記だけであり、driver、harness、task topology、capability probe、fallback reason、native evidence は含まれない。eligibility は autonomous Construction の未完了 batch に限定される。
+
+### swarm referee CLI
+
+```bash
+bun <harness-dir>/tools/amadeus-swarm.ts prepare \
+  --batch <n> --units <a,b,...> [--base <branch>] [--repo <name>] \
+  [--degraded-from <subagent|ultracode>]
+
+bun <harness-dir>/tools/amadeus-swarm.ts check <unit> \
+  --check-cmd "<command>" [--test-file <protected-spec>]
+
+bun <harness-dir>/tools/amadeus-swarm.ts finalize \
+  --batch <n> --units <a,b,...> --claimed <a,...> \
+  --check-cmd "<command>" [--test-file <protected-spec>] \
+  [--reasons <unit>=<reason>,...]
+```
+
+- `prepare`: Unit ごとの worktree／Bolt state を作り、`SWARM_STARTED` を発行する。`--degraded-from` は旧 `subagent|ultracode` のみで、fallback は `subagent` として `SWARM_DEGRADED` に記録される。
+- `check`: convergence command と protected file を検査する advisory API。監査イベントは発行しない。
+- `finalize`: claimed Unit を再検証し、genuine pass のみ直列 merge する。成功は exit 0、未収束／merge failure は failure envelope と exit 2。
+
+現行 contract には `AMADEUS_SWARM_DRIVER` の5値、explicit unavailable hard error、`auto` fallback、requested／selected／reason／capability evidence／native trace の受け口がない。後続設計では、engine の read-only 性と referee の audit ownership を維持しながら、選択結果を worker 起動前に確定・監査へ渡す必要がある。
+
+### packaging 契約の現行訂正
+
+`scripts/package.ts --check` は現在、再生成 byte diff に加えて `dist/<name>/` 全域の orphan scan（`:692-709`）と harness source-side unreferenced scan（`:711-725`）を実行する。以下の #735／#701 節は発見当時の履歴であり、両ギャップを現存問題として扱わない。
+
 ## 公開 API サーフェス
 
 この repository に HTTP API、GraphQL API、service endpoint は存在しない。公開されている契約は CLI コマンド(`@amadeus-dlc/setup`、AI-DLC 内部ツール群)である。当該スキャン intent(260709-bug-zero-batch)は既存契約の変更ではなく内部欠陥の修理であったため、CLI サーフェスの外形は維持される想定。以降の一連の bugfix intent(バッチ D=tools-dispatch-batch まで)も既存契約の変更を含まない。
@@ -7,6 +47,8 @@
 > **2026-07-10 更新(intent 260710、#735)**: 前回 intent の2バグは出荷済み — **#685 は #729 で解消**(`delegate-rejection` subcommand + `DELEGATED_REJECTION` イベント追加。`amadeus-state.ts` dispatch L262-263)、**#670 は #727 で解消**(worktree write パスのアンカー化)。下記「#685」「#670」節は歴史的記録。
 
 ## `scripts/package.ts` の packaging CLI 契約(#735 に関連)
+
+> **履歴・解決済み**: source-side unreferenced scan は現行 `scripts/package.ts:711-725` に実装済み。以下は修正前の契約記録。
 
 ```bash
 bun scripts/package.ts [<harness>]            # write: dist/<name>/ を再生成(clean-sweep)
@@ -105,6 +147,8 @@ bun .claude/tools/amadeus-utility.ts codekb-path [--repo <name>] [--json]
 - **#668 の欠陥**: `codekbRepoName()` の fallback(`amadeus-lib.ts:503`)がワークツリーのディレクトリ名を使うため、「決定的(deterministic)」であるべき per-repo ディレクトリが worktree ごとに変わってしまう。本スキャン自体が `codekb/claude-engineer-1/` に出力されている(この codekb ファイル群自体)ことが直接の実例である。
 
 ## `scripts/package.ts` CLI 契約(#701 に関連)
+
+> **履歴・解決済み**: dist root を含む whole-tree orphan scan は現行 `scripts/package.ts:692-709` に実装済み。以下は修正前の契約記録。
 
 ```bash
 bun scripts/package.ts [<harness>] [--check]

@@ -1,6 +1,50 @@
 # アーキテクチャ
 
-> **2026-07-11 更新(intent 260711-docs-repair-batch9、最新)**: docs/harness 修理バッチ第9弾(#812 / #824 / #680 / #885 / #886)の diff-refresh(base `b845478bb`=前回 bughunt-fix-batch observed → observed `13598b752`=origin/main、59コミット)。フォーカスは kiro-ide ハーネスの localize 漏れ(#812 SKILL.md byte-copy / #824 onboarding.fills.ts 部分漏れ)・sensor-type-check の self-contained ヘッダ契約乖離(#680)・**restart 境界で失われた2契約**(#885 normalizeWorktreeSlug の slug 正規化一本化 / #886 phase-check ゲート)。restart-loss 2件のアーキ乖離(旧系譜契約 vs 現行)は末尾「docs-repair-batch9(2026-07-11)の観測面」節に記録。#812/#824/#680 の欠陥3ファイルは区間内無変更、#885/#886 の lib/state/worktree は区間内で #880 flip 配線・#869 jump per-phase の行番号シフトを受けたが欠陥自体は未修復で現存。
+> **2026-07-13 更新（intent `260713-swarm-driver-migration`、最新）**: base `13598b752b656cc9bbf5d931f8e3a6c34881fd1c` から observed `cf3dc88b46a2b23bcfd71b1136632d1739cdd7e5` まで49コミットを diff-refresh。現行は engine eligibility、harness conductor の fan-out、stateless referee、worktree／Bolt／audit、packaging の境界を維持するが、`AMADEUS_SWARM_DRIVER`、capability probe、driver-aware audit、4 native driver の live proof は未実装である。直前の「最新」表記はすべて履歴へ降格する。
+
+## 現行 swarm 実行アーキテクチャ（260713-swarm-driver-migration）
+
+現行 engine は「swarm を許可するか」と「どの Unit を対象にするか」を決める。`Construction Autonomy Mode` が `autonomous`、runtime graph に未完了 batch があり、対象 stage が Construction の `for_each: unit-of-work` かつ `mode: subagent` である場合に、driver-neutral な `invoke-swarm` directive を返す。directive は `{ kind, units, repo? }` だけを持ち、requested／selected driver、capability evidence、topology は持たない（`packages/framework/core/tools/amadeus-orchestrate.ts:706-742,1744-1830`、`amadeus-directive.ts:142-163,280-292`）。
+
+driver 選択と AI worker の起動は、各 harness の `SKILL.md` prose を実行する live conductor に残る。Claude Code は既定で live `Task`、旧変数が1なら Dynamic `Workflow`、Codex は Unit ごとの別 `codex exec` process、Kiro CLI／IDE は live native `subagent` を使う。現行コードには共通 selector module も `AMADEUS_SWARM_DRIVER` の実装もない。
+
+`amadeus-swarm.ts` は AI dispatcher ではなく、stateless な referee である。`prepare` が worktree と Bolt state を作成し、`check` が convergence command と protected file を検査し、`finalize` が claimed Unit を再検証して成功分を直列 merge する。swarm 監査イベントの発行者も referee に集約されているが、driver 情報は `SWARM_DEGRADED` の旧 `ultracode → subagent` 記録に限られる。
+
+配布の正本は `packages/framework/core/` と `packages/framework/harness/<name>/` であり、`scripts/package.ts` が4 harness の `dist/<name>/` を生成する。Claude／Codex の project-local self-install は `scripts/promote-self.ts` が同期する。`dist/**` は生成物であり直接編集しない。
+
+## Interaction Diagrams
+
+```mermaid
+flowchart LR
+  Engine["Engine eligibility"]
+  Directive["invoke-swarm: kind, units, repo"]
+  Conductor["Harness conductor: driver and fan-out"]
+  Worker["Current worker surface: Task, Workflow, codex exec, subagent"]
+  Referee["Stateless referee: prepare, check, finalize"]
+  Isolation["Unit worktree and Bolt state"]
+  Audit["Swarm audit shard"]
+  Sources["Canonical core and harness sources"]
+  Packager["scripts/package.ts"]
+  Dist["dist per harness"]
+  Promote["Claude and Codex self-promotion"]
+
+  Engine --> Directive --> Conductor --> Worker
+  Conductor --> Referee
+  Referee --> Isolation --> Worker
+  Worker --> Referee --> Audit
+  Sources --> Packager --> Dist --> Promote
+```
+
+テキスト代替: engine は eligibility 判定後、Unit と任意の repo だけを持つ `invoke-swarm` を conductor へ渡す。conductor はハーネス固有 prose に従って worker surface を選び、referee の `prepare` で作られた Unit worktree 上へ fan-out する。worker 終了後は `check`／`finalize` が収束・保護 spec・merge を再検証し、referee が監査へ記録する。これと独立して、正本 core／harness source は `scripts/package.ts` から各 `dist` へ投影され、Claude／Codex のみ self-promotion される。新 driver 契約は conductor 選択境界と referee 監査境界を明示化する必要がある。
+
+### 現行境界の設計上の含意
+
+- engine の read-only eligibility と referee の verdict／merge／audit 所有は分離されている。selector をどちらへ置く場合も、この責務を崩さず決定入力と監査 payload を渡す必要がある。
+- explicit unavailable の hard error は worker 起動前に capability probe を完了させなければならない。`auto` fallback は同じ probe 結果から決定し、requested／selected／reason を同一 execution として監査する必要がある。
+- native 利用の証明は CLI flag や環境変数の受理では足りない。Agent Teams、Ultra Code、Codex Ultra、Kiro subagent それぞれの native event／trace を2 Unit以上で捕捉し、referee の batch verdict と相関させる必要がある。
+- packaging は source-side unreferenced scan と whole-tree orphan scan を既に持つ（`scripts/package.ts:692-725`）。過去節の #735／#701 は歴史的な設計記録であり、現存ギャップではない。
+
+> **2026-07-11 更新(intent 260711-docs-repair-batch9、履歴)**: docs/harness 修理バッチ第9弾(#812 / #824 / #680 / #885 / #886)の diff-refresh(base `b845478bb`=前回 bughunt-fix-batch observed → observed `13598b752`=origin/main、59コミット)。フォーカスは kiro-ide ハーネスの localize 漏れ(#812 SKILL.md byte-copy / #824 onboarding.fills.ts 部分漏れ)・sensor-type-check の self-contained ヘッダ契約乖離(#680)・**restart 境界で失われた2契約**(#885 normalizeWorktreeSlug の slug 正規化一本化 / #886 phase-check ゲート)。restart-loss 2件のアーキ乖離(旧系譜契約 vs 現行)は末尾「docs-repair-batch9(2026-07-11)の観測面」節に記録。#812/#824/#680 の欠陥3ファイルは区間内無変更、#885/#886 の lib/state/worktree は区間内で #880 flip 配線・#869 jump per-phase の行番号シフトを受けたが欠陥自体は未修復で現存。
 >
 > **2026-07-11(intent 260710-core-repair-batch3、履歴)**: バッチ3(#746 / #786 / #742 / #743 / #747 / #741 / #751 / #744 / #749 / #750)を対象とする core/setup/tests 横断の内部欠陥修理。焦点は swarm/bolt の worktreePath read/write 非対称(#746)、learnings emitKey の生 NUL バイト(#786)、setup の err swallow(#742)/ 非アトミック書き込み(#743)/ prerelease 順序無視(#747)、t90 test 13 の wallclock フレーク(#741)、codex adapter のレガシー flat root 参照(#751)、orchestrate の PHASE_NUMBERS prototype-chain(#744)/ single skeleton-gate 詰み(#749)/ Branch 0 除外欠落(#750)。**焦点コードは base→observed(`da1611a9a..58f3453ad`、14コミット)でいずれも無変更**(バッチ D #774/#785/#787/#788/#789 が着地したが焦点面に非関与、全件現存)のため下記はすべて現行コード直読に基づく静的分析。主眼は末尾「core-repair-batch3(2026-07-11)の観測面」節。
 > **2026-07-11 更新(intent 260711-p3-cleanup-batch8)**: P3 修理7件(#843 / #846 / #850 / #851 / #876 / #877 / #878)を対象とする docs/tools/tests 横断の内部欠陥修理。うち #843/#846/#850/#851 は旧 `.agents/`・`aidlc/` 系譜 → `packages/framework/` 移行境界で復元漏れした restart-loss(差分区間 `9738580ef..60f5e1edf` の**外**)、#876/#877/#878 は区間内で導入・変更された面。構造面の主眼は下記「orchestrate エラー監査経路の部分配線(#879/#878)」節(#879 導入 recordEngineError と default 出口未配線の非対称)。他6件は挙動/docs 欠陥で構造変化を伴わないため code-quality-assessment.md の同名節に接地。
@@ -15,7 +59,7 @@
 >
 > **履歴**: 前々 intent 対象の2バグは出荷済み — **#685 delegate-rejection は #729(`14d1146e0`)で解消**(`DELEGATED_REJECTION` イベント + `delegate-rejection` subcommand を追加、verb-scoped presence に分離)、**#670 sibling-worktree guard は #727(`20c2e9674`)で解消**(write パスをメインチェックアウトへアンカーする方式に変更)。以下の「#685」「#670」の相互作用図は**歴史的記録**であり現状コードとは一致しない。
 
-> **2026-07-10 更新(intent 260710-source-unreferenced-check)**: 前回 intent 対象の2バグは出荷済み — **#685 delegate-rejection は #729(`14d1146e0`)で解消**(`DELEGATED_REJECTION` イベント + `delegate-rejection` subcommand を追加、verb-scoped presence に分離)、**#670 sibling-worktree guard は #727(`20c2e9674`)で解消**(write パスをメインチェックアウトへアンカーする方式に変更)。以下の「#685」「#670」の相互作用図は**歴史的記録**であり現状コードとは一致しない。この直下の packaging source 側 unreferenced 検査(#735)節は intent `260710-source-unreferenced-check` の記録(履歴)。最新 intent の記録は本ページ末尾の swarm-worktree-batch 節群(worktree anchor WRITE/READ 非対称 #746 ほか)を参照。
+> **2026-07-10 更新(intent 260710-source-unreferenced-check、履歴)**: 前回 intent 対象の2バグは出荷済み — **#685 delegate-rejection は #729(`14d1146e0`)で解消**(`DELEGATED_REJECTION` イベント + `delegate-rejection` subcommand を追加、verb-scoped presence に分離)、**#670 sibling-worktree guard は #727(`20c2e9674`)で解消**(write パスをメインチェックアウトへアンカーする方式に変更)。以下の「#685」「#670」の相互作用図は**歴史的記録**であり現状コードとは一致しない。この直下の packaging source 側 unreferenced 検査(#735)節も修正前の記録であり、current view は本ページ先頭の `260713-swarm-driver-migration` 節を参照する。
 
 ## orchestrate エラー監査経路の部分配線(#879/#878、intent 260711-p3-cleanup-batch8、2026-07-11)
 
