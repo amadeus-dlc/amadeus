@@ -22,6 +22,8 @@
 
 <!-- プロジェクト固有の上書き。 -->
 
+- Version-controlled append-only生成物の誤りは、履歴rewrite・force push・branch protection緩和をせず、人間承認付き通常PRのgit revertで回復する。collector/schema defectなら修正test/codeとrevertを同一PRにし、一時入力異常のみ単独revertを許容する。conflict時は停止する。秘密漏洩等の緊急削除は別手順で扱う。 (learned 2026-07-12) <!-- cid:deployment-pipeline:c3 -->
+- Deployment Executionの結果は、N/A（反証可能な不存在/非適用根拠あり）、NOT EXECUTED（対象/操作を認識したが禁止または未実施。理由を併記）、PENDING（後続の実行・観測条件待ち。閉包条件を併記）、PASS（実行証跡に基づく検証成功）を相互代用せず分離する。必要な外部操作を省略した完了根拠には使わない。 (learned 2026-07-12) <!-- cid:deployment-execution:c3 -->
 ## Code Style
 
 <!-- プロジェクト固有の上書き。 -->
@@ -107,3 +109,20 @@
 - 選挙・ゲートの手続きは結果が自明に見えても省略しない。質問ファイルの [Answer] タグへの記入は選挙裁定の受領後にのみ行う — 既定候補が確実に見えることは記入の根拠にならない(bughunt-fix-batch requirements-analysis で conductor が未実施選挙の結果を記入しかけ、コミット前に自己是正した実ヒヤリハットより。E-L2 裁定 4/6) (learned 2026-07-10) <!-- cid:requirements-analysis:election-answer-after-ruling -->
 - agmsg 上の選挙・裁定を成果物から参照するときは、git で検証可能な事実(delegate コミット SHA 等)と agmsg 出典の事実(配信・裁定タイムスタンプ)を明示的に分離して書く — レビュアーの独立検証(git grep)で裏取り不能な主張を成果物に残さないため(product-lead レビューが E-L1 参照を git から裏取りできず REVISE した実例より。E-L2 裁定 4/6) (learned 2026-07-10) <!-- cid:requirements-analysis:agmsg-git-evidence-split -->
 - 要件・受け入れ基準に時間・回数等の数値を書くときは、実在する対照実装の named constant を file:line で引くか、選択を design へ明示的に委ねる — 実在しない要約帯(例: 10-30秒)は開発者に新しいマジックナンバーを作らせる(nfr-requirements:c3『数値は強制メカニズムから導出』の requirements-analysis 版類例。FR-4 レビュー実例より。E-L2 裁定 4/6) (learned 2026-07-10) <!-- cid:requirements-analysis:constants-from-code -->
+
+## Testing
+- Standardの中核はunit/integrationとし、performance/securityは承認済みNFRと実在境界へtraceして選定する。戦略名だけで検査を機械追加しない。既決strategy再述に留めず、stage定義の曖昧さは別途追跡する。 (learned 2026-07-12) <!-- cid:build-and-test:c1 -->
+- 攻撃面・依存・承認NFRを成果物で実測明記した場合のみ検査を比例選定する。既存必須scanや要求済み検査の省略根拠にはしない。 (learned 2026-07-12) <!-- cid:build-and-test:c3 -->
+
+## CI/CD
+- Snapshot jobはPR blocking集約外とするが、main上のjob失敗は赤く可視化する。適用時はjobの非blocking目的とloud-fail契約を成果物へ明記し、一般の必須CI gateを除外する根拠にはしない。 (learned 2026-07-12) <!-- cid:ci-pipeline:c3 -->
+- Code Generationで既存workflowへ実装済みなら、CI Pipelineで新規workflowを二重生成せず、既存workflowを唯一の正本として文書化・検証する。 (learned 2026-07-12) <!-- cid:ci-pipeline:c2 -->
+
+## Provisioning
+- Provisioning inventoryでは実在対象とN/A対象を分離し、N/Aには人間決定・承認scope・上流成果物等の反証可能な不存在/非適用根拠を併記する。N/Aを未検証やPASSと表現せず、実在resourceや必須検査の省略理由にしない。 (learned 2026-07-12) <!-- cid:environment-provisioning:c3 -->
+
+## Observability
+- Execution timeoutや処理上限は個別実行の停止guardでありservice SLOではない。Service SLOは実在する利用者向けservice/SLI・観測期間・目標値に基づく契約とし、runtime service/SLI不存在時にtimeoutや単発run成功をservice SLO達成へ昇格させず、根拠付きN/A/PENDINGとする。実在service SLOの省略根拠にはしない。 (learned 2026-07-12) <!-- cid:observability-setup:c3 -->
+
+## Incident Response
+- 承認済みincident要件の対象者・通知時機・応答時間・監査証跡を既存repository-nativeなPR/run recordが満たし、閲覧権限・保持・責任主体を実測できる場合は、相関可能なPR/run linkをDetect→Recover→Verify→Recordの正本として再利用し、要求外のcommunication/paging基盤を作らない。明示on-call/SLA/即時通知、secret exposure等の緊急経路、既存必須pagingを省略・置換する根拠にはしない。 (learned 2026-07-12) <!-- cid:incident-response:c3 -->

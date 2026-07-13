@@ -25,6 +25,7 @@ import { fileURLToPath } from "node:url";
 import { buildMeta, renderMeta, type MetaCounts } from "./lib/bun-junit-to-meta.ts";
 import { type CoverageSourcePathContext } from "./lib/coverage-source-path.ts";
 import { normalizeCoverageReport as normalizeCoverageReportImpl } from "./lib/coverage-normalize.ts";
+import { buildTestsTotals, writeTestsTotals } from "./lib/run-tests-totals.ts";
 import {
   beginObservation,
   buildMeasuredRecord,
@@ -897,6 +898,10 @@ async function runTier(level: Level, label: string, collector: SizeCollector): P
 }
 
 function printSummary(collector: SizeCollector): void {
+  writeTestsTotals(
+    join(coverageRoot, "tests-totals.json"),
+    buildTestsTotals(totalFiles, failedFiles, totalTests, totalFailed),
+  );
   process.stdout.write("\n==============================\n");
   process.stdout.write("SUMMARY\n");
   process.stdout.write("==============================\n");
