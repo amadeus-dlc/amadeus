@@ -137,16 +137,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
-      contents: write
+      contents: read
     concurrency:
       group: metrics-snapshot-main
       queue: max
       cancel-in-progress: false
     steps:
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.METRICS_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.METRICS_BOT_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Set up bun
         uses: oven-sh/setup-bun@v2
@@ -168,22 +178,35 @@ jobs:
       - name: Generate snapshot
         run: bun scripts/metrics-snapshot.ts --write
 
+      - name: Get GitHub App user ID
+        id: app-user
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: echo "user-id=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+
       - name: Commit snapshot
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
+          git config user.email '${{ steps.app-user.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com'
           git add metrics/*.json
           git commit -m "chore(metrics): record snapshot"
 
-      - name: Push snapshot branch
+      - name: Publish snapshot pull request
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          # Main requires pull requests, so preserve the snapshot on a review branch.
-          branch="metrics/snapshot-${GITHUB_SHA:0:12}"
+          branch="metrics/snapshot-${GITHUB_SHA:0:12}-${GITHUB_RUN_ATTEMPT}"
           git push origin "HEAD:refs/heads/$branch"
+          pr_url=$(gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "メトリクススナップショットを記録する" \
+            --body "main の ${GITHUB_SHA:0:12} に対応するコードメトリクスを自動記録します。")
+          gh pr merge --auto --squash --delete-branch "$pr_url"
           {
-            echo "## Metrics snapshot ready"
+            echo "## Metrics snapshot pull request"
             echo
-            echo "[Open a pull request](https://github.com/${GITHUB_REPOSITORY}/compare/main...$branch?expand=1)"
+            echo "[$pr_url]($pr_url)"
           } >> "$GITHUB_STEP_SUMMARY"
 
   codecov-status:
