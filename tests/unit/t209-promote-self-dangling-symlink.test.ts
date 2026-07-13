@@ -21,9 +21,20 @@
 //      still reported (check exit 1) and removed by --apply.
 //   4. A dangling symlink OUTSIDE preserved is diagnosed as an ORPHAN (no
 //      crash) and removed by --apply.
+//   5. Root CLAUDE.md inlines the preserved Claude onboarding file without
+//      importing AGENTS.md.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { composeRootAgents, promoteSelfMain } from "../../scripts/promote-self.ts";
@@ -43,6 +54,7 @@ beforeEach(() => {
   write("dist/codex/.codex/b.txt", "beta\n");
   write("dist/codex/.agents/c.txt", "gamma\n");
   write("dist/codex/AGENTS.md", "@.agents/rules/amadeus.md\n\n# AI-DLC on Codex CLI\n\ngenerated\n");
+  write(".claude/CLAUDE.md", "@.claude/rules/amadeus.md\n\n# Claude onboarding\n");
   write("AGENTS.md", "@.agents/rules/amadeus.md\n\n# Project rules\n");
   // Materialize an in-sync self install (also creates CLAUDE.md + cursor).
   expect(promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
@@ -74,6 +86,13 @@ describe("t209 promote-self dangling-symlink resilience", () => {
   test("root AGENTS keeps the dist import when no project guidance exists", () => {
     const dist = Buffer.from("@.agents/rules/amadeus.md\n\n# AI-DLC on Codex CLI\n\nfresh\n");
     expect(composeRootAgents(Buffer.alloc(0), dist)).toEqual(dist);
+  });
+
+  test("root CLAUDE inlines Claude onboarding without importing AGENTS", () => {
+    const got = readFileSync(join(root, "CLAUDE.md"), "utf-8");
+    expect(got).toStartWith("## Project Instructions\n");
+    expect(got).toContain("@.claude/rules/amadeus.md\n\n# Claude onboarding\n");
+    expect(got).not.toContain("@AGENTS.md");
   });
 
   test("--check passes with a dangling symlink under a preserved dir", () => {

@@ -37,9 +37,7 @@ const managedDirs: ManagedDir[] = [
   { src: "dist/codex/.agents", dst: ".agents" },
 ];
 
-const CLAUDE_MD_CONTENT = `@AGENTS.md
-
-## Project Instructions
+const PROJECT_INSTRUCTIONS = `## Project Instructions
 
 - Communicate with the user in Japanese.
 - Write documentation in English by default.
@@ -47,11 +45,8 @@ const CLAUDE_MD_CONTENT = `@AGENTS.md
 - Write code comments in English.
 - Write commit messages in English.
 - If you find violations of these language rules while working, fix them as part of the same change.
-`;
 
-const managedFiles = new Map<string, Buffer>([
-  ["CLAUDE.md", Buffer.from(CLAUDE_MD_CONTENT, "utf-8")],
-]);
+`;
 
 const CODEX_AGENTS_MARKER = "# AI-DLC on Codex CLI\n";
 const AMADEUS_IMPORT = "@.agents/rules/amadeus.md\n\n";
@@ -185,7 +180,7 @@ function isPreserved(rel: string): boolean {
 }
 
 function buildExpected(repoRoot: string): Map<string, Buffer> {
-  const expected = new Map(managedFiles);
+  const expected = new Map<string, Buffer>();
   for (const { src, dst } of managedDirs) {
     const srcAbs = join(repoRoot, src);
     if (!existsSync(srcAbs)) {
@@ -197,6 +192,17 @@ function buildExpected(repoRoot: string): Map<string, Buffer> {
       expected.set(dstRel, readFileSync(file));
     }
   }
+  const claudeOnboarding = join(repoRoot, ".claude", "CLAUDE.md");
+  if (!existsSync(claudeOnboarding)) {
+    throw new Error("missing source file: .claude/CLAUDE.md");
+  }
+  expected.set(
+    "CLAUDE.md",
+    Buffer.concat([
+      Buffer.from(PROJECT_INSTRUCTIONS, "utf-8"),
+      readFileSync(claudeOnboarding),
+    ]),
+  );
   const rootAgents = join(repoRoot, "AGENTS.md");
   const distAgents = join(repoRoot, "dist", "codex", "AGENTS.md");
   if (!existsSync(distAgents)) throw new Error("missing source file: dist/codex/AGENTS.md");
