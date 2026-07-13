@@ -566,7 +566,7 @@ The task MUST be `in_progress` for the `activeForm` spinner to display. This upd
 
 ## Deliberate Deviations
 
-The following intentional differences from the upstream `aidlc-workflows/` reference and the v2 framework spec are documented in SKILL.md and stage-protocol.md to prevent future "fix" attempts.
+The following intentional differences from the upstream AI-DLC Workflows reference and the v2 framework spec are documented in SKILL.md and stage-protocol.md to prevent future "fix" attempts.
 
 | # | Deviation | Reference | Implementation | Rationale |
 |---|-----------|-----------|----------------|-----------|
