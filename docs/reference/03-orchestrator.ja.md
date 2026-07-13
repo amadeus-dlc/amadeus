@@ -566,7 +566,7 @@ stateDiagram-v2
 
 ## Deliberate Deviations
 
-上流の `amadeus-workflows/` リファレンスおよび v2 フレームワーク仕様からの以下の意図的な差異は、将来の「修正」試行を防ぐため SKILL.md と stage-protocol.md に文書化されています。
+上流の `aidlc-workflows/` リファレンスおよび v2 フレームワーク仕様からの以下の意図的な差異は、将来の「修正」試行を防ぐため SKILL.md と stage-protocol.md に文書化されています。
 
 | # | 逸脱 | リファレンス | 実装 | 根拠 |
 |---|-----------|-----------|----------------|-----------|
