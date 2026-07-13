@@ -23,7 +23,7 @@
 | bugs-only の期限付きスコープ | intent record / history | 常時適用ルールから除外 |
 | 特定 intent の sibling dependency | intent record / history | project の常時適用ルールから除外 |
 | 失効したハーネス固有の役割規則 | knowledge / audit | resolver が読む rule body から分離 |
-| ソロ／チームの実行形態 | team | ハーネスとは独立した運用契約として両モードと縮退規則を明記 |
+| ソロ／チームの実行形態 | team | `AMADEUS_OPERATING_MODE` を唯一の判定元とし、両モードと縮退規則を明記 |
 
 ## 継続時の配置テスト
 

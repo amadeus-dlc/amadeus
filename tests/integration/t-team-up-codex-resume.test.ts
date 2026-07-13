@@ -39,6 +39,12 @@ function commandFor(member: string, resolverBody: string) {
 }
 
 describe("team-up Codex resume", () => {
+  test("marks Codex member sessions as team mode", () => {
+    const result = commandFor("engineer-1", "exit 0");
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.toString()).toContain("AMADEUS_OPERATING_MODE=team");
+  });
+
   test("resumes the role's recorded UUID instead of global --last", () => {
     const result = commandFor("engineer-1", 'printf "thread-engineer-1"');
     const command = result.stdout.toString();
@@ -63,5 +69,28 @@ describe("team-up Codex resume", () => {
     expect(command).toContain("--codex-command codex");
     expect(command).not.toContain("--codex-command resume");
     expect(result.stderr.toString()).toContain("role resume resolver failed");
+  });
+});
+
+describe("team-up shared operating mode", () => {
+  test("marks Claude member sessions as team mode", () => {
+    const result = Bun.spawnSync({
+      cmd: [
+        "bash",
+        "-c",
+        'script="$1"; set --; TEAM_UP_LIB_ONLY=1 source "$script"; CONTINUE=0; claude_member_cmd engineer-1',
+        "_",
+        TEAM_UP,
+      ],
+      env: {
+        ...process.env,
+        DELIVERY: "/path/that/does/not/exist",
+      },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.toString()).toContain("AMADEUS_OPERATING_MODE=team");
   });
 });
