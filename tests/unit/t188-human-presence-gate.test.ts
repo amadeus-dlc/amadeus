@@ -385,10 +385,19 @@ describe("t188: human-presence approval gate (ledger-event design)", () => {
 
     test("REFUSES to record an answer when the ledger has events but no HUMAN_TURN", () => {
       const slug = field(proj, "Current Stage");
-      guarded(proj, ["gate-start", slug]); // ledger non-empty, no HUMAN_TURN
+      const seed = guardedLog(proj, [
+        "decision",
+        "--stage",
+        slug,
+        "--decision",
+        "Seed a non-human ledger event",
+      ]);
+      expect(seed.rc).toBe(0);
+      expect(eventCount(proj, "DECISION_RECORDED")).toBe(1);
       const r = guardedLog(proj, ["answer", "--stage", slug, "--details", "my answer"]);
       expect(r.rc).not.toBe(0);
-      expect(r.out).toContain("Refusing to record this answer");
+      expect(r.out).toContain("a real human has not acted");
+      expect(r.out).not.toContain("an approval gate is open");
       expect(eventCount(proj, "QUESTION_ANSWERED")).toBe(0);
     });
 
