@@ -22,7 +22,7 @@
 | 選挙、独立レビュー、エスカレーション | team | team に維持 |
 | bugs-only の期限付きスコープ | intent record / history | 常時適用ルールから除外 |
 | 特定 intent の sibling dependency | intent record / history | project の常時適用ルールから除外 |
-| 失効した Codex/Claude 役割規則 | knowledge / audit | resolver が読む rule body から分離 |
+| 失効したハーネス固有の役割規則 | knowledge / audit | resolver が読む rule body から分離 |
 
 ## 継続時の配置テスト
 
