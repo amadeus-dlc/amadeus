@@ -1,7 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import { extractCiSnapshotWiring } from "../lib/ci-snapshot-wiring.ts";
 
-const yaml = `  coverage:
+const yaml = `on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - metrics/**
+  pull_request:
+
+concurrency:
+  coverage:
       - name: Upload coverage artifact
         name: amadeus-coverage-report
         path: |
@@ -25,8 +33,13 @@ const yaml = `  coverage:
   ci-success:
     needs: [coverage]
 `;
-const { job, uploadStep, ciSuccess } = extractCiSnapshotWiring(yaml);
+const { trigger, job, uploadStep, ciSuccess } = extractCiSnapshotWiring(yaml);
 describe("t222 CI snapshot wiring", () => {
+  test("metrics-only main pushes do not recurse while pull requests still run", () => {
+    expect(trigger).toContain("push:\n    branches: [main]");
+    expect(trigger).toContain("paths-ignore:\n      - metrics/**");
+    expect(trigger).toContain("pull_request:");
+  });
   test("main push guard", () => expect(job).toContain("github.event_name == 'push' && github.ref == 'refs/heads/main'"));
   test("write permission", () => expect(job).toContain("contents: write"));
   test("fixed concurrency queue", () => { expect(job).toContain("group: metrics-snapshot-main"); expect(job).toContain("queue: max"); expect(job).toContain("cancel-in-progress: false"); });
