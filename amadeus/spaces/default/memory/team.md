@@ -1,6 +1,6 @@
 # Team-Level Rules
 
-> このチームが承認したプラクティスと是正事項。org.md を上書きする。practices-discovery の承認ゲートで記入される。原則としてゲート経由で編集し、直接編集しない。
+> このチームが複数プロジェクトで共通して採用するプラクティスと是正事項。org.md に矛盾しない規則を加算する。practices-discovery の承認ゲートで記入され、原則としてゲート経由で編集する。
 >
 > 2026-07-09 ノルム整理(監査: claude-engineer-2、選挙 A4=A 全会一致、ユーザー承認済み): 矛盾・重複・失効・表記ゆれを再編。以降の追記は本整理後の正準表現(エスカレーション正準リスト等)を参照すること。
 
@@ -16,13 +16,11 @@
 
 - **P4: 不可逆・外部境界には人間を置く。** PR マージ、human-presence ゲート、セッションのライフサイクル操作(起動/再起動/despawn)など、取り消せない/外部に作用する行為は、その都度の人間の明示承認を前提とする。過去や類似案件の承認を次へ流用しない。遠隔承認は委任 provenance(実 HUMAN_TURN 由来の delegate)でのみ行い、ゲートの緩和・偽装はしない。
 
-- **P5: 変更は最小・同期・隔離を保ち、トランクの単純性を守る。** 触るのは必要な箇所だけ(surgical)。要求されない後方互換レイヤー・移行シムは足さず古い挙動を置き換える。`core/`・`harness/` を編集したら dist/self-install を同一コミットで同期する。並行実装は worktree 隔離規律(割当ツリー外の git 状態変更禁止・本線絶対パス非混入)を守り、scratch は repo 外で実行する。指令ループ外の規範は、該当イベント時にタスク化しない限り実行されない。
+- **P5: 変更は最小・同期・隔離を保ち、トランクの単純性を守る。** 触るのは必要な箇所だけ(surgical)。要求されない後方互換レイヤー・移行シムは足さず古い挙動を置き換える。生成物を持つプロジェクトでは正本と生成物を同一変更で同期する。並行実装は worktree 隔離規律(割当ツリー外の git 状態変更禁止・本線絶対パス非混入)を守り、scratch は repo 外で実行する。指令ループ外の規範は、該当イベント時にタスク化しない限り実行されない。
 
 ## Way of Working
 
-このリポジトリは `main` を中心に、短命ブランチから Pull Request 経由で変更を取り込む GitHub Flow / トランクベース寄りの運用を採用する。実装時は `core/` または `harness/<name>/` を編集元とし、`dist/` とセルフインストールツリーは生成物として `bun scripts/package.ts` と `bun run promote:self` で同期する。
-
-amadeus/ ワークスペース(record: state・per-clone 監査シャード・intents.json、memory、codekb、knowledge)は version-controlled。**チェックポイント(ワークフローのパーク時・ステージ完了時・セッションや1日の終わり)で `amadeus/` ツリーごとコミットする**。監査シャードは per-clone・append-only(`<record>/audit/<host>-<clone>.md`、読み取りは `audit/*.md` の glob マージ)で競合しないため、監査だけの専用コミットは通常不要 — チェックポイントのコミットに自然に含める。
+`main` を中心に、短命ブランチから Pull Request 経由で変更を取り込む GitHub Flow / トランクベース寄りの運用を採用する。プロジェクト固有の正本・生成物・同期コマンドは project.md に記録する。
 
 amadeus 実行中に、現在の intent と関連して一緒に扱う必要はあるが、同じ intent に含めると目的や成果物の焦点がぼやける課題を見つけた場合は、発見時点では intent 粒度を気にせず GitHub Issue として起票し、リンクを会話・関連成果物・必要なら stage diary に残してから本線の作業へ戻る。質問の選択肢で非採用にした案や、単にスコープ外と判断しただけの案を機械的に Issue 化しない。
 
@@ -66,7 +64,6 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 - 学びの回収は二段構えで行う: (1) ステージ完了ごとの §13 学習選定選挙(cid:learnings-election)で作業中の学びを都度 persist する (2) **約1時間周期のローリング・ポストモーテム**(2026-07-10 ユーザー改訂 — 当初の「バッチ完結節目」→30分周期→1時間周期): leader が定期に全員へ「直近1時間の学習候補(なければ0件)」を募り、提出候補を blind 選挙で採否確定、採用分は leader がチェックポイント persist し、persist ごとに速やかにノルム PR(2名レビュー+ユーザー承認マージ)で main へ反映する(cid:norm-changes-via-pr の即時同期に従う)。入力はバグ由来分類・intent 別集計・原因所在コメント・diary・運用インシデント。あわせて leader は毎ラウンド、**自作バグのトレンド**(直近窓の自作起票数 = bug − origin:bootstrap − 外部、対クローズ数、累計推移)を実測して報告に含める — 防止ノルムの実効性を発生率で監視するため(2026-07-10 ユーザー指示)。0件ラウンドは選挙省略可(提出ゼロの記録のみ)。バグ Issue の精査(由来・原因所在の記載)はこの一次材料として維持する (user decision 2026-07-10) <!-- cid:requirements-analysis:postmortem-two-tier -->
 
 - leader はオープンバグゼロを目標として運営する: バグの起票・トリアージ・バッチ編成・割当を能動的に回し、割当はトークン資源制約に従う(cid:rate-limit-idle-allowance — アイドル回避を割当の根拠にしない)。実装待ちのバグには codex の事前深掘り(根本原因・再現・修正案の選択肢)を先行させ、requirements・選挙を高速化する (user decision 2026-07-09) (amended 2026-07-11 user decision) <!-- cid:requirements-analysis:bug-zero-goal -->
-- 当面の対応スコープはバグのみ: 新規タスク・intent はバグ修正に限定し、enhancement 系は起票・トリアージまでに留めて着手しない。進行中の enhancement intent は park のまま凍結。例外: (1) バグ対応自体の前提となるインフラ作業(例: #671) (2) ユーザーが P0 指定したタスク(#683、#684 とその分割 Issue — #697 の PBT は #684 Phase B としてのみ実装可。#688 単体の本格導入は凍結継続。2026-07-09 ユーザー裁定) (user decision 2026-07-09) <!-- cid:requirements-analysis:bugs-only-scope -->
 - バグ修正の着手順は「優先度がキューの並び順、依存関係が実行可能性の制約」の2層で決める: (1) パイプラインを塞ぐバグ(全 PR のマージ・CI を止めるもの)は P ラベルに関わらず依存の根元として最優先で倒す (2) 同一ファイルを触る修正は並行させず直列化する(c6 の非交差判定) (3) 進行中 PR と同じ層を触る修正は、その PR の着地を待つかファイル単位の非交差を実測確認してから着手する (4) クロスレビュー2名成立はバッチ編入の前提であり、優先度が高くても揃うまで着手しない(逆に低優先度でも揃っていれば同バッチに同乗可)。優先度と依存が衝突したら依存を優先し、その判断は leader が記録する (user decision 2026-07-10) <!-- cid:requirements-analysis:priority-vs-dependency -->
 - 潜在バグ探索タスクでは修正を行わない: 発見バグは file:line で裏取りした実測のみを GitHub Issue に起票する(推測起票・重複起票禁止)。修正は claude メンバーへの別タスクとして割り当てる (user decision 2026-07-09) <!-- cid:requirements-analysis:bughunt-file-only -->
 - GitHub Issue・PR はともにタイトル・本文・コメント(Issue のクロスレビュー verdict、ラベル bug/P0-P3 等を含む)を日本語で書く。コード識別子・ファイルパス・コマンド・ログ引用は原文のまま保持する。既存に英語が残っている場合は、その Issue/PR を更新するとき(コメント追加・ラベル変更・クローズ・修正着手等)についでにタイトル・本文を日本語化する(一括翻訳キャンペーンは行わない)。コミットメッセージは従来どおり英語 (user decision 2026-07-10) <!-- cid:requirements-analysis:issues-in-japanese --> <!-- cid:requirements-analysis:prs-in-japanese -->
@@ -87,48 +84,20 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 - Issue のラベルトリアージは自動発動とする: 起票者は起票時に種別(bug/enhancement/documentation)+ 優先度(P0-P3)の見立てを必ず付ける。leader は起票報告を受けるたびに未付与・不整合がないか確認し、あれば空いているメンバー(旧: codex — all-claude-team 2026-07-10 で読み替え)へトリアージを即ディスパッチする(ユーザーの指示を待たない)。優先度基準: P0=正しさ/安全性の破綻、P1=重要だが回避可、P2=通常、P3=いつか (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:auto-label-triage -->
 - bug には優先度(P0-P3 = いつ直すか)に加えて重大度ラベル(S1-S4 = どれだけ深刻か)を併記する(2軸、user decision 2026-07-10): S1-FATAL=データ・監査・ゲート整合性の破壊/誤マージ誘発/ワークフロー停止、S2-CRITICAL=主要機能の誤動作・偽 green/偽赤で回避策なし、S3-MAJOR=誤動作だが回避策あり・限定条件でのみ発現、S4-MINOR=軽微・エッジケース・表示層。起票者が見立てを付け、クロスレビューで妥当性も検証する。2軸は乖離してよい(深刻だが緩和済みで P2、軽微だが即修正で P1 等)。S ラベルは後付けにせず、起票時に bug ラベル・P ラベルと同時に付与する(2026-07-10 ユーザー指示で明確化)。加えて、欠陥コードが bootstrap 初期実装(本家)由来と判明したバグには `origin:bootstrap` ラベルを付与する — 起票時に blame で判明していれば同時付与、後から判明したら追加付与(2026-07-10 ユーザー指示) <!-- cid:requirements-analysis:bug-severity-labels -->
 - Issue クロスレビューは独立検証であって同意表明ではない: レビュアーは起票文の要約・追認だけのコメントを書かず、自分で実際にコード・ファイルを開いて突き合わせた新しいエビデンス(自分が実行したコマンドと結果、確認した file:line の引用、可能なら再現の実測)を必ずコメントに含める。独立エビデンスのないレビューは2名確認の頭数に数えない。leader は verdict コメントにエビデンスが無い場合、レビューやり直しを差し戻す (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:issue-review-evidence -->
-- ドキュメントの修正・執筆(docs/、amadeus/ 配下の日本語 Markdown、EN/JA ペア更新を含む)は claude メンバーが担当する。codex メンバーには日本語文書の執筆・修正を割り当てない(日本語の品質担保のため。codex はドキュメントの検証・参照整合チェックには従来どおり参加してよい) (user decision 2026-07-09) (learned 2026-07-09) (note: codex 条項は all-claude-team 2026-07-10 の退役により空文化 — 全 claude 体制ではドキュメントは全員可) <!-- cid:requirements-analysis:requirements-analysis:docs-by-claude -->
+- ドキュメントの修正・執筆では、対象読者が使用する言語とリポジトリの言語規約を守る。レビューでは内容だけでなく、参照整合と対訳が必要な文書の同期も確認する (user decision 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:docs-by-claude -->
 - $HOME/.agents/skills のスキルを状況に応じて活用する: PR レビュー時は thermo-nuclear-code-quality-review(厳格な保守性監査)を codex の標準レビュー手順に加える。PR が壊れているときは fix-merge-conflicts / fix-ci / loop-on-ci。他エージェントの主張・レビュー結果の裏取りには verify-this(反証可能な形での fresh evidence 検証 — Issue クロスレビューの独立エビデンス要件と整合)。PR コメント回収は get-pr-comments (user decision 2026-07-09) (learned 2026-07-09) (updated by all-claude-team 2026-07-10: 『codex の標準レビュー手順』は『レビュアーの標準手順』に読み替え) <!-- cid:requirements-analysis:requirements-analysis:agents-skills-usage -->
 - 無言で作業しない: 各メンバー(特に codex)は作業中、自セッションのターミナルに進捗ナレーションを出す — 着手時に「何をどの手順でやるか」、長い工程の節目ごとに「いま何をしていて次に何をするか」、ツール実行の前に一言の意図表明。人間がターミナルを覗いたときに現在地が分かる状態を常に保つ(leader への報告制とは別軸: 報告は節目、ナレーションは常時) (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:no-silent-work -->
 - PR 作成前の deslop を標準工程にする: 実装者は PR を出す前に $HOME/.agents/skills/deslop スキル(main との diff から AI slop — 不要コメント・過剰防御・any キャスト・深いネスト・周辺コードと不整合なパターン — を除去、挙動不変)を実行する。レビュアーも slop 残存をレビュー観点に含める(thermo-nuclear と併用)。deslop 後も全検証コマンドの再実行必須(挙動不変の実証) (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:deslop-in-workflow -->
-- チームは claude 6名体制で運用する(2026-07-09 決定): codex(GPT-5.6)は agmsg の monitor 受信が Codex CLI 本体の制約(外部イベントで走行中の可視セッションを起こす API 不在 — openai/codex #18056/#15299/#17543 open, #11415 not_planned、3名独立 VERIFIED)で成立せず turn mode 退避が必要になったため、codex worktree を claude で立ち上げ直した(codex-engineer-1/2/3 worktree → claude-engineer-4/5/6)。全員 monitor で可視・wake 可能。旧 codex 専用の役割分担(レビュー/リサーチ専任・実装解放等)は失効し、全 claude が実装・conductor・レビュー・リサーチを担う(自己実装 PR の自己レビュー禁止は維持)。Codex 側が該当機能を実装したら codex 再導入を再検討 (learned 2026-07-09) (learned 2026-07-10) <!-- cid:requirements-analysis:requirements-analysis:all-claude-team -->
-- 全 claude 6名の役割モデル(2026-07-10 ユーザー指示により leader が策定): 能力は同一のため、役割の区別は固定分担ではなく「領域アフィニティ(蓄積した文脈)」と「帽子(conduct / レビュー / バグハント)」で行う。領域アフィニティ: e1=ゲート・presence・監査層(amadeus-state/lib/audit)、e2=CI・カバレッジ・リリース(workflows/codecov/release)、e3=パッケージング・dist・promote-self・日本語ドキュメント、e4=エンジン(orchestrate/swarm)・ハーネス表層、e5=tools 深部(learnings/runner-gen)・テストインフラ、e6=scripts・packages/setup・トリアージ。運用規則: (1) 同時 conduct は最大2 intent とし(2026-07-11 user decision: レートリミット対策で3→2へ縮小)、常時2名以上をレビュー/バグハント側に確保する(レビュー枯渇防止) (2) conductor 割当はラウンドロビンとし、同じメンバーが連続して conduct しない(直前の intent の conductor は次の intent の割当対象から除外)。ローテーション順で複数の候補が同順位の場合(複数 intent の同時立ち上げ等)に限り、アフィニティ最寄りをタイブレークとして用いる(2026-07-11 user decision: アフィニティ既定→ラウンドロビン一次へ改定) (3) Issue クロスレビューは起票者以外で「領域内1名+領域外1名」を混ぜる(盲点防止) (4) 優先順位は全員共通で レビュー > バグハント > 新規着手 (5) アフィニティは独占ではない — 手が空いた者が領域外を担ってよく、選挙・ドキュメントは全員が担う (user decision 2026-07-10) (amended 2026-07-11 user decision) <!-- cid:requirements-analysis:claude-role-model -->
-## Walking Skeleton
-
-スコープ別の walking-skeleton 既定は org.md に従う。greenfield 要素(新パッケージ・新配布経路など)を含む intent では、最初の Construction Bolt を小さな end-to-end スライスとして扱い、以後の拡張前に人間がゲートで確認する。
-
-## Testing Posture
-
-テストは TypeScript で `tests/` 配下に追加し、Bun ベースの既存ランナーで検証する。PR/CI の基準は `bun run typecheck`、`bun run lint`、`bun run dist:check`、`bun run promote:self:check`、`bash tests/run-tests.sh --ci`。ユーザー可視の契約(CLI 契約・配布物ドリフト・セルフインストール互換など)は該当領域を触る変更で必ずカバーする。
-
-タスク実行中に既存テストが赤い場合、「自分と無関係」を理由に無視して作業を進めたり、スイートをグリーンとして報告・完了扱いしたりしない。まずベースライン(自分の変更前から赤かったか)を確認し、自分の変更で赤くしたテストは必ず直す。変更前から赤い無関係なテストは、原因が明快で安全・低コストに直せるなら同一 PR で直す(ボーイスカウトルール)。直すのが大きい・リスキー・他者の作業中の場合は、黙って進めず GitHub Issue を起票し会話でフラグしてから本線に戻る(Way of Working の Issue 起票ノルムに合流する)。無関係な赤の是正で本線のスコープを不必要に膨張させない。
-
-## Deployment
-
-デプロイ基盤は持たず、リリースは npm パッケージ配布と GitHub 上のタグ/PR 履歴で管理する。GitHub Actions は push と pull_request で typecheck、lint、dist/self-install drift guard、smoke+unit+integration tests を実行し、リリース前には必要に応じて `--release` テスト層を追加する。
-
-リリースは release.yml の workflow_dispatch 一本で行う: release-it がバージョンバンプ(`after:bump` の `scripts/release-version-sync.ts` が `packages/setup/package.json`・`amadeus-version.ts`・README バッジ・`dist/`・セルフインストールツリーを機械的に同期)→ `vX.Y.Z` タグ発行 → GitHub Release ノート自動生成 → npm publish まで完結する。手書きの CHANGELOG.md は持たず(2026-07-09 削除)、PR や amadeus ワークフローがバージョンを上げることもない。タグはインストーラ(`@amadeus-dlc/setup`)の配布物取得先として参照される。リリースのバンプコミットのみ、PR/5ゲートを経ずに main へ入る明示的な例外として承認する(release-it が行う version 変更に限定。2026-07-09 ユーザー決定)。
-
-## Code Style
-
-TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフィックス、`packages/framework/` 配下のハーネス中立 `core/` とハーネス別 `harness/<name>/` という境界を守る。フォーマッタは無効、lint は Biome、型検査は `tsc --noEmit` の2構成で行い、ツール・フックには実行ビットを要求しない。
-
-新設パッケージ(`packages/*`)は、lint(Biome)と型検査(`tsc --noEmit`)の配線を**パッケージを追加する同一 PR で**追加し、既存の狭い CI lint スコープ(`tests/` のみ)を継承しない。
-
-リリース手順の正準は Deployment 節を参照(旧: 本節に `setup-vX.Y.Z` タグ表記の重複段落があったが、実タグは `vX.Y.Z` であり事実誤りのため 2026-07-09 の整理で Deployment へ一本化)。
-
+- 役割は固定メンバー名ではなく、領域アフィニティ(蓄積した文脈)と作業上の帽子(conduct / review / investigation)で割り当てる。自己実装の自己レビューは禁止し、同一人物への連続した conductor 割当を避け、レビュー能力を常に確保する (user decision 2026-07-10) <!-- cid:requirements-analysis:claude-role-model -->
 ## Forbidden
 
-- NEVER `dist/<harness>/` 配下を手編集する — 生成物であり、`bun scripts/package.ts --check` が CI で失敗する
 - NEVER 要求されていない後方互換レイヤー・フォールバック分岐・非推奨API のシム・移行用の二重実装を追加しない。トランクベース開発で互換負債を溜めないため、古い挙動は削除して置き換える。互換維持が必要なときは requirements/NFR に明示された場合にのみ実装し、根拠を成果物に残す
-- NEVER 既存テストの赤を「自分と無関係」を理由に無視して作業を続行したり、赤いスイートをグリーン・完了として報告したりしない。まずベースラインを確認し、直す(ボーイスカウト)か Issue 起票でフラグするかのいずれかを必ず行う
 - NEVER 検証・ゲート・チェックの結果を実行結果から導出せずに構築しない — status のハードコード、自己参照比較(x === x)、両分岐が同一の条件式、どのコードも消費しない検証用フィールドはすべて「検証劇場」であり、偽の信頼を生む分だけゲート不在より悪い
 - NEVER AI(leader・メンバー・サブエージェントを問わず)が PR のマージを自発的に実行しない。マージはその PR について人間の明示承認を得てから実行する。過去の承認や類似 PR の承認をもって次のマージの承認と見なさない (user decision 2026-07-09) <!-- cid:requirements-analysis:no-ai-merge -->
 - NEVER leader・メンバーがメンバーセッションのライフサイクル操作(起動・再起動・despawn、tmux 直接操作を含む)を行わない。セッションは人間が identity ランナー(scripts/run-claude.sh / run-codex.sh、CLAUDE_IDENTITY 指定)で起動する。エージェント側は再起動が必要な状況の案内までに留める (user decision 2026-07-09) <!-- cid:requirements-analysis:no-session-lifecycle-ops -->
 
 ## Mandated
 
-- ALWAYS `core/` または `harness/<name>/` を編集したら `bun scripts/package.ts` で dist を再生成し、`bun run promote:self` でセルフインストール(`.claude/` / `.codex/` / `.agents/` / `CLAUDE.md`)へ昇格して、両方を同一コミットに含める
 - ALWAYS code-generation / functional-design のレビューゲートで、要求にない後方互換レイヤー・フォールバック分岐・移行シム・二重実装が混入していないかを reviewer が明示的に検査する。混入を発見したら、requirements/NFR に根拠が明示されていない限り是正するまでステージを完了させない
 - ALWAYS 新設のゲート・検証スクリプト・チェックは、失敗ケースを注入して実際に赤くなることを実証してから完成扱いにする。生成するエビデンス(レポート/アーティファクト)が実行結果由来であること、および保存先まで実際に到達することを確認する。reviewer はコードを読んで承認するだけでなく、この「落ちる実証」を要求する
 
@@ -187,22 +156,3 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - 並行 fan-out 直後にフルスイート統合検証を回すときは、ホスト負荷の収束を待つか並列度を落とす — 入れ子 spawn 型テスト(t05 planted-failure 等)は外側並列と重なるとタイムアウト予算を食い切り、負荷起因の偽赤で切り分けコストを生む(E-L71 2026-07-11 採用 全会一致、batch10 実測: 初回 FAIL→solo 28 pass→負荷収束後 PASS の3点対照。#912 の運用面) (learned 2026-07-11) <!-- cid:code-generation:fanout-load-settle-before-integration -->
 - mutating CLI verb へ --help プローブをしない — --help フラグを実装しない CLI では、既知の mutating verb への --help はただの余剰引数として無視され verb がそのまま実行される(park --help が既 park 状態へ再 park した実測 2026-07-12 00:01Z 監査記録; amadeus-orchestrate.ts:2947-2949 handlePark が _args を無視、:2992-2993 case park ディスパッチ)。未知 subcommand 経路は loud エラーで安全 — 危険なのは既知 verb 側。interface 調査は引数なし実行のエラー出力か README で行う(E-CG-L 2026-07-12 採用 4/6、doctor-consistency code-generation 実測) (learned 2026-07-12) <!-- cid:code-generation:no-help-probe-on-mutating-verbs -->
 - 検査機構の不在主張(「〜を検査するテストは存在しない」)は、ファイル名・ヘッダコメントの責務表示を根拠にせず、テスト名・関数名の全域 grep で反証確認してから書く — テストファイルは多責務同居がありうる(t174-docs-legacy-refs-gate が言語切替リンク検査 :256 を同居)。E-L38(引用の実在)・E-L56(列挙の完全性)と直交する「不在主張の反証確認」面を埋める(E-L76 2026-07-12 採用 6/6、test-pyramid requirements iteration 1 の誤 REVISE 実測 — conductor 反実測+レビュアー追認の2段確定) (learned 2026-07-12) <!-- cid:requirements-analysis:absence-claim-grep-verify -->
-
-## Archived(失効ノルム)
-
-> 失効・休眠したルールを履歴として保持する(削除ではなく移動)。cid コメント・注記は原文のまま。現行の判断根拠には使わない — 前提条件(codex 再導入等)が復活した場合にのみ参照する。
-
-### 退役済み役割分担
-
-> all-claude-team(2026-07-10、codex 退役)により失効。全 claude 体制では実装・conductor・レビュー・リサーチを全員が担う。
-
-- メンバーの役割分担: codex メンバーにはレビュー・ディープリサーチ(調査・検証・トリアージ)系のタスクを割り当てる。実装・conductor 役は claude メンバーが担う(CI 整備などユーザーが明示指定した場合は例外)。選挙は全員参加のまま (user decision 2026-07-09) (superseded by all-claude-team 2026-07-10 — codex 退役により失効) <!-- cid:requirements-analysis:codex-role-specialization -->
-- 役割分担の改定(2026-07-09 ユーザー決定、codex の gpt-5.6 sol medium への更新に伴う): codex メンバーにも実装作業・バグ修正の Bolt を割り当ててよい(従来のレビュー・ディープリサーチ・トリアージに追加)。制約: (1) 自分が実装した PR のレビューは他メンバーが行う(自己レビュー禁止) (2) 日本語ドキュメントの執筆・修正は引き続き claude 担当 (3) intent の conductor 役は当面 claude が担い、codex 拡大は実績を見て再判断。旧 codex-role-specialization はこの項で更新される (learned 2026-07-09) (superseded by all-claude-team 2026-07-10 — codex 退役により全条項失効) <!-- cid:requirements-analysis:requirements-analysis:codex-implementation-enabled -->
-
-### Codex 再導入時の運用知識
-
-> all-claude-team による codex 退役中は適用対象なし。Codex を再導入する場合の運用知識として温存する。
-
-- Codex 0.144.0 は code_mode_host が既定有効で、環境に codex-code-mode-host 実体が無いと functions.exec 等のツール実行が失敗する。対策はバージョンを下げず ~/.codex/config.toml の [features] に code_mode_host=false を設定する(0.143.0 固定は gpt-5.6 が使えないため不採用)。確認手順: codex --version / codex features list / agmsg whoami・inbox (learned 2026-07-09、codex-engineer-1 の実復旧) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:codex-code-mode-host-workaround -->
-- Codex の共有 app-server は起動時の feature 状態を保持し続けるため、~/.codex/config.toml の変更(code_mode_host=false 等)後も古い app-server が再利用されると症状が継続する。delivery.sh set monitor の再実行では app-server は入れ替わらない。復旧手順: 対象セッション終了 → delivery.sh set off codex <worktree> → set monitor → 再launch(app-server の作り直しまで含める) (learned 2026-07-09、codex-engineer-2 の実復旧) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:codex-app-server-stale -->
-- codex(GPT-5.6)の受信は当面 turn mode を既定運用とする(2026-07-09 ユーザー決定)。理由: 外部から走行中セッションを起こしつつ TUI に可視化する経路が Codex CLI 本体に存在しない(MCP 通知がモデルに届かない #18056、走行中通知ルーティング未実装 #15299/#17543、外部プロンプト注入 not planned #11415 — 一次情報認定)。既製 MCP ツールも同制約で解決不可。運用: leader は keep-alive で保留を検知して nudge を置き、確実に起こすのはユーザーの TUI 物理入力。Codex 本体が該当機能を実装したら monitor(push)へ復帰を再検討。tmux send-keys wake ウォッチャーは実装可能だが当面は採らない (learned 2026-07-09) (learned 2026-07-10) (dormant: all-claude-team 2026-07-10 の codex 退役中は適用対象なし — 再導入時の運用知識として温存) <!-- cid:requirements-analysis:requirements-analysis:codex-turn-mode-standing -->

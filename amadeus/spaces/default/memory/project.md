@@ -1,32 +1,34 @@
 # Project-Level Rules
 
-> プロジェクト固有の上書きと是正事項。team.md と org.md を上書きする。practices-discovery と自己学習ループによって記入される。
+> このプロジェクト固有の技術・構造・運用上の追加規則と是正事項。org.md、team.md に矛盾しない規則を加算し、practices-discovery と自己学習ループによって記入される。
 >
-> 控えめに使うこと: 多くのチームにはプロジェクト層は不要。このプロジェクトだけがチーム全体のプラクティスから安定的・恒久的に逸脱する場合にのみ使う(例:「このモノレポはチームのデフォルトがスカッシュでもリベースする」「このレガシープロジェクトは既存スイートが救済不能なためテスト下限を免除し、それを受け入れている」)。
+> ランタイム、リポジトリ構造、CI、配布経路など、このプロジェクトを離れると成立しない規則をここに置く。チーム共通の判断・レビュー・エスカレーション規則は team.md、一時的な intent 制約は intent record に置く。
 
 ## Way of Working
 
-<!-- プロジェクト固有の上書き。例: -->
-<!-- このモノレポはスカッシュマージではなくリベースする。パッケージ単位のコミット履歴が部分ロールバック判断の監査証跡だから。この上書きはこのプロジェクトにのみ適用される。 -->
+実装時は `core/` または `harness/<name>/` を編集元とし、`dist/` とセルフインストールツリーは生成物として `bun scripts/package.ts` と `bun run promote:self` で同期する。
 
 ## Walking Skeleton
 
-<!-- プロジェクト固有の上書き。例: -->
-<!-- このプロジェクトは walking skeleton をスキップする。既存サービスのインプレース書き換えであり、ゲートすべきグリーンフィールドのブートストラップが存在しないため。 -->
+スコープ別の walking-skeleton 既定は org.md に従う。greenfield 要素(新パッケージ・新配布経路など)を含む intent では、最初の Construction Bolt を小さな end-to-end スライスとして扱い、以後の拡張前に人間がゲートで確認する。
 
 ## Testing Posture
 
-<!-- プロジェクト固有の上書き。 -->
+テストは TypeScript で `tests/` 配下に追加し、Bun ベースの既存ランナーで検証する。PR/CI の基準は `bun run typecheck`、`bun run lint`、`bun run dist:check`、`bun run promote:self:check`、`bash tests/run-tests.sh --ci`。ユーザー可視の契約(CLI 契約・配布物ドリフト・セルフインストール互換など)は該当領域を触る変更で必ずカバーする。
+
+既存テストが赤い場合は変更前のベースラインを確認する。自分の変更による失敗は必ず直し、既存の無関係な失敗は安全かつ低コストなら修正し、それ以外は Issue に記録してスコープを不必要に膨張させない。
 
 ## Deployment
 
-<!-- プロジェクト固有の上書き。 -->
+デプロイ基盤は持たず、リリースは npm パッケージ配布と GitHub 上のタグ/PR 履歴で管理する。GitHub Actions は push と pull_request で typecheck、lint、dist/self-install drift guard、smoke+unit+integration tests を実行する。
+
+リリースは release.yml の workflow_dispatch 一本で行う。release-it がバージョン同期、`vX.Y.Z` タグ、GitHub Release ノート、npm publish を実行する。手書きの `CHANGELOG.md` は持たず、PR や amadeus ワークフローからバージョンを上げない。
 
 - Version-controlled append-only生成物の誤りは、履歴rewrite・force push・branch protection緩和をせず、人間承認付き通常PRのgit revertで回復する。collector/schema defectなら修正test/codeとrevertを同一PRにし、一時入力異常のみ単独revertを許容する。conflict時は停止する。秘密漏洩等の緊急削除は別手順で扱う。 (learned 2026-07-12) <!-- cid:deployment-pipeline:c3 -->
 - Deployment Executionの結果は、N/A（反証可能な不存在/非適用根拠あり）、NOT EXECUTED（対象/操作を認識したが禁止または未実施。理由を併記）、PENDING（後続の実行・観測条件待ち。閉包条件を併記）、PASS（実行証跡に基づく検証成功）を相互代用せず分離する。必要な外部操作を省略した完了根拠には使わない。 (learned 2026-07-12) <!-- cid:deployment-execution:c3 -->
 ## Code Style
 
-<!-- プロジェクト固有の上書き。 -->
+TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフィックス、`core/` のハーネス中立層と `harness/<name>/` のハーネス別表層という境界を守る。フォーマッタは無効、lint は Biome、型検査は `tsc --noEmit` で行い、ツール・フックには実行ビットを要求しない。
 
 - DECIDED: このプロジェクトのドメインモデリングは `amadeus/spaces/default/knowledge/amadeus-shared/software-design/functional-domain-modeling-ts/`(class-free、type+コンパニオンオブジェクト、ブランド型+スマートコンストラクタ、判別ユニオン Result)を採用する。普遍原則(tell-dont-ask、parse-dont-validate、first-class-collection 等、索引 `software-design/README.md` の常時適用群)はこのスタイルの上で適用する (adopted 2026-07-08、installer-distribution intent にてユーザー指示)
 
@@ -52,11 +54,10 @@
 
 - NEVER 手書きの `CHANGELOG.md` をリポジトリに復活させない — 2026-07-09 に削除済み。リリースノートは release.yml の GitHub Release 自動生成ノートが唯一のソース (user decision 2026-07-09)
 
-- NEVER hand-edit `dist/<harness>/` as an implementation shortcut. (affirmed 2026-07-07)
-- NEVER let source, distribution, and self-install trees drift across commits when installer behavior changes. (affirmed 2026-07-07)
-- NEVER rely on a local-only manual checklist for installer release readiness when a deterministic drift guard already exists. (affirmed 2026-07-07)
-- NEVER add runtime dependencies to the shipped framework without documenting why the user-side Bun-only premise changes. (affirmed 2026-07-07)
-- NEVER `dist/<harness>/` を layout 変更の近道として手編集しない。 (affirmed 2026-07-07)
+- NEVER `dist/<harness>/` を実装の近道として手編集しない。 (affirmed 2026-07-07)
+- NEVER インストーラの挙動を変更するとき、正本・配布物・セルフインストールツリーをコミット間で不整合にしない。 (affirmed 2026-07-07)
+- NEVER 決定的なドリフトガードが存在する検査を、ローカルだけの手動チェックリストで代替しない。 (affirmed 2026-07-07)
+- NEVER 利用者側の Bun-only 前提を変更する理由を文書化せず、配布フレームワークへ runtime dependency を追加しない。 (affirmed 2026-07-07)
 - NEVER root `core/` / `harness/` の維持または移動を、ADR/設計記録なしに暗黙決定しない。 (affirmed 2026-07-07)
 - NEVER `dist/` relocation を internal refactor として扱わない。README、docs、tests、self-promotion、CI への user-facing impact を棚卸しする。 (affirmed 2026-07-07)
 - NEVER `packages/setup` の不在をローカル filesystem evidence として捏造しない。 (affirmed 2026-07-07)
@@ -64,14 +65,13 @@
 
 - ALWAYS リリース(バージョンバンプ・タグ発行・GitHub Release ノート・npm publish)は release.yml の workflow_dispatch 一本で行う。PR ではバージョン・バッジ・リリースノートに一切触れない(`tests/unit/t68-version-changelog-sync.test.ts` が version.ts↔CLI↔README バッジの同期を強制) (user decision 2026-07-09)
 
-- ALWAYS edit `core/` or `harness/<name>/` as the source of truth, then regenerate `dist/` with `bun scripts/package.ts`. (affirmed 2026-07-07)
-- ALWAYS run `bun run promote:self` after source changes that affect the self-installed `.claude/`, `.codex/`, `.agents/`, or `CLAUDE.md` trees. (affirmed 2026-07-07)
-- ALWAYS include `bun run dist:check` and `bun run promote:self:check` in installer-related validation because the installer depends on generated distribution parity. (affirmed 2026-07-07)
-- ALWAYS validate installer changes with `bun run typecheck`, `bun run lint`, and the relevant `tests/run-tests.sh` profile before merge. (affirmed 2026-07-07)
-- ALWAYS treat the first installer Construction Bolt as a small end-to-end package setup slice and gate it before broader installer expansion. (affirmed 2026-07-07)
+- ALWAYS `core/` または `harness/<name>/` を正本として編集し、`bun scripts/package.ts` で `dist/` を再生成する。 (affirmed 2026-07-07)
+- ALWAYS セルフインストール対象の `.claude/`、`.codex/`、`.agents/`、`CLAUDE.md` に影響する正本変更後は `bun run promote:self` を実行する。 (affirmed 2026-07-07)
+- ALWAYS インストーラ関連の検証に `bun run dist:check` と `bun run promote:self:check` を含め、生成された配布物との一致を確認する。 (affirmed 2026-07-07)
+- ALWAYS インストーラ変更はマージ前に `bun run typecheck`、`bun run lint`、関連する `tests/run-tests.sh` プロファイルで検証する。 (affirmed 2026-07-07)
+- ALWAYS インストーラの最初の Construction Bolt を小さな end-to-end package setup slice とし、広範な拡張より前にゲートする。 (affirmed 2026-07-07)
 - ALWAYS layout-normalization の判断では `code-structure`, `technology-stack`, `dependencies`, `code-quality-assessment`, `architecture`, `business-overview` の CodeKB 根拠を参照する。 (affirmed 2026-07-07)
 - ALWAYS `dist/`、`.claude/`、`.codex/`、`.agents/` の path を変える案では `dist:check` と `promote:self:check` の維持方法を同じ成果物に書く。 (affirmed 2026-07-07)
-- ALWAYS `packages/setup` は別 intent の sibling dependency として扱い、この intent の実装スコープに吸収しない。 (affirmed 2026-07-07)
 - ALWAYS markdown artifact は日本語で書く。ただし path、CLI、コード識別子、tool が要求する heading は正確性を優先して保持する。 (affirmed 2026-07-07)
 - ALWAYS 新設パッケージ(`packages/*`)は lint(Biome)と型検査(`tsc --noEmit`)の配線をパッケージ追加と同一 PR で加え、既存の狭い CI lint スコープ(`tests/` のみ)を継承しない (affirmed 2026-07-08)
 ## Corrections
