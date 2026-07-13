@@ -7,6 +7,9 @@ name: CI
 on:
   push:
     branches: [main]
+    # Snapshot-only merges must not create another snapshot review branch.
+    paths-ignore:
+      - metrics/**
   pull_request:
 
 concurrency:
