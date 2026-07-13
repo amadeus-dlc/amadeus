@@ -23,6 +23,7 @@
 | bugs-only の期限付きスコープ | intent record / history | 常時適用ルールから除外 |
 | 特定 intent の sibling dependency | intent record / history | project の常時適用ルールから除外 |
 | 失効したハーネス固有の役割規則 | knowledge / audit | resolver が読む rule body から分離 |
+| ソロ／チームの実行形態 | team | ハーネスとは独立した運用契約として両モードと縮退規則を明記 |
 
 ## 継続時の配置テスト
 
@@ -33,3 +34,4 @@
 3. 特定フェーズ以外では意味がないか。該当するなら phase。
 4. 期限、担当者、Issue 集合、「この intent」を含むか。含むなら memory rule に置かない。
 5. 失効済みか。失効済みなら knowledge または audit に置き、rule body に残さない。
+6. 複数メンバーを前提とするか。前提とするならチームモード限定と明記し、ソロ時に存在しない投票・レビュー・ack を要求しない。
