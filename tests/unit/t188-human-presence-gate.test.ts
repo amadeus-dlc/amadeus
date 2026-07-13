@@ -324,12 +324,80 @@ describe("t188: human-presence approval gate (ledger-event design)", () => {
 
   // --- handleAnswer twin (interview path) ------------------------------------
   describe("handleAnswer twin (amadeus-log answer)", () => {
+    test("REFUSES while an approval gate is open and preserves the HUMAN_TURN for approve", () => {
+      const slug = field(proj, "Current Stage");
+      guarded(proj, ["checkbox", `${slug}=in-progress`]);
+      recordHumanTurn(proj);
+      guarded(proj, ["gate-start", slug]);
+
+      const answer = guardedLog(proj, [
+        "answer",
+        "--stage",
+        slug,
+        "--details",
+        "Approve",
+      ]);
+      expect(answer.rc).not.toBe(0);
+      expect(answer.out).toContain("an approval gate is open");
+      expect(answer.out).toContain("amadeus-orchestrate.ts report");
+      expect(eventCount(proj, "QUESTION_ANSWERED")).toBe(0);
+
+      const approve = guarded(proj, ["approve", slug, "--user-input", "Approve"]);
+      expect(approve.rc).toBe(0);
+      expect(eventCount(proj, "GATE_APPROVED")).toBe(1);
+    });
+
+    test("REFUSES a differently scoped answer while any approval gate is open", () => {
+      const slug = field(proj, "Current Stage");
+      guarded(proj, ["checkbox", `${slug}=in-progress`]);
+      recordHumanTurn(proj);
+      guarded(proj, ["gate-start", slug]);
+
+      const answer = guardedLog(proj, [
+        "answer",
+        "--stage",
+        "scope-definition",
+        "--details",
+        "Approve",
+      ]);
+      expect(answer.rc).not.toBe(0);
+      expect(answer.out).toContain("an approval gate is open");
+      expect(eventCount(proj, "QUESTION_ANSWERED")).toBe(0);
+    });
+
+    test("REFUSES while an approval gate is open even in autonomous Construction", () => {
+      const slug = field(proj, "Current Stage");
+      guarded(proj, ["checkbox", `${slug}=in-progress`]);
+      setAutonomous(proj);
+      guarded(proj, ["gate-start", slug]);
+
+      const answer = guardedLog(proj, [
+        "answer",
+        "--stage",
+        slug,
+        "--details",
+        "Approve",
+      ]);
+      expect(answer.rc).not.toBe(0);
+      expect(answer.out).toContain("an approval gate is open");
+      expect(eventCount(proj, "QUESTION_ANSWERED")).toBe(0);
+    });
+
     test("REFUSES to record an answer when the ledger has events but no HUMAN_TURN", () => {
       const slug = field(proj, "Current Stage");
-      guarded(proj, ["gate-start", slug]); // ledger non-empty, no HUMAN_TURN
+      const seed = guardedLog(proj, [
+        "decision",
+        "--stage",
+        slug,
+        "--decision",
+        "Seed a non-human ledger event",
+      ]);
+      expect(seed.rc).toBe(0);
+      expect(eventCount(proj, "DECISION_RECORDED")).toBe(1);
       const r = guardedLog(proj, ["answer", "--stage", slug, "--details", "my answer"]);
       expect(r.rc).not.toBe(0);
-      expect(r.out).toContain("Refusing to record this answer");
+      expect(r.out).toContain("a real human has not acted");
+      expect(r.out).not.toContain("an approval gate is open");
       expect(eventCount(proj, "QUESTION_ANSWERED")).toBe(0);
     });
 

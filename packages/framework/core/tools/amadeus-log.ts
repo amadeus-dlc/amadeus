@@ -9,6 +9,7 @@ import { appendAuditEntry } from "./amadeus-audit.ts";
 import {
   emitError,
   errorMessage,
+  hasOpenGate,
   humanActedSinceLastAnswer,
   humanPresenceGuardDisabled,
   isAutonomousMode,
@@ -122,12 +123,18 @@ function handleAnswer(args: string[]): void {
   // a human-judgement event, so require a HUMAN_TURN appended AFTER the last
   // QUESTION_ANSWERED (ledger order) before recording another. The prior
   // QUESTION_ANSWERED is the "since" boundary (its own consume-once: one human turn
-  // logs one answer), so no separate marker/consume step is needed. Autonomy
-  // carve-out FIRST (Construction swarm/Bolt answers are not human), then the scoped
-  // test off-switch. Fail-open when no ledger exists (presence not tracked yet).
+  // logs one answer), so no separate marker/consume step is needed. An open
+  // approval gate is refused before the autonomy carve-out (Construction
+  // swarm/Bolt answers are not human) and the scoped test off-switch. Fail-open
+  // when no ledger exists (presence not tracked yet).
   const content = existsSync(stateFilePath(pd))
     ? readFileSync(stateFilePath(pd), "utf-8")
     : null;
+  if (hasOpenGate(content)) {
+    error(
+      "Refusing to record this answer: an approval gate is open. Approval and rejection responses must resolve the gate directly via amadeus-orchestrate.ts report or amadeus-state.ts reject; no QUESTION_ANSWERED event was emitted."
+    );
+  }
   if (isAutonomousMode(content)) {
     // autonomous Construction: no human presence required
   } else if (humanPresenceGuardDisabled()) {
