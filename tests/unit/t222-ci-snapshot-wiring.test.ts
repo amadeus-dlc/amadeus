@@ -18,6 +18,9 @@ const yaml = `  coverage:
       cancel-in-progress: false
     timeout-minutes: 5
     name: amadeus-coverage-report
+    branch="metrics/snapshot-\${GITHUB_SHA:0:12}"
+    git push origin "HEAD:refs/heads/$branch"
+    https://github.com/\${GITHUB_REPOSITORY}/compare/main...$branch?expand=1
   codecov-status:
   ci-success:
     needs: [coverage]
@@ -30,6 +33,12 @@ describe("t222 CI snapshot wiring", () => {
   test("five minute timeout", () => expect(job).toContain("timeout-minutes: 5"));
   test("named artifact", () => expect(job).toContain("name: amadeus-coverage-report"));
   test("no secrets", () => expect(job).not.toContain("secrets."));
+  test("stages snapshots on a review branch", () => {
+    expect(job).toContain('branch="metrics/snapshot-${GITHUB_SHA:0:12}"');
+    expect(job).toContain('git push origin "HEAD:refs/heads/$branch"');
+    expect(job).toContain("/compare/main...$branch?expand=1");
+    expect(job).not.toContain("HEAD:main");
+  });
   test("ci-success does not depend on snapshot", () => expect(ciSuccess).not.toContain("metrics-snapshot"));
   test("totals belong to the named coverage artifact upload step", () => {
     expect(uploadStep).toContain("name: amadeus-coverage-report");
