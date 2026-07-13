@@ -1,5 +1,25 @@
 # コンポーネント棚卸し
 
+## swarm driver 関連コンポーネント（intent 260713-swarm-driver-migration、2026-07-13、最新）
+
+| コンポーネント | 現行責務 | driver migration との関係 |
+| --- | --- | --- |
+| `amadeus-orchestrate.ts` `tryEmitSwarm` 系 | autonomous Construction、runtime graph、未完了 batch、walking-skeleton から eligibility を判定 | driver-neutral。#841 の batch 再提示は最初の未完了 batch 選択により解消済み |
+| `amadeus-directive.ts` | `invoke-swarm` の schema／parse | `{kind, units, repo?}` のみ。選択結果・能力証跡なし |
+| Claude `skills/amadeus/SKILL.md` | live `Task` fan-out、旧変数1で Dynamic `Workflow`、retry loop | Agent Teams／Ultra Code の明示 driver adapter と capability proof は未実装 |
+| Codex `skills/amadeus/SKILL.md` | Unit ごとの `codex exec` floor、stdin close、resume | Codex Ultra の明示選択／native multi-agent proof は未実装。現行で唯一の別 AI CLI process fan-out |
+| Kiro CLI／IDE `skills/amadeus/SKILL.md` | live native `subagent` 一括 fan-out | driver selector と native trace classifier は未実装 |
+| `amadeus-swarm.ts` | `prepare`／`check`／`finalize`、worktree／Bolt、anti-tamper、merge、監査 | stateless referee。AI dispatcher ではない。driver 型は degrade 記録用の旧2値のみ |
+| `amadeus-worktree.ts`／`amadeus-bolt.ts` | Unit 隔離と Bolt lifecycle | 全 driver が再利用すべき共通収束境界 |
+| `audit-format.md` と swarm emitter | swarm 6イベント | selected driver、capability evidence、native trace correlation が不足 |
+| 4 harness の `onboarding.fills.ts` と Codex `emit.ts` | 導入条件、利用者設定、生成設定 | selector、experimental flag、Ultra／trust／probe の契約追加面 |
+| `scripts/package.ts` |4 harness の build、drift／whole-tree orphan／source-unreferenced 検査 | source scan と root orphan blind spot は解消済み。driver 正本の全配布同期を担う |
+| `scripts/promote-self.ts` | Claude／Codex の project-local self-install | Kiro は対象外。Claude／Codex 正本変更時の同期境界 |
+| `t135-invoke-swarm`／`t134-swarm-referee` | eligibility と referee の決定的検証 | live AI worker は起動しないため native proof にはならない |
+| Codex exec journey／Kiro ACP journey／Claude live journey | opt-in live transport seam | 4 driver の2 Unit以上 live proof へ再利用可能だが専用 classifier は未実装 |
+
+> 以下は過去 intent の棚卸し。#735 の source-side scan と #701 の dist-root orphan は現行 `scripts/package.ts:692-725` で解消済みであり、旧表の「現存」記述は修正前の履歴を表す。
+
 ## docs/harness 修理コンポーネント(intent 260711-docs-repair-batch9、フォーカス5欠陥)
 
 現行 HEAD `13598b752`(base `b845478bb`、59コミット diff-refresh)で確定したフォーカス5欠陥の正本コンポーネント。出典は本 intent の `inception/reverse-engineering/scan-notes.md`(全 file:line 実測)。localize 3面(#812/#824 + question-rendering.md 同根)+ ヘッダ契約1面(#680)は区間内無変更、restart-loss 2面(#885/#886)は #880/#869 の行番号シフトのみで欠陥現存。
@@ -17,6 +37,8 @@
 
 ## packaging コンポーネント(intent 260710、#735 関連)
 
+> **履歴・解決済み**: `checkHarness` は現在 `readSources` と harness source tree を照合し、未参照 source を `UNREFERENCED in source` として報告する（`scripts/package.ts:711-725`）。
+
 | コンポーネント | 責務 | 依存先 | #735 との関係 |
 | --- | --- | --- | --- |
 | `scripts/package.ts` `buildTree` | build 入力集合の確定と dist 生成(core walk / harnessFiles コピー / onboarding / memory / emit) | `manifest-types.ts`、各 `harness/<name>/manifest.ts`、`core/`、`harness/<name>/` | **build が読む入力集合の確定点**(L307)。未列挙 harness ソースは不可視 |
@@ -30,6 +52,8 @@
 ## 260709-gate-mechanics(前 intent、履歴)関連コンポーネント
 
 ## 差分リフレッシュ(260709-packaging-repair-batch)
+
+> **履歴・解決済み**: #701 の dist root blind spot は whole-tree orphan scan（`scripts/package.ts:692-709`）で解消済み。
 
 packaging-repair-batch(intent 260709-packaging-repair-batch、履歴)の2バグの正本コンポーネント(下表)と、差分区間 `a1c79dc12..22e3eb5aa` で変更のあったコンポーネント。
 

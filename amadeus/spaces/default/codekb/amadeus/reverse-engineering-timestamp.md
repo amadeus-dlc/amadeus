@@ -1,6 +1,23 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(最新: 260712-metrics-observation)
+## 実行メタデータ（最新: 260713-swarm-driver-migration）
+
+- Date: 2026-07-13
+- Observed at: 2026-07-13T07:57:31Z
+- Intent: `260713-swarm-driver-migration`（`AMADEUS_SWARM_DRIVER` 新設、`AMADEUS_USE_SWARM` の0.1.x互換移行、Claude Agent Teams／Ultra Code、Codex Ultra、Kiro subagent の決定的選択・監査・live proof）
+- Scope: `amadeus`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering`（2.1）
+- 手法: diff-refresh。base=`13598b752b656cc9bbf5d931f8e3a6c34881fd1c`、observed=`cf3dc88b46a2b23bcfd71b1136632d1739cdd7e5`、距離49 commits。全 `re-scans/*.md` の Observed commit を `git merge-base --is-ancestor` で検査し、HEAD の祖先である候補のうち距離最小を採用した。`c11554226542faabd2a6c694650ea26323745ed8` は現 HEAD の非祖先であり除外した。
+- 実施体制: Developer code scan → Architect synthesis の2サブエージェント直列
+- Focus: engine eligibility、driver-neutral `invoke-swarm`、harness conductor の fan-out、Claude／Codex／Kiro の process／live-tool 境界、stateless referee、worktree／Bolt／audit、`scripts/package.ts`／`promote-self.ts`、決定的 selector matrix、capability probe、explicit hard error、auto loud fallback、driver-aware audit、4 driver の2 Unit以上 live proof
+- 現行結論: `AMADEUS_SWARM_DRIVER` の製品実装は0件。現行 driver 選択は harness skill prose に分散し、referee は AI dispatcher ではない。#841 の batch progress、package source-side unreferenced scan、dist root orphan blind spot は解消済み。
+- Per-intent record: `re-scans/260713-swarm-driver-migration.md`
+- 更新成果物: `business-overview.md`、`architecture.md`、`code-structure.md`、`api-documentation.md`、`component-inventory.md`、`technology-stack.md`、`dependencies.md`、`code-quality-assessment.md`、本ファイル、および per-intent record。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。**本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。**
+
+## 実行メタデータ(履歴: 260712-metrics-observation)
 
 - Date: 2026-07-12
 - Intent: `260712-metrics-observation`(既存計測経路 — CCN 分布・テスト数・カバレッジ% — の出力をコミット snapshot に保存する観測機構、#921)

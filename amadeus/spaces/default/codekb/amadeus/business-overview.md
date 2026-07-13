@@ -1,5 +1,20 @@
 # ビジネス概要
 
+## 260713-swarm-driver-migration の業務境界（2026-07-13、最新）
+
+Amadeus の Construction では、依存関係を持つ複数 Unit を同一バッチで実装し、Unit ごとの隔離 worktree と決定的な収束判定を組み合わせる。現行の公開スイッチ `AMADEUS_USE_SWARM` は boolean だが、実際の実行方式は Claude Code の `Task`／Dynamic `Workflow`、Codex の Unit ごとの `codex exec`、Kiro の native `subagent` とハーネスごとに異なる。この差を利用者が明示・検証できる共通 driver 契約は、観測コミット `cf3dc88b46a2b23bcfd71b1136632d1739cdd7e5` 時点では未実装である。
+
+今回の intent は、Construction の multi-Unit `invoke-swarm` に限って `AMADEUS_SWARM_DRIVER` を公開契約とし、次の利用者価値を成立させるための brownfield 変更である。
+
+- `auto` はハーネス能力と task topology から決定的に driver を選び、fallback を画面と監査の両方へ残す。
+- 明示 driver は利用不能なら実行開始前に hard error とし、別方式で成功扱いしない。
+- Claude Code Agent Teams、Claude Ultra Code、Codex Ultra、Kiro subagent を、2 Unit 以上の native 実行証跡と既存 referee の収束結果で検証する。
+- `AMADEUS_USE_SWARM` は 0.1.x の警告付き互換に閉じ、0.2.0 での削除は後続 Issue とする。
+
+対象外は、通常の `run-stage`／対話 conductor／Responses API Multi-agent／custom driver SDK／新しい credentialed CI job である。engine の eligibility、Unit worktree、Bolt、保護 spec、`prepare`／`check`／`finalize` の収束境界は維持し、driver 選択と native 実行証跡をその外側へ追加する。
+
+> 以下は過去 intent の業務境界を履歴として温存したもの。`260710-source-unreferenced-check` の source-side 検査ギャップは、現行 `scripts/package.ts:711-725` で解消済みである。
+
 ## 260710-source-unreferenced-check(intent、履歴)の業務境界
 
 `bugfix` スコープの intent。packaging(`scripts/package.ts` + harness manifests)の **source 側 unreferenced 検査**(Issue #735)を対象とする。既存の drift guard(`dist:check`)は「committed dist に混入した stale ファイル(出力側 orphan)」を検出するが、「`harness/<name>/` に置かれた authored ソースが manifest のどの行からも参照されず build に不可視のまま滞留する(source 側 unreferenced)」ことを検出しない。#719/#737 でこのギャップの実害(kiro CLI harness の7個の stale `.kiro.hook` が vacuous exemption に隠れて滞留)が顕在化しており、当該 intent はその一般的な検査機構を検討した。

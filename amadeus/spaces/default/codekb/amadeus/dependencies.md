@@ -1,5 +1,38 @@
 # 依存関係
 
+## swarm driver の現行依存グラフ（intent 260713-swarm-driver-migration、2026-07-13、最新）
+
+```mermaid
+flowchart TD
+  State["Workflow state and runtime graph"]
+  Engine["amadeus-orchestrate eligibility"]
+  Directive["driver-neutral invoke-swarm"]
+  Conductor["Harness conductor prose"]
+  Worker["Task, Workflow, codex exec, or subagent"]
+  Referee["amadeus-swarm referee"]
+  Worktree["Unit worktree"]
+  Bolt["Bolt state and merge"]
+  Audit["Swarm audit events"]
+  Core["Canonical core source"]
+  Harness["Canonical harness source"]
+  Package["scripts/package.ts"]
+  Dist["dist per harness"]
+  Promote["Claude and Codex self-install"]
+
+  State --> Engine --> Directive --> Conductor --> Worker
+  Conductor --> Referee
+  Referee --> Worktree --> Worker
+  Worktree --> Bolt --> Referee --> Audit
+  Core --> Package
+  Harness --> Package --> Dist --> Promote
+```
+
+テキスト代替: workflow state と runtime graph を engine が読み、driver-neutral な `invoke-swarm` を harness conductor へ渡す。conductor はハーネス固有 worker surface を選び、referee が準備した Unit worktree 上で実行する。Bolt は worktree lifecycle と merge を担い、referee が収束を再検証して監査へ記録する。別の生成依存として core／harness 正本を `scripts/package.ts` が各 `dist` へ投影し、Claude／Codex だけを self-install へ反映する。
+
+新契約で追加される依存は、core の deterministic selector、harness の capability probe／driver adapter、referee が受け取る driver-aware audit metadata、native event／trace classifier である。外部 package 追加は現時点で不要で、既存ローカル CLI と live tool を利用する。依存方向は selector→adapter→worker、選択結果→referee audit とし、referee から AI provider へ依存させないことが現行境界を保つ条件である。
+
+> 以下は過去 intent の依存記録。#735 の source-side unreferenced scan は現行 `scripts/package.ts:711-725` で解消済み。
+
 ## packaging の入力依存(intent 260710、#735)
 
 ```mermaid
