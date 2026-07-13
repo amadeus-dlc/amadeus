@@ -12,8 +12,9 @@ name: Release @amadeus-dlc/setup
 # is a one-line version change). The same run then creates the GitHub
 # Release with auto-generated notes (softprops/action-gh-release), builds
 # dist/cli.js fresh, and publishes to npm with provenance. Everything
-# happens in one run because tags/commits pushed with GITHUB_TOKEN never
-# trigger other workflows. Post-publish verification is a manual step
+# happens in one run. GitHub App pushes trigger workflows, so the release job
+# ignores its own bot-authored tag push while CI intentionally validates the
+# bot-authored main commit. Post-publish verification is a manual step
 # (see docs/guide/publishing-setup.md ch. 6) — an in-run npx smoke was
 # removed after producing only false alarms (registry propagation lag
 # poisons the runner's npx cache, so retries can never recover).
@@ -51,6 +52,7 @@ permissions:
 jobs:
   release:
     name: bump · tag · notes · publish
+    if: ${{ !(github.event_name == 'push' && github.actor == 'amadeus-dlc-bot[bot]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

@@ -14,6 +14,10 @@ describe("t223 release bot bypass boundary", () => {
     expect(yaml).toContain(`token: \${{ steps.app-token.outputs.token }}`);
     expect(yaml).toContain(`GH_TOKEN: \${{ steps.app-token.outputs.token }}`);
     expect(yaml).toContain(`\${{ steps.app-token.outputs.app-slug }}[bot]`);
+    expect(yaml).toContain(
+      `if: \${{ !(github.event_name == 'push' && github.actor == 'amadeus-dlc-bot[bot]') }}`,
+    );
     expect(yaml).not.toContain('git config user.name "github-actions[bot]"');
+    expect(yaml).not.toContain("tags/commits pushed with GITHUB_TOKEN never trigger other workflows");
   });
 });
