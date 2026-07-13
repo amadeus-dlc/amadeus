@@ -172,8 +172,16 @@ jobs:
           git add metrics/*.json
           git commit -m "chore(metrics): record snapshot"
 
-      - name: Push snapshot (retry non-fast-forward only)
-        run: bun scripts/metrics-push-retry.ts
+      - name: Push snapshot branch
+        run: |
+          # Main requires pull requests, so preserve the snapshot on a review branch.
+          branch="metrics/snapshot-${GITHUB_SHA:0:12}"
+          git push origin "HEAD:refs/heads/$branch"
+          {
+            echo "## Metrics snapshot ready"
+            echo
+            echo "[Open a pull request](https://github.com/${GITHUB_REPOSITORY}/compare/main...$branch?expand=1)"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   codecov-status:
     name: Codecov Status
