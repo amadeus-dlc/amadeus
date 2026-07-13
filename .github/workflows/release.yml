@@ -12,8 +12,9 @@ name: Release @amadeus-dlc/setup
 # is a one-line version change). The same run then creates the GitHub
 # Release with auto-generated notes (softprops/action-gh-release), builds
 # dist/cli.js fresh, and publishes to npm with provenance. Everything
-# happens in one run because tags/commits pushed with GITHUB_TOKEN never
-# trigger other workflows. Post-publish verification is a manual step
+# happens in one run. GitHub App pushes trigger workflows, so the release job
+# ignores its own bot-authored tag push while CI intentionally validates the
+# bot-authored main commit. Post-publish verification is a manual step
 # (see docs/guide/publishing-setup.md ch. 6) — an in-run npx smoke was
 # removed after producing only false alarms (registry propagation lag
 # poisons the runner's npx cache, so retries can never recover).
@@ -45,20 +46,30 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write # release-it pushes the bump commit + tag; gh-release creates the release
+  contents: read # release writes use the narrowly scoped GitHub App token below
   id-token: write # npm provenance
 
 jobs:
   release:
     name: bump · tag · notes · publish
+    if: ${{ !(github.event_name == 'push' && github.actor == 'amadeus-dlc-bot[bot]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.METRICS_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.METRICS_BOT_PRIVATE_KEY }}
+          permission-contents: write
+
       - name: Checkout (full history + tags for guards and the bootstrap check)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           fetch-tags: true
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Set up bun
         uses: oven-sh/setup-bun@v2
@@ -97,9 +108,12 @@ jobs:
       - name: Bump, commit, tag, push (release-it)
         if: github.event_name == 'workflow_dispatch'
         working-directory: packages/setup
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          bot_user_id="$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)"
+          git config user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
+          git config user.email "${bot_user_id}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com"
           if [ -z "$(git tag --list 'v*')" ]; then
             # Bootstrap: no v* tag exists yet — release the committed version
             # as-is (tag only, no bump commit).
@@ -123,6 +137,7 @@ jobs:
         with:
           tag_name: v${{ steps.version.outputs.version }}
           generate_release_notes: true
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Build dist/cli.js (fresh)
         working-directory: packages/setup
