@@ -31317,3 +31317,9 @@
 **Context**: construction > swarm-execution-lifecycle > functional-design > domain-entities.md
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-13T22:52:25Z
+**Event**: HUMAN_TURN
+
+---
