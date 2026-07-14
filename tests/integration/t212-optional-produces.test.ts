@@ -26,13 +26,17 @@ import {
   compileStageGraph,
   producersOf,
 } from "../../packages/framework/core/tools/amadeus-graph.ts";
-import { validateDirective } from "../../packages/framework/core/tools/amadeus-directive.ts";
+import {
+  directiveSelfCheckExamples,
+  validateDirective,
+} from "../../packages/framework/core/tools/amadeus-directive.ts";
 import {
   _resetStageGraphForTests,
   emitStageFrontmatter,
   parseStageFrontmatter,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import { validateStageFrontmatter } from "../../packages/framework/core/tools/amadeus-stage-schema.ts";
+import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -130,6 +134,31 @@ describe("t212 optional_produces frontmatter", () => {
     );
     expect(overlap.errors).toContain(
       'artifact "business-rules" cannot be both required and optional',
+    );
+  });
+});
+
+describe("t212 optional_produces directive contract", () => {
+  test("the CLI self-check fixture exercises optional output candidates", () => {
+    const optional = directiveSelfCheckExamples.find(
+      (example) =>
+        example.kind === "run-stage" &&
+        example.optional_produces !== undefined,
+    );
+    expect(optional).toBeDefined();
+    if (optional?.kind !== "run-stage") {
+      throw new Error("optional self-check directive missing");
+    }
+    expect(validateDirective(optional).valid).toBe(true);
+
+    const malformed = validateDirective({
+      ...optional,
+      optional_produces: [...(optional.optional_produces ?? []), 42],
+    });
+    expect(malformed.valid).toBe(false);
+    if (malformed.valid) throw new Error("mixed optional output list accepted");
+    expect(malformed.errors).toContain(
+      "run-stage: optional_produces[1] must be string, got number",
     );
   });
 });
@@ -557,6 +586,57 @@ describe("t212 optional_produces per-unit routing and coverage", () => {
     expect(nonSubset.errors).toContain(
       `dispatch-subagent: optional_produces path "${unrelatedPath}" must also appear in produces`,
     );
+  }, 30_000);
+
+  test("in-process routing carries the optional subset into the directive", () => {
+    const project = seedProject();
+    coverRequired(project, "alpha");
+    const graphPath = sourceGraph();
+    const envKeys = [
+      "AMADEUS_STAGE_GRAPH",
+      "AMADEUS_SCOPE_GRID",
+      "AMADEUS_SKIP_ARTIFACT_GUARD",
+      "AMADEUS_SKIP_HUMAN_PRESENCE_GUARD",
+      "AMADEUS_DEFAULT_SCOPE",
+    ] as const;
+    const previous = Object.fromEntries(
+      envKeys.map((key) => [key, process.env[key]]),
+    );
+    process.env.AMADEUS_STAGE_GRAPH = graphPath;
+    process.env.AMADEUS_SCOPE_GRID = scopeGrid;
+    process.env.AMADEUS_SKIP_ARTIFACT_GUARD = "1";
+    process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = "1";
+    delete process.env.AMADEUS_DEFAULT_SCOPE;
+    _resetStageGraphForTests();
+    __resetGraphCache();
+
+    let stdout = "";
+    const originalLog = console.log;
+    console.log = (...args: unknown[]) => {
+      stdout += `${args.map(String).join(" ")}\n`;
+    };
+    try {
+      handleNext([], project);
+    } finally {
+      console.log = originalLog;
+      for (const key of envKeys) {
+        const value = previous[key];
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+      _resetStageGraphForTests();
+      __resetGraphCache();
+    }
+
+    const directive = JSON.parse(stdout.trim()) as {
+      produces?: string[];
+      optional_produces?: string[];
+    };
+    const optionalPath =
+      `amadeus/spaces/${DEFAULT_SPACE}/intents/${DEFAULT_RECORD_DIR}` +
+      "/construction/beta/functional-design/frontend-components.md";
+    expect(directive.produces).toContain(optionalPath);
+    expect(directive.optional_produces).toEqual([optionalPath]);
   }, 30_000);
 
   test("an optional artifact cannot replace a missing required artifact", () => {
