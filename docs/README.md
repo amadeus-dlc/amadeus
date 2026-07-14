@@ -42,6 +42,6 @@ to add one.
 
 ## Upstream AI-DLC v2 differences
 
-- [Upstream AI-DLC `v2.2.0` and `main` workspace comparison](research/awslabs-aidlc-workflows-v2.2.0-main-workspace-comparison.md)
+- [Upstream AI-DLC v2.2.0 and Amadeus `main` workspace differences](research/upstream-aidlc-v2.2.0-amadeus-main-workspace-differences.md)
 
 Repository layout の設計判断は [Workspace Layout Decision](reference/18-workspace-layout.md) に記録している。Framework source は `packages/framework/core` と `packages/framework/harness` に置き、root `scripts/` と `dist/` は repository-level contract として維持する。
