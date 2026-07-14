@@ -1,13 +1,19 @@
 import {
+  closeSync,
+  constants as fsConstants,
   cpSync,
   existsSync,
+  fstatSync,
   lstatSync,
   mkdirSync,
+  openSync,
   readdirSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
+import type { Stats } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { appendAuditEntry, appendAuditEntryUnlocked } from "./amadeus-audit.ts";
@@ -402,6 +408,163 @@ export interface DoctorCheck {
   fix?: string;
 }
 
+interface HookHeartbeatInspection {
+  directoryExists: boolean;
+  entries: string[];
+}
+
+function sameFileIdentity(
+  left: Stats,
+  right: Stats,
+): boolean {
+  return left.dev === right.dev && left.ino === right.ino;
+}
+
+function injectHeartbeatSwapForTest(path: string): void {
+  const target = process.env.AMADEUS_DOCTOR_TEST_SWAP_HEARTBEAT_TARGET;
+  if (process.env.NODE_ENV !== "test" || !target) return;
+  rmSync(path, { force: true });
+  symlinkSync(target, path);
+}
+
+function injectHeartbeatDirectorySwapForTest(path: string): void {
+  const target = process.env.AMADEUS_DOCTOR_TEST_SWAP_HEALTH_DIR_TARGET;
+  if (process.env.NODE_ENV !== "test" || !target) return;
+  rmSync(path, { recursive: true, force: true });
+  symlinkSync(target, path, process.platform === "win32" ? "junction" : "dir");
+}
+
+function matchesRealDirectory(path: string, expected: Stats): boolean {
+  try {
+    const current = lstatSync(path);
+    return (
+      current.isDirectory() &&
+      !current.isSymbolicLink() &&
+      sameFileIdentity(current, expected)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function openHeartbeatNoFollow(path: string): number | null {
+  let fd: number | null = null;
+  try {
+    const before = lstatSync(path);
+    if (before.isSymbolicLink() || !before.isFile()) return null;
+    injectHeartbeatSwapForTest(path);
+    const noFollow = typeof fsConstants.O_NOFOLLOW === "number"
+      ? fsConstants.O_NOFOLLOW
+      : 0;
+    fd = openSync(path, fsConstants.O_RDONLY | noFollow);
+    const opened = fstatSync(fd);
+    const after = lstatSync(path);
+    if (
+      !opened.isFile() ||
+      after.isSymbolicLink() ||
+      !after.isFile() ||
+      !sameFileIdentity(before, opened) ||
+      !sameFileIdentity(opened, after)
+    ) {
+      closeSync(fd);
+      fd = null;
+      return null;
+    }
+    return fd;
+  } catch {
+    if (fd !== null) {
+      try {
+        closeSync(fd);
+      } catch {
+        // The descriptor may already have been closed by a failing close.
+      }
+    }
+    return null;
+  }
+}
+
+function readHeartbeatTimestamp(path: string): string | null {
+  const fd = openHeartbeatNoFollow(path);
+  if (fd === null) return null;
+  try {
+    return readFileSync(fd, "utf-8").trim();
+  } catch {
+    return null;
+  } finally {
+    closeSync(fd);
+  }
+}
+
+function inspectHookHeartbeats(healthDir: string): HookHeartbeatInspection {
+  let directoryStat: Stats;
+  try {
+    directoryStat = lstatSync(healthDir);
+  } catch {
+    return { directoryExists: false, entries: [] };
+  }
+  if (directoryStat.isSymbolicLink() || !directoryStat.isDirectory()) {
+    return { directoryExists: true, entries: [] };
+  }
+  injectHeartbeatDirectorySwapForTest(healthDir);
+  if (!matchesRealDirectory(healthDir, directoryStat)) {
+    return { directoryExists: true, entries: [] };
+  }
+
+  const entries: string[] = [];
+  try {
+    const files = readdirSync(healthDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".last"))
+      .map((entry) => entry.name);
+    if (!matchesRealDirectory(healthDir, directoryStat)) {
+      return { directoryExists: true, entries: [] };
+    }
+    for (const file of files) {
+      if (!matchesRealDirectory(healthDir, directoryStat)) {
+        return { directoryExists: true, entries: [] };
+      }
+      const path = join(healthDir, file);
+      const timestamp = readHeartbeatTimestamp(path);
+      if (!matchesRealDirectory(healthDir, directoryStat)) {
+        return { directoryExists: true, entries: [] };
+      }
+      if (timestamp !== null) {
+        entries.push(`${file.slice(0, -".last".length)} ${timestamp}`);
+      }
+    }
+  } catch {
+    // An unreadable real directory is an existing but unhealthy heartbeat dir.
+  }
+  return { directoryExists: true, entries };
+}
+
+function hookHeartbeatDoctorCheck(projectDir: string): DoctorCheck {
+  if (process.env.AMADEUS_MIGRATION_DOCTOR === "1") {
+    return {
+      pass: true,
+      label:
+        "Hook heartbeats: not inspected during migration (runtime scratch is intentionally discarded)",
+    };
+  }
+  const heartbeat = inspectHookHeartbeats(hooksHealthDir(projectDir));
+  if (heartbeat.entries.length > 0) {
+    return {
+      pass: true,
+      label: `Hooks last fired: ${heartbeat.entries.join(", ")}`,
+    };
+  }
+  if (!heartbeat.directoryExists) {
+    return {
+      pass: true,
+      label: "Hook heartbeats: not yet fired (first workflow stage will populate)",
+    };
+  }
+  return {
+    pass: false,
+    label: "Hook heartbeat data",
+    fix: "health dir exists but no hooks have fired — verify hooks are registered in settings.json",
+  };
+}
+
 // Classify the workspace-shell readiness into the THREE states doctor reports
 // (#844), mirroring the hook-heartbeat fresh-install split further below:
 //   (a) harness engine dir missing -> a genuinely broken install. FAIL, and the
@@ -763,45 +926,7 @@ function handleDoctor(projectDir: string): void {
   //   (b) Directory exists but no .last files → hooks registered but have
   //       never fired. Genuine drift; fail.
   //   (c) Directory has .last files → hooks are working; pass with timestamps.
-  const healthDir = hooksHealthDir(projectDir);
-  const heartbeatEntries: string[] = [];
-  const heartbeatDirExists = existsSync(healthDir);
-  if (heartbeatDirExists) {
-    try {
-      const files = readdirSync(healthDir).filter((f) => f.endsWith(".last"));
-      for (const f of files) {
-        try {
-          const ts = readFileSync(join(healthDir, f), "utf-8").trim();
-          const name = f.replace(".last", "");
-          heartbeatEntries.push(`${name} ${ts}`);
-        } catch {
-          // skip unreadable
-        }
-      }
-    } catch {
-      // skip unreadable dir
-    }
-  }
-  if (heartbeatEntries.length > 0) {
-    // (c) hooks working
-    results.push({
-      pass: true,
-      label: `Hooks last fired: ${heartbeatEntries.join(", ")}`,
-    });
-  } else if (!heartbeatDirExists) {
-    // (a) fresh install — nothing to verify yet
-    results.push({
-      pass: true,
-      label: "Hook heartbeats: not yet fired (first workflow stage will populate)",
-    });
-  } else {
-    // (b) registered but never fired — genuine drift
-    results.push({
-      pass: false,
-      label: "Hook heartbeat data",
-      fix: "health dir exists but no hooks have fired — verify hooks are registered in settings.json",
-    });
-  }
+  results.push(hookHeartbeatDoctorCheck(projectDir));
 
   // State / audit drift check — if latest audit event implies the state file
   // should be in a certain shape (e.g., Status=Completed after WORKFLOW_COMPLETED),
