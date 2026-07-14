@@ -34,6 +34,11 @@ import {
   type ProcessIdentity,
 } from "./amadeus-armed-process.ts";
 import { digestValue, hasExactKeys, isRecord, nonEmptyString } from "./amadeus-swarm-canonical.ts";
+import {
+  createNativeProcessDisposal,
+  type NativeProcessDisposal,
+  type NativeProcessDisposalResult,
+} from "./amadeus-swarm-native-disposal.ts";
 import type {
   NativeProcessPort,
   NativeProcessOutputFrame,
@@ -46,6 +51,10 @@ import type {
 import type { NativeProcessOutputPort } from "./amadeus-swarm-native-capture.ts";
 
 export type { NativeProcessOutputPort } from "./amadeus-swarm-native-capture.ts";
+export type {
+  NativeProcessDisposalReceipt,
+  NativeProcessDisposalResult,
+} from "./amadeus-swarm-native-disposal.ts";
 
 export type NativeProcessPlanInput = Readonly<{
   nativeRunId: string;
@@ -95,6 +104,10 @@ export type ContextualNativeProcessPort = Omit<NativeProcessPort, "plan" | "spaw
   spawn(input: Parameters<NativeProcessPort["spawn"]>[0]): Promise<ContextualNativeProcessSession>;
   releasePlan(plan: ContextualPlannedProcessRun): Promise<void>;
   recoverAttempt(target: NativeProcessRecoveryTarget): Promise<NativeProcessRecoveryResult>;
+  disposeRecoveredAttempt(input: Readonly<{
+    target: NativeProcessRecoveryTarget;
+    recoveryReceipt: NativeProcessRecoveryReceipt;
+  }>): Promise<NativeProcessDisposalResult>;
   recoveryObserver: NativeResourceRecoveryObserverPort;
   activeRecordCount(): number;
 }>;
@@ -1052,6 +1065,109 @@ function processRecoveryReceipt(
   return Object.freeze({ ...semantic, receiptDigest: digestValue(semantic) });
 }
 
+function processRecoveryReceiptMatches(
+  target: NativeProcessRecoveryTarget,
+  receipt: NativeProcessRecoveryReceipt,
+): boolean {
+  const validDisposition = receipt.disposition === "unarmed"
+    ? target.processIdentityDigest === null && receipt.processIdentityDigest === null
+    : receipt.disposition === "stopped" &&
+      nonEmptyString(receipt.processIdentityDigest) &&
+      (target.processIdentityDigest === null ||
+        target.processIdentityDigest === receipt.processIdentityDigest);
+  if (!validDisposition) return false;
+  const expected = processRecoveryReceipt(
+    target,
+    receipt.disposition,
+    receipt.processIdentityDigest,
+  );
+  return digestValue(receipt) === digestValue(expected);
+}
+
+function processRecoveryTargetForRecord(
+  record: PlannedRunRecord,
+  processIdentityDigest: string | null,
+): NativeProcessRecoveryTarget {
+  return Object.freeze({
+    kind: "native-process-recovery",
+    schemaVersion: 1,
+    nativeRunId: record.publicPlan.nativeRunId,
+    armDigest: record.publicPlan.armDigest,
+    runEpochDigest: record.publicPlan.runEpochDigest,
+    processIdentityDigest,
+  });
+}
+
+function disposeProcessRecord(
+  disposal: NativeProcessDisposal,
+  record: PlannedRunRecord,
+  target: NativeProcessRecoveryTarget,
+  recoveryReceipt: NativeProcessRecoveryReceipt,
+): NativeProcessDisposalResult {
+  return disposal.start({
+    target,
+    recoveryReceipt,
+    runDirectory: Object.freeze({
+      owner: record.owner,
+      recoveryJournalDigest: digestValue(record.lifecycle),
+    }),
+  });
+}
+
+function completeProcessDisposal(
+  disposal: NativeProcessDisposal,
+  record: PlannedRunRecord,
+  resume: boolean,
+): void {
+  const processIdentityDigest = record.lifecycle.processIdentityDigest;
+  if (!processIdentityDigest) throw new Error("NATIVE_PROCESS_IDENTITY_MISSING");
+  const target = processRecoveryTargetForRecord(record, processIdentityDigest);
+  const recoveryReceipt = processRecoveryReceipt(target, "stopped", processIdentityDigest);
+  const resumed = resume ? disposal.resume(target) : undefined;
+  const result = resumed?.status === "disposed"
+    ? resumed
+    : disposeProcessRecord(disposal, record, target, recoveryReceipt);
+  if (result.status !== "disposed") throw new Error("NATIVE_PROCESS_DISPOSAL_UNKNOWN");
+}
+
+function disposeSessionRecord(
+  record: PlannedRunRecord,
+  now: () => Date,
+  onDisposed: () => void,
+  disposal?: NativeProcessDisposal,
+): void {
+  if (disposal && record.lifecycle.state === "disposed") {
+    completeProcessDisposal(disposal, record, true);
+  } else {
+    if (!exactOwnedRunDirectory(record)) {
+      throw new Error("NATIVE_PROCESS_RUN_DIRECTORY_OWNERSHIP_MISMATCH");
+    }
+    if (record.lifecycle.state !== "disposed") {
+      transitionLifecycle(record, ["terminal"], "disposed", now);
+    }
+    if (!exactOwnedRunDirectory(record)) {
+      throw new Error("NATIVE_PROCESS_RUN_DIRECTORY_OWNERSHIP_MISMATCH");
+    }
+    if (disposal) {
+      completeProcessDisposal(disposal, record, false);
+    } else {
+      quarantineOwnedRunDirectory(record);
+      rmSync(record.runDirectoryPath, { recursive: true, force: true });
+    }
+  }
+  onDisposed();
+}
+
+function recoveryFromDisposal(
+  result: NativeProcessDisposalResult,
+): NativeProcessRecoveryResult | null {
+  if (result.status !== "disposed") return null;
+  return Object.freeze({
+    status: result.recoveryReceipt.disposition,
+    receipt: result.recoveryReceipt,
+  });
+}
+
 function unknownProcessRecovery(): NativeProcessRecoveryResult {
   return Object.freeze({ status: "unknown" });
 }
@@ -1326,6 +1442,7 @@ function sessionFor(
   startedAt: number,
   now: () => Date,
   onDisposed: () => void,
+  disposal?: NativeProcessDisposal,
 ): ContextualNativeProcessSession {
   const { publicPlan: plan } = record;
   let observedIdentity: NativeRunIdentity | null = null;
@@ -1532,14 +1649,7 @@ function sessionFor(
     },
 
     async dispose() {
-      if (!exactOwnedRunDirectory(record)) throw new Error("NATIVE_PROCESS_RUN_DIRECTORY_OWNERSHIP_MISMATCH");
-      if (record.lifecycle.state !== "disposed") {
-        transitionLifecycle(record, ["terminal"], "disposed", now);
-      }
-      if (!exactOwnedRunDirectory(record)) throw new Error("NATIVE_PROCESS_RUN_DIRECTORY_OWNERSHIP_MISMATCH");
-      quarantineOwnedRunDirectory(record);
-      rmSync(record.runDirectoryPath, { recursive: true, force: true });
-      onDisposed();
+      disposeSessionRecord(record, now, onDisposed, disposal);
     },
   });
 }
@@ -1641,12 +1751,53 @@ function releasablePlannedRecord(
   return record;
 }
 
+function recordForRecoveryTarget(
+  rootDir: string,
+  target: NativeProcessRecoveryTarget,
+  recoveryReceipt: NativeProcessRecoveryReceipt,
+): PlannedRunRecord | null {
+  const owned = loadOwnedNativeRunJournal(resolve(rootDir), target.nativeRunId);
+  const journalDispositionMatches = recoveryReceipt.disposition === "unarmed"
+    ? owned?.journal.state === "planned" && owned.journal.processIdentityDigest === undefined
+    : owned?.journal.state !== "planned" &&
+      (
+        owned?.journal.processIdentityDigest === undefined ||
+        owned.journal.processIdentityDigest === recoveryReceipt.processIdentityDigest
+      );
+  if (
+    !owned ||
+    !journalDispositionMatches ||
+    owned.journal.armDigest !== target.armDigest ||
+    owned.journal.runEpochDigest !== target.runEpochDigest
+  ) return null;
+  const plan: PlannedProcessRun = Object.freeze({
+    nativeRunId: target.nativeRunId,
+    identityRelativePath: `${owned.runDirectory}/identity.json`,
+    armRelativePath: `${owned.runDirectory}/arm.json`,
+    armDigest: target.armDigest,
+    runEpochDigest: target.runEpochDigest,
+    recoveryJournalRelativePath: `${owned.runDirectory}/recovery.json`,
+  });
+  return recordFromOwnedJournal(rootDir, plan, owned);
+}
+
+function forgetExactRecord(
+  records: Map<string, PlannedRunRecord>,
+  plan: PlannedProcessRun,
+): void {
+  const current = records.get(plan.nativeRunId);
+  if (current && digestValue(current.publicPlan) === digestValue(plan)) {
+    records.delete(plan.nativeRunId);
+  }
+}
+
 export function createNativeProcessPort(config: NativeProcessPortConfig): ContextualNativeProcessPort {
   const platform = config.platform ?? process.platform;
   const now = config.now ?? (() => new Date());
   const armTimeoutMs = config.armTimeoutMs ?? DEFAULT_ARM_TIMEOUT_MS;
   const graceMs = config.terminationGraceMs ?? DEFAULT_TERMINATION_GRACE_MS;
   const records = new Map<string, PlannedRunRecord>();
+  const disposal = createNativeProcessDisposal({ rootDir: config.rootDir });
 
   const port: ContextualNativeProcessPort = Object.freeze({
     plan(baseInput): ContextualPlannedProcessRun {
@@ -1758,7 +1909,8 @@ export function createNativeProcessPort(config: NativeProcessPortConfig): Contex
           graceMs,
           Date.now(),
           now,
-          () => records.delete(plan.nativeRunId),
+          () => forgetExactRecord(records, plan),
+          disposal,
         );
       } catch (error) {
         if (wrapper) throw error;
@@ -1772,18 +1924,34 @@ export function createNativeProcessPort(config: NativeProcessPortConfig): Contex
     },
 
     async releasePlan(plan) {
-      const record = releasablePlannedRecord(config.rootDir, plan);
-      if (!record) {
-        records.delete(plan.nativeRunId);
+      const target: NativeProcessRecoveryTarget = Object.freeze({
+        kind: "native-process-recovery",
+        schemaVersion: 1,
+        nativeRunId: plan.nativeRunId,
+        armDigest: plan.armDigest,
+        runEpochDigest: plan.runEpochDigest,
+        processIdentityDigest: null,
+      });
+      if (disposal.resume(target).status === "disposed") {
+        forgetExactRecord(records, plan);
         return;
       }
-      rollbackUnspawnedRun(record);
-      records.delete(plan.nativeRunId);
+      const record = releasablePlannedRecord(config.rootDir, plan);
+      if (!record) {
+        forgetExactRecord(records, plan);
+        return;
+      }
+      const recoveryReceipt = processRecoveryReceipt(target, "unarmed", null);
+      const result = disposeProcessRecord(disposal, record, target, recoveryReceipt);
+      if (result.status !== "disposed") throw new Error("NATIVE_PROCESS_DISPOSAL_UNKNOWN");
+      forgetExactRecord(records, plan);
     },
 
     async recoverAttempt(target) {
       requireSupportedPlatform(platform);
       if (!processRecoveryTargetIsValid(target)) return unknownProcessRecovery();
+      const disposed = recoveryFromDisposal(disposal.resume(target));
+      if (disposed) return disposed;
       const owned = loadOwnedNativeRunJournal(resolve(config.rootDir), target.nativeRunId);
       if (
         !owned ||
@@ -1794,6 +1962,26 @@ export function createNativeProcessPort(config: NativeProcessPortConfig): Contex
         return recoverPlannedNativeProcess(resolve(config.rootDir), owned, target);
       }
       return await recoverStartedNativeProcess(resolve(config.rootDir), owned, target, graceMs);
+    },
+
+    async disposeRecoveredAttempt({ target, recoveryReceipt }) {
+      requireSupportedPlatform(platform);
+      if (
+        !processRecoveryTargetIsValid(target) ||
+        !processRecoveryReceiptMatches(target, recoveryReceipt)
+      ) return Object.freeze({ status: "unknown" });
+      const resumed = disposal.resume(target);
+      if (resumed.status === "disposed") return resumed;
+      const reproved = await port.recoverAttempt(target);
+      if (
+        reproved.status === "unknown" ||
+        digestValue(reproved.receipt) !== digestValue(recoveryReceipt)
+      ) return Object.freeze({ status: "unknown" });
+      const record = recordForRecoveryTarget(config.rootDir, target, recoveryReceipt);
+      if (!record) return Object.freeze({ status: "unknown" });
+      const result = disposeProcessRecord(disposal, record, target, recoveryReceipt);
+      if (result.status === "disposed") forgetExactRecord(records, record.publicPlan);
+      return result;
     },
 
     recoveryObserver: createRecoveryObserver(config.rootDir),
