@@ -720,6 +720,7 @@ export function createCoordinator(input: Readonly<{
           adapter,
           launchInput,
           context,
+          fencingToken: checkpoint.lease.fencingToken,
           onDispatchPrepared: async (dispatchPreparation) => {
             if (checkpoint.state !== "prepared" || checkpoint.dispatchPreparation !== undefined) {
               throw new Error("NATIVE_DISPATCH_PREPARATION_INVALID");

@@ -192,6 +192,7 @@ async function notifyNativeCallbacks(input: Readonly<{
     resourceReceiptDigest: "resource-receipt",
     processIdentityDigest: "process-identity",
     armDigest: "arm-digest",
+    armDeadline: "2026-07-14T00:00:30.000Z",
     capture: input.plan.captureKind === "event-bound-provider-path"
       ? {
           kind: "event-bound-provider-path",
@@ -266,8 +267,16 @@ function fixture(
       resources: Object.freeze([]),
     }),
     resolveCaptureBinding: () => ({ kind: "not-binding" as const }),
+    openEvidenceSession: () => Object.freeze({
+      liveInputs: Object.freeze({
+        providerState: (async function* () {})(),
+        nativeEvents: (async function* () {})(),
+      }),
+      ingest: () => {},
+      seal: async function* () {},
+      abort: async () => {},
+    }),
     observeControl: async function* () {},
-    normalize: async function* () {},
   });
   const codex = DriverRegistration.build({
     provider: "codex",
@@ -324,6 +333,7 @@ function fixture(
         const dispatchPreparation = {
           kind: "native" as const,
           nativeRunId: launchInput.nativeRunId,
+          fencingToken: 1,
           waveIndex: context.waveIndex,
           waveDigest: context.waveDigest,
           resourcePreparationDigest: digestValue([]),
@@ -338,6 +348,7 @@ function fixture(
           identityRelativePath: ".amadeus/native/identity.json",
           armRelativePath: ".amadeus/native/arm.json",
           armDigest: "arm-digest",
+          recoveryJournalRelativePath: ".amadeus/native/recovery.json",
         };
         const preparedNativeRun = {
           kind: "native" as const,

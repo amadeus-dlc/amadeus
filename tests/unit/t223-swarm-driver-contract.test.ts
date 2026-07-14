@@ -138,8 +138,16 @@ function adapter(driver: NativeDriver, harnesses: readonly Harness[]): DriverAda
       });
     },
     resolveCaptureBinding: () => Object.freeze({ kind: "not-binding" as const }),
+    openEvidenceSession: () => Object.freeze({
+      liveInputs: Object.freeze({
+        providerState: (async function* () {})(),
+        nativeEvents: (async function* () {})(),
+      }),
+      ingest: () => {},
+      seal: async function* () {},
+      abort: async () => {},
+    }),
     async *observeControl() {},
-    async *normalize() {},
   });
 }
 

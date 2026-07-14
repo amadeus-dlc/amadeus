@@ -5,6 +5,7 @@
 import type {
   AdapterExecutionPlan,
   AdapterResourcePreparation,
+  AttemptEvidenceSession,
   AuxiliaryResourcePlan,
   CaptureIdentity,
   CoordinatorTransport,
@@ -12,15 +13,13 @@ import type {
   DriverControlSignal,
   EventBoundCaptureBinding,
   EvidenceCapturePlan,
-  EvidenceInputs,
   LaunchInput,
-  LiveEvidenceInputs,
   MaterializedAuxiliaryResourceSet,
   MaterializedAuxiliaryResource,
   NormalizedDriverEvent,
   NormalizeContext,
   ProcessTerminal,
-  RawNativeEvent,
+  RawEvidenceFrame,
 } from "./amadeus-swarm-driver-adapter-contract.ts";
 import { digestValue, hasExactKeys, isRecord } from "./amadeus-swarm-canonical.ts";
 
@@ -67,6 +66,7 @@ export type EventBoundCaptureBindingReceipt = Readonly<{
 export type NativeDispatchPreparation = Readonly<{
   kind: "native";
   nativeRunId: string;
+  fencingToken: number;
   waveIndex: number;
   waveDigest: string;
   resourcePreparationDigest: string;
@@ -74,6 +74,7 @@ export type NativeDispatchPreparation = Readonly<{
   identityRelativePath: string;
   armRelativePath: string;
   armDigest: string;
+  recoveryJournalRelativePath: string;
 }>;
 
 export type PreparedNativeRun = Readonly<{
@@ -93,7 +94,30 @@ export type NativeDispatchCheckpoint = Readonly<{
   resourceReceiptDigest: string;
   processIdentityDigest: string;
   armDigest: string;
+  armDeadline: string;
   capture: CaptureCheckpoint;
+}>;
+
+export type NativeResourceRecoveryOwner = Readonly<{
+  executionId: string;
+  attemptId: string;
+  attemptNonceHash: string;
+  planDigest: string;
+  waveIndex: number;
+  waveDigest: string;
+  nativeRunId: string;
+  fencingToken: number;
+  processIdentityDigest: string;
+}>;
+
+export type NativeResourceRecoveryObservation = Readonly<{
+  ownerState: "live" | "dead" | "unknown";
+  processIdentityDigest: string;
+  processGroupState: "live" | "stopped" | "unknown";
+}>;
+
+export type NativeResourceRecoveryObserverPort = Readonly<{
+  observe(owner: NativeResourceRecoveryOwner): Promise<NativeResourceRecoveryObservation>;
 }>;
 
 export type ResourceSupervisorPort = Readonly<{
@@ -101,28 +125,63 @@ export type ResourceSupervisorPort = Readonly<{
     preparation: AdapterResourcePreparation,
     input: LaunchInput,
   ): Promise<MaterializedAuxiliaryResourceSet>;
+  bindRecoveryOwner(
+    resources: MaterializedAuxiliaryResourceSet,
+    owner: NativeResourceRecoveryOwner,
+  ): Promise<void>;
+  verifyForArm(
+    preparation: AdapterResourcePreparation,
+    resources: MaterializedAuxiliaryResourceSet,
+  ): Promise<void>;
   cleanup(resources: MaterializedAuxiliaryResourceSet): Promise<void>;
 }>;
 
 export type EvidenceCaptureSession = Readonly<{
-  liveInputs: LiveEvidenceInputs;
-  bindingEvents: AsyncIterable<RawNativeEvent>;
   applyBinding(binding: EventBoundCaptureBinding): Promise<void>;
-  stopAndWait(terminal: ProcessTerminal): Promise<EvidenceInputs>;
+  stopAndWait(terminal: ProcessTerminal): Promise<void>;
   abortAndWait(reason: string): Promise<void>;
 }>;
 
+export type RawEvidenceSink = Readonly<{
+  ingest(frame: RawEvidenceFrame): void;
+  close(): void;
+  fail(error: unknown): void;
+}>;
+
+export type NativeProcessOutputFrame =
+  | Readonly<{
+      kind: "evidence";
+      transport: "stdio-json";
+      channel: "stdout";
+      bytes: Uint8Array;
+    }>
+  | Readonly<{
+      kind: "diagnostic";
+      transport: "stdio-json";
+      channel: "stderr";
+      bytes: Uint8Array;
+    }>
+  | Readonly<{
+      kind: "diagnostic";
+      transport: "pty-interactive";
+      channel: "pty";
+      bytes: Uint8Array;
+    }>;
+
 export type EvidenceCapturePort = Readonly<{
   start(input: Readonly<{
+    nativeRunId: string;
     plan: EvidenceCapturePlan;
     identity: AdapterExecutionPlan["captureIdentity"];
     resources: MaterializedAuxiliaryResourceSet;
+    evidence: RawEvidenceSink;
   }>): Promise<EvidenceCaptureSession>;
 }>;
 
 export type NativeProcessIdentity = Readonly<{
   processIdentityDigest: string;
   armDigest: string;
+  armDeadline: string;
 }>;
 
 export type PlannedProcessRun = Readonly<{
@@ -130,6 +189,7 @@ export type PlannedProcessRun = Readonly<{
   identityRelativePath: string;
   armRelativePath: string;
   armDigest: string;
+  recoveryJournalRelativePath: string;
 }>;
 
 export type NativeProcessSession = Readonly<{
@@ -140,12 +200,15 @@ export type NativeProcessSession = Readonly<{
     controlSignals?: AsyncIterable<DriverControlSignal>;
   }>): Promise<ProcessTerminal>;
   terminateAndWait(reason: string): Promise<ProcessTerminal>;
+  dispose(): Promise<void>;
 }>;
 
 export type NativeProcessPort = Readonly<{
   plan(input: Readonly<{
     nativeRunId: string;
     evidenceDir: string;
+    context: NormalizeContext;
+    fencingToken: number;
   }>): PlannedProcessRun;
   spawn(input: Readonly<{
     plan: PlannedProcessRun;
@@ -157,6 +220,7 @@ export type NativeLifecycleExecutionInput = Readonly<{
   adapter: DriverAdapter;
   launchInput: LaunchInput;
   context: NormalizeContext;
+  fencingToken: number;
   onDispatchPrepared(preparation: NativeDispatchPreparation): Promise<void>;
   onResourcesPrepared(prepared: PreparedNativeRun): Promise<void>;
   onReadyToArm(checkpoint: NativeDispatchCheckpoint): Promise<void>;
@@ -493,7 +557,7 @@ function captureCheckpoint(
 function eventBindingReceipt(
   binding: EventBoundCaptureBinding,
   nativeRunId: string,
-  event: RawNativeEvent,
+  event: RawEvidenceFrame,
 ): EventBoundCaptureBindingReceipt {
   const canonicalPaths = [...new Set(binding.exactPaths)].sort();
   requireCondition(
@@ -520,26 +584,105 @@ function eventBindingReceipt(
   });
 }
 
-async function bindEventCapture(
+type ResolvedEventBinding = Readonly<{
+  binding: EventBoundCaptureBinding;
+  receipt: EventBoundCaptureBindingReceipt;
+}>;
+
+function evidenceBridge(
   input: NativeLifecycleExecutionInput,
   execution: AdapterExecutionPlan,
-  session: EvidenceCaptureSession,
+  attempt: AttemptEvidenceSession,
+): EvidenceBridge {
+  let resolveBinding: ((binding: ResolvedEventBinding) => void) | undefined;
+  let rejectBinding: ((error: unknown) => void) | undefined;
+  let bindingSettled = false;
+  const binding = execution.capture.kind === "event-bound-provider-path"
+    ? new Promise<ResolvedEventBinding>((resolveValue, reject) => {
+        resolveBinding = resolveValue;
+        rejectBinding = reject;
+      })
+    : undefined;
+  void binding?.catch(() => {});
+  const failBinding = (error: unknown): void => {
+    if (!binding || bindingSettled) return;
+    bindingSettled = true;
+    rejectBinding?.(error);
+  };
+  return Object.freeze({
+    sink: Object.freeze({
+      ingest(frame: RawEvidenceFrame): void {
+        attempt.ingest(frame);
+        if (execution.capture.kind !== "event-bound-provider-path" || bindingSettled) return;
+        const resolution = input.adapter.resolveCaptureBinding({
+          plan: execution.capture,
+          identity: execution.captureIdentity,
+          event: frame,
+        });
+        if (resolution.kind === "invalid") {
+          const error = new Error("CAPTURE_BINDING_INVALID");
+          failBinding(error);
+          throw error;
+        }
+        if (resolution.kind !== "bound") return;
+        const receipt = eventBindingReceipt(
+          resolution.binding,
+          input.launchInput.nativeRunId,
+          frame,
+        );
+        bindingSettled = true;
+        resolveBinding?.(Object.freeze({ binding: resolution.binding, receipt }));
+      },
+      close(): void {
+        failBinding(new Error("CAPTURE_BINDING_MISSING"));
+      },
+      fail(error: unknown): void {
+        failBinding(error);
+      },
+    }),
+    async bind(session: EvidenceCaptureSession): Promise<void> {
+      if (!binding) return;
+      const resolved = await binding;
+      await input.onCaptureBound(resolved.receipt);
+      await session.applyBinding(resolved.binding);
+    },
+  });
+}
+
+type EvidenceBridge = Readonly<{
+  sink: RawEvidenceSink;
+  bind(session: EvidenceCaptureSession): Promise<void>;
+}>;
+
+function openEvidenceSession(
+  adapter: DriverAdapter,
+  context: NormalizeContext,
+): AttemptEvidenceSession {
+  const session = adapter.openEvidenceSession(context);
+  const liveInputs = session?.liveInputs;
+  requireCondition(
+      session !== undefined &&
+      liveInputs !== undefined &&
+      liveInputs !== null &&
+      typeof liveInputs.providerState?.[Symbol.asyncIterator] === "function" &&
+      typeof liveInputs.nativeEvents?.[Symbol.asyncIterator] === "function" &&
+      typeof session.ingest === "function" &&
+      typeof session.seal === "function" &&
+      typeof session.abort === "function",
+    "EVIDENCE_SESSION_UNAVAILABLE",
+  );
+  return session;
+}
+
+async function abortEvidenceSession(
+  session: AttemptEvidenceSession,
+  reason: string,
 ): Promise<void> {
-  if (execution.capture.kind !== "event-bound-provider-path") return;
-  for await (const event of session.bindingEvents) {
-    const resolution = input.adapter.resolveCaptureBinding({
-      plan: execution.capture,
-      identity: execution.captureIdentity,
-      event,
-    });
-    if (resolution.kind === "invalid") throw new Error("CAPTURE_BINDING_INVALID");
-    if (resolution.kind !== "bound") continue;
-    const receipt = eventBindingReceipt(resolution.binding, input.launchInput.nativeRunId, event);
-    await input.onCaptureBound(receipt);
-    await session.applyBinding(resolution.binding);
-    return;
+  try {
+    await session.abort(reason);
+  } catch (error) {
+    throw new Error("EVIDENCE_SESSION_ABORT_FAILED", { cause: error });
   }
-  throw new Error("CAPTURE_BINDING_MISSING");
 }
 
 function controlSignalMatches(signal: DriverControlSignal, context: NormalizeContext): boolean {
@@ -663,12 +806,19 @@ function relativePathIsValid(path: string): boolean {
 
 function validateProcessPlan(plan: PlannedProcessRun, nativeRunId: string): void {
   requireCondition(
-    hasExactKeys(plan, ["nativeRunId", "identityRelativePath", "armRelativePath", "armDigest"]) &&
+    hasExactKeys(plan, [
+      "nativeRunId",
+      "identityRelativePath",
+      "armRelativePath",
+      "armDigest",
+      "recoveryJournalRelativePath",
+    ]) &&
       plan.nativeRunId === nativeRunId &&
       relativePathIsValid(plan.identityRelativePath) &&
       relativePathIsValid(plan.armRelativePath) &&
       plan.identityRelativePath !== plan.armRelativePath &&
-      nonEmpty(plan.armDigest),
+      nonEmpty(plan.armDigest) &&
+      relativePathIsValid(plan.recoveryJournalRelativePath),
     "PROCESS_PLAN_INVALID",
   );
 }
@@ -678,60 +828,320 @@ type FailedExecutionRecoveryInput = Readonly<{
   resources: MaterializedAuxiliaryResourceSet;
   resourcePort: ResourceSupervisorPort;
   capture?: EvidenceCaptureSession;
+  evidenceSession?: AttemptEvidenceSession;
   process?: NativeProcessSession;
   terminal?: ProcessTerminal;
   captureJoined: boolean;
+  evidenceSealed: boolean;
+  processDisposed: boolean;
   transport: CoordinatorTransport["kind"];
   nativeRunId: string;
   processIdentityDigest?: string;
 }>;
 
+async function recoverProcessTerminal(
+  input: FailedExecutionRecoveryInput,
+  errors: unknown[],
+): Promise<ProcessTerminal | undefined> {
+  if (!input.process || input.terminal) return input.terminal;
+  try {
+    const terminal = await input.process.terminateAndWait("native-execution-failed");
+    requireCondition(terminalMatches(terminal, input), "PROCESS_TERMINAL_INVALID");
+    return terminal;
+  } catch (error) {
+    errors.push(error);
+    return undefined;
+  }
+}
+
+async function recoverCapture(
+  input: FailedExecutionRecoveryInput,
+  terminal: ProcessTerminal | undefined,
+  errors: unknown[],
+): Promise<boolean> {
+  if (!input.capture || input.captureJoined) return true;
+  try {
+    if (terminal) await input.capture.stopAndWait(terminal);
+    else await input.capture.abortAndWait("native-execution-failed");
+    return true;
+  } catch (error) {
+    errors.push(error);
+    return false;
+  }
+}
+
+async function recoverEvidence(
+  input: FailedExecutionRecoveryInput,
+  errors: unknown[],
+): Promise<boolean> {
+  if (!input.evidenceSession || input.evidenceSealed) return true;
+  try {
+    await abortEvidenceSession(input.evidenceSession, "native-execution-failed");
+    return true;
+  } catch (error) {
+    errors.push(error);
+    return false;
+  }
+}
+
+async function recoverProcessDisposal(
+  input: FailedExecutionRecoveryInput,
+  processTerminal: boolean,
+  errors: unknown[],
+): Promise<boolean> {
+  if (!input.process || input.processDisposed) return true;
+  if (!processTerminal) return false;
+  try {
+    await input.process.dispose();
+    return true;
+  } catch (error) {
+    errors.push(error);
+    return false;
+  }
+}
+
+async function recoverResources(
+  input: FailedExecutionRecoveryInput,
+  prerequisitesMet: boolean,
+  errors: unknown[],
+): Promise<boolean> {
+  if (!prerequisitesMet) return false;
+  try {
+    await input.resourcePort.cleanup(input.resources);
+    return true;
+  } catch (error) {
+    errors.push(error);
+    return false;
+  }
+}
+
 async function recoverFailedExecution(input: FailedExecutionRecoveryInput): Promise<never> {
   const recoveryErrors: unknown[] = [];
-  let terminal = input.terminal;
-  let processTerminal = input.process === undefined || terminal !== undefined;
-  let captureJoined = input.capture === undefined || input.captureJoined;
-  if (input.process && !terminal) {
-    try {
-      terminal = await input.process.terminateAndWait("native-execution-failed");
-      requireCondition(terminalMatches(terminal, input), "PROCESS_TERMINAL_INVALID");
-      processTerminal = true;
-    } catch (error) {
-      recoveryErrors.push(error);
-    }
-  }
-  if (input.capture && !captureJoined) {
-    try {
-      if (terminal) {
-        const evidence = await input.capture.stopAndWait(terminal);
-        requireCondition(
-          digestValue(evidence.processTerminal) === digestValue(terminal),
-          "CAPTURE_TERMINAL_MISMATCH",
-        );
-      } else await input.capture.abortAndWait("native-execution-failed");
-      captureJoined = true;
-    } catch (error) {
-      recoveryErrors.push(error);
-    }
-  }
-  if (processTerminal && captureJoined) {
-    try {
-      await input.resourcePort.cleanup(input.resources);
-    } catch (error) {
-      recoveryErrors.push(error);
-    }
-  }
+  const terminal = await recoverProcessTerminal(input, recoveryErrors);
+  const processTerminal = input.process === undefined || terminal !== undefined;
+  const captureJoined = await recoverCapture(input, terminal, recoveryErrors);
+  const evidenceClosed = await recoverEvidence(input, recoveryErrors);
+  const resourcesCleaned = await recoverResources(
+    input,
+    processTerminal && captureJoined && evidenceClosed,
+    recoveryErrors,
+  );
+  await recoverProcessDisposal(
+    input,
+    processTerminal && captureJoined && evidenceClosed && resourcesCleaned,
+    recoveryErrors,
+  );
   if (recoveryErrors.length > 0) {
     throw new AggregateError([input.error, ...recoveryErrors], "NATIVE_EXECUTION_RECOVERY_FAILED");
   }
   throw input.error;
 }
 
-export function createLifecycleNativeExecution(ports: Readonly<{
+type NativeExecutionPorts = Readonly<{
   resources: ResourceSupervisorPort;
   capture: EvidenceCapturePort;
   process: NativeProcessPort;
-}>): LifecycleNativeExecution {
+}>;
+
+type NativeExecutionProgress = {
+  capture?: EvidenceCaptureSession;
+  evidenceSession?: AttemptEvidenceSession;
+  process?: NativeProcessSession;
+  terminal?: ProcessTerminal;
+  captureJoined: boolean;
+  evidenceSealed: boolean;
+  processDisposed: boolean;
+  execution?: AdapterExecutionPlan;
+  processIdentityDigest?: string;
+};
+
+type ActiveNativeRun = Readonly<{
+  execution: AdapterExecutionPlan;
+  evidenceSession: AttemptEvidenceSession;
+  evidence: EvidenceBridge;
+  capture: EvidenceCaptureSession;
+  process: NativeProcessSession;
+  identity: NativeProcessIdentity;
+}>;
+
+async function startNativeRun(input: Readonly<{
+  ports: NativeExecutionPorts;
+  lifecycle: NativeLifecycleExecutionInput;
+  preparation: AdapterResourcePreparation;
+  resources: MaterializedAuxiliaryResourceSet;
+  dispatchPreparation: NativeDispatchPreparation;
+  processPlan: PlannedProcessRun;
+  progress: NativeExecutionProgress;
+}>): Promise<ActiveNativeRun> {
+  const { lifecycle, preparation, resources, dispatchPreparation, processPlan, progress } = input;
+  validateMaterializedResources(preparation, resources);
+  const execution = lifecycle.adapter.buildExecution(lifecycle.launchInput, resources);
+  progress.execution = execution;
+  validateExecutionPlan(execution, preparation, resources, lifecycle);
+  const evidenceSession = openEvidenceSession(lifecycle.adapter, lifecycle.context);
+  progress.evidenceSession = evidenceSession;
+  const evidence = evidenceBridge(lifecycle, execution, evidenceSession);
+  const preparedNativeRun: PreparedNativeRun = Object.freeze({
+    kind: "native",
+    dispatchPreparationDigest: digestValue(dispatchPreparation),
+    resourceReceiptDigest: resources.receiptDigest,
+    executionPlanDigest: digestValue(execution),
+    capturePlanDigest: digestValue(execution.capture),
+    transportKind: execution.launch.transport.kind,
+    captureKind: execution.capture.kind,
+  });
+  await lifecycle.onResourcesPrepared(preparedNativeRun);
+  const capture = await input.ports.capture.start({
+    nativeRunId: lifecycle.launchInput.nativeRunId,
+    plan: execution.capture,
+    identity: execution.captureIdentity,
+    resources,
+    evidence: evidence.sink,
+  });
+  progress.capture = capture;
+  const process = await input.ports.process.spawn({
+    plan: processPlan,
+    launch: execution.launch,
+  });
+  progress.process = process;
+  const identity = await process.observeIdentity();
+  requireCondition(
+    nonEmpty(identity.processIdentityDigest) &&
+      identity.armDigest === processPlan.armDigest &&
+      !Number.isNaN(Date.parse(identity.armDeadline)),
+    "PROCESS_IDENTITY_INVALID",
+  );
+  progress.processIdentityDigest = identity.processIdentityDigest;
+  await input.ports.resources.bindRecoveryOwner(
+    resources,
+    Object.freeze({
+      executionId: lifecycle.context.executionId,
+      attemptId: lifecycle.context.attemptId,
+      attemptNonceHash: lifecycle.context.attemptNonceHash,
+      planDigest: lifecycle.context.planDigest,
+      waveIndex: lifecycle.context.waveIndex,
+      waveDigest: lifecycle.context.waveDigest,
+      nativeRunId: lifecycle.launchInput.nativeRunId,
+      fencingToken: lifecycle.fencingToken,
+      processIdentityDigest: identity.processIdentityDigest,
+    }),
+  );
+  await input.ports.resources.verifyForArm(preparation, resources);
+  await lifecycle.onReadyToArm(
+    Object.freeze({
+      kind: "native",
+      nativeRunId: lifecycle.launchInput.nativeRunId,
+      preparedNativeRunDigest: digestValue(preparedNativeRun),
+      resourceReceiptDigest: resources.receiptDigest,
+      processIdentityDigest: identity.processIdentityDigest,
+      armDigest: identity.armDigest,
+      armDeadline: identity.armDeadline,
+      capture: captureCheckpoint(execution, preparation, resources),
+    }),
+  );
+  return Object.freeze({ execution, evidenceSession, evidence, capture, process, identity });
+}
+
+async function controlSignalFor(
+  lifecycle: NativeLifecycleExecutionInput,
+  active: ActiveNativeRun,
+): Promise<DriverControlSignal | undefined> {
+  if (active.execution.launch.transport.kind !== "pty-interactive") return undefined;
+  return await exactlyOneControlSignal(
+    lifecycle.adapter.observeControl(active.evidenceSession.liveInputs, lifecycle.context),
+    lifecycle.context,
+    active.execution.launch.transport.controlTimeoutMs,
+  );
+}
+
+function oneControlSignal(signal: DriverControlSignal): AsyncIterable<DriverControlSignal> {
+  return (async function* () {
+    yield signal;
+  })();
+}
+
+function terminalWaitInput(
+  transport: CoordinatorTransport,
+  controlSignal: DriverControlSignal | undefined,
+): Readonly<{
+  transport: CoordinatorTransport;
+  controlSignals?: AsyncIterable<DriverControlSignal>;
+}> {
+  return controlSignal
+    ? Object.freeze({ transport, controlSignals: oneControlSignal(controlSignal) })
+    : Object.freeze({ transport });
+}
+
+async function waitForNativeTerminal(
+  lifecycle: NativeLifecycleExecutionInput,
+  active: ActiveNativeRun,
+): Promise<ProcessTerminal> {
+  const controlSignal = await controlSignalFor(lifecycle, active);
+  const terminal = await active.process.waitForTerminal(
+    terminalWaitInput(active.execution.launch.transport, controlSignal),
+  );
+  requireCondition(
+    terminalMatches(terminal, {
+      transport: active.execution.launch.transport.kind,
+      nativeRunId: lifecycle.launchInput.nativeRunId,
+      processIdentityDigest: active.identity.processIdentityDigest,
+      ...(controlSignal ? { controlSignalDigest: digestValue(controlSignal) } : {}),
+    }),
+    "PROCESS_TERMINAL_INVALID",
+  );
+  return terminal;
+}
+
+async function completeNativeRun(input: Readonly<{
+  ports: NativeExecutionPorts;
+  lifecycle: NativeLifecycleExecutionInput;
+  resources: MaterializedAuxiliaryResourceSet;
+  active: ActiveNativeRun;
+  progress: NativeExecutionProgress;
+}>): Promise<readonly NormalizedDriverEvent[]> {
+  const { active, progress } = input;
+  await active.process.arm();
+  await active.evidence.bind(active.capture);
+  const terminal = await waitForNativeTerminal(input.lifecycle, active);
+  progress.terminal = terminal;
+  await active.capture.stopAndWait(terminal);
+  progress.captureJoined = true;
+  const events = await collectEvents(active.evidenceSession.seal(terminal));
+  progress.evidenceSealed = true;
+  await input.ports.resources.cleanup(input.resources);
+  await active.process.dispose();
+  progress.processDisposed = true;
+  return events;
+}
+
+function failedExecutionRecovery(input: Readonly<{
+  error: unknown;
+  resourcePort: ResourceSupervisorPort;
+  resources: MaterializedAuxiliaryResourceSet;
+  lifecycle: NativeLifecycleExecutionInput;
+  progress: NativeExecutionProgress;
+}>): FailedExecutionRecoveryInput {
+  const { progress } = input;
+  return Object.freeze({
+    error: input.error,
+    resources: input.resources,
+    resourcePort: input.resourcePort,
+    ...(progress.capture ? { capture: progress.capture } : {}),
+    ...(progress.evidenceSession ? { evidenceSession: progress.evidenceSession } : {}),
+    ...(progress.process ? { process: progress.process } : {}),
+    ...(progress.terminal ? { terminal: progress.terminal } : {}),
+    captureJoined: progress.captureJoined,
+    evidenceSealed: progress.evidenceSealed,
+    processDisposed: progress.processDisposed,
+    transport: progress.execution?.launch.transport.kind ?? "stdio-json",
+    nativeRunId: input.lifecycle.launchInput.nativeRunId,
+    ...(progress.processIdentityDigest
+      ? { processIdentityDigest: progress.processIdentityDigest }
+      : {}),
+  });
+}
+
+export function createLifecycleNativeExecution(ports: NativeExecutionPorts): LifecycleNativeExecution {
   return Object.freeze({
     async execute(input): Promise<readonly NormalizedDriverEvent[]> {
       const preparation = input.adapter.prepareResources(input.launchInput);
@@ -739,11 +1149,14 @@ export function createLifecycleNativeExecution(ports: Readonly<{
       const processPlan = ports.process.plan({
         nativeRunId: input.launchInput.nativeRunId,
         evidenceDir: input.launchInput.evidenceDir,
+        context: input.context,
+        fencingToken: input.fencingToken,
       });
       validateProcessPlan(processPlan, input.launchInput.nativeRunId);
       const dispatchPreparation: NativeDispatchPreparation = Object.freeze({
         kind: "native",
         nativeRunId: input.launchInput.nativeRunId,
+        fencingToken: input.fencingToken,
         waveIndex: input.context.waveIndex,
         waveDigest: input.context.waveDigest,
         resourcePreparationDigest: preparation.preparationDigest,
@@ -751,102 +1164,40 @@ export function createLifecycleNativeExecution(ports: Readonly<{
         identityRelativePath: processPlan.identityRelativePath,
         armRelativePath: processPlan.armRelativePath,
         armDigest: processPlan.armDigest,
+        recoveryJournalRelativePath: processPlan.recoveryJournalRelativePath,
       });
       await input.onDispatchPrepared(dispatchPreparation);
       const resources = await ports.resources.materialize(preparation, input.launchInput);
-      let capture: EvidenceCaptureSession | undefined;
-      let process: NativeProcessSession | undefined;
-      let terminal: ProcessTerminal | undefined;
-      let captureJoined = false;
-      let execution: AdapterExecutionPlan | undefined;
-      let processIdentityDigest: string | undefined;
+      const progress: NativeExecutionProgress = {
+        captureJoined: false,
+        evidenceSealed: false,
+        processDisposed: false,
+      };
       try {
-        validateMaterializedResources(preparation, resources);
-        execution = input.adapter.buildExecution(input.launchInput, resources);
-        validateExecutionPlan(execution, preparation, resources, input);
-        const preparedNativeRun: PreparedNativeRun = Object.freeze({
-          kind: "native",
-          dispatchPreparationDigest: digestValue(dispatchPreparation),
-          resourceReceiptDigest: resources.receiptDigest,
-          executionPlanDigest: digestValue(execution),
-          capturePlanDigest: digestValue(execution.capture),
-          transportKind: execution.launch.transport.kind,
-          captureKind: execution.capture.kind,
-        });
-        await input.onResourcesPrepared(preparedNativeRun);
-        capture = await ports.capture.start({
-          plan: execution.capture,
-          identity: execution.captureIdentity,
+        const active = await startNativeRun({
+          ports,
+          lifecycle: input,
+          preparation,
           resources,
+          dispatchPreparation,
+          processPlan,
+          progress,
         });
-        process = await ports.process.spawn({
-          plan: processPlan,
-          launch: execution.launch,
+        return await completeNativeRun({
+          ports,
+          lifecycle: input,
+          resources,
+          active,
+          progress,
         });
-        const identity = await process.observeIdentity();
-        requireCondition(
-          nonEmpty(identity.processIdentityDigest) && identity.armDigest === processPlan.armDigest,
-          "PROCESS_IDENTITY_INVALID",
-        );
-        processIdentityDigest = identity.processIdentityDigest;
-        await input.onReadyToArm(
-          Object.freeze({
-            kind: "native",
-            nativeRunId: input.launchInput.nativeRunId,
-            preparedNativeRunDigest: digestValue(preparedNativeRun),
-            resourceReceiptDigest: resources.receiptDigest,
-            processIdentityDigest: identity.processIdentityDigest,
-            armDigest: identity.armDigest,
-            capture: captureCheckpoint(execution, preparation, resources),
-          }),
-        );
-        await process.arm();
-        await bindEventCapture(input, execution, capture);
-        const controlSignal = execution.launch.transport.kind === "pty-interactive"
-          ? await exactlyOneControlSignal(
-              input.adapter.observeControl(capture.liveInputs, input.context),
-              input.context,
-              execution.launch.transport.controlTimeoutMs,
-            )
-          : undefined;
-        const controlSignalDigest = controlSignal ? digestValue(controlSignal) : undefined;
-        terminal = await process.waitForTerminal({
-          transport: execution.launch.transport,
-          ...(controlSignal
-            ? { controlSignals: (async function* () { yield controlSignal; })() }
-            : {}),
-        });
-        requireCondition(
-          terminalMatches(terminal, {
-            transport: execution.launch.transport.kind,
-            nativeRunId: input.launchInput.nativeRunId,
-            processIdentityDigest: identity.processIdentityDigest,
-            ...(controlSignalDigest ? { controlSignalDigest } : {}),
-          }),
-          "PROCESS_TERMINAL_INVALID",
-        );
-        const evidence = await capture.stopAndWait(terminal);
-        requireCondition(
-          digestValue(evidence.processTerminal) === digestValue(terminal),
-          "CAPTURE_TERMINAL_MISMATCH",
-        );
-        captureJoined = true;
-        const events = await collectEvents(input.adapter.normalize(evidence, input.context));
-        await ports.resources.cleanup(resources);
-        return events;
       } catch (error) {
-        return await recoverFailedExecution({
+        return await recoverFailedExecution(failedExecutionRecovery({
           error,
-          resources,
           resourcePort: ports.resources,
-          ...(capture ? { capture } : {}),
-          ...(process ? { process } : {}),
-          ...(terminal ? { terminal } : {}),
-          captureJoined,
-          transport: execution?.launch.transport.kind ?? "stdio-json",
-          nativeRunId: input.launchInput.nativeRunId,
-          ...(processIdentityDigest ? { processIdentityDigest } : {}),
-        });
+          resources,
+          lifecycle: input,
+          progress,
+        }));
       }
     },
   });
