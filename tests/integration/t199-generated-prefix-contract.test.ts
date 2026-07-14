@@ -36,10 +36,8 @@ const foreignPrefixContentAllowlist = new Set([
   "contrib/skills/amadeus-upstream-sync/evals/evals.json",
   "contrib/skills/amadeus-upstream-sync/references/artifact-contracts.md",
   ".claude/skills/amadeus-upstream-sync/SKILL.md",
-  ".claude/skills/amadeus-upstream-sync/evals/evals.json",
   ".claude/skills/amadeus-upstream-sync/references/artifact-contracts.md",
   ".agents/skills/amadeus-upstream-sync/SKILL.md",
-  ".agents/skills/amadeus-upstream-sync/evals/evals.json",
   ".agents/skills/amadeus-upstream-sync/references/artifact-contracts.md",
   "tests/fixtures/upstream-v2-migration/operational-tokens.txt",
 ]);

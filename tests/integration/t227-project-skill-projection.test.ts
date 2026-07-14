@@ -6,8 +6,9 @@
 //
 // Contributor skills are repository maintenance tools, not framework product
 // features. Their canonical source lives under contrib/skills/ and promote-self
-// projects it into both project-local discovery trees without adding it to
-// dist/. This test proves projection, drift detection, repair, and removal.
+// projects its runtime files into both project-local discovery trees without
+// adding it to dist/. Authoring-only eval assets remain canonical. This test
+// proves projection, pruning, drift detection, repair, and removal.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
@@ -46,6 +47,7 @@ beforeEach(() => {
     "contrib/skills/amadeus-upstream-sync/agents/openai.yaml",
     "policy:\n  allow_implicit_invocation: true\n",
   );
+  write("contrib/skills/amadeus-upstream-sync/evals/evals.json", "{\"evals\": []}\n");
 });
 
 afterEach(() => {
@@ -53,7 +55,9 @@ afterEach(() => {
 });
 
 describe("t227 contributor skill projection", () => {
-  test("--apply projects the canonical skill into Claude and Codex only", () => {
+  test("--apply projects runtime files but keeps evals canonical", () => {
+    write(".claude/skills/amadeus-upstream-sync/evals/evals.json", "stale\n");
+    write(".agents/skills/amadeus-upstream-sync/evals/evals.json", "stale\n");
     expect(promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
 
     const source = readFileSync(
@@ -64,6 +68,12 @@ describe("t227 contributor skill projection", () => {
       .toBe(source);
     expect(readFileSync(join(root, ".agents/skills/amadeus-upstream-sync/SKILL.md"), "utf-8"))
       .toBe(source);
+    expect(existsSync(join(root, "contrib/skills/amadeus-upstream-sync/evals/evals.json")))
+      .toBe(true);
+    expect(existsSync(join(root, ".claude/skills/amadeus-upstream-sync/evals/evals.json")))
+      .toBe(false);
+    expect(existsSync(join(root, ".agents/skills/amadeus-upstream-sync/evals/evals.json")))
+      .toBe(false);
     expect(existsSync(join(root, "dist/claude/.claude/skills/amadeus-upstream-sync")))
       .toBe(false);
     expect(existsSync(join(root, "dist/codex/.agents/skills/amadeus-upstream-sync")))

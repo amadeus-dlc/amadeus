@@ -4,8 +4,9 @@
 // This is a project-local dogfood install, not a distributable build. The
 // packager still owns dist/; this script copies the generated Claude/Codex
 // harness surfaces into the repository root so Amadeus can develop itself.
-// Contributor-only skills under contrib/skills/ are projected into both
-// harness discovery trees without entering dist/.
+// Contributor-only skill runtime files under contrib/skills/ are projected
+// into both harness discovery trees without entering dist/. Authoring-only
+// eval assets remain at the canonical contributor path.
 
 import { spawnSync } from "node:child_process";
 import {
@@ -201,6 +202,7 @@ function buildExpected(repoRoot: string): Map<string, Buffer> {
   if (existsSync(contributorSkillsAbs)) {
     for (const file of walk(contributorSkillsAbs)) {
       const relFromSkills = normalizeRel(relative(contributorSkillsAbs, file));
+      if (relFromSkills.split("/")[1] === "evals") continue;
       const bytes = readFileSync(file);
       for (const dst of CONTRIBUTOR_SKILL_DESTINATIONS) {
         expected.set(normalizeRel(join(dst, relFromSkills)), bytes);

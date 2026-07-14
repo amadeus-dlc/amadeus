@@ -1,4 +1,4 @@
-# skill-forge-source-sha256: a475b785aeb3f98c6145a87adaef03ef9b6b137732d86d2428771637879c19be
+# skill-forge-source-sha256: 6fc7cf308a532abf7d90440aae26fb5487034a801892a95a35b6dfa890d2f882
 interface:
   display_name: "Amadeus Upstream Sync"
   short_description: "Plan safe upstream AI-DLC v2 synchronization"
