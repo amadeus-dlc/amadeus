@@ -817,10 +817,13 @@ function isSecureMigrationLatch(path: string): boolean {
   // allowed to follow a symlink moved from the predictable latch path. The
   // caller's catch also fails closed if this inspection races with removal.
   const stat = lstatSync(path);
-  if (!stat.isFile() || (stat.mode & 0o777) !== 0o600) return false;
-  if (typeof process.getuid === "function" && stat.uid !== process.getuid()) {
-    return false;
+  if (!stat.isFile()) return false;
+  const getuid = process.getuid;
+  if (typeof getuid === "function") {
+    if ((stat.mode & 0o777) !== 0o600 || stat.uid !== getuid()) return false;
   }
+  // Windows has no POSIX uid/mode contract. Its per-user temp directory ACL is
+  // the ownership boundary; the regular-file and atomic-claim checks still apply.
   return true;
 }
 
