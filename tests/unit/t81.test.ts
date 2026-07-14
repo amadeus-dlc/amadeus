@@ -235,7 +235,7 @@ describe("t81 amadeus-state practices-event — bolt-plan-marker-conflict overri
   });
 
   // --- Test 3: t28 audit count unchanged BY THIS PR's discriminator reuse ---
-  test("3: framework event count pinned at 73 (no bump from this PR's discriminator reuse)", () => {
+  test("3: framework event count pinned at 78 (no bump from this PR's discriminator reuse)", () => {
     // The .sh read t28's pinned $TS_COUNT. Under milestone 4, t28 is now a
     // .test.ts (no `assert_eq N "$TS_COUNT"` line to grep), so pin the SAME
     // observable against the SOURCE OF TRUTH instead — VALID_EVENT_TYPES in
@@ -249,7 +249,8 @@ describe("t81 amadeus-state practices-event — bolt-plan-marker-conflict overri
     // RECOMPOSED (the adaptive composer's in-flight re-shape, +1), plus
     // DELEGATED_APPROVAL (#671 delegated-approval provenance, +1) = 71, plus
     // DELEGATED_REJECTION (#685 delegated-rejection provenance, +1) = 72, plus
-    // GUARD_EXEMPTED (#499/#848 docs-only workspace_requires exemption, +1) = 73.
+    // GUARD_EXEMPTED (#499/#848 docs-only workspace_requires exemption, +1) = 73,
+    // plus the five swarm-driver lifecycle events = 78.
     const auditSrc = readFileSync(
       join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-audit.ts"),
       "utf-8",
@@ -257,7 +258,7 @@ describe("t81 amadeus-state practices-event — bolt-plan-marker-conflict overri
     const block = auditSrc.match(/const VALID_EVENT_TYPES = new Set\(\[([\s\S]*?)\]\)/);
     expect(block).not.toBeNull();
     const count = (block ? block[1].match(/"[A-Z0-9_]+"/g) : null)?.length ?? -1;
-    expect(count).toBe(73);
+    expect(count).toBe(78);
   });
 
   // --- Test 4: milestone 8 write-failure path coexists (different Reason value) ---

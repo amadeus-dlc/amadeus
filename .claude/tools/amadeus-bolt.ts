@@ -41,11 +41,20 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { appendAuditEntry } from "./amadeus-audit.ts";
+import { validateFinalizeOperationClaim } from "./amadeus-swarm-operation-claim.js";
+import {
+  openOperationJournal,
+  operationStepEvidence,
+  recordOperationResult,
+  recordOperationStep,
+  type OperationJournal,
+} from "./amadeus-swarm-operation-journal.js";
 import {
   emitError,
   errorMessage,
   getField,
   relativeRecordDir,
+  readAllAuditShards,
   readStateFile,
   resolveProjectDir,
   setFieldStrict,
@@ -150,6 +159,88 @@ function parseFlags(args: string[]): Record<string, string> {
     i++;
   }
   return flags;
+}
+
+function finalizeOperationGuardPresent(flags: Record<string, string>): boolean {
+  return Boolean(
+    flags["operation-id"] ||
+    flags["finalize-request-digest"] ||
+    flags["claim-file"] ||
+    flags["fencing-token"],
+  );
+}
+
+function metadataMergeClaimIsValid(pd: string, flags: Record<string, string>): boolean {
+  const operationId = flags["operation-id"];
+  const finalizeRequestDigest = flags["finalize-request-digest"];
+  const claimPath = flags["claim-file"];
+  const fencingToken = flags["fencing-token"];
+  if (
+    !operationId ||
+    !finalizeRequestDigest ||
+    !claimPath ||
+    !fencingToken ||
+    !/^[1-9][0-9]*$/.test(fencingToken)
+  ) return false;
+  return validateFinalizeOperationClaim({
+    projectDir: pd,
+    claimPath,
+    operationId,
+    finalizeRequestDigest,
+    fencingToken: Number(fencingToken),
+    unit: flags.slug,
+    operation: "metadata-merge",
+    ...(flags.intent ? { intent: flags.intent } : {}),
+    ...(flags.space ? { space: flags.space } : {}),
+  });
+}
+
+function assertMetadataMergeClaim(pd: string, flags: Record<string, string>): void {
+  if (!finalizeOperationGuardPresent(flags)) return;
+  if (metadataMergeClaimIsValid(pd, flags)) return;
+  failJson(
+    "complete-merge",
+    flags.slug,
+    "invalid-operation-claim",
+    "Finalize operation claim is missing, stale, or mismatched.",
+  );
+}
+
+function metadataAuditPostcondition(
+  pd: string,
+  event: string,
+  slug: string,
+  operationId: string,
+  finalizeRequestDigest: string,
+  intent?: string,
+  space?: string,
+): Readonly<Record<string, string>> | null {
+  const found = readAllAuditShards(pd, intent, space)
+    .replace(/\r\n/g, "\n")
+    .split(/\n---\n/)
+    .findLast(
+      (block) =>
+        block.includes(`**Event**: ${event}`) &&
+        (block.includes(`**Bolt slug**: ${slug}`) || block.includes(`**Bolt Slug**: ${slug}`)) &&
+        block.includes(`**Operation ID**: ${operationId}`) &&
+        block.includes(`**Finalize request digest**: ${finalizeRequestDigest}`),
+    );
+  if (!found) return null;
+  return Object.freeze({ event, unit: slug, operationId, finalizeRequestDigest });
+}
+
+function metadataAuditBindingFields(flags: Record<string, string>): Record<string, string> {
+  const fields: Record<string, string> = {};
+  if (flags["operation-id"]) fields["Operation ID"] = flags["operation-id"];
+  if (flags["finalize-request-digest"]) {
+    fields["Finalize request digest"] = flags["finalize-request-digest"];
+  }
+  return fields;
+}
+
+function requireMetadataStepEvidence(evidence: unknown | null, slug: string, step: string): unknown {
+  if (evidence !== null) return evidence;
+  failJson("complete-merge", slug, "postcondition-missing", `${step} postcondition missing.`);
 }
 
 // --- Subcommand: start ---
@@ -362,6 +453,7 @@ function handleComplete(args: string[]): void {
         `--merge requires a single bolt name; got csv: "${flags.name}". Issue one complete --merge per bolt.`
       );
     }
+    assertMetadataMergeClaim(pd, flags);
     // HOLD-MERGE invariant enforcement.
     // SKILL.md U5's multi-failure halt-and-ask sequence sets `Merge-Held: true`
     // on each successful Bolt's per-Bolt forked state file before rendering
@@ -380,21 +472,87 @@ function handleComplete(args: string[]): void {
     }
   }
 
-  try {
+  let journalPath = "";
+  let journal: OperationJournal | null = null;
+  if (useMerge && finalizeOperationGuardPresent(flags)) {
+    const opened = openOperationJournal({
+      claimPath: flags["claim-file"],
+      operationId: flags["operation-id"],
+      kind: "metadata-merge",
+      request: {
+        unit: flags.slug,
+        batch: flags.batch,
+        name: flags.name,
+        finalizeRequestDigest: flags["finalize-request-digest"],
+        intent: flags.intent ?? "",
+        space: flags.space ?? "",
+      },
+    });
+    journalPath = opened.path;
+    journal = opened.journal;
+    if (journal.result !== undefined) {
+      console.log(JSON.stringify(journal.result));
+      return;
+    }
+  }
+  const metadataBindingArgs = journal
+    ? [
+        "--operation-id",
+        flags["operation-id"],
+        "--finalize-request-digest",
+        flags["finalize-request-digest"],
+      ]
+    : [];
+
+  const guardedStep = (
+    step: string,
+    postcondition: () => unknown | null,
+    execute: () => unknown | null,
+  ): void => {
+    if (!journal) {
+      execute();
+      return;
+    }
+    assertMetadataMergeClaim(pd, flags);
+    if (operationStepEvidence(journal, step) === null) {
+      let evidence = postcondition();
+      if (evidence === null) evidence = execute() ?? postcondition();
+      evidence = requireMetadataStepEvidence(evidence, flags.slug, step);
+      assertMetadataMergeClaim(pd, flags);
+      journal = recordOperationStep(journalPath, journal, step, evidence);
+    }
+  };
+
+  const auditPostcondition = (event: string): Readonly<Record<string, string>> | null =>
+    metadataAuditPostcondition(
+      pd,
+      event,
+      flags.slug,
+      flags["operation-id"],
+      flags["finalize-request-digest"],
+      flags.intent,
+      flags.space,
+    );
+
+  guardedStep("bolt-completed", () => auditPostcondition("BOLT_COMPLETED"), () => {
+    try {
     const fields: Record<string, string> = {
       "Bolt names": flags.name,
       "Batch number": flags.batch,
     };
     if (useMerge) {
       fields["Bolt slug"] = flags.slug;
+      Object.assign(fields, metadataAuditBindingFields(flags));
     }
     emitAudit(pd, "BOLT_COMPLETED", fields, flags.intent, flags.space);
-  } catch (e) {
+    } catch (e) {
     if (useMerge) {
       failJson("complete-merge", flags.slug, "audit-emit-failed", errorMessage(e));
     }
     error(`Audit emission failed: ${errorMessage(e)}`);
-  }
+    }
+    return null;
+  });
 
   if (!useMerge) {
     console.log(
@@ -405,13 +563,15 @@ function handleComplete(args: string[]): void {
 
   // Delegate to state-merge (emits STATE_MERGED inside withAuditLock;
   // removes slug from main's Bolt Refs; merges per-field rules from worktree).
-  const stateMergeResult = spawnSibling(pd, "amadeus-state.ts", [
+  guardedStep("state-merged", () => auditPostcondition("STATE_MERGED"), () => {
+    const stateMergeResult = spawnSibling(pd, "amadeus-state.ts", [
     "merge",
     "--slug",
     flags.slug,
+    ...metadataBindingArgs,
     ...selectorArgs(flags),
   ]);
-  if (!stateMergeResult.ok) {
+    if (!stateMergeResult.ok) {
     const reason =
       stateMergeResult.signal === "SIGTERM" ? "state-merge-timeout" : "state-merge-failed";
     failBolt(pd, flags.name, flags.slug, reason, stateMergeResult.stderr || stateMergeResult.stdout);
@@ -421,17 +581,21 @@ function handleComplete(args: string[]): void {
       reason,
       `amadeus-state merge --slug ${flags.slug} exited ${stateMergeResult.status}: ${stateMergeResult.stderr || stateMergeResult.stdout || "(no output)"}`
     );
-  }
+    }
+    return null;
+  });
 
   // Audit-merge primitive. Emits AUDIT_MERGED after appending the
   // worktree's post-fork delta to main audit.
-  const auditMergeResult = spawnSibling(pd, "amadeus-audit.ts", [
+  guardedStep("audit-merged", () => auditPostcondition("AUDIT_MERGED"), () => {
+    const auditMergeResult = spawnSibling(pd, "amadeus-audit.ts", [
     "audit-merge",
     "--slug",
     flags.slug,
+    ...metadataBindingArgs,
     ...selectorArgs(flags),
   ]);
-  if (!auditMergeResult.ok) {
+    if (!auditMergeResult.ok) {
     const reason =
       auditMergeResult.signal === "SIGTERM" ? "audit-merge-timeout" : "audit-merge-failed";
     failBolt(pd, flags.name, flags.slug, reason, auditMergeResult.stderr || auditMergeResult.stdout);
@@ -441,20 +605,24 @@ function handleComplete(args: string[]): void {
       reason,
       `amadeus-audit audit-merge --slug ${flags.slug} exited ${auditMergeResult.status}: ${auditMergeResult.stderr || auditMergeResult.stdout || "(no output)"}`
     );
-  }
+    }
+    return null;
+  });
 
   // Fragment-merge primitive. Removes the worktree's runtime-graph.json
   // fragment. Idempotent — fragment-absent is a clean no-op. The post-Bash
   // hook fires after this Bash invocation returns, sees AUDIT_MERGED in
   // the last 3 audit blocks (per amadeus-runtime-compile.ts:87), and rebuilds
   // main runtime-graph with instances[] populated for this slug.
-  const fragmentMergeResult = spawnSibling(pd, "amadeus-runtime.ts", [
+  guardedStep("runtime-fragment-merged", () => null, () => {
+    const fragmentMergeResult = spawnSibling(pd, "amadeus-runtime.ts", [
     "fragment-merge",
     "--slug",
     flags.slug,
+    ...metadataBindingArgs,
     ...selectorArgs(flags),
   ]);
-  if (!fragmentMergeResult.ok) {
+    if (!fragmentMergeResult.ok) {
     const reason =
       fragmentMergeResult.signal === "SIGTERM"
         ? "fragment-merge-timeout"
@@ -472,17 +640,41 @@ function handleComplete(args: string[]): void {
       reason,
       `amadeus-runtime fragment-merge --slug ${flags.slug} exited ${fragmentMergeResult.status}: ${fragmentMergeResult.stderr || fragmentMergeResult.stdout || "(no output)"}`
     );
-  }
+    }
+    try {
+      const parsed = JSON.parse(fragmentMergeResult.stdout) as { status?: unknown; slug?: unknown };
+      if (
+        (parsed.status !== "fragment-merged" && parsed.status !== "fragment-absent") ||
+        parsed.slug !== flags.slug
+      ) return null;
+      return Object.freeze({
+        event: "RUNTIME_GRAPH_MERGED",
+        unit: flags.slug,
+        operationId: flags["operation-id"],
+        finalizeRequestDigest: flags["finalize-request-digest"],
+        status: parsed.status,
+      });
+    } catch {
+      return null;
+    }
+  });
 
-  console.log(
-    JSON.stringify({
+  const output = {
       emitted: "BOLT_COMPLETED",
       bolt_names: flags.name,
       batch: flags.batch,
       slug: flags.slug,
       merged: ["STATE_MERGED", "AUDIT_MERGED", "RUNTIME_GRAPH_MERGED"],
-    })
-  );
+      ...(flags["operation-id"] ? { operation_id: flags["operation-id"] } : {}),
+      ...(flags["finalize-request-digest"]
+        ? { finalize_request_digest: flags["finalize-request-digest"] }
+        : {}),
+    };
+  if (journal) {
+    assertMetadataMergeClaim(pd, flags);
+    journal = recordOperationResult(journalPath, journal, output);
+  }
+  console.log(JSON.stringify(output));
 }
 
 // --- Subcommand: fail ---

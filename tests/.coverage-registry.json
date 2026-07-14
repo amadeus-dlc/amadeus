@@ -20,10 +20,10 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 444,
+    "total": 449,
     "enumeratedByClass": {
       "function": 223,
-      "audit": 73,
+      "audit": 78,
       "scope": 9,
       "stage": 32,
       "hook": 11,
@@ -32,7 +32,7 @@
     },
     "coveredByClass": {
       "function": 103,
-      "audit": 32,
+      "audit": 37,
       "scope": 9,
       "stage": 8,
       "hook": 11,
@@ -616,6 +616,66 @@
         {
           "file": "tests/e2e/t134-swarm-referee.test.ts",
           "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "SWARM_DRIVER_ATTEMPTED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t231-swarm-driver-runtime.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "SWARM_DRIVER_RECONCILED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t228-swarm-driver-store.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "SWARM_DRIVER_SELECTED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t231-swarm-driver-runtime.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "SWARM_DRIVER_TRANSITION",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t231-swarm-driver-runtime.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "SWARM_NATIVE_EVIDENCE",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t231-swarm-driver-runtime.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"

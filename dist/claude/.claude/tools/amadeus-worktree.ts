@@ -17,6 +17,15 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { appendAuditEntry } from "./amadeus-audit.ts";
+import { validateFinalizeOperationClaim } from "./amadeus-swarm-operation-claim.js";
+import {
+  openOperationJournal,
+  operationStepEvidence,
+  recordOperationResult,
+  recordOperationStep,
+  type OperationJournal,
+} from "./amadeus-swarm-operation-journal.js";
+import { digestValue, hasExactKeys, nonEmptyString } from "./amadeus-swarm-canonical.js";
 import {
   emitError,
   errorMessage,
@@ -72,6 +81,49 @@ function parseFlags(
     i++;
   }
   return flags;
+}
+
+function finalizeOperationGuardPresent(flags: Record<string, string>): boolean {
+  return Boolean(flags["operation-id"] || flags["claim-file"] || flags["fencing-token"]);
+}
+
+function codeMergeClaimIsValid(pd: string, slug: string, flags: Record<string, string>): boolean {
+  const operationId = flags["operation-id"];
+  const claimPath = flags["claim-file"];
+  const fencingToken = flags["fencing-token"];
+  if (!operationId || !claimPath || !fencingToken || !/^[1-9][0-9]*$/.test(fencingToken)) return false;
+  return validateFinalizeOperationClaim({
+    projectDir: pd,
+    claimPath,
+    operationId,
+    fencingToken: Number(fencingToken),
+    unit: slug,
+    operation: "code-merge",
+    ...(flags.intent ? { intent: flags.intent } : {}),
+    ...(flags.space ? { space: flags.space } : {}),
+  });
+}
+
+function validateCodeMergeGuard(pd: string, slug: string, flags: Record<string, string>): boolean {
+  const present = finalizeOperationGuardPresent(flags);
+  if (present && !codeMergeClaimIsValid(pd, slug, flags)) {
+    errorWithSlug(slug, "Finalize operation claim is missing, stale, or mismatched.");
+  }
+  return present && flags["metadata-merged"] === "true";
+}
+
+function assertCodeMergeClaim(pd: string, slug: string, flags: Record<string, string>): void {
+  if (codeMergeClaimIsValid(pd, slug, flags)) return;
+  errorWithSlug(slug, "Finalize operation claim is missing, stale, or mismatched.");
+}
+
+function codeLandedCommit(journal: OperationJournal, slug: string): string | null {
+  const evidence = operationStepEvidence(journal, "code-landed");
+  if (evidence === null) return null;
+  if (!hasExactKeys(evidence, ["commitSha"]) || !nonEmptyString(evidence.commitSha)) {
+    errorWithSlug(slug, "Stored code-landed evidence is invalid.");
+  }
+  return evidence.commitSha;
 }
 
 // --- Audit emit shorthand ---
@@ -341,6 +393,7 @@ export function handleMerge(
   const message = flags.message ?? `Bolt ${slug}`;
 
   const pd = resolveProjectDir(explicitProjectDir ?? projectDir);
+  const forceCleanupAfterAidlc = validateCodeMergeGuard(pd, slug, flags);
   // P7: resolve the target sibling repo, then the worktree anchor. The merge runs
   // IN the main checkout (squash/merge/ff/commit/worktree-remove/branch-D); the
   // rebase still runs in the worktree (wtPath). When the caller runs from a sibling
@@ -369,6 +422,36 @@ export function handleMerge(
 
   const wtPath = worktreePath(pd, slug);
   const branchName = `bolt-${slug}`;
+  let journalPath = "";
+  let journal: OperationJournal | null = null;
+  if (finalizeOperationGuardPresent(flags)) {
+    if (!flags["expected-target-head"] || !flags["expected-source-head"]) {
+      errorWithSlug(slug, "Bound code merge requires expected target and source heads.");
+    }
+    const opened = openOperationJournal({
+      claimPath: flags["claim-file"],
+      operationId: flags["operation-id"],
+      kind: "code-merge",
+      request: {
+        unit: slug,
+        target: flags.target,
+        strategy,
+        messageDigest: digestValue(message),
+        expectedTargetHead: flags["expected-target-head"],
+        expectedSourceHead: flags["expected-source-head"],
+      },
+    });
+    journalPath = opened.path;
+    journal = opened.journal;
+    const landedCommit = codeLandedCommit(journal, slug);
+    if (landedCommit && currentSha(gitCwd) !== landedCommit) {
+      errorWithSlug(slug, "Target HEAD no longer matches the bound code-landed commit.");
+    }
+    if (journal.result !== undefined) {
+      console.log(JSON.stringify(journal.result));
+      return;
+    }
+  }
 
   // Rebase requires a remote for <target>. The remote-existence check is
   // a pre-audit guard (no state change). The actual `git fetch` is post-
@@ -376,7 +459,29 @@ export function handleMerge(
   // the audit emit would leave a kill-9 window where refs moved without
   // a corresponding audit row.
   let rebaseRemote = "";
-  if (strategy === "rebase") {
+  const operationMarker = flags["operation-id"] ? `Amadeus-Operation: ${flags["operation-id"]}` : "";
+  let commitSha = "";
+  let codeAlreadyLanded = false;
+  if (journal) {
+    const targetHead = currentSha(gitCwd);
+    const landedCommit = codeLandedCommit(journal, slug);
+    if (landedCommit) {
+      commitSha = landedCommit;
+      codeAlreadyLanded = true;
+    } else if (targetHead !== flags["expected-target-head"]) {
+      const landedMessage = runGit(["log", "-1", "--format=%B", targetHead], gitCwd);
+      if (!landedMessage.ok || !landedMessage.stdout.includes(operationMarker)) {
+        errorWithSlug(slug, "Target HEAD changed outside the bound code operation.");
+      }
+      assertCodeMergeClaim(pd, slug, flags);
+      commitSha = targetHead;
+      codeAlreadyLanded = true;
+    } else if (currentSha(wtPath) !== flags["expected-source-head"]) {
+      errorWithSlug(slug, "Source HEAD changed outside the bound code operation.");
+    }
+  }
+
+  if (strategy === "rebase" && !codeAlreadyLanded) {
     const remote = runGit(["config", `branch.${flags.target}.remote`], gitCwd);
     if (!remote.ok || !remote.stdout.trim()) {
       errorWithSlug(
@@ -389,19 +494,28 @@ export function handleMerge(
 
   // Audit-first: emit BEFORE any state-mutating git command (including the
   // rebase pre-fetch).
-  let auditTs: string;
-  try {
-    auditTs = emitAudit(pd, "WORKTREE_MERGED", {
+  let auditTs = "replayed";
+  if (!journal || operationStepEvidence(journal, "audit-intent") === null) {
+    if (journal) assertCodeMergeClaim(pd, slug, flags);
+    try {
+      auditTs = emitAudit(pd, "WORKTREE_MERGED", {
       "Bolt slug": slug,
       "Worktree path": wtPath,
       "Target branch": flags.target,
       Strategy: strategy,
-    }, flags.intent, flags.space);
-  } catch (e) {
-    errorWithSlug(slug, `Audit emission failed: ${errorMessage(e)}`);
+      ...(flags["operation-id"] ? { "Operation ID": flags["operation-id"] } : {}),
+      }, flags.intent, flags.space);
+    } catch (e) {
+      errorWithSlug(slug, `Audit emission failed: ${errorMessage(e)}`);
+    }
+    if (journal) {
+      assertCodeMergeClaim(pd, slug, flags);
+      journal = recordOperationStep(journalPath, journal, "audit-intent", { auditTimestamp: auditTs });
+    }
   }
 
-  if (strategy === "rebase") {
+  if (strategy === "rebase" && !codeAlreadyLanded) {
+    if (journal) assertCodeMergeClaim(pd, slug, flags);
     const fetch = runGit(["fetch", rebaseRemote], wtPath);
     if (!fetch.ok) {
       errorWithSlug(
@@ -411,7 +525,6 @@ export function handleMerge(
     }
   }
 
-  let commitSha = "";
   // conflictCwd records which checkout the conflicting state lives in:
   // squash/merge run in the main checkout (cwd = gitCwd), rebase runs in the
   // worktree (cwd = wtPath). For conflict-file enumeration, we query
@@ -421,8 +534,9 @@ export function handleMerge(
   // caller ran from a sibling worktree.)
   let conflictCwd: string | undefined = gitCwd;
   let conflictHit = false;
-  switch (strategy) {
+  if (!codeAlreadyLanded) switch (strategy) {
     case "squash": {
+      if (journal) assertCodeMergeClaim(pd, slug, flags);
       const m = runGit(["-c", "merge.ff=true", "merge", "--squash", branchName], gitCwd);
       if (!m.ok) {
         if (isConflict(m)) {
@@ -434,7 +548,13 @@ export function handleMerge(
           `git merge --squash failed: ${m.stderr.trim() || `exit ${m.code}`}`
         );
       }
-      const c = runGit(["commit", "--no-edit", "-m", message], gitCwd);
+      if (journal) assertCodeMergeClaim(pd, slug, flags);
+      const c = runGit([
+        "commit",
+        "--no-edit",
+        "-m",
+        operationMarker ? `${message}\n\n${operationMarker}` : message,
+      ], gitCwd);
       if (!c.ok) {
         errorWithSlug(
           slug,
@@ -445,12 +565,13 @@ export function handleMerge(
       break;
     }
     case "merge": {
+      if (journal) assertCodeMergeClaim(pd, slug, flags);
       const m = runGit([
         "merge",
         "--no-ff",
         "--no-edit",
         "-m",
-        `Merge bolt ${slug}`,
+        operationMarker ? `Merge bolt ${slug}\n\n${operationMarker}` : `Merge bolt ${slug}`,
         branchName,
       ], gitCwd);
       if (!m.ok) {
@@ -467,6 +588,7 @@ export function handleMerge(
       break;
     }
     case "rebase": {
+      if (journal) assertCodeMergeClaim(pd, slug, flags);
       const r = runGit(["rebase", flags.target], wtPath);
       if (!r.ok) {
         if (isConflict(r)) {
@@ -479,6 +601,20 @@ export function handleMerge(
           `git rebase failed: ${r.stderr.trim() || `exit ${r.code}`}`
         );
       }
+      if (journal) {
+        assertCodeMergeClaim(pd, slug, flags);
+        const previousMessage = runGit(["log", "-1", "--format=%B"], wtPath);
+        const amended = previousMessage.ok
+          ? runGit(
+              ["commit", "--amend", "--no-edit", "-m", `${previousMessage.stdout.trim()}\n\n${operationMarker}`],
+              wtPath,
+            )
+          : previousMessage;
+        if (!previousMessage.ok || !amended.ok) {
+          errorWithSlug(slug, "Failed to bind rebased commit to the finalize operation.");
+        }
+      }
+      if (journal) assertCodeMergeClaim(pd, slug, flags);
       const ff = runGit(["merge", "--ff-only", branchName], gitCwd);
       if (!ff.ok) {
         errorWithSlug(
@@ -505,6 +641,11 @@ export function handleMerge(
     process.exit(1);
   }
 
+  if (journal && operationStepEvidence(journal, "code-landed") === null) {
+    assertCodeMergeClaim(pd, slug, flags);
+    journal = recordOperationStep(journalPath, journal, "code-landed", { commitSha });
+  }
+
   // Cleanup: remove worktree + delete branch. The merge commit at
   // <commitSha> is now permanent on <target> — failures here leave an
   // orphan worktree directory and/or branch but DO NOT roll back the
@@ -513,23 +654,46 @@ export function handleMerge(
   // "merge failed entirely" from "merge landed, cleanup orphan remains"
   // — these need different recovery actions.
   const cleanupTag = `[merge-succeeded:${commitSha}]`;
-  const rm = runGit(["worktree", "remove", wtPath], gitCwd);
-  if (!rm.ok) {
-    errorWithSlug(
-      slug,
-      `${cleanupTag} worktree remove failed: ${rm.stderr.trim() || `exit ${rm.code}`}`
-    );
+  if (!journal || operationStepEvidence(journal, "worktree-removed") === null) {
+    if (journal) assertCodeMergeClaim(pd, slug, flags);
+    if (existsSync(wtPath)) {
+      const rm = runGit(
+        ["worktree", "remove", ...(forceCleanupAfterAidlc ? ["--force"] : []), wtPath],
+        gitCwd,
+      );
+      if (!rm.ok) {
+        errorWithSlug(
+          slug,
+          `${cleanupTag} worktree remove failed: ${rm.stderr.trim() || `exit ${rm.code}`}`
+        );
+      }
+    }
+    if (journal) {
+      assertCodeMergeClaim(pd, slug, flags);
+      journal = recordOperationStep(journalPath, journal, "worktree-removed", { absent: !existsSync(wtPath) });
+    }
   }
-  const del = runGit(["branch", "-D", branchName], gitCwd);
-  if (!del.ok) {
-    errorWithSlug(
-      slug,
-      `${cleanupTag} branch -D ${branchName} failed: ${del.stderr.trim() || `exit ${del.code}`}`
-    );
+  if (!journal || operationStepEvidence(journal, "branch-deleted") === null) {
+    if (journal) assertCodeMergeClaim(pd, slug, flags);
+    const branchExists = runGit(["show-ref", "--verify", `refs/heads/${branchName}`], gitCwd).ok;
+    if (branchExists) {
+      const del = runGit(["branch", "-D", branchName], gitCwd);
+      if (!del.ok) {
+        errorWithSlug(
+          slug,
+          `${cleanupTag} branch -D ${branchName} failed: ${del.stderr.trim() || `exit ${del.code}`}`
+        );
+      }
+    }
+    if (journal) {
+      assertCodeMergeClaim(pd, slug, flags);
+      journal = recordOperationStep(journalPath, journal, "branch-deleted", {
+        absent: !runGit(["show-ref", "--verify", `refs/heads/${branchName}`], gitCwd).ok,
+      });
+    }
   }
 
-  console.log(
-    JSON.stringify({
+  const output = {
       emitted: "WORKTREE_MERGED",
       slug,
       worktree_path: wtPath,
@@ -537,8 +701,13 @@ export function handleMerge(
       strategy,
       commit_sha: commitSha,
       audit_timestamp: auditTs,
-    })
-  );
+      ...(flags["operation-id"] ? { operation_id: flags["operation-id"] } : {}),
+    };
+  if (journal) {
+    assertCodeMergeClaim(pd, slug, flags);
+    journal = recordOperationResult(journalPath, journal, output);
+  }
+  console.log(JSON.stringify(output));
 }
 
 function currentSha(cwd?: string): string {

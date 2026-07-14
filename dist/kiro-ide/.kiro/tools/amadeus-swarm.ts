@@ -70,12 +70,25 @@
 //     (BOLT_FAILED paired with the BOLT_STARTED that `start --worktree` emitted).
 
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import { join, relative, resolve, sep } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { dirname } from "node:path";
 import { appendAuditEntry } from "./amadeus-audit.ts";
 import { parseArgs, resolveConstructionRepo, resolveProjectDir, worktreePath } from "./amadeus-lib.ts";
+import { digestValue } from "./amadeus-swarm-canonical.ts";
+import type {
+  BoundFinalizeInvocation,
+  CodeMergeOutcome,
+  ExpectedUnitGitBinding,
+  FinalizeRequestBinding,
+} from "./amadeus-swarm-finalize-contract.ts";
+import { parseBoundFinalizeInvocation } from "./amadeus-swarm-finalize-contract.ts";
+import {
+  createFileBoundFinalizeStore,
+  executeBoundFinalize,
+} from "./amadeus-swarm-referee-finalize.ts";
+import { executeArmedProcess } from "./amadeus-armed-process.ts";
+import type { ArmedProcessProgress } from "./amadeus-armed-process.ts";
 
 const TOOLS_DIR = dirname(fileURLToPath(import.meta.url));
 
@@ -130,6 +143,14 @@ function runTool(toolFile: string, args: string[], projectDir: string): ToolRun 
     stdout: result.stdout ?? "",
     stderr: result.stderr ?? "",
   };
+}
+
+function stringEnvironment(): Readonly<Record<string, string>> {
+  return Object.freeze(
+    Object.fromEntries(
+      Object.entries(process.env).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+    ),
+  );
 }
 
 // --- The deterministic verdict primitives -----------------------------------
@@ -543,6 +564,323 @@ export function claimedUnitsFailureEnvelope(
   return { batch, units, converged: 0, failed: units.length, merge_failures: [] };
 }
 
+function gitText(cwd: string, args: readonly string[]): string | null {
+  const result = spawnSync("git", [...args], { cwd, encoding: "utf-8", timeout: 60_000 });
+  return result.status === 0 ? result.stdout.trim() : null;
+}
+
+function gitOutput(cwd: string, args: readonly string[]): string | null {
+  const result = spawnSync("git", [...args], { cwd, encoding: "utf-8", timeout: 60_000 });
+  return result.status === 0 ? result.stdout : null;
+}
+
+function boundInputFile(projectDir: string, path: string): string | null {
+  const root = `${resolve(projectDir)}${sep}`;
+  const candidate = resolve(projectDir, path);
+  if (!candidate.startsWith(root)) return null;
+  try {
+    return readFileSync(candidate, "utf-8");
+  } catch {
+    return null;
+  }
+}
+
+function protectedSpecBindingIsValid(
+  request: FinalizeRequestBinding,
+  expected: ExpectedUnitGitBinding,
+  unitPath: string,
+  repoCwd: string,
+): boolean {
+  if (request.protectedSpec.kind !== "file") return true;
+  if (
+    request.protectedSpec.baselineCommit !== expected.baseCommit ||
+    request.protectedSpec.targetAtFinalizeCommit !== request.targetBeforeCommit
+  ) {
+    return false;
+  }
+  const baseline = gitOutput(unitPath, [
+    "show",
+    `${request.protectedSpec.baselineCommit}:${request.protectedSpec.confinedRelativePath}`,
+  ]);
+  const target = gitOutput(repoCwd, [
+    "show",
+    `${request.protectedSpec.targetAtFinalizeCommit}:${request.protectedSpec.confinedRelativePath}`,
+  ]);
+  const unitHead = gitOutput(unitPath, [
+    "show",
+    `${expected.headCommit}:${request.protectedSpec.confinedRelativePath}`,
+  ]);
+  const protectedPath = resolve(unitPath, request.protectedSpec.confinedRelativePath);
+  const unitRoot = `${resolve(unitPath)}${sep}`;
+  let workingTree: string | null = null;
+  if (protectedPath.startsWith(unitRoot)) {
+    try {
+      workingTree = readFileSync(protectedPath, "utf-8");
+    } catch {
+      workingTree = null;
+    }
+  }
+  const expectedDigest = request.protectedSpec.baselineBlobDigest;
+  return (
+    baseline !== null &&
+    target !== null &&
+    unitHead !== null &&
+    workingTree !== null &&
+    digestValue(baseline) === expectedDigest &&
+    digestValue(target) === expectedDigest &&
+    digestValue(unitHead) === expectedDigest &&
+    digestValue(workingTree) === expectedDigest
+  );
+}
+
+async function handleBoundFinalize(rest: string[]): Promise<void> {
+  const { flags } = parseArgs(rest);
+  const projectDir = resolveProjectDir(flags["project-dir"]);
+  if (!flags["binding-file"] || !flags["invocation-file"]) {
+    fail("bound finalize requires --binding-file and --invocation-file");
+  }
+  const bindingText = boundInputFile(projectDir, flags["binding-file"]);
+  const invocationText = boundInputFile(projectDir, flags["invocation-file"]);
+  if (!bindingText || !invocationText) fail("bound finalize input must be a readable project-local file");
+  let binding: FinalizeRequestBinding;
+  let invocationValue: unknown;
+  try {
+    binding = JSON.parse(bindingText) as FinalizeRequestBinding;
+    invocationValue = JSON.parse(invocationText);
+  } catch {
+    fail("bound finalize input is not valid JSON");
+  }
+  const parsedInvocation = parseBoundFinalizeInvocation(invocationValue);
+  if (parsedInvocation.type === "err") fail("bound finalize invocation is invalid");
+  const invocation: BoundFinalizeInvocation = parsedInvocation.value;
+
+  let repoCwd: string;
+  let repoName: string | null;
+  try {
+    const resolvedRepo = resolveConstructionRepo(projectDir, flags.repo, flags.intent, flags.space);
+    repoCwd = resolvedRepo.cwd;
+    repoName = resolvedRepo.repo;
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
+  }
+  const selectorArgs = [
+    ...(flags.intent ? ["--intent", flags.intent] : []),
+    ...(flags.space ? ["--space", flags.space] : []),
+    ...(repoName ? ["--repo", repoName] : []),
+  ];
+  const runArmedMergeTool = async (
+    toolFile: string,
+    args: readonly string[],
+    operation: Readonly<{
+      operationId: string;
+      claimPath: string;
+      fencingToken: number;
+      onRunProgress(progress: ArmedProcessProgress): Promise<void>;
+    }>,
+  ): Promise<ToolRun> => {
+    const result = await executeArmedProcess({
+      rootDir: dirname(operation.claimPath),
+      runId: `${operation.operationId}-f${operation.fencingToken}`,
+      executionId: binding.executionId,
+      attemptId: binding.attemptId,
+      planDigest: binding.planDigest,
+      waveDigest: binding.worktreeManifestDigest,
+      fencingToken: operation.fencingToken,
+      executable: process.execPath,
+      args: [join(TOOLS_DIR, toolFile), "--project-dir", projectDir, ...args],
+      cwd: projectDir,
+      env: stringEnvironment(),
+      stdin: "closed",
+      timeoutMs: 60_000,
+      onProgress: operation.onRunProgress,
+    });
+    if (result.type === "err") {
+      return { ok: false, stdout: "", stderr: `armed process failed: ${result.error.code}` };
+    }
+    return {
+      ok: result.value.exitCode === 0,
+      stdout: result.value.stdout,
+      stderr: result.value.stderr,
+    };
+  };
+  const expectedByUnit = new Map(binding.expectedUnits.map((entry) => [entry.unit, entry]));
+  const ports = {
+    validateRequest: async (
+      request: FinalizeRequestBinding,
+      context: Readonly<{ completedUnits: readonly import("./amadeus-swarm-finalize-contract.ts").UnitMergeResult[] }>,
+    ) => {
+      const commonDir = gitText(repoCwd, ["rev-parse", "--git-common-dir"]);
+      const target = gitText(repoCwd, ["rev-parse", request.mergeTargetBranch]);
+      if (!commonDir || digestValue(resolve(repoCwd, commonDir)) !== request.repoIdentityDigest) {
+        return "FINALIZE_BINDING_INVALID" as const;
+      }
+      const expectedTarget = context.completedUnits.at(-1)?.codeMerge.targetAfterCommit ?? request.targetBeforeCommit;
+      if (target !== expectedTarget) return "FINALIZE_BINDING_INVALID" as const;
+      return null;
+    },
+    validateUnit: async (expected: ExpectedUnitGitBinding, request: FinalizeRequestBinding) => {
+      const unitPath = worktreePath(projectDir, expected.unit);
+      if (digestValue(resolve(unitPath)) !== expected.worktreePathDigest) {
+        return "FINALIZE_BINDING_INVALID" as const;
+      }
+      if (gitText(unitPath, ["rev-parse", "HEAD"]) !== expected.headCommit) {
+        return "FINALIZE_BINDING_INVALID" as const;
+      }
+      if (gitText(unitPath, ["merge-base", expected.baseCommit, expected.headCommit]) !== expected.baseCommit) {
+        return "FINALIZE_BINDING_INVALID" as const;
+      }
+      if (!protectedSpecBindingIsValid(request, expected, unitPath, repoCwd)) {
+        return "PROTECTED_SPEC_BINDING_INVALID" as const;
+      }
+      return null;
+    },
+    reverify: async (input: { unit: string; checkCommand: string; protectedSpec?: string }) => {
+      const verdict = verdictFor(input.unit, projectDir, input.checkCommand, input.protectedSpec);
+      return verdict.exists && verdict.converged && !verdict.tampered && !verdict.confineError;
+    },
+    mergeAidlc: async (input: {
+      unit: string;
+      batch: number;
+      operationId: string;
+      finalizeRequestDigest: string;
+      claimPath: string;
+      fencingToken: number;
+      onRunProgress(progress: ArmedProcessProgress): Promise<void>;
+    }) => {
+      runTool("amadeus-bolt.ts", ["release-merge", "--slug", input.unit, ...selectorArgs], projectDir);
+      const merged = await runArmedMergeTool(
+        "amadeus-bolt.ts",
+        [
+          "complete",
+          "--merge",
+          "--slug",
+          input.unit,
+          "--batch",
+          String(input.batch),
+          "--name",
+          input.unit,
+          "--operation-id",
+          input.operationId,
+          "--finalize-request-digest",
+          input.finalizeRequestDigest,
+          "--claim-file",
+          input.claimPath,
+          "--fencing-token",
+          String(input.fencingToken),
+          ...selectorArgs,
+        ],
+        input,
+      );
+      if (!merged.ok) throw new Error(merged.stderr || merged.stdout);
+      return Object.freeze({
+        stateMergeDigest: digestValue({
+          unit: input.unit,
+          operation: input.operationId,
+          finalizeRequestDigest: input.finalizeRequestDigest,
+          kind: "state",
+        }),
+        auditMergeDigest: digestValue({
+          unit: input.unit,
+          operation: input.operationId,
+          finalizeRequestDigest: input.finalizeRequestDigest,
+          kind: "audit",
+        }),
+        runtimeFragmentMergeDigest: digestValue({
+          unit: input.unit,
+          operation: input.operationId,
+          finalizeRequestDigest: input.finalizeRequestDigest,
+          kind: "runtime",
+        }),
+      });
+    },
+    mergeCode: async (input: {
+      unit: string;
+      target: string;
+      strategy: FinalizeRequestBinding["mergeStrategy"];
+      message: string;
+      operationId: string;
+      claimPath: string;
+      fencingToken: number;
+      onRunProgress(progress: ArmedProcessProgress): Promise<void>;
+    }): Promise<CodeMergeOutcome> => {
+      const before = gitText(repoCwd, ["rev-parse", "HEAD"]);
+      const expected = expectedByUnit.get(input.unit);
+      if (!before || !expected) throw new Error("code merge binding unavailable");
+      const patchIdentityDigest = digestValue(
+        gitText(repoCwd, ["diff", `${expected.baseCommit}..${expected.headCommit}`]) ?? "",
+      );
+      const merged = await runArmedMergeTool(
+        "amadeus-worktree.ts",
+        [
+          "merge",
+          "--slug",
+          input.unit,
+          "--target",
+          input.target,
+          "--strategy",
+          input.strategy,
+          "--message",
+          `${input.message} (${input.unit})`,
+          "--operation-id",
+          input.operationId,
+          "--claim-file",
+          input.claimPath,
+          "--fencing-token",
+          String(input.fencingToken),
+          "--metadata-merged",
+          "true",
+          "--expected-target-head",
+          before,
+          "--expected-source-head",
+          expected.headCommit,
+          ...selectorArgs,
+        ],
+        input,
+      );
+      if (!merged.ok) throw new Error(merged.stderr || merged.stdout);
+      const output = JSON.parse(merged.stdout) as { commit_sha?: string };
+      const after = output.commit_sha ?? gitText(repoCwd, ["rev-parse", "HEAD"]);
+      if (!after) throw new Error("code merge postcondition unavailable");
+      if (input.strategy === "squash") {
+        return Object.freeze({
+          strategy: "squash",
+          targetBeforeCommit: before,
+          targetAfterCommit: after,
+          resultTreeDigest: digestValue(gitText(repoCwd, ["rev-parse", `${after}^{tree}`]) ?? ""),
+        });
+      }
+      if (input.strategy === "merge") {
+        return Object.freeze({
+          strategy: "merge",
+          targetBeforeCommit: before,
+          targetAfterCommit: after,
+          sourceHeadCommit: expected.headCommit,
+        });
+      }
+      return Object.freeze({
+        strategy: "rebase",
+        targetBeforeCommit: before,
+        targetAfterCommit: after,
+        rebasedHeadCommit: after,
+        patchIdentityDigest,
+      });
+    },
+  };
+  const outcome = await executeBoundFinalize({
+    binding,
+    invocation,
+    store: createFileBoundFinalizeStore({
+      projectDir,
+      ...(flags.intent ? { intent: flags.intent } : {}),
+      ...(flags.space ? { space: flags.space } : {}),
+    }),
+    ports,
+  });
+  console.log(JSON.stringify(outcome, null, 2));
+  if (outcome.type === "err") process.exit(3);
+  process.exit(outcome.value.mergeCompleted ? 0 : 2);
+}
+
 function finishFinalizeInputFailure(
   envelope: FinalizeEnvelope,
   exit: (code: number) => void,
@@ -744,7 +1082,7 @@ function fail(msg: string): never {
   process.exit(1);
 }
 
-function main(): void {
+async function main(): Promise<void> {
   // The subcommand is the first bare token that is NOT a flag NOR a flag's value.
   // Walk argv skipping `--flag value` / `--flag=value` pairs so
   // `--project-dir <path> check ...` and `check --project-dir <path> ...` both
@@ -774,7 +1112,11 @@ function main(): void {
       handleCheck(rest);
       break;
     case "finalize":
-      handleFinalize(rest);
+      if (rest.some((argument) => argument === "--binding-file" || argument.startsWith("--binding-file="))) {
+        await handleBoundFinalize(rest);
+      } else {
+        handleFinalize(rest);
+      }
       break;
     default:
       console.error(
@@ -786,4 +1128,4 @@ function main(): void {
   }
 }
 
-if (import.meta.main) main();
+if (import.meta.main) await main();
