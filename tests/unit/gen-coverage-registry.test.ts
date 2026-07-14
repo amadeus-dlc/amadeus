@@ -886,6 +886,7 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "integration/t212-optional-produces.test.ts",
     "integration/t214-engine-error-logged.test.ts",
     "integration/t215-docs-only-exemption.test.ts",
+    "integration/t222-migration-routing.test.ts",
     "integration/t21b.test.ts",
     "integration/t224-upstream-v2-migration-cli.test.ts",
     "integration/t225-upstream-v2-migration-preflight.test.ts",

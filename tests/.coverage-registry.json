@@ -1134,7 +1134,7 @@
       "minMechanism": "none",
       "coveredBy": [
         {
-          "file": "tests/unit/t222-migration-routing.test.ts",
+          "file": "tests/integration/t222-migration-routing.test.ts",
           "mechanism": "cli"
         }
       ],
@@ -1770,7 +1770,7 @@
       "minMechanism": "none",
       "coveredBy": [
         {
-          "file": "tests/unit/t222-migration-routing.test.ts",
+          "file": "tests/integration/t222-migration-routing.test.ts",
           "mechanism": "cli"
         }
       ],
@@ -1803,7 +1803,7 @@
       "minMechanism": "none",
       "coveredBy": [
         {
-          "file": "tests/unit/t222-migration-routing.test.ts",
+          "file": "tests/integration/t222-migration-routing.test.ts",
           "mechanism": "cli"
         }
       ],
@@ -5169,7 +5169,7 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
-          "file": "tests/unit/t222-migration-routing.test.ts",
+          "file": "tests/integration/t222-migration-routing.test.ts",
           "mechanism": "cli"
         }
       ],
