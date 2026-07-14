@@ -559,6 +559,7 @@ describe("t237 closed native execution lifecycle", () => {
     const throwingControlAdapter: DriverAdapter = Object.freeze({
       ...ptyAdapter,
       observeControl: async function* () {
+        yield* [] as DriverControlSignal[];
         throw new Error("control-source-failed");
       },
     });
