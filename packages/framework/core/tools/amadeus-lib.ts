@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { accessSync, appendFileSync, constants as fsConstants, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { accessSync, appendFileSync, closeSync, constants as fsConstants, cpSync, existsSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
 import { basename, dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -457,14 +457,47 @@ function workspaceRoot(projectDir: string): string {
   return join(projectDir, "amadeus");
 }
 
+function isRealDirectory(path: string): boolean {
+  try {
+    return lstatSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function isRealRegularFile(path: string): boolean {
+  try {
+    return lstatSync(path).isFile();
+  } catch {
+    return false;
+  }
+}
+
+function isSafeWorkspaceEntryName(name: string): boolean {
+  return name !== "" && name !== "." && name !== ".." && !/[\\/]/.test(name);
+}
+
+function realIntentsDir(projectDir: string, space: string): string | null {
+  if (!isSafeWorkspaceEntryName(space)) return null;
+  const root = workspaceRoot(projectDir);
+  const allSpaces = join(root, "spaces");
+  const spaceRoot = join(allSpaces, space);
+  const intents = join(spaceRoot, "intents");
+  return [root, allSpaces, spaceRoot, intents].every(isRealDirectory)
+    ? intents
+    : null;
+}
+
 // The active space for this project. Reads the `amadeus/active-space` cursor;
 // defaults to "default". NEVER throws — the default space is always valid even
 // when nothing is on disk yet (the resolver tolerates an absent space dir).
 export function activeSpace(projectDir: string): string {
   const ptr = join(workspaceRoot(projectDir), ACTIVE_SPACE_POINTER);
   try {
+    if (!isRealDirectory(workspaceRoot(projectDir))) return DEFAULT_SPACE;
+    if (!isRealRegularFile(ptr)) return DEFAULT_SPACE;
     const raw = readFileSync(ptr, "utf-8").trim();
-    if (raw.length > 0) return raw;
+    if (isSafeWorkspaceEntryName(raw)) return raw;
   } catch {
     // no cursor → default
   }
@@ -496,7 +529,9 @@ export function knowledgeDir(projectDir: string, space?: string): string {
 // "does any record exist?" signal the path resolver and migration detector need
 // (it must not depend on the registry being present).
 export function listIntentDirs(projectDir: string, space?: string): string[] {
-  const dir = intentsDir(projectDir, space);
+  const sp = space ?? activeSpace(projectDir);
+  const dir = realIntentsDir(projectDir, sp);
+  if (dir === null) return [];
   let entries: string[];
   try {
     entries = readdirSync(dir);
@@ -507,7 +542,14 @@ export function listIntentDirs(projectDir: string, space?: string): string[] {
   for (const name of entries) {
     // A record dir holds amadeus-state.md; skip the active-intent cursor,
     // intents.json, and any stray files.
-    if (existsSync(join(dir, name, "amadeus-state.md"))) records.push(name);
+    if (!isSafeWorkspaceEntryName(name)) continue;
+    const record = join(dir, name);
+    if (
+      isRealDirectory(record) &&
+      isRealRegularFile(join(record, "amadeus-state.md"))
+    ) {
+      records.push(name);
+    }
   }
   return records.sort();
 }
@@ -524,16 +566,21 @@ export function activeIntent(
   explicit?: string,
 ): string | null {
   const sp = space ?? activeSpace(projectDir);
-  const dir = intentsDir(projectDir, sp);
   if (explicit) return explicit;
+  const records = listIntentDirs(projectDir, sp);
+  const dir = realIntentsDir(projectDir, sp);
   // Cursor: a real record the pointer names.
   try {
-    const raw = readFileSync(join(dir, ACTIVE_INTENT_POINTER), "utf-8").trim();
-    if (raw.length > 0 && existsSync(join(dir, raw, "amadeus-state.md"))) return raw;
+    if (dir !== null) {
+      const cursor = join(dir, ACTIVE_INTENT_POINTER);
+      if (isRealRegularFile(cursor)) {
+        const raw = readFileSync(cursor, "utf-8").trim();
+        if (records.includes(raw)) return raw;
+      }
+    }
   } catch {
     // no cursor → fall through to lone-intent
   }
-  const records = listIntentDirs(projectDir, sp);
   if (records.length === 1) return records[0];
   // 0 records → null (bare space root); >1 with no cursor → null (the handler
   // layer prompts; a path helper cannot guess which intent the caller meant).
@@ -884,15 +931,8 @@ export function needsFlatMigration(projectDir: string): boolean {
 // True iff any space already holds an intent record (a `<dir>/amadeus-state.md`).
 // Scans amadeus/spaces/*/intents/*/amadeus-state.md WITHOUT relying on the registry.
 export function anyIntentRecordExists(projectDir: string): boolean {
-  const spacesRoot = join(workspaceRoot(projectDir), "spaces");
-  let spaces: string[];
-  try {
-    spaces = readdirSync(spacesRoot);
-  } catch {
-    return false;
-  }
-  for (const sp of spaces) {
-    if (listIntentDirs(projectDir, sp).length > 0) return true;
+  for (const space of listSpaces(projectDir)) {
+    if (listIntentDirs(projectDir, space.name).length > 0) return true;
   }
   return false;
 }
@@ -968,8 +1008,12 @@ export function spacesRoot(projectDir: string): string {
 // but the registry carries the uuid/status/scope/repos a human or the --json
 // consumer needs.
 export function readIntentRegistry(projectDir: string, space?: string): IntentRegistryEntry[] {
-  const path = intentsRegistryPath(projectDir, space);
+  const sp = space ?? activeSpace(projectDir);
+  const dir = realIntentsDir(projectDir, sp);
+  if (dir === null) return [];
+  const path = join(dir, "intents.json");
   try {
+    if (!isRealRegularFile(path)) return [];
     const parsed: unknown = JSON.parse(readFileSync(path, "utf-8"));
     if (Array.isArray(parsed)) return parsed as IntentRegistryEntry[];
   } catch {
@@ -998,9 +1042,19 @@ export interface SpaceInfo {
 export function listSpaces(projectDir: string): SpaceInfo[] {
   const active = activeSpace(projectDir);
   const names = new Set<string>([DEFAULT_SPACE]);
+  const root = workspaceRoot(projectDir);
+  const allSpaces = spacesRoot(projectDir);
   try {
-    for (const name of readdirSync(spacesRoot(projectDir))) {
-      if (statSync(join(spacesRoot(projectDir), name)).isDirectory()) names.add(name);
+    if (!isRealDirectory(root) || !isRealDirectory(allSpaces)) {
+      return [{ name: DEFAULT_SPACE, active: active === DEFAULT_SPACE }];
+    }
+    for (const name of readdirSync(allSpaces)) {
+      if (
+        isSafeWorkspaceEntryName(name) &&
+        isRealDirectory(join(allSpaces, name))
+      ) {
+        names.add(name);
+      }
     }
   } catch {
     // no spaces dir → just the always-present default
@@ -1539,8 +1593,11 @@ function cloneIdPath(projectDir: string): string {
 }
 
 // The stable per-CLONE token (not per-process). Read from the gitignored
-// `amadeus/.amadeus-clone-id` file when present; minted (12 hex chars from a v4
-// uuid — no Math.random) and persisted on first use otherwise. Stable WITHIN a
+// `amadeus/.amadeus-clone-id` regular file when present; minted (12 hex chars
+// from a v4 uuid — no Math.random) and persisted on first use otherwise. A
+// symlink is never followed: its stable token is derived from the canonical
+// project path and link text, so migration can preserve the link without
+// allowing audit setup to read or overwrite its target. Stable WITHIN a
 // clone across processes (the fork subprocess and the merge subprocess both
 // read the same file → the same shard), DISTINCT across clones (each clone
 // mints its own; the file is gitignored so it doesn't travel). A read/mint race
@@ -1551,26 +1608,82 @@ function cloneIdPath(projectDir: string): string {
 // unwritable workspace degrades to an in-memory token for this process (still
 // stable within the process, still distinct from other clones).
 let _cloneId: string | null = null;
+
+function linkedCloneId(projectDir: string, path: string): string | null {
+  try {
+    if (!lstatSync(path).isSymbolicLink()) return null;
+    const canonicalProject = realpathSync(projectDir);
+    const link = readlinkSync(path, { encoding: "buffer" });
+    return createHash("sha256")
+      .update(canonicalProject, "utf-8")
+      .update("\0", "utf-8")
+      .update(link)
+      .digest("hex")
+      .slice(0, 12);
+  } catch {
+    return null;
+  }
+}
+
+function readCloneIdNoFollow(path: string): string | null {
+  let fd: number | null = null;
+  try {
+    const noFollow = typeof fsConstants.O_NOFOLLOW === "number"
+      ? fsConstants.O_NOFOLLOW
+      : 0;
+    fd = openSync(path, fsConstants.O_RDONLY | noFollow);
+    const raw = readFileSync(fd, "utf-8").trim();
+    return /^[a-z0-9]{1,32}$/.test(raw) ? raw : null;
+  } catch {
+    return null;
+  } finally {
+    if (fd !== null) closeSync(fd);
+  }
+}
+
+function writeCloneIdNoFollow(path: string, value: string): boolean {
+  let fd: number | null = null;
+  try {
+    const noFollow = typeof fsConstants.O_NOFOLLOW === "number"
+      ? fsConstants.O_NOFOLLOW
+      : 0;
+    fd = openSync(
+      path,
+      fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_TRUNC | noFollow,
+      0o600,
+    );
+    writeFileSync(fd, `${value}\n`, "utf-8");
+    return true;
+  } catch {
+    return false;
+  } finally {
+    if (fd !== null) closeSync(fd);
+  }
+}
+
 function cloneId(projectDir: string): string {
   if (_cloneId !== null) return _cloneId;
   const path = cloneIdPath(projectDir);
-  try {
-    const raw = readFileSync(path, "utf-8").trim();
-    if (/^[a-z0-9]{1,32}$/.test(raw)) {
-      _cloneId = raw;
-      return _cloneId;
-    }
-  } catch {
-    // no token yet → mint one below
+  const linked = linkedCloneId(projectDir, path);
+  if (linked !== null) {
+    _cloneId = linked;
+    return _cloneId;
+  }
+  const existing = readCloneIdNoFollow(path);
+  if (existing !== null) {
+    _cloneId = existing;
+    return _cloneId;
   }
   const minted = randomUUID().replace(/-/g, "").slice(0, 12);
   try {
     mkdirSync(workspaceRoot(projectDir), { recursive: true });
-    writeFileSync(path, `${minted}\n`, "utf-8");
+    if (!writeCloneIdNoFollow(path, minted)) {
+      _cloneId = linkedCloneId(projectDir, path) ?? minted;
+      return _cloneId;
+    }
     // Re-read so a concurrent first-run mint that landed first wins for ALL
     // processes in this clone (converge on one on-disk token).
-    const settled = readFileSync(path, "utf-8").trim();
-    _cloneId = /^[a-z0-9]{1,32}$/.test(settled) ? settled : minted;
+    _cloneId = readCloneIdNoFollow(path) ?? minted;
   } catch {
     _cloneId = minted; // unwritable workspace → in-memory token
   }
@@ -3406,10 +3519,7 @@ export function detectLeakedLocks(projectDir: string, clear = false): LeakedLock
   // Workspace sentinel bucket.
   probe(WORKSPACE_LOCK_SENTINEL);
   // Every intent record across every space.
-  const spacesRoot = join(workspaceRoot(projectDir), "spaces");
-  let spaces: string[] = [];
-  try { spaces = readdirSync(spacesRoot); } catch { /* no spaces dir */ }
-  for (const sp of spaces) {
+  for (const { name: sp } of listSpaces(projectDir)) {
     for (const intent of listIntentDirs(projectDir, sp)) {
       probe(`${sp}/${intent}`, intent, sp);
     }

@@ -19,12 +19,17 @@ const knownPrefixes = [
   ["amadeus", "-"].join(""),
 ] as const;
 const forbiddenPrefixes = knownPrefixes.filter((known) => known !== prefix);
-// These research notes deliberately quote the upstream product's paths and
-// filenames. Keep the exemption content-only: authored paths still follow this
-// repository's naming contract, and tracked-file assertions prevent stale rows.
+// The migrator, its generated self-install copies, and its exact token fixture
+// deliberately quote upstream paths and filenames. Keep the exemption
+// content-only: authored paths still follow this repository's naming contract,
+// and tracked-file assertions prevent stale rows.
 const foreignPrefixContentAllowlist = new Set([
+  "packages/framework/core/tools/amadeus-migrate.ts",
+  ".claude/tools/amadeus-migrate.ts",
+  ".codex/tools/amadeus-migrate.ts",
   "docs/research/upstream-ai-dlc-v2.2.0-amadeus-main-workspace-differences.md",
   "docs/research/upstream-ai-dlc-v2.2.0-amadeus-main-workspace-differences.ja.md",
+  "tests/fixtures/upstream-v2-migration/operational-tokens.txt",
 ]);
 const previousCommandName = ["ai", "dlc"].join("");
 const previousEnvPrefix = ["AI", "DLC", "_"].join("");
@@ -129,7 +134,12 @@ describe("authored source naming prefix contract", () => {
       const body = readFileSync(join(REPO_ROOT, file), "utf-8");
       for (const { label, pattern } of forbiddenToolSurfaces) {
         if (pattern.test(file)) offenders.push(`${file}: path contains ${label}`);
-        if (pattern.test(body)) offenders.push(`${file}: content contains ${label}`);
+        if (
+          !foreignPrefixContentAllowlist.has(file) &&
+          pattern.test(body)
+        ) {
+          offenders.push(`${file}: content contains ${label}`);
+        }
       }
     }
     expect(offenders).toEqual([]);

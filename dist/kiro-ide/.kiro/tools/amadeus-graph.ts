@@ -41,7 +41,7 @@
 //
 // See docs/reference/16-artifact-vocabulary.md for artifact naming.
 
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, lstatSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -493,6 +493,22 @@ function parseRuleHeadings(raw: string): Map<string, string> {
   return out;
 }
 
+function realDirectory(path: string): boolean {
+  try {
+    return lstatSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function regularFile(path: string): boolean {
+  try {
+    return lstatSync(path).isFile();
+  } catch {
+    return false;
+  }
+}
+
 /** Walk the rules directory and return parsed + validated rule files in
  *  precedence order. Public — the future doctor rule-drift check imports
  *  this same walker (single walking surface, no parser duplication).
@@ -500,7 +516,16 @@ function parseRuleHeadings(raw: string): Map<string, string> {
  *  case stays clean. */
 export function loadRules(): RuleFile[] {
   const dir = rulesDir();
-  if (!existsSync(dir)) return [];
+  const defaultRoot = join(__FILE_DIR, "..", "..");
+  const structuralDirectories = process.env.AMADEUS_RULES_DIR === undefined
+    ? [
+        join(defaultRoot, "amadeus"),
+        join(defaultRoot, "amadeus", "spaces"),
+        join(defaultRoot, "amadeus", "spaces", MEMORY_SPACE),
+        dir,
+      ]
+    : [dir];
+  if (!structuralDirectories.every(realDirectory)) return [];
 
   // Each candidate: the absolute on-disk path to read, the display sub-path
   // (relative to amadeus/memory/, e.g. "org.md" or "phases/construction.md")
@@ -523,18 +548,23 @@ export function loadRules(): RuleFile[] {
     if (scopeKey !== "org" && scopeKey !== "team" && scopeKey !== "project") {
       continue; // unreachable given the regex, but keep the guard explicit
     }
-    candidates.push({ rel: f, filePath: join(dir, f), scope: scopeKey });
+    const filePath = join(dir, f);
+    if (regularFile(filePath)) {
+      candidates.push({ rel: f, filePath, scope: scopeKey });
+    }
   }
 
   // 2. Phase-scoped files nested under phases/<phase>.md.
   const phasesDir = join(dir, PHASE_RULES_SUBDIR);
-  if (existsSync(phasesDir)) {
+  if (realDirectory(phasesDir)) {
     for (const f of readdirSync(phasesDir)) {
       const m = f.match(PHASE_FILE_REGEX);
       if (!m) continue;
+      const filePath = join(phasesDir, f);
+      if (!regularFile(filePath)) continue;
       candidates.push({
         rel: toPosix(join(PHASE_RULES_SUBDIR, f)),
-        filePath: join(phasesDir, f),
+        filePath,
         scope: "phase",
         phase: m[1],
       });
