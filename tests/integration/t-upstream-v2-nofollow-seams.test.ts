@@ -1,4 +1,4 @@
-// In-process coverage for the no-follow filesystem branches used by the v2
+// In-process integration coverage for the no-follow filesystem branches used by the v2
 // migration safety checks. The CLI migration tests keep the process-level
 // contract; these cases exercise the shared helpers in Bun's coverage process.
 
