@@ -323,7 +323,7 @@ describe("t231 swarm driver runtime", () => {
       REFEREE_CHECK_FAILED: false,
       REFEREE_FINALIZE_FAILED: false,
       REFEREE_CLAIM_ACTIVE: false,
-      AIDLC_MERGE_FAILED: false,
+      METADATA_MERGE_FAILED: false,
       CODE_MERGE_FAILED: false,
       PROTECTED_SPEC_BINDING_INVALID: true,
       LYING_CONDUCTOR: true,

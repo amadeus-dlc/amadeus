@@ -48146,3 +48146,171 @@
 **Context**: .amadeus-code-generation-selections.json
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T06:46:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 11c2d68f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-finalize-contract.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T06:47:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 11c2d68f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-finalize-contract.ts
+**Duration ms**: 1316
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T06:47:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: d52603ed
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-finalize-contract.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T06:47:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: d52603ed
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-finalize-contract.ts
+**Duration ms**: 804
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T06:47:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9496da85
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T06:47:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9496da85
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Duration ms**: 1287
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T06:47:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: c63d3230
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T06:47:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: c63d3230
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Duration ms**: 481
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T06:47:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 72047e17
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-referee-finalize.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T06:47:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 72047e17
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-referee-finalize.ts
+**Duration ms**: 1265
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T06:47:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: c143ede6
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-referee-finalize.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T06:47:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: c143ede6
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-referee-finalize.ts
+**Duration ms**: 502
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T06:47:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4e27f2ef
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T06:47:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4e27f2ef
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Duration ms**: 3232
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T06:47:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 97449914
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T06:47:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 97449914
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Duration ms**: 480
+
+---

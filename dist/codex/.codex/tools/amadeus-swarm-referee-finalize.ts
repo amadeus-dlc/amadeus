@@ -812,7 +812,14 @@ async function mergeUnit(
         },
       });
     } catch {
-      progress = await markFailed(input.store, claim, progress, input.binding, expected.unit, "AIDLC_MERGE_FAILED");
+      progress = await markFailed(
+        input.store,
+        claim,
+        progress,
+        input.binding,
+        expected.unit,
+        "METADATA_MERGE_FAILED",
+      );
       return Object.freeze({ claim, progress });
     }
     progress = withUnit(progress, expected.unit, {
