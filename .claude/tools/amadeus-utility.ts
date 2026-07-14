@@ -174,6 +174,7 @@ Scopes (set depth, test strategy, and stage count):
 const HELP_TEXT_TAIL = `
 Utilities:
   --status          Show current workflow progress (read-only)
+  --migrate [path]  Dry-run an upstream v2 workspace migration, then ask before apply
   compose "<task>"  Propose a tailored EXECUTE/SKIP plan (mid-workflow: re-shape the pending stages)
   compose --report <path>  Compose from a scan report (triage findings into a fix-and-ship run)
   --new-scope "<task>"  Force the composer to synthesize a custom scope even when a stock scope matches
@@ -200,6 +201,7 @@ Examples:
   /amadeus feature                                Start a feature workflow
   /amadeus Fix the login timeout bug              Auto-detected as bugfix scope
   /amadeus compose "harden the deploy pipeline"   Composer proposes a tailored plan
+  /amadeus --migrate                              Preview migration from the default upstream workspace
   /amadeus                                        Resume or begin
   /amadeus --stage code-generation                Jump to code-generation stage
   /amadeus --phase construction --scope bugfix    Jump to construction with bugfix scope
@@ -3933,6 +3935,77 @@ function handleResolveEnvScope(): void {
 }
 
 // ---------------------------------------------------------------------------
+// migrate — thin adapter to the deterministic workspace migrator
+//
+// The public orchestrator owns the dry-run/approval/apply conversation. This
+// utility only maps its compact `migrate [path]` interface to the sibling
+// migrator's explicit argv contract and relays both streams and the exit code.
+// No shell is involved, so a user-supplied path is always one argv value.
+// ---------------------------------------------------------------------------
+
+const MIGRATE_FLAGS = new Set(["apply", "json", "project-dir"]);
+
+function unsupportedMigrateFlags(flags: Record<string, string>): string[] {
+  const unsupported: string[] = [];
+  for (const flag of Object.keys(flags)) {
+    if (!MIGRATE_FLAGS.has(flag)) unsupported.push(flag);
+  }
+  return unsupported.sort();
+}
+
+function valuedMigrateBooleanFlag(flags: Record<string, string>): string | null {
+  for (const flag of ["apply", "json"]) {
+    if (Object.hasOwn(flags, flag) && flags[flag] !== "true") return flag;
+  }
+  return null;
+}
+
+function migrateFlagList(flags: readonly string[]): string {
+  return flags.map((flag) => "--" + flag).join(", ");
+}
+
+function migrateToolArgs(
+  projectDir: string,
+  positional: readonly string[],
+  flags: Record<string, string>,
+): string[] {
+  const args = ["--from", positional[1] ?? "aidlc", "--project-dir", projectDir];
+  if (Object.hasOwn(flags, "apply")) args.push("--apply");
+  if (Object.hasOwn(flags, "json")) args.push("--json");
+  return args;
+}
+
+function handleMigrate(
+  projectDir: string,
+  positional: string[],
+  flags: Record<string, string>,
+): void {
+  const unsupported = unsupportedMigrateFlags(flags);
+  if (unsupported.length > 0) {
+    die("Unsupported migrate option(s): " + migrateFlagList(unsupported));
+  }
+  const valuedBoolean = valuedMigrateBooleanFlag(flags);
+  if (valuedBoolean !== null) {
+    die(
+      `--${valuedBoolean} does not accept a value. Put the optional source path before --apply/--json.`,
+    );
+  }
+  if (positional.length > 2) {
+    die("Usage: amadeus-utility migrate [path] [--apply] [--json] [--project-dir <path>]");
+  }
+
+  const run = Bun.spawnSync({
+    cmd: ["bun", join(TOOLS_DIR, "amadeus-migrate.ts"), ...migrateToolArgs(projectDir, positional, flags)],
+    cwd: projectDir,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  process.stdout.write(new TextDecoder().decode(run.stdout));
+  process.stderr.write(new TextDecoder().decode(run.stderr));
+  if (run.exitCode !== 0) process.exit(run.exitCode);
+}
+
+// ---------------------------------------------------------------------------
 // CLI entry point
 // ---------------------------------------------------------------------------
 
@@ -3954,6 +4027,9 @@ function main(): void {
       break;
     case "doctor":
       handleDoctor(projectDir);
+      break;
+    case "migrate":
+      handleMigrate(projectDir, positional, flags);
       break;
     case "intent-birth":
       handleIntentBirth(projectDir, flags);
@@ -4016,7 +4092,7 @@ function main(): void {
       break;
     default:
       die(
-        `Usage: amadeus-utility <help|version|status|doctor|intent-birth|intent|space|space-create|codekb-path|detect|recompose|scope-change|config-change|set-status|detect-scope|resolve-env-scope|scope-table> [--project-dir <path>] [--scope <scope>] [--json]`
+        `Usage: amadeus-utility <help|version|status|doctor|migrate|intent-birth|intent|space|space-create|codekb-path|detect|recompose|scope-change|config-change|set-status|detect-scope|resolve-env-scope|scope-table> [--project-dir <path>] [--scope <scope>] [--json]`
       );
   }
 }

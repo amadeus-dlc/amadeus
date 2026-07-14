@@ -20,23 +20,23 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 444,
+    "total": 456,
     "enumeratedByClass": {
-      "function": 223,
+      "function": 234,
       "audit": 73,
       "scope": 9,
       "stage": 32,
       "hook": 11,
-      "subcommand": 89,
+      "subcommand": 90,
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 103,
+      "function": 106,
       "audit": 32,
       "scope": 9,
       "stage": 8,
       "hook": 11,
-      "subcommand": 74,
+      "subcommand": 75,
       "render-surface": 7
     }
   },
@@ -929,6 +929,20 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:armMigrationPendingDecision",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:armMigrationStopLatch",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:artifactsRegistry",
       "minMechanism": "none",
       "coveredBy": [
@@ -1116,6 +1130,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:classifyMigrationRequest",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t222-migration-routing.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:classifyTerminalCommand",
       "minMechanism": "none",
       "coveredBy": [
@@ -1212,6 +1238,20 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:consumeMigrationPendingDecision",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:consumeMigrationStopLatch",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "function",
@@ -1705,6 +1745,39 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:isMigrationApplyCommand",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:isMigrationDispatchCommand",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:isMigrationExecutionCommand",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:isMigrationPublicRoute",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t222-migration-routing.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:isoTimestamp",
       "minMechanism": "none",
       "coveredBy": [],
@@ -1723,6 +1796,18 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:isRejectedMigrationDispatch",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t222-migration-routing.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -2193,6 +2278,13 @@
     {
       "unitClass": "function",
       "unitId": "function:pathKey",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:peekMigrationPendingDecision",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -5066,6 +5158,18 @@
         },
         {
           "file": "tests/unit/t191-composed-scope-write.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-utility migrate",
+      "minMechanism": "cli",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t222-migration-routing.test.ts",
           "mechanism": "cli"
         }
       ],
