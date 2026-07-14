@@ -18,7 +18,7 @@ the build if the JSON diverges from the YAML.
 
 ```yaml
 ---
-# YAML frontmatter — 14 top-level authored fields
+# YAML frontmatter — authored fields
 ---
 
 # [Stage Title]
@@ -40,8 +40,8 @@ and completion messages.
 
 ## Authored fields
 
-Fourteen top-level authored fields (plus three `consumes[]` subfields).
-All required unless marked optional. The schema in `stage-schema.ts`
+Top-level authored fields (plus three `consumes[]` subfields). All required
+unless marked optional. The schema in `stage-schema.ts`
 copies this table verbatim.
 
 | Field | Type | Required | Enum / Constraint |
@@ -55,7 +55,8 @@ copies this table verbatim.
 | `mode` | string | yes | `inline` \| `subagent` \| `agent-team`. `inline` and `subagent` are active; **`agent-team` is reserved** — no stage declares it until a consumer ships. Orchestrator code reading `mode` MUST handle `agent-team` explicitly (at minimum throw "not yet implemented") — do not fall through to a default path |
 | `for_each` | string | optional | artifact slug; stage runs once per instance of that artifact. Omit for once-per-workflow stages. Doctor validates the artifact is produced by an upstream stage |
 | `workspace_requires` | boolean | optional | Default `false`. `true` marks a stage that must write source code to the workspace root, not just planning docs under the per-intent record dir. The stage-completion artifact guard (`amadeus-state.ts` approve/advance/finalize/complete-workflow) then requires a file outside the `amadeus/` workspace tree and the harness dir before the stage can complete: a stage that wrote only its `produces[]` markdown but no code is refused. Today only `code-generation` declares it |
-| `produces` | string[] | yes | empty allowed; lowercase-kebab artifact names — see [Artifact Vocabulary](../../../../docs/reference/16-artifact-vocabulary.md) for rules and the live registry tool |
+| `produces` | string[] | yes | empty allowed; lowercase-kebab artifact names — see [Artifact Vocabulary](../../../../../docs/reference/16-artifact-vocabulary.md) for rules and the live registry tool |
+| `optional_produces` | string[] | optional | unique lowercase-kebab artifact names that a stage may omit for a unit; must be disjoint from `produces`. Excluded from per-unit completion coverage, but included in `directive.produces`, repeated as the conditional subset in `directive.optional_produces`, and included in the artifact registry, producer lookup, and required-sections template eligibility |
 | `consumes` | object[] | yes | empty allowed; each entry `{artifact, required, conditional_on?}` |
 | `consumes[].artifact` | string | yes per entry | lowercase-kebab |
 | `consumes[].required` | boolean | yes per entry | Scoped to the active plan. `true` means "if the producing stage runs, this consume must be satisfied" — not a global assertion that the artifact always exists. Scopes that skip the producer (e.g., `bugfix` skipping `units-generation`) make the consume moot; the stage body handles graceful degradation. The reserved `when:` primitive will eventually let authors express richer predicates |
@@ -63,7 +64,7 @@ copies this table verbatim.
 | `requires_stage` | string[] | yes | empty allowed; each entry a known stage slug. Two roles: (1) semantic data dependency; (2) presentation-order edge for stages with no semantic link but a fixed display order. Primary input to computed `display_order` |
 | `scopes` | string[] | optional | each entry a scope name with a matching `.kiro/scopes/amadeus-<name>.md` file. Naming a scope marks this stage EXECUTE under that scope; absence marks it SKIP. The per-stage transpose of the scope membership matrix — `amadeus-graph compile` reads every stage's `scopes:` and emits the compiled EXECUTE/SKIP grid (`tools/data/scope-grid.json`). The 3 initialization stages name all scopes (always EXECUTE). Absent and `[]` are treated identically |
 | `inputs` | string | yes | human prose (preserves today's `**Inputs**:` line) |
-| `outputs` | string | yes | human prose (preserves today's `**Outputs**:` line). **Non-load-bearing at runtime** — the engine NEVER reads `outputs:` for path resolution; it resolves the node's `produces[]` artifact NAMES against the **active intent's record dir** at emit time (see "Artifact paths are engine-resolved" below). Author `outputs:` as relative artifact NAMES (or `<phase>/<stage>/<name>.md` shapes); do NOT hardcode a workspace root (`amadeus-docs/…` or `amadeus/spaces/…`) — it would read FALSE the moment the record re-roots per intent |
+| `outputs` | string | yes | human prose (preserves today's `**Outputs**:` line). **Non-load-bearing at runtime** — the engine NEVER reads `outputs:` for path resolution; it resolves the node's `produces[]` and `optional_produces[]` artifact NAMES against the **active intent's record dir** at emit time (see "Artifact paths are engine-resolved" below). Author `outputs:` as relative artifact NAMES (or `<phase>/<stage>/<name>.md` shapes); do NOT hardcode a workspace root (`amadeus-docs/…` or `amadeus/spaces/…`) — it would read FALSE the moment the record re-roots per intent |
 
 ---
 
@@ -125,7 +126,8 @@ NAMES, not rooted paths — the engine resolves the root (see below).
 
 ## Artifact paths are engine-resolved (no stage `.md` hardcodes a root)
 
-A stage emits relative artifact **names** (its `produces[]`); the engine
+A stage emits relative artifact **names** (its required `produces[]` plus any
+`optional_produces[]`); the engine
 resolves them to canonical write paths at directive-emit time, **against the
 active intent's record dir** — `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/<phase>/<stage>/<name>.md`
 (a pre-workspace project is migrated to this layout on first touch — there is no
@@ -134,7 +136,11 @@ flat-root resolution path post-migration). The resolver is `resolveArtifactPath`
 (`relativeRecordDir` in `amadeus-lib.ts`). **No stage `.md` hardcodes a workspace
 root** — the `outputs:` frontmatter and any "Create `…/…`" prose are
 human-facing documentation only; the engine hands the conductor the resolved
-`produces[]` path. Treat a rooted path literal in a stage file as a doc bug, not
+output path list in `directive.produces` and repeats the conditional subset in
+`directive.optional_produces`. Required paths must be written; optional paths
+are candidates governed by matching `CONDITIONAL` instructions in the stage
+body. Per-unit completion checks only the required `produces[]`.
+Treat a rooted path literal in a stage file as a doc bug, not
 a behavior contract.
 
 The same emit-time resolution splits the consumed inputs by presence: the

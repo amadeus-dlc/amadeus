@@ -34,7 +34,14 @@ import {
 import { hostname, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { birthIntent } from "../../packages/framework/core/tools/amadeus-lib.ts";
+import {
+  armMigrationPendingDecision,
+  birthIntent,
+  consumeMigrationPendingDecision,
+  consumeMigrationStopLatch,
+  peekMigrationPendingDecision,
+} from "../../packages/framework/core/tools/amadeus-lib.ts";
+import { projectSnapshot } from "../helpers/upstream-v2-fixture.ts";
 import {
   DEFAULT_RECORD_DIR,
   DEFAULT_SPACE,
@@ -105,6 +112,12 @@ function scratchProject(withState: boolean): string {
     mkdirSync(auditDir, { recursive: true });
     writeFileSync(join(auditDir, pinnedShardName()), "# AI-DLC Audit Log\n");
   }
+  return dir;
+}
+
+function bareKiroProject(): string {
+  const dir = mkdtempSync(join(tmpdir(), "t147-migration-gate-"));
+  cpSync(KIRO_TREE, join(dir, ".kiro"), { recursive: true });
   return dir;
 }
 
@@ -246,6 +259,305 @@ describe("t147 Kiro hook adapter (live-captured payload fixtures)", () => {
       const r = runAdapter(dir, "runtime-compile", FIXTURES.postToolUse_shell);
       expect(r.code).toBe(0);
     } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("8a: migration runtime/Stop targets forward session_id without cross-session consume", () => {
+    const dir = scratchProject(false);
+    try {
+      const runtimePayload = (sessionId: string) => ({
+        ...(FIXTURES.postToolUse_shell as Record<string, unknown>),
+        session_id: sessionId,
+        tool_input: {
+          command: "bun .kiro/tools/amadeus-utility.ts migrate --apply",
+        },
+      });
+
+      expect(runAdapter(dir, "runtime-compile", runtimePayload("session-a")).code).toBe(0);
+      expect(consumeMigrationStopLatch(dir, "session-a")).toBe(true);
+
+      expect(runAdapter(dir, "runtime-compile", runtimePayload("session-a")).code).toBe(0);
+      expect(
+        runAdapter(dir, "stop", { ...(FIXTURES.stop as object), session_id: "session-b" }).code,
+      ).toBe(0);
+      expect(consumeMigrationStopLatch(dir, "session-a")).toBe(true);
+
+      expect(runAdapter(dir, "runtime-compile", runtimePayload("session-a")).code).toBe(0);
+      expect(
+        runAdapter(dir, "stop", { ...(FIXTURES.stop as object), session_id: "session-a" }).code,
+      ).toBe(0);
+      expect(consumeMigrationStopLatch(dir, "session-a")).toBe(false);
+
+      const rejectedSession = `kiro-rejected-${process.pid}-${Date.now()}`;
+      const beforeRejected = projectSnapshot(dir);
+      expect(
+        runAdapter(dir, "runtime-compile", {
+          ...(FIXTURES.postToolUse_shell as Record<string, unknown>),
+          session_id: rejectedSession,
+          tool_input: {
+            command: "bun .kiro/tools/amadeus-orchestrate.ts next --apply",
+          },
+          tool_response: {
+            items: [
+              {
+                Text: JSON.stringify({
+                  kind: "error",
+                  message: "--apply is internal to the migration approval flow.",
+                }),
+              },
+            ],
+          },
+        }).code,
+      ).toBe(0);
+      expect(consumeMigrationStopLatch(dir, rejectedSession)).toBe(true);
+      expect(projectSnapshot(dir)).toBe(beforeRejected);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("8b: migration Yes/No turns bypass project-local clocks until apply consumes the decision", () => {
+    const dir = bareKiroProject();
+    const sessionId = `kiro-gate-${process.pid}-${Date.now()}`;
+    const initialPayload = {
+      session_id: sessionId,
+      prompt: "Run `bun .kiro/tools/amadeus-orchestrate.ts next --migrate` and relay it.",
+    };
+    try {
+      const before = projectSnapshot(dir);
+      expect(runAdapter(dir, "verb-intercept", initialPayload).code).toBe(0);
+      expect(peekMigrationPendingDecision(dir, sessionId)).toBe(false);
+      expect(projectSnapshot(dir)).toBe(before);
+
+      const dryRun = {
+        ...(FIXTURES.postToolUse_shell as Record<string, unknown>),
+        session_id: sessionId,
+        tool_input: {
+          command: "bun .kiro/tools/amadeus-utility.ts migrate --json",
+        },
+        tool_response: {
+          items: [
+            {
+              Text: JSON.stringify({
+                schemaVersion: 1,
+                mode: "dry-run",
+                status: "ready",
+              }),
+            },
+          ],
+        },
+      };
+      expect(runAdapter(dir, "runtime-compile", dryRun).code).toBe(0);
+      expect(peekMigrationPendingDecision(dir, sessionId)).toBe(true);
+      expect(projectSnapshot(dir)).toBe(before);
+
+      expect(runAdapter(dir, "verb-intercept", { session_id: sessionId, prompt: "Yes" }).code).toBe(
+        0,
+      );
+      expect(peekMigrationPendingDecision(dir, sessionId)).toBe(true);
+      expect(projectSnapshot(dir)).toBe(before);
+
+      const apply = {
+        ...(FIXTURES.postToolUse_shell as Record<string, unknown>),
+        session_id: sessionId,
+        tool_input: {
+          command: "bun .kiro/tools/amadeus-utility.ts migrate --apply",
+        },
+      };
+      expect(runAdapter(dir, "runtime-compile", apply).code).toBe(0);
+      expect(peekMigrationPendingDecision(dir, sessionId)).toBe(false);
+      expect(projectSnapshot(dir)).toBe(before);
+      expect(consumeMigrationStopLatch(dir, sessionId)).toBe(true);
+
+      expect(runAdapter(dir, "verb-intercept", initialPayload).code).toBe(0);
+      expect(peekMigrationPendingDecision(dir, sessionId)).toBe(false);
+      expect(runAdapter(dir, "runtime-compile", dryRun).code).toBe(0);
+      expect(peekMigrationPendingDecision(dir, sessionId)).toBe(true);
+      expect(runAdapter(dir, "verb-intercept", { session_id: sessionId, prompt: "2" }).code).toBe(0);
+      expect(peekMigrationPendingDecision(dir, sessionId)).toBe(false);
+      expect(projectSnapshot(dir)).toBe(before);
+    } finally {
+      consumeMigrationPendingDecision(dir, sessionId);
+      consumeMigrationStopLatch(dir, sessionId);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("8c: a pending migration marker protects only an exact fresh gate answer", () => {
+    const dir = bareKiroProject();
+    const sessionId = `kiro-non-answer-${process.pid}-${Date.now()}`;
+    try {
+      expect(
+        runAdapter(dir, "verb-intercept", {
+          session_id: sessionId,
+          prompt: "Run `bun .kiro/tools/amadeus-orchestrate.ts next --migrate` and relay it.",
+        }).code,
+      ).toBe(0);
+      expect(peekMigrationPendingDecision(dir, sessionId)).toBe(false);
+      expect(
+        runAdapter(dir, "runtime-compile", {
+          ...(FIXTURES.postToolUse_shell as Record<string, unknown>),
+          session_id: sessionId,
+          tool_input: {
+            command: "bun .kiro/tools/amadeus-utility.ts migrate",
+          },
+          tool_response: {
+            items: [
+              {
+                Text: JSON.stringify({
+                  schemaVersion: 1,
+                  mode: "dry-run",
+                  status: "ready",
+                }),
+              },
+            ],
+          },
+        }).code,
+      ).toBe(0);
+      expect(peekMigrationPendingDecision(dir, sessionId)).toBe(true);
+      expect(
+        runAdapter(dir, "verb-intercept", {
+          session_id: sessionId,
+          prompt: "Yes, but show the report again",
+        }).code,
+      ).toBe(0);
+      expect(peekMigrationPendingDecision(dir, sessionId)).toBe(true);
+      expect(existsSync(join(dir, "amadeus", ".amadeus-turn-counter"))).toBe(true);
+    } finally {
+      consumeMigrationPendingDecision(dir, sessionId);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("8d: only canonical ready dry-run output arms; failure, absence, and lookalikes clear", () => {
+    const dir = bareKiroProject();
+    const sessionId = `kiro-ready-proof-${process.pid}-${Date.now()}`;
+    const command = "bun .kiro/tools/amadeus-utility.ts migrate";
+    const humanReady = [
+      "AI-DLC v2 -> Amadeus workspace migration",
+      "Mode: dry-run",
+      "Status: ready",
+      "Source: aidlc",
+      "Destination: amadeus",
+      "Source version: unknown",
+      "Target: absent",
+      "",
+      "Checks:",
+      "[pass] source: valid",
+      "",
+      "Operations:",
+      '{"kind":"move","path":"aidlc","to":"amadeus"}',
+      "",
+      "No files were changed. Re-run with --apply only after explicit approval.",
+    ].join("\n");
+    const runDryRunResponse = (toolResponse?: unknown) =>
+      runAdapter(dir, "runtime-compile", {
+        ...(FIXTURES.postToolUse_shell as Record<string, unknown>),
+        session_id: sessionId,
+        tool_input: { command },
+        ...(toolResponse === undefined ? {} : { tool_response: toolResponse }),
+      });
+    try {
+      expect(
+        runDryRunResponse({ items: [{ Text: humanReady }] }).code,
+      ).toBe(0);
+      expect(peekMigrationPendingDecision(dir, sessionId)).toBe(true);
+      consumeMigrationPendingDecision(dir, sessionId);
+
+      const rejectedResponses: Array<[string, unknown | undefined]> = [
+        ["missing", undefined],
+        [
+          "failed-json",
+          {
+            items: [
+              {
+                Text: JSON.stringify({
+                  schemaVersion: 1,
+                  mode: "dry-run",
+                  status: "failed",
+                }),
+              },
+            ],
+          },
+        ],
+        ["fake-json", { items: [{ Text: '{"status":"ready"}' }] }],
+        ["fake-human", { items: [{ Text: "command failed\nStatus: ready" }] }],
+        [
+          "nonzero-ready-lookalike",
+          { items: [{ Text: `Command exited with code 1\n${humanReady}` }] },
+        ],
+        ["non-text", { items: [{ Json: { status: "ready" } }] }],
+        [
+          "ambiguous",
+          {
+            items: [
+              {
+                Text: JSON.stringify({
+                  schemaVersion: 1,
+                  mode: "dry-run",
+                  status: "ready",
+                }),
+              },
+              { Text: humanReady },
+            ],
+          },
+        ],
+      ];
+      for (const [label, toolResponse] of rejectedResponses) {
+        armMigrationPendingDecision(dir, sessionId);
+        expect(`${label}:${runDryRunResponse(toolResponse).code}`).toBe(`${label}:0`);
+        expect(`${label}:${peekMigrationPendingDecision(dir, sessionId)}`).toBe(
+          `${label}:false`,
+        );
+      }
+    } finally {
+      consumeMigrationPendingDecision(dir, sessionId);
+      consumeMigrationStopLatch(dir, sessionId);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("8e: invalid public migration requests never arm a decision marker", () => {
+    const dir = bareKiroProject();
+    const sessionId = `kiro-invalid-migration-${process.pid}-${Date.now()}`;
+    try {
+      const before = projectSnapshot(dir);
+      for (const args of [
+        "--apply",
+        "--migrate --apply",
+        "--migrate --stage requirements-analysis",
+      ]) {
+        armMigrationPendingDecision(dir, sessionId);
+        const run = runAdapter(dir, "verb-intercept", {
+          session_id: sessionId,
+          prompt: `Run \`bun .kiro/tools/amadeus-orchestrate.ts next ${args}\` and relay it.`,
+        });
+        expect(`${args}:${run.code}`).toBe(`${args}:0`);
+        expect(peekMigrationPendingDecision(dir, sessionId)).toBe(false);
+        expect(projectSnapshot(dir)).toBe(before);
+      }
+    } finally {
+      consumeMigrationPendingDecision(dir, sessionId);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("8f: bare public apply exits before Kiro clocks or active-Intent presence minting", () => {
+    const dir = scratchProject(true);
+    const sessionId = `kiro-bare-apply-${process.pid}-${Date.now()}`;
+    try {
+      const before = projectSnapshot(dir);
+      const run = runAdapter(dir, "verb-intercept", {
+        session_id: sessionId,
+        prompt: "Run `bun .kiro/tools/amadeus-orchestrate.ts next --apply` and relay it.",
+      });
+      expect(run.code).toBe(0);
+      expect(run.stdout).toBe("");
+      expect(projectSnapshot(dir)).toBe(before);
+      expect(peekMigrationPendingDecision(dir, sessionId)).toBe(false);
+    } finally {
+      consumeMigrationPendingDecision(dir, sessionId);
       rmSync(dir, { recursive: true, force: true });
     }
   });
