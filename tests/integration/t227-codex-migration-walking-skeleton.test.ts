@@ -7,10 +7,12 @@ import { spawnSync } from "node:child_process";
 import {
   cpSync,
   existsSync,
+  mkdirSync,
   readFileSync,
   readdirSync,
+  writeFileSync,
 } from "node:fs";
-import { dirname, isAbsolute, join, relative } from "node:path";
+import { delimiter, dirname, isAbsolute, join, relative } from "node:path";
 import { consumeMigrationStopLatch } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import {
   createUpstreamV2Fixture,
@@ -19,6 +21,7 @@ import {
 } from "../helpers/upstream-v2-fixture.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
+const TEST_BIN_DIR = ".test-bin";
 
 interface CommandResult {
   status: number;
@@ -31,6 +34,7 @@ function codexEnv(project: UpstreamV2Fixture): NodeJS.ProcessEnv {
     ...process.env,
     AMADEUS_HARNESS_DIR: ".codex",
     CLAUDE_PROJECT_DIR: project.projectDir,
+    PATH: `${join(project.projectDir, TEST_BIN_DIR)}${delimiter}${process.env.PATH ?? ""}`,
   };
 }
 
@@ -46,6 +50,21 @@ function installCodexHarness(project: UpstreamV2Fixture): void {
     cpSync(
       join(project.projectDir, ".codex", `${name}.example`),
       join(project.projectDir, ".codex", name),
+    );
+  }
+  const testBin = join(project.projectDir, TEST_BIN_DIR);
+  mkdirSync(testBin, { recursive: true });
+  if (process.platform === "win32") {
+    writeFileSync(
+      join(testBin, "codex.cmd"),
+      "@echo off\r\necho codex-cli 0.139.0\r\n",
+      "utf-8",
+    );
+  } else {
+    writeFileSync(
+      join(testBin, "codex"),
+      "#!/bin/sh\nprintf 'codex-cli 0.139.0\\n'\n",
+      { encoding: "utf-8", mode: 0o755 },
     );
   }
   project.commitAll("test: install Codex migration harness");
