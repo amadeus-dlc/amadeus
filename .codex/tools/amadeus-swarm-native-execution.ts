@@ -974,14 +974,16 @@ type ActiveNativeRun = Readonly<{
   identity: NativeProcessIdentity;
 }>;
 
-function nativeDispatchCheckpoint(input: Readonly<{
+type NativeDispatchCheckpointInput = Readonly<{
   lifecycle: NativeLifecycleExecutionInput;
   preparation: AdapterResourcePreparation;
   resources: MaterializedAuxiliaryResourceSet;
   preparedNativeRun: PreparedNativeRun;
   execution: AdapterExecutionPlan;
   identity: NativeProcessIdentity;
-}>): NativeDispatchCheckpoint {
+}>;
+
+function nativeDispatchCheckpoint(input: NativeDispatchCheckpointInput): NativeDispatchCheckpoint {
   return Object.freeze({
     kind: "native",
     nativeRunId: input.lifecycle.launchInput.nativeRunId,
