@@ -66,6 +66,7 @@ export type NativeProcessDisposal = Readonly<{
 type DisposalPhase = "intent" | "moved" | "deleting" | "completed";
 type DisposalTestCrashPoint =
   | `${DisposalPhase}-temp`
+  | "before-durable-read"
   | "intent"
   | "before-rename"
   | "rename"
@@ -600,6 +601,7 @@ function durableBeforeMutation(
   chain: DisposalChain,
   afterStep: (point: DisposalTestCrashPoint) => void,
 ): ReconcileStep {
+  afterStep("before-durable-read");
   const durable = readChain(root, chain.latest.target);
   if (!durable) return unknownDisposalResult();
   return durable.latest.entryDigest === chain.latest.entryDigest
@@ -612,9 +614,9 @@ function moveToQuarantine(
   chain: DisposalChain,
   afterStep: (point: DisposalTestCrashPoint) => void,
 ): ReconcileStep {
-  afterStep("before-rename");
   const durable = durableBeforeMutation(root, chain, afterStep);
   if (isDisposalResult(durable)) return durable;
+  afterStep("before-rename");
   try {
     renameSync(chain.paths.originalPath, chain.paths.quarantinePath);
   } catch (error) {
@@ -685,9 +687,9 @@ function removeQuarantine(
   if (!directoryIdentityMatches(chain.paths.quarantinePath, chain.latest.owner)) {
     return unknownDisposalResult();
   }
-  afterStep("before-remove");
   const durable = durableBeforeMutation(root, chain, afterStep);
   if (isDisposalResult(durable)) return durable;
+  afterStep("before-remove");
   try {
     rmSync(chain.paths.quarantinePath, { recursive: true });
   } catch (error) {
@@ -858,19 +860,23 @@ function failClosedDisposal(disposal: NativeProcessDisposal): NativeProcessDispo
   });
 }
 
+type CrashInjectedDisposalInput = Readonly<{
+  rootDir: string;
+  crashAfter: DisposalTestCrashPoint;
+}>;
+
+type InterceptedDisposalInput = Readonly<{
+  rootDir: string;
+  afterStep(point: DisposalTestCrashPoint): void;
+}>;
+
 export const nativeProcessDisposalTestSeam = Object.freeze({
-  createCrashInjected(input: Readonly<{
-    rootDir: string;
-    crashAfter: DisposalTestCrashPoint;
-  }>): NativeProcessDisposal {
+  createCrashInjected(input: CrashInjectedDisposalInput): NativeProcessDisposal {
     return createNativeProcessDisposalAdapter(input, (point) => {
       if (point === input.crashAfter) throw new Error("NATIVE_PROCESS_DISPOSAL_TEST_CRASH");
     });
   },
-  createIntercepted(input: Readonly<{
-    rootDir: string;
-    afterStep(point: DisposalTestCrashPoint): void;
-  }>): NativeProcessDisposal {
+  createIntercepted(input: InterceptedDisposalInput): NativeProcessDisposal {
     return failClosedDisposal(createNativeProcessDisposalAdapter(input, input.afterStep));
   },
 });

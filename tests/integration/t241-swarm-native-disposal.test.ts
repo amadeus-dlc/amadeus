@@ -12,6 +12,7 @@ import {
   renameSync,
   rmSync,
   symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -583,6 +584,60 @@ describe("t241 native process run-directory disposal", () => {
     expect(existsSync(owned.path)).toBe(true);
   });
 
+  test("a syntactically malformed phase fails closed without moving the owned directory", () => {
+    const dir = root();
+    const nativeRunId = "run-unparseable-intent";
+    const target = recoveryTarget(nativeRunId, "epoch-unparseable-intent");
+    const recovered = recoveryReceipt(target);
+    const owned = ownedRunDirectory(dir, target);
+    expect(() => nativeProcessDisposalTestSeam.createCrashInjected({
+      rootDir: dir,
+      crashAfter: "intent",
+    }).start({
+      target,
+      recoveryReceipt: recovered,
+      runDirectory: Object.freeze({
+        owner: owned.ownership,
+        recoveryJournalDigest: owned.recoveryJournalDigest,
+      }),
+    })).toThrow("NATIVE_PROCESS_DISPOSAL_TEST_CRASH");
+    writeFileSync(join(walDirectory(dir, target), "intent.json"), "not-json\n", { mode: 0o600 });
+
+    expect(createNativeProcessDisposal({ rootDir: dir }).resume(target).status).toBe("unknown");
+    expect(existsSync(owned.path)).toBe(true);
+  });
+
+  for (const [condition, corrupt] of [
+    ["a missing owner marker", (path: string) => unlinkSync(join(path, "owner.json"))],
+    [
+      "an unparseable owner marker",
+      (path: string) => writeFileSync(join(path, "owner.json"), "not-json\n", { mode: 0o600 }),
+    ],
+    [
+      "an unparseable recovery journal",
+      (path: string) => writeFileSync(join(path, "recovery.json"), "not-json\n", { mode: 0o600 }),
+    ],
+  ] as const) {
+    test(`${condition} fails closed before disposal`, () => {
+      const dir = root();
+      const nativeRunId = `run-invalid-owned-evidence-${condition.replaceAll(" ", "-")}`;
+      const target = recoveryTarget(nativeRunId, "epoch-invalid-owned-evidence");
+      const recovered = recoveryReceipt(target);
+      const owned = ownedRunDirectory(dir, target);
+      corrupt(owned.path);
+
+      expect(createNativeProcessDisposal({ rootDir: dir }).start({
+        target,
+        recoveryReceipt: recovered,
+        runDirectory: Object.freeze({
+          owner: owned.ownership,
+          recoveryJournalDigest: owned.recoveryJournalDigest,
+        }),
+      }).status).toBe("unknown");
+      expect(existsSync(owned.path)).toBe(true);
+    });
+  }
+
   test("a foreign quarantine blocks roll-forward without mutating either directory", () => {
     const dir = root();
     const nativeRunId = "run-foreign-quarantine";
@@ -711,6 +766,122 @@ describe("t241 native process run-directory disposal", () => {
     const retry = contender.start(input);
     expect(winner.status).toBe("disposed");
     expect(retry).toEqual(winner);
+  });
+
+  test("reconciles a winner that advances the WAL before a destructive re-read", () => {
+    const dir = root();
+    const target = recoveryTarget("run-durable-read-winner", "epoch-durable-read-winner");
+    const recovered = recoveryReceipt(target);
+    const owned = ownedRunDirectory(dir, target);
+    const input = Object.freeze({
+      target,
+      recoveryReceipt: recovered,
+      runDirectory: Object.freeze({
+        owner: owned.ownership,
+        recoveryJournalDigest: owned.recoveryJournalDigest,
+      }),
+    });
+    let winnerStarted = false;
+    const outer = nativeProcessDisposalTestSeam.createIntercepted({
+      rootDir: dir,
+      afterStep(point) {
+        if (point !== "before-durable-read" || winnerStarted) return;
+        winnerStarted = true;
+        expect(createNativeProcessDisposal({ rootDir: dir }).start(input).status).toBe("disposed");
+      },
+    });
+
+    expect(outer.start(input).status).toBe("disposed");
+    expect(winnerStarted).toBeTrue();
+    expect(existsSync(owned.path)).toBeFalse();
+  });
+
+  test("an identical competing phase publication converges without replacing the winner", () => {
+    const dir = root();
+    const nativeRunId = "run-concurrent-phase-publication";
+    const target = recoveryTarget(nativeRunId, "epoch-concurrent-phase-publication");
+    const recovered = recoveryReceipt(target);
+    const owned = ownedRunDirectory(dir, target);
+    const input = Object.freeze({
+      target,
+      recoveryReceipt: recovered,
+      runDirectory: Object.freeze({
+        owner: owned.ownership,
+        recoveryJournalDigest: owned.recoveryJournalDigest,
+      }),
+    });
+    const contender = createNativeProcessDisposal({ rootDir: dir });
+    let published = false;
+    const racing = nativeProcessDisposalTestSeam.createIntercepted({
+      rootDir: dir,
+      afterStep(point) {
+        if (point !== "intent-temp" || published) return;
+        published = true;
+        expect(contender.start(input).status).toBe("disposed");
+      },
+    });
+
+    expect(racing.start(input).status).toBe("disposed");
+    expect(published).toBe(true);
+  });
+
+  test("a conflicting regular phase publication fails closed without replacing it", () => {
+    const dir = root();
+    const nativeRunId = "run-conflicting-phase-publication";
+    const target = recoveryTarget(nativeRunId, "epoch-conflicting-phase-publication");
+    const recovered = recoveryReceipt(target);
+    const owned = ownedRunDirectory(dir, target);
+    const conflicting = "{\"foreign\":true}\n";
+    const disposal = nativeProcessDisposalTestSeam.createIntercepted({
+      rootDir: dir,
+      afterStep(point) {
+        if (point !== "intent-temp") return;
+        writeFileSync(join(walDirectory(dir, target), "intent.json"), conflicting, { mode: 0o600 });
+      },
+    });
+
+    expect(disposal.start({
+      target,
+      recoveryReceipt: recovered,
+      runDirectory: Object.freeze({
+        owner: owned.ownership,
+        recoveryJournalDigest: owned.recoveryJournalDigest,
+      }),
+    }).status).toBe("unknown");
+    expect(readFileSync(join(walDirectory(dir, target), "intent.json"), "utf-8")).toBe(conflicting);
+    expect(existsSync(owned.path)).toBe(true);
+  });
+
+  test("a non-conflict phase publication error fails closed", () => {
+    const dir = root();
+    const nativeRunId = "run-phase-publication-error";
+    const target = recoveryTarget(nativeRunId, "epoch-phase-publication-error");
+    const recovered = recoveryReceipt(target);
+    const owned = ownedRunDirectory(dir, target);
+    const wal = walDirectory(dir, target);
+    let intercepted = false;
+    const disposal = nativeProcessDisposalTestSeam.createIntercepted({
+      rootDir: dir,
+      afterStep(point) {
+        if (point !== "intent-temp") return;
+        intercepted = true;
+        chmodSync(wal, 0o500);
+      },
+    });
+
+    const result = disposal.start({
+      target,
+      recoveryReceipt: recovered,
+      runDirectory: Object.freeze({
+        owner: owned.ownership,
+        recoveryJournalDigest: owned.recoveryJournalDigest,
+      }),
+    });
+    chmodSync(wal, 0o700);
+
+    expect(intercepted).toBe(true);
+    expect(result.status).toBe("unknown");
+    expect(existsSync(owned.path)).toBe(true);
   });
 
   test("a crash after fsyncing a phase temp cannot publish a partial intent", () => {
@@ -957,6 +1128,61 @@ describe("t241 native process run-directory disposal", () => {
     expect(racing.resume(target).status).toBe("disposed");
     expect(raced).toBe(true);
     expect(contender.resume(target).status).toBe("disposed");
+  });
+
+  test("a quarantine recreated after completion fails the in-flight disposal closed", () => {
+    const dir = root();
+    const nativeRunId = "run-quarantine-recreated-after-completion";
+    const target = recoveryTarget(nativeRunId, "epoch-quarantine-recreated-after-completion");
+    const recovered = recoveryReceipt(target);
+    const owned = ownedRunDirectory(dir, target);
+    const quarantine = quarantinePath(dir, target);
+    const disposal = nativeProcessDisposalTestSeam.createIntercepted({
+      rootDir: dir,
+      afterStep(point) {
+        if (point === "completed") mkdirSync(quarantine, { mode: 0o700 });
+      },
+    });
+
+    expect(disposal.start({
+      target,
+      recoveryReceipt: recovered,
+      runDirectory: Object.freeze({
+        owner: owned.ownership,
+        recoveryJournalDigest: owned.recoveryJournalDigest,
+      }),
+    }).status).toBe("unknown");
+    expect(existsSync(quarantine)).toBe(true);
+    expect(existsSync(owned.path)).toBe(false);
+  });
+
+  test("an intercepted resume exception fails closed without moving the owned directory", () => {
+    const dir = root();
+    const nativeRunId = "run-resume-exception";
+    const target = recoveryTarget(nativeRunId, "epoch-resume-exception");
+    const recovered = recoveryReceipt(target);
+    const owned = ownedRunDirectory(dir, target);
+    const input = Object.freeze({
+      target,
+      recoveryReceipt: recovered,
+      runDirectory: Object.freeze({
+        owner: owned.ownership,
+        recoveryJournalDigest: owned.recoveryJournalDigest,
+      }),
+    });
+    expect(() => nativeProcessDisposalTestSeam.createCrashInjected({
+      rootDir: dir,
+      crashAfter: "intent",
+    }).start(input)).toThrow("NATIVE_PROCESS_DISPOSAL_TEST_CRASH");
+    const disposal = nativeProcessDisposalTestSeam.createIntercepted({
+      rootDir: dir,
+      afterStep(point) {
+        if (point === "before-rename") throw new Error("injected resume failure");
+      },
+    });
+
+    expect(disposal.resume(target).status).toBe("unknown");
+    expect(existsSync(owned.path)).toBe(true);
   });
 
   test("an atomic phase publish never follows a competing symlink", () => {

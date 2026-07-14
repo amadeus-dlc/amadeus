@@ -390,6 +390,24 @@ describe("t240 provider-neutral native process", () => {
     await restarted.releasePlan(replacement);
   });
 
+  test("forgets an in-memory plan when its run directory is already absent", async () => {
+    const dir = root();
+    const port = createNativeProcessPort({
+      rootDir: dir,
+      output: { publish: () => {}, close: () => {}, fail: () => {} },
+    });
+    const plan = port.plan({
+      nativeRunId: "run-release-missing-directory",
+      evidenceDir: dir,
+      context,
+      fencingToken: 4,
+    });
+    rmSync(join(dir, dirname(plan.recoveryJournalRelativePath)), { recursive: true });
+
+    await expect(port.releasePlan(plan)).resolves.toBeUndefined();
+    expect(port.activeRecordCount()).toBe(0);
+  });
+
   test("keeps a published dispatch plan recoverable when resource materialization fails", async () => {
     const dir = root();
     const processPort = createNativeProcessPort({
@@ -3041,6 +3059,7 @@ describe("t240 provider-neutral native process", () => {
     const makeSession = (input: Readonly<{
       transport?: "stdio-json" | "pty-interactive";
       deadlineMs?: number;
+      now?: () => Date;
       output?: Readonly<{
         publish(nativeRunId: string, frame: NativeProcessOutputFrame): void;
         close(nativeRunId: string): void;
@@ -3140,7 +3159,7 @@ describe("t240 provider-neutral native process", () => {
         observed.value.platform,
         10,
         Date.now(),
-        () => new Date(),
+        input.now ?? (() => new Date()),
         () => {},
       );
       return { child, plan, record, session, wrapperPlan, launch };
@@ -3156,6 +3175,23 @@ describe("t240 provider-neutral native process", () => {
       armDeadline: fixture.wrapperPlan.armDeadline,
       process: processIdentity,
     })}\n`, "utf-8");
+    const markTerminal = (fixture: ReturnType<typeof makeSession>): void => {
+      const processIdentityDigest = digestValue(observed.value);
+      const lifecycle = Object.freeze({
+        ...fixture.record.lifecycle,
+        state: "terminal" as const,
+        processIdentityDigest,
+        terminal: Object.freeze({
+          transport: fixture.launch.transport.kind,
+          exitCode: 0,
+          processGroupId: observed.value.processGroupId,
+          nativeRunId: fixture.plan.nativeRunId,
+          processIdentityDigest,
+        }),
+      });
+      Reflect.set(fixture.record, "lifecycle", lifecycle);
+      writeFileSync(fixture.record.recoveryJournalPath, `${JSON.stringify(lifecycle)}\n`, "utf-8");
+    };
 
     const invalidTerminalChild = new EventEmitter();
     const invalidTerminal = nativeProcessTestSeam.observeProviderTerminal(
@@ -3229,6 +3265,33 @@ describe("t240 provider-neutral native process", () => {
       transport: terminalMismatch.launch.transport,
     })).rejects.toThrow("NATIVE_PROCESS_PROVIDER_TERMINAL_INVALID");
     expect(terminalIdentity.processIdentityDigest).toBe(digestValue(observed.value));
+
+    const legacyDisposal = makeSession();
+    markTerminal(legacyDisposal);
+    await expect(legacyDisposal.session.dispose()).resolves.toBeUndefined();
+    expect(existsSync(join(dir, dirname(legacyDisposal.plan.recoveryJournalRelativePath)))).toBeFalse();
+
+    let canonicalPath = "";
+    let savedPath = "";
+    let replaced = false;
+    const ownershipSwap = makeSession({
+      now: () => {
+        if (!replaced) {
+          replaced = true;
+          renameSync(canonicalPath, savedPath);
+          mkdirSync(canonicalPath, { mode: 0o700 });
+        }
+        return new Date();
+      },
+    });
+    canonicalPath = join(dir, dirname(ownershipSwap.plan.recoveryJournalRelativePath));
+    savedPath = `${canonicalPath}-saved`;
+    markTerminal(ownershipSwap);
+    await expect(ownershipSwap.session.dispose())
+      .rejects.toThrow("NATIVE_PROCESS_RUN_DIRECTORY_OWNERSHIP_MISMATCH");
+    expect(replaced).toBeTrue();
+    expect(existsSync(savedPath)).toBeTrue();
+    expect(existsSync(canonicalPath)).toBeTrue();
   });
 
   test("fails closed before planning on Windows", () => {
