@@ -555,6 +555,24 @@ describe("t237 closed native execution lifecycle", () => {
     expect(calls).toContain("process-terminate");
     expect(calls).toContain("capture-stop");
     expect(calls).toContain("cleanup");
+
+    const throwingControlAdapter: DriverAdapter = Object.freeze({
+      ...ptyAdapter,
+      observeControl: async function* () {
+        throw new Error("control-source-failed");
+      },
+    });
+    await expect(
+      execution.execute({
+        adapter: throwingControlAdapter,
+        launchInput: launchInput(),
+        context: normalizeContext(),
+        onDispatchPrepared: async () => {},
+        onResourcesPrepared: async () => {},
+        onReadyToArm: async () => {},
+        onCaptureBound: async () => {},
+      }),
+    ).rejects.toThrow("control-source-failed");
   });
 
   test("rejects a malformed fixed binding before capture starts", async () => {
@@ -755,6 +773,9 @@ describe("t237 closed native execution lifecycle", () => {
 
   test("terminates, joins, and cleans up when the audit-first arm checkpoint fails", async () => {
     const calls: string[] = [];
+    let terminateFailure = false;
+    let captureFailure = false;
+    let cleanupFailure = false;
     const resourcePlans = Object.freeze([
       Object.freeze({
         kind: "attempt-owned-directory" as const,
@@ -796,6 +817,7 @@ describe("t237 closed native execution lifecycle", () => {
         },
         cleanup: async () => {
           calls.push("cleanup");
+          if (cleanupFailure) throw new Error("cleanup-failed");
         },
       }),
       capture: Object.freeze({
@@ -809,6 +831,7 @@ describe("t237 closed native execution lifecycle", () => {
             },
             stopAndWait: async () => {
               calls.push("capture-stop");
+              if (captureFailure) throw new Error("capture-stop-failed");
               return Object.freeze({ ...liveInputs, processTerminal: terminal });
             },
             abortAndWait: async () => {
@@ -841,6 +864,7 @@ describe("t237 closed native execution lifecycle", () => {
             },
             terminateAndWait: async () => {
               calls.push("process-terminate");
+              if (terminateFailure) throw new Error("terminate-failed");
               return terminal;
             },
           });
@@ -881,6 +905,27 @@ describe("t237 closed native execution lifecycle", () => {
       "capture-stop",
       "cleanup",
     ]);
+
+    const runWithCheckpointFailure = () => execution.execute({
+      adapter: adapter([], preparation),
+      launchInput: launchInput(),
+      context: normalizeContext(),
+      onDispatchPrepared: async () => {},
+      onResourcesPrepared: async () => {},
+      onReadyToArm: async () => {
+        throw new Error("checkpoint-write-failed");
+      },
+      onCaptureBound: async () => {},
+    });
+
+    terminateFailure = true;
+    await expect(runWithCheckpointFailure()).rejects.toThrow("NATIVE_EXECUTION_RECOVERY_FAILED");
+    terminateFailure = false;
+    captureFailure = true;
+    await expect(runWithCheckpointFailure()).rejects.toThrow("NATIVE_EXECUTION_RECOVERY_FAILED");
+    captureFailure = false;
+    cleanupFailure = true;
+    await expect(runWithCheckpointFailure()).rejects.toThrow("NATIVE_EXECUTION_RECOVERY_FAILED");
   });
 
   test("fails closed and recovers when event-bound capture reaches EOF without a binding", async () => {
@@ -1016,5 +1061,204 @@ describe("t237 closed native execution lifecycle", () => {
     expect(calls).toContain("cleanup");
     expect(calls).not.toContain("terminal");
     expect(calls).not.toContain("capture-bound");
+  });
+
+  test("accepts every closed resource variant with a fixed capture binding", async () => {
+    const calls: string[] = [];
+    const resourcePlans = Object.freeze([
+      Object.freeze({
+        kind: "exclusive-reservation" as const,
+        resourceId: "provider-run",
+        candidates: Object.freeze([
+          Object.freeze({ reservationPath: "/locks/run-1", guardedPaths: Object.freeze(["/provider/run-1"]) }),
+        ]),
+      }),
+      Object.freeze({
+        kind: "attempt-owned-file" as const,
+        resourceId: "config",
+        path: "/evidence/config.json",
+        bytes: new Uint8Array([1]),
+        mode: "0600" as const,
+      }),
+      Object.freeze({
+        kind: "attempt-owned-directory" as const,
+        resourceId: "hooks",
+        path: "/evidence/hooks",
+        mode: "0700" as const,
+      }),
+      Object.freeze({
+        kind: "pre-arm-baseline" as const,
+        resourceId: "baseline",
+        exactPaths: Object.freeze(["/provider/baseline"]),
+        allowAbsent: false,
+      }),
+    ]);
+    const preparation = Object.freeze({
+      resources: resourcePlans,
+      preparationDigest: digestValue(resourcePlans),
+    });
+    const materialized = Object.freeze([
+      Object.freeze({
+        resourceId: "provider-run",
+        kind: "exclusive-reservation" as const,
+        selectedCandidateIndex: 0,
+        resolvedPaths: Object.freeze(["/provider/run-1"]),
+        ownerDigest: "owner-run",
+        contentOrBaselineDigest: "content-run",
+      }),
+      Object.freeze({
+        resourceId: "config",
+        kind: "attempt-owned-file" as const,
+        resolvedPaths: Object.freeze(["/evidence/config.json"]),
+        ownerDigest: "owner-config",
+        contentOrBaselineDigest: "content-config",
+      }),
+      Object.freeze({
+        resourceId: "hooks",
+        kind: "attempt-owned-directory" as const,
+        resolvedPaths: Object.freeze(["/evidence/hooks"]),
+        ownerDigest: "owner-hooks",
+        contentOrBaselineDigest: "content-hooks",
+      }),
+      Object.freeze({
+        resourceId: "baseline",
+        kind: "pre-arm-baseline" as const,
+        resolvedPaths: Object.freeze(["/provider/baseline"]),
+        ownerDigest: "owner-baseline",
+        contentOrBaselineDigest: "content-baseline",
+      }),
+    ]);
+    const resources = Object.freeze({
+      preparationDigest: preparation.preparationDigest,
+      receiptDigest: digestValue(materialized),
+      resources: materialized,
+    });
+    const base = adapter(calls, preparation);
+    const fixedAdapter: DriverAdapter = Object.freeze({
+      ...base,
+      buildExecution: (input) => {
+        calls.push("build-execution");
+        const exactPaths = Object.freeze(["/provider/run-1"]);
+        return Object.freeze({
+          launch: Object.freeze({
+            executable: "codex",
+            args: Object.freeze(["exec"]),
+            cwd: "/repo",
+            env: Object.freeze({}),
+            transport: Object.freeze({
+              kind: "stdio-json" as const,
+              stdin: "closed" as const,
+              output: "jsonl" as const,
+            }),
+            timeoutMs: 1_000,
+          }),
+          capture: Object.freeze({
+            kind: "fixed-provider-path" as const,
+            hookDir: "/evidence/hooks",
+            initialBinding: Object.freeze({
+              kind: "fixed-provider-path" as const,
+              nativeRunId: input.nativeRunId,
+              exactPaths,
+              exactPathDigest: digestValue(exactPaths),
+              sourcePlanDigest: preparation.preparationDigest,
+            }),
+          }),
+          captureIdentity: Object.freeze({
+            executionId: input.plan.executionId,
+            attemptId: input.plan.attemptId,
+            attemptNonceHash: input.plan.attemptNonceHash,
+            planDigest: input.plan.planDigest,
+            waveIndex: input.wave.index,
+            waveDigest: digestValue(input.wave),
+          }),
+          resources: resourcePlans,
+        });
+      },
+    });
+    const terminal: ProcessTerminal = Object.freeze({
+      transport: "stdio-json",
+      exitCode: 0,
+      processGroupId: 46,
+      nativeRunId: "native-run-1",
+      processIdentityDigest: "identity",
+    });
+    let checkpoint: NativeDispatchCheckpoint | undefined;
+    const execution = createLifecycleNativeExecution({
+      resources: Object.freeze({ materialize: async () => resources, cleanup: async () => {} }),
+      capture: Object.freeze({
+        start: async () => Object.freeze({
+          liveInputs,
+          bindingEvents: emptyNativeEvents(),
+          applyBinding: async () => {},
+          stopAndWait: async () => Object.freeze({ ...liveInputs, processTerminal: terminal }),
+          abortAndWait: async () => {},
+        }),
+      }),
+      process: Object.freeze({
+        plan: () => plannedProcess(),
+        spawn: async () => Object.freeze({
+          observeIdentity: async () => Object.freeze({ processIdentityDigest: "identity", armDigest: "arm-digest" }),
+          arm: async () => {},
+          waitForTerminal: async () => terminal,
+          terminateAndWait: async () => terminal,
+        }),
+      }),
+    });
+
+    await execution.execute({
+      adapter: fixedAdapter,
+      launchInput: launchInput(),
+      context: normalizeContext(),
+      onDispatchPrepared: async () => {},
+      onResourcesPrepared: async () => {},
+      onReadyToArm: async (value) => {
+        checkpoint = value;
+      },
+      onCaptureBound: async () => {},
+    });
+    expect(checkpoint?.capture).toMatchObject({
+      kind: "fixed-provider-path",
+      binding: { sourceResourceIds: ["provider-run"] },
+    });
+  });
+
+  test("rejects duplicate preparation ids before planning a process", async () => {
+    const calls: string[] = [];
+    const duplicate = Object.freeze({
+      kind: "attempt-owned-directory" as const,
+      resourceId: "duplicate",
+      path: "/evidence/hooks",
+      mode: "0700" as const,
+    });
+    const resources = Object.freeze([duplicate, duplicate]);
+    const preparation = Object.freeze({ resources, preparationDigest: digestValue(resources) });
+    const execution = createLifecycleNativeExecution({
+      resources: Object.freeze({
+        materialize: async () => {
+          throw new Error("must not materialize");
+        },
+        cleanup: async () => {},
+      }),
+      capture: Object.freeze({ start: async () => { throw new Error("must not capture"); } }),
+      process: Object.freeze({
+        plan: () => {
+          calls.push("process-plan");
+          return plannedProcess();
+        },
+        spawn: async () => { throw new Error("must not spawn"); },
+      }),
+    });
+    await expect(
+      execution.execute({
+        adapter: adapter(calls, preparation),
+        launchInput: launchInput(),
+        context: normalizeContext(),
+        onDispatchPrepared: async () => {},
+        onResourcesPrepared: async () => {},
+        onReadyToArm: async () => {},
+        onCaptureBound: async () => {},
+      }),
+    ).rejects.toThrow("RESOURCE_PREPARATION_INVALID");
+    expect(calls).toEqual(["prepare-resources"]);
   });
 });
