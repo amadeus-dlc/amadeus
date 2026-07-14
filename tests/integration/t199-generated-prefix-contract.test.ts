@@ -19,6 +19,13 @@ const knownPrefixes = [
   ["amadeus", "-"].join(""),
 ] as const;
 const forbiddenPrefixes = knownPrefixes.filter((known) => known !== prefix);
+// These research notes deliberately quote the upstream product's paths and
+// filenames. Keep the exemption content-only: authored paths still follow this
+// repository's naming contract, and tracked-file assertions prevent stale rows.
+const foreignPrefixContentAllowlist = new Set([
+  "docs/research/upstream-ai-dlc-v2.2.0-amadeus-main-workspace-differences.md",
+  "docs/research/upstream-ai-dlc-v2.2.0-amadeus-main-workspace-differences.ja.md",
+]);
 const previousCommandName = ["ai", "dlc"].join("");
 const previousEnvPrefix = ["AI", "DLC", "_"].join("");
 const forbiddenToolSurfaces = [
@@ -99,6 +106,7 @@ describe("authored source naming prefix contract", () => {
     expect(tracked).toContain(`packages/framework/core/scopes/${prefix}feature.md`);
     expect(tracked).toContain(`packages/framework/core/skills/${prefix}replay/SKILL.md`);
     expect(tracked).toContain(`packages/framework/harness/claude/skills/${commandName}/SKILL.md`);
+    for (const file of foreignPrefixContentAllowlist) expect(tracked).toContain(file);
   });
 
   test("tracked authored file paths and contents do not retain another known framework prefix", () => {
@@ -107,7 +115,7 @@ describe("authored source naming prefix contract", () => {
       const body = readFileSync(join(REPO_ROOT, file));
       for (const forbidden of forbiddenPrefixes) {
         if (file.includes(forbidden)) offenders.push(`${file}: path contains ${forbidden}`);
-        if (body.includes(Buffer.from(forbidden))) {
+        if (body.includes(Buffer.from(forbidden)) && !foreignPrefixContentAllowlist.has(file)) {
           offenders.push(`${file}: content contains ${forbidden}`);
         }
       }

@@ -1,6 +1,6 @@
 # Upstream AI-DLC v2.2.0 and Amadeus `main` workspace differences
 
-> Languages: **English** | [日本語](upstream-aidlc-v2.2.0-amadeus-main-workspace-differences.ja.md)
+> Languages: **English** | [日本語](upstream-ai-dlc-v2.2.0-amadeus-main-workspace-differences.ja.md)
 
 This document compares the workspace paths and filenames in
 `awslabs/aidlc-workflows` v2.2.0 with those in the Amadeus repository's `main`

@@ -1,6 +1,6 @@
 # 本家AI-DLC v2.2.0とAmadeus `main`のワークスペース差分
 
-> 言語: [English](upstream-aidlc-v2.2.0-amadeus-main-workspace-differences.md) | **日本語**
+> 言語: [English](upstream-ai-dlc-v2.2.0-amadeus-main-workspace-differences.md) | **日本語**
 
 この文書では、`awslabs/aidlc-workflows` v2.2.0と、Amadeusリポジトリの
 `main` HEADについて、ワークスペースのパスとファイル名を比較する。生成される
