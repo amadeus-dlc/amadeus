@@ -1,12 +1,29 @@
 // covers: module:amadeus-swarm-driver-boundary, requirement:FR-05, requirement:FR-18, requirement:FR-20
 // size: medium
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
 const TOOLS = join(REPO_ROOT, "packages", "framework", "core", "tools");
+
+type CapturedNativeExecution = Readonly<{
+  execute(input: unknown): Promise<unknown>;
+}>;
+
+let productionNativeExecution: CapturedNativeExecution | undefined;
+
+mock.module("../../packages/framework/core/tools/amadeus-swarm-driver-runtime.ts", () => ({
+  createProductionCoordinator(input: Readonly<{ nativeExecution: CapturedNativeExecution }>) {
+    productionNativeExecution = input.nativeExecution;
+    return Object.freeze({ status: () => null });
+  },
+}));
+
+const { executeSwarmDriverCommand } = await import(
+  "../../packages/framework/core/tools/amadeus-swarm-driver.ts"
+);
 
 function source(name: string): string {
   return readFileSync(join(TOOLS, name), "utf-8");
@@ -44,6 +61,7 @@ describe("t233 swarm driver architecture boundary", () => {
       "amadeus-swarm-driver-store.ts",
       "amadeus-swarm-driver-supervisor.ts",
       "amadeus-swarm-driver-runtime.ts",
+      "amadeus-swarm-native-execution.ts",
       "amadeus-swarm-driver.ts",
     ];
     const refereeFiles = ["amadeus-swarm-referee-finalize.ts", "amadeus-swarm.ts"];
@@ -54,7 +72,7 @@ describe("t233 swarm driver architecture boundary", () => {
     }
     for (const file of refereeFiles) {
       expect(source(file)).not.toMatch(
-        /from\s+["'][^"']*amadeus-swarm-driver-(?:lifecycle|store|supervisor|runtime)(?:\.ts)?["']/,
+        /from\s+["'][^"']*amadeus-swarm-(?:driver-(?:lifecycle|store|supervisor|runtime)|native-execution)(?:\.ts)?["']/,
       );
     }
   });
@@ -70,6 +88,7 @@ describe("t233 swarm driver architecture boundary", () => {
       "amadeus-swarm-driver-store.ts",
       "amadeus-swarm-driver-supervisor.ts",
       "amadeus-swarm-driver-runtime.ts",
+      "amadeus-swarm-native-execution.ts",
       "amadeus-swarm-driver.ts",
     ];
     expect(c01Private.filter((file) => closure.has(file))).toEqual([]);
@@ -89,6 +108,7 @@ describe("t233 swarm driver architecture boundary", () => {
   test("does not discover plugins dynamically or add network and runtime dependencies", () => {
     const boundary = [
       "amadeus-swarm-driver-runtime.ts",
+      "amadeus-swarm-native-execution.ts",
       "amadeus-swarm-driver-adapters/claude.ts",
       "amadeus-swarm-driver-adapters/codex.ts",
       "amadeus-swarm-driver-adapters/kiro.ts",
@@ -97,6 +117,22 @@ describe("t233 swarm driver architecture boundary", () => {
     expect(boundary).not.toMatch(new RegExp(`\\b(?:${forbiddenCalls.join("|")})\\s*\\(`));
     expect(boundary).not.toMatch(/\bimport\s*\(/);
     expect(boundary).not.toContain("node_modules");
+  });
+
+  test("keeps the unavailable production slot fail-closed without placeholder supervisors", async () => {
+    const output = await executeSwarmDriverCommand(
+      ["status", "--project-dir", REPO_ROOT],
+      JSON.stringify({ schemaVersion: 1, batch: 1 }),
+    );
+    const cli = source("amadeus-swarm-driver.ts");
+    expect(output.exitCode).toBe(0);
+    expect(productionNativeExecution).toBeDefined();
+    await expect(productionNativeExecution!.execute({})).rejects.toThrow(
+      "NATIVE_RESOURCE_SUPERVISOR_UNIMPLEMENTED",
+    );
+    expect(cli).not.toContain("NATIVE_CAPTURE_SUPERVISOR_UNIMPLEMENTED");
+    expect(cli).not.toContain("NATIVE_PROCESS_SUPERVISOR_UNIMPLEMENTED");
+    expect(cli).not.toContain("NATIVE_EXECUTION_SLOT_UNIMPLEMENTED");
   });
 
   test("guards both irreversible merge primitives with claim, fencing, and arm", () => {

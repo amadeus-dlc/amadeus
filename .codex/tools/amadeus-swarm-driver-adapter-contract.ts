@@ -65,6 +65,115 @@ export type LaunchInput = Readonly<{
   convergenceCommand: string;
   protectedSpec?: string;
   evidenceDir: string;
+  nativeRunId: string;
+}>;
+
+export type AuxiliaryResourcePlan =
+  | Readonly<{
+      kind: "exclusive-reservation";
+      resourceId: string;
+      candidates: readonly Readonly<{
+        reservationPath: string;
+        guardedPaths: readonly string[];
+      }>[];
+    }>
+  | Readonly<{
+      kind: "attempt-owned-file";
+      resourceId: string;
+      path: string;
+      bytes: Uint8Array;
+      mode: "0600";
+    }>
+  | Readonly<{
+      kind: "attempt-owned-directory";
+      resourceId: string;
+      path: string;
+      mode: "0700";
+    }>
+  | Readonly<{
+      kind: "pre-arm-baseline";
+      resourceId: string;
+      exactPaths: readonly string[];
+      allowAbsent: boolean;
+    }>;
+
+export type AdapterResourcePreparation = Readonly<{
+  resources: readonly AuxiliaryResourcePlan[];
+  preparationDigest: string;
+}>;
+
+export type MaterializedAuxiliaryResource = Readonly<{
+  resourceId: string;
+  kind: AuxiliaryResourcePlan["kind"];
+  selectedCandidateIndex?: number;
+  resolvedPaths: readonly string[];
+  ownerDigest: string;
+  contentOrBaselineDigest: string;
+}>;
+
+export type MaterializedAuxiliaryResourceSet = Readonly<{
+  preparationDigest: string;
+  receiptDigest: string;
+  resources: readonly MaterializedAuxiliaryResource[];
+}>;
+
+export type CoordinatorTransport =
+  | Readonly<{
+      kind: "stdio-json";
+      stdin: "closed" | Uint8Array;
+      output: "stream-json" | "jsonl";
+    }>
+  | Readonly<{
+      kind: "pty-interactive";
+      initialInput: Uint8Array;
+      columns: 120;
+      rows: 40;
+      exitOnSignal: "ready-for-graceful-exit";
+      gracefulExitInput: Uint8Array;
+      controlTimeoutMs: number;
+      gracefulExitTimeoutMs: number;
+    }>;
+
+export type FixedCaptureBinding = Readonly<{
+  kind: "fixed-provider-path";
+  nativeRunId: string;
+  exactPaths: readonly string[];
+  exactPathDigest: string;
+  sourcePlanDigest: string;
+}>;
+
+export type EventBoundCaptureBinding = Readonly<{
+  kind: "event-bound-provider-path";
+  nativeRunId: string;
+  exactPaths: readonly string[];
+  exactPathDigest: string;
+  sourceEventDigest: string;
+}>;
+
+export type CaptureBinding = FixedCaptureBinding | EventBoundCaptureBinding;
+
+export type EvidenceCapturePlan =
+  | Readonly<{
+      kind: "fixed-provider-path";
+      initialBinding: FixedCaptureBinding;
+      hookDir: string;
+    }>
+  | Readonly<{
+      kind: "event-bound-provider-path";
+      hookDir: string;
+    }>
+  | Readonly<{
+      kind: "hook-only";
+      hookDir: string;
+    }>;
+
+export type CaptureIdentity = Readonly<{
+  executionId: string;
+  attemptId: string;
+  attemptNonceHash: string;
+  planDigest: string;
+  waveIndex: number;
+  waveDigest: string;
 }>;
 
 export type LaunchSpec = Readonly<{
@@ -72,8 +181,49 @@ export type LaunchSpec = Readonly<{
   args: readonly string[];
   cwd: string;
   env: Readonly<Record<string, string>>;
-  stdin: "closed" | Uint8Array;
+  transport: CoordinatorTransport;
   timeoutMs: number;
+}>;
+
+export type AdapterExecutionPlan = Readonly<{
+  launch: LaunchSpec;
+  capture: EvidenceCapturePlan;
+  captureIdentity: CaptureIdentity;
+  resources: readonly AuxiliaryResourcePlan[];
+}>;
+
+export type RawNativeEvent = Readonly<{
+  source: "stream" | "hook";
+  bytes: Uint8Array;
+}>;
+
+export type CaptureBindingInput = Readonly<{
+  plan: Extract<EvidenceCapturePlan, Readonly<{ kind: "event-bound-provider-path" }>>;
+  identity: CaptureIdentity;
+  event: RawNativeEvent;
+}>;
+
+export type CaptureBindingResolution =
+  | Readonly<{ kind: "not-binding" }>
+  | Readonly<{ kind: "bound"; binding: EventBoundCaptureBinding }>
+  | Readonly<{ kind: "invalid"; diagnosticCode: string }>;
+
+export type LiveEvidenceInputs = Readonly<{
+  providerState: AsyncIterable<Uint8Array>;
+  nativeEvents: AsyncIterable<RawNativeEvent>;
+}>;
+
+export type ProcessTerminal = Readonly<{
+  transport: CoordinatorTransport["kind"];
+  exitCode: number;
+  processGroupId: number;
+  nativeRunId: string;
+  processIdentityDigest: string;
+  controlSignalDigest?: string;
+}>;
+
+export type EvidenceInputs = LiveEvidenceInputs & Readonly<{
+  processTerminal: ProcessTerminal;
 }>;
 
 export type NormalizeContext = Readonly<{
@@ -87,10 +237,24 @@ export type NormalizeContext = Readonly<{
   expectedUnits: readonly string[];
 }>;
 
+export type DriverControlSignal = Readonly<{
+  kind: "ready-for-graceful-exit";
+  driver: NativeDriver;
+  executionId: string;
+  attemptId: string;
+  attemptNonceHash: string;
+  planDigest: string;
+  waveIndex: number;
+  waveDigest: string;
+  coveredUnits: readonly string[];
+  liveEvidenceDigest: string;
+}>;
+
 export type EvidenceSource =
   | "model-handshake"
   | "provider-state"
   | "session-metadata"
+  | "process-lifecycle"
   | "stream"
   | "hook";
 
@@ -164,11 +328,21 @@ export type NormalizedDriverEvent =
 
 export type DriverAdapter = Readonly<{
   driver: NativeDriver;
+  provider: DriverProvider;
   supports(harness: Harness): boolean;
   probe(input: ProbeInput): Promise<ProbeResult>;
-  buildLaunch(input: LaunchInput): LaunchSpec;
+  prepareResources(input: LaunchInput): AdapterResourcePreparation;
+  buildExecution(
+    input: LaunchInput,
+    resources: MaterializedAuxiliaryResourceSet,
+  ): AdapterExecutionPlan;
+  resolveCaptureBinding(input: CaptureBindingInput): CaptureBindingResolution;
+  observeControl(
+    inputs: LiveEvidenceInputs,
+    context: NormalizeContext,
+  ): AsyncIterable<DriverControlSignal>;
   normalize(
-    raw: AsyncIterable<Uint8Array>,
+    inputs: EvidenceInputs,
     context: NormalizeContext,
   ): AsyncIterable<NormalizedDriverEvent>;
 }>;
@@ -192,7 +366,10 @@ function hasAdapterPort(adapter: unknown): adapter is DriverAdapter {
     isRecord(adapter) &&
     typeof adapter.supports === "function" &&
     typeof adapter.probe === "function" &&
-    typeof adapter.buildLaunch === "function" &&
+    typeof adapter.prepareResources === "function" &&
+    typeof adapter.buildExecution === "function" &&
+    typeof adapter.resolveCaptureBinding === "function" &&
+    typeof adapter.observeControl === "function" &&
     typeof adapter.normalize === "function"
   );
 }
@@ -213,6 +390,9 @@ function indexAdapter(
     return registrationFailure("REGISTRATION_SLOT_INVALID", provider);
   }
   if (!NATIVE_DRIVER_VALUES.includes(adapter.driver) || !expected.has(adapter.driver)) {
+    return registrationFailure("REGISTRATION_DRIVER_OWNERSHIP_INVALID", provider, adapter.driver);
+  }
+  if (adapter.provider !== provider) {
     return registrationFailure("REGISTRATION_DRIVER_OWNERSHIP_INVALID", provider, adapter.driver);
   }
   if (byDriver.has(adapter.driver)) {

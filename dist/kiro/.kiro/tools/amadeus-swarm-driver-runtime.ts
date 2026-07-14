@@ -3,9 +3,10 @@
 import { randomUUID } from "node:crypto";
 import {
   DriverRegistrationSet,
-  type DriverAdapter,
   type DriverPlan,
   type DriverRegistrationSet as DriverRegistrationSetValue,
+  type LaunchInput,
+  type NormalizeContext,
   type NormalizedDriverEvent,
   type PreparedUnit,
 } from "./amadeus-swarm-driver-adapter-contract.ts";
@@ -27,6 +28,7 @@ import {
 } from "./amadeus-swarm-driver-contract.ts";
 import {
   buildTransition,
+  buildDispatchDigest,
   buildFinalizeRequestBinding,
   buildRunRequestBinding,
   canonicalPreparedUnits,
@@ -61,6 +63,10 @@ import {
   sameProcess,
   type ProcessIdentity,
 } from "./amadeus-armed-process.ts";
+import type {
+  LifecycleNativeExecution,
+  NativeDispatchCheckpoint,
+} from "./amadeus-swarm-native-execution.ts";
 
 export type RuntimeError = Readonly<{
   code:
@@ -115,15 +121,7 @@ export type ResolutionOutput = Readonly<{
   expectedUnits: readonly string[];
 }>;
 
-export type NativeExecutionPort = Readonly<{
-  execute(input: Readonly<{
-    adapter: DriverAdapter;
-    plan: DriverPlan;
-    preparedUnits: readonly PreparedUnit[];
-    nativeRunId: string;
-    waveDigest: string;
-  }>): Promise<readonly NormalizedDriverEvent[]>;
-}>;
+export type NativeExecutionPort = LifecycleNativeExecution;
 
 export type AttemptRecoveryPort = Readonly<{
   recover(input: Readonly<{
@@ -240,6 +238,22 @@ function withoutDigest<Checkpoint extends AttemptCheckpoint>(
   return post;
 }
 
+function withoutDispatch(
+  checkpoint: Extract<AttemptCheckpoint, Readonly<{ state: "dispatched" }>>,
+): Omit<
+  Extract<AttemptCheckpoint, Readonly<{ state: "dispatched" }>>,
+  "stateDigest" | "dispatch" | "dispatchDigest" | "dispatchPreparation" | "preparedNativeRun"
+> {
+  const {
+    dispatch: _dispatch,
+    dispatchDigest: _dispatchDigest,
+    dispatchPreparation: _dispatchPreparation,
+    preparedNativeRun: _preparedNativeRun,
+    ...post
+  } = withoutDigest(checkpoint);
+  return post;
+}
+
 function transitionTo<State extends AttemptState>(
   store: DriverAttemptStore,
   checkpoint: AttemptCheckpoint,
@@ -273,6 +287,17 @@ function failAttempt(
     AttemptState,
     "succeeded" | "failed-resumable" | "failed-terminal"
   >;
+  const recoveryContext =
+    (checkpoint.state === "prepared" || checkpoint.state === "dispatched") &&
+    checkpoint.dispatchPreparation
+      ? Object.freeze({
+          dispatchPreparation: checkpoint.dispatchPreparation,
+          ...(checkpoint.preparedNativeRun ? { preparedNativeRun: checkpoint.preparedNativeRun } : {}),
+          ...(checkpoint.state === "dispatched" && checkpoint.dispatch.kind === "native"
+            ? { dispatch: checkpoint.dispatch }
+            : {}),
+        })
+      : undefined;
   return transitionTo(store, checkpoint, randomUUID(), "attempt-failed", {
     schemaVersion: checkpoint.schemaVersion,
     state: terminal ? "failed-terminal" : "failed-resumable",
@@ -290,6 +315,7 @@ function failAttempt(
       code,
       affectedUnits: checkpoint.selectionInput.expectedUnits,
       failedFromState,
+      ...(recoveryContext ? { recoveryContext } : {}),
     },
   });
 }
@@ -402,6 +428,8 @@ function selectionFailureCode(code: SelectorError["code"]): RuntimeError["code"]
 }
 
 type SelectedCheckpoint = Extract<AttemptCheckpoint, Readonly<{ state: "selected" }>>;
+type PreparedCheckpoint = Extract<AttemptCheckpoint, Readonly<{ state: "prepared" }>>;
+type DispatchedCheckpoint = Extract<AttemptCheckpoint, Readonly<{ state: "dispatched" }>>;
 
 function readSelectedCheckpoint(
   store: DriverAttemptStore,
@@ -436,6 +464,46 @@ function nonNativeExecutionPlan(checkpoint: AttemptCheckpoint): FloorOrLegacyExe
     planDigest: checkpoint.selectedContext.planDigest,
     warningCode: selection.warningCode,
   });
+}
+
+function dispatchExternalExecution(
+  store: DriverAttemptStore,
+  checkpoint: PreparedCheckpoint,
+  mintId: () => string,
+): Readonly<{
+  checkpoint: DispatchedCheckpoint;
+  plan: FloorOrLegacyExecutionPlan;
+}> | null {
+  const selection = checkpoint.selectedContext.selection;
+  if (selection.kind === "native-selection") return null;
+  const executionMode = selection.kind === "floor-selection" ? "floor" as const : "legacy" as const;
+  const dispatch = Object.freeze({ kind: "external" as const, executionMode });
+  const dispatchDigest = buildDispatchDigest({
+    executionId: checkpoint.executionId,
+    attemptId: checkpoint.attemptId,
+    manifestDigest: checkpoint.worktreeManifestDigest,
+    selection,
+    runBinding: checkpoint.runBinding,
+    dispatch,
+  });
+  const dispatched = transitionTo(store, checkpoint, mintId(), "prepared-dispatched", {
+    ...withoutDigest(checkpoint),
+    state: "dispatched",
+    preparedUnits: checkpoint.preparedUnits,
+    worktreeManifestDigest: checkpoint.worktreeManifestDigest,
+    dispatchDigest,
+    dispatch,
+    runBinding: checkpoint.runBinding,
+  });
+  const plan = nonNativeExecutionPlan(dispatched);
+  if (!plan) throw new Error("Invalid external execution plan");
+  return Object.freeze({ checkpoint: dispatched, plan });
+}
+
+function assertNativeSelection(
+  selection: RedactedSelection,
+): asserts selection is Extract<RedactedSelection, Readonly<{ kind: "native-selection" }>> {
+  if (selection.kind !== "native-selection") throw new Error("Invalid native selection");
 }
 
 export function createCoordinator(input: Readonly<{
@@ -579,25 +647,9 @@ export function createCoordinator(input: Readonly<{
         runBinding: runBinding.value,
       });
       const selection = checkpoint.selectedContext.selection;
-      const dispatchDigest = digestValue({
-        executionId: checkpoint.executionId,
-        attemptId: checkpoint.attemptId,
-        manifestDigest,
-        selection,
-        runBinding: runBinding.value,
-      });
-      checkpoint = transitionTo(input.store, checkpoint, mintId(), "prepared-dispatched", {
-        ...withoutDigest(checkpoint),
-        state: "dispatched",
-        preparedUnits: prepared.value,
-        worktreeManifestDigest: manifestDigest,
-        dispatchDigest,
-        runBinding: runBinding.value,
-      });
-
-      const nonNativePlan = nonNativeExecutionPlan(checkpoint);
-      if (nonNativePlan) return ok(nonNativePlan);
-      if (selection.kind !== "native-selection") return err("CHECKPOINT_STATE_INVALID");
+      const external = dispatchExternalExecution(input.store, checkpoint, mintId);
+      if (external) return ok(external.plan);
+      assertNativeSelection(selection);
 
       const driver = selectedDriver(selection);
       if (!driver) return err("CHECKPOINT_STATE_INVALID");
@@ -634,19 +686,115 @@ export function createCoordinator(input: Readonly<{
       const nativeRunId = mintId();
       const waveIndex = 0;
       const waveDigest = digestValue(plan.waves[waveIndex]);
+      const launchInput: LaunchInput = Object.freeze({
+        plan,
+        wave: plan.waves[waveIndex],
+        preparedUnits: prepared.value,
+        convergenceCommand: runInput.convergenceCommand,
+        ...(runInput.protectedSpec ? { protectedSpec: runInput.protectedSpec } : {}),
+        evidenceDir: runInput.evidenceDir,
+        nativeRunId,
+      });
+      const context: NormalizeContext = Object.freeze({
+        driver,
+        executionId: plan.executionId,
+        attemptId: plan.attemptId,
+        attemptNonceHash: plan.attemptNonceHash,
+        planDigest: plan.planDigest,
+        waveIndex,
+        waveDigest,
+        expectedUnits: checkpoint.selectionInput.expectedUnits,
+      });
+      const nativeDispatchDigest = (dispatch: NativeDispatchCheckpoint): string =>
+        buildDispatchDigest({
+          executionId: checkpoint.executionId,
+          attemptId: checkpoint.attemptId,
+          manifestDigest: manifestDigest,
+          selection,
+          runBinding: runBinding.value,
+          dispatch,
+        });
       let events: readonly NormalizedDriverEvent[];
       try {
         events = await input.nativeExecution.execute({
           adapter,
-          plan,
-          preparedUnits: prepared.value,
-          nativeRunId,
-          waveDigest,
+          launchInput,
+          context,
+          onDispatchPrepared: async (dispatchPreparation) => {
+            if (checkpoint.state !== "prepared" || checkpoint.dispatchPreparation !== undefined) {
+              throw new Error("NATIVE_DISPATCH_PREPARATION_INVALID");
+            }
+            checkpoint = transitionTo(input.store, checkpoint, mintId(), "native-dispatch-prepared", {
+              ...withoutDigest(checkpoint),
+              state: "prepared",
+              dispatchPreparation,
+            });
+          },
+          onResourcesPrepared: async (preparedNativeRun) => {
+            if (
+              checkpoint.state !== "prepared" ||
+              checkpoint.dispatchPreparation === undefined ||
+              checkpoint.preparedNativeRun !== undefined
+            ) {
+              throw new Error("NATIVE_RESOURCE_PREPARATION_INVALID");
+            }
+            checkpoint = transitionTo(input.store, checkpoint, mintId(), "native-resources-prepared", {
+              ...withoutDigest(checkpoint),
+              state: "prepared",
+              preparedNativeRun,
+            });
+          },
+          onReadyToArm: async (dispatch) => {
+            if (
+              checkpoint.state !== "prepared" ||
+              checkpoint.dispatchPreparation === undefined ||
+              checkpoint.preparedNativeRun === undefined ||
+              dispatch.nativeRunId !== nativeRunId ||
+              dispatch.preparedNativeRunDigest !== digestValue(checkpoint.preparedNativeRun)
+            ) {
+              throw new Error("NATIVE_DISPATCH_INVALID");
+            }
+            checkpoint = transitionTo(input.store, checkpoint, mintId(), "prepared-dispatched", {
+              ...withoutDigest(checkpoint),
+              state: "dispatched",
+              preparedUnits: prepared.value,
+              worktreeManifestDigest: manifestDigest,
+              dispatchDigest: nativeDispatchDigest(dispatch),
+              dispatch,
+              runBinding: runBinding.value,
+            });
+          },
+          onCaptureBound: async (binding) => {
+            if (
+              checkpoint.state !== "dispatched" ||
+              checkpoint.dispatch.kind !== "native" ||
+              checkpoint.dispatch.capture.kind !== "event-bound-provider-path" ||
+              checkpoint.dispatch.capture.binding !== undefined
+            ) {
+              throw new Error("CAPTURE_BINDING_INVALID");
+            }
+            const dispatch: NativeDispatchCheckpoint = Object.freeze({
+              ...checkpoint.dispatch,
+              capture: Object.freeze({ ...checkpoint.dispatch.capture, binding }),
+            });
+            checkpoint = transitionTo(input.store, checkpoint, mintId(), "capture-bound", {
+              ...withoutDigest(checkpoint),
+              state: "dispatched",
+              dispatchDigest: nativeDispatchDigest(dispatch),
+              dispatch,
+            });
+          },
         });
       } catch {
         failAttempt(input.store, checkpoint, "COORDINATOR_FAILED", false);
         return err("EXECUTION_FAILED");
       }
+      const materializedDispatch = input.store.read(runInput.batch);
+      if (materializedDispatch?.state !== "dispatched" || materializedDispatch.dispatch.kind !== "native") {
+        failAttempt(input.store, checkpoint, "COORDINATOR_FAILED", false);
+        return err("EXECUTION_FAILED");
+      }
+      checkpoint = materializedDispatch;
       const verdict = verifyNativeEvidence({
         driver,
         executionId: checkpoint.executionId,
@@ -678,7 +826,7 @@ export function createCoordinator(input: Readonly<{
         completedUnits: verdict.completedUnits,
       });
       transitionTo(input.store, checkpoint, mintId(), "dispatch-evidence-verified", {
-        ...withoutDigest(checkpoint),
+        ...withoutDispatch(checkpoint),
         state: "evidence-verified",
         preparedUnits: prepared.value,
         worktreeManifestDigest: manifestDigest,
@@ -712,7 +860,7 @@ export function createCoordinator(input: Readonly<{
       });
       return ok(
         transitionTo(input.store, checkpoint, mintId(), "dispatch-evidence-verified", {
-          ...withoutDigest(checkpoint),
+          ...withoutDispatch(checkpoint),
           state: "evidence-verified",
           preparedUnits: checkpoint.preparedUnits,
           worktreeManifestDigest: checkpoint.worktreeManifestDigest,
@@ -746,7 +894,7 @@ export function createCoordinator(input: Readonly<{
       });
       return ok(
         transitionTo(input.store, checkpoint, mintId(), "dispatch-evidence-verified", {
-          ...withoutDigest(checkpoint),
+          ...withoutDispatch(checkpoint),
           state: "evidence-verified",
           preparedUnits: checkpoint.preparedUnits,
           worktreeManifestDigest: checkpoint.worktreeManifestDigest,

@@ -62669,3 +62669,3812 @@
 **Context**: construction > code-generation > memory.md
 
 ---
+
+## Session Compacted
+**Timestamp**: 2026-07-14T12:02:50Z
+**Event**: SESSION_COMPACTED
+**Current Stage**: code-generation
+**State Validity**: valid
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:10:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: a2b13515
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:10:54Z
+**Event**: SENSOR_FAILED
+**Fire id**: a2b13515
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/linter-a2b13515.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:10:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1968e3c0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:10:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1968e3c0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 588
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:11:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: d9bfeac1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-adapter-contract.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:11:45Z
+**Event**: SENSOR_FAILED
+**Fire id**: d9bfeac1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-adapter-contract.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/linter-d9bfeac1.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:11:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 17438156
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-adapter-contract.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:11:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 17438156
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-adapter-contract.ts
+**Duration ms**: 784
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:13:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4fcc36b9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:13:12Z
+**Event**: SENSOR_FAILED
+**Fire id**: 4fcc36b9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/linter-4fcc36b9.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:13:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: b0d29c60
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:13:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: b0d29c60
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Duration ms**: 552
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:13:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6c5bafc9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:13:20Z
+**Event**: SENSOR_FAILED
+**Fire id**: 6c5bafc9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/linter-6c5bafc9.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:13:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 629447ed
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:13:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: 629447ed
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 513
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:14:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1c32ef15
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/t223-swarm-driver-contract.test.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:14:04Z
+**Event**: SENSOR_FAILED
+**Fire id**: 1c32ef15
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/t223-swarm-driver-contract.test.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/linter-1c32ef15.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:14:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2b5fd0a1
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/t223-swarm-driver-contract.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:14:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2b5fd0a1
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/t223-swarm-driver-contract.test.ts
+**Duration ms**: 513
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:14:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 447e89d9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:14:18Z
+**Event**: SENSOR_FAILED
+**Fire id**: 447e89d9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/linter-447e89d9.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:14:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: c77944fb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:14:18Z
+**Event**: SENSOR_PASSED
+**Fire id**: c77944fb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Duration ms**: 519
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:14:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 886e0d2e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:14:25Z
+**Event**: SENSOR_FAILED
+**Fire id**: 886e0d2e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/linter-886e0d2e.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:14:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0ac51952
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:14:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0ac51952
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 504
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:15:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9ee62299
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:15:09Z
+**Event**: SENSOR_FAILED
+**Fire id**: 9ee62299
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/linter-9ee62299.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:15:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: 56d068a5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:15:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: 56d068a5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 489
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:15:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6947ec91
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:15:38Z
+**Event**: SENSOR_FAILED
+**Fire id**: 6947ec91
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/linter-6947ec91.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:15:38Z
+**Event**: SENSOR_FIRED
+**Fire id**: 528e8126
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:15:38Z
+**Event**: SENSOR_PASSED
+**Fire id**: 528e8126
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 507
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:16:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: 66d56c34
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:16:18Z
+**Event**: SENSOR_FAILED
+**Fire id**: 66d56c34
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/linter-66d56c34.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:16:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2a1c68de
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:16:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2a1c68de
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 693
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:16:42Z
+**Event**: SENSOR_FIRED
+**Fire id**: 94551b2f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:16:43Z
+**Event**: SENSOR_FAILED
+**Fire id**: 94551b2f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/linter-94551b2f.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:16:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0f6c3d9b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:16:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0f6c3d9b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 579
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:16:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0e50e746
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:16:55Z
+**Event**: SENSOR_FAILED
+**Fire id**: 0e50e746
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/linter-0e50e746.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:16:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 02e3c3dc
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:16:56Z
+**Event**: SENSOR_FAILED
+**Fire id**: 02e3c3dc
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/type-check-02e3c3dc.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:17:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2d1f85c5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:17:33Z
+**Event**: SENSOR_FAILED
+**Fire id**: 2d1f85c5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/linter-2d1f85c5.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:17:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 033a839d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:17:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: 033a839d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Duration ms**: 670
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:18:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: c7266a57
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:18:03Z
+**Event**: SENSOR_FAILED
+**Fire id**: c7266a57
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/linter-c7266a57.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:18:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: ff82e8f6
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:18:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: ff82e8f6
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Duration ms**: 502
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:18:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 448d56f6
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:18:49Z
+**Event**: SENSOR_FAILED
+**Fire id**: 448d56f6
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/linter-448d56f6.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:18:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 87047188
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:18:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 87047188
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Duration ms**: 636
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:18:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: cbdeb37f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:18:58Z
+**Event**: SENSOR_FAILED
+**Fire id**: cbdeb37f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/linter-cbdeb37f.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:18:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: c9311dea
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:18:58Z
+**Event**: SENSOR_FAILED
+**Fire id**: c9311dea
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/type-check-c9311dea.md
+**Findings count**: 3
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:19:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: aef81e8d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:19:12Z
+**Event**: SENSOR_FAILED
+**Fire id**: aef81e8d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/linter-aef81e8d.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:19:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: bbe77967
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:19:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: bbe77967
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Duration ms**: 653
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:19:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: 24d2f5bb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t233-swarm-driver-boundary.test.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:19:47Z
+**Event**: SENSOR_FAILED
+**Fire id**: 24d2f5bb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t233-swarm-driver-boundary.test.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/linter-24d2f5bb.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:19:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: df08a43a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t233-swarm-driver-boundary.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:19:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: df08a43a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t233-swarm-driver-boundary.test.ts
+**Duration ms**: 543
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:20:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 35d8e729
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:20:45Z
+**Event**: SENSOR_FAILED
+**Fire id**: 35d8e729
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/linter-35d8e729.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:20:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: a6f5bba1
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:20:46Z
+**Event**: SENSOR_PASSED
+**Fire id**: a6f5bba1
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 496
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:20:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9e3a3e47
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:20:56Z
+**Event**: SENSOR_FAILED
+**Fire id**: 9e3a3e47
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/linter-9e3a3e47.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:20:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: cdf92b03
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:20:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: cdf92b03
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 503
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:21:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8fafdee4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:21:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8fafdee4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Duration ms**: 1430
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:21:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 748c64ce
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:21:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 748c64ce
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Duration ms**: 653
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:21:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7948602e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:21:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7948602e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 1269
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:21:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 89fbfaa9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:21:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 89fbfaa9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 496
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:21:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: c96081b9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:21:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: c96081b9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 1276
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:21:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: fc0cec0d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:21:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: fc0cec0d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 490
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:22:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: ab7ac59e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-adapter-contract.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:22:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: ab7ac59e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-adapter-contract.ts
+**Duration ms**: 1340
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:22:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: ab328ee9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-adapter-contract.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:22:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: ab328ee9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-adapter-contract.ts
+**Duration ms**: 797
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:22:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 322ace81
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/t223-swarm-driver-contract.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:22:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 322ace81
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/t223-swarm-driver-contract.test.ts
+**Duration ms**: 1289
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:22:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1f3027c6
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/t223-swarm-driver-contract.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:22:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1f3027c6
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/t223-swarm-driver-contract.test.ts
+**Duration ms**: 500
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:22:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 69895e7d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:22:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: 69895e7d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Duration ms**: 1396
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:22:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 19b6c94b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:22:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: 19b6c94b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Duration ms**: 503
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:22:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9831293c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:23:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9831293c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 1296
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:23:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: f2a3e3ce
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:23:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: f2a3e3ce
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 493
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:23:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: bb113e7a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/t223-swarm-driver-contract.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:23:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: bb113e7a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/t223-swarm-driver-contract.test.ts
+**Duration ms**: 1304
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:23:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: 99c244f1
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/t223-swarm-driver-contract.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:23:18Z
+**Event**: SENSOR_PASSED
+**Fire id**: 99c244f1
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/t223-swarm-driver-contract.test.ts
+**Duration ms**: 551
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:23:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0d17d83a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:23:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0d17d83a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 1299
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:23:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: aa73e9c8
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:23:42Z
+**Event**: SENSOR_PASSED
+**Fire id**: aa73e9c8
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 715
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:23:42Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7a02c9c7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:23:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7a02c9c7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Duration ms**: 1248
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:23:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: b8a70800
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:23:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: b8a70800
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Duration ms**: 492
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:24:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5c721e1d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:24:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5c721e1d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 1288
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:24:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3326b213
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:24:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3326b213
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 505
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:25:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: d6d5fc76
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:25:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: d6d5fc76
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 1285
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:25:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5f363a14
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:25:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5f363a14
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 585
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:25:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: b4c980eb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:25:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: b4c980eb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Duration ms**: 1286
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:25:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4ead936f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:25:36Z
+**Event**: SENSOR_FAILED
+**Fire id**: 4ead936f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/type-check-4ead936f.md
+**Findings count**: 13
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:25:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1e0ae3b0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:25:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1e0ae3b0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Duration ms**: 1264
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:25:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: f1abcaf3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:26:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: f1abcaf3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Duration ms**: 620
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:26:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: 79d10c65
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:26:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 79d10c65
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Duration ms**: 1277
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:26:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: ecdaf085
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:26:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: ecdaf085
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Duration ms**: 612
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:30:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: e5a974f3
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:30:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: e5a974f3
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Duration ms**: 1352
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:30:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1be78eba
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:30:15Z
+**Event**: SENSOR_FAILED
+**Fire id**: 1be78eba
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/type-check-1be78eba.md
+**Findings count**: 3
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-14T12:30:46Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: default
+**Agent ID**: 019f5fde-f2a7-77b0-ba8d-275e28b72614
+**Message**: 判定は **NOT-READY** です。Critical 1件、Major 5件、Minor 0件です。\n\n1. Critical — crash recoveryに必要な状態とabort契約がありません。`prepared` checkpointにplanned run情報がなく、capture/process開始後の例外ではjoin・terminate・cleanupも保証されません。[li
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:33:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8727c88f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-adapter-contract.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:33:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8727c88f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-adapter-contract.ts
+**Duration ms**: 1304
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:33:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 26b08f66
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-adapter-contract.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:33:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 26b08f66
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-adapter-contract.ts
+**Duration ms**: 773
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:33:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: d629bac6
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:33:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: d629bac6
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Duration ms**: 1271
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:33:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 879cbdbe
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:33:26Z
+**Event**: SENSOR_FAILED
+**Fire id**: 879cbdbe
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/type-check-879cbdbe.md
+**Findings count**: 3
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:33:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: bee4f66f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:33:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: bee4f66f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Duration ms**: 1294
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:33:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7adf3bad
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:33:37Z
+**Event**: SENSOR_FAILED
+**Fire id**: 7adf3bad
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/type-check-7adf3bad.md
+**Findings count**: 3
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:35:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2c3f38d4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:35:18Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2c3f38d4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Duration ms**: 1314
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:35:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: 330483ec
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:35:18Z
+**Event**: SENSOR_PASSED
+**Fire id**: 330483ec
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Duration ms**: 563
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:35:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3d88558e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:35:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3d88558e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 1279
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:35:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2df094d1
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:35:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2df094d1
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 696
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:35:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 067b9ee2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:35:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: 067b9ee2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 1287
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:35:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: 594e69c5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:35:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: 594e69c5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 589
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:36:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: 642c374a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:36:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: 642c374a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 1382
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:36:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8b6b5d4b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:36:11Z
+**Event**: SENSOR_FAILED
+**Fire id**: 8b6b5d4b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/type-check-8b6b5d4b.md
+**Findings count**: 3
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:36:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: fdd7bd63
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:36:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: fdd7bd63
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 1257
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:36:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: 067f9692
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:36:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: 067f9692
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 593
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:36:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8981f04f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:36:26Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8981f04f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 1346
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:36:26Z
+**Event**: SENSOR_FIRED
+**Fire id**: 83b4e29d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:36:27Z
+**Event**: SENSOR_PASSED
+**Fire id**: 83b4e29d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 581
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:36:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: b333cf2e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:36:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: b333cf2e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 1273
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:36:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4442bc10
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:36:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4442bc10
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 585
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:37:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: 381460e5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:37:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 381460e5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 1396
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:37:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: d6e954a1
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:37:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: d6e954a1
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 578
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:37:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: 63a86fb7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:37:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 63a86fb7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 1268
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:37:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9b1ddf55
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:37:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9b1ddf55
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 602
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:37:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: ab552939
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:37:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: ab552939
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 1658
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:37:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9e6b21de
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:37:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9e6b21de
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 600
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:37:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: 675e3953
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:37:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 675e3953
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Duration ms**: 1273
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:37:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: dfee8539
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:37:35Z
+**Event**: SENSOR_FAILED
+**Fire id**: dfee8539
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/type-check-dfee8539.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:37:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: cfbd32d5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:37:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: cfbd32d5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Duration ms**: 1270
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:37:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8caccf27
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:37:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8caccf27
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Duration ms**: 625
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:38:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: d19b4a1f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:38:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: d19b4a1f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Duration ms**: 1385
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:38:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6ef2a8ed
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:38:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6ef2a8ed
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-runtime.ts
+**Duration ms**: 630
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:38:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: ee10ba88
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:38:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: ee10ba88
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Duration ms**: 1284
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:38:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 25a1c94f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:38:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 25a1c94f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Duration ms**: 494
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:38:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 52a1732c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:38:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 52a1732c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 1303
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:38:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: c828c513
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:38:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: c828c513
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 502
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:39:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: a0182bac
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:39:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: a0182bac
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 1261
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:39:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 41ce7423
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:39:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 41ce7423
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 493
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:39:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: 396cd3fd
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:39:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: 396cd3fd
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 1291
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:39:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: 234358ec
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:39:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: 234358ec
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 530
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:40:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 80c869d0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:40:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: 80c869d0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 1273
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:40:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9ff9b59e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:40:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9ff9b59e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 497
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:40:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4019ee46
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:40:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4019ee46
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 1277
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:40:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4964196d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:40:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4964196d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 499
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:41:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 284dd7d1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:41:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: 284dd7d1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Duration ms**: 1300
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:41:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 97dd3eb8
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:41:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: 97dd3eb8
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Duration ms**: 583
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:41:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: db7b00fb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:41:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: db7b00fb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver.ts
+**Duration ms**: 1284
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:41:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7fb4bdba
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:41:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7fb4bdba
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver.ts
+**Duration ms**: 564
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:42:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6eba8967
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:42:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6eba8967
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 1668
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:42:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0571698a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:42:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0571698a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 499
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:43:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 16e4cd72
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:43:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: 16e4cd72
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 1407
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:43:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6fa62a47
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:43:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6fa62a47
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 500
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:43:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: b36f45d0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:43:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: b36f45d0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Duration ms**: 1315
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:43:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: 97afb899
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:43:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: 97afb899
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Duration ms**: 530
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:43:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: d83ad97a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t233-swarm-driver-boundary.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:43:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: d83ad97a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t233-swarm-driver-boundary.test.ts
+**Duration ms**: 1303
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:43:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 16a8a734
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t233-swarm-driver-boundary.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:43:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 16a8a734
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t233-swarm-driver-boundary.test.ts
+**Duration ms**: 497
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:43:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: b9b7e046
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:43:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: b9b7e046
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Duration ms**: 1275
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:43:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: 93cc3a3f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:43:42Z
+**Event**: SENSOR_PASSED
+**Fire id**: 93cc3a3f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Duration ms**: 493
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:44:38Z
+**Event**: SENSOR_FIRED
+**Fire id**: c933f61e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:44:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: c933f61e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Duration ms**: 1312
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:44:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: 812e1a40
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:44:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: 812e1a40
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Duration ms**: 565
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:45:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: e58c9ad4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:45:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: e58c9ad4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Duration ms**: 1263
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:45:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9b711674
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:45:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9b711674
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Duration ms**: 566
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:45:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: cd3e8af1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:45:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: cd3e8af1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 1289
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:45:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: b89903ef
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:45:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: b89903ef
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 592
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:46:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0898f8db
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:46:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0898f8db
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 1275
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:46:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5b98824c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:46:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5b98824c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 591
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:46:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7c97777f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:46:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7c97777f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 1283
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:46:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4cc4f4dc
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:46:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4cc4f4dc
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 505
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:46:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: 40af78c2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:46:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 40af78c2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 1300
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:46:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6b51b6ff
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:46:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6b51b6ff
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 514
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:47:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: b7070a28
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:47:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: b7070a28
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 1283
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:47:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: c911677e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:47:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: c911677e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 495
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:47:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 48649d09
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:47:26Z
+**Event**: SENSOR_PASSED
+**Fire id**: 48649d09
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 1279
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:47:26Z
+**Event**: SENSOR_FIRED
+**Fire id**: 364159ef
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:47:26Z
+**Event**: SENSOR_PASSED
+**Fire id**: 364159ef
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 494
+
+---
+
+## Session Compacted
+**Timestamp**: 2026-07-14T12:47:52Z
+**Event**: SESSION_COMPACTED
+**Current Stage**: code-generation
+**State Validity**: valid
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:49:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1faef10d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:49:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1faef10d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Duration ms**: 1335
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:49:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: bf4e4a6f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:49:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: bf4e4a6f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Duration ms**: 503
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:49:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: e638fd40
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:49:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: e638fd40
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Duration ms**: 1288
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:49:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: a81bcacd
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:49:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: a81bcacd
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Duration ms**: 571
+
+---
+
+## Session Compacted
+**Timestamp**: 2026-07-14T12:49:37Z
+**Event**: SESSION_COMPACTED
+**Current Stage**: code-generation
+**State Validity**: valid
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-14T12:52:39Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: default
+**Agent ID**: 019f5fde-f2a7-77b0-ba8d-275e28b72614
+**Message**: ## Review Iteration 2\n\n**判定: NOT-READY — Critical 1 / Major 5**\n\n主な残件:\n\n- Critical: `prepared` / `dispatched` の実プロセスクラッシュを回収・resumeできない。\n- Major: event-bound bindingがcapture supervisorへ適用されず、継続streamで
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:55:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 82a918fa
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-adapter-contract.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:55:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 82a918fa
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-adapter-contract.ts
+**Duration ms**: 1312
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:55:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5c6a4e4b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-adapter-contract.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:55:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5c6a4e4b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-adapter-contract.ts
+**Duration ms**: 769
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:56:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 816ef859
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:56:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: 816ef859
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Duration ms**: 1271
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:56:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: b8a053a3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:56:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: b8a053a3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Duration ms**: 720
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:56:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: e58ab950
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:56:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: e58ab950
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Duration ms**: 1307
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:56:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: d3cd36cc
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:56:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: d3cd36cc
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Duration ms**: 574
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:56:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6f725be4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:56:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6f725be4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Duration ms**: 1293
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:56:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: 008b16e7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-14T12:56:41Z
+**Event**: SENSOR_FAILED
+**Fire id**: 008b16e7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Detail path**: amadeus/spaces/default/intents/260713-swarm-driver-migration/.amadeus-sensors/code-generation/type-check-008b16e7.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:57:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: 86cf3768
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:57:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 86cf3768
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Duration ms**: 1324
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:57:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1e16891d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:57:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1e16891d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Duration ms**: 615
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:57:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: db0e228a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:57:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: db0e228a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 1301
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:57:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 87177859
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:57:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 87177859
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 594
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:57:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: c7b09793
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:57:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: c7b09793
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 1272
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:57:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: 83e2e764
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:57:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: 83e2e764
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts
+**Duration ms**: 608
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:57:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6c4581fe
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:57:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6c4581fe
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 1444
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:57:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: ab2ad8ce
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:57:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: ab2ad8ce
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t237-swarm-driver-capture.test.ts
+**Duration ms**: 505
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:57:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 07e3ee9c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:58:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: 07e3ee9c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Duration ms**: 1367
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:58:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5052a29a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:58:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5052a29a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Duration ms**: 555
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:58:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: d486033e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:58:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: d486033e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Duration ms**: 1288
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:58:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3a017e06
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:58:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3a017e06
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Duration ms**: 497
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:58:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: e6820b4f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:58:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: e6820b4f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Duration ms**: 1284
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:58:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1ab1815c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:58:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1ab1815c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Duration ms**: 502
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:59:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: a6fd15d6
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:59:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: a6fd15d6
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Duration ms**: 1501
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T12:59:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: e033be70
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T12:59:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: e033be70
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t231-swarm-driver-runtime.test.ts
+**Duration ms**: 508
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-14T12:59:51Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/.codex/worktrees/d9c7/amadeus/amadeus/spaces/default/intents/260713-swarm-driver-migration/construction/swarm-execution-lifecycle/code-generation/code-generation-plan.md
+**Context**: construction > swarm-execution-lifecycle > code-generation > code-generation-plan.md
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-14T12:59:51Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/.codex/worktrees/d9c7/amadeus/amadeus/spaces/default/intents/260713-swarm-driver-migration/construction/swarm-execution-lifecycle/code-generation/code-summary.md
+**Context**: construction > swarm-execution-lifecycle > code-generation > code-summary.md
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-14T12:59:51Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/.codex/worktrees/d9c7/amadeus/amadeus/spaces/default/intents/260713-swarm-driver-migration/construction/code-generation/memory.md
+**Context**: construction > code-generation > memory.md
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-14T13:00:04Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/.codex/worktrees/d9c7/amadeus/amadeus/spaces/default/intents/260713-swarm-driver-migration/construction/code-generation/memory.md
+**Context**: construction > code-generation > memory.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T13:01:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0133556f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T13:01:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0133556f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Duration ms**: 1284
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-14T13:01:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: c5455bcb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-14T13:01:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: c5455bcb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-swarm-native-execution.ts
+**Duration ms**: 573
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-14T13:06:22Z
+**Event**: HUMAN_TURN
+
+---

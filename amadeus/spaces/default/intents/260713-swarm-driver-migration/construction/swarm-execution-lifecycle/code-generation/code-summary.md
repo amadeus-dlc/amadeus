@@ -251,3 +251,26 @@ Iteration 2で指摘された5件をtest-firstで修正した。併せて、oper
 - coverage registry / project gate: PASS。registry fresh、guard green、current 62.3331% / baseline 40.9395%、ratchet維持。
 - `bun run dist`、`bun run promote:self`、`bun run dist:check`、`bun run promote:self:check`: PASS。
 - `bun tests/run-tests.ts --ci --verbose`: 347 files、4,759 assertions、0 fail、wall-clock drift 0。
+
+## Closed PTY / capture中間スタックPR
+
+### 実装
+
+- `DriverAdapter`へprovider ownership、resource preparation、closed transport／capture、event-bound binding、live control、normalized evidenceの契約を追加した。
+- provider-neutralなnative lifecycleを追加し、resource準備、checkpoint、capture開始、identity確認、arm、binding、PTY control、terminal、capture join、normalize、cleanupの順序を固定した。
+- event-bound bindingは監査checkpointを先に保存し、その後capture sessionへexact bindingを適用して直ちにprocess待機へ進む。継続するbinding streamのEOFには依存しない。
+- PTY controlはtimeout内のちょうど1件を要求し、control signal digestをterminal receiptと照合する。通常終了、回復終了、captureが返すterminalはnative run、transport、process identityを含めて相関する。
+- execution plan、transport／capture variant、materialized resource receipt、checkpoint relative pathをexact schemaへ閉じた。transition適用時にもcheckpoint parserで検証する。
+
+### Testとレビュー
+
+- `t237-swarm-driver-capture.test.ts`を追加し、capture-before-arm、event-bound binding、PTY control、resource receipt拒否、checkpoint失敗時のterminate→join→cleanup、bindingなしEOFを検証した。
+- `t223`、`t231`、`t233`を新契約へ追従させ、runtime fixtureのcapture identityをcanonical identityへ修正した。
+- 独立architecture reviewはIteration 2でNOT-READY。契約seamの先行PRは許容されたが、production generic supervisorとactive parent-crash recoveryがU-02完了のblockingとして残る。
+- 現時点のfocused検証はtypecheck PASS、`t223 + t231 + t233 + t237`が63 pass、0 fail。
+
+### 未完了
+
+- production generic Resource／Capture／Process supervisorは次のU-02スタックPRで実装する。
+- 期限切れactive `prepared`／`dispatched` attemptからexact process groupとresourceを回収し、新attemptへfencingしてresumeする経路を次のU-02スタックPRで実装する。
+- 上記完了前にU-03 Claude adapterのproduction実装へ進まない。

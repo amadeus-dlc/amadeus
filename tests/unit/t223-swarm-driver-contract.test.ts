@@ -89,22 +89,56 @@ function registration(input: DriverRegistrationInput) {
 function adapter(driver: NativeDriver, harnesses: readonly Harness[]): DriverAdapter {
   return Object.freeze({
     driver,
+    provider: NativeDriverValue.from(driver).provider,
     supports(harness: Harness): boolean {
       return harnesses.includes(harness);
     },
     async probe() {
       return availableProbe();
     },
-    buildLaunch(): LaunchSpec {
+    prepareResources() {
+      return Object.freeze({ resources: Object.freeze([]), preparationDigest: "empty-resources" });
+    },
+    buildExecution(input): Readonly<{
+      launch: LaunchSpec;
+      capture: Readonly<{ kind: "hook-only"; hookDir: string }>;
+      captureIdentity: Readonly<{
+        executionId: string;
+        attemptId: string;
+        attemptNonceHash: string;
+        planDigest: string;
+        waveIndex: number;
+        waveDigest: string;
+      }>;
+      resources: readonly never[];
+    }> {
       return Object.freeze({
-        executable: "test-adapter",
-        args: Object.freeze([]),
-        cwd: "/project",
-        env: Object.freeze({}),
-        stdin: "closed",
-        timeoutMs: 1,
+        launch: Object.freeze({
+          executable: "test-adapter",
+          args: Object.freeze([]),
+          cwd: "/project",
+          env: Object.freeze({}),
+          transport: Object.freeze({
+            kind: "stdio-json" as const,
+            stdin: "closed" as const,
+            output: "stream-json" as const,
+          }),
+          timeoutMs: 1,
+        }),
+        capture: Object.freeze({ kind: "hook-only" as const, hookDir: "/evidence/hooks" }),
+        captureIdentity: Object.freeze({
+          executionId: input.plan.executionId,
+          attemptId: input.plan.attemptId,
+          attemptNonceHash: input.plan.attemptNonceHash,
+          planDigest: input.plan.planDigest,
+          waveIndex: input.wave.index,
+          waveDigest: "wave-digest",
+        }),
+        resources: Object.freeze([]),
       });
     },
+    resolveCaptureBinding: () => Object.freeze({ kind: "not-binding" as const }),
+    async *observeControl() {},
     async *normalize() {},
   });
 }
@@ -354,6 +388,18 @@ describe("probe, capability, and registration contracts", () => {
           adapters: [
             adapter("claude-agent-teams", ["claude"]),
             adapter("claude-ultracode", ["claude", "codex"]),
+          ],
+        },
+      }).type,
+    ).toBe("err");
+    expect(
+      DriverRegistration.build({
+        ...base,
+        slot: {
+          kind: "available",
+          adapters: [
+            { ...adapter("claude-agent-teams", ["claude"]), provider: "codex" },
+            adapter("claude-ultracode", ["claude"]),
           ],
         },
       }).type,
@@ -1216,9 +1262,10 @@ function assertCompileTimeInvalidStates(): void {
   };
   void invalidRegistration;
 
-  // @ts-expect-error every adapter must provide buildLaunch and normalize ports.
+  // @ts-expect-error every adapter must provide resource, execution, capture, control, and normalize ports.
   const incompleteAdapter: DriverAdapter = {
     driver: "codex-ultra",
+    provider: "codex",
     supports: (harness) => harness === "codex",
     probe: async () => availableProbe(),
   };
@@ -1233,8 +1280,8 @@ function assertCompileTimeInvalidStates(): void {
     args: [],
     cwd: "/project",
     env: {},
-    // @ts-expect-error adapters must close stdin or provide explicit bytes.
-    stdin: "inherit",
+    // @ts-expect-error transport is a closed stdio-json or pty-interactive variant.
+    transport: { kind: "stdio-json", stdin: "inherit", output: "stream-json" },
     timeoutMs: 1,
   };
   void invalidLaunch;

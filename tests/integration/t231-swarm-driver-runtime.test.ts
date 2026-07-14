@@ -36,6 +36,7 @@ import {
   buildTransition,
   createProbingCheckpoint,
   digestValue,
+  parseAttemptCheckpoint,
   type AttemptCheckpoint,
 } from "../../packages/framework/core/tools/amadeus-swarm-driver-lifecycle.ts";
 import { executeSwarmDriverCommand } from "../../packages/framework/core/tools/amadeus-swarm-driver.ts";
@@ -43,6 +44,11 @@ import {
   ATTEMPT_FAILURE_CODE_VALUES,
   type AttemptFailureCode,
 } from "../../packages/framework/core/tools/amadeus-swarm-finalize-contract.ts";
+import type {
+  NativeDispatchPreparation,
+  NativeLifecycleExecutionInput,
+  PreparedNativeRun,
+} from "../../packages/framework/core/tools/amadeus-swarm-native-execution.ts";
 
 const preparedUnits = Object.freeze([
   Object.freeze({ unit: "alpha", worktreePath: "/repo/alpha", branchName: "unit/alpha" }),
@@ -136,6 +142,83 @@ function nativeEvents(input: Readonly<{
   ]);
 }
 
+type NativeCallbackMode =
+  | "valid"
+  | "duplicate-dispatch-prepared"
+  | "duplicate-resources-prepared"
+  | "invalid-ready-to-arm"
+  | "event-bound-capture"
+  | "duplicate-capture-bound"
+  | "missing-ready-to-arm";
+
+const nativeCallbackPlans = Object.freeze({
+  valid: { dispatchCount: 1, resourceCount: 1, ready: true, validNativeRunId: true, captureKind: "hook-only", bindingCount: 0 },
+  "duplicate-dispatch-prepared": { dispatchCount: 2, resourceCount: 1, ready: true, validNativeRunId: true, captureKind: "hook-only", bindingCount: 0 },
+  "duplicate-resources-prepared": { dispatchCount: 1, resourceCount: 2, ready: true, validNativeRunId: true, captureKind: "hook-only", bindingCount: 0 },
+  "invalid-ready-to-arm": { dispatchCount: 1, resourceCount: 1, ready: true, validNativeRunId: false, captureKind: "hook-only", bindingCount: 0 },
+  "event-bound-capture": { dispatchCount: 1, resourceCount: 1, ready: true, validNativeRunId: true, captureKind: "event-bound-provider-path", bindingCount: 1 },
+  "duplicate-capture-bound": { dispatchCount: 1, resourceCount: 1, ready: true, validNativeRunId: true, captureKind: "event-bound-provider-path", bindingCount: 2 },
+  "missing-ready-to-arm": { dispatchCount: 1, resourceCount: 1, ready: false, validNativeRunId: true, captureKind: "hook-only", bindingCount: 0 },
+} as const satisfies Record<NativeCallbackMode, Readonly<{
+  dispatchCount: number;
+  resourceCount: number;
+  ready: boolean;
+  validNativeRunId: boolean;
+  captureKind: "hook-only" | "event-bound-provider-path";
+  bindingCount: number;
+}>>);
+
+async function notifyNativeCallbacks(input: Readonly<{
+  plan: (typeof nativeCallbackPlans)[NativeCallbackMode];
+  nativeRunId: string;
+  dispatchPreparation: NativeDispatchPreparation;
+  preparedNativeRun: PreparedNativeRun;
+  onDispatchPrepared: NativeLifecycleExecutionInput["onDispatchPrepared"];
+  onResourcesPrepared: NativeLifecycleExecutionInput["onResourcesPrepared"];
+  onReadyToArm: NativeLifecycleExecutionInput["onReadyToArm"];
+  onCaptureBound: NativeLifecycleExecutionInput["onCaptureBound"];
+}>): Promise<void> {
+  for (let count = 0; count < input.plan.dispatchCount; count += 1) {
+    await input.onDispatchPrepared(input.dispatchPreparation);
+  }
+  for (let count = 0; count < input.plan.resourceCount; count += 1) {
+    await input.onResourcesPrepared(input.preparedNativeRun);
+  }
+  if (!input.plan.ready) return;
+  await input.onReadyToArm({
+    kind: "native",
+    nativeRunId: input.plan.validNativeRunId ? input.nativeRunId : "unexpected-native-run",
+    preparedNativeRunDigest: digestValue(input.preparedNativeRun),
+    resourceReceiptDigest: "resource-receipt",
+    processIdentityDigest: "process-identity",
+    armDigest: "arm-digest",
+    capture: input.plan.captureKind === "event-bound-provider-path"
+      ? {
+          kind: "event-bound-provider-path",
+          identityDigest: input.dispatchPreparation.captureIdentityDigest,
+          capturePlanDigest: "capture-plan",
+          resourcesDigest: "resource-receipt",
+          transport: "stdio-json",
+        }
+      : {
+          kind: "hook-only",
+          identityDigest: input.dispatchPreparation.captureIdentityDigest,
+          capturePlanDigest: "capture-plan",
+          resourcesDigest: "resource-receipt",
+          transport: "stdio-json",
+        },
+  });
+  const binding = {
+    kind: "event-bound-provider-path" as const,
+    nativeRunId: input.nativeRunId,
+    exactPathDigest: "exact-path",
+    sourceEventDigest: "source-event",
+  };
+  for (let count = 0; count < input.plan.bindingCount; count += 1) {
+    await input.onCaptureBound(binding);
+  }
+}
+
 function fixture(
   options: Readonly<{
     nativeAvailable?: boolean;
@@ -144,6 +227,7 @@ function fixture(
     recovery?: AttemptRecoveryPort;
     ownerLive?: boolean;
     auditReadable?: boolean;
+    callbackMode?: NativeCallbackMode;
   }> = {},
 ) {
   const checkpoints = new Map<number, AttemptCheckpoint>();
@@ -154,19 +238,35 @@ function fixture(
   let id = 0;
   const adapter: DriverAdapter = Object.freeze({
     driver: "codex-ultra",
+    provider: "codex",
     supports: (harness: Harness) => harness === "codex",
     probe: async () => {
       probeCount += 1;
       return availableProbe();
     },
-    buildLaunch: () => ({
-      executable: "codex",
-      args: ["exec"],
-      cwd: "/repo",
-      env: {},
-      stdin: "closed" as const,
-      timeoutMs: 1_000,
+    prepareResources: () => ({ resources: Object.freeze([]), preparationDigest: digestValue([]) }),
+    buildExecution: (input) => ({
+      launch: {
+        executable: "codex",
+        args: ["exec"],
+        cwd: "/repo",
+        env: {},
+        transport: { kind: "stdio-json" as const, stdin: "closed" as const, output: "stream-json" as const },
+        timeoutMs: 1_000,
+      },
+      capture: { kind: "hook-only" as const, hookDir: input.evidenceDir },
+      captureIdentity: {
+        executionId: input.plan.executionId,
+        attemptId: input.plan.attemptId,
+        attemptNonceHash: input.plan.attemptNonceHash,
+        planDigest: input.plan.planDigest,
+        waveIndex: input.wave.index,
+        waveDigest: digestValue(input.wave),
+      },
+      resources: Object.freeze([]),
     }),
+    resolveCaptureBinding: () => ({ kind: "not-binding" as const }),
+    observeControl: async function* () {},
     normalize: async function* () {},
   });
   const codex = DriverRegistration.build({
@@ -211,16 +311,61 @@ function fixture(
     mintId: () => `id-${++id}`,
     now: options.now ?? (() => new Date("2026-07-14T00:00:00.000Z")),
     nativeExecution: {
-      execute: async ({ plan, waveDigest, nativeRunId }) => {
+      execute: async ({
+        launchInput,
+        context,
+        onDispatchPrepared,
+        onResourcesPrepared,
+        onReadyToArm,
+        onCaptureBound,
+      }) => {
         executionCount += 1;
+        const callbackPlan = nativeCallbackPlans[options.callbackMode ?? "valid"];
+        const dispatchPreparation = {
+          kind: "native" as const,
+          nativeRunId: launchInput.nativeRunId,
+          waveIndex: context.waveIndex,
+          waveDigest: context.waveDigest,
+          resourcePreparationDigest: digestValue([]),
+          captureIdentityDigest: digestValue({
+            executionId: context.executionId,
+            attemptId: context.attemptId,
+            attemptNonceHash: context.attemptNonceHash,
+            planDigest: context.planDigest,
+            waveIndex: context.waveIndex,
+            waveDigest: context.waveDigest,
+          }),
+          identityRelativePath: ".amadeus/native/identity.json",
+          armRelativePath: ".amadeus/native/arm.json",
+          armDigest: "arm-digest",
+        };
+        const preparedNativeRun = {
+          kind: "native" as const,
+          dispatchPreparationDigest: digestValue(dispatchPreparation),
+          resourceReceiptDigest: "resource-receipt",
+          executionPlanDigest: "execution-plan",
+          capturePlanDigest: "capture-plan",
+          transportKind: "stdio-json" as const,
+          captureKind: callbackPlan.captureKind,
+        };
+        await notifyNativeCallbacks({
+          plan: callbackPlan,
+          nativeRunId: launchInput.nativeRunId,
+          dispatchPreparation,
+          preparedNativeRun,
+          onDispatchPrepared,
+          onResourcesPrepared,
+          onReadyToArm,
+          onCaptureBound,
+        });
         if (options.invalidEvidence) return [];
         return nativeEvents({
-          executionId: plan.executionId,
-          attemptId: plan.attemptId,
-          nonceHash: plan.attemptNonceHash,
-          planDigest: plan.planDigest,
-          waveDigest,
-          nativeRunId,
+          executionId: launchInput.plan.executionId,
+          attemptId: launchInput.plan.attemptId,
+          nonceHash: launchInput.plan.attemptNonceHash,
+          planDigest: launchInput.plan.planDigest,
+          waveDigest: context.waveDigest,
+          nativeRunId: launchInput.nativeRunId,
         });
       },
     },
@@ -266,6 +411,24 @@ async function failNativeAttempt(f: ReturnType<typeof fixture>): Promise<Attempt
   const checkpoint = f.store.read(1);
   if (checkpoint?.state !== "failed-resumable") throw new Error("failed checkpoint fixture failed");
   return checkpoint;
+}
+
+async function runNativeAttempt(f: ReturnType<typeof fixture>) {
+  const resolved = await f.coordinator.resolve({
+    ...baseResolve,
+    batch: 1,
+    selectionEnvironment: { AMADEUS_SWARM_DRIVER: "codex-ultra" },
+  });
+  if (resolved.type === "err") throw new Error("resolve fixture failed");
+  return f.coordinator.run({
+    executionId: resolved.value.executionId,
+    attemptId: resolved.value.attemptId,
+    batch: 1,
+    preparedUnits,
+    convergenceCommand: "bun test",
+    evidenceDir: "/repo/evidence",
+    gitBinding: runGitBinding,
+  });
 }
 
 function resumeRequest(checkpoint: AttemptCheckpoint) {
@@ -351,6 +514,16 @@ describe("t231 swarm driver runtime", () => {
     const clock = new Date("2026-07-14T00:00:00.000Z");
     const f = fixture({ nativeAvailable: true, invalidEvidence: true, now: () => clock, ownerLive: false });
     const failed = await failNativeAttempt(f);
+    if (failed.state !== "failed-resumable" && failed.state !== "failed-terminal") {
+      throw new Error("expected failed checkpoint");
+    }
+    expect(parseAttemptCheckpoint(failed)).toMatchObject({ type: "ok" });
+    expect(failed.failure.recoveryContext).toMatchObject({
+      dispatchPreparation: { nativeRunId: expect.any(String) },
+      preparedNativeRun: { kind: "native" },
+      dispatch: { kind: "native" },
+    });
+    expect(JSON.stringify(failed.failure.recoveryContext)).not.toContain("/evidence/");
     expect(await f.coordinator.resume(resumeRequest(failed))).toMatchObject({
       type: "err",
       error: { code: "ATTEMPT_LEASE_ACTIVE" },
@@ -521,6 +694,53 @@ describe("t231 swarm driver runtime", () => {
       Verified: "true",
       Sources: "hook,model-handshake,stream",
       "Unit names": "alpha,beta",
+    });
+  });
+
+  for (const [callbackMode, failedFromState] of [
+    ["duplicate-dispatch-prepared", "prepared"],
+    ["duplicate-resources-prepared", "prepared"],
+    ["invalid-ready-to-arm", "prepared"],
+    ["duplicate-capture-bound", "dispatched"],
+  ] as const) {
+    test(`fails closed for invalid native callback sequence: ${callbackMode}`, async () => {
+      const f = fixture({ nativeAvailable: true, callbackMode });
+      expect(await runNativeAttempt(f)).toMatchObject({ type: "err", error: { code: "EXECUTION_FAILED" } });
+      expect(f.store.read(1)).toMatchObject({
+        state: "failed-resumable",
+        failure: { code: "COORDINATOR_FAILED", failedFromState },
+      });
+    });
+  }
+
+  test("persists the event-bound capture receipt before rejecting invalid evidence", async () => {
+    const f = fixture({ nativeAvailable: true, invalidEvidence: true, callbackMode: "event-bound-capture" });
+    expect(await runNativeAttempt(f)).toMatchObject({ type: "err", error: { code: "EVIDENCE_INVALID" } });
+    expect(f.store.read(1)).toMatchObject({
+      state: "failed-resumable",
+      failure: {
+        recoveryContext: {
+          dispatch: {
+            capture: {
+              kind: "event-bound-provider-path",
+              binding: {
+                kind: "event-bound-provider-path",
+                exactPathDigest: "exact-path",
+                sourceEventDigest: "source-event",
+              },
+            },
+          },
+        },
+      },
+    });
+  });
+
+  test("fails closed when native execution returns without materializing dispatch", async () => {
+    const f = fixture({ nativeAvailable: true, callbackMode: "missing-ready-to-arm" });
+    expect(await runNativeAttempt(f)).toMatchObject({ type: "err", error: { code: "EXECUTION_FAILED" } });
+    expect(f.store.read(1)).toMatchObject({
+      state: "failed-resumable",
+      failure: { code: "COORDINATOR_FAILED", failedFromState: "prepared" },
     });
   });
 
