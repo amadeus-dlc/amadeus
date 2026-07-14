@@ -935,6 +935,10 @@
         {
           "file": "tests/integration/t66.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t212-optional-produces.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
@@ -1201,6 +1205,10 @@
         {
           "file": "tests/unit/t124-scope-transpose.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t212-optional-produces.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
@@ -1330,6 +1338,10 @@
         {
           "file": "tests/integration/t65.test.ts",
           "mechanism": "none"
+        },
+        {
+          "file": "tests/unit/t212-optional-produces.test.ts",
+          "mechanism": "cli"
         },
         {
           "file": "tests/unit/t64.test.ts",
@@ -2161,6 +2173,10 @@
           "mechanism": "none"
         },
         {
+          "file": "tests/unit/t212-optional-produces.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t64.test.ts",
           "mechanism": "none"
         }
@@ -2209,6 +2225,10 @@
       "coveredBy": [
         {
           "file": "tests/integration/t66.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t212-optional-produces.test.ts",
           "mechanism": "cli"
         }
       ],
@@ -4409,6 +4429,10 @@
         {
           "file": "tests/unit/t-sensor-fire-seam.test.ts",
           "mechanism": "none"
+        },
+        {
+          "file": "tests/unit/t212-optional-produces.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"

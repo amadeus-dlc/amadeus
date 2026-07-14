@@ -120,6 +120,9 @@ export interface SensorResolution {
 export interface GraphStage extends StageEntry {
   condition?: string;
   produces: string[];
+  // Optional artifacts are part of the stage's output vocabulary and routing,
+  // but are deliberately excluded from per-unit completion coverage.
+  optional_produces?: string[];
   consumes: Consume[];
   requires_stage: string[];
   // sensors is the stage-side pull import — a list of sensor manifest
@@ -367,6 +370,7 @@ const FIELD_ORDER = [
   "for_each",
   "workspace_requires",
   "produces",
+  "optional_produces",
   "consumes",
   "requires_stage",
   "sensors",
@@ -712,10 +716,14 @@ export function loadGraph(): GraphStage[] {
   return _graph;
 }
 
-/** Stages that produce the given artifact. Empty array = orphan
+/** Stages that may produce the given artifact. Empty array = orphan
  *  consumer candidate (doctor surfaces). */
 export function producersOf(artifact: string): GraphStage[] {
-  return loadGraph().filter((s) => (s.produces ?? []).includes(artifact));
+  return loadGraph().filter(
+    (s) =>
+      (s.produces ?? []).includes(artifact) ||
+      (s.optional_produces ?? []).includes(artifact),
+  );
 }
 
 /** Stages that consume the given artifact. */
@@ -1089,13 +1097,16 @@ export function keywordCollisions(granted: string[]): string[] {
   return errors;
 }
 
-/** Union of produces[] across all stages. */
+/** Union of required and optional outputs across all stages. */
 export function artifactsRegistry(): ReadonlySet<string> {
   if (!_artifactsRegistry) {
     const stages = loadGraph();
     const names = new Set<string>();
     for (const stage of stages) {
       for (const name of stage.produces ?? []) {
+        names.add(name);
+      }
+      for (const name of stage.optional_produces ?? []) {
         names.add(name);
       }
     }
@@ -1195,6 +1206,33 @@ export function canonicalStageGraphJson(stages: GraphStage[]): string {
     return out;
   });
   return `${JSON.stringify(ordered, null, 2)}\n`;
+}
+
+function assertUniqueArtifactProducers(stages: GraphStage[]): void {
+  const declaredBy = new Map<
+    string,
+    { stage: string; field: "produces" | "optional_produces" }
+  >();
+  for (const stage of stages) {
+    const declarations = [
+      ["produces", stage.produces ?? []],
+      ["optional_produces", stage.optional_produces ?? []],
+    ] as const;
+    for (const [field, names] of declarations) {
+      for (const name of names) {
+        const previous = declaredBy.get(name);
+        if (previous) {
+          throw new Error(
+            `Artifact producer collision for "${name}": stage ` +
+              `"${previous.stage}" (${previous.field}) and stage ` +
+              `"${stage.slug}" (${field}) both declare it. ` +
+              "Canonical artifact names must have exactly one producer.",
+          );
+        }
+        declaredBy.set(name, { stage: stage.slug, field });
+      }
+    }
+  }
 }
 
 // --- Scope grid (the transpose) ---
@@ -1456,6 +1494,11 @@ export function compileStageGraph(): {
   // Sort by numeric order (phase-prefix.index).
   stages.sort((a, b) => numericStageOrder(a.number, b.number));
 
+  // Artifact paths and consumes resolve through producersOf(name)[0], so more
+  // than one producer would make routing depend on graph order. Enforce the
+  // documented flat-namespace invariant across required and optional outputs.
+  assertUniqueArtifactProducers(stages);
+
   // Resolve per-stage rule chain. Strict-additive: every applicable rule
   // appears in rules_in_context (org+team+project + phase when stage's
   // `phase:` matches the rule's filename suffix). The walk + parse +
@@ -1575,6 +1618,9 @@ function buildGraphStage(
   }
   if (parsed.workspace_requires !== undefined) {
     stage.workspace_requires = parsed.workspace_requires;
+  }
+  if (parsed.optional_produces !== undefined) {
+    stage.optional_produces = parsed.optional_produces;
   }
   if (parsed.sensors !== undefined) {
     stage.sensors = parsed.sensors;
