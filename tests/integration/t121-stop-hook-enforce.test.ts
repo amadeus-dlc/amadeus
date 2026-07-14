@@ -104,6 +104,7 @@ import {
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
+import { projectSnapshot } from "../helpers/upstream-v2-fixture.ts";
 import { MACHINE_INJECTED_TURN_MARKERS } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // Live-observed machine-injected turns, derived from the shared catalog so a
@@ -135,6 +136,14 @@ const HOOK_TS = join(
   ".claude",
   "hooks",
   "amadeus-stop.ts",
+);
+const RUNTIME_COMPILE_HOOK_TS = join(
+  REPO_ROOT,
+  "dist",
+  "claude",
+  ".claude",
+  "hooks",
+  "amadeus-runtime-compile.ts",
 );
 
 // P9 per-intent layout: the stop hook reads state (stateFilePath), the audit
@@ -577,6 +586,25 @@ function runHook(
     input: payload,
     encoding: "utf-8",
     env,
+    timeout: 20_000,
+  });
+  return { rc: res.status ?? -1, out: (res.stdout ?? "").trim() };
+}
+
+function runRuntimeCompileHook(
+  proj: string,
+  command: string,
+  sessionId?: string,
+): HookResult {
+  const res = spawnSync(BUN, [RUNTIME_COMPILE_HOOK_TS], {
+    input: JSON.stringify({
+      hook_event_name: "PostToolUse",
+      ...(sessionId ? { session_id: sessionId } : {}),
+      tool_name: "Bash",
+      tool_input: { command },
+    }),
+    encoding: "utf-8",
+    env: { ...process.env, CLAUDE_PROJECT_DIR: proj },
     timeout: 20_000,
   });
   return { rc: res.status ?? -1, out: (res.stdout ?? "").trim() };
@@ -1537,8 +1565,139 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
   }, 30000);
 
+  test.each([
+    "bun .claude/tools/amadeus-utility.ts migrate --apply",
+    "bun .claude/tools/amadeus-migrate.ts --from 'aidlc source' --apply",
+  ])(
+    "(j) a completed migration command is a one-shot terminal Stop carve-out: %s",
+    (command) => {
+      const proj = makeProject();
+      seedActive(proj, "requirements-analysis");
+      const sessionId = `migration-${command.includes("utility") ? "utility" : "core"}`;
+      const before = projectSnapshot(proj);
+
+      const postTool = runRuntimeCompileHook(proj, command, sessionId);
+      expect(postTool.rc).toBe(0);
+      const terminalStop = runHook(
+        proj,
+        JSON.stringify({ stop_hook_active: false, session_id: sessionId }),
+        "run-stage",
+      );
+      expect(terminalStop.rc).toBe(0);
+      expect(terminalStop.out).toBe("");
+      expect(projectSnapshot(proj)).toBe(before);
+      expect(existsSync(join(seededRecordDir(proj), "runtime-graph.json"))).toBe(false);
+      expect(
+        existsSync(join(seededRecordDir(proj), ".amadeus-hooks-health", "runtime-compile.last")),
+      ).toBe(false);
+      expect(
+        existsSync(join(seededRecordDir(proj), ".amadeus-hooks-health", "stop.last")),
+      ).toBe(false);
+
+      const nextStop = runHook(
+        proj,
+        JSON.stringify({ stop_hook_active: false, session_id: sessionId }),
+        "run-stage",
+      );
+      expect(nextStop.rc).toBe(0);
+      expect((JSON.parse(nextStop.out) as { decision?: string }).decision).toBe(
+        "block",
+      );
+    },
+    30000,
+  );
+
+  test.each(["absent destination", "installer seed"])(
+    "(j) migration PostToolUse → Stop preserves a pristine %s project snapshot",
+    (target) => {
+      const proj = mkdtempSync(join(tmpdir(), "t121-migration-pristine-"));
+      try {
+        if (target === "installer seed") {
+          mkdirSync(join(proj, "amadeus", ".installer"), { recursive: true });
+          writeFileSync(
+            join(proj, "amadeus", ".installer", "amadeus-setup-manifest.json"),
+            '{"schemaVersion":1}\n',
+            "utf-8",
+          );
+          mkdirSync(join(proj, "amadeus", "spaces", "default", "memory"), {
+            recursive: true,
+          });
+          writeFileSync(
+            join(proj, "amadeus", "spaces", "default", "memory", "org.md"),
+            "# Installer seed\n",
+            "utf-8",
+          );
+        }
+        const before = projectSnapshot(proj);
+        const sessionId = `migration-pristine-${target.replaceAll(" ", "-")}`;
+        expect(
+          runRuntimeCompileHook(
+            proj,
+            "bun .claude/tools/amadeus-utility.ts migrate --apply",
+            sessionId,
+          ).rc,
+        ).toBe(0);
+        const stop = runHook(
+          proj,
+          JSON.stringify({ stop_hook_active: false, session_id: sessionId }),
+          "run-stage",
+        );
+        expect(stop.rc).toBe(0);
+        expect(stop.out).toBe("");
+        expect(projectSnapshot(proj)).toBe(before);
+      } finally {
+        rmSync(proj, { recursive: true, force: true });
+      }
+    },
+    30000,
+  );
+
+  test("(j) migration latch cannot be consumed by another session and missing ids fail closed", () => {
+    const proj = makeProject();
+    seedActive(proj, "requirements-analysis");
+
+    expect(
+      runRuntimeCompileHook(
+        proj,
+        "bun .claude/tools/amadeus-utility.ts migrate --apply",
+        "session-a",
+      ).rc,
+    ).toBe(0);
+    const otherSession = runHook(
+      proj,
+      JSON.stringify({ stop_hook_active: false, session_id: "session-b" }),
+      "run-stage",
+      "8",
+    );
+    expect((JSON.parse(otherSession.out) as { decision?: string }).decision).toBe(
+      "block",
+    );
+    const ownerSession = runHook(
+      proj,
+      JSON.stringify({ stop_hook_active: false, session_id: "session-a" }),
+      "run-stage",
+    );
+    expect(ownerSession.out).toBe("");
+
+    expect(
+      runRuntimeCompileHook(
+        proj,
+        "bun .claude/tools/amadeus-utility.ts migrate --apply",
+      ).rc,
+    ).toBe(0);
+    const missingSession = runHook(
+      proj,
+      JSON.stringify({ stop_hook_active: false }),
+      "run-stage",
+      "8",
+    );
+    expect((JSON.parse(missingSession.out) as { decision?: string }).decision).toBe(
+      "block",
+    );
+  }, 30000);
+
   // =========================================================================
-  // (j) MACHINE-INJECTED TURN EXCLUSION (#755). The tier-3 conversational
+  // (k) MACHINE-INJECTED TURN EXCLUSION (#755). The tier-3 conversational
   // carve-out reads the ending turn's user prompt as the human anchor. But
   // agmsg task-notifications and teammate-message inbox deliveries arrive as
   // user-role transcript entries too, so without excluding them a machine turn

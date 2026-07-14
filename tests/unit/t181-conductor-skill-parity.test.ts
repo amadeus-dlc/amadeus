@@ -17,10 +17,9 @@
 //   (a) NEGATIVE — the retired `/amadeus --init` command (a bare `--init` flag
 //       token; `git init`/`npm init` are NOT the amadeus command, same predicate as
 //       t174) must be ABSENT from every shipped conductor SKILL.
-//   (b) POSITIVE — the workspace-anchor vocabulary (`intent-birth`, `--repo`,
-//       "offer a second intent", "intent and space verbs") must be PRESENT in
-//       every shipped conductor SKILL. Catches a future fork that drops `--init`
-//       yet still lacks the new verbs.
+//   (b) POSITIVE — shared workspace-routing and run-stage output semantics must
+//       be PRESENT in every shipped conductor SKILL. Catches a future fork that
+//       drops `--init` yet still lacks the current conductor contract.
 //
 // All four authored SKILLs (claude, codex, kiro, kiro-ide) carry the full
 // vocabulary today and none carry a bare `--init`, so the POSITIVE set needs no
@@ -52,12 +51,15 @@ function harnessSkills(): string[] {
 // predicate as t174's `--init` scan.
 const BARE_INIT = /(^|[^-\w])--init\b/;
 
-// The workspace-anchor conductor vocabulary every shipped SKILL must define.
+// The shared conductor vocabulary every shipped SKILL must define.
 const REQUIRED_TOKENS = [
   "intent-birth", // run-then-continue birth verb (replaced `init`)
   "--repo", // multi-repo swarm prepare flag
   "offer a second intent", // P4-completion new-work conductor prose
   "intent and space verbs", // frontmatter utilities tail
+  "required output paths are mandatory", // produces candidates: required half
+  "optional output paths are candidates", // produces candidates: conditional half
+  "Pass only artifact paths that exist", // reviewers never read omitted optionals
 ];
 
 describe("t181 per-harness conductor-SKILL freshness gate (P11 RESOLVE-2)", () => {

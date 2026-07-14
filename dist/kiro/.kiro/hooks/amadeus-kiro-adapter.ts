@@ -32,12 +32,20 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  armMigrationPendingDecision,
+  classifyMigrationRequest,
   classifyTerminalCommand,
+  consumeMigrationPendingDecision,
   hasOpenGate,
   humanActedSinceGate,
   humanPresenceGuardDisabled,
   isAutonomousMode,
   isMachineInjectedTurnText,
+  isMigrationApplyCommand,
+  isMigrationDispatchCommand,
+  isMigrationExecutionCommand,
+  isMigrationPublicRoute,
+  peekMigrationPendingDecision,
   stateFilePath,
 } from "../tools/amadeus-lib.ts";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
@@ -93,14 +101,95 @@ const projectDir = kiro.cwd ?? process.cwd();
 // with `prompt` = the fully-expanded skill body (the raw `/amadeus …` literal is
 // gone), but it SUBSTITUTES the user's post-/amadeus text ($ARGUMENTS) into the
 // forwarding-loop anchor `amadeus-orchestrate.ts next <ARGS>`. We read the args
-// back from that anchor — the same text the conductor would forward.
+// back from that anchor — the same text the conductor would forward. Tokenize
+// shell quoting rather than splitting on whitespace: a quoted migration source
+// may legitimately contain a word such as `--status`, which must remain part of
+// the source argv instead of being intercepted as a read-only flag.
+interface QuotedSegment {
+  text: string;
+  end: number;
+}
+
+const DOUBLE_QUOTE_ESCAPES = new Set(['"', "\\", "$", "`", "\n"]);
+
+function readDoubleQuoted(input: string, start: number): QuotedSegment | null {
+  let text = "";
+  for (let i = start + 1; i < input.length; i++) {
+    const char = input[i];
+    if (char === '"') return { text, end: i };
+    if (char !== "\\") {
+      text += char;
+      continue;
+    }
+    const next = input[i + 1];
+    if (next === undefined) return null;
+    if (!DOUBLE_QUOTE_ESCAPES.has(next)) {
+      text += "\\";
+      continue;
+    }
+    text += next;
+    i++;
+  }
+  return null;
+}
+
+function readSingleQuoted(input: string, start: number): QuotedSegment | null {
+  const end = input.indexOf("'", start + 1);
+  return end === -1 ? null : { text: input.slice(start + 1, end), end };
+}
+
+function readShellSegment(input: string, start: number): QuotedSegment | null {
+  const char = input[start];
+  if (char === "'") return readSingleQuoted(input, start);
+  if (char === '"') return readDoubleQuoted(input, start);
+  if (char !== "\\") return { text: char, end: start };
+  const next = input[start + 1];
+  return next === undefined ? null : { text: next, end: start + 1 };
+}
+
+function tokenizeShellWords(input: string): string[] | null {
+  const words: string[] = [];
+  let word = "";
+  let started = false;
+
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i];
+    if (/\s/.test(char)) {
+      if (started) words.push(word);
+      word = "";
+      started = false;
+      continue;
+    }
+    const segment = readShellSegment(input, i);
+    if (segment === null) return null;
+    word += segment.text;
+    started = true;
+    i = segment.end;
+  }
+
+  if (started) words.push(word);
+  return words;
+}
+
 function extractNextArgs(expandedPrompt: string): string[] {
   // Match the FIRST `… amadeus-orchestrate.ts next <ARGS>` occurrence (the loop's
   // step-1 anchor) and take the tokens up to the closing backtick. The anchor is
   // inside a markdown code span, so the args end at the backtick.
   const m = expandedPrompt.match(/amadeus-orchestrate\.ts next ([^`\n]*)`/);
   if (!m) return [];
-  return m[1].trim().split(/\s+/).filter((t) => t.length > 0);
+  return tokenizeShellWords(m[1].trim()) ?? [];
+}
+
+type MigrationGateDecision = "yes" | "no";
+
+function classifyMigrationGateDecision(
+  prompt: string,
+  args: string[],
+): MigrationGateDecision | null {
+  const candidate = args.length === 1 ? args[0] : prompt.trim();
+  if (candidate === "1" || /^yes$/i.test(candidate)) return "yes";
+  if (candidate === "2" || /^no$/i.test(candidate)) return "no";
+  return null;
 }
 
 if (target === "verb-intercept") {
@@ -109,6 +198,39 @@ if (target === "verb-intercept") {
   // output → Kiro proceeds to the LLM normally). Advisory: any failure fails open.
   const args = extractNextArgs(kiro.prompt ?? "");
   const cmd = classifyTerminalCommand(args);
+
+  // A migration approval answer is still part of the prior gated terminal
+  // operation, not an Intent turn. Recognize only the four exact answers while
+  // a fresh marker exists for THIS session, before the project-local turn clock
+  // or HUMAN_TURN mint can run. Yes retains the marker until apply PostToolUse;
+  // No consumes it immediately. A dry-run failure, non-answer, missing session,
+  // stale marker, or insecure marker falls through to normal hook behavior—the
+  // external marker itself never causes a project write or suppresses a future
+  // unrelated turn.
+  const decision = classifyMigrationGateDecision(kiro.prompt ?? "", args);
+  if (decision === "yes") {
+    if (peekMigrationPendingDecision(projectDir, kiro.session_id)) process.exit(0);
+  } else if (decision === "no") {
+    if (consumeMigrationPendingDecision(projectDir, kiro.session_id)) process.exit(0);
+  }
+
+  // Migration is a gated conductor flow, not an off-band terminal command.
+  // Leave the request untouched—including not creating the turn-clock
+  // directory, which may be the migration destination itself. Do NOT arm the
+  // decision marker here: public-option conflicts and failed/refused dry-runs
+  // must never make a later unrelated Yes/No look like gate approval. The
+  // runtime-compile PostToolUse seam arms only after it proves status=ready.
+  // Read-only flags keep their engine-defined absolute precedence.
+  if (
+    isMigrationPublicRoute(args) &&
+    cmd?.source !== "read-only-flag"
+  ) {
+    // A new public request supersedes any prior unanswered gate. This is a
+    // consume-only seam: even invalid/conflicting requests leave no marker;
+    // only their later successful dry-run PostToolUse may arm a fresh one.
+    consumeMigrationPendingDecision(projectDir, kiro.session_id);
+    process.exit(0);
+  }
   // Turn-clock: bump a per-turn counter EVERY time this seam fires (it fires
   // once per turn, BEFORE the cmd===null exit so a bare-next turn still advances
   // the clock and a prior turn's latch goes stale). The read-only/nav latch
@@ -202,10 +324,12 @@ if (target === "verb-intercept") {
 // goes stale and a legitimate advancing next runs). Advisory/fail-open: any
 // parse/read failure exits 0 and never blocks a real next.
 if (target === "pretool-block") {
-  const cmdStr = String((kiro.tool_input ?? {}).command ?? "");
+  const cmdStr = String(kiro.tool_input?.command ?? "");
   const cwd = kiro.cwd ?? process.cwd();
+  const migrationDispatch = isMigrationDispatchCommand(cmdStr, cwd);
   const m = cmdStr.match(/amadeus-orchestrate\.ts\s+next\b([^\n]*)/);
-  const nextArgs = m ? m[1].trim().split(/\s+/).filter((t) => t.length > 0) : [];
+  const parsedNextArgs = m ? tokenizeShellWords(m[1].trim()) : null;
+  const nextArgs = parsedNextArgs ?? [];
   // A next carrying ANY advancing/config flag is a DELIBERATE move — only a truly
   // bare next is the spurious roll-forward. Mirrors the engine done-guard's
   // exemptions (the engine doesn't parse --init/--force — retired P4 — so listing
@@ -213,15 +337,17 @@ if (target === "pretool-block") {
   const ADVANCING_FLAGS = new Set([
     "--stage", "--phase", "--scope", "--resume", "--depth",
     "--test-strategy", "--single", "--init", "--force",
-    "--new-scope", "--report",
+    "--new-scope", "--report", "--migrate",
   ]);
   // A leading `compose` verb is a deliberate composer dispatch (the engine's
   // Branch 0 exempts flags.compose the same way) - never the spurious bare
   // roll-forward this backstop exists to block.
   const isBareAdvancing =
     m !== null &&
+    parsedNextArgs !== null &&
     nextArgs[0] !== "compose" &&
     !nextArgs.some((a) => ADVANCING_FLAGS.has(a)) &&
+    classifyMigrationRequest(nextArgs) === null &&
     classifyTerminalCommand(nextArgs) === null;
 
   let counter = -1;
@@ -245,6 +371,12 @@ if (target === "pretool-block") {
     );
     process.exit(2); // Kiro reject contract: exit 2 + stderr BLOCKS the tool call.
   }
+
+  // Migration dispatch is a pure read that reaches the shared engine's gated
+  // terminal branch before any state inspection. Let exactly that one complete
+  // bun invocation pass without minting HUMAN_TURN or touching the active
+  // Intent; utility/apply commands are not covered by this carve-out.
+  if (migrationDispatch) process.exit(0);
 
   // --- human-presence floor (second exit-2 branch) ---
   //
@@ -284,6 +416,80 @@ function canonicalTool(name: string): string {
   if (name === "write" || name === "fs_write") return "Write";
   if (name === "shell" || name === "execute_bash") return "Bash";
   return name;
+}
+
+function kiroTextOutput(toolResponse: unknown): string | null {
+  if (toolResponse === null || typeof toolResponse !== "object") return null;
+  const items = (toolResponse as { items?: unknown }).items;
+  if (!Array.isArray(items) || items.length === 0) return null;
+  const chunks: string[] = [];
+  for (const item of items) {
+    if (item === null || typeof item !== "object") return null;
+    const text = (item as { Text?: unknown }).Text;
+    if (typeof text !== "string") return null;
+    chunks.push(text);
+  }
+  const output = chunks.join("\n").trim();
+  return output.length > 0 ? output : null;
+}
+
+function jsonMigrationDryRunIsReady(output: string): boolean {
+  try {
+    const parsed = JSON.parse(output) as unknown;
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return false;
+    }
+    const report = parsed as Record<string, unknown>;
+    return (
+      report.schemaVersion === 1 &&
+      report.mode === "dry-run" &&
+      report.status === "ready"
+    );
+  } catch {
+    return false;
+  }
+}
+
+function humanMigrationDryRunIsReady(output: string): boolean {
+  const lines = output.split(/\r?\n/);
+  const modeLines = lines.filter((line) => line.startsWith("Mode:"));
+  const statusLines = lines.filter((line) => line.startsWith("Status:"));
+  return (
+    lines[0] === "AI-DLC v2 -> Amadeus workspace migration" &&
+    lines.at(-1) ===
+      "No files were changed. Re-run with --apply only after explicit approval." &&
+    modeLines.length === 1 &&
+    modeLines[0] === "Mode: dry-run" &&
+    statusLines.length === 1 &&
+    statusLines[0] === "Status: ready" &&
+    lines.includes("Checks:") &&
+    lines.includes("Operations:")
+  );
+}
+
+function migrationDryRunResponseIsReady(toolResponse: unknown): boolean {
+  const output = kiroTextOutput(toolResponse);
+  return output !== null &&
+    (jsonMigrationDryRunIsReady(output) || humanMigrationDryRunIsReady(output));
+}
+
+function updateMigrationPendingDecision(
+  command: string,
+  toolResponse: unknown,
+): void {
+  if (isMigrationApplyCommand(command, projectDir)) {
+    consumeMigrationPendingDecision(projectDir, kiro.session_id);
+    return;
+  }
+  if (!isMigrationExecutionCommand(command, projectDir)) return;
+
+  // Every completed dry-run supersedes any prior gate marker. Re-arm only when
+  // the live Kiro response is an unambiguous canonical ready report; refused,
+  // failed, non-zero/missing output and lookalike text all leave no permission.
+  consumeMigrationPendingDecision(projectDir, kiro.session_id);
+  if (migrationDryRunResponseIsReady(toolResponse)) {
+    armMigrationPendingDecision(projectDir, kiro.session_id);
+  }
 }
 
 type Forward = { hook: string; input: Record<string, unknown> } | null;
@@ -328,12 +534,18 @@ function buildForward(): Forward {
 
     case "runtime-compile": {
       if (tool !== "Bash") return null;
+      const command = (ti.command as string) ?? "";
+      updateMigrationPendingDecision(command, kiro.tool_response);
       return {
         hook: "amadeus-runtime-compile.ts",
         input: {
           hook_event_name: "PostToolUse",
+          ...(kiro.session_id ? { session_id: kiro.session_id } : {}),
           tool_name: "Bash",
-          tool_input: { command: (ti.command as string) ?? "" },
+          tool_input: { command },
+          ...(kiro.tool_response !== undefined
+            ? { tool_response: kiro.tool_response }
+            : {}),
         },
       };
     }
@@ -381,7 +593,11 @@ function buildForward(): Forward {
       // {"decision":"block"} stdout contract is identical.
       return {
         hook: "amadeus-stop.ts",
-        input: { hook_event_name: "Stop", stop_hook_active: false },
+        input: {
+          hook_event_name: "Stop",
+          ...(kiro.session_id ? { session_id: kiro.session_id } : {}),
+          stop_hook_active: false,
+        },
       };
 
     default:

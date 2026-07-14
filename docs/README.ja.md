@@ -29,3 +29,4 @@ Harness Engineer Guide と Developer Reference の境界は **データ対コー
 ## 本家 AI-DLC v2の違い
 
 - [本家AI-DLC v2.2.0とAmadeus `main`のワークスペース差分](research/upstream-ai-dlc-v2.2.0-amadeus-main-workspace-differences.ja.md)
+- [本家 AI-DLC v2 ワークスペースを Amadeus へ移行](guide/18-migrating-upstream-v2.ja.md)
