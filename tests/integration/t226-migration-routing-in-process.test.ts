@@ -5,6 +5,7 @@
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import {
+  chmodSync,
   mkdtempSync,
   rmSync,
   unlinkSync,
@@ -55,6 +56,7 @@ class ExitSignal extends Error {
 
 interface UtilityRun {
   command?: string[];
+  cwd?: string;
   exitCode?: number;
   stdout: string;
   stderr: string;
@@ -68,6 +70,7 @@ function runUtilityInProcess(args: string[], fakeSpawn = false): UtilityRun {
   const originalConsoleError = console.error;
   const originalSpawnSync = Bun.spawnSync;
   let command: string[] | undefined;
+  let cwd: string | undefined;
   let exitCode: number | undefined;
   let stdout = "";
   let stderr = "";
@@ -92,8 +95,9 @@ function runUtilityInProcess(args: string[], fakeSpawn = false): UtilityRun {
     stderr += `${values.map(String).join(" ")}\n`;
   };
   if (fakeSpawn) {
-    Bun.spawnSync = ((options: { cmd: string[] }) => {
+    Bun.spawnSync = ((options: { cmd: string[]; cwd?: string }) => {
       command = options.cmd;
+      cwd = options.cwd;
       return {
         exitCode: 0,
         stdout: Buffer.from("migrator stdout"),
@@ -115,7 +119,7 @@ function runUtilityInProcess(args: string[], fakeSpawn = false): UtilityRun {
     console.error = originalConsoleError;
     Bun.spawnSync = originalSpawnSync;
   }
-  return { command, exitCode, stdout, stderr };
+  return { command, cwd, exitCode, stdout, stderr };
 }
 
 describe("migration shell and latch seams run in process", () => {
@@ -163,10 +167,15 @@ describe("migration shell and latch seams run in process", () => {
   test("owner mismatch and malformed latch content fail closed", () => {
     const project = mkdtempSync(join(tmpdir(), "amadeus-migration-latch-seam-"));
     const ownerSession = `owner-${process.pid}`;
+    const modeSession = `mode-${process.pid}`;
     const malformedSession = `malformed-${process.pid}`;
     const originalGetuid = process.getuid;
     try {
       if (originalGetuid !== undefined) {
+        armMigrationStopLatch(project, modeSession, 1_000);
+        chmodSync(migrationLatchPath(project, modeSession), 0o644);
+        expect(consumeMigrationStopLatch(project, modeSession, 1_001)).toBe(false);
+
         armMigrationStopLatch(project, ownerSession, 1_000);
         process.getuid = (() => originalGetuid() + 1) as typeof process.getuid;
         expect(consumeMigrationStopLatch(project, ownerSession, 1_001)).toBe(false);
@@ -178,12 +187,32 @@ describe("migration shell and latch seams run in process", () => {
       expect(consumeMigrationStopLatch(project, malformedSession, 1_001)).toBe(false);
     } finally {
       process.getuid = originalGetuid;
-      for (const session of [ownerSession, malformedSession]) {
+      for (const session of [ownerSession, modeSession, malformedSession]) {
         try {
           unlinkSync(migrationLatchPath(project, session));
         } catch {
           // The failed claim normally removes the latch.
         }
+      }
+      rmSync(project, { recursive: true, force: true });
+    }
+  });
+
+  test("non-POSIX runtimes rely on the user temp ACL for regular latches", () => {
+    const project = mkdtempSync(join(tmpdir(), "amadeus-migration-latch-windows-"));
+    const session = `windows-${process.pid}`;
+    const originalGetuid = process.getuid;
+    try {
+      armMigrationStopLatch(project, session, 1_000);
+      chmodSync(migrationLatchPath(project, session), 0o666);
+      process.getuid = undefined as unknown as typeof process.getuid;
+      expect(consumeMigrationStopLatch(project, session, 1_001)).toBe(true);
+    } finally {
+      process.getuid = originalGetuid;
+      try {
+        unlinkSync(migrationLatchPath(project, session));
+      } catch {
+        // A successful claim consumes the latch.
       }
       rmSync(project, { recursive: true, force: true });
     }
@@ -227,6 +256,15 @@ describe("migration utility dispatch runs in process", () => {
     } finally {
       rmSync(project, { recursive: true, force: true });
     }
+  });
+
+  test("resolves a relative project dir once before spawning the migrator", () => {
+    const project = "relative-migration-project";
+    const run = runUtilityInProcess(["migrate", "--project-dir", project], true);
+    const absoluteProject = resolve(project);
+    expect(run.cwd).toBe(absoluteProject);
+    expect(run.command).toContain(absoluteProject);
+    expect(run.command).not.toContain(project);
   });
 
   test.each([

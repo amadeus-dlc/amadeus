@@ -14,7 +14,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import type { Stats } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { appendAuditEntry, appendAuditEntryUnlocked } from "./amadeus-audit.ts";
 import {
@@ -3994,9 +3994,10 @@ function handleMigrate(
     die("Usage: amadeus-utility migrate [path] [--apply] [--json] [--project-dir <path>]");
   }
 
+  const absoluteProjectDir = resolve(projectDir);
   const run = Bun.spawnSync({
-    cmd: ["bun", join(TOOLS_DIR, "amadeus-migrate.ts"), ...migrateToolArgs(projectDir, positional, flags)],
-    cwd: projectDir,
+    cmd: ["bun", join(TOOLS_DIR, "amadeus-migrate.ts"), ...migrateToolArgs(absoluteProjectDir, positional, flags)],
+    cwd: absoluteProjectDir,
     stdout: "pipe",
     stderr: "pipe",
   });
