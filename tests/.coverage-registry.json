@@ -933,11 +933,11 @@
       "minMechanism": "none",
       "coveredBy": [
         {
-          "file": "tests/integration/t66.test.ts",
+          "file": "tests/integration/t212-optional-produces.test.ts",
           "mechanism": "cli"
         },
         {
-          "file": "tests/unit/t212-optional-produces.test.ts",
+          "file": "tests/integration/t66.test.ts",
           "mechanism": "cli"
         }
       ],
@@ -1195,6 +1195,10 @@
           "mechanism": "none"
         },
         {
+          "file": "tests/integration/t212-optional-produces.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t66.test.ts",
           "mechanism": "cli"
         },
@@ -1204,10 +1208,6 @@
         },
         {
           "file": "tests/unit/t124-scope-transpose.test.ts",
-          "mechanism": "cli"
-        },
-        {
-          "file": "tests/unit/t212-optional-produces.test.ts",
           "mechanism": "cli"
         }
       ],
@@ -1336,12 +1336,12 @@
       "minMechanism": "none",
       "coveredBy": [
         {
-          "file": "tests/integration/t65.test.ts",
-          "mechanism": "none"
+          "file": "tests/integration/t212-optional-produces.test.ts",
+          "mechanism": "cli"
         },
         {
-          "file": "tests/unit/t212-optional-produces.test.ts",
-          "mechanism": "cli"
+          "file": "tests/integration/t65.test.ts",
+          "mechanism": "none"
         },
         {
           "file": "tests/unit/t64.test.ts",
@@ -2145,6 +2145,10 @@
       "minMechanism": "none",
       "coveredBy": [
         {
+          "file": "tests/integration/t212-optional-produces.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t32-stage-graph-consistency.test.ts",
           "mechanism": "none"
         },
@@ -2171,10 +2175,6 @@
         {
           "file": "tests/unit/t14.test.ts",
           "mechanism": "none"
-        },
-        {
-          "file": "tests/unit/t212-optional-produces.test.ts",
-          "mechanism": "cli"
         },
         {
           "file": "tests/unit/t64.test.ts",
@@ -2224,11 +2224,11 @@
       "minMechanism": "none",
       "coveredBy": [
         {
-          "file": "tests/integration/t66.test.ts",
+          "file": "tests/integration/t212-optional-produces.test.ts",
           "mechanism": "cli"
         },
         {
-          "file": "tests/unit/t212-optional-produces.test.ts",
+          "file": "tests/integration/t66.test.ts",
           "mechanism": "cli"
         }
       ],
@@ -4423,16 +4423,16 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/integration/t212-optional-produces.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t92.test.ts",
           "mechanism": "cli"
         },
         {
           "file": "tests/unit/t-sensor-fire-seam.test.ts",
           "mechanism": "none"
-        },
-        {
-          "file": "tests/unit/t212-optional-produces.test.ts",
-          "mechanism": "cli"
         }
       ],
       "status": "covered"
