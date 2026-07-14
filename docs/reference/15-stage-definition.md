@@ -198,6 +198,33 @@ For unconditional consumes, **omit the field entirely**. There is no
 `always` value — an unconditional consume simply has no `conditional_on`
 key.
 
+### `optional_produces`
+
+A kebab-case string list, parallel to `produces:`. It names artifacts a stage
+may write for a unit but does not require for every unit. Omit the field when a
+stage has no conditional outputs.
+
+Per-unit coverage checks only `produces[]`. This distinction lets
+`functional-design` omit `frontend-components` for a backend-only unit and lets
+`infrastructure-design` omit `shared-infrastructure` when infrastructure is not
+shared. Neither case needs an artificial N/A file to reach the stage gate.
+
+Optional outputs remain first-class everywhere else:
+
+- Run-stage directives put every resolved required and optional path in
+  `directive.produces`, and repeat the conditional subset in
+  `directive.optional_produces`. Required paths must be written; optional paths
+  are candidates governed by the matching `CONDITIONAL` instruction.
+- `artifactsRegistry()` and `producersOf()` include both lists.
+- Required-sections template eligibility includes an optional artifact when it
+  is actually written.
+
+Every `optional_produces` entry must have a matching `CONDITIONAL` instruction
+in the stage body and in `outputs:` that states when to create it. Use this field
+only for genuinely conditional outputs; moving a required output here removes
+it from the deterministic per-unit completion proof. Each output list must be
+duplicate-free, and the required and optional lists must be disjoint.
+
 ### `mode`
 
 Dispatch mechanism, three values:

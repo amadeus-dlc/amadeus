@@ -73,13 +73,12 @@ const ORCH = join(AMADEUS_SRC, "tools", "amadeus-orchestrate.ts");
 // active intent's record dir (relativeRecordDir over the seeded default intent).
 const RP = `amadeus/spaces/${DEFAULT_SPACE}/intents/${DEFAULT_RECORD_DIR}`;
 
-// functional-design's produces[] (verified frontmatter), the artifacts that
-// constitute a unit's coverage for that stage.
-const FD_PRODUCES = [
+// functional-design's required produces[] (verified frontmatter), the artifacts
+// that constitute coverage. frontend-components is optional and is not listed.
+const FD_REQUIRED_PRODUCES = [
   "business-logic-model",
   "business-rules",
   "domain-entities",
-  "frontend-components",
 ];
 
 const tempDirs: string[] = [];
@@ -270,6 +269,10 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     expect(d.produces).toContain(
       `${RP}/construction/alpha/functional-design/business-logic-model.md`,
     );
+    // Optional outputs remain routed even though they are not coverage evidence.
+    expect(d.produces).toContain(
+      `${RP}/construction/alpha/functional-design/frontend-components.md`,
+    );
     // The literal placeholder is gone, the real unit was substituted.
     expect(d.produces?.some((p) => p.includes("{unit-name}"))).toBe(false);
   }, 30000);
@@ -284,12 +287,12 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     expect(d.gate).toBe(false);
   }, 30000);
 
-  // 3: iteration advance, cover alpha's full produces[] on disk -> next emits
+  // 3: iteration advance, cover alpha's full required produces[] on disk -> next emits
   // unit=beta (the engine walks to the next uncovered unit).
   test("3: covering the first unit advances the iteration to the next unit", () => {
     const proj = seedProject("functional-design", "on");
     seedBoltDag(proj, ["alpha", "beta"]);
-    coverUnit(proj, "alpha", "functional-design", FD_PRODUCES);
+    coverUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES);
     const d = runNext(proj);
     expect(d.kind).toBe("run-stage");
     expect(d.unit).toBe("beta");
@@ -306,7 +309,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
   test("4: gate stays suppressed (false) on the last uncovered unit (its artifacts do not exist yet)", () => {
     const proj = seedProject("functional-design", "on");
     seedBoltDag(proj, ["alpha", "beta"]);
-    coverUnit(proj, "alpha", "functional-design", FD_PRODUCES);
+    coverUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES);
     const d = runNext(proj);
     expect(d.unit).toBe("beta");
     expect(d.gate).toBe(false);
@@ -351,7 +354,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
   test("6b: approving with only the last unit uncovered is still refused", () => {
     const proj = seedProject("functional-design", "on");
     seedBoltDag(proj, ["alpha", "beta"]);
-    coverUnit(proj, "alpha", "functional-design", FD_PRODUCES);
+    coverUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES);
     const d = runReport(proj, [
       "--stage",
       "functional-design",
@@ -394,8 +397,8 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
   test("9: with every unit covered, next presents the real gate on the last unit", () => {
     const proj = seedProject("functional-design", "on");
     seedBoltDag(proj, ["alpha", "beta"]);
-    coverUnit(proj, "alpha", "functional-design", FD_PRODUCES);
-    coverUnit(proj, "beta", "functional-design", FD_PRODUCES);
+    coverUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES);
+    coverUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES);
     const d = runNext(proj);
     expect(d.kind).toBe("run-stage");
     expect(d.stage).toBe("functional-design");
@@ -408,8 +411,8 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
   test("9b: approving once every unit is covered is allowed and commits", () => {
     const proj = seedProject("functional-design", "on");
     seedBoltDag(proj, ["alpha", "beta"]);
-    coverUnit(proj, "alpha", "functional-design", FD_PRODUCES);
-    coverUnit(proj, "beta", "functional-design", FD_PRODUCES);
+    coverUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES);
+    coverUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES);
     const d = runReport(proj, [
       "--stage",
       "functional-design",

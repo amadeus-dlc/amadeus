@@ -933,6 +933,10 @@
       "minMechanism": "none",
       "coveredBy": [
         {
+          "file": "tests/integration/t212-optional-produces.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t66.test.ts",
           "mechanism": "cli"
         }
@@ -1191,6 +1195,10 @@
           "mechanism": "none"
         },
         {
+          "file": "tests/integration/t212-optional-produces.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t66.test.ts",
           "mechanism": "cli"
         },
@@ -1327,6 +1335,10 @@
       "unitId": "function:emitStageFrontmatter",
       "minMechanism": "none",
       "coveredBy": [
+        {
+          "file": "tests/integration/t212-optional-produces.test.ts",
+          "mechanism": "cli"
+        },
         {
           "file": "tests/integration/t65.test.ts",
           "mechanism": "none"
@@ -2133,6 +2145,10 @@
       "minMechanism": "none",
       "coveredBy": [
         {
+          "file": "tests/integration/t212-optional-produces.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t32-stage-graph-consistency.test.ts",
           "mechanism": "none"
         },
@@ -2207,6 +2223,10 @@
       "unitId": "function:producersOf",
       "minMechanism": "none",
       "coveredBy": [
+        {
+          "file": "tests/integration/t212-optional-produces.test.ts",
+          "mechanism": "cli"
+        },
         {
           "file": "tests/integration/t66.test.ts",
           "mechanism": "cli"
@@ -4400,6 +4420,10 @@
         },
         {
           "file": "tests/integration/t-sensor-fire-hardening.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t212-optional-produces.test.ts",
           "mechanism": "cli"
         },
         {
