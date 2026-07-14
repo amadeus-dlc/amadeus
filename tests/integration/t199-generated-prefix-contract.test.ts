@@ -29,6 +29,15 @@ const foreignPrefixContentAllowlist = new Set([
   ".codex/tools/amadeus-migrate.ts",
   "docs/research/upstream-ai-dlc-v2.2.0-amadeus-main-workspace-differences.md",
   "docs/research/upstream-ai-dlc-v2.2.0-amadeus-main-workspace-differences.ja.md",
+  "contrib/skills/amadeus-upstream-sync/SKILL.md",
+  "contrib/skills/amadeus-upstream-sync/evals/evals.json",
+  "contrib/skills/amadeus-upstream-sync/references/artifact-contracts.md",
+  ".claude/skills/amadeus-upstream-sync/SKILL.md",
+  ".claude/skills/amadeus-upstream-sync/evals/evals.json",
+  ".claude/skills/amadeus-upstream-sync/references/artifact-contracts.md",
+  ".agents/skills/amadeus-upstream-sync/SKILL.md",
+  ".agents/skills/amadeus-upstream-sync/evals/evals.json",
+  ".agents/skills/amadeus-upstream-sync/references/artifact-contracts.md",
   "tests/fixtures/upstream-v2-migration/operational-tokens.txt",
 ]);
 const previousCommandName = ["ai", "dlc"].join("");
