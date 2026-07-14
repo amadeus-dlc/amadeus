@@ -243,9 +243,6 @@ export const DriverAdapterSet = Object.freeze({
     for (const driver of expectedDrivers) {
       if (!byDriver.has(driver)) return registrationFailure("REGISTRATION_DRIVER_MISSING", provider, driver);
     }
-    if (byDriver.size !== expected.size) {
-      return registrationFailure("REGISTRATION_DRIVER_OWNERSHIP_INVALID", provider);
-    }
     const canonicalAdapters = Object.freeze(expectedDrivers.map((driver) => byDriver.get(driver)!));
     const canonicalDrivers = Object.freeze([...expectedDrivers]);
     return Result.ok(
@@ -427,9 +424,6 @@ function indexRegistration(
   }
   byProvider.set(registration.provider, registration);
   for (const driver of registration.drivers) {
-    if (byDriver.has(driver)) {
-      return registrationFailure("REGISTRATION_DRIVER_DUPLICATE", registration.provider, driver);
-    }
     byDriver.set(driver, registration);
   }
   return Result.ok(undefined);

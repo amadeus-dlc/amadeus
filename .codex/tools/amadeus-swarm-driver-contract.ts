@@ -874,9 +874,14 @@ function selectionWithBehavior<T extends RedactedSelection>(redacted: T): T & Se
   }) as unknown as T & SelectionBehavior;
 }
 
-function legacyWithBehavior<
-  T extends RedactedClaudeLegacySelection | RedactedCodexLegacySelection | RedactedKiroLegacySelection,
->(redacted: T): T & SelectionBehavior & Readonly<{ isDegraded(): boolean }> {
+type RedactedLegacySelection =
+  | RedactedClaudeLegacySelection
+  | RedactedCodexLegacySelection
+  | RedactedKiroLegacySelection;
+
+type LegacySelectionBehavior = SelectionBehavior & Readonly<{ isDegraded(): boolean }>;
+
+function legacyWithBehavior<T extends RedactedLegacySelection>(redacted: T): T & LegacySelectionBehavior {
   const frozen = deepFreezeJson(redacted);
   return Object.freeze({
     ...frozen,

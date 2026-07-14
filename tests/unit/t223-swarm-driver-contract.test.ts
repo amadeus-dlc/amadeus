@@ -10,6 +10,7 @@ import {
   DriverRequest,
   FALLBACK_REASON_PRIORITY,
   FALLBACK_REASON_VALUES,
+  FallbackCauseCollection,
   FLOOR_DRIVER_VALUES,
   HARNESS_VALUES,
   NATIVE_DRIVER_VALUES,
@@ -35,6 +36,7 @@ import {
   type NormalizedDriverEvent,
   type ProbeCheck,
   type RedactedCodexLegacySelection,
+  type RedactedNativeSelection,
   type RegistrationSlotInput,
   type TopologySignal,
 } from "../../packages/framework/core/tools/amadeus-swarm-driver-contract.ts";
@@ -154,6 +156,26 @@ describe("swarm driver closed vocabulary and immutable values", () => {
     expect(NativeDriverValue.parse("auto").type).toBe("err");
   });
 
+  test("value and topology collections expose canonical behavior and reject malformed signals", () => {
+    expect(NativeDriverValue.values().map((value) => value.id)).toEqual([...NATIVE_DRIVER_VALUES]);
+
+    const malformedSignals = [
+      null,
+      { unit: "alpha", kind: "shared-task", extension: true },
+      { unit: "", kind: "shared-task" },
+    ];
+    for (const signal of malformedSignals) {
+      expect(TopologySignalCollection.build(["alpha", "beta"], [signal]).type).toBe("err");
+    }
+
+    const collection = okValue(
+      TopologySignalCollection.build(["alpha", "beta"], [{ unit: "alpha", kind: "shared-task" }]),
+    );
+    const decision = TopologyDecision.classify(collection);
+    expect(collection.units()).toEqual(["alpha", "beta"]);
+    expect(decision.diagnosticCodes()).toEqual(["coordination-signal"]);
+  });
+
   test("DriverRequest returns only redacted source-specific fields", () => {
     const defaultRequest = DriverRequest.default();
     const legacyRequest = DriverRequest.fromLegacyEnvironment("enabled");
@@ -191,6 +213,26 @@ describe("probe, capability, and registration contracts", () => {
       ).type,
     ).toBe("err");
     expect(CapabilitySet.build(["codex-ultra"], [{ driver: "kiro-subagent", result: probe }]).type).toBe("err");
+    expect(CapabilitySet.build(["codex-ultra", "codex-ultra"], []).type).toBe("err");
+
+    const canonical = okValue(CapabilitySet.build(["codex-ultra"], [{ driver: "codex-ultra", result: probe }]));
+    expect(canonical.rows()).toEqual([{ driver: "codex-ultra", result: probe }]);
+  });
+
+  test("probe and fallback defensive branches reject invalid checks and expose canonical causes", () => {
+    expect(
+      ProbeResult.build({
+        status: "unavailable",
+        reason: "cli-unavailable",
+        checks: [{ name: "unknown", ok: false, diagnosticCode: "CLI_UNAVAILABLE" } as unknown as ProbeCheck],
+      }).type,
+    ).toBe("err");
+
+    const causes = FallbackCauseCollection.build([
+      { driver: "codex-ultra", reason: "cli-unavailable", diagnosticCodes: ["CLI_UNAVAILABLE"] },
+      { driver: "codex-ultra", reason: "cli-unavailable", diagnosticCodes: ["CAPABILITY_PROBE_FAILED"] },
+    ]);
+    expect(causes.values()).toHaveLength(2);
   });
 
   test("registration set fixes three providers and four native drivers", () => {
@@ -409,6 +451,76 @@ describe("probe, capability, and registration contracts", () => {
     });
     expect(DriverRegistrationSet.build([fakeClaude, codex, kiro]).type).toBe("err");
   });
+
+  test("registration builders reject malformed public-boundary structures", () => {
+    expect(
+      DriverAdapterSet.build("codex", [null as unknown as DriverAdapter]).type,
+    ).toBe("err");
+    expect(
+      DriverAdapterSet.build("plugin" as unknown as Parameters<typeof DriverAdapterSet.build>[0], []).type,
+    ).toBe("err");
+
+    const malformedInputs = [
+      { provider: "codex", drivers: null, harnesses: ["codex"], slot: unavailableSlot },
+      { provider: "codex", drivers: ["codex-ultra"], harnesses: null, slot: unavailableSlot },
+      { provider: "codex", drivers: ["codex-ultra"], harnesses: ["codex"], slot: null },
+      {
+        provider: "codex",
+        drivers: ["codex-ultra"],
+        harnesses: ["codex"],
+        slot: { kind: "available", adapters: null },
+      },
+    ];
+    for (const input of malformedInputs) {
+      expect(DriverRegistration.build(input as unknown as DriverRegistrationInput).type).toBe("err");
+    }
+
+    const codex = registration({
+      provider: "codex",
+      drivers: ["codex-ultra"],
+      harnesses: ["codex"],
+      slot: unavailableSlot,
+    });
+    const kiro = registration({
+      provider: "kiro",
+      drivers: ["kiro-subagent"],
+      harnesses: ["kiro", "kiro-ide"],
+      slot: unavailableSlot,
+    });
+    const claude = registration({
+      provider: "claude",
+      drivers: ["claude-agent-teams", "claude-ultracode"],
+      harnesses: ["claude"],
+      slot: unavailableSlot,
+    });
+
+    const malformedRegistrations = [
+      {},
+      { ...codex, schemaVersion: 2 },
+      { ...codex, provider: "plugin" },
+      { ...codex, drivers: ["plugin-driver"] },
+      { ...codex, harnesses: ["plugin-harness"] },
+      { ...codex, slot: { kind: "bogus" } },
+      { ...codex, slot: { kind: "available", adapterSet: {} } },
+      {
+        ...codex,
+        slot: {
+          kind: "available",
+          adapterSet: {
+            adapters(): never {
+              throw new Error("expected test failure");
+            },
+          },
+        },
+      },
+    ];
+    for (const malformed of malformedRegistrations) {
+      expect(
+        DriverRegistrationSet.build([malformed as unknown as DriverRegistrationValue, claude, kiro]).type,
+      ).toBe("err");
+    }
+    expect(DriverRegistrationSet.build([claude, claude, kiro]).type).toBe("err");
+  });
 });
 
 describe("selection schema v1 and redaction", () => {
@@ -427,7 +539,52 @@ describe("selection schema v1 and redaction", () => {
     const parsed = okValue(SelectionOutcomeProjection.parse(JSON.parse(projection.canonicalJSON())));
     expect(parsed.canonicalJSON()).toBe(projection.canonicalJSON());
     expect(parsed.digest()).toBe(projection.digest());
+    expect(parsed.toJSON()).toEqual(outcome.toRedactedJSON());
     expect(projection.digest()).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  test("projection parser rejects malformed nested and variant fields", () => {
+    const native = okValue(
+      SelectionOutcome.native({
+        source: "default",
+        requested: "auto",
+        selected: "codex-ultra",
+        harness: "codex",
+        topology: unknownTopology(),
+        fallbackReason: "none",
+        capabilityDetails: [],
+        probe: availableProbe(),
+      }),
+    ).toRedactedJSON() as RedactedNativeSelection;
+    const floor = okValue(
+      SelectionOutcome.floor({
+        source: "default",
+        selected: "codex-exec-floor",
+        harness: "codex",
+        topology: unknownTopology(),
+        fallbackReason: "cli-unavailable",
+        capabilityDetails: ["CLI_UNAVAILABLE"],
+      }),
+    ).toRedactedJSON();
+    const malformed = [
+      { ...native, probe: { ...native.probe, modeIdentifier: 1 } },
+      {
+        ...native,
+        topology: { topology: "unknown", reason: "no-signal", signals: [{ unit: "alpha", kind: "bogus" }] },
+      },
+      { ...native, topology: { topology: "unknown", reason: "bogus", signals: [] } },
+      {
+        ...native,
+        probe: {
+          status: "available",
+          reason: "none",
+          checks: [{ name: "cli", ok: false, diagnosticCode: "CLI_UNAVAILABLE" }],
+        },
+      },
+      { ...floor, fallbackReason: "none" },
+      { ...SelectionOutcome.codexFloor(true).toRedactedJSON(), legacyEnabled: "yes" },
+    ];
+    for (const value of malformed) expect(SelectionOutcomeProjection.parse(value).type).toBe("err");
   });
 
   test("schema declares every variant closed", () => {

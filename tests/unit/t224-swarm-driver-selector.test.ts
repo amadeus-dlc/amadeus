@@ -266,6 +266,19 @@ describe("explicit and auto selection", () => {
     ).toBe("err");
     expect(selectAutoDriver("default", "codex", decision, rows([["kiro-subagent", available()]])).type).toBe("err");
   });
+
+  test("auto selection rejects a structurally corrupt unavailable probe with no fallback reason", () => {
+    const corruptProbe = {
+      status: "unavailable",
+      reason: "none",
+      checks: [],
+      isAvailable: () => false,
+      diagnosticCodes: () => [],
+    } as unknown as ProbeResultValue;
+    expect(
+      selectAutoDriver("default", "codex", topology(), rows([["codex-ultra", corruptProbe]])).type,
+    ).toBe("err");
+  });
 });
 
 describe("independent 0.1.x legacy resolution", () => {
@@ -312,8 +325,17 @@ describe("independent 0.1.x legacy resolution", () => {
         capabilities: rows([["codex-ultra", available()]]),
       }),
     );
+    const automatic = okValue(
+      selectDriver({
+        request: DriverRequest.default(),
+        harness: "codex",
+        topology: decision,
+        capabilities: rows([["codex-ultra", available()]]),
+      }),
+    );
     expect(legacy.kind).toBe("legacy-selection");
     expect(legacy.executionMode).toBe("legacy");
     expect(explicit.kind).toBe("native-selection");
+    expect(automatic.kind).toBe("native-selection");
   });
 });
