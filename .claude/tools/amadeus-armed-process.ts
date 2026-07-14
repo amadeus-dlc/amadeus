@@ -19,6 +19,11 @@ export type ProcessIdentity = Readonly<{
   startTokenHash: string;
 }>;
 
+export type ProcessLivenessObservation =
+  | Readonly<{ status: "live"; observedOwner: ProcessIdentity }>
+  | Readonly<{ status: "dead" }>
+  | Readonly<{ status: "unknown" }>;
+
 export type PlannedRun = Readonly<{
   schemaVersion: 1;
   runId: string;
@@ -241,6 +246,35 @@ export function sameProcess(expected: ProcessIdentity, observed: ProcessIdentity
     expected.processGroupId === observed.processGroupId &&
     expected.startTokenHash === observed.startTokenHash
   );
+}
+
+function processExistence(
+  pid: number,
+  signalProcess: (pid: number) => void,
+): "exists" | "dead" | "unknown" {
+  try {
+    signalProcess(pid);
+    return "exists";
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "ESRCH" ? "dead" : "unknown";
+  }
+}
+
+export function observeExactProcessLiveness(
+  expected: ProcessIdentity,
+  injected: Readonly<{
+    signalProcess?: (pid: number) => void;
+    observeIdentity?: typeof observeProcessIdentity;
+  }> = {},
+): ProcessLivenessObservation {
+  const existence = processExistence(expected.pid, injected.signalProcess ?? ((pid) => process.kill(pid, 0)));
+  if (existence === "dead") return Object.freeze({ status: "dead" });
+  if (existence === "unknown") return Object.freeze({ status: "unknown" });
+  const observed = (injected.observeIdentity ?? observeProcessIdentity)(expected.pid, expected.platform);
+  if (observed.type === "err") return Object.freeze({ status: "unknown" });
+  return sameProcess(expected, observed.value)
+    ? Object.freeze({ status: "live", observedOwner: observed.value })
+    : Object.freeze({ status: "dead" });
 }
 
 export function createPlannedRun(input: Readonly<{

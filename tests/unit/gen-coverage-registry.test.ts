@@ -885,6 +885,7 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "integration/t185-stage-artifact-guard.test.ts",
     "integration/t214-engine-error-logged.test.ts",
     "integration/t215-docs-only-exemption.test.ts",
+    "integration/t230-swarm-driver-supervisor.test.ts",
     "integration/t238-swarm-native-resources.test.ts",
     "integration/t240-swarm-native-process.test.ts",
     "integration/t21b.test.ts",

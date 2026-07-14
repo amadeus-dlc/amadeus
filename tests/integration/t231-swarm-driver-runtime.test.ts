@@ -226,9 +226,12 @@ function fixture(
     invalidEvidence?: boolean;
     now?: () => Date;
     recovery?: AttemptRecoveryPort;
-    ownerLive?: boolean;
+    ownerLive?: boolean | (() => boolean);
+    ownerLivenessUnknown?: boolean;
+    recoveryOwnerIdentityAvailable?: boolean;
     auditReadable?: boolean;
     callbackMode?: NativeCallbackMode;
+    beforeHeartbeat?: () => void;
   }> = {},
 ) {
   const checkpoints = new Map<number, AttemptCheckpoint>();
@@ -236,6 +239,9 @@ function fixture(
   let probeCount = 0;
   let executionCount = 0;
   let failCheckpointWrite = false;
+  let heartbeatCallback: (() => void) | undefined;
+  let heartbeatDelay: number | undefined;
+  let heartbeatCancelled = false;
   let id = 0;
   const adapter: DriverAdapter = Object.freeze({
     driver: "codex-ultra",
@@ -323,6 +329,7 @@ function fixture(
       execute: async ({
         launchInput,
         context,
+        fencingToken,
         onDispatchPrepared,
         onResourcesPrepared,
         onReadyToArm,
@@ -333,7 +340,8 @@ function fixture(
         const dispatchPreparation = {
           kind: "native" as const,
           nativeRunId: launchInput.nativeRunId,
-          fencingToken: 1,
+          planDigest: context.planDigest,
+          fencingToken,
           waveIndex: context.waveIndex,
           waveDigest: context.waveDigest,
           resourcePreparationDigest: digestValue([]),
@@ -369,6 +377,8 @@ function fixture(
           onReadyToArm,
           onCaptureBound,
         });
+        options.beforeHeartbeat?.();
+        heartbeatCallback?.();
         if (options.invalidEvidence) return [];
         return nativeEvents({
           executionId: launchInput.plan.executionId,
@@ -381,7 +391,26 @@ function fixture(
       },
     },
     recovery: options.recovery,
-    observeOwner: (expected) => (options.ownerLive === false ? null : expected),
+    observeOwner: (expected) => {
+      if (options.ownerLivenessUnknown) return Object.freeze({ status: "unknown" as const });
+      const ownerLive = typeof options.ownerLive === "function" ? options.ownerLive() : options.ownerLive;
+      return ownerLive === false
+        ? Object.freeze({ status: "dead" as const })
+        : Object.freeze({ status: "live" as const, observedOwner: expected });
+    },
+    ...(options.recoveryOwnerIdentityAvailable === false
+      ? { observeRecoveryOwner: () => null }
+      : {}),
+    heartbeatTimer: {
+      start: (callback, delay) => {
+        heartbeatCallback = callback;
+        heartbeatDelay = delay;
+        return "heartbeat-fixture";
+      },
+      stop: () => {
+        heartbeatCancelled = true;
+      },
+    },
   });
   return {
     coordinator,
@@ -389,6 +418,8 @@ function fixture(
     audits,
     probeCount: () => probeCount,
     executionCount: () => executionCount,
+    heartbeatDelay: () => heartbeatDelay,
+    heartbeatCancelled: () => heartbeatCancelled,
     failWrites: (enabled: boolean) => {
       failCheckpointWrite = enabled;
     },
@@ -455,7 +486,14 @@ function resumeRequest(checkpoint: AttemptCheckpoint) {
   } as const;
 }
 
-function probingCheckpoint(): AttemptCheckpoint {
+const expiredOwnerProcess = Object.freeze({
+  platform: "darwin" as const,
+  pid: 42,
+  processGroupId: 42,
+  startTokenHash: "expired-owner-start-token",
+});
+
+function probingCheckpoint(options: Readonly<{ ownerProcess?: boolean }> = {}): AttemptCheckpoint {
   const checkpoint = createProbingCheckpoint({
     executionId: "audit-only-execution",
     attemptId: "audit-only-attempt",
@@ -469,6 +507,7 @@ function probingCheckpoint(): AttemptCheckpoint {
       ownerId: "audit-only-owner",
       heartbeatAt: "2026-07-14T00:00:00.000Z",
       expiresAt: "2026-07-14T00:00:30.000Z",
+      ...(options.ownerProcess === false ? {} : { ownerProcess: expiredOwnerProcess }),
     },
     selectionInput: {
       requested: { source: "default", requested: "auto" },
@@ -570,6 +609,234 @@ describe("t231 swarm driver runtime", () => {
     });
   });
 
+  test("materializes an expired active attempt as recovered before resuming it", async () => {
+    const recovery: AttemptRecoveryPort = Object.freeze({ recover: async () => "recovered" as const });
+    const f = fixture({
+      now: () => new Date("2026-07-14T00:00:31.000Z"),
+      ownerLive: false,
+      recovery,
+    });
+    const active = f.store.begin(probingCheckpoint());
+
+    expect(await f.coordinator.resume(resumeRequest(active))).toMatchObject({
+      type: "ok",
+      value: {
+        state: "probing",
+        origin: "resumed",
+        previousAttemptId: active.attemptId,
+        lease: { fencingToken: 3 },
+      },
+    });
+    expect(f.audits
+      .filter(({ event }) => event === "SWARM_DRIVER_TRANSITION")
+      .map(({ fields }) => fields["Transition edge"])).toEqual([
+      "active-recovery-claimed",
+      "active-attempt-recovered",
+      "attempt-resumed",
+    ]);
+  });
+
+  test("refuses to claim active recovery when the expired owner identity is missing", async () => {
+    let recoveryCalls = 0;
+    const recovery: AttemptRecoveryPort = Object.freeze({
+      recover: async () => {
+        recoveryCalls += 1;
+        return "recovered" as const;
+      },
+    });
+    const f = fixture({
+      now: () => new Date("2026-07-14T00:00:31.000Z"),
+      ownerLive: false,
+      recovery,
+    });
+    const active = f.store.begin(probingCheckpoint({ ownerProcess: false }));
+
+    expect(await f.coordinator.resume(resumeRequest(active))).toMatchObject({
+      type: "err",
+      error: { code: "ATTEMPT_LIVENESS_UNKNOWN" },
+    });
+    expect(recoveryCalls).toBe(0);
+    expect(f.store.read(1)).toEqual(active);
+  });
+
+  test("refuses to claim active recovery when old-owner liveness observation fails", async () => {
+    let recoveryCalls = 0;
+    const f = fixture({
+      now: () => new Date("2026-07-14T00:00:31.000Z"),
+      ownerLivenessUnknown: true,
+      recovery: Object.freeze({
+        recover: async () => {
+          recoveryCalls += 1;
+          return "recovered" as const;
+        },
+      }),
+    });
+    const active = f.store.begin(probingCheckpoint());
+
+    expect(await f.coordinator.resume(resumeRequest(active))).toMatchObject({
+      type: "err",
+      error: { code: "ATTEMPT_LIVENESS_UNKNOWN" },
+    });
+    expect(recoveryCalls).toBe(0);
+    expect(f.store.read(1)).toEqual(active);
+  });
+
+  test("refuses to claim active recovery when the recovery-owner identity cannot be established", async () => {
+    let recoveryCalls = 0;
+    const f = fixture({
+      now: () => new Date("2026-07-14T00:00:31.000Z"),
+      ownerLive: false,
+      recoveryOwnerIdentityAvailable: false,
+      recovery: Object.freeze({
+        recover: async () => {
+          recoveryCalls += 1;
+          return "recovered" as const;
+        },
+      }),
+    });
+    const active = f.store.begin(probingCheckpoint());
+
+    expect(await f.coordinator.resume(resumeRequest(active))).toMatchObject({
+      type: "err",
+      error: { code: "ATTEMPT_LIVENESS_UNKNOWN" },
+    });
+    expect(recoveryCalls).toBe(0);
+    expect(f.store.read(1)).toEqual(active);
+  });
+
+  test("allows exactly one failed-attempt recovery claimant to perform external recovery", async () => {
+    let clock = new Date("2026-07-14T00:00:00.000Z");
+    let releaseRecovery: (() => void) | undefined;
+    const recoveryGate = new Promise<void>((resolve) => {
+      releaseRecovery = resolve;
+    });
+    let recoveryCalls = 0;
+    const recovery: AttemptRecoveryPort = Object.freeze({
+      recover: async () => {
+        recoveryCalls += 1;
+        await recoveryGate;
+        return "recovered" as const;
+      },
+    });
+    const f = fixture({
+      nativeAvailable: true,
+      invalidEvidence: true,
+      now: () => clock,
+      ownerLive: false,
+      recovery,
+    });
+    const failed = await failNativeAttempt(f);
+    clock = new Date("2026-07-14T00:00:31.000Z");
+
+    const winner = f.coordinator.resume(resumeRequest(failed));
+    const loser = f.coordinator.resume({
+      ...resumeRequest(failed),
+      newAttemptId: "loser-attempt",
+      leaseId: "loser-lease",
+      mutationId: "loser-mutation",
+    });
+    await Promise.resolve();
+    releaseRecovery?.();
+
+    expect(await winner).toMatchObject({ type: "ok" });
+    expect(await loser).toMatchObject({ type: "err", error: { code: "ATTEMPT_LEASE_ACTIVE" } });
+    expect(recoveryCalls).toBe(1);
+    expect(f.audits.filter(({ fields }) => fields["Transition edge"] === "active-recovery-claimed")).toHaveLength(1);
+  });
+
+  test("reconciles an audit-only external recovery before resuming", async () => {
+    let clock = new Date("2026-07-14T00:00:00.000Z");
+    let f: ReturnType<typeof fixture>;
+    const recovery: AttemptRecoveryPort = Object.freeze({
+      recover: async () => {
+        f.failWrites(true);
+        return "recovered" as const;
+      },
+    });
+    f = fixture({
+      nativeAvailable: true,
+      invalidEvidence: true,
+      now: () => clock,
+      ownerLive: false,
+      auditReadable: true,
+      recovery,
+    });
+    const failed = await failNativeAttempt(f);
+    clock = new Date("2026-07-14T00:00:31.000Z");
+
+    expect(await f.coordinator.resume(resumeRequest(failed))).toMatchObject({
+      type: "err",
+      error: { code: "CHECKPOINT_STATE_INVALID" },
+    });
+    f.failWrites(false);
+    expect(f.coordinator.status(1)).toMatchObject({
+      state: "failed-resumable",
+      recoveryClaim: { claimId: expect.any(String) },
+    });
+    expect(await f.coordinator.resume(resumeRequest(failed))).toMatchObject({
+      type: "ok",
+      value: { state: "probing", lease: { fencingToken: 4 } },
+    });
+  });
+
+  test("reclaims an abandoned recovery claim only after its lease expires", async () => {
+    let clock = new Date("2026-07-14T00:00:00.000Z");
+    let ownerLive = false;
+    let outcome: "unknown" | "recovered" = "unknown";
+    let recoveryCalls = 0;
+    const recovery: AttemptRecoveryPort = Object.freeze({
+      recover: async () => {
+        recoveryCalls += 1;
+        return outcome;
+      },
+    });
+    const f = fixture({
+      nativeAvailable: true,
+      invalidEvidence: true,
+      now: () => clock,
+      ownerLive: () => ownerLive,
+      recovery,
+    });
+    const failed = await failNativeAttempt(f);
+    clock = new Date("2026-07-14T00:00:31.000Z");
+
+    expect(await f.coordinator.resume(resumeRequest(failed))).toMatchObject({
+      type: "err",
+      error: { code: "ATTEMPT_LIVENESS_UNKNOWN" },
+    });
+    expect(f.store.read(1)?.lease.fencingToken).toBe(3);
+    const unknownClaimField = structuredClone(f.store.read(1)!);
+    (unknownClaimField.recoveryClaim as unknown as Record<string, unknown>).unexpected = true;
+    expect(parseAttemptCheckpoint(unknownClaimField)).toMatchObject({
+      type: "err",
+      error: { code: "SCHEMA_INVALID" },
+    });
+
+    clock = new Date("2026-07-14T00:01:00.000Z");
+    expect(await f.coordinator.resume(resumeRequest(failed))).toMatchObject({
+      type: "err",
+      error: { code: "ATTEMPT_LEASE_ACTIVE" },
+    });
+    expect(recoveryCalls).toBe(1);
+
+    clock = new Date("2026-07-14T00:01:02.000Z");
+    outcome = "recovered";
+    ownerLive = true;
+    expect(await f.coordinator.resume(resumeRequest(failed))).toMatchObject({
+      type: "err",
+      error: { code: "ATTEMPT_LEASE_ACTIVE" },
+    });
+    expect(recoveryCalls).toBe(1);
+
+    ownerLive = false;
+    expect(await f.coordinator.resume(resumeRequest(failed))).toMatchObject({
+      type: "ok",
+      value: { state: "probing", lease: { fencingToken: 5 } },
+    });
+    expect(recoveryCalls).toBe(2);
+    expect(f.audits.filter(({ fields }) => fields["Transition edge"] === "active-recovery-claimed")).toHaveLength(2);
+  });
+
   test("status reconciles an audit-only failure before returning the checkpoint", async () => {
     const f = fixture({ auditReadable: true });
     const probing = f.store.begin(probingCheckpoint());
@@ -599,7 +866,18 @@ describe("t231 swarm driver runtime", () => {
 
   test("resume reconciles an audit-only failure before deciding eligibility", async () => {
     let clock = new Date("2026-07-14T00:00:00.000Z");
-    const f = fixture({ auditReadable: true, now: () => clock, ownerLive: false });
+    let recoveryCalls = 0;
+    const f = fixture({
+      auditReadable: true,
+      now: () => clock,
+      ownerLive: false,
+      recovery: Object.freeze({
+        recover: async () => {
+          recoveryCalls += 1;
+          return "recovered" as const;
+        },
+      }),
+    });
     const probing = f.store.begin(probingCheckpoint());
     const transition = buildTransition(probing, {
       transitionId: "audit-only-resume",
@@ -633,6 +911,7 @@ describe("t231 swarm driver runtime", () => {
       type: "ok",
       value: { state: "probing", origin: "resumed", previousAttemptId: probing.attemptId },
     });
+    expect(recoveryCalls).toBe(0);
   });
 
   test("rejects a foreign explicit driver before checkpoint and probe side effects", async () => {
@@ -708,6 +987,155 @@ describe("t231 swarm driver runtime", () => {
     });
   });
 
+  test("transfers the resolved lease to the run owner with the next fencing token", async () => {
+    const f = fixture({ nativeAvailable: true });
+    const resolved = await f.coordinator.resolve({
+      ...baseResolve,
+      batch: 1,
+      ownerId: "resolve-process-owner",
+      selectionEnvironment: { AMADEUS_SWARM_DRIVER: "codex-ultra" },
+    });
+    if (resolved.type === "err") throw new Error("resolve fixture failed");
+    const resolvedLease = f.store.read(1)?.lease;
+    if (!resolvedLease) throw new Error("resolved lease fixture failed");
+
+    expect(await f.coordinator.run({
+      executionId: resolved.value.executionId,
+      attemptId: resolved.value.attemptId,
+      batch: 1,
+      preparedUnits,
+      convergenceCommand: "bun test",
+      evidenceDir: "/repo/evidence",
+      gitBinding: runGitBinding,
+    })).toMatchObject({ type: "ok" });
+    expect(f.store.read(1)?.lease).toMatchObject({ fencingToken: 2 });
+    expect(f.store.read(1)?.lease.leaseId).not.toBe(resolvedLease.leaseId);
+    expect(f.store.read(1)?.lease.ownerId).not.toBe(resolvedLease.ownerId);
+    expect(() => f.store.heartbeat({
+      batch: 1,
+      leaseId: resolvedLease.leaseId,
+      fencingToken: resolvedLease.fencingToken,
+      heartbeatAt: "2026-07-14T00:00:05.000Z",
+      expiresAt: "2026-07-14T00:00:35.000Z",
+    })).toThrow(AttemptStoreError);
+  });
+
+  test("heartbeats the native run lease every five seconds and stops the timer", async () => {
+    let clock = new Date("2026-07-14T00:00:00.000Z");
+    const f = fixture({
+      nativeAvailable: true,
+      now: () => clock,
+      beforeHeartbeat: () => {
+        clock = new Date("2026-07-14T00:00:05.000Z");
+      },
+    });
+
+    expect(await runNativeAttempt(f)).toMatchObject({ type: "ok" });
+    expect(f.heartbeatDelay()).toBe(5_000);
+    expect(f.heartbeatCancelled()).toBeTrue();
+    expect(f.store.read(1)?.lease).toMatchObject({
+      heartbeatAt: "2026-07-14T00:00:05.000Z",
+      expiresAt: "2026-07-14T00:00:35.000Z",
+    });
+  });
+
+  test("prevents a fenced native run from writing after its heartbeat becomes stale", async () => {
+    let clock = new Date("2026-07-14T00:00:00.000Z");
+    let staleLease: AttemptCheckpoint["lease"] | undefined;
+    let f: ReturnType<typeof fixture>;
+    f = fixture({
+      nativeAvailable: true,
+      now: () => clock,
+      beforeHeartbeat: () => {
+        clock = new Date("2026-07-14T00:00:31.000Z");
+        const active = f.store.read(1);
+        if (!active) throw new Error("active fixture missing");
+        staleLease = active.lease;
+        f.store.claimActiveRecovery({
+          batch: active.batch,
+          executionId: active.executionId,
+          attemptId: active.attemptId,
+          expectedLeaseId: active.lease.leaseId,
+          expectedFencingToken: active.lease.fencingToken,
+          claimId: "replacement-claim",
+          recoveryLeaseId: "replacement-lease",
+          recoveryOwnerId: "replacement-owner",
+          recoveryOwnerProcess: active.lease.ownerProcess ?? expiredOwnerProcess,
+          now: clock.toISOString(),
+          expiresAt: "2026-07-14T00:01:01.000Z",
+          mutationId: "replacement-mutation",
+          ownerLivenessVerified: true,
+        });
+      },
+    });
+
+    expect(await runNativeAttempt(f)).toMatchObject({ type: "err", error: { code: "EXECUTION_FAILED" } });
+    expect(f.store.read(1)).toMatchObject({
+      state: "dispatched",
+      lease: { leaseId: "replacement-lease", fencingToken: 3 },
+      recoveryClaim: { claimId: "replacement-claim" },
+    });
+    expect(f.audits.filter(({ fields }) => fields["Transition edge"] === "attempt-failed")).toHaveLength(0);
+    const claimed = f.store.read(1);
+    if (!staleLease || !claimed) throw new Error("claimed recovery fixture missing");
+    const verdict = Object.freeze({
+      ok: true,
+      code: "VERIFIED" as const,
+      completedUnits: Object.freeze(["alpha", "beta"]),
+      sources: Object.freeze(["hook", "model-handshake", "stream"]),
+      evidenceDigest: "stale-evidence",
+    });
+    for (const lease of [staleLease, claimed.lease]) {
+      expect(() => f.store.recordNativeEvidence({
+        batch: claimed.batch,
+        executionId: claimed.executionId,
+        attemptId: claimed.attemptId,
+        expectedLeaseId: lease.leaseId,
+        expectedFencingToken: lease.fencingToken,
+        driver: "codex-ultra",
+        verdict,
+      })).toThrow("STALE_WRITER");
+    }
+    expect(f.audits.filter(({ event }) => event === "SWARM_NATIVE_EVIDENCE")).toHaveLength(0);
+  });
+
+  test("does not heartbeat or auto-recover active floor and legacy dispatches", async () => {
+    for (const selectionEnvironment of [{}, { AMADEUS_USE_SWARM: "1" }] as const) {
+      let clock = new Date("2026-07-14T00:00:00.000Z");
+      let recoveryCalls = 0;
+      const f = fixture({
+        now: () => clock,
+        ownerLive: false,
+        recovery: Object.freeze({
+          recover: async () => {
+            recoveryCalls += 1;
+            return "recovered" as const;
+          },
+        }),
+      });
+      const resolved = await f.coordinator.resolve({ ...baseResolve, batch: 1, selectionEnvironment });
+      if (resolved.type === "err") throw new Error("resolve fixture failed");
+      expect(await f.coordinator.run({
+        executionId: resolved.value.executionId,
+        attemptId: resolved.value.attemptId,
+        batch: 1,
+        preparedUnits,
+        convergenceCommand: "bun test",
+        evidenceDir: "/repo/evidence",
+        gitBinding: runGitBinding,
+      })).toMatchObject({ type: "ok" });
+      expect(f.heartbeatDelay()).toBeUndefined();
+
+      clock = new Date("2026-07-14T00:00:31.000Z");
+      expect(await f.coordinator.resume(resumeRequest(f.store.read(1)!))).toMatchObject({
+        type: "err",
+        error: { code: "ATTEMPT_LIVENESS_UNKNOWN" },
+      });
+      expect(f.store.read(1)?.state).toBe("dispatched");
+      expect(recoveryCalls).toBe(0);
+    }
+  });
+
   for (const [callbackMode, failedFromState] of [
     ["duplicate-dispatch-prepared", "prepared"],
     ["duplicate-resources-prepared", "prepared"],
@@ -743,6 +1171,30 @@ describe("t231 swarm driver runtime", () => {
           },
         },
       },
+    });
+  });
+
+  test("retains the selected plan digest in native recovery preparation", async () => {
+    const f = fixture({ nativeAvailable: true, invalidEvidence: true });
+    const resolved = await f.coordinator.resolve({
+      ...baseResolve,
+      batch: 1,
+      selectionEnvironment: { AMADEUS_SWARM_DRIVER: "codex-ultra" },
+    });
+    if (resolved.type === "err") throw new Error("resolve fixture failed");
+
+    await f.coordinator.run({
+      executionId: resolved.value.executionId,
+      attemptId: resolved.value.attemptId,
+      batch: 1,
+      preparedUnits,
+      convergenceCommand: "bun test",
+      evidenceDir: "/repo/evidence",
+      gitBinding: runGitBinding,
+    });
+    expect(f.store.read(1)).toMatchObject({
+      state: "failed-resumable",
+      failure: { recoveryContext: { dispatchPreparation: { planDigest: resolved.value.planDigest } } },
     });
   });
 

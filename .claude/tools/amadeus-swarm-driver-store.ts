@@ -11,6 +11,7 @@ import {
   digestValue,
   parseAttemptCheckpoint,
   type AttemptCheckpoint,
+  type CheckpointWithoutDigest,
   type AttemptTransition,
   type AttemptLease,
   type EvidenceVerdict,
@@ -73,6 +74,31 @@ export type DriverAttemptStore = Readonly<{
     heartbeatAt: string;
     expiresAt: string;
   }>): AttemptCheckpoint;
+  claimActiveRecovery(input: Readonly<{
+    batch: number;
+    executionId: string;
+    attemptId: string;
+    expectedLeaseId: string;
+    expectedFencingToken: number;
+    claimId: string;
+    recoveryLeaseId: string;
+    recoveryOwnerId: string;
+    recoveryOwnerProcess: NonNullable<AttemptLease["ownerProcess"]>;
+    now: string;
+    expiresAt: string;
+    mutationId: string;
+    ownerLivenessVerified: true;
+  }>): AttemptCheckpoint;
+  completeActiveRecovery(input: Readonly<{
+    batch: number;
+    executionId: string;
+    attemptId: string;
+    claimId: string;
+    leaseId: string;
+    fencingToken: number;
+    mutationId: string;
+    recoveryVerified: true;
+  }>): AttemptCheckpoint;
   beginResume(input: Readonly<{
     batch: number;
     previousAttemptId: string;
@@ -86,11 +112,15 @@ export type DriverAttemptStore = Readonly<{
     mutationId: string;
     reusedConvergedUnits: readonly string[];
     recoveryVerified: true;
+    recoveryClaimId?: string;
+    recoveredTransitionId?: string;
   }>): AttemptCheckpoint;
   recordNativeEvidence(input: Readonly<{
     batch: number;
     executionId: string;
     attemptId: string;
+    expectedLeaseId: string;
+    expectedFencingToken: number;
     driver: NativeDriver;
     verdict: EvidenceVerdict;
   }>): void;
@@ -101,6 +131,7 @@ export type AttemptStoreErrorCode =
   | "CHECKPOINT_MISSING"
   | "CHECKPOINT_CONFLICT"
   | "CHECKPOINT_NOT_RESUMABLE"
+  | "RECOVERY_CLAIM_ACTIVE"
   | "STALE_WRITER"
   | "BEGIN_CONFLICT"
   | "TRANSITION_INVALID";
@@ -217,6 +248,29 @@ function refreshLeaseDigest(checkpoint: AttemptCheckpoint, heartbeatAt: string, 
   });
 }
 
+function isActiveCheckpoint(checkpoint: AttemptCheckpoint): boolean {
+  return !["succeeded", "failed-resumable", "failed-terminal"].includes(checkpoint.state);
+}
+
+function activeRecoveryFailure(checkpoint: AttemptCheckpoint): Extract<AttemptCheckpoint, Readonly<{ state: "failed-resumable" }>>["failure"] {
+  const recoveryContext =
+    (checkpoint.state === "prepared" || checkpoint.state === "dispatched") && checkpoint.dispatchPreparation
+      ? Object.freeze({
+          dispatchPreparation: checkpoint.dispatchPreparation,
+          ...(checkpoint.preparedNativeRun ? { preparedNativeRun: checkpoint.preparedNativeRun } : {}),
+          ...(checkpoint.state === "dispatched" && checkpoint.dispatch.kind === "native"
+            ? { dispatch: checkpoint.dispatch }
+            : {}),
+        })
+      : undefined;
+  return Object.freeze({
+    code: "COORDINATOR_FAILED" as const,
+    affectedUnits: checkpoint.selectionInput.expectedUnits,
+    failedFromState: checkpoint.state as Exclude<AttemptCheckpoint["state"], "succeeded" | "failed-resumable" | "failed-terminal">,
+    ...(recoveryContext ? { recoveryContext } : {}),
+  });
+}
+
 type DriverStorePorts = Readonly<{
   checkpoint: DriverCheckpointPort;
   audit: DriverAuditPort;
@@ -259,6 +313,8 @@ function resumedTransitionImageIsValid(current: AttemptCheckpoint, intended: Att
     intended.state === "probing" &&
     intended.origin === "resumed" &&
     intended.previousAttemptId === current.attemptId &&
+    intended.recoveryClaim === undefined &&
+    intended.lease.leaseId !== current.lease.leaseId &&
     intended.lease.fencingToken === current.lease.fencingToken + 1
   );
 }
@@ -356,6 +412,85 @@ function reconcilePendingLocked(ports: DriverStorePorts, batch: number): readonl
   const current = ports.checkpoint.read(batch);
   if (!current) return reconcileAbsentCheckpoint(ports, batch, records);
   return reconcileTransitionRecords(ports, batch, records, current);
+}
+
+type ActiveRecoveryClaimInput = Parameters<DriverAttemptStore["claimActiveRecovery"]>[0];
+type BeginResumeInput = Parameters<DriverAttemptStore["beginResume"]>[0];
+
+function assertActiveRecoveryClaimable(
+  current: AttemptCheckpoint,
+  input: ActiveRecoveryClaimInput,
+): void {
+  if (
+    current.executionId !== input.executionId ||
+    current.attemptId !== input.attemptId ||
+    current.lease.leaseId !== input.expectedLeaseId ||
+    current.lease.fencingToken !== input.expectedFencingToken
+  ) {
+    throw new AttemptStoreError("STALE_WRITER");
+  }
+  const failedWithExternalRecovery = current.state === "failed-resumable" &&
+    current.failure.recoveryContext !== undefined;
+  if ((!isActiveCheckpoint(current) && !failedWithExternalRecovery) || current.recoveryClaim?.recoveredTransitionId) {
+    throw new AttemptStoreError("CHECKPOINT_NOT_RESUMABLE");
+  }
+  if (
+    input.ownerLivenessVerified !== true ||
+    input.recoveryOwnerProcess === undefined ||
+    Number.isNaN(Date.parse(input.now)) ||
+    Number.isNaN(Date.parse(input.expiresAt)) ||
+    Date.parse(input.now) <= Date.parse(current.lease.expiresAt)
+  ) {
+    throw new AttemptStoreError("RECOVERY_CLAIM_ACTIVE");
+  }
+}
+
+function activeRecoveryClaimPost(
+  current: AttemptCheckpoint,
+  input: ActiveRecoveryClaimInput,
+): CheckpointWithoutDigest {
+  const { stateDigest: _stateDigest, ...semantic } = current;
+  return Object.freeze({
+    ...semantic,
+    lease: Object.freeze({
+      leaseId: input.recoveryLeaseId,
+      fencingToken: current.lease.fencingToken + 1,
+      ownerId: input.recoveryOwnerId,
+      heartbeatAt: input.now,
+      expiresAt: input.expiresAt,
+      ownerProcess: input.recoveryOwnerProcess,
+    }),
+    recoveryClaim: Object.freeze({
+      claimId: input.claimId,
+      previousLeaseId: current.lease.leaseId,
+      previousFencingToken: current.lease.fencingToken,
+      resourceFencingToken: current.recoveryClaim?.resourceFencingToken ?? current.lease.fencingToken,
+      previousOwnerId: current.lease.ownerId,
+      ...(current.lease.ownerProcess ? { previousOwnerProcess: current.lease.ownerProcess } : {}),
+      claimedAt: input.now,
+    }),
+  }) as CheckpointWithoutDigest;
+}
+
+function assertResumeEligible(current: AttemptCheckpoint, input: BeginResumeInput): asserts current is Extract<
+  AttemptCheckpoint,
+  Readonly<{ state: "failed-resumable" }>
+> {
+  if (current.state !== "failed-resumable" || current.attemptId !== input.previousAttemptId) {
+    throw new AttemptStoreError("CHECKPOINT_NOT_RESUMABLE");
+  }
+  const recoveredClaimMatches =
+    current.recoveryClaim !== undefined &&
+    current.recoveryClaim.recoveredTransitionId !== undefined &&
+    input.recoveryClaimId === current.recoveryClaim.claimId &&
+    input.recoveredTransitionId === current.recoveryClaim.recoveredTransitionId &&
+    input.recoveredTransitionId === current.lastMutationId;
+  const recoveryWindowIsValid = current.recoveryClaim !== undefined
+    ? recoveredClaimMatches
+    : Date.parse(input.now) > Date.parse(current.lease.expiresAt);
+  if (input.recoveryVerified !== true || Number.isNaN(Date.parse(input.now)) || !recoveryWindowIsValid) {
+    throw new AttemptStoreError("CHECKPOINT_NOT_RESUMABLE");
+  }
 }
 
 export function createDriverAttemptStore(ports: DriverStorePorts): DriverAttemptStore {
@@ -516,20 +651,85 @@ export function createDriverAttemptStore(ports: DriverStorePorts): DriverAttempt
       });
     },
 
+    claimActiveRecovery(input): AttemptCheckpoint {
+      return ports.lock.run(() => {
+        const current = ports.checkpoint.read(input.batch);
+        if (!current) throw new AttemptStoreError("CHECKPOINT_MISSING");
+        assertActiveRecoveryClaimable(current, input);
+        const post = activeRecoveryClaimPost(current, input);
+        const transition = unwrap(buildTransition(current, {
+          transitionId: input.mutationId,
+          edge: "active-recovery-claimed",
+          executionId: current.executionId,
+          attemptId: current.attemptId,
+          leaseId: current.lease.leaseId,
+          fencingToken: current.lease.fencingToken,
+          post,
+        }));
+        const next = unwrap(applyTransition(current, transition));
+        ports.audit.append("SWARM_DRIVER_TRANSITION", transitionFields(transition, next.stateDigest));
+        ports.checkpoint.write(next.batch, next);
+        return next;
+      });
+    },
+
+    completeActiveRecovery(input): AttemptCheckpoint {
+      return ports.lock.run(() => {
+        const current = ports.checkpoint.read(input.batch);
+        if (!current) throw new AttemptStoreError("CHECKPOINT_MISSING");
+        if (
+          (!isActiveCheckpoint(current) &&
+            !(current.state === "failed-resumable" && current.failure.recoveryContext !== undefined)) ||
+          current.executionId !== input.executionId ||
+          current.attemptId !== input.attemptId ||
+          current.recoveryClaim?.claimId !== input.claimId ||
+          current.lease.leaseId !== input.leaseId ||
+          current.lease.fencingToken !== input.fencingToken ||
+          input.recoveryVerified !== true
+        ) {
+          throw new AttemptStoreError("STALE_WRITER");
+        }
+        const recoveredClaim = Object.freeze({
+          ...current.recoveryClaim,
+          recoveredTransitionId: input.mutationId,
+        });
+        const post = Object.freeze({
+          schemaVersion: current.schemaVersion,
+          state: "failed-resumable" as const,
+          executionId: current.executionId,
+          attemptId: current.attemptId,
+          batch: current.batch,
+          origin: current.origin,
+          ...(current.origin === "resumed" ? { previousAttemptId: current.previousAttemptId } : {}),
+          nonceHash: current.nonceHash,
+          lease: current.lease,
+          recoveryClaim: recoveredClaim,
+          selectionInput: current.selectionInput,
+          unitStates: current.unitStates,
+          lastMutationId: current.lastMutationId,
+          failure: current.state === "failed-resumable" ? current.failure : activeRecoveryFailure(current),
+        }) as CheckpointWithoutDigest;
+        const transition = unwrap(buildTransition(current, {
+          transitionId: input.mutationId,
+          edge: "active-attempt-recovered",
+          executionId: current.executionId,
+          attemptId: current.attemptId,
+          leaseId: current.lease.leaseId,
+          fencingToken: current.lease.fencingToken,
+          post,
+        }));
+        const next = unwrap(applyTransition(current, transition));
+        ports.audit.append("SWARM_DRIVER_TRANSITION", transitionFields(transition, next.stateDigest));
+        ports.checkpoint.write(next.batch, next);
+        return next;
+      });
+    },
+
     beginResume(input): AttemptCheckpoint {
       return ports.lock.run(() => {
         const current = ports.checkpoint.read(input.batch);
         if (!current) throw new AttemptStoreError("CHECKPOINT_MISSING");
-        if (current.state !== "failed-resumable" || current.attemptId !== input.previousAttemptId) {
-          throw new AttemptStoreError("CHECKPOINT_NOT_RESUMABLE");
-        }
-        if (
-          input.recoveryVerified !== true ||
-          Number.isNaN(Date.parse(input.now)) ||
-          Date.parse(input.now) <= Date.parse(current.lease.expiresAt)
-        ) {
-          throw new AttemptStoreError("CHECKPOINT_NOT_RESUMABLE");
-        }
+        assertResumeEligible(current, input);
         const selectionInput: SelectionInputSnapshot = current.selectionInput;
         const next = unwrap(
           createProbingCheckpoint({
@@ -581,6 +781,13 @@ export function createDriverAttemptStore(ports: DriverStorePorts): DriverAttempt
           (current.state !== "dispatched" && current.state !== "evidence-verified")
         ) {
           throw new AttemptStoreError("CHECKPOINT_CONFLICT");
+        }
+        if (
+          current.lease.leaseId !== evidence.expectedLeaseId ||
+          current.lease.fencingToken !== evidence.expectedFencingToken ||
+          current.recoveryClaim !== undefined
+        ) {
+          throw new AttemptStoreError("STALE_WRITER");
         }
         const key = eventKey(
           "SWARM_NATIVE_EVIDENCE",

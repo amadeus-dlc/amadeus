@@ -2,6 +2,8 @@
 // size: medium
 
 import { afterEach, describe, expect, test } from "bun:test";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -10,6 +12,7 @@ import {
   consumeArm,
   createPlannedRun,
   executeArmedProcess,
+  observeExactProcessLiveness,
   observeProcessIdentity,
   parseArmedProcessProgress,
   readRunIdentity,
@@ -93,6 +96,7 @@ function nativeCheckpoint(captureKind: "fixed-provider-path" | "event-bound-prov
   const dispatchPreparation = {
     kind: "native" as const,
     nativeRunId: "native-run",
+    planDigest: "plan",
     fencingToken: 1,
     waveIndex: 0,
     waveDigest,
@@ -246,6 +250,32 @@ describe("t230 armed process supervisor", () => {
       type: "err",
       error: { code: "PLATFORM_UNSUPPORTED" },
     });
+  });
+
+  test("observes an exact subprocess as live and then dead after exit", async () => {
+    const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "ignore" });
+    await once(child, "spawn");
+    try {
+      if (!child.pid) throw new Error("subprocess pid unavailable");
+      const identity = observeProcessIdentity(child.pid);
+      if (identity.type === "err") throw new Error("subprocess identity unavailable");
+      expect(observeExactProcessLiveness(identity.value)).toMatchObject({ status: "live" });
+
+      child.kill("SIGTERM");
+      await once(child, "exit");
+      expect(observeExactProcessLiveness(identity.value)).toEqual({ status: "dead" });
+    } finally {
+      if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+    }
+  });
+
+  test("reports unknown when identity observation fails for an existing process", () => {
+    const identity = observeProcessIdentity(process.pid);
+    if (identity.type === "err") throw new Error("current process identity unavailable");
+    expect(observeExactProcessLiveness(identity.value, {
+      signalProcess: () => {},
+      observeIdentity: () => ({ type: "err", error: { code: "PROCESS_NOT_FOUND" } }),
+    })).toEqual({ status: "unknown" });
   });
 
   test("confines identity and arm files to the attempt directory", () => {
@@ -473,12 +503,18 @@ describe("t230 armed process supervisor", () => {
   });
 
   test("rejects native preparation correlations before accepting the dispatch", () => {
-    const checkpoint = structuredClone(nativeCheckpoint());
-    object(checkpoint.dispatchPreparation).captureIdentityDigest = "mismatched-identity";
-    expect(parseAttemptCheckpoint(checkpoint)).toMatchObject({
-      type: "err",
-      error: { code: "SCHEMA_INVALID", field: "dispatchPreparation" },
-    });
+    const mismatchedIdentity = structuredClone(nativeCheckpoint());
+    object(mismatchedIdentity.dispatchPreparation).captureIdentityDigest = "mismatched-identity";
+    const mismatchedPlan = structuredClone(nativeCheckpoint());
+    object(mismatchedPlan.dispatchPreparation).planDigest = "mismatched-plan";
+    const unknownPreparationField = structuredClone(nativeCheckpoint());
+    object(unknownPreparationField.dispatchPreparation).unexpected = true;
+    for (const checkpoint of [mismatchedIdentity, mismatchedPlan, unknownPreparationField]) {
+      expect(parseAttemptCheckpoint(checkpoint)).toMatchObject({
+        type: "err",
+        error: { code: "SCHEMA_INVALID", field: "dispatchPreparation" },
+      });
+    }
   });
 
   test("rejects recovery context fields outside the closed schema", () => {
