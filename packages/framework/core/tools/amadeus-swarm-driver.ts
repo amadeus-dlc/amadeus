@@ -21,6 +21,7 @@ import {
   type LegacyExecution,
   type SwarmEnvironment,
 } from "./amadeus-swarm-driver-contract.ts";
+import { createLifecycleNativeExecution } from "./amadeus-swarm-native-execution.ts";
 
 const COMMANDS = Object.freeze([
   "resolve",
@@ -52,10 +53,31 @@ export type SwarmDriverCliDependencies = Readonly<{
   mintId(): string;
 }>;
 
-const failClosedNativeExecution: NativeExecutionPort = Object.freeze({
-  async execute() {
-    throw new Error("NATIVE_EXECUTION_SLOT_UNIMPLEMENTED");
-  },
+const failClosedNativeExecution: NativeExecutionPort = createLifecycleNativeExecution({
+  resources: Object.freeze({
+    async materialize() {
+      throw new Error("NATIVE_RESOURCE_SUPERVISOR_UNIMPLEMENTED");
+    },
+    async cleanup() {},
+  }),
+  capture: Object.freeze({
+    async start() {
+      throw new Error("NATIVE_CAPTURE_SUPERVISOR_UNIMPLEMENTED");
+    },
+  }),
+  process: Object.freeze({
+    plan({ nativeRunId }) {
+      return Object.freeze({
+        nativeRunId,
+        identityRelativePath: `.amadeus/native/${nativeRunId}/identity.json`,
+        armRelativePath: `.amadeus/native/${nativeRunId}/arm.json`,
+        armDigest: digestValue({ nativeRunId, kind: "one-time-arm" }),
+      });
+    },
+    async spawn() {
+      throw new Error("NATIVE_PROCESS_SUPERVISOR_UNIMPLEMENTED");
+    },
+  }),
 });
 
 function productionDependencies(): SwarmDriverCliDependencies {

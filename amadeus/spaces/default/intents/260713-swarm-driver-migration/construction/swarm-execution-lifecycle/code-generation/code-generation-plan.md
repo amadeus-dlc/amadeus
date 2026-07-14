@@ -110,3 +110,16 @@ Active Test Strategy は **Comprehensive** である。各 logical component は
 ## Review gate
 
 PART 2へ進む前に、本計画のStep順、変更面、Test strategy、Story-to-step traceabilityについてユーザー承認を得る。architecture reviewerは実装完了後に独立レビューを行う。承認前はapplication code、test、config、`code-summary.md`を作成・変更しない。
+
+## Closed PTY / capture追補（中間スタックPR）
+
+U-03開始前の独立レビューで、U-02が所有すべきclosed transport／capture契約が不足していることが判明した。この追補は、provider固有実装を始める前に次の共通seamを固定する中間スタックPRとして扱う。U-02完了は主張しない。
+
+- `stdio-json | pty-interactive`、`fixed-provider-path | event-bound-provider-path | hook-only`をclosed unionとして追加する。
+- resource preparation、materialized receipt、capture identity、process identity、one-time armをaudit-first checkpointへ相関する。
+- event-bound captureはbinding eventを1件だけ採用し、checkpoint保存後にobserverへexact pathを適用する。継続streamのEOFを待たない。
+- PTY controlは相関済みsignalをちょうど1件要求し、process terminalのcontrol receipt、capture terminal、native run、process identityを相互照合する。
+- execution／launch／transport／capture／永続化relative pathのunknown fieldと不正variantを拒否する。
+- transition適用時にも完成checkpointをclosed parserへ通し、後続read時だけ不整合が判明する状態を作らない。
+
+後続のU-02スタックPRでは、production generic Resource／Capture／Process supervisorと、親process異常終了後に残るactive `prepared`／`dispatched` attemptのexact group回収・resumeを実装する。この2点がgreenになるまでU-02は未完了である。

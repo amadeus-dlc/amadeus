@@ -33,6 +33,12 @@ import type {
 } from "./amadeus-swarm-finalize-contract.ts";
 import { SelectionOutcomeProjection } from "./amadeus-swarm-driver-contract.ts";
 import type { ProcessIdentity } from "./amadeus-armed-process.ts";
+import type {
+  CaptureCheckpoint,
+  NativeDispatchCheckpoint,
+  NativeDispatchPreparation,
+  PreparedNativeRun,
+} from "./amadeus-swarm-native-execution.ts";
 
 export { canonicalJson, digestValue, rejectSecretLikeFields } from "./amadeus-swarm-canonical.ts";
 export {
@@ -130,6 +136,24 @@ export type VerifiedExecutionResult =
       completedUnits: readonly string[];
     }>;
 
+export type DispatchCheckpoint =
+  | NativeDispatchCheckpoint
+  | Readonly<{
+      kind: "external";
+      executionMode: "floor" | "legacy";
+    }>;
+
+export function buildDispatchDigest(input: Readonly<{
+  executionId: string;
+  attemptId: string;
+  manifestDigest: string;
+  selection: RedactedSelection;
+  runBinding: RunRequestBinding;
+  dispatch: DispatchCheckpoint;
+}>): string {
+  return digestValue(input);
+}
+
 type CheckpointBase = Readonly<{
   schemaVersion: 1;
   executionId: string;
@@ -156,6 +180,8 @@ export type AttemptCheckpoint =
         preparedUnits: readonly PreparedUnit[];
         worktreeManifestDigest: string;
         runBinding: RunRequestBinding;
+        dispatchPreparation?: NativeDispatchPreparation;
+        preparedNativeRun?: PreparedNativeRun;
       }>)
   | (SelectedBase &
       Readonly<{
@@ -163,7 +189,10 @@ export type AttemptCheckpoint =
         preparedUnits: readonly PreparedUnit[];
         worktreeManifestDigest: string;
         dispatchDigest: string;
+        dispatch: DispatchCheckpoint;
         runBinding: RunRequestBinding;
+        dispatchPreparation?: NativeDispatchPreparation;
+        preparedNativeRun?: PreparedNativeRun;
       }>)
   | (SelectedBase &
       Readonly<{
@@ -200,6 +229,11 @@ type FailureCheckpoint = Readonly<{
     code: AttemptFailureCode;
     affectedUnits: readonly string[];
     failedFromState: Exclude<AttemptState, "succeeded" | "failed-resumable" | "failed-terminal">;
+    recoveryContext?: Readonly<{
+      dispatchPreparation: NativeDispatchPreparation;
+      preparedNativeRun?: PreparedNativeRun;
+      dispatch?: NativeDispatchCheckpoint;
+    }>;
   }>;
 }>;
 
@@ -212,7 +246,10 @@ export type CheckpointWithoutDigest = AttemptCheckpoint extends infer Checkpoint
 export type TransitionEdge =
   | "probe-selected"
   | "selected-prepared"
+  | "native-dispatch-prepared"
+  | "native-resources-prepared"
   | "prepared-dispatched"
+  | "capture-bound"
   | "dispatch-evidence-verified"
   | "evidence-referee-running"
   | "referee-succeeded"
@@ -334,7 +371,10 @@ export function createProbingCheckpoint(input: Readonly<{
 const EDGE_STATES = Object.freeze({
   "probe-selected": Object.freeze(["probing", "selected"]),
   "selected-prepared": Object.freeze(["selected", "prepared"]),
+  "native-dispatch-prepared": Object.freeze(["prepared", "prepared"]),
+  "native-resources-prepared": Object.freeze(["prepared", "prepared"]),
   "prepared-dispatched": Object.freeze(["prepared", "dispatched"]),
+  "capture-bound": Object.freeze(["dispatched", "dispatched"]),
   "dispatch-evidence-verified": Object.freeze(["dispatched", "evidence-verified"]),
   "evidence-referee-running": Object.freeze(["evidence-verified", "referee-running"]),
   "referee-succeeded": Object.freeze(["referee-running", "succeeded"]),
@@ -401,7 +441,9 @@ export function applyTransition(
     return err("STALE_WRITER");
   }
   if (!edgeAllows(transition.edge, checkpoint.state, transition.post.state)) return err("INVALID_EDGE");
-  return ok(freezeCheckpoint(transition.post));
+  const next = freezeCheckpoint(transition.post);
+  const parsed = parseAttemptCheckpoint(next);
+  return parsed.type === "ok" ? ok(parsed.value) : parsed;
 }
 
 export type EvidenceVerdict = Readonly<{
@@ -731,6 +773,7 @@ const CHECKPOINT_STATE_KEYS: Readonly<Record<AttemptState, readonly string[]>> =
     "preparedUnits",
     "worktreeManifestDigest",
     "dispatchDigest",
+    "dispatch",
     "runBinding",
   ]),
   "evidence-verified": Object.freeze([
@@ -880,11 +923,158 @@ function executionResultIsValid(value: unknown): value is VerifiedExecutionResul
   );
 }
 
+function captureBindingIsValid(value: unknown, expectedKind: string): boolean {
+  if (!isRecord(value) || value.kind !== expectedKind) return false;
+  const sourceField = expectedKind === "fixed-provider-path" ? "sourcePlanDigest" : "sourceEventDigest";
+  const sourceResourceKeys = expectedKind === "fixed-provider-path" ? ["sourceResourceIds"] : [];
+  if (
+    !hasExactKeys(value, ["kind", "nativeRunId", ...sourceResourceKeys, "exactPathDigest", sourceField]) ||
+    !nonEmptyString(value.nativeRunId) ||
+    !nonEmptyString(value.exactPathDigest) ||
+    !nonEmptyString(value[sourceField])
+  ) return false;
+  return expectedKind !== "fixed-provider-path" ||
+    (Array.isArray(value.sourceResourceIds) &&
+      value.sourceResourceIds.length > 0 &&
+      (value.sourceResourceIds as unknown[]).every(nonEmptyString));
+}
+
+function captureCheckpointIsValid(value: unknown): boolean {
+  if (!isRecord(value) || !["fixed-provider-path", "event-bound-provider-path", "hook-only"].includes(String(value.kind))) {
+    return false;
+  }
+  const hasBinding = value.binding !== undefined;
+  const keys = [
+    "kind",
+    "identityDigest",
+    "capturePlanDigest",
+    "resourcesDigest",
+    "transport",
+    ...(hasBinding ? ["binding"] : []),
+  ];
+  if (
+    !hasExactKeys(value, keys) ||
+    ![value.identityDigest, value.capturePlanDigest, value.resourcesDigest].every(nonEmptyString) ||
+    (value.transport !== "stdio-json" && value.transport !== "pty-interactive")
+  ) {
+    return false;
+  }
+  if (value.kind === "fixed-provider-path") {
+    return hasBinding && captureBindingIsValid(value.binding, value.kind);
+  }
+  if (value.kind === "event-bound-provider-path") {
+    return !hasBinding || captureBindingIsValid(value.binding, value.kind);
+  }
+  return !hasBinding;
+}
+
+function dispatchPreparationIsValid(value: unknown): value is NativeDispatchPreparation {
+  return (
+    hasExactKeys(value, [
+      "kind",
+      "nativeRunId",
+      "waveIndex",
+      "waveDigest",
+      "resourcePreparationDigest",
+      "captureIdentityDigest",
+      "identityRelativePath",
+      "armRelativePath",
+      "armDigest",
+    ]) &&
+    value.kind === "native" &&
+    Number.isInteger(value.waveIndex) &&
+    Number(value.waveIndex) >= 0 &&
+    [
+      value.nativeRunId,
+      value.waveDigest,
+      value.resourcePreparationDigest,
+      value.captureIdentityDigest,
+      value.identityRelativePath,
+      value.armRelativePath,
+      value.armDigest,
+    ].every(nonEmptyString) &&
+    relativeCheckpointPathIsValid(String(value.identityRelativePath)) &&
+    relativeCheckpointPathIsValid(String(value.armRelativePath)) &&
+    value.identityRelativePath !== value.armRelativePath
+  );
+}
+
+function relativeCheckpointPathIsValid(path: string): boolean {
+  return (
+    !path.startsWith("/") &&
+    !/^[A-Za-z]:[\\/]/.test(path) &&
+    !path.split(/[\\/]/).includes("..")
+  );
+}
+
+function preparedNativeRunIsValid(value: unknown): value is PreparedNativeRun {
+  return (
+    hasExactKeys(value, [
+      "kind",
+      "dispatchPreparationDigest",
+      "resourceReceiptDigest",
+      "executionPlanDigest",
+      "capturePlanDigest",
+      "transportKind",
+      "captureKind",
+    ]) &&
+    value.kind === "native" &&
+    [
+      value.dispatchPreparationDigest,
+      value.resourceReceiptDigest,
+      value.executionPlanDigest,
+      value.capturePlanDigest,
+    ].every(nonEmptyString) &&
+    (value.transportKind === "stdio-json" || value.transportKind === "pty-interactive") &&
+    ["fixed-provider-path", "event-bound-provider-path", "hook-only"].includes(String(value.captureKind))
+  );
+}
+
+function dispatchCheckpointIsValid(value: unknown): value is DispatchCheckpoint {
+  if (!isRecord(value)) return false;
+  if (value.kind === "external") {
+    return (
+      hasExactKeys(value, ["kind", "executionMode"]) &&
+      (value.executionMode === "floor" || value.executionMode === "legacy")
+    );
+  }
+  return (
+    value.kind === "native" &&
+    hasExactKeys(value, [
+      "kind",
+      "nativeRunId",
+      "preparedNativeRunDigest",
+      "resourceReceiptDigest",
+      "processIdentityDigest",
+      "armDigest",
+      "capture",
+    ]) &&
+    [
+      value.nativeRunId,
+      value.preparedNativeRunDigest,
+      value.resourceReceiptDigest,
+      value.processIdentityDigest,
+      value.armDigest,
+    ].every(nonEmptyString) &&
+    captureCheckpointIsValid(value.capture) &&
+    (value.capture as CaptureCheckpoint).resourcesDigest === value.resourceReceiptDigest &&
+    (!(value.capture as CaptureCheckpoint & { binding?: { nativeRunId: string } }).binding ||
+      (value.capture as CaptureCheckpoint & { binding: { nativeRunId: string } }).binding.nativeRunId === value.nativeRunId)
+  );
+}
+
 function checkpointBaseIsValid(value: Record<string, unknown>, state: AttemptState): boolean {
+  const nativePreparationKeys = ["prepared", "dispatched"].includes(state)
+    ? [
+        ...(value.dispatchPreparation === undefined ? [] : ["dispatchPreparation"]),
+        ...(value.preparedNativeRun === undefined ? [] : ["preparedNativeRun"]),
+      ]
+    : [];
   const expectedKeys = [
     ...CHECKPOINT_BASE_KEYS,
     ...(value.previousAttemptId === undefined ? [] : ["previousAttemptId"]),
     ...CHECKPOINT_STATE_KEYS[state],
+    ...nativePreparationKeys,
   ];
   if (!hasExactKeys(value, expectedKeys) || value.schemaVersion !== 1) return false;
   if (![value.executionId, value.attemptId, value.nonceHash, value.lastMutationId, value.stateDigest].every(nonEmptyString)) {
@@ -936,14 +1126,35 @@ function preparedCheckpointFieldsAreValid(value: Record<string, unknown>): boole
   );
 }
 
+function recoveryContextIsValid(value: unknown): boolean {
+  if (!isRecord(value) || !dispatchPreparationIsValid(value.dispatchPreparation)) return false;
+  const hasPrepared = value.preparedNativeRun !== undefined;
+  const hasDispatch = value.dispatch !== undefined;
+  if (!hasExactKeys(value, ["dispatchPreparation", ...(hasPrepared ? ["preparedNativeRun"] : []), ...(hasDispatch ? ["dispatch"] : [])])) {
+    return false;
+  }
+  if (hasPrepared && !preparedNativeRunIsValid(value.preparedNativeRun)) return false;
+  if (hasPrepared && (value.preparedNativeRun as PreparedNativeRun).dispatchPreparationDigest !== digestValue(value.dispatchPreparation)) {
+    return false;
+  }
+  if (!hasDispatch) return true;
+  if (!hasPrepared || !dispatchCheckpointIsValid(value.dispatch)) return false;
+  return (value.dispatch as NativeDispatchCheckpoint).preparedNativeRunDigest === digestValue(value.preparedNativeRun);
+}
+
 function failureIsValid(value: unknown): boolean {
-  if (!hasExactKeys(value, ["code", "affectedUnits", "failedFromState"])) return false;
+  if (!isRecord(value)) return false;
+  const hasRecovery = value.recoveryContext !== undefined;
+  if (!hasExactKeys(value, ["code", "affectedUnits", "failedFromState", ...(hasRecovery ? ["recoveryContext"] : [])])) {
+    return false;
+  }
   return (
     ATTEMPT_FAILURE_CODE_VALUES.includes(value.code as AttemptFailureCode) &&
     Array.isArray(value.affectedUnits) &&
     ["probing", "selected", "prepared", "dispatched", "evidence-verified", "referee-running"].includes(
       String(value.failedFromState),
-    )
+    ) &&
+    (!hasRecovery || recoveryContextIsValid(value.recoveryContext))
   );
 }
 
@@ -960,12 +1171,100 @@ function failureForStateIsValid(value: Record<string, unknown>, state: AttemptSt
 function checkpointStateFieldError(value: Record<string, unknown>, state: AttemptState): string | undefined {
   if (stateNeedsSelection(state) && !selectedContextIsValid(value.selectedContext)) return "selectedContext";
   if (stateNeedsPrepared(state) && !preparedCheckpointFieldsAreValid(value)) return "preparedUnits";
-  if (state === "dispatched" && !nonEmptyString(value.dispatchDigest)) return "dispatchDigest";
+  if (!nativePreparationForStateIsValid(value, state)) return "dispatchPreparation";
+  const dispatchError = dispatchStateFieldError(value, state);
+  if (dispatchError) return dispatchError;
   if (stateNeedsExecutionResult(state) && !executionResultIsValid(value.executionResult)) return "executionResult";
   if (!finalizeBindingForStateIsValid(value, state)) return "finalizeBinding";
   if (state === "succeeded" && !nonEmptyString(value.refereeResultDigest)) return "refereeResultDigest";
   if (!failureForStateIsValid(value, state)) return "failure";
   return undefined;
+}
+
+function dispatchStateFieldError(
+  value: Record<string, unknown>,
+  state: AttemptState,
+): "dispatch" | "dispatchDigest" | undefined {
+  if (state !== "dispatched") return undefined;
+  if (!nonEmptyString(value.dispatchDigest)) return "dispatchDigest";
+  if (!dispatchCheckpointIsValid(value.dispatch)) return "dispatch";
+  if (!nativePreparationForStateIsValid(value, state)) return "dispatch";
+  const expected = buildDispatchDigest({
+    executionId: String(value.executionId),
+    attemptId: String(value.attemptId),
+    manifestDigest: String(value.worktreeManifestDigest),
+    selection: (value.selectedContext as SelectedContext).selection,
+    runBinding: value.runBinding as RunRequestBinding,
+    dispatch: value.dispatch,
+  });
+  return value.dispatchDigest === expected ? undefined : "dispatchDigest";
+}
+
+function nativePreparationForStateIsValid(
+  value: Record<string, unknown>,
+  state: AttemptState,
+): boolean {
+  if (state !== "prepared" && state !== "dispatched") return true;
+  const selection = (value.selectedContext as SelectedContext).selection;
+  const preparation = value.dispatchPreparation;
+  const prepared = value.preparedNativeRun;
+  if (selection.kind !== "native-selection") {
+    return preparation === undefined && prepared === undefined;
+  }
+  return nativePreparationValuesAreValid(value, state, preparation, prepared);
+}
+
+function nativePreparationValuesAreValid(
+  value: Record<string, unknown>,
+  state: "prepared" | "dispatched",
+  preparation: unknown,
+  prepared: unknown,
+): boolean {
+  if (preparation === undefined) return state === "prepared" && prepared === undefined;
+  if (!dispatchPreparationIsValid(preparation)) return false;
+  const expectedIdentity = digestValue({
+    executionId: value.executionId,
+    attemptId: value.attemptId,
+    attemptNonceHash: value.nonceHash,
+    planDigest: (value.selectedContext as SelectedContext).planDigest,
+    waveIndex: preparation.waveIndex,
+    waveDigest: preparation.waveDigest,
+  });
+  const expectedWaveDigest = digestValue({
+    index: preparation.waveIndex,
+    units: (value.selectionInput as SelectionInputSnapshot).expectedUnits,
+  });
+  if (preparation.captureIdentityDigest !== expectedIdentity || preparation.waveDigest !== expectedWaveDigest) {
+    return false;
+  }
+  if (prepared !== undefined) {
+    if (!preparedNativeRunIsValid(prepared)) return false;
+    if (prepared.dispatchPreparationDigest !== digestValue(preparation)) return false;
+  }
+  if (state === "prepared") return true;
+  if (prepared === undefined || !dispatchCheckpointIsValid(value.dispatch)) return false;
+  const dispatch = value.dispatch as DispatchCheckpoint;
+  return dispatch.kind === "native" && nativeDispatchBindingsMatch(preparation, prepared, dispatch);
+}
+
+function nativeDispatchBindingsMatch(
+  preparation: NativeDispatchPreparation,
+  prepared: PreparedNativeRun,
+  dispatch: NativeDispatchCheckpoint,
+): boolean {
+  if (
+    dispatch.nativeRunId !== preparation.nativeRunId ||
+    dispatch.armDigest !== preparation.armDigest ||
+    dispatch.preparedNativeRunDigest !== digestValue(prepared) ||
+    dispatch.resourceReceiptDigest !== prepared.resourceReceiptDigest ||
+    dispatch.capture.identityDigest !== preparation.captureIdentityDigest ||
+    dispatch.capture.capturePlanDigest !== prepared.capturePlanDigest ||
+    dispatch.capture.resourcesDigest !== prepared.resourceReceiptDigest ||
+    dispatch.capture.transport !== prepared.transportKind ||
+    dispatch.capture.kind !== prepared.captureKind
+  ) return false;
+  return dispatch.capture.kind !== "fixed-provider-path" ||
+    dispatch.capture.binding.sourcePlanDigest === preparation.resourcePreparationDigest;
 }
 
 export function parseAttemptCheckpoint(value: unknown): LifecycleResult<AttemptCheckpoint> {

@@ -44,6 +44,7 @@ describe("t233 swarm driver architecture boundary", () => {
       "amadeus-swarm-driver-store.ts",
       "amadeus-swarm-driver-supervisor.ts",
       "amadeus-swarm-driver-runtime.ts",
+      "amadeus-swarm-native-execution.ts",
       "amadeus-swarm-driver.ts",
     ];
     const refereeFiles = ["amadeus-swarm-referee-finalize.ts", "amadeus-swarm.ts"];
@@ -54,7 +55,7 @@ describe("t233 swarm driver architecture boundary", () => {
     }
     for (const file of refereeFiles) {
       expect(source(file)).not.toMatch(
-        /from\s+["'][^"']*amadeus-swarm-driver-(?:lifecycle|store|supervisor|runtime)(?:\.ts)?["']/,
+        /from\s+["'][^"']*amadeus-swarm-(?:driver-(?:lifecycle|store|supervisor|runtime)|native-execution)(?:\.ts)?["']/,
       );
     }
   });
@@ -70,6 +71,7 @@ describe("t233 swarm driver architecture boundary", () => {
       "amadeus-swarm-driver-store.ts",
       "amadeus-swarm-driver-supervisor.ts",
       "amadeus-swarm-driver-runtime.ts",
+      "amadeus-swarm-native-execution.ts",
       "amadeus-swarm-driver.ts",
     ];
     expect(c01Private.filter((file) => closure.has(file))).toEqual([]);
@@ -89,6 +91,7 @@ describe("t233 swarm driver architecture boundary", () => {
   test("does not discover plugins dynamically or add network and runtime dependencies", () => {
     const boundary = [
       "amadeus-swarm-driver-runtime.ts",
+      "amadeus-swarm-native-execution.ts",
       "amadeus-swarm-driver-adapters/claude.ts",
       "amadeus-swarm-driver-adapters/codex.ts",
       "amadeus-swarm-driver-adapters/kiro.ts",
@@ -97,6 +100,13 @@ describe("t233 swarm driver architecture boundary", () => {
     expect(boundary).not.toMatch(new RegExp(`\\b(?:${forbiddenCalls.join("|")})\\s*\\(`));
     expect(boundary).not.toMatch(/\bimport\s*\(/);
     expect(boundary).not.toContain("node_modules");
+  });
+
+  test("routes the production CLI through the provider-neutral native lifecycle", () => {
+    const cli = source("amadeus-swarm-driver.ts");
+    expect(cli).toContain('from "./amadeus-swarm-native-execution.ts"');
+    expect(cli).toContain("createLifecycleNativeExecution({");
+    expect(cli).not.toContain("NATIVE_EXECUTION_SLOT_UNIMPLEMENTED");
   });
 
   test("guards both irreversible merge primitives with claim, fencing, and arm", () => {
