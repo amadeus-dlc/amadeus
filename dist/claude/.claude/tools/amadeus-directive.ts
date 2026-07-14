@@ -50,7 +50,8 @@ export type DirectiveKind =
   | "parked";
 
 // run-stage — load lead + support agents, load `consumes` artifacts, run the
-// stage body, write `produces`, keep memory.md. Routing fields (lead_agent,
+// stage body, write required `produces` plus condition-matched optional outputs,
+// keep memory.md. Routing fields (lead_agent,
 // support_agents, mode, gate, sensors_applicable, rules_in_context, stage_file)
 // are read straight off the compiled stage-graph.json node; consumes/produces
 // carry RESOLVED amadeus-docs/... paths (the engine resolves vocabulary names →
@@ -72,7 +73,11 @@ export interface RunStageDirective {
   // declared inputs whose file is absent move to consumes_absent so the
   // conductor is never pointed at a path that cannot be read.
   consumes: string[];
+  // All resolved output candidates. Required paths are always written; paths
+  // repeated in optional_produces are written only when the stage condition
+  // applies.
   produces: string[];
+  optional_produces?: string[];
   rules_in_context: string[];
   sensors_applicable: string[];
   stage_file: string;
@@ -131,6 +136,7 @@ export interface DispatchSubagentDirective {
   memory_path: string;
   consumes: string[];
   produces: string[];
+  optional_produces?: string[];
   rules_in_context: string[];
   sensors_applicable: string[];
   stage_file: string;
@@ -264,6 +270,7 @@ const RUN_STAGE_FIELDS = [
   "memory_path",
   "consumes",
   "produces",
+  "optional_produces",
   "rules_in_context",
   "sensors_applicable",
   "stage_file",
@@ -409,6 +416,8 @@ function checkRunStageShared(
   checkString(o, "memory_path", kind, errors);
   checkStringArray(o, "consumes", kind, errors);
   checkStringArray(o, "produces", kind, errors);
+  checkOptionalStringArray(o, "optional_produces", kind, errors);
+  checkOutputCandidateContract(o, kind, errors);
   checkStringArray(o, "rules_in_context", kind, errors);
   checkStringArray(o, "sensors_applicable", kind, errors);
   checkString(o, "stage_file", kind, errors);
@@ -483,6 +492,83 @@ function checkOptionalString(
   if (!(field in o)) return;
   if (typeof o[field] !== "string") {
     errors.push(`${kind}: ${field} must be string, got ${describe(o[field])}`);
+  }
+}
+
+function checkOptionalStringArray(
+  o: Record<string, unknown>,
+  field: string,
+  kind: DirectiveKind,
+  errors: string[],
+): void {
+  if (!(field in o) || o[field] === undefined) return;
+  const v: unknown = o[field];
+  if (!Array.isArray(v)) {
+    errors.push(`${kind}: ${field} must be array, got ${describe(v)}`);
+    return;
+  }
+  const arr: unknown[] = v;
+  arr.forEach((item: unknown, i: number) => {
+    if (typeof item !== "string") {
+      errors.push(`${kind}: ${field}[${i}] must be string, got ${describe(item)}`);
+    }
+  });
+}
+
+// `produces` is the complete output-candidate set and optional_produces is a
+// subset marker, not a second independent output list. Enforce that relationship
+// at the directive trust boundary as well as in stage frontmatter so malformed
+// engine output cannot silently misclassify output paths.
+function checkOutputCandidateContract(
+  o: Record<string, unknown>,
+  kind: DirectiveKind,
+  errors: string[],
+): void {
+  const produces = stringArrayValue(o.produces);
+  if (produces === null) return;
+  checkDuplicateOutputPaths(produces, "produces", kind, errors);
+
+  if (o.optional_produces === undefined) return;
+  const optional = stringArrayValue(o.optional_produces);
+  if (optional === null) return;
+  checkDuplicateOutputPaths(optional, "optional_produces", kind, errors);
+
+  const candidates = new Set(produces);
+  const reported = new Set<string>();
+  for (const path of optional) {
+    if (!candidates.has(path) && !reported.has(path)) {
+      errors.push(
+        `${kind}: optional_produces path "${path}" must also appear in produces`,
+      );
+      reported.add(path);
+    }
+  }
+}
+
+function stringArrayValue(value: unknown): string[] | null {
+  if (!Array.isArray(value)) return null;
+  const items: unknown[] = value;
+  return items.every(
+    (item: unknown): item is string => typeof item === "string",
+  )
+    ? items
+    : null;
+}
+
+function checkDuplicateOutputPaths(
+  paths: string[],
+  field: "produces" | "optional_produces",
+  kind: DirectiveKind,
+  errors: string[],
+): void {
+  const seen = new Set<string>();
+  const reported = new Set<string>();
+  for (const path of paths) {
+    if (seen.has(path) && !reported.has(path)) {
+      errors.push(`${kind}: ${field} contains duplicate path "${path}"`);
+      reported.add(path);
+    }
+    seen.add(path);
   }
 }
 
@@ -585,11 +671,9 @@ function checkEnum(
 // `bun amadeus-directive.ts` constructs one well-formed example of each of the 9
 // kinds, validates each, prints one line per kind ("<kind>: VALID" or the
 // errors), and exits 0 iff all 9 validate. Satisfies the acceptance check
-// "bun .../amadeus-directive.ts validates the 9 kinds".
-if (import.meta.main) {
-  // One well-formed example per kind. run-stage mirrors the engine design's example
-  // directive verbatim (application-design); the others follow the same catalogue table.
-  const examples: Directive[] = [
+// "bun .../amadeus-directive.ts validates the 9 kinds". Exporting the fixtures
+// lets tests validate the same examples without spawning a process.
+export const directiveSelfCheckExamples: Directive[] = [
     {
       kind: "run-stage",
       stage: "application-design",
@@ -659,14 +743,23 @@ if (import.meta.main) {
       gate: GATE_UNRESOLVED,
       memory_path: "amadeus-docs/construction/{unit-name}/functional-design/memory.md",
       consumes: [],
-      produces: ["amadeus-docs/construction/{unit-name}/functional-design/business-logic-model.md"],
+      produces: [
+        "amadeus-docs/construction/{unit-name}/functional-design/business-logic-model.md",
+        "amadeus-docs/construction/{unit-name}/functional-design/frontend-components.md",
+      ],
+      optional_produces: [
+        "amadeus-docs/construction/{unit-name}/functional-design/frontend-components.md",
+      ],
       rules_in_context: ["amadeus-org.md", "amadeus-phase-construction.md"],
       sensors_applicable: ["required-sections"],
       stage_file: ".claude/amadeus-common/stages/construction/functional-design.md",
       conductor_persona: "# The Conductor's Craft …",
     },
-  ];
+];
 
+const examples = directiveSelfCheckExamples;
+
+if (import.meta.main) {
   let allValid = true;
   for (const ex of examples) {
     const r = validateDirective(ex);

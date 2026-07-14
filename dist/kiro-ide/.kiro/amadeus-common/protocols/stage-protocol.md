@@ -382,7 +382,7 @@ When the orchestrator runs a Bolt in phased mode:
 6. **Code generation (3.5)**: Per-Unit Task delegation to the amadeus-developer-agent. The stage file's per-Unit approval gate is **suppressed by the orchestrator** — a single Bolt-level gate (or batch-level gate for parallel batches) replaces it.
 7. **Bolt gate**: Walking skeleton — always present. Subsequent Bolts — per `Construction Autonomy Mode`. Failure always halts and asks regardless of mode. See SKILL.md §CONSTRUCTION Flow for the ladder prompt, autonomy mode, and halt-and-ask details.
 
-**Engine-driven per-unit iteration.** The orchestration engine now drives the per-Unit loop for the inline per-Unit design stages (functional-design, nfr-requirements, nfr-design, infrastructure-design) the same way it always has for code-generation: on a `next` that lands on an in-flight per-Unit stage (off the swarm path), the engine emits ONE `run-stage` directive per Unit, in Bolt build order, carrying the resolved Unit name in `directive.unit` and its artifact paths. The per-Unit ARTIFACTS on disk are the coverage ledger (a Unit is done for a stage once all of the stage's `produces` exist under `construction/<unit>/<stage>/`); the engine substitutes the next uncovered Unit on each `next`. The stage's per-Unit gate is **suppressed** (`gate: false`) on every not-yet-covered Unit, and the stage's real gate is presented exactly once, on the re-entry after the LAST Unit's artifacts land on disk, so a single stage-level approval covers all Units and cannot be reached until every Unit is built (the same "per-Unit gate suppressed, single gate replaces it" rule point 6 already states for code-generation, now applied across all five per-Unit stages, and enforced deterministically: `report --result approved` on a not-yet-completed per-Unit stage is refused while any Unit is uncovered). A scope with no compiled Unit list degrades to one single-iteration directive (unchanged behaviour).
+**Engine-driven per-unit iteration.** The orchestration engine now drives the per-Unit loop for the inline per-Unit design stages (functional-design, nfr-requirements, nfr-design, infrastructure-design) the same way it always has for code-generation: on a `next` that lands on an in-flight per-Unit stage (off the swarm path), the engine emits ONE `run-stage` directive per Unit, in Bolt build order, carrying the resolved Unit name in `directive.unit` and its artifact paths. `directive.produces` contains every output candidate; `directive.optional_produces` identifies the subset to write only when the matching `CONDITIONAL` stage instruction applies. The per-Unit ARTIFACTS on disk are the coverage ledger (a Unit is done for a stage once all required frontmatter `produces` exist under `construction/<unit>/<stage>/`; `optional_produces` may be absent); the engine substitutes the next uncovered Unit on each `next`. The stage's per-Unit gate is **suppressed** (`gate: false`) on every not-yet-covered Unit, and the stage's real gate is presented exactly once, on the re-entry after the LAST Unit's artifacts land on disk, so a single stage-level approval covers all Units and cannot be reached until every Unit is built (the same "per-Unit gate suppressed, single gate replaces it" rule point 6 already states for code-generation, now applied across all five per-Unit stages, and enforced deterministically: `report --result approved` on a not-yet-completed per-Unit stage is refused while any Unit is uncovered). A scope with no compiled Unit list degrades to one single-iteration directive (unchanged behaviour).
 
 Each construction stage file (3.1–3.4) documents its execution modes (QUESTION-ONLY, ARTIFACT-ONLY, Full) and the step split points. See the individual stage files for details.
 
@@ -864,7 +864,7 @@ If the `run-stage` directive includes a `reviewer` field (non-null), the orchest
 1. **Invoke reviewer sub-agent.** Delegate to the reviewer agent named in `directive.reviewer`. Pass:
    - The stage definition file path (`directive.stage_file`)
    - The Q&A file path (e.g., `<record>/<phase>/<stage>/<stage>-questions.md`)
-   - All artifact file paths produced by the stage (the `produces` artifacts)
+   - Every artifact path that exists after evaluating optional-output conditions. Start from `directive.produces`, require every path not listed in `directive.optional_produces`, and omit optional candidates that were not produced.
    - The validation tools list from the stage definition's frontmatter (if any)
 
    Do NOT pass: `memory.md` (builder's diary) or any plan/reasoning files. The reviewer forms independent judgment.
@@ -872,7 +872,7 @@ If the `run-stage` directive includes a `reviewer` field (non-null), the orchest
 2. **Reviewer executes.** The reviewer sub-agent:
    - Reads the stage definition to understand what SHOULD have been produced
    - Reads the Q&A to understand context and constraints
-   - Reads the artifact(s) to evaluate what WAS produced
+   - Reads every supplied, existing artifact to evaluate what WAS produced; it never attempts to read an omitted optional candidate
    - Runs any validation tools listed (via shell) and includes results in findings
    - Appends a `## Review` section to the primary artifact file with verdict: READY or NOT-READY
 
