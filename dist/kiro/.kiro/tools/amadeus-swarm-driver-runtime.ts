@@ -1051,13 +1051,8 @@ export function createCoordinator(input: Readonly<{
   });
 
   const defaultRecovery: AttemptRecoveryPort = Object.freeze({
-    async recover({ checkpoint, observedOwner }) {
+    async recover({ observedOwner }) {
       if (observedOwner) return "active";
-      if (checkpoint.state === "failed-resumable") {
-        return ["probing", "selected", "prepared"].includes(checkpoint.failure.failedFromState)
-          ? "recovered"
-          : "unknown";
-      }
       return "unknown";
     },
   });
@@ -1529,7 +1524,7 @@ export function createProductionCoordinator(input: Readonly<{
   space?: string;
   nativeExecution: NativeExecutionPort;
   audit?: RuntimeAuditPort;
-  recovery?: AttemptRecoveryPort;
+  recovery: AttemptRecoveryPort;
 }>): SwarmDriverCoordinator {
   return createCoordinator({
     registry: productionDriverRegistry,

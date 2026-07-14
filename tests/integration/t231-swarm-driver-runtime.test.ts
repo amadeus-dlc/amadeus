@@ -1025,6 +1025,35 @@ describe("t231 swarm driver runtime", () => {
     });
   });
 
+  test("does not locally recover failed prepared attempts with native recovery context", async () => {
+    let clock = new Date("2026-07-14T00:00:00.000Z");
+    const f = fixture({
+      nativeAvailable: true,
+      callbackMode: "process-observed-then-fails",
+      now: () => clock,
+      ownerLive: false,
+    });
+    expect(await runNativeAttempt(f)).toMatchObject({
+      type: "err",
+      error: { code: "EXECUTION_FAILED" },
+    });
+    const failed = f.store.read(1);
+    expect(failed).toMatchObject({
+      state: "failed-resumable",
+      failure: {
+        failedFromState: "prepared",
+        recoveryContext: { dispatchPreparation: { kind: "native" } },
+      },
+    });
+    if (failed?.state !== "failed-resumable") throw new Error("failed checkpoint fixture failed");
+    clock = new Date("2026-07-14T00:00:31.000Z");
+
+    expect(await f.coordinator.resume(resumeRequest(failed))).toMatchObject({
+      type: "err",
+      error: { code: "ATTEMPT_LIVENESS_UNKNOWN" },
+    });
+  });
+
   test("refuses recovery directly from evidence-verified state", async () => {
     let clock = new Date("2026-07-14T00:00:00.000Z");
     const f = fixture({ nativeAvailable: true, now: () => clock, ownerLive: false });

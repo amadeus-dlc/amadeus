@@ -8,7 +8,9 @@ import {
   type LifecycleNativeExecution,
 } from "./amadeus-swarm-native-execution.ts";
 import { createNativeProcessPort } from "./amadeus-swarm-native-process.ts";
+import { createNativeAttemptRecovery } from "./amadeus-swarm-native-recovery.ts";
 import { createNativeResourceSupervisor } from "./amadeus-swarm-native-resources.ts";
+import type { AttemptRecoveryPort } from "./amadeus-swarm-driver-runtime.ts";
 
 export type ProductionNativeExecutionInput = Readonly<{
   projectDir: string;
@@ -16,7 +18,14 @@ export type ProductionNativeExecutionInput = Readonly<{
   space?: string;
 }>;
 
-function buildProductionNativeExecution(input: ProductionNativeExecutionInput): LifecycleNativeExecution {
+export type ProductionNativeSupervisors = Readonly<{
+  execution: LifecycleNativeExecution;
+  recovery: AttemptRecoveryPort;
+}>;
+
+function buildProductionNativeSupervisors(
+  input: ProductionNativeExecutionInput,
+): ProductionNativeSupervisors {
   const root = recordDir(input.projectDir, input.intent, input.space) ?? input.projectDir;
   const capture = createNativeCaptureSupervisor();
   const process = createNativeProcessPort({ rootDir: root, output: capture.output });
@@ -24,17 +33,34 @@ function buildProductionNativeExecution(input: ProductionNativeExecutionInput): 
     journalRoot: join(root, ".amadeus-swarm-driver", "native", "resources"),
     recoveryObserver: process.recoveryObserver,
   });
-  return createLifecycleNativeExecution({ resources, capture: capture.capture, process });
+  return Object.freeze({
+    execution: createLifecycleNativeExecution({ resources, capture: capture.capture, process }),
+    recovery: createNativeAttemptRecovery({ process, resources }),
+  });
+}
+
+export function createProductionNativeSupervisors(
+  input: ProductionNativeExecutionInput,
+): ProductionNativeSupervisors {
+  let supervisors: ProductionNativeSupervisors | undefined;
+  const resolve = (): ProductionNativeSupervisors => {
+    supervisors ??= buildProductionNativeSupervisors(input);
+    return supervisors;
+  };
+  return Object.freeze({
+    execution: Object.freeze({
+      execute: (runInput: Parameters<LifecycleNativeExecution["execute"]>[0]) =>
+        resolve().execution.execute(runInput),
+    }),
+    recovery: Object.freeze({
+      recover: (recoveryInput: Parameters<AttemptRecoveryPort["recover"]>[0]) =>
+        resolve().recovery.recover(recoveryInput),
+    }),
+  });
 }
 
 export function createProductionNativeExecution(
   input: ProductionNativeExecutionInput,
 ): LifecycleNativeExecution {
-  let execution: LifecycleNativeExecution | undefined;
-  return Object.freeze({
-    execute(runInput) {
-      execution ??= buildProductionNativeExecution(input);
-      return execution.execute(runInput);
-    },
-  });
+  return createProductionNativeSupervisors(input).execution;
 }

@@ -5,10 +5,10 @@ import { readFileSync } from "node:fs";
 import { resolveProjectDir } from "./amadeus-lib.ts";
 import {
   createProductionCoordinator,
-  type NativeExecutionPort,
   type RuntimeError,
   type SwarmDriverCoordinator,
 } from "./amadeus-swarm-driver-runtime.ts";
+import { createProductionNativeSupervisors } from "./amadeus-swarm-native-supervisors.ts";
 import {
   digestValue,
   parseFinalizeRequestBinding,
@@ -52,19 +52,16 @@ export type SwarmDriverCliDependencies = Readonly<{
   mintId(): string;
 }>;
 
-const failClosedNativeExecution: NativeExecutionPort = Object.freeze({
-  async execute(): Promise<never> {
-    throw new Error("NATIVE_ACTIVE_RECOVERY_UNIMPLEMENTED");
-  },
-});
-
 function productionDependencies(): SwarmDriverCliDependencies {
   return Object.freeze({
-    coordinator: (context) =>
-      createProductionCoordinator({
+    coordinator: (context) => {
+      const native = createProductionNativeSupervisors(context);
+      return createProductionCoordinator({
         ...context,
-        nativeExecution: failClosedNativeExecution,
-      }),
+        nativeExecution: native.execution,
+        recovery: native.recovery,
+      });
+    },
     environment: Object.freeze({
       ...(Object.hasOwn(process.env, "AMADEUS_SWARM_DRIVER")
         ? { AMADEUS_SWARM_DRIVER: process.env.AMADEUS_SWARM_DRIVER }
