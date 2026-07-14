@@ -177,7 +177,7 @@ Session hooks check for the active intent's `amadeus-state.md` (under `amadeus/s
 
 ## Audit event taxonomy
 
-**73 events**, grouped below into 17 categories (the canonical `audit-format.md` registry splits the same 73 into 18 - the grouping is presentational, the event set is the invariant). Every event has exactly one tool or hook emitter, except for events pre-registered for an upcoming release whose Emitter cell reads `Reserved (v0.4.0 PR N)`, `Reserved (v0.5.0 PR N)`, or `Reserved (v0.6.0 PR N)` - these are skipped by the drift test's forward check until the consumer PR ships the emitter. The drift test `tests/integration/t48-audit-event-emitters.test.ts` enforces forward/reverse/tertiary/pairing/MD-MD consistency between this chapter's tables and the code.
+**78 events**, grouped below into 18 categories (the canonical `audit-format.md` registry splits the same 78 into 19 - the grouping is presentational, the event set is the invariant). Every event has exactly one tool or hook emitter, except for events pre-registered for an upcoming release whose Emitter cell reads `Reserved (v0.4.0 PR N)`, `Reserved (v0.5.0 PR N)`, or `Reserved (v0.6.0 PR N)` - these are skipped by the drift test's forward check until the consumer PR ships the emitter. The drift test `tests/integration/t48-audit-event-emitters.test.ts` enforces forward/reverse/tertiary/pairing/MD-MD consistency between this chapter's tables and the code.
 
 ### Workflow lifecycle
 
@@ -348,6 +348,18 @@ Pre-registered for v0.6.0 in milestone 2. All six swarm events now emit from the
 | `SWARM_BATON_RETURNED` | `tools/amadeus-swarm.ts` | A swarm Unit returned the baton to the conductor for orchestrator-mediated coordination |
 | `SWARM_COMPLETED` | `tools/amadeus-swarm.ts` | All Units in the batch finished (converged or failed); batch closed |
 | `SWARM_DEGRADED` | `tools/amadeus-swarm.ts` | `AMADEUS_USE_SWARM=1` was requested but the Workflow tool was unavailable; the conductor ran the subagent floor |
+
+### Swarm driver lifecycle
+
+The stateful driver store owns selection and execution-attempt observability. Every row is redacted and digest-bound; normalized provider payloads remain outside the audit ledger.
+
+| Event | Emitter | Trigger |
+|---|---|---|
+| `SWARM_DRIVER_ATTEMPTED` | `tools/amadeus-swarm-driver-store.ts` | Audit-first declaration of a new probing attempt before checkpoint materialization |
+| `SWARM_DRIVER_SELECTED` | `tools/amadeus-swarm-driver-store.ts` | Capability probing resolved to a native, floor, or legacy selection |
+| `SWARM_DRIVER_TRANSITION` | `tools/amadeus-swarm-driver-store.ts` | Fenced attempt state transition recorded before checkpoint replacement |
+| `SWARM_DRIVER_RECONCILED` | `tools/amadeus-swarm-driver-store.ts` | Recovery classified or repaired an interrupted audit/checkpoint mutation |
+| `SWARM_NATIVE_EVIDENCE` | `tools/amadeus-swarm-driver-store.ts` | Normalized evidence verdict recorded without raw provider output |
 
 Every event in the taxonomy is either backed by a real emitter or marked `Reserved (v0.4.0 PR N)` / `Reserved (v0.5.0 PR N)` / `Reserved (v0.6.0 PR N)` for a pre-registered upcoming consumer. The drift test enforces both halves — the `Reserved` early-skip applies only while the cell literally contains "Reserved"; consumer PRs replace it with the real emitter file path in the same commit they ship the emit call.
 

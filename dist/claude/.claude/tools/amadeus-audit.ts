@@ -16,7 +16,7 @@ import {
   worktreePath,
 } from "./amadeus-lib.ts";
 
-// --- Canonical event types (73) ---
+// --- Canonical event types (78) ---
 // See docs/reference/12-state-machine.md for the state transitions that emit each event.
 
 const VALID_EVENT_TYPES = new Set([
@@ -139,6 +139,13 @@ const VALID_EVENT_TYPES = new Set([
   "SWARM_BATON_RETURNED",
   "SWARM_COMPLETED",
   "SWARM_DEGRADED",
+  // Stateful swarm-driver selection, transition, reconciliation, and native
+  // evidence lifecycle. Emitted by amadeus-swarm-driver-store.ts.
+  "SWARM_DRIVER_ATTEMPTED",
+  "SWARM_DRIVER_SELECTED",
+  "SWARM_DRIVER_TRANSITION",
+  "SWARM_DRIVER_RECONCILED",
+  "SWARM_NATIVE_EVIDENCE",
 ]);
 
 // --- Event type to human-readable heading ---
@@ -217,6 +224,11 @@ const EVENT_HEADINGS: Record<string, string> = {
   SWARM_BATON_RETURNED: "Swarm Baton Returned",
   SWARM_COMPLETED: "Swarm Completed",
   SWARM_DEGRADED: "Swarm Degraded",
+  SWARM_DRIVER_ATTEMPTED: "Swarm Driver Attempted",
+  SWARM_DRIVER_SELECTED: "Swarm Driver Selected",
+  SWARM_DRIVER_TRANSITION: "Swarm Driver Transition",
+  SWARM_DRIVER_RECONCILED: "Swarm Driver Reconciled",
+  SWARM_NATIVE_EVIDENCE: "Swarm Native Evidence",
 };
 
 // --- Helpers ---
@@ -575,6 +587,10 @@ export function handleAuditFork(args: string[], projectDir: string): void {
 
 function handleAuditMerge(args: string[], projectDir: string): void {
   const slug = parseSlugFlag(args, "audit-merge");
+  const operationIndex = args.indexOf("--operation-id");
+  const requestDigestIndex = args.indexOf("--finalize-request-digest");
+  const operationId = operationIndex >= 0 ? args[operationIndex + 1] : undefined;
+  const finalizeRequestDigest = requestDigestIndex >= 0 ? args[requestDigestIndex + 1] : undefined;
   // Same selector the state/audit fork used -> the SAME intent record on both
   // ends (vision §5). recordPrefix pins the worktree audit mirror.
   const { intent, space } = parseSelectorFlags(args);
@@ -710,6 +726,8 @@ function handleAuditMerge(args: string[], projectDir: string): void {
         "Entries Merged": String(entriesMerged),
         "Source Audit Hash": sourceHash,
         "Fork Boundary": String(boundary),
+        ...(operationId ? { "Operation ID": operationId } : {}),
+        ...(finalizeRequestDigest ? { "Finalize request digest": finalizeRequestDigest } : {}),
       },
       projectDir,
       intent,
@@ -746,6 +764,8 @@ function handleAuditMerge(args: string[], projectDir: string): void {
     source_audit_hash: sourceHash,
     fork_boundary: boundary,
     audit_timestamp: result.timestamp,
+    ...(operationId ? { operation_id: operationId } : {}),
+    ...(finalizeRequestDigest ? { finalize_request_digest: finalizeRequestDigest } : {}),
   });
 }
 

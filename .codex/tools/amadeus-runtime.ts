@@ -1271,6 +1271,12 @@ function handleFragmentMerge(rest: string[], projectDir: string): void {
     } else if (a === "--space" && i + 1 < rest.length) {
       flags.space = rest[i + 1];
       i++;
+    } else if (a === "--operation-id" && i + 1 < rest.length) {
+      flags.operationId = rest[i + 1];
+      i++;
+    } else if (a === "--finalize-request-digest" && i + 1 < rest.length) {
+      flags.finalizeRequestDigest = rest[i + 1];
+      i++;
     }
   }
   if (!flags.slug) {
@@ -1300,6 +1306,10 @@ function handleFragmentMerge(rest: string[], projectDir: string): void {
       JSON.stringify({
         status: "fragment-absent",
         slug: flags.slug,
+        ...(flags.operationId ? { operation_id: flags.operationId } : {}),
+        ...(flags.finalizeRequestDigest
+          ? { finalize_request_digest: flags.finalizeRequestDigest }
+          : {}),
       })
     );
     return;
@@ -1315,6 +1325,10 @@ function handleFragmentMerge(rest: string[], projectDir: string): void {
       status: "fragment-merged",
       slug: flags.slug,
       fragment_runtime_graph_hash: fragmentHash,
+      ...(flags.operationId ? { operation_id: flags.operationId } : {}),
+      ...(flags.finalizeRequestDigest
+        ? { finalize_request_digest: flags.finalizeRequestDigest }
+        : {}),
     })
   );
 }

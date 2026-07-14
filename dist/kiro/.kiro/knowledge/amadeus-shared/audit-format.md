@@ -8,7 +8,7 @@
 
 All event names follow `SUBJECT_PAST_VERB` — every event answers "what happened?"
 
-## Event Registry (73 events, 18 categories)
+## Event Registry (78 events, 19 categories)
 
 ### Workflow Lifecycle (4 events)
 
@@ -191,6 +191,18 @@ All six swarm events emit from the swarm referee `amadeus-swarm.ts` — the dete
 | `SWARM_BATON_RETURNED` | A swarm Unit returned the baton to the conductor for orchestrator-mediated coordination | Timestamp, Batch number, Unit name, Reason | `tools/amadeus-swarm.ts` |
 | `SWARM_COMPLETED` | All Units in the batch finished (converged or failed); batch closed | Timestamp, Batch number, Converged count, Failed count | `tools/amadeus-swarm.ts` |
 | `SWARM_DEGRADED` | `AMADEUS_USE_SWARM=1` was requested but the Workflow tool was unavailable, so the conductor ran the subagent floor (loud-degrade) | Timestamp, Batch number, Requested driver, Fallback driver | `tools/amadeus-swarm.ts` |
+
+### Swarm Driver Lifecycle (5 events)
+
+These events are owned by the stateful driver store. They contain only redacted selection coordinates, canonical digests, closed verdict codes, and correlation IDs; raw provider output and environment values are never written. `SWARM_NATIVE_EVIDENCE` records the normalized-evidence verdict, not the evidence payload itself.
+
+| Event | When | Required Fields | Emitter |
+|-------|------|-----------------|---------|
+| `SWARM_DRIVER_ATTEMPTED` | A new batch attempt intent was recorded before its probing checkpoint was materialized | Timestamp, Schema version, Execution ID, Attempt ID, Batch number, Begin ID, Request source, Requested driver, Harness, Selection input digest, Probe status, Event key | `tools/amadeus-swarm-driver-store.ts` |
+| `SWARM_DRIVER_SELECTED` | Capability probing produced a native, floor, or legacy selection | Timestamp, Schema version, Execution ID, Attempt ID, Batch number, Transition ID, Request source, Requested driver, Selected driver, Execution mode, Harness, Selection digest, Plan digest, Probe digest, Event key | `tools/amadeus-swarm-driver-store.ts` |
+| `SWARM_DRIVER_TRANSITION` | A fenced attempt state transition was recorded before checkpoint replacement | Timestamp, Schema version, Execution ID, Attempt ID, Transition ID, Transition edge, Pre digest, Post digest, Fencing token | `tools/amadeus-swarm-driver-store.ts` |
+| `SWARM_DRIVER_RECONCILED` | Recovery classified or repaired an audit/checkpoint interruption | Timestamp, Schema version, Execution ID, Attempt ID, Transition ID or Begin ID, Action | `tools/amadeus-swarm-driver-store.ts` |
+| `SWARM_NATIVE_EVIDENCE` | Normalized provider evidence was verified or rejected before the evidence checkpoint transition | Timestamp, Schema version, Execution ID, Attempt ID, Batch number, Driver, Verdict code, Verified, Evidence digest, Sources, Unit names, Event key | `tools/amadeus-swarm-driver-store.ts` |
 
 ## Hook-Generated Format
 

@@ -3099,6 +3099,10 @@ function handleMerge(args: string[]): void {
         "Source state hash": wtSha,
         "Target state hash": postMergeSha,
         "Conflict resolution": conflictResolutionField,
+        ...(flags["operation-id"] ? { "Operation ID": flags["operation-id"] } : {}),
+        ...(flags["finalize-request-digest"]
+          ? { "Finalize request digest": flags["finalize-request-digest"] }
+          : {}),
       }, pd, resolvedIntent, space);
     } catch (e) {
       errorWithSlug(slug, `audit emission failed: ${errorMessage(e)}`);
@@ -3126,6 +3130,10 @@ function handleMerge(args: string[]): void {
       source_state_hash: wtSha,
       target_state_hash: result.postMergeSha,
       conflict_resolution: result.conflictResolutionField,
+      ...(flags["operation-id"] ? { operation_id: flags["operation-id"] } : {}),
+      ...(flags["finalize-request-digest"]
+        ? { finalize_request_digest: flags["finalize-request-digest"] }
+        : {}),
     })}\n`
   );
 }
