@@ -24,6 +24,11 @@ export type ProcessLivenessObservation =
   | Readonly<{ status: "dead" }>
   | Readonly<{ status: "unknown" }>;
 
+type ProcessLivenessDependencies = Readonly<{
+  signalProcess?: (pid: number) => void;
+  observeIdentity?: typeof observeProcessIdentity;
+}>;
+
 export type PlannedRun = Readonly<{
   schemaVersion: 1;
   runId: string;
@@ -262,10 +267,7 @@ function processExistence(
 
 export function observeExactProcessLiveness(
   expected: ProcessIdentity,
-  injected: Readonly<{
-    signalProcess?: (pid: number) => void;
-    observeIdentity?: typeof observeProcessIdentity;
-  }> = {},
+  injected: ProcessLivenessDependencies = {},
 ): ProcessLivenessObservation {
   const existence = processExistence(expected.pid, injected.signalProcess ?? ((pid) => process.kill(pid, 0)));
   if (existence === "dead") return Object.freeze({ status: "dead" });

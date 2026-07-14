@@ -12,6 +12,10 @@ import {
   type NormalizedDriverEvent,
 } from "../../packages/framework/core/tools/amadeus-swarm-driver-adapter-contract.ts";
 import {
+  observeProcessIdentity,
+  type ProcessIdentity,
+} from "../../packages/framework/core/tools/amadeus-armed-process.ts";
+import {
   ProbeResult,
   type Harness,
 } from "../../packages/framework/core/tools/amadeus-swarm-driver-contract.ts";
@@ -32,6 +36,7 @@ import { claudeDriverRegistration } from "../../packages/framework/core/tools/am
 import { kiroDriverRegistration } from "../../packages/framework/core/tools/amadeus-swarm-driver-adapters/kiro.ts";
 import {
   buildFinalizeRequestBinding,
+  buildRunRequestBinding,
   buildRefereeFinalizeEnvelope,
   buildTransition,
   createProbingCheckpoint,
@@ -232,6 +237,12 @@ function fixture(
     auditReadable?: boolean;
     callbackMode?: NativeCallbackMode;
     beforeHeartbeat?: () => void;
+    heartbeatTimerFailure?: "start" | "stop";
+    omitHeartbeatTimer?: boolean;
+    omitObserveOwner?: boolean;
+    recordNativeEvidenceError?: "stale-writer" | "generic";
+    claimActiveRecoveryError?: "claim-active" | "stale-writer" | "generic";
+    registrationUnavailableOnRun?: boolean;
   }> = {},
 ) {
   const checkpoints = new Map<number, AttemptCheckpoint>();
@@ -320,9 +331,33 @@ function fixture(
     },
     lock: { run: (fn) => fn() },
   });
+  const coordinatorStore = Object.freeze({
+    ...store,
+    recordNativeEvidence(evidence: Parameters<typeof store.recordNativeEvidence>[0]): void {
+      if (options.recordNativeEvidenceError === "stale-writer") throw new AttemptStoreError("STALE_WRITER");
+      if (options.recordNativeEvidenceError === "generic") throw new Error("injected evidence write failure");
+      store.recordNativeEvidence(evidence);
+    },
+    claimActiveRecovery(claim: Parameters<typeof store.claimActiveRecovery>[0]): AttemptCheckpoint {
+      if (options.claimActiveRecoveryError === "claim-active") throw new AttemptStoreError("RECOVERY_CLAIM_ACTIVE");
+      if (options.claimActiveRecoveryError === "stale-writer") throw new AttemptStoreError("STALE_WRITER");
+      if (options.claimActiveRecoveryError === "generic") throw new Error("injected recovery claim failure");
+      return store.claimActiveRecovery(claim);
+    },
+  });
+  let registrationUnavailable = false;
+  const coordinatorRegistry = options.registrationUnavailableOnRun
+    ? Object.freeze({
+        registrations: () => registry.value.registrations(),
+        forDriver: (driver: Parameters<typeof registry.value.forDriver>[0]) =>
+          registrationUnavailable
+            ? productionDriverRegistry.forDriver(driver)
+            : registry.value.forDriver(driver),
+      })
+    : registry.value;
   const coordinator = createCoordinator({
-    registry: registry.value,
-    store,
+    registry: coordinatorRegistry,
+    store: coordinatorStore,
     mintId: () => `id-${++id}`,
     now: options.now ?? (() => new Date("2026-07-14T00:00:00.000Z")),
     nativeExecution: {
@@ -391,26 +426,36 @@ function fixture(
       },
     },
     recovery: options.recovery,
-    observeOwner: (expected) => {
-      if (options.ownerLivenessUnknown) return Object.freeze({ status: "unknown" as const });
-      const ownerLive = typeof options.ownerLive === "function" ? options.ownerLive() : options.ownerLive;
-      return ownerLive === false
-        ? Object.freeze({ status: "dead" as const })
-        : Object.freeze({ status: "live" as const, observedOwner: expected });
-    },
+    ...(options.omitObserveOwner
+      ? {}
+      : {
+          observeOwner: (expected: ProcessIdentity) => {
+            if (options.ownerLivenessUnknown) return Object.freeze({ status: "unknown" as const });
+            const ownerLive = typeof options.ownerLive === "function" ? options.ownerLive() : options.ownerLive;
+            return ownerLive === false
+              ? Object.freeze({ status: "dead" as const })
+              : Object.freeze({ status: "live" as const, observedOwner: expected });
+          },
+        }),
     ...(options.recoveryOwnerIdentityAvailable === false
       ? { observeRecoveryOwner: () => null }
       : {}),
-    heartbeatTimer: {
-      start: (callback, delay) => {
-        heartbeatCallback = callback;
-        heartbeatDelay = delay;
-        return "heartbeat-fixture";
-      },
-      stop: () => {
-        heartbeatCancelled = true;
-      },
-    },
+    ...(options.omitHeartbeatTimer
+      ? {}
+      : {
+          heartbeatTimer: {
+            start: (callback: () => void, delay: number) => {
+              if (options.heartbeatTimerFailure === "start") throw new Error("injected heartbeat start failure");
+              heartbeatCallback = callback;
+              heartbeatDelay = delay;
+              return "heartbeat-fixture";
+            },
+            stop: () => {
+              if (options.heartbeatTimerFailure === "stop") throw new Error("injected heartbeat stop failure");
+              heartbeatCancelled = true;
+            },
+          },
+        }),
   });
   return {
     coordinator,
@@ -422,6 +467,9 @@ function fixture(
     heartbeatCancelled: () => heartbeatCancelled,
     failWrites: (enabled: boolean) => {
       failCheckpointWrite = enabled;
+    },
+    makeRegistrationUnavailable: () => {
+      registrationUnavailable = true;
     },
   };
 }
@@ -493,7 +541,9 @@ const expiredOwnerProcess = Object.freeze({
   startTokenHash: "expired-owner-start-token",
 });
 
-function probingCheckpoint(options: Readonly<{ ownerProcess?: boolean }> = {}): AttemptCheckpoint {
+function probingCheckpoint(
+  options: Readonly<{ ownerProcess?: ProcessIdentity | false }> = {},
+): AttemptCheckpoint {
   const checkpoint = createProbingCheckpoint({
     executionId: "audit-only-execution",
     attemptId: "audit-only-attempt",
@@ -507,7 +557,9 @@ function probingCheckpoint(options: Readonly<{ ownerProcess?: boolean }> = {}): 
       ownerId: "audit-only-owner",
       heartbeatAt: "2026-07-14T00:00:00.000Z",
       expiresAt: "2026-07-14T00:00:30.000Z",
-      ...(options.ownerProcess === false ? {} : { ownerProcess: expiredOwnerProcess }),
+      ...(options.ownerProcess === false
+        ? {}
+        : { ownerProcess: options.ownerProcess ?? expiredOwnerProcess }),
     },
     selectionInput: {
       requested: { source: "default", requested: "auto" },
@@ -519,6 +571,81 @@ function probingCheckpoint(options: Readonly<{ ownerProcess?: boolean }> = {}): 
   });
   if (checkpoint.type === "err") throw new Error("probing checkpoint fixture failed");
   return checkpoint.value;
+}
+
+async function resolveNativeCheckpoint(f: ReturnType<typeof fixture>): Promise<AttemptCheckpoint> {
+  const resolved = await f.coordinator.resolve({
+    ...baseResolve,
+    batch: 1,
+    selectionEnvironment: { AMADEUS_SWARM_DRIVER: "codex-ultra" },
+  });
+  if (resolved.type === "err") throw new Error("resolve fixture failed");
+  const checkpoint = f.store.read(1);
+  if (checkpoint?.state !== "selected") throw new Error("selected checkpoint fixture failed");
+  return checkpoint;
+}
+
+function materializePreparedCheckpoint(
+  f: ReturnType<typeof fixture>,
+  selected: AttemptCheckpoint,
+  withDispatchPreparation: boolean,
+): AttemptCheckpoint {
+  if (selected.state !== "selected") throw new Error("selected checkpoint fixture failed");
+  const runBinding = buildRunRequestBinding({
+    preparedUnits,
+    gitBinding: runGitBinding,
+    convergenceCommand: "bun test",
+    evidenceDir: "/repo/evidence",
+  });
+  if (runBinding.type === "err") throw new Error("run binding fixture failed");
+  const waveDigest = digestValue({ index: 0, units: selected.selectionInput.expectedUnits });
+  const dispatchPreparation: NativeDispatchPreparation = Object.freeze({
+    kind: "native",
+    nativeRunId: "prepared-native-run",
+    planDigest: selected.selectedContext.planDigest,
+    fencingToken: selected.lease.fencingToken + 1,
+    waveIndex: 0,
+    waveDigest,
+    resourcePreparationDigest: digestValue([]),
+    captureIdentityDigest: digestValue({
+      executionId: selected.executionId,
+      attemptId: selected.attemptId,
+      attemptNonceHash: selected.nonceHash,
+      planDigest: selected.selectedContext.planDigest,
+      waveIndex: 0,
+      waveDigest,
+    }),
+    identityRelativePath: ".amadeus/native/identity.json",
+    armRelativePath: ".amadeus/native/arm.json",
+    armDigest: "prepared-arm",
+    recoveryJournalRelativePath: ".amadeus/native/recovery.json",
+  });
+  const { stateDigest: _stateDigest, ...selectedWithoutDigest } = selected;
+  const transition = buildTransition(selected, {
+    transitionId: "prepared-fixture-transition",
+    edge: "selected-prepared",
+    executionId: selected.executionId,
+    attemptId: selected.attemptId,
+    leaseId: selected.lease.leaseId,
+    fencingToken: selected.lease.fencingToken,
+    post: {
+      ...selectedWithoutDigest,
+      state: "prepared",
+      lease: {
+        ...selected.lease,
+        leaseId: "prepared-fixture-lease",
+        fencingToken: selected.lease.fencingToken + 1,
+      },
+      preparedUnits,
+      worktreeManifestDigest: digestValue(preparedUnits),
+      runBinding: runBinding.value,
+      ...(withDispatchPreparation ? { dispatchPreparation } : {}),
+    },
+  });
+  if (transition.type === "err") throw new Error("prepared transition fixture failed");
+  const prepared = f.store.transition(transition.value);
+  if (prepared.state !== "prepared") throw new Error("prepared checkpoint fixture failed");
+  return prepared;
 }
 
 describe("t231 swarm driver runtime", () => {
@@ -702,6 +829,133 @@ describe("t231 swarm driver runtime", () => {
     });
     expect(recoveryCalls).toBe(0);
     expect(f.store.read(1)).toEqual(active);
+  });
+
+  test("uses exact process observation when no owner observer is injected", async () => {
+    const ownerProcess = observeProcessIdentity(process.pid);
+    if (ownerProcess.type === "err") throw new Error("process identity fixture failed");
+    const f = fixture({
+      now: () => new Date("2026-07-14T00:00:31.000Z"),
+      omitObserveOwner: true,
+    });
+    const active = f.store.begin(probingCheckpoint({ ownerProcess: ownerProcess.value }));
+
+    expect(await f.coordinator.resume(resumeRequest(active))).toMatchObject({
+      type: "err",
+      error: { code: "ATTEMPT_LEASE_ACTIVE" },
+    });
+  });
+
+  for (const claimActiveRecoveryError of ["claim-active", "stale-writer"] as const) {
+    test(`maps ${claimActiveRecoveryError} recovery claim races to an active lease`, async () => {
+      const f = fixture({
+        now: () => new Date("2026-07-14T00:00:31.000Z"),
+        ownerLive: false,
+        claimActiveRecoveryError,
+      });
+      const active = f.store.begin(probingCheckpoint());
+
+      expect(await f.coordinator.resume(resumeRequest(active))).toMatchObject({
+        type: "err",
+        error: { code: "ATTEMPT_LEASE_ACTIVE" },
+      });
+    });
+  }
+
+  test("fails closed when an unexpected recovery claim error escapes the store", async () => {
+    const f = fixture({
+      now: () => new Date("2026-07-14T00:00:31.000Z"),
+      ownerLive: false,
+      claimActiveRecoveryError: "generic",
+    });
+    const active = f.store.begin(probingCheckpoint());
+
+    expect(await f.coordinator.resume(resumeRequest(active))).toMatchObject({
+      type: "err",
+      error: { code: "CHECKPOINT_STATE_INVALID" },
+    });
+  });
+
+  test("refuses recovery for a failure originating after evidence verification", async () => {
+    let clock = new Date("2026-07-14T00:00:00.000Z");
+    const f = fixture({ nativeAvailable: true, now: () => clock, ownerLive: false });
+    expect(await runNativeAttempt(f)).toMatchObject({ type: "ok" });
+    const verified = f.store.read(1);
+    if (verified?.state !== "evidence-verified") throw new Error("verified checkpoint fixture failed");
+    const failedTransition = buildTransition(verified, {
+      transitionId: "failed-after-evidence",
+      edge: "attempt-failed",
+      executionId: verified.executionId,
+      attemptId: verified.attemptId,
+      leaseId: verified.lease.leaseId,
+      fencingToken: verified.lease.fencingToken,
+      post: {
+        schemaVersion: verified.schemaVersion,
+        state: "failed-resumable",
+        executionId: verified.executionId,
+        attemptId: verified.attemptId,
+        batch: verified.batch,
+        origin: verified.origin,
+        nonceHash: verified.nonceHash,
+        lease: verified.lease,
+        selectionInput: verified.selectionInput,
+        unitStates: verified.unitStates,
+        lastMutationId: verified.lastMutationId,
+        failure: {
+          code: "COORDINATOR_FAILED",
+          affectedUnits: verified.selectionInput.expectedUnits,
+          failedFromState: "evidence-verified",
+        },
+      },
+    });
+    if (failedTransition.type === "err") throw new Error("failed transition fixture failed");
+    const failed = f.store.transition(failedTransition.value);
+    clock = new Date("2026-07-14T00:00:31.000Z");
+
+    expect(await f.coordinator.resume(resumeRequest(failed))).toMatchObject({
+      type: "err",
+      error: { code: "ATTEMPT_LIVENESS_UNKNOWN" },
+    });
+  });
+
+  test("locally recovers an expired prepared attempt before dispatch preparation", async () => {
+    let clock = new Date("2026-07-14T00:00:00.000Z");
+    const f = fixture({ nativeAvailable: true, now: () => clock, ownerLive: false });
+    const selected = await resolveNativeCheckpoint(f);
+    const prepared = materializePreparedCheckpoint(f, selected, false);
+    clock = new Date("2026-07-14T00:00:31.000Z");
+
+    expect(await f.coordinator.resume(resumeRequest(prepared))).toMatchObject({
+      type: "ok",
+      value: { state: "probing", origin: "resumed" },
+    });
+  });
+
+  test("requires external recovery after native dispatch preparation", async () => {
+    let clock = new Date("2026-07-14T00:00:00.000Z");
+    const f = fixture({ nativeAvailable: true, now: () => clock, ownerLive: false });
+    const selected = await resolveNativeCheckpoint(f);
+    const prepared = materializePreparedCheckpoint(f, selected, true);
+    clock = new Date("2026-07-14T00:00:31.000Z");
+
+    expect(await f.coordinator.resume(resumeRequest(prepared))).toMatchObject({
+      type: "err",
+      error: { code: "ATTEMPT_LIVENESS_UNKNOWN" },
+    });
+  });
+
+  test("refuses recovery directly from evidence-verified state", async () => {
+    let clock = new Date("2026-07-14T00:00:00.000Z");
+    const f = fixture({ nativeAvailable: true, now: () => clock, ownerLive: false });
+    expect(await runNativeAttempt(f)).toMatchObject({ type: "ok" });
+    const verified = f.store.read(1);
+    if (verified?.state !== "evidence-verified") throw new Error("verified checkpoint fixture failed");
+    clock = new Date("2026-07-14T00:00:31.000Z");
+
+    expect(await f.coordinator.resume(resumeRequest(verified))).toMatchObject({
+      type: "err",
+      error: { code: "ATTEMPT_LIVENESS_UNKNOWN" },
+    });
   });
 
   test("allows exactly one failed-attempt recovery claimant to perform external recovery", async () => {
@@ -952,6 +1206,81 @@ describe("t231 swarm driver runtime", () => {
     expect(f.executionCount()).toBe(0);
   });
 
+  test("refuses to resume a terminal attempt", async () => {
+    const f = fixture();
+    const resolved = await f.coordinator.resolve({
+      ...baseResolve,
+      batch: 1,
+      selectionEnvironment: { AMADEUS_SWARM_DRIVER: "codex-ultra" },
+    });
+    expect(resolved).toMatchObject({ type: "err", error: { code: "EXPLICIT_DRIVER_UNAVAILABLE" } });
+    const terminal = f.store.read(1);
+    if (terminal?.state !== "failed-terminal") throw new Error("terminal checkpoint fixture failed");
+
+    expect(await f.coordinator.resume(resumeRequest(terminal))).toMatchObject({
+      type: "err",
+      error: { code: "CHECKPOINT_STATE_INVALID" },
+    });
+  });
+
+  test("fails terminally when prepared Units do not match the selected Units", async () => {
+    const f = fixture({ nativeAvailable: true });
+    const selected = await resolveNativeCheckpoint(f);
+
+    expect(await f.coordinator.run({
+      executionId: selected.executionId,
+      attemptId: selected.attemptId,
+      batch: 1,
+      preparedUnits: [preparedUnits[0]],
+      convergenceCommand: "bun test",
+      evidenceDir: "/repo/evidence",
+      gitBinding: runGitBinding,
+    })).toMatchObject({ type: "err", error: { code: "PREPARED_MANIFEST_INVALID" } });
+    expect(f.store.read(1)).toMatchObject({
+      state: "failed-terminal",
+      failure: { code: "INPUT_INVALID", failedFromState: "selected" },
+    });
+  });
+
+  test("keeps the selected checkpoint when claiming the run lease cannot persist", async () => {
+    const f = fixture({ nativeAvailable: true });
+    const selected = await resolveNativeCheckpoint(f);
+    f.failWrites(true);
+    const result = await f.coordinator.run({
+      executionId: selected.executionId,
+      attemptId: selected.attemptId,
+      batch: 1,
+      preparedUnits,
+      convergenceCommand: "bun test",
+      evidenceDir: "/repo/evidence",
+      gitBinding: runGitBinding,
+    });
+    f.failWrites(false);
+
+    expect(result).toMatchObject({ type: "err", error: { code: "CHECKPOINT_STATE_INVALID" } });
+    expect(f.store.read(1)?.state).toBe("selected");
+  });
+
+  test("fails resumably when a selected native registration disappears before run", async () => {
+    const f = fixture({ nativeAvailable: true, registrationUnavailableOnRun: true });
+    const selected = await resolveNativeCheckpoint(f);
+    f.makeRegistrationUnavailable();
+
+    expect(await f.coordinator.run({
+      executionId: selected.executionId,
+      attemptId: selected.attemptId,
+      batch: 1,
+      preparedUnits,
+      convergenceCommand: "bun test",
+      evidenceDir: "/repo/evidence",
+      gitBinding: runGitBinding,
+    })).toMatchObject({ type: "err", error: { code: "REGISTRATION_UNAVAILABLE" } });
+    expect(f.store.read(1)).toMatchObject({
+      state: "failed-resumable",
+      failure: { code: "COORDINATOR_FAILED", failedFromState: "prepared" },
+    });
+  });
+
   test("probes a native candidate exactly once and verifies exact Unit evidence", async () => {
     const f = fixture({ nativeAvailable: true });
     const resolved = await f.coordinator.resolve({
@@ -985,6 +1314,27 @@ describe("t231 swarm driver runtime", () => {
       Sources: "hook,model-handshake,stream",
       "Unit names": "alpha,beta",
     });
+  });
+
+  test("returns execution failure when native evidence loses the run lease race", async () => {
+    const f = fixture({ nativeAvailable: true, recordNativeEvidenceError: "stale-writer" });
+
+    expect(await runNativeAttempt(f)).toMatchObject({
+      type: "err",
+      error: { code: "EXECUTION_FAILED" },
+    });
+  });
+
+  test("propagates unexpected native evidence persistence failures", async () => {
+    const f = fixture({ nativeAvailable: true, recordNativeEvidenceError: "generic" });
+
+    try {
+      await runNativeAttempt(f);
+      throw new Error("expected native evidence persistence failure");
+    } catch (error) {
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toBe("injected evidence write failure");
+    }
   });
 
   test("transfers the resolved lease to the run owner with the next fencing token", async () => {
@@ -1038,6 +1388,27 @@ describe("t231 swarm driver runtime", () => {
       expiresAt: "2026-07-14T00:00:35.000Z",
     });
   });
+
+  test("uses the default heartbeat timer when none is injected", async () => {
+    const f = fixture({ nativeAvailable: true, omitHeartbeatTimer: true });
+
+    expect(await runNativeAttempt(f)).toMatchObject({ type: "ok" });
+  });
+
+  for (const heartbeatTimerFailure of ["start", "stop"] as const) {
+    test(`fails execution when the heartbeat timer cannot ${heartbeatTimerFailure}`, async () => {
+      const f = fixture({ nativeAvailable: true, heartbeatTimerFailure });
+
+      expect(await runNativeAttempt(f)).toMatchObject({
+        type: "err",
+        error: { code: "EXECUTION_FAILED" },
+      });
+      expect(f.store.read(1)).toMatchObject({
+        state: "failed-resumable",
+        failure: { code: "COORDINATOR_FAILED" },
+      });
+    });
+  }
 
   test("prevents a fenced native run from writing after its heartbeat becomes stale", async () => {
     let clock = new Date("2026-07-14T00:00:00.000Z");

@@ -144,6 +144,25 @@ describe("t227 swarm driver lifecycle", () => {
     expect(buildTransition(initial.value, { ...transition.value, fencingToken: 0 }).type).toBe("err");
   });
 
+  test("rejects recovery completion without an active recovery claim", () => {
+    const initial = probing();
+    if (initial.type === "err") throw new Error("fixture failed");
+
+    expect(buildTransition(initial.value, {
+      transitionId: "recovery-complete-1",
+      edge: "active-attempt-recovered",
+      executionId: initial.value.executionId,
+      attemptId: initial.value.attemptId,
+      leaseId: initial.value.lease.leaseId,
+      fencingToken: initial.value.lease.fencingToken,
+      post: {
+        ...initial.value,
+        state: "failed-resumable",
+        failure: { code: "COORDINATOR_FAILED", affectedUnits: ["alpha"], failedFromState: "probing" },
+      },
+    })).toEqual({ type: "err", error: { code: "STALE_WRITER", field: undefined } });
+  });
+
   test("canonicalizes and binds the complete finalize request", () => {
     const binding = buildFinalizeRequestBinding({
       executionId: "exec-1",

@@ -914,10 +914,7 @@ export function createCoordinator(input: Readonly<{
           ? "recovered"
           : "unknown";
       }
-      if (checkpoint.state === "probing" || checkpoint.state === "selected") return "recovered";
-      return checkpoint.state === "prepared" && checkpoint.dispatchPreparation === undefined
-        ? "recovered"
-        : "unknown";
+      return "unknown";
     },
   });
 
