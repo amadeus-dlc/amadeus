@@ -27,8 +27,8 @@ U-06にも検証可能な利用者価値を割り当てるため、FR-24〜FR-26
 
 | Scenario | Primary Unit(s) | Supporting Unit(s) | 実装される受入結果 | Test / evidence |
 |---|---|---|---|---|
-| USR-01 Claude相互調整型`auto` | U-01、U-03 | U-02、U-06 | topologyをcoordinatedに分類し、Agent Teamsを選択し、Team native証跡とreferee収束を相関する | selector fixture、fake Claude integration、macOS Agent Teams live、release evidence index |
-| USR-02 Claude独立batch `auto` | U-01、U-03 | U-02、U-06 | independentを分類し、Ultra Code workflowでUnitを割り当てる | selector fixture、fake workflow event、macOS Ultra Code live |
+| USR-01 Claude相互調整型`auto` | U-01、U-03 | U-02、U-06 | topologyをcoordinatedに分類し、interactive PTYのAgent Teamsを選択し、exact team/task state、TaskCreated / TaskCompleted / TeammateIdle、terminal後のnative証跡をreferee収束と相関する | selector fixture、fake PTY integration、macOS 2 teammate Agent Teams live、release evidence index |
+| USR-02 Claude独立batch `auto` | U-01、U-03 | U-02、U-06 | independentを分類し、exact headless Ultra Code commandでWorkflow Unitを割り当て、snapshot・journal/stream・hookを相関する | selector fixture、fake workflow event、macOS Ultra Code live |
 | USR-03 Claude topology不明 | U-01、U-03 | U-02、U-06 | `claude-ultracode`を選択し、`topology=unknown`とreasonを表示・監査する | unknown fixture、stderr/audit assertion、Claude integration |
 | USR-04 Codexで`codex-ultra`明示 | U-04 | U-01、U-02、U-06 | Ultra受理と2 child以上を開始前/実行時に証明し、xhigh-onlyを拒否する | fake JSONL/hook、downgrade failure、macOS Codex Ultra live |
 | USR-05 Kiroで5 Unit `auto` | U-05 | U-01、U-02、U-06 | `kiro-subagent`を選択し、3+2 waveで全Unitを処理する | selector fixture、wave property test、fake session、macOS Kiro live |
@@ -58,7 +58,7 @@ U-06にも検証可能な利用者価値を割り当てるため、FR-24〜FR-26
 
 | Slice | Scenario | Unit内の受入増分 |
 |---:|---|---|
-| 1 | USR-01〜USR-05 | fake adapterでresolve、prepare binding、dispatch、evidence、finalizeを閉じるhappy-path lifecycle |
+| 1 | USR-01〜USR-05 | fake adapterでclosed transport/capture plan、capture-before-arm、binding、dispatch、PTY live control、terminal後のevidence、finalizeを閉じるhappy-path lifecycle |
 | 2 | USR-06、USR-09 | hard error時にattempt/worker/worktreeを作らないside-effect boundary |
 | 3 | USR-07、USR-08 | floor/legacy execution planのrecordとloud audit correlation |
 | 4 | USR-10 | audit-first checkpoint、lease/fencing、resume/reconciliation |
@@ -68,11 +68,11 @@ U-06にも検証可能な利用者価値を割り当てるため、FR-24〜FR-26
 
 | Slice | Scenario | Unit内の受入増分 |
 |---:|---|---|
-| 1 | USR-01 | Agent Teams probe、batch coordinator、team/task/Unit evidence |
-| 2 | USR-02 | Ultra Code probe、Dynamic Workflow task/agent evidence |
+| 1 | USR-01 | 完成済みU-02 contract上のinteractive `claude` PTY、Agent Teams env/in-process mode、fixed initial binding、exact team/task/Unit evidence、`ready-for-graceful-exit`後のterminal evidence |
+| 2 | USR-02 | exact headless Ultra Code command、event-bound capture、Dynamic Workflow snapshot・journal/stream・hook・task/agent evidence |
 | 3 | USR-03 | unknown topologyのUltra Code routeとreason preservation |
 | 4 | USR-07、USR-08 | Claude Task floorと0.1.x Dynamic Workflow compatibility seam |
-| 5 | USR-10 | Claude process停止・cleanup前snapshot・resume対応 |
+| 5 | USR-10 | PTY/control/graceful-exit失敗、headless cleanup前snapshot欠落、capture join失敗、resume対応 |
 
 ### U-04 `codex-native-driver`
 
@@ -110,7 +110,8 @@ U-06にも検証可能な利用者価値を割り当てるため、FR-24〜FR-26
 | Hard error before side effect | USR-04、USR-06、USR-09 | U-01、U-02、対応provider | U-02がselector/probe failure後のprepare/dispatch 0件を保証する |
 | Loud fallback | USR-07 | U-01〜U-06 | U-01がplan、providerがprobe、U-02がaudit、U-06がdocs/distributionを所有する |
 | Legacy compatibility | USR-08、REL-02 | U-01〜U-06 | U-01が意味の正本、providerが現行execution、U-06が文書と削除追跡を所有する |
-| Crash safety | USR-10 | U-02、active U-03〜U-05 | U-02 checkpointを正本にprovider process/evidenceを再束縛する |
+| Crash safety | USR-10 | U-02、active U-03〜U-05 | U-02のvariant付きcapture checkpointを正本にprovider process/evidenceを再束縛する |
+| Transport/capture lifecycle | USR-01〜USR-05、USR-10 | U-02、U-03〜U-05 | U-02がclosed unionと順序を完成させ、providerはplan/binding/control/evidence projectionだけを返す。provider Unitはcommon runtimeを編集しない |
 | Security/redaction | 全scenario | U-01〜U-06 | raw provider dataをadapter外へ出さず、U-02 schemaとU-06 docs/testで検証する |
 | Release/platform | REL-01 | U-03〜U-06 | providerがmacOS live proof、U-06がLinux deterministic suiteと全体matrixを束ねる |
 

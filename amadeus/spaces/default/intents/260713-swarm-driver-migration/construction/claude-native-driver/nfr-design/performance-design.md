@@ -45,9 +45,9 @@ common probeはfresh resolve scope内だけで共有する。attempt/batch/globa
 |---|---|---|
 | U03-PERF-01/02 | resolve-scope probe port | common/mode spy count、resume fresh scope |
 | U03-PERF-03 | fake clock/process | timeout/kill/wait trace |
-| U03-PERF-04 | U-02 launch trace | waveごとの`claude -p` count |
+| U03-PERF-04 | U-02 transport別launch trace | waveごとのinteractive `claude`またはheadless `claude -p` count |
 | U03-PERF-05/06 | filesystem/lock spy | exact lookup count、root listing 0、256停止 |
 | U03-PERF-07/08 | operation/object counter | generated size ladder、raw buffer 0 |
 | U03-PERF-09 | capture/provider lifecycle trace | start→checkpoint→arm→terminal→join順序 |
 
-root scan、raw全量buffer、quadratic join、Unitごとの`claude -p`、cross-attempt cache、capture開始前arm、terminal前joinのいずれかをmerge blockerにする。cache service、queue、worker pool、connection poolは非適用である。
+root scan、raw全量buffer、quadratic join、Unitごとのprovider process、cross-attempt cache、capture開始前arm、terminal前joinのいずれかをmerge blockerにする。cache service、queue、worker pool、connection poolは非適用である。

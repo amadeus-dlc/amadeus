@@ -38,6 +38,161 @@
 
 `PlannedRun`はspawn前に確定するrun ID、wave digest、identity/arm pathとarm digestだけを持つ。`DispatchReadyRun`はwrapper自身が書いた`RunIdentity(status="identity-established")`を加えた別型であり、`prepared-dispatched` materialization後だけ`arm()`できる。wrapperはarmなしではproviderを起動せず、attempt lease期限までに自己終了する。
 
+## CoordinatorTransportとCaptureCheckpoint
+
+U-01のadapter boundary contractが公開型の正本であり、U-02はそれをimportしてprovider名ではなくclosed variantで実行順序を所有する。以下のsnippetはU-01型へlifecycle固有branded IDを適用した内部specializationであり、別の公開contractを定義しない。
+
+```ts
+type CoordinatorTransport =
+  | Readonly<{
+      kind: "stdio-json";
+      stdin: "closed" | Uint8Array;
+      output: "stream-json" | "jsonl";
+    }>
+  | Readonly<{
+      kind: "pty-interactive";
+      initialInput: Uint8Array;
+      columns: 120;
+      rows: 40;
+      exitOnSignal: "ready-for-graceful-exit";
+      gracefulExitInput: Uint8Array;
+      controlTimeoutMs: number;
+      gracefulExitTimeoutMs: number;
+    }>;
+
+type EvidenceCapturePlan =
+  | Readonly<{
+      kind: "fixed-provider-path";
+      initialBinding: FixedCaptureBinding;
+      hookDir: string;
+    }>
+  | Readonly<{
+      kind: "event-bound-provider-path";
+      hookDir: string;
+    }>
+  | Readonly<{
+      kind: "hook-only";
+      hookDir: string;
+    }>;
+
+type FixedCaptureBinding = Readonly<{
+  kind: "fixed-provider-path";
+  nativeRunId: NativeRunId;
+  exactPaths: readonly string[];
+  exactPathDigest: string;
+  sourcePlanDigest: string;
+}>;
+
+type EventBoundCaptureBinding = Readonly<{
+  kind: "event-bound-provider-path";
+  nativeRunId: NativeRunId;
+  exactPaths: readonly string[];
+  exactPathDigest: string;
+  sourceEventDigest: string;
+}>;
+
+type AuxiliaryResourcePlan =
+  | Readonly<{
+      kind: "exclusive-reservation";
+      resourceId: string;
+      candidates: readonly Readonly<{
+        reservationPath: string;
+        guardedPaths: readonly string[];
+      }>[];
+    }>
+  | Readonly<{
+      kind: "attempt-owned-file";
+      resourceId: string;
+      path: string;
+      bytes: Uint8Array;
+      mode: "0600";
+    }>
+  | Readonly<{
+      kind: "attempt-owned-directory";
+      resourceId: string;
+      path: string;
+      mode: "0700";
+    }>
+  | Readonly<{
+      kind: "pre-arm-baseline";
+      resourceId: string;
+      exactPaths: readonly string[];
+      allowAbsent: boolean;
+    }>;
+
+type AdapterResourcePreparation = Readonly<{
+  resources: readonly AuxiliaryResourcePlan[];
+  preparationDigest: string;
+}>;
+
+type MaterializedAuxiliaryResourceSet = Readonly<{
+  preparationDigest: string;
+  receiptDigest: string;
+  resources: readonly Readonly<{
+    resourceId: string;
+    kind: AuxiliaryResourcePlan["kind"];
+    selectedCandidateIndex?: number;
+    resolvedPaths: readonly string[];
+    ownerDigest: string;
+    contentOrBaselineDigest: string;
+  }>[];
+}>;
+
+type AdapterExecutionPlan = Readonly<{
+  launch: Readonly<{
+    executable: string;
+    args: readonly string[];
+    cwd: string;
+    env: Readonly<Record<string, string>>;
+    transport: CoordinatorTransport;
+    timeoutMs: number;
+  }>;
+  capture: EvidenceCapturePlan;
+  captureIdentity: Readonly<{
+    executionId: ExecutionId;
+    attemptId: AttemptId;
+    attemptNonceHash: AttemptNonceHash;
+    planDigest: PlanDigest;
+    waveIndex: number;
+    waveDigest: string;
+  }>;
+  resources: readonly AuxiliaryResourcePlan[];
+}>;
+
+type CaptureCheckpoint =
+  | Readonly<{
+      kind: "fixed-provider-path";
+      identityDigest: string;
+      capturePlanDigest: string;
+      resourcesDigest: string;
+      transport: CoordinatorTransport["kind"];
+      binding: FixedCaptureBinding;
+    }>
+  | Readonly<{
+      kind: "event-bound-provider-path";
+      identityDigest: string;
+      capturePlanDigest: string;
+      resourcesDigest: string;
+      transport: CoordinatorTransport["kind"];
+      binding?: EventBoundCaptureBinding;
+    }>
+  | Readonly<{
+      kind: "hook-only";
+      identityDigest: string;
+      capturePlanDigest: string;
+      resourcesDigest: string;
+      transport: CoordinatorTransport["kind"];
+    }>;
+```
+
+`FixedCaptureBinding`はnative run ID、exact path digest、source plan digestを持ち、adapterがU-02から受け取った`MaterializedAuxiliaryResourceSet`を純粋に投影してarm前に構築する。`EventBoundCaptureBinding`はnative run ID、exact path digest、source event digestを持ち、最初のallowlist済みeventからだけ構築する。raw absolute pathはcheckpointへ保存しない。
+
+`AuxiliaryResourcePlan`はprovider固有resourceの意味を共通runtimeへ持ち込まず、exclusive reservation、attempt-owned file/directory、pre-arm baselineの4操作だけを表す。adapterはephemeralなpath/bytes/candidateをplanへ渡すがI/Oを行わない。`AuxiliaryResourceSupervisor`がcapture開始前にmaterializeし、owner/plan/content/baseline digestだけを`resourcesDigest`へ束縛する。capture join後に自分が作成・予約したresourceだけをcleanupし、既存provider stateや別attempt resourceを削除しない。
+
+resource選択でlaunch値やfixed pathが決まるproviderのため、adapterは`prepareResources(input)`で純粋な`AdapterResourcePreparation`を返し、U-02がmaterializeした`MaterializedAuxiliaryResourceSet`を受けてから`buildExecution(input, resources)`を純粋実行する。`buildExecution`が返す`AdapterExecutionPlan.resources`はpreparationと同じ集合・digestでなければならない。materialized setのraw path/bytesはin-memory入力だけで、checkpointにはreceipt digestだけを保存する。
+
+`DriverControlSignal(kind="ready-for-graceful-exit")`はdriver、execution/attempt、nonce/plan/wave digest、expected Unit集合、live evidence digestへ束縛する。runtimeはPTY transportでだけ検証・消費し、最終`EvidenceVerdict`の構築材料にはしない。
+
 ## AttemptCheckpoint aggregate
 
 ```ts
@@ -89,12 +244,20 @@ type SelectedCheckpointBase = CheckpointBase & Readonly<{
 }>;
 
 type DispatchPreparation =
-  | Readonly<{ kind: "native"; plannedRuns: readonly PlannedRun[] }>
+  | Readonly<{
+      kind: "native";
+      plannedRuns: readonly PlannedRun[];
+      executionPlans: readonly AdapterExecutionPlan[];
+    }>
   | Readonly<{ kind: "floor"; plan: FloorExecutionPlan }>
   | Readonly<{ kind: "legacy"; plan: LegacyHarnessExecutionPlan }>;
 
 type DispatchRecord =
-  | Readonly<{ kind: "native"; runs: readonly DispatchReadyRun[] }>
+  | Readonly<{
+      kind: "native";
+      runs: readonly DispatchReadyRun[];
+      captures: readonly CaptureCheckpoint[];
+    }>
   | Readonly<{ kind: "floor"; planDigest: string }>
   | Readonly<{ kind: "legacy"; planDigest: string }>;
 
@@ -193,7 +356,8 @@ type FailureRecoveryContext =
 |---|---|---|
 | `probe-selected` | probing → selected | probe/plan digest、selection |
 | `selected-prepared` | selected → prepared | worktree manifest digest、Unit集合、planned run/identity/arm path |
-| `prepared-dispatched` | prepared → dispatched | wrapper実identity、arm digest。provider起動前 |
+| `prepared-dispatched` | prepared → dispatched | wrapper実identity、arm digest、variant付きcapture checkpoint。provider起動前 |
+| `capture-bound` | dispatched → dispatched | event-boundのnative run/path/source event digest。provider state読取前 |
 | `dispatch-evidence-verified` | dispatched → evidence-verified | native evidenceまたはfloor/legacy result digest |
 | `evidence-referee-running` | evidence-verified → referee-running | finalize invocation、claimed Units、request digest/path、result path |
 | `referee-succeeded` | referee-running → succeeded | referee result/unit merges digest |
@@ -202,6 +366,8 @@ type FailureRecoveryContext =
 | `attempt-resumed` | failed-resumable → probing | old/new attempt、reused converged Units |
 
 `AttemptTransition.apply(checkpoint)`はinstance methodとしてlease/fencing/preDigest/edgeを検証し、新しいfrozen checkpointを返す。companion `AttemptTransition.build`はclosed detailsを構築し、`reconcile(auditIntent, checkpoint)`はpre/post digestから`reapplied | already-materialized | marked-failed`を返す。`probe-selected`だけがfresh `SelectedContext`を作り、`attempt-resumed`は旧checkpointから`SelectionInputSnapshot`と再検証済みUnitだけを取り出して`SelectedContext`のない`probing`を作る。
+
+`capture-bound`は未boundの`event-bound-provider-path` checkpointへ1回だけ適用できるmetadata self-edgeである。fixed/hook-only、既にbound、異なる2件目のbindingでは`canTransition`がfalseを返す。provider state portはevent-bound checkpointにbindingがmaterializeされるまでread capabilityを公開しない。
 
 ### AttemptBeginIntent
 
@@ -511,6 +677,8 @@ type UnitMergeResult = Readonly<{
 | `DriverAttemptStore` | read、begin、transition、heartbeat、beginResume、reconcileBegin | lock外write、lost update |
 | `DriverAuditEmitter` | attempted、selected、transition、reconciled、evidence、degraded | raw payload、unknown field |
 | `ProcessSupervisor` | wrapper identity、durable arm、stream、group terminate/wait | arm前provider起動、long-lived daemon、shell string |
+| `EvidenceCaptureSupervisor` | observer start、variant validation、binding fence、live/retained fan-out、terminal後join | provider分岐、binding前state read、空evidence成功 |
+| `AuxiliaryResourceSupervisor` | exclusive materialize、owner receipt、pre-arm baseline、terminal後cleanup | provider意味の解釈、既存resource削除、checkpoint外hidden I/O |
 | `RefereeResultStore` | request create-if-absent、claim CAS/heartbeat、fenced progress/result write | selector、convergence判断、merge mechanics |
 | `MergeOperationSupervisor` | identity-first wrapper、fenced arm、tool group terminate/wait | merge semantics、arm前tool起動 |
 | `BoltMergePort` | operation ID付きAIDLC state/audit/runtime統合と部分成功reconcile | git code merge |
@@ -540,6 +708,9 @@ classDiagram
   AttemptCheckpoint --> VerifiedExecutionResult : records
   AttemptTransition --> AttemptCheckpoint : transforms
   PlannedRun --> RunIdentity : identity then arm
+  AttemptCheckpoint --> CaptureCheckpoint : binds before arm
+  CaptureCheckpoint --> CoordinatorTransport : records variant
+  AdapterExecutionPlan --> AuxiliaryResourcePlan : declares
   EvidenceSet --> VerifiedExecutionResult : verifies
   AttemptCheckpoint --> FinalizeRequestBinding : binds
   FinalizeRequestBinding --> FinalizeClaim : fences
@@ -548,4 +719,4 @@ classDiagram
   FinalizeRequestBinding --> RefereeFinalizeEnvelope : validates
 ```
 
-テキスト代替: checkpointがlease、execution result、finalize request bindingを状態別に所有し、transitionだけがcheckpointを更新する。planned runは短命supervisorのidentityを確立し、durable checkpoint後のarmでproviderを起動する。finalize bindingはephemeral invocationとenvelopeを照合し、claimが単一writerをfencingし、Unit progressがAIDLC統合とcode統合を別stepとして記録する。
+テキスト代替: checkpointがlease、capture variant、execution result、finalize request bindingを状態別に所有し、transitionだけがcheckpointを更新する。planned runはcapture observerと短命supervisorのidentityを確立し、variant付きcheckpoint後のarmでproviderを起動する。finalize bindingはephemeral invocationとenvelopeを照合し、claimが単一writerをfencingし、Unit progressがAIDLC統合とcode統合を別stepとして記録する。

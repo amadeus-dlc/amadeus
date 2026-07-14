@@ -21,9 +21,15 @@
 | ID | ルール | 違反時 |
 |---|---|---|
 | BR-08 | PreparedUnitはplan Unitと全単射で、worktree/repo/ownership/base bindingが一致する | `failed-terminal` |
-| BR-09 | native run ID、wave digest、identity/arm pathを`prepared`へ保存してからwrapperをspawnし、wrapper実identityを`dispatched`へ保存してからarmする | dispatch禁止 |
+| BR-09 | native run ID、wave digest、identity/arm path、capture identity/planを`prepared`へ保存し、capture observer開始とvariant付きcheckpoint保存後だけproviderをarmする | dispatch禁止 |
 | BR-10 | wrapperはattempt専用groupでidentityをatomic保存し、durable checkpointへ束縛されたone-time armだけでproviderを起動する。armなしではlease期限までに自己終了する | `PERSISTENCE_FAILED` |
-| BR-11 | LaunchSpecはexecutable/argv/env/cwd/stdinを分離し、shell commandを組み立てない | launch拒否 |
+| BR-11 | `LaunchSpec`はexecutable/argv/env/cwdとclosed `stdio-json | pty-interactive` transportを分離し、shell commandを組み立てない | launch拒否 |
+| BR-11a | `EvidenceCapturePlan`は`fixed-provider-path | event-bound-provider-path | hook-only`に閉じる。fixedはU-02がmaterializeしたresourceをadapterへ渡し、adapterがarm前`initialBinding`を純粋構築する。event-boundはarm時binding禁止、hook-onlyはbinding field禁止とする | launch拒否 |
+| BR-11b | event-boundだけが最初の有効eventから`capture-bound` self-edgeを1回適用でき、保存前にprovider stateを読まない。fixed/hook-onlyや異なる2件目bindingは拒否する | `failed-resumable` |
+| BR-11c | PTYは相関済み`ready-for-graceful-exit`後だけexit inputを1回送り、signal自体をnative successへ数えない。stdioはcontrol signalを要求しない | `failed-resumable` |
+| BR-11d | 全transportでprocess group terminal後にobserverをjoinし、join失敗・snapshot欠落・control timeoutを空evidence成功へ変換しない | evidence failure |
+| BR-11e | provider補助resourceはadapterのpure `prepareResources`がclosed `AuxiliaryResourcePlan[]`として宣言し、U-02がexclusive materializeしてからmaterialized setをpure `buildExecution`へ渡す。preparation/実行planのresource digest一致、owner/content/baseline digest checkpoint、terminal/capture join後cleanupを必須とする | dispatch/evidence failure |
+| BR-11f | provider adapterのhidden filesystem write、private cleanup closure、既存provider state削除、別attempt resource再利用を禁止する | architecture violation |
 | BR-12 | native eventはadapterでnormalized unionへ変換し、生payloadを共通runtimeへ渡さない | event拒否 |
 | BR-13 | driver/attempt/nonce/plan/waveの相関は全eventでexact matchする | evidence failure |
 | BR-14 | provider別の独立source集合、mode、marker、coordinator exit 0をANDで要求する | evidence failure |
@@ -85,6 +91,7 @@
 8. macOS/Linuxでlivenessを実測し、Windows対応や未検証成功を表明しない。
 9. C-11のrequest/claim/progressはidempotency専用であり、retry判断、iteration cap、driver selectionを持たない。
 10. worker後のHEADや複数workerの一致をprotected spec baselineとして信頼しない。
+11. provider UnitはU-02のtransport/capture/checkpoint/live-control runtimeを編集せず、adapter固有plan、resolver、projectionだけを提供する。
 
 ## Scenario別の受入
 

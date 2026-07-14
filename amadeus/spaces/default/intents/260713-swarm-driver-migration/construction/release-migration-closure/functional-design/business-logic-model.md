@@ -10,11 +10,11 @@ U-06は新しいdriver behavior、provider parser、selector、checkpoint、refe
 
 | 入力 | 正本 | U-06の判定 |
 |---|---|---|
-| production registry | U-02 composition root + U-03の`DriverAdapterSet`訂正 | 3 provider、4 driver、2/1/1、availableのみ |
+| production registry | U-01 registration contract + U-02 composition root | 3 provider、4 driver、2/1/1、availableのみ |
 | deterministic test | same treeのcommand receipt | unit/integration/E2E/failure/securityが全green |
 | distribution | `packages/framework` + C-12 | 4 dist treeとself-installのdrift 0 |
 | docs | source docs manifest | 5値、選択、error、fallback、legacy、platformのsemantic coverage |
-| live evidence | U-03〜U-05 redacted summary | macOSで4 driver、C-08とC-11がgreen |
+| live evidence | U-03〜U-05 redacted summary | macOSで4 driver、mode別transport/capture、terminal retained evidence、C-08/C-11がgreen |
 | migration tracking | GitHub Issue reference | 日本語Issue、marker一意、required checklist |
 
 すべてのreceiptは同じrepository、release input tree digest、contract versionへ束縛する。input treeは固定manifestに列挙したauthored sourceとgenerated targetから計算し、provider live summaryを含む全receipt/reportとmachine-local runtimeを除外して自己参照を防ぐ。古いcommit、別worktree、raw provider payload、CI URLだけの自己申告は入力として拒否する。
@@ -52,7 +52,7 @@ write commandの成功だけではreceiptにしない。直後のread-only check
 
 ## Production registry完全性
 
-U-03 architecture reviewで訂正された最終contractを使う。
+U-01で定義されU-02でassemblyされた最終contractを使う。
 
 ```text
 RegistrationSlot =
@@ -75,7 +75,7 @@ production composition rootをbuildし、public `forDriver`から4 driverを各1
 - fake/no-op/test adapter、dynamic import、unknown/extra descriptorが0件である。
 - 4 driverをproduction registry経由でprobe/buildできるfixtureを持つ。
 
-source regexやfile存在だけから完全性を推定しない。generic contract correctionはU-01/U-02 Code Generationへ適用するが、provider mappingと公開literalは変えない。
+source regexやfile存在だけから完全性を推定しない。generic contractとdriver-to-provider cardinalityはU-01、production assemblyはU-02を正本とし、provider UnitやU-06から逆向きに訂正しない。
 
 ## Distribution projectionとdrift guard
 
@@ -123,12 +123,12 @@ FR-22/NFR-11のcoverage mapはFR-01〜FR-26を最低1つのunit/integration/E2E/
 
 | Driver | 必須journey | 最低条件 |
 |---|---|---|
-| `claude-agent-teams` | Claude Code | 2 Unit以上、Team native child、C-08/C-11 green |
-| `claude-ultracode` | Claude Code | 2 Unit以上、Ultra Code workflow、C-08/C-11 green |
-| `codex-ultra` | Codex | 2 Unit以上、runtime-resolved Ultra、native collaboration、C-08/C-11 green |
-| `kiro-subagent` | Kiro CLI + Kiro IDE | 両harnessで2 Unit/5 Unit、5件は3+2、全child、C-08/C-11 green |
+| `claude-agent-teams` | Claude Code | interactive `claude` + `pty-interactive`、`fixed-provider-path`、全Unit completed/idle後のready signal、PTY exit input、terminal後retained Team evidence、2 Unit以上、C-08/C-11 green |
+| `claude-ultracode` | Claude Code | exact headless `claude -p --verbose --effort ultracode --output-format stream-json --include-hook-events` + `stdio-json`、`event-bound-provider-path`、binding後state read、2 Unit以上、C-08/C-11 green |
+| `codex-ultra` | Codex | `stdio-json` + `hook-only`、runtime-resolved Ultra、native collaboration、2 Unit以上、C-08/C-11 green |
+| `kiro-subagent` | Kiro CLI + Kiro IDE | `stdio-json` + `event-bound-provider-path`、両harnessで2 Unit/5 Unit、5件は3+2、全child、C-08/C-11 green |
 
-各provider Unitがownerであり、U-06はsummaryを再parseしない。indexはdriver/harness/platform、CLI/profile version、execution/attempt/run digest、Unit/child/wave count、C-08 verdict、C-11 check/finalize、evidence file digestだけを保持する。prompt、summary text、raw JSONL/session/provider state、credential、absolute homeを拒否する。
+各provider Unitがownerであり、U-06はsummaryを再parseしない。indexはdriver/harness/platform、CLI/profile version、execution/attempt/run digest、transport/capture/resource receipt、必要時のbinding/control/terminal-retained-evidence digest、Unit/child/wave count、C-08 verdict、C-11 check/finalize、evidence file digestだけを保持する。prompt、summary text、raw PTY/JSONL/session/provider state、credential、absolute homeを拒否する。
 
 auth不足、unknown schema、park、skip、floor、legacy、Claude xhigh、Codex xhigh-only、Kiro default childをgreenへ変換しない。4 driver中1つでも欠ければrelease全体をblockedとする。
 
@@ -216,22 +216,26 @@ stateDiagram-v2
 8. 全receiptは同一tree/contractへ束縛し、1件でも不足ならreleaseをclosedにしない。
 9. raw provider data、prompt、credential、session本文をreport/indexへ入れない。
 10. U-06はprovider behavior、selector、refereeを再実装しない。
+11. Agent Teamsのready signalはexit制御に限定し、process terminalとretained evidenceを欠くreceiptを拒否する。
+12. Ultra Codeのheadless exact command／stdio transportとAgent Teamsのinteractive PTYを相互代替しない。
 
 ## Review
 
-必須のarchitecture reviewerが本節へ結果を追記する。
+**Iteration:** 2
+**Verdict:** READY
 
-### Iteration 1
+### 解消済みfinding
 
-- Verdict: **READY**
-- Blocking findings: **0**
+- live receiptはtransport、capture variant、resource receipt、必要なbinding/control、process terminal、terminal後retained evidenceをdriver別の閉じたvariantで必須化した。
+- production registryの所有権はU-01 contract／U-02 assemblyとして表現され、provider Unitからgeneric contractを逆向きに訂正しない。
+- macOS native live、Linux deterministic、Windows対象外、migration Issueの一意ensure、同一tree receipt bindingは維持されている。
 
-指定されたrelease closure境界は実装可能なfail-closed contractとして一貫している。
+### 新規finding
 
-- production registryはU-03で訂正されたdriver-keyed `DriverAdapterSet`を採用し、Claude/Codex/Kiroの3 provider、4 driver、cardinality 2/1/1、全slot `available`、key/declared driver/`adapter.driver`一致をproduction composition rootから検証する。
-- C-12は`packages/framework`のauthored coreと4 harness manifestを正本とし、4つの`dist`を`package.ts --check`、既存するClaude/Codex dogfood self-installだけを`promote-self.ts --check`で検証する。Kiro/Kiro IDE用self-installを新設せず、generated targetを直接編集しない。
-- docsは固定source manifestとsemantic IDで、公開5値、harness別selection、明示hard error、dispatch前だけのloud fallback、0.1.x legacy/conflict、platform、0.2.0 Issue linkをsection単位で検証する。generated docsを正本へ読み替えない。
-- macOSとGitHub Actions Linuxのdeterministic suiteを両方必須とし、credentialed native liveはローカルmacOSの4 driverへ限定する。Linuxのskip/fake testをlive proofへ昇格せず、Windowsを未保証のまま分離する。
-- release input treeは固定manifestのauthored source/generated targetから計算し、provider summaryを含むreceipt/reportとmachine-local runtimeを除外するため自己参照しない。全receiptとFR-01〜FR-26の非空`RequirementCoverageMap`を同じcandidateへ束縛し、不足時は`closed`を構築できない。
-- 0.2.0 Issue ensureはmarker検索でopen 1件を再利用し、0件時だけ単一publisherが作成する。create後に再検索してopen exactly 1件かつ作成number一致を確認し、重複・closed-only・競合では外部状態を追加変更せずblockする。今回のscopeでは旧変数を削除しない。
-- U-06はprovider Unitのsealed/redaction済みsummaryだけをindex化し、provider probe/parser/selector/checkpoint/refereeやsuccess判定を再実装しない。不足はU-03〜U-05へ戻し、skip・floor・legacy・自己申告で補完しない。
+- U-06固有のBlocking findingなし。U-03/U-05の未解決設計はlive evidence不足としてrelease closureを`blocked`にする既存fail-closed規則で扱われる。
+
+### センサー結果
+
+- `required-sections`: 4成果物すべてPASS。
+- `upstream-coverage`: 4成果物すべてPASS、未参照0件。
+- `linter` / `type-check`: 対象成果物はMarkdownのため非適用。

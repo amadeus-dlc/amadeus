@@ -56,8 +56,9 @@ C-11はC-10へ依存せず、既存referee audit emitterを介して既存の収
 | 3 | C-01 | C-03 + selected adapters | pure + bounded subprocess | topology、probe、selection |
 | 4 | conductor | C-11 `prepare` | sync subprocess | Unit worktree manifest |
 | 5 | conductor | C-01 `run` | sync long-running subprocess | native Unit result、またはfloor execution plan |
-| 6 | C-01 | C-05/C-06/C-07 | one child process per batch/wave | raw provider stream |
-| 7 | adapter | C-08 | in-process stream | evidence verdict |
+| 6 | C-01 | C-05/C-06/C-07 | capture-before-arm + one child process per batch/wave。transportは`stdio-json | pty-interactive` | live control / joined provider state / hook / process input |
+| 6a | adapter | C-01 runtime | event-bound exact binding、PTY時だけ`ready-for-graceful-exit` | audit-first binding、またはgraceful-exit入力。どちらもsuccess verdictではない |
+| 7 | adapter | C-08 | terminal後のin-process normalization | evidence verdict |
 | 7a | conductor | 既存harness floor + C-01 `record-floor` | harness tool/process + sync subprocess | floor Unit result |
 | 8 | conductor | C-11 `check` | sync subprocess、反復可 | Unit convergence advice |
 | 9 | conductor | C-11 `finalize` | sync subprocess | merge/verdict envelope |
@@ -75,9 +76,9 @@ flowchart TD
   B --> C["Redacted DriverPlan"]
   C --> Q["Attempt checkpoint"]
   C --> L["Driver audit"]
-  W["Referee worktree manifest"] --> J["LaunchSpec"]
+  W["Referee worktree manifest"] --> J["LaunchSpec + CapturePlan"]
   C --> J
-  J --> O["Provider raw stream\nadapter-local"]
+  J --> O["Provider raw evidence\nstdio/PTY + state + hook"]
   O --> Z["Normalized events"]
   Z --> V["EvidenceVerdict"]
   V --> Q
@@ -91,7 +92,7 @@ flowchart TD
   M --> L2["Referee audit"]
 ```
 
-テキスト代替: directive、topology、envをredacted planへ変換しcheckpoint/auditへ書く。worktree manifestとplanからproviderを起動し、生streamはadapter内でnormalized eventへ落とす。evidence verdictはconductorへ返り、conductorだけがrefereeを呼ぶ。versioned referee envelopeはconductorから`record-finalize`へ渡され、provider raw streamは境界外へ出ない。
+テキスト代替: directive、topology、envをredacted planへ変換しcheckpoint/auditへ書く。worktree manifestとplanからcaptureを先に開始し、capture identity/plan digest保存後にmode別transportでproviderを起動する。run後にpathが判明するmodeはadapter resolverのexact bindingをprovider state読取前に追加保存する。PTY modeはlive captureからadapterが終了制御signalを返し、runtimeがexit inputを送ってterminalへ進める。process group terminal後にprovider state、hook、process terminalをjoinし、adapter内でnormalized eventへ落とす。evidence verdictはconductorへ返り、conductorだけがrefereeを呼ぶ。versioned referee envelopeはconductorから`record-finalize`へ渡され、provider raw evidenceは境界外へ出ない。
 
 ## データ所有権
 
@@ -115,7 +116,7 @@ flowchart TD
 | batch checkpoint | replace + heartbeat | 同じaudit lock下のatomic temp+rename、期限付きlease、process identity、fencing token |
 | Unit worktrees | Unitごとにwrite | C-11 ownership marker、1 Unit 1 writer |
 | main branch / merge target | serialized write | C-11 finalizeのみ |
-| Claude team/task state | execution由来team名だけread | adapter scope、cleanup前snapshot |
+| Claude team/task state | attempt専用session ID由来のexact team/task pathだけread | provider arm前にobserver開始、terminal snapshot後にPTY graceful exit、root scan禁止 |
 | Codex hook evidence dir | attemptごとappend | nonce + atomic append、driver process終了時close |
 | Kiro session metadata | attempt session IDsだけread | parent-child correlation |
 | provider credentials | provider CLIだけread | child env allowlist、Amadeusは値を保存しない |

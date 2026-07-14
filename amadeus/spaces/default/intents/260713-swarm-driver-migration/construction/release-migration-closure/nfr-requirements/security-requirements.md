@@ -8,7 +8,8 @@
 |---|---|---:|---|
 | repository/tree/contract/candidate/report digest | internal | yes | canonical immutable binding |
 | driver/harness/platform/profile/verdict/count | internal | yes | closed allowlist schema |
-| provider prompt/raw stream/session/state | confidential/tainted | no | sealed summary only |
+| transport/capture/resource、binding/control/terminal evidence digest | internal | yes | driver別closed variant |
+| provider prompt/raw PTY/JSONL/session/state | confidential/tainted | no | sealed summary only |
 | provider/GitHub credential/token/account | restricted | no | publisher/process env only |
 | Issue number/URL/marker/body digest/status | public/internal | yes | repository/marker validation |
 | local home/worktree path、CI raw log | sensitive operational | no | digest/receipt projection |
@@ -19,13 +20,13 @@
 |---|---|---|
 | U06-SEC-01 |全receipt/index/reportをsame repository/tree/contractへexact bindし、stale commit/別worktree/duplicate IDを拒否する | mismatchがclosed 0件 |
 | U06-SEC-02 | release input manifestからreceipt/report/provider summary/machine runtimeを除外し、自己参照・local secret取込を防ぐ | canary path非読取 |
-| U06-SEC-03 | live indexはprovider Unitのsealed allowlist summaryだけを読み、raw stream/session/stateを再parseしない | raw input port call 0 |
+| U06-SEC-03 | live indexはprovider Unitのsealed allowlist summaryだけを読み、Agent Teams=`pty-interactive`+`fixed-provider-path`、Ultra Code=`stdio-json`+`event-bound-provider-path`、Codex=`stdio-json`+`hook-only`、Kiro=`stdio-json`+`event-bound-provider-path`のclosed variantとresource receiptを検証し、raw PTY/JSONL/session/stateを再parseしない | raw input port call 0 |
 | U06-SEC-04 | report/errorはcode/subject/expected-observed digestだけを持ち、credential/prompt/raw response/pathを持たない | secret/sensitive canary 0件 |
 | U06-SEC-05 | production registryは実composition rootをbuildし、fake/no-op/unavailable/dynamic/unknown adapterを拒否する | planted adapterがgreen 0 |
 | U06-SEC-06 | package/docs/source ownershipをmanifestで固定し、generated targetの直接編集をgreenにしない | hand-edited dist rejection |
 | U06-SEC-07 | Issue publisherはfixed repository/marker、日本語title/body/checklistを使い、tokenをbody/log/referenceへ保存しない | publisher canary scan |
 | U06-SEC-08 | marker多重、closed-only、create後競合ではreopen/delete/additional createを0件にする | mutation spy |
-| U06-SEC-09 | Issue URL/number/status/body digestを再検索結果へ照合し、別repository/markerを拒否する | spoof reference rejection |
+| U06-SEC-09 | marker検索を全page列挙し、authoritative total countが提供される場合は件数照合してからIssue URL/number/status/body digestを再検索結果へ照合し、別repository/marker、不完全検索、未知schemaを拒否する | spoof/incomplete reference rejection |
 | U06-SEC-10 |新GitHub SDK、cloud service、database、dynamic plugin/runtime dependencyを追加しない | dependency guard |
 
 ## STRIDE assessment
@@ -35,7 +36,7 @@
 | Spoofing |別repo/tree/CI/live/Issueをrelease proofに偽装 | repository/tree/contract/run SHA/marker exact binding |
 | Tampering |dist/docs/receipt/report/Issue body改変 | source ownership、read-only drift、canonical digest、re-search |
 | Repudiation |driver live/test/Issue作成の否認 | candidate-bound receipt、verdict、Issue URL/body digest |
-| Information disclosure |provider/GitHub credential、prompt、raw trace、home path | sealed summary、allowlist report、canary scan |
+| Information disclosure |provider/GitHub credential、prompt、raw PTY/JSONL trace、home path | sealed summary、allowlist report、canary scan |
 | Denial of service |大量finding、Issue競合、stale receipt | bounded manifest、canonical aggregate、single publisher、blocked state |
 | Elevation of privilege |generated targetを正本化、fake adapter、Issueへの任意write | manifest/composition validation、fixed marker/repository/checklist |
 
@@ -47,4 +48,4 @@ closed reportには各domainのreceipt digest、coverage map digest、Issue refe
 
 ## Security test gate
 
-stale commit、別worktree、duplicate receipt、raw/secret field、fake adapter、hand-edited dist、Issue marker/repository/number競合、closed-only、create後open2、token canaryをdeterministic suiteへ含める。secret漏えい、fake/live昇格、任意Issue mutation、generated source ownership違反はmerge blockerである。
+stale commit、別worktree、duplicate receipt、raw/secret field、fake adapter、hand-edited dist、Issue marker/repository/number競合、closed-only、create後open2、page/limit打切り、件数不一致、検索schema不明、token canary、driver別transport/capture/resource receiptの取り違え、process terminal/terminal-retained evidence欠落をdeterministic suiteへ含める。secret漏えい、fake/live昇格、ready signal単独の成功化、不完全検索からのIssue mutation、generated source ownership違反はmerge blockerである。

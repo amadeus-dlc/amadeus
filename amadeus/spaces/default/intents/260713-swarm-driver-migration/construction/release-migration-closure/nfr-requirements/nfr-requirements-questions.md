@@ -20,11 +20,11 @@
 
 ### Q4. credentialed live evidenceをどこまで保存するか
 
-[Answer]: provider Unitがsealしたallowlist summaryだけをindex化し、driver/harness/platform/profile、ID/file digest、Unit/child/wave count、C-08/C-11 verdictを保持する。prompt、raw stream/session/provider state、credential、absolute homeを拒否し、U-06でraw payloadを再parseしない。
+[Answer]: provider Unitがsealしたallowlist summaryだけをindex化し、driver/harness/platform/profile、ID/file digest、transport/capture/resource receipt、必要なbinding/control/process terminal/terminal-retained-evidence digest、Unit/child/wave count、C-08/C-11 verdictを保持する。prompt、raw PTY/JSONL/session/provider state、credential、absolute homeを拒否し、U-06でraw payloadを再parseしない。
 
 ### Q5. migration Issueをどう冪等化するか
 
-[Answer]: fixed markerを検索しopen 1件なら再利用、0件ならsingle publisherが日本語Issueを1件作成して再検索する。open exactly 1件かつ作成number一致を要求し、複数、closed-only、create競合では再open/削除/追加作成せずblockする。
+[Answer]: fixed markerの全検索結果をpaginationで終端まで取得し、列挙件数をauthoritative total countが提供される場合はそれとも照合する。完全な結果集合がopen 1件なら再利用、0件ならsingle publisherが日本語Issueを1件作成して同じ完全検索を再実行する。open exactly 1件かつ作成number一致を要求し、page/limit打切り、件数不一致、schema不明、複数、closed-only、create競合では再open/削除/追加作成せずblockする。
 
 ### Q6. platformの完了条件は何か
 
@@ -39,4 +39,5 @@
 - closureの「速さ」ではなく、fixed inputの一回評価、計算量、決定性、stale receipt 0で定量化する。
 - 6 release domainにcoverage validationを追加でANDしており、coverageを第7の外部domainとして曖昧に数えない。
 - liveはmacOS、deterministicはmacOS/Linuxという非対称matrixを明示し、Windows成功を推測しない。
-- Issue作成は唯一の外部writeであり、single publisherと再検索で重複をfail-closedにする。
+- Agent Teamsのinteractive PTY、Ultra Codeのexact headless stdio、Codexのhook-only、Kiroのevent-bound captureを相互代替せず、ready signalだけをprocess成功へ昇格しない。
+- Issue作成は唯一の外部writeであり、single publisherと完全な再検索で未取得pageを含む重複をfail-closedにする。

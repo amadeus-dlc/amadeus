@@ -26,7 +26,7 @@
 
 ### Q5. hook trustとattempt限定captureをどう両立するか
 
-[Answer]: projectの既存`hooks.json`へ`SubagentStart`を追加し、既存`SessionStart`と`SubagentStop`のadapter commandをattempt evidence modeへ拡張する。`--dangerously-bypass-hook-trust`は使わない。U-02がprovider arm前にcapture ID、attempt lease/fencing由来owner token、nonce hash、binding digest、sandbox外evidence rootを固定し、C-06の`LaunchSpec.env`へ5つのexact correlation keyとして渡す。static hook commandはprovider envを継承する一方、model-generated tool/subagent shellは`shell_environment_policy.inherit="none"`とsafe scratch HOME/PATHだけへ限定し、correlation key、auth env、実HOMEを継承しない。evidence rootはcwd/全`--add-dir`/sandbox tempの外に置く。`hooks/list`のversioned trust profile、SessionStart sentinel、悪意あるtoolからのenv read/evidence write拒否を実証できない構成はpre-dispatch unavailableとする。
+[Answer]: projectの既存`hooks.json`へ`SubagentStart`を追加し、既存`SessionStart`と`SubagentStop`のadapter commandをattempt evidence modeへ拡張する。`--dangerously-bypass-hook-trust`は使わない。Codex adapterのpure `prepareResources`はsandbox外evidence root/owner marker/scratchを`AuxiliaryResourcePlan[]`として返し、U-02がprovider arm前にmaterialize・固定する。adapterのpure `buildExecution`はmaterialized set、capture ID、attempt lease/fencing由来owner token、nonce hash、binding digestをC-06の`LaunchSpec.env`へ5つのexact correlation keyとして投影し、U-02の`hook-only` captureを返す。static hook commandはprovider envを継承する一方、model-generated tool/subagent shellは`shell_environment_policy.inherit="none"`とsafe scratch HOME/PATHだけへ限定し、correlation key、auth env、実HOMEを継承しない。evidence rootはcwd/全`--add-dir`/sandbox tempの外に置く。`hooks/list`のversioned trust profile、SessionStart sentinel、悪意あるtoolからのenv read/evidence write拒否を実証できない構成はpre-dispatch unavailableとする。
 
 ### Q6. process、stdin、config overrideをどう構築するか
 

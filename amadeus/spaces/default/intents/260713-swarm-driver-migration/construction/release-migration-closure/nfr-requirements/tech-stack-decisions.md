@@ -14,8 +14,8 @@
 | projection | existing `scripts/package.ts --check`、`scripts/promote-self.ts --check`、setup offline fixture | source/generated/self-install parity | generated direct edit |
 | docs | source docs manifest + semantic ID checker |表現自由度とcontract coverageを両立 | byte match、generated docs正本 |
 | tests | existing `bun:test`/runner、typecheck/Biome/complexity、GitHub Actions Linux | current CI/test strategy維持 | new test framework |
-| live evidence | provider Unit sealed JSON summary/index | ownership/redaction維持 | raw trace reparse、CI live requirement |
-| Issue | existing authenticated GitHub publisher、fixed repo/marker、single-writer ensure | idempotent external tracking | new GitHub SDK、auto reopen/delete |
+| live evidence | provider Unit sealed JSON summary/index + driver別transport/capture/resource receipt | ownership/redactionとprocess lifecycle維持 | raw PTY/JSONL trace reparse、ready signal単独、CI live requirement |
+| Issue | existing authenticated GitHub publisher、fixed repo/marker、全page検索、single-writer ensure | idempotent external trackingと重複false green防止 | new GitHub SDK、partial search、auto reopen/delete |
 | report | closed versioned JSON、canonical findings/digests | deterministic immutable closure | mutable dashboard/database |
 | dependencies | node標準API + existing repository modules、runtime package 0件追加 | supply-chain最小化 | cache/database/schema package |
 
@@ -31,7 +31,7 @@
 
 macOS local receiptとGitHub Actions Linux receiptを同じtree/SHAへ束縛する。Windows jobや未検証success表現を追加せず、既存Windows専用codeを目的なく変更しない。
 
-GitHub/provider credentialは既存process envだけで使用し、Issue body、receipt、report、live indexへ保存しない。操作signalはblocked finding、receipt digest、workflow run SHA/conclusion、Issue referenceを使い、新telemetry backendを追加しない。
+GitHub/provider credentialは既存process envだけで使用し、Issue body、receipt、report、live indexへ保存しない。操作signalはblocked finding、receipt digest、transport/capture/resource variant、process terminal、workflow run SHA/conclusion、Issue referenceを使い、新telemetry backendを追加しない。
 
 ## Decision consequences
 

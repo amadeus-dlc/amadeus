@@ -49,7 +49,8 @@
 | ID | ルール | 違反時 |
 |---|---|---|
 | CXR-27 | capture rootはattempt専用exact path、0700、owner marker 0600で作り、5 correlation keyとrealpath confinementを検証する | provider process 0件 |
-| CXR-28 | capture identity/plan/ProbeBinding/tool-env/sandbox digestをaudit-first checkpointした後だけproviderをarmする | success禁止 |
+| CXR-27a | captureはU-02の`hook-only` variantを使い、provider-state binding、resolver、`capture-bound`を持たない | architecture violation |
+| CXR-28 | pure `prepareResources`でroot/owner/scratchをU-02の`AuxiliaryResourcePlan[]`として宣言し、materialized setを受けるpure `buildExecution`で同一resource digestのenv/capture planを作る。capture identity/plan/resource/ProbeBinding/tool-env/sandbox digestをaudit-first checkpointした後だけproviderをarmする | success禁止 |
 | CXR-29 | required hookはSessionStart、SubagentStart、SubagentStopである | `native-evidence-unavailable` |
 | CXR-30 | `--dangerously-bypass-hook-trust`を使わず、versioned `hooks/list` profileで3 exact definition hashのtrusted/enabledを確認する | preflight failure |
 | CXR-31 | 5 correlation keyが完全かつowner markerのcapture/binding/nonce/ownerが一致する場合だけswarm recordを書く | hook record拒否 |
@@ -60,6 +61,7 @@
 | CXR-35 | 同じevent/agentの重複recordを上書きせずduplicateとして拒否する | evidence failure |
 | CXR-36 | provider group terminal後に全hook childをwaitし、captureをsealしてからnormalizationする | success禁止 |
 | CXR-37 | unknown file、symlink、owner不一致、join timeoutを無視しない | failed-resumable |
+| CXR-37a | terminal/capture join後はU-02がowned resourceだけをcleanupし、既存・別attempt resourceを削除しない | failed-resumable |
 
 ## Evidenceとverdict
 

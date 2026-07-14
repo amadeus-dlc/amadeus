@@ -16,7 +16,7 @@ rule groupはすべてall-match accumulateである。1件でも違反すればr
 | RMR-04 | map key、declared driver、`adapter.driver`、provider ownershipを全件一致させる | `REGISTRY_INCOMPLETE` |
 | RMR-05 | `unavailable` slot、`REGISTRATION_SLOT_UNIMPLEMENTED`、fake/no-op adapterをproductionで0件にする | `REGISTRY_INCOMPLETE` |
 | RMR-06 | dynamic load、unknown/extra descriptor、runtime driver mutationを禁止する | architecture failure |
-| RMR-07 | U-03のdriver-keyed set correctionをU-01/U-02 Code Generationへ適用し、provider mapping/literalを変更しない | contract drift |
+| RMR-07 | driver-keyed set/cardinalityはU-01、production assemblyはU-02を正本とし、provider UnitやU-06からgeneric contractを訂正しない | contract drift |
 
 ## Distribution projection
 
@@ -69,6 +69,9 @@ rule groupはすべてall-match accumulateである。1件でも違反すればr
 | RMR-37 | auth不足、unknown schema、park、skip、floor、legacy、xhigh-only/default childをpassにしない | false native success |
 | RMR-38 | indexはallowlist summaryとdigestだけを持ち、raw stream/session/provider state、prompt、credential、absolute homeを拒否する | `LIVE_EVIDENCE_REDACTION_FAILED` |
 | RMR-39 | provider Unitのsealed summaryを参照し、U-06でraw provider payloadを再parseしない | ownership failure |
+| RMR-39a | Agent Teams receiptはinteractive `claude`、`pty-interactive`、`fixed-provider-path`、全Unit completed/idle後のready signal、PTY exit input、process terminal、terminal後retained evidenceをANDし、signal単独をsuccessにしない | false Agent Teams success |
+| RMR-39b | Ultra Code receiptはexact headless command、`stdio-json`、`event-bound-provider-path`、一度だけのbinding checkpoint、binding後state read、terminal retained evidenceをANDする | false Ultra Code success |
+| RMR-39c | Codexは`hook-only`、Kiroは`event-bound-provider-path`を使い、全providerでU-02のresource/capture checkpointとterminal後joinを確認する | capture contract drift |
 
 ## Migration Issue
 

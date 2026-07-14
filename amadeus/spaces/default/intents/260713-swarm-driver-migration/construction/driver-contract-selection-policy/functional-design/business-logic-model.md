@@ -99,8 +99,8 @@ coordination信号は`shared-task`、`direct-message`、`mutual-coordination`、
 1. `claude` providerは`claude-agent-teams`と`claude-ultracode`を各1回、`codex`は`codex-ultra`を1回、`kiro`は`kiro-subagent`を1回だけ宣言する。
 2. 4つの`NativeDriver`は全体でちょうど1つのregistrationに属し、余分・重複・欠落を認めない。
 3. harness集合はClaude=`claude`、Codex=`codex`、Kiro=`kiro|kiro-ide`に固定する。
-4. slotは`available`または`unavailable`の判別unionとし、`unavailable`はprovider IDと列挙済み診断codeだけを持つ。未知moduleの動的loadは行わない。
-5. `DriverAdapter`は`probe`、`buildLaunch`、`normalize`の型境界を宣言するだけで、U-01から呼び出さない。
+4. slotは`available(adaptersByDriver)`または`unavailable`の判別unionとする。available setのkeyはregistrationのdeclared driver集合と完全一致し、Claude 2件、Codex/Kiro各1件、adapter.driverとの不一致0件を要求する。`unavailable`はprovider IDと列挙済み診断codeだけを持ち、未知moduleの動的loadは行わない。
+5. `DriverAdapter`は`probe`、pure `prepareResources(input)`、pure `buildExecution(input, MaterializedAuxiliaryResourceSet)`、`normalize`の型境界を宣言するだけで、U-01から呼び出さない。`AdapterExecutionPlan`は`launch + capture + captureIdentity + resources`を必須とし、resource preparationとexecution planのresource集合/digestは一致しなければならない。
 
 Kiroのbalanced wave式はU-05が所有する。U-01はregistrationとUnit順序を保持する入力contractだけを定め、provider固有のwave構築を先取りしない。
 
@@ -133,43 +133,27 @@ selection outcomeは`schemaVersion: 1`と判別可能な`kind`を必須とし、
 
 ## Review
 
-**Iteration:** 1  
+**Iteration:** 2
 **Verdict:** NOT-READY
 
-### Findings
+### 解消済みfinding
 
-1. **`NativeDriver`のinstance methodとcompanion operationの分担がTypeScript表現として成立していない。** `domain-entities.md`は`NativeDriver`を`"claude-agent-teams" | "claude-ultracode" | "codex-ultra" | "kiro-subagent"`のliteral unionとして定義する一方、`NativeDriver.supports(harness)`をinstance methodと説明している。literal stringは独自methodを持てず、`NativeDriver.supports(...)`という呼出形もreceiverを取らないcompanion/static operationである。上流`component-methods.md`のclosed literal unionを維持するなら、companion側の`NativeDriver.supports(driver, harness)`へ明確に寄せる必要がある。instance methodを採用するなら、literal値とは別のimmutable value objectを定義し、`nativeDriver.supports(harness)`として実装可能な型・factory・serialization境界を示す必要がある。現状はfunctional-domain-modeling-tsの実装指針が二通りに読める。
-2. **closed contractが無効状態を型で表現できてしまう。** `DriverRequest`は`source`とoptionalな`requested` / `rawValueClass`の相関を型に持たないため、`source="default"`かつ`rawValueClass="enabled"`、`source="legacy-env"`かつ`requested="auto"`などを構築でき、上流`ParsedRequest`のdiscriminated unionを弱めている。`LegacySelection`も`harness`、`execution`、optionalな`selectedFloor` / `degradedFrom`を独立に組み合わせられるため、Kiroと`claude-dynamic-workflow`の組合せなどlegacy全表に存在しない状態が型上有効になる。default / new-env / legacy-env、およびlegacy harness別結果を判別unionで閉じるか、外部構築不能なopaque型とcompanion smart constructorの全invariantを明示し、instance methodは構築済み値への振る舞いだけに限定する必要がある。
+- `NativeDriver` wire literalとdomainの`NativeDriverValue`は分離され、instance/companionの実装形が一意になった。
+- `DriverRequest`とharness別legacy outcomeは判別unionで閉じ、不正なfield組合せを型で排除した。
+- registrationの所有権はU-01のgeneric `DriverAdapterSet` contractに固定され、U-02がassembly、U-03〜U-05がdescriptorを提供する方向へ揃った。
+- adapter method surfaceは`probe + prepareResources + buildExecution + normalize`へ揃い、旧`buildLaunch`契約とprovider側の追随漏れは解消した。
 
-### Validation evidence
+### 新規finding
 
-- U-01境界: PASS。U-01はC-02/C-03/C-04のversioned contractと純粋selectionだけを所有し、U-02はproduction registry assembly・process・audit・checkpoint、U-03〜U-05は各provider slot、U-06はplaceholder 0件とmapping網羅性の検証を所有している。
-- 選択表: PASS。未設定と公開5値、新旧envの存在競合、明示driverのharness不一致・能力不足hard error、Claude/Codex/Kiroの`auto`候補列、dispatch前だけのloud fallback、4 harness × unset/enabled/other/競合とClaude surface unavailableを含むlegacy全行が追跡されている。
-- 決定性・schema・redaction: PASS。入力canonical化、固定reason優先順、I/O・時刻・乱数・locale依存の排除、schema v1、`additionalProperties: false`、secret-like fieldの構築前拒否、canonical JSON testが定義されている。
-- 不要な互換層: PASS。要求済み0.1.x legacy以外のshim、旧名alias、custom plugin seam、明示driver fallback、dispatch後fallback、selector二重実装は追加されていない。
-- Mermaid: PASS。`flowchart TD`と`classDiagram`の2図はfence、node/relationship、label構文が閉じ、いずれもテキスト代替を持つ。
-- 全consumes参照: PASS。`unit-of-work`、`unit-of-work-story-map`、`requirements`、`components`、`component-methods`、`services`を4成果物すべてが参照している。
-- `amadeus-sensor-required-sections.ts`: 4成果物すべてPASS。
-- `amadeus-sensor-upstream-coverage.ts --consumes unit-of-work,unit-of-work-story-map,requirements,components,component-methods,services`: 4成果物すべてPASS、未参照0件。
-- `linter` / `type-check`: 4成果物はいずれもMarkdownであり、sensor manifestの`**/*.{ts,js}` / `**/*.{ts,tsx}`に一致しないため非適用。dispatcherのapplicability probeは期待どおりmatch rejectionとなり、未実行をPASSには読み替えていない。TypeScript snippetの意味レビューでは上記2件を検出した。
+1. **[Major / Blocking] U-01が正本とする`DriverAdapter`の境界型が未定義である。** interfaceは`DriverProbeInput`、`AdapterPreparationInput`、`AdapterResourcePreparation`、`AdapterExecutionInput`、`MaterializedAuxiliaryResourceSet`、`AdapterExecutionPlan`、`EvidenceInputs`、`NormalizeContext`、`NormalizedDriverEvent`を参照するが、本Unit内で定義も上流common contractへの明示参照もない。これらの具体型はdownstream U-02にのみ存在するため、U-01実装から参照すれば依存方向が逆転し、参照しなければgeneric registration contractを型検査できない。adapter boundary型をU-01-owned contractとして定義してU-02が消費するか、循環しない上流common moduleを明示する必要がある。
 
-## Review
+### センサー結果
 
-**Iteration:** 2  
-**Verdict:** READY
+- `required-sections`: 4成果物すべてPASS。
+- `upstream-coverage`: 4成果物すべてPASS、未参照0件。
+- `linter` / `type-check`: 対象成果物はMarkdownのため非適用。
 
-### Findings
+## Iteration 2後の是正記録
 
-- Blocking findingなし。Iteration 1の2 findingは閉包された。wire/schemaの`NativeDriver` literal unionとdomain内部のfrozen `NativeDriverValue`は役割が分離され、`DriverRequest`と`LegacySelection`は上流契約の有効状態だけを表す判別unionになっている。
-
-### Validation evidence
-
-- Iteration 1 finding 1: RESOLVED。`NativeDriverValue`はcanonicalな`NativeDriver` IDを1つだけ包み、providerをIDから導出し、`toJSON()`で同じliteralへ戻す。新しいdriver ID、wire schema、selector表は追加しておらず、literal IDとvalue objectは二重の正本にならない。
-- instance / companion分担: PASS。instance methodは`nativeDriverValue.supports(harness)`と`toJSON()`、companion namespaceは`parse(raw)`、`from(id)`、`values()`に限定され、factoryがclosure実装したfrozen objectを返すためTypeScriptで実装可能である。
-- Iteration 1 finding 2: RESOLVED。`DriverRequest`はdefault=`requested: auto`、new-env=`requested: RequestedDriver`、legacy-env=`rawValueClass`の3 variantへ閉じ、sourceにないfieldを組み合わせない。legacyの生値も保持しない。
-- Legacy全表: PASS。Claudeはenabled時のDynamic Workflow、dispatch前surface unavailable時のClaude floor degrade、other時の非degrade floorを別variantにする。CodexとKiro/Kiro IDEもenabled時だけ`degradedFrom=ultracode`を必須とし、other時はdegrade fieldを`never`にする。harness、execution、selected floor、degrade理由の不正な組合せは型で排除される。
-- 単一selector・fallback境界: PASS。BR-37/BR-38は型invariantとcompile fixtureだけを追加し、要求済み0.1.x legacy以外のshim、alias、未定義fallback、明示driver fallback、dispatch後fallback、selector二重実装を導入していない。
-- U-01境界、公開5値、env競合、明示hard error、`auto`候補列、決定性、schema v1、redaction、Mermaid、全consumes参照: Iteration 1のPASS状態を維持している。
-- `amadeus-sensor-required-sections.ts`: 4成果物すべてPASS。
-- `amadeus-sensor-upstream-coverage.ts --consumes unit-of-work,unit-of-work-story-map,requirements,components,component-methods,services`: 4成果物すべてPASS、未参照0件。
-- `linter` / `type-check`: 4成果物はMarkdownでmanifestの`**/*.{ts,js}` / `**/*.{ts,tsx}`に一致しないため非適用。dispatcherのapplicability probeはmatch rejectionとなり、未実行をPASSには読み替えていない。
+- 2026-07-14T10:53:15Z — reviewer上限到達後に、唯一のblocking findingだったadapter境界型未定義を是正した。U-01の`domain-entities.md`へ`ProbeInput`、`ProbeResult`、`LaunchInput`、`AuxiliaryResourcePlan`、`AdapterResourcePreparation`、`MaterializedAuxiliaryResourceSet`、`CoordinatorTransport`、`EvidenceCapturePlan`、`AdapterExecutionPlan`、capture binding、live/retained evidence、control signal、closed `NormalizedDriverEvent`をU-01-owned contractとして定義し、U-02をconsumer/internal specializationと明記した。
+- これは独立reviewerによるIteration 3判定ではないため、上記Iteration 2 verdictは監査履歴として変更しない。事後修正後の適用sensorと`git diff --check`を再実行し、ゲートではreviewerのNOT-READYと修正済み事実を分けて提示する。

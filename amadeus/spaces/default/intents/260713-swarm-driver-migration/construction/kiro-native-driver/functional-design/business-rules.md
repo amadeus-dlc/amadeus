@@ -39,8 +39,8 @@
 | KXR-19 | worker read/write allowed pathは担当prepared worktree、denied pathはmain/他worktree/evidence/runtime config/session rootである | launch拒否 |
 | KXR-20 | path制約を`allowedTools: [write]`で上書きせず、`toolsSettings.write.allowedPaths`を非対話pre-approvalに使う | trust failure |
 | KXR-21 | `--trust-all-tools`をlaunchへ含めない | security failure |
-| KXR-22 | runtime agent configは予約pathへexclusive createし、symlink/name/global-local collisionを拒否する | provider process 0件 |
-| KXR-23 | config digest/ownerをarm前checkpointし、capture seal後だけowner一致cleanupし、cleanup完了をC-01が返す前にconductorはC-11 check/次waveへ進まない | failed-resumable |
+| KXR-22 | runtime agent configは既存canonical `.kiro/agents/` root配下の予約pathへ`attempt-owned-file`としてexclusive createし、root欠落/非directory/symlink/project外/owner不一致とname/global-local collisionを拒否する。root自体は作成・削除しない | provider process 0件 |
+| KXR-23 | pure `prepareResources`でruntime config file/session baselineをU-02の`AuxiliaryResourcePlan[]`として宣言し、materialized setを受けたpure `buildExecution`で同一resource digestのlaunch/capture planを作る。root identityとconfig/resource digest/ownerをarm前checkpointし、capture seal後だけowner一致fileをcleanupする。既存root/他fileは削除せず、完了前にconductorはC-11 check/次waveへ進まない | failed-resumable |
 
 ## Launchとprocess
 
@@ -58,6 +58,7 @@
 | ID | ルール | 違反時 |
 |---|---|---|
 | KXR-30 | session baseline、role/config digest、capture/nonce/plan/waveをprovider arm前に固定する | success禁止 |
+| KXR-30a | captureはU-02の`event-bound-provider-path`を使い、parent-session eventから解決したbindingを`capture-bound`保存した後だけsession metadataを読む | correlation failure |
 | KXR-31 | baseline後に作成された`.json`/`.jsonl`だけを対象とし、旧sessionを再利用しない | correlation failure |
 | KXR-32 | runtime parent role/cwdを持つnew parent metadataはexactly 1件である | parent mismatch |
 | KXR-33 | childはparent session ID、worker agent name、terminal completedをversioned profileでexact照合する | child incomplete |
@@ -79,7 +80,7 @@
 | KXR-43 | resumeは同じexecution、新attempt/nonce/role/inventoryでfresh probeし、最初の未確定waveから進む | resume拒否 |
 | KXR-44 | 確定済みwaveはfenced C-08 resultと、conductorがC-01へ記録したC-11 resultが両方ある場合だけ再利用する | false reuse |
 | KXR-45 | 旧process生存またはcapture未joinならtakeoverしない | liveness unknown |
-| KXR-45a | 旧runtime configは旧process停止/capture join/owner/fencing一致後だけcleanupし、新attemptへ再利用しない | resume拒否 |
+| KXR-45a | 旧runtime config fileは旧process停止/capture join/owner/fencing一致後だけcleanupし、既存config root/他fileを保持して新attemptへ旧fileを再利用しない | resume拒否 |
 | KXR-46 | Kiro CLI/Kiro IDEは同じC-01 contractを使い、selector/wave/parserをharness proseへ複製しない | architecture failure |
 | KXR-47 | Kiro IDE `invoke_sub_agent`とCLI既存subagent fan-outはfloor/legacyで、native successへ読み替えない | audit failure |
 | KXR-48 | `AMADEUS_USE_SWARM` 0.1.xのenabled/other契約と`SWARM_DEGRADED`を維持する | compatibility failure |

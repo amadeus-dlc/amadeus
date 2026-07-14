@@ -26,7 +26,8 @@ KiroSubagentAdapterView
   surfaceProfiles: immutable supported set
   splitWaves(units): KiroWaveSet
   probe(input): KiroProbeResult
-  buildExecution(input): AdapterExecutionPlan
+  prepareResources(input): AdapterResourcePreparation
+  buildExecution(input, resources: MaterializedAuxiliaryResourceSet): AdapterExecutionPlan
   normalize(inputs, context): NormalizedDriverEvent stream
 ```
 
@@ -168,6 +169,7 @@ KiroLaunchConfig
   argv: immutable separated args
   cwd: canonical project root
   env: AllowlistedProviderEnvironment
+  transport = stdio-json(output = jsonl)
   stdin: Uint8Array(KiroWaveManifestV1)
   stdinCloseRequired = true
   timeoutMs: fixed policy
@@ -190,7 +192,8 @@ file本文を保持しない。baselineとsealed inventoryの差分からarm後f
 ## KiroSessionCapturePlan
 
 ```text
-KiroSessionCapturePlan
+KiroSessionCaptureProjection
+  kind = event-bound-provider-path
   captureId / ownerTokenDigest
   executionId / attemptId / nonceHash / planDigest / waveDigest
   parentRole / expectedWorkerRoles
@@ -200,6 +203,8 @@ KiroSessionCapturePlan
   startBeforeProviderArm = true
   stopAfterProviderGroupTerminal = true
 ```
+
+adapterのpure `prepareResources`はruntime agent configごとの`attempt-owned-file`とsession rootの`pre-arm-baseline`だけを返す。既存canonical `.kiro/agents/` rootはU-02がidentity、directory種別、symlink不在、project confinement、ownerを検証するが、attempt-owned resourceやcleanup対象にはしない。adapterはmaterialize/cleanup I/Oを行わず、U-02のmaterialized setを受けたpure `buildExecution`が同じresource digestを持つ具体的launch/capture planを返す。allowlist済みparent-session eventから`EventBoundCaptureBinding`を純粋に解決し、U-02がbinding checkpoint後にexact session metadata readを有効化する。
 
 planはI/Oを行わない。U-02 supervisorがinventory、observer、join、sealを所有する。
 

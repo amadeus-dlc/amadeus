@@ -20,7 +20,7 @@ U-02は、U-01のselection planを既存referee worktreeへ束縛し、native/fl
 - U-01の`DriverSelector`とschema/parser。
 - production `DriverRegistrationSet`。Claude/Codex/Kiro moduleをstatic importし、4 native driverをexhaustive mappingする。
 - `DriverAttemptStore`、`DriverAuditEmitter`、`NativeEvidenceVerifier`。
-- `ProcessSupervisor`、clock、ID/nonce generator、process liveness probe、filesystem/git read port。
+- `ProcessSupervisor`、`EvidenceCaptureSupervisor`、`AuxiliaryResourceSupervisor`、PTY/stdio transport port、clock、ID/nonce generator、process liveness probe、filesystem/git read port。
 
 production registryはU-02時点で3 providerの型付き`unavailable` slotを許す。unit testだけは`createCoordinator({ registry })`へfake registrationを注入できる。runtimeでmodule名を受け取るdynamic discovery、custom driver、plugin SDKは作らない。
 
@@ -45,8 +45,18 @@ sequenceDiagram
   H->>D: run(prepared manifest)
   D->>S: selected to prepared to dispatched
   alt native
-    D->>P: short-lived supervised launch
-    P-->>D: normalized events
+    D->>D: capture plan/variantをarm前checkpointへ保存
+    D->>P: capture observer開始後にshort-lived supervised launch
+    opt event-bound provider path
+      P-->>D: binding event
+      D->>S: capture-boundをaudit-first保存
+    end
+    opt PTY interactive
+      P-->>D: provider state + hook control projection
+      D->>P: ready-for-graceful-exit後にexit inputを1回送信
+    end
+    P-->>D: process group terminal
+    D->>D: observer stopAndWait後にnormalized eventsを生成
     D->>D: verify source AND unit bijection
   else floor or legacy
     D-->>H: execution plan
@@ -87,24 +97,30 @@ sequenceDiagram
 
 checkpointが`selected`で現行lease/fencing tokenと一致する場合だけrunできる。`PreparedUnit`はplanの全Unitと順序非依存の全単射であり、重複・欠落・余分が0件、worktree pathとbranchが既存referee `prepare`結果、repo、ownership marker、base commitに一致しなければならない。canonical manifest digestを作り、`selected-prepared`をaudit-first適用する。
 
-### Dispatch前登録と短命supervisor
+### Dispatch前登録、closed transport/capture、短命supervisor
 
-native run ID、wave digest、identity-file path、one-time arm path、evidence directoryをspawn前に採番し、`prepared` checkpointへplanned runを保存する。各waveはruntime内部の短命`ProcessSupervisor`を次のhandshakeで起動する。
+adapterは最初にpure `prepareResources(input)`でprovider-neutralな`AuxiliaryResourcePlan[]`を返す。U-02がそれをmaterializeした後、adapterはpure `buildExecution(input, materializedResources)`で、shell文字列ではない`LaunchSpec`、`EvidenceCapturePlan`、capture identity、同じresource planを持つ`AdapterExecutionPlan`を返す。resource不要adapterは空集合を返す。`LaunchSpec.transport`は`stdio-json | pty-interactive`、captureは`fixed-provider-path | event-bound-provider-path | hook-only`のclosed unionであり、runtimeはprovider名で分岐しない。fixed variantはmaterialized resourceを入力にadapterが作るarm前`initialBinding`を必須とし、event-boundはarm時点では未bound、hook-onlyはbinding field自体を持たない。
 
-1. coordinatorはwrapperを専用process groupとしてspawnする。wrapperはproviderを起動せず、自分のPID、PGID、process start token hash、native run ID、arm digestをidentity fileへatomic writeする。
-2. wrapperはidentity確立後もone-time arm fileを待つ。armが届かなければ固定30秒のattempt lease期限までに自分のgroupを終了し、provider起動数を0件に保つ。
-3. coordinatorはidentityを読んでOS観測と一致を確認し、実identityとarm digestを含む`prepared-dispatched` checkpointをaudit-first保存する。identityが未到着ならarmせず、wrapperの期限終了を実測するまで新attemptを開始しない。
-4. checkpoint materialization後だけ、coordinatorはexecution/attempt/run/plan/wave/fencingへ束縛したone-time arm fileをatomic writeする。wrapperはexact matchするarmを1回だけconsumeしてadapterの`LaunchSpec`をexecutable/argvとして起動する。
-5. provider stdout/stderrはadapter内normalizerへstreamし、生payloadをcheckpoint/audit/fixtureへ渡さない。supervisorはprovider exitとprocess group停止を確認してterminal identity statusを書き、終了する。
+native run ID、wave digest、identity-file path、one-time arm path、capture identity/plan digestをspawn前に採番し、`prepared` checkpointへplanned runを保存する。各waveはruntime内部の短命`EvidenceCaptureSupervisor`と`ProcessSupervisor`を次のhandshakeで起動する。
+
+1. `AuxiliaryResourceSupervisor`がadapterのpreparationにあるexclusive reservation、attempt-owned file/directory、pre-arm baselineをmaterializeし、選択されたcandidate、owner/content/baseline digestを`MaterializedAuxiliaryResourceSet`として返す。adapter自身のfilesystem writeやprivate cleanup closureは禁止する。
+2. adapterの`buildExecution`へmaterialized setとpreallocated native run/capture identityを渡し、返されたresource集合・preparation digestの同一性を検証する。fixed variantはadapterが選択candidateのexact pathsから作った`initialBinding`のnative run ID、path digest、source plan digestを検証する。その後capture observerを開始し、capture identity、plan digest、transport kindを取得する。event-boundはbindingなし、hook-onlyはbinding fieldなしである。
+3. coordinatorはprovider wrapperを専用process groupとしてspawnする。wrapperはproviderを起動せず、自分のPID、PGID、process start token hash、native run ID、arm digestをidentity fileへatomic writeする。
+4. wrapperはidentity確立後もone-time arm fileを待つ。armが届かなければ固定30秒のattempt lease期限までに自分のgroupを終了し、provider起動数を0件に保つ。
+5. coordinatorはwrapper identityをOS観測と照合し、variant付き`CaptureCheckpoint`、resource receipt digest、実identity、arm digestを含む`prepared-dispatched` transitionをaudit-firstで保存する。capture未開始、resource未materialize、fixed initial binding欠落／resource receipt不一致、event-boundの早期binding、hook-onlyのbinding存在は保存前に拒否する。
+6. checkpoint materialization後だけ、coordinatorはexecution/attempt/run/plan/wave/fencingへ束縛したone-time arm fileをatomic writeする。wrapperはexact matchするarmを1回だけconsumeし、`stdio-json`ならpipe、`pty-interactive`ならPTY上でadapterのexecutable/argvを起動する。
+7. event-bound variantはallowlist済みnative eventをadapter resolverへ渡し、最初の有効bindingだけを`capture-bound` self-edgeとしてaudit-first保存する。保存前のprovider-state read、異なる2件目のbinding、fixed/hook-onlyでのself-edgeを禁止する。
+8. PTY transportではlive projectionの全Unit完了を示す`ready-for-graceful-exit`だけを相関・digest検証し、`gracefulExitInput`を1回送る。このsignalは終了制御でありsuccess evidenceではない。stdio transportはcontrol signalを要求しない。
+9. process group terminal後にobserverを`stopAndWait`でjoinし、process stream、provider state、hookを独立channelとしてadapter normalizerへ渡す。その後にresource supervisorがowned resourceだけをcleanupする。join失敗、snapshot欠落、cleanup所有権不明、control/graceful-exit timeoutを空evidenceへ変換しない。
 
 親がwrapper spawn直後・identity保存前に停止しても、armがないためproviderは起動せず、wrapperはlease期限で自己終了する。identity保存後・arm前に停止した場合はcheckpointの有無にかかわらずidentity/arm pathを突き合わせ、同じgroupの終了を確認する。identity未作成を即座に「processなし」と推測せず、identity出現またはwrapper期限終了を証明するまでfail-closedにする。常駐daemon、port、queueは追加しない。
 
 ### Native evidence
 
-C-08はversion 1の`NormalizedDriverEvent`だけを読み、waveごとに次のANDを要求する。
+C-08はterminal後にretainされたversion 1の`NormalizedDriverEvent`だけを読み、waveごとに次のANDを要求する。
 
 - 全eventのdriver、execution/attempt、nonce hash、plan/wave digestが一致する。
-- source集合がClaude=`provider-state + stream`、Codex=`model-handshake + stream + hook`、Kiro=`session-metadata + stream`を満たす。
+- source集合がClaude Agent Teams=`provider-state + Task/Teammate hook`、Claude Ultra=`provider-state/journal + stream + hook`、Codex=`model-handshake + stream + hook`、Kiro=`session-metadata + stream`を満たす。PTY bytesをTeam構造のsourceにしない。
 - coordinator start/exit 0、mode confirmation、driver markerが同じnative runへ相関する。
 - state snapshotのUnit-child bindingが期待Unitと全単射である。
 - 全childにstartとcompleted stopがあり、failed/欠落/余分/重複childが0件である。
@@ -205,6 +221,12 @@ macOSは`ps`由来、Linuxは`/proc`由来のprocess start identityをhash化す
 | SELECTED/transition audit成功→checkpoint失敗 | event重複0、次resumeで同transitionを1回だけreapply |
 | wrapper spawn成功→identity write前に親crash | provider起動0、wrapper期限終了を証明後だけ新attempt |
 | identity write成功→dispatch checkpoint/arm前に親crash | provider起動0、exact groupだけ回収、重複attempt 0 |
+| capture開始前にarm要求 | provider起動0、transition拒否 |
+| resource materialize前にcapture/arm要求／owned cleanup失敗 | provider起動0またはsuccess 0、他attempt resource削除0 |
+| fixed initial binding欠落／event-bound早期binding／hook-only bindingあり | provider起動0、capture contract failure |
+| event-bound binding保存前にstate read／異なる2件目binding | evidence read 0またはattempt失敗、binding上書き0 |
+| PTY control timeout／partial state／graceful exit失敗 | exit successへ推定せずgroup停止、`failed-resumable` |
+| process terminal前のobserver join／join失敗 | success 0、retained evidenceへ空集合を渡さない |
 | arm後/child途中crash | checkpoint identityで対象process groupだけ回収、新attempt |
 | failed-resumable→probing | 新attemptに旧probe/selection/plan digest 0、behavior probeを再実行 |
 | nonce/plan/wave/Unit binding不一致 | evidence failure、post-dispatch fallback 0件 |
@@ -230,46 +252,23 @@ fake adapterの2 Unit以上fixtureをproductionと同じcoordinator/store/verifi
 
 ## Review
 
-### 判定
+**Iteration:** 2
+**Verdict:** READY
 
-**NOT-READY — Iteration 1**
+### 解消済みfinding
 
-worktree、native evidence、lease/fencing、referee mergeを単一lifecycleへ束縛する大枠と、既存`withAuditLock` / `appendAuditEntryUnlocked` / `writeFileAtomic`を使う永続化方針は妥当である。一方、以下の4件はcrash後の同一性または再調停を証明できず、FR-20、FR-21、NFR-02〜NFR-05およびU-02の「成功二重発行0件」を満たせないためblockingである。
+- `FinalizeRequestBinding`、request record、claim/fencing、merge progressがfinalizeの意味入力と部分成功を一意に束縛する。
+- identity-first/one-time-armによりspawn直後、identity前、arm前のcrash windowを閉じ、resumeはfresh `probing`から再probeする。
+- `AttemptBeginIntent`と独立eventのdedupeで最初のcheckpoint前後を再調停する。
+- 共通runtimeはtransport、capture variant、binding self-edge、PTY control、terminal join、`AuxiliaryResourcePlan[]`をprovider-neutralなclosed unionとして所有する。
+- 旧U-02 contractの未定義型は`FixedCaptureBinding`、`EventBoundCaptureBinding`、`AdapterExecutionPlan`として定義され、PTY rows/columnsも閉じた。
 
-### Blocking findings
+### 新規finding
 
-1. **[Critical] `RefereeBinding`がfinalize要求全体を束縛していない。** `RefereeBinding`はexecution/attempt/invocation/batch/plan/worktree/result pathだけを持つが、現行`amadeus-swarm.ts finalize`の判定を変えるexpected Unit、claimed Unit、check command、protected test file、declined reasonを束縛しない。直上`component-methods.md`の`evidence-referee-running` detailsにある`claimedUnits`も本成果物では欠落している。このため、envelope保存前のcrash後に同じ`finalizeInvocationId`を別のclaimed集合またはcheck条件で再実行しても検出できず、lying-conductor guard、merge結果、監査行の意味が変わり得る。referee副作用前に、canonical expected/claimed Unit、check/protected-spec binding、reason、worktree/head/base/trunk identityを含むimmutable finalize request digestをcheckpointとreferee側のrequest recordへ保存し、再実行・envelope・`recordFinalize`のすべてでexact matchするprotocolを定義すること。現行公開subcommand数を維持するなら、同じ`finalize`呼出し内でも、merge前にrequest recordをcreate-if-absentし、既存recordとの不一致を副作用0で拒否する必要がある。
+- U-02固有のBlocking findingなし。provider側がこのclosed runtimeを正確に消費するかは各Unit Reviewで判定する。
 
-2. **[Critical] supervisor spawn後・identity file作成前のcrash windowが閉じていない。** 「identity未作成ならprovider未起動として扱える」は、coordinatorがwrapperをOSへspawnした直後、wrapperがidentityを保存する前に停止した場合には成立しない。wrapperは親停止後も生存し、resumeがidentityなしとして新attemptを開始した後に旧providerを起動できるため、専用groupの特定もfencingもできないsplit-brainになる。wrapperはidentityをatomic保存した後も、coordinatorがdurableなarm/ackを与えるまでproviderを起動しない二段階handshakeにし、ackなしではtimeout終了すること。failure injectionへ「wrapper spawn成功→identity write前に親crash」と「identity write成功→arm前に親crash」を分け、どちらも旧provider起動0件、新attemptとの重複0件を検証すること。
+### センサー結果
 
-3. **[High] resume直後の`probing`型が旧probe/selectionの再利用を表してしまう。** `AttemptCheckpoint`は全variantに`planDigest`と`selection`を必須化し、`probing`には`probeDigest`も必須としている一方、`attempt-resumed`は新attemptのprobe実行前に`failed-resumable → probing`へ遷移する。新attemptがこの型を満たすには旧attemptのprobe/selectionを入れるしかなく、「resumeは能力検査から再開し、probe結果を再利用しない」というFR-20とBR-31/BR-32に反する。初回の「probe完了後staging」とresumeの「probe未実行」を同じstateで表現せず、例えばselection/plan/probe digestを持たない`resume-probing` variantから`probe-selected`へ進めるなど、新attemptで未実施の事実を型で表すこと。`previousAttemptId`もresume variantで必須にし、初回attemptとの不正な組合せをparse時ではなく型で排除すること。
-
-4. **[High] 最初のcheckpointより前に残る監査行を、記載のreconciliationでは回収できない。** `resolve`は`SWARM_DRIVER_ATTEMPTED`をappendしてから最初の`probing` checkpointを書くが、この時点にはpre checkpointも`SWARM_DRIVER_TRANSITION`のpre/post digestもない。したがってappend後・write前のcrashは、後段の表にある「checkpoint digest = pre/post」に分類できず、「次回resumeのreconciliation対象」という説明を実装できない。同様に`SWARM_DRIVER_SELECTED`をselected checkpointより先に別rowとしてappendするため、transition再適用時の二重row防止keyも必要である。不存在を表すsentinel pre digestと完全なpost imageを持つidempotent begin transitionを定義するか、ATTEMPTED-only orphanを明示的にabandon/reconcileして次回`resolve`が安全に新executionを作る規則を定義すること。ATTEMPTED/SELECTEDを独立eventとして維持する場合は、execution/attempt/event keyによる同一audit lock内のdedupeもfailure injectionで検証すること。
-
-### 再レビュー条件
-
-- 上記4件を`business-logic-model.md`、`business-rules.md`、`domain-entities.md`へ一貫して反映する。
-- `RefereeBinding`または後継request bindingが、現行`finalize`の全意味入力とmerge対象git identityを固定することを型・手順・テストで示す。
-- spawn/identity/arm、initial audit/checkpoint、resume re-probe、finalize request/resultの各crash windowについて、前後状態と期待副作用数をfailure injection表へ追加する。
-- 現行refereeが持つ`prepare` / `check` / `finalize`の責務境界とlying-conductor guardを維持し、driver coordinatorがconvergence判定を再実装しない。
-
-## Review
-
-### 判定
-
-**READY — Iteration 2（最終）**
-
-Iteration 1の4件と、Iteration 2で追加確認したfinalize同時実行、AIDLC統合とcode mergeの責務分離、ephemeral入力、旧merge childの停止保証、protected specの信頼可能なbaselineは、いずれも型、永続化手順、failure injectionへ一貫して反映された。実装へ進める状態である。
-
-### 解消確認
-
-1. **Finalize要求の同一性:** `FinalizeRequestBinding`がexpected/claimed Unit、check、protected spec、decline reason、merge対象・方式、Unit worktree/base/head、request/claim/progress/result pathを固定し、referee側request recordとのexact matchを副作用前に要求する。
-2. **起動と再開の安全性:** native providerとmerge primitiveはidentity-first/one-time-arm supervisorを使い、identity保存前・arm前の親停止で子processを起動しない。resumeは旧selection/probeを再利用せず、`AttemptBeginIntent` orphanと独立eventをdedupe可能に再調停する。
-3. **Finalizeの単一writer性:** `FinalizeClaim`のCAS、lease/fencing、heartbeatに加え、takeover前に旧wrapper/childのexact identityを検証してterminate/waitする。各不可逆substepはoperation IDと現claimを再検証し、stale processの追加mutationを拒否する。
-4. **Merge責務と部分成功:** `amadeus-bolt complete --merge`によるstate/audit/runtime統合と、`amadeus-worktree merge`によるcode統合・cleanupを別primitiveとして順序付け、`MergeOperationRun`とmarker/postconditionから部分成功を再調停する。coordinatorはmerge mechanicsを複製しない。
-5. **Protected specの保護:** baselineをPreparedUnit共通base commitのgit object blobに置き、target-before、全Unit HEAD、working treeのdigestがすべて一致する場合だけmergeへ進むため、worker同士の一致だけでは改変を正当化できない。
-6. **検証可能性:** 2 process競合、owner停止、identity/arm境界、primitive途中停止、stale primitive、protected spec改変、各merge境界のfailure injectionが、期待副作用数と再開条件を観測可能に定義している。
-
-### 総合所見
-
-上流要求・component責務・domain model・永続化境界・異常系の間に、実装を妨げる未解決の矛盾はない。blocking findingは0件である。
+- `required-sections`: 4成果物すべてPASS。
+- `upstream-coverage`: 4成果物すべてPASS、未参照0件。
+- `linter` / `type-check`: 対象成果物はMarkdownのため非適用。

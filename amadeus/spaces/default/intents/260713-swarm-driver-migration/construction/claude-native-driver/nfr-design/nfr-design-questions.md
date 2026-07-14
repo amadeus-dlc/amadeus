@@ -32,7 +32,7 @@
 
 ### Q7. scale patternは何か
 
-[Answer]: waveごとにClaude coordinator processはexactly 1件とし、Unit-child全単射をnative schedulerへ要求する。C-05はUnitごとの`claude -p`、独自queue/pool、hidden concurrency limitを追加しない。
+[Answer]: waveごとにmode-specific Claude coordinator processはexactly 1件とし、Unit-child全単射をnative schedulerへ要求する。C-05はUnitごとのprovider process、独自queue/pool、hidden concurrency limitを追加しない。
 
 ### Q8. infrastructureを新設するか
 

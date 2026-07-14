@@ -88,3 +88,14 @@ B. **修正する** — 修正する判断番号と内容を指定する
 X. **Other (please specify)**
 
 [Answer]: A — この理解で確定（ユーザー回答: 1）
+
+## Q8. Claude mode別transport
+
+Code Generation入口の実機調査で、Claude Code 2.1.205は非対話`claude -p`ではsession team初期化を行わず、Agent Teamsではなく通常のasync Agentを起動することが判明した。一方、Ultra Codeは`claude -p --verbose --effort ultracode --output-format stream-json --include-hook-events`でnative Workflowと独立provider stateを証明できた。Claude adapterの起動transportをどう訂正するか。
+
+A. **mode別の閉じたtransport（推奨）** — Agent Teamsはinteractive PTY上の`claude` coordinator、Ultra Codeはheadless `claude -p` coordinatorとする。共通runtimeには`stdio-json | pty-interactive`の閉じたtransportを置き、coordinator 1 process、capture-before-arm、native証跡、Unit worktree隔離は維持する
+B. **両modeを`claude -p`へ統一** — transportは単純だが、Agent Teams初期化が抑止されるためFR-11を満たせない
+C. **通常async AgentをAgent Teamsとして受理** — headlessのまま実行できるが、team stateとTeammate eventを欠き、floorとの区別を失う
+X. **Other (please specify)**
+
+[Answer]: A — mode別の閉じたtransport（ユーザー回答: 1）。Application Designへ戻して訂正し、その後の下流成果物を再生成する。

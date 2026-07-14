@@ -17,7 +17,7 @@
 
 対話menuやdriver pickerを追加せず、`resolve`の前に既存engine/conductorが渡した値を使う。floor/legacy/nativeの違いは色ではなく`executionMode`と`selected/execution` fieldで機械可読にする。
 
-`record-finalize`のstdoutはrequest相の`referee-ready`またはresult相の`attempt-recorded`の判別unionであり、同じ呼出しで両方を返さない。
+`record-finalize`のstdoutはrequest相の`referee-ready`またはresult相の`attempt-recorded`の判別unionであり、同じ呼出しで両方を返さない。PTY transportのlive controlは内部制御であり、利用者向けsuccess表示にはprocess terminal、retained evidence、referee/merge完了が必要である。
 
 ## UX scenario
 

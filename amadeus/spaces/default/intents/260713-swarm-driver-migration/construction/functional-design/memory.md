@@ -33,6 +33,8 @@
 - 2026-07-13T14:31:11Z — finalize claim takeoverはowner processだけでなく進行中merge wrapper/child groupの停止またはarmなし終了も証明し、各不可逆primitive substepがcurrent claimを再検証する契約へ強化した。
 - 2026-07-13T14:31:11Z — protected spec baselineをworker後HEADから作業前prepared baseのgit blobへ訂正し、HEADへcommit済みの同一改ざんも検出対象にした。
 
+- 2026-07-14T10:36:14Z — ADR-009で再承認されたApplication Designを既存6 Unitへ再投影し、`unit-of-work.md`、`unit-of-work-story-map.md`、`requirements.md`、`components.md`、`component-methods.md`、`services.md`を再照合してFunctional Designを回復更新した; generic registrationはU-01、共通transport/capture/resource lifecycleとproduction assemblyはU-02、provider固有projectionはU-03〜U-05、release receiptはU-06が所有する。
+
 ## Deviations
 
 - 2026-07-13T16:17:58Z — U-06もUIを持たないがengine directiveのproducesに含まれるため、frontend-components.mdへN/A根拠とrelease checker/Issue feedback contractを記録した。
@@ -41,6 +43,9 @@
 - 2026-07-13T14:47:48Z — U-03もUIを持たないがengine directiveのproducesに含まれるため、frontend-components.mdへN/A根拠とCLI feedback contractを記録した。
 - 2026-07-13T13:25:32Z — stage定義ではfrontend-components.mdはUIを含むUnitだけの条件付き成果物だが、engine directiveのproducesに含まれるため、UI非適用の根拠とCLI引き渡し境界を記したN/A成果物を生成した。
 - 2026-07-13T13:50:46Z — U-02もUIを持たないがengine directiveのproducesに含まれるため、frontend-components.mdへN/A根拠とCLI feedback contractを記録した。
+
+- 2026-07-14T10:36:14Z — engineが既存成果物を持つため`gate=true`を返したが、成果物が再承認済み上流設計より古かったため、そのまま承認せず6 Unitの成果物をrecovery protocolで更新した。
+- 2026-07-14T10:53:15Z — Application Designの単相`buildExecution` seamを、U-01-owned `prepareResources → U-02 materialize → buildExecution`へFunctional Designで精緻化した; component数やprovider責務は変えず、prefix選択・attempt file・baselineをadapterのhidden I/Oにしないための境界修正である。
 
 ## Tradeoffs
 
@@ -70,6 +75,9 @@
 - 2026-07-13T14:23:44Z — C-11がgit/state mergeを再実装する方式より、既存2 primitiveへoperation IDとexpected pre-stateを渡し、各deep moduleが自身の部分成功を再調停する方式を選んだ。
 - 2026-07-13T14:31:11Z — finalize parentだけをfenceする方式より、armed child supervisionとsubstep CASを併用した; parent crash後に旧childと新claimが同じtargetを更新するsplit-brainを防ぐ。
 
+- 2026-07-14T10:36:14Z — provider別adapterがfilesystem I/Oとcleanup closureを隠し持つ方式より、U-02にprovider-neutralな`AuxiliaryResourcePlan`とsupervisor lifecycleを閉じる方式を選んだ; U-03〜U-05は必要resourceを宣言するだけとし、materialize/checkpoint/join後cleanupの順序を共通化した。
+- 2026-07-14T10:53:15Z — launch/capture planへ未解決resource path placeholderを混ぜる方式より、pure二段階adapter contractを選んだ; generic interfaceはU-01を正本、U-02を唯一のmaterialize/cleanup ownerとし、provider Unitはmaterialized receiptから具体planを純粋構築する。
+
 ## Open questions
 
 - 2026-07-13T15:59:19Z — Kiro 2.12.1 credentialed native fixtureでpersisted childのparent relation、agent name、completed terminalをどのexact field pathから取得できるか未確定; Code Generation entryでprofile化し、取得不能ならU-05をparkする。
@@ -80,3 +88,4 @@
 - 2026-07-13T15:21:22Z — Codex catalog/config surfaceはlocalで確認済みだが、credentialed `codex exec`でUltra overrideと3 hook eventが同時成立するlive handshakeは未実施; U-04 Code Generation entryで実証し、取得不能ならU-04をparkしてIntent scopeへ戻す。
 - 2026-07-13T14:47:48Z — Dynamic Workflowのrun/task/agent state field pathは公式公開契約で確定できない; U-03 Code Generation entryのcredentialed macOS discoveryでprofile化し、機械取得不能ならこのUnitだけをparkする。
 - 2026-07-13T13:25:32Z — なし; U-01の成果物生成を止める未確定事項はない。
+- 2026-07-14T10:36:14Z — Claude Agent Teamsのinteractive PTYでready signal、graceful exit input、terminal state、retained evidenceを取得するexact schemaは未確定; U-03 Code Generation entryでcredentialed profileを確定し、機械取得不能ならU-03をparkする。

@@ -61,6 +61,7 @@
 | BR-31 | Claude registrationは2 driver、CodexとKiroは各1 driverを所有し、provider間の重複を禁止する | cardinality fixture |
 | BR-32 | Kiro registrationだけが`kiro`と`kiro-ide`の2 harnessを受理する | harness fixture |
 | BR-33 | registrationはstatic import用contractであり、未知driver、動的discovery、custom pluginを受理しない | unknown/extra fixture |
+| BR-34a | 全adapterはpure `prepareResources`と、U-02の`MaterializedAuxiliaryResourceSet`を受けるpure `buildExecution`を実装し、`AdapterExecutionPlan(launch + capture + captureIdentity + resources)`のresource集合/digestをpreparationと一致させる | registration/dispatch拒否 |
 | BR-34 | provider slotは`available|unavailable`のclosed unionとし、未実装slotをavailableへ偽装しない | fail-closed fixture |
 | BR-35 | JSON schemaはversion 1、判別可能なkind、`additionalProperties=false`を必須にする | schema fixture |
 | BR-36 | secret-like field、生provider payload、prompt、credentialを型とschemaのallowlist外に置く | planted secret fixture |
