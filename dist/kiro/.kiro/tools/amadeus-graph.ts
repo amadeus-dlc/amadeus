@@ -493,6 +493,22 @@ function parseRuleHeadings(raw: string): Map<string, string> {
   return out;
 }
 
+function realDirectory(path: string): boolean {
+  try {
+    return lstatSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function regularFile(path: string): boolean {
+  try {
+    return lstatSync(path).isFile();
+  } catch {
+    return false;
+  }
+}
+
 /** Walk the rules directory and return parsed + validated rule files in
  *  precedence order. Public — the future doctor rule-drift check imports
  *  this same walker (single walking surface, no parser duplication).
@@ -500,20 +516,6 @@ function parseRuleHeadings(raw: string): Map<string, string> {
  *  case stays clean. */
 export function loadRules(): RuleFile[] {
   const dir = rulesDir();
-  const realDirectory = (path: string): boolean => {
-    try {
-      return lstatSync(path).isDirectory();
-    } catch {
-      return false;
-    }
-  };
-  const regularFile = (path: string): boolean => {
-    try {
-      return lstatSync(path).isFile();
-    } catch {
-      return false;
-    }
-  };
   const defaultRoot = join(__FILE_DIR, "..", "..");
   const structuralDirectories = process.env.AMADEUS_RULES_DIR === undefined
     ? [

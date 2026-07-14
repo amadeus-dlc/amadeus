@@ -420,6 +420,18 @@ function sameFileIdentity(
   return left.dev === right.dev && left.ino === right.ino;
 }
 
+function lstatOrNull(path: string): Stats | null {
+  try {
+    return lstatSync(path);
+  } catch {
+    return null;
+  }
+}
+
+function closeHeartbeat(fd: number): void {
+  try { closeSync(fd); } catch { /* Best-effort cleanup after a rejected read. */ }
+}
+
 function injectHeartbeatSwapForTest(path: string): void {
   const target = process.env.AMADEUS_DOCTOR_TEST_SWAP_HEARTBEAT_TARGET;
   if (process.env.NODE_ENV !== "test" || !target) return;
@@ -435,16 +447,11 @@ function injectHeartbeatDirectorySwapForTest(path: string): void {
 }
 
 function matchesRealDirectory(path: string, expected: Stats): boolean {
-  try {
-    const current = lstatSync(path);
-    return (
-      current.isDirectory() &&
-      !current.isSymbolicLink() &&
-      sameFileIdentity(current, expected)
-    );
-  } catch {
-    return false;
-  }
+  const current = lstatOrNull(path);
+  return current !== null &&
+    current.isDirectory() &&
+    !current.isSymbolicLink() &&
+    sameFileIdentity(current, expected);
 }
 
 function openHeartbeatNoFollow(path: string): number | null {
@@ -459,26 +466,16 @@ function openHeartbeatNoFollow(path: string): number | null {
     fd = openSync(path, fsConstants.O_RDONLY | noFollow);
     const opened = fstatSync(fd);
     const after = lstatSync(path);
-    if (
+    const changed =
       !opened.isFile() ||
       after.isSymbolicLink() ||
       !after.isFile() ||
       !sameFileIdentity(before, opened) ||
-      !sameFileIdentity(opened, after)
-    ) {
-      closeSync(fd);
-      fd = null;
-      return null;
-    }
+      !sameFileIdentity(opened, after);
+    if (changed) { closeHeartbeat(fd); fd = null; return null; }
     return fd;
   } catch {
-    if (fd !== null) {
-      try {
-        closeSync(fd);
-      } catch {
-        // The descriptor may already have been closed by a failing close.
-      }
-    }
+    if (fd !== null) closeHeartbeat(fd);
     return null;
   }
 }
@@ -488,20 +485,14 @@ function readHeartbeatTimestamp(path: string): string | null {
   if (fd === null) return null;
   try {
     return readFileSync(fd, "utf-8").trim();
-  } catch {
-    return null;
   } finally {
-    closeSync(fd);
+    closeHeartbeat(fd);
   }
 }
 
 function inspectHookHeartbeats(healthDir: string): HookHeartbeatInspection {
-  let directoryStat: Stats;
-  try {
-    directoryStat = lstatSync(healthDir);
-  } catch {
-    return { directoryExists: false, entries: [] };
-  }
+  const directoryStat = lstatOrNull(healthDir);
+  if (directoryStat === null) return { directoryExists: false, entries: [] };
   if (directoryStat.isSymbolicLink() || !directoryStat.isDirectory()) {
     return { directoryExists: true, entries: [] };
   }
@@ -515,18 +506,12 @@ function inspectHookHeartbeats(healthDir: string): HookHeartbeatInspection {
     const files = readdirSync(healthDir, { withFileTypes: true })
       .filter((entry) => entry.isFile() && entry.name.endsWith(".last"))
       .map((entry) => entry.name);
-    if (!matchesRealDirectory(healthDir, directoryStat)) {
-      return { directoryExists: true, entries: [] };
-    }
+    if (!matchesRealDirectory(healthDir, directoryStat)) return { directoryExists: true, entries: [] };
     for (const file of files) {
-      if (!matchesRealDirectory(healthDir, directoryStat)) {
-        return { directoryExists: true, entries: [] };
-      }
+      if (!matchesRealDirectory(healthDir, directoryStat)) return { directoryExists: true, entries: [] };
       const path = join(healthDir, file);
       const timestamp = readHeartbeatTimestamp(path);
-      if (!matchesRealDirectory(healthDir, directoryStat)) {
-        return { directoryExists: true, entries: [] };
-      }
+      if (!matchesRealDirectory(healthDir, directoryStat)) return { directoryExists: true, entries: [] };
       if (timestamp !== null) {
         entries.push(`${file.slice(0, -".last".length)} ${timestamp}`);
       }
@@ -537,7 +522,7 @@ function inspectHookHeartbeats(healthDir: string): HookHeartbeatInspection {
   return { directoryExists: true, entries };
 }
 
-function hookHeartbeatDoctorCheck(projectDir: string): DoctorCheck {
+export function hookHeartbeatDoctorCheck(projectDir: string): DoctorCheck {
   if (process.env.AMADEUS_MIGRATION_DOCTOR === "1") {
     return {
       pass: true,
@@ -686,7 +671,7 @@ export function checkPhaseProgressConsistency(projectDir: string): DoctorCheck {
   return classifyPhaseProgressConsistency(scanned);
 }
 
-function handleDoctor(projectDir: string): void {
+export function handleDoctor(projectDir: string): void {
   const results: Array<{ pass: boolean; label: string; fix?: string }> = [];
   const isWindows = process.platform === "win32";
 
