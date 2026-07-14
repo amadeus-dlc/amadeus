@@ -1393,10 +1393,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
 
   // Branch 1a — upstream workspace migration dispatches immediately after the
   // read-only utilities and before workspace navigation or workflow state.
-  if (migration) {
-    emitMigrationDirective(args, migration);
-    return;
-  }
+  if (migration) { emitMigrationDirective(args, migration); return; }
 
   // Branch 1b — workspace navigation verbs (space/space-create/intent) dispatch
   // BEFORE any state inspection, mirroring Branch 1. This MUST precede

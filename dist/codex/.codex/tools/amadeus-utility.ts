@@ -4009,7 +4009,7 @@ function handleMigrate(
 // CLI entry point
 // ---------------------------------------------------------------------------
 
-function main(): void {
+export function runUtilityMain(): void {
   const rawArgs = process.argv.slice(2);
   const { positional, flags } = parseArgs(rawArgs);
   const subcommand = positional[0];
@@ -4097,4 +4097,4 @@ function main(): void {
   }
 }
 
-if (import.meta.main) main();
+if (import.meta.main) runUtilityMain();

@@ -813,18 +813,15 @@ export function armMigrationPendingDecision(
 }
 
 function isSecureMigrationLatch(path: string): boolean {
-  try {
-    // Inspect the claimed directory entry itself. readFileSync must never be
-    // allowed to follow a symlink moved from the predictable latch path.
-    const stat = lstatSync(path);
-    if (!stat.isFile() || (stat.mode & 0o777) !== 0o600) return false;
-    if (typeof process.getuid === "function" && stat.uid !== process.getuid()) {
-      return false;
-    }
-    return true;
-  } catch {
+  // Inspect the claimed directory entry itself. readFileSync must never be
+  // allowed to follow a symlink moved from the predictable latch path. The
+  // caller's catch also fails closed if this inspection races with removal.
+  const stat = lstatSync(path);
+  if (!stat.isFile() || (stat.mode & 0o777) !== 0o600) return false;
+  if (typeof process.getuid === "function" && stat.uid !== process.getuid()) {
     return false;
   }
+  return true;
 }
 
 function claimSecureMigrationLatch(
@@ -843,9 +840,7 @@ function claimSecureMigrationLatch(
   }
   try {
     if (!isSecureMigrationLatch(claimPath)) return false;
-    const parsed = JSON.parse(readFileSync(claimPath, "utf-8")) as {
-      timestamp?: unknown;
-    };
+    const parsed = JSON.parse(readFileSync(claimPath, "utf-8")) as { timestamp?: unknown };
     if (typeof parsed.timestamp !== "number") return false;
     const age = now - parsed.timestamp;
     if (age < 0 || age > MIGRATION_LATCH_MAX_AGE_MS) return false;
