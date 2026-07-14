@@ -984,6 +984,7 @@ describe("t237 closed native execution lifecycle", () => {
     let captureFailure = false;
     let cleanupFailure = false;
     let disposeFailure = false;
+    let verifyFailure = false;
     const resourcePlans = Object.freeze([
       Object.freeze({
         kind: "attempt-owned-directory" as const,
@@ -1026,7 +1027,10 @@ describe("t237 closed native execution lifecycle", () => {
         bindRecoveryOwner: async () => {
           calls.push("bind-owner");
         },
-        verifyForArm: async () => {},
+        verifyForArm: async () => {
+          calls.push("verify-arm");
+          if (verifyFailure) throw new Error("verify-arm-failed");
+        },
         cleanup: async () => {
           calls.push("cleanup");
           if (cleanupFailure) throw new Error("cleanup-failed");
@@ -1098,6 +1102,10 @@ describe("t237 closed native execution lifecycle", () => {
         onResourcesPrepared: async () => {
           calls.push("resources-prepared");
         },
+        onProcessObserved: (dispatch) => {
+          calls.push("process-observed");
+          expect(dispatch.processIdentityDigest).toBe("process-identity");
+        },
         onReadyToArm: async () => {
           calls.push("checkpoint");
           throw new Error("checkpoint-write-failed");
@@ -1116,6 +1124,8 @@ describe("t237 closed native execution lifecycle", () => {
       "process-spawn",
       "identity",
       "bind-owner",
+      "process-observed",
+      "verify-arm",
       "checkpoint",
       "process-terminate",
       "capture-stop",
@@ -1123,6 +1133,27 @@ describe("t237 closed native execution lifecycle", () => {
       "cleanup",
       "process-dispose",
     ]);
+
+    verifyFailure = true;
+    const beforeVerifyFailure = calls.length;
+    await expect(execution.execute({
+      adapter: adapter([], preparation),
+      launchInput: launchInput(),
+      context: normalizeContext(),
+      fencingToken: 1,
+      onDispatchPrepared: async () => {},
+      onResourcesPrepared: async () => {},
+      onProcessObserved: (dispatch) => {
+        calls.push(`observed-before-verify:${dispatch.processIdentityDigest}`);
+      },
+      onReadyToArm: async () => {
+        calls.push("unexpected-ready-to-arm");
+      },
+      onCaptureBound: async () => {},
+    })).rejects.toThrow("verify-arm-failed");
+    expect(calls.slice(beforeVerifyFailure)).toContain("observed-before-verify:process-identity");
+    expect(calls.slice(beforeVerifyFailure)).not.toContain("unexpected-ready-to-arm");
+    verifyFailure = false;
 
     const runWithCheckpointFailure = () => execution.execute({
       adapter: adapter([], preparation),

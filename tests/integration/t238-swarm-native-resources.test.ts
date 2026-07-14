@@ -33,6 +33,7 @@ import { digestValue } from "../../packages/framework/core/tools/amadeus-swarm-d
 import {
   createNativeResourceSupervisor,
   nativeResourceTestSeam,
+  type NativeResourceRecoveryTarget,
   type NativeResourceRecoveryOwner,
   type NativeResourceRecoveryObservation,
   type NativeResourceRecoveryObserverPort,
@@ -132,6 +133,28 @@ function recoveryOwner(
   });
 }
 
+function resourceRecoveryTarget(
+  nativeRunId: string,
+  preparationDigest: string,
+  processIdentityDigest: string | null = null,
+  fencingToken: number | null = processIdentityDigest === null ? null : 7,
+): NativeResourceRecoveryTarget {
+  return Object.freeze({
+    kind: "native-resource-recovery",
+    schemaVersion: 1,
+    executionId: driverPlan.executionId,
+    attemptId: driverPlan.attemptId,
+    attemptNonceHash: driverPlan.attemptNonceHash,
+    planDigest: driverPlan.planDigest,
+    waveIndex: driverPlan.waves[0].index,
+    waveDigest: digestValue(driverPlan.waves[0]),
+    nativeRunId,
+    preparationDigest,
+    fencingToken,
+    processIdentityDigest,
+  });
+}
+
 function recoveryObserver(
   observation: Readonly<{
     ownerState?: NativeResourceRecoveryObservation["ownerState"];
@@ -191,6 +214,16 @@ function writePendingJournal(
 function firstJournalPath(journalRoot: string): string {
   const name = readdirSync(journalRoot).find((entry) => entry.endsWith(".json"));
   if (!name) throw new Error("journal fixture missing");
+  return join(journalRoot, name);
+}
+
+function activeJournalNames(journalRoot: string): readonly string[] {
+  return readdirSync(journalRoot).filter((name) => /^[a-f0-9]{64}\.json$/.test(name));
+}
+
+function firstCompletedTombstonePath(journalRoot: string): string {
+  const name = readdirSync(journalRoot).find((entry) => entry.endsWith(".completed.json"));
+  if (!name) throw new Error("completed tombstone fixture missing");
   return join(journalRoot, name);
 }
 
@@ -470,7 +503,7 @@ describe("t238 native auxiliary resource supervisor", () => {
     expect(existsSync(ownedDirectory)).toBeFalse();
     expect(existsSync(reservation)).toBeFalse();
     expect(readFileSync(existing, "utf-8")).toBe("foreign");
-    expect(readdirSync(journalRoot)).toEqual([]);
+    expect(activeJournalNames(journalRoot)).toEqual([]);
   });
 
   test("selects the first free exclusive reservation candidate and rechecks it before arm", async () => {
@@ -517,6 +550,270 @@ describe("t238 native auxiliary resource supervisor", () => {
     expect(existsSync(freeGuard)).toBeTrue();
     await expect(supervisor.cleanup(resources)).resolves.toBeUndefined();
   });
+
+  test("replays an exact cleanup receipt after ordinary cleanup and restart", async () => {
+    const root = temporaryRoot();
+    const journalRoot = join(root, "journals");
+    const ownedFile = join(root, "owned.json");
+    const nativeRunId = "ordinary-cleanup-replay";
+    mkdirSync(journalRoot, { mode: 0o700 });
+    const resourcePlan = preparation(Object.freeze([Object.freeze({
+      kind: "attempt-owned-file" as const,
+      resourceId: "settings",
+      path: ownedFile,
+      bytes: new TextEncoder().encode("owned"),
+      mode: "0600" as const,
+    })]));
+    const supervisor = createTestResourceSupervisor(journalRoot);
+    const resources = await supervisor.materialize(resourcePlan, launchInput(root, nativeRunId));
+    const owner = recoveryOwner(nativeRunId);
+    await supervisor.bindRecoveryOwner(resources, owner);
+    const target = resourceRecoveryTarget(
+      nativeRunId,
+      resourcePlan.preparationDigest,
+      owner.processIdentityDigest,
+      owner.fencingToken,
+    );
+
+    await supervisor.cleanup(resources);
+    const restarted = createTestResourceSupervisor(journalRoot);
+    const first = await restarted.recoverAttempt(target);
+    const replayed = await restarted.recoverAttempt(target);
+
+    expect(first).toMatchObject({
+      status: "cleaned",
+      receipt: {
+        kind: "native-resource-cleanup-receipt",
+        schemaVersion: 1,
+        targetDigest: digestValue(target),
+        nativeRunId,
+        resourceReceiptDigest: resources.receiptDigest,
+        disposition: "cleaned",
+      },
+    });
+    expect(replayed).toEqual(first);
+    expect(existsSync(ownedFile)).toBeFalse();
+  });
+
+  test("publishes an exact cleanup receipt during recovery sweep", async () => {
+    const root = temporaryRoot();
+    const journalRoot = join(root, "journals");
+    const ownedFile = join(root, "owned.json");
+    const nativeRunId = "sweep-cleanup-replay";
+    mkdirSync(journalRoot, { mode: 0o700 });
+    const resourcePlan = preparation(Object.freeze([Object.freeze({
+      kind: "attempt-owned-file" as const,
+      resourceId: "settings",
+      path: ownedFile,
+      bytes: new TextEncoder().encode("owned"),
+      mode: "0600" as const,
+    })]));
+    const first = createTestResourceSupervisor(journalRoot);
+    const resources = await first.materialize(resourcePlan, launchInput(root, nativeRunId));
+    const owner = recoveryOwner(nativeRunId);
+    await first.bindRecoveryOwner(resources, owner);
+    const target = resourceRecoveryTarget(
+      nativeRunId,
+      resourcePlan.preparationDigest,
+      owner.processIdentityDigest,
+      owner.fencingToken,
+    );
+    const restarted = createTestResourceSupervisor(journalRoot);
+
+    await expect(restarted.recover()).resolves.toEqual({ recovered: 1, retained: 0 });
+    await expect(restarted.recoverAttempt(target)).resolves.toMatchObject({
+      status: "cleaned",
+      receipt: { resourceReceiptDigest: resources.receiptDigest },
+    });
+  });
+
+  for (const corruption of ["tampered", "symlink", "mode"] as const) {
+    test(`fails closed for a ${corruption} exact cleanup tombstone`, async () => {
+      const root = temporaryRoot();
+      const journalRoot = join(root, "journals");
+      const ownedFile = join(root, "owned.json");
+      const nativeRunId = `cleanup-tombstone-${corruption}`;
+      mkdirSync(journalRoot, { mode: 0o700 });
+      const resourcePlan = preparation(Object.freeze([Object.freeze({
+        kind: "attempt-owned-file" as const,
+        resourceId: "settings",
+        path: ownedFile,
+        bytes: new TextEncoder().encode("owned"),
+        mode: "0600" as const,
+      })]));
+      const supervisor = createTestResourceSupervisor(journalRoot);
+      const resources = await supervisor.materialize(resourcePlan, launchInput(root, nativeRunId));
+      const owner = recoveryOwner(nativeRunId);
+      await supervisor.bindRecoveryOwner(resources, owner);
+      const target = resourceRecoveryTarget(
+        nativeRunId,
+        resourcePlan.preparationDigest,
+        owner.processIdentityDigest,
+        owner.fencingToken,
+      );
+      await supervisor.cleanup(resources);
+      const tombstonePath = firstCompletedTombstonePath(journalRoot);
+
+      if (corruption === "tampered") {
+        const tombstone = JSON.parse(readFileSync(tombstonePath, "utf-8")) as Record<string, unknown>;
+        (tombstone.receipt as Record<string, unknown>).cleanupScopeDigest = "tampered";
+        writeFileSync(tombstonePath, `${JSON.stringify(tombstone)}\n`, { mode: 0o600 });
+      } else if (corruption === "symlink") {
+        const foreign = join(root, "foreign-tombstone.json");
+        writeFileSync(foreign, readFileSync(tombstonePath), { mode: 0o600 });
+        unlinkSync(tombstonePath);
+        symlinkSync(foreign, tombstonePath);
+      } else {
+        chmodSync(tombstonePath, 0o644);
+      }
+
+      await expect(createTestResourceSupervisor(journalRoot).recoverAttempt(target)).resolves.toEqual({
+        status: "unknown",
+      });
+      expect(existsSync(tombstonePath)).toBeTrue();
+    });
+  }
+
+  test("retains a foreign inode during exact resource recovery", async () => {
+    const root = temporaryRoot();
+    const journalRoot = join(root, "journals");
+    const ownedFile = join(root, "owned.json");
+    const foreignFile = join(root, "foreign.json");
+    const nativeRunId = "exact-cleanup-foreign-inode";
+    mkdirSync(journalRoot, { mode: 0o700 });
+    const resourcePlan = preparation(Object.freeze([Object.freeze({
+      kind: "attempt-owned-file" as const,
+      resourceId: "settings",
+      path: ownedFile,
+      bytes: new TextEncoder().encode("owned"),
+      mode: "0600" as const,
+    })]));
+    const supervisor = createTestResourceSupervisor(journalRoot);
+    const resources = await supervisor.materialize(resourcePlan, launchInput(root, nativeRunId));
+    const owner = recoveryOwner(nativeRunId);
+    await supervisor.bindRecoveryOwner(resources, owner);
+    writeFileSync(foreignFile, "owned", { mode: 0o600 });
+    unlinkSync(ownedFile);
+    renameSync(foreignFile, ownedFile);
+    const target = resourceRecoveryTarget(
+      nativeRunId,
+      resourcePlan.preparationDigest,
+      owner.processIdentityDigest,
+      owner.fencingToken,
+    );
+
+    await expect(supervisor.recoverAttempt(target)).resolves.toEqual({ status: "unknown" });
+    expect(readFileSync(ownedFile, "utf-8")).toBe("owned");
+    expect(activeJournalNames(journalRoot)).toHaveLength(1);
+    expect(readdirSync(journalRoot).filter((name) => name.endsWith(".completed.json"))).toEqual([]);
+  });
+
+  test("distinguishes an absent exact resource journal from unknown recovery state", async () => {
+    const root = temporaryRoot();
+    const journalRoot = join(root, "journals");
+    mkdirSync(journalRoot, { mode: 0o700 });
+    const target = resourceRecoveryTarget("absent-run", "preparation-digest", null, 7);
+
+    await expect(createTestResourceSupervisor(journalRoot).recoverAttempt(target)).resolves.toEqual({
+      status: "absent",
+    });
+  });
+
+  test("rejects an exact recovery target bound to another resource owner", async () => {
+    const root = temporaryRoot();
+    const journalRoot = join(root, "journals");
+    const ownedFile = join(root, "owned.json");
+    const nativeRunId = "exact-owner-binding";
+    mkdirSync(journalRoot, { mode: 0o700 });
+    const resourcePlan = preparation(Object.freeze([Object.freeze({
+      kind: "attempt-owned-file" as const,
+      resourceId: "settings",
+      path: ownedFile,
+      bytes: new TextEncoder().encode("owned"),
+      mode: "0600" as const,
+    })]));
+    const supervisor = createTestResourceSupervisor(journalRoot);
+    const resources = await supervisor.materialize(resourcePlan, launchInput(root, nativeRunId));
+    const owner = recoveryOwner(nativeRunId);
+    await supervisor.bindRecoveryOwner(resources, owner);
+
+    for (const target of [
+      resourceRecoveryTarget(nativeRunId, resourcePlan.preparationDigest, owner.processIdentityDigest, 8),
+      resourceRecoveryTarget(nativeRunId, resourcePlan.preparationDigest, "other-process", 7),
+    ]) {
+      await expect(supervisor.recoverAttempt(target)).resolves.toEqual({ status: "unknown" });
+    }
+    expect(readFileSync(ownedFile, "utf-8")).toBe("owned");
+    expect(activeJournalNames(journalRoot)).toHaveLength(1);
+  });
+
+  for (const recoveryCase of [
+    Object.freeze({ ownerState: "live" as const, processGroupState: "live" as const, cleaned: false }),
+    Object.freeze({ ownerState: "dead" as const, processGroupState: "live" as const, cleaned: false }),
+    Object.freeze({ ownerState: "dead" as const, processGroupState: "stopped" as const, cleaned: true }),
+  ]) {
+    test(`exact recovery requires a stopped bound process: ${recoveryCase.ownerState}/${recoveryCase.processGroupState}`, async () => {
+      const root = temporaryRoot();
+      const journalRoot = join(root, "journals");
+      const ownedFile = join(root, "owned.json");
+      const nativeRunId = `exact-observation-${recoveryCase.ownerState}-${recoveryCase.processGroupState}`;
+      mkdirSync(journalRoot, { mode: 0o700 });
+      const resourcePlan = preparation(Object.freeze([Object.freeze({
+        kind: "attempt-owned-file" as const,
+        resourceId: "settings",
+        path: ownedFile,
+        bytes: new TextEncoder().encode("owned"),
+        mode: "0600" as const,
+      })]));
+      const supervisor = createTestResourceSupervisor(journalRoot, recoveryCase);
+      const resources = await supervisor.materialize(resourcePlan, launchInput(root, nativeRunId));
+      const owner = recoveryOwner(nativeRunId);
+      await supervisor.bindRecoveryOwner(resources, owner);
+      const target = resourceRecoveryTarget(
+        nativeRunId,
+        resourcePlan.preparationDigest,
+        owner.processIdentityDigest,
+        owner.fencingToken,
+      );
+
+      const result = await supervisor.recoverAttempt(target);
+
+      expect(result.status).toBe(recoveryCase.cleaned ? "cleaned" : "unknown");
+      expect(existsSync(ownedFile)).toBe(!recoveryCase.cleaned);
+      expect(activeJournalNames(journalRoot)).toHaveLength(recoveryCase.cleaned ? 0 : 1);
+    });
+  }
+
+  for (const crashAfter of [
+    "cleanup-complete",
+    "tombstone-published",
+    "journal-unlinked",
+  ] as const) {
+    test(`replays exact cleanup after a crash at ${crashAfter}`, async () => {
+      const root = temporaryRoot();
+      const journalRoot = join(root, "journals");
+      const ownedFile = join(root, "owned.json");
+      const nativeRunId = `exact-crash-${crashAfter}`;
+      mkdirSync(journalRoot, { mode: 0o700 });
+      const resourcePlan = preparation(Object.freeze([Object.freeze({
+        kind: "attempt-owned-file" as const,
+        resourceId: "settings",
+        path: ownedFile,
+        bytes: new TextEncoder().encode("owned"),
+        mode: "0600" as const,
+      })]));
+      const supervisor = nativeResourceTestSeam.createCrashInjected({ journalRoot, crashAfter });
+      const resources = await supervisor.materialize(resourcePlan, launchInput(root, nativeRunId));
+      const target = resourceRecoveryTarget(nativeRunId, resourcePlan.preparationDigest);
+
+      await expect(supervisor.cleanup(resources)).rejects.toThrow("RESOURCE_CLEANUP_TEST_CRASH");
+      const recovered = await createTestResourceSupervisor(journalRoot).recoverAttempt(target);
+
+      expect(recovered.status).toBe("cleaned");
+      expect(existsSync(ownedFile)).toBeFalse();
+      expect(activeJournalNames(journalRoot)).toEqual([]);
+    });
+  }
 
   test("materializes owned directories and files while binding a pre-arm baseline", async () => {
     const root = temporaryRoot();
@@ -738,7 +1035,7 @@ describe("t238 native auxiliary resource supervisor", () => {
     await expect(supervisor.cleanup(resources)).resolves.toBeUndefined();
     expect(existsSync(ownedFile)).toBeFalse();
     expect(readFileSync(unrelatedFile, "utf-8")).toBe("unrelated");
-    expect(readdirSync(journalRoot)).toEqual([]);
+    expect(activeJournalNames(journalRoot)).toEqual([]);
   });
 
   test("quarantines and preserves a foreign directory swapped in after inspection", async () => {
@@ -863,7 +1160,7 @@ describe("t238 native auxiliary resource supervisor", () => {
 
     await expect(supervisor.cleanup(resources)).resolves.toBeUndefined();
     expect(existsSync(ownedFile)).toBeFalse();
-    expect(readdirSync(journalRoot)).toEqual([]);
+    expect(activeJournalNames(journalRoot)).toEqual([]);
   });
 
   for (const recoveryCase of [
@@ -898,7 +1195,7 @@ describe("t238 native auxiliary resource supervisor", () => {
         recoveryCase.recovered ? { recovered: 1, retained: 0 } : { recovered: 0, retained: 1 },
       );
       expect(existsSync(ownedFile)).toBe(!recoveryCase.recovered);
-      expect(readdirSync(journalRoot)).toHaveLength(recoveryCase.recovered ? 0 : 1);
+      expect(activeJournalNames(journalRoot)).toHaveLength(recoveryCase.recovered ? 0 : 1);
     });
   }
 
@@ -958,7 +1255,7 @@ describe("t238 native auxiliary resource supervisor", () => {
       expect(await restarted.recover()).toEqual({ recovered: 1, retained: 0 });
       expect(existsSync(ownedFile)).toBeFalse();
       expect(existsSync(quarantinePath)).toBeFalse();
-      expect(readdirSync(journalRoot)).toEqual([]);
+      expect(activeJournalNames(journalRoot)).toEqual([]);
     });
   }
 
@@ -1159,7 +1456,7 @@ describe("t238 native auxiliary resource supervisor", () => {
 
       await supervisor.cleanup(materialized[cleanupOrder[0]]);
       await supervisor.cleanup(materialized[cleanupOrder[1]]);
-      expect(readdirSync(journalRoot)).toEqual([]);
+      expect(activeJournalNames(journalRoot)).toEqual([]);
 
       const third = await supervisor.materialize(
         resourcePlan,
@@ -1167,7 +1464,7 @@ describe("t238 native auxiliary resource supervisor", () => {
       );
       expect(third.receiptDigest).toBe(materialized[0].receiptDigest);
       await supervisor.cleanup(third);
-      expect(readdirSync(journalRoot)).toEqual([]);
+      expect(activeJournalNames(journalRoot)).toEqual([]);
     }
   });
 
@@ -1600,7 +1897,7 @@ await supervisor.materialize(Object.freeze({ resources, preparationDigest: diges
     expect(await restarted.recover()).toEqual({ recovered: 1, retained: 0 });
     expect(existsSync(stagingPath)).toBeFalse();
     expect(existsSync(targetPath)).toBeFalse();
-    expect(readdirSync(journalRoot)).toEqual([]);
+    expect(activeJournalNames(journalRoot)).toEqual([]);
   });
 
   test("recovers an identified staging inode when the file write was interrupted", async () => {
@@ -1622,7 +1919,7 @@ await supervisor.materialize(Object.freeze({ resources, preparationDigest: diges
     const restarted = createTestResourceSupervisor(journalRoot);
     expect(await restarted.recover()).toEqual({ recovered: 1, retained: 0 });
     expect(existsSync(stagingPath)).toBeFalse();
-    expect(readdirSync(journalRoot)).toEqual([]);
+    expect(activeJournalNames(journalRoot)).toEqual([]);
   });
 
   for (const [kind, nameCharacter] of [
@@ -1646,7 +1943,7 @@ await supervisor.materialize(Object.freeze({ resources, preparationDigest: diges
       const restarted = createTestResourceSupervisor(journalRoot);
       expect(await restarted.recover()).toEqual({ recovered: 1, retained: 0 });
       expect(existsSync(cleanupPath)).toBeFalse();
-      expect(readdirSync(journalRoot)).toEqual([]);
+      expect(activeJournalNames(journalRoot)).toEqual([]);
     });
   }
 
@@ -1670,7 +1967,7 @@ await supervisor.materialize(Object.freeze({ resources, preparationDigest: diges
     const restarted = createTestResourceSupervisor(journalRoot);
     expect(await restarted.recover()).toEqual({ recovered: 1, retained: 0 });
     expect(existsSync(cleanupPath)).toBeFalse();
-    expect(readdirSync(journalRoot)).toEqual([]);
+    expect(activeJournalNames(journalRoot)).toEqual([]);
   });
 
   test("preserves a symlink that replaced a pending owned-file inode", async () => {
@@ -1790,7 +2087,7 @@ await supervisor.materialize(Object.freeze({ resources, preparationDigest: diges
     } finally {
       chmodSync(journalRoot, 0o700);
     }
-    expect(readdirSync(journalRoot)).toEqual([]);
+    expect(activeJournalNames(journalRoot)).toEqual([]);
   });
 
   test("removes a temporary journal when an atomic replacement fails", async () => {
@@ -1920,7 +2217,7 @@ await supervisor.materialize(Object.freeze({ resources, preparationDigest: diges
     }));
 
     expect(await createTestResourceSupervisor(journalRoot).recover()).toEqual({ recovered: 1, retained: 0 });
-    expect(readdirSync(journalRoot)).toEqual([]);
+    expect(activeJournalNames(journalRoot)).toEqual([]);
   });
 
   test("retains a pending file whose staging inode does not match", async () => {
