@@ -92,6 +92,7 @@ function plannedProcess(nativeRunId = "native-run-1") {
     identityRelativePath: ".amadeus/native/identity.json",
     armRelativePath: ".amadeus/native/arm.json",
     armDigest: "arm-digest",
+    runEpochDigest: "run-epoch-digest",
     recoveryJournalRelativePath: ".amadeus/native/recovery.json",
   });
 }
@@ -719,6 +720,9 @@ describe("t237 closed native execution lifecycle", () => {
           calls.push("process-plan");
           return plannedProcess();
         },
+        releasePlan: async () => {
+          calls.push("process-release");
+        },
         spawn: async () => {
           throw new Error("must not spawn");
         },
@@ -795,6 +799,9 @@ describe("t237 closed native execution lifecycle", () => {
           calls.push("process-plan");
           return plannedProcess();
         },
+        releasePlan: async () => {
+          calls.push("process-release");
+        },
         spawn: async () => {
           throw new Error("must not spawn");
         },
@@ -815,7 +822,160 @@ describe("t237 closed native execution lifecycle", () => {
         onCaptureBound: async () => {},
       }),
     ).rejects.toThrow("RESOURCE_RECEIPT_INVALID");
-    expect(calls).toEqual(["prepare-resources", "process-plan", "dispatch-prepared", "cleanup"]);
+    expect(calls).toEqual([
+      "prepare-resources",
+      "process-plan",
+      "dispatch-prepared",
+      "cleanup",
+    ]);
+  });
+
+  test("preserves a durable process plan when dispatch persistence or materialization may have begun", async () => {
+    for (const failureAt of ["dispatch", "materialize"] as const) {
+      const calls: string[] = [];
+      const preparation = Object.freeze({
+        resources: Object.freeze([]),
+        preparationDigest: digestValue([]),
+      });
+      const execution = createLifecycleNativeExecution({
+        resources: Object.freeze({
+          materialize: async () => {
+            calls.push("materialize");
+            throw new Error("materialize failed");
+          },
+          bindRecoveryOwner: async () => {},
+          verifyForArm: async () => {},
+          cleanup: async () => {},
+        }),
+        capture: Object.freeze({
+          start: async () => { throw new Error("must not start"); },
+        }),
+        process: Object.freeze({
+          plan: () => {
+            calls.push("process-plan");
+            return plannedProcess();
+          },
+          releasePlan: async () => {
+            calls.push("process-release");
+          },
+          spawn: async () => { throw new Error("must not spawn"); },
+        }),
+      });
+
+      await expect(execution.execute({
+        adapter: adapter(calls, preparation),
+        launchInput: launchInput(),
+        context: normalizeContext(),
+        fencingToken: 1,
+        onDispatchPrepared: async () => {
+          calls.push("dispatch-prepared");
+          if (failureAt === "dispatch") throw new Error("dispatch failed");
+        },
+        onResourcesPrepared: async () => {},
+        onReadyToArm: async () => {},
+        onCaptureBound: async () => {},
+      })).rejects.toThrow(`${failureAt} failed`);
+      expect(calls).toEqual(failureAt === "dispatch"
+        ? ["prepare-resources", "process-plan", "dispatch-prepared"]
+        : ["prepare-resources", "process-plan", "dispatch-prepared", "materialize"]);
+    }
+  });
+
+  test("releases a durable process plan only before dispatch publication", async () => {
+    const calls: string[] = [];
+    const preparation = Object.freeze({
+      resources: Object.freeze([]),
+      preparationDigest: digestValue([]),
+    });
+    const execution = createLifecycleNativeExecution({
+      resources: Object.freeze({
+        materialize: async () => { throw new Error("must not materialize"); },
+        bindRecoveryOwner: async () => {},
+        verifyForArm: async () => {},
+        cleanup: async () => {},
+      }),
+      capture: Object.freeze({
+        start: async () => { throw new Error("must not start"); },
+      }),
+      process: Object.freeze({
+        plan: () => {
+          calls.push("process-plan");
+          return { ...plannedProcess(), runEpochDigest: "" };
+        },
+        releasePlan: async () => {
+          calls.push("process-release");
+        },
+        spawn: async () => { throw new Error("must not spawn"); },
+      }),
+    });
+
+    await expect(execution.execute({
+      adapter: adapter(calls, preparation),
+      launchInput: launchInput(),
+      context: normalizeContext(),
+      fencingToken: 1,
+      onDispatchPrepared: async () => { throw new Error("must not publish"); },
+      onResourcesPrepared: async () => {},
+      onReadyToArm: async () => {},
+      onCaptureBound: async () => {},
+    })).rejects.toThrow("PROCESS_PLAN_INVALID");
+    expect(calls).toEqual(["prepare-resources", "process-plan", "process-release"]);
+  });
+
+  test("preserves process-plan validation and release failures before dispatch publication", async () => {
+    const calls: string[] = [];
+    const preparation = Object.freeze({
+      resources: Object.freeze([]),
+      preparationDigest: digestValue([]),
+    });
+    const releaseFailure = new Error("process-release-failed");
+    const execution = createLifecycleNativeExecution({
+      resources: Object.freeze({
+        materialize: async () => { throw new Error("must not materialize"); },
+        bindRecoveryOwner: async () => {},
+        verifyForArm: async () => {},
+        cleanup: async () => {},
+      }),
+      capture: Object.freeze({
+        start: async () => { throw new Error("must not start"); },
+      }),
+      process: Object.freeze({
+        plan: () => {
+          calls.push("process-plan");
+          return { ...plannedProcess(), runEpochDigest: "" };
+        },
+        releasePlan: async () => {
+          calls.push("process-release");
+          throw releaseFailure;
+        },
+        spawn: async () => { throw new Error("must not spawn"); },
+      }),
+    });
+
+    let caught: unknown;
+    try {
+      await execution.execute({
+        adapter: adapter(calls, preparation),
+        launchInput: launchInput(),
+        context: normalizeContext(),
+        fencingToken: 1,
+        onDispatchPrepared: async () => { throw new Error("must not publish"); },
+        onResourcesPrepared: async () => {},
+        onReadyToArm: async () => {},
+        onCaptureBound: async () => {},
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(AggregateError);
+    if (!(caught instanceof AggregateError)) throw new Error("AggregateError fixture missing");
+    expect(caught.message).toBe("NATIVE_EXECUTION_RECOVERY_FAILED");
+    expect(caught.errors).toHaveLength(2);
+    expect(caught.errors[0]).toBeInstanceOf(Error);
+    expect((caught.errors[0] as Error).message).toBe("PROCESS_PLAN_INVALID");
+    expect(caught.errors[1]).toBe(releaseFailure);
+    expect(calls).toEqual(["prepare-resources", "process-plan", "process-release"]);
   });
 
   test("terminates, joins, and cleans up when the audit-first arm checkpoint fails", async () => {

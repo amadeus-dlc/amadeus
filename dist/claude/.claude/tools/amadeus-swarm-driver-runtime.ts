@@ -29,6 +29,7 @@ import {
 import {
   ATTEMPT_HEARTBEAT_MS,
   ATTEMPT_LEASE_MS,
+  applyTransition,
   buildTransition,
   buildDispatchDigest,
   buildFinalizeRequestBinding,
@@ -41,6 +42,7 @@ import {
   type AttemptCheckpoint,
   type AttemptFailureCode,
   type AttemptState,
+  type AttemptTransition,
   type CheckpointWithoutDigest,
   type FinalizeRequestBinding,
   type RefereeFinalizeEnvelope,
@@ -71,6 +73,7 @@ import {
 import type {
   LifecycleNativeExecution,
   NativeDispatchCheckpoint,
+  NativeDispatchPreparation,
   NativeLifecycleExecutionInput,
 } from "./amadeus-swarm-native-execution.ts";
 
@@ -267,13 +270,12 @@ function withoutDispatch(
   return post;
 }
 
-function transitionTo<State extends AttemptState>(
-  store: DriverAttemptStore,
+function buildValidatedTransition<State extends AttemptState>(
   checkpoint: AttemptCheckpoint,
   transitionId: string,
   edge: Parameters<typeof buildTransition>[1]["edge"],
   post: Extract<CheckpointWithoutDigest, Readonly<{ state: State }>>,
-): Extract<AttemptCheckpoint, Readonly<{ state: State }>> {
+): AttemptTransition {
   const transition = buildTransition(checkpoint, {
     transitionId,
     edge,
@@ -284,7 +286,37 @@ function transitionTo<State extends AttemptState>(
     post,
   });
   if (transition.type === "err") throw new Error(`Invalid runtime transition: ${transition.error.code}`);
-  return store.transition(transition.value) as Extract<AttemptCheckpoint, Readonly<{ state: State }>>;
+  const validated = applyTransition(checkpoint, transition.value);
+  if (validated.type === "err") throw new Error(`Invalid runtime transition: ${validated.error.code}`);
+  return transition.value;
+}
+
+function transitionTo<State extends AttemptState>(
+  store: DriverAttemptStore,
+  checkpoint: AttemptCheckpoint,
+  transitionId: string,
+  edge: Parameters<typeof buildTransition>[1]["edge"],
+  post: Extract<CheckpointWithoutDigest, Readonly<{ state: State }>>,
+): Extract<AttemptCheckpoint, Readonly<{ state: State }>> {
+  const transition = buildValidatedTransition(checkpoint, transitionId, edge, post);
+  return store.transition(transition) as Extract<AttemptCheckpoint, Readonly<{ state: State }>>;
+}
+
+function failureRecoveryContext(
+  checkpoint: AttemptCheckpoint,
+  dispatchPreparationOverride?: NativeDispatchPreparation,
+) {
+  if (checkpoint.state !== "prepared" && checkpoint.state !== "dispatched") return undefined;
+  const dispatchPreparation = checkpoint.dispatchPreparation ??
+    (checkpoint.state === "prepared" ? dispatchPreparationOverride : undefined);
+  if (!dispatchPreparation) return undefined;
+  return Object.freeze({
+    dispatchPreparation,
+    ...(checkpoint.preparedNativeRun ? { preparedNativeRun: checkpoint.preparedNativeRun } : {}),
+    ...(checkpoint.state === "dispatched" && checkpoint.dispatch.kind === "native"
+      ? { dispatch: checkpoint.dispatch }
+      : {}),
+  });
 }
 
 function failAttempt(
@@ -292,6 +324,7 @@ function failAttempt(
   checkpoint: AttemptCheckpoint,
   code: AttemptFailureCode,
   terminal: boolean,
+  dispatchPreparationOverride?: NativeDispatchPreparation,
 ): AttemptCheckpoint {
   if (["succeeded", "failed-resumable", "failed-terminal"].includes(checkpoint.state)) {
     throw new Error("Attempt is already terminal");
@@ -300,17 +333,7 @@ function failAttempt(
     AttemptState,
     "succeeded" | "failed-resumable" | "failed-terminal"
   >;
-  const recoveryContext =
-    (checkpoint.state === "prepared" || checkpoint.state === "dispatched") &&
-    checkpoint.dispatchPreparation
-      ? Object.freeze({
-          dispatchPreparation: checkpoint.dispatchPreparation,
-          ...(checkpoint.preparedNativeRun ? { preparedNativeRun: checkpoint.preparedNativeRun } : {}),
-          ...(checkpoint.state === "dispatched" && checkpoint.dispatch.kind === "native"
-            ? { dispatch: checkpoint.dispatch }
-            : {}),
-        })
-      : undefined;
+  const recoveryContext = failureRecoveryContext(checkpoint, dispatchPreparationOverride);
   return transitionTo(store, checkpoint, randomUUID(), "attempt-failed", {
     schemaVersion: checkpoint.schemaVersion,
     state: terminal ? "failed-terminal" : "failed-resumable",
@@ -330,6 +353,40 @@ function failAttempt(
       failedFromState,
       ...(recoveryContext ? { recoveryContext } : {}),
     },
+  });
+}
+
+function failReconciledRunAttempt(input: Readonly<{
+  store: DriverAttemptStore;
+  batch: number;
+  executionId: string;
+  attemptId: string;
+  leaseId: string;
+  fencingToken: number;
+  dispatchPreparation: NativeDispatchPreparation | undefined;
+}>): void {
+  const checkpoint = input.store.readReconciled(input.batch);
+  if (
+    checkpoint?.executionId !== input.executionId ||
+    checkpoint.attemptId !== input.attemptId ||
+    checkpoint.lease.leaseId !== input.leaseId ||
+    checkpoint.lease.fencingToken !== input.fencingToken
+  ) {
+    return;
+  }
+  failAttempt(input.store, checkpoint, "COORDINATOR_FAILED", false, input.dispatchPreparation);
+}
+
+function createDispatchPreparationCapture(): Readonly<{
+  capture(preparation: NativeDispatchPreparation): void;
+  read(): NativeDispatchPreparation | undefined;
+}> {
+  let captured: NativeDispatchPreparation | undefined;
+  return Object.freeze({
+    capture: (preparation) => {
+      captured = Object.freeze({ ...preparation });
+    },
+    read: () => captured,
   });
 }
 
@@ -810,6 +867,9 @@ function nativeLifecycleCallbacks(input: Readonly<{
   manifestDigest: string;
   runBinding: RunRequestBinding;
   dispatchDigest(dispatch: NativeDispatchCheckpoint): string;
+  waveIndex: number;
+  waveDigest: string;
+  captureDispatchPreparation(preparation: NativeDispatchPreparation): void;
 }>): Pick<
   NativeLifecycleExecutionInput,
   "onDispatchPrepared" | "onResourcesPrepared" | "onReadyToArm" | "onCaptureBound"
@@ -817,14 +877,32 @@ function nativeLifecycleCallbacks(input: Readonly<{
   return Object.freeze({
     onDispatchPrepared: async (dispatchPreparation) => {
       const checkpoint = input.checkpoint();
-      if (checkpoint.state !== "prepared" || checkpoint.dispatchPreparation !== undefined) {
+      if (
+        checkpoint.state !== "prepared" ||
+        checkpoint.dispatchPreparation !== undefined ||
+        dispatchPreparation.nativeRunId !== input.nativeRunId ||
+        dispatchPreparation.planDigest !== checkpoint.selectedContext.planDigest ||
+        dispatchPreparation.fencingToken !== checkpoint.lease.fencingToken ||
+        dispatchPreparation.waveIndex !== input.waveIndex ||
+        dispatchPreparation.waveDigest !== input.waveDigest ||
+        dispatchPreparation.captureIdentityDigest !== digestValue({
+          executionId: checkpoint.executionId,
+          attemptId: checkpoint.attemptId,
+          attemptNonceHash: checkpoint.nonceHash,
+          planDigest: checkpoint.selectedContext.planDigest,
+          waveIndex: input.waveIndex,
+          waveDigest: input.waveDigest,
+        })
+      ) {
         throw new Error("NATIVE_DISPATCH_PREPARATION_INVALID");
       }
-      input.update(transitionTo(input.store, checkpoint, input.mintId(), "native-dispatch-prepared", {
+      const transition = buildValidatedTransition(checkpoint, input.mintId(), "native-dispatch-prepared", {
         ...withoutDigest(checkpoint),
         state: "prepared",
         dispatchPreparation,
-      }));
+      });
+      input.captureDispatchPreparation(dispatchPreparation);
+      input.update(input.store.transition(transition));
     },
     onResourcesPrepared: async (preparedNativeRun) => {
       const checkpoint = input.checkpoint();
@@ -1098,6 +1176,7 @@ export function createCoordinator(input: Readonly<{
         });
       const runLeaseId = checkpoint.lease.leaseId;
       const runFencingToken = checkpoint.lease.fencingToken;
+      const dispatchPreparationCapture = createDispatchPreparationCapture();
       const callbacks = nativeLifecycleCallbacks({
         store: input.store,
         checkpoint: () => checkpoint,
@@ -1110,6 +1189,9 @@ export function createCoordinator(input: Readonly<{
         manifestDigest,
         runBinding,
         dispatchDigest: nativeDispatchDigest,
+        waveIndex,
+        waveDigest,
+        captureDispatchPreparation: dispatchPreparationCapture.capture,
       });
       const execution = await executeWithHeartbeat({
         store: input.store,
@@ -1131,7 +1213,15 @@ export function createCoordinator(input: Readonly<{
       });
       if (execution.type === "err") {
         try {
-          failAttempt(input.store, checkpoint, "COORDINATOR_FAILED", false);
+          failReconciledRunAttempt({
+            store: input.store,
+            batch: runInput.batch,
+            executionId: plan.executionId,
+            attemptId: plan.attemptId,
+            leaseId: runLeaseId,
+            fencingToken: runFencingToken,
+            dispatchPreparation: dispatchPreparationCapture.read(),
+          });
         } catch {
           // A stale run owner must not overwrite the recovery winner.
         }

@@ -75,6 +75,7 @@ export type NativeDispatchPreparation = Readonly<{
   identityRelativePath: string;
   armRelativePath: string;
   armDigest: string;
+  runEpochDigest: string;
   recoveryJournalRelativePath: string;
 }>;
 
@@ -190,6 +191,7 @@ export type PlannedProcessRun = Readonly<{
   identityRelativePath: string;
   armRelativePath: string;
   armDigest: string;
+  runEpochDigest: string;
   recoveryJournalRelativePath: string;
 }>;
 
@@ -215,6 +217,7 @@ export type NativeProcessPort = Readonly<{
     plan: PlannedProcessRun;
     launch: AdapterExecutionPlan["launch"];
   }>): Promise<NativeProcessSession>;
+  releasePlan?(plan: PlannedProcessRun): Promise<void>;
 }>;
 
 export type NativeLifecycleExecutionInput = Readonly<{
@@ -805,13 +808,17 @@ function relativePathIsValid(path: string): boolean {
   );
 }
 
-function validateProcessPlan(plan: PlannedProcessRun, nativeRunId: string): void {
+function validateProcessPlan(
+  plan: PlannedProcessRun,
+  nativeRunId: string,
+): asserts plan is PlannedProcessRun & Readonly<{ runEpochDigest: string }> {
   requireCondition(
     hasExactKeys(plan, [
       "nativeRunId",
       "identityRelativePath",
       "armRelativePath",
       "armDigest",
+      "runEpochDigest",
       "recoveryJournalRelativePath",
     ]) &&
       plan.nativeRunId === nativeRunId &&
@@ -819,6 +826,7 @@ function validateProcessPlan(plan: PlannedProcessRun, nativeRunId: string): void
       relativePathIsValid(plan.armRelativePath) &&
       plan.identityRelativePath !== plan.armRelativePath &&
       nonEmpty(plan.armDigest) &&
+      nonEmpty(plan.runEpochDigest) &&
       relativePathIsValid(plan.recoveryJournalRelativePath),
     "PROCESS_PLAN_INVALID",
   );
@@ -1142,6 +1150,20 @@ function failedExecutionRecovery(input: Readonly<{
   });
 }
 
+async function releaseUnspawnedProcessPlan(
+  processPort: NativeProcessPort,
+  processPlan: PlannedProcessRun,
+  failure: unknown,
+): Promise<never> {
+  if (!processPort.releasePlan) throw failure;
+  try {
+    await processPort.releasePlan(processPlan);
+  } catch (releaseError) {
+    throw new AggregateError([failure, releaseError], "NATIVE_EXECUTION_RECOVERY_FAILED");
+  }
+  throw failure;
+}
+
 export function createLifecycleNativeExecution(ports: NativeExecutionPorts): LifecycleNativeExecution {
   return Object.freeze({
     async execute(input): Promise<readonly NormalizedDriverEvent[]> {
@@ -1153,29 +1175,33 @@ export function createLifecycleNativeExecution(ports: NativeExecutionPorts): Lif
         context: input.context,
         fencingToken: input.fencingToken,
       });
-      validateProcessPlan(processPlan, input.launchInput.nativeRunId);
-      const dispatchPreparation: NativeDispatchPreparation = Object.freeze({
-        kind: "native",
-        nativeRunId: input.launchInput.nativeRunId,
-        planDigest: input.context.planDigest,
-        fencingToken: input.fencingToken,
-        waveIndex: input.context.waveIndex,
-        waveDigest: input.context.waveDigest,
-        resourcePreparationDigest: preparation.preparationDigest,
-        captureIdentityDigest: digestValue(captureIdentityFromContext(input.context)),
-        identityRelativePath: processPlan.identityRelativePath,
-        armRelativePath: processPlan.armRelativePath,
-        armDigest: processPlan.armDigest,
-        recoveryJournalRelativePath: processPlan.recoveryJournalRelativePath,
-      });
-      await input.onDispatchPrepared(dispatchPreparation);
-      const resources = await ports.resources.materialize(preparation, input.launchInput);
       const progress: NativeExecutionProgress = {
         captureJoined: false,
         evidenceSealed: false,
         processDisposed: false,
       };
+      let resources: MaterializedAuxiliaryResourceSet | undefined;
+      let publicationMayHaveStarted = false;
       try {
+        validateProcessPlan(processPlan, input.launchInput.nativeRunId);
+        const dispatchPreparation: NativeDispatchPreparation = Object.freeze({
+          kind: "native",
+          nativeRunId: input.launchInput.nativeRunId,
+          planDigest: input.context.planDigest,
+          fencingToken: input.fencingToken,
+          waveIndex: input.context.waveIndex,
+          waveDigest: input.context.waveDigest,
+          resourcePreparationDigest: preparation.preparationDigest,
+          captureIdentityDigest: digestValue(captureIdentityFromContext(input.context)),
+          identityRelativePath: processPlan.identityRelativePath,
+          armRelativePath: processPlan.armRelativePath,
+          armDigest: processPlan.armDigest,
+          runEpochDigest: processPlan.runEpochDigest,
+          recoveryJournalRelativePath: processPlan.recoveryJournalRelativePath,
+        });
+        publicationMayHaveStarted = true;
+        await input.onDispatchPrepared(dispatchPreparation);
+        resources = await ports.resources.materialize(preparation, input.launchInput);
         const active = await startNativeRun({
           ports,
           lifecycle: input,
@@ -1193,6 +1219,10 @@ export function createLifecycleNativeExecution(ports: NativeExecutionPorts): Lif
           progress,
         });
       } catch (error) {
+        if (!publicationMayHaveStarted) {
+          return await releaseUnspawnedProcessPlan(ports.process, processPlan, error);
+        }
+        if (!resources) throw error;
         return await recoverFailedExecution(failedExecutionRecovery({
           error,
           resourcePort: ports.resources,

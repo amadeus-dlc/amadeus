@@ -15,6 +15,7 @@ import {
   readFileSync,
   renameSync,
   rmSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -57,9 +58,43 @@ export type ContextualNativeProcessSession = NativeProcessSession & Readonly<{
   dispose(): Promise<void>;
 }>;
 
-export type ContextualNativeProcessPort = Omit<NativeProcessPort, "spawn"> & Readonly<{
-  plan(input: NativeProcessPlanInput): PlannedProcessRun;
+export type ContextualPlannedProcessRun = PlannedProcessRun & Readonly<{
+  runEpochDigest: string;
+}>;
+
+export type NativeProcessRecoveryTarget = Readonly<{
+  kind: "native-process-recovery";
+  schemaVersion: 1;
+  nativeRunId: string;
+  armDigest: string;
+  runEpochDigest: string;
+  processIdentityDigest: string | null;
+}>;
+
+export type NativeProcessRecoveryReceipt = Readonly<{
+  kind: "native-process-recovery-receipt";
+  schemaVersion: 1;
+  targetDigest: string;
+  nativeRunId: string;
+  armDigest: string;
+  runEpochDigest: string;
+  processIdentityDigest: string | null;
+  disposition: "unarmed" | "stopped";
+  receiptDigest: string;
+}>;
+
+export type NativeProcessRecoveryResult =
+  | Readonly<{
+      status: "unarmed" | "stopped";
+      receipt: NativeProcessRecoveryReceipt;
+    }>
+  | Readonly<{ status: "unknown" }>;
+
+export type ContextualNativeProcessPort = Omit<NativeProcessPort, "plan" | "spawn" | "releasePlan"> & Readonly<{
+  plan(input: NativeProcessPlanInput): ContextualPlannedProcessRun;
   spawn(input: Parameters<NativeProcessPort["spawn"]>[0]): Promise<ContextualNativeProcessSession>;
+  releasePlan(plan: ContextualPlannedProcessRun): Promise<void>;
+  recoverAttempt(target: NativeProcessRecoveryTarget): Promise<NativeProcessRecoveryResult>;
   recoveryObserver: NativeResourceRecoveryObserverPort;
   activeRecordCount(): number;
 }>;
@@ -78,6 +113,7 @@ type NativeRunIdentity = Readonly<{
   schemaVersion: 1;
   nativeRunId: string;
   armDigest: string;
+  runEpochDigest: string;
   armDeadline: string;
   process: ProcessIdentity;
 }>;
@@ -86,6 +122,7 @@ type ArmReceipt = Readonly<{
   schemaVersion: 1;
   nativeRunId: string;
   armDigest: string;
+  runEpochDigest: string;
   processIdentityDigest: string;
 }>;
 
@@ -103,6 +140,7 @@ type WrapperPlan = Readonly<{
   identityPath: string;
   armPath: string;
   armDigest: string;
+  runEpochDigest: string;
   armDeadline: string;
 }>;
 
@@ -136,12 +174,23 @@ type RunDirectoryMarker = Readonly<{
 type ProcessRecoveryJournal = Readonly<{
   schemaVersion: 1;
   nativeRunId: string;
+  armDigest: string;
+  runEpochDigest: string;
   owner: RunDirectoryOwner;
   state: NativeProcessLifecycleState;
   updatedAt: string;
   armDeadline?: string;
   processIdentityDigest?: string;
   terminal?: ProcessTerminal;
+}>;
+
+type NativeProcessSpawnClaim = Readonly<{
+  schemaVersion: 1;
+  nativeRunId: string;
+  armDigest: string;
+  runEpochDigest: string;
+  ownerDigest: string;
+  token: string;
 }>;
 
 type SerializedTransport =
@@ -198,6 +247,7 @@ function runDirectoryForPlan(plan: PlannedProcessRun): string {
   if (
     !plan.nativeRunId ||
     !plan.armDigest ||
+    !nonEmptyString(plan.runEpochDigest) ||
     plan.identityRelativePath !== `${runDirectory}/identity.json` ||
     plan.armRelativePath !== `${runDirectory}/arm.json` ||
     plan.recoveryJournalRelativePath !== `${runDirectory}/recovery.json`
@@ -237,6 +287,14 @@ function transitionLifecycle(
   >> = {},
 ): void {
   if (!expected.includes(record.lifecycle.state)) throw new Error(`NATIVE_PROCESS_STATE_${record.lifecycle.state.toUpperCase()}`);
+  if (!exactOwnedRunDirectory(record)) throw new Error("NATIVE_PROCESS_RUN_DIRECTORY_OWNERSHIP_MISMATCH");
+  const durable = readProcessRecoveryJournal(
+    record.recoveryJournalPath,
+    record.publicPlan.nativeRunId,
+  );
+  if (!durable || digestValue(durable) !== digestValue(record.lifecycle)) {
+    throw new Error("NATIVE_PROCESS_STATE_CONFLICT");
+  }
   record.lifecycle = Object.freeze({
     ...record.lifecycle,
     ...details,
@@ -248,6 +306,42 @@ function transitionLifecycle(
 
 function restoreSpawnedAfterArmFailure(record: PlannedRunRecord, now: () => Date): void {
   if (record.lifecycle.state === "arming") transitionLifecycle(record, ["arming"], "spawned", now);
+}
+
+function restorePlannedAfterSpawnFailure(
+  record: PlannedRunRecord,
+  claim: NativeProcessSpawnClaim,
+  now: () => Date,
+): void {
+  if (!exactOwnedRunDirectory(record)) {
+    throw new Error("NATIVE_PROCESS_RUN_DIRECTORY_OWNERSHIP_MISMATCH");
+  }
+  if (!spawnClaimMatchesRecord(record, claim)) {
+    throw new Error("NATIVE_PROCESS_SPAWN_CLAIM_MISMATCH");
+  }
+  const durable = readProcessRecoveryJournal(
+    record.recoveryJournalPath,
+    record.publicPlan.nativeRunId,
+  );
+  if (
+    record.lifecycle.state !== "spawned" ||
+    !durable ||
+    durable.state !== "spawned" ||
+    digestValue(durable) !== digestValue(record.lifecycle)
+  ) {
+    throw new Error("NATIVE_PROCESS_STATE_CONFLICT");
+  }
+  record.lifecycle = Object.freeze({
+    schemaVersion: 1,
+    nativeRunId: record.publicPlan.nativeRunId,
+    armDigest: record.publicPlan.armDigest,
+    runEpochDigest: record.lifecycle.runEpochDigest,
+    owner: record.owner,
+    state: "planned",
+    updatedAt: now().toISOString(),
+  });
+  atomicJson(record.recoveryJournalPath, record.lifecycle);
+  removeSpawnClaim(record, claim);
 }
 
 function directoryMatchesOwner(path: string, owner: RunDirectoryOwner): boolean {
@@ -371,6 +465,137 @@ function exactOwnedRunDirectory(record: PlannedRunRecord): boolean {
     markerMatchesOwner(record.ownerMarkerPath, record.publicPlan.nativeRunId, record.owner);
 }
 
+function spawnClaimPath(runDirectoryPath: string): string {
+  return join(runDirectoryPath, "spawn-claim.json");
+}
+
+function readSpawnClaim(path: string): NativeProcessSpawnClaim | null {
+  try {
+    const value: unknown = JSON.parse(readFileSync(path, "utf-8"));
+    if (
+      !hasExactKeys(value, [
+        "schemaVersion",
+        "nativeRunId",
+        "armDigest",
+        "runEpochDigest",
+        "ownerDigest",
+        "token",
+      ]) ||
+      value.schemaVersion !== 1 ||
+      ![
+        value.nativeRunId,
+        value.armDigest,
+        value.runEpochDigest,
+        value.ownerDigest,
+        value.token,
+      ].every(nonEmptyString)
+    ) return null;
+    return Object.freeze(value) as NativeProcessSpawnClaim;
+  } catch {
+    return null;
+  }
+}
+
+function spawnClaimMatchesRecord(
+  record: PlannedRunRecord,
+  claim: NativeProcessSpawnClaim,
+): boolean {
+  const durable = readSpawnClaim(spawnClaimPath(record.runDirectoryPath));
+  return durable !== null && digestValue(durable) === digestValue(claim) &&
+    claim.nativeRunId === record.publicPlan.nativeRunId &&
+    claim.armDigest === record.publicPlan.armDigest &&
+    claim.runEpochDigest === record.lifecycle.runEpochDigest &&
+    claim.ownerDigest === digestValue(record.owner);
+}
+
+function createSpawnClaim(record: PlannedRunRecord): NativeProcessSpawnClaim {
+  if (!exactOwnedRunDirectory(record)) {
+    throw new Error("NATIVE_PROCESS_RUN_DIRECTORY_OWNERSHIP_MISMATCH");
+  }
+  const claim = Object.freeze({
+    schemaVersion: 1 as const,
+    nativeRunId: record.publicPlan.nativeRunId,
+    armDigest: record.publicPlan.armDigest,
+    runEpochDigest: record.lifecycle.runEpochDigest,
+    ownerDigest: digestValue(record.owner),
+    token: crypto.randomUUID(),
+  });
+  let file: number;
+  try {
+    file = openSync(spawnClaimPath(record.runDirectoryPath), "wx", 0o600);
+  } catch {
+    throw new Error("NATIVE_PROCESS_SPAWN_CLAIMED");
+  }
+  try {
+    writeFileSync(file, `${JSON.stringify(claim)}\n`, "utf-8");
+    fsyncSync(file);
+  } finally {
+    closeSync(file);
+  }
+  const directory = openSync(record.runDirectoryPath, "r");
+  try {
+    fsyncSync(directory);
+  } finally {
+    closeSync(directory);
+  }
+  return claim;
+}
+
+function removeSpawnClaim(record: PlannedRunRecord, claim: NativeProcessSpawnClaim): void {
+  if (!exactOwnedRunDirectory(record) || !spawnClaimMatchesRecord(record, claim)) {
+    throw new Error("NATIVE_PROCESS_SPAWN_CLAIM_MISMATCH");
+  }
+  unlinkSync(spawnClaimPath(record.runDirectoryPath));
+  const directory = openSync(record.runDirectoryPath, "r");
+  try {
+    fsyncSync(directory);
+  } finally {
+    closeSync(directory);
+  }
+}
+
+function releaseUnadvancedSpawnClaim(
+  record: PlannedRunRecord,
+  claim: NativeProcessSpawnClaim,
+  plannedLifecycle: ProcessRecoveryJournal,
+): void {
+  if (!exactOwnedRunDirectory(record) || !spawnClaimMatchesRecord(record, claim)) {
+    throw new Error("NATIVE_PROCESS_SPAWN_CLAIM_MISMATCH");
+  }
+  const durable = readProcessRecoveryJournal(
+    record.recoveryJournalPath,
+    record.publicPlan.nativeRunId,
+  );
+  if (
+    plannedLifecycle.state !== "planned" ||
+    !durable ||
+    digestValue(durable) !== digestValue(plannedLifecycle)
+  ) {
+    throw new Error("NATIVE_PROCESS_STATE_CONFLICT");
+  }
+  record.lifecycle = plannedLifecycle;
+  removeSpawnClaim(record, claim);
+}
+
+function plannedProcessArtifactsAreAbsent(root: string, owned: OwnedRecoveryJournal): boolean {
+  const runDirectoryPath = resolve(root, owned.runDirectory);
+  return ![
+    resolve(runDirectoryPath, "identity.json"),
+    resolve(runDirectoryPath, "arm.json"),
+    resolve(runDirectoryPath, "arm.json.consumed"),
+    spawnClaimPath(runDirectoryPath),
+  ].some(existsSync);
+}
+
+function spawnClaimMatchesOwnedJournal(root: string, owned: OwnedRecoveryJournal): boolean {
+  const claim = readSpawnClaim(spawnClaimPath(resolve(root, owned.runDirectory)));
+  return claim !== null &&
+    claim.nativeRunId === owned.journal.nativeRunId &&
+    claim.armDigest === owned.journal.armDigest &&
+    claim.runEpochDigest === owned.journal.runEpochDigest &&
+    claim.ownerDigest === digestValue(owned.journal.owner);
+}
+
 function quarantineOwnedRunDirectory(record: PlannedRunRecord): void {
   const quarantine = quarantinePath(record.runDirectoryPath, record.publicPlan.nativeRunId);
   renameSync(record.runDirectoryPath, quarantine);
@@ -403,7 +628,7 @@ function failUnspawnedRun(
 }
 
 function processIdentity(value: unknown): value is ProcessIdentity {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  if (!hasExactKeys(value, ["platform", "pid", "processGroupId", "startTokenHash"])) return false;
   const identity = value as Partial<ProcessIdentity>;
   return (
     (identity.platform === "darwin" || identity.platform === "linux") &&
@@ -420,6 +645,10 @@ function runDirectoryOwner(value: unknown): value is RunDirectoryOwner {
   return isRecord(value) &&
     hasExactKeys(value, ["device", "inode", "userId", "markerDigest"]) &&
     [value.device, value.inode, value.userId, value.markerDigest].every(nonEmptyString);
+}
+
+function runEpochDigestFor(nativeRunId: string, owner: RunDirectoryOwner): string {
+  return digestValue({ schemaVersion: 1, nativeRunId, owner });
 }
 
 function recoveryOwnerIsValid(owner: NativeResourceRecoveryOwner): boolean {
@@ -471,10 +700,21 @@ function armDigestFor(input: Readonly<{
   });
 }
 
+function requireValidPlanInput(input: NativeProcessPlanInput): void {
+  if (
+    !input.nativeRunId ||
+    !input.context ||
+    !Number.isInteger(input.fencingToken) ||
+    input.fencingToken < 1
+  ) throw new Error("NATIVE_PROCESS_PLAN_INVALID");
+}
+
 function recoveryJournalKeysAreValid(value: Record<string, unknown>): boolean {
   return hasExactKeys(value, [
     "schemaVersion",
     "nativeRunId",
+    "armDigest",
+    "runEpochDigest",
     "owner",
     "state",
     "updatedAt",
@@ -490,6 +730,8 @@ function recoveryJournalCoreIsValid(
 ): boolean {
   return value.schemaVersion === 1 &&
     value.nativeRunId === nativeRunId &&
+    nonEmptyString(value.armDigest) &&
+    nonEmptyString(value.runEpochDigest) &&
     runDirectoryOwner(value.owner) &&
     ["planned", "spawned", "arming", "armed", "terminal", "disposed"].includes(String(value.state)) &&
     nonEmptyString(value.updatedAt) &&
@@ -505,9 +747,19 @@ function recoveryJournalOptionalFieldsAreValid(value: Record<string, unknown>): 
   return value.terminal === undefined || isRecord(value.terminal);
 }
 
-function recoveryJournalHasObservedIdentity(journal: ProcessRecoveryJournal): boolean {
-  if (!journal.armDeadline || !journal.processIdentityDigest) return false;
-  return !["terminal", "disposed"].includes(journal.state) || journal.terminal !== undefined;
+function recoveryJournalStateIsValid(journal: ProcessRecoveryJournal): boolean {
+  if (journal.state === "planned") {
+    return journal.armDeadline === undefined &&
+      journal.processIdentityDigest === undefined &&
+      journal.terminal === undefined;
+  }
+  if (!journal.armDeadline) return false;
+  if (journal.state === "spawned") return journal.terminal === undefined;
+  if (!journal.processIdentityDigest) return false;
+  if (journal.state === "arming" || journal.state === "armed") {
+    return journal.terminal === undefined;
+  }
+  return journal.terminal !== undefined;
 }
 
 function readProcessRecoveryJournal(
@@ -521,7 +773,7 @@ function readProcessRecoveryJournal(
     if (!recoveryJournalCoreIsValid(value, nativeRunId)) return null;
     if (!recoveryJournalOptionalFieldsAreValid(value)) return null;
     const journal = value as unknown as ProcessRecoveryJournal;
-    return recoveryJournalHasObservedIdentity(journal) ? Object.freeze(journal) : null;
+    return recoveryJournalStateIsValid(journal) ? Object.freeze(journal) : null;
   } catch {
     return null;
   }
@@ -546,6 +798,71 @@ function observeProcessGroup(processGroupId: number): "live" | "stopped" | "unkn
   }
 }
 
+type RecoveryGuardianState = "live" | "dead" | "reused" | "unknown";
+type RecoveryGroupState = "live" | "stopped" | "unknown";
+
+type ExactProcessRecoveryOperations = Readonly<{
+  observeGuardian(identity: ProcessIdentity): RecoveryGuardianState;
+  observeGroup(processGroupId: number): RecoveryGroupState;
+  signalExactGroup(identity: ProcessIdentity, signal: NodeJS.Signals): boolean;
+  pause(milliseconds: number): Promise<void>;
+}>;
+
+function observeRecoveryGuardian(identity: ProcessIdentity): RecoveryGuardianState {
+  try {
+    process.kill(identity.pid, 0);
+  } catch (error) {
+    return isRecord(error) && error.code === "ESRCH" ? "dead" : "unknown";
+  }
+  const observed = observeProcessIdentity(identity.pid, identity.platform);
+  if (observed.type !== "ok") return "unknown";
+  return sameProcess(identity, observed.value) ? "live" : "reused";
+}
+
+const productionExactProcessRecoveryOperations: ExactProcessRecoveryOperations = Object.freeze({
+  observeGuardian: observeRecoveryGuardian,
+  observeGroup: observeProcessGroup,
+  signalExactGroup: signalExactProcessGroup,
+  pause: delay,
+});
+
+function observeRecoveryProcessState(
+  guardian: ProcessIdentity,
+  operations: ExactProcessRecoveryOperations,
+): Readonly<{ guardian: RecoveryGuardianState; group: RecoveryGroupState }> {
+  return Object.freeze({
+    guardian: operations.observeGuardian(guardian),
+    group: operations.observeGroup(guardian.processGroupId),
+  });
+}
+
+function recoveryProcessStateIsStopped(
+  state: Readonly<{ guardian: RecoveryGuardianState; group: RecoveryGroupState }>,
+): boolean {
+  return state.guardian === "dead" && state.group === "stopped";
+}
+
+async function recoverExactNativeProcess(
+  guardian: ProcessIdentity,
+  graceMs: number,
+  operations: ExactProcessRecoveryOperations = productionExactProcessRecoveryOperations,
+): Promise<"stopped" | "unknown"> {
+  if (guardian.pid !== guardian.processGroupId) return "unknown";
+  const initial = observeRecoveryProcessState(guardian, operations);
+  if (recoveryProcessStateIsStopped(initial)) return "stopped";
+  if (initial.guardian !== "live" || initial.group !== "live") return "unknown";
+  if (!operations.signalExactGroup(guardian, "SIGTERM")) return "unknown";
+  await operations.pause(graceMs);
+  const afterTerm = observeRecoveryProcessState(guardian, operations);
+  if (recoveryProcessStateIsStopped(afterTerm)) return "stopped";
+  if (afterTerm.guardian !== "live" || afterTerm.group !== "live") return "unknown";
+  if (!operations.signalExactGroup(guardian, "SIGKILL")) return "unknown";
+  await operations.pause(graceMs);
+  return recoveryProcessStateIsStopped(observeRecoveryProcessState(guardian, operations))
+    ? "stopped"
+    : "unknown";
+}
+
 function aggregateProcessGroups(
   identities: readonly ProcessIdentity[],
 ): "live" | "stopped" | "unknown" {
@@ -561,18 +878,29 @@ type OwnedRecoveryJournal = Readonly<{
   journal: ProcessRecoveryJournal;
 }>;
 
+function loadOwnedNativeRunJournal(
+  root: string,
+  nativeRunId: string,
+): OwnedRecoveryJournal | null {
+  const runDirectory = `.amadeus-swarm-driver/native/${digestValue(nativeRunId).slice(0, 24)}`;
+  const runDirectoryPath = resolve(root, runDirectory);
+  const journal = readProcessRecoveryJournal(resolve(runDirectoryPath, "recovery.json"), nativeRunId);
+  if (!journal) return null;
+  if (!directoryMatchesOwner(runDirectoryPath, journal.owner)) return null;
+  if (!markerMatchesOwner(resolve(runDirectoryPath, "owner.json"), nativeRunId, journal.owner)) return null;
+  if (journal.runEpochDigest !== runEpochDigestFor(nativeRunId, journal.owner)) return null;
+  return Object.freeze({ runDirectory, journal });
+}
+
 function loadOwnedRecoveryJournal(
   root: string,
   owner: NativeResourceRecoveryOwner,
 ): OwnedRecoveryJournal | null {
-  const runDirectory = `.amadeus-swarm-driver/native/${digestValue(owner.nativeRunId).slice(0, 24)}`;
-  const runDirectoryPath = resolve(root, runDirectory);
-  const journal = readProcessRecoveryJournal(resolve(runDirectoryPath, "recovery.json"), owner.nativeRunId);
-  if (!journal) return null;
-  if (!directoryMatchesOwner(runDirectoryPath, journal.owner)) return null;
-  if (!markerMatchesOwner(resolve(runDirectoryPath, "owner.json"), owner.nativeRunId, journal.owner)) return null;
+  const owned = loadOwnedNativeRunJournal(root, owner.nativeRunId);
+  if (!owned) return null;
+  const { journal } = owned;
   if (journal.processIdentityDigest !== owner.processIdentityDigest) return null;
-  return Object.freeze({ runDirectory, journal });
+  return owned;
 }
 
 function recoveryTerminalMatches(
@@ -596,6 +924,7 @@ function loadRecoveryIdentity(
     identityRelativePath: `${owned.runDirectory}/identity.json`,
     armRelativePath: `${owned.runDirectory}/arm.json`,
     armDigest: armDigestFor(owner),
+    runEpochDigest: owned.journal.runEpochDigest,
     recoveryJournalRelativePath: `${owned.runDirectory}/recovery.json`,
   });
   const identity = readRunIdentity(
@@ -605,6 +934,42 @@ function loadRecoveryIdentity(
   );
   if (!identity || digestValue(identity.process) !== owner.processIdentityDigest) return null;
   if (!recoveryTerminalMatches(owned.journal, owner, identity.process)) return null;
+  return identity.process;
+}
+
+function loadAttemptRecoveryIdentity(
+  root: string,
+  owned: OwnedRecoveryJournal,
+  target: NativeProcessRecoveryTarget,
+): ProcessIdentity | null {
+  if (!owned.journal.armDeadline) return null;
+  const plan: PlannedProcessRun = Object.freeze({
+    nativeRunId: target.nativeRunId,
+    identityRelativePath: `${owned.runDirectory}/identity.json`,
+    armRelativePath: `${owned.runDirectory}/arm.json`,
+    armDigest: target.armDigest,
+    runEpochDigest: target.runEpochDigest,
+    recoveryJournalRelativePath: `${owned.runDirectory}/recovery.json`,
+  });
+  const identity = readRunIdentity(
+    resolve(root, plan.identityRelativePath),
+    plan,
+    owned.journal.armDeadline,
+  );
+  if (!identity) return null;
+  const processIdentityDigest = digestValue(identity.process);
+  if (
+    owned.journal.processIdentityDigest !== undefined &&
+    processIdentityDigest !== owned.journal.processIdentityDigest
+  ) return null;
+  if (
+    owned.journal.terminal &&
+    (
+      owned.journal.terminal.nativeRunId !== target.nativeRunId ||
+      owned.journal.terminal.processIdentityDigest !== processIdentityDigest ||
+      owned.journal.terminal.processGroupId !== identity.process.processGroupId
+    )
+  ) return null;
   return identity.process;
 }
 
@@ -652,23 +1017,126 @@ function createRecoveryObserver(
   });
 }
 
+function processRecoveryTargetIsValid(value: NativeProcessRecoveryTarget): boolean {
+  return hasExactKeys(value, [
+    "kind",
+    "schemaVersion",
+    "nativeRunId",
+    "armDigest",
+    "runEpochDigest",
+    "processIdentityDigest",
+  ]) &&
+    value.kind === "native-process-recovery" &&
+    value.schemaVersion === 1 &&
+    nonEmptyString(value.nativeRunId) &&
+    nonEmptyString(value.armDigest) &&
+    nonEmptyString(value.runEpochDigest) &&
+    (value.processIdentityDigest === null || nonEmptyString(value.processIdentityDigest));
+}
+
+function processRecoveryReceipt(
+  target: NativeProcessRecoveryTarget,
+  disposition: NativeProcessRecoveryReceipt["disposition"],
+  processIdentityDigest: string | null,
+): NativeProcessRecoveryReceipt {
+  const semantic = Object.freeze({
+    kind: "native-process-recovery-receipt" as const,
+    schemaVersion: 1 as const,
+    targetDigest: digestValue(target),
+    nativeRunId: target.nativeRunId,
+    armDigest: target.armDigest,
+    runEpochDigest: target.runEpochDigest,
+    processIdentityDigest,
+    disposition,
+  });
+  return Object.freeze({ ...semantic, receiptDigest: digestValue(semantic) });
+}
+
+function unknownProcessRecovery(): NativeProcessRecoveryResult {
+  return Object.freeze({ status: "unknown" });
+}
+
+function recoverPlannedNativeProcess(
+  root: string,
+  owned: OwnedRecoveryJournal,
+  target: NativeProcessRecoveryTarget,
+): NativeProcessRecoveryResult {
+  if (target.processIdentityDigest !== null) return unknownProcessRecovery();
+  if (!plannedProcessArtifactsAreAbsent(root, owned)) return unknownProcessRecovery();
+  const receipt = processRecoveryReceipt(target, "unarmed", null);
+  return Object.freeze({ status: "unarmed", receipt });
+}
+
+async function recoverStartedNativeProcess(
+  root: string,
+  owned: OwnedRecoveryJournal,
+  target: NativeProcessRecoveryTarget,
+  graceMs: number,
+  operations: ExactProcessRecoveryOperations = productionExactProcessRecoveryOperations,
+): Promise<NativeProcessRecoveryResult> {
+  if (!spawnClaimMatchesOwnedJournal(root, owned)) return unknownProcessRecovery();
+  const identity = loadAttemptRecoveryIdentity(root, owned, target);
+  if (!identity) return unknownProcessRecovery();
+  const processIdentityDigest = digestValue(identity);
+  if (
+    target.processIdentityDigest !== null &&
+    target.processIdentityDigest !== processIdentityDigest
+  ) return unknownProcessRecovery();
+  if (await recoverExactNativeProcess(identity, graceMs, operations) !== "stopped") {
+    return unknownProcessRecovery();
+  }
+  const receipt = processRecoveryReceipt(target, "stopped", processIdentityDigest);
+  return Object.freeze({ status: "stopped", receipt });
+}
+
 function readRunIdentity(path: string, plan: PlannedProcessRun, armDeadline: string): NativeRunIdentity | null {
   if (!existsSync(path)) return null;
   try {
-    const value = JSON.parse(readFileSync(path, "utf-8")) as Partial<NativeRunIdentity>;
+    const value: unknown = JSON.parse(readFileSync(path, "utf-8"));
     if (
+      !hasExactKeys(value, [
+        "schemaVersion",
+        "nativeRunId",
+        "armDigest",
+        "runEpochDigest",
+        "armDeadline",
+        "process",
+      ]) ||
       value.schemaVersion !== 1 ||
       value.nativeRunId !== plan.nativeRunId ||
       value.armDigest !== plan.armDigest ||
+      value.runEpochDigest !== plan.runEpochDigest ||
       value.armDeadline !== armDeadline ||
       !processIdentity(value.process)
     ) {
       return null;
     }
-    return Object.freeze(value as NativeRunIdentity);
+    return Object.freeze(value as unknown as NativeRunIdentity);
   } catch {
     return null;
   }
+}
+
+function wrapperPlanIsValid(value: unknown): value is WrapperPlan {
+  return hasExactKeys(value, [
+    "schemaVersion",
+    "nativeRunId",
+    "identityPath",
+    "armPath",
+    "armDigest",
+    "runEpochDigest",
+    "armDeadline",
+  ]) &&
+    value.schemaVersion === 1 &&
+    [
+      value.nativeRunId,
+      value.identityPath,
+      value.armPath,
+      value.armDigest,
+      value.runEpochDigest,
+    ].every(nonEmptyString) &&
+    nonEmptyString(value.armDeadline) &&
+    !Number.isNaN(Date.parse(value.armDeadline));
 }
 
 function serializeTransport(transport: CoordinatorTransport): SerializedTransport {
@@ -1000,6 +1468,7 @@ function sessionFor(
           schemaVersion: 1,
           nativeRunId: plan.nativeRunId,
           armDigest: plan.armDigest,
+          runEpochDigest: wrapperPlan.runEpochDigest,
           processIdentityDigest,
         });
         atomicJson(wrapperPlan.armPath, receipt);
@@ -1075,6 +1544,103 @@ function sessionFor(
   });
 }
 
+function recordFromOwnedJournal(
+  rootDir: string,
+  plan: PlannedProcessRun,
+  owned: OwnedRecoveryJournal,
+): PlannedRunRecord {
+  const runDirectoryPath = resolve(rootDir, owned.runDirectory);
+  return {
+    publicPlan: plan,
+    wrapperPlan: Object.freeze({
+      schemaVersion: 1,
+      nativeRunId: plan.nativeRunId,
+      identityPath: resolve(rootDir, plan.identityRelativePath),
+      armPath: resolve(rootDir, plan.armRelativePath),
+      armDigest: plan.armDigest,
+      runEpochDigest: owned.journal.runEpochDigest,
+    }),
+    runDirectoryPath,
+    ownerMarkerPath: resolve(runDirectoryPath, "owner.json"),
+    owner: owned.journal.owner,
+    recoveryJournalPath: resolve(rootDir, plan.recoveryJournalRelativePath),
+    lifecycle: owned.journal,
+  };
+}
+
+function plannedRecordForSpawn(
+  rootDir: string,
+  records: Map<string, PlannedRunRecord>,
+  plan: PlannedProcessRun,
+): PlannedRunRecord {
+  runDirectoryForPlan(plan);
+  const record = records.get(plan.nativeRunId);
+  if (!record || digestValue(record.publicPlan) !== digestValue(plan)) {
+    throw new Error("NATIVE_PROCESS_PLAN_MISSING");
+  }
+  if (record.lifecycle.state !== "planned") throw new Error("NATIVE_PROCESS_STATE_SPAWNED");
+  const durable = loadOwnedNativeRunJournal(resolve(rootDir), plan.nativeRunId);
+  if (!durable) throw new Error("NATIVE_PROCESS_RUN_DIRECTORY_OWNERSHIP_MISMATCH");
+  if (
+    durable.journal.armDigest !== plan.armDigest ||
+    durable.journal.runEpochDigest !== plan.runEpochDigest ||
+    digestValue(durable.journal.owner) !== digestValue(record.owner)
+  ) throw new Error("NATIVE_PROCESS_PLAN_CONFLICT");
+  if (durable.journal.state !== "planned") throw new Error("NATIVE_PROCESS_STATE_SPAWNED");
+  const current = recordFromOwnedJournal(rootDir, plan, durable);
+  records.set(plan.nativeRunId, current);
+  return current;
+}
+
+function claimSpawnTransition(
+  record: PlannedRunRecord,
+  armDeadline: string,
+  now: () => Date,
+): NativeProcessSpawnClaim {
+  const plannedLifecycle = record.lifecycle;
+  const claim = createSpawnClaim(record);
+  try {
+    transitionLifecycle(record, ["planned"], "spawned", now, { armDeadline });
+  } catch (error) {
+    try {
+      releaseUnadvancedSpawnClaim(record, claim, plannedLifecycle);
+    } catch (rollbackError) {
+      throw new AggregateError([error, rollbackError], "NATIVE_PROCESS_SPAWN_ROLLBACK_FAILED");
+    }
+    throw error;
+  }
+  return claim;
+}
+
+function releasablePlannedRecord(
+  rootDir: string,
+  plan: PlannedProcessRun,
+): PlannedRunRecord | null {
+  const root = resolve(rootDir);
+  const runDirectory = runDirectoryForPlan(plan);
+  const durable = loadOwnedNativeRunJournal(root, plan.nativeRunId);
+  if (!durable) {
+    if (!existsSync(resolve(root, runDirectory))) return null;
+    throw new Error("NATIVE_PROCESS_RUN_DIRECTORY_OWNERSHIP_MISMATCH");
+  }
+  if (
+    durable.journal.armDigest !== plan.armDigest ||
+    durable.journal.runEpochDigest !== plan.runEpochDigest
+  ) {
+    throw new Error("NATIVE_PROCESS_PLAN_CONFLICT");
+  }
+  if (
+    durable.journal.state !== "planned" ||
+    !plannedProcessArtifactsAreAbsent(root, durable)
+  ) throw new Error("NATIVE_PROCESS_PLAN_ACTIVE");
+  const record = recordFromOwnedJournal(rootDir, plan, durable);
+  if (digestValue(record.publicPlan) !== digestValue(plan)) {
+    throw new Error("NATIVE_PROCESS_PLAN_CONFLICT");
+  }
+  if (record.lifecycle.state !== "planned") throw new Error("NATIVE_PROCESS_PLAN_ACTIVE");
+  return record;
+}
+
 export function createNativeProcessPort(config: NativeProcessPortConfig): ContextualNativeProcessPort {
   const platform = config.platform ?? process.platform;
   const now = config.now ?? (() => new Date());
@@ -1083,17 +1649,10 @@ export function createNativeProcessPort(config: NativeProcessPortConfig): Contex
   const records = new Map<string, PlannedRunRecord>();
 
   const port: ContextualNativeProcessPort = Object.freeze({
-    plan(baseInput): PlannedProcessRun {
+    plan(baseInput): ContextualPlannedProcessRun {
       requireSupportedPlatform(platform);
       const input = baseInput as NativeProcessPlanInput;
-      if (
-        !input.nativeRunId ||
-        !input.context ||
-        !Number.isInteger(input.fencingToken) ||
-        input.fencingToken < 1
-      ) {
-        throw new Error("NATIVE_PROCESS_PLAN_INVALID");
-      }
+      requireValidPlanInput(input);
       const runDirectory = `.amadeus-swarm-driver/native/${digestValue(input.nativeRunId).slice(0, 24)}`;
       const identityRelativePath = `${runDirectory}/identity.json`;
       const armRelativePath = `${runDirectory}/arm.json`;
@@ -1107,56 +1666,79 @@ export function createNativeProcessPort(config: NativeProcessPortConfig): Contex
         waveDigest: input.context.waveDigest,
         fencingToken: input.fencingToken,
       });
-      const publicPlan: PlannedProcessRun = Object.freeze({
+      const publicPlan = (runEpochDigest: string): ContextualPlannedProcessRun => Object.freeze({
         nativeRunId: input.nativeRunId,
         identityRelativePath,
         armRelativePath,
         armDigest,
+        runEpochDigest,
         recoveryJournalRelativePath: `${runDirectory}/recovery.json`,
       });
-      return publicPlan;
+      const existing = records.get(input.nativeRunId);
+      if (existing) {
+        const expected = publicPlan(existing.lifecycle.runEpochDigest);
+        if (digestValue(existing.publicPlan) !== digestValue(expected)) {
+          throw new Error("NATIVE_PROCESS_PLAN_CONFLICT");
+        }
+        return existing.publicPlan as ContextualPlannedProcessRun;
+      }
+      const durable = loadOwnedNativeRunJournal(resolve(config.rootDir), input.nativeRunId);
+      if (durable) {
+        if (durable.journal.state !== "planned" || durable.journal.armDigest !== armDigest) {
+          throw new Error("NATIVE_PROCESS_PLAN_CONFLICT");
+        }
+        const recoveredPlan = publicPlan(durable.journal.runEpochDigest);
+        records.set(input.nativeRunId, recordFromOwnedJournal(config.rootDir, recoveredPlan, durable));
+        return recoveredPlan;
+      }
+      const runDirectoryPath = resolve(config.rootDir, runDirectory);
+      const ownership = createOwnedRunDirectory(runDirectoryPath, input.nativeRunId);
+      const runEpochDigest = runEpochDigestFor(input.nativeRunId, ownership.owner);
+      const planned = publicPlan(runEpochDigest);
+      const record: PlannedRunRecord = {
+        publicPlan: planned,
+        wrapperPlan: Object.freeze({
+          schemaVersion: 1,
+          nativeRunId: planned.nativeRunId,
+          identityPath: resolve(config.rootDir, planned.identityRelativePath),
+          armPath: resolve(config.rootDir, planned.armRelativePath),
+          armDigest: planned.armDigest,
+          runEpochDigest,
+        }),
+        runDirectoryPath,
+        ownerMarkerPath: ownership.markerPath,
+        owner: ownership.owner,
+        recoveryJournalPath: resolve(config.rootDir, planned.recoveryJournalRelativePath),
+        lifecycle: Object.freeze({
+          schemaVersion: 1,
+          nativeRunId: planned.nativeRunId,
+          armDigest: planned.armDigest,
+          runEpochDigest,
+          owner: ownership.owner,
+          state: "planned",
+          updatedAt: now().toISOString(),
+        }),
+      };
+      try {
+        atomicJson(record.recoveryJournalPath, record.lifecycle);
+        records.set(input.nativeRunId, record);
+      } catch (error) {
+        failUnspawnedRun(records, record, error);
+      }
+      return planned;
     },
 
     async spawn({ plan, launch }) {
       requireSupportedPlatform(platform);
-      const runDirectory = runDirectoryForPlan(plan);
-      if (records.has(plan.nativeRunId)) throw new Error("NATIVE_PROCESS_STATE_SPAWNED");
-      const wrapperPlanBase: WrapperPlanBase = Object.freeze({
-        schemaVersion: 1,
-        nativeRunId: plan.nativeRunId,
-        identityPath: resolve(config.rootDir, plan.identityRelativePath),
-        armPath: resolve(config.rootDir, plan.armRelativePath),
-        armDigest: plan.armDigest,
-      });
-      const runDirectoryPath = resolve(config.rootDir, runDirectory);
+      const record = plannedRecordForSpawn(config.rootDir, records, plan);
       const launchLine = `${JSON.stringify(launchMessage(launch))}\n`;
-      const plannedAt = now().toISOString();
-      let record: PlannedRunRecord | undefined;
+      const wrapperPlan: WrapperPlan = Object.freeze({
+        ...record.wrapperPlan,
+        armDeadline: new Date(now().getTime() + armTimeoutMs).toISOString(),
+      });
+      const claim = claimSpawnTransition(record, wrapperPlan.armDeadline, now);
       let wrapper: GuardianProcess | undefined;
       try {
-        const ownership = createOwnedRunDirectory(runDirectoryPath, plan.nativeRunId);
-        record = {
-          publicPlan: plan,
-          wrapperPlan: wrapperPlanBase,
-          runDirectoryPath,
-          ownerMarkerPath: ownership.markerPath,
-          owner: ownership.owner,
-          recoveryJournalPath: resolve(config.rootDir, plan.recoveryJournalRelativePath),
-          lifecycle: Object.freeze({
-            schemaVersion: 1,
-            nativeRunId: plan.nativeRunId,
-            owner: ownership.owner,
-            state: "planned",
-            updatedAt: plannedAt,
-          }),
-        };
-        atomicJson(record.recoveryJournalPath, record.lifecycle);
-        records.set(plan.nativeRunId, record);
-        const wrapperPlan: WrapperPlan = Object.freeze({
-          ...wrapperPlanBase,
-          armDeadline: new Date(now().getTime() + armTimeoutMs).toISOString(),
-        });
-        transitionLifecycle(record, ["planned"], "spawned", now, { armDeadline: wrapperPlan.armDeadline });
         if (!exactOwnedRunDirectory(record)) throw new Error("NATIVE_PROCESS_RUN_DIRECTORY_OWNERSHIP_MISMATCH");
         mkdirSync(dirname(wrapperPlan.identityPath), { recursive: true });
         const encodedPlan = Buffer.from(JSON.stringify(wrapperPlan), "utf-8").toString("base64");
@@ -1179,9 +1761,39 @@ export function createNativeProcessPort(config: NativeProcessPortConfig): Contex
           () => records.delete(plan.nativeRunId),
         );
       } catch (error) {
-        if (wrapper || !record) throw error;
-        failUnspawnedRun(records, record, error);
+        if (wrapper) throw error;
+        try {
+          restorePlannedAfterSpawnFailure(record, claim, now);
+        } catch (rollbackError) {
+          throw new AggregateError([error, rollbackError], "NATIVE_PROCESS_SPAWN_ROLLBACK_FAILED");
+        }
+        throw error;
       }
+    },
+
+    async releasePlan(plan) {
+      const record = releasablePlannedRecord(config.rootDir, plan);
+      if (!record) {
+        records.delete(plan.nativeRunId);
+        return;
+      }
+      rollbackUnspawnedRun(record);
+      records.delete(plan.nativeRunId);
+    },
+
+    async recoverAttempt(target) {
+      requireSupportedPlatform(platform);
+      if (!processRecoveryTargetIsValid(target)) return unknownProcessRecovery();
+      const owned = loadOwnedNativeRunJournal(resolve(config.rootDir), target.nativeRunId);
+      if (
+        !owned ||
+        owned.journal.armDigest !== target.armDigest ||
+        owned.journal.runEpochDigest !== target.runEpochDigest
+      ) return unknownProcessRecovery();
+      if (owned.journal.state === "planned") {
+        return recoverPlannedNativeProcess(resolve(config.rootDir), owned, target);
+      }
+      return await recoverStartedNativeProcess(resolve(config.rootDir), owned, target, graceMs);
     },
 
     recoveryObserver: createRecoveryObserver(config.rootDir),
@@ -1200,11 +1812,19 @@ async function waitForArm(plan: WrapperPlan, identity: NativeRunIdentity): Promi
     if (existsSync(plan.armPath)) {
       try {
         renameSync(plan.armPath, consumedPath);
-        const receipt = JSON.parse(readFileSync(consumedPath, "utf-8")) as Partial<ArmReceipt>;
+        const receipt: unknown = JSON.parse(readFileSync(consumedPath, "utf-8"));
         return (
+          hasExactKeys(receipt, [
+            "schemaVersion",
+            "nativeRunId",
+            "armDigest",
+            "runEpochDigest",
+            "processIdentityDigest",
+          ]) &&
           receipt.schemaVersion === 1 &&
           receipt.nativeRunId === plan.nativeRunId &&
           receipt.armDigest === plan.armDigest &&
+          receipt.runEpochDigest === plan.runEpochDigest &&
           receipt.processIdentityDigest === digestValue(identity.process)
         );
       } catch {
@@ -1463,7 +2083,9 @@ async function wrapperMain(
   runtime.onTerm(() => {});
   let plan: WrapperPlan;
   try {
-    plan = JSON.parse(Buffer.from(encodedPlan, "base64").toString("utf-8")) as WrapperPlan;
+    const value: unknown = JSON.parse(Buffer.from(encodedPlan, "base64").toString("utf-8"));
+    if (!wrapperPlanIsValid(value)) throw new Error("invalid wrapper plan");
+    plan = value;
   } catch {
     runtime.exit(125);
     return;
@@ -1477,6 +2099,7 @@ async function wrapperMain(
     schemaVersion: 1,
     nativeRunId: plan.nativeRunId,
     armDigest: plan.armDigest,
+    runEpochDigest: plan.runEpochDigest,
     armDeadline: plan.armDeadline,
     process: observed.value,
   });
@@ -1513,9 +2136,17 @@ export const nativeProcessTestSeam = Object.freeze({
   quarantinePath,
   rollbackOwnedDirectoryInitialization,
   createOwnedRunDirectory,
+  createSpawnClaim,
+  removeSpawnClaim,
+  releaseUnadvancedSpawnClaim,
+  transitionLifecycle,
+  restorePlannedAfterSpawnFailure,
+  claimSpawnTransition,
   readProcessRecoveryJournal,
   recoveryObservationFromStates,
   readRunIdentity,
+  recoverExactNativeProcess,
+  recoverStartedNativeProcess,
   signalExactProcessGroup,
   waitUntilGone,
   terminatePinnedGuardianGroup,

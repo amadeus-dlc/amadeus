@@ -112,6 +112,7 @@ function nativeCheckpoint(captureKind: "fixed-provider-path" | "event-bound-prov
     identityRelativePath: ".amadeus-native/identity.json",
     armRelativePath: ".amadeus-native/arm.json",
     armDigest: "arm",
+    runEpochDigest: "run-epoch",
     recoveryJournalRelativePath: ".amadeus-native/recovery.json",
   };
   const preparedNativeRun = {

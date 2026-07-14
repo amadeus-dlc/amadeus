@@ -32,13 +32,16 @@ import { observeProcessIdentity } from "../../packages/framework/core/tools/amad
 import { digestValue } from "../../packages/framework/core/tools/amadeus-swarm-canonical.ts";
 import type {
   AdapterResourcePreparation,
+  DriverAdapter,
   DriverPlan,
   LaunchInput,
 } from "../../packages/framework/core/tools/amadeus-swarm-driver-adapter-contract.ts";
 import { ProbeResult } from "../../packages/framework/core/tools/amadeus-swarm-driver-contract.ts";
-import type {
-  NativeProcessOutputFrame,
-  NativeResourceRecoveryOwner,
+import {
+  createLifecycleNativeExecution,
+  type NativeDispatchPreparation,
+  type NativeProcessOutputFrame,
+  type NativeResourceRecoveryOwner,
 } from "../../packages/framework/core/tools/amadeus-swarm-native-execution.ts";
 
 const roots: string[] = [];
@@ -133,6 +136,41 @@ function recoveryJournal(dir: string, relativePath: string): Record<string, unkn
   return JSON.parse(readFileSync(join(dir, relativePath), "utf-8")) as Record<string, unknown>;
 }
 
+type TestProcessPlan = ReturnType<ReturnType<typeof createNativeProcessPort>["plan"]>;
+type TestClaimRecord = Parameters<typeof nativeProcessTestSeam.createSpawnClaim>[0];
+
+function claimRecord(dir: string, plan: TestProcessPlan): TestClaimRecord {
+  const journal = recoveryJournal(dir, plan.recoveryJournalRelativePath);
+  const runDirectoryPath = join(dir, dirname(plan.recoveryJournalRelativePath));
+  return {
+    publicPlan: plan,
+    wrapperPlan: Object.freeze({
+      schemaVersion: 1,
+      nativeRunId: plan.nativeRunId,
+      identityPath: join(dir, plan.identityRelativePath),
+      armPath: join(dir, plan.armRelativePath),
+      armDigest: plan.armDigest,
+      runEpochDigest: plan.runEpochDigest,
+    }),
+    runDirectoryPath,
+    ownerMarkerPath: join(runDirectoryPath, "owner.json"),
+    owner: journal.owner,
+    recoveryJournalPath: join(dir, plan.recoveryJournalRelativePath),
+    lifecycle: journal,
+  } as TestClaimRecord;
+}
+
+function dormantLaunch(dir: string) {
+  return {
+    executable: process.execPath,
+    args: ["-e", "await new Promise(() => {})"],
+    cwd: dir,
+    env: { PATH: process.env.PATH ?? "" },
+    transport: { kind: "stdio-json" as const, stdin: "closed" as const, output: "jsonl" as const },
+    timeoutMs: 5_000,
+  };
+}
+
 function recoveryOwner(
   nativeRunId: string,
   fencingToken: number,
@@ -174,6 +212,966 @@ async function waitForStoppedProcessGroup(processGroupId: number): Promise<void>
 }
 
 describe("t240 provider-neutral native process", () => {
+  test("recovers a durable planned process as explicitly unarmed", async () => {
+    const dir = root();
+    const port = createNativeProcessPort({
+      rootDir: dir,
+      output: { publish: () => {}, close: () => {}, fail: () => {} },
+    });
+    const plan = port.plan({
+      nativeRunId: "run-planned-recovery",
+      evidenceDir: dir,
+      context,
+      fencingToken: 3,
+    });
+    const target = Object.freeze({
+      kind: "native-process-recovery" as const,
+      schemaVersion: 1 as const,
+      nativeRunId: plan.nativeRunId,
+      armDigest: plan.armDigest,
+      runEpochDigest: plan.runEpochDigest,
+      processIdentityDigest: null,
+    });
+    const receipt = Object.freeze({
+      kind: "native-process-recovery-receipt" as const,
+      schemaVersion: 1 as const,
+      targetDigest: digestValue(target),
+      nativeRunId: plan.nativeRunId,
+      armDigest: plan.armDigest,
+      runEpochDigest: plan.runEpochDigest,
+      processIdentityDigest: null,
+      disposition: "unarmed" as const,
+    });
+
+    expect(recoveryJournal(dir, plan.recoveryJournalRelativePath)).toMatchObject({
+      schemaVersion: 1,
+      nativeRunId: plan.nativeRunId,
+      armDigest: plan.armDigest,
+      runEpochDigest: plan.runEpochDigest,
+      state: "planned",
+    });
+    expect(port.activeRecordCount()).toBe(1);
+    await expect(port.recoverAttempt(target)).resolves.toEqual({
+      status: "unarmed",
+      receipt: Object.freeze({ ...receipt, receiptDigest: digestValue(receipt) }),
+    });
+
+    await port.releasePlan(plan);
+    await port.releasePlan(plan);
+    expect(existsSync(join(dir, dirname(plan.recoveryJournalRelativePath)))).toBeFalse();
+    expect(port.activeRecordCount()).toBe(0);
+
+    const replacement = port.plan({
+      nativeRunId: plan.nativeRunId,
+      evidenceDir: dir,
+      context,
+      fencingToken: 3,
+    });
+    expect(replacement.runEpochDigest).not.toBe(plan.runEpochDigest);
+    await expect(port.recoverAttempt(target)).resolves.toEqual({ status: "unknown" });
+    const restarted = createNativeProcessPort({
+      rootDir: dir,
+      output: { publish: () => {}, close: () => {}, fail: () => {} },
+    });
+    await expect(restarted.releasePlan(plan)).rejects.toThrow("NATIVE_PROCESS_PLAN_CONFLICT");
+    expect(existsSync(join(dir, dirname(replacement.recoveryJournalRelativePath)))).toBeTrue();
+    await restarted.releasePlan(replacement);
+  });
+
+  test("keeps a published dispatch plan recoverable when resource materialization fails", async () => {
+    const dir = root();
+    const processPort = createNativeProcessPort({
+      rootDir: dir,
+      output: { publish: () => {}, close: () => {}, fail: () => {} },
+    });
+    const preparation = resourcePreparation(Object.freeze([]));
+    const adapter: DriverAdapter = Object.freeze({
+      driver: "codex-ultra",
+      provider: "codex",
+      supports: (harness) => harness === "codex",
+      probe: async () => probe.value,
+      prepareResources: () => preparation,
+      buildExecution: () => { throw new Error("must not build"); },
+      resolveCaptureBinding: () => Object.freeze({ kind: "not-binding" as const }),
+      openEvidenceSession: () => { throw new Error("must not open evidence"); },
+      observeControl: async function* () {},
+    });
+    const execution = createLifecycleNativeExecution({
+      resources: Object.freeze({
+        materialize: async () => { throw new Error("materialize failed"); },
+        bindRecoveryOwner: async () => {},
+        verifyForArm: async () => {},
+        cleanup: async () => {},
+      }),
+      capture: Object.freeze({
+        start: async () => { throw new Error("must not capture"); },
+      }),
+      process: processPort,
+    });
+    let published: NativeDispatchPreparation | undefined;
+
+    await expect(execution.execute({
+      adapter,
+      launchInput: launchInput(dir, "run-materialize-failure-recovery"),
+      context,
+      fencingToken: 5,
+      onDispatchPrepared: async (value) => { published = value; },
+      onResourcesPrepared: async () => {},
+      onReadyToArm: async () => {},
+      onCaptureBound: async () => {},
+    })).rejects.toThrow("materialize failed");
+    if (!published) throw new Error("dispatch preparation was not published");
+    const target = Object.freeze({
+      kind: "native-process-recovery" as const,
+      schemaVersion: 1 as const,
+      nativeRunId: published.nativeRunId,
+      armDigest: published.armDigest,
+      runEpochDigest: published.runEpochDigest,
+      processIdentityDigest: null,
+    });
+
+    expect(recoveryJournal(dir, published.recoveryJournalRelativePath)).toMatchObject({
+      state: "planned",
+      runEpochDigest: published.runEpochDigest,
+    });
+    await expect(processPort.recoverAttempt(target)).resolves.toMatchObject({ status: "unarmed" });
+    await processPort.releasePlan({
+      nativeRunId: published.nativeRunId,
+      identityRelativePath: published.identityRelativePath,
+      armRelativePath: published.armRelativePath,
+      armDigest: published.armDigest,
+      runEpochDigest: published.runEpochDigest,
+      recoveryJournalRelativePath: published.recoveryJournalRelativePath,
+    });
+  });
+
+  test("does not release a plan after another port advances its durable journal", async () => {
+    const dir = root();
+    const portA = createNativeProcessPort({
+      rootDir: dir,
+      output: { publish: () => {}, close: () => {}, fail: () => {} },
+      terminationGraceMs: 50,
+      wrapperExecutable: "\0",
+    });
+    const plan = portA.plan({
+      nativeRunId: "run-cross-port-release-fence",
+      evidenceDir: dir,
+      context,
+      fencingToken: 4,
+    });
+    const portB = createNativeProcessPort({
+      rootDir: dir,
+      output: { publish: () => {}, close: () => {}, fail: () => {} },
+      terminationGraceMs: 50,
+    });
+    expect(portB.plan({
+      nativeRunId: plan.nativeRunId,
+      evidenceDir: dir,
+      context,
+      fencingToken: 4,
+    })).toEqual(plan);
+    const session = await portB.spawn({
+      plan,
+      launch: {
+        executable: process.execPath,
+        args: ["-e", "await new Promise(() => {})"],
+        cwd: dir,
+        env: { PATH: process.env.PATH ?? "" },
+        transport: { kind: "stdio-json", stdin: "closed", output: "jsonl" },
+        timeoutMs: 5_000,
+      },
+    });
+    const runDirectory = join(dir, dirname(plan.recoveryJournalRelativePath));
+
+    await expect(portA.releasePlan(plan)).rejects.toThrow("NATIVE_PROCESS_PLAN_ACTIVE");
+    expect(recoveryJournal(dir, plan.recoveryJournalRelativePath)).toMatchObject({ state: "spawned" });
+    expect(existsSync(runDirectory)).toBeTrue();
+    await expect(portA.spawn({
+      plan,
+      launch: {
+        executable: process.execPath,
+        args: ["-e", "process.exit(0)"],
+        cwd: dir,
+        env: { PATH: process.env.PATH ?? "" },
+        transport: { kind: "stdio-json", stdin: "closed", output: "jsonl" },
+        timeoutMs: 1_000,
+      },
+    })).rejects.toThrow("NATIVE_PROCESS_STATE_SPAWNED");
+    expect(recoveryJournal(dir, plan.recoveryJournalRelativePath)).toMatchObject({ state: "spawned" });
+
+    await session.terminateAndWait("cross-port-release-test");
+    await session.dispose();
+  }, 10_000);
+
+  test("rejects a stale second port after the first advances the durable plan", async () => {
+    const dir = root();
+    const output = { publish: () => {}, close: () => {}, fail: () => {} };
+    const portA = createNativeProcessPort({ rootDir: dir, output, terminationGraceMs: 50 });
+    const plan = portA.plan({
+      nativeRunId: "run-cross-port-spawn-claim",
+      evidenceDir: dir,
+      context,
+      fencingToken: 14,
+    });
+    const portB = createNativeProcessPort({ rootDir: dir, output, terminationGraceMs: 50 });
+    expect(portB.plan({
+      nativeRunId: plan.nativeRunId,
+      evidenceDir: dir,
+      context,
+      fencingToken: 14,
+    })).toEqual(plan);
+    const spawnInput = {
+      plan,
+      launch: {
+        executable: process.execPath,
+        args: ["-e", "await new Promise(() => {})"],
+        cwd: dir,
+        env: { PATH: process.env.PATH ?? "" },
+        transport: { kind: "stdio-json" as const, stdin: "closed" as const, output: "jsonl" as const },
+        timeoutMs: 5_000,
+      },
+    };
+
+    const results = await Promise.allSettled([
+      portA.spawn(spawnInput),
+      portB.spawn(spawnInput),
+    ]);
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+    const winner = results.find((result) => result.status === "fulfilled");
+    if (winner?.status !== "fulfilled") throw new Error("expected one cross-port spawn winner");
+    const journal = recoveryJournal(dir, plan.recoveryJournalRelativePath);
+    expect(journal).toMatchObject({ state: "spawned", runEpochDigest: plan.runEpochDigest });
+    expect(JSON.parse(readFileSync(
+      join(dir, dirname(plan.recoveryJournalRelativePath), "spawn-claim.json"),
+      "utf-8",
+    ))).toMatchObject({
+      schemaVersion: 1,
+      nativeRunId: plan.nativeRunId,
+      armDigest: plan.armDigest,
+      runEpochDigest: plan.runEpochDigest,
+      ownerDigest: digestValue(journal.owner),
+      token: expect.any(String),
+    });
+
+    await winner.value.terminateAndWait("cross-port-spawn-claim-test");
+    await winner.value.dispose();
+  }, 10_000);
+
+  test("creates one immutable exclusive claim for independently loaded planned records", async () => {
+    const dir = root();
+    const port = createNativeProcessPort({
+      rootDir: dir,
+      output: { publish: () => {}, close: () => {}, fail: () => {} },
+    });
+    const plan = port.plan({
+      nativeRunId: "run-exclusive-spawn-claim",
+      evidenceDir: dir,
+      context,
+      fencingToken: 15,
+    });
+    const runDirectoryPath = join(dir, dirname(plan.recoveryJournalRelativePath));
+    const journal = recoveryJournal(dir, plan.recoveryJournalRelativePath);
+    type ClaimRecord = Parameters<typeof nativeProcessTestSeam.createSpawnClaim>[0];
+    const independentlyLoadedRecord = (): ClaimRecord => ({
+      publicPlan: plan,
+      wrapperPlan: Object.freeze({
+        schemaVersion: 1,
+        nativeRunId: plan.nativeRunId,
+        identityPath: join(dir, plan.identityRelativePath),
+        armPath: join(dir, plan.armRelativePath),
+        armDigest: plan.armDigest,
+        runEpochDigest: plan.runEpochDigest,
+      }),
+      runDirectoryPath,
+      ownerMarkerPath: join(runDirectoryPath, "owner.json"),
+      owner: journal.owner,
+      recoveryJournalPath: join(dir, plan.recoveryJournalRelativePath),
+      lifecycle: journal,
+    }) as ClaimRecord;
+    const recordA = independentlyLoadedRecord();
+    const recordB = independentlyLoadedRecord();
+
+    const winnerClaim = nativeProcessTestSeam.createSpawnClaim(recordA);
+    const claimPath = join(runDirectoryPath, "spawn-claim.json");
+    const winnerBytes = readFileSync(claimPath, "utf-8");
+    expect(winnerClaim).toMatchObject({
+      nativeRunId: plan.nativeRunId,
+      armDigest: plan.armDigest,
+      runEpochDigest: plan.runEpochDigest,
+      ownerDigest: digestValue(journal.owner),
+    });
+    expect(() => nativeProcessTestSeam.createSpawnClaim(recordB))
+      .toThrow("NATIVE_PROCESS_SPAWN_CLAIMED");
+    expect(readFileSync(claimPath, "utf-8")).toBe(winnerBytes);
+    expect(recoveryJournal(dir, plan.recoveryJournalRelativePath)).toMatchObject({
+      state: "planned",
+      runEpochDigest: plan.runEpochDigest,
+      owner: journal.owner,
+    });
+
+    unlinkSync(claimPath);
+    await port.releasePlan(plan);
+  });
+
+  test("releases an exclusive claim when lifecycle transition fails before publication", async () => {
+    const dir = root();
+    let nowCalls = 0;
+    const port = createNativeProcessPort({
+      rootDir: dir,
+      output: { publish: () => {}, close: () => {}, fail: () => {} },
+      now: () => {
+        nowCalls += 1;
+        if (nowCalls === 3) {
+          return {
+            toISOString: () => { throw new Error("transition clock failed"); },
+          } as unknown as Date;
+        }
+        return new Date();
+      },
+    });
+    const plan = port.plan({
+      nativeRunId: "run-unadvanced-claim-release",
+      evidenceDir: dir,
+      context,
+      fencingToken: 16,
+    });
+    const runDirectory = join(dir, dirname(plan.recoveryJournalRelativePath));
+
+    await expect(port.spawn({ plan, launch: dormantLaunch(dir) }))
+      .rejects.toThrow("transition clock failed");
+    expect(recoveryJournal(dir, plan.recoveryJournalRelativePath)).toMatchObject({
+      state: "planned",
+      runEpochDigest: plan.runEpochDigest,
+    });
+    expect(existsSync(join(runDirectory, "spawn-claim.json"))).toBeFalse();
+    await port.releasePlan(plan);
+  });
+
+  test("fails closed for missing and conflicting durable plans", async () => {
+    const dir = root();
+    const output = { publish: () => {}, close: () => {}, fail: () => {} };
+    const port = createNativeProcessPort({ rootDir: dir, output });
+    const planInput = {
+      nativeRunId: "run-plan-conflict-coverage",
+      evidenceDir: dir,
+      context,
+      fencingToken: 21,
+    };
+    const plan = port.plan(planInput);
+    const unadopted = createNativeProcessPort({ rootDir: dir, output });
+
+    await expect(unadopted.spawn({ plan, launch: dormantLaunch(dir) }))
+      .rejects.toThrow("NATIVE_PROCESS_PLAN_MISSING");
+    expect(() => port.plan({ ...planInput, fencingToken: 22 }))
+      .toThrow("NATIVE_PROCESS_PLAN_CONFLICT");
+    expect(() => unadopted.plan({ ...planInput, fencingToken: 22 }))
+      .toThrow("NATIVE_PROCESS_PLAN_CONFLICT");
+
+    const journalPath = join(dir, plan.recoveryJournalRelativePath);
+    const plannedJournal = readFileSync(journalPath, "utf-8");
+    const conflictingJournal = JSON.parse(plannedJournal) as Record<string, unknown>;
+    conflictingJournal.armDigest = "conflicting-durable-arm";
+    writeFileSync(journalPath, `${JSON.stringify(conflictingJournal)}\n`, "utf-8");
+    await expect(port.spawn({ plan, launch: dormantLaunch(dir) }))
+      .rejects.toThrow("NATIVE_PROCESS_PLAN_CONFLICT");
+    writeFileSync(journalPath, plannedJournal, "utf-8");
+    await port.releasePlan(plan);
+  });
+
+  test("fails closed across lifecycle and claim validation seams", async () => {
+    const dir = root();
+    const port = createNativeProcessPort({
+      rootDir: dir,
+      output: { publish: () => {}, close: () => {}, fail: () => {} },
+    });
+    const plan = port.plan({
+      nativeRunId: "run-lifecycle-claim-validation",
+      evidenceDir: dir,
+      context,
+      fencingToken: 24,
+    });
+    const record = claimRecord(dir, plan);
+    const journalPath = join(dir, plan.recoveryJournalRelativePath);
+    const plannedJournal = readFileSync(journalPath, "utf-8");
+
+    writeFileSync(journalPath, "{}\n", "utf-8");
+    expect(() => nativeProcessTestSeam.transitionLifecycle(
+      record,
+      ["planned"],
+      "spawned",
+      () => new Date(),
+    )).toThrow("NATIVE_PROCESS_STATE_CONFLICT");
+    writeFileSync(journalPath, plannedJournal, "utf-8");
+
+    const runDirectory = record.runDirectoryPath;
+    const ownedBackup = `${runDirectory}-owned`;
+    renameSync(runDirectory, ownedBackup);
+    mkdirSync(runDirectory);
+    expect(() => nativeProcessTestSeam.createSpawnClaim(record))
+      .toThrow("NATIVE_PROCESS_RUN_DIRECTORY_OWNERSHIP_MISMATCH");
+    rmSync(runDirectory, { recursive: true });
+    renameSync(ownedBackup, runDirectory);
+
+    const claim = nativeProcessTestSeam.createSpawnClaim(record);
+    const claimPath = join(runDirectory, "spawn-claim.json");
+    const claimBytes = readFileSync(claimPath, "utf-8");
+    writeFileSync(claimPath, `${JSON.stringify({ ...claim, token: "foreign" })}\n`, "utf-8");
+    expect(() => nativeProcessTestSeam.removeSpawnClaim(record, claim))
+      .toThrow("NATIVE_PROCESS_SPAWN_CLAIM_MISMATCH");
+    expect(() => nativeProcessTestSeam.releaseUnadvancedSpawnClaim(record, claim, record.lifecycle))
+      .toThrow("NATIVE_PROCESS_SPAWN_CLAIM_MISMATCH");
+    expect(() => nativeProcessTestSeam.restorePlannedAfterSpawnFailure(record, claim, () => new Date()))
+      .toThrow("NATIVE_PROCESS_SPAWN_CLAIM_MISMATCH");
+    writeFileSync(claimPath, claimBytes, "utf-8");
+
+    expect(() => nativeProcessTestSeam.restorePlannedAfterSpawnFailure(record, claim, () => new Date()))
+      .toThrow("NATIVE_PROCESS_STATE_CONFLICT");
+    expect(() => nativeProcessTestSeam.releaseUnadvancedSpawnClaim(
+      record,
+      claim,
+      { ...record.lifecycle, state: "spawned" },
+    )).toThrow("NATIVE_PROCESS_STATE_CONFLICT");
+    nativeProcessTestSeam.removeSpawnClaim(record, claim);
+    await port.releasePlan(plan);
+  });
+
+  test("preserves an exclusive claim when transition rollback loses ownership", async () => {
+    const dir = root();
+    const port = createNativeProcessPort({
+      rootDir: dir,
+      output: { publish: () => {}, close: () => {}, fail: () => {} },
+    });
+    const plan = port.plan({
+      nativeRunId: "run-claim-transition-rollback-conflict",
+      evidenceDir: dir,
+      context,
+      fencingToken: 25,
+    });
+    const record = claimRecord(dir, plan);
+    const ownedBackup = `${record.runDirectoryPath}-owned`;
+
+    let failure: unknown;
+    try {
+      nativeProcessTestSeam.claimSpawnTransition(
+        record,
+        new Date(Date.now() + 1_000).toISOString(),
+        () => {
+          renameSync(record.runDirectoryPath, ownedBackup);
+          mkdirSync(record.runDirectoryPath);
+          throw new Error("transition clock failed after ownership replacement");
+        },
+      );
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(failure).toBeInstanceOf(AggregateError);
+    expect((failure as Error).message).toBe("NATIVE_PROCESS_SPAWN_ROLLBACK_FAILED");
+    expect(existsSync(join(ownedBackup, "spawn-claim.json"))).toBeTrue();
+  });
+
+  test("retains a started process when exact stopping cannot be proved", async () => {
+    const dir = root();
+    const port = createNativeProcessPort({
+      rootDir: dir,
+      output: { publish: () => {}, close: () => {}, fail: () => {} },
+      terminationGraceMs: 50,
+    });
+    const plan = port.plan({
+      nativeRunId: "run-unproved-started-recovery",
+      evidenceDir: dir,
+      context,
+      fencingToken: 26,
+    });
+    const session = await port.spawn({ plan, launch: dormantLaunch(dir) });
+    const identity = await session.observeIdentity();
+    const target = {
+      kind: "native-process-recovery" as const,
+      schemaVersion: 1 as const,
+      nativeRunId: plan.nativeRunId,
+      armDigest: plan.armDigest,
+      runEpochDigest: plan.runEpochDigest,
+      processIdentityDigest: identity.processIdentityDigest,
+    };
+    const owned = {
+      runDirectory: dirname(plan.recoveryJournalRelativePath),
+      journal: recoveryJournal(dir, plan.recoveryJournalRelativePath),
+    } as Parameters<typeof nativeProcessTestSeam.recoverStartedNativeProcess>[1];
+
+    try {
+      await expect(nativeProcessTestSeam.recoverStartedNativeProcess(dir, owned, target, 1, {
+        observeGuardian: () => "live",
+        observeGroup: () => "live",
+        signalExactGroup: () => false,
+        pause: async () => {},
+      })).resolves.toEqual({ status: "unknown" });
+    } finally {
+      await session.terminateAndWait("unproved-recovery-cleanup");
+      await session.dispose();
+    }
+  }, 10_000);
+
+  test("fails closed when initial recovery journal persistence loses ownership", () => {
+    const dir = root();
+    const nativeRunId = "run-initial-journal-persistence-failure";
+    const runDirectory = join(
+      dir,
+      `.amadeus-swarm-driver/native/${digestValue(nativeRunId).slice(0, 24)}`,
+    );
+    const ownedBackup = `${runDirectory}-owned`;
+    const port = createNativeProcessPort({
+      rootDir: dir,
+      output: { publish: () => {}, close: () => {}, fail: () => {} },
+      now: () => {
+        renameSync(runDirectory, ownedBackup);
+        writeFileSync(runDirectory, "foreign", "utf-8");
+        return new Date();
+      },
+    });
+
+    expect(() => port.plan({
+      nativeRunId,
+      evidenceDir: dir,
+      context,
+      fencingToken: 27,
+    })).toThrow("NATIVE_PROCESS_SPAWN_ROLLBACK_FAILED");
+    expect(readFileSync(runDirectory, "utf-8")).toBe("foreign");
+    expect(existsSync(join(ownedBackup, "owner.json"))).toBeTrue();
+  });
+
+  test("fails closed for foreign and unstable release plans", async () => {
+    const dir = root();
+    const port = createNativeProcessPort({
+      rootDir: dir,
+      output: { publish: () => {}, close: () => {}, fail: () => {} },
+    });
+    const plan = port.plan({
+      nativeRunId: "run-release-conflict-coverage",
+      evidenceDir: dir,
+      context,
+      fencingToken: 23,
+    });
+    const runDirectory = join(dir, dirname(plan.recoveryJournalRelativePath));
+    const ownedBackup = `${runDirectory}-owned`;
+    renameSync(runDirectory, ownedBackup);
+    mkdirSync(runDirectory);
+    writeFileSync(join(runDirectory, "foreign"), "preserve", "utf-8");
+    await expect(port.releasePlan(plan))
+      .rejects.toThrow("NATIVE_PROCESS_RUN_DIRECTORY_OWNERSHIP_MISMATCH");
+    expect(readFileSync(join(runDirectory, "foreign"), "utf-8")).toBe("preserve");
+    rmSync(runDirectory, { recursive: true });
+    renameSync(ownedBackup, runDirectory);
+
+    let unstableValue = 0;
+    const unstablePlan = { ...plan };
+    Object.defineProperty(unstablePlan, "unstable", {
+      enumerable: true,
+      get: () => { unstableValue += 1; return unstableValue; },
+    });
+    await expect(port.releasePlan(unstablePlan))
+      .rejects.toThrow("NATIVE_PROCESS_PLAN_CONFLICT");
+    await port.releasePlan(plan);
+  });
+
+  test("stops only an exact live guardian group and proves the whole group stopped", async () => {
+    const guardian = Object.freeze({
+      platform: "darwin" as const,
+      pid: 701,
+      processGroupId: 701,
+      startTokenHash: "guardian-701",
+    });
+    const cases = [
+      {
+        name: "TERM stops the exact group",
+        observations: [["live", "live"], ["dead", "stopped"]] as const,
+        expected: "stopped",
+        signals: ["SIGTERM"],
+      },
+      {
+        name: "KILL stops the exact group after grace",
+        observations: [["live", "live"], ["live", "live"], ["dead", "stopped"]] as const,
+        expected: "stopped",
+        signals: ["SIGTERM", "SIGKILL"],
+      },
+      {
+        name: "an already stopped group is proved without signaling",
+        observations: [["dead", "stopped"]] as const,
+        expected: "stopped",
+        signals: [],
+      },
+      {
+        name: "a reused PID is not treated as stopped",
+        observations: [["reused", "stopped"]] as const,
+        expected: "unknown",
+        signals: [],
+      },
+      {
+        name: "a headless live group is retained",
+        observations: [["dead", "live"]] as const,
+        expected: "unknown",
+        signals: [],
+      },
+      {
+        name: "EPERM or an unknown observation is retained",
+        observations: [["unknown", "unknown"]] as const,
+        expected: "unknown",
+        signals: [],
+      },
+      {
+        name: "a group that outlives its guardian after TERM is retained",
+        observations: [["live", "live"], ["dead", "live"]] as const,
+        expected: "unknown",
+        signals: ["SIGTERM"],
+      },
+      {
+        name: "a guardian identity reused after TERM is retained without KILL",
+        observations: [["live", "live"], ["reused", "live"]] as const,
+        expected: "unknown",
+        signals: ["SIGTERM"],
+      },
+      {
+        name: "TERM is not sent when the exact identity recheck fails",
+        observations: [["live", "live"]] as const,
+        expected: "unknown",
+        signals: [],
+        failedSignal: "SIGTERM" as const,
+      },
+      {
+        name: "KILL is not sent when the exact identity recheck fails",
+        observations: [["live", "live"], ["live", "live"]] as const,
+        expected: "unknown",
+        signals: ["SIGTERM"],
+        failedSignal: "SIGKILL" as const,
+      },
+      {
+        name: "KILL without a stopped proof remains unknown",
+        observations: [["live", "live"], ["live", "live"], ["dead", "unknown"]] as const,
+        expected: "unknown",
+        signals: ["SIGTERM", "SIGKILL"],
+      },
+    ] as const;
+
+    for (const fixture of cases) {
+      const pending = [...fixture.observations];
+      let current: (typeof pending)[number] | undefined;
+      const signals: NodeJS.Signals[] = [];
+      const result = await nativeProcessTestSeam.recoverExactNativeProcess(guardian, 1, {
+        observeGuardian: () => {
+          current = pending.shift();
+          if (!current) throw new Error(`missing guardian observation for ${fixture.name}`);
+          return current[0];
+        },
+        observeGroup: () => {
+          if (!current) throw new Error(`missing group observation for ${fixture.name}`);
+          return current[1];
+        },
+        signalExactGroup: (_identity, signal) => {
+          if ("failedSignal" in fixture && fixture.failedSignal === signal) return false;
+          signals.push(signal);
+          return true;
+        },
+        pause: async () => {},
+      });
+      expect(result, fixture.name).toBe(fixture.expected);
+      expect(signals, fixture.name).toEqual([...fixture.signals]);
+      expect(pending, fixture.name).toHaveLength(0);
+    }
+
+    await expect(nativeProcessTestSeam.recoverExactNativeProcess(
+      { ...guardian, processGroupId: guardian.pid + 1 },
+      1,
+      {
+        observeGuardian: () => "live",
+        observeGroup: () => "live",
+        signalExactGroup: () => true,
+        pause: async () => {},
+      },
+    )).resolves.toBe("unknown");
+  });
+
+  test("recovers an orphaned exact guardian without disposing its durable run", async () => {
+    const dir = root();
+    const ownerPort = createNativeProcessPort({
+      rootDir: dir,
+      output: { publish: () => {}, close: () => {}, fail: () => {} },
+      armTimeoutMs: 2_000,
+      terminationGraceMs: 50,
+    });
+    const plan = ownerPort.plan({
+      nativeRunId: "run-orphaned-guardian-recovery",
+      evidenceDir: dir,
+      context,
+      fencingToken: 13,
+    });
+    const session = await ownerPort.spawn({
+      plan,
+      launch: {
+        executable: process.execPath,
+        args: ["-e", "await new Promise(() => {})"],
+        cwd: dir,
+        env: { PATH: process.env.PATH ?? "" },
+        transport: { kind: "stdio-json", stdin: "closed", output: "jsonl" },
+        timeoutMs: 5_000,
+      },
+    });
+    const identity = await session.observeIdentity();
+    await session.arm();
+    const target = Object.freeze({
+      kind: "native-process-recovery" as const,
+      schemaVersion: 1 as const,
+      nativeRunId: plan.nativeRunId,
+      armDigest: plan.armDigest,
+      runEpochDigest: plan.runEpochDigest,
+      processIdentityDigest: null,
+    });
+    const receipt = Object.freeze({
+      kind: "native-process-recovery-receipt" as const,
+      schemaVersion: 1 as const,
+      targetDigest: digestValue(target),
+      nativeRunId: plan.nativeRunId,
+      armDigest: plan.armDigest,
+      runEpochDigest: plan.runEpochDigest,
+      processIdentityDigest: identity.processIdentityDigest,
+      disposition: "stopped" as const,
+    });
+    const journalPath = join(dir, plan.recoveryJournalRelativePath);
+    const crashedAfterIdentity = JSON.parse(readFileSync(journalPath, "utf-8")) as Record<string, unknown>;
+    crashedAfterIdentity.state = "spawned";
+    delete crashedAfterIdentity.processIdentityDigest;
+    const journalBeforeRecovery = `${JSON.stringify(crashedAfterIdentity)}\n`;
+    writeFileSync(journalPath, journalBeforeRecovery, "utf-8");
+    const recoveryPort = createNativeProcessPort({
+      rootDir: dir,
+      output: { publish: () => {}, close: () => {}, fail: () => {} },
+      terminationGraceMs: 50,
+    });
+
+    await expect(recoveryPort.recoverAttempt(target)).resolves.toEqual({
+      status: "stopped",
+      receipt: Object.freeze({ ...receipt, receiptDigest: digestValue(receipt) }),
+    });
+    const exactTarget = Object.freeze({
+      ...target,
+      processIdentityDigest: identity.processIdentityDigest,
+    });
+    const exactReceipt = Object.freeze({
+      ...receipt,
+      targetDigest: digestValue(exactTarget),
+    });
+    await expect(recoveryPort.recoverAttempt(exactTarget)).resolves.toEqual({
+      status: "stopped",
+      receipt: Object.freeze({ ...exactReceipt, receiptDigest: digestValue(exactReceipt) }),
+    });
+    expect(readFileSync(journalPath, "utf-8")).toBe(journalBeforeRecovery);
+    expect(existsSync(dirname(journalPath))).toBeTrue();
+  }, 10_000);
+
+  test("recovers an exact guardian after its controller is killed", async () => {
+    const dir = root();
+    const readyPath = join(dir, "controller-crash-ready.json");
+    const sourceUrl = new URL(
+      "../../packages/framework/core/tools/amadeus-swarm-native-process.ts",
+      import.meta.url,
+    ).href;
+    const controllerScript = `
+      import { createNativeProcessPort } from ${JSON.stringify(sourceUrl)};
+      const context = ${JSON.stringify(context)};
+      const rootDir = ${JSON.stringify(dir)};
+      const port = createNativeProcessPort({
+        rootDir,
+        output: { publish: () => {}, close: () => {}, fail: () => {} },
+        armTimeoutMs: 2_000,
+      });
+      const plan = port.plan({
+        nativeRunId: "run-controller-crash-recovery",
+        evidenceDir: rootDir,
+        context,
+        fencingToken: 19,
+      });
+      const session = await port.spawn({
+        plan,
+        launch: {
+          executable: process.execPath,
+          args: ["-e", "await new Promise(() => {})"],
+          cwd: rootDir,
+          env: { PATH: process.env.PATH ?? "" },
+          transport: { kind: "stdio-json", stdin: "closed", output: "jsonl" },
+          timeoutMs: 10_000,
+        },
+      });
+      const identity = await session.observeIdentity();
+      await session.arm();
+      const durableIdentity = JSON.parse(await Bun.file(rootDir + "/" + plan.identityRelativePath).text());
+      await Bun.write(${JSON.stringify(readyPath)}, JSON.stringify({
+        target: {
+          kind: "native-process-recovery",
+          schemaVersion: 1,
+          nativeRunId: plan.nativeRunId,
+          armDigest: plan.armDigest,
+          runEpochDigest: plan.runEpochDigest,
+          processIdentityDigest: identity.processIdentityDigest,
+        },
+        processGroupId: durableIdentity.process.processGroupId,
+        recoveryJournalRelativePath: plan.recoveryJournalRelativePath,
+      }));
+      await new Promise(() => {});
+    `;
+    const controller = Bun.spawn([process.execPath, "-e", controllerScript], {
+      cwd: dir,
+      env: process.env,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    let processGroupId: number | undefined;
+    try {
+      await waitForFile(readyPath);
+      const ready = JSON.parse(readFileSync(readyPath, "utf-8")) as {
+        target: Parameters<ReturnType<typeof createNativeProcessPort>["recoverAttempt"]>[0];
+        processGroupId: number;
+        recoveryJournalRelativePath: string;
+      };
+      processGroupId = ready.processGroupId;
+      controller.kill("SIGKILL");
+      await controller.exited;
+
+      const recoveryPort = createNativeProcessPort({
+        rootDir: dir,
+        output: { publish: () => {}, close: () => {}, fail: () => {} },
+        terminationGraceMs: 50,
+      });
+      await expect(recoveryPort.recoverAttempt(ready.target)).resolves.toMatchObject({
+        status: "stopped",
+        receipt: { processIdentityDigest: ready.target.processIdentityDigest },
+      });
+      expect(processGroupIsStopped(ready.processGroupId)).toBeTrue();
+      expect(existsSync(join(dir, ready.recoveryJournalRelativePath))).toBeTrue();
+    } finally {
+      controller.kill("SIGKILL");
+      if (processGroupId !== undefined && !processGroupIsStopped(processGroupId)) {
+        try { process.kill(-processGroupId, "SIGKILL"); } catch {}
+        await waitForStoppedProcessGroup(processGroupId);
+      }
+    }
+  }, 10_000);
+
+  test("keeps absent, corrupt, mismatched, and identity-less recovery state unknown", async () => {
+    const dir = root();
+    const port = createNativeProcessPort({
+      rootDir: dir,
+      output: { publish: () => {}, close: () => {}, fail: () => {} },
+    });
+    const plan = port.plan({
+      nativeRunId: "run-closed-recovery-target",
+      evidenceDir: dir,
+      context,
+      fencingToken: 17,
+    });
+    const target = Object.freeze({
+      kind: "native-process-recovery" as const,
+      schemaVersion: 1 as const,
+      nativeRunId: plan.nativeRunId,
+      armDigest: plan.armDigest,
+      runEpochDigest: plan.runEpochDigest,
+      processIdentityDigest: null,
+    });
+    const journalPath = join(dir, plan.recoveryJournalRelativePath);
+    const ownerPath = join(dirname(journalPath), "owner.json");
+    const plannedJournal = readFileSync(journalPath, "utf-8");
+    const ownerMarker = readFileSync(ownerPath, "utf-8");
+
+    const unknownTargets = [
+      { ...target, nativeRunId: "missing-native-run" },
+      { ...target, armDigest: "wrong-arm" },
+      { ...target, runEpochDigest: "wrong-epoch" },
+      { ...target, processIdentityDigest: "unexpected-process" },
+      { ...target, extra: "not-closed" },
+    ];
+    for (const unknownTarget of unknownTargets) {
+      await expect(port.recoverAttempt(unknownTarget)).resolves.toEqual({ status: "unknown" });
+    }
+
+    writeFileSync(journalPath, "{}\n", "utf-8");
+    await expect(port.recoverAttempt(target)).resolves.toEqual({ status: "unknown" });
+    writeFileSync(journalPath, plannedJournal, "utf-8");
+
+    writeFileSync(ownerPath, "{}\n", "utf-8");
+    await expect(port.recoverAttempt(target)).resolves.toEqual({ status: "unknown" });
+    writeFileSync(ownerPath, ownerMarker, "utf-8");
+
+    const runDirectory = dirname(journalPath);
+    const ownedBackup = `${runDirectory}-owned`;
+    renameSync(runDirectory, ownedBackup);
+    mkdirSync(runDirectory);
+    writeFileSync(ownerPath, `${JSON.stringify({
+      schemaVersion: 1,
+      nativeRunId: plan.nativeRunId,
+      token: "foreign-owner-token",
+    })}\n`, "utf-8");
+    writeFileSync(journalPath, plannedJournal, "utf-8");
+    writeFileSync(join(runDirectory, "foreign"), "preserve", "utf-8");
+    await expect(port.recoverAttempt(target)).resolves.toEqual({ status: "unknown" });
+    expect(readFileSync(join(runDirectory, "foreign"), "utf-8")).toBe("preserve");
+    rmSync(runDirectory, { recursive: true });
+    renameSync(ownedBackup, runDirectory);
+
+    const identityPath = join(dir, plan.identityRelativePath);
+    const armPath = join(dir, plan.armRelativePath);
+    writeFileSync(identityPath, "{}\n", "utf-8");
+    await expect(port.recoverAttempt(target)).resolves.toEqual({ status: "unknown" });
+    unlinkSync(identityPath);
+    writeFileSync(armPath, "{}\n", "utf-8");
+    await expect(port.recoverAttempt(target)).resolves.toEqual({ status: "unknown" });
+    unlinkSync(armPath);
+    writeFileSync(`${armPath}.consumed`, "{}\n", "utf-8");
+    await expect(port.recoverAttempt(target)).resolves.toEqual({ status: "unknown" });
+    unlinkSync(`${armPath}.consumed`);
+
+    const spawnClaimPath = join(runDirectory, "spawn-claim.json");
+    const journalOwner = (JSON.parse(plannedJournal) as { owner: unknown }).owner;
+    writeFileSync(spawnClaimPath, `${JSON.stringify({
+      schemaVersion: 1,
+      nativeRunId: plan.nativeRunId,
+      armDigest: plan.armDigest,
+      runEpochDigest: plan.runEpochDigest,
+      ownerDigest: digestValue(journalOwner),
+      token: "controller-crashed-before-journal-transition",
+    })}\n`, "utf-8");
+    await expect(port.recoverAttempt(target)).resolves.toEqual({ status: "unknown" });
+    await expect(port.releasePlan(plan)).rejects.toThrow("NATIVE_PROCESS_PLAN_ACTIVE");
+    expect(existsSync(runDirectory)).toBeTrue();
+    unlinkSync(spawnClaimPath);
+
+    const spawnedWithoutIdentity = {
+      ...JSON.parse(plannedJournal) as Record<string, unknown>,
+      state: "spawned",
+      armDeadline: new Date(Date.now() + 5_000).toISOString(),
+    };
+    writeFileSync(journalPath, `${JSON.stringify(spawnedWithoutIdentity)}\n`, "utf-8");
+    await expect(port.recoverAttempt(target)).resolves.toEqual({ status: "unknown" });
+    const observed = observeProcessIdentity(process.pid);
+    if (observed.type !== "ok") throw new Error("test process identity unavailable");
+    const wrongEpochIdentity = {
+      schemaVersion: 1,
+      nativeRunId: plan.nativeRunId,
+      armDigest: plan.armDigest,
+      runEpochDigest: "wrong-epoch",
+      armDeadline: spawnedWithoutIdentity.armDeadline,
+      process: observed.value,
+    };
+    writeFileSync(identityPath, `${JSON.stringify(wrongEpochIdentity)}\n`, "utf-8");
+    expect(nativeProcessTestSeam.readRunIdentity(
+      identityPath,
+      plan,
+      String(spawnedWithoutIdentity.armDeadline),
+    )).toBeNull();
+    await expect(port.recoverAttempt(target)).resolves.toEqual({ status: "unknown" });
+    unlinkSync(identityPath);
+
+    writeFileSync(journalPath, plannedJournal, "utf-8");
+    await port.releasePlan(plan);
+  });
+
   test("cleans owned resources only after the exact observed process stops", async () => {
     const dir = realpathSync(root());
     const journalRoot = join(dir, "resource-journals");
@@ -676,12 +1674,24 @@ describe("t240 provider-neutral native process", () => {
       context,
       fencingToken: 6,
     };
+    const conflictingRunDirectory = join(
+      dir,
+      `.amadeus-swarm-driver/native/${digestValue("run-lifecycle-conflict").slice(0, 24)}`,
+    );
+    mkdirSync(conflictingRunDirectory, { recursive: true });
+    const prePlanForeign = join(conflictingRunDirectory, "foreign");
+    writeFileSync(prePlanForeign, "preserve", "utf-8");
+    expect(() => port.plan({ ...planInput, nativeRunId: "run-lifecycle-conflict" }))
+      .toThrow("NATIVE_PROCESS_RUN_DIRECTORY_EXISTS");
+    expect(readFileSync(prePlanForeign, "utf-8")).toBe("preserve");
+    rmSync(conflictingRunDirectory, { recursive: true });
+
     const plan = port.plan(planInput);
     const runDirectory = join(dir, dirname(plan.recoveryJournalRelativePath));
     expect(plan).not.toHaveProperty("armDeadline");
     expect(port.plan(planInput)).toEqual(plan);
-    expect(existsSync(runDirectory)).toBeFalse();
-    expect(port.activeRecordCount()).toBe(0);
+    expect(existsSync(runDirectory)).toBeTrue();
+    expect(port.activeRecordCount()).toBe(1);
 
     currentTime = new Date();
     const spawnInput = {
@@ -695,13 +1705,6 @@ describe("t240 provider-neutral native process", () => {
         timeoutMs: 2_000,
       },
     };
-    mkdirSync(runDirectory, { recursive: true });
-    const preSpawnForeign = join(runDirectory, "foreign");
-    writeFileSync(preSpawnForeign, "preserve", "utf-8");
-    await expect(port.spawn(spawnInput)).rejects.toThrow("NATIVE_PROCESS_RUN_DIRECTORY_EXISTS");
-    expect(readFileSync(preSpawnForeign, "utf-8")).toBe("preserve");
-    rmSync(runDirectory, { recursive: true });
-
     const spawnResults = await Promise.allSettled([port.spawn(spawnInput), port.spawn(spawnInput)]);
     expect(spawnResults.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     const spawned = spawnResults.find((result) => result.status === "fulfilled");
@@ -770,7 +1773,7 @@ describe("t240 provider-neutral native process", () => {
     await expect(session.observeIdentity()).rejects.toThrow("NATIVE_PROCESS_DISPOSED");
   });
 
-  test("rolls back owned run state when wrapper spawn throws synchronously", async () => {
+  test("restores durable planned state when wrapper spawn throws synchronously", async () => {
     const dir = root();
     const port = createNativeProcessPort({
       rootDir: dir,
@@ -797,7 +1800,23 @@ describe("t240 provider-neutral native process", () => {
       },
     })).rejects.toThrow();
 
-    expect(port.activeRecordCount()).toBe(0);
+    expect(recoveryJournal(dir, plan.recoveryJournalRelativePath)).toMatchObject({
+      state: "planned",
+      armDigest: plan.armDigest,
+      runEpochDigest: plan.runEpochDigest,
+    });
+    expect(port.activeRecordCount()).toBe(1);
+    expect(existsSync(runDirectory)).toBeTrue();
+    expect(existsSync(join(runDirectory, "spawn-claim.json"))).toBeFalse();
+    await expect(port.recoverAttempt({
+      kind: "native-process-recovery",
+      schemaVersion: 1,
+      nativeRunId: plan.nativeRunId,
+      armDigest: plan.armDigest,
+      runEpochDigest: plan.runEpochDigest,
+      processIdentityDigest: null,
+    })).resolves.toMatchObject({ status: "unarmed" });
+    await port.releasePlan(plan);
     expect(existsSync(runDirectory)).toBeFalse();
   });
 
@@ -844,7 +1863,57 @@ describe("t240 provider-neutral native process", () => {
     expect((failure as Error).message).toBe("NATIVE_PROCESS_SPAWN_ROLLBACK_FAILED");
     expect(readFileSync(join(runDirectory, "foreign"), "utf-8")).toBe("preserve");
     expect(existsSync(ownedBackup)).toBeTrue();
-    expect(port.activeRecordCount()).toBe(0);
+    expect(port.activeRecordCount()).toBe(1);
+  });
+
+  test("does not mutate a foreign directory installed before spawn", async () => {
+    const dir = root();
+    const port = createNativeProcessPort({
+      rootDir: dir,
+      output: { publish: () => {}, close: () => {}, fail: () => {} },
+    });
+    const plan = port.plan({
+      nativeRunId: "run-pre-spawn-directory-replacement",
+      evidenceDir: dir,
+      context,
+      fencingToken: 9,
+    });
+    const runDirectory = join(dir, dirname(plan.recoveryJournalRelativePath));
+    const ownedBackup = `${runDirectory}-owned`;
+    renameSync(runDirectory, ownedBackup);
+    mkdirSync(runDirectory);
+    writeFileSync(join(runDirectory, "owner.json"), `${JSON.stringify({
+      schemaVersion: 1,
+      nativeRunId: plan.nativeRunId,
+      token: "foreign-token",
+    })}\n`, "utf-8");
+    const foreignRecovery = `${JSON.stringify({
+      schemaVersion: 1,
+      nativeRunId: plan.nativeRunId,
+      owner: { device: "1", inode: "1", userId: "1", markerDigest: "foreign" },
+      armDigest: plan.armDigest,
+      runEpochDigest: "foreign-epoch",
+      state: "planned",
+      updatedAt: new Date().toISOString(),
+    })}\n`;
+    const foreignRecoveryPath = join(runDirectory, "recovery.json");
+    writeFileSync(foreignRecoveryPath, foreignRecovery, "utf-8");
+
+    await expect(port.spawn({
+      plan,
+      launch: {
+        executable: process.execPath,
+        args: ["-e", "process.exit(0)"],
+        cwd: dir,
+        env: { PATH: process.env.PATH ?? "" },
+        transport: { kind: "stdio-json", stdin: "closed", output: "jsonl" },
+        timeoutMs: 1_000,
+      },
+    })).rejects.toThrow("NATIVE_PROCESS_RUN_DIRECTORY_OWNERSHIP_MISMATCH");
+
+    expect(readFileSync(foreignRecoveryPath, "utf-8")).toBe(foreignRecovery);
+    expect(existsSync(runDirectory)).toBeTrue();
+    expect(existsSync(ownedBackup)).toBeTrue();
   });
 
   test("materializes wrapper identity before one-time arm permits stdio launch", async () => {
@@ -1079,12 +2148,14 @@ describe("t240 provider-neutral native process", () => {
     const tailPath = join(dir, "invalid-control-tail");
     const nativeRunId = "run-invalid-pty-control";
     const armDigest = digestValue({ nativeRunId, token: "invalid-control" });
+    const runEpochDigest = digestValue({ nativeRunId, epoch: 1 });
     const wrapperPlan = {
       schemaVersion: 1,
       nativeRunId,
       identityPath,
       armPath,
       armDigest,
+      runEpochDigest,
       armDeadline: new Date(Date.now() + 5_000).toISOString(),
     };
     const wrapper = spawn(process.execPath, [
@@ -1151,6 +2222,7 @@ describe("t240 provider-neutral native process", () => {
         schemaVersion: 1,
         nativeRunId,
         armDigest,
+        runEpochDigest,
         processIdentityDigest: digestValue(identity.process),
       })}\n`, "utf-8");
       await waitForFile(readyPath);
@@ -1237,6 +2309,7 @@ describe("t240 provider-neutral native process", () => {
       identityRelativePath: "foreign/identity.json",
       armRelativePath: "foreign/arm.json",
       armDigest: "digest",
+      runEpochDigest: "epoch",
       recoveryJournalRelativePath: "foreign/recovery.json",
     })).toThrow("NATIVE_PROCESS_PLAN_INVALID");
     expect(nativeProcessTestSeam.directoryMatchesOwner(join(dir, "missing"), {
@@ -1436,7 +2509,13 @@ describe("t240 provider-neutral native process", () => {
       fencingToken: 52,
     });
     const runDirectory = join(dir, dirname(plan.recoveryJournalRelativePath));
-    const ownership = nativeProcessTestSeam.createOwnedRunDirectory(runDirectory, plan.nativeRunId);
+    const plannedJournal = recoveryJournal(dir, plan.recoveryJournalRelativePath);
+    const ownership = {
+      markerPath: join(runDirectory, "owner.json"),
+      owner: plannedJournal.owner as ReturnType<
+        typeof nativeProcessTestSeam.createOwnedRunDirectory
+      >["owner"],
+    };
     const observed = observeProcessIdentity(process.pid);
     if (observed.type !== "ok") throw new Error("test process identity unavailable");
     const armDeadline = new Date(Date.now() + 5_000).toISOString();
@@ -1444,6 +2523,7 @@ describe("t240 provider-neutral native process", () => {
       schemaVersion: 1 as const,
       nativeRunId: plan.nativeRunId,
       armDigest: plan.armDigest,
+      runEpochDigest: plan.runEpochDigest,
       armDeadline,
       process: observed.value,
     };
@@ -1453,6 +2533,8 @@ describe("t240 provider-neutral native process", () => {
     writeFileSync(journalPath, `${JSON.stringify({
       schemaVersion: 1,
       nativeRunId: plan.nativeRunId,
+      armDigest: plan.armDigest,
+      runEpochDigest: plan.runEpochDigest,
       owner: ownership.owner,
       state: "spawned",
       updatedAt: new Date().toISOString(),
@@ -1493,6 +2575,7 @@ describe("t240 provider-neutral native process", () => {
     const wrapperIdentity = observed.value;
     const nativeRunId = "run-wrapper-helper-seam";
     const armDigest = digestValue({ nativeRunId });
+    const runEpochDigest = digestValue({ nativeRunId, epoch: 1 });
     const armPath = join(dir, "arm.json");
     const plan = {
       schemaVersion: 1 as const,
@@ -1500,12 +2583,14 @@ describe("t240 provider-neutral native process", () => {
       identityPath: join(dir, "identity.json"),
       armPath,
       armDigest,
+      runEpochDigest,
       armDeadline: new Date(Date.now() + 2_000).toISOString(),
     };
     const identity = {
       schemaVersion: 1 as const,
       nativeRunId,
       armDigest,
+      runEpochDigest,
       armDeadline: plan.armDeadline,
       process: wrapperIdentity,
     };
@@ -1513,10 +2598,21 @@ describe("t240 provider-neutral native process", () => {
       schemaVersion: 1,
       nativeRunId,
       armDigest,
+      runEpochDigest,
       processIdentityDigest: digestValue(wrapperIdentity),
     })}\n`, "utf-8");
     expect(await nativeProcessTestSeam.waitForArm(plan, identity)).toBeTrue();
     expect(await nativeProcessTestSeam.waitForArm(plan, identity)).toBeFalse();
+
+    const wrongEpochPlan = { ...plan, armPath: join(dir, "wrong-epoch-arm.json") };
+    writeFileSync(wrongEpochPlan.armPath, `${JSON.stringify({
+      schemaVersion: 1,
+      nativeRunId,
+      armDigest,
+      runEpochDigest: "wrong-epoch",
+      processIdentityDigest: digestValue(wrapperIdentity),
+    })}\n`, "utf-8");
+    expect(await nativeProcessTestSeam.waitForArm(wrongEpochPlan, identity)).toBeFalse();
 
     const polledPlan = {
       ...plan,
@@ -1527,6 +2623,7 @@ describe("t240 provider-neutral native process", () => {
       schemaVersion: 1,
       nativeRunId,
       armDigest,
+      runEpochDigest,
       processIdentityDigest: digestValue(wrapperIdentity),
     })}\n`, "utf-8"), 20);
     expect(await nativeProcessTestSeam.waitForArm(polledPlan, {
@@ -1680,6 +2777,7 @@ describe("t240 provider-neutral native process", () => {
       identityPath: join(dir, "identity.json"),
       armPath: join(dir, "arm.json"),
       armDigest: "wrapper-main-arm",
+      runEpochDigest: "wrapper-main-epoch",
       armDeadline: new Date(Date.now() + 2_000).toISOString(),
     };
     const encodedPlan = Buffer.from(JSON.stringify(plan), "utf-8").toString("base64");
@@ -1816,7 +2914,13 @@ describe("t240 provider-neutral native process", () => {
         fencingToken: 60 + sequence,
       });
       const runDirectoryPath = join(dir, dirname(plan.recoveryJournalRelativePath));
-      const ownership = nativeProcessTestSeam.createOwnedRunDirectory(runDirectoryPath, plan.nativeRunId);
+      const plannedJournal = recoveryJournal(dir, plan.recoveryJournalRelativePath);
+      const ownership = {
+        markerPath: join(runDirectoryPath, "owner.json"),
+        owner: plannedJournal.owner as ReturnType<
+          typeof nativeProcessTestSeam.createOwnedRunDirectory
+        >["owner"],
+      };
       const armDeadline = new Date(Date.now() + (input.deadlineMs ?? 2_000)).toISOString();
       const wrapperPlan = {
         schemaVersion: 1 as const,
@@ -1824,6 +2928,7 @@ describe("t240 provider-neutral native process", () => {
         identityPath: join(dir, plan.identityRelativePath),
         armPath: join(dir, plan.armRelativePath),
         armDigest: plan.armDigest,
+        runEpochDigest: plan.runEpochDigest,
         armDeadline,
       };
       const record = {
@@ -1834,6 +2939,7 @@ describe("t240 provider-neutral native process", () => {
           identityPath: wrapperPlan.identityPath,
           armPath: wrapperPlan.armPath,
           armDigest: wrapperPlan.armDigest,
+          runEpochDigest: wrapperPlan.runEpochDigest,
         },
         runDirectoryPath,
         ownerMarkerPath: ownership.markerPath,
@@ -1842,6 +2948,8 @@ describe("t240 provider-neutral native process", () => {
         lifecycle: {
           schemaVersion: 1 as const,
           nativeRunId: plan.nativeRunId,
+          armDigest: plan.armDigest,
+          runEpochDigest: plan.runEpochDigest,
           owner: ownership.owner,
           state: "spawned" as const,
           updatedAt: new Date().toISOString(),
@@ -1899,6 +3007,7 @@ describe("t240 provider-neutral native process", () => {
       schemaVersion: 1,
       nativeRunId: fixture.plan.nativeRunId,
       armDigest: fixture.plan.armDigest,
+      runEpochDigest: fixture.plan.runEpochDigest,
       armDeadline: fixture.wrapperPlan.armDeadline,
       process: processIdentity,
     })}\n`, "utf-8");
