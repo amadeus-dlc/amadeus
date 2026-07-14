@@ -62,6 +62,31 @@ state rootの列挙、latest/mtime探索、xhigh、Task floor、通常Agent、as
 
 再開条件は、Claudeがworkflow-created eventから一意に導出できるrun-state exact path/schemaを提供するか、同等の独立provider-state surfaceを公式に定義することである。要件を緩和して再開する場合はFunctional Designへ戻り、evidence契約の再承認を必要とする。
 
+### Entry gate再開調査結果 — 2026-07-14T08:51:16Z
+
+**判定: DESIGN ROLLBACK REQUIRED**
+
+Claude Code 2.1.205の認証済みmacOS環境で、repository外の非機密2 worker fixtureを新規実行した。Ultra Codeについては、前回のpark理由を解消できた。
+
+- `--effort ultracode`でnative `Workflow`を実行し、tool resultの`runId`と`transcriptDir`から、root scanやmtime探索なしでsession root配下の`workflows/<runId>.json`を一意導出できた。
+- snapshotは`runId`、`taskId`、`status=completed`、`agentCount=2`、2件の`workflow_agent`の`label` / `agentId` / `state=done` / `model`を持つ。
+- `transcriptDir/journal.jsonl`は`started`×2と`result`×2を持ち、各`agentId`がsnapshotの2 workerと全件一致した。SubagentStart/Stop hookも2件ずつ発火した。従ってUltraは、exact provider-state/journalとhookの独立sourceを同一run/sessionでAND結合できる。
+
+一方、Agent Teamsは承認済み起動契約では実行不能であることが確定した。
+
+- Claude binaryのCLI actionは`Fl() && !on() && !agentId`の場合だけ`initializeSessionTeam()`を呼ぶ。`Fl()`は`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`の有効判定、`on()`は`!isInteractive`である。そのため`claude -p`ではteam初期化が必ずskipされる。
+- `claude -p` + experimental env + `--teammate-mode in-process`で2つのnamed `Agent`を起動し、TaskCreated/TaskCompleted/SubagentStart/SubagentStopは各2件観測した。しかし、provider開始前から50 ms間隔で同期させたexact `session-<sessionId[0..8]>` team/task observerはprocess terminalまで1度もstateを観測せず、TeammateIdleも0件だった。これらのchildはAgent Teamsではなくordinary async Agent floorである。
+- flag、in-process option、Task/Subagent eventのみをAgent Teams successとすると、FR-11、CBR-16〜21、完了条件2の「provider-state + stream/hookの独立AND」とfloor識別を弱めるため採用しない。
+
+最小の戻り先はApplication Designである。`requirements.md` FR-11はAgent Teamsのnative proofを要求するが、non-interactive processや`claude -p`を要求していない。その後の`component-methods.md`、`unit-of-work.md`、U-03 Functional Design / NFR Requirements / NFR Design / Code Generation planがAgent Teamsへ`claude -p` / `stream-json`を一律適用した。次の最小訂正案をApplication Designから再承認する必要がある。
+
+1. Claude adapterのexecution transportをmode-specificにし、Agent Teamsはinteractive PTYの`claude` coordinator、Ultra Codeは従来どおりnon-interactive `claude -p` stream-json coordinatorとする。どちらもbatch/waveごとにcoordinator processはexactly 1件とする。
+2. Agent Teamsの独立ANDは、provider前に開始したexact team/task snapshotとattempt専用TaskCreated/TaskCompleted/TeammateIdle hook recordで証明する。PTY terminal streamはprocess terminal identityに限定し、structured eventを推測しない。
+3. U-02がpipe processだけを想定しているなら、`LaunchSpec` / process supervisorにclosed `stdio-json | pty-interactive`のtransport seamを追加し、identity-first、capture-before-arm、provider-group-terminal-after-join、lease/fencingは不変とする。これはU-02 owner moduleに影響するため、U-03の黙示的な実装で追加しない。
+4. Application Design訂正後にUnits Generation、Delivery Planning、U-03 Functional Design、NFR Requirements、NFR Design、本planを順に再生成し、interactive PTY上の2 teammate live discoveryをStep 1の入口ゲートとして再実行する。
+
+Step 1はAgent Teams側が未達のため引き続き未完了とし、production code、test、生成物、`code-summary.md`は作成しない。生trace、provider result、transcript、local absolute pathはrepositoryへ保存しない。
+
 ## 予定する変更面
 
 ### 正本コード

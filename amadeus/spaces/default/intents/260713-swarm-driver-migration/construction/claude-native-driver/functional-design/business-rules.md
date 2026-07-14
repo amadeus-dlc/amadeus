@@ -8,8 +8,8 @@
 
 | ID | ルール | 違反時 |
 |---|---|---|
-| CBR-01 | generic registrationはdriver-keyed `DriverAdapterSet`を使い、Claude=2 adapter、Codex/Kiro=各1 adapterのcardinalityとadapter.driver一致をbuild時に検証する | production registry起動拒否 |
-| CBR-02 | C-05は1 module/class familyとして2つのimmutable mode-bound viewをClaude setへ格納し、provider mapping/literalとCodex/Kiro実装状態を変更しない | build/test failure |
+| CBR-01 | U-03はU-01/U-02のdriver-keyed registrationとcardinalityを変更せず、Claude slotへ2つの実descriptorだけを提供する | ownership violation |
+| CBR-02 | C-05は1 module/class familyとして2つのimmutable mode-bound viewをClaude setへ格納し、production mapping、common runtime、Codex/Kiro slotを変更しない | build/test failure |
 | CBR-03 | common CLI/auth probeは同一resolve scopeで1回だけ実行し、mode probeを追加する。cacheはattempt外へ出さない | `capability-probe-failed` |
 | CBR-04 | probe順はCLI 5秒、auth 10秒、mode/evidence surface、非破壊handshake 30秒、総45秒で固定する | candidate unavailable |
 | CBR-05 | version、env、flag受理だけでavailableにせず、非機密behavior handshakeとcapture surfaceを必要とする | `native-surface-unavailable` |
@@ -20,17 +20,20 @@
 
 | ID | ルール | 違反時 |
 |---|---|---|
-| CBR-08 | native modeはbatch/waveごとに`claude -p` coordinatorをちょうど1 process起動する | launch拒否 |
-| CBR-09 | Agent Teamsはexperimental env=`1`、`--teammate-mode in-process`、execution由来`--session-id`を明示する | mode evidence failure |
-| CBR-10 | Ultra Codeは`--effort ultracode`を明示し、xhigh単独やkeyword自己申告を代替にしない | mode evidence failure |
-| CBR-11 | 両modeは`--output-format stream-json`、`--include-hook-events`、`--verbose`、attempt専用ephemeral settings/hookを使う | `native-evidence-unavailable` |
+| CBR-08 | Agent Teamsはinteractive PTY上の`claude`、Ultra Codeはheadless `claude -p`をbatch/waveごとにちょうど1 process起動する | launch拒否 |
+| CBR-09 | Agent Teamsはexperimental env=`1`、`--teammate-mode in-process`、execution由来`--session-id`、attempt専用Task/Teammate hookを明示し、`claude -p`を使わない | mode evidence failure |
+| CBR-10 | Ultra Codeは`claude -p --verbose --effort ultracode --output-format stream-json --include-hook-events`を使い、xhigh単独やkeyword自己申告を代替にしない | mode evidence failure |
+| CBR-11 | Agent TeamsのPTY bytesは診断専用、Ultraのstream-jsonはstructured sourceとし、両modeでattempt専用ephemeral hookを使う | `native-evidence-unavailable` |
 | CBR-12 | Unit manifest/promptはstdinだけへ渡し、argv、settings、audit、checkpoint、fixtureへ保存しない | confidentiality failure |
 | CBR-13 | envは固定allowlistで構築し、選択されていないprovider credential、全env dump、raw値を渡さない | launch拒否 |
 | CBR-14 | Unitごとにreferee prepared worktreeを明示し、Claude自身の自動worktreeへ成果を置かない | Unit result拒否 |
 | CBR-15 | wrapper identity/checkpoint/arm/process groupはU-02をそのまま使用し、C-05が独自supervisorを作らない | architecture violation |
-| CBR-15a | adapterはpureな`AdapterExecutionPlan(LaunchSpec + EvidenceCapturePlan)`を返し、hidden observer I/Oやprivate mutable closureを持たない | launch拒否 |
+| CBR-15a | adapterはpure `prepareResources`で`AuxiliaryResourcePlan[]`を宣言し、U-02のmaterialized setを受けるpure `buildExecution`で共通`AdapterExecutionPlan(launch + capture + captureIdentity + resources)`を返す。hidden filesystem/observer I/Oやprivate cleanup closureを持たない | launch拒否 |
 | CBR-15b | U-02はcapture identity/plan digestをcheckpointへ保存し、capture start後だけproviderをarmし、group terminal後にcapture stop/joinする | success禁止 |
-| CBR-15c | Ultraのstate observerはstream-boundで開始し、allowlisted run-created eventから得たexact path bindingをU-02 checkpointへ保存した後だけpollする | bindingなしはevidence failure |
+| CBR-15c | Agent Teamsはarm前initial binding付き`fixed-provider-path`、Ultraは`event-bound-provider-path`を使い、allowlisted eventから得たexact bindingをU-02 checkpointへ保存した後だけpollする | bindingなしはevidence failure |
+| CBR-15d | Agent Teamsのlive projectionが全Unit completedかつ全owner idleを満たす場合だけ`ready-for-graceful-exit`を返し、U-02がPTYへexit inputを1回送る。signalをsuccess evidenceへ数えない | graceful-exit failure |
+| CBR-15e | Agent Teamsはready signal後も同一process groupのterminal/exit 0、capture join/seal、retained final evidenceを必須とし、いずれかを欠けばsuccessにしない | terminal evidence failure |
+| CBR-15f | session prefix reservation、ephemeral settings、evidence/hook/snapshot rootはU-02の`AuxiliaryResourcePlan[]`だけでmaterialize/checkpoint/owned cleanupし、U-03が直接mkdir/write/deleteしない | architecture violation |
 
 ## Agent Teams evidence
 
@@ -40,7 +43,7 @@
 | CBR-17 | `~/.claude/teams/<expected>/config.json`と`~/.claude/tasks/<expected>/`以外を列挙・読取しない | security failure |
 | CBR-17a | deterministic counterごとにprefix lockをatomic予約し、team/task両exact pathが不存在の候補だけをdispatch前checkpointへ束縛する。既存pathを削除・再利用しない | provider process 0件 |
 | CBR-18 | provider-stateはmembers 2件以上、taskとUnit tokenの全単射、member owner、completed statusを要求する | `NATIVE_EVIDENCE_BINDING_MISMATCH` |
-| CBR-19 | streamは同じsessionのTaskCreated/TaskCompleted/TeammateIdleを要求し、deprecated `team_name`単独には依存しない | `NATIVE_EVIDENCE_SOURCE_MISSING` |
+| CBR-19 | attempt専用hookは同じsessionのTaskCreated/TaskCompleted/TeammateIdleを要求し、PTY bytesやdeprecated `team_name`単独には依存しない | `NATIVE_EVIDENCE_SOURCE_MISSING` |
 | CBR-20 | `native-child-stopped(completed)`はtask completedと対応teammate idleの両方が揃ったときだけ生成する | child incomplete |
 | CBR-21 | config cleanup前にobserverがvalid snapshotを保存できなければ、process exit 0でもsuccessにしない | `NATIVE_EVIDENCE_STATE_MISSING` |
 

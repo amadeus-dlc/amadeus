@@ -24,7 +24,7 @@ Error: selected=claude-ultracode reason=native-evidence-unavailable action=verif
 
 1. 利用者は既存の`/amadeus` Construction workflowを開始する。
 2. harness conductorがC-01を呼び、選択結果を表示する。
-3. native実行中はC-01の進捗だけを表示し、Claudeのraw streamを直接流さない。
+3. native実行中はC-01の進捗だけを表示し、Agent TeamsのPTY bytesやUltra Codeのraw streamを直接流さない。
 4. evidence/refereeがgreenなら完了を表示し、失敗ならfallbackせず再開可能性を示す。
 
 ## Accessibilityと機密性

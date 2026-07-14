@@ -14,7 +14,7 @@
 | C-02 | `DriverContract` | 新規・共通型 | driver値、floor ID、topology、probe、normalized event、checkpointの閉じた型を定義する | provider固有JSON |
 | C-03 | `DriverSelector` | 新規・純粋ロジック | env解析、legacy互換、topology分類、`auto`選択、fallback判定を決定的に行う | CLI起動、I/O |
 | C-04 | `DriverAdapterRegistry` | 新規・閉じたregistry | 4 native driverのprovider adapterだけを既知集合として引く | floor実行、custom driver/plugin SDK |
-| C-05 | `ClaudeDriverAdapter` | 新規・provider adapter | Agent TeamsとUltra Codeのprobe、batch coordinator起動、native evidence正規化 | checkpoint、audit、収束判定 |
+| C-05 | `ClaudeDriverAdapter` | 新規・provider adapter | Agent TeamsとUltra Codeのprobe、mode別transportによるbatch coordinator起動、native evidence正規化 | checkpoint、audit、収束判定 |
 | C-06 | `CodexDriverAdapter` | 新規・provider adapter | Codex multi-agent coordinatorのprobe・起動、JSONLとSubagent hookの正規化 | undocumentedな`--ultra` flagの仮定 |
 | C-07 | `KiroDriverAdapter` | 新規・provider adapter | trust条件確認、2〜4 Unitのbalanced wave分割、Kiro coordinator起動、parent-child session証跡の正規化 | Unit drop、1 Unit末尾wave、暗黙skip |
 | C-08 | `NativeEvidenceVerifier` | 新規・共通policy | normalized eventだけを読み、native driverごとの必須証跡とUnit割当をfail-closed検証する | provider生出力の解析 |
@@ -67,11 +67,11 @@ composition rootは3つのprovider moduleを静的importし、4 native driver値
 
 ### C-05 `ClaudeDriverAdapter`
 
-1つのadapterが `claude-agent-teams` と `claude-ultracode` の2 modeを扱う。共通のCLI/auth probeを1回だけ行い、mode固有surfaceを追加検査する。
+1つのadapterが `claude-agent-teams` と `claude-ultracode` の2 modeを扱う。共通のCLI/auth probeを1回だけ行い、mode固有surfaceとtransportを追加検査する。共通runtimeへは`stdio-json | pty-interactive`の閉じたtransportだけを公開し、Claude固有分岐を持ち込まない。
 
-- Agent Teamsは `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` とin-process teammate modeを明示し、execution IDから導出した一意なteam名を使う。Team configの`members`と共有task listを、stream eventと相関して正規化する。
-- Ultra Codeはxhigh effortだけを成功条件にせず、standing Dynamic Workflowのrun ID、workflow task/agent ID、Unit割当が取れたときだけnative successとする。
-- `claude -p --output-format stream-json --include-hook-events`の生streamはadapter内だけで扱い、promptやmessage本文をC-01へ返さない。
+- Agent Teamsはinteractive PTY上で`claude`を起動する。`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`、in-process teammate mode、attempt専用session IDを明示し、`session-<session-id先頭8文字>`のexact team configとtask directoryをobserverがprocess起動前から監視する。adapterのlive control projectorがTaskCreated / TaskCompleted / TeammateIdleとprovider stateから全Unit完了を確認した場合だけprovider-neutralな`ready-for-graceful-exit`を返し、runtimeがPTYへexit inputを送る。最終native successはterminal後のretained evidenceで別途判定する。PTY出力はprocess lifecycle診断に限定し、structured Team eventとして推測しない。
+- Ultra Codeはheadlessの`claude -p --verbose --effort ultracode --output-format stream-json --include-hook-events`を使う。Workflow結果の`runId`と`transcriptDir`からsnapshotとjournalをexact pathで導出し、workflow task/agent ID、Unit割当、hookを相関できた場合だけnative successとする。xhigh effortだけを成功条件にしない。
+- 両modeともcaptureを開始してvariant付きcapture checkpointを保存した後だけproviderをarmする。Agent Teamsのfixed-path variantはadapterがattempt専用session launch planからinitial run/path bindingを作り、arm前にsource plan digestとともに保存する。event-bound pathはadapter resolverだけがnative eventから解決し、run IDとpath digestをprovider state読取前に`capture-bound` transitionへ追加保存する。hook-onlyはbindingを持たない。PTYだけはlive control signal後にexit inputを送り、全modeでprocess group terminal後にobserverをjoinしてから正規化する。生のPTY/stream、provider state、hook payload、prompt、message本文はC-01へ返さない。
 
 ### C-06 `CodexDriverAdapter`
 
@@ -95,7 +95,7 @@ composition rootは3つのprovider moduleを静的importし、4 native driver値
 adapterが生成したversion 1のnormalized event以外を受け取らない。native driver成功の共通条件は次のAND条件とする。
 
 - 全eventがdriver、execution/attempt、attempt nonce hash、plan digest、wave index/digestで期待planへ相関する。
-- driverごとに独立sourceのANDを満たす。Claude 2 driverはprovider state + stream、Codexはmodel handshake + JSONL stream + Subagent hook、Kiroはsession metadata + process streamを要求する。
+- driverごとに独立sourceのANDを満たす。Agent Teamsはprovider state + Task/Teammate hook、Claude Ultraはprovider state/journal + stream + hook、Codexはmodel handshake + JSONL stream + Subagent hook、Kiroはsession metadata + process streamを要求する。
 - 各waveのcoordinator開始とexit 0の終了が同じnative runへ相関する。
 - provider state/session metadata/Subagent hookから正規化したUnit-child割当がwave Unitsとの全単射である。
 - 各childにstartと`completed` stopがあり、failed/欠落/余分なchildが0件である。

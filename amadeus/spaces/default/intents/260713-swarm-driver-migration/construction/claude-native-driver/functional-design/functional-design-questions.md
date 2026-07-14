@@ -14,11 +14,11 @@
 
 ### Q2. Agent Teamsを環境変数設定や自己申告からどう区別するか
 
-[Answer]: `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`と`--teammate-mode in-process`は起動条件にすぎない。成功には、exact session-derived team configとtask directoryから得た`provider-state`、および`--include-hook-events`付きstreamに現れる`TaskCreated`、`TaskCompleted`、`TeammateIdle`をANDで要求する。member、task、teammate name、Unit assignment tokenを全単射で相関し、2 teammate以上、全Unit completed、coordinator exit 0を満たす場合だけnative successとする。
+[Answer]: `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`と`--teammate-mode in-process`は起動条件にすぎない。Agent Teamsはinteractive PTY上の`claude`で起動し、`claude -p`は禁止する。成功には、exact session-derived team configとtask directoryから得た`provider-state`、attempt専用hookの`TaskCreated`、`TaskCompleted`、`TeammateIdle`をANDで要求する。member、task、teammate name、Unit assignment tokenを全単射で相関し、2 teammate以上、全Unit completed、coordinator terminalを満たす場合だけnative successとする。PTY bytesや通常async AgentはTeam証跡へ数えない。
 
 ### Q3. Ultra Codeをどう起動し、xhigh単独とどう区別するか
 
-[Answer]: Claude Code 2.1.203以降の公式surfaceである`--effort ultracode`を明示し、stdin promptでもdynamic workflowを明示要求する。`--effort xhigh`、prompt keyword受理、通常subagent呼出しだけは成功にしない。実workflow run ID、workflow task/agent ID、Unit assignment、SubagentStart/Stop stream/hook、provider workflow stateの二系統が必要である。
+[Answer]: headless `claude -p --verbose --effort ultracode --output-format stream-json --include-hook-events`を使い、stdinでもdynamic workflowを明示要求する。`--effort xhigh`、prompt keyword受理、通常subagent呼出しだけは成功にしない。実workflow run ID、workflow task/agent ID、Unit assignment、SubagentStart/Stop stream/hook、provider workflow stateの独立sourceが必要である。
 
 ### Q4. Dynamic Workflowの未公開field pathを設計で固定するか
 
@@ -26,7 +26,7 @@
 
 ### Q5. 1つのC-05と`DriverAdapter.driver`の単一値をどう両立させるか
 
-[Answer]: Iteration 1 reviewで上流`RegistrationSlot.available.adapter`の単数形では2 viewを格納不能と判明したため、generic slotをdriver-keyed `DriverAdapterSet`へ訂正する。C-05を1つのmodule/class familyとして実装し、`claude-agent-teams`と`claude-ultracode`に束縛したimmutable viewを2つ生成してClaude setへ格納する。Claudeはexactly 2、Codex/Kiroはexactly 1をbuild時に検証し、provider mappingは変えない。各viewは公開`DriverAdapter`を満たし、同一resolve scope内では共通CLI/auth probe promiseだけを共有する。singleton cacheやattempt外cacheは作らない。
+[Answer]: generic slot、driver-keyed set、Claude=2/Codex=1/Kiro=1のcardinalityはU-01/U-02の完成済みcontractである。U-03はそれらを訂正せず、C-05を1つのmodule/class familyとして実装し、`claude-agent-teams`と`claude-ultracode`に束縛したimmutable viewを2つ含むClaude registration descriptorだけを提供する。U-02がproduction slotへ投影しcardinalityを検証する。各viewは公開`DriverAdapter`を満たし、同一resolve scope内では共通CLI/auth probe promiseだけを共有する。singleton cacheやattempt外cacheは作らない。
 
 ### Q6. promptとcredentialをどう隔離するか
 
@@ -34,9 +34,9 @@
 
 ### Q7. provider cleanupとresumeをどう扱うか
 
-[Answer]: adapterは`LaunchSpec`と別にclosed `EvidenceCapturePlan`を返す。U-02 supervisorがcapture ID/plan digestをcheckpointへ保存し、observerをprovider arm前にstart、provider group terminal後にstopAndWaitし、provider-state、hook record、process streamを別channelでnormalizerへ渡す。Agent Teams configはsession終了時に削除され得るため、実行中の最後のvalid normalized snapshotをatomic保存する。process exit後に初めて読む方式は採用しない。
+[Answer]: adapterはU-02のclosed `LaunchSpec`／`EvidenceCapturePlan`を消費する。Agent Teamsは`pty-interactive + fixed-provider-path(initialBinding)`、Ultraは`stdio-json + event-bound-provider-path`を返す。U-02 supervisorがcapture ID/plan digestをcheckpointへ保存し、observerをprovider arm前にstart、provider group terminal後にstopAndWaitする。Agent Teamsはprovider-stateとhook、Ultraはprovider-state/journal・stream・hookを独立channelでnormalizerへ渡す。Agent Teams configはsession終了時に削除され得るため、実行中の最後のvalid normalized snapshotをatomic保存する。PTYの`ready-for-graceful-exit`は終了制御だけで、process exit後の最終証跡を省略しない。
 
-session prefixはUUID先頭8文字しか使われずtask directoryが永続するため、`execution/attempt/wave/counter`由来UUID候補をuser-scoped temp lockで予約し、expected team/task両pathをdirect `lstat`する。既存pathは削除せず次counterへ進み、counter、UUID、prefix、path digest、reservationをdispatch前checkpointへ束縛する。crash時はU-02のprocess group停止とfencingを使い、旧team/workflow sessionを再利用せず、同じexecutionの新attemptでfresh probeと新seedから開始する。
+session prefixはUUID先頭8文字しか使われずtask directoryが永続するため、U-03のpure `prepareResources`が`execution/attempt/wave/counter`由来UUID候補を`exclusive-reservation`として宣言する。U-02がuser-scoped temp reservationとexpected team/task両pathのdirect `lstat`を行い、既存pathを削除せず次candidateへ進む。selected counter、UUID hash、prefix、path digest、owner receiptをdispatch前checkpointへ束縛し、capture join後にowned resourceだけをcleanupする。crash時はU-02のprocess group停止とfencingを使い、旧team/workflow sessionを再利用せず、同じexecutionの新attemptでfresh probeと新seedから開始する。
 
 ## 曖昧性分析
 

@@ -117,6 +117,11 @@ NativeLiveJourneyReceipt
   platform = macos
   cliVersion / profileVersion
   executionDigest / attemptDigest / nativeRunDigest
+  launchProfile: NativeLaunchProfile
+  resourceReceiptDigest
+  captureCheckpointDigest
+  processTerminalDigest
+  retainedEvidenceDigest
   unitCount / childCount / waveSizes
   nativeEvidence = green
   unitResults = green
@@ -124,6 +129,28 @@ NativeLiveJourneyReceipt
   refereeFinalize = green
   summaryFileDigest
 ```
+
+```text
+NativeLaunchProfile =
+  claude-agent-teams(
+    executableProfile = interactive-claude,
+    transport = pty-interactive,
+    capture = fixed-provider-path,
+    readyForGracefulExitDigest,
+    gracefulExitInputCount = 1,
+    signalIsSuccessEvidence = false
+  )
+  | claude-ultracode(
+      commandProfileDigest = sha256(exact required headless argv),
+      transport = stdio-json,
+      capture = event-bound-provider-path,
+      captureBoundDigest
+    )
+  | codex-ultra(transport = stdio-json, capture = hook-only)
+  | kiro-subagent(transport = stdio-json, capture = event-bound-provider-path, captureBoundDigest)
+```
+
+`NativeLaunchProfile`はdriverと完全対応し、別variantを構築できない。Agent Teamsはcontrol signal、PTY exit input、process terminal、retained evidenceが同じattemptへ相関することを要求し、signal単独ではreceiptをgreenにできない。Ultra/Kiroのevent-bound variantはstate readより前のbinding checkpoint、Codex hook-onlyはbinding不存在を要求する。raw argv/path/control bytesは保持せず、versioned profileとdigestだけを持つ。
 
 `driver`とjourneyの許可組合せはClaude 2 driver→Claude、Codex→Codex、Kiro→Kiro CLI/Kiro IDEに閉じる。Kiroは各harnessの2 Unitと5 Unit receiptを必要とし、5 UnitのwaveSizesは3+2である。
 
@@ -233,7 +260,7 @@ classDiagram
 
 | Data | Owner | 永続先 | 禁止事項 |
 |---|---|---|---|
-| production registry | U-02 + U-03 correction | source/test | U-06でprovider実装変更 |
+| production registry | U-01 contract + U-02 assembly | source/test | U-06でprovider実装変更 |
 | distribution receipt | C-12/U-06 | code-generation release report | generated targetを正本化 |
 | docs receipt | U-06 | code-generation release report | raw docs全文の複製 |
 | deterministic receipt | local/CI runner | code-generation release report | 別tree結果の再利用 |

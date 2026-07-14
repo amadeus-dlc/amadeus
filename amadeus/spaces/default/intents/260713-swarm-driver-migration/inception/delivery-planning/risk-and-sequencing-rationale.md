@@ -9,7 +9,7 @@ ReinertsenのCost of Delay／CD3やSAFe WSJFが示す「価値・時間制約・
 ## 上流根拠
 
 - `requirements`: FR-01〜FR-26、NFR-01〜NFR-12、USR-01〜USR-10、A-02、OQ-01〜OQ-04。
-- `components`: C-01〜C-12とADR-001〜ADR-008。特にADR-006のprovider別native evidence contract。
+- `components`: C-01〜C-12とADR-001〜ADR-009。特にADR-006のprovider別native evidence contractとADR-009のmode別closed transport。
 - `unit-of-work`: U-01〜U-06のownership、test、完了条件、相対複雑度。
 - `unit-of-work-dependency`: `U-01 → U-02 → {U-03,U-04,U-05} → U-06`、provider別single-writer、production registry seam。
 - `unit-of-work-story-map`: USR／RELからUnitへの受入sliceとevidence。
@@ -25,7 +25,7 @@ ReinertsenのCost of Delay／CD3やSAFe WSJFが示す「価値・時間制約・
 
 ### 2. U-02を分離する理由
 
-U-02はXLで、process、checkpoint、audit、referee、production registryを持つ最も大きい共有境界である。U-01と別Boltにすることでpure policyとstateful runtimeを別々に収束させる。provider placeholderが型付きfail-closedであるため、provider実装なしでもlifecycleをfake E2Eで検証でき、DAGに隠れた循環を作らない。
+U-02はXLで、process、closed transport/capture、checkpoint、audit、referee、production registryを持つ最も大きい共有境界である。U-01と別Boltにすることでpure policyとstateful runtimeを別々に収束させる。fake PTY/stdioと3 capture variantをprovider実装なしで検証し、U-03〜U-05は完成済みcommon seamだけを消費するため、DAGに隠れた循環を作らない。
 
 ### 3. U-04 Codexを最初のprovider proofにする理由
 
@@ -35,7 +35,7 @@ U-04は正式なAI-DLC walking-skeleton markerではない。本intentはbrownfi
 
 ### 4. U-03／U-05をparallel waveにする理由
 
-両UnitはU-02だけへ依存し、互いをimportせず、provider別adapter／harness／fixtureをsingle-writeする。したがって実装とdeterministic fake suiteは安全に並列化できる。一方、credentialed live runは同じmacOS hostのCPU、process、user-global stateを使うためmutexで直列化し、証拠汚染と診断の曖昧さを防ぐ。同時readyなら、主要受入で2 modeを持つClaudeを先にする。
+両UnitはU-02だけへ依存し、互いをimportせず、provider別adapter／harness／fixtureをsingle-writeし、common runtimeを編集しない。したがって実装とdeterministic fake suiteは安全に並列化できる。一方、credentialed live runは同じmacOS hostのCPU、process、user-global stateを使うためmutexで直列化し、証拠汚染と診断の曖昧さを防ぐ。同時readyなら、主要受入で2 modeを持つClaudeを先にする。
 
 一方が外部surfaceでblockedになっても、DAG上独立な他方は続行する。これは完成を偽るためではなく、再計画に必要な追加証拠を得るためであり、U-06は両方が完了するまで開始しない。
 
@@ -58,9 +58,9 @@ U-03／U-04／U-05の間にedgeはなく、U-04を先に選ぶのは経済的な
 | ID | Risk | Probability | Impact | Earliest Bolt | Mitigation / Stop rule |
 |---|---|---|---|---|---|
 | R-01 | selector／registration contractがproviderごとに分岐 | Medium | High | B-01 | closed union、single owner、architect review。複製をREVISE |
-| R-02 | common lifecycleがnative自己申告を成功扱い | Medium | Critical | B-02 | evidence＋referee＋mergeのAND、lying-conductor guard、failure injection |
+| R-02 | common lifecycleがnative自己申告やPTY control signalを成功扱い | Medium | Critical | B-02 | terminal後evidence＋referee＋mergeのAND、lying-conductor guard、failure injection |
 | R-03 | Codex Ultraをxhigh／floorから区別不能 | High | Critical | B-03 entry | live schema discovery。不能ならintent全体を再審議し、floorで代替しない |
-| R-04 | Claude Agent Teams／Ultra Code field pathが不安定 | High | High | B-04 entry | provider state＋streamの最小live discovery。失敗時はB-04だけpark |
+| R-04 | interactive Agent Teamsのexact team/task/hook相関が不安定 | High | High | B-04 entry | PTY arm前observer＋attempt専用path/hookの最小live discovery。失敗時はB-04だけpark。headless async Agentで代替しない |
 | R-05 | Kiro trust／session metadataを非対話で取得不能 | Medium | High | B-05 entry | trust preflight＋session/stream discovery。失敗時はB-05だけpark |
 | R-06 | 並列live runがhost／global stateを競合 | Medium | High | B-04/B-05 | 実装並列、live proof mutex、Claude優先、execution由来IDへscope |
 | R-07 | provider worktreeがregistry／他providerを同時編集 | Medium | High | B-03〜B-05 | U-02固定slot、provider single-writer、U-06は検査のみ |
@@ -68,18 +68,19 @@ U-03／U-04／U-05の間にedgeはなく、U-04を先に選ぶのは経済的な
 | R-09 | 実装失敗でpre-code設計状態を失う | Medium | High | B-01前 | checkpoint PRを人間承認・mergeし、その`main`からBolt branchを作る |
 | R-10 | generated harness／dist／docsが正本とdrift | Medium | High | B-06 | `packages/framework` single source、package/promote checks、docs scan |
 | R-11 | Windows未検証を対応済みと誤表明 | Medium | Medium | B-05/B-06 | Windows対象外をmatrix／docsへ明記、既存Windows codeを目的なく変更しない |
+| R-12 | U-02共通補正がU-03へ混入し、provider間にhidden dependencyを作る | Medium | High | B-02/B-04 | 共通補正は[PR #964](https://github.com/amadeus-dlc/amadeus/pull/964)だけへ置き、[PR #965](https://github.com/amadeus-dlc/amadeus/pull/965)をrebase。U-03 diffでcommon runtime変更0件をreview |
 
 ## Confidence Ladder
 
 | Bolt | Shipping後に上がるconfidence | 反証signal |
 |---|---|---|
 | B-01 | selection contractが決定的で互換的 | 同一fixtureの結果差、side effect、未知union値 |
-| B-02 | provider非依存lifecycleがfalse successを防ぐ | evidence/referee/merge欠落でsuccess、resume二重発行 |
+| B-02 | provider非依存transport/capture lifecycleがfalse successを防ぐ | capture-before-arm違反、control signalだけでsuccess、evidence/referee/merge欠落でsuccess、resume二重発行 |
 | B-03 | Codex Ultra native delegationが機械判定可能 | xhigh-only、childなし、hook相関不能、floor成功 |
-| B-04 | Claude 2 modeが各native surfaceを実証可能 | env／自己申告だけ、Task floor、Unit相関欠落 |
+| B-04 | interactive Agent Teamsとheadless Ultra Codeが各native surfaceを実証可能 | headless async Agent、env／control自己申告だけ、Task floor、Unit相関欠落 |
 | B-05 | Kiroがtrust付きbalanced waveで全Unitを処理 | 1 Unit末尾wave、drop、session不一致、approval prompt |
 | B-06 | release全体がclosed／drift-free | placeholder、evidence欠落、generated差分、Issue欠落 |
 
 ## Checkpoint and Recovery
 
-最初のCode Generation前にpre-code checkpoint PRをmergeする。以後の実装失敗では、成功済みBoltのsquash commitと失敗Bolt worktreeを保持し、protocolのhalt-and-askへ従う。全実装を破棄して設計へ戻す場合でも、checkpoint merge済み`main`を既知の復帰点にできる。force push、history rewrite、未承認mergeは行わない。
+pre-code checkpoint [PR #955](https://github.com/amadeus-dlc/amadeus/pull/955)はmerge済みで、既知の復帰点である。ADR-009の回復ではB-02の[PR #964](https://github.com/amadeus-dlc/amadeus/pull/964)を補正し、B-04の[PR #965](https://github.com/amadeus-dlc/amadeus/pull/965)を更新headへrebaseする。以後の実装失敗では、成功済みBoltのsquash commitと失敗Bolt worktreeを保持し、protocolのhalt-and-askへ従う。force push、history rewrite、未承認mergeは行わない。

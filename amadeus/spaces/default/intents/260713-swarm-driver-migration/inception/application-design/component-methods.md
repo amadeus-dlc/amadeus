@@ -309,7 +309,7 @@ interface RefereeUnitFailure {
 | Method | 事前条件 | 成功結果 | 失敗時 |
 |---|---|---|---|
 | `resolve` | multi-Unit `invoke-swarm`、正のbatch、重複なしUnit | batch内1回のprobeと決定的planをatomic保存 | env不正・明示driver不一致・明示probe失敗はworktree/worker作成前のhard error |
-| `run` | 同じattemptが`selected`、全Unitのreferee worktreeが存在 | nativeはcoordinator 1 processを起動してevidence verifiedまで進める。floor/legacy harnessはconductor用planを返す | dispatch後のevidence欠落は`failed-resumable`。fallback禁止 |
+| `run` | 同じattemptが`selected`、全Unitのreferee worktreeが存在 | nativeは閉じたtransportでcoordinator 1 processを起動してevidence verifiedまで進める。floor/legacy harnessはconductor用planを返す | dispatch後のevidence欠落は`failed-resumable`。fallback禁止 |
 | `resume` | stateが`failed-resumable`、または期限切れleaseを持つactive stateをrecovery可能 | 同じexecution ID、新attempt ID、新lease/fencing tokenでprobeから再開 | 生存owner、liveness不明、checkpoint破損、batch不一致、`succeeded`、`failed-terminal`はfail-closed |
 | `recordFloor` | conductorがplanどおり既存floorを実行し、全Unit結果を返す | native証跡不要のfloor完了を記録 | plan外Unit、driver不一致、結果欠落はfail-closed |
 | `recordLegacy` | legacy planどおり現行ハーネス挙動を実行した | 0.1.x結果を新driverへ読み替えず記録 | execution/plan digest/Unit不一致はfail-closed |
@@ -414,8 +414,10 @@ interface DriverAdapter {
   readonly driver: NativeDriver;
   supports(harness: Harness): boolean;
   probe(input: ProbeInput): Promise<ProbeResult>;
-  buildLaunch(input: LaunchInput): LaunchSpec;
-  normalize(raw: AsyncIterable<Uint8Array>, context: NormalizeContext): AsyncIterable<NormalizedDriverEvent>;
+  buildExecution(input: LaunchInput): AdapterExecutionPlan;
+  resolveCaptureBinding(input: CaptureBindingInput): CaptureBindingResolution;
+  observeControl(input: LiveEvidenceInputs, context: NormalizeContext): AsyncIterable<DriverControlSignal>;
+  normalize(input: EvidenceInputs, context: NormalizeContext): AsyncIterable<NormalizedDriverEvent>;
 }
 
 interface ProbeInput {
@@ -448,13 +450,120 @@ interface ProbeCheck {
   diagnosticCode: string;
 }
 
+interface AdapterExecutionPlan {
+  launch: LaunchSpec;
+  capture: EvidenceCapturePlan;
+  captureIdentity: CaptureIdentity;
+}
+
 interface LaunchSpec {
   executable: string;
   args: readonly string[];
   cwd: string;
   env: Readonly<Record<string, string>>;
-  stdin: "closed" | Uint8Array;
+  transport: CoordinatorTransport;
   timeoutMs: number;
+}
+
+type CoordinatorTransport =
+  | {
+      kind: "stdio-json";
+      stdin: "closed" | Uint8Array;
+      output: "stream-json" | "jsonl";
+    }
+  | {
+      kind: "pty-interactive";
+      initialInput: Uint8Array;
+      columns: 120;
+      rows: 40;
+      exitOnSignal: "ready-for-graceful-exit";
+      gracefulExitInput: Uint8Array;
+      controlTimeoutMs: number;
+      gracefulExitTimeoutMs: number;
+    };
+
+type EvidenceCapturePlan =
+  | {
+      kind: "fixed-provider-path";
+      initialBinding: FixedCaptureBinding;
+      hookDir: string;
+    }
+  | {
+      kind: "event-bound-provider-path";
+      hookDir: string;
+    }
+  | {
+      kind: "hook-only";
+      hookDir: string;
+    };
+
+interface CaptureIdentity {
+  executionId: string;
+  attemptId: string;
+  attemptNonceHash: string;
+  planDigest: string;
+  waveIndex: number;
+  waveDigest: string;
+}
+
+interface FixedCaptureBinding {
+  kind: "fixed-provider-path";
+  nativeRunId: string;
+  exactPaths: readonly string[];
+  exactPathDigest: string;
+  sourcePlanDigest: string;
+}
+
+interface EventBoundCaptureBinding {
+  kind: "event-bound-provider-path";
+  nativeRunId: string;
+  exactPaths: readonly string[];
+  exactPathDigest: string;
+  sourceEventDigest: string;
+}
+
+type CaptureBinding = FixedCaptureBinding | EventBoundCaptureBinding;
+
+interface CaptureBindingInput {
+  plan: Extract<EvidenceCapturePlan, { kind: "event-bound-provider-path" }>;
+  identity: CaptureIdentity;
+  event: RawNativeEvent;
+}
+
+type CaptureBindingResolution =
+  | { kind: "not-binding" }
+  | { kind: "bound"; binding: EventBoundCaptureBinding }
+  | { kind: "invalid"; diagnosticCode: string };
+
+interface RawNativeEvent {
+  source: "stream" | "hook";
+  bytes: Uint8Array;
+}
+
+interface LiveEvidenceInputs {
+  providerState: AsyncIterable<Uint8Array>;
+  nativeEvents: AsyncIterable<RawNativeEvent>;
+}
+
+interface DriverControlSignal {
+  kind: "ready-for-graceful-exit";
+  driver: NativeDriver;
+  executionId: string;
+  attemptId: string;
+  attemptNonceHash: string;
+  planDigest: string;
+  waveIndex: number;
+  waveDigest: string;
+  coveredUnits: readonly string[];
+  liveEvidenceDigest: string;
+}
+
+interface EvidenceInputs extends LiveEvidenceInputs {
+  processTerminal: {
+    transport: CoordinatorTransport["kind"];
+    exitCode: number;
+    processGroupId: number;
+  };
 }
 
 interface NormalizeContext {
@@ -469,14 +578,20 @@ interface NormalizeContext {
 }
 ```
 
-`buildLaunch`はshell文字列を返さず、executableとargvを分離してcommand injectionを防ぐ。`probe`はversionだけでavailableを返さず、CLI・auth・mode/trust・非破壊handshakeの全checkを要求する。timeoutは`CLI_METADATA_TIMEOUT_MS=5_000`、`AUTH_STATUS_TIMEOUT_MS=10_000`、`BEHAVIOR_HANDSHAKE_TIMEOUT_MS=30_000`、1候補の総deadlineを`45_000`とする。timeout値は共通定数を正本とし、環境変数では任意変更させない。
+`buildExecution`はshell文字列を返さず、executableとargvを分離してcommand injectionを防ぐ。`EvidenceCapturePlan`の`fixed-provider-path`はAgent Teams等、`event-bound-provider-path`はUltra/Kiro等、`hook-only`はCodex等を表し、runtimeへprovider名の分岐を持ち込まない。fixed variantはadapterがattempt専用session等のlaunch planからarm前に`initialBinding`を構築し、`sourcePlanDigest`へ束縛する。event-bound variantだけが`resolveCaptureBinding`を呼び、provider eventをnative run IDとexact pathへ変換する。hook-only variantはbindingを持たずresolverを呼ばない。
+
+runtimeはbindingのraw absolute pathを永続化せず、variant、native run ID、path digest、source plan/event digestだけをaudit-firstでcheckpointへ保存してからobserverへexact pathを渡す。fixedでinitial binding欠落、event-boundでarm前bindingあり、hook-onlyでbindingあり、resolverの`invalid`、2件目の異なるbinding、binding前のstate readはfail-closedとする。
+
+capture supervisorはprovider stateとsource-tag付きstream/hook eventをlive projectionとterminal後のretained projectionへfan-outする。PTY transportでは`observeControl`がlive projectionからprovider固有の完了条件を判定し、全expected Unitを覆う`ready-for-graceful-exit`だけをruntimeへ返す。runtimeはcorrelationとdigestを検査して`gracefulExitInput`をPTYへ1回だけ送信し、その後にprocess group terminalを待つ。このsignalは終了制御だけに使い、native successには数えない。timeout、partial/unknown/failed stateではsignalを生成せず、runtimeがprocess groupを停止して`failed-resumable`にする。stdio transportはcontrol signalを要求せずprocess terminalを直接待つ。
+
+全transportの順序は、capture observer開始 → capture identity/planの`prepared-dispatched`保存 → provider arm/spawn → event-bound `capture-bound`保存（state read前）→ PTYだけlive control signalとgraceful-exit入力 → process group terminal → observer `stopAndWait` → retained 3-channel `EvidenceInputs`の`normalize`、とする。capture開始前のprovider arm、binding前のprovider state read、PTY signal前のgraceful-exit、process terminal前のjoin、join失敗後の空evidence成功を禁止する。`probe`はversionだけでavailableを返さず、CLI・auth・mode/trust・非破壊handshakeの全checkを要求する。timeoutは`CLI_METADATA_TIMEOUT_MS=5_000`、`AUTH_STATUS_TIMEOUT_MS=10_000`、`BEHAVIOR_HANDSHAKE_TIMEOUT_MS=30_000`、1候補の総deadlineを`45_000`とする。timeout値は共通定数を正本とし、環境変数では任意変更させない。
 
 ### Driver固有mode識別子
 
 | Driver | Launchの必須指定 | `modeIdentifier` | native成功証跡 |
 |---|---|---|---|
-| `claude-agent-teams` | Agent Teams env、in-process teammate mode、stream-json、hook event | `claude-agent-teams-v1` | 一意team名、2 members以上、共有taskのUnit割当 |
-| `claude-ultracode` | Ultra Code session設定、xhigh-capable model、stream-json、hook event | `claude-dynamic-workflow-v1` | workflow run ID、2 native task/agent以上、Unit割当 |
+| `claude-agent-teams` | `pty-interactive`、Agent Teams env、in-process teammate mode、attempt専用session ID、Task/Teammate hook | `claude-agent-teams-v1` | exact `session-<id8>` team、2 members以上、共有taskのUnit割当、全owner idle |
+| `claude-ultracode` | `stdio-json`、`claude -p --verbose --effort ultracode --output-format stream-json --include-hook-events` | `claude-dynamic-workflow-v1` | workflow run ID、completed snapshot、2 native task/agent以上、journal/hookとのID一致、Unit割当 |
 | `codex-ultra` | `codex exec --json`、`model_reasoning_effort="ultra"`、`features.multi_agent=true`、attempt専用Subagent hooks | `codex-ultra-v1:<resolved-model-id>` | resolved modelのUltra受理、thread ID、2 child agent ID以上、Unit割当 |
 | `kiro-subagent` | `chat --no-interactive`、trusted subagent設定、balanced wave 2〜4 | `kiro-subagent-v1` | parent session ID、予定数のchild session、Unit全単射、全child completed stop |
 
@@ -489,6 +604,7 @@ type EvidenceSource =
   | "model-handshake"
   | "provider-state"
   | "session-metadata"
+  | "process-lifecycle"
   | "stream"
   | "hook";
 
@@ -519,7 +635,7 @@ type NormalizedDriverEvent =
     })
   | (EvidenceEventBase & {
       kind: "coordinator-started";
-      source: "stream";
+      source: "process-lifecycle";
       coordinatorId: string;
     })
   | (EvidenceEventBase & {
@@ -548,7 +664,7 @@ type NormalizedDriverEvent =
     })
   | (EvidenceEventBase & {
       kind: "coordinator-stopped";
-      source: "stream";
+      source: "process-lifecycle";
       coordinatorId: string;
       exitCode: number;
     });
@@ -601,7 +717,7 @@ interface EvidenceVerdict {
 verifierは次のAND条件を全waveへ適用する。
 
 1. 全eventのdriver、execution/attempt、attempt nonce hash、plan digest、wave index/digestが期待値と完全一致する。
-2. driver別に独立sourceを要求する。Agent TeamsとClaude Ultraは`provider-state + stream`、Codex Ultraは`model-handshake + stream + hook`、Kiroは`session-metadata + stream`を必須にする。
+2. driver別に独立sourceを要求する。Agent Teamsは`provider-state + hook`、Claude Ultraは`provider-state + stream + hook`、Codex Ultraは`model-handshake + stream + hook`、Kiroは`session-metadata + stream`を必須にする。`process-lifecycle`はcoordinatorの生存・終了相関にだけ使い、native delegationの独立source数へ算入しない。
 3. 各waveにcoordinator startとexit 0のstopがあり、同じcoordinator/native runへ相関する。
 4. `native-state-observed.bindings`がwave Unitsとchild IDsの全単射であり、重複・余分・欠落がない。
 5. 全bindingについてchild startと`outcome=completed`のchild stopが存在する。startedだけ、failed stop、coordinatorだけの成功を拒否する。
@@ -673,7 +789,21 @@ type AttemptTransition =
       edge: "prepared-dispatched";
       from: "prepared";
       to: "dispatched";
-      details: { nativeRunIds: readonly string[]; waveDigests: readonly string[] };
+      details: {
+        capture: CaptureCheckpoint;
+        waveDigests: readonly string[];
+      };
+    })
+  | (AttemptTransitionBase & {
+      edge: "capture-bound";
+      from: "dispatched";
+      to: "dispatched";
+      details: {
+        captureKind: "event-bound-provider-path";
+        nativeRunId: string;
+        exactPathDigest: string;
+        sourceEventDigest: string;
+      };
     })
   | (AttemptTransitionBase & {
       edge: "dispatch-evidence-verified";
@@ -730,14 +860,49 @@ interface AttemptCheckpoint {
   selected?: SelectedDriver;
   legacyExecution?: LegacyExecution;
   worktreeManifestDigest?: string;
+  capture?: CaptureCheckpoint;
   unitStates: Readonly<Record<string, "pending" | "dispatched" | "evidence-seen" | "referee-converged" | "failed">>;
   previousAttemptId?: string;
   lastTransitionId: string;
   stateDigest: string;
 }
+
+type CaptureCheckpoint =
+  | {
+      kind: "fixed-provider-path";
+      identityDigest: string;
+      capturePlanDigest: string;
+      transport: CoordinatorTransport["kind"];
+      binding: {
+        nativeRunId: string;
+        exactPathDigest: string;
+        sourcePlanDigest: string;
+      };
+    }
+  | {
+      kind: "event-bound-provider-path";
+      identityDigest: string;
+      capturePlanDigest: string;
+      transport: CoordinatorTransport["kind"];
+      binding?: {
+        nativeRunId: string;
+        exactPathDigest: string;
+        sourceEventDigest: string;
+      };
+    }
+  | {
+      kind: "hook-only";
+      identityDigest: string;
+      capturePlanDigest: string;
+      transport: CoordinatorTransport["kind"];
+    };
 ```
 
-`transition`は上のclosed unionにあるstate edgeだけを受理し、batch、lease ID、単調増加するfencing tokenが現在checkpointと一致しないwriterを拒否する。既存audit-first規則に従い、同じlock内で一意なtransition IDとpre/post digestを含む`SWARM_DRIVER_TRANSITION`を先にappendし、その後checkpointをatomic replaceする。どちらかが失敗しても成功応答を返さない。audit成功・checkpoint失敗のcrash windowはresumeが`lastTransitionId`とdigestを照合し、idempotentに再適用した結果を`SWARM_DRIVER_RECONCILED`へ記録する。
+`transition`は上のclosed unionにあるstate edgeだけを受理し、batch、lease ID、単調増加するfencing tokenが現在checkpointと一致しないwriterを拒否する。`capture-bound`だけは`dispatched → dispatched`のmetadata self-edgeであり、未boundの`event-bound-provider-path`へ最初の1回だけ適用できる。fixed-pathとhook-onlyではこのedgeを型とruntime validatorの両方で拒否し、異なるrun/pathへの再bindingも拒否する。
+
+`prepared-dispatched`はcapture observer開始後かつprovider arm前にvariant付きcapture checkpointを保存する。fixed-pathはadapterがlaunch planから作ったnative run ID、exact path digest、source plan digestを含むinitial bindingを必須とし、event-boundはbindingなし、hook-onlyはbinding field自体を持たない。event-bound modeでは`capture-bound`成功前にprovider stateを読まない。これによりstoreはprovider名やargvを解析せず、capture kindだけで許可edgeと必須fieldを検証できる。
+
+既存audit-first規則に従い、同じlock内で一意なtransition IDとpre/post digestを含む`SWARM_DRIVER_TRANSITION`を先にappendし、その後checkpointをatomic replaceする。どちらかが失敗しても成功応答を返さない。audit成功・checkpoint失敗のcrash windowはresumeが`lastTransitionId`とdigestを照合し、idempotentに再適用した結果を`SWARM_DRIVER_RECONCILED`へ記録する。provider arm直前、spawn直後、binding直前のcrashもlease/process-group recoveryと同じfencing tokenで回収し、旧attemptのobserver・PTY・bindingを新attemptへ再利用しない。
 
 leaseは固定30秒、heartbeatは固定5秒とし、利用者設定にはしない。heartbeatはlease metadataだけのatomic compare-and-setで、lifecycle `stateDigest`から除外する。通常edgeは現在checkpointのlease/fencing token一致を要求する。`active-attempt-recovered`だけはaudit lock下で期限切れleaseのtokenに1を加えたrecovery claimをcompare-and-setする特例である。
 

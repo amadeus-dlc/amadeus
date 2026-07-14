@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | Driver Coordination Service | `amadeus-swarm-driver.ts` 1 process | `invoke-swarm`からreferee完了まで | record-local checkpoint | batch |
 | Native Coordinator | Claude/Codex/Kiro CLI child process | driver `run`中だけ | provider session + normalized evidence | Claude/Codexはbatch、Kiroはwave |
-| Evidence Capture | adapter parser +必要時hook process | coordinatorと同時 | attempt temp dir | native event |
+| Evidence Capture | exact-path observer + adapter parser +必要時hook process | coordinator起動前に開始し、process group terminal後にjoin | attempt temp dir | native event |
 | Swarm Referee | 既存`amadeus-swarm.ts` invocation | prepare/check/finalizeごと | stateless、git/worktreeを観測 | Unit/batch |
 
 中央のDriver Coordination Serviceが順序を所有するorchestration方式を採用する。provider event同士のchoreographyにはしない。外部CLIが終了してもrefereeが収束を確認するまでbatch successを確定しない。
@@ -25,6 +25,7 @@ sequenceDiagram
   participant H as Harness Conductor
   participant D as Driver Coordinator
   participant R as Swarm Referee
+  participant C as Evidence Capture
   participant P as Native Coordinator
 
   E->>H: invoke-swarm(batch, units, topology)
@@ -38,8 +39,27 @@ sequenceDiagram
     R-->>H: prepared Unit worktrees
     H->>D: run(plan, worktree manifest)
     alt native plan
-      D->>P: one coordinator process
-      P-->>D: native events/traces
+      D->>C: start observer + checkpoint identity/plan
+      D->>P: arm + spawn one coordinator process
+      opt event-bound provider path
+        P-->>C: native binding event
+        C-->>D: adapter-resolved run + exact path
+        D->>D: audit-first capture-bound
+        D->>C: enable exact state read
+      end
+      alt PTY interactive
+        loop live state/hook projection
+          P-->>C: provider state + hook input
+          C-->>D: adapter control projection
+        end
+        D->>D: validate ready-for-graceful-exit
+        D->>P: graceful-exit input
+      else stdio JSON
+        P-->>C: stream + hook/provider state
+      end
+      P-->>D: process group terminal
+      D->>C: stopAndWait
+      C-->>D: joined evidence inputs
       D->>D: normalize + verify evidence
     else floor plan
       D-->>H: floor execution manifest
@@ -66,7 +86,7 @@ sequenceDiagram
   end
 ```
 
-テキスト代替: engineがdriver-neutralなbatchを渡し、driver toolが選択する。refereeがworktreeを準備した後、nativeならcoordinatorを1つ起動して証跡を検証し、floorならconductorへ既存floorの実行manifestを返して結果を記録する。その後だけ既存refereeのcheck/finalizeへ進み、merge結果をdriver checkpointへ取り込む。
+テキスト代替: engineがdriver-neutralなbatchを渡し、driver toolが選択する。refereeがworktreeを準備した後、nativeならcapture identity/planを保存してcoordinatorを1つ起動する。run後にpathが判明するmodeはadapter resolverがexact bindingを返し、driver toolがprovider state読取前にaudit-first保存する。PTY modeはlive state/hookからadapterが全Unit完了signalを返した場合だけdriver toolがexit inputを送り、その後process terminalを待つ。stdio modeはprocess terminalを直接待つ。terminal後にcaptureをjoinして最終証跡を検証する。floorならconductorへ既存floorの実行manifestを返して結果を記録する。その後だけ既存refereeのcheck/finalizeへ進み、merge結果をdriver checkpointへ取り込む。
 
 ## Driver別process contract
 
@@ -74,27 +94,28 @@ sequenceDiagram
 
 | 項目 | 契約 |
 |---|---|
-| Process | batchごとに`claude -p` 1 process |
-| Mode | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`、`teammateMode=in-process`、stream-json + hook events |
-| Input | 一意team名、Unit slug、worktree path、依存、convergence commandを構造化promptへ渡す |
-| Native evidence | team configの同一team `members` 2件以上、共有task listの各Unit task、stream上のTeam/task marker |
+| Process | batchごとにinteractive PTY上の`claude` 1 process。`claude -p`は禁止 |
+| Mode | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`、`--teammate-mode in-process`、attempt専用`--session-id`、Task/Teammate hook |
+| Input | Unit slug、worktree path、依存、convergence commandをPTYのinitial inputとして渡す。promptをargvへ置かない |
+| Native evidence | exact `session-<session-id先頭8文字>` team configの`members` 2件以上、共有task listの各Unit task、TaskCreated / TaskCompleted / TeammateIdle hook |
 | Isolation | teammate自身の自動worktreeに依存せず、各Unitへreferee作成済みworktreeを明示割当 |
-| Failure | Team未作成、member<2、Unit未割当、cleanup前消失、process非0はdispatch failure |
+| Completion | adapterのlive projectionが全Unit task completedと全owner idleを満たす`ready-for-graceful-exit`を返した後だけ、runtimeがPTYへ`/exit`を1回送りgraceful exitを待つ。signalは最終success証跡には数えない |
+| Failure | Team未作成、member<2、Unit未割当、TeammateIdle欠落、capture join失敗、graceful exit失敗、process非0はdispatch failure |
 
-Agent Teamsは独立したClaude session、共有task list、direct messagingを提供する。team stateは`~/.claude/teams/{team-name}/config.json`、task stateは`~/.claude/tasks/{team-name}/`にあるため、adapterはexecution/attemptから導出したteam名だけを読み、他teamをscanしない。cleanup前に必要fieldを正規化し、raw fileはcheckpoint/auditへ複製しない。
+Agent Teamsは独立したClaude session、共有task list、direct messagingを提供する。Claude Code 2.1.205では非対話actionがsession team初期化を抑止するため、`claude -p`はAgent Teams transportとして利用できない。adapterはattempt専用session IDからClaude既定のteam名`session-<id8>`を厳密導出し、`~/.claude/teams/{team-name}/config.json`と`~/.claude/tasks/{team-name}/`だけを監視する。他teamのroot scanやmtime探索は行わない。team configはclean session exitで消えるため、observerをprovider arm前に開始する。capture supervisorはlive projectionを終了制御へ、retained terminal snapshotを最終verifierへ分配する。control timeout、partial/failed state、signal相関不一致では`/exit` success pathへ進まずprocess groupを停止してfailed-resumableとする。PTY terminal bytesは診断専用で、Team証跡として扱わない。
 
 ### Claude Ultra Code
 
 | 項目 | 契約 |
 |---|---|
 | Process | batchごとに`claude -p` 1 process |
-| Mode | ephemeral settingsでUltra CodeとDynamic Workflowsを明示、xhigh-capable model、stream-json + hook events |
+| Mode | `--verbose --effort ultracode --output-format stream-json --include-hook-events`、stream-json + hook events |
 | Input | batchを1つのdynamic workflowとして実行し、各Unitを別native workflow task/agentへ割り当てる |
-| Native evidence | workflow run ID、workflow marker、2件以上のnative task/agent ID、全Unit対応 |
+| Native evidence | Workflow結果の`runId` / `transcriptDir`、`workflows/<runId>.json`のcompleted snapshot、`transcriptDir/journal.jsonl`、2件以上のnative task/agent ID、hook、全Unit対応 |
 | Floorとの差 | `claude-task-floor`のUnit別Task呼出しではなく、1 process内のstanding workflowがbatchを調整する |
 | Failure | xhighだけ、keyword受理だけ、自己申告だけ、workflow markerなしはsuccessにしない |
 
-Ultra Codeの公開CLI surfaceがversion間で変わる可能性があるため、adapterは固定の表示文言をparseしない。opt-in live fixtureで捕捉したversioned event pathだけをallowlistし、未知schemaでは`native-surface-unavailable`または`native-evidence-unavailable`として停止する。
+Ultra Codeの公開CLI surfaceがversion間で変わる可能性があるため、adapterは固定の表示文言をparseしない。Workflow resultの`runId`と`transcriptDir`からsnapshotとjournalを一意導出し、snapshotの`status=completed`、`agentCount>=2`、全`workflow_agent.state=done`、journalのstarted/result、Subagent hookのagent IDを同一run/sessionで照合する。opt-in live fixtureで捕捉したversioned field pathだけをallowlistし、未知schemaでは`native-surface-unavailable`または`native-evidence-unavailable`として停止する。
 
 ### Codex Ultra
 
@@ -159,7 +180,8 @@ stateDiagram-v2
   probing --> failed_terminal: input / explicit probe failure
   probing --> failed_resumable: interrupted
   selected --> prepared: referee prepare bound
-  prepared --> dispatched: coordinator started
+  prepared --> dispatched: capture checkpointed before provider arm
+  dispatched --> dispatched: provider arm / event-bound capture-bound before state read
   dispatched --> evidence_verified: native evidence valid / floor completed
   dispatched --> failed_resumable: process / evidence / crash
   evidence_verified --> referee_running: check/finalize started

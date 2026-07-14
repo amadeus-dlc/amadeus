@@ -42,6 +42,8 @@ Markdown reportはJSON正本から生成し、次の固定順で表示する。
 
 各rowは`green`、`red`、`missing`のいずれかで、空欄をpassとみなさない。Issueを言及するときは必ずURLを付ける。
 
+Native live rowはdriver名だけでなくtransport/captureを表示する。Agent Teamsは`interactive PTY / fixed-provider-path / terminal retained`、Ultra Codeは`headless stdio-json / event-bound-provider-path`とし、ready signalだけをgreen表示しない。
+
 ## GitHub Issue interaction
 
 Issue ensureは非対話の暗黙作成をしない。Code Generationで明示的に実行し、結果を次へ分類する。
@@ -59,4 +61,3 @@ release checkはharness内へselection proseを複製しない。C-12が同じco
 ## Accessibilityとplatform
 
 GUIがないためvisual accessibilityはN/Aである。JSON key、text status、exit codeを併用し、色やemojiだけへ依存しない。macOSとGitHub Actions Linuxだけを検証対象として表示し、Windowsを`green`、`supported`、`verified`と表示しない。
-

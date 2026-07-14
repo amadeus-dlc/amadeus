@@ -17,7 +17,7 @@ raw app-server response、JSONL bytes、hook JSONはparser stack内のephemeral 
 
 ## CodexAdapterRegistration
 
-U-03でgeneric slotをdriver-keyed setへ訂正済みである。Codexは単一viewを登録する。
+U-01で確定したdriver-keyed set contractに従い、U-02のproduction composition rootへCodexの単一view descriptorを提供する。
 
 ```text
 CodexAdapterRegistration
@@ -37,7 +37,8 @@ CodexUltraAdapterView
   provider = codex
   surfaceProfiles: immutable supported profile set
   probe(input): CodexProbeResult
-  buildExecution(input): AdapterExecutionPlan
+  prepareResources(input): AdapterResourcePreparation
+  buildExecution(input, resources: MaterializedAuxiliaryResourceSet): AdapterExecutionPlan
   normalize(inputs, context): NormalizedDriverEvent stream
 ```
 
@@ -304,8 +305,9 @@ key setはexact 5件であり、欠落、追加、空valueを拒否する。owne
 
 ```text
 CodexEvidenceCapturePlan
+  kind = hook-only
   captureId
-  evidenceRoot: canonical exact path
+  hookDir: canonical exact evidence root
   ownerMarkerDigest / ownerTokenDigest
   nonceHash / planDigest / probeBindingFinalDigest
   hookDefinitionsDigest
@@ -316,7 +318,7 @@ CodexEvidenceCapturePlan
   stopAfterProviderGroupTerminal: true
 ```
 
-provider-stateは持たない。U-03のgeneric fixed-path capture variantを使い、evidence rootだけをobserver対象にする。capture plan自身はI/Oを行わず、U-02 supervisorがmaterialize/start/sealする。materialize時にevidence rootが全sandbox readable/writable rootと交差しないことをrealpathで検証する。
+provider-state bindingは持たない。U-01が定義しU-02が実行する`hook-only` capture variantを使い、event-bound resolverや`capture-bound`を呼ばない。pure `prepareResources`がevidence root、owner marker、scratch HOME/configを`AuxiliaryResourcePlan[]`として返し、U-02のmaterialized setを受けたpure `buildExecution`が具体的env/capture identityを返す。U-02がmaterialize/seal/cleanupし、materialize時にevidence rootが全sandbox readable/writable rootと交差しないことをrealpathで検証する。
 
 ## CodexHookRecord
 

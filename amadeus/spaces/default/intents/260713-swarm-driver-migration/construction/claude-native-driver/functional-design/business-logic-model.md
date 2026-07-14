@@ -24,20 +24,7 @@ versionは診断であり成功根拠ではない。localでは`--teammate-mode 
 
 ## C-05 moduleとproduction registration
 
-Iteration 1 reviewで、上流U-01の`RegistrationSlot.available.adapter`が単数である一方、Claude providerは2 driverを所有するため、そのままではproduction registryを構築できないことが判明した。Functional Designの実装契約は、単数slotをdriver-keyed `DriverAdapterSet`へ訂正する。この狭いgeneric contract correctionはU-01/U-02 Code Generationにも適用し、provider別mappingやdriver literalは変更しない。
-
-```text
-RegistrationSlot =
-  available(adapterSet: DriverAdapterSet)
-  | unavailable(diagnosticCode)
-
-DriverAdapterSet.build(provider, declaredDrivers, adapters)
-  - adapter.driverをkeyに重複0件
-  - keys == declaredDrivers
-  - Claude: exactly 2
-  - Codex/Kiro: exactly 1
-  - forDriver(driver): exactly 1 adapter
-```
+driver-keyed registration、Claude=2/Codex=1/Kiro=1のcardinality、production composition root、fail-closed slotはU-01/U-02で完成済みのgeneric contractである。U-03はこの型やmappingを訂正せず、Claude slotへ格納する2つの実descriptorだけを提供する。他provider slot、common runtime、checkpoint、verifier、refereeは変更しない。
 
 `ClaudeDriverAdapter`は1つのprovider module/class familyであり、singleton processやsingleton cacheではない。共通`DriverAdapter.driver`が単一driver IDを要求するため、factoryは次の2つのimmutable mode-bound viewを返し、Claudeの`DriverAdapterSet`へ2件とも格納する。
 
@@ -49,7 +36,7 @@ createClaudeAdapterFamily(resolveScope)
              └─ shared commonProbe Promise (resolveScope内だけ)
 ```
 
-production composition rootはClaude providerのfail-closed slotだけを、この2件を持つavailable `DriverAdapterSet`へ置換する。Codex/Kiroは同じgeneric型のunavailable slotのままで、static importと4 native driverのclosed mappingは変更しない。C-01は`probing` attemptごとにfresh resolve scopeを作り、Claude setの2 viewを同じscopeへ束縛する。scope破棄後にprobe結果を再利用しない。
+U-03のregistration descriptorはClaude providerのfail-closed slotだけを、この2 viewを持つavailable setへ置換する。U-02のcomposition rootがstatic mappingとcardinalityを検証し、U-03はCodex/Kiro slotや4 driver mappingを編集しない。C-01は`probing` attemptごとにfresh resolve scopeを作り、Claude setの2 viewを同じscopeへ束縛する。scope破棄後にprobe結果を再利用しない。
 
 この形は「C-05が2 modeを扱う」と「`DriverAdapter.driver`は1値」を両立し、2つの独立adapter実装へbusiness logicを複製しない。単一adapterの`driver`を実行中に変更することは禁止する。共通部分はCLI/auth/env/schema profile、差分はmode probe、launch args、provider-state parser、evidence policyだけである。
 
@@ -61,7 +48,7 @@ sequenceDiagram
   participant C as C-01 Coordinator
   participant A as C-05 Claude Adapter
   participant S as U-02 Supervisor
-  participant P as claude -p
+  participant P as Claude coordinator
   participant O as State Observer
   participant V as C-08 Verifier
   participant R as C-11 Referee
@@ -75,15 +62,21 @@ sequenceDiagram
   H->>C: run(plan, PreparedUnit[])
   C->>A: buildExecution(plan, preparedUnits)
   A-->>C: LaunchSpec + EvidenceCapturePlan
-  C->>S: bind capture/run then start capture
+  C->>S: U-02 capture plan/transportをcheckpointしてstart
   S-->>C: CaptureIdentity
   C->>S: identity-first provider wrapper
   S-->>C: process identity
   C->>C: dispatched checkpoint then arm
-  S->>P: claude -p, stdin manifest
-  par provider stream
+  alt Agent Teams
+    S->>P: interactive PTY上でclaude + initial input
+    P-->>A: exact team/task state + Task/Teammate hooks
+    A-->>S: ready-for-graceful-exit
+    S->>P: PTY exit inputを1回送信
+  else Ultra Code
+    S->>P: exact headless claude -p command + stdin manifest
     P-->>A: stream-json + hook events
-  and exact provider state
+  end
+  par exact provider state
     O->>O: exact session team/workflow path only
     O-->>A: normalized snapshots
   end
@@ -102,7 +95,7 @@ sequenceDiagram
   C-->>H: terminal checkpoint
 ```
 
-テキスト代替: Claude harnessはC-01をdriver lifecycleの公開入口にし、C-11をrefereeの公開入口にする。C-01とC-11は互いをimport/callしない。harness conductorだけがprepare、advisory check、record-finalize request、finalize、record-finalize resultをversioned JSONで媒介する。adapterがpureなlaunch/capture planとevidence変換を提供し、U-02 supervisorがcaptureとprovider processを安全に起動する。
+テキスト代替: Claude harnessはC-01をdriver lifecycleの公開入口にし、C-11をrefereeの公開入口にする。C-01とC-11は互いをimport/callしない。harness conductorだけがprepare、advisory check、record-finalize request、finalize、record-finalize resultをversioned JSONで媒介する。adapterはAgent TeamsにPTY plan、Ultra Codeにstdio JSON planを返し、U-02 supervisorがclosed transport/capture順序を実行する。
 
 ## Probeアルゴリズム
 
@@ -119,14 +112,14 @@ sequenceDiagram
 |---:|---|---|---:|---|
 | 1 | CLI | `claude --version` | 5秒 | executable、parse可能version、exit 0 |
 | 2 | Auth | `claude auth status` | 10秒 | JSON statusがlogged-in。token/valueは読取後破棄 |
-| 3 | Stream | temp dirの非破壊`claude -p` handshake | 30秒内 | `system/init`とterminal eventがallowlist schema、session相関 |
-| 4 | Hook capture | attempt専用ephemeral settings | 同上 | sentinel hookがowned evidence dirへ最小eventを1件書く |
+| 3 | Mode handshake | mode別の非破壊fixture | 30秒内 | Agent Teamsはinteractive PTY/team初期化surface、Ultraはstream `system/init`/terminalを確認 |
+| 4 | Hook capture | attempt専用ephemeral settings | 同上 | mode別sentinel hookがowned evidence dirへ最小eventを1件書く |
 
 handshakeはapplication code、git、team、workflowを作らず、toolsを無効化した固定応答だけを要求する。APIを呼べないauth/modeではavailableを返さない。raw output、result text、model responseは保存しない。
 
 ### Mode probe
 
-Agent Teamsはexperimental env、`--teammate-mode in-process`、session ID flagの受理、expected team/task rootの安全なpath構築、Task/Teammate hook schema profileを検査する。実teamはprobeで作らない。
+Agent Teamsはexperimental env、interactive action、`--teammate-mode in-process`、session ID flag、expected team/task rootの安全なpath構築、Task/Teammate hook schema profileを検査する。`claude -p`で通常async Agentが動くことをTeams surfaceとして受理しない。
 
 Ultra Codeは`--effort ultracode` flag受理、workflows無効設定がないこと、`system/init.capabilities`とlive-discovered profileの一致、SubagentStart/Stop captureを検査する。`xhigh`受理だけではavailableにしない。公式に安定fieldがないrun/task pathはcredentialed discovery fixtureが確定するまで`native-evidence-unavailable`である。
 
@@ -136,7 +129,7 @@ Ultra Codeは`--effort ultracode` flag受理、workflows無効設定がないこ
 - `auto`: dispatch前だけU-01の固定候補列へ進む。coordinatedでTeams unavailableならUltra、さらにunavailableならTask floor。
 - dispatch後: probeを再解釈せずfailed-resumable。別mode/floorへfallbackしない。
 
-## LaunchSpec構築
+## Mode別LaunchSpec構築
 
 ### 共通input
 
@@ -153,21 +146,29 @@ ClaudeBatchManifestV1
 
 `assignmentToken`は`sha256(executionId, attemptId, waveDigest, unitSlug)`の短縮base32であり、Unit slugと組み合わせてtask/workflow labelに使う。これはsecretでなく、別attemptの自己申告や残存stateを排除する相関tokenである。
 
-stdinはwrapperがprovider spawn後に1回だけwriteし、EOFを送る。argvへpromptを置かず、shell commandを組み立てない。
+Ultraではwrapperがprovider spawn後にstdinを1回だけwriteしてEOFを送る。Agent Teamsでは同じmanifest由来instructionをPTYの`initialInput`として1回送る。どちらもargvへpromptを置かず、shell commandを組み立てない。
 
-### 共通argvとsettings
+### Agent Teams interactive PTY
 
 ```text
-claude -p
-  --output-format stream-json
-  --verbose
-  --include-hook-events
+claude
+  --teammate-mode in-process
   --session-id <execution-derived UUID>
   --settings <attempt-owned ephemeral settings path>
   --permission-mode dontAsk
 ```
 
-ephemeral settingsはU-03のevidence hookだけを追加し、既存project/user settingsを上書きしない。fileはmode、hook command、evidence directoryの非機密pathだけを持ち、0600で作る。`claude -p`はinvalid settingsを対話表示せず無視し得るため、probeのsentinel hook成立を必須にする。
+`LaunchSpec.transport`は`pty-interactive`で、manifest由来instructionを`initialInput`、`/exit`を`gracefulExitInput`とする。`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`をenvへ追加する。PTY bytesはprocess lifecycle診断に限定し、Team eventやsuccess evidenceへ投影しない。`claude -p`、`--output-format stream-json`、通常async Agent/Taskはこのmodeで禁止する。
+
+### Ultra Code headless stdio JSON
+
+```text
+claude -p --verbose --effort ultracode --output-format stream-json --include-hook-events
+```
+
+`LaunchSpec.transport`は`stdio-json`で、canonical manifestをstdinへ渡す。上記の必須flag列を保ち、`--effort xhigh`、keyword自己申告、通常subagentへ置換しない。
+
+両modeのephemeral settings bytesはU-03のevidence hookだけを追加し、既存project/user settingsを上書きしない。contentはmode、hook command、evidence directoryの非機密pathだけを持つ。adapterは`attempt-owned-file(mode=0600)`として宣言し、U-02だけが作成する。invalid settingsの黙示無視を防ぐため、mode別probeのsentinel hook成立を必須にする。
 
 envは固定allowlistで構築する。
 
@@ -184,35 +185,28 @@ Iteration 1 reviewで、上流`buildLaunch`と`normalize(rawStream)`だけでは
 
 ```text
 DriverAdapter
-  buildExecution(input): AdapterExecutionPlan
+  prepareResources(input): AdapterResourcePreparation
+  buildExecution(input, resources: MaterializedAuxiliaryResourceSet): AdapterExecutionPlan
   normalize(inputs: EvidenceInputs, context): NormalizedDriverEvent stream
 
-AdapterExecutionPlan
-  launch: LaunchSpec
+AdapterExecutionPlan = U-01-owned / U-02-consumed common contract
+  launch: LaunchSpec(transport = pty-interactive | stdio-json)
   capture: EvidenceCapturePlan
-  planDigest: sha256(launch redacted shape + capture)
-
-EvidenceCapturePlan
-  schemaVersion / provider / mode / profile
-  captureId / expected session-run identity
-  stateBinding:
-    fixed-path(exact provider-state locations)
-    | stream-bound(expected session root, run-created path, location resolver)
-  hook record directory
-  atomic snapshot target
-  startBeforeProviderArm = true
-  stopAfterProviderGroupTerminal = true
+  captureIdentity: executionId / attemptId / planDigest / waveIndex / waveDigest
+  resources: AuxiliaryResourcePlan[]
 ```
+
+Claudeのresource preparationは、Agent Teamsのordered 256 prefix candidatesを持つ`exclusive-reservation`、両modeのephemeral settingsを持つ`attempt-owned-file`、attempt evidence/hook/snapshot rootを持つ`attempt-owned-directory`だけを宣言する。U-03は`mkdir`、`lstat`、write、unlink、reservation cleanupを行わない。U-02が返すmaterialized setからselected session UUID/path、settings path、evidence rootを読み、具体的argv、fixed initial binding、hookDirを純粋構築する。Ultraはprefix reservationを持たず、event-bound captureを返す。
 
 U-02 `ProcessSupervisor`は`EvidenceCaptureSupervisor` portを所有し、次の順序を強制する。
 
-1. `AdapterExecutionPlan.planDigest`、capture ID、state/hook/snapshot path digestを`prepared` checkpointへaudit-firstで束縛する。
-2. capture observerを開始し、owner process identity、capture ID、plan digestを持つ`CaptureIdentity`を返させる。Agent Teamsはfixed path observerを直ちに開始する。Ultraは`awaiting-binding` observerを開始し、provider streamのallowlisted workflow-created eventからrun IDを得るまでpathを読まない。observerはC-05 parser/profileを使うが、起動順と停止保証はU-02が所有する。
+1. `AdapterResourcePreparation`をU-02がmaterializeし、owner/content/selected candidate receiptをcheckpointへaudit-firstで束縛する。そのmaterialized setから構築した`AdapterExecutionPlan.captureIdentity.planDigest`、capture ID、state/hook/snapshot path digestを同じprepared lifecycleへ束縛する。
+2. capture observerを開始し、owner process identity、capture ID、plan digestを持つ`CaptureIdentity`を返させる。Agent Teamsは`fixed-provider-path`の`initialBinding`にあるexact path observerを直ちに開始する。Ultraは`event-bound-provider-path` observerを開始し、provider eventからrun IDを得るまでpathを読まない。observerはC-05 parser/profileを使うが、起動順と停止保証はU-02が所有する。
 3. `CaptureIdentity`をcheckpointへ保存した後にprovider wrapper identity handshakeを行う。providerのone-time armはcapture startedのfenced checkpointがなければ受理しない。
 4. Ultraのworkflow-created eventをC-05のclosed binding parserへ渡し、run ID、session ID、resolved exact state pathを持つ`CaptureBinding`を作る。U-02はprofile ruleとrealpath confinementを再検証し、binding digestをaudit-first checkpointへ保存してからそのexact pathのpollingを有効にする。binding前にdirectory scanやstate readをしない。
-5. provider stdoutを`processStream`、observer snapshotを`providerStateStream`、exact hook directoryのrecordを`hookRecordStream`として別channelへ保つ。private mutable closureや`buildExecution`中のpollingは禁止する。
+5. Ultraのstructured stdoutを`processStream`、observer snapshotを`providerStateStream`、exact hook directoryのrecordを`hookRecordStream`として別channelへ保つ。Agent TeamsのPTY bytesはdiagnostic channelに隔離し、structured `processStream`やTeam evidenceへ昇格しない。private mutable closureや`buildExecution`中のpollingは禁止する。
 6. provider group terminalを確認した後にcaptureへstopを送り、`stopAndWait`でlast valid atomic snapshotとhook record集合を確定する。observer停止不能、binding/snapshot欠落、hook読取未完了はsuccessにしない。
-7. adapter `normalize`へ3 channelとterminal identityを渡し、C-08検証後にscratch cleanupを行う。streamとprovider-stateを同じraw eventから二重生成しない。
+7. adapter `normalize`へ3 channelとterminal identityを渡す。U-02がcapture join後にowned resourceだけをcleanupし、resource receiptとcleanup結果をC-08判定へ含める。streamとprovider-stateを同じraw eventから二重生成しない。
 
 coordinator crash時はcaptureが同一owner processとともに停止し、U-02が旧provider groupをterminate/waitする。snapshotが確定していなければ旧attemptをsuccessにせず、新attemptはfresh capture planから始める。
 
@@ -220,17 +214,17 @@ coordinator crash時はcaptureが同一owner processとともに停止し、U-02
 
 Agent Teamsのteam/task pathはsession UUID先頭8文字だけで決まり、task directoryはsession終了後も残り得る。dispatch前に次のbounded deterministic allocatorでprefixを予約する。
 
-1. `counter=0..255`についてUUIDv5を`executionId + attemptId + waveDigest + counter`から導出し、expected team directoryとtask directoryを直接計算する。
-2. system tempのuser-scoped `amadeus-claude-prefix-<first8>.lock`をatomic `mkdir`で予約する。root directoryは列挙せず、lock owner recordをU-02 process identity/lease/fencingへ束縛する。
-3. reservation取得後にexpected team directoryとtask directoryをそれぞれ`lstat`する。どちらかが存在する、symlinkである、ownership不明なら削除・再利用せずreservationを解放して次counterへ進む。
-4. 両pathが不存在ならcounter、full UUID、prefix、両path digest、reservation identityを`prepared` checkpointへaudit-first保存する。これが完了するまでobserver/providerを起動しない。
-5. reservationはprovider group terminalとcapture joinまで保持する。crash時のstale reservationはU-02が旧owner非生存と旧group停止を証明した後だけ回収する。新attemptは新seedで再探索し、旧task pathを削除しない。
+1. U-03のpure `prepareResources`が`counter=0..255`についてUUIDv5を`executionId + attemptId + waveDigest + counter`から導出し、reservation pathとexpected team/task guarded pathsを持つordered `exclusive-reservation` candidatesを返す。
+2. U-02 `AuxiliaryResourceSupervisor`がcandidate順にuser-scoped reservationをatomic取得し、guarded pathsをdirect `lstat`する。root directoryは列挙せず、どちらかが存在する、symlinkである、ownership不明なら削除・再利用せず次candidateへ進む。
+3. exactly 1件を選んだmaterialized receiptをowner process identity/lease/fencingへ束縛し、U-03のpure `buildExecution`がselected counter/full UUID/prefix/pathからAgent Teams argvと`fixed-provider-path.initialBinding`を作る。
+4. U-02はcounter、full UUID hash、prefix、両path digest、reservation receiptとcapture bindingを`prepared` checkpointへaudit-first保存する。これが完了するまでobserver/providerを起動しない。
+5. U-02はreservationをprovider group terminalとcapture joinまで保持し、owned scratch cleanup後にだけ解放する。crash時のstale reservationは旧owner非生存と旧group停止を証明した後だけ回収する。新attemptは新seedで再探索し、旧task pathを削除しない。
 
 256候補が埋まる、lock livenessが不明、checkpoint前後のexact path再検査で出現した場合は`CLAUDE_SESSION_PREFIX_UNAVAILABLE`としてpre-dispatch停止する。Amadeus外processとの予約非協調raceはarm直前の再`lstat`と、実行中のfull session ID/assignment token/extra task検証でfail-closedにし、誤ったnative successを0件にする。
 
-### Agent Teams固有launch
+### Agent Teams固有instruction
 
-共通argvへ`--teammate-mode in-process`を追加する。Claude 2.1.178以降はteam名を任意指定できないため、allocatorが予約・checkpoint束縛したUUIDを`--session-id`へ渡し、expected team名を`session-<予約済みprefix>`として導出する。`team_name` prompt/flagや旧`TeamCreate`/`TeamDelete` toolを使わない。
+Claude 2.1.178以降はteam名を任意指定できないため、U-02のmaterialized reservation receiptへ束縛したUUIDをinteractive processの`--session-id`へ渡し、expected team名を`session-<予約済みprefix>`として導出する。`team_name` prompt/flagや旧`TeamCreate`/`TeamDelete` toolを使わない。
 
 stdin instructionは次の制約だけを構造化する。
 
@@ -242,9 +236,9 @@ stdin instructionは次の制約だけを構造化する。
 
 自然言語指示は起動要求であり証拠ではない。実team/task/hook stateだけを検証する。
 
-### Ultra Code固有launch
+### Ultra Code固有instruction
 
-共通argvへ`--effort ultracode`を追加する。stdin先頭でdynamic workflowを明示要求し、workflow scriptへ次を要求する。
+exact headless commandのstdin先頭でdynamic workflowを明示要求し、workflow scriptへ次を要求する。
 
 1. manifestのUnit配列をinput `args`として扱う。
 2. `pipeline(args.units, ...)`相当でUnitごとにちょうど1つのworker `agent()`を作る。
@@ -279,14 +273,15 @@ allowlistは次だけである。
 
 task description、message、mailbox、transcript path、pane ID、prompt/outputは読み捨てる。member nameからagent ID、task ownerからUnit tokenへ結合し、`UnitChildBinding`を構築する。
 
-### Stream projection
+### Hook/control projection
 
-`--include-hook-events`付きstream-jsonから、profileに登録したenvelope内の次eventだけをparseする。
+attempt専用hook directoryからprofileに登録した次のTeam eventだけをparseし、U-02 process supervisorからcontrol/terminal projectionを別入力として受け取る。PTY bytesや通常async Agentのstream表示からTeam event、ready signal、terminal evidenceを合成しない。
 
 - `TaskCreated`: session ID、task ID、subject token、teammate name。
 - `TaskCompleted`: session ID、task ID、subject token、teammate name。
 - `TeammateIdle`: session ID、teammate name。
-- coordinator `system/init`とterminal result: session/coordinator ID、exit code。
+- `DriverControlSignal(ready-for-graceful-exit)`: session/coordinator ID、execution/attempt/nonce/plan/wave digest、expected Unit集合、live evidence digest。
+- process terminal: wrapper identity、process group terminal status、exit code、capture join/seal digest。
 
 deprecated `team_name`は存在しても診断以外に使わない。TaskCreated/Completedが同じtask/token、config/task snapshotが同じowner/memberへ結びつき、TeammateIdleが到着したときだけ、そのchildのcompleted stopを生成する。
 
@@ -294,12 +289,14 @@ deprecated `team_name`は存在しても診断以外に使わない。TaskCreate
 
 Agent Teams modeが成立するのは次のすべてが真の場合である。
 
-1. `modeIdentifier=claude-agent-teams-v1`、coordinator session ID exact match、exit 0。
+1. `modeIdentifier=claude-agent-teams-v1`、coordinator session ID exact match、interactive `claude` + `pty-interactive` launch profile一致。
 2. provider-stateに2 member以上、expected Unit全件のtask、Unit-member全単射。
-3. streamにexpected task全件のcreated/completedとowner全件のidle。
-4. provider-stateとstreamのtask ID、assignment token、teammate nameが一致。
+3. hook projectionにexpected task全件のcreated/completedとowner全件のidle。
+4. provider-stateとhook projectionのtask ID、assignment token、teammate nameが一致。
 5. `claude-team-membership`と`claude-shared-task` markerが存在。
 6. C-08のexecution/attempt/nonce/plan/wave correlationが一致。
+7. 全Unit completedと全owner idleへ束縛した`ready-for-graceful-exit`を受け、U-02がPTYへgraceful exit inputをちょうど1回送る。signal単独は成功証跡に数えない。
+8. 同じattemptのprocess groupがexit 0でterminalとなり、その後captureがjoin/sealされ、最終provider-state/hook evidenceがretainedされる。
 
 ## Ultra Code evidenceアルゴリズム
 
@@ -392,7 +389,7 @@ projection変更はClaude skill、evidence hook、harness manifest、generated d
 | coordinator crash/timeout | dispatch | U-02がgroup terminate/wait、failed-resumable |
 | evidence green、check/finalize red | referee | U-02/C-11 verdictどおりsuccess禁止 |
 
-normal exitではprovider自身のteam/workflow cleanupを妨げない。U-02はprovider group terminal後にcaptureをstopAndWaitし、adapterはlast valid snapshot、hook record、terminal streamをnormalizeする。C-08 verdict後にephemeral settings、hook candidate、state scratchを削除し、normalized evidenceだけを残す。cleanup failureは機密scratchが残る可能性があるため成功を返さず、attempt dirをredacted診断付きで隔離する。prefix reservationはcapture joinとscratch cleanupの後に解放する。
+normal exitではprovider自身のteam/workflow cleanupを妨げない。U-02はprovider group terminal後にcaptureをstopAndWaitし、adapterはlast valid snapshot、hook record、terminal streamをnormalizeする。その後U-02 `AuxiliaryResourceSupervisor`がephemeral settings、hook candidate、state scratchをowner receipt一致時だけ削除し、prefix reservationを解放する。cleanup failureは機密scratchが残る可能性があるためsuccessを禁止し、U-02がattempt dirをredacted診断付きで隔離する。U-03はcleanup closureを返さない。
 
 crash/resumeではU-02がwrapper/provider process groupの非生存を証明する。new attemptはfresh probe、fresh UUID/session、fresh evidence dirを使い、旧provider session、team config、task state、workflow runを再利用しない。prepared worktreeとreferee-converged Unitの再利用可否はU-02/C-11が判定する。
 
@@ -441,51 +438,22 @@ U-03を完了できるのは次がすべて成立した場合だけである。
 
 ## Review
 
-### 判定
+**Iteration:** 2
+**Verdict:** READY
 
-**NOT-READY — Iteration 1**
+### 解消済みfinding
 
-Agent Teamsのsession-derived path、cleanup前snapshot、Ultra Codeのschema discovery/park、provider-stateとstreamのAND検証、post-dispatch fail-closedという方針は妥当である。一方、現行の上流contractへ接続できないseamと責務逆転があり、以下4件を解消するまで実装へ進めない。
+- Agent Teamsはheadlessではなくinteractive `claude`を`pty-interactive`で起動し、全Unit completed/idleの`ready-for-graceful-exit`、PTY exit input、process terminal、retained provider/hook evidenceをANDする。
+- registrationはU-01のdriver-keyed setを消費し、U-03は2 immutable Claude descriptorだけを提供する。
+- Agent Teamsは`fixed-provider-path`、Ultraは`event-bound-provider-path`を使い、capture lifecycleとC-01/C-11境界もU-02へ揃った。
+- session prefix reservation、ephemeral settings、evidence/hook/snapshot rootはpure `prepareResources`から`AuxiliaryResourcePlan[]`として宣言され、U-02がmaterialize、checkpoint、owned cleanupする。U-03のdirect filesystem I/O/private cleanupは除去された。
 
-### Blocking findings
+### 新規finding
 
-1. **[Critical] 2つのmode-bound viewをproductionのClaude registration slotへ格納できない。** U-01の`DriverRegistration`はClaude providerとして2 driverを所有する一方、`RegistrationSlot.available`は単一の`adapter: DriverAdapter`だけを持つ。U-03の`ClaudeAdapterFamily`自身は`DriverAdapter`を実装せず、`driver`が異なる2 viewだけが実装するため、familyをslotへ置けば型不一致、片方のviewを置けば他方のdriverを解決不能になる。「Claude slotだけをfamilyへ置換する」という記述ではproduction registryを構築できない。`RegistrationSlot`をdriver key付きadapterのfirst-class collectionへ変更してClaudeの2件・Codex/Kiroの各1件をbuild時に検証するか、provider-level adapter contractがdriverを引数にmode-bound viewを返す形へ上流U-01/U-02 contractごと揃えること。実行中に単一adapterの`driver`を書き換える解決は禁止し、production registry経由で両driverをprobe/runするfixtureを追加すること。
+- Blocking findingなし。
 
-2. **[Critical] cleanup前provider-state observerを公開`DriverAdapter`からU-02 supervisor lifecycleへ接続できない。** 上流interfaceは`buildLaunch(): LaunchSpec`と`normalize(rawStream, NormalizeContext)`だけで、observerのstart/arm/stop/join、evidence directory、session/profile identity、provider group terminalを受け渡すseamがない。したがって、記載された`ClaudeStateObserver.start(...)`をwrapper arm前に開始し、team config削除前の最後のsnapshotを保存し、provider group終了とjoinした後にstream/hookと合成する手順を、immutable mode viewや汎用`ProcessSupervisor`から実装できない。private mutable closureや`buildLaunch`の隠れたI/Oで補うとwave/attempt相関と停止保証を型外へ逃がす。例えば`LaunchSpec`と別のclosed `EvidenceCapturePlan`をadapterが返し、U-02がobserver identityをcheckpointへ束縛してprovider arm前にstart、group terminal後にstop/waitし、adapterがprovider-state streamとprocess streamを別入力としてnormalizeするcontractを定義すること。hook fileの読取経路、observer停止不能、snapshot atomic replace、cleanup順序も同じlifecycleへ含め、cleanup-before-snapshot failure injectionでsuccess 0件を示すこと。
+### センサー結果
 
-3. **[High] C-01からC-11を直接呼ぶsequenceがU-02の媒介境界に反する。** End-to-end図は`C->>R: prepare`と`C->>R: check each Unit then finalize`を描くが、U-02はC-01とC-11が互いをimport/invokeせず、harness conductorが`prepare`、advisory `check`、`record-finalize(kind=request)`、C-11 `finalize`、`record-finalize(kind=result)`をversioned JSONで媒介すると確定している。現記述どおりではdriver coordinatorがreferee orchestrationを再所有し、request bindingとauthoritative merge gateを迂回し得る。図・本文・test pathをU-02の二相handoffへ揃え、U-03はadapterのprobe/build/evidence projectionとClaude harness conductor projectionだけを所有すること。fake/live proofにも、C-01からC-11への直接import/callが0件であるarchitecture checkを追加すること。
-
-4. **[High] session ID先頭8文字の衝突検査が永続task directoryを覆っていない。** [Agent Teams公式仕様](https://code.claude.com/docs/en/agent-teams)ではteam/task pathはsession ID先頭8文字だけで決まり、team configはsession終了時に削除される一方、task directoryは保持される。`ClaudeSessionIdentity`は同一executionのwaveとactive local sessionだけを事前検査し、本文は残存taskをtoken不一致として実行後に無視するが、別の完全UUIDが同じ8文字prefixを持てば残存taskは新runと同じexpected pathになる。これは「旧sessionを再利用しない」とexact-path observerの前提を壊し、決定的UUIDのためresumeでも解消しない。dispatch前に導出済みteam/task両pathの存在とownershipを直接検査し、既存pathを任意削除せずhard errorにするか、checkpointへ束縛した決定的collision counterで未使用prefixを選ぶ規則を定義すること。active config、persistent taskのみ、prefix collision、別attempt resumeをfailure injectionへ追加すること。
-
-### 再レビュー条件
-
-- registrationの上流型、U-02 assembly、U-03 family/view、production fixtureが同じ1 provider/2 driver cardinalityを表す。
-- provider-state observerとhook fileがU-02のidentity-first arm・group terminal・fencingへ明示的に接続され、streamとは独立sourceとしてUnit-child全単射を構成する。
-- C-11のprepare/check/finalizeはconductorだけが呼び、C-01はrequest/result bindingの二相記録だけを行う。
-- Agent Teamsのsession-derived identityでpersistent task path衝突をdispatch前に閉じる。
-- Ultra Codeは現在の`ClaudeSurfaceProfile` discovery、exact path confinement、schema不明時park、floor/xhigh代替禁止を維持する。
-
-## Review
-
-### 判定
-
-**READY — Iteration 2（最終）**
-
-Iteration 1の4 blocking findingは、generic registration contract、explicit capture lifecycle、conductor媒介、session prefix reservationへ一貫して反映された。実装へ進める状態である。
-
-### 前回指摘の解消確認
-
-1. **1 provider / 2 driver registration:** `RegistrationSlot.available`はdriver-keyed `DriverAdapterSet`を持ち、`keys == declaredDrivers`、重複0件、Claude 2件、Codex/Kiro各1件をbuild時に検証する。Claudeの2 mode-bound viewはそれぞれimmutableな単一`driver`を保ち、production registryから両driverを一意に解決できる。
-2. **Provider-state capture lifecycle:** `AdapterExecutionPlan`が`LaunchSpec`と`EvidenceCapturePlan`を返し、U-02がcapture plan/identityをcheckpointへ束縛してからproviderをarmする。Agent Teamsは予約済みfixed path、Ultraはworkflow-created eventからaudit-first保存した`CaptureBinding`だけを読む。OS上のprovider group terminal確認後にcaptureを`stopAndWait`し、`processStream`、`providerStateStream`、`hookRecordStream`の3独立channelを確定してからnormalize／C-08判定へ進むため、cleanup-before-snapshotを成功へ読み替えない。
-3. **C-01 / C-11責務境界:** 図とharness手順はdirect import/callを双方向0件とし、conductorだけが`prepare → check → record-finalize(request) → finalize → record-finalize(result)`をversioned binding/envelopeで媒介する。architecture fixtureも同じ順序とdirect edge 0件を固定する。
-4. **Session prefix衝突:** bounded `counter=0..255`、user-scoped atomic reservation、team/task exact-pathの不存在確認、checkpoint束縛、arm直前再確認、terminal/capture joinまでのreservation保持を定義した。stale reservationは旧owner非生存と旧group停止の証明後だけ回収し、新attemptはfresh seedで再探索するため、persistent task directoryや別UUIDの同prefixを再利用しない。
-
-### 維持確認
-
-- Ultra Codeはcredentialed `ClaudeSurfaceProfile` discovery、stream-bound run/state path、realpath confinementを必須とし、schemaを確定できなければU-03をparkする。
-- `--effort ultracode`、実workflow run/task/agent、provider-state + stream、Unit-child全単射をAND条件とし、xhigh、floor、通常Agent tool、自己申告による代替を禁止している。
-- capture停止不能、snapshot欠落、unknown schema、referee failureはいずれもfail-closedで、post-dispatch fallbackとnative evidence単独の成功を許さない。
-
-### 総合所見
-
-primary artifact内に実装を妨げる未解決の矛盾はない。blocking findingは0件である。
+- `required-sections`: 4成果物すべてPASS。
+- `upstream-coverage`: 4成果物すべてPASS、未参照0件。
+- `linter` / `type-check`: 対象成果物はMarkdownのため非適用。

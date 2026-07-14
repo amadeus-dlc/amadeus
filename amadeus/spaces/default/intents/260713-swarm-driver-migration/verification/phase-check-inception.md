@@ -6,7 +6,7 @@
 
 FR-01〜FR-26、NFR-01〜NFR-12、USR-01〜USR-10、REL-01〜REL-02はApplication Design、6 Unit、6 Boltへ欠落なく追跡できる。`stories`と`mockups`はscopeで意図的にSKIPされており、requirements内のUSR／RELがstory相当の受入シナリオを担うため、orphanはない。
 
-Constructionへ進む条件は、Delivery Planningの人間承認と、最初のCode Generation直前のpre-code checkpoint PR承認・mergeである。B-03 Codexのschema discoveryが失敗した場合はintent全体を再審議し、native proofをfloorで代替しない。
+Constructionへ進む条件はDelivery Planningの人間承認である。pre-code checkpoint [PR #955](https://github.com/amadeus-dlc/amadeus/pull/955)はmerge済みである。ADR-009回復条件として、B-02の[PR #964](https://github.com/amadeus-dlc/amadeus/pull/964)へprovider-neutral transport/captureを追加し、B-04の[PR #965](https://github.com/amadeus-dlc/amadeus/pull/965)を更新headへrebaseしてClaude固有diffだけにする。B-03 Codexのschema discoveryが失敗した場合はintent全体を再審議し、native proofをfloorで代替しない。
 
 ## Artifact Completeness
 
@@ -15,7 +15,7 @@ Constructionへ進む条件は、Delivery Planningの人間承認と、最初の
 | `requirements` | PASS | FR 26件、NFR 12件、USR 10件、platform／test／failure契約を定義 |
 | `stories` | N/A | User Stories stageはSKIP。USR-01〜USR-10とREL-01〜REL-02が受入scenarioを提供 |
 | `mockups` | N/A | Rough／Refined MockupsはSKIP。CLI／headless scopeでGUIなし |
-| `components` | PASS | C-01〜C-12、method／service／dependency／ADRが要求境界をcover |
+| `components` | PASS | C-01〜C-12、method／service／dependency、ADR-001〜ADR-009が要求境界をcover |
 | `unit-of-work` | PASS | U-01〜U-06の責務、test、完了条件、single ownershipを定義 |
 | `unit-of-work-dependency` | PASS | acyclic DAG、provider parallel ready set、registry convergence seamを定義 |
 | `unit-of-work-story-map` | PASS | USR 10件＋REL 2件をUnit／test／evidenceへ割当 |
@@ -98,8 +98,8 @@ U-04を他providerより先に置くことは、provider間にdependency edgeを
 |---|---|---|
 | Public driver 5値が全成果物で一致 | PASS | requirements、components、U-01、B-01、B-06 |
 | Pure selectionとstateful lifecycleが分離 | PASS | C-02/C-03 vs C-01/C-08〜C-10、U-01 vs U-02 |
-| Provider proofがproduction registryを通る | PASS | U-02 placeholder seam、U-03〜U-05 DoD、B-03〜B-05 |
-| Native successとfloorが混同されない | PASS | FR-06/FR-10〜FR-14、ADR-006、provider entry/exit gates |
+| Provider proofがproduction registryを通る | PASS | U-02 placeholder＋closed transport/capture seam、U-03〜U-05 DoD、B-03〜B-05 |
+| Native successとfloorが混同されない | PASS | FR-06/FR-10〜FR-14、ADR-006/ADR-009、provider entry/exit gates |
 | Native evidenceとreferee／mergeがAND | PASS | FR-15/FR-21、C-08/C-11、U-02/B-02 |
 | Provider raw dataが共通auditへ漏れない | PASS | FR-19/NFR-04、adapter normalization、secret scan |
 | Legacy bridgeと0.2.0削除が分離 | PASS | U-01互換、U-06追跡Issue。削除実装はscope外 |
@@ -107,23 +107,25 @@ U-04を他providerより先に置くことは、provider間にdependency edgeを
 | Platform contractが一致 | PASS | macOS native、Linux fake/deterministic、Windows N/A |
 | Formal walking skeleton stanceがpracticeと一致 | PASS | Brownfieldのためmarker off。B-03はnative proof milestoneのみ |
 | Pre-code recovery pointがある | PASS | checkpoint PRをB-01 Code Generation前に人間merge |
+| U-02/U-03の回復所有権が一意 | PASS | [PR #964](https://github.com/amadeus-dlc/amadeus/pull/964)がcommon seam、[PR #965](https://github.com/amadeus-dlc/amadeus/pull/965)がClaude固有。rebase gateあり |
 
 ## Unresolved but Bounded
 
-- Codex Ultra、Claude Agent Teams／Ultra Code、Kiro sessionの実field pathはprovider-entry schema discoveryで確定する。設計contractは確定済みだが、外部surface取得不能時は実装へ進まない。
+- Codex UltraとKiro sessionの実field path、interactive Claude Agent Teamsのexact team/task/hook pathはprovider-entry schema discoveryで確定する。Claude Ultra Codeのsnapshot/journal/hook surfaceとheadless Agent Teams不成立は実測済みである。外部surface取得不能時は実装へ進まない。
 - Local credential／trustの有効性は保存せず、各probeで確認する。認証不足をPASSへ読み替えない。
 - GitHub Actionsの実runと0.2.0 Issue URLはB-06で取得する。それまではPENDINGであり、設計欠落ではない。
 - WindowsはOut of Scopeであり、未検証を成功表現へ変換しない。
 
 ## Mandatory Conditions for Construction
 
-1. 最初のCode Generation前にpre-code checkpoint PRを承認・mergeする。
-2. B-03 entryでCodex Ultraとnative multi-agentをfloorから機械判定できなければintent全体を再審議する。
-3. 各providerはentry discoveryとexit live proofの両方を満たす。
-4. B-04/B-05の片方がparkされても他方は続行できるが、B-06は全provider完了まで開始しない。
-5. provider proofはtest injectionではなく、対応harness conductorからproduction registryを通す。
-6. `packages/framework`だけを正本として編集し、生成先を直接変更しない。
-7. PR merge、credentialed live操作、仕様変更は人間のdecision rightを維持する。
+1. pre-code checkpoint [PR #955](https://github.com/amadeus-dlc/amadeus/pull/955)を既知の復帰点として維持する。
+2. B-02の[PR #964](https://github.com/amadeus-dlc/amadeus/pull/964)でclosed transport/captureを収束させ、B-04の[PR #965](https://github.com/amadeus-dlc/amadeus/pull/965)をその更新headへrebaseする。U-03 diffへcommon runtimeを混在させない。
+3. B-03 entryでCodex Ultraとnative multi-agentをfloorから機械判定できなければintent全体を再審議する。
+4. 各providerはentry discoveryとexit live proofの両方を満たす。
+5. B-04/B-05の片方がparkされても他方は続行できるが、B-06は全provider完了まで開始しない。
+6. provider proofはtest injectionではなく、対応harness conductorからproduction registryを通す。
+7. `packages/framework`だけを正本として編集し、生成先を直接変更しない。
+8. PR merge、credentialed live操作、仕様変更は人間のdecision rightを維持する。
 
 ## Human Approval
 

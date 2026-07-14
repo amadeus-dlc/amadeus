@@ -12,7 +12,7 @@
 
 ### Q2. 非対話実行で必要最小限のtrustをどう作るか
 
-[Answer]: `--trust-all-tools`は使わない。U-02 supervisorがwave固有parent agent configとUnit固有worker agent configを、予約済みruntime agent pathへprovider arm前に生成する。parentはread/thinking/subagentだけを持ち、`availableAgents`と`trustedAgents`をそのwaveのworker role集合へexact限定する。workerはsubagent/shell/MCPを持たず、read/writeの`allowedPaths`を自分のprepared worktreeへ、`deniedPaths`をmain checkout、他worktree、evidence、runtime agent config、Kiro session rootへ限定する。non-interactive malicious fixtureでapproval要求0件と境界外write拒否を実証できなければparkする。
+[Answer]: `--trust-all-tools`は使わない。U-02 supervisorがwave固有parent agent configとUnit固有worker agent configを、既存canonical `.kiro/agents/` root配下の予約済みruntime agent pathへprovider arm前に`attempt-owned-file`として生成する。root自体は既存harness resourceとしてidentity/confinement/ownerだけを検証し、attempt resourceとして作成・削除しない。parentはread/thinking/subagentだけを持ち、`availableAgents`と`trustedAgents`をそのwaveのworker role集合へexact限定する。workerはsubagent/shell/MCPを持たず、read/writeの`allowedPaths`を自分のprepared worktreeへ、`deniedPaths`をmain checkout、他worktree、evidence、runtime agent config、Kiro session rootへ限定する。non-interactive malicious fixtureでapproval要求0件と境界外write拒否を実証できなければparkする。
 
 ### Q3. 2〜4 Unitのbalanced waveをどう決定するか
 

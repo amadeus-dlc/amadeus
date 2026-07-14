@@ -14,19 +14,21 @@
 | credentialed live driver | l | 4 | macOS全件、missing 0 |
 | functional requirement coverage | q | 26 | FR-01〜FR-26各1以上 |
 | release domain | c | 6 | registry/projection/docs/platform/live/Issue all green |
-| finding/receipt/file | k/r/f | manifest-driven |全件aggregate、drop 0 |
+| finding/receipt/file/byte | k/r/f/b | manifest-driven |全件aggregate、drop 0、全byte streaming hash |
+| Issue result/page | i/p | search-driven |終端まで全page取得、件数照合 |
 
 ## Scalability requirements
 
 | ID | Requirement | Verification |
 |---|---|---|
-| U06-SCALE-01 | file digestは`O(f log f)`以下、receipt/coverage/findingは`O((r+q+k) log(r+q+k))`以下、追加memory線形 | operation/object count |
+| U06-SCALE-01 | file digestは`O(b + f log f)`以下、receipt/coverage/findingは`O((r+q+k) log(r+q+k))`以下、追加memoryはfile metadataとrow数に線形かつhash bufferはbounded | byte/operation/object count |
 | U06-SCALE-02 | finding数が増えてもfirst-errorで停止せず、全件canonical aggregateしdrop/duplicateしない | generated finding set |
 | U06-SCALE-03 | registry/distro/docs/live/platform集合をclosed expected setへexact matchし、unknown/extraを暗黙許可しない | cardinality/set fixture |
 | U06-SCALE-04 | tree変更ごとにnew candidateで全receiptを再評価し、旧closed reportや部分receiptをincremental successへ流用しない | mutation/rebuild test |
 | U06-SCALE-05 | receipt/report/provider summaryだけの更新はinput digestを変えず、authored/generated input変更だけがnew candidateを要求する | manifest boundary test |
-| U06-SCALE-06 | Issue ensureのpublisher concurrencyを1に限定し、create後re-searchでopen exactly 1を要求する | race fixture |
+| U06-SCALE-06 | Issue ensureのpublisher concurrencyを1に限定し、create前後ともpaginationを終端まで取得し、authoritative total countが提供される場合は列挙件数と照合してopen exactly 1を要求する | multi-page/race fixture |
 | U06-SCALE-07 | coverageはFR-01〜FR-26を各1以上へ逆引きし、skip/unimplementedをrow数で覆い隠さない | coverage completeness test |
+| U06-SCALE-08 | page/limit打切り、件数不一致、検索schema不明では結果集合を推測せずblockし、外部mutationを0件にする | incomplete-search fixture |
 
 ## Growth and change policy
 

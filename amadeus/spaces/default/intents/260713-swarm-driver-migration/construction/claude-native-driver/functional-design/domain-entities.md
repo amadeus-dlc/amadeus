@@ -15,20 +15,20 @@ U-03はprovider adapterのimmutable value、versioned parser、短命observerを
 
 U-03固有entityは生provider payloadを保持しない。parse中のraw bytesはadapter stack内のephemeral bufferだけであり、domain constructorへ渡す前にallowlist projectionする。
 
-## DriverAdapterSet contract correction
+## Claude production descriptor
 
-Iteration 1 reviewで、単一`RegistrationSlot.available.adapter`ではClaudeの2 driverを型安全に格納できないことが判明した。generic registration valueを次へ訂正する。
+driver-keyed set、cardinality、slot、production mappingはU-01/U-02が所有する。U-03はgeneric entityを訂正せず、次のClaude固有descriptorだけを構築する。
 
 ```text
-RegistrationSlot =
-  available(adapterSet: DriverAdapterSet)
-  | unavailable(diagnosticCode)
-
-DriverAdapterSet
-  provider: claude | codex | kiro
-  adaptersByDriver: immutable closed map
-  forDriver(driver): exactly one DriverAdapter
+ClaudeRegistrationDescriptor
+  provider = claude
+  adapters:
+    claude-agent-teams -> immutable Agent Teams view
+    claude-ultracode -> immutable Ultra Code view
+  descriptorDigest
 ```
+
+U-02のfactoryがdescriptorを既存Claude slotへ投影し、全provider cardinalityを検証する。U-03 constructorはClaude以外のdriver、重複、欠落、mutable viewを拒否するが、generic registration typeやcomposition rootを生成しない。
 
 smart constructorはdeclared driver setとmap keyの完全一致、adapter.driverとkey一致、重複/余分/欠落0件、Claude=2、Codex/Kiro=1のcardinalityを検証する。U-03はClaude setへ2 mode viewを格納し、他provider mapping/literalを変更しない。runtimeでadapter.driverを書き換えない。
 
@@ -53,8 +53,9 @@ ClaudeModeAdapterView
   familyId: opaque in-memory identity
   supports(harness)
   probe(input)
-  buildLaunch(input)
-  normalize(raw, context)
+  prepareResources(input): AdapterResourcePreparation
+  buildExecution(input, resources: MaterializedAuxiliaryResourceSet): AdapterExecutionPlan
+  normalize(inputs: EvidenceInputs, context)
 ```
 
 viewは構築後immutableであり、呼出し中に`driver`を切り替えない。familyは同じ共通probe promiseを使うが、mode-specific result/normalizer/state observerを共有しない。production registry外へfamily typeを公開せず、他providerがClaude branchをimportしない。
@@ -146,7 +147,7 @@ ClaudeSessionIdentity
   sessionIdHash: sha256
   expectedTeamName: session-<first 8 hex>
   prefixCounter: 0..255
-  prefixReservation: SessionPrefixReservation
+  prefixReservation: ClaudePrefixReservationProjection
   executionId: bound external ID
   attemptId: bound external ID
   waveDigest: bound external digest
@@ -154,9 +155,21 @@ ClaudeSessionIdentity
 
 session UUIDは固定namespaceに対するUUIDv5で`executionId + attemptId + waveDigest + prefixCounter`から導出する。同一attempt/wave/counterでは決定的、別attemptでは異なる。UUIDそのものはprovider launch/correlationに使い、共有auditにはhashだけを出す。
 
-`expectedTeamName`は公式layoutから導出する値であり、providerへ任意team名として指定しない。counter順にuser-scoped prefix lockをatomic取得し、expected team/task両pathをdirect `lstat`してどちらも不存在の候補だけを選ぶ。counter、full UUID、prefix、path digest、reservation identityをdispatch前checkpointへ束縛する。既存pathは削除・再利用せず、256候補枯渇はhard errorである。
+`expectedTeamName`は公式layoutから導出する値であり、providerへ任意team名として指定しない。U-03はcounter順のreservation/guarded path候補をpureに構築し、U-02がatomic reservationとdirect `lstat`を行って両pathが不存在の候補だけをmaterializeする。counter、full UUID hash、prefix、path digest、reservation receiptをdispatch前checkpointへ束縛する。既存pathは削除・再利用せず、256候補枯渇はhard errorである。
 
-`SessionPrefixReservation`はprefix、lock path digest、owner process identity hash、lease/fencing、team/task path digestを持つ。root directoryをscanしない。stale lockは旧owner非生存とprovider group停止後だけ回収し、Amadeus外raceはarm直前再検査とfull session/token相関でfail-closedにする。
+`ClaudePrefixReservationProjection`はU-02の`MaterializedAuxiliaryResourceSet`からだけ構築し、prefix、selected candidate index、lock path digest、owner process identity hash、lease/fencing、team/task path digestを持つ。U-03自身はroot directory scan、reservation、stale lock回収を行わない。Amadeus外raceはU-02のarm直前再検査とfull session/token相関でfail-closedにする。
+
+```text
+ClaudePrefixReservationProjection
+  resourceId
+  selectedCandidateIndex: 0..255
+  prefix
+  lockPathDigest
+  ownerProcessIdentityHash
+  leaseId / fencingToken
+  teamPathDigest / taskPathDigest
+  resourceReceiptDigest
+```
 
 ## ClaudeBatchManifestV1
 
@@ -210,36 +223,35 @@ ClaudeEphemeralSettings
   contentDigest: sha256
 ```
 
-設定にはmodel/provider/credential/promptを置かない。Agent TeamsはTaskCreated、TaskCompleted、TeammateIdle、UltraはSubagentStart、SubagentStop、Stopを配線する。settings fileを`-p`が無視する可能性をhook sentinelで検出する。
+設定にはmodel/provider/credential/promptを置かない。Agent TeamsはTaskCreated、TaskCompleted、TeammateIdle、UltraはSubagentStart、SubagentStop、Stopを配線する。mode別handshakeでhook sentinelを確認し、Agent TeamsのPTY bytesやUltraのassistant resultをhookの代替にしない。
+
+これはfilesystem entityではなく、`attempt-owned-file(mode=0600)`へ渡すimmutable content valueである。path選択、file作成、owner marker、cleanupはU-02の`AuxiliaryResourceSupervisor`だけが行う。
 
 ## AdapterExecutionPlanとEvidenceCapturePlan
 
 ```text
-AdapterExecutionPlan
+AdapterResourcePreparation
+  resources: AuxiliaryResourcePlan[]
+  preparationDigest: sha256
+
+AdapterExecutionPlan = U-01-owned / U-02-consumed common contract
   launch: LaunchSpec
   capture: EvidenceCapturePlan
-  planDigest: sha256
+  captureIdentity: executionId / attemptId / planDigest / waveIndex / waveDigest
+  resources: AuxiliaryResourcePlan[]
 
 EvidenceCapturePlan
-  schemaVersion: 1
-  provider/mode/profileId
-  captureId
-  expectedSessionOrRunIdentity
-  stateBinding:
-    fixed-path(location digests)
-    | stream-bound(expected root digest, run-created field path, resolver ID)
-  hookRecordDirectoryDigest
-  atomicSnapshotTargetDigest
-  startBeforeProviderArm: true
-  stopAfterProviderGroupTerminal: true
+  fixed-provider-path(initialBinding, hookDir)
+  | event-bound-provider-path(hookDir)
+  | hook-only(hookDir)
 ```
 
-adapterはpureにplanを構築し、pollingやfile writeを開始しない。U-02 `EvidenceCaptureSupervisor`がplan digestとcapture IDをcheckpointへ束縛し、capture start → CaptureIdentity checkpoint → provider arm → provider group terminal → capture stopAndWaitを強制する。
+adapterはpure `prepareResources`でprefix reservation、settings file、evidence/hook/snapshot directoryを宣言する。U-02が返す`MaterializedAuxiliaryResourceSet`を受けたpure `buildExecution`だけが具体的launch/capture planを構築し、polling、reservation、file write、cleanupを開始しない。`AdapterExecutionPlan.resources`はpreparationと同じ集合/digestである。U-02 `EvidenceCaptureSupervisor`がresource receipt、plan digest、capture IDをcheckpointへ束縛し、resource materialize → capture start → CaptureIdentity checkpoint → provider arm → provider group terminal → capture stopAndWait → owned cleanupを強制する。
 
-Agent Teamsは`fixed-path`で予約済みteam/task pathを使う。Ultraは`stream-bound`でcaptureを`awaiting-binding`開始し、allowlisted workflow-created stream eventからrun IDを得た後だけ`CaptureBinding`を作る。
+Agent TeamsはU-02がmaterializeしたselected candidateのteam/task pathとsource plan digestから、`fixed-provider-path.initialBinding`をarm前に純粋構築する。Ultraは`event-bound-provider-path`でcaptureを未bound開始し、allowlisted workflow-created eventからrun IDを得た後だけ`EventBoundCaptureBinding`を作る。U-03はU-02のvariant、checkpoint、resource lifecycle、self-edgeを変更しない。
 
 ```text
-CaptureBinding
+EventBoundCaptureBinding
   captureId / profileId
   sessionIdHash / nativeRunId
   resolvedStatePathDigest
@@ -448,7 +460,7 @@ error detailはdriver、mode、CLI/profile version、expected/actual count、列
 
 ```mermaid
 classDiagram
-  DriverAdapterSet *-- ClaudeModeAdapterView
+  ClaudeRegistrationDescriptor *-- ClaudeModeAdapterView
   ClaudeAdapterFamily *-- ClaudeModeAdapterView
   ClaudeAdapterFamily *-- ClaudeResolveScope
   ClaudeResolveScope o-- ClaudeCommonProbeResult
@@ -476,8 +488,8 @@ classDiagram
 
 | 所有物 | U-03 | 他Unit |
 |---|---|---|
-| generic driver-keyed adapter set | contract correctionとClaude cardinality fixture | U-01 type、U-02 assemblyへ同じ訂正を適用 |
-| Claude adapter family/mode view/profile/parser | 実装・test | generic adapter contractを消費 |
+| generic driver-keyed adapter set | 変更しない | U-01 type、U-02 assembly/cardinality |
+| Claude registration descriptor／adapter family／mode view／profile/parser | 実装・test | generic adapter contractを消費 |
 | Claude production slot | unavailableから2-adapter available setへ置換 | U-02 assembly、U-06 completeness検査 |
 | session/team/workflow observer parserとhook | 実装・projection | U-02 capture supervisor/checkpoint/start-stop |
 | normalized Claude event | 生成 | C-08がAND verdict |

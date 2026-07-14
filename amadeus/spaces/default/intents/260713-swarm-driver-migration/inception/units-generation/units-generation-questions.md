@@ -116,6 +116,25 @@ U-03〜U-05間には依存edgeを置かない。3 Unitが同時にreadyならeng
 
 [Answer]: A — 承認して成果物生成へ進む（2026-07-13T11:21:37Z、Mode: Grill me）
 
+## Q7. Application Design再承認後の回復補正
+
+Code Generation入口の実機調査により、Agent Teamsはheadless `claude -p`ではなくinteractive PTY上の`claude`が必要と確定し、Application DesignへADR-009とprovider-neutralなtransport/capture lifecycleが追加された。6 UnitのDAGを維持しながら、この訂正をどこへ収めるか？
+
+- A. **6 UnitとDAGを維持し、共通seamはU-02、Claude mode差はU-03へ置く（推奨）** — U-02の完了条件へclosed transport/capture lifecycleを追加し、U-03は完成済みcontractだけを消費する。新しいUnit/edgeは追加せず、回復時のPR packagingはDelivery Planningで扱う
+- B. transport/capture専用Unitを追加する — 共通補正は独立するが、承認済みのstacked PR分割とUnit番号を変更する
+- C. 共通seamをU-03へ置く — U-03からU-04/U-05への依存edgeを追加し、provider並列性を撤回する
+- X. Other (please specify)
+
+[Answer]: A — 利用者が「分割想定なら元の計画でOK」として6 Unitのstacked PR前提を承認済みであり、Application Designもその前提で承認したため（2026-07-14T09:23:29Z、Mode: Grill me）
+
+## 再合意
+
+Unit数、Unit ID、DAG、provider vertical sliceを維持する。U-02はclosed transport/capture union、binding、live control、capture lifecycleを完了条件として所有する。U-03はAgent Teamsのinteractive PTY、Ultra Codeのheadless実行、mode固有projection、fake/live proofだけを所有し、U-02共通runtimeを編集しない。回復時のBolt/PR packagingはUnit topologyと経済的sequencingを分けるためDelivery Planningへ委ねる。
+
+## 今回Iteration 1 review後の所有権精緻化
+
+reviewerは、U-03がU-02の共通seamを後補正しながらU-04/U-05と同時readyになる記述をhidden dependencyと判定した。6 Unit、provider vertical slice、DAGを維持するため、ADR-009のprovider-neutral transport/capture contractとruntimeはU-02の完了条件へ全面移管し、U-03から共通seamの編集権を除いた。U-03にはAgent Teams、Ultra Code、harness/legacy、live proofの4 review checkpointを設け、Claude provider境界内でrollback可能にした。
+
 ## Iteration 1 review後の所有権精緻化
 
 reviewerは、U-06までproduction registry配線を遅らせると、U-03〜U-05が各providerのend-to-end/live proofを単独で完了できず、承認済みDAGにhidden cycleが生じると指摘した。承認済みの6 Unit、provider vertical slice、DAG、closed registry、plugin非提供を維持するため、U-01はversioned registration contract、U-02は3つの静的fail-closed provider slotを持つproduction registry assembly、U-03〜U-05は自分のslotの実装、U-06はplaceholder 0とmapping exhaustivenessの最終検証を所有するよう精緻化した。provider live proofはtest-only injectionではなく、対応harness conductorから公開C-01 CLIとproduction registryを通す。

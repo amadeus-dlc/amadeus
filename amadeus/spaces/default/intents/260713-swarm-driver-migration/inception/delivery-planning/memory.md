@@ -14,6 +14,8 @@
 - 2026-07-13T12:25:12Z — 正式なwalking-skeleton markerはbrownfield practiceに従ってoffとし、U-04/B-03はengine markerではなく最初のnative end-to-end proof milestoneとして扱う。
 - 2026-07-13T12:25:12Z — Constructionのparallel batchはready Boltの一時的な実行groupであり、製品runtimeのbatchやUnitの永続親とは区別してparallel waveと記述する。
 - 2026-07-13T12:27:00Z — 上流正本は`requirements`、`components`、`unit-of-work`、`unit-of-work-dependency`、`unit-of-work-story-map`、`team-practices`であり、SKIP済みの`stories`と`mockups`はUSR／RELとCLI interactionで代替する。
+- 2026-07-14T10:15:40Z — ADR-009再承認後も6 Unit＝6 Boltと経済的順序を維持する。provider-neutral transport/captureはB-02の完了条件、interactive Agent Teamsとheadless Ultra CodeはB-04のClaude固有受入とする。
+- 2026-07-14T10:15:40Z — 現在のstackは[PR #960](https://github.com/amadeus-dlc/amadeus/pull/960)→[PR #964](https://github.com/amadeus-dlc/amadeus/pull/964)→[PR #965](https://github.com/amadeus-dlc/amadeus/pull/965)である。#964へ共通補正を追加し、#965をrebaseして1 Unit＝1実装PRの境界を保つ。
 
 ## Deviations
 
@@ -32,8 +34,10 @@
 - 2026-07-13T12:15:13Z — 常時共同作業より実装ownershipと独立reviewを分離し、mobのcontext costはblocker解消時に限定する。
 - 2026-07-13T12:25:12Z — U-03/U-05のsource実装とfake検証は並列化するが、同一macOS hostのcredentialed live proofはmutexで直列化し、同時ready時はClaudeを先行する。
 - 2026-07-13T12:25:12Z — 最初のCode Generation前にpre-code checkpoint PRを人間承認・mergeし、設計の復帰点を固定するため、着手速度より失敗時の回復可能性を優先する。
+- 2026-07-14T10:15:40Z — 共通補正専用PRやU-03への同梱ではなく、既存B-02 PRの補正とB-04 PRのrebaseを選んだ。PR数とDAGを増やさず、shared resource ownershipとreviewabilityを同時に守るためである。
 
 ## Open questions
 
 - 2026-07-13T11:43:08Z — sequencing heuristic、walking skeleton、Bolt granularity、parallelism、external dependencies、per-Bolt confidence hypothesisを質問で確定する。
 - 2026-07-13T12:25:12Z — Codex／Claude／Kiroの実native field pathは各provider entryのschema discoveryで確定する。取得不能は学習候補ではなく当該risk gateのblockerとして扱う。
+- 2026-07-14T10:15:40Z — Claude Ultra Code surfaceとheadless Agent Teams不成立は確定済み。interactive PTY Agent Teamsのexact team/task/hook schemaはB-04 entry gateで確定する。

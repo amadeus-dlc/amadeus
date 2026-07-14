@@ -103,6 +103,312 @@ declare namespace DriverRequest {
 
 失敗した候補とreasonの集合を所有し、`primary()`が固定優先順の主理由、`details()`が残りの非機密diagnostic codeをcanonical順で返す。空collectionの`primary()`は`none`である。呼出側が配列indexや`Map`順から主理由を選ばないようにする。
 
+## Adapter boundary contract
+
+U-01が次のgeneric型を所有し、U-02は同じ型をimportしてresource/process/capture lifecycleを実装する。U-03〜U-05はprovider固有値を構築するだけで、同名型を再定義しない。
+
+```ts
+type ProbeInput = Readonly<{
+  driver: NativeDriver;
+  harness: Harness;
+  projectDir: string;
+  batch: number;
+  timeoutMs: number;
+  environment: Readonly<Record<string, string>>;
+}>;
+
+type ProbeStatus = "available" | "unavailable" | "error";
+
+type ProbeCheck = Readonly<{
+  name: "cli" | "auth" | "mode" | "trust" | "handshake";
+  ok: boolean;
+  diagnosticCode: string;
+}>;
+
+type ProbeResult = Readonly<{
+  status: ProbeStatus;
+  reason: FallbackReason;
+  cliVersion?: string;
+  modeIdentifier?: string;
+  checks: readonly ProbeCheck[];
+}>;
+
+type UnitWaveRef = Readonly<{
+  index: number;
+  digest: string;
+  units: readonly string[];
+}>;
+
+type PreparedUnitRef = Readonly<{
+  unit: string;
+  worktreePath: string;
+  baseCommit: string;
+  headCommit: string;
+}>;
+
+type LaunchInput = Readonly<{
+  driver: NativeDriver;
+  harness: Harness;
+  executionId: string;
+  attemptId: string;
+  attemptNonceHash: string;
+  nativeRunId: string;
+  planDigest: string;
+  wave: UnitWaveRef;
+  preparedUnits: readonly PreparedUnitRef[];
+  convergenceCommand: string;
+  protectedSpec?: string;
+}>;
+
+type AuxiliaryResourcePlan =
+  | Readonly<{
+      kind: "exclusive-reservation";
+      resourceId: string;
+      candidates: readonly Readonly<{
+        reservationPath: string;
+        guardedPaths: readonly string[];
+      }>[];
+    }>
+  | Readonly<{
+      kind: "attempt-owned-file";
+      resourceId: string;
+      path: string;
+      bytes: Uint8Array;
+      mode: "0600";
+    }>
+  | Readonly<{
+      kind: "attempt-owned-directory";
+      resourceId: string;
+      path: string;
+      mode: "0700";
+    }>
+  | Readonly<{
+      kind: "pre-arm-baseline";
+      resourceId: string;
+      exactPaths: readonly string[];
+      allowAbsent: boolean;
+    }>;
+
+type AdapterResourcePreparation = Readonly<{
+  resources: readonly AuxiliaryResourcePlan[];
+  preparationDigest: string;
+}>;
+
+type MaterializedAuxiliaryResourceSet = Readonly<{
+  preparationDigest: string;
+  receiptDigest: string;
+  resources: readonly Readonly<{
+    resourceId: string;
+    kind: AuxiliaryResourcePlan["kind"];
+    selectedCandidateIndex?: number;
+    resolvedPaths: readonly string[];
+    ownerDigest: string;
+    contentOrBaselineDigest: string;
+  }>[];
+}>;
+
+type CoordinatorTransport =
+  | Readonly<{
+      kind: "stdio-json";
+      stdin: "closed" | Uint8Array;
+      output: "stream-json" | "jsonl";
+    }>
+  | Readonly<{
+      kind: "pty-interactive";
+      initialInput: Uint8Array;
+      columns: 120;
+      rows: 40;
+      exitOnSignal: "ready-for-graceful-exit";
+      gracefulExitInput: Uint8Array;
+      controlTimeoutMs: number;
+      gracefulExitTimeoutMs: number;
+    }>;
+
+type FixedCaptureBinding = Readonly<{
+  kind: "fixed-provider-path";
+  nativeRunId: string;
+  exactPaths: readonly string[];
+  exactPathDigest: string;
+  sourcePlanDigest: string;
+}>;
+
+type EventBoundCaptureBinding = Readonly<{
+  kind: "event-bound-provider-path";
+  nativeRunId: string;
+  exactPaths: readonly string[];
+  exactPathDigest: string;
+  sourceEventDigest: string;
+}>;
+
+type EvidenceCapturePlan =
+  | Readonly<{
+      kind: "fixed-provider-path";
+      initialBinding: FixedCaptureBinding;
+      hookDir: string;
+    }>
+  | Readonly<{
+      kind: "event-bound-provider-path";
+      hookDir: string;
+    }>
+  | Readonly<{
+      kind: "hook-only";
+      hookDir: string;
+    }>;
+
+type CaptureIdentity = Readonly<{
+  executionId: string;
+  attemptId: string;
+  attemptNonceHash: string;
+  planDigest: string;
+  waveIndex: number;
+  waveDigest: string;
+}>;
+
+type LaunchSpec = Readonly<{
+  executable: string;
+  args: readonly string[];
+  cwd: string;
+  env: Readonly<Record<string, string>>;
+  transport: CoordinatorTransport;
+  timeoutMs: number;
+}>;
+
+type AdapterExecutionPlan = Readonly<{
+  launch: LaunchSpec;
+  capture: EvidenceCapturePlan;
+  captureIdentity: CaptureIdentity;
+  resources: readonly AuxiliaryResourcePlan[];
+}>;
+
+type RawNativeEvent = Readonly<{
+  source: "stream" | "hook";
+  bytes: Uint8Array;
+}>;
+
+type CaptureBindingInput = Readonly<{
+  plan: Extract<EvidenceCapturePlan, { kind: "event-bound-provider-path" }>;
+  identity: CaptureIdentity;
+  event: RawNativeEvent;
+}>;
+
+type CaptureBindingResolution =
+  | Readonly<{ kind: "not-binding" }>
+  | Readonly<{ kind: "bound"; binding: EventBoundCaptureBinding }>
+  | Readonly<{ kind: "invalid"; diagnosticCode: string }>;
+
+type LiveEvidenceInputs = Readonly<{
+  providerState: AsyncIterable<Uint8Array>;
+  nativeEvents: AsyncIterable<RawNativeEvent>;
+}>;
+
+type EvidenceInputs = LiveEvidenceInputs & Readonly<{
+  processTerminal: Readonly<{
+    transport: CoordinatorTransport["kind"];
+    exitCode: number;
+    processGroupId: number;
+  }>;
+}>;
+
+type NormalizeContext = Readonly<{
+  driver: NativeDriver;
+  executionId: string;
+  attemptId: string;
+  attemptNonceHash: string;
+  planDigest: string;
+  waveIndex: number;
+  waveDigest: string;
+  expectedUnits: readonly string[];
+}>;
+
+type DriverControlSignal = Readonly<{
+  kind: "ready-for-graceful-exit";
+  driver: NativeDriver;
+  executionId: string;
+  attemptId: string;
+  attemptNonceHash: string;
+  planDigest: string;
+  waveIndex: number;
+  waveDigest: string;
+  coveredUnits: readonly string[];
+  liveEvidenceDigest: string;
+}>;
+
+type EvidenceSource =
+  | "model-handshake"
+  | "provider-state"
+  | "session-metadata"
+  | "process-lifecycle"
+  | "stream"
+  | "hook";
+
+type NormalizedEventBase = Readonly<{
+  v: 1;
+  driver: NativeDriver;
+  source: EvidenceSource;
+  executionId: string;
+  attemptId: string;
+  attemptNonceHash: string;
+  planDigest: string;
+  waveIndex: number;
+  waveDigest: string;
+  nativeRunId: string;
+}>;
+
+type UnitChildBinding = Readonly<{ unit: string; childId: string }>;
+
+type NativeMarker =
+  | "claude-team-membership"
+  | "claude-shared-task"
+  | "claude-workflow"
+  | "codex-subagent-hook"
+  | "kiro-parent-child-session";
+
+type NormalizedDriverEvent =
+  | (NormalizedEventBase & Readonly<{
+      kind: "mode-confirmed";
+      source: "model-handshake" | "provider-state" | "session-metadata" | "stream";
+      modeIdentifier: string;
+      resolvedModelId?: string;
+    }>)
+  | (NormalizedEventBase & Readonly<{
+      kind: "coordinator-started";
+      source: "process-lifecycle";
+      coordinatorId: string;
+    }>)
+  | (NormalizedEventBase & Readonly<{
+      kind: "native-state-observed";
+      source: "provider-state" | "session-metadata" | "hook";
+      snapshotDigest: string;
+      bindings: readonly UnitChildBinding[];
+    }>)
+  | (NormalizedEventBase & Readonly<{
+      kind: "native-child-started";
+      source: "stream" | "hook" | "provider-state" | "session-metadata";
+      childId: string;
+      unit: string;
+    }>)
+  | (NormalizedEventBase & Readonly<{
+      kind: "native-child-stopped";
+      source: "stream" | "hook" | "provider-state" | "session-metadata";
+      childId: string;
+      unit: string;
+      outcome: "completed" | "failed";
+    }>)
+  | (NormalizedEventBase & Readonly<{
+      kind: "native-coordination";
+      source: "stream" | "hook";
+      marker: NativeMarker;
+    }>)
+  | (NormalizedEventBase & Readonly<{
+      kind: "coordinator-stopped";
+      source: "process-lifecycle";
+      coordinatorId: string;
+      exitCode: number;
+    }>);
+```
+
+`MaterializedAuxiliaryResourceSet`のraw path/bytesはU-02からadapterへのin-memory入力に限定し、checkpoint/auditはreceipt digestだけを保持する。`NormalizedDriverEvent`はkindごとのclosed schemaでprovider raw payloadやsecret-like fieldを受理しない。Functional Designで追加したresource二段階は、Application Designのcapture/live-control/normalization seamを保持したまま、provider adapterのhidden filesystem I/Oを排除する精緻化である。
+
 ## Selection aggregate
 
 ### SelectionOutcome
@@ -238,14 +544,42 @@ type DriverRegistration = Readonly<{
 }>;
 
 type RegistrationSlot =
-  | Readonly<{ kind: "available"; adapter: DriverAdapter }>
+  | Readonly<{ kind: "available"; adapters: DriverAdapterSet }>
   | Readonly<{
       kind: "unavailable";
       diagnosticCode: "REGISTRATION_SLOT_UNIMPLEMENTED";
     }>;
+
+type DriverAdapterSet = Readonly<{
+  provider: "claude" | "codex" | "kiro";
+  adaptersByDriver: ReadonlyMap<NativeDriver, DriverAdapter>;
+  forDriver(driver: NativeDriver): DriverAdapter;
+}>;
+
+type DriverAdapter = Readonly<{
+  driver: NativeDriver;
+  provider: "claude" | "codex" | "kiro";
+  probe(input: ProbeInput): Promise<ProbeResult>;
+  prepareResources(input: LaunchInput): AdapterResourcePreparation;
+  buildExecution(
+    input: LaunchInput,
+    resources: MaterializedAuxiliaryResourceSet,
+  ): AdapterExecutionPlan;
+  resolveCaptureBinding(input: CaptureBindingInput): CaptureBindingResolution;
+  observeControl(
+    inputs: LiveEvidenceInputs,
+    context: NormalizeContext,
+  ): AsyncIterable<DriverControlSignal>;
+  normalize(
+    inputs: EvidenceInputs,
+    context: NormalizeContext,
+  ): AsyncIterable<NormalizedDriverEvent>;
+}>;
 ```
 
-`DriverRegistration.build`はproviderとdriver/harness tupleの正確な対応を検証する。`owns`と`supports`はregistration値自身のinstance methodであり、外部switchの増殖を防ぐ。slot未実装は明示的にfail-closedであり、no-op adapterを許可しない。
+`DriverRegistration.build`はproviderとdriver/harness tupleの正確な対応を検証する。available slotでは`adaptersByDriver.keys == drivers`、adapterの`driver`とkey一致、重複0件を必須にする。Claudeは2件、Codex/Kiroは各1件であり、実行中にadapterのdriverを書き換えない。`owns`と`supports`はregistration値自身のinstance methodであり、外部switchの増殖を防ぐ。slot未実装は明示的にfail-closedであり、no-op adapterを許可しない。
+
+`prepareResources`と`buildExecution`はどちらもI/Oを行わない。前者はclosed `AuxiliaryResourcePlan[]`とpreparation digestを返し、U-02がmaterializeしたsetだけを後者へ渡す。後者の`AdapterExecutionPlan`は`launch + capture + captureIdentity + resources`を持ち、preparationと同じresource集合/digestをechoする。filesystem/process/checkpoint/cleanupはU-02、provider固有candidate/content/resolver/projectionはU-03〜U-05が所有する。
 
 ### DriverRegistrationSet
 
