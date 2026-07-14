@@ -191,6 +191,7 @@ describe("t237 closed native execution lifecycle", () => {
       nativeRunId: "native-run-1",
       processIdentityDigest: "process-identity-digest",
     });
+    let observedCheckpoint: NativeDispatchCheckpoint | undefined;
     let checkpoint: NativeDispatchCheckpoint | undefined;
     const execution = createLifecycleNativeExecution({
       resources: Object.freeze({
@@ -288,6 +289,10 @@ describe("t237 closed native execution lifecycle", () => {
       onResourcesPrepared: async () => {
         calls.push("resources-prepared");
       },
+      onProcessObserved: (value) => {
+        calls.push("process-observed");
+        observedCheckpoint = value;
+      },
       onReadyToArm: async (value) => {
         calls.push("checkpoint");
         checkpoint = value;
@@ -298,14 +303,22 @@ describe("t237 closed native execution lifecycle", () => {
     });
 
     expect(events).toEqual([]);
+    expect(observedCheckpoint).toBe(checkpoint);
     expect(checkpoint).toMatchObject({
       kind: "native",
       nativeRunId: "native-run-1",
+      preparedNativeRunDigest: expect.any(String),
       resourceReceiptDigest: resources.receiptDigest,
       processIdentityDigest: "process-identity-digest",
       armDigest: "arm-digest",
       armDeadline: AUTHORITATIVE_ARM_DEADLINE,
-      capture: { kind: "hook-only", transport: "stdio-json" },
+      capture: {
+        kind: "hook-only",
+        identityDigest: expect.any(String),
+        capturePlanDigest: expect.any(String),
+        resourcesDigest: resources.receiptDigest,
+        transport: "stdio-json",
+      },
     });
     expect(calls).toEqual([
       "prepare-resources",
@@ -318,6 +331,7 @@ describe("t237 closed native execution lifecycle", () => {
       "process-spawn",
       "identity",
       "bind-owner",
+      "process-observed",
       "verify-arm",
       "checkpoint",
       "arm",

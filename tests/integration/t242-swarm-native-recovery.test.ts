@@ -287,6 +287,24 @@ describe("t242 integrated native attempt recovery", () => {
     expect(order).toEqual(["process"]);
   });
 
+  test("fails closed when a recovery port throws", async () => {
+    const order: string[] = [];
+    const ports = successfulPorts(order);
+    const recovery = createNativeAttemptRecovery({
+      ...ports,
+      process: Object.freeze({
+        ...ports.process,
+        async recoverAttempt() {
+          order.push("process");
+          throw new Error("injected recovery failure");
+        },
+      }),
+    });
+
+    expect(await recovery.recover({ checkpoint: dispatchedCheckpoint(), observedOwner: null })).toBe("unknown");
+    expect(order).toEqual(["process"]);
+  });
+
   test("does not dispose the process directory when resource recovery is unknown", async () => {
     const order: string[] = [];
     const ports = successfulPorts(order);

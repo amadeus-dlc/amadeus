@@ -627,7 +627,14 @@ describe("t238 native auxiliary resource supervisor", () => {
     });
   });
 
-  for (const corruption of ["tampered", "symlink", "mode"] as const) {
+  for (const corruption of [
+    "tampered",
+    "receipt-envelope",
+    "tombstone-envelope",
+    "tombstone-digest",
+    "symlink",
+    "mode",
+  ] as const) {
     test(`fails closed for a ${corruption} exact cleanup tombstone`, async () => {
       const root = temporaryRoot();
       const journalRoot = join(root, "journals");
@@ -658,6 +665,18 @@ describe("t238 native auxiliary resource supervisor", () => {
         const tombstone = JSON.parse(readFileSync(tombstonePath, "utf-8")) as Record<string, unknown>;
         (tombstone.receipt as Record<string, unknown>).cleanupScopeDigest = "tampered";
         writeFileSync(tombstonePath, `${JSON.stringify(tombstone)}\n`, { mode: 0o600 });
+      } else if (corruption === "receipt-envelope") {
+        const tombstone = JSON.parse(readFileSync(tombstonePath, "utf-8")) as Record<string, unknown>;
+        (tombstone.receipt as Record<string, unknown>).disposition = "unknown";
+        writeFileSync(tombstonePath, `${JSON.stringify(tombstone)}\n`, { mode: 0o600 });
+      } else if (corruption === "tombstone-envelope") {
+        const tombstone = JSON.parse(readFileSync(tombstonePath, "utf-8")) as Record<string, unknown>;
+        tombstone.kind = "unknown";
+        writeFileSync(tombstonePath, `${JSON.stringify(tombstone)}\n`, { mode: 0o600 });
+      } else if (corruption === "tombstone-digest") {
+        const tombstone = JSON.parse(readFileSync(tombstonePath, "utf-8")) as Record<string, unknown>;
+        tombstone.tombstoneDigest = "tampered";
+        writeFileSync(tombstonePath, `${JSON.stringify(tombstone)}\n`, { mode: 0o600 });
       } else if (corruption === "symlink") {
         const foreign = join(root, "foreign-tombstone.json");
         writeFileSync(foreign, readFileSync(tombstonePath), { mode: 0o600 });
@@ -673,6 +692,145 @@ describe("t238 native auxiliary resource supervisor", () => {
       expect(existsSync(tombstonePath)).toBeTrue();
     });
   }
+
+  test("fails closed for a structurally invalid exact recovery target", async () => {
+    const root = temporaryRoot();
+    const journalRoot = join(root, "journals");
+    mkdirSync(journalRoot, { mode: 0o700 });
+    const invalidTarget = Object.freeze({
+      ...resourceRecoveryTarget("invalid-target", "preparation-digest"),
+      processIdentityDigest: "process-digest-without-fence",
+    }) as NativeResourceRecoveryTarget;
+
+    await expect(createTestResourceSupervisor(journalRoot).recoverAttempt(invalidTarget)).resolves.toEqual({
+      status: "unknown",
+    });
+  });
+
+  test("accepts an identical tombstone when cleanup publication is retried", async () => {
+    const root = temporaryRoot();
+    const journalRoot = join(root, "journals");
+    const ownedFile = join(root, "owned.json");
+    const nativeRunId = "cleanup-tombstone-idempotent-publication";
+    mkdirSync(journalRoot, { mode: 0o700 });
+    const resourcePlan = preparation(Object.freeze([Object.freeze({
+      kind: "attempt-owned-file" as const,
+      resourceId: "settings",
+      path: ownedFile,
+      bytes: new TextEncoder().encode("owned"),
+      mode: "0600" as const,
+    })]));
+    const supervisor = nativeResourceTestSeam.createCrashInjected({
+      journalRoot,
+      crashAfter: "tombstone-published",
+    });
+    const resources = await supervisor.materialize(resourcePlan, launchInput(root, nativeRunId));
+    const target = resourceRecoveryTarget(nativeRunId, resourcePlan.preparationDigest);
+
+    await expect(supervisor.cleanup(resources)).rejects.toThrow("RESOURCE_CLEANUP_TEST_CRASH");
+    await expect(supervisor.cleanup(resources)).rejects.toThrow("RESOURCE_CLEANUP_TEST_CRASH");
+    await expect(createTestResourceSupervisor(journalRoot).recoverAttempt(target)).resolves.toMatchObject({
+      status: "cleaned",
+    });
+  });
+
+  test("rejects a conflicting tombstone when cleanup publication is retried", async () => {
+    const root = temporaryRoot();
+    const journalRoot = join(root, "journals");
+    const ownedFile = join(root, "owned.json");
+    const nativeRunId = "cleanup-tombstone-conflicting-publication";
+    mkdirSync(journalRoot, { mode: 0o700 });
+    const resourcePlan = preparation(Object.freeze([Object.freeze({
+      kind: "attempt-owned-file" as const,
+      resourceId: "settings",
+      path: ownedFile,
+      bytes: new TextEncoder().encode("owned"),
+      mode: "0600" as const,
+    })]));
+    const supervisor = nativeResourceTestSeam.createCrashInjected({
+      journalRoot,
+      crashAfter: "tombstone-published",
+    });
+    const resources = await supervisor.materialize(resourcePlan, launchInput(root, nativeRunId));
+
+    await expect(supervisor.cleanup(resources)).rejects.toThrow("RESOURCE_CLEANUP_TEST_CRASH");
+    const tombstonePath = firstCompletedTombstonePath(journalRoot);
+    const parsed = JSON.parse(readFileSync(tombstonePath, "utf-8")) as Record<string, unknown>;
+    const receipt = parsed.receipt as Record<string, unknown>;
+    const { receiptDigest: _receiptDigest, ...receiptSemantic } = receipt;
+    receiptSemantic.cleanupScopeDigest = "conflicting-cleanup-scope";
+    parsed.receipt = Object.freeze({
+      ...receiptSemantic,
+      receiptDigest: digestValue(receiptSemantic),
+    });
+    const { tombstoneDigest: _tombstoneDigest, ...tombstoneSemantic } = parsed;
+    writeFileSync(
+      tombstonePath,
+      `${JSON.stringify({
+        ...tombstoneSemantic,
+        tombstoneDigest: digestValue(tombstoneSemantic),
+      })}\n`,
+      { mode: 0o600 },
+    );
+
+    await expect(supervisor.cleanup(resources)).rejects.toThrow("RESOURCE_CLEANUP_TOMBSTONE_CONFLICT");
+    expect(activeJournalNames(journalRoot)).toHaveLength(1);
+  });
+
+  test("rejects a valid tombstone stored under another exact recovery target", async () => {
+    const root = temporaryRoot();
+    const journalRoot = join(root, "journals");
+    const nativeRunId = "cleanup-tombstone-foreign-target";
+    const fixture = await materializedOwnedFileFixture(root, nativeRunId);
+    const sourceTarget = resourceRecoveryTarget(nativeRunId, fixture.resources.preparationDigest);
+    await fixture.supervisor.cleanup(fixture.resources);
+    const sourcePath = firstCompletedTombstonePath(journalRoot);
+    const requestedTarget = Object.freeze({
+      ...sourceTarget,
+      preparationDigest: "another-preparation-digest",
+    });
+    const requestedPath = join(journalRoot, `${digestValue(requestedTarget)}.completed.json`);
+    renameSync(sourcePath, requestedPath);
+
+    await expect(createTestResourceSupervisor(journalRoot).recoverAttempt(requestedTarget)).resolves.toEqual({
+      status: "unknown",
+    });
+    expect(existsSync(requestedPath)).toBeTrue();
+  });
+
+  test("retains a journal that conflicts with a completed cleanup receipt", async () => {
+    const root = temporaryRoot();
+    const journalRoot = join(root, "journals");
+    const nativeRunId = "cleanup-tombstone-journal-conflict";
+    mkdirSync(journalRoot, { mode: 0o700 });
+    const ownedFile = join(root, "owned.json");
+    const resourcePlan = preparation(Object.freeze([Object.freeze({
+      kind: "attempt-owned-file" as const,
+      resourceId: "settings",
+      path: ownedFile,
+      bytes: new TextEncoder().encode("owned"),
+      mode: "0600" as const,
+    })]));
+    const supervisor = nativeResourceTestSeam.createCrashInjected({
+      journalRoot,
+      crashAfter: "tombstone-published",
+    });
+    const resources = await supervisor.materialize(resourcePlan, launchInput(root, nativeRunId));
+    const target = resourceRecoveryTarget(nativeRunId, resourcePlan.preparationDigest);
+
+    await expect(supervisor.cleanup(resources)).rejects.toThrow("RESOURCE_CLEANUP_TEST_CRASH");
+    const journalName = activeJournalNames(journalRoot)[0];
+    if (!journalName) throw new Error("active journal fixture missing");
+    const journalPath = join(journalRoot, journalName);
+    rewriteJournal(journalPath, (semantic) => {
+      semantic.receiptDigest = "another-resource-receipt-digest";
+    });
+
+    await expect(createTestResourceSupervisor(journalRoot).recoverAttempt(target)).resolves.toEqual({
+      status: "unknown",
+    });
+    expect(existsSync(journalPath)).toBeTrue();
+  });
 
   test("retains a foreign inode during exact resource recovery", async () => {
     const root = temporaryRoot();

@@ -1960,9 +1960,6 @@ function completeJournalCleanup(
   afterStep: (point: ResourceCleanupCrashPoint) => void,
   target: NativeResourceRecoveryTarget = resourceRecoveryTarget(journal),
 ): NativeResourceCleanupReceipt {
-  if (!journalMatchesRecoveryTarget(journal, target)) {
-    throw new Error("RESOURCE_RECOVERY_TARGET_INVALID");
-  }
   const tombstone = cleanupTombstone(target, journal);
   cleanupJournalResources(journalPath, journal);
   afterStep("cleanup-complete");
