@@ -4,6 +4,8 @@
 // This is a project-local dogfood install, not a distributable build. The
 // packager still owns dist/; this script copies the generated Claude/Codex
 // harness surfaces into the repository root so Amadeus can develop itself.
+// Contributor-only skills under contrib/skills/ are projected into both
+// harness discovery trees without entering dist/.
 
 import { spawnSync } from "node:child_process";
 import {
@@ -36,6 +38,9 @@ const managedDirs: ManagedDir[] = [
   { src: "dist/codex/.codex", dst: ".codex" },
   { src: "dist/codex/.agents", dst: ".agents" },
 ];
+
+const CONTRIBUTOR_SKILLS_ROOT = "contrib/skills";
+const CONTRIBUTOR_SKILL_DESTINATIONS = [".claude/skills", ".agents/skills"];
 
 const PROJECT_INSTRUCTIONS = `## Project Instructions
 
@@ -190,6 +195,16 @@ function buildExpected(repoRoot: string): Map<string, Buffer> {
       const relFromSrc = normalizeRel(relative(srcAbs, file));
       const dstRel = normalizeRel(join(dst, relFromSrc));
       expected.set(dstRel, readFileSync(file));
+    }
+  }
+  const contributorSkillsAbs = join(repoRoot, CONTRIBUTOR_SKILLS_ROOT);
+  if (existsSync(contributorSkillsAbs)) {
+    for (const file of walk(contributorSkillsAbs)) {
+      const relFromSkills = normalizeRel(relative(contributorSkillsAbs, file));
+      const bytes = readFileSync(file);
+      for (const dst of CONTRIBUTOR_SKILL_DESTINATIONS) {
+        expected.set(normalizeRel(join(dst, relFromSkills)), bytes);
+      }
     }
   }
   const claudeOnboarding = join(repoRoot, ".claude", "CLAUDE.md");

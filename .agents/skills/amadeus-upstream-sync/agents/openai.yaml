@@ -1,0 +1,7 @@
+# skill-forge-source-sha256: a475b785aeb3f98c6145a87adaef03ef9b6b137732d86d2428771637879c19be
+interface:
+  display_name: "Amadeus Upstream Sync"
+  short_description: "Plan safe upstream AI-DLC v2 synchronization"
+  default_prompt: "Use $amadeus-upstream-sync to plan an upstream AI-DLC v2 synchronization."
+policy:
+  allow_implicit_invocation: true
