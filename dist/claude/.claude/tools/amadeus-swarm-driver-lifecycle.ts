@@ -143,14 +143,16 @@ export type DispatchCheckpoint =
       executionMode: "floor" | "legacy";
     }>;
 
-export function buildDispatchDigest(input: Readonly<{
+type DispatchDigestInput = Readonly<{
   executionId: string;
   attemptId: string;
   manifestDigest: string;
   selection: RedactedSelection;
   runBinding: RunRequestBinding;
   dispatch: DispatchCheckpoint;
-}>): string {
+}>;
+
+export function buildDispatchDigest(input: DispatchDigestInput): string {
   return digestValue(input);
 }
 

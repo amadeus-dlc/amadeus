@@ -601,12 +601,7 @@ async function exactlyOneControlSignal(
 
 function terminalMatches(
   terminal: ProcessTerminal,
-  expected: Readonly<{
-    transport: CoordinatorTransport["kind"];
-    nativeRunId: string;
-    processIdentityDigest?: string;
-    controlSignalDigest?: string;
-  }>,
+  expected: TerminalMatchExpectation,
 ): boolean {
   const hasControl = terminal.controlSignalDigest !== undefined;
   return (
@@ -630,6 +625,13 @@ function terminalMatches(
     nonEmpty(terminal.processIdentityDigest)
   );
 }
+
+type TerminalMatchExpectation = Readonly<{
+  transport: CoordinatorTransport["kind"];
+  nativeRunId: string;
+  processIdentityDigest?: string;
+  controlSignalDigest?: string;
+}>;
 
 async function collectEvents(
   events: AsyncIterable<NormalizedDriverEvent>,
@@ -671,7 +673,7 @@ function validateProcessPlan(plan: PlannedProcessRun, nativeRunId: string): void
   );
 }
 
-async function recoverFailedExecution(input: Readonly<{
+type FailedExecutionRecoveryInput = Readonly<{
   error: unknown;
   resources: MaterializedAuxiliaryResourceSet;
   resourcePort: ResourceSupervisorPort;
@@ -682,7 +684,9 @@ async function recoverFailedExecution(input: Readonly<{
   transport: CoordinatorTransport["kind"];
   nativeRunId: string;
   processIdentityDigest?: string;
-}>): Promise<never> {
+}>;
+
+async function recoverFailedExecution(input: FailedExecutionRecoveryInput): Promise<never> {
   const recoveryErrors: unknown[] = [];
   let terminal = input.terminal;
   let processTerminal = input.process === undefined || terminal !== undefined;

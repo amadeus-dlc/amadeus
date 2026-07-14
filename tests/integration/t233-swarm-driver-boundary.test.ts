@@ -1,12 +1,29 @@
 // covers: module:amadeus-swarm-driver-boundary, requirement:FR-05, requirement:FR-18, requirement:FR-20
 // size: medium
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
 const TOOLS = join(REPO_ROOT, "packages", "framework", "core", "tools");
+
+type CapturedNativeExecution = Readonly<{
+  execute(input: unknown): Promise<unknown>;
+}>;
+
+let productionNativeExecution: CapturedNativeExecution | undefined;
+
+mock.module("../../packages/framework/core/tools/amadeus-swarm-driver-runtime.ts", () => ({
+  createProductionCoordinator(input: Readonly<{ nativeExecution: CapturedNativeExecution }>) {
+    productionNativeExecution = input.nativeExecution;
+    return Object.freeze({ status: () => null });
+  },
+}));
+
+const { executeSwarmDriverCommand } = await import(
+  "../../packages/framework/core/tools/amadeus-swarm-driver.ts"
+);
 
 function source(name: string): string {
   return readFileSync(join(TOOLS, name), "utf-8");
@@ -102,10 +119,19 @@ describe("t233 swarm driver architecture boundary", () => {
     expect(boundary).not.toContain("node_modules");
   });
 
-  test("routes the production CLI through the provider-neutral native lifecycle", () => {
+  test("keeps the unavailable production slot fail-closed without placeholder supervisors", async () => {
+    const output = await executeSwarmDriverCommand(
+      ["status", "--project-dir", REPO_ROOT],
+      JSON.stringify({ schemaVersion: 1, batch: 1 }),
+    );
     const cli = source("amadeus-swarm-driver.ts");
-    expect(cli).toContain('from "./amadeus-swarm-native-execution.ts"');
-    expect(cli).toContain("createLifecycleNativeExecution({");
+    expect(output.exitCode).toBe(0);
+    expect(productionNativeExecution).toBeDefined();
+    await expect(productionNativeExecution!.execute({})).rejects.toThrow(
+      "NATIVE_RESOURCE_SUPERVISOR_UNIMPLEMENTED",
+    );
+    expect(cli).not.toContain("NATIVE_CAPTURE_SUPERVISOR_UNIMPLEMENTED");
+    expect(cli).not.toContain("NATIVE_PROCESS_SUPERVISOR_UNIMPLEMENTED");
     expect(cli).not.toContain("NATIVE_EXECUTION_SLOT_UNIMPLEMENTED");
   });
 
