@@ -93,6 +93,7 @@ function nativeCheckpoint(captureKind: "fixed-provider-path" | "event-bound-prov
   const dispatchPreparation = {
     kind: "native" as const,
     nativeRunId: "native-run",
+    fencingToken: 1,
     waveIndex: 0,
     waveDigest,
     resourcePreparationDigest: "resource-plan",
@@ -107,6 +108,7 @@ function nativeCheckpoint(captureKind: "fixed-provider-path" | "event-bound-prov
     identityRelativePath: ".amadeus-native/identity.json",
     armRelativePath: ".amadeus-native/arm.json",
     armDigest: "arm",
+    recoveryJournalRelativePath: ".amadeus-native/recovery.json",
   };
   const preparedNativeRun = {
     kind: "native" as const,
@@ -152,6 +154,7 @@ function nativeCheckpoint(captureKind: "fixed-provider-path" | "event-bound-prov
     resourceReceiptDigest: "resources",
     processIdentityDigest: "process",
     armDigest: "arm",
+    armDeadline: "2026-07-14T00:00:30.000Z",
     capture,
   };
   const manifestDigest = digestValue(preparedUnits);

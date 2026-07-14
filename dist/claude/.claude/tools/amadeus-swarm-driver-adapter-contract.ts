@@ -192,6 +192,24 @@ export type AdapterExecutionPlan = Readonly<{
   resources: readonly AuxiliaryResourcePlan[];
 }>;
 
+export type RawStreamEvidenceFrame = Readonly<{
+  source: "process-stream";
+  bytes: Uint8Array;
+}>;
+
+export type RawEvidenceFrame =
+  | RawStreamEvidenceFrame
+  | Readonly<{
+      source: "hook";
+      pathDigest: string;
+      bytes: Uint8Array;
+    }>
+  | Readonly<{
+      source: "provider-state";
+      pathDigest: string;
+      bytes: Uint8Array;
+    }>;
+
 export type RawNativeEvent = Readonly<{
   source: "stream" | "hook";
   bytes: Uint8Array;
@@ -200,7 +218,7 @@ export type RawNativeEvent = Readonly<{
 export type CaptureBindingInput = Readonly<{
   plan: Extract<EvidenceCapturePlan, Readonly<{ kind: "event-bound-provider-path" }>>;
   identity: CaptureIdentity;
-  event: RawNativeEvent;
+  event: RawEvidenceFrame;
 }>;
 
 export type CaptureBindingResolution =
@@ -222,8 +240,11 @@ export type ProcessTerminal = Readonly<{
   controlSignalDigest?: string;
 }>;
 
-export type EvidenceInputs = LiveEvidenceInputs & Readonly<{
-  processTerminal: ProcessTerminal;
+export type AttemptEvidenceSession = Readonly<{
+  liveInputs: LiveEvidenceInputs;
+  ingest(frame: RawEvidenceFrame): void;
+  seal(terminal: ProcessTerminal): AsyncIterable<NormalizedDriverEvent>;
+  abort(reason: string): Promise<void>;
 }>;
 
 export type NormalizeContext = Readonly<{
@@ -337,14 +358,11 @@ export type DriverAdapter = Readonly<{
     resources: MaterializedAuxiliaryResourceSet,
   ): AdapterExecutionPlan;
   resolveCaptureBinding(input: CaptureBindingInput): CaptureBindingResolution;
+  openEvidenceSession(context: NormalizeContext): AttemptEvidenceSession;
   observeControl(
     inputs: LiveEvidenceInputs,
     context: NormalizeContext,
   ): AsyncIterable<DriverControlSignal>;
-  normalize(
-    inputs: EvidenceInputs,
-    context: NormalizeContext,
-  ): AsyncIterable<NormalizedDriverEvent>;
 }>;
 
 export type DriverAdapterSet = Readonly<{
@@ -369,8 +387,8 @@ function hasAdapterPort(adapter: unknown): adapter is DriverAdapter {
     typeof adapter.prepareResources === "function" &&
     typeof adapter.buildExecution === "function" &&
     typeof adapter.resolveCaptureBinding === "function" &&
-    typeof adapter.observeControl === "function" &&
-    typeof adapter.normalize === "function"
+    typeof adapter.openEvidenceSession === "function" &&
+    typeof adapter.observeControl === "function"
   );
 }
 

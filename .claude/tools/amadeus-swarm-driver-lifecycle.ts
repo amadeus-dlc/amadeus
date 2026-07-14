@@ -975,6 +975,7 @@ function dispatchPreparationIsValid(value: unknown): value is NativeDispatchPrep
     hasExactKeys(value, [
       "kind",
       "nativeRunId",
+      "fencingToken",
       "waveIndex",
       "waveDigest",
       "resourcePreparationDigest",
@@ -982,8 +983,11 @@ function dispatchPreparationIsValid(value: unknown): value is NativeDispatchPrep
       "identityRelativePath",
       "armRelativePath",
       "armDigest",
+      "recoveryJournalRelativePath",
     ]) &&
     value.kind === "native" &&
+    Number.isInteger(value.fencingToken) &&
+    Number(value.fencingToken) > 0 &&
     Number.isInteger(value.waveIndex) &&
     Number(value.waveIndex) >= 0 &&
     [
@@ -994,9 +998,11 @@ function dispatchPreparationIsValid(value: unknown): value is NativeDispatchPrep
       value.identityRelativePath,
       value.armRelativePath,
       value.armDigest,
+      value.recoveryJournalRelativePath,
     ].every(nonEmptyString) &&
     relativeCheckpointPathIsValid(String(value.identityRelativePath)) &&
     relativeCheckpointPathIsValid(String(value.armRelativePath)) &&
+    relativeCheckpointPathIsValid(String(value.recoveryJournalRelativePath)) &&
     value.identityRelativePath !== value.armRelativePath
   );
 }
@@ -1049,6 +1055,7 @@ function dispatchCheckpointIsValid(value: unknown): value is DispatchCheckpoint 
       "resourceReceiptDigest",
       "processIdentityDigest",
       "armDigest",
+      "armDeadline",
       "capture",
     ]) &&
     [
@@ -1058,6 +1065,7 @@ function dispatchCheckpointIsValid(value: unknown): value is DispatchCheckpoint 
       value.processIdentityDigest,
       value.armDigest,
     ].every(nonEmptyString) &&
+    !Number.isNaN(Date.parse(String(value.armDeadline))) &&
     captureCheckpointIsValid(value.capture) &&
     (value.capture as CaptureCheckpoint).resourcesDigest === value.resourceReceiptDigest &&
     (!(value.capture as CaptureCheckpoint & { binding?: { nativeRunId: string } }).binding ||
@@ -1239,6 +1247,7 @@ function nativePreparationValuesAreValid(
   if (preparation.captureIdentityDigest !== expectedIdentity || preparation.waveDigest !== expectedWaveDigest) {
     return false;
   }
+  if (preparation.fencingToken !== (value.lease as AttemptLease).fencingToken) return false;
   if (prepared !== undefined) {
     if (!preparedNativeRunIsValid(prepared)) return false;
     if (prepared.dispatchPreparationDigest !== digestValue(preparation)) return false;

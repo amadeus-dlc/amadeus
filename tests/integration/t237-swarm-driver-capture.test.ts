@@ -8,7 +8,6 @@ import type {
   DriverAdapter,
   DriverControlSignal,
   DriverPlan,
-  EvidenceInputs,
   LaunchInput,
   LiveEvidenceInputs,
   NormalizedDriverEvent,
@@ -93,8 +92,11 @@ function plannedProcess(nativeRunId = "native-run-1") {
     identityRelativePath: ".amadeus/native/identity.json",
     armRelativePath: ".amadeus/native/arm.json",
     armDigest: "arm-digest",
+    recoveryJournalRelativePath: ".amadeus/native/recovery.json",
   });
 }
+
+const AUTHORITATIVE_ARM_DEADLINE = "2026-07-14T00:00:30.000Z";
 
 function adapter(
   calls: string[],
@@ -137,11 +139,18 @@ function adapter(
       });
     },
     resolveCaptureBinding: () => Object.freeze({ kind: "not-binding" as const }),
+    openEvidenceSession: () => Object.freeze({
+      liveInputs,
+      ingest: () => {},
+      seal: async function* (_terminal: ProcessTerminal) {
+        calls.push("evidence-seal");
+        yield* [] as NormalizedDriverEvent[];
+      },
+      abort: async () => {
+        calls.push("evidence-abort");
+      },
+    }),
     observeControl: async function* () {},
-    normalize: async function* (_inputs: EvidenceInputs) {
-      calls.push("normalize");
-      yield* [] as NormalizedDriverEvent[];
-    },
   });
 }
 
@@ -188,6 +197,23 @@ describe("t237 closed native execution lifecycle", () => {
           calls.push("materialize");
           return resources;
         },
+        bindRecoveryOwner: async (_resources, owner) => {
+          calls.push("bind-owner");
+          expect(owner).toEqual({
+            executionId: "execution-1",
+            attemptId: "attempt-1",
+            attemptNonceHash: "nonce-hash",
+            planDigest: "plan-digest",
+            waveIndex: 0,
+            waveDigest: digestValue(plan.waves[0]),
+            nativeRunId: "native-run-1",
+            fencingToken: 1,
+            processIdentityDigest: "process-identity-digest",
+          });
+        },
+        verifyForArm: async () => {
+          calls.push("verify-arm");
+        },
         cleanup: async () => {
           calls.push("cleanup");
         },
@@ -196,15 +222,12 @@ describe("t237 closed native execution lifecycle", () => {
         start: async () => {
           calls.push("capture-start");
           return Object.freeze({
-            liveInputs,
-            bindingEvents: emptyNativeEvents(),
             applyBinding: async () => {
               calls.push("apply-binding");
             },
             stopAndWait: async (observedTerminal: ProcessTerminal) => {
               calls.push("capture-stop");
               expect(observedTerminal).toEqual(terminal);
-              return Object.freeze({ ...liveInputs, processTerminal: observedTerminal });
             },
             abortAndWait: async () => {
               calls.push("capture-abort");
@@ -225,6 +248,7 @@ describe("t237 closed native execution lifecycle", () => {
               return Object.freeze({
                 processIdentityDigest: "process-identity-digest",
                 armDigest: "arm-digest",
+                armDeadline: AUTHORITATIVE_ARM_DEADLINE,
               });
             },
             arm: async () => {
@@ -244,6 +268,9 @@ describe("t237 closed native execution lifecycle", () => {
               calls.push("process-terminate");
               return terminal;
             },
+            dispose: async () => {
+              calls.push("process-dispose");
+            },
           });
         },
       }),
@@ -253,6 +280,7 @@ describe("t237 closed native execution lifecycle", () => {
       adapter: adapter(calls, preparation),
       launchInput: launchInput(),
       context: normalizeContext(),
+      fencingToken: 1,
       onDispatchPrepared: async () => {
         calls.push("dispatch-prepared");
       },
@@ -275,6 +303,7 @@ describe("t237 closed native execution lifecycle", () => {
       resourceReceiptDigest: resources.receiptDigest,
       processIdentityDigest: "process-identity-digest",
       armDigest: "arm-digest",
+      armDeadline: AUTHORITATIVE_ARM_DEADLINE,
       capture: { kind: "hook-only", transport: "stdio-json" },
     });
     expect(calls).toEqual([
@@ -287,12 +316,15 @@ describe("t237 closed native execution lifecycle", () => {
       "capture-start",
       "process-spawn",
       "identity",
+      "bind-owner",
+      "verify-arm",
       "checkpoint",
       "arm",
       "terminal",
       "capture-stop",
-      "normalize",
+      "evidence-seal",
       "cleanup",
+      "process-dispose",
     ]);
 
   });
@@ -326,7 +358,7 @@ describe("t237 closed native execution lifecycle", () => {
       resources: materializedResources,
     });
     const base = adapter(calls, preparation);
-    const event = Object.freeze({ source: "hook" as const, bytes: new Uint8Array([1]) });
+    const event = Object.freeze({ source: "process-stream" as const, bytes: new Uint8Array([1]) });
     const controlSignal = Object.freeze({
       kind: "ready-for-graceful-exit" as const,
       driver: "codex-ultra" as const,
@@ -404,32 +436,29 @@ describe("t237 closed native execution lifecycle", () => {
       processIdentityDigest: "identity",
       controlSignalDigest: digestValue(controlSignal),
     });
-    async function* bindingEvents(): AsyncIterable<RawNativeEvent> {
-      calls.push("binding-event");
-      yield event;
-    }
     const execution = createLifecycleNativeExecution({
       resources: Object.freeze({
         materialize: async () => {
           calls.push("materialize");
           return resources;
         },
+        bindRecoveryOwner: async () => {},
+        verifyForArm: async () => {},
         cleanup: async () => {
           calls.push("cleanup");
         },
       }),
       capture: Object.freeze({
-        start: async () => {
+        start: async (captureInput) => {
           calls.push("capture-start");
+          calls.push("binding-event");
+          captureInput.evidence.ingest(event);
           return Object.freeze({
-            liveInputs,
-            bindingEvents: bindingEvents(),
             applyBinding: async () => {
               calls.push("apply-binding");
             },
             stopAndWait: async () => {
               calls.push("capture-stop");
-              return Object.freeze({ ...liveInputs, processTerminal: terminal });
             },
             abortAndWait: async () => {
               calls.push("capture-abort");
@@ -447,7 +476,11 @@ describe("t237 closed native execution lifecycle", () => {
           return Object.freeze({
             observeIdentity: async () => {
               calls.push("identity");
-              return Object.freeze({ processIdentityDigest: "identity", armDigest: "arm-digest" });
+              return Object.freeze({
+                processIdentityDigest: "identity",
+                armDigest: "arm-digest",
+                armDeadline: AUTHORITATIVE_ARM_DEADLINE,
+              });
             },
             arm: async () => {
               calls.push("arm");
@@ -470,6 +503,9 @@ describe("t237 closed native execution lifecycle", () => {
               calls.push("process-terminate");
               return terminal;
             },
+            dispose: async () => {
+              calls.push("process-dispose");
+            },
           });
         },
       }),
@@ -480,6 +516,7 @@ describe("t237 closed native execution lifecycle", () => {
       adapter: ptyAdapter,
       launchInput: launchInput(),
       context: normalizeContext(),
+      fencingToken: 1,
       onDispatchPrepared: async () => {
         calls.push("dispatch-prepared");
       },
@@ -507,20 +544,21 @@ describe("t237 closed native execution lifecycle", () => {
       "build-execution",
       "resources-prepared",
       "capture-start",
+      "binding-event",
+      "resolve-binding",
       "process-spawn",
       "identity",
       "checkpoint",
       "arm",
-      "binding-event",
-      "resolve-binding",
       "capture-bound",
       "apply-binding",
       "observe-control",
       "terminal-wait",
       "control-signal",
       "capture-stop",
-      "normalize",
+      "evidence-seal",
       "cleanup",
+      "process-dispose",
     ]);
 
     calls.length = 0;
@@ -546,6 +584,7 @@ describe("t237 closed native execution lifecycle", () => {
         adapter: staleControlAdapter,
         launchInput: launchInput(),
         context: normalizeContext(),
+        fencingToken: 1,
         onDispatchPrepared: async () => {},
         onResourcesPrepared: async () => {},
         onReadyToArm: async () => {},
@@ -568,6 +607,7 @@ describe("t237 closed native execution lifecycle", () => {
         adapter: throwingControlAdapter,
         launchInput: launchInput(),
         context: normalizeContext(),
+        fencingToken: 1,
         onDispatchPrepared: async () => {},
         onResourcesPrepared: async () => {},
         onReadyToArm: async () => {},
@@ -662,6 +702,8 @@ describe("t237 closed native execution lifecycle", () => {
     const execution = createLifecycleNativeExecution({
       resources: Object.freeze({
         materialize: async () => resources,
+        bindRecoveryOwner: async () => {},
+        verifyForArm: async () => {},
         cleanup: async () => {
           calls.push("cleanup");
         },
@@ -688,6 +730,7 @@ describe("t237 closed native execution lifecycle", () => {
         adapter: invalidAdapter,
         launchInput: launchInput(),
         context: normalizeContext(),
+        fencingToken: 1,
         onDispatchPrepared: async () => {
           calls.push("dispatch-prepared");
         },
@@ -735,6 +778,8 @@ describe("t237 closed native execution lifecycle", () => {
     const execution = createLifecycleNativeExecution({
       resources: Object.freeze({
         materialize: async () => resources,
+        bindRecoveryOwner: async () => {},
+        verifyForArm: async () => {},
         cleanup: async () => {
           calls.push("cleanup");
         },
@@ -761,6 +806,7 @@ describe("t237 closed native execution lifecycle", () => {
         adapter: adapter(calls, preparation),
         launchInput: launchInput(),
         context: normalizeContext(),
+        fencingToken: 1,
         onDispatchPrepared: async () => {
           calls.push("dispatch-prepared");
         },
@@ -777,6 +823,7 @@ describe("t237 closed native execution lifecycle", () => {
     let terminateFailure = false;
     let captureFailure = false;
     let cleanupFailure = false;
+    let disposeFailure = false;
     const resourcePlans = Object.freeze([
       Object.freeze({
         kind: "attempt-owned-directory" as const,
@@ -816,6 +863,10 @@ describe("t237 closed native execution lifecycle", () => {
           calls.push("materialize");
           return resources;
         },
+        bindRecoveryOwner: async () => {
+          calls.push("bind-owner");
+        },
+        verifyForArm: async () => {},
         cleanup: async () => {
           calls.push("cleanup");
           if (cleanupFailure) throw new Error("cleanup-failed");
@@ -825,15 +876,12 @@ describe("t237 closed native execution lifecycle", () => {
         start: async () => {
           calls.push("capture-start");
           return Object.freeze({
-            liveInputs,
-            bindingEvents: emptyNativeEvents(),
             applyBinding: async () => {
               calls.push("apply-binding");
             },
             stopAndWait: async () => {
               calls.push("capture-stop");
               if (captureFailure) throw new Error("capture-stop-failed");
-              return Object.freeze({ ...liveInputs, processTerminal: terminal });
             },
             abortAndWait: async () => {
               calls.push("capture-abort");
@@ -854,6 +902,7 @@ describe("t237 closed native execution lifecycle", () => {
               return Object.freeze({
                 processIdentityDigest: "process-identity",
                 armDigest: "arm-digest",
+                armDeadline: AUTHORITATIVE_ARM_DEADLINE,
               });
             },
             arm: async () => {
@@ -868,6 +917,10 @@ describe("t237 closed native execution lifecycle", () => {
               if (terminateFailure) throw new Error("terminate-failed");
               return terminal;
             },
+            dispose: async () => {
+              calls.push("process-dispose");
+              if (disposeFailure) throw new Error("process-dispose-failed");
+            },
           });
         },
       }),
@@ -878,6 +931,7 @@ describe("t237 closed native execution lifecycle", () => {
         adapter: adapter(calls, preparation),
         launchInput: launchInput(),
         context: normalizeContext(),
+        fencingToken: 1,
         onDispatchPrepared: async () => {
           calls.push("dispatch-prepared");
         },
@@ -901,16 +955,20 @@ describe("t237 closed native execution lifecycle", () => {
       "capture-start",
       "process-spawn",
       "identity",
+      "bind-owner",
       "checkpoint",
       "process-terminate",
       "capture-stop",
+      "evidence-abort",
       "cleanup",
+      "process-dispose",
     ]);
 
     const runWithCheckpointFailure = () => execution.execute({
       adapter: adapter([], preparation),
       launchInput: launchInput(),
       context: normalizeContext(),
+      fencingToken: 1,
       onDispatchPrepared: async () => {},
       onResourcesPrepared: async () => {},
       onReadyToArm: async () => {
@@ -926,11 +984,44 @@ describe("t237 closed native execution lifecycle", () => {
     await expect(runWithCheckpointFailure()).rejects.toThrow("NATIVE_EXECUTION_RECOVERY_FAILED");
     captureFailure = false;
     cleanupFailure = true;
+    const beforeCleanupFailure = calls.length;
     await expect(runWithCheckpointFailure()).rejects.toThrow("NATIVE_EXECUTION_RECOVERY_FAILED");
+    expect(calls.slice(beforeCleanupFailure)).not.toContain("process-dispose");
+    cleanupFailure = false;
+    disposeFailure = true;
+    await expect(runWithCheckpointFailure()).rejects.toThrow("NATIVE_EXECUTION_RECOVERY_FAILED");
+    disposeFailure = false;
+
+    const abortingAdapter: DriverAdapter = Object.freeze({
+      ...adapter([], preparation),
+      openEvidenceSession: () => Object.freeze({
+        liveInputs,
+        ingest: () => {},
+        seal: async function* () {
+          yield* [] as NormalizedDriverEvent[];
+        },
+        abort: async () => {
+          throw new Error("evidence-abort-failed");
+        },
+      }),
+    });
+    await expect(execution.execute({
+      adapter: abortingAdapter,
+      launchInput: launchInput(),
+      context: normalizeContext(),
+      fencingToken: 1,
+      onDispatchPrepared: async () => {},
+      onResourcesPrepared: async () => {
+        throw new Error("resources-checkpoint-failed");
+      },
+      onReadyToArm: async () => {},
+      onCaptureBound: async () => {},
+    })).rejects.toThrow("NATIVE_EXECUTION_RECOVERY_FAILED");
   });
 
   test("fails closed and recovers when event-bound capture reaches EOF without a binding", async () => {
     const calls: string[] = [];
+    let captureFailure: "close" | "invalid" | "stream" = "close";
     const resourcePlans = Object.freeze([
       Object.freeze({
         kind: "attempt-owned-directory" as const,
@@ -960,6 +1051,9 @@ describe("t237 closed native execution lifecycle", () => {
     const base = adapter(calls, preparation);
     const eventAdapter: DriverAdapter = Object.freeze({
       ...base,
+      resolveCaptureBinding: () => captureFailure === "invalid"
+        ? Object.freeze({ kind: "invalid" as const, diagnosticCode: "CAPTURE_BINDING_INVALID" })
+        : Object.freeze({ kind: "not-binding" as const }),
       buildExecution: (input) => {
         calls.push("build-execution");
         return Object.freeze({
@@ -1001,25 +1095,38 @@ describe("t237 closed native execution lifecycle", () => {
     const execution = createLifecycleNativeExecution({
       resources: Object.freeze({
         materialize: async () => resources,
+        bindRecoveryOwner: async () => {},
+        verifyForArm: async () => {},
         cleanup: async () => {
           calls.push("cleanup");
         },
       }),
       capture: Object.freeze({
-        start: async () => Object.freeze({
-          liveInputs,
-          bindingEvents: emptyNativeEvents(),
-          applyBinding: async () => {
-            calls.push("apply-binding");
-          },
-          stopAndWait: async () => {
-            calls.push("capture-stop");
-            return Object.freeze({ ...liveInputs, processTerminal: terminal });
-          },
-          abortAndWait: async () => {
-            calls.push("capture-abort");
-          },
-        }),
+        start: async (captureInput) => {
+          if (captureFailure === "close") captureInput.evidence.close();
+          if (captureFailure === "invalid") {
+            captureInput.evidence.ingest(Object.freeze({
+              source: "process-stream" as const,
+              bytes: new Uint8Array([1]),
+            }));
+          }
+          if (captureFailure === "stream") {
+            const error = new Error("capture-stream-failed");
+            captureInput.evidence.fail(error);
+            throw error;
+          }
+          return Object.freeze({
+            applyBinding: async () => {
+              calls.push("apply-binding");
+            },
+            stopAndWait: async () => {
+              calls.push("capture-stop");
+            },
+            abortAndWait: async () => {
+              calls.push("capture-abort");
+            },
+          });
+        },
       }),
       process: Object.freeze({
         plan: () => plannedProcess(),
@@ -1027,6 +1134,7 @@ describe("t237 closed native execution lifecycle", () => {
           observeIdentity: async () => Object.freeze({
             processIdentityDigest: "process-identity",
             armDigest: "arm-digest",
+            armDeadline: AUTHORITATIVE_ARM_DEADLINE,
           }),
           arm: async () => {
             calls.push("arm");
@@ -1039,6 +1147,9 @@ describe("t237 closed native execution lifecycle", () => {
             calls.push("process-terminate");
             return terminal;
           },
+          dispose: async () => {
+            calls.push("process-dispose");
+          },
         }),
       }),
     });
@@ -1048,6 +1159,7 @@ describe("t237 closed native execution lifecycle", () => {
         adapter: eventAdapter,
         launchInput: launchInput(),
         context: normalizeContext(),
+        fencingToken: 1,
         onDispatchPrepared: async () => {},
         onResourcesPrepared: async () => {},
         onReadyToArm: async () => {},
@@ -1062,6 +1174,21 @@ describe("t237 closed native execution lifecycle", () => {
     expect(calls).toContain("cleanup");
     expect(calls).not.toContain("terminal");
     expect(calls).not.toContain("capture-bound");
+
+    const run = () => execution.execute({
+      adapter: eventAdapter,
+      launchInput: launchInput(),
+      context: normalizeContext(),
+      fencingToken: 1,
+      onDispatchPrepared: async () => {},
+      onResourcesPrepared: async () => {},
+      onReadyToArm: async () => {},
+      onCaptureBound: async () => {},
+    });
+    captureFailure = "invalid";
+    await expect(run()).rejects.toThrow("CAPTURE_BINDING_INVALID");
+    captureFailure = "stream";
+    await expect(run()).rejects.toThrow("capture-stream-failed");
   });
 
   test("accepts every closed resource variant with a fixed capture binding", async () => {
@@ -1185,23 +1312,31 @@ describe("t237 closed native execution lifecycle", () => {
     });
     let checkpoint: NativeDispatchCheckpoint | undefined;
     const execution = createLifecycleNativeExecution({
-      resources: Object.freeze({ materialize: async () => resources, cleanup: async () => {} }),
+      resources: Object.freeze({
+        materialize: async () => resources,
+        bindRecoveryOwner: async () => {},
+        verifyForArm: async () => {},
+        cleanup: async () => {},
+      }),
       capture: Object.freeze({
         start: async () => Object.freeze({
-          liveInputs,
-          bindingEvents: emptyNativeEvents(),
           applyBinding: async () => {},
-          stopAndWait: async () => Object.freeze({ ...liveInputs, processTerminal: terminal }),
+          stopAndWait: async () => {},
           abortAndWait: async () => {},
         }),
       }),
       process: Object.freeze({
         plan: () => plannedProcess(),
         spawn: async () => Object.freeze({
-          observeIdentity: async () => Object.freeze({ processIdentityDigest: "identity", armDigest: "arm-digest" }),
+          observeIdentity: async () => Object.freeze({
+            processIdentityDigest: "identity",
+            armDigest: "arm-digest",
+            armDeadline: AUTHORITATIVE_ARM_DEADLINE,
+          }),
           arm: async () => {},
           waitForTerminal: async () => terminal,
           terminateAndWait: async () => terminal,
+          dispose: async () => {},
         }),
       }),
     });
@@ -1210,6 +1345,7 @@ describe("t237 closed native execution lifecycle", () => {
       adapter: fixedAdapter,
       launchInput: launchInput(),
       context: normalizeContext(),
+      fencingToken: 1,
       onDispatchPrepared: async () => {},
       onResourcesPrepared: async () => {},
       onReadyToArm: async (value) => {
@@ -1238,6 +1374,8 @@ describe("t237 closed native execution lifecycle", () => {
         materialize: async () => {
           throw new Error("must not materialize");
         },
+        bindRecoveryOwner: async () => {},
+        verifyForArm: async () => {},
         cleanup: async () => {},
       }),
       capture: Object.freeze({ start: async () => { throw new Error("must not capture"); } }),
@@ -1254,6 +1392,7 @@ describe("t237 closed native execution lifecycle", () => {
         adapter: adapter(calls, preparation),
         launchInput: launchInput(),
         context: normalizeContext(),
+        fencingToken: 1,
         onDispatchPrepared: async () => {},
         onResourcesPrepared: async () => {},
         onReadyToArm: async () => {},
