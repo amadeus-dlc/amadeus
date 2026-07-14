@@ -19,16 +19,19 @@ const knownPrefixes = [
   ["amadeus", "-"].join(""),
 ] as const;
 const forbiddenPrefixes = knownPrefixes.filter((known) => known !== prefix);
-// The migrator, its generated self-install copies, and its exact token fixture
-// deliberately quote upstream paths and filenames. Keep the exemption
-// content-only: authored paths still follow this repository's naming contract,
-// and tracked-file assertions prevent stale rows.
+// The migrator, its generated self-install copies, exact token fixture,
+// compatibility documents, and upstream-sync skill deliberately quote upstream
+// paths and filenames. Keep the exemption content-only: authored paths still
+// follow this repository's naming contract, and tracked-file assertions prevent
+// stale rows.
 const foreignPrefixContentAllowlist = new Set([
   "packages/framework/core/tools/amadeus-migrate.ts",
   ".claude/tools/amadeus-migrate.ts",
   ".codex/tools/amadeus-migrate.ts",
   "docs/research/upstream-ai-dlc-v2.2.0-amadeus-main-workspace-differences.md",
   "docs/research/upstream-ai-dlc-v2.2.0-amadeus-main-workspace-differences.ja.md",
+  "docs/guide/18-migrating-upstream-v2.md",
+  "docs/guide/18-migrating-upstream-v2.ja.md",
   "contrib/skills/amadeus-upstream-sync/SKILL.md",
   "contrib/skills/amadeus-upstream-sync/evals/evals.json",
   "contrib/skills/amadeus-upstream-sync/references/artifact-contracts.md",

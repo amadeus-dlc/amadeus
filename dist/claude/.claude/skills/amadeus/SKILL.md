@@ -5,11 +5,11 @@ description: >
   development lifecycle. Scopes are defined one file per scope under
   `.claude/scopes/`; run
   `bun .claude/tools/amadeus-utility.ts help` for the authoritative list
-  and descriptions. Utilities: --status, --doctor, --stage,
+  and descriptions. Utilities: --status, --doctor, --migrate [path], --stage,
   --phase, --scope, --depth, --test-strategy, --version,
   --help, plus the intent and space verbs.
   Or describe what you want to build and the scope will be auto-detected.
-argument-hint: "[description | --status | --stage <slug|#> | --phase <name|#> | --version | --help]"
+argument-hint: "[description | --status | --migrate [path] | --stage <slug|#> | --phase <name|#> | --version | --help]"
 user-invocable: true
 ---
 
@@ -51,7 +51,7 @@ Run the engine binary directly via Bash. If a directive looks malformed or names
 
 | `kind` | What you do |
 |--------|-------------|
-| `print` | Do exactly what `directive.message` says — it is authoritative. Two shapes: (a) **terminal** — the message names a read-only utility (status, help, doctor, version) or a workspace command and ends with "print its output … and stop": run the named tool, print its stdout verbatim, and STOP the loop. (b) **run-then-continue** — the message names a mutating tool (e.g. a scope-change / config-change / jump `execute`, or the workflow-birth `intent-birth` the engine names when the user explicitly names a scope on a fresh workspace) and ends with "then re-run `next` to continue": run that tool, then go back to step 1 of the loop. The mutation lives in the named tool, never in `next`; you act on its instruction rather than improvising the routing. |
+| `print` | Do exactly what `directive.message` says — it is authoritative. Three shapes: (a) **terminal** — the message names a read-only utility (status, help, doctor, version) or a workspace command and ends with "print its output … and stop": run the named tool, print its stdout verbatim, and STOP the loop. (b) **run-then-continue** — the message names a mutating tool (e.g. a scope-change / config-change / jump `execute`, or the workflow-birth `intent-birth` the engine names when the user explicitly names a scope on a fresh workspace) and ends with "then re-run `next` to continue": run that tool, then go back to step 1 of the loop. (c) **gated terminal** — workspace migration names a dry-run, an exact numbered Yes/No gate, and an internal apply command: run the dry-run, stop for the human, and run apply only after explicit approval; never run `next` or `report`. The mutation lives in the named tool, never in `next`; you act on its instruction rather than improvising the routing. |
 | `error` | Print `directive.message` verbatim and STOP. Do not recover, retry, or smooth it over — the message is the user-facing error. |
 | `done` | The workflow (or single-stage run) is complete. Present the completion summary and STOP the loop. |
 | `parked` | The workflow was parked at a clean inter-stage boundary (`directive.stage`) for a later session. Tell the user it is parked and how to resume (`/amadeus --resume`), then STOP the loop. No stage was advanced and nothing was marked complete. |
@@ -62,6 +62,8 @@ Run the engine binary directly via Bash. If a directive looks malformed or names
 | `present-gate` | _(engine-future — not emitted today; folded into `run-stage`'s `gate` field for now.)_ Run the gate ritual described below. |
 
 The orchestration engine emits seven kinds today: `run-stage`, `invoke-swarm`, `ask`, `print`, `error`, `done`, `parked` (`invoke-swarm` is emitted only for an eligible Construction batch under an `autonomous` grant; `invoke-swarm` is an orthogonal directive kind, NOT the reserved `agent-team` stage `mode`). The `dispatch-subagent` and `present-gate` arms remain documented placeholders so the loop is complete-shaped; until the engine emits those two, you will only ever act on the seven. Do not implement those two placeholder behaviours speculatively.
+
+**Workspace migration is outside the workflow.** `/amadeus --migrate [path]`, or conservative natural language that names both the upstream workspace and a migrate/convert action, routes to the gated-terminal `print` before state inspection. Natural language always uses the default source; only the explicit flag accepts a custom path. Follow the directive literally: this route never births or advances an Intent and never enters the stage loop.
 
 **Parking a workflow.** A long workflow (enterprise scope spans many stages) need not finish in one session. When the user wants to stop and continue later, or you are running low on context mid-loop, run `bun .claude/tools/amadeus-orchestrate.ts park` to park the workflow cleanly at the current inter-stage boundary; it emits a `parked` directive you act on as above. Never advance or approve stages you did not actually run just to reach `done`: park instead. The next session resumes with `/amadeus --resume` (the engine clears the park marker before continuing).
 
@@ -98,6 +100,12 @@ The engine names which stage to run; you read and execute that stage from its `s
 - `amadeus-common/protocols/stage-protocol-governance.md` — load at phase boundaries to run the phase-boundary traceability verification.
 
 ### New work while an intent is active — offer a second intent
+
+**Migration takes precedence over active-Intent routing.** Before the
+new-work/continuation/plan-reshape judgment below, pass an explicit `--migrate`
+request — or natural language that names both the upstream AI-DLC workspace and
+a migrate/convert action — verbatim to the first `next`. Do not inspect, birth,
+select, resume, or advance an Intent on this route.
 
 When an intent is already active, `next` advances it (the engine is read-only and never births alongside a live intent). But the FIRST thing you do with each `$ARGUMENTS` is a knowledge judgment that belongs to you, not the engine: **does this input continue the active intent, describe a genuinely new, unrelated piece of work, or ask to re-shape the RUNNING workflow's plan?**
 
