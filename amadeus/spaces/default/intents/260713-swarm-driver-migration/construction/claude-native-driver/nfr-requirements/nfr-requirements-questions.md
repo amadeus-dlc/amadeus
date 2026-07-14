@@ -12,7 +12,7 @@
 
 ### Q2. 1 batchで何processを起動するか
 
-[Answer]: selected modeのbatch/waveごとに`claude -p` coordinatorをexactly 1 process起動する。Agent Teamsはexpected Unitごとにexactly 1 teammate、Ultra Codeはexactly 1 workflow workerを作り、lead/coordinator自身のUnit実装や余分なplanner/verifier agentを認めない。
+[Answer]: selected modeのbatch/waveごとにcoordinatorをexactly 1 process起動する。Agent Teamsはinteractive PTYの`claude`、Ultra Codeはheadless `claude -p`を使う。Agent Teamsはexpected Unitごとにexactly 1 teammate、Ultra Codeはexactly 1 workflow workerを作り、lead/coordinator自身のUnit実装や余分なplanner/verifier agentを認めない。
 
 ### Q3. Agent TeamsとUltra Codeを何でnativeと証明するか
 

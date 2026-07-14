@@ -8,7 +8,7 @@
 
 | Mode | Coordinator | Native child mapping | Evidence mapping |
 |---|---:|---|---|
-| Agent Teams | waveごとに`claude -p` 1件 | Unitごとにshared task 1件 + teammate 1件 | Unit-task-member全単射 + created/completed/idle |
+| Agent Teams | waveごとにinteractive PTYの`claude` 1件 | Unitごとにshared task 1件 + teammate 1件 | Unit-task-member全単射 + created/completed/idle |
 | Ultra Code | waveごとに`claude -p` 1件 | Unitごとにworkflow task 1件 + worker agent 1件 | Unit-task-agent全単射 + start/stop |
 
 C-05はC-01が決めたwave/Unit集合を変更せず、Unitごとのprovider process、planner/verifier余分agent、nested team、独自queue/pool、hidden concurrency limitを追加しない。native schedulerへparallelism値を注入せず、結果の全単射だけを検証する。

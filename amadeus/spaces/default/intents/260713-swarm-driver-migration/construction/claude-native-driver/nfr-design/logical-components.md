@@ -97,7 +97,7 @@ Infrastructure Designへ渡すprovisioning componentは0件である。
 
 | Infrastructure concern | Decision |
 |---|---|
-| compute | installed `claude -p` coordinatorとnative child。専用serviceなし |
+| compute | Agent Teamsはinteractive `claude`、Ultra Codeはheadless `claude -p` coordinatorとnative child。専用serviceなし |
 | network/API/SDK |既存CLI transportのみ。direct API/SDKなし |
 | database/cache/queue |非適用。attempt-owned local scratchのみ |
 | IAM/KMS/secret store |非適用。既存CLI authをenv allowlistで利用 |

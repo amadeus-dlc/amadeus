@@ -13,7 +13,7 @@
 | U03-PERF-01 | common CLI/auth probe | 同一resolve scopeでexactly 1回 | 2 mode view評価 | spy count |
 | U03-PERF-02 | mode probe | evaluated modeごとに最大1回 | 1 attempt | spy count |
 | U03-PERF-03 | probe deadline | CLI 5秒、auth 10秒、handshake/hook 30秒、total 45秒以下 | unavailable/hung fake CLI | fake clock/process timeout |
-| U03-PERF-04 | coordinator process | selected batch/waveごとに`claude -p` exactly 1件 | native dispatch | process trace |
+| U03-PERF-04 | coordinator process | selected batch/waveごとにexactly 1件。Agent Teamsはinteractive `claude`、Ultra Codeはheadless `claude -p` | native dispatch | transport別process trace |
 | U03-PERF-05 | state path lookup | expected exact pathのみ、root directory listing 0件 | Teams/Ultra observer | filesystem spy |
 | U03-PERF-06 | session prefix allocation | 最大256 candidate、各candidateのlock/team/task probe最大1回 | collision worst case | operation count |
 | U03-PERF-07 | normalization/binding | time `O((n+e+s) log(n+e+s))`以下、追加memory `O(n+e+s)`以下 | order-independent evidence | counter/property test |
