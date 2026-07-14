@@ -671,11 +671,9 @@ function checkEnum(
 // `bun amadeus-directive.ts` constructs one well-formed example of each of the 9
 // kinds, validates each, prints one line per kind ("<kind>: VALID" or the
 // errors), and exits 0 iff all 9 validate. Satisfies the acceptance check
-// "bun .../amadeus-directive.ts validates the 9 kinds".
-if (import.meta.main) {
-  // One well-formed example per kind. run-stage mirrors the engine design's example
-  // directive verbatim (application-design); the others follow the same catalogue table.
-  const examples: Directive[] = [
+// "bun .../amadeus-directive.ts validates the 9 kinds". Exporting the fixtures
+// lets tests validate the same examples without spawning a process.
+export const directiveSelfCheckExamples: Directive[] = [
     {
       kind: "run-stage",
       stage: "application-design",
@@ -757,8 +755,11 @@ if (import.meta.main) {
       stage_file: ".claude/amadeus-common/stages/construction/functional-design.md",
       conductor_persona: "# The Conductor's Craft …",
     },
-  ];
+];
 
+const examples = directiveSelfCheckExamples;
+
+if (import.meta.main) {
   let allValid = true;
   for (const ex of examples) {
     const r = validateDirective(ex);

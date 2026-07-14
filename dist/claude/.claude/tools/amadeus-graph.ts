@@ -1208,11 +1208,13 @@ export function canonicalStageGraphJson(stages: GraphStage[]): string {
   return `${JSON.stringify(ordered, null, 2)}\n`;
 }
 
+interface ArtifactProducerDeclaration {
+  stage: string;
+  field: "produces" | "optional_produces";
+}
+
 function assertUniqueArtifactProducers(stages: GraphStage[]): void {
-  const declaredBy = new Map<
-    string,
-    { stage: string; field: "produces" | "optional_produces" }
-  >();
+  const declaredBy = new Map<string, ArtifactProducerDeclaration>();
   for (const stage of stages) {
     const declarations = [
       ["produces", stage.produces ?? []],
@@ -1225,8 +1227,7 @@ function assertUniqueArtifactProducers(stages: GraphStage[]): void {
           throw new Error(
             `Artifact producer collision for "${name}": stage ` +
               `"${previous.stage}" (${previous.field}) and stage ` +
-              `"${stage.slug}" (${field}) both declare it. ` +
-              "Canonical artifact names must have exactly one producer.",
+              `"${stage.slug}" (${field}) both declare it; canonical artifact names require one producer.`,
           );
         }
         declaredBy.set(name, { stage: stage.slug, field });
@@ -1494,10 +1495,7 @@ export function compileStageGraph(): {
   // Sort by numeric order (phase-prefix.index).
   stages.sort((a, b) => numericStageOrder(a.number, b.number));
 
-  // Artifact paths and consumes resolve through producersOf(name)[0], so more
-  // than one producer would make routing depend on graph order. Enforce the
-  // documented flat-namespace invariant across required and optional outputs.
-  assertUniqueArtifactProducers(stages);
+  assertUniqueArtifactProducers(stages); // Required and optional outputs share one namespace.
 
   // Resolve per-stage rule chain. Strict-additive: every applicable rule
   // appears in rules_in_context (org+team+project + phase when stage's
