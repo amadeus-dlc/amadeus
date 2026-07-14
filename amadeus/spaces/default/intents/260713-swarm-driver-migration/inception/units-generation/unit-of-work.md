@@ -68,7 +68,7 @@ C-01の公開CLI lifecycleと、C-08 evidence verifier、C-09 attempt store、C-
 - `CoordinatorTransport`は`stdio-json | pty-interactive`、captureは`fixed-provider-path | event-bound-provider-path | hook-only`のclosed unionとする。capture observer開始、variant付きcheckpoint保存、provider arm/spawn、event-bound時だけのfenced `capture-bound`、PTY時だけのlive control、process terminal、observer join、retained evidence正規化の順をprovider-neutralに制御する。
 - C-04 production registry assemblyをcomposition root内に置き、`claude.ts`、`codex.ts`、`kiro.ts`の3 moduleを静的importして4 native driver値へexhaustiveに対応付ける。動的discoveryは行わない。
 - U-02収束時点では3 provider moduleに型付きfail-closed `unavailable` registration slotを用意する。slotはprovider IDと未実装reasonだけを返し、native workerを起動できない。U-03〜U-05は自分のslotだけを実装へ置換する。
-- batch execution ID、attempt ID、lease、fencing token、audit-first transition、atomic replace、crash reconciliationを実装する。
+- batch execution ID、attempt ID、lease、fencing token、audit-first transition、atomic replace、crash reconciliationを実装する。永続化済みwrapperをprocess group guardianとし、providerを同じ専用PGIDへarm後に起動する。native process identityをresource ownerへarm前に一度だけ束縛し、wrapper reap、process group停止、output drainの確認後にresourceをcleanupしてからprocess journalを破棄する。
 - 既存`amadeus-swarm.ts`の`prepare` / `check` / `finalize`意味を維持し、versioned finalize envelopeとmerge resultを追加する。driver toolとrefereeは互いを直接呼ばず、conductorが媒介する。
 - `SWARM_DRIVER_ATTEMPTED`、`SWARM_DRIVER_SELECTED`、`SWARM_DRIVER_TRANSITION`、`SWARM_DRIVER_RECONCILED`、`SWARM_NATIVE_EVIDENCE`をredaction済みfieldだけで発行する。
 
@@ -76,8 +76,8 @@ C-01の公開CLI lifecycleと、C-08 evidence verifier、C-09 attempt store、C-
 
 - 主要求: FR-05〜FR-06、FR-15、FR-18〜FR-22、NFR-02〜NFR-05、NFR-11。
 - 利用者シナリオ: USR-01〜USR-08の共通lifecycleとUSR-10。
-- Unit/integration test: probeがbatch/attemptごと1回、明示probe failureでworker/worktree 0件、post-dispatch fallback 0件、evidence全単射、audit redactionを検証する。fake `stdio-json` / `pty-interactive`と3種のcapture planを使い、capture-before-arm、fixed initial binding、event-bound一回だけの`capture-bound`、hook-onlyのbinding禁止、PTY control timeout、terminal-before-joinを網羅する。
-- Failure injection: probe timeout、native evidence欠落、partial worker failure、audit成功後checkpoint失敗、lease失効、stale writer、referee check/finalize/merge失敗を検証する。
+- Unit/integration test: probeがbatch/attemptごと1回、明示probe failureでworker/worktree 0件、post-dispatch fallback 0件、evidence全単射、audit redactionを検証する。fake `stdio-json` / `pty-interactive`と3種のcapture planを使い、capture-before-arm、fixed initial binding、event-bound一回だけの`capture-bound`、hook-onlyのbinding禁止、PTY control timeout、terminal-before-joinを網羅する。実filesystemではancestorのswap-and-restore、symlink、2^53を超える隣接inodeを拒否し、macOS `libSystem`とLinux glibcの`openat`経路を検証する。
+- Failure injection: probe timeout、native evidence欠落、partial worker failure、audit成功後checkpoint失敗、lease失効、stale writer、referee check/finalize/merge失敗を検証する。native processはwrapper/provider PGID不一致、provider終端IPC不正、guardian異常終了、TERM無視child、PID/PGID reuseを注入し、foreign groupへsignalしないことを確認する。native resourceはowner再束縛、live process group、quarantine WAL各遷移でのcrash、foreign inode差し替えを注入し、誤削除しないことを確認する。
 - E2E fixture: 2 Unit以上のfake adapterを既存worktree、protected spec、lying-conductor guard、`prepare` / `check` / `finalize`へ通す。
 - 完了条件: provider具象実装なしでclosed transport/capture全variantとlive controlをfake adapterから実行でき、U-03〜U-05が共通contract/runtimeを編集せずreadyになれる。native自己申告だけでは成功せず、native result、referee convergence、merge-backが揃うまでbatch成功eventを発行しない。再開後も成功二重発行と未完了Unit成功化が0件となる。
 
@@ -98,7 +98,7 @@ C-05の1つのClaude adapterで`claude-agent-teams`と`claude-ultracode`を別mo
 - Agent Teamsはbatchごと1つのinteractive PTY上で`claude` coordinatorを起動し、`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`、in-process teammate mode、attempt専用session、exact team/task state、TaskCreated / TaskCompleted / TeammateIdle、共有taskのUnit-child全単射を証明する。全Unit task completedかつ全owner idleのlive projectionだけが`ready-for-graceful-exit`を返し、runtimeがPTYへexit inputを送る。このsignalは終了制御だけに使い、成功証跡へ数えない。
 - Ultra Codeはbatchごと1つのheadless `claude -p --verbose --effort ultracode --output-format stream-json --include-hook-events` coordinatorを起動し、Dynamic Workflow run/task/agent ID、completed snapshot、journal/stream、hook、Unit割当を相関する。`xhigh`やcoordinator自己申告だけをnative successにしない。
 - Agent Teamsはattempt専用session launch planからarm前の`initialBinding`を作る`fixed-provider-path`、Ultra Codeはnative eventからexact run/pathへ一度だけ束縛する`event-bound-provider-path`を使う。raw PTY bytesやroot scanへTeam構造を推測せず、terminal後のretained evidenceで最終判定する。
-- U-02が完成条件として提供するclosed transport/capture union、binding、live control、capture lifecycleを変更せずに消費する。common runtimeへClaude名の条件分岐を追加せず、既存`node-pty` 1.1.0を再利用して新しいruntime dependencyを追加しない。
+- U-02が完成条件として提供するclosed transport/capture union、binding、live control、capture lifecycleを変更せずに消費する。common runtimeへClaude名の条件分岐を追加せず、Bun組み込みの`Bun.Terminal`を使って新しいruntime dependencyを追加しない。
 - Claude harnessの`invoke-swarm` conductor手順とprojectionをC-01呼出しへ変更し、既存Task floorと0.1.x Dynamic Workflow behaviorをexecution planとして維持する。
 - provider raw stream、team/task state、workflow eventをversioned normalized eventへ変換し、生payloadをadapter外へ出さない。
 
