@@ -3,28 +3,29 @@
 > Languages: **English** | [日本語](16-artifact-vocabulary.ja.md)
 
 This chapter is the written rule for AI-DLC artifact names — the canonical
-strings that appear in each stage's `produces:` and `consumes[].artifact:`
-YAML frontmatter. It covers the naming shape, the collision-resolution policy,
-the filesystem-path convention, and how to view the live registry from the
-command line.
+strings that appear in each stage's `produces:`, `optional_produces:`, and
+`consumes[].artifact:` YAML frontmatter. It covers the naming shape, the
+collision-resolution policy, the filesystem-path convention, and how to view
+the live registry from the command line.
 
 The registry itself is **derived**, not written. The authoritative source
-for "which canonical names exist" is the `produces[]` field on every stage
-file. A helper in `dist/claude/.claude/tools/amadeus-graph.ts` reads
-the compiled stage graph and returns the union as a set — the same pattern
-used for scopes (`validScopes()` at `amadeus-lib.ts:772`) and for agents
-(`loadAgents()` at `amadeus-lib.ts:794`). Keeping the registry out
-of this chapter prevents the drift that parallel hand-maintained lists
-invite.
+for "which canonical names exist" is the union of the `produces[]` and
+`optional_produces[]` fields on every stage file. A helper in
+`dist/claude/.claude/tools/amadeus-graph.ts` reads the compiled stage graph and
+returns that union as a set — the same pattern used for scopes (`validScopes()`
+at `amadeus-lib.ts:772`) and for agents (`loadAgents()` at
+`amadeus-lib.ts:794`). Keeping the registry out of this chapter prevents the
+drift that parallel hand-maintained lists invite.
 
 ---
 
 ## What an artifact is here
 
-An artifact is a **canonical identifier** declared by exactly one
-producing stage in its YAML frontmatter. Other stages reference the same
-identifier in `consumes[]` to declare a read dependency. The identifier is
-a short kebab-case string — no file extension, no folder prefix, no slash.
+An artifact is a **canonical identifier** declared by exactly one producing
+stage in its YAML frontmatter: in `produces[]` for a required output, or in
+`optional_produces[]` for a conditional output. Other stages reference the
+same identifier in `consumes[]` to declare a read dependency. The identifier
+is a short kebab-case string — no file extension, no folder prefix, no slash.
 
 Concrete example from milestone 4's worked example in
 `dist/claude/.claude/amadeus-common/protocols/stage-definition.md`:
@@ -58,7 +59,7 @@ Things that are **not** artifacts in this registry:
   to match (they usually do, except at collisions).
 - **State plumbing.** `amadeus-state.md`, `audit.md`, and
   `.amadeus-recovery.md` are managed by tools (`amadeus-state.ts`, hook
-  scripts), not by stages via `produces[]`. They never appear in the
+  scripts), not by stages via either output list. They never appear in the
   registry.
 - **Runtime values.** Strings like "user's prose answer" or
   "workspace classification (greenfield/brownfield)" are dynamic data,
@@ -68,14 +69,15 @@ Things that are **not** artifacts in this registry:
 
 ## The derivation rule
 
-1. **Stage files are authoritative.** Each stage's `produces:` list
-   declares every canonical name the stage emits. `consumes:` names the
-   canonical strings the stage depends on.
+1. **Stage files are authoritative.** Each stage's `produces:` list declares
+   outputs required whenever that stage runs. Its `optional_produces:` list
+   declares conditional outputs that may legitimately be absent. `consumes:`
+   names the canonical strings the stage depends on.
 2. **The registry is computed, not written.** Run
    `bun dist/claude/.claude/tools/amadeus-graph.ts artifacts` to
    print the live registry — one name per line, sorted alphabetically.
-   The tool unions every stage's `produces[]` from the compiled
-   `stage-graph.json`.
+   The tool unions every stage's `produces[]` and `optional_produces[]` from
+   the compiled `stage-graph.json`.
 3. **No parallel list in this chapter.** If a reader wants the enumeration,
    they run the tool. This chapter never lists canonical names as a
    registry table.
@@ -84,9 +86,10 @@ Things that are **not** artifacts in this registry:
    entry and `requires_stage[]` slug must resolve against the derived registry.
    Orphan consumers are reported as broken references.
 
-All 32 stage files declare `produces:`, so the derivation returns the full
-registry. The tool is well-defined on empty data too — a stage with no
-`produces:` simply contributes nothing — but in the shipped framework every
+All 32 stage files declare `produces:`, and conditional outputs declared in
+`optional_produces:` supplement that set, so the derivation returns the full
+registry. The tool is well-defined on empty data too — a stage with neither
+output list simply contributes nothing — but in the shipped framework every
 stage is populated.
 
 ---
@@ -119,10 +122,11 @@ agent slugs, scope names, stage slugs, phase names are all flat kebab.
 
 ## Collision policy
 
-Two stages **must not** declare the same canonical name in their
-`produces[]` lists. The registry is a set; names must be globally unique.
-When the same underlying concept is emitted by two stages, pick two
-distinct names that disambiguate.
+Within a stage, each output list must be duplicate-free and the `produces[]`
+and `optional_produces[]` lists must be disjoint. Across stages, two producers
+**must not** declare the same canonical name in either list. The registry is a
+set; names must be globally unique. When the same underlying concept is emitted
+by two stages, pick two distinct names that disambiguate.
 
 Today's one example: both `build-and-test` (Construction) and
 `performance-validation` (Operation) write a file called `test-results.md`.
@@ -183,9 +187,8 @@ the same directory is printed by the read-only `/amadeus codekb-path` command.
 **Canonical name ≠ filename for collisions.** Where a collision is split
 (see above), the on-disk filename may keep the pre-split form
 (`test-results.md`) while the canonical name is the disambiguated
-version. Use the stage's `produces:` list and
-`bun amadeus-graph.ts artifacts` as the source of truth, not the
-filesystem.
+version. Use the stage's `produces:` and `optional_produces:` lists and
+`bun amadeus-graph.ts artifacts` as the source of truth, not the filesystem.
 
 ---
 
@@ -213,14 +216,15 @@ No edit to this chapter required — the registry is derived.
 **To add a new artifact:**
 
 1. Edit the producing stage's `.md` file and add the canonical name to
-   its `produces:` list.
+   `produces:` when it is required, or to `optional_produces:` when it is a
+   genuinely conditional output.
 2. Run `bun amadeus-graph.ts artifacts` to confirm it appears.
 3. Run `/amadeus --doctor` to confirm no consumer references a name that no
    longer exists (the "Graph references" check).
 
 **To rename an artifact:**
 
-1. Rename it in the producing stage's `produces:` entry.
+1. Rename it in whichever output list declares it on the producing stage.
 2. Rename it in every consuming stage's `consumes[].artifact` entry.
 3. `/amadeus --doctor` (post-PR-11) catches any consumer you forgot to
    update — the old name becomes a missing-producer error.
@@ -250,8 +254,8 @@ at tag time and the registry at HEAD is a one-line `diff`.
 ## Cross-references
 
 - `dist/claude/.claude/amadeus-common/protocols/stage-definition.md` —
-  authoritative stage format spec; defines `produces[]` / `consumes[]`
-  as structured fields.
+  authoritative stage format spec; defines `produces[]`,
+  `optional_produces[]`, and `consumes[]` as structured fields.
 - [Stage Definition](15-stage-definition.md) — narrative chapter on the
   spec.
 - [State Machine](12-state-machine.md) — parallel derivation pattern

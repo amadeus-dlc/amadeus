@@ -26,11 +26,14 @@ import { join } from "node:path";
 import {
   activeIntent,
   activeSpace,
+  armMigrationStopLatch,
   type ClaudeCodeHookInput,
   errorMessage,
   hooksHealthDir,
   isClaudeCodeHookInput,
   isoTimestamp,
+  isMigrationExecutionCommand,
+  isRejectedMigrationDispatch,
   readAllAuditShards,
   recordHookDrop,
   resolveProjectDirFromHook,
@@ -54,6 +57,29 @@ try {
   process.exit(0);
 }
 const command: string = parsed.tool_input?.command ?? "";
+
+// A rejected public migration dispatch is also terminal. It ran no utility, so
+// the execution branch below cannot arm the Stop latch; without this response-
+// checked seam an active Intent would make Stop consult a bare `next` and inject
+// its pending stage after the engine had already returned the migration error.
+// Arm only for the exact canonical dispatch plus an actual `error` directive.
+// A valid `print` response remains unlatching so Stop still catches a conductor
+// that fails to run the required dry-run.
+if (isRejectedMigrationDispatch(command, parsed.tool_response, projectDir)) {
+  armMigrationStopLatch(projectDir, parsed.session_id);
+  process.exit(0);
+}
+
+// Workspace migration is a gated TERMINAL utility, not a workflow transition.
+// Arm a session-scoped, one-shot Stop carve-out after the utility actually ran,
+// then exit before ANY audit/heartbeat/runtime-graph work. Apply may have just
+// made an active state visible, but migration's postcondition requires runtime
+// scratch to stay absent and the same turn must not roll into its pending stage.
+// A missing session id deliberately leaves no latch (fail closed).
+if (isMigrationExecutionCommand(command, projectDir)) {
+  armMigrationStopLatch(projectDir, parsed.session_id);
+  process.exit(0);
+}
 
 // 3. Command filter — only dispatch on the audit-emit-side seam.
 //    amadeus-runtime.ts is rejected explicitly (recursion guard at the

@@ -45,7 +45,11 @@ import {
 import { hostname, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { birthIntent } from "../../packages/framework/core/tools/amadeus-lib.ts";
+import {
+  birthIntent,
+  consumeMigrationStopLatch,
+} from "../../packages/framework/core/tools/amadeus-lib.ts";
+import { projectSnapshot } from "../helpers/upstream-v2-fixture.ts";
 import {
   DEFAULT_RECORD_DIR,
   DEFAULT_SPACE,
@@ -205,6 +209,71 @@ describe("t149 Codex hook adapter (live-captured payload fixtures)", () => {
       const r = runAdapter(dir, "stop", withCwd(FIXTURES.stop, dir));
       expect(r.code).toBe(0);
       expect(r.stdout.trim()).toBe("");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("2a: migration runtime/Stop passthrough preserves the Codex session id", () => {
+    const dir = scratchProject(false);
+    let nonce = 0;
+    const runtimePayload = (sessionId: string) =>
+      withCwd(
+        {
+          ...FIXTURES.postToolUse_bash,
+          session_id: sessionId,
+          turn_id: `migration-runtime-${nonce++}`,
+          tool_use_id: `migration-call-${nonce}`,
+          tool_input: {
+            command: "bun .codex/tools/amadeus-utility.ts migrate --apply",
+          },
+        },
+        dir,
+      );
+    const stopPayload = (sessionId: string) =>
+      withCwd(
+        {
+          ...FIXTURES.stop,
+          session_id: sessionId,
+          turn_id: `migration-stop-${nonce++}`,
+        },
+        dir,
+      );
+    try {
+      expect(runAdapter(dir, "runtime-compile", runtimePayload("session-a")).code).toBe(0);
+      expect(runAdapter(dir, "stop", stopPayload("session-b")).code).toBe(0);
+      expect(consumeMigrationStopLatch(dir, "session-a")).toBe(true);
+
+      expect(runAdapter(dir, "runtime-compile", runtimePayload("session-a")).code).toBe(0);
+      expect(runAdapter(dir, "stop", stopPayload("session-a")).code).toBe(0);
+      expect(consumeMigrationStopLatch(dir, "session-a")).toBe(false);
+
+      const rejectedSession = `codex-rejected-${process.pid}-${Date.now()}`;
+      const beforeRejected = projectSnapshot(dir);
+      expect(
+        runAdapter(
+          dir,
+          "runtime-compile",
+          withCwd(
+            {
+              ...FIXTURES.postToolUse_bash,
+              session_id: rejectedSession,
+              turn_id: `migration-rejected-${nonce++}`,
+              tool_use_id: `migration-rejected-call-${nonce}`,
+              tool_input: {
+                command: "bun .codex/tools/amadeus-orchestrate.ts next --apply",
+              },
+              tool_response: JSON.stringify({
+                kind: "error",
+                message: "--apply is internal to the migration approval flow.",
+              }),
+            },
+            dir,
+          ),
+        ).code,
+      ).toBe(0);
+      expect(consumeMigrationStopLatch(dir, rejectedSession)).toBe(true);
+      expect(projectSnapshot(dir)).toBe(beforeRejected);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

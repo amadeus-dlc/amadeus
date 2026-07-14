@@ -44,8 +44,9 @@
 //      nudge, not eight. When the workflow advances, the signature changes and
 //      the counter resets to 0, so a healthy loop is never throttled.
 //
-// Four human-wait carve-outs keep the hook from punishing a turn that ended
-// *because* it is waiting on the human (or is simply conversational):
+// Five human-wait / terminal carve-outs keep the hook from punishing a turn
+// that ended because it is waiting on the human, is conversational, or ran a
+// terminal workspace migration:
 //   1. The Esc interrupt is FREE: Stop hooks do not fire on user interrupt, so
 //      an Esc can never be trapped — no code needed for that case.
 //   2. The interactive GATE is not free: the Stop hook DOES fire when the
@@ -79,6 +80,10 @@
 //      responding turn, an unreadable transcript, no human prompt found, or any
 //      parse miss falls through to the cap-bounded block. It only ever ALLOWS;
 //      it can never block more.
+//   5. A MIGRATION utility call is terminal even when apply just made an active
+//      Amadeus state visible. The PostToolUse Bash hook arms a short-lived,
+//      one-shot latch outside the project tree only after the utility ran; this
+//      hook consumes it before probing normal workflow state.
 //
 // No-op outside AIDLC. The frontmatter Stop matcher scopes this to the `amadeus`
 // skill, but we defend here too: with no active workflow (no amadeus-state.md
@@ -90,6 +95,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { join } from "node:path";
 import {
   auditFilePath,
+  consumeMigrationStopLatch,
   errorMessage,
   getField,
   hooksHealthDir,
@@ -147,15 +153,6 @@ const INTERACTIVE_BLOCK_CAP = 2;
 const ENGINE_TIMEOUT_MS = 10_000;
 
 const projectDir = resolveProjectDirFromHook(import.meta.url);
-
-// Write a health heartbeat (mirrors the other hooks' .amadeus-hooks-health beat).
-try {
-  const healthDir = hooksHealthDir(projectDir);
-  mkdirSync(healthDir, { recursive: true });
-  writeFileSync(join(healthDir, "stop.last"), isoTimestamp(), "utf-8");
-} catch {
-  // Heartbeat failure is non-fatal — never let it affect the stop decision.
-}
 
 // Allow the stop: emit nothing, exit 0. This is the precedent non-blocking
 // pattern shared by every other framework hook. The conductor's turn ends.
@@ -775,10 +772,42 @@ if (process.stdin.isTTY) allowStop();
 
 const input = await Bun.stdin.text();
 
+let stopInputObject: Record<string, unknown> | null = null;
+try {
+  const raw: unknown = JSON.parse(input);
+  if (raw !== null && typeof raw === "object") {
+    stopInputObject = raw as Record<string, unknown>;
+  }
+} catch {
+  // Malformed input follows the existing fail-open parser below. In particular,
+  // it supplies no session id, so it can never consume a migration permission.
+}
+
+// A migration utility that ran in THIS session is terminal even when apply just
+// made an active Amadeus state visible. Consume the PostToolUse latch before any
+// heartbeat or state probe: dry-run/apply Stop must leave an absent destination,
+// pristine installer seed, and migrated runtime/scratch set byte-identical. A
+// missing/mismatched/stale session id fails closed (see amadeus-lib.ts).
+const migrationSessionId =
+  typeof stopInputObject?.session_id === "string"
+    ? stopInputObject.session_id
+    : undefined;
+if (consumeMigrationStopLatch(projectDir, migrationSessionId)) allowStop();
+
 // No-op outside AIDLC: if there is no workflow state file under the project dir,
 // there is nothing to enforce — allow the stop. Defends the frontmatter scoping.
 const statePath = stateFilePath(projectDir);
 if (!existsSync(statePath)) allowStop();
+
+// Write a health heartbeat only for a real active workflow, after the terminal
+// migration carve-out. A pre-Intent installer seed must remain pristine.
+try {
+  const healthDir = hooksHealthDir(projectDir);
+  mkdirSync(healthDir, { recursive: true });
+  writeFileSync(join(healthDir, "stop.last"), isoTimestamp(), "utf-8");
+} catch {
+  // Heartbeat failure is non-fatal — never let it affect the stop decision.
+}
 
 let stateContent: string;
 try {
@@ -803,17 +832,20 @@ let transcriptPath: string | null = null;
 // Codex rollout. (Both readers fail-closed, so a misclassification can only ever
 // return false and fall through to the cap, never a false allow.)
 let transcriptFormat: "claude" | "codex" = "claude";
-try {
-  const raw: unknown = JSON.parse(input);
-  if (raw !== null && typeof raw === "object") {
-    const obj = raw as Record<string, unknown>;
-    if ("stop_hook_active" in obj) stopHookActive = obj.stop_hook_active === true;
-    if (typeof obj.transcript_path === "string" && obj.transcript_path.length > 0) {
-      transcriptPath = obj.transcript_path;
-      if (/[/\\]rollout-[^/\\]*\.jsonl$/.test(transcriptPath)) transcriptFormat = "codex";
+if (stopInputObject !== null) {
+  if ("stop_hook_active" in stopInputObject) {
+    stopHookActive = stopInputObject.stop_hook_active === true;
+  }
+  if (
+    typeof stopInputObject.transcript_path === "string" &&
+    stopInputObject.transcript_path.length > 0
+  ) {
+    transcriptPath = stopInputObject.transcript_path;
+    if (/[/\\]rollout-[^/\\]*\.jsonl$/.test(transcriptPath)) {
+      transcriptFormat = "codex";
     }
   }
-} catch {
+} else {
   // Malformed JSON (or empty): proceed with stopHookActive=false and no
   // transcript. The engine read below still governs whether work is pending; the
   // counter still bounds any block. We never crash on bad input.
