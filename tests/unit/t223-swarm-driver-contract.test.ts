@@ -820,6 +820,16 @@ describe("selection schema v1 and redaction", () => {
           }),
         ),
       },
+      {
+        source: "default",
+        requested: "auto",
+        selected: "codex-ultra",
+        harness: "codex",
+        topology,
+        fallbackReason: "none",
+        capabilityDetails: [],
+        probe: { ...probe, modeIdentifier: 1 },
+      },
     ];
     for (const input of invalidNativeInputs) {
       expect(SelectionOutcome.native(input as unknown as NativeSelectionInput).type).toBe("err");
