@@ -40,4 +40,8 @@ Maintainers author in `packages/framework/core/` and `packages/framework/harness
 for the full build-and-test loop, and [Porting to a New Harness](harness-engineering/09-porting-to-a-new-harness.md)
 to add one.
 
+## Upstream AI-DLC v2 differences
+
+- [Upstream AI-DLC v2.2.0 and Amadeus `main` workspace differences](research/upstream-ai-dlc-v2.2.0-amadeus-main-workspace-differences.md)
+
 Repository layout の設計判断は [Workspace Layout Decision](reference/18-workspace-layout.md) に記録している。Framework source は `packages/framework/core` と `packages/framework/harness` に置き、root `scripts/` と `dist/` は repository-level contract として維持する。

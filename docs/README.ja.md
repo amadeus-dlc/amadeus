@@ -25,3 +25,7 @@ Harness Engineer Guide と Developer Reference の境界は **データ対コー
 ## ビルドと貢献
 
 メンテナは `core/` で著述し、`bun run dist`(`bun scripts/package.ts`)で `dist/<harness>/` ツリーを再生成します — 完全なビルド&テストのループについては [Contributing Guide](reference/11-contributing.ja.md) を、ハーネスの追加については [Porting to a New Harness](harness-engineering/09-porting-to-a-new-harness.ja.md) を参照してください。
+
+## 本家 AI-DLC v2の違い
+
+- [本家AI-DLC v2.2.0とAmadeus `main`のワークスペース差分](research/upstream-ai-dlc-v2.2.0-amadeus-main-workspace-differences.ja.md)
