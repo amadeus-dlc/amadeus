@@ -3017,16 +3017,13 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
   // batch-level gate for parallel batches)"), with the swarm referee
   // (amadeus-swarm.ts finalize) verifying each batch's convergence before its merge.
   // An all-units coverage check is WRONG there: after batch 1 of a multi-batch
-  // DAG merges, the later batches' units are legitimately still uncovered, so
-  // requiring every unit would refuse the batch-1 approve AND `next` would
-  // re-emit batch 1 (no batch-advance), deadlocking the run. So we exclude the
-  // swarm condition (per-unit + mode:subagent + autonomous) verbatim from
-  // tryEmitSwarm's trigger and let the swarm's own per-batch verification stand.
-  // The guard remains for every inline per-unit stage (the four design stages,
-  // and code-generation when it falls back to the inline path off the swarm).
+  // DAG merges leave later batches legitimately active, so an autonomous swarm
+  // may approve the completed current batch without satisfying every active
+  // unit. Explicit settlement blockers are different: parked units and batches
+  // blocked by a skipped dependency must still prevent approval in every mode.
   const isAutonomousSwarm =
     node.mode === SWARM_MODE && readAutonomyMode(stateContent) === "autonomous";
-  if (isGated && isPerUnit(node) && stageCheckbox.state !== "completed" && !isAutonomousSwarm) {
+  if (isGated && isPerUnit(node) && stageCheckbox.state !== "completed") {
     const recordPrefix = relativeRecordDir(pd);
     const codekbCtx = codekbCtxFor(pd);
     const batches = readBoltDagBatches(pd);
@@ -3057,15 +3054,17 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
           });
           return;
         }
-        const unsettled = [...pending.active, ...pending.parked];
-        emit({
-          kind: "error",
-          message:
-            `Stage "${slug}" is per-unit (for_each: unit-of-work) and ${unsettled.length} of ` +
-            `${units.length} units are not yet complete (${unsettled.join(", ")}). ` +
-            "Run `next` to continue the remaining units before approving.",
-        });
-        return;
+        if (!isAutonomousSwarm) {
+          const unsettled = [...pending.active, ...pending.parked];
+          emit({
+            kind: "error",
+            message:
+              `Stage "${slug}" is per-unit (for_each: unit-of-work) and ${unsettled.length} of ` +
+              `${units.length} units are not yet complete (${unsettled.join(", ")}). ` +
+              "Run `next` to continue the remaining units before approving.",
+          });
+          return;
+        }
       }
     }
   }

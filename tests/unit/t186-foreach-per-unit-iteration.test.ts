@@ -786,4 +786,36 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     expect(refused.kind).toBe("error");
     expect(refused.message).toContain("dependency");
   }, 30000);
+
+  test("21: autonomous swarm approval still rejects explicit disposition blockers", () => {
+    const skippedProj = seedProject("code-generation", "on");
+    seedMultiBatchDag(skippedProj, [["alpha"], ["beta"]]);
+    setAutonomous(skippedProj);
+    setUnitDisposition(skippedProj, "skip", "alpha", "human accepted the reduced scope");
+
+    const skippedRefused = runReportInProcess(skippedProj, [
+      "--stage",
+      "code-generation",
+      "--result",
+      "approved",
+    ]);
+    expect(skippedRefused.kind).toBe("error");
+    expect(skippedRefused.message).toContain("alpha");
+    expect(skippedRefused.message).toContain("dependency");
+
+    const parkedProj = seedProject("code-generation", "on");
+    seedBoltDag(parkedProj, ["alpha", "beta"]);
+    setAutonomous(parkedProj);
+    setUnitDisposition(parkedProj, "park", "alpha", "waiting for an external surface");
+
+    const parkedRefused = runReportInProcess(parkedProj, [
+      "--stage",
+      "code-generation",
+      "--result",
+      "approved",
+    ]);
+    expect(parkedRefused.kind).toBe("error");
+    expect(parkedRefused.message).toContain("alpha");
+    expect(parkedRefused.message).toContain("parked");
+  }, 30000);
 });
