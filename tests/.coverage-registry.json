@@ -33,7 +33,7 @@
     "coveredByClass": {
       "function": 106,
       "audit": 32,
-      "scope": 9,
+      "scope": 10,
       "stage": 8,
       "hook": 11,
       "subcommand": 75,
@@ -3560,8 +3560,13 @@
       "unitClass": "scope",
       "unitId": "chore",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/unit/t125-scope-files.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "scope",

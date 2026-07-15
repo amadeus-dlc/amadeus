@@ -1,4 +1,4 @@
-// covers: function:validScopes, function:loadScopeMetadata, function:loadScopeMapping, function:scalarField, cli:amadeus-utility(detect-scope)
+// covers: function:validScopes, function:loadScopeMetadata, function:loadScopeMapping, function:scalarField, scope:chore, cli:amadeus-utility(detect-scope)
 //
 // t125 — scope files: validScopes() + scope metadata derive from
 // .claude/scopes/amadeus-<name>.md presence (milestone 12). Migrated from

@@ -56,7 +56,7 @@ Every workflow runs under one of 10 named scopes. Each scope defines a stage set
 
 - **Stages:** 5 of 32
 - **Default depth:** Minimal
-- **Skips:** All Ideation stages, the rest of Inception (reverse engineering, requirements analysis, and beyond), Functional Design, and all Operation stages — runs only the 3 bootstrap initialization stages plus Code Generation and Build and Test
+- **Skips:** All Ideation stages, all Inception stages (reverse engineering, requirements analysis, and beyond), Functional Design, and all Operation stages — runs only the 3 bootstrap initialization stages plus Code Generation and Build and Test
 
 ### refactor
 

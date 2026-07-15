@@ -42,10 +42,10 @@
 //     .sh 4 (| EXECUTE / Total column)   -> "A4: region carries the | EXECUTE / Total column"
 //   Section B (row count, 1 assert):
 //     .sh 5 (row count == JSON keys)     -> "B: region row count matches scope-grid.json key count"
-//   Section C (per-scope EXECUTE, 9 asserts):
+//   Section C (per-scope EXECUTE, 10 asserts):
 //     .sh 6-14 (one per scope, alpha)    -> "C: <scope> EXECUTE cell matches scope-grid.json"
-//       (one test() per scope: bugfix, enterprise, feature, infra, mvp, poc,
-//        refactor, security-patch, workshop — same 9, same order)
+//       (one test() per scope: bugfix, chore, enterprise, feature, infra, mvp,
+//        poc, refactor, security-patch, workshop — same 10, same order)
 //   Section D (phase-presence semantics, 3 asserts):
 //     .sh 15 (bugfix 0 ideation EXEC)    -> "D1: bugfix executes zero ideation-phase stages"
 //     .sh 16 (workshop 0 ideation EXEC)  -> "D2: workshop executes zero ideation-phase stages"
@@ -56,7 +56,7 @@
 //     committed SKILL.md region against canonicalScopeTableRegion(
 //     renderScopeTable()) — the committed table is provably the transpose of
 //     the grid, not merely "contains the markers / count agrees".
-//   - Section C asserts exact integers (7, 32, 13, 22, 8, 8, 10, 25) derived
+//   - Section C asserts exact integers (7, 5, 32, 32, 13, 22, 8, 8, 10, 25) derived
 //     from the grid AND read from the table cell, on the SAME scope row —
 //     co-located, not "the number appears somewhere".
 //   - Section D guards against a vacuous pass: both the ideation slug set and
@@ -175,7 +175,7 @@ describe("t30 Section B — table row count matches scope-grid.json", () => {
 });
 
 // =============================================================================
-// Section C — per-scope EXECUTE counts: table cell == grid truth (9 asserts)
+// Section C — per-scope EXECUTE counts: table cell == grid truth (10 asserts)
 // =============================================================================
 describe("t30 Section C — each scope's EXECUTE cell matches scope-grid.json", () => {
   for (const scope of SCOPES) {

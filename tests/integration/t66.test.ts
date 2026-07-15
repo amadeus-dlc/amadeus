@@ -576,7 +576,7 @@ describe("t66 firstInScopeStageOfPhase parity (spawnSync CLI-boundary)", () => {
       if (actual !== expected) fails.push(scope);
     }
     expect(fails).toEqual([]);
-  }, 120000); // 10 scopes x 5 phases = 45 sequential CLI spawns
+  }, 120000); // 10 scopes x 5 phases = 50 sequential CLI spawns
 });
 
 // =============================================================================

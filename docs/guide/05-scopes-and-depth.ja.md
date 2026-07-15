@@ -56,7 +56,7 @@
 
 - **ステージ:** 32 のうち 5
 - **デフォルト深度:** Minimal
-- **スキップ:** すべての Ideation ステージ、Inception の残り(reverse engineering、requirements analysis 以降)、Functional Design、すべての Operation ステージ — 実行するのは初期化の3ブートストラップステージと Code Generation、Build and Test のみ
+- **スキップ:** すべての Ideation ステージ、すべての Inception ステージ(reverse engineering、requirements analysis 以降)、Functional Design、すべての Operation ステージ — 実行するのは初期化の3ブートストラップステージと Code Generation、Build and Test のみ
 
 ### refactor
 

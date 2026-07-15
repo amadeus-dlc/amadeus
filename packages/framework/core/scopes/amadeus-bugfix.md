@@ -22,9 +22,9 @@ what exists (reverse-engineering), state what "fixed" means
 (requirements-analysis), and change-plus-verify (code-generation,
 build-and-test). It does not need market-research, user-stories,
 application-design, or the operation phase — those belong to net-new
-features. This scope is one of the three incremental scopes that skip the
-walking-skeleton ceremony (alongside `refactor` and `security-patch`),
-since there is nothing to bootstrap.
+features. This scope is one of the four incremental scopes that skip the
+walking-skeleton ceremony (alongside `chore`, `refactor`, and
+`security-patch`), since there is nothing to bootstrap.
 
 ## Membership
 

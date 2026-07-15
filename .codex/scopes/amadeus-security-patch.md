@@ -28,7 +28,7 @@ EXECUTE — a patch that never deploys does not close the vulnerability.
 requirements-analysis runs so there is an auditable statement of the
 vulnerability and its remediation criteria (the `requirements` artifact
 nfr-requirements and code-generation consume), and nfr-requirements runs
-so the security constraint is recorded. One of the three incremental
+so the security constraint is recorded. One of the four incremental
 scopes that skip the walking-skeleton ceremony.
 
 ## Membership

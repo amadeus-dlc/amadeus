@@ -28,8 +28,8 @@
 //         section + the numbered fields are rebuilt. (Mirrors .sh Test 6.)
 //   - The 10 canonical scopes are exactly the keys of
 //     data/scope-mapping.json: enterprise, feature, mvp, poc, bugfix,
-//     refactor, infra, security-patch, workshop (verified by reading the
-//     JSON keys) — identical to the .sh's Test-3 loop list.
+//     chore, refactor, infra, security-patch, workshop (verified by reading
+//     the JSON keys) — identical to the .sh's Test-3 loop list.
 //   - Audit row shape (amadeus-audit.ts:256-267): a `## Scope Changed` heading,
 //     then `**Timestamp**:`, `**Event**: SCOPE_CHANGED`, then one
 //     `**<key>**: <value>` line per field, terminated by `---`. The .sh
@@ -52,7 +52,7 @@
 //       rather than a bare presence grep) + res.status === 0.
 //   - .sh Test 3  loop: each of 10 scopes -> state '\*\*Scope\*\*: <t>'  ->
 //       Test 3: per-scope sub-test, getField(state,"Scope") === target exact,
-//       all 9 targets (the .sh emitted a single `ok` after the loop; we keep
+//       all 10 targets (the .sh emitted a single `ok` after the loop; we keep
 //       one expect per scope so a single bad scope is pinpointed — STRONGER).
 //   - .sh Test 4  invalid scope: $? == 1                          -> Test 4:
 //       res.status === 1 (same observable) + stderr/stdout names the bad scope
