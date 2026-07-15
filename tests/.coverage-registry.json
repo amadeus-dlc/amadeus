@@ -3078,6 +3078,10 @@
       "minMechanism": "none",
       "coveredBy": [
         {
+          "file": "tests/integration/t223-settings-load.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/unit/t223-settings-skeleton.test.ts",
           "mechanism": "none"
         }
