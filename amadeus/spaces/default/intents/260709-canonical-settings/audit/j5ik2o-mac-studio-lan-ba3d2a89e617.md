@@ -1352,3 +1352,96 @@
 **Message**: 全部マージして
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T17:51:24Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aee52341a68202394
+**Message**: 全部マージして
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T17:51:38Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aeca74e4044f9ba7a
+**Message**: 全部マージして
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T17:52:09Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a7f986eb4e65f8148
+**Message**: 全部マージして。bugfixスコープで修正バッチも進めて。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T17:52:51Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a32d446a39895ae88
+**Message**: 全部マージしてOK。修正バッチはbugfixスコープで。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T17:53:17Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a78ca7ecbb83e51fd
+**Message**: 全部マージしてOK
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T17:59:03Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ade5161d444268d5e
+**Message**: 全部マージして
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T17:59:20Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ab28ce56d2d9137ed
+**Message**: 全部マージしてOK。bugfixスコープも承認します
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T17:59:26Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: acfedf42651738e33
+**Message**: 全部マージして
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T17:59:50Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a2581297fe90aa926
+**Message**: 全部マージして
+
+---
+
+## Delegated Approval
+**Timestamp**: 2026-07-15T18:00:00Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: nfr-design
+**Issuer Space**: default
+**Issuer Intent**: 260709-canonical-settings
+**Issuer Shard**: j5ik2o-mac-studio-lan-ba3d2a89e617.md
+**Issuer Human Ts**: 2026-07-15T16:04:27Z
+**User Input**: leader delegate: e2 gate-ready for nfr-design (per-Unit 4x5=20 files, F1-lesson applied in delegation prompts with zero recurrence, reviewer iteration1 REVISE blocking citation mismatch -> same-root fix at 3 sites incl. upstream requirements.md:77 -> iteration2 READY GoA1 with grep残存0, sensors 40+ exit 0). S13 election E-CS8 concluded: (i) zero adoptions (ii) upstream retro-fix ruled non-deviation (bibliographic citation correction, requirement substance unchanged) — e1/e2/e4 = 1, e3 pending cannot change outcome.
+
+---
