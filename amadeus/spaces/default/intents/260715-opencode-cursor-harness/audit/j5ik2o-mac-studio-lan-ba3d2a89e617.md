@@ -119,3 +119,15 @@
 **User Input**: leader delegate: e3 gate-ready for delivery-planning (artifacts x5 + phase-check-inception.md 3-checks PASS, questions answered post-approval per E-OC1 order, sensors 10/10 after upstream-ref correction). S13 election E-OC11 concluded zero adoptions (e1/e3/e4 = 1, e2 pending cannot change outcome). Inception closes; construction begins with U1 opencode-skeleton solo-gated.
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-15T18:32:54Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: functional-design
+**Issuer Space**: default
+**Issuer Intent**: 260709-canonical-settings
+**Issuer Shard**: j5ik2o-mac-studio-lan-ba3d2a89e617.md
+**Issuer Human Ts**: 2026-07-15T16:04:27Z
+**User Input**: leader delegate: e3 gate-ready for functional-design (per-Unit 4 units x 3 artifacts, per-unit reviewers with U1 upstream retro-fix under E-CS8 precedent leader-approved, sensors all PASSED). S13 election E-OC12 concluded: adopt c1 (e2/e3/e4 = 1; e1 pending cannot change outcome), reject c2-c4.
+
+---
