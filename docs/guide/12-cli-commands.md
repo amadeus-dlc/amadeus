@@ -23,6 +23,7 @@ All AI-DLC commands start with the orchestrator invocation. This chapter is a co
 | `/amadeus` | Resume an existing workflow (if an intent exists) or birth the first intent and start new |
 | `/amadeus --status` | Display a read-only status summary |
 | `/amadeus --doctor` | Run a health check on your setup |
+| `/amadeus --migrate [path]` | Preview and, after explicit approval, migrate an upstream v2 workspace |
 | `/amadeus --stage <slug\|#>` | Jump to a specific stage |
 | `/amadeus --stage <slug> --single` | Run one stage in isolation, without advancing your workflow |
 | `/amadeus --phase <name\|#>` | Jump to the start of a phase |
@@ -205,6 +206,23 @@ Display current workflow progress without modifying anything.
 ```
 
 **Behavior:** Reads the active intent's `amadeus-state.md` and displays: current phase, current stage, completed/total stage count, scope, depth, and the stage progress list. If no workflow is active, reports that no workflow is in progress.
+
+---
+
+### `/amadeus --migrate [path]` — Migrate an upstream v2 workspace
+
+Run a non-mutating dry-run over `<project>/aidlc` or the explicitly supplied
+path. The conductor prints the full plan and stops at a numbered Yes/No gate;
+only an explicit approval runs the internal apply command. This route never
+creates, resumes, or advances an Intent. Public `--apply` and combinations with
+workflow flags are rejected.
+
+Natural-language routing requires both an `aidlc`/AI-DLC name and a
+migrate/convert term. It always uses `<project>/aidlc`; use the explicit flag to
+select another source path.
+
+See [Migrating an Upstream AI-DLC v2 Workspace](18-migrating-upstream-v2.md)
+for prerequisites, supported revisions, transformations, and recovery.
 
 ---
 

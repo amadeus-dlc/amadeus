@@ -41,7 +41,7 @@
 //
 // See docs/reference/16-artifact-vocabulary.md for artifact naming.
 
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, lstatSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -120,6 +120,9 @@ export interface SensorResolution {
 export interface GraphStage extends StageEntry {
   condition?: string;
   produces: string[];
+  // Optional artifacts are part of the stage's output vocabulary and routing,
+  // but are deliberately excluded from per-unit completion coverage.
+  optional_produces?: string[];
   consumes: Consume[];
   requires_stage: string[];
   // sensors is the stage-side pull import — a list of sensor manifest
@@ -367,6 +370,7 @@ const FIELD_ORDER = [
   "for_each",
   "workspace_requires",
   "produces",
+  "optional_produces",
   "consumes",
   "requires_stage",
   "sensors",
@@ -489,6 +493,22 @@ function parseRuleHeadings(raw: string): Map<string, string> {
   return out;
 }
 
+function realDirectory(path: string): boolean {
+  try {
+    return lstatSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function regularFile(path: string): boolean {
+  try {
+    return lstatSync(path).isFile();
+  } catch {
+    return false;
+  }
+}
+
 /** Walk the rules directory and return parsed + validated rule files in
  *  precedence order. Public — the future doctor rule-drift check imports
  *  this same walker (single walking surface, no parser duplication).
@@ -496,7 +516,16 @@ function parseRuleHeadings(raw: string): Map<string, string> {
  *  case stays clean. */
 export function loadRules(): RuleFile[] {
   const dir = rulesDir();
-  if (!existsSync(dir)) return [];
+  const defaultRoot = join(__FILE_DIR, "..", "..");
+  const structuralDirectories = process.env.AMADEUS_RULES_DIR === undefined
+    ? [
+        join(defaultRoot, "amadeus"),
+        join(defaultRoot, "amadeus", "spaces"),
+        join(defaultRoot, "amadeus", "spaces", MEMORY_SPACE),
+        dir,
+      ]
+    : [dir];
+  if (!structuralDirectories.every(realDirectory)) return [];
 
   // Each candidate: the absolute on-disk path to read, the display sub-path
   // (relative to amadeus/memory/, e.g. "org.md" or "phases/construction.md")
@@ -519,18 +548,23 @@ export function loadRules(): RuleFile[] {
     if (scopeKey !== "org" && scopeKey !== "team" && scopeKey !== "project") {
       continue; // unreachable given the regex, but keep the guard explicit
     }
-    candidates.push({ rel: f, filePath: join(dir, f), scope: scopeKey });
+    const filePath = join(dir, f);
+    if (regularFile(filePath)) {
+      candidates.push({ rel: f, filePath, scope: scopeKey });
+    }
   }
 
   // 2. Phase-scoped files nested under phases/<phase>.md.
   const phasesDir = join(dir, PHASE_RULES_SUBDIR);
-  if (existsSync(phasesDir)) {
+  if (realDirectory(phasesDir)) {
     for (const f of readdirSync(phasesDir)) {
       const m = f.match(PHASE_FILE_REGEX);
       if (!m) continue;
+      const filePath = join(phasesDir, f);
+      if (!regularFile(filePath)) continue;
       candidates.push({
         rel: toPosix(join(PHASE_RULES_SUBDIR, f)),
-        filePath: join(phasesDir, f),
+        filePath,
         scope: "phase",
         phase: m[1],
       });
@@ -712,10 +746,14 @@ export function loadGraph(): GraphStage[] {
   return _graph;
 }
 
-/** Stages that produce the given artifact. Empty array = orphan
+/** Stages that may produce the given artifact. Empty array = orphan
  *  consumer candidate (doctor surfaces). */
 export function producersOf(artifact: string): GraphStage[] {
-  return loadGraph().filter((s) => (s.produces ?? []).includes(artifact));
+  return loadGraph().filter(
+    (s) =>
+      (s.produces ?? []).includes(artifact) ||
+      (s.optional_produces ?? []).includes(artifact),
+  );
 }
 
 /** Stages that consume the given artifact. */
@@ -1089,13 +1127,16 @@ export function keywordCollisions(granted: string[]): string[] {
   return errors;
 }
 
-/** Union of produces[] across all stages. */
+/** Union of required and optional outputs across all stages. */
 export function artifactsRegistry(): ReadonlySet<string> {
   if (!_artifactsRegistry) {
     const stages = loadGraph();
     const names = new Set<string>();
     for (const stage of stages) {
       for (const name of stage.produces ?? []) {
+        names.add(name);
+      }
+      for (const name of stage.optional_produces ?? []) {
         names.add(name);
       }
     }
@@ -1195,6 +1236,34 @@ export function canonicalStageGraphJson(stages: GraphStage[]): string {
     return out;
   });
   return `${JSON.stringify(ordered, null, 2)}\n`;
+}
+
+interface ArtifactProducerDeclaration {
+  stage: string;
+  field: "produces" | "optional_produces";
+}
+
+function assertUniqueArtifactProducers(stages: GraphStage[]): void {
+  const declaredBy = new Map<string, ArtifactProducerDeclaration>();
+  for (const stage of stages) {
+    const declarations = [
+      ["produces", stage.produces ?? []],
+      ["optional_produces", stage.optional_produces ?? []],
+    ] as const;
+    for (const [field, names] of declarations) {
+      for (const name of names) {
+        const previous = declaredBy.get(name);
+        if (previous) {
+          throw new Error(
+            `Artifact producer collision for "${name}": stage ` +
+              `"${previous.stage}" (${previous.field}) and stage ` +
+              `"${stage.slug}" (${field}) both declare it; canonical artifact names require one producer.`,
+          );
+        }
+        declaredBy.set(name, { stage: stage.slug, field });
+      }
+    }
+  }
 }
 
 // --- Scope grid (the transpose) ---
@@ -1456,6 +1525,8 @@ export function compileStageGraph(): {
   // Sort by numeric order (phase-prefix.index).
   stages.sort((a, b) => numericStageOrder(a.number, b.number));
 
+  assertUniqueArtifactProducers(stages); // Required and optional outputs share one namespace.
+
   // Resolve per-stage rule chain. Strict-additive: every applicable rule
   // appears in rules_in_context (org+team+project + phase when stage's
   // `phase:` matches the rule's filename suffix). The walk + parse +
@@ -1575,6 +1646,9 @@ function buildGraphStage(
   }
   if (parsed.workspace_requires !== undefined) {
     stage.workspace_requires = parsed.workspace_requires;
+  }
+  if (parsed.optional_produces !== undefined) {
+    stage.optional_produces = parsed.optional_produces;
   }
   if (parsed.sensors !== undefined) {
     stage.sensors = parsed.sensors;

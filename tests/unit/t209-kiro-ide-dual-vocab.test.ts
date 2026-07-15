@@ -39,9 +39,14 @@ import { hostname, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  consumeMigrationStopLatch,
+  peekMigrationPendingDecision,
+} from "../../packages/framework/core/tools/amadeus-lib.ts";
+import {
   isSubagentTool,
   mapStateSyncInput,
 } from "../../packages/framework/harness/kiro-ide/hooks/amadeus-kiro-vocab.ts";
+import { projectSnapshot } from "../helpers/upstream-v2-fixture.ts";
 import {
   DEFAULT_RECORD_DIR,
   DEFAULT_SPACE,
@@ -263,6 +268,83 @@ describe("t209 dist/kiro-ide adapter — both vocabularies fire end-to-end", () 
       expect(r.code).toBe(0);
       const after = readFileSync(seededStateFile(dir), "utf-8");
       expect(/\*\*Current Stage\*\*:\s*intent-capture/.test(after)).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("10a: migration runtime/Stop forwarding keeps the latch session-scoped", () => {
+    const dir = scratchProject();
+    const runtimePayload = (sessionId: string) => ({
+      hook_event_name: "postToolUse",
+      cwd: dir,
+      session_id: sessionId,
+      tool_name: "shell",
+      tool_input: {
+        command: "bun .kiro/tools/amadeus-utility.ts migrate --apply",
+      },
+    });
+    const stopPayload = (sessionId: string) => ({
+      hook_event_name: "agentStop",
+      cwd: dir,
+      session_id: sessionId,
+    });
+    try {
+      expect(runAdapter(dir, "runtime-compile", runtimePayload("session-a")).code).toBe(0);
+      expect(runAdapter(dir, "stop", stopPayload("session-b")).code).toBe(0);
+      expect(consumeMigrationStopLatch(dir, "session-a")).toBe(true);
+
+      expect(runAdapter(dir, "runtime-compile", runtimePayload("session-a")).code).toBe(0);
+      expect(runAdapter(dir, "stop", stopPayload("session-a")).code).toBe(0);
+      expect(consumeMigrationStopLatch(dir, "session-a")).toBe(false);
+
+      const rejectedSession = `kiro-ide-rejected-${process.pid}-${Date.now()}`;
+      const beforeRejected = projectSnapshot(dir);
+      expect(
+        runAdapter(dir, "runtime-compile", {
+          hook_event_name: "postToolUse",
+          cwd: dir,
+          session_id: rejectedSession,
+          tool_name: "shell",
+          tool_input: {
+            command: "bun .kiro/tools/amadeus-orchestrate.ts next --apply",
+          },
+          tool_response: {
+            items: [
+              {
+                Text: JSON.stringify({
+                  kind: "error",
+                  message: "--apply is internal to the migration approval flow.",
+                }),
+              },
+            ],
+          },
+        }).code,
+      ).toBe(0);
+      expect(consumeMigrationStopLatch(dir, rejectedSession)).toBe(true);
+      expect(projectSnapshot(dir)).toBe(beforeRejected);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("10b: Kiro IDE does not arm the Kiro CLI-only migration decision seam", () => {
+    const dir = scratchProject();
+    const sessionId = `kiro-ide-no-decision-${process.pid}-${Date.now()}`;
+    try {
+      const before = projectSnapshot(dir);
+      for (const args of ["--migrate", "--apply"]) {
+        const initial = runAdapter(dir, "verb-intercept", {
+          hook_event_name: "userPromptSubmit",
+          cwd: dir,
+          session_id: sessionId,
+          prompt: `Run \`bun .kiro/tools/amadeus-orchestrate.ts next ${args}\` and relay it.`,
+        });
+        expect(`${args}:${initial.code}`).toBe(`${args}:0`);
+        expect(initial.stdout).toBe("");
+        expect(peekMigrationPendingDecision(dir, sessionId)).toBe(false);
+        expect(projectSnapshot(dir)).toBe(before);
+      }
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

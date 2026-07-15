@@ -78,6 +78,7 @@ To reshape *how* AI-DLC behaves — add a stage or an agent, define a scope, aut
 | [Troubleshooting](15-troubleshooting.md) | Symptom-based problem solving |
 | [Worked Examples](16-worked-examples.md) | Full bugfix and feature walkthroughs |
 | [Skills and Runner Commands](17-skills.md) | The `/amadeus-*` stage- and scope-runner commands and the author-your-own-runner path |
+| [Migrating an Upstream v2 Workspace](18-migrating-upstream-v2.md) | Dry-run, approval, compatibility, and recovery for `aidlc/` to Amadeus migration |
 | [Workshop Mode](workshop-mode.md) | Multi-developer manual recipe for the workshop scope (claim semantics via git push) |
 | [Running on other harnesses](harnesses/README.md) | Install and run on Kiro IDE or Codex CLI, and what differs per harness |
 | [Glossary](glossary.md) | All terminology defined |
