@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { accessSync, appendFileSync, constants as fsConstants, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { accessSync, appendFileSync, closeSync, constants as fsConstants, cpSync, existsSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
 import { basename, dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -27,6 +27,8 @@ export interface StageEntry {
   // fields uses the GraphStage type in amadeus-graph.ts (required there).
   condition?: string;
   produces?: string[];
+  // Artifacts the stage may write per unit. See GraphStage for runtime use.
+  optional_produces?: string[];
   consumes?: Array<{ artifact: string; required: boolean; conditional_on?: string }>;
   requires_stage?: string[];
   scopes?: string[];
@@ -425,6 +427,492 @@ export interface TerminalCommand {
   source: "read-only-flag" | "workspace-verb";
 }
 
+// A workspace migration request is deliberately separate from TerminalCommand:
+// it needs the conductor's human approval gate, so pre-LLM harness adapters must
+// never execute it off-band as a one-shot utility. The orchestration engine uses
+// this shared pure classifier before it reads any workflow state.
+export interface MigrationRequest {
+  source: "explicit-flag" | "natural-language";
+  from?: string;
+}
+
+/**
+ * Classify `/amadeus --migrate [path]` and the conservative natural-language
+ * equivalent. Natural language must name both the upstream source and a
+ * migration action; it always uses the default source path. A custom source is
+ * accepted only as the positional value immediately following `--migrate`.
+ */
+export function classifyMigrationRequest(args: string[]): MigrationRequest | null {
+  const flagIndex = args.indexOf("--migrate");
+  if (flagIndex !== -1) {
+    const candidate = args[flagIndex + 1];
+    return candidate !== undefined && !candidate.startsWith("--")
+      ? { source: "explicit-flag", from: candidate }
+      : { source: "explicit-flag" };
+  }
+
+  const text = args.join(" ");
+  const namesUpstream = /(?:\baidlc\b|\bai[\s-]?dlc\b)/i.test(text);
+  const requestsMigration =
+    /(?:\bmigrat(?:e|es|ed|ing|ion)\b|\bconvert(?:s|ed|ing)?\b|\bconversion\b|移行|変換)/i.test(
+      text,
+    );
+  return namesUpstream && requestsMigration
+    ? { source: "natural-language" }
+    : null;
+}
+
+/** True when public args belong to the migration route, including the forbidden
+ * bare `--apply` attempt that must terminate as an error before Intent routing. */
+export function isMigrationPublicRoute(args: string[]): boolean {
+  return args.includes("--apply") || classifyMigrationRequest(args) !== null;
+}
+
+// Tokenize one complete, non-composite shell invocation. This is intentionally
+// narrower than a general shell parser: the migration conductor emits one
+// direct `bun ...` command, so substitutions, pipelines, redirects, comments,
+// and command lists all fail closed. Quoted source paths remain one argv value.
+interface ShellTokenState {
+  words: string[];
+  word: string;
+  started: boolean;
+  quote: "single" | "double" | null;
+}
+
+function pushShellWord(state: ShellTokenState): void {
+  if (!state.started) return;
+  state.words.push(state.word);
+  state.word = "";
+  state.started = false;
+}
+
+function consumeSingleQuotedCharacter(state: ShellTokenState, char: string): void {
+  if (char === "'") state.quote = null;
+  else state.word += char;
+  state.started = true;
+}
+
+function consumeDoubleQuotedCharacter(
+  command: string,
+  index: number,
+  state: ShellTokenState,
+): number | null {
+  const char = command[index];
+  if (char === '"') {
+    state.quote = null;
+    state.started = true;
+    return index;
+  }
+  // Shell expansion inside double quotes could execute another command or
+  // make the recognized argv differ from the text. The emitted migration
+  // command does not need either form, so reject them.
+  if (char === "$" || char === "`") return null;
+  if (char !== "\\") {
+    state.word += char;
+    state.started = true;
+    return index;
+  }
+  const next = command[index + 1];
+  if (next === undefined || next === "\n" || next === "\r") return null;
+  if (['"', "\\", "$", "`"].includes(next)) {
+    state.word += next;
+    state.started = true;
+    return index + 1;
+  }
+  state.word += char;
+  state.started = true;
+  return index;
+}
+
+function consumeUnquotedCharacter(
+  command: string,
+  index: number,
+  state: ShellTokenState,
+): number | null {
+  const char = command[index];
+  if (char === "'" || char === '"') {
+    state.quote = char === "'" ? "single" : "double";
+    state.started = true;
+    return index;
+  }
+  if (char === "\n" || char === "\r" || ";|&<>()`".includes(char)) return null;
+  if (char === "$" || (char === "#" && !state.started)) return null;
+  if (/\s/.test(char)) {
+    pushShellWord(state);
+    return index;
+  }
+  if (char !== "\\") {
+    state.word += char;
+    state.started = true;
+    return index;
+  }
+  const next = command[index + 1];
+  if (next === undefined || next === "\n" || next === "\r") return null;
+  state.word += next;
+  state.started = true;
+  return index + 1;
+}
+
+function tokenizeSingleShellInvocation(command: string): string[] | null {
+  const state: ShellTokenState = {
+    words: [],
+    word: "",
+    started: false,
+    quote: null,
+  };
+
+  for (let i = 0; i < command.length; i++) {
+    if (state.quote === "single") {
+      consumeSingleQuotedCharacter(state, command[i]);
+      continue;
+    }
+    const nextIndex = state.quote === "double"
+      ? consumeDoubleQuotedCharacter(command, i, state)
+      : consumeUnquotedCharacter(command, i, state);
+    if (nextIndex === null) return null;
+    i = nextIndex;
+  }
+
+  if (state.quote !== null) return null;
+  pushShellWord(state);
+  return state.words;
+}
+
+function bunScriptInvocation(command: string): { script: string; args: string[] } | null {
+  const words = tokenizeSingleShellInvocation(command);
+  if (words === null || words.length < 2) return null;
+  const executable = words[0].split(/[\\/]/).at(-1)?.toLowerCase();
+  if (executable !== "bun" && executable !== "bun.exe") return null;
+  const scriptIndex = words[1] === "run" ? 2 : 1;
+  if (scriptIndex >= words.length) return null;
+  return { script: words[scriptIndex], args: words.slice(scriptIndex + 1) };
+}
+
+function scriptResolvesTo(
+  projectDir: string,
+  script: string,
+  relativeCandidates: readonly string[],
+): boolean {
+  const platformScript = script.replace(/[\\/]+/g, sep);
+  const resolvedScript = resolve(projectDir, platformScript);
+  for (const candidate of relativeCandidates) {
+    if (resolve(projectDir, ...candidate.split("/")) === resolvedScript) return true;
+  }
+  return false;
+}
+
+const MIGRATION_UTILITY_PATHS = [
+  ".claude/tools/amadeus-utility.ts",
+  ".codex/tools/amadeus-utility.ts",
+  ".kiro/tools/amadeus-utility.ts",
+  "packages/framework/core/tools/amadeus-utility.ts",
+] as const;
+
+const MIGRATION_CORE_PATHS = [
+  ".claude/tools/amadeus-migrate.ts",
+  ".codex/tools/amadeus-migrate.ts",
+  ".kiro/tools/amadeus-migrate.ts",
+  "packages/framework/core/tools/amadeus-migrate.ts",
+] as const;
+
+function migrationExecutionInvocation(
+  command: string,
+  projectDir: string,
+): { script: string; args: string[] } | null {
+  const invocation = bunScriptInvocation(command);
+  if (invocation === null) return null;
+  const script = invocation.script.split(/[\\/]/).at(-1);
+  if (script === "amadeus-utility.ts") {
+    return (
+      scriptResolvesTo(projectDir, invocation.script, MIGRATION_UTILITY_PATHS) &&
+      invocation.args[0] === "migrate"
+        ? invocation
+        : null
+    );
+  }
+  if (script !== "amadeus-migrate.ts") return null;
+  const fromIndex = invocation.args.indexOf("--from");
+  const from = invocation.args[fromIndex + 1];
+  return (
+    scriptResolvesTo(projectDir, invocation.script, MIGRATION_CORE_PATHS) &&
+    fromIndex !== -1 &&
+    from !== undefined &&
+    !from.startsWith("--")
+      ? invocation
+      : null
+  );
+}
+
+/** True only for the single terminal utility/core invocation that actually
+ * runs a workspace migration. Merely consulting `orchestrate next --migrate`,
+ * mentioning the command, or placing it in a shell list is not enough. */
+export function isMigrationExecutionCommand(command: string, projectDir: string): boolean {
+  return migrationExecutionInvocation(command, projectDir) !== null;
+}
+
+/** True only for a canonical migration execution that selected apply mode. */
+export function isMigrationApplyCommand(command: string, projectDir: string): boolean {
+  return migrationExecutionInvocation(command, projectDir)?.args.includes("--apply") === true;
+}
+
+const MIGRATION_DISPATCH_PATHS = [
+  ".claude/tools/amadeus-orchestrate.ts",
+  ".codex/tools/amadeus-orchestrate.ts",
+  ".kiro/tools/amadeus-orchestrate.ts",
+  "packages/framework/core/tools/amadeus-orchestrate.ts",
+] as const;
+
+/** True only for the conductor's single, read-only migration dispatch or a
+ * public apply attempt that the engine rejects before workflow state. Kiro's
+ * preToolUse floor uses this so the route can reach the shared engine without
+ * minting or advancing an Intent; the PostToolUse hook additionally inspects
+ * the returned directive before arming a terminal Stop latch. */
+export function isMigrationDispatchCommand(command: string, projectDir: string): boolean {
+  const invocation = bunScriptInvocation(command);
+  if (invocation === null) return false;
+  const script = invocation.script.split(/[\\/]/).at(-1);
+  const nextArgs = invocation.args.slice(1);
+  return (
+    script === "amadeus-orchestrate.ts" &&
+    scriptResolvesTo(projectDir, invocation.script, MIGRATION_DISPATCH_PATHS) &&
+    invocation.args[0] === "next" &&
+    isMigrationPublicRoute(nextArgs)
+  );
+}
+
+function nonEmptyTrimmedString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const output = value.trim();
+  return output.length > 0 ? output : null;
+}
+
+function migrationDispatchItemsOutput(items: unknown): string | null {
+  if (!Array.isArray(items) || items.length === 0) return null;
+  const chunks: string[] = [];
+  for (const item of items) {
+    if (item === null || typeof item !== "object") return null;
+    const text = (item as { Text?: unknown }).Text;
+    if (typeof text !== "string") return null;
+    chunks.push(text);
+  }
+  const output = chunks.join("\n").trim();
+  return output.length > 0 ? output : null;
+}
+
+function migrationDispatchOutput(toolResponse: unknown): string | null {
+  const direct = nonEmptyTrimmedString(toolResponse);
+  if (direct !== null) return direct;
+  if (toolResponse === null || typeof toolResponse !== "object") return null;
+  const response = toolResponse as Record<string, unknown>;
+  return (
+    nonEmptyTrimmedString(response.stdout) ??
+    nonEmptyTrimmedString(response.output) ??
+    nonEmptyTrimmedString(response.text) ??
+    migrationDispatchItemsOutput(response.items)
+  );
+}
+
+/** True only when an exact migration dispatch returned the engine's terminal
+ * error directive. A valid migration returns `print` and deliberately does not
+ * match: if the conductor skips its dry-run, Stop must still enforce the loop. */
+export function isRejectedMigrationDispatch(
+  command: string,
+  toolResponse: unknown,
+  projectDir: string,
+): boolean {
+  if (!isMigrationDispatchCommand(command, projectDir)) return false;
+  const output = migrationDispatchOutput(toolResponse);
+  if (output === null) return false;
+  try {
+    const parsed = JSON.parse(output) as unknown;
+    return (
+      parsed !== null &&
+      typeof parsed === "object" &&
+      !Array.isArray(parsed) &&
+      (parsed as { kind?: unknown }).kind === "error" &&
+      typeof (parsed as { message?: unknown }).message === "string"
+    );
+  } catch {
+    return false;
+  }
+}
+
+const MIGRATION_LATCH_MAX_AGE_MS = 10 * 60 * 1000;
+
+function migrationStopLatchPath(projectDir: string, sessionId: string): string {
+  const key = createHash("sha256")
+    .update(resolve(projectDir))
+    .update("\0")
+    .update(sessionId)
+    .digest("hex")
+    .slice(0, 24);
+  return join(tmpdir(), `amadeus-migration-stop-${key}.json`);
+}
+
+function migrationPendingDecisionPath(projectDir: string, sessionId: string): string {
+  const key = createHash("sha256")
+    .update(resolve(projectDir))
+    .update("\0")
+    .update(sessionId)
+    .digest("hex")
+    .slice(0, 24);
+  return join(tmpdir(), `amadeus-migration-decision-${key}.json`);
+}
+
+function validMigrationSessionId(sessionId: string | undefined): sessionId is string {
+  return typeof sessionId === "string" && sessionId.trim().length > 0;
+}
+
+function armSecureMigrationLatch(path: string, now: number): void {
+  const stagingPath = join(
+    tmpdir(),
+    `.amadeus-migration-latch-${process.pid}-${randomUUID()}.tmp`,
+  );
+  try {
+    writeFileSync(
+      stagingPath,
+      JSON.stringify({ timestamp: now }) + "\n",
+      { flag: "wx", mode: 0o600 },
+    );
+    // Rename replaces the predictable latch directory entry without following
+    // it. A pre-planted symlink therefore gets replaced, never written through.
+    renameSync(stagingPath, path);
+  } catch {
+    // Advisory: a latch failure must never change the migration command result.
+  } finally {
+    try {
+      unlinkSync(stagingPath);
+    } catch {
+      // A successful rename moved the staging entry to its final path.
+    }
+  }
+}
+
+/** Arm the one-shot Stop-hook terminal carve-out without touching the project
+ * tree. A missing session id fails closed so another session can never consume
+ * a project-global permission. `now` is a deterministic stale-latch test seam. */
+export function armMigrationStopLatch(
+  projectDir: string,
+  sessionId: string | undefined,
+  now = Date.now(),
+): void {
+  if (!validMigrationSessionId(sessionId)) return;
+  armSecureMigrationLatch(migrationStopLatchPath(projectDir, sessionId), now);
+}
+
+/** Remember that Kiro CLI emitted a migration approval gate. The marker stores
+ * only its timestamp: source paths and migration mode remain in the conductor's
+ * prior directive, never in this project-external coordination record. */
+export function armMigrationPendingDecision(
+  projectDir: string,
+  sessionId: string | undefined,
+  now = Date.now(),
+): void {
+  if (!validMigrationSessionId(sessionId)) return;
+  armSecureMigrationLatch(migrationPendingDecisionPath(projectDir, sessionId), now);
+}
+
+function isSecureMigrationLatch(path: string): boolean {
+  // Inspect the claimed directory entry itself. readFileSync must never be
+  // allowed to follow a symlink moved from the predictable latch path. The
+  // caller's catch also fails closed if this inspection races with removal.
+  const stat = lstatSync(path);
+  if (!stat.isFile()) return false;
+  const getuid = process.getuid;
+  if (typeof getuid === "function") {
+    if ((stat.mode & 0o777) !== 0o600 || stat.uid !== getuid()) return false;
+  }
+  // Windows has no POSIX uid/mode contract. Its per-user temp directory ACL is
+  // the ownership boundary; the regular-file and atomic-claim checks still apply.
+  return true;
+}
+
+function claimSecureMigrationLatch(
+  path: string,
+  consume: boolean,
+  now: number,
+): boolean {
+  const claimPath = `${path}.${process.pid}.${randomUUID()}.claim`;
+  let restored = false;
+  try {
+    // rename is atomic on the temp filesystem: concurrent Stop hooks cannot
+    // both claim the same permission, so the latch is genuinely one-shot.
+    renameSync(path, claimPath);
+  } catch {
+    return false;
+  }
+  try {
+    if (!isSecureMigrationLatch(claimPath)) return false;
+    const parsed = JSON.parse(readFileSync(claimPath, "utf-8")) as { timestamp?: unknown };
+    if (typeof parsed.timestamp !== "number") return false;
+    const age = now - parsed.timestamp;
+    if (age < 0 || age > MIGRATION_LATCH_MAX_AGE_MS) return false;
+    if (!consume) {
+      // A fresh Yes answer only peeks. Restore by rename so no read/write ever
+      // follows a predictable-path symlink planted during inspection.
+      renameSync(claimPath, path);
+      restored = true;
+    }
+    return true;
+  } catch {
+    return false;
+  } finally {
+    if (!restored) {
+      try {
+        unlinkSync(claimPath);
+      } catch {
+        // A consumed or rejected claim has no reusable permission left.
+      }
+    }
+  }
+}
+
+/** Consume a fresh migration-terminal latch. Stale or malformed records are
+ * deleted and fail closed so they cannot suppress a later workflow turn. */
+export function consumeMigrationStopLatch(
+  projectDir: string,
+  sessionId: string | undefined,
+  now = Date.now(),
+): boolean {
+  if (!validMigrationSessionId(sessionId)) return false;
+  return claimSecureMigrationLatch(
+    migrationStopLatchPath(projectDir, sessionId),
+    true,
+    now,
+  );
+}
+
+/** Inspect a fresh Kiro CLI migration gate without consuming it. Only an exact
+ * Yes response uses this; stale, malformed, insecure, or cross-session records
+ * fail closed and are removed outside the project tree. */
+export function peekMigrationPendingDecision(
+  projectDir: string,
+  sessionId: string | undefined,
+  now = Date.now(),
+): boolean {
+  if (!validMigrationSessionId(sessionId)) return false;
+  return claimSecureMigrationLatch(
+    migrationPendingDecisionPath(projectDir, sessionId),
+    false,
+    now,
+  );
+}
+
+/** Consume the pending decision after an exact No answer or after Kiro reports
+ * the approved apply command through PostToolUse. */
+export function consumeMigrationPendingDecision(
+  projectDir: string,
+  sessionId: string | undefined,
+  now = Date.now(),
+): boolean {
+  if (!validMigrationSessionId(sessionId)) return false;
+  return claimSecureMigrationLatch(
+    migrationPendingDecisionPath(projectDir, sessionId),
+    true,
+    now,
+  );
+}
+
 // Classify the post-`/amadeus` argument tokens. Returns the terminal command to run
 // deterministically, or null when the input is NOT a terminal command (freeform
 // intent text, a --scope/--stage/--phase jump, a config/scope change, birth — all
@@ -455,14 +943,47 @@ function workspaceRoot(projectDir: string): string {
   return join(projectDir, "amadeus");
 }
 
+function isRealDirectory(path: string): boolean {
+  try {
+    return lstatSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function isRealRegularFile(path: string): boolean {
+  try {
+    return lstatSync(path).isFile();
+  } catch {
+    return false;
+  }
+}
+
+function isSafeWorkspaceEntryName(name: string): boolean {
+  return name !== "" && name !== "." && name !== ".." && !/[\\/]/.test(name);
+}
+
+function realIntentsDir(projectDir: string, space: string): string | null {
+  if (!isSafeWorkspaceEntryName(space)) return null;
+  const root = workspaceRoot(projectDir);
+  const allSpaces = join(root, "spaces");
+  const spaceRoot = join(allSpaces, space);
+  const intents = join(spaceRoot, "intents");
+  return [root, allSpaces, spaceRoot, intents].every(isRealDirectory)
+    ? intents
+    : null;
+}
+
 // The active space for this project. Reads the `amadeus/active-space` cursor;
 // defaults to "default". NEVER throws — the default space is always valid even
 // when nothing is on disk yet (the resolver tolerates an absent space dir).
 export function activeSpace(projectDir: string): string {
   const ptr = join(workspaceRoot(projectDir), ACTIVE_SPACE_POINTER);
   try {
+    if (!isRealDirectory(workspaceRoot(projectDir))) return DEFAULT_SPACE;
+    if (!isRealRegularFile(ptr)) return DEFAULT_SPACE;
     const raw = readFileSync(ptr, "utf-8").trim();
-    if (raw.length > 0) return raw;
+    if (isSafeWorkspaceEntryName(raw)) return raw;
   } catch {
     // no cursor → default
   }
@@ -494,7 +1015,9 @@ export function knowledgeDir(projectDir: string, space?: string): string {
 // "does any record exist?" signal the path resolver and migration detector need
 // (it must not depend on the registry being present).
 export function listIntentDirs(projectDir: string, space?: string): string[] {
-  const dir = intentsDir(projectDir, space);
+  const sp = space ?? activeSpace(projectDir);
+  const dir = realIntentsDir(projectDir, sp);
+  if (dir === null) return [];
   let entries: string[];
   try {
     entries = readdirSync(dir);
@@ -505,7 +1028,14 @@ export function listIntentDirs(projectDir: string, space?: string): string[] {
   for (const name of entries) {
     // A record dir holds amadeus-state.md; skip the active-intent cursor,
     // intents.json, and any stray files.
-    if (existsSync(join(dir, name, "amadeus-state.md"))) records.push(name);
+    if (!isSafeWorkspaceEntryName(name)) continue;
+    const record = join(dir, name);
+    if (
+      isRealDirectory(record) &&
+      isRealRegularFile(join(record, "amadeus-state.md"))
+    ) {
+      records.push(name);
+    }
   }
   return records.sort();
 }
@@ -522,16 +1052,21 @@ export function activeIntent(
   explicit?: string,
 ): string | null {
   const sp = space ?? activeSpace(projectDir);
-  const dir = intentsDir(projectDir, sp);
   if (explicit) return explicit;
+  const records = listIntentDirs(projectDir, sp);
+  const dir = realIntentsDir(projectDir, sp);
   // Cursor: a real record the pointer names.
   try {
-    const raw = readFileSync(join(dir, ACTIVE_INTENT_POINTER), "utf-8").trim();
-    if (raw.length > 0 && existsSync(join(dir, raw, "amadeus-state.md"))) return raw;
+    if (dir !== null) {
+      const cursor = join(dir, ACTIVE_INTENT_POINTER);
+      if (isRealRegularFile(cursor)) {
+        const raw = readFileSync(cursor, "utf-8").trim();
+        if (records.includes(raw)) return raw;
+      }
+    }
   } catch {
     // no cursor → fall through to lone-intent
   }
-  const records = listIntentDirs(projectDir, sp);
   if (records.length === 1) return records[0];
   // 0 records → null (bare space root); >1 with no cursor → null (the handler
   // layer prompts; a path helper cannot guess which intent the caller meant).
@@ -882,15 +1417,8 @@ export function needsFlatMigration(projectDir: string): boolean {
 // True iff any space already holds an intent record (a `<dir>/amadeus-state.md`).
 // Scans amadeus/spaces/*/intents/*/amadeus-state.md WITHOUT relying on the registry.
 export function anyIntentRecordExists(projectDir: string): boolean {
-  const spacesRoot = join(workspaceRoot(projectDir), "spaces");
-  let spaces: string[];
-  try {
-    spaces = readdirSync(spacesRoot);
-  } catch {
-    return false;
-  }
-  for (const sp of spaces) {
-    if (listIntentDirs(projectDir, sp).length > 0) return true;
+  for (const space of listSpaces(projectDir)) {
+    if (listIntentDirs(projectDir, space.name).length > 0) return true;
   }
   return false;
 }
@@ -966,8 +1494,12 @@ export function spacesRoot(projectDir: string): string {
 // but the registry carries the uuid/status/scope/repos a human or the --json
 // consumer needs.
 export function readIntentRegistry(projectDir: string, space?: string): IntentRegistryEntry[] {
-  const path = intentsRegistryPath(projectDir, space);
+  const sp = space ?? activeSpace(projectDir);
+  const dir = realIntentsDir(projectDir, sp);
+  if (dir === null) return [];
+  const path = join(dir, "intents.json");
   try {
+    if (!isRealRegularFile(path)) return [];
     const parsed: unknown = JSON.parse(readFileSync(path, "utf-8"));
     if (Array.isArray(parsed)) return parsed as IntentRegistryEntry[];
   } catch {
@@ -996,9 +1528,19 @@ export interface SpaceInfo {
 export function listSpaces(projectDir: string): SpaceInfo[] {
   const active = activeSpace(projectDir);
   const names = new Set<string>([DEFAULT_SPACE]);
+  const root = workspaceRoot(projectDir);
+  const allSpaces = spacesRoot(projectDir);
   try {
-    for (const name of readdirSync(spacesRoot(projectDir))) {
-      if (statSync(join(spacesRoot(projectDir), name)).isDirectory()) names.add(name);
+    if (!isRealDirectory(root) || !isRealDirectory(allSpaces)) {
+      return [{ name: DEFAULT_SPACE, active: active === DEFAULT_SPACE }];
+    }
+    for (const name of readdirSync(allSpaces)) {
+      if (
+        isSafeWorkspaceEntryName(name) &&
+        isRealDirectory(join(allSpaces, name))
+      ) {
+        names.add(name);
+      }
     }
   } catch {
     // no spaces dir → just the always-present default
@@ -1537,8 +2079,11 @@ function cloneIdPath(projectDir: string): string {
 }
 
 // The stable per-CLONE token (not per-process). Read from the gitignored
-// `amadeus/.amadeus-clone-id` file when present; minted (12 hex chars from a v4
-// uuid — no Math.random) and persisted on first use otherwise. Stable WITHIN a
+// `amadeus/.amadeus-clone-id` regular file when present; minted (12 hex chars
+// from a v4 uuid — no Math.random) and persisted on first use otherwise. A
+// symlink is never followed: its stable token is derived from the canonical
+// project path and link text, so migration can preserve the link without
+// allowing audit setup to read or overwrite its target. Stable WITHIN a
 // clone across processes (the fork subprocess and the merge subprocess both
 // read the same file → the same shard), DISTINCT across clones (each clone
 // mints its own; the file is gitignored so it doesn't travel). A read/mint race
@@ -1549,26 +2094,82 @@ function cloneIdPath(projectDir: string): string {
 // unwritable workspace degrades to an in-memory token for this process (still
 // stable within the process, still distinct from other clones).
 let _cloneId: string | null = null;
+
+function linkedCloneId(projectDir: string, path: string): string | null {
+  try {
+    if (!lstatSync(path).isSymbolicLink()) return null;
+    const canonicalProject = realpathSync(projectDir);
+    const link = readlinkSync(path, { encoding: "buffer" });
+    return createHash("sha256")
+      .update(canonicalProject, "utf-8")
+      .update("\0", "utf-8")
+      .update(link)
+      .digest("hex")
+      .slice(0, 12);
+  } catch {
+    return null;
+  }
+}
+
+function readCloneIdNoFollow(path: string): string | null {
+  let fd: number | null = null;
+  try {
+    const noFollow = typeof fsConstants.O_NOFOLLOW === "number"
+      ? fsConstants.O_NOFOLLOW
+      : 0;
+    fd = openSync(path, fsConstants.O_RDONLY | noFollow);
+    const raw = readFileSync(fd, "utf-8").trim();
+    return /^[a-z0-9]{1,32}$/.test(raw) ? raw : null;
+  } catch {
+    return null;
+  } finally {
+    if (fd !== null) closeSync(fd);
+  }
+}
+
+function writeCloneIdNoFollow(path: string, value: string): boolean {
+  let fd: number | null = null;
+  try {
+    const noFollow = typeof fsConstants.O_NOFOLLOW === "number"
+      ? fsConstants.O_NOFOLLOW
+      : 0;
+    fd = openSync(
+      path,
+      fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_TRUNC | noFollow,
+      0o600,
+    );
+    writeFileSync(fd, `${value}\n`, "utf-8");
+    return true;
+  } catch {
+    return false;
+  } finally {
+    if (fd !== null) closeSync(fd);
+  }
+}
+
 function cloneId(projectDir: string): string {
   if (_cloneId !== null) return _cloneId;
   const path = cloneIdPath(projectDir);
-  try {
-    const raw = readFileSync(path, "utf-8").trim();
-    if (/^[a-z0-9]{1,32}$/.test(raw)) {
-      _cloneId = raw;
-      return _cloneId;
-    }
-  } catch {
-    // no token yet → mint one below
+  const linked = linkedCloneId(projectDir, path);
+  if (linked !== null) {
+    _cloneId = linked;
+    return _cloneId;
+  }
+  const existing = readCloneIdNoFollow(path);
+  if (existing !== null) {
+    _cloneId = existing;
+    return _cloneId;
   }
   const minted = randomUUID().replace(/-/g, "").slice(0, 12);
   try {
     mkdirSync(workspaceRoot(projectDir), { recursive: true });
-    writeFileSync(path, `${minted}\n`, "utf-8");
+    if (!writeCloneIdNoFollow(path, minted)) {
+      _cloneId = linkedCloneId(projectDir, path) ?? minted;
+      return _cloneId;
+    }
     // Re-read so a concurrent first-run mint that landed first wins for ALL
     // processes in this clone (converge on one on-disk token).
-    const settled = readFileSync(path, "utf-8").trim();
-    _cloneId = /^[a-z0-9]{1,32}$/.test(settled) ? settled : minted;
+    _cloneId = readCloneIdNoFollow(path) ?? minted;
   } catch {
     _cloneId = minted; // unwritable workspace → in-memory token
   }
@@ -2529,6 +3130,7 @@ export function isPackageJson(x: unknown): x is PackageJson {
  */
 export interface ClaudeCodeHookInput {
   hook_event_name?: string;
+  session_id?: string;
   tool_name?: string;
   tool_input?: {
     file_path?: string;
@@ -3404,10 +4006,7 @@ export function detectLeakedLocks(projectDir: string, clear = false): LeakedLock
   // Workspace sentinel bucket.
   probe(WORKSPACE_LOCK_SENTINEL);
   // Every intent record across every space.
-  const spacesRoot = join(workspaceRoot(projectDir), "spaces");
-  let spaces: string[] = [];
-  try { spaces = readdirSync(spacesRoot); } catch { /* no spaces dir */ }
-  for (const sp of spaces) {
+  for (const { name: sp } of listSpaces(projectDir)) {
     for (const intent of listIntentDirs(projectDir, sp)) {
       probe(`${sp}/${intent}`, intent, sp);
     }
@@ -3872,6 +4471,9 @@ export function parseStageFrontmatter(
   for (const key of topLevelKeys) {
     if (key === CONSUMES_KEY) continue;
     if (ARRAY_KEYS.has(key)) continue;
+    // Unlike required list fields, absence must stay distinguishable from an
+    // explicitly empty optional list.
+    if (key === "optional_produces") continue;
     // The key was discovered at the start of some line, so it IS
     // present. scalarField returns "" for both absent AND empty-quoted
     // ("") — since we know it's present, assign the result
@@ -3891,6 +4493,10 @@ export function parseStageFrontmatter(
   }
 
   obj.consumes = objectListField(fm, CONSUMES_KEY);
+
+  if (topLevelKeys.has("optional_produces")) {
+    obj.optional_produces = listField(fm, "optional_produces");
+  }
 
   // reviewer_max_iterations is the one numeric scalar field. The generic
   // scalar loop above captured it as a string ("2"); coerce it to a real
@@ -4150,6 +4756,7 @@ export function emitStageFrontmatter(obj: Record<string, unknown>): string {
     "for_each",
     "workspace_requires",
     "produces",
+    "optional_produces",
     "consumes",
     "requires_stage",
     "sensors",

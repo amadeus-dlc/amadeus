@@ -296,6 +296,16 @@ function presentConsumes(pd: string, slugs: string[]): string[] {
 	});
 }
 
+function stageTemplateEligibleArtifacts(stage: {
+	produces?: string[];
+	optional_produces?: string[];
+}): string[] {
+	return templateEligibleArtifacts([
+		...(stage.produces ?? []),
+		...(stage.optional_produces ?? []),
+	]);
+}
+
 // --- Subcommand: fire ---
 //
 // Step 1 — validate + resolve all inputs + generate Fire id (no lock).
@@ -406,9 +416,9 @@ export function handleFire(args: string[], projectDirArg?: string): void {
 	// set. The per-sensor script cannot know the stage's artifact set (it gets
 	// only --stage/--output-path), so the dispatcher threads it from the
 	// stageNode — exactly as --consumes is threaded for upstream-coverage above.
-	// Eligibility = the `produces` artifact names that are NOT questions/timestamp
-	// markers (the stem==artifact key is unsound for those non-prose files). The
-	// script applies a resolved template only when the output stem ∈ this set.
+	// Eligibility = the required + optional output names that are NOT questions/
+	// timestamp markers. An optional artifact that is actually written still
+	// receives the same template validation as a required artifact.
 	// AMADEUS_TEMPLATES_DIR is a test/relocation seam mirroring AMADEUS_RULES_DIR;
 	// the default lookup is the workspace method tree's templates/ dir —
 	// <projectDir>/amadeus/spaces/<space>/memory/templates — derived via
@@ -416,7 +426,7 @@ export function handleFire(args: string[], projectDirArg?: string): void {
 	// packager emit use, so the sensor's lookup can never drift from where SEED
 	// ships the floor (resolution falls through gracefully when absent).
 	if (id === "required-sections") {
-		const eligible = templateEligibleArtifacts(stageNode.produces ?? []);
+		const eligible = stageTemplateEligibleArtifacts(stageNode);
 		const templatesDir =
 			process.env.AMADEUS_TEMPLATES_DIR ?? memoryTemplatesDir(projectDir);
 		scriptArgs.push("--templates-dir", templatesDir);
