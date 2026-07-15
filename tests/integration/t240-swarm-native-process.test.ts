@@ -5,6 +5,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -212,6 +213,114 @@ async function waitForStoppedProcessGroup(processGroupId: number): Promise<void>
 }
 
 describe("t240 provider-neutral native process", () => {
+  test("durably disposes one exact recovered attempt and replays its recovery receipt", async () => {
+    const dir = root();
+    const port = createNativeProcessPort({
+      rootDir: dir,
+      output: { publish: () => {}, close: () => {}, fail: () => {} },
+    });
+    const plan = port.plan({
+      nativeRunId: "run-recovered-disposal",
+      evidenceDir: dir,
+      context,
+      fencingToken: 3,
+    });
+    const target = Object.freeze({
+      kind: "native-process-recovery" as const,
+      schemaVersion: 1 as const,
+      nativeRunId: plan.nativeRunId,
+      armDigest: plan.armDigest,
+      runEpochDigest: plan.runEpochDigest,
+      processIdentityDigest: null,
+    });
+    const recovered = await port.recoverAttempt(target);
+    if (recovered.status === "unknown") throw new Error("expected unarmed recovery receipt");
+
+    const disposed = await port.disposeRecoveredAttempt({
+      target,
+      recoveryReceipt: recovered.receipt,
+    });
+
+    expect(disposed).toMatchObject({
+      status: "disposed",
+      recoveryReceipt: recovered.receipt,
+      receipt: {
+        nativeRunId: target.nativeRunId,
+        runEpochDigest: target.runEpochDigest,
+        disposition: "disposed",
+      },
+    });
+    expect(existsSync(join(dir, dirname(plan.recoveryJournalRelativePath)))).toBeFalse();
+    expect(port.activeRecordCount()).toBe(0);
+
+    const restarted = createNativeProcessPort({
+      rootDir: dir,
+      output: { publish: () => {}, close: () => {}, fail: () => {} },
+    });
+    expect(await restarted.recoverAttempt(target)).toEqual(recovered);
+    expect(await restarted.disposeRecoveredAttempt({
+      target,
+      recoveryReceipt: recovered.receipt,
+    })).toEqual(disposed);
+    expect(await restarted.disposeRecoveredAttempt({
+      target,
+      recoveryReceipt: Object.freeze({
+        ...recovered.receipt,
+        receiptDigest: "mismatched-recovery-receipt",
+      }),
+    })).toEqual({ status: "unknown" });
+
+    const replacement = restarted.plan({
+      nativeRunId: plan.nativeRunId,
+      evidenceDir: dir,
+      context,
+      fencingToken: 4,
+    });
+    expect(replacement.runEpochDigest).not.toBe(plan.runEpochDigest);
+    expect(await restarted.recoverAttempt(target)).toEqual(recovered);
+    expect(existsSync(join(dir, dirname(replacement.recoveryJournalRelativePath)))).toBeTrue();
+    await restarted.releasePlan(replacement);
+  });
+
+  test("does not dispose a planned run from a forged stopped receipt", async () => {
+    const dir = root();
+    const port = createNativeProcessPort({
+      rootDir: dir,
+      output: { publish: () => {}, close: () => {}, fail: () => {} },
+    });
+    const plan = port.plan({
+      nativeRunId: "run-forged-stopped-disposal",
+      evidenceDir: dir,
+      context,
+      fencingToken: 3,
+    });
+    const target = Object.freeze({
+      kind: "native-process-recovery" as const,
+      schemaVersion: 1 as const,
+      nativeRunId: plan.nativeRunId,
+      armDigest: plan.armDigest,
+      runEpochDigest: plan.runEpochDigest,
+      processIdentityDigest: "forged-process-identity",
+    });
+    const semantic = Object.freeze({
+      kind: "native-process-recovery-receipt" as const,
+      schemaVersion: 1 as const,
+      targetDigest: digestValue(target),
+      nativeRunId: target.nativeRunId,
+      armDigest: target.armDigest,
+      runEpochDigest: target.runEpochDigest,
+      processIdentityDigest: target.processIdentityDigest,
+      disposition: "stopped" as const,
+    });
+
+    expect(await port.disposeRecoveredAttempt({
+      target,
+      recoveryReceipt: Object.freeze({ ...semantic, receiptDigest: digestValue(semantic) }),
+    })).toEqual({ status: "unknown" });
+    expect(existsSync(join(dir, dirname(plan.recoveryJournalRelativePath)))).toBeTrue();
+    await port.releasePlan(plan);
+  });
+
   test("recovers a durable planned process as explicitly unarmed", async () => {
     const dir = root();
     const port = createNativeProcessPort({
@@ -268,14 +377,35 @@ describe("t240 provider-neutral native process", () => {
       fencingToken: 3,
     });
     expect(replacement.runEpochDigest).not.toBe(plan.runEpochDigest);
-    await expect(port.recoverAttempt(target)).resolves.toEqual({ status: "unknown" });
+    await expect(port.recoverAttempt(target)).resolves.toEqual({
+      status: "unarmed",
+      receipt: Object.freeze({ ...receipt, receiptDigest: digestValue(receipt) }),
+    });
     const restarted = createNativeProcessPort({
       rootDir: dir,
       output: { publish: () => {}, close: () => {}, fail: () => {} },
     });
-    await expect(restarted.releasePlan(plan)).rejects.toThrow("NATIVE_PROCESS_PLAN_CONFLICT");
+    await expect(restarted.releasePlan(plan)).resolves.toBeUndefined();
     expect(existsSync(join(dir, dirname(replacement.recoveryJournalRelativePath)))).toBeTrue();
     await restarted.releasePlan(replacement);
+  });
+
+  test("forgets an in-memory plan when its run directory is already absent", async () => {
+    const dir = root();
+    const port = createNativeProcessPort({
+      rootDir: dir,
+      output: { publish: () => {}, close: () => {}, fail: () => {} },
+    });
+    const plan = port.plan({
+      nativeRunId: "run-release-missing-directory",
+      evidenceDir: dir,
+      context,
+      fencingToken: 4,
+    });
+    rmSync(join(dir, dirname(plan.recoveryJournalRelativePath)), { recursive: true });
+
+    await expect(port.releasePlan(plan)).resolves.toBeUndefined();
+    expect(port.activeRecordCount()).toBe(0);
   });
 
   test("keeps a published dispatch plan recoverable when resource materialization fails", async () => {
@@ -947,7 +1077,8 @@ describe("t240 provider-neutral native process", () => {
       terminationGraceMs: 50,
     });
 
-    await expect(recoveryPort.recoverAttempt(target)).resolves.toEqual({
+    const recovered = await recoveryPort.recoverAttempt(target);
+    expect(recovered).toEqual({
       status: "stopped",
       receipt: Object.freeze({ ...receipt, receiptDigest: digestValue(receipt) }),
     });
@@ -965,6 +1096,18 @@ describe("t240 provider-neutral native process", () => {
     });
     expect(readFileSync(journalPath, "utf-8")).toBe(journalBeforeRecovery);
     expect(existsSync(dirname(journalPath))).toBeTrue();
+    if (recovered.status !== "stopped") throw new Error("expected stopped recovery receipt");
+    const disposed = await recoveryPort.disposeRecoveredAttempt({
+      target,
+      recoveryReceipt: recovered.receipt,
+    });
+    expect(disposed.status).toBe("disposed");
+    expect(existsSync(dirname(journalPath))).toBeFalse();
+    const restarted = createNativeProcessPort({
+      rootDir: dir,
+      output: { publish: () => {}, close: () => {}, fail: () => {} },
+    });
+    expect(await restarted.recoverAttempt(target)).toEqual(recovered);
   }, 10_000);
 
   test("recovers an exact guardian after its controller is killed", async () => {
@@ -1767,8 +1910,28 @@ describe("t240 provider-neutral native process", () => {
 
     unlinkSync(runDirectory);
     renameSync(ownedBackup, runDirectory);
+    const disposalsDirectory = join(dir, ".amadeus-swarm-driver", "native", "disposals");
+    mkdirSync(disposalsDirectory, { mode: 0o700 });
+    chmodSync(disposalsDirectory, 0o755);
+    await expect(session.dispose()).rejects.toThrow("NATIVE_PROCESS_DISPOSAL_UNKNOWN");
+    expect(recoveryJournal(dir, plan.recoveryJournalRelativePath)).toMatchObject({ state: "disposed" });
+    expect(existsSync(runDirectory)).toBeTrue();
+    chmodSync(disposalsDirectory, 0o700);
     await session.dispose();
+    await expect(session.dispose()).resolves.toBeUndefined();
     expect(existsSync(runDirectory)).toBeFalse();
+    const disposalId = digestValue({
+      nativeRunId: plan.nativeRunId,
+      runEpochDigest: plan.runEpochDigest,
+    });
+    expect(existsSync(join(
+      dir,
+      ".amadeus-swarm-driver",
+      "native",
+      "disposals",
+      disposalId,
+      "completed.json",
+    ))).toBeTrue();
     expect(port.activeRecordCount()).toBe(0);
     await expect(session.observeIdentity()).rejects.toThrow("NATIVE_PROCESS_DISPOSED");
   });
@@ -2896,6 +3059,7 @@ describe("t240 provider-neutral native process", () => {
     const makeSession = (input: Readonly<{
       transport?: "stdio-json" | "pty-interactive";
       deadlineMs?: number;
+      now?: () => Date;
       output?: Readonly<{
         publish(nativeRunId: string, frame: NativeProcessOutputFrame): void;
         close(nativeRunId: string): void;
@@ -2995,7 +3159,7 @@ describe("t240 provider-neutral native process", () => {
         observed.value.platform,
         10,
         Date.now(),
-        () => new Date(),
+        input.now ?? (() => new Date()),
         () => {},
       );
       return { child, plan, record, session, wrapperPlan, launch };
@@ -3011,6 +3175,23 @@ describe("t240 provider-neutral native process", () => {
       armDeadline: fixture.wrapperPlan.armDeadline,
       process: processIdentity,
     })}\n`, "utf-8");
+    const markTerminal = (fixture: ReturnType<typeof makeSession>): void => {
+      const processIdentityDigest = digestValue(observed.value);
+      const lifecycle = Object.freeze({
+        ...fixture.record.lifecycle,
+        state: "terminal" as const,
+        processIdentityDigest,
+        terminal: Object.freeze({
+          transport: fixture.launch.transport.kind,
+          exitCode: 0,
+          processGroupId: observed.value.processGroupId,
+          nativeRunId: fixture.plan.nativeRunId,
+          processIdentityDigest,
+        }),
+      });
+      Reflect.set(fixture.record, "lifecycle", lifecycle);
+      writeFileSync(fixture.record.recoveryJournalPath, `${JSON.stringify(lifecycle)}\n`, "utf-8");
+    };
 
     const invalidTerminalChild = new EventEmitter();
     const invalidTerminal = nativeProcessTestSeam.observeProviderTerminal(
@@ -3084,6 +3265,33 @@ describe("t240 provider-neutral native process", () => {
       transport: terminalMismatch.launch.transport,
     })).rejects.toThrow("NATIVE_PROCESS_PROVIDER_TERMINAL_INVALID");
     expect(terminalIdentity.processIdentityDigest).toBe(digestValue(observed.value));
+
+    const legacyDisposal = makeSession();
+    markTerminal(legacyDisposal);
+    await expect(legacyDisposal.session.dispose()).resolves.toBeUndefined();
+    expect(existsSync(join(dir, dirname(legacyDisposal.plan.recoveryJournalRelativePath)))).toBeFalse();
+
+    let canonicalPath = "";
+    let savedPath = "";
+    let replaced = false;
+    const ownershipSwap = makeSession({
+      now: () => {
+        if (!replaced) {
+          replaced = true;
+          renameSync(canonicalPath, savedPath);
+          mkdirSync(canonicalPath, { mode: 0o700 });
+        }
+        return new Date();
+      },
+    });
+    canonicalPath = join(dir, dirname(ownershipSwap.plan.recoveryJournalRelativePath));
+    savedPath = `${canonicalPath}-saved`;
+    markTerminal(ownershipSwap);
+    await expect(ownershipSwap.session.dispose())
+      .rejects.toThrow("NATIVE_PROCESS_RUN_DIRECTORY_OWNERSHIP_MISMATCH");
+    expect(replaced).toBeTrue();
+    expect(existsSync(savedPath)).toBeTrue();
+    expect(existsSync(canonicalPath)).toBeTrue();
   });
 
   test("fails closed before planning on Windows", () => {
