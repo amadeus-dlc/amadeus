@@ -3060,8 +3060,7 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
             kind: "error",
             message:
               `Stage "${slug}" is per-unit (for_each: unit-of-work) and ${unsettled.length} of ` +
-              `${units.length} units are not yet complete (${unsettled.join(", ")}). ` +
-              "Run `next` to continue the remaining units before approving.",
+              `${units.length} units are not yet complete (${unsettled.join(", ")}). Run \`next\` to continue the remaining units before approving.`,
           });
           return;
         }
