@@ -323,6 +323,7 @@ function failureRecoveryContext(
   if (!dispatchPreparation) return undefined;
   const dispatch = failureRecoveryDispatch(checkpoint, dispatchOverride);
   return Object.freeze({
+    selectedContext: checkpoint.selectedContext,
     dispatchPreparation,
     ...(checkpoint.preparedNativeRun ? { preparedNativeRun: checkpoint.preparedNativeRun } : {}),
     ...(dispatch ? { dispatch } : {}),

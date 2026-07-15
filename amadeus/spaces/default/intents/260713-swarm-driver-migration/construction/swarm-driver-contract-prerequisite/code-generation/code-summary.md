@@ -9,6 +9,7 @@ U-04 `codex-native-driver` が安全に実装できるよう、U-01/U-02のprovi
 - `ProbeResult`へclosed schemaの`ProbeBindingReferenceV1`を追加した。available probeだけが保持でき、driver/mode、Codex resolved model、lowercase SHA-256 seed/final digestを検証する。
 - selection projectionとcheckpoint parseを通じてbinding referenceを保持し、unknown field、secret-like field、partial binding、driver/mode mismatchを拒否する。
 - `AdapterExecutionPlan`へoptionalな`NativeExecutionBinding`を追加した。probe binding、tool environment policy digest、sandbox policy digestをprovider arm前の`PreparedNativeRun`へimmutableに保存する。
+- failed recovery snapshotにもredacted `selectedContext`を保持し、binding付き`PreparedNativeRun`がselected ProbeBindingと一致しない場合やselectionを欠く場合はparse時にfail-closedする。bindingなしの既存snapshotは後方互換で受理する。
 - CodexのC-08は`codex-ultra-v1:<resolved-model-id>`だけでなく、selected ProbeBindingのmode identifierとresolved modelへの完全一致を要求する。Claude/Kiroのliteral exact policyは維持した。
 - native candidateの共通probe timeoutを10,000msから45,000msへ更新した。provider固有step ceilingはadapter側の責務として残した。
 - framework coreの変更をClaude、Codex、Kiro CLI、Kiro IDEの生成treeとproject-local self installへ同期した。
@@ -20,6 +21,7 @@ U-04 `codex-native-driver` が安全に実装できるよう、U-01/U-02のprovi
 - `t231`: resolve contextと45秒budget、bindingのpre-arm checkpoint、mismatch/partial fail-closed。
 - `t237`: AdapterExecutionPlanからPreparedNativeRunへのimmutable binding伝達とarm前callback。
 - 独立レビューIteration 1は非Codex空resolved modelの契約不整合を指摘し、RED→GREENで修正した。Iteration 2は`READY`で追加指摘なし。
+- PR #984のBugbot threadはfailed recovery binding相関の欠落を指摘し、`t231`のselection欠落・binding mismatch caseをRED→GREENで修正した。
 
 ## 検証
 

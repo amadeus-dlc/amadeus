@@ -9,6 +9,7 @@
 
 - 2026-07-15T04:38:24Z — 初回レビューで、非Codex bindingの空`resolvedModelId`をselectionだけが受理する契約不整合を検出した。contract、JSON schema、checkpoint、native executionを「field存在時は非空」へ統一し、非Codex回帰testを追加した。
 - 2026-07-15T04:38:24Z — 初回の全coverage実行で、今回差分由来のcomplexity 6件と生成tree drift 3系統を検出した。helper分割とpackage/promote同期で解消した。未変更のreaper競合testは一度だけ失敗したが、全coverage再実行ではgreenとなり、今回差分外の一過性競合として記録する。
+- 2026-07-15T05:00:09Z — PR #984のBugbot reviewで、failed recovery contextだけがselected ProbeBindingとの相関を失うことを検出した。binding付きPreparedNativeRunではredacted selectedContextをfailure snapshotへ保持し、欠落またはbinding不一致をcheckpoint parse時に拒否するよう修正した。bindingなしの既存snapshotは後方互換で受理する。
 
 ## Tradeoffs
 

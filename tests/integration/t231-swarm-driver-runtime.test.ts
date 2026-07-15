@@ -1878,6 +1878,57 @@ describe("t231 swarm driver runtime", () => {
     });
   });
 
+  test("binds failed recovery snapshots to the selected probe binding", async () => {
+    const f = fixture({ nativeAvailable: true, callbackMode: "process-observed-then-fails" });
+
+    expect(await runNativeAttempt(f)).toMatchObject({ type: "err", error: { code: "EXECUTION_FAILED" } });
+    const failed = f.store.read(1);
+    if (failed?.state !== "failed-resumable" || failed.failure.recoveryContext === undefined) {
+      throw new Error("failed recovery fixture expected");
+    }
+    const recoveryContext = failed.failure.recoveryContext;
+    expect(recoveryContext.selectedContext?.selection).toMatchObject({
+      kind: "native-selection",
+      selected: "codex-ultra",
+      probe: { binding: probeBinding },
+    });
+    if (recoveryContext.preparedNativeRun?.binding === undefined) {
+      throw new Error("prepared binding fixture expected");
+    }
+
+    const withStateDigest = (checkpoint: AttemptCheckpoint): AttemptCheckpoint => {
+      const { stateDigest: _stateDigest, ...semantic } = checkpoint;
+      return {
+        ...semantic,
+        stateDigest: digestValue({
+          ...semantic,
+          lease: { ...semantic.lease, heartbeatAt: undefined, expiresAt: undefined },
+        }),
+      } as AttemptCheckpoint;
+    };
+    const { selectedContext: _selectedContext, ...withoutSelectedContext } = recoveryContext;
+    const mismatched = {
+      ...recoveryContext,
+      preparedNativeRun: {
+        ...recoveryContext.preparedNativeRun,
+        binding: {
+          ...recoveryContext.preparedNativeRun.binding,
+          probeBinding: {
+            ...recoveryContext.preparedNativeRun.binding.probeBinding,
+            finalDigest: "e".repeat(64),
+          },
+        },
+      },
+    };
+
+    for (const candidate of [withoutSelectedContext, mismatched]) {
+      expect(parseAttemptCheckpoint(withStateDigest({
+        ...failed,
+        failure: { ...failed.failure, recoveryContext: candidate },
+      } as AttemptCheckpoint))).toMatchObject({ type: "err", error: { code: "SCHEMA_INVALID", field: "failure" } });
+    }
+  });
+
   test("accepts repeated observation of the same process identity", async () => {
     const f = fixture({ nativeAvailable: true, callbackMode: "duplicate-process-observed" });
 

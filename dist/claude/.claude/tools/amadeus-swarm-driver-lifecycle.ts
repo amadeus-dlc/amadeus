@@ -246,6 +246,7 @@ type FailureCheckpoint = Readonly<{
     affectedUnits: readonly string[];
     failedFromState: Exclude<AttemptState, "succeeded" | "failed-resumable" | "failed-terminal">;
     recoveryContext?: Readonly<{
+      selectedContext?: SelectedContext;
       dispatchPreparation: NativeDispatchPreparation;
       preparedNativeRun?: PreparedNativeRun;
       dispatch?: NativeDispatchCheckpoint;
@@ -1338,17 +1339,35 @@ function preparedCheckpointFieldsAreValid(value: Record<string, unknown>): boole
   );
 }
 
+function recoveryPreparedRunIsValid(
+  value: Record<string, unknown>,
+  selectedContext: SelectedContext | undefined,
+): boolean {
+  if (value.preparedNativeRun === undefined) return true;
+  if (!preparedNativeRunIsValid(value.preparedNativeRun)) return false;
+  const prepared = value.preparedNativeRun as PreparedNativeRun;
+  if (prepared.dispatchPreparationDigest !== digestValue(value.dispatchPreparation)) return false;
+  if (prepared.binding !== undefined && selectedContext === undefined) return false;
+  return selectedContext === undefined ||
+    preparedNativeRunBindingMatchesSelection({ selectedContext }, prepared);
+}
+
 function recoveryContextIsValid(value: unknown): boolean {
   if (!isRecord(value) || !dispatchPreparationIsValid(value.dispatchPreparation)) return false;
+  const hasSelectedContext = value.selectedContext !== undefined;
   const hasPrepared = value.preparedNativeRun !== undefined;
   const hasDispatch = value.dispatch !== undefined;
-  if (!hasExactKeys(value, ["dispatchPreparation", ...(hasPrepared ? ["preparedNativeRun"] : []), ...(hasDispatch ? ["dispatch"] : [])])) {
+  if (!hasExactKeys(value, [
+    ...(hasSelectedContext ? ["selectedContext"] : []),
+    "dispatchPreparation",
+    ...(hasPrepared ? ["preparedNativeRun"] : []),
+    ...(hasDispatch ? ["dispatch"] : []),
+  ])) {
     return false;
   }
-  if (hasPrepared && !preparedNativeRunIsValid(value.preparedNativeRun)) return false;
-  if (hasPrepared && (value.preparedNativeRun as PreparedNativeRun).dispatchPreparationDigest !== digestValue(value.dispatchPreparation)) {
-    return false;
-  }
+  if (hasSelectedContext && !selectedContextIsValid(value.selectedContext)) return false;
+  const selectedContext = hasSelectedContext ? value.selectedContext as SelectedContext : undefined;
+  if (!recoveryPreparedRunIsValid(value, selectedContext)) return false;
   if (!hasDispatch) return true;
   if (!hasPrepared || !dispatchCheckpointIsValid(value.dispatch)) return false;
   return (value.dispatch as NativeDispatchCheckpoint).preparedNativeRunDigest === digestValue(value.preparedNativeRun);
