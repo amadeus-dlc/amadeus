@@ -227,6 +227,7 @@ export type NativeLifecycleExecutionInput = Readonly<{
   fencingToken: number;
   onDispatchPrepared(preparation: NativeDispatchPreparation): Promise<void>;
   onResourcesPrepared(prepared: PreparedNativeRun): Promise<void>;
+  onProcessObserved?(checkpoint: NativeDispatchCheckpoint): void;
   onReadyToArm(checkpoint: NativeDispatchCheckpoint): Promise<void>;
   onCaptureBound(binding: EventBoundCaptureBindingReceipt): Promise<void>;
 }>;
@@ -973,6 +974,28 @@ type ActiveNativeRun = Readonly<{
   identity: NativeProcessIdentity;
 }>;
 
+type NativeDispatchCheckpointInput = Readonly<{
+  lifecycle: NativeLifecycleExecutionInput;
+  preparation: AdapterResourcePreparation;
+  resources: MaterializedAuxiliaryResourceSet;
+  preparedNativeRun: PreparedNativeRun;
+  execution: AdapterExecutionPlan;
+  identity: NativeProcessIdentity;
+}>;
+
+function nativeDispatchCheckpoint(input: NativeDispatchCheckpointInput): NativeDispatchCheckpoint {
+  return Object.freeze({
+    kind: "native",
+    nativeRunId: input.lifecycle.launchInput.nativeRunId,
+    preparedNativeRunDigest: digestValue(input.preparedNativeRun),
+    resourceReceiptDigest: input.resources.receiptDigest,
+    processIdentityDigest: input.identity.processIdentityDigest,
+    armDigest: input.identity.armDigest,
+    armDeadline: input.identity.armDeadline,
+    capture: captureCheckpoint(input.execution, input.preparation, input.resources),
+  });
+}
+
 async function startNativeRun(input: Readonly<{
   ports: NativeExecutionPorts;
   lifecycle: NativeLifecycleExecutionInput;
@@ -1035,19 +1058,17 @@ async function startNativeRun(input: Readonly<{
       processIdentityDigest: identity.processIdentityDigest,
     }),
   );
+  const dispatch = nativeDispatchCheckpoint({
+    lifecycle,
+    preparation,
+    resources,
+    preparedNativeRun,
+    execution,
+    identity,
+  });
+  lifecycle.onProcessObserved?.(dispatch);
   await input.ports.resources.verifyForArm(preparation, resources);
-  await lifecycle.onReadyToArm(
-    Object.freeze({
-      kind: "native",
-      nativeRunId: lifecycle.launchInput.nativeRunId,
-      preparedNativeRunDigest: digestValue(preparedNativeRun),
-      resourceReceiptDigest: resources.receiptDigest,
-      processIdentityDigest: identity.processIdentityDigest,
-      armDigest: identity.armDigest,
-      armDeadline: identity.armDeadline,
-      capture: captureCheckpoint(execution, preparation, resources),
-    }),
-  );
+  await lifecycle.onReadyToArm(dispatch);
   return Object.freeze({ execution, evidenceSession, evidence, capture, process, identity });
 }
 

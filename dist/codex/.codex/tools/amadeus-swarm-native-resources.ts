@@ -117,13 +117,63 @@ type ResourceJournal = Readonly<{
 
 const OWNER_MARKER_FILE = ".amadeus-owner.json";
 
-export type NativeResourceRecoveryResult = Readonly<{
+export type NativeResourceRecoveryTarget = Readonly<{
+  kind: "native-resource-recovery";
+  schemaVersion: 1;
+  executionId: string;
+  attemptId: string;
+  attemptNonceHash: string;
+  planDigest: string;
+  waveIndex: number;
+  waveDigest: string;
+  nativeRunId: string;
+  preparationDigest: string;
+  fencingToken: number | null;
+  processIdentityDigest: string | null;
+}>;
+
+export type NativeResourceCleanupReceipt = Readonly<{
+  kind: "native-resource-cleanup-receipt";
+  schemaVersion: 1;
+  targetDigest: string;
+  nativeRunId: string;
+  resourceReceiptDigest: string | null;
+  cleanupScopeDigest: string;
+  disposition: "cleaned";
+  receiptDigest: string;
+}>;
+
+export type NativeResourceRecoveryResult =
+  | Readonly<{
+      status: "cleaned";
+      receipt: NativeResourceCleanupReceipt;
+    }>
+  | Readonly<{ status: "absent" }>
+  | Readonly<{ status: "unknown" }>;
+
+export type NativeResourceSweepResult = Readonly<{
   recovered: number;
   retained: number;
 }>;
 
 export type NativeResourceSupervisor = ResourceSupervisorPort & Readonly<{
-  recover(): Promise<NativeResourceRecoveryResult>;
+  recover(): Promise<NativeResourceSweepResult>;
+  recoverAttempt(target: NativeResourceRecoveryTarget): Promise<NativeResourceRecoveryResult>;
+}>;
+
+type ResourceCleanupTombstone = Readonly<{
+  kind: "native-resource-cleanup-completed";
+  schemaVersion: 1;
+  target: NativeResourceRecoveryTarget;
+  receipt: NativeResourceCleanupReceipt;
+  tombstoneDigest: string;
+}>;
+
+type ResourceCleanupCrashPoint = "cleanup-complete" | "tombstone-published" | "journal-unlinked";
+
+type NativeResourceSupervisorInput = Readonly<{
+  journalRoot: string;
+  recoveryObserver?: NativeResourceRecoveryObserverPort;
 }>;
 
 type MaterializedResourceOutcome = Readonly<{
@@ -695,6 +745,233 @@ function readJournal(path: string): ResourceJournal {
     throw new Error("RESOURCE_JOURNAL_INVALID");
   }
   return parseJournal(JSON.parse(readFileSync(path, "utf-8")));
+}
+
+function resourceRecoveryTargetHasExactShape(value: Record<string, unknown>): boolean {
+  return hasExactKeys(value, [
+    "kind",
+    "schemaVersion",
+    "executionId",
+    "attemptId",
+    "attemptNonceHash",
+    "planDigest",
+    "waveIndex",
+    "waveDigest",
+    "nativeRunId",
+    "preparationDigest",
+    "fencingToken",
+    "processIdentityDigest",
+  ]);
+}
+
+function resourceRecoveryTargetStringsAreValid(value: Record<string, unknown>): boolean {
+  return [
+    value.executionId,
+    value.attemptId,
+    value.attemptNonceHash,
+    value.planDigest,
+    value.waveDigest,
+    value.nativeRunId,
+    value.preparationDigest,
+  ].every(nonEmptyString);
+}
+
+function resourceRecoveryTargetWaveIsValid(value: Record<string, unknown>): boolean {
+  return Number.isInteger(value.waveIndex) && Number(value.waveIndex) >= 0;
+}
+
+function resourceRecoveryTargetOwnerIsValid(value: Record<string, unknown>): boolean {
+  if (value.fencingToken === null) return value.processIdentityDigest === null;
+  if (!Number.isInteger(value.fencingToken) || Number(value.fencingToken) < 1) return false;
+  return value.processIdentityDigest === null || nonEmptyString(value.processIdentityDigest);
+}
+
+function parseResourceRecoveryTarget(value: unknown): NativeResourceRecoveryTarget {
+  if (
+    !isRecord(value) ||
+    !resourceRecoveryTargetHasExactShape(value) ||
+    value.kind !== "native-resource-recovery" ||
+    value.schemaVersion !== 1 ||
+    !resourceRecoveryTargetStringsAreValid(value) ||
+    !resourceRecoveryTargetWaveIsValid(value) ||
+    !resourceRecoveryTargetOwnerIsValid(value)
+  ) {
+    throw new Error("RESOURCE_RECOVERY_TARGET_INVALID");
+  }
+  return Object.freeze({
+    kind: "native-resource-recovery",
+    schemaVersion: 1,
+    executionId: String(value.executionId),
+    attemptId: String(value.attemptId),
+    attemptNonceHash: String(value.attemptNonceHash),
+    planDigest: String(value.planDigest),
+    waveIndex: Number(value.waveIndex),
+    waveDigest: String(value.waveDigest),
+    nativeRunId: String(value.nativeRunId),
+    preparationDigest: String(value.preparationDigest),
+    fencingToken: value.fencingToken === null ? null : Number(value.fencingToken),
+    processIdentityDigest: value.processIdentityDigest === null
+      ? null
+      : String(value.processIdentityDigest),
+  });
+}
+
+function resourceRecoveryTarget(journal: ResourceJournal): NativeResourceRecoveryTarget {
+  return Object.freeze({
+    kind: "native-resource-recovery",
+    schemaVersion: 1,
+    executionId: journal.attemptIdentity.executionId,
+    attemptId: journal.attemptIdentity.attemptId,
+    attemptNonceHash: journal.attemptIdentity.attemptNonceHash,
+    planDigest: journal.attemptIdentity.planDigest,
+    waveIndex: journal.attemptIdentity.waveIndex,
+    waveDigest: journal.attemptIdentity.waveDigest,
+    nativeRunId: journal.nativeRunId,
+    preparationDigest: journal.preparationDigest,
+    fencingToken: journal.recoveryOwner?.fencingToken ?? null,
+    processIdentityDigest: journal.recoveryOwner?.processIdentityDigest ?? null,
+  });
+}
+
+function cleanupScopeDigest(journal: ResourceJournal): string {
+  return digestValue({
+    attemptIdentity: journal.attemptIdentity,
+    preparationDigest: journal.preparationDigest,
+    receiptDigest: journal.receiptDigest ?? null,
+    receipts: journal.receipts,
+    cleanupPaths: journal.cleanupPaths,
+    ownerMarkers: journal.ownerMarkers,
+    pending: journal.pending ?? null,
+  });
+}
+
+function resourceCleanupReceipt(
+  target: NativeResourceRecoveryTarget,
+  journal: ResourceJournal,
+): NativeResourceCleanupReceipt {
+  const semantic = Object.freeze({
+    kind: "native-resource-cleanup-receipt" as const,
+    schemaVersion: 1 as const,
+    targetDigest: digestValue(target),
+    nativeRunId: target.nativeRunId,
+    resourceReceiptDigest: journal.receiptDigest ?? null,
+    cleanupScopeDigest: cleanupScopeDigest(journal),
+    disposition: "cleaned" as const,
+  });
+  return Object.freeze({ ...semantic, receiptDigest: digestValue(semantic) });
+}
+
+function parseResourceCleanupReceipt(
+  value: unknown,
+  target: NativeResourceRecoveryTarget,
+): NativeResourceCleanupReceipt {
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, [
+      "kind",
+      "schemaVersion",
+      "targetDigest",
+      "nativeRunId",
+      "resourceReceiptDigest",
+      "cleanupScopeDigest",
+      "disposition",
+      "receiptDigest",
+    ]) ||
+    value.kind !== "native-resource-cleanup-receipt" ||
+    value.schemaVersion !== 1 ||
+    value.targetDigest !== digestValue(target) ||
+    value.nativeRunId !== target.nativeRunId ||
+    (value.resourceReceiptDigest !== null && !nonEmptyString(value.resourceReceiptDigest)) ||
+    !nonEmptyString(value.cleanupScopeDigest) ||
+    value.disposition !== "cleaned" ||
+    !nonEmptyString(value.receiptDigest)
+  ) {
+    throw new Error("RESOURCE_CLEANUP_TOMBSTONE_INVALID");
+  }
+  const semantic = Object.freeze({
+    kind: "native-resource-cleanup-receipt" as const,
+    schemaVersion: 1 as const,
+    targetDigest: String(value.targetDigest),
+    nativeRunId: String(value.nativeRunId),
+    resourceReceiptDigest: value.resourceReceiptDigest === null
+      ? null
+      : String(value.resourceReceiptDigest),
+    cleanupScopeDigest: String(value.cleanupScopeDigest),
+    disposition: "cleaned" as const,
+  });
+  if (digestValue(semantic) !== value.receiptDigest) {
+    throw new Error("RESOURCE_CLEANUP_TOMBSTONE_INVALID");
+  }
+  return Object.freeze({ ...semantic, receiptDigest: value.receiptDigest });
+}
+
+function cleanupTombstone(
+  target: NativeResourceRecoveryTarget,
+  journal: ResourceJournal,
+): ResourceCleanupTombstone {
+  const semantic = Object.freeze({
+    kind: "native-resource-cleanup-completed" as const,
+    schemaVersion: 1 as const,
+    target,
+    receipt: resourceCleanupReceipt(target, journal),
+  });
+  return Object.freeze({ ...semantic, tombstoneDigest: digestValue(semantic) });
+}
+
+function readCleanupTombstone(path: string): ResourceCleanupTombstone | null {
+  const stat = pathEntry(path);
+  if (!stat) return null;
+  if (!stat.isFile() || stat.isSymbolicLink() || statUid(stat) !== currentUid() || statMode(stat) !== 0o600) {
+    throw new Error("RESOURCE_CLEANUP_TOMBSTONE_INVALID");
+  }
+  const value: unknown = JSON.parse(readFileSync(path, "utf-8"));
+  if (
+    !isRecord(value) ||
+    !hasExactKeys(value, ["kind", "schemaVersion", "target", "receipt", "tombstoneDigest"]) ||
+    value.kind !== "native-resource-cleanup-completed" ||
+    value.schemaVersion !== 1 ||
+    !nonEmptyString(value.tombstoneDigest)
+  ) {
+    throw new Error("RESOURCE_CLEANUP_TOMBSTONE_INVALID");
+  }
+  const target = parseResourceRecoveryTarget(value.target);
+  const receipt = parseResourceCleanupReceipt(value.receipt, target);
+  const semantic = Object.freeze({
+    kind: "native-resource-cleanup-completed" as const,
+    schemaVersion: 1 as const,
+    target,
+    receipt,
+  });
+  if (digestValue(semantic) !== value.tombstoneDigest) {
+    throw new Error("RESOURCE_CLEANUP_TOMBSTONE_INVALID");
+  }
+  return Object.freeze({ ...semantic, tombstoneDigest: value.tombstoneDigest });
+}
+
+function publishCleanupTombstone(path: string, tombstone: ResourceCleanupTombstone): void {
+  const body = `${canonicalJson(tombstone)}\n`;
+  const temporaryPath = `${path}.${process.pid}.${randomUUID()}.tmp`;
+  let temporaryIdentity: ResourceIdentity | undefined;
+  try {
+    writeDurableFile(temporaryPath, body, (identity) => {
+      temporaryIdentity = identity;
+    });
+    try {
+      linkSync(temporaryPath, path);
+      fsyncDirectory(dirname(path));
+    } catch (error) {
+      if (!(isRecord(error) && error.code === "EEXIST")) throw error;
+    }
+  } finally {
+    const temporary = pathEntry(temporaryPath);
+    if (temporaryIdentity && temporary && identityMatches(temporary, temporaryIdentity)) {
+      unlinkSync(temporaryPath);
+    }
+  }
+  const durable = readCleanupTombstone(path);
+  if (!durable || digestValue(durable) !== digestValue(tombstone)) {
+    throw new Error("RESOURCE_CLEANUP_TOMBSTONE_CONFLICT");
+  }
 }
 
 function ownedFileReceipt(
@@ -1439,6 +1716,13 @@ function validateResourceReceiptDigest(resources: MaterializedAuxiliaryResourceS
 export const nativeResourceTestSeam = Object.freeze({
   statUid,
   validateResourceReceiptDigest,
+  createCrashInjected(
+    input: NativeResourceSupervisorInput & Readonly<{ crashAfter: ResourceCleanupCrashPoint }>,
+  ): NativeResourceSupervisor {
+    return createNativeResourceSupervisorAdapter(input, (point) => {
+      if (point === input.crashAfter) throw new Error("RESOURCE_CLEANUP_TEST_CRASH");
+    });
+  },
 });
 
 function validateJournalBinding(journal: ResourceJournal, resources: MaterializedAuxiliaryResourceSet): void {
@@ -1629,16 +1913,96 @@ function journalFile(root: string, input: LaunchInput): string {
   return path;
 }
 
+function journalFileForRecoveryTarget(
+  root: string,
+  target: NativeResourceRecoveryTarget,
+): string {
+  const name = digestValue({
+    nativeRunId: target.nativeRunId,
+    executionId: target.executionId,
+    attemptId: target.attemptId,
+    waveIndex: target.waveIndex,
+  });
+  const path = resolve(root, `${name}.json`);
+  if (!path.startsWith(`${root}${sep}`)) throw new Error("RESOURCE_JOURNAL_PATH_INVALID");
+  return path;
+}
+
+function cleanupTombstoneFile(root: string, target: NativeResourceRecoveryTarget): string {
+  const path = resolve(root, `${digestValue(target)}.completed.json`);
+  if (!path.startsWith(`${root}${sep}`)) throw new Error("RESOURCE_JOURNAL_PATH_INVALID");
+  return path;
+}
+
+function journalMatchesRecoveryTarget(
+  journal: ResourceJournal,
+  target: NativeResourceRecoveryTarget,
+): boolean {
+  const journalTarget = resourceRecoveryTarget(journal);
+  if (journal.recoveryOwner) {
+    return digestValue(journalTarget) === digestValue(target);
+  }
+  return digestValue({
+    ...journalTarget,
+    fencingToken: null,
+    processIdentityDigest: null,
+  }) === digestValue({
+    ...target,
+    fencingToken: null,
+    processIdentityDigest: null,
+  });
+}
+
+function completeJournalCleanup(
+  root: string,
+  journalPath: string,
+  journal: ResourceJournal,
+  afterStep: (point: ResourceCleanupCrashPoint) => void,
+  target: NativeResourceRecoveryTarget = resourceRecoveryTarget(journal),
+): NativeResourceCleanupReceipt {
+  const tombstone = cleanupTombstone(target, journal);
+  cleanupJournalResources(journalPath, journal);
+  afterStep("cleanup-complete");
+  publishCleanupTombstone(cleanupTombstoneFile(root, target), tombstone);
+  afterStep("tombstone-published");
+  unlinkJournal(journalPath);
+  afterStep("journal-unlinked");
+  return tombstone.receipt;
+}
+
+function replayCompletedCleanup(
+  root: string,
+  target: NativeResourceRecoveryTarget,
+  tombstone: ResourceCleanupTombstone,
+): NativeResourceRecoveryResult {
+  if (digestValue(tombstone.target) !== digestValue(target)) {
+    return Object.freeze({ status: "unknown" });
+  }
+  const journalPath = journalFileForRecoveryTarget(root, target);
+  if (pathEntry(journalPath)) {
+    const journal = readJournal(journalPath);
+    if (
+      !journalMatchesRecoveryTarget(journal, target) ||
+      cleanupScopeDigest(journal) !== tombstone.receipt.cleanupScopeDigest ||
+      (journal.receiptDigest ?? null) !== tombstone.receipt.resourceReceiptDigest
+    ) {
+      return Object.freeze({ status: "unknown" });
+    }
+    unlinkJournal(journalPath);
+  }
+  return Object.freeze({ status: "cleaned", receipt: tombstone.receipt });
+}
+
 function stagingFile(plan: AuxiliaryResourcePlan, input: LaunchInput): string {
   if (plan.kind !== "attempt-owned-file") throw new Error("RESOURCE_KIND_UNIMPLEMENTED");
   const suffix = digestValue({ nativeRunId: input.nativeRunId, resourceId: plan.resourceId }).slice(0, 16);
   return join(dirname(resolve(plan.path)), `.${basename(plan.path)}.amadeus-${suffix}.tmp`);
 }
 
-export function createNativeResourceSupervisor(input: Readonly<{
-  journalRoot: string;
-  recoveryObserver?: NativeResourceRecoveryObserverPort;
-}>): NativeResourceSupervisor {
+function createNativeResourceSupervisorAdapter(
+  input: NativeResourceSupervisorInput,
+  afterCleanupStep: (point: ResourceCleanupCrashPoint) => void,
+): NativeResourceSupervisor {
   const configuredRoot = resolve(input.journalRoot);
   mkdirSync(configuredRoot, { recursive: true, mode: 0o700 });
   const rootStat = lstatSync(configuredRoot, { bigint: true });
@@ -1752,8 +2116,7 @@ export function createNativeResourceSupervisor(input: Readonly<{
       ) {
         throw new Error("RESOURCE_PROCESS_ACTIVE");
       }
-      cleanupJournalResources(path, journal);
-      unlinkJournal(path);
+      completeJournalCleanup(root, path, journal, afterCleanupStep);
       activeJournals.delete(resources);
       completedReceipts.add(resources);
     },
@@ -1780,7 +2143,7 @@ export function createNativeResourceSupervisor(input: Readonly<{
       writeJournal(path, bound);
     },
 
-    async recover(): Promise<NativeResourceRecoveryResult> {
+    async recover(): Promise<NativeResourceSweepResult> {
       let recovered = 0;
       let retained = 0;
       for (const name of readdirSync(root)) {
@@ -1793,8 +2156,7 @@ export function createNativeResourceSupervisor(input: Readonly<{
             retained += 1;
             continue;
           }
-          cleanupJournalResources(path, journal);
-          unlinkJournal(path);
+          completeJournalCleanup(root, path, journal, afterCleanupStep);
           recovered += 1;
         } catch {
           retained += 1;
@@ -1802,5 +2164,35 @@ export function createNativeResourceSupervisor(input: Readonly<{
       }
       return Object.freeze({ recovered, retained });
     },
+
+    async recoverAttempt(rawTarget): Promise<NativeResourceRecoveryResult> {
+      try {
+        const target = parseResourceRecoveryTarget(rawTarget);
+        const tombstone = readCleanupTombstone(cleanupTombstoneFile(root, target));
+        if (tombstone) return replayCompletedCleanup(root, target, tombstone);
+        const path = journalFileForRecoveryTarget(root, target);
+        if (!pathEntry(path)) return Object.freeze({ status: "absent" });
+        const journal = readJournal(path);
+        if (!journalMatchesRecoveryTarget(journal, target)) {
+          return Object.freeze({ status: "unknown" });
+        }
+        if (
+          journal.recoveryOwner !== undefined &&
+          !await observerAuthorizesCleanup(journal, input.recoveryObserver)
+        ) {
+          return Object.freeze({ status: "unknown" });
+        }
+        const receipt = completeJournalCleanup(root, path, journal, afterCleanupStep, target);
+        return Object.freeze({ status: "cleaned", receipt });
+      } catch {
+        return Object.freeze({ status: "unknown" });
+      }
+    },
   });
+}
+
+export function createNativeResourceSupervisor(
+  input: NativeResourceSupervisorInput,
+): NativeResourceSupervisor {
+  return createNativeResourceSupervisorAdapter(input, () => {});
 }

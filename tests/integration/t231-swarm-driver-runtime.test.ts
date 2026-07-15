@@ -50,6 +50,7 @@ import {
   type AttemptFailureCode,
 } from "../../packages/framework/core/tools/amadeus-swarm-finalize-contract.ts";
 import type {
+  NativeDispatchCheckpoint,
   NativeDispatchPreparation,
   NativeLifecycleExecutionInput,
   PreparedNativeRun,
@@ -154,16 +155,28 @@ type NativeCallbackMode =
   | "invalid-ready-to-arm"
   | "event-bound-capture"
   | "duplicate-capture-bound"
+  | "process-observed-then-fails"
+  | "duplicate-process-observed"
+  | "conflicting-process-observed"
   | "missing-ready-to-arm";
 
+const defaultProcessObservation = Object.freeze({
+  processObservedCount: 1,
+  conflictingProcessObserved: false,
+  failAfterProcessObserved: false,
+});
+
 const nativeCallbackPlans = Object.freeze({
-  valid: { dispatchCount: 1, resourceCount: 1, ready: true, validNativeRunId: true, captureKind: "hook-only", bindingCount: 0 },
-  "duplicate-dispatch-prepared": { dispatchCount: 2, resourceCount: 1, ready: true, validNativeRunId: true, captureKind: "hook-only", bindingCount: 0 },
-  "duplicate-resources-prepared": { dispatchCount: 1, resourceCount: 2, ready: true, validNativeRunId: true, captureKind: "hook-only", bindingCount: 0 },
-  "invalid-ready-to-arm": { dispatchCount: 1, resourceCount: 1, ready: true, validNativeRunId: false, captureKind: "hook-only", bindingCount: 0 },
-  "event-bound-capture": { dispatchCount: 1, resourceCount: 1, ready: true, validNativeRunId: true, captureKind: "event-bound-provider-path", bindingCount: 1 },
-  "duplicate-capture-bound": { dispatchCount: 1, resourceCount: 1, ready: true, validNativeRunId: true, captureKind: "event-bound-provider-path", bindingCount: 2 },
-  "missing-ready-to-arm": { dispatchCount: 1, resourceCount: 1, ready: false, validNativeRunId: true, captureKind: "hook-only", bindingCount: 0 },
+  valid: { ...defaultProcessObservation, dispatchCount: 1, resourceCount: 1, ready: true, validNativeRunId: true, captureKind: "hook-only", bindingCount: 0 },
+  "duplicate-dispatch-prepared": { ...defaultProcessObservation, dispatchCount: 2, resourceCount: 1, ready: true, validNativeRunId: true, captureKind: "hook-only", bindingCount: 0 },
+  "duplicate-resources-prepared": { ...defaultProcessObservation, dispatchCount: 1, resourceCount: 2, ready: true, validNativeRunId: true, captureKind: "hook-only", bindingCount: 0 },
+  "invalid-ready-to-arm": { ...defaultProcessObservation, dispatchCount: 1, resourceCount: 1, ready: true, validNativeRunId: false, captureKind: "hook-only", bindingCount: 0 },
+  "event-bound-capture": { ...defaultProcessObservation, dispatchCount: 1, resourceCount: 1, ready: true, validNativeRunId: true, captureKind: "event-bound-provider-path", bindingCount: 1 },
+  "duplicate-capture-bound": { ...defaultProcessObservation, dispatchCount: 1, resourceCount: 1, ready: true, validNativeRunId: true, captureKind: "event-bound-provider-path", bindingCount: 2 },
+  "process-observed-then-fails": { ...defaultProcessObservation, dispatchCount: 1, resourceCount: 1, ready: false, validNativeRunId: true, captureKind: "hook-only", bindingCount: 0, failAfterProcessObserved: true },
+  "duplicate-process-observed": { ...defaultProcessObservation, dispatchCount: 1, resourceCount: 1, ready: true, validNativeRunId: true, captureKind: "hook-only", bindingCount: 0, processObservedCount: 2 },
+  "conflicting-process-observed": { ...defaultProcessObservation, dispatchCount: 1, resourceCount: 1, ready: true, validNativeRunId: true, captureKind: "hook-only", bindingCount: 0, processObservedCount: 2, conflictingProcessObserved: true },
+  "missing-ready-to-arm": { ...defaultProcessObservation, dispatchCount: 1, resourceCount: 1, ready: false, validNativeRunId: true, captureKind: "hook-only", bindingCount: 0 },
 } as const satisfies Record<NativeCallbackMode, Readonly<{
   dispatchCount: number;
   resourceCount: number;
@@ -171,6 +184,9 @@ const nativeCallbackPlans = Object.freeze({
   validNativeRunId: boolean;
   captureKind: "hook-only" | "event-bound-provider-path";
   bindingCount: number;
+  processObservedCount: number;
+  conflictingProcessObserved: boolean;
+  failAfterProcessObserved: boolean;
 }>>);
 
 async function notifyNativeCallbacks(input: Readonly<{
@@ -180,6 +196,7 @@ async function notifyNativeCallbacks(input: Readonly<{
   preparedNativeRun: PreparedNativeRun;
   onDispatchPrepared: NativeLifecycleExecutionInput["onDispatchPrepared"];
   onResourcesPrepared: NativeLifecycleExecutionInput["onResourcesPrepared"];
+  onProcessObserved: NativeLifecycleExecutionInput["onProcessObserved"];
   onReadyToArm: NativeLifecycleExecutionInput["onReadyToArm"];
   onCaptureBound: NativeLifecycleExecutionInput["onCaptureBound"];
 }>): Promise<void> {
@@ -189,8 +206,7 @@ async function notifyNativeCallbacks(input: Readonly<{
   for (let count = 0; count < input.plan.resourceCount; count += 1) {
     await input.onResourcesPrepared(input.preparedNativeRun);
   }
-  if (!input.plan.ready) return;
-  await input.onReadyToArm({
+  const dispatch: NativeDispatchCheckpoint = Object.freeze({
     kind: "native",
     nativeRunId: input.plan.validNativeRunId ? input.nativeRunId : "unexpected-native-run",
     preparedNativeRunDigest: digestValue(input.preparedNativeRun),
@@ -200,20 +216,30 @@ async function notifyNativeCallbacks(input: Readonly<{
     armDeadline: "2026-07-14T00:00:30.000Z",
     capture: input.plan.captureKind === "event-bound-provider-path"
       ? {
-          kind: "event-bound-provider-path",
+          kind: "event-bound-provider-path" as const,
           identityDigest: input.dispatchPreparation.captureIdentityDigest,
           capturePlanDigest: "capture-plan",
           resourcesDigest: "resource-receipt",
-          transport: "stdio-json",
+          transport: "stdio-json" as const,
         }
       : {
-          kind: "hook-only",
+          kind: "hook-only" as const,
           identityDigest: input.dispatchPreparation.captureIdentityDigest,
           capturePlanDigest: "capture-plan",
           resourcesDigest: "resource-receipt",
-          transport: "stdio-json",
+          transport: "stdio-json" as const,
         },
   });
+  for (let count = 0; count < input.plan.processObservedCount; count += 1) {
+    input.onProcessObserved?.(
+      count > 0 && input.plan.conflictingProcessObserved
+        ? Object.freeze({ ...dispatch, processIdentityDigest: "conflicting-process-identity" })
+        : dispatch,
+    );
+  }
+  if (input.plan.failAfterProcessObserved) throw new Error("injected post-process-observation failure");
+  if (!input.plan.ready) return;
+  await input.onReadyToArm(dispatch);
   const binding = {
     kind: "event-bound-provider-path" as const,
     nativeRunId: input.nativeRunId,
@@ -245,6 +271,8 @@ function fixture(
     registrationUnavailableOnRun?: boolean;
     failDispatchPreparationCheckpointWriteOnce?: boolean;
     failDispatchPreparationAuditAppendOnce?: boolean;
+    failReadyToArmCheckpointWriteOnce?: boolean;
+    failReadyToArmAuditAppendOnce?: boolean;
     invalidDispatchPreparation?: "absolute-path" | "parent-path" | "empty-digest";
   }> = {},
 ) {
@@ -255,6 +283,8 @@ function fixture(
   let failCheckpointWrite = false;
   let failDispatchPreparationCheckpointWrite = options.failDispatchPreparationCheckpointWriteOnce === true;
   let failDispatchPreparationAuditAppend = options.failDispatchPreparationAuditAppendOnce === true;
+  let failReadyToArmCheckpointWrite = options.failReadyToArmCheckpointWriteOnce === true;
+  let failReadyToArmAuditAppend = options.failReadyToArmAuditAppendOnce === true;
   let heartbeatCallback: (() => void) | undefined;
   let heartbeatDelay: number | undefined;
   let heartbeatCancelled = false;
@@ -329,6 +359,14 @@ function fixture(
           failDispatchPreparationCheckpointWrite = false;
           throw new Error("injected dispatch preparation checkpoint write failure");
         }
+        if (
+          failReadyToArmCheckpointWrite &&
+          checkpoint.state === "dispatched" &&
+          checkpoint.dispatch.kind === "native"
+        ) {
+          failReadyToArmCheckpointWrite = false;
+          throw new Error("injected ready-to-arm checkpoint write failure");
+        }
         checkpoints.set(batch, checkpoint);
       },
     },
@@ -341,6 +379,14 @@ function fixture(
         ) {
           failDispatchPreparationAuditAppend = false;
           throw new Error("injected dispatch preparation audit append failure");
+        }
+        if (
+          failReadyToArmAuditAppend &&
+          event === "SWARM_DRIVER_TRANSITION" &&
+          fields["Transition edge"] === "prepared-dispatched"
+        ) {
+          failReadyToArmAuditAppend = false;
+          throw new Error("injected ready-to-arm audit append failure");
         }
         audits.push({ event, fields });
       },
@@ -391,6 +437,7 @@ function fixture(
         fencingToken,
         onDispatchPrepared,
         onResourcesPrepared,
+        onProcessObserved,
         onReadyToArm,
         onCaptureBound,
       }) => {
@@ -441,6 +488,7 @@ function fixture(
           preparedNativeRun,
           onDispatchPrepared,
           onResourcesPrepared,
+          onProcessObserved,
           onReadyToArm,
           onCaptureBound,
         });
@@ -1618,6 +1666,89 @@ describe("t231 swarm driver runtime", () => {
     expect(f.store.readReconciled(1)).toEqual(failed);
   });
 
+  for (const [failure, injected] of [
+    ["checkpoint write", { failReadyToArmCheckpointWriteOnce: true }],
+    ["audit append", { failReadyToArmAuditAppendOnce: true }],
+  ] as const) {
+    test(`retains the ready-to-arm identity when its ${failure} fails`, async () => {
+      const f = fixture({ nativeAvailable: true, ...injected });
+
+      expect(await runNativeAttempt(f)).toMatchObject({ type: "err", error: { code: "EXECUTION_FAILED" } });
+      const failed = f.store.read(1);
+      expect(parseAttemptCheckpoint(failed)).toMatchObject({ type: "ok" });
+      expect(failed).toMatchObject({
+        state: "failed-resumable",
+        failure: {
+          code: "COORDINATOR_FAILED",
+          failedFromState: "prepared",
+          recoveryContext: {
+            dispatchPreparation: {
+              kind: "native",
+              nativeRunId: expect.any(String),
+            },
+            preparedNativeRun: {
+              kind: "native",
+              resourceReceiptDigest: "resource-receipt",
+            },
+            dispatch: {
+              kind: "native",
+              processIdentityDigest: "process-identity",
+              armDigest: "arm-digest",
+            },
+          },
+        },
+      });
+    });
+  }
+
+  test("retains the observed process identity when execution fails before ready-to-arm", async () => {
+    const f = fixture({ nativeAvailable: true, callbackMode: "process-observed-then-fails" });
+
+    expect(await runNativeAttempt(f)).toMatchObject({ type: "err", error: { code: "EXECUTION_FAILED" } });
+    const failed = f.store.read(1);
+    expect(parseAttemptCheckpoint(failed)).toMatchObject({ type: "ok" });
+    expect(failed).toMatchObject({
+      state: "failed-resumable",
+      failure: {
+        code: "COORDINATOR_FAILED",
+        failedFromState: "prepared",
+        recoveryContext: {
+          dispatchPreparation: { kind: "native" },
+          preparedNativeRun: { kind: "native" },
+          dispatch: {
+            kind: "native",
+            processIdentityDigest: "process-identity",
+            armDigest: "arm-digest",
+          },
+        },
+      },
+    });
+  });
+
+  test("accepts repeated observation of the same process identity", async () => {
+    const f = fixture({ nativeAvailable: true, callbackMode: "duplicate-process-observed" });
+
+    expect(await runNativeAttempt(f)).toMatchObject({ type: "ok" });
+    expect(f.store.read(1)?.state).toBe("evidence-verified");
+  });
+
+  test("fails closed when process observation changes before ready-to-arm", async () => {
+    const f = fixture({ nativeAvailable: true, callbackMode: "conflicting-process-observed" });
+
+    expect(await runNativeAttempt(f)).toMatchObject({ type: "err", error: { code: "EXECUTION_FAILED" } });
+    const failed = f.store.read(1);
+    expect(parseAttemptCheckpoint(failed)).toMatchObject({ type: "ok" });
+    expect(failed).toMatchObject({
+      state: "failed-resumable",
+      failure: {
+        failedFromState: "prepared",
+        recoveryContext: {
+          dispatch: { processIdentityDigest: "process-identity" },
+        },
+      },
+    });
+  });
+
   for (const invalidDispatchPreparation of ["absolute-path", "parent-path", "empty-digest"] as const) {
     test(`rejects ${invalidDispatchPreparation} dispatch preparation before capturing recovery context`, async () => {
       const f = fixture({ nativeAvailable: true, invalidDispatchPreparation });
@@ -1682,9 +1813,15 @@ describe("t231 swarm driver runtime", () => {
   test("fails closed when native execution returns without materializing dispatch", async () => {
     const f = fixture({ nativeAvailable: true, callbackMode: "missing-ready-to-arm" });
     expect(await runNativeAttempt(f)).toMatchObject({ type: "err", error: { code: "EXECUTION_FAILED" } });
-    expect(f.store.read(1)).toMatchObject({
+    const failed = f.store.read(1);
+    expect(parseAttemptCheckpoint(failed)).toMatchObject({ type: "ok" });
+    expect(failed).toMatchObject({
       state: "failed-resumable",
-      failure: { code: "COORDINATOR_FAILED", failedFromState: "prepared" },
+      failure: {
+        code: "COORDINATOR_FAILED",
+        failedFromState: "prepared",
+        recoveryContext: { dispatch: { processIdentityDigest: "process-identity" } },
+      },
     });
   });
 
