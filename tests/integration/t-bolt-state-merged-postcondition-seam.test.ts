@@ -1,7 +1,7 @@
 // In-process coverage seam for the crash-window state-merged postcondition.
 // t232 proves the contract end-to-end by spawning the real amadeus-bolt CLI,
 // which bun's coverage instrumentation cannot see (the spawn blindspot) — so
-// this unit test imports stateMergedPostcondition directly and drives every
+// this test imports stateMergedPostcondition directly and drives every
 // branch in-process: no audit row, audit row with the slug still in main's
 // Bolt Refs (the crash window — must NOT skip the merge), and audit row with
 // the slug removed (the merge really finished — evidence accepted).
@@ -9,9 +9,8 @@
 // register in lcov (local-lcov-pre-push norm).
 
 import { afterAll, describe, expect, test } from "bun:test";
-import { writeFileSync } from "node:fs";
-import { rmSync } from "node:fs";
-import { stateMergedPostcondition } from "../../packages/framework/core/tools/amadeus-bolt.ts";
+import { rmSync, writeFileSync } from "node:fs";
+import { stateMergedPostcondition } from "../../packages/framework/core/tools/amadeus-swarm-operation-journal.ts";
 import { createTestProject, seededStateFile } from "../harness/fixtures.ts";
 
 const tempDirs: string[] = [];

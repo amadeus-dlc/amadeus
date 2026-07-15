@@ -52,13 +52,13 @@ import {
   operationStepEvidence,
   recordOperationResult,
   recordOperationStep,
+  stateMergedPostcondition,
   type OperationJournal,
 } from "./amadeus-swarm-operation-journal.js";
 import {
   emitError,
   errorMessage,
   getField,
-  parseRefsList,
   relativeRecordDir,
   readAllAuditShards,
   readStateFile,
@@ -247,22 +247,6 @@ function metadataAuditBindingFields(flags: Record<string, string>): Record<strin
 function requireMetadataStepEvidence(evidence: unknown | null, slug: string, step: string): unknown {
   if (evidence !== null) return evidence;
   failJson("complete-merge", slug, "postcondition-missing", `${step} postcondition missing.`);
-}
-
-// The STATE_MERGED audit row alone is NOT proof the state merge finished:
-// amadeus-state handleMerge appends the row before writeStateFile (strict
-// audit-first), so a crash between the two leaves the row on disk with main
-// state unmerged. Require the state effect too — slug gone from main's Bolt
-// Refs — before letting a resumed journal skip the merge step.
-export function stateMergedPostcondition(
-  pd: string,
-  flags: Record<string, string>,
-  auditPostcondition: (event: string) => Readonly<Record<string, string>> | null,
-): Readonly<Record<string, string>> | null {
-  const audit = auditPostcondition("STATE_MERGED");
-  if (audit === null) return null;
-  const refs = getField(readStateFile(pd, flags.intent, flags.space), "Bolt Refs") ?? "";
-  return parseRefsList(refs).includes(flags.slug) ? null : audit;
 }
 
 // --- Subcommand: start ---

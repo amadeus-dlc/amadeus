@@ -22,7 +22,6 @@ import {
 } from "../../packages/framework/core/tools/amadeus-swarm-finalize-contract.ts";
 import { digestValue } from "../../packages/framework/core/tools/amadeus-swarm-canonical.ts";
 import { appendAuditEntry } from "../../packages/framework/core/tools/amadeus-audit.ts";
-import { stateMergedPostcondition } from "../../packages/framework/core/tools/amadeus-bolt.ts";
 import {
   getField,
   readAllAuditShards,
@@ -41,6 +40,7 @@ import {
   openOperationJournal,
   parseOperationJournal,
   recordOperationStep,
+  stateMergedPostcondition,
 } from "../../packages/framework/core/tools/amadeus-swarm-operation-journal.ts";
 import {
   FIXTURES_DIR,
