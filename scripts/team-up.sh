@@ -105,10 +105,17 @@ mux_kill() {
   case "$MUX" in
   tmux) tmux kill-session -t "$1" 2>/dev/null && echo "killed session $1" || echo "no session $1" ;;
   herdr)
+    # `session stop` alone is not enough: herdr persists the session's
+    # workspace layout on disk and restores it (with dead shells) on the
+    # next `server` start, leaving ghost workspaces in the UI. `session
+    # delete` removes the persisted state as well.
     if "$HERDR" --session "$1" workspace list >/dev/null 2>&1; then
-      "$HERDR" session stop "$1" >/dev/null 2>&1 && echo "killed session $1" || echo "no session $1"
+      "$HERDR" session stop "$1" >/dev/null 2>&1
+      "$HERDR" session delete "$1" >/dev/null 2>&1
+      echo "killed session $1"
     else
-      echo "no session $1"
+      # server not running: still delete any persisted session state
+      "$HERDR" session delete "$1" >/dev/null 2>&1 && echo "killed session $1" || echo "no session $1"
     fi
     ;;
   esac
@@ -118,12 +125,18 @@ mux_kill() {
 # tmux surfaces the member via pane-border-format (cwd basename); herdr has
 # no --label on pane split (0.7.1), so the label is applied post-create via
 # `pane rename` — without it the UI falls back to the workspace label and
-# every agent renders as the session name (#999).
+# every agent renders as the session name (#999). The pane label names the
+# pane border only; the agents panel reads the agent name, so `agent rename`
+# is applied too (it binds to the pane even before the agent process is
+# detected — verified on herdr 0.7.1). Both are cosmetic: never fail launch.
 mux_pane_label() {
   local s="$1" pane="$2" label="$3"
   case "$MUX" in
   tmux) : ;;
-  herdr) "$HERDR" --session "$s" pane rename "$pane" "$label" >/dev/null ;;
+  herdr)
+    "$HERDR" --session "$s" pane rename "$pane" "$label" >/dev/null 2>&1 || true
+    "$HERDR" --session "$s" agent rename "$pane" "$label" >/dev/null 2>&1 || true
+    ;;
   esac
 }
 
