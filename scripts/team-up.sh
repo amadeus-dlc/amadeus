@@ -114,10 +114,23 @@ mux_kill() {
   esac
 }
 
-# mux_new_session <session> <cwd> <cmd> — create the session's first pane
-# running <cmd> and echo its pane id.
+# mux_pane_label <session> <pane> <label> — name the pane after its member.
+# tmux surfaces the member via pane-border-format (cwd basename); herdr has
+# no --label on pane split (0.7.1), so the label is applied post-create via
+# `pane rename` — without it the UI falls back to the workspace label and
+# every agent renders as the session name (#999).
+mux_pane_label() {
+  local s="$1" pane="$2" label="$3"
+  case "$MUX" in
+  tmux) : ;;
+  herdr) "$HERDR" --session "$s" pane rename "$pane" "$label" >/dev/null ;;
+  esac
+}
+
+# mux_new_session <session> <cwd> <cmd> <label> — create the session's first
+# pane running <cmd> and echo its pane id.
 mux_new_session() {
-  local s="$1" cwd="$2" cmd="$3" pane
+  local s="$1" cwd="$2" cmd="$3" label="$4" pane
   case "$MUX" in
   tmux)
     tmux new-session -d -s "$s" -x 300 -y 90 "$cmd"
@@ -129,16 +142,17 @@ mux_new_session() {
     herdr_wait_ready "$s" || return 1
     pane="$("$HERDR" --session "$s" workspace create --cwd "$cwd" --label "$s" --no-focus | herdr_pane_id)"
     [ -n "$pane" ] || { echo "ERROR: herdr workspace create returned no pane id" >&2; return 1; }
+    mux_pane_label "$s" "$pane" "$label"
     "$HERDR" --session "$s" pane run "$pane" "$cmd" >/dev/null
     printf '%s\n' "$pane"
     ;;
   esac
 }
 
-# mux_split <session> <target_pane> <orient h|v> <newpct> <cwd> <cmd> — split
-# <target_pane> and echo the new pane id running <cmd>.
+# mux_split <session> <target_pane> <orient h|v> <newpct> <cwd> <cmd> <label>
+# — split <target_pane> and echo the new pane id running <cmd>.
 mux_split() {
-  local s="$1" target="$2" orient="$3" pct="$4" cwd="$5" cmd="$6" dir ratio pane
+  local s="$1" target="$2" orient="$3" pct="$4" cwd="$5" cmd="$6" label="$7" dir ratio pane
   case "$MUX" in
   tmux)
     case "$orient" in
@@ -156,6 +170,7 @@ mux_split() {
     ratio="$(awk "BEGIN{printf \"%.4f\", (100-$pct)/100}")"
     pane="$("$HERDR" --session "$s" pane split "$target" --direction "$dir" --ratio "$ratio" --cwd "$cwd" --no-focus | herdr_pane_id)"
     [ -n "$pane" ] || { echo "ERROR: herdr pane split returned no pane id" >&2; return 1; }
+    mux_pane_label "$s" "$pane" "$label"
     "$HERDR" --session "$s" pane run "$pane" "$cmd" >/dev/null
     printf '%s\n' "$pane"
     ;;
@@ -680,16 +695,16 @@ register_team_members
 if [ "$RUN_PREPARING" = "1" ]; then
   printf 'launching\n' >"$RUN_RECORD/status"
 fi
-P_E1="$(mux_new_session "$S" "$(member_worktree engineer-1)" "$(member_cmd engineer-1 "$(member_worktree engineer-1)")")"
+P_E1="$(mux_new_session "$S" "$(member_worktree engineer-1)" "$(member_cmd engineer-1 "$(member_worktree engineer-1)")" engineer-1)"
 AGENTS_STARTED=1
-P_LEADER="$(mux_split "$S" "$P_E1" h 66 "$(member_worktree leader)" "$(member_cmd leader "$(member_worktree leader)")")"
-P_E4="$(mux_split "$S" "$P_LEADER" h 50 "$(member_worktree engineer-4)" "$(member_cmd engineer-4 "$(member_worktree engineer-4)")")"
+P_LEADER="$(mux_split "$S" "$P_E1" h 66 "$(member_worktree leader)" "$(member_cmd leader "$(member_worktree leader)")" leader)"
+P_E4="$(mux_split "$S" "$P_LEADER" h 50 "$(member_worktree engineer-4)" "$(member_cmd engineer-4 "$(member_worktree engineer-4)")" engineer-4)"
 
-P_E2="$(mux_split "$S" "$P_E1" v 66 "$(member_worktree engineer-2)" "$(member_cmd engineer-2 "$(member_worktree engineer-2)")")"
-mux_split "$S" "$P_E2" v 50 "$(member_worktree engineer-3)" "$(member_cmd engineer-3 "$(member_worktree engineer-3)")" >/dev/null
+P_E2="$(mux_split "$S" "$P_E1" v 66 "$(member_worktree engineer-2)" "$(member_cmd engineer-2 "$(member_worktree engineer-2)")" engineer-2)"
+mux_split "$S" "$P_E2" v 50 "$(member_worktree engineer-3)" "$(member_cmd engineer-3 "$(member_worktree engineer-3)")" engineer-3 >/dev/null
 
-P_E5="$(mux_split "$S" "$P_E4" v 66 "$(member_worktree engineer-5)" "$(member_cmd engineer-5 "$(member_worktree engineer-5)")")"
-mux_split "$S" "$P_E5" v 50 "$(member_worktree engineer-6)" "$(member_cmd engineer-6 "$(member_worktree engineer-6)")" >/dev/null
+P_E5="$(mux_split "$S" "$P_E4" v 66 "$(member_worktree engineer-5)" "$(member_cmd engineer-5 "$(member_worktree engineer-5)")" engineer-5)"
+mux_split "$S" "$P_E5" v 50 "$(member_worktree engineer-6)" "$(member_cmd engineer-6 "$(member_worktree engineer-6)")" engineer-6 >/dev/null
 
 mux_focus "$S" "$P_LEADER"
 if [ "$MUX" = "tmux" ]; then
