@@ -431,3 +431,114 @@
 **User Input**: leader delegate: e2 gate-ready report for practices-discovery (c1 same-day RE codekb substitution, c2 partial-draft with no changed sections, artifacts x4 present, promotion 0 with deferral rationale).
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T15:58:29Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ad8ca10d49611ec75
+**Message**: e1のPR #982はまだ終わらない？
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-15T16:00:56Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T16:01:02Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aa883ffe1d836dac7
+**Message**: OK
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T16:01:50Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ac666e93b4e08d82c
+**Message**: マージしていいよ
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-15T16:04:27Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T16:06:08Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ae8f7ec846800dae9
+**Message**: 1011マージして
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T16:06:13Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a69640f90a6c650d1
+**Message**: PR #1011マージしていいよ
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T16:06:20Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ab6e6d05ae872687c
+**Message**: PR #1011マージしていいよ
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T16:07:01Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a3ddfc04ce529f9be
+**Message**: PR #1011マージしていいよ
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T16:07:08Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a5179eff52ee5c517
+**Message**: PR #1011マージしていいよ
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T16:08:55Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a76c1a37435c174b4
+**Message**: #1011マージしていいよ
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T16:10:32Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: abd6bfad2691b7579
+**Message**: 1011マージして
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T16:11:08Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aa138e7f8b32995e6
+**Message**: 1011マージしていいよ
+
+---
