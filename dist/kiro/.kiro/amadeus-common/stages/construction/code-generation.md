@@ -77,7 +77,7 @@ Read all design artifacts for the current unit:
 - Story map from `<record>/inception/units-generation/unit-of-work-story-map.md` (if exists)
 - Requirements from `<record>/inception/requirements-analysis/requirements.md` (if exists)
 
-Incremental scopes (bugfix, poc, refactor, security-patch) skip units-generation and application-design by design; when those inputs are absent, scope the work from the requirements and, on brownfield, the reverse-engineered code knowledge base at `amadeus/spaces/<active-space>/codekb/<repo>/` — never invent the content of a missing artifact.
+Incremental scopes (bugfix, poc, refactor, security-patch, chore) skip units-generation and application-design by design; when those inputs are absent, scope the work from the requirements and, on brownfield, the reverse-engineered code knowledge base at `amadeus/spaces/<active-space>/codekb/<repo>/` — never invent the content of a missing artifact. The chore scope additionally skips requirements-analysis and reverse-engineering, so requirements and the code knowledge base may be absent too; in that case scope the work directly from the captured intent (the task description recorded at initialization) — the change is self-evident from the task itself.
 
 ### Step 2: PART 1 — Planning
 
