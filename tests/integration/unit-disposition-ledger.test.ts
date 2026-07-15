@@ -208,6 +208,28 @@ describe("Unit disposition ledger", () => {
     }).changed).toBe(true);
   });
 
+  test("a disposition on another stage does not consume an unused stage answer", () => {
+    root = project();
+    appendAuditEntry("QUESTION_ANSWERED", {
+      Stage: "code-generation",
+      Details: "park the code generation Unit",
+    }, root);
+    appendAuditEntry("QUESTION_ANSWERED", {
+      Stage: "functional-design",
+      Details: "park the design Unit",
+    }, root);
+    expect(changeUnitDisposition({
+      projectDir: root,
+      stage: "functional-design",
+      unit: "unit-b",
+      to: "parked",
+      reason: "design dependency unavailable",
+      expectedFrom: "active",
+    }).changed).toBe(true);
+
+    expect(change(root, "parked", "active").changed).toBe(true);
+  });
+
   test("explicit guard bypass permits skip without an answer", () => {
     root = project();
     process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = "1";

@@ -135,7 +135,7 @@ function changeUnitDispositionLocked(
   const actualFrom = prior?.disposition ?? "active";
   if (actualFrom === input.to) return { changed: false, from: actualFrom, to: input.to };
   assertExpectedDisposition(input.expectedFrom, actualFrom);
-  assertFreshAnswer(input, audit, latestDispositionEvent(audit));
+  assertFreshAnswer(input, audit, latestDispositionEvent(audit, input.stage));
   const appended = appendAuditEntryUnlocked(
     "UNIT_DISPOSITION_CHANGED",
     {
@@ -194,7 +194,10 @@ function hasFreshAnswer(
   return false;
 }
 
-function latestDispositionEvent(auditContent: string): OrderedDispositionRecord | undefined {
+function latestDispositionEvent(
+  auditContent: string,
+  targetStage: string,
+): OrderedDispositionRecord | undefined {
   let latest: OrderedDispositionRecord | undefined;
   const blocks = auditBlocks(auditContent);
   for (let order = 0; order < blocks.length; order++) {
@@ -204,7 +207,7 @@ function latestDispositionEvent(auditContent: string): OrderedDispositionRecord 
     const unit = auditBlockField(block, "Unit");
     const disposition = auditBlockField(block, "To");
     const timestamp = auditBlockField(block, "Timestamp");
-    if (!stage || !unit || !timestamp || !isUnitDisposition(disposition)) continue;
+    if (stage !== targetStage || !unit || !timestamp || !isUnitDisposition(disposition)) continue;
     const candidate: OrderedDispositionRecord = {
       stage,
       unit,
