@@ -1,6 +1,40 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（最新: 260713-swarm-driver-migration）
+## 実行メタデータ（最新: 260715-parser-checkbox-fixes）
+
+- Date: 2026-07-16
+- Observed at: `git rev-parse HEAD` = `6495e03a12d9e7149c2e80b59f171a90607a2d2c`
+- Intent: `260715-parser-checkbox-fixes`（bugfix。#1013 practices-promote parseRules が ALWAYS/NEVER 契約を検証せず散文行を project.md へ append / #1015 scope-change checkbox 再構築の三項が6→4状態崩落＝awaiting-approval・revising が pending へ退行＋再構築ヘッダの4状態 drift）
+- Scope: `bugfix`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering`（2.1）
+- 手法: diff-refresh（cid:reverse-engineering:c1、E-L63 の base 選定2則）。base=`cf3dc88b46a2b23bcfd71b1136632d1739cdd7e5`（リーダー割当。全 `re-scans/*.md` の observed のうち HEAD 祖先で距離最小=65。`git merge-base --is-ancestor cf3dc88 HEAD`=exit 0、`git rev-list --count`=65 を実測で裏取り）、observed=`6495e03a12d9e7149c2e80b59f171a90607a2d2c`（`git rev-parse HEAD` 実測一致）。共有 timestamp 前 pointer の canonical-settings observed `e55cc25143717d84b3e7f1a543151f0b7c99b96f` は `--is-ancestor`=exit 1（非祖先・並行 intent）につき base 候補から除外。区間65コミットにフォーカス欠陥の修正は存在せず、両欠陥は observed に現存。base/observed の真実源は本 intent の `inception/reverse-engineering/scan-notes.md` および `re-scans/260715-parser-checkbox-fixes.md`。
+- 実施体制: Developer（スキャン）→ Architect（合成）の2サブエージェント直列（cid:reverse-engineering:c3）
+- Focus: #1013 `amadeus-state.ts:2556-2561`（parseRules、区間無変更で欠陥貫通。呼び出し元は handlePracticesPromote の :2570/:2571 のみ、stage 契約 `practices-discovery.md:101`）・#1015 `amadeus-utility.ts:3228-3230`（handleScopeChange 三項の6→4崩落）＋副次 drift `:3238`（再構築ヘッダ4状態、正本テンプレ :2748 は6状態）・状態型正本 `amadeus-lib.ts:58` CheckboxState / `:60-67` CHECKBOX_MAP / `:69-76` CHECKBOX_REVERSE / `:3395` parseCheckboxes（6状態復元）/ `:3435` CHECKBOX_MAP 正準経路。手書き marker 構築サイト2箇所（`utility.ts:3229` 欠陥 / `:2656` 良性 init）
+- 現行結論: #1013 / #1015 とも observed HEAD で未修正・現存。両欠陥とも既存テスト未カバー（t75 は ALWAYS/NEVER 整形済み fixture のみ、t194 は別関数 handleRecompose を検査）。編集正本は `packages/framework/core/tools/`（`.claude/tools/*` と byte 同一）。codekb の本 intent 観測面に stale 記述は検出されず。
+- Per-intent record: `re-scans/260715-parser-checkbox-fixes.md`
+- 更新成果物: `code-structure.md`（「parser/checkbox 欠陥面の観測」節を先頭新設＋前「最新」= canonical-settings 節を履歴ラベル化 cid:reverse-engineering:c3-relabel）、本ファイル（鮮度ポインタ＋「最新: 260709-canonical-settings」→履歴ラベル化）、`re-scans/260715-parser-checkbox-fixes.md`（per-intent re-scan 記録）。他成果物（architecture / business-overview / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment）は両欠陥が挙動欠陥で構造変化を伴わず、base→observed でフォーカス面外に破壊的変化がないため温存（churn 回避、cid:reverse-engineering:c1）。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。**本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。**
+
+## 実行メタデータ（履歴: 260709-canonical-settings）
+
+- Date: 2026-07-16
+- Observed at: `git rev-parse HEAD` = `e55cc25143717d84b3e7f1a543151f0b7c99b96f`
+- Intent: `260709-canonical-settings`（#623: Amadeus 共通の既定挙動を型付き canonical settings＝1正本へ集約する基盤。現状 CLI フラグ `--depth`/`--test-strategy`・env `AMADEUS_DEFAULT_SCOPE`・state `Construction Autonomy Mode` の3系統に分散した設定を統合）
+- Scope: `amadeus`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering`（2.1）
+- 手法: diff-refresh（cid:reverse-engineering:c1、E-L63 の base 選定2則）。base=`cf3dc88b46a2b23bcfd71b1136632d1739cdd7e5`（前 intent `260713-swarm-driver-migration` の observed。全 `re-scans/*.md` の Observed commit を `git merge-base --is-ancestor` で走査し、HEAD の祖先である候補のうち `git rev-list --count` が最小＝距離58 を採用）、observed=`e55cc25143717d84b3e7f1a543151f0b7c99b96f`（`git rev-parse HEAD` 実測一致）。区間58コミット（519 files, +98136/-1659、主因は upstream-v2 移行 `amadeus-migrate.ts` +3823行新規と移行テスト大量追加）に**本 intent 関連の新規機構は存在せず**、設定土台（doctor row 構造・stage-schema 厳格 parse 様式・amadeus-lib の JSON ロード様式・`AMADEUS_DEFAULT_SCOPE` precedent）は base 時点で確立済み。フォーカス面は observed HEAD 実コード直読で file:line 確定。base/observed の真実源は本 intent の `inception/reverse-engineering/scan-notes.md` および `re-scans/260709-canonical-settings.md`。
+- 実施体制: Developer（スキャン）→ Architect（合成）の2サブエージェント直列（cid:reverse-engineering:c3）
+- Focus: 設定配置（`amadeus/spaces/default/` 直下に設定ファイル不在・`.gitignore:47-58` はどのパターンでも新設 settings を ignore しない）・doctor 統合（`DoctorCheck{pass,label,fix?}` `amadeus-utility.ts:407-411`、`handleDoctor:676`、`process.exit(failed>0?1:0):1958`、`AMADEUS_DEFAULT_SCOPE` row:875-892 が雛形）・parse 様式（厳格＝`amadeus-stage-schema.ts` 判別ユニオン `{valid,data}｜{valid,errors[]}`:55-57/`unknown key:`:163 対 寛容＝`amadeus-rule-schema.ts` throw:69,72/未知キー許容:39）・JSON ロード（`readIntentRegistry` `amadeus-lib.ts:1496-1509`、`writeFileAtomic`、`AMADEUS_*` env-seam `amadeus-graph.ts:307`）・共通挙動設定の3系統分散（CLI フラグ/`AMADEUS_DEFAULT_SCOPE`/`Construction Autonomy Mode`、重複記述なし）・dist 同期（正本 `packages/framework/core/tools/` `package.ts:56-57`、`promote:self`、`dist:check`/`promote:self:check`）・env var 責務境界（約40 `AMADEUS_*` の唯一の挙動既定 precedent＝`AMADEUS_DEFAULT_SCOPE`、settings.json env 由来 `amadeus-utility.ts:871`）
+- 現行結論: `settings.json` 相当の型付き canonical settings ファイルは製品に**未実装**（実装0件）。設定の3系統分散は現存し、`AMADEUS_DEFAULT_SCOPE`（settings.json env → env var → ツール読み）が canonical settings チャネルの唯一の既存 precedent。設定土台（parse/JSON/doctor/dist 同期）は base 時点で確立済みで区間内に破壊的変化なし。codekb の本 intent 観測面に stale 記述は検出されず。
+- Per-intent record: `re-scans/260709-canonical-settings.md`
+- 更新成果物: `code-structure.md`（「canonical settings 観測面」節を先頭新設 = フォーカス面1〜7 の要点を file:line 付き転記）、本ファイル（鮮度ポインタ + 「最新: 260713-swarm-driver-migration」→履歴ラベル化 cid:reverse-engineering:c3-relabel）、`re-scans/260709-canonical-settings.md`（per-intent re-scan 記録）。他成果物（architecture / business-overview / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment）は Developer が本 intent 観測面で stale なしと判定し、base→observed で構造変化・挙動欠陥を伴わないため温存（churn 回避、cid:reverse-engineering:c1）。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。**本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。**
+
+## 実行メタデータ（履歴: 260713-swarm-driver-migration）
 
 - Date: 2026-07-13
 - Observed at: 2026-07-13T07:57:31Z
