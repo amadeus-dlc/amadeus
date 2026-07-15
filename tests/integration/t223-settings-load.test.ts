@@ -17,6 +17,8 @@ import { join } from "node:path";
 import {
   AmadeusSettings,
   DEFAULT_SETTINGS,
+  SETTINGS_KNOWN_KEYS,
+  settingsDoctorCheck,
 } from "../../packages/framework/core/tools/amadeus-settings.ts";
 
 function makeProjectDir(prefix: string): string {
@@ -99,6 +101,52 @@ describe("t223 settings skeleton — load (fs boundary)", () => {
       if (!result.valid) return;
       expect(result.source).toBe("defaults");
       expect(result.settings.interactionModes).toEqual(DEFAULT_SETTINGS);
+    } finally {
+      rmSync(projectDir, { recursive: true, force: true });
+    }
+  });
+});
+
+// settingsDoctorCheck (U3): the in-process seam handleDoctor wires spawn-only.
+// The three load outcomes map to three doctor rows; driving them here (fs, no
+// spawn) covers the judgment the spawn-only wiring line does not.
+describe("t223 settings skeleton — settingsDoctorCheck (doctor row seam)", () => {
+  test("an absent file → pass with the defaults-in-effect label", () => {
+    const projectDir = makeProjectDir("doctor-absent-");
+    try {
+      const row = settingsDoctorCheck(projectDir);
+      expect(row.pass).toBe(true);
+      expect(row.label).toContain("absent — defaults in effect");
+      expect(row.fix).toBeUndefined();
+    } finally {
+      rmSync(projectDir, { recursive: true, force: true });
+    }
+  });
+
+  test("a valid on-disk file → pass with the resolved path and 'valid'", () => {
+    const projectDir = makeProjectDir("doctor-valid-");
+    try {
+      writeSettingsFile(projectDir, "default", JSON.stringify({ interactionModes: { chat: false } }));
+      const row = settingsDoctorCheck(projectDir);
+      expect(row.pass).toBe(true);
+      expect(row.label).toContain(join("spaces", "default", "settings.json"));
+      expect(row.label).toContain("valid");
+      expect(row.fix).toBeUndefined();
+    } finally {
+      rmSync(projectDir, { recursive: true, force: true });
+    }
+  });
+
+  test("an invalid file → fail, fix lists the valid keys (falling-down proof)", () => {
+    const projectDir = makeProjectDir("doctor-invalid-");
+    try {
+      writeSettingsFile(projectDir, "default", JSON.stringify({ bogusKey: 1, interactionModes: { chat: true } }));
+      const row = settingsDoctorCheck(projectDir);
+      expect(row.pass).toBe(false);
+      expect(row.label).toContain("invalid");
+      expect(row.label).toContain(join("spaces", "default", "settings.json"));
+      expect(row.fix).toBeDefined();
+      expect(row.fix).toContain(`valid keys: ${SETTINGS_KNOWN_KEYS.join(", ")}`);
     } finally {
       rmSync(projectDir, { recursive: true, force: true });
     }

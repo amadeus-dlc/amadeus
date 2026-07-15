@@ -192,3 +192,22 @@ export namespace AmadeusSettings {
 }
 
 Object.freeze(AmadeusSettings);
+
+// Doctor row (U3). Judgment is not re-implemented here: AmadeusSettings.load has
+// already decided valid/invalid, the source, and (when relevant) the resolved
+// path — this only projects that outcome onto the { pass, label, fix } shape
+// handleDoctor consumes. The return type structurally matches amadeus-utility's
+// DoctorCheck; it is accepted by shape (no import), like the sibling check
+// functions. Absent file → defaults in effect (pass). On-disk file valid → pass
+// carrying the resolved path. Invalid → fail, with every parse error joined
+// verbatim (U2 wording, not re-authored) as the fix text.
+export function settingsDoctorCheck(projectDir: string): { pass: boolean; label: string; fix?: string } {
+  const result = AmadeusSettings.load(projectDir);
+  if (result.valid) {
+    if (result.source === "defaults") {
+      return { pass: true, label: "settings.json (absent — defaults in effect; place at amadeus/spaces/<space>/settings.json)" };
+    }
+    return { pass: true, label: `settings.json (${settingsPath(projectDir)}, valid)` };
+  }
+  return { pass: false, label: `settings.json (${result.path}, invalid)`, fix: result.errors.join("; ") };
+}

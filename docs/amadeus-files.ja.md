@@ -123,6 +123,7 @@ amadeus/
 ├── .amadeus-clone-id                                     # このクローンの監査シャード名(gitignore, machine-local)
 ├── .amadeus-sessions/                                    # 会話→intentマップ(gitignore)
 └── spaces/<space>/
+    ├── settings.json                                     # 正規のワークスペース設定(interactionModes; 任意、コミット)
     ├── memory/                                           # ルール層(コミット)
     │   ├── org.md                                        # フレームワーク既定
     │   ├── team.md                                       # チーム実践(orgを上書き)
@@ -158,6 +159,18 @@ amadeus/
 | `amadeus/` | AI-DLCの中立ワークスペース。space、intent、state、audit、artifact、team memoryを保持 | `memory/` と成果物は通常のレビュー対象。runtime一時ファイルは手編集しない | コミット + 一部gitignore |
 
 `agents/`、`amadeus-common/`、`hooks/` はエンジンの一部であり、AI-DLCが生成する成果物ではない。ユーザー/チームが継続的に育てる情報は、ハーネス別エンジン配下ではなく `amadeus/spaces/<space>/memory/` と `amadeus/spaces/<space>/knowledge/` に置く。
+
+### 1.2 正規のワークスペース設定
+
+| ファイル | 説明 | git |
+|---|---|---|
+| `spaces/<space>/settings.json` | space ごとの正規ワークスペース設定。任意 — 不在時は既定値が有効 | コミット |
+
+- **パス**: `amadeus/spaces/<space>/settings.json` — 読み取り対象はこの一箇所のみ(フォールバック探索なし)。
+- **形式**: JSON。既知のキーは `interactionModes` のみで、4つの真偽値 `guideMe`・`grillMe`・`editFile`・`chat` を持つオブジェクト。
+- **既定値**: すべての interaction mode が `true`。ファイル不在、または個々のキー不在は、この既定の姿勢に解決される。
+- **エラー方針**: fail-closed。未知キー(ルートまたは `interactionModes` 配下)、型不一致、4モードすべての無効化(all-modes-off)はファイルを `invalid` にする。最初の1件だけでなく、すべての違反を報告する。
+- **doctor**: `/amadeus --doctor` は `settings.json` の行を報告する — 不在(既定値が有効)、valid(解決済みパス付き)、invalid(parse エラーを fix テキストとして表示)。
 
 ---
 
