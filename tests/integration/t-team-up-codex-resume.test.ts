@@ -19,7 +19,7 @@ afterEach(() => {
   for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
-function commandFor(member: string, resolverBody: string) {
+function commandFor(member: string, resolverBody: string, env: Record<string, string> = {}) {
   const dir = mkdtempSync(join(tmpdir(), "amadeus-team-up-"));
   tempDirs.push(dir);
   const resolver = join(dir, "role-resume.sh");
@@ -37,6 +37,7 @@ function commandFor(member: string, resolverBody: string) {
     ],
     env: {
       ...process.env,
+      ...env,
       ROLE_RESUME: resolver,
       CODEX_MONITOR: "/usr/bin/true",
       DELIVERY: join(dir, "missing-delivery.sh"),
@@ -154,6 +155,7 @@ describe("team-up run lifecycle", () => {
     expect(result.stdout.toString()).toContain("-c, --continue");
     expect(result.stdout.toString()).toContain("--list-runs");
     expect(result.stdout.toString()).toContain("--delete-run ID");
+    expect(result.stdout.toString()).toContain("AGENT_IDENTITY");
   });
 
   test("a fresh launch creates one isolated worktree and branch per role from HEAD", () => {
@@ -647,9 +649,17 @@ describe("team-up run lifecycle", () => {
 
 describe("team-up Codex resume", () => {
   test("marks Codex member sessions as team mode", () => {
-    const result = commandFor("engineer-1", "exit 0");
+    const result = commandFor("engineer-1", "exit 0", {
+      AGENT_IDENTITY: "personal",
+      CLAUDE_IDENTITY: "ignored-claude",
+      CODEX_IDENTITY: "ignored-codex",
+    });
     expect(result.exitCode).toBe(0);
     expect(result.stdout.toString()).toContain("AMADEUS_OPERATING_MODE=team");
+    expect(result.stdout.toString()).toContain("CODEX_IDENTITY=personal");
+    expect(result.stdout.toString()).toContain(`CODEX_HOME=${process.env.HOME}/.codex-personal`);
+    expect(result.stdout.toString()).not.toContain("ignored-codex");
+    expect(result.stdout.toString()).not.toContain("CLAUDE_IDENTITY=");
     expect(result.stdout.toString()).toContain("AGMSG_CODEX_ROLE=e1");
     expect(result.stdout.toString()).toContain("actas\\ e1");
   });
@@ -693,6 +703,9 @@ describe("team-up shared operating mode", () => {
       ],
       env: {
         ...process.env,
+        AGENT_IDENTITY: "personal",
+        CLAUDE_IDENTITY: "ignored-claude",
+        CODEX_IDENTITY: "ignored-codex",
         DELIVERY: "/path/that/does/not/exist",
       },
       stderr: "pipe",
@@ -701,5 +714,8 @@ describe("team-up shared operating mode", () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout.toString()).toContain("AMADEUS_OPERATING_MODE=team");
+    expect(result.stdout.toString()).toContain("CLAUDE_IDENTITY=personal");
+    expect(result.stdout.toString()).not.toContain("ignored-claude");
+    expect(result.stdout.toString()).not.toContain("CODEX_IDENTITY=");
   });
 });
