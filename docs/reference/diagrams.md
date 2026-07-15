@@ -68,7 +68,7 @@ graph LR
 
 ## 2. Ideation Flow
 
-The Ideation phase captures business intent, validates feasibility, defines scope, forms the team, creates rough mockups, and produces an initiative brief for approval. Stages marked ALWAYS execute for every scope; CONDITIONAL stages are skipped for certain scopes (e.g., poc, bugfix, refactor skip Market Research). Solid arrows indicate ALWAYS routing; dashed arrows indicate CONDITIONAL routing.
+The Ideation phase captures business intent, validates feasibility, defines scope, forms the team, creates rough mockups, and produces an initiative brief for approval. Stages marked ALWAYS execute for every scope; CONDITIONAL stages are skipped for certain scopes (e.g., poc, bugfix, chore, refactor skip Market Research). Solid arrows indicate ALWAYS routing; dashed arrows indicate CONDITIONAL routing.
 
 ```mermaid
 flowchart TD
@@ -82,12 +82,12 @@ flowchart TD
     VG1{{"Verification Gate:\nIdeation --> Inception"}}
 
     S11 ==>|ALWAYS| S12
-    S11 -.->|"skip: poc, bugfix,\nrefactor, infra,\nsecurity-patch"| S14
+    S11 -.->|"skip: poc, bugfix,\nchore, refactor, infra,\nsecurity-patch"| S14
     S12 -.->|CONDITIONAL| S13
     S12 -.->|"skip if no\nfeasibility needed"| S14
     S13 -.->|CONDITIONAL| S14
     S14 ==>|ALWAYS| S15
-    S14 -.->|"skip: poc,\nbugfix, refactor"| S17
+    S14 -.->|"skip: poc,\nbugfix, chore, refactor"| S17
     S15 -.->|CONDITIONAL| S16
     S15 -.->|"skip if no UI"| S17
     S16 -.->|CONDITIONAL| S17
@@ -211,7 +211,7 @@ flowchart TD
 
 ## 5. Operation Flow
 
-The Operation phase covers deployment, environment provisioning, observability, incident response, performance validation, and feedback. All seven stages are CONDITIONAL (the entire phase may be skipped for poc and bugfix scopes). All stages run inline. Stage 4.7 is the terminal stage; upon approval, the workflow is complete or a new Ideation cycle can begin.
+The Operation phase covers deployment, environment provisioning, observability, incident response, performance validation, and feedback. All seven stages are CONDITIONAL (the entire phase may be skipped for poc, bugfix, and chore scopes). All stages run inline. Stage 4.7 is the terminal stage; upon approval, the workflow is complete or a new Ideation cycle can begin.
 
 ```mermaid
 flowchart TD

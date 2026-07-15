@@ -68,7 +68,7 @@ graph LR
 
 ## 2. Ideation フロー
 
-Ideation フェーズでは、ビジネス上の intent を捕捉し、実現可能性を検証し、スコープを定義し、チームを編成し、ラフなモックアップを作成し、承認のためのイニシアチブブリーフを作成します。ALWAYS とマークされたステージはすべてのスコープで実行されます。CONDITIONAL のステージは特定のスコープではスキップされます(例: poc、bugfix、refactor は Market Research をスキップ)。実線の矢印は ALWAYS のルーティングを、破線の矢印は CONDITIONAL のルーティングを示します。
+Ideation フェーズでは、ビジネス上の intent を捕捉し、実現可能性を検証し、スコープを定義し、チームを編成し、ラフなモックアップを作成し、承認のためのイニシアチブブリーフを作成します。ALWAYS とマークされたステージはすべてのスコープで実行されます。CONDITIONAL のステージは特定のスコープではスキップされます(例: poc、bugfix、chore、refactor は Market Research をスキップ)。実線の矢印は ALWAYS のルーティングを、破線の矢印は CONDITIONAL のルーティングを示します。
 
 ```mermaid
 flowchart TD
@@ -82,12 +82,12 @@ flowchart TD
     VG1{{"Verification Gate:\nIdeation --> Inception"}}
 
     S11 ==>|ALWAYS| S12
-    S11 -.->|"skip: poc, bugfix,\nrefactor, infra,\nsecurity-patch"| S14
+    S11 -.->|"skip: poc, bugfix,\nchore, refactor, infra,\nsecurity-patch"| S14
     S12 -.->|CONDITIONAL| S13
     S12 -.->|"skip if no\nfeasibility needed"| S14
     S13 -.->|CONDITIONAL| S14
     S14 ==>|ALWAYS| S15
-    S14 -.->|"skip: poc,\nbugfix, refactor"| S17
+    S14 -.->|"skip: poc,\nbugfix, chore, refactor"| S17
     S15 -.->|CONDITIONAL| S16
     S15 -.->|"skip if no UI"| S17
     S16 -.->|CONDITIONAL| S17
@@ -211,7 +211,7 @@ flowchart TD
 
 ## 5. Operation フロー
 
-Operation フェーズは、デプロイ、環境プロビジョニング、可観測性、インシデント対応、パフォーマンス検証、およびフィードバックをカバーします。7 つのステージはすべて CONDITIONAL です(poc および bugfix スコープではフェーズ全体がスキップされる場合があります)。すべてのステージはインラインで実行されます。ステージ 4.7 は終端ステージです。承認されると、ワークフローが完了するか、新しい Ideation サイクルを開始できます。
+Operation フェーズは、デプロイ、環境プロビジョニング、可観測性、インシデント対応、パフォーマンス検証、およびフィードバックをカバーします。7 つのステージはすべて CONDITIONAL です(poc、bugfix、および chore スコープではフェーズ全体がスキップされる場合があります)。すべてのステージはインラインで実行されます。ステージ 4.7 は終端ステージです。承認されると、ワークフローが完了するか、新しい Ideation サイクルを開始できます。
 
 ```mermaid
 flowchart TD

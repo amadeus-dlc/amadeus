@@ -21,6 +21,7 @@ scopes:
   - infra
   - security-patch
   - workshop
+  - chore
 inputs: none (scans filesystem)
 outputs: workspace classification (greenfield/brownfield), technology stack detection
 ---

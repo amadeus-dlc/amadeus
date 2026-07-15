@@ -20,11 +20,11 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 456,
+    "total": 457,
     "enumeratedByClass": {
       "function": 234,
       "audit": 73,
-      "scope": 9,
+      "scope": 10,
       "stage": 32,
       "hook": 11,
       "subcommand": 90,
@@ -33,7 +33,7 @@
     "coveredByClass": {
       "function": 106,
       "audit": 32,
-      "scope": 9,
+      "scope": 10,
       "stage": 8,
       "hook": 11,
       "subcommand": 75,
@@ -3551,6 +3551,18 @@
         },
         {
           "file": "tests/smoke/t130-scope-runners.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "scope",
+      "unitId": "chore",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t125-scope-files.test.ts",
           "mechanism": "cli"
         }
       ],

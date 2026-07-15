@@ -114,7 +114,7 @@ fed back to the engine — the engine still owns the transition:
    - prose says **"scope-dependent"** / is unspecified / the team layer is
      empty → `scope-dependent` (the engine then falls back to the
      scope-mapping defaults: skeleton-on for `enterprise`/`mvp`/`feature`/
-     `poc`/`workshop`, off for `bugfix`/`refactor`/`security-patch`).
+     `poc`/`workshop`, off for `bugfix`/`chore`/`refactor`/`security-patch`).
 3. Hand the stance back: `report --skeleton-stance <on|off|scope-dependent>`.
    The engine records it; the next `next` re-emits the same stage with the now
    determined boolean gate.

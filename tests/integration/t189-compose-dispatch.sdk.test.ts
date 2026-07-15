@@ -95,17 +95,17 @@ describe("t189 composer dispatch (/amadeus compose, sdk live)", () => {
           existsSync(join(intentsDir, d, "amadeus-state.md")),
         );
         expect(stateFiles).toEqual([]);
-        // No composed scope file (the 9 stock scopes only):
+        // No composed scope file (the 10 stock scopes only):
         const scopesDir = join(proj, ".claude", "scopes");
         const scopeFiles = readdirSync(scopesDir).filter(
           (f) => f.startsWith("amadeus-") && f.endsWith(".md"),
         );
-        expect(scopeFiles.length).toBe(9);
-        // No grid mutation (exactly the 9 stock keys):
+        expect(scopeFiles.length).toBe(10);
+        // No grid mutation (exactly the 10 stock keys):
         const grid = JSON.parse(
           readFileSync(join(proj, ".claude", "tools", "data", "scope-grid.json"), "utf-8"),
         ) as Record<string, unknown>;
-        expect(Object.keys(grid).length).toBe(9);
+        expect(Object.keys(grid).length).toBe(10);
       } finally {
         cleanupTestProject(proj);
       }

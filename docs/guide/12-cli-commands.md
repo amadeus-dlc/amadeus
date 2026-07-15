@@ -76,7 +76,7 @@ flowchart TD
 
 ### `/amadeus [scope]` — Start with explicit scope
 
-Start a new workflow with one of the 9 named scopes.
+Start a new workflow with one of the 10 named scopes.
 
 **Syntax:**
 
@@ -250,7 +250,7 @@ Validate that all of this implementation's prerequisites, configuration, and sta
 | Cycle detection | `stage-graph.json` has no cycles |
 | Orphan stage files | Every slug in the graph has a matching `<phase>/<slug>.md` on disk |
 | Uncompiled stage files | Surfaces any stage `.md` on disk whose slug is not in the compiled graph, it will not execute until you run `amadeus-graph.ts compile` (advisory, never fails) |
-| Scope validation | All 9 scopes (from `.claude/scopes/*.md`) walk cleanly (advisories for scope-truncation gaps are expected) |
+| Scope validation | All 10 scopes (from `.claude/scopes/*.md`) walk cleanly (advisories for scope-truncation gaps are expected) |
 | Schema validation | Every stage's YAML frontmatter passes `validateStageFrontmatter` |
 | Graph references | Every `consumes[].artifact` and `requires_stage[]` target resolves |
 | Keyword overlap | No keyword is claimed by >1 scope |
@@ -276,7 +276,7 @@ Validate that all of this implementation's prerequisites, configuration, and sta
 ✓ Cycle detection: 0 cycles
 ✓ Orphan stage files: 32 graph entries all have files
 ✓ Uncompiled stage files: 0 stage files missing from the compiled graph
-✓ Scope validation: 9 scopes valid (29 advisories)
+✓ Scope validation: 10 scopes valid (29 advisories)
 ✓ Schema validation: 32/32 stages valid
 ✓ Graph references: 122 artifacts + edges resolved
 ✓ Keyword overlap: no conflicts
@@ -543,7 +543,7 @@ Pre-set the default scope for a project. Read from `.claude/settings.json` `env`
 }
 ```
 
-**Valid values:** `enterprise`, `feature`, `mvp`, `poc`, `bugfix`, `refactor`, `infra`, `security-patch`, `workshop`.
+**Valid values:** `enterprise`, `feature`, `mvp`, `poc`, `bugfix`, `chore`, `refactor`, `infra`, `security-patch`, `workshop`.
 
 **Precedence:** explicit CLI flag > keyword detection > `AMADEUS_DEFAULT_SCOPE` > hard-coded fallback.
 

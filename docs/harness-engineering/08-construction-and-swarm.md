@@ -55,7 +55,7 @@ demands. The shipped default lives in the org rule you author at
   `enterprise`, `feature`, `poc`, `workshop`, `infra`. Bolt 1 is solo and gated,
   and the user approves it before the remaining Bolts run.
 - The **skeleton ceremony is skipped** for incremental scopes — `bugfix`,
-  `refactor`, `security-patch`. There is nothing to bootstrap on an existing
+  `chore`, `refactor`, `security-patch`. There is nothing to bootstrap on an existing
   codebase, so the first Bolt runs like any other.
 - After Bolt 1 ships, the **ladder prompt** fires once: "How should the
   remaining Bolts run?" with two options, continue autonomously or gate every
@@ -138,7 +138,7 @@ once at the end across everything, so they are not part of the per-Unit fan-out.
 
 **This parallel surface exists only for the scopes where `units-generation`
 runs** — `enterprise`, `feature`, `mvp`, and `workshop`. The incremental scopes
-(`bugfix`, `refactor`, `security-patch`) and `poc`/`infra` never run
+(`bugfix`, `chore`, `refactor`, `security-patch`) and `poc`/`infra` never run
 `units-generation`, so they produce no edge block, carry no `bolt_dag`, and run
 Construction single-pass with nothing for the swarm to fan out across. Shape the
 swarm where the work is genuinely multi-Unit, and treat hands-off Construction as

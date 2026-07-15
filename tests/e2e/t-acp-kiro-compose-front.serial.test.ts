@@ -21,7 +21,7 @@
 //           tool title.
 //
 // Disk assertions (the same P2 contract as t192/SDK + t-tui):
-//   - .kiro/scopes/ gained a 10th amadeus-*.md AND scope-grid.json a 10th key
+//   - .kiro/scopes/ gained an 11th amadeus-*.md AND scope-grid.json an 11th key
 //     (the write landed THROUGH the Kiro sandbox);
 //   - the born amadeus-state.md carries the composed (non-stock) scope.
 //
@@ -54,7 +54,7 @@ const TASK =
   "harden the deployment pipeline and add observability for our existing service - no new features, compose a custom plan for exactly this";
 
 const STOCK_SCOPES = new Set([
-  "bugfix", "enterprise", "feature", "infra", "mvp", "poc", "refactor",
+  "bugfix", "chore", "enterprise", "feature", "infra", "mvp", "poc", "refactor",
   "security-patch", "workshop",
 ]);
 
@@ -86,7 +86,7 @@ describe("t-acp-kiro compose front journey (live Kiro ACP)", () => {
       try {
         const scopesDir = join(root, ".kiro", "scopes");
         const gridPath = join(root, ".kiro", "tools", "data", "scope-grid.json");
-        expect(readdirSync(scopesDir).filter((f) => f.endsWith(".md")).length).toBe(9);
+        expect(readdirSync(scopesDir).filter((f) => f.endsWith(".md")).length).toBe(10);
 
         // --- turn 1: compose -> proposal -> gate (turn ends at the ask) -----
         await driveKiroAcp({
@@ -97,7 +97,7 @@ describe("t-acp-kiro compose front journey (live Kiro ACP)", () => {
           keepAlive: true,
         });
         // No write and no birth before approval (P0's no-write contract).
-        expect(readdirSync(scopesDir).filter((f) => f.endsWith(".md")).length).toBe(9);
+        expect(readdirSync(scopesDir).filter((f) => f.endsWith(".md")).length).toBe(10);
 
         // --- turn 2: approve -> composer writes -> same-turn birth ----------
         const r2 = await driveKiroAcp({
@@ -119,9 +119,9 @@ describe("t-acp-kiro compose front journey (live Kiro ACP)", () => {
         const scopeFiles = readdirSync(scopesDir).filter(
           (f) => f.startsWith("amadeus-") && f.endsWith(".md"),
         );
-        expect(scopeFiles.length).toBe(10);
+        expect(scopeFiles.length).toBe(11);
         const grid = JSON.parse(readFileSync(gridPath, "utf-8")) as Record<string, unknown>;
-        expect(Object.keys(grid).length).toBe(10);
+        expect(Object.keys(grid).length).toBe(11);
         const composed = Object.keys(grid).find((k) => !STOCK_SCOPES.has(k));
         expect(composed).toBeDefined();
 

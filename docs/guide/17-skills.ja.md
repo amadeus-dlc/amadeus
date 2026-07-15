@@ -72,8 +72,8 @@
 ```
 
 **ランナーを同梱するのは 4 つのスコープだけ** — トラフィックの多いものです。
-フレームワークは合計 9 つのスコープを定義しています([スコープ、深さ、テスト戦略](05-scopes-and-depth.ja.md) を参照)。
-他のすべて — `enterprise`、`poc`、`infra`、`refactor`、`workshop` — は常に
+フレームワークは合計 10 個のスコープを定義しています([スコープ、深さ、テスト戦略](05-scopes-and-depth.ja.md) を参照)。
+他のすべて — `chore`、`enterprise`、`infra`、`poc`、`refactor`、`workshop` — は常に
 オーケストレーター経由で到達可能です:
 
 ```
@@ -202,7 +202,7 @@ bun .claude/tools/amadeus-runner-gen.ts scopes --check   # スコープランナ
 ```
 # フルワークフロー
 /amadeus                              スコープを検出し、すべてを実行
-/amadeus --scope enterprise           9 スコープのいずれか
+/amadeus --scope enterprise           10 スコープのいずれか
 
 # スコープランナー(トラフィックの多い 4 つの入口)
 /amadeus-bugfix · /amadeus-feature · /amadeus-mvp · /amadeus-security-patch

@@ -151,6 +151,7 @@ Source of truth: one file per scope under `.codex/scopes/amadeus-<name>.md` (ide
 | Scope          | Depth         | TestStrategy | EXECUTE / Total |
 |----------------|---------------|--------------|-----------------|
 | bugfix         | Minimal       | (default)    | 7 / 32          |
+| chore          | Minimal       | (default)    | 5 / 32          |
 | enterprise     | Comprehensive | (default)    | 32 / 32         |
 | feature        | Standard      | (default)    | 32 / 32         |
 | infra          | Standard      | (default)    | 13 / 32         |
@@ -215,7 +216,7 @@ The engine reads the compiled `data/stage-graph.json` directly for all routing; 
 
 ## Key Principles
 
-- **Adaptive scope**: Scope determines which stages execute and at what depth — from 7-stage bugfix to 32-stage enterprise. The engine owns the resolution; you run the stages it hands you.
+- **Adaptive scope**: Scope determines which stages execute and at what depth — from 5-stage chore to 32-stage enterprise. The engine owns the resolution; you run the stages it hands you.
 - **User control**: The user can override any stage decision at any approval gate.
 - **11 domain experts**: Each stage leverages the appropriate agent persona (product, design, delivery, architect, aws-platform, compliance, devsecops, developer, quality, pipeline-deploy, operations).
 - **Approval gates**: Every stage except the bootstrap initialization stages presents an approval gate (the engine signals this via `run-stage`'s `gate` field).

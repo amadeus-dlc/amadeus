@@ -288,7 +288,7 @@ function auditEventCount(file: string, ev: string): number {
 // baseline: validScopes() == sorted scope names from the shipped
 // .claude/scopes/*.md set.
 const EXPECTED_DEFAULT_SCOPES =
-  "bugfix,enterprise,feature,infra,mvp,poc,refactor,security-patch,workshop";
+  "bugfix,chore,enterprise,feature,infra,mvp,poc,refactor,security-patch,workshop";
 
 describe("t60 valid-scopes derived from .claude/scopes/*.md (migrated from t60-valid-scopes-derived.sh, plan 9)", () => {
   // --- Test 0: STRONGER current-surface pin (no .sh row) ---

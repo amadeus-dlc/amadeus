@@ -52,7 +52,7 @@ You can pass a description and flags straight through, exactly as you would to `
 /amadeus-feature --status
 ```
 
-**Only four scopes ship a runner** — the high-traffic ones. The framework defines nine scopes total (see [Scopes, Depth, and Test Strategy](05-scopes-and-depth.md)); every other one — `enterprise`, `poc`, `infra`, `refactor`, `workshop` — is always reachable through the orchestrator:
+**Only four scopes ship a runner** — the high-traffic ones. The framework defines ten scopes total (see [Scopes, Depth, and Test Strategy](05-scopes-and-depth.md)); every other one — `chore`, `enterprise`, `infra`, `poc`, `refactor`, `workshop` — is always reachable through the orchestrator:
 
 ```
 /amadeus --scope enterprise
@@ -151,7 +151,7 @@ For the mechanics of writing a stage file, see [Customization](13-customization.
 ```
 # Full workflow
 /amadeus                              detect scope, run everything
-/amadeus --scope enterprise           any of the 9 scopes
+/amadeus --scope enterprise           any of the 10 scopes
 
 # Scope-runners (the 4 high-traffic doors)
 /amadeus-bugfix · /amadeus-feature · /amadeus-mvp · /amadeus-security-patch

@@ -6,7 +6,7 @@
 
 AI-DLC is a methodology, and this implementation ships it working out of the box
 on the harness you use — Claude Code, Kiro CLI, Kiro IDE, or Codex CLI: 11 agents, 32
-stages, 9 scopes, a set of rules and sensors. This guide is for the person who
+stages, 10 scopes, a set of rules and sensors. This guide is for the person who
 wants to **reshape** that methodology — change which stages run, add an agent for
 a domain the framework doesn't cover, tighten a scope, teach the framework a
 standing rule, or wire a deterministic check into a stage.
