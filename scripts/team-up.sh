@@ -2,17 +2,19 @@
 
 set -euo pipefail
 
-# Relaunch the 7-member agent team in ONE window: a session with a 3-1-3 pane
-# layout (left column e1-e3, center leader, right column e4-e6), attached in a
-# single Ghostty window. The launch backend is tmux by default; set
+# Relaunch the agent team in ONE window: a leader plus N engineers laid out as
+# three columns (left engineers | center leader | right engineers), attached in
+# a single Ghostty window. N is 6 by default (3-1-3); -2/-4/-6 pick 2/4/6
+# engineers (1-1-1 / 2-1-2 / 3-1-3). The launch backend is tmux by default; set
 # TEAM_MUX=herdr (or pass --herdr) to build the same layout with herdr instead.
 #
 # For each member pane this script re-applies agmsg monitor delivery, enters the
 # member worktree, runs `mise trust`, and launches the selected agent runtime.
 #
 # Usage:
-#   scripts/team-up.sh          # create a run + launch all 7 Claude members
-#   scripts/team-up.sh --codex  # create a run + launch all 7 Codex members
+#   scripts/team-up.sh          # create a run + launch leader + 6 Claude members
+#   scripts/team-up.sh -4       # create a run with 4 engineers (2-1-2)
+#   scripts/team-up.sh --codex  # create a run + launch Codex members
 #   scripts/team-up.sh -c       # resume each member's last conversation
 #   scripts/team-up.sh --kill   # tear down the team session
 #   TEAM_MUX=herdr scripts/team-up.sh   # build the layout with herdr
@@ -24,6 +26,7 @@ set -euo pipefail
 #   TEAM_REPO         repository whose HEAD seeds a new team run
 #   TEAM_STATE_DIR    local team run metadata directory
 #   TEAM_RUNTIME      claude or codex (default: claude)
+#   TEAM_ENGINEERS    engineer count for a fresh run: 2, 4, or 6 (default: 6)
 #   TEAM_RUN_ID       fixed run ID (intended for deterministic automation)
 #   TEAM_SESSION      session name (default: amadeus-team)
 #   TEAM_MUX          launch backend: tmux or herdr (default: tmux)
@@ -48,6 +51,10 @@ RUNTIME="${TEAM_RUNTIME:-claude}"
 RUNTIME_EXPLICIT=0
 S="${TEAM_SESSION:-amadeus-team}"
 HERDR="${HERDR:-herdr}"
+# Number of engineer members (leader is always added on top). Selectable per
+# fresh run with -2/-4/-6; defaults to 6. A resumed run reads its saved size.
+TEAM_SIZE="${TEAM_ENGINEERS:-6}"
+TEAM_SIZE_EXPLICIT=0
 
 # --- launch backend abstraction (tmux default; herdr optional) -----------
 # The 3-1-3 layout is built through a small set of mux_* verbs so the launch
@@ -237,9 +244,11 @@ usage() {
   cat <<'EOF'
 Usage: scripts/team-up.sh [OPTIONS]
 
-Without -c, creates a new seven-member run from the repository HEAD.
+Without -c, creates a new run (leader + N engineers) from the repository HEAD.
 
   -c, --continue       Resume the current run and its saved runtime
+  -2, -4, -6           Engineer count for a fresh run (default 6; leader always
+                       added). Layout: -2 1-1-1, -4 2-1-2, -6 3-1-3
       --run ID         Resume a retained run (requires -c)
       --base REF       Seed a fresh run from REF instead of HEAD
       --name LABEL     Add a display name to a fresh run
@@ -256,8 +265,22 @@ The first resume of legacy fixed worktrees requires --claude or --codex.
 
 Environment:
   AGENT_IDENTITY      Identity for the selected runtime (default: corporate-1)
+  TEAM_ENGINEERS      Engineer count for a fresh run: 2, 4, or 6 (default: 6)
   TEAM_MUX            Launch backend: tmux or herdr (default: tmux)
 EOF
+}
+
+# Echo "leader engineer-1 … engineer-N" for a run of N engineers.
+members_for() {
+  local n="$1" i out="leader"
+  for i in $(seq 1 "$n"); do out="$out engineer-$i"; done
+  printf '%s\n' "$out"
+}
+
+# Engineer count recorded for run $1 (its record dir). Runs predating the size
+# record default to 6 — the fixed team size before this option existed.
+record_size() {
+  cat "$1/size" 2>/dev/null || printf '6'
 }
 
 valid_run_id() {
@@ -269,7 +292,7 @@ valid_run_id() {
 
 run_owns_branch() {
   local run_record="$1" candidate="$2" m managed_branch
-  for m in leader engineer-1 engineer-2 engineer-3 engineer-4 engineer-5 engineer-6; do
+  for m in $(members_for "$(record_size "$run_record")"); do
     [ -f "$run_record/members/$m/branch" ] || continue
     managed_branch="$(cat "$run_record/members/$m/branch")"
     if [ -n "$managed_branch" ] && [ "$managed_branch" = "$candidate" ]; then
@@ -290,7 +313,7 @@ delete_run() {
   base_commit="$(cat "$run_record/base-commit")"
 
   # Validate every member before removing any resource.
-  for m in leader engineer-1 engineer-2 engineer-3 engineer-4 engineer-5 engineer-6; do
+  for m in $(members_for "$(record_size "$run_record")"); do
     [ -f "$run_record/members/$m/path" ] || { echo "ERROR: missing path metadata for $run_id/$m" >&2; return 1; }
     wt="$(cat "$run_record/members/$m/path")"
     [ -d "$wt" ] || { echo "ERROR: missing worktree for $run_id/$m: $wt" >&2; return 1; }
@@ -319,7 +342,7 @@ delete_run() {
     fi
   done
 
-  for m in leader engineer-1 engineer-2 engineer-3 engineer-4 engineer-5 engineer-6; do
+  for m in $(members_for "$(record_size "$run_record")"); do
     wt="$(cat "$run_record/members/$m/path")"
     branch="$(cat "$run_record/members/$m/branch")"
     git -C "$REPO" worktree remove "$wt"
@@ -338,6 +361,7 @@ delete_run() {
 while [ "$#" -gt 0 ]; do
   case "$1" in
   -c | --continue) CONTINUE=1 ;;
+  -2 | -4 | -6) TEAM_SIZE="${1#-}"; TEAM_SIZE_EXPLICIT=1 ;;
   -h | --help) usage; exit 0 ;;
   --claude) RUNTIME="claude"; RUNTIME_EXPLICIT=1 ;;
   --codex) RUNTIME="codex"; RUNTIME_EXPLICIT=1 ;;
@@ -417,6 +441,10 @@ if [ "$CONTINUE" = "1" ] && { [ -n "$BASE_REF" ] || [ -n "$RUN_NAME" ]; }; then
   echo "ERROR: --base and --name are only valid for a fresh run" >&2
   exit 1
 fi
+if [ "$CONTINUE" = "1" ] && [ "$TEAM_SIZE_EXPLICIT" = "1" ]; then
+  echo "ERROR: -2/-4/-6 are only valid for a fresh run (a resumed run keeps its size)" >&2
+  exit 1
+fi
 if [ -n "$RUN_SELECTION" ] && ! valid_run_id "$RUN_SELECTION"; then
   echo "ERROR: invalid run ID: $RUN_SELECTION" >&2
   exit 1
@@ -429,6 +457,21 @@ claude | codex) ;;
   exit 1
   ;;
 esac
+
+# Validate the engineer count for a fresh run. The -2/-4/-6 flags already
+# restrict the value, but TEAM_ENGINEERS accepts any string; reject anything
+# outside {2,4,6} here so an out-of-range env never reaches the layout (0 or a
+# non-number would crash under set -u). A resumed run skips this: load_run
+# overwrites TEAM_SIZE from the run's recorded size.
+if [ "$CONTINUE" != "1" ]; then
+  case "$TEAM_SIZE" in
+  2 | 4 | 6) ;;
+  *)
+    echo "invalid engineer count: $TEAM_SIZE (expected 2, 4, or 6)" >&2
+    exit 1
+    ;;
+  esac
+fi
 
 # True if the identity has at least one saved conversation for this worktree.
 # Claude Code stores history under CLAUDE_CONFIG_DIR/projects/<cwd with "/"
@@ -524,11 +567,25 @@ member_worktree() {
   fi
 }
 
+# stack_column <top_pane> <member...> — split the given members evenly down the
+# column below top_pane (top_pane already holds the column's first member). The
+# even division reproduces the old fixed ratios: 3 panes -> 66,50 / 2 -> 50 /
+# 1 -> no split.
+stack_column() {
+  local top="$1"; shift
+  local members=("$@") total=$(( $# + 1 )) prev="$top" j=1 pct mem
+  for mem in "${members[@]}"; do
+    pct=$(( 100 * (total - j) / (total - j + 1) ))
+    prev="$(mux_split "$S" "$prev" v "$pct" "$(member_worktree "$mem")" "$(member_cmd "$mem" "$(member_worktree "$mem")")" "$mem")"
+    j=$(( j + 1 ))
+  done
+}
+
 register_team_members() {
   local m wt role agent_type
   [ -f "$AGMSG_JOIN" ] || { echo "ERROR: missing agmsg join script: $AGMSG_JOIN" >&2; return 1; }
   agent_type="$(agmsg_type)"
-  for m in leader engineer-1 engineer-2 engineer-3 engineer-4 engineer-5 engineer-6; do
+  for m in $(members_for "$TEAM_SIZE"); do
     wt="$(member_worktree "$m")"
     role="$(member_role "$m")"
     if ! AGMSG_RESOLVE_PROJECT=0 bash "$AGMSG_JOIN" "$TEAM_NAME" "$role" "$agent_type" "$wt" >/dev/null; then
@@ -600,9 +657,10 @@ create_run() {
   printf '%s\n' "$RUN_NAME" >"$RUN_RECORD/name"
   printf '%s\n' "$base_ref" >"$RUN_RECORD/base-ref"
   printf '%s\n' "$base_commit" >"$RUN_RECORD/base-commit"
+  printf '%s\n' "$TEAM_SIZE" >"$RUN_RECORD/size"
   printf 'preparing\n' >"$RUN_RECORD/status"
 
-  for m in leader engineer-1 engineer-2 engineer-3 engineer-4 engineer-5 engineer-6; do
+  for m in $(members_for "$TEAM_SIZE"); do
     wt="$RUN_ROOT/$m"
     branch="team/$RUN_ID/$m"
     git -C "$REPO" worktree add -q -b "$branch" "$wt" "$base_commit"
@@ -638,6 +696,8 @@ load_run() {
     return 1
   fi
   MUX="$saved_mux"
+  # Engineer count is fixed by the run's worktrees; read the saved size.
+  TEAM_SIZE="$(record_size "$RUN_RECORD")"
 }
 
 adopt_legacy_run() {
@@ -646,7 +706,7 @@ adopt_legacy_run() {
     echo "ERROR: the first legacy resume requires --claude or --codex" >&2
     return 1
   fi
-  for m in leader engineer-1 engineer-2 engineer-3 engineer-4 engineer-5 engineer-6; do
+  for m in $(members_for 6); do
     wt="$BASE/$m"
     [ -d "$wt" ] || { echo "ERROR: missing legacy worktree $wt" >&2; return 1; }
   done
@@ -663,7 +723,8 @@ adopt_legacy_run() {
   printf '%s\n' "$(git -C "$REPO" rev-parse HEAD)" >"$RUN_RECORD/base-commit"
   printf 'stopped\n' >"$RUN_RECORD/status"
   printf '1\n' >"$RUN_RECORD/legacy"
-  for m in leader engineer-1 engineer-2 engineer-3 engineer-4 engineer-5 engineer-6; do
+  printf '6\n' >"$RUN_RECORD/size"
+  for m in $(members_for 6); do
     wt="$BASE/$m"
     branch="$(git -C "$wt" branch --show-current)"
     mkdir -p "$RUN_RECORD/members/$m"
@@ -716,28 +777,33 @@ if [ "$CONTINUE" = "0" ]; then
   create_run
 fi
 
-for m in leader engineer-1 engineer-2 engineer-3 engineer-4 engineer-5 engineer-6; do
+for m in $(members_for "$TEAM_SIZE"); do
   wt="$(member_worktree "$m")"
   [ -d "$wt" ] || { echo "ERROR: missing worktree $wt" >&2; exit 1; }
 done
 
 register_team_members
 
-# --- build the 3-1-3 layout ---------------------------------------------
-# columns first: [e1] | [leader] | [e4], then split each side column into 3
+# --- build the layout: [left column] | leader | [right column] ----------
+# Engineers split evenly across the two side columns (ceil on the left); the
+# center column is always the leader. 6 engineers -> 3-1-3, 4 -> 2-1-2,
+# 2 -> 1-1-1. The columns are always 3, so the horizontal ratios (66 then 50)
+# are unchanged; each side column is then stacked evenly.
 if [ "$RUN_PREPARING" = "1" ]; then
   printf 'launching\n' >"$RUN_RECORD/status"
 fi
-P_E1="$(mux_new_session "$S" "$(member_worktree engineer-1)" "$(member_cmd engineer-1 "$(member_worktree engineer-1)")" engineer-1)"
+left_count=$(( (TEAM_SIZE + 1) / 2 ))
+left=(); right=()
+for i in $(seq 1 "$TEAM_SIZE"); do
+  if [ "$i" -le "$left_count" ]; then left+=("engineer-$i"); else right+=("engineer-$i"); fi
+done
+P_TOP_LEFT="$(mux_new_session "$S" "$(member_worktree "${left[0]}")" "$(member_cmd "${left[0]}" "$(member_worktree "${left[0]}")")" "${left[0]}")"
 AGENTS_STARTED=1
-P_LEADER="$(mux_split "$S" "$P_E1" h 66 "$(member_worktree leader)" "$(member_cmd leader "$(member_worktree leader)")" leader)"
-P_E4="$(mux_split "$S" "$P_LEADER" h 50 "$(member_worktree engineer-4)" "$(member_cmd engineer-4 "$(member_worktree engineer-4)")" engineer-4)"
+P_LEADER="$(mux_split "$S" "$P_TOP_LEFT" h 66 "$(member_worktree leader)" "$(member_cmd leader "$(member_worktree leader)")" leader)"
+P_TOP_RIGHT="$(mux_split "$S" "$P_LEADER" h 50 "$(member_worktree "${right[0]}")" "$(member_cmd "${right[0]}" "$(member_worktree "${right[0]}")")" "${right[0]}")"
 
-P_E2="$(mux_split "$S" "$P_E1" v 66 "$(member_worktree engineer-2)" "$(member_cmd engineer-2 "$(member_worktree engineer-2)")" engineer-2)"
-mux_split "$S" "$P_E2" v 50 "$(member_worktree engineer-3)" "$(member_cmd engineer-3 "$(member_worktree engineer-3)")" engineer-3 >/dev/null
-
-P_E5="$(mux_split "$S" "$P_E4" v 66 "$(member_worktree engineer-5)" "$(member_cmd engineer-5 "$(member_worktree engineer-5)")" engineer-5)"
-mux_split "$S" "$P_E5" v 50 "$(member_worktree engineer-6)" "$(member_cmd engineer-6 "$(member_worktree engineer-6)")" engineer-6 >/dev/null
+stack_column "$P_TOP_LEFT" "${left[@]:1}"
+stack_column "$P_TOP_RIGHT" "${right[@]:1}"
 
 mux_focus "$S" "$P_LEADER"
 if [ "$MUX" = "tmux" ]; then
@@ -753,4 +819,4 @@ if [ -n "$RUN_ID" ]; then
   printf '%s\n' "$RUN_ID" >"$STATE_DIR/active-run"
 fi
 RUN_PREPARING=0
-echo "session '$S' launched: e1-e3 | leader | e4-e6 (runtime=$RUNTIME, identity=$AGENT_IDENTITY)"
+echo "session '$S' launched: ${left[*]} | leader | ${right[*]} ($TEAM_SIZE engineers, runtime=$RUNTIME, identity=$AGENT_IDENTITY)"

@@ -153,9 +153,11 @@ describe("team-up run lifecycle", () => {
 
     expect(result.exitCode, result.stderr.toString()).toBe(0);
     expect(result.stdout.toString()).toContain("-c, --continue");
+    expect(result.stdout.toString()).toContain("-2, -4, -6");
     expect(result.stdout.toString()).toContain("--list-runs");
     expect(result.stdout.toString()).toContain("--delete-run ID");
     expect(result.stdout.toString()).toContain("AGENT_IDENTITY");
+    expect(result.stdout.toString()).toContain("TEAM_ENGINEERS");
   });
 
   test("a fresh launch creates one isolated worktree and branch per role from HEAD", () => {
@@ -183,6 +185,69 @@ describe("team-up run lifecycle", () => {
       expect(git(worktree, "branch", "--show-current")).toBe(`team/run-001/${role}`);
     }
     expect(readFileSync(join(fixture.state, "current-run"), "utf8").trim()).toBe("run-001");
+  });
+
+  test("-4 creates a five-member run and records the engineer count", () => {
+    const fixture = createCliFixture();
+    const result = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "-4"],
+      env: fixture.env,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+    for (const role of ["leader", "engineer-1", "engineer-2", "engineer-3", "engineer-4"]) {
+      expect(existsSync(join(fixture.base, "runs", "run-001", role))).toBe(true);
+    }
+    for (const role of ["engineer-5", "engineer-6"]) {
+      expect(existsSync(join(fixture.base, "runs", "run-001", role))).toBe(false);
+    }
+    expect(readFileSync(join(fixture.state, "runs", "run-001", "size"), "utf8").trim()).toBe("4");
+  });
+
+  test("-2 creates a three-member run and records the engineer count", () => {
+    const fixture = createCliFixture();
+    const result = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "-2"],
+      env: fixture.env,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+    for (const role of ["leader", "engineer-1", "engineer-2"]) {
+      expect(existsSync(join(fixture.base, "runs", "run-001", role))).toBe(true);
+    }
+    expect(existsSync(join(fixture.base, "runs", "run-001", "engineer-3"))).toBe(false);
+    expect(readFileSync(join(fixture.state, "runs", "run-001", "size"), "utf8").trim()).toBe("2");
+  });
+
+  test("the engineer count flags are rejected when resuming a run", () => {
+    const fixture = createCliFixture();
+    const result = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "-c", "-4"],
+      env: fixture.env,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr.toString()).toContain("only valid for a fresh run");
+  });
+
+  test("a fresh launch rejects an out-of-range engineer count", () => {
+    const fixture = createCliFixture();
+    const result = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP],
+      env: { ...fixture.env, TEAM_ENGINEERS: "5" },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr.toString()).toContain("invalid engineer count");
+    expect(existsSync(join(fixture.base, "runs", "run-001"))).toBe(false);
   });
 
   test("a fresh Codex launch pre-registers every role with agmsg", () => {
@@ -717,5 +782,26 @@ describe("team-up shared operating mode", () => {
     expect(result.stdout.toString()).toContain("CLAUDE_IDENTITY=personal");
     expect(result.stdout.toString()).not.toContain("ignored-claude");
     expect(result.stdout.toString()).not.toContain("CODEX_IDENTITY=");
+  });
+});
+
+describe("team-up member roster", () => {
+  test("members_for lists the leader plus the requested engineer count", () => {
+    const result = Bun.spawnSync({
+      cmd: [
+        "bash",
+        "-c",
+        'script="$1"; set --; TEAM_UP_LIB_ONLY=1 source "$script"; members_for 4',
+        "_",
+        TEAM_UP,
+      ],
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+    expect(result.stdout.toString().trim()).toBe(
+      "leader engineer-1 engineer-2 engineer-3 engineer-4",
+    );
   });
 });
