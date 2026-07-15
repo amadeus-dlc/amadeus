@@ -4809,6 +4809,10 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
+          "file": "tests/integration/t-practices-promote-contract.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t75.test.ts",
           "mechanism": "cli"
         }
