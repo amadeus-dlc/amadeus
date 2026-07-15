@@ -25,6 +25,9 @@ export interface StageFrontmatter {
   // Absent -> false.
   workspace_requires?: boolean;
   produces: string[];
+  // Artifacts the stage may write per unit. They remain visible to the
+  // conductor and sensors but do not participate in per-unit completion.
+  optional_produces?: string[];
   consumes: Array<{
     artifact: string;
     required: boolean;
@@ -112,7 +115,7 @@ const REQUIRED_FIELDS = [
   "outputs",
 ] as const;
 
-const OPTIONAL_FIELDS = ["for_each", "workspace_requires", "sensors", "scopes", "reviewer", "reviewer_max_iterations"] as const;
+const OPTIONAL_FIELDS = ["for_each", "workspace_requires", "optional_produces", "sensors", "scopes", "reviewer", "reviewer_max_iterations"] as const;
 
 const KNOWN_FIELDS = new Set<string>([...REQUIRED_FIELDS, ...OPTIONAL_FIELDS]);
 
@@ -237,6 +240,8 @@ export function validateStageFrontmatter(
   }
 
   checkStringArray(o, "produces", errors);
+  checkDuplicateArtifacts(o.produces, "produces", errors);
+  checkOptionalProduces(o, errors);
 
   // Rule 8: nested consumes[] — array of {artifact, required, conditional_on?}.
   if ("consumes" in o) {
@@ -375,6 +380,68 @@ export function validateStageFrontmatter(
   // rest of the codebase cast-free.
   // type-coverage:ignore-next-line — documented validator trust boundary
   return { valid: true, data: o as unknown as StageFrontmatter };
+}
+
+function stringArtifacts(value: readonly unknown[]): Set<string> {
+  const names = new Set<string>();
+  for (const name of value) {
+    if (typeof name === "string") names.add(name);
+  }
+  return names;
+}
+
+function checkOptionalProduces(
+  o: Record<string, unknown>,
+  errors: string[],
+): void {
+  if (!("optional_produces" in o) || o.optional_produces === undefined) return;
+  checkStringArray(o, "optional_produces", errors);
+  const optionalProduces = o.optional_produces;
+  if (!Array.isArray(optionalProduces)) return;
+
+  for (const [index, name] of optionalProduces.entries()) {
+    if (typeof name === "string" && !ARTIFACT_SLUG_RE.test(name)) {
+      errors.push(
+        `optional_produces[${index}] must be kebab-case, got "${name}"`,
+      );
+    }
+  }
+  checkDuplicateArtifacts(optionalProduces, "optional_produces", errors);
+
+  // An artifact cannot be both mandatory coverage evidence and optional.
+  // Keeping the lists disjoint also prevents duplicate resolved paths in a
+  // run-stage directive.
+  if (!Array.isArray(o.produces)) return;
+  const requiredNames = stringArtifacts(o.produces);
+  const reported = new Set<string>();
+  for (const name of optionalProduces) {
+    if (
+      typeof name === "string" &&
+      requiredNames.has(name) &&
+      !reported.has(name)
+    ) {
+      errors.push(`artifact "${name}" cannot be both required and optional`);
+      reported.add(name);
+    }
+  }
+}
+
+function checkDuplicateArtifacts(
+  value: unknown,
+  field: "produces" | "optional_produces",
+  errors: string[],
+): void {
+  if (!Array.isArray(value)) return;
+  const seen = new Set<string>();
+  const reported = new Set<string>();
+  for (const name of value as unknown[]) {
+    if (typeof name !== "string") continue;
+    if (seen.has(name) && !reported.has(name)) {
+      errors.push(`${field} contains duplicate artifact "${name}"`);
+      reported.add(name);
+    }
+    seen.add(name);
+  }
 }
 
 // --- Helpers ---

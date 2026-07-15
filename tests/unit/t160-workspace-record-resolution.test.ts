@@ -15,7 +15,8 @@
 //   needsFlatMigration/migrateFlatLayout/appendIntentToRegistry — the migration.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   activeIntent,
@@ -27,6 +28,8 @@ import {
   intentsDir,
   knowledgeDir,
   listIntentDirs,
+  listIntents,
+  listSpaces,
   migrateFlatLayout,
   migratedMarkerPath,
   needsFlatMigration,
@@ -152,6 +155,26 @@ describe("t160 selectors — space + intent resolution", () => {
     // a stray dir with no state file is NOT a record
     mkdirSync(join(intentsDir(proj, "default"), "not-a-record"), { recursive: true });
     expect(listIntentDirs(proj, "default")).toEqual(["alpha-11111111", "zeta-22222222"]);
+  });
+
+  test("query enumeration ignores linked spaces and never reads their registries", () => {
+    seedShell(proj);
+    const external = mkdtempSync(join(tmpdir(), "amadeus-linked-space-query-"));
+    try {
+      mkdirSync(join(external, "intents"), { recursive: true });
+      writeFileSync(
+        join(external, "intents", "intents.json"),
+        '[{"uuid":"secret","slug":"must-not-read","status":"in-flight"}]\n',
+        "utf-8",
+      );
+      symlinkSync(external, join(proj, "amadeus", "spaces", "linked-secret"));
+
+      expect(listSpaces(proj).map((space) => space.name)).toEqual(["default"]);
+      expect(listIntentDirs(proj, "linked-secret")).toEqual([]);
+      expect(listIntents(proj, "linked-secret")).toEqual([]);
+    } finally {
+      rmSync(external, { recursive: true, force: true });
+    }
   });
 });
 
