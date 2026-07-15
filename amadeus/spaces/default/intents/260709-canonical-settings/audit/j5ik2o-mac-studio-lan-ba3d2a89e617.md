@@ -371,3 +371,63 @@
 **User Input**: leader delegate: e2 gate-ready report for reverse-engineering (c3-compliant Developer scan -> Architect synthesis, diff-refresh base cf3dc88 ancestry-verified per rescan-base-ancestry, 58-commit window, settings observation section added to code-structure.md).
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-15T15:52:17Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T15:52:23Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a60fe81e8cd9eff93
+**Message**: e1のPR #982はまだ終わらない？
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T15:53:09Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a662c43139a9b2678
+**Message**: 1
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-15T15:54:07Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T15:54:52Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aef47044b47020830
+**Message**: 1011レビュー終わったらマージしていいよ
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T15:55:12Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aedc5839e45d29145
+**Message**: https://github.com/amadeus-dlc/amadeus/issues/625 これも独立作業できる？
+
+---
+
+## Delegated Approval
+**Timestamp**: 2026-07-15T15:58:03Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: practices-discovery
+**Issuer Space**: default
+**Issuer Intent**: 260709-canonical-settings
+**Issuer Shard**: j5ik2o-mac-studio-lan-ba3d2a89e617.md
+**Issuer Human Ts**: 2026-07-15T15:54:07Z
+**User Input**: leader delegate: e2 gate-ready report for practices-discovery (c1 same-day RE codekb substitution, c2 partial-draft with no changed sections, artifacts x4 present, promotion 0 with deferral rationale).
+
+---
