@@ -194,11 +194,22 @@ function confined(root: string, path: string): boolean {
   return resolve(path).startsWith(normalizedRoot);
 }
 
+// Extract starttime (field 22 per proc(5)) from /proc/<pid>/stat. The comm
+// field (2) is an arbitrary process name that may contain spaces and
+// parentheses, so a naive whitespace split misindexes every later field;
+// fields are only positionally stable after the LAST ")". starttime is the
+// 20th field of that remainder (22 - the 2 fields before comm).
+export function linuxProcStatStartTime(stat: string): string | null {
+  const commEnd = stat.lastIndexOf(")");
+  if (commEnd === -1) return null;
+  const fields = stat.slice(commEnd + 1).trim().split(" ");
+  return fields[19] || null;
+}
+
 function startToken(pid: number, platform: NodeJS.Platform = process.platform): SupervisorResult<string> {
   if (platform === "linux") {
     try {
-      const fields = readFileSync(`/proc/${pid}/stat`, "utf-8").trim().split(" ");
-      const token = fields[21];
+      const token = linuxProcStatStartTime(readFileSync(`/proc/${pid}/stat`, "utf-8"));
       return token ? ok(token) : err("PROCESS_NOT_FOUND");
     } catch {
       return err("PROCESS_NOT_FOUND");

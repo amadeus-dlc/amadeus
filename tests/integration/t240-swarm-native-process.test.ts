@@ -29,7 +29,10 @@ import {
 import {
   createNativeResourceSupervisor,
 } from "../../packages/framework/core/tools/amadeus-swarm-native-resources.ts";
-import { observeProcessIdentity } from "../../packages/framework/core/tools/amadeus-armed-process.ts";
+import {
+  linuxProcStatStartTime,
+  observeProcessIdentity,
+} from "../../packages/framework/core/tools/amadeus-armed-process.ts";
 import { digestValue } from "../../packages/framework/core/tools/amadeus-swarm-canonical.ts";
 import type {
   AdapterResourcePreparation,
@@ -3306,5 +3309,25 @@ describe("t240 provider-neutral native process", () => {
       context,
       fencingToken: 1,
     })).toThrow("NATIVE_PROCESS_PLATFORM_UNSUPPORTED");
+  });
+});
+
+describe("t240 linux /proc stat start-time parsing", () => {
+  // proc(5): pid (comm) state ppid pgrp session tty_nr tpgid flags minflt
+  // cminflt majflt cmajflt utime stime cutime cstime priority nice num_threads
+  // itrealvalue starttime ... — starttime is field 22.
+  const tail =
+    "S 1 42 42 0 -1 4194304 100 0 0 0 5 3 0 0 20 0 1 0 7654321 1024000 200 18446744073709551615";
+
+  test("extracts starttime for a plain comm", () => {
+    expect(linuxProcStatStartTime(`42 (bun) ${tail}\n`)).toBe("7654321");
+  });
+
+  test("extracts starttime when comm contains spaces and parentheses", () => {
+    expect(linuxProcStatStartTime(`42 (tmux: server (v3) x) ${tail}\n`)).toBe("7654321");
+  });
+
+  test("returns null for content without a comm terminator", () => {
+    expect(linuxProcStatStartTime("garbage with no parens")).toBeNull();
   });
 });

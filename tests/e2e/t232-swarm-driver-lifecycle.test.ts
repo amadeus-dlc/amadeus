@@ -21,7 +21,13 @@ import {
   validateRefereeEnvelope,
 } from "../../packages/framework/core/tools/amadeus-swarm-finalize-contract.ts";
 import { digestValue } from "../../packages/framework/core/tools/amadeus-swarm-canonical.ts";
-import { readAllAuditShards, recordDir } from "../../packages/framework/core/tools/amadeus-lib.ts";
+import { appendAuditEntry } from "../../packages/framework/core/tools/amadeus-audit.ts";
+import {
+  getField,
+  readAllAuditShards,
+  readStateFile,
+  recordDir,
+} from "../../packages/framework/core/tools/amadeus-lib.ts";
 import {
   observeProcessIdentity,
   sameProcess,
@@ -871,6 +877,87 @@ describe("t232 bound swarm lifecycle", () => {
       JSON.parse(readFileSync(join(claimDir, "operations", `${operationId}.json`), "utf-8")),
     );
     expect(Object.keys(journal.completedSteps)).toEqual(["bolt-completed"]);
+  });
+
+  test("re-runs the state merge when the audit row exists but Bolt Refs still holds the slug", () => {
+    // Crash window: handleMerge appends STATE_MERGED before writeStateFile, so
+    // a crash between the two leaves the audit row on disk with main state
+    // unmerged. The resumed journal must NOT trust the row alone.
+    const projectDir = realFixture();
+    const swarmTool = join(process.cwd(), "packages", "framework", "core", "tools", "amadeus-swarm.ts");
+    const boltTool = join(process.cwd(), "packages", "framework", "core", "tools", "amadeus-bolt.ts");
+    expect(spawnSync(
+      process.execPath,
+      [swarmTool, "--project-dir", projectDir, "prepare", "--batch", "1", "--units", "alpha,beta", "--base", "main"],
+      { cwd: projectDir, encoding: "utf-8" },
+    ).status).toBe(0);
+
+    const invocationId = "finalize-crash-window";
+    const operationId = finalizeOperationId(invocationId, "alpha", "metadata-merge");
+    appendAuditEntry(
+      "STATE_MERGED",
+      {
+        "Bolt slug": "alpha",
+        "Operation ID": operationId,
+        "Finalize request digest": "crash-window-request",
+      },
+      projectDir,
+    );
+    expect(getField(readStateFile(projectDir), "Bolt Refs") ?? "").toContain("alpha");
+
+    const record = recordDir(projectDir);
+    if (!record) throw new Error("record fixture unavailable");
+    const claimDir = join(record, ".amadeus-swarm-referee", `finalize-${invocationId}`);
+    mkdirSync(claimDir, { recursive: true });
+    const claimSemantic = Object.freeze({
+      schemaVersion: 1 as const,
+      finalizeInvocationId: invocationId,
+      finalizeRequestDigest: "crash-window-request",
+      ownerPid: process.pid,
+      ownerStartTokenHash: "owner-crash-window",
+      fencingToken: 1,
+      expiresAt: "2099-01-01T00:00:00.000Z",
+      status: "active" as const,
+    });
+    const claimPath = join(claimDir, "claim.json");
+    writeFileSync(claimPath, JSON.stringify({ ...claimSemantic, claimDigest: digestValue(claimSemantic) }));
+
+    const resumed = spawnSync(
+      process.execPath,
+      [
+        boltTool,
+        "--project-dir",
+        projectDir,
+        "complete",
+        "--merge",
+        "--slug",
+        "alpha",
+        "--batch",
+        "1",
+        "--name",
+        "alpha",
+        "--operation-id",
+        operationId,
+        "--finalize-request-digest",
+        claimSemantic.finalizeRequestDigest,
+        "--claim-file",
+        claimPath,
+        "--fencing-token",
+        "1",
+      ],
+      { cwd: projectDir, encoding: "utf-8" },
+    );
+    expect(resumed.status, `${resumed.stdout}\n${resumed.stderr}`).toBe(0);
+    expect(getField(readStateFile(projectDir), "Bolt Refs") ?? "").not.toContain("alpha");
+    const journal = parseOperationJournal(
+      JSON.parse(readFileSync(join(claimDir, "operations", `${operationId}.json`), "utf-8")),
+    );
+    expect(Object.keys(journal.completedSteps).sort()).toEqual([
+      "audit-merged",
+      "bolt-completed",
+      "runtime-fragment-merged",
+      "state-merged",
+    ]);
   });
 
   test("runs the bound CLI through real AIDLC and code merges for two Units", () => {

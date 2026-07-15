@@ -29,6 +29,7 @@ import {
 import { readAllAuditShards, recordDir, withAuditLock, writeFileAtomic } from "./amadeus-lib.ts";
 import { finalizeOperationId } from "./amadeus-swarm-operation-claim.ts";
 import {
+  linuxProcStatStartTime,
   observeProcessIdentity,
   parseArmedProcessProgress,
   readRunIdentity,
@@ -163,7 +164,7 @@ function err(code: BoundFinalizeError["code"]): BoundFinalizeResult {
 function currentStartTokenHash(pid = process.pid): string {
   if (process.platform === "linux") {
     try {
-      const token = readFileSync(`/proc/${pid}/stat`, "utf-8").trim().split(" ")[21];
+      const token = linuxProcStatStartTime(readFileSync(`/proc/${pid}/stat`, "utf-8"));
       return token ? digestValue(token) : "";
     } catch {
       return "";
