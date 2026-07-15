@@ -1110,6 +1110,7 @@ function dispatchPreparationIsValid(value: unknown): value is NativeDispatchPrep
       "identityRelativePath",
       "armRelativePath",
       "armDigest",
+      "runEpochDigest",
       "recoveryJournalRelativePath",
     ]) &&
     value.kind === "native" &&
@@ -1126,6 +1127,7 @@ function dispatchPreparationIsValid(value: unknown): value is NativeDispatchPrep
       value.identityRelativePath,
       value.armRelativePath,
       value.armDigest,
+      value.runEpochDigest,
       value.recoveryJournalRelativePath,
     ].every(nonEmptyString) &&
     relativeCheckpointPathIsValid(String(value.identityRelativePath)) &&

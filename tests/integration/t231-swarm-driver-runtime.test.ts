@@ -243,6 +243,9 @@ function fixture(
     recordNativeEvidenceError?: "stale-writer" | "generic";
     claimActiveRecoveryError?: "claim-active" | "stale-writer" | "generic";
     registrationUnavailableOnRun?: boolean;
+    failDispatchPreparationCheckpointWriteOnce?: boolean;
+    failDispatchPreparationAuditAppendOnce?: boolean;
+    invalidDispatchPreparation?: "absolute-path" | "parent-path" | "empty-digest";
   }> = {},
 ) {
   const checkpoints = new Map<number, AttemptCheckpoint>();
@@ -250,6 +253,8 @@ function fixture(
   let probeCount = 0;
   let executionCount = 0;
   let failCheckpointWrite = false;
+  let failDispatchPreparationCheckpointWrite = options.failDispatchPreparationCheckpointWriteOnce === true;
+  let failDispatchPreparationAuditAppend = options.failDispatchPreparationAuditAppendOnce === true;
   let heartbeatCallback: (() => void) | undefined;
   let heartbeatDelay: number | undefined;
   let heartbeatCancelled = false;
@@ -315,11 +320,30 @@ function fixture(
       read: (batch) => checkpoints.get(batch) ?? null,
       write: (batch, checkpoint) => {
         if (failCheckpointWrite) throw new Error("injected checkpoint write failure");
+        if (
+          failDispatchPreparationCheckpointWrite &&
+          checkpoint.state === "prepared" &&
+          checkpoint.dispatchPreparation !== undefined &&
+          checkpoint.preparedNativeRun === undefined
+        ) {
+          failDispatchPreparationCheckpointWrite = false;
+          throw new Error("injected dispatch preparation checkpoint write failure");
+        }
         checkpoints.set(batch, checkpoint);
       },
     },
     audit: {
-      append: (event, fields) => audits.push({ event, fields }),
+      append: (event, fields) => {
+        if (
+          failDispatchPreparationAuditAppend &&
+          event === "SWARM_DRIVER_TRANSITION" &&
+          fields["Transition edge"] === "native-dispatch-prepared"
+        ) {
+          failDispatchPreparationAuditAppend = false;
+          throw new Error("injected dispatch preparation audit append failure");
+        }
+        audits.push({ event, fields });
+      },
       hasEventKey: (key) => audits.some(({ fields }) => fields["Event key"] === key),
       read: () => options.auditReadable
         ? audits.map(({ event, fields }) =>
@@ -391,7 +415,15 @@ function fixture(
           identityRelativePath: ".amadeus/native/identity.json",
           armRelativePath: ".amadeus/native/arm.json",
           armDigest: "arm-digest",
+          runEpochDigest: "run-epoch-digest",
           recoveryJournalRelativePath: ".amadeus/native/recovery.json",
+          ...(options.invalidDispatchPreparation === "absolute-path"
+            ? { identityRelativePath: "/outside/identity.json" }
+            : {}),
+          ...(options.invalidDispatchPreparation === "parent-path"
+            ? { recoveryJournalRelativePath: "../recovery.json" }
+            : {}),
+          ...(options.invalidDispatchPreparation === "empty-digest" ? { armDigest: "" } : {}),
         };
         const preparedNativeRun = {
           kind: "native" as const,
@@ -618,6 +650,7 @@ function materializePreparedCheckpoint(
     identityRelativePath: ".amadeus/native/identity.json",
     armRelativePath: ".amadeus/native/arm.json",
     armDigest: "prepared-arm",
+    runEpochDigest: "prepared-run-epoch",
     recoveryJournalRelativePath: ".amadeus/native/recovery.json",
   });
   const { stateDigest: _stateDigest, ...selectedWithoutDigest } = selected;
@@ -1520,6 +1553,83 @@ describe("t231 swarm driver runtime", () => {
         state: "failed-resumable",
         failure: { code: "COORDINATOR_FAILED", failedFromState },
       });
+    });
+  }
+
+  test("reconciles audit-only dispatch preparation before recording an execution failure", async () => {
+    const f = fixture({
+      nativeAvailable: true,
+      auditReadable: true,
+      failDispatchPreparationCheckpointWriteOnce: true,
+    });
+
+    expect(await runNativeAttempt(f)).toMatchObject({ type: "err", error: { code: "EXECUTION_FAILED" } });
+    expect(f.store.read(1)).toMatchObject({
+      state: "failed-resumable",
+      failure: {
+        code: "COORDINATOR_FAILED",
+        failedFromState: "prepared",
+        recoveryContext: {
+          dispatchPreparation: {
+            kind: "native",
+            runEpochDigest: "run-epoch-digest",
+          },
+        },
+      },
+    });
+    expect(f.store.readReconciled(1)).toMatchObject({
+      state: "failed-resumable",
+      failure: {
+        recoveryContext: {
+          dispatchPreparation: { runEpochDigest: "run-epoch-digest" },
+        },
+      },
+    });
+    expect(f.audits.filter(({ event }) => event === "SWARM_DRIVER_RECONCILED").map(({ fields }) => fields.Action).slice(-2))
+      .toEqual(["reapplied", "already-materialized"]);
+  });
+
+  test("retains captured dispatch preparation when its audit append fails", async () => {
+    const f = fixture({
+      nativeAvailable: true,
+      auditReadable: true,
+      failDispatchPreparationAuditAppendOnce: true,
+    });
+
+    expect(await runNativeAttempt(f)).toMatchObject({ type: "err", error: { code: "EXECUTION_FAILED" } });
+    const failed = f.store.read(1);
+    expect(failed).toMatchObject({
+      state: "failed-resumable",
+      failure: {
+        code: "COORDINATOR_FAILED",
+        failedFromState: "prepared",
+        recoveryContext: {
+          dispatchPreparation: {
+            kind: "native",
+            runEpochDigest: "run-epoch-digest",
+            identityRelativePath: ".amadeus/native/identity.json",
+            armRelativePath: ".amadeus/native/arm.json",
+            recoveryJournalRelativePath: ".amadeus/native/recovery.json",
+          },
+        },
+      },
+    });
+    expect(f.store.readReconciled(1)).toEqual(failed);
+    expect(f.store.readReconciled(1)).toEqual(failed);
+  });
+
+  for (const invalidDispatchPreparation of ["absolute-path", "parent-path", "empty-digest"] as const) {
+    test(`rejects ${invalidDispatchPreparation} dispatch preparation before capturing recovery context`, async () => {
+      const f = fixture({ nativeAvailable: true, invalidDispatchPreparation });
+
+      expect(await runNativeAttempt(f)).toMatchObject({ type: "err", error: { code: "EXECUTION_FAILED" } });
+      const failed = f.store.read(1);
+      expect(failed).toMatchObject({
+        state: "failed-resumable",
+        failure: { code: "COORDINATOR_FAILED", failedFromState: "prepared" },
+      });
+      expect(failed?.state === "failed-resumable" ? failed.failure.recoveryContext : undefined).toBeUndefined();
+      expect(f.audits.filter(({ fields }) => fields["Transition edge"] === "native-dispatch-prepared")).toHaveLength(0);
     });
   }
 
