@@ -173,5 +173,12 @@
     "dirName": "260713-swarm-driver-migration",
     "scope": "amadeus",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019f6683-1975-7b70-8cef-f7150c0854b0",
+    "slug": "opencode-cursor-harness",
+    "dirName": "260715-opencode-cursor-harness",
+    "scope": "amadeus",
+    "status": "in-flight"
   }
 ]
