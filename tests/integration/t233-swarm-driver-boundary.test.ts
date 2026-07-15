@@ -13,10 +13,24 @@ type CapturedNativeExecution = Readonly<{
 }>;
 
 let productionNativeExecution: CapturedNativeExecution | undefined;
+let productionRecovery: Readonly<{ recover(input: unknown): Promise<unknown> }> | undefined;
+
+const nativeExecution = Object.freeze({ execute: async () => Object.freeze([]) });
+const nativeRecovery = Object.freeze({ recover: async () => "unknown" as const });
+
+mock.module("../../packages/framework/core/tools/amadeus-swarm-native-supervisors.ts", () => ({
+  createProductionNativeSupervisors() {
+    return Object.freeze({ execution: nativeExecution, recovery: nativeRecovery });
+  },
+}));
 
 mock.module("../../packages/framework/core/tools/amadeus-swarm-driver-runtime.ts", () => ({
-  createProductionCoordinator(input: Readonly<{ nativeExecution: CapturedNativeExecution }>) {
+  createProductionCoordinator(input: Readonly<{
+    nativeExecution: CapturedNativeExecution;
+    recovery: Readonly<{ recover(input: unknown): Promise<unknown> }>;
+  }>) {
     productionNativeExecution = input.nativeExecution;
+    productionRecovery = input.recovery;
     return Object.freeze({ status: () => null });
   },
 }));
@@ -119,7 +133,7 @@ describe("t233 swarm driver architecture boundary", () => {
     expect(boundary).not.toContain("node_modules");
   });
 
-  test("keeps the production CLI fail-closed until active recovery is wired", async () => {
+  test("wires the production CLI to one native execution and exact recovery suite", async () => {
     const output = await executeSwarmDriverCommand(
       ["status", "--project-dir", REPO_ROOT],
       JSON.stringify({ schemaVersion: 1, batch: 1 }),
@@ -127,15 +141,13 @@ describe("t233 swarm driver architecture boundary", () => {
     const cli = source("amadeus-swarm-driver.ts");
     const supervisors = source("amadeus-swarm-native-supervisors.ts");
     expect(output.exitCode).toBe(0);
-    expect(productionNativeExecution).toBeDefined();
-    await expect(productionNativeExecution!.execute({})).rejects.toThrow(
-      "NATIVE_ACTIVE_RECOVERY_UNIMPLEMENTED",
-    );
-    expect(cli).not.toContain('from "./amadeus-swarm-native-supervisors.ts"');
-    expect(cli).toContain("nativeExecution: failClosedNativeExecution");
-    expect(cli).toContain("NATIVE_ACTIVE_RECOVERY_UNIMPLEMENTED");
+    expect(productionNativeExecution).toBe(nativeExecution);
+    expect(productionRecovery).toBe(nativeRecovery);
+    expect(cli).toContain('from "./amadeus-swarm-native-supervisors.ts"');
+    expect(cli).toContain("createProductionNativeSupervisors(context)");
+    expect(cli).not.toContain("NATIVE_ACTIVE_RECOVERY_UNIMPLEMENTED");
     expect(supervisors).toContain("createLifecycleNativeExecution({");
-    expect(supervisors).not.toContain(".recover(");
+    expect(supervisors).toContain("createNativeAttemptRecovery({ process, resources })");
   });
 
   test("guards both irreversible merge primitives with claim, fencing, and arm", () => {
