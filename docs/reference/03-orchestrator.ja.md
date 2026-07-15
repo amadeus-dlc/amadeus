@@ -34,7 +34,7 @@
 
 ### `/amadeus [scope]` -- 明示的スコープ
 
-引数が9つの既知スコープ(`enterprise`、`feature`、`mvp`、`poc`、`bugfix`、`refactor`、`infra`、`security-patch`、`workshop`)のいずれかにマッチする場合:
+引数が10個の既知スコープ(`enterprise`、`feature`、`mvp`、`poc`、`bugfix`、`chore`、`refactor`、`infra`、`security-patch`、`workshop`)のいずれかにマッチする場合:
 
 まっさらなワークスペース(まだ intent がない — `amadeus/spaces/*/intents/*/` の下に `amadeus-state.md` がない)上で明示的に名指しされたスコープは、**最初の intent を誕生させます**: エンジンの `next` が `amadeus-utility.ts intent-birth --scope <scope>` を名指しする run-then-continue の `print` ディレクティブ(`--depth` / `--test-strategy` フラグを名指しコマンドに通す)を発行します。コンダクターがそれを実行し、`next` を再実行して最初のステージに着地します。両方の命名形 — 素の位置引数(`/amadeus bugfix`)と明示的フラグ(`/amadeus --scope bugfix`)— は同一の誕生 print を発行します。何を構築するかを記述する(`/amadeus "build the auth service"`)ことも誕生させます。明示的に名指しされたスコープも記述もない素の `/amadeus` は誕生させません(env またはデフォルトで解決されたスコープは誕生シグナルではありません)。何を構築するか記述するかスコープを名指しするようユーザーへ促す no-state エラーを発行します。
 
@@ -52,6 +52,7 @@
 1. `amadeus/spaces/<space>/memory/` からガードレールを読む。
 2. intent をキーワードパターンに対して分析する:
    - "fix" / "bug" / "broken" は `bugfix` にマップ
+   - "chore" / "tweak" は `chore` にマップ
    - "refactor" / "clean up" / "simplify" は `refactor` にマップ
    - "infrastructure" / "deploy" / "infra" は `infra` にマップ
    - "security" / "CVE" / "vulnerability" / "patch" は `security-patch` にマップ
@@ -278,6 +279,7 @@ Construction フェーズセクションは特別です: Bolt 単位で実行さ
 | `mvp` | 0.1-0.3, 1.1, 1.3 (light), 1.4, 2.1 (if brownfield), 2.2, 2.3, 2.4, 2.5 (if UI), 2.6, 2.7, 2.8, 3.1-3.7 | 22 / 32 | Standard | Standard |
 | `poc` | 0.1-0.3, 1.1 (minimal), 2.1 (if brownfield), 2.3 (minimal), 3.5, 3.6 | 8 / 32 | Minimal | Minimal |
 | `bugfix` | 0.1-0.3, 2.1 (always), 2.3 (minimal), 3.5, 3.6 | 7 / 32 | Minimal | Minimal |
+| `chore` | 0.1-0.3, 3.5, 3.6 | 5 / 32 | Minimal | Minimal |
 | `refactor` | 0.1-0.3, 2.1 (always), 2.3 (minimal), 3.1 (refactoring plan), 3.5, 3.6 | 8 / 32 | Minimal | Minimal |
 | `infra` | 0.1-0.3, 2.2, 2.3 (infra requirements), 3.2, 3.3, 3.4, 3.7, 4.1, 4.2, 4.3, 4.4 | 13 / 32 | Standard | Standard |
 | `security-patch` | 0.1-0.3, 2.1 (find vulnerability context), 2.3 (minimal), 3.2, 3.5, 3.6, 4.1, 4.3 | 10 / 32 | Minimal | Minimal |
@@ -290,6 +292,7 @@ Construction フェーズセクションは特別です: Bolt 単位で実行さ
 - **mvp** — Ideation のほとんどをスキップ(Intent Capture、軽量 Feasibility、Scope Definition のみ保持)。Inception と Construction のすべてを実行。Operation ステージはオプション。
 - **poc** — 最小限の Ideation(Intent Capture のみ)。コアな Inception。Construction からは Code Generation と Build and Test のみ。Operation なし。
 - **bugfix** — Ideation なし。Reverse Engineering を常に含む(バグを見つけるため)加えて最小限の Requirements Analysis。Code Generation と Build and Test のみ。
+- **chore** — Ideation なし、Requirements/Design ステージもなし。Initialization に加えて Code Generation と Build and Test のみ — 最も軽量な incremental スコープで、開発スクリプト・docs・CI 設定などユーザー可視契約に触れない1〜数ファイルの小さな自己完結の修正向け。
 - **refactor** — Ideation なし。bugfix と同じ Inception 開始。Functional Design(リファクタリングプランとして)を追加。
 - **infra** — Ideation なし。インフラ重視の Requirements Analysis。Construction からは NFR ステージ + Infrastructure Design + CI Pipeline。Operation からは Deployment と Observability。
 - **security-patch** — Ideation なし。脆弱性コンテキストを見つける Reverse Engineering 加えて最小限の Requirements Analysis(脆弱性とその修正基準の監査可能な記述)。NFR Requirements、Code Generation、Build and Test。Operation からは Deployment Pipeline と Deployment Execution。
@@ -299,7 +302,7 @@ Construction フェーズセクションは特別です: Bolt 単位で実行さ
 
 | 深度 | スコープ | 特徴 |
 |---|---|---|
-| Minimal | poc, bugfix, refactor, security-patch | 最小限の成果物、簡潔な分析、オプションステージはスキップ |
+| Minimal | poc, bugfix, chore, refactor, security-patch | 最小限の成果物、簡潔な分析、オプションステージはスキップ |
 | Standard | feature, mvp, infra, workshop | 中程度の詳細でフルの成果物 |
 | Comprehensive | enterprise | 深い分析で comprehensive な成果物、全ステージ実行 |
 

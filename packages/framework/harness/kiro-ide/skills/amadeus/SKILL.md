@@ -157,6 +157,7 @@ The engine resolves scope-level stage routing internally (it reads the compiled 
 | Scope          | Depth         | TestStrategy | EXECUTE / Total |
 |----------------|---------------|--------------|-----------------|
 | bugfix         | Minimal       | (default)    | 7 / 32          |
+| chore          | Minimal       | (default)    | 5 / 32          |
 | enterprise     | Comprehensive | (default)    | 32 / 32         |
 | feature        | Standard      | (default)    | 32 / 32         |
 | infra          | Standard      | (default)    | 13 / 32         |

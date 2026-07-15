@@ -282,7 +282,7 @@ function rowNames(tableOut: string): string[] {
 }
 
 const EXPECTED_ROW_ORDER =
-  "bugfix enterprise feature infra mvp poc refactor security-patch workshop";
+  "bugfix chore enterprise feature infra mvp poc refactor security-patch workshop";
 
 // ============================================================
 // scope-table — emission shape (.sh §1)
@@ -345,7 +345,7 @@ describe("t67 scope-table emission (migrated from t67-scope-table.sh §1-3)", ()
     expect(gridCount).toBe(mdCount);
     expect(rowCount).toBe(gridCount);
     // … and the concrete count is pinned.
-    expect(rowCount).toBe(9);
+    expect(rowCount).toBe(10);
   });
 });
 
@@ -425,6 +425,8 @@ describe("t67 detect-scope --from-text keyword inference (migrated from t67 §7)
   test('17: "spike prototype" -> poc', keywordCase("spike prototype", "poc"));
   test('18: "mvp" -> mvp', keywordCase("mvp", "mvp"));
   test('19: "infra deploy" -> infra', keywordCase("infra deploy", "infra"));
+  test('20: "chore bump the dep" -> chore', keywordCase("chore bump the dep", "chore"));
+  test('21: "tweak the log line" -> chore', keywordCase("tweak the log line", "chore"));
 });
 
 describe("t67 detect-scope --from-text boundary + fallback (migrated from t67 §8-10)", () => {
@@ -469,6 +471,12 @@ describe("t67 detect-scope --from-text boundary + fallback (migrated from t67 §
     // STRONGER: a keyword-less match also marks Source=freeform.
     expect(auditField(readAudit(p), "SCOPE_DETECTED", "Source")).toBe("freeform");
   });
+
+  // #993 regression guard: "script" was deliberately NOT adopted as a chore
+  // keyword (too common a noun — it collides with legitimate feature/tool work).
+  // A short input mentioning "script" must fall through to feature, not chore.
+  // If someone re-adds `script` to amadeus-chore.md keywords, this turns red.
+  test('24b: "write a script" -> feature (script is NOT a chore keyword)', fallbackCase("write a script", "feature"));
 });
 
 // ============================================================

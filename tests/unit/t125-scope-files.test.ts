@@ -1,4 +1,4 @@
-// covers: function:validScopes, function:loadScopeMetadata, function:loadScopeMapping, function:scalarField, cli:amadeus-utility(detect-scope)
+// covers: function:validScopes, function:loadScopeMetadata, function:loadScopeMapping, function:scalarField, scope:chore, cli:amadeus-utility(detect-scope)
 //
 // t125 — scope files: validScopes() + scope metadata derive from
 // .claude/scopes/amadeus-<name>.md presence (milestone 12). Migrated from
@@ -43,9 +43,9 @@
 //                                   emits SCOPE_DETECTED with **Detected scope**: <s>
 //
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test()):
-//   .sh test 1  (9 shipped scope files)                     -> "exactly 9 shipped amadeus-*.md scope files exist"
+//   .sh test 1  (10 shipped scope files)                     -> "exactly 10 shipped amadeus-*.md scope files exist"
 //   .sh test 2  (frontmatter name == filename stem)          -> "every shipped scope file's frontmatter name == its slug"
-//   .sh test 3  (validScopes() == 9 names, alphabetical)     -> "validScopes() == the 9 .md-derived names, alphabetical"
+//   .sh test 3  (validScopes() == 10 names, alphabetical)     -> "validScopes() == the 10 .md-derived names, alphabetical"
 //   .sh test 4  (loadScopeMetadata bugfix depth/kw/desc)     -> "loadScopeMetadata reads bugfix depth/keywords/description from .md"
 //   .sh test 5  (workshop testStrategy override)             -> "loadScopeMetadata reads workshop's testStrategy override from .md"
 //   .sh test 6  (loadScopeMapping poc derived fields)        -> "loadScopeMapping poc depth/keywords/description derive from .md"
@@ -90,10 +90,11 @@ const UTIL = fileURLToPath(
   new URL("../../dist/claude/.claude/tools/amadeus-utility.ts", import.meta.url),
 );
 
-// The 9 scopes the framework ships, alphabetical — the .sh's hard-coded
+// The 10 scopes the framework ships, alphabetical — the .sh's hard-coded
 // expectation (t125:62). Each is a literal independent of source iteration.
 const SHIPPED_SCOPES = [
   "bugfix",
+  "chore",
   "enterprise",
   "feature",
   "infra",
@@ -127,11 +128,11 @@ afterEach(() => {
 });
 
 describe("shipped scope files — frontmatter + derived metadata (in-process)", () => {
-  test("exactly 9 shipped amadeus-*.md scope files exist [.sh test 1]", () => {
+  test("exactly 10 shipped amadeus-*.md scope files exist [.sh test 1]", () => {
     const files = readdirSync(SCOPES_DIR).filter(
       (f) => f.startsWith("amadeus-") && f.endsWith(".md"),
     );
-    expect(files.length).toBe(9);
+    expect(files.length).toBe(10);
   });
 
   test("every shipped scope file's frontmatter name == its slug [.sh test 2]", () => {
@@ -150,7 +151,7 @@ describe("shipped scope files — frontmatter + derived metadata (in-process)", 
     }
   });
 
-  test("validScopes() == the 9 .md-derived names, alphabetical [.sh test 3]", () => {
+  test("validScopes() == the 10 .md-derived names, alphabetical [.sh test 3]", () => {
     expect([...validScopes()]).toEqual(SHIPPED_SCOPES);
   });
 
@@ -180,6 +181,29 @@ describe("shipped scope files — frontmatter + derived metadata (in-process)", 
     // EXECUTE/SKIP `.stages` half from the compiled grid (the transpose).
     expect(typeof m.poc.stages).toBe("object");
     expect(Object.keys(m.poc.stages).length).toBeGreaterThan(0);
+  });
+
+  test("chore scope: Minimal depth, chore/tweak keywords, EXECUTE = init + code-gen + build-and-test only [#993]", () => {
+    const m = loadScopeMapping();
+    expect(m.chore.depth).toBe("Minimal");
+    expect(m.chore.keywords).toEqual(["chore", "tweak"]);
+    expect(m.chore.description).toBe("Small self-contained tweak");
+    // The load-bearing contract: chore's grid EXECUTEs exactly the three
+    // bootstrap initialization stages plus code-generation and build-and-test
+    // — nothing from ideation, the rest of inception, or operation. Pinned as
+    // a sorted set so a stray `- chore` added to (or dropped from) any other
+    // stage's `scopes:` frontmatter turns this red.
+    const execute = Object.entries(m.chore.stages)
+      .filter(([, action]) => action === "EXECUTE")
+      .map(([slug]) => slug)
+      .sort();
+    expect(execute).toEqual([
+      "build-and-test",
+      "code-generation",
+      "state-init",
+      "workspace-detection",
+      "workspace-scaffold",
+    ]);
   });
 
   test("every scope-grid column has a matching .claude/scopes/*.md file [.sh test 10]", () => {
@@ -228,7 +252,7 @@ describe("dropped-file scope dynamics (AMADEUS_SCOPES_DIR seam)", () => {
     const scopes = [...validScopes()];
     // The drop made it valid with zero code change...
     expect(scopes).toContain("dropscope");
-    // ...alongside all 9 shipped scopes that were copied into the sandbox.
+    // ...alongside all 10 shipped scopes that were copied into the sandbox.
     for (const s of SHIPPED_SCOPES) expect(scopes).toContain(s);
   });
 

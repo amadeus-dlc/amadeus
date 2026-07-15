@@ -21,6 +21,7 @@ scopes:
   - infra
   - security-patch
   - workshop
+  - chore
 inputs: workspace classification from workspace-detection, scope from orchestrator
 outputs: <record>/amadeus-state.md (full populated version, engine-resolved)
 ---
@@ -66,9 +67,17 @@ Overwrite `<record>/amadeus-state.md` with the full populated version:
 
 ### Step 3: Determine Routing
 
-Based on project type:
-- **Brownfield** → First post-initialization stage: reverse-engineering (Inception)
-- **Greenfield** → First post-initialization stage: requirements-analysis (Inception), skip reverse-engineering
+The first post-initialization stage is the first EXECUTE stage after the
+initialization phase in the scope's execute/skip mapping (the engine resolves
+this deterministically from the compiled scope grid). When the scope executes
+an Inception entry stage, project type decides which one:
+- **Brownfield** → reverse-engineering (Inception)
+- **Greenfield** → requirements-analysis (Inception), skip reverse-engineering
+
+Scopes that skip both Inception entry stages advance straight to their first
+executed stage instead — e.g. `chore` skips reverse-engineering and
+requirements-analysis, so its first post-initialization stage is
+code-generation (Construction).
 
 Update amadeus-state.md with the routing decision:
 - Set `Stages to Execute` and `Stages to Skip` based on scope + project type

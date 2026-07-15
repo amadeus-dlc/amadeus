@@ -23,7 +23,8 @@
         "refactor",
         "infra",
         "security-patch",
-        "workshop"
+        "workshop",
+        "chore"
       ],
       "inputs": "none (first stage after session start)",
       "outputs": "the per-intent record tree (stage artifact dirs + verification dir) and the space-level knowledge/ dir",
@@ -68,7 +69,8 @@
         "refactor",
         "infra",
         "security-patch",
-        "workshop"
+        "workshop",
+        "chore"
       ],
       "inputs": "none (scans filesystem)",
       "outputs": "workspace classification (greenfield/brownfield), technology stack detection",
@@ -113,7 +115,8 @@
         "refactor",
         "infra",
         "security-patch",
-        "workshop"
+        "workshop",
+        "chore"
       ],
       "inputs": "workspace classification from workspace-detection, scope from orchestrator",
       "outputs": "<record>/amadeus-state.md (full populated version, engine-resolved)",
@@ -1913,7 +1916,8 @@
         "bugfix",
         "refactor",
         "security-patch",
-        "workshop"
+        "workshop",
+        "chore"
       ],
       "reviewer": "amadeus-architecture-reviewer-agent",
       "reviewer_max_iterations": 2,
@@ -1997,7 +2001,8 @@
         "bugfix",
         "refactor",
         "security-patch",
-        "workshop"
+        "workshop",
+        "chore"
       ],
       "inputs": "ALL code generation outputs across all units",
       "outputs": "build-instructions.md, unit-test-instructions.md, integration-test-instructions.md, performance-test-instructions.md, security-test-instructions.md, build-and-test-summary.md, test-results.md (under this stage's record dir, engine-resolved)",
@@ -2764,6 +2769,48 @@
         "broken"
       ],
       "description": "Fix a specific bug"
+    },
+    "chore": {
+      "depth": "Minimal",
+      "stages": {
+        "workspace-scaffold": "EXECUTE",
+        "workspace-detection": "EXECUTE",
+        "state-init": "EXECUTE",
+        "intent-capture": "SKIP",
+        "market-research": "SKIP",
+        "feasibility": "SKIP",
+        "scope-definition": "SKIP",
+        "team-formation": "SKIP",
+        "rough-mockups": "SKIP",
+        "approval-handoff": "SKIP",
+        "reverse-engineering": "SKIP",
+        "practices-discovery": "SKIP",
+        "requirements-analysis": "SKIP",
+        "user-stories": "SKIP",
+        "refined-mockups": "SKIP",
+        "application-design": "SKIP",
+        "units-generation": "SKIP",
+        "delivery-planning": "SKIP",
+        "functional-design": "SKIP",
+        "nfr-requirements": "SKIP",
+        "nfr-design": "SKIP",
+        "infrastructure-design": "SKIP",
+        "code-generation": "EXECUTE",
+        "build-and-test": "EXECUTE",
+        "ci-pipeline": "SKIP",
+        "deployment-pipeline": "SKIP",
+        "environment-provisioning": "SKIP",
+        "deployment-execution": "SKIP",
+        "observability-setup": "SKIP",
+        "incident-response": "SKIP",
+        "performance-validation": "SKIP",
+        "feedback-optimization": "SKIP"
+      },
+      "keywords": [
+        "chore",
+        "tweak"
+      ],
+      "description": "Small self-contained tweak"
     },
     "enterprise": {
       "depth": "Comprehensive",

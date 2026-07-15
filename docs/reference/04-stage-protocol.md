@@ -738,6 +738,7 @@ and problem complexity.
 | mvp | Standard | Standard | 22 | Skip all Operation |
 | poc | Minimal | Minimal | ~8 | Initialization + Ideation + core Inception |
 | bugfix | Minimal | Minimal | ~8 | Targeted |
+| chore | Minimal | Minimal | 5 | Small self-contained tweak |
 | refactor | Minimal | Minimal | 8 | Targeted |
 | infra | Standard | Standard | ~13 | Infra-focused |
 | security-patch | Minimal | Minimal | ~10 | Security-focused |
@@ -747,7 +748,7 @@ User can override depth or test strategy at any approval gate.
 
 ### Three Depth Levels
 
-**Minimal** (poc, bugfix, refactor, security-patch) -- minimal artifacts,
+**Minimal** (poc, bugfix, chore, refactor, security-patch) -- minimal artifacts,
 brief analysis, skip optional stages:
 - Requirements: 5-10 items, brief descriptions, minimal NFRs
 - App Design: single component diagram, basic data model, no ADRs
@@ -779,7 +780,7 @@ brief analysis, skip optional stages:
 | **AI-DLC** | AI-Driven Development Life Cycle -- the methodology this system implements |
 | **Phase** | Top-level grouping: Initialization, Ideation, Inception, Construction, Operation |
 | **Stage** | A discrete step within a phase (e.g., Intent Capture, Code Generation) |
-| **Scope** | Controls which stages execute and at what depth (enterprise, feature, mvp, poc, bugfix, refactor, infra, security-patch, workshop) |
+| **Scope** | Controls which stages execute and at what depth (enterprise, feature, mvp, poc, bugfix, chore, refactor, infra, security-patch, workshop) |
 | **Depth** | Artifact detail scale: Minimal, Standard, or Comprehensive |
 | **Unit of Work** | An independently implementable package of features; the Construction iteration unit. One pass through stages 3.1-3.7. |
 | **Service** | A deployable process or container (API server, worker, frontend app) |

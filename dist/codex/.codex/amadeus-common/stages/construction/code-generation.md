@@ -48,6 +48,7 @@ scopes:
   - refactor
   - security-patch
   - workshop
+  - chore
 inputs: ALL prior design artifacts for this unit
 outputs: application code + code-generation-plan.md, code-summary.md (under this stage's per-unit record dir, engine-resolved)
 ---
@@ -76,11 +77,11 @@ Read all design artifacts for the current unit:
 - Story map from `<record>/inception/units-generation/unit-of-work-story-map.md` (if exists)
 - Requirements from `<record>/inception/requirements-analysis/requirements.md` (if exists)
 
-Incremental scopes (bugfix, poc, refactor, security-patch) skip units-generation and application-design by design; when those inputs are absent, scope the work from the requirements and, on brownfield, the reverse-engineered code knowledge base at `amadeus/spaces/<active-space>/codekb/<repo>/` — never invent the content of a missing artifact.
+Incremental scopes (bugfix, poc, refactor, security-patch, chore) skip units-generation and application-design by design; when those inputs are absent, scope the work from the requirements and, on brownfield, the reverse-engineered code knowledge base at `amadeus/spaces/<active-space>/codekb/<repo>/` — never invent the content of a missing artifact. The chore scope additionally skips requirements-analysis and reverse-engineering, so requirements and the code knowledge base may be absent too; in that case scope the work directly from the captured intent — the **Project** description in `<record>/amadeus-state.md`, recorded at initialization from the task description — the change is self-evident from the task itself.
 
 ### Step 2: PART 1 — Planning
 
-Create a detailed code generation plan at `<record>/construction/{unit-name}/code-generation/code-generation-plan.md` with checkboxes for each implementation step. Include story-to-code-step traceability — map each plan step back to the user story it implements.
+Create a detailed code generation plan at `<record>/construction/{unit-name}/code-generation/code-generation-plan.md` with checkboxes for each implementation step. Include story-to-code-step traceability — map each plan step back to the user story it implements. When user stories are absent because the scope skipped them (e.g. `chore` scoped from the captured intent), map each step back to that captured intent instead, and record in the plan that the work was scoped from intent only — so the degraded input used is written down, and the same note carries into `code-summary.md`.
 
 Plan should cover (as applicable to the unit):
 - [ ] Business logic implementation

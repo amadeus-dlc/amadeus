@@ -130,7 +130,7 @@ Run the health check to confirm everything is in place:
 | State file | the active intent's `amadeus-state.md` matches its audit trail (no drift) |
 | Hook heartbeats | `.amadeus-hooks-health/` contains recent timestamps from hook executions |
 | Graph integrity | No cycles in `stage-graph.json`; every slug has a matching stage file |
-| Scope validation | All 9 scopes walk cleanly against the graph (advisories for scope-truncation gaps are expected) |
+| Scope validation | All 10 scopes walk cleanly against the graph (advisories for scope-truncation gaps are expected) |
 | Schema + references | Every stage's YAML frontmatter validates, and every consumes/requires_stage reference resolves |
 | Keyword overlap | No keyword is claimed by more than one scope across the `.claude/scopes/*.md` files |
 
@@ -152,7 +152,7 @@ Run the health check to confirm everything is in place:
 ✓ State matches last audit event (no drift)
 ✓ Cycle detection: 0 cycles
 ✓ Orphan stage files: 32 graph entries all have files
-✓ Scope validation: 9 scopes valid (29 advisories)
+✓ Scope validation: 10 scopes valid (29 advisories)
 ✓ Schema validation: 32/32 stages valid
 ✓ Graph references: 122 artifacts + edges resolved
 ✓ Keyword overlap: no conflicts

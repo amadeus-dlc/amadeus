@@ -424,7 +424,7 @@ amadeus/                                    # neutral, harness-independent, comm
 
 7. **フラットなエージェントファイル** — 各エージェントは `agents/` 内の単一の `.md` ファイルです(`agent.md` + `knowledge/` を持つサブディレクトリではありません)。これは構造を簡素化し、エージェントを発見しやすくします。方法論の知識は別途 `knowledge/[agent]/` に存在します。
 
-8. **スコープ駆動の適応的深度** — 9つの名前付きスコープ(enterprise、feature、mvp、poc、bugfix、refactor、infra、security-patch、workshop)に加え自動検出が、どのステージがどの深度で実行されるかを決定します。各スコープは `.claude/scopes/amadeus-<name>.md` ファイル(アイデンティティ)です。メンバーシップはステージごとの `scopes:` フロントマタータグで、コンパイル時に EXECUTE/SKIP グリッド(`.claude/tools/data/scope-grid.json`、権威)に転置され、SKILL.md 内のサマリーテーブル(情報提供用)へコンパイルされます。自然言語のキーワード→スコープ推論は、各スコープの `.md` フロントマターから `keywords` を読みます。ユーザーは任意の承認ゲートでオーバーライドできます。
+8. **スコープ駆動の適応的深度** — 10個の名前付きスコープ(enterprise、feature、mvp、poc、bugfix、chore、refactor、infra、security-patch、workshop)に加え自動検出が、どのステージがどの深度で実行されるかを決定します。各スコープは `.claude/scopes/amadeus-<name>.md` ファイル(アイデンティティ)です。メンバーシップはステージごとの `scopes:` フロントマタータグで、コンパイル時に EXECUTE/SKIP グリッド(`.claude/tools/data/scope-grid.json`、権威)に転置され、SKILL.md 内のサマリーテーブル(情報提供用)へコンパイルされます。自然言語のキーワード→スコープ推論は、各スコープの `.md` フロントマターから `keywords` を読みます。ユーザーは任意の承認ゲートでオーバーライドできます。
 
 9. **最小限のルール** — ガードレール(合計約35行)のみが space メモリ層(`amadeus/spaces/<space>/memory/`、`.claude/rules/amadeus.md` の @-import スタブ経由でプルされる)に存在します。それ以外すべて(検証、ブラウンフィールドのセーフガード、監査フォーマット、適応パターン)は `knowledge/amadeus-shared/` に存在するか、SKILL.md/stage-protocol.md に埋め込まれています。ルールは常にロードされるため、これにより非 AI-DLC の会話でのコンテキスト肥大化を防ぎます。
 

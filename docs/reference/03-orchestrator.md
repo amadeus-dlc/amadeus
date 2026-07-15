@@ -34,7 +34,7 @@ The conductor passes `$ARGUMENTS` to the engine's first `next` verbatim — it n
 
 ### `/amadeus [scope]` -- Explicit Scope
 
-When the argument matches one of the 9 known scopes (`enterprise`, `feature`, `mvp`, `poc`, `bugfix`, `refactor`, `infra`, `security-patch`, `workshop`):
+When the argument matches one of the 10 known scopes (`enterprise`, `feature`, `mvp`, `poc`, `bugfix`, `chore`, `refactor`, `infra`, `security-patch`, `workshop`):
 
 An explicitly named scope on a fresh workspace (no intent yet — no `amadeus-state.md` under `amadeus/spaces/*/intents/*/`) **births the first intent**: the engine's `next` emits a run-then-continue `print` directive naming `amadeus-utility.ts intent-birth --scope <scope>` (threading any `--depth` / `--test-strategy` flags onto the named command); the conductor runs it and re-runs `next` to land on the first stage. Both naming shapes — the bare positional (`/amadeus bugfix`) and the explicit flag (`/amadeus --scope bugfix`) — emit the identical birth print. Describing what to build (`/amadeus "build the auth service"`) also births. A bare `/amadeus` with no explicitly named scope and no description does NOT birth (an env- or default-resolved scope is not a birth signal); it emits the no-state error directing the user to describe what to build or name a scope.
 
@@ -52,6 +52,7 @@ When the argument is freeform text (not a known scope keyword):
 1. Reads guardrails from `amadeus/spaces/<space>/memory/`.
 2. Analyzes the intent against keyword patterns:
    - "fix" / "bug" / "broken" maps to `bugfix`
+   - "chore" / "tweak" maps to `chore`
    - "refactor" / "clean up" / "simplify" maps to `refactor`
    - "infrastructure" / "deploy" / "infra" maps to `infra`
    - "security" / "CVE" / "vulnerability" / "patch" maps to `security-patch`
@@ -278,6 +279,7 @@ Authoritative data lives in the `.claude/scopes/amadeus-<name>.md` files plus ea
 | `mvp` | 0.1-0.3, 1.1, 1.3 (light), 1.4, 2.1 (if brownfield), 2.2, 2.3, 2.4, 2.5 (if UI), 2.6, 2.7, 2.8, 3.1-3.7 | 22 / 32 | Standard | Standard |
 | `poc` | 0.1-0.3, 1.1 (minimal), 2.1 (if brownfield), 2.3 (minimal), 3.5, 3.6 | 8 / 32 | Minimal | Minimal |
 | `bugfix` | 0.1-0.3, 2.1 (always), 2.3 (minimal), 3.5, 3.6 | 7 / 32 | Minimal | Minimal |
+| `chore` | 0.1-0.3, 3.5, 3.6 | 5 / 32 | Minimal | Minimal |
 | `refactor` | 0.1-0.3, 2.1 (always), 2.3 (minimal), 3.1 (refactoring plan), 3.5, 3.6 | 8 / 32 | Minimal | Minimal |
 | `infra` | 0.1-0.3, 2.2, 2.3 (infra requirements), 3.2, 3.3, 3.4, 3.7, 4.1, 4.2, 4.3, 4.4 | 13 / 32 | Standard | Standard |
 | `security-patch` | 0.1-0.3, 2.1 (find vulnerability context), 2.3 (minimal), 3.2, 3.5, 3.6, 4.1, 4.3 | 10 / 32 | Minimal | Minimal |
@@ -290,6 +292,7 @@ Authoritative data lives in the `.claude/scopes/amadeus-<name>.md` files plus ea
 - **mvp** -- Skips most of Ideation (keeps only Intent Capture, light Feasibility, and Scope Definition). Runs all of Inception and Construction. Operation stages optional.
 - **poc** -- Minimal Ideation (only Intent Capture). Core Inception. Only Code Generation and Build and Test from Construction. No Operation.
 - **bugfix** -- No Ideation. Reverse Engineering always included (to find the bug) plus minimal Requirements Analysis. Code Generation and Build and Test only.
+- **chore** -- No Ideation, no Requirements/Design stages. Just Initialization plus Code Generation and Build and Test -- the lightest incremental scope, for a small self-contained tweak (a 1-to-few-file change to a dev script, docs, or CI config touching no user-visible contract).
 - **refactor** -- No Ideation. Same Inception start as bugfix. Adds Functional Design (as refactoring plan).
 - **infra** -- No Ideation. Infra-focused Requirements Analysis. NFR stages + Infrastructure Design + CI Pipeline from Construction. Deployment and Observability from Operation.
 - **security-patch** -- No Ideation. Reverse Engineering to find vulnerability context plus minimal Requirements Analysis (the auditable statement of the vulnerability and its remediation criteria). NFR Requirements, Code Generation, Build and Test. Deployment Pipeline and Deployment Execution from Operation.
@@ -299,7 +302,7 @@ Authoritative data lives in the `.claude/scopes/amadeus-<name>.md` files plus ea
 
 | Depth | Scopes | Characteristics |
 |---|---|---|
-| Minimal | poc, bugfix, refactor, security-patch | Minimal artifacts, brief analysis, optional stages skipped |
+| Minimal | poc, bugfix, chore, refactor, security-patch | Minimal artifacts, brief analysis, optional stages skipped |
 | Standard | feature, mvp, infra, workshop | Full artifacts at moderate detail |
 | Comprehensive | enterprise | Comprehensive artifacts with deep analysis, all stages execute |
 

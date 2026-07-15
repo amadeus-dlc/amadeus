@@ -21,6 +21,7 @@ All three stages run inside a single deterministic `bun .claude/tools/amadeus-ut
 | mvp | All 0.1-0.3 |
 | poc | All 0.1-0.3 |
 | bugfix | All 0.1-0.3 |
+| chore | All 0.1-0.3 |
 | refactor | All 0.1-0.3 |
 | infra | All 0.1-0.3 |
 | security-patch | All 0.1-0.3 |

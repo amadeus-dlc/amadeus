@@ -23,7 +23,7 @@ reverse-engineering (understand what exists), requirements-analysis
 shape), then code-generation and build-and-test (apply and verify the
 existing suite stays green). It skips the discovery and operation phases
 for the same reason `bugfix` does — there is no new product and no new
-deployment surface. One of the three incremental scopes that skip the
+deployment surface. One of the four incremental scopes that skip the
 walking-skeleton ceremony.
 
 ## Membership

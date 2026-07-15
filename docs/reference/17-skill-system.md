@@ -96,7 +96,7 @@ Two drift guards keep the on-disk runner sets pinned to their sources: `amadeus-
 
 Scope is a file-authored primitive, the same muscle memory as authoring a sensor or an agent. There is **no `scope-mapping.json`** — it has been removed from the shipped tree. Scope identity and stage membership are split across two file-authored surfaces, transposed into a compiled grid:
 
-1. **Identity** lives in one file per scope at `dist/claude/.claude/scopes/amadeus-<name>.md` — frontmatter (`name`, `depth`, `keywords`, `description`) plus prose describing the scope. The shipped set is `bugfix`, `enterprise`, `feature`, `infra`, `mvp`, `poc`, `refactor`, `security-patch`, `workshop`.
+1. **Identity** lives in one file per scope at `dist/claude/.claude/scopes/amadeus-<name>.md` — frontmatter (`name`, `depth`, `keywords`, `description`) plus prose describing the scope. The shipped set is `bugfix`, `chore`, `enterprise`, `feature`, `infra`, `mvp`, `poc`, `refactor`, `security-patch`, `workshop`.
 2. **Membership** lives in each stage's `scopes:` frontmatter — the list of scopes for which that stage is EXECUTE.
 
 `bun .claude/tools/amadeus-graph.ts compile` (the same compile path that produces `stage-graph.json`) transposes these into the grid at `tools/data/scope-grid.json` — a `scope → {stages: {slug: EXECUTE|SKIP}}` map that the engine reads for all scope-level routing. The engine's `validScopes()` derives its canonical scope-name set from that compiled grid.

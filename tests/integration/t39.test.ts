@@ -2,10 +2,10 @@
 //
 // CLI-contract port of tests/integration/t39-per-scope-phase-sequence.sh (TAP
 // plan 27), mechanism = cli. Equal-or-stronger migration: the .sh is a
-// data-driven sweep over all 9 canonical scopes (enterprise, feature, mvp,
-// poc, bugfix, refactor, infra, security-patch, workshop), running `bun
+// data-driven sweep over all 10 canonical scopes (enterprise, feature, mvp,
+// poc, bugfix, chore, refactor, infra, security-patch, workshop), running `bun
 // amadeus-utility.ts init --scope <s> --project-dir <p>` once per
-// scope and asserting 3 observables per scope (27 total). Every one of those
+// scope and asserting 3 observables per scope (30 total). Every one of those
 // observables is preserved here by SPAWNING the real CLI via
 // node:child_process spawnSync (BUN + the tool .ts path) and asserting on the
 // audit.md PHASE_STARTED/PHASE_SKIPPED rows the tool writes + the
@@ -41,7 +41,7 @@
 //       pre-crosses the initialization boundary — #836) (the .sh only checked
 //       the excluded set; this pins the Init row too).
 //
-// 9 scopes × 3 .sh asserts = 27 -> 27 expect()-bearing test() cases here
+// 10 scopes × 3 .sh asserts = 30 -> 30 expect()-bearing test() cases here
 // (one describe per scope, 3 test()s each).
 //
 // FIXTURE DISCIPLINE (mirrors the .sh's create_test_project +
@@ -210,6 +210,7 @@ const EXPECTED_SKIPPED: Record<string, string[]> = {
   mvp: ["operation"],
   poc: ["operation"],
   bugfix: ["ideation", "operation"],
+  chore: ["ideation", "inception", "operation"],
   refactor: ["ideation", "operation"],
   infra: ["ideation"],
   "security-patch": ["ideation"],
@@ -222,6 +223,7 @@ const SCOPES = [
   "mvp",
   "poc",
   "bugfix",
+  "chore",
   "refactor",
   "infra",
   "security-patch",

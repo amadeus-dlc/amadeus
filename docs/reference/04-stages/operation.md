@@ -13,7 +13,7 @@ observability, incident response, performance validation, and feedback
 collection.
 
 All seven Operation stages are **CONDITIONAL** -- they execute based on the
-scope and execution plan. For example, mvp, poc, bugfix, and refactor scopes skip Operation
+scope and execution plan. For example, mvp, poc, bugfix, chore, and refactor scopes skip Operation
 entirely. The infra and security-patch scopes run a subset (deployment and
 environment stages).
 
@@ -291,7 +291,7 @@ This reflects the cyclical nature of the AI-DLC lifecycle.
 - enterprise / feature / workshop: All 7 stages
 - infra: Stages 4.1-4.4 (deployment-pipeline, environment-provisioning, deployment-execution, observability-setup)
 - security-patch: Stages 4.1, 4.3 (deployment-pipeline, deployment-execution)
-- mvp / poc / bugfix / refactor: Operation phase skipped entirely
+- mvp / poc / bugfix / chore / refactor: Operation phase skipped entirely
 
 ## Cross-References
 
