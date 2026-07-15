@@ -50,6 +50,8 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 
 <!-- このプロジェクト用のカスタムスコープルール。 -->
 
+- DECIDED: この repo の amadeus ワークフローで intent を開始・再開するときの利用スコープは `amadeus`(Self-hosted Amadeus framework development without infrastructure operations)を既定とする。別スコープ(bugfix 等)を使う場合はユーザーの明示指示による (user decision 2026-07-16、intent 260709-canonical-settings の feature→amadeus 切替指示より) <!-- cid:scope-definition:default-scope-amadeus -->
+
 ## Forbidden
 
 - NEVER 手書きの `CHANGELOG.md` をリポジトリに復活させない — 2026-07-09 に削除済み。リリースノートは release.yml の GitHub Release 自動生成ノートが唯一のソース (user decision 2026-07-09)
