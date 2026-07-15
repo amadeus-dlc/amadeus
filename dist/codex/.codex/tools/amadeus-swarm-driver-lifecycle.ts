@@ -3,6 +3,7 @@
 
 import type {
   NativeMarker,
+  NativeExecutionBinding,
   NormalizedDriverEvent,
   PreparedUnit,
 } from "./amadeus-swarm-driver-adapter-contract.ts";
@@ -14,6 +15,7 @@ import type {
   RedactedDriverRequest,
   RedactedSelection,
 } from "./amadeus-swarm-driver-contract.ts";
+import type { ProbeBindingReferenceV1 } from "./amadeus-swarm-driver-foundation.ts";
 import {
   canonicalJson,
   digestValue,
@@ -31,7 +33,7 @@ import type {
   FinalizeRequestBinding,
   ProtectedSpecBinding,
 } from "./amadeus-swarm-finalize-contract.ts";
-import { SelectionOutcomeProjection } from "./amadeus-swarm-driver-contract.ts";
+import { NATIVE_DRIVER_VALUES, SelectionOutcomeProjection } from "./amadeus-swarm-driver-contract.ts";
 import type { ProcessIdentity } from "./amadeus-armed-process.ts";
 import type {
   CaptureCheckpoint,
@@ -244,6 +246,7 @@ type FailureCheckpoint = Readonly<{
     affectedUnits: readonly string[];
     failedFromState: Exclude<AttemptState, "succeeded" | "failed-resumable" | "failed-terminal">;
     recoveryContext?: Readonly<{
+      selectedContext?: SelectedContext;
       dispatchPreparation: NativeDispatchPreparation;
       preparedNativeRun?: PreparedNativeRun;
       dispatch?: NativeDispatchCheckpoint;
@@ -570,6 +573,26 @@ const EVIDENCE_POLICY: Readonly<Record<NativeDriver, EvidencePolicy>> = Object.f
   }),
 });
 
+const CODEX_MODE_IDENTIFIER_PREFIX = "codex-ultra-v1:";
+
+function modeEvidenceMatches(
+  driver: NativeDriver,
+  event: Extract<NormalizedDriverEvent, Readonly<{ kind: "mode-confirmed" }>>,
+  policy: EvidencePolicy,
+  expectedProbeBinding: ProbeBindingReferenceV1 | undefined,
+): boolean {
+  if (driver !== "codex-ultra") return event.modeIdentifier === policy.modeIdentifier;
+  return (
+    expectedProbeBinding?.driver === driver &&
+    expectedProbeBinding.schemaVersion === 1 &&
+    typeof event.resolvedModelId === "string" &&
+    event.resolvedModelId.length > 0 &&
+    event.modeIdentifier === `${CODEX_MODE_IDENTIFIER_PREFIX}${event.resolvedModelId}` &&
+    event.modeIdentifier === expectedProbeBinding.modeIdentifier &&
+    event.resolvedModelId === expectedProbeBinding.resolvedModelId
+  );
+}
+
 function evidenceFailure(
   code: EvidenceVerdict["code"],
   events: readonly NormalizedDriverEvent[],
@@ -593,6 +616,7 @@ type EvidenceInput = Readonly<{
   waveDigest: string;
   nativeRunId: string;
   expectedUnits: readonly string[];
+  expectedProbeBinding?: ProbeBindingReferenceV1;
   events: readonly NormalizedDriverEvent[];
 }>;
 
@@ -644,7 +668,7 @@ function evidenceLifecycleMatches(input: EvidenceInput): boolean {
   const requiredMarkers = [...policy.markers].sort();
   return (
     mode.length === 1 &&
-    mode[0].modeIdentifier === policy.modeIdentifier &&
+    modeEvidenceMatches(input.driver, mode[0], policy, input.expectedProbeBinding) &&
     coordinatorStarted.length === 1 &&
     coordinatorStopped.length === 1 &&
     coordinatorStarted[0].coordinatorId.length > 0 &&
@@ -1146,6 +1170,7 @@ function relativeCheckpointPathIsValid(path: string): boolean {
 }
 
 function preparedNativeRunIsValid(value: unknown): value is PreparedNativeRun {
+  const hasBinding = isRecord(value) && value.binding !== undefined;
   return (
     hasExactKeys(value, [
       "kind",
@@ -1155,6 +1180,7 @@ function preparedNativeRunIsValid(value: unknown): value is PreparedNativeRun {
       "capturePlanDigest",
       "transportKind",
       "captureKind",
+      ...(hasBinding ? ["binding"] : []),
     ]) &&
     value.kind === "native" &&
     [
@@ -1164,7 +1190,52 @@ function preparedNativeRunIsValid(value: unknown): value is PreparedNativeRun {
       value.capturePlanDigest,
     ].every(nonEmptyString) &&
     (value.transportKind === "stdio-json" || value.transportKind === "pty-interactive") &&
-    ["fixed-provider-path", "event-bound-provider-path", "hook-only"].includes(String(value.captureKind))
+    ["fixed-provider-path", "event-bound-provider-path", "hook-only"].includes(String(value.captureKind)) &&
+    (!hasBinding || nativeExecutionBindingIsValid(value.binding))
+  );
+}
+
+const SHA256_DIGEST_PATTERN = /^[0-9a-f]{64}$/;
+
+function persistedProbeBindingIsValid(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  const hasResolvedModel = value.resolvedModelId !== undefined;
+  if (!hasExactKeys(value, [
+    "schemaVersion",
+    "driver",
+    "modeIdentifier",
+    ...(hasResolvedModel ? ["resolvedModelId"] : []),
+    "seedDigest",
+    "finalDigest",
+  ])) return false;
+  if (
+    value.schemaVersion !== 1 ||
+    !NATIVE_DRIVER_VALUES.includes(value.driver as NativeDriver) ||
+    !nonEmptyString(value.modeIdentifier) ||
+    !SHA256_DIGEST_PATTERN.test(String(value.seedDigest)) ||
+    !SHA256_DIGEST_PATTERN.test(String(value.finalDigest))
+  ) return false;
+  if (value.driver !== "codex-ultra") {
+    return !hasResolvedModel || nonEmptyString(value.resolvedModelId);
+  }
+  return (
+    nonEmptyString(value.resolvedModelId) &&
+    value.modeIdentifier === `codex-ultra-v1:${value.resolvedModelId}`
+  );
+}
+
+function nativeExecutionBindingIsValid(value: unknown): value is NativeExecutionBinding {
+  return (
+    hasExactKeys(value, [
+      "schemaVersion",
+      "probeBinding",
+      "toolEnvironmentPolicyDigest",
+      "sandboxPolicyDigest",
+    ]) &&
+    value.schemaVersion === 1 &&
+    persistedProbeBindingIsValid(value.probeBinding) &&
+    SHA256_DIGEST_PATTERN.test(String(value.toolEnvironmentPolicyDigest)) &&
+    SHA256_DIGEST_PATTERN.test(String(value.sandboxPolicyDigest))
   );
 }
 
@@ -1268,17 +1339,35 @@ function preparedCheckpointFieldsAreValid(value: Record<string, unknown>): boole
   );
 }
 
+function recoveryPreparedRunIsValid(
+  value: Record<string, unknown>,
+  selectedContext: SelectedContext | undefined,
+): boolean {
+  if (value.preparedNativeRun === undefined) return true;
+  if (!preparedNativeRunIsValid(value.preparedNativeRun)) return false;
+  const prepared = value.preparedNativeRun as PreparedNativeRun;
+  if (prepared.dispatchPreparationDigest !== digestValue(value.dispatchPreparation)) return false;
+  if (prepared.binding !== undefined && selectedContext === undefined) return false;
+  return selectedContext === undefined ||
+    preparedNativeRunBindingMatchesSelection({ selectedContext }, prepared);
+}
+
 function recoveryContextIsValid(value: unknown): boolean {
   if (!isRecord(value) || !dispatchPreparationIsValid(value.dispatchPreparation)) return false;
+  const hasSelectedContext = value.selectedContext !== undefined;
   const hasPrepared = value.preparedNativeRun !== undefined;
   const hasDispatch = value.dispatch !== undefined;
-  if (!hasExactKeys(value, ["dispatchPreparation", ...(hasPrepared ? ["preparedNativeRun"] : []), ...(hasDispatch ? ["dispatch"] : [])])) {
+  if (!hasExactKeys(value, [
+    ...(hasSelectedContext ? ["selectedContext"] : []),
+    "dispatchPreparation",
+    ...(hasPrepared ? ["preparedNativeRun"] : []),
+    ...(hasDispatch ? ["dispatch"] : []),
+  ])) {
     return false;
   }
-  if (hasPrepared && !preparedNativeRunIsValid(value.preparedNativeRun)) return false;
-  if (hasPrepared && (value.preparedNativeRun as PreparedNativeRun).dispatchPreparationDigest !== digestValue(value.dispatchPreparation)) {
-    return false;
-  }
+  if (hasSelectedContext && !selectedContextIsValid(value.selectedContext)) return false;
+  const selectedContext = hasSelectedContext ? value.selectedContext as SelectedContext : undefined;
+  if (!recoveryPreparedRunIsValid(value, selectedContext)) return false;
   if (!hasDispatch) return true;
   if (!hasPrepared || !dispatchCheckpointIsValid(value.dispatch)) return false;
   return (value.dispatch as NativeDispatchCheckpoint).preparedNativeRunDigest === digestValue(value.preparedNativeRun);
@@ -1391,14 +1480,38 @@ function nativePreparationValuesAreValid(
   const recoveryClaim = value.recoveryClaim as ActiveRecoveryClaim | undefined;
   const preparationFencingToken = recoveryClaim?.resourceFencingToken ?? (value.lease as AttemptLease).fencingToken;
   if (preparation.fencingToken !== preparationFencingToken) return false;
-  if (prepared !== undefined) {
-    if (!preparedNativeRunIsValid(prepared)) return false;
-    if (prepared.dispatchPreparationDigest !== digestValue(preparation)) return false;
-  }
+  if (prepared !== undefined && !preparedNativeRunMatchesPreparation(value, preparation, prepared)) return false;
   if (state === "prepared") return true;
   if (prepared === undefined || !dispatchCheckpointIsValid(value.dispatch)) return false;
   const dispatch = value.dispatch as DispatchCheckpoint;
   return dispatch.kind === "native" && nativeDispatchBindingsMatch(preparation, prepared, dispatch);
+}
+
+function preparedNativeRunMatchesPreparation(
+  value: Record<string, unknown>,
+  preparation: NativeDispatchPreparation,
+  prepared: unknown,
+): prepared is PreparedNativeRun {
+  return (
+    preparedNativeRunIsValid(prepared) &&
+    prepared.dispatchPreparationDigest === digestValue(preparation) &&
+    preparedNativeRunBindingMatchesSelection(value, prepared)
+  );
+}
+
+function preparedNativeRunBindingMatchesSelection(
+  value: Record<string, unknown>,
+  prepared: PreparedNativeRun,
+): boolean {
+  const selection = (value.selectedContext as SelectedContext).selection;
+  if (selection.kind !== "native-selection") return prepared.binding === undefined;
+  const probeBinding = selection.probe.binding;
+  if (prepared.binding === undefined) return probeBinding === undefined;
+  return (
+    probeBinding !== undefined &&
+    prepared.binding.probeBinding.driver === selection.selected &&
+    digestValue(prepared.binding.probeBinding) === digestValue(probeBinding)
+  );
 }
 
 function nativeDispatchBindingsMatch(

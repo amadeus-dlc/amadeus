@@ -230,6 +230,259 @@ describe("swarm driver closed vocabulary and immutable values", () => {
 });
 
 describe("probe, capability, and registration contracts", () => {
+  test("available probe preserves an immutable binding reference", () => {
+    const binding = {
+      schemaVersion: 1,
+      driver: "codex-ultra",
+      modeIdentifier: "codex-ultra-v1:model",
+      resolvedModelId: "model",
+      seedDigest: "a".repeat(64),
+      finalDigest: "b".repeat(64),
+    } as const;
+    const probe = okValue(
+      ProbeResult.build({
+        status: "available",
+        reason: "none",
+        modeIdentifier: binding.modeIdentifier,
+        binding,
+      }),
+    );
+
+    expect(probe.binding).toEqual(binding);
+    expect(probe.binding).not.toBe(binding);
+    expect(Object.isFrozen(probe.binding)).toBe(true);
+  });
+
+  test("rejects a probe binding whose mode does not match the probe", () => {
+    expect(
+      ProbeResult.build({
+        status: "available",
+        reason: "none",
+        modeIdentifier: "codex-ultra-v1:model-a",
+        binding: {
+          schemaVersion: 1,
+          driver: "codex-ultra",
+          modeIdentifier: "codex-ultra-v1:model-b",
+          resolvedModelId: "model-b",
+          seedDigest: "a".repeat(64),
+          finalDigest: "b".repeat(64),
+        },
+      }).type,
+    ).toBe("err");
+  });
+
+  test("rejects a native selection whose driver does not match the probe binding", () => {
+    const probe = okValue(
+      ProbeResult.build({
+        status: "available",
+        reason: "none",
+        modeIdentifier: "kiro-subagent",
+        binding: {
+          schemaVersion: 1,
+          driver: "kiro-subagent",
+          modeIdentifier: "kiro-subagent",
+          seedDigest: "a".repeat(64),
+          finalDigest: "b".repeat(64),
+        },
+      }),
+    );
+
+    expect(
+      SelectionOutcome.native({
+        source: "default",
+        requested: "auto",
+        selected: "codex-ultra",
+        harness: "codex",
+        topology: unknownTopology(),
+        fallbackReason: "none",
+        capabilityDetails: [],
+        probe,
+      }).type,
+    ).toBe("err");
+  });
+
+  test("rejects a binding on an unavailable probe", () => {
+    expect(
+      ProbeResult.build({
+        status: "unavailable",
+        reason: "native-surface-unavailable",
+        modeIdentifier: "kiro-subagent",
+        binding: {
+          schemaVersion: 1,
+          driver: "kiro-subagent",
+          modeIdentifier: "kiro-subagent",
+          seedDigest: "a".repeat(64),
+          finalDigest: "b".repeat(64),
+        },
+      }).type,
+    ).toBe("err");
+  });
+
+  test("rejects probe bindings whose digests are not lowercase SHA-256 hex", () => {
+    const binding = {
+      schemaVersion: 1,
+      driver: "kiro-subagent",
+      modeIdentifier: "kiro-subagent",
+      seedDigest: "a".repeat(64),
+      finalDigest: "b".repeat(64),
+    } as const;
+    const invalid = [
+      { ...binding, seedDigest: "a".repeat(63) },
+      { ...binding, seedDigest: "A".repeat(64) },
+      { ...binding, finalDigest: "g".repeat(64) },
+    ];
+
+    for (const candidate of invalid) {
+      expect(
+        ProbeResult.build({
+          status: "available",
+          reason: "none",
+          modeIdentifier: candidate.modeIdentifier,
+          binding: candidate,
+        }).type,
+      ).toBe("err");
+    }
+  });
+
+  test("requires an exact versioned Codex binding mode and resolved model", () => {
+    const common = {
+      schemaVersion: 1,
+      driver: "codex-ultra",
+      seedDigest: "a".repeat(64),
+      finalDigest: "b".repeat(64),
+    } as const;
+    const invalid = [
+      { ...common, modeIdentifier: "", resolvedModelId: "model" },
+      { ...common, modeIdentifier: "codex-ultra", resolvedModelId: "model" },
+      { ...common, modeIdentifier: "codex-ultra-v1:model" },
+      { ...common, modeIdentifier: "codex-ultra-v1:model", resolvedModelId: "other-model" },
+      { ...common, modeIdentifier: "codex-ultra-v1:", resolvedModelId: "" },
+    ];
+
+    for (const binding of invalid) {
+      expect(
+        ProbeResult.build({
+          status: "available",
+          reason: "none",
+          modeIdentifier: binding.modeIdentifier,
+          binding,
+        }).type,
+      ).toBe("err");
+    }
+  });
+
+  test("rejects an empty resolved model for every probe binding", () => {
+    expect(
+      ProbeResult.build({
+        status: "available",
+        reason: "none",
+        modeIdentifier: "agent-teams",
+        binding: {
+          schemaVersion: 1,
+          driver: "claude-agent-teams",
+          modeIdentifier: "agent-teams",
+          resolvedModelId: "",
+          seedDigest: "a".repeat(64),
+          finalDigest: "b".repeat(64),
+        },
+      }).type,
+    ).toBe("err");
+  });
+
+  test("roundtrips a probe binding through the selection projection", () => {
+    const probe = okValue(
+      ProbeResult.build({
+        status: "available",
+        reason: "none",
+        modeIdentifier: "codex-ultra-v1:model",
+        binding: {
+          schemaVersion: 1,
+          driver: "codex-ultra",
+          modeIdentifier: "codex-ultra-v1:model",
+          resolvedModelId: "model",
+          seedDigest: "a".repeat(64),
+          finalDigest: "b".repeat(64),
+        },
+      }),
+    );
+    const outcome = okValue(
+      SelectionOutcome.native({
+        source: "default",
+        requested: "auto",
+        selected: "codex-ultra",
+        harness: "codex",
+        topology: unknownTopology(),
+        fallbackReason: "none",
+        capabilityDetails: [],
+        probe,
+      }),
+    );
+    const projection = SelectionOutcomeProjection.fromOutcome(outcome);
+    const parsed = okValue(SelectionOutcomeProjection.parse(JSON.parse(projection.canonicalJSON())));
+
+    expect((parsed.toJSON() as RedactedNativeSelection).probe.binding).toEqual(probe.binding);
+    expect(Object.isFrozen((parsed.toJSON() as RedactedNativeSelection).probe.binding)).toBe(true);
+    const redacted = outcome.toRedactedJSON() as RedactedNativeSelection;
+    expect(SelectionOutcomeProjection.parse({
+      ...redacted,
+      probe: {
+        ...redacted.probe,
+        binding: {
+          ...redacted.probe.binding,
+          modeIdentifier: "codex-ultra-v1:other-model",
+          resolvedModelId: "other-model",
+        },
+      },
+    }).type).toBe("err");
+  });
+
+  test("rejects unknown and secret-like probe binding fields without echoing values", () => {
+    const baseline = okValue(
+      SelectionOutcome.native({
+        source: "default",
+        requested: "auto",
+        selected: "codex-ultra",
+        harness: "codex",
+        topology: unknownTopology(),
+        fallbackReason: "none",
+        capabilityDetails: [],
+        probe: okValue(
+          ProbeResult.build({
+            status: "available",
+            reason: "none",
+            modeIdentifier: "codex-ultra-v1:model",
+            binding: {
+              schemaVersion: 1,
+              driver: "codex-ultra",
+              modeIdentifier: "codex-ultra-v1:model",
+              resolvedModelId: "model",
+              seedDigest: "a".repeat(64),
+              finalDigest: "b".repeat(64),
+            },
+          }),
+        ),
+      }),
+    ).toRedactedJSON() as RedactedNativeSelection;
+    const unknown = SelectionOutcomeProjection.parse({
+      ...baseline,
+      probe: { ...baseline.probe, binding: { ...baseline.probe.binding, extension: true } },
+    });
+    const secret = SelectionOutcomeProjection.parse({
+      ...baseline,
+      probe: { ...baseline.probe, binding: { ...baseline.probe.binding, providerToken: "do-not-echo" } },
+    });
+
+    expect(unknown).toEqual({
+      type: "err",
+      error: { code: "REDACTION_SCHEMA_REJECTED", fieldPath: "$.probe.binding.extension" },
+    });
+    expect(secret).toEqual({
+      type: "err",
+      error: { code: "REDACTION_SCHEMA_REJECTED", fieldPath: "$.probe.binding.providerToken" },
+    });
+    expect(JSON.stringify(secret)).not.toContain("do-not-echo");
+  });
+
   test("rejects contradictory probe status/reason and failed available checks", () => {
     expect(ProbeResult.build({ status: "available", reason: "cli-unavailable" }).type).toBe("err");
     expect(ProbeResult.build({ status: "unavailable", reason: "none" }).type).toBe("err");

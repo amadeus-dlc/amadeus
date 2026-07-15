@@ -20,7 +20,13 @@ function events(units: readonly string[]): NormalizedDriverEvent[] {
   };
   const bindings = units.map((unit, index) => ({ unit, childId: `child-${index}` }));
   return [
-    { ...base, kind: "mode-confirmed", source: "model-handshake", modeIdentifier: "codex-ultra" },
+    {
+      ...base,
+      kind: "mode-confirmed",
+      source: "model-handshake",
+      modeIdentifier: "codex-ultra-v1:gpt-5.6-sol-ultra",
+      resolvedModelId: "gpt-5.6-sol-ultra",
+    },
     { ...base, kind: "coordinator-started", source: "stream", coordinatorId: "coordinator" },
     { ...base, kind: "native-state-observed", source: "hook", snapshotDigest: "snapshot", bindings },
     ...bindings.map(
@@ -46,6 +52,14 @@ const evidenceBinding = {
   waveDigest: "wave",
   nativeRunId: "run",
   expectedUnits: ["alpha", "beta"] as const,
+  expectedProbeBinding: Object.freeze({
+    schemaVersion: 1 as const,
+    driver: "codex-ultra" as const,
+    modeIdentifier: "codex-ultra-v1:gpt-5.6-sol-ultra",
+    resolvedModelId: "gpt-5.6-sol-ultra",
+    seedDigest: "a".repeat(64),
+    finalDigest: "b".repeat(64),
+  }),
 };
 
 function verify(inputEvents: readonly NormalizedDriverEvent[]) {
@@ -116,10 +130,16 @@ describe("t229 native evidence properties", () => {
 
   test("requires the closed Codex mode, marker, lifecycle cardinality, coordinator identity, and exit zero", () => {
     const fixture = events(["alpha", "beta"]);
+    const invalidModes = [
+      { modeIdentifier: "codex-ultra", resolvedModelId: undefined },
+      { modeIdentifier: "codex-ultra-v1:gpt-5.6-sol-ultra", resolvedModelId: undefined },
+      { modeIdentifier: "codex-ultra-v1:gpt-5.6-sol-ultra", resolvedModelId: "other-model" },
+      { modeIdentifier: "codex-ultra-v1:", resolvedModelId: "" },
+    ];
     const invalid = [
       fixture.filter((event) => event.kind !== "mode-confirmed"),
-      fixture.map((event) =>
-        event.kind === "mode-confirmed" ? { ...event, modeIdentifier: "wrong-mode" } : event,
+      ...invalidModes.map((mode) =>
+        fixture.map((event) => (event.kind === "mode-confirmed" ? { ...event, ...mode } : event)),
       ),
       fixture.filter((event) => event.kind !== "native-coordination"),
       fixture.map((event) =>
@@ -137,6 +157,26 @@ describe("t229 native evidence properties", () => {
     ];
     for (const candidate of invalid) {
       expect(verify(candidate as readonly NormalizedDriverEvent[]).ok).toBeFalse();
+    }
+  });
+
+  test("requires Codex evidence to match the selected ProbeBinding exactly", () => {
+    const fixture = events(["alpha", "beta"]);
+    const { expectedProbeBinding: _expectedProbeBinding, ...withoutBinding } = evidenceBinding;
+    expect(verifyNativeEvidence({ ...withoutBinding, events: fixture })).toMatchObject({
+      ok: false,
+      code: "EVIDENCE_POLICY_INVALID",
+    });
+
+    const mismatches = [
+      { ...evidenceBinding.expectedProbeBinding, modeIdentifier: "codex-ultra-v1:other-model" },
+      { ...evidenceBinding.expectedProbeBinding, resolvedModelId: "other-model" },
+    ];
+    for (const expectedProbeBinding of mismatches) {
+      expect(verifyNativeEvidence({ ...evidenceBinding, expectedProbeBinding, events: fixture })).toMatchObject({
+        ok: false,
+        code: "EVIDENCE_POLICY_INVALID",
+      });
     }
   });
 });

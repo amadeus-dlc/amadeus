@@ -10,6 +10,7 @@ import {
   DriverRegistrationSet,
   type DriverAdapter,
   type NormalizedDriverEvent,
+  type ProbeInput,
 } from "../../packages/framework/core/tools/amadeus-swarm-driver-adapter-contract.ts";
 import {
   observeProcessIdentity,
@@ -61,6 +62,21 @@ const preparedUnits = Object.freeze([
   Object.freeze({ unit: "beta", worktreePath: "/repo/beta", branchName: "unit/beta" }),
 ]);
 
+const probeBinding = Object.freeze({
+  schemaVersion: 1 as const,
+  driver: "codex-ultra" as const,
+  modeIdentifier: "codex-ultra-v1:gpt-5.6-sol-ultra",
+  resolvedModelId: "gpt-5.6-sol-ultra",
+  seedDigest: "a".repeat(64),
+  finalDigest: "b".repeat(64),
+});
+const executionBinding = Object.freeze({
+  schemaVersion: 1 as const,
+  probeBinding,
+  toolEnvironmentPolicyDigest: "c".repeat(64),
+  sandboxPolicyDigest: "d".repeat(64),
+});
+
 const runGitBinding = Object.freeze({
   expectedUnits: Object.freeze([
     Object.freeze({
@@ -82,11 +98,12 @@ const runGitBinding = Object.freeze({
   targetBeforeCommit: "base",
 });
 
-function availableProbe() {
+function availableProbe(withBinding = false) {
   const result = ProbeResult.build({
     status: "available",
     reason: "none",
-    modeIdentifier: "codex-ultra",
+    modeIdentifier: probeBinding.modeIdentifier,
+    ...(withBinding ? { binding: probeBinding } : {}),
     checks: [{ name: "mode", ok: true, diagnosticCode: "CLI_AVAILABLE" }],
   });
   if (result.type === "err") throw new Error("Invalid probe fixture");
@@ -113,7 +130,13 @@ function nativeEvents(input: Readonly<{
     nativeRunId: input.nativeRunId,
   };
   return Object.freeze([
-    { ...common, kind: "mode-confirmed", source: "model-handshake", modeIdentifier: "codex-ultra" },
+    {
+      ...common,
+      kind: "mode-confirmed",
+      source: "model-handshake",
+      modeIdentifier: probeBinding.modeIdentifier,
+      resolvedModelId: probeBinding.resolvedModelId,
+    },
     { ...common, kind: "coordinator-started", source: "stream", coordinatorId: "coordinator-1" },
     {
       ...common,
@@ -274,10 +297,14 @@ function fixture(
     failReadyToArmCheckpointWriteOnce?: boolean;
     failReadyToArmAuditAppendOnce?: boolean;
     invalidDispatchPreparation?: "absolute-path" | "parent-path" | "empty-digest";
+    nativeBinding?: boolean;
+    preparedBindingOverride?: unknown;
   }> = {},
 ) {
   const checkpoints = new Map<number, AttemptCheckpoint>();
+  const checkpointWrites: AttemptCheckpoint[] = [];
   const audits: { event: DriverAuditEvent; fields: Readonly<Record<string, string>> }[] = [];
+  const probeInputs: ProbeInput[] = [];
   let probeCount = 0;
   let executionCount = 0;
   let failCheckpointWrite = false;
@@ -293,9 +320,10 @@ function fixture(
     driver: "codex-ultra",
     provider: "codex",
     supports: (harness: Harness) => harness === "codex",
-    probe: async () => {
+    probe: async (input) => {
       probeCount += 1;
-      return availableProbe();
+      probeInputs.push(Object.freeze({ ...input, environment: Object.freeze({ ...input.environment }) }));
+      return availableProbe(options.nativeBinding ?? true);
     },
     prepareResources: () => ({ resources: Object.freeze([]), preparationDigest: digestValue([]) }),
     buildExecution: (input) => ({
@@ -368,6 +396,7 @@ function fixture(
           throw new Error("injected ready-to-arm checkpoint write failure");
         }
         checkpoints.set(batch, checkpoint);
+        checkpointWrites.push(checkpoint);
       },
     },
     audit: {
@@ -480,7 +509,10 @@ function fixture(
           capturePlanDigest: "capture-plan",
           transportKind: "stdio-json" as const,
           captureKind: callbackPlan.captureKind,
-        };
+          ...(options.nativeBinding ?? true
+            ? { binding: options.preparedBindingOverride ?? executionBinding }
+            : {}),
+        } as PreparedNativeRun;
         await notifyNativeCallbacks({
           plan: callbackPlan,
           nativeRunId: launchInput.nativeRunId,
@@ -541,6 +573,8 @@ function fixture(
     coordinator,
     store,
     audits,
+    checkpointWrites: () => Object.freeze([...checkpointWrites]),
+    probeInputs: () => Object.freeze([...probeInputs]),
     probeCount: () => probeCount,
     executionCount: () => executionCount,
     heartbeatDelay: () => heartbeatDelay,
@@ -1291,6 +1325,96 @@ describe("t231 swarm driver runtime", () => {
     expect(f.audits).toHaveLength(0);
   });
 
+  test("passes the common probe budget and resolve context to the adapter", async () => {
+    const f = fixture({ nativeAvailable: true });
+    const result = await f.coordinator.resolve({
+      ...baseResolve,
+      projectDir: "/probe-project",
+      batch: 7,
+      probeEnvironment: { TEST_PROBE_FLAG: "enabled" },
+      selectionEnvironment: { AMADEUS_SWARM_DRIVER: "codex-ultra" },
+    });
+
+    expect(result.type).toBe("ok");
+    expect(f.probeInputs()).toEqual([
+      {
+        projectDir: "/probe-project",
+        batch: 7,
+        timeoutMs: 45_000,
+        environment: { TEST_PROBE_FLAG: "enabled" },
+      },
+    ]);
+  });
+
+  test("persists the native execution binding before the provider arm checkpoint", async () => {
+    const f = fixture({ nativeAvailable: true, nativeBinding: true });
+    const selected = await f.coordinator.resolve({
+      ...baseResolve,
+      batch: 1,
+      selectionEnvironment: { AMADEUS_SWARM_DRIVER: "codex-ultra" },
+    });
+    if (selected.type === "err") throw new Error("resolve fixture failed");
+
+    const result = await f.coordinator.run({
+      executionId: selected.value.executionId,
+      attemptId: selected.value.attemptId,
+      batch: 1,
+      preparedUnits,
+      convergenceCommand: "bun test",
+      evidenceDir: "/repo/evidence",
+      gitBinding: runGitBinding,
+    });
+    const writes = f.checkpointWrites();
+    const resourcesPreparedIndex = writes.findIndex(
+      (checkpoint) => checkpoint.state === "prepared" && checkpoint.preparedNativeRun?.binding !== undefined,
+    );
+    const providerArmIndex = writes.findIndex(
+      (checkpoint) => checkpoint.state === "dispatched" && checkpoint.dispatch.kind === "native",
+    );
+
+    expect(result.type).toBe("ok");
+    expect(resourcesPreparedIndex).toBeGreaterThanOrEqual(0);
+    expect(providerArmIndex).toBeGreaterThan(resourcesPreparedIndex);
+    const resourcesPrepared = writes[resourcesPreparedIndex];
+    expect(resourcesPrepared.state === "prepared" ? resourcesPrepared.preparedNativeRun?.binding : undefined)
+      .toEqual(executionBinding);
+  });
+
+  test("fails closed on mismatched or partial native execution bindings", async () => {
+    const invalidBindings = [
+      {
+        ...executionBinding,
+        probeBinding: { ...probeBinding, finalDigest: "e".repeat(64) },
+      },
+      {
+        schemaVersion: 1,
+        probeBinding,
+        toolEnvironmentPolicyDigest: "c".repeat(64),
+      },
+    ];
+
+    for (const preparedBindingOverride of invalidBindings) {
+      const f = fixture({ nativeAvailable: true, nativeBinding: true, preparedBindingOverride });
+      const selected = await f.coordinator.resolve({
+        ...baseResolve,
+        batch: 1,
+        selectionEnvironment: { AMADEUS_SWARM_DRIVER: "codex-ultra" },
+      });
+      if (selected.type === "err") throw new Error("resolve fixture failed");
+
+      expect(await f.coordinator.run({
+        executionId: selected.value.executionId,
+        attemptId: selected.value.attemptId,
+        batch: 1,
+        preparedUnits,
+        convergenceCommand: "bun test",
+        evidenceDir: "/repo/evidence",
+        gitBinding: runGitBinding,
+      })).toMatchObject({ type: "err", error: { code: "EXECUTION_FAILED" } });
+      expect(f.checkpointWrites().some((checkpoint) => checkpoint.state === "dispatched")).toBeFalse();
+    }
+  });
+
   test("rejects conflicting environment before allocating an attempt", async () => {
     const f = fixture({ nativeAvailable: true });
     const result = await f.coordinator.resolve({
@@ -1752,6 +1876,72 @@ describe("t231 swarm driver runtime", () => {
         },
       },
     });
+  });
+
+  test("binds failed recovery snapshots to the selected probe binding", async () => {
+    const f = fixture({ nativeAvailable: true, callbackMode: "process-observed-then-fails" });
+
+    expect(await runNativeAttempt(f)).toMatchObject({ type: "err", error: { code: "EXECUTION_FAILED" } });
+    const failed = f.store.read(1);
+    if (failed?.state !== "failed-resumable" || failed.failure.recoveryContext === undefined) {
+      throw new Error("failed recovery fixture expected");
+    }
+    const recoveryContext = failed.failure.recoveryContext;
+    expect(recoveryContext.selectedContext?.selection).toMatchObject({
+      kind: "native-selection",
+      selected: "codex-ultra",
+      probe: { binding: probeBinding },
+    });
+    if (recoveryContext.preparedNativeRun?.binding === undefined) {
+      throw new Error("prepared binding fixture expected");
+    }
+
+    const withStateDigest = (checkpoint: AttemptCheckpoint): AttemptCheckpoint => {
+      const { stateDigest: _stateDigest, ...semantic } = checkpoint;
+      return {
+        ...semantic,
+        stateDigest: digestValue({
+          ...semantic,
+          lease: { ...semantic.lease, heartbeatAt: undefined, expiresAt: undefined },
+        }),
+      } as AttemptCheckpoint;
+    };
+    const { selectedContext: _selectedContext, ...withoutSelectedContext } = recoveryContext;
+    const mismatched = {
+      ...recoveryContext,
+      preparedNativeRun: {
+        ...recoveryContext.preparedNativeRun,
+        binding: {
+          ...recoveryContext.preparedNativeRun.binding,
+          probeBinding: {
+            ...recoveryContext.preparedNativeRun.binding.probeBinding,
+            finalDigest: "e".repeat(64),
+          },
+        },
+      },
+    };
+    const nonCodexBinding = {
+      ...recoveryContext,
+      preparedNativeRun: {
+        ...recoveryContext.preparedNativeRun,
+        binding: {
+          ...recoveryContext.preparedNativeRun.binding,
+          probeBinding: {
+            ...recoveryContext.preparedNativeRun.binding.probeBinding,
+            driver: "kiro-subagent" as const,
+            modeIdentifier: "kiro-subagent",
+            resolvedModelId: "kiro-model",
+          },
+        },
+      },
+    };
+
+    for (const candidate of [withoutSelectedContext, mismatched, nonCodexBinding]) {
+      expect(parseAttemptCheckpoint(withStateDigest({
+        ...failed,
+        failure: { ...failed.failure, recoveryContext: candidate },
+      } as AttemptCheckpoint))).toMatchObject({ type: "err", error: { code: "SCHEMA_INVALID", field: "failure" } });
+    }
   });
 
   test("accepts repeated observation of the same process identity", async () => {

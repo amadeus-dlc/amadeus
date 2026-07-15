@@ -323,6 +323,7 @@ function failureRecoveryContext(
   if (!dispatchPreparation) return undefined;
   const dispatch = failureRecoveryDispatch(checkpoint, dispatchOverride);
   return Object.freeze({
+    selectedContext: checkpoint.selectedContext,
     dispatchPreparation,
     ...(checkpoint.preparedNativeRun ? { preparedNativeRun: checkpoint.preparedNativeRun } : {}),
     ...(dispatch ? { dispatch } : {}),
@@ -495,6 +496,8 @@ function explicitRequestMismatch(
   return null;
 }
 
+const NATIVE_PROBE_TIMEOUT_MS = 45_000;
+
 async function probeDriver(
   registry: DriverRegistrationSetValue,
   driver: NativeDriver,
@@ -507,7 +510,7 @@ async function probeDriver(
   return adapter.probe({
     projectDir: resolveInput.projectDir,
     batch: resolveInput.batch,
-    timeoutMs: 10_000,
+    timeoutMs: NATIVE_PROBE_TIMEOUT_MS,
     environment: resolveInput.probeEnvironment ?? {},
   });
 }
@@ -1315,6 +1318,10 @@ export function createCoordinator(input: Readonly<{
         waveDigest,
         nativeRunId,
         expectedUnits: checkpoint.selectionInput.expectedUnits,
+        expectedProbeBinding:
+          checkpoint.selectedContext.selection.kind === "native-selection"
+            ? checkpoint.selectedContext.selection.probe.binding
+            : undefined,
         events,
       });
       if (!recordNativeEvidenceForRun(input.store, {

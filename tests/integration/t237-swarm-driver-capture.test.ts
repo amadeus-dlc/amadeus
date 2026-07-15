@@ -20,6 +20,7 @@ import { digestValue } from "../../packages/framework/core/tools/amadeus-swarm-d
 import {
   createLifecycleNativeExecution,
   type NativeDispatchCheckpoint,
+  type PreparedNativeRun,
 } from "../../packages/framework/core/tools/amadeus-swarm-native-execution.ts";
 
 async function* emptyBytes(): AsyncIterable<Uint8Array> {}
@@ -59,6 +60,29 @@ const plan: DriverPlan = Object.freeze({
   attemptNonceHash: "nonce-hash",
 });
 
+const probeBinding = Object.freeze({
+  schemaVersion: 1 as const,
+  driver: "codex-ultra" as const,
+  modeIdentifier: "codex-ultra-v1:gpt-5.6-sol-ultra",
+  resolvedModelId: "gpt-5.6-sol-ultra",
+  seedDigest: "a".repeat(64),
+  finalDigest: "b".repeat(64),
+});
+const boundProbeResult = ProbeResult.build({
+  status: "available",
+  reason: "none",
+  modeIdentifier: probeBinding.modeIdentifier,
+  binding: probeBinding,
+});
+if (boundProbeResult.type === "err") throw new Error("Invalid bound probe fixture");
+const boundPlan: DriverPlan = Object.freeze({ ...plan, probe: boundProbeResult.value });
+const executionBinding = Object.freeze({
+  schemaVersion: 1 as const,
+  probeBinding,
+  toolEnvironmentPolicyDigest: "c".repeat(64),
+  sandboxPolicyDigest: "d".repeat(64),
+});
+
 function launchInput(nativeRunId = "native-run-1"): LaunchInput {
   return Object.freeze({
     plan,
@@ -71,6 +95,10 @@ function launchInput(nativeRunId = "native-run-1"): LaunchInput {
     evidenceDir: "/evidence",
     nativeRunId,
   });
+}
+
+function boundLaunchInput(): LaunchInput {
+  return Object.freeze({ ...launchInput(), plan: boundPlan });
 }
 
 function normalizeContext(): NormalizeContext {
@@ -102,6 +130,7 @@ const AUTHORITATIVE_ARM_DEADLINE = "2026-07-14T00:00:30.000Z";
 function adapter(
   calls: string[],
   preparation: AdapterResourcePreparation,
+  binding = undefined as typeof executionBinding | undefined,
 ): DriverAdapter {
   return Object.freeze({
     driver: "codex-ultra",
@@ -137,6 +166,7 @@ function adapter(
           waveDigest: digestValue(input.wave),
         }),
         resources: preparation.resources,
+        ...(binding === undefined ? {} : { binding }),
       });
     },
     resolveCaptureBinding: () => Object.freeze({ kind: "not-binding" as const }),
@@ -193,6 +223,7 @@ describe("t237 closed native execution lifecycle", () => {
     });
     let observedCheckpoint: NativeDispatchCheckpoint | undefined;
     let checkpoint: NativeDispatchCheckpoint | undefined;
+    let preparedCheckpoint: PreparedNativeRun | undefined;
     const execution = createLifecycleNativeExecution({
       resources: Object.freeze({
         materialize: async () => {
@@ -279,15 +310,16 @@ describe("t237 closed native execution lifecycle", () => {
     });
 
     const events = await execution.execute({
-      adapter: adapter(calls, preparation),
-      launchInput: launchInput(),
+      adapter: adapter(calls, preparation, executionBinding),
+      launchInput: boundLaunchInput(),
       context: normalizeContext(),
       fencingToken: 1,
       onDispatchPrepared: async () => {
         calls.push("dispatch-prepared");
       },
-      onResourcesPrepared: async () => {
+      onResourcesPrepared: async (prepared) => {
         calls.push("resources-prepared");
+        preparedCheckpoint = prepared;
       },
       onProcessObserved: (value) => {
         calls.push("process-observed");
@@ -303,6 +335,8 @@ describe("t237 closed native execution lifecycle", () => {
     });
 
     expect(events).toEqual([]);
+    expect(preparedCheckpoint).toMatchObject({ binding: executionBinding });
+    expect(Object.isFrozen(preparedCheckpoint?.binding)).toBe(true);
     expect(observedCheckpoint).toBe(checkpoint);
     expect(checkpoint).toMatchObject({
       kind: "native",
