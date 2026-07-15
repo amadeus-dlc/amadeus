@@ -939,7 +939,7 @@ export function classifyTerminalCommand(args: string[]): TerminalCommand | null 
 
 // `amadeus/` — the harness-neutral workspace roof (memory · codekb · knowledge ·
 // intents live under spaces/<space>/ here; the engine stays in <harness>/).
-function workspaceRoot(projectDir: string): string {
+export function workspaceRoot(projectDir: string): string {
   return join(projectDir, "amadeus");
 }
 
