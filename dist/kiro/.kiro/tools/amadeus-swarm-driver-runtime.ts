@@ -1518,14 +1518,18 @@ export function createCoordinator(input: Readonly<{
   });
 }
 
-export function createProductionCoordinator(input: Readonly<{
+export type ProductionCoordinatorInput = Readonly<{
   projectDir: string;
   intent?: string;
   space?: string;
   nativeExecution: NativeExecutionPort;
   audit?: RuntimeAuditPort;
   recovery: AttemptRecoveryPort;
-}>): SwarmDriverCoordinator {
+}>;
+
+export function createProductionCoordinator(
+  input: ProductionCoordinatorInput,
+): SwarmDriverCoordinator {
   return createCoordinator({
     registry: productionDriverRegistry,
     store: createFileDriverAttemptStore({

@@ -61,7 +61,10 @@ import type {
   NativeResourceCleanupReceipt,
   NativeResourceRecoveryTarget,
 } from "../../packages/framework/core/tools/amadeus-swarm-native-resources.ts";
-import { createProductionNativeSupervisors } from "../../packages/framework/core/tools/amadeus-swarm-native-supervisors.ts";
+import {
+  createProductionNativeExecution,
+  createProductionNativeSupervisors,
+} from "../../packages/framework/core/tools/amadeus-swarm-native-supervisors.ts";
 
 const BATCH = 1;
 const INTENT = "production-recovery-intent";
@@ -663,6 +666,20 @@ const UNKNOWN_SCENARIOS: readonly Readonly<{
 ]);
 
 describe("t243 production native recovery", () => {
+  test("keeps the production execution compatibility factory", () => {
+    const projectDir = mkdtempSync(join(tmpdir(), "amadeus-t243-compatibility-"));
+    try {
+      const execution = createProductionNativeExecution({
+        projectDir,
+        intent: INTENT,
+        space: SPACE,
+      });
+      expect(typeof execution.execute).toBe("function");
+    } finally {
+      rmSync(projectDir, { recursive: true, force: true });
+    }
+  });
+
   test("starts a fresh attempt only after exact production recovery completes", async () => {
     const projectDir = mkdtempSync(join(tmpdir(), "amadeus-t243-"));
     try {
