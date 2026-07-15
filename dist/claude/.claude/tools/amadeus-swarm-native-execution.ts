@@ -66,6 +66,7 @@ export type EventBoundCaptureBindingReceipt = Readonly<{
 export type NativeDispatchPreparation = Readonly<{
   kind: "native";
   nativeRunId: string;
+  planDigest: string;
   fencingToken: number;
   waveIndex: number;
   waveDigest: string;
@@ -1156,6 +1157,7 @@ export function createLifecycleNativeExecution(ports: NativeExecutionPorts): Lif
       const dispatchPreparation: NativeDispatchPreparation = Object.freeze({
         kind: "native",
         nativeRunId: input.launchInput.nativeRunId,
+        planDigest: input.context.planDigest,
         fencingToken: input.fencingToken,
         waveIndex: input.context.waveIndex,
         waveDigest: input.context.waveDigest,

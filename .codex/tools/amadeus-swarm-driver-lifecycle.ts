@@ -82,6 +82,17 @@ export type AttemptLease = Readonly<{
   ownerProcess?: ProcessIdentity;
 }>;
 
+export type ActiveRecoveryClaim = Readonly<{
+  claimId: string;
+  previousLeaseId: string;
+  previousFencingToken: number;
+  resourceFencingToken: number;
+  previousOwnerId: string;
+  previousOwnerProcess?: ProcessIdentity;
+  claimedAt: string;
+  recoveredTransitionId?: string;
+}>;
+
 export type SelectionInputSnapshot = Readonly<{
   requested: RedactedDriverRequest;
   harness: Harness;
@@ -165,6 +176,7 @@ type CheckpointBase = Readonly<{
   previousAttemptId?: string;
   nonceHash: string;
   lease: AttemptLease;
+  recoveryClaim?: ActiveRecoveryClaim;
   selectionInput: SelectionInputSnapshot;
   unitStates: Readonly<Record<string, "pending" | "dispatched" | "evidence-seen" | "referee-converged" | "failed">>;
   lastMutationId: string;
@@ -256,6 +268,8 @@ export type TransitionEdge =
   | "evidence-referee-running"
   | "referee-succeeded"
   | "attempt-failed"
+  | "active-recovery-claimed"
+  | "active-attempt-recovered"
   | "attempt-resumed";
 
 export type AttemptTransition = Readonly<{
@@ -380,6 +394,8 @@ const EDGE_STATES = Object.freeze({
   "dispatch-evidence-verified": Object.freeze(["dispatched", "evidence-verified"]),
   "evidence-referee-running": Object.freeze(["evidence-verified", "referee-running"]),
   "referee-succeeded": Object.freeze(["referee-running", "succeeded"]),
+  "active-recovery-claimed": Object.freeze(["probing", "probing"]),
+  "active-attempt-recovered": Object.freeze(["probing", "failed-resumable"]),
   "attempt-failed": Object.freeze([
     "probing",
     "selected",
@@ -394,6 +410,12 @@ const EDGE_STATES = Object.freeze({
 }) as Readonly<Record<TransitionEdge, readonly AttemptState[]>>;
 
 function edgeAllows(edge: TransitionEdge, from: AttemptState, to: AttemptState): boolean {
+  if (edge === "active-recovery-claimed") {
+    return from !== "succeeded" && from !== "failed-terminal" && from === to;
+  }
+  if (edge === "active-attempt-recovered") {
+    return from !== "succeeded" && from !== "failed-terminal" && to === "failed-resumable";
+  }
   if (edge === "attempt-failed") {
     return (
       !["succeeded", "failed-resumable", "failed-terminal"].includes(from) &&
@@ -404,6 +426,59 @@ function edgeAllows(edge: TransitionEdge, from: AttemptState, to: AttemptState):
   return states[0] === from && states[1] === to;
 }
 
+function leaseAdvances(checkpoint: AttemptCheckpoint, post: CheckpointWithoutDigest): boolean {
+  return (
+    post.lease.leaseId !== checkpoint.lease.leaseId &&
+    post.lease.fencingToken === checkpoint.lease.fencingToken + 1
+  );
+}
+
+function recoveryClaimMutationIsValid(
+  checkpoint: AttemptCheckpoint,
+  post: CheckpointWithoutDigest,
+): boolean {
+  const claim = post.recoveryClaim;
+  return Boolean(
+    claim &&
+    claim.recoveredTransitionId === undefined &&
+    leaseAdvances(checkpoint, post) &&
+    claim.previousLeaseId === checkpoint.lease.leaseId &&
+    claim.previousFencingToken === checkpoint.lease.fencingToken &&
+    claim.resourceFencingToken === (checkpoint.recoveryClaim?.resourceFencingToken ?? checkpoint.lease.fencingToken) &&
+    claim.previousOwnerId === checkpoint.lease.ownerId &&
+    canonicalJson(claim.previousOwnerProcess) === canonicalJson(checkpoint.lease.ownerProcess),
+  );
+}
+
+function recoveryCompletionMutationIsValid(
+  checkpoint: AttemptCheckpoint,
+  post: CheckpointWithoutDigest,
+): boolean {
+  const postClaim = post.recoveryClaim;
+  if (!checkpoint.recoveryClaim || checkpoint.recoveryClaim.recoveredTransitionId || !postClaim?.recoveredTransitionId) {
+    return false;
+  }
+  const { recoveredTransitionId: _recoveredTransitionId, ...postClaimBase } = postClaim;
+  return (
+    canonicalJson(postClaimBase) === canonicalJson(checkpoint.recoveryClaim) &&
+    canonicalJson(post.lease) === canonicalJson(checkpoint.lease)
+  );
+}
+
+function transitionLeaseMutationIsValid(
+  checkpoint: AttemptCheckpoint,
+  edge: TransitionEdge,
+  post: CheckpointWithoutDigest,
+): boolean {
+  if (edge === "active-recovery-claimed") return recoveryClaimMutationIsValid(checkpoint, post);
+  if (edge === "active-attempt-recovered") return recoveryCompletionMutationIsValid(checkpoint, post);
+  if (edge === "selected-prepared" || edge === "attempt-resumed") {
+    return post.recoveryClaim === undefined && leaseAdvances(checkpoint, post);
+  }
+  return canonicalJson(post.recoveryClaim) === canonicalJson(checkpoint.recoveryClaim) &&
+    canonicalJson(post.lease) === canonicalJson(checkpoint.lease);
+}
+
 export function buildTransition(
   checkpoint: AttemptCheckpoint,
   input: Omit<AttemptTransition, "preDigest" | "post"> & {
@@ -412,6 +487,7 @@ export function buildTransition(
 ): LifecycleResult<AttemptTransition> {
   if (!nonEmpty(input.transitionId)) return err("INVALID_ID");
   if (!edgeAllows(input.edge, checkpoint.state, input.post.state)) return err("INVALID_EDGE");
+  if (!transitionLeaseMutationIsValid(checkpoint, input.edge, input.post)) return err("STALE_WRITER");
   if (
     checkpoint.executionId !== input.executionId ||
     checkpoint.attemptId !== input.attemptId ||
@@ -443,6 +519,7 @@ export function applyTransition(
     return err("STALE_WRITER");
   }
   if (!edgeAllows(transition.edge, checkpoint.state, transition.post.state)) return err("INVALID_EDGE");
+  if (!transitionLeaseMutationIsValid(checkpoint, transition.edge, transition.post)) return err("STALE_WRITER");
   const next = freezeCheckpoint(transition.post);
   const parsed = parseAttemptCheckpoint(next);
   return parsed.type === "ok" ? ok(parsed.value) : parsed;
@@ -766,6 +843,55 @@ const CHECKPOINT_BASE_KEYS = Object.freeze([
   "stateDigest",
 ]);
 
+function recoveryClaimHasExactShape(value: Record<string, unknown>): boolean {
+  const hasPreviousOwnerProcess = value.previousOwnerProcess !== undefined;
+  const hasRecoveredTransition = value.recoveredTransitionId !== undefined;
+  return hasExactKeys(value, [
+    "claimId",
+    "previousLeaseId",
+    "previousFencingToken",
+    "resourceFencingToken",
+    "previousOwnerId",
+    ...(hasPreviousOwnerProcess ? ["previousOwnerProcess"] : []),
+    "claimedAt",
+    ...(hasRecoveredTransition ? ["recoveredTransitionId"] : []),
+  ]);
+}
+
+function recoveryClaimTokensAreValid(value: Record<string, unknown>, lease: AttemptLease): boolean {
+  return Number.isInteger(value.previousFencingToken) &&
+    Number(value.previousFencingToken) > 0 &&
+    Number.isInteger(value.resourceFencingToken) &&
+    Number(value.resourceFencingToken) > 0 &&
+    Number(value.resourceFencingToken) <= Number(value.previousFencingToken) &&
+    Number(value.previousFencingToken) + 1 === lease.fencingToken;
+}
+
+function recoveryClaimIsValid(value: unknown, lease: AttemptLease): value is ActiveRecoveryClaim {
+  if (!isRecord(value) || !recoveryClaimHasExactShape(value)) return false;
+  return (
+    [value.claimId, value.previousLeaseId, value.previousOwnerId, value.claimedAt].every(nonEmptyString) &&
+    recoveryClaimTokensAreValid(value, lease) &&
+    value.previousLeaseId !== lease.leaseId &&
+    !Number.isNaN(Date.parse(String(value.claimedAt))) &&
+    (value.previousOwnerProcess === undefined || leaseOwnerProcessIsValid(value.previousOwnerProcess)) &&
+    (value.recoveredTransitionId === undefined || nonEmptyString(value.recoveredTransitionId))
+  );
+}
+
+function recoveryClaimForStateIsValid(
+  value: unknown,
+  state: AttemptState,
+  lease: AttemptLease,
+  lastMutationId: unknown,
+): boolean {
+  if (value === undefined) return true;
+  if (state === "succeeded" || state === "failed-terminal") return false;
+  if (!recoveryClaimIsValid(value, lease)) return false;
+  return value.recoveredTransitionId === undefined ||
+    (state === "failed-resumable" && value.recoveredTransitionId === lastMutationId);
+}
+
 const CHECKPOINT_STATE_KEYS: Readonly<Record<AttemptState, readonly string[]>> = Object.freeze({
   probing: Object.freeze([]),
   selected: Object.freeze(["selectedContext"]),
@@ -975,6 +1101,7 @@ function dispatchPreparationIsValid(value: unknown): value is NativeDispatchPrep
     hasExactKeys(value, [
       "kind",
       "nativeRunId",
+      "planDigest",
       "fencingToken",
       "waveIndex",
       "waveDigest",
@@ -992,6 +1119,7 @@ function dispatchPreparationIsValid(value: unknown): value is NativeDispatchPrep
     Number(value.waveIndex) >= 0 &&
     [
       value.nativeRunId,
+      value.planDigest,
       value.waveDigest,
       value.resourcePreparationDigest,
       value.captureIdentityDigest,
@@ -1083,6 +1211,7 @@ function checkpointBaseIsValid(value: Record<string, unknown>, state: AttemptSta
   const expectedKeys = [
     ...CHECKPOINT_BASE_KEYS,
     ...(value.previousAttemptId === undefined ? [] : ["previousAttemptId"]),
+    ...(value.recoveryClaim === undefined ? [] : ["recoveryClaim"]),
     ...CHECKPOINT_STATE_KEYS[state],
     ...nativePreparationKeys,
   ];
@@ -1092,6 +1221,7 @@ function checkpointBaseIsValid(value: Record<string, unknown>, state: AttemptSta
   }
   if (!Number.isInteger(value.batch) || Number(value.batch) < 1) return false;
   if (!leaseIsValid(value.lease)) return false;
+  if (!recoveryClaimForStateIsValid(value.recoveryClaim, state, value.lease, value.lastMutationId)) return false;
   if (!selectionInputIsValid(value.selectionInput, Number(value.batch))) return false;
   return isRecord(value.unitStates);
 }
@@ -1224,14 +1354,10 @@ function nativePreparationForStateIsValid(
   return nativePreparationValuesAreValid(value, state, preparation, prepared);
 }
 
-function nativePreparationValuesAreValid(
+function nativePreparationCorrelationIsValid(
   value: Record<string, unknown>,
-  state: "prepared" | "dispatched",
-  preparation: unknown,
-  prepared: unknown,
+  preparation: NativeDispatchPreparation,
 ): boolean {
-  if (preparation === undefined) return state === "prepared" && prepared === undefined;
-  if (!dispatchPreparationIsValid(preparation)) return false;
   const expectedIdentity = digestValue({
     executionId: value.executionId,
     attemptId: value.attemptId,
@@ -1244,10 +1370,25 @@ function nativePreparationValuesAreValid(
     index: preparation.waveIndex,
     units: (value.selectionInput as SelectionInputSnapshot).expectedUnits,
   });
-  if (preparation.captureIdentityDigest !== expectedIdentity || preparation.waveDigest !== expectedWaveDigest) {
-    return false;
-  }
-  if (preparation.fencingToken !== (value.lease as AttemptLease).fencingToken) return false;
+  return (
+    preparation.captureIdentityDigest === expectedIdentity &&
+    preparation.waveDigest === expectedWaveDigest &&
+    preparation.planDigest === (value.selectedContext as SelectedContext).planDigest
+  );
+}
+
+function nativePreparationValuesAreValid(
+  value: Record<string, unknown>,
+  state: "prepared" | "dispatched",
+  preparation: unknown,
+  prepared: unknown,
+): boolean {
+  if (preparation === undefined) return state === "prepared" && prepared === undefined;
+  if (!dispatchPreparationIsValid(preparation)) return false;
+  if (!nativePreparationCorrelationIsValid(value, preparation)) return false;
+  const recoveryClaim = value.recoveryClaim as ActiveRecoveryClaim | undefined;
+  const preparationFencingToken = recoveryClaim?.resourceFencingToken ?? (value.lease as AttemptLease).fencingToken;
+  if (preparation.fencingToken !== preparationFencingToken) return false;
   if (prepared !== undefined) {
     if (!preparedNativeRunIsValid(prepared)) return false;
     if (prepared.dispatchPreparationDigest !== digestValue(preparation)) return false;

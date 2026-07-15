@@ -227,6 +227,39 @@ describe("t228 swarm driver store", () => {
     expect(resumed.lease.fencingToken).toBe(2);
   });
 
+  test("reconciles an audit-only resumed attempt", () => {
+    const f = fixture();
+    const first = f.store.begin(initial());
+    f.store.transition(failedTransition(first));
+    f.failWrites(true);
+    expect(() =>
+      f.store.beginResume({
+        batch: 1,
+        previousAttemptId: "attempt-1",
+        newAttemptId: "attempt-2",
+        nonceHash: "nonce-2",
+        leaseId: "lease-2",
+        ownerId: "owner-2",
+        now: "2026-07-14T00:01:00.000Z",
+        expiresAt: "2026-07-14T00:01:30.000Z",
+        mutationId: "resume-1",
+        reusedConvergedUnits: ["alpha"],
+        recoveryVerified: true,
+      }),
+    ).toThrow("injected write failure");
+    f.failWrites(false);
+
+    const reconciled = f.store.reconcilePending(1);
+    expect(reconciled.map(({ action }) => action)).toEqual(["already-materialized", "reapplied"]);
+    expect(reconciled.at(-1)?.checkpoint).toMatchObject({
+      state: "probing",
+      origin: "resumed",
+      attemptId: "attempt-2",
+      lease: { leaseId: "lease-2", fencingToken: 2 },
+    });
+    expect("recoveryClaim" in (reconciled.at(-1)?.checkpoint ?? {})).toBeFalse();
+  });
+
   test("refuses resume while the persisted lease is still active", () => {
     const f = fixture();
     const first = f.store.begin(initial());

@@ -3,11 +3,11 @@
 import { randomUUID } from "node:crypto";
 import {
   DriverRegistrationSet,
+  type DriverAdapter,
   type DriverPlan,
   type DriverRegistrationSet as DriverRegistrationSetValue,
   type LaunchInput,
   type NormalizeContext,
-  type NormalizedDriverEvent,
   type PreparedUnit,
 } from "./amadeus-swarm-driver-adapter-contract.ts";
 import {
@@ -27,6 +27,8 @@ import {
   type TopologyDecision as TopologyDecisionValue,
 } from "./amadeus-swarm-driver-contract.ts";
 import {
+  ATTEMPT_HEARTBEAT_MS,
+  ATTEMPT_LEASE_MS,
   buildTransition,
   buildDispatchDigest,
   buildFinalizeRequestBinding,
@@ -43,9 +45,11 @@ import {
   type FinalizeRequestBinding,
   type RefereeFinalizeEnvelope,
   type RunGitBindingInput,
+  type RunRequestBinding,
   type VerifiedExecutionResult,
 } from "./amadeus-swarm-driver-lifecycle.ts";
 import {
+  AttemptStoreError,
   createFileDriverAttemptStore,
   type DriverAttemptStore,
 } from "./amadeus-swarm-driver-store.ts";
@@ -59,13 +63,15 @@ import { claudeDriverRegistration } from "./amadeus-swarm-driver-adapters/claude
 import { codexDriverRegistration } from "./amadeus-swarm-driver-adapters/codex.ts";
 import { kiroDriverRegistration } from "./amadeus-swarm-driver-adapters/kiro.ts";
 import {
+  observeExactProcessLiveness,
   observeProcessIdentity,
-  sameProcess,
   type ProcessIdentity,
+  type ProcessLivenessObservation,
 } from "./amadeus-armed-process.ts";
 import type {
   LifecycleNativeExecution,
   NativeDispatchCheckpoint,
+  NativeLifecycleExecutionInput,
 } from "./amadeus-swarm-native-execution.ts";
 
 export type RuntimeError = Readonly<{
@@ -125,10 +131,12 @@ export type NativeExecutionPort = LifecycleNativeExecution;
 
 export type AttemptRecoveryPort = Readonly<{
   recover(input: Readonly<{
-    checkpoint: Extract<AttemptCheckpoint, Readonly<{ state: "failed-resumable" }>>;
+    checkpoint: AttemptCheckpoint;
     observedOwner: ProcessIdentity | null;
   }>): Promise<"recovered" | "active" | "unknown">;
 }>;
+
+export type AttemptOwnerLiveness = ProcessLivenessObservation;
 
 export type ResumeRequest = Readonly<{
   batch: number;
@@ -147,6 +155,11 @@ export type RuntimeAuditPort = Readonly<{
     attemptId: string;
     verdict: ReturnType<typeof verifyNativeEvidence>;
   }>): void;
+}>;
+
+export type AttemptHeartbeatTimer = Readonly<{
+  start(callback: () => void, intervalMs: number): unknown;
+  stop(handle: unknown): void;
 }>;
 
 export type SwarmDriverCoordinator = Readonly<{
@@ -430,12 +443,13 @@ function selectionFailureCode(code: SelectorError["code"]): RuntimeError["code"]
 type SelectedCheckpoint = Extract<AttemptCheckpoint, Readonly<{ state: "selected" }>>;
 type PreparedCheckpoint = Extract<AttemptCheckpoint, Readonly<{ state: "prepared" }>>;
 type DispatchedCheckpoint = Extract<AttemptCheckpoint, Readonly<{ state: "dispatched" }>>;
+type FailedResumableCheckpoint = Extract<AttemptCheckpoint, Readonly<{ state: "failed-resumable" }>>;
 
 function readSelectedCheckpoint(
   store: DriverAttemptStore,
   input: Readonly<{ batch: number; executionId: string; attemptId: string }>,
 ): SelectedCheckpoint | null {
-  const checkpoint = store.read(input.batch);
+  const checkpoint = store.readReconciled(input.batch);
   if (checkpoint?.state !== "selected") return null;
   if (checkpoint.executionId !== input.executionId || checkpoint.attemptId !== input.attemptId) return null;
   return checkpoint;
@@ -506,25 +520,401 @@ function assertNativeSelection(
   if (selection.kind !== "native-selection") throw new Error("Invalid native selection");
 }
 
+function prepareRunInput(
+  checkpoint: SelectedCheckpoint,
+  input: Parameters<SwarmDriverCoordinator["run"]>[0],
+): RuntimeResult<Readonly<{ preparedUnits: readonly PreparedUnit[]; runBinding: RunRequestBinding }>> {
+  const prepared = canonicalPreparedUnits(input.preparedUnits);
+  const runBinding = buildRunRequestBinding({
+    preparedUnits: input.preparedUnits,
+    gitBinding: input.gitBinding,
+    convergenceCommand: input.convergenceCommand,
+    ...(input.protectedSpec ? { protectedSpecPath: input.protectedSpec } : {}),
+    evidenceDir: input.evidenceDir,
+  });
+  if (
+    prepared.type === "err" ||
+    runBinding.type === "err" ||
+    !exactUnits(checkpoint.selectionInput.expectedUnits, input.preparedUnits.map((unit) => unit.unit))
+  ) {
+    return err("PREPARED_MANIFEST_INVALID");
+  }
+  return ok(Object.freeze({ preparedUnits: prepared.value, runBinding: runBinding.value }));
+}
+
+function recordNativeEvidenceForRun(
+  store: DriverAttemptStore,
+  evidence: Parameters<DriverAttemptStore["recordNativeEvidence"]>[0],
+): boolean {
+  try {
+    store.recordNativeEvidence(evidence);
+    return true;
+  } catch (error) {
+    if (error instanceof AttemptStoreError && error.code === "STALE_WRITER") return false;
+    throw error;
+  }
+}
+
+function nativeRunDependencies(
+  registry: DriverRegistrationSetValue,
+  selection: Extract<RedactedSelection, Readonly<{ kind: "native-selection" }>>,
+): RuntimeResult<Readonly<{ driver: NativeDriver; adapter: DriverAdapter; probe: ProbeResultValue }>> {
+  const driver = selectedDriver(selection);
+  if (!driver) return err("CHECKPOINT_STATE_INVALID");
+  const registration = registry.forDriver(driver);
+  if (registration.slot.kind !== "available") return err("REGISTRATION_UNAVAILABLE");
+  const adapter = registration.slot.adapterSet.forDriver(driver);
+  if (!adapter) return err("REGISTRATION_UNAVAILABLE");
+  const probe = ProbeResult.build(selection.probe);
+  if (probe.type === "err" || !probe.value.isAvailable()) return err("CHECKPOINT_STATE_INVALID");
+  return ok(Object.freeze({ driver, adapter, probe: probe.value }));
+}
+
+function claimRunLease(input: Readonly<{
+  store: DriverAttemptStore;
+  checkpoint: SelectedCheckpoint;
+  preparedUnits: readonly PreparedUnit[];
+  manifestDigest: string;
+  runBinding: RunRequestBinding;
+  startedAt: Date;
+  mintId(): string;
+}>): PreparedCheckpoint | null {
+  const ownerProcess = observeProcessIdentity(process.pid);
+  try {
+    return transitionTo(input.store, input.checkpoint, input.mintId(), "selected-prepared", {
+      ...withoutDigest(input.checkpoint),
+      state: "prepared",
+      lease: {
+        leaseId: input.mintId(),
+        fencingToken: input.checkpoint.lease.fencingToken + 1,
+        ownerId: digestValue({ pid: process.pid, ppid: process.ppid }),
+        heartbeatAt: input.startedAt.toISOString(),
+        expiresAt: new Date(input.startedAt.getTime() + ATTEMPT_LEASE_MS).toISOString(),
+        ...(ownerProcess.type === "ok" ? { ownerProcess: ownerProcess.value } : {}),
+      },
+      preparedUnits: input.preparedUnits,
+      worktreeManifestDigest: input.manifestDigest,
+      runBinding: input.runBinding,
+    });
+  } catch {
+    return null;
+  }
+}
+
+type HeartbeatExecutionResult<T> =
+  | Readonly<{ type: "ok"; value: T }>
+  | Readonly<{ type: "err" }>;
+
+async function executeWithHeartbeat<T>(input: Readonly<{
+  store: DriverAttemptStore;
+  batch: number;
+  leaseId: string;
+  fencingToken: number;
+  now(): Date;
+  timer: AttemptHeartbeatTimer;
+  onHeartbeat(checkpoint: AttemptCheckpoint): void;
+  execute(): Promise<T>;
+}>): Promise<HeartbeatExecutionResult<T>> {
+  let heartbeatFailed = false;
+  let handle: unknown;
+  try {
+    handle = input.timer.start(() => {
+      if (heartbeatFailed) return;
+      try {
+        const heartbeatAt = input.now();
+        input.onHeartbeat(input.store.heartbeat({
+          batch: input.batch,
+          leaseId: input.leaseId,
+          fencingToken: input.fencingToken,
+          heartbeatAt: heartbeatAt.toISOString(),
+          expiresAt: new Date(heartbeatAt.getTime() + ATTEMPT_LEASE_MS).toISOString(),
+        }));
+      } catch {
+        heartbeatFailed = true;
+      }
+    }, ATTEMPT_HEARTBEAT_MS);
+  } catch {
+    return Object.freeze({ type: "err" });
+  }
+  let value: T | undefined;
+  let executionFailed = false;
+  try {
+    value = await input.execute();
+  } catch {
+    executionFailed = true;
+  }
+  try {
+    input.timer.stop(handle);
+  } catch {
+    executionFailed = true;
+  }
+  return executionFailed || heartbeatFailed
+    ? Object.freeze({ type: "err" })
+    : Object.freeze({ type: "ok", value: value as T });
+}
+
+function observeAttemptOwner(
+  checkpoint: AttemptCheckpoint,
+  injected?: (expected: ProcessIdentity) => AttemptOwnerLiveness,
+): AttemptOwnerLiveness {
+  const expected = checkpoint.lease.ownerProcess;
+  if (!expected) return Object.freeze({ status: "unknown" });
+  if (injected) return injected(expected);
+  return observeExactProcessLiveness(expected);
+}
+
+function claimActiveRecoveryForRuntime(input: Readonly<{
+  store: DriverAttemptStore;
+  checkpoint: AttemptCheckpoint;
+  claimedAt: Date;
+  observeRecoveryOwner?: () => ProcessIdentity | null;
+  mintId(): string;
+}>): RuntimeResult<Readonly<{ checkpoint: AttemptCheckpoint; claimId: string }>> {
+  const claimId = input.mintId();
+  const observedOwner = input.observeRecoveryOwner
+    ? input.observeRecoveryOwner()
+    : (() => {
+        const observed = observeProcessIdentity(process.pid);
+        return observed.type === "ok" ? observed.value : null;
+      })();
+  if (!observedOwner) return err("ATTEMPT_LIVENESS_UNKNOWN");
+  try {
+    return ok(Object.freeze({
+      checkpoint: input.store.claimActiveRecovery({
+        batch: input.checkpoint.batch,
+        executionId: input.checkpoint.executionId,
+        attemptId: input.checkpoint.attemptId,
+        expectedLeaseId: input.checkpoint.lease.leaseId,
+        expectedFencingToken: input.checkpoint.lease.fencingToken,
+        claimId,
+        recoveryLeaseId: input.mintId(),
+        recoveryOwnerId: digestValue({ pid: process.pid, ppid: process.ppid }),
+        recoveryOwnerProcess: observedOwner,
+        now: input.claimedAt.toISOString(),
+        expiresAt: new Date(input.claimedAt.getTime() + ATTEMPT_LEASE_MS).toISOString(),
+        mutationId: input.mintId(),
+        ownerLivenessVerified: true,
+      }),
+      claimId,
+    }));
+  } catch (error) {
+    if (error instanceof AttemptStoreError && ["RECOVERY_CLAIM_ACTIVE", "STALE_WRITER"].includes(error.code)) {
+      return err("ATTEMPT_LEASE_ACTIVE");
+    }
+    throw error;
+  }
+}
+
+type AttemptRecoveryMode = "local" | "external" | "unsupported";
+
+function failedAttemptRecoveryMode(checkpoint: FailedResumableCheckpoint): AttemptRecoveryMode {
+  if (checkpoint.failure.recoveryContext) return "external";
+  return ["probing", "selected", "prepared"].includes(checkpoint.failure.failedFromState)
+    ? "local"
+    : "unsupported";
+}
+
+function attemptRecoveryMode(checkpoint: AttemptCheckpoint): AttemptRecoveryMode {
+  if (checkpoint.state === "failed-resumable") return failedAttemptRecoveryMode(checkpoint);
+  if (checkpoint.state === "probing" || checkpoint.state === "selected") return "local";
+  if (checkpoint.state === "prepared") {
+    if (checkpoint.dispatchPreparation === undefined) return "local";
+    return checkpoint.selectedContext.selection.kind === "native-selection" ? "external" : "unsupported";
+  }
+  if (checkpoint.state === "dispatched") {
+    return checkpoint.selectedContext.selection.kind === "native-selection" &&
+      checkpoint.dispatch.kind === "native" &&
+      checkpoint.dispatchPreparation !== undefined
+      ? "external"
+      : "unsupported";
+  }
+  return "unsupported";
+}
+
+async function recoverExpiredCheckpoint(input: Readonly<{
+  store: DriverAttemptStore;
+  checkpoint: AttemptCheckpoint;
+  resumedAt: Date;
+  recovery: AttemptRecoveryPort;
+  observeOwner?: (expected: ProcessIdentity) => AttemptOwnerLiveness;
+  observeRecoveryOwner?: () => ProcessIdentity | null;
+  mintId(): string;
+}>): Promise<RuntimeResult<FailedResumableCheckpoint>> {
+  if (input.resumedAt.getTime() <= Date.parse(input.checkpoint.lease.expiresAt)) {
+    return err("ATTEMPT_LEASE_ACTIVE");
+  }
+  const ownerLiveness = observeAttemptOwner(input.checkpoint, input.observeOwner);
+  if (ownerLiveness.status === "live") return err("ATTEMPT_LEASE_ACTIVE");
+  if (ownerLiveness.status === "unknown") return err("ATTEMPT_LIVENESS_UNKNOWN");
+  const recoveryMode = attemptRecoveryMode(input.checkpoint);
+  if (recoveryMode === "unsupported") return err("ATTEMPT_LIVENESS_UNKNOWN");
+  let checkpoint = input.checkpoint;
+  let claimId: string | undefined;
+  if (checkpoint.state !== "failed-resumable" || recoveryMode === "external") {
+    const claimed = claimActiveRecoveryForRuntime({
+      store: input.store,
+      checkpoint,
+      claimedAt: input.resumedAt,
+      observeRecoveryOwner: input.observeRecoveryOwner,
+      mintId: input.mintId,
+    });
+    if (claimed.type === "err") return claimed;
+    checkpoint = claimed.value.checkpoint;
+    claimId = claimed.value.claimId;
+  }
+  if (recoveryMode === "external") {
+    const recovery = await input.recovery.recover({ checkpoint, observedOwner: null });
+    if (recovery === "active") return err("ATTEMPT_LEASE_ACTIVE");
+    if (recovery !== "recovered") return err("ATTEMPT_LIVENESS_UNKNOWN");
+  }
+  if (claimId) {
+    checkpoint = input.store.completeActiveRecovery({
+      batch: checkpoint.batch,
+      executionId: checkpoint.executionId,
+      attemptId: checkpoint.attemptId,
+      claimId,
+      leaseId: checkpoint.lease.leaseId,
+      fencingToken: checkpoint.lease.fencingToken,
+      mutationId: input.mintId(),
+      recoveryVerified: true,
+    });
+  }
+  return checkpoint.state === "failed-resumable" ? ok(checkpoint) : err("CHECKPOINT_STATE_INVALID");
+}
+
+function beginResumedAttempt(
+  store: DriverAttemptStore,
+  checkpoint: FailedResumableCheckpoint,
+  request: ResumeRequest,
+  resumedAt: Date,
+): AttemptCheckpoint {
+  const ownerProcess = observeProcessIdentity(process.pid);
+  return store.beginResume({
+    ...request,
+    now: resumedAt.toISOString(),
+    expiresAt: new Date(resumedAt.getTime() + ATTEMPT_LEASE_MS).toISOString(),
+    recoveryVerified: true,
+    ...(checkpoint.recoveryClaim ? { recoveryClaimId: checkpoint.recoveryClaim.claimId } : {}),
+    ...(checkpoint.recoveryClaim ? { recoveredTransitionId: checkpoint.lastMutationId } : {}),
+    ...(ownerProcess.type === "ok" ? { ownerProcess: ownerProcess.value } : {}),
+  });
+}
+
+function nativeLifecycleCallbacks(input: Readonly<{
+  store: DriverAttemptStore;
+  checkpoint(): AttemptCheckpoint;
+  update(checkpoint: AttemptCheckpoint): void;
+  mintId(): string;
+  nativeRunId: string;
+  preparedUnits: readonly PreparedUnit[];
+  manifestDigest: string;
+  runBinding: RunRequestBinding;
+  dispatchDigest(dispatch: NativeDispatchCheckpoint): string;
+}>): Pick<
+  NativeLifecycleExecutionInput,
+  "onDispatchPrepared" | "onResourcesPrepared" | "onReadyToArm" | "onCaptureBound"
+> {
+  return Object.freeze({
+    onDispatchPrepared: async (dispatchPreparation) => {
+      const checkpoint = input.checkpoint();
+      if (checkpoint.state !== "prepared" || checkpoint.dispatchPreparation !== undefined) {
+        throw new Error("NATIVE_DISPATCH_PREPARATION_INVALID");
+      }
+      input.update(transitionTo(input.store, checkpoint, input.mintId(), "native-dispatch-prepared", {
+        ...withoutDigest(checkpoint),
+        state: "prepared",
+        dispatchPreparation,
+      }));
+    },
+    onResourcesPrepared: async (preparedNativeRun) => {
+      const checkpoint = input.checkpoint();
+      if (
+        checkpoint.state !== "prepared" ||
+        checkpoint.dispatchPreparation === undefined ||
+        checkpoint.preparedNativeRun !== undefined
+      ) {
+        throw new Error("NATIVE_RESOURCE_PREPARATION_INVALID");
+      }
+      input.update(transitionTo(input.store, checkpoint, input.mintId(), "native-resources-prepared", {
+        ...withoutDigest(checkpoint),
+        state: "prepared",
+        preparedNativeRun,
+      }));
+    },
+    onReadyToArm: async (dispatch) => {
+      const checkpoint = input.checkpoint();
+      if (
+        checkpoint.state !== "prepared" ||
+        checkpoint.dispatchPreparation === undefined ||
+        checkpoint.preparedNativeRun === undefined ||
+        dispatch.nativeRunId !== input.nativeRunId ||
+        dispatch.preparedNativeRunDigest !== digestValue(checkpoint.preparedNativeRun)
+      ) {
+        throw new Error("NATIVE_DISPATCH_INVALID");
+      }
+      input.update(transitionTo(input.store, checkpoint, input.mintId(), "prepared-dispatched", {
+        ...withoutDigest(checkpoint),
+        state: "dispatched",
+        preparedUnits: input.preparedUnits,
+        worktreeManifestDigest: input.manifestDigest,
+        dispatchDigest: input.dispatchDigest(dispatch),
+        dispatch,
+        runBinding: input.runBinding,
+      }));
+    },
+    onCaptureBound: async (binding) => {
+      const checkpoint = input.checkpoint();
+      if (
+        checkpoint.state !== "dispatched" ||
+        checkpoint.dispatch.kind !== "native" ||
+        checkpoint.dispatch.capture.kind !== "event-bound-provider-path" ||
+        checkpoint.dispatch.capture.binding !== undefined
+      ) {
+        throw new Error("CAPTURE_BINDING_INVALID");
+      }
+      const dispatch: NativeDispatchCheckpoint = Object.freeze({
+        ...checkpoint.dispatch,
+        capture: Object.freeze({ ...checkpoint.dispatch.capture, binding }),
+      });
+      input.update(transitionTo(input.store, checkpoint, input.mintId(), "capture-bound", {
+        ...withoutDigest(checkpoint),
+        state: "dispatched",
+        dispatchDigest: input.dispatchDigest(dispatch),
+        dispatch,
+      }));
+    },
+  });
+}
+
 export function createCoordinator(input: Readonly<{
   registry: DriverRegistrationSetValue;
   store: DriverAttemptStore;
   nativeExecution: NativeExecutionPort;
   audit?: RuntimeAuditPort;
   recovery?: AttemptRecoveryPort;
-  observeOwner?: (expected: ProcessIdentity) => ProcessIdentity | null;
+  observeOwner?: (expected: ProcessIdentity) => AttemptOwnerLiveness;
+  observeRecoveryOwner?: () => ProcessIdentity | null;
+  heartbeatTimer?: AttemptHeartbeatTimer;
   now?: () => Date;
   mintId?: () => string;
 }>): SwarmDriverCoordinator {
   const now = input.now ?? (() => new Date());
   const mintId = input.mintId ?? randomUUID;
+  const heartbeatTimer = input.heartbeatTimer ?? Object.freeze({
+    start: (callback: () => void, intervalMs: number): ReturnType<typeof setInterval> =>
+      setInterval(callback, intervalMs),
+    stop: (handle: unknown): void => clearInterval(handle as ReturnType<typeof setInterval>),
+  });
 
   const defaultRecovery: AttemptRecoveryPort = Object.freeze({
     async recover({ checkpoint, observedOwner }) {
       if (observedOwner) return "active";
-      return ["probing", "selected", "prepared"].includes(checkpoint.failure.failedFromState)
-        ? "recovered"
-        : "unknown";
+      if (checkpoint.state === "failed-resumable") {
+        return ["probing", "selected", "prepared"].includes(checkpoint.failure.failedFromState)
+          ? "recovered"
+          : "unknown";
+      }
+      return "unknown";
     },
   });
 
@@ -558,7 +948,7 @@ export function createCoordinator(input: Readonly<{
           fencingToken: 1,
           ownerId: resolveInput.ownerId ?? digestValue({ pid: process.pid, ppid: process.ppid }),
           heartbeatAt: startedAt.toISOString(),
-          expiresAt: new Date(startedAt.getTime() + 30_000).toISOString(),
+          expiresAt: new Date(startedAt.getTime() + ATTEMPT_LEASE_MS).toISOString(),
           ...(ownerProcess.type === "ok" ? { ownerProcess: ownerProcess.value } : {}),
         },
         selectionInput: {
@@ -622,49 +1012,41 @@ export function createCoordinator(input: Readonly<{
       const selectedCheckpoint = readSelectedCheckpoint(input.store, runInput);
       if (!selectedCheckpoint) return err("CHECKPOINT_STATE_INVALID");
       let checkpoint: AttemptCheckpoint = selectedCheckpoint;
-      const prepared = canonicalPreparedUnits(runInput.preparedUnits);
-      const runBinding = buildRunRequestBinding({
-        preparedUnits: runInput.preparedUnits,
-        gitBinding: runInput.gitBinding,
-        convergenceCommand: runInput.convergenceCommand,
-        ...(runInput.protectedSpec ? { protectedSpecPath: runInput.protectedSpec } : {}),
-        evidenceDir: runInput.evidenceDir,
-      });
-      if (
-        prepared.type === "err" ||
-        runBinding.type === "err" ||
-        !exactUnits(checkpoint.selectionInput.expectedUnits, runInput.preparedUnits.map((unit) => unit.unit))
-      ) {
+      const prepared = prepareRunInput(selectedCheckpoint, runInput);
+      if (prepared.type === "err") {
         failAttempt(input.store, checkpoint, "INPUT_INVALID", true);
-        return err("PREPARED_MANIFEST_INVALID");
+        return prepared;
       }
-      const manifestDigest = digestValue(prepared.value);
-      checkpoint = transitionTo(input.store, checkpoint, mintId(), "selected-prepared", {
-        ...withoutDigest(checkpoint),
-        state: "prepared",
-        preparedUnits: prepared.value,
-        worktreeManifestDigest: manifestDigest,
-        runBinding: runBinding.value,
+      const { preparedUnits, runBinding } = prepared.value;
+      const manifestDigest = digestValue(preparedUnits);
+      const preparedCheckpoint = claimRunLease({
+        store: input.store,
+        checkpoint: selectedCheckpoint,
+        preparedUnits,
+        manifestDigest,
+        runBinding,
+        startedAt: now(),
+        mintId,
       });
+      if (!preparedCheckpoint) return err("CHECKPOINT_STATE_INVALID");
+      checkpoint = preparedCheckpoint;
       const selection = checkpoint.selectedContext.selection;
       const external = dispatchExternalExecution(input.store, checkpoint, mintId);
       if (external) return ok(external.plan);
       assertNativeSelection(selection);
 
-      const driver = selectedDriver(selection);
-      if (!driver) return err("CHECKPOINT_STATE_INVALID");
-      const registration = input.registry.forDriver(driver);
-      if (registration.slot.kind !== "available") {
-        failAttempt(input.store, checkpoint, "COORDINATOR_FAILED", false);
-        return err("REGISTRATION_UNAVAILABLE");
+      const dependencies = nativeRunDependencies(input.registry, selection);
+      if (dependencies.type === "err") {
+        const registrationUnavailable = dependencies.error.code === "REGISTRATION_UNAVAILABLE";
+        failAttempt(
+          input.store,
+          checkpoint,
+          registrationUnavailable ? "COORDINATOR_FAILED" : "SCHEMA_INVALID",
+          !registrationUnavailable,
+        );
+        return dependencies;
       }
-      const adapter = registration.slot.adapterSet.forDriver(driver);
-      if (!adapter) return err("REGISTRATION_UNAVAILABLE");
-      const probeResult = ProbeResult.build(selection.probe);
-      if (probeResult.type === "err" || !probeResult.value.isAvailable()) {
-        failAttempt(input.store, checkpoint, "SCHEMA_INVALID", true);
-        return err("CHECKPOINT_STATE_INVALID");
-      }
+      const { driver, adapter, probe: probeResult } = dependencies.value;
       const plan: DriverPlan = Object.freeze({
         kind: "driver-plan",
         schemaVersion: 1,
@@ -678,7 +1060,7 @@ export function createCoordinator(input: Readonly<{
         topology: selection.topology.topology,
         topologyReason: selection.topology.reason,
         fallbackReason: selection.fallbackReason,
-        probe: probeResult.value,
+        probe: probeResult,
         waves: Object.freeze([{ index: 0, units: checkpoint.selectionInput.expectedUnits }]),
         planDigest: checkpoint.selectedContext.planDigest,
         attemptNonceHash: checkpoint.nonceHash,
@@ -689,7 +1071,7 @@ export function createCoordinator(input: Readonly<{
       const launchInput: LaunchInput = Object.freeze({
         plan,
         wave: plan.waves[waveIndex],
-        preparedUnits: prepared.value,
+        preparedUnits,
         convergenceCommand: runInput.convergenceCommand,
         ...(runInput.protectedSpec ? { protectedSpec: runInput.protectedSpec } : {}),
         evidenceDir: runInput.evidenceDir,
@@ -711,85 +1093,51 @@ export function createCoordinator(input: Readonly<{
           attemptId: checkpoint.attemptId,
           manifestDigest: manifestDigest,
           selection,
-          runBinding: runBinding.value,
+          runBinding,
           dispatch,
         });
-      let events: readonly NormalizedDriverEvent[];
-      try {
-        events = await input.nativeExecution.execute({
+      const runLeaseId = checkpoint.lease.leaseId;
+      const runFencingToken = checkpoint.lease.fencingToken;
+      const callbacks = nativeLifecycleCallbacks({
+        store: input.store,
+        checkpoint: () => checkpoint,
+        update: (next) => {
+          checkpoint = next;
+        },
+        mintId,
+        nativeRunId,
+        preparedUnits,
+        manifestDigest,
+        runBinding,
+        dispatchDigest: nativeDispatchDigest,
+      });
+      const execution = await executeWithHeartbeat({
+        store: input.store,
+        batch: checkpoint.batch,
+        leaseId: runLeaseId,
+        fencingToken: runFencingToken,
+        now,
+        timer: heartbeatTimer,
+        onHeartbeat: (next) => {
+          checkpoint = next;
+        },
+        execute: () => input.nativeExecution.execute({
           adapter,
           launchInput,
           context,
           fencingToken: checkpoint.lease.fencingToken,
-          onDispatchPrepared: async (dispatchPreparation) => {
-            if (checkpoint.state !== "prepared" || checkpoint.dispatchPreparation !== undefined) {
-              throw new Error("NATIVE_DISPATCH_PREPARATION_INVALID");
-            }
-            checkpoint = transitionTo(input.store, checkpoint, mintId(), "native-dispatch-prepared", {
-              ...withoutDigest(checkpoint),
-              state: "prepared",
-              dispatchPreparation,
-            });
-          },
-          onResourcesPrepared: async (preparedNativeRun) => {
-            if (
-              checkpoint.state !== "prepared" ||
-              checkpoint.dispatchPreparation === undefined ||
-              checkpoint.preparedNativeRun !== undefined
-            ) {
-              throw new Error("NATIVE_RESOURCE_PREPARATION_INVALID");
-            }
-            checkpoint = transitionTo(input.store, checkpoint, mintId(), "native-resources-prepared", {
-              ...withoutDigest(checkpoint),
-              state: "prepared",
-              preparedNativeRun,
-            });
-          },
-          onReadyToArm: async (dispatch) => {
-            if (
-              checkpoint.state !== "prepared" ||
-              checkpoint.dispatchPreparation === undefined ||
-              checkpoint.preparedNativeRun === undefined ||
-              dispatch.nativeRunId !== nativeRunId ||
-              dispatch.preparedNativeRunDigest !== digestValue(checkpoint.preparedNativeRun)
-            ) {
-              throw new Error("NATIVE_DISPATCH_INVALID");
-            }
-            checkpoint = transitionTo(input.store, checkpoint, mintId(), "prepared-dispatched", {
-              ...withoutDigest(checkpoint),
-              state: "dispatched",
-              preparedUnits: prepared.value,
-              worktreeManifestDigest: manifestDigest,
-              dispatchDigest: nativeDispatchDigest(dispatch),
-              dispatch,
-              runBinding: runBinding.value,
-            });
-          },
-          onCaptureBound: async (binding) => {
-            if (
-              checkpoint.state !== "dispatched" ||
-              checkpoint.dispatch.kind !== "native" ||
-              checkpoint.dispatch.capture.kind !== "event-bound-provider-path" ||
-              checkpoint.dispatch.capture.binding !== undefined
-            ) {
-              throw new Error("CAPTURE_BINDING_INVALID");
-            }
-            const dispatch: NativeDispatchCheckpoint = Object.freeze({
-              ...checkpoint.dispatch,
-              capture: Object.freeze({ ...checkpoint.dispatch.capture, binding }),
-            });
-            checkpoint = transitionTo(input.store, checkpoint, mintId(), "capture-bound", {
-              ...withoutDigest(checkpoint),
-              state: "dispatched",
-              dispatchDigest: nativeDispatchDigest(dispatch),
-              dispatch,
-            });
-          },
-        });
-      } catch {
-        failAttempt(input.store, checkpoint, "COORDINATOR_FAILED", false);
+          ...callbacks,
+        }),
+      });
+      if (execution.type === "err") {
+        try {
+          failAttempt(input.store, checkpoint, "COORDINATOR_FAILED", false);
+        } catch {
+          // A stale run owner must not overwrite the recovery winner.
+        }
         return err("EXECUTION_FAILED");
       }
+      const events = execution.value;
       const materializedDispatch = input.store.read(runInput.batch);
       if (materializedDispatch?.state !== "dispatched" || materializedDispatch.dispatch.kind !== "native") {
         failAttempt(input.store, checkpoint, "COORDINATOR_FAILED", false);
@@ -808,13 +1156,15 @@ export function createCoordinator(input: Readonly<{
         expectedUnits: checkpoint.selectionInput.expectedUnits,
         events,
       });
-      input.store.recordNativeEvidence({
-        batch: checkpoint.batch,
-        executionId: checkpoint.executionId,
-        attemptId: checkpoint.attemptId,
-        driver,
-        verdict,
-      });
+      if (!recordNativeEvidenceForRun(input.store, {
+          batch: checkpoint.batch,
+          executionId: checkpoint.executionId,
+          attemptId: checkpoint.attemptId,
+          expectedLeaseId: runLeaseId,
+          expectedFencingToken: runFencingToken,
+          driver,
+          verdict,
+        })) return err("EXECUTION_FAILED");
       input.audit?.evidence({ executionId: checkpoint.executionId, attemptId: checkpoint.attemptId, verdict });
       if (!verdict.ok) {
         failAttempt(input.store, checkpoint, "NATIVE_EVIDENCE_INVALID", false);
@@ -829,7 +1179,7 @@ export function createCoordinator(input: Readonly<{
       transitionTo(input.store, checkpoint, mintId(), "dispatch-evidence-verified", {
         ...withoutDispatch(checkpoint),
         state: "evidence-verified",
-        preparedUnits: prepared.value,
+        preparedUnits,
         worktreeManifestDigest: manifestDigest,
         executionResult: result,
         runBinding: checkpoint.runBinding,
@@ -972,44 +1322,30 @@ export function createCoordinator(input: Readonly<{
     async resume(resumeInput): Promise<RuntimeResult<AttemptCheckpoint>> {
       try {
         const checkpoint = input.store.readReconciled(resumeInput.batch);
-        if (
-          checkpoint?.state !== "failed-resumable" ||
-          checkpoint.attemptId !== resumeInput.previousAttemptId
-        ) {
+        if (!checkpoint || checkpoint.attemptId !== resumeInput.previousAttemptId) {
           return err("CHECKPOINT_STATE_INVALID");
         }
         const resumedAt = now();
-        if (resumedAt.getTime() <= Date.parse(checkpoint.lease.expiresAt)) {
-          return err("ATTEMPT_LEASE_ACTIVE");
+        if (
+          checkpoint.state === "failed-resumable" &&
+          checkpoint.recoveryClaim?.recoveredTransitionId === checkpoint.lastMutationId
+        ) {
+          return ok(beginResumedAttempt(input.store, checkpoint, resumeInput, resumedAt));
         }
-        let observedOwner: ProcessIdentity | null = null;
-        if (checkpoint.lease.ownerProcess) {
-          if (input.observeOwner) {
-            observedOwner = input.observeOwner(checkpoint.lease.ownerProcess);
-          } else {
-            const observed = observeProcessIdentity(
-              checkpoint.lease.ownerProcess.pid,
-              checkpoint.lease.ownerProcess.platform,
-            );
-            if (observed.type === "ok" && sameProcess(checkpoint.lease.ownerProcess, observed.value)) {
-              observedOwner = observed.value;
-            }
-          }
+        if (checkpoint.state === "succeeded" || checkpoint.state === "failed-terminal") {
+          return err("CHECKPOINT_STATE_INVALID");
         }
-        if (observedOwner) return err("ATTEMPT_LEASE_ACTIVE");
-        const recovery = await (input.recovery ?? defaultRecovery).recover({ checkpoint, observedOwner });
-        if (recovery === "active") return err("ATTEMPT_LEASE_ACTIVE");
-        if (recovery !== "recovered") return err("ATTEMPT_LIVENESS_UNKNOWN");
-        const ownerProcess = observeProcessIdentity(process.pid);
-        return ok(
-          input.store.beginResume({
-            ...resumeInput,
-            now: resumedAt.toISOString(),
-            expiresAt: new Date(resumedAt.getTime() + 30_000).toISOString(),
-            recoveryVerified: true,
-            ...(ownerProcess.type === "ok" ? { ownerProcess: ownerProcess.value } : {}),
-          }),
-        );
+        const recovered = await recoverExpiredCheckpoint({
+          store: input.store,
+          checkpoint,
+          resumedAt,
+          recovery: input.recovery ?? defaultRecovery,
+          observeOwner: input.observeOwner,
+          observeRecoveryOwner: input.observeRecoveryOwner,
+          mintId,
+        });
+        if (recovered.type === "err") return recovered;
+        return ok(beginResumedAttempt(input.store, recovered.value, resumeInput, resumedAt));
       } catch {
         return err("CHECKPOINT_STATE_INVALID");
       }
