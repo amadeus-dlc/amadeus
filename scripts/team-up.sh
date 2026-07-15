@@ -20,6 +20,8 @@ set -euo pipefail
 #   TEAM_RUNTIME      claude or codex (default: claude)
 #   TEAM_SESSION      tmux session name (default: amadeus-team)
 #
+# A fresh launch clears unread agmsg messages for each member before starting
+# the runtime. With -c, both conversation history and unread messages remain.
 # In Claude mode, -c falls back to a fresh start for members without history.
 # In Codex mode, -c resumes the last conversation in each member worktree.
 
@@ -27,6 +29,7 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 BASE="$HOME/worktrees/github.com/amadeus-dlc/amadeus"
 AGMSG_ROOT="${AGMSG_ROOT:-$HOME/.agents/skills/agmsg}"
 DELIVERY="${DELIVERY:-$AGMSG_ROOT/scripts/delivery.sh}"
+INBOX="${INBOX:-$AGMSG_ROOT/scripts/inbox.sh}"
 CODEX_MONITOR="${CODEX_MONITOR:-$AGMSG_ROOT/scripts/drivers/types/codex/codex-monitor.sh}"
 ROLE_RESUME="${ROLE_RESUME:-$AGMSG_ROOT/scripts/role-resume.sh}"
 TEAM_NAME="${AGMSG_TEAM:-amadeus}"
@@ -68,8 +71,31 @@ has_history() {
   ls "$HOME/.claude-$IDENTITY/projects/$munged"/*.jsonl >/dev/null 2>&1
 }
 
+claude_role() {
+  case "$1" in
+  leader) printf 'leader' ;;
+  engineer-*) printf 'e%s' "${1#engineer-}" ;;
+  esac
+}
+
+member_role() {
+  case "$RUNTIME" in
+  claude) claude_role "$1" ;;
+  codex) codex_role "$1" ;;
+  esac
+}
+
+fresh_mailbox_cmd() {
+  local m="$1" role
+  [ "$CONTINUE" = "0" ] || return 0
+  [ -f "$INBOX" ] || return 0
+  role="$(member_role "$m")"
+  printf 'bash %q %q %q --quiet >/dev/null 2>&1 || echo %q >&2; ' \
+    "$INBOX" "$TEAM_NAME" "$role" "WARN: failed to clear stale agmsg messages for $role (continuing)"
+}
+
 claude_member_cmd() {
-  local m="$1" wt="$BASE/$1" args=""
+  local m="$1" wt="$BASE/$1" args="" mailbox_cmd
   if [ "$CONTINUE" = "1" ]; then
     args="--continue"
   fi
@@ -81,9 +107,10 @@ claude_member_cmd() {
     bash "$DELIVERY" set monitor claude-code "$wt" >/dev/null 2>&1 ||
       echo "WARN: delivery.sh set monitor failed for $m (continuing)" >&2
   fi
+  mailbox_cmd="$(fresh_mailbox_cmd "$m")"
   # keep the pane open after claude exits so crashes stay inspectable
-  printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team CLAUDE_IDENTITY=%q %q %s %q; exec $SHELL -l' \
-    "$wt" "$IDENTITY" "$REPO/scripts/run-claude.sh" "$args" "/agmsg mode monitor"
+  printf 'cd %q && mise trust -q 2>/dev/null; %sAMADEUS_OPERATING_MODE=team CLAUDE_IDENTITY=%q %q %s %q; exec $SHELL -l' \
+    "$wt" "$mailbox_cmd" "$IDENTITY" "$REPO/scripts/run-claude.sh" "$args" "/agmsg mode monitor"
 }
 
 codex_role() {
@@ -94,7 +121,7 @@ codex_role() {
 }
 
 codex_member_cmd() {
-  local m="$1" wt="$BASE/$1" role prompt command="codex" resume_arg="" resume_uuid=""
+  local m="$1" wt="$BASE/$1" role prompt command="codex" resume_arg="" resume_uuid="" mailbox_cmd
   role="$(codex_role "$m")"
   prompt="\$agmsg actas $role"
 
@@ -122,11 +149,12 @@ codex_member_cmd() {
       echo "WARN: role resume resolver failed for $role — starting fresh" >&2
     fi
   fi
+  mailbox_cmd="$(fresh_mailbox_cmd "$m")"
 
   # AGMSG_CODEX_ROLE disambiguates old role registrations that may coexist in
   # a reused worktree. Keep the pane open after Codex exits for inspection.
-  printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team AGMSG_CODEX_ROLE=%q %q --project %q --codex-command %q -- %s %q; exec $SHELL -l' \
-    "$wt" "$role" "$CODEX_MONITOR" "$wt" "$command" "$resume_arg" "$prompt"
+  printf 'cd %q && mise trust -q 2>/dev/null; %sAMADEUS_OPERATING_MODE=team AGMSG_CODEX_ROLE=%q %q --project %q --codex-command %q -- %s %q; exec $SHELL -l' \
+    "$wt" "$mailbox_cmd" "$role" "$CODEX_MONITOR" "$wt" "$command" "$resume_arg" "$prompt"
 }
 
 member_cmd() {
