@@ -150,6 +150,7 @@ codex/manifest.ts:11-16 と emit.ts の役割: config.toml.example / hooks.json.
 3. `packages/setup/src/domain/engine-layout.ts:8-12` `ENGINE_DIR_BY_HARNESS` map
 4. `packages/setup/src/modules/reporter.ts:24-25,137` usage 文字列 + invalid エラー文言
 5. `tests/unit/setup-harness.test.ts:13` `toEqual(["claude","codex","kiro","kiro-ide"])` — **契約テスト、要更新**
+5b. `tests/unit/setup-harness-parse.test.ts:17` `HarnessName.parse` 受理集合の契約テスト — **要更新**(追補 2026-07-16: requirements-analysis reviewer が独立再列挙で検出。:167 の「fixture .claude 固定」一般化の除外根拠に当てはまらない)
 
 **framework runtime（open-set が主だが test-seam/fallback の閉じたマップあり）:**
 6. `packages/framework/core/tools/amadeus-lib.ts:114` `KNOWN_HARNESS_DIRS`、:170-172 `KNOWN_RULES_SUBDIR` — 実 install は `harness.json`(harnessDir/rulesSubdir) で解決するので**これらは AMADEUS_HARNESS_DIR test-seam と fallback 専用**（:109-114,:162-168 コメント明記）。新ハーネスの test-seam を使うなら追記。
@@ -162,7 +163,7 @@ codex/manifest.ts:11-16 と emit.ts の役割: config.toml.example / hooks.json.
 9. `scripts/promote-self.ts:37-41` managedDirs、:313-319 build 呼び出し（面3、dogfood 対象にする場合のみ）
 
 ### 8.3 ハーネス名を閉じた列挙で持つファイル数
-本 intent のフォーカス面で**編集が要りうる**閉じ列挙保持ファイル = **9ファイル**（上記1〜9のファイル単位: harness.ts, engine-layout.ts, reporter.ts, setup-harness.test.ts, amadeus-lib.ts, amadeus-utility.ts, amadeus-migrate.ts, promote-self.ts の8ソース + 契約テスト setup-harness.test.ts）。うち **installer 5ファイルは正しさに必須**、framework runtime 2 + migrate 1 は advisory/test-seam/移行、self-install 1 は dogfood 判断。
+本 intent のフォーカス面で**編集が要りうる**閉じ列挙保持ファイル = **10ファイル**(追補後)（上記1〜9のファイル単位: harness.ts, engine-layout.ts, reporter.ts, setup-harness.test.ts, amadeus-lib.ts, amadeus-utility.ts, amadeus-migrate.ts, promote-self.ts の8ソース + 契約テスト setup-harness.test.ts）。うち **installer 6ファイル(harness.ts / engine-layout.ts / reporter.ts / setup-harness.test.ts / setup-harness-parse.test.ts + install 受理面)は正しさに必須**、framework runtime 2 + migrate 1 は advisory/test-seam/移行、self-install 1 は dogfood 判断。
 
 （補足: `grep -rln` で harness 名を含む .ts は tests/ に多数あるが、大半は fixture が `.claude` 固定で新ハーネス追加に非依存。上記は「ハーネス集合そのものを閉じた列挙として持つ」ファイルに絞った。）
 
@@ -223,6 +224,7 @@ codex/manifest.ts:11-16 と emit.ts の役割: config.toml.example / hooks.json.
 2. `packages/setup/src/domain/engine-layout.ts:8-12`（engine dir map）
 3. `packages/setup/src/modules/reporter.ts:24-25,137`（usage/error）
 4. `tests/unit/setup-harness.test.ts:13`（契約テスト）
+4b. `tests/unit/setup-harness-parse.test.ts:17`（parse 受理集合の契約テスト、追補 2026-07-16）
 
 ### 12.3 品質を揃えるための追加編集（正しさには非必須）
 - doctor advisory: `amadeus-utility.ts:857`(otherTrees), `:2000-2006`(SCAN_EXCLUDE)
