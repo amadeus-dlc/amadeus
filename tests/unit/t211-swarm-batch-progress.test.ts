@@ -30,21 +30,23 @@
 // both bug and fix) — these tests pin the units/advance the older test left open.
 
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
+  DEFAULT_SPACE,
   resetAidlcEnv,
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
+import { appendAuditEntry } from "../../packages/framework/core/tools/amadeus-audit.ts";
 import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 
 // The core source has no co-located compiled graph — point the engine at the
 // packaged dist copy (regenerated from the same core in this commit).
-process.env.AMADEUS_STAGE_GRAPH ??= join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
+process.env.AMADEUS_STAGE_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 // Standalone hermeticity (mirrors t186): the suite runner injects these guard
 // bypasses; default them here so a bare `bun test <file>` behaves the same.
 process.env.AMADEUS_SKIP_ARTIFACT_GUARD ??= "1";
@@ -63,6 +65,8 @@ afterEach(() => {
 interface Directive {
   kind?: string;
   units?: unknown;
+  question?: string;
+  repo?: string;
   [k: string]: unknown;
 }
 
@@ -140,6 +144,27 @@ function coverUnit(proj: string, unit: string): void {
   }
 }
 
+function recordDisposition(
+  proj: string,
+  unit: string,
+  to: "parked" | "skipped",
+): void {
+  appendAuditEntry("UNIT_DISPOSITION_CHANGED", {
+    Stage: "code-generation",
+    Unit: unit,
+    From: "active",
+    To: to,
+    Reason: "test fixture",
+  }, proj);
+}
+
+function rewriteIntentRepos(proj: string, repos: string[]): void {
+  const path = join(proj, "amadeus", "spaces", DEFAULT_SPACE, "intents", "intents.json");
+  const rows = JSON.parse(readFileSync(path, "utf-8")) as Array<Record<string, unknown>>;
+  rows[0].repos = repos;
+  writeFileSync(path, `${JSON.stringify(rows, null, 2)}\n`, "utf-8");
+}
+
 /**
  * Seed a fresh autonomous code-generation project with a multi-batch DAG.
  * `current` picks the handleNext branch: "code-generation" (re-entry, default) or
@@ -205,5 +230,32 @@ describe("t211 tryEmitSwarm excludes completed batches (#841)", () => {
     const directive = runNext(proj);
     expect(directive.kind).toBe("invoke-swarm");
     expect(directive.units).toEqual(["beta"]);
+  });
+
+  test("d: a parked-only swarm batch asks for an explicit disposition change", () => {
+    const proj = seedSwarmProject([["alpha"]]);
+    recordDisposition(proj, "alpha", "parked");
+    const directive = runNext(proj);
+    expect(directive.kind).toBe("ask");
+    expect(directive.question).toContain("alpha");
+    expect(directive.question).toContain("parked");
+  });
+
+  test("e: a skipped dependency batch does not unlock the next swarm batch", () => {
+    const proj = seedSwarmProject([["alpha"], ["beta"]]);
+    recordDisposition(proj, "alpha", "skipped");
+    const directive = runNext(proj);
+    expect(directive.kind).toBe("ask");
+    expect(directive.question).toContain("dependency");
+    expect(directive.units).toBeUndefined();
+  });
+
+  test("f: a single recorded repository is forwarded with the active swarm batch", () => {
+    const proj = seedSwarmProject([["alpha"]]);
+    rewriteIntentRepos(proj, ["application"]);
+    const directive = runNext(proj);
+    expect(directive.kind).toBe("invoke-swarm");
+    expect(directive.units).toEqual(["alpha"]);
+    expect(directive.repo).toBe("application");
   });
 });

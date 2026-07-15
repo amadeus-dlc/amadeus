@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { appendAuditEntry } from "../../packages/framework/core/tools/amadeus-audit.ts";
 import {
   changeUnitDisposition,
+  currentUnitDisposition,
   foldUnitDispositions,
   latestUnitDispositions,
   unitDispositionKey,
@@ -88,6 +89,8 @@ describe("Unit disposition ledger", () => {
       disposition: "parked",
       reason: "move to parked",
     });
+    expect(currentUnitDisposition(root, "code-generation", "unit-a")).toBe("parked");
+    expect(currentUnitDisposition(root, "code-generation", "unit-b")).toBe("active");
   });
 
   test("rejects an unknown disposition before touching the ledger", () => {
@@ -100,6 +103,14 @@ describe("Unit disposition ledger", () => {
       reason: "invalid",
       expectedFrom: "active",
     })).toThrow("Unknown Unit disposition");
+    expect(() => changeUnitDisposition({
+      projectDir: root,
+      stage: "code-generation",
+      unit: "unit-a",
+      to: "parked",
+      reason: "invalid expected disposition",
+      expectedFrom: "unknown" as "active",
+    })).toThrow("Unknown expected Unit disposition");
     expect(latestUnitDispositions(root).size).toBe(0);
   });
 

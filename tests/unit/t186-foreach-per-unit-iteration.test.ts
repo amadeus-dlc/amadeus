@@ -22,11 +22,10 @@
 //     sites after tryEmitSwarm returns false.
 //   - the §3d coverage guard in handleReport (refuses approve while >1 uncovered).
 //   - amadeus-directive.ts, the optional `unit` field on RunStageDirective.
-// NONE are exported (the tool has zero exports), so the behaviour is observable
-// only on the JSON directive the spawned engine emits to stdout, MECHANISM =
-// cli: SPAWN `bun amadeus-orchestrate.ts next|report` and assert on the parsed
-// directive, the SAME process boundary t116 (emit/parse) and t135 (bolt_dag
-// seeding) drive.
+// The CLI contract remains covered through spawned `next|report` calls. The
+// exported handleNext/handleReport seams additionally drive disposition-only
+// branches in-process because Bun coverage cannot instrument child processes;
+// both paths assert on the same validated JSON directive emitted by the engine.
 //
 // FIXTURE DISCIPLINE (mirrors t135's seedCodegenProject + t116's fresh-temp-per-
 // emit): each case uses a FRESH temp project (createTestProject seeds the
@@ -40,7 +39,7 @@
 // than emitting the unresolved sentinel, isolating the per-unit behaviour. All
 // temp dirs are cleaned in afterEach.
 
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -54,6 +53,10 @@ import {
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
+import {
+  handleNext,
+  handleReport,
+} from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 
 // Standalone hermeticity (issue #698): the suite runner injects these guard
 // bypasses into every test file's env (tests/run-tests.ts), so this file only
@@ -63,6 +66,7 @@ import {
 // not mask enforcement coverage.
 process.env.AMADEUS_SKIP_ARTIFACT_GUARD ??= "1";
 process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD ??= "1";
+process.env.AMADEUS_STAGE_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 
 resetAidlcEnv();
 
@@ -259,6 +263,27 @@ function runReport(proj: string, args: string[]): Directive {
   }
 }
 
+function captureDirective(run: () => void): Directive {
+  let raw = "";
+  const log = spyOn(console, "log").mockImplementation((value) => {
+    raw = String(value);
+  });
+  try {
+    run();
+  } finally {
+    log.mockRestore();
+  }
+  return JSON.parse(raw) as Directive;
+}
+
+function runNextInProcess(proj: string): Directive {
+  return captureDirective(() => handleNext([], proj));
+}
+
+function runReportInProcess(proj: string, args: string[]): Directive {
+  return captureDirective(() => handleReport(args, proj));
+}
+
 function runTool(proj: string, tool: string, args: string[]) {
   return spawnSync(BUN, [tool, ...args, "--project-dir", proj], {
     encoding: "utf-8",
@@ -295,7 +320,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
   test("1: per-unit stage with no artifacts emits the first unit with paths substituted", () => {
     const proj = seedProject("functional-design", "on");
     seedBoltDag(proj, ["alpha", "beta"]);
-    const d = runNext(proj);
+    const d = runNextInProcess(proj);
     expect(d.kind).toBe("run-stage");
     expect(d.stage).toBe("functional-design");
     expect(d.unit).toBe("alpha");
@@ -315,7 +340,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
   test("2: gate is suppressed (false) on a non-last unit", () => {
     const proj = seedProject("functional-design", "on");
     seedBoltDag(proj, ["alpha", "beta"]);
-    const d = runNext(proj);
+    const d = runNextInProcess(proj);
     expect(d.unit).toBe("alpha");
     expect(d.gate).toBe(false);
   }, 30000);
@@ -326,7 +351,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     const proj = seedProject("functional-design", "on");
     seedBoltDag(proj, ["alpha", "beta"]);
     coverUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES);
-    const d = runNext(proj);
+    const d = runNextInProcess(proj);
     expect(d.kind).toBe("run-stage");
     expect(d.unit).toBe("beta");
     expect(d.produces).toContain(
@@ -650,7 +675,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     seedBoltDag(proj, ["alpha", "beta"]);
     setUnitDisposition(proj, "park", "alpha", "waiting for an external surface");
 
-    const d = runNext(proj);
+    const d = runNextInProcess(proj);
     expect(d.kind).toBe("run-stage");
     expect(d.unit).toBe("beta");
     expect(d.gate).toBe(false);
@@ -662,7 +687,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     setUnitDisposition(proj, "park", "alpha", "waiting for an external surface");
     coverUnit(proj, "beta", "code-generation", CG_PRODUCES);
 
-    const d = runNext(proj);
+    const d = runNextInProcess(proj);
     expect(d.kind).toBe("ask");
     expect(d.question).toContain("alpha");
     expect(d.question).toContain("parked");
@@ -677,7 +702,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     setUnitDisposition(proj, "skip", "alpha", "human accepted the reduced scope");
     coverUnit(proj, "beta", "code-generation", CG_PRODUCES);
 
-    const d = runNext(proj);
+    const d = runNextInProcess(proj);
     expect(d.kind).toBe("run-stage");
     expect(d.unit).toBe("beta");
     expect(d.gate).toBe(true);
@@ -688,7 +713,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     seedMultiBatchDag(proj, [["alpha"], ["beta"]]);
     setUnitDisposition(proj, "park", "alpha", "dependency unavailable");
 
-    const d = runNext(proj);
+    const d = runNextInProcess(proj);
     expect(d.kind).toBe("ask");
     expect(d.question).toContain("alpha");
     expect(d.question).toContain("parked");
@@ -701,7 +726,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     setUnitDisposition(parkedProj, "park", "alpha", "waiting for an external surface");
     coverUnit(parkedProj, "beta", "code-generation", CG_PRODUCES);
 
-    const refused = runReport(parkedProj, [
+    const refused = runReportInProcess(parkedProj, [
       "--stage",
       "code-generation",
       "--result",
@@ -716,7 +741,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     setUnitDisposition(skippedProj, "skip", "alpha", "human accepted the reduced scope");
     coverUnit(skippedProj, "beta", "code-generation", CG_PRODUCES);
 
-    const gate = runNext(skippedProj);
+    const gate = runNextInProcess(skippedProj);
     expect(gate.kind).toBe("run-stage");
     expect(gate.gate).toBe(true);
     const accepted = runReport(skippedProj, [
@@ -726,6 +751,18 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
       "approved",
     ]);
     expect(accepted.kind).not.toBe("error");
+
+    const activeProj = seedProject("code-generation", "on");
+    seedBoltDag(activeProj, ["alpha", "beta"]);
+    const activeRefused = runReportInProcess(activeProj, [
+      "--stage",
+      "code-generation",
+      "--result",
+      "approved",
+    ]);
+    expect(activeRefused.kind).toBe("error");
+    expect(activeRefused.message).toContain("alpha");
+    expect(activeRefused.message).toContain("beta");
   }, 30000);
 
   test("20: skipping an upstream Unit does not implicitly unlock a dependent batch", () => {
@@ -733,11 +770,20 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     seedMultiBatchDag(proj, [["alpha"], ["beta"]]);
     setUnitDisposition(proj, "skip", "alpha", "human accepted the reduced scope");
 
-    const d = runNext(proj);
+    const d = runNextInProcess(proj);
     expect(d.kind).toBe("ask");
     expect(d.question).toContain("alpha");
     expect(d.question).toContain("dependency");
     expect(d.question).toContain("resume");
     expect(d.unit).not.toBe("beta");
+
+    const refused = runReportInProcess(proj, [
+      "--stage",
+      "code-generation",
+      "--result",
+      "approved",
+    ]);
+    expect(refused.kind).toBe("error");
+    expect(refused.message).toContain("dependency");
   }, 30000);
 });

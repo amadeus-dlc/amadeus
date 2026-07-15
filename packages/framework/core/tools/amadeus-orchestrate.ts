@@ -2886,7 +2886,7 @@ function approveArgs(slug: string, flags: ReportFlags): string[] {
 // atomic state tool, and emits a terminal `done` directive on success or an
 // `error` directive on a rejected transition. Mutation happens entirely inside
 // the spawned subcommand(s) — the engine itself writes nothing.
-function handleReport(args: string[], projectDir: string | undefined): void {
+export function handleReport(args: string[], projectDir: string | undefined): void {
   const flags = parseReportFlags(args);
 
   // Branch -1 — the --single stage-runner commit. A stage-runner reports
