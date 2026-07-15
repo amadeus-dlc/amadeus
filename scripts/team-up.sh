@@ -2,9 +2,10 @@
 
 set -euo pipefail
 
-# Relaunch the 7-member agent team in ONE window: a tmux session with a
-# 3-1-3 pane layout (left column e1-e3, center leader, right column e4-e6),
-# attached in a single Ghostty window.
+# Relaunch the 7-member agent team in ONE window: a session with a 3-1-3 pane
+# layout (left column e1-e3, center leader, right column e4-e6), attached in a
+# single Ghostty window. The launch backend is tmux by default; set
+# TEAM_MUX=herdr (or pass --herdr) to build the same layout with herdr instead.
 #
 # For each member pane this script re-applies agmsg monitor delivery, enters the
 # member worktree, runs `mise trust`, and launches the selected agent runtime.
@@ -13,7 +14,8 @@ set -euo pipefail
 #   scripts/team-up.sh          # create a run + launch all 7 Claude members
 #   scripts/team-up.sh --codex  # create a run + launch all 7 Codex members
 #   scripts/team-up.sh -c       # resume each member's last conversation
-#   scripts/team-up.sh --kill   # tear down the tmux session
+#   scripts/team-up.sh --kill   # tear down the team session
+#   TEAM_MUX=herdr scripts/team-up.sh   # build the layout with herdr
 #
 # Env:
 #   AGMSG_TEAM        team each member joins before launch (default: amadeus)
@@ -23,7 +25,8 @@ set -euo pipefail
 #   TEAM_STATE_DIR    local team run metadata directory
 #   TEAM_RUNTIME      claude or codex (default: claude)
 #   TEAM_RUN_ID       fixed run ID (intended for deterministic automation)
-#   TEAM_SESSION      tmux session name (default: amadeus-team)
+#   TEAM_SESSION      session name (default: amadeus-team)
+#   TEAM_MUX          launch backend: tmux or herdr (default: tmux)
 #
 # In Claude mode, -c falls back to a fresh start for members without history.
 # In Codex mode, -c resumes the last conversation in each member worktree.
@@ -44,6 +47,138 @@ CODEX_IDENTITY="$AGENT_IDENTITY"
 RUNTIME="${TEAM_RUNTIME:-claude}"
 RUNTIME_EXPLICIT=0
 S="${TEAM_SESSION:-amadeus-team}"
+HERDR="${HERDR:-herdr}"
+
+# --- launch backend abstraction (tmux default; herdr optional) -----------
+# The 3-1-3 layout is built through a small set of mux_* verbs so the launch
+# backend is swappable. tmux is the default and unchanged; herdr (an
+# agent-aware terminal multiplexer, https://herdr.dev) is selectable via
+# TEAM_MUX=herdr or --herdr. Everything else (run management, worktrees,
+# agmsg registration) is backend-neutral.
+#
+# Resolve the backend before argument parsing so --kill (handled inline in
+# the parse loop) sees it regardless of flag order. TEAM_MUX is the primary
+# selector; the --herdr/--tmux flags are a convenience pre-scanned here.
+MUX="${TEAM_MUX:-tmux}"
+MUX_EXPLICIT=0
+for _arg in "$@"; do
+  case "$_arg" in
+  --herdr) MUX="herdr"; MUX_EXPLICIT=1 ;;
+  --tmux) MUX="tmux"; MUX_EXPLICIT=1 ;;
+  esac
+done
+case "$MUX" in
+tmux | herdr) ;;
+*)
+  echo "invalid TEAM_MUX: $MUX (expected tmux or herdr)" >&2
+  exit 1
+  ;;
+esac
+
+# Extract the first "pane_id":"..." from a herdr JSON response. Every herdr
+# CLI command prints JSON; workspace-create and pane-split responses each
+# carry exactly one pane_id (the root/new pane), so first-match is exact.
+herdr_pane_id() { grep -o '"pane_id":"[^"]*"' | head -1 | cut -d'"' -f4; }
+
+# Block until session S's headless server accepts socket commands.
+herdr_wait_ready() {
+  local s="$1" i
+  for i in $(seq 1 50); do
+    "$HERDR" --session "$s" workspace list >/dev/null 2>&1 && return 0
+    sleep 0.2
+  done
+  echo "ERROR: herdr session '$s' did not become ready" >&2
+  return 1
+}
+
+# True when session $1 exists (tmux: has-session; herdr: server accepts the
+# session socket). A running herdr headless server answers workspace list.
+mux_has_session() {
+  case "$MUX" in
+  tmux) tmux has-session -t "$1" 2>/dev/null ;;
+  herdr) "$HERDR" --session "$1" workspace list >/dev/null 2>&1 ;;
+  esac
+}
+
+# Tear down session $1, echoing killed/none. Keeps worktrees intact.
+mux_kill() {
+  case "$MUX" in
+  tmux) tmux kill-session -t "$1" 2>/dev/null && echo "killed session $1" || echo "no session $1" ;;
+  herdr)
+    if "$HERDR" --session "$1" workspace list >/dev/null 2>&1; then
+      "$HERDR" session stop "$1" >/dev/null 2>&1 && echo "killed session $1" || echo "no session $1"
+    else
+      echo "no session $1"
+    fi
+    ;;
+  esac
+}
+
+# mux_new_session <session> <cwd> <cmd> — create the session's first pane
+# running <cmd> and echo its pane id.
+mux_new_session() {
+  local s="$1" cwd="$2" cmd="$3" pane
+  case "$MUX" in
+  tmux)
+    tmux new-session -d -s "$s" -x 300 -y 90 "$cmd"
+    tmux display-message -p -t "$s" '#{pane_id}'
+    ;;
+  herdr)
+    nohup "$HERDR" --session "$s" server >/dev/null 2>&1 &
+    disown 2>/dev/null || true
+    herdr_wait_ready "$s" || return 1
+    pane="$("$HERDR" --session "$s" workspace create --cwd "$cwd" --label "$s" --no-focus | herdr_pane_id)"
+    [ -n "$pane" ] || { echo "ERROR: herdr workspace create returned no pane id" >&2; return 1; }
+    "$HERDR" --session "$s" pane run "$pane" "$cmd" >/dev/null
+    printf '%s\n' "$pane"
+    ;;
+  esac
+}
+
+# mux_split <session> <target_pane> <orient h|v> <newpct> <cwd> <cmd> — split
+# <target_pane> and echo the new pane id running <cmd>.
+mux_split() {
+  local s="$1" target="$2" orient="$3" pct="$4" cwd="$5" cmd="$6" dir ratio pane
+  case "$MUX" in
+  tmux)
+    case "$orient" in
+    h) tmux split-window -h -l "${pct}%" -t "$target" -P -F '#{pane_id}' "$cmd" ;;
+    v) tmux split-window -v -l "${pct}%" -t "$target" -P -F '#{pane_id}' "$cmd" ;;
+    esac
+    ;;
+  herdr)
+    case "$orient" in
+    h) dir="right" ;;
+    v) dir="down" ;;
+    esac
+    # tmux -l sizes the NEW pane; herdr --ratio sizes the RETAINED pane, so
+    # the ratio is inverted (66% new pane -> retained 0.34).
+    ratio="$(awk "BEGIN{printf \"%.4f\", (100-$pct)/100}")"
+    pane="$("$HERDR" --session "$s" pane split "$target" --direction "$dir" --ratio "$ratio" --cwd "$cwd" --no-focus | herdr_pane_id)"
+    [ -n "$pane" ] || { echo "ERROR: herdr pane split returned no pane id" >&2; return 1; }
+    "$HERDR" --session "$s" pane run "$pane" "$cmd" >/dev/null
+    printf '%s\n' "$pane"
+    ;;
+  esac
+}
+
+# Focus pane $2 in session $1. herdr 0.7.1 has no focus-by-id; its native
+# agent-status display makes the initial focused pane non-critical, so this
+# is a no-op there.
+mux_focus() {
+  case "$MUX" in
+  tmux) tmux select-pane -t "$2" ;;
+  herdr) : ;;
+  esac
+}
+
+# Attach session $1 in a fresh Ghostty window.
+mux_attach() {
+  case "$MUX" in
+  tmux) open -na Ghostty --args -e tmux attach -t "$1" ;;
+  herdr) open -na Ghostty --args -e "$HERDR" session attach "$1" ;;
+  esac
+}
 
 CONTINUE=0
 RUN_SELECTION=""
@@ -62,7 +197,9 @@ Without -c, creates a new seven-member run from the repository HEAD.
       --name LABEL     Add a display name to a fresh run
       --claude         Use Claude for a fresh run
       --codex          Use Codex for a fresh run
-      --kill           Stop the active tmux session; keep its worktrees
+      --kill           Stop the active session; keep its worktrees
+      --herdr          Build the layout with herdr (default: tmux)
+      --tmux           Build the layout with tmux (the default)
       --list-runs      List retained runs
       --delete-run ID  Delete a stopped, clean run with no unmerged work
   -h, --help           Show this help
@@ -71,6 +208,7 @@ The first resume of legacy fixed worktrees requires --claude or --codex.
 
 Environment:
   AGENT_IDENTITY      Identity for the selected runtime (default: corporate-1)
+  TEAM_MUX            Launch backend: tmux or herdr (default: tmux)
 EOF
 }
 
@@ -155,6 +293,7 @@ while [ "$#" -gt 0 ]; do
   -h | --help) usage; exit 0 ;;
   --claude) RUNTIME="claude"; RUNTIME_EXPLICIT=1 ;;
   --codex) RUNTIME="codex"; RUNTIME_EXPLICIT=1 ;;
+  --herdr | --tmux) ;; # backend already resolved by the pre-scan above
   --run)
     shift
     [ "$#" -gt 0 ] || { echo "ERROR: --run requires an ID" >&2; exit 1; }
@@ -171,9 +310,23 @@ while [ "$#" -gt 0 ]; do
     RUN_NAME="$1"
     ;;
   --kill)
-    tmux kill-session -t "$S" 2>/dev/null && echo "killed session $S" || echo "no session $S"
+    # Kill with the backend that created the session, not the current default.
+    # The active run records its mux; honor it so a bare --kill after a herdr
+    # launch tears down the herdr session (not a phantom tmux one).
+    active_run=""
     if [ -f "$STATE_DIR/active-run" ]; then
       active_run="$(cat "$STATE_DIR/active-run")"
+    fi
+    if [ -n "$active_run" ] && [ -f "$STATE_DIR/runs/$active_run/mux" ]; then
+      saved_mux="$(cat "$STATE_DIR/runs/$active_run/mux")"
+      if [ "$MUX_EXPLICIT" = "1" ] && [ "$MUX" != "$saved_mux" ]; then
+        echo "ERROR: active run $active_run uses mux=$saved_mux, not mux=$MUX" >&2
+        exit 1
+      fi
+      MUX="$saved_mux"
+    fi
+    mux_kill "$S"
+    if [ -n "$active_run" ]; then
       if [ -d "$STATE_DIR/runs/$active_run" ]; then
         printf 'stopped\n' >"$STATE_DIR/runs/$active_run/status"
       fi
@@ -395,6 +548,7 @@ create_run() {
   mkdir -p "$RUN_ROOT" "$RUN_RECORD/members"
   RUN_PREPARING=1
   printf '%s\n' "$RUNTIME" >"$RUN_RECORD/runtime"
+  printf '%s\n' "$MUX" >"$RUN_RECORD/mux"
   printf '%s\n' "$RUN_NAME" >"$RUN_RECORD/name"
   printf '%s\n' "$base_ref" >"$RUN_RECORD/base-ref"
   printf '%s\n' "$base_commit" >"$RUN_RECORD/base-commit"
@@ -412,7 +566,7 @@ create_run() {
 }
 
 load_run() {
-  local requested_id="$1" saved_runtime
+  local requested_id="$1" saved_runtime saved_mux
   if [ -n "$requested_id" ]; then
     RUN_ID="$requested_id"
   else
@@ -428,6 +582,14 @@ load_run() {
     return 1
   fi
   RUNTIME="$saved_runtime"
+  # Resume with the backend that created the run. Runs predating the mux
+  # record default to tmux.
+  saved_mux="$(cat "$RUN_RECORD/mux" 2>/dev/null || printf 'tmux')"
+  if [ "$MUX_EXPLICIT" = "1" ] && [ "$MUX" != "$saved_mux" ]; then
+    echo "ERROR: run $RUN_ID uses mux=$saved_mux, not mux=$MUX" >&2
+    return 1
+  fi
+  MUX="$saved_mux"
 }
 
 adopt_legacy_run() {
@@ -449,6 +611,7 @@ adopt_legacy_run() {
   fi
   mkdir -p "$RUN_RECORD/members"
   printf '%s\n' "$RUNTIME" >"$RUN_RECORD/runtime"
+  printf '%s\n' "$MUX" >"$RUN_RECORD/mux"
   printf '%s\n' "$(git -C "$REPO" rev-parse HEAD)" >"$RUN_RECORD/base-commit"
   printf 'stopped\n' >"$RUN_RECORD/status"
   printf '1\n' >"$RUN_RECORD/legacy"
@@ -483,7 +646,7 @@ if [ "$CONTINUE" = "1" ]; then
   fi
 fi
 
-if tmux has-session -t "$S" 2>/dev/null; then
+if mux_has_session "$S"; then
   if [ "$CONTINUE" = "1" ]; then
     if [ -f "$STATE_DIR/active-run" ]; then
       active_run="$(cat "$STATE_DIR/active-run")"
@@ -492,11 +655,11 @@ if tmux has-session -t "$S" 2>/dev/null; then
         exit 1
       fi
     fi
-    echo "tmux session '$S' already exists — attaching instead." >&2
-    open -na Ghostty --args -e tmux attach -t "$S"
+    echo "$MUX session '$S' already exists — attaching instead." >&2
+    mux_attach "$S"
     exit 0
   fi
-  echo "ERROR: tmux session '$S' already exists" >&2
+  echo "ERROR: $MUX session '$S' already exists" >&2
   echo "(tear it down first with: scripts/team-up.sh --kill)" >&2
   exit 1
 fi
@@ -517,23 +680,24 @@ register_team_members
 if [ "$RUN_PREPARING" = "1" ]; then
   printf 'launching\n' >"$RUN_RECORD/status"
 fi
-tmux new-session -d -s "$S" -x 300 -y 90 "$(member_cmd engineer-1 "$(member_worktree engineer-1)")"
+P_E1="$(mux_new_session "$S" "$(member_worktree engineer-1)" "$(member_cmd engineer-1 "$(member_worktree engineer-1)")")"
 AGENTS_STARTED=1
-P_E1="$(tmux display-message -p -t "$S" '#{pane_id}')"
-P_LEADER="$(tmux split-window -h -l '66%' -t "$P_E1" -P -F '#{pane_id}' "$(member_cmd leader "$(member_worktree leader)")")"
-P_E4="$(tmux split-window -h -l '50%' -t "$P_LEADER" -P -F '#{pane_id}' "$(member_cmd engineer-4 "$(member_worktree engineer-4)")")"
+P_LEADER="$(mux_split "$S" "$P_E1" h 66 "$(member_worktree leader)" "$(member_cmd leader "$(member_worktree leader)")")"
+P_E4="$(mux_split "$S" "$P_LEADER" h 50 "$(member_worktree engineer-4)" "$(member_cmd engineer-4 "$(member_worktree engineer-4)")")"
 
-P_E2="$(tmux split-window -v -l '66%' -t "$P_E1" -P -F '#{pane_id}' "$(member_cmd engineer-2 "$(member_worktree engineer-2)")")"
-tmux split-window -v -l '50%' -t "$P_E2" "$(member_cmd engineer-3 "$(member_worktree engineer-3)")"
+P_E2="$(mux_split "$S" "$P_E1" v 66 "$(member_worktree engineer-2)" "$(member_cmd engineer-2 "$(member_worktree engineer-2)")")"
+mux_split "$S" "$P_E2" v 50 "$(member_worktree engineer-3)" "$(member_cmd engineer-3 "$(member_worktree engineer-3)")" >/dev/null
 
-P_E5="$(tmux split-window -v -l '66%' -t "$P_E4" -P -F '#{pane_id}' "$(member_cmd engineer-5 "$(member_worktree engineer-5)")")"
-tmux split-window -v -l '50%' -t "$P_E5" "$(member_cmd engineer-6 "$(member_worktree engineer-6)")"
+P_E5="$(mux_split "$S" "$P_E4" v 66 "$(member_worktree engineer-5)" "$(member_cmd engineer-5 "$(member_worktree engineer-5)")")"
+mux_split "$S" "$P_E5" v 50 "$(member_worktree engineer-6)" "$(member_cmd engineer-6 "$(member_worktree engineer-6)")" >/dev/null
 
-tmux select-pane -t "$P_LEADER"
-tmux set-option -t "$S" pane-border-status top
-tmux set-option -t "$S" pane-border-format ' #{b:pane_current_path} '
+mux_focus "$S" "$P_LEADER"
+if [ "$MUX" = "tmux" ]; then
+  tmux set-option -t "$S" pane-border-status top
+  tmux set-option -t "$S" pane-border-format ' #{b:pane_current_path} '
+fi
 
-open -na Ghostty --args -e tmux attach -t "$S"
+mux_attach "$S"
 if [ -n "$RUN_ID" ]; then
   printf 'running\n' >"$RUN_RECORD/status"
   mkdir -p "$STATE_DIR"
