@@ -53,8 +53,8 @@ export type SwarmDriverCliDependencies = Readonly<{
 }>;
 
 const failClosedNativeExecution: NativeExecutionPort = Object.freeze({
-  async execute() {
-    throw new Error("NATIVE_RESOURCE_SUPERVISOR_UNIMPLEMENTED");
+  async execute(): Promise<never> {
+    throw new Error("NATIVE_ACTIVE_RECOVERY_UNIMPLEMENTED");
   },
 });
 

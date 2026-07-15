@@ -119,20 +119,23 @@ describe("t233 swarm driver architecture boundary", () => {
     expect(boundary).not.toContain("node_modules");
   });
 
-  test("keeps the unavailable production slot fail-closed without placeholder supervisors", async () => {
+  test("keeps the production CLI fail-closed until active recovery is wired", async () => {
     const output = await executeSwarmDriverCommand(
       ["status", "--project-dir", REPO_ROOT],
       JSON.stringify({ schemaVersion: 1, batch: 1 }),
     );
     const cli = source("amadeus-swarm-driver.ts");
+    const supervisors = source("amadeus-swarm-native-supervisors.ts");
     expect(output.exitCode).toBe(0);
     expect(productionNativeExecution).toBeDefined();
     await expect(productionNativeExecution!.execute({})).rejects.toThrow(
-      "NATIVE_RESOURCE_SUPERVISOR_UNIMPLEMENTED",
+      "NATIVE_ACTIVE_RECOVERY_UNIMPLEMENTED",
     );
-    expect(cli).not.toContain("NATIVE_CAPTURE_SUPERVISOR_UNIMPLEMENTED");
-    expect(cli).not.toContain("NATIVE_PROCESS_SUPERVISOR_UNIMPLEMENTED");
-    expect(cli).not.toContain("NATIVE_EXECUTION_SLOT_UNIMPLEMENTED");
+    expect(cli).not.toContain('from "./amadeus-swarm-native-supervisors.ts"');
+    expect(cli).toContain("nativeExecution: failClosedNativeExecution");
+    expect(cli).toContain("NATIVE_ACTIVE_RECOVERY_UNIMPLEMENTED");
+    expect(supervisors).toContain("createLifecycleNativeExecution({");
+    expect(supervisors).not.toContain(".recover(");
   });
 
   test("guards both irreversible merge primitives with claim, fencing, and arm", () => {

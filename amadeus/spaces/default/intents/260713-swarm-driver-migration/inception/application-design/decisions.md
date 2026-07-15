@@ -344,17 +344,17 @@ Code Generation入口のmacOS実機調査で、Claude Code 2.1.205はAgent Teams
 
 ### Options
 
-- Option A — mode別closed transport: Agent Teamsはinteractive PTY、Ultra Codeはheadless stdio JSONとし、共通runtimeは`stdio-json | pty-interactive`だけを扱う。native surfaceに一致し、provider分岐をruntimeへ漏らさない。既存`node-pty` 1.1.0を再利用するため新runtime dependencyは不要。可逆性は中程度。
+- Option A — mode別closed transport: Agent Teamsはinteractive PTY、Ultra Codeはheadless stdio JSONとし、共通runtimeは`stdio-json | pty-interactive`だけを扱う。native surfaceに一致し、provider分岐をruntimeへ漏らさない。Bun組み込みの`Bun.Terminal`を使うため新runtime dependencyは不要。可逆性は中程度。
 - Option B — 全Claude modeをheadless: process supervisionは単純だが、Agent Teamsが初期化されずFR-11を実現できない。可逆性は低い。
 - Option C — 通常async AgentをTeamsとして受理: 実装量は少ないが、team固有state/hookを欠きfalse successになる。可逆性は高いが要求不適合。
 
 ### Decision
 
-Option Aを採用する。`LaunchSpec`は`stdio-json | pty-interactive`のdiscriminated unionを持つ。Agent Teamsはattempt専用session ID、Agent Teams env、in-process teammate modeを指定したinteractive `claude`をPTYでbatchごと1 process起動する。observerはexact `session-<id8>` team/task pathとattempt専用hook directoryをprovider arm前から監視する。adapterのlive control projectorが全Unit task completedと全owner idleを満たすprovider-neutralな`ready-for-graceful-exit`を返した場合だけruntimeがPTYへ`/exit`を送り、graceful exitを待つ。control signalは終了トリガーに限定し、terminal後のretained evidenceによる最終success判定を省略しない。PTY bytesはprocess lifecycle診断にだけ使い、Team構造をparseしない。
+Option Aを採用する。`LaunchSpec`は`stdio-json | pty-interactive`のdiscriminated unionを持つ。Agent Teamsはattempt専用session ID、Agent Teams env、in-process teammate modeを指定したinteractive `claude`を`Bun.Terminal`上でbatchごと1 process起動する。observerはexact `session-<id8>` team/task pathとattempt専用hook directoryをprovider arm前から監視する。adapterのlive control projectorが全Unit task completedと全owner idleを満たすprovider-neutralな`ready-for-graceful-exit`を返した場合だけruntimeがPTYへ`/exit`を送り、graceful exitを待つ。control signalは終了トリガーに限定し、terminal後のretained evidenceによる最終success判定を省略しない。PTY bytesはprocess lifecycle診断にだけ使い、Team構造をparseしない。`node-pty` 1.1.0はBun配下の実機確認でPTY入出力が進行しなかったため採用せず、Bun 1.3系でready・input・exitを確認できた組み込みsurfaceを使用する。
 
 Ultra Codeは`claude -p --verbose --effort ultracode --output-format stream-json --include-hook-events`をbatchごと1 process起動する。Workflow resultの`runId` / `transcriptDir`からsnapshotとjournalをroot scanなしで導出し、provider state、journal/stream、hookのIDをAND結合する。
 
-両transportでruntime lifecycleを、capture開始 → variant付きcapture checkpointを`prepared-dispatched` transitionへ保存 → provider arm/spawn → adapter resolverによるevent-bound `capture-bound` transition（provider state読取前）→ PTYだけlive control signalとexit input → process group terminal → observer `stopAndWait` → normalize、の順へ固定する。fixed-pathはadapterがlaunch planから作るinitial run/path bindingとsource plan digestをarm前checkpointへ必須保存し、event-boundだけがfencing対象の`dispatched → dispatched` self-edgeでnative run ID、exact path digest、source event digestを保存する。hook-onlyはbindingを持たない。raw absolute pathは永続化しない。join失敗、cleanup前snapshot欠落、control/graceful exit失敗を空evidenceやsuccessへ変換しない。batch coordinator、Unit worktree隔離、fallback、lease/fencing、referee contractは変更しない。
+両transportでruntime lifecycleを、capture開始 → variant付きcapture checkpointを`prepared-dispatched` transitionへ保存 → wrapper spawnとprocess identity観測 → resource ownerを一度だけ束縛 → arm前resource検証とready-to-arm checkpoint保存 → provider arm → adapter resolverによるevent-bound `capture-bound` transition（provider state読取前）→ PTYだけlive control signalとexit input → process group terminal → observer `stopAndWait`とevidence seal → resource cleanup → process journal破棄、の順へ固定する。永続化済みwrapperをprocess group guardianとして残し、providerはwrapperと同じ専用PGIDへ起動する。provider終端はevidence streamと分離したprivate IPCで通知し、wrapperをPGIDのpinとして保持したままgroupへTERM、猶予後にKILLを送る。wrapper reap、PGID停止、output drainが揃うまでprocess terminalを確定しない。resource cleanupが失敗した場合はprocess journalを照合証拠として残す。fixed-pathはadapterがlaunch planから作るinitial run/path bindingとsource plan digestをarm前checkpointへ必須保存し、event-boundだけがfencing対象の`dispatched → dispatched` self-edgeでnative run ID、exact path digest、source event digestを保存する。hook-onlyはbindingを持たない。raw absolute pathは永続化しない。join失敗、cleanup前snapshot欠落、control/graceful exit失敗を空evidenceやsuccessへ変換しない。batch coordinator、Unit worktree隔離、fallback、lease/fencing、referee contractは変更しない。
 
 ### Consequences
 
@@ -363,6 +363,7 @@ Ultra Codeは`claude -p --verbose --effort ultracode --output-format stream-json
 - Positive: `claude -p`で通常AgentをTeamsと誤判定するfalse successを防げる。
 - Negative: Agent TeamsにPTY supervision、graceful exit、live-only team configのrace testが必要になる。
 - Negative: macOS live proofとLinux fake PTY integrationの両方を保守する必要がある。
+- Negative: capture対象の祖先directory差し替えを防ぐため、Node互換APIにない`openat`をBun組み込みFFIから呼ぶ。macOSの`libSystem`とLinuxのglibcを個別に検証し、symbol解決不能時はfail-closedとする必要がある。
 
 ### Alternatives Rejected
 
@@ -370,7 +371,7 @@ Option Bは実機でteam初期化されずFR-11を満たせないため却下し
 
 ### Security / Compliance impact
 
-promptはargvへ置かずPTY initial inputまたはstdioへ渡す。PTY bytes、provider state、hook payloadを永続化せず、normalized ID/enum/digestだけをcheckpoint/auditへ保存する。observerはattempt専用exact pathだけを読み、`~/.claude/teams`や`tasks`のroot scanを禁止する。user-global Claude settingsは変更しない。
+promptはargvへ置かずPTY initial inputまたはstdioへ渡す。PTY bytes、provider state、hook payloadを永続化せず、normalized ID/enum/digestだけをcheckpoint/auditへ保存する。observerはattempt専用exact pathだけを読み、`~/.claude/teams`や`tasks`のroot scanを禁止する。captureはrootと各directoryをfdで固定し、子要素を`openat(O_NOFOLLOW)`で相対openして、ancestorのswap-and-restoreから異物を取り込まない。attempt-owned resourceはattempt・wave・fencing token・exact process identityへ一度だけ束縛し、ownerの非生存とprocess group停止を確認してからdurable quarantine WAL経由で削除する。未bind、identity不一致、live process、途中crashは保持する。providerはarm後にだけ起動し、永続化済みwrapper guardianと同じ専用PGIDを共有しなければ即時停止してfail-closedとする。guardianはTERMを無視してKILL送信までPGIDを固定し、wrapper identity不一致、guardian異常終了、private IPC不正、group停止不明のときはresourceを保持する。同一UIDで無関係な悪性processによる任意のpath操作は、0600 resourceも操作できる同権限主体であるため保証対象外とする。user-global Claude settingsは変更しない。
 
 ### Reversibility
 
