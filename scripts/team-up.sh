@@ -60,10 +60,11 @@ HERDR="${HERDR:-herdr}"
 # the parse loop) sees it regardless of flag order. TEAM_MUX is the primary
 # selector; the --herdr/--tmux flags are a convenience pre-scanned here.
 MUX="${TEAM_MUX:-tmux}"
+MUX_EXPLICIT=0
 for _arg in "$@"; do
   case "$_arg" in
-  --herdr) MUX="herdr" ;;
-  --tmux) MUX="tmux" ;;
+  --herdr) MUX="herdr"; MUX_EXPLICIT=1 ;;
+  --tmux) MUX="tmux"; MUX_EXPLICIT=1 ;;
   esac
 done
 case "$MUX" in
@@ -309,9 +310,23 @@ while [ "$#" -gt 0 ]; do
     RUN_NAME="$1"
     ;;
   --kill)
-    mux_kill "$S"
+    # Kill with the backend that created the session, not the current default.
+    # The active run records its mux; honor it so a bare --kill after a herdr
+    # launch tears down the herdr session (not a phantom tmux one).
+    active_run=""
     if [ -f "$STATE_DIR/active-run" ]; then
       active_run="$(cat "$STATE_DIR/active-run")"
+    fi
+    if [ -n "$active_run" ] && [ -f "$STATE_DIR/runs/$active_run/mux" ]; then
+      saved_mux="$(cat "$STATE_DIR/runs/$active_run/mux")"
+      if [ "$MUX_EXPLICIT" = "1" ] && [ "$MUX" != "$saved_mux" ]; then
+        echo "ERROR: active run $active_run uses mux=$saved_mux, not mux=$MUX" >&2
+        exit 1
+      fi
+      MUX="$saved_mux"
+    fi
+    mux_kill "$S"
+    if [ -n "$active_run" ]; then
       if [ -d "$STATE_DIR/runs/$active_run" ]; then
         printf 'stopped\n' >"$STATE_DIR/runs/$active_run/status"
       fi
@@ -533,6 +548,7 @@ create_run() {
   mkdir -p "$RUN_ROOT" "$RUN_RECORD/members"
   RUN_PREPARING=1
   printf '%s\n' "$RUNTIME" >"$RUN_RECORD/runtime"
+  printf '%s\n' "$MUX" >"$RUN_RECORD/mux"
   printf '%s\n' "$RUN_NAME" >"$RUN_RECORD/name"
   printf '%s\n' "$base_ref" >"$RUN_RECORD/base-ref"
   printf '%s\n' "$base_commit" >"$RUN_RECORD/base-commit"
@@ -550,7 +566,7 @@ create_run() {
 }
 
 load_run() {
-  local requested_id="$1" saved_runtime
+  local requested_id="$1" saved_runtime saved_mux
   if [ -n "$requested_id" ]; then
     RUN_ID="$requested_id"
   else
@@ -566,6 +582,14 @@ load_run() {
     return 1
   fi
   RUNTIME="$saved_runtime"
+  # Resume with the backend that created the run. Runs predating the mux
+  # record default to tmux.
+  saved_mux="$(cat "$RUN_RECORD/mux" 2>/dev/null || printf 'tmux')"
+  if [ "$MUX_EXPLICIT" = "1" ] && [ "$MUX" != "$saved_mux" ]; then
+    echo "ERROR: run $RUN_ID uses mux=$saved_mux, not mux=$MUX" >&2
+    return 1
+  fi
+  MUX="$saved_mux"
 }
 
 adopt_legacy_run() {
@@ -587,6 +611,7 @@ adopt_legacy_run() {
   fi
   mkdir -p "$RUN_RECORD/members"
   printf '%s\n' "$RUNTIME" >"$RUN_RECORD/runtime"
+  printf '%s\n' "$MUX" >"$RUN_RECORD/mux"
   printf '%s\n' "$(git -C "$REPO" rev-parse HEAD)" >"$RUN_RECORD/base-commit"
   printf 'stopped\n' >"$RUN_RECORD/status"
   printf '1\n' >"$RUN_RECORD/legacy"
