@@ -1,22 +1,20 @@
-// amadeus-settings.ts — canonical Amadeus settings model (skeleton).
+// amadeus-settings.ts — canonical Amadeus settings model.
 //
 // WHAT THIS IS. The source-of-truth type + parse/load/defaults for the
 // workspace settings file (`amadeus/spaces/<space>/settings.json`). Written in
 // the functional-domain-modeling-ts style: class-free, a `type` carrying its
 // instance behaviour, a companion `namespace` for the static surface (parse /
-// load / defaults), a branded frozen literal built by an internal factory, and
-// a discriminated-union Result for parse/load outcomes.
+// load / defaults), a frozen literal built by an internal factory, and a
+// discriminated-union Result for parse/load outcomes.
 //
-// U1 SCOPE (this Bolt). Only the happy-path shape is modelled: parse a JSON
-// object, fill absent interactionModes keys from DEFAULT_SETTINGS, and load a
-// file with a fail-closed read boundary. The richer validation surface —
-// unknown-key rejection, per-key type-mismatch errors, and the all-modes-off
-// guard — is deferred to U2 and NOT implemented here.
-//
-// PROVISIONAL U1 BEHAVIOUR (replaced in U2). parse adopts an interactionModes
-// value only when it is a boolean; any non-boolean value is silently backfilled
-// from DEFAULT_SETTINGS rather than rejected. U2 replaces this backfill with an
-// `invalid` result so malformed values become loud parse errors.
+// VALIDATION SURFACE. parse is fail-closed: a JSON syntax error, a non-object
+// root, an unknown key (root or nested), a non-boolean mode value, and the
+// all-modes-off state each yield an `invalid` result. Violations are collected
+// in full (not fail-fast) so one parse reports every problem. Only absent keys
+// are backfilled from DEFAULT_SETTINGS; a present-but-malformed value is loud.
+// Error strings come from the named generators below (unknownKeyError /
+// typeMismatchError / ALL_MODES_DISABLED_ERROR) so the doctor check reuses one
+// definition rather than re-authoring the wording.
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -27,16 +25,30 @@ import { activeSpace, workspaceRoot } from "./amadeus-lib.ts";
 export const INTERACTION_MODE_KEYS = ["guideMe", "grillMe", "editFile", "chat"] as const;
 export type InteractionModeKey = (typeof INTERACTION_MODE_KEYS)[number];
 
-// Top-level settings keys U2 will validate against. Declared canonically here
-// so the unknown-key check has one list to read; U1 does not yet enforce it.
+// Top-level settings keys. Declared canonically here so the unknown-key check
+// reads one list; any root key outside this set is rejected.
 export const SETTINGS_KNOWN_KEYS = ["interactionModes"] as const;
 
 // Every interaction mode enabled — the default when no settings file exists and
-// the backfill value for absent/non-boolean keys. Named constant so docs, tests,
-// and doctor derive the default posture from one place.
+// the backfill value for absent keys. Named constant so docs, tests, and doctor
+// derive the default posture from one place.
 export const DEFAULT_SETTINGS: Readonly<Record<InteractionModeKey, boolean>> = Object.freeze(
   Object.fromEntries(INTERACTION_MODE_KEYS.map((key) => [key, true])) as Record<InteractionModeKey, boolean>,
 );
+
+// Error-message generators — the single source for parse wording, reused by the
+// doctor check (U3) so the fix text and parse errors never drift apart.
+// `path` is dotted (`interactionModes.foo`); `validKeys` is the key set for the
+// offending level, so the valid-keys list derives from the canonical constants.
+export function unknownKeyError(path: string, validKeys: readonly string[]): string {
+  return `unknown key: ${path} (valid keys: ${validKeys.join(", ")})`;
+}
+
+export function typeMismatchError(path: string, expected: string, got: string): string {
+  return `type mismatch: ${path} expects ${expected}, got ${got}`;
+}
+
+export const ALL_MODES_DISABLED_ERROR = `all interaction modes disabled (at least one of ${INTERACTION_MODE_KEYS.join(", ")} must be true)`;
 
 export type AmadeusSettings = {
   readonly interactionModes: Readonly<Record<InteractionModeKey, boolean>>;
@@ -64,17 +76,47 @@ function createSettings(interactionModes: Readonly<Record<InteractionModeKey, bo
   });
 }
 
-// U1 backfill: adopt a per-mode value only when it is a boolean, otherwise take
-// DEFAULT_SETTINGS. A non-object interactionModes field yields all defaults.
-// U2 replaces the non-boolean branch with an invalid parse result.
-function buildInteractionModes(raw: unknown): Readonly<Record<InteractionModeKey, boolean>> {
-  const source = typeof raw === "object" && raw !== null && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+// Backfill absent mode keys from DEFAULT_SETTINGS. Callers pass an
+// already-validated modes object (every present value is a boolean) or
+// undefined when the field is absent; only the fill-from-default path runs here.
+function buildInteractionModes(source: Record<string, unknown> | undefined): Readonly<Record<InteractionModeKey, boolean>> {
   const result = {} as Record<InteractionModeKey, boolean>;
   for (const key of INTERACTION_MODE_KEYS) {
-    const value = source[key];
+    const value = source?.[key];
     result[key] = typeof value === "boolean" ? value : DEFAULT_SETTINGS[key];
   }
   return Object.freeze(result);
+}
+
+// A plain object (not null, not an array). Used to gate both the root and the
+// interactionModes container before their keys are scanned.
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+// Collect unknown-key and type-mismatch violations under interactionModes into
+// `errors`, and return the validated modes object for backfill (undefined when
+// the field is absent). A present-but-non-object container is a type mismatch.
+function collectModeErrors(raw: unknown, errors: string[]): Record<string, unknown> | undefined {
+  if (raw === undefined) {
+    return undefined;
+  }
+  if (!isPlainObject(raw)) {
+    errors.push(typeMismatchError("interactionModes", "object", typeof raw));
+    return undefined;
+  }
+  for (const key of Object.keys(raw)) {
+    if (!(INTERACTION_MODE_KEYS as readonly string[]).includes(key)) {
+      errors.push(unknownKeyError(`interactionModes.${key}`, INTERACTION_MODE_KEYS));
+    }
+  }
+  for (const key of INTERACTION_MODE_KEYS) {
+    const value = raw[key];
+    if (value !== undefined && typeof value !== "boolean") {
+      errors.push(typeMismatchError(`interactionModes.${key}`, "boolean", typeof value));
+    }
+  }
+  return raw;
 }
 
 function isEnoent(err: unknown): boolean {
@@ -89,9 +131,11 @@ export function settingsPath(projectDir: string, space?: string): string {
 }
 
 export namespace AmadeusSettings {
-  // Pure, throw-free JSON → settings parser. Fails on JSON syntax errors and on
-  // a non-object root (arrays and null included); otherwise backfills absent
-  // interactionModes keys from DEFAULT_SETTINGS (U1 scope).
+  // Pure, throw-free JSON → settings parser, fail-closed. Order: JSON syntax →
+  // non-object root → unknown keys (root then nested) and mode type mismatches
+  // (all collected) → absent-key backfill → all-modes-off guard on the
+  // effective values. Any collected violation, or an all-off effective state,
+  // yields an invalid result listing every problem.
   export function parse(text: string): SettingsParseResult {
     let parsed: unknown;
     try {
@@ -100,11 +144,24 @@ export namespace AmadeusSettings {
       const message = err instanceof Error ? err.message : String(err);
       return { valid: false, errors: [`invalid JSON: ${message}`] };
     }
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    if (!isPlainObject(parsed)) {
       return { valid: false, errors: [`settings root must be an object, got ${typeof parsed}`] };
     }
-    const root = parsed as Record<string, unknown>;
-    return { valid: true, settings: createSettings(buildInteractionModes(root.interactionModes)) };
+    const errors: string[] = [];
+    for (const key of Object.keys(parsed)) {
+      if (!(SETTINGS_KNOWN_KEYS as readonly string[]).includes(key)) {
+        errors.push(unknownKeyError(key, SETTINGS_KNOWN_KEYS));
+      }
+    }
+    const modes = collectModeErrors(parsed.interactionModes, errors);
+    if (errors.length > 0) {
+      return { valid: false, errors };
+    }
+    const interactionModes = buildInteractionModes(modes);
+    if (INTERACTION_MODE_KEYS.every((key) => interactionModes[key] === false)) {
+      return { valid: false, errors: [ALL_MODES_DISABLED_ERROR] };
+    }
+    return { valid: true, settings: createSettings(interactionModes) };
   }
 
   // Read `settings.json` from disk. ENOENT (absent file) → defaults; every other
