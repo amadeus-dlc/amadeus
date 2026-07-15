@@ -51,6 +51,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 <!-- このプロジェクト用のカスタムスコープルール。 -->
 
 - DECIDED: この repo の amadeus ワークフローで intent を開始・再開するときの利用スコープは `amadeus`(Self-hosted Amadeus framework development without infrastructure operations)を既定とする。別スコープ(bugfix 等)を使う場合はユーザーの明示指示による (user decision 2026-07-16、intent 260709-canonical-settings の feature→amadeus 切替指示より) <!-- cid:scope-definition:default-scope-amadeus -->
+- DECIDED: bug ラベルの Issue を修正する intent は `bugfix` スコープを既定とする(default-scope-amadeus の明文化された例外 — ユーザーの standing 指示)。クロスレビュー2名成立が起動の前提(issue-cross-review)。bugfix 以外(例: 修正が新機能設計を要する場合の amadeus)へ切り替える場合はユーザーの明示指示による (user decision 2026-07-16、260715-parser-checkbox-fixes の bugfix 明示承認→standing 化) <!-- cid:scope-definition:bugfix-scope-for-bug-intents -->
 
 ## Forbidden
 
