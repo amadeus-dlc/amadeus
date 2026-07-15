@@ -190,8 +190,12 @@ function buildForward(): Forward {
         hook: "amadeus-runtime-compile.ts",
         input: {
           hook_event_name: "PostToolUse",
+          ...(kiro.session_id ? { session_id: kiro.session_id } : {}),
           tool_name: "Bash",
           tool_input: { command: (ti.command as string) ?? "" },
+          ...(kiro.tool_response !== undefined
+            ? { tool_response: kiro.tool_response }
+            : {}),
         },
       };
     }
@@ -233,7 +237,11 @@ function buildForward(): Forward {
       // to false). The {"decision":"block"} stdout contract is identical.
       return {
         hook: "amadeus-stop.ts",
-        input: { hook_event_name: "Stop", stop_hook_active: false },
+        input: {
+          hook_event_name: "Stop",
+          ...(kiro.session_id ? { session_id: kiro.session_id } : {}),
+          stop_hook_active: false,
+        },
       };
 
     case "session-end":
