@@ -177,7 +177,7 @@ session フックは発行前にアクティブな intent の `amadeus-state.md`
 
 ## Audit event taxonomy
 
-**73 events** で、以下では17カテゴリにグループ化しています(正典の `audit-format.md` レジストリは同じ73を18に分割しています — グループ化は表現上のものであり、イベントセットが不変条件です)。すべてのイベントはちょうど1つのツールまたはフックのエミッタを持ちます。ただし、来たるリリース向けに事前登録され、Emitter セルが `Reserved (v0.4.0 PR N)`、`Reserved (v0.5.0 PR N)`、または `Reserved (v0.6.0 PR N)` と読めるイベントは例外です — これらはコンシューマ PR がエミッタを出荷するまで、ドリフトテストの forward チェックでスキップされます。ドリフトテスト `tests/integration/t48-audit-event-emitters.test.ts` は、本章のテーブルとコードの間の forward/reverse/tertiary/pairing/MD-MD の一貫性を強制します。
+**74 events** で、以下では17カテゴリにグループ化しています(正典の `audit-format.md` レジストリは同じ74を18に分割しています — グループ化は表現上のものであり、イベントセットが不変条件です)。すべてのイベントはちょうど1つのツールまたはフックのエミッタを持ちます。ただし、来たるリリース向けに事前登録され、Emitter セルが `Reserved (v0.4.0 PR N)`、`Reserved (v0.5.0 PR N)`、または `Reserved (v0.6.0 PR N)` と読めるイベントは例外です — これらはコンシューマ PR がエミッタを出荷するまで、ドリフトテストの forward チェックでスキップされます。ドリフトテスト `tests/integration/t48-audit-event-emitters.test.ts` は、本章のテーブルとコードの間の forward/reverse/tertiary/pairing/MD-MD の一貫性を強制します。
 
 ### Workflow lifecycle
 
@@ -251,6 +251,7 @@ session フックは発行前にアクティブな intent の `amadeus-state.md`
 | `BOLT_COMPLETED` | `tools/amadeus-bolt.ts` | 先行する `BOLT_STARTED` とペア |
 | `BOLT_FAILED` | `tools/amadeus-bolt.ts`(`fail` + `abort`) | `--succeeded-siblings` が並列バッチの生存者を捕捉。`abort` はサブ分類のため `Reason: aborted` フィールドを追加 |
 | `AUTONOMY_MODE_SET` | `tools/amadeus-bolt.ts` | `Construction Autonomy Mode` フィールドをアトミックに更新。まずフィールドの存在を検証(audit-first) |
+| `UNIT_DISPOSITION_CHANGED` | `tools/amadeus-unit-disposition.ts` | `amadeus-bolt.ts park`、`skip`、`resume` から呼ばれる、コンダクター所有の監査ベース `(stage, Unit)` disposition 遷移。`From`、`To`、`Reason` を記録し、変更ごとに新しい回答を1件消費する。人間が承認した Unit park は autonomous Construction でも有効であり、ワークフロー全体は park しない |
 
 ### Session
 

@@ -8,7 +8,7 @@
 
 All event names follow `SUBJECT_PAST_VERB` — every event answers "what happened?"
 
-## Event Registry (78 events, 19 categories)
+## Event Registry (79 events, 19 categories)
 
 ### Workflow Lifecycle (4 events)
 
@@ -106,7 +106,7 @@ All event names follow `SUBJECT_PAST_VERB` — every event answers "what happene
 | `ERROR_LOGGED` | Tool CLI exited non-zero via `error()` | Timestamp, Tool, Command, Error | `tools/amadeus-lib.ts emitError` (called by every tool's `error()` helper) |
 | `RECOVERY_COMPLETED` | User answered the compaction-awareness prompt | Timestamp, Choice, Current Stage | `tools/amadeus-state.ts acknowledge-compaction` |
 
-### Construction Bolt Events (4 events)
+### Construction Bolt Events (5 events)
 
 Emitted only during Phase 3 (Construction). A Bolt is one execution of stages 3.1–3.5 for a Unit or small group of dependency-linked Units. See `stage-protocol.md` Glossary. Note: this deviates intentionally from AI-DLC v1, where a Bolt is a sprint-like time-box (a Unit of Work spans multiple Bolts). This implementation repurposes "Bolt" to mean a deployable slice that wraps one or more Units of Work.
 
@@ -116,6 +116,7 @@ Emitted only during Phase 3 (Construction). A Bolt is one execution of stages 3.
 | `BOLT_COMPLETED` | All Bolts in the batch finished successfully | Timestamp, Bolt names, Batch number, optional Bolt slug (when --merge) | `tools/amadeus-bolt.ts complete` |
 | `BOLT_FAILED` | A Bolt failed during code-generation, or was explicitly aborted by the user | Timestamp, Failed Bolt, Error summary, optional Bolt slug (halt-and-ask correlation surface read by `amadeus-worktree info --slug`), optional Reason (`aborted` for explicit abort), optional Succeeded siblings | `tools/amadeus-bolt.ts fail` and `tools/amadeus-bolt.ts abort` |
 | `AUTONOMY_MODE_SET` | User answered the ladder prompt after the walking skeleton | Timestamp, Mode (`autonomous` or `gated`) | `tools/amadeus-bolt.ts set-autonomy` |
+| `UNIT_DISPOSITION_CHANGED` | A conductor explicitly parks, skips, or resumes one Unit for one per-Unit stage | Timestamp, Stage, Unit, From, To, Reason | `tools/amadeus-unit-disposition.ts` via `amadeus-bolt.ts park`, `skip`, and `resume` |
 
 ### Worktree (7 events)
 

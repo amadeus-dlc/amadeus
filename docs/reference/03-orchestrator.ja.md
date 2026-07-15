@@ -423,8 +423,8 @@ Bolt ごとの構造:
 
 失敗処理は **halt-and-ask** で、autonomy モードに関わらず実行されます:
 
-- 単独 Bolt の失敗: 停止し、`BOLT_FAILED` を発行し、retry / skip / abort を提示する。
-- 並列バッチの部分失敗: すべての並列 Task が返るのを待ち、成功した Bolt の成果物をディスク上に保持し、`Succeeded=[names]` 付きで `BOLT_FAILED` を発行し、失敗した Bolt にスコープした同じ選択肢を提示する。Retry は失敗した Bolt のみを再実行する。バッチの兄弟は `[x]` のまま。
+- 単独 Bolt の失敗: 停止し、`BOLT_FAILED` を発行し、retry / park / skip / abort を提示する。
+- 並列バッチの部分失敗: すべての並列 Task が返るのを待ち、成功した Bolt の成果物をディスク上に保持し、`Succeeded=[names]` 付きで `BOLT_FAILED` を発行し、失敗した Bolt にスコープした同じ選択肢を提示する。Retry は失敗した Bolt のみを再実行する。Park は独立した兄弟 Unit の続行を許可するが、stage は未完了のままにする。人間が承認した Unit park は `autonomous` モードでも有効であり、無人ワークフロー全体の park とは異なる。Skip は必須成果物を偽造せず、その Unit を当該 stage でsettleする。どちらも回答文の解釈ではなくtyped Unit dispositionとして記録する。
 
 ```mermaid
 sequenceDiagram

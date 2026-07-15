@@ -109,6 +109,11 @@ import {
   WORKSPACE_VERBS,
 } from "./amadeus-lib.ts";
 import {
+  latestUnitDispositions,
+  type UnitDispositionRecord,
+  unitDispositionKey,
+} from "./amadeus-unit-disposition.ts";
+import {
   type Consume,
   type GraphStage,
   loadGraph,
@@ -1859,8 +1864,8 @@ export function handleNext(args: string[], projectDir: string | undefined): void
     // invoke-swarm directive (and returns true) only when all trigger
     // conditions hold; otherwise emitForSlug fires, which itself drives the
     // engine's per-unit for_each loop for a per-unit Construction stage (one
-    // unit per `next`, gate suppressed on every uncovered unit with the real
-    // gate only on the all-covered re-entry; issue #368) and emits a single
+    // active Unit per `next`, gate suppressed while any Unit remains active or
+    // parked, and the real gate only after all Units settle; issue #368) and emits a single
     // directive for every other stage.
     if (!tryEmitSwarm(currentSlug, scope, stateContent, pd, recordPrefix, codekbCtx)) {
       emitForSlug(currentSlug, projectType, scope, stateContent, recordPrefix, codekbCtx, pd);
@@ -1943,24 +1948,27 @@ function tryEmitSwarm(
   if (!batches || batches.length === 0) return false;
   // Issue #841 (contract from #486): bolt_dag.batches is the STATIC topology —
   // completed batches must be excluded here, or every `next` re-offers batch 1
-  // forever and the swarm never advances. Coverage uses the same ledger as the
-  // per-unit loop (unitCovered: the stage's produces on disk), so no bolt-name
-  // correlation is needed. The first batch with uncovered units is offered (only
-  // its uncovered units); when every unit of every batch is covered, fall through
-  // (return false) to emitPerUnitRunStage's all-covered re-entry, which presents
-  // the stage's real gate.
-  let firstBatch: string[] | null = null;
-  for (const batch of batches) {
-    if (!Array.isArray(batch) || batch.length === 0) continue;
-    const uncovered = batch.filter(
-      (u) => !unitCovered(projectDir, node, u, recordPrefix, codekbCtx),
-    );
-    if (uncovered.length > 0) {
-      firstBatch = uncovered;
-      break;
-    }
+  // forever and the swarm never advances. The per-unit loop combines required
+  // artifact coverage with typed Unit dispositions. The first unsettled batch
+  // offers only active Units; once every batch settles, fall through (return
+  // false) so emitPerUnitRunStage presents the stage's real gate.
+  const dispositions = latestUnitDispositions(projectDir);
+  const pending = firstPendingBatch(
+    projectDir,
+    node,
+    batches,
+    recordPrefix,
+    codekbCtx,
+    dispositions,
+  );
+  if (pending === null) return false;
+  if (pending.active.length === 0) {
+    const question = pending.parked.length > 0
+      ? parkedBatchQuestion(node.slug, pending.parked)
+      : skippedDependencyQuestion(node.slug, pending.blockedBySkipped);
+    emit(askDirective(question));
+    return true;
   }
-  if (firstBatch === null) return false;
   // Thread the construction repo to the conductor when the engine can resolve it
   // DETERMINISTICALLY (read-only — intentRepos never throws; it returns [] for a
   // legacy/flat intent). NOT resolveConstructionRepo here: that THROWS on >1, and
@@ -1975,9 +1983,9 @@ function tryEmitSwarm(
   //     intent, surfacing the choice rather than guessing.
   const repos = intentRepos(projectDir);
   if (repos.length === 1) {
-    emit({ kind: "invoke-swarm", units: firstBatch, repo: repos[0] });
+    emit({ kind: "invoke-swarm", units: pending.active, repo: repos[0] });
   } else {
-    emit({ kind: "invoke-swarm", units: firstBatch });
+    emit({ kind: "invoke-swarm", units: pending.active });
   }
   return true;
 }
@@ -2012,29 +2020,15 @@ function emitRunStageForSlug(
 // A per-unit Construction stage (for_each: unit-of-work) runs ONCE PER Unit of
 // Work, but the state file carries ONE checkbox row per stage slug (the engine
 // never duplicates rows, verified). So a single checkbox cannot, on its own,
-// track "stage done for 3 of 9 units". The COVERAGE LEDGER is the per-unit
-// ARTIFACTS on disk: a unit is "covered" for this stage once all of the stage's
-// produces[] exist under <recordPrefix>/construction/<unit>/<slug>/. The engine
-// walks the ordered unit list (the compiled Bolt DAG, flattened to topo order),
-// finds the FIRST uncovered unit, and emits a run-stage for THAT concrete unit,
-// with the gate SUPPRESSED (false) on EVERY not-yet-covered unit. The conductor
-// completes the unit's body, writes its artifacts, and re-runs `next` WITHOUT
-// reporting; the single checkbox stays in-flight and the engine hands back the
-// next uncovered unit. Once the LAST unit's artifacts land on disk, the next
-// `next` re-enters with no uncovered units and presents the stage's real gate
-// (see emitPerUnitRunStage's pick === null branch), so the human approves once
-// (covering all units, only after every unit is built) and the checkbox flips.
+// track "stage done for 3 of 9 Units". Required artifacts are authoritative
+// evidence of coverage; typed audit dispositions add explicit parked and skipped
+// states without fabricating artifacts. The engine walks the compiled Bolt DAG
+// one topological batch at a time, emits only active Units, and suppresses the
+// gate while any Unit remains active or parked. Once every Unit is covered or
+// explicitly skipped, the next `next` presents the stage's real gate so the human
+// approves the aggregate outcome once and the checkbox flips.
 // No unit DAG (a scope that SKIPs units-generation, or pre-compile) degrades to
 // today's single {unit-name} directive, zero behaviour change.
-
-// The ordered Unit-of-Work list for the active intent: the compiled Bolt DAG's
-// batches flattened to topological order (each batch is already lexicographically
-// sorted by computeBatches). [] when there is no compiled DAG (degrade path).
-function orderedUnits(projectDir: string): string[] {
-  const batches = readBoltDagBatches(projectDir);
-  if (!batches) return [];
-  return batches.flat();
-}
 
 // True when `unit` is COVERED for `node`: every REQUIRED artifact in
 // node.produces[] exists on disk under the resolved per-unit path
@@ -2064,34 +2058,106 @@ function unitCovered(
   return true;
 }
 
-// Walk the ordered unit list and find the units whose artifacts are not all
-// present on disk. Returns {unit, uncovered} where `unit` is the FIRST uncovered
-// unit (the one the engine emits next) and `uncovered` is the full ordered list
-// of not-yet-covered units (so the caller can name them without re-scanning the
-// disk), or null when EVERY unit is already covered (the stage's per-unit work is
-// complete; the caller then presents the final gate, see emitPerUnitRunStage).
-// Order is the topo order from orderedUnits, so the engine produces unit
-// dependencies before their dependents.
-function nextUncoveredUnit(
+type PendingBatch = {
+  active: string[];
+  parked: string[];
+  blockedBySkipped: string[];
+};
+
+type UnitBatchState = "covered" | "active" | "parked" | "skipped";
+
+function unitBatchState(
   projectDir: string,
   node: GraphStage,
-  units: string[],
+  unit: string,
   recordPrefix: string | null,
   codekbCtx: CodekbCtx,
-): { unit: string; uncovered: string[] } | null {
-  const uncovered = units.filter(
-    (u) => !unitCovered(projectDir, node, u, recordPrefix, codekbCtx),
+  dispositions: ReadonlyMap<string, UnitDispositionRecord>,
+): UnitBatchState {
+  if (unitCovered(projectDir, node, unit, recordPrefix, codekbCtx)) return "covered";
+  return dispositions.get(unitDispositionKey(node.slug, unit))?.disposition ?? "active";
+}
+
+// Resolve only the FIRST topological batch that is not settled. Artifact
+// coverage is authoritative: once a unit's required outputs exist, an older
+// park/skip record cannot make it pending again. An uncovered skipped unit is
+// settled by the human disposition; an uncovered parked unit is deliberately
+// not runnable and keeps its batch open. Units without a record remain active,
+// preserving the pre-ledger routing byte-for-byte.
+function firstPendingBatch(
+  projectDir: string,
+  node: GraphStage,
+  batches: string[][],
+  recordPrefix: string | null,
+  codekbCtx: CodekbCtx,
+  dispositions: ReadonlyMap<string, UnitDispositionRecord>,
+): PendingBatch | null {
+  const usableBatches = batches.filter((batch) => Array.isArray(batch) && batch.length > 0);
+  for (let index = 0; index < usableBatches.length; index++) {
+    const batch = usableBatches[index];
+    const states = batch.map((unit) => ({
+      unit,
+      state: unitBatchState(
+        projectDir,
+        node,
+        unit,
+        recordPrefix,
+        codekbCtx,
+        dispositions,
+      ),
+    }));
+    const pending: PendingBatch = {
+      active: states.filter(({ state }) => state === "active").map(({ unit }) => unit),
+      parked: states.filter(({ state }) => state === "parked").map(({ unit }) => unit),
+      blockedBySkipped: states
+        .filter(({ state }) => state === "skipped")
+        .map(({ unit }) => unit),
+    };
+    if (pending.active.length > 0 || pending.parked.length > 0) return pending;
+    // Skipping settles this batch but does not prove that any dependent Unit in
+    // a later batch remains valid. Stop before crossing that dependency edge;
+    // the human must explicitly resume the skipped Unit or skip downstream work.
+    const laterNeedsRouting = usableBatches
+      .slice(index + 1)
+      .flat()
+      .some((unit) => {
+        const state = unitBatchState(
+          projectDir,
+          node,
+          unit,
+          recordPrefix,
+          codekbCtx,
+          dispositions,
+        );
+        return state === "active" || state === "parked";
+      });
+    if (pending.blockedBySkipped.length > 0 && laterNeedsRouting) {
+      return pending;
+    }
+  }
+  return null;
+}
+
+function parkedBatchQuestion(stage: string, parked: string[]): string {
+  return (
+    `Stage "${stage}" cannot advance because its current batch contains parked ` +
+    `Units (${parked.join(", ")}). Explicitly unpark or skip the parked Units, then run \`next\` again.`
   );
-  if (uncovered.length === 0) return null;
-  return { unit: uncovered[0], uncovered };
+}
+
+function skippedDependencyQuestion(stage: string, skipped: string[]): string {
+  return (
+    `Stage "${stage}" cannot route a later dependency batch after skipped Units ` +
+    `(${skipped.join(", ")}). Confirm the dependency impact, then resume those Units or explicitly skip the downstream Units.`
+  );
 }
 
 // Emit ONE iteration of a per-unit Construction stage. The engine owns the
-// for_each loop here: it resolves the next uncovered unit, substitutes the real
-// unit name for {unit-name} in every path, and suppresses the gate for EVERY
-// not-yet-covered unit. The stage's real gate is presented exactly once, on the
-// all-covered re-entry (pick === null), after the last unit's artifacts exist on
-// disk. See the ledger note above emitRunStageForSlug's per-unit section.
+// for_each loop here: it resolves the first unsettled topological batch, routes
+// only its active Units, and suppresses the gate while work remains. Covered
+// Units and explicitly skipped Units are settled within their batch; parked
+// Units keep the batch open but are not runnable. The stage's real gate is
+// presented only when every batch is settled.
 function emitPerUnitRunStage(
   node: GraphStage,
   projectType: "brownfield" | "greenfield" | null,
@@ -2117,23 +2183,27 @@ function emitPerUnitRunStage(
   // No compiled unit DAG (a scope that SKIPs units-generation, refactor /
   // security-patch / infra / bugfix / poc, or a pre-compile moment): degrade to
   // today's single {unit-name} directive. Zero behaviour change off this path.
-  const units = orderedUnits(projectDir);
-  if (units.length === 0) {
+  const batches = readBoltDagBatches(projectDir);
+  const units = batches?.flat() ?? [];
+  if (!batches || units.length === 0) {
     emitRunStageForSlug(node.slug, projectType, scope, stateContent, recordPrefix, codekbCtx);
     return;
   }
 
-  const pick = nextUncoveredUnit(projectDir, node, units, recordPrefix, codekbCtx);
-  if (pick === null) {
-    // Every unit is already covered, but the checkbox is still in-flight: the
-    // conductor wrote the LAST unit's artifacts and re-ran `next` to settle the
-    // stage. There is nothing left to PRODUCE, so present the stage gate now (its
-    // REAL computed gate) on the last unit, so the human approves once and the
-    // engine advances. This is the ONLY directive on which the gate fires, so the
-    // approval is reached only after every unit's artifacts exist (closing the
-    // last-unit hole: no unit, not even the final one, can be skipped). It is also
-    // the re-entry after a "request changes" that re-ran a unit and then
-    // everything is covered again.
+  const pending = firstPendingBatch(
+    projectDir,
+    node,
+    batches,
+    recordPrefix,
+    codekbCtx,
+    latestUnitDispositions(projectDir),
+  );
+  if (pending === null) {
+    // Every Unit is settled by required artifacts or an explicit skip, while the
+    // single stage checkbox is still in-flight. There is nothing left to route,
+    // so present the stage's real gate once and let the human approve the aggregate
+    // outcome. It is also the re-entry after a "request changes" that re-ran a Unit
+    // and then settled the whole stage again.
     const lastUnit = units[units.length - 1];
     const directive = buildRunStageDirective(
       node, projectType, lastUnit, scope, stateContent, recordPrefix, codekbCtx,
@@ -2143,8 +2213,18 @@ function emitPerUnitRunStage(
     return;
   }
 
+  if (pending.active.length === 0) {
+    const question = pending.parked.length > 0
+      ? parkedBatchQuestion(node.slug, pending.parked)
+      : skippedDependencyQuestion(node.slug, pending.blockedBySkipped);
+    emit(askDirective(question));
+    return;
+  }
+
+  const unit = pending.active[0];
+
   const directive = buildRunStageDirective(
-    node, projectType, pick.unit, scope, stateContent, recordPrefix, codekbCtx,
+    node, projectType, unit, scope, stateContent, recordPrefix, codekbCtx,
   );
   // Suppress the gate on EVERY not-yet-covered unit. A per-unit directive with an
   // uncovered unit carries gate:false: the conductor completes the body, writes
@@ -2155,7 +2235,7 @@ function emitPerUnitRunStage(
   // the whole stage only after all units are built. We override AFTER building so
   // the rest of the directive (paths, reviewer, persona) is unchanged.
   directive.gate = false;
-  directive.unit = pick.unit;
+  directive.unit = unit;
   emit(directive);
 }
 
@@ -2806,7 +2886,7 @@ function approveArgs(slug: string, flags: ReportFlags): string[] {
 // atomic state tool, and emits a terminal `done` directive on success or an
 // `error` directive on a rejected transition. Mutation happens entirely inside
 // the spawned subcommand(s) — the engine itself writes nothing.
-function handleReport(args: string[], projectDir: string | undefined): void {
+export function handleReport(args: string[], projectDir: string | undefined): void {
   const flags = parseReportFlags(args);
 
   // Branch -1 — the --single stage-runner commit. A stage-runner reports
@@ -2914,15 +2994,14 @@ function handleReport(args: string[], projectDir: string | undefined): void {
   }
   const isGated = node.phase !== "initialization";
 
-  // Per-unit coverage gate (issue #368), DETERMINISTIC enforcement on the
-  // approve path. The engine only PRESENTS the stage's real gate once every unit
-  // is covered (emitPerUnitRunStage suppresses gate:false on every uncovered unit
-  // and fires the real gate only on the all-covered re-entry), but a hand-flipped
+  // Per-unit settlement gate (issue #368), DETERMINISTIC enforcement on the
+  // approve path. The engine only PRESENTS the stage's real gate once every Unit
+  // is covered or explicitly skipped, but a hand-flipped
   // checkbox or a conductor that reported the wrong directive could still try to
   // approve early and complete the stage for only some of N units. So before
-  // committing a gated per-unit stage's transition, require that EVERY unit is
-  // covered. If any unit is still uncovered, refuse with an error naming the
-  // remaining units, the conductor must run `next` to finish them first. Only
+  // committing a gated per-unit stage's transition, require that EVERY Unit is
+  // settled. If any Unit remains active or parked, refuse with an error naming
+  // it; the conductor must run `next` or change its disposition first. Only
   // enforced when a unit DAG exists (units.length>0); no DAG = single-iteration =
   // no guard (matches the degrade path in emitPerUnitRunStage).
   //
@@ -2938,30 +3017,53 @@ function handleReport(args: string[], projectDir: string | undefined): void {
   // batch-level gate for parallel batches)"), with the swarm referee
   // (amadeus-swarm.ts finalize) verifying each batch's convergence before its merge.
   // An all-units coverage check is WRONG there: after batch 1 of a multi-batch
-  // DAG merges, the later batches' units are legitimately still uncovered, so
-  // requiring every unit would refuse the batch-1 approve AND `next` would
-  // re-emit batch 1 (no batch-advance), deadlocking the run. So we exclude the
-  // swarm condition (per-unit + mode:subagent + autonomous) verbatim from
-  // tryEmitSwarm's trigger and let the swarm's own per-batch verification stand.
-  // The guard remains for every inline per-unit stage (the four design stages,
-  // and code-generation when it falls back to the inline path off the swarm).
+  // DAG merges leave later batches legitimately active, so an autonomous swarm
+  // may approve the completed current batch without satisfying every active
+  // unit. Explicit settlement blockers are different: parked units and batches
+  // blocked by a skipped dependency must still prevent approval in every mode.
   const isAutonomousSwarm =
     node.mode === SWARM_MODE && readAutonomyMode(stateContent) === "autonomous";
-  if (isGated && isPerUnit(node) && stageCheckbox.state !== "completed" && !isAutonomousSwarm) {
+  if (isGated && isPerUnit(node) && stageCheckbox.state !== "completed") {
     const recordPrefix = relativeRecordDir(pd);
     const codekbCtx = codekbCtxFor(pd);
-    const units = orderedUnits(pd);
-    if (units.length > 0) {
-      const pick = nextUncoveredUnit(pd, node, units, recordPrefix, codekbCtx);
-      if (pick !== null) {
-        emit({
-          kind: "error",
-          message:
-            `Stage "${slug}" is per-unit (for_each: unit-of-work) and ${pick.uncovered.length} of ` +
-            `${units.length} units are not yet complete (${pick.uncovered.join(", ")}). ` +
-            "Run `next` to continue the remaining units before approving.",
-        });
-        return;
+    const batches = readBoltDagBatches(pd);
+    const units = batches?.flat() ?? [];
+    if (batches && units.length > 0) {
+      const pending = firstPendingBatch(
+        pd,
+        node,
+        batches,
+        recordPrefix,
+        codekbCtx,
+        latestUnitDispositions(pd),
+      );
+      if (pending !== null) {
+        if (pending.blockedBySkipped.length > 0 && pending.active.length === 0 && pending.parked.length === 0) {
+          emit({
+            kind: "error",
+            message: skippedDependencyQuestion(slug, pending.blockedBySkipped),
+          });
+          return;
+        }
+        if (pending.parked.length > 0) {
+          emit({
+            kind: "error",
+            message:
+              `Stage "${slug}" cannot be approved while units are parked ` +
+              `(${pending.parked.join(", ")}). Explicitly unpark or skip them first.`,
+          });
+          return;
+        }
+        if (!isAutonomousSwarm) {
+          const unsettled = [...pending.active, ...pending.parked];
+          emit({
+            kind: "error",
+            message:
+              `Stage "${slug}" is per-unit (for_each: unit-of-work) and ${unsettled.length} of ` +
+              `${units.length} units are not yet complete (${unsettled.join(", ")}). Run \`next\` to continue the remaining units before approving.`,
+          });
+          return;
+        }
       }
     }
   }

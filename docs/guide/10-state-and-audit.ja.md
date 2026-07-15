@@ -79,7 +79,7 @@ stateDiagram-v2
 
 監査証跡は intent のレコードディレクトリ配下 `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/audit/` に存在します。これは **クローンごとのシャード**(`<host>-<clone>.md`)として書き込まれる追記専用のイベントログです。各クローンは自分のシャードにのみ追記するため、兄弟 worktree からの同時追記が git 上で衝突することはありません。読み手は `audit/*.md` を glob し、ISO タイムスタンプでマージソートして、決定とイベントの完全な時系列履歴を再構築します。
 
-### 68 イベントのタクソノミー
+### 69 イベントのタクソノミー
 
 イベントは 18 のカテゴリに整理されています。
 
@@ -96,7 +96,7 @@ stateDiagram-v2
 | **Subagent** | 1 | `SUBAGENT_COMPLETED`(log-subagent フック) |
 | **Utility** | 1 | `HEALTH_CHECKED` |
 | **Error/Recovery** | 2 | `ERROR_LOGGED`, `RECOVERY_COMPLETED` |
-| **Construction Bolt** | 4 | `BOLT_STARTED`, `BOLT_COMPLETED`, `BOLT_FAILED`, `AUTONOMY_MODE_SET` |
+| **Construction Bolt** | 5 | `BOLT_STARTED`, `BOLT_COMPLETED`, `BOLT_FAILED`, `AUTONOMY_MODE_SET`, `UNIT_DISPOSITION_CHANGED` |
 | **Worktree** | 7 | `WORKTREE_CREATED`, `WORKTREE_MERGED`, `WORKTREE_DISCARDED`, `STATE_FORKED`, `STATE_MERGED`, `AUDIT_FORKED`, `AUDIT_MERGED` |
 | **Practices** | 4 | `PRACTICES_DISCOVERED`, `PRACTICES_AFFIRMED`, `PRACTICES_OVERRIDE`, `PRACTICES_SECTION_EMPTY` |
 | **Merge Dispatch** | 3 | `MERGE_DISPATCH_INVOKED`, `MERGE_DISPATCH_RETURNED`, `MERGE_DISPATCH_FALLBACK` |
@@ -118,7 +118,7 @@ stateDiagram-v2
 各エントリは以下のフィールドを持つ構造化フォーマットに従います。
 
 - **Timestamp** — ISO 8601 タイムスタンプ
-- **Event** — 68 種類のイベントタイプのいずれか
+- **Event** — 69 種類のイベントタイプのいずれか
 - **Details** — イベント固有のデータ(ステージ名、決定、成果物パスなど)
 
 エントリは時系列で追記されます。特定のステージの履歴を確認するには、その `STAGE_STARTED` と `STAGE_COMPLETED` のエントリ、およびその間のすべてを検索します。

@@ -78,7 +78,7 @@
       "path": "packages/framework/core/tools/amadeus-orchestrate.ts",
       "name": "handleNext",
       "ordinal": 0,
-      "ccn": 39
+      "ccn": 28
     },
     {
       "path": "packages/framework/core/tools/amadeus-orchestrate.ts",
@@ -120,7 +120,7 @@
       "path": "packages/framework/core/tools/amadeus-sensor.ts",
       "name": "handleFire",
       "ordinal": 0,
-      "ccn": 25
+      "ccn": 23
     },
     {
       "path": "packages/framework/core/tools/amadeus-stage-schema.ts",
@@ -198,7 +198,7 @@
       "path": "packages/framework/core/tools/amadeus-utility.ts",
       "name": "detectWorkspace",
       "ordinal": 0,
-      "ccn": 19
+      "ccn": 17
     },
     {
       "path": "packages/framework/core/tools/amadeus-utility.ts",

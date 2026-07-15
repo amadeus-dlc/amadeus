@@ -41,6 +41,11 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { appendAuditEntry } from "./amadeus-audit.ts";
+import {
+  changeUnitDisposition,
+  currentUnitDisposition,
+  type UnitDisposition,
+} from "./amadeus-unit-disposition.ts";
 import { validateFinalizeOperationClaim } from "./amadeus-swarm-operation-claim.js";
 import {
   openOperationJournal,
@@ -1021,13 +1026,57 @@ function handleSetAutonomy(args: string[]): void {
   );
 }
 
+// --- Subcommand: park / skip / resume ---
+// Usage: amadeus-bolt <park|skip|resume> --slug <unit-slug> --stage <stage-slug>
+//                                         --reason <text>
+//
+// Unit disposition is an audit-backed conductor decision. The current value is
+// read before entering the deep module and supplied as a compare-and-swap
+// expectation; the module re-reads under the audit lock before it appends.
+function handleUnitDisposition(command: "park" | "skip" | "resume", args: string[]): void {
+  const flags = parseFlags(args);
+  if (!flags.slug) error("Missing --slug <unit-slug>");
+  if (!flags.stage) error("Missing --stage <stage-slug>");
+  if (!flags.reason) error("Missing --reason <text>");
+
+  const pd = resolveProjectDir(projectDir);
+  const to: UnitDisposition = command === "park"
+    ? "parked"
+    : command === "skip"
+      ? "skipped"
+      : "active";
+  const expectedFrom = currentUnitDisposition(
+    pd,
+    flags.stage,
+    flags.slug,
+    flags.intent,
+    flags.space,
+  );
+  const result = changeUnitDisposition({
+    projectDir: pd,
+    stage: flags.stage,
+    unit: flags.slug,
+    to,
+    reason: flags.reason,
+    expectedFrom,
+    intent: flags.intent,
+    space: flags.space,
+  });
+  console.log(JSON.stringify({
+    emitted: result.changed ? "UNIT_DISPOSITION_CHANGED" : null,
+    changed: result.changed,
+    stage: flags.stage,
+    unit: flags.slug,
+    from: result.from,
+    to: result.to,
+  }));
+}
+
 // --- CLI entry point ---
 
 let projectDir: string | undefined;
 
-function main(): void {
-  const rawArgs = process.argv.slice(2);
-
+function parseGlobalArgs(rawArgs: string[]): string[] {
   const filteredArgs: string[] = [];
   for (let i = 0; i < rawArgs.length; i++) {
     if (rawArgs[i] === "--project-dir" && i + 1 < rawArgs.length) {
@@ -1037,6 +1086,11 @@ function main(): void {
       filteredArgs.push(rawArgs[i]);
     }
   }
+  return filteredArgs;
+}
+
+function main(): void {
+  const filteredArgs = parseGlobalArgs(process.argv.slice(2));
 
   const subcommand = filteredArgs[0];
 
@@ -1054,6 +1108,11 @@ function main(): void {
       case "abort":
         handleAbort(filteredArgs.slice(1));
         break;
+      case "park":
+      case "skip":
+      case "resume":
+        handleUnitDisposition(subcommand, filteredArgs.slice(1));
+        break;
       case "set-autonomy":
         handleSetAutonomy(filteredArgs.slice(1));
         break;
@@ -1068,7 +1127,7 @@ function main(): void {
         break;
       default:
         error(
-          `Unknown subcommand: ${subcommand}. Valid: start, complete, fail, abort, set-autonomy, dispatch-event, hold-merge, release-merge`
+          `Unknown subcommand: ${subcommand}. Valid: start, complete, fail, abort, park, skip, resume, set-autonomy, dispatch-event, hold-merge, release-merge`
         );
     }
   } catch (e) {

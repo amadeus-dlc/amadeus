@@ -15,7 +15,7 @@
 //     escape (the forged-audit-entry defence the source comments on at :248)
 //   - that appending twice keeps BOTH blocks (append-not-overwrite invariant)
 //   - that an invalid event type is rejected by throw, before any disk write
-//   - that EVERY one of the 78 VALID_EVENT_TYPES is accepted
+//   - that EVERY one of the 79 VALID_EVENT_TYPES is accepted
 // A regression that dropped escaping, overwrote prior history, reordered the
 // header fields, or narrowed the accepted event set would turn one of these
 // red.
@@ -79,7 +79,7 @@ afterAll(() => {
   }
 });
 
-// The 78 canonical event types, mirrored from amadeus-audit.ts VALID_EVENT_TYPES.
+// The 79 canonical event types, mirrored from amadeus-audit.ts VALID_EVENT_TYPES.
 // Kept as an explicit literal (not re-derived from the source) so that a silent
 // addition/removal in the source surfaces here as a count mismatch worth a look.
 const VALID_EVENT_TYPES = [
@@ -128,6 +128,7 @@ const VALID_EVENT_TYPES = [
   "BOLT_COMPLETED",
   "BOLT_FAILED",
   "AUTONOMY_MODE_SET",
+  "UNIT_DISPOSITION_CHANGED",
   "WORKTREE_CREATED",
   "WORKTREE_MERGED",
   "WORKTREE_DISCARDED",
@@ -343,12 +344,12 @@ describe("appendAuditEntryUnlocked — escaping and append-not-overwrite", () =>
 });
 
 describe("VALID_EVENT_TYPES — every canonical type is accepted", () => {
-  test("the mirrored list has 78 entries with no duplicates", () => {
-    expect(VALID_EVENT_TYPES.length).toBe(78);
-    expect(new Set(VALID_EVENT_TYPES).size).toBe(78);
+  test("the mirrored list has 79 entries with no duplicates", () => {
+    expect(VALID_EVENT_TYPES.length).toBe(79);
+    expect(new Set(VALID_EVENT_TYPES).size).toBe(79);
   });
 
-  // Loop over ALL 68 valid types: each must append a block whose **Event**
+  // Loop over ALL valid types: each must append a block whose **Event**
   // line carries that exact token, and the return must echo it. A regression
   // that dropped a type from the Set would throw here and fail its case.
   for (const eventType of VALID_EVENT_TYPES) {

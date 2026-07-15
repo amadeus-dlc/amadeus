@@ -319,7 +319,7 @@ Next Action: resume current stage
 
 ## 監査イベント分類体系
 
-監査証跡(intentの `audit/` シャード)は、`.claude/knowledge/amadeus-shared/audit-format.md` で定義された**68イベントの分類体系**を使用します。すべてのイベントはツール所有またはフック所有です - コンダクターはもはやプロセスからイベントを発行しません。正典のエミッタレジストリと監査ファースト原子性ルールについては[状態機械](12-state-machine.ja.md)を参照してください。以下のサマリーは相互参照であり、真実の源ではありません。
+監査証跡(intentの `audit/` シャード)は、`.claude/knowledge/amadeus-shared/audit-format.md` で定義された**69イベントの分類体系**を使用します。すべてのイベントはツール所有またはフック所有です - コンダクターはもはやプロセスからイベントを発行しません。正典のエミッタレジストリと監査ファースト原子性ルールについては[状態機械](12-state-machine.ja.md)を参照してください。以下のサマリーは相互参照であり、真実の源ではありません。
 
 ### イベントカテゴリ
 
@@ -336,7 +336,7 @@ Next Action: resume current stage
 | **Subagent** | 1 | `SUBAGENT_COMPLETED` | log-subagent フック |
 | **Utility** | 1 | `HEALTH_CHECKED` | `amadeus-utility.ts doctor` |
 | **Error/Recovery** | 2 | `ERROR_LOGGED`, `RECOVERY_COMPLETED` | `lib.ts emitError`、`amadeus-state.ts acknowledge-compaction` |
-| **Construction Bolt** | 4 | `BOLT_STARTED`, `BOLT_COMPLETED`, `BOLT_FAILED`, `AUTONOMY_MODE_SET` | `amadeus-bolt.ts` |
+| **Construction Bolt** | 5 | `BOLT_STARTED`, `BOLT_COMPLETED`, `BOLT_FAILED`, `AUTONOMY_MODE_SET`, `UNIT_DISPOSITION_CHANGED` | `amadeus-bolt.ts` |
 | **Worktree / fork-merge** | 7 | `WORKTREE_CREATED`, `WORKTREE_MERGED`, `WORKTREE_DISCARDED`, `STATE_FORKED`, `STATE_MERGED`, `AUDIT_FORKED`, `AUDIT_MERGED` | `amadeus-worktree.ts`、`amadeus-state.ts`(fork/merge)、`amadeus-audit.ts`(audit-fork/merge) |
 | **Practices** | 4 | `PRACTICES_DISCOVERED`, `PRACTICES_AFFIRMED`, `PRACTICES_OVERRIDE`, `PRACTICES_SECTION_EMPTY` | `amadeus-state.ts`(practices-promote / practices-event) |
 | **Merge dispatch** | 3 | `MERGE_DISPATCH_INVOKED`, `MERGE_DISPATCH_RETURNED`, `MERGE_DISPATCH_FALLBACK` | `amadeus-bolt.ts dispatch-event` |
