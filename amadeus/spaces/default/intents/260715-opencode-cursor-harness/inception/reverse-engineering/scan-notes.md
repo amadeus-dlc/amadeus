@@ -163,7 +163,7 @@ codex/manifest.ts:11-16 と emit.ts の役割: config.toml.example / hooks.json.
 9. `scripts/promote-self.ts:37-41` managedDirs、:313-319 build 呼び出し（面3、dogfood 対象にする場合のみ）
 
 ### 8.3 ハーネス名を閉じた列挙で持つファイル数
-本 intent のフォーカス面で**編集が要りうる**閉じ列挙保持ファイル = **10ファイル**(追補後)（上記1〜9のファイル単位: harness.ts, engine-layout.ts, reporter.ts, setup-harness.test.ts, amadeus-lib.ts, amadeus-utility.ts, amadeus-migrate.ts, promote-self.ts の8ソース + 契約テスト setup-harness.test.ts）。うち **installer 6ファイル(harness.ts / engine-layout.ts / reporter.ts / setup-harness.test.ts / setup-harness-parse.test.ts + install 受理面)は正しさに必須**、framework runtime 2 + migrate 1 は advisory/test-seam/移行、self-install 1 は dogfood 判断。
+本 intent のフォーカス面で**編集が要りうる**閉じ列挙保持ファイル = **9ファイル**(追補・実数再計算後)（内訳: installer 5 = harness.ts / engine-layout.ts / reporter.ts / setup-harness.test.ts / setup-harness-parse.test.ts、runtime 2 = amadeus-utility.ts / amadeus-lib.ts、migrate 1 = amadeus-migrate.ts、self-install 1 = promote-self.ts）。うち **installer 5ファイル(harness.ts / engine-layout.ts / reporter.ts / setup-harness.test.ts / setup-harness-parse.test.ts)は正しさに必須**、framework runtime 2 + migrate 1 は advisory/test-seam/移行、self-install 1 は dogfood 判断。
 
 （補足: `grep -rln` で harness 名を含む .ts は tests/ に多数あるが、大半は fixture が `.claude` 固定で新ハーネス追加に非依存。上記は「ハーネス集合そのものを閉じた列挙として持つ」ファイルに絞った。）
 

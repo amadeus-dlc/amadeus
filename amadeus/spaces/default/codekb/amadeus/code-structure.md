@@ -14,10 +14,10 @@ opencode / Cursor harness port(Issue #626)のフォーカス面。出典は本 i
 
 manifest 契約は `scripts/manifest-types.ts:79-122`(HarnessManifest 全12フィールド)。新ハーネスは `harnessDir`(".opencode"/".cursor" 等)+ `coreDirs`/`harnessFiles` 投影 + `rulesRename`(null か dir 名)+ 任意 `emit` の宣言 1本で表現する。COMPILED_DATA seed は初回ビルド時に committed claude tree の JSON へ fallback(`package.ts:289-299`)するため、新ハーネスの初回ビルドは claude JSON を種にできる。
 
-### 閉じ列挙(手動追記が要る)台帳 — 新ハーネス名を閉じた列挙で持つ10ファイル
+### 閉じ列挙(手動追記が要る)台帳 — 新ハーネス名を閉じた列挙で持つ9ファイル
 
-open-set の外で「ハーネス集合そのもの」を閉じた列挙として持つファイル。本 intent フォーカス面で編集が要りうるのは計10ファイル。
-> 追補(2026-07-16、requirements-analysis reviewer 指摘): installer 契約テストは2本(setup-harness.test.ts / setup-harness-parse.test.ts)で installer 必須は計6ファイル、台帳総計は10ファイル。あわせて非破壊の閉じ列挙(`tests/unit/t156-memory-relocation.test.ts:149`、`tests/unit/t199-grilling-distribution.test.ts:33-40` — 新ハーネスを検査しないだけで壊れない)を第3分類として記録する。
+open-set の外で「ハーネス集合そのもの」を閉じた列挙として持つファイル。本 intent フォーカス面で編集が要りうるのは計9ファイル(installer 5 + runtime 2 + migrate 1 + self-install 1)。
+> 追補(2026-07-16、requirements-analysis reviewer 指摘): installer 契約テストは2本(setup-harness.test.ts / setup-harness-parse.test.ts)で installer 必須は実ファイル5個(harness.ts / engine-layout.ts / reporter.ts / 契約テスト2本 — 旧記載の「5」は harness.ts の2行参照込みの誤計上で、実体は4個だった)、台帳総計は9ファイル。あわせて非破壊の閉じ列挙(`tests/unit/t156-memory-relocation.test.ts:149`、`tests/unit/t199-grilling-distribution.test.ts:33-40` — 新ハーネスを検査しないだけで壊れない)を第3分類として記録する。
 
 
 **installer(packages/setup)— 5ファイル必須**(未対応だと `install --harness opencode` が弾かれる。正しさに必須):
