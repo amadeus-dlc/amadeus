@@ -135,40 +135,21 @@ mux_kill() {
 # mux_pane_label <session> <pane> <label> — name the pane after its member.
 # tmux surfaces the member via pane-border-format (cwd basename); herdr has
 # no --label on pane split (0.7.1), so the label is applied post-create via
-# `pane rename` — without it the UI falls back to the workspace label and
-# every agent renders as the session name (#999). Cosmetic: never fail launch.
+# `pane rename` sets the pane-border title; `agent rename` sets the name in
+# the agents panel — without both, the herdr UI falls back to the workspace
+# label and every agent renders as the session name (#999). Applied right
+# after the pane is created and before its command runs, while no agent
+# process is detected yet, so the rename lands immediately and persists
+# (verified on 0.7.1). Cosmetic: never fail launch.
 mux_pane_label() {
   local s="$1" pane="$2" label="$3"
   case "$MUX" in
   tmux) : ;;
-  herdr) "$HERDR" --session "$s" pane rename "$pane" "$label" >/dev/null 2>&1 || true ;;
+  herdr)
+    "$HERDR" --session "$s" pane rename "$pane" "$label" >/dev/null 2>&1 || true
+    "$HERDR" --session "$s" agent rename "$pane" "$label" >/dev/null 2>&1 || true
+    ;;
   esac
-}
-
-# mux_name_agents <session> <pane>=<name>... — bind agent names for the agents
-# panel. An `agent rename` issued before herdr detects the agent process does
-# not persist (verified on 0.7.1: the binding evaporates once detection
-# runs), so this waits for detection per pane and renames sequentially, in
-# the given order — the agents panel lists newest binding first, so callers
-# pass the reverse of the desired display order. Runs in the background;
-# cosmetic, so failures are silent and bounded by a per-pane timeout.
-mux_name_agents() {
-  local s="$1"; shift
-  [ "$MUX" = "herdr" ] || return 0
-  (
-    local spec pane name i
-    for spec in "$@"; do
-      pane="${spec%%=*}"; name="${spec#*=}"
-      for i in $(seq 1 60); do
-        if "$HERDR" --session "$s" agent get "$pane" >/dev/null 2>&1; then
-          "$HERDR" --session "$s" agent rename "$pane" "$name" >/dev/null 2>&1 || true
-          break
-        fi
-        sleep 2
-      done
-    done
-  ) >/dev/null 2>&1 &
-  disown 2>/dev/null || true
 }
 
 # mux_new_session <session> <cwd> <cmd> <label> — create the session's first
@@ -181,6 +162,14 @@ mux_new_session() {
     tmux display-message -p -t "$s" '#{pane_id}'
     ;;
   herdr)
+    # herdr persists a session's workspace layout to session.json on stop /
+    # GUI close / crash, and RESTORES it when the server next starts. We only
+    # reach here when mux_has_session reported no running server, so any
+    # persisted state is stale — starting the server without purging it would
+    # restore the old workspaces and stack this run's workspace on top,
+    # leaving ghost spaces in the UI (#999 follow-up). Delete the persisted
+    # state first so the server starts clean with exactly one workspace.
+    "$HERDR" session delete "$s" >/dev/null 2>&1 || true
     nohup "$HERDR" --session "$s" server >/dev/null 2>&1 &
     disown 2>/dev/null || true
     herdr_wait_ready "$s" || return 1
@@ -745,18 +734,10 @@ P_LEADER="$(mux_split "$S" "$P_E1" h 66 "$(member_worktree leader)" "$(member_cm
 P_E4="$(mux_split "$S" "$P_LEADER" h 50 "$(member_worktree engineer-4)" "$(member_cmd engineer-4 "$(member_worktree engineer-4)")" engineer-4)"
 
 P_E2="$(mux_split "$S" "$P_E1" v 66 "$(member_worktree engineer-2)" "$(member_cmd engineer-2 "$(member_worktree engineer-2)")" engineer-2)"
-P_E3="$(mux_split "$S" "$P_E2" v 50 "$(member_worktree engineer-3)" "$(member_cmd engineer-3 "$(member_worktree engineer-3)")" engineer-3)"
+mux_split "$S" "$P_E2" v 50 "$(member_worktree engineer-3)" "$(member_cmd engineer-3 "$(member_worktree engineer-3)")" engineer-3 >/dev/null
 
 P_E5="$(mux_split "$S" "$P_E4" v 66 "$(member_worktree engineer-5)" "$(member_cmd engineer-5 "$(member_worktree engineer-5)")" engineer-5)"
-P_E6="$(mux_split "$S" "$P_E5" v 50 "$(member_worktree engineer-6)" "$(member_cmd engineer-6 "$(member_worktree engineer-6)")" engineer-6)"
-
-# Agents panel: bind names once each agent process is detected. The panel
-# lists the newest binding first, so bind in reverse of the desired display
-# order (leader on top, then engineer-1..6).
-mux_name_agents "$S" \
-  "$P_E6=engineer-6" "$P_E5=engineer-5" "$P_E4=engineer-4" \
-  "$P_E3=engineer-3" "$P_E2=engineer-2" "$P_E1=engineer-1" \
-  "$P_LEADER=leader"
+mux_split "$S" "$P_E5" v 50 "$(member_worktree engineer-6)" "$(member_cmd engineer-6 "$(member_worktree engineer-6)")" engineer-6 >/dev/null
 
 mux_focus "$S" "$P_LEADER"
 if [ "$MUX" = "tmux" ]; then
