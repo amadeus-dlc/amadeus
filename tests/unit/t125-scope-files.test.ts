@@ -43,9 +43,9 @@
 //                                   emits SCOPE_DETECTED with **Detected scope**: <s>
 //
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test()):
-//   .sh test 1  (9 shipped scope files)                     -> "exactly 9 shipped amadeus-*.md scope files exist"
+//   .sh test 1  (10 shipped scope files)                     -> "exactly 10 shipped amadeus-*.md scope files exist"
 //   .sh test 2  (frontmatter name == filename stem)          -> "every shipped scope file's frontmatter name == its slug"
-//   .sh test 3  (validScopes() == 9 names, alphabetical)     -> "validScopes() == the 9 .md-derived names, alphabetical"
+//   .sh test 3  (validScopes() == 10 names, alphabetical)     -> "validScopes() == the 10 .md-derived names, alphabetical"
 //   .sh test 4  (loadScopeMetadata bugfix depth/kw/desc)     -> "loadScopeMetadata reads bugfix depth/keywords/description from .md"
 //   .sh test 5  (workshop testStrategy override)             -> "loadScopeMetadata reads workshop's testStrategy override from .md"
 //   .sh test 6  (loadScopeMapping poc derived fields)        -> "loadScopeMapping poc depth/keywords/description derive from .md"
@@ -90,7 +90,7 @@ const UTIL = fileURLToPath(
   new URL("../../dist/claude/.claude/tools/amadeus-utility.ts", import.meta.url),
 );
 
-// The 9 scopes the framework ships, alphabetical — the .sh's hard-coded
+// The 10 scopes the framework ships, alphabetical — the .sh's hard-coded
 // expectation (t125:62). Each is a literal independent of source iteration.
 const SHIPPED_SCOPES = [
   "bugfix",
@@ -128,7 +128,7 @@ afterEach(() => {
 });
 
 describe("shipped scope files — frontmatter + derived metadata (in-process)", () => {
-  test("exactly 9 shipped amadeus-*.md scope files exist [.sh test 1]", () => {
+  test("exactly 10 shipped amadeus-*.md scope files exist [.sh test 1]", () => {
     const files = readdirSync(SCOPES_DIR).filter(
       (f) => f.startsWith("amadeus-") && f.endsWith(".md"),
     );
@@ -151,7 +151,7 @@ describe("shipped scope files — frontmatter + derived metadata (in-process)", 
     }
   });
 
-  test("validScopes() == the 9 .md-derived names, alphabetical [.sh test 3]", () => {
+  test("validScopes() == the 10 .md-derived names, alphabetical [.sh test 3]", () => {
     expect([...validScopes()]).toEqual(SHIPPED_SCOPES);
   });
 
@@ -252,7 +252,7 @@ describe("dropped-file scope dynamics (AMADEUS_SCOPES_DIR seam)", () => {
     const scopes = [...validScopes()];
     // The drop made it valid with zero code change...
     expect(scopes).toContain("dropscope");
-    // ...alongside all 9 shipped scopes that were copied into the sandbox.
+    // ...alongside all 10 shipped scopes that were copied into the sandbox.
     for (const s of SHIPPED_SCOPES) expect(scopes).toContain(s);
   });
 

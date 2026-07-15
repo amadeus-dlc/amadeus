@@ -28,11 +28,11 @@
 //     pin (2), rules_in_context / sensors_applicable array + FIELD_ORDER shape,
 //     resolveSensorsForStage declared-order, withAuditLock reentrancy (2).
 //   MUST STAY SPAWN (process.exit / module-load env read / CLI stdout / parallel-process):
-//     plan-identity parity (9 scopes via `state lookup stages-in-scope` byte-exact),
-//     AMADEUS_GRAPH_RESOLVE=1 `resolve <scope> --stdout` cutover parity (9 scopes byte-exact
+//     plan-identity parity (10 scopes via `state lookup stages-in-scope` byte-exact),
+//     AMADEUS_GRAPH_RESOLVE=1 `resolve <scope> --stdout` cutover parity (10 scopes byte-exact
 //       vs mr9-parity fixtures) + the gate (no flag -> exit 1, stderr), env-seam read,
-//     nextInScopeStage walk parity (9 scopes via `lookup next-stage`),
-//     firstInScopeStageOfPhase parity (9 scopes x 5 phases via `lookup first-in-phase`),
+//     nextInScopeStage walk parity (10 scopes via `lookup next-stage`),
+//     firstInScopeStageOfPhase parity (10 scopes x 5 phases via `lookup first-in-phase`),
 //     AMADEUS_STAGE_GRAPH env-override-honoured-by-rewired-stagesInScope,
 //     compile --check drift (clean->0 / mutated->1 / restore->0),
 //     AMADEUS_RULES_DIR populate-from-disk + --check drift, AMADEUS_SENSORS_DIR populate +
@@ -268,8 +268,8 @@ describe("t66 subgraphForScope (in-process)", () => {
     const sorted = [...nums].sort(numericOrder);
     expect(nums).toEqual(sorted);
   });
-  // .sh:176-189 — per-scope sizes match EXECUTE count for all 9 scopes
-  test("subgraphForScope size matches EXECUTE count for all 9 scopes", () => {
+  // .sh:176-189 — per-scope sizes match EXECUTE count for all 10 scopes
+  test("subgraphForScope size matches EXECUTE count for all 10 scopes", () => {
     const mapping = loadScopeMapping();
     const mismatches: string[] = [];
     for (const scope of SCOPES) {
@@ -432,13 +432,13 @@ describe("t66 graph traversal — per-scope sub-DAG (in-process)", () => {
 });
 
 // =============================================================================
-// Plan-identity parity — byte-exact for 9 scopes (.sh:381-390, 9 assertions)
+// Plan-identity parity — byte-exact for 10 scopes (.sh:381-390, 9 assertions)
 // MUST STAY SPAWN: asserts the CLI `state lookup stages-in-scope` stdout matches the
 // golden fixtures byte-for-byte (process-boundary stdout contract). The .sh re-pretty-
 // prints the CLI's single-line JSON with JSON.stringify(parse, null, 2); reproduced here.
 // =============================================================================
 
-describe("t66 plan-identity parity (spawnSync CLI-boundary: 9 scopes)", () => {
+describe("t66 plan-identity parity (spawnSync CLI-boundary: 10 scopes)", () => {
   for (const scope of SCOPES) {
     test(`plan-identity parity: ${scope} byte-exact`, () => {
       const res = spawnSync(BUN, [STATE_TS, "lookup", "stages-in-scope", scope], {
@@ -454,7 +454,7 @@ describe("t66 plan-identity parity (spawnSync CLI-boundary: 9 scopes)", () => {
 });
 
 // =============================================================================
-// AMADEUS_GRAPH_RESOLVE=1 resolve cutover parity — byte-exact for 9 scopes
+// AMADEUS_GRAPH_RESOLVE=1 resolve cutover parity — byte-exact for 10 scopes
 // (.sh:407-415, 9 assertions). MUST STAY SPAWN: this is an ENV-GATED CLI
 // subcommand whose entire subject is a process-boundary seam — a FRESH process
 // must (a) read AMADEUS_GRAPH_RESOLVE at module/handler time to lift the gate and
@@ -466,7 +466,7 @@ describe("t66 plan-identity parity (spawnSync CLI-boundary: 9 scopes)", () => {
 // proving the frontmatter-derived grid == the LEGACY scope-mapping-derived plan
 // BEFORE scope-mapping.json was retired. scope-mapping.json IS now retired
 // (verified: dist/claude/.claude/tools/data/ has scope-grid.json, no
-// scope-mapping.json; nine .claude/scopes/amadeus-<scope>.md files are the
+// scope-mapping.json; ten .claude/scopes/amadeus-<scope>.md files are the
 // authored source). resolvePlanForScope() (amadeus-graph.ts:762-780) reads
 // loadScopeGrid()[scope] — the compiled grid — so this resolve path now pins the
 // CURRENT shipped surface, and its output still equals the mr9-parity fixtures
@@ -522,13 +522,13 @@ describe("t66 AMADEUS_GRAPH_RESOLVE=1 resolve cutover parity (spawnSync env-gate
 });
 
 // =============================================================================
-// nextInScopeStage walk parity — 9 scopes (.sh:396-423, 1 grouped assertion)
+// nextInScopeStage walk parity — 10 scopes (.sh:396-423, 1 grouped assertion)
 // MUST STAY SPAWN: drives the CLI `state lookup next-stage <slug> <scope>` walk loop
 // (process-boundary; each step is a fresh process emitting next or "none").
 // =============================================================================
 
-describe("t66 nextInScopeStage walk parity (spawnSync CLI-boundary: 9 scopes)", () => {
-  test("nextInScopeStage walk parity byte-exact for 9 scopes", () => {
+describe("t66 nextInScopeStage walk parity (spawnSync CLI-boundary: 10 scopes)", () => {
+  test("nextInScopeStage walk parity byte-exact for 10 scopes", () => {
     const fails: string[] = [];
     for (const scope of SCOPES) {
       const scopeRows = JSON.parse(
@@ -552,16 +552,16 @@ describe("t66 nextInScopeStage walk parity (spawnSync CLI-boundary: 9 scopes)", 
       if (actual !== expected) fails.push(scope);
     }
     expect(fails).toEqual([]);
-  }, 120000); // many sequential CLI spawns across 9 scopes (workshop ~25 steps)
+  }, 120000); // many sequential CLI spawns across 10 scopes (workshop ~25 steps)
 });
 
 // =============================================================================
-// firstInScopeStageOfPhase parity — 9 scopes x 5 phases (.sh:430-458, 1 grouped assertion)
+// firstInScopeStageOfPhase parity — 10 scopes x 5 phases (.sh:430-458, 1 grouped assertion)
 // MUST STAY SPAWN: drives the CLI `state lookup first-in-phase <phase> <scope>` per cell.
 // =============================================================================
 
 describe("t66 firstInScopeStageOfPhase parity (spawnSync CLI-boundary)", () => {
-  test("firstInScopeStageOfPhase parity byte-exact for 9 scopes x 5 phases", () => {
+  test("firstInScopeStageOfPhase parity byte-exact for 10 scopes x 5 phases", () => {
     const fails: string[] = [];
     for (const scope of SCOPES) {
       const obj: Record<string, string> = {};
@@ -576,7 +576,7 @@ describe("t66 firstInScopeStageOfPhase parity (spawnSync CLI-boundary)", () => {
       if (actual !== expected) fails.push(scope);
     }
     expect(fails).toEqual([]);
-  }, 120000); // 9 scopes x 5 phases = 45 sequential CLI spawns
+  }, 120000); // 10 scopes x 5 phases = 45 sequential CLI spawns
 });
 
 // =============================================================================

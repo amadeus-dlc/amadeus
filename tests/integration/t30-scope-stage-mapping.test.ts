@@ -80,7 +80,7 @@ const STAGE_GRAPH_PATH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 const BEGIN = "<!-- BEGIN: compiled scope grid";
 const END = "<!-- END: compiled scope grid -->";
 
-// The nine scopes the .sh iterated, in the SAME alphabetical order.
+// The ten scopes the .sh iterated, in the SAME alphabetical order.
 const SCOPES = [
   "bugfix",
   "chore",
@@ -169,7 +169,7 @@ describe("t30 Section B — table row count matches scope-grid.json", () => {
       .filter((l) => /^\| [a-z-]+ /.test(l)).length;
     const jsonCount = Object.keys(readGrid()).length;
     expect(rowCount).toBe(jsonCount);
-    // Cross-check: the data rows are exactly the nine scopes we iterate below.
+    // Cross-check: the data rows are exactly the ten scopes we iterate below.
     expect(jsonCount).toBe(SCOPES.length);
   });
 });

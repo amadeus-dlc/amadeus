@@ -471,6 +471,12 @@ describe("t67 detect-scope --from-text boundary + fallback (migrated from t67 §
     // STRONGER: a keyword-less match also marks Source=freeform.
     expect(auditField(readAudit(p), "SCOPE_DETECTED", "Source")).toBe("freeform");
   });
+
+  // #993 regression guard: "script" was deliberately NOT adopted as a chore
+  // keyword (too common a noun — it collides with legitimate feature/tool work).
+  // A short input mentioning "script" must fall through to feature, not chore.
+  // If someone re-adds `script` to amadeus-chore.md keywords, this turns red.
+  test('24b: "write a script" -> feature (script is NOT a chore keyword)', fallbackCase("write a script", "feature"));
 });
 
 // ============================================================

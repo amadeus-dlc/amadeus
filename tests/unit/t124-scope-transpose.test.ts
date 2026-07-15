@@ -47,7 +47,7 @@
 //   .sh test 9  (compile --check clean tree exits 0)             -> CLI "compile --check on a clean tree exits 0"
 //   .sh test 10 (compile --check stale grid exits 1)             -> CLI "compile --check exits 1 on a stale scope-grid.json (drift guard)"
 //   .sh test 11 (compile --check missing grid exits 1)           -> CLI "compile --check exits 1 when scope-grid.json is missing"
-//   .sh test 12 (grid EXECUTE set == subgraphForScope, 9 scopes) -> "shipped grid EXECUTE set is cell-identical to subgraphForScope for all 9 scopes"
+//   .sh test 12 (grid EXECUTE set == subgraphForScope, 10 scopes) -> "shipped grid EXECUTE set is cell-identical to subgraphForScope for all 10 scopes"
 
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -78,7 +78,7 @@ const GRAPH_TOOL = join(AMADEUS_SRC, "tools", "amadeus-graph.ts");
 const GRAPH_JSON = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 const GRID_JSON = join(AMADEUS_SRC, "tools", "data", "scope-grid.json");
 
-// The nine scopes the shipped grid carries — the .sh's hard-coded list.
+// The ten scopes the shipped grid carries — the .sh's hard-coded list.
 const SCOPES = [
   "enterprise",
   "feature",
@@ -194,13 +194,13 @@ describe("canonicalScopeGridJson() + compileStageGraph() determinism (in-process
 });
 
 // ===========================================================================
-// Grid <-> subgraph parity for all 9 shipped scopes (none).
+// Grid <-> subgraph parity for all 10 shipped scopes (none).
 // .sh test 12: the shipped grid's EXECUTE set per scope == subgraphForScope's
 // slugs per scope. The grid is the source the subgraph reads, so this is the
 // round-trip invariant the runtime relies on.
 // ===========================================================================
 describe("scope-grid <-> subgraphForScope parity (in-process)", () => {
-  test("shipped grid EXECUTE set is cell-identical to subgraphForScope for all 9 scopes [.sh test 12]", () => {
+  test("shipped grid EXECUTE set is cell-identical to subgraphForScope for all 10 scopes [.sh test 12]", () => {
     const grid = JSON.parse(readFileSync(GRID_JSON, "utf-8")) as Record<
       string,
       { stages: Record<string, "EXECUTE" | "SKIP"> }
