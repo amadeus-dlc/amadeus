@@ -19,7 +19,7 @@ afterEach(() => {
   for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
-function commandFor(member: string, resolverBody: string) {
+function commandFor(member: string, resolverBody: string, env: Record<string, string> = {}) {
   const dir = mkdtempSync(join(tmpdir(), "amadeus-team-up-"));
   tempDirs.push(dir);
   const resolver = join(dir, "role-resume.sh");
@@ -37,6 +37,7 @@ function commandFor(member: string, resolverBody: string) {
     ],
     env: {
       ...process.env,
+      ...env,
       ROLE_RESUME: resolver,
       CODEX_MONITOR: "/usr/bin/true",
       DELIVERY: join(dir, "missing-delivery.sh"),
@@ -59,6 +60,7 @@ function createCliFixture() {
   const base = join(root, "worktrees");
   const state = join(root, "state");
   const bin = join(root, "bin");
+  const joinLog = join(root, "join.log");
   const tmuxState = join(root, "tmux-state");
   mkdirSync(repo, { recursive: true });
   mkdirSync(bin, { recursive: true });
@@ -104,6 +106,23 @@ esac
   writeFileSync(roleResume, '#!/usr/bin/env bash\nprintf "thread-%s" "$3"\n');
   chmodSync(roleResume, 0o755);
 
+  const joinAgent = join(bin, "join.sh");
+  writeFileSync(
+    joinAgent,
+    `#!/usr/bin/env bash
+set -eu
+if [ "\${FAKE_JOIN_FAIL_ROLE:-}" = "$2" ]; then
+  exit 8
+fi
+printf '%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "\${AGMSG_RESOLVE_PROJECT:-}" >>"\${FAKE_JOIN_LOG:?}"
+`,
+  );
+  chmodSync(joinAgent, 0o755);
+
+  const resetAgent = join(bin, "reset.sh");
+  writeFileSync(resetAgent, "#!/usr/bin/env bash\nexit 0\n");
+  chmodSync(resetAgent, 0o755);
+
   const env = {
     ...process.env,
     TEAM_REPO: repo,
@@ -111,14 +130,17 @@ esac
     TEAM_STATE_DIR: state,
     TEAM_RUN_ID: "run-001",
     TEAM_SESSION: "amadeus-team-test",
+    FAKE_JOIN_LOG: joinLog,
     FAKE_TMUX_STATE: tmuxState,
+    AGMSG_JOIN: joinAgent,
+    AGMSG_RESET: resetAgent,
     DELIVERY: join(root, "missing-delivery.sh"),
     CODEX_MONITOR: codexMonitor,
     ROLE_RESUME: roleResume,
     PATH: `${bin}:${process.env.PATH}`,
   };
 
-  return { base, env, repo, state };
+  return { base, env, joinLog, repo, state, tmuxState };
 }
 
 describe("team-up run lifecycle", () => {
@@ -133,6 +155,7 @@ describe("team-up run lifecycle", () => {
     expect(result.stdout.toString()).toContain("-c, --continue");
     expect(result.stdout.toString()).toContain("--list-runs");
     expect(result.stdout.toString()).toContain("--delete-run ID");
+    expect(result.stdout.toString()).toContain("AGENT_IDENTITY");
   });
 
   test("a fresh launch creates one isolated worktree and branch per role from HEAD", () => {
@@ -160,6 +183,68 @@ describe("team-up run lifecycle", () => {
       expect(git(worktree, "branch", "--show-current")).toBe(`team/run-001/${role}`);
     }
     expect(readFileSync(join(fixture.state, "current-run"), "utf8").trim()).toBe("run-001");
+  });
+
+  test("a fresh Codex launch pre-registers every role with agmsg", () => {
+    const fixture = createCliFixture();
+    const result = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "--codex"],
+      env: fixture.env,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+    const registrations = existsSync(fixture.joinLog)
+      ? readFileSync(fixture.joinLog, "utf8").trim().split("\n")
+      : [];
+    expect(registrations).toEqual(
+      ["leader", ...Array.from({ length: 6 }, (_, index) => `e${index + 1}`)].map(
+        (role, index) => {
+          const member = index === 0 ? "leader" : `engineer-${index}`;
+          return `amadeus\t${role}\tcodex\t${join(fixture.base, "runs", "run-001", member)}\t0`;
+        },
+      ),
+    );
+  });
+
+  test("a fresh Claude launch pre-registers every role with agmsg", () => {
+    const fixture = createCliFixture();
+    const result = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "--claude"],
+      env: fixture.env,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+    const registrations = existsSync(fixture.joinLog)
+      ? readFileSync(fixture.joinLog, "utf8").trim().split("\n")
+      : [];
+    expect(registrations.map((line) => line.split("\t").slice(0, 3).join("\t"))).toEqual([
+      "amadeus\tleader\tclaude-code",
+      "amadeus\te1\tclaude-code",
+      "amadeus\te2\tclaude-code",
+      "amadeus\te3\tclaude-code",
+      "amadeus\te4\tclaude-code",
+      "amadeus\te5\tclaude-code",
+      "amadeus\te6\tclaude-code",
+    ]);
+  });
+
+  test("an agmsg registration failure prevents pane launch", () => {
+    const fixture = createCliFixture();
+    const result = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "--codex"],
+      env: { ...fixture.env, FAKE_JOIN_FAIL_ROLE: "e3" },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr.toString()).toContain("agmsg registration failed");
+    expect(existsSync(join(fixture.tmuxState, "session"))).toBe(false);
+    expect(existsSync(join(fixture.base, "runs", "run-001"))).toBe(false);
   });
 
   test("continue reuses the current run worktrees and restores its runtime", () => {
@@ -190,6 +275,7 @@ describe("team-up run lifecycle", () => {
     expect(resumed.exitCode, resumed.stderr.toString()).toBe(0);
     expect(resumed.stdout.toString()).toContain("runtime=codex");
     expect(git(fixture.repo, "worktree", "list", "--porcelain")).toBe(before);
+    expect(readFileSync(fixture.joinLog, "utf8").trim().split("\n")).toHaveLength(14);
   });
 
   test("the first legacy resume requires a runtime and adopts fixed worktrees in place", () => {
@@ -563,9 +649,19 @@ describe("team-up run lifecycle", () => {
 
 describe("team-up Codex resume", () => {
   test("marks Codex member sessions as team mode", () => {
-    const result = commandFor("engineer-1", "exit 0");
+    const result = commandFor("engineer-1", "exit 0", {
+      AGENT_IDENTITY: "personal",
+      CLAUDE_IDENTITY: "ignored-claude",
+      CODEX_IDENTITY: "ignored-codex",
+    });
     expect(result.exitCode).toBe(0);
     expect(result.stdout.toString()).toContain("AMADEUS_OPERATING_MODE=team");
+    expect(result.stdout.toString()).toContain("CODEX_IDENTITY=personal");
+    expect(result.stdout.toString()).toContain(`CODEX_HOME=${process.env.HOME}/.codex-personal`);
+    expect(result.stdout.toString()).not.toContain("ignored-codex");
+    expect(result.stdout.toString()).not.toContain("CLAUDE_IDENTITY=");
+    expect(result.stdout.toString()).toContain("AGMSG_CODEX_ROLE=e1");
+    expect(result.stdout.toString()).toContain("actas\\ e1");
   });
 
   test("resumes the role's recorded UUID instead of global --last", () => {
@@ -607,6 +703,9 @@ describe("team-up shared operating mode", () => {
       ],
       env: {
         ...process.env,
+        AGENT_IDENTITY: "personal",
+        CLAUDE_IDENTITY: "ignored-claude",
+        CODEX_IDENTITY: "ignored-codex",
         DELIVERY: "/path/that/does/not/exist",
       },
       stderr: "pipe",
@@ -615,5 +714,8 @@ describe("team-up shared operating mode", () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout.toString()).toContain("AMADEUS_OPERATING_MODE=team");
+    expect(result.stdout.toString()).toContain("CLAUDE_IDENTITY=personal");
+    expect(result.stdout.toString()).not.toContain("ignored-claude");
+    expect(result.stdout.toString()).not.toContain("CODEX_IDENTITY=");
   });
 });

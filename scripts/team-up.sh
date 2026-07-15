@@ -16,7 +16,8 @@ set -euo pipefail
 #   scripts/team-up.sh --kill   # tear down the tmux session
 #
 # Env:
-#   CLAUDE_IDENTITY   identity for run-claude.sh (default: corporate-1)
+#   AGMSG_TEAM        team each member joins before launch (default: amadeus)
+#   AGENT_IDENTITY    identity for the selected runtime (default: corporate-1)
 #   TEAM_BASE         parent directory for team worktrees
 #   TEAM_REPO         repository whose HEAD seeds a new team run
 #   TEAM_STATE_DIR    local team run metadata directory
@@ -31,11 +32,15 @@ REPO="${TEAM_REPO:-$(cd "$(dirname "$0")/.." && pwd)}"
 BASE="${TEAM_BASE:-$HOME/worktrees/github.com/amadeus-dlc/amadeus}"
 STATE_DIR="${TEAM_STATE_DIR:-$BASE/.team-up}"
 AGMSG_ROOT="${AGMSG_ROOT:-$HOME/.agents/skills/agmsg}"
+AGMSG_JOIN="${AGMSG_JOIN:-$AGMSG_ROOT/scripts/join.sh}"
+AGMSG_RESET="${AGMSG_RESET:-$AGMSG_ROOT/scripts/reset.sh}"
 DELIVERY="${DELIVERY:-$AGMSG_ROOT/scripts/delivery.sh}"
 CODEX_MONITOR="${CODEX_MONITOR:-$AGMSG_ROOT/scripts/drivers/types/codex/codex-monitor.sh}"
 ROLE_RESUME="${ROLE_RESUME:-$AGMSG_ROOT/scripts/role-resume.sh}"
 TEAM_NAME="${AGMSG_TEAM:-amadeus}"
-IDENTITY="${CLAUDE_IDENTITY:-corporate-1}"
+AGENT_IDENTITY="${AGENT_IDENTITY:-corporate-1}"
+CLAUDE_IDENTITY="$AGENT_IDENTITY"
+CODEX_IDENTITY="$AGENT_IDENTITY"
 RUNTIME="${TEAM_RUNTIME:-claude}"
 RUNTIME_EXPLICIT=0
 S="${TEAM_SESSION:-amadeus-team}"
@@ -63,6 +68,9 @@ Without -c, creates a new seven-member run from the repository HEAD.
   -h, --help           Show this help
 
 The first resume of legacy fixed worktrees requires --claude or --codex.
+
+Environment:
+  AGENT_IDENTITY      Identity for the selected runtime (default: corporate-1)
 EOF
 }
 
@@ -227,7 +235,7 @@ esac
 has_history() {
   local munged="${1//\//-}"
   munged="${munged//./-}"
-  ls "$HOME/.claude-$IDENTITY/projects/$munged"/*.jsonl >/dev/null 2>&1
+  ls "$HOME/.claude-$CLAUDE_IDENTITY/projects/$munged"/*.jsonl >/dev/null 2>&1
 }
 
 claude_member_cmd() {
@@ -236,7 +244,7 @@ claude_member_cmd() {
     args="--continue"
   fi
   if [ "$args" = "--continue" ] && ! has_history "$wt"; then
-    echo "WARN: no $IDENTITY history for $m — starting fresh (dropping --continue)" >&2
+    echo "WARN: no $CLAUDE_IDENTITY history for $m — starting fresh (dropping --continue)" >&2
     args=""
   fi
   if [ -f "$DELIVERY" ]; then
@@ -245,20 +253,28 @@ claude_member_cmd() {
   fi
   # keep the pane open after claude exits so crashes stay inspectable
   printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team CLAUDE_IDENTITY=%q %q %s %q; exec $SHELL -l' \
-    "$wt" "$IDENTITY" "$REPO/scripts/run-claude.sh" "$args" "/agmsg mode monitor"
+    "$wt" "$CLAUDE_IDENTITY" "$REPO/scripts/run-claude.sh" "$args" "/agmsg mode monitor"
 }
 
-codex_role() {
+member_role() {
   case "$1" in
   leader) printf 'leader' ;;
-  engineer-*) printf 'codex-%s' "$1" ;;
+  engineer-*) printf 'e%s' "${1#engineer-}" ;;
+  esac
+}
+
+agmsg_type() {
+  case "$RUNTIME" in
+  claude) printf 'claude-code' ;;
+  codex) printf 'codex' ;;
   esac
 }
 
 codex_member_cmd() {
-  local m="$1" wt="${2:-$BASE/$1}" role prompt command="codex" resume_arg="" resume_uuid=""
-  role="$(codex_role "$m")"
+  local m="$1" wt="${2:-$BASE/$1}" role prompt command="codex" resume_arg="" resume_uuid="" codex_home
+  role="$(member_role "$m")"
   prompt="\$agmsg actas $role"
+  codex_home="$HOME/.codex-$CODEX_IDENTITY"
 
   [ -x "$CODEX_MONITOR" ] || {
     echo "ERROR: missing Codex monitor launcher: $CODEX_MONITOR" >&2
@@ -287,8 +303,8 @@ codex_member_cmd() {
 
   # AGMSG_CODEX_ROLE disambiguates old role registrations that may coexist in
   # a reused worktree. Keep the pane open after Codex exits for inspection.
-  printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team AGMSG_CODEX_ROLE=%q %q --project %q --codex-command %q -- %s %q; exec $SHELL -l' \
-    "$wt" "$role" "$CODEX_MONITOR" "$wt" "$command" "$resume_arg" "$prompt"
+  printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team CODEX_IDENTITY=%q CODEX_HOME=%q AGMSG_CODEX_ROLE=%q %q --project %q --codex-command %q -- %s %q; exec $SHELL -l' \
+    "$wt" "$CODEX_IDENTITY" "$codex_home" "$role" "$CODEX_MONITOR" "$wt" "$command" "$resume_arg" "$prompt"
 }
 
 member_cmd() {
@@ -307,8 +323,35 @@ member_worktree() {
   fi
 }
 
+register_team_members() {
+  local m wt role agent_type
+  [ -f "$AGMSG_JOIN" ] || { echo "ERROR: missing agmsg join script: $AGMSG_JOIN" >&2; return 1; }
+  agent_type="$(agmsg_type)"
+  for m in leader engineer-1 engineer-2 engineer-3 engineer-4 engineer-5 engineer-6; do
+    wt="$(member_worktree "$m")"
+    role="$(member_role "$m")"
+    if ! AGMSG_RESOLVE_PROJECT=0 bash "$AGMSG_JOIN" "$TEAM_NAME" "$role" "$agent_type" "$wt" >/dev/null; then
+      echo "ERROR: agmsg registration failed for $m as $role in team $TEAM_NAME" >&2
+      return 1
+    fi
+    REGISTERED_MEMBERS="$REGISTERED_MEMBERS $m"
+  done
+}
+
+rollback_registered_members() {
+  local m wt role agent_type
+  [ -f "$AGMSG_RESET" ] || return 0
+  agent_type="$(agmsg_type)"
+  for m in $REGISTERED_MEMBERS; do
+    wt="$RUN_ROOT/$m"
+    role="$(member_role "$m")"
+    AGMSG_RESOLVE_PROJECT=0 bash "$AGMSG_RESET" "$wt" "$agent_type" "$role" >/dev/null 2>&1 || true
+  done
+}
+
 rollback_prepared_run() {
   local m wt branch
+  rollback_registered_members
   for m in $CREATED_MEMBERS; do
     wt="$RUN_ROOT/$m"
     branch="team/$RUN_ID/$m"
@@ -428,6 +471,7 @@ RUN_ID=""
 RUN_RECORD=""
 RUN_ROOT=""
 CREATED_MEMBERS=""
+REGISTERED_MEMBERS=""
 RUN_PREPARING=0
 AGENTS_STARTED=0
 trap handle_exit EXIT
@@ -466,6 +510,8 @@ for m in leader engineer-1 engineer-2 engineer-3 engineer-4 engineer-5 engineer-
   [ -d "$wt" ] || { echo "ERROR: missing worktree $wt" >&2; exit 1; }
 done
 
+register_team_members
+
 # --- build the 3-1-3 layout ---------------------------------------------
 # columns first: [e1] | [leader] | [e4], then split each side column into 3
 if [ "$RUN_PREPARING" = "1" ]; then
@@ -495,8 +541,4 @@ if [ -n "$RUN_ID" ]; then
   printf '%s\n' "$RUN_ID" >"$STATE_DIR/active-run"
 fi
 RUN_PREPARING=0
-if [ "$RUNTIME" = "claude" ]; then
-  echo "session '$S' launched: e1-e3 | leader | e4-e6 (runtime=claude, identity=$IDENTITY)"
-else
-  echo "session '$S' launched: e1-e3 | leader | e4-e6 (runtime=codex)"
-fi
+echo "session '$S' launched: e1-e3 | leader | e4-e6 (runtime=$RUNTIME, identity=$AGENT_IDENTITY)"
