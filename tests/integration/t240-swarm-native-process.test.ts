@@ -3330,4 +3330,11 @@ describe("t240 linux /proc stat start-time parsing", () => {
   test("returns null for content without a comm terminator", () => {
     expect(linuxProcStatStartTime("garbage with no parens")).toBeNull();
   });
+
+  test("reports PROCESS_NOT_FOUND through the linux stat path for a nonexistent pid", () => {
+    // Portable: macOS has no /proc (read throws), Linux has no such pid (ENOENT).
+    const observed = observeProcessIdentity(4_193_777, "linux");
+    expect(observed.type).toBe("err");
+    if (observed.type === "err") expect(observed.error.code).toBe("PROCESS_NOT_FOUND");
+  });
 });

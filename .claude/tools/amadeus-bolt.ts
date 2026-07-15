@@ -254,7 +254,7 @@ function requireMetadataStepEvidence(evidence: unknown | null, slug: string, ste
 // audit-first), so a crash between the two leaves the row on disk with main
 // state unmerged. Require the state effect too — slug gone from main's Bolt
 // Refs — before letting a resumed journal skip the merge step.
-function stateMergedPostcondition(
+export function stateMergedPostcondition(
   pd: string,
   flags: Record<string, string>,
   auditPostcondition: (event: string) => Readonly<Record<string, string>> | null,

@@ -22,6 +22,7 @@ import {
 } from "../../packages/framework/core/tools/amadeus-swarm-finalize-contract.ts";
 import { digestValue } from "../../packages/framework/core/tools/amadeus-swarm-canonical.ts";
 import { appendAuditEntry } from "../../packages/framework/core/tools/amadeus-audit.ts";
+import { stateMergedPostcondition } from "../../packages/framework/core/tools/amadeus-bolt.ts";
 import {
   getField,
   readAllAuditShards,
@@ -905,6 +906,13 @@ describe("t232 bound swarm lifecycle", () => {
     );
     expect(getField(readStateFile(projectDir), "Bolt Refs") ?? "").toContain("alpha");
 
+    // In-process seam: the resumed step must ignore the audit row while the
+    // slug still sits in main's Bolt Refs, and only accept it once removed.
+    const auditRow = Object.freeze({ event: "STATE_MERGED", unit: "alpha" });
+    const postconditionFlags = { slug: "alpha" };
+    expect(stateMergedPostcondition(projectDir, postconditionFlags, () => null)).toBeNull();
+    expect(stateMergedPostcondition(projectDir, postconditionFlags, () => auditRow)).toBeNull();
+
     const record = recordDir(projectDir);
     if (!record) throw new Error("record fixture unavailable");
     const claimDir = join(record, ".amadeus-swarm-referee", `finalize-${invocationId}`);
@@ -949,6 +957,7 @@ describe("t232 bound swarm lifecycle", () => {
     );
     expect(resumed.status, `${resumed.stdout}\n${resumed.stderr}`).toBe(0);
     expect(getField(readStateFile(projectDir), "Bolt Refs") ?? "").not.toContain("alpha");
+    expect(stateMergedPostcondition(projectDir, postconditionFlags, () => auditRow)).toBe(auditRow);
     const journal = parseOperationJournal(
       JSON.parse(readFileSync(join(claimDir, "operations", `${operationId}.json`), "utf-8")),
     );
