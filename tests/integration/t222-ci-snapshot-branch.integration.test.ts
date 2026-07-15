@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { extractCiSnapshotWiring } from "../lib/ci-snapshot-wiring.ts";
@@ -18,6 +19,22 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(changesJob).toContain("packages/framework/*");
     expect(checkJob).toContain("needs: changes");
     expect(checkJob).toContain(`if: \${{ needs.changes.outputs.ci == 'true' }}`);
+  });
+
+  test("repository workflow change detector has valid Bash syntax", () => {
+    const yaml = readFileSync(join(import.meta.dir, "../../.github/workflows/ci.yml"), "utf8");
+    const changesJob = yaml.split("  changes:")[1]?.split("\n  check:")[0] ?? "";
+    const script =
+      changesJob
+        .split("        run: |\n")[1]
+        ?.split("\n")
+        .map((line) => (line.startsWith("          ") ? line.slice(10) : line))
+        .join("\n") ?? "";
+
+    expect(script).not.toBe("");
+    const syntax = spawnSync("bash", ["-n"], { input: script, encoding: "utf8" });
+    expect(syntax.stderr).toBe("");
+    expect(syntax.status).toBe(0);
   });
 
   test("repository workflow uses ASCII-only action names", () => {
