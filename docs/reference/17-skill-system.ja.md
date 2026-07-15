@@ -96,7 +96,7 @@ flowchart LR
 
 スコープはファイルで作成されるプリミティブであり、センサーやエージェントを作成するのと同じ筋肉記憶です。**`scope-mapping.json` は存在しません** — 出荷ツリーから削除されました。スコープの identity とステージメンバーシップは、2つのファイルで作成されるサーフェスに分割され、コンパイル済みグリッドに転置されます:
 
-1. **Identity** はスコープごとに1ファイル `dist/claude/.claude/scopes/amadeus-<name>.md` に存在します — フロントマター(`name`、`depth`、`keywords`、`description`)にスコープを記述する prose を加えたもの。出荷セットは `bugfix`、`enterprise`、`feature`、`infra`、`mvp`、`poc`、`refactor`、`security-patch`、`workshop` です。
+1. **Identity** はスコープごとに1ファイル `dist/claude/.claude/scopes/amadeus-<name>.md` に存在します — フロントマター(`name`、`depth`、`keywords`、`description`)にスコープを記述する prose を加えたもの。出荷セットは `bugfix`、`chore`、`enterprise`、`feature`、`infra`、`mvp`、`poc`、`refactor`、`security-patch`、`workshop` です。
 2. **Membership** は各ステージの `scopes:` フロントマターに存在します — そのステージが EXECUTE となるスコープのリスト。
 
 `bun .claude/tools/amadeus-graph.ts compile`(`stage-graph.json` を生成するのと同じコンパイルパス)は、これらを `tools/data/scope-grid.json` のグリッド — エンジンがすべての scope-level ルーティングのために読む `scope → {stages: {slug: EXECUTE|SKIP}}` マップ — に転置します。エンジンの `validScopes()` は、そのコンパイル済みグリッドから正規スコープ名セットを導出します。

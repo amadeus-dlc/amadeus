@@ -161,7 +161,7 @@ A scope is authored as a file (its identity) plus a per-stage membership tag. Th
 ### What does NOT validate automatically
 
 - A `scopes:` tag with a typo'd scope name still compiles — it just produces a grid column nobody asks for, silently dropping that stage from the real scope. `/amadeus --doctor` and a per-scope test are the guardrails.
-- Stage skipping semantics (`PHASE_SKIPPED` events). `tests/integration/t39.test.ts` hardcodes the 9 known scope names in a per-scope loop — a new scope is not exercised until that list is extended. Add your new scope to that loop as part of the same PR.
+- Stage skipping semantics (`PHASE_SKIPPED` events). `tests/integration/t39.test.ts` hardcodes the 10 known scope names in a per-scope loop — a new scope is not exercised until that list is extended. Add your new scope to that loop as part of the same PR.
 
 ## Adding a Stage
 

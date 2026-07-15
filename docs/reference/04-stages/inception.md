@@ -66,6 +66,7 @@ and a parallel multi-agent dispatch at Stage 2.2 (Practices Discovery).
 | mvp              | 2.1 (if brownfield), 2.2, 2.3, 2.4, 2.5 (if UI), 2.6, 2.7, 2.8 |
 | poc              | 2.1 (if brownfield), 2.3 (minimal)                             |
 | bugfix           | 2.1 (always -- find the bug), 2.3 (minimal -- bug description) |
+| chore            | None (Inception skipped entirely)                             |
 | refactor         | 2.1 (always -- understand current code), 2.3 (minimal)         |
 | infra            | 2.2, 2.3 (infra requirements)                                  |
 | security-patch   | 2.1 (find vulnerability context), 2.3 (minimal)                 |

@@ -52,7 +52,7 @@ cp .claude/settings.local.json.example .claude/settings.local.json
 3. `.claude/settings.json` の `AMADEUS_DEFAULT_SCOPE` 環境変数。
 4. ハードコードされたフォールバック(intent 生成時は `poc`、未マッチな自由形式は `feature`)。
 
-**有効な値:** `enterprise`、`feature`、`mvp`、`poc`、`bugfix`、`refactor`、`infra`、`security-patch`、`workshop`。無効な値は呼び出し時に明確なメッセージとともにエラーになります。チームは `.claude/scopes/amadeus-<name>.md` ファイルを配置し、メンバーステージの `scopes:` リストにタグ付けすることで、追加のスコープを定義できます — [Contributing: スコープの追加](../reference/11-contributing.ja.md#adding-a-scope) を参照してください。チームは `.claude/agents/` に追加のエージェントを定義することもできます — [Contributing: エージェントの追加](../reference/11-contributing.ja.md#adding-an-agent) を参照してください。
+**有効な値:** `enterprise`、`feature`、`mvp`、`poc`、`bugfix`、`chore`、`refactor`、`infra`、`security-patch`、`workshop`。無効な値は呼び出し時に明確なメッセージとともにエラーになります。チームは `.claude/scopes/amadeus-<name>.md` ファイルを配置し、メンバーステージの `scopes:` リストにタグ付けすることで、追加のスコープを定義できます — [Contributing: スコープの追加](../reference/11-contributing.ja.md#adding-a-scope) を参照してください。チームは `.claude/agents/` に追加のエージェントを定義することもできます — [Contributing: エージェントの追加](../reference/11-contributing.ja.md#adding-an-agent) を参照してください。
 
 **設定の検証:** `/amadeus --doctor` を実行して環境変数が設定され有効であることを確認します。
 
@@ -70,7 +70,7 @@ cp .claude/settings.local.json.example .claude/settings.local.json
 
 ## スコープ設定
 
-スコープは、どのステージをどの深度とテスト戦略で実行するかを制御します。AI-DLC は 9 つの名前付きスコープを提供します。完全な表(各スコープの EXECUTE/総ステージ数、デフォルト深度、テスト戦略、ユースケース)は [スコープ、深度、テスト戦略 § 9 つのスコープ](05-scopes-and-depth.ja.md#the-9-scopes) が単一の情報源です。このセクションではそれらの*設定*と上書きを扱います。
+スコープは、どのステージをどの深度とテスト戦略で実行するかを制御します。AI-DLC は 10 個の名前付きスコープを提供します。完全な表(各スコープの EXECUTE/総ステージ数、デフォルト深度、テスト戦略、ユースケース)は [スコープ、深度、テスト戦略 § 10 のスコープ](05-scopes-and-depth.ja.md#the-10-scopes) が単一の情報源です。このセクションではそれらの*設定*と上書きを扱います。
 
 ### スコープの選択
 

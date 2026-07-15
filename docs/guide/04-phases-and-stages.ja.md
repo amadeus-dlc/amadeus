@@ -97,12 +97,12 @@ flowchart TD
     VG1{{"Verification Gate:\nIdeation → Inception"}}
 
     S11 ==>|ALWAYS| S12
-    S11 -.->|"skip: bugfix, refactor,\ninfra, security-patch"| S14
+    S11 -.->|"skip: bugfix, chore, refactor,\ninfra, security-patch"| S14
     S12 -.->|CONDITIONAL| S13
     S12 -.->|"skip if no\nfeasibility needed"| S14
     S13 -.->|CONDITIONAL| S14
     S14 ==>|ALWAYS| S15
-    S14 -.->|"skip: poc,\nbugfix, refactor"| S17
+    S14 -.->|"skip: poc,\nbugfix, chore, refactor"| S17
     S15 -.->|CONDITIONAL| S16
     S15 -.->|"skip if no UI"| S17
     S16 -.->|CONDITIONAL| S17
@@ -377,7 +377,7 @@ flowchart TD
 | 4.7 | Feedback & Optimization | amadeus-operations-agent | amadeus-aws-platform-agent | SLO レポート、コスト分析、フィードバックループ文書 | CONDITIONAL |
 
 **主要な挙動:**
-- 7 つのステージすべてが **conditional** です — `mvp`、`poc`、`bugfix`、`refactor` スコープでは、フェーズ全体がスキップされる場合があります
+- 7 つのステージすべてが **conditional** です — `mvp`、`poc`、`bugfix`、`chore`、`refactor` スコープでは、フェーズ全体がスキップされる場合があります
 - ステージ 4.7 は**終端ステージ**です — 承認されると、ワークフローは完了します
 - 4.7 から 1.1 へ戻る**フィードバックループ**により、反復的な開発サイクルが可能になります
 

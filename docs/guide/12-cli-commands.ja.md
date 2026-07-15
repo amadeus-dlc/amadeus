@@ -76,7 +76,7 @@ flowchart TD
 
 ### `/amadeus [scope]` — 明示的なスコープで開始
 
-9 つの名前付きスコープのいずれかで新しいワークフローを開始します。
+10 個の名前付きスコープのいずれかで新しいワークフローを開始します。
 
 **構文:**
 
@@ -245,7 +245,7 @@ intent が扱うリポジトリの集合を `intents.json` の行に記録しま
 | Cycle detection | `stage-graph.json` にサイクルがない |
 | Orphan stage files | グラフ内のすべての slug がディスク上に対応する `<phase>/<slug>.md` を持つ |
 | Uncompiled stage files | slug がコンパイル済みグラフにないディスク上のステージ `.md` を表面化する。`amadeus-graph.ts compile` を実行するまで実行されない(アドバイザリ、決して失敗しない) |
-| Scope validation | 9 つすべてのスコープ(`.claude/scopes/*.md` から)がクリーンに walk する(スコープ切り詰めギャップのアドバイザリは想定内) |
+| Scope validation | 10 個すべてのスコープ(`.claude/scopes/*.md` から)がクリーンに walk する(スコープ切り詰めギャップのアドバイザリは想定内) |
 | Schema validation | すべてのステージの YAML フロントマターが `validateStageFrontmatter` をパスする |
 | Graph references | すべての `consumes[].artifact` と `requires_stage[]` のターゲットが解決する |
 | Keyword overlap | どのキーワードも複数のスコープに主張されていない |
@@ -271,7 +271,7 @@ intent が扱うリポジトリの集合を `intents.json` の行に記録しま
 ✓ Cycle detection: 0 cycles
 ✓ Orphan stage files: 32 graph entries all have files
 ✓ Uncompiled stage files: 0 stage files missing from the compiled graph
-✓ Scope validation: 9 scopes valid (29 advisories)
+✓ Scope validation: 10 scopes valid (29 advisories)
 ✓ Schema validation: 32/32 stages valid
 ✓ Graph references: 122 artifacts + edges resolved
 ✓ Keyword overlap: no conflicts
@@ -537,7 +537,7 @@ bun .claude/tools/amadeus-runtime.ts read requirements-analysis
 }
 ```
 
-**有効な値:** `enterprise`、`feature`、`mvp`、`poc`、`bugfix`、`refactor`、`infra`、`security-patch`、`workshop`。
+**有効な値:** `enterprise`、`feature`、`mvp`、`poc`、`bugfix`、`chore`、`refactor`、`infra`、`security-patch`、`workshop`。
 
 **優先順位:** 明示的な CLI フラグ > キーワード検出 > `AMADEUS_DEFAULT_SCOPE` > ハードコードされたフォールバック。
 

@@ -35,6 +35,7 @@ CONDITIONAL stages that do not apply to the current scope.
 | mvp              | 1.1, 1.3 (light), 1.4, 1.6                  |
 | poc              | 1.1 (minimal)                               |
 | bugfix           | None (Ideation skipped entirely)            |
+| chore            | None (Ideation skipped entirely)            |
 | refactor         | None (Ideation skipped entirely)            |
 | infra            | None (Ideation skipped entirely)            |
 | security-patch   | None (Ideation skipped entirely)            |

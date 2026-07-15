@@ -6,9 +6,9 @@ Scopes control **which stages execute**. Depth controls **how much detail** each
 
 ---
 
-## The 9 Scopes
+## The 10 Scopes
 
-Every workflow runs under one of 9 named scopes. Each scope defines a stage set and a default depth level.
+Every workflow runs under one of 10 named scopes. Each scope defines a stage set and a default depth level.
 
 ### enterprise
 
@@ -49,6 +49,14 @@ Every workflow runs under one of 9 named scopes. Each scope defines a stage set 
 - **Stages:** 7 of 32
 - **Default depth:** Minimal
 - **Skips:** Market Research, Feasibility, Team Formation, Mockups, most design and architecture stages, all Operation stages
+
+### chore
+
+**Use when:** Making a small self-contained tweak — a 1-to-few-file change to a dev script, docs, or CI config touching no user-visible contract.
+
+- **Stages:** 5 of 32
+- **Default depth:** Minimal
+- **Skips:** All Ideation stages, the rest of Inception (reverse engineering, requirements analysis, and beyond), Functional Design, and all Operation stages — runs only the 3 bootstrap initialization stages plus Code Generation and Build and Test
 
 ### refactor
 
@@ -98,6 +106,7 @@ Authoritative data lives in the `.claude/scopes/amadeus-<name>.md` files (scope 
 | `mvp` | 22 / 32 | Standard | Standard | Greenfield, skip late operations |
 | `poc` | 8 / 32 | Minimal | Minimal | Prove feasibility fast |
 | `bugfix` | 7 / 32 | Minimal | Minimal | Fix a specific bug |
+| `chore` | 5 / 32 | Minimal | Minimal | Small self-contained tweak |
 | `refactor` | 8 / 32 | Minimal | Minimal | Clean up existing code |
 | `infra` | 13 / 32 | Standard | Standard | Infrastructure change |
 | `security-patch` | 10 / 32 | Minimal | Minimal | CVE response |
@@ -121,6 +130,7 @@ The engine analyzes your intent against keyword patterns:
 | Keywords | Detected Scope |
 |----------|---------------|
 | "fix", "bug", "broken" | `bugfix` |
+| "chore", "tweak" | `chore` |
 | "refactor", "clean up", "simplify" | `refactor` |
 | "infrastructure", "deploy", "infra" | `infra` |
 | "security", "CVE", "vulnerability", "patch" | `security-patch` |
@@ -340,6 +350,7 @@ You can change the test strategy at three points:
 | Greenfield product from scratch | `mvp` or `feature` |
 | Quick validation of an approach | `poc` |
 | Known bug to fix | `bugfix` |
+| Small self-contained tweak — a 1-to-few-file change to a dev script, docs, or CI config touching no user-visible contract | `chore` |
 | Code cleanup without behavior changes | `refactor` |
 | New AWS environment or CDK changes | `infra` |
 | CVE or security vulnerability response | `security-patch` |

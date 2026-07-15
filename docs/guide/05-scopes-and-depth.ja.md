@@ -6,9 +6,9 @@
 
 ---
 
-## 9 つのスコープ
+## 10 のスコープ
 
-すべてのワークフローは、名前付きの 9 つのスコープのいずれかの下で実行されます。各スコープはステージ集合とデフォルトの深度レベルを定義します。
+すべてのワークフローは、名前付きの 10 のスコープのいずれかの下で実行されます。各スコープはステージ集合とデフォルトの深度レベルを定義します。
 
 ### enterprise
 
@@ -49,6 +49,14 @@
 - **ステージ:** 32 のうち 7
 - **デフォルト深度:** Minimal
 - **スキップ:** Market Research、Feasibility、Team Formation、Mockups、ほとんどの設計・アーキテクチャステージ、すべての Operation ステージ
+
+### chore
+
+**使う場面:** 開発スクリプト・docs・CI 設定などユーザー可視契約に触れない、1〜数ファイルの小さな自己完結の修正を行うとき。
+
+- **ステージ:** 32 のうち 5
+- **デフォルト深度:** Minimal
+- **スキップ:** すべての Ideation ステージ、Inception の残り(reverse engineering、requirements analysis 以降)、Functional Design、すべての Operation ステージ — 実行するのは初期化の3ブートストラップステージと Code Generation、Build and Test のみ
 
 ### refactor
 
@@ -98,6 +106,7 @@
 | `mvp` | 22 / 32 | Standard | Standard | グリーンフィールド、後段の運用をスキップ |
 | `poc` | 8 / 32 | Minimal | Minimal | 実現可能性を素早く実証 |
 | `bugfix` | 7 / 32 | Minimal | Minimal | 特定のバグを修正 |
+| `chore` | 5 / 32 | Minimal | Minimal | 小さな自己完結の修正 |
 | `refactor` | 8 / 32 | Minimal | Minimal | 既存コードをクリーンアップ |
 | `infra` | 13 / 32 | Standard | Standard | インフラ変更 |
 | `security-patch` | 10 / 32 | Minimal | Minimal | CVE 対応 |
@@ -121,6 +130,7 @@
 | キーワード | 検出されるスコープ |
 |----------|---------------|
 | "fix"、"bug"、"broken" | `bugfix` |
+| "chore"、"tweak" | `chore` |
 | "refactor"、"clean up"、"simplify" | `refactor` |
 | "infrastructure"、"deploy"、"infra" | `infra` |
 | "security"、"CVE"、"vulnerability"、"patch" | `security-patch` |
@@ -340,6 +350,7 @@ You can request different depth or test strategy at any approval gate.
 | ゼロからのグリーンフィールド製品 | `mvp` または `feature` |
 | アプローチの素早い検証 | `poc` |
 | 既知のバグの修正 | `bugfix` |
+| 小さな自己完結の修正 — 開発スクリプト・docs・CI 設定などユーザー可視契約に触れない1〜数ファイルの変更 | `chore` |
 | 挙動を変えないコードクリーンアップ | `refactor` |
 | 新しい AWS 環境または CDK 変更 | `infra` |
 | CVE またはセキュリティ脆弱性への対応 | `security-patch` |

@@ -108,7 +108,7 @@ cd your-project
 | 状態ファイル | アクティブな intent の `amadeus-state.md` がその監査証跡と一致する(ドリフトなし) |
 | フックのハートビート | `.amadeus-hooks-health/` にフック実行からの最近のタイムスタンプが含まれる |
 | グラフの整合性 | `stage-graph.json` にサイクルがない。すべての slug に対応するステージファイルがある |
-| スコープの検証 | 9 つのスコープすべてがグラフに対してクリーンに走査できる(スコープ切り詰めギャップに対する advisory は想定内) |
+| スコープの検証 | 10 個のスコープすべてがグラフに対してクリーンに走査できる(スコープ切り詰めギャップに対する advisory は想定内) |
 | スキーマ + 参照 | すべてのステージの YAML フロントマターが検証され、すべての consumes/requires_stage 参照が解決する |
 | キーワードの重複 | `.claude/scopes/*.md` ファイル間で、複数のスコープが同じキーワードを主張していない |
 
@@ -130,7 +130,7 @@ cd your-project
 ✓ State matches last audit event (no drift)
 ✓ Cycle detection: 0 cycles
 ✓ Orphan stage files: 32 graph entries all have files
-✓ Scope validation: 9 scopes valid (29 advisories)
+✓ Scope validation: 10 scopes valid (29 advisories)
 ✓ Schema validation: 32/32 stages valid
 ✓ Graph references: 122 artifacts + edges resolved
 ✓ Keyword overlap: no conflicts
