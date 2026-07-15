@@ -16,6 +16,7 @@ set -euo pipefail
 #   scripts/team-up.sh --kill   # tear down the tmux session
 #
 # Env:
+#   AGMSG_TEAM        team each member joins before launch (default: amadeus)
 #   CLAUDE_IDENTITY   identity for run-claude.sh (default: corporate-1)
 #   TEAM_BASE         parent directory for team worktrees
 #   TEAM_REPO         repository whose HEAD seeds a new team run
@@ -31,6 +32,8 @@ REPO="${TEAM_REPO:-$(cd "$(dirname "$0")/.." && pwd)}"
 BASE="${TEAM_BASE:-$HOME/worktrees/github.com/amadeus-dlc/amadeus}"
 STATE_DIR="${TEAM_STATE_DIR:-$BASE/.team-up}"
 AGMSG_ROOT="${AGMSG_ROOT:-$HOME/.agents/skills/agmsg}"
+AGMSG_JOIN="${AGMSG_JOIN:-$AGMSG_ROOT/scripts/join.sh}"
+AGMSG_RESET="${AGMSG_RESET:-$AGMSG_ROOT/scripts/reset.sh}"
 DELIVERY="${DELIVERY:-$AGMSG_ROOT/scripts/delivery.sh}"
 CODEX_MONITOR="${CODEX_MONITOR:-$AGMSG_ROOT/scripts/drivers/types/codex/codex-monitor.sh}"
 ROLE_RESUME="${ROLE_RESUME:-$AGMSG_ROOT/scripts/role-resume.sh}"
@@ -255,6 +258,27 @@ codex_role() {
   esac
 }
 
+claude_role() {
+  case "$1" in
+  leader) printf 'leader' ;;
+  engineer-*) printf 'e%s' "${1#engineer-}" ;;
+  esac
+}
+
+agmsg_role() {
+  case "$RUNTIME" in
+  claude) claude_role "$1" ;;
+  codex) codex_role "$1" ;;
+  esac
+}
+
+agmsg_type() {
+  case "$RUNTIME" in
+  claude) printf 'claude-code' ;;
+  codex) printf 'codex' ;;
+  esac
+}
+
 codex_member_cmd() {
   local m="$1" wt="${2:-$BASE/$1}" role prompt command="codex" resume_arg="" resume_uuid=""
   role="$(codex_role "$m")"
@@ -307,8 +331,35 @@ member_worktree() {
   fi
 }
 
+register_team_members() {
+  local m wt role agent_type
+  [ -f "$AGMSG_JOIN" ] || { echo "ERROR: missing agmsg join script: $AGMSG_JOIN" >&2; return 1; }
+  agent_type="$(agmsg_type)"
+  for m in leader engineer-1 engineer-2 engineer-3 engineer-4 engineer-5 engineer-6; do
+    wt="$(member_worktree "$m")"
+    role="$(agmsg_role "$m")"
+    if ! AGMSG_RESOLVE_PROJECT=0 bash "$AGMSG_JOIN" "$TEAM_NAME" "$role" "$agent_type" "$wt" >/dev/null; then
+      echo "ERROR: agmsg registration failed for $m as $role in team $TEAM_NAME" >&2
+      return 1
+    fi
+    REGISTERED_MEMBERS="$REGISTERED_MEMBERS $m"
+  done
+}
+
+rollback_registered_members() {
+  local m wt role agent_type
+  [ -f "$AGMSG_RESET" ] || return 0
+  agent_type="$(agmsg_type)"
+  for m in $REGISTERED_MEMBERS; do
+    wt="$RUN_ROOT/$m"
+    role="$(agmsg_role "$m")"
+    AGMSG_RESOLVE_PROJECT=0 bash "$AGMSG_RESET" "$wt" "$agent_type" "$role" >/dev/null 2>&1 || true
+  done
+}
+
 rollback_prepared_run() {
   local m wt branch
+  rollback_registered_members
   for m in $CREATED_MEMBERS; do
     wt="$RUN_ROOT/$m"
     branch="team/$RUN_ID/$m"
@@ -428,6 +479,7 @@ RUN_ID=""
 RUN_RECORD=""
 RUN_ROOT=""
 CREATED_MEMBERS=""
+REGISTERED_MEMBERS=""
 RUN_PREPARING=0
 AGENTS_STARTED=0
 trap handle_exit EXIT
@@ -465,6 +517,8 @@ for m in leader engineer-1 engineer-2 engineer-3 engineer-4 engineer-5 engineer-
   wt="$(member_worktree "$m")"
   [ -d "$wt" ] || { echo "ERROR: missing worktree $wt" >&2; exit 1; }
 done
+
+register_team_members
 
 # --- build the 3-1-3 layout ---------------------------------------------
 # columns first: [e1] | [leader] | [e4], then split each side column into 3

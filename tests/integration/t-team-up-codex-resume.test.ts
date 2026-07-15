@@ -59,6 +59,7 @@ function createCliFixture() {
   const base = join(root, "worktrees");
   const state = join(root, "state");
   const bin = join(root, "bin");
+  const joinLog = join(root, "join.log");
   const tmuxState = join(root, "tmux-state");
   mkdirSync(repo, { recursive: true });
   mkdirSync(bin, { recursive: true });
@@ -104,6 +105,23 @@ esac
   writeFileSync(roleResume, '#!/usr/bin/env bash\nprintf "thread-%s" "$3"\n');
   chmodSync(roleResume, 0o755);
 
+  const joinAgent = join(bin, "join.sh");
+  writeFileSync(
+    joinAgent,
+    `#!/usr/bin/env bash
+set -eu
+if [ "\${FAKE_JOIN_FAIL_ROLE:-}" = "$2" ]; then
+  exit 8
+fi
+printf '%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "\${AGMSG_RESOLVE_PROJECT:-}" >>"\${FAKE_JOIN_LOG:?}"
+`,
+  );
+  chmodSync(joinAgent, 0o755);
+
+  const resetAgent = join(bin, "reset.sh");
+  writeFileSync(resetAgent, "#!/usr/bin/env bash\nexit 0\n");
+  chmodSync(resetAgent, 0o755);
+
   const env = {
     ...process.env,
     TEAM_REPO: repo,
@@ -111,14 +129,17 @@ esac
     TEAM_STATE_DIR: state,
     TEAM_RUN_ID: "run-001",
     TEAM_SESSION: "amadeus-team-test",
+    FAKE_JOIN_LOG: joinLog,
     FAKE_TMUX_STATE: tmuxState,
+    AGMSG_JOIN: joinAgent,
+    AGMSG_RESET: resetAgent,
     DELIVERY: join(root, "missing-delivery.sh"),
     CODEX_MONITOR: codexMonitor,
     ROLE_RESUME: roleResume,
     PATH: `${bin}:${process.env.PATH}`,
   };
 
-  return { base, env, repo, state };
+  return { base, env, joinLog, repo, state, tmuxState };
 }
 
 describe("team-up run lifecycle", () => {
@@ -162,6 +183,68 @@ describe("team-up run lifecycle", () => {
     expect(readFileSync(join(fixture.state, "current-run"), "utf8").trim()).toBe("run-001");
   });
 
+  test("a fresh Codex launch pre-registers every role with agmsg", () => {
+    const fixture = createCliFixture();
+    const result = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "--codex"],
+      env: fixture.env,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+    const registrations = existsSync(fixture.joinLog)
+      ? readFileSync(fixture.joinLog, "utf8").trim().split("\n")
+      : [];
+    expect(registrations).toEqual(
+      ["leader", ...Array.from({ length: 6 }, (_, index) => `codex-engineer-${index + 1}`)].map(
+        (role, index) => {
+          const member = index === 0 ? "leader" : `engineer-${index}`;
+          return `amadeus\t${role}\tcodex\t${join(fixture.base, "runs", "run-001", member)}\t0`;
+        },
+      ),
+    );
+  });
+
+  test("a fresh Claude launch pre-registers every role with agmsg", () => {
+    const fixture = createCliFixture();
+    const result = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "--claude"],
+      env: fixture.env,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+    const registrations = existsSync(fixture.joinLog)
+      ? readFileSync(fixture.joinLog, "utf8").trim().split("\n")
+      : [];
+    expect(registrations.map((line) => line.split("\t").slice(0, 3).join("\t"))).toEqual([
+      "amadeus\tleader\tclaude-code",
+      "amadeus\te1\tclaude-code",
+      "amadeus\te2\tclaude-code",
+      "amadeus\te3\tclaude-code",
+      "amadeus\te4\tclaude-code",
+      "amadeus\te5\tclaude-code",
+      "amadeus\te6\tclaude-code",
+    ]);
+  });
+
+  test("an agmsg registration failure prevents pane launch", () => {
+    const fixture = createCliFixture();
+    const result = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "--codex"],
+      env: { ...fixture.env, FAKE_JOIN_FAIL_ROLE: "codex-engineer-3" },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr.toString()).toContain("agmsg registration failed");
+    expect(existsSync(join(fixture.tmuxState, "session"))).toBe(false);
+    expect(existsSync(join(fixture.base, "runs", "run-001"))).toBe(false);
+  });
+
   test("continue reuses the current run worktrees and restores its runtime", () => {
     const fixture = createCliFixture();
     const started = Bun.spawnSync({
@@ -190,6 +273,7 @@ describe("team-up run lifecycle", () => {
     expect(resumed.exitCode, resumed.stderr.toString()).toBe(0);
     expect(resumed.stdout.toString()).toContain("runtime=codex");
     expect(git(fixture.repo, "worktree", "list", "--porcelain")).toBe(before);
+    expect(readFileSync(fixture.joinLog, "utf8").trim().split("\n")).toHaveLength(14);
   });
 
   test("the first legacy resume requires a runtime and adopts fixed worktrees in place", () => {
