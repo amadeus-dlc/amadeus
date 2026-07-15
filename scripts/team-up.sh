@@ -105,40 +105,87 @@ mux_kill() {
   case "$MUX" in
   tmux) tmux kill-session -t "$1" 2>/dev/null && echo "killed session $1" || echo "no session $1" ;;
   herdr)
+    # `session stop` alone is not enough: herdr persists the session's
+    # workspace layout on disk and restores it (with dead shells) on the
+    # next `server` start, leaving ghost workspaces in the UI. `session
+    # delete` removes the persisted state as well — but stop is
+    # asynchronous, and a delete issued while the server is still going
+    # down fails silently, resurrecting the ghosts. Wait for the socket
+    # to actually die before deleting, and verify the delete landed.
     if "$HERDR" --session "$1" workspace list >/dev/null 2>&1; then
-      "$HERDR" session stop "$1" >/dev/null 2>&1 && echo "killed session $1" || echo "no session $1"
+      "$HERDR" session stop "$1" >/dev/null 2>&1
+      local _i
+      for _i in $(seq 1 20); do
+        "$HERDR" --session "$1" workspace list >/dev/null 2>&1 || break
+        sleep 0.5
+      done
+      "$HERDR" session delete "$1" >/dev/null 2>&1
+      if "$HERDR" session list 2>/dev/null | awk -v s="$1" '$1 == s { found=1 } END { exit !found }'; then
+        echo "WARNING: herdr session $1 still present after delete — ghost workspaces may reappear" >&2
+      fi
+      echo "killed session $1"
     else
-      echo "no session $1"
+      # server not running: still delete any persisted session state
+      "$HERDR" session delete "$1" >/dev/null 2>&1 && echo "killed session $1" || echo "no session $1"
     fi
     ;;
   esac
 }
 
-# mux_new_session <session> <cwd> <cmd> — create the session's first pane
-# running <cmd> and echo its pane id.
+# mux_pane_label <session> <pane> <label> — name the pane after its member.
+# tmux surfaces the member via pane-border-format (cwd basename); herdr has
+# no --label on pane split (0.7.1), so the label is applied post-create via
+# `pane rename` sets the pane-border title; `agent rename` sets the name in
+# the agents panel — without both, the herdr UI falls back to the workspace
+# label and every agent renders as the session name (#999). Applied right
+# after the pane is created and before its command runs, while no agent
+# process is detected yet, so the rename lands immediately and persists
+# (verified on 0.7.1). Cosmetic: never fail launch.
+mux_pane_label() {
+  local s="$1" pane="$2" label="$3"
+  case "$MUX" in
+  tmux) : ;;
+  herdr)
+    "$HERDR" --session "$s" pane rename "$pane" "$label" >/dev/null 2>&1 || true
+    "$HERDR" --session "$s" agent rename "$pane" "$label" >/dev/null 2>&1 || true
+    ;;
+  esac
+}
+
+# mux_new_session <session> <cwd> <cmd> <label> — create the session's first
+# pane running <cmd> and echo its pane id.
 mux_new_session() {
-  local s="$1" cwd="$2" cmd="$3" pane
+  local s="$1" cwd="$2" cmd="$3" label="$4" pane
   case "$MUX" in
   tmux)
     tmux new-session -d -s "$s" -x 300 -y 90 "$cmd"
     tmux display-message -p -t "$s" '#{pane_id}'
     ;;
   herdr)
+    # herdr persists a session's workspace layout to session.json on stop /
+    # GUI close / crash, and RESTORES it when the server next starts. We only
+    # reach here when mux_has_session reported no running server, so any
+    # persisted state is stale — starting the server without purging it would
+    # restore the old workspaces and stack this run's workspace on top,
+    # leaving ghost spaces in the UI (#999 follow-up). Delete the persisted
+    # state first so the server starts clean with exactly one workspace.
+    "$HERDR" session delete "$s" >/dev/null 2>&1 || true
     nohup "$HERDR" --session "$s" server >/dev/null 2>&1 &
     disown 2>/dev/null || true
     herdr_wait_ready "$s" || return 1
     pane="$("$HERDR" --session "$s" workspace create --cwd "$cwd" --label "$s" --no-focus | herdr_pane_id)"
     [ -n "$pane" ] || { echo "ERROR: herdr workspace create returned no pane id" >&2; return 1; }
+    mux_pane_label "$s" "$pane" "$label"
     "$HERDR" --session "$s" pane run "$pane" "$cmd" >/dev/null
     printf '%s\n' "$pane"
     ;;
   esac
 }
 
-# mux_split <session> <target_pane> <orient h|v> <newpct> <cwd> <cmd> — split
-# <target_pane> and echo the new pane id running <cmd>.
+# mux_split <session> <target_pane> <orient h|v> <newpct> <cwd> <cmd> <label>
+# — split <target_pane> and echo the new pane id running <cmd>.
 mux_split() {
-  local s="$1" target="$2" orient="$3" pct="$4" cwd="$5" cmd="$6" dir ratio pane
+  local s="$1" target="$2" orient="$3" pct="$4" cwd="$5" cmd="$6" label="$7" dir ratio pane
   case "$MUX" in
   tmux)
     case "$orient" in
@@ -156,6 +203,7 @@ mux_split() {
     ratio="$(awk "BEGIN{printf \"%.4f\", (100-$pct)/100}")"
     pane="$("$HERDR" --session "$s" pane split "$target" --direction "$dir" --ratio "$ratio" --cwd "$cwd" --no-focus | herdr_pane_id)"
     [ -n "$pane" ] || { echo "ERROR: herdr pane split returned no pane id" >&2; return 1; }
+    mux_pane_label "$s" "$pane" "$label"
     "$HERDR" --session "$s" pane run "$pane" "$cmd" >/dev/null
     printf '%s\n' "$pane"
     ;;
@@ -680,16 +728,16 @@ register_team_members
 if [ "$RUN_PREPARING" = "1" ]; then
   printf 'launching\n' >"$RUN_RECORD/status"
 fi
-P_E1="$(mux_new_session "$S" "$(member_worktree engineer-1)" "$(member_cmd engineer-1 "$(member_worktree engineer-1)")")"
+P_E1="$(mux_new_session "$S" "$(member_worktree engineer-1)" "$(member_cmd engineer-1 "$(member_worktree engineer-1)")" engineer-1)"
 AGENTS_STARTED=1
-P_LEADER="$(mux_split "$S" "$P_E1" h 66 "$(member_worktree leader)" "$(member_cmd leader "$(member_worktree leader)")")"
-P_E4="$(mux_split "$S" "$P_LEADER" h 50 "$(member_worktree engineer-4)" "$(member_cmd engineer-4 "$(member_worktree engineer-4)")")"
+P_LEADER="$(mux_split "$S" "$P_E1" h 66 "$(member_worktree leader)" "$(member_cmd leader "$(member_worktree leader)")" leader)"
+P_E4="$(mux_split "$S" "$P_LEADER" h 50 "$(member_worktree engineer-4)" "$(member_cmd engineer-4 "$(member_worktree engineer-4)")" engineer-4)"
 
-P_E2="$(mux_split "$S" "$P_E1" v 66 "$(member_worktree engineer-2)" "$(member_cmd engineer-2 "$(member_worktree engineer-2)")")"
-mux_split "$S" "$P_E2" v 50 "$(member_worktree engineer-3)" "$(member_cmd engineer-3 "$(member_worktree engineer-3)")" >/dev/null
+P_E2="$(mux_split "$S" "$P_E1" v 66 "$(member_worktree engineer-2)" "$(member_cmd engineer-2 "$(member_worktree engineer-2)")" engineer-2)"
+mux_split "$S" "$P_E2" v 50 "$(member_worktree engineer-3)" "$(member_cmd engineer-3 "$(member_worktree engineer-3)")" engineer-3 >/dev/null
 
-P_E5="$(mux_split "$S" "$P_E4" v 66 "$(member_worktree engineer-5)" "$(member_cmd engineer-5 "$(member_worktree engineer-5)")")"
-mux_split "$S" "$P_E5" v 50 "$(member_worktree engineer-6)" "$(member_cmd engineer-6 "$(member_worktree engineer-6)")" >/dev/null
+P_E5="$(mux_split "$S" "$P_E4" v 66 "$(member_worktree engineer-5)" "$(member_cmd engineer-5 "$(member_worktree engineer-5)")" engineer-5)"
+mux_split "$S" "$P_E5" v 50 "$(member_worktree engineer-6)" "$(member_cmd engineer-6 "$(member_worktree engineer-6)")" engineer-6 >/dev/null
 
 mux_focus "$S" "$P_LEADER"
 if [ "$MUX" = "tmux" ]; then
