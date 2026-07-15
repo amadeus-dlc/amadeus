@@ -148,7 +148,7 @@ describe("Unit disposition ledger", () => {
     expect(() => change(root, "parked", "active")).toThrow("conductor-only");
   });
 
-  test("rejects park while Construction autonomy is autonomous", () => {
+  test("permits a human-authorized Unit park while Construction autonomy is autonomous", () => {
     root = project();
     const path = seededStateFile(root);
     writeFileSync(
@@ -156,7 +156,11 @@ describe("Unit disposition ledger", () => {
       `${readFileSync(path, "utf-8")}\n- **Construction Autonomy Mode**: autonomous\n`,
       "utf-8",
     );
-    expect(() => change(root, "parked", "active")).toThrow("autonomous");
+    appendAuditEntry("QUESTION_ANSWERED", {
+      Stage: "code-generation",
+      Details: "park the failed Unit",
+    }, root);
+    expect(change(root, "parked", "active").changed).toBe(true);
   });
 
   test("skip and resume each consume only a fresh stage answer without interpreting it", () => {

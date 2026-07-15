@@ -424,7 +424,7 @@ Bolts eligible to run in parallel (dependency prerequisites satisfied, no mutual
 Failure handling is **halt-and-ask** and runs regardless of autonomy mode:
 
 - Solo Bolt failure: halt, emit `BOLT_FAILED`, present retry / park / skip / abort.
-- Parallel batch partial failure: wait for all parallel Tasks to return, preserve successful Bolts' artifacts on disk, emit `BOLT_FAILED` with `Succeeded=[names]`, and present the same choices scoped to the failed Bolt. Retry re-runs only the failed Bolt. Park defers the failed Unit while independent siblings continue, but does not settle the stage. Skip settles that Unit without fabricating required artifacts. Both decisions are recorded as typed Unit dispositions; neither is inferred from answer text.
+- Parallel batch partial failure: wait for all parallel Tasks to return, preserve successful Bolts' artifacts on disk, emit `BOLT_FAILED` with `Succeeded=[names]`, and present the same choices scoped to the failed Bolt. Retry re-runs only the failed Bolt. Park defers the failed Unit while independent siblings continue, but does not settle the stage. A human-authorized Unit park remains valid in `autonomous` mode and is distinct from parking the entire unattended workflow. Skip settles that Unit without fabricating required artifacts. Both decisions are recorded as typed Unit dispositions; neither is inferred from answer text.
 
 ```mermaid
 sequenceDiagram

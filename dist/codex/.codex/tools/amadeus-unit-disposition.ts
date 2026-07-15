@@ -157,10 +157,6 @@ function assertConductorState(input: ChangeUnitDispositionInput): void {
   if ((getField(state, "Worktree Path") ?? "").trim() !== "") {
     throw new Error("Unit disposition changes are conductor-only; Worktree Path must be empty.");
   }
-  if (input.to === "parked" &&
-    (getField(state, "Construction Autonomy Mode") ?? "").trim() === "autonomous") {
-    throw new Error("Refusing to park Unit while Construction Autonomy Mode is autonomous.");
-  }
 }
 
 function assertExpectedDisposition(expected: UnitDisposition, actual: UnitDisposition): void {

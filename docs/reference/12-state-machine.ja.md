@@ -251,7 +251,7 @@ session フックは発行前にアクティブな intent の `amadeus-state.md`
 | `BOLT_COMPLETED` | `tools/amadeus-bolt.ts` | 先行する `BOLT_STARTED` とペア |
 | `BOLT_FAILED` | `tools/amadeus-bolt.ts`(`fail` + `abort`) | `--succeeded-siblings` が並列バッチの生存者を捕捉。`abort` はサブ分類のため `Reason: aborted` フィールドを追加 |
 | `AUTONOMY_MODE_SET` | `tools/amadeus-bolt.ts` | `Construction Autonomy Mode` フィールドをアトミックに更新。まずフィールドの存在を検証(audit-first) |
-| `UNIT_DISPOSITION_CHANGED` | `tools/amadeus-unit-disposition.ts` | `amadeus-bolt.ts park`、`skip`、`resume` から呼ばれる、コンダクター所有の監査ベース `(stage, Unit)` disposition 遷移。`From`、`To`、`Reason` を記録し、変更ごとに新しい回答を1件消費する |
+| `UNIT_DISPOSITION_CHANGED` | `tools/amadeus-unit-disposition.ts` | `amadeus-bolt.ts park`、`skip`、`resume` から呼ばれる、コンダクター所有の監査ベース `(stage, Unit)` disposition 遷移。`From`、`To`、`Reason` を記録し、変更ごとに新しい回答を1件消費する。人間が承認した Unit park は autonomous Construction でも有効であり、ワークフロー全体は park しない |
 
 ### Session
 

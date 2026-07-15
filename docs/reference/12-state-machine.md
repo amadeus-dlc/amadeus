@@ -251,7 +251,7 @@ Session hooks check for the active intent's `amadeus-state.md` (under `amadeus/s
 | `BOLT_COMPLETED` | `tools/amadeus-bolt.ts` | Paired with a prior `BOLT_STARTED` |
 | `BOLT_FAILED` | `tools/amadeus-bolt.ts` (`fail` + `abort`) | `--succeeded-siblings` captures parallel-batch survivors; `abort` adds `Reason: aborted` field for sub-classification |
 | `AUTONOMY_MODE_SET` | `tools/amadeus-bolt.ts` | Atomically updates `Construction Autonomy Mode` field; validates field exists first (audit-first) |
-| `UNIT_DISPOSITION_CHANGED` | `tools/amadeus-unit-disposition.ts` | Conductor-owned, audit-backed `(stage, Unit)` disposition transition invoked by `amadeus-bolt.ts park`, `skip`, and `resume`; one fresh answer is consumed per change |
+| `UNIT_DISPOSITION_CHANGED` | `tools/amadeus-unit-disposition.ts` | Conductor-owned, audit-backed `(stage, Unit)` disposition transition invoked by `amadeus-bolt.ts park`, `skip`, and `resume`; one fresh answer is consumed per change. A human-authorized Unit park remains valid in autonomous Construction and does not park the whole workflow |
 
 ### Session
 
