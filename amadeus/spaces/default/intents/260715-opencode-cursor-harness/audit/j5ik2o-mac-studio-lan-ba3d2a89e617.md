@@ -23,3 +23,15 @@
 **User Input**: leader delegate: e3 gate-ready for feasibility (artifacts x4, no-election judgment approved under E-OC1 3-step order, sensors pass). S13 election E-OC2 concluded 4/4: zero adoptions confirmed.
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-15T16:34:45Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: scope-definition
+**Issuer Space**: default
+**Issuer Intent**: 260709-canonical-settings
+**Issuer Shard**: j5ik2o-mac-studio-lan-ba3d2a89e617.md
+**Issuer Human Ts**: 2026-07-15T16:04:27Z
+**User Input**: leader delegate: e3 gate-ready for scope-definition (no-election judgment approved under E-OC1, artifacts per stage contract, E-OC3 S13 election concluded zero adoptions 3/4 unanimous-so-far, e1 vote pending cannot change outcome).
+
+---
