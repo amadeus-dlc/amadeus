@@ -81,7 +81,7 @@ Incremental scopes (bugfix, poc, refactor, security-patch, chore) skip units-gen
 
 ### Step 2: PART 1 — Planning
 
-Create a detailed code generation plan at `<record>/construction/{unit-name}/code-generation/code-generation-plan.md` with checkboxes for each implementation step. Include story-to-code-step traceability — map each plan step back to the user story it implements.
+Create a detailed code generation plan at `<record>/construction/{unit-name}/code-generation/code-generation-plan.md` with checkboxes for each implementation step. Include story-to-code-step traceability — map each plan step back to the user story it implements. When user stories are absent because the scope skipped them (e.g. `chore` scoped from the captured intent), map each step back to that captured intent instead, and record in the plan that the work was scoped from intent only — so the degraded input used is written down, and the same note carries into `code-summary.md`.
 
 Plan should cover (as applicable to the unit):
 - [ ] Business logic implementation
