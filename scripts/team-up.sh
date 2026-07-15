@@ -251,24 +251,10 @@ claude_member_cmd() {
     "$wt" "$IDENTITY" "$REPO/scripts/run-claude.sh" "$args" "/agmsg mode monitor"
 }
 
-codex_role() {
-  case "$1" in
-  leader) printf 'leader' ;;
-  engineer-*) printf 'codex-%s' "$1" ;;
-  esac
-}
-
-claude_role() {
+member_role() {
   case "$1" in
   leader) printf 'leader' ;;
   engineer-*) printf 'e%s' "${1#engineer-}" ;;
-  esac
-}
-
-agmsg_role() {
-  case "$RUNTIME" in
-  claude) claude_role "$1" ;;
-  codex) codex_role "$1" ;;
   esac
 }
 
@@ -281,7 +267,7 @@ agmsg_type() {
 
 codex_member_cmd() {
   local m="$1" wt="${2:-$BASE/$1}" role prompt command="codex" resume_arg="" resume_uuid=""
-  role="$(codex_role "$m")"
+  role="$(member_role "$m")"
   prompt="\$agmsg actas $role"
 
   [ -x "$CODEX_MONITOR" ] || {
@@ -337,7 +323,7 @@ register_team_members() {
   agent_type="$(agmsg_type)"
   for m in leader engineer-1 engineer-2 engineer-3 engineer-4 engineer-5 engineer-6; do
     wt="$(member_worktree "$m")"
-    role="$(agmsg_role "$m")"
+    role="$(member_role "$m")"
     if ! AGMSG_RESOLVE_PROJECT=0 bash "$AGMSG_JOIN" "$TEAM_NAME" "$role" "$agent_type" "$wt" >/dev/null; then
       echo "ERROR: agmsg registration failed for $m as $role in team $TEAM_NAME" >&2
       return 1
@@ -352,7 +338,7 @@ rollback_registered_members() {
   agent_type="$(agmsg_type)"
   for m in $REGISTERED_MEMBERS; do
     wt="$RUN_ROOT/$m"
-    role="$(agmsg_role "$m")"
+    role="$(member_role "$m")"
     AGMSG_RESOLVE_PROJECT=0 bash "$AGMSG_RESET" "$wt" "$agent_type" "$role" >/dev/null 2>&1 || true
   done
 }

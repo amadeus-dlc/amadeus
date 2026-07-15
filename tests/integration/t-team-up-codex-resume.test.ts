@@ -197,7 +197,7 @@ describe("team-up run lifecycle", () => {
       ? readFileSync(fixture.joinLog, "utf8").trim().split("\n")
       : [];
     expect(registrations).toEqual(
-      ["leader", ...Array.from({ length: 6 }, (_, index) => `codex-engineer-${index + 1}`)].map(
+      ["leader", ...Array.from({ length: 6 }, (_, index) => `e${index + 1}`)].map(
         (role, index) => {
           const member = index === 0 ? "leader" : `engineer-${index}`;
           return `amadeus\t${role}\tcodex\t${join(fixture.base, "runs", "run-001", member)}\t0`;
@@ -234,7 +234,7 @@ describe("team-up run lifecycle", () => {
     const fixture = createCliFixture();
     const result = Bun.spawnSync({
       cmd: ["bash", TEAM_UP, "--codex"],
-      env: { ...fixture.env, FAKE_JOIN_FAIL_ROLE: "codex-engineer-3" },
+      env: { ...fixture.env, FAKE_JOIN_FAIL_ROLE: "e3" },
       stderr: "pipe",
       stdout: "pipe",
     });
@@ -650,6 +650,8 @@ describe("team-up Codex resume", () => {
     const result = commandFor("engineer-1", "exit 0");
     expect(result.exitCode).toBe(0);
     expect(result.stdout.toString()).toContain("AMADEUS_OPERATING_MODE=team");
+    expect(result.stdout.toString()).toContain("AGMSG_CODEX_ROLE=e1");
+    expect(result.stdout.toString()).toContain("actas\\ e1");
   });
 
   test("resumes the role's recorded UUID instead of global --last", () => {
