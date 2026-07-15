@@ -16,7 +16,7 @@ import {
   worktreePath,
 } from "./amadeus-lib.ts";
 
-// --- Canonical event types (78) ---
+// --- Canonical event types (79) ---
 // See docs/reference/12-state-machine.md for the state transitions that emit each event.
 
 const VALID_EVENT_TYPES = new Set([
@@ -98,6 +98,7 @@ const VALID_EVENT_TYPES = new Set([
   "BOLT_COMPLETED",
   "BOLT_FAILED",
   "AUTONOMY_MODE_SET",
+  "UNIT_DISPOSITION_CHANGED",
   // Worktree lifecycle:
   //   WORKTREE_* emitted by amadeus-worktree.ts
   //   STATE_*    emitted by amadeus-state.ts state-fork/state-merge
@@ -196,6 +197,7 @@ const EVENT_HEADINGS: Record<string, string> = {
   BOLT_COMPLETED: "Bolt Completed",
   BOLT_FAILED: "Bolt Failed",
   AUTONOMY_MODE_SET: "Autonomy Mode Set",
+  UNIT_DISPOSITION_CHANGED: "Unit Disposition Changed",
   WORKTREE_CREATED: "Worktree Created",
   WORKTREE_MERGED: "Worktree Merged",
   WORKTREE_DISCARDED: "Worktree Discarded",

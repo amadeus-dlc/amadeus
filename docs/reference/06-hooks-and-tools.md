@@ -319,7 +319,7 @@ Special states: `[Amadeus-DLC] ready` (no workflow), `[Amadeus-DLC] COMPLETE [â–
 
 ## Audit Event Taxonomy
 
-The audit trail (the intent's `audit/` shards) uses a **68-event taxonomy** defined in `.claude/knowledge/amadeus-shared/audit-format.md`. Every event is tool-owned or hook-owned - the conductor no longer emits events from prose. See [State Machine](12-state-machine.md) for the canonical emitter registry and the audit-first atomicity rules; the summary below is a cross-reference, not the source of truth.
+The audit trail (the intent's `audit/` shards) uses a **69-event taxonomy** defined in `.claude/knowledge/amadeus-shared/audit-format.md`. Every event is tool-owned or hook-owned - the conductor no longer emits events from prose. See [State Machine](12-state-machine.md) for the canonical emitter registry and the audit-first atomicity rules; the summary below is a cross-reference, not the source of truth.
 
 ### Event Categories
 
@@ -336,7 +336,7 @@ The audit trail (the intent's `audit/` shards) uses a **68-event taxonomy** defi
 | **Subagent** | 1 | `SUBAGENT_COMPLETED` | log-subagent hook |
 | **Utility** | 1 | `HEALTH_CHECKED` | `amadeus-utility.ts doctor` |
 | **Error/Recovery** | 2 | `ERROR_LOGGED`, `RECOVERY_COMPLETED` | `lib.ts emitError`, `amadeus-state.ts acknowledge-compaction` |
-| **Construction Bolt** | 4 | `BOLT_STARTED`, `BOLT_COMPLETED`, `BOLT_FAILED`, `AUTONOMY_MODE_SET` | `amadeus-bolt.ts` |
+| **Construction Bolt** | 5 | `BOLT_STARTED`, `BOLT_COMPLETED`, `BOLT_FAILED`, `AUTONOMY_MODE_SET`, `UNIT_DISPOSITION_CHANGED` | `amadeus-bolt.ts` |
 | **Worktree / fork-merge** | 7 | `WORKTREE_CREATED`, `WORKTREE_MERGED`, `WORKTREE_DISCARDED`, `STATE_FORKED`, `STATE_MERGED`, `AUDIT_FORKED`, `AUDIT_MERGED` | `amadeus-worktree.ts`, `amadeus-state.ts` (fork/merge), `amadeus-audit.ts` (audit-fork/merge) |
 | **Practices** | 4 | `PRACTICES_DISCOVERED`, `PRACTICES_AFFIRMED`, `PRACTICES_OVERRIDE`, `PRACTICES_SECTION_EMPTY` | `amadeus-state.ts` (practices-promote / practices-event) |
 | **Merge dispatch** | 3 | `MERGE_DISPATCH_INVOKED`, `MERGE_DISPATCH_RETURNED`, `MERGE_DISPATCH_FALLBACK` | `amadeus-bolt.ts dispatch-event` |

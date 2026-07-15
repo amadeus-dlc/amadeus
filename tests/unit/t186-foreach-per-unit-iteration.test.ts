@@ -68,6 +68,8 @@ resetAidlcEnv();
 
 const BUN = process.execPath; // the bun running this test
 const ORCH = join(AMADEUS_SRC, "tools", "amadeus-orchestrate.ts");
+const BOLT = join(AMADEUS_SRC, "tools", "amadeus-bolt.ts");
+const LOG = join(AMADEUS_SRC, "tools", "amadeus-log.ts");
 
 // The record-relative prefix every resolved per-unit path is rooted at, the
 // active intent's record dir (relativeRecordDir over the seeded default intent).
@@ -93,6 +95,7 @@ interface Directive {
   gate?: unknown;
   produces?: string[];
   message?: string;
+  question?: string;
   [k: string]: unknown;
 }
 
@@ -108,6 +111,7 @@ function constructionState(current: string, skeletonStance?: string): string {
   const stanceLine = skeletonStance
     ? `- **Skeleton Stance**: ${skeletonStance}\n`
     : "";
+  const mark = (slug: string) => slug === current ? "[-]" : "[ ]";
   return `# AI-DLC State Tracking
 
 ## Project Information
@@ -125,12 +129,12 @@ ${stanceLine}
 ## Stage Progress
 
 ### CONSTRUCTION PHASE
-- [-] functional-design — EXECUTE
-- [ ] nfr-requirements — EXECUTE
-- [ ] nfr-design — EXECUTE
-- [ ] infrastructure-design — EXECUTE
-- [ ] code-generation — EXECUTE
-- [ ] build-and-test — EXECUTE
+- ${mark("functional-design")} functional-design — EXECUTE
+- ${mark("nfr-requirements")} nfr-requirements — EXECUTE
+- ${mark("nfr-design")} nfr-design — EXECUTE
+- ${mark("infrastructure-design")} infrastructure-design — EXECUTE
+- ${mark("code-generation")} code-generation — EXECUTE
+- ${mark("build-and-test")} build-and-test — EXECUTE
 
 ### INCEPTION PHASE
 - [-] application-design — EXECUTE
@@ -253,6 +257,35 @@ function runReport(proj: string, args: string[]): Directive {
       `runReport did not emit parseable JSON. status=${r.status}\n${r.stdout}\n${r.stderr}`,
     );
   }
+}
+
+function runTool(proj: string, tool: string, args: string[]) {
+  return spawnSync(BUN, [tool, ...args, "--project-dir", proj], {
+    encoding: "utf-8",
+    env: {
+      ...process.env,
+      AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "1",
+      AMADEUS_SKIP_ARTIFACT_GUARD: "1",
+    },
+  });
+}
+
+function setUnitDisposition(
+  proj: string,
+  disposition: "park" | "skip",
+  unit: string,
+  reason: string,
+): void {
+  const result = runTool(proj, BOLT, [
+    disposition,
+    "--stage",
+    "code-generation",
+    "--slug",
+    unit,
+    "--reason",
+    reason,
+  ]);
+  expect(result.status).toBe(0);
 }
 
 describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
@@ -439,7 +472,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     // Mark functional-design completed in the seeded state; no artifacts on disk.
     const statePath = seededStateFile(proj);
     const state = readFileSync(statePath, "utf-8").replace(
-      "- [-] functional-design — EXECUTE",
+      "- [ ] functional-design — EXECUTE",
       "- [x] functional-design — EXECUTE",
     );
     writeFileSync(statePath, state);
@@ -545,5 +578,166 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
       "approved",
     ]);
     expect(d.kind).not.toBe("error");
+  }, 30000);
+
+  test("14: a user-skipped failed code-generation unit is excluded and next advances", () => {
+    const proj = seedProject("code-generation", "on");
+    const statePath = seededStateFile(proj);
+    let state = readFileSync(statePath, "utf-8");
+    for (const slug of [
+      "functional-design",
+      "nfr-requirements",
+      "nfr-design",
+      "infrastructure-design",
+    ]) {
+      state = state
+        .replace(`- [-] ${slug} — EXECUTE`, `- [x] ${slug} — EXECUTE`)
+        .replace(`- [ ] ${slug} — EXECUTE`, `- [x] ${slug} — EXECUTE`);
+    }
+    state = state.replace(
+      "- [ ] code-generation — EXECUTE",
+      "- [-] code-generation — EXECUTE",
+    );
+    writeFileSync(statePath, state);
+    seedBoltDag(proj, ["alpha", "beta"]);
+
+    const first = runNext(proj);
+    expect(first.kind).toBe("run-stage");
+    expect(first.unit).toBe("alpha");
+
+    const failed = runTool(proj, BOLT, [
+      "fail",
+      "--name",
+      "Unit Alpha",
+      "--slug",
+      "alpha",
+      "--error",
+      "synthetic failure",
+    ]);
+    expect(failed.status).toBe(0);
+
+    const decision = runTool(proj, LOG, [
+      "decision",
+      "--stage",
+      "code-generation",
+      "--decision",
+      "Unit Alpha failed",
+      "--options",
+      "Skip alpha and proceed with beta,Retry alpha,Abort Construction",
+    ]);
+    expect(decision.status).toBe(0);
+
+    const answer = runTool(proj, LOG, [
+      "answer",
+      "--stage",
+      "code-generation",
+      "--details",
+      "1",
+    ]);
+    expect(answer.status).toBe(0);
+
+    setUnitDisposition(proj, "skip", "alpha", "human selected option 1");
+
+    const second = runNext(proj);
+    expect(second.kind).toBe("run-stage");
+    expect(second.stage).toBe("code-generation");
+    expect(second.unit).toBe("beta");
+    expect(second.gate).toBe(false);
+  }, 30000);
+
+  test("15: a parked sibling is not runnable while an active sibling in the same batch is", () => {
+    const proj = seedProject("code-generation", "on");
+    seedBoltDag(proj, ["alpha", "beta"]);
+    setUnitDisposition(proj, "park", "alpha", "waiting for an external surface");
+
+    const d = runNext(proj);
+    expect(d.kind).toBe("run-stage");
+    expect(d.unit).toBe("beta");
+    expect(d.gate).toBe(false);
+  }, 30000);
+
+  test("16: a parked-only remainder asks for unpark or skip and never presents the real gate", () => {
+    const proj = seedProject("code-generation", "on");
+    seedBoltDag(proj, ["alpha", "beta"]);
+    setUnitDisposition(proj, "park", "alpha", "waiting for an external surface");
+    coverUnit(proj, "beta", "code-generation", CG_PRODUCES);
+
+    const d = runNext(proj);
+    expect(d.kind).toBe("ask");
+    expect(d.question).toContain("alpha");
+    expect(d.question).toContain("parked");
+    expect(d.question).toContain("unpark");
+    expect(d.question).toContain("skip");
+    expect(d.gate).toBeUndefined();
+  }, 30000);
+
+  test("17: a skipped unit plus a covered sibling settles the batch and presents the real gate", () => {
+    const proj = seedProject("code-generation", "on");
+    seedBoltDag(proj, ["alpha", "beta"]);
+    setUnitDisposition(proj, "skip", "alpha", "human accepted the reduced scope");
+    coverUnit(proj, "beta", "code-generation", CG_PRODUCES);
+
+    const d = runNext(proj);
+    expect(d.kind).toBe("run-stage");
+    expect(d.unit).toBe("beta");
+    expect(d.gate).toBe(true);
+  }, 30000);
+
+  test("18: a parked dependency batch blocks routing into a later batch", () => {
+    const proj = seedProject("code-generation", "on");
+    seedMultiBatchDag(proj, [["alpha"], ["beta"]]);
+    setUnitDisposition(proj, "park", "alpha", "dependency unavailable");
+
+    const d = runNext(proj);
+    expect(d.kind).toBe("ask");
+    expect(d.question).toContain("alpha");
+    expect(d.question).toContain("parked");
+    expect(d.unit).not.toBe("beta");
+  }, 30000);
+
+  test("19: report rejects a parked unit but accepts skipped plus covered units", () => {
+    const parkedProj = seedProject("code-generation", "on");
+    seedBoltDag(parkedProj, ["alpha", "beta"]);
+    setUnitDisposition(parkedProj, "park", "alpha", "waiting for an external surface");
+    coverUnit(parkedProj, "beta", "code-generation", CG_PRODUCES);
+
+    const refused = runReport(parkedProj, [
+      "--stage",
+      "code-generation",
+      "--result",
+      "approved",
+    ]);
+    expect(refused.kind).toBe("error");
+    expect(refused.message).toContain("alpha");
+    expect(refused.message).toContain("parked");
+
+    const skippedProj = seedProject("code-generation", "on");
+    seedBoltDag(skippedProj, ["alpha", "beta"]);
+    setUnitDisposition(skippedProj, "skip", "alpha", "human accepted the reduced scope");
+    coverUnit(skippedProj, "beta", "code-generation", CG_PRODUCES);
+
+    const gate = runNext(skippedProj);
+    expect(gate.kind).toBe("run-stage");
+    expect(gate.gate).toBe(true);
+    const accepted = runReport(skippedProj, [
+      "--stage",
+      "code-generation",
+      "--result",
+      "approved",
+    ]);
+    expect(accepted.kind).not.toBe("error");
+  }, 30000);
+
+  test("20: skipping an upstream Unit does not implicitly unlock a dependent batch", () => {
+    const proj = seedProject("code-generation", "on");
+    seedMultiBatchDag(proj, [["alpha"], ["beta"]]);
+    setUnitDisposition(proj, "skip", "alpha", "human accepted the reduced scope");
+
+    const d = runNext(proj);
+    expect(d.kind).toBe("ask");
+    expect(d.question).toContain("alpha");
+    expect(d.question).toContain("dependency");
+    expect(d.question).toContain("resume");
+    expect(d.unit).not.toBe("beta");
   }, 30000);
 });

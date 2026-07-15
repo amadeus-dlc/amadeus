@@ -20,19 +20,19 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 461,
+    "total": 465,
     "enumeratedByClass": {
       "function": 234,
-      "audit": 78,
+      "audit": 79,
       "scope": 9,
       "stage": 32,
       "hook": 11,
-      "subcommand": 90,
+      "subcommand": 93,
       "render-surface": 7
     },
     "coveredByClass": {
       "function": 106,
-      "audit": 37,
+      "audit": 38,
       "scope": 9,
       "stage": 8,
       "hook": 11,
@@ -732,6 +732,18 @@
         {
           "file": "tests/integration/t28-integration-test-strategy.test.ts",
           "mechanism": "sdk"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "UNIT_DISPOSITION_CHANGED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/unit-disposition-ledger.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
@@ -4176,6 +4188,18 @@
     },
     {
       "unitClass": "subcommand",
+      "unitId": "amadeus-bolt park",
+      "minMechanism": "cli",
+      "coveredBy": [
+        {
+          "file": "tests/integration/unit-disposition-ledger.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "UNDER-MECHANISM"
+    },
+    {
+      "unitClass": "subcommand",
       "unitId": "amadeus-bolt release-merge",
       "minMechanism": "cli",
       "coveredBy": [
@@ -4188,6 +4212,18 @@
     },
     {
       "unitClass": "subcommand",
+      "unitId": "amadeus-bolt resume",
+      "minMechanism": "cli",
+      "coveredBy": [
+        {
+          "file": "tests/integration/unit-disposition-ledger.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "UNDER-MECHANISM"
+    },
+    {
+      "unitClass": "subcommand",
       "unitId": "amadeus-bolt set-autonomy",
       "minMechanism": "cli",
       "coveredBy": [
@@ -4197,6 +4233,18 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-bolt skip",
+      "minMechanism": "cli",
+      "coveredBy": [
+        {
+          "file": "tests/integration/unit-disposition-ledger.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "UNDER-MECHANISM"
     },
     {
       "unitClass": "subcommand",

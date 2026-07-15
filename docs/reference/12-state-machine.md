@@ -177,7 +177,7 @@ Session hooks check for the active intent's `amadeus-state.md` (under `amadeus/s
 
 ## Audit event taxonomy
 
-**78 events**, grouped below into 18 categories (the canonical `audit-format.md` registry splits the same 78 into 19 - the grouping is presentational, the event set is the invariant). Every event has exactly one tool or hook emitter, except for events pre-registered for an upcoming release whose Emitter cell reads `Reserved (v0.4.0 PR N)`, `Reserved (v0.5.0 PR N)`, or `Reserved (v0.6.0 PR N)` - these are skipped by the drift test's forward check until the consumer PR ships the emitter. The drift test `tests/integration/t48-audit-event-emitters.test.ts` enforces forward/reverse/tertiary/pairing/MD-MD consistency between this chapter's tables and the code.
+**79 events**, grouped below into 18 categories (the canonical `audit-format.md` registry splits the same 79 into 19 - the grouping is presentational, the event set is the invariant). Every event has exactly one tool or hook emitter, except for events pre-registered for an upcoming release whose Emitter cell reads `Reserved (v0.4.0 PR N)`, `Reserved (v0.5.0 PR N)`, or `Reserved (v0.6.0 PR N)` - these are skipped by the drift test's forward check until the consumer PR ships the emitter. The drift test `tests/integration/t48-audit-event-emitters.test.ts` enforces forward/reverse/tertiary/pairing/MD-MD consistency between this chapter's tables and the code.
 
 ### Workflow lifecycle
 
@@ -251,6 +251,7 @@ Session hooks check for the active intent's `amadeus-state.md` (under `amadeus/s
 | `BOLT_COMPLETED` | `tools/amadeus-bolt.ts` | Paired with a prior `BOLT_STARTED` |
 | `BOLT_FAILED` | `tools/amadeus-bolt.ts` (`fail` + `abort`) | `--succeeded-siblings` captures parallel-batch survivors; `abort` adds `Reason: aborted` field for sub-classification |
 | `AUTONOMY_MODE_SET` | `tools/amadeus-bolt.ts` | Atomically updates `Construction Autonomy Mode` field; validates field exists first (audit-first) |
+| `UNIT_DISPOSITION_CHANGED` | `tools/amadeus-unit-disposition.ts` | Conductor-owned, audit-backed `(stage, Unit)` disposition transition invoked by `amadeus-bolt.ts park`, `skip`, and `resume`; one fresh answer is consumed per change |
 
 ### Session
 

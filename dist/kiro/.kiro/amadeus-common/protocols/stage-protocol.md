@@ -121,10 +121,11 @@ For Bolts after the walking skeleton, the Bolt-level gate is presented only if `
 
 When a Bolt's code-generation returns failure, **always halt and present the halt-and-ask prompt regardless of autonomy mode**. This is the one case where `autonomous` mode stops to consult the user.
 
-- Solo Bolt failure: halt immediately, emit `BOLT_FAILED` (with `--slug` for halt-and-ask correlation), present retry / skip / abort.
-- Parallel batch partial failure: wait for all parallel Tasks to return, preserve successful Bolts' artifacts, emit `BOLT_FAILED` for the failed Bolt with `Succeeded=[names]`, present `"Bolts [X, Y] succeeded, Bolt [Z] failed with: [error]. Options: retry Z, skip Z, abort Construction."`
+- Solo Bolt failure: halt immediately, emit `BOLT_FAILED` (with `--slug` for halt-and-ask correlation), present retry / park / skip / abort.
+- Parallel batch partial failure: wait for all parallel Tasks to return, preserve successful Bolts' artifacts, emit `BOLT_FAILED` for the failed Bolt with `Succeeded=[names]`, present `"Bolts [X, Y] succeeded, Bolt [Z] failed with: [error]. Options: retry Z, park Z, skip Z, abort Construction."`
 - Retry: re-run the failed Bolt only inside the existing worktree.
-- Skip: mark `[S]` in state with reason, proceed to next batch. Worktree at `<path>` is preserved.
+- Park: after recording the human answer, run `amadeus-bolt park --stage <stage> --slug <slug> --reason <reason>`. The Unit becomes non-runnable but does not settle the stage; independent siblings in the same batch may continue, while dependent batches and the stage gate remain blocked. Worktree at `<path>` is preserved. Resume with `amadeus-bolt resume --stage <stage> --slug <slug> --reason <reason>`.
+- Skip: after recording the human answer, run `amadeus-bolt skip --stage <stage> --slug <slug> --reason <reason>`. The Unit becomes terminally settled for this stage without fabricating its required artifacts. A skip never satisfies a dependent Unit implicitly. Worktree at `<path>` is preserved.
 - Abort: stop Construction; user can resume later. Worktree at `<path>` is preserved.
 
 The orchestrator runs `bun .kiro/tools/amadeus-worktree.ts info --slug <slug>` to obtain the worktree `<path>` and `<branch_name>` deterministically before composing the halt-and-ask question. See `SKILL.md` § "Halt-and-ask failure handling" for the full tool-call sequence and the `worktree-info-schema.md` knowledge file for the JSON contract.
@@ -136,8 +137,10 @@ multiSelect: false
 options:
   - label: Retry
     description: Re-run Bolt [Z] in the existing worktree.
+  - label: Park
+    description: Defer Bolt [Z]; continue independent siblings but keep the stage open.
   - label: Skip
-    description: Mark Bolt [Z] skipped; worktree preserved.
+    description: Settle Bolt [Z] as skipped for this stage; worktree preserved.
   - label: Abort
     description: Stop Construction; worktree preserved.
 ```
