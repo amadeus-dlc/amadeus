@@ -131,6 +131,36 @@ describe("t223 settings skeleton — load", () => {
     }
   });
 
+  test("a malformed on-disk file fails closed with the resolved path", () => {
+    const projectDir = makeProjectDir("settings-malformed-");
+    try {
+      writeSettingsFile(projectDir, "default", "{ not json");
+      const result = AmadeusSettings.load(projectDir, "default");
+      expect(result.valid).toBe(false);
+      if (result.valid) return;
+      expect(result.errors[0]).toContain("invalid JSON");
+      expect(result.path).toContain(join("spaces", "default", "settings.json"));
+    } finally {
+      rmSync(projectDir, { recursive: true, force: true });
+    }
+  });
+
+  test("a non-ENOENT read failure fails closed (ENOTDIR injection)", () => {
+    const projectDir = makeProjectDir("settings-enotdir-");
+    try {
+      const spacesDir = join(projectDir, "amadeus", "spaces");
+      mkdirSync(join(projectDir, "amadeus"), { recursive: true });
+      writeFileSync(spacesDir, "a regular file where the spaces directory should be");
+      const result = AmadeusSettings.load(projectDir, "default");
+      expect(result.valid).toBe(false);
+      if (result.valid) return;
+      expect(result.errors[0]).toContain("failed to read settings");
+      expect(result.path).toContain("settings.json");
+    } finally {
+      rmSync(projectDir, { recursive: true, force: true });
+    }
+  });
+
   test("a settings.json outside spaces/<space>/ is not read", () => {
     const projectDir = makeProjectDir("settings-wrongloc-");
     try {
