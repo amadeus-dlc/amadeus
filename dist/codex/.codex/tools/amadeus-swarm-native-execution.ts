@@ -16,6 +16,7 @@ import type {
   LaunchInput,
   MaterializedAuxiliaryResourceSet,
   MaterializedAuxiliaryResource,
+  NativeExecutionBinding,
   NormalizedDriverEvent,
   NormalizeContext,
   ProcessTerminal,
@@ -87,6 +88,7 @@ export type PreparedNativeRun = Readonly<{
   capturePlanDigest: string;
   transportKind: CoordinatorTransport["kind"];
   captureKind: EvidenceCapturePlan["kind"];
+  binding?: NativeExecutionBinding;
 }>;
 
 export type NativeDispatchCheckpoint = Readonly<{
@@ -439,6 +441,77 @@ function captureIdentityMatches(
   );
 }
 
+const SHA256_DIGEST_PATTERN = /^[0-9a-f]{64}$/;
+
+function probeBindingShapeIsValid(
+  probeBinding: NativeExecutionBinding["probeBinding"],
+  input: NativeLifecycleExecutionInput,
+): boolean {
+  const hasResolvedModel = probeBinding.resolvedModelId !== undefined;
+  return (
+    isRecord(probeBinding) &&
+    hasExactKeys(probeBinding, [
+      "schemaVersion",
+      "driver",
+      "modeIdentifier",
+      ...(hasResolvedModel ? ["resolvedModelId"] : []),
+      "seedDigest",
+      "finalDigest",
+    ]) &&
+    probeBinding.schemaVersion === 1 &&
+    probeBinding.driver === input.context.driver &&
+    nonEmpty(probeBinding.modeIdentifier) &&
+    (!hasResolvedModel || nonEmpty(probeBinding.resolvedModelId)) &&
+    SHA256_DIGEST_PATTERN.test(probeBinding.seedDigest) &&
+    SHA256_DIGEST_PATTERN.test(probeBinding.finalDigest)
+  );
+}
+
+function probeBindingModeIsValid(probeBinding: NativeExecutionBinding["probeBinding"]): boolean {
+  if (probeBinding.driver !== "codex-ultra") return true;
+  return (
+    nonEmpty(probeBinding.resolvedModelId) &&
+    probeBinding.modeIdentifier === `codex-ultra-v1:${probeBinding.resolvedModelId}`
+  );
+}
+
+function executionPolicyDigestsAreValid(binding: NativeExecutionBinding): boolean {
+  return (
+    SHA256_DIGEST_PATTERN.test(binding.toolEnvironmentPolicyDigest) &&
+    SHA256_DIGEST_PATTERN.test(binding.sandboxPolicyDigest)
+  );
+}
+
+function nativeExecutionBindingIsValid(
+  binding: NativeExecutionBinding,
+  input: NativeLifecycleExecutionInput,
+): boolean {
+  const probeBinding = binding.probeBinding;
+  return (
+    hasExactKeys(binding, [
+      "schemaVersion",
+      "probeBinding",
+      "toolEnvironmentPolicyDigest",
+      "sandboxPolicyDigest",
+    ]) &&
+    binding.schemaVersion === 1 &&
+    probeBindingShapeIsValid(probeBinding, input) &&
+    probeBindingModeIsValid(probeBinding) &&
+    executionPolicyDigestsAreValid(binding) &&
+    input.launchInput.plan.probe.binding !== undefined &&
+    digestValue(probeBinding) === digestValue(input.launchInput.plan.probe.binding)
+  );
+}
+
+function executionBindingMatches(
+  binding: NativeExecutionBinding | undefined,
+  input: NativeLifecycleExecutionInput,
+): boolean {
+  const probeBinding = input.launchInput.plan.probe.binding;
+  if (binding === undefined) return probeBinding === undefined;
+  return probeBinding !== undefined && nativeExecutionBindingIsValid(binding, input);
+}
+
 function fixedBindingReceipt(
   plan: Extract<EvidenceCapturePlan, Readonly<{ kind: "fixed-provider-path" }>>,
   nativeRunId: string,
@@ -496,7 +569,13 @@ function validateExecutionPlan(
   input: NativeLifecycleExecutionInput,
 ): void {
   requireCondition(
-    hasExactKeys(execution, ["launch", "capture", "captureIdentity", "resources"]) &&
+    hasExactKeys(execution, [
+      "launch",
+      "capture",
+      "captureIdentity",
+      "resources",
+      ...(execution.binding === undefined ? [] : ["binding"]),
+    ]) &&
       hasExactKeys(execution.launch, ["executable", "args", "cwd", "env", "transport", "timeoutMs"]) &&
       nonEmpty(execution.launch.executable) &&
       Array.isArray(execution.launch.args) &&
@@ -509,6 +588,7 @@ function validateExecutionPlan(
       transportIsValid(execution.launch.transport),
     "EXECUTION_PLAN_INVALID",
   );
+  requireCondition(executionBindingMatches(execution.binding, input), "EXECUTION_BINDING_MISMATCH");
   requireCondition(
     digestValue(execution.resources) === preparation.preparationDigest,
     "RESOURCE_PLAN_MISMATCH",
@@ -1021,6 +1101,14 @@ async function startNativeRun(input: Readonly<{
     capturePlanDigest: digestValue(execution.capture),
     transportKind: execution.launch.transport.kind,
     captureKind: execution.capture.kind,
+    ...(execution.binding === undefined
+      ? {}
+      : {
+          binding: Object.freeze({
+            ...execution.binding,
+            probeBinding: Object.freeze({ ...execution.binding.probeBinding }),
+          }),
+        }),
   });
   await lifecycle.onResourcesPrepared(preparedNativeRun);
   const capture = await input.ports.capture.start({

@@ -92,11 +92,21 @@ export type ProbeCheck = Readonly<{
   diagnosticCode: CapabilityDiagnosticCode;
 }>;
 
+export type ProbeBindingReferenceV1 = Readonly<{
+  schemaVersion: 1;
+  driver: NativeDriver;
+  modeIdentifier: string;
+  resolvedModelId?: string;
+  seedDigest: string;
+  finalDigest: string;
+}>;
+
 export type ProbeResult = Readonly<{
   status: ProbeStatus;
   reason: FallbackReason;
   cliVersion?: string;
   modeIdentifier?: string;
+  binding?: ProbeBindingReferenceV1;
   checks: readonly ProbeCheck[];
   isAvailable(): this is AvailableProbeResult;
   diagnosticCodes(): readonly CapabilityDiagnosticCode[];

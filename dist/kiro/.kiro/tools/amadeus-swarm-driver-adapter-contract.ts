@@ -14,6 +14,7 @@ import {
   type FallbackReason,
   type Harness,
   type NativeDriver,
+  type ProbeBindingReferenceV1,
   type ProbeResult,
   type RequestedDriver,
   type SelectedDriver,
@@ -185,11 +186,19 @@ export type LaunchSpec = Readonly<{
   timeoutMs: number;
 }>;
 
+export type NativeExecutionBinding = Readonly<{
+  schemaVersion: 1;
+  probeBinding: ProbeBindingReferenceV1;
+  toolEnvironmentPolicyDigest: string;
+  sandboxPolicyDigest: string;
+}>;
+
 export type AdapterExecutionPlan = Readonly<{
   launch: LaunchSpec;
   capture: EvidenceCapturePlan;
   captureIdentity: CaptureIdentity;
   resources: readonly AuxiliaryResourcePlan[];
+  binding?: NativeExecutionBinding;
 }>;
 
 export type RawStreamEvidenceFrame = Readonly<{

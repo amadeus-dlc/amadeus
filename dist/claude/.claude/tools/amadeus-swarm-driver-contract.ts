@@ -27,6 +27,7 @@ import {
   type NativeDriver,
   type AvailableProbeResult as AvailableProbeResultShape,
   type ProbeCheck as ProbeCheckShape,
+  type ProbeBindingReferenceV1,
   type ProbeResult as ProbeResultShape,
   type ProbeStatus,
   type RequestedDriver,
@@ -302,10 +303,28 @@ export type ProbeResultInput = Readonly<{
   reason: FallbackReason;
   cliVersion?: string;
   modeIdentifier?: string;
+  binding?: ProbeBindingReferenceV1;
   checks?: readonly ProbeCheck[];
 }>;
 
 type AvailableProbeResultInput = ProbeResultInput & Readonly<{ status: "available"; reason: "none" }>;
+
+const SHA256_DIGEST_PATTERN = /^[0-9a-f]{64}$/;
+const CODEX_PROBE_MODE_IDENTIFIER_PREFIX = "codex-ultra-v1:";
+
+function probeBindingInputError(input: ProbeResultInput): SelectorError | undefined {
+  const binding = input.binding;
+  if (binding === undefined) return undefined;
+  if (validateProbeBindingProjection(binding, "$.binding") !== null) {
+    return SelectorError.invalidCapability(undefined, "CAPABILITY_CHECK_INVALID");
+  }
+  if (input.status !== "available") {
+    return SelectorError.invalidCapability(binding.driver, "CAPABILITY_STATUS_REASON_MISMATCH");
+  }
+  return binding.modeIdentifier === input.modeIdentifier
+    ? undefined
+    : SelectorError.invalidCapability(binding.driver, "CAPABILITY_CHECK_INVALID");
+}
 
 function buildProbeResult(input: AvailableProbeResultInput): Result<AvailableProbeResult, SelectorError>;
 function buildProbeResult(input: ProbeResultInput): Result<ProbeResult, SelectorError>;
@@ -316,6 +335,8 @@ function buildProbeResult(input: ProbeResultInput): Result<ProbeResult, Selector
   if (!correlationValid) {
     return Result.err(SelectorError.invalidCapability(undefined, "CAPABILITY_STATUS_REASON_MISMATCH"));
   }
+  const bindingError = probeBindingInputError(input);
+  if (bindingError) return Result.err(bindingError);
   const checks: ProbeCheck[] = [];
   for (const check of input.checks ?? []) {
     if (
@@ -336,6 +357,7 @@ function buildProbeResult(input: ProbeResultInput): Result<ProbeResult, Selector
       reason: input.reason,
       ...(input.cliVersion === undefined ? {} : { cliVersion: input.cliVersion }),
       ...(input.modeIdentifier === undefined ? {} : { modeIdentifier: input.modeIdentifier }),
+      ...(input.binding === undefined ? {} : { binding: Object.freeze({ ...input.binding }) }),
       checks: frozenChecks,
       isAvailable(): this is AvailableProbeResult {
         return input.status === "available";
@@ -473,6 +495,7 @@ export type RedactedProbeResult = Readonly<{
   reason: FallbackReason;
   cliVersion?: string;
   modeIdentifier?: string;
+  binding?: ProbeBindingReferenceV1;
   checks: readonly ProbeCheck[];
 }>;
 
@@ -796,6 +819,12 @@ function availableProbeInvariantError(probe: unknown): string | null {
   if (probe.modeIdentifier !== undefined && typeof probe.modeIdentifier !== "string") {
     return "$.probe.modeIdentifier";
   }
+  if (probe.binding !== undefined) {
+    const bindingError = validateProbeBindingProjection(probe.binding, "$.probe.binding");
+    if (bindingError) return bindingError;
+    const binding = probe.binding as ProbeBindingReferenceV1;
+    if (binding.modeIdentifier !== probe.modeIdentifier) return "$.probe.binding.modeIdentifier";
+  }
   if (!Array.isArray(probe.checks)) return "$.probe.checks";
   return probe.checks.every(isAvailableProbeCheck) ? null : "$.probe.checks";
 }
@@ -813,13 +842,30 @@ function nativeSelectionInvariantError(input: Readonly<Record<string, unknown>>)
       candidate.topologies.includes(topology),
   );
   if (variant === undefined) return "$.requested";
-  if (!isOneOf(input.fallbackReason, FALLBACK_REASON_VALUES)) return "$.fallbackReason";
-  if (variant.fallbackPolicy === "none" && input.fallbackReason !== "none") return "$.fallbackReason";
-  if (variant.fallbackPolicy === "non-none" && !isOneOf(input.fallbackReason, FALLBACK_REASON_PRIORITY)) {
-    return "$.fallbackReason";
-  }
+  const fallbackError = nativeFallbackInvariantError(input.fallbackReason, variant.fallbackPolicy);
+  if (fallbackError) return fallbackError;
   const capabilityError = validateCapabilityDetails(input.capabilityDetails, "$.capabilityDetails");
-  return capabilityError ?? availableProbeInvariantError(input.probe);
+  const probeError = availableProbeInvariantError(input.probe);
+  if (capabilityError ?? probeError) return capabilityError ?? probeError;
+  return selectedProbeBindingDriverError(input);
+}
+
+function nativeFallbackInvariantError(
+  fallbackReason: unknown,
+  fallbackPolicy: NativeSelectionVariant["fallbackPolicy"],
+): string | null {
+  if (!isOneOf(fallbackReason, FALLBACK_REASON_VALUES)) return "$.fallbackReason";
+  if (fallbackPolicy === "none" && fallbackReason !== "none") return "$.fallbackReason";
+  return fallbackPolicy === "non-none" && !isOneOf(fallbackReason, FALLBACK_REASON_PRIORITY)
+    ? "$.fallbackReason"
+    : null;
+}
+
+function selectedProbeBindingDriverError(input: Readonly<Record<string, unknown>>): string | null {
+  const probe = input.probe as Readonly<Record<string, unknown>>;
+  return isPlainObject(probe.binding) && probe.binding.driver !== input.selected
+    ? "$.probe.binding.driver"
+    : null;
 }
 
 function floorSelectionInvariantError(input: Readonly<Record<string, unknown>>): string | null {
@@ -860,6 +906,7 @@ function redactProbe(probe: ProbeResult): RedactedProbeResult {
     reason: probe.reason,
     ...(probe.cliVersion === undefined ? {} : { cliVersion: probe.cliVersion }),
     ...(probe.modeIdentifier === undefined ? {} : { modeIdentifier: probe.modeIdentifier }),
+    ...(probe.binding === undefined ? {} : { binding: { ...probe.binding } }),
     checks: probe.checks.map((check) => ({ ...check })),
   });
 }
@@ -1094,6 +1141,49 @@ function validateProbeChecks(value: unknown, path: string): string | null {
   return null;
 }
 
+function validateProbeBindingIdentity(value: Record<string, unknown>, path: string): string | null {
+  if (value.schemaVersion !== 1) return `${path}.schemaVersion`;
+  if (!isOneOf(value.driver, NATIVE_DRIVER_VALUES)) return `${path}.driver`;
+  if (typeof value.modeIdentifier !== "string" || value.modeIdentifier.length === 0) {
+    return `${path}.modeIdentifier`;
+  }
+  if (
+    value.resolvedModelId !== undefined &&
+    (typeof value.resolvedModelId !== "string" || value.resolvedModelId.length === 0)
+  ) {
+    return `${path}.resolvedModelId`;
+  }
+  if (value.driver === "codex-ultra") {
+    if (typeof value.resolvedModelId !== "string" || value.resolvedModelId.length === 0) {
+      return `${path}.resolvedModelId`;
+    }
+    if (value.modeIdentifier !== `${CODEX_PROBE_MODE_IDENTIFIER_PREFIX}${value.resolvedModelId}`) {
+      return `${path}.modeIdentifier`;
+    }
+  }
+  return null;
+}
+
+function validateProbeBindingDigests(value: Record<string, unknown>, path: string): string | null {
+  if (typeof value.seedDigest !== "string" || !SHA256_DIGEST_PATTERN.test(value.seedDigest)) {
+    return `${path}.seedDigest`;
+  }
+  return typeof value.finalDigest === "string" && SHA256_DIGEST_PATTERN.test(value.finalDigest)
+    ? null
+    : `${path}.finalDigest`;
+}
+
+function validateProbeBindingProjection(value: unknown, path: string): string | null {
+  if (!isPlainObject(value)) return path;
+  const unknown = unknownField(
+    value,
+    ["schemaVersion", "driver", "modeIdentifier", "resolvedModelId", "seedDigest", "finalDigest"],
+    path,
+  );
+  if (unknown) return unknown;
+  return validateProbeBindingIdentity(value, path) ?? validateProbeBindingDigests(value, path);
+}
+
 function probeStatusReasonCorrelate(value: Record<string, unknown>): boolean {
   if (value.status === "available") return value.reason === "none";
   return value.reason !== "none";
@@ -1103,14 +1193,37 @@ function hasFailedProbeCheck(value: unknown): boolean {
   return Array.isArray(value) && value.some((check) => isPlainObject(check) && !check.ok);
 }
 
+function validateProbeProjectionMetadata(value: Record<string, unknown>, path: string): string | null {
+  if (value.cliVersion !== undefined && typeof value.cliVersion !== "string") return `${path}.cliVersion`;
+  return value.modeIdentifier !== undefined && typeof value.modeIdentifier !== "string"
+    ? `${path}.modeIdentifier`
+    : null;
+}
+
+function validateProbeProjectionBinding(value: Record<string, unknown>, path: string): string | null {
+  if (value.binding === undefined) return null;
+  if (value.status !== "available") return `${path}.binding`;
+  const bindingError = validateProbeBindingProjection(value.binding, `${path}.binding`);
+  if (bindingError) return bindingError;
+  return (value.binding as ProbeBindingReferenceV1).modeIdentifier === value.modeIdentifier
+    ? null
+    : `${path}.binding.modeIdentifier`;
+}
+
 function validateProbeProjection(value: unknown, path: string): string | null {
   if (!isPlainObject(value)) return path;
-  const unknown = unknownField(value, ["status", "reason", "cliVersion", "modeIdentifier", "checks"], path);
+  const unknown = unknownField(
+    value,
+    ["status", "reason", "cliVersion", "modeIdentifier", "binding", "checks"],
+    path,
+  );
   if (unknown) return unknown;
   if (!isOneOf(value.status, ["available", "unavailable", "error"] as const)) return `${path}.status`;
   if (!isOneOf(value.reason, FALLBACK_REASON_VALUES)) return `${path}.reason`;
-  if (value.cliVersion !== undefined && typeof value.cliVersion !== "string") return `${path}.cliVersion`;
-  if (value.modeIdentifier !== undefined && typeof value.modeIdentifier !== "string") return `${path}.modeIdentifier`;
+  const metadataError = validateProbeProjectionMetadata(value, path);
+  if (metadataError) return metadataError;
+  const bindingError = validateProbeProjectionBinding(value, path);
+  if (bindingError) return bindingError;
   const checksError = validateProbeChecks(value.checks, `${path}.checks`);
   if (checksError) return checksError;
   if (!probeStatusReasonCorrelate(value)) return `${path}.reason`;
@@ -1301,6 +1414,7 @@ function canonicalProbeProjection(value: RedactedProbeResult): RedactedProbeResu
     reason: value.reason,
     ...(value.cliVersion === undefined ? {} : { cliVersion: value.cliVersion }),
     ...(value.modeIdentifier === undefined ? {} : { modeIdentifier: value.modeIdentifier }),
+    ...(value.binding === undefined ? {} : { binding: { ...value.binding } }),
     checks: deduped,
   };
 }
@@ -1449,6 +1563,19 @@ const PROBE_PROJECTION_SCHEMA_V1 = {
     reason: { const: "none" },
     cliVersion: { type: "string" },
     modeIdentifier: { type: "string" },
+    binding: {
+      type: "object",
+      additionalProperties: false,
+      required: ["schemaVersion", "driver", "modeIdentifier", "seedDigest", "finalDigest"],
+      properties: {
+        schemaVersion: { const: 1 },
+        driver: { enum: NATIVE_DRIVER_VALUES },
+        modeIdentifier: { type: "string", minLength: 1 },
+        resolvedModelId: { type: "string", minLength: 1 },
+        seedDigest: { type: "string", pattern: "^[0-9a-f]{64}$" },
+        finalDigest: { type: "string", pattern: "^[0-9a-f]{64}$" },
+      },
+    },
     checks: {
       type: "array",
       items: {
