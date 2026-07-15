@@ -352,6 +352,7 @@ describe("probe, capability, and registration contracts", () => {
       finalDigest: "b".repeat(64),
     } as const;
     const invalid = [
+      { ...common, modeIdentifier: "", resolvedModelId: "model" },
       { ...common, modeIdentifier: "codex-ultra", resolvedModelId: "model" },
       { ...common, modeIdentifier: "codex-ultra-v1:model" },
       { ...common, modeIdentifier: "codex-ultra-v1:model", resolvedModelId: "other-model" },
@@ -421,6 +422,18 @@ describe("probe, capability, and registration contracts", () => {
 
     expect((parsed.toJSON() as RedactedNativeSelection).probe.binding).toEqual(probe.binding);
     expect(Object.isFrozen((parsed.toJSON() as RedactedNativeSelection).probe.binding)).toBe(true);
+    const redacted = outcome.toRedactedJSON() as RedactedNativeSelection;
+    expect(SelectionOutcomeProjection.parse({
+      ...redacted,
+      probe: {
+        ...redacted.probe,
+        binding: {
+          ...redacted.probe.binding,
+          modeIdentifier: "codex-ultra-v1:other-model",
+          resolvedModelId: "other-model",
+        },
+      },
+    }).type).toBe("err");
   });
 
   test("rejects unknown and secret-like probe binding fields without echoing values", () => {

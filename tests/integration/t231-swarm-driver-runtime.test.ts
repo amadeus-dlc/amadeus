@@ -1920,8 +1920,23 @@ describe("t231 swarm driver runtime", () => {
         },
       },
     };
+    const nonCodexBinding = {
+      ...recoveryContext,
+      preparedNativeRun: {
+        ...recoveryContext.preparedNativeRun,
+        binding: {
+          ...recoveryContext.preparedNativeRun.binding,
+          probeBinding: {
+            ...recoveryContext.preparedNativeRun.binding.probeBinding,
+            driver: "kiro-subagent" as const,
+            modeIdentifier: "kiro-subagent",
+            resolvedModelId: "kiro-model",
+          },
+        },
+      },
+    };
 
-    for (const candidate of [withoutSelectedContext, mismatched]) {
+    for (const candidate of [withoutSelectedContext, mismatched, nonCodexBinding]) {
       expect(parseAttemptCheckpoint(withStateDigest({
         ...failed,
         failure: { ...failed.failure, recoveryContext: candidate },

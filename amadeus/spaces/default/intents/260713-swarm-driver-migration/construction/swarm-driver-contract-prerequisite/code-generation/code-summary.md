@@ -27,7 +27,7 @@ U-04 `codex-native-driver` が安全に実装できるよう、U-01/U-02のprovi
 
 - focused回帰: 12ファイル、381 tests、失敗0。
 - review修正後focused: 4ファイル、87 tests、失敗0。
-- full coverage CI: 363 files、5,278 assertions、失敗0。
+- full coverage CI: 363 files、失敗0。
 - project coverage gate: 66.5213%、baseline比 +25.5819pp。
 - typecheck、lint、complexity gate、coverage registry、packaging parity、dist check、promote-self check、diff checkはgreen。
 - AWS credential依存のlive testとClaude substrate依存testは環境条件によりskipされた。
