@@ -25,6 +25,7 @@ my-project/
 │   ├── active-space              ← cursor: which space you're in (gitignored, per-user)
 │   └── spaces/
 │       ├── default/              ★ the only space most people ever see
+│       │   ├── settings.json     WORKSPACE SETTINGS — interactionModes(任意; 不在時は既定値)
 │       │   ├── memory/           THE METHOD — how this team works (committed)
 │       │   │   ├── org.md          framework defaults
 │       │   │   ├── team.md         your team's practices  (overrides org)

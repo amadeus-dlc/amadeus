@@ -123,6 +123,7 @@ amadeus/
 ├── .amadeus-clone-id                                     # Audit shard name for this clone (gitignored, machine-local)
 ├── .amadeus-sessions/                                    # Conversation-to-intent map (gitignored)
 └── spaces/<space>/
+    ├── settings.json                                     # Canonical workspace settings (interactionModes; optional, committed)
     ├── memory/                                           # Rule layers (committed)
     │   ├── org.md                                        # Framework defaults
     │   ├── team.md                                       # Team practices (overrides org)
@@ -158,6 +159,18 @@ amadeus/
 | `amadeus/` | Harness-neutral AI-DLC workspace. Holds spaces, intents, state, audit, artifacts, and team memory | `memory/` and artifacts are normal review targets. Runtime scratch files should not be edited | Committed + partly gitignored |
 
 `agents/`, `amadeus-common/`, and `hooks/` are part of the engine, not AI-DLC output artifacts. User- and team-owned long-lived information belongs under `amadeus/spaces/<space>/memory/` and `amadeus/spaces/<space>/knowledge/`, not under a harness-specific engine directory.
+
+### 1.2 Canonical Workspace Settings
+
+| File | Description | git |
+|---|---|---|
+| `spaces/<space>/settings.json` | Canonical per-space workspace settings. Optional — when absent, defaults are in effect | Committed |
+
+- **Path**: `amadeus/spaces/<space>/settings.json` — the sole location read (no fallback search).
+- **Format**: JSON. The one known key is `interactionModes`, an object of four booleans: `guideMe`, `grillMe`, `editFile`, `chat`.
+- **Defaults**: every interaction mode is `true`. An absent file, or an absent individual key, resolves to this default posture.
+- **Error policy**: fail-closed. An unknown key (root or under `interactionModes`), a type mismatch, or disabling all four modes at once (all-modes-off) makes the file `invalid`; every violation is reported, not just the first.
+- **Doctor**: `/amadeus --doctor` reports a `settings.json` row — absent (defaults in effect), valid (with the resolved path), or invalid (with the parse errors as the fix text).
 
 ---
 

@@ -97,6 +97,7 @@ import {
   harnessDir,
   rulesSubdir,
 } from "./amadeus-lib.ts";
+import { settingsDoctorCheck } from "./amadeus-settings.ts";
 import { validateStageFrontmatter } from "./amadeus-stage-schema.ts";
 import { PHASE_PROGRESS_FIELD } from "./amadeus-state.ts";
 import { AMADEUS_VERSION } from "./amadeus-version.ts";
@@ -890,6 +891,11 @@ export function handleDoctor(projectDir: string): void {
       fix: `valid values: ${[...validScopes()].join(", ")}`,
     });
   }
+
+  // 4b. Canonical settings.json (U3) — spawn-only wiring, precedent Check 8's
+  // checkPhaseProgressConsistency line: the judgment lives in the in-process-
+  // tested settingsDoctorCheck seam.
+  results.push(settingsDoctorCheck(projectDir));
 
   // 5. Workspace shell ready (P4: no --init artifact to check). Readiness is the
   // SHIPPED SHELL: the harness engine dir (.claude/.kiro/.codex) present AND the
