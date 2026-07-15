@@ -700,7 +700,12 @@ type BoundFinalizeExecutionInput = Readonly<{
 
 type FinalizeStep = Readonly<{ claim: FinalizeClaim; progress: FinalizeProgress }>;
 
-async function failPendingUnits(
+// Fails every expected unit that has not reached a terminal state (completed
+// or failed). Crash-resumed progress can hold units in intermediate merge
+// states (metadata-merging/metadata-merged/code-merging); sweeping them keeps
+// the terminal envelope covering every expected unit, which
+// validateRefereeEnvelope enforces on the consumer side.
+async function failUnsettledUnits(
   input: BoundFinalizeExecutionInput,
   claim: FinalizeClaim,
   progress: FinalizeProgress,
@@ -708,7 +713,8 @@ async function failPendingUnits(
 ): Promise<FinalizeProgress> {
   let next = progress;
   for (const { unit } of input.binding.expectedUnits) {
-    if (next.units[unit].state === "pending") {
+    const state = next.units[unit].state;
+    if (state !== "completed" && state !== "failed") {
       next = await markFailed(input.store, claim, next, input.binding, unit, code);
     }
   }
@@ -759,20 +765,6 @@ async function validateExpectedUnits(
     input.store.update(claim, progress);
   }
   return Object.freeze({ claim, progress, mergeBlocked });
-}
-
-async function failVerifiedUnits(
-  input: BoundFinalizeExecutionInput,
-  claim: FinalizeClaim,
-  progress: FinalizeProgress,
-): Promise<FinalizeProgress> {
-  let next = progress;
-  for (const expected of input.binding.expectedUnits) {
-    if (next.units[expected.unit].state === "verified") {
-      next = await markFailed(input.store, claim, next, input.binding, expected.unit, "REFEREE_FINALIZE_FAILED");
-    }
-  }
-  return next;
 }
 
 async function mergeUnit(
@@ -948,13 +940,13 @@ export async function executeBoundFinalize(input: BoundFinalizeExecutionInput): 
       .sort((a, b) => a.unit.localeCompare(b.unit));
     const requestFailure = await input.ports.validateRequest(input.binding, { completedUnits });
     if (requestFailure) {
-      progress = await failPendingUnits(input, claim, progress, requestFailure);
+      progress = await failUnsettledUnits(input, claim, progress, requestFailure);
     } else {
       const validated = await validateExpectedUnits(input, claim, progress);
       claim = validated.claim;
       progress = validated.progress;
       if (validated.mergeBlocked) {
-        progress = await failVerifiedUnits(input, claim, progress);
+        progress = await failUnsettledUnits(input, claim, progress, "REFEREE_FINALIZE_FAILED");
       } else {
         ({ claim, progress } = await mergeExpectedUnits(input, acquisition.claimPath, claim, progress));
       }

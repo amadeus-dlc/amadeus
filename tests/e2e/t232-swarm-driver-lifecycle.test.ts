@@ -352,6 +352,44 @@ describe("t232 bound swarm lifecycle", () => {
     expect(memory.audit.filter(({ event }) => event === "SWARM_COMPLETED")).toHaveLength(1);
   });
 
+  test("sweeps crash-resumed mid-merge Units into terminal failures when a later Unit blocks the merge", async () => {
+    const request = binding();
+    const memory = memoryStore({ failCompletedUpdateOnce: true });
+    const first = await executeBoundFinalize({ binding: request, invocation, store: memory.store, ports: ports().ports });
+    expect(first).toEqual({ type: "err", error: { code: "PERSISTENCE_FAILED" } });
+    expect(memory.progress()?.units.alpha.state).toBe("code-merging");
+    const p = ports({
+      validateUnit: async (unit) => (unit.unit === "beta" ? "PROTECTED_SPEC_BINDING_INVALID" : null),
+    });
+    const outcome = await executeBoundFinalize({ binding: request, invocation, store: memory.store, ports: p.ports });
+    expect(outcome.type).toBe("ok");
+    if (outcome.type === "err") return;
+    expect(outcome.value.mergeCompleted).toBeFalse();
+    expect(outcome.value.failures).toEqual([
+      { unit: "alpha", code: "REFEREE_FINALIZE_FAILED" },
+      { unit: "beta", code: "PROTECTED_SPEC_BINDING_INVALID" },
+    ]);
+    expect(validateRefereeEnvelope(request, outcome.value).type).toBe("ok");
+  });
+
+  test("sweeps crash-resumed mid-merge Units into terminal failures when request validation fails on resume", async () => {
+    const request = binding();
+    const memory = memoryStore({ failCompletedUpdateOnce: true });
+    const first = await executeBoundFinalize({ binding: request, invocation, store: memory.store, ports: ports().ports });
+    expect(first).toEqual({ type: "err", error: { code: "PERSISTENCE_FAILED" } });
+    expect(memory.progress()?.units.alpha.state).toBe("code-merging");
+    const p = ports({ validateRequest: async () => "FINALIZE_BINDING_INVALID" });
+    const outcome = await executeBoundFinalize({ binding: request, invocation, store: memory.store, ports: p.ports });
+    expect(outcome.type).toBe("ok");
+    if (outcome.type === "err") return;
+    expect(outcome.value.mergeCompleted).toBeFalse();
+    expect(outcome.value.failures).toEqual([
+      { unit: "alpha", code: "FINALIZE_BINDING_INVALID" },
+      { unit: "beta", code: "FINALIZE_BINDING_INVALID" },
+    ]);
+    expect(validateRefereeEnvelope(request, outcome.value).type).toBe("ok");
+  });
+
   test("rejects open or digest-tampered stored finalize progress", () => {
     const request = binding();
     const semantic = Object.freeze({
