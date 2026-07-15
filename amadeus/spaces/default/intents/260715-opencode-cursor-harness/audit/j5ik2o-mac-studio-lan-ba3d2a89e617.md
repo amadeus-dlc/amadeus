@@ -143,3 +143,15 @@
 **User Input**: leader delegate: e3 gate-ready for nfr-requirements (per-Unit 4x5=20 artifacts, U1 solo review + U2-4 batch review with per-unit independent verdicts — declared deviation ratified by E-OC13 with conditions: limited to inherited-structure unit groups under resource constraints, per-unit independent evidence mandatory, no cross-unit finding reuse, re-evaluate as default at PM after rate limits lift. N/A all grounded, sensors 40/40). S13: zero adoptions (E-OC13, e1/e2/e3 = agree, e4 pending cannot change outcome).
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-15T22:13:58Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: nfr-design
+**Issuer Space**: default
+**Issuer Intent**: 260709-canonical-settings
+**Issuer Shard**: j5ik2o-mac-studio-lan-ba3d2a89e617.md
+**Issuer Human Ts**: 2026-07-15T22:03:46Z
+**User Input**: leader delegate: e3 gate-ready for nfr-design (per-Unit 4 units, batch review under E-OC13 3-condition prompt, all READY Critical/Major 0, U3 exit-semantics precondition carried to code-generation gate). S13 election E-OC14 concluded zero adoptions (e1/e2/e4 = 1, e3 proposer pending own vote cannot change outcome).
+
+---

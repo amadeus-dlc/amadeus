@@ -1703,3 +1703,12 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T22:12:38Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ad74c6f5cc61bb352
+**Message**: 982をマージした
+
+---
