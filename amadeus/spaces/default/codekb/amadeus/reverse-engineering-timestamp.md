@@ -1,6 +1,23 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（最新: 260709-canonical-settings）
+## 実行メタデータ(最新: 260715-opencode-cursor-harness)
+
+- Date: 2026-07-16
+- Observed at: HEAD `6a23b0ec2498915532ab40930f82cc7744aa15b7`(`git rev-parse HEAD` 実測)
+- Intent: `260715-opencode-cursor-harness`(Issue #626 — opencode / Cursor harness port。既存4 harness の packaging seam・installer 閉じ列挙・doctor/version 依存性・runner-gen・promote:self・docs 面を調査し、新ハーネス2種を最小差分で追加する開放性を確定する)
+- Scope: `amadeus`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh(cid:reverse-engineering:c1、E-L63 の base 選定則)。base=`cf3dc88b46a2b23bcfd71b1136632d1739cdd7e5`(前 intent 260713-swarm-driver-migration の observed。全 `re-scans/*.md` observed の HEAD 祖先性を `git merge-base --is-ancestor` で走査し、祖先のうち距離最小=**65** を採用)、observed=`6a23b0ec`。祖先性実測済み(exit 0)。`git diff --stat origin/main HEAD -- ':!amadeus/'` は空 = HEAD と origin/main の差は record コミット(`amadeus/` 配下)のみで source 面完全一致。フォーカス面の file:line は observed HEAD 実コード直読で確定。
+- 実施体制: Developer(スキャン)→ Architect(合成)の2サブエージェント直列(cid:reverse-engineering:c3)
+- Focus: packaging seam(`scripts/package.ts` discoverHarnessNames:68-73 / `manifest-types.ts:79-122` HarnessManifest 全フィールド)・既存4 harness の manifest+emit 対比(Claude/Kiro 型 vs Codex 型)・promote:self(`promote-self.ts:37-41` managedDirs ハードコード)・version/doctor 依存性(`amadeus-utility.ts:243-245` version 非依存 / `:676,:696` doctor `.claude` 専用ブロック / `:857` otherTrees / `:2000-2006` SCAN_EXCLUDE)・runner-gen(`amadeus-runner-gen.ts:60,63` `<harnessDir>/skills/` / skipRunnerGen)・閉じ列挙9ファイル台帳(installer 5必須:harness.ts:9,19-24 / engine-layout.ts:8-12 / reporter.ts:24-25,137 / setup-harness.test.ts:13)・docs 面(README 対応表 4→6 + harnesses/ ガイド×2言語)
+- 現行結論: packaging seam は完全 open-set(manifest 1本 + 任意 emit.ts で package.ts 無編集ビルド、dist:check 自動対応)。新ハーネスは Claude/Kiro 型(薄 manifest)か Codex 型(emit.ts)の2系統に分かれ、系統は skills/agents/hooks 探索規約で決まる。閉じ列挙で手動追記が要るのは installer 5(正しさ必須)+ runtime/migrate/advisory 3 + self-install 1 = 9ファイル。promote:self は新ハーネス非自動対応(dogfood 判断)、doctor は `.claude` 専用ブロック + advisory 劣化のみで新ハーネス動作。区間65コミットはフォーカス面のハーネス開放性契約を一切変えていない。
+- Per-intent record: `re-scans/260715-opencode-cursor-harness.md`
+- 更新した成果物: `code-structure.md`(「harness port 開放性の観測面」節を先頭新設 = open-set 3層 / 閉じ列挙9ファイル台帳 / promote:self 非自動 / doctor advisory 劣化 / 最小ファイル集合。旧「swarm driver 変更面の配置境界」節見出しの「最新」→「履歴」降格 cid:reverse-engineering:c3-relabel)、本ファイル(鮮度ポインタ + 旧「最新: 260713」→履歴ラベル化)、`re-scans/260715-opencode-cursor-harness.md`(per-intent re-scan 記録)。他 body 成果物(architecture / business-overview / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment の7点)は base→observed で本 intent 観測面(packaging 開放性・閉じ列挙)と無関係、かつ区間65コミットで構造不変(scan-notes フォーカス面8実測)のため温存(churn 回避、cid:reverse-engineering:c1)。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。**本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。**
+
+## 実行メタデータ（履歴: 260709-canonical-settings）
 
 - Date: 2026-07-16
 - Observed at: `git rev-parse HEAD` = `e55cc25143717d84b3e7f1a543151f0b7c99b96f`
