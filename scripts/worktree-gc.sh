@@ -98,7 +98,8 @@ for index in "${!paths[@]}"; do
     echo "[kept: main] $candidate"
     continue
   fi
-  if [ "$candidate" = "$current_worktree" ]; then
+  if candidate_worktree="$(cd "$candidate" 2>/dev/null && pwd -P)" &&
+    [ "$candidate_worktree" = "$current_worktree" ]; then
     echo "[kept: current] $candidate"
     continue
   fi

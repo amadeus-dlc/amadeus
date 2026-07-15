@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -30,7 +30,7 @@ function createFixture() {
   git(repo, "add", "README.md");
   git(repo, "commit", "-qm", "fixture");
 
-  return { repo, worktrees };
+  return { repo, root, worktrees };
 }
 
 function run(repo: string, ...args: string[]) {
@@ -121,6 +121,22 @@ describe("worktree-gc", () => {
     expect(result.stdout.toString()).toContain(`[kept: main] ${realpathSync(fixture.repo)}`);
     expect(result.stdout.toString()).toContain(`[kept: current] ${realpathSync(current)}`);
     expect(existsSync(fixture.repo)).toBe(true);
+    expect(existsSync(current)).toBe(true);
+  });
+
+  test("--apply recognizes the current worktree through a symlinked metadata path", () => {
+    const fixture = createFixture();
+    const current = join(fixture.worktrees, "current");
+    const worktreesAlias = join(fixture.root, "worktrees-alias");
+    git(fixture.repo, "worktree", "add", "-q", "-b", "cleanup/current", current, "HEAD");
+    symlinkSync(fixture.worktrees, worktreesAlias, "dir");
+    const adminDir = git(current, "rev-parse", "--absolute-git-dir");
+    writeFileSync(join(adminDir, "gitdir"), `${join(worktreesAlias, "current", ".git")}\n`);
+
+    const result = run(current, "--apply");
+
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+    expect(result.stdout.toString()).toContain(`[kept: current] ${join(worktreesAlias, "current")}`);
     expect(existsSync(current)).toBe(true);
   });
 
