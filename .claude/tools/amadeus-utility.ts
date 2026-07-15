@@ -1,14 +1,20 @@
 import {
+  closeSync,
+  constants as fsConstants,
   cpSync,
   existsSync,
+  fstatSync,
   lstatSync,
   mkdirSync,
+  openSync,
   readdirSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import type { Stats } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { appendAuditEntry, appendAuditEntryUnlocked } from "./amadeus-audit.ts";
 import {
@@ -168,6 +174,7 @@ Scopes (set depth, test strategy, and stage count):
 const HELP_TEXT_TAIL = `
 Utilities:
   --status          Show current workflow progress (read-only)
+  --migrate [path]  Dry-run an upstream v2 workspace migration, then ask before apply
   compose "<task>"  Propose a tailored EXECUTE/SKIP plan (mid-workflow: re-shape the pending stages)
   compose --report <path>  Compose from a scan report (triage findings into a fix-and-ship run)
   --new-scope "<task>"  Force the composer to synthesize a custom scope even when a stock scope matches
@@ -194,6 +201,7 @@ Examples:
   /amadeus feature                                Start a feature workflow
   /amadeus Fix the login timeout bug              Auto-detected as bugfix scope
   /amadeus compose "harden the deploy pipeline"   Composer proposes a tailored plan
+  /amadeus --migrate                              Preview migration from the default upstream workspace
   /amadeus                                        Resume or begin
   /amadeus --stage code-generation                Jump to code-generation stage
   /amadeus --phase construction --scope bugfix    Jump to construction with bugfix scope
@@ -402,6 +410,148 @@ export interface DoctorCheck {
   fix?: string;
 }
 
+interface HookHeartbeatInspection {
+  directoryExists: boolean;
+  entries: string[];
+}
+
+function sameFileIdentity(
+  left: Stats,
+  right: Stats,
+): boolean {
+  return left.dev === right.dev && left.ino === right.ino;
+}
+
+function lstatOrNull(path: string): Stats | null {
+  try {
+    return lstatSync(path);
+  } catch {
+    return null;
+  }
+}
+
+function closeHeartbeat(fd: number): void {
+  try { closeSync(fd); } catch { /* Best-effort cleanup after a rejected read. */ }
+}
+
+function injectHeartbeatSwapForTest(path: string): void {
+  const target = process.env.AMADEUS_DOCTOR_TEST_SWAP_HEARTBEAT_TARGET;
+  if (process.env.NODE_ENV !== "test" || !target) return;
+  rmSync(path, { force: true });
+  symlinkSync(target, path);
+}
+
+function injectHeartbeatDirectorySwapForTest(path: string): void {
+  const target = process.env.AMADEUS_DOCTOR_TEST_SWAP_HEALTH_DIR_TARGET;
+  if (process.env.NODE_ENV !== "test" || !target) return;
+  rmSync(path, { recursive: true, force: true });
+  symlinkSync(target, path, process.platform === "win32" ? "junction" : "dir");
+}
+
+function matchesRealDirectory(path: string, expected: Stats): boolean {
+  const current = lstatOrNull(path);
+  return current !== null &&
+    current.isDirectory() &&
+    !current.isSymbolicLink() &&
+    sameFileIdentity(current, expected);
+}
+
+function openHeartbeatNoFollow(path: string): number | null {
+  let fd: number | null = null;
+  try {
+    const before = lstatSync(path);
+    if (before.isSymbolicLink() || !before.isFile()) return null;
+    injectHeartbeatSwapForTest(path);
+    const noFollow = typeof fsConstants.O_NOFOLLOW === "number"
+      ? fsConstants.O_NOFOLLOW
+      : 0;
+    fd = openSync(path, fsConstants.O_RDONLY | noFollow);
+    const opened = fstatSync(fd);
+    const after = lstatSync(path);
+    const changed =
+      !opened.isFile() ||
+      after.isSymbolicLink() ||
+      !after.isFile() ||
+      !sameFileIdentity(before, opened) ||
+      !sameFileIdentity(opened, after);
+    if (changed) { closeHeartbeat(fd); fd = null; return null; }
+    return fd;
+  } catch {
+    if (fd !== null) closeHeartbeat(fd);
+    return null;
+  }
+}
+
+function readHeartbeatTimestamp(path: string): string | null {
+  const fd = openHeartbeatNoFollow(path);
+  if (fd === null) return null;
+  try {
+    return readFileSync(fd, "utf-8").trim();
+  } finally {
+    closeHeartbeat(fd);
+  }
+}
+
+function inspectHookHeartbeats(healthDir: string): HookHeartbeatInspection {
+  const directoryStat = lstatOrNull(healthDir);
+  if (directoryStat === null) return { directoryExists: false, entries: [] };
+  if (directoryStat.isSymbolicLink() || !directoryStat.isDirectory()) {
+    return { directoryExists: true, entries: [] };
+  }
+  injectHeartbeatDirectorySwapForTest(healthDir);
+  if (!matchesRealDirectory(healthDir, directoryStat)) {
+    return { directoryExists: true, entries: [] };
+  }
+
+  const entries: string[] = [];
+  try {
+    const files = readdirSync(healthDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".last"))
+      .map((entry) => entry.name);
+    if (!matchesRealDirectory(healthDir, directoryStat)) return { directoryExists: true, entries: [] };
+    for (const file of files) {
+      if (!matchesRealDirectory(healthDir, directoryStat)) return { directoryExists: true, entries: [] };
+      const path = join(healthDir, file);
+      const timestamp = readHeartbeatTimestamp(path);
+      if (!matchesRealDirectory(healthDir, directoryStat)) return { directoryExists: true, entries: [] };
+      if (timestamp !== null) {
+        entries.push(`${file.slice(0, -".last".length)} ${timestamp}`);
+      }
+    }
+  } catch {
+    // An unreadable real directory is an existing but unhealthy heartbeat dir.
+  }
+  return { directoryExists: true, entries };
+}
+
+export function hookHeartbeatDoctorCheck(projectDir: string): DoctorCheck {
+  if (process.env.AMADEUS_MIGRATION_DOCTOR === "1") {
+    return {
+      pass: true,
+      label:
+        "Hook heartbeats: not inspected during migration (runtime scratch is intentionally discarded)",
+    };
+  }
+  const heartbeat = inspectHookHeartbeats(hooksHealthDir(projectDir));
+  if (heartbeat.entries.length > 0) {
+    return {
+      pass: true,
+      label: `Hooks last fired: ${heartbeat.entries.join(", ")}`,
+    };
+  }
+  if (!heartbeat.directoryExists) {
+    return {
+      pass: true,
+      label: "Hook heartbeats: not yet fired (first workflow stage will populate)",
+    };
+  }
+  return {
+    pass: false,
+    label: "Hook heartbeat data",
+    fix: "health dir exists but no hooks have fired — verify hooks are registered in settings.json",
+  };
+}
+
 // Classify the workspace-shell readiness into the THREE states doctor reports
 // (#844), mirroring the hook-heartbeat fresh-install split further below:
 //   (a) harness engine dir missing -> a genuinely broken install. FAIL, and the
@@ -523,7 +673,7 @@ export function checkPhaseProgressConsistency(projectDir: string): DoctorCheck {
   return classifyPhaseProgressConsistency(scanned);
 }
 
-function handleDoctor(projectDir: string): void {
+export function handleDoctor(projectDir: string): void {
   const results: Array<{ pass: boolean; label: string; fix?: string }> = [];
   const isWindows = process.platform === "win32";
 
@@ -763,45 +913,7 @@ function handleDoctor(projectDir: string): void {
   //   (b) Directory exists but no .last files → hooks registered but have
   //       never fired. Genuine drift; fail.
   //   (c) Directory has .last files → hooks are working; pass with timestamps.
-  const healthDir = hooksHealthDir(projectDir);
-  const heartbeatEntries: string[] = [];
-  const heartbeatDirExists = existsSync(healthDir);
-  if (heartbeatDirExists) {
-    try {
-      const files = readdirSync(healthDir).filter((f) => f.endsWith(".last"));
-      for (const f of files) {
-        try {
-          const ts = readFileSync(join(healthDir, f), "utf-8").trim();
-          const name = f.replace(".last", "");
-          heartbeatEntries.push(`${name} ${ts}`);
-        } catch {
-          // skip unreadable
-        }
-      }
-    } catch {
-      // skip unreadable dir
-    }
-  }
-  if (heartbeatEntries.length > 0) {
-    // (c) hooks working
-    results.push({
-      pass: true,
-      label: `Hooks last fired: ${heartbeatEntries.join(", ")}`,
-    });
-  } else if (!heartbeatDirExists) {
-    // (a) fresh install — nothing to verify yet
-    results.push({
-      pass: true,
-      label: "Hook heartbeats: not yet fired (first workflow stage will populate)",
-    });
-  } else {
-    // (b) registered but never fired — genuine drift
-    results.push({
-      pass: false,
-      label: "Hook heartbeat data",
-      fix: "health dir exists but no hooks have fired — verify hooks are registered in settings.json",
-    });
-  }
+  results.push(hookHeartbeatDoctorCheck(projectDir));
 
   // State / audit drift check — if latest audit event implies the state file
   // should be in a certain shape (e.g., Status=Completed after WORKFLOW_COMPLETED),
@@ -3823,10 +3935,82 @@ function handleResolveEnvScope(): void {
 }
 
 // ---------------------------------------------------------------------------
+// migrate — thin adapter to the deterministic workspace migrator
+//
+// The public orchestrator owns the dry-run/approval/apply conversation. This
+// utility only maps its compact `migrate [path]` interface to the sibling
+// migrator's explicit argv contract and relays both streams and the exit code.
+// No shell is involved, so a user-supplied path is always one argv value.
+// ---------------------------------------------------------------------------
+
+const MIGRATE_FLAGS = new Set(["apply", "json", "project-dir"]);
+
+function unsupportedMigrateFlags(flags: Record<string, string>): string[] {
+  const unsupported: string[] = [];
+  for (const flag of Object.keys(flags)) {
+    if (!MIGRATE_FLAGS.has(flag)) unsupported.push(flag);
+  }
+  return unsupported.sort();
+}
+
+function valuedMigrateBooleanFlag(flags: Record<string, string>): string | null {
+  for (const flag of ["apply", "json"]) {
+    if (Object.hasOwn(flags, flag) && flags[flag] !== "true") return flag;
+  }
+  return null;
+}
+
+function migrateFlagList(flags: readonly string[]): string {
+  return flags.map((flag) => "--" + flag).join(", ");
+}
+
+function migrateToolArgs(
+  projectDir: string,
+  positional: readonly string[],
+  flags: Record<string, string>,
+): string[] {
+  const args = ["--from", positional[1] ?? "aidlc", "--project-dir", projectDir];
+  if (Object.hasOwn(flags, "apply")) args.push("--apply");
+  if (Object.hasOwn(flags, "json")) args.push("--json");
+  return args;
+}
+
+function handleMigrate(
+  projectDir: string,
+  positional: string[],
+  flags: Record<string, string>,
+): void {
+  const unsupported = unsupportedMigrateFlags(flags);
+  if (unsupported.length > 0) {
+    die("Unsupported migrate option(s): " + migrateFlagList(unsupported));
+  }
+  const valuedBoolean = valuedMigrateBooleanFlag(flags);
+  if (valuedBoolean !== null) {
+    die(
+      `--${valuedBoolean} does not accept a value. Put the optional source path before --apply/--json.`,
+    );
+  }
+  if (positional.length > 2) {
+    die("Usage: amadeus-utility migrate [path] [--apply] [--json] [--project-dir <path>]");
+  }
+
+  const absoluteProjectDir = resolve(projectDir);
+  const run = Bun.spawnSync({
+    cmd: ["bun", join(TOOLS_DIR, "amadeus-migrate.ts"), ...migrateToolArgs(absoluteProjectDir, positional, flags)],
+    cwd: absoluteProjectDir,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  process.stdout.write(new TextDecoder().decode(run.stdout));
+  process.stderr.write(new TextDecoder().decode(run.stderr));
+  if (run.exitCode !== 0) process.exit(run.exitCode);
+}
+
+// ---------------------------------------------------------------------------
 // CLI entry point
 // ---------------------------------------------------------------------------
 
-function main(): void {
+export function runUtilityMain(): void {
   const rawArgs = process.argv.slice(2);
   const { positional, flags } = parseArgs(rawArgs);
   const subcommand = positional[0];
@@ -3844,6 +4028,9 @@ function main(): void {
       break;
     case "doctor":
       handleDoctor(projectDir);
+      break;
+    case "migrate":
+      handleMigrate(projectDir, positional, flags);
       break;
     case "intent-birth":
       handleIntentBirth(projectDir, flags);
@@ -3906,9 +4093,9 @@ function main(): void {
       break;
     default:
       die(
-        `Usage: amadeus-utility <help|version|status|doctor|intent-birth|intent|space|space-create|codekb-path|detect|recompose|scope-change|config-change|set-status|detect-scope|resolve-env-scope|scope-table> [--project-dir <path>] [--scope <scope>] [--json]`
+        `Usage: amadeus-utility <help|version|status|doctor|migrate|intent-birth|intent|space|space-create|codekb-path|detect|recompose|scope-change|config-change|set-status|detect-scope|resolve-env-scope|scope-table> [--project-dir <path>] [--scope <scope>] [--json]`
       );
   }
 }
 
-if (import.meta.main) main();
+if (import.meta.main) runUtilityMain();

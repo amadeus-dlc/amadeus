@@ -85,6 +85,8 @@ import {
   activeSpace,
   type CheckboxLine,
   codekbRepoName,
+  classifyMigrationRequest,
+  type MigrationRequest,
   errorMessage,
   firstInScopeStageOfPhase,
   getField,
@@ -153,7 +155,7 @@ const DEFAULT_SCOPE = "feature";
 // the frozen contract. A malformed directive is a hard error (clean
 // boundaries), never a silent miss — we exit non-zero so a wiring bug surfaces
 // loudly rather than emitting a lie the conductor would act on.
-function emit(directive: Directive): void {
+function emit(directive: Directive, recordError = true): void {
   const result = validateDirective(directive);
   if (!result.valid) {
     console.error(
@@ -166,10 +168,11 @@ function emit(directive: Directive): void {
   // the only tool whose error exits left no audit trail (emit⇔terminal
   // asymmetry). Recording is best-effort and happens BEFORE the stdout print so
   // the directive JSON stays the sole stdout output and the exit code is
-  // untouched. Every `emit(errorDirective(...))` call site (30+) is covered by
-  // this single aggregation point, so no future error directive can slip the
-  // instrumentation.
-  if (directive.kind === "error") {
+  // untouched. Every workflow `emit(errorDirective(...))` call site is covered
+  // by this aggregation point. The sole opt-out is emitMigrationError below:
+  // workspace migration is outside the Intent lifecycle and must not annotate
+  // an unrelated active record.
+  if (directive.kind === "error" && recordError) {
     recordEngineError(directive.message);
   }
   console.log(JSON.stringify(result.data));
@@ -298,6 +301,13 @@ function printDirective(message: string): PrintDirective {
 
 function errorDirective(message: string): ErrorDirective {
   return { kind: "error", message };
+}
+
+// Workspace migration is outside the Intent lifecycle. Its public-routing
+// errors are still ordinary `error` directives, but must not append ERROR_LOGGED
+// to whichever unrelated Intent happens to be active in the destination.
+function emitMigrationError(message: string): void {
+  emit(errorDirective(message), false);
 }
 
 // parked - the terminal directive a parked workflow emits (issue #367). Carries
@@ -1047,17 +1057,22 @@ function splitConsumesByPresence(
   return { present, absent };
 }
 
-// Resolve a node's produces[] (always bare names, even for per-unit stages) to
-// canonical paths. produces has no conditional_on axis, so every name resolves.
+// Resolve every required and optional output to a canonical path. `candidates`
+// preserves the existing directive.produces contract; `optional` retains the
+// conditional subset so the conductor can distinguish paths it may omit.
 function resolveProduces(
   node: GraphStage,
   unit: string,
   recordPrefix: string | null,
   codekbCtx?: CodekbCtx,
-): string[] {
-  return (node.produces ?? []).map((name) =>
+): { candidates: string[]; optional: string[] } {
+  const required = (node.produces ?? []).map((name) =>
     resolveArtifactPath(name, node, unit, recordPrefix, codekbCtx),
   );
+  const optional = (node.optional_produces ?? []).map((name) =>
+    resolveArtifactPath(name, node, unit, recordPrefix, codekbCtx),
+  );
+  return { candidates: [...required, ...optional], optional };
 }
 
 // Compute the `gate` value for a run-stage directive — the human-judgement
@@ -1131,6 +1146,7 @@ function buildRunStageDirective(
     node.consumes ?? [], node, projectType, unit, recordPrefix, codekbCtx,
   );
   const { present, absent } = splitConsumesByPresence(resolvedConsumes, scope, codekbCtx);
+  const resolvedProduces = resolveProduces(node, unit, recordPrefix, codekbCtx);
   const directive: RunStageDirective = {
     kind: "run-stage",
     stage: node.slug,
@@ -1145,12 +1161,15 @@ function buildRunStageDirective(
     gate: computeGate(node, scope, stateContent),
     memory_path: memoryPathFor(node.phase, node.slug, recordPrefix),
     consumes: present,
-    produces: resolveProduces(node, unit, recordPrefix, codekbCtx),
+    produces: resolvedProduces.candidates,
     rules_in_context: (node.rules_in_context ?? []).map((r) => r.path),
     sensors_applicable: (node.sensors_applicable ?? []).map((s) => s.id),
     stage_file: stageFileFor(node.phase, node.slug),
   };
   if (absent.length > 0) directive.consumes_absent = absent;
+  if (resolvedProduces.optional.length > 0) {
+    directive.optional_produces = resolvedProduces.optional;
+  }
   // Reviewer — include if the stage declares one (§12a).
   if (node.reviewer) {
     directive.reviewer = node.reviewer;
@@ -1172,9 +1191,129 @@ function nodeForSlug(slug: string): GraphStage | undefined {
   return loadGraph().find((s) => s.slug === slug);
 }
 
+const MIGRATION_WORKFLOW_OPTIONS = new Set([
+  "compose",
+  "--stage",
+  "--phase",
+  "--scope",
+  "--depth",
+  "--test-strategy",
+  "--single",
+  "--resume",
+  "--new-intent",
+  "--new-scope",
+  "--report",
+]);
+
+const SHELL_SINGLE_QUOTE_ESCAPE = "'\"'\"'";
+
+function quoteShellArg(value: string): string {
+  if (/^[A-Za-z0-9_./-]+$/.test(value)) return value;
+  return "'" + value.split("'").join(SHELL_SINGLE_QUOTE_ESCAPE) + "'";
+}
+
+function isSafeMigrationSourceForDirective(value: string): boolean {
+  // The source is rendered twice inside Markdown code spans. Shell quoting is
+  // not display escaping: a backtick or control character would terminate the
+  // span / reshape the numbered approval gate before the command ever runs.
+  for (const char of value) {
+    const point = char.codePointAt(0) ?? 0;
+    if (char === "`" || point <= 0x1f || (point >= 0x7f && point <= 0x9f)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// Emit the complete dry-run -> human gate -> internal apply contract. Keeping
+// it behind one narrow module interface makes every caller use the same safety
+// wording and keeps migration entirely outside workflow state transitions.
+function emitMigrationDirective(args: string[], migration: MigrationRequest): void {
+  if (
+    migration.from !== undefined &&
+    !isSafeMigrationSourceForDirective(migration.from)
+  ) {
+    emitMigrationError(
+      "The migration source path cannot contain backticks or control characters. Rename the path or pass a safe relative path.",
+    );
+    return;
+  }
+
+  // A bare word immediately after --migrate is the selected source path, even
+  // when that directory happens to be named like a workflow verb (for example
+  // `compose`). Exclude only that one classified argv position; flag-shaped
+  // tokens such as `--stage` are never source candidates and remain conflicts.
+  const migrationFlagIndex = args.indexOf("--migrate");
+  const sourceIndex =
+    migration.source === "explicit-flag" && migration.from !== undefined
+      ? migrationFlagIndex + 1
+      : -1;
+  const conflict = args.find(
+    (arg, index) => index !== sourceIndex && MIGRATION_WORKFLOW_OPTIONS.has(arg),
+  );
+  if (conflict) {
+    emitMigrationError(
+      `Cannot combine workspace migration with ${conflict}. Migration does not run or advance workflow stages; run the commands separately.`,
+    );
+    return;
+  }
+
+  if (args.filter((arg) => arg === "--migrate").length > 1) {
+    emitMigrationError("Specify --migrate only once.");
+    return;
+  }
+  if (
+    migration.source === "explicit-flag" &&
+    args.length !== (migration.from === undefined ? 1 : 2)
+  ) {
+    emitMigrationError(
+      "--migrate accepts one optional source path and no freeform arguments. Run workflow options separately.",
+    );
+    return;
+  }
+
+  const sourceArg = migration.from ? ` ${quoteShellArg(migration.from)}` : "";
+  const dryRun = `bun ${harnessDir()}/tools/amadeus-utility.ts migrate${sourceArg}`;
+  const apply = `${dryRun} --apply`;
+  emit(printDirective(
+    `Run \`${dryRun}\` and print its complete dry-run report. If the dry-run fails, print the error and stop. Otherwise present exactly this numbered approval gate and STOP for the human's answer:\n\n` +
+      "1. Yes — apply this migration exactly as shown\n" +
+      "2. No — leave the workspace unchanged\n\n" +
+      `Only after an explicit \`1\` or \`Yes\`, run \`${apply}\`, print its complete output, and stop. On \`2\` or \`No\`, stop without running apply. This is workspace migration, NOT workflow work: do NOT run \`next\`, do NOT birth or advance an Intent, and do not infer approval from silence.`,
+  ));
+}
+
+function isBareAdvancingNext(
+  flags: ParsedFlags,
+  migration: MigrationRequest | null,
+): boolean {
+  if (migration !== null) return false;
+  const blockers: unknown[] = [
+    flags.readOnly,
+    flags.workspaceVerb,
+    flags.stage,
+    flags.phase,
+    flags.scope,
+    flags.intent,
+    flags.resume,
+    flags.depth,
+    flags.testStrategy,
+    flags.single,
+    flags.compose,
+    flags.newScope,
+    flags.report,
+    flags.newIntent,
+  ];
+  for (const blocker of blockers) {
+    if (blocker) return false;
+  }
+  return true;
+}
+
 // The `next` handler — pure read, emits exactly one directive.
 export function handleNext(args: string[], projectDir: string | undefined): void {
   const flags = parseNextFlags(args);
+  const migration = classifyMigrationRequest(args);
 
   // Branch 0 — turn-scoped no-op-next guard (Kiro roll-forward defense). On Kiro
   // the userPromptSubmit seam handles a read-only/navigation command
@@ -1189,9 +1328,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
   // swallowed. Inert on Claude/Codex: the latch files are never written there (no
   // seam) → fresh is always false → falls through. Advisory: any failure fails
   // open to the normal `next`.
-  if (!flags.readOnly && !flags.workspaceVerb && !flags.stage && !flags.phase &&
-      !flags.scope && !flags.intent && !flags.resume && !flags.depth && !flags.testStrategy &&
-      !flags.single && !flags.compose && !flags.newScope && !flags.report && !flags.newIntent) {
+  if (isBareAdvancingNext(flags, migration)) {
     try {
       const pdLatch = resolveProjectDir(projectDir);
       const latchPath = join(pdLatch, "amadeus", ".amadeus-readonly-latch");
@@ -1242,6 +1379,21 @@ export function handleNext(args: string[], projectDir: string | undefined): void
     ));
     return;
   }
+
+  // Public apply is never a workflow request. Reject it before migration,
+  // workspace, or active-Intent routing, but after the documented absolute
+  // precedence of read-only utilities. Apply is reachable only from the
+  // migration print directive after the human approves its numbered gate.
+  if (args.includes("--apply")) {
+    emitMigrationError(
+      "--apply is internal to the migration approval flow. Run /amadeus --migrate [path] and approve the numbered gate instead.",
+    );
+    return;
+  }
+
+  // Branch 1a — upstream workspace migration dispatches immediately after the
+  // read-only utilities and before workspace navigation or workflow state.
+  if (migration) { emitMigrationDirective(args, migration); return; }
 
   // Branch 1b — workspace navigation verbs (space/space-create/intent) dispatch
   // BEFORE any state inspection, mirroring Branch 1. This MUST precede
@@ -1884,15 +2036,17 @@ function orderedUnits(projectDir: string): string[] {
   return batches.flat();
 }
 
-// True when `unit` is COVERED for `node`, every artifact in node.produces[]
-// exists on disk under the resolved per-unit path
-// (<recordPrefix>/construction/<unit>/<owner.slug>/<name>.md). The resolved path
+// True when `unit` is COVERED for `node`: every REQUIRED artifact in
+// node.produces[] exists on disk under the resolved per-unit path
+// (<recordPrefix>/construction/<unit>/<owner.slug>/<name>.md).
+// node.optional_produces[] is deliberately excluded: those artifacts may be
+// legitimately absent for a unit. The resolved path
 // is workspace-RELATIVE with forward slashes, so we re-root it absolutely under
 // projectDir (splitting on "/" so the join is OS-correct). A stage with no
-// produces can never be "covered" by artifacts, but all five per-unit stages
-// declare >=2 produces (verified), so the empty case is unreachable in practice;
-// we treat empty-produces as NOT covered so the engine never silently skips a
-// unit it cannot prove it ran.
+// required produces can never be "covered" by artifacts, but all five per-unit
+// stages declare required outputs, so the empty case is unreachable in
+// practice; an empty required set remains NOT covered so the engine never
+// silently skips a unit it cannot prove it ran.
 function unitCovered(
   projectDir: string,
   node: GraphStage,
