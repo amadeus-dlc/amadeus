@@ -27,8 +27,55 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    name: Detect CI changes
+    runs-on: ubuntu-latest
+    outputs:
+      ci: ${{ steps.filter.outputs.ci }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect CI-relevant changes
+        id: filter
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          list_changed_files() {
+            if [[ "${EVENT_NAME}" == "pull_request" ]]; then
+              git diff --name-only -z --no-renames "${BASE_SHA}...${HEAD_SHA}"
+            elif [[ "${BASE_SHA}" =~ ^0+$ ]]; then
+              git ls-tree -r --name-only -z "${HEAD_SHA}"
+            else
+              git diff --name-only -z --no-renames "${BASE_SHA}" "${HEAD_SHA}"
+            fi
+          }
+
+          ci=false
+          while IFS= read -r -d '' path; do
+            case "${path}" in
+              *.ts|*.tsx|*.mts|*.cts|
+              bun.lock|package.json|*/package.json|tsconfig*.json|biome.json|biome.jsonc|codecov.yml|.codecov.yml|
+              .github/workflows/ci.yml|
+              scripts/*|tests/*|packages/framework/*|packages/setup/*|
+              dist/*|.agents/*|.claude/*|.codex/*|.kiro/*|
+              AGENTS.md|CLAUDE.md)
+                ci=true
+                break
+                ;;
+            esac
+          done < <(list_changed_files)
+
+          printf 'ci=%s\n' "${ci}" >> "${GITHUB_OUTPUT}"
+
   check:
-    name: typecheck · lint · drift · tests
+    name: typecheck - lint - drift - tests
+    needs: changes
+    if: ${{ needs.changes.outputs.ci == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -61,7 +108,7 @@ jobs:
       - name: Self-install drift guard (.claude/.codex/.agents/CLAUDE.md in sync with dist/)
         run: bun run promote:self:check
 
-      - name: Tests — smoke + unit + integration
+      - name: Tests - smoke + unit + integration
         run: bun run test:ci
 
       - name: Upload dynamic test-size report (#684 Phase D / #699, advisory)
@@ -75,9 +122,11 @@ jobs:
 
   coverage:
     name: Coverage Report
-    runs-on: ubuntu-latest
     needs:
+      - changes
       - check
+    if: ${{ needs.changes.outputs.ci == 'true' }}
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read
@@ -94,7 +143,7 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Install lizard (CCN measurement, pinned — the suite's complexity-gate tests spawn it)
+      - name: Install lizard (CCN measurement, pinned - the suite's complexity-gate tests spawn it)
         run: pip install lizard==1.23.0
 
       - name: Generate coverage reports
@@ -132,8 +181,10 @@ jobs:
   # never extend the pull-request critical path.
   metrics-snapshot:
     name: Metrics Snapshot
-    needs: coverage
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs:
+      - changes
+      - coverage
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.ci == 'true' && needs.coverage.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -213,8 +264,9 @@ jobs:
     name: Codecov Status
     runs-on: ubuntu-latest
     needs:
+      - changes
       - coverage
-    if: ${{ always() }}
+    if: ${{ always() && needs.changes.outputs.ci == 'true' }}
     permissions:
       contents: read
       checks: read
@@ -310,6 +362,7 @@ jobs:
     name: CI Success
     runs-on: ubuntu-latest
     needs:
+      - changes
       - check
       - coverage
       - codecov-status
@@ -326,7 +379,20 @@ jobs:
             fi
           }
 
-          require_result "check" "${{ needs.check.result }}"
-          require_result "coverage" "${{ needs.coverage.result }}"
-          require_result "codecov-status" "${{ needs['codecov-status'].result }}"
-          echo "All CI checks passed successfully"
+          require_result "changes" "${{ needs.changes.result }}"
+
+          case "${{ needs.changes.outputs.ci }}" in
+            true)
+              require_result "check" "${{ needs.check.result }}"
+              require_result "coverage" "${{ needs.coverage.result }}"
+              require_result "codecov-status" "${{ needs['codecov-status'].result }}"
+              echo "All CI checks passed successfully"
+              ;;
+            false)
+              echo "No CI-relevant changes; expensive checks skipped"
+              ;;
+            *)
+              echo "changes returned an invalid CI decision"
+              exit 1
+              ;;
+          esac
