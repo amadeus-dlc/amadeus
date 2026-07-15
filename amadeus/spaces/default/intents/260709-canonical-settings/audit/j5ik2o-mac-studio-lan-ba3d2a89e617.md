@@ -98,3 +98,81 @@
 **Message**: 1
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T15:25:49Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a41e42697fce14115
+**Message**: worktree間のdelegate配送問題はIssueに起票して
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T15:26:22Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: acd03123161464448
+**Message**: e2のapprove再実行の結果は？
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T15:26:28Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a977db4b6db6f7751
+**Message**: e2のapprove再実行の結果は？
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T15:26:44Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ab4b788a3b804b608
+**Message**: e1の再読ackはまだ？
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-15T15:27:22Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T15:28:04Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a257c24b30dd1febe
+**Message**: e2の返答を待って報告して
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-15T15:28:48Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-15T15:29:35Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a0a3c1b8692f9a0f0
+**Message**: scope切替後のステージグリッドはどう変わった？
+
+---
+
+## Delegated Approval
+**Timestamp**: 2026-07-15T15:29:56Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: scope-definition
+**Issuer Space**: default
+**Issuer Intent**: 260709-canonical-settings
+**Issuer Shard**: j5ik2o-mac-studio-lan-ba3d2a89e617.md
+**Issuer Human Ts**: 2026-07-15T15:28:48Z
+**User Input**: leader delegate: e2 gate-ready report for scope-definition (artifacts x3 present, sensors 6/6 exit 0, 5/5 questions answered via decided norms/measurements, gate-start 15:29:22Z).
+
+---
