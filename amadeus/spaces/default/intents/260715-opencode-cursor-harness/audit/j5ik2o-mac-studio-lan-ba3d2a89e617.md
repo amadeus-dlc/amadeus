@@ -131,3 +131,15 @@
 **User Input**: leader delegate: e3 gate-ready for functional-design (per-Unit 4 units x 3 artifacts, per-unit reviewers with U1 upstream retro-fix under E-CS8 precedent leader-approved, sensors all PASSED). S13 election E-OC12 concluded: adopt c1 (e2/e3/e4 = 1; e1 pending cannot change outcome), reject c2-c4.
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-15T18:48:25Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: nfr-requirements
+**Issuer Space**: default
+**Issuer Intent**: 260709-canonical-settings
+**Issuer Shard**: j5ik2o-mac-studio-lan-ba3d2a89e617.md
+**Issuer Human Ts**: 2026-07-15T16:04:27Z
+**User Input**: leader delegate: e3 gate-ready for nfr-requirements (per-Unit 4x5=20 artifacts, U1 solo review + U2-4 batch review with per-unit independent verdicts — declared deviation ratified by E-OC13 with conditions: limited to inherited-structure unit groups under resource constraints, per-unit independent evidence mandatory, no cross-unit finding reuse, re-evaluate as default at PM after rate limits lift. N/A all grounded, sensors 40/40). S13: zero adoptions (E-OC13, e1/e2/e3 = agree, e4 pending cannot change outcome).
+
+---
