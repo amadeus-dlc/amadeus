@@ -202,6 +202,7 @@ Where `S` = total stages for the current scope. Reference scope stage counts:
 | mvp | ~18 |
 | poc | ~8 |
 | bugfix | ~8 |
+| chore | ~5 |
 | refactor | ~9 |
 | infra | ~13 |
 | security-patch | ~10 |
@@ -638,12 +639,13 @@ Create exactly the detail needed — no more, no less. Depth adapts to scope and
 | mvp | Standard | ~25 (skip late Operation) |
 | poc | Minimal | ~8 (Ideation + core Inception) |
 | bugfix | Minimal | ~8 (targeted) |
+| chore | Minimal | ~5 (tweak-sized: init + code-gen + build) |
 | refactor | Minimal | ~9 (targeted) |
 | infra | Standard | ~13 (infra-focused) |
 | security-patch | Minimal | ~10 (security-focused) |
 
 ### Depth levels
-- **Minimal** (poc, bugfix, refactor, security-patch): ~2-4 questions per stage, minimal artifacts, brief analysis
+- **Minimal** (poc, bugfix, chore, refactor, security-patch): ~2-4 questions per stage, minimal artifacts, brief analysis
 - **Standard** (feature, mvp, infra): ~5-8 questions per stage, full artifacts at moderate detail
 - **Comprehensive** (enterprise): ~8-12+ questions per stage, comprehensive artifacts with deep analysis, all stages execute
 
@@ -715,7 +717,7 @@ Key terms used throughout AI-DLC documentation:
 |------|-----------|
 | **Phase** | Top-level grouping: INITIALIZATION, IDEATION, INCEPTION, CONSTRUCTION, OPERATION |
 | **Stage** | A discrete step within a phase (e.g., Intent Capture, Requirements Analysis, Code Generation, Observability Setup) |
-| **Scope** | Controls which stages execute and at what depth. Nine built-in scopes, one file per scope under `.kiro/scopes/amadeus-<name>.md`: enterprise, feature, mvp, poc, bugfix, refactor, infra, security-patch, workshop. Custom scopes can be added without editing this file. |
+| **Scope** | Controls which stages execute and at what depth. Ten built-in scopes, one file per scope under `.kiro/scopes/amadeus-<name>.md`: enterprise, feature, mvp, poc, bugfix, chore, refactor, infra, security-patch, workshop. Custom scopes can be added without editing this file. |
 | **Bolt** | One execution of Construction stages 3.1–3.5 for a Unit (or small group of dependency-linked Units). Stages 3.6 (Build and Test) and 3.7 (CI Pipeline) run **once** after all Bolts complete, not per-Bolt. The first Bolt is the **walking skeleton** — the thinnest end-to-end slice that proves the architecture. Note: this deviates intentionally from AI-DLC v1, where a Bolt is a sprint-like time-box (a Unit of Work spans multiple Bolts). This implementation repurposes "Bolt" to mean a deployable slice that wraps one or more Units of Work. |
 | **Walking skeleton** | The first Bolt in Construction — smallest end-to-end slice that exercises every integration point. Always gated and interactive so humans can confirm the shape before the rest of Construction runs. |
 | **Ladder prompt** | The single prompt that fires after the walking-skeleton gate asking the user to choose between "continue autonomously" and "gate every Bolt". The choice is recorded in state (`Construction Autonomy Mode`) and governs the rest of Construction. |

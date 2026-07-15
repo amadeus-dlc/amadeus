@@ -94,6 +94,7 @@ const UTIL = fileURLToPath(
 // expectation (t125:62). Each is a literal independent of source iteration.
 const SHIPPED_SCOPES = [
   "bugfix",
+  "chore",
   "enterprise",
   "feature",
   "infra",
@@ -131,7 +132,7 @@ describe("shipped scope files — frontmatter + derived metadata (in-process)", 
     const files = readdirSync(SCOPES_DIR).filter(
       (f) => f.startsWith("amadeus-") && f.endsWith(".md"),
     );
-    expect(files.length).toBe(9);
+    expect(files.length).toBe(10);
   });
 
   test("every shipped scope file's frontmatter name == its slug [.sh test 2]", () => {
@@ -180,6 +181,29 @@ describe("shipped scope files — frontmatter + derived metadata (in-process)", 
     // EXECUTE/SKIP `.stages` half from the compiled grid (the transpose).
     expect(typeof m.poc.stages).toBe("object");
     expect(Object.keys(m.poc.stages).length).toBeGreaterThan(0);
+  });
+
+  test("chore scope: Minimal depth, chore/tweak keywords, EXECUTE = init + code-gen + build-and-test only [#993]", () => {
+    const m = loadScopeMapping();
+    expect(m.chore.depth).toBe("Minimal");
+    expect(m.chore.keywords).toEqual(["chore", "tweak"]);
+    expect(m.chore.description).toBe("Small self-contained tweak");
+    // The load-bearing contract: chore's grid EXECUTEs exactly the three
+    // bootstrap initialization stages plus code-generation and build-and-test
+    // — nothing from ideation, the rest of inception, or operation. Pinned as
+    // a sorted set so a stray `- chore` added to (or dropped from) any other
+    // stage's `scopes:` frontmatter turns this red.
+    const execute = Object.entries(m.chore.stages)
+      .filter(([, action]) => action === "EXECUTE")
+      .map(([slug]) => slug)
+      .sort();
+    expect(execute).toEqual([
+      "build-and-test",
+      "code-generation",
+      "state-init",
+      "workspace-detection",
+      "workspace-scaffold",
+    ]);
   });
 
   test("every scope-grid column has a matching .claude/scopes/*.md file [.sh test 10]", () => {

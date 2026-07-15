@@ -83,6 +83,7 @@ const END = "<!-- END: compiled scope grid -->";
 // The nine scopes the .sh iterated, in the SAME alphabetical order.
 const SCOPES = [
   "bugfix",
+  "chore",
   "enterprise",
   "feature",
   "infra",

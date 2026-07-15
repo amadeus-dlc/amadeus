@@ -21,6 +21,7 @@ scopes:
   - infra
   - security-patch
   - workshop
+  - chore
 inputs: workspace classification from workspace-detection, scope from orchestrator
 outputs: <record>/amadeus-state.md (full populated version, engine-resolved)
 ---

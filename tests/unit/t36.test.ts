@@ -122,6 +122,7 @@ const CANONICAL_SCOPES = [
   "mvp",
   "poc",
   "bugfix",
+  "chore",
   "refactor",
   "infra",
   "security-patch",

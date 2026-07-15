@@ -71,7 +71,7 @@ const APPROVE_ALL = {
 };
 
 const STOCK_SCOPES = new Set([
-  "bugfix", "enterprise", "feature", "infra", "mvp", "poc", "refactor",
+  "bugfix", "chore", "enterprise", "feature", "infra", "mvp", "poc", "refactor",
   "security-patch", "workshop",
 ]);
 
@@ -86,7 +86,7 @@ describe("t192 front composer journey (/amadeus compose -> approve -> write -> b
       try {
         const scopesDir = join(proj, ".claude", "scopes");
         const gridPath = join(proj, ".claude", "tools", "data", "scope-grid.json");
-        expect(readdirSync(scopesDir).filter((f) => f.endsWith(".md")).length).toBe(9);
+        expect(readdirSync(scopesDir).filter((f) => f.endsWith(".md")).length).toBe(10);
 
         const r = await driveAidlc(`/amadeus compose "${TASK}"`, {
           projectDir: proj,
