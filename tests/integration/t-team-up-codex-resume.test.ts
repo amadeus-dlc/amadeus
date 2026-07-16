@@ -1,3 +1,4 @@
+// size: large
 import { afterEach, describe, expect, test } from "bun:test";
 import {
   chmodSync,
