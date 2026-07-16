@@ -17,6 +17,7 @@ import {
   emitError,
   errorMessage,
   extractMarkdownSection,
+  fieldExists,
   findStageBySlug,
   findAllEvents,
   firstInScopeStageOfPhase,
@@ -478,13 +479,31 @@ function handleSet(args: string[]): void {
   withAuditLock(pd, () => {
   let content = readStateFile(pd);
 
-  for (const pair of args) {
+  // Parse every pair up front so field existence can be validated as one pass
+  // before any write. `set` must fail closed (Issue #1027): if a target field
+  // row is absent, setField silently no-ops, so the old code wrote an unchanged
+  // file and still reported `{"updated":true}` — a lie the caller trusts.
+  const pairs = args.map((pair) => {
     const eqIdx = pair.indexOf("=");
     if (eqIdx <= 0) error(`Invalid field=value pair: ${pair}`);
-    const field = pair.slice(0, eqIdx);
-    let value = pair.slice(eqIdx + 1);
+    return { field: pair.slice(0, eqIdx), value: pair.slice(eqIdx + 1) };
+  });
 
+  // Pre-validate ALL fields and reject atomically with the full list of the
+  // missing ones (fail-at-first would hide later absences). On reject nothing
+  // is written — the state file, Last Updated included, stays byte-identical.
+  const missing = pairs.filter(({ field }) => !fieldExists(content, field)).map(({ field }) => field);
+  if (missing.length > 0) {
+    error(
+      missing
+        .map((field) => `Field not found in state file: "${field}". Cannot update — refusing to silently no-op.`)
+        .join("\n"),
+    );
+  }
+
+  for (const { field, value: raw } of pairs) {
     // Special values
+    let value = raw;
     if (value === "NOW") {
       value = isoTimestamp();
     } else if (value === "+1") {
@@ -500,6 +519,8 @@ function handleSet(args: string[]): void {
     content = setField(content, field, value);
   }
 
+  // Reached only when every field existed: the write is real, so the success
+  // report is now execution-derived (FR-2), not unconditional.
   writeStateFile(pd, content);
   console.log(JSON.stringify({ updated: true, fields: args.length }));
   });
