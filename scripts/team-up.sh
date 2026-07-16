@@ -5,8 +5,8 @@ set -euo pipefail
 # Relaunch the agent team in ONE window: a leader plus N engineers laid out as
 # three columns (left engineers | center leader | right engineers), attached in
 # a single Ghostty window. N is 6 by default (3-1-3); -2/-4/-6 pick 2/4/6
-# engineers (1-1-1 / 2-1-2 / 3-1-3). The launch backend is tmux by default; set
-# TEAM_MUX=herdr (or pass --herdr) to build the same layout with herdr instead.
+# engineers (1-1-1 / 2-1-2 / 3-1-3). The layout is built with herdr, an
+# agent-aware terminal multiplexer (https://herdr.dev).
 #
 # For each member pane this script re-applies agmsg monitor delivery, enters the
 # member worktree, runs `mise trust`, and launches the selected agent runtime.
@@ -17,7 +17,6 @@ set -euo pipefail
 #   scripts/team-up.sh --codex  # create a run + launch Codex members
 #   scripts/team-up.sh -c       # resume each member's last conversation
 #   scripts/team-up.sh --kill   # tear down the team session
-#   TEAM_MUX=herdr scripts/team-up.sh   # build the layout with herdr
 #
 # Env:
 #   AGMSG_TEAM        team each member joins before launch (default: amadeus)
@@ -29,7 +28,7 @@ set -euo pipefail
 #   TEAM_ENGINEERS    engineer count for a fresh run: 2, 4, or 6 (default: 6)
 #   TEAM_RUN_ID       fixed run ID (intended for deterministic automation)
 #   TEAM_SESSION      session name (default: amadeus-team)
-#   TEAM_MUX          launch backend: tmux or herdr (default: tmux)
+#   HERDR             herdr executable (default: herdr on PATH)
 #
 # In Claude mode, -c falls back to a fresh start for members without history.
 # In Codex mode, -c resumes the last conversation in each member worktree.
@@ -56,31 +55,10 @@ HERDR="${HERDR:-herdr}"
 TEAM_SIZE="${TEAM_ENGINEERS:-6}"
 TEAM_SIZE_EXPLICIT=0
 
-# --- launch backend abstraction (tmux default; herdr optional) -----------
-# The 3-1-3 layout is built through a small set of mux_* verbs so the launch
-# backend is swappable. tmux is the default and unchanged; herdr (an
-# agent-aware terminal multiplexer, https://herdr.dev) is selectable via
-# TEAM_MUX=herdr or --herdr. Everything else (run management, worktrees,
-# agmsg registration) is backend-neutral.
-#
-# Resolve the backend before argument parsing so --kill (handled inline in
-# the parse loop) sees it regardless of flag order. TEAM_MUX is the primary
-# selector; the --herdr/--tmux flags are a convenience pre-scanned here.
-MUX="${TEAM_MUX:-tmux}"
-MUX_EXPLICIT=0
-for _arg in "$@"; do
-  case "$_arg" in
-  --herdr) MUX="herdr"; MUX_EXPLICIT=1 ;;
-  --tmux) MUX="tmux"; MUX_EXPLICIT=1 ;;
-  esac
-done
-case "$MUX" in
-tmux | herdr) ;;
-*)
-  echo "invalid TEAM_MUX: $MUX (expected tmux or herdr)" >&2
-  exit 1
-  ;;
-esac
+# --- herdr launch layer --------------------------------------------------
+# The 3-1-3 layout is built through a small set of mux_* verbs that drive
+# herdr. Everything else (run management, worktrees, agmsg registration) is
+# launch-neutral.
 
 # Extract the first "pane_id":"..." from a herdr JSON response. Every herdr
 # CLI command prints JSON; workspace-create and pane-split responses each
@@ -98,141 +76,110 @@ herdr_wait_ready() {
   return 1
 }
 
-# True when session $1 exists (tmux: has-session; herdr: server accepts the
-# session socket). A running herdr headless server answers workspace list.
+# The run record's mux file is a generation marker, not a backend selector:
+# fresh runs always record "herdr". A run whose marker is missing or is not
+# "herdr" predates the herdr-only launcher and cannot be driven here — reject
+# it loudly with recovery guidance.
+reject_legacy_run() {
+  local run_id="$1" marker="$2"
+  {
+    echo "ERROR: run $run_id predates the herdr-only launcher (mux marker: ${marker:-<none>}); it cannot be resumed or killed here."
+    echo "Its worktrees and branches are intact — create a fresh run to continue that work: scripts/team-up.sh"
+    echo "If the old session is still attached, tear it down manually, e.g.: tmux kill-session -t $S"
+  } >&2
+  exit 1
+}
+
+# True when session $1 exists: a running herdr headless server answers
+# `workspace list` over the session socket.
 mux_has_session() {
-  case "$MUX" in
-  tmux) tmux has-session -t "$1" 2>/dev/null ;;
-  herdr) "$HERDR" --session "$1" workspace list >/dev/null 2>&1 ;;
-  esac
+  "$HERDR" --session "$1" workspace list >/dev/null 2>&1
 }
 
 # Tear down session $1, echoing killed/none. Keeps worktrees intact.
 mux_kill() {
-  case "$MUX" in
-  tmux) tmux kill-session -t "$1" 2>/dev/null && echo "killed session $1" || echo "no session $1" ;;
-  herdr)
-    # `session stop` alone is not enough: herdr persists the session's
-    # workspace layout on disk and restores it (with dead shells) on the
-    # next `server` start, leaving ghost workspaces in the UI. `session
-    # delete` removes the persisted state as well — but stop is
-    # asynchronous, and a delete issued while the server is still going
-    # down fails silently, resurrecting the ghosts. Wait for the socket
-    # to actually die before deleting, and verify the delete landed.
-    if "$HERDR" --session "$1" workspace list >/dev/null 2>&1; then
-      "$HERDR" session stop "$1" >/dev/null 2>&1
-      local _i
-      for _i in $(seq 1 20); do
-        "$HERDR" --session "$1" workspace list >/dev/null 2>&1 || break
-        sleep 0.5
-      done
-      "$HERDR" session delete "$1" >/dev/null 2>&1
-      if "$HERDR" session list 2>/dev/null | awk -v s="$1" '$1 == s { found=1 } END { exit !found }'; then
-        echo "WARNING: herdr session $1 still present after delete — ghost workspaces may reappear" >&2
-      fi
-      echo "killed session $1"
-    else
-      # server not running: still delete any persisted session state
-      "$HERDR" session delete "$1" >/dev/null 2>&1 && echo "killed session $1" || echo "no session $1"
+  # `session stop` alone is not enough: herdr persists the session's workspace
+  # layout on disk and restores it (with dead shells) on the next `server`
+  # start, leaving ghost workspaces in the UI. `session delete` removes the
+  # persisted state as well — but stop is asynchronous, and a delete issued
+  # while the server is still going down fails silently, resurrecting the
+  # ghosts. Wait for the socket to actually die before deleting, and verify
+  # the delete landed.
+  if "$HERDR" --session "$1" workspace list >/dev/null 2>&1; then
+    "$HERDR" session stop "$1" >/dev/null 2>&1
+    local _i
+    for _i in $(seq 1 20); do
+      "$HERDR" --session "$1" workspace list >/dev/null 2>&1 || break
+      sleep 0.5
+    done
+    "$HERDR" session delete "$1" >/dev/null 2>&1
+    if "$HERDR" session list 2>/dev/null | awk -v s="$1" '$1 == s { found=1 } END { exit !found }'; then
+      echo "WARNING: herdr session $1 still present after delete — ghost workspaces may reappear" >&2
     fi
-    ;;
-  esac
+    echo "killed session $1"
+  else
+    # server not running: still delete any persisted session state
+    "$HERDR" session delete "$1" >/dev/null 2>&1 && echo "killed session $1" || echo "no session $1"
+  fi
 }
 
 # mux_pane_label <session> <pane> <label> — name the pane after its member.
-# tmux surfaces the member via pane-border-format (cwd basename); herdr has
-# no --label on pane split (0.7.1), so the label is applied post-create via
-# `pane rename` sets the pane-border title; `agent rename` sets the name in
-# the agents panel — without both, the herdr UI falls back to the workspace
-# label and every agent renders as the session name (#999). Applied right
-# after the pane is created and before its command runs, while no agent
+# herdr has no --label on pane split (0.7.1), so the label is applied
+# post-create: `pane rename` sets the pane-border title; `agent rename` sets
+# the name in the agents panel — without both, the herdr UI falls back to the
+# workspace label and every agent renders as the session name (#999). Applied
+# right after the pane is created and before its command runs, while no agent
 # process is detected yet, so the rename lands immediately and persists
 # (verified on 0.7.1). Cosmetic: never fail launch.
 mux_pane_label() {
   local s="$1" pane="$2" label="$3"
-  case "$MUX" in
-  tmux) : ;;
-  herdr)
-    "$HERDR" --session "$s" pane rename "$pane" "$label" >/dev/null 2>&1 || true
-    "$HERDR" --session "$s" agent rename "$pane" "$label" >/dev/null 2>&1 || true
-    ;;
-  esac
+  "$HERDR" --session "$s" pane rename "$pane" "$label" >/dev/null 2>&1 || true
+  "$HERDR" --session "$s" agent rename "$pane" "$label" >/dev/null 2>&1 || true
 }
 
 # mux_new_session <session> <cwd> <cmd> <label> — create the session's first
 # pane running <cmd> and echo its pane id.
 mux_new_session() {
   local s="$1" cwd="$2" cmd="$3" label="$4" pane
-  case "$MUX" in
-  tmux)
-    tmux new-session -d -s "$s" -x 300 -y 90 "$cmd"
-    tmux display-message -p -t "$s" '#{pane_id}'
-    ;;
-  herdr)
-    # herdr persists a session's workspace layout to session.json on stop /
-    # GUI close / crash, and RESTORES it when the server next starts. We only
-    # reach here when mux_has_session reported no running server, so any
-    # persisted state is stale — starting the server without purging it would
-    # restore the old workspaces and stack this run's workspace on top,
-    # leaving ghost spaces in the UI (#999 follow-up). Delete the persisted
-    # state first so the server starts clean with exactly one workspace.
-    "$HERDR" session delete "$s" >/dev/null 2>&1 || true
-    nohup "$HERDR" --session "$s" server >/dev/null 2>&1 &
-    disown 2>/dev/null || true
-    herdr_wait_ready "$s" || return 1
-    pane="$("$HERDR" --session "$s" workspace create --cwd "$cwd" --label "$s" --no-focus | herdr_pane_id)"
-    [ -n "$pane" ] || { echo "ERROR: herdr workspace create returned no pane id" >&2; return 1; }
-    mux_pane_label "$s" "$pane" "$label"
-    "$HERDR" --session "$s" pane run "$pane" "$cmd" >/dev/null
-    printf '%s\n' "$pane"
-    ;;
-  esac
+  # herdr persists a session's workspace layout to session.json on stop / GUI
+  # close / crash, and RESTORES it when the server next starts. We only reach
+  # here when mux_has_session reported no running server, so any persisted
+  # state is stale — starting the server without purging it would restore the
+  # old workspaces and stack this run's workspace on top, leaving ghost spaces
+  # in the UI (#999 follow-up). Delete the persisted state first so the server
+  # starts clean with exactly one workspace.
+  "$HERDR" session delete "$s" >/dev/null 2>&1 || true
+  nohup "$HERDR" --session "$s" server >/dev/null 2>&1 &
+  disown 2>/dev/null || true
+  herdr_wait_ready "$s" || return 1
+  pane="$("$HERDR" --session "$s" workspace create --cwd "$cwd" --label "$s" --no-focus | herdr_pane_id)"
+  [ -n "$pane" ] || { echo "ERROR: herdr workspace create returned no pane id" >&2; return 1; }
+  mux_pane_label "$s" "$pane" "$label"
+  "$HERDR" --session "$s" pane run "$pane" "$cmd" >/dev/null
+  printf '%s\n' "$pane"
 }
 
 # mux_split <session> <target_pane> <orient h|v> <newpct> <cwd> <cmd> <label>
 # — split <target_pane> and echo the new pane id running <cmd>.
 mux_split() {
   local s="$1" target="$2" orient="$3" pct="$4" cwd="$5" cmd="$6" label="$7" dir ratio pane
-  case "$MUX" in
-  tmux)
-    case "$orient" in
-    h) tmux split-window -h -l "${pct}%" -t "$target" -P -F '#{pane_id}' "$cmd" ;;
-    v) tmux split-window -v -l "${pct}%" -t "$target" -P -F '#{pane_id}' "$cmd" ;;
-    esac
-    ;;
-  herdr)
-    case "$orient" in
-    h) dir="right" ;;
-    v) dir="down" ;;
-    esac
-    # tmux -l sizes the NEW pane; herdr --ratio sizes the RETAINED pane, so
-    # the ratio is inverted (66% new pane -> retained 0.34).
-    ratio="$(awk "BEGIN{printf \"%.4f\", (100-$pct)/100}")"
-    pane="$("$HERDR" --session "$s" pane split "$target" --direction "$dir" --ratio "$ratio" --cwd "$cwd" --no-focus | herdr_pane_id)"
-    [ -n "$pane" ] || { echo "ERROR: herdr pane split returned no pane id" >&2; return 1; }
-    mux_pane_label "$s" "$pane" "$label"
-    "$HERDR" --session "$s" pane run "$pane" "$cmd" >/dev/null
-    printf '%s\n' "$pane"
-    ;;
+  case "$orient" in
+  h) dir="right" ;;
+  v) dir="down" ;;
   esac
-}
-
-# Focus pane $2 in session $1. herdr 0.7.1 has no focus-by-id; its native
-# agent-status display makes the initial focused pane non-critical, so this
-# is a no-op there.
-mux_focus() {
-  case "$MUX" in
-  tmux) tmux select-pane -t "$2" ;;
-  herdr) : ;;
-  esac
+  # The caller's pct sizes the NEW pane; herdr --ratio sizes the RETAINED
+  # pane, so the ratio is inverted (66% new pane -> retained 0.34).
+  ratio="$(awk "BEGIN{printf \"%.4f\", (100-$pct)/100}")"
+  pane="$("$HERDR" --session "$s" pane split "$target" --direction "$dir" --ratio "$ratio" --cwd "$cwd" --no-focus | herdr_pane_id)"
+  [ -n "$pane" ] || { echo "ERROR: herdr pane split returned no pane id" >&2; return 1; }
+  mux_pane_label "$s" "$pane" "$label"
+  "$HERDR" --session "$s" pane run "$pane" "$cmd" >/dev/null
+  printf '%s\n' "$pane"
 }
 
 # Attach session $1 in a fresh Ghostty window.
 mux_attach() {
-  case "$MUX" in
-  tmux) open -na Ghostty --args -e tmux attach -t "$1" ;;
-  herdr) open -na Ghostty --args -e "$HERDR" session attach "$1" ;;
-  esac
+  open -na Ghostty --args -e "$HERDR" session attach "$1"
 }
 
 CONTINUE=0
@@ -255,18 +202,19 @@ Without -c, creates a new run (leader + N engineers) from the repository HEAD.
       --claude         Use Claude for a fresh run
       --codex          Use Codex for a fresh run
       --kill           Stop the active session; keep its worktrees
-      --herdr          Build the layout with herdr (default: tmux)
-      --tmux           Build the layout with tmux (the default)
       --list-runs      List retained runs
       --delete-run ID  Delete a stopped, clean run with no unmerged work
   -h, --help           Show this help
 
 The first resume of legacy fixed worktrees requires --claude or --codex.
 
+Runs created before the herdr-only launcher (their run record's mux marker is
+absent or not "herdr") can no longer be resumed or killed; their worktrees and
+branches stay intact, so create a fresh run to continue that work.
+
 Environment:
   AGENT_IDENTITY      Identity for the selected runtime (default: corporate-1)
   TEAM_ENGINEERS      Engineer count for a fresh run: 2, 4, or 6 (default: 6)
-  TEAM_MUX            Launch backend: tmux or herdr (default: tmux)
 EOF
 }
 
@@ -365,7 +313,6 @@ while [ "$#" -gt 0 ]; do
   -h | --help) usage; exit 0 ;;
   --claude) RUNTIME="claude"; RUNTIME_EXPLICIT=1 ;;
   --codex) RUNTIME="codex"; RUNTIME_EXPLICIT=1 ;;
-  --herdr | --tmux) ;; # backend already resolved by the pre-scan above
   --run)
     shift
     [ "$#" -gt 0 ] || { echo "ERROR: --run requires an ID" >&2; exit 1; }
@@ -382,20 +329,16 @@ while [ "$#" -gt 0 ]; do
     RUN_NAME="$1"
     ;;
   --kill)
-    # Kill with the backend that created the session, not the current default.
-    # The active run records its mux; honor it so a bare --kill after a herdr
-    # launch tears down the herdr session (not a phantom tmux one).
     active_run=""
     if [ -f "$STATE_DIR/active-run" ]; then
       active_run="$(cat "$STATE_DIR/active-run")"
     fi
-    if [ -n "$active_run" ] && [ -f "$STATE_DIR/runs/$active_run/mux" ]; then
-      saved_mux="$(cat "$STATE_DIR/runs/$active_run/mux")"
-      if [ "$MUX_EXPLICIT" = "1" ] && [ "$MUX" != "$saved_mux" ]; then
-        echo "ERROR: active run $active_run uses mux=$saved_mux, not mux=$MUX" >&2
-        exit 1
-      fi
-      MUX="$saved_mux"
+    # Legacy guard: refuse to --kill a run created before the herdr-only
+    # launcher (its mux marker is absent or not "herdr"); its session, if any,
+    # is not a herdr session this script can tear down.
+    if [ -n "$active_run" ]; then
+      saved_mux="$(cat "$STATE_DIR/runs/$active_run/mux" 2>/dev/null || true)"
+      [ "$saved_mux" = "herdr" ] || reject_legacy_run "$active_run" "$saved_mux"
     fi
     mux_kill "$S"
     if [ -n "$active_run" ]; then
@@ -653,7 +596,10 @@ create_run() {
   mkdir -p "$RUN_ROOT" "$RUN_RECORD/members"
   RUN_PREPARING=1
   printf '%s\n' "$RUNTIME" >"$RUN_RECORD/runtime"
-  printf '%s\n' "$MUX" >"$RUN_RECORD/mux"
+  # Generation marker (always "herdr" now that it is the only backend);
+  # resume/--kill read it back as a legacy guard, rejecting runs whose marker
+  # is absent or not "herdr".
+  printf 'herdr\n' >"$RUN_RECORD/mux"
   printf '%s\n' "$RUN_NAME" >"$RUN_RECORD/name"
   printf '%s\n' "$base_ref" >"$RUN_RECORD/base-ref"
   printf '%s\n' "$base_commit" >"$RUN_RECORD/base-commit"
@@ -688,14 +634,10 @@ load_run() {
     return 1
   fi
   RUNTIME="$saved_runtime"
-  # Resume with the backend that created the run. Runs predating the mux
-  # record default to tmux.
-  saved_mux="$(cat "$RUN_RECORD/mux" 2>/dev/null || printf 'tmux')"
-  if [ "$MUX_EXPLICIT" = "1" ] && [ "$MUX" != "$saved_mux" ]; then
-    echo "ERROR: run $RUN_ID uses mux=$saved_mux, not mux=$MUX" >&2
-    return 1
-  fi
-  MUX="$saved_mux"
+  # Legacy guard: only herdr-generation runs can be resumed. A run with an
+  # absent or non-herdr mux marker predates the herdr-only launcher; reject it.
+  saved_mux="$(cat "$RUN_RECORD/mux" 2>/dev/null || true)"
+  [ "$saved_mux" = "herdr" ] || reject_legacy_run "$RUN_ID" "$saved_mux"
   # Engineer count is fixed by the run's worktrees; read the saved size.
   TEAM_SIZE="$(record_size "$RUN_RECORD")"
 }
@@ -719,7 +661,9 @@ adopt_legacy_run() {
   fi
   mkdir -p "$RUN_RECORD/members"
   printf '%s\n' "$RUNTIME" >"$RUN_RECORD/runtime"
-  printf '%s\n' "$MUX" >"$RUN_RECORD/mux"
+  # These fixed worktrees are adopted and launched with herdr, so record the
+  # herdr generation marker (see create_run).
+  printf 'herdr\n' >"$RUN_RECORD/mux"
   printf '%s\n' "$(git -C "$REPO" rev-parse HEAD)" >"$RUN_RECORD/base-commit"
   printf 'stopped\n' >"$RUN_RECORD/status"
   printf '1\n' >"$RUN_RECORD/legacy"
@@ -764,11 +708,11 @@ if mux_has_session "$S"; then
         exit 1
       fi
     fi
-    echo "$MUX session '$S' already exists — attaching instead." >&2
+    echo "herdr session '$S' already exists — attaching instead." >&2
     mux_attach "$S"
     exit 0
   fi
-  echo "ERROR: $MUX session '$S' already exists" >&2
+  echo "ERROR: herdr session '$S' already exists" >&2
   echo "(tear it down first with: scripts/team-up.sh --kill)" >&2
   exit 1
 fi
@@ -804,12 +748,6 @@ P_TOP_RIGHT="$(mux_split "$S" "$P_LEADER" h 50 "$(member_worktree "${right[0]}")
 
 stack_column "$P_TOP_LEFT" "${left[@]:1}"
 stack_column "$P_TOP_RIGHT" "${right[@]:1}"
-
-mux_focus "$S" "$P_LEADER"
-if [ "$MUX" = "tmux" ]; then
-  tmux set-option -t "$S" pane-border-status top
-  tmux set-option -t "$S" pane-border-format ' #{b:pane_current_path} '
-fi
 
 mux_attach "$S"
 if [ -n "$RUN_ID" ]; then
