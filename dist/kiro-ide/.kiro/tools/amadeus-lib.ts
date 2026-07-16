@@ -3297,16 +3297,28 @@ export function setField(content: string, field: string, value: string): string 
   return content;
 }
 
+// fieldLineRegex: the canonical `- **Field**:` line-head matcher. Shared by
+// setFieldStrict and fieldExists so the two cannot drift on what "the field
+// exists" means (both must agree with what setField actually mutates).
+// [ \t]* instead of \s* — see setField comment for the line-crossing rationale.
+function fieldLineRegex(field: string): RegExp {
+  return new RegExp(`^(- \\*\\*${escapeRegex(field)}\\*\\*:)[ \\t]*.*$`, "m");
+}
+
+// fieldExists: true when a `- **Field**:` bullet is present in the state file,
+// using the exact matcher setFieldStrict/setField rely on. Callers that must
+// fail-closed on an absent field (e.g. `state set`) pre-validate with this
+// before writing, instead of letting setField silently no-op (Issue #1027).
+export function fieldExists(content: string, field: string): boolean {
+  return fieldLineRegex(field).test(content);
+}
+
 // setFieldStrict: like setField but throws when the field is absent. Use this
 // in state-machine transitions where a silent no-op would cause undetected
 // drift (e.g., bolt set-autonomy updating Construction Autonomy Mode — if the
 // field is missing, we want to know immediately, not ship a lie to the caller).
 export function setFieldStrict(content: string, field: string, value: string): string {
-  // [ \t]* instead of \s* — see setField comment for the line-crossing rationale.
-  const regex = new RegExp(
-    `^(- \\*\\*${escapeRegex(field)}\\*\\*:)[ \\t]*.*$`,
-    "m"
-  );
+  const regex = fieldLineRegex(field);
   if (!regex.test(content)) {
     throw new Error(
       `Field not found in state file: "${field}". Cannot update — refusing to silently no-op.`

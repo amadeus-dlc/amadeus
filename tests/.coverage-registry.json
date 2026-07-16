@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 459,
+    "total": 460,
     "enumeratedByClass": {
-      "function": 236,
+      "function": 237,
       "audit": 73,
       "scope": 10,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 107,
+      "function": 108,
       "audit": 32,
       "scope": 10,
       "stage": 8,
@@ -1434,6 +1434,18 @@
         },
         {
           "file": "tests/unit/t80.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:fieldExists",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t224-state-set-failclosed.test.ts",
           "mechanism": "cli"
         }
       ],

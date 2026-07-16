@@ -17,6 +17,7 @@ import {
   emitError,
   errorMessage,
   extractMarkdownSection,
+  fieldExists,
   findStageBySlug,
   findAllEvents,
   firstInScopeStageOfPhase,
@@ -468,7 +469,7 @@ function handleGet(args: string[]): void {
   console.log(value);
 }
 
-function handleSet(args: string[]): void {
+export function handleSet(args: string[]): void {
   if (args.length < 1) error("Usage: amadeus-state.ts set <field=value> ...");
   const pd = resolveProjectDir(projectDir);
   // C2b lost-update safety: hold the audit lock across read→decide→write so
@@ -478,13 +479,38 @@ function handleSet(args: string[]): void {
   withAuditLock(pd, () => {
   let content = readStateFile(pd);
 
+  // Parse every pair up front so field existence can be validated as one pass
+  // before any write. `set` must fail closed (Issue #1027): if a target field
+  // row is absent, setField silently no-ops, so the old code wrote an unchanged
+  // file and still reported `{"updated":true}` — a lie the caller trusts.
+  // Plain loops (no arrow callbacks): the complexity baseline keys anonymous
+  // functions by ordinal, so adding closures here would shift every later
+  // anonymous entry off its baseline row.
+  const pairs: { field: string; value: string }[] = [];
   for (const pair of args) {
     const eqIdx = pair.indexOf("=");
     if (eqIdx <= 0) error(`Invalid field=value pair: ${pair}`);
-    const field = pair.slice(0, eqIdx);
-    let value = pair.slice(eqIdx + 1);
+    pairs.push({ field: pair.slice(0, eqIdx), value: pair.slice(eqIdx + 1) });
+  }
 
+  // Pre-validate ALL fields and reject atomically with the full list of the
+  // missing ones (fail-at-first would hide later absences). On reject nothing
+  // is written — the state file, Last Updated included, stays byte-identical.
+  const missingMessages: string[] = [];
+  for (const { field } of pairs) {
+    if (!fieldExists(content, field)) {
+      missingMessages.push(
+        `Field not found in state file: "${field}". Cannot update — refusing to silently no-op.`,
+      );
+    }
+  }
+  if (missingMessages.length > 0) {
+    error(missingMessages.join("\n"));
+  }
+
+  for (const { field, value: raw } of pairs) {
     // Special values
+    let value = raw;
     if (value === "NOW") {
       value = isoTimestamp();
     } else if (value === "+1") {
@@ -500,6 +526,8 @@ function handleSet(args: string[]): void {
     content = setField(content, field, value);
   }
 
+  // Reached only when every field existed: the write is real, so the success
+  // report is now execution-derived (FR-2), not unconditional.
   writeStateFile(pd, content);
   console.log(JSON.stringify({ updated: true, fields: args.length }));
   });
