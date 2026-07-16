@@ -182,6 +182,17 @@ describe("gate-start wiring (in-process lcov carrier)", () => {
     expect(r.stderr).toContain("no ruling reference (E-code) or leader-approval timestamp line");
   });
 
+  test("refuses in-process with the M-2 wording on an unparseable approval timestamp", () => {
+    const dir = scaffoldShared(`${HEADER}leader 承認 あとで\n\n[Answer]: A — 採用\n`);
+    const saved = process.env.CLAUDE_PROJECT_DIR;
+    process.env.CLAUDE_PROJECT_DIR = dir;
+    const r = captureExit(() => handleGateStart(["requirements-analysis"]));
+    if (saved === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+    else process.env.CLAUDE_PROJECT_DIR = saved;
+    expect(r.exitCode).toBe(1);
+    expect(r.stderr).toContain("does not carry a parseable ISO timestamp");
+  });
+
   test("passes in-process on the zero-question format (guard lines run, no refusal)", () => {
     const dir = scaffoldShared(`${HEADER}0 問(leader 承認 2026-07-16T15:20:19Z)。\n\n## 質問\n\n(なし)\n`);
     const saved = process.env.CLAUDE_PROJECT_DIR;
