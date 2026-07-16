@@ -1149,28 +1149,48 @@ const ANSWER_TAG_RE = /\[Answer\]\s*:?/;
 const ECODE_RE = /E-[A-Z0-9][A-Z0-9-]*/;
 const ISO_TS_RE = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?Z?/;
 
+// Blank shapes: empty, "N/A" (any case), or content that is nothing but one
+// parenthesized group — the measured waiting-placeholder convention.
+function isFilledAnswer(line: string): boolean {
+  const content = line.slice(line.search(ANSWER_TAG_RE)).replace(ANSWER_TAG_RE, "").trim();
+  if (content === "" || /^n\/a$/i.test(content)) return false;
+  return !/^[((][^)))]*[))]$/.test(content);
+}
+
+// A leader-approval line satisfies the evidence requirement only when its ISO
+// timestamp actually parses (parse-don't-validate; a decorative "承認" line
+// with no real timestamp is the unparseable-timestamp failure).
+function hasParseableApprovalTimestamp(line: string): boolean {
+  const m = line.match(ISO_TS_RE);
+  if (!m) return false;
+  return Number.isFinite(Date.parse(m[0].endsWith("Z") ? m[0] : `${m[0]}Z`));
+}
+
+// Plain loops, zero anonymous functions: the complexity baseline matches
+// anonymous functions by ordinal, so adding arrows here shifts unrelated
+// entries into NEW_VIOLATION (the E-PM2 M7 mechanism, measured again on this
+// change).
 export function checkQuestionsEvidence(questionsPath: string): QuestionsEvidence {
   if (!existsSync(questionsPath)) return { kind: "pass", reason: "no-file" };
-  const text = readFileSync(questionsPath, "utf-8");
-  const lines = text.split("\n");
-  const answerLines = lines.filter((l) => ANSWER_TAG_RE.test(l));
+  const lines = readFileSync(questionsPath, "utf-8").split("\n");
+  const answerLines: string[] = [];
+  for (const l of lines) if (ANSWER_TAG_RE.test(l)) answerLines.push(l);
   if (answerLines.length === 0) return { kind: "pass", reason: "no-answer-tag" };
-  const filled = answerLines.some((l) => {
-    const content = l.slice(l.search(ANSWER_TAG_RE)).replace(ANSWER_TAG_RE, "").trim();
-    if (content === "" || /^n\/a$/i.test(content)) return false;
-    if (/^[((][^)))]*[))]$/.test(content)) return false;
-    return true;
-  });
-  if (!filled) return { kind: "pass", reason: "answer-blank" };
-  if (answerLines.some((l) => ECODE_RE.test(l))) return { kind: "pass", reason: "evidence-present" };
-  const approvalLines = lines.filter((l) => l.includes("承認"));
-  for (const line of approvalLines) {
-    const m = line.match(ISO_TS_RE);
-    if (m && Number.isFinite(Date.parse(m[0].endsWith("Z") ? m[0] : `${m[0]}Z`))) {
-      return { kind: "pass", reason: "evidence-present" };
-    }
+  let filled = false;
+  let hasEcode = false;
+  for (const l of answerLines) {
+    if (isFilledAnswer(l)) filled = true;
+    if (ECODE_RE.test(l)) hasEcode = true;
   }
-  if (approvalLines.length > 0) return { kind: "fail", reason: "unparseable-timestamp" };
+  if (!filled) return { kind: "pass", reason: "answer-blank" };
+  if (hasEcode) return { kind: "pass", reason: "evidence-present" };
+  let sawApprovalLine = false;
+  for (const l of lines) {
+    if (!l.includes("承認")) continue;
+    sawApprovalLine = true;
+    if (hasParseableApprovalTimestamp(l)) return { kind: "pass", reason: "evidence-present" };
+  }
+  if (sawApprovalLine) return { kind: "fail", reason: "unparseable-timestamp" };
   return { kind: "fail", reason: "no-evidence" };
 }
 
