@@ -19,14 +19,28 @@ afterEach(() => {
   for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
-function commandFor(member: string, resolverBody: string, env: Record<string, string> = {}) {
+// Drive codex_member_cmd for one member. HOME is pinned to a throwaway dir so
+// the trust-seed writes to `<home>/.codex-<identity>/config.toml` instead of the
+// real user home, and TEAM_REPO points at the checkout so the seed's
+// `package.ts codex trust` call resolves. Pass `homeOverride` to reuse a home
+// across calls (idempotency checks). Returns the spawn result plus the seeded
+// config path.
+function commandFor(
+  member: string,
+  resolverBody: string,
+  env: Record<string, string> = {},
+  homeOverride?: string,
+) {
   const dir = mkdtempSync(join(tmpdir(), "amadeus-team-up-"));
   tempDirs.push(dir);
+  const home = homeOverride ?? mkdtempSync(join(tmpdir(), "amadeus-codex-home-"));
+  if (!homeOverride) tempDirs.push(home);
+  const identity = env.AGENT_IDENTITY ?? "corporate-1";
   const resolver = join(dir, "role-resume.sh");
   writeFileSync(resolver, `#!/usr/bin/env bash\n${resolverBody}\n`);
   chmodSync(resolver, 0o755);
 
-  return Bun.spawnSync({
+  const result = Bun.spawnSync({
     cmd: [
       "bash",
       "-c",
@@ -38,6 +52,8 @@ function commandFor(member: string, resolverBody: string, env: Record<string, st
     env: {
       ...process.env,
       ...env,
+      HOME: home,
+      TEAM_REPO: ROOT,
       ROLE_RESUME: resolver,
       CODEX_MONITOR: "/usr/bin/true",
       DELIVERY: join(dir, "missing-delivery.sh"),
@@ -45,6 +61,7 @@ function commandFor(member: string, resolverBody: string, env: Record<string, st
     stderr: "pipe",
     stdout: "pipe",
   });
+  return { result, home, config: join(home, `.codex-${identity}`, "config.toml") };
 }
 
 function git(cwd: string, ...args: string[]) {
@@ -835,15 +852,15 @@ describe("team-up herdr-only launcher", () => {
 
 describe("team-up Codex resume", () => {
   test("marks Codex member sessions as team mode", () => {
-    const result = commandFor("engineer-1", "exit 0", {
+    const { result, home } = commandFor("engineer-1", "exit 0", {
       AGENT_IDENTITY: "personal",
       CLAUDE_IDENTITY: "ignored-claude",
       CODEX_IDENTITY: "ignored-codex",
     });
-    expect(result.exitCode).toBe(0);
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
     expect(result.stdout.toString()).toContain("AMADEUS_OPERATING_MODE=team");
     expect(result.stdout.toString()).toContain("CODEX_IDENTITY=personal");
-    expect(result.stdout.toString()).toContain(`CODEX_HOME=${process.env.HOME}/.codex-personal`);
+    expect(result.stdout.toString()).toContain(`CODEX_HOME=${home}/.codex-personal`);
     expect(result.stdout.toString()).not.toContain("ignored-codex");
     expect(result.stdout.toString()).not.toContain("CLAUDE_IDENTITY=");
     expect(result.stdout.toString()).toContain("AGMSG_CODEX_ROLE=e1");
@@ -851,29 +868,64 @@ describe("team-up Codex resume", () => {
   });
 
   test("resumes the role's recorded UUID instead of global --last", () => {
-    const result = commandFor("engineer-1", 'printf "thread-engineer-1"');
+    const { result } = commandFor("engineer-1", 'printf "thread-engineer-1"');
     const command = result.stdout.toString();
-    expect(result.exitCode).toBe(0);
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
     expect(command).toContain("--codex-command resume -- thread-engineer-1");
     expect(command).not.toContain("--last");
   });
 
   test("starts fresh when the role has no unique resumable UUID", () => {
-    const result = commandFor("engineer-2", "exit 0");
+    const { result } = commandFor("engineer-2", "exit 0");
     const command = result.stdout.toString();
-    expect(result.exitCode).toBe(0);
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
     expect(command).toContain("--codex-command codex");
     expect(command).not.toContain("--codex-command resume");
     expect(result.stderr.toString()).toContain("starting fresh");
   });
 
   test("starts fresh when the role resume resolver fails", () => {
-    const result = commandFor("engineer-3", "exit 1");
+    const { result } = commandFor("engineer-3", "exit 1");
     const command = result.stdout.toString();
-    expect(result.exitCode).toBe(0);
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
     expect(command).toContain("--codex-command codex");
     expect(command).not.toContain("--codex-command resume");
     expect(result.stderr.toString()).toContain("role resume resolver failed");
+  });
+});
+
+describe("team-up Codex trust seed", () => {
+  test("seeds project trust and hook trust into the identity config on launch", () => {
+    const { result, config } = commandFor("engineer-1", "exit 0", { AGENT_IDENTITY: "seedy" });
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+    expect(existsSync(config)).toBe(true);
+
+    const toml = readFileSync(config, "utf8");
+    // Layer 1: project trust for this member's worktree.
+    expect(toml).toMatch(/\[projects\."[^"]*engineer-1"\]/);
+    expect(toml).toContain('trust_level = "trusted"');
+    // Layer 2: hook trust entries substituted for this member's worktree.
+    expect(toml).toContain("[hooks.state.");
+    expect(toml).toContain("engineer-1/.codex/hooks.json:session_start:0:0");
+    expect(toml).toContain("trusted_hash = ");
+  });
+
+  test("re-running the seed on the same config does not duplicate entries", () => {
+    const home = mkdtempSync(join(tmpdir(), "amadeus-codex-home-"));
+    tempDirs.push(home);
+
+    const first = commandFor("engineer-1", "exit 0", { AGENT_IDENTITY: "seedy" }, home);
+    expect(first.result.exitCode, first.result.stderr.toString()).toBe(0);
+    const afterFirst = readFileSync(first.config, "utf8");
+
+    const second = commandFor("engineer-1", "exit 0", { AGENT_IDENTITY: "seedy" }, home);
+    expect(second.result.exitCode, second.result.stderr.toString()).toBe(0);
+    const afterSecond = readFileSync(second.config, "utf8");
+
+    // Idempotent: the second launch appends nothing.
+    expect(afterSecond).toBe(afterFirst);
+    expect((afterSecond.match(/\[projects\./g) ?? []).length).toBe(1);
+    expect((afterSecond.match(/\[hooks\.state\."[^"]*session_start:0:0"\]/g) ?? []).length).toBe(1);
   });
 });
 
