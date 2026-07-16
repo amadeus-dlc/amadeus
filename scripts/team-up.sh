@@ -457,6 +457,67 @@ agmsg_type() {
   esac
 }
 
+# seed_codex_trust <worktree> <config_toml> — pre-seed BOTH trust layers Codex
+# needs before it will run this project's hooks without an interactive TUI trust
+# pass (Codex never runs untrusted hooks; the --dangerously-bypass-hook-trust
+# flag does not run them either):
+#   layer 1  [projects."<worktree>"] trust_level = "trusted"  (project trust)
+#   layer 2  [hooks.state."..."] trusted_hash = "..."         (hook trust)
+# Without layer 1, Codex skips the whole .codex hook layer with no warning, so
+# both layers are required. Idempotent: each layer's anchor key line is probed
+# with `grep -qF` and skipped when already present, so resume (-c) never
+# duplicates entries. Surgical: only appends; never rewrites or deletes existing
+# content, and only touches this worktree's entries. Any failure is loud and
+# stops this member's launch.
+seed_codex_trust() {
+  local wt="$1" config="$2" dir entries line key
+  dir="$(dirname "$config")"
+  mkdir -p "$dir" || {
+    echo "ERROR: cannot create Codex config dir: $dir" >&2
+    return 1
+  }
+  [ -f "$config" ] || : >"$config" || {
+    echo "ERROR: cannot create Codex config file: $config" >&2
+    return 1
+  }
+
+  # Layer 1: project trust. Anchor key is the [projects."<wt>"] table header.
+  if ! grep -qF "[projects.\"$wt\"]" "$config"; then
+    printf '\n[projects."%s"]\ntrust_level = "trusted"\n' "$wt" >>"$config" || {
+      echo "ERROR: cannot seed Codex project trust into $config" >&2
+      return 1
+    }
+  fi
+
+  # Layer 2: hook trust. package.ts prints the [hooks.state] entries with this
+  # worktree substituted; append only entries whose header line is absent.
+  entries="$(cd "$REPO" && bun scripts/package.ts codex trust --project "$wt")" || {
+    echo "ERROR: cannot generate Codex hook-trust entries for $wt" >&2
+    return 1
+  }
+  key=""
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in
+    "") continue ;;
+    "[hooks.state."*)
+      key="$line"
+      ;;
+    *)
+      # Header + trusted_hash form one entry; flush after the hash line.
+      if [ -n "$key" ] && ! grep -qF "$key" "$config"; then
+        printf '\n%s\n%s\n' "$key" "$line" >>"$config" || {
+          echo "ERROR: cannot seed Codex hook trust into $config" >&2
+          return 1
+        }
+      fi
+      key=""
+      ;;
+    esac
+  done <<EOF
+$entries
+EOF
+}
+
 codex_member_cmd() {
   local m="$1" wt="${2:-$BASE/$1}" role prompt command="codex" resume_arg="" resume_uuid="" codex_home
   role="$(member_role "$m")"
@@ -487,6 +548,10 @@ codex_member_cmd() {
       echo "WARN: role resume resolver failed for $role — starting fresh" >&2
     fi
   fi
+
+  # Pre-seed both Codex trust layers into this identity's config.toml before
+  # emitting the launch command, so project hooks fire without a TUI trust pass.
+  seed_codex_trust "$wt" "$codex_home/config.toml" || return 1
 
   # AGMSG_CODEX_ROLE disambiguates old role registrations that may coexist in
   # a reused worktree. Keep the pane open after Codex exits for inspection.

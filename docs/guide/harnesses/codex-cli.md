@@ -49,18 +49,37 @@ never hand-edit it (the drift guard fails CI).
    its own `<host>-<clone>.md`, so concurrent appends never git-conflict), while
    per-user cursors and machine-local runtime state stay ignored.
 
-3. Trust the project and pre-seed hook trust. Codex never runs untrusted
-   hooks (the `--dangerously-bypass-hook-trust` flag does not run them
-   either). Either run one interactive TUI session and choose "Trust all and
-   continue" at the hooks dialog, or pre-seed deterministically:
+3. Trust the project. Codex trust is **two layers**, and both must be
+   pre-seeded in `$CODEX_HOME/config.toml`:
+
+   - **Layer 1 — project trust:** a `[projects."<abs-project-dir>"]` table with
+     `trust_level = "trusted"`. This is the gate. **Without layer 1 Codex skips
+     this project's entire `.codex` hook layer with no warning**, so layer 2
+     never even runs.
+   - **Layer 2 — hook trust:** the `[hooks.state."..."]` entries. Codex never
+     runs untrusted hooks (the `--dangerously-bypass-hook-trust` flag does not
+     run them either).
+
+   `scripts/team-up.sh` seeds both layers automatically for each Codex member.
+   To seed manually, either run one interactive TUI session and choose "Trust
+   all and continue" at the hooks dialog, or pre-seed deterministically:
+
+   ```toml
+   # layer 1 — project trust (add by hand)
+   [projects."/abs/path/to/your-project"]
+   trust_level = "trusted"
+   ```
 
    ```bash
+   # layer 2 — hook trust (printed ready to paste)
    bun scripts/package.ts codex trust --project /abs/path/to/your-project
    ```
 
-   appends ready-to-paste `[hooks.state]` entries for `$CODEX_HOME/config.toml`
-   (the hash covers the hook identity, not the path — the printed entries are
-   exact for `hooks.json` created from the shipped `hooks.json.example`).
+   The layer-2 command appends ready-to-paste `[hooks.state]` entries for
+   `$CODEX_HOME/config.toml` (the hash covers the hook identity, not the path —
+   the printed entries are exact for `hooks.json` created from the shipped
+   `hooks.json.example`). `$amadeus --doctor` checks layer 1's presence loudly
+   and reminds about layer 2.
 
 4. Keep `.codex/config.toml` project-level only when the project intentionally
    owns Codex settings; otherwise keep provider/model choices in
