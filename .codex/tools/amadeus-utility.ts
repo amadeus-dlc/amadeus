@@ -895,7 +895,7 @@ export function handleDoctor(projectDir: string): void {
   // 4b. Dual-harness coexistence (D-11): another harness tree installed AND a
   // workflow active is supported-but-untested — warn (advisory pass with a
   // visible label), never block.
-  const otherTrees = [".claude", ".kiro", ".codex"].filter(
+  const otherTrees = [".claude", ".kiro", ".codex", ".opencode", ".cursor"].filter(
     (h) => h !== harness && existsSync(join(projectDir, h, "tools", "amadeus-lib.ts")),
   );
   if (

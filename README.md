@@ -55,8 +55,8 @@ Ad-hoc AI coding works until the project gets real. Then context drifts between 
 | **Kiro CLI** (≥ 2.6) | `dist/kiro/.kiro/` + `dist/kiro/amadeus/` → `<project>/` (+ `dist/kiro/AGENTS.md`) | `/amadeus` | [Quick Start](#quick-start) below + [Running AI-DLC on Kiro CLI](docs/guide/harnesses/kiro-cli.md). |
 | **Claude Code** | `dist/claude/.claude/` + `dist/claude/amadeus/` → `<project>/` | `/amadeus` | [Quick Start](#quick-start) below + [Getting Started](docs/guide/01-getting-started.md). |
 | **Codex CLI** (≥ 0.139.0) | `dist/codex/` → `<project>/` (`.codex/` + `.agents/` + `amadeus/` + `AGENTS.md`) | `$amadeus` (or `/skills` → amadeus) | [Quick Start](#quick-start) below + [AI-DLC on Codex CLI](docs/guide/harnesses/codex-cli.md). |
-| **OpenCode** | `dist/opencode/.opencode/` + `dist/opencode/amadeus/` → `<project>/` (+ `dist/opencode/AGENTS.md`) | `$amadeus` | [AI-DLC on OpenCode](docs/guide/harnesses/opencode.md) — manual install, session skills, hooks deferred. |
-| **Cursor** | `dist/cursor/.cursor/` + `dist/cursor/amadeus/` → `<project>/` (+ `dist/cursor/AGENTS.md`) | `/amadeus` | [AI-DLC on Cursor](docs/guide/harnesses/cursor.md) — manual install, 8-event hook wiring. |
+| **OpenCode** | `dist/opencode/.opencode/` + `dist/opencode/amadeus/` → `<project>/` (+ `dist/opencode/AGENTS.md`) | `$amadeus` | [Quick Start](#quick-start) below + [AI-DLC on OpenCode](docs/guide/harnesses/opencode.md). |
+| **Cursor** | `dist/cursor/.cursor/` + `dist/cursor/amadeus/` → `<project>/` (+ `dist/cursor/AGENTS.md`) | `/amadeus` | [Quick Start](#quick-start) below + [AI-DLC on Cursor](docs/guide/harnesses/cursor.md). |
 
 The deterministic engine — state machine, audit log, and the referee that coordinates parallel agents — is byte-identical across every harness; only the shell differs. Each section in the [Quick Start](#quick-start) installs one harness end to end, and its guide above goes deeper on prerequisites and differences.
 
@@ -106,7 +106,7 @@ bunx @amadeus-dlc/setup install     # bun
 npx @amadeus-dlc/setup install      # npm/node
 ```
 
-Run bare, `install` launches an interactive wizard: pick your harness (`claude` / `codex` / `kiro` / `kiro-ide`), then a target directory. For scripts and CI, skip the wizard with explicit flags:
+Run bare, `install` launches an interactive wizard: pick your harness (`claude` / `codex` / `kiro` / `kiro-ide` / `opencode` / `cursor`), then a target directory. For scripts and CI, skip the wizard with explicit flags:
 
 ```bash
 bunx @amadeus-dlc/setup install --harness claude --target your-project --yes
