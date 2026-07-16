@@ -19,16 +19,24 @@ import type { RuleFile } from "../../packages/framework/core/tools/amadeus-graph
 import {
   amendmentCountOf,
   buildRows,
+  CHURN_THRESHOLD,
   classifySection,
   collectMetrics,
+  DEFAULT_DISTILL_K,
+  distillCandidates,
   main,
   normaliseCid,
   parseArgs,
   parseCidRecords,
+  parseGoaLine,
+  parsePmCidLine,
+  renderDistillJson,
+  renderDistillTable,
   renderJson,
   renderTable,
   type RuleLine,
   scanCitations,
+  ZERO_CITE_THRESHOLD_DAYS,
 } from "../../packages/framework/core/tools/amadeus-norm-metrics.ts";
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
@@ -36,6 +44,10 @@ const REAL_MEMORY = join(REPO_ROOT, "amadeus", "spaces", "default", "memory");
 // A path guaranteed not to resolve to a rules dir — loadRules() returns [] for
 // a non-existent AMADEUS_RULES_DIR, which is the fail-closed (exit 1) trigger.
 const NO_MEMORY = join(REPO_ROOT, "no-such-memory-dir-xyz");
+// A corpus root whose amadeus/spaces/*/intents subtree exists — drives the
+// IoCollector (corpusFileBodies -> collectMarkdownFiles) in-process so those
+// fs-walk lines are lcov-measured, not left to the spawn-only blind spot.
+const CORPUS_FIXTURE = join(REPO_ROOT, "tests", "fixtures", "norm-corpus");
 
 function line(scope: RuleLine["scope"], section: string, text: string): RuleLine {
   return { scope, section, text };
@@ -280,17 +292,37 @@ describe("determinism + JSON schema", () => {
 
 describe("parseArgs", () => {
   test("rank with flags", () => {
-    expect(parseArgs(["rank"])).toEqual({ kind: "ok", verb: "rank", json: false, top: null });
-    expect(parseArgs(["rank", "--json"])).toEqual({ kind: "ok", verb: "rank", json: true, top: null });
-    expect(parseArgs(["rank", "--top", "5"])).toEqual({ kind: "ok", verb: "rank", json: false, top: 5 });
+    expect(parseArgs(["rank"])).toEqual({ kind: "ok", verb: "rank", json: false, top: null, k: null });
+    expect(parseArgs(["rank", "--json"])).toEqual({ kind: "ok", verb: "rank", json: true, top: null, k: null });
+    expect(parseArgs(["rank", "--top", "5"])).toEqual({ kind: "ok", verb: "rank", json: false, top: 5, k: null });
   });
 
-  test("missing verb / bad --top are exit-2 errors", () => {
+  test("distill-candidates with --k", () => {
+    expect(parseArgs(["distill-candidates"])).toEqual({
+      kind: "ok",
+      verb: "distill-candidates",
+      json: false,
+      top: null,
+      k: null,
+    });
+    expect(parseArgs(["distill-candidates", "--k", "3", "--json"])).toEqual({
+      kind: "ok",
+      verb: "distill-candidates",
+      json: true,
+      top: null,
+      k: 3,
+    });
+  });
+
+  test("missing verb / bad --top / bad --k are exit-2 errors", () => {
     expect(parseArgs([])).toMatchObject({ kind: "error", code: 2 });
     expect(parseArgs(["rank", "--top", "0"])).toMatchObject({ kind: "error", code: 2 });
     expect(parseArgs(["rank", "--top", "x"])).toMatchObject({ kind: "error", code: 2 });
     expect(parseArgs(["rank", "--top"])).toMatchObject({ kind: "error", code: 2 });
     expect(parseArgs(["rank", "extra"])).toMatchObject({ kind: "error", code: 2 });
+    expect(parseArgs(["distill-candidates", "--k", "0"])).toMatchObject({ kind: "error", code: 2 });
+    expect(parseArgs(["distill-candidates", "--k", "x"])).toMatchObject({ kind: "error", code: 2 });
+    expect(parseArgs(["distill-candidates", "--k"])).toMatchObject({ kind: "error", code: 2 });
   });
 });
 
@@ -314,7 +346,7 @@ describe("main dispatch (fail-closed)", () => {
   }
 
   test("unknown verb -> exit 2 (switch default)", () => {
-    expect(silence(() => main(["distill-candidates"]))).toBe(2);
+    expect(silence(() => main(["bogus-verb"]))).toBe(2);
   });
 
   test("argv parse error -> exit 2 (main error branch)", () => {
@@ -336,8 +368,250 @@ describe("main dispatch (fail-closed)", () => {
     try {
       expect(silence(() => main(["rank", "--json", "--top", "3"]))).toBe(0);
       expect(silence(() => main(["rank"]))).toBe(0);
+      expect(silence(() => main(["distill-candidates"]))).toBe(0);
+      expect(silence(() => main(["distill-candidates", "--json", "--k", "3"]))).toBe(0);
     } finally {
       restore();
     }
+  });
+
+  test("distill-candidates with memory absent -> exit 1 (fail-closed)", () => {
+    process.env.AMADEUS_RULES_DIR = NO_MEMORY;
+    try {
+      expect(silence(() => main(["distill-candidates"]))).toBe(1);
+    } finally {
+      restore();
+    }
+  });
+
+  test("main drives the corpus IoCollector in-process (fixture root)", () => {
+    const origCorpus = process.env.AMADEUS_CORPUS_ROOT;
+    process.env.AMADEUS_RULES_DIR = REAL_MEMORY;
+    process.env.AMADEUS_CORPUS_ROOT = CORPUS_FIXTURE;
+    try {
+      // Both verbs walk corpusFileBodies -> collectMarkdownFiles over the
+      // fixture's amadeus/spaces/*/intents subtree (record file + audit shard).
+      expect(silence(() => main(["rank", "--json"]))).toBe(0);
+      expect(silence(() => main(["distill-candidates", "--json"]))).toBe(0);
+    } finally {
+      restore();
+      if (origCorpus === undefined) delete process.env.AMADEUS_CORPUS_ROOT;
+      else process.env.AMADEUS_CORPUS_ROOT = origCorpus;
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FR-1: citation corpus (record tree + audit shards) folds into the counts.
+// collectMetrics takes an iterable of corpus file bodies; here we drive it with
+// string fixtures (the production caller passes a streaming generator).
+// ---------------------------------------------------------------------------
+
+function corpusRules(): RuleFile[] {
+  const team = new Map<string, string>([
+    ["Corrections", "- alpha rule (2026-07-05) <!-- cid:s:alpha -->"],
+  ]);
+  return [ruleFile("team", team)];
+}
+
+describe("citation corpus (record + audit surface — AC-1b)", () => {
+  test("corpus bodies add citations and advance lastCited / latestDataDate", () => {
+    const memoryOnly = collectMetrics(corpusRules(), "sha");
+    const withCorpus = collectMetrics(corpusRules(), "sha", [
+      "record file cites cid:s:alpha again (2026-07-20)",
+      "audit shard cites cid:alpha tail form (2026-07-25)",
+    ]);
+    const before = memoryOnly.rows.find((r) => r.cid === "s:alpha");
+    const after = withCorpus.rows.find((r) => r.cid === "s:alpha");
+    // memory-only: 1 self-definition cite; corpus adds 2 more.
+    expect(before?.cites).toBe(1);
+    expect(after?.cites).toBe(3);
+    expect(memoryOnly.latestDataDate).toBe("2026-07-05");
+    expect(withCorpus.latestDataDate).toBe("2026-07-25");
+    expect(after?.lastCited).toBe("2026-07-25");
+  });
+
+  test("corpus E-code occurrences fold into the observed count", () => {
+    const memoryOnly = collectMetrics(corpusRules(), "sha");
+    const withCorpus = collectMetrics(corpusRules(), "sha", ["ruling E-CV3 and E-PM1 mentioned here"]);
+    expect(memoryOnly.ecodeOccurrences).toBe(0);
+    expect(withCorpus.ecodeOccurrences).toBe(2);
+  });
+
+  test("determinism holds with a corpus (AC-1d) — byte-identical across runs", () => {
+    const corpus = ["cid:s:alpha ref (2026-07-19)", "another cid:alpha ref (2026-07-21)"];
+    const a = renderJson(collectMetrics(corpusRules(), "sha", corpus), null);
+    const b = renderJson(collectMetrics(corpusRules(), "sha", corpus), null);
+    expect(a).toBe(b);
+  });
+
+  test("empty corpus is equivalent to memory-only (additive)", () => {
+    const memoryOnly = renderJson(collectMetrics(corpusRules(), "sha"), null);
+    const emptyCorpus = renderJson(collectMetrics(corpusRules(), "sha", []), null);
+    expect(emptyCorpus).toBe(memoryOnly);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FR-2: distill-candidates — zero-cite / high-churn selection, structural
+// Forbidden/Mandated exemption, threshold boundaries, k cap.
+// ---------------------------------------------------------------------------
+
+function distillRules(): RuleFile[] {
+  const team = new Map<string, string>([
+    [
+      "Corrections",
+      // stale: only its self-definition cite, adopted long before the anchor.
+      "- stale general norm (2026-06-01) <!-- cid:s:stale -->\n" +
+        // fresh: adopted right at the anchor -> too new to flag zero-cite.
+        "- fresh general norm (2026-07-16) <!-- cid:s:fresh -->\n" +
+        // churny: two amendment markers -> high-churn; cited once externally so
+        // it is NOT also a zero-cite candidate.
+        "- churny norm (2026-06-10) (amended 2026-06-20) (精密化 2026-06-25) <!-- cid:s:churny -->\n" +
+        "- one-amend norm (2026-06-01) (amended 2026-06-02) <!-- cid:s:one -->\n" +
+        // external refs keep churny and one off the zero-cite list, isolating the
+        // high-churn / churn-boundary signals.
+        "- external ref to cid:s:churny keeps it off the zero-cite list (2026-07-01)\n" +
+        "- external ref to cid:s:one keeps it off the zero-cite list (2026-07-02)\n" +
+        "- anchor line fixes the latest data date (2026-07-17)",
+    ],
+    ["Forbidden", "- never do X (2026-06-01) (amended 2026-06-05) <!-- cid:requirements-analysis:never-x -->"],
+    ["Mandated", "- always do Y (2026-06-01) <!-- cid:requirements-analysis:always-y -->"],
+  ]);
+  return [ruleFile("team", team)];
+}
+
+describe("distillCandidates (FR-2)", () => {
+  test("zero-cite / high-churn selection with the anchor-fixed data date", () => {
+    const metrics = collectMetrics(distillRules(), "sha");
+    expect(metrics.latestDataDate).toBe("2026-07-17");
+    const report = distillCandidates(metrics, DEFAULT_DISTILL_K);
+    expect(report.zeroCite.map((c) => c.cid)).toEqual(["s:stale"]);
+    expect(report.highChurn.map((c) => c.cid)).toEqual(["s:churny"]);
+    // s:fresh (1 day old) is NOT flagged; s:one (1 amendment) is NOT high-churn.
+    const all = [...report.zeroCite, ...report.highChurn].map((c) => c.cid);
+    expect(all).not.toContain("s:fresh");
+    expect(all).not.toContain("s:one");
+  });
+
+  test("Forbidden/Mandated are structurally exempt, never candidates (AC-2b)", () => {
+    // Fault-injection target (falling proof i): removing the klass!=general guard
+    // in distillCandidates would let never-x (forbidden, stale + amended) flow in
+    // and redden this assertion.
+    const report = distillCandidates(collectMetrics(distillRules(), "sha"), DEFAULT_DISTILL_K);
+    const candidateCids = [...report.zeroCite, ...report.highChurn].map((c) => c.cid);
+    expect(candidateCids).not.toContain("requirements-analysis:never-x");
+    expect(candidateCids).not.toContain("requirements-analysis:always-y");
+    expect(report.exempt.count).toBe(2);
+    expect(report.exempt.cids).toEqual(["requirements-analysis:always-y", "requirements-analysis:never-x"]);
+  });
+
+  test("zero-cite threshold boundary (adopted >= ZERO_CITE_THRESHOLD_DAYS)", () => {
+    expect(ZERO_CITE_THRESHOLD_DAYS).toBe(14);
+    const team = new Map<string, string>([
+      [
+        "Corrections",
+        "- exactly at threshold (2026-07-01) <!-- cid:s:at14 -->\n" +
+          "- one day short (2026-07-02) <!-- cid:s:at13 -->\n" +
+          "- anchor (2026-07-15)",
+      ],
+    ]);
+    const report = distillCandidates(collectMetrics([ruleFile("team", team)], "sha"), DEFAULT_DISTILL_K);
+    const cids = report.zeroCite.map((c) => c.cid);
+    expect(cids).toContain("s:at14"); // 14 days -> flagged
+    expect(cids).not.toContain("s:at13"); // 13 days -> not flagged
+  });
+
+  test("churn threshold boundary and k cap", () => {
+    expect(CHURN_THRESHOLD).toBe(2);
+    const metrics = collectMetrics(distillRules(), "sha");
+    // k=0-safe: k>=1 by parse; here cap each list at 1 with a populated list.
+    const capped = distillCandidates(metrics, 1);
+    expect(capped.zeroCite.length).toBeLessThanOrEqual(1);
+    expect(capped.highChurn.length).toBeLessThanOrEqual(1);
+  });
+
+  test("renderDistillTable / renderDistillJson consume every field (AC-1f)", () => {
+    const report = distillCandidates(collectMetrics(distillRules(), "sha"), DEFAULT_DISTILL_K);
+    const table = renderDistillTable(report);
+    expect(table).toContain(`zero-cite candidates (ZERO_CITE_THRESHOLD_DAYS=${ZERO_CITE_THRESHOLD_DAYS}): 1`);
+    expect(table).toContain(`high-churn candidates (CHURN_THRESHOLD=${CHURN_THRESHOLD}): 1`);
+    expect(table).toContain("forbidden/mandated exempt (never candidates): 2 listed");
+    expect(table).toContain("s:stale");
+    expect(table).toContain("requirements-analysis:never-x");
+    const json = JSON.parse(renderDistillJson(report));
+    expect(Object.keys(json).sort()).toEqual(["exempt", "highChurn", "zeroCite"]);
+    expect(Object.keys(json.exempt).sort()).toEqual(["cids", "count"]);
+    expect(Object.keys(json.zeroCite[0]).sort()).toEqual(
+      ["adoptedDate", "ageDays", "amendmentCount", "cid", "cites", "lastCited"].sort(),
+    );
+  });
+
+  test("DEFAULT_DISTILL_K is the design-fixed default", () => {
+    expect(DEFAULT_DISTILL_K).toBe(5);
+  });
+
+  test("candidate ordering: staleness/churn desc with cid tiebreak (multi-element)", () => {
+    // Two zero-cite norms share an ageDays (tie -> cid asc); a third is younger.
+    // Two high-churn norms share an amendmentCount (tie -> cid asc); a third has
+    // more. This drives both comparators through their subtraction AND
+    // localeCompare branches.
+    const team = new Map<string, string>([
+      [
+        "Corrections",
+        "- z (2026-06-01) <!-- cid:s:zeta -->\n" +
+          "- a (2026-06-01) <!-- cid:s:alpha2 -->\n" +
+          "- m (2026-06-15) <!-- cid:s:mid -->\n" +
+          "- churn a (2026-06-01) (amended 2026-06-02) (精密化 2026-06-03) <!-- cid:s:churn-a -->\n" +
+          "- churn b (2026-06-01) (amended 2026-06-02) (改定 2026-06-03) <!-- cid:s:churn-b -->\n" +
+          "- churn c (2026-06-01) 追補 追補 追補 <!-- cid:s:churn-c -->\n" +
+          "- ext cid:s:churn-a cid:s:churn-b cid:s:churn-c keeps them off zero-cite (2026-07-01)\n" +
+          "- anchor (2026-07-17)",
+      ],
+    ]);
+    const report = distillCandidates(collectMetrics([ruleFile("team", team)], "sha"), DEFAULT_DISTILL_K);
+    expect(report.zeroCite.map((c) => c.cid)).toEqual(["s:alpha2", "s:zeta", "s:mid"]);
+    expect(report.highChurn.map((c) => c.cid)).toEqual(["s:churn-c", "s:churn-a", "s:churn-b"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FR-3: Phase B input schemas — parse-only, no estimation (malformed -> failure).
+// ---------------------------------------------------------------------------
+
+describe("PhaseBSchemas (parseGoaLine / parsePmCidLine)", () => {
+  test("parseGoaLine parses the 8-bin distribution (ADR-4)", () => {
+    const r = parseGoaLine("GoA[E-PM1]: 1x4 2x0 3x1 4x0 5x0 6x2 7x0 8x0");
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.ecode).toBe("E-PM1");
+      expect(r.votes).toEqual([4, 0, 1, 0, 0, 2, 0, 0]);
+    }
+  });
+
+  test("parseGoaLine fails (never estimates) on malformed input", () => {
+    expect(parseGoaLine("not a goa line").ok).toBe(false);
+    expect(parseGoaLine("GoA[E-PM1]: 1x4 2x0 3x1").ok).toBe(false); // too few bins
+    expect(parseGoaLine("GoA[E-PM1]: 2x4 1x0 3x1 4x0 5x0 6x0 7x0 8x0").ok).toBe(false); // bins out of order
+    expect(parseGoaLine("GoA[E-PM1]: 1xz 2x0 3x1 4x0 5x0 6x0 7x0 8x0").ok).toBe(false); // non-numeric count
+  });
+
+  test("parsePmCidLine parses the PM round record (ADR-4)", () => {
+    const r = parsePmCidLine(
+      "PM-cid: requirements-analysis:merge-approval-latency incident=誤マージ誘発の懸念 round=E-PM3",
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.cid).toBe("requirements-analysis:merge-approval-latency");
+      expect(r.incident).toBe("誤マージ誘発の懸念");
+      expect(r.round).toBe("E-PM3");
+    }
+  });
+
+  test("parsePmCidLine normalises a double-namespace cid and fails on malformed", () => {
+    const r = parsePmCidLine("PM-cid: code-generation:code-generation:c2 incident=x round=E-PM1");
+    expect(r.ok && r.cid).toBe("code-generation:c2");
+    expect(parsePmCidLine("PM-cid: no round token here").ok).toBe(false);
+    expect(parsePmCidLine("totally unrelated line").ok).toBe(false);
   });
 });

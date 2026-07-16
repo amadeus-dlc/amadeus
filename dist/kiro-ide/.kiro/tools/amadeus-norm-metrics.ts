@@ -3,34 +3,55 @@
 // carry the most weight, and what is structurally NOT measurable yet" so the
 // distillation work (Bolt 2) has an evidence base instead of a guess.
 //
-// Bolt 1 (walking skeleton) ships ONE verb:
+// Two verbs:
 //
 //   rank [--json] [--top <n>]
 //       Load the memory layer (via graph.loadRules — the SAME walker the rule
-//       resolver uses, so the corpus is method-correct), parse every cid
-//       definition marker into a CidRecord, scan the corpus for citations of
-//       each norm, aggregate into a per-norm metric row sorted by citation
-//       count, and render a table (default) or a single-line JSON object.
+//       resolver uses, so the norm ledger is method-correct), parse every cid
+//       definition marker into a CidRecord, scan the citation corpus for
+//       citations of each norm, aggregate into a per-norm metric row sorted by
+//       citation count, and render a table (default) or a single-line JSON
+//       object.
 //
-// EVERYTHING here is deterministic: the corpus is read off disk, the "latest
-// data date" is derived from the corpus itself (never Date.now), and two runs
-// on the same tree are byte-identical. The pure parsers/scanners/renderers are
-// exported so tests drive them in-process with string fixtures (bun --coverage
-// does not measure spawned subprocesses, so the in-process seam is the lcov
-// carrier); the `rank` argv dispatch is also exercised as a real CLI spawn so
-// the coverage registry's `subcommand` unit is verified at its cli mechanism.
+//   distill-candidates [--k <n>] [--json]
+//       Surface distillation candidates: norms with zero citations that are old
+//       enough to judge (ZERO_CITE_THRESHOLD_DAYS) and norms rewritten enough to
+//       be unstable (amendmentCount >= CHURN_THRESHOLD), top k of each. Forbidden
+//       and Mandated norms are STRUCTURALLY excluded (the fire-extinguisher
+//       exemption) and listed separately with a count so the exemption is visible.
 //
-// What this tool deliberately does NOT do in Bolt 1: GoA-variance and
-// violation-recurrence are NOT collected (no structured records exist for
-// them — the header says so loudly), E-code citations are counted but NOT
-// aggregated into the ranking, and legacy-alias reverse-linking is not
-// implemented (unlinkedLegacy is derived from parsed old-slug markers, which
-// the current corpus has zero of). These are surfaced as explicit "NOT
-// COLLECTED / NOT AGGREGATED" lines rather than silently omitted, so the
-// output can never masquerade as more complete than it is.
+// CITATION CORPUS (Bolt 2 — AC-1b). Definitions come from the memory layer only
+// (the population is cid-bearing norms). Citations are counted across the memory
+// layer body PLUS the record tree and audit shards
+// (amadeus/spaces/*/intents/**/*.md). Corpus files are read one at a time and
+// discarded (a streaming loop — scalability-design), never all loaded at once.
+//
+// EVERYTHING here is deterministic: the corpus is read off disk in a sorted
+// order, the "latest data date" is derived from the corpus itself (never
+// Date.now), and two runs on the same tree are byte-identical. The pure
+// parsers/scanners/renderers/schema-parsers are exported so tests drive them
+// in-process with string fixtures (bun --coverage does not measure spawned
+// subprocesses, so the in-process seam is the lcov carrier); the argv dispatch
+// is also exercised as a real CLI spawn so the coverage registry's `subcommand`
+// units are verified at their cli mechanism.
+//
+// What this tool deliberately does NOT do: GoA-variance and violation-recurrence
+// are NOT collected (no structured records exist for them yet — FR-3 defines the
+// input schemas via parseGoaLine/parsePmCidLine, but aggregation is future), and
+// E-code citations are counted but NOT aggregated into the ranking. These are
+// surfaced as explicit "NOT COLLECTED / NOT AGGREGATED" lines rather than
+// silently omitted, so the output can never masquerade as more complete than it
+// is.
 
 import { spawnSync } from "node:child_process";
+import { existsSync, readdirSync, readFileSync, type Dirent } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { loadRules, type RuleFile } from "./amadeus-graph.ts";
+
+// This tool's directory (<workspace>/<harness>/tools/) — the anchor for the
+// corpus root, mirroring amadeus-graph.ts's __FILE_DIR / rulesDir() idiom.
+const __FILE_DIR = dirname(fileURLToPath(import.meta.url));
 
 // ---------------------------------------------------------------------------
 // Domain types (bare types + pure functions — this is an instrument, not a
@@ -116,6 +137,28 @@ const ADOPTION_VOTE_RE = /採用\s*\d+\/\d+/g;
 const OLD_SLUG_RE = /旧\s*cid:\s*([a-z0-9-]+(?::[a-z0-9-]+)*)/g;
 // Amendment textual markers (each occurrence increments amendmentCount).
 const AMENDMENT_TOKENS = ["追補", "amended", "superseded", "精密化", "改定", "updated"];
+
+// distill-candidates thresholds (ADR-2 — design-fixed, not CLI flags, so the
+// weekly round stays comparable across runs).
+// ZERO_CITE_THRESHOLD_DAYS = 14: two weekly-round cycles — a norm missed on one
+// round is still caught on the next, the minimum window that avoids a false
+// "unused" flag on a brand-new norm.
+export const ZERO_CITE_THRESHOLD_DAYS = 14;
+// CHURN_THRESHOLD = 2: two-or-more amendments marks a wording-unstable norm
+// (verify-before-notify's three-face rewrite is the archetype).
+export const CHURN_THRESHOLD = 2;
+// DEFAULT_DISTILL_K = 5: the default per-category candidate cap when --k is
+// omitted — a blind-election batch of ~5 candidates per signal is tractable to
+// review in one weekly round (matches the refined-mockups M2 worked example).
+export const DEFAULT_DISTILL_K = 5;
+
+// FR-3 Phase B input schemas (parse-only). A GoA persist line (ADR-4):
+//   `GoA[E-<code>]: 1x<n> 2x<n> 3x<n> 4x<n> 5x<n> 6x<n> 7x<n> 8x<n>`
+const GOA_HEAD_RE = /^GoA\[(E-[A-Z0-9]+)\]:\s*(.+)$/;
+const GOA_TOKEN_RE = /^([1-8])x(\d+)$/;
+// A PM round record line (ADR-4):
+//   `PM-cid: <full-cid> incident=<one-line> round=<E-PMn>`
+const PM_CID_RE = /^PM-cid:\s+([a-z0-9-]+(?::[a-z0-9-]+)*)\s+incident=(.+)\s+round=(E-[A-Z0-9]+)$/;
 
 // ---------------------------------------------------------------------------
 // Pure helpers.
@@ -309,19 +352,48 @@ function recordCitation(tally: CitationTally, lineDate: string | null): void {
   }
 }
 
-function scanLine(
-  line: RuleLine,
-  index: RecordIndex,
-  tallies: Map<string, CitationTally>,
-): void {
-  const lineDate = extremeDate(line.text, "max");
+/** Mutable accumulator threaded through every scanned text line (memory layer
+ *  and corpus). Bundles the record index, per-norm tallies, the running max
+ *  corpus date (the age anchor — Date.now-free), and the running E-code count so
+ *  a single streaming pass over the corpus never needs a second read. */
+export interface ScanState {
+  index: RecordIndex;
+  tallies: Map<string, CitationTally>;
+  latestDate: string | null;
+  ecodeCount: number;
+}
+
+export function makeScanState(records: CidRecord[]): ScanState {
+  const tallies = new Map<string, CitationTally>();
+  for (const r of records) tallies.set(r.fullCid, { cites: 0, lastCited: null });
+  return { index: indexRecords(records), tallies, latestDate: null, ecodeCount: 0 };
+}
+
+/** Scan one line of text: tally each resolved citation, fold the line's max ISO
+ *  date into latestDate, and add its E-code occurrences to ecodeCount. The same
+ *  boundary/resolution contract applies to memory and corpus lines alike. */
+export function scanTextLine(text: string, state: ScanState): void {
+  const lineDate = extremeDate(text, "max");
   CITE_RE.lastIndex = 0;
-  let m = CITE_RE.exec(line.text);
+  let m = CITE_RE.exec(text);
   while (m !== null) {
-    const target = resolveCitation(normaliseCid(m[1]), index);
-    const tally = target === null ? undefined : tallies.get(target.fullCid);
+    const target = resolveCitation(normaliseCid(m[1]), state.index);
+    const tally = target === null ? undefined : state.tallies.get(target.fullCid);
     if (tally !== undefined) recordCitation(tally, lineDate);
-    m = CITE_RE.exec(line.text);
+    m = CITE_RE.exec(text);
+  }
+  if (lineDate !== null && (state.latestDate === null || lineDate > state.latestDate)) {
+    state.latestDate = lineDate;
+  }
+  state.ecodeCount += countMatches(text, ECODE_RE);
+}
+
+/** Scan every non-empty line of a text blob (one corpus file body, or a joined
+ *  block) into the state. */
+export function scanTextBlob(text: string, state: ScanState): void {
+  for (const raw of text.split("\n")) {
+    if (raw.trim() === "") continue;
+    scanTextLine(raw, state);
   }
 }
 
@@ -329,11 +401,9 @@ export function scanCitations(
   records: CidRecord[],
   lines: RuleLine[],
 ): Map<string, CitationTally> {
-  const index = indexRecords(records);
-  const tallies = new Map<string, CitationTally>();
-  for (const r of records) tallies.set(r.fullCid, { cites: 0, lastCited: null });
-  for (const line of lines) scanLine(line, index, tallies);
-  return tallies;
+  const state = makeScanState(records);
+  for (const line of lines) scanTextLine(line.text, state);
+  return state.tallies;
 }
 
 // ---------------------------------------------------------------------------
@@ -412,16 +482,27 @@ function computeUncounted(lines: RuleLine[]): UncountedRules {
   return { org, affirmed };
 }
 
-export function collectMetrics(rules: RuleFile[], sourceSha: string | null): NormMetrics {
+/** Collect metrics over the memory layer plus an (optional) citation corpus.
+ *  `corpus` is an iterable of file bodies — the production caller passes a lazy
+ *  generator so files stream in one at a time (scalability-design), tests pass
+ *  an array of string fixtures. Definitions and the uncounted/adoption-vote
+ *  counts come from the memory layer only; citations, the latest-data-date
+ *  anchor, and the E-code count fold in the corpus too (AC-1b). */
+export function collectMetrics(
+  rules: RuleFile[],
+  sourceSha: string | null,
+  corpus: Iterable<string> = [],
+): NormMetrics {
   const lines = flattenRules(rules);
   const records = parseCidRecords(lines);
-  const latestDataDate = extremeDate(lines.map((l) => l.text).join("\n"), "max");
-  const tallies = scanCitations(records, lines);
-  const rows = buildRows(records, tallies, latestDataDate);
+  const state = makeScanState(records);
+  for (const line of lines) scanTextLine(line.text, state);
+  for (const body of corpus) scanTextBlob(body, state);
 
-  let ecodeOccurrences = 0;
+  const latestDataDate = state.latestDate;
+  const rows = buildRows(records, state.tallies, latestDataDate);
+
   let unlinkedLegacy = 0;
-  for (const line of lines) ecodeOccurrences += countMatches(line.text, ECODE_RE);
   for (const r of records) unlinkedLegacy += r.oldSlugs.length;
 
   return {
@@ -429,7 +510,7 @@ export function collectMetrics(rules: RuleFile[], sourceSha: string | null): Nor
     latestDataDate,
     rows,
     uncounted: computeUncounted(lines),
-    ecodeOccurrences,
+    ecodeOccurrences: state.ecodeCount,
     adoptionVotes: { have: countAdoptionVotes(lines, records), total: records.length },
     unlinkedLegacy,
   };
@@ -478,32 +559,241 @@ export function renderTable(metrics: NormMetrics, top: number | null): string {
 }
 
 // ---------------------------------------------------------------------------
-// CLI — `rank [--json] [--top <n>]`. Unknown verb -> exit 2; missing memory
-// layer -> exit 1 (loud ERROR on stderr). No other verbs in Bolt 1
-// (distill-candidates is Bolt 2).
+// Distiller — rows -> distillation candidates. Zero-cite (old enough to judge)
+// and high-churn (rewritten enough to be unstable), top k of each. Forbidden and
+// Mandated norms are STRUCTURALLY exempt (never candidates) and listed with a
+// count so the fire-extinguisher exemption is visible, never silent (AC-2b).
+// ---------------------------------------------------------------------------
+
+/** One distillation candidate. Every field is consumed by a distill renderer
+ *  (AC-1f): cid/lastCited/adoptedDate/ageDays on the zero-cite line, and
+ *  cid/amendmentCount/cites/lastCited on the high-churn line. */
+export interface DistillCandidate {
+  cid: string;
+  cites: number;
+  amendmentCount: number;
+  adoptedDate: string | null;
+  lastCited: string | null;
+  ageDays: number; // whole days from adoptedDate to latestDataDate (staleness)
+}
+
+export interface DistillReport {
+  zeroCite: DistillCandidate[];
+  highChurn: DistillCandidate[];
+  exempt: { count: number; cids: string[] }; // every forbidden/mandated cid
+}
+
+// Each norm's own definition marker is scanned as one self-citation (the uniform
+// +1 baseline documented on the CitationScanner). "Zero-cite" therefore means
+// "cited by nothing beyond its own definition" — cites at or below this baseline
+// — because a literal cites==0 is unreachable for any defined norm.
+const SELF_CITE_BASELINE = 1;
+
+function candidateOf(row: NormMetricRow, latestDataDate: string | null): DistillCandidate {
+  return {
+    cid: row.cid,
+    cites: row.cites,
+    amendmentCount: row.amendmentCount,
+    adoptedDate: row.adoptedDate,
+    lastCited: row.lastCited,
+    ageDays: daySpan(row.adoptedDate, latestDataDate),
+  };
+}
+
+/** Zero-cite candidates: staler first (largest ageDays), cid asc as tiebreak. */
+function byAgeDaysDescThenCid(a: DistillCandidate, b: DistillCandidate): number {
+  return b.ageDays - a.ageDays || a.cid.localeCompare(b.cid);
+}
+
+/** High-churn candidates: most-amended first, cid asc as tiebreak. */
+function byChurnDescThenCid(a: DistillCandidate, b: DistillCandidate): number {
+  return b.amendmentCount - a.amendmentCount || a.cid.localeCompare(b.cid);
+}
+
+export function distillCandidates(metrics: NormMetrics, k: number): DistillReport {
+  const zeroCite: DistillCandidate[] = [];
+  const highChurn: DistillCandidate[] = [];
+  const exemptCids: string[] = [];
+  for (const row of metrics.rows) {
+    if (row.klass !== "general") {
+      exemptCids.push(row.cid);
+      continue;
+    }
+    const cand = candidateOf(row, metrics.latestDataDate);
+    // A null adoptedDate yields ageDays 1 (treated as brand new) and so is never
+    // flagged zero-cite — we do not estimate staleness we cannot measure (P2).
+    if (cand.cites <= SELF_CITE_BASELINE && row.adoptedDate !== null && cand.ageDays >= ZERO_CITE_THRESHOLD_DAYS) {
+      zeroCite.push(cand);
+    }
+    if (cand.amendmentCount >= CHURN_THRESHOLD) highChurn.push(cand);
+  }
+  zeroCite.sort(byAgeDaysDescThenCid);
+  highChurn.sort(byChurnDescThenCid);
+  exemptCids.sort();
+  return {
+    zeroCite: zeroCite.slice(0, k),
+    highChurn: highChurn.slice(0, k),
+    exempt: { count: exemptCids.length, cids: exemptCids },
+  };
+}
+
+export function renderDistillTable(report: DistillReport): string {
+  const out: string[] = [];
+  out.push(`zero-cite candidates (ZERO_CITE_THRESHOLD_DAYS=${ZERO_CITE_THRESHOLD_DAYS}): ${report.zeroCite.length}`);
+  for (const c of report.zeroCite) {
+    out.push(`  ${c.cid}  (last-cited: ${c.lastCited ?? "never"}, adopted: ${c.adoptedDate ?? "-"}, age-days: ${c.ageDays})`);
+  }
+  out.push(`high-churn candidates (CHURN_THRESHOLD=${CHURN_THRESHOLD}): ${report.highChurn.length}`);
+  for (const c of report.highChurn) {
+    out.push(`  ${c.cid}  (amendments: ${c.amendmentCount}, cites: ${c.cites}, last-cited: ${c.lastCited ?? "never"})`);
+  }
+  out.push(`forbidden/mandated exempt (never candidates): ${report.exempt.count} listed`);
+  for (const cid of report.exempt.cids) out.push(`  ${cid}`);
+  return out.join("\n");
+}
+
+export function renderDistillJson(report: DistillReport): string {
+  return JSON.stringify(report);
+}
+
+// ---------------------------------------------------------------------------
+// PhaseBSchemas (FR-3) — parse-only. These define the input contract for the
+// GoA-variance / violation-recurrence axes that rank reports as NOT COLLECTED.
+// They structure a single record line into a typed value; they never aggregate,
+// and they never fill in missing fields — a malformed line is a ParseFailure,
+// not a guessed default (US-3.2 / P2).
+// ---------------------------------------------------------------------------
+
+/** An 8-bin Gradients-of-Agreement vote distribution parsed from a persist line. */
+export interface GoaBreakdown {
+  ok: true;
+  ecode: string;
+  votes: [number, number, number, number, number, number, number, number];
+}
+
+/** One PM-round incident record parsed from a `PM-cid:` line. */
+export interface PmIncident {
+  ok: true;
+  cid: string;
+  incident: string;
+  round: string;
+}
+
+export interface ParseFailure {
+  ok: false;
+  error: string;
+}
+
+/** Parse `GoA[E-<code>]: 1x<n> 2x<n> ... 8x<n>` into a GoaBreakdown, or fail. */
+export function parseGoaLine(line: string): GoaBreakdown | ParseFailure {
+  const head = GOA_HEAD_RE.exec(line.trim());
+  if (head === null) return { ok: false, error: `not a GoA line: ${line}` };
+  const tokens = head[2].trim().split(/\s+/);
+  if (tokens.length !== 8) return { ok: false, error: `expected 8 vote bins, got ${tokens.length}` };
+  const votes: number[] = [];
+  for (let i = 0; i < 8; i++) {
+    const tok = GOA_TOKEN_RE.exec(tokens[i]);
+    if (tok === null) return { ok: false, error: `malformed vote bin: ${tokens[i]}` };
+    if (Number(tok[1]) !== i + 1) return { ok: false, error: `bin out of order: ${tokens[i]} (expected ${i + 1}x<n>)` };
+    votes.push(Number(tok[2]));
+  }
+  return { ok: true, ecode: head[1], votes: [votes[0], votes[1], votes[2], votes[3], votes[4], votes[5], votes[6], votes[7]] };
+}
+
+/** Parse `PM-cid: <full-cid> incident=<one-line> round=<E-PMn>`, or fail. */
+export function parsePmCidLine(line: string): PmIncident | ParseFailure {
+  const m = PM_CID_RE.exec(line.trim());
+  if (m === null) return { ok: false, error: `not a PM-cid line: ${line}` };
+  return { ok: true, cid: normaliseCid(m[1]), incident: m[2].trim(), round: m[3] };
+}
+
+// ---------------------------------------------------------------------------
+// IoCollector (corpus) — discover and stream the citation corpus off disk. The
+// corpus is the record tree + audit shards (amadeus/spaces/*/intents/**/*.md);
+// the memory layer body is scanned separately via loadRules. Files are yielded
+// one body at a time so collectMetrics never holds the whole corpus in memory.
+// AMADEUS_CORPUS_ROOT is a test/relocation seam mirroring AMADEUS_RULES_DIR.
+// ---------------------------------------------------------------------------
+
+/** Workspace root holding `amadeus/spaces/`. Defaults to two levels up from this
+ *  tool (<ws>/<harness>/tools/ -> <ws>), matching amadeus-graph.ts's rulesDir. */
+function corpusRoot(): string {
+  return process.env.AMADEUS_CORPUS_ROOT ?? join(__FILE_DIR, "..", "..");
+}
+
+/** Directory entries by name, ascending — the default string sort is
+ *  deterministic (UTF-16 code-unit order), which is all the corpus needs for
+ *  byte-identical runs. Returns [name, Dirent] pairs so callers keep the type. */
+function sortedEntries(dir: string): [string, Dirent][] {
+  const byName = new Map<string, Dirent>();
+  for (const e of readdirSync(dir, { withFileTypes: true })) byName.set(e.name, e);
+  const pairs: [string, Dirent][] = [];
+  for (const name of [...byName.keys()].sort()) pairs.push([name, byName.get(name) as Dirent]);
+  return pairs;
+}
+
+/** Recursively collect every `.md` file under `dir`, in a deterministic
+ *  (name-sorted) order, appending absolute paths to `out`. */
+function collectMarkdownFiles(dir: string, out: string[]): void {
+  for (const [name, e] of sortedEntries(dir)) {
+    const full = join(dir, name);
+    if (e.isDirectory()) collectMarkdownFiles(full, out);
+    else if (e.isFile() && name.endsWith(".md")) out.push(full);
+  }
+}
+
+/** Stream the corpus file bodies (record tree + audit shards). A missing
+ *  amadeus/spaces or intents tree yields nothing — the tool then measures the
+ *  memory layer alone rather than failing (the corpus is additive). */
+export function* corpusFileBodies(): Generator<string> {
+  const spacesDir = join(corpusRoot(), "amadeus", "spaces");
+  if (!existsSync(spacesDir)) return;
+  for (const [name, s] of sortedEntries(spacesDir)) {
+    if (!s.isDirectory()) continue;
+    const intentsDir = join(spacesDir, name, "intents");
+    if (!existsSync(intentsDir)) continue;
+    const files: string[] = [];
+    collectMarkdownFiles(intentsDir, files);
+    for (const f of files) yield readFileSync(f, "utf-8");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// CLI — `rank [--json] [--top <n>]` / `distill-candidates [--k <n>] [--json]`.
+// Unknown verb -> exit 2; missing memory layer -> exit 1 (loud ERROR on stderr).
 // ---------------------------------------------------------------------------
 
 type ParsedArgs =
-  | { kind: "ok"; verb: string; json: boolean; top: number | null }
+  | { kind: "ok"; verb: string; json: boolean; top: number | null; k: number | null }
   | { kind: "error"; code: number; message: string };
+
+/** A `--flag <n>` positive-integer value, or a usage error. Shared by --top and
+ *  --k (identical validation intent). */
+type IntFlag = { ok: true; n: number } | { ok: false; message: string };
+
+function parsePositiveIntFlag(flag: string, raw: string | undefined): IntFlag {
+  const n = Number(raw);
+  if (raw === undefined || !Number.isInteger(n) || n < 1) {
+    return { ok: false, message: `Invalid ${flag} value: ${raw ?? "(missing)"}` };
+  }
+  return { ok: true, n };
+}
 
 export function parseArgs(argv: string[]): ParsedArgs {
   let verb: string | null = null;
   let json = false;
   let top: number | null = null;
+  let k: number | null = null;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--json") {
       json = true;
-    } else if (arg === "--top") {
-      const raw = argv[i + 1];
-      i++;
-      const n = Number(raw);
-      if (raw === undefined || !Number.isInteger(n) || n < 1) {
-        return { kind: "error", code: 2, message: `Invalid --top value: ${raw ?? "(missing)"}` };
-      }
-      top = n;
+    } else if (arg === "--top" || arg === "--k") {
+      const parsed = parsePositiveIntFlag(arg, argv[++i]);
+      if (!parsed.ok) return { kind: "error", code: 2, message: parsed.message };
+      if (arg === "--top") top = parsed.n;
+      else k = parsed.n;
     } else if (verb === null) {
       verb = arg;
     } else {
@@ -512,21 +802,42 @@ export function parseArgs(argv: string[]): ParsedArgs {
   }
 
   if (verb === null) {
-    return { kind: "error", code: 2, message: "Usage: amadeus-norm-metrics rank [--json] [--top <n>]" };
+    return {
+      kind: "error",
+      code: 2,
+      message: "Usage: amadeus-norm-metrics <rank [--json] [--top <n>] | distill-candidates [--k <n>] [--json]>",
+    };
   }
-  return { kind: "ok", verb, json, top };
+  return { kind: "ok", verb, json, top, k };
 }
 
-/** The `rank` verb: load the memory layer, aggregate, render. Fails closed with
- *  exit 1 (loud ERROR) when the memory layer is absent. */
-function runRank(json: boolean, top: number | null): number {
+/** Load the memory layer, failing closed with exit 1 (loud ERROR) when it is
+ *  absent. Returns null on failure so callers can `return 1`. */
+function loadMemoryOrReport(): RuleFile[] | null {
   const rules = loadRules();
   if (rules.length === 0) {
     console.error("ERROR: memory layer not found (loadRules returned no rule files)");
-    return 1;
+    return null;
   }
-  const metrics = collectMetrics(rules, gitHeadSha());
+  return rules;
+}
+
+/** The `rank` verb: memory + corpus -> aggregate -> render. */
+function runRank(json: boolean, top: number | null): number {
+  const rules = loadMemoryOrReport();
+  if (rules === null) return 1;
+  const metrics = collectMetrics(rules, gitHeadSha(), corpusFileBodies());
   console.log(json ? renderJson(metrics, top) : renderTable(metrics, top));
+  return 0;
+}
+
+/** The `distill-candidates` verb: memory + corpus -> aggregate -> candidates. */
+function runDistill(json: boolean, k: number | null): number {
+  const rules = loadMemoryOrReport();
+  if (rules === null) return 1;
+  const metrics = collectMetrics(rules, gitHeadSha(), corpusFileBodies());
+  const report = distillCandidates(metrics, k ?? DEFAULT_DISTILL_K);
+  console.log(json ? renderDistillJson(report) : renderDistillTable(report));
   return 0;
 }
 
@@ -541,8 +852,10 @@ export function main(argv: string[]): number {
   switch (verb) {
     case "rank":
       return runRank(parsed.json, parsed.top);
+    case "distill-candidates":
+      return runDistill(parsed.json, parsed.k);
     default:
-      console.error(`Unknown verb: ${verb} (Bolt 1 implements only 'rank')`);
+      console.error(`Unknown verb: ${verb} (valid: rank, distill-candidates)`);
       return 2;
   }
 }
