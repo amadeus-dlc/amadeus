@@ -20,14 +20,14 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 461,
+    "total": 462,
     "enumeratedByClass": {
       "function": 238,
       "audit": 73,
       "scope": 10,
       "stage": 32,
       "hook": 11,
-      "subcommand": 90,
+      "subcommand": 91,
       "render-surface": 7
     },
     "coveredByClass": {
@@ -36,7 +36,7 @@
       "scope": 10,
       "stage": 8,
       "hook": 11,
-      "subcommand": 75,
+      "subcommand": 76,
       "render-surface": 7
     }
   },
@@ -4453,6 +4453,18 @@
       "coveredBy": [
         {
           "file": "tests/unit/t31.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-norm-metrics rank",
+      "minMechanism": "cli",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-norm-metrics.test.ts",
           "mechanism": "cli"
         }
       ],
