@@ -408,6 +408,9 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
   // the run reports RESULT: FAIL and exits non-zero under --parallel 4. We do
   // the same — a genuine `not ok` must drive the failure; a happy path would
   // NOT be equal-or-stronger. The planted file is removed in finally.
+  // The nested filter runs the planted file ALONE: the propagation contract
+  // needs only one failing file, and every extra file in the nested run costs a
+  // cold bun startup that eats into PER_TEST_TIMEOUT under host load (#912).
   test("planted failure propagates under --parallel 4 (RESULT: FAIL, non-zero exit)", () => {
     const plant = join(TESTS_ROOT, "integration", "tZZ-planted-fail-t05.test.ts");
     writeFileSync(
@@ -422,7 +425,7 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
       const r = run([
         "--integration",
         "--filter",
-        "t12-state|tZZ-planted-fail-t05",
+        "tZZ-planted-fail-t05",
         "--parallel",
         "4",
       ]);
