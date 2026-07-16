@@ -2646,6 +2646,10 @@
       "minMechanism": "none",
       "coveredBy": [
         {
+          "file": "tests/integration/t230-hook-project-dir-opencode-cursor-marker.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/unit/t202-hook-project-dir-worktree-marker.test.ts",
           "mechanism": "cli"
         }

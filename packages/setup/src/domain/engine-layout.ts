@@ -10,6 +10,8 @@ const ENGINE_DIR_BY_HARNESS: Readonly<Record<string, string>> = Object.freeze({
   codex: ".codex",
   kiro: ".kiro",
   "kiro-ide": ".kiro",
+  opencode: ".opencode",
+  cursor: ".cursor",
 });
 
 export function engineDirNameFor(harness: HarnessName): string {

@@ -24,12 +24,26 @@ import type { TarFixtureEntry } from "../lib/setup-tar-fixture.ts";
 
 const RELEASES_PATH = "/repos/amadeus-dlc/amadeus/releases?per_page=100";
 
-const CLAUDE_FIXTURE_ENTRIES: TarFixtureEntry[] = [
-  { type: "file", name: "dist/claude/.claude/agents/amadeus-test-agent.md", content: Buffer.from("# test agent\n") },
-  { type: "file", name: "dist/claude/.claude/tools/amadeus-runtime.ts", content: Buffer.from("export const runtime = 1;\n") },
-  { type: "file", name: "dist/claude/.claude/rules/amadeus.md", content: Buffer.from("# rules\n") },
-  { type: "file", name: "dist/claude/amadeus/spaces/default/memory/org.md", content: Buffer.from("# org rules\n") },
-];
+// A codeload fixture subtree for one harness: dist/<harness>/<engineDir>/...
+// mirrors the shipped layout (owned tools/agents, shared rules, user-preserved
+// memory). Path classification in the installer is engine-dir-agnostic, so the
+// same four-file shape exercises every harness — only the harness key and its
+// dot-directory differ.
+function harnessFixtureEntries(harness: string, engineDir: string): TarFixtureEntry[] {
+  return [
+    { type: "file", name: `dist/${harness}/${engineDir}/agents/amadeus-test-agent.md`, content: Buffer.from("# test agent\n") },
+    { type: "file", name: `dist/${harness}/${engineDir}/tools/amadeus-runtime.ts`, content: Buffer.from("export const runtime = 1;\n") },
+    { type: "file", name: `dist/${harness}/${engineDir}/rules/amadeus.md`, content: Buffer.from("# rules\n") },
+    { type: "file", name: `dist/${harness}/amadeus/spaces/default/memory/org.md`, content: Buffer.from("# org rules\n") },
+  ];
+}
+
+const CLAUDE_FIXTURE_ENTRIES: TarFixtureEntry[] = harnessFixtureEntries("claude", ".claude");
+// Bolt 1 (#1048): opencode/cursor join the installer's known-harness enum, so
+// the full install→verify pipeline must complete for them exactly as it does
+// for the original four. Their engine dirs are .opencode / .cursor.
+const OPENCODE_FIXTURE_ENTRIES: TarFixtureEntry[] = harnessFixtureEntries("opencode", ".opencode");
+const CURSOR_FIXTURE_ENTRIES: TarFixtureEntry[] = harnessFixtureEntries("cursor", ".cursor");
 
 function fakeHttp(archive: Buffer): Http {
   return {
@@ -114,6 +128,68 @@ describe("install pipeline (fake network, real filesystem)", () => {
       const second = await main(["install", "--harness", "claude", "--target", target, "--yes", "--force"], realPorts(archive));
       expect(second).toBe(0);
     } finally {
+      rmSync(target, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("install pipeline — opencode / cursor harnesses (Bolt 1, #1048)", () => {
+  test("installs opencode into .opencode and writes a manifest tagged opencode", async () => {
+    const target = mkdtempSync(join(tmpdir(), "amadeus-setup-install-flow-opencode-"));
+    try {
+      const archive = buildCodeloadFixture("amadeus-1.2.3", OPENCODE_FIXTURE_ENTRIES);
+      const exitCode = await main(["install", "--harness", "opencode", "--target", target, "--yes"], realPorts(archive));
+      expect(exitCode).toBe(0);
+
+      expect(existsSync(join(target, ".opencode", "agents", "amadeus-test-agent.md"))).toBe(true);
+      expect(existsSync(join(target, ".opencode", "tools", "amadeus-runtime.ts"))).toBe(true);
+      expect(existsSync(join(target, ".opencode", "rules", "amadeus.md"))).toBe(true);
+      expect(existsSync(join(target, "amadeus", "spaces", "default", "memory", "org.md"))).toBe(true);
+
+      const manifestPath = join(target, "amadeus", ".installer", "amadeus-setup-manifest.json");
+      const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+      expect(manifest.harness).toBe("opencode");
+      expect(manifest.files.some((f: { path: string }) => f.path === ".opencode/tools/amadeus-runtime.ts")).toBe(true);
+    } finally {
+      rmSync(target, { recursive: true, force: true });
+    }
+  });
+
+  test("installs cursor into .cursor and writes a manifest tagged cursor", async () => {
+    const target = mkdtempSync(join(tmpdir(), "amadeus-setup-install-flow-cursor-"));
+    try {
+      const archive = buildCodeloadFixture("amadeus-1.2.3", CURSOR_FIXTURE_ENTRIES);
+      const exitCode = await main(["install", "--harness", "cursor", "--target", target, "--yes"], realPorts(archive));
+      expect(exitCode).toBe(0);
+
+      expect(existsSync(join(target, ".cursor", "tools", "amadeus-runtime.ts"))).toBe(true);
+      expect(existsSync(join(target, "amadeus", "spaces", "default", "memory", "org.md"))).toBe(true);
+
+      const manifestPath = join(target, "amadeus", ".installer", "amadeus-setup-manifest.json");
+      const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+      expect(manifest.harness).toBe("cursor");
+    } finally {
+      rmSync(target, { recursive: true, force: true });
+    }
+  });
+
+  test("edge case: an unknown --harness value is a usage error (exit 2) listing all six harnesses", async () => {
+    const target = mkdtempSync(join(tmpdir(), "amadeus-setup-install-flow-badharness-"));
+    const errors: string[] = [];
+    const originalError = console.error;
+    console.error = (...args: unknown[]) => {
+      errors.push(args.map(String).join(" "));
+    };
+    try {
+      const archive = buildCodeloadFixture("amadeus-1.2.3", CLAUDE_FIXTURE_ENTRIES);
+      const exitCode = await main(["install", "--harness", "foo", "--target", target, "--yes"], realPorts(archive));
+      expect(exitCode).toBe(2);
+      const message = errors.join("\n");
+      for (const name of ["claude", "codex", "kiro", "kiro-ide", "opencode", "cursor"]) {
+        expect(message).toContain(name);
+      }
+    } finally {
+      console.error = originalError;
       rmSync(target, { recursive: true, force: true });
     }
   });

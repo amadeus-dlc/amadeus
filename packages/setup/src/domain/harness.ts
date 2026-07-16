@@ -5,8 +5,10 @@ declare const harnessBrand: unique symbol;
 // Branded type: prevents an unvalidated string from being mistaken for a
 // checked harness name. Validation of arbitrary user input (`--harness` etc.)
 // is owned by U2's cli (component-methods.md); this file owns only the type
-// and the canonical 4-value list so U1 can be built and tested standalone.
-export type HarnessName = ("claude" | "codex" | "kiro" | "kiro-ide") & { readonly [harnessBrand]: "HarnessName" };
+// and the canonical harness-name list so U1 can be built and tested standalone.
+export type HarnessName = ("claude" | "codex" | "kiro" | "kiro-ide" | "opencode" | "cursor") & {
+  readonly [harnessBrand]: "HarnessName";
+};
 
 // Deliberately not UsageError: harness.ts must not depend on command.ts (that
 // would create a two-directional value dependency between the two files —
@@ -21,6 +23,8 @@ export namespace HarnessName {
     "codex",
     "kiro",
     "kiro-ide",
+    "opencode",
+    "cursor",
   ]) as readonly HarnessName[];
 
   // U2 install-flow's smart constructor for the raw `--harness` CLI value
