@@ -36,7 +36,6 @@ concurrency:
     --base main
     --head "$branch"
     gh pr merge --auto --squash --delete-branch "$pr_url"
-  codecov-status:
   ci-success:
     needs: [coverage]
 `;
