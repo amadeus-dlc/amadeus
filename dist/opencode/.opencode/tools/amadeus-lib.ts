@@ -1123,6 +1123,77 @@ export function ensureStageDiary(
   return "created";
 }
 
+// E-OC1 evidence check for gate-start (#1101): the 3-step order (report the
+// no-election judgment -> leader approval -> only then fill [Answer]) is a
+// prose norm that slipped twice in one day, so gate-start enforces the
+// machine-checkable half as an implication: a FILLED [Answer] must be
+// accompanied, somewhere in the same questions file, by a ruling reference
+// (an E-code ON THE ANSWER LINE ITSELF -- every questions header cites
+// "E-OC1" by name, so a file-wide E-code scan would make the guard vacuous)
+// or, anywhere in the file, a leader-approval line carrying a parseable ISO
+// timestamp.
+// Everything else passes unconditionally: a missing questions file (not every
+// stage has one), a file with no [Answer] tag at all (the post-E-OC1 "0
+// questions" format), and a blank/waiting placeholder. The blank rule is
+// deliberately asymmetric: content that is nothing but one parenthesized
+// group is the measured waiting-placeholder shape (e.g. "(TF-Q0 選挙の裁定受領後に記入
+// — cid:election-answer-after-ruling)"), and misreading a parenthesized real
+// answer as blank degrades to PASS — the guard exists to catch unevidenced
+// fills, never to reject legitimate flows. Read-only; callers decide how to
+// fail (amadeus-state.ts gate-start maps fail reasons to fail-closed error()).
+export type QuestionsEvidence =
+  | { kind: "pass"; reason: "no-file" | "no-answer-tag" | "answer-blank" | "evidence-present" }
+  | { kind: "fail"; reason: "no-evidence" | "unparseable-timestamp" };
+
+const ANSWER_TAG_RE = /\[Answer\]\s*:?/;
+const ECODE_RE = /E-[A-Z0-9][A-Z0-9-]*/;
+const ISO_TS_RE = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?Z?/;
+
+// Blank shapes: empty, "N/A" (any case), or content that is nothing but one
+// parenthesized group — the measured waiting-placeholder convention.
+function isFilledAnswer(line: string): boolean {
+  const content = line.slice(line.search(ANSWER_TAG_RE)).replace(ANSWER_TAG_RE, "").trim();
+  if (content === "" || /^n\/a$/i.test(content)) return false;
+  return !/^[((][^)))]*[))]$/.test(content);
+}
+
+// A leader-approval line satisfies the evidence requirement only when its ISO
+// timestamp actually parses (parse-don't-validate; a decorative "承認" line
+// with no real timestamp is the unparseable-timestamp failure).
+function hasParseableApprovalTimestamp(line: string): boolean {
+  const m = line.match(ISO_TS_RE);
+  if (!m) return false;
+  return Number.isFinite(Date.parse(m[0].endsWith("Z") ? m[0] : `${m[0]}Z`));
+}
+
+// Plain loops, zero anonymous functions: the complexity baseline matches
+// anonymous functions by ordinal, so adding arrows here shifts unrelated
+// entries into NEW_VIOLATION (the E-PM2 M7 mechanism, measured again on this
+// change).
+export function checkQuestionsEvidence(questionsPath: string): QuestionsEvidence {
+  if (!existsSync(questionsPath)) return { kind: "pass", reason: "no-file" };
+  const lines = readFileSync(questionsPath, "utf-8").split("\n");
+  const answerLines: string[] = [];
+  for (const l of lines) if (ANSWER_TAG_RE.test(l)) answerLines.push(l);
+  if (answerLines.length === 0) return { kind: "pass", reason: "no-answer-tag" };
+  let filled = false;
+  let hasEcode = false;
+  for (const l of answerLines) {
+    if (isFilledAnswer(l)) filled = true;
+    if (ECODE_RE.test(l)) hasEcode = true;
+  }
+  if (!filled) return { kind: "pass", reason: "answer-blank" };
+  if (hasEcode) return { kind: "pass", reason: "evidence-present" };
+  let sawApprovalLine = false;
+  for (const l of lines) {
+    if (!l.includes("承認")) continue;
+    sawApprovalLine = true;
+    if (hasParseableApprovalTimestamp(l)) return { kind: "pass", reason: "evidence-present" };
+  }
+  if (sawApprovalLine) return { kind: "fail", reason: "unparseable-timestamp" };
+  return { kind: "fail", reason: "no-evidence" };
+}
+
 // Relative record-dir prefix for the engine's agent-consumed artifact/diary
 // paths: `amadeus/spaces/<space>/intents/<slug>-<id8>` with forward slashes
 // regardless of host OS (portable across worktrees). Returns null → the engine

@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 462,
+    "total": 463,
     "enumeratedByClass": {
-      "function": 238,
+      "function": 239,
       "audit": 73,
       "scope": 10,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 109,
+      "function": 110,
       "audit": 32,
       "scope": 10,
       "stage": 8,
@@ -1127,6 +1127,18 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:checkQuestionsEvidence",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-eoc1-gate-evidence.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -4775,6 +4787,10 @@
       "unitId": "amadeus-state gate-start",
       "minMechanism": "cli",
       "coveredBy": [
+        {
+          "file": "tests/integration/t-eoc1-gate-evidence.test.ts",
+          "mechanism": "cli"
+        },
         {
           "file": "tests/integration/t47-failure-injection.test.ts",
           "mechanism": "cli"
