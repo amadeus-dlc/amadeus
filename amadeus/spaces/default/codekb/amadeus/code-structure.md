@@ -1,6 +1,45 @@
 # コード構造
 
-## parser/checkbox 欠陥面の観測（intent 260715-parser-checkbox-fixes、2026-07-16、最新）
+## t05 並列フレーク観測面 — 260716-github-issue-912(2026-07-16、最新)
+
+Issue #912(t05 planted-failure ケースが高負荷ホストで `--parallel 4` 下 120005ms タイムアウト間欠 FAIL、labels=`bug / P3 / S4-MINOR`)のフォーカス面。出典は本 intent の `inception/reverse-engineering/scan-notes.md` および `re-scans/260716-github-issue-912-tests-s.md`(file:line は observed HEAD `8e8cc9b1` 直読)。diff-refresh base `e55cc25`→observed `8e8cc9b1`(祖先性実測 exit 0、距離37)で**フォーカス3ファイル(`tests/smoke/t05-run-tests-parallel.test.ts`・`tests/run-tests.ts`・`tests/run-tests.sh`)の区間 diff は空** — 現行 worktree の行番号は Issue #912 実測(2026-07-11)時点とバイト同一(「実行コード変更なし、負荷起因」という Issue 見立てと整合)。
+
+### planted-failure ケースの機序(`tests/smoke/t05-run-tests-parallel.test.ts`)
+
+- 該当ケース = **test 8「planted failure propagates under --parallel 4 (RESULT: FAIL, non-zero exit)」= L411-438**。契約(コメント L406-410 明示): 「§6-E: the failure FIRES」= 本物の `not ok` が `--parallel 4` 下で SUMMARY を `RESULT: FAIL` に反転させ非ゼロ exit を返す(`run-tests.sh:818` の失敗伝播)。happy path では等価・強化にならないため実失敗の伝播を必須検証。
+- 機序(L412-428): 冒頭で `tests/integration/tZZ-planted-fail-t05.test.ts` を `expect(false).toBe(true)` 本体で書き出し(L413-420)、`run(["--integration","--filter","t12-state|tZZ-planted-fail-t05","--parallel","4"])`(L422-428)を実行。`run()`(L104-125)は `spawnSync("bash",[RUNNER,...args])`(L113)で **`bash tests/run-tests.sh` を入れ子 spawn**。フィルタが2ファイルにマッチし、内側ランナーが各ファイルにつき `bun test` を更に spawn(**二重 spawn: bun→bash→bun×2**)。
+- **120s タイムアウト定義箇所 = `const PER_TEST_TIMEOUT = 120000;`(L161)**。これは bun の **per-test タイムアウト**で `test(name, fn, PER_TEST_TIMEOUT)` の第3引数として渡る(test 8 は L438 で適用)。**`run()` 内 `spawnSync` には `timeout` オプションが無い**(L113-120 のオプションは `cwd`/`encoding`/`env`/`maxBuffer` のみ)。ゆえに 120s を食い切って FAIL させるのは spawnSync のプロセスタイムアウトではなく、**外側 bun が test() 全体を 120s で打ち切る per-test timeout**。内側ランナーは 120s に無頓着で走り続け、外側 bun が先にタイムアウトを宣告する構造。
+- 二重 spawn の支配項: `tests/integration/t12-state-fixture-validation.test.ts` はヘッダ L16 に「zero tool spawn, zero LLM, zero tokens」と明記、spawn grep = 0。t12 側は軽量な in-process fixture 検証で、入れ子コストの支配項は **run-tests.ts 起動オーバーヘッド + cold bun 起動 ×2 の直列化**。高負荷時はこれらが CPU 待ちで伸び 120s 予算を超過。
+
+### run-tests.ts の並列制御の実態(負荷適応 seam 皆無)
+
+- **並列度既定 = 1**(`args.parallel` 既定、L163)。`--parallel|-P` は `/^[1-9][0-9]*$/` で正整数検証し `Number(value)` を代入(L223-233)。**CPU 由来の自動決定は無い**(nproc/os.cpus 参照なし)。
+- **worker プール = `runFileBand`(L839-862)**。`serialFiles` を直列実行(L845)後、`effectiveParallel<=1` なら残りも直列(L846-849)。並列時は `Set<Promise>` のスライディングウィンドウで `executing.size >= effectiveParallel` になったら `Promise.race`(L857-858)で1つ空くのを待つ素朴なセマフォ。各ファイルは `runBunTestFile`(L693)→`runSpawnCapture`(L647-691)→`spawn(cmd,cmdArgs,{cwd,env,stdio})`(**L653-657**)。
+- **テスト子プロセス spawn には timeout オプションが無い**(L653-657)。既存の `timeout:` は補助 spawn 2箇所のみ(`commandExists` の `--version` プローブ `timeout: 30_000`、L360-363)で対象外。**個々の `bun test` 子には時間上限が掛かっていない**。
+- **負荷適応機構の有無**: `grep -nE 'os\.cpus|loadavg|nice|AMADEUS_.*PARALLEL|settle|adaptive'` = **NONE FOUND**。load-average 参照・nice 降格・並列度の環境変数上書き・収束待ちの seam はいずれも不在。smoke/unit は L890 で強制直列だが、本件の内側ランナーは `--integration` なので `args.parallel=4` がそのまま効く。
+- t05 は smoke 層(`tests/smoke/`)配置ながら **28 test を持ち複数ケースが per-test 120s(L161)を要求する重量級**で、smoke 層(本来軽量ガード)では例外的に重い。これが「smoke 段で 1 fail により全体 abort」(Issue 実測)の被害拡大要因。
+
+### 先行修正3クラス(同クラスフレークの前例)
+
+- **#819**(`e9c49a4ae`): case 15 が `-P 8` フル負荷でフレーク(linter sensor が実 eslint を spawn、`amadeus-sensor.ts:470`、Findings 1→0 間欠)。対策 = (a) --ci 段で spawn を hermetic stub 化(`AMADEUS_T92_FINDINGS` 注入で両極決定化)、(b) 実 eslint ラウンドトリップを assertion 同一のまま `tests/e2e/t92-linter-eslint-roundtrip.test.ts`(--release 段)へ**物理移設** = 重い入れ子 spawn を高頻度 tier→低頻度 tier へ隔離。**#912 に最も近い**(重い入れ子 spawn が高負荷で予算超過)。ただし #912 の入れ子は外部プロセスでなく **run-tests.sh 自身の再帰**。
+- **#831**(`f09e84128`): t76 が並列で共有 audit-lock 競合によりフレーク。対策 = run 毎に `AMADEUS_LOCK_BASE_DIR` でロック基底を隔離 = 共有リソース競合の分離(タイムアウトではなく競合)。
+- **#877**(`8922e8002`): in-process の clone-id/audit-shard キャッシュを test 間でリセット = プロセス内共有状態のリセット。
+- 整理: #831/#877(+参考 #741 `fd4009671` の wallclock 順序固定)は「競合/共有状態/タイミング依存」を断つ**決定化**、#819 は「重い入れ子 spawn を tier 移設で隔離」。**#912 は #819 型**だが隔離先が「別 tier」か「spawn 除去」かで手が分かれる。
+
+### 修正3案の実現可能性評価(scan-notes 転記)
+
+- **案A(タイムアウト負荷適応)**: `PER_TEST_TIMEOUT`(L161)を環境変数(例 `AMADEUS_T05_TIMEOUT_MS`)で延伸可能に、または run-tests.ts の spawn(L653)へ `timeout` 配線。**実現可能性 中**。t05 側定数外出しは surgical(1定数)だが**症状を隠すだけで根本(入れ子コストの負荷依存)は残る**。延伸は真の hang 検出も遅らせるトレードオフで、ノルム P2(検証劇場回避)と緊張。**単独では非推奨、安全網に留めるのが妥当**。
+- **案B(#819 型の tier 隔離)**: 重い入れ子 spawn ケースを smoke→e2e/--release へ物理移設、assertion 同一で温存。移設先の cli-spawner 登録(EXPECTED_NONE_TO_CLI)+ coverage registry 再生成が必須(integration-registry-regen ノルム)。**実現可能性 中〜高**。前例確立・手順明文化済みだが、t05 は「smoke tier の parallel 契約ガード」であり失敗伝播ケースだけ切り出すと1ファイル内のケース分割になり設計意図(--parallel 契約を1箇所で保証)がやや分散。**有効だが構造分散のコスト**。
+- **案C(入れ子 spawn 分離/削減 — 本命)**: (c1) test 8 のフィルタを `t12-state|tZZ-planted-fail-t05`→**`tZZ-planted-fail-t05` 単独**に絞り、入れ子で走る bun test を2本→1本へ半減(L422-428 の1行 diff、契約=失敗反転は planted 1本で完全保存)。t12-state は失敗伝播契約に非寄与(interleaving 契約は別ケース test 6 = L334-365 が既にカバー)。(c2) 併せて内側 `--parallel 4` を削るか環境変数上書き seam(run() 経由)で CI 時 1 に落とす。**実現可能性 高**。最小・surgical で入れ子コストの支配項(cold bun 起動数)を直接削減、副作用リスク最小。ただし「--parallel 4 下の並列 race」観点をどこまで残すかは要件で確定すべき。
+- **総合**: 案C(フィルタ最小化=入れ子コスト削減)を主軸に、必要なら案A(timeout の環境変数 seam)を安全網併用が bugfix スコープ内で surgical かつ根本(負荷依存の入れ子コスト)に効く。案B は前例強だが構造分散コストあり、案C 不足時の代替。最終選択は requirements/選挙で確定。
+- **入れ子 spawn なしで同契約を検証できる構造の実在可能性**: 集計反転ロジック(SUMMARY 生成 = `run-tests.sh:809-824`)を fixture/直接呼びで検証する seam があれば入れ子 spawn を全廃できるが、`run-tests.sh` は bash スクリプトで in-process seam を持たず(t05 冒頭 L11-19「Mechanism: cli … nothing to import」)、**現状 CLI 境界でしか観測面が無い** — 直接呼び化は run-tests.sh の TS 化/ロジック抽出を要し bugfix スコープを超える。
+
+### E-L71(fanout-load-settle)との関係
+
+- E-L71(team norm、`3392f962a`/#913 で persist)=「fan-out 直後のフルスイート統合検証はホスト負荷収束を待つか並列度を落とす」は**運用手順**であって、テストコード側に「負荷収束待ち/並列度低減」を強制する **seam は現状不在**(上記 NONE FOUND が裏付け)。構造化余地: (a) 内側ランナー呼び出しの `--parallel` を環境変数で上書き可能にする seam(run() 経由)、(b) run-tests.ts の spawn(L653)に timeout オプションを配線し子の暴走を loud に打ち切る seam。いずれも現状は配線ゼロからの新設。
+
+
+## parser/checkbox 欠陥面の観測（intent 260715-parser-checkbox-fixes、2026-07-16、履歴）
 
 bugfix intent（#1013 / #1015）の diff-refresh 観測面。出典は本 intent の `inception/reverse-engineering/scan-notes.md`（Developer scan、observed HEAD `6495e03a12d9e7149c2e80b59f171a90607a2d2c` 直読の file:line）。手法は diff-refresh（base=`cf3dc88b46a2b23bcfd71b1136632d1739cdd7e5`、祖先・距離65、observed=`6495e03a12d9e7149c2e80b59f171a90607a2d2c`）。**区間65コミットにフォーカス欠陥の修正は存在せず、両欠陥は observed に現存**。編集正本は `packages/framework/core/tools/`（`.claude/tools/*` は byte 同一 self-install コピー、`dist/<harness>/…` は build 出力）。
 
