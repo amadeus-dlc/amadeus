@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { appendAuditEntry, appendAuditEntryUnlocked } from "./amadeus-audit.ts";
 import {
   activeIntent,
@@ -1712,7 +1712,16 @@ export function handleGateStart(args: string[]): void {
   // evidence. Fail-closed via error() BEFORE any transition is written, so a
   // refusal leaves the checkbox untouched and STAGE_AWAITING_APPROVAL unemitted.
   const rd = recordDir(pd);
-  if (rd !== null) {
+  // Enforcement cutoff (reviewer catch, PR #1106): 59/111 questions files in
+  // the live corpus predate the E-OC1 evidence-header convention, so applying
+  // the guard to pre-guard intents would hard-block unpark -> gate-start on
+  // history the norm explicitly does not reach ("no retroactive checks").
+  // Intents are dated by their record dir name (YYMMDD-...); only intents
+  // born on/after the guard's adoption day are enforced.
+  const GUARD_CUTOFF_YYMMDD = 260716;
+  const intentDate = rd === null ? null : Number.parseInt(basename(rd).slice(0, 6), 10);
+  const enforced = intentDate !== null && Number.isFinite(intentDate) && intentDate >= GUARD_CUTOFF_YYMMDD;
+  if (rd !== null && enforced) {
     const questionsPath = join(rd, stage.phase, slug, `${slug}-questions.md`);
     const ev = checkQuestionsEvidence(questionsPath);
     if (ev.kind === "fail" && ev.reason === "no-evidence") {

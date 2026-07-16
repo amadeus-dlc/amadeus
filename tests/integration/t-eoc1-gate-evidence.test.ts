@@ -70,16 +70,16 @@ describe("checkQuestionsEvidence (in-process, all 6 reasons)", () => {
   });
 });
 
-function scaffoldShared(questionsBody: string | null): string {
+function scaffoldShared(questionsBody: string | null, dirName = "260716-demo-1a2b3c4d"): string {
     const dir = mkdtempSync(join(tmpdir(), "eoc1-gate-"));
     tempDirs.push(dir);
-    const intentDir = join(dir, "amadeus", "spaces", "default", "intents", "demo-1a2b3c4d");
+    const intentDir = join(dir, "amadeus", "spaces", "default", "intents", dirName);
     mkdirSync(join(intentDir, "inception", "requirements-analysis"), { recursive: true });
     mkdirSync(join(intentDir, "audit"), { recursive: true });
-    writeFileSync(join(dir, "amadeus", "spaces", "default", "intents", "intents.json"), JSON.stringify({ version: 1, intents: [{ id: "1a2b3c4d", slug: "demo", dirName: "demo-1a2b3c4d", status: "active" }] }));
+    writeFileSync(join(dir, "amadeus", "spaces", "default", "intents", "intents.json"), JSON.stringify({ version: 1, intents: [{ id: "1a2b3c4d", slug: "demo", dirName, status: "active" }] }));
     mkdirSync(join(dir, "amadeus", "spaces", "default", "memory"), { recursive: true });
     writeFileSync(join(dir, "amadeus", "active-space"), "default");
-    writeFileSync(join(dir, "amadeus", "spaces", "default", "intents", "active-intent"), "demo-1a2b3c4d");
+    writeFileSync(join(dir, "amadeus", "spaces", "default", "intents", "active-intent"), dirName);
     const state = [
       "# Amadeus State",
       "",
@@ -111,7 +111,7 @@ describe("gate-start wiring (spawned, fail-closed contract)", () => {
     const r = runGateStart(dir);
     expect(r.exitCode).toBe(1);
     expect(r.stderr.toString()).toContain("no ruling reference (E-code) or leader-approval timestamp line");
-    const state = readFileSync(join(dir, "amadeus", "spaces", "default", "intents", "demo-1a2b3c4d", "amadeus-state.md"), "utf-8");
+    const state = readFileSync(join(dir, "amadeus", "spaces", "default", "intents", "260716-demo-1a2b3c4d", "amadeus-state.md"), "utf-8");
     expect(state).toContain("- [-] requirements-analysis — EXECUTE");
     expect(state).not.toContain("- [?]");
   });
@@ -127,8 +127,14 @@ describe("gate-start wiring (spawned, fail-closed contract)", () => {
     const dir = scaffoldShared(`${HEADER}明確化質問 0 問(leader 承認 2026-07-16T15:20:19Z)。\n\n## 質問\n\n(なし)\n`);
     const r = runGateStart(dir);
     expect(r.exitCode, r.stderr.toString()).toBe(0);
-    const state = readFileSync(join(dir, "amadeus", "spaces", "default", "intents", "demo-1a2b3c4d", "amadeus-state.md"), "utf-8");
+    const state = readFileSync(join(dir, "amadeus", "spaces", "default", "intents", "260716-demo-1a2b3c4d", "amadeus-state.md"), "utf-8");
     expect(state).toContain("- [?] requirements-analysis — EXECUTE");
+  });
+
+  test("a pre-guard intent (dir date before 260716) passes even with an unevidenced fill (enforcement cutoff)", () => {
+    const dir = scaffoldShared(`${HEADER}[Answer]: A — 採用します\n`, "260712-legacy-9z8y7x6w");
+    const r = runGateStart(dir);
+    expect(r.exitCode, r.stderr.toString()).toBe(0);
   });
 
   test("a missing questions file passes the gate (exit 0)", () => {
@@ -201,7 +207,7 @@ describe("gate-start wiring (in-process lcov carrier)", () => {
     if (saved === undefined) delete process.env.CLAUDE_PROJECT_DIR;
     else process.env.CLAUDE_PROJECT_DIR = saved;
     expect(r.exitCode).toBeNull();
-    const state = readFileSync(join(dir, "amadeus", "spaces", "default", "intents", "demo-1a2b3c4d", "amadeus-state.md"), "utf-8");
+    const state = readFileSync(join(dir, "amadeus", "spaces", "default", "intents", "260716-demo-1a2b3c4d", "amadeus-state.md"), "utf-8");
     expect(state).toContain("- [?] requirements-analysis — EXECUTE");
   });
 });
