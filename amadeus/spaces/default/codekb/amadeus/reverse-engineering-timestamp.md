@@ -1,6 +1,19 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(最新: 260716-github-issue-912-tests-s)
+## 実行メタデータ(最新: 260716-teamup-resume-size-drift)
+
+- Date: 2026-07-16
+- Observed at: HEAD `5761e65ce73a82b055590a50f483161e5df2abca`(`git rev-parse HEAD` 実測、conductor 本線 — scan-notes 参照)
+- Intent: `260716-teamup-resume-size-drift`(Issue #1081 — t-team-up-codex-resume の wall-clock drift。E-1081-FIX 裁定 C: size: large 宣言(PR #1090 着地済み)+短縮別 Issue #1087)
+- Scope: `bugfix`
+- 手法: diff-refresh(cid:reverse-engineering:c1)。base=`6495e03a`(全 re-scans observed のうち HEAD 祖先・距離最小 86 — rescan-base-ancestry、非祖先 observed は除外)。Developer スキャン→Architect 合成の直列(c3、再照合7点全一致)
+- Focus: 対象テストの size/covers ヘッダ不在・test-size.ts の宣言パース(:279-291)と drift 上方向専用(:117)・run-tests.ts の観測専用出力(:915-923)・t-test-size-drift.test.ts の guard/purity・#1077 前例形
+- 現行結論: 宣言不在ゆえ static=medium が effectiveDeclared となり実測 large 帯(3実行系 31.3〜32.5s、修正時までに7点)と乖離 — 最上部 `// size: large` 1行で drift 消滅(strictly-greater 機構)。全ゲートは宣言<static 方向専用のため large 宣言で赤化なし
+- Per-intent record: `re-scans/260716-teamup-resume-size-drift.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ+旧「最新: 260716-github-issue-912-tests-s」→履歴ラベル化)、`re-scans/260716-teamup-resume-size-drift.md`。**codekb body は全点温存**(churn 回避 — test-size 専用節は不在、size 機構3ファイルは区間 86 コミットで不変、1行 bugfix。cid:reverse-engineering:c1)
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260716-github-issue-912-tests-s)
 
 - Date: 2026-07-16
 - Observed at: HEAD `8e8cc9b14d9c21e3e8282e3fdb6ae30db7f0f478`(`git rev-parse HEAD` 実測)
