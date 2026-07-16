@@ -1,20 +1,26 @@
-// harness/opencode/manifest.ts — the OpenCode CLI distribution row (skeleton).
+// harness/opencode/manifest.ts — the OpenCode CLI distribution row.
 //
 // Projects core/ into dist/opencode/.opencode/ (rules → amadeus-rules, mirroring
-// codex D-10) and defers the ONE opencode-specific surface — the
-// .opencode/commands/amadeus.md orchestrator-forwarding command — to emit.ts.
-// A minimal walking skeleton: no adapter shim, no per-shell config, no agent
-// transposition (those arrive in later Bolts). The tools/data/harness.json
-// runtime fact is written by the packager's writeHarnessData (scripts/package.ts),
-// NOT by emit — the skeleton adds no data emission of its own.
+// codex D-10) and defers every opencode-specific surface to emit.ts: the
+// .opencode/commands/amadeus.md orchestrator-forwarding command (Bolt 1), and
+// the Bolt 2 surfaces — the projectRoot AGENTS.md session guide,
+// opencode.json.example (a permission-narrowing config example), and the four
+// harness-neutral SESSION skills composed into .opencode/skills/. No adapter
+// shim and no agent transposition (OpenCode has no stdin-hook shell and reads
+// the persona .md bodies as prose). The tools/data/harness.json runtime fact is
+// written by the packager's writeHarnessData (scripts/package.ts), NOT by emit.
 //
 // OpenCode specifics vs Codex:
 //   - token → .opencode
 //   - rules/ → amadeus-rules/ (same rename class as codex; the AIDLC markdown
 //     layers live in amadeus-rules/, keeping the harness's native rules dir free)
-//   - skills are NOT shipped in .opencode/skills/ — OpenCode discovers user
-//     commands at .opencode/commands/, so skipRunnerGen is set and emit() writes
-//     the single orchestrator-forwarding command there.
+//   - skills ship at .opencode/skills/ (OpenCode's skill-discovery path) and user
+//     commands at .opencode/commands/ — both emitted by emit(), so skipRunnerGen
+//     is set. Only the four SESSION skills are composed there; the orchestrator
+//     ships solely as the command (E-OC16 ruling C — core has no orchestrator
+//     skill origin, and re-composing it would duplicate the command in dist).
+//   - session skills ship as bare SKILL.md (no codex openai.yaml guard — that is
+//     an OpenAI/Codex agent-discovery artifact with no OpenCode equivalent).
 //   - NO authored .opencode/ file beyond the projectRoot .gitignore: unlike
 //     codex there is no stdin adapter shim, so authoredExempt is the explicit
 //     empty array (no core-copied dir hides an authored harness file).
@@ -54,8 +60,10 @@ const manifest: HarnessManifest = {
   // empty array documents that the orphan scan needs no exemption here.
   authoredExempt: [],
 
-  // The command ships at .opencode/commands/ via emit, not <harnessDir>/skills/
-  // via runner-gen.
+  // emit() owns both the .opencode/commands/ command and the .opencode/skills/
+  // session skills; the packager's standard runner-gen (which would write
+  // <harnessDir>/skills/ per-stage runners) is skipped — per-stage runners are
+  // out of scope for this port.
   skipRunnerGen: true,
 
   emit,

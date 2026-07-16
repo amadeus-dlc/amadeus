@@ -1,6 +1,43 @@
 # コード構造
 
-## harness port 開放性の観測面(intent 260715-opencode-cursor-harness、2026-07-16、最新)
+## parser/checkbox 欠陥面の観測（intent 260715-parser-checkbox-fixes、2026-07-16、最新）
+
+bugfix intent（#1013 / #1015）の diff-refresh 観測面。出典は本 intent の `inception/reverse-engineering/scan-notes.md`（Developer scan、observed HEAD `6495e03a12d9e7149c2e80b59f171a90607a2d2c` 直読の file:line）。手法は diff-refresh（base=`cf3dc88b46a2b23bcfd71b1136632d1739cdd7e5`、祖先・距離65、observed=`6495e03a12d9e7149c2e80b59f171a90607a2d2c`）。**区間65コミットにフォーカス欠陥の修正は存在せず、両欠陥は observed に現存**。編集正本は `packages/framework/core/tools/`（`.claude/tools/*` は byte 同一 self-install コピー、`dist/<harness>/…` は build 出力）。
+
+### 欠陥面1: practices-promote parseRules（`amadeus-state.ts`、#1013）
+
+- `parseRules`（:2556-2561）は `handlePracticesPromote` 内のローカル arrow（export なし）。フィルタは「非空・非コメント（`<!--`）・非見出し（`#`）」のみで、**`ALWAYS …` / `NEVER …` 契約プレフィックスを検証しない**。
+- 呼び出し元は2箇所のみ: `mandatedRules = parseRules(mandatedDraft)`（:2570）/ `forbiddenRules = parseRules(forbiddenDraft)`（:2571）。
+- 処理フロー: draft 存在確認・読込（:2493-）→ `extractMarkdownSection(…, "## Mandated"/"## Forbidden")`（:2562-）→ parseRules（:2570-2571）→ `appendUnderHeading` で `${rule} (affirmed ${today})` を見出し配下へ append（:2574-2601）→ project.md 先・team.md 後に write（:2610-）→ 失敗経路で `PRACTICES_OVERRIDE` audit。
+- stage 契約: `practices-discovery.md:101`「`## Mandated`（rules with `ALWAYS …` format）… One rule per line」。散文行が混入すると契約非接頭のまま append され契約違反。
+
+### 欠陥面2: scope-change checkbox 再構築（`amadeus-utility.ts` / `amadeus-lib.ts`、#1015）
+
+- **所在**: `handleScopeChange`（:3136、verb `scope-change`、dispatch :4070-4071）。別関数 `handleRecompose`（:3306、verb `recompose`）は suffix-only でマーカー不変（t194 が検査、scope-change は対象外）。
+- 再構築フロー: `parseCheckboxes(content)`（:3195）→ `existingMap`（:3196）→ phase ループ内 `existingMap.get(stage.slug)`（:3226）→ **三項マーカー**（:3228-3230）→ ヘッダ書き戻し（:3237-3239）。
+- **三項の崩落**（:3228-3230）: `existing.state === "completed" ? "x" : … "in-progress" ? "-" : … "skipped" ? "S" : " "`。completed/in-progress/skipped の3状態のみ明示し、**awaiting-approval / revising / pending は末尾 `[ ]`（pending）へ落ちる**。
+- **入力は正しい**: `parseCheckboxes`（`amadeus-lib.ts:3395`）の regex `[ xSR?-]` と switch が6状態（`?`→awaiting-approval、`R`→revising 含む）を復元。existingMap は忠実で、崩落は再構築三項側。
+- **副次 drift**: 再構築ヘッダ `stageProgressHeader`（:3238）が4状態表記（`[?]`/`[R]` 欠落）。正本テンプレ :2748 は6状態表記。
+- **状態型の正本**（`amadeus-lib.ts`）: `CheckboxState`（:58、6状態）/ `CHECKBOX_MAP`（:60-67、state→marker 1正本）/ `CHECKBOX_REVERSE`（:69-76、逆写像）。正準マーカー構築は `CHECKBOX_MAP[newState]`（:3435）。#1015 の三項はこれを使わず手書き列挙。
+
+### 手書き marker 構築の同根棚卸し
+
+state→marker 文字列を手書き構築するサイトは2箇所: `amadeus-utility.ts:3229`（**欠陥**、6→4崩落）/ `amadeus-utility.ts:2656`（`isInit ? "[x]" : "[ ]"`、初期化文脈で既存状態なし＝**非欠陥**）。正準 `CHECKBOX_MAP` 経路は `amadeus-lib.ts:3435` の1箇所。surgical 修正方向は 3229 を CHECKBOX_MAP 参照へ置換。
+
+### 既存テスト（両欠陥とも未カバー）
+
+- #1013: `tests/integration/t75.test.ts` は practices-promote を検査するが fixture は全行 ALWAYS/NEVER 整形済みで、契約非接頭行の拒否ケース不在。
+- #1015: `tests/unit/t194-recompose.test.ts` は別関数 `handleRecompose`（marker untouched）を検査。scope-change × `[?]`/`[R]` 保存を結合するテストは全域 grep で0件。
+
+### アーキテクチャ視点: 書き手境界と対称性契約（後続 requirements/design 向け）
+
+- **書き手境界**: 両欠陥は state を書く別々の境界に属するが同型。#1013 `handlePracticesPromote`（`amadeus-state.ts`）は **memory 層（team.md/project.md のルール）への書き手**で、draft 契約書式（ALWAYS/NEVER）を検証せず散文を永続ルール化する。#1015 `handleScopeChange`（`amadeus-utility.ts`）は **state ファイル（Stage Progress チェックボックス）への書き手**で、6状態を4状態へ縮約して書き戻す。いずれも「入力（memory draft / `parseCheckboxes` 復元）は正しいが、書き手側が契約を落とす」非対称欠陥。
+- **後続が受け入れ基準に固定すべき対称性契約**（symmetric-pair-review / team.md PM1-6 の適用）:
+  - #1015 = **parse⇔rebuild の6状態対称**: 読み手 `parseCheckboxes`（`amadeus-lib.ts:3395`、6状態を全復元）と書き手の再構築三項（3状態のみ）が非対称。正準 `CHECKBOX_MAP`（:60-67、6状態1正本）を rebuild 側でも唯一の写像源とし、ヘッダ凡例も正本テンプレ（:2748、6状態）へ一致させて対称を回復する。requirements/design は「parse が受理する全状態を rebuild が保存する」を検証可能な受け入れ基準に固定すべき。
+  - #1013 = **stage 契約⇔parser の検証対称**: 入力側の stage 契約（`practices-discovery.md:101`「ALWAYS … format / One rule per line」）が要求する書式を、書き手 `parseRules` が出力側で検証しない非対称。契約プレフィックス検証を `parseRules` 側に置き、契約非接頭行を拒否/隔離して対称を回復する。design は「契約違反行が memory 層に着地しない」を受け入れ基準に固定すべき。
+
+
+## harness port 開放性の観測面(intent 260715-opencode-cursor-harness、2026-07-16、履歴)
 
 opencode / Cursor harness port(Issue #626)のフォーカス面。出典は本 intent の `inception/reverse-engineering/scan-notes.md` および `re-scans/260715-opencode-cursor-harness.md`(file:line は observed HEAD `6a23b0ec` 直読)。diff-refresh base `cf3dc88`→observed `6a23b0ec`(距離65、祖先性実測済み)でフォーカス面のハーネス開放性契約は全て不変(下記温存判定参照)。
 
