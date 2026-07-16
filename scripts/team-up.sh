@@ -528,15 +528,17 @@ codex_member_cmd() {
     echo "ERROR: missing Codex monitor launcher: $CODEX_MONITOR" >&2
     return 1
   }
-  [ -x "$ROLE_RESUME" ] || {
-    echo "ERROR: missing role resume resolver: $ROLE_RESUME" >&2
-    return 1
-  }
   if [ -f "$DELIVERY" ]; then
     AGMSG_CODEX_ROLE="$role" bash "$DELIVERY" set monitor codex "$wt" >/dev/null 2>&1 ||
       echo "WARN: delivery.sh set monitor failed for $m (continuing)" >&2
   fi
   if [ "$CONTINUE" = "1" ]; then
+    # The role resume resolver is only consulted on the resume path; a fresh
+    # launch must not require it to be present.
+    [ -x "$ROLE_RESUME" ] || {
+      echo "ERROR: missing role resume resolver: $ROLE_RESUME" >&2
+      return 1
+    }
     if resume_uuid="$("$ROLE_RESUME" codex "$TEAM_NAME" "$role" "$wt")"; then
       if [ -n "$resume_uuid" ]; then
         command="resume"
