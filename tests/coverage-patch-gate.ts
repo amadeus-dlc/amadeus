@@ -292,19 +292,3 @@ export function main(argv: string[]): number {
 }
 
 if (import.meta.main) process.exit(main(process.argv.slice(2)));
-
-// FALLING-PROOF INJECTION (temporary; reverted in the next commit): ten
-// uncovered lines to demonstrate both gates go red on real CI.
-export function fallingProofInjection(x: number): number {
-  let acc = x;
-  acc += 1;
-  acc += 2;
-  acc += 3;
-  acc += 4;
-  acc += 5;
-  acc += 6;
-  acc += 7;
-  acc += 8;
-  acc += 9;
-  return acc;
-}
