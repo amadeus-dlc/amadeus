@@ -1,6 +1,121 @@
 # コード構造
 
-## swarm driver 変更面の配置境界（intent 260713-swarm-driver-migration、2026-07-13、最新）
+## harness port 開放性の観測面(intent 260715-opencode-cursor-harness、2026-07-16、最新)
+
+opencode / Cursor harness port(Issue #626)のフォーカス面。出典は本 intent の `inception/reverse-engineering/scan-notes.md` および `re-scans/260715-opencode-cursor-harness.md`(file:line は observed HEAD `6a23b0ec` 直読)。diff-refresh base `cf3dc88`→observed `6a23b0ec`(距離65、祖先性実測済み)でフォーカス面のハーネス開放性契約は全て不変(下記温存判定参照)。
+
+### open-set(自動発見)3層 — 新ハーネスが「編集ゼロ」で乗る面
+
+| 層 | seam | 所在(file:line) | 開放機構 |
+| --- | --- | --- | --- |
+| build ターゲット発見 | `discoverHarnessNames()` | `scripts/package.ts:68-73` | `packages/framework/harness/` を `readdirSync` し `manifest.ts` を持つ dir のみ返す(sort 済み)。ハーネス集合はハードコードされていない(:63-67 コメント)。既定ターゲット=`discoverHarnessNames()`(:764)、manifest 実在フィルタ(:769) → `harness/opencode/manifest.ts` + `harness/cursor/manifest.ts` を置けば package.ts 無編集で両者をビルド。`--check` ドリフトガードも自動で効く。 |
+| runtime のハーネス dir 解決 | `harness.json`(`{harnessDir, rulesSubdir}`) | `scripts/package.ts:438` writeHarnessData が生成、runtime は install 済み `harness.json` で解決 | 実 install の harnessDir/rulesSubdir 解決は `harness.json` が権威。`amadeus-lib.ts:114` `KNOWN_HARNESS_DIRS`/`:170-172` `KNOWN_RULES_SUBDIR` は **AMADEUS_HARNESS_DIR test-seam と fallback 専用**(:109-114,:162-168 コメント明記)。 |
+| skills 生成 | runner-gen | `amadeus-runner-gen.ts:60,63`(出力先=`<harnessDir>/skills/`) | `<harnessDir>/skills/` に skills を置く規約なら `skipRunnerGen=false`(省略)で stage/scope runner を自動生成。`.agents/skills/` 等の特殊探索なら codex 同様 `skipRunnerGen=true`(`manifest-types.ts:119`)+ `emit.ts` で自前生成。 |
+
+manifest 契約は `scripts/manifest-types.ts:79-122`(HarnessManifest 全12フィールド)。新ハーネスは `harnessDir`(".opencode"/".cursor" 等)+ `coreDirs`/`harnessFiles` 投影 + `rulesRename`(null か dir 名)+ 任意 `emit` の宣言 1本で表現する。COMPILED_DATA seed は初回ビルド時に committed claude tree の JSON へ fallback(`package.ts:289-299`)するため、新ハーネスの初回ビルドは claude JSON を種にできる。
+
+### 閉じ列挙(手動追記が要る)台帳 — 新ハーネス名を閉じた列挙で持つ9ファイル
+
+open-set の外で「ハーネス集合そのもの」を閉じた列挙として持つファイル。本 intent フォーカス面で編集が要りうるのは計9ファイル(installer 5 + runtime 2 + migrate 1 + self-install 1)。
+> 追補(2026-07-16、requirements-analysis reviewer 指摘): installer 契約テストは2本(setup-harness.test.ts / setup-harness-parse.test.ts)で installer 必須は実ファイル5個(harness.ts / engine-layout.ts / reporter.ts / 契約テスト2本 — 旧記載の「5」は harness.ts の2行参照込みの誤計上で、実体は4個だった)、台帳総計は9ファイル。あわせて非破壊の閉じ列挙(`tests/unit/t156-memory-relocation.test.ts:149`、`tests/unit/t199-grilling-distribution.test.ts:33-40` — 新ハーネスを検査しないだけで壊れない)を第3分類として記録する。
+
+
+**installer(packages/setup)— 5ファイル必須**(未対応だと `install --harness opencode` が弾かれる。正しさに必須):
+1. `packages/setup/src/domain/harness.ts:9` `HarnessName` union type(`"claude"|"codex"|"kiro"|"kiro-ide"`)
+2. `packages/setup/src/domain/harness.ts:19-24` `HarnessName.all` frozen array
+3. `packages/setup/src/domain/engine-layout.ts:8-12` `ENGINE_DIR_BY_HARNESS` map
+4. `packages/setup/src/modules/reporter.ts:24-25,137` usage 文字列 + invalid エラー文言
+5. `tests/unit/setup-harness.test.ts:13` `toEqual(["claude","codex","kiro","kiro-ide"])`(契約テスト、要更新)
+6. `tests/unit/setup-harness-parse.test.ts:17` `HarnessName.parse` の受理集合を直接検査する契約テスト(要更新 — requirements-analysis reviewer 指摘で追補、2026-07-16)
+
+**framework runtime(test-seam/advisory)— 2ファイル**(正しさ非影響):
+6. `packages/framework/core/tools/amadeus-lib.ts:114` `KNOWN_HARNESS_DIRS`、`:170-172` `KNOWN_RULES_SUBDIR`(test-seam/fallback 専用、上記 harness.json が実解決の権威)
+7. `packages/framework/core/tools/amadeus-utility.ts:857` `otherTrees`(`[".claude",".kiro",".codex"]` フィルタ)、`:2000-2006` `SCAN_EXCLUDE`、`:696` doctor `.claude` 分岐(advisory 品質のみ)
+
+**migration — 1ファイル**(aidlc→amadeus 移行で新ハーネスを扱う場合のみ):
+8. `packages/framework/core/tools/amadeus-migrate.ts:71` `INSTALLED_HARNESS_DIRS=[".claude",".codex",".kiro"]`(ほか :383/:843/:1459/:2514)
+
+**self-install — 1ファイル**(dogfood 対象化する場合のみ、面3参照):
+9. `scripts/promote-self.ts:37-41` managedDirs、`:313-319` build 呼び出し
+
+### promote:self は新ハーネス非自動対応
+
+`scripts/promote-self.ts` は project-local dogfood install(amadeus が自分自身を開発するため、:2-8 冒頭コメント)であり配布ビルド(dist)ではない。`managedDirs`(:37-41)は **ハードコードで claude(.claude)+ codex(.codex/.agents)のみ**(kiro/kiro-ide すら対象外)、build 呼び出しも `package.ts claude`/`package.ts codex` を明示ハードコード(:313-319)。opencode/Cursor で amadeus 自身を開発する必要がなければ promote:self 編集は不要(dist 配布は package.ts の discover で成立)。self-install を新ハーネスへ広げる場合のみ managedDirs + build 呼び出しの2箇所編集が要る。**この判定は本 intent のスコープ判断事項**。
+
+### doctor の `.claude` 専用ブロックと advisory 劣化
+
+`amadeus-utility.ts:243-245` `handleVersion` は harness 非依存(`amadeus <version>` を出力するのみ)で新ハーネス dist から bun 直叩きで動く。`:676` `handleDoctor(projectDir)` は harness 依存: `:695` `harnessDir()` で分岐し `:696` `if (harness === ".claude")` 専用ブロック(settings.json からフック roster 導出、:714-)を持つ。`.claude` 以外は汎用経路。`:857` `otherTrees` と `:2000-2006` `SCAN_EXCLUDE` は閉じた列挙で、新ハーネスの engine dir がここに無いと「他ツリー存在」advisory 警告に列挙されない。**正しさには非影響で、doctor の advisory 品質のみが劣化**する(厳密対応には otherTrees/SCAN_EXCLUDE 追記が要る)。
+
+### 新ハーネス追加の最小ファイル集合(既存4 harness 対比から導出)
+
+既存4 harness は2系統: **Claude/Kiro 型**(薄 manifest、skills/agents を core .md + harnessFiles で投影)と **Codex 型**(`emit.ts` 368行が宣言行で表せない構造発散 — config.toml/hooks.json/AGENTS.md/11 agent TOML/`.agents/skills/` ツリー全体 — を内包、`skipRunnerGen=true`)。系統は各ハーネスの skills・agents・hooks 探索規約で決まる(Architect 合成で確定すべき設計問い)。
+
+- 配布(dist)成立の最小: `packages/framework/harness/<name>/manifest.ts`(必須)。Claude/Kiro 型なら + `onboarding.fills.ts` + `skills/amadeus/{SKILL.md, question-rendering.md, issue-ref-contract.md}` + rules @-stub(`rules-amadeus.md` 相当)+ 設定 example + `dot-gitignore`(Kiro 型は加えて agent .json 群 + adapter.ts + settings/cli.json、rulesRename あり、onboarding=AGENTS.md projectRoot)。Codex 型なら + `emit.ts` + adapter shim。
+- installer 選択可の必須編集: 上記閉じ列挙台帳 1〜4(+契約テスト 5)。
+- docs: README(対応表 4→6 + バッジ)+ `docs/guide/harnesses/<name>.md(.ja)` 新規×2言語 + 各 guide のハーネス言及棚卸し。
+
+## canonical settings 観測面（intent 260709-canonical-settings、2026-07-16、履歴）
+
+Amadeus 共通の既定挙動を型付き canonical settings（1正本）へ集約する intent（#623）の観測面。出典は本 intent の `inception/reverse-engineering/scan-notes.md`（Developer scan、observed HEAD `e55cc25143717d84b3e7f1a543151f0b7c99b96f` 直読の file:line）。手法は diff-refresh（base=`cf3dc88b46a2b23bcfd71b1136632d1739cdd7e5`＝前 intent 260713-swarm-driver-migration の observed、祖先・距離58で最小、observed=`e55cc25143717d84b3e7f1a543151f0b7c99b96f`）。**区間58コミットに本 intent 関連の新規機構は存在せず、設定土台は base 時点で確立済み**（区間主因は upstream-v2 移行 `amadeus-migrate.ts` +3823行の新規と移行テスト大量追加）。
+
+### フォーカス面1: 設定配置面（ディレクトリ構造・.gitignore）
+
+- `amadeus/spaces/default/` 直下の実ディレクトリは `codekb/`／`intents/`／`knowledge/`／`memory/` の4つのみで、**`settings.json` 相当の設定ファイルは現状存在しない**（`memory/` は `org.md`／`team.md`／`project.md`／`phases/`／`templates/` の手編集ルール層正本）。
+- `.gitignore:47-58` の amadeus 関連 ignore パターン: `amadeus/active-space`（:50）／`amadeus/spaces/*/intents/active-intent`（:51）／`amadeus/.amadeus-clone-id`（:52）／`amadeus/.amadeus-sessions/`（:53）／`amadeus/spaces/*/intents/*/runtime-graph.json`（:54）／`amadeus/spaces/*/intents/*/.amadeus-*`（:55）／`amadeus/spaces/*/intents/.amadeus-*`（:58）。**すべて cursor／machine-local runtime／intent 配下の `.amadeus-*` に限定**。
+- 含意: `amadeus/spaces/<space>/settings.json`・`memory/` 配下・workspace ルート `amadeus/settings.json` のいずれに設定ファイルを置いても**どのパターンにも一致せず ignore されない**（コミット対象）。version-controlled 化（org.md「amadeus/ ワークスペースはバージョン管理」方針）なら追加の gitignore 変更は不要。
+
+### フォーカス面2: doctor 統合面（`amadeus-utility.ts` handleDoctor）
+
+- health-check row 型: `interface DoctorCheck { pass: boolean; label: string; fix?: string }`（`amadeus-utility.ts:407-411`）。個別チェック関数（`hookHeartbeatDoctorCheck`:527、`checkPhaseProgressConsistency`:653 等）がこの型を返す。
+- `handleDoctor(projectDir: string): void`（:676）は内部で `results: Array<{pass,label,fix?}>`（:677）を組み立て、各チェックを inline `results.push({...})` するか `DoctorCheck` 返却関数の結果を push する二方式。**副作用のない純関数化（`export function xxxCheck(projectDir): DoctorCheck`）が in-process テスト可能な既習様式**（spawn-only の handleDoctor 盲点回避、:568/:599 コメント参照）。
+- exit code 方針: 集計は `passed`／`failed` カウント（:1926-1937）、末尾 `process.exit(failed > 0 ? 1 : 0)`（:1958）で**どの row が fail でも exit 1**。stdout に全診断を出す（exit code と独立、:1954-1957）。
+- 拡張の雛形: `AMADEUS_DEFAULT_SCOPE` 検証 row（:875-892、unset=pass／valid=pass／invalid=fail+fix）。canonical settings の doctor 統合はこの row を拡張する形が自然（面7と直結）。
+
+### フォーカス面3: 既存 parse/validation パターン（厳格 vs 寛容の2 posture）
+
+| posture | 正本 | エントリ／構造 | 未知キーの扱い |
+| --- | --- | --- | --- |
+| **厳格（Result 型）** | `amadeus-stage-schema.ts` | `validateStageFrontmatter():ValidationResult`（:136）。判別ユニオン `{valid:true;data}｜{valid:false;errors[]}`（:55-57）。`REQUIRED_FIELDS`（:103-116）／`OPTIONAL_FIELDS`（:118）／`KNOWN_FIELDS=new Set([...REQUIRED,...OPTIONAL])`（:120）／`RESERVED_KEYS:Readonly<Record<string,string>>`（:95-101）。型ヘルパ `checkString`／`checkPositiveInteger`／`checkStringArray`／`checkEnum`／`checkSlugPattern`（:455-513） | **errors に集約（throw しない）**: `errors.push(\`unknown key: ${key}\`)`（:163） |
+| **寛容（throw）** | `amadeus-rule-schema.ts` | `parseRuleFrontmatter(raw):RuleFrontmatter`（:46）／`validateRuleFrontmatter()`（:63） | **未知キー許容**（:39 コメント forward-compat additive）。不正時のみ `throw new Error(...)`（:69/:72） |
+
+- 設計含意: canonical settings ローダは「ユーザー編集ファイルの未知キーをどう扱うか」で posture を選ぶ。doctor へ流すなら **stage-schema の判別ユニオン `{valid,data}｜{valid,errors[]}` が最も接続容易**（errors をそのまま fail row に写せる）。
+
+### フォーカス面4: 既存 JSON ロード実装（設定ローダが従うべき既習様式）
+
+- intents.json 読み（`amadeus-lib.ts`）: `readIntentRegistry():IntentRegistryEntry[]`（:1496-1509）= `JSON.parse(readFileSync(path,"utf-8")) as unknown`（:1503）→ `Array.isArray` 構造チェック（:1504）→ **try/catch で absent／malformed は `[]` へ寛容フォールバック**（:1505-1507）。書きは `writeFileAtomic(path, JSON.stringify(list,null,2)+"\n")`（:1481/:1832/:1874）。関連 `appendIntentToRegistry`（:1466）／`intentsRegistryPath`（:1462-1464）。
+- runtime-graph.json／scope-grid.json 読み（`amadeus-graph.ts`）: path 解決は env-seam 経由 `scopeGridPath()=process.env.AMADEUS_SCOPE_GRID ?? join(DATA_DIR,"scope-grid.json")`（:307、stage-graph も同型 `AMADEUS_STAGE_GRAPH`）。load 後キャッシュ（:326- コメント）。runtime-graph は #849 self-heal 対象（gitignored machine-local 生成物、`amadeus-learnings.ts:151`）で not-found 時は再コンパイル→なお無ければ `fail(...)`（:173/:180）。
+- 様式4点: **(a)** `JSON.parse(readFileSync) as unknown` + 構造ガード、**(b)** 欠損は用途で二分（registry=`[]` 寛容／compiled graph=再生成 or fail）、**(c)** 書きは `writeFileAtomic` + 2-space + 末尾改行、**(d)** path は `AMADEUS_*` env-seam で override 可能。canonical settings ローダはこの4点を踏襲すべき。
+
+### フォーカス面5: 共通挙動設定の3系統分散（重複なしの棚卸し結果）
+
+- ハーネス設定ファイルの実態: リポジトリルート実在 harness engine dir は **`.claude` と `.codex` のみ**（`.kiro` はルート不在。ただし `dist/kiro/`・`packages/framework/harness/{claude,codex,kiro,kiro-ide}` は4 harness 実在）。`.claude/settings.json.example`（6745B）は `permissions.allow`／`statusLine`／`hooks`／`companyAnnouncements` を持つが**Amadeus 挙動設定（depth／test-strategy／autonomy 等）は皆無**（model／provider も未 pin）。`.codex/config.toml.example` は `AMADEUS_RULES_DIR` seam・`sandbox_mode`・statusline のみで depth／test-strategy／autonomy キーは `grep -c`=0。
+- **棚卸し結論**: Amadeus 共通挙動設定はどのハーネス設定ファイルにも**重複記述されていない**。挙動は3系統に分散:
+  1. **CLI フラグ** — `--depth`／`--test-strategy`（`amadeus-orchestrate.ts:396-400`、:448-449 で born intent へ伝播）
+  2. **env var** — `AMADEUS_DEFAULT_SCOPE`（settings.json の `env` 由来、面7）
+  3. **state ファイルフィールド** — `Construction Autonomy Mode`（`amadeus-orchestrate.ts:722`、`amadeus-bolt.ts:807` が `setFieldStrict` で書く）
+- canonical settings intent はこの分散した「1プロジェクトの既定挙動」を型付き1正本へ集約するのが狙いと読める。
+
+### フォーカス面6: dist/self-install 同期経路（`scripts/package.ts` / promote:self）
+
+- **正本の実配置**: `packages/framework/core/`（=`CORE_ROOT`、`package.ts:56-57`）と `packages/framework/harness/<name>/`。root の `core/`・`harness/` は**存在しない**（base 時点で `packages/framework/` へ移設済み、区間内の移動ではない）。
+- 新規 tool の dist 搭載条件: `buildTree` が `core/<src>` を `dist/<name>/<harnessDir>/<dst>` へコピー（`package.ts:11-14`、:336 `srcDir=join(CORE_ROOT,src)`）。`.ts`／`.json` はトークン置換なしコピー、`.md` はトークン置換（:76-78）。harness は `manifest.ts` 行から**発見**（:64-71）。→ **新設 `amadeus-<x>.ts` を `packages/framework/core/tools/` に置けば自動で全 dist に載る**（手動 dist 編集は Forbidden）。
+- コンパイル済みデータは dist のみ: `COMPILED_DATA=["tools/data/stage-graph.json","tools/data/scope-grid.json"]`（:157）。設定を「コンパイル済みデータ」にするなら同扱い、「手編集正本」なら core/memory 相当 verbatim copy 経路（:227-255 emitMemory/seed）を参照。
+- promote:self: `scripts/promote-self.ts` `promoteSelfMain(argv,repoRoot)`（:300）、`--check`／`--apply`／`--no-build`（:142）が Claude／Codex の project-local self-install を同期。正本（core/harness）を触ったら `bun run promote:self` 必須。検証は `bun run dist:check`（package.ts --check の byte 差分ガード :31-34）+ `bun run promote:self:check`。
+
+### フォーカス面7: env var 読み込みと責務境界（`AMADEUS_DEFAULT_SCOPE` precedent）
+
+- `packages/framework/core/tools/*.ts` が読む distinct `AMADEUS_*` env var は約40種で用途4分類: **path-seam（テスト isolation 用が大半）** `AMADEUS_RULES_DIR`／`AMADEUS_STAGE_GRAPH`／`AMADEUS_SCOPE_GRID` 他約16種、**挙動トグル/既定値** `AMADEUS_DEFAULT_SCOPE`／`AMADEUS_SKIP_ARTIFACT_GUARD`／`AMADEUS_SKIP_HUMAN_PRESENCE_GUARD`／`AMADEUS_MIGRATION_DOCTOR`、**lock チューニング** `AMADEUS_AUDIT_LOCK_*` 他、**テスト注入専用** `AMADEUS_DOCTOR_TEST_SWAP_*` 他。
+- **最重要 precedent = `AMADEUS_DEFAULT_SCOPE`**: 読みは `amadeus-orchestrate.ts:574`（`const envScope=process.env.AMADEUS_DEFAULT_SCOPE`）、resolve 順「引数→env→既定」（:560/:574）。不正時は canonical validator が `Invalid AMADEUS_DEFAULT_SCOPE "...". Valid scopes: ...`（:1532-1534、`amadeus-utility.ts:3925-3931`）。由来コメントが決定的: `amadeus-utility.ts:871`「project-default scope from **settings.json env**」、:872-874「settings.json env が Bash に露出する Claude セッション内でのみ観測可能」。
+- 含意: **「settings.json の `env` ブロック → `AMADEUS_*` env var → ツールが読む」チャネルが既に1本存在する**。canonical settings はこの単発チャネルを、型付き設定ファイル（1正本）から複数既定値を供給する形へ一般化する intent と整合。責務境界: depth／test-strategy には env var が無く（CLI フラグ + state のみ）、autonomy も env でなく state field。「env var は現状スコープ既定にしか使われていない」= canonical settings が新設定を持つ余地が明確にある。
+
+### codekb stale 記述チェック結果
+
+- `architecture.md:13,:175,:179-180`・`business-overview.md:37`・`api-documentation.md` 各所は既に `packages/framework/core/`／`packages/framework/harness/<name>/` の3層構造を正しく反映し、本 intent 観測面（設定配置・doctor・parse・JSON・env）に関する **codekb の stale 記述は検出されなかった**（Developer 判定）。よって他 codekb 成果物は温存（churn 回避、cid:reverse-engineering:c1）。
+- 参考（codekb 外のルール層注意）: `memory/project.md` の "Way of Working"／Mandated は依然 `core/`／`harness/<name>/` を編集正本と表記するが実配置は `packages/framework/core/`／`packages/framework/harness/<name>/`。この不整合は **base より前**の既存事項で本 intent の range 外・codekb 外（memory ルールの保守事項）。事実記録に留める。
+
+> 以下は過去 intent の構造記録。冒頭の「本 intent」等は各見出しに記された履歴 intent を指し、今回 intent の current marker ではない。
+
+## swarm driver 変更面の配置境界（intent 260713-swarm-driver-migration、2026-07-13、履歴）
 
 | 層 | 正本／生成物 | 現行責務 | 新 driver 契約での含意 |
 | --- | --- | --- | --- |
@@ -15,8 +130,6 @@
 | `tests/unit`／`tests/integration`／`tests/e2e` | 検証正本 | selector、directive、referee、配布、live transport | 決定的 matrix と opt-in live native proof を分離する |
 
 現行 `AMADEUS_SWARM_DRIVER` 実装は0件であり、追加先は既存の層境界を壊さず決める必要がある。最小構造は、core に deterministic selector と型、harness に capability probe／driver adapter、referee に監査用の選択結果を渡す形だが、これは現時点では設計仮説であり Application Design で確定する。
-
-> 以下は過去 intent の構造記録。冒頭の「本 intent」等は各見出しに記された履歴 intent を指し、今回 intent の current marker ではない。
 
 ## 計測 seam 台帳 — metrics-observation の観測面(intent 260712-metrics-observation、2026-07-12)
 
