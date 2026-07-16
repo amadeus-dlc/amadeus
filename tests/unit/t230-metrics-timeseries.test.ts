@@ -54,6 +54,13 @@ describe("t230 parseSnapshot (falling proofs, AC-1a)", () => {
     expect(out).toMatchObject({ kind: "error", reason: "captured_at is not a string" });
   });
 
+  test("collector entry with non-string tool_version is rejected", () => {
+    const text = JSON.stringify(snap("t", "c", { ccn: { tool: "lizard", tool_version: 7, values: {} } as never }));
+    const out = parseSnapshot(text, "bad-ver.json");
+    expect(out.kind).toBe("error");
+    if (out.kind === "error") expect(out.reason).toContain("tool_version");
+  });
+
   test("collector entry without values object is rejected naming the collector", () => {
     const text = JSON.stringify(snap("t", "c", { ccn: { tool: "lizard", tool_version: "1", values: 3 } as never }));
     const out = parseSnapshot(text, "bad-entry.json");

@@ -8,7 +8,7 @@
 // (AC-1a/1b/3d).
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { main, type Snapshot } from "../../scripts/metrics-timeseries";
@@ -69,6 +69,19 @@ describe("t230 CLI boundary via env seam", () => {
       "b.json": JSON.stringify(snap("2026-07-16T01:00:00Z", "def", { coverage: COVERAGE })),
     });
     expect(main(["--last", "1"])).toBe(0);
+  });
+
+  test("usage error through main exits 2 with the usage string", () => {
+    root = fixtureRoot({ "a.json": JSON.stringify(snap("2026-07-16T00:00:00Z", "abc", { coverage: COVERAGE })) });
+    expect(main(["--nope"])).toBe(2);
+  });
+
+  test("a snapshot that cannot be read (dangling symlink) exits 1 (RL-3)", () => {
+    root = fixtureRoot({ "a.json": JSON.stringify(snap("2026-07-16T00:00:00Z", "abc", { coverage: COVERAGE })) });
+    // ENOENT on read is the portable throw injection (macOS/Linux divergence
+    // of readFileSync(dir) makes directory injection non-portable).
+    symlinkSync(join(root, "metrics", "gone.json"), join(root, "metrics", "z.json"));
+    expect(main([])).toBe(1);
   });
 
   test("missing metrics dir exits 1", () => {
