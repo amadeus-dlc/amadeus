@@ -11,6 +11,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkQuestionsEvidence } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { handleGateStart } from "../../dist/claude/.claude/tools/amadeus-state.ts";
 
 const tempDirs: string[] = [];
 afterEach(() => {
@@ -69,8 +70,7 @@ describe("checkQuestionsEvidence (in-process, all 6 reasons)", () => {
   });
 });
 
-describe("gate-start wiring (spawned, fail-closed contract)", () => {
-  function scaffold(questionsBody: string | null): string {
+function scaffoldShared(questionsBody: string | null): string {
     const dir = mkdtempSync(join(tmpdir(), "eoc1-gate-"));
     tempDirs.push(dir);
     const intentDir = join(dir, "amadeus", "spaces", "default", "intents", "demo-1a2b3c4d");
@@ -96,8 +96,9 @@ describe("gate-start wiring (spawned, fail-closed contract)", () => {
       writeFileSync(join(intentDir, "inception", "requirements-analysis", "requirements-analysis-questions.md"), questionsBody);
     }
     return dir;
-  }
+}
 
+describe("gate-start wiring (spawned, fail-closed contract)", () => {
   function runGateStart(projectDir: string) {
     return Bun.spawnSync({
       cmd: ["bun", join(import.meta.dir, "..", "..", "dist", "claude", ".claude", "tools", "amadeus-state.ts"), "gate-start", "requirements-analysis", "--project-dir", projectDir],
@@ -106,7 +107,7 @@ describe("gate-start wiring (spawned, fail-closed contract)", () => {
   }
 
   test("a filled [Answer] without evidence refuses the gate (exit 1, no transition, no emit)", () => {
-    const dir = scaffold(`${HEADER}[Answer]: A — 採用します\n`);
+    const dir = scaffoldShared(`${HEADER}[Answer]: A — 採用します\n`);
     const r = runGateStart(dir);
     expect(r.exitCode).toBe(1);
     expect(r.stderr.toString()).toContain("no ruling reference (E-code) or leader-approval timestamp line");
@@ -116,14 +117,14 @@ describe("gate-start wiring (spawned, fail-closed contract)", () => {
   });
 
   test("an unparseable approval timestamp refuses the gate with the M-2 wording", () => {
-    const dir = scaffold(`${HEADER}leader 承認 あとで\n\n[Answer]: A — 採用\n`);
+    const dir = scaffoldShared(`${HEADER}leader 承認 あとで\n\n[Answer]: A — 採用\n`);
     const r = runGateStart(dir);
     expect(r.exitCode).toBe(1);
     expect(r.stderr.toString()).toContain("does not carry a parseable ISO timestamp");
   });
 
   test("the zero-question format passes the gate silently (exit 0, transition happens)", () => {
-    const dir = scaffold(`${HEADER}明確化質問 0 問(leader 承認 2026-07-16T15:20:19Z)。\n\n## 質問\n\n(なし)\n`);
+    const dir = scaffoldShared(`${HEADER}明確化質問 0 問(leader 承認 2026-07-16T15:20:19Z)。\n\n## 質問\n\n(なし)\n`);
     const r = runGateStart(dir);
     expect(r.exitCode, r.stderr.toString()).toBe(0);
     const state = readFileSync(join(dir, "amadeus", "spaces", "default", "intents", "demo-1a2b3c4d", "amadeus-state.md"), "utf-8");
@@ -131,8 +132,65 @@ describe("gate-start wiring (spawned, fail-closed contract)", () => {
   });
 
   test("a missing questions file passes the gate (exit 0)", () => {
-    const dir = scaffold(null);
+    const dir = scaffoldShared(null);
     const r = runGateStart(dir);
     expect(r.exitCode, r.stderr.toString()).toBe(0);
+  });
+});
+
+// In-process wiring drive (lcov carrier for the gate-start guard lines — the
+// spawned cases above exercise the same paths but bun --coverage cannot see
+// subprocesses; same seam idiom as t224-state-set-failclosed).
+class ExitSignal extends Error {
+  constructor(public code: number) {
+    super(`exit ${code}`);
+  }
+}
+
+function captureExit(fn: () => void): { exitCode: number | null; stderr: string } {
+  let stderr = "";
+  let exitCode: number | null = null;
+  const origExit = process.exit.bind(process);
+  const origErr = console.error;
+  process.exit = ((code?: number) => {
+    throw new ExitSignal(code ?? 0);
+  }) as typeof process.exit;
+  console.error = (...a: unknown[]) => {
+    stderr += a.map(String).join(" ");
+  };
+  try {
+    fn();
+  } catch (e) {
+    if (e instanceof ExitSignal) exitCode = e.code;
+    else throw e;
+  } finally {
+    process.exit = origExit;
+    console.error = origErr;
+  }
+  return { exitCode, stderr };
+}
+
+describe("gate-start wiring (in-process lcov carrier)", () => {
+  test("refuses in-process with the M-1 wording and exit signal 1", () => {
+    const dir = scaffoldShared(`${HEADER}[Answer]: A — 採用します\n`);
+    const saved = process.env.CLAUDE_PROJECT_DIR;
+    process.env.CLAUDE_PROJECT_DIR = dir;
+    const r = captureExit(() => handleGateStart(["requirements-analysis"]));
+    if (saved === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+    else process.env.CLAUDE_PROJECT_DIR = saved;
+    expect(r.exitCode).toBe(1);
+    expect(r.stderr).toContain("no ruling reference (E-code) or leader-approval timestamp line");
+  });
+
+  test("passes in-process on the zero-question format (guard lines run, no refusal)", () => {
+    const dir = scaffoldShared(`${HEADER}0 問(leader 承認 2026-07-16T15:20:19Z)。\n\n## 質問\n\n(なし)\n`);
+    const saved = process.env.CLAUDE_PROJECT_DIR;
+    process.env.CLAUDE_PROJECT_DIR = dir;
+    const r = captureExit(() => handleGateStart(["requirements-analysis"]));
+    if (saved === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+    else process.env.CLAUDE_PROJECT_DIR = saved;
+    expect(r.exitCode).toBeNull();
+    const state = readFileSync(join(dir, "amadeus", "spaces", "default", "intents", "demo-1a2b3c4d", "amadeus-state.md"), "utf-8");
+    expect(state).toContain("- [?] requirements-analysis — EXECUTE");
   });
 });

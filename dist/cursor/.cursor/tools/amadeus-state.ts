@@ -1687,7 +1687,7 @@ function validateSlugInState(
 // --recovered marks a BACKFILLED gate row (the engine opening a gate the
 // conductor skipped, e.g. report's explicit-stage recovery) with
 // Recovered=true so audit consumers can tell backfills from organic opens.
-function handleGateStart(args: string[]): void {
+export function handleGateStart(args: string[]): void {
   if (args.length < 1) error("Usage: amadeus-state.ts gate-start <slug> [--artifacts <csv>] [--recovered]");
   const slug = args[0];
   let artifacts: string | undefined;
