@@ -37,6 +37,7 @@ import {
   parseStateStageSuffixes,
   readAllAuditShards,
   readStateFile,
+  checkQuestionsEvidence,
   recordDir,
   relativeMemoryPath,
   relativeRecordDir,
@@ -1705,6 +1706,22 @@ function handleGateStart(args: string[]): void {
   const stage = findStageBySlug(slug);
   if (!stage) error(`Unknown stage: ${slug}`);
   validateSlugInState(content, slug, "in-progress");
+
+  // E-OC1 evidence gate (#1101): refuse to open the approval gate when the
+  // stage's questions file carries a filled [Answer] without ruling/approval
+  // evidence. Fail-closed via error() BEFORE any transition is written, so a
+  // refusal leaves the checkbox untouched and STAGE_AWAITING_APPROVAL unemitted.
+  const rd = recordDir(pd);
+  if (rd !== null) {
+    const questionsPath = join(rd, stage.phase, slug, `${slug}-questions.md`);
+    const ev = checkQuestionsEvidence(questionsPath);
+    if (ev.kind === "fail" && ev.reason === "no-evidence") {
+      error(`Refusing to gate-start "${slug}": ${slug}-questions.md has a filled [Answer] but no ruling reference (E-code) or leader-approval timestamp line. Record the E-OC1 evidence in the questions header, then retry.`);
+    }
+    if (ev.kind === "fail" && ev.reason === "unparseable-timestamp") {
+      error(`Refusing to gate-start "${slug}": the approval evidence line in ${slug}-questions.md does not carry a parseable ISO timestamp. Fix the E-OC1 evidence header, then retry.`);
+    }
+  }
 
   content = setCheckbox(content, slug, "awaiting-approval");
   const timestamp = isoTimestamp();
