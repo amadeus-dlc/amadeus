@@ -1,8 +1,1 @@
-[
-  {
-    "file": "tests/coverage-patch-gate.ts",
-    "lines": "299-422",
-    "reason": "TEMPORARY falling-proof: allowlisted uncovered injection so the patch gate passes while the relative gate demonstrates DROP_EXCEEDED on real CI",
-    "expiry": "removed together with fallingProofInjection in the next commit"
-  }
-]
+[]
