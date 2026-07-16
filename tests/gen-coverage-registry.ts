@@ -265,6 +265,7 @@ export const TOOL_DESCRIPTORS: readonly ToolDescriptor[] = [
   { file: "amadeus-utility.ts", kind: "switch", anchor: "subcommand" },
   { file: "amadeus-graph.ts", kind: "object", anchor: "COMMANDS" },
   { file: "amadeus-runtime.ts", kind: "object", anchor: "SUBCOMMANDS" },
+  { file: "amadeus-norm-metrics.ts", kind: "switch", anchor: "verb" },
 ];
 
 // ===========================================================================
