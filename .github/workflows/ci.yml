@@ -14,7 +14,9 @@ on:
 
 concurrency:
   # Main pushes must all run to completion: a cancelled main run skips the
-  # coverage job, leaving no Codecov base report for that commit (#777).
+  # coverage job, leaving no metrics snapshot for that commit (originally
+  # motivated by the external coverage service's base reports, #777; the
+  # completeness guarantee is still wanted for snapshots).
   # cancel-in-progress: false alone is not enough — a concurrency group holds
   # at most one pending run, so a third consecutive push would still replace
   # (cancel) the queued one. Keying the group by SHA on main gives every push
@@ -59,7 +61,7 @@ jobs:
           while IFS= read -r -d '' path; do
             case "${path}" in
               *.ts|*.tsx|*.mts|*.cts|\
-              bun.lock|package.json|*/package.json|tsconfig*.json|biome.json|biome.jsonc|codecov.yml|.codecov.yml|\
+              bun.lock|package.json|*/package.json|tsconfig*.json|biome.json|biome.jsonc|\
               .github/workflows/ci.yml|\
               scripts/*|tests/*|packages/framework/*|packages/setup/*|\
               dist/*|.agents/*|.claude/*|.codex/*|.kiro/*|\
@@ -127,13 +129,16 @@ jobs:
       - check
     if: ${{ needs.changes.outputs.ci == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Head suite + (cache-miss) merge-base suite for the relative gate.
+    timeout-minutes: 40
     permissions:
       contents: read
       id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up bun
         uses: oven-sh/setup-bun@v2
@@ -152,6 +157,80 @@ jobs:
       - name: Project coverage gate
         run: bun tests/coverage-project-gate.ts --check
 
+      - name: Patch coverage gate
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          AMADEUS_PATCH_BASE_REF: origin/${{ github.event.pull_request.base.ref }}
+        run: |
+          set -euo pipefail
+          bun tests/coverage-patch-gate.ts --check | tee /tmp/patch-gate-summary.txt
+          {
+            echo "## Patch Coverage Gate"
+            echo
+            echo '```'
+            cat /tmp/patch-gate-summary.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Resolve merge-base for the relative coverage gate
+        if: ${{ github.event_name == 'pull_request' }}
+        id: merge-base
+        run: |
+          set -euo pipefail
+          mb="$(git merge-base "origin/${{ github.event.pull_request.base.ref }}" HEAD)"
+          echo "sha=$mb" >> "$GITHUB_OUTPUT"
+
+      - name: Restore base coverage cache
+        if: ${{ github.event_name == 'pull_request' }}
+        id: base-cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/base-coverage-totals.json
+          key: relative-coverage-base-${{ steps.merge-base.outputs.sha }}
+
+      - name: Measure base coverage (merge-base worktree)
+        if: ${{ github.event_name == 'pull_request' && steps.base-cache.outputs.cache-hit != 'true' }}
+        run: |
+          set -euo pipefail
+          BASE_WT=/tmp/relative-coverage-base
+          git worktree add --detach "$BASE_WT" "${{ steps.merge-base.outputs.sha }}"
+          cd "$BASE_WT"
+          bun install --frozen-lockfile
+          # The base suite VERDICT (wall-clock drift and other post-hoc gates)
+          # must not poison the relative gate (E-CV2 D4). Capture the exit
+          # code, then require the coverage artifacts to be complete before
+          # they may be compared (E-CV2 e1 reservation: never compare against
+          # a partial base measurement — fail closed).
+          status=0
+          bun run coverage:ci || status=$?
+          if [[ ! -s coverage/lcov.info || ! -s coverage/coverage-totals.json ]]; then
+            echo "::error::base coverage artifacts incomplete (coverage:ci exit ${status}); refusing to compare"
+            exit 1
+          fi
+          if [[ "${status}" -ne 0 ]]; then
+            echo "::warning::base suite verdict failed (exit ${status}) but coverage artifacts are complete; proceeding verdict-independent per E-CV2 D4"
+          fi
+          cp coverage/coverage-totals.json /tmp/base-coverage-totals.json
+
+      - name: Relative coverage gate (head vs merge-base)
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          # Reuses the project gate comparator (BigInt, -0.02pp) with the
+          # baseline seam pointed at the live merge-base measurement (E-CV2
+          # D1/D2). The gate itself validates the base totals (parse-don't-
+          # validate: missing/malformed/empty all fail closed).
+          AMADEUS_COVERAGE_PROJECT_BASELINE: /tmp/base-coverage-totals.json
+        run: |
+          set -euo pipefail
+          bun tests/coverage-project-gate.ts --check | tee /tmp/relative-gate-summary.txt
+          {
+            echo "## Relative Coverage Gate (head vs merge-base)"
+            echo
+            echo '```'
+            cat /tmp/relative-gate-summary.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload coverage artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -165,17 +244,6 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f
-        with:
-          use_oidc: true
-          files: ./coverage/lcov.info
-          disable_search: true
-          fail_ci_if_error: true
-          # No flags: the per-flag report path carried stale base values into
-          # head reports (#791, despite carryforward defaulting to false), and
-          # nothing here uses flag features. Flagless uploads bypass that path.
-          name: amadeus-coverage
 
   # Main-only and intentionally outside ci-success: metrics publication must
   # never extend the pull-request critical path.
@@ -260,104 +328,6 @@ jobs:
             echo "[$pr_url]($pr_url)"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  codecov-status:
-    name: Codecov Status
-    runs-on: ubuntu-latest
-    needs:
-      - changes
-      - coverage
-    if: ${{ always() && needs.changes.outputs.ci == 'true' }}
-    permissions:
-      contents: read
-      checks: read
-      statuses: read
-    steps:
-      - name: Wait for Codecov status checks
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
-        env:
-          COVERAGE_RESULT: ${{ needs.coverage.result }}
-          CODECOV_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-          IS_PULL_REQUEST: ${{ github.event_name == 'pull_request' }}
-        with:
-          script: |
-            const coverageResult = process.env.COVERAGE_RESULT;
-            if (coverageResult !== "success") {
-              throw new Error(`coverage failed or was skipped: ${coverageResult}`);
-            }
-
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const ref = process.env.CODECOV_SHA;
-            const requiredChecks = [];
-
-            if (process.env.IS_PULL_REQUEST === "true") {
-              requiredChecks.push("codecov/patch");
-            } else {
-              core.info("Skipping codecov/patch outside pull_request events");
-            }
-
-            for (const checkName of requiredChecks) {
-              await waitForCheck(checkName);
-            }
-
-            async function waitForCheck(checkName) {
-              for (let attempt = 1; attempt <= 60; attempt += 1) {
-                const run = await latestCheckRun(checkName);
-
-                if (run) {
-                  core.info(`${checkName}: status=${run.status} conclusion=${run.conclusion || ""} url=${run.html_url}`);
-
-                  if (run.status === "completed") {
-                    if (run.conclusion === "success") {
-                      return;
-                    }
-
-                    throw new Error(`${checkName} failed with conclusion=${run.conclusion}`);
-                  }
-                } else {
-                  const status = await latestCommitStatus(checkName);
-                  if (status) {
-                    core.info(`${checkName}: state=${status.state} url=${status.target_url || ""}`);
-
-                    if (status.state === "success") {
-                      return;
-                    }
-                    if (status.state === "failure" || status.state === "error") {
-                      throw new Error(`${checkName} failed with state=${status.state}`);
-                    }
-                  } else {
-                    core.info(`${checkName}: waiting for Codecov status (${attempt}/60)`);
-                  }
-                }
-
-                await new Promise((resolve) => setTimeout(resolve, 10000));
-              }
-
-              throw new Error(`${checkName} did not report within timeout`);
-            }
-
-            async function latestCheckRun(checkName) {
-              const response = await github.rest.checks.listForRef({
-                owner,
-                repo,
-                ref,
-                check_name: checkName,
-                per_page: 100,
-              });
-              return response.data.check_runs
-                .filter((checkRun) => checkRun.name === checkName)
-                .sort((left, right) => {
-                  const rightTime = Date.parse(right.started_at || right.created_at);
-                  const leftTime = Date.parse(left.started_at || left.created_at);
-                  return rightTime - leftTime;
-                })[0];
-            }
-
-            async function latestCommitStatus(checkName) {
-              const response = await github.rest.repos.getCombinedStatusForRef({ owner, repo, ref });
-              return response.data.statuses.find((status) => status.context === checkName);
-            }
-
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
@@ -365,7 +335,6 @@ jobs:
       - changes
       - check
       - coverage
-      - codecov-status
     if: ${{ always() }}
     steps:
       - name: All checks passed
@@ -385,7 +354,6 @@ jobs:
             true)
               require_result "check" "${{ needs.check.result }}"
               require_result "coverage" "${{ needs.coverage.result }}"
-              require_result "codecov-status" "${{ needs['codecov-status'].result }}"
               echo "All CI checks passed successfully"
               ;;
             false)

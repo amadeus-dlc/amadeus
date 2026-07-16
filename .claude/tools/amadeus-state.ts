@@ -2444,7 +2444,62 @@ function handlePracticesEvent(args: string[]): void {
 // bricks. Routing the writes through a tool subcommand removes the LLM's
 // judgment from the path: the path is never the LLM's write target, so the
 // hallucinated policy never fires.
-function handlePracticesPromote(args: string[]): void {
+// Parse a discovered-rules section body into trimmed, non-empty, non-comment,
+// non-heading rule lines. Mirrors loadRules()'s line filter so the writer and
+// reader never drift.
+export function parseRuleLines(sectionContent: string): string[] {
+  return sectionContent
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0 && !l.startsWith("<!--") && !l.startsWith("#"));
+}
+
+// Validate parsed rule lines against the section-keyword contract (Issue #1013):
+// each rule under `## Mandated` must lead with `ALWAYS ` and each under
+// `## Forbidden` with `NEVER ` (after an optional `- ` bullet), matching the
+// org.md rule dialect loadRules() reads back. Returns one message per violation
+// (all collected — never fail-fast) naming the section, the offending line, and
+// the expected prefix. An unknown section imposes no contract and yields none.
+export function validateRuleLines(section: string, lines: string[]): string[] {
+  const keywords: Record<string, string> = { Mandated: "ALWAYS ", Forbidden: "NEVER " };
+  const keyword = keywords[section];
+  if (keyword === undefined) return [];
+  const violations: string[] = [];
+  for (const line of lines) {
+    const body = line.startsWith("- ") ? line.slice(2) : line;
+    if (!body.startsWith(keyword)) {
+      violations.push(`## ${section} rule must start with "${keyword}": ${line}`);
+    }
+  }
+  return violations;
+}
+
+// Parse the ## Mandated / ## Forbidden sections of a discovered-rules draft and
+// enforce the section-keyword contract atomically. All violations are collected
+// and handed to onViolation (which is expected to reject and exit) BEFORE this
+// returns, so a violating draft never yields rule lists to write.
+export function parseRuleSectionsOrFail(
+  discoveredRulesDraft: string,
+  onViolation: (reason: string) => never
+): { mandated: string[]; forbidden: string[] } {
+  const mandated = parseRuleLines(
+    extractMarkdownSection(discoveredRulesDraft, "## Mandated")
+  );
+  const forbidden = parseRuleLines(
+    extractMarkdownSection(discoveredRulesDraft, "## Forbidden")
+  );
+  const violations = validateRuleLines("Mandated", mandated).concat(
+    validateRuleLines("Forbidden", forbidden)
+  );
+  if (violations.length > 0) {
+    onViolation(
+      `discovered-rules violates the section-keyword contract:\n${violations.join("\n")}`
+    );
+  }
+  return { mandated, forbidden };
+}
+
+export function handlePracticesPromote(args: string[]): void {
   const flags: Record<string, string> = {};
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
@@ -2550,25 +2605,9 @@ function handlePracticesPromote(args: string[]): void {
     }
   }
 
-  // Step 3b: Build new project-guardrails.md by appending each rule under the
-  // matching heading with a date stamp. Rules are one-per-line in the draft;
-  // empty/blank lines and comment lines are skipped.
-  const parseRules = (sectionContent: string): string[] => {
-    return sectionContent
-      .split("\n")
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0 && !l.startsWith("<!--") && !l.startsWith("#"));
-  };
-  const mandatedDraft = extractMarkdownSection(
-    discoveredRulesDraft,
-    "## Mandated"
-  );
-  const forbiddenDraft = extractMarkdownSection(
-    discoveredRulesDraft,
-    "## Forbidden"
-  );
-  const mandatedRules = parseRules(mandatedDraft);
-  const forbiddenRules = parseRules(forbiddenDraft);
+  // Step 3b: parse + enforce the section-keyword contract atomically (Issue #1013).
+  const { mandated: mandatedRules, forbidden: forbiddenRules } =
+    parseRuleSectionsOrFail(discoveredRulesDraft, fail);
 
   let newGuardrailsMd = guardrailsMd;
   for (const rule of mandatedRules) {

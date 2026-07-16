@@ -50,31 +50,41 @@ describe("t222 CI snapshot publication boundary", () => {
     }
   });
 
-  test("repository workflow gates coverage, Codecov, and snapshots on CI-relevant changes", () => {
+  test("repository workflow gates coverage (project + patch) and snapshots on CI-relevant changes", () => {
     const yaml = readFileSync(join(import.meta.dir, "../../.github/workflows/ci.yml"), "utf8");
     const coverageJob = yaml.split("  coverage:")[1]?.split("\n  metrics-snapshot:")[0] ?? "";
-    const snapshotJob = yaml.split("  metrics-snapshot:")[1]?.split("\n  codecov-status:")[0] ?? "";
-    const codecovJob = yaml.split("  codecov-status:")[1]?.split("\n  ci-success:")[0] ?? "";
+    const snapshotJob = yaml.split("  metrics-snapshot:")[1]?.split("\n  ci-success:")[0] ?? "";
 
     expect(coverageJob).toContain("- changes\n      - check");
     expect(coverageJob).toContain(`if: \${{ needs.changes.outputs.ci == 'true' }}`);
+    expect(coverageJob).toContain("bun tests/coverage-project-gate.ts --check");
+    expect(coverageJob).toContain("bun tests/coverage-patch-gate.ts --check");
+    expect(coverageJob).toContain("fetch-depth: 0");
+    expect(coverageJob).toContain("AMADEUS_PATCH_BASE_REF: origin/${{ github.event.pull_request.base.ref }}");
+    // relative gate (E-CV2): live merge-base measurement compared through the
+    // project-gate baseline seam, verdict-independent base run, cache keyed by
+    // merge-base sha, artifact completeness verified before comparison
+    expect(coverageJob).toContain("Relative coverage gate (head vs merge-base)");
+    expect(coverageJob).toContain("AMADEUS_COVERAGE_PROJECT_BASELINE: /tmp/base-coverage-totals.json");
+    expect(coverageJob).toContain("key: relative-coverage-base-${{ steps.merge-base.outputs.sha }}");
+    expect(coverageJob).toContain("base coverage artifacts incomplete");
+    // codecov is fully removed — no upload step, no waiting job (#1017 migration)
+    expect(yaml).not.toContain("codecov");
+    expect(yaml).not.toContain("Codecov");
     expect(snapshotJob).toContain("- changes\n      - coverage");
     expect(snapshotJob).toContain("needs.changes.outputs.ci == 'true'");
-    expect(codecovJob).toContain("- changes\n      - coverage");
-    expect(codecovJob).toContain("always() && needs.changes.outputs.ci == 'true'");
   });
 
   test("CI Success passes skipped work but fails closed on detection or required job failures", () => {
     const yaml = readFileSync(join(import.meta.dir, "../../.github/workflows/ci.yml"), "utf8");
     const ciSuccessJob = yaml.split("  ci-success:")[1] ?? "";
 
-    expect(ciSuccessJob).toContain("- changes\n      - check\n      - coverage\n      - codecov-status");
+    expect(ciSuccessJob).toContain("- changes\n      - check\n      - coverage");
     expect(ciSuccessJob).toContain(`require_result "changes" "\${{ needs.changes.result }}"`);
     expect(ciSuccessJob).toContain(`case "\${{ needs.changes.outputs.ci }}" in`);
     expect(ciSuccessJob).toContain("No CI-relevant changes; expensive checks skipped");
     expect(ciSuccessJob).toContain(`require_result "check" "\${{ needs.check.result }}"`);
     expect(ciSuccessJob).toContain(`require_result "coverage" "\${{ needs.coverage.result }}"`);
-    expect(ciSuccessJob).toContain(`require_result "codecov-status" "\${{ needs['codecov-status'].result }}"`);
   });
 
   test("repository workflow publishes snapshots through auto-merged pull requests", () => {
