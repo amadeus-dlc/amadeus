@@ -31,6 +31,7 @@ function commandFor(
   resolverBody: string,
   env: Record<string, string> = {},
   homeOverride?: string,
+  opts: { continueMode?: "0" | "1"; roleResumeOverride?: string } = {},
 ) {
   const dir = mkdtempSync(join(tmpdir(), "amadeus-team-up-"));
   tempDirs.push(dir);
@@ -40,12 +41,18 @@ function commandFor(
   const resolver = join(dir, "role-resume.sh");
   writeFileSync(resolver, `#!/usr/bin/env bash\n${resolverBody}\n`);
   chmodSync(resolver, 0o755);
+  // Default to the resume path (CONTINUE=1) so the resume-focused tests keep
+  // their meaning; a fresh launch pins CONTINUE=0. roleResumeOverride pins
+  // ROLE_RESUME to an arbitrary (possibly non-existent) path to exercise the
+  // resolver-absent branches.
+  const continueMode = opts.continueMode ?? "1";
+  const roleResume = opts.roleResumeOverride ?? resolver;
 
   const result = Bun.spawnSync({
     cmd: [
       "bash",
       "-c",
-      'script="$1"; member="$2"; set --; TEAM_UP_LIB_ONLY=1 source "$script"; CONTINUE=1; codex_member_cmd "$member"',
+      `script="$1"; member="$2"; set --; TEAM_UP_LIB_ONLY=1 source "$script"; CONTINUE=${continueMode}; codex_member_cmd "$member"`,
       "_",
       TEAM_UP,
       member,
@@ -55,7 +62,7 @@ function commandFor(
       ...env,
       HOME: home,
       TEAM_REPO: ROOT,
-      ROLE_RESUME: resolver,
+      ROLE_RESUME: roleResume,
       CODEX_MONITOR: "/usr/bin/true",
       DELIVERY: join(dir, "missing-delivery.sh"),
     },
@@ -892,6 +899,33 @@ describe("team-up Codex resume", () => {
     expect(command).toContain("--codex-command codex");
     expect(command).not.toContain("--codex-command resume");
     expect(result.stderr.toString()).toContain("role resume resolver failed");
+  });
+
+  test("a fresh launch succeeds and emits a launch command even when the resolver is absent", () => {
+    // CONTINUE=0 (a fresh run) must never consult the role resume resolver, so
+    // a missing role-resume.sh cannot abort the codex launch (#1061). Pin
+    // ROLE_RESUME at a path that does not exist.
+    const { result } = commandFor("engineer-1", "exit 0", {}, undefined, {
+      continueMode: "0",
+      roleResumeOverride: join(tmpdir(), "amadeus-no-such-role-resume.sh"),
+    });
+    const command = result.stdout.toString();
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+    expect(command).toContain("--codex-command codex");
+    expect(command).not.toContain("--codex-command resume");
+    expect(result.stderr.toString()).not.toContain("missing role resume resolver");
+  });
+
+  test("a resume launch is refused loudly when the resolver is absent", () => {
+    // CONTINUE=1 (the resume path) genuinely needs the resolver; keep the
+    // pre-#1061 loud error and its message (AC-4b).
+    const missing = join(tmpdir(), "amadeus-no-such-role-resume.sh");
+    const { result } = commandFor("engineer-1", "exit 0", {}, undefined, {
+      continueMode: "1",
+      roleResumeOverride: missing,
+    });
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr.toString()).toContain(`missing role resume resolver: ${missing}`);
   });
 });
 
