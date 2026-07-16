@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 458,
+    "total": 459,
     "enumeratedByClass": {
-      "function": 235,
+      "function": 236,
       "audit": 73,
       "scope": 10,
       "stage": 32,
@@ -2821,6 +2821,13 @@
     {
       "unitClass": "function",
       "unitId": "function:spacesRoot",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:STAGE_PROGRESS_HEADER_COMMENT",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
