@@ -1,6 +1,24 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（最新: 260715-parser-checkbox-fixes）
+## 実行メタデータ(最新: 260716-github-issue-912-tests-s)
+
+- Date: 2026-07-16
+- Observed at: HEAD `8e8cc9b14d9c21e3e8282e3fdb6ae30db7f0f478`(`git rev-parse HEAD` 実測)
+- Intent: `260716-github-issue-912-tests-s`(Issue #912 — t05 planted-failure ケースが高負荷ホストで `--parallel 4` 下 120005ms タイムアウト間欠 FAIL、labels=`bug / P3 / S4-MINOR`。単独実行では 28 pass/0 fail、負荷収束後の再 `--ci` は PASS。「実行コード変更なし、負荷起因」の見立て)
+- Scope: `bugfix`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh(cid:reverse-engineering:c1、E-L63 の base 選定則)。base=`e55cc25143717d84b3e7f1a543151f0b7c99b96f`(祖先性 `git merge-base --is-ancestor` exit 0 実測、距離=**37**、祖先かつ距離最小の指定 base を採用)、observed=`8e8cc9b14d9c21e3e8282e3fdb6ae30db7f0f478`(`git rev-parse HEAD` 実測一致)。**フォーカス3ファイル(`tests/smoke/t05-run-tests-parallel.test.ts`・`tests/run-tests.ts`・`tests/run-tests.sh`)の区間 diff は空** — 観測面は base..HEAD の37コミット区間で一切変化しておらず、現行 worktree の行番号は Issue #912 実測(2026-07-11)時点とバイト同一。base/observed の真実源は本 intent の `inception/reverse-engineering/scan-notes.md` および `re-scans/260716-github-issue-912-tests-s.md`。
+- 実施体制: Developer(スキャン)→ Architect(合成)の2サブエージェント直列(cid:reverse-engineering:c3)
+- Focus: t05 planted-failure ケース(test 8 = L411-438、`PER_TEST_TIMEOUT=120000` L161、入れ子 spawn `run()` L104-125/`spawnSync` L113、二重 spawn bun→bash→bun×2)・run-tests.ts 並列制御(`args.parallel` 既定1 L163、`runFileBand` L839-862、テスト子 spawn timeout なし L653-657、負荷適応 seam NONE FOUND)・先行修正3クラス(#819 e2e 移設/#831 lock 隔離/#877 キャッシュリセット、参考 #741)・E-L71(fanout-load-settle)の seam 不在
+- 現行結論: t05・テストランナー本体・並列制御の実行コードは区間37コミットで不変。120s 予算超過は spawnSync のプロセスタイムアウトではなく**外側 bun の per-test timeout**(L161)で、内側 run-tests.sh 再帰の cold bun 起動 ×2 直列化が高負荷 CPU 待ちで伸びる構造。負荷適応 seam(load-average/nice/並列度 env 上書き/収束待ち)は皆無。修正3案評価 = 案C(test 8 フィルタを planted 単独へ最小化し入れ子コスト半減、L422-428 の1行 diff、契約完全保存)を本命、案A(timeout の env seam)を安全網併用、案B(#819 型 tier 隔離)は前例強だが構造分散コスト。最終選択は requirements/選挙で確定。
+- Per-intent record: `re-scans/260716-github-issue-912-tests-s.md`
+- 更新した成果物: `code-structure.md`(「t05 並列フレーク観測面 — 260716-github-issue-912」節を H1 直後に新設 = planted-failure 機序 / 並列制御の実態 / 先行修正3クラス / 修正3案評価。旧「最新」= parser/checkbox 欠陥面(260715-parser-checkbox-fixes)節見出しの「最新」→「履歴」降格(main 反映時点の最新節。harness port 節は既に履歴) cid:reverse-engineering:c3-relabel)、本ファイル(鮮度ポインタ + 旧「最新: 260715-parser-checkbox-fixes」→履歴ラベル化)、`re-scans/260716-github-issue-912-tests-s.md`(per-intent re-scan 記録)。他 body 成果物(architecture / business-overview / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment の7点)は base→observed でフォーカス面と無関係、かつ区間 diff 空で構造不変のため温存(churn 回避、cid:reverse-engineering:c1)。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。**本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。**
+
+
+## 実行メタデータ（履歴: 260715-parser-checkbox-fixes）
 
 - Date: 2026-07-16
 - Observed at: `git rev-parse HEAD` = `6495e03a12d9e7149c2e80b59f171a90607a2d2c`
