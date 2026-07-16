@@ -92,6 +92,17 @@ describe("parseCidRecords (cid ledger)", () => {
     expect(amendmentCountOf("採用 4/4")).toBe(0);
   });
 
+  test("oldSlugs parsed from a (旧 cid: <slug>) legacy-alias marker", () => {
+    const recs = parseCidRecords([
+      line(
+        "team",
+        "Corrections",
+        "- renamed rule (旧 cid: requirements-analysis:old-name) <!-- cid:requirements-analysis:new-name -->",
+      ),
+    ]);
+    expect(recs[0].oldSlugs).toEqual(["old-name"]);
+  });
+
   test("normaliseCid / classifySection primitives", () => {
     expect(normaliseCid("a:a:slug")).toBe("a:slug");
     expect(normaliseCid("a:slug")).toBe("a:slug");
@@ -302,8 +313,13 @@ describe("main dispatch (fail-closed)", () => {
     }
   }
 
-  test("unknown verb -> exit 2", () => {
+  test("unknown verb -> exit 2 (switch default)", () => {
     expect(silence(() => main(["distill-candidates"]))).toBe(2);
+  });
+
+  test("argv parse error -> exit 2 (main error branch)", () => {
+    expect(silence(() => main([]))).toBe(2);
+    expect(silence(() => main(["rank", "--top", "0"]))).toBe(2);
   });
 
   test("memory layer absent -> exit 1", () => {
