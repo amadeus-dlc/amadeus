@@ -31,6 +31,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fieldExists, setFieldStrict } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { handleSet } from "../../dist/claude/.claude/tools/amadeus-state.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -227,5 +228,69 @@ describe("t224 fieldExists predicate", () => {
   test("false for a substring / non-anchored match", () => {
     // `Stage` is a substring of `Current Stage` but not its own bullet row.
     expect(fieldExists(content, "Stage")).toBe(false);
+  });
+});
+
+describe("t224 handleSet in-process seam", () => {
+  // The CLI reject path exits via error(); convert process.exit into a
+  // throwable so the pre-validation lines register in lcov (captureExit —
+  // t-practices-promote-contract's established idiom).
+  class ExitSignal extends Error {
+    constructor(public readonly code: number) {
+      super(`exit ${code}`);
+    }
+  }
+  function captureExit(fn: () => void): { threw: boolean; stderr: string; stdout: string } {
+    let stderr = "";
+    let stdout = "";
+    const origExit = process.exit.bind(process);
+    const origErr = console.error;
+    const origLog = console.log;
+    process.exit = ((code?: number) => {
+      throw new ExitSignal(code ?? 0);
+    }) as typeof process.exit;
+    console.error = (...a: unknown[]) => {
+      stderr += a.map(String).join(" ");
+    };
+    console.log = (...a: unknown[]) => {
+      stdout += a.map(String).join(" ");
+    };
+    let threw = false;
+    try {
+      fn();
+    } catch (e) {
+      if (e instanceof ExitSignal) threw = true;
+      else throw e;
+    } finally {
+      process.exit = origExit;
+      console.error = origErr;
+      console.log = origLog;
+    }
+    return { threw, stderr, stdout };
+  }
+
+  test("rejects an absent field in-process with the full enumeration", () => {
+    proj = createTestProject();
+    seedStateFile(proj, INIT_DONE);
+    process.env.CLAUDE_PROJECT_DIR = proj;
+    const before = stateSha(proj);
+    const r = captureExit(() => handleSet(["Ghost One=a", "Ghost Two=b"]));
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("Field not found in state file:");
+    expect(r.stderr).toContain("Ghost One");
+    expect(r.stderr).toContain("Ghost Two");
+    expect(stateSha(proj)).toBe(before);
+  });
+
+  test("writes present fields in-process and reports execution-derived success", () => {
+    proj = createTestProject();
+    seedStateFile(proj, INIT_DONE);
+    process.env.CLAUDE_PROJECT_DIR = proj;
+    const r = captureExit(() =>
+      handleSet(["Current Stage=market-research", "Last Updated=NOW", "Completed=+1", "Completed=-1"]),
+    );
+    expect(r.threw).toBe(false);
+    expect(r.stdout).toContain('"updated":true');
+    expect(readFileSync(stateMd(proj), "utf-8")).toContain("- **Current Stage**: market-research");
   });
 });

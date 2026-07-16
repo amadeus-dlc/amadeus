@@ -469,7 +469,7 @@ function handleGet(args: string[]): void {
   console.log(value);
 }
 
-function handleSet(args: string[]): void {
+export function handleSet(args: string[]): void {
   if (args.length < 1) error("Usage: amadeus-state.ts set <field=value> ...");
   const pd = resolveProjectDir(projectDir);
   // C2b lost-update safety: hold the audit lock across read→decide→write so
