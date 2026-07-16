@@ -1,4 +1,4 @@
-// covers: lib:ensureStageDiary(created,exists,template-missing)
+// covers: function:ensureStageDiary(created,exists,template-missing)
 // size: medium
 //
 // Deterministic stage-diary creation (#1080): the engine auto-creates

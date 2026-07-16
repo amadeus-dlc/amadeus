@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 108,
+      "function": 109,
       "audit": 32,
       "scope": 10,
       "stage": 8,
@@ -1394,8 +1394,13 @@
       "unitClass": "function",
       "unitId": "function:ensureStageDiary",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-ensure-stage-diary.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
