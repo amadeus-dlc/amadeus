@@ -64,9 +64,13 @@ other — only you, the conductor, delegate.
 Every stage keeps an observation diary at the `memory_path` the `run-stage`
 directive carries (`<record>/<phase>/<stage>/memory.md`):
 
-1. At stage start, if `memory.md` does not exist at that path, copy
-   `{{HARNESS_DIR}}/knowledge/amadeus-shared/memory-template.md` to it. Idempotent —
-   never overwrite; re-entry or resume must keep accumulated entries.
+1. The engine auto-creates `memory.md` from
+   `{{HARNESS_DIR}}/knowledge/amadeus-shared/memory-template.md` when it issues
+   the `run-stage` directive (idempotent — an existing diary is never
+   overwritten; re-entry or resume keeps accumulated entries). Fallback: if the
+   file is still absent when you start (e.g. the template was missing — the
+   engine warns on stderr and continues), copy the template to the path
+   yourself before appending.
 2. During the stage, append timestamped bullets under the matching canonical
    heading as observations arise — Interpretation, Deviation, Tradeoff, or Open
    question. This is your diary-keeping (see `stage-protocol.md` §13); the four
