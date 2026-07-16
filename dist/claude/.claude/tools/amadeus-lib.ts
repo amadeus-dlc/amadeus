@@ -1094,6 +1094,35 @@ export function recordDir(
   return join(intentsDir(projectDir, sp), slug);
 }
 
+// Stage diaries (<record>/<phase>/<stage>/memory.md) are auto-created from the
+// shipped template at stage start (CLAUDE.md Conventions). The engine is the
+// deterministic creator: `next` calls this while building each run-stage
+// directive, so every issuance path (advance / jump / birth / resume / --single)
+// passes through one chokepoint. Idempotent by contract — an existing diary is
+// NEVER overwritten (re-entry and resume must keep accumulated entries, mirroring
+// conductor.md "Keeping the diary"). The template resolves under the harness dir
+// (<harness>/knowledge/amadeus-shared/memory-template.md — the same file
+// conductor.md names as the copy source); the space-relative
+// memoryTemplatesDir() family is a different resolver for sensor floors and is
+// deliberately not used here (#1080). A missing template must not block the
+// workflow (the diary is an observation layer) but must not fail silent either:
+// the caller gets "template-missing" and a one-line stderr warning is emitted.
+export function ensureStageDiary(
+  projectDir: string,
+  memoryPathRel: string,
+): "created" | "exists" | "template-missing" {
+  const abs = join(projectDir, memoryPathRel);
+  if (existsSync(abs)) return "exists";
+  const template = join(projectDir, harnessDir(), "knowledge", "amadeus-shared", "memory-template.md");
+  if (!existsSync(template)) {
+    console.error(`amadeus: stage diary not auto-created — template missing at ${template}`);
+    return "template-missing";
+  }
+  mkdirSync(dirname(abs), { recursive: true });
+  writeFileSync(abs, readFileSync(template));
+  return "created";
+}
+
 // Relative record-dir prefix for the engine's agent-consumed artifact/diary
 // paths: `amadeus/spaces/<space>/intents/<slug>-<id8>` with forward slashes
 // regardless of host OS (portable across worktrees). Returns null → the engine

@@ -167,9 +167,12 @@ function runNext(proj: string): { directive: Directive; raw: string } {
     encoding: "utf-8",
   });
   const raw = `${r.stdout ?? ""}${r.stderr ?? ""}`.trim();
+  // Parse the directive from stdout ONLY: the engine reserves stdout for the
+  // directive JSON, while advisory lines (e.g. the stage-diary template-missing
+  // warning in template-less fixtures like these) go to stderr by contract.
   let directive: Directive;
   try {
-    directive = JSON.parse(raw) as Directive;
+    directive = JSON.parse((r.stdout ?? "").trim()) as Directive;
   } catch {
     directive = {};
   }

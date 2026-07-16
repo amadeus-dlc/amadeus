@@ -87,6 +87,7 @@ import {
   codekbRepoName,
   classifyMigrationRequest,
   type MigrationRequest,
+  ensureStageDiary,
   errorMessage,
   firstInScopeStageOfPhase,
   getField,
@@ -1166,6 +1167,12 @@ function buildRunStageDirective(
     sensors_applicable: (node.sensors_applicable ?? []).map((s) => s.id),
     stage_file: stageFileFor(node.phase, node.slug),
   };
+  // Deterministic diary creation at the single chokepoint every issuance path
+  // (advance / jump / birth / resume / --single) funnels through. Skipped when
+  // the record prefix is unresolved (pre-birth shell — no intent dir to write
+  // into) or no ctx carries a live projectDir. ensureStageDiary never
+  // overwrites an existing diary (#1080).
+  if (recordPrefix !== null && codekbCtx) ensureStageDiary(codekbCtx.projectDir, directive.memory_path);
   if (absent.length > 0) directive.consumes_absent = absent;
   if (resolvedProduces.optional.length > 0) {
     directive.optional_produces = resolvedProduces.optional;
