@@ -838,12 +838,38 @@ export function handleDoctor(projectDir: string): void {
         fix: "upgrade Codex CLI to 0.139.0 or later",
       });
     }
-    // Hook trust pre-seed reminder (advisory pass-with-label): untrusted
-    // project hooks never fire (the bypass flag does not run them either).
+    // Codex trust is two layers, both pre-seeded in $CODEX_HOME/config.toml.
+    // Layer 1 (project trust) is the gate: without a [projects."<dir>"] entry
+    // Codex skips this project's whole .codex hook layer with NO warning, so
+    // layer 2 (hook trust) never even runs. Check layer 1's presence loudly.
+    const codexHome = process.env.CODEX_HOME ?? join(process.env.HOME ?? "", ".codex");
+    const codexConfig = join(codexHome, "config.toml");
+    const projectTrustKey = `[projects."${projectDir}"]`;
+    if (process.env.AMADEUS_MIGRATION_DOCTOR === "1") {
+      // Project trust is seeded at team-up runtime (or manually), not by
+      // migration — same class as the hook-heartbeat scratch above. A fresh
+      // migration has none yet, so this check is not inspected here.
+      results.push({
+        pass: true,
+        label: "project trust: not inspected during migration (seeded at team-up runtime)",
+      });
+    } else {
+      let projectTrusted = false;
+      if (existsSync(codexConfig)) {
+        projectTrusted = readFileSync(codexConfig, "utf-8").includes(projectTrustKey);
+      }
+      results.push({
+        pass: projectTrusted,
+        label: `project trust: ${projectTrustKey} present in ${codexConfig} (layer 1 — Codex skips all .codex hooks silently without it)`,
+        fix: 're-run `scripts/team-up.sh` (seeds both trust layers) or append the entry manually with `trust_level = "trusted"`',
+      });
+    }
+    // Hook trust pre-seed reminder (advisory pass-with-label): even with project
+    // trust, untrusted hooks never fire (the bypass flag does not run them).
     results.push({
       pass: true,
       label:
-        "hook trust: ensure [hooks.state] entries are pre-seeded in $CODEX_HOME/config.toml (`bun scripts/package.ts codex trust --project <dir>`) or run one TUI trust pass",
+        "hook trust: ensure [hooks.state] entries are pre-seeded in $CODEX_HOME/config.toml (layer 2 — `bun scripts/package.ts codex trust --project <dir>`) or run one TUI trust pass",
     });
   } else {
     const settingsPath = join(projectDir, harness, "settings.json");
