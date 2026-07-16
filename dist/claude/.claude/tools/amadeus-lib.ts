@@ -75,6 +75,13 @@ export const CHECKBOX_REVERSE: Record<string, CheckboxState> = {
   "[S]": "skipped",
 };
 
+// Canonical HTML comment written under the `## Stage Progress` heading in the
+// state file. It documents every checkbox state in CHECKBOX_MAP/CHECKBOX_REVERSE,
+// so both the intent-birth template and scope-change rewrite share one string
+// and cannot drift out of sync with the six markers above.
+export const STAGE_PROGRESS_HEADER_COMMENT =
+  "<!-- Checkbox states: [ ] not started, [-] in progress, [?] awaiting approval (gate open), [R] revising (user rejected gate), [x] completed, [S] skipped via --stage/--phase jump -->";
+
 export const PHASES = [
   "initialization",
   "ideation",
