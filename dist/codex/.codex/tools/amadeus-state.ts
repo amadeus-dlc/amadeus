@@ -483,22 +483,29 @@ function handleSet(args: string[]): void {
   // before any write. `set` must fail closed (Issue #1027): if a target field
   // row is absent, setField silently no-ops, so the old code wrote an unchanged
   // file and still reported `{"updated":true}` — a lie the caller trusts.
-  const pairs = args.map((pair) => {
+  // Plain loops (no arrow callbacks): the complexity baseline keys anonymous
+  // functions by ordinal, so adding closures here would shift every later
+  // anonymous entry off its baseline row.
+  const pairs: { field: string; value: string }[] = [];
+  for (const pair of args) {
     const eqIdx = pair.indexOf("=");
     if (eqIdx <= 0) error(`Invalid field=value pair: ${pair}`);
-    return { field: pair.slice(0, eqIdx), value: pair.slice(eqIdx + 1) };
-  });
+    pairs.push({ field: pair.slice(0, eqIdx), value: pair.slice(eqIdx + 1) });
+  }
 
   // Pre-validate ALL fields and reject atomically with the full list of the
   // missing ones (fail-at-first would hide later absences). On reject nothing
   // is written — the state file, Last Updated included, stays byte-identical.
-  const missing = pairs.filter(({ field }) => !fieldExists(content, field)).map(({ field }) => field);
-  if (missing.length > 0) {
-    error(
-      missing
-        .map((field) => `Field not found in state file: "${field}". Cannot update — refusing to silently no-op.`)
-        .join("\n"),
-    );
+  const missingMessages: string[] = [];
+  for (const { field } of pairs) {
+    if (!fieldExists(content, field)) {
+      missingMessages.push(
+        `Field not found in state file: "${field}". Cannot update — refusing to silently no-op.`,
+      );
+    }
+  }
+  if (missingMessages.length > 0) {
+    error(missingMessages.join("\n"));
   }
 
   for (const { field, value: raw } of pairs) {

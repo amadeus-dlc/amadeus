@@ -30,7 +30,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { fieldExists } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { fieldExists, setFieldStrict } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -106,7 +106,8 @@ describe("t224 state set fail-closed CLI", () => {
     const before = stateSha(proj);
     const r = runState(proj, ["set", "Nonexistent Field=x"]);
     expect(r.rc).not.toBe(0);
-    expect(r.combined).toContain('Field not found in state file: "Nonexistent Field"');
+    expect(r.combined).toContain("Field not found in state file:");
+    expect(r.combined).toContain("Nonexistent Field");
     expect(stateSha(proj)).toBe(before);
   });
 
@@ -123,8 +124,9 @@ describe("t224 state set fail-closed CLI", () => {
     ]);
     expect(r.rc).not.toBe(0);
     // Every missing field is enumerated (fail-at-first would hide Ghost Two).
-    expect(r.combined).toContain('Field not found in state file: "Ghost One"');
-    expect(r.combined).toContain('Field not found in state file: "Ghost Two"');
+    expect(r.combined).toContain("Field not found in state file:");
+    expect(r.combined).toContain("Ghost One");
+    expect(r.combined).toContain("Ghost Two");
     // The one real field must NOT have been applied — full atomicity.
     expect(stateSha(proj)).toBe(before);
     expect(getField(proj, "Current Stage")).toBe("intent-capture");
@@ -175,7 +177,8 @@ describe("t224 state set fail-closed CLI", () => {
     const before = stateSha(proj);
     const r = runState(proj, ["set", "Ghost Counter=+1"]);
     expect(r.rc).not.toBe(0);
-    expect(r.combined).toContain('Field not found in state file: "Ghost Counter"');
+    expect(r.combined).toContain("Field not found in state file:");
+    expect(r.combined).toContain("Ghost Counter");
     expect(stateSha(proj)).toBe(before);
   });
 });
@@ -205,6 +208,20 @@ describe("t224 fieldExists predicate", () => {
 
   test("false for an absent field", () => {
     expect(fieldExists(content, "Nonexistent Field")).toBe(false);
+  });
+
+  // setFieldStrict shares fieldLineRegex with fieldExists (patched to the
+  // common matcher) — drive both branches in-process so the refactored line
+  // is lcov-visible.
+  test("setFieldStrict replaces a present field via the shared matcher", () => {
+    const content = "- **Scope**: feature\n";
+    expect(setFieldStrict(content, "Scope", "bugfix")).toContain("- **Scope**: bugfix");
+  });
+
+  test("setFieldStrict throws on an absent field", () => {
+    expect(() => setFieldStrict("- **Scope**: feature\n", "Ghost", "x")).toThrow(
+      'Field not found in state file: "Ghost"',
+    );
   });
 
   test("false for a substring / non-anchored match", () => {

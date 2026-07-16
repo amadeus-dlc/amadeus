@@ -1445,7 +1445,7 @@
       "minMechanism": "none",
       "coveredBy": [
         {
-          "file": "tests/unit/t224-state-set-failclosed.test.ts",
+          "file": "tests/integration/t224-state-set-failclosed.test.ts",
           "mechanism": "cli"
         }
       ],
