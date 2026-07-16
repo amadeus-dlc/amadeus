@@ -2,22 +2,19 @@
 //
 // t230 — metrics snapshot timeseries viewer (Issue #921).
 //
-// Drives the exported pure functions in-process (no spawn) and proves the
-// CLI can actually fail: malformed JSON, an unsupported schema_version, a
-// structurally broken collector entry, an empty snapshot directory, and a
-// non-numeric --last all reach their loud exit paths (AC-1a/1b, AC-3d,
-// AC-4b falling proofs). File discovery is driven through main() with the
-// AMADEUS_METRICS_ROOT seam pointing at fixture roots.
+// Drives the exported pure functions in-process (no spawn, no fs) and proves
+// the parsers can actually fail: malformed JSON, an unsupported
+// schema_version, a broken collector entry, and a non-numeric --last all
+// reach their loud outcomes (AC-1a, AC-3d, AC-4b falling proofs). The fs /
+// CLI boundary (main() over fixture roots) lives in
+// tests/integration/t230-metrics-timeseries.integration.test.ts — size
+// purity keeps this file small (pure functions over literal fixtures).
 
-import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { describe, expect, test } from "bun:test";
 import {
   assertNonEmpty,
   buildSeries,
   discoverCollectors,
-  main,
   parseArgs,
   parseSnapshot,
   renderCollectorTable,
@@ -115,65 +112,6 @@ describe("t230 rendering", () => {
     expect(out).toContain("captured_at");
     expect(out).toContain("aaa000000000");
     expect(out).toContain("?"); // percent: "oops" renders loud but non-fatal
-  });
-});
-
-describe("t230 CLI boundary via env seam", () => {
-  let root: string | null = null;
-  afterEach(() => {
-    if (root !== null) rmSync(root, { recursive: true, force: true });
-    delete process.env.AMADEUS_METRICS_ROOT;
-    root = null;
-  });
-
-  function fixtureRoot(files: Record<string, string>): string {
-    const dir = mkdtempSync(join(tmpdir(), "t230-"));
-    mkdirSync(join(dir, "metrics"), { recursive: true });
-    for (const [name, text] of Object.entries(files)) writeFileSync(join(dir, "metrics", name), text);
-    process.env.AMADEUS_METRICS_ROOT = dir;
-    return dir;
-  }
-
-  test("digest over a fixture root exits 0", () => {
-    root = fixtureRoot({ "a.json": JSON.stringify(snap("2026-07-16T00:00:00Z", "abc", { coverage: COVERAGE })) });
-    expect(main([])).toBe(0);
-  });
-
-  test("empty metrics dir exits 1 (AC-1b falling proof)", () => {
-    root = fixtureRoot({});
-    expect(main([])).toBe(1);
-  });
-
-  test("one broken file fails the whole run (AC-1a falling proof)", () => {
-    root = fixtureRoot({
-      "a.json": JSON.stringify(snap("2026-07-16T00:00:00Z", "abc", { coverage: COVERAGE })),
-      "b.json": "{broken",
-    });
-    expect(main([])).toBe(1);
-  });
-
-  test("unknown collector exits 2 (AC-3d falling proof)", () => {
-    root = fixtureRoot({ "a.json": JSON.stringify(snap("2026-07-16T00:00:00Z", "abc", { coverage: COVERAGE })) });
-    expect(main(["--collector", "cnn"])).toBe(2);
-  });
-
-  test("--collector renders the per-collector table and exits 0", () => {
-    root = fixtureRoot({ "a.json": JSON.stringify(snap("2026-07-16T00:00:00Z", "abc", { coverage: COVERAGE })) });
-    expect(main(["--collector", "coverage"])).toBe(0);
-  });
-
-  test("--last limits the series and exits 0", () => {
-    root = fixtureRoot({
-      "a.json": JSON.stringify(snap("2026-07-16T00:00:00Z", "abc", { coverage: COVERAGE })),
-      "b.json": JSON.stringify(snap("2026-07-16T01:00:00Z", "def", { coverage: COVERAGE })),
-    });
-    expect(main(["--last", "1"])).toBe(0);
-  });
-
-  test("missing metrics dir exits 1", () => {
-    root = mkdtempSync(join(tmpdir(), "t230-nometrics-"));
-    process.env.AMADEUS_METRICS_ROOT = root;
-    expect(main([])).toBe(1);
   });
 });
 
