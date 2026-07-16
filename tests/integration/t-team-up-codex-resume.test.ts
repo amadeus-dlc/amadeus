@@ -61,10 +61,10 @@ function createCliFixture() {
   const state = join(root, "state");
   const bin = join(root, "bin");
   const joinLog = join(root, "join.log");
-  const tmuxState = join(root, "tmux-state");
+  const herdrState = join(root, "herdr-state");
   mkdirSync(repo, { recursive: true });
   mkdirSync(bin, { recursive: true });
-  mkdirSync(tmuxState, { recursive: true });
+  mkdirSync(herdrState, { recursive: true });
 
   git(repo, "init", "-q", "-b", "main");
   git(repo, "config", "user.email", "team-up@example.com");
@@ -73,26 +73,47 @@ function createCliFixture() {
   git(repo, "add", "README.md");
   git(repo, "commit", "-qm", "fixture");
 
-  const tmux = join(bin, "tmux");
+  // Fake herdr binary. team-up.sh drives herdr through `--session <name>
+  // <verb...>` (workspace/pane/agent verbs) plus bare `session <verb>` calls.
+  // Session existence is modeled by a single state file whose presence means
+  // "the headless server is up". workspace-create / pane-split print the JSON
+  // pane_id contract team-up.sh parses; FAKE_HERDR_FAIL_COMMAND fails a chosen
+  // verb (e.g. "pane split") to exercise the layout-failure path.
+  const herdr = join(bin, "herdr");
   writeFileSync(
-    tmux,
+    herdr,
     `#!/usr/bin/env bash
 set -eu
-state="\${FAKE_TMUX_STATE:?}"
-if [ "\${FAKE_TMUX_FAIL_COMMAND:-}" = "\${1:-}" ]; then
+state="\${FAKE_HERDR_STATE:?}"
+session=""
+if [ "\${1:-}" = "--session" ]; then
+  session="\${2:-}"
+  shift 2
+fi
+verb="\${1:-} \${2:-}"
+if [ -n "\${FAKE_HERDR_FAIL_COMMAND:-}" ] && [ "$FAKE_HERDR_FAIL_COMMAND" = "$verb" ]; then
   exit 9
 fi
-case "\${1:-}" in
-  has-session) test -f "$state/session" ;;
-  new-session) touch "$state/session" ;;
-  kill-session) rm -f "$state/session" ;;
-  display-message|split-window) printf '%%1\\n' ;;
-  select-pane|set-option) ;;
-  *) exit 2 ;;
+case "$verb" in
+  "workspace list") test -f "$state/session" ;;
+  "workspace create") printf '{"pane_id":"%%1"}\\n' ;;
+  "pane split") printf '{"pane_id":"%%1"}\\n' ;;
+  "pane run") ;;
+  "pane rename") ;;
+  "agent rename") ;;
+  "session stop") rm -f "$state/session" ;;
+  "session delete") rm -f "$state/session" ;;
+  "session list") [ -f "$state/session" ] && cat "$state/session" || true ;;
+  *)
+    case "\${1:-}" in
+      server) printf '%s\\n' "$session" >"$state/session" ;;
+      *) exit 2 ;;
+    esac
+    ;;
 esac
 `,
   );
-  chmodSync(tmux, 0o755);
+  chmodSync(herdr, 0o755);
 
   const open = join(bin, "open");
   writeFileSync(open, "#!/usr/bin/env bash\nexit 0\n");
@@ -131,7 +152,11 @@ printf '%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "\${AGMSG_RESOLVE_PROJECT:-}" 
     TEAM_RUN_ID: "run-001",
     TEAM_SESSION: "amadeus-team-test",
     FAKE_JOIN_LOG: joinLog,
-    FAKE_TMUX_STATE: tmuxState,
+    FAKE_HERDR_STATE: herdrState,
+    // Pin the launch backend to the fake herdr by absolute path (variable
+    // injection, not PATH order) so the suite never touches a real herdr and
+    // is insensitive to the host's TEAM_MUX/HERDR (#1020).
+    HERDR: herdr,
     AGMSG_JOIN: joinAgent,
     AGMSG_RESET: resetAgent,
     DELIVERY: join(root, "missing-delivery.sh"),
@@ -140,7 +165,7 @@ printf '%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "\${AGMSG_RESOLVE_PROJECT:-}" 
     PATH: `${bin}:${process.env.PATH}`,
   };
 
-  return { base, env, joinLog, repo, state, tmuxState };
+  return { base, env, herdrState, joinLog, repo, state };
 }
 
 describe("team-up run lifecycle", () => {
@@ -308,7 +333,7 @@ describe("team-up run lifecycle", () => {
 
     expect(result.exitCode).not.toBe(0);
     expect(result.stderr.toString()).toContain("agmsg registration failed");
-    expect(existsSync(join(fixture.tmuxState, "session"))).toBe(false);
+    expect(existsSync(join(fixture.herdrState, "session"))).toBe(false);
     expect(existsSync(join(fixture.base, "runs", "run-001"))).toBe(false);
   });
 
@@ -465,7 +490,7 @@ describe("team-up run lifecycle", () => {
     const fixture = createCliFixture();
     const result = Bun.spawnSync({
       cmd: ["bash", TEAM_UP],
-      env: { ...fixture.env, FAKE_TMUX_FAIL_COMMAND: "split-window" },
+      env: { ...fixture.env, FAKE_HERDR_FAIL_COMMAND: "pane split" },
       stderr: "pipe",
       stdout: "pipe",
     });
@@ -709,6 +734,102 @@ describe("team-up run lifecycle", () => {
     expect(result.exitCode).toBe(1);
     expect(result.stderr.toString()).toContain("invalid run ID");
     expect(existsSync(join(fixture.base, "escape"))).toBe(false);
+  });
+});
+
+describe("team-up herdr-only launcher", () => {
+  test("a fresh run records the herdr generation marker", () => {
+    const fixture = createCliFixture();
+    const started = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP],
+      env: fixture.env,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(started.exitCode, started.stderr.toString()).toBe(0);
+    expect(readFileSync(join(fixture.state, "runs", "run-001", "mux"), "utf8").trim()).toBe("herdr");
+  });
+
+  test("the fixture is insensitive to a host TEAM_MUX (the removed selector)", () => {
+    const fixture = createCliFixture();
+    // Before #1031, a host TEAM_MUX=herdr leaked through `...process.env` and
+    // resolved the backend to a real herdr, failing the suite (#1020). The
+    // variable no longer exists, so injecting it must not perturb the launch.
+    const result = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP],
+      env: { ...fixture.env, TEAM_MUX: "herdr" },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+    expect(readFileSync(join(fixture.state, "runs", "run-001", "mux"), "utf8").trim()).toBe("herdr");
+  });
+
+  test("resuming a run created by the removed backend is refused with recovery guidance", () => {
+    const fixture = createCliFixture();
+    const started = Bun.spawnSync({ cmd: ["bash", TEAM_UP], env: fixture.env });
+    expect(started.exitCode).toBe(0);
+    Bun.spawnSync({ cmd: ["bash", TEAM_UP, "--kill"], env: fixture.env });
+    // Simulate a run created by the old tmux backend.
+    writeFileSync(join(fixture.state, "runs", "run-001", "mux"), "tmux\n");
+
+    const resumed = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "-c"],
+      env: fixture.env,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(resumed.exitCode).not.toBe(0);
+    const err = resumed.stderr.toString();
+    expect(err).toContain("create a fresh run"); // (i) recovery path
+    expect(err).toContain("tmux kill-session"); // (ii) manual cleanup command
+    // Worktrees and branches stay intact.
+    expect(git(join(fixture.base, "runs", "run-001", "leader"), "branch", "--show-current")).toBe(
+      "team/run-001/leader",
+    );
+  });
+
+  test("killing a run created by the removed backend is refused and leaves the pointer intact", () => {
+    const fixture = createCliFixture();
+    const started = Bun.spawnSync({ cmd: ["bash", TEAM_UP], env: fixture.env });
+    expect(started.exitCode).toBe(0);
+    // The active run's marker is tampered to look like an old tmux run.
+    writeFileSync(join(fixture.state, "runs", "run-001", "mux"), "tmux\n");
+
+    const killed = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "--kill"],
+      env: fixture.env,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(killed.exitCode).not.toBe(0);
+    const err = killed.stderr.toString();
+    expect(err).toContain("create a fresh run");
+    expect(err).toContain("tmux kill-session");
+    // Refused before touching the active-run pointer.
+    expect(existsSync(join(fixture.state, "active-run"))).toBe(true);
+  });
+
+  test("resuming a run with no mux marker (predating the record) is refused", () => {
+    const fixture = createCliFixture();
+    const started = Bun.spawnSync({ cmd: ["bash", TEAM_UP], env: fixture.env });
+    expect(started.exitCode).toBe(0);
+    Bun.spawnSync({ cmd: ["bash", TEAM_UP, "--kill"], env: fixture.env });
+    rmSync(join(fixture.state, "runs", "run-001", "mux"));
+
+    const resumed = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "-c"],
+      env: fixture.env,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(resumed.exitCode).not.toBe(0);
+    expect(resumed.stderr.toString()).toContain("tmux kill-session");
   });
 });
 

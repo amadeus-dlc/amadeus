@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "command": "bun .cursor/hooks/amadeus-cursor-adapter.ts session-start"
+      }
+    ],
+    "beforeSubmitPrompt": [
+      {
+        "type": "command",
+        "command": "bun .cursor/hooks/amadeus-cursor-adapter.ts mint"
+      }
+    ],
+    "afterShellExecution": [
+      {
+        "type": "command",
+        "command": "bun .cursor/hooks/amadeus-cursor-adapter.ts runtime-compile"
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "type": "command",
+        "command": "bun .cursor/hooks/amadeus-cursor-adapter.ts audit-and-sensors"
+      }
+    ],
+    "subagentStop": [
+      {
+        "type": "command",
+        "command": "bun .cursor/hooks/amadeus-cursor-adapter.ts log-subagent"
+      }
+    ],
+    "preCompact": [
+      {
+        "type": "command",
+        "command": "bun .cursor/hooks/amadeus-cursor-adapter.ts validate-state"
+      }
+    ],
+    "stop": [
+      {
+        "type": "command",
+        "command": "bun .cursor/hooks/amadeus-cursor-adapter.ts stop"
+      }
+    ],
+    "sessionEnd": [
+      {
+        "type": "command",
+        "command": "bun .cursor/hooks/amadeus-cursor-adapter.ts session-end"
+      }
+    ]
+  }
+}
