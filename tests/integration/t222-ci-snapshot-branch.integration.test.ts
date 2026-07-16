@@ -61,6 +61,13 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(coverageJob).toContain("bun tests/coverage-patch-gate.ts --check");
     expect(coverageJob).toContain("fetch-depth: 0");
     expect(coverageJob).toContain("AMADEUS_PATCH_BASE_REF: origin/${{ github.event.pull_request.base.ref }}");
+    // relative gate (E-CV2): live merge-base measurement compared through the
+    // project-gate baseline seam, verdict-independent base run, cache keyed by
+    // merge-base sha, artifact completeness verified before comparison
+    expect(coverageJob).toContain("Relative coverage gate (head vs merge-base)");
+    expect(coverageJob).toContain("AMADEUS_COVERAGE_PROJECT_BASELINE: /tmp/base-coverage-totals.json");
+    expect(coverageJob).toContain("key: relative-coverage-base-${{ steps.merge-base.outputs.sha }}");
+    expect(coverageJob).toContain("base coverage artifacts incomplete");
     // codecov is fully removed — no upload step, no waiting job (#1017 migration)
     expect(yaml).not.toContain("codecov");
     expect(yaml).not.toContain("Codecov");

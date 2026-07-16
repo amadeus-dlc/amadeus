@@ -16,6 +16,7 @@ import { join } from "node:path";
 import {
   evaluatePatch,
   findStaleAllowlistEntries,
+  main,
   parseAllowlist,
   parseDiffAddedLines,
   parseLcovLineHits,
@@ -205,7 +206,7 @@ describe("t229 process boundary: --check via AMADEUS_PATCH_* seams", () => {
     expect(runCheck()).toBe(1);
   });
 
-  test("git branch: HEAD..HEAD yields an empty diff and passes (covers the spawn wiring)", () => {
+  test("git branch: HEAD...HEAD yields an empty diff and passes (covers the spawn wiring)", () => {
     const d = fixtureDir();
     const lcovPath = join(d, "lcov.info");
     writeFileSync(lcovPath, LCOV);
@@ -214,5 +215,33 @@ describe("t229 process boundary: --check via AMADEUS_PATCH_* seams", () => {
     process.env.AMADEUS_PATCH_BASE_REF = "HEAD";
     process.env.AMADEUS_PATCH_ALLOWLIST = join(d, "no-allowlist.json");
     expect(runCheck()).toBe(0);
+  });
+
+  test("git branch: unknown base ref fails closed", () => {
+    const d = fixtureDir();
+    const lcovPath = join(d, "lcov.info");
+    writeFileSync(lcovPath, LCOV);
+    process.env.AMADEUS_PATCH_LCOV = lcovPath;
+    delete process.env.AMADEUS_PATCH_DIFF;
+    process.env.AMADEUS_PATCH_BASE_REF = "refs/no-such-ref-for-t229";
+    expect(runCheck()).toBe(1);
+  });
+
+  test("main: usage error exits 2, --check delegates to runCheck", () => {
+    expect(main([])).toBe(2);
+    expect(main(["--bogus"])).toBe(2);
+    const d = fixtureDir();
+    const lcovPath = join(d, "lcov.info");
+    writeFileSync(lcovPath, LCOV);
+    const diffPath = join(d, "empty.diff");
+    writeFileSync(diffPath, "");
+    process.env.AMADEUS_PATCH_LCOV = lcovPath;
+    process.env.AMADEUS_PATCH_DIFF = diffPath;
+    process.env.AMADEUS_PATCH_ALLOWLIST = join(d, "no-allowlist.json");
+    expect(main(["--check"])).toBe(0);
+  });
+
+  test("allowlist that is not an array throws", () => {
+    expect(() => parseAllowlist(JSON.stringify({ file: "x" }))).toThrow(/must be a JSON array/);
   });
 });

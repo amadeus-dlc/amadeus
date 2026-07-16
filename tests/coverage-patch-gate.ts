@@ -249,24 +249,15 @@ export function runCheck(): number {
     diffText = readFileSync(diffFile, "utf8");
   } else {
     const baseRef = process.env.AMADEUS_PATCH_BASE_REF ?? "origin/main";
-    const mb = spawnSync("git", ["merge-base", baseRef, "HEAD"], {
-      cwd: REPO_ROOT,
-      encoding: "utf8",
-      env: process.env,
-    });
-    if (mb.status !== 0) {
-      console.error(`coverage-patch-gate: git merge-base ${baseRef} HEAD failed: ${mb.stderr}`);
-      return 1;
-    }
-    const mergeBase = mb.stdout.trim();
-    const diff = spawnSync("git", ["diff", "--unified=0", `${mergeBase}..HEAD`], {
+    // three-dot: diff against the merge-base of baseRef and HEAD in one call
+    const diff = spawnSync("git", ["diff", "--unified=0", `${baseRef}...HEAD`], {
       cwd: REPO_ROOT,
       encoding: "utf8",
       env: process.env,
       maxBuffer: 64 * 1024 * 1024,
     });
     if (diff.status !== 0) {
-      console.error(`coverage-patch-gate: git diff failed: ${diff.stderr}`);
+      console.error(`coverage-patch-gate: git diff ${baseRef}...HEAD failed: ${diff.stderr}`);
       return 1;
     }
     diffText = diff.stdout;
@@ -292,11 +283,12 @@ export function runCheck(): number {
   return result.violations.length === 0 ? 0 : 1;
 }
 
-if (import.meta.main) {
-  const mode = process.argv[2];
-  if (mode !== "--check") {
+export function main(argv: string[]): number {
+  if (argv[0] !== "--check") {
     console.error("Usage: bun tests/coverage-patch-gate.ts --check");
-    process.exit(2);
+    return 2;
   }
-  process.exit(runCheck());
+  return runCheck();
 }
+
+if (import.meta.main) process.exit(main(process.argv.slice(2)));

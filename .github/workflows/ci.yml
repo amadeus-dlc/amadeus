@@ -129,7 +129,8 @@ jobs:
       - check
     if: ${{ needs.changes.outputs.ci == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Head suite + (cache-miss) merge-base suite for the relative gate.
+    timeout-minutes: 40
     permissions:
       contents: read
       id-token: write
@@ -168,6 +169,65 @@ jobs:
             echo
             echo '```'
             cat /tmp/patch-gate-summary.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Resolve merge-base for the relative coverage gate
+        if: ${{ github.event_name == 'pull_request' }}
+        id: merge-base
+        run: |
+          set -euo pipefail
+          mb="$(git merge-base "origin/${{ github.event.pull_request.base.ref }}" HEAD)"
+          echo "sha=$mb" >> "$GITHUB_OUTPUT"
+
+      - name: Restore base coverage cache
+        if: ${{ github.event_name == 'pull_request' }}
+        id: base-cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/base-coverage-totals.json
+          key: relative-coverage-base-${{ steps.merge-base.outputs.sha }}
+
+      - name: Measure base coverage (merge-base worktree)
+        if: ${{ github.event_name == 'pull_request' && steps.base-cache.outputs.cache-hit != 'true' }}
+        run: |
+          set -euo pipefail
+          BASE_WT=/tmp/relative-coverage-base
+          git worktree add --detach "$BASE_WT" "${{ steps.merge-base.outputs.sha }}"
+          cd "$BASE_WT"
+          bun install --frozen-lockfile
+          # The base suite VERDICT (wall-clock drift and other post-hoc gates)
+          # must not poison the relative gate (E-CV2 D4). Capture the exit
+          # code, then require the coverage artifacts to be complete before
+          # they may be compared (E-CV2 e1 reservation: never compare against
+          # a partial base measurement — fail closed).
+          status=0
+          bun run coverage:ci || status=$?
+          if [[ ! -s coverage/lcov.info || ! -s coverage/coverage-totals.json ]]; then
+            echo "::error::base coverage artifacts incomplete (coverage:ci exit ${status}); refusing to compare"
+            exit 1
+          fi
+          if [[ "${status}" -ne 0 ]]; then
+            echo "::warning::base suite verdict failed (exit ${status}) but coverage artifacts are complete; proceeding verdict-independent per E-CV2 D4"
+          fi
+          cp coverage/coverage-totals.json /tmp/base-coverage-totals.json
+
+      - name: Relative coverage gate (head vs merge-base)
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          # Reuses the project gate comparator (BigInt, -0.02pp) with the
+          # baseline seam pointed at the live merge-base measurement (E-CV2
+          # D1/D2). The gate itself validates the base totals (parse-don't-
+          # validate: missing/malformed/empty all fail closed).
+          AMADEUS_COVERAGE_PROJECT_BASELINE: /tmp/base-coverage-totals.json
+        run: |
+          set -euo pipefail
+          bun tests/coverage-project-gate.ts --check | tee /tmp/relative-gate-summary.txt
+          {
+            echo "## Relative Coverage Gate (head vs merge-base)"
+            echo
+            echo '```'
+            cat /tmp/relative-gate-summary.txt
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
