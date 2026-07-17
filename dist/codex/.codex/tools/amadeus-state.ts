@@ -1825,10 +1825,7 @@ function assertHumanPresentForGateResolution(
     }
   }
   error(
-    `Refusing to ${verb} "${slug}": a real human has not acted at this gate ` +
-      `since it opened. The approval gate requires a typed human turn before it ` +
-      `can commit. Acknowledge the gate as a human, then ${verb}. (autonomous ` +
-      `Construction is exempt)`
+    `Refusing to ${verb} "${slug}": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then ${verb}. (autonomous Construction is exempt)`
   );
 }
 
@@ -2003,8 +2000,7 @@ function standingGrantForDelegation(pd: string, slug: string, targetRecord: stri
     }
   }
   error(
-    "Refusing to delegate approval: no real human turn on this session since the " +
-      "last gate resolution. Acknowledge the approval as a human, then delegate."
+    "Refusing to delegate approval: no real human turn on this session since the last gate resolution. Acknowledge the approval as a human, then delegate."
   );
 }
 
@@ -2027,9 +2023,7 @@ export function handleDelegateApproval(args: string[]): void {
   // Stance decide whether the grant covers this gate).
   const targetRecord = recordDir(pd, toIntent, toSpace);
   if (targetRecord === null || !existsSync(join(targetRecord, "amadeus-state.md"))) {
-    error(
-      `delegate-approval: target intent record not found: ${toIntent}${toSpace ? ` (space ${toSpace})` : ""}`
-    );
+    error(`delegate-approval: target intent record not found: ${toIntent}${toSpace ? ` (space ${toSpace})` : ""}`);
   }
 
   // Grounding gate: a real human must have acted on THIS session since the last
@@ -2217,10 +2211,7 @@ function collectIssuerProvenance(
     // fall through to the guard below
   }
   if (!issuerHumanTs) {
-    error(
-      `${verb}: no HUMAN_TURN in this session's own audit shard (${issuerShard}); ` +
-        "cannot ground the grant"
-    );
+    error(`${verb}: no HUMAN_TURN in this session's own audit shard (${issuerShard}); cannot ground the grant`);
   }
   return { issuerSpace, issuerIntent, issuerShard, issuerHumanTs };
 }
@@ -2244,8 +2235,7 @@ export function handleGrantStandingDelegation(args: string[]): void {
   // last gate resolution (same predicate + off-switch as delegate-approval).
   if (!humanPresenceGuardDisabled() && !humanActedSinceGate(pd)) {
     error(
-      "Refusing to grant standing delegation: no real human turn on this session " +
-        "since the last gate resolution. Acknowledge the grant as a human, then grant."
+      "Refusing to grant standing delegation: no real human turn on this session since the last gate resolution. Acknowledge the grant as a human, then grant."
     );
   }
 
@@ -2253,8 +2243,7 @@ export function handleGrantStandingDelegation(args: string[]): void {
   // directly, so a standing grant has no meaning there).
   if (process.env.AMADEUS_OPERATING_MODE !== "team") {
     error(
-      "Refusing to grant standing delegation: standing grants are a team-mode " +
-        "mechanism (AMADEUS_OPERATING_MODE=team). Solo mode approves each gate directly."
+      "Refusing to grant standing delegation: standing grants are a team-mode mechanism (AMADEUS_OPERATING_MODE=team). Solo mode approves each gate directly."
     );
   }
 
@@ -2331,14 +2320,12 @@ export function handleRevokeStandingDelegation(args: string[]): void {
 
   if (!humanPresenceGuardDisabled() && !humanActedSinceGate(pd)) {
     error(
-      "Refusing to revoke standing delegation: no real human turn on this session " +
-        "since the last gate resolution. Acknowledge the revocation as a human, then revoke."
+      "Refusing to revoke standing delegation: no real human turn on this session since the last gate resolution. Acknowledge the revocation as a human, then revoke."
     );
   }
   if (process.env.AMADEUS_OPERATING_MODE !== "team") {
     error(
-      "Refusing to revoke standing delegation: standing grants are a team-mode " +
-        "mechanism (AMADEUS_OPERATING_MODE=team)."
+      "Refusing to revoke standing delegation: standing grants are a team-mode mechanism (AMADEUS_OPERATING_MODE=team)."
     );
   }
 

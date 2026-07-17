@@ -706,43 +706,97 @@ describe("in-process handler seams (coverage)", () => {
     expect(r.stderr).toContain("no real human turn");
   });
 
-  test("handleApprove: a covering opt-in grant opens the gate and stamps the Grant Id", () => {
+  test("handleDelegateApproval: refuses when the target intent record is missing", () => {
+    const proj = seamProject();
+    seedHumanTurn(proj);
+    appendAuditEntry("GATE_APPROVED", { Stage: "x" }, proj);
+    process.env.AMADEUS_OPERATING_MODE = "team";
+    delete process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
+    const r = captureIO(() =>
+      handleDelegateApproval(["requirements-analysis", "--to-intent", "no-such-intent-00000000"]),
+    );
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("target intent record not found");
+  });
+
+  test("handleRevokeStandingDelegation: refuses when no fresh human turn backs the call", () => {
+    const proj = seamProject();
+    appendAuditEntry("GATE_APPROVED", { Stage: "x" }, proj); // resolution, no outstanding turn
+    process.env.AMADEUS_OPERATING_MODE = "team";
+    delete process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
+    const r = captureIO(() => handleRevokeStandingDelegation(["--grant-id", "aabbccdd"]));
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("since the last gate resolution");
+  });
+
+  // Set up requirements-analysis at [?] with a resolution after a human turn, so
+  // the approve presence gate is not fresh. opts control whether a grant exists
+  // and its coverage. Returns the project dir.
+  function setupApprovable(opts: { grant?: "opt-in" | "none"; team?: boolean } = {}): string {
     const proj = createTestProject();
     seedStateFile(proj, "state-mid-inception.md");
     process.env.CLAUDE_PROJECT_DIR = proj;
     process.env.AMADEUS_SKIP_ARTIFACT_GUARD = "1";
-    process.env.AMADEUS_OPERATING_MODE = "team";
     process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = "1";
-    // Open the gate on requirements-analysis.
+    if (opts.team) process.env.AMADEUS_OPERATING_MODE = "team";
+    else delete process.env.AMADEUS_OPERATING_MODE;
     captureIO(() => handleGateStart(["requirements-analysis"]));
     const ht = seedHumanTurn(proj);
     appendAuditEntry("GATE_APPROVED", { Stage: "prior" }, proj); // resolution → gate not fresh
-    // A phase-check artifact in case requirements-analysis crosses a boundary.
     const vdir = join(seededRecordDir(proj), "verification");
     mkdirSync(vdir, { recursive: true });
     writeFileSync(join(vdir, "phase-check-inception.md"), "# phase-check inception\n", "utf-8");
-    // An opt-in grant covers even a phase-boundary gate → returns a Grant Id.
-    appendAuditEntry(
-      "GRANT_ISSUED",
-      {
-        "Grant Id": "beef0002",
-        Scope: "stage-gates",
-        "Expires At": new Date(Date.now() + DEFAULT_STANDING_GRANT_TTL_MS).toISOString(),
-        "Includes Phase Boundary": "true",
-        "Issuer Space": "default",
-        "Issuer Intent": seededRecordName(proj),
-        "Issuer Shard": auditShardName(proj),
-        "Issuer Human Ts": ht,
-      },
-      proj,
-    );
-    // Now approve with the presence guard ACTIVE so the grant path is exercised.
-    delete process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
+    if (opts.grant === "opt-in") {
+      appendAuditEntry(
+        "GRANT_ISSUED",
+        {
+          "Grant Id": "beef0002",
+          Scope: "stage-gates",
+          "Expires At": new Date(Date.now() + DEFAULT_STANDING_GRANT_TTL_MS).toISOString(),
+          "Includes Phase Boundary": "true",
+          "Issuer Space": "default",
+          "Issuer Intent": seededRecordName(proj),
+          "Issuer Shard": auditShardName(proj),
+          "Issuer Human Ts": ht,
+        },
+        proj,
+      );
+    }
+    delete process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD; // guard ACTIVE for the approve call
+    return proj;
+  }
+
+  test("handleApprove: a covering opt-in grant opens the gate and stamps the Grant Id", () => {
+    const proj = setupApprovable({ grant: "opt-in", team: true });
     const r = captureIO(() => handleApprove(["requirements-analysis"]));
     expect(r.threw).toBe(false);
     const audit = readFileSync(seededAuditShardPath(proj), "utf-8");
     expect(audit).toContain("**Event**: GATE_APPROVED");
     expect(audit).toContain("**Grant Id**: beef0002");
+  });
+
+  test("handleApprove: refuses when no grant covers and no fresh human turn", () => {
+    setupApprovable({ grant: "none", team: true });
+    const r = captureIO(() => handleApprove(["requirements-analysis"]));
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("a real human has not acted at this gate");
+  });
+
+  test("handleApprove: a fresh human turn opens the gate without a grant", () => {
+    const proj = setupApprovable({ grant: "none", team: false });
+    // A HUMAN_TURN AFTER the last resolution → humanActedSinceGate is true.
+    seedHumanTurn(proj);
+    const r = captureIO(() => handleApprove(["requirements-analysis"]));
+    expect(r.threw).toBe(false);
+  });
+
+  test("handleApprove: autonomous mode skips the presence check", () => {
+    const proj = setupApprovable({ grant: "none", team: false });
+    // Mark the workflow autonomous so isAutonomousMode short-circuits the check.
+    const sf = seededStateFile(proj);
+    writeFileSync(sf, `${readFileSync(sf, "utf-8")}- **Construction Autonomy Mode**: autonomous\n`, "utf-8");
+    const r = captureIO(() => handleApprove(["requirements-analysis"]));
+    expect(r.threw).toBe(false);
   });
 
   // The seeded record's dir NAME (issuer intent for grant provenance).
