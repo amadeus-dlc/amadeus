@@ -2718,14 +2718,31 @@ export function findActiveStandingGrant(
   }
 }
 
+// Scopes whose walking-skeleton default is ON when the recorded stance is
+// "scope-dependent" (or the classify round-trip has not landed a value yet).
+// Canonical single definition — amadeus-orchestrate.ts imports this same set
+// for its gate:"unresolved" resolution, so the grant-side skeleton exclusion
+// below and the engine's own skeleton gating can never drift apart.
+export const SKELETON_ON_SCOPES: ReadonlySet<string> = new Set([
+  "enterprise",
+  "mvp",
+  "feature",
+  "poc",
+  "workshop",
+  "infra",
+]);
+
 // Decide whether a valid standing grant covers THIS gate. Single classifying
 // function:
 //   (a) phase-boundary gate — the slug's phase differs from the next in-scope
 //       stage's phase, OR there is no next stage (final) — is covered ONLY when
 //       the grant opted in via includesPhaseBoundary.
-//   (b) the FIRST in-scope construction stage while Skeleton Stance is "on"
-//       (the walking-skeleton gate) is NEVER auto-covered (false): a human must
-//       see the skeleton before the remaining Bolts run.
+//   (b) the FIRST in-scope construction stage is NEVER auto-covered (false)
+//       while the walking-skeleton gate is effectively on: recorded stance
+//       "on", or a non-"off" stance (raw "scope-dependent" / absent — the
+//       stance is persisted un-normalized) combined with a SKELETON_ON_SCOPES
+//       scope. Only an explicit "off" clears the exclusion — a human must see
+//       the skeleton before the remaining Bolts run.
 //   (c) any other ordinary stage gate is covered (true).
 // stateContent supplies Scope + Skeleton Stance; `graph` is the loaded stage
 // graph, passed in so the caller controls the read.
@@ -2743,10 +2760,18 @@ export function standingGrantSatisfiesGate(
     return grant.includesPhaseBoundary;
   }
   // Walking-skeleton gate: the first in-scope construction stage stays
-  // human-gated while the Skeleton Stance is "on", regardless of grant coverage.
-  if (scope && (getField(stateContent, "Skeleton Stance") ?? "") === "on") {
-    const firstConstruction = firstInScopeStageOfPhase("construction", scope);
-    if (firstConstruction && firstConstruction.slug === slug) return false;
+  // human-gated while the skeleton is effectively on. The stance field is
+  // persisted un-normalized ("on" | "off" | "scope-dependent" | absent), so a
+  // raw "scope-dependent" (or missing) value defers to the scope default —
+  // literal "on"-only matching would silently skip the exclusion for a
+  // greenfield scope that never completed the classify round-trip.
+  if (scope) {
+    const stance = getField(stateContent, "Skeleton Stance") ?? "";
+    const skeletonOn = stance === "on" || (stance !== "off" && SKELETON_ON_SCOPES.has(scope));
+    if (skeletonOn) {
+      const firstConstruction = firstInScopeStageOfPhase("construction", scope);
+      if (firstConstruction && firstConstruction.slug === slug) return false;
+    }
   }
   return true;
 }

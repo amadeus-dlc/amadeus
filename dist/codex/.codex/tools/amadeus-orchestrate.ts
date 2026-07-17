@@ -108,6 +108,7 @@ import {
   validScopes,
   harnessDir,
   WORKSPACE_VERBS,
+  SKELETON_ON_SCOPES,
 } from "./amadeus-lib.ts";
 import {
   type Consume,
@@ -696,14 +697,10 @@ const VALID_SKELETON_STANCES: ReadonlySet<string> = new Set([
 // but nfr-requirements EXECUTEs and is what isSkeletonGateStage matches), so an
 // `infra` Construction workflow emits gate:"unresolved" at nfr-requirements and
 // resolves through this set like any other greenfield scope.
-const SKELETON_ON_SCOPES: ReadonlySet<string> = new Set([
-  "enterprise",
-  "mvp",
-  "feature",
-  "poc",
-  "workshop",
-  "infra",
-]);
+// Canonical set now lives in amadeus-lib.ts (shared with the standing-grant
+// skeleton exclusion — PR #1147 e3 review Major-1); re-exported semantics are
+// identical to the inline set this replaced.
+// (imported below as SKELETON_ON_SCOPES)
 
 // Read the recorded skeleton stance from state, or null if the round-trip has
 // not completed yet (the field is absent or empty). Composes getField.

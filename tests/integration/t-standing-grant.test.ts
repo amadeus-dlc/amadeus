@@ -37,7 +37,9 @@ import {
   auditShardName,
   DEFAULT_STANDING_GRANT_TTL_MS,
   findActiveStandingGrant,
+  firstInScopeStageOfPhase,
   loadStageGraph,
+  SKELETON_ON_SCOPES,
   StandingGrant,
   standingGrantSatisfiesGate,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
@@ -820,4 +822,41 @@ describe("in-process handler seams (coverage)", () => {
   function seededAuditShardPath(proj: string): string {
     return join(seededRecordDir(proj), "audit", auditShardName(proj));
   }
+});
+
+// RED (e3 PR #1147 Major-1): a raw "scope-dependent" stance on a greenfield
+// scope must still exclude the walking-skeleton gate — the stance field is
+// persisted un-normalized, so literal "on"-only matching would silently grant
+// through the skeleton gate when the classify round-trip never landed "on".
+describe("skeleton exclusion honours un-normalized stance (e3 Major-1)", () => {
+  test("RED: scope-dependent stance + greenfield scope excludes the skeleton gate", () => {
+    const state = stateContent("feature", "scope-dependent");
+    expect(standingGrantSatisfiesGate(grantWith(true), "functional-design", state, GRAPH)).toBe(false);
+  });
+
+  test("RED: absent stance + greenfield scope excludes the skeleton gate", () => {
+    const state = stateContent("feature");
+    expect(standingGrantSatisfiesGate(grantWith(true), "functional-design", state, GRAPH)).toBe(false);
+  });
+
+  test("WHITE: explicit off stance clears the exclusion on the same gate", () => {
+    const state = stateContent("feature", "off");
+    expect(standingGrantSatisfiesGate(grantWith(true), "functional-design", state, GRAPH)).toBe(true);
+  });
+
+  test("WHITE: scope-dependent stance on an incremental scope stays covered", () => {
+    expect(SKELETON_ON_SCOPES.has("bugfix")).toBe(false);
+    const state = stateContent("bugfix", "scope-dependent");
+    // bugfix first construction stage: resolve from the graph via the same
+    // helper the implementation uses — covered because bugfix is skeleton-off.
+    const first = firstInScopeStageOfPhase("construction", "bugfix");
+    if (first !== null) {
+      const verdict = standingGrantSatisfiesGate(grantWith(true), first.slug, state, GRAPH);
+      // covered unless that slug happens to be a phase boundary for bugfix —
+      // assert the skeleton path specifically by requiring non-skeleton denial:
+      // with stance scope-dependent + non-greenfield scope, only the
+      // phase-boundary rule may deny (and grantWith(true) opts in), so true.
+      expect(verdict).toBe(true);
+    }
+  });
 });
