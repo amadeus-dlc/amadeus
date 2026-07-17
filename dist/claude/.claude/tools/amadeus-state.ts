@@ -38,6 +38,7 @@ import {
   readAllAuditShards,
   readStateFile,
   checkQuestionsEvidence,
+  QUESTIONS_EVIDENCE_CUTOFF_YYMMDD,
   recordDir,
   relativeMemoryPath,
   relativeRecordDir,
@@ -1717,10 +1718,14 @@ export function handleGateStart(args: string[]): void {
   // the guard to pre-guard intents would hard-block unpark -> gate-start on
   // history the norm explicitly does not reach ("no retroactive checks").
   // Intents are dated by their record dir name (YYMMDD-...); only intents
-  // born on/after the guard's adoption day are enforced.
-  const GUARD_CUTOFF_YYMMDD = 260716;
+  // born on/after the guard's adoption day are enforced. The cutoff is
+  // canonical in amadeus-lib.ts (QUESTIONS_EVIDENCE_CUTOFF_YYMMDD), shared with
+  // the advisory answer-evidence sensor so the two never drift.
   const intentDate = rd === null ? null : Number.parseInt(basename(rd).slice(0, 6), 10);
-  const enforced = intentDate !== null && Number.isFinite(intentDate) && intentDate >= GUARD_CUTOFF_YYMMDD;
+  const enforced =
+    intentDate !== null &&
+    Number.isFinite(intentDate) &&
+    intentDate >= QUESTIONS_EVIDENCE_CUTOFF_YYMMDD;
   if (rd !== null && enforced) {
     const questionsPath = join(rd, stage.phase, slug, `${slug}-questions.md`);
     const ev = checkQuestionsEvidence(questionsPath);

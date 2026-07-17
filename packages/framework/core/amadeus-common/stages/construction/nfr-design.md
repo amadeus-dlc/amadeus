@@ -37,6 +37,7 @@ sensors:
   - upstream-coverage
   - linter
   - type-check
+  - answer-evidence
 scopes:
   - enterprise
   - feature

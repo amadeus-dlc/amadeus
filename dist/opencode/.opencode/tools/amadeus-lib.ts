@@ -1166,6 +1166,15 @@ function hasParseableApprovalTimestamp(line: string): boolean {
   return Number.isFinite(Date.parse(m[0].endsWith("Z") ? m[0] : `${m[0]}Z`));
 }
 
+// Enforcement cutoff (YYMMDD) for the E-OC1 evidence guard: intents whose
+// record-dir date is on/after this day are subject to the check; older intents
+// predate the evidence-header convention and are exempt ("no retroactive
+// checks"). Canonical here so both consumers — the gate-start guard
+// (amadeus-state.ts handleGateStart) and the advisory answer-evidence sensor
+// (amadeus-sensor-answer-evidence.ts) — derive the boundary from one definition
+// rather than duplicating the literal.
+export const QUESTIONS_EVIDENCE_CUTOFF_YYMMDD = 260716;
+
 // Plain loops, zero anonymous functions: the complexity baseline matches
 // anonymous functions by ordinal, so adding arrows here shifts unrelated
 // entries into NEW_VIOLATION (the E-PM2 M7 mechanism, measured again on this

@@ -9,7 +9,8 @@ mode: inline
 produces: []
 consumes: []
 requires_stage: []
-sensors: []
+sensors:
+  - answer-evidence
 scopes:
   - enterprise
   - feature

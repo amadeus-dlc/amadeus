@@ -39,6 +39,7 @@ requires_stage:
 sensors:
   - linter
   - type-check
+  - answer-evidence
 scopes:
   - enterprise
   - feature
