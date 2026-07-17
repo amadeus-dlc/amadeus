@@ -23,7 +23,7 @@
 //   - dist/claude/.claude/tools/amadeus-audit.ts   : presenceMintRejection, handleAppend
 //   - dist/claude/.claude/tools/amadeus-state.ts   : grant-standing-delegation /
 //       revoke-standing-delegation / delegate-approval (spawned)
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
@@ -42,6 +42,19 @@ import {
   standingGrantSatisfiesGate,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { standingGrantDoctorCheck } from "../../dist/claude/.claude/tools/amadeus-utility.ts";
+import {
+  handleApprove,
+  handleDelegateApproval,
+  handleGateStart,
+  handleGrantStandingDelegation,
+  handleRevokeStandingDelegation,
+} from "../../dist/claude/.claude/tools/amadeus-state.ts";
+import {
+  createTestProject,
+  seededRecordDir,
+  seededStateFile,
+  seedStateFile,
+} from "../harness/fixtures.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const STATE_TS = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-state.ts");
@@ -459,4 +472,286 @@ describe("issuance round-trip (spawned) — team mode honours, solo ignores", ()
     expect(r.status).toBe(1);
     expect(r.stderr).toContain("no real human turn");
   });
+});
+
+// --- In-process seam coverage (spawn-blindspot: drive the exported handlers
+// directly so their lines are measured by LCOV; the spawned round-trip above
+// proves end-to-end behaviour but subprocess execution is not instrumented). ---
+describe("in-process handler seams (coverage)", () => {
+  class ExitSignal extends Error {
+    constructor(public readonly code: number) {
+      super(`exit ${code}`);
+    }
+  }
+  // Wrap a handler call: capture process.exit (error() path), console.error
+  // (error message), console.log (stdout JSON), and process.stderr.write (the
+  // human-readable grant summary), so the handler runs fully without killing the
+  // test or leaking to the runner's streams.
+  function captureIO(fn: () => void): { threw: boolean; code: number; stdout: string; stderr: string } {
+    let stdout = "";
+    let stderr = "";
+    let code = -1;
+    let threw = false;
+    const origExit = process.exit.bind(process);
+    const origErr = console.error;
+    const origLog = console.log;
+    const origWrite = process.stderr.write.bind(process.stderr);
+    process.exit = ((c?: number) => {
+      throw new ExitSignal(c ?? 0);
+    }) as typeof process.exit;
+    console.error = (...a: unknown[]) => {
+      stderr += a.map(String).join(" ");
+    };
+    console.log = (...a: unknown[]) => {
+      stdout += a.map(String).join(" ");
+    };
+    (process.stderr as unknown as { write: (c: string | Uint8Array) => boolean }).write = (
+      c: string | Uint8Array,
+    ) => {
+      stderr += typeof c === "string" ? c : c.toString();
+      return true;
+    };
+    try {
+      fn();
+    } catch (e) {
+      if (e instanceof ExitSignal) {
+        threw = true;
+        code = e.code;
+      } else {
+        throw e;
+      }
+    } finally {
+      process.exit = origExit;
+      console.error = origErr;
+      console.log = origLog;
+      (process.stderr as unknown as { write: typeof origWrite }).write = origWrite;
+    }
+    return { threw, code, stdout, stderr };
+  }
+
+  // Env keys these seam tests mutate; saved once and restored after each test so
+  // the suite-wide AMADEUS_SKIP_HUMAN_PRESENCE_GUARD is not leaked/clobbered.
+  const ENV_KEYS = [
+    "CLAUDE_PROJECT_DIR",
+    "AMADEUS_OPERATING_MODE",
+    "AMADEUS_SKIP_HUMAN_PRESENCE_GUARD",
+    "AMADEUS_SKIP_ARTIFACT_GUARD",
+  ];
+  let savedEnv: Record<string, string | undefined> = {};
+  function saveEnv(): void {
+    savedEnv = {};
+    for (const k of ENV_KEYS) savedEnv[k] = process.env[k];
+  }
+  function restoreEnv(): void {
+    for (const k of ENV_KEYS) {
+      if (savedEnv[k] === undefined) delete process.env[k];
+      else process.env[k] = savedEnv[k];
+    }
+  }
+
+  // A project with a minimal state file (so the default record resolves as an
+  // intent) and CLAUDE_PROJECT_DIR pointed at it.
+  function seamProject(): string {
+    const proj = createTestProject();
+    mkdirSyncFsSafe(seededRecordDir(proj));
+    writeFileSync(seededStateFile(proj), "# AI-DLC State\n\n- **Scope**: feature\n", "utf-8");
+    process.env.CLAUDE_PROJECT_DIR = proj;
+    return proj;
+  }
+  function mkdirSyncFsSafe(dir: string): void {
+    mkdirSync(dir, { recursive: true });
+  }
+  // Seed a HUMAN_TURN (grounds grants + makes humanActedSinceGate true) into the
+  // active intent shard. Returns its timestamp.
+  function seedHumanTurn(proj: string): string {
+    return appendAuditEntry("HUMAN_TURN", {}, proj).timestamp;
+  }
+
+  beforeEach(saveEnv);
+  afterEach(restoreEnv);
+
+  test("handleGrantStandingDelegation: happy path emits a grant and prints JSON", () => {
+    const proj = seamProject();
+    seedHumanTurn(proj);
+    process.env.AMADEUS_OPERATING_MODE = "team";
+    delete process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
+    const r = captureIO(() => handleGrantStandingDelegation(["--include-phase-boundary"]));
+    expect(r.threw).toBe(false);
+    expect(r.stdout).toContain('"scope":"stage-gates"');
+    expect(r.stderr).toContain("INCLUDED");
+    expect(findActiveStandingGrant(proj, Date.now())?.includesPhaseBoundary).toBe(true);
+  });
+
+  test("handleGrantStandingDelegation: refuses in solo mode", () => {
+    const proj = seamProject();
+    seedHumanTurn(proj);
+    delete process.env.AMADEUS_OPERATING_MODE;
+    process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = "1";
+    const r = captureIO(() => handleGrantStandingDelegation([]));
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("team-mode");
+  });
+
+  test("handleGrantStandingDelegation: refuses a bad --scope and a bad --ttl-ms", () => {
+    const proj = seamProject();
+    seedHumanTurn(proj);
+    process.env.AMADEUS_OPERATING_MODE = "team";
+    process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = "1";
+    expect(captureIO(() => handleGrantStandingDelegation(["--scope", "everything"])).stderr).toContain(
+      "unsupported --scope",
+    );
+    expect(captureIO(() => handleGrantStandingDelegation(["--ttl-ms", "five"])).stderr).toContain(
+      "finite positive number",
+    );
+    // A valid explicit TTL takes the happy branch.
+    const r = captureIO(() => handleGrantStandingDelegation(["--ttl-ms", "60000"]));
+    expect(r.threw).toBe(false);
+    expect(r.stderr).toContain("EXCLUDED");
+  });
+
+  test("handleGrantStandingDelegation: refuses when no fresh human turn backs the call", () => {
+    const proj = seamProject();
+    // A resolution with no outstanding HUMAN_TURN after it → humanActedSinceGate
+    // is false (not the empty-ledger fail-open) → the grounding gate fires.
+    appendAuditEntry("GATE_APPROVED", { Stage: "x" }, proj);
+    process.env.AMADEUS_OPERATING_MODE = "team";
+    delete process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
+    const r = captureIO(() => handleGrantStandingDelegation([]));
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("since the last gate resolution");
+  });
+
+  test("handleGrantStandingDelegation: guard-disabled reaches the no-HUMAN_TURN issuer check", () => {
+    seamProject(); // no HUMAN_TURN
+    process.env.AMADEUS_OPERATING_MODE = "team";
+    process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = "1"; // skip grounding → reach collectIssuerProvenance
+    const r = captureIO(() => handleGrantStandingDelegation([]));
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("no HUMAN_TURN in this session");
+  });
+
+  test("handleRevokeStandingDelegation: happy path emits GRANT_REVOKED", () => {
+    const proj = seamProject();
+    seedHumanTurn(proj);
+    process.env.AMADEUS_OPERATING_MODE = "team";
+    delete process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
+    const r = captureIO(() => handleRevokeStandingDelegation(["--grant-id", "0badf00d"]));
+    expect(r.threw).toBe(false);
+    expect(r.stdout).toContain('"revoked_grant_id":"0badf00d"');
+  });
+
+  test("handleRevokeStandingDelegation: refuses solo, missing id, and bad id", () => {
+    const proj = seamProject();
+    seedHumanTurn(proj);
+    delete process.env.AMADEUS_OPERATING_MODE;
+    process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = "1";
+    expect(captureIO(() => handleRevokeStandingDelegation(["--grant-id", "aabbccdd"])).stderr).toContain(
+      "team-mode",
+    );
+    process.env.AMADEUS_OPERATING_MODE = "team";
+    expect(captureIO(() => handleRevokeStandingDelegation([])).stderr).toContain("requires --grant-id");
+    expect(captureIO(() => handleRevokeStandingDelegation(["--grant-id", "NOTHEX!"])).stderr).toContain(
+      "8-hex",
+    );
+  });
+
+  test("handleDelegateApproval: a covering grant authorises the delegation in-process", () => {
+    const proj = seamProject();
+    const ht = seedHumanTurn(proj);
+    // A resolution AFTER the turn → humanActedSinceGate is false → grant path.
+    appendAuditEntry("GATE_APPROVED", { Stage: "x" }, proj);
+    // Seed a covering grant grounded in the same HUMAN_TURN.
+    appendAuditEntry(
+      "GRANT_ISSUED",
+      {
+        "Grant Id": "cafe0001",
+        Scope: "stage-gates",
+        "Expires At": new Date(Date.now() + DEFAULT_STANDING_GRANT_TTL_MS).toISOString(),
+        "Includes Phase Boundary": "false",
+        "Issuer Space": "default",
+        "Issuer Intent": seededRecordName(proj),
+        "Issuer Shard": auditShardName(proj),
+        "Issuer Human Ts": ht,
+      },
+      proj,
+    );
+    // A target record with a Scope the classifier can read.
+    const target = "target-intent-00000001";
+    const targetDir = join(seededRecordDir(proj), "..", target);
+    mkdirSync(targetDir, { recursive: true });
+    writeFileSync(join(targetDir, "amadeus-state.md"), "# AI-DLC State\n\n- **Scope**: feature\n", "utf-8");
+    process.env.AMADEUS_OPERATING_MODE = "team";
+    delete process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
+    const r = captureIO(() =>
+      handleDelegateApproval(["requirements-analysis", "--to-intent", target]),
+    );
+    expect(r.threw).toBe(false);
+    expect(r.stdout).toContain('"delegated":true');
+  });
+
+  test("handleDelegateApproval: refuses when no grant covers and no human turn (solo)", () => {
+    const proj = seamProject();
+    seedHumanTurn(proj);
+    appendAuditEntry("GATE_APPROVED", { Stage: "x" }, proj);
+    const target = "target-intent-00000002";
+    const targetDir = join(seededRecordDir(proj), "..", target);
+    mkdirSync(targetDir, { recursive: true });
+    writeFileSync(join(targetDir, "amadeus-state.md"), "# AI-DLC State\n\n- **Scope**: feature\n", "utf-8");
+    delete process.env.AMADEUS_OPERATING_MODE; // solo
+    delete process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
+    const r = captureIO(() =>
+      handleDelegateApproval(["requirements-analysis", "--to-intent", target]),
+    );
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("no real human turn");
+  });
+
+  test("handleApprove: a covering opt-in grant opens the gate and stamps the Grant Id", () => {
+    const proj = createTestProject();
+    seedStateFile(proj, "state-mid-inception.md");
+    process.env.CLAUDE_PROJECT_DIR = proj;
+    process.env.AMADEUS_SKIP_ARTIFACT_GUARD = "1";
+    process.env.AMADEUS_OPERATING_MODE = "team";
+    process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = "1";
+    // Open the gate on requirements-analysis.
+    captureIO(() => handleGateStart(["requirements-analysis"]));
+    const ht = seedHumanTurn(proj);
+    appendAuditEntry("GATE_APPROVED", { Stage: "prior" }, proj); // resolution → gate not fresh
+    // A phase-check artifact in case requirements-analysis crosses a boundary.
+    const vdir = join(seededRecordDir(proj), "verification");
+    mkdirSync(vdir, { recursive: true });
+    writeFileSync(join(vdir, "phase-check-inception.md"), "# phase-check inception\n", "utf-8");
+    // An opt-in grant covers even a phase-boundary gate → returns a Grant Id.
+    appendAuditEntry(
+      "GRANT_ISSUED",
+      {
+        "Grant Id": "beef0002",
+        Scope: "stage-gates",
+        "Expires At": new Date(Date.now() + DEFAULT_STANDING_GRANT_TTL_MS).toISOString(),
+        "Includes Phase Boundary": "true",
+        "Issuer Space": "default",
+        "Issuer Intent": seededRecordName(proj),
+        "Issuer Shard": auditShardName(proj),
+        "Issuer Human Ts": ht,
+      },
+      proj,
+    );
+    // Now approve with the presence guard ACTIVE so the grant path is exercised.
+    delete process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
+    const r = captureIO(() => handleApprove(["requirements-analysis"]));
+    expect(r.threw).toBe(false);
+    const audit = readFileSync(seededAuditShardPath(proj), "utf-8");
+    expect(audit).toContain("**Event**: GATE_APPROVED");
+    expect(audit).toContain("**Grant Id**: beef0002");
+  });
+
+  // The seeded record's dir NAME (issuer intent for grant provenance).
+  function seededRecordName(proj: string): string {
+    const rec = seededRecordDir(proj);
+    return rec.slice(rec.lastIndexOf("/") + 1);
+  }
+  // The active intent's audit shard path (single pinned clone in fixtures).
+  function seededAuditShardPath(proj: string): string {
+    return join(seededRecordDir(proj), "audit", auditShardName(proj));
+  }
 });
