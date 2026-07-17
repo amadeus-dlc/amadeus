@@ -10,10 +10,10 @@
 // prune path is exercised with a light 361-file synthetic fixture.
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { main } from "../../scripts/metrics-retention";
+import { METRICS_RETENTION_KEEP_LAST, main } from "../../scripts/metrics-retention";
 import { main as timeseriesMain } from "../../scripts/metrics-timeseries";
 
 const COVERAGE = { tool: "bun", tool_version: "1.0", values: { hits: 10, lines: 20, percent: 50 } };
@@ -116,5 +116,20 @@ describe("t231 retention CLI boundary via env seam", () => {
   test("an unexpected argument exits 2", () => {
     root = fixtureRoot({ "a.json": snapshotJson("2026-07-16T00:00:00Z", "aaa") });
     expect(main(["--nope"])).toBe(2);
+  });
+
+  test("--apply surfaces an unlink failure loudly and exits 1 (read-only dir injection)", () => {
+    root = bulkRoot(METRICS_RETENTION_KEEP_LAST + 1);
+    const dir = join(root, "metrics");
+    // Portable unlink-failure injection on POSIX: a read-only directory makes
+    // unlinkSync throw EACCES/EPERM without touching fs internals.
+    chmodSync(dir, 0o555);
+    try {
+      expect(main(["--apply"])).toBe(1);
+    } finally {
+      chmodSync(dir, 0o755);
+    }
+    // Nothing was deleted: the failing unlink aborted before any removal.
+    expect(jsonCount(root)).toBe(METRICS_RETENTION_KEEP_LAST + 1);
   });
 });
