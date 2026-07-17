@@ -2008,7 +2008,7 @@ function standingGrantForDelegation(pd: string, slug: string, targetRecord: stri
   );
 }
 
-function handleDelegateApproval(args: string[]): void {
+export function handleDelegateApproval(args: string[]): void {
   const slug = args.find((a) => !a.startsWith("--"));
   if (!slug) {
     error(
@@ -2237,7 +2237,7 @@ function collectIssuerProvenance(
 // grounding rather than trusting it. Minting is refused at the general audit CLI
 // (presence-protected), so only this verb — backed by a real HUMAN_TURN — writes
 // the grant.
-function handleGrantStandingDelegation(args: string[]): void {
+export function handleGrantStandingDelegation(args: string[]): void {
   const pd = resolveProjectDir(projectDir);
 
   // (1) Grounding gate — a real human must have acted on THIS session since the
@@ -2326,7 +2326,7 @@ function handleGrantStandingDelegation(args: string[]): void {
 // gates as issuance. Emits GRANT_REVOKED (Grant Id reference + issuer coordinates)
 // into this session's active intent shard; findActiveStandingGrant treats any
 // grant whose id appears in a GRANT_REVOKED block as invalid, even before expiry.
-function handleRevokeStandingDelegation(args: string[]): void {
+export function handleRevokeStandingDelegation(args: string[]): void {
   const pd = resolveProjectDir(projectDir);
 
   if (!humanPresenceGuardDisabled() && !humanActedSinceGate(pd)) {

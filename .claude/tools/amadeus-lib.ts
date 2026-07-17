@@ -2578,16 +2578,21 @@ export type StandingGrant = {
   isExpired(nowMs: number): boolean;
 };
 
-// Internal factory: a frozen StandingGrant literal whose isExpired closes over
-// expiresAtMs. The grant lapses the instant `now` reaches its expiry.
-function makeStandingGrant(f: {
+// Field bundle for the StandingGrant factory (module-level named type so the
+// factory signature is a single runtime line — a multi-line inline type
+// annotation reads back as permanent DA:0 under bun --coverage).
+type StandingGrantFields = {
   grantId: string;
   expiresAtMs: number;
   includesPhaseBoundary: boolean;
   issuerIntent: string;
   issuerShard: string;
   issuerHumanTs: string;
-}): StandingGrant {
+};
+
+// Internal factory: a frozen StandingGrant literal whose isExpired closes over
+// expiresAtMs. The grant lapses the instant `now` reaches its expiry.
+function makeStandingGrant(f: StandingGrantFields): StandingGrant {
   return Object.freeze({
     grantId: f.grantId,
     scope: "stage-gates" as const,
