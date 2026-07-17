@@ -1,0 +1,13 @@
+{
+  "stage_slug": "intent-capture",
+  "selections": [
+    {
+      "candidate_id": "c4",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "変更規模に固定の行数上限を置かず、Units Generation の概算行数レンジと変更の凝集性で過大化を判定する。旧 driver stack の一般化を再利用する案より、conductor の三モード選択契約に限定する案を選んだ。",
+      "source": "orchestrator"
+    }
+  ]
+}

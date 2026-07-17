@@ -1,0 +1,21 @@
+{
+  "stage_slug": "approval-handoff",
+  "selections": [
+    {
+      "candidate_id": "c3",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "Team Formation が SKIP された Initiative Approval & Handoff では、未確定の named mob や Construction schedule を捏造しない。Ideation で確約する resource は Inception の分析と人間 gate までに限定し、Unit と依存が確定した後の Delivery Planning で Construction の staffing と schedule を承認する。",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "c4",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "Initiative Approval & Handoff で optional upstream stage が SKIP されている場合、存在しない competitive analysis・team assessment・wireframes 等を補完しない。各 handoff 成果物で N/A の根拠、代わりに使う内部証拠、後続の decision point を明示する。",
+      "source": "orchestrator"
+    }
+  ]
+}
