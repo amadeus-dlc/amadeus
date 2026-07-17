@@ -10,5 +10,23 @@
     "lines": "884",
     "reason": "handleDoctor .codex layer-2 hook-trust reminder label string (FR-2 #1065 relabel to make the two-layer structure explicit). A static pass:true advisory message-string row inside spawn-only handleDoctor — refactor is unnatural per spawn-blindspot-two-step (ii), which names message-string rows as the allowlist case.",
     "expiry": "remove when handleDoctor gains an in-process driver test"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "408-413",
+    "reason": "main() dispatch cases for the grant-standing-delegation / revoke-standing-delegation verbs (#1125). main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handlers they dispatch (handleGrantStandingDelegation / handleRevokeStandingDelegation) are fully covered in-process by t-standing-grant. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
+    "expiry": "remove when main() gains an in-process argv driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "458",
+    "reason": "Unknown-subcommand usage message string in main()'s default case — the two new verbs were added to the existing single-line list. A spawn-only main() message-string row (spawn-blindspot-two-step (ii)); the surrounding default branch was already unmeasured before this change.",
+    "expiry": "remove when main() gains an in-process argv driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-lib.ts",
+    "lines": "2716",
+    "reason": "Defensive `catch {}` in findActiveStandingGrant that returns null so a verification defect can never wedge a gate (design contract E-SDG: throws collapse to per-gate approval, never fail-open at the check). No natural corpus input throws inside the scan (listIntentDirs / readAllAuditShards / StandingGrant.parse / verifyDelegatedProvenance all swallow their own IO errors), so the catch arm is unreachable by a black-box test; the happy scan and every classification branch are covered in-process by t-standing-grant.",
+    "expiry": "remove if the scan grows a throw path a test can inject"
   }
 ]

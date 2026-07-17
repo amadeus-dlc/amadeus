@@ -621,6 +621,18 @@ describe("in-process handler seams (coverage)", () => {
     expect(r.stderr).toContain("since the last gate resolution");
   });
 
+  test("handleGrantStandingDelegation: refuses when no active intent grounds the grant", () => {
+    // A workspace shell with NO seeded state file → no valid record → activeIntent
+    // resolves to null → collectIssuerProvenance refuses.
+    const proj = createTestProject();
+    process.env.CLAUDE_PROJECT_DIR = proj;
+    process.env.AMADEUS_OPERATING_MODE = "team";
+    process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = "1"; // skip grounding → reach collectIssuerProvenance
+    const r = captureIO(() => handleGrantStandingDelegation([]));
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("no active intent");
+  });
+
   test("handleGrantStandingDelegation: guard-disabled reaches the no-HUMAN_TURN issuer check", () => {
     seamProject(); // no HUMAN_TURN
     process.env.AMADEUS_OPERATING_MODE = "team";
