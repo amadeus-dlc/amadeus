@@ -264,5 +264,12 @@
   "dirName": "260717-answer-tag-vocab-fix",
   "scope": "bugfix",
   "status": "complete"
+ },
+ {
+  "uuid": "019f7003-e273-7c0b-85ba-0a6c99d0aa9d",
+  "slug": "mirror-issue-tool",
+  "dirName": "260717-mirror-issue-tool",
+  "scope": "amadeus",
+  "status": "in-flight"
  }
 ]

@@ -134,6 +134,8 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - agmsg 上の選挙・裁定を成果物から参照するときは、git で検証可能な事実(delegate コミット SHA 等)と agmsg 出典の事実(配信・裁定タイムスタンプ)を明示的に分離して書く — レビュアーの独立検証(git grep)で裏取り不能な主張を成果物に残さないため(product-lead レビューが E-L1 参照を git から裏取りできず REVISE した実例より。E-L2 裁定 4/6) (learned 2026-07-10) <!-- cid:requirements-analysis:agmsg-git-evidence-split -->
 - 要件・受け入れ基準に時間・回数等の数値を書くときは、実在する対照実装の named constant を file:line で引くか、選択を design へ明示的に委ねる — 実在しない要約帯(例: 10-30秒)は開発者に新しいマジックナンバーを作らせる(nfr-requirements:c3『数値は強制メカニズムから導出』の requirements-analysis 版類例。FR-4 レビュー実例より。E-L2 裁定 4/6) (learned 2026-07-10) <!-- cid:requirements-analysis:constants-from-code -->
 
+- 事前整理(standalone grilling 等)で裁定済みの intent では、intent-capture の質問を未決の判断のみに絞り、確定済み裁定は前提知識として成果物へ直接反映する — 質問の重複再演をしない(260717-mirror-issue-tool で実践、4+1問で完了) (learned 2026-07-17) <!-- cid:intent-capture:c1 -->
+
 ## Testing
 - Standardの中核はunit/integrationとし、performance/securityは承認済みNFRと実在境界へtraceして選定する。戦略名だけで検査を機械追加しない。既決strategy再述に留めず、stage定義の曖昧さは別途追跡する。 (learned 2026-07-12) <!-- cid:build-and-test:c1 -->
 - 攻撃面・依存・承認NFRを成果物で実測明記した場合のみ検査を比例選定する。既存必須scanや要求済み検査の省略根拠にはしない。 (learned 2026-07-12) <!-- cid:build-and-test:c3 -->
