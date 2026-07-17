@@ -141,6 +141,13 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - 上流入力ヘッダーは「本文に依拠箇所を書いた後」に本文の実参照から転記して作る — 宣言リストからの機械転記が本文未参照の装飾トークン(artifact-upstream-inputs-header 禁止パターン)を生む。consumes-first-drafting(宣言を先に読む)と対の出力側順序(260717-mirror-issue-tool で nfr-requirements/nfr-design の2ステージ連続再発を実測) (learned 2026-07-17) <!-- cid:nfr-design:body-derivation-before-header -->
 - エラー経路テストの green は「目的の分岐を実際に踏んだこと」を lcov の DA で実測確認してから完成扱いにする — 別経路が同じ exit code に到達する偽経路 green(260717 で単一 record 自動解決により no-active-intent テストが番号 parse 失敗経路で green だった実測)は assertion だけでは見えない。injection-surface-verify(注入面)と直交するテスト到達面の検査 (learned 2026-07-17) <!-- cid:build-and-test:error-path-reach-lcov -->
 
+- 変更規模に固定の行数上限を置かず、Units Generation の概算行数レンジと変更の凝集性で過大化を判定する。旧 driver stack の一般化を再利用する案より、conductor の三モード選択契約に限定する案を選んだ。 (learned 2026-07-17) <!-- cid:intent-capture:c4 -->
+- Codex native subagent の並列 spawn と結果回収は、同一セッションで三つの `ultra` 指定 probe を同時実行して成立した。effort 指定は API に受理されたが、実際に honor された値を示す telemetry は観測できないため、受理と実適用を分けて扱う。 (learned 2026-07-17) <!-- cid:feasibility:c1-2 -->
+- `codex-ultra` を直ちに不成立とする案より、API による `ultra` 指定受理を現在の証拠限界として明記する Conditional GO を候補とした。prepared Bolt worktree への隔離書き込みが成立しない場合は代替へ黙って降格せず、Requirements 確約前に停止する。 (learned 2026-07-17) <!-- cid:feasibility:c4 -->
+- 公開契約を完結させる六つの proto-capability はすべて Must とし、Should／Could を置かない。Must を削って軽量化する案より、telemetry・汎用 adapter・外部 messaging・referee 再設計を Won't として厳格に除外する案を選んだ。 (learned 2026-07-17) <!-- cid:scope-definition:c2 -->
+- raw WSJF より dependency と risk-first を優先し、worktree isolation proof を最初の hard stop とした。未証明の基盤に依存する価値面を先行着地させないためである。 (learned 2026-07-17) <!-- cid:scope-definition:c3 -->
+- Team Formation が SKIP された Initiative Approval & Handoff では、未確定の named mob や Construction schedule を捏造しない。Ideation で確約する resource は Inception の分析と人間 gate までに限定し、Unit と依存が確定した後の Delivery Planning で Construction の staffing と schedule を承認する。 (learned 2026-07-17) <!-- cid:approval-handoff:c3 -->
+- Initiative Approval & Handoff で optional upstream stage が SKIP されている場合、存在しない competitive analysis・team assessment・wireframes 等を補完しない。各 handoff 成果物で N/A の根拠、代わりに使う内部証拠、後続の decision point を明示する。 (learned 2026-07-17) <!-- cid:approval-handoff:c4 -->
 ## Testing
 - Standardの中核はunit/integrationとし、performance/securityは承認済みNFRと実在境界へtraceして選定する。戦略名だけで検査を機械追加しない。既決strategy再述に留めず、stage定義の曖昧さは別途追跡する。 (learned 2026-07-12) <!-- cid:build-and-test:c1 -->
 - 攻撃面・依存・承認NFRを成果物で実測明記した場合のみ検査を比例選定する。既存必須scanや要求済み検査の省略根拠にはしない。 (learned 2026-07-12) <!-- cid:build-and-test:c3 -->

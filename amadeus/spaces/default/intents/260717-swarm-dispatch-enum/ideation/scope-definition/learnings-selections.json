@@ -1,0 +1,21 @@
+{
+  "stage_slug": "scope-definition",
+  "selections": [
+    {
+      "candidate_id": "c2",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "公開契約を完結させる六つの proto-capability はすべて Must とし、Should／Could を置かない。Must を削って軽量化する案より、telemetry・汎用 adapter・外部 messaging・referee 再設計を Won't として厳格に除外する案を選んだ。",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "c3",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "raw WSJF より dependency と risk-first を優先し、worktree isolation proof を最初の hard stop とした。未証明の基盤に依存する価値面を先行着地させないためである。",
+      "source": "orchestrator"
+    }
+  ]
+}

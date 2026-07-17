@@ -1,0 +1,21 @@
+{
+  "stage_slug": "feasibility",
+  "selections": [
+    {
+      "candidate_id": "c1-2",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "Codex native subagent の並列 spawn と結果回収は、同一セッションで三つの `ultra` 指定 probe を同時実行して成立した。effort 指定は API に受理されたが、実際に honor された値を示す telemetry は観測できないため、受理と実適用を分けて扱う。",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "c4",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "`codex-ultra` を直ちに不成立とする案より、API による `ultra` 指定受理を現在の証拠限界として明記する Conditional GO を候補とした。prepared Bolt worktree への隔離書き込みが成立しない場合は代替へ黙って降格せず、Requirements 確約前に停止する。",
+      "source": "orchestrator"
+    }
+  ]
+}
