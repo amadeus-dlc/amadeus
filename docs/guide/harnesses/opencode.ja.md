@@ -57,7 +57,7 @@ OpenCode の既定の権限は全許可です。同梱の `opencode.json.example
 | 設定例 | `.opencode/opencode.json.example` — `$schema` + 権限絞り込み(`edit`/`bash`/`webfetch` = `ask`) |
 | セッションスキル | 4 本(`session-cost`・`replay`・`outcomes-pack`・`grilling`)— per-stage runner 32 本は初期スコープ外 |
 | フック | **未配線(8 中 0)** — 工程0 対応表([#1049](https://github.com/amadeus-dlc/amadeus/issues/1049))で Cursor 相当の core hook 8 target を OpenCode の JS プラグイン API へ実測: **配線 0・条件付き 5・未対応 3**。下記 [フック対応表](#フック対応表-1049) を参照 |
-| `promote:self` | 本ハーネスは非対象 |
+| `promote:self` | `bun run promote:self` が `dist/opencode/.opencode/` → ルート `.opencode/` へ promote(dogfood) |
 
 ## Claude Code との相違点
 

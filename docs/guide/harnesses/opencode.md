@@ -56,7 +56,7 @@ the session-resume onboarding a returning session reads.
 | Config example | `.opencode/opencode.json.example` — `$schema` + permission narrowing (`edit`/`bash`/`webfetch` = `ask`) |
 | Session skills | 4 (`session-cost`, `replay`, `outcomes-pack`, `grilling`) — the 32 per-stage runners are out of initial scope |
 | Hooks | **Not wired (0 of 8)** — the step-0 mapping ([#1049](https://github.com/amadeus-dlc/amadeus/issues/1049)) measured every Cursor-parity core-hook target against OpenCode's JS plugin API: **0 wired · 5 conditional · 3 unsupported**. See [Hook mapping](#hook-mapping-1049) below |
-| `promote:self` | Not applicable to this harness |
+| `promote:self` | `bun run promote:self` promotes `dist/opencode/.opencode/` → root `.opencode/` (dogfood) |
 
 ## Harness differences vs Claude Code
 
