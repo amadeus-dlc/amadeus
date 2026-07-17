@@ -297,6 +297,9 @@ jobs:
       - name: Generate snapshot
         run: bun scripts/metrics-snapshot.ts --write
 
+      - name: Prune old snapshots
+        run: bun scripts/metrics-retention.ts --apply
+
       - name: Get GitHub App user ID
         id: app-user
         env:
@@ -307,7 +310,7 @@ jobs:
         run: |
           git config user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
           git config user.email '${{ steps.app-user.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com'
-          git add metrics/*.json
+          git add -A metrics/
           git commit -m "chore(metrics): record snapshot"
 
       - name: Publish snapshot pull request
