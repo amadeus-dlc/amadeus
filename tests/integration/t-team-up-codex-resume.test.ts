@@ -100,38 +100,51 @@ function createCliFixture() {
 
   // Fake herdr binary. team-up.sh drives herdr through `--session <name>
   // <verb...>` (workspace/pane/agent verbs) plus bare `session <verb>` calls.
-  // Session existence is modeled by a single state file whose presence means
-  // "the headless server is up". workspace-create / pane-split print the JSON
-  // pane_id contract team-up.sh parses; FAKE_HERDR_FAIL_COMMAND fails a chosen
-  // verb (e.g. "pane split") to exercise the layout-failure path.
+  // Session existence is modeled per session name under sessions/<name> so
+  // named team-up instances can run in parallel. workspace-create / pane-split
+  // print the JSON pane_id contract team-up.sh parses; FAKE_HERDR_FAIL_COMMAND
+  // fails a chosen verb (e.g. "pane split") to exercise the layout-failure path.
   const herdr = join(bin, "herdr");
   writeFileSync(
     herdr,
     `#!/usr/bin/env bash
 set -eu
 state="\${FAKE_HERDR_STATE:?}"
+mkdir -p "$state/sessions"
 session=""
 if [ "\${1:-}" = "--session" ]; then
   session="\${2:-}"
   shift 2
 fi
 verb="\${1:-} \${2:-}"
+target="$session"
+case "$verb" in
+  "session stop" | "session delete") target="\${3:-$session}" ;;
+esac
 if [ -n "\${FAKE_HERDR_FAIL_COMMAND:-}" ] && [ "$FAKE_HERDR_FAIL_COMMAND" = "$verb" ]; then
   exit 9
 fi
 case "$verb" in
-  "workspace list") test -f "$state/session" ;;
+  "workspace list") test -n "$session" && test -f "$state/sessions/$session" ;;
   "workspace create") printf '{"pane_id":"%%1"}\\n' ;;
   "pane split") printf '{"pane_id":"%%1"}\\n' ;;
   "pane run") ;;
   "pane rename") ;;
   "agent rename") ;;
-  "session stop") rm -f "$state/session" ;;
-  "session delete") rm -f "$state/session" ;;
-  "session list") [ -f "$state/session" ] && cat "$state/session" || true ;;
+  "session stop") rm -f "$state/sessions/$target" ;;
+  "session delete") rm -f "$state/sessions/$target" ;;
+  "session list")
+    for f in "$state/sessions"/*; do
+      [ -f "$f" ] || continue
+      basename "$f"
+    done
+    ;;
   *)
     case "\${1:-}" in
-      server) printf '%s\\n' "$session" >"$state/session" ;;
+      server)
+        test -n "$session"
+        printf '%s\\n' "$session" >"$state/sessions/$session"
+        ;;
       *) exit 2 ;;
     esac
     ;;
@@ -204,10 +217,13 @@ describe("team-up run lifecycle", () => {
     expect(result.exitCode, result.stderr.toString()).toBe(0);
     expect(result.stdout.toString()).toContain("-c, --continue");
     expect(result.stdout.toString()).toContain("-2, -4, -6");
+    expect(result.stdout.toString()).toContain("-i, --instance NAME");
     expect(result.stdout.toString()).toContain("--list-runs");
+    expect(result.stdout.toString()).toContain("--list-instances");
     expect(result.stdout.toString()).toContain("--delete-run ID");
     expect(result.stdout.toString()).toContain("AGENT_IDENTITY");
     expect(result.stdout.toString()).toContain("TEAM_ENGINEERS");
+    expect(result.stdout.toString()).toContain("TEAM_INSTANCE");
   });
 
   test("a fresh launch creates one isolated worktree and branch per role from HEAD", () => {
@@ -358,7 +374,7 @@ describe("team-up run lifecycle", () => {
 
     expect(result.exitCode).not.toBe(0);
     expect(result.stderr.toString()).toContain("agmsg registration failed");
-    expect(existsSync(join(fixture.herdrState, "session"))).toBe(false);
+    expect(existsSync(join(fixture.herdrState, "sessions", "amadeus-team-test"))).toBe(false);
     expect(existsSync(join(fixture.base, "runs", "run-001"))).toBe(false);
   });
 
@@ -1011,5 +1027,135 @@ describe("team-up member roster", () => {
     expect(result.stdout.toString().trim()).toBe(
       "leader engineer-1 engineer-2 engineer-3 engineer-4",
     );
+  });
+});
+
+describe("team-up named instances", () => {
+  function derivedEnv(fixture: ReturnType<typeof createCliFixture>) {
+    // Drop TEAM_SESSION so --instance can derive amadeus-team-<name>.
+    // AGMSG_TEAM is not set on the fixture env, so omission alone is enough.
+    const { TEAM_SESSION: _ignored, ...env } = fixture.env;
+    return env;
+  }
+
+  test("two named instances launch in parallel with isolated session and agmsg team", () => {
+    const fixture = createCliFixture();
+    const env = derivedEnv(fixture);
+
+    const alpha = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "--instance", "alpha", "-2"],
+      env: { ...env, TEAM_RUN_ID: "run-alpha" },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    expect(alpha.exitCode, alpha.stderr.toString()).toBe(0);
+    expect(alpha.stdout.toString()).toContain("instance=alpha");
+    expect(alpha.stdout.toString()).toContain("agmsg=amadeus-alpha");
+    expect(existsSync(join(fixture.herdrState, "sessions", "amadeus-team-alpha"))).toBe(true);
+    expect(readFileSync(join(fixture.state, "instances", "alpha", "active-run"), "utf8").trim()).toBe(
+      "run-alpha",
+    );
+    expect(existsSync(join(fixture.state, "active-run"))).toBe(false);
+
+    const beta = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "-i", "beta", "-2"],
+      env: { ...env, TEAM_RUN_ID: "run-beta" },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    expect(beta.exitCode, beta.stderr.toString()).toBe(0);
+    expect(existsSync(join(fixture.herdrState, "sessions", "amadeus-team-beta"))).toBe(true);
+    expect(readFileSync(join(fixture.state, "instances", "beta", "active-run"), "utf8").trim()).toBe(
+      "run-beta",
+    );
+
+    const joinLog = readFileSync(fixture.joinLog, "utf8");
+    expect(joinLog).toContain("amadeus-alpha\tleader\t");
+    expect(joinLog).toContain("amadeus-beta\tleader\t");
+
+    const listed = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "--list-instances"],
+      env,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    expect(listed.exitCode, listed.stderr.toString()).toBe(0);
+    expect(listed.stdout.toString()).toContain("alpha\tamadeus-team-alpha\trun-alpha\tup");
+    expect(listed.stdout.toString()).toContain("beta\tamadeus-team-beta\trun-beta\tup");
+  });
+
+  test("killing one instance leaves the other running", () => {
+    const fixture = createCliFixture();
+    const env = derivedEnv(fixture);
+
+    expect(
+      Bun.spawnSync({
+        cmd: ["bash", TEAM_UP, "--instance", "alpha", "-2"],
+        env: { ...env, TEAM_RUN_ID: "run-alpha" },
+        stderr: "pipe",
+        stdout: "pipe",
+      }).exitCode,
+    ).toBe(0);
+    expect(
+      Bun.spawnSync({
+        cmd: ["bash", TEAM_UP, "--instance", "beta", "-2"],
+        env: { ...env, TEAM_RUN_ID: "run-beta" },
+        stderr: "pipe",
+        stdout: "pipe",
+      }).exitCode,
+    ).toBe(0);
+
+    const killed = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "--kill", "--instance", "alpha"],
+      env,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    expect(killed.exitCode, killed.stderr.toString()).toBe(0);
+    expect(existsSync(join(fixture.herdrState, "sessions", "amadeus-team-alpha"))).toBe(false);
+    expect(existsSync(join(fixture.herdrState, "sessions", "amadeus-team-beta"))).toBe(true);
+    expect(existsSync(join(fixture.state, "instances", "alpha", "active-run"))).toBe(false);
+    expect(readFileSync(join(fixture.state, "instances", "beta", "active-run"), "utf8").trim()).toBe(
+      "run-beta",
+    );
+  });
+
+  test("default instance keeps legacy state layout at the state root", () => {
+    const fixture = createCliFixture();
+    const result = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "-2"],
+      env: { ...fixture.env, TEAM_RUN_ID: "run-default" },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+    expect(readFileSync(join(fixture.state, "active-run"), "utf8").trim()).toBe("run-default");
+    expect(existsSync(join(fixture.state, "runs", "run-default"))).toBe(true);
+    expect(existsSync(join(fixture.state, "instances"))).toBe(false);
+  });
+
+  test("same named instance refuses a second fresh launch while session is up", () => {
+    const fixture = createCliFixture();
+    const env = derivedEnv(fixture);
+    expect(
+      Bun.spawnSync({
+        cmd: ["bash", TEAM_UP, "--instance", "alpha", "-2"],
+        env: { ...env, TEAM_RUN_ID: "run-alpha-1" },
+        stderr: "pipe",
+        stdout: "pipe",
+      }).exitCode,
+    ).toBe(0);
+
+    const second = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "--instance", "alpha", "-2"],
+      env: { ...env, TEAM_RUN_ID: "run-alpha-2" },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    expect(second.exitCode).toBe(1);
+    expect(second.stderr.toString()).toContain("already exists");
+    expect(second.stderr.toString()).toContain("--instance alpha --kill");
+    expect(existsSync(join(fixture.base, "runs", "run-alpha-2"))).toBe(false);
   });
 });

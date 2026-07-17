@@ -17,18 +17,23 @@ set -euo pipefail
 #   scripts/team-up.sh --codex  # create a run + launch Codex members
 #   scripts/team-up.sh -c       # resume each member's last conversation
 #   scripts/team-up.sh --kill   # tear down the team session
+#   scripts/team-up.sh -i alpha # named instance (parallel teams on one machine)
+#   scripts/team-up.sh --list-instances
 #
 # Env:
-#   AGMSG_TEAM        team each member joins before launch (default: amadeus)
+#   AGMSG_TEAM        team each member joins before launch (default: amadeus,
+#                     or amadeus-<instance> when --instance is set)
 #   AGENT_IDENTITY    identity for the selected runtime (default: corporate-1)
 #   TEAM_BASE         parent directory for team worktrees
 #   TEAM_REPO         repository whose HEAD seeds a new team run
 #   TEAM_STATE_DIR    local team run metadata directory
+#   TEAM_INSTANCE     instance name (default: default; same as --instance)
 #   TEAM_RUNTIME      claude or codex (default: claude)
 #   TEAM_ENGINEERS    engineer count for a fresh run: 2, 4, or 6 (default: 6)
 #   TEAM_MSG          messaging backend for a fresh run: agmsg (default) or herdr
 #   TEAM_RUN_ID       fixed run ID (intended for deterministic automation)
-#   TEAM_SESSION      session name (default: amadeus-team)
+#   TEAM_SESSION      session name (default: amadeus-team,
+#                     or amadeus-team-<instance> when --instance is set)
 #   HERDR             herdr executable (default: herdr on PATH)
 #
 # In Claude mode, -c falls back to a fresh start for members without history.
@@ -43,18 +48,87 @@ AGMSG_RESET="${AGMSG_RESET:-$AGMSG_ROOT/scripts/reset.sh}"
 DELIVERY="${DELIVERY:-$AGMSG_ROOT/scripts/delivery.sh}"
 CODEX_MONITOR="${CODEX_MONITOR:-$AGMSG_ROOT/scripts/drivers/types/codex/codex-monitor.sh}"
 ROLE_RESUME="${ROLE_RESUME:-$AGMSG_ROOT/scripts/role-resume.sh}"
-TEAM_NAME="${AGMSG_TEAM:-amadeus}"
 AGENT_IDENTITY="${AGENT_IDENTITY:-corporate-1}"
 CLAUDE_IDENTITY="$AGENT_IDENTITY"
 CODEX_IDENTITY="$AGENT_IDENTITY"
 RUNTIME="${TEAM_RUNTIME:-claude}"
 RUNTIME_EXPLICIT=0
-S="${TEAM_SESSION:-amadeus-team}"
 HERDR="${HERDR:-herdr}"
 # Number of engineer members (leader is always added on top). Selectable per
 # fresh run with -2/-4/-6; defaults to 6. A resumed run reads its saved size.
 TEAM_SIZE="${TEAM_ENGINEERS:-6}"
 TEAM_SIZE_EXPLICIT=0
+
+# Explicit env overrides win over --instance derivation.
+if [ "${AGMSG_TEAM+set}" = "set" ]; then
+  AGMSG_EXPLICIT=1
+  TEAM_NAME="$AGMSG_TEAM"
+else
+  AGMSG_EXPLICIT=0
+  TEAM_NAME="amadeus"
+fi
+if [ "${TEAM_SESSION+set}" = "set" ]; then
+  SESSION_EXPLICIT=1
+  S="$TEAM_SESSION"
+else
+  SESSION_EXPLICIT=0
+  S="amadeus-team"
+fi
+
+# Resolve --instance / TEAM_INSTANCE before argument parsing so --kill sees it
+# regardless of flag order.
+INSTANCE="${TEAM_INSTANCE:-default}"
+_instance_pending=0
+for _arg in "$@"; do
+  if [ "$_instance_pending" = "1" ]; then
+    INSTANCE="$_arg"
+    _instance_pending=0
+    continue
+  fi
+  case "$_arg" in
+  --instance | -i) _instance_pending=1 ;;
+  esac
+done
+if [ "$_instance_pending" = "1" ]; then
+  echo "ERROR: --instance requires a name" >&2
+  exit 1
+fi
+
+valid_instance_id() {
+  case "$1" in
+  "" | "." | ".." | instances | [!A-Za-z0-9]* | *[!A-Za-z0-9._-]*) return 1 ;;
+  *) return 0 ;;
+  esac
+}
+
+# Map INSTANCE → INSTANCE_DIR + default session/agmsg names.
+# default keeps the legacy layout at $STATE_DIR; named instances live under
+# $STATE_DIR/instances/<name>/ with derived session/agmsg unless env overrides.
+resolve_instance() {
+  valid_instance_id "$INSTANCE" || {
+    echo "ERROR: invalid instance name: $INSTANCE" >&2
+    exit 1
+  }
+  if [ "$INSTANCE" = "default" ]; then
+    INSTANCE_DIR="$STATE_DIR"
+    if [ "$SESSION_EXPLICIT" != "1" ]; then
+      S="amadeus-team"
+    fi
+    if [ "$AGMSG_EXPLICIT" != "1" ]; then
+      TEAM_NAME="amadeus"
+    fi
+  else
+    INSTANCE_DIR="$STATE_DIR/instances/$INSTANCE"
+    if [ "$SESSION_EXPLICIT" != "1" ]; then
+      S="amadeus-team-$INSTANCE"
+    fi
+    if [ "$AGMSG_EXPLICIT" != "1" ]; then
+      TEAM_NAME="amadeus-$INSTANCE"
+    fi
+  fi
+}
+
+resolve_instance
 
 # Team messaging backend the launched members use (agmsg | herdr). Selected per
 # fresh run with --msg or TEAM_MSG (flag wins), saved to the run record, and
@@ -207,6 +281,10 @@ Without -c, creates a new run (leader + N engineers) from the repository HEAD.
   -c, --continue       Resume the current run and its saved runtime
   -2, -4, -6           Engineer count for a fresh run (default 6; leader always
                        added). Layout: -2 1-1-1, -4 2-1-2, -6 3-1-3
+  -i, --instance NAME  Named team instance for parallel teams (default: default).
+                       Derives session amadeus-team-NAME and agmsg team
+                       amadeus-NAME unless TEAM_SESSION / AGMSG_TEAM are set.
+                       --name remains a display label for the run, not isolation.
       --msg BACKEND    Team messaging backend for a fresh run: agmsg (default)
                        or herdr. Overrides TEAM_MSG; inherited on resume.
       --run ID         Resume a retained run (requires -c)
@@ -215,7 +293,8 @@ Without -c, creates a new run (leader + N engineers) from the repository HEAD.
       --claude         Use Claude for a fresh run
       --codex          Use Codex for a fresh run
       --kill           Stop the active session; keep its worktrees
-      --list-runs      List retained runs
+      --list-runs      List retained runs for this instance
+      --list-instances List known instances and whether their session is up
       --delete-run ID  Delete a stopped, clean run with no unmerged work
   -h, --help           Show this help
 
@@ -228,6 +307,7 @@ branches stay intact, so create a fresh run to continue that work.
 Environment:
   AGENT_IDENTITY      Identity for the selected runtime (default: corporate-1)
   TEAM_ENGINEERS      Engineer count for a fresh run: 2, 4, or 6 (default: 6)
+  TEAM_INSTANCE       Instance name (same as --instance; default: default)
   TEAM_MSG            Messaging backend for a fresh run: agmsg (default) or herdr
 EOF
 }
@@ -290,10 +370,10 @@ run_owns_branch() {
 }
 
 delete_run() {
-  local run_id="$1" run_record="$STATE_DIR/runs/$1" m wt branch head base_commit ref ref_branch merged_elsewhere
+  local run_id="$1" run_record="$INSTANCE_DIR/runs/$1" m wt branch head base_commit ref ref_branch merged_elsewhere
   valid_run_id "$run_id" || { echo "ERROR: invalid run ID: $run_id" >&2; return 1; }
   [ -d "$run_record" ] || { echo "ERROR: unknown run: $run_id" >&2; return 1; }
-  if [ -f "$STATE_DIR/active-run" ] && [ "$(cat "$STATE_DIR/active-run")" = "$run_id" ]; then
+  if [ -f "$INSTANCE_DIR/active-run" ] && [ "$(cat "$INSTANCE_DIR/active-run")" = "$run_id" ]; then
     echo "ERROR: run is active; stop it with --kill first: $run_id" >&2
     return 1
   fi
@@ -339,10 +419,50 @@ delete_run() {
   done
   rmdir "$BASE/runs/$run_id" 2>/dev/null || true
   rm -rf -- "$run_record"
-  if [ -f "$STATE_DIR/current-run" ] && [ "$(cat "$STATE_DIR/current-run")" = "$run_id" ]; then
-    rm -f "$STATE_DIR/current-run"
+  if [ -f "$INSTANCE_DIR/current-run" ] && [ "$(cat "$INSTANCE_DIR/current-run")" = "$run_id" ]; then
+    rm -f "$INSTANCE_DIR/current-run"
   fi
   echo "deleted run $run_id"
+}
+
+# Print INSTANCE / SESSION / ACTIVE_RUN / SESSION_STATE for one instance dir.
+emit_instance_row() {
+  local name="$1" dir="$2" session active sess_state
+  session="$(cat "$dir/session" 2>/dev/null || true)"
+  if [ -z "$session" ]; then
+    if [ "$name" = "default" ]; then
+      session="amadeus-team"
+    else
+      session="amadeus-team-$name"
+    fi
+  fi
+  active="$(cat "$dir/active-run" 2>/dev/null || printf '-')"
+  if mux_has_session "$session"; then
+    sess_state="up"
+  else
+    sess_state="down"
+  fi
+  printf '%s\t%s\t%s\t%s\n' "$name" "$session" "$active" "$sess_state"
+}
+
+list_instances() {
+  printf 'INSTANCE\tSESSION\tACTIVE_RUN\tSESSION_STATE\n'
+  emit_instance_row "default" "$STATE_DIR"
+  if [ -d "$STATE_DIR/instances" ]; then
+    local d
+    for d in "$STATE_DIR"/instances/*; do
+      [ -d "$d" ] || continue
+      emit_instance_row "$(basename "$d")" "$d"
+    done
+  fi
+}
+
+kill_hint() {
+  if [ "$INSTANCE" = "default" ]; then
+    printf 'scripts/team-up.sh --kill'
+  else
+    printf 'scripts/team-up.sh --instance %s --kill' "$INSTANCE"
+  fi
 }
 
 while [ "$#" -gt 0 ]; do
@@ -357,6 +477,11 @@ while [ "$#" -gt 0 ]; do
   -h | --help) usage; exit 0 ;;
   --claude) RUNTIME="claude"; RUNTIME_EXPLICIT=1 ;;
   --codex) RUNTIME="codex"; RUNTIME_EXPLICIT=1 ;;
+  --instance | -i)
+    shift
+    [ "$#" -gt 0 ] || { echo "ERROR: --instance requires a name" >&2; exit 1; }
+    # Already applied in the pre-scan; consume the value for flag-order freedom.
+    ;;
   --run)
     shift
     [ "$#" -gt 0 ] || { echo "ERROR: --run requires an ID" >&2; exit 1; }
@@ -374,28 +499,35 @@ while [ "$#" -gt 0 ]; do
     ;;
   --kill)
     active_run=""
-    if [ -f "$STATE_DIR/active-run" ]; then
-      active_run="$(cat "$STATE_DIR/active-run")"
+    if [ -f "$INSTANCE_DIR/session" ]; then
+      S="$(cat "$INSTANCE_DIR/session")"
+    fi
+    if [ -f "$INSTANCE_DIR/active-run" ]; then
+      active_run="$(cat "$INSTANCE_DIR/active-run")"
     fi
     # Legacy guard: refuse to --kill a run created before the herdr-only
     # launcher (its mux marker is absent or not "herdr"); its session, if any,
     # is not a herdr session this script can tear down.
     if [ -n "$active_run" ]; then
-      saved_mux="$(cat "$STATE_DIR/runs/$active_run/mux" 2>/dev/null || true)"
+      saved_mux="$(cat "$INSTANCE_DIR/runs/$active_run/mux" 2>/dev/null || true)"
       [ "$saved_mux" = "herdr" ] || reject_legacy_run "$active_run" "$saved_mux"
     fi
     mux_kill "$S"
     if [ -n "$active_run" ]; then
-      if [ -d "$STATE_DIR/runs/$active_run" ]; then
-        printf 'stopped\n' >"$STATE_DIR/runs/$active_run/status"
+      if [ -d "$INSTANCE_DIR/runs/$active_run" ]; then
+        printf 'stopped\n' >"$INSTANCE_DIR/runs/$active_run/status"
       fi
-      rm -f "$STATE_DIR/active-run"
+      rm -f "$INSTANCE_DIR/active-run"
     fi
+    exit 0
+    ;;
+  --list-instances)
+    list_instances
     exit 0
     ;;
   --list-runs)
     printf 'ID\tRUNTIME\tSTATUS\tNAME\n'
-    for run_record in "$STATE_DIR"/runs/*; do
+    for run_record in "$INSTANCE_DIR"/runs/*; do
       [ -d "$run_record" ] || continue
       run_id="$(basename "$run_record")"
       run_runtime="$(cat "$run_record/runtime" 2>/dev/null || printf 'unknown')"
@@ -740,7 +872,7 @@ create_run() {
   RUN_ID="${TEAM_RUN_ID:-$(date '+%Y%m%d-%H%M%S')-$(printf '%04x' "$RANDOM")}"
   valid_run_id "$RUN_ID" || { echo "ERROR: invalid run ID: $RUN_ID" >&2; return 1; }
   RUN_ROOT="$BASE/runs/$RUN_ID"
-  RUN_RECORD="$STATE_DIR/runs/$RUN_ID"
+  RUN_RECORD="$INSTANCE_DIR/runs/$RUN_ID"
   [ ! -e "$RUN_ROOT" ] || { echo "ERROR: run worktree directory already exists: $RUN_ROOT" >&2; return 1; }
   [ ! -e "$RUN_RECORD" ] || { echo "ERROR: run metadata already exists: $RUN_RECORD" >&2; return 1; }
 
@@ -751,6 +883,9 @@ create_run() {
   # resume/--kill read it back as a legacy guard, rejecting runs whose marker
   # is absent or not "herdr".
   printf 'herdr\n' >"$RUN_RECORD/mux"
+  printf '%s\n' "$INSTANCE" >"$RUN_RECORD/instance"
+  printf '%s\n' "$S" >"$RUN_RECORD/session"
+  printf '%s\n' "$TEAM_NAME" >"$RUN_RECORD/agmsg-team"
   printf '%s\n' "$RUN_NAME" >"$RUN_RECORD/name"
   printf '%s\n' "$base_ref" >"$RUN_RECORD/base-ref"
   printf '%s\n' "$base_commit" >"$RUN_RECORD/base-commit"
@@ -774,10 +909,10 @@ load_run() {
   if [ -n "$requested_id" ]; then
     RUN_ID="$requested_id"
   else
-    [ -f "$STATE_DIR/current-run" ] || return 1
-    RUN_ID="$(cat "$STATE_DIR/current-run")"
+    [ -f "$INSTANCE_DIR/current-run" ] || return 1
+    RUN_ID="$(cat "$INSTANCE_DIR/current-run")"
   fi
-  RUN_RECORD="$STATE_DIR/runs/$RUN_ID"
+  RUN_RECORD="$INSTANCE_DIR/runs/$RUN_ID"
   [ -d "$RUN_RECORD" ] || { echo "ERROR: missing metadata for current run: $RUN_ID" >&2; return 1; }
   [ -f "$RUN_RECORD/runtime" ] || { echo "ERROR: missing runtime for current run: $RUN_ID" >&2; return 1; }
   saved_runtime="$(cat "$RUN_RECORD/runtime")"
@@ -809,7 +944,7 @@ adopt_legacy_run() {
   done
 
   RUN_ID="legacy"
-  RUN_RECORD="$STATE_DIR/runs/$RUN_ID"
+  RUN_RECORD="$INSTANCE_DIR/runs/$RUN_ID"
   if [ -e "$RUN_RECORD" ]; then
     echo "ERROR: legacy run metadata already exists without a current-run pointer" >&2
     return 1
@@ -819,6 +954,9 @@ adopt_legacy_run() {
   # These fixed worktrees are adopted and launched with herdr, so record the
   # herdr generation marker (see create_run).
   printf 'herdr\n' >"$RUN_RECORD/mux"
+  printf '%s\n' "$INSTANCE" >"$RUN_RECORD/instance"
+  printf '%s\n' "$S" >"$RUN_RECORD/session"
+  printf '%s\n' "$TEAM_NAME" >"$RUN_RECORD/agmsg-team"
   printf '%s\n' "$(git -C "$REPO" rev-parse HEAD)" >"$RUN_RECORD/base-commit"
   printf 'stopped\n' >"$RUN_RECORD/status"
   printf '1\n' >"$RUN_RECORD/legacy"
@@ -832,8 +970,10 @@ adopt_legacy_run() {
     printf '%s\n' "$wt" >"$RUN_RECORD/members/$m/path"
     printf '%s\n' "$branch" >"$RUN_RECORD/members/$m/branch"
   done
-  mkdir -p "$STATE_DIR"
-  printf '%s\n' "$RUN_ID" >"$STATE_DIR/current-run"
+  mkdir -p "$INSTANCE_DIR"
+  printf '%s\n' "$RUN_ID" >"$INSTANCE_DIR/current-run"
+  printf '%s\n' "$S" >"$INSTANCE_DIR/session"
+  printf '%s\n' "$TEAM_NAME" >"$INSTANCE_DIR/agmsg-team"
 }
 
 if [ "${TEAM_UP_LIB_ONLY:-0}" = "1" ]; then
@@ -849,7 +989,7 @@ RUN_PREPARING=0
 AGENTS_STARTED=0
 trap handle_exit EXIT
 if [ "$CONTINUE" = "1" ]; then
-  if [ -n "$RUN_SELECTION" ] || [ -f "$STATE_DIR/current-run" ]; then
+  if [ -n "$RUN_SELECTION" ] || [ -f "$INSTANCE_DIR/current-run" ]; then
     load_run "$RUN_SELECTION"
   else
     adopt_legacy_run
@@ -858,10 +998,10 @@ fi
 
 if mux_has_session "$S"; then
   if [ "$CONTINUE" = "1" ]; then
-    if [ -f "$STATE_DIR/active-run" ]; then
-      active_run="$(cat "$STATE_DIR/active-run")"
+    if [ -f "$INSTANCE_DIR/active-run" ]; then
+      active_run="$(cat "$INSTANCE_DIR/active-run")"
       if [ -n "$RUN_ID" ] && [ "$active_run" != "$RUN_ID" ]; then
-        echo "ERROR: run $active_run is active; stop it with --kill before resuming $RUN_ID" >&2
+        echo "ERROR: run $active_run is active; stop it with $(kill_hint) before resuming $RUN_ID" >&2
         exit 1
       fi
     fi
@@ -869,8 +1009,8 @@ if mux_has_session "$S"; then
     mux_attach "$S"
     exit 0
   fi
-  echo "ERROR: herdr session '$S' already exists" >&2
-  echo "(tear it down first with: scripts/team-up.sh --kill)" >&2
+  echo "ERROR: herdr session '$S' already exists (instance=$INSTANCE)" >&2
+  echo "(tear it down first with: $(kill_hint))" >&2
   exit 1
 fi
 
@@ -917,9 +1057,12 @@ stack_column "$P_TOP_RIGHT" "${right[@]:1}"
 mux_attach "$S"
 if [ -n "$RUN_ID" ]; then
   printf 'running\n' >"$RUN_RECORD/status"
-  mkdir -p "$STATE_DIR"
-  printf '%s\n' "$RUN_ID" >"$STATE_DIR/current-run"
-  printf '%s\n' "$RUN_ID" >"$STATE_DIR/active-run"
+  mkdir -p "$INSTANCE_DIR"
+  printf '%s\n' "$RUN_ID" >"$INSTANCE_DIR/current-run"
+  printf '%s\n' "$RUN_ID" >"$INSTANCE_DIR/active-run"
+  printf '%s\n' "$S" >"$INSTANCE_DIR/session"
+  printf '%s\n' "$TEAM_NAME" >"$INSTANCE_DIR/agmsg-team"
+  printf '%s\n' "$INSTANCE" >"$INSTANCE_DIR/instance"
 fi
 RUN_PREPARING=0
-echo "session '$S' launched: ${left[*]} | leader | ${right[*]} ($TEAM_SIZE engineers, runtime=$RUNTIME, identity=$AGENT_IDENTITY)"
+echo "session '$S' launched (instance=$INSTANCE): ${left[*]} | leader | ${right[*]} ($TEAM_SIZE engineers, runtime=$RUNTIME, identity=$AGENT_IDENTITY, agmsg=$TEAM_NAME)"
