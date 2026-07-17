@@ -1,0 +1,5976 @@
+import { spawnSync } from "node:child_process";
+import { createHash, randomUUID } from "node:crypto";
+import { accessSync, appendFileSync, closeSync, constants as fsConstants, cpSync, existsSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { hostname, tmpdir } from "node:os";
+import { basename, dirname, join, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
+// Type-only import for the lazy-loaded amadeus-graph.ts dependency. The
+// runtime require() below avoids the circular import (amadeus-graph.ts
+// imports loadScopeMapping/loadStageGraph from this file). Type-only
+// imports are erased at runtime so they don't create the cycle.
+import type { subgraphForScope as SubgraphForScope } from "./amadeus-graph.ts";
+
+// --- Types ---
+
+export interface StageEntry {
+  slug: string;
+  number: string;
+  name: string;
+  phase: string;
+  execution: "ALWAYS" | "CONDITIONAL";
+  lead_agent: string;
+  support_agents: string[];
+  mode: string;
+  // Optional fields populated by amadeus-graph compile from YAML sources.
+  // Existing callers read only the 8 required fields above; optional
+  // additions are source-compatible. Library code that needs these
+  // fields uses the GraphStage type in amadeus-graph.ts (required there).
+  condition?: string;
+  produces?: string[];
+  // Artifacts the stage may write per unit. See GraphStage for runtime use.
+  optional_produces?: string[];
+  consumes?: Array<{ artifact: string; required: boolean; conditional_on?: string }>;
+  requires_stage?: string[];
+  scopes?: string[];
+  inputs?: string;
+  outputs?: string;
+  for_each?: string;
+  // True for stages that must write source code to the workspace root (not just
+  // planning docs under the per-intent record dir). The stage-completion artifact
+  // guard (amadeus-state.ts) uses this to require a non-doc workspace file before
+  // approve/advance: a code-generation stage that wrote only its markdown
+  // produces[] docs but no actual code must not pass (issue #366).
+  workspace_requires?: boolean;
+}
+
+export interface ScopeDefinition {
+  depth: string;
+  stages: Record<string, "EXECUTE" | "SKIP">;
+  // Optional fields from scope-mapping.json. `testStrategy` is on
+  // workshop; `keywords` drives NL scope inference (see
+  // amadeus-utility.ts inferScopeFromText); `description` is a one-line
+  // scope summary rendered into HELP_TEXT.
+  testStrategy?: string;
+  keywords?: string[];
+  description?: string;
+}
+
+export type CheckboxState = "pending" | "in-progress" | "awaiting-approval" | "revising" | "completed" | "skipped";
+
+export const CHECKBOX_MAP: Record<CheckboxState, string> = {
+  pending: "[ ]",
+  "in-progress": "[-]",
+  "awaiting-approval": "[?]",
+  revising: "[R]",
+  completed: "[x]",
+  skipped: "[S]",
+};
+
+export const CHECKBOX_REVERSE: Record<string, CheckboxState> = {
+  "[ ]": "pending",
+  "[-]": "in-progress",
+  "[?]": "awaiting-approval",
+  "[R]": "revising",
+  "[x]": "completed",
+  "[S]": "skipped",
+};
+
+// Canonical HTML comment written under the `## Stage Progress` heading in the
+// state file. It documents every checkbox state in CHECKBOX_MAP/CHECKBOX_REVERSE,
+// so both the intent-birth template and scope-change rewrite share one string
+// and cannot drift out of sync with the six markers above.
+export const STAGE_PROGRESS_HEADER_COMMENT =
+  "<!-- Checkbox states: [ ] not started, [-] in progress, [?] awaiting approval (gate open), [R] revising (user rejected gate), [x] completed, [S] skipped via --stage/--phase jump -->";
+
+export const PHASES = [
+  "initialization",
+  "ideation",
+  "inception",
+  "construction",
+  "operation",
+] as const;
+
+export type Phase = (typeof PHASES)[number];
+
+export const PHASE_NUMBERS: Record<string, Phase> = {
+  "0": "initialization",
+  "1": "ideation",
+  "2": "inception",
+  "3": "construction",
+  "4": "operation",
+};
+
+// --- Harness dir resolution (.claude vs .kiro vs .codex) ---
+
+// The deterministic core ships in multiple harness trees: Claude Code reads
+// it from <project>/.claude/, Kiro CLI from <project>/.kiro/, Codex CLI from
+// <project>/.codex/, and ANY future harness from <project>/<its-dir>/. Every
+// runtime path that names the harness directory flows through harnessDir() so
+// the SAME tool sources work in every tree. Resolution order mirrors
+// resolveProjectDir: env seam (tests/fixtures) → script-path derivation (this
+// module ships at <project>/<harness>/tools/amadeus-lib.ts, so the harness dir is
+// simply the directory two levels up — derived OPEN-SET, not matched against a
+// fixed list, so harness #N needs no edit here) → CWD probe → ".claude"
+// fallback.
+//
+// KNOWN_HARNESS_DIRS is NOT the source of truth for which harnesses exist — the
+// script-path derivation handles any dir. It is only a probe-ORDER hint for the
+// dev-repo CWD rung, where more than one harness dir can coexist and the Claude
+// tree is canonical (".claude" must win). A real single-harness install never
+// reaches the probe; it resolves by script path.
+const KNOWN_HARNESS_DIRS = [".claude", ".kiro", ".codex", ".opencode", ".cursor"] as const;
+
+// True for a plausible harness dir name: a dot-prefixed segment, e.g. ".claude"
+// / ".kiro" / ".gemini". Guards the script-path derivation so an unexpected
+// layout (lib copied loose in a test, a non-dotted parent) falls through to the
+// CWD probe instead of returning a bogus harness dir.
+function isHarnessDirName(name: string): boolean {
+  return /^\.[a-z0-9][a-z0-9._-]*$/i.test(name);
+}
+
+function deriveHarnessDir(): string {
+  // Script-path derivation (open-set): the module ships at
+  // <project>/<harness>/tools/amadeus-lib.ts, so the harness dir is the basename
+  // of the grandparent of this file — whatever it is named.
+  const scriptDir = dirname(fileURLToPath(import.meta.url));
+  if (basename(scriptDir) === "tools") {
+    const candidate = basename(dirname(scriptDir));
+    if (isHarnessDirName(candidate)) return candidate;
+  }
+  // CWD probe (dev repo, multiple trees coexist): known dirs in canonical order.
+  const cwd = process.cwd();
+  for (const h of KNOWN_HARNESS_DIRS) {
+    if (existsSync(join(cwd, h))) return h;
+  }
+  return ".claude";
+}
+
+let _harnessDir: string | null = null;
+
+export function harnessDir(): string {
+  // Env read at call time (not cached) so tests can flip it between bun
+  // invocations — same pattern as stageGraphPath() below.
+  if (process.env.AMADEUS_HARNESS_DIR) return process.env.AMADEUS_HARNESS_DIR;
+  if (_harnessDir === null) _harnessDir = deriveHarnessDir();
+  return _harnessDir;
+}
+
+// The AIDLC markdown rule layers (amadeus-org/team/project/phase .md) live under
+// a per-harness subdirectory of the harness dir: `.claude/rules/`,
+// `.kiro/steering/` (Kiro reads steering files as its native rule surface),
+// `.codex/amadeus-rules/` (Codex's native `.codex/rules/` is Starlark permission
+// rules — D-10). The packager renames the SHIPPED directory and the prose/JSON
+// that names it (transform()/applyRulesRename + renameRulesInCompiledData), but
+// the .ts tools are byte-copied across all trees, so any runtime path a tool
+// builds to a rule file MUST go through rulesSubdir() — a hardcoded "rules"
+// segment targets a directory that does not exist on a rename-rules harness.
+//
+// The rename is a fact only the harness MANIFEST knows, so the packager emits
+// it per-tree into tools/data/harness.json ({"rulesSubdir": "..."}) — the
+// open-set source of truth: a new harness ships its own harness.json and needs
+// no edit here. Resolution: AMADEUS_RULES_SUBDIR env seam (fixtures) →
+// AMADEUS_HARNESS_DIR test-seam map (so "pretend to be .kiro" yields "steering"
+// without a .kiro tree on disk) → the shipped harness.json (the real-install
+// rung) → KNOWN_RULES_SUBDIR dev-fallback map → "rules". Returns the LAST path
+// segment only (e.g. "steering"); callers join it under harnessDir().
+const KNOWN_RULES_SUBDIR: Record<string, string> = {
+  ".claude": "rules",
+  ".kiro": "steering",
+  ".codex": "amadeus-rules",
+};
+
+function shippedRulesSubdir(): string | null {
+  // tools/data/harness.json sits beside the compiled stage-graph.json in the
+  // shipped tree (DATA_DIR). Absent in a dev checkout's core/ (authored source
+  // carries no compiled data) → null, and the caller falls through.
+  try {
+    const raw = readFileSync(join(DATA_DIR, "harness.json"), "utf-8");
+    const parsed = JSON.parse(raw) as { rulesSubdir?: unknown };
+    if (typeof parsed.rulesSubdir === "string" && parsed.rulesSubdir.length > 0) {
+      return parsed.rulesSubdir;
+    }
+  } catch {
+    // no harness.json (dev core/, or a tree built before this landed) → fall through
+  }
+  return null;
+}
+
+export function rulesSubdir(): string {
+  if (process.env.AMADEUS_RULES_SUBDIR) return process.env.AMADEUS_RULES_SUBDIR;
+  // Test seam: AMADEUS_HARNESS_DIR pins the harness without a tree on disk, so it
+  // must out-rank the physically-shipped harness.json (which reflects THIS lib
+  // copy's tree). Real installs don't set it and fall to the shipped value.
+  if (process.env.AMADEUS_HARNESS_DIR) {
+    return KNOWN_RULES_SUBDIR[process.env.AMADEUS_HARNESS_DIR] ?? "rules";
+  }
+  return shippedRulesSubdir() ?? KNOWN_RULES_SUBDIR[harnessDir()] ?? "rules";
+}
+
+// --- Project dir resolution ---
+
+export function resolveProjectDir(explicitDir?: string): string {
+  // 1. Explicit --project-dir argument
+  if (explicitDir) return explicitDir;
+
+  // 2. CLAUDE_PROJECT_DIR env var
+  if (process.env.CLAUDE_PROJECT_DIR) return process.env.CLAUDE_PROJECT_DIR;
+
+  // 3. Script path derivation (open-set): this module ships at
+  //    <project>/<harness>/tools/, so strip "<harness>/tools" for ANY harness
+  //    dir name — the project root is the dir two levels up.
+  const scriptDir = dirname(fileURLToPath(import.meta.url));
+  const fromScript = stripHarnessLeaf(scriptDir, "tools");
+  if (fromScript) return fromScript;
+
+  // 4. CWD has a known harness directory (dev repo).
+  const cwd = process.cwd();
+  for (const h of KNOWN_HARNESS_DIRS) {
+    if (existsSync(join(cwd, h))) {
+      return cwd;
+    }
+  }
+
+  // Fallback to CWD
+  return cwd;
+}
+
+// If `dir` is "<root>/<harness>/<leaf>" with <harness> a harness-dir name and
+// <leaf> the given segment (tools | hooks), return <root>; else null. Open-set:
+// the harness segment is validated by SHAPE (isHarnessDirName), not membership
+// in a fixed list, so a new harness needs no edit here.
+function stripHarnessLeaf(dir: string, leaf: string): string | null {
+  if (basename(dir) !== leaf) return null;
+  const harnessDirPath = dirname(dir);
+  if (!isHarnessDirName(basename(harnessDirPath))) return null;
+  return dirname(harnessDirPath);
+}
+
+// True if `p` exists AND is a directory (not a plain file). Guards the
+// workspace marker check below against a stray FILE named "amadeus" or
+// ".claude/tools" satisfying the marker by name alone.
+function isDir(p: string): boolean {
+  try {
+    return statSync(p).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+// True for `dir` carrying the amadeus workspace marker: an "amadeus/"
+// directory AND a "tools/" directory under one of the known harness dirs
+// (e.g. ".claude/tools"). A worktree session ships its OWN amadeus/ record
+// tree and its OWN harness tools tree even though the hook SCRIPTS it runs
+// still live under the main checkout's harness dir — so this marker, unlike
+// script-path derivation, distinguishes the worktree from the main checkout.
+// Both halves must be DIRECTORIES, not merely present-by-name (issue #641
+// review fix): a plain file named "amadeus" or ".claude/tools" must not
+// satisfy the marker.
+function hasWorkspaceMarker(dir: string): boolean {
+  if (!isDir(join(dir, "amadeus"))) return false;
+  return KNOWN_HARNESS_DIRS.some((h) => isDir(join(dir, h, "tools")));
+}
+
+// Search `startDir` and its ancestors (up to the filesystem root) for the
+// first directory carrying the amadeus workspace marker (see
+// hasWorkspaceMarker). Returns null if none is found.
+function findWorkspaceMarkerAncestor(startDir: string): string | null {
+  let dir = startDir;
+  while (true) {
+    if (hasWorkspaceMarker(dir)) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+}
+
+// --- Hook project dir resolution ---
+
+export function resolveProjectDirFromHook(importMetaUrl: string): string {
+  // 1. CLAUDE_PROJECT_DIR env var
+  if (process.env.CLAUDE_PROJECT_DIR) return process.env.CLAUDE_PROJECT_DIR;
+
+  // 2. CWD (or an ancestor) carries its own amadeus workspace marker
+  //    (issue #641). In a worktree session the hook SCRIPTS live in the
+  //    launch dir (the main checkout), so rung 3 below would converge on
+  //    main even though the engine's cwd — and the record it writes — is
+  //    the worktree. Search upward from cwd for a dir that itself has an
+  //    "amadeus/" tree and a "<harness>/tools/" tree, and prefer it over the
+  //    script-path derivation.
+  const markerDir = findWorkspaceMarkerAncestor(process.cwd());
+  if (markerDir) return markerDir;
+
+  // 3. Script path derivation (open-set): hooks ship at
+  //    <project>/<harness>/hooks/, so strip "<harness>/hooks" for ANY harness.
+  const scriptDir = dirname(fileURLToPath(importMetaUrl));
+  const fromScript = stripHarnessLeaf(scriptDir, "hooks");
+  if (fromScript) return fromScript;
+
+  // 4. CWD has a known harness directory (dev repo).
+  const cwd = process.cwd();
+  for (const h of KNOWN_HARNESS_DIRS) {
+    if (existsSync(join(cwd, h))) {
+      return cwd;
+    }
+  }
+
+  return cwd;
+}
+
+// --- Machine-injected turn classification (shared catalog) --------------------
+//
+// Claude Code fires UserPromptSubmit (and records user-role transcript turns)
+// not only for physical human input but also for MACHINE-INJECTED, turn-starting
+// user-role messages. Those must never count as human presence: the
+// human-presence gate (humanActedSinceGate) and the #671 delegate-approval
+// provenance both key off HUMAN_TURN authenticity, so a phantom mint lets a
+// model under autopilot ride a machine ping to approve its own gate (issue #708,
+// reopened by #755). This is the single catalog of the injection markers, shared
+// by every classifier (the mint hook and the Stop hook's tier-3 conversational
+// carve-out) so the recognised set can never drift between them.
+//
+// The live-observed forms (measured 2026-07-10, #755; team-msg added 2026-07-17, #1142):
+//   "<task-notification>"                       — agmsg Monitor task-notification
+//   "<teammate-message"                         — agmsg/SendMessage inbox delivery
+//                                                 (tag opener; attributes follow)
+//   "Another Claude session sent a message:"     — teammate-message preamble line
+//   "[SYSTEM NOTIFICATION - NOT USER INPUT]"     — Monitor-event preamble line
+//   "[team-msg "                                 — herdr team-msg send header
+//                                                 ("[team-msg from:<role> via:herdr machine]")
+export const MACHINE_INJECTED_TURN_MARKERS: readonly string[] = [
+  "<task-notification>",
+  "<teammate-message",
+  "Another Claude session sent a message:",
+  "[SYSTEM NOTIFICATION - NOT USER INPUT]",
+  "[team-msg ",
+];
+
+// True when `text` opens as a machine-injected turn: any catalog marker whose
+// UTF-8 start byte offset is less than 256. #708's classifier
+// only matched a bare `startsWith("<task-notification>")` and so missed the
+// preamble-prefixed and teammate-message forms (#755): the measured marker
+// offsets are 0 (task-notification / preamble lines) and 39 (the `<teammate-
+// message` tag after the "Another Claude session sent a message:\n" preamble,
+// 3/3 in this session's conductor transcript), so N=256 is ~6x the largest
+// observed byte offset. The marker body may extend beyond byte 255; only its
+// start offset is bounded. A leading window (not a whole-body scan) keeps the
+// fail-open property intact: a human opening their prompt's first 256 bytes with
+// one of these fixed markers is a negligible risk, and the threat model is a
+// MODEL fabricating presence, not a human disowning their own input.
+export function isMachineInjectedTurnText(text: string): boolean {
+  const bytes = new TextEncoder().encode(text);
+  for (const marker of MACHINE_INJECTED_TURN_MARKERS) {
+    const markerBytes = new TextEncoder().encode(marker);
+    const lastStart = Math.min(256, bytes.length);
+    for (let start = 0; start < lastStart; start++) {
+      if (markerBytes.every((byte, offset) => bytes[start + offset] === byte)) return true;
+    }
+  }
+  return false;
+}
+
+// --- File paths ---
+
+export function toPosix(p: string): string {
+  return sep === "/" ? p : p.split(sep).join("/");
+}
+
+// --- Workspace selectors: space + intent ---------------------------------------
+//
+// The record (state · audit · artifacts · diary) re-roots per INTENT under a
+// per-team SPACE: `amadeus/spaces/<space>/intents/<slug>-<id8>/…`. Two cursors
+// pick the active space/intent, both GITIGNORED (per-user, not shared truth):
+//   - `amadeus/active-space`                            → the active space
+//   - `amadeus/spaces/<space>/intents/active-intent`    → that space's active intent
+//
+// Resolution precedence (vision §5):
+//   space:  explicit arg > active-space pointer > "default" (NEVER errors).
+//   intent: explicit arg > active-intent pointer > lone-intent > null.
+//
+// NULL RESOLUTION (P9 end state — no flat root). When NO intent record resolves
+// (activeIntent() → null: a fresh SEED shell before auto-birth, or a flat project
+// still awaiting migration), the absolute path helpers resolve to the bare SPACE
+// record root (amadeus/spaces/<space>/intents/ — see spaceRecordRoot). No
+// amadeus-state.md ever lives directly there, so existence-gated consumers
+// (loadStateFileIfPresent) read "no workflow yet" and the orchestrator
+// births/errors. The ONLY surviving flat `amadeus-docs` read is the one-time
+// migration's SOURCE (flatStateSource/flatMigrationSource below).
+// activeIntent() returning null IS that "no record yet" signal.
+
+export const ACTIVE_SPACE_POINTER = "active-space";
+export const ACTIVE_INTENT_POINTER = "active-intent";
+export const DEFAULT_SPACE = "default";
+
+// --- Terminal-command classification (the deterministic-dispatch seam) ---
+//
+// A small set of `/amadeus` commands are TERMINAL: they map 1:1 to an
+// `amadeus-utility.ts` subcommand that runs a tool, prints its output, and stops —
+// they carry NO workflow work and never advance an intent. The orchestration
+// engine's `next` already routes these to a terminal `print` directive
+// (handleNext Branch 1 + 1b). They are exported HERE so a pre-LLM harness seam
+// (e.g. the Kiro userPromptSubmit hook) can dispatch them deterministically off
+// the SAME classification the engine uses — never a divergent hardcoded list.
+//
+//   - read-only utility flags: matched ANYWHERE in the args (mirrors the engine's
+//     parseNextFlags, which sets `readOnly` on any matching token). Each maps to
+//     its subcommand by stripping the leading `--` (--status→status, …).
+//   - workspace navigation verbs: matched ONLY as the LEADING token (i === 0), so
+//     freeform prose merely containing "space"/"intent" stays intent text. The
+//     optional <name> arg is args[1] when present and not itself a --flag.
+export const READ_ONLY_FLAGS: ReadonlySet<string> = new Set([
+  "--status",
+  "--help",
+  "--doctor",
+  "--version",
+]);
+export const WORKSPACE_VERBS: ReadonlySet<string> = new Set([
+  "space",
+  "space-create",
+  "intent",
+]);
+
+// A classified terminal command: the amadeus-utility.ts subcommand to run, plus an
+// optional positional arg (the <name> for a workspace verb). `source` records
+// which family matched, for diagnostics.
+export interface TerminalCommand {
+  subcommand: string;
+  arg?: string;
+  source: "read-only-flag" | "workspace-verb";
+}
+
+// A workspace migration request is deliberately separate from TerminalCommand:
+// it needs the conductor's human approval gate, so pre-LLM harness adapters must
+// never execute it off-band as a one-shot utility. The orchestration engine uses
+// this shared pure classifier before it reads any workflow state.
+export interface MigrationRequest {
+  source: "explicit-flag" | "natural-language";
+  from?: string;
+}
+
+/**
+ * Classify `/amadeus --migrate [path]` and the conservative natural-language
+ * equivalent. Natural language must name both the upstream source and a
+ * migration action; it always uses the default source path. A custom source is
+ * accepted only as the positional value immediately following `--migrate`.
+ */
+export function classifyMigrationRequest(args: string[]): MigrationRequest | null {
+  const flagIndex = args.indexOf("--migrate");
+  if (flagIndex !== -1) {
+    const candidate = args[flagIndex + 1];
+    return candidate !== undefined && !candidate.startsWith("--")
+      ? { source: "explicit-flag", from: candidate }
+      : { source: "explicit-flag" };
+  }
+
+  const text = args.join(" ");
+  const namesUpstream = /(?:\baidlc\b|\bai[\s-]?dlc\b)/i.test(text);
+  const requestsMigration =
+    /(?:\bmigrat(?:e|es|ed|ing|ion)\b|\bconvert(?:s|ed|ing)?\b|\bconversion\b|移行|変換)/i.test(
+      text,
+    );
+  return namesUpstream && requestsMigration
+    ? { source: "natural-language" }
+    : null;
+}
+
+/** True when public args belong to the migration route, including the forbidden
+ * bare `--apply` attempt that must terminate as an error before Intent routing. */
+export function isMigrationPublicRoute(args: string[]): boolean {
+  return args.includes("--apply") || classifyMigrationRequest(args) !== null;
+}
+
+// Tokenize one complete, non-composite shell invocation. This is intentionally
+// narrower than a general shell parser: the migration conductor emits one
+// direct `bun ...` command, so substitutions, pipelines, redirects, comments,
+// and command lists all fail closed. Quoted source paths remain one argv value.
+interface ShellTokenState {
+  words: string[];
+  word: string;
+  started: boolean;
+  quote: "single" | "double" | null;
+}
+
+function pushShellWord(state: ShellTokenState): void {
+  if (!state.started) return;
+  state.words.push(state.word);
+  state.word = "";
+  state.started = false;
+}
+
+function consumeSingleQuotedCharacter(state: ShellTokenState, char: string): void {
+  if (char === "'") state.quote = null;
+  else state.word += char;
+  state.started = true;
+}
+
+function consumeDoubleQuotedCharacter(
+  command: string,
+  index: number,
+  state: ShellTokenState,
+): number | null {
+  const char = command[index];
+  if (char === '"') {
+    state.quote = null;
+    state.started = true;
+    return index;
+  }
+  // Shell expansion inside double quotes could execute another command or
+  // make the recognized argv differ from the text. The emitted migration
+  // command does not need either form, so reject them.
+  if (char === "$" || char === "`") return null;
+  if (char !== "\\") {
+    state.word += char;
+    state.started = true;
+    return index;
+  }
+  const next = command[index + 1];
+  if (next === undefined || next === "\n" || next === "\r") return null;
+  if (['"', "\\", "$", "`"].includes(next)) {
+    state.word += next;
+    state.started = true;
+    return index + 1;
+  }
+  state.word += char;
+  state.started = true;
+  return index;
+}
+
+function consumeUnquotedCharacter(
+  command: string,
+  index: number,
+  state: ShellTokenState,
+): number | null {
+  const char = command[index];
+  if (char === "'" || char === '"') {
+    state.quote = char === "'" ? "single" : "double";
+    state.started = true;
+    return index;
+  }
+  if (char === "\n" || char === "\r" || ";|&<>()`".includes(char)) return null;
+  if (char === "$" || (char === "#" && !state.started)) return null;
+  if (/\s/.test(char)) {
+    pushShellWord(state);
+    return index;
+  }
+  if (char !== "\\") {
+    state.word += char;
+    state.started = true;
+    return index;
+  }
+  const next = command[index + 1];
+  if (next === undefined || next === "\n" || next === "\r") return null;
+  state.word += next;
+  state.started = true;
+  return index + 1;
+}
+
+function tokenizeSingleShellInvocation(command: string): string[] | null {
+  const state: ShellTokenState = {
+    words: [],
+    word: "",
+    started: false,
+    quote: null,
+  };
+
+  for (let i = 0; i < command.length; i++) {
+    if (state.quote === "single") {
+      consumeSingleQuotedCharacter(state, command[i]);
+      continue;
+    }
+    const nextIndex = state.quote === "double"
+      ? consumeDoubleQuotedCharacter(command, i, state)
+      : consumeUnquotedCharacter(command, i, state);
+    if (nextIndex === null) return null;
+    i = nextIndex;
+  }
+
+  if (state.quote !== null) return null;
+  pushShellWord(state);
+  return state.words;
+}
+
+function bunScriptInvocation(command: string): { script: string; args: string[] } | null {
+  const words = tokenizeSingleShellInvocation(command);
+  if (words === null || words.length < 2) return null;
+  const executable = words[0].split(/[\\/]/).at(-1)?.toLowerCase();
+  if (executable !== "bun" && executable !== "bun.exe") return null;
+  const scriptIndex = words[1] === "run" ? 2 : 1;
+  if (scriptIndex >= words.length) return null;
+  return { script: words[scriptIndex], args: words.slice(scriptIndex + 1) };
+}
+
+function scriptResolvesTo(
+  projectDir: string,
+  script: string,
+  relativeCandidates: readonly string[],
+): boolean {
+  const platformScript = script.replace(/[\\/]+/g, sep);
+  const resolvedScript = resolve(projectDir, platformScript);
+  for (const candidate of relativeCandidates) {
+    if (resolve(projectDir, ...candidate.split("/")) === resolvedScript) return true;
+  }
+  return false;
+}
+
+const MIGRATION_UTILITY_PATHS = [
+  ".claude/tools/amadeus-utility.ts",
+  ".codex/tools/amadeus-utility.ts",
+  ".kiro/tools/amadeus-utility.ts",
+  "packages/framework/core/tools/amadeus-utility.ts",
+] as const;
+
+const MIGRATION_CORE_PATHS = [
+  ".claude/tools/amadeus-migrate.ts",
+  ".codex/tools/amadeus-migrate.ts",
+  ".kiro/tools/amadeus-migrate.ts",
+  "packages/framework/core/tools/amadeus-migrate.ts",
+] as const;
+
+function migrationExecutionInvocation(
+  command: string,
+  projectDir: string,
+): { script: string; args: string[] } | null {
+  const invocation = bunScriptInvocation(command);
+  if (invocation === null) return null;
+  const script = invocation.script.split(/[\\/]/).at(-1);
+  if (script === "amadeus-utility.ts") {
+    return (
+      scriptResolvesTo(projectDir, invocation.script, MIGRATION_UTILITY_PATHS) &&
+      invocation.args[0] === "migrate"
+        ? invocation
+        : null
+    );
+  }
+  if (script !== "amadeus-migrate.ts") return null;
+  const fromIndex = invocation.args.indexOf("--from");
+  const from = invocation.args[fromIndex + 1];
+  return (
+    scriptResolvesTo(projectDir, invocation.script, MIGRATION_CORE_PATHS) &&
+    fromIndex !== -1 &&
+    from !== undefined &&
+    !from.startsWith("--")
+      ? invocation
+      : null
+  );
+}
+
+/** True only for the single terminal utility/core invocation that actually
+ * runs a workspace migration. Merely consulting `orchestrate next --migrate`,
+ * mentioning the command, or placing it in a shell list is not enough. */
+export function isMigrationExecutionCommand(command: string, projectDir: string): boolean {
+  return migrationExecutionInvocation(command, projectDir) !== null;
+}
+
+/** True only for a canonical migration execution that selected apply mode. */
+export function isMigrationApplyCommand(command: string, projectDir: string): boolean {
+  return migrationExecutionInvocation(command, projectDir)?.args.includes("--apply") === true;
+}
+
+const MIGRATION_DISPATCH_PATHS = [
+  ".claude/tools/amadeus-orchestrate.ts",
+  ".codex/tools/amadeus-orchestrate.ts",
+  ".kiro/tools/amadeus-orchestrate.ts",
+  "packages/framework/core/tools/amadeus-orchestrate.ts",
+] as const;
+
+/** True only for the conductor's single, read-only migration dispatch or a
+ * public apply attempt that the engine rejects before workflow state. Kiro's
+ * preToolUse floor uses this so the route can reach the shared engine without
+ * minting or advancing an Intent; the PostToolUse hook additionally inspects
+ * the returned directive before arming a terminal Stop latch. */
+export function isMigrationDispatchCommand(command: string, projectDir: string): boolean {
+  const invocation = bunScriptInvocation(command);
+  if (invocation === null) return false;
+  const script = invocation.script.split(/[\\/]/).at(-1);
+  const nextArgs = invocation.args.slice(1);
+  return (
+    script === "amadeus-orchestrate.ts" &&
+    scriptResolvesTo(projectDir, invocation.script, MIGRATION_DISPATCH_PATHS) &&
+    invocation.args[0] === "next" &&
+    isMigrationPublicRoute(nextArgs)
+  );
+}
+
+function nonEmptyTrimmedString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const output = value.trim();
+  return output.length > 0 ? output : null;
+}
+
+function migrationDispatchItemsOutput(items: unknown): string | null {
+  if (!Array.isArray(items) || items.length === 0) return null;
+  const chunks: string[] = [];
+  for (const item of items) {
+    if (item === null || typeof item !== "object") return null;
+    const text = (item as { Text?: unknown }).Text;
+    if (typeof text !== "string") return null;
+    chunks.push(text);
+  }
+  const output = chunks.join("\n").trim();
+  return output.length > 0 ? output : null;
+}
+
+function migrationDispatchOutput(toolResponse: unknown): string | null {
+  const direct = nonEmptyTrimmedString(toolResponse);
+  if (direct !== null) return direct;
+  if (toolResponse === null || typeof toolResponse !== "object") return null;
+  const response = toolResponse as Record<string, unknown>;
+  return (
+    nonEmptyTrimmedString(response.stdout) ??
+    nonEmptyTrimmedString(response.output) ??
+    nonEmptyTrimmedString(response.text) ??
+    migrationDispatchItemsOutput(response.items)
+  );
+}
+
+/** True only when an exact migration dispatch returned the engine's terminal
+ * error directive. A valid migration returns `print` and deliberately does not
+ * match: if the conductor skips its dry-run, Stop must still enforce the loop. */
+export function isRejectedMigrationDispatch(
+  command: string,
+  toolResponse: unknown,
+  projectDir: string,
+): boolean {
+  if (!isMigrationDispatchCommand(command, projectDir)) return false;
+  const output = migrationDispatchOutput(toolResponse);
+  if (output === null) return false;
+  try {
+    const parsed = JSON.parse(output) as unknown;
+    return (
+      parsed !== null &&
+      typeof parsed === "object" &&
+      !Array.isArray(parsed) &&
+      (parsed as { kind?: unknown }).kind === "error" &&
+      typeof (parsed as { message?: unknown }).message === "string"
+    );
+  } catch {
+    return false;
+  }
+}
+
+const MIGRATION_LATCH_MAX_AGE_MS = 10 * 60 * 1000;
+
+function migrationStopLatchPath(projectDir: string, sessionId: string): string {
+  const key = createHash("sha256")
+    .update(resolve(projectDir))
+    .update("\0")
+    .update(sessionId)
+    .digest("hex")
+    .slice(0, 24);
+  return join(tmpdir(), `amadeus-migration-stop-${key}.json`);
+}
+
+function migrationPendingDecisionPath(projectDir: string, sessionId: string): string {
+  const key = createHash("sha256")
+    .update(resolve(projectDir))
+    .update("\0")
+    .update(sessionId)
+    .digest("hex")
+    .slice(0, 24);
+  return join(tmpdir(), `amadeus-migration-decision-${key}.json`);
+}
+
+function validMigrationSessionId(sessionId: string | undefined): sessionId is string {
+  return typeof sessionId === "string" && sessionId.trim().length > 0;
+}
+
+function armSecureMigrationLatch(path: string, now: number): void {
+  const stagingPath = join(
+    tmpdir(),
+    `.amadeus-migration-latch-${process.pid}-${randomUUID()}.tmp`,
+  );
+  try {
+    writeFileSync(
+      stagingPath,
+      JSON.stringify({ timestamp: now }) + "\n",
+      { flag: "wx", mode: 0o600 },
+    );
+    // Rename replaces the predictable latch directory entry without following
+    // it. A pre-planted symlink therefore gets replaced, never written through.
+    renameSync(stagingPath, path);
+  } catch {
+    // Advisory: a latch failure must never change the migration command result.
+  } finally {
+    try {
+      unlinkSync(stagingPath);
+    } catch {
+      // A successful rename moved the staging entry to its final path.
+    }
+  }
+}
+
+/** Arm the one-shot Stop-hook terminal carve-out without touching the project
+ * tree. A missing session id fails closed so another session can never consume
+ * a project-global permission. `now` is a deterministic stale-latch test seam. */
+export function armMigrationStopLatch(
+  projectDir: string,
+  sessionId: string | undefined,
+  now = Date.now(),
+): void {
+  if (!validMigrationSessionId(sessionId)) return;
+  armSecureMigrationLatch(migrationStopLatchPath(projectDir, sessionId), now);
+}
+
+/** Remember that Kiro CLI emitted a migration approval gate. The marker stores
+ * only its timestamp: source paths and migration mode remain in the conductor's
+ * prior directive, never in this project-external coordination record. */
+export function armMigrationPendingDecision(
+  projectDir: string,
+  sessionId: string | undefined,
+  now = Date.now(),
+): void {
+  if (!validMigrationSessionId(sessionId)) return;
+  armSecureMigrationLatch(migrationPendingDecisionPath(projectDir, sessionId), now);
+}
+
+function isSecureMigrationLatch(path: string): boolean {
+  // Inspect the claimed directory entry itself. readFileSync must never be
+  // allowed to follow a symlink moved from the predictable latch path. The
+  // caller's catch also fails closed if this inspection races with removal.
+  const stat = lstatSync(path);
+  if (!stat.isFile()) return false;
+  const getuid = process.getuid;
+  if (typeof getuid === "function") {
+    if ((stat.mode & 0o777) !== 0o600 || stat.uid !== getuid()) return false;
+  }
+  // Windows has no POSIX uid/mode contract. Its per-user temp directory ACL is
+  // the ownership boundary; the regular-file and atomic-claim checks still apply.
+  return true;
+}
+
+function claimSecureMigrationLatch(
+  path: string,
+  consume: boolean,
+  now: number,
+): boolean {
+  const claimPath = `${path}.${process.pid}.${randomUUID()}.claim`;
+  let restored = false;
+  try {
+    // rename is atomic on the temp filesystem: concurrent Stop hooks cannot
+    // both claim the same permission, so the latch is genuinely one-shot.
+    renameSync(path, claimPath);
+  } catch {
+    return false;
+  }
+  try {
+    if (!isSecureMigrationLatch(claimPath)) return false;
+    const parsed = JSON.parse(readFileSync(claimPath, "utf-8")) as { timestamp?: unknown };
+    if (typeof parsed.timestamp !== "number") return false;
+    const age = now - parsed.timestamp;
+    if (age < 0 || age > MIGRATION_LATCH_MAX_AGE_MS) return false;
+    if (!consume) {
+      // A fresh Yes answer only peeks. Restore by rename so no read/write ever
+      // follows a predictable-path symlink planted during inspection.
+      renameSync(claimPath, path);
+      restored = true;
+    }
+    return true;
+  } catch {
+    return false;
+  } finally {
+    if (!restored) {
+      try {
+        unlinkSync(claimPath);
+      } catch {
+        // A consumed or rejected claim has no reusable permission left.
+      }
+    }
+  }
+}
+
+/** Consume a fresh migration-terminal latch. Stale or malformed records are
+ * deleted and fail closed so they cannot suppress a later workflow turn. */
+export function consumeMigrationStopLatch(
+  projectDir: string,
+  sessionId: string | undefined,
+  now = Date.now(),
+): boolean {
+  if (!validMigrationSessionId(sessionId)) return false;
+  return claimSecureMigrationLatch(
+    migrationStopLatchPath(projectDir, sessionId),
+    true,
+    now,
+  );
+}
+
+/** Inspect a fresh Kiro CLI migration gate without consuming it. Only an exact
+ * Yes response uses this; stale, malformed, insecure, or cross-session records
+ * fail closed and are removed outside the project tree. */
+export function peekMigrationPendingDecision(
+  projectDir: string,
+  sessionId: string | undefined,
+  now = Date.now(),
+): boolean {
+  if (!validMigrationSessionId(sessionId)) return false;
+  return claimSecureMigrationLatch(
+    migrationPendingDecisionPath(projectDir, sessionId),
+    false,
+    now,
+  );
+}
+
+/** Consume the pending decision after an exact No answer or after Kiro reports
+ * the approved apply command through PostToolUse. */
+export function consumeMigrationPendingDecision(
+  projectDir: string,
+  sessionId: string | undefined,
+  now = Date.now(),
+): boolean {
+  if (!validMigrationSessionId(sessionId)) return false;
+  return claimSecureMigrationLatch(
+    migrationPendingDecisionPath(projectDir, sessionId),
+    true,
+    now,
+  );
+}
+
+// Classify the post-`/amadeus` argument tokens. Returns the terminal command to run
+// deterministically, or null when the input is NOT a terminal command (freeform
+// intent text, a --scope/--stage/--phase jump, a config/scope change, birth — all
+// of which carry workflow work and MUST go through the engine + conductor). The
+// matching rules are byte-for-byte the engine's parseNextFlags terminal branches
+// (read-only flag anywhere; workspace verb only at index 0) so the seam and the
+// engine can never disagree about what is terminal.
+export function classifyTerminalCommand(args: string[]): TerminalCommand | null {
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (READ_ONLY_FLAGS.has(a)) {
+      return { subcommand: a.replace(/^--/, ""), source: "read-only-flag" };
+    }
+    if (i === 0 && WORKSPACE_VERBS.has(a)) {
+      const next = args[i + 1];
+      const arg = next !== undefined && !next.startsWith("--") ? next : undefined;
+      return arg !== undefined
+        ? { subcommand: a, arg, source: "workspace-verb" }
+        : { subcommand: a, source: "workspace-verb" };
+    }
+  }
+  return null;
+}
+
+// `amadeus/` — the harness-neutral workspace roof (memory · codekb · knowledge ·
+// intents live under spaces/<space>/ here; the engine stays in <harness>/).
+export function workspaceRoot(projectDir: string): string {
+  return join(projectDir, "amadeus");
+}
+
+function isRealDirectory(path: string): boolean {
+  try {
+    return lstatSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function isRealRegularFile(path: string): boolean {
+  try {
+    return lstatSync(path).isFile();
+  } catch {
+    return false;
+  }
+}
+
+function isSafeWorkspaceEntryName(name: string): boolean {
+  return name !== "" && name !== "." && name !== ".." && !/[\\/]/.test(name);
+}
+
+function realIntentsDir(projectDir: string, space: string): string | null {
+  if (!isSafeWorkspaceEntryName(space)) return null;
+  const root = workspaceRoot(projectDir);
+  const allSpaces = join(root, "spaces");
+  const spaceRoot = join(allSpaces, space);
+  const intents = join(spaceRoot, "intents");
+  return [root, allSpaces, spaceRoot, intents].every(isRealDirectory)
+    ? intents
+    : null;
+}
+
+// The active space for this project. Reads the `amadeus/active-space` cursor;
+// defaults to "default". NEVER throws — the default space is always valid even
+// when nothing is on disk yet (the resolver tolerates an absent space dir).
+export function activeSpace(projectDir: string): string {
+  const ptr = join(workspaceRoot(projectDir), ACTIVE_SPACE_POINTER);
+  try {
+    if (!isRealDirectory(workspaceRoot(projectDir))) return DEFAULT_SPACE;
+    if (!isRealRegularFile(ptr)) return DEFAULT_SPACE;
+    const raw = readFileSync(ptr, "utf-8").trim();
+    if (isSafeWorkspaceEntryName(raw)) return raw;
+  } catch {
+    // no cursor → default
+  }
+  return DEFAULT_SPACE;
+}
+
+// `amadeus/spaces/<space>/intents` — the intent registry + record root.
+export function intentsDir(projectDir: string, space?: string): string {
+  const sp = space ?? activeSpace(projectDir);
+  return join(workspaceRoot(projectDir), "spaces", sp, "intents");
+}
+
+// `amadeus/spaces/<space>/knowledge` — SPACE DOMAIN knowledge (durable, free-form,
+// team-authored, empty at bootstrap). A space-level sibling of memory/codekb/
+// intents (vision §"Spaces": "its own memory, codekb, knowledge, and intent
+// record") — NOT per-intent: domain knowledge accumulates across every intent in
+// the space, so it must not live inside one intent's record. Distinct from the
+// engine's per-agent METHODOLOGY knowledge at <harness>/knowledge/ (shipped,
+// untouched). Created lazily by ensure-exists, never by SEED.
+export function knowledgeDir(projectDir: string, space?: string): string {
+  const sp = space ?? activeSpace(projectDir);
+  return join(workspaceRoot(projectDir), "spaces", sp, "knowledge");
+}
+
+// Enumerate the intent RECORD directories in a space (each `<slug>-<id8>/`
+// holding an amadeus-state.md). Returns the bare directory names, sorted; [] when
+// the space has no intents dir or no records yet. The intents.json registry is
+// the canonical list for humans/ordering — this on-disk scan is the cheap
+// "does any record exist?" signal the path resolver and migration detector need
+// (it must not depend on the registry being present).
+export function listIntentDirs(projectDir: string, space?: string): string[] {
+  const sp = space ?? activeSpace(projectDir);
+  const dir = realIntentsDir(projectDir, sp);
+  if (dir === null) return [];
+  let entries: string[];
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return [];
+  }
+  const records: string[] = [];
+  for (const name of entries) {
+    // A record dir holds amadeus-state.md; skip the active-intent cursor,
+    // intents.json, and any stray files.
+    if (!isSafeWorkspaceEntryName(name)) continue;
+    const record = join(dir, name);
+    if (
+      isRealDirectory(record) &&
+      isRealRegularFile(join(record, "amadeus-state.md"))
+    ) {
+      records.push(name);
+    }
+  }
+  return records.sort();
+}
+
+// The active intent's RECORD directory NAME (`<slug>-<id8>`) for a space, or
+// null when no record resolves (→ the path helpers resolve the bare space record
+// root). Precedence: explicit > active-intent cursor (if it names a real record)
+// > lone intent. Returns null rather than throwing on ambiguity so the path
+// helpers stay total; the verb/handler layer (P4) owns the error/prompt for the
+// >1-intent-no-cursor case.
+export function activeIntent(
+  projectDir: string,
+  space?: string,
+  explicit?: string,
+): string | null {
+  const sp = space ?? activeSpace(projectDir);
+  if (explicit) return explicit;
+  const records = listIntentDirs(projectDir, sp);
+  const dir = realIntentsDir(projectDir, sp);
+  // Cursor: a real record the pointer names.
+  try {
+    if (dir !== null) {
+      const cursor = join(dir, ACTIVE_INTENT_POINTER);
+      if (isRealRegularFile(cursor)) {
+        const raw = readFileSync(cursor, "utf-8").trim();
+        if (records.includes(raw)) return raw;
+      }
+    }
+  } catch {
+    // no cursor → fall through to lone-intent
+  }
+  if (records.length === 1) return records[0];
+  // 0 records → null (bare space root); >1 with no cursor → null (the handler
+  // layer prompts; a path helper cannot guess which intent the caller meant).
+  return null;
+}
+
+// The absolute RECORD directory for an intent:
+// `amadeus/spaces/<space>/intents/<slug>-<id8>/`. Returns null when no intent
+// resolves, signalling the bare-space-root resolution in the path helpers.
+export function recordDir(
+  projectDir: string,
+  intent?: string,
+  space?: string,
+): string | null {
+  const sp = space ?? activeSpace(projectDir);
+  const slug = activeIntent(projectDir, sp, intent);
+  if (slug === null) return null;
+  return join(intentsDir(projectDir, sp), slug);
+}
+
+// Stage diaries (<record>/<phase>/<stage>/memory.md) are auto-created from the
+// shipped template at stage start (CLAUDE.md Conventions). The engine is the
+// deterministic creator: `next` calls this while building each run-stage
+// directive, so every issuance path (advance / jump / birth / resume / --single)
+// passes through one chokepoint. Idempotent by contract — an existing diary is
+// NEVER overwritten (re-entry and resume must keep accumulated entries, mirroring
+// conductor.md "Keeping the diary"). The template resolves under the harness dir
+// (<harness>/knowledge/amadeus-shared/memory-template.md — the same file
+// conductor.md names as the copy source); the space-relative
+// memoryTemplatesDir() family is a different resolver for sensor floors and is
+// deliberately not used here (#1080). A missing template must not block the
+// workflow (the diary is an observation layer) but must not fail silent either:
+// the caller gets "template-missing" and a one-line stderr warning is emitted.
+export function ensureStageDiary(
+  projectDir: string,
+  memoryPathRel: string,
+): "created" | "exists" | "template-missing" {
+  const abs = join(projectDir, memoryPathRel);
+  if (existsSync(abs)) return "exists";
+  const template = join(projectDir, harnessDir(), "knowledge", "amadeus-shared", "memory-template.md");
+  if (!existsSync(template)) {
+    console.error(`amadeus: stage diary not auto-created — template missing at ${template}`);
+    return "template-missing";
+  }
+  mkdirSync(dirname(abs), { recursive: true });
+  writeFileSync(abs, readFileSync(template));
+  return "created";
+}
+
+// E-OC1 evidence check for gate-start (#1101): the 3-step order (report the
+// no-election judgment -> leader approval -> only then fill [Answer]) is a
+// prose norm that slipped twice in one day, so gate-start enforces the
+// machine-checkable half as an implication: a FILLED [Answer] must be
+// accompanied, somewhere in the same questions file, by a ruling reference
+// (an E-code ON THE ANSWER LINE ITSELF -- every questions header cites
+// "E-OC1" by name, so a file-wide E-code scan would make the guard vacuous)
+// or, anywhere in the file, a leader-approval line carrying a parseable ISO
+// timestamp.
+// Everything else passes unconditionally: a missing questions file (not every
+// stage has one), a file with no [Answer] tag at all (the post-E-OC1 "0
+// questions" format), and a blank/waiting placeholder. The blank rule is
+// deliberately asymmetric: content that is nothing but one parenthesized
+// group is the measured waiting-placeholder shape (e.g. "(TF-Q0 選挙の裁定受領後に記入
+// — cid:election-answer-after-ruling)"), and misreading a parenthesized real
+// answer as blank degrades to PASS — the guard exists to catch unevidenced
+// fills, never to reject legitimate flows. Read-only; callers decide how to
+// fail (amadeus-state.ts gate-start maps fail reasons to fail-closed error()).
+export type QuestionsEvidence =
+  | { kind: "pass"; reason: "no-file" | "no-answer-tag" | "answer-blank" | "evidence-present" }
+  | { kind: "fail"; reason: "no-evidence" | "unparseable-timestamp" };
+
+const ANSWER_TAG_RE = /\[Answer\]\s*:/;
+const ECODE_RE = /E-[A-Z0-9][A-Z0-9-]*/;
+const ISO_TS_RE = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?Z?/;
+
+// Blank shapes: empty, "N/A" (any case), or content that is nothing but one
+// parenthesized group — the measured waiting-placeholder convention.
+function isFilledAnswer(line: string): boolean {
+  const content = line.slice(line.search(ANSWER_TAG_RE)).replace(ANSWER_TAG_RE, "").trim();
+  if (content === "" || /^n\/a$/i.test(content)) return false;
+  return !/^[((][^)))]*[))]$/.test(content);
+}
+
+// A leader-approval line satisfies the evidence requirement only when its ISO
+// timestamp actually parses (parse-don't-validate; a decorative "承認" line
+// with no real timestamp is the unparseable-timestamp failure).
+function hasParseableApprovalTimestamp(line: string): boolean {
+  const m = line.match(ISO_TS_RE);
+  if (!m) return false;
+  return Number.isFinite(Date.parse(m[0].endsWith("Z") ? m[0] : `${m[0]}Z`));
+}
+
+// Enforcement cutoff (YYMMDD) for the E-OC1 evidence guard: intents whose
+// record-dir date is on/after this day are subject to the check; older intents
+// predate the evidence-header convention and are exempt ("no retroactive
+// checks"). Canonical here so both consumers — the gate-start guard
+// (amadeus-state.ts handleGateStart) and the advisory answer-evidence sensor
+// (amadeus-sensor-answer-evidence.ts) — derive the boundary from one definition
+// rather than duplicating the literal.
+export const QUESTIONS_EVIDENCE_CUTOFF_YYMMDD = 260716;
+
+// Plain loops, zero anonymous functions: the complexity baseline matches
+// anonymous functions by ordinal, so adding arrows here shifts unrelated
+// entries into NEW_VIOLATION (the E-PM2 M7 mechanism, measured again on this
+// change).
+export function checkQuestionsEvidence(questionsPath: string): QuestionsEvidence {
+  if (!existsSync(questionsPath)) return { kind: "pass", reason: "no-file" };
+  const lines = readFileSync(questionsPath, "utf-8").split("\n");
+  const answerLines: string[] = [];
+  for (const l of lines) if (ANSWER_TAG_RE.test(l)) answerLines.push(l);
+  if (answerLines.length === 0) return { kind: "pass", reason: "no-answer-tag" };
+  let filled = false;
+  let hasEcode = false;
+  for (const l of answerLines) {
+    if (isFilledAnswer(l)) filled = true;
+    if (ECODE_RE.test(l)) hasEcode = true;
+  }
+  if (!filled) return { kind: "pass", reason: "answer-blank" };
+  if (hasEcode) return { kind: "pass", reason: "evidence-present" };
+  let sawApprovalLine = false;
+  for (const l of lines) {
+    if (!l.includes("承認")) continue;
+    sawApprovalLine = true;
+    if (hasParseableApprovalTimestamp(l)) return { kind: "pass", reason: "evidence-present" };
+  }
+  if (sawApprovalLine) return { kind: "fail", reason: "unparseable-timestamp" };
+  return { kind: "fail", reason: "no-evidence" };
+}
+
+// Relative record-dir prefix for the engine's agent-consumed artifact/diary
+// paths: `amadeus/spaces/<space>/intents/<slug>-<id8>` with forward slashes
+// regardless of host OS (portable across worktrees). Returns null → the engine
+// resolvers resolve the bare space-relative record prefix
+// (relativeSpaceRecordPrefix). The space + intent come from the active cursors
+// unless passed explicitly; the engine threads the active intent's record-dir
+// name in (it knows projectDir but the resolvers themselves take no projectDir —
+// see amadeus-orchestrate.ts).
+export function relativeRecordDir(
+  projectDir: string,
+  intent?: string,
+  space?: string,
+): string | null {
+  const sp = space ?? activeSpace(projectDir);
+  const slug = activeIntent(projectDir, sp, intent);
+  if (slug === null) return null;
+  return `amadeus/spaces/${sp}/intents/${slug}`;
+}
+
+// `amadeus/spaces/<space>/codekb/<repo>/` — the durable per-repo code
+// knowledge base, a space-level sibling of memory/knowledge/intents (vision
+// §Spaces; committed glob amadeus/spaces/*/codekb/**). NOT per-intent: it is keyed
+// by repo and shared across every intent in the space, so it must NOT carry the
+// intents/<slug> tail. Mirrors knowledgeDir's space-aware shape.
+export function codekbDir(projectDir: string, repo: string, space?: string): string {
+  const sp = space ?? activeSpace(projectDir);
+  return join(workspaceRoot(projectDir), "spaces", sp, "codekb", repo);
+}
+
+// Relative analog of codekbDir (posix slashes), the engine-emitted form
+// the conductor/subagent reads. Mirrors relativeRecordDir (takes projectDir so it
+// can read the active-space cursor — NOT relativeSpaceRecordPrefix, which is
+// pinned to the default space).
+export function relativeCodekbDir(projectDir: string, repo: string, space?: string): string {
+  const sp = space ?? activeSpace(projectDir);
+  return `amadeus/spaces/${sp}/codekb/${repo}`;
+}
+
+// `amadeus/spaces/<space>/codekb/<repo>/re-scans/` — the PER-INTENT reverse-
+// engineering scan-record store within a repo's codekb. Each intent's differential
+// base point (base commit / observed commit / focus / date) lives in its OWN file
+// here, keyed by the intent's record-dir name, so two intents scanning the same
+// repo concurrently never overwrite one another's base point (#707). Contrast the
+// repo-level 8 body artifacts + the `reverse-engineering-timestamp.md` freshness
+// pointer, which stay shared and last-writer-wins. The dir is intent-independent
+// (like codekbDir): the per-intent key is the FILE stem (see codekbReScanFile).
+export function codekbReScanDir(projectDir: string, repo: string, space?: string): string {
+  return join(codekbDir(projectDir, repo, space), "re-scans");
+}
+
+// Relative analog of codekbReScanDir (posix slashes) — the engine-emitted form
+// the conductor/subagent reads. Mirrors relativeCodekbDir.
+export function relativeCodekbReScanDir(projectDir: string, repo: string, space?: string): string {
+  return `${relativeCodekbDir(projectDir, repo, space)}/re-scans`;
+}
+
+// The absolute PER-INTENT RE scan-record file:
+// `amadeus/spaces/<space>/codekb/<repo>/re-scans/<intent-record>.md`. The stem is
+// the intent's record-dir NAME (`<slug>-<id8>`), globally unique, so concurrent
+// intents resolve to distinct files (#707). `intent` defaults to the active
+// intent's record-dir name (via activeIntent); returns null when no intent
+// resolves — a caller cannot name a per-intent record without an intent (mirrors
+// relativeRecordDir's null contract).
+export function codekbReScanFile(
+  projectDir: string,
+  repo: string,
+  space?: string,
+  intent?: string,
+): string | null {
+  const sp = space ?? activeSpace(projectDir);
+  const record = activeIntent(projectDir, sp, intent);
+  if (record === null) return null;
+  return join(codekbReScanDir(projectDir, repo, sp), `${record}.md`);
+}
+
+// Relative analog of codekbReScanFile (posix slashes). Returns null on the same
+// no-intent-resolves condition as codekbReScanFile.
+export function relativeCodekbReScanFile(
+  projectDir: string,
+  repo: string,
+  space?: string,
+  intent?: string,
+): string | null {
+  const sp = space ?? activeSpace(projectDir);
+  const record = activeIntent(projectDir, sp, intent);
+  if (record === null) return null;
+  return `${relativeCodekbReScanDir(projectDir, repo, sp)}/${record}.md`;
+}
+
+// The deterministic repo NAME for codekb keying (NOT the intent slug):
+//   1 recorded repo  -> that name
+//   0 recorded repos (workspace root IS the repo) -> the `origin` remote's repo
+//                       slug (SSH/HTTPS, .git suffix stripped) when one resolves,
+//                       else basename(projectDir). Worktree/clone directory names
+//                       (e.g. `codex-engineer-2`) are NOT stable across checkouts
+//                       of the same repo, so basename alone fragmented codekb/
+//                       into one directory per checkout leaf (#668); the origin
+//                       remote is stable across worktrees/clones of one repo.
+//   >1 recorded      -> caller loops per repo (this returns basename as a safe
+//                       default; callers that know the repo pass --repo explicitly).
+// basename done here (lib has basename imported) so callers never inline it.
+export function codekbRepoName(projectDir: string, space?: string): string {
+  const repos = intentRepos(projectDir, undefined, space);
+  if (repos.length === 1) return repos[0];
+  if (repos.length === 0) {
+    const remoteSlug = originRepoSlug(projectDir);
+    if (remoteSlug) return remoteSlug;
+  }
+  return basename(projectDir);
+}
+
+// Extract the repo slug (e.g. `amadeus`) from the `origin` remote's URL, the
+// last path segment with any `.git` suffix stripped. Handles both SSH
+// (`git@github.com:org/repo.git`) and HTTPS (`https://github.com/org/repo.git`)
+// forms. Returns null on any git failure, missing remote, or unparseable URL
+// (fail-safe: codekbRepoName falls back to basename(projectDir)).
+function originRepoSlug(projectDir: string): string | null {
+  let url: string;
+  try {
+    const r = spawnSync("git", ["remote", "get-url", "origin"], {
+      cwd: projectDir,
+      encoding: "utf-8",
+      timeout: 5_000,
+    });
+    if (r.status !== 0 || typeof r.stdout !== "string") return null;
+    url = r.stdout.trim();
+  } catch {
+    return null;
+  }
+  if (url.length === 0) return null;
+  const withoutGitSuffix = url.replace(/\.git$/, "");
+  const lastSegment = withoutGitSuffix.split(/[/:]/).pop();
+  return lastSegment && lastSegment.length > 0 ? lastSegment : null;
+}
+
+// The bare SPACE record root: `amadeus/spaces/<space>/intents/`. The absolute path
+// helpers resolve here when no intent record exists (activeIntent → null) — a
+// fresh SEED shell before auto-birth, or a flat project still awaiting migration.
+// No amadeus-state.md ever lives directly here, so existence-gated readers
+// (loadStateFileIfPresent) see "no workflow yet" and the orchestrator
+// births/errors. This is the P9 end state — there is no flat `amadeus-docs/` root.
+function spaceRecordRoot(projectDir: string, space?: string): string {
+  return intentsDir(projectDir, space);
+}
+
+// The bare space-RELATIVE record prefix (posix slashes) — the relative analog of
+// spaceRecordRoot, used by the engine/worktree resolvers when no per-intent
+// record prefix is threaded. The relative resolvers take no projectDir, so they
+// cannot read the active-space cursor and default to `default` (the same
+// single-string limitation the old flat relative prefix had — not a regression;
+// a non-default space threads relativeRecordDir explicitly).
+export function relativeSpaceRecordPrefix(space: string = DEFAULT_SPACE): string {
+  return `amadeus/spaces/${space}/intents`;
+}
+
+// --- Intent identity: UUIDv7 + slugify ----------------------------------------
+//
+// The canonical intent id is a UUIDv7 (time-ordered, globally unique, merge-safe,
+// stable across a slug rename). The dir name is `<slug>-<id8>` where id8 is the
+// trailing 8 hex of the uuid (a derived disambiguator). A within-space clash
+// resolves by the next-longer prefix of the SAME uuid (id8→id10→…), never a
+// re-mint.
+
+// Generate a UUIDv7: a 48-bit Unix-ms timestamp prefix + version 7 nibble +
+// random/variant tail. Sorting by uuid string is creation order. Uses new Date()
+// for the timestamp (permitted; isoTimestamp does the same) and randomUUID() for
+// the random + variant bits (no Math.random): take the v4 uuid's 32 hex digits,
+// overwrite the first 12 (the timestamp) and the 13th (the version nibble → 7),
+// and keep digits 13..31 (which include the v4 variant nibble) cryptographically
+// sourced.
+export function uuidv7(): string {
+  const hex = randomUUID().replace(/-/g, ""); // 32 hex chars, v4
+  const ms = new Date().getTime();
+  const tsHex = ms.toString(16).padStart(12, "0").slice(-12); // 48 bits = 12 hex
+  const body = `${tsHex}7${hex.slice(13)}`; // ts(12) + version(1) + tail(19)
+  return `${body.slice(0, 8)}-${body.slice(8, 12)}-${body.slice(12, 16)}-${body.slice(16, 20)}-${body.slice(20, 32)}`;
+}
+
+// The id8 disambiguator: trailing 8 hex chars of the uuid (digits only, dashes
+// stripped). Used in the `<slug>-<id8>` dir name.
+export function idSuffix(uuid: string, length = 8): string {
+  const hex = uuid.replace(/-/g, "");
+  return hex.slice(-length);
+}
+
+// Deterministic free-text → SLUG_RE-valid kebab: lowercase; non-alphanumerics →
+// hyphens; collapse + trim hyphens; cap length; ensure a leading letter. Pure +
+// idempotent (slugify(slugify(x)) === slugify(x)). Falls back to "intent" when
+// the input reduces to empty.
+export function slugify(text: string, maxLength = 48): string {
+  let s = text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, maxLength)
+    .replace(/-+$/g, "");
+  // Ensure a leading LETTER (SLUG_RE = /^[a-z][a-z0-9-]*$/).
+  if (!/^[a-z]/.test(s)) s = `intent-${s}`.replace(/-+$/g, "");
+  if (s.length === 0) s = "intent";
+  return s;
+}
+
+// --- Intent record dir name: <YYMMDD>-<short-label> ---------------------------
+//
+// SPIKE (date-prefix). The record dir name leads with a compact UTC date so the
+// records sort CHRONOLOGICALLY in any file browser / `ls` (the time token is a
+// PREFIX, where lexicographic sort = creation order — a suffix would sort by the
+// label). The label is a SHORT human slug (cap 24, vs the old 48) — the
+// orchestrator is expected to pass a 2-3 word essence ("simple calc"), not the
+// full request sentence. Uniqueness within the space is the caller's collision
+// loop (a -N counter), NOT this name: the canonical, collision-proof id stays the
+// UUIDv7 in the registry row, and the row now stores this dirName verbatim (so the
+// readers never reconstruct it from slug+uuid).
+
+// The human-readable LABEL for a record dir name, for display/orphan rows when
+// no registry row supplies a slug. SPIKE (date-prefix): strip a leading `YYMMDD-`
+// date prefix; else strip a legacy trailing `-<hex>` id8. Falls back to the whole
+// name if neither shape matches.
+export function displaySlugFromDirName(dirName: string): string {
+  const dated = /^\d{6}-(.+)$/.exec(dirName);
+  if (dated) return dated[1];
+  return dirName.replace(/-[0-9a-f]+$/, "");
+}
+
+// Compact UTC date stamp YYMMDD. UTC (not local) so the stamp is reproducible
+// regardless of the clone's timezone — matches isoTimestamp's UTC basis.
+export function dateStamp(date: Date = new Date()): string {
+  const yy = String(date.getUTCFullYear()).slice(-2);
+  const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(date.getUTCDate()).padStart(2, "0");
+  return `${yy}${mm}${dd}`;
+}
+
+// Build the BASE record dir name `<YYMMDD>-<short-label>` (pre-collision). The
+// label is slugified with the tighter 24-char cap. Starts with a DIGIT — legal,
+// since no SLUG_RE validates the intent dir name (those guard the bolt/stage/
+// artifact slugs). The collision loop appends `-2`, `-3`, … to this base.
+export function intentDirNameBase(label: string, date: Date = new Date()): string {
+  return `${dateStamp(date)}-${slugify(label, 24)}`;
+}
+
+// Resolve a within-space dir clash by appending a numeric counter: `<base>`,
+// `<base>-2`, `<base>-3`, … (the date prefix has no hex tail to extend, unlike the
+// pre-spike scheme). Two intents born the same day with the same short label is
+// the only collision case; the counter keeps the readable name AND uniqueness, and
+// the canonical id is still the row's UUIDv7. Returns the first free name.
+//
+// Bounded by MAX_DIR_COLLISIONS: 998 same-day same-label intents is not a real
+// workflow — it is a bug or a pathological caller (e.g. a script birthing in a
+// loop with a constant label). Fail LOUD with a diagnostic rather than spin, so
+// the cause surfaces. Safe to throw here: the caller holds the workspace lock via
+// withAuditLock, which releases in its `finally` (and an on-exit net), so the
+// throw unwinds without leaking the lock.
+export function resolveUniqueIntentDir(intentsRoot: string, base: string): string {
+  if (!existsSync(join(intentsRoot, base))) return base;
+  const MAX_DIR_COLLISIONS = 1000;
+  for (let n = 2; n < MAX_DIR_COLLISIONS; n++) {
+    const candidate = `${base}-${n}`;
+    if (!existsSync(join(intentsRoot, candidate))) return candidate;
+  }
+  throw new Error(
+    `Could not find a free intent record dir for "${base}" after ${MAX_DIR_COLLISIONS} attempts in ${intentsRoot}. ` +
+      `This many same-day intents with the same label indicates a bug or a runaway caller — pass a distinct --label.`,
+  );
+}
+
+// --- Flat-layout migration (one-time, lock-guarded, crash-safe) ---------------
+//
+// A pre-workspace project keeps its record at the flat `amadeus-docs/` root. This
+// moves it ONCE into a per-intent record dir under spaces/default/. Two review
+// blockers shaped the design (vision plan P1 migration box):
+//
+//  (1) DETECTION keys on a signal SEED does NOT ship: a flat `amadeus-docs/
+//      amadeus-state.md` present AND no `amadeus/spaces/*/intents/*/amadeus-state.md`
+//      record yet AND no `.migrated` marker. (SEED ships `amadeus/spaces/default/`,
+//      so "no spaces dir" would never fire and would orphan the legacy tree.)
+//  (2) IDEMPOTENCY keys on the `.migrated` marker ALONE (written LAST), never on
+//      `amadeus/spaces/` existence — a crash after the parent mkdir but before the
+//      move completes must re-detect and re-stage from the untouched original.
+//
+// MECHANISM (all inside withAuditLock on the WORKSPACE bucket): mint a UUIDv7;
+// slug from existing state or "default"; (1) stage a COPY of the whole amadeus-docs/
+// tree into a temp dir UNDER the workspace root (same filesystem — NOT tmpdir(),
+// or a cross-device rename degrades to non-atomic); (2) mkdir the intent dir's
+// PARENT chain; (3) ONE atomic rename of the staged tree into the leaf
+// <slug>-<id8>/ (the leaf is created BY this rename); (4) append to intents.json
+// + set active-intent; (5) write the `.migrated` marker LAST. The flat tree is
+// git-rm'd post-move (the data MOVED, not deleted); the source is NEVER rmSync'd.
+//
+// THE ONE SURVIVING `amadeus-docs` READ. P9 removed the transitional dual-layout
+// fallback — the record tree is now a SINGLE per-intent layout. The ONLY place
+// the legacy flat `amadeus-docs/` root is still read is this one-time migration:
+// needsFlatMigration() probes flatStateSource() and migrateFlatLayout() moves
+// flatMigrationSource(). These two private helpers localise that read so the
+// grep gate's `amadeus-docs` allowlist in core code is exactly this constant.
+const FLAT_MIGRATION_ROOT = "amadeus-docs";
+
+function flatMigrationSource(projectDir: string): string {
+  return join(projectDir, FLAT_MIGRATION_ROOT);
+}
+
+function flatStateSource(projectDir: string): string {
+  return join(flatMigrationSource(projectDir), "amadeus-state.md");
+}
+
+export const MIGRATED_MARKER = ".migrated";
+
+// The marker path: `amadeus/.migrated` (workspace-level, committed, idempotency key).
+export function migratedMarkerPath(projectDir: string): string {
+  return join(workspaceRoot(projectDir), MIGRATED_MARKER);
+}
+
+// Does this project need a flat→per-intent migration? Detection per blocker (1).
+export function needsFlatMigration(projectDir: string): boolean {
+  // Marker present → already migrated (idempotency key, blocker 2).
+  if (existsSync(migratedMarkerPath(projectDir))) return false;
+  // No flat state → nothing to migrate (a fresh SEED shell, or already moved).
+  // This is the migration DETECTION trigger — the sole legitimate read of the
+  // legacy flat state path (allowlisted in the grep gate).
+  const flatState = flatStateSource(projectDir);
+  if (!existsSync(flatState)) return false;
+  // Any new-layout intent RECORD already present → migration ran (or a fresh
+  // born intent exists); do not move a second tree on top of it.
+  if (anyIntentRecordExists(projectDir)) return false;
+  return true;
+}
+
+// True iff any space already holds an intent record (a `<dir>/amadeus-state.md`).
+// Scans amadeus/spaces/*/intents/*/amadeus-state.md WITHOUT relying on the registry.
+export function anyIntentRecordExists(projectDir: string): boolean {
+  for (const space of listSpaces(projectDir)) {
+    if (listIntentDirs(projectDir, space.name).length > 0) return true;
+  }
+  return false;
+}
+
+// Append an intent to the space's intents.json registry (creating it if absent).
+// MUST be called under the WORKSPACE lock bucket (invariant 2) — the registry is
+// shared workspace-level truth. Each row: {uuid, slug, scope, repos, status}.
+export interface IntentRegistryEntry {
+  uuid: string;
+  slug: string;
+  // The on-disk record dir name. SPIKE (date-prefix): stored verbatim at birth so
+  // readers join a row to its dir DIRECTLY, never reconstructing it from slug+uuid
+  // (the date-prefixed name `<YYMMDD>-<label>` is not derivable from {slug,uuid}).
+  // Optional for back-compat: pre-spike rows (and hand-written fixtures) omit it,
+  // and recordDirMatches() falls back to the legacy `<slug>-<id8>` hex match.
+  dirName?: string;
+  scope?: string;
+  repos?: string[];
+  status: string;
+  // Issue #499/#848: a docs-only declaration exempts a workspace_requires stage's
+  // completion guard (verifyStageArtifacts in amadeus-state.ts) from requiring
+  // source work outside amadeus/ — for Intents whose produces are entirely
+  // record-internal documents. Written only via setIntentDocsOnly (never hand-
+  // edited); a declaration with empty/missing evidence is invalid (see
+  // docsOnlyDeclaration).
+  docsOnly?: { evidence: string };
+}
+
+// Does record dir `dirName` belong to registry row `entry`? The single shared
+// join rule for every row→dir matcher (listIntents/updateIntentStatus/intentRepos).
+// SPIKE (date-prefix): prefer the stored `entry.dirName` (exact match); fall back
+// to the legacy `<slug>-<id8>` shape (slug prefix + trailing hex that is a prefix
+// of the uuid's id-suffix) so pre-spike rows and fixtures still resolve.
+export function recordDirMatches(entry: IntentRegistryEntry, dirName: string): boolean {
+  if (entry.dirName) return entry.dirName === dirName;
+  if (!dirName.startsWith(`${entry.slug}-`)) return false;
+  const suffix = dirName.slice(entry.slug.length + 1);
+  return /^[0-9a-f]+$/.test(suffix) && idSuffix(entry.uuid, suffix.length) === suffix;
+}
+
+export function intentsRegistryPath(projectDir: string, space?: string): string {
+  return join(intentsDir(projectDir, space), "intents.json");
+}
+
+export function appendIntentToRegistry(
+  projectDir: string,
+  entry: IntentRegistryEntry,
+  space?: string,
+): void {
+  const path = intentsRegistryPath(projectDir, space);
+  let list: IntentRegistryEntry[] = [];
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(path, "utf-8"));
+    if (Array.isArray(parsed)) list = parsed as IntentRegistryEntry[];
+  } catch {
+    // absent / malformed → start a fresh list
+  }
+  list.push(entry);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileAtomic(path, `${JSON.stringify(list, null, 2)}\n`);
+}
+
+// The `amadeus/spaces` root — the parent of every space dir. Sole helper so the
+// "what spaces exist?" scan and the intent-record scan agree on one location.
+export function spacesRoot(projectDir: string): string {
+  return join(workspaceRoot(projectDir), "spaces");
+}
+
+// Read a space's intents.json registry as a typed list. Returns [] when the
+// file is absent or malformed (same tolerance as appendIntentToRegistry). The
+// canonical "what intents exist" record for humans/ordering/status — the cheap
+// on-disk listIntentDirs() scan is the path-resolver's record-presence signal,
+// but the registry carries the uuid/status/scope/repos a human or the --json
+// consumer needs.
+export function readIntentRegistry(projectDir: string, space?: string): IntentRegistryEntry[] {
+  const sp = space ?? activeSpace(projectDir);
+  const dir = realIntentsDir(projectDir, sp);
+  if (dir === null) return [];
+  const path = join(dir, "intents.json");
+  try {
+    if (!isRealRegularFile(path)) return [];
+    const parsed: unknown = JSON.parse(readFileSync(path, "utf-8"));
+    if (Array.isArray(parsed)) return parsed as IntentRegistryEntry[];
+  } catch {
+    // absent / malformed → empty
+  }
+  return [];
+}
+
+// --- The deterministic query layer: "what exists" (one source, two modes) ----
+//
+// listSpaces()/listIntents() are the single shared readers the verb handlers,
+// the auto-birth gate, the resume-rebind, and the statusline all call (P4
+// query-layer box). Pure reads — they never mutate. A space exists iff its dir
+// is present under amadeus/spaces/; an intent's authoritative row is the
+// registry, joined with the on-disk record presence.
+
+export interface SpaceInfo {
+  name: string;
+  active: boolean;
+}
+
+// Enumerate the spaces (dir names under amadeus/spaces/), sorted, each flagged
+// active per the active-space cursor. "default" is always reported even when no
+// spaces dir exists yet (the resolver treats it as always-valid — activeSpace()
+// returns it), so the listing never claims zero spaces on a fresh shell.
+export function listSpaces(projectDir: string): SpaceInfo[] {
+  const active = activeSpace(projectDir);
+  const names = new Set<string>([DEFAULT_SPACE]);
+  const root = workspaceRoot(projectDir);
+  const allSpaces = spacesRoot(projectDir);
+  try {
+    if (!isRealDirectory(root) || !isRealDirectory(allSpaces)) {
+      return [{ name: DEFAULT_SPACE, active: active === DEFAULT_SPACE }];
+    }
+    for (const name of readdirSync(allSpaces)) {
+      if (
+        isSafeWorkspaceEntryName(name) &&
+        isRealDirectory(join(allSpaces, name))
+      ) {
+        names.add(name);
+      }
+    }
+  } catch {
+    // no spaces dir → just the always-present default
+  }
+  return [...names].sort().map((name) => ({ name, active: name === active }));
+}
+
+export interface IntentInfo {
+  uuid: string;
+  slug: string;
+  status: string;
+  scope?: string;
+  repos?: string[];
+  dirName: string | null; // the on-disk <slug>-<id8> record dir, or null if registry-only
+  active: boolean;
+}
+
+// Enumerate a space's intents from the registry, joined with the on-disk record
+// dirs, each flagged active per the active-intent cursor. The registry is the
+// ordering/identity source; the dir-name is matched by the id8 disambiguator
+// suffix so a registry row resolves to its record dir even when the slug was
+// later renamed. A record dir with no registry row (a hand-created or migrated
+// orphan) is appended so the listing never hides an on-disk intent.
+export function listIntents(projectDir: string, space?: string): IntentInfo[] {
+  const sp = space ?? activeSpace(projectDir);
+  const registry = readIntentRegistry(projectDir, sp);
+  const dirs = listIntentDirs(projectDir, sp);
+  // activeIntent() returns the record DIR NAME of the active intent (or null).
+  const activeDir = activeIntent(projectDir, sp);
+  const claimedDirs = new Set<string>();
+  const infos: IntentInfo[] = registry.map((entry) => {
+    // Match the row to its record dir via the shared join rule (stored dirName,
+    // else the legacy `<slug>-<id8>` shape).
+    const dirName = dirs.find((d) => recordDirMatches(entry, d)) ?? null;
+    if (dirName) claimedDirs.add(dirName);
+    return {
+      uuid: entry.uuid,
+      slug: entry.slug,
+      status: entry.status,
+      scope: entry.scope,
+      repos: entry.repos,
+      dirName,
+      active: dirName !== null && dirName === activeDir,
+    };
+  });
+  // On-disk records with no registry row (orphans) — surface them too.
+  for (const d of dirs) {
+    if (claimedDirs.has(d)) continue;
+    infos.push({
+      uuid: "",
+      slug: displaySlugFromDirName(d),
+      status: "unknown",
+      dirName: d,
+      active: d === activeDir,
+    });
+  }
+  return infos;
+}
+
+// Write the active-intent cursor for a space (gitignored per-user pointer).
+// Best-effort: the cursor dir is created if absent; a write failure is swallowed
+// (the cursor is per-user state, never the source of truth — the registry is).
+export function setActiveIntentCursor(projectDir: string, dirName: string, space?: string): void {
+  const dir = intentsDir(projectDir, space);
+  try {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, ACTIVE_INTENT_POINTER), `${dirName}\n`, "utf-8");
+  } catch {
+    /* per-user cursor; best-effort */
+  }
+}
+
+// Write the active-space cursor (gitignored per-user pointer). Best-effort.
+export function setActiveSpaceCursor(projectDir: string, name: string): void {
+  try {
+    mkdirSync(workspaceRoot(projectDir), { recursive: true });
+    writeFileSync(join(workspaceRoot(projectDir), ACTIVE_SPACE_POINTER), `${name}\n`, "utf-8");
+  } catch {
+    /* per-user cursor; best-effort */
+  }
+}
+
+// --- Per-conversation session→intent record (resume rebind, P8) --------------
+//
+// A conversation (one Claude Code `session_id`) works ONE intent at a time, but
+// the active-intent CURSOR is per-user, durable, and shared across sessions — so
+// resuming an A-chat after the cursor moved to B would otherwise silently inject
+// B's context (the central multi-space hazard, vision §3). The fix is a tiny
+// per-user, machine-local map: at session START stamp the working intent's UUID
+// keyed by session_id; on RESUME, compare the stamped UUID to the live cursor
+// and OFFER a rebind on mismatch. The map lives at `amadeus/.amadeus-sessions/`
+// (gitignored — see dot-gitignore `amadeus/.amadeus-sessions/`): it is per-user
+// runtime state, never shared truth. The intent record itself is the durable,
+// harness-neutral artifact; the session merely enriches the cursor on resume.
+export const SESSIONS_DIR = ".amadeus-sessions";
+
+function sessionsDir(projectDir: string): string {
+  return join(workspaceRoot(projectDir), SESSIONS_DIR);
+}
+
+// The per-session record file: `amadeus/.amadeus-sessions/<session-id>`. The
+// session id is normalised to the slug shape so a host-supplied id can never
+// escape the sessions dir (path traversal / separators); an empty id yields "".
+function sessionRecordPath(projectDir: string, sessionId: string): string {
+  const safe = sessionId.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+  if (!safe) return "";
+  return join(sessionsDir(projectDir), safe);
+}
+
+// Read the intent UUID this conversation last stamped, or null. Best-effort.
+export function readSessionIntentUuid(projectDir: string, sessionId: string): string | null {
+  const path = sessionRecordPath(projectDir, sessionId);
+  if (!path) return null;
+  try {
+    const raw = readFileSync(path, "utf-8").trim();
+    return raw.length > 0 ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+// Stamp the intent UUID this conversation is working into its session record.
+// Best-effort (per-user runtime state; a write failure degrades to "no offer on
+// the next resume", never breaks the hook). A blank uuid clears nothing — the
+// caller only stamps when an intent actually resolves.
+export function writeSessionIntentUuid(projectDir: string, sessionId: string, uuid: string): void {
+  const path = sessionRecordPath(projectDir, sessionId);
+  if (!path || !uuid) return;
+  try {
+    mkdirSync(sessionsDir(projectDir), { recursive: true });
+    writeFileSync(path, `${uuid}\n`, "utf-8");
+  } catch {
+    /* per-user runtime state; best-effort */
+  }
+}
+
+// The "current session" marker: a FIXED-name file inside the sessions dir naming
+// the most-recently-active session id. The per-session STAMP above is keyed by
+// session_id (which only the hook sees); a CLI tool like `/amadeus intent <slug>`
+// has no session_id, so it cannot re-stamp the live session's record on its own.
+// This marker is the bridge: the hook writes it on EVERY fire (so it always names
+// the live conversation), and the switch tool reads it to learn which session to
+// re-stamp. Lives beside the per-session records under `amadeus/.amadeus-sessions/`
+// (gitignored — dot-gitignore `amadeus/.amadeus-sessions/`): per-user runtime state.
+export const CURRENT_SESSION_FILE = ".current-session";
+
+function currentSessionPath(projectDir: string): string {
+  return join(sessionsDir(projectDir), CURRENT_SESSION_FILE);
+}
+
+// Read the most-recently-active session id, or null. Best-effort.
+export function readCurrentSessionId(projectDir: string): string | null {
+  try {
+    const raw = readFileSync(currentSessionPath(projectDir), "utf-8").trim();
+    return raw.length > 0 ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+// Record the most-recently-active session id. Best-effort; no-op on a blank id
+// (a TTY/empty hook invocation has no session to record).
+export function writeCurrentSessionId(projectDir: string, sessionId: string): void {
+  if (!sessionId) return;
+  try {
+    mkdirSync(sessionsDir(projectDir), { recursive: true });
+    writeFileSync(currentSessionPath(projectDir), `${sessionId}\n`, "utf-8");
+  } catch {
+    /* per-user runtime state; best-effort */
+  }
+}
+
+// The UUID of the active intent in a space (the cursor's / lone intent's
+// registry row), or null when no new-layout intent resolves (flat-legacy) or
+// the active record has no registry row (an orphan — no stable uuid to stamp).
+export function activeIntentUuid(projectDir: string, space?: string): string | null {
+  const sp = space ?? activeSpace(projectDir);
+  const activeDir = activeIntent(projectDir, sp);
+  if (activeDir === null) return null;
+  const match = listIntents(projectDir, sp).find((i) => i.dirName === activeDir);
+  return match && match.uuid ? match.uuid : null;
+}
+
+// Resolve an intent UUID to its registry row across EVERY space (a conversation
+// may have been working an intent in a different space than the active one).
+// Returns the {space, slug} of the first match, or null when the uuid names no
+// known intent (a stale stamp from a since-deleted intent → no rebind offer).
+export function findIntentByUuid(
+  projectDir: string,
+  uuid: string,
+): { space: string; slug: string } | null {
+  if (!uuid) return null;
+  for (const sp of listSpaces(projectDir)) {
+    const row = readIntentRegistry(projectDir, sp.name).find((e) => e.uuid === uuid);
+    if (row) return { space: sp.name, slug: row.slug };
+  }
+  return null;
+}
+
+// --- Intent birth: the deterministic mutation behind the engine's directive ---
+//
+// birthIntent() is the single deterministic primitive the `intent-birth` tool
+// handler calls: mint a UUIDv7, create the record dir, append the registry row,
+// set the active-intent cursor. It does NOT emit audit events or write the
+// amadeus-state.md body (the handler owns those, since they need the scope graph)
+// — it owns only the identity + dir + registry + cursor, the parts that must be
+// crash-safe and clash-free. The CALLER MUST already hold the WORKSPACE lock
+// (invariant 2: every intents.json mutation takes the workspace bucket); a
+// concurrent birth is serialized by that lock, so the within-space dir-clash
+// disambiguation here only ever resolves a same-uuid id8 collision, never a
+// cross-process race.
+export interface BornIntent {
+  uuid: string;
+  slug: string;
+  dirName: string;
+  recordDir: string;
+  space: string;
+}
+
+export function birthIntent(
+  projectDir: string,
+  label: string,
+  space: string,
+  scope?: string,
+  repos?: string[],
+): BornIntent {
+  const uuid = uuidv7();
+  const intentsRoot = intentsDir(projectDir, space);
+  // SPIKE (date-prefix): the dir name is `<YYMMDD>-<short-label>`, the `label` arg
+  // being the orchestrator's 2-3 word essence. Normalize it ONCE to the slug shape
+  // so the stored row `slug`, the dir-name label, and the display all agree even
+  // when the caller passes raw text (cap 24). A same-day same-label clash resolves
+  // by a numeric counter (never re-mints).
+  const slug = slugify(label, 24);
+  const dirName = resolveUniqueIntentDir(intentsRoot, `${dateStamp()}-${slug}`);
+  const recordPath = join(intentsRoot, dirName);
+  mkdirSync(recordPath, { recursive: true });
+  // BIND the record so the resolvers recognize it immediately: activeIntent()
+  // only treats a record dir as real once it holds an amadeus-state.md (the cursor
+  // + lone-intent checks both gate on existsSync(<dir>/amadeus-state.md)). Birth
+  // mkdir's the dir, but the full state body is written AFTER birth by the
+  // caller (handleIntentBirth, via the default-resolving writeStateFile). Write
+  // a header-only stub here so the cursor resolves to THIS record between mint
+  // and the full write — without it, activeIntent() returns null and the
+  // post-birth state/audit writes leak to the flat fallback (a bootstrap gap).
+  const statePath = join(recordPath, "amadeus-state.md");
+  if (!existsSync(statePath)) {
+    writeFileSync(statePath, "# AI-DLC State Tracking\n", "utf-8");
+  }
+  appendIntentToRegistry(
+    projectDir,
+    // An empty repo set (no --repos, no sibling discovery — the legacy single-repo
+    // or fresh-greenfield case) records NO repos row; the lone repo is inferred on
+    // the construction path (resolveConstructionRepo). Only a non-empty set is
+    // persisted, so existing single-repo + flat-legacy intents stay byte-identical.
+    { uuid, slug, dirName, scope, repos: repos && repos.length > 0 ? repos : undefined, status: "in-flight" },
+    space,
+  );
+  setActiveIntentCursor(projectDir, dirName, space);
+  return { uuid, slug, dirName, recordDir: recordPath, space };
+}
+
+// Flip an intent's registry row to a terminal/other status (e.g. "complete").
+// Matches the row by record DIR NAME (the stable identity the cursor/state use),
+// rewriting intents.json in place. MUST be called under the WORKSPACE lock
+// (invariant 2). Returns true iff a row matched and was updated. No-op (false)
+// when the intent is the legacy flat record (dirName null) or no row matches.
+export function updateIntentStatus(
+  projectDir: string,
+  dirName: string,
+  status: string,
+  space?: string,
+): boolean {
+  const sp = space ?? activeSpace(projectDir);
+  const path = intentsRegistryPath(projectDir, sp);
+  const list = readIntentRegistry(projectDir, sp);
+  let changed = false;
+  for (const entry of list) {
+    // Match the active dirName via the shared join rule listIntents() uses.
+    if (!recordDirMatches(entry, dirName)) continue;
+    if (entry.status !== status) {
+      entry.status = status;
+      changed = true;
+    }
+    break;
+  }
+  if (changed) {
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileAtomic(path, `${JSON.stringify(list, null, 2)}\n`);
+  }
+  return changed;
+}
+
+// Write a docs-only declaration to an intent's registry row (Issue #499/#848):
+// the tool-owned entry point for the docs-only exemption (declare-docs-only in
+// amadeus-state.ts is the sole caller — no prose or hand-edit path). Requires
+// non-empty evidence (a reference to the approval decision/audit event that
+// confirms the produces are record-internal documents only); throws otherwise
+// so an empty declaration never reaches the registry. Matches the row by record
+// DIR NAME (recordDirMatches, the same join every registry mutator uses). MUST
+// be called under the WORKSPACE audit lock. Returns matched=false when NO
+// registry row corresponds to `dirName` — the caller must surface that as an
+// error rather than a silent success (a declaration that lands nowhere exempts
+// nothing).
+export function setIntentDocsOnly(
+  projectDir: string,
+  dirName: string,
+  evidence: string,
+  space?: string,
+): { matched: boolean; changed: boolean } {
+  const trimmed = evidence.trim();
+  if (trimmed.length === 0) {
+    throw new Error("docs-only declaration requires non-empty --evidence.");
+  }
+  const sp = space ?? activeSpace(projectDir);
+  const path = intentsRegistryPath(projectDir, sp);
+  const list = readIntentRegistry(projectDir, sp);
+  let matched = false;
+  let changed = false;
+  for (const entry of list) {
+    if (!recordDirMatches(entry, dirName)) continue;
+    matched = true;
+    if (entry.docsOnly?.evidence !== trimmed) {
+      entry.docsOnly = { evidence: trimmed };
+      changed = true;
+    }
+    break;
+  }
+  if (changed) {
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileAtomic(path, `${JSON.stringify(list, null, 2)}\n`);
+  }
+  return { matched, changed };
+}
+
+// Read back a VALID docs-only declaration for `dirName`, or null when absent —
+// the read side verifyStageArtifacts's workspace_requires branch consults
+// before refusing. Evidence must be non-empty after trimming; a malformed row
+// (missing/blank evidence, e.g. from a hand-edited registry) is treated as NOT
+// declared so the guard falls back to its default refusal (#366's gap detection
+// stays intact for anything but a genuine declaration).
+export function docsOnlyDeclaration(
+  projectDir: string,
+  dirName: string,
+  space?: string,
+): { evidence: string } | null {
+  const sp = space ?? activeSpace(projectDir);
+  for (const entry of readIntentRegistry(projectDir, sp)) {
+    if (!recordDirMatches(entry, dirName)) continue;
+    const evidence = entry.docsOnly?.evidence?.trim();
+    return evidence && evidence.length > 0 ? { evidence } : null;
+  }
+  return null;
+}
+
+// Run the flat→per-intent migration if needed. Idempotent. Returns the new
+// intent dir name on a migration, or null when none was needed. The caller owns
+// the git-rm of the flat tree (a tool can shell out to git; lib stays
+// git-agnostic) — migrateFlatLayout returns the moved-from path so the caller
+// can untrack it. NEVER rmSync's the source: the staged COPY is renamed into the
+// leaf, leaving the original amadeus-docs/ for the git-rm step.
+export interface FlatMigrationResult {
+  intentDirName: string;
+  uuid: string;
+  slug: string;
+  movedFrom: string; // the flat amadeus-docs/ path, for the caller's git-rm
+}
+
+export function migrateFlatLayout(projectDir: string): FlatMigrationResult | null {
+  // Whole operation under the WORKSPACE lock bucket (intent omitted → sentinel).
+  return withAuditLock(projectDir, () => {
+    // Re-check inside the lock (another clone may have migrated while we waited).
+    if (!needsFlatMigration(projectDir)) return null;
+
+    const flatRoot = flatMigrationSource(projectDir);
+    const flatState = join(flatRoot, "amadeus-state.md");
+
+    // Slug from the existing state's most slug-worthy field, else "default".
+    // Prefer an explicit intent/workflow name, then the human project name; the
+    // bare scope token (feature/bugfix/…) is the last resort before "default".
+    let slug = "default";
+    try {
+      const content = readFileSync(flatState, "utf-8");
+      const name =
+        getField(content, "Workflow") ??
+        getField(content, "Intent") ??
+        getField(content, "Project") ??
+        getField(content, "Scope") ??
+        "";
+      if (name.trim().length > 0) slug = slugify(name);
+    } catch {
+      // unreadable state → keep "default"
+    }
+
+    const uuid = uuidv7();
+    const space = DEFAULT_SPACE;
+    const intentsRoot = intentsDir(projectDir, space);
+    // SPIKE (date-prefix): same `<YYMMDD>-<short-label>` shape as birthIntent, with
+    // a numeric-counter collision resolve.
+    const intentDirName = resolveUniqueIntentDir(intentsRoot, intentDirNameBase(slug));
+    const leaf = join(intentsRoot, intentDirName);
+
+    // (1) Stage a COPY of the whole flat tree into a temp dir UNDER the workspace
+    // root (same filesystem → the rename in step 3 is atomic, not a cross-device
+    // copy+unlink). A unique per-process staging name avoids a concurrent clash.
+    const staging = join(workspaceRoot(projectDir), `.migrate-staging-${process.pid}-${reapSuffix()}`);
+    try {
+      rmSync(staging, { recursive: true, force: true });
+    } catch {
+      /* no prior staging */
+    }
+    cpSync(flatRoot, staging, { recursive: true });
+
+    // ── Shape the staged tree to the target layout BEFORE the atomic rename ──
+    // CRASH-SAFETY INVARIANT: the rename in step (3) is the SOLE commit point.
+    // Everything below operates on the staging tree (or the idempotent, intent-
+    // independent space-knowledge move), so the ONLY "partial" window is steps
+    // 1-2b — which produce no `amadeus-state.md` under intents/ and no `.migrated`
+    // marker, so needsFlatMigration() stays true and a crash re-fires cleanly
+    // (step 1 rmSync's any half-built staging first; the flat source is never
+    // mutated). Doing these relocations AFTER the rename would strand them in a
+    // window where anyIntentRecordExists() has already flipped the detector off.
+
+    // (2a) RELOCATE the staged `audit.md` into the per-clone SHARD layout the
+    // readers glob. The blind copy in step 1 lands the flat `amadeus-docs/audit.md`
+    // FILE at `<staging>/audit.md`, but auditShards()/readAllAuditShards() read
+    // the `<record>/audit/*.md` DIR (auditShardDir), and the flat-fallback fires
+    // ONLY when the record dir is absent — which it never is post-migration. Left
+    // as a top-level file, the pre-migration WORKFLOW_STARTED/STAGE/PHASE history
+    // would be on disk but INVISIBLE to runtime-graph compile, summary/replay, and
+    // every hook. Move it INTO the shard set as `audit/<host>-<clone>.md` so it
+    // joins the shards the readers already merge-sort (honours decision #1: a
+    // per-clone shard, NOT a single committed audit.md + merge=union). Guard the
+    // no-audit case (a flat tree with no audit.md) — skip silently.
+    const stagedAudit = join(staging, "audit.md");
+    if (existsSync(stagedAudit)) {
+      const shardDir = join(staging, "audit");
+      mkdirSync(shardDir, { recursive: true });
+      renameSync(stagedAudit, join(shardDir, auditShardName(projectDir)));
+    }
+
+    // (2b) RELOCATE the staged `knowledge/` tree to the SPACE level. The old flat
+    // layout kept team domain knowledge at `amadeus-docs/knowledge/` (the former
+    // scaffold stage seeded `knowledge/README.md` + `knowledge/amadeus-shared/`);
+    // the blind copy in step 1 lands it at `<staging>/knowledge/`, but the
+    // per-intent record is the WRONG home — knowledge is a space-level concern (a
+    // sibling of intents) so it compounds across every intent, and the agent
+    // personas read it from `spaces/<space>/knowledge/`. Left in the record, a
+    // migrating team's accumulated knowledge would be silently invisible to every
+    // agent. Move it up to the space dir (merge into any existing space knowledge,
+    // entry-by-entry so a pre-existing dir is preserved) and empty it out of the
+    // staging tree so the rename carries no `knowledge/` into the record. This is
+    // intent-independent and idempotent — safe to re-apply on a crash re-fire; the
+    // flat source is untouched, so the caller's gitRmFlatTree(flatRoot) is intact.
+    const stagedKnowledge = join(staging, "knowledge");
+    if (existsSync(stagedKnowledge)) {
+      const spaceKnowledge = knowledgeDir(projectDir, space);
+      mkdirSync(spaceKnowledge, { recursive: true });
+      for (const entry of readdirSync(stagedKnowledge)) {
+        const from = join(stagedKnowledge, entry);
+        const to = join(spaceKnowledge, entry);
+        if (existsSync(to)) {
+          cpSync(from, to, { recursive: true });
+        } else {
+          renameSync(from, to);
+        }
+      }
+      rmSync(stagedKnowledge, { recursive: true, force: true });
+    }
+
+    // (2c) mkdir the intent dir's PARENT chain (the leaf is created by the rename).
+    mkdirSync(intentsRoot, { recursive: true });
+
+    // (3) ONE atomic rename of the now-target-shaped staged tree into the leaf —
+    // the single commit point (see the crash-safety invariant above).
+    renameSync(staging, leaf);
+
+    // (4) Append to intents.json + set the active-intent cursor (workspace bucket).
+    appendIntentToRegistry(
+      projectDir,
+      { uuid, slug, dirName: intentDirName, scope: undefined, repos: undefined, status: "in-flight" },
+      space,
+    );
+    try {
+      writeFileSync(join(intentsRoot, ACTIVE_INTENT_POINTER), `${intentDirName}\n`, "utf-8");
+    } catch {
+      /* cursor is per-user/gitignored; best-effort */
+    }
+
+    // (5) Write the `.migrated` marker LAST (the sole idempotency key).
+    mkdirSync(workspaceRoot(projectDir), { recursive: true });
+    writeFileSync(migratedMarkerPath(projectDir), `migrated ${isoTimestamp()} → ${intentDirName}\n`, "utf-8");
+
+    return { intentDirName, uuid, slug, movedFrom: flatRoot };
+  });
+}
+
+// --- Per-intent record resolution (P9 end state — no flat fallback) -----------
+//
+// Each absolute path helper resolves the per-intent record dir when an intent
+// exists (explicit arg, active cursor, or a lone intent), else the bare SPACE
+// record root (spaceRecordRoot). There is NO flat `amadeus-docs/` fallback any more
+// — the transitional bridge was retired in P9 once the fixtures migrated. The
+// only place the legacy flat root is still touched is the one-time migration
+// SOURCE (flatStateSource/flatMigrationSource above).
+
+export function stateFilePath(projectDir: string, intent?: string, space?: string): string {
+  const dir = recordDir(projectDir, intent, space);
+  if (dir === null) return join(spaceRecordRoot(projectDir, space), "amadeus-state.md");
+  return join(dir, "amadeus-state.md");
+}
+
+// Per-clone audit SHARD path: `…/intents/<slug>-<id8>/audit/<host>-<clone>.md`.
+// The audit trail is committed (vision §5.1) but each clone writes its OWN
+// shard so git never merge-conflicts concurrent appends (merge=union was proven
+// to corrupt the multi-line blocks). Readers glob `audit/*.md` and merge-sort by
+// timestamp — see auditShards()/readAllAuditShards(). With no intent resolved the
+// shard lands under the bare space record root (no flat audit.md any more).
+export function auditFilePath(projectDir: string, intent?: string, space?: string): string {
+  const dir = recordDir(projectDir, intent, space);
+  if (dir === null) return join(spaceRecordRoot(projectDir, space), "audit", auditShardName(projectDir));
+  return join(dir, "audit", auditShardName(projectDir));
+}
+
+// The clone-id token file: `amadeus/.amadeus-clone-id`. Workspace-level,
+// machine-local, GITIGNORED (see the `amadeus/.amadeus-*` rule) so it never travels
+// in a commit — that is what makes the token DISTINCT across clones (a fresh
+// checkout has no token file and mints its own). The shard name below embeds
+// this token, so every process IN one clone resolves the SAME shard while two
+// different clones get DIFFERENT shards (no git merge-conflict on concurrent
+// appends — the whole point of per-clone sharding).
+export const CLONE_ID_FILE = ".amadeus-clone-id";
+
+function cloneIdPath(projectDir: string): string {
+  return join(workspaceRoot(projectDir), CLONE_ID_FILE);
+}
+
+// The stable per-CLONE token (not per-process). Read from the gitignored
+// `amadeus/.amadeus-clone-id` regular file when present; minted (12 hex chars
+// from a v4 uuid — no Math.random) and persisted on first use otherwise. A
+// symlink is never followed: its stable token is derived from the canonical
+// project path and link text, so migration can preserve the link without
+// allowing audit setup to read or overwrite its target. Stable WITHIN a
+// clone across processes (the fork subprocess and the merge subprocess both
+// read the same file → the same shard), DISTINCT across clones (each clone
+// mints its own; the file is gitignored so it doesn't travel). A read/mint race
+// between two first-run processes converges on whichever write lands last; both
+// then read that single file on every subsequent call, so the clone settles on
+// ONE token (a transient duplicate shard on the very first concurrent mint is
+// harmless — readers glob `audit/*.md`). Memoized per process. Best-effort: an
+// unwritable workspace degrades to an in-memory token for this process (still
+// stable within the process, still distinct from other clones).
+let _cloneId: string | null = null;
+
+function linkedCloneId(projectDir: string, path: string): string | null {
+  try {
+    if (!lstatSync(path).isSymbolicLink()) return null;
+    const canonicalProject = realpathSync(projectDir);
+    const link = readlinkSync(path, { encoding: "buffer" });
+    return createHash("sha256")
+      .update(canonicalProject, "utf-8")
+      .update("\0", "utf-8")
+      .update(link)
+      .digest("hex")
+      .slice(0, 12);
+  } catch {
+    return null;
+  }
+}
+
+function readCloneIdNoFollow(path: string): string | null {
+  let fd: number | null = null;
+  try {
+    const noFollow = typeof fsConstants.O_NOFOLLOW === "number"
+      ? fsConstants.O_NOFOLLOW
+      : 0;
+    fd = openSync(path, fsConstants.O_RDONLY | noFollow);
+    const raw = readFileSync(fd, "utf-8").trim();
+    return /^[a-z0-9]{1,32}$/.test(raw) ? raw : null;
+  } catch {
+    return null;
+  } finally {
+    if (fd !== null) closeSync(fd);
+  }
+}
+
+function writeCloneIdNoFollow(path: string, value: string): boolean {
+  let fd: number | null = null;
+  try {
+    const noFollow = typeof fsConstants.O_NOFOLLOW === "number"
+      ? fsConstants.O_NOFOLLOW
+      : 0;
+    fd = openSync(
+      path,
+      fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_TRUNC | noFollow,
+      0o600,
+    );
+    writeFileSync(fd, `${value}\n`, "utf-8");
+    return true;
+  } catch {
+    return false;
+  } finally {
+    if (fd !== null) closeSync(fd);
+  }
+}
+
+function cloneId(projectDir: string): string {
+  if (_cloneId !== null) return _cloneId;
+  const path = cloneIdPath(projectDir);
+  const linked = linkedCloneId(projectDir, path);
+  if (linked !== null) {
+    _cloneId = linked;
+    return _cloneId;
+  }
+  const existing = readCloneIdNoFollow(path);
+  if (existing !== null) {
+    _cloneId = existing;
+    return _cloneId;
+  }
+  const minted = randomUUID().replace(/-/g, "").slice(0, 12);
+  try {
+    mkdirSync(workspaceRoot(projectDir), { recursive: true });
+    if (!writeCloneIdNoFollow(path, minted)) {
+      _cloneId = linkedCloneId(projectDir, path) ?? minted;
+      return _cloneId;
+    }
+    // Re-read so a concurrent first-run mint that landed first wins for ALL
+    // processes in this clone (converge on one on-disk token).
+    _cloneId = readCloneIdNoFollow(path) ?? minted;
+  } catch {
+    _cloneId = minted; // unwritable workspace → in-memory token
+  }
+  return _cloneId;
+}
+
+// --- Human presence at an approval/interview gate ---
+//
+// Ledger-event presence check (the marker-free design). "A real human acted at
+// this checkpoint this turn" is proven by scanning the append-only audit ledger
+// for a human act (HUMAN_TURN, or a verified delegated-provenance line) that a
+// consuming resolution has not yet followed. The prior resolution is the
+// freshness boundary — consume-once semantics expressed as event order instead
+// of a flag.
+//
+// Why the boundary is a prior RESOLUTION, not this gate's STAGE_AWAITING_APPROVAL
+// (the live Kiro IDE spike, 2026-06-30, caught this): in the real flow ONE human
+// prompt drives the agent to BOTH open the gate AND approve it, so the human turn
+// PRECEDES this gate-open. A "human turn after gate-open" rule false-refuses every
+// legitimate approval. But a human turn after the prior gate's resolution still
+// proves a fresh human acted this turn, while a fabricated cascade (gate2 approved
+// right after gate1 committed, no new human turn) has its only human turn BEFORE
+// the gate1 GATE_APPROVED -> refused. Stale (human turn long ago, then a fabricated
+// approve) likewise has the last resolution after the human turn -> refused.
+//
+// Ordering is CHRONOLOGICAL by Timestamp. Within one shard the append order is
+// authoritative (timestamps are non-decreasing and the buffer position preserves
+// it), which is what makes same-second events (the common case: one human turn
+// drives mint + gate + resolution inside one second) resolve by execution order.
+// ACROSS shards a raw-position scan is unsafe: readAllAuditShards concatenates
+// per-clone shards in FILENAME order (a second shard appears after a re-clone or
+// on another machine), which is NOT time order — an OLD resolution in a lexically-
+// later shard could outrank a fresh HUMAN_TURN.
+//
+// Fail-closed cross-shard same-second tie (#779, election E-779Q1 verdict A).
+// isoTimestamp is SECOND-granular (the audit-visible format is fixed and NOT
+// touched here), so a HUMAN_TURN and a consuming resolution emitted in the SAME
+// second but living in DIFFERENT shards have an ordering that filename-sort can
+// flip either way — a false-open when the sort happens to rank a consumed
+// HUMAN_TURN after its resolution. The presence predicates therefore treat any
+// same-second, cross-shard resolution as ordered AFTER a human act (the human
+// side loses the tie → consumed). Same-shard same-second order is UNCHANGED (the
+// buffer position is the real append order there). A cross-shard resolution at a
+// STRICTLY-EARLIER second still cannot mask a later human act (scenario G).
+// This is decided in the predicates (not the sort): a comparator that mixed
+// trusted same-shard order with the fail-closed cross-shard rule is not a
+// consistent total order (it can cycle), so the tie-break lives where the two
+// events being compared are known. Fail-open when no ledger exists (no presence
+// tracking yet on this harness).
+//
+// The resolution boundary is workflow-global (the most recent commit of ANY
+// gate), which is what makes a same-turn cascade across DIFFERENT stages refuse
+// correctly; there is no per-stage scoping.
+//
+// Grounding vs resolution (#671 approval, #685 rejection). A delegated-provenance
+// line is a human act ONLY when its grounding HUMAN_TURN is verified to physically
+// exist in the issuer shard. An unverifiable delegation is dropped entirely (not
+// counted as a human act, not counted as a resolution) so a forged block can
+// neither manufacture presence nor consume any boundary.
+//
+// Per-delegate resolution slots (#736, election Q1=A / Q2=A). A HUMAN_TURN is a
+// local, single-use act: ANY resolution after it (GATE_APPROVED / GATE_REJECTED /
+// QUESTION_ANSWERED) consumes it — this is the t188 one-act-per-turn semantics and
+// is UNCHANGED. A delegation, by contrast, carries a REMOTE grounding and opens
+// exactly one KIND of gate, so it owns two independent slots:
+//   - its "gate slot" is consumed only by a GATE_APPROVED / GATE_REJECTED;
+//   - its "answer slot" is consumed only by a QUESTION_ANSWERED.
+// The #736 bug was that a QUESTION_ANSWERED (emitted by amadeus-log answer the
+// moment a delegate lands) consumed the delegation's GATE slot, so the very
+// delegate that authorised an approval could no longer satisfy the approve gate.
+// Scoping the answer to the answer slot and the gate to the gate slot fixes it
+// WITHOUT any new on-disk state — both boundaries are derived from one ledger scan.
+//
+// Verb scoping (#685): a DELEGATED_APPROVAL opens ONLY an approve gate and a
+// DELEGATED_REJECTION opens ONLY a reject gate — never each other. When a verb is
+// given (the gate predicate below), an off-verb delegation is ignored for the
+// delegation branch. When verb is omitted (the general predicate — delegate-
+// issuance grounding at the two issuers), both verified types count and the
+// legacy uniform-resolution boundary is preserved so issuer grounding is unchanged.
+
+// One classified, chronologically-ordered ledger event. `delegVerb` is set only
+// for a VERIFIED delegation (unverifiable delegations are dropped during the
+// scan and never reach here). `res` classifies a resolution as a gate resolution
+// (GATE_APPROVED / GATE_REJECTED) or an answer resolution (QUESTION_ANSWERED),
+// the split the per-delegate slots key off.
+type PresenceEvent = {
+  ts: string;
+  shard: number; // index of the origin shard (auditShards order); the tie-break key
+  pos: number; // append order WITHIN the origin shard (authoritative there only)
+  human: boolean; // HUMAN_TURN or a verified delegation
+  delegVerb?: "approve" | "reject"; // present iff this is a verified delegation
+  res?: "gate" | "answer"; // present iff this is a resolution
+};
+
+// Parse + verify the ledger once, tagging each event with its ORIGIN shard so the
+// predicates can apply the fail-closed cross-shard tie-break. Returns null when no
+// ledger exists at all (the fail-open signal). Delegations are verified here so
+// every downstream predicate shares one forgery-resistant view; an unverifiable
+// delegation is simply omitted. Shards are read individually (not via the merged
+// buffer) precisely so shard boundaries survive — the merged buffer's block index
+// cannot tell which shard a same-second event came from. A shard that vanishes
+// between enumerate and read is skipped; the empty-merged-buffer fail-open signal
+// of readAllAuditShards (join by "\n") is preserved exactly — an empty buffer
+// means no ledger → no presence tracking → fail open. (These notes live up here
+// rather than inside the body: bun's lcov stamps in-body comment lines as
+// never-hit DA records, which the codecov patch gate counts as misses.)
+function scanPresenceLedger(projectDir: string): PresenceEvent[] | null {
+  const shardPaths = auditShards(projectDir);
+  const contents: string[] = [];
+  for (const path of shardPaths) {
+    try {
+      contents.push(readFileSync(path, "utf-8"));
+    } catch {} // vanished between enumerate and read — skip (see doc above)
+  }
+  if (contents.join("\n").length === 0) return null;
+  const events: PresenceEvent[] = [];
+  for (let shard = 0; shard < contents.length; shard++) {
+    const blocks = contents[shard].replace(/\r\n/g, "\n").split(/\n---\n/);
+    for (let pos = 0; pos < blocks.length; pos++) {
+      const ev = auditBlockField(blocks[pos], "Event");
+      if (!ev) continue;
+      const ts = auditBlockField(blocks[pos], "Timestamp") ?? "";
+      if (ev === "HUMAN_TURN") {
+        events.push({ ts, shard, pos, human: true });
+      } else if (ev === "DELEGATED_APPROVAL") {
+        if (verifyDelegatedProvenance(projectDir, blocks[pos])) {
+          events.push({ ts, shard, pos, human: true, delegVerb: "approve" });
+        }
+      } else if (ev === "DELEGATED_REJECTION") {
+        if (verifyDelegatedProvenance(projectDir, blocks[pos])) {
+          events.push({ ts, shard, pos, human: true, delegVerb: "reject" });
+        }
+      } else if (ev === "GATE_APPROVED" || ev === "GATE_REJECTED") {
+        events.push({ ts, shard, pos, human: false, res: "gate" });
+      } else if (ev === "QUESTION_ANSWERED") {
+        events.push({ ts, shard, pos, human: false, res: "answer" });
+      }
+    }
+  }
+  return events;
+}
+
+// Does resolution `r` consume human act `h`? A resolution consumes a human act
+// when it is ordered at-or-after it. Same-shard order is authoritative (real
+// append order via pos); a strictly-later second consumes; a strictly-earlier
+// second does not. The #779 case: a same-second resolution in a DIFFERENT shard
+// has an ambiguous order, so it is treated as consuming (fail closed — the human
+// side loses the tie).
+function resolutionConsumesHuman(r: PresenceEvent, h: PresenceEvent): boolean {
+  if (r.ts !== h.ts) return r.ts > h.ts;
+  if (r.shard !== h.shard) return true; // same second, cross shard → fail closed
+  return r.pos > h.pos; // same shard → real append order
+}
+
+// True iff some human act (matching `isHuman`) is not consumed by ANY resolution
+// (matching `isResolution`) under the fail-closed ordering. This replaces the
+// pre-#779 "last human index > last resolution index" comparison: with a total
+// chronological order the two are equivalent, but the per-event consume relation
+// also encodes the fail-closed cross-shard same-second tie the sort could not.
+function humanActOutstanding(
+  events: PresenceEvent[],
+  isHuman: (e: PresenceEvent) => boolean,
+  isResolution: (e: PresenceEvent) => boolean,
+): boolean {
+  for (const h of events) {
+    if (!isHuman(h)) continue;
+    if (!events.some((r) => isResolution(r) && resolutionConsumesHuman(r, h))) return true;
+  }
+  return false;
+}
+
+// The approval-gate presence predicate. With a verb it is the #736/#685 gate
+// predicate (per-delegate GATE slot, verb-scoped); with no verb it is the general
+// predicate the delegate-issuance grounding relies on (legacy uniform boundary,
+// unchanged). The `verb` parameter shape is preserved for both callers.
+//
+// Verb-less branch (issuer grounding at the two delegate-issuance sites): ANY
+// human act (HUMAN_TURN or either verified delegation) after the last resolution
+// of ANY kind. Behaviour is identical to the pre-#736 code — a QUESTION_ANSWERED
+// still closes this boundary — so issuer grounding is not regressed.
+//
+// Verb branch (gate predicate, #736): true when EITHER a HUMAN_TURN sits after
+// the last resolution of any kind (local semantics, unchanged — one local turn,
+// consumed by any resolution incl. an answer), OR a verified verb-matching
+// delegation sits after the last GATE resolution (its GATE slot: a
+// QUESTION_ANSWERED does NOT consume it — the #736 fix).
+//
+// (These branch notes live up here rather than inside the body: bun's lcov
+// stamps in-body comment/blank lines as never-hit DA records, which the codecov
+// patch gate counts as misses.)
+export function humanActedSinceGate(
+  projectDir: string,
+  verb?: "approve" | "reject"
+): boolean {
+  const events = scanPresenceLedger(projectDir);
+  if (events === null) return true; // fail open
+  if (verb === undefined) {
+    return humanActOutstanding(events, (e) => e.human, (e) => e.res !== undefined);
+  }
+  const humanTurnOutstanding = humanActOutstanding(
+    events,
+    (e) => e.human && e.delegVerb === undefined,
+    (e) => e.res !== undefined,
+  );
+  if (humanTurnOutstanding) return true;
+  return humanActOutstanding(
+    events,
+    (e) => e.delegVerb === verb,
+    (e) => e.res === "gate",
+  );
+}
+
+// Verify a delegated-provenance block (#671 DELEGATED_APPROVAL, #685
+// DELEGATED_REJECTION) is grounded in a REAL human turn. Both event types carry
+// the identical issuer coordinates (space, intent record dir, audit shard
+// filename, HUMAN_TURN timestamp), so ONE verifier serves both verbs: it reads
+// that specific shard and confirms a HUMAN_TURN event with the referenced
+// timestamp physically exists. Verb scoping (which verb a given block may open)
+// is decided by the caller (humanActedSinceGate); this function only proves the
+// grounding is real, independent of verb.
+//
+// Forgery resistance: HUMAN_TURN lines are written ONLY by the UserPromptSubmit
+// hook on a real human prompt, via the in-process appendAuditEntry. The general
+// audit CLI refuses to mint HUMAN_TURN (and the delegations) — see
+// amadeus-audit.ts presenceMintRejection / rawPresenceMintRejection — so no
+// ordinary `amadeus-audit append` a model can invoke emits one. A delegation a
+// model fabricates therefore references a HUMAN_TURN that is not on disk and
+// fails here. This is the "referenced, not self-asserted" contract from #671
+// (検証劇場 Forbidden): the conductor proves the grounding, it does not trust it.
+//
+// Residual limit (documented, not closed here): a raw filesystem write — an
+// arbitrary file-write tool appending a crafted shard directly — could still
+// fabricate a HUMAN_TURN line. That is a general property of the on-disk,
+// append-only audit trail, not specific to this check; the CLI guard closes the
+// tool-invocation path, filesystem-level integrity is a separate concern.
+//
+// Fail-closed on every anomaly (missing/malformed field, path-shape violation,
+// unreadable shard, absent HUMAN_TURN). Path-shape guards reject any separator
+// or traversal so a crafted field cannot escape the intents tree.
+export function verifyDelegatedProvenance(projectDir: string, block: string): boolean {
+  const issuerIntent = auditBlockField(block, "Issuer Intent");
+  const issuerShard = auditBlockField(block, "Issuer Shard");
+  const issuerHumanTs = auditBlockField(block, "Issuer Human Ts");
+  const issuerSpace = auditBlockField(block, "Issuer Space") ?? undefined;
+  if (!issuerIntent || !issuerShard || !issuerHumanTs) return false;
+  // Record dir name and `<host>-<clone>.md` shard leaf — no separators, no "..".
+  if (!/^[A-Za-z0-9._-]+$/.test(issuerIntent) || issuerIntent === "." || issuerIntent === "..") {
+    return false;
+  }
+  if (!/^[A-Za-z0-9._-]+\.md$/.test(issuerShard)) return false;
+  const shardDir = auditShardDir(projectDir, issuerIntent, issuerSpace);
+  if (shardDir === null) return false;
+  let content: string;
+  try {
+    content = readFileSync(join(shardDir, issuerShard), "utf-8");
+  } catch {
+    return false;
+  }
+  const blocks = content.replace(/\r\n/g, "\n").split(/\n---\n/);
+  for (const b of blocks) {
+    if (auditBlockField(b, "Event") !== "HUMAN_TURN") continue;
+    if ((auditBlockField(b, "Timestamp") ?? "") === issuerHumanTs) return true;
+  }
+  return false;
+}
+
+// --- Standing delegation grants (Issue #1125) ---
+
+// Default time-to-live for a standing stage-gate grant: 4 hours. Fixed by the
+// E-SDG-RA Q4=A ruling (a normal working session's length) so a grant spans a
+// typical leader-away window and then lapses back to per-gate approval on its
+// own. No env override is provided ON PURPOSE (standing-approval-scope-limit):
+// the auto-approval window stays a fixed, auditable constant rather than a knob
+// a session could widen at runtime. Semantically DISTINCT from
+// DEFAULT_LOCK_STALE_MS — that bounds a stale audit LOCK; this bounds a
+// human-granted APPROVAL window (different meaning, different magnitude).
+export const DEFAULT_STANDING_GRANT_TTL_MS = 4 * 60 * 60 * 1000;
+
+// A parsed, currently-relevant standing grant. Built only via StandingGrant.parse
+// (class-free companion-object style): the type carries an isExpired predicate so
+// callers ask the grant rather than re-deriving the comparison.
+export type StandingGrant = {
+  readonly grantId: string;
+  readonly scope: "stage-gates";
+  readonly expiresAtMs: number;
+  readonly includesPhaseBoundary: boolean;
+  readonly issuerIntent: string;
+  readonly issuerShard: string;
+  readonly issuerHumanTs: string;
+  isExpired(nowMs: number): boolean;
+};
+
+// Field bundle for the StandingGrant factory (module-level named type so the
+// factory signature is a single runtime line — a multi-line inline type
+// annotation reads back as permanent DA:0 under bun --coverage).
+type StandingGrantFields = {
+  grantId: string;
+  expiresAtMs: number;
+  includesPhaseBoundary: boolean;
+  issuerIntent: string;
+  issuerShard: string;
+  issuerHumanTs: string;
+};
+
+// Internal factory: a frozen StandingGrant literal whose isExpired closes over
+// expiresAtMs. The grant lapses the instant `now` reaches its expiry.
+function makeStandingGrant(f: StandingGrantFields): StandingGrant {
+  return Object.freeze({
+    grantId: f.grantId,
+    scope: "stage-gates" as const,
+    expiresAtMs: f.expiresAtMs,
+    includesPhaseBoundary: f.includesPhaseBoundary,
+    issuerIntent: f.issuerIntent,
+    issuerShard: f.issuerShard,
+    issuerHumanTs: f.issuerHumanTs,
+    isExpired(nowMs: number): boolean {
+      return nowMs >= f.expiresAtMs;
+    },
+  });
+}
+
+// Companion object (parse seam). Separate value binding from the type of the same
+// name so callers read StandingGrant.parse(block) at the intended altitude.
+export const StandingGrant = {
+  // Build a StandingGrant from a GRANT_ISSUED audit block, or null when a required
+  // field is absent, the Scope is not "stage-gates", or Expires At is not a
+  // parseable date. Every unparseable block collapses to null so a malformed row
+  // can never masquerade as a valid grant.
+  parse(auditBlock: string): StandingGrant | null {
+    const grantId = auditBlockField(auditBlock, "Grant Id");
+    const scope = auditBlockField(auditBlock, "Scope");
+    const expiresAt = auditBlockField(auditBlock, "Expires At");
+    const includes = auditBlockField(auditBlock, "Includes Phase Boundary");
+    const issuerIntent = auditBlockField(auditBlock, "Issuer Intent");
+    const issuerShard = auditBlockField(auditBlock, "Issuer Shard");
+    const issuerHumanTs = auditBlockField(auditBlock, "Issuer Human Ts");
+    if (
+      !grantId ||
+      scope !== "stage-gates" ||
+      !expiresAt ||
+      includes === null ||
+      !issuerIntent ||
+      !issuerShard ||
+      !issuerHumanTs
+    ) {
+      return null;
+    }
+    const expiresAtMs = Date.parse(expiresAt);
+    if (Number.isNaN(expiresAtMs)) return null;
+    return makeStandingGrant({
+      grantId,
+      expiresAtMs,
+      includesPhaseBoundary: includes === "true",
+      issuerIntent,
+      issuerShard,
+      issuerHumanTs,
+    });
+  },
+};
+
+// Every Grant Id revoked by a GRANT_REVOKED block anywhere in the space. A
+// revocation may live in a different intent's shard than the issuance, so the
+// whole space is swept before any candidate is judged.
+function collectRevokedGrantIds(
+  projectDir: string,
+  space: string,
+  intents: string[],
+): Set<string> {
+  const revoked = new Set<string>();
+  for (const intent of intents) {
+    const audit = readAllAuditShards(projectDir, intent, space);
+    if (audit.length === 0) continue;
+    for (const ev of findAllEvents(audit, "GRANT_REVOKED")) {
+      const id = auditBlockField(ev.block, "Grant Id");
+      if (id) revoked.add(id);
+    }
+  }
+  return revoked;
+}
+
+// Judge ONE GRANT_ISSUED block: return the parsed grant when it qualifies as a
+// live grant, else null. Qualifies only when ALL hold: parse succeeds; scope is
+// "stage-gates"; it is not expired at `now`; its id is not revoked; and its
+// issuer HUMAN_TURN provenance physically exists (verifyDelegatedProvenance — the
+// grant block carries the same issuer coordinates a delegation does).
+function qualifiedStandingGrant(
+  projectDir: string,
+  block: string,
+  now: number,
+  revoked: Set<string>,
+): StandingGrant | null {
+  const grant = StandingGrant.parse(block);
+  if (grant === null) return null;
+  if (grant.scope !== "stage-gates") return null;
+  if (grant.isExpired(now)) return null;
+  if (revoked.has(grant.grantId)) return null;
+  if (!verifyDelegatedProvenance(projectDir, block)) return null;
+  return grant;
+}
+
+// Find the newest currently-valid standing grant across every intent's audit
+// shards in the active space, or null when none qualifies (see
+// qualifiedStandingGrant for the per-candidate predicate). Ties break to the
+// latest expiresAtMs. `now` is an argument (never Date.now() here) so the
+// decision is deterministic for a fixed corpus + clock. Every failure mode is
+// caught and collapses to null so a verification defect can never wedge a gate
+// (fail to per-gate approval, never fail open at the check).
+export function findActiveStandingGrant(
+  projectDir: string,
+  now: number,
+): StandingGrant | null {
+  try {
+    const space = activeSpace(projectDir);
+    const intents = listIntentDirs(projectDir, space);
+    const revoked = collectRevokedGrantIds(projectDir, space, intents);
+    let best: StandingGrant | null = null;
+    for (const intent of intents) {
+      const audit = readAllAuditShards(projectDir, intent, space);
+      if (audit.length === 0) continue;
+      for (const ev of findAllEvents(audit, "GRANT_ISSUED")) {
+        const grant = qualifiedStandingGrant(projectDir, ev.block, now, revoked);
+        if (grant && (best === null || grant.expiresAtMs > best.expiresAtMs)) {
+          best = grant;
+        }
+      }
+    }
+    return best;
+  } catch {
+    return null;
+  }
+}
+
+// Scopes whose walking-skeleton default is ON when the recorded stance is
+// "scope-dependent" (or the classify round-trip has not landed a value yet).
+// Canonical single definition — amadeus-orchestrate.ts imports this same set
+// for its gate:"unresolved" resolution, so the grant-side skeleton exclusion
+// below and the engine's own skeleton gating can never drift apart.
+export const SKELETON_ON_SCOPES: ReadonlySet<string> = new Set([
+  "enterprise",
+  "mvp",
+  "feature",
+  "poc",
+  "workshop",
+  "infra",
+]);
+
+// Decide whether a valid standing grant covers THIS gate. Single classifying
+// function:
+//   (a) phase-boundary gate — the slug's phase differs from the next in-scope
+//       stage's phase, OR there is no next stage (final) — is covered ONLY when
+//       the grant opted in via includesPhaseBoundary.
+//   (b) the FIRST in-scope construction stage is NEVER auto-covered (false)
+//       while the walking-skeleton gate is effectively on: recorded stance
+//       "on", or a non-"off" stance (raw "scope-dependent" / absent — the
+//       stance is persisted un-normalized) combined with a SKELETON_ON_SCOPES
+//       scope. Only an explicit "off" clears the exclusion — a human must see
+//       the skeleton before the remaining Bolts run.
+//   (c) any other ordinary stage gate is covered (true).
+// stateContent supplies Scope + Skeleton Stance; `graph` is the loaded stage
+// graph, passed in so the caller controls the read.
+export function standingGrantSatisfiesGate(
+  grant: StandingGrant,
+  slug: string,
+  stateContent: string,
+  graph: StageEntry[],
+): boolean {
+  const scope = getField(stateContent, "Scope") ?? "";
+  const current = graph.find((s) => s.slug === slug);
+  const next = scope ? nextInScopeStage(slug, scope, stateContent) : null;
+  const crossesPhaseBoundary = !next || (current != null && next.phase !== current.phase);
+  if (crossesPhaseBoundary) {
+    return grant.includesPhaseBoundary;
+  }
+  // Walking-skeleton gate: the first in-scope construction stage stays
+  // human-gated while the skeleton is effectively on. The stance field is
+  // persisted un-normalized ("on" | "off" | "scope-dependent" | absent), so a
+  // raw "scope-dependent" (or missing) value defers to the scope default —
+  // literal "on"-only matching would silently skip the exclusion for a
+  // greenfield scope that never completed the classify round-trip.
+  if (scope) {
+    const stance = getField(stateContent, "Skeleton Stance") ?? "";
+    const skeletonOn = stance === "on" || (stance !== "off" && SKELETON_ON_SCOPES.has(scope));
+    if (skeletonOn) {
+      const firstConstruction = firstInScopeStageOfPhase("construction", scope);
+      if (firstConstruction && firstConstruction.slug === slug) return false;
+    }
+  }
+  return true;
+}
+
+// True when any stage sits at [?] (awaiting-approval) in the state file: the
+// "a gate is actually OPEN" predicate for the per-harness preToolUse floors.
+// Without it a floor would keep refusing tool calls AFTER a legitimate approval
+// (the resolution then follows the turn's only HUMAN_TURN), blocking the
+// same-turn continuation the stage protocol mandates.
+export function hasOpenGate(stateContent: string | null): boolean {
+  if (!stateContent) return false;
+  return parseCheckboxes(stateContent).some((c) => c.state === "awaiting-approval");
+}
+
+// The interview path (handleAnswer) answer predicate (#736, election Q2=A). It is
+// the mirror of the gate predicate: a delegation owns an ANSWER slot that only a
+// QUESTION_ANSWERED consumes, so a GATE_APPROVED / GATE_REJECTED landing on the
+// delegate does NOT block a subsequent answer. True when EITHER:
+//   - a HUMAN_TURN sits after the last resolution of any kind (local one-answer-
+//     per-turn semantics, unchanged — t188), OR
+//   - a verified delegation (either verb — the general verb-less acceptance range)
+//     sits after the last ANSWER resolution (its ANSWER slot).
+// A dedicated implementation, NOT an alias of humanActedSinceGate(pd): the general
+// (verb-less) gate predicate keeps the legacy uniform boundary for issuer
+// grounding, whereas the answer predicate needs the per-delegate answer slot.
+export function humanActedSinceLastAnswer(projectDir: string): boolean {
+  const events = scanPresenceLedger(projectDir);
+  if (events === null) return true; // fail open
+  const humanTurnOutstanding = humanActOutstanding(
+    events,
+    (e) => e.human && e.delegVerb === undefined,
+    (e) => e.res !== undefined,
+  );
+  if (humanTurnOutstanding) return true;
+  return humanActOutstanding(
+    events,
+    (e) => e.delegVerb !== undefined,
+    (e) => e.res === "answer",
+  );
+}
+
+// Read a `**Field**: value` line from one audit block (tolerates an optional
+// leading `- ` so it serves both audit blocks and the state file). Mirrors the
+// per-tool private auditField readers; shared here for humanActedSinceGate.
+export function auditBlockField(block: string, fieldName: string): string | null {
+  const prefix = `**${fieldName}**:`;
+  for (const raw of block.split("\n")) {
+    const line = raw.startsWith("- ") ? raw.slice(2) : raw;
+    if (line.startsWith(prefix)) return line.slice(prefix.length).trim();
+  }
+  return null;
+}
+
+// This clone's audit shard filename: `<host>-<clone-id>.md`. The clone-id token
+// (not the PID) is the cross-clone disambiguator — stable across every process
+// in a clone (so the fork process and the merge process resolve ONE shard) and
+// distinct across clones (so concurrent clones never collide / git-conflict).
+// hostname() is a human-readable hint only; it can carry dots/uppercase, so
+// normalise it to the slug shape it never escapes the audit dir.
+let _auditShardName: string | null = null;
+export function auditShardName(projectDir: string): string {
+  if (_auditShardName !== null) return _auditShardName;
+  const host = hostname()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48) || "host";
+  _auditShardName = `${host}-${cloneId(projectDir)}.md`;
+  return _auditShardName;
+}
+
+// `…/intents/<slug>-<id8>/audit/` — the shard directory, or null when no intent
+// resolves (the bare space root has no audit dir, so an enumerator gets []).
+export function auditShardDir(projectDir: string, intent?: string, space?: string): string | null {
+  const dir = recordDir(projectDir, intent, space);
+  if (dir === null) return null;
+  return join(dir, "audit");
+}
+
+// Every audit shard path for an intent (sorted). With no intent resolved the
+// enumerated dir is the bare space record root's audit/ — absent on a fresh
+// shell, so the read is []. Readers merge-sort the parsed events by **Timestamp**.
+export function auditShards(projectDir: string, intent?: string, space?: string): string[] {
+  const shardDir = auditShardDir(projectDir, intent, space) ?? join(spaceRecordRoot(projectDir, space), "audit");
+  let entries: string[];
+  try {
+    entries = readdirSync(shardDir);
+  } catch {
+    return [];
+  }
+  return entries
+    .filter((f) => f.endsWith(".md"))
+    .sort()
+    .map((f) => join(shardDir, f));
+}
+
+// Concatenate every audit shard's content for an intent into one buffer the
+// existing block-parsers (findAllEvents / findLatestEvent — both split on
+// `\n---\n`) can walk as if it were one file. Each shard is a self-contained
+// sequence of `\n---\n`-separated blocks, so concatenation preserves block
+// boundaries; cross-shard ordering by timestamp is the parsers' job (they read
+// **Timestamp** per block). Returns "" when no shard exists.
+export function readAllAuditShards(projectDir: string, intent?: string, space?: string): string {
+  const shards = auditShards(projectDir, intent, space);
+  if (shards.length === 0) return "";
+  const parts: string[] = [];
+  for (const path of shards) {
+    try {
+      parts.push(readFileSync(path, "utf-8"));
+    } catch {
+      // a shard vanished between enumerate and read — skip it
+    }
+  }
+  return parts.join("\n");
+}
+
+// True iff the ACTIVE intent has any audit shard FILE on disk — the "is there an
+// active workflow rooted here?" guard the advisory hooks (audit-logger,
+// sensor-fire, log-subagent, validate-state) share. Resolves the active space +
+// intent (cursor / lone-intent → null = flat-legacy) and globs EVERY per-clone
+// `audit/*.md` shard, NOT just this process's own clone shard.
+//
+// A bare existsSync(auditFilePath(projectDir)) only tests the CALLER's own clone
+// shard name (`<host>-<clone>.md`), so a fresh clone / new worktree — which mints
+// a brand-new gitignored clone-id — reads FALSE and silently drops audit/sensor
+// events until the engine's first append, even though committed shards from other
+// clones sit right beside it. This mirrors the intent of the fix in
+// amadeus-runtime-compile.ts (glob-merge across shards).
+//
+// Existence, not content: the check is the presence of a shard FILE
+// (auditShards().length > 0), preserving the old existsSync(auditFilePath())
+// semantics — a freshly-created-but-still-empty shard already marks an active
+// workflow. Returns false only when NO shard exists at all (workflow fully absent
+// → hooks stay a no-op, the unchanged behaviour).
+export function hasActiveWorkflowAudit(projectDir: string): boolean {
+  const space = activeSpace(projectDir);
+  const intent = activeIntent(projectDir, space) ?? undefined;
+  return auditShards(projectDir, intent, space).length > 0;
+}
+
+// True iff the ACTIVE intent's workflow has reached a terminal Completed state —
+// the "should advisory writers stay their hand?" guard. Resolves the active
+// space + intent, reads its amadeus-state.md `Status` field and treats
+// "Completed"/"Complete" as terminal (matching the statusline's own check).
+//
+// Appending audit events (e.g. SUBAGENT_COMPLETED) to a CLOSED workflow leaves
+// unpushed residue in every worktree that merely runs subagents after the intent
+// finished — a real operational nuisance (Issue #845). Existence of a shard
+// (hasActiveWorkflowAudit) is NOT enough: a completed intent still has shards on
+// disk. Returns false when no state file resolves or Status is absent/non-terminal
+// (the workflow is still Running → the unchanged append behaviour).
+export function activeWorkflowIsComplete(projectDir: string): boolean {
+  const space = activeSpace(projectDir);
+  const intent = activeIntent(projectDir, space) ?? undefined;
+  const stateFile = stateFilePath(projectDir, intent, space);
+  // A single read handles BOTH "no state file yet" (ENOENT — the common case
+  // when no workflow has written state) and an unreadable path: either throws,
+  // and a missing/unreadable state means "not terminal" → false. (No existsSync
+  // pre-check: the ENOENT throw is deterministic on every platform, so this
+  // branch is portably reachable — a directory read is NOT, it throws on macOS
+  // but Bun/Linux returns "".)
+  let content: string;
+  try {
+    content = readFileSync(stateFile, "utf-8");
+  } catch {
+    return false;
+  }
+  const status = getField(content, "Status");
+  return status === "Completed" || status === "Complete";
+}
+
+// Normalise a Claude Code hook's `agent_type` to a non-empty label. The field
+// arrives as an EMPTY STRING for generic Task agents, and `x ?? "unknown"` passes
+// the empty string straight through (`??` only substitutes null/undefined),
+// recording a blank "Agent Type". Fall back to "unknown" whenever the value is
+// missing OR blank (whitespace-only), keeping the original value verbatim
+// otherwise. (Issue #845 side-symptom.)
+export function normalizeAgentType(raw: string | null | undefined): string {
+  return raw?.trim() ? raw : "unknown";
+}
+
+// --- Worktree anchor resolution (shared by read and write paths) ----------------
+//
+// The MAIN checkout is the shared anchor for the Bolt worktree namespace. A session
+// running from a sibling dev worktree of a legacy single-repo intent creates its Bolt
+// worktrees under the MAIN checkout (siblings of it, #670/#727), so every reader that
+// re-derives the location from (projectDir, slug) must apply the SAME anchor rule or
+// it looks in the wrong place (#746). This block is the single source of that rule:
+// the write subcommands (amadeus-worktree) and all read consumers of `worktreePath`
+// resolve the base through it, never re-implementing the semantics locally.
+
+// Read-only git probe: spawnSync git and classify the exit. No throw, no exit — a
+// missing git binary or a non-repo cwd surfaces as ok=false so callers stay total.
+function gitProbe(args: string[], cwd?: string): { ok: boolean; stdout: string } {
+  const r = spawnSync("git", args, {
+    cwd,
+    encoding: "utf-8",
+    env: { ...process.env, EDITOR: process.env.EDITOR ?? "false" },
+  });
+  return { ok: r.status === 0, stdout: (r.stdout ?? "").toString() };
+}
+
+// Canonicalise a path (macOS symlinks `/var → /private/var`), falling back to the
+// input when the path does not exist on disk.
+export function canonicalise(p: string): string {
+  try {
+    return realpathSync(p);
+  } catch {
+    return p;
+  }
+}
+
+// A comparable, canonicalised, platform-normalised key for a filesystem path.
+export function pathKey(p: string): string {
+  const normalised = canonicalise(resolve(p)).replace(/\\/g, "/");
+  return process.platform === "win32" ? normalised.toLowerCase() : normalised;
+}
+
+export interface MainCheckout {
+  cwdTop: string;
+  mainCheckout: string;
+}
+
+// Read-only git probe: return the caller cwd's own toplevel and its main checkout
+// (`git rev-parse --git-common-dir`'s parent, canonicalised), or null when the cwd is
+// not a git repo / the common dir can't be resolved. No rejection, no side effects.
+export function resolveMainCheckout(gitCwd?: string): MainCheckout | null {
+  const top = gitProbe(["rev-parse", "--show-toplevel"], gitCwd);
+  if (!top.ok) return null;
+  const cwdTop = canonicalise(top.stdout.trim());
+  const common = gitProbe(["rev-parse", "--git-common-dir"], gitCwd);
+  if (!common.ok) return null;
+  const commonAbs = resolve(cwdTop, common.stdout.trim());
+  return { cwdTop, mainCheckout: canonicalise(dirname(commonAbs)) };
+}
+
+// Pure anchor rule — no I/O. `here` is the SESSION cwd's probe, `pdRepo` the
+// projectDir's probe. Only a session running from a sibling worktree (`anchored`)
+// of a legacy single-repo intent (`legacySingleRepo`: the session and the projectDir
+// share one main checkout) anchors the namespace at that main checkout. Every other
+// context — main checkout, outside a git repo (null probe), or a multi-repo workspace
+// roof whose own repo differs — keeps projectDir (byte-identical to the old join).
+export function resolveWorktreeBaseDir(
+  projectDir: string,
+  here: MainCheckout | null,
+  pdRepo: MainCheckout | null,
+): string {
+  const anchored = here !== null && here.cwdTop !== here.mainCheckout;
+  const legacySingleRepo =
+    here !== null &&
+    pdRepo !== null &&
+    pathKey(pdRepo.mainCheckout) === pathKey(here.mainCheckout);
+  return anchored && legacySingleRepo ? here.mainCheckout : projectDir;
+}
+
+// Impure wrapper: run the read-only git probes (session cwd + projectDir) and apply
+// the pure anchor rule to get the base dir the Bolt worktree namespace hangs under.
+export function worktreeBaseDir(projectDir: string): string {
+  return resolveWorktreeBaseDir(
+    projectDir,
+    resolveMainCheckout(),
+    resolveMainCheckout(projectDir),
+  );
+}
+
+// Slug inputs may arrive in the record's display casing (e.g. unit names like
+// "U101-registry-issues-field" per the Unnn-<slug> naming convention). Derived
+// artifacts (worktree dirs, branch names, audit shard paths) must be lowercase
+// kebab-case — on case-insensitive filesystems (macOS default) two casings
+// would collide silently, so ONE canonical lowercase form is used everywhere
+// (Issue #478 gap2 / #885). validateBoltSlug / the CLI validateSlug guards and
+// worktreePath all route through this single choke point.
+export function normalizeWorktreeSlug(slug: string): string {
+  return slug.toLowerCase();
+}
+
+export function worktreePath(projectDir: string, boltSlug: string): string {
+  return join(
+    worktreeBaseDir(projectDir),
+    ".amadeus",
+    "worktrees",
+    `bolt-${normalizeWorktreeSlug(boltSlug)}`,
+  );
+}
+
+// --- Multi-repo: repos are siblings of the workspace ----------------------------
+//
+// In the workspace model the projectDir is the WORKSPACE roof (`my-workspace/`),
+// which is NOT itself a git repo. Code repos are its immediate children
+// (`my-workspace/repo-a/`, `my-workspace/repo-b/`) — siblings of `amadeus/` and the
+// engine dir (vision §7). An intent records the repos it touches in its
+// intents.json row (`repos`); construction targets a specific one. P7 decouples
+// "the repo to operate on" from "the single projectDir": before P7 the worktree
+// tool ran `git worktree add` in the projectDir's own cwd (assuming projectDir IS
+// the repo); now `--repo <name>` anchors it to the sibling repo dir instead.
+//
+// repoDir resolves the on-disk dir for a repo name; it does NOT validate that the
+// dir exists or is a git repo (the caller does, where the git op runs).
+
+// A repo name is a single path segment (no separators, no `..`) so it can only
+// resolve to an immediate child of the workspace — never escape it.
+export const REPO_NAME_REGEX = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+export function isValidRepoName(name: string): boolean {
+  return REPO_NAME_REGEX.test(name) && name !== "." && name !== "..";
+}
+
+// The on-disk dir for a sibling repo: an immediate child of the workspace root.
+export function repoDir(projectDir: string, repoName: string): string {
+  return join(projectDir, repoName);
+}
+
+// True iff `dir` looks like a git checkout: it holds a `.git` (a directory for a
+// normal clone, OR a file for a submodule / linked worktree). Workspace-internal
+// dirs that are never code repos are excluded by the discovery scan, not here.
+export function isGitRepoDir(dir: string): boolean {
+  return existsSync(join(dir, ".git"));
+}
+
+// Workspace-internal child dirs that are never code repos — excluded from sibling
+// auto-discovery so the engine dir / the amadeus roof / VCS metadata never count as
+// a repo. The harness dirs are open-set (isHarnessDirName), checked separately.
+const NON_REPO_WORKSPACE_DIRS = new Set([
+  "amadeus",
+  ".git",
+  ".amadeus",
+  "node_modules",
+]);
+
+// Auto-discover the code repos that are immediate children of the workspace root:
+// any child dir holding a `.git`, excluding the workspace's own internal dirs and
+// the harness engine dir. Sorted + deduped. Returns [] when the workspace root is
+// unreadable or holds no sibling repos (the legacy single-repo / fresh-greenfield
+// case — the caller records no repos row and the lone repo is inferred later).
+export function discoverSiblingRepos(projectDir: string): string[] {
+  const found: string[] = [];
+  let entries: string[];
+  try {
+    entries = readdirSync(projectDir);
+  } catch {
+    return [];
+  }
+  for (const name of entries) {
+    if (NON_REPO_WORKSPACE_DIRS.has(name)) continue;
+    if (isHarnessDirName(name)) continue; // .claude / .kiro / .codex
+    const dir = join(projectDir, name);
+    try {
+      if (!statSync(dir).isDirectory()) continue;
+    } catch {
+      continue;
+    }
+    if (isGitRepoDir(dir)) found.push(name);
+  }
+  return [...new Set(found)].sort();
+}
+
+// Resolve the repo set for a new intent at birth: an explicit `--repos a,b` set
+// wins (authoritative when the user names them); absent it, sibling auto-discovery
+// supplies the default. Each name is validated. Returns [] when neither yields a
+// repo (→ no repos row → lone-repo inference). Throws on an invalid explicit name.
+export function resolveBirthRepoSet(
+  projectDir: string,
+  explicitReposCsv?: string,
+): string[] {
+  if (explicitReposCsv && explicitReposCsv.trim().length > 0) {
+    const names = explicitReposCsv
+      .split(",")
+      .map((r) => r.trim())
+      .filter((r) => r.length > 0);
+    for (const name of names) {
+      if (!isValidRepoName(name)) {
+        throw new Error(
+          `Invalid --repos entry "${name}": a repo name must be a single path segment matching ${REPO_NAME_REGEX} (no separators or "..").`,
+        );
+      }
+    }
+    return [...new Set(names)].sort();
+  }
+  return discoverSiblingRepos(projectDir);
+}
+
+// The recorded repo set for an intent (its intents.json row's `repos`), or [] when
+// none was recorded (legacy single-repo / projectDir-is-the-repo). The lookup
+// follows the SAME row→record-dir match listIntents() uses, then falls back to the
+// active intent's row when no explicit dirName is given.
+export function intentRepos(
+  projectDir: string,
+  intentDirName?: string | null,
+  space?: string,
+): string[] {
+  const sp = space ?? activeSpace(projectDir);
+  const dirName = intentDirName ?? activeIntent(projectDir, sp);
+  if (!dirName) return [];
+  for (const entry of readIntentRegistry(projectDir, sp)) {
+    if (!recordDirMatches(entry, dirName)) continue;
+    return entry.repos ?? [];
+  }
+  return [];
+}
+
+export interface RepoResolution {
+  // The repo NAME to operate on, or null when the intent records NO repos (the
+  // legacy single-repo case → git runs in the projectDir cwd, today's behaviour).
+  repo: string | null;
+  // The cwd the git op must run in: the sibling repo dir when `repo` is set, else
+  // the projectDir (back-compat). The caller passes this as the git invocation cwd.
+  cwd: string;
+}
+
+// Resolve which repo a CONSTRUCTION op targets, decoupling "the repo to operate
+// on" from "the single projectDir":
+//   - no recorded repos (legacy / projectDir-is-the-repo): with no --repo, null
+//     → cwd=projectDir (back-compat); an explicit --repo is HONOURED as a sibling
+//     anchor (cwd = the named sibling dir, repoDir(projectDir, requestedRepo)),
+//     for multi-repo ops on an unrecorded intent — not errored.
+//   - exactly one recorded repo: inferred (the lone repo); --repo optional but, if
+//     given, must match.
+//   - multiple recorded repos: --repo is REQUIRED to disambiguate; it must name one
+//     of the set.
+// Throws (string message) on any disambiguation failure so the tool can surface it.
+export function resolveConstructionRepo(
+  projectDir: string,
+  requestedRepo: string | undefined,
+  intentDirName?: string | null,
+  space?: string,
+): RepoResolution {
+  const repos = intentRepos(projectDir, intentDirName, space);
+  if (requestedRepo !== undefined) {
+    if (!isValidRepoName(requestedRepo)) {
+      throw new Error(
+        `Invalid --repo "${requestedRepo}": a repo name must be a single path segment matching ${REPO_NAME_REGEX}.`,
+      );
+    }
+    if (repos.length > 0 && !repos.includes(requestedRepo)) {
+      throw new Error(
+        `--repo "${requestedRepo}" is not in this intent's repo set: ${repos.join(", ")}.`,
+      );
+    }
+    // repos.length === 0 (legacy) AND an explicit --repo: honour it as a sibling
+    // anchor (the caller may be operating multi-repo on an unrecorded intent),
+    // resolving cwd to the named sibling dir.
+    return { repo: requestedRepo, cwd: repoDir(projectDir, requestedRepo) };
+  }
+  if (repos.length === 0) {
+    // Legacy single-repo / projectDir-is-the-repo: run git in projectDir's cwd.
+    return { repo: null, cwd: projectDir };
+  }
+  if (repos.length === 1) {
+    return { repo: repos[0], cwd: repoDir(projectDir, repos[0]) };
+  }
+  throw new Error(
+    `This intent spans ${repos.length} repos (${repos.join(", ")}); pass --repo <name> to disambiguate which to operate on.`,
+  );
+}
+
+// --- Record-tree data-path family ---------------------------------------------
+//
+// Single chokepoint for every path under the project's record tree. Each helper
+// resolves the per-intent RECORD dir (amadeus/spaces/<sp>/intents/<slug>-<id8>/)
+// when an intent exists, else the bare space record root (spaceRecordRoot) — the
+// P9 end state has no flat `amadeus-docs/` root, so the whole tree stays on ONE
+// root per intent (state split across two roots is meaningless). The
+// state/audit/worktree helpers above are the load-bearing pair; these cover the
+// rest of the family (runtime graph, hook health, recovery breadcrumb, plan,
+// stop-hook guard, the bare docs dir, and a stage's per-run directory) plus the
+// per-worktree mirror copies.
+//
+// NOT funnelled here (deliberately): the two engine artifact/diary resolvers in
+// amadeus-orchestrate.ts (resolveArtifactPath / memoryPathFor) build RELATIVE,
+// agent-consumed paths from backtick templates and take no projectDir — the
+// absolute, projectDir-keyed shape here is incompatible with them. They re-root
+// via relativeRecordDir() threaded from the engine instead.
+
+// The record-tree ROOT for a project: the per-intent record dir when an intent
+// resolves, else the bare space record root (amadeus/spaces/<sp>/intents/). Every
+// family helper below joins under this so the whole tree moves with the intent in
+// lockstep. Stays total (never throws) so the hooks that call the family at
+// module top on a pre-birth shell don't crash.
+export function docsRoot(projectDir: string, intent?: string, space?: string): string {
+  const dir = recordDir(projectDir, intent, space);
+  return dir ?? spaceRecordRoot(projectDir, space);
+}
+
+// The bare record-tree root (doctor's existence check, the init scaffolder's
+// base dir).
+export function docsDir(projectDir: string, intent?: string, space?: string): string {
+  return docsRoot(projectDir, intent, space);
+}
+
+// `<root>/runtime-graph.json` — the compiled runtime graph.
+export function runtimeGraphPath(projectDir: string, intent?: string, space?: string): string {
+  return join(docsRoot(projectDir, intent, space), "runtime-graph.json");
+}
+
+// `<root>/.amadeus-hooks-health` — per-hook heartbeat + drop counters surfaced by
+// `--doctor`.
+export function hooksHealthDir(projectDir: string, intent?: string, space?: string): string {
+  return join(docsRoot(projectDir, intent, space), ".amadeus-hooks-health");
+}
+
+// `<root>/.amadeus-recovery.md` — the validate-state breadcrumb the orchestrator
+// reads on resume.
+export function recoveryFilePath(projectDir: string, intent?: string, space?: string): string {
+  return join(docsRoot(projectDir, intent, space), ".amadeus-recovery.md");
+}
+
+// `<root>/.amadeus-plan.json` — `amadeus-graph resolve` output.
+export function planFilePath(projectDir: string, intent?: string, space?: string): string {
+  return join(docsRoot(projectDir, intent, space), ".amadeus-plan.json");
+}
+
+// `<root>/.amadeus-stop-hook` — the Stop hook's durable no-progress guard counter
+// directory.
+export function stopHookDir(projectDir: string, intent?: string, space?: string): string {
+  return join(docsRoot(projectDir, intent, space), ".amadeus-stop-hook");
+}
+
+// `<baseDir>/.amadeus-sensors` — the sensor detail-output / tsbuildinfo directory.
+// `baseDir` is the project dir for the dispatcher, or a tsconfig anchor for the
+// type-check sensor; callers append a stage slug as needed. The tsconfig-anchor
+// caller passes a non-projectDir base, so the record-dir resolution is OPT-OUT:
+// only resolve per-intent when the caller passes intent/space context; a bare
+// baseDir keeps the flat `.amadeus-sensors` leaf for the type-check anchor case.
+export function sensorsDir(baseDir: string, intent?: string, space?: string): string {
+  if (intent === undefined && space === undefined) {
+    return join(docsRoot(baseDir), ".amadeus-sensors");
+  }
+  return join(docsRoot(baseDir, intent, space), ".amadeus-sensors");
+}
+
+// `<root>/<phase>/<slug>` — a stage's per-run artifact directory (the Stop hook
+// scans it for unanswered question files).
+export function stageDir(projectDir: string, phase: string, slug: string, intent?: string, space?: string): string {
+  return join(docsRoot(projectDir, intent, space), phase, slug);
+}
+
+// Relative diary path recorded on a runtime-graph row — forward slashes
+// regardless of host OS so the schema stays portable across worktrees. Mirrors
+// the engine's memoryPathFor. `recordPrefix` is the relative per-intent record
+// dir (relativeRecordDir) when one resolves, else null → the bare space record
+// prefix (relativeSpaceRecordPrefix). Kept here so the prefix decision funnels
+// with the rest of the family.
+export function relativeMemoryPath(phase: string, stageSlug: string, recordPrefix?: string | null): string {
+  const prefix = recordPrefix ?? relativeSpaceRecordPrefix();
+  return `${prefix}/${phase}/${stageSlug}/memory.md`;
+}
+
+// `<root>/<phase>/<stageSlug>/memory.md` — the absolute diary path for a stage.
+export function memoryFilePath(projectDir: string, phase: string, stageSlug: string, intent?: string, space?: string): string {
+  return join(docsRoot(projectDir, intent, space), phase, stageSlug, "memory.md");
+}
+
+// `<root>/inception/units-generation/unit-of-work-dependency.md` — the fenced
+// edge block the Bolt-DAG node is computed from.
+export function unitDependencyPath(projectDir: string, intent?: string, space?: string): string {
+  return join(docsRoot(projectDir, intent, space), "inception", "units-generation", "unit-of-work-dependency.md");
+}
+
+// --- Per-worktree mirror copies -----------------------------------------------
+//
+// A Bolt worktree is a git worktree of the project, so it carries its OWN mirror
+// of the record tree at the SAME relative layout as the main checkout: the
+// per-intent record dir (amadeus/spaces/<sp>/intents/<slug>-<id8>/) when the Bolt
+// forks from an intent, else the bare space record root. These take an
+// ALREADY-RESOLVED worktree base dir (the output of worktreePath, or an
+// audit-recorded path), not projectDir, plus an optional `recordPrefix` — the
+// RELATIVE per-intent record dir (relativeRecordDir) the fork inherited from the
+// main intent. When omitted (a caller without intent context yet), the prefix
+// falls back to the bare space record root (relativeSpaceRecordPrefix). Fork and
+// merge MUST pass the SAME prefix or they read the wrong mirror file.
+
+function worktreeRecordRoot(wtPath: string, recordPrefix?: string | null): string {
+  const prefix = recordPrefix ?? relativeSpaceRecordPrefix();
+  // recordPrefix is a posix-relative path (forward slashes); split so join
+  // produces native separators under wtPath.
+  return join(wtPath, ...prefix.split("/"));
+}
+
+export function worktreeDocsDir(wtPath: string, recordPrefix?: string | null): string {
+  return worktreeRecordRoot(wtPath, recordPrefix);
+}
+
+export function worktreeStateFilePath(wtPath: string, recordPrefix?: string | null): string {
+  return join(worktreeRecordRoot(wtPath, recordPrefix), "amadeus-state.md");
+}
+
+export function worktreeAuditFilePath(wtPath: string, recordPrefix?: string | null, projectDir?: string): string {
+  // A worktree clone writes its own audit shard inside the worktree mirror.
+  // The shard name embeds the MAIN clone's stable token (projectDir), NOT the
+  // worktree's own — the fork and merge subprocesses are both spawned from the
+  // main checkout, so threading the main clone-id makes them resolve the SAME
+  // worktree shard across the two PIDs. A git worktree is a separate working dir
+  // and would otherwise mint its own (ungitignored, untracked) clone-id, so the
+  // token MUST come from the main checkout. Fall back to wtPath only when no
+  // projectDir is threaded (legacy callers without main context).
+  return join(worktreeRecordRoot(wtPath, recordPrefix), "audit", auditShardName(projectDir ?? wtPath));
+}
+
+export function worktreeRuntimeGraphPath(wtPath: string, recordPrefix?: string | null): string {
+  return join(worktreeRecordRoot(wtPath, recordPrefix), "runtime-graph.json");
+}
+
+// Bolt slug shape: lowercase letter, then lowercase letters / digits / hyphens.
+// Centralised here (previously duplicated as SLUG_RE in amadeus-worktree.ts and
+// SLUG_REGEX in amadeus-audit.ts) so a future tightening lands once. Stage and
+// artifact slugs in stage-schema.ts are a separate domain and keep their own
+// regex.
+export const BOLT_SLUG_REGEX = /^[a-z][a-z0-9-]*$/;
+export const BOLT_SLUG_MAX_LENGTH = 64;
+
+// --- Error helpers (catch-block discipline) ---
+//
+// TypeScript 4.4+ types `catch (e)` as `unknown` under --useUnknownInCatchVariables.
+// These two helpers replace the old `e as Error` pattern in throw-sites and
+// log-sites uniformly. Use:
+//
+//   try { ... } catch (e) {
+//     throw new Error(`failed: ${errorMessage(e)}`);
+//   }
+//
+// Both helpers are total (never throw) and stable on any thrown value
+// — string throws, plain objects, Error instances, primitives.
+
+export function errorMessage(e: unknown): string {
+  if (e instanceof Error) {
+    return e.message;
+  }
+  if (typeof e === "string") {
+    return e;
+  }
+  // TS 4.9+ narrows `e.message` to `unknown` after the `in` check — no cast needed.
+  if (typeof e === "object" && e !== null && "message" in e) {
+    const msg: unknown = e.message;
+    return typeof msg === "string" ? msg : String(msg);
+  }
+  return String(e);
+}
+
+export function errorStack(e: unknown): string | undefined {
+  if (e instanceof Error) {
+    return e.stack;
+  }
+  if (typeof e === "object" && e !== null && "stack" in e) {
+    const stack: unknown = e.stack;
+    return typeof stack === "string" ? stack : undefined;
+  }
+  return undefined;
+}
+
+// --- JSON.parse type guards ---
+//
+// JSON.parse returns `any` (TypeScript design choice). These guards narrow
+// `unknown` to a concrete shape so consumers don't need property-access
+// casts. Each guard is structural and total — it returns false for malformed
+// input rather than throwing, so callers can decide how to fail.
+
+/**
+ * Generic "is plain object" predicate. After this guard, the value is typed
+ * `Record<string, unknown>` so caller can do `if ("x" in v) { v.x ... }`
+ * with TS narrowing carrying through.
+ */
+export function isPlainObject(x: unknown): x is Record<string, unknown> {
+  return typeof x === "object" && x !== null && !Array.isArray(x);
+}
+
+/**
+ * Minimal package.json shape. Only fields the framework reads are listed —
+ * the type-coverage layer needs declared shapes for JSON.parse outputs to
+ * count as typed.
+ */
+export interface PackageJson {
+  name?: string;
+  version?: string;
+  description?: string;
+  license?: string;
+  main?: string;
+  module?: string;
+  scripts?: Record<string, string>;
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
+}
+
+/** Type guard for package.json. Permissive — accepts any plain object. */
+export function isPackageJson(x: unknown): x is PackageJson {
+  return isPlainObject(x);
+}
+
+/**
+ * Claude Code hook event payload. Hooks receive JSON on stdin with a
+ * shape that varies by event type. Fields below are the union of what
+ * the framework's hooks actually read — see
+ * https://docs.anthropic.com/en/docs/claude-code/hooks for the canonical
+ * reference. All fields are optional because the hook code defensively
+ * coalesces with `?? ""`.
+ */
+export interface ClaudeCodeHookInput {
+  hook_event_name?: string;
+  session_id?: string;
+  tool_name?: string;
+  tool_input?: {
+    file_path?: string;
+    command?: string;
+    status?: string;
+    activeForm?: string;
+    [key: string]: unknown;
+  };
+  reason?: string;
+  source?: string;
+  prompt?: string;
+  agent_type?: string;
+  agent_id?: string;
+  last_assistant_message?: string;
+  [key: string]: unknown;
+}
+
+/** Type guard for Claude Code hook input JSON. */
+export function isClaudeCodeHookInput(x: unknown): x is ClaudeCodeHookInput {
+  return isPlainObject(x);
+}
+
+// --- Map / collection access helpers ---
+//
+// Replace Map.get(k)! / Array.pop()! / Array.shift()! patterns where the
+// caller has algorithmic certainty the value exists. Throws on nullish
+// instead of leaving a runtime undefined to leak silently — strictly
+// safer than the bang assertion.
+
+/** Get a Map value that the algorithm guarantees is set. Throws if absent. */
+export function mustGet<K, V>(m: Map<K, V>, k: K, ctx: string): V {
+  const v = m.get(k);
+  if (v === undefined) {
+    throw new Error(`Internal: mustGet(${ctx}) returned undefined; map invariant violated`);
+  }
+  return v;
+}
+
+/** Pop from an array the caller guarantees is non-empty. Throws if empty. */
+export function mustPop<T>(arr: T[], ctx: string): T {
+  const v = arr.pop();
+  if (v === undefined) {
+    throw new Error(`Internal: mustPop(${ctx}) on empty array`);
+  }
+  return v;
+}
+
+/** Shift from an array the caller guarantees is non-empty. Throws if empty. */
+export function mustShift<T>(arr: T[], ctx: string): T {
+  const v = arr.shift();
+  if (v === undefined) {
+    throw new Error(`Internal: mustShift(${ctx}) on empty array`);
+  }
+  return v;
+}
+
+// Validate a Bolt slug against shape + length. Returns null on success or a
+// human-readable error string on failure. Pure — callers route through their
+// preferred error mechanism (jsonError, throw, etc.).
+export function validateBoltSlug(slug: string): string | null {
+  if (!slug) {
+    return "Bolt slug is empty";
+  }
+  if (slug.length > BOLT_SLUG_MAX_LENGTH) {
+    return `Bolt slug "${slug.slice(0, 32)}..." is ${slug.length} chars; max is ${BOLT_SLUG_MAX_LENGTH}`;
+  }
+  // Judge in the normalized form so an uppercase-bearing display name (Unnn-
+  // <slug>) is accepted; derived artifacts are lowercased at the same choke
+  // point (normalizeWorktreeSlug above). Issue #478 gap2 / #885.
+  if (!BOLT_SLUG_REGEX.test(normalizeWorktreeSlug(slug))) {
+    return `Invalid Bolt slug "${slug}" — must normalize to ${BOLT_SLUG_REGEX} (letter, then letters/digits/hyphens)`;
+  }
+  return null;
+}
+
+// --- State file I/O ---
+
+export function readStateFile(projectDir: string, intent?: string, space?: string): string {
+  const path = stateFilePath(projectDir, intent, space);
+  if (!existsSync(path)) {
+    throw new Error(`State file not found: ${path}`);
+  }
+  return readFileSync(path, "utf-8");
+}
+
+export function writeStateFile(projectDir: string, content: string, intent?: string, space?: string): void {
+  const path = stateFilePath(projectDir, intent, space);
+  // A read-only amadeus-state.md is a deliberate write barrier the state tool
+  // must honour (a corrupt/locked workspace must fail loud, not silently
+  // advance — see the t47/t77/t137 read-only-state failure-injection tests).
+  // writeFileAtomic uses tmp+rename, and POSIX rename overwrites a read-only
+  // TARGET (it only needs directory-write permission), so it would bypass that
+  // barrier. Preserve the bare-writeFileSync EACCES semantics by refusing up
+  // front when the target exists but is not writable.
+  if (existsSync(path)) accessSync(path, fsConstants.W_OK);
+  // Ensure the record dir's parent chain exists before the atomic write — a
+  // per-intent record dir's parents (amadeus/spaces/<sp>/intents/<slug>-<id8>/)
+  // may not exist yet on first write; the flat fallback's amadeus-docs/ is created
+  // by the init scaffolder, but mkdir-recursive is idempotent so it's safe for
+  // both layouts.
+  else mkdirSync(dirname(path), { recursive: true });
+  // Atomic write (tmp + rename) so a crash mid-write can never leave a
+  // half-written state file a concurrent reader would see torn. Lost-update
+  // safety for the read-modify-write handlers (withAuditLock wrapping) is a
+  // separate, larger change tracked as a follow-up; this reroute is the
+  // torn-write half and benefits every caller unconditionally.
+  writeFileAtomic(path, content);
+}
+
+// --- Field reading/writing ---
+
+export function getField(content: string, field: string): string | null {
+  // Match: - **Field Name**: value
+  // Use [ \t]* instead of \s* so a field with an empty value returns "" (not
+  // the next bullet line — \s matches \n in JS regex, which would let the
+  // pattern cross into the next line).
+  const regex = new RegExp(
+    `^- \\*\\*${escapeRegex(field)}\\*\\*:[ \\t]*(.*)$`,
+    "m"
+  );
+  const match = content.match(regex);
+  return match ? match[1].trim() : null;
+}
+
+// --- Autonomy mode ---
+//
+// The state-file field that distinguishes autonomous Construction (swarm/Bolt)
+// from interactive flow. Promoted to ONE exported predicate so the human-
+// presence gate's carve-out and the existing open-coded `=== "autonomous"`
+// sites cannot drift. (This PR uses the helper only at the NEW gate sites;
+// refactoring the existing open-coded sites is a tracked follow-up.)
+export const AUTONOMY_MODE_FIELD = "Construction Autonomy Mode";
+
+export function isAutonomousMode(stateContent: string | null): boolean {
+  return !!stateContent && getField(stateContent, AUTONOMY_MODE_FIELD)?.trim() === "autonomous";
+}
+
+// Deterministic off-switch for the human-presence gate (mirrors
+// artifactGuardDisabled in amadeus-state.ts). The suite sets this globally (the
+// dedicated guard test clears it), and it is the documented bypass for
+// synthetic CI runs that drive approve/answer against bare fixtures.
+export function humanPresenceGuardDisabled(): boolean {
+  return process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD === "1";
+}
+
+export function setField(content: string, field: string, value: string): string {
+  // [ \t]* instead of \s* so an empty value doesn't let the regex eat the
+  // following line. .* with the m flag does not cross lines on its own, but
+  // \s* preceding it would consume the trailing \n.
+  const regex = new RegExp(
+    `^(- \\*\\*${escapeRegex(field)}\\*\\*:)[ \\t]*.*$`,
+    "m"
+  );
+  if (regex.test(content)) {
+    return content.replace(regex, `$1 ${value}`);
+  }
+  return content;
+}
+
+// fieldLineRegex: the canonical `- **Field**:` line-head matcher. Shared by
+// setFieldStrict and fieldExists so the two cannot drift on what "the field
+// exists" means (both must agree with what setField actually mutates).
+// [ \t]* instead of \s* — see setField comment for the line-crossing rationale.
+function fieldLineRegex(field: string): RegExp {
+  return new RegExp(`^(- \\*\\*${escapeRegex(field)}\\*\\*:)[ \\t]*.*$`, "m");
+}
+
+// fieldExists: true when a `- **Field**:` bullet is present in the state file,
+// using the exact matcher setFieldStrict/setField rely on. Callers that must
+// fail-closed on an absent field (e.g. `state set`) pre-validate with this
+// before writing, instead of letting setField silently no-op (Issue #1027).
+export function fieldExists(content: string, field: string): boolean {
+  return fieldLineRegex(field).test(content);
+}
+
+// setFieldStrict: like setField but throws when the field is absent. Use this
+// in state-machine transitions where a silent no-op would cause undetected
+// drift (e.g., bolt set-autonomy updating Construction Autonomy Mode — if the
+// field is missing, we want to know immediately, not ship a lie to the caller).
+export function setFieldStrict(content: string, field: string, value: string): string {
+  const regex = fieldLineRegex(field);
+  if (!regex.test(content)) {
+    throw new Error(
+      `Field not found in state file: "${field}". Cannot update — refusing to silently no-op.`
+    );
+  }
+  return content.replace(regex, `$1 ${value}`);
+}
+
+// setOrInsertField: update field if present; otherwise insert a new
+// `- **Field**: value` bullet at the end of the named `## Heading` section.
+// Intended for optional fields that don't ship in the current state-template
+// but may be added at runtime (e.g., the `Merge-Held` per-Bolt marker —
+// added only when a multi-failure halt-and-ask sequence opens).
+export function setOrInsertField(
+  content: string,
+  heading: string,
+  field: string,
+  value: string,
+): string {
+  const regex = new RegExp(
+    `^(- \\*\\*${escapeRegex(field)}\\*\\*:)[ \\t]*.*$`,
+    "m"
+  );
+  if (regex.test(content)) {
+    return content.replace(regex, `$1 ${value}`);
+  }
+  return appendUnderHeading(content, heading, `- **${field}**: ${value}\n`);
+}
+
+// removeField: delete the `- **Field**: ...` bullet line if present; a no-op
+// otherwise. The inverse of setOrInsertField, for runtime-only fields that are
+// cleared rather than reset (e.g. the `Parked` / `Parked At Stage` markers an
+// `unpark` removes). Matches the bullet at line start and drops the whole line
+// including its trailing newline so no blank line is left behind.
+export function removeField(content: string, field: string): string {
+  const regex = new RegExp(
+    `^- \\*\\*${escapeRegex(field)}\\*\\*:[ \\t]*.*(?:\\r?\\n)?`,
+    "m"
+  );
+  return content.replace(regex, "");
+}
+
+// --- Refs-list field operations (Bolt Refs in v7 state template) ---
+//
+// `Bolt Refs` is a list-shaped single-line value with a literal `[empty list]`
+// placeholder when empty (state-template.md:11) — `amadeus-utility.ts`'s init
+// emitter at line 1391 also produces a bare-empty shape (no value after the
+// colon). Both are tolerated on parse; emit always produces `[empty list]`
+// when empty for round-trip determinism.
+export function parseRefsList(value: string): string[] {
+  const trimmed = value.trim();
+  if (trimmed === "" || trimmed === "[empty list]") return [];
+  const inner = trimmed.startsWith("[") && trimmed.endsWith("]")
+    ? trimmed.slice(1, -1)
+    : trimmed;
+  return inner
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
+
+export function emitRefsList(slugs: string[]): string {
+  if (slugs.length === 0) return "[empty list]";
+  const sorted = [...slugs].sort();
+  return `[${sorted.join(", ")}]`;
+}
+
+export function appendSlug(currentValue: string, slug: string): string {
+  const list = parseRefsList(currentValue);
+  if (list.includes(slug)) {
+    throw new Error(`slug already present in refs list: "${slug}"`);
+  }
+  list.push(slug);
+  return emitRefsList(list);
+}
+
+export function removeSlug(currentValue: string, slug: string): string {
+  const list = parseRefsList(currentValue);
+  if (!list.includes(slug)) {
+    throw new Error(`slug not present in refs list: "${slug}"`);
+  }
+  return emitRefsList(list.filter((s) => s !== slug));
+}
+
+// --- Checkbox operations ---
+
+export interface CheckboxLine {
+  slug: string;
+  state: CheckboxState;
+  suffix: string; // e.g., "EXECUTE" or "SKIP: reason"
+}
+
+export function parseCheckboxes(content: string): CheckboxLine[] {
+  const results: CheckboxLine[] = [];
+  const regex = /^- \[([ xSR?-])\] (\S+)\s*—\s*(.*)$/gm;
+  let match: RegExpExecArray | null = regex.exec(content);
+  while (match !== null) {
+    const marker = match[1];
+    let state: CheckboxState;
+    switch (marker) {
+      case " ":
+        state = "pending";
+        break;
+      case "-":
+        state = "in-progress";
+        break;
+      case "?":
+        state = "awaiting-approval";
+        break;
+      case "R":
+        state = "revising";
+        break;
+      case "x":
+        state = "completed";
+        break;
+      case "S":
+        state = "skipped";
+        break;
+      default:
+        state = "pending";
+    }
+    results.push({ slug: match[2], state, suffix: match[3].trim() });
+    match = regex.exec(content);
+  }
+  return results;
+}
+
+export function setCheckbox(
+  content: string,
+  slug: string,
+  newState: CheckboxState
+): string {
+  const marker = CHECKBOX_MAP[newState];
+  // Match any checkbox state for this slug
+  const regex = new RegExp(
+    `^(- )\\[[ xSR?-]\\]( ${escapeRegex(slug)} —)`,
+    "m"
+  );
+  return content.replace(regex, `$1${marker}$2`);
+}
+
+// The suffix-setter twin of setCheckbox: flips ONE stage line's plan suffix
+// (the em-dash EXECUTE/SKIP tail the router's override channel reads)
+// in either direction, leaving the checkbox marker untouched. setCheckbox owns
+// the marker (run-state); this owns the suffix (the plan) - the two edit
+// disjoint fields of the same line, so recompose and jump compose cleanly.
+// Returns the content unchanged when the slug has no stage line.
+export function setStageSuffix(
+  content: string,
+  slug: string,
+  action: "EXECUTE" | "SKIP"
+): string {
+  const regex = new RegExp(
+    `^(- \\[[ xSR?-]\\] ${escapeRegex(slug)}\\s*—\\s*)(EXECUTE|SKIP)\\b`,
+    "m"
+  );
+  return content.replace(regex, `$1${action}`);
+}
+
+export function countCheckboxes(
+  content: string,
+  state: CheckboxState
+): number {
+  const checkboxes = parseCheckboxes(content);
+  return checkboxes.filter((c) => c.state === state).length;
+}
+
+// --- Audit locking (per-intent, reaper-guarded) -------------------------------
+//
+// The audit lock is a cross-process mutex: a bare mkdir-EEXIST dir in tmpdir().
+// It is keyed PER INTENT so two intents (or two Bolts in different intents) run
+// truly in parallel without false serialization. Two keying invariants (P4's
+// auto-birth depends on them):
+//
+//  (1) intent-OMITTED hashes a RESERVED sentinel `__workspace__` bucket, distinct
+//      from every per-intent bucket, and does NOT resolve activeIntent() (at
+//      birth there is no active intent; resolving would throw or bucket on
+//      "default", and two concurrent first-runs would key different/empty
+//      buckets and both birth). EVERY intents.json mutation takes this workspace
+//      bucket; only intent-scoped state/audit writes take a per-intent bucket.
+//  (2) the composite identity (projectDir + space + intent | sentinel) keys the
+//      lock dir AND the in-process depth/handler maps, or the maps collide
+//      across intents.
+//
+// REAPER: acquire stamps owner PID + start-time into the lock dir (owner.json).
+// A waiter reclaims a lock iff process.kill(pid,0) throws ESRCH (owner gone) OR
+// the stamp's age exceeds a conservative threshold — a live under-threshold
+// holder is NEVER robbed. Reclaim is atomic (rename the dead dir aside, then
+// re-mkdir) so only one waiter wins.
+
+// The reserved bucket for workspace-level mutations (intents.json, intent birth).
+export const WORKSPACE_LOCK_SENTINEL = "__workspace__";
+
+// Default stale-lock age threshold (ms). A lock whose owner is still alive but
+// whose stamp is older than this is treated as leaked (a wedged holder). Tunable
+// via AMADEUS_LOCK_STALE_MS for tests/ops. Conservative by default (10 min) so a
+// genuinely slow-but-live holder is never robbed on liveness alone — the PID
+// liveness check reclaims a dead owner immediately regardless of age.
+export const DEFAULT_LOCK_STALE_MS = 10 * 60 * 1000;
+
+function lockStaleMs(): number {
+  const raw = process.env.AMADEUS_LOCK_STALE_MS;
+  if (raw) {
+    const n = Number(raw);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return DEFAULT_LOCK_STALE_MS;
+}
+
+// The composite lock IDENTITY string — keys the dir hash AND the in-process
+// maps. intent-omitted → the workspace sentinel (invariant 1). When intent is
+// given, the space is default-resolved (a per-intent lock is meaningless without
+// its space) but activeIntent() is NEVER consulted here.
+export function auditLockIdentity(projectDir: string, intent?: string, space?: string): string {
+  if (intent === undefined) {
+    return `${projectDir}\x00${WORKSPACE_LOCK_SENTINEL}`;
+  }
+  const sp = space ?? activeSpace(projectDir);
+  return `${projectDir}\x00${sp}\x00${intent}`;
+}
+
+// The base directory the audit-lock dirs live under. Defaults to the OS temp
+// dir (a machine-global namespace shared by every process). Tunable via
+// AMADEUS_LOCK_BASE_DIR for tests/ops — same env-injection shape as
+// AMADEUS_LOCK_STALE_MS, not a test-only code branch. Concurrent test runs
+// point it at a per-run private dir so a 32-bit-hash collision between two
+// runs' distinct identities can't make one run's lock dir alias another's in
+// the shared tmpdir (#831).
+function lockBaseDir(): string {
+  const raw = process.env.AMADEUS_LOCK_BASE_DIR;
+  if (raw) return raw;
+  return tmpdir();
+}
+
+export function auditLockDir(projectDir: string, intent?: string, space?: string): string {
+  const identity = auditLockIdentity(projectDir, intent, space);
+  const hash = createHash("md5").update(identity).digest("hex").slice(0, 8);
+  return join(lockBaseDir(), `.amadeus-audit-${hash}.lock`);
+}
+
+// Owner stamp written into the lock dir on acquire. start-time uses the process
+// start epoch when available (a wrapped-around PID reuse is then detectable by a
+// start-time mismatch); falls back to acquire-time. No Math.random / Date.now in
+// the steal SUFFIX (scripts forbid them) — see reapStaleLock.
+interface LockOwner {
+  pid: number;
+  startedAtMs: number;
+}
+
+function ownerStampPath(lockDir: string): string {
+  return join(lockDir, "owner.json");
+}
+
+// Records the owner stamp THIS process wrote at acquire, keyed by lock identity.
+// releaseAuditLock / the exit-handler consult it so a release only removes a dir
+// that STILL carries the stamp we wrote — the write⇔delete symmetry of the
+// acquire-side reaper's stampMatches (a fresh lock a colliding identity holds at
+// the same 32-bit-hashed path is never robbed). Cleared on release.
+const AUDIT_LOCK_OWNED_STAMPS = new Map<string, LockOwner>();
+
+function writeOwnerStamp(lockDir: string, key: string): void {
+  const owner: LockOwner = { pid: process.pid, startedAtMs: lockAcquireEpochMs() };
+  try {
+    writeFileSync(ownerStampPath(lockDir), JSON.stringify(owner), "utf-8");
+    AUDIT_LOCK_OWNED_STAMPS.set(key, owner);
+  } catch {
+    // Best-effort: a missing stamp degrades the reaper to age-only on the next
+    // waiter (it can't read a PID), never to incorrectness.
+  }
+}
+
+// True iff the lock dir currently on disk is one THIS process may remove on
+// release/exit — i.e. it still carries the exact stamp we wrote (pid +
+// startedAtMs), OR it is unstamped (our own dir whose best-effort stamp write
+// failed, or which we hold mid-lifecycle). A dir re-stamped by a colliding
+// identity (auditLockDir keys on md5[:8] = 32 bits, so distinct identities can
+// share a tmpdir path) carries a foreign stamp → refused, so releasing OUR
+// identity never destroys THEIR live lock. Symmetric to reapStaleLock's
+// "never rob a live holder" contract on the acquire side.
+function ownsLockDir(lockDir: string, key: string): boolean {
+  const disk = readOwnerStamp(lockDir);
+  // Unstamped: our own dir (stamp write is best-effort). A foreign live holder
+  // mid-acquire cannot be at this path — release is only called by the holder,
+  // and the holder's mkdir would have EEXIST'd against a foreign dir.
+  if (disk === null) return true;
+  const owned = AUDIT_LOCK_OWNED_STAMPS.get(key);
+  if (owned) return disk.pid === owned.pid && disk.startedAtMs === owned.startedAtMs;
+  // No recorded acquire in this process (a bare release): fall back to pid
+  // identity. A live releaser's pid is unique among running processes, so a
+  // matching on-disk pid proves we wrote the stamp.
+  return disk.pid === process.pid;
+}
+
+// Remove the lock dir ONLY if it still carries our owner stamp. Shared by
+// releaseAuditLock and the withAuditLock exit-handler so both honour the same
+// write⇔delete symmetry — neither ever destroys a colliding identity's live
+// lock at a shared (32-bit-hashed) tmpdir path.
+function removeLockDirIfOwned(lockDir: string, key: string): void {
+  if (!ownsLockDir(lockDir, key)) return;
+  try {
+    rmSync(lockDir, { recursive: true, force: true });
+  } catch {
+    // Lock dir may already be removed
+  }
+}
+
+function readOwnerStamp(lockDir: string): LockOwner | null {
+  try {
+    const raw = readFileSync(ownerStampPath(lockDir), "utf-8");
+    const parsed: unknown = JSON.parse(raw);
+    if (isPlainObject(parsed) && typeof parsed.pid === "number" && typeof parsed.startedAtMs === "number") {
+      return { pid: parsed.pid, startedAtMs: parsed.startedAtMs };
+    }
+  } catch {
+    // no stamp / unreadable
+  }
+  return null;
+}
+
+// A monotonic-ish epoch for the owner stamp. performance.timeOrigin + now()
+// gives a wall-clock-equivalent without the bare `Date.now()` the lint forbids;
+// it is used only for AGE comparison (a relative delta), so origin drift is
+// irrelevant — both stamps come from the same clock family across processes
+// because timeOrigin is anchored to the unix epoch by the runtime.
+function lockAcquireEpochMs(): number {
+  return Math.floor(performance.timeOrigin + performance.now());
+}
+
+// Is the lock-owning process still alive? signal 0 probes liveness without
+// delivering a signal: ESRCH ⇒ gone, EPERM ⇒ alive-but-not-ours (still alive),
+// success ⇒ alive. A missing/invalid pid is treated as "not alive" so an
+// unstamped leaked dir is reclaimable on age alone.
+function ownerAlive(owner: LockOwner | null): boolean {
+  if (!owner || !Number.isInteger(owner.pid) || owner.pid <= 0) return false;
+  try {
+    process.kill(owner.pid, 0);
+    return true;
+  } catch (e) {
+    // EPERM ⇒ the process exists but is owned by another user → still alive.
+    return (e as NodeJS.ErrnoException)?.code === "EPERM";
+  }
+}
+
+// A monotonic per-process counter for the steal-rename suffix (no Math.random /
+// Date.now — scripts/forbid). Combined with the PID it is unique enough that two
+// waiters never collide on the same `.dead.<suffix>` name, and only one wins the
+// rename anyway (the second gets ENOENT).
+let _reapCounter = 0;
+function reapSuffix(): string {
+  _reapCounter += 1;
+  return `${process.pid}-${_reapCounter}`;
+}
+
+// Grace window (ms) for an UNSTAMPED lock dir. acquireAuditLock mkdirs the lock
+// dir THEN writes owner.json, so there is a brief window where a live holder's
+// dir has no stamp yet. A waiter must NOT steal an unstamped dir younger than
+// this grace (it is a live process mid-acquire) — only an unstamped dir OLDER
+// than the grace is treated as a genuine leak (e.g. a SIGKILL between mkdir and
+// stamp). Generous relative to the mkdir→write gap, tiny relative to the stale
+// threshold. Tunable via AMADEUS_LOCK_UNSTAMPED_GRACE_MS.
+function unstampedGraceMs(): number {
+  const raw = process.env.AMADEUS_LOCK_UNSTAMPED_GRACE_MS;
+  if (raw) {
+    const n = Number(raw);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return 5000;
+}
+
+// The lock dir's own mtime epoch (ms), or null if it can't be stat'd. Used as the
+// age anchor for an UNSTAMPED dir (no owner.json yet / ever). statSync mtime is a
+// wall-clock ms, comparable to lockAcquireEpochMs()'s epoch family.
+function lockDirMtimeMs(lockDir: string): number | null {
+  try {
+    return statSync(lockDir).mtimeMs;
+  } catch {
+    return null;
+  }
+}
+
+// True iff `dir` carries the exact owner identity `judged` to be reclaimable
+// (same pid + startedAtMs). Called by reapStaleLock on the reaper-PRIVATE moved
+// dir AFTER the CAS rename, to confirm we grabbed the same stale lock we judged
+// — not a fresh live lock a competitor re-acquired in the decide→rename window.
+//
+// A `null` judged-owner means the dir was judged reclaimable as an OLD UNSTAMPED
+// dir. It still matches only if it is STILL unstamped AND still over the grace
+// window. renameSync preserves the inode's mtime, so a genuine old leak keeps
+// its over-grace mtime through the move, whereas a competitor's freshly-mkdir'd
+// re-acquire has a RECENT mtime (under grace) → mismatch → restore. A now-present
+// stamp (a live re-acquirer that already wrote owner.json) likewise mismatches.
+//
+// A concrete judged stamp (dead, or live-but-over-age) matches only if the moved
+// dir still carries the SAME pid + startedAtMs. A re-acquire rewrites owner.json
+// with a different pid / fresher startedAtMs → mismatch → restore.
+function stampMatches(dir: string, judged: LockOwner | null): boolean {
+  const now = readOwnerStamp(dir);
+  if (judged === null) {
+    // Old-unstamped leak. Still unstamped + still over grace (mtime preserved by
+    // rename). A re-created dir resets mtime → under grace → mismatch; a now-
+    // stamped dir → a live re-acquirer → mismatch.
+    if (now !== null) return false;
+    const mtime = lockDirMtimeMs(dir);
+    if (mtime === null) return false; // vanished — nothing to steal
+    return lockAcquireEpochMs() - mtime > unstampedGraceMs();
+  }
+  if (now === null) return false;
+  return now.pid === judged.pid && now.startedAtMs === judged.startedAtMs;
+}
+
+// Reclaim a lock iff it is provably dead (owner gone) OR stale (over-age). A
+// live, under-threshold holder is left alone (returns false). Returns true iff
+// THIS call freed the dir.
+//
+// MUTUAL-EXCLUSION SAFETY (compare-and-swap steal): the staleness DECISION (read
+// stamp, judge dead/over-age) and the steal are not one OS-atomic operation, so
+// a competing waiter can reap + re-mkdir + stamp a FRESH LIVE lock at the same
+// path in between. A "re-read stamp THEN rename" guard shrinks but does NOT
+// eliminate the window — the competitor can still re-acquire between the re-read
+// and the rename, and the rename then robs the fresh live holder (two concurrent
+// holders → lost update). So the steal is a true CAS keyed on the OS-atomic
+// rename:
+//
+//   1. Rename lockDir aside to a reaper-PRIVATE nonce path. renameSync is the
+//      atomic arbiter — exactly one process moves a given dir; the losers get
+//      ENOENT and fall back to a normal mkdir retry. After this we hold the
+//      moved dir EXCLUSIVELY (no other process can see it under the nonce name).
+//   2. Read the owner stamp INSIDE the moved dir and compare against `judged`
+//      (the identity we decided was stale). If it MATCHES, the dir we grabbed is
+//      the same stale lock we judged → legitimate steal → remove it, return true.
+//   3. If it does NOT match, a competitor reaped the stale dir and re-acquired a
+//      FRESH lock at lockDir between our decision and our rename — we just moved
+//      THEIR live lock. Restore it: rename the nonce dir back to lockDir. If that
+//      restore fails (yet another process already re-mkdir'd lockDir in the gap),
+//      the live lock already exists again at lockDir, so just drop our private
+//      copy. Either way we return false WITHOUT having robbed a live holder.
+//
+// This preserves both invariants atomically — a live (fresh, under-threshold)
+// holder is never destroyed, and exactly one reaper ever frees a given stale dir.
+//
+// RESIDUAL (documented, not silently shipped): the only remaining mutual-
+// exclusion gap is the restore in step 3 — between renaming a wrongly-grabbed
+// fresh lock OUT of lockDir and renaming it BACK, a third process can mkdir
+// lockDir (seeing it momentarily empty); the restore then fails EEXIST and two
+// processes briefly believe they hold the lock. This requires THREE specific
+// interleavings in a sub-microsecond rename↔mkdir window (a competitor must
+// re-acquire before our first rename, AND a third process must mkdir between our
+// two renames) — orders of magnitude narrower than the pre-CAS decide→rename
+// window, and the lock protects an idempotent audit-first transaction (re-run
+// safe). A kernel-atomic compare-and-swap on a directory does not exist in
+// portable POSIX (rename + mkdir are separate syscalls), so closing it fully
+// needs a different primitive (e.g. O_EXCL lockfile with fcntl); tracked as a
+// known limitation, acceptable for this phase given the blast radius.
+function reapStaleLock(lockDir: string): boolean {
+  const owner = readOwnerStamp(lockDir);
+  if (owner === null) {
+    // UNSTAMPED dir: a live holder mid-acquire (between mkdir and stamp) OR a
+    // process SIGKILL'd in that window. Distinguish by the dir's own age — only
+    // steal one OLDER than the grace window; a fresh unstamped dir is a live
+    // holder about to stamp and MUST NOT be robbed (the C2b concurrent-fork
+    // serialization depends on this).
+    const mtime = lockDirMtimeMs(lockDir);
+    if (mtime === null) return false; // vanished — let the next mkdir try
+    if (lockAcquireEpochMs() - mtime <= unstampedGraceMs()) return false;
+    // else: an old unstamped dir → genuine leak, fall through to steal.
+  } else if (ownerAlive(owner)) {
+    // Live owner: only reclaim if its stamp is over-age (a wedged-but-running
+    // holder). A fresh, live holder is never robbed.
+    if (lockAcquireEpochMs() - owner.startedAtMs <= lockStaleMs()) return false;
+  }
+  // STEP 1 — CAS swap: move the dir to a reaper-private nonce path. This is the
+  // atomic arbiter; only one process wins the rename of a given dir.
+  const dead = `${lockDir}.dead.${reapSuffix()}`;
+  try {
+    renameSync(lockDir, dead);
+  } catch {
+    return false; // another waiter already reclaimed (or the holder released)
+  }
+  // STEP 2 — verify the dir we just grabbed STILL carries the identity judged
+  // stale. stampMatches re-reads owner.json inside the now-private `dead` dir.
+  if (!stampMatches(dead, owner)) {
+    // STEP 3 — we grabbed a FRESH lock a competitor re-acquired in the window.
+    // Restore it so the live holder is not robbed.
+    try {
+      renameSync(dead, lockDir);
+    } catch {
+      // lockDir already re-created by yet another process → the live lock is
+      // back in place; discard our private snapshot.
+      try { rmSync(dead, { recursive: true, force: true }); } catch { /* harmless */ }
+    }
+    return false;
+  }
+  // Legitimate steal: dead owner, live-but-over-age, or old-unstamped — AND the
+  // identity we grabbed matches what we judged. Remove the private dir.
+  try {
+    rmSync(dead, { recursive: true, force: true });
+  } catch {
+    // leftover .dead dir is harmless (it never collides with the live lock name)
+  }
+  return true;
+}
+
+export function acquireAuditLock(
+  projectDir: string,
+  maxRetries = 50,
+  retryMs = 100,
+  intent?: string,
+  space?: string,
+): boolean {
+  const lockDir = auditLockDir(projectDir, intent, space);
+  const key = auditLockIdentity(projectDir, intent, space);
+  for (let i = 0; i <= maxRetries; i++) {
+    try {
+      mkdirSync(lockDir);
+      writeOwnerStamp(lockDir, key);
+      return true;
+    } catch {
+      // EEXIST: someone holds it. Before sleeping, try to reap a dead/stale
+      // holder so a SIGKILL'd owner doesn't wedge every waiter for the full
+      // retry budget. If we reap, retry the mkdir immediately (next loop turn).
+      if (reapStaleLock(lockDir)) {
+        try {
+          mkdirSync(lockDir);
+          writeOwnerStamp(lockDir, key);
+          return true;
+        } catch {
+          // another waiter beat us to the freed dir — fall through to sleep
+        }
+      }
+      if (i < maxRetries) {
+        Bun.sleepSync(retryMs);
+      }
+    }
+  }
+  return false;
+}
+
+export function releaseAuditLock(projectDir: string, intent?: string, space?: string): void {
+  const lockDir = auditLockDir(projectDir, intent, space);
+  const key = auditLockIdentity(projectDir, intent, space);
+  // Only remove the dir if it still carries OUR stamp. A colliding identity
+  // (md5[:8] hash collision) that re-acquired the same tmpdir path holds a
+  // foreign stamp — unconditionally rmSync'ing it here would destroy their live
+  // lock (the #831 flake: a parallel merge's release deletes a lock a colliding
+  // test planted, freeing a waiter that should have timed out).
+  removeLockDirIfOwned(lockDir, key);
+  AUDIT_LOCK_OWNED_STAMPS.delete(key);
+  const handler = AUDIT_LOCK_EXIT_HANDLERS.get(key);
+  if (handler) {
+    process.off("exit", handler);
+    AUDIT_LOCK_EXIT_HANDLERS.delete(key);
+  }
+}
+
+// Tracks per-identity exit handlers that release the audit lock if a caller
+// process.exit()s while still holding it. Bun's process.exit skips `finally`
+// blocks, so a tool that wraps locked work in try/finally and then calls
+// errorWithSlug → emitError → process.exit will leak the lock dir without
+// this safety net. Lock acquire registers a handler; release deregisters.
+// Keyed on the COMPOSITE lock identity (projectDir + space + intent | sentinel)
+// so handlers for different intents don't collide (invariant 2).
+const AUDIT_LOCK_EXIT_HANDLERS = new Map<string, () => void>();
+
+// Per-IDENTITY reentrancy depth. Same-process nested withAuditLock calls for the
+// same lock identity would otherwise self-deadlock — the inner mkdir hits
+// EEXIST against the lock the outer caller already holds, and burns the
+// retry budget (50 × 100ms = 5s) before throwing. The depth counter makes the
+// primitive reentrant: the outer call performs the OS-level lock acquire/release;
+// inner calls just bump depth and return. Cross-process locking is unaffected —
+// different processes still serialise via mkdir EEXIST. Keyed on the composite
+// identity so two intents in one process don't share a depth counter.
+const AUDIT_LOCK_DEPTH = new Map<string, number>();
+
+// writeFileAtomic — non-corrupting variant of writeFileSync. Writes to a
+// sibling `<path>.tmp` then POSIX-renames into place atomically. Readers
+// of <path> see either the previous version or the new one — never a
+// half-written file. Pair with withAuditLock when concurrent writers
+// must serialise (rename alone defeats half-writes but not lost updates).
+//
+// Sibling temp keeps the rename on the same filesystem so it's a true
+// atomic rename (cross-fs renames degrade to copy-then-unlink). Cleans
+// up the temp file on write failure.
+export function writeFileAtomic(path: string, data: string): void {
+  const tmp = `${path}.tmp`;
+  try {
+    writeFileSync(tmp, data, "utf-8");
+    renameSync(tmp, path);
+  } catch (err) {
+    try { unlinkSync(tmp); } catch { /* tmp may already be gone */ }
+    throw err;
+  }
+}
+
+// withAuditLock — atomic locked-section helper. Acquires the audit lock,
+// installs an exit-handler safety net (so a process.exit inside `fn` still
+// releases the lock dir), runs `fn`, releases the lock. Use this when you
+// need to hold the lock across multiple reads/writes (e.g., audit-first
+// state mutations that emit audit + write state atomically).
+//
+// Reentrant within a single process for the same projectDir: nested calls
+// just bump depth and run `fn`; only the outermost call performs OS-level
+// acquire/release. Cross-process locking is unchanged.
+//
+// SYNC ONLY. The return type excludes Promise so a caller can't pass an
+// async function that releases the lock before its work settles. Today's
+// callers are all sync (compile, state.ts fork/merge); future async-locked
+// transactions need a separate `withAuditLockAsync` that awaits before
+// release. The compile-time guard catches the footgun at the call site.
+export function withAuditLock<T>(
+  projectDir: string,
+  fn: () => T extends Promise<unknown> ? never : T,
+  intent?: string,
+  space?: string,
+): T extends Promise<unknown> ? never : T {
+  const key = auditLockIdentity(projectDir, intent, space);
+  const currentDepth = AUDIT_LOCK_DEPTH.get(key) ?? 0;
+  if (currentDepth === 0) {
+    if (!acquireAuditLock(projectDir, 50, 100, intent, space)) {
+      throw new Error(`Failed to acquire audit lock for ${key} after retries`);
+    }
+    // Safety net: if the body calls process.exit (Bun skips `finally` in that
+    // case), the on-exit handler releases the lock dir so the project isn't
+    // poisoned for ~5s on the next invocation.
+    // Same owner-stamp guard as releaseAuditLock (via removeLockDirIfOwned):
+    // never destroy a colliding identity's live lock at a shared tmpdir path.
+    const onExit = () => removeLockDirIfOwned(auditLockDir(projectDir, intent, space), key);
+    AUDIT_LOCK_EXIT_HANDLERS.set(key, onExit);
+    process.on("exit", onExit);
+  }
+  AUDIT_LOCK_DEPTH.set(key, currentDepth + 1);
+  try {
+    return fn();
+  } finally {
+    const depth = AUDIT_LOCK_DEPTH.get(key) ?? 0;
+    if (depth <= 1) {
+      AUDIT_LOCK_DEPTH.delete(key);
+      releaseAuditLock(projectDir, intent, space);
+    } else {
+      AUDIT_LOCK_DEPTH.set(key, depth - 1);
+    }
+  }
+}
+
+// True iff THIS process currently holds the audit lock for the given identity
+// (projectDir + intent | sentinel) via an outer withAuditLock (or a bare
+// acquireAuditLock paired with the exit-handler install). The lock-acquire path
+// registers a per-identity exit handler and the release path removes it (see
+// AUDIT_LOCK_EXIT_HANDLERS), so the handler's presence is the in-lock signal.
+// emitError (below) already branches on this to pick appendAuditEntryUnlocked
+// vs appendAuditEntry; the state tool's emitAudit helper uses it for the same
+// reason — an audit emit issued from inside a held lock MUST use the unlocked
+// variant or it self-deadlocks against the lock it is already holding
+// (appendAuditEntry calls acquireAuditLock, which is NOT reentrant — only
+// withAuditLock's depth counter is — so it would burn the full 50×100ms retry
+// budget and then throw).
+export function holdsAuditLock(projectDir: string, intent?: string, space?: string): boolean {
+  return AUDIT_LOCK_EXIT_HANDLERS.has(auditLockIdentity(projectDir, intent, space));
+}
+
+// --- Doctor probe: leaked audit locks ----------------------------------------
+//
+// A leaked lock is a lock dir whose owner is provably dead (ESRCH) OR whose
+// stamp is over the stale threshold. `/amadeus doctor` surfaces it (and, when
+// clear=true, clears it loudly). We can't enumerate tmpdir() hashes back to
+// projects, so we probe the buckets THIS project would use: the workspace
+// sentinel bucket + every intent record across every space (the same identities
+// the writers key on). A leaked lock is reported with its bucket + owner PID.
+
+export interface LeakedLock {
+  bucket: string; // "__workspace__" or "<space>/<intent>"
+  lockDir: string;
+  ownerPid: number | null;
+  reason: "dead-owner" | "over-age" | "unstamped";
+}
+
+// Detect (and optionally clear) leaked locks for this project. `staleMs`
+// defaults to the configured threshold. Returns the leaks found (and cleared,
+// when clear=true). Pure-read when clear=false.
+export function detectLeakedLocks(projectDir: string, clear = false): LeakedLock[] {
+  const leaks: LeakedLock[] = [];
+  const probe = (bucketLabel: string, intent?: string, space?: string): void => {
+    const lockDir = auditLockDir(projectDir, intent, space);
+    if (!existsSync(lockDir)) return;
+    const owner = readOwnerStamp(lockDir);
+    let reason: LeakedLock["reason"] | null = null;
+    if (!owner) {
+      // Unstamped: only a leak if older than the mid-acquire grace window (else
+      // a live process is between mkdir and stamp).
+      const mtime = lockDirMtimeMs(lockDir);
+      if (mtime !== null && lockAcquireEpochMs() - mtime > unstampedGraceMs()) {
+        reason = "unstamped";
+      }
+    } else if (!ownerAlive(owner)) {
+      reason = "dead-owner";
+    } else if (lockAcquireEpochMs() - owner.startedAtMs > lockStaleMs()) {
+      reason = "over-age";
+    }
+    if (reason === null) return; // a live, fresh, stamped lock is legitimately held
+    leaks.push({ bucket: bucketLabel, lockDir, ownerPid: owner?.pid ?? null, reason });
+    if (clear) {
+      try { rmSync(lockDir, { recursive: true, force: true }); } catch { /* already gone */ }
+    }
+  };
+  // Workspace sentinel bucket.
+  probe(WORKSPACE_LOCK_SENTINEL);
+  // Every intent record across every space.
+  for (const { name: sp } of listSpaces(projectDir)) {
+    for (const intent of listIntentDirs(projectDir, sp)) {
+      probe(`${sp}/${intent}`, intent, sp);
+    }
+  }
+  // The flat-legacy project also keys on the workspace bucket for its writes, so
+  // the sentinel probe above already covers it.
+  return leaks;
+}
+
+// --- Audit event correlation ---
+//
+// Doctor (and future sensors / observers) need to walk audit blocks and
+// correlate ERROR_LOGGED rows back to the operation that emitted them.
+// The three regexes below match the slug-bearing tags shipped by the
+// worktree primitive (`[slug=...]`), the audit fork/merge subcommands
+// (`[fork-emitted:<ts>]`), and post-merge cleanup (`[merge-succeeded:<sha>]`).
+// Promoted from inline literals so consumers reuse one definition.
+
+export const SLUG_TAG_REGEX = /\[slug=([a-z0-9-]+)\]/;
+export const FORK_EMITTED_TAG_REGEX = /\[fork-emitted:([^\]]+)\]/;
+export const MERGE_SUCCEEDED_TAG_REGEX = /\[merge-succeeded:([^\]]+)\]/;
+
+// findAllEvents — multi-match analogue of findLatestEvent (which lives
+// tool-local in amadeus-worktree.ts and returns at most one match). Optional
+// slug filter mirrors findLatestEvent's signature. Walks audit blocks from
+// start; collects every block where **Event**: <event> matches (and
+// **Bolt slug**: <slug> if slug provided). Returns [] on no match.
+//
+// Block separator is the same `\n---\n` amadeus-audit.ts uses on emit.
+// Normalises CRLF → LF before splitting so audits authored or edited on
+// Windows (Bun's PRE_REQ env per dist/claude/.claude/CLAUDE.md.example) parse
+// the same as Unix audits. Without this, `\r\n---\r\n` doesn't match the
+// `\n---\n` separator and every block past the first looks merged into one
+// — silently masking every drift class.
+export function findAllEvents(
+  audit: string,
+  event: string,
+  slug?: string,
+): { timestamp: string; block: string }[] {
+  const results: { timestamp: string; block: string; pos: number }[] = [];
+  const blocks = audit.replace(/\r\n/g, "\n").split(/\n---\n/);
+  const eventRegex = new RegExp(`^\\*\\*Event\\*\\*:\\s*${escapeRegex(event)}\\s*$`, "m");
+  const slugRegex = slug
+    ? new RegExp(`^\\*\\*Bolt slug\\*\\*:\\s*${escapeRegex(slug)}\\s*$`, "m")
+    : null;
+  const tsRegex = /^\*\*Timestamp\*\*:\s*(\S+)/m;
+  let pos = 0;
+  for (const block of blocks) {
+    if (!eventRegex.test(block)) {
+      pos++;
+      continue;
+    }
+    if (slugRegex && !slugRegex.test(block)) {
+      pos++;
+      continue;
+    }
+    const tsMatch = block.match(tsRegex);
+    if (!tsMatch) {
+      pos++;
+      continue;
+    }
+    results.push({ timestamp: tsMatch[1], block, pos });
+    pos++;
+  }
+  // CHRONOLOGICAL, not buffer-order. readAllAuditShards concatenates per-clone
+  // shards in FILENAME order, so the raw buffer is NOT time-ordered across
+  // shards — a `[len-1]` "newest" reader (buildWorkflowHeader, hasStageAuditEvent)
+  // could otherwise pick an OLDER event from a lexically-later shard. ISO-8601
+  // timestamps sort lexicographically; ties (same-ms events, or a single shard's
+  // already-ordered blocks) break by buffer position to keep the within-shard
+  // order stable. This makes the readAllAuditShards "ordering by timestamp is the
+  // parsers' job" contract TRUE for every findAllEvents consumer.
+  results.sort((a, b) => {
+    if (a.timestamp !== b.timestamp) return a.timestamp < b.timestamp ? -1 : 1;
+    return a.pos - b.pos;
+  });
+  return results.map(({ timestamp, block }) => ({ timestamp, block }));
+}
+
+// --- Data loaders ---
+
+const DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), "data");
+
+let _stageGraph: StageEntry[] | null = null;
+let _scopeMapping: Record<string, ScopeDefinition> | null = null;
+
+// Override paths for fixture injection in tests. Read at call time (not
+// module load) so tests can mutate env vars between bun invocations
+// while still sharing a process in rare cases. AMADEUS_STAGE_GRAPH pattern
+// matches AMADEUS_PROJECT_DIR in resolveProjectDir() above.
+function stageGraphPath(): string {
+  return process.env.AMADEUS_STAGE_GRAPH ?? join(DATA_DIR, "stage-graph.json");
+}
+
+// Exported so the read-only `detect` verb can TELL the composer agent where
+// the runtime scope registry lives (the paths are module-relative to the
+// installed tool, which a prose agent cannot derive itself).
+export function scopeGridPath(): string {
+  return process.env.AMADEUS_SCOPE_GRID ?? join(DATA_DIR, "scope-grid.json");
+}
+
+// scope-mapping.json is retired. It survives ONLY as a test
+// fixture seam: when AMADEUS_SCOPE_MAPPING is set, loadScopeMapping() reads
+// that JSON file verbatim (preserving fixture-injection tests + the
+// designer-export env-seam). With the var unset there is no JSON on disk —
+// the mapping is derived from the compiled scope-grid.json (the EXECUTE/SKIP
+// transpose) + the .claude/scopes/*.md frontmatter (depth/keywords/etc.).
+function scopeMappingPath(): string | null {
+  return process.env.AMADEUS_SCOPE_MAPPING ?? null;
+}
+
+// .claude/scopes/ holds one amadeus-<name>.md per scope. AMADEUS_SCOPES_DIR
+// env-var seam mirrors AMADEUS_SENSORS_DIR / AMADEUS_RULES_DIR so fixture tests
+// can point the scope-metadata loader at an isolated tree. Evaluated at call
+// time so tests that set/unset mid-process see the change.
+// Exported for the same reason as scopeGridPath: `detect --json` prints it so
+// the composer agent is told the authoritative write target per harness.
+export function scopesDir(): string {
+  return process.env.AMADEUS_SCOPES_DIR ?? join(dirname(fileURLToPath(import.meta.url)), "..", "scopes");
+}
+
+export function loadStageGraph(): StageEntry[] {
+  if (_stageGraph !== null) return _stageGraph;
+  const p = stageGraphPath();
+  let raw: string;
+  try {
+    raw = readFileSync(p, "utf-8");
+  } catch (err) {
+    const hint = process.env.AMADEUS_STAGE_GRAPH
+      ? `AMADEUS_STAGE_GRAPH points to ${p}; unset it to use the default.`
+      : "Reinstall the framework or re-run setup to restore the data file.";
+    throw new Error(
+      `Stage graph not readable at ${p}: ${errorMessage(err)}. ${hint}`
+    );
+  }
+  let parsed: StageEntry[];
+  try {
+    // JSON.parse returns `any`; we trust the on-disk schema (project-controlled
+    // data file written by the framework, not user input). Phase E will
+    // replace this trust boundary with an isStageEntryArray() type guard.
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    throw new Error(
+      `Stage graph at ${p} is not valid JSON: ${errorMessage(err)}`
+    );
+  }
+  _stageGraph = parsed;
+  return parsed;
+}
+
+// Per-scope prose metadata read from each .claude/scopes/amadeus-<name>.md
+// frontmatter: name/depth/keywords/description (+ optional testStrategy).
+// This is the depth/keywords/description half of a ScopeDefinition; the
+// EXECUTE/SKIP `.stages` half comes from the compiled grid. Cached.
+interface ScopeMetadata {
+  name: string;
+  depth: string;
+  description: string;
+  keywords: string[];
+  testStrategy?: string;
+}
+
+let _scopeMetadata: Record<string, ScopeMetadata> | null = null;
+
+type ScopeGridForMapping = Record<string, { stages: Record<string, "EXECUTE" | "SKIP"> }>;
+
+function transposeScopeGridForMapping(stages: StageEntry[]): ScopeGridForMapping {
+  const scopeNames = new Set<string>();
+  for (const stage of stages) {
+    for (const name of stage.scopes ?? []) scopeNames.add(name);
+  }
+  const grid: ScopeGridForMapping = {};
+  for (const scope of [...scopeNames].sort()) {
+    const stagesMap: Record<string, "EXECUTE" | "SKIP"> = {};
+    for (const stage of stages) {
+      stagesMap[stage.slug] = (stage.scopes ?? []).includes(scope) ? "EXECUTE" : "SKIP";
+    }
+    grid[scope] = { stages: stagesMap };
+  }
+  return grid;
+}
+
+function loadScopeGridForMapping(): ScopeGridForMapping {
+  const p = scopeGridPath();
+  try {
+    return JSON.parse(readFileSync(p, "utf-8")) as ScopeGridForMapping;
+  } catch {
+    return transposeScopeGridForMapping(loadStageGraph());
+  }
+}
+
+export function loadScopeMetadata(): Record<string, ScopeMetadata> {
+  if (_scopeMetadata !== null) return _scopeMetadata;
+  const dir = scopesDir();
+  const out: Record<string, ScopeMetadata> = {};
+  let files: string[];
+  try {
+    // Sort so readdirSync order is platform-independent — the derived
+    // scope set + the designer-export `scopes` key order stay deterministic
+    // across machines (same discipline as loadAgents()).
+    files = readdirSync(dir).filter((f) => f.endsWith(".md")).sort();
+  } catch {
+    files = [];
+  }
+  for (const f of files) {
+    const body = readFileSync(join(dir, f), "utf-8");
+    const m = body.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    if (!m) throw new Error(`Scope file missing frontmatter: ${join(dir, f)}`);
+    const fm = m[1];
+    const name = scalarField(fm, "name");
+    if (!name) throw new Error(`Scope file ${join(dir, f)} missing required frontmatter: name`);
+    const meta: ScopeMetadata = {
+      name,
+      depth: scalarField(fm, "depth"),
+      description: scalarField(fm, "description"),
+      keywords: listField(fm, "keywords"),
+    };
+    const ts = scalarField(fm, "testStrategy");
+    if (ts) meta.testStrategy = ts;
+    out[name] = meta;
+  }
+  _scopeMetadata = out;
+  return out;
+}
+
+// loadScopeMapping reconstructs the legacy `Record<scope, ScopeDefinition>`
+// shape so every existing consumer (the EXECUTE/SKIP `.stages` map, the
+// keyword/depth/description reads) keeps working unchanged after the JSON
+// source-of-truth is retired. Two sources:
+//   - AMADEUS_SCOPE_MAPPING set  → read that JSON file verbatim (test seam).
+//   - unset (the shipped path) → merge the compiled scope-grid.json
+//     (.stages) with the .claude/scopes/*.md frontmatter (depth/keywords/
+//     description/testStrategy). Scope set = the .md files present.
+export function loadScopeMapping(): Record<string, ScopeDefinition> {
+  if (_scopeMapping !== null) return _scopeMapping;
+
+  const jsonPath = scopeMappingPath();
+  if (jsonPath !== null) {
+    // Test-seam path: an injected scope-mapping.json fixture.
+    let raw: string;
+    try {
+      raw = readFileSync(jsonPath, "utf-8");
+    } catch (err) {
+      throw new Error(
+        `Scope mapping not readable at ${jsonPath}: ${errorMessage(err)}. ` +
+          `AMADEUS_SCOPE_MAPPING points to ${jsonPath}; unset it to derive from .claude/scopes/.`
+      );
+    }
+    let parsed: Record<string, ScopeDefinition>;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (err) {
+      throw new Error(`Scope mapping at ${jsonPath} is not valid JSON: ${errorMessage(err)}`);
+    }
+    _scopeMapping = parsed;
+    return parsed;
+  }
+
+  // Shipped path: derive from the compiled grid + per-scope .md metadata.
+  // Keep the grid read local to avoid a circular amadeus-lib -> amadeus-graph
+  // require while amadeus-graph's CLI is still initialising under native Windows
+  // Bun.
+  const grid = loadScopeGridForMapping();
+  const metadata = loadScopeMetadata();
+
+  const out: Record<string, ScopeDefinition> = {};
+  for (const name of Object.keys(metadata)) {
+    const meta = metadata[name];
+    const def: ScopeDefinition = {
+      depth: meta.depth,
+      stages: grid[name]?.stages ?? {},
+      keywords: meta.keywords,
+      description: meta.description,
+    };
+    if (meta.testStrategy !== undefined) def.testStrategy = meta.testStrategy;
+    out[name] = def;
+  }
+  _scopeMapping = out;
+  return out;
+}
+
+// Reset caches so fixture-swapping tests can reload from a different
+// AMADEUS_SCOPE_MAPPING / AMADEUS_STAGE_GRAPH path within the same bun
+// process. Mirrors the precedent set by amadeus-graph.ts __resetGraphCache.
+export function _resetScopeMappingForTests(): void {
+  _scopeMapping = null;
+  _scopeMetadata = null;
+  _validScopes = null;
+}
+
+export function _resetStageGraphForTests(): void {
+  _stageGraph = null;
+}
+
+// Reset the process-global clone-id / audit-shard-name memoization so an
+// in-process test that mints a random clone id (unseeded fixture project)
+// cannot leak that token into a later test's audit emit. Resets BOTH caches
+// together to preserve write/reset symmetry: cloneId() populates _cloneId and
+// auditShardName() populates _auditShardName, so a single reset must clear the
+// pair. State-init only (no behaviour branch), mirroring the precedent set by
+// _resetScopeMappingForTests / _resetStageGraphForTests.
+export function _resetCloneIdForTests(): void {
+  _cloneId = null;
+  _auditShardName = null;
+}
+
+// Canonical scope names derived from .claude/scopes/*.md presence (via
+// loadScopeMapping's metadata source). Dropping a new amadeus-<name>.md file
+// automatically flows through every tool that validates scope arguments —
+// no code change. Sorted alphabetically so error-message enumeration is
+// deterministic regardless of file-read order. (Under the AMADEUS_SCOPE_MAPPING
+// test seam the names come from the injected JSON keys instead.)
+let _validScopes: ReadonlySet<string> | null = null;
+
+export function validScopes(): ReadonlySet<string> {
+  if (!_validScopes) {
+    _validScopes = new Set(Object.keys(loadScopeMapping()).sort());
+  }
+  return _validScopes;
+}
+
+// Agent metadata derived from `.claude/agents/*.md` frontmatter. Adding a
+// new agent means dropping in an `.md` file with the required fields; the
+// loader discovers it at next invocation. Sorted alphabetically by slug
+// so readdirSync order is platform-independent.
+
+export interface AgentMetadata {
+  slug: string;
+  display_name: string;
+  examples: string[];
+}
+
+const AGENTS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "agents");
+
+let _agents: AgentMetadata[] | null = null;
+
+export function loadAgents(): AgentMetadata[] {
+  if (!_agents) {
+    const files = readdirSync(AGENTS_DIR).filter((f) => f.endsWith(".md"));
+    _agents = files
+      .map((f) => parseAgentFrontmatter(join(AGENTS_DIR, f)))
+      .sort((a, b) => a.slug.localeCompare(b.slug));
+  }
+  return _agents;
+}
+
+function parseAgentFrontmatter(path: string): AgentMetadata {
+  const body = readFileSync(path, "utf-8");
+  const m = body.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!m) throw new Error(`Agent file missing frontmatter: ${path}`);
+  const fm = m[1];
+
+  const slug = scalarField(fm, "name");
+  const display_name = scalarField(fm, "display_name");
+  const examples = listField(fm, "examples");
+
+  const missing: string[] = [];
+  if (!slug) missing.push("name");
+  if (!display_name) missing.push("display_name");
+  if (missing.length > 0) {
+    throw new Error(
+      `Agent file ${path} missing required frontmatter: ${missing.join(", ")}`
+    );
+  }
+  return { slug, display_name, examples };
+}
+
+// Scalar field parser. Rejects YAML folded/literal block markers
+// (`>`, `|`) so `description: >` on the next line can't be silently
+// captured as the value. Strips surrounding quotes so
+// `display_name: "Foo"` renders as `Foo` in user-facing output.
+//
+// Exported so amadeus-rule-schema.ts can reuse the zero-dep YAML primitive
+// (rule frontmatter has the same scalar/list shape as agent frontmatter).
+export function scalarField(fm: string, key: string): string {
+  const re = new RegExp(`^${key}:\\s*(.+?)\\s*$`, "m");
+  const m = fm.match(re);
+  if (!m) return "";
+  const raw = m[1].trim();
+  if (raw === ">" || raw === "|" || raw === ">-" || raw === "|-") return "";
+  if (
+    (raw.startsWith('"') && raw.endsWith('"')) ||
+    (raw.startsWith("'") && raw.endsWith("'"))
+  ) {
+    return raw.slice(1, -1);
+  }
+  return raw;
+}
+
+// List field parser. Bounds list items strictly to indented `- ` lines so
+// a following `description: >` folded block cannot leak its continuation
+// lines into this list. Requires at least one space after the dash — YAML
+// syntax demands it, and accepting `-foo` silently as `foo` masks user
+// error when adding new agents.
+//
+// Exported so amadeus-rule-schema.ts can reuse the zero-dep YAML primitive
+// (rule frontmatter's `paths:` is a YAML list of strings).
+export function listField(fm: string, key: string): string[] {
+  const re = new RegExp(
+    `^${key}:\\s*\\n((?:[ \\t]+-[ \\t]+[^\\r\\n]+\\r?\\n?)+)`,
+    "m"
+  );
+  const m = fm.match(re);
+  if (!m) return [];
+  return m[1]
+    .split(/\r?\n/)
+    .map((l) => {
+      const match = l.match(/^\s*-[ \t]+(.+?)\s*$/);
+      return match ? match[1].replace(/^["']|["']$/g, "") : "";
+    })
+    .filter(Boolean);
+}
+
+// --- Stage frontmatter parse / emit ---
+
+// parseStageFrontmatter reads a stage `.md` file body and extracts the
+// YAML frontmatter block into a plain object shaped like the
+// StageFrontmatter interface in stage-schema.ts. Pure — no I/O, no
+// validation. Callers wanting schema checks pipe the result through
+// validateStageFrontmatter() from stage-schema.ts.
+//
+// Extends the hand-rolled zero-dep parser pattern from loadAgents()
+// above: scalarField for scalars, listField for string lists, and the
+// new objectListField below for the consumes[] nested-object shape.
+export function parseStageFrontmatter(
+  raw: string
+): Record<string, unknown> {
+  if (typeof raw !== "string") {
+    throw new Error(
+      `parseStageFrontmatter expected string, got ${typeof raw}`
+    );
+  }
+  const m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!m) {
+    throw new Error("Stage file missing YAML frontmatter (---...---)");
+  }
+  const fm = m[1];
+
+  const obj: Record<string, unknown> = {};
+
+  // Discover every top-level key in the frontmatter block. Passing
+  // unknown keys through (rather than silently dropping them) is what
+  // lets stage-schema.ts's validator reject reserved names like
+  // `when:` / `on_failure:` with target-release messages. Scalar keys
+  // parse via scalarField, list keys via listField, and `consumes:`
+  // goes through objectListField.
+  const topLevelKeys = new Set<string>();
+  for (const line of fm.split(/\r?\n/)) {
+    const m = line.match(/^([a-z_][a-z0-9_]*)\s*:/);
+    if (m) topLevelKeys.add(m[1]);
+  }
+
+  const ARRAY_KEYS = new Set([
+    "support_agents",
+    "produces",
+    "requires_stage",
+    "sensors",
+    "scopes",
+  ]);
+  const CONSUMES_KEY = "consumes";
+
+  for (const key of topLevelKeys) {
+    if (key === CONSUMES_KEY) continue;
+    if (ARRAY_KEYS.has(key)) continue;
+    // Unlike required list fields, absence must stay distinguishable from an
+    // explicitly empty optional list.
+    if (key === "optional_produces") continue;
+    // The key was discovered at the start of some line, so it IS
+    // present. scalarField returns "" for both absent AND empty-quoted
+    // ("") — since we know it's present, assign the result
+    // unconditionally. An empty-string value reaches the validator
+    // (which will flag condition: "" as an invalid required-field
+    // value if the field should be non-empty — that's a schema
+    // concern, not a parser concern).
+    obj[key] = scalarField(fm, key);
+  }
+
+  // Required string-array fields must be PRESENT in the object even
+  // when empty — stage-schema.ts rejects absent required fields with
+  // "missing required field". listField returns [] when its block
+  // regex doesn't match, so unconditional assignment is safe.
+  for (const key of ARRAY_KEYS) {
+    obj[key] = listField(fm, key);
+  }
+
+  obj.consumes = objectListField(fm, CONSUMES_KEY);
+
+  if (topLevelKeys.has("optional_produces")) {
+    obj.optional_produces = listField(fm, "optional_produces");
+  }
+
+  // reviewer_max_iterations is the one numeric scalar field. The generic
+  // scalar loop above captured it as a string ("2"); coerce it to a real
+  // number when the raw value is an integer literal so the type is correct
+  // end-to-end — the schema validator, the directive contract, and the
+  // conductor's `iterations < max` comparison all want a number, not "2".
+  // A non-integer-literal value (e.g. "two", "2.5") is left as the string so
+  // validateStageFrontmatter rejects it loudly rather than the parser
+  // silently coercing to NaN. `reviewer` stays a string (handled by the loop).
+  if (typeof obj.reviewer_max_iterations === "string") {
+    const raw = obj.reviewer_max_iterations;
+    if (/^-?\d+$/.test(raw)) {
+      obj.reviewer_max_iterations = Number(raw);
+    }
+  }
+
+  // workspace_requires is the one boolean scalar field. The generic scalar loop
+  // above captured it as a string ("true"/"false"); coerce to a real boolean so
+  // StageEntry/GraphStage and the schema validator see the typed value (mirrors
+  // consumes.required's "true"/"false" coercion in objectListField). A non-boolean
+  // token is left as the string so validateStageFrontmatter rejects it loudly.
+  if (typeof obj.workspace_requires === "string") {
+    const raw = obj.workspace_requires;
+    if (raw === "true" || raw === "false") {
+      obj.workspace_requires = raw === "true";
+    }
+  }
+
+  return obj;
+}
+
+// parseMemoryHeadings counts entries under each of the four canonical
+// §13 H2 headings in a memory.md file and returns the per-heading
+// breakdown plus the total. Pure function — no I/O, no validation.
+// Single source of truth for runtime-graph compile, gate-ritual
+// candidate surfacing, and memory.md lifecycle.
+//
+// Canonical headings (case-sensitive, exact match, no leading
+// whitespace): "## Interpretations", "## Deviations", "## Tradeoffs",
+// "## Open questions". Pinned by tests/smoke/t86-stage-protocol-section-13.sh.
+//
+// Counting rule: a non-blank, non-excluded line under a canonical
+// heading counts as one entry. Bullets, prose paragraphs, and
+// ISO-timestamped lines all count one each.
+//
+// Excluded (do NOT count): blank/whitespace-only lines, blockquote-only
+// lines (`>` with no other content), HTML-comment-only lines
+// (`<!-- ... -->`), code-fence delimiters (```), the canonical heading
+// lines themselves, and any line inside a fenced code block.
+//
+// Section termination: any non-canonical H2 (`## X` not in the four
+// anchors) below a canonical heading stops counting for the prior
+// section; lines beneath it are ignored entirely.
+//
+// Missing canonical heading returns 0 for that key — never throws.
+// Silent-skip detection is the consumer's concern; failing the parse
+// because the orchestrator wrote three of four headings under context
+// pressure would be the wrong move.
+export function parseMemoryHeadings(raw: string): {
+  interpretations: number;
+  deviations: number;
+  tradeoffs: number;
+  open_questions: number;
+  total: number;
+} {
+  if (typeof raw !== "string") {
+    throw new Error(
+      `parseMemoryHeadings expected string, got ${typeof raw}`
+    );
+  }
+
+  const counts = {
+    interpretations: 0,
+    deviations: 0,
+    tradeoffs: 0,
+    open_questions: 0,
+  };
+
+  const HEADING_TO_KEY: Record<string, keyof typeof counts> = {
+    "## Interpretations": "interpretations",
+    "## Deviations": "deviations",
+    "## Tradeoffs": "tradeoffs",
+    "## Open questions": "open_questions",
+  };
+
+  const normalized = raw.replace(/^﻿/, "").replace(/\r\n/g, "\n");
+  const lines = normalized.split("\n");
+
+  let current: keyof typeof counts | null = null;
+  let inFence = false;
+
+  for (const line of lines) {
+    if (/^```/.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+
+    if (line in HEADING_TO_KEY) {
+      current = HEADING_TO_KEY[line];
+      continue;
+    }
+    if (/^## /.test(line)) {
+      current = null;
+      continue;
+    }
+
+    if (current === null) continue;
+
+    const trimmed = line.trim();
+    if (trimmed === "") continue;
+    if (/^>/.test(trimmed)) continue;
+    if (/^<!--.*-->\s*$/.test(trimmed)) continue;
+
+    counts[current]++;
+  }
+
+  const total =
+    counts.interpretations +
+    counts.deviations +
+    counts.tradeoffs +
+    counts.open_questions;
+  return { ...counts, total };
+}
+
+// parseMemoryEntries — the per-entry companion to parseMemoryHeadings (used
+// by the learning-gate surface step, which needs each entry's ts /
+// summary / context, not just counts). It reuses parseMemoryHeadings' exact
+// skip logic (in-fence toggle, four canonical-heading anchors, non-canonical
+// H2 section termination, blockquote/comment/blank skip) so the invariant
+// `parseMemoryEntries(raw).length === parseMemoryHeadings(raw).total` holds
+// for ANY input — ONE entry per counted line, NO multi-line merging. A
+// wrapped/continuation line that does not match the canonical
+// `- <ISO> — <summary>; <context>` shape degrades into its own degenerate
+// entry (summary = the raw line, ts/context empty) rather than merging into
+// the preceding entry, preserving the count invariant.
+export function parseMemoryEntries(raw: string): Array<{
+  heading: "Interpretations" | "Deviations" | "Tradeoffs" | "Open questions";
+  ts: string;
+  summary: string;
+  context: string;
+  raw: string;
+}> {
+  if (typeof raw !== "string") {
+    throw new Error(`parseMemoryEntries expected string, got ${typeof raw}`);
+  }
+
+  const HEADING_TO_DISPLAY: Record<
+    string,
+    "Interpretations" | "Deviations" | "Tradeoffs" | "Open questions"
+  > = {
+    "## Interpretations": "Interpretations",
+    "## Deviations": "Deviations",
+    "## Tradeoffs": "Tradeoffs",
+    "## Open questions": "Open questions",
+  };
+
+  const normalized = raw.replace(/^﻿/, "").replace(/\r\n/g, "\n");
+  const lines = normalized.split("\n");
+
+  const entries: Array<{
+    heading: "Interpretations" | "Deviations" | "Tradeoffs" | "Open questions";
+    ts: string;
+    summary: string;
+    context: string;
+    raw: string;
+  }> = [];
+
+  let current:
+    | "Interpretations"
+    | "Deviations"
+    | "Tradeoffs"
+    | "Open questions"
+    | null = null;
+  let inFence = false;
+
+  for (const line of lines) {
+    if (/^```/.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+
+    if (line in HEADING_TO_DISPLAY) {
+      current = HEADING_TO_DISPLAY[line];
+      continue;
+    }
+    if (/^## /.test(line)) {
+      current = null;
+      continue;
+    }
+
+    if (current === null) continue;
+
+    const trimmed = line.trim();
+    if (trimmed === "") continue;
+    if (/^>/.test(trimmed)) continue;
+    if (/^<!--.*-->\s*$/.test(trimmed)) continue;
+
+    // Counted line → one entry. Parse the canonical bullet shape; degrade to
+    // raw on any deviation (never throw).
+    const { ts, summary, context } = parseMemoryEntryLine(trimmed);
+    entries.push({ heading: current, ts, summary, context, raw: trimmed });
+  }
+
+  return entries;
+}
+
+// Split a single counted memory line into ts / summary / context. The
+// canonical shape is `- <ISO> — <summary>; <context>` (stage-protocol.md
+// :876-879). Tolerates a missing `;` (tail → summary, context empty) and a
+// missing ts/em-dash (degrade to summary = the whole line, ts empty).
+function parseMemoryEntryLine(trimmed: string): {
+  ts: string;
+  summary: string;
+  context: string;
+} {
+  // Strip a leading list bullet ("- " or "* ").
+  const body = trimmed.replace(/^[-*]\s+/, "");
+  // Pull an ISO-8601 timestamp prefix followed by an em-dash separator.
+  const tsMatch = body.match(/^(\S+)\s+—\s+(.*)$/);
+  if (!tsMatch) {
+    return { ts: "", summary: body, context: "" };
+  }
+  const ts = tsMatch[1];
+  const rest = tsMatch[2];
+  const semi = rest.indexOf(";");
+  if (semi === -1) {
+    return { ts, summary: rest.trim(), context: "" };
+  }
+  return {
+    ts,
+    summary: rest.slice(0, semi).trim(),
+    context: rest.slice(semi + 1).trim(),
+  };
+}
+
+// emitStageFrontmatter is the inverse — turns a StageFrontmatter-shaped
+// object back into YAML bytes. Symmetric with parseStageFrontmatter:
+// parse → emit → parse yields the same object. Field order is pinned
+// to stage-definition.md:84-110's worked example so diffs stay stable.
+export function emitStageFrontmatter(obj: Record<string, unknown>): string {
+  const needsQuote = (v: string): boolean => /[:#]|^\s|\s$/.test(v);
+  const emitScalar = (v: string): string =>
+    needsQuote(v) ? `"${v.replace(/"/g, '\\"')}"` : v;
+
+  const FIELD_ORDER = [
+    "slug",
+    "phase",
+    "execution",
+    "condition",
+    "lead_agent",
+    "support_agents",
+    "mode",
+    "reviewer",
+    "reviewer_max_iterations",
+    "for_each",
+    "workspace_requires",
+    "produces",
+    "optional_produces",
+    "consumes",
+    "requires_stage",
+    "sensors",
+    "scopes",
+    "inputs",
+    "outputs",
+  ] as const;
+
+  const lines: string[] = ["---"];
+
+  for (const key of FIELD_ORDER) {
+    const v: unknown = obj[key];
+    if (v === undefined) continue;
+
+    if (key === "consumes") {
+      if (!Array.isArray(v)) continue;
+      const consumes: unknown[] = v;
+      if (consumes.length === 0) {
+        lines.push("consumes: []");
+      } else {
+        lines.push("consumes:");
+        for (const entry of consumes) {
+          if (!isPlainObject(entry)) continue;
+          const e = entry;
+          if (typeof e.artifact === "string") {
+            lines.push(`  - artifact: ${emitScalar(e.artifact)}`);
+          }
+          if (typeof e.required === "boolean") {
+            lines.push(`    required: ${e.required}`);
+          }
+          if (typeof e.conditional_on === "string") {
+            lines.push(`    conditional_on: ${emitScalar(e.conditional_on)}`);
+          }
+        }
+      }
+    } else if (Array.isArray(v)) {
+      const arr: unknown[] = v;
+      if (arr.length === 0) {
+        lines.push(`${key}: []`);
+      } else {
+        lines.push(`${key}:`);
+        for (const item of arr) {
+          lines.push(`  - ${typeof item === "string" ? emitScalar(item) : String(item)}`);
+        }
+      }
+    } else if (typeof v === "string") {
+      lines.push(`${key}: ${emitScalar(v)}`);
+    } else if (typeof v === "number") {
+      // reviewer_max_iterations round-trips as an unquoted number, matching
+      // how stages author it on disk (`reviewer_max_iterations: 2`). Without
+      // this branch the numeric value the parser now returns (V1) would be
+      // dropped on emit, breaking the parse -> emit -> parse contract (t65).
+      lines.push(`${key}: ${v}`);
+    } else if (typeof v === "boolean") {
+      // workspace_requires round-trips as an unquoted boolean (the parser
+      // coerces the "true"/"false" token to a real boolean), so emit it
+      // unquoted to preserve the parse -> emit -> parse contract.
+      lines.push(`${key}: ${v}`);
+    }
+  }
+
+  lines.push("---");
+  return `${lines.join("\n")}\n`;
+}
+
+// Nested-object list parser. Matches the specific shape stage-definition.md
+// uses for consumes[]:
+//
+//   consumes:
+//     - artifact: intent-statement
+//       required: true
+//     - artifact: feasibility-assessment
+//       required: false
+//       conditional_on: brownfield
+//
+// Each `- ` item starts a new object; indented `k: v` lines add fields
+// to the current object. Booleans coerce from "true"/"false"; quoted
+// strings have their quotes stripped. Rejects deeper nesting, anchors,
+// and block scalars — same strictness philosophy as listField above.
+//
+// The trailing alternation `(?:\r?\n|$)` is required because the
+// enclosing frontmatter extractor strips the newline before the
+// closing `---`, so the last line of a consumes[] block often has no
+// trailing `\n` at match time. Without `|$` the regex silently drops
+// it.
+function objectListField(
+  fm: string,
+  key: string
+): Array<Record<string, unknown>> {
+  const blockRe = new RegExp(
+    `^${key}:\\s*\\n((?:[ \\t]+-[ \\t]+[^\\n]+(?:\\r?\\n|$)(?:[ \\t]+[^- \\t\\n][^\\n]*(?:\\r?\\n|$))*)+)`,
+    "m"
+  );
+  const m = fm.match(blockRe);
+  if (!m) return [];
+
+  // Detect blank lines inside the block — the outer regex stops at the
+  // first blank line, so a blank between items would silently drop the
+  // second item. Rather than skip quietly, look ahead past the captured
+  // block: if the next lines are still indented with `- ` items, the
+  // author wrote a blank separator — reject it.
+  const blockEnd = (m.index ?? 0) + m[0].length;
+  const rest = fm.slice(blockEnd).split(/\r?\n/);
+  for (const line of rest) {
+    if (line === "" || /^[ \t]+$/.test(line)) continue;
+    if (/^[ \t]+-[ \t]/.test(line)) {
+      throw new Error(
+        `Blank line not allowed inside ${key}[] block — list items must be consecutive`
+      );
+    }
+    break;
+  }
+
+  const lines = m[1].split(/\r?\n/).filter((l) => l.trim() !== "");
+  const items: Array<Record<string, unknown>> = [];
+  let current: Record<string, unknown> | null = null;
+
+  for (const line of lines) {
+    const itemMatch = line.match(/^\s*-\s+([a-z_]+):\s*(.+?)\s*$/);
+    const subMatch = line.match(/^\s+([a-z_]+):\s*(.+?)\s*$/);
+
+    if (itemMatch) {
+      if (current) items.push(current);
+      current = {};
+      current[itemMatch[1]] = coerceScalar(itemMatch[2]);
+    } else if (subMatch && current) {
+      current[subMatch[1]] = coerceScalar(subMatch[2]);
+    } else {
+      throw new Error(
+        `Malformed ${key}[] entry in frontmatter: ${line.trim()}`
+      );
+    }
+  }
+  if (current) items.push(current);
+  return items;
+}
+
+// Scalar coercion for objectListField values. Quoted scalars always
+// return as strings (the quote-strip happens AFTER the boolean check),
+// so unquoted `true` → boolean, quoted `"true"` → string "true".
+// Matches scalarField's quote-stripping rules.
+function coerceScalar(raw: string): unknown {
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  if (
+    (raw.startsWith('"') && raw.endsWith('"')) ||
+    (raw.startsWith("'") && raw.endsWith("'"))
+  ) {
+    return raw.slice(1, -1);
+  }
+  return raw;
+}
+
+// --- Stage graph queries ---
+
+export function findStageBySlug(slug: string): StageEntry | undefined {
+  return loadStageGraph().find((s) => s.slug === slug);
+}
+
+export function findStageByNumber(num: string): StageEntry | undefined {
+  return loadStageGraph().find((s) => s.number === num);
+}
+
+export function resolveStage(slugOrNumber: string): StageEntry | undefined {
+  return findStageBySlug(slugOrNumber) || findStageByNumber(slugOrNumber);
+}
+
+export function stageIndex(slug: string): number {
+  return loadStageGraph().findIndex((s) => s.slug === slug);
+}
+
+// When stateContent is provided, the state file's per-stage EXECUTE/SKIP
+// suffix and checkbox state override the scope-mapping.json defaults. This
+// matters for Greenfield bugfix flows where handleInit stamps
+// reverse-engineering SKIP (even though scope-mapping.json maps it EXECUTE)
+// and for jumps that skipped stages via `[S]`. Without the override the
+// state tool would try to activate a stage the state file said was done.
+export function nextInScopeStage(
+  afterSlug: string,
+  scope: string,
+  stateContent?: string
+): StageEntry | null {
+  const mapping = loadScopeMapping()[scope];
+  if (!mapping) return null;
+
+  const stateOverrides = stateContent
+    ? parseStateStageSuffixes(stateContent)
+    : null;
+  const checkboxStates = stateContent ? parseCheckboxes(stateContent) : [];
+
+  // Walk the full graph forward from afterSlug, applying the same action-
+  // resolution rule the pre-rewire implementation used: state overrides
+  // take precedence over scope-mapping. The common case (no overrides,
+  // or only SKIP overrides) produces byte-identical output to
+  // subgraphForScope-based iteration — proven by t66 walk parity across
+  // all 9 scopes. The uncommon case (a hand-edited state file promoting
+  // a scope-SKIP stage to EXECUTE) is the power-user escape hatch
+  // amadeus-state.ts:276-284's explicit-advance path also honours; keeping
+  // both callers consistent on the same input.
+  const graph = loadStageGraph();
+  const currentIdx = graph.findIndex((s) => s.slug === afterSlug);
+  if (currentIdx === -1) return null;
+
+  for (let i = currentIdx + 1; i < graph.length; i++) {
+    const slug = graph[i].slug;
+
+    // Already completed or skipped via jump — keep walking.
+    const cb = checkboxStates.find((c) => c.slug === slug);
+    if (cb && (cb.state === "completed" || cb.state === "skipped")) continue;
+
+    // State override wins over scope-mapping. A SKIP override drops an
+    // EXECUTE stage; an EXECUTE override promotes a SKIP stage.
+    const effectiveAction = stateOverrides?.get(slug) ?? mapping.stages[slug];
+    if (effectiveAction === "EXECUTE") return graph[i];
+  }
+  return null;
+}
+
+// Parse the "- [x] slug — EXECUTE" / "— SKIP" suffix from Stage Progress. The
+// suffix is set by `amadeus-utility init` per scope + Greenfield/Brownfield
+// overrides, then preserved across stage transitions — it represents the
+// plan, not the current run-state (checkbox letters are separate).
+export function parseStateStageSuffixes(
+  content: string
+): Map<string, "EXECUTE" | "SKIP"> {
+  const out = new Map<string, "EXECUTE" | "SKIP">();
+  const regex = /^- \[[ xSR?-]\] (\S+)\s*—\s*(EXECUTE|SKIP)\b/gm;
+  let m: RegExpExecArray | null = regex.exec(content);
+  while (m !== null) {
+    // The regex's second capture group only matches "EXECUTE" or "SKIP";
+    // narrow via predicate so the Map.set call is fully typed.
+    const action = m[2];
+    if (action === "EXECUTE" || action === "SKIP") {
+      out.set(m[1], action);
+    }
+    m = regex.exec(content);
+  }
+  return out;
+}
+
+export function firstInScopeStageOfPhase(
+  phase: string,
+  scope: string
+): StageEntry | null {
+  const mapping = loadScopeMapping()[scope];
+  if (!mapping) return null;
+
+  // Lazy require to avoid circular import (amadeus-graph imports from us).
+  // Type-only import at top of file pins the signature.
+  const { subgraphForScope } = require("./amadeus-graph.ts") as {
+    subgraphForScope: typeof SubgraphForScope;
+  };
+  const path = subgraphForScope(scope);
+
+  const phaseLower = phase.toLowerCase();
+  for (const stage of path) {
+    if (stage.phase === phaseLower) return stage;
+  }
+  return null;
+}
+
+export function stagesInScope(
+  scope: string
+): Array<{ slug: string; phase: string; action: "EXECUTE" | "SKIP" }> {
+  const graph = loadStageGraph();
+  if (!loadScopeMapping()[scope]) return [];
+
+  // Lazy require to avoid circular import (amadeus-graph imports from us).
+  const { subgraphForScope } = require("./amadeus-graph.ts") as {
+    subgraphForScope: typeof SubgraphForScope;
+  };
+  const onPath = new Set(
+    subgraphForScope(scope).map((s) => s.slug)
+  );
+
+  return graph.map((s) => ({
+    slug: s.slug,
+    phase: s.phase,
+    action: onPath.has(s.slug) ? ("EXECUTE" as const) : ("SKIP" as const),
+  }));
+}
+
+// --- Timestamp ---
+
+export function isoTimestamp(): string {
+  return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
+// --- Hook drop counter ---
+//
+// Hooks swallow audit emission errors to avoid breaking the user's tool call,
+// but silent failure was the whole point of the state-machine refactor.
+// Record drops to a per-hook counter file so `--doctor` can surface them.
+// File format: one ISO timestamp per line, most recent drop last.
+
+export function recordHookDrop(
+  projectDir: string,
+  hookName: string,
+  reason: string
+): void {
+  try {
+    const healthDir = hooksHealthDir(projectDir);
+    mkdirSync(healthDir, { recursive: true });
+    const dropFile = join(healthDir, `${hookName}.drops`);
+    const line = `${isoTimestamp()}\t${reason.replace(/\r?\n/g, " ")}\n`;
+    appendFileSync(dropFile, line, "utf-8");
+  } catch {
+    // Drop-log failure is truly non-fatal — we're already in a failure path.
+  }
+}
+
+// Recursion guard: if emitError is entered while emitting ERROR_LOGGED fails,
+// do not re-enter. The guard is process-local (one flag) — tools exit after
+// one error(), so nested error() calls inside a single process are bugs.
+let _errorEmitInProgress = false;
+
+// Centralised error-exit used by all tool CLIs. Emits ERROR_LOGGED (best-
+// effort, no-op if no workflow in cwd, swallows any audit failure), prints
+// JSON error to stderr, exits 1.
+//
+// `tool`    — tool name (e.g. "amadeus-state", "amadeus-jump")
+// `command` — the failing subcommand + args (typically process.argv.slice(2).join(" "))
+// `msg`     — human-readable error shown to the caller and recorded in audit
+//
+// Uses appendAuditEntry (the canonical audit emitter) so the drift test's
+// forward/reverse check sees ERROR_LOGGED as a standard emission call site.
+// Type-only import for the lazy-loaded amadeus-audit.ts dependency. Same
+// pattern as amadeus-graph.ts above — the runtime cycle is broken by
+// require() below; type erases at compile time.
+import type {
+  appendAuditEntry as AppendAuditEntry,
+  appendAuditEntryUnlocked as AppendAuditEntryUnlocked,
+} from "./amadeus-audit.ts";
+
+// Failures are swallowed — we're already exiting, the caller gets the JSON
+// error on stderr regardless.
+export function emitError(
+  projectDir: string,
+  tool: string,
+  command: string,
+  msg: string,
+  intent?: string,
+  space?: string
+): never {
+  if (!_errorEmitInProgress) {
+    _errorEmitInProgress = true;
+    try {
+      if (existsSync(stateFilePath(projectDir))) {
+        // Lazy import to break the lib.ts ↔ amadeus-audit.ts cycle at load time.
+        // amadeus-audit.ts imports from lib.ts, and importing it at top of lib.ts
+        // would create a circular dependency. Dynamic import is synchronous via
+        // require under Bun and keeps the dependency one-way at module-init time.
+        const audit = require("./amadeus-audit.ts") as {
+          appendAuditEntry: typeof AppendAuditEntry;
+          appendAuditEntryUnlocked: typeof AppendAuditEntryUnlocked;
+        };
+        // If we're inside a withAuditLock-held critical section (e.g., the
+        // caller is amadeus-state.ts fork/merge mid-transaction), the audit
+        // lock is already held by us. Use the unlocked variant directly so
+        // the ERROR_LOGGED row lands without the 5s acquire timeout. The
+        // exit-handler safety net releases the lock dir on process.exit.
+        // NOTE: holdsAuditLock keys on the COMPOSITE lock identity (per-intent
+        // keying, P3) — a bare `AUDIT_LOCK_EXIT_HANDLERS.has(projectDir)` would
+        // miss the workspace-bucket / per-intent handler keys and re-introduce
+        // the 5s self-deadlock on every in-transaction error emit.
+        //
+        // The caller threads its RESOLVED intent+space (fork/merge hold a
+        // PER-INTENT lock — amadeus-state.ts error()/lockIntent). We MUST probe and
+        // emit on the SAME bucket: a bare holdsAuditLock(projectDir) keys the
+        // __workspace__ sentinel, returns false mid per-intent transaction, takes
+        // the 5s blocking-acquire branch, and writes ERROR_LOGGED to the wrong
+        // shard. Omitted intent/space -> sentinel, which is correct for every
+        // sentinel-locked caller (the common case).
+        if (holdsAuditLock(projectDir, intent, space)) {
+          audit.appendAuditEntryUnlocked("ERROR_LOGGED", {
+            Tool: tool,
+            Command: command,
+            Error: msg,
+          }, projectDir, intent, space);
+        } else {
+          audit.appendAuditEntry("ERROR_LOGGED", {
+            Tool: tool,
+            Command: command,
+            Error: msg,
+          }, projectDir, intent, space);
+        }
+      }
+    } catch {
+      // Audit write failed — we're already in an error path, swallow.
+    }
+  }
+  console.error(JSON.stringify({ error: msg }));
+  process.exit(1);
+}
+
+// --- Helpers ---
+
+export function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// --- CLI argument parsing ---
+
+export function parseArgs(args: string[]): {
+  positional: string[];
+  flags: Record<string, string>;
+} {
+  const positional: string[] = [];
+  const flags: Record<string, string> = {};
+  let i = 0;
+  while (i < args.length) {
+    if (args[i].startsWith("--")) {
+      const key = args[i].slice(2);
+      if (i + 1 < args.length && !args[i + 1].startsWith("--")) {
+        flags[key] = args[i + 1];
+        i += 2;
+      } else {
+        flags[key] = "true";
+        i++;
+      }
+    } else {
+      positional.push(args[i]);
+      i++;
+    }
+  }
+  return { positional, flags };
+}
+
+// --- Repeated field collection for --field key=value ---
+
+export function parseFieldArgs(args: string[]): Record<string, string> {
+  const fields: Record<string, string> = {};
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--field" && i + 1 < args.length) {
+      const eqIdx = args[i + 1].indexOf("=");
+      if (eqIdx > 0) {
+        fields[args[i + 1].slice(0, eqIdx)] = args[i + 1].slice(eqIdx + 1);
+      }
+      i++;
+    }
+  }
+  return fields;
+}
+
+// --- Markdown section helpers ---
+// Used by practices-discovery affirmation (copy under ## Mandated /
+// ## Forbidden) and the orchestrator (reads amadeus-team.md sections for
+// stance lookup). Pure string operations against well-formed markdown.
+// Caller is responsible for code-fence-free input — rules/amadeus-*.md
+// never contain fenced ## lines per spec.
+//
+// Heading-match rules:
+//   - Pass the full marker form ("## Walking Skeleton") as `heading`.
+//   - Trailing whitespace on the actual heading line is tolerated.
+//   - Sub-headings (`### Walking Skeleton`) never match `## Walking Skeleton`.
+//   - On multiple matches of the same heading, the first wins.
+//   - When the heading is absent, extract returns "" and append throws.
+
+export function extractMarkdownSection(content: string, heading: string): string {
+  // Returns the prose between `heading` (e.g. "## Walking Skeleton") and the
+  // next `## ` heading at the same level (or end of file). The heading line
+  // itself is not included in the output. Returns "" if heading is absent.
+  // Headings inside fenced code blocks (```) are skipped — a teaching example
+  // that contains `## Walking Skeleton` should not be mistaken for the actual
+  // section.
+  const stripped = stripFencedCodeBlocks(content);
+  const headingRegex = new RegExp(
+    `^${escapeRegex(heading)}[ \\t]*$`,
+    "m",
+  );
+  const startMatch = headingRegex.exec(stripped);
+  if (!startMatch) return "";
+  const afterHeading = startMatch.index + startMatch[0].length;
+  // Skip the newline immediately after the heading line, if any.
+  const bodyStart = stripped[afterHeading] === "\n" ? afterHeading + 1 : afterHeading;
+  // Find the next `## ` heading at the same level (not `### ` or deeper).
+  const nextHeading = /^## [^\n]*$/m;
+  nextHeading.lastIndex = bodyStart;
+  const remainder = stripped.slice(bodyStart);
+  const nextMatch = nextHeading.exec(remainder);
+  const bodyEnd = nextMatch ? bodyStart + nextMatch.index : stripped.length;
+  return stripped.slice(bodyStart, bodyEnd);
+}
+
+// Replace the contents of fenced code blocks (```...```) with blank lines of
+// the same count, preserving line numbers and byte offsets up to a few chars
+// per line. Headings inside fenced code blocks are no longer matched by
+// regex scans against the returned string. Used by extractMarkdownSection to
+// keep teaching-example `## Heading` lines from masquerading as real headings.
+function stripFencedCodeBlocks(content: string): string {
+  const lines = content.split("\n");
+  let inFence = false;
+  for (let i = 0; i < lines.length; i++) {
+    if (/^```/.test(lines[i])) {
+      inFence = !inFence;
+      lines[i] = "";
+      continue;
+    }
+    if (inFence) lines[i] = "";
+  }
+  return lines.join("\n");
+}
+
+export function appendUnderHeading(
+  content: string,
+  heading: string,
+  newContent: string,
+): string {
+  // Inserts `newContent` immediately before the next `## ` heading after
+  // `heading` (or at end-of-file when `heading` is the last `## ` section).
+  // Throws if `heading` is not present in `content`.
+  const headingRegex = new RegExp(
+    `^${escapeRegex(heading)}[ \\t]*$`,
+    "m",
+  );
+  const startMatch = headingRegex.exec(content);
+  if (!startMatch) {
+    throw new Error(`appendUnderHeading: heading not found: ${heading}`);
+  }
+  const afterHeading = startMatch.index + startMatch[0].length;
+  const bodyStart = content[afterHeading] === "\n" ? afterHeading + 1 : afterHeading;
+  const nextHeading = /^## [^\n]*$/m;
+  const remainder = content.slice(bodyStart);
+  const nextMatch = nextHeading.exec(remainder);
+  const insertAt = nextMatch ? bodyStart + nextMatch.index : content.length;
+  return content.slice(0, insertAt) + newContent + content.slice(insertAt);
+}
+
+export function replaceSection(
+  content: string,
+  heading: string,
+  newContent: string,
+): string {
+  // Replaces the prose between `heading` and the next `## ` heading (or EOF)
+  // with `newContent`. The heading line itself is preserved. Throws if
+  // `heading` is not present. Used by practices-discovery affirmation:
+  // re-runs overwrite amadeus-team.md sections rather than accumulating duplicates.
+  const headingRegex = new RegExp(
+    `^${escapeRegex(heading)}[ \\t]*$`,
+    "m",
+  );
+  const startMatch = headingRegex.exec(content);
+  if (!startMatch) {
+    throw new Error(`replaceSection: heading not found: ${heading}`);
+  }
+  const afterHeading = startMatch.index + startMatch[0].length;
+  const bodyStart = content[afterHeading] === "\n" ? afterHeading + 1 : afterHeading;
+  const nextHeading = /^## [^\n]*$/m;
+  const remainder = content.slice(bodyStart);
+  const nextMatch = nextHeading.exec(remainder);
+  const bodyEnd = nextMatch ? bodyStart + nextMatch.index : content.length;
+  return content.slice(0, bodyStart) + newContent + content.slice(bodyEnd);
+}
+
+// --- Bolt/unit dependency DAG (units-generation 2.7 → runtime compile) ---
+
+export interface UnitDependencyEdge {
+  name: string;
+  depends_on: string[];
+}
+
+// Discriminated result so the two consumers — the required-sections sensor
+// (gate-time validation) and amadeus-runtime compile (DAG emission) — branch on
+// one single source of truth:
+//   - absent    : no fenced ```yaml units: block in the body
+//   - malformed : block present but structurally invalid (duplicate name,
+//                 dangling dependency, self-dependency, non-list value, no units)
+//   - cyclic    : structurally valid edges that contain a dependency cycle
+//   - ok        : units + batches (topological levels; each level sorted
+//                 lexicographically; units with satisfied, non-mutual deps
+//                 share a batch)
+export type BoltDagParse =
+  | { ok: true; units: UnitDependencyEdge[]; batches: string[][] }
+  | { ok: false; reason: "absent" | "malformed" | "cyclic"; detail: string };
+
+// Locate the first fenced ```yaml block whose body declares a top-level
+// `units:` key. Returns the inner block text, or null when no such fence
+// exists. Other fenced blocks (mermaid diagrams, prose examples) are skipped.
+function extractYamlUnitsBlock(body: string): string | null {
+  const lines = body.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    if (/^```ya?ml\s*$/.test(lines[i].trim())) {
+      const inner: string[] = [];
+      let j = i + 1;
+      for (; j < lines.length; j++) {
+        if (/^```\s*$/.test(lines[j].trim())) break;
+        inner.push(lines[j]);
+      }
+      const block = inner.join("\n");
+      if (/^\s*units\s*:/m.test(block)) {
+        return block;
+      }
+      i = j; // not the units block — resume scanning past its close fence
+    }
+  }
+  return null;
+}
+
+function unquoteScalar(s: string): string {
+  const t = s.trim();
+  if (
+    (t.startsWith('"') && t.endsWith('"')) ||
+    (t.startsWith("'") && t.endsWith("'"))
+  ) {
+    return t.slice(1, -1);
+  }
+  return t;
+}
+
+function parseInlineDepsList(raw: string): string[] {
+  const t = raw.trim();
+  if (t === "" || t === "[]") return [];
+  if (t.startsWith("[") && t.endsWith("]")) {
+    return t
+      .slice(1, -1)
+      .split(",")
+      .map((s) => unquoteScalar(s))
+      .filter((s) => s !== "");
+  }
+  // Bare scalar (rare) — treat as a one-item list.
+  return [unquoteScalar(t)];
+}
+
+// Hand-rolled zero-dep scanner for the `units:` block list. Mirrors the
+// scalarField / listField primitives above (the framework ships no YAML
+// dependency). Throws on a structurally unparseable block; the caller maps
+// the throw to a `malformed` result.
+function parseUnitsBlock(block: string): UnitDependencyEdge[] {
+  const lines = block.split(/\r?\n/);
+  let i = 0;
+  for (; i < lines.length; i++) {
+    if (/^\s*units\s*:/.test(lines[i])) {
+      const after = lines[i].replace(/^\s*units\s*:/, "").trim();
+      if (after !== "") {
+        throw new Error("units: must be a block list, not an inline value");
+      }
+      break;
+    }
+  }
+  if (i >= lines.length) throw new Error("missing units: key");
+  i++; // step past the `units:` line
+
+  const edges: UnitDependencyEdge[] = [];
+  let current: UnitDependencyEdge | null = null;
+  for (; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.trim() === "") continue;
+
+    const nameMatch = line.match(/^\s*-\s+name\s*:\s*(.+?)\s*$/);
+    if (nameMatch) {
+      if (current) edges.push(current);
+      current = { name: unquoteScalar(nameMatch[1]), depends_on: [] };
+      continue;
+    }
+
+    const depMatch = line.match(/^\s*depends_on\s*:\s*(.*)$/);
+    if (depMatch) {
+      if (!current) throw new Error("depends_on: before any - name: entry");
+      current.depends_on = parseInlineDepsList(depMatch[1]);
+      continue;
+    }
+
+    // Block-form dependency item (a bare `- dep` under `depends_on:`).
+    const itemMatch = line.match(/^\s*-\s+(.+?)\s*$/);
+    if (itemMatch && current) {
+      current.depends_on.push(unquoteScalar(itemMatch[1]));
+      continue;
+    }
+
+    throw new Error(`unrecognised line in units block: ${line.trim()}`);
+  }
+  if (current) edges.push(current);
+
+  for (const e of edges) {
+    // Reject empty AND whitespace-only names — a quoted `"   "` survives
+    // unquoteScalar with literal spaces and would otherwise become a
+    // meaningless valid unit (and dependency target).
+    if (!e.name.trim()) throw new Error("unit with empty name");
+  }
+  return edges;
+}
+
+// Kahn's algorithm by level. Each level is a batch — the units whose
+// dependencies are all already placed (satisfied, non-mutual). Levels are
+// sorted lexicographically before emission so the output is deterministic
+// regardless of input order or Set iteration order. Returns null when a
+// cycle remains (no unit has all dependencies satisfied).
+function computeBatches(edges: UnitDependencyEdge[]): string[][] | null {
+  const deps = new Map<string, string[]>();
+  for (const e of edges) deps.set(e.name, e.depends_on);
+  const remaining = new Set(edges.map((e) => e.name));
+  const batches: string[][] = [];
+  while (remaining.size > 0) {
+    const level: string[] = [];
+    for (const name of remaining) {
+      const satisfied = deps.get(name)!.every((dep) => !remaining.has(dep));
+      if (satisfied) level.push(name);
+    }
+    if (level.length === 0) return null; // cycle
+    level.sort();
+    for (const name of level) remaining.delete(name);
+    batches.push(level);
+  }
+  return batches;
+}
+
+// Parse the required fenced ```yaml edge block out of a
+// unit-of-work-dependency.md body and compute the topological batch DAG.
+//
+// The block shape — authored once at the 2.7 gate (knowledge work by the
+// LLM, behind a human approval gate):
+//
+//   ```yaml
+//   units:
+//     - name: auth
+//       depends_on: []
+//     - name: api
+//       depends_on: [auth]
+//   ```
+//
+// Pure data — no model call, no NLP. A given body always parses to the same
+// result, so a hook-fired re-compile of runtime-graph.json stays
+// byte-identical (no model in the path; the determinism invariant holds).
+export function parseBoltDag(body: string): BoltDagParse {
+  const block = extractYamlUnitsBlock(body);
+  if (block === null) {
+    return {
+      ok: false,
+      reason: "absent",
+      detail: "no fenced ```yaml units: block found",
+    };
+  }
+
+  let edges: UnitDependencyEdge[];
+  try {
+    edges = parseUnitsBlock(block);
+  } catch (e) {
+    return { ok: false, reason: "malformed", detail: errorMessage(e) };
+  }
+
+  if (edges.length === 0) {
+    return { ok: false, reason: "malformed", detail: "units: block has no entries" };
+  }
+
+  const names = new Set<string>();
+  for (const u of edges) {
+    if (names.has(u.name)) {
+      return { ok: false, reason: "malformed", detail: `duplicate unit name: ${u.name}` };
+    }
+    names.add(u.name);
+  }
+  for (const u of edges) {
+    for (const dep of u.depends_on) {
+      if (dep === u.name) {
+        return { ok: false, reason: "malformed", detail: `unit "${u.name}" depends on itself` };
+      }
+      if (!names.has(dep)) {
+        return {
+          ok: false,
+          reason: "malformed",
+          detail: `unit "${u.name}" depends on unknown unit "${dep}"`,
+        };
+      }
+    }
+  }
+
+  const batches = computeBatches(edges);
+  if (batches === null) {
+    return { ok: false, reason: "cyclic", detail: "dependency cycle detected" };
+  }
+  return { ok: true, units: edges, batches };
+}
+
+// --- Stop-hook engine-engagement classifier ------------------------------------
+// Used by hooks/amadeus-stop.ts's tier-3 conversational carve-out. Hosted here
+// (not in the hook) because the hook only ever runs as a spawned process, which
+// bun --coverage cannot observe — the lib is the in-process test seam (t209, #758).
+
+// A workflow-engine tool call: a Bash invocation of amadeus-orchestrate/amadeus-state,
+// or a tool whose name itself references amadeus. These are the calls that mean
+// "the conductor engaged the workflow this turn"; their presence in the turn
+// that answered the human disqualifies the turn from the conversational carve-out
+// (a conductor that ran the engine and then quit mid-loop must still be nudged).
+//
+// Steps (comments hoisted to module scope per cid:code-generation:bun-inbody-comment-da0):
+// - `text` is the command text to inspect: a Bash/Shell command, or (for
+//   harnesses that surface the tool by name) the tool name itself.
+// - Fast reject: no amadeus engine/state/workspace tool named at all -> not a
+//   workflow engagement (a chat turn that ran git/cat/ls etc.).
+// - Split on shell separators so a CHAINED command is judged per sub-command,
+//   not as one blob. Otherwise a read-only flag anywhere in the line
+//   (`... --status && amadeus-orchestrate report ...`) would wrongly exempt a
+//   mutating call elsewhere in the same line. Each segment is judged on its own.
+export function isEngineToolCall(name: string, input: unknown): boolean {
+  const cmd =
+    input !== null && typeof input === "object"
+      ? String((input as Record<string, unknown>).command ?? "")
+      : "";
+  const text = /^(bash|shell|execute_bash)$/i.test(name) ? cmd : name;
+  if (!/amadeus-(orchestrate|state|jump|bolt|swarm)\b/.test(text)) return false;
+  const segments = text.split(/&&|\|\||[;|\n]/);
+  for (const seg of segments) {
+    if (isEngineEngagementSegment(seg)) return true;
+  }
+  return false;
+}
+
+// One shell sub-command. True when it ENGAGES the forwarding loop or MUTATES
+// workflow state, false for a read-only query. A human chatting may legitimately
+// ask "what stage am I on?" answered with `--status` / `next --status` /
+// `--doctor` / `--help` / `--version` or a read-only utility call: those must
+// NOT disqualify the conversational carve-out. Anything that advances the loop
+// (`next` fetching a directive, `report` committing a transition) or mutates
+// state (any amadeus-state subcommand outside the read-only trio; a checkbox/
+// jump/bolt/swarm move) DOES count as engagement. Fail-toward-engagement: an
+// amadeus-orchestrate/state/jump/bolt/swarm verb we do not specifically
+// recognise is treated as engagement (BLOCK), so an unrecognised mutating verb
+// can never leak through as "chat" - the conservative direction for loop
+// integrity.
+//
+// Branch notes (comments hoisted to module scope per
+// cid:code-generation:bun-inbody-comment-da0 — logic reads top to bottom):
+// - `hasReadOnlyFlag`: a PURE read-only query is a read-only flag present AND
+//   no mutating/advancing verb in the SAME segment. `next --status` is
+//   read-only; `report --status` (nonsensical, but) still has `report` so is
+//   engagement.
+// - amadeus-orchestrate: `next --status` is the read-only status query; a bare
+//   `next` (or any `report`) advances. So: advancing verb present ->
+//   engagement UNLESS the ONLY advancing token is `next` and it carries a
+//   read-only flag.
+// - amadeus-state: INVERTED enumeration (#758) — list the READ-ONLY
+//   subcommands (the amadeus-state.ts dispatch switch's pure reads:
+//   get / count / lookup) and treat every OTHER subcommand as engagement.
+//   Enumerating mutating verbs instead silently drifted as the tool grew
+//   (8 mutating verbs were missed), so the safe default must be structural:
+//   a verb added tomorrow is engagement the day it lands
+//   (fail-toward-engagement, t209). With no parseable subcommand, a flag-only
+//   usage query (--help / --version / --status) is read-only; anything else
+//   unrecognised is engagement — the conservative direction (the carve-out is
+//   allow-only, so falling through to the cap-bounded block can never trap a
+//   session).
+// - amadeus-jump / amadeus-bolt / amadeus-swarm: a read-only query
+//   (--help/--status) is not engagement; anything else mutates (jump moves the
+//   pointer, bolt forks/merges, swarm runs Construction) so counts as
+//   engagement.
+export function isEngineEngagementSegment(seg: string): boolean {
+  if (!/amadeus-(orchestrate|state|jump|bolt|swarm)\b/.test(seg)) return false;
+  const hasReadOnlyFlag = /--status\b|--doctor\b|--help\b|--version\b/.test(seg);
+  if (/amadeus-orchestrate\b/.test(seg)) {
+    const advances = /\bnext\b|\breport\b/.test(seg);
+    if (!advances) return false; // e.g. an orchestrate invocation with only a read-only flag
+    if (hasReadOnlyFlag && /\bnext\b/.test(seg) && !/\breport\b/.test(seg)) return false;
+    return true;
+  }
+  if (/amadeus-state\b/.test(seg)) {
+    const sub = seg.match(/amadeus-state(?:\.ts)?["']?(?:\s+--?\S+)*\s+([A-Za-z][A-Za-z-]*)/);
+    if (sub) return !/^(?:get|count|lookup)$/.test(sub[1]);
+    return !hasReadOnlyFlag;
+  }
+  if (hasReadOnlyFlag) return false;
+  return true;
+}

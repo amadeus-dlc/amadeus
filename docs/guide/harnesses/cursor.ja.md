@@ -51,7 +51,7 @@ cp -n your-project/.cursor/hooks.json.example your-project/.cursor/hooks.json
 | オーケストレーター | `.cursor/commands/amadeus.md`(`/amadeus` コマンド) |
 | オンボーディング | `AGENTS.md`(セッション再開導線) |
 | フック | `.cursor/hooks.json.example` が 8 イベントをアダプタ経由で配線(下記参照) |
-| `promote:self` | 本ハーネスは非対象 |
+| `promote:self` | `bun run promote:self` が `dist/cursor/.cursor/` → ルート `.cursor/` へ promote(dogfood) |
 
 ## フック配線
 

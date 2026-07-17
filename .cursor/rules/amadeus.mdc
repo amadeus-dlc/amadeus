@@ -1,0 +1,17 @@
+---
+description: AI-DLC (Amadeus) method — always-applied pointer to the layered rule chain.
+alwaysApply: true
+---
+
+# AI-DLC method (Amadeus)
+
+This project runs the AI-DLC workflow. The method — the layered rule files
+`org.md` → `team.md` → `project.md` → `phases/<phase>.md` — is authored once at
+the workspace root under `amadeus/spaces/<space>/memory/`, the single
+hand-editable source of truth shared by every harness. Read that chain (in that
+additive order) as the governing rules for every stage; do NOT restate the rules
+here.
+
+To start, resume, or manage the workflow, run the `/amadeus` command
+(`.cursor/commands/amadeus.md`), which forwards to the deterministic
+orchestration engine at `.cursor/tools/amadeus-orchestrate.ts`.

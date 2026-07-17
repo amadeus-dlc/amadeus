@@ -2,8 +2,8 @@
 // scripts/promote-self.ts — promote generated harness output into this repo.
 //
 // This is a project-local dogfood install, not a distributable build. The
-// packager still owns dist/; this script copies the generated Claude/Codex
-// harness surfaces into the repository root so Amadeus can develop itself.
+// packager still owns dist/; this script copies the generated Claude/Codex/
+// Cursor harness surfaces into the repository root so Amadeus can develop itself.
 // Contributor-only skill runtime files under contrib/skills/ are projected
 // into both harness discovery trees without entering dist/. Authoring-only
 // eval assets remain at the canonical contributor path.
@@ -38,6 +38,7 @@ const managedDirs: ManagedDir[] = [
   { src: "dist/claude/.claude", dst: ".claude" },
   { src: "dist/codex/.codex", dst: ".codex" },
   { src: "dist/codex/.agents", dst: ".agents" },
+  { src: "dist/cursor/.cursor", dst: ".cursor" },
 ];
 
 const CONTRIBUTOR_SKILLS_ROOT = "contrib/skills";
@@ -88,6 +89,8 @@ const preserved = [
   ".codex/hooks.json",
   ".codex/agmsg-delivery-mode",
   ".codex/local/",
+  // Local activation of the shipped hooks.json.example (same pattern as Codex).
+  ".cursor/hooks.json",
 ];
 
 // Composed-scope runtime data: the adaptive composer APPENDS approved scopes to
@@ -142,7 +145,7 @@ function printUsage(): void {
       "usage: bun scripts/promote-self.ts [--check|--apply] [--no-build]",
       "",
       "  --check     verify project-local self install matches generated output (default)",
-      "  --apply     write .claude/, .codex/, .agents/, AGENTS.md, and CLAUDE.md",
+      "  --apply     write .claude/, .codex/, .agents/, .cursor/, AGENTS.md, and CLAUDE.md",
       "  --no-build  skip the package.ts freshness step",
     ].join("\n"),
   );
@@ -155,6 +158,28 @@ function run(cmd: string, args: string[]): void {
     env: process.env,
   });
   if (res.status !== 0) process.exit(res.status ?? 1);
+}
+
+// Harnesses whose dist trees feed the managedDirs self-install. Kept as data
+// so --apply/--check freshness can be asserted in-process without spawning
+// package.ts (bun --coverage cannot see spawned subprocesses).
+export const PACKAGE_HARNESSES = ["claude", "codex", "cursor"] as const;
+
+export function packageFreshnessArgs(mode: Mode): string[][] {
+  return PACKAGE_HARNESSES.map((harness) =>
+    mode === "apply"
+      ? ["scripts/package.ts", harness]
+      : ["scripts/package.ts", harness, "--check"],
+  );
+}
+
+export function runPackageFreshness(
+  mode: Mode,
+  runner: (cmd: string, args: string[]) => void = run,
+): void {
+  for (const args of packageFreshnessArgs(mode)) {
+    runner("bun", args);
+  }
 }
 
 // Dirents carry lstat-level type info, so symlinks are never followed: a
@@ -297,7 +322,11 @@ function apply(expected: Map<string, Buffer>, repoRoot: string): void {
 // process exit code instead of exiting so tests can drive check/apply against
 // a fixture repoRoot without spawning (spawned subprocesses are invisible to
 // bun --coverage).
-export function promoteSelfMain(argv: string[], repoRoot: string = REPO_ROOT): number {
+export function promoteSelfMain(
+  argv: string[],
+  repoRoot: string = REPO_ROOT,
+  freshness: (mode: Mode) => void = runPackageFreshness,
+): number {
   if (argv.includes("--help") || argv.includes("-h")) {
     printUsage();
     return 2;
@@ -310,13 +339,7 @@ export function promoteSelfMain(argv: string[], repoRoot: string = REPO_ROOT): n
   const noBuild = argv.includes("--no-build");
 
   if (!noBuild) {
-    if (mode === "apply") {
-      run("bun", ["scripts/package.ts", "claude"]);
-      run("bun", ["scripts/package.ts", "codex"]);
-    } else {
-      run("bun", ["scripts/package.ts", "claude", "--check"]);
-      run("bun", ["scripts/package.ts", "codex", "--check"]);
-    }
+    freshness(mode);
   }
 
   let expected: Map<string, Buffer>;
