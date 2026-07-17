@@ -4,8 +4,8 @@
 
 ## 実装結果(実測、wc -l)
 
-- scripts/amadeus-mirror.ts: **370行**(見積り 288〜432 の範囲内。カバレッジ閉鎖で main へ deps 既定引数 seam を追加)
-- テスト: unit 129行 + integration 296行 = **425行**(見積り 280〜420 をわずかに超過 — カバレッジ閉鎖テスト7件追加分、+1.2%)。29 テスト / 60 expect
+- scripts/amadeus-mirror.ts: **369行**(見積り 288〜432 の範囲内。カバレッジ閉鎖で main へ deps 既定引数 seam を追加)
+- テスト: unit 129行 + integration 286行 = **415行**(wc -l 実測。見積り 280〜420 の範囲内)。29 テスト / 60 expect
 - **lcov 実測: scripts/amadeus-mirror.ts の未カバー 0行**(local-lcov-pre-push)
 
 ## 検証(コマンドと exit code — 自己捕捉)
