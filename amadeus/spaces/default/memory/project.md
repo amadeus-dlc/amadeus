@@ -6,7 +6,7 @@
 
 ## Way of Working
 
-実装時は `core/` または `harness/<name>/` を編集元とし、`dist/` とセルフインストールツリーは生成物として `bun scripts/package.ts` と `bun run promote:self` で同期する。
+実装時は `packages/framework/core/` または `packages/framework/harness/<name>/` を編集元とし、`dist/` とセルフインストールツリーは生成物として `bun scripts/package.ts` と `bun run promote:self` で同期する。
 
 ## Walking Skeleton
 
@@ -28,7 +28,7 @@
 - Deployment Executionの結果は、N/A（反証可能な不存在/非適用根拠あり）、NOT EXECUTED（対象/操作を認識したが禁止または未実施。理由を併記）、PENDING（後続の実行・観測条件待ち。閉包条件を併記）、PASS（実行証跡に基づく検証成功）を相互代用せず分離する。必要な外部操作を省略した完了根拠には使わない。 (learned 2026-07-12) <!-- cid:deployment-execution:c3 -->
 ## Code Style
 
-TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフィックス、`core/` のハーネス中立層と `harness/<name>/` のハーネス別表層という境界を守る。フォーマッタは無効、lint は Biome、型検査は `tsc --noEmit` で行い、ツール・フックには実行ビットを要求しない。
+TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフィックス、`packages/framework/core/` のハーネス中立層と `packages/framework/harness/<name>/` のハーネス別表層という境界を守る。フォーマッタは無効、lint は Biome、型検査は `tsc --noEmit` で行い、ツール・フックには実行ビットを要求しない。
 
 - DECIDED: このプロジェクトのドメインモデリングは `amadeus/spaces/default/knowledge/amadeus-shared/software-design/functional-domain-modeling-ts/`(class-free、type+コンパニオンオブジェクト、ブランド型+スマートコンストラクタ、判別ユニオン Result)を採用する。普遍原則(tell-dont-ask、parse-dont-validate、first-class-collection 等、索引 `software-design/README.md` の常時適用群)はこのスタイルの上で適用する (adopted 2026-07-08、installer-distribution intent にてユーザー指示)
 
@@ -39,7 +39,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - リンター: Biome 2.4系(フォーマッタ無効)
 - テスト: bun test ベースの自作ランナー `tests/run-tests.sh`(smoke / unit / integration / e2e の4層)
 - 主要開発依存: agent SDK、node-pty、@xterm/headless(e2e のターミナル駆動用)
-- 構成: `core/`(ハーネス中立のソースオブトゥルース)、`harness/<name>/`(ハーネス別表層)、`scripts/package.ts`(ビルド)、`dist/<harness>/`(生成・コミット・ドリフトガード対象)、`docs/`
+- 構成: `packages/framework/core/`(ハーネス中立のソースオブトゥルース)、`packages/framework/harness/<name>/`(ハーネス別表層)、`scripts/package.ts`(ビルド)、`dist/<harness>/`(生成・コミット・ドリフトガード対象)、`docs/`
 
 ## Decided
 
@@ -62,14 +62,14 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - NEVER インストーラの挙動を変更するとき、正本・配布物・セルフインストールツリーをコミット間で不整合にしない。 (affirmed 2026-07-07)
 - NEVER 決定的なドリフトガードが存在する検査を、ローカルだけの手動チェックリストで代替しない。 (affirmed 2026-07-07)
 - NEVER 利用者側の Bun-only 前提を変更する理由を文書化せず、配布フレームワークへ runtime dependency を追加しない。 (affirmed 2026-07-07)
-- NEVER root `core/` / `harness/` の維持または移動を、ADR/設計記録なしに暗黙決定しない。 (affirmed 2026-07-07)
+- NEVER `packages/framework/core/` / `packages/framework/harness/` の維持または移動を、ADR/設計記録なしに暗黙決定しない。 (affirmed 2026-07-07)
 - NEVER `dist/` relocation を internal refactor として扱わない。README、docs、tests、self-promotion、CI への user-facing impact を棚卸しする。 (affirmed 2026-07-07)
 - NEVER `packages/setup` の不在をローカル filesystem evidence として捏造しない。 (affirmed 2026-07-07)
 ## Mandated
 
 - ALWAYS リリース(バージョンバンプ・タグ発行・GitHub Release ノート・npm publish)は release.yml の workflow_dispatch 一本で行う。PR ではバージョン・バッジ・リリースノートに一切触れない(`tests/unit/t68-version-changelog-sync.test.ts` が version.ts↔CLI↔README バッジの同期を強制) (user decision 2026-07-09)
 
-- ALWAYS `core/` または `harness/<name>/` を正本として編集し、`bun scripts/package.ts` で `dist/` を再生成する。 (affirmed 2026-07-07)
+- ALWAYS `packages/framework/core/` または `packages/framework/harness/<name>/` を正本として編集し、`bun scripts/package.ts` で `dist/` を再生成する。 (affirmed 2026-07-07)
 - ALWAYS セルフインストールされる全ハーネスツリーに影響する正本変更後は `bun run promote:self` を実行する。 (affirmed 2026-07-07)
 - ALWAYS インストーラ関連の検証に `bun run dist:check` と `bun run promote:self:check` を含め、生成された配布物との一致を確認する。 (affirmed 2026-07-07)
 - ALWAYS インストーラ変更はマージ前に `bun run typecheck`、`bun run lint`、関連する `tests/run-tests.sh` プロファイルで検証する。 (affirmed 2026-07-07)
@@ -100,7 +100,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - 概念の改名・所有移管を含む修正では、旧名・旧所属を全成果物(上流の unit 定義・関係図・questions ファイル含む)で grep してから再レビューに出す — 伝播漏れはレビューイテレーションを1回消費する最頻出の欠陥 (learned 2026-07-08) <!-- cid:functional-design:c3 -->
 - NFR 具体化では、ファイル名・タイムスタンプ等の設計値を実行環境の制約(Windows 予約文字、API の実在バージョン)と照合し、性能数値は強制メカニズム(タイムアウト等)から導出する — 照合なしの数値・形式は実装で破綻する (learned 2026-07-08) <!-- cid:nfr-requirements:c3 -->
 - 概念移動時の全成果物 grep には修正中のユニット自身のファイルも含める — 伝播漏れは消費側だけでなく発生元にも残る(functional-design:c3 の補強) (learned 2026-07-08) <!-- cid:nfr-requirements:c5 -->
-- framework 版同期の検証は、パッケージ内コピーの内部整合テストと dist:check/promote:self:check(全 dist ツリー+セルフインストールへの core 反映)の相補2機構で扱う — core/tools/amadeus-version.ts を触る変更は後者なしに完了と見なさない (learned 2026-07-08) <!-- cid:nfr-requirements:c1 -->
+- framework 版同期の検証は、パッケージ内コピーの内部整合テストと dist:check/promote:self:check(全 dist ツリー+セルフインストールへの core 反映)の相補2機構で扱う — packages/framework/core/tools/amadeus-version.ts を触る変更は後者なしに完了と見なさない (learned 2026-07-08) <!-- cid:nfr-requirements:c1 -->
 - 「修正対象ファイルの目録」「無改修」「実行回数・予算」等の断定的インベントリは、全設計決定が確定した後に導出して書く — 設計途中の早期断定は修正のたびに偽り、レビューイテレーションを消費する(nfr-design で3度観測) (learned 2026-07-08) <!-- cid:nfr-design:c7 -->
 - 「構造的保証」を謳う設計記述は一枚岩の断定を避け、モジュール別に保証機構(ポート不保持/限定ポート/呼び出し順序契約など)を層別に書く — 例外を含む全称命題は自己矛盾の温床 (learned 2026-07-08) <!-- cid:nfr-design:c4 -->
 - レビュー是正で新しい概念・共有物・所有関係(ヘルパー、環境変数、契約など)を導入するときは、その提供側と消費側の全成果物(他ユニット・他ステージ含む)を同時に棚卸しして伝播させ、伝播先一覧を是正コミットに含める — 是正自体が次の伝播漏れの発生源になる(infrastructure-design で2回観測) (learned 2026-07-08) <!-- cid:infrastructure-design:infrastructure-design:review-fix-propagation -->
