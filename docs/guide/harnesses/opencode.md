@@ -55,21 +55,45 @@ the session-resume onboarding a returning session reads.
 | Onboarding | `AGENTS.md` (session-resume path) |
 | Config example | `.opencode/opencode.json.example` — `$schema` + permission narrowing (`edit`/`bash`/`webfetch` = `ask`) |
 | Session skills | 4 (`session-cost`, `replay`, `outcomes-pack`, `grilling`) — the 32 per-stage runners are out of initial scope |
-| Hooks | **Not supported** — OpenCode's hook equivalent is JS plugins; deferred to Issue [#1049](https://github.com/amadeus-dlc/amadeus/issues/1049) |
+| Hooks | **Not wired (0 of 8)** — the 工程0 mapping ([#1049](https://github.com/amadeus-dlc/amadeus/issues/1049)) measured every Cursor-parity core-hook target against OpenCode's JS plugin API: **0 wired · 5 conditional · 3 unsupported**. See [Hook mapping](#hook-mapping-1049) below |
 | `promote:self` | Not applicable to this harness |
 
 ## Harness differences vs Claude Code
 
-- **No hooks**: OpenCode has no shell-command hook mechanism the framework can
-  wire to — its extension surface is JS plugins. Audit emission, sensor firing,
-  and presence minting that ride hooks on other harnesses are not active here.
-  Tracked in Issue [#1049](https://github.com/amadeus-dlc/amadeus/issues/1049).
+- **No hooks wired**: OpenCode has no shell-command hook mechanism — its
+  extension surface is JS plugins. Audit emission, sensor firing, and presence
+  minting that ride hooks on other harnesses are **not active** here. The 工程0
+  mapping ([#1049](https://github.com/amadeus-dlc/amadeus/issues/1049)) measured
+  the plugin API and wired none of the eight targets; see [Hook mapping](#hook-mapping-1049).
 - **`$amadeus --version`** reports `amadeus 0.1.2` (exit 0).
 - **`$amadeus --doctor`** degrades to advisory only — it misfires the `.claude`
   prerequisite block and does not enumerate other worktrees, neither of which
   affects correctness.
 - **Session skills only**: the four read-only session skills ship; the per-stage
   runners are excluded from the initial scope.
+
+## Hook mapping (#1049)
+
+The 工程0 measurement classified each of the eight Cursor-parity core-hook
+targets against OpenCode's plugin API by reading the installed type
+definitions verbatim. **Measured 2026-07-17 against `@opencode-ai/plugin@1.18.3`
+(and its `@opencode-ai/sdk@1.18.3` dependency).**
+
+| Cursor target | OpenCode status | Confirmation condition / rationale |
+| --- | --- | --- |
+| audit-and-sensors | ⚠ conditional | `tool.execute.after` seam confirmed, but the tool vocabulary (`ToolIds = Array<string>`, no enum) and `args` shape (`args: any`) are untyped — needs live-runtime measurement (a follow-up intent) |
+| runtime-compile | ⚠ conditional | same as above (`tool.execute.after`, untyped vocabulary/args) |
+| session-start | ⚠ conditional | `event` (`session.created`) carries no `source` field and OpenCode has no `additionalContext` injection seam; side-effect-only wiring was declined (no false parity) |
+| session-end | ⚠ conditional | `event` (`session.deleted`) / `dispose` carry no `reason` and differ in meaning from a session ending; side-effect-only wiring declined |
+| validate-state | ⚠ conditional | `event` (`session.compacted`) fires **after** compaction; the core hook is a **pre**-compact validator — timing is inverted |
+| mint (HUMAN_TURN) | ❌ unsupported | Held **fail-closed** to block a phantom HUMAN_TURN: `UserMessage` has no machine-injection marker field, and whether an AskUserQuestion answer flows through `chat.message` is unverified. Human-presence keeps the current delegate flow |
+| log-subagent | ❌ unsupported | No event carries a subagent-stop signal with `agent_type` / `agent_id` |
+| stop | ❌ unsupported | No turn-end gate event (`session.idle` is idle-transition, not a turn boundary) |
+
+The five conditional rows all block on the same missing fact — OpenCode's tool
+vocabulary and `args` shape are untyped, so they need live-runtime measurement,
+deferred to a follow-up intent. The full evidence (verbatim type citations per
+row) lives in the intent record's `mapping-table.md`.
 
 ## Regenerating
 
