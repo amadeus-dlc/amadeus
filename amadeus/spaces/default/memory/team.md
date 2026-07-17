@@ -111,6 +111,13 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 - 無言で作業しない: 各メンバーは作業中、自セッションに進捗ナレーションを出す — 着手時に「何をどの手順でやるか」、長い工程の節目ごとに「いま何をしていて次に何をするか」、ツール実行の前に一言の意図表明。人間がセッションを確認したときに現在地が分かる状態を保つ(leader への報告制とは別軸: 報告は節目、ナレーションは常時) (user decision 2026-07-09) <!-- cid:requirements-analysis:no-silent-work -->
 - PR 作成前の deslop を標準工程にする: 実装者は PR を出す前に $HOME/.agents/skills/deslop スキル(main との diff から AI slop — 不要コメント・過剰防御・any キャスト・深いネスト・周辺コードと不整合なパターン — を除去、挙動不変)を実行する。レビュアーも slop 残存をレビュー観点に含める(thermo-nuclear と併用)。deslop 後も全検証コマンドの再実行必須(挙動不変の実証) (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:deslop-in-workflow -->
 - 役割は固定メンバー名やハーネスではなく、領域アフィニティ(蓄積した文脈)と作業上の帽子(conduct / review / investigation)で割り当てる。自己実装の自己レビューは禁止し、同一メンバーへの連続した conductor 割当を避け、レビュー能力を常に確保する (user decision 2026-07-10) <!-- cid:requirements-analysis:role-model -->
+
+<!-- amadeus:practices-promote:BEGIN -->
+
+私たちは `main` を中心に、短命branchからPull Request経由で変更を取り込み、Boltはsquashして線形履歴を保つ。AIはmain mergeや不可逆な外部操作を行わず、人間の明示承認へhandoffする。
+
+<!-- amadeus:practices-promote:END -->
+
 ## Forbidden
 
 - NEVER 要求されていない後方互換レイヤー・フォールバック分岐・非推奨API のシム・移行用の二重実装を追加しない。トランクベース開発で互換負債を溜めないため、古い挙動は削除して置き換える。互換維持が必要なときは requirements/NFR に明示された場合にのみ実装し、根拠を成果物に残す
@@ -261,3 +268,34 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 - 大型/停滞 PR の収束可否・設計妥当性の判断は、実 rebase/merge の前に git merge-tree <merge-base> <head1> <head2>(read-only plumbing)で衝突マーカーを非破壊実測する — GitHub の mergeable=CONFLICTING は base 前進ステールと実テキスト衝突を区別しない(mega-pr-three-stage-review / base-advance-regrounding の前段追補、closed-pr-state-first と補完。E-PM9 C4 2026-07-17 採用 3/3 — #982 で出力 147,664行・マーカー0件→ステール確定し重作業(rebase+6 harness dist regen)を回避した実測) (learned 2026-07-17) <!-- cid:requirements-analysis:merge-tree-nondestructive-conflict-probe -->
 - 選挙・§13 の配信は候補原文の verbatim 転記を原則とし、agmsg の配信長 truncate が予想される場合(目安: 本日実測で和文約2,000字級の配信が truncate)は要点+record/ファイル参照で全文へ誘導する — 要約・言い換え・切断は票を歪める(e3 留保転記: 安全長目安の明記。E-PM9 C6 2026-07-17 採用 3/3 — E-SDG-CG の §13 0件誤要約で2票が読替+E-TPR-RA truncate で2名が内容指定投票へ迂回した実測。distribution-verbatim 系の正準) (learned 2026-07-17) <!-- cid:requirements-analysis:election-distribution-verbatim-and-length -->
 - E-PM9 ラウンド記録(2026-07-17): 候補7件全採用(C5/C7 は統合 persist — C5 は cross-worktree-delegate-delivery 追補3、C7 は phases/inception.md 規模の正当化節の数値必須化+N3 追記)。候補外1件(grep -c && 連鎖 = 既存 no-grep-count-mid-chain の違反実例回付、全員異議なし)。バグトレンド: open 1 / 24h 起票3(bootstrap 除外)/ クローズ7 = 純減。違反実例カウント: no-exit-capture-through-pipe 1件(自己捕捉)。票: 配信 11:13Z 頃 → e3 11:14:12Z → e1 11:14:37Z → e4 11:14:39Z → 開票 11:15Z 頃(e2 park 中欠席、3/3)。GoA[E-PM9]: C1 1x3 / C2 1x3 / C3 1x3 / C4 1x3 / C5 1x1 2x2 / C6 1x3 / C7 1x1 2x1 3x1 <!-- cid:requirements-analysis:pm9-round-record -->
+
+## Walking Skeleton
+
+<!-- amadeus:practices-promote:BEGIN -->
+
+私たちはgreenfieldの最初のConstruction Boltを小さなend-to-end sliceとして確認し、既存コードへのbugfixではbootstrap対象がないためceremonyをskipする。本intentは既存Markdownのbranch hygieneであり、追加のskeletonは設けない。
+
+<!-- amadeus:practices-promote:END -->
+
+## Testing Posture
+
+<!-- amadeus:practices-promote:BEGIN -->
+
+私たちはTypeScriptのテストを `tests/` 配下へ置き、Bun runnerでunit / integration / e2e / smokeを検証する。bugfixでは対象regressionを第一級成果物とし、typecheck、Biome lint、complexity、dist / self-install drift、test、coverageの既存CI gateをgreenに保つ。
+
+<!-- amadeus:practices-promote:END -->
+
+## Deployment
+
+<!-- amadeus:practices-promote:BEGIN -->
+
+私たちはapplication deploy基盤を持たず、releaseは `.github/workflows/release.yml` の手動 `workflow_dispatch` からrelease-it、GitHub Release、npm publishを一続きで行う。PRやAmadeus workflowからversionを上げず、production相当のpublishは人間の承認下で実行する。
+
+<!-- amadeus:practices-promote:END -->
+
+## Code Style
+
+<!-- amadeus:practices-promote:BEGIN -->
+
+私たちはTypeScript / ESMとBun直接実行を採用し、Biome lint、無効化したformatter、strictな `tsc --noEmit` に従う。`packages/framework/core/` のharness中立層と `packages/framework/harness/<name>/` のharness別表層を分離し、setup domainでは判別unionの `Result` を既決styleとして使う。
+<!-- amadeus:practices-promote:END -->
