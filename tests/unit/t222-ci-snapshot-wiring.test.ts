@@ -36,6 +36,14 @@ concurrency:
     --base main
     --head "$branch"
     gh pr merge --auto --squash --delete-branch "$pr_url"
+      - name: Generate snapshot
+        run: bun scripts/metrics-snapshot.ts --write
+      - name: Prune old snapshots
+        run: bun scripts/metrics-retention.ts --apply
+      - name: Commit snapshot
+        run: |
+          git add -A metrics/
+          git commit -m "chore(metrics): record snapshot"
   ci-success:
     needs: [coverage]
 `;
@@ -66,6 +74,19 @@ describe("t222 CI snapshot wiring", () => {
     expect(job).toContain('--head "$branch"');
     expect(job).toContain('gh pr merge --auto --squash --delete-branch "$pr_url"');
     expect(job).not.toContain("HEAD:main");
+  });
+  test("prunes old snapshots after generating and before committing (Issue #1121)", () => {
+    const generate = job.indexOf("- name: Generate snapshot");
+    const prune = job.indexOf("- name: Prune old snapshots");
+    const commit = job.indexOf("- name: Commit snapshot");
+    expect(generate).toBeGreaterThanOrEqual(0);
+    expect(prune).toBeGreaterThan(generate);
+    expect(commit).toBeGreaterThan(prune);
+    expect(job).toContain("run: bun scripts/metrics-retention.ts --apply");
+  });
+  test("commit stages deletions with git add -A so pruned snapshots are removed (Issue #1121)", () => {
+    expect(job).toContain("git add -A metrics/");
+    expect(job).not.toContain("git add metrics/*.json");
   });
   test("ci-success does not depend on snapshot", () => expect(ciSuccess).not.toContain("metrics-snapshot"));
   test("totals belong to the named coverage artifact upload step", () => {
