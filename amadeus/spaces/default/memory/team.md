@@ -30,6 +30,8 @@ Amadeus は、同じ `org → team → project → phase → stage` ルールを
 
 `scripts/team-up.sh` は起動する全セッションへ `AMADEUS_OPERATING_MODE=team` を設定する。この明示マーカーがある場合だけチームモードとし、leader、conductor、builder、reviewer を別メンバーへ割り当て、agmsg の配送・ack、独立選挙、クロスレビュー、worktree 隔離、leader/member の指揮系統を適用する。チーム構成や利用ハーネスにかかわらず、役割は能力ではなく責務として割り当てる。
 
+同一マシンで複数チームを並行起動する場合は `--instance NAME`（または `TEAM_INSTANCE`）を使う。名前付き instance は herdr セッション・state ディレクトリ・agmsg team を `NAME` から導出して隔離する（例: session `amadeus-team-alpha`、agmsg `amadeus-alpha`）。フラグなしの default instance は従来どおり `amadeus-team` / `amadeus` と state ルート直下のレイアウトを維持する。`--name` は run の表示ラベルであり、隔離キーではない。
+
 agmsg の `whoami.sh` と `team.sh` は登録済みidentity・team・宛先の確認に使うが、チームモードの判定には使わない。登録はセッション終了後も残り、`team.sh` の一覧はliveメンバーを保証しないためである。起動経路や登録数を推測せず、`AMADEUS_OPERATING_MODE` を唯一の判定元とする。
 
 ### 共通の品質契約
