@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 464,
+    "total": 465,
     "enumeratedByClass": {
-      "function": 239,
+      "function": 240,
       "audit": 73,
       "scope": 10,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 110,
+      "function": 111,
       "audit": 32,
       "scope": 10,
       "stage": 8,
@@ -2358,6 +2358,18 @@
         {
           "file": "tests/integration/t66.test.ts",
           "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:QUESTIONS_EVIDENCE_CUTOFF_YYMMDD",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-answer-evidence-sensor.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"

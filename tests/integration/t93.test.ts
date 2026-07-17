@@ -26,7 +26,7 @@
 //
 // PARITY NOTES (every .sh `ok`/`assert_eq` line maps to an expect() below;
 // several are STRONGER than the original grep/awk):
-//   - .sh Case 1  list emits 4 framework sensors (grep -c TAB == 4)   -> Test 1:
+//   - .sh Case 1  list emits the framework sensors (now 5 with answer-evidence) -> Test 1:
 //       rows.length === 4 (same observable: count of tab-bearing rows).
 //   - .sh Case 2  every row column 2 == "deterministic" (awk != count) -> Test 2:
 //       every row's cols[1] === "deterministic" (same observable, per-row).
@@ -98,6 +98,7 @@ function listRows(out: string): string[][] {
 }
 
 const EXPECTED_IDS = [
+  "answer-evidence",
   "linter",
   "required-sections",
   "type-check",
@@ -109,10 +110,10 @@ const EXPECTED_IDS = [
 // ============================================================
 
 describe("t93 amadeus-sensor list (migrated from t93-sensor-list-describe.sh, plan 12)", () => {
-  test("1: list emits exactly 4 framework sensors", () => {
+  test("1: list emits exactly 5 framework sensors", () => {
     const r = sensor("list");
     expect(r.status).toBe(0); // STRONGER: .sh discarded $? on list; we pin clean exit
-    expect(listRows(r.out)).toHaveLength(4);
+    expect(listRows(r.out)).toHaveLength(5);
   });
 
   test("2: list column 2 is 'deterministic' for every row", () => {
@@ -130,7 +131,7 @@ describe("t93 amadeus-sensor list (migrated from t93-sensor-list-describe.sh, pl
     expect(ids).toEqual([...ids].sort());
   });
 
-  test("4: list returns exactly the 4 framework sensor ids", () => {
+  test("4: list returns exactly the 5 framework sensor ids", () => {
     const r = sensor("list");
     const ids = listRows(r.out).map((cols) => cols[0]);
     // .sh sentinel set — flags drift if a sensor is renamed/added/removed.

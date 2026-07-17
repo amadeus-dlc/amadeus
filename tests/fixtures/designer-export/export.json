@@ -13,7 +13,9 @@
       "produces": [],
       "consumes": [],
       "requires_stage": [],
-      "sensors": [],
+      "sensors": [
+        "answer-evidence"
+      ],
       "scopes": [
         "enterprise",
         "feature",
@@ -42,7 +44,13 @@
           "scope": "project"
         }
       ],
-      "sensors_applicable": []
+      "sensors_applicable": [
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
+        }
+      ]
     },
     {
       "slug": "workspace-detection",
@@ -59,7 +67,9 @@
       "requires_stage": [
         "workspace-scaffold"
       ],
-      "sensors": [],
+      "sensors": [
+        "answer-evidence"
+      ],
       "scopes": [
         "enterprise",
         "feature",
@@ -88,7 +98,13 @@
           "scope": "project"
         }
       ],
-      "sensors_applicable": []
+      "sensors_applicable": [
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
+        }
+      ]
     },
     {
       "slug": "state-init",
@@ -105,7 +121,9 @@
       "requires_stage": [
         "workspace-detection"
       ],
-      "sensors": [],
+      "sensors": [
+        "answer-evidence"
+      ],
       "scopes": [
         "enterprise",
         "feature",
@@ -134,7 +152,13 @@
           "scope": "project"
         }
       ],
-      "sensors_applicable": []
+      "sensors_applicable": [
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
+        }
+      ]
     },
     {
       "slug": "intent-capture",
@@ -157,7 +181,8 @@
       "requires_stage": [],
       "sensors": [
         "required-sections",
-        "upstream-coverage"
+        "upstream-coverage",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -195,6 +220,11 @@
           "id": "upstream-coverage",
           "path": ".claude/sensors/amadeus-upstream-coverage.md",
           "matches": "**/{amadeus-docs,intents}/**"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -225,7 +255,8 @@
       ],
       "sensors": [
         "required-sections",
-        "upstream-coverage"
+        "upstream-coverage",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -261,6 +292,11 @@
           "id": "upstream-coverage",
           "path": ".claude/sensors/amadeus-upstream-coverage.md",
           "matches": "**/{amadeus-docs,intents}/**"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -307,7 +343,8 @@
       ],
       "sensors": [
         "required-sections",
-        "upstream-coverage"
+        "upstream-coverage",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -344,6 +381,11 @@
           "id": "upstream-coverage",
           "path": ".claude/sensors/amadeus-upstream-coverage.md",
           "matches": "**/{amadeus-docs,intents}/**"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -384,7 +426,8 @@
       ],
       "sensors": [
         "required-sections",
-        "upstream-coverage"
+        "upstream-coverage",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -421,6 +464,11 @@
           "id": "upstream-coverage",
           "path": ".claude/sensors/amadeus-upstream-coverage.md",
           "matches": "**/{amadeus-docs,intents}/**"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -459,7 +507,8 @@
       ],
       "sensors": [
         "required-sections",
-        "upstream-coverage"
+        "upstream-coverage",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -495,6 +544,11 @@
           "id": "upstream-coverage",
           "path": ".claude/sensors/amadeus-upstream-coverage.md",
           "matches": "**/{amadeus-docs,intents}/**"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -535,7 +589,8 @@
       ],
       "sensors": [
         "required-sections",
-        "upstream-coverage"
+        "upstream-coverage",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -574,6 +629,11 @@
           "id": "upstream-coverage",
           "path": ".claude/sensors/amadeus-upstream-coverage.md",
           "matches": "**/{amadeus-docs,intents}/**"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -637,7 +697,8 @@
       ],
       "sensors": [
         "required-sections",
-        "upstream-coverage"
+        "upstream-coverage",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -673,6 +734,11 @@
           "id": "upstream-coverage",
           "path": ".claude/sensors/amadeus-upstream-coverage.md",
           "matches": "**/{amadeus-docs,intents}/**"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -705,7 +771,8 @@
       ],
       "sensors": [
         "required-sections",
-        "upstream-coverage"
+        "upstream-coverage",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -747,6 +814,11 @@
           "id": "upstream-coverage",
           "path": ".claude/sensors/amadeus-upstream-coverage.md",
           "matches": "**/{amadeus-docs,intents}/**"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -808,7 +880,8 @@
       ],
       "sensors": [
         "required-sections",
-        "upstream-coverage"
+        "upstream-coverage",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -847,6 +920,11 @@
           "id": "upstream-coverage",
           "path": ".claude/sensors/amadeus-upstream-coverage.md",
           "matches": "**/{amadeus-docs,intents}/**"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -899,7 +977,8 @@
       ],
       "sensors": [
         "required-sections",
-        "upstream-coverage"
+        "upstream-coverage",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -944,6 +1023,11 @@
           "id": "upstream-coverage",
           "path": ".claude/sensors/amadeus-upstream-coverage.md",
           "matches": "**/{amadeus-docs,intents}/**"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -989,7 +1073,8 @@
       ],
       "sensors": [
         "required-sections",
-        "upstream-coverage"
+        "upstream-coverage",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -1029,6 +1114,11 @@
           "id": "upstream-coverage",
           "path": ".claude/sensors/amadeus-upstream-coverage.md",
           "matches": "**/{amadeus-docs,intents}/**"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -1078,7 +1168,8 @@
       ],
       "sensors": [
         "required-sections",
-        "upstream-coverage"
+        "upstream-coverage",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -1118,6 +1209,11 @@
           "id": "upstream-coverage",
           "path": ".claude/sensors/amadeus-upstream-coverage.md",
           "matches": "**/{amadeus-docs,intents}/**"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -1171,7 +1267,8 @@
       ],
       "sensors": [
         "required-sections",
-        "upstream-coverage"
+        "upstream-coverage",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -1211,6 +1308,11 @@
           "id": "upstream-coverage",
           "path": ".claude/sensors/amadeus-upstream-coverage.md",
           "matches": "**/{amadeus-docs,intents}/**"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -1266,7 +1368,8 @@
       ],
       "sensors": [
         "required-sections",
-        "upstream-coverage"
+        "upstream-coverage",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -1306,6 +1409,11 @@
           "id": "upstream-coverage",
           "path": ".claude/sensors/amadeus-upstream-coverage.md",
           "matches": "**/{amadeus-docs,intents}/**"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -1367,7 +1475,8 @@
       ],
       "sensors": [
         "required-sections",
-        "upstream-coverage"
+        "upstream-coverage",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -1405,6 +1514,11 @@
           "id": "upstream-coverage",
           "path": ".claude/sensors/amadeus-upstream-coverage.md",
           "matches": "**/{amadeus-docs,intents}/**"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -1462,7 +1576,8 @@
         "required-sections",
         "upstream-coverage",
         "linter",
-        "type-check"
+        "type-check",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -1513,6 +1628,11 @@
           "id": "type-check",
           "path": ".claude/sensors/amadeus-type-check.md",
           "matches": "**/*.{ts,tsx}"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -1565,7 +1685,8 @@
         "required-sections",
         "upstream-coverage",
         "linter",
-        "type-check"
+        "type-check",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -1617,6 +1738,11 @@
           "id": "type-check",
           "path": ".claude/sensors/amadeus-type-check.md",
           "matches": "**/*.{ts,tsx}"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -1674,7 +1800,8 @@
         "required-sections",
         "upstream-coverage",
         "linter",
-        "type-check"
+        "type-check",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -1725,6 +1852,11 @@
           "id": "type-check",
           "path": ".claude/sensors/amadeus-type-check.md",
           "matches": "**/*.{ts,tsx}"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -1793,7 +1925,8 @@
         "required-sections",
         "upstream-coverage",
         "linter",
-        "type-check"
+        "type-check",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -1844,6 +1977,11 @@
           "id": "type-check",
           "path": ".claude/sensors/amadeus-type-check.md",
           "matches": "**/*.{ts,tsx}"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -1906,7 +2044,8 @@
       ],
       "sensors": [
         "linter",
-        "type-check"
+        "type-check",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -1951,6 +2090,11 @@
           "id": "type-check",
           "path": ".claude/sensors/amadeus-type-check.md",
           "matches": "**/*.{ts,tsx}"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -1991,7 +2135,8 @@
       "sensors": [
         "required-sections",
         "upstream-coverage",
-        "type-check"
+        "type-check",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -2039,6 +2184,11 @@
           "id": "type-check",
           "path": ".claude/sensors/amadeus-type-check.md",
           "matches": "**/*.{ts,tsx}"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -2078,7 +2228,8 @@
         "required-sections",
         "upstream-coverage",
         "linter",
-        "type-check"
+        "type-check",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -2127,6 +2278,11 @@
           "id": "type-check",
           "path": ".claude/sensors/amadeus-type-check.md",
           "matches": "**/*.{ts,tsx}"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -2170,7 +2326,8 @@
       ],
       "sensors": [
         "required-sections",
-        "upstream-coverage"
+        "upstream-coverage",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -2209,6 +2366,11 @@
           "id": "upstream-coverage",
           "path": ".claude/sensors/amadeus-upstream-coverage.md",
           "matches": "**/{amadeus-docs,intents}/**"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -2250,7 +2412,8 @@
       ],
       "sensors": [
         "required-sections",
-        "upstream-coverage"
+        "upstream-coverage",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -2288,6 +2451,11 @@
           "id": "upstream-coverage",
           "path": ".claude/sensors/amadeus-upstream-coverage.md",
           "matches": "**/{amadeus-docs,intents}/**"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -2333,7 +2501,8 @@
       ],
       "sensors": [
         "required-sections",
-        "upstream-coverage"
+        "upstream-coverage",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -2372,6 +2541,11 @@
           "id": "upstream-coverage",
           "path": ".claude/sensors/amadeus-upstream-coverage.md",
           "matches": "**/{amadeus-docs,intents}/**"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -2423,7 +2597,8 @@
       ],
       "sensors": [
         "required-sections",
-        "upstream-coverage"
+        "upstream-coverage",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -2461,6 +2636,11 @@
           "id": "upstream-coverage",
           "path": ".claude/sensors/amadeus-upstream-coverage.md",
           "matches": "**/{amadeus-docs,intents}/**"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -2507,7 +2687,8 @@
       ],
       "sensors": [
         "required-sections",
-        "upstream-coverage"
+        "upstream-coverage",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -2544,6 +2725,11 @@
           "id": "upstream-coverage",
           "path": ".claude/sensors/amadeus-upstream-coverage.md",
           "matches": "**/{amadeus-docs,intents}/**"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -2592,7 +2778,8 @@
       ],
       "sensors": [
         "required-sections",
-        "upstream-coverage"
+        "upstream-coverage",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -2629,6 +2816,11 @@
           "id": "upstream-coverage",
           "path": ".claude/sensors/amadeus-upstream-coverage.md",
           "matches": "**/{amadeus-docs,intents}/**"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     },
@@ -2685,7 +2877,8 @@
       ],
       "sensors": [
         "required-sections",
-        "upstream-coverage"
+        "upstream-coverage",
+        "answer-evidence"
       ],
       "scopes": [
         "enterprise",
@@ -2722,6 +2915,11 @@
           "id": "upstream-coverage",
           "path": ".claude/sensors/amadeus-upstream-coverage.md",
           "matches": "**/{amadeus-docs,intents}/**"
+        },
+        {
+          "id": "answer-evidence",
+          "path": ".claude/sensors/amadeus-answer-evidence.md",
+          "matches": "**/*-questions.md"
         }
       ]
     }
