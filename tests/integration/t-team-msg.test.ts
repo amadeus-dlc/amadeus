@@ -83,7 +83,7 @@ describe("team-msg backend resolution", () => {
   test("send requires a role and text", () => {
     const result = run(["send", "e1"], { TEAM_MSG: "agmsg" });
     expect(result.exitCode).toBe(1);
-    expect(result.stderr.toString()).toContain("send requires <role> <text>");
+    expect(result.stderr.toString()).toContain("send requires exactly");
   });
 });
 
@@ -265,5 +265,18 @@ describe("team-msg herdr backend", () => {
     const result = run(["read", "e1"], { TEAM_MSG: "herdr", HERDR: herdr });
     expect(result.exitCode, result.stderr.toString()).toBe(0);
     expect(result.stdout.toString().trim()).toBe("history for engineer-1");
+  });
+});
+
+describe("team-msg send argument arity", () => {
+  test("surplus arguments are rejected loudly instead of silently dropped", () => {
+    const result = Bun.spawnSync({
+      cmd: ["bash", TEAM_MSG, "send", "e3", "hello", "stray-extra-arg"],
+      env: { ...process.env, TEAM_MSG: "herdr" },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr.toString()).toContain("send requires exactly");
   });
 });

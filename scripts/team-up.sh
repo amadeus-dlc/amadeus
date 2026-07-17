@@ -498,9 +498,16 @@ claude_member_cmd() {
     init_prompt=""
   fi
   # TEAM_MSG is propagated so the member's team-msg.sh uses the same backend.
+  # Under herdr the run record is also wired in as the send audit-log home, so
+  # the elected append-only message log is armed in real runs (the guard needs
+  # an activator; without this env every send would silently skip logging).
+  local log_env=""
+  if [ "$MSG_BACKEND" = "herdr" ] && [ -n "${RUN_RECORD:-}" ]; then
+    log_env="TEAM_MSG_LOG_DIR=$(printf '%q' "$RUN_RECORD") "
+  fi
   # keep the pane open after claude exits so crashes stay inspectable
-  printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team TEAM_MSG=%q CLAUDE_IDENTITY=%q %q %s %q; exec $SHELL -l' \
-    "$wt" "$MSG_BACKEND" "$CLAUDE_IDENTITY" "$REPO/scripts/run-claude.sh" "$args" "$init_prompt"
+  printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team %sTEAM_MSG=%q CLAUDE_IDENTITY=%q %q %s %q; exec $SHELL -l' \
+    "$wt" "$log_env" "$MSG_BACKEND" "$CLAUDE_IDENTITY" "$REPO/scripts/run-claude.sh" "$args" "$init_prompt"
 }
 
 member_role() {
@@ -590,8 +597,13 @@ codex_member_cmd() {
   # and is not used here.
   if [ "$MSG_BACKEND" = "herdr" ]; then
     seed_codex_trust "$wt" "$codex_home/config.toml" || return 1
-    printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team TEAM_MSG=%q CODEX_IDENTITY=%q %q; exec $SHELL -l' \
-      "$wt" "$MSG_BACKEND" "$CODEX_IDENTITY" "$REPO/scripts/run-codex.sh"
+    # TEAM_MSG_LOG_DIR arms the elected send audit log (same wiring as claude).
+    local log_env=""
+    if [ -n "${RUN_RECORD:-}" ]; then
+      log_env="TEAM_MSG_LOG_DIR=$(printf '%q' "$RUN_RECORD") "
+    fi
+    printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team %sTEAM_MSG=%q CODEX_IDENTITY=%q %q; exec $SHELL -l' \
+      "$wt" "$log_env" "$MSG_BACKEND" "$CODEX_IDENTITY" "$REPO/scripts/run-codex.sh"
     return 0
   fi
 

@@ -62,3 +62,11 @@ metadata already names the sender.
   the herdr backend changes codex messaging, not the codex launch path
   (per-intent ruling E-TMB-CG, 2026-07-17). Removing that shim dependency is a
   possible future enhancement.
+
+## Send audit log
+
+Under the herdr backend, `team-up.sh` wires `TEAM_MSG_LOG_DIR` (the run record
+directory) into every member's environment, so each `team-msg.sh send` appends
+one line to `<run record>/messages.log`. That file is the primary send-side
+record for election provenance (the herdr analogue of agmsg history). A write
+failure only warns on stderr — it never fails the send.

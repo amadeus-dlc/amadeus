@@ -175,8 +175,8 @@ main() {
   case "$verb" in
   send)
     shift
-    [ "$#" -ge 2 ] || {
-      echo "ERROR: send requires <role> <text>" >&2
+    [ "$#" -eq 2 ] || {
+      echo "ERROR: send requires exactly <role> <text> (got $# arguments)" >&2
       return 1
     }
     dispatch_send "$1" "$2"

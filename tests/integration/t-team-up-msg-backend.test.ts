@@ -317,4 +317,33 @@ describe("team-up member command backend wiring", () => {
     expect(cmd).toContain("TEAM_MSG=herdr");
     expect(cmd).not.toContain("/agmsg");
   });
+
+  function claudeCmdWithRunRecord(msgBackend: string) {
+    return Bun.spawnSync({
+      cmd: [
+        "bash",
+        "-c",
+        `script="$1"; set --; TEAM_UP_LIB_ONLY=1 source "$script"; CONTINUE=0; MSG_BACKEND=${msgBackend}; RUN_RECORD=/tmp/run-record; claude_member_cmd engineer-1 /tmp/wt`,
+        "_",
+        TEAM_UP,
+      ],
+      env: { ...process.env, DELIVERY: "/path/that/does/not/exist" },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+  }
+
+  // The elected send audit log needs an activator: the herdr launch command
+  // must carry TEAM_MSG_LOG_DIR or every real-run send silently skips logging.
+  test("the herdr claude command arms TEAM_MSG_LOG_DIR from the run record", () => {
+    const result = claudeCmdWithRunRecord("herdr");
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+    expect(result.stdout.toString()).toContain("TEAM_MSG_LOG_DIR=/tmp/run-record");
+  });
+
+  test("the agmsg claude command does not set TEAM_MSG_LOG_DIR", () => {
+    const result = claudeCmdWithRunRecord("agmsg");
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+    expect(result.stdout.toString()).not.toContain("TEAM_MSG_LOG_DIR");
+  });
 });
