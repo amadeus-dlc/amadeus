@@ -15,4 +15,8 @@ B. S-05 相当の consumer 同期を opencode / cursor にも追加する — In
 C. requirements では A とし、docs(S-08)に「opencode / cursor は dispatch 指示を持たないため env 値の影響を受けない」旨の1行言及のみ追加する
 X. Other (please specify)
 
-[Answer]:
+[Answer]: C — 契約対象外とし、S-09 の生成物同期に加えて docs へ1行言及のみ追加する。
+裁定: E-SDE-RA 2026-07-17T23:27:58Z 開票(採用 C、開票時 2/3: e3 GoA1 / e4 GoA2、e1 後着は到着次第記録)。
+留保転記(GoA 2 — e4、必須反映): docs 言及は enum 変更で更新される既存 `docs/harness-engineering/08-construction-and-swarm.md` 節への1行追記に限定し、新規ページ・新規節は作らない。
+e3 根拠: dist に tool コピー配布+dispatch 指示非配布の非対称による AMADEUS_USE_SWARM 無音 no-op ギャップを docs 1行で封じる。(いずれも agmsg 出典: leader 開票配信 23:27:58Z)
+後着転記(23:28:23Z): e1 後着票 = A・GoA 2(C 受容度 6)、裁定 C 不変。e1 留保(必須反映): Out of scope に『SKILL 追加時に三値契約へ追随する』将来条件を1行残す — requirements.md Out of scope 節へ転記済み。最終 GoA[E-SDE-RA]: C 1x1 2x1 + A 2x1

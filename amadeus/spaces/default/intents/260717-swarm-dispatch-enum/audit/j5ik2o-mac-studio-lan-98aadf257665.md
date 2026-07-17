@@ -453,3 +453,21 @@
 **Timestamp**: 2026-07-17T23:13:11Z
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-17T23:17:26Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: acfb07930fd97e0a4
+**Message**: PR #1188 マージしてよいです
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-17T23:24:16Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a7302e4445652d54f
+**Message**: intent 260717-swarm-dispatch-enum(AMADEUS_USE_SWARMの三値enum化)のconductorとして、reverse-engineeringとpractices-discoveryを完了し、requirements.mdを起草済みです。次はQ1選挙(opencode/cursorの扱い)とC-13隔離書き込みprobeの裁定を待って要件を確定します。
+
+---
