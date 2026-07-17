@@ -137,3 +137,11 @@
 **Error**: Transition rejected by amadeus-state.ts approve for "reverse-engineering": {"error":"Refusing to approve \"reverse-engineering\": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then approve. (autonomous Construction is exempt)"}
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-17T22:56:17Z
+**Event**: WORKFLOW_PARKED
+**Stage**: reverse-engineering
+**Timestamp**: 2026-07-17T22:56:17Z
+
+---
