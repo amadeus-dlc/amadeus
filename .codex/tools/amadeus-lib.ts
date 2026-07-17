@@ -1148,7 +1148,7 @@ export type QuestionsEvidence =
   | { kind: "pass"; reason: "no-file" | "no-answer-tag" | "answer-blank" | "evidence-present" }
   | { kind: "fail"; reason: "no-evidence" | "unparseable-timestamp" };
 
-const ANSWER_TAG_RE = /\[Answer\]\s*:?/;
+const ANSWER_TAG_RE = /\[Answer\]\s*:/;
 const ECODE_RE = /E-[A-Z0-9][A-Z0-9-]*/;
 const ISO_TS_RE = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?Z?/;
 
