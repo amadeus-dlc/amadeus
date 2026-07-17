@@ -330,5 +330,19 @@
     "dirName": "260717-teamup-msg-backend",
     "scope": "amadeus",
     "status": "complete"
+  },
+  {
+    "uuid": "019f7124-0601-7cc9-8504-749fc2d6c16d",
+    "slug": "state-mirror-fixes",
+    "dirName": "260717-state-mirror-fixes",
+    "scope": "amadeus",
+    "status": "in-flight"
+  },
+  {
+    "uuid": "019f712a-ed49-7a85-8dba-26efb88df0db",
+    "slug": "codekb-diff3-cleanup",
+    "dirName": "260717-codekb-diff3-cleanup",
+    "scope": "amadeus",
+    "status": "in-flight"
   }
 ]
