@@ -1,6 +1,160 @@
 # コード構造
 
-## t05 並列フレーク観測面 — 260716-github-issue-912(2026-07-16、最新)
+## delegate provenance 機構の観測 — 常任委任グラントの挿入面（最新: 260717-standing-delegation-gran）
+
+amadeus intent（Issue #1125 — 常任委任グラント機構。ステージゲートごとの都度 delegate 発行を、明示的に付与された「常任委任グラント」で一定範囲・一定期間だけ省ける機構の設計基盤調査）の diff-refresh 観測面。出典は本 intent の `inception/reverse-engineering/scan-notes.md`（Developer scan、observed HEAD `46f51091f0c8d5d39dc9790a218d03293ffdf060` 直読の file:line、measurement-ref を全数に明記）。手法は diff-refresh（base=`e530fc4b13f477e9155d1ec246fd50a49176eadd`、祖先性 `git merge-base --is-ancestor` exit 0・距離67 実測、observed=`46f51091f`）。**区間 diff（427 files / +17676）の実体は前 intent 260716-answer-preemption-guard の answer-evidence guard 着地であり、本 intent が消費・拡張する delegate provenance 機構は区間より前から安定 = 挿入 seam は現 HEAD 実測で確定**。
+
+### 挿入 seam は3層で分離（scan-notes §2）
+
+- **(a) `amadeus-lib.ts` — 検証・接地の純関数層**:
+  - `verifyDelegatedProvenance(projectDir, block): boolean`（定義 **:2528-2565**）: block から4座標（Issuer Intent / Issuer Shard / Issuer Human Ts / Issuer Space）を抽出し、必須3つ欠落なら false。path-shape ガード（`issuerIntent` は `/^[A-Za-z0-9._-]+$/` かつ `.`/`..` 拒否 :2534-2536、`issuerShard` は `/^[A-Za-z0-9._-]+\.md$/` :2537）。`auditShardDir` で解決した shard に `HUMAN_TURN` イベントで `Timestamp === issuerHumanTs` の block が物理的に存在すれば true（:2547-2551）。**あらゆる異常（欠落/不正フィールド、path-shape 違反、shard 読取不能、HUMAN_TURN 不在）で fail-closed**（コメント :2523-2526、各 `return false`）。呼び出し元は `scanPresenceLedger` 内の DELEGATED_APPROVAL 分岐（:2413-2419）。
+  - `humanActedSinceGate(projectDir, verb?): boolean`（定義 **:2479-2499**、export 済み）: シグネチャは `(projectDir, verb?)`。verb 未指定 = 汎用述語（delegate 発行時の issuer grounding が依拠、legacy 一様境界）、verb 指定時は per-delegate GATE slot・verb-scoped（#685）。**fail-open 分岐**: `scanPresenceLedger` が `null`（ledger 読取不能）なら `return true`（:2483、scan-notes の記載どおり — 誇張なし）。verb 指定時はローカル HUMAN_TURN が outstanding なら true（:2493）、無ければ当該 verb の delegate slot（`e.delegVerb === verb` かつ `e.res === "gate"`）を評価。
+  - forgery 耐性コメント（:2510-2517）: HUMAN_TURN は UserPromptSubmit hook のみが書き、汎用 audit CLI は mint を拒否。**残余限界**（:2519-2523）: 任意 file-write ツールによる shard 直書きは CLI ガードの対象外（on-disk append-only trail の一般性質）。
+- **(b) `amadeus-state.ts` — 接地ゲートと DELEGATED_APPROVAL 監査行の書式**:
+  - `assertHumanPresentForGateResolution(pd, content, slug, verb)`（定義 **:1781-1805**）: 3分岐の skip 条件 — (1) `isAutonomousMode(content)` (2) `humanPresenceGuardDisabled()`（env `AMADEUS_SKIP_HUMAN_PRESENCE_GUARD`） (3) いずれでもなく `!humanActedSinceGate(pd, verb)` なら `error()` で exit。呼び出しは `handleApprove`（:1841、mutation 前）と `handleReject`（:2163、`"reject"`）。
+  - `handleDelegateApproval`（定義 **:1957-2038**）: grounding gate（:1975 `if (!humanPresenceGuardDisabled() && !humanActedSinceGate(pd))` → 拒否）、issuer 座標収集（:1983-2007、`issuerSpace=activeSpace` / `issuerIntent=activeIntent` / `issuerShard=auditShardName` / issuer shard 最終 HUMAN_TURN の timestamp を `issuerHumanTs` :1995-1996、HUMAN_TURN 不在なら error :1999-2003）、target 実在検査（:2009-2014、`recordDir` が null か `amadeus-state.md` 不在なら error — scaffold しない）。
+  - **DELEGATED_APPROVAL 監査行のフィールド全数**（**:2016-2023** 実測）: **Stage / Issuer Space / Issuer Intent / Issuer Shard / Issuer Human Ts**（+ 任意 **User Input**）。加えて `appendAuditEntry` が Timestamp を付す。DELEGATED_REJECTION 側（`handleDelegateRejection` :2041-2137）は同座標で User Input の代わりに **Feedback**（:2121 付近）。dispatch: `case "delegate-approval"`（:398-399）、`delegate-rejection`（:401）。
+- **(c) `amadeus-audit.ts` — イベント allowlist と HUMAN_TURN/DELEGATED_* mint 拒否**:
+  - **保護イベント集合** `PRESENCE_PROTECTED_EVENTS = new Set(["HUMAN_TURN","DELEGATED_APPROVAL","DELEGATED_REJECTION"])`（**:766-770**）、heading 版 `PRESENCE_PROTECTED_HEADINGS`（:774-776）。
+  - allowlist `VALID_EVENT_TYPES`（:22）に `HUMAN_TURN`（:50）/`DELEGATED_APPROVAL`（:68）/`DELEGATED_REJECTION`（:75）を含む。未知イベントは `Invalid event type:`（:275-277、:308-310）。
+  - mint 拒否実装: `append` 経路 `presenceMintRejection(eventType)`（:780-783、`main()` :348 呼び出し）、`append-raw` 経路 `rawPresenceMintRejection(heading, expandedBody)`（:795-810、:364 呼び出し）。設計コメント（:754-765）: trust anchor は in-process `appendAuditEntry` のみ許可、CLI hole は塞ぐが直接 file-write は別 concern（(a) 残余限界と一致）。
+
+### 既定除外の分類データ（scan-notes §3）
+
+- **phase-check ガード**（`amadeus-state.ts:158` 付近）: `const artifactPath = join(rec, "verification", "phase-check-${phase}.md");`（:158、テンプレートリテラル、`${phase}` は `stage.phase` 由来）、不在時 `Refusing to complete the "${phase}" phase boundary: ... does not exist ...`（:160-161）。**どの stage が phase boundary か**は `stage.phase` 値と実際に phase-check を produce する stage で決まりスコープ依存で移動（project.md `phase-check-before-final-approve` と整合）。→ 常任委任の既定除外（不可逆・phase 境界を人間に残す）を実装するなら、この artifactPath 要求ロジックが分類の一次シグナル。
+- **Skeleton Stance**（walking-skeleton の状態表現）: 書き込み `handleSetSkeletonStance`（`amadeus-state.ts:548-577`、許容値 `["on","off","scope-dependent"]` :552）が `## Runtime State` 節へ `setOrInsertField(..., "Skeleton Stance", stance)`（**:568**-573）で挿入。**Skeleton Stance は runtime metadata**（Revision Count 同様）で `## Runtime State` の1フィールド。既定グラント除外の対象判定に読み出せる。
+
+### TTL 対照・doctor 可視化・env 前例（scan-notes §4-§6）
+
+- **TTL の完全な対照実装** = `DEFAULT_LOCK_STALE_MS`+`lockStaleMs()`（`amadeus-lib.ts:3629-3638`）: `export const DEFAULT_LOCK_STALE_MS = 10 * 60 * 1000;`（:3629 付近）を canonical に置き、`lockStaleMs()` が `process.env.AMADEUS_LOCK_STALE_MS` を `Number()` parse → `Number.isFinite(n) && n > 0` の妥当性ゲート → 不正/未設定はデフォルトへ fallback。named constant + parse-don't-validate（team.md `verification-numeric-parse` と整合）+ env override + fallback を1関数で満たす。**グラント TTL を実装するなら、要件の数値はこの named constant を file:line で引く（constants-from-code）**。
+- **doctor 可視化テンプレート** = `AMADEUS_DEFAULT_SCOPE` チェック（`amadeus-utility.ts:912-932`）: 行モデルは `interface DoctorCheck { pass: boolean; label: string; fix?: string }`（:410-414 付近）、`handleDoctor(projectDir)`（:711）が `results: DoctorCheck[]` を組み立て末尾ループ描画、`process.exit(failed > 0 ? 1 : 0)`。env 未設定は `label: "AMADEUS_DEFAULT_SCOPE (unset — no project default)"` で **pass**、設定済みは valid/invalid で分岐 = **グラント状態（有効/無効・TTL 残）を doctor に1行出す直接テンプレート**（追加先は env 系がまとまる 912 付近の `results.push` 列）。
+- **`AMADEUS_OPERATING_MODE` は core で 0 ヒット**: `grep -rn 'AMADEUS_OPERATING_MODE' packages/framework/core/` = **0 件**（scan-notes §4 再確認 実測）。operating mode（solo/team）は core ランタイムでは読まれず team-up.sh 側マーカー。**常任委任グラントが team モードを前提にするなら、モード判定を core で行う設計は前例なし**。env override 記法の前例は真偽値的（`AMADEUS_SKIP_HUMAN_PRESENCE_GUARD` → `humanPresenceGuardDisabled()`）か数値 TTL（`AMADEUS_LOCK_STALE_MS`）のいずれか。
+
+### audit taxonomy 同期の留意（scan-notes §2d）
+
+- 正本 `packages/framework/core/knowledge/amadeus-shared/audit-format.md` の `## Event Registry (73 events, 18 categories)`（:11）→ `### Interaction Events (4 events)`（:71）に delegate 系が属する。delegate 行実測: `:79` DELEGATED_APPROVAL（フィールド= Timestamp, Stage, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts, User Input）、`:80` DELEGATED_REJECTION（… Feedback）、`:51` HUMAN_TURN（Timestamp）。**グラント機構が新イベント種別を導入するなら**、`t28-audit-event-sync.test.ts` が taxonomy 3面（`VALID_EVENT_TYPES` / audit-format.md 見出し「73 events」/ `EVENT_HEADINGS`）の同期を強制する点に注意（3面同時更新が必要）。
+
+- 詳細: re-scans/260717-standing-delegation-gran.md
+
+## answer-evidence 検査機構の観測 — sensor 発火面（intent 260716-answer-preemption-guard、2026-07-16、履歴）
+
+bugfix/feature intent（Issue #922 — [Answer] 先取り記入を Write/Edit 時点で機械検知するため、checkQuestionsEvidence の予測ロジックを sensor 発火点へ配線する）の diff-refresh 観測面。出典は本 intent の `inception/reverse-engineering/scan-notes.md`（Developer scan、observed HEAD `e530fc4b13f477e9155d1ec246fd50a49176eadd` 直読の file:line）。手法は diff-refresh（base=`f0f4e0ca4e60fbe36a867015e134346aff0094c4`、祖先・距離124、observed=`e530fc4b`）。**checkQuestionsEvidence（純関数、export 済み）と gate-start ガード配線は base〜HEAD 区間で既に着地済み（#1101/#1106）、sensor 機構は区間内で未変更 = 既存実装がそのまま本 intent の利用対象**。
+
+### 予測ロジック本体は純関数として抽出済み（`amadeus-lib.ts`）
+
+- 型 `QuestionsEvidence`（**:1144-1146**）= 判別ユニオン `{kind:"pass"; reason:"no-file"|"no-answer-tag"|"answer-blank"|"evidence-present"} | {kind:"fail"; reason:"no-evidence"|"unparseable-timestamp"}`。
+- `checkQuestionsEvidence(questionsPath: string): QuestionsEvidence`（**:1173**、**export 済み**、引数はファイルパス1本）。判定列（:1174-1194）: no-file → no-answer-tag → answer-blank（未記入/N/A/単一括弧プレースホルダ）→ evidence-present（E-code or 承認行に parseable ISO TS）→ 承認行はあるが TS 不正なら fail:unparseable-timestamp → それ以外 fail:no-evidence。
+- module-scope ヘルパー（非 export）: `isFilledAnswer`（:1154）、`hasParseableApprovalTimestamp`（:1163）、正規表現定数 `ANSWER_TAG_RE`（:1148）/`ECODE_RE`（:1149）/`ISO_TS_RE`（:1150）。
+- 設計コメント（:1140-1143）: read-only、呼び出し側が失敗の扱いを決める。**先取り検知本体は既に sensor から再利用可能な純関数** — 新規予測ロジックの再実装は不要。
+
+### 既存の消費側 = gate-start ブロッキングガード（`amadeus-state.ts`）
+
+- import（:40）で lib から取り込み。`handleGateStart`（:1690）内の E-OC1 evidence ゲート本体は :1710-1733。
+- ローカル cutoff 定数 `GUARD_CUTOFF_YYMMDD = 260716`（**:1721**、handleGateStart 内スコープ、export/module-scope ではない）。日付導出は record dir 名先頭 YYMMDD（`:1722`）、`enforced = intentDate >= GUARD_CUTOFF_YYMMDD`（:1723）。
+- `questionsPath = join(rd, stage.phase, slug, `${slug}-questions.md`)`（**:1725**）→ checkQuestionsEvidence（:1726）→ fail:no-evidence/unparseable-timestamp で `error()`（fail-closed、checkbox 遷移前）。cutoff の趣旨（:1715-1720）: live corpus 59/111 questions は E-OC1 規約以前 → 遡及適用回避。
+
+### sensor 追加が hook 改修なしで成立する構造（A1 = YES）
+
+- dispatcher `amadeus-sensor.ts`: fire は id-agnostic — per-sensor script は `--stage`/`--output-path`（+ threaded flags）を受け、stdout JSON の `pass`（boolean、:576）/`findings_count`（readFindingsCount :693-699）だけを汎用的に読む。**新 sensor 追加 = manifest 1枚 + script 1本 + stage の `sensors:` へ id 追加で完結**。per-sensor script `amadeus-sensor-required-sections.ts` は `./amadeus-lib.ts` から `errorMessage,parseBoltDag` を import する前例（:1-3）= 新 script が checkQuestionsEvidence を lib から import する前例が成立。
+- manifest frontmatter（`sensors/amadeus-required-sections.md` :1-24）: `id`/`kind`/`command`（`{{HARNESS_DIR}}` プレースホルダ）/`default_severity: advisory`/`matches`/`input_schema`/`output_schema`/`timeout_seconds`。`matches` が capability filter で compile 時に SensorResolution へ verbatim スナップショット。
+- stage `sensors:` → `sensors_applicable` 解決（`amadeus-graph.ts`）: `resolveSensorsForStage`（:704-728）が stage.sensors 各 id を `loadSensors()` Map で引き（未知 id は compile 時 throw = fail-loud）、`sensor.manifest.matches` を verbatim コピー、宣言順保持。requirements-analysis は既に `sensors: [required-sections, upstream-coverage]` を宣言（:33-35）。
+- PostToolUse hook `.claude/hooks/amadeus-sensor-fire.ts`（matcher = Write|Edit）: Write/Edit の絶対 `file_path`（:76）を、Current Stage の `sensors_applicable` 各 entry の `matches` glob と `Bun.Glob(entry.matches).match(filePathNorm)`（:193-194）で照合、マッチ時のみ dispatcher を spawn（:209）。常に exit 0（:272、G5 advisory）。
+- **A1 実測**: questions ファイルの絶対パス（`.../amadeus/spaces/<space>/intents/<record>/.../<slug>-questions.md`、`/intents/` セグメント含む）は既存 required-sections の `matches` glob `**/{amadeus-docs,intents}/**` に `Bun.Glob` で match=true（`bun -e` で実測）。かつ questions 書込みは producing stage が Current Stage の時点（gate 前）に起きる → 発火経路は既に成立（required-sections は questions 書込みでも発火中）。**hook 側の改修は不要** — 既存 per-entry dispatch が新 entry をそのまま回す。
+
+### 相補関係・実装時要判断（要件へ委譲）
+
+- gate-start ガード（ブロッキング、fail-closed、unpark→gate-start 時点の1回）と sensor（advisory、exit 0、書込みごとの連続チェック）は**タイミングが異なり相補**。ブロッキングは gate-start が担い、sensor は先取りを早期に loud 化する。
+- cutoff（GUARD_CUTOFF_YYMMDD=260716）を sensor 側へ持たせるかは要件判断（sensor は fail-open advisory ゆえ遡及ブロック懸念は弱い）。construction 段の questions パスは `<record>/construction/<unit>/<slug>/...` になりうる点、matches を狭める（`*-questions.md`）場合の Bun.Glob と dispatcher の bespoke globToRegex（amadeus-sensor.ts:835）の両エンジン整合（hook コメント :183-189 が `**/<seg>/**` 形を load-bearing と明記）は実装時に実測確認。
+- 詳細: re-scans/260716-answer-preemption-guard.md
+
+## gate-start 検査挿入面の観測（intent 260716-eoc1-gate-check、2026-07-16、履歴）
+
+- handleGateStart（amadeus-state.ts :389 dispatch / :1661 定義）— validateSlugInState 後・setCheckbox 前が検査挿入点、error() fail-closed・withAuditLock アトミック
+- questions ファイル様式 `<record>/<phase>/<stage>/<stage>-questions.md`（不在は正常）、L1 証跡（承認 ISO タイムスタンプ行）は機械抽出可能（本日8ファイル実測）
+- 詳細: re-scans/260716-eoc1-gate-check.md
+
+## テストランナー失敗計上機構の観測（intent 260716-covci-flake、2026-07-16、履歴）
+
+- coverage:ci = --ci --coverage（package.json:16）、--ci = smoke+unit+integration のみ（run-tests.ts:187-192、e2e 非実行）
+- 失敗計上は per-file .meta → aggregateTierResults（:465-479、:475 で failedFiles++）。resultsDir は run ごと mkdtemp（:323/:327）— 並行・入れ子 run 間の交差汚染経路なし
+- SUMMARY（:900-925）は総数のみで per-scope 失敗表なし。size matrix は失敗と無関係。exit = failedFiles（:1207、t112 ピン）
+- 入れ子 spawn テスト（t05 等）は子 run の `--- FAIL:`/`RESULT: FAIL` 行を親 stdout へ流す — grep/目視のスコープ帰属誤計上の温床
+- 詳細: re-scans/260716-covci-flake.md
+
+## ステージ diary 生成機構の観測（intent 260716-diary-ensure-exists、2026-07-16、履歴）
+
+- memory.md の決定的生成コードは不在 — orchestrate `next` は memory_path 文字列を directive に載せるのみ（amadeus-orchestrate.ts:1162、memoryPathFor :591）
+- テンプレートは knowledge/amadeus-shared/memory-template.md（t100 ガード）に実在し、conductor.md:66-75 が copy 手順（Idempotent / never overwrite）を conductor 義務として規定
+- STAGE_STARTED 発火点は5経路（state:1370 advance / jump:585 / utility:2511,2575,2596 init / utility:2806 birth / orchestrate:2756 --single）+ STAGE_STARTED 非経由の復旧経路あり — 全経路が通る単一点は next の run-stage directive 発行
+- 詳細: re-scans/260716-diary-ensure-exists.md
+
+## テスト size 分類機構の観測（intent 260716-t224-size-large、2026-07-16、履歴）
+
+bugfix intent（Issue #1059 — `t224-upstream-v2-migration-cli.test.ts` が wall-clock drift ゲートで `declared=medium measured=large`、35-41s で恒常 FAIL）の diff-refresh 観測面。出典は本 intent の `inception/reverse-engineering/scan-notes.md`（Developer scan、observed HEAD `720b0145b4b396b5c146b5c7271ff83f1da65243` 直読の file:line）。手法は diff-refresh（base=`e97fdb6fc658d4cd36d4c30fc460c5b7e70e8c75`、祖先・距離26、observed=`720b0145b`）。**フォーカス3面（size 分類器正本・ランナー drift 報告部・t224 本体）は区間26コミットで無変更、欠陥は observed に現存**。主実測は Issue #1059 の e4/e1 クロスレビュー（2名確認済み）で完了、本節はその転記＋独立追認。
+
+### wall-clock drift 分類のデータフロー（`tests/lib/test-size.ts`）
+
+- 帯定義 `WALL_CLOCK_BANDS = { smallMaxSeconds: 1, largeMinSeconds: 30 }`（**:89**）。下端 inclusive / 上端 exclusive: `[0,1)`=small、`[1,30)`=medium、`[30,∞)`=large。
+- `sizeFloorFromDuration`（**:95-99**）: 実測 duration → SMALLEST 整合 size。t224 の 40s → **dynamicFloor=large**。
+- `detectWallClockDrift(effectiveDeclared, dynamicFloor)`（**:113-121**）: `SIZE_ORDER[floor] > SIZE_ORDER[declared]` のとき**のみ** `{kind:"wall-clock"}` を返すスマートコンストラクタ（正しい非対称、floor≤declared は `{kind:"none"}`）。`detectWallClockDrift(medium, large)` → drift 発火。
+- `parseSizeAnnotation`（**:279-287**、走査域 先頭40行 `.slice(0,40)` :280）: 先頭コメント域の `// size: <value>` を先頭一致で読む。t224 は size ヘッダ無し → `{declared:null}`。
+- `buildMeasuredRecord`（**:141-161**）: `effectiveDeclared = annotation.declared ?? classification.size`（**:149**）。t224 は未宣言（null）なので **effectiveDeclared = static 信号分類の値**。
+
+### 「declared=medium」の正体（ハードコード既定ではない）
+
+- t224 先頭40行 grep: `// covers: cli:amadeus-migrate(dry-run,apply)`（:1）のみ、`// size:` は **0件（未宣言）**。
+- static 分類（`classifyTestSize` :49-62 / `SIGNAL_PATTERNS` :35-40）: t224 は `spawnSync`（:8、spawn→medium）＋ `node:fs` の `mkdtempSync/readFileSync/writeFileSync`（:15-25、filesystem→medium）を含み network（large）は無い → **classification.size=medium**。ゆえに drift 行が表示する `declared=medium`（run-tests.ts `declared=${r.drift.declared}` **:977**、レポート生成 :944-969）は**未宣言時に static 信号分類が返す medium**であって既定定数ではない。
+
+### 実測 wall-clock（第4実行系での large 帯到達）
+
+`/usr/bin/time -p bun test tests/integration/t224-upstream-v2-migration-cli.test.ts` → **58 pass / 0 fail、`Ran 58 tests across 1 file. [40.40s]`、real 40.43s**（exit 0）。起票 35-37s（coverage あり×2）・e4 41s（coverage 有無×2）・e1 42.6s（coverage なし）に続く第4実行系で large 帯（≥30s）に単独・無負荷で到達 → **declared と実測の恒常乖離**を追認、coverage 仮説の反証（e4/e1）も追認（coverage 有無で帯不変、30s 閾値に対しマージン十分）。
+
+### 既習アノテーション様式と修正方針
+
+- `tests/` に `// size:` 宣言は **45ファイル**。medium 既習例 = `tests/unit/t207-worktree-base-freshness.test.ts:2` / `t209-worktree-read-anchor.test.ts:2`（先頭コメント域2行目）。**`// size: large` 宣言済みテストは repo に 0件**（t224 が最初の large になる）。
+- **最小修正 = t224 先頭コメント域へ `// size: large` の1行追加** → `parseSizeAnnotation` が large を返し → effectiveDeclared=large → `detectWallClockDrift(large, large)` 同値で strictly-greater 不成立 → `{kind:"none"}` → drift 解消。機構（test-size.ts / run-tests.ts）無改修、対象は `tests/` 直下で dist 再生成非関与。分割案は 40-43s に対し過剰。blame `1a39edea2`（2026-07-14、#962 upstream v2 移行）、origin:bootstrap 非該当、**原因の所在=実装**（30s 超テストへの size 宣言漏れ）。落ちる実証は既存 t-test-size-drift/dynamic ゲート側にあり新設不要。
+- **同型棚卸し**: 「未宣言かつ 30s 超」の他テスト有無はフル `bash tests/run-tests.sh --ci` の `tests/logs/test-size-report.json` 集計を要し本区間では確定不能 → **本 intent は t224 のみ対象、全数棚卸しは別 Issue 候補**。
+
+### アーキテクチャ視点（Architect 合成）
+
+size 分類機構は**3層の floor モデル**で設計されている。(1) **static 信号分類**（`classifyTestSize` :49-62、`SIGNAL_PATTERNS` :35-40）はソーステキストの API シグナルから size を推定する — 実行不要の安価な既定であり、宣言漏れテストにも下限を与える安全網。(2) **dynamic wall-clock floor**（`sizeFloorFromDuration` :95-99）は実測実行時間から size 下限を導出する — 「実際に large 帯で走るなら large と分類されるべき」という実測 truth。(3) **宣言アノテーション**（`parseSizeAnnotation` :279-287）は作者の明示意図で、`effectiveDeclared = annotation.declared ?? classification.size`（:149）により static 既定を**上書き**する権威層。`detectWallClockDrift`（:113-121）は「宣言/既定（effectiveDeclared）が実測 floor を下回る」ときのみ strictly-greater で drift を発火させる非対称ゲートであり、実測を天井ではなく floor として扱う設計 — 速く走った分には寛容、遅れた分だけ是正を要求する。t224 の欠陥は機構の破綻ではなく、**宣言層が欠けたため static 既定 medium が権威値に昇格し、実測 floor large と構造的に乖離した**もの。よって修正は宣言層への1行注入で、機構3層は無改修が正しい。
+
+**large 初宣言の意味**: t224 は repo 初の `// size: large` 宣言（V2 反証 grep で 0件を確認済み）。これまで large は dynamic floor が実測から導く「発見される」size でしかなく、作者が意図として明示する経路は理論上存在しても未使用だった。t224 の宣言はこの権威層の large 分岐を初めて実行し、「重いテストは重いと宣言する」idiom を medium 既習例（t207/t209 :2）に続けて large へ拡張する。将来 large テストの標準アノテーション位置（`// covers:` 直後の :2）の初例にもなる。
+
+
+## §13 learn-candidate label 面の観測（intent 260716-s13-label-clarity、2026-07-16、履歴）
+
+bugfix intent（Issue #609 — §13 learn candidates の選択肢が内部 ID 単独表示になる）の diff-refresh 観測面。フォーカスは **docs / プロトコル prose のみ**（コード欠陥ではない）。出典は本 intent の `inception/reverse-engineering/scan-notes.md`（Developer scan、observed HEAD `e97fdb6fc658d4cd36d4c30fc460c5b7e70e8c75` 直読の file:line）。手法は diff-refresh（base=`6495e03a12d9e7149c2e80b59f171a90607a2d2c`、祖先・距離28、observed=`e97fdb6fc658d4cd36d4c30fc460c5b7e70e8c75`）。**フォーカス3面は区間28コミットで無変更、§13 仕様は現行で正しく規定済み**。
+
+### §13 option label の規定所在（`stage-protocol.md`）
+
+- 編集正本 = `packages/framework/core/amadeus-common/protocols/stage-protocol.md`（`{{HARNESS_DIR}}` プレースホルダ形）。`.claude/` ・ `.codex/` ・ `dist/<harness>/…` は生成ツリー（`bun scripts/package.ts` + `promote:self` 出力）。両者は `{{HARNESS_DIR}}` 置換差で **byte 非同一**だが、**§13 label 文言(L960)は同一**。
+- **§13 Step 3（:960）**: 「render one option whose `label` is the candidate `summary` (verbatim) and whose `description` names the routed destination …」 — option label = candidate summary verbatim を既定化済み。Issue #609 の `Persist c5 only` は ID 単独ラベルで **L960 違反**＝ orchestrator(LLM) のプロトコル逸脱の一事例（決定的機構欠陥ではない。blame: afdbdc623 / 2026-07-07 bootstrap から現文言）。
+
+### option-label 規定の同型面棚卸し（enumeration-completeness）
+
+`stage-protocol.md` 内の option-label 規定は4箇所: L11(annex 参照)・L19(「Never summarize User Input」＝選択結果 verbatim 記録の別クラスタ)・L577(監査様式の User Input 捕捉、別クラスタ)・**L960(§13 learn-candidate を summary verbatim でラベルする唯一の規定)**。否定例(`❌ Persist c5 only`)を足すべきは **L960 単独**。
+
+### learnings.ts surface 出力契約（`amadeus-learnings.ts`、正本と `.claude/` は byte 同一）
+
+- `SurfaceCandidate`（:96-103）: `id`(:97)/`source_heading`(:98)/`ts`(:99)/**`summary`(:100)**/**`context`(:101)**/`default_scope`(:102)。candidate 構築 :244-249、JSON 出力 :262（`SurfaceOutput.candidates` :115）。**意味あるラベルの材料(summary/context)はツール側に揃っており、欠陥はレンダリング層の遵守のみ**。
+
+### question-rendering annex（`.claude/skills/amadeus/question-rendering.md`）
+
+- AskUserQuestion のフィールドマッピング annex（`options[].label` :19、選択結果 verbatim 捕捉 :62-63）。**§13・candidate・summary への言及 0件** — 候補ラベル中身は規定せず、§13 label 規定は stage-protocol.md L960 に一元化されている。
+
+### 修正方針（Issue #609、bug/P3/S4-MINOR）
+
+(a) §13 Step 3(L960) に否定例明記 = docs 強化（本 intent スコープ内・クローズ条件になりうる、対象 L960 単独） / (b) レンダリング前 `label ⊇ summary` 検査の軽量ガード = 新機構で bugs-only スコープ外。
+
+### アーキテクチャ視点: prose 契約における否定例の設計位置づけ（後続 design 向け）
+
+- **欠陥クラスの所在**: この不具合は決定的機構の欠落ではなく、正の規定（L960「label = candidate `summary` verbatim」）が既にありながら orchestrator(LLM) がそれを逸脱した一事例。ツール層（`amadeus-learnings.ts` surface）は L958 で「surfaced verbatim — no paraphrase」の JSON を出し、ラベル材料（`summary`/`context`）を欠かさず供給しているため、逸脱点はレンダリング層（LLM が JSON→AskUserQuestion option へ写す一手）に限局する。修正の設計対象は「機構」ではなく「prose 契約の遵守可能性」。
+- **否定例の設計上の役割**: 修正方針(a) が L960 に足す `❌ Persist c5 only` は、正の規定を反復するのではなく **既知の逸脱形（ID 単独ラベル）を名指しで禁止**する契約強化である。正の指示のみでは逸脱形が指示空間の外側に残り LLM が再現しうるが、否定例は逸脱形を契約の内側へ取り込んで閉じる。docs-only 修正が「決定的ガード不在（grep 0件）でも本 Issue のクローズ条件になりうる」根拠はここにある。
+- **配置の一意性契約**: 否定例は §13 learn-candidate の option label を規定する唯一の行（L960）にのみ置く。L19/L577 は post-selection capture（ユーザー選択結果の verbatim 記録）の別クラスタで、候補ラベルの**構築**規定ではないため否定例を重複配置しない（enumeration-completeness の結論＝配置は L960 単独）。後続 design は「否定例の配置箇所」を受け入れ基準に固定する際、この一意性（L960 のみ・L19/L577 除外）を明示すること。
+
+
+## t05 並列フレーク観測面 — 260716-github-issue-912(2026-07-16、履歴)
 
 Issue #912(t05 planted-failure ケースが高負荷ホストで `--parallel 4` 下 120005ms タイムアウト間欠 FAIL、labels=`bug / P3 / S4-MINOR`)のフォーカス面。出典は本 intent の `inception/reverse-engineering/scan-notes.md` および `re-scans/260716-github-issue-912-tests-s.md`(file:line は observed HEAD `8e8cc9b1` 直読)。diff-refresh base `e55cc25`→observed `8e8cc9b1`(祖先性実測 exit 0、距離37)で**フォーカス3ファイル(`tests/smoke/t05-run-tests-parallel.test.ts`・`tests/run-tests.ts`・`tests/run-tests.sh`)の区間 diff は空** — 現行 worktree の行番号は Issue #912 実測(2026-07-11)時点とバイト同一(「実行コード変更なし、負荷起因」という Issue 見立てと整合)。
 

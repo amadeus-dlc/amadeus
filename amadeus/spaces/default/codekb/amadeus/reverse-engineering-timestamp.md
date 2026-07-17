@@ -1,6 +1,32 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(最新: 260716-teamup-resume-size-drift)
+## 実行メタデータ(最新: 260717-standing-delegation-gran)
+
+- Date: 2026-07-17
+- Observed at: HEAD `46f51091f0c8d5d39dc9790a218d03293ffdf060`(`git rev-parse HEAD` 実測、measurement-ref — scan-notes の全件数・行番号はこの HEAD で測定)
+- Intent: `260717-standing-delegation-gran`(Issue #1125 — 常任委任グラント機構。ステージゲートごとの都度 delegate 発行を、明示的に付与された常任委任グラントで一定範囲・一定期間だけ省ける機構の設計基盤調査。delegate provenance 既存 seam を消費・拡張する側)
+- Scope: `amadeus`
+- 手法: diff-refresh(cid:reverse-engineering:c1、E-L63 の base 選定則)。base=`e530fc4b13f477e9155d1ec246fd50a49176eadd`(祖先性 `git merge-base --is-ancestor` exit 0 実測、距離 `git rev-list --count` = **67** 実測)、observed=`46f51091f0c8d5d39dc9790a218d03293ffdf060`(`git rev-parse HEAD` 実測一致)。Developer スキャン → Architect 合成の直列(cid:reverse-engineering:c3)
+- Focus: (a) `amadeus-lib.ts:2528` verifyDelegatedProvenance(4座標 fail-closed 検証)/`:2479` humanActedSinceGate(verb-scoped・ledger 欠落時 fail-open :2483) (b) `amadeus-state.ts:1781` assertHumanPresentForGateResolution(3分岐 skip)/`:1957` handleDelegateApproval(DELEGATED_APPROVAL フィールド全数 :2016-2023) (c) `amadeus-audit.ts:766` PRESENCE_PROTECTED_EVENTS(HUMAN_TURN/DELEGATED_* mint 拒否)・既定除外の分類データ(phase-check ガード state.ts:158 / Skeleton Stance state.ts:568)・TTL 対照(DEFAULT_LOCK_STALE_MS+lockStaleMs lib.ts:3629-3638)・doctor テンプレート(utility.ts:912-932 DoctorCheck)・`AMADEUS_OPERATING_MODE` core 0 ヒット
+- 現行結論: 区間 diff(427 files / +17676)の実体は前 intent 260716-answer-preemption-guard の answer-evidence guard 着地で、core/tools 変更は3ファイル(lib の cutoff canonical 化、新センサー、state の import 切替)のみ。#1125 が消費・拡張する delegate provenance 機構は区間より前から安定しており挿入 seam は現 HEAD 実測で確定。3層(lib 検証/state 接地・監査書式/audit mint 拒否)のどこに常任グラント状態を持たせるかが設計判断の核。既定除外・TTL・doctor 可視化・env の前例は全て実在(TTL は DEFAULT_LOCK_STALE_MS が完全対照、doctor は AMADEUS_DEFAULT_SCOPE 行が直接テンプレート)。ただし `AMADEUS_OPERATING_MODE` は core で 0 ヒット = team モード判定を core で行う前例なし。humanActedSinceGate は ledger 読取不能(scanPresenceLedger が null)時 `return true` の fail-open(lib.ts:2483、scan-notes 記載どおり転記)。
+- Per-intent record: `re-scans/260717-standing-delegation-gran.md`
+- 更新した成果物: `code-structure.md`(「delegate provenance 機構の観測 — 常任委任グラントの挿入面」節を H1 直後に新設 = 3層 seam / DELEGATED_APPROVAL フィールド全数 / 既定除外分類データ / TTL 対照 / doctor テンプレート / AMADEUS_OPERATING_MODE 0 ヒット / audit taxonomy 同期留意。旧「最新」= answer-evidence sensor 発火面(260716-answer-preemption-guard)節見出しの「最新」→「履歴」降格 cid:reverse-engineering:c3-relabel、本文不変)、本ファイル(鮮度ポインタ + 旧「最新: 260716-answer-preemption-guard」→履歴ラベル化)、`re-scans/260717-standing-delegation-gran.md`(per-intent re-scan 記録)。他 body 成果物(architecture / business-overview / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment の7点)は本 intent が既存 delegate provenance seam を消費・拡張する調査で、区間の実体は前 intent の sensor 着地(生成物中心)、フォーカス面(delegate 3層 seam)は区間より前から構造不変のため全点温存(churn 回避、cid:reverse-engineering:c1)。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。**本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。**
+
+## 実行メタデータ(履歴: 260716-answer-preemption-guard)
+
+- Date: 2026-07-16
+- Observed at: HEAD `e530fc4b13f477e9155d1ec246fd50a49176eadd`(`git rev-parse HEAD` 実測、conductor 本線 — scan-notes 参照)
+- Intent: `260716-answer-preemption-guard`(Issue #922 — [Answer] 先取り記入の機械検知。checkQuestionsEvidence の予測ロジックを sensor 発火点へ配線し、Write/Edit 時点で先取りを機械検知する拡張)
+- Scope: `amadeus`
+- 手法: diff-refresh(cid:reverse-engineering:c1、E-L63 の base 選定則)。base=`f0f4e0ca4e60fbe36a867015e134346aff0094c4`(直前 re-scan 260716-eoc1-gate-check の observed。`git merge-base --is-ancestor` exit 0・距離124 実測)、observed=`e530fc4b13f477e9155d1ec246fd50a49176eadd`(`git rev-parse HEAD` 実測一致)。Developer スキャン→Architect 合成の直列(c3)
+- Focus: (a) checkQuestionsEvidence 純関数(`amadeus-lib.ts:1173`、export 済み、判別ユニオン `QuestionsEvidence` :1144-1146)・(b) handleGateStart 内 E-OC1 evidence ガード配線 + cutoff 定数 `GUARD_CUTOFF_YYMMDD=260716`(`amadeus-state.ts:1710-1733`/:1721)・(c) sensor dispatcher `amadeus-sensor.ts`(id-agnostic fire、pass/findings_count 汎用読み)・(d) manifest frontmatter スキーマ(`sensors/amadeus-required-sections.md:1-24`、matches capability filter)・(e) `sensors:`→`sensors_applicable` 解決(`amadeus-graph.ts:704-728` resolveSensorsForStage)・(f) PostToolUse hook 発火経路(`.claude/hooks/amadeus-sensor-fire.ts`、Write|Edit matcher、`Bun.Glob(entry.matches).match` :193-194)・(g) テスト前例(`t-eoc1-gate-evidence.test.ts`/`t-sensor-fire-seam.test.ts`、dist import・in-process seam)
+- 現行結論: **A1 = YES(PostToolUse hook は questions ファイル書込みで発火可能)**。questions 絶対パスは既存 required-sections の matches `**/{amadeus-docs,intents}/**` に `Bun.Glob` で match=true(実測)、かつ producing stage が Current Stage の時点(gate 前)に書込みが起きるため発火経路は既に成立。先取り検知本体(checkQuestionsEvidence)は純関数として抽出・export 済みで sensor から再利用可能。新 sensor 追加は「manifest 1枚 + script 1本 + stage の `sensors:` へ id 追加」で完結し、**hook 側改修は不要**。gate-start ブロッキングガード(b)と sensor advisory(f)はタイミングが異なり相補。sensor 機構は区間124コミットで未変更。
+- Per-intent record: `re-scans/260716-answer-preemption-guard.md`
+- 更新した成果物: `code-structure.md`(「answer-evidence 検査機構の観測 — sensor 発火面」節を H1 直後に新設 = checkQuestionsEvidence 純関数 / gate-start 消費側 / sensor 追加構造 / A1=YES 実測 / 相補関係。旧「最新」= gate-start 検査挿入面(260716-eoc1-gate-check)節見出しの「最新」→「履歴」降格 cid:reverse-engineering:c3-relabel)、本ファイル(鮮度ポインタ + 旧「最新: 260716-teamup-resume-size-drift」→履歴ラベル化)、`re-scans/260716-answer-preemption-guard.md`(per-intent re-scan 記録)。他 body 成果物(architecture / business-overview / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment の7点)は本 intent が sensor 1本追加の小規模変更で、フォーカス面(既存 sensor/lib/hook 機構の再利用)と無関係・構造不変のため全点温存(churn 回避、cid:reverse-engineering:c1)。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。**本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。**
+
+## 実行メタデータ(履歴: 260716-teamup-resume-size-drift)
 
 - Date: 2026-07-16
 - Observed at: HEAD `5761e65ce73a82b055590a50f483161e5df2abca`(`git rev-parse HEAD` 実測、conductor 本線 — scan-notes 参照)
@@ -12,6 +38,44 @@
 - Per-intent record: `re-scans/260716-teamup-resume-size-drift.md`
 - 更新した成果物: 本ファイル(鮮度ポインタ+旧「最新: 260716-github-issue-912-tests-s」→履歴ラベル化)、`re-scans/260716-teamup-resume-size-drift.md`。**codekb body は全点温存**(churn 回避 — test-size 専用節は不在、size 機構3ファイルは区間 86 コミットで不変、1行 bugfix。cid:reverse-engineering:c1)
 - Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ（履歴: 260716-t224-size-large）
+
+- Date: 2026-07-16
+- Observed at: `git rev-parse HEAD` = `720b0145b4b396b5c146b5c7271ff83f1da65243`
+- Intent: `260716-t224-size-large`（bugfix。Issue #1059 — `t224-upstream-v2-migration-cli.test.ts` が wall-clock drift ゲートで `declared=medium measured=large`、35-41s で恒常 FAIL。labels=`bug / P3 / S4-MINOR`）
+- Scope: `bugfix`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering`（2.1）
+- 手法: diff-refresh（cid:reverse-engineering:c1、E-L63 の base 選定2則）。base=`e97fdb6fc658d4cd36d4c30fc460c5b7e70e8c75`（リーダー割当。直前 re-scan `260716-s13-label-clarity.md` の observed。`git merge-base --is-ancestor`=exit 0、`git rev-list --count`=**26** を実測で裏取り）、observed=`720b0145b4b396b5c146b5c7271ff83f1da65243`（`git rev-parse HEAD` 実測一致）。**フォーカス3面（`tests/lib/test-size.ts`・`tests/run-tests.ts`・`tests/integration/t224-*.test.ts`）の区間 diff は空** — Issue #1059 実測（2026-07-16、e4/e1 追認）時点の file:line は observed HEAD とバイト同一、欠陥は現存。
+- 実施体制: Developer（スキャン）→ Architect（合成）の2サブエージェント直列（cid:reverse-engineering:c3）
+- Focus: 帯定義 `WALL_CLOCK_BANDS`（`test-size.ts:89`、`[30,∞)`=large）・`sizeFloorFromDuration`（:95-99、40s→large）・`detectWallClockDrift`（:113-121、strictly-greater のみ drift）・`parseSizeAnnotation`（:279-287、先頭40行走査、t224 は未宣言）・`buildMeasuredRecord` の `effectiveDeclared = annotation.declared ?? classification.size`（:149）＝**未宣言時は static 信号分類（t224 は spawnSync:8/node:fs:15-25 で medium）を既定に採る**経路。run-tests.ts の drift 表示（:944-977）。単独実測 wall-clock=40.43s（58 pass、exit 0）＝起票35-37s/e4 41s/e1 42.6s に続く第4実行系で large 帯到達、coverage 有無で帯不変。
+- 現行結論: 「declared=medium」はハードコード既定ではなく size 未宣言時の static 分類結果。ゲート機構（test-size.ts / run-tests.ts）は正しく発火しており、欠陥は t224 側の size 宣言漏れ（#962 由来、原因所在=実装）。**最小修正 = t224 先頭コメント域へ `// size: large` の1行追加**（effectiveDeclared=large → `detectWallClockDrift(large,large)` 同値で drift 不成立）。対象は `tests/` 直下で dist 再生成非関与、機構無改修、落ちる実証は既存 t-test-size-drift/dynamic ゲート側。全数棚卸し（未宣言かつ 30s 超の他テスト）は別 Issue 候補。codekb の本 intent 観測面に stale 記述は検出されず。
+- Per-intent record: `re-scans/260716-t224-size-large.md`
+- 更新成果物: `code-structure.md`（「テスト size 分類機構の観測」節を H1 直後に新設＋前「最新」= §13 label 節を履歴ラベル化 cid:reverse-engineering:c3-relabel）、本ファイル（鮮度ポインタ＋「最新: 260716-s13-label-clarity」→履歴ラベル化）、`re-scans/260716-t224-size-large.md`（per-intent re-scan 記録）。他 body 成果物は本 intent がテスト資産の1行 size 宣言のみで構造変化を伴わないため温存（churn 回避、cid:reverse-engineering:c1）。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。**本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。**
+
+
+
+## 実行メタデータ（履歴: 260716-s13-label-clarity）
+
+- Date: 2026-07-16
+- Observed at: `git rev-parse HEAD` = `e97fdb6fc658d4cd36d4c30fc460c5b7e70e8c75`
+- Intent: `260716-s13-label-clarity`（bugfix。Issue #609 — §13 learn candidates の選択肢が内部 ID 単独表示になる。フォーカスは docs / プロトコル prose のみでコード欠陥ではない）
+- Scope: `bugfix`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering`（2.1）
+- 手法: diff-refresh（cid:reverse-engineering:c1、E-L63 の base 選定2則）。base=`6495e03a12d9e7149c2e80b59f171a90607a2d2c`（リーダー割当。直前 re-scan `260715-parser-checkbox-fixes.md` の observed。`git merge-base --is-ancestor 6495e03a1 HEAD`=exit 0、`git rev-list --count`=28 を実測で裏取り）、observed=`e97fdb6fc658d4cd36d4c30fc460c5b7e70e8c75`（`git rev-parse HEAD` 実測一致）。直前 re-scan の「鮮度追補」に現れる `d6b489772` は landed-main pointer（observed ではない）ため base に採らない。区間28コミットでフォーカス3面（`.claude/amadeus-common/` / `.claude/skills/amadeus/` / `.claude/tools/amadeus-learnings.ts`）は無変更。
+- 実施体制: Developer（スキャン）→ Architect（合成）の2サブエージェント直列（cid:reverse-engineering:c3）
+- Focus: `stage-protocol.md:960`（§13 Step 3 — option label = candidate summary verbatim を既定化済み。Issue #609 の `Persist c5 only` は L960 違反＝orchestrator(LLM) 逸脱の一事例、決定的機構欠陥ではない）・同型面棚卸し（option-label 規定は L11/L19/L577/L960 の4箇所、否定例を足すべきは L960 単独）・`amadeus-learnings.ts` surface 出力契約（`SurfaceCandidate` :96-103 に summary(:100)/context(:101)、構築 :244-249、出力 :262 — ラベル材料はツール側に充足）・`question-rendering.md`（§13 言及 0件）
+- 現行結論: §13 仕様は observed HEAD で既に正しく規定済み（欠陥はレンダリング層のプロトコル遵守面のみ、決定的ガードは grep 0件）。修正方針は (a) §13 Step 3 に否定例明記の docs 強化（本 intent スコープ内）/ (b) label⊇summary ガード（bugs-only スコープ外）。編集正本は `packages/framework/core/amadeus-common/protocols/stage-protocol.md`（`{{HARNESS_DIR}}` 形、生成ツリー `.claude/…` とは置換差で byte 非同一だが §13 label 本文は同一）。L960 修正時は `bun scripts/package.ts` + `promote:self` の dist 再生成が必須。codekb の本 intent 観測面に stale 記述は検出されず。
+- Per-intent record: `re-scans/260716-s13-label-clarity.md`
+- 更新成果物: `code-structure.md`（「§13 learn-candidate label 面の観測」節を先頭新設＋前「最新」= parser/checkbox 節を履歴ラベル化 cid:reverse-engineering:c3-relabel）、本ファイル（鮮度ポインタ＋「最新: 260715-parser-checkbox-fixes」→履歴ラベル化）、`re-scans/260716-s13-label-clarity.md`（per-intent re-scan 記録）。他成果物は本 intent が docs prose 面のみで構造変化を伴わないため温存（churn 回避、cid:reverse-engineering:c1）。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。**本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。**
+
+
 
 ## 実行メタデータ(履歴: 260716-github-issue-912-tests-s)
 

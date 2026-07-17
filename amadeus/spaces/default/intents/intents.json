@@ -28,9 +28,9 @@
   "status": "complete"
  },
  {
-  "uuid": "019f45ae-c0c9-7277-bc22-e322efec6972",
-  "slug": "framework-repair-batch",
-  "dirName": "260709-framework-repair-batch",
+  "uuid": "019f45fc-6fce-7194-a414-1ef902fde564",
+  "slug": "bug-zero-batch",
+  "dirName": "260709-bug-zero-batch",
   "scope": "bugfix",
   "status": "complete"
  },
@@ -42,16 +42,16 @@
   "status": "complete"
  },
  {
-  "uuid": "019f45fc-6fce-7194-a414-1ef902fde564",
-  "slug": "bug-zero-batch",
-  "dirName": "260709-bug-zero-batch",
-  "scope": "bugfix",
+  "uuid": "019f48c4-c619-700b-8d3a-d5fca154d3cd",
+  "slug": "dynamic-test-size",
+  "dirName": "260709-dynamic-test-size",
+  "scope": "refactor",
   "status": "complete"
  },
  {
-  "uuid": "019f46ac-7bdb-7a8e-a99f-da2232df246e",
-  "slug": "packaging-repair-batch",
-  "dirName": "260709-packaging-repair-batch",
+  "uuid": "019f45ae-c0c9-7277-bc22-e322efec6972",
+  "slug": "framework-repair-batch",
+  "dirName": "260709-framework-repair-batch",
   "scope": "bugfix",
   "status": "complete"
  },
@@ -63,13 +63,6 @@
   "status": "complete"
  },
  {
-  "uuid": "019f49f8-bff3-79ac-8d0f-c602c02057e9",
-  "slug": "source-unreferenced-chec",
-  "dirName": "260710-source-unreferenced-chec",
-  "scope": "bugfix",
-  "status": "complete"
- },
- {
   "uuid": "019f46cc-d639-7b7e-8db3-4a5f10229292",
   "slug": "integrity-batch",
   "dirName": "260709-integrity-batch",
@@ -77,9 +70,9 @@
   "status": "complete"
  },
  {
-  "uuid": "019f4738-d9b4-73d8-b7dc-3f7b1a23a34e",
-  "slug": "t92-worktree-hermeticity",
-  "dirName": "260709-t92-worktree-hermeticity",
+  "uuid": "019f46ac-7bdb-7a8e-a99f-da2232df246e",
+  "slug": "packaging-repair-batch",
+  "dirName": "260709-packaging-repair-batch",
   "scope": "bugfix",
   "status": "complete"
  },
@@ -91,9 +84,23 @@
   "status": "complete"
  },
  {
-  "uuid": "019f48c4-c619-700b-8d3a-d5fca154d3cd",
-  "slug": "dynamic-test-size",
-  "dirName": "260709-dynamic-test-size",
+  "uuid": "019f4738-d9b4-73d8-b7dc-3f7b1a23a34e",
+  "slug": "t92-worktree-hermeticity",
+  "dirName": "260709-t92-worktree-hermeticity",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f4b5e-682b-7c9b-8362-0535f6f2a2d6",
+  "slug": "bughunt-fix-batch",
+  "dirName": "260710-bughunt-fix-batch",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f49fc-0afa-7349-9d19-c6165c291d6c",
+  "slug": "codecov-project-gate",
+  "dirName": "260710-codecov-project-gate",
   "scope": "refactor",
   "status": "complete"
  },
@@ -112,23 +119,9 @@
   "status": "complete"
  },
  {
-  "uuid": "019f49fc-0afa-7349-9d19-c6165c291d6c",
-  "slug": "codecov-project-gate",
-  "dirName": "260710-codecov-project-gate",
-  "scope": "refactor",
-  "status": "complete"
- },
- {
   "uuid": "019f4a2b-c911-74a6-8fe9-afb4c17d342e",
   "slug": "mint-presence-vectors",
   "dirName": "260710-mint-presence-vectors",
-  "scope": "bugfix",
-  "status": "complete"
- },
- {
-  "uuid": "019f4b5e-682b-7c9b-8362-0535f6f2a2d6",
-  "slug": "bughunt-fix-batch",
-  "dirName": "260710-bughunt-fix-batch",
   "scope": "bugfix",
   "status": "complete"
  },
@@ -140,9 +133,16 @@
   "status": "complete"
  },
  {
-  "uuid": "019f5081-f2aa-733f-b775-06083afca037",
-  "slug": "p3-repair-batch6",
-  "dirName": "260711-p3-repair-batch6",
+  "uuid": "019f49f8-bff3-79ac-8d0f-c602c02057e9",
+  "slug": "source-unreferenced-chec",
+  "dirName": "260710-source-unreferenced-chec",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f519d-2d17-7d5c-ba0c-6548a60af66f",
+  "slug": "docs-repair-batch9",
+  "dirName": "260711-docs-repair-batch9",
   "scope": "bugfix",
   "status": "complete"
  },
@@ -154,9 +154,9 @@
   "status": "complete"
  },
  {
-  "uuid": "019f519d-2d17-7d5c-ba0c-6548a60af66f",
-  "slug": "docs-repair-batch9",
-  "dirName": "260711-docs-repair-batch9",
+  "uuid": "019f5081-f2aa-733f-b775-06083afca037",
+  "slug": "p3-repair-batch6",
+  "dirName": "260711-p3-repair-batch6",
   "scope": "bugfix",
   "status": "complete"
  },
@@ -175,9 +175,16 @@
   "status": "closed"
  },
  {
-  "uuid": "019f6845-f1ee-751a-b4df-7dec51d84976",
-  "slug": "github-issue-912-tests-s",
-  "dirName": "260716-github-issue-912-tests-s",
+  "uuid": "019f6683-1975-7b70-8cef-f7150c0854b0",
+  "slug": "opencode-cursor-harness",
+  "dirName": "260715-opencode-cursor-harness",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f67d8-e34c-748e-89b4-366df8a37ee4",
+  "slug": "parser-checkbox-fixes",
+  "dirName": "260715-parser-checkbox-fixes",
   "scope": "bugfix",
   "status": "complete"
  },
@@ -189,23 +196,54 @@
   "status": "complete"
  },
  {
-  "uuid": "019f6844-d2e4-7606-8cda-1d29a90a048a",
-  "slug": "team-up-herdr-only",
-  "dirName": "260716-team-up-herdr-only",
+  "uuid": "019f6cbe-0ac0-78da-a7e8-6d133d91b90d",
+  "slug": "answer-preemption-guard",
+  "dirName": "260716-answer-preemption-guard",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f6903-7112-7a2d-9604-0d2a95af3a03",
+  "slug": "codecov-fallback",
+  "dirName": "260716-codecov-fallback",
   "scope": "bugfix",
   "status": "complete"
  },
  {
-  "uuid": "019f67d8-e34c-748e-89b4-366df8a37ee4",
-  "slug": "parser-checkbox-fixes",
-  "dirName": "260715-parser-checkbox-fixes",
+  "uuid": "019f6afc-4e99-7e11-9c55-c45754e4c7a3",
+  "slug": "covci-flake",
+  "dirName": "260716-covci-flake",
+  "scope": "bugfix",
+  "status": "complete",
+  "docsOnly": {
+   "evidence": "GATE_APPROVED requirements-analysis 2026-07-16T13:13Z — FR-3 の pre-declared 分岐(非再現→選挙)が承認済み要件であり、E-1085-FIX 裁定 A(発動条件付き保留)によりリポジトリ変更ゼロが裁定どおりの成果。調査成果は Issue #1085 コメントと record 成果物に完結、scratch ハーネスは repo 外"
+  }
+ },
+ {
+  "uuid": "019f6a48-573d-7c43-94d2-2584a4554b21",
+  "slug": "diary-ensure-exists",
+  "dirName": "260716-diary-ensure-exists",
   "scope": "bugfix",
   "status": "complete"
  },
  {
-  "uuid": "019f6683-1975-7b70-8cef-f7150c0854b0",
-  "slug": "opencode-cursor-harness",
-  "dirName": "260715-opencode-cursor-harness",
+  "uuid": "019f6b58-9bfe-7e61-a235-80190714c30d",
+  "slug": "eoc1-gate-check",
+  "dirName": "260716-eoc1-gate-check",
+  "scope": "feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f6845-f1ee-751a-b4df-7dec51d84976",
+  "slug": "github-issue-912-tests-s",
+  "dirName": "260716-github-issue-912-tests-s",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f6cbc-ef47-78b8-a164-ec045c7f2ad6",
+  "slug": "metrics-timeseries-repor",
+  "dirName": "260716-metrics-timeseries-repor",
   "scope": "amadeus",
   "status": "complete"
  },
@@ -217,44 +255,16 @@
   "status": "complete"
  },
  {
-  "uuid": "019f6903-7112-7a2d-9604-0d2a95af3a03",
-  "slug": "codecov-fallback",
-  "dirName": "260716-codecov-fallback",
+  "uuid": "019f69f5-4556-7004-8fab-9801266c36df",
+  "slug": "t224-size-large",
+  "dirName": "260716-t224-size-large",
   "scope": "bugfix",
   "status": "complete"
  },
  {
-  "uuid": "019f6d77-2af6-789b-8eda-1cc89285a745",
-  "slug": "metrics-retention-gc",
-  "dirName": "260717-metrics-retention-gc",
-  "scope": "amadeus",
-  "status": "complete"
- },
- {
-  "uuid": "019f6d94-b376-7126-a771-628a38be6946",
-  "slug": "teamup-msg-backend",
-  "dirName": "260717-teamup-msg-backend",
-  "scope": "amadeus",
-  "status": "complete"
- },
- {
-  "uuid": "019f6da4-5cfb-79cf-8b66-e05088e7df92",
-  "slug": "standing-delegation-gran",
-  "dirName": "260717-standing-delegation-gran",
-  "scope": "amadeus",
-  "status": "complete"
- },
- {
-  "uuid": "019f6cbc-ef47-78b8-a164-ec045c7f2ad6",
-  "slug": "metrics-timeseries-repor",
-  "dirName": "260716-metrics-timeseries-repor",
-  "scope": "amadeus",
-  "status": "complete"
- },
- {
-  "uuid": "019f6eb1-b802-7152-a6b8-f848a5af16b0",
-  "slug": "presence-teammsg-marker",
-  "dirName": "260717-presence-teammsg-marker",
+  "uuid": "019f6844-d2e4-7606-8cda-1d29a90a048a",
+  "slug": "team-up-herdr-only",
+  "dirName": "260716-team-up-herdr-only",
   "scope": "bugfix",
   "status": "complete"
  },
@@ -266,10 +276,38 @@
   "status": "complete"
  },
  {
+  "uuid": "019f6d77-2af6-789b-8eda-1cc89285a745",
+  "slug": "metrics-retention-gc",
+  "dirName": "260717-metrics-retention-gc",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
   "uuid": "019f7003-e273-7c0b-85ba-0a6c99d0aa9d",
   "slug": "mirror-issue-tool",
   "dirName": "260717-mirror-issue-tool",
   "scope": "amadeus",
   "status": "in-flight"
+ },
+ {
+  "uuid": "019f6eb1-b802-7152-a6b8-f848a5af16b0",
+  "slug": "presence-teammsg-marker",
+  "dirName": "260717-presence-teammsg-marker",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f6da4-5cfb-79cf-8b66-e05088e7df92",
+  "slug": "standing-delegation-gran",
+  "dirName": "260717-standing-delegation-gran",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f6d94-b376-7126-a771-628a38be6946",
+  "slug": "teamup-msg-backend",
+  "dirName": "260717-teamup-msg-backend",
+  "scope": "amadeus",
+  "status": "complete"
  }
 ]
