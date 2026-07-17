@@ -154,6 +154,21 @@ gate-start  →  [?] AwaitingApproval
 
 `amadeus-state set-skeleton-stance <on|off|scope-dependent>` records the conductor's classified walking-skeleton stance into the `Skeleton Stance` field. Like `Revision Count`, this is runtime metadata that lives in the state file — it rides no event and **emits no audit row**, so it does NOT appear in the audit event taxonomy below. It is not a state-machine transition; it is a value the next `amadeus-orchestrate next` reads to resolve the deferred Construction Bolt-1 gate (the walking-skeleton ladder): the classify round-trip persists whether this intent's scope warrants a gated walking-skeleton Bolt 1, with `scope-dependent` falling back to the scope-mapping default (greenfield → skeleton-on, incremental → skeleton-off).
 
+### Standing delegation grants (team mode, #1125)
+
+Delegated approval (#671) opens ONE remote gate per real human turn. In a long agent-team run that means the leader re-acknowledges every gate. A **standing delegation grant** amortises that: a leader session, grounded in a real `HUMAN_TURN` on its own ledger, issues a time-boxed grant that opens stage-gate approvals across the team for the grant's TTL without a per-gate human turn.
+
+```
+amadeus-state grant-standing-delegation [--scope stage-gates] [--ttl-ms <n>] [--include-phase-boundary] [--user-input <text>]
+amadeus-state revoke-standing-delegation --grant-id <8-hex id>
+```
+
+- **Team mode only.** `AMADEUS_OPERATING_MODE=team` is the sole arbiter; solo mode approves each gate directly and refuses issuance. The grant is likewise consulted at the gate ONLY in team mode.
+- **Default TTL is 4 hours** (`DEFAULT_STANDING_GRANT_TTL_MS`) — a normal working session — after which the grant lapses back to per-gate approval on its own. There is deliberately no env override; the auto-approval window stays a fixed, auditable constant.
+- **Phase-boundary gates are EXCLUDED by default.** Pass `--include-phase-boundary` to opt in. The **walking-skeleton gate** (the first in-scope construction stage while `Skeleton Stance` is `on`) is NEVER auto-covered — a human must see the skeleton before the remaining Bolts run.
+- **Provenance is proven, not trusted.** `GRANT_ISSUED` carries the same issuer coordinates as a delegation (`Issuer Space/Intent/Shard/Human Ts`); a gate honours the grant only after `verifyDelegatedProvenance` confirms the grounding `HUMAN_TURN` physically exists in the issuer shard. `GRANT_ISSUED` / `GRANT_REVOKED` are presence-protected — the general `amadeus-audit append` CLI refuses to mint them, so only these verbs (backed by a real human turn) write them.
+- When a grant — rather than a fresh human turn — opens a gate, the resulting `GATE_APPROVED` (or `DELEGATED_APPROVAL`) row carries a `Grant Id` field recording which grant authorised it. `amadeus --doctor` reports the currently-active grant (scope, remaining TTL, phase-boundary opt-in, issuer) or `none`.
+
 ---
 
 ## Session stream (hook-owned, independent)
@@ -217,6 +232,8 @@ Session hooks check for the active intent's `amadeus-state.md` (under `amadeus/s
 | `GATE_REJECTED` | `tools/amadeus-state.ts` | `--feedback` captures the rejection reason |
 | `DELEGATED_APPROVAL` | `tools/amadeus-state.ts` | `delegate-approval` records a leader session's human-grounded approval into a remote conductor intent's audit dir; carries the issuer `(space, intent, shard, HUMAN_TURN timestamp)` the conductor's gate verifies (#671) |
 | `DELEGATED_REJECTION` | `tools/amadeus-state.ts` | `delegate-rejection` records a leader session's human-grounded rejection into a remote conductor intent's audit dir; verb-scoped mirror of `DELEGATED_APPROVAL` — opens only a reject gate (#685) |
+| `GRANT_ISSUED` | `tools/amadeus-state.ts` | `grant-standing-delegation` records a leader session's time-boxed standing grant that opens team-mode stage gates for its TTL without a per-gate human turn; carries `Grant Id`, `Scope`, `Expires At`, `Includes Phase Boundary`, and the issuer `(space, intent, shard, HUMAN_TURN timestamp)` (#1125) |
+| `GRANT_REVOKED` | `tools/amadeus-state.ts` | `revoke-standing-delegation` cancels an outstanding standing grant by `Grant Id`, grounded in a real human turn on the leader's own ledger (#1125) |
 
 ### User interaction
 
