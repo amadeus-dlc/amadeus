@@ -36,6 +36,7 @@ beforeEach(() => {
   write("dist/claude/.claude/tools/a.txt", "alpha\n");
   write("dist/codex/.codex/b.txt", "beta\n");
   write("dist/codex/.agents/c.txt", "gamma\n");
+  write("dist/cursor/.cursor/d.txt", "delta\n");
   write("dist/codex/AGENTS.md", "# AI-DLC on Codex CLI\n\ngenerated\n");
   write(".claude/CLAUDE.md", "# Claude onboarding\n");
   write("AGENTS.md", "# Project rules\n");
