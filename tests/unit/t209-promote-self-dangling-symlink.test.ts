@@ -38,7 +38,13 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { composeRootAgents, promoteSelfMain } from "../../scripts/promote-self.ts";
+import {
+  PACKAGE_HARNESSES,
+  composeRootAgents,
+  packageFreshnessArgs,
+  promoteSelfMain,
+  runPackageFreshness,
+} from "../../scripts/promote-self.ts";
 
 let root: string;
 
@@ -136,5 +142,48 @@ describe("t209 promote-self dangling-symlink resilience", () => {
     expect(promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
     expect(lstatSync(link, { throwIfNoEntry: false })).toBeUndefined();
     expect(promoteSelfMain(["--no-build"], root)).toBe(0);
+  });
+
+  test("PACKAGE_HARNESSES includes Cursor alongside Claude and Codex", () => {
+    expect([...PACKAGE_HARNESSES]).toEqual(["claude", "codex", "cursor"]);
+  });
+
+  test("packageFreshnessArgs covers apply and check for every harness", () => {
+    expect(packageFreshnessArgs("apply")).toEqual([
+      ["scripts/package.ts", "claude"],
+      ["scripts/package.ts", "codex"],
+      ["scripts/package.ts", "cursor"],
+    ]);
+    expect(packageFreshnessArgs("check")).toEqual([
+      ["scripts/package.ts", "claude", "--check"],
+      ["scripts/package.ts", "codex", "--check"],
+      ["scripts/package.ts", "cursor", "--check"],
+    ]);
+  });
+
+  test("runPackageFreshness drives the runner for each harness argv", () => {
+    const calls: string[][] = [];
+    runPackageFreshness("apply", (_cmd, args) => {
+      calls.push(args);
+    });
+    expect(calls).toEqual(packageFreshnessArgs("apply"));
+  });
+
+  test("promoteSelfMain without --no-build invokes the freshness seam", () => {
+    const seen: string[] = [];
+    expect(
+      promoteSelfMain(["--apply"], root, (mode) => {
+        seen.push(mode);
+      }),
+    ).toBe(0);
+    expect(seen).toEqual(["apply"]);
+
+    seen.length = 0;
+    expect(
+      promoteSelfMain([], root, (mode) => {
+        seen.push(mode);
+      }),
+    ).toBe(0);
+    expect(seen).toEqual(["check"]);
   });
 });

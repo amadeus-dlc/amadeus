@@ -29,17 +29,10 @@
 import { describe, expect, test } from "bun:test";
 import {
   COMPOSED_SCOPE_RE,
-  PACKAGE_HARNESSES,
   SCOPE_GRID_RE,
   mergeScopeGrid,
-  packageFreshnessArgs,
-  promoteSelfMain,
-  runPackageFreshness,
   scopeGridInSync,
 } from "../../scripts/promote-self.ts";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 
 const grid = (obj: Record<string, unknown>): Buffer =>
   Buffer.from(`${JSON.stringify(obj, null, 2)}\n`, "utf-8");
@@ -105,64 +98,5 @@ describe("t200 promote-self composed-scope preservation", () => {
   test("mergeScopeGrid overwrites unparseable dst content with dist bytes", () => {
     const want = grid(STOCK);
     expect(mergeScopeGrid(Buffer.from("junk", "utf-8"), want).equals(want)).toBe(true);
-  });
-});
-
-describe("t200 promote-self package freshness harness list", () => {
-  test("PACKAGE_HARNESSES includes Cursor alongside Claude and Codex", () => {
-    expect([...PACKAGE_HARNESSES]).toEqual(["claude", "codex", "cursor"]);
-  });
-
-  test("packageFreshnessArgs covers apply and check for every harness", () => {
-    expect(packageFreshnessArgs("apply")).toEqual([
-      ["scripts/package.ts", "claude"],
-      ["scripts/package.ts", "codex"],
-      ["scripts/package.ts", "cursor"],
-    ]);
-    expect(packageFreshnessArgs("check")).toEqual([
-      ["scripts/package.ts", "claude", "--check"],
-      ["scripts/package.ts", "codex", "--check"],
-      ["scripts/package.ts", "cursor", "--check"],
-    ]);
-  });
-
-  test("runPackageFreshness drives the runner for each harness argv", () => {
-    const calls: string[][] = [];
-    runPackageFreshness("apply", (_cmd, args) => {
-      calls.push(args);
-    });
-    expect(calls).toEqual(packageFreshnessArgs("apply"));
-  });
-
-  test("promoteSelfMain without --no-build invokes the freshness seam", () => {
-    const root = mkdtempSync(join(tmpdir(), "t200-freshness-"));
-    const write = (rel: string, content: string): void => {
-      const abs = join(root, rel);
-      mkdirSync(join(abs, ".."), { recursive: true });
-      writeFileSync(abs, content);
-    };
-    write("dist/claude/.claude/tools/a.txt", "alpha\n");
-    write("dist/codex/.codex/b.txt", "beta\n");
-    write("dist/codex/.agents/c.txt", "gamma\n");
-    write("dist/cursor/.cursor/d.txt", "delta\n");
-    write("dist/codex/AGENTS.md", "# AI-DLC on Codex CLI\n\ngenerated\n");
-    write(".claude/CLAUDE.md", "# Claude onboarding\n");
-    write("AGENTS.md", "# Project rules\n");
-
-    const seen: string[] = [];
-    expect(
-      promoteSelfMain(["--apply"], root, (mode) => {
-        seen.push(mode);
-      }),
-    ).toBe(0);
-    expect(seen).toEqual(["apply"]);
-
-    seen.length = 0;
-    expect(
-      promoteSelfMain([], root, (mode) => {
-        seen.push(mode);
-      }),
-    ).toBe(0);
-    expect(seen).toEqual(["check"]);
   });
 });
