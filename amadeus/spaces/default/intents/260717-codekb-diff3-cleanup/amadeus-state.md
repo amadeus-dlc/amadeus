@@ -49,7 +49,7 @@
 - [x] state-init — EXECUTE
 
 ### IDEATION PHASE
-- [-] intent-capture — EXECUTE
+- [?] intent-capture — EXECUTE
 - [ ] market-research — SKIP
 - [ ] feasibility — EXECUTE
 - [ ] scope-definition — EXECUTE
@@ -91,7 +91,7 @@ Per unit: [TBD]
 - **Current Stage**: intent-capture
 - **Next Stage**: feasibility
 - **Status**: Running
-- **Last Updated**: 2026-07-17T17:42:58Z
+- **Last Updated**: 2026-07-17T17:55:11Z
 
 ## Session Resume Point
 - **Last Completed Stage**: state-init
