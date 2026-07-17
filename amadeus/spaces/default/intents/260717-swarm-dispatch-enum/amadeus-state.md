@@ -22,7 +22,7 @@ issue-mirror は amadeus-mirror.ts を指し、Intent 名には使わない。In
 - **Test Strategy**: Comprehensive
 
 ## Workspace State
-- **Project Root**: /Users/j5ik2o/.codex/worktrees/c421/amadeus
+- **Project Root**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260718-073253-15ea/engineer-2
 - **Languages**: TypeScript
 - **Frameworks**: Unknown
 - **Build System**: bun (package.json)
@@ -35,8 +35,6 @@ issue-mirror は amadeus-mirror.ts を指し、Intent 名には使わない。In
 ## Runtime State
 - **Revision Count**: 0
 
-- **Parked**: 2026-07-17T22:23:37Z
-- **Parked At Stage**: reverse-engineering
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -64,7 +62,7 @@ issue-mirror は amadeus-mirror.ts を指し、Intent 名には使わない。In
 - [x] approval-handoff — EXECUTE
 
 ### INCEPTION PHASE
-- [-] reverse-engineering — EXECUTE
+- [?] reverse-engineering — EXECUTE
 - [ ] practices-discovery — EXECUTE
 - [ ] requirements-analysis — EXECUTE
 - [ ] user-stories — SKIP
@@ -97,7 +95,7 @@ Per unit: [TBD]
 - **Current Stage**: reverse-engineering
 - **Next Stage**: practices-discovery
 - **Status**: Running
-- **Last Updated**: 2026-07-17T22:23:37Z
+- **Last Updated**: 2026-07-17T22:48:27Z
 
 ## Session Resume Point
 - **Last Completed Stage**: approval-handoff

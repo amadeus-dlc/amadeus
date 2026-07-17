@@ -1,6 +1,23 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(最新: 260717-codekb-diff3-cleanup)
+## 実行メタデータ(最新: 260717-swarm-dispatch-enum)
+
+- Date: 2026-07-18(Asia/Tokyo)
+- Observed at: HEAD `e9a001105d253e14affb77417423d9f0b0360f9e`(`git rev-parse HEAD` 実測)
+- Intent: `260717-swarm-dispatch-enum`([Issue #1157](https://github.com/amadeus-dlc/amadeus/issues/1157) — `AMADEUS_USE_SWARM` の三値 enum 化 `unset`/`claude-ultra`/`codex-ultra` + Codex 通常経路のセッション内 native subagent 並列化。Mirror Issue #1182)
+- Scope: `amadeus`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh(cid:reverse-engineering:c1)。base=`6495e03a12d9e7149c2e80b59f171a90607a2d2c`(全 `re-scans/*.md` observed のうち HEAD 祖先かつ距離最小。`git merge-base --is-ancestor 6495e03a12d9e7149c2e80b59f171a90607a2d2c HEAD` exit 0 実測、`git rev-list --count 6495e03a..HEAD`=**128**。rescan-base-ancestry)。日付が新しい squash tip の非祖先 observed は E-L63 に従い除外。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3、独立再照合で反証なし)
+- Focus: `AMADEUS_USE_SWARM` 全数188(実コード読み取りゼロ・conductor SKILL prose 二値 dispatch)・三値化改修サイト(claude SKILL:61 / codex SKILL:57,171 / onboarding.fills.ts / kiro・kiro-ide 各1、opencode/cursor は SKILL 不在の欠落面)・referee 契約(`amadeus-swarm.ts` 789行、ステートレス prepare/check/finalize、driver 型 `DriverName` :88-89 は swarm 内に閉じる)・6監査イベント(`SWARM_*`、Fallback `driver="subagent"` ハードコード :293)・Codex exec per-unit worker 経路(`codex/SKILL.md:57,171` / `emit.ts:81`)・旧 driver stack 不在確認(`AMADEUS_SWARM_DRIVER` adapter/driver スタック未着地)・テスト9件・docs 契約(08-construction-and-swarm.md:201-213 / 17-skill-system.md)
+- 測定 ref: 件数・行番号は observed HEAD `e9a001105` の実ファイル直読、区間変更は `git log 6495e03a..HEAD -- <path>` で実測(measurement-ref-in-artifacts)。swarm 正本 `amadeus-swarm.ts` の区間変更は0件。
+- 現行結論: swarm 正本・SKILL invoke-swarm dispatch 指示・swarm テスト群は区間 `6495e03a..HEAD`(128コミット)で**区間変更ゼロ**。関心 seam の実行コード・構造・API・依存は実質無変更。`AMADEUS_USE_SWARM` はエンジンのコードパスに一切読まれず、すべて conductor 側 SKILL prose の二値(`== "1"`)dispatch 指示 — 三値 enum 化は主に SKILL prose と監査 driver 語彙・Fallback ハードコードの改修面。区間の実変更はいずれも本 intent フォーカス面外(CI リファクタ・coverage-patch-gate 新設・無関係な新テスト群)。既決 `cid:feasibility:c1-2`(Codex native subagent 並列成立・effort telemetry 観測不能)を適用。
+- Per-intent record: `re-scans/260717-swarm-dispatch-enum.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「最新: 260717-codekb-diff3-cleanup」→履歴ラベル化)、`re-scans/260717-swarm-dispatch-enum.md`。**codekb body 9成果物は全点温存**(churn 回避 — swarm 正本の区間変更ゼロ、再照合で本文との矛盾なし、cid:reverse-engineering:c1)。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260717-codekb-diff3-cleanup)
 
 - Date: 2026-07-18(Asia/Tokyo)
 - Observed at: HEAD `0b5e24f8ffeecb6648639adf4a8b1a257084efac`(`git rev-parse HEAD` 実測)
