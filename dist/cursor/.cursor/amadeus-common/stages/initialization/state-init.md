@@ -10,8 +10,7 @@ produces: []
 consumes: []
 requires_stage:
   - workspace-detection
-sensors:
-  - answer-evidence
+sensors: []
 scopes:
   - enterprise
   - feature

@@ -13,9 +13,7 @@
       "produces": [],
       "consumes": [],
       "requires_stage": [],
-      "sensors": [
-        "answer-evidence"
-      ],
+      "sensors": [],
       "scopes": [
         "enterprise",
         "feature",
@@ -44,13 +42,7 @@
           "scope": "project"
         }
       ],
-      "sensors_applicable": [
-        {
-          "id": "answer-evidence",
-          "path": ".claude/sensors/amadeus-answer-evidence.md",
-          "matches": "**/*-questions.md"
-        }
-      ]
+      "sensors_applicable": []
     },
     {
       "slug": "workspace-detection",
@@ -67,9 +59,7 @@
       "requires_stage": [
         "workspace-scaffold"
       ],
-      "sensors": [
-        "answer-evidence"
-      ],
+      "sensors": [],
       "scopes": [
         "enterprise",
         "feature",
@@ -98,13 +88,7 @@
           "scope": "project"
         }
       ],
-      "sensors_applicable": [
-        {
-          "id": "answer-evidence",
-          "path": ".claude/sensors/amadeus-answer-evidence.md",
-          "matches": "**/*-questions.md"
-        }
-      ]
+      "sensors_applicable": []
     },
     {
       "slug": "state-init",
@@ -121,9 +105,7 @@
       "requires_stage": [
         "workspace-detection"
       ],
-      "sensors": [
-        "answer-evidence"
-      ],
+      "sensors": [],
       "scopes": [
         "enterprise",
         "feature",
@@ -152,13 +134,7 @@
           "scope": "project"
         }
       ],
-      "sensors_applicable": [
-        {
-          "id": "answer-evidence",
-          "path": ".claude/sensors/amadeus-answer-evidence.md",
-          "matches": "**/*-questions.md"
-        }
-      ]
+      "sensors_applicable": []
     },
     {
       "slug": "intent-capture",
