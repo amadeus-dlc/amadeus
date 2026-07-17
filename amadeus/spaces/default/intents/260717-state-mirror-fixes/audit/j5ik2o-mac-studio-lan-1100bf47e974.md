@@ -735,3 +735,11 @@
 **Duration ms**: 35
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-17T17:41:02Z
+**Event**: WORKFLOW_PARKED
+**Stage**: intent-capture
+**Timestamp**: 2026-07-17T17:41:02Z
+
+---
