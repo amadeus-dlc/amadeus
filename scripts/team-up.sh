@@ -26,6 +26,7 @@ set -euo pipefail
 #   TEAM_STATE_DIR    local team run metadata directory
 #   TEAM_RUNTIME      claude or codex (default: claude)
 #   TEAM_ENGINEERS    engineer count for a fresh run: 2, 4, or 6 (default: 6)
+#   TEAM_MSG          messaging backend for a fresh run: agmsg (default) or herdr
 #   TEAM_RUN_ID       fixed run ID (intended for deterministic automation)
 #   TEAM_SESSION      session name (default: amadeus-team)
 #   HERDR             herdr executable (default: herdr on PATH)
@@ -54,6 +55,16 @@ HERDR="${HERDR:-herdr}"
 # fresh run with -2/-4/-6; defaults to 6. A resumed run reads its saved size.
 TEAM_SIZE="${TEAM_ENGINEERS:-6}"
 TEAM_SIZE_EXPLICIT=0
+
+# Team messaging backend the launched members use (agmsg | herdr). Selected per
+# fresh run with --msg or TEAM_MSG (flag wins), saved to the run record, and
+# inherited on resume. Defaults to agmsg so the existing launch path is
+# unchanged. resolve_msg_backend is the single resolution point; every other
+# reference reads MSG_BACKEND. The default here keeps library-mode sourcing
+# (TEAM_UP_LIB_ONLY) on the agmsg path.
+MSG_BACKEND="agmsg"
+MSG_FLAG=""
+MSG_FLAG_EXPLICIT=0
 
 # --- herdr launch layer --------------------------------------------------
 # The 3-1-3 layout is built through a small set of mux_* verbs that drive
@@ -196,6 +207,8 @@ Without -c, creates a new run (leader + N engineers) from the repository HEAD.
   -c, --continue       Resume the current run and its saved runtime
   -2, -4, -6           Engineer count for a fresh run (default 6; leader always
                        added). Layout: -2 1-1-1, -4 2-1-2, -6 3-1-3
+      --msg BACKEND    Team messaging backend for a fresh run: agmsg (default)
+                       or herdr. Overrides TEAM_MSG; inherited on resume.
       --run ID         Resume a retained run (requires -c)
       --base REF       Seed a fresh run from REF instead of HEAD
       --name LABEL     Add a display name to a fresh run
@@ -215,6 +228,7 @@ branches stay intact, so create a fresh run to continue that work.
 Environment:
   AGENT_IDENTITY      Identity for the selected runtime (default: corporate-1)
   TEAM_ENGINEERS      Engineer count for a fresh run: 2, 4, or 6 (default: 6)
+  TEAM_MSG            Messaging backend for a fresh run: agmsg (default) or herdr
 EOF
 }
 
@@ -229,6 +243,31 @@ members_for() {
 # record default to 6 — the fixed team size before this option existed.
 record_size() {
   cat "$1/size" 2>/dev/null || printf '6'
+}
+
+# Messaging backend recorded for run $1 (its record dir). Runs predating the msg
+# record default to agmsg — the only backend before this option existed.
+record_msg() {
+  cat "$1/msg" 2>/dev/null || printf 'agmsg'
+}
+
+# Resolve the messaging backend for a fresh run into MSG_BACKEND: --msg flag wins
+# over the TEAM_MSG env, default agmsg. An unknown value is rejected fail-closed.
+resolve_msg_backend() {
+  local resolved
+  if [ "$MSG_FLAG_EXPLICIT" = "1" ]; then
+    resolved="$MSG_FLAG"
+  else
+    resolved="${TEAM_MSG:-agmsg}"
+  fi
+  case "$resolved" in
+  agmsg | herdr) ;;
+  *)
+    echo "ERROR: unknown msg backend: $resolved (agmsg|herdr)" >&2
+    exit 1
+    ;;
+  esac
+  MSG_BACKEND="$resolved"
 }
 
 valid_run_id() {
@@ -310,6 +349,11 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
   -c | --continue) CONTINUE=1 ;;
   -2 | -4 | -6) TEAM_SIZE="${1#-}"; TEAM_SIZE_EXPLICIT=1 ;;
+  --msg)
+    shift
+    [ "$#" -gt 0 ] || { echo "ERROR: --msg requires a value (agmsg|herdr)" >&2; exit 1; }
+    MSG_FLAG="$1"; MSG_FLAG_EXPLICIT=1
+    ;;
   -h | --help) usage; exit 0 ;;
   --claude) RUNTIME="claude"; RUNTIME_EXPLICIT=1 ;;
   --codex) RUNTIME="codex"; RUNTIME_EXPLICIT=1 ;;
@@ -388,6 +432,10 @@ if [ "$CONTINUE" = "1" ] && [ "$TEAM_SIZE_EXPLICIT" = "1" ]; then
   echo "ERROR: -2/-4/-6 are only valid for a fresh run (a resumed run keeps its size)" >&2
   exit 1
 fi
+if [ "$CONTINUE" = "1" ] && [ "$MSG_FLAG_EXPLICIT" = "1" ]; then
+  echo "ERROR: --msg is only valid for a fresh run (a resumed run keeps its backend)" >&2
+  exit 1
+fi
 if [ -n "$RUN_SELECTION" ] && ! valid_run_id "$RUN_SELECTION"; then
   echo "ERROR: invalid run ID: $RUN_SELECTION" >&2
   exit 1
@@ -414,6 +462,10 @@ if [ "$CONTINUE" != "1" ]; then
     exit 1
     ;;
   esac
+  # Resolve and validate the messaging backend for a fresh run (fail-closed on
+  # an unknown --msg/TEAM_MSG value). A resumed run skips this: load_run reads
+  # the saved backend from the run record.
+  resolve_msg_backend
 fi
 
 # True if the identity has at least one saved conversation for this worktree.
@@ -426,7 +478,7 @@ has_history() {
 }
 
 claude_member_cmd() {
-  local m="$1" wt="${2:-$BASE/$1}" args=""
+  local m="$1" wt="${2:-$BASE/$1}" args="" init_prompt="/agmsg mode monitor"
   if [ "$CONTINUE" = "1" ]; then
     args="--continue"
   fi
@@ -434,13 +486,21 @@ claude_member_cmd() {
     echo "WARN: no $CLAUDE_IDENTITY history for $m — starting fresh (dropping --continue)" >&2
     args=""
   fi
-  if [ -f "$DELIVERY" ]; then
-    bash "$DELIVERY" set monitor claude-code "$wt" >/dev/null 2>&1 ||
-      echo "WARN: delivery.sh set monitor failed for $m (continuing)" >&2
+  # The agmsg monitor delivery and its bootstrap prompt only apply to the agmsg
+  # backend. Under herdr messaging there is no monitor to arm and no monitor
+  # prompt to send, so the initial prompt is empty.
+  if [ "$MSG_BACKEND" = "agmsg" ]; then
+    if [ -f "$DELIVERY" ]; then
+      bash "$DELIVERY" set monitor claude-code "$wt" >/dev/null 2>&1 ||
+        echo "WARN: delivery.sh set monitor failed for $m (continuing)" >&2
+    fi
+  else
+    init_prompt=""
   fi
+  # TEAM_MSG is propagated so the member's team-msg.sh uses the same backend.
   # keep the pane open after claude exits so crashes stay inspectable
-  printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team CLAUDE_IDENTITY=%q %q %s %q; exec $SHELL -l' \
-    "$wt" "$CLAUDE_IDENTITY" "$REPO/scripts/run-claude.sh" "$args" "/agmsg mode monitor"
+  printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team TEAM_MSG=%q CLAUDE_IDENTITY=%q %q %s %q; exec $SHELL -l' \
+    "$wt" "$MSG_BACKEND" "$CLAUDE_IDENTITY" "$REPO/scripts/run-claude.sh" "$args" "$init_prompt"
 }
 
 member_role() {
@@ -524,6 +584,17 @@ codex_member_cmd() {
   prompt="\$agmsg actas $role"
   codex_home="$HOME/.codex-$CODEX_IDENTITY"
 
+  # Under herdr messaging there is no agmsg monitor to drive and no `actas`
+  # bootstrap prompt: launch the Codex CLI directly. The trust seed still runs
+  # so this project's Codex hooks fire. Role resume is an agmsg-monitor concern
+  # and is not used here.
+  if [ "$MSG_BACKEND" = "herdr" ]; then
+    seed_codex_trust "$wt" "$codex_home/config.toml" || return 1
+    printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team TEAM_MSG=%q CODEX_IDENTITY=%q %q; exec $SHELL -l' \
+      "$wt" "$MSG_BACKEND" "$CODEX_IDENTITY" "$REPO/scripts/run-codex.sh"
+    return 0
+  fi
+
   [ -x "$CODEX_MONITOR" ] || {
     echo "ERROR: missing Codex monitor launcher: $CODEX_MONITOR" >&2
     return 1
@@ -556,9 +627,10 @@ codex_member_cmd() {
   seed_codex_trust "$wt" "$codex_home/config.toml" || return 1
 
   # AGMSG_CODEX_ROLE disambiguates old role registrations that may coexist in
-  # a reused worktree. Keep the pane open after Codex exits for inspection.
-  printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team CODEX_IDENTITY=%q CODEX_HOME=%q AGMSG_CODEX_ROLE=%q %q --project %q --codex-command %q -- %s %q; exec $SHELL -l' \
-    "$wt" "$CODEX_IDENTITY" "$codex_home" "$role" "$CODEX_MONITOR" "$wt" "$command" "$resume_arg" "$prompt"
+  # a reused worktree. TEAM_MSG is propagated so the member's team-msg.sh uses
+  # the same backend. Keep the pane open after Codex exits for inspection.
+  printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team TEAM_MSG=%q CODEX_IDENTITY=%q CODEX_HOME=%q AGMSG_CODEX_ROLE=%q %q --project %q --codex-command %q -- %s %q; exec $SHELL -l' \
+    "$wt" "$MSG_BACKEND" "$CODEX_IDENTITY" "$codex_home" "$role" "$CODEX_MONITOR" "$wt" "$command" "$resume_arg" "$prompt"
 }
 
 member_cmd() {
@@ -671,6 +743,7 @@ create_run() {
   printf '%s\n' "$base_ref" >"$RUN_RECORD/base-ref"
   printf '%s\n' "$base_commit" >"$RUN_RECORD/base-commit"
   printf '%s\n' "$TEAM_SIZE" >"$RUN_RECORD/size"
+  printf '%s\n' "$MSG_BACKEND" >"$RUN_RECORD/msg"
   printf 'preparing\n' >"$RUN_RECORD/status"
 
   for m in $(members_for "$TEAM_SIZE"); do
@@ -707,6 +780,9 @@ load_run() {
   [ "$saved_mux" = "herdr" ] || reject_legacy_run "$RUN_ID" "$saved_mux"
   # Engineer count is fixed by the run's worktrees; read the saved size.
   TEAM_SIZE="$(record_size "$RUN_RECORD")"
+  # The messaging backend is fixed at run creation; inherit the saved value
+  # (runs predating this record default to agmsg).
+  MSG_BACKEND="$(record_msg "$RUN_RECORD")"
 }
 
 adopt_legacy_run() {
@@ -735,6 +811,8 @@ adopt_legacy_run() {
   printf 'stopped\n' >"$RUN_RECORD/status"
   printf '1\n' >"$RUN_RECORD/legacy"
   printf '6\n' >"$RUN_RECORD/size"
+  # Legacy fixed worktrees predate the messaging backend switch: agmsg.
+  printf 'agmsg\n' >"$RUN_RECORD/msg"
   for m in $(members_for 6); do
     wt="$BASE/$m"
     branch="$(git -C "$wt" branch --show-current)"
@@ -793,7 +871,15 @@ for m in $(members_for "$TEAM_SIZE"); do
   [ -d "$wt" ] || { echo "ERROR: missing worktree $wt" >&2; exit 1; }
 done
 
-register_team_members
+# agmsg registration is an agmsg-backend concern: it pre-registers every role in
+# the agmsg store so monitor delivery can route messages. The herdr backend
+# addresses agents directly through herdr, so no agmsg registration is needed —
+# and this keeps a herdr launch working with no agmsg installation. When it is
+# skipped, REGISTERED_MEMBERS stays empty and rollback_registered_members is a
+# safe no-op.
+if [ "$MSG_BACKEND" = "agmsg" ]; then
+  register_team_members
+fi
 
 # --- build the layout: [left column] | leader | [right column] ----------
 # Engineers split evenly across the two side columns (ceil on the left); the
