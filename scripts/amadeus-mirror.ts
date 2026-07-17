@@ -349,15 +349,21 @@ export function handleClose(
 
 // --- C6: entry -------------------------------------------------------------
 
-export function main(argv: string[]): number {
+// projectDir/run are injectable (ADR-4 test seam via default parameters); the
+// CLI entry always runs with the real repo root and the real gh spawn.
+export function main(
+  argv: string[],
+  projectDir: string = PROJECT_DIR,
+  run: GhRunner = spawnGh,
+): number {
   const args = parseArgs(argv);
   if (args.kind === "usage") {
     console.error(args.message);
     return 2;
   }
-  if (args.kind === "create") return handleCreate(PROJECT_DIR, args.intentDir, spawnGh);
-  if (args.kind === "sync") return handleSync(PROJECT_DIR, args.intentDir, spawnGh);
-  return handleClose(PROJECT_DIR, args.intentDir, spawnGh);
+  if (args.kind === "create") return handleCreate(projectDir, args.intentDir, run);
+  if (args.kind === "sync") return handleSync(projectDir, args.intentDir, run);
+  return handleClose(projectDir, args.intentDir, run);
 }
 
 if (import.meta.main) process.exit(main(process.argv.slice(2)));

@@ -4,14 +4,15 @@
 
 ## 実装結果(実測、wc -l)
 
-- scripts/amadeus-mirror.ts: **363行**(見積り 288〜432 の範囲内)
-- テスト: unit 129行 + integration 210行 = **339行**(見積り 280〜420 の範囲内)。22 テスト / 46 expect
+- scripts/amadeus-mirror.ts: **370行**(見積り 288〜432 の範囲内。カバレッジ閉鎖で main へ deps 既定引数 seam を追加)
+- テスト: unit 129行 + integration 296行 = **425行**(見積り 280〜420 をわずかに超過 — カバレッジ閉鎖テスト7件追加分、+1.2%)。29 テスト / 60 expect
+- **lcov 実測: scripts/amadeus-mirror.ts の未カバー 0行**(local-lcov-pre-push)
 
 ## 検証(コマンドと exit code — 自己捕捉)
 
 | コマンド | exit |
 |---|---|
-| bun test tests/unit/t232-… tests/integration/t232-… | 0(22 pass / 0 fail) |
+| bun test tests/unit/t232-… tests/integration/t232-… | 0(29 pass / 0 fail) |
 | bun run typecheck(tsc -p tsconfig + tsconfig.tests) | 0 |
 | bun run lint(Biome、新規3ファイルは警告0) | 0 |
 | bun tests/gen-coverage-registry.ts --check | 0(fresh, guards green, ratchet held) |

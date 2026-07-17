@@ -18,6 +18,8 @@ import {
   handleClose,
   handleCreate,
   handleSync,
+  main,
+  spawnGh,
 } from "../../scripts/amadeus-mirror";
 
 const DIR = "260717-mirror-issue-tool";
@@ -208,3 +210,77 @@ describe("t232 parked state rendering through the real state file", () => {
     expect(body).toContain("**parked @ reverse-engineering**");
   });
 });
+
+describe("t232 snapshot error paths (C2 fail-closed)", () => {
+  test("no active intent and no --intent fails loud", () => {
+    // A barren workspace (no records at all) so activeIntent cannot fall back
+    // to a single-record resolution.
+    const root = mkdtempSync(join(tmpdir(), "amadeus-mirror-t232-empty-"));
+    roots.push(root);
+    mkdirSync(join(root, "amadeus", "spaces", "default", "intents"), { recursive: true });
+    expect(handleCreate(root, null, fakeGh({}).run)).toBe(1);
+  });
+
+  test("registry entry without a readable state file fails loud", () => {
+    const root = makeWorkspace({});
+    rmSync(
+      join(root, "amadeus", "spaces", "default", "intents", DIR, "amadeus-state.md"),
+    );
+    expect(handleSync(root, DIR, fakeGh({}).run)).toBe(1);
+  });
+
+  test("close without a Mirror Issue field fails loud", () => {
+    const root = makeWorkspace({});
+    expect(handleClose(root, DIR, fakeGh({}).run)).toBe(1);
+  });
+
+  test("unparseable gh create output fails loud (no field written)", () => {
+    const root = makeWorkspace({});
+    const gh = fakeGh({ "issue create": { kind: "ok", stdout: "something weird\n" } });
+    expect(handleCreate(root, DIR, gh.run)).toBe(1);
+  });
+});
+
+describe("t232 main dispatch through the injected seam (C6)", () => {
+  test("usage path returns 2 without touching gh", () => {
+    const gh = fakeGh({});
+    expect(main(["bogus"], "/nonexistent", gh.run)).toBe(2);
+    expect(gh.calls.length).toBe(0);
+  });
+
+  test("create/sync/close dispatch to the handlers with the injected deps", () => {
+    const root = makeWorkspace({});
+    const gh = fakeGh({ "issue create": CREATED });
+    expect(main(["create", "--intent", DIR], root, gh.run)).toBe(0);
+    expect(main(["sync", "--intent", DIR], root, gh.run)).toBe(0);
+    expect(main(["close", "--intent", DIR], root, gh.run)).toBe(1);
+  });
+});
+
+describe("t232 spawnGh against a stub gh executable (C4 real process boundary)", () => {
+  test("ok, non-zero, and missing-binary paths", () => {
+    const bin = mkdtempSync(join(tmpdir(), "amadeus-mirror-ghstub-"));
+    roots.push(bin);
+    const stub = join(bin, "gh");
+    writeFileSync(stub, '#!/bin/sh\nif [ "$1" = "boom" ]; then echo "kaput" >&2; exit 3; fi\necho "ok $@"\n');
+    chmodSync(stub, 0o755);
+    const oldPath = process.env.PATH;
+    process.env.PATH = bin;
+    try {
+      const ok = spawnGh(["auth", "status"]);
+      expect(ok).toEqual({ kind: "ok", stdout: "ok auth status\n" });
+      const bad = spawnGh(["boom"]);
+      expect(bad.kind).toBe("error");
+      if (bad.kind === "error") {
+        expect(bad.exitCode).toBe(3);
+        expect(bad.stderr).toContain("kaput");
+      }
+      process.env.PATH = "/nonexistent-empty-path";
+      const missing = spawnGh(["auth", "status"]);
+      expect(missing.kind).toBe("error");
+    } finally {
+      process.env.PATH = oldPath;
+    }
+  });
+});
+
