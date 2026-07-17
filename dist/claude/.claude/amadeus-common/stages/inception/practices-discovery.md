@@ -136,9 +136,10 @@ bun .claude/tools/amadeus-state.ts practices-promote \
 The subcommand:
 
 - Reads both drafts and both target files (`.claude/rules/amadeus-team.md` and `.claude/rules/amadeus-project.md`); fails closed before any write if any input is missing.
-- For `amadeus-team.md`: applies `replaceSection` to each of the five sections (`## Way of Working`, `## Walking Skeleton`, `## Testing Posture`, `## Deployment`, `## Code Style`). Sections absent from the draft leave the live file's section untouched (useful for partial re-runs).
+- For `amadeus-team.md`: owns only the content between `<!-- amadeus:practices-promote:BEGIN -->` and `<!-- amadeus:practices-promote:END -->` inside each of the five canonical sections (`## Way of Working`, `## Walking Skeleton`, `## Testing Posture`, `## Deployment`, `## Code Style`). For an existing heading, the subcommand byte-preserves all unmanaged content and adds or updates only that managed block. For a missing heading, it appends the heading and block at EOF in canonical order. Sections absent from the draft remain byte-identical.
+- Validates every promotion marker before either target is written. One-sided, reverse-ordered, duplicate, outside-canonical-section, or cross-section markers fail closed with `PRACTICES_OVERRIDE`; both targets remain unchanged. Re-running a valid promotion replaces the existing managed block instead of adding another one.
 - For `amadeus-project.md`: parses rules from the draft's `## Mandated` and `## Forbidden` sections and applies `appendUnderHeading` for each, stamping `(affirmed YYYY-MM-DD)`. Append (not replace) is correct here because rules accumulate over runs.
-- Writes `amadeus-project.md` first, `amadeus-team.md` second.
+- Builds and validates both target contents in memory, then writes `amadeus-project.md` first and `amadeus-team.md` second.
 - Emits `PRACTICES_AFFIRMED` on success or `PRACTICES_OVERRIDE` on failure (with the failure reason as a field). On `PRACTICES_OVERRIDE` the subcommand exits non-zero — the orchestrator should treat that as a halt: do NOT proceed to Step 7's state update; the user re-enters the affirmation gate after addressing the failure.
 
 ### Step 7: Emit + Update State

@@ -1,6 +1,23 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(最新: 260717-mirror-issue-tool)
+## 実行メタデータ(最新: 260717-codekb-diff3-cleanup)
+
+- Date: 2026-07-18(Asia/Tokyo)
+- Observed at: HEAD `0b5e24f8ffeecb6648639adf4a8b1a257084efac`(`git rev-parse HEAD` 実測)
+- Intent: `260717-codekb-diff3-cleanup`([Issue #1129](https://github.com/amadeus-dlc/amadeus/issues/1129) — 共有 CodeKB 2ファイルへ孤立した diff3 base sentinel と旧「最新」ヘッダ断片の branch hygiene)
+- Scope: `amadeus`
+- Project type: Brownfield
+- Repository: `amadeus`
+- 手法: diff-refresh(cid:reverse-engineering:c1)。base=`6495e03a12d9e7149c2e80b59f171a90607a2d2c`(全 `re-scans/*.md` の observed のうち HEAD 祖先かつ距離最小。`git merge-base --is-ancestor 6495e03a... HEAD` exit 0、`git rev-list --count 6495e03a..HEAD`=126)。次点祖先 `cf3dc88b...` は距離191、日付が新しい `46f51091...` は非祖先(exit 1)のため除外。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3、独立再照合で反証なし)
+- Focus: 修正前 `9313fae4c...`、修正 commit `5e92d1516...`、`origin/fix/1027-state-set-fail-closed`、observed HEAD、`origin/main` の5 refで対象2ファイルを比較し、4 conflict marker語彙(`<<<<<<<` / `|||||||` / `=======` / `>>>>>>>`)と「最新」H2を全数走査。修正commitは2ファイル・4行削除でfix branchの祖先だが、HEAD/mainの祖先ではない。一方、HEAD/mainの対象2ファイルは同一で、4語彙はいずれも0件、「最新」H2は各1件。
+- 測定 ref: 件数は上記各 git refへの `git show <ref>:<file> | awk`、系統は `git merge-base --is-ancestor`、内容同一性は `git diff --exit-code HEAD origin/main -- <file>` で実測。Issue は OPEN、`bug` / `P3` / `S4-MINOR` / `in-progress:amadeus`。
+- 現行結論: 実行コード、構造、API、依存、technology stack、品質機構の変更はない。`amadeus-worktree.ts:549-568` は Git の `CONFLICT (` と unmerged indexだけを扱い、`tests/e2e/t03.test.ts:186-216` は通常merge conflictの検証で、孤立diff3 sentinel専用fixtureはない。既決 `cid:reverse-engineering:diff3-marker-vocab` を適用し、新規設計判断は導入しない。
+- Per-intent record: `re-scans/260717-codekb-diff3-cleanup.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「最新: 260717-mirror-issue-tool」→履歴ラベル化)、`re-scans/260717-codekb-diff3-cleanup.md`。他8 body成果物は全点温存(churn回避 — 実行コード・構造・API・依存に変化なし、cid:reverse-engineering:c1)。
+- Delivery boundary: main merge/rebase、Issue close、GitHub上のレビュー作成・更新操作は本scanで実施していない。content cleanとfix commitの系統着地は別事実として追跡する。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260717-mirror-issue-tool)
 
 - Date: 2026-07-17
 - Observed at: HEAD `3d89916e6eb70f5d34683f8a7141ce1afe33d4b4`(`git rev-parse HEAD` 実測、conductor 本線 — scan-notes 参照)

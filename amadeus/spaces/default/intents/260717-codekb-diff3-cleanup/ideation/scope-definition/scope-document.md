@@ -6,7 +6,7 @@
 
 - Issue #1129 の問題・対象者・成功指標・制約を intent record として確定し、Ideation を検証済み状態で park する。
 - 修正 commit `5e92d1516ba44856f1ec039e7b1eadebbfb4c8c0` と対象 CodeKB 2ファイルの clean 状態を trace する。
-- park 後に、現在の branch から [record PR #1181](https://github.com/amadeus-dlc/amadeus/pull/1181) で record review を開始する。
+- park 後に、現在の branch から [record PR 作成画面](https://github.com/amadeus-dlc/amadeus/pull/new/team/20260718-023505-0ccc/engineer-1)を使って record review を開始する。
 - bug Issue-first の既決運用に従い、重複 Issue を作らず、既存 [Issue #1129](https://github.com/amadeus-dlc/amadeus/issues/1129) へ record link と状態を同期する。
 - 人間承認による main 着地後、対象2ファイルで sentinel 0件・最新ヘッダ各1件を再計測し、その後に Issue を close する。
 

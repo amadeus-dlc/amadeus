@@ -41,6 +41,10 @@ afterAll(() => {
 const TEAM_MD_LIVE = "# Team-Level Rules\n\n## Way of Working\n\nOLD_WAY_TEXT\n";
 const PROJECT_MD_LIVE = "# Project-Level Rules\n\n## Mandated\n\n## Forbidden\n";
 const TEAM_PRACTICES_DRAFT = "# Team Practices Draft\n";
+const VALID_DISCOVERED_RULES =
+  "# Discovered Rules\n\n## Mandated\n\nALWAYS run tests\n\n## Forbidden\n\nNEVER skip CI\n";
+const MANAGED_BEGIN = "<!-- amadeus:practices-promote:BEGIN -->";
+const MANAGED_END = "<!-- amadeus:practices-promote:END -->";
 
 interface Fixture {
   proj: string;
@@ -256,10 +260,204 @@ describe("t-practices-promote-contract: handler wiring (in-process)", () => {
     const fx = makeFixture(
       "# Discovered Rules\n\n## Mandated\n\n- ALWAYS run tests\n\n## Forbidden\n\n- NEVER force-push main\n",
     );
+    const teamBefore = readFileSync(fx.teamMd, "utf-8");
     const r = runHandlerInProcess(fx);
     expect(r.threw).toBe(false);
+    expect(readFileSync(fx.teamMd, "utf-8")).toBe(teamBefore);
     const project = readFileSync(fx.projectMd, "utf-8");
     expect(project).toContain(`- ALWAYS run tests (affirmed ${today})`);
     expect(project).toContain(`- NEVER force-push main (affirmed ${today})`);
+  });
+
+  test("K: an existing unmarked section gains one managed block without replacing unmanaged text", () => {
+    const fx = makeFixture(VALID_DISCOVERED_RULES);
+    writeFileSync(
+      fx.teamPractices,
+      "# Team Practices Draft\n\n## Way of Working\n\nPROMOTED_WAY_TEXT\n",
+      "utf-8",
+    );
+
+    const r = runHandlerInProcess(fx);
+
+    expect(r.threw).toBe(false);
+    const team = readFileSync(fx.teamMd, "utf-8");
+    expect(team).toContain("OLD_WAY_TEXT");
+    expect(team).toContain(
+      `${MANAGED_BEGIN}\n\nPROMOTED_WAY_TEXT\n${MANAGED_END}`,
+    );
+    expect(team.split(MANAGED_BEGIN)).toHaveLength(2);
+    expect(team.split(MANAGED_END)).toHaveLength(2);
+  });
+
+  test("L: an existing managed block is replaced while its prefix and suffix stay byte-identical", () => {
+    const fx = makeFixture(VALID_DISCOVERED_RULES);
+    writeFileSync(
+      fx.teamMd,
+      `# Team-Level Rules
+
+## Way of Working
+
+UNMANAGED_PREFIX
+${MANAGED_BEGIN}
+OLD_MANAGED_TEXT
+${MANAGED_END}
+UNMANAGED_SUFFIX
+`,
+      "utf-8",
+    );
+    writeFileSync(
+      fx.teamPractices,
+      "# Team Practices Draft\n\n## Way of Working\n\nUPDATED_MANAGED_TEXT\n",
+      "utf-8",
+    );
+    const before = readFileSync(fx.teamMd, "utf-8");
+    const begin = before.indexOf(MANAGED_BEGIN);
+    const end = before.indexOf(MANAGED_END, begin);
+    const unmanagedPrefix = before.slice(0, begin);
+    const unmanagedSuffix = before.slice(end + MANAGED_END.length);
+
+    const r = runHandlerInProcess(fx);
+
+    expect(r.threw).toBe(false);
+    const after = readFileSync(fx.teamMd, "utf-8");
+    const updatedBegin = after.indexOf(MANAGED_BEGIN);
+    const updatedEnd = after.indexOf(MANAGED_END, updatedBegin);
+    expect(after.slice(0, updatedBegin)).toBe(unmanagedPrefix);
+    expect(after.slice(updatedEnd + MANAGED_END.length)).toBe(unmanagedSuffix);
+    expect(after).toContain("UPDATED_MANAGED_TEXT");
+    expect(after).not.toContain("OLD_MANAGED_TEXT");
+  });
+
+  test("M: missing canonical headings are appended at EOF in canonical order", () => {
+    const fx = makeFixture(VALID_DISCOVERED_RULES);
+    writeFileSync(
+      fx.teamMd,
+      "# Team-Level Rules\n\n## Way of Working\n\nKEEP_WAY_TEXT\n\n",
+      "utf-8",
+    );
+    writeFileSync(
+      fx.teamPractices,
+      `# Team Practices Draft
+
+## Walking Skeleton
+
+PROMOTED_WALKING_TEXT
+
+## Testing Posture
+
+PROMOTED_TESTING_TEXT
+`,
+      "utf-8",
+    );
+
+    const r = runHandlerInProcess(fx);
+
+    expect(r.threw).toBe(false);
+    const team = readFileSync(fx.teamMd, "utf-8");
+    const way = team.indexOf("## Way of Working");
+    const walking = team.indexOf("## Walking Skeleton");
+    const testing = team.indexOf("## Testing Posture");
+    expect(walking).toBeGreaterThan(way);
+    expect(testing).toBeGreaterThan(walking);
+    expect(team).toContain("KEEP_WAY_TEXT");
+    expect(team).toContain("PROMOTED_WALKING_TEXT");
+    expect(team).toContain("PROMOTED_TESTING_TEXT");
+    expect(team.split(MANAGED_BEGIN)).toHaveLength(3);
+    expect(team.split(MANAGED_END)).toHaveLength(3);
+  });
+
+  test("O: a missing heading is separated from a target with no trailing newline", () => {
+    const fx = makeFixture(VALID_DISCOVERED_RULES);
+    writeFileSync(fx.teamMd, "# Team-Level Rules", "utf-8");
+    writeFileSync(
+      fx.teamPractices,
+      "# Team Practices Draft\n\n## Deployment\n\nPROMOTED_DEPLOYMENT_TEXT\n",
+      "utf-8",
+    );
+
+    const r = runHandlerInProcess(fx);
+
+    expect(r.threw).toBe(false);
+    const team = readFileSync(fx.teamMd, "utf-8");
+    expect(team).toStartWith("# Team-Level Rules\n\n## Deployment\n\n");
+    expect(team).toContain("PROMOTED_DEPLOYMENT_TEXT");
+  });
+
+  test.each([
+    [
+      "one-sided marker",
+      `# Team-Level Rules
+
+## Way of Working
+
+KEEP_WAY_TEXT
+${MANAGED_BEGIN}
+`,
+    ],
+    [
+      "reverse-ordered markers",
+      `# Team-Level Rules
+
+## Way of Working
+
+${MANAGED_END}
+KEEP_WAY_TEXT
+${MANAGED_BEGIN}
+`,
+    ],
+    [
+      "duplicate marker blocks",
+      `# Team-Level Rules
+
+## Way of Working
+
+${MANAGED_BEGIN}
+FIRST
+${MANAGED_END}
+${MANAGED_BEGIN}
+SECOND
+${MANAGED_END}
+`,
+    ],
+    [
+      "markers crossing a canonical section boundary",
+      `# Team-Level Rules
+
+## Way of Working
+
+KEEP_WAY_TEXT
+${MANAGED_BEGIN}
+
+## Walking Skeleton
+
+${MANAGED_END}
+KEEP_WALKING_TEXT
+`,
+    ],
+    [
+      "marker block outside canonical sections",
+      `# Team-Level Rules
+
+${MANAGED_BEGIN}
+OUTSIDE_CANONICAL_SECTION
+${MANAGED_END}
+
+## Way of Working
+
+KEEP_WAY_TEXT
+`,
+    ],
+  ])("N: %s fails closed before either target write", (_caseName, teamMd) => {
+    const fx = makeFixture(VALID_DISCOVERED_RULES);
+    writeFileSync(fx.teamMd, teamMd, "utf-8");
+    const teamBefore = readFileSync(fx.teamMd, "utf-8");
+    const projectBefore = readFileSync(fx.projectMd, "utf-8");
+
+    const r = runHandlerInProcess(fx);
+
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("managed markers malformed");
+    expect(readFileSync(fx.teamMd, "utf-8")).toBe(teamBefore);
+    expect(readFileSync(fx.projectMd, "utf-8")).toBe(projectBefore);
   });
 });

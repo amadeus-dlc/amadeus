@@ -47,7 +47,6 @@ import {
   relativeRecordDir,
   removeField,
   removeSlug,
-  replaceSection,
   resolveProjectDir,
   resolveStage,
   setCheckbox,
@@ -77,6 +76,16 @@ const VALID_CHECKBOX_STATES: CheckboxState[] = [
   "completed",
   "skipped",
 ];
+
+const PRACTICES_MANAGED_BEGIN = "<!-- amadeus:practices-promote:BEGIN -->";
+const PRACTICES_MANAGED_END = "<!-- amadeus:practices-promote:END -->";
+const PRACTICES_TEAM_SECTIONS = [
+  "## Way of Working",
+  "## Walking Skeleton",
+  "## Testing Posture",
+  "## Deployment",
+  "## Code Style",
+] as const;
 
 function isCheckboxState(s: string): s is CheckboxState {
   return (VALID_CHECKBOX_STATES as readonly string[]).includes(s);
@@ -2694,9 +2703,9 @@ function handlePracticesEvent(args: string[]): void {
 // and applies them deterministically to the relocated method files the
 // resolver reads (amadeus/spaces/<space>/memory/, neutral names):
 //
-//   memory/team.md ........... replaceSection × 5 (Way of Working,
-//                              Walking Skeleton, Testing Posture,
-//                              Deployment, Code Style)
+//   memory/team.md ........... upsert one promotion-owned marker block in
+//                              each draft-present canonical section while
+//                              preserving unmanaged content byte-for-byte
 //   memory/project.md ........ appendUnderHeading × 2 (Mandated,
 //                              Forbidden), each rule stamped
 //                              with `(affirmed YYYY-MM-DD)`
@@ -2772,6 +2781,96 @@ export function parseRuleSectionsOrFail(
     );
   }
   return { mandated, forbidden };
+}
+
+function markdownSectionRange(
+  markdown: string,
+  heading: string,
+): { bodyStart: number; bodyEnd: number } | null {
+  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = new RegExp(`^${escapedHeading}[ \\t]*$`, "m").exec(markdown);
+  if (!match) return null;
+  const afterHeading = match.index + match[0].length;
+  const bodyStart = markdown[afterHeading] === "\n" ? afterHeading + 1 : afterHeading;
+  const nextHeading = /^## [^\n]*$/m.exec(markdown.slice(bodyStart));
+  const bodyEnd = nextHeading ? bodyStart + nextHeading.index : markdown.length;
+  return { bodyStart, bodyEnd };
+}
+
+function managedPracticesBlock(sectionContent: string): string {
+  const contentSuffix = sectionContent.endsWith("\n") ? "" : "\n";
+  return `${PRACTICES_MANAGED_BEGIN}\n${sectionContent}${contentSuffix}${PRACTICES_MANAGED_END}`;
+}
+
+function markerCount(markdown: string, marker: string): number {
+  return markdown.split(marker).length - 1;
+}
+
+function validateManagedPracticesMarkers(
+  markdown: string,
+  headings: readonly string[],
+  onViolation: (reason: string) => never
+): void {
+  let containedBegins = 0;
+  let containedEnds = 0;
+  for (const heading of headings) {
+    const range = markdownSectionRange(markdown, heading);
+    if (!range) continue;
+    const body = markdown.slice(range.bodyStart, range.bodyEnd);
+    const beginCount = markerCount(body, PRACTICES_MANAGED_BEGIN);
+    const endCount = markerCount(body, PRACTICES_MANAGED_END);
+    containedBegins += beginCount;
+    containedEnds += endCount;
+    if (beginCount === 0 && endCount === 0) continue;
+    if (
+      beginCount !== 1 ||
+      endCount !== 1 ||
+      body.indexOf(PRACTICES_MANAGED_BEGIN) >
+        body.indexOf(PRACTICES_MANAGED_END)
+    ) {
+      onViolation(`managed markers malformed for "${heading}"`);
+    }
+  }
+
+  if (
+    markerCount(markdown, PRACTICES_MANAGED_BEGIN) !== containedBegins ||
+    markerCount(markdown, PRACTICES_MANAGED_END) !== containedEnds
+  ) {
+    onViolation("managed markers malformed outside canonical team sections");
+  }
+}
+
+function appendSeparator(markdown: string): string {
+  if (markdown.endsWith("\n\n")) return "";
+  if (markdown.endsWith("\n")) return "\n";
+  return "\n\n";
+}
+
+function upsertManagedPracticesSection(
+  markdown: string,
+  heading: string,
+  sectionContent: string
+): string {
+  const block = managedPracticesBlock(sectionContent);
+  const range = markdownSectionRange(markdown, heading);
+  if (!range) {
+    return `${markdown}${appendSeparator(markdown)}${heading}\n\n${block}\n`;
+  }
+
+  const body = markdown.slice(range.bodyStart, range.bodyEnd);
+  if (!body.includes(PRACTICES_MANAGED_BEGIN)) {
+    const before = markdown.slice(0, range.bodyEnd);
+    const after = markdown.slice(range.bodyEnd);
+    const afterBlock = after === "" ? "\n" : "\n\n";
+    return `${before}${appendSeparator(before)}${block}${afterBlock}${after}`;
+  }
+
+  // validateManagedPracticesMarkers() established exactly one ordered pair.
+  const begin = body.indexOf(PRACTICES_MANAGED_BEGIN);
+  const end = body.indexOf(PRACTICES_MANAGED_END);
+  const blockStart = range.bodyStart + begin;
+  const blockEnd = range.bodyStart + end + PRACTICES_MANAGED_END.length;
+  return `${markdown.slice(0, blockStart)}${block}${markdown.slice(blockEnd)}`;
 }
 
 export function handlePracticesPromote(args: string[]): void {
@@ -2851,34 +2950,30 @@ export function handlePracticesPromote(args: string[]): void {
     return;
   }
 
-  // Step 3a: Build new team.md by section-replacing each of the five
-  // sections. team.md uses Title Case headings; the draft mirrors that
-  // shape.
-  const TEAM_SECTIONS = [
-    "## Way of Working",
-    "## Walking Skeleton",
-    "## Testing Posture",
-    "## Deployment",
-    "## Code Style",
-  ];
+  // Step 3a: Validate every managed marker before building either target.
+  // Draft-absent sections are still validated so malformed ownership markers
+  // can never be hidden by a partial promotion.
+  validateManagedPracticesMarkers(teamMd, PRACTICES_TEAM_SECTIONS, fail);
+
+  // Build new team.md by upserting one managed block per draft-present
+  // canonical section. Existing unmanaged bytes remain outside that block;
+  // missing headings are appended in canonical order.
   let newTeamMd = teamMd;
-  for (const heading of TEAM_SECTIONS) {
+  for (const heading of PRACTICES_TEAM_SECTIONS) {
     const draftSection = extractMarkdownSection(teamPracticesDraft, heading);
     if (draftSection === "") {
       // Section absent from draft → leave the live file's section alone.
       // Useful for partial re-runs that only change one practice area.
       continue;
     }
-    try {
-      newTeamMd = replaceSection(newTeamMd, heading, draftSection);
-      sectionsWritten.push(heading.slice(3));
-    } catch (e) {
-      fail(
-        `replaceSection failed on team.md for "${heading}": ${errorMessage(e)}`
-      );
-      return;
-    }
+    newTeamMd = upsertManagedPracticesSection(newTeamMd, heading, draftSection);
+    sectionsWritten.push(heading.slice(3));
   }
+  validateManagedPracticesMarkers(
+    newTeamMd,
+    PRACTICES_TEAM_SECTIONS,
+    fail
+  );
 
   // Step 3b: parse + enforce the section-keyword contract atomically (Issue #1013).
   const { mandated: mandatedRules, forbidden: forbiddenRules } =
