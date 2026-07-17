@@ -160,3 +160,296 @@
 **Agent**: amadeus-pipeline-deploy-agent
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-17T23:10:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: 58e4e787
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/practices-discovery/team-practices.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-17T23:10:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: 58e4e787
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/practices-discovery/team-practices.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-17T23:10:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: e0237273
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/practices-discovery/discovered-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-17T23:10:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: e0237273
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/practices-discovery/discovered-rules.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-17T23:10:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8135e973
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/practices-discovery/evidence.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-17T23:10:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8135e973
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/practices-discovery/evidence.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-17T23:10:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: 08ff4606
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/practices-discovery/practices-discovery-timestamp.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-17T23:10:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: 08ff4606
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/practices-discovery/practices-discovery-timestamp.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-17T23:10:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8c40f936
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/practices-discovery/team-practices.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-17T23:10:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8c40f936
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/practices-discovery/team-practices.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-17T23:10:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: aa9ac914
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/practices-discovery/discovered-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-17T23:10:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: aa9ac914
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/practices-discovery/discovered-rules.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-17T23:10:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: a76a2599
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/practices-discovery/evidence.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-17T23:10:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: a76a2599
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/practices-discovery/evidence.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-17T23:10:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 306823ac
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/practices-discovery/practices-discovery-timestamp.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-17T23:10:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 306823ac
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/practices-discovery/practices-discovery-timestamp.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-17T23:10:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: aeef5fee
+**Sensor ID**: answer-evidence
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/practices-discovery/practices-discovery-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-17T23:10:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: aeef5fee
+**Sensor ID**: answer-evidence
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/practices-discovery/practices-discovery-questions.md
+**Duration ms**: 34
+
+---
+
+## Practices Discovered
+**Timestamp**: 2026-07-17T23:10:55Z
+**Event**: PRACTICES_DISCOVERED
+**Sources Scanned**: RE codekb 8 body artifacts (c1 substitution) + .github/workflows/ci.yml + release.yml + tests/ file counts + biome.json/tsconfig.json at HEAD 07e3b21b5
+**Drafts**: team-practices.md, discovered-rules.md
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-17T23:11:02Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: practices-discovery
+**Artifacts**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/practices-discovery/team-practices.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/practices-discovery/discovered-rules.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/practices-discovery/evidence.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/practices-discovery/practices-discovery-timestamp.md
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-17T23:11:02Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-log
+**Command**: amadeus-log decision --stage practices-discovery --text Affirmation gate: team-practices.md / discovered-rules.md の承認(promote 実行)可否。0問判定は E-OC1 承認済み(23:09:24Z)、新規 Mandated/Forbidden なし、canonical 5セクションの managed block を intent 文脈で更新
+**Error**: Missing --decision <text>
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-17T23:11:06Z
+**Event**: DECISION_RECORDED
+**Stage**: practices-discovery
+**Decision**: Affirmation gate: team-practices.md / discovered-rules.md の承認(promote 実行)可否。0問判定は E-OC1 承認済み(23:09:24Z)、新規 Mandated/Forbidden なし、canonical 5セクションの managed block を intent 文脈で更新
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-17T23:11:43Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a9e8ecd19812826a5
+**Message**: 続けて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-17T23:12:57Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a1ddf2b3a2700e809
+**Message**: continue
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-17T23:13:06Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-log
+**Command**: amadeus-log answer --stage practices-discovery --answer Approve(グラント f8f6b049 による委任承認 — §13 E-SDE-PD 0件成立 23:12:54Z 後の執行)
+**Error**: Missing --details <text>
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-17T23:13:06Z
+**Event**: GATE_APPROVED
+**Stage**: practices-discovery
+**User Input**: Approve
+**Grant Id**: f8f6b049
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-17T23:13:06Z
+**Event**: STAGE_COMPLETED
+**Stage**: practices-discovery
+**Details**: Stage Practices Discovery approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-17T23:13:06Z
+**Event**: STAGE_STARTED
+**Stage**: requirements-analysis
+**Agent**: amadeus-product-agent
+
+---
+
+## Question Answered
+**Timestamp**: 2026-07-17T23:13:11Z
+**Event**: QUESTION_ANSWERED
+**Stage**: practices-discovery
+**Details**: Approve(グラント f8f6b049 による委任承認 — §13 E-SDE-PD 0件成立 23:12:54Z 後の執行)
+
+---
+
+## Practices Affirmed
+**Timestamp**: 2026-07-17T23:13:11Z
+**Event**: PRACTICES_AFFIRMED
+**Affirming User**: j5ik2o (delegated via grant f8f6b049)
+**Sections Written**: Way of Working, Walking Skeleton, Testing Posture, Deployment, Code Style
+**Mandated Rules Appended**: 0
+**Forbidden Rules Appended**: 0
+**Timestamp**: 2026-07-17T23:13:11Z
+
+---

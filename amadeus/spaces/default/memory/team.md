@@ -273,7 +273,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 <!-- amadeus:practices-promote:BEGIN -->
 
-私たちはgreenfieldの最初のConstruction Boltを小さなend-to-end sliceとして確認し、既存コードへのbugfixではbootstrap対象がないためceremonyをskipする。本intentは既存Markdownのbranch hygieneであり、追加のskeletonは設けない。
+私たちはgreenfieldの最初のConstruction Boltを小さなend-to-end sliceとして確認し、greenfield要素のない既存契約への加算ではceremonyを比例縮小する。本intentは既存swarm契約への三値enum拡張であり新パッケージ・新配布経路を持たないため、Bolt構成と先行スライスの要否はdelivery-planningで確定する。
 
 <!-- amadeus:practices-promote:END -->
 
@@ -281,7 +281,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 <!-- amadeus:practices-promote:BEGIN -->
 
-私たちはTypeScriptのテストを `tests/` 配下へ置き、Bun runnerでunit / integration / e2e / smokeを検証する。bugfixでは対象regressionを第一級成果物とし、typecheck、Biome lint、complexity、dist / self-install drift、test、coverageの既存CI gateをgreenに保つ。
+私たちはTypeScriptのテストを `tests/` 配下へ置き、Bun runnerでunit / integration / e2e / smokeを検証する。コードと並行してテストを作成し、typecheck、Biome lint、complexity、dist / self-install drift、test、coverage(patch gateを含む)の既存CI gateをgreenに保つ。
 
 <!-- amadeus:practices-promote:END -->
 
