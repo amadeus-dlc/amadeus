@@ -52,3 +52,13 @@ a stable machine header as the body's **first line**, then the original body:
 
 Only `from:<role>` varies. The agmsg backend does **not** add this header — its
 metadata already names the sender.
+
+## Runtime prerequisites under the herdr backend
+
+- **claude** members launch without any agmsg installation (`AGMSG_ROOT` may be
+  absent entirely).
+- **codex** members still require the agmsg skill to be installed: the codex
+  launcher (`scripts/run-codex.sh`) execs the agmsg codex shim internally, so
+  the herdr backend changes codex messaging, not the codex launch path
+  (per-intent ruling E-TMB-CG, 2026-07-17). Removing that shim dependency is a
+  possible future enhancement.
