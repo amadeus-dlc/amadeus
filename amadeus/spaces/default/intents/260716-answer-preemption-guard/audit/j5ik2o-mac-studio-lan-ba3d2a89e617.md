@@ -166,3 +166,15 @@
 **User Input**: E-APG-CG13 開票: C1・C2 採用、不採用1件承認(4/4、留保転記は PR #1124)。再発行 — 初回発行(00:50:15Z)は issuerHumanTs が gate open より前で無効のため。code-generation ゲート承認を委任。
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-17T00:56:11Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: build-and-test
+**Issuer Space**: default
+**Issuer Intent**: 260709-canonical-settings
+**Issuer Shard**: j5ik2o-mac-studio-lan-ba3d2a89e617.md
+**Issuer Human Ts**: 2026-07-17T00:55:52Z
+**User Input**: E-APG-BT 開票: §13 採用0件で成立。票: 配信 00:54Z 頃 → e1 GoA1 00:55:26Z → e2 GoA1 00:55:37Z → 開票 00:56Z(提案側 e4 込み 3/4、e3 後着記録)。build-and-test(workflow 最終)ゲート承認を委任(phase-check-construction.md 実在の報告確認済み)。
+
+---
