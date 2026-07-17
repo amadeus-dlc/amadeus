@@ -56,20 +56,43 @@ OpenCode の既定の権限は全許可です。同梱の `opencode.json.example
 | オンボーディング | `AGENTS.md`(セッション再開導線) |
 | 設定例 | `.opencode/opencode.json.example` — `$schema` + 権限絞り込み(`edit`/`bash`/`webfetch` = `ask`) |
 | セッションスキル | 4 本(`session-cost`・`replay`・`outcomes-pack`・`grilling`)— per-stage runner 32 本は初期スコープ外 |
-| フック | **未対応** — OpenCode のフック相当は JS プラグイン。Issue [#1049](https://github.com/amadeus-dlc/amadeus/issues/1049) で将来対応 |
+| フック | **未配線(8 中 0)** — 工程0 対応表([#1049](https://github.com/amadeus-dlc/amadeus/issues/1049))で Cursor 相当の core hook 8 target を OpenCode の JS プラグイン API へ実測: **配線 0・条件付き 5・未対応 3**。下記 [フック対応表](#フック対応表-1049) を参照 |
 | `promote:self` | 本ハーネスは非対象 |
 
 ## Claude Code との相違点
 
-- **フックなし**: OpenCode にはフレームワークが配線できるシェルコマンド型の
-  フック機構がありません — 拡張サーフェスは JS プラグインです。他ハーネスで
-  フックに乗る監査発行・センサー発火・presence mint はここでは動作しません。
-  Issue [#1049](https://github.com/amadeus-dlc/amadeus/issues/1049) で追跡。
+- **フック未配線**: OpenCode にはシェルコマンド型のフック機構がありません —
+  拡張サーフェスは JS プラグインです。他ハーネスでフックに乗る監査発行・
+  センサー発火・presence mint はここでは**動作しません**。工程0 対応表
+  ([#1049](https://github.com/amadeus-dlc/amadeus/issues/1049))でプラグイン API を
+  実測し、8 target のいずれも配線しませんでした。下記 [フック対応表](#フック対応表-1049) を参照。
 - **`$amadeus --version`** は `amadeus 0.1.2` を報告します(exit 0)。
 - **`$amadeus --doctor`** は advisory のみに劣化します — `.claude` 前提ブロックの
   誤発火と他 worktree の非列挙があり、いずれも正しさには影響しません。
 - **セッションスキルのみ**: 読み取り専用のセッションスキル 4 本を同梱します。
   per-stage runner は初期スコープから除外されています。
+
+## フック対応表 (#1049)
+
+工程0 実測で、Cursor 相当の core hook 8 target を OpenCode のプラグイン API へ
+分類しました(導入済み型定義を verbatim に実測)。**2026-07-17、
+`@opencode-ai/plugin@1.18.3`(依存 `@opencode-ai/sdk@1.18.3`)で測定。**
+
+| Cursor target | OpenCode 状態 | 確定条件 / 根拠 |
+| --- | --- | --- |
+| audit-and-sensors | ⚠ 条件付き | `tool.execute.after` の seam は確定。だが tool 語彙(`ToolIds = Array<string>`, enum 不在)と `args`(`args: any`)が型面未確定 — ライブランタイム実測が必要(別 intent) |
+| runtime-compile | ⚠ 条件付き | 同上(`tool.execute.after`、語彙・args が型面未確定) |
+| session-start | ⚠ 条件付き | `event`(`session.created`)に `source` フィールドがなく、`additionalContext` 注入 seam も OpenCode に不在。副作用のみ配線は不採用(偽対応を作らない) |
+| session-end | ⚠ 条件付き | `event`(`session.deleted`)/ `dispose` は `reason` を運ばず、意味もセッション終了と異なる。副作用のみ配線は不採用 |
+| validate-state | ⚠ 条件付き | `event`(`session.compacted`)は圧縮**後**発火。core hook は**圧縮前**バリデータで時機が逆 |
+| mint(HUMAN_TURN) | ❌ 未対応 | phantom HUMAN_TURN 封鎖のため **fail-closed** 維持: `UserMessage` に machine 注入判別フィールドがなく、AskUserQuestion 応答が `chat.message` を経由するかも未検証。human-presence は現行 delegate 運用を維持 |
+| log-subagent | ❌ 未対応 | subagent 停止 + `agent_type` / `agent_id` を運ぶイベントが無い |
+| stop | ❌ 未対応 | ターン終了ゲートのイベントが無い(`session.idle` はアイドル遷移でありターン境界ではない) |
+
+条件付き 5 行はすべて同一の未確定事実 — OpenCode の tool 語彙と `args` 構造が
+型面で未確定 — に依存し、ライブランタイム実測が必要なため別 intent へ送りました。
+各行の verbatim 型引用を含む完全な根拠は intent record の `mapping-table.md` に
+あります。
 
 ## 再生成
 
