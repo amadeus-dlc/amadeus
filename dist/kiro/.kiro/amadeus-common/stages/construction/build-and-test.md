@@ -26,6 +26,7 @@ sensors:
   - required-sections
   - upstream-coverage
   - type-check
+  - answer-evidence
 scopes:
   - enterprise
   - feature
