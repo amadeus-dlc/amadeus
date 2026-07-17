@@ -50,10 +50,11 @@ const write = (rel: string, content: string): void => {
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "t209-promote-self-"));
-  // Minimal dist fixture covering all three managed dirs.
+  // Minimal dist fixture covering all managed dirs (claude/codex/agents/cursor).
   write("dist/claude/.claude/tools/a.txt", "alpha\n");
   write("dist/codex/.codex/b.txt", "beta\n");
   write("dist/codex/.agents/c.txt", "gamma\n");
+  write("dist/cursor/.cursor/d.txt", "delta\n");
   write("dist/codex/AGENTS.md", "@.agents/rules/amadeus.md\n\n# AI-DLC on Codex CLI\n\ngenerated\n");
   write(".claude/CLAUDE.md", "@.claude/rules/amadeus.md\n\n# Claude onboarding\n");
   write("AGENTS.md", "@.agents/rules/amadeus.md\n\n# Project rules\n");

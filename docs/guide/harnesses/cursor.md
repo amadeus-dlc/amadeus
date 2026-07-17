@@ -50,7 +50,7 @@ the session-resume onboarding a returning session reads.
 | Orchestrator | `.cursor/commands/amadeus.md` (the `/amadeus` command) |
 | Onboarding | `AGENTS.md` (session-resume path) |
 | Hooks | `.cursor/hooks.json.example` wires 8 events through the adapter (see below) |
-| `promote:self` | Not applicable to this harness |
+| `promote:self` | `bun run promote:self` promotes `dist/cursor/.cursor/` → root `.cursor/` (dogfood) |
 
 ## Hook wiring
 
