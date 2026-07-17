@@ -35,8 +35,6 @@ issue-mirror は amadeus-mirror.ts を指し、Intent 名には使わない。In
 ## Runtime State
 - **Revision Count**: 0
 
-- **Parked**: 2026-07-17T23:29:44Z
-- **Parked At Stage**: requirements-analysis
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -97,7 +95,7 @@ Per unit: [TBD]
 - **Current Stage**: requirements-analysis
 - **Next Stage**: application-design
 - **Status**: Running
-- **Last Updated**: 2026-07-17T23:29:44Z
+- **Last Updated**: 2026-07-17T23:48:02Z
 
 ## Session Resume Point
 - **Last Completed Stage**: practices-discovery

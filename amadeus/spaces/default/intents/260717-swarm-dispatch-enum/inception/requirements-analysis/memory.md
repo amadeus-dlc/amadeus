@@ -2,6 +2,7 @@
 > This file is maintained by the orchestrator during stage execution. Add observations at the gate ritual, not by editing here directly.
 
 ## Interpretations
+- 2026-07-17T23:49:03Z — C-13/C-14 probe 成立(codex evidence、agmsg 出典)を record へ verbatim 転記して evidence 正本化(child commit は dangling のため git 到達不能)。C-14 は sandbox unrestricted 条件付き成立として開示欄へ転記し、無条件成立と誤表現しない(P2/C-15 同型)
 - 2026-07-17T23:17:05Z — 既決照合(no-election-for-decided-norms)により真に未決は Q1(opencode/cursor の扱い)のみと判定。C-16/C-18 は constraint-register 自身が design/FD への委任を明記しているため pre-approved 委任として requirements に固定
 - 2026-07-17T23:17:05Z — C-13/C-14 は「質問」でなく live probe のブロッカーとして扱い、blocker-election で leader へルーティング依頼(私は Claude 環境で Codex native probe を自力実施できない)
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
