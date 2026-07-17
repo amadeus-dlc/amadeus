@@ -64,3 +64,21 @@
 **User Input**: 自動承認にして(ユーザー実入力)
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-17T18:11:26Z
+**Event**: HUMAN_TURN
+
+---
+
+## Delegated Approval
+**Timestamp**: 2026-07-17T18:11:31Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: approval-handoff
+**Issuer Space**: default
+**Issuer Intent**: 260717-state-mirror-fixes
+**Issuer Shard**: j5ik2o-mac-studio-lan-0752a98c8152.md
+**Issuer Human Ts**: 2026-07-17T18:11:26Z
+**User Input**: 意図通りです。進んで(ユーザー実入力 — phase boundary 承認)
+
+---
