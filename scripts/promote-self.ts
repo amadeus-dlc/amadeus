@@ -322,7 +322,11 @@ function apply(expected: Map<string, Buffer>, repoRoot: string): void {
 // process exit code instead of exiting so tests can drive check/apply against
 // a fixture repoRoot without spawning (spawned subprocesses are invisible to
 // bun --coverage).
-export function promoteSelfMain(argv: string[], repoRoot: string = REPO_ROOT): number {
+export function promoteSelfMain(
+  argv: string[],
+  repoRoot: string = REPO_ROOT,
+  freshness: (mode: Mode) => void = runPackageFreshness,
+): number {
   if (argv.includes("--help") || argv.includes("-h")) {
     printUsage();
     return 2;
@@ -335,7 +339,7 @@ export function promoteSelfMain(argv: string[], repoRoot: string = REPO_ROOT): n
   const noBuild = argv.includes("--no-build");
 
   if (!noBuild) {
-    runPackageFreshness(mode);
+    freshness(mode);
   }
 
   let expected: Map<string, Buffer>;

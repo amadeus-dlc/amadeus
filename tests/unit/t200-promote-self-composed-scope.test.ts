@@ -33,9 +33,13 @@ import {
   SCOPE_GRID_RE,
   mergeScopeGrid,
   packageFreshnessArgs,
+  promoteSelfMain,
   runPackageFreshness,
   scopeGridInSync,
 } from "../../scripts/promote-self.ts";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const grid = (obj: Record<string, unknown>): Buffer =>
   Buffer.from(`${JSON.stringify(obj, null, 2)}\n`, "utf-8");
@@ -128,5 +132,37 @@ describe("t200 promote-self package freshness harness list", () => {
       calls.push(args);
     });
     expect(calls).toEqual(packageFreshnessArgs("apply"));
+  });
+
+  test("promoteSelfMain without --no-build invokes the freshness seam", () => {
+    const root = mkdtempSync(join(tmpdir(), "t200-freshness-"));
+    const write = (rel: string, content: string): void => {
+      const abs = join(root, rel);
+      mkdirSync(join(abs, ".."), { recursive: true });
+      writeFileSync(abs, content);
+    };
+    write("dist/claude/.claude/tools/a.txt", "alpha\n");
+    write("dist/codex/.codex/b.txt", "beta\n");
+    write("dist/codex/.agents/c.txt", "gamma\n");
+    write("dist/cursor/.cursor/d.txt", "delta\n");
+    write("dist/codex/AGENTS.md", "# AI-DLC on Codex CLI\n\ngenerated\n");
+    write(".claude/CLAUDE.md", "# Claude onboarding\n");
+    write("AGENTS.md", "# Project rules\n");
+
+    const seen: string[] = [];
+    expect(
+      promoteSelfMain(["--apply"], root, (mode) => {
+        seen.push(mode);
+      }),
+    ).toBe(0);
+    expect(seen).toEqual(["apply"]);
+
+    seen.length = 0;
+    expect(
+      promoteSelfMain([], root, (mode) => {
+        seen.push(mode);
+      }),
+    ).toBe(0);
+    expect(seen).toEqual(["check"]);
   });
 });
