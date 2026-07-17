@@ -2694,9 +2694,9 @@ function handlePracticesEvent(args: string[]): void {
 // and applies them deterministically to the relocated method files the
 // resolver reads (amadeus/spaces/<space>/memory/, neutral names):
 //
-//   memory/team.md ........... replaceSection × 5 (Way of Working,
-//                              Walking Skeleton, Testing Posture,
-//                              Deployment, Code Style)
+//   memory/team.md ........... replace or append 5 canonical sections
+//                              (Way of Working, Walking Skeleton,
+//                              Testing Posture, Deployment, Code Style)
 //   memory/project.md ........ appendUnderHeading × 2 (Mandated,
 //                              Forbidden), each rule stamped
 //                              with `(affirmed YYYY-MM-DD)`
@@ -2772,6 +2772,25 @@ export function parseRuleSectionsOrFail(
     );
   }
   return { mandated, forbidden };
+}
+
+function replaceOrAppendSection(
+  markdown: string,
+  heading: string,
+  sectionContent: string
+): string {
+  try {
+    return replaceSection(markdown, heading, sectionContent);
+  } catch (e) {
+    if (errorMessage(e) !== `replaceSection: heading not found: ${heading}`) {
+      throw e;
+    }
+  }
+
+  let separator = "\n\n";
+  if (markdown.endsWith("\n\n")) separator = "";
+  else if (markdown.endsWith("\n")) separator = "\n";
+  return `${markdown}${separator}${heading}\n${sectionContent}`;
 }
 
 export function handlePracticesPromote(args: string[]): void {
@@ -2851,9 +2870,9 @@ export function handlePracticesPromote(args: string[]): void {
     return;
   }
 
-  // Step 3a: Build new team.md by section-replacing each of the five
-  // sections. team.md uses Title Case headings; the draft mirrors that
-  // shape.
+  // Step 3a: Build new team.md by replacing existing canonical sections and
+  // appending missing ones in canonical order. team.md uses Title Case
+  // headings; the draft mirrors that shape.
   const TEAM_SECTIONS = [
     "## Way of Working",
     "## Walking Skeleton",
@@ -2870,14 +2889,13 @@ export function handlePracticesPromote(args: string[]): void {
       continue;
     }
     try {
-      newTeamMd = replaceSection(newTeamMd, heading, draftSection);
-      sectionsWritten.push(heading.slice(3));
+      newTeamMd = replaceOrAppendSection(newTeamMd, heading, draftSection);
     } catch (e) {
-      fail(
-        `replaceSection failed on team.md for "${heading}": ${errorMessage(e)}`
-      );
+      const message = errorMessage(e);
+      fail(`replaceSection failed on team.md for "${heading}": ${message}`);
       return;
     }
+    sectionsWritten.push(heading.slice(3));
   }
 
   // Step 3b: parse + enforce the section-keyword contract atomically (Issue #1013).

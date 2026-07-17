@@ -129,6 +129,21 @@ OLD_DEPLOYMENT_TEXT
 OLD_CODE_STYLE_TEXT
 `;
 
+const TEAM_MD_MISSING_CANONICAL_SECTIONS = `# Team-Level Rules
+
+## First Principles
+
+KEEP_FIRST_PRINCIPLES
+
+## Way of Working
+
+OLD_WAY_OF_WORKING_TEXT
+
+## Corrections
+
+KEEP_CORRECTIONS
+`;
+
 const PROJECT_MD_LIVE = `# Project-Level Rules
 
 ## Decided
@@ -375,6 +390,70 @@ describe("t75 practices-promote — happy path (migrated from t75-practices-prom
   });
 });
 
+describe("t75 practices-promote — first promotion into a partial team.md", () => {
+  test("appends missing canonical sections at the end in canonical order", () => {
+    const fx = makeFixture();
+    writeFileSync(
+      fx.teamMd,
+      TEAM_MD_MISSING_CANONICAL_SECTIONS,
+      "utf-8",
+    );
+
+    const r = runPromote(fx);
+
+    expect(r.status).toBe(0);
+    const teamContent = readFileSync(fx.teamMd, "utf-8");
+    expect(teamContent).toContain("KEEP_FIRST_PRINCIPLES");
+    expect(teamContent).toContain("KEEP_CORRECTIONS");
+    expect(teamContent).toContain("NEW_WAY_OF_WORKING_TEXT");
+    expect(teamContent).not.toContain("OLD_WAY_OF_WORKING_TEXT");
+    expect(teamContent).toContain("NEW_WALKING_TEXT");
+    expect(teamContent).toContain("NEW_TESTING_TEXT");
+    expect(teamContent).toContain("NEW_DEPLOYMENT_TEXT");
+    expect(teamContent).toContain("NEW_CODE_STYLE_TEXT");
+
+    const appendedHeadings = [
+      "## Walking Skeleton",
+      "## Testing Posture",
+      "## Deployment",
+      "## Code Style",
+    ];
+    let previous = teamContent.indexOf("## Corrections");
+    for (const heading of appendedHeadings) {
+      const current = teamContent.indexOf(heading);
+      expect(current).toBeGreaterThan(previous);
+      previous = current;
+    }
+  });
+
+  test("re-running after the first promotion does not duplicate canonical headings", () => {
+    const fx = makeFixture();
+    writeFileSync(
+      fx.teamMd,
+      TEAM_MD_MISSING_CANONICAL_SECTIONS,
+      "utf-8",
+    );
+
+    expect(runPromote(fx).status).toBe(0);
+    const firstPromotion = readFileSync(fx.teamMd, "utf-8");
+    expect(runPromote(fx).status).toBe(0);
+    const secondPromotion = readFileSync(fx.teamMd, "utf-8");
+
+    expect(secondPromotion).toBe(firstPromotion);
+    for (const heading of [
+      "## Way of Working",
+      "## Walking Skeleton",
+      "## Testing Posture",
+      "## Deployment",
+      "## Code Style",
+    ]) {
+      expect(
+        secondPromotion.split("\n").filter((line) => line === heading),
+      ).toHaveLength(1);
+    }
+  });
+});
+
 // ============================================================
 // Case B — missing draft fails closed (t75:178-199, .sh tests 16-19)
 // ============================================================
@@ -427,6 +506,40 @@ describe("t75 practices-promote — missing target fails closed (atomicity)", ()
     expect(readFileSync(fx.teamMd, "utf-8")).not.toContain(
       "NEW_WAY_OF_WORKING_TEXT",
     );
+  });
+});
+
+describe("t75 practices-promote — validation failure is atomic", () => {
+  test("invalid discovered rules leave both targets unchanged after building team.md", () => {
+    const fx = makeFixture();
+    writeFileSync(
+      fx.teamMd,
+      TEAM_MD_MISSING_CANONICAL_SECTIONS,
+      "utf-8",
+    );
+    writeFileSync(
+      fx.discoveredRulesPath,
+      `# Discovered Rules
+
+## Mandated
+
+This line is prose, not a rule
+
+## Forbidden
+
+NEVER skip CI gates
+`,
+      "utf-8",
+    );
+    const teamBefore = readFileSync(fx.teamMd, "utf-8");
+    const projectBefore = readFileSync(fx.projectMd, "utf-8");
+
+    const r = runPromote(fx);
+
+    expect(r.status).not.toBe(0);
+    expect(r.out).toContain("section-keyword contract");
+    expect(readFileSync(fx.teamMd, "utf-8")).toBe(teamBefore);
+    expect(readFileSync(fx.projectMd, "utf-8")).toBe(projectBefore);
   });
 });
 
