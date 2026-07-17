@@ -471,3 +471,11 @@
 **Message**: intent 260717-swarm-dispatch-enum(AMADEUS_USE_SWARMの三値enum化)のconductorとして、reverse-engineeringとpractices-discoveryを完了し、requirements.mdを起草済みです。次はQ1選挙(opencode/cursorの扱い)とC-13隔離書き込みprobeの裁定を待って要件を確定します。
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-17T23:29:44Z
+**Event**: WORKFLOW_PARKED
+**Stage**: requirements-analysis
+**Timestamp**: 2026-07-17T23:29:44Z
+
+---
