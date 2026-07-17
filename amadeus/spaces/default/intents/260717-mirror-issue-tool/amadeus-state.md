@@ -4,6 +4,7 @@
 - **Project**: amadeus-mirror ツール: intent-first 起票運用(team.md cid:intent-first-mirror-issue、PR #1159)のミラー Issue を作成・同期・クローズする小さな CLI(create / sync / close の3サブコマンド、状態は amadeus-runtime summary --json と intents.json から決定的に読む、同期は record → Issue の一方向)。この intent は ideation まで実行して park する(試運転)
 - **Project Type**: Brownfield
 - **Scope**: amadeus
+- **Mirror Issue**: #1161
 - **Start Date**: 2026-07-17T12:18:50Z
 - **State Version**: 7
 - **Active Agent**: amadeus-quality-agent
