@@ -62,6 +62,18 @@ describe("evaluateAnswerEvidence — R1 failing checks (fail reasons -> findings
 });
 
 describe("evaluateAnswerEvidence — R2 passing checks (pass reasons -> zero findings)", () => {
+  test("#1127 trigger: waiting-window bare-[Answer] instruction header passes (zero findings)", () => {
+    // The Issue #1127 waiting-window shape (bare-token instruction line in the
+    // evidence header + unparseable approval placeholder + blank real answers)
+    // must read as a passing check now that ANSWER_TAG_RE requires the colon —
+    // pre-fix it surfaced as a fail:unparseable-timestamp advisory false-red.
+    const body =
+      "# RA — 明確化質問\n\n<!-- E-OC1 判定証跡:\nleader 承認: (受領後に追記)\n" +
+      "[Answer] 記入は leader 承認受領後にのみ行う。 -->\n\n## Q1\n\n[Answer]:\n";
+    const r = evaluateAnswerEvidence(questionsFile(body));
+    expect(r.pass).toBe(true);
+  });
+
   test("empty / N/A answers pass (answer-blank)", () => {
     const r = evaluateAnswerEvidence(questionsFile(`${HEADER}[Answer]: N/A\n[Answer]:\n`));
     expect(r).toEqual({ pass: true, findings_count: 0, reason: "answer-blank", skipped: null });

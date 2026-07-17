@@ -64,6 +64,30 @@ describe("checkQuestionsEvidence (in-process, all 6 reasons)", () => {
     expect(checkQuestionsEvidence(questionsFile(body))).toEqual({ kind: "fail", reason: "no-evidence" });
   });
 
+  test("#1127 trigger: a waiting-window file with a bare-[Answer] instruction line passes (answer-blank)", () => {
+    // The authoritative waiting-window shape from Issue #1127: an E-OC1
+    // evidence-header instruction line carrying a bare [Answer] token (no
+    // colon, inside an HTML comment), an approval placeholder whose "承認"
+    // line has no parseable ISO timestamp, and only blank real answers.
+    // Pre-fix, ANSWER_TAG_RE's optional colon collected the instruction line
+    // as the sole filled answer and the file fell to fail:unparseable-timestamp
+    // (the advisory false-red this regression pins closed).
+    const body =
+      "# RA — 明確化質問\n\n<!-- E-OC1 判定証跡:\n判定: 全4問 選挙不要(既決導出)。\n" +
+      "leader 承認: (受領後に追記)\n[Answer] 記入は leader 承認受領後にのみ行う。 -->\n\n" +
+      "## Q1\n\n[Answer]:\n\n## Q2\n\n[Answer]:\n\n## Q3\n\n[Answer]:\n\n## Q4\n\n[Answer]:\n";
+    expect(checkQuestionsEvidence(questionsFile(body))).toEqual({ kind: "pass", reason: "answer-blank" });
+  });
+
+  test("#1127 guard: a colon-less bare [Answer] prose mention is never collected as an answer", () => {
+    // A blockquote instruction outside any comment (the measured corpus
+    // counter-example that ruled out comment-scoped exclusion): with only a
+    // bare-token prose line and no [Answer]: tags at all, the file reads as
+    // having no answer slots.
+    const body = `${HEADER}> 既決照合: [Answer] は選挙裁定の受領後にのみ記入する。\n\n## 質問\n\n(なし)\n`;
+    expect(checkQuestionsEvidence(questionsFile(body))).toEqual({ kind: "pass", reason: "no-answer-tag" });
+  });
+
   test("filled answer with an approval line whose timestamp does not parse fails (unparseable-timestamp)", () => {
     const body = `${HEADER}leader 承認 いつか\n\n[Answer]: A — 採用\n`;
     expect(checkQuestionsEvidence(questionsFile(body))).toEqual({ kind: "fail", reason: "unparseable-timestamp" });

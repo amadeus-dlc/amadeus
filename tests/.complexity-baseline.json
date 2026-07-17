@@ -144,7 +144,7 @@
       "path": "packages/framework/core/tools/amadeus-state.ts",
       "name": "handleDelegateApproval",
       "ordinal": 0,
-      "ccn": 26
+      "ccn": 27
     },
     {
       "path": "packages/framework/core/tools/amadeus-state.ts",
@@ -162,7 +162,7 @@
       "path": "packages/framework/core/tools/amadeus-state.ts",
       "name": "main",
       "ordinal": 0,
-      "ccn": 31
+      "ccn": 33
     },
     {
       "path": "packages/framework/core/tools/amadeus-swarm.ts",

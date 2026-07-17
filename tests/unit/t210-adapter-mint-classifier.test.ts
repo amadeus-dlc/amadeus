@@ -4,7 +4,7 @@
 // their UserPromptSubmit payload BEFORE minting a HUMAN_TURN (issue #811).
 //
 // THE DEFECT. #755 (PR #766) added machine-injected-turn suppression to the CORE
-// hook amadeus-mint-presence.ts (isMachineInjectedTurnText, a 4-marker catalog +
+// hook amadeus-mint-presence.ts (isMachineInjectedTurnText, a 5-marker catalog +
 // leading-256-byte scan). But the three non-claude adapters mint inline via
 // appendAuditEntry("HUMAN_TURN", …) and NEVER route their prompt through the
 // classifier — so an agmsg-style machine-injected turn (teammate-message /
@@ -93,11 +93,13 @@ const TASK_NOTIFICATION_FORM = `${MACHINE_INJECTED_TURN_MARKERS[0]}\ntask-id: ab
 const TEAMMATE_TAG_FORM = `${MACHINE_INJECTED_TURN_MARKERS[1]} from="researcher">assign task 1</teammate-message>`;
 const TEAMMATE_PREAMBLE_FORM = `${MACHINE_INJECTED_TURN_MARKERS[2]}\n${MACHINE_INJECTED_TURN_MARKERS[1]} from="researcher">start on task #1</teammate-message>`;
 const SYSTEM_NOTIFICATION_FORM = `${MACHINE_INJECTED_TURN_MARKERS[3]}\nAn event fired.\n<task-notification>event: build-done</task-notification>`;
+const TEAM_MSG_FORM = `${MACHINE_INJECTED_TURN_MARKERS[4]}from:e3 via:herdr machine]\nack: received your dispatch`;
 const CATALOG_FORMS: ReadonlyArray<readonly [string, string]> = [
   ["task-notification", TASK_NOTIFICATION_FORM],
   ["teammate-message tag", TEAMMATE_TAG_FORM],
   ["teammate-message preamble", TEAMMATE_PREAMBLE_FORM],
   ["system-notification preamble", SYSTEM_NOTIFICATION_FORM],
+  ["team-msg herdr header", TEAM_MSG_FORM],
 ];
 
 const PINNED_CLONE_ID = "testcloneid210";
