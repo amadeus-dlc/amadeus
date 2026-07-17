@@ -1,12 +1,14 @@
 // covers: subcommand:amadeus-state:practices-promote
 //
 // CLI-contract port of tests/integration/t75-practices-promote.sh (TAP plan 24),
-// mechanism = cli. Equal-or-stronger migration: every .sh assertion that
-// shelled out to `bun amadeus-state.ts practices-promote ...` is preserved by
+// mechanism = cli. The historical CLI assertions remain except for the unsafe
+// whole-section replacement expectations, which the managed-block ownership
+// contract intentionally supersedes. The test shells out to
+// `bun amadeus-state.ts practices-promote ...` by
 // SPAWNING the real CLI via node:child_process spawnSync (BUN + the tool
 // .ts path), asserting on res.status / res.stdout (the JSON envelope) / the
 // combined stdout+stderr (mirrors the .sh's 2>&1) AND the on-disk effects the
-// tool produces (amadeus-team.md replaceSection x5, amadeus-project.md
+// tool produces (amadeus-team.md managed-block upserts, amadeus-project.md
 // appendUnderHeading x2 with `(affirmed YYYY-MM-DD)` stamps, the audit.md
 // PRACTICES_AFFIRMED / PRACTICES_OVERRIDE rows). The contract under test is
 // the PROCESS boundary plus those file effects, so it stays a spawn — an
@@ -33,9 +35,10 @@
 //   Case A (happy path) — .sh tests 1-15:
 //     - exit 0 (assert_eq EXIT_A 0)                    -> A: r.status === 0.
 //     - stdout JSON '"emitted":"PRACTICES_AFFIRMED"'   -> A: r.stdout contains.
-//     - team.md Way of Working / Testing / Code Style replaced (3 grep)
+//     - team.md Way of Working / Testing / Code Style promoted (3 grep)
 //                                                       -> A: file contains all 3.
-//     - team.md OLD Way/Code Style removed (2 not_grep) -> A: file lacks both.
+//     - team.md unmanaged Way/Code Style retained       -> A: file keeps both
+//       while the promoted text lands inside marker-owned blocks.
 //     - project.md Mandated + Forbidden rule w/ date    -> A: file contains both
 //       stamps (2 grep, "(affirmed $TODAY)")              with the literal TODAY.
 //     - audit file exists                                -> A: existsSync.
@@ -57,13 +60,13 @@
 //     - error "amadeus-project.md not found"               -> C: r.out contains.
 //     - team.md NOT written (no NEW content)             -> C: file lacks NEW.
 //   Case D (partial draft) — .sh tests 22-23 (counts as 4 .sh asserts):
-//     - Way of Working / Testing replaced                -> D: file contains both.
+//     - Way of Working / Testing promoted                -> D: file contains both.
 //     - Walking Skeleton / Deployment untouched          -> D: file contains both OLD.
-//   Case E (idempotency) — .sh test 24:
+//   Case E (managed-block idempotency) — .sh test 24:
 //     - team.md identical across two runs                -> E: byte-equal reads.
 //
-// 24 .sh asserts -> 24+ expect()-bearing checks here, grouped into 5
-// describe-blocks mirroring the .sh's Cases A-E.
+// The original 24-assert shape is retained where compatible, with managed-block
+// preservation, update, and malformed-marker regressions added below.
 
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -177,6 +180,9 @@ NEW_DEPLOYMENT_TEXT
 
 NEW_CODE_STYLE_TEXT
 `;
+
+const MANAGED_BEGIN = "<!-- amadeus:practices-promote:BEGIN -->";
+const MANAGED_END = "<!-- amadeus:practices-promote:END -->";
 
 const DISCOVERED_RULES_DRAFT = `# Discovered Rules
 
@@ -341,6 +347,10 @@ function todayUtc(): string {
 describe("t75 practices-promote — happy path (migrated from t75-practices-promote.sh, plan 24)", () => {
   test("A: success path emits PRACTICES_AFFIRMED, writes both files, records audit fields", () => {
     const fx = makeFixture();
+    const teamBefore = readFileSync(fx.teamMd, "utf-8");
+    const wayStart = teamBefore.indexOf("## Way of Working");
+    const wayEnd = teamBefore.indexOf("## Walking Skeleton");
+    const unmanagedWayBytes = teamBefore.slice(wayStart, wayEnd);
     const r = runPromote(fx);
 
     // .sh test 1: exit 0 on success.
@@ -349,14 +359,22 @@ describe("t75 practices-promote — happy path (migrated from t75-practices-prom
     // .sh test 2: stdout JSON reports PRACTICES_AFFIRMED.
     expect(r.stdout).toContain('"emitted":"PRACTICES_AFFIRMED"');
 
-    // .sh test 3: amadeus-team.md got new content for the asserted sections.
+    // .sh test 3: amadeus-team.md got new managed content for the asserted
+    // sections without replacing the pre-existing unmanaged content.
     const teamContent = readFileSync(fx.teamMd, "utf-8");
     expect(teamContent).toContain("NEW_WAY_OF_WORKING_TEXT");
     expect(teamContent).toContain("NEW_TESTING_TEXT");
     expect(teamContent).toContain("NEW_CODE_STYLE_TEXT");
-    // ...and the OLD content for those sections is gone.
-    expect(teamContent).not.toContain("OLD_WAY_OF_WORKING_TEXT");
-    expect(teamContent).not.toContain("OLD_CODE_STYLE_TEXT");
+    expect(teamContent).toContain("OLD_WAY_OF_WORKING_TEXT");
+    expect(teamContent).toContain("OLD_CODE_STYLE_TEXT");
+    expect(
+      teamContent.slice(wayStart, wayStart + unmanagedWayBytes.length),
+    ).toBe(unmanagedWayBytes);
+    expect(teamContent).toContain(
+      `${MANAGED_BEGIN}\n\nNEW_WAY_OF_WORKING_TEXT\n\n${MANAGED_END}`,
+    );
+    expect(teamContent.split(MANAGED_BEGIN)).toHaveLength(6);
+    expect(teamContent.split(MANAGED_END)).toHaveLength(6);
 
     // .sh test 4: amadeus-project.md got the rules with date stamps.
     const today = todayUtc();
@@ -406,7 +424,7 @@ describe("t75 practices-promote — first promotion into a partial team.md", () 
     expect(teamContent).toContain("KEEP_FIRST_PRINCIPLES");
     expect(teamContent).toContain("KEEP_CORRECTIONS");
     expect(teamContent).toContain("NEW_WAY_OF_WORKING_TEXT");
-    expect(teamContent).not.toContain("OLD_WAY_OF_WORKING_TEXT");
+    expect(teamContent).toContain("OLD_WAY_OF_WORKING_TEXT");
     expect(teamContent).toContain("NEW_WALKING_TEXT");
     expect(teamContent).toContain("NEW_TESTING_TEXT");
     expect(teamContent).toContain("NEW_DEPLOYMENT_TEXT");
@@ -451,6 +469,40 @@ describe("t75 practices-promote — first promotion into a partial team.md", () 
         secondPromotion.split("\n").filter((line) => line === heading),
       ).toHaveLength(1);
     }
+  });
+});
+
+describe("t75 practices-promote — managed block update", () => {
+  test("re-running replaces only the managed block and byte-preserves its surroundings", () => {
+    const fx = makeFixture();
+    expect(runPromote(fx).status).toBe(0);
+    const before = readFileSync(fx.teamMd, "utf-8");
+    const beginBefore = before.indexOf(MANAGED_BEGIN);
+    const endBefore = before.indexOf(MANAGED_END, beginBefore);
+    const unmanagedPrefix = before.slice(0, beginBefore);
+    const unmanagedSuffix = before.slice(endBefore + MANAGED_END.length);
+
+    writeFileSync(
+      fx.teamPracticesPath,
+      `# Team Practices Draft
+
+## Way of Working
+
+UPDATED_WAY_OF_WORKING_TEXT
+`,
+      "utf-8",
+    );
+
+    expect(runPromote(fx).status).toBe(0);
+    const after = readFileSync(fx.teamMd, "utf-8");
+    const beginAfter = after.indexOf(MANAGED_BEGIN);
+    const endAfter = after.indexOf(MANAGED_END, beginAfter);
+
+    expect(after.slice(0, beginAfter)).toBe(unmanagedPrefix);
+    expect(after.slice(endAfter + MANAGED_END.length)).toBe(unmanagedSuffix);
+    expect(after).toContain("UPDATED_WAY_OF_WORKING_TEXT");
+    expect(after).not.toContain("NEW_WAY_OF_WORKING_TEXT");
+    expect(after).toContain("OLD_WAY_OF_WORKING_TEXT");
   });
 });
 
@@ -543,6 +595,75 @@ NEVER skip CI gates
   });
 });
 
+describe("t75 practices-promote — malformed managed markers", () => {
+  test("a one-sided marker in a draft-absent section rejects both target writes", () => {
+    const fx = makeFixture();
+    writeFileSync(
+      fx.teamMd,
+      TEAM_MD_LIVE.replace(
+        "OLD_DEPLOYMENT_TEXT\n\n## Code Style",
+        `OLD_DEPLOYMENT_TEXT\n\n${MANAGED_BEGIN}\n\n## Code Style`,
+      ),
+      "utf-8",
+    );
+    writeFileSync(
+      fx.teamPracticesPath,
+      `# Team Practices Draft
+
+## Way of Working
+
+PARTIAL_NEW_WAY_OF_WORKING
+`,
+      "utf-8",
+    );
+    const teamBefore = readFileSync(fx.teamMd, "utf-8");
+    const projectBefore = readFileSync(fx.projectMd, "utf-8");
+
+    const r = runPromote(fx);
+
+    expect(r.status).not.toBe(0);
+    expect(r.out).toContain("managed markers malformed");
+    expect(readFileSync(fx.teamMd, "utf-8")).toBe(teamBefore);
+    expect(readFileSync(fx.projectMd, "utf-8")).toBe(projectBefore);
+  });
+
+  test.each([
+    [
+      "reverse-ordered markers",
+      TEAM_MD_LIVE.replace(
+        "OLD_WAY_OF_WORKING_TEXT",
+        `${MANAGED_END}\n\nOLD_WAY_OF_WORKING_TEXT\n\n${MANAGED_BEGIN}`,
+      ),
+    ],
+    [
+      "duplicate marker blocks",
+      TEAM_MD_LIVE.replace(
+        "OLD_WAY_OF_WORKING_TEXT",
+        `${MANAGED_BEGIN}\nFIRST\n${MANAGED_END}\n\n${MANAGED_BEGIN}\nSECOND\n${MANAGED_END}`,
+      ),
+    ],
+    [
+      "markers crossing a section boundary",
+      TEAM_MD_LIVE.replace(
+        "OLD_WAY_OF_WORKING_TEXT\n\n## Walking Skeleton\n\nOLD_WALKING_TEXT",
+        `OLD_WAY_OF_WORKING_TEXT\n\n${MANAGED_BEGIN}\n\n## Walking Skeleton\n\n${MANAGED_END}\n\nOLD_WALKING_TEXT`,
+      ),
+    ],
+  ])("%s reject both target writes", (_caseName, malformedTeamMd) => {
+    const fx = makeFixture();
+    writeFileSync(fx.teamMd, malformedTeamMd, "utf-8");
+    const teamBefore = readFileSync(fx.teamMd, "utf-8");
+    const projectBefore = readFileSync(fx.projectMd, "utf-8");
+
+    const r = runPromote(fx);
+
+    expect(r.status).not.toBe(0);
+    expect(r.out).toContain("managed markers malformed");
+    expect(readFileSync(fx.teamMd, "utf-8")).toBe(teamBefore);
+    expect(readFileSync(fx.projectMd, "utf-8")).toBe(projectBefore);
+  });
+});
+
 // ============================================================
 // Case D — partial draft leaves other sections alone (t75:216-237, .sh 22-23)
 // ============================================================
@@ -572,17 +693,23 @@ PARTIAL_NEW_TESTING
     // and never checked the exit; we pin a clean exit before asserting effects.
 
     const teamContent = readFileSync(fx.teamMd, "utf-8");
-    // .sh test 22: the two present sections replaced.
+    // .sh test 22: the two present sections were promoted into managed blocks.
     expect(teamContent).toContain("PARTIAL_NEW_WAY_OF_WORKING");
     expect(teamContent).toContain("PARTIAL_NEW_TESTING");
     // .sh test 23: sections absent from the draft keep their old content.
     expect(teamContent).toContain("OLD_WALKING_TEXT");
     expect(teamContent).toContain("OLD_DEPLOYMENT_TEXT");
+    expect(teamContent).toContain(
+      "## Walking Skeleton\n\nOLD_WALKING_TEXT\n\n## Testing Posture",
+    );
+    expect(teamContent).toContain(
+      "## Deployment\n\nOLD_DEPLOYMENT_TEXT\n\n## Code Style",
+    );
   });
 });
 
 // ============================================================
-// Case E — idempotency of replaceSection on team.md (t75:239-252, .sh test 24)
+// Case E — idempotency of managed blocks on team.md (t75:239-252, .sh test 24)
 // ============================================================
 
 describe("t75 practices-promote — idempotency on team.md", () => {
