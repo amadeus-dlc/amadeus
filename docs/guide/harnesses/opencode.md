@@ -55,14 +55,14 @@ the session-resume onboarding a returning session reads.
 | Onboarding | `AGENTS.md` (session-resume path) |
 | Config example | `.opencode/opencode.json.example` — `$schema` + permission narrowing (`edit`/`bash`/`webfetch` = `ask`) |
 | Session skills | 4 (`session-cost`, `replay`, `outcomes-pack`, `grilling`) — the 32 per-stage runners are out of initial scope |
-| Hooks | **Not wired (0 of 8)** — the 工程0 mapping ([#1049](https://github.com/amadeus-dlc/amadeus/issues/1049)) measured every Cursor-parity core-hook target against OpenCode's JS plugin API: **0 wired · 5 conditional · 3 unsupported**. See [Hook mapping](#hook-mapping-1049) below |
+| Hooks | **Not wired (0 of 8)** — the step-0 mapping ([#1049](https://github.com/amadeus-dlc/amadeus/issues/1049)) measured every Cursor-parity core-hook target against OpenCode's JS plugin API: **0 wired · 5 conditional · 3 unsupported**. See [Hook mapping](#hook-mapping-1049) below |
 | `promote:self` | Not applicable to this harness |
 
 ## Harness differences vs Claude Code
 
 - **No hooks wired**: OpenCode has no shell-command hook mechanism — its
   extension surface is JS plugins. Audit emission, sensor firing, and presence
-  minting that ride hooks on other harnesses are **not active** here. The 工程0
+  minting that ride hooks on other harnesses are **not active** here. The step-0
   mapping ([#1049](https://github.com/amadeus-dlc/amadeus/issues/1049)) measured
   the plugin API and wired none of the eight targets; see [Hook mapping](#hook-mapping-1049).
 - **`$amadeus --version`** reports `amadeus 0.1.2` (exit 0).
@@ -74,7 +74,7 @@ the session-resume onboarding a returning session reads.
 
 ## Hook mapping (#1049)
 
-The 工程0 measurement classified each of the eight Cursor-parity core-hook
+The step-0 measurement classified each of the eight Cursor-parity core-hook
 targets against OpenCode's plugin API by reading the installed type
 definitions verbatim. **Measured 2026-07-17 against `@opencode-ai/plugin@1.18.3`
 (and its `@opencode-ai/sdk@1.18.3` dependency).**
