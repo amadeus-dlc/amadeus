@@ -6852,3 +6852,92 @@
 **Error**: Unknown --result "answered". report commits forward transitions only; accepted outcomes: approved, completed, complete, done.
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-17T16:48:20Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T16:48:35Z
+**Event**: HUMAN_TURN
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-17T16:48:53Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --user-input Resume
+**Error**: report requires --result <outcome>. Accepted: approved, completed, complete, done (the verdict for the stage just acted on).
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T16:49:07Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T16:49:24Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T16:50:54Z
+**Event**: HUMAN_TURN
+
+---
+
+## Session End
+**Timestamp**: 2026-07-17T16:52:40Z
+**Event**: SESSION_ENDED
+**Reason**: inferred — Codex has no SessionEnd event (D-4); reconciled at next SessionStart. Prior session 019f70f9-0866-7de3-b3b4-15e7641d5c1a last seen 2026-07-17T16:46:42.306Z.
+
+---
+
+## Session Resume
+**Timestamp**: 2026-07-17T16:52:40Z
+**Event**: SESSION_RESUMED
+**Source**: resume
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T16:52:40Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T16:53:06Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T16:53:39Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T16:53:57Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T16:56:02Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T17:06:46Z
+**Event**: HUMAN_TURN
+
+---

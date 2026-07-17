@@ -7,7 +7,7 @@
 - **Mirror Issue**: #1161
 - **Start Date**: 2026-07-17T12:18:50Z
 - **State Version**: 7
-- **Active Agent**: amadeus-quality-agent
+- **Active Agent**: amadeus-architect-agent
 - **Worktree Path**:
 - **Bolt Refs**: amadeus-mirror-cli
 - **Practices Affirmed Timestamp**:
@@ -27,7 +27,7 @@
 ## Execution Plan Summary
 - **Total Stages**: 18
 - **Completed**: 18
-- **In Progress**: none
+- **In Progress**: nfr-requirements
 
 ## Runtime State
 - **Revision Count**: 0
@@ -72,7 +72,7 @@
 ### CONSTRUCTION PHASE
 Per unit: [TBD]
 - [x] functional-design — EXECUTE
-- [x] nfr-requirements — EXECUTE
+- [-] nfr-requirements — EXECUTE
 - [x] nfr-design — EXECUTE
 - [ ] infrastructure-design — SKIP
 - [x] code-generation — EXECUTE
@@ -93,7 +93,7 @@ Per unit: [TBD]
 - **Current Stage**: build-and-test
 - **Next Stage**: none
 - **Status**: Completed
-- **Last Updated**: 2026-07-17T16:14:55Z
+- **Last Updated**: 2026-07-17T16:54:19Z
 
 ## Session Resume Point
 - **Last Completed Stage**: build-and-test
