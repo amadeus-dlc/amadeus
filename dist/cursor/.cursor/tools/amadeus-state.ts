@@ -2858,21 +2858,16 @@ function upsertManagedPracticesSection(
   }
 
   const body = markdown.slice(range.bodyStart, range.bodyEnd);
-  const beginCount = body.split(PRACTICES_MANAGED_BEGIN).length - 1;
-  const endCount = body.split(PRACTICES_MANAGED_END).length - 1;
-  if (beginCount === 0 && endCount === 0) {
+  if (!body.includes(PRACTICES_MANAGED_BEGIN)) {
     const before = markdown.slice(0, range.bodyEnd);
     const after = markdown.slice(range.bodyEnd);
     const afterBlock = after === "" ? "\n" : "\n\n";
     return `${before}${appendSeparator(before)}${block}${afterBlock}${after}`;
   }
 
+  // validateManagedPracticesMarkers() established exactly one ordered pair.
   const begin = body.indexOf(PRACTICES_MANAGED_BEGIN);
   const end = body.indexOf(PRACTICES_MANAGED_END);
-  if (beginCount !== 1 || endCount !== 1 || begin > end) {
-    throw new Error(`managed markers malformed for "${heading}"`);
-  }
-
   const blockStart = range.bodyStart + begin;
   const blockEnd = range.bodyStart + end + PRACTICES_MANAGED_END.length;
   return `${markdown.slice(0, blockStart)}${block}${markdown.slice(blockEnd)}`;
@@ -2971,17 +2966,7 @@ export function handlePracticesPromote(args: string[]): void {
       // Useful for partial re-runs that only change one practice area.
       continue;
     }
-    try {
-      newTeamMd = upsertManagedPracticesSection(
-        newTeamMd,
-        heading,
-        draftSection
-      );
-    } catch (e) {
-      const message = errorMessage(e);
-      fail(`managed section upsert failed on team.md for "${heading}": ${message}`);
-      return;
-    }
+    newTeamMd = upsertManagedPracticesSection(newTeamMd, heading, draftSection);
     sectionsWritten.push(heading.slice(3));
   }
   validateManagedPracticesMarkers(
