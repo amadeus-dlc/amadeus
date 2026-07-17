@@ -328,17 +328,20 @@ export function resolveProjectDirFromHook(importMetaUrl: string): string {
 // by every classifier (the mint hook and the Stop hook's tier-3 conversational
 // carve-out) so the recognised set can never drift between them.
 //
-// The four live-observed forms (measured 2026-07-10, #755):
+// The live-observed forms (measured 2026-07-10, #755; team-msg added 2026-07-17, #1142):
 //   "<task-notification>"                       — agmsg Monitor task-notification
 //   "<teammate-message"                         — agmsg/SendMessage inbox delivery
 //                                                 (tag opener; attributes follow)
 //   "Another Claude session sent a message:"     — teammate-message preamble line
 //   "[SYSTEM NOTIFICATION - NOT USER INPUT]"     — Monitor-event preamble line
+//   "[team-msg "                                 — herdr team-msg send header
+//                                                 ("[team-msg from:<role> via:herdr machine]")
 export const MACHINE_INJECTED_TURN_MARKERS: readonly string[] = [
   "<task-notification>",
   "<teammate-message",
   "Another Claude session sent a message:",
   "[SYSTEM NOTIFICATION - NOT USER INPUT]",
+  "[team-msg ",
 ];
 
 // True when `text` opens as a machine-injected turn: any catalog marker whose

@@ -56,11 +56,15 @@ const TASK_NOTIFICATION_FORM = `${MACHINE_INJECTED_TURN_MARKERS[0]}\ntask-id: ab
 const TEAMMATE_TAG_FORM = `${MACHINE_INJECTED_TURN_MARKERS[1]} from="researcher">assign task 1</teammate-message>`;
 const TEAMMATE_PREAMBLE_FORM = `${MACHINE_INJECTED_TURN_MARKERS[2]}\n${MACHINE_INJECTED_TURN_MARKERS[1]} from="researcher">start on task #1</teammate-message>`;
 const SYSTEM_NOTIFICATION_FORM = `${MACHINE_INJECTED_TURN_MARKERS[3]}\nAn event fired.\n<task-notification>event: build-done</task-notification>`;
+// herdr team-msg send header (#1142): the marker is a stable prefix; the from
+// role is the only variable part and sits inside the leading line.
+const TEAM_MSG_FORM = `${MACHINE_INJECTED_TURN_MARKERS[4]}from:e3 via:herdr machine]\nack: received your dispatch`;
 const CATALOG_FORMS: ReadonlyArray<readonly [string, string]> = [
   ["task-notification", TASK_NOTIFICATION_FORM],
   ["teammate-message tag", TEAMMATE_TAG_FORM],
   ["teammate-message preamble", TEAMMATE_PREAMBLE_FORM],
   ["system-notification preamble", SYSTEM_NOTIFICATION_FORM],
+  ["team-msg herdr header", TEAM_MSG_FORM],
 ];
 
 const BUN = process.execPath;
@@ -190,6 +194,14 @@ describe("t203: isMachineInjectedTurnText classifies the shared catalog (#755)",
     expect(isMachineInjectedTurnText("hello")).toBe(false);
     expect(isMachineInjectedTurnText("please approve the feasibility gate")).toBe(false);
     expect(isMachineInjectedTurnText("")).toBe(false);
+  });
+
+  // #1142: the herdr team-msg header must be caught, but a human typing prose
+  // that merely mentions team-msg (without the leading marker) must not be.
+  test("team-msg herdr header is machine-injected; prose mentioning it is not", () => {
+    expect(isMachineInjectedTurnText("[team-msg from:leader via:herdr machine]\ngo")).toBe(true);
+    expect(isMachineInjectedTurnText("I sent a team-msg to e3 earlier")).toBe(false);
+    expect(isMachineInjectedTurnText("[team-message from:x]")).toBe(false);
   });
 
   test("ASCII prefix: marker start byte offset 255 is detected and 256 is not", () => {
