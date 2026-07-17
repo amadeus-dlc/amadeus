@@ -85,3 +85,78 @@
 **Timestamp**: 2026-07-17T22:49:48Z
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-17T22:50:11Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a6e33aaebfabd6b15
+**Message**: (サイレント — delegate待ちのため次アクションはleader通知次第)
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-17T22:51:02Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ababd95485a818323
+**Message**: 続けて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-17T22:53:34Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a59863579b9988fae
+**Message**: PR #1187をマージしてください
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-17T23:01:45Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a42c14933a4a2aa0f
+**Message**: (waiting for delegate notification)
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-17T23:03:24Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aa54745487c1c8fac
+**Message**: (no suggestion — エージェント自律運用中で delegate 待機、ユーザー入力の自然な次手は不明)
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-17T23:06:13Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-17T23:06:13Z
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-17T23:06:35Z
+**Event**: GATE_APPROVED
+**Stage**: reverse-engineering
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-17T23:06:35Z
+**Event**: STAGE_COMPLETED
+**Stage**: reverse-engineering
+**Details**: Stage Reverse Engineering approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-17T23:06:35Z
+**Event**: STAGE_STARTED
+**Stage**: practices-discovery
+**Agent**: amadeus-pipeline-deploy-agent
+
+---
