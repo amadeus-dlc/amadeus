@@ -73,6 +73,17 @@ const VALID_EVENT_TYPES = new Set([
   // DELEGATED_APPROVAL (verified by verifyDelegatedProvenance); verb-scoped so it
   // can ONLY open a reject gate, never an approve gate.
   "DELEGATED_REJECTION",
+  // Standing delegation grants (Issue #1125): a leader session, driven by a real
+  // human turn on its own ledger, issues a time-boxed standing grant that opens
+  // stage-gate approvals across the team for the grant's TTL without a per-gate
+  // human turn. GRANT_ISSUED carries the same issuer provenance coordinates as the
+  // delegations (space, intent, shard, HUMAN_TURN timestamp) plus scope, expiry,
+  // and phase-boundary opt-in; GRANT_REVOKED cancels an outstanding grant by id.
+  // Both are minted ONLY by the trusted in-process writers (amadeus-state
+  // grant-standing-delegation / revoke-standing-delegation) and refused at the
+  // general audit CLI, exactly like the presence/provenance events.
+  "GRANT_ISSUED",
+  "GRANT_REVOKED",
   // Artifact events (hook-emitted)
   "ARTIFACT_CREATED",
   "ARTIFACT_UPDATED",
@@ -173,6 +184,8 @@ const EVENT_HEADINGS: Record<string, string> = {
   QUESTION_ANSWERED: "Question Answered",
   DELEGATED_APPROVAL: "Delegated Approval",
   DELEGATED_REJECTION: "Delegated Rejection",
+  GRANT_ISSUED: "Standing Grant Issued",
+  GRANT_REVOKED: "Standing Grant Revoked",
   ARTIFACT_CREATED: "Artifact Created",
   ARTIFACT_UPDATED: "Artifact Updated",
   ARTIFACT_REUSED: "Artifact Reused",
@@ -767,6 +780,12 @@ const PRESENCE_PROTECTED_EVENTS = new Set([
   "HUMAN_TURN",
   "DELEGATED_APPROVAL",
   "DELEGATED_REJECTION",
+  // Standing grants carry the same human-provenance weight as the delegations —
+  // a fabricated GRANT_ISSUED would open every stage gate for its TTL, so the
+  // general audit CLI must refuse to mint them (only grant-standing-delegation /
+  // revoke-standing-delegation, backed by a real HUMAN_TURN, may write them).
+  "GRANT_ISSUED",
+  "GRANT_REVOKED",
 ]);
 
 // The EVENT_HEADINGS values for the protected events — the `## <heading>` a forger
