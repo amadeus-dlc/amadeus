@@ -20,23 +20,23 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 459,
+    "total": 465,
     "enumeratedByClass": {
-      "function": 236,
+      "function": 240,
       "audit": 73,
       "scope": 10,
       "stage": 32,
       "hook": 11,
-      "subcommand": 90,
+      "subcommand": 92,
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 107,
+      "function": 111,
       "audit": 32,
       "scope": 10,
       "stage": 8,
       "hook": 11,
-      "subcommand": 75,
+      "subcommand": 77,
       "render-surface": 7
     }
   },
@@ -1130,6 +1130,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:checkQuestionsEvidence",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-eoc1-gate-evidence.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:classifyMigrationRequest",
       "minMechanism": "none",
       "coveredBy": [
@@ -1392,6 +1404,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:ensureStageDiary",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-ensure-stage-diary.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:errorMessage",
       "minMechanism": "none",
       "coveredBy": [],
@@ -1434,6 +1458,18 @@
         },
         {
           "file": "tests/unit/t80.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:fieldExists",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t224-state-set-failclosed.test.ts",
           "mechanism": "cli"
         }
       ],
@@ -2328,6 +2364,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:QUESTIONS_EVIDENCE_CUTOFF_YYMMDD",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-answer-evidence-sensor.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:READ_ONLY_FLAGS",
       "minMechanism": "none",
       "coveredBy": [
@@ -2609,6 +2657,10 @@
       "unitId": "function:resolveProjectDirFromHook",
       "minMechanism": "none",
       "coveredBy": [
+        {
+          "file": "tests/integration/t230-hook-project-dir-opencode-cursor-marker.test.ts",
+          "mechanism": "none"
+        },
         {
           "file": "tests/unit/t202-hook-project-dir-worktree-marker.test.ts",
           "mechanism": "cli"
@@ -4436,6 +4488,30 @@
     },
     {
       "unitClass": "subcommand",
+      "unitId": "amadeus-norm-metrics distill-candidates",
+      "minMechanism": "cli",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-norm-metrics.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-norm-metrics rank",
+      "minMechanism": "cli",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-norm-metrics.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
       "unitId": "amadeus-runtime compile",
       "minMechanism": "cli",
       "coveredBy": [
@@ -4739,6 +4815,10 @@
       "unitId": "amadeus-state gate-start",
       "minMechanism": "cli",
       "coveredBy": [
+        {
+          "file": "tests/integration/t-eoc1-gate-evidence.test.ts",
+          "mechanism": "cli"
+        },
         {
           "file": "tests/integration/t47-failure-injection.test.ts",
           "mechanism": "cli"

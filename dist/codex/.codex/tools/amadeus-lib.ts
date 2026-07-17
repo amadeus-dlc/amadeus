@@ -118,7 +118,7 @@ export const PHASE_NUMBERS: Record<string, Phase> = {
 // dev-repo CWD rung, where more than one harness dir can coexist and the Claude
 // tree is canonical (".claude" must win). A real single-harness install never
 // reaches the probe; it resolves by script path.
-const KNOWN_HARNESS_DIRS = [".claude", ".kiro", ".codex"] as const;
+const KNOWN_HARNESS_DIRS = [".claude", ".kiro", ".codex", ".opencode", ".cursor"] as const;
 
 // True for a plausible harness dir name: a dot-prefixed segment, e.g. ".claude"
 // / ".kiro" / ".gemini". Guards the script-path derivation so an unexpected
@@ -1092,6 +1092,115 @@ export function recordDir(
   const slug = activeIntent(projectDir, sp, intent);
   if (slug === null) return null;
   return join(intentsDir(projectDir, sp), slug);
+}
+
+// Stage diaries (<record>/<phase>/<stage>/memory.md) are auto-created from the
+// shipped template at stage start (CLAUDE.md Conventions). The engine is the
+// deterministic creator: `next` calls this while building each run-stage
+// directive, so every issuance path (advance / jump / birth / resume / --single)
+// passes through one chokepoint. Idempotent by contract — an existing diary is
+// NEVER overwritten (re-entry and resume must keep accumulated entries, mirroring
+// conductor.md "Keeping the diary"). The template resolves under the harness dir
+// (<harness>/knowledge/amadeus-shared/memory-template.md — the same file
+// conductor.md names as the copy source); the space-relative
+// memoryTemplatesDir() family is a different resolver for sensor floors and is
+// deliberately not used here (#1080). A missing template must not block the
+// workflow (the diary is an observation layer) but must not fail silent either:
+// the caller gets "template-missing" and a one-line stderr warning is emitted.
+export function ensureStageDiary(
+  projectDir: string,
+  memoryPathRel: string,
+): "created" | "exists" | "template-missing" {
+  const abs = join(projectDir, memoryPathRel);
+  if (existsSync(abs)) return "exists";
+  const template = join(projectDir, harnessDir(), "knowledge", "amadeus-shared", "memory-template.md");
+  if (!existsSync(template)) {
+    console.error(`amadeus: stage diary not auto-created — template missing at ${template}`);
+    return "template-missing";
+  }
+  mkdirSync(dirname(abs), { recursive: true });
+  writeFileSync(abs, readFileSync(template));
+  return "created";
+}
+
+// E-OC1 evidence check for gate-start (#1101): the 3-step order (report the
+// no-election judgment -> leader approval -> only then fill [Answer]) is a
+// prose norm that slipped twice in one day, so gate-start enforces the
+// machine-checkable half as an implication: a FILLED [Answer] must be
+// accompanied, somewhere in the same questions file, by a ruling reference
+// (an E-code ON THE ANSWER LINE ITSELF -- every questions header cites
+// "E-OC1" by name, so a file-wide E-code scan would make the guard vacuous)
+// or, anywhere in the file, a leader-approval line carrying a parseable ISO
+// timestamp.
+// Everything else passes unconditionally: a missing questions file (not every
+// stage has one), a file with no [Answer] tag at all (the post-E-OC1 "0
+// questions" format), and a blank/waiting placeholder. The blank rule is
+// deliberately asymmetric: content that is nothing but one parenthesized
+// group is the measured waiting-placeholder shape (e.g. "(TF-Q0 選挙の裁定受領後に記入
+// — cid:election-answer-after-ruling)"), and misreading a parenthesized real
+// answer as blank degrades to PASS — the guard exists to catch unevidenced
+// fills, never to reject legitimate flows. Read-only; callers decide how to
+// fail (amadeus-state.ts gate-start maps fail reasons to fail-closed error()).
+export type QuestionsEvidence =
+  | { kind: "pass"; reason: "no-file" | "no-answer-tag" | "answer-blank" | "evidence-present" }
+  | { kind: "fail"; reason: "no-evidence" | "unparseable-timestamp" };
+
+const ANSWER_TAG_RE = /\[Answer\]\s*:?/;
+const ECODE_RE = /E-[A-Z0-9][A-Z0-9-]*/;
+const ISO_TS_RE = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?Z?/;
+
+// Blank shapes: empty, "N/A" (any case), or content that is nothing but one
+// parenthesized group — the measured waiting-placeholder convention.
+function isFilledAnswer(line: string): boolean {
+  const content = line.slice(line.search(ANSWER_TAG_RE)).replace(ANSWER_TAG_RE, "").trim();
+  if (content === "" || /^n\/a$/i.test(content)) return false;
+  return !/^[((][^)))]*[))]$/.test(content);
+}
+
+// A leader-approval line satisfies the evidence requirement only when its ISO
+// timestamp actually parses (parse-don't-validate; a decorative "承認" line
+// with no real timestamp is the unparseable-timestamp failure).
+function hasParseableApprovalTimestamp(line: string): boolean {
+  const m = line.match(ISO_TS_RE);
+  if (!m) return false;
+  return Number.isFinite(Date.parse(m[0].endsWith("Z") ? m[0] : `${m[0]}Z`));
+}
+
+// Enforcement cutoff (YYMMDD) for the E-OC1 evidence guard: intents whose
+// record-dir date is on/after this day are subject to the check; older intents
+// predate the evidence-header convention and are exempt ("no retroactive
+// checks"). Canonical here so both consumers — the gate-start guard
+// (amadeus-state.ts handleGateStart) and the advisory answer-evidence sensor
+// (amadeus-sensor-answer-evidence.ts) — derive the boundary from one definition
+// rather than duplicating the literal.
+export const QUESTIONS_EVIDENCE_CUTOFF_YYMMDD = 260716;
+
+// Plain loops, zero anonymous functions: the complexity baseline matches
+// anonymous functions by ordinal, so adding arrows here shifts unrelated
+// entries into NEW_VIOLATION (the E-PM2 M7 mechanism, measured again on this
+// change).
+export function checkQuestionsEvidence(questionsPath: string): QuestionsEvidence {
+  if (!existsSync(questionsPath)) return { kind: "pass", reason: "no-file" };
+  const lines = readFileSync(questionsPath, "utf-8").split("\n");
+  const answerLines: string[] = [];
+  for (const l of lines) if (ANSWER_TAG_RE.test(l)) answerLines.push(l);
+  if (answerLines.length === 0) return { kind: "pass", reason: "no-answer-tag" };
+  let filled = false;
+  let hasEcode = false;
+  for (const l of answerLines) {
+    if (isFilledAnswer(l)) filled = true;
+    if (ECODE_RE.test(l)) hasEcode = true;
+  }
+  if (!filled) return { kind: "pass", reason: "answer-blank" };
+  if (hasEcode) return { kind: "pass", reason: "evidence-present" };
+  let sawApprovalLine = false;
+  for (const l of lines) {
+    if (!l.includes("承認")) continue;
+    sawApprovalLine = true;
+    if (hasParseableApprovalTimestamp(l)) return { kind: "pass", reason: "evidence-present" };
+  }
+  if (sawApprovalLine) return { kind: "fail", reason: "unparseable-timestamp" };
+  return { kind: "fail", reason: "no-evidence" };
 }
 
 // Relative record-dir prefix for the engine's agent-consumed artifact/diary
@@ -3297,16 +3406,28 @@ export function setField(content: string, field: string, value: string): string 
   return content;
 }
 
+// fieldLineRegex: the canonical `- **Field**:` line-head matcher. Shared by
+// setFieldStrict and fieldExists so the two cannot drift on what "the field
+// exists" means (both must agree with what setField actually mutates).
+// [ \t]* instead of \s* — see setField comment for the line-crossing rationale.
+function fieldLineRegex(field: string): RegExp {
+  return new RegExp(`^(- \\*\\*${escapeRegex(field)}\\*\\*:)[ \\t]*.*$`, "m");
+}
+
+// fieldExists: true when a `- **Field**:` bullet is present in the state file,
+// using the exact matcher setFieldStrict/setField rely on. Callers that must
+// fail-closed on an absent field (e.g. `state set`) pre-validate with this
+// before writing, instead of letting setField silently no-op (Issue #1027).
+export function fieldExists(content: string, field: string): boolean {
+  return fieldLineRegex(field).test(content);
+}
+
 // setFieldStrict: like setField but throws when the field is absent. Use this
 // in state-machine transitions where a silent no-op would cause undetected
 // drift (e.g., bolt set-autonomy updating Construction Autonomy Mode — if the
 // field is missing, we want to know immediately, not ship a lie to the caller).
 export function setFieldStrict(content: string, field: string, value: string): string {
-  // [ \t]* instead of \s* — see setField comment for the line-crossing rationale.
-  const regex = new RegExp(
-    `^(- \\*\\*${escapeRegex(field)}\\*\\*:)[ \\t]*.*$`,
-    "m"
-  );
+  const regex = fieldLineRegex(field);
   if (!regex.test(content)) {
     throw new Error(
       `Field not found in state file: "${field}". Cannot update — refusing to silently no-op.`

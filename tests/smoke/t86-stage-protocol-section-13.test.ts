@@ -136,6 +136,17 @@ describe("t86 stage-protocol §13 + MEMORY_EMPTY + SKILL.md gate wiring (migrate
     expect(body.includes("amadeus-team-learnings.md")).toBe(false);
   });
 
+  // --- #609 regression: §13 Step 3 label directive carries a negative example --
+  test("§13 Step 3 pins the id-only-label negative example (Issue #609)", () => {
+    const body = read(STAGE_PROTOCOL);
+    // The label directive requires the visible `label` to be the candidate
+    // `summary` (verbatim), NOT the id. #609 observed an LLM rendering the id
+    // alone (`Persist c5 only (Recommended)`), which strips the human's ability
+    // to judge the candidate. The negative example makes that prohibition
+    // explicit inside Step 3, next to the positive rule.
+    expect(body.includes("Persist c5 only")).toBe(true);
+  });
+
   // --- .sh test 5 (declared before 4's CLI half for prose grouping) --------
   test("§13 carries the 'Why stage files stay immutable' invariant H3 [.sh test 5]", () => {
     const body = read(STAGE_PROTOCOL);

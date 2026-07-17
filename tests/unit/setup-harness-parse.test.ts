@@ -13,8 +13,8 @@ import { describe, expect, test } from "bun:test";
 import { HarnessName } from "../../packages/setup/src/domain/harness.ts";
 
 describe("HarnessName.parse", () => {
-  test("accepts each of the four known harness names", () => {
-    for (const name of ["claude", "codex", "kiro", "kiro-ide"]) {
+  test("accepts each of the six known harness names", () => {
+    for (const name of ["claude", "codex", "kiro", "kiro-ide", "opencode", "cursor"]) {
       const result = HarnessName.parse(name);
       expect(result.type).toBe("ok");
       if (result.type === "ok") expect(result.value as string).toBe(name);

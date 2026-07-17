@@ -35,6 +35,7 @@ requires_stage:
 sensors:
   - required-sections
   - upstream-coverage
+  - answer-evidence
 scopes:
   - enterprise
   - feature

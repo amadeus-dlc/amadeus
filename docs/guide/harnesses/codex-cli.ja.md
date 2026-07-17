@@ -48,19 +48,38 @@
    `<host>-<clone>.md` を書くため、並行 append が git 競合しません)。一方、
    per-user カーソルとマシンローカルなランタイム状態は無視されたままにします。
 
-3. プロジェクトを trust し、フックの trust を事前シードします。Codex は
-   untrusted なフックを決して実行しません(`--dangerously-bypass-hook-trust`
-   フラグでも実行しません)。対話的な TUI セッションを 1 回実行して hooks
+3. プロジェクトを trust します。Codex の trust は **2 層** あり、どちらも
+   `$CODEX_HOME/config.toml` に事前シードする必要があります:
+
+   - **第 1 層 — プロジェクト trust:** `trust_level = "trusted"` を持つ
+     `[projects."<プロジェクトの絶対パス>"]` テーブル。これがゲートです。
+     **第 1 層が無いと Codex はこのプロジェクトの `.codex` フック層全体を
+     無警告でスキップし**、第 2 層はそもそも実行されません。
+   - **第 2 層 — フック trust:** `[hooks.state."..."]` エントリ。Codex は
+     untrusted なフックを決して実行しません(`--dangerously-bypass-hook-trust`
+     フラグでも実行しません)。
+
+   `scripts/team-up.sh` は各 Codex メンバーについて両層を自動でシードします。
+   手動でシードする場合は、対話的な TUI セッションを 1 回実行して hooks
    ダイアログで「Trust all and continue」を選ぶか、決定論的に事前シードします:
 
+   ```toml
+   # 第 1 層 — プロジェクト trust(手で追記)
+   [projects."/abs/path/to/your-project"]
+   trust_level = "trusted"
+   ```
+
    ```bash
+   # 第 2 層 — フック trust(そのまま貼り付け可能な形で出力)
    bun scripts/package.ts codex trust --project /abs/path/to/your-project
    ```
 
-   これは `$CODEX_HOME/config.toml` 用の、そのまま貼り付け可能な `[hooks.state]`
-   エントリを追記します(ハッシュはパスではなくフックのアイデンティティをカバーします
-   — 出力されるエントリは同梱の `hooks.json.example` から作成した `hooks.json`
-   に対して正確です)。
+   第 2 層のコマンドは `$CODEX_HOME/config.toml` 用の、そのまま貼り付け可能な
+   `[hooks.state]` エントリを追記します(ハッシュはパスではなくフックの
+   アイデンティティをカバーします — 出力されるエントリは同梱の
+   `hooks.json.example` から作成した `hooks.json` に対して正確です)。
+   `$amadeus --doctor` は第 1 層の存在を loud に検査し、第 2 層について
+   リマインドします。
 
 4. プロジェクトが意図的に Codex 設定を所有する場合のみ `.codex/config.toml` を
    プロジェクトレベルに保ちます。そうでなければプロバイダ/モデルの選択は

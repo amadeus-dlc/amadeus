@@ -1,3 +1,4 @@
+// size: large
 import { afterEach, describe, expect, test } from "bun:test";
 import {
   chmodSync,
@@ -19,18 +20,39 @@ afterEach(() => {
   for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
-function commandFor(member: string, resolverBody: string, env: Record<string, string> = {}) {
+// Drive codex_member_cmd for one member. HOME is pinned to a throwaway dir so
+// the trust-seed writes to `<home>/.codex-<identity>/config.toml` instead of the
+// real user home, and TEAM_REPO points at the checkout so the seed's
+// `package.ts codex trust` call resolves. Pass `homeOverride` to reuse a home
+// across calls (idempotency checks). Returns the spawn result plus the seeded
+// config path.
+function commandFor(
+  member: string,
+  resolverBody: string,
+  env: Record<string, string> = {},
+  homeOverride?: string,
+  opts: { continueMode?: "0" | "1"; roleResumeOverride?: string } = {},
+) {
   const dir = mkdtempSync(join(tmpdir(), "amadeus-team-up-"));
   tempDirs.push(dir);
+  const home = homeOverride ?? mkdtempSync(join(tmpdir(), "amadeus-codex-home-"));
+  if (!homeOverride) tempDirs.push(home);
+  const identity = env.AGENT_IDENTITY ?? "corporate-1";
   const resolver = join(dir, "role-resume.sh");
   writeFileSync(resolver, `#!/usr/bin/env bash\n${resolverBody}\n`);
   chmodSync(resolver, 0o755);
+  // Default to the resume path (CONTINUE=1) so the resume-focused tests keep
+  // their meaning; a fresh launch pins CONTINUE=0. roleResumeOverride pins
+  // ROLE_RESUME to an arbitrary (possibly non-existent) path to exercise the
+  // resolver-absent branches.
+  const continueMode = opts.continueMode ?? "1";
+  const roleResume = opts.roleResumeOverride ?? resolver;
 
-  return Bun.spawnSync({
+  const result = Bun.spawnSync({
     cmd: [
       "bash",
       "-c",
-      'script="$1"; member="$2"; set --; TEAM_UP_LIB_ONLY=1 source "$script"; CONTINUE=1; codex_member_cmd "$member"',
+      `script="$1"; member="$2"; set --; TEAM_UP_LIB_ONLY=1 source "$script"; CONTINUE=${continueMode}; codex_member_cmd "$member"`,
       "_",
       TEAM_UP,
       member,
@@ -38,13 +60,16 @@ function commandFor(member: string, resolverBody: string, env: Record<string, st
     env: {
       ...process.env,
       ...env,
-      ROLE_RESUME: resolver,
+      HOME: home,
+      TEAM_REPO: ROOT,
+      ROLE_RESUME: roleResume,
       CODEX_MONITOR: "/usr/bin/true",
       DELIVERY: join(dir, "missing-delivery.sh"),
     },
     stderr: "pipe",
     stdout: "pipe",
   });
+  return { result, home, config: join(home, `.codex-${identity}`, "config.toml") };
 }
 
 function git(cwd: string, ...args: string[]) {
@@ -61,10 +86,10 @@ function createCliFixture() {
   const state = join(root, "state");
   const bin = join(root, "bin");
   const joinLog = join(root, "join.log");
-  const tmuxState = join(root, "tmux-state");
+  const herdrState = join(root, "herdr-state");
   mkdirSync(repo, { recursive: true });
   mkdirSync(bin, { recursive: true });
-  mkdirSync(tmuxState, { recursive: true });
+  mkdirSync(herdrState, { recursive: true });
 
   git(repo, "init", "-q", "-b", "main");
   git(repo, "config", "user.email", "team-up@example.com");
@@ -73,26 +98,60 @@ function createCliFixture() {
   git(repo, "add", "README.md");
   git(repo, "commit", "-qm", "fixture");
 
-  const tmux = join(bin, "tmux");
+  // Fake herdr binary. team-up.sh drives herdr through `--session <name>
+  // <verb...>` (workspace/pane/agent verbs) plus bare `session <verb>` calls.
+  // Session existence is modeled per session name under sessions/<name> so
+  // named team-up instances can run in parallel. workspace-create / pane-split
+  // print the JSON pane_id contract team-up.sh parses; FAKE_HERDR_FAIL_COMMAND
+  // fails a chosen verb (e.g. "pane split") to exercise the layout-failure path.
+  const herdr = join(bin, "herdr");
   writeFileSync(
-    tmux,
+    herdr,
     `#!/usr/bin/env bash
 set -eu
-state="\${FAKE_TMUX_STATE:?}"
-if [ "\${FAKE_TMUX_FAIL_COMMAND:-}" = "\${1:-}" ]; then
+state="\${FAKE_HERDR_STATE:?}"
+mkdir -p "$state/sessions"
+session=""
+if [ "\${1:-}" = "--session" ]; then
+  session="\${2:-}"
+  shift 2
+fi
+verb="\${1:-} \${2:-}"
+target="$session"
+case "$verb" in
+  "session stop" | "session delete") target="\${3:-$session}" ;;
+esac
+if [ -n "\${FAKE_HERDR_FAIL_COMMAND:-}" ] && [ "$FAKE_HERDR_FAIL_COMMAND" = "$verb" ]; then
   exit 9
 fi
-case "\${1:-}" in
-  has-session) test -f "$state/session" ;;
-  new-session) touch "$state/session" ;;
-  kill-session) rm -f "$state/session" ;;
-  display-message|split-window) printf '%%1\\n' ;;
-  select-pane|set-option) ;;
-  *) exit 2 ;;
+case "$verb" in
+  "workspace list") test -n "$session" && test -f "$state/sessions/$session" ;;
+  "workspace create") printf '{"pane_id":"%%1"}\\n' ;;
+  "pane split") printf '{"pane_id":"%%1"}\\n' ;;
+  "pane run") ;;
+  "pane rename") ;;
+  "agent rename") ;;
+  "session stop") rm -f "$state/sessions/$target" ;;
+  "session delete") rm -f "$state/sessions/$target" ;;
+  "session list")
+    for f in "$state/sessions"/*; do
+      [ -f "$f" ] || continue
+      basename "$f"
+    done
+    ;;
+  *)
+    case "\${1:-}" in
+      server)
+        test -n "$session"
+        printf '%s\\n' "$session" >"$state/sessions/$session"
+        ;;
+      *) exit 2 ;;
+    esac
+    ;;
 esac
 `,
   );
-  chmodSync(tmux, 0o755);
+  chmodSync(herdr, 0o755);
 
   const open = join(bin, "open");
   writeFileSync(open, "#!/usr/bin/env bash\nexit 0\n");
@@ -131,7 +190,11 @@ printf '%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "\${AGMSG_RESOLVE_PROJECT:-}" 
     TEAM_RUN_ID: "run-001",
     TEAM_SESSION: "amadeus-team-test",
     FAKE_JOIN_LOG: joinLog,
-    FAKE_TMUX_STATE: tmuxState,
+    FAKE_HERDR_STATE: herdrState,
+    // Pin the launch backend to the fake herdr by absolute path (variable
+    // injection, not PATH order) so the suite never touches a real herdr and
+    // is insensitive to the host's TEAM_MUX/HERDR (#1020).
+    HERDR: herdr,
     AGMSG_JOIN: joinAgent,
     AGMSG_RESET: resetAgent,
     DELIVERY: join(root, "missing-delivery.sh"),
@@ -140,7 +203,7 @@ printf '%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "\${AGMSG_RESOLVE_PROJECT:-}" 
     PATH: `${bin}:${process.env.PATH}`,
   };
 
-  return { base, env, joinLog, repo, state, tmuxState };
+  return { base, env, herdrState, joinLog, repo, state };
 }
 
 describe("team-up run lifecycle", () => {
@@ -154,10 +217,13 @@ describe("team-up run lifecycle", () => {
     expect(result.exitCode, result.stderr.toString()).toBe(0);
     expect(result.stdout.toString()).toContain("-c, --continue");
     expect(result.stdout.toString()).toContain("-2, -4, -6");
+    expect(result.stdout.toString()).toContain("-i, --instance NAME");
     expect(result.stdout.toString()).toContain("--list-runs");
+    expect(result.stdout.toString()).toContain("--list-instances");
     expect(result.stdout.toString()).toContain("--delete-run ID");
     expect(result.stdout.toString()).toContain("AGENT_IDENTITY");
     expect(result.stdout.toString()).toContain("TEAM_ENGINEERS");
+    expect(result.stdout.toString()).toContain("TEAM_INSTANCE");
   });
 
   test("a fresh launch creates one isolated worktree and branch per role from HEAD", () => {
@@ -308,7 +374,7 @@ describe("team-up run lifecycle", () => {
 
     expect(result.exitCode).not.toBe(0);
     expect(result.stderr.toString()).toContain("agmsg registration failed");
-    expect(existsSync(join(fixture.tmuxState, "session"))).toBe(false);
+    expect(existsSync(join(fixture.herdrState, "sessions", "amadeus-team-test"))).toBe(false);
     expect(existsSync(join(fixture.base, "runs", "run-001"))).toBe(false);
   });
 
@@ -465,7 +531,7 @@ describe("team-up run lifecycle", () => {
     const fixture = createCliFixture();
     const result = Bun.spawnSync({
       cmd: ["bash", TEAM_UP],
-      env: { ...fixture.env, FAKE_TMUX_FAIL_COMMAND: "split-window" },
+      env: { ...fixture.env, FAKE_HERDR_FAIL_COMMAND: "pane split" },
       stderr: "pipe",
       stdout: "pipe",
     });
@@ -712,17 +778,113 @@ describe("team-up run lifecycle", () => {
   });
 });
 
+describe("team-up herdr-only launcher", () => {
+  test("a fresh run records the herdr generation marker", () => {
+    const fixture = createCliFixture();
+    const started = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP],
+      env: fixture.env,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(started.exitCode, started.stderr.toString()).toBe(0);
+    expect(readFileSync(join(fixture.state, "runs", "run-001", "mux"), "utf8").trim()).toBe("herdr");
+  });
+
+  test("the fixture is insensitive to a host TEAM_MUX (the removed selector)", () => {
+    const fixture = createCliFixture();
+    // Before #1031, a host TEAM_MUX=herdr leaked through `...process.env` and
+    // resolved the backend to a real herdr, failing the suite (#1020). The
+    // variable no longer exists, so injecting it must not perturb the launch.
+    const result = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP],
+      env: { ...fixture.env, TEAM_MUX: "herdr" },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+    expect(readFileSync(join(fixture.state, "runs", "run-001", "mux"), "utf8").trim()).toBe("herdr");
+  });
+
+  test("resuming a run created by the removed backend is refused with recovery guidance", () => {
+    const fixture = createCliFixture();
+    const started = Bun.spawnSync({ cmd: ["bash", TEAM_UP], env: fixture.env });
+    expect(started.exitCode).toBe(0);
+    Bun.spawnSync({ cmd: ["bash", TEAM_UP, "--kill"], env: fixture.env });
+    // Simulate a run created by the old tmux backend.
+    writeFileSync(join(fixture.state, "runs", "run-001", "mux"), "tmux\n");
+
+    const resumed = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "-c"],
+      env: fixture.env,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(resumed.exitCode).not.toBe(0);
+    const err = resumed.stderr.toString();
+    expect(err).toContain("create a fresh run"); // (i) recovery path
+    expect(err).toContain("tmux kill-session"); // (ii) manual cleanup command
+    // Worktrees and branches stay intact.
+    expect(git(join(fixture.base, "runs", "run-001", "leader"), "branch", "--show-current")).toBe(
+      "team/run-001/leader",
+    );
+  });
+
+  test("killing a run created by the removed backend is refused and leaves the pointer intact", () => {
+    const fixture = createCliFixture();
+    const started = Bun.spawnSync({ cmd: ["bash", TEAM_UP], env: fixture.env });
+    expect(started.exitCode).toBe(0);
+    // The active run's marker is tampered to look like an old tmux run.
+    writeFileSync(join(fixture.state, "runs", "run-001", "mux"), "tmux\n");
+
+    const killed = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "--kill"],
+      env: fixture.env,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(killed.exitCode).not.toBe(0);
+    const err = killed.stderr.toString();
+    expect(err).toContain("create a fresh run");
+    expect(err).toContain("tmux kill-session");
+    // Refused before touching the active-run pointer.
+    expect(existsSync(join(fixture.state, "active-run"))).toBe(true);
+  });
+
+  test("resuming a run with no mux marker (predating the record) is refused", () => {
+    const fixture = createCliFixture();
+    const started = Bun.spawnSync({ cmd: ["bash", TEAM_UP], env: fixture.env });
+    expect(started.exitCode).toBe(0);
+    Bun.spawnSync({ cmd: ["bash", TEAM_UP, "--kill"], env: fixture.env });
+    rmSync(join(fixture.state, "runs", "run-001", "mux"));
+
+    const resumed = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "-c"],
+      env: fixture.env,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(resumed.exitCode).not.toBe(0);
+    expect(resumed.stderr.toString()).toContain("tmux kill-session");
+  });
+});
+
 describe("team-up Codex resume", () => {
   test("marks Codex member sessions as team mode", () => {
-    const result = commandFor("engineer-1", "exit 0", {
+    const { result, home } = commandFor("engineer-1", "exit 0", {
       AGENT_IDENTITY: "personal",
       CLAUDE_IDENTITY: "ignored-claude",
       CODEX_IDENTITY: "ignored-codex",
     });
-    expect(result.exitCode).toBe(0);
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
     expect(result.stdout.toString()).toContain("AMADEUS_OPERATING_MODE=team");
     expect(result.stdout.toString()).toContain("CODEX_IDENTITY=personal");
-    expect(result.stdout.toString()).toContain(`CODEX_HOME=${process.env.HOME}/.codex-personal`);
+    expect(result.stdout.toString()).toContain(`CODEX_HOME=${home}/.codex-personal`);
     expect(result.stdout.toString()).not.toContain("ignored-codex");
     expect(result.stdout.toString()).not.toContain("CLAUDE_IDENTITY=");
     expect(result.stdout.toString()).toContain("AGMSG_CODEX_ROLE=e1");
@@ -730,29 +892,91 @@ describe("team-up Codex resume", () => {
   });
 
   test("resumes the role's recorded UUID instead of global --last", () => {
-    const result = commandFor("engineer-1", 'printf "thread-engineer-1"');
+    const { result } = commandFor("engineer-1", 'printf "thread-engineer-1"');
     const command = result.stdout.toString();
-    expect(result.exitCode).toBe(0);
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
     expect(command).toContain("--codex-command resume -- thread-engineer-1");
     expect(command).not.toContain("--last");
   });
 
   test("starts fresh when the role has no unique resumable UUID", () => {
-    const result = commandFor("engineer-2", "exit 0");
+    const { result } = commandFor("engineer-2", "exit 0");
     const command = result.stdout.toString();
-    expect(result.exitCode).toBe(0);
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
     expect(command).toContain("--codex-command codex");
     expect(command).not.toContain("--codex-command resume");
     expect(result.stderr.toString()).toContain("starting fresh");
   });
 
   test("starts fresh when the role resume resolver fails", () => {
-    const result = commandFor("engineer-3", "exit 1");
+    const { result } = commandFor("engineer-3", "exit 1");
     const command = result.stdout.toString();
-    expect(result.exitCode).toBe(0);
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
     expect(command).toContain("--codex-command codex");
     expect(command).not.toContain("--codex-command resume");
     expect(result.stderr.toString()).toContain("role resume resolver failed");
+  });
+
+  test("a fresh launch succeeds and emits a launch command even when the resolver is absent", () => {
+    // CONTINUE=0 (a fresh run) must never consult the role resume resolver, so
+    // a missing role-resume.sh cannot abort the codex launch (#1061). Pin
+    // ROLE_RESUME at a path that does not exist.
+    const { result } = commandFor("engineer-1", "exit 0", {}, undefined, {
+      continueMode: "0",
+      roleResumeOverride: join(tmpdir(), "amadeus-no-such-role-resume.sh"),
+    });
+    const command = result.stdout.toString();
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+    expect(command).toContain("--codex-command codex");
+    expect(command).not.toContain("--codex-command resume");
+    expect(result.stderr.toString()).not.toContain("missing role resume resolver");
+  });
+
+  test("a resume launch is refused loudly when the resolver is absent", () => {
+    // CONTINUE=1 (the resume path) genuinely needs the resolver; keep the
+    // pre-#1061 loud error and its message (AC-4b).
+    const missing = join(tmpdir(), "amadeus-no-such-role-resume.sh");
+    const { result } = commandFor("engineer-1", "exit 0", {}, undefined, {
+      continueMode: "1",
+      roleResumeOverride: missing,
+    });
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr.toString()).toContain(`missing role resume resolver: ${missing}`);
+  });
+});
+
+describe("team-up Codex trust seed", () => {
+  test("seeds project trust and hook trust into the identity config on launch", () => {
+    const { result, config } = commandFor("engineer-1", "exit 0", { AGENT_IDENTITY: "seedy" });
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+    expect(existsSync(config)).toBe(true);
+
+    const toml = readFileSync(config, "utf8");
+    // Layer 1: project trust for this member's worktree.
+    expect(toml).toMatch(/\[projects\."[^"]*engineer-1"\]/);
+    expect(toml).toContain('trust_level = "trusted"');
+    // Layer 2: hook trust entries substituted for this member's worktree.
+    expect(toml).toContain("[hooks.state.");
+    expect(toml).toContain("engineer-1/.codex/hooks.json:session_start:0:0");
+    expect(toml).toContain("trusted_hash = ");
+  });
+
+  test("re-running the seed on the same config does not duplicate entries", () => {
+    const home = mkdtempSync(join(tmpdir(), "amadeus-codex-home-"));
+    tempDirs.push(home);
+
+    const first = commandFor("engineer-1", "exit 0", { AGENT_IDENTITY: "seedy" }, home);
+    expect(first.result.exitCode, first.result.stderr.toString()).toBe(0);
+    const afterFirst = readFileSync(first.config, "utf8");
+
+    const second = commandFor("engineer-1", "exit 0", { AGENT_IDENTITY: "seedy" }, home);
+    expect(second.result.exitCode, second.result.stderr.toString()).toBe(0);
+    const afterSecond = readFileSync(second.config, "utf8");
+
+    // Idempotent: the second launch appends nothing.
+    expect(afterSecond).toBe(afterFirst);
+    expect((afterSecond.match(/\[projects\./g) ?? []).length).toBe(1);
+    expect((afterSecond.match(/\[hooks\.state\."[^"]*session_start:0:0"\]/g) ?? []).length).toBe(1);
   });
 });
 
@@ -803,5 +1027,135 @@ describe("team-up member roster", () => {
     expect(result.stdout.toString().trim()).toBe(
       "leader engineer-1 engineer-2 engineer-3 engineer-4",
     );
+  });
+});
+
+describe("team-up named instances", () => {
+  function derivedEnv(fixture: ReturnType<typeof createCliFixture>) {
+    // Drop TEAM_SESSION so --instance can derive amadeus-team-<name>.
+    // AGMSG_TEAM is not set on the fixture env, so omission alone is enough.
+    const { TEAM_SESSION: _ignored, ...env } = fixture.env;
+    return env;
+  }
+
+  test("two named instances launch in parallel with isolated session and agmsg team", () => {
+    const fixture = createCliFixture();
+    const env = derivedEnv(fixture);
+
+    const alpha = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "--instance", "alpha", "-2"],
+      env: { ...env, TEAM_RUN_ID: "run-alpha" },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    expect(alpha.exitCode, alpha.stderr.toString()).toBe(0);
+    expect(alpha.stdout.toString()).toContain("instance=alpha");
+    expect(alpha.stdout.toString()).toContain("agmsg=amadeus-alpha");
+    expect(existsSync(join(fixture.herdrState, "sessions", "amadeus-team-alpha"))).toBe(true);
+    expect(readFileSync(join(fixture.state, "instances", "alpha", "active-run"), "utf8").trim()).toBe(
+      "run-alpha",
+    );
+    expect(existsSync(join(fixture.state, "active-run"))).toBe(false);
+
+    const beta = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "-i", "beta", "-2"],
+      env: { ...env, TEAM_RUN_ID: "run-beta" },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    expect(beta.exitCode, beta.stderr.toString()).toBe(0);
+    expect(existsSync(join(fixture.herdrState, "sessions", "amadeus-team-beta"))).toBe(true);
+    expect(readFileSync(join(fixture.state, "instances", "beta", "active-run"), "utf8").trim()).toBe(
+      "run-beta",
+    );
+
+    const joinLog = readFileSync(fixture.joinLog, "utf8");
+    expect(joinLog).toContain("amadeus-alpha\tleader\t");
+    expect(joinLog).toContain("amadeus-beta\tleader\t");
+
+    const listed = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "--list-instances"],
+      env,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    expect(listed.exitCode, listed.stderr.toString()).toBe(0);
+    expect(listed.stdout.toString()).toContain("alpha\tamadeus-team-alpha\trun-alpha\tup");
+    expect(listed.stdout.toString()).toContain("beta\tamadeus-team-beta\trun-beta\tup");
+  });
+
+  test("killing one instance leaves the other running", () => {
+    const fixture = createCliFixture();
+    const env = derivedEnv(fixture);
+
+    expect(
+      Bun.spawnSync({
+        cmd: ["bash", TEAM_UP, "--instance", "alpha", "-2"],
+        env: { ...env, TEAM_RUN_ID: "run-alpha" },
+        stderr: "pipe",
+        stdout: "pipe",
+      }).exitCode,
+    ).toBe(0);
+    expect(
+      Bun.spawnSync({
+        cmd: ["bash", TEAM_UP, "--instance", "beta", "-2"],
+        env: { ...env, TEAM_RUN_ID: "run-beta" },
+        stderr: "pipe",
+        stdout: "pipe",
+      }).exitCode,
+    ).toBe(0);
+
+    const killed = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "--kill", "--instance", "alpha"],
+      env,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    expect(killed.exitCode, killed.stderr.toString()).toBe(0);
+    expect(existsSync(join(fixture.herdrState, "sessions", "amadeus-team-alpha"))).toBe(false);
+    expect(existsSync(join(fixture.herdrState, "sessions", "amadeus-team-beta"))).toBe(true);
+    expect(existsSync(join(fixture.state, "instances", "alpha", "active-run"))).toBe(false);
+    expect(readFileSync(join(fixture.state, "instances", "beta", "active-run"), "utf8").trim()).toBe(
+      "run-beta",
+    );
+  });
+
+  test("default instance keeps legacy state layout at the state root", () => {
+    const fixture = createCliFixture();
+    const result = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "-2"],
+      env: { ...fixture.env, TEAM_RUN_ID: "run-default" },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+    expect(readFileSync(join(fixture.state, "active-run"), "utf8").trim()).toBe("run-default");
+    expect(existsSync(join(fixture.state, "runs", "run-default"))).toBe(true);
+    expect(existsSync(join(fixture.state, "instances"))).toBe(false);
+  });
+
+  test("same named instance refuses a second fresh launch while session is up", () => {
+    const fixture = createCliFixture();
+    const env = derivedEnv(fixture);
+    expect(
+      Bun.spawnSync({
+        cmd: ["bash", TEAM_UP, "--instance", "alpha", "-2"],
+        env: { ...env, TEAM_RUN_ID: "run-alpha-1" },
+        stderr: "pipe",
+        stdout: "pipe",
+      }).exitCode,
+    ).toBe(0);
+
+    const second = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "--instance", "alpha", "-2"],
+      env: { ...env, TEAM_RUN_ID: "run-alpha-2" },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    expect(second.exitCode).toBe(1);
+    expect(second.stderr.toString()).toContain("already exists");
+    expect(second.stderr.toString()).toContain("--instance alpha --kill");
+    expect(existsSync(join(fixture.base, "runs", "run-alpha-2"))).toBe(false);
   });
 });

@@ -1,16 +1,16 @@
 // covers: domain:setup-harness
 // size: small
 //
-// HarnessName.all — the canonical 4-value list U1 owns standalone (U2 owns
+// HarnessName.all — the canonical harness-name list U1 owns standalone (U2 owns
 // string-input validation separately).
 
 import { describe, expect, test } from "bun:test";
 import { HarnessName } from "../../packages/setup/src/domain/harness.ts";
 
 describe("HarnessName.all", () => {
-  test("contains exactly the four known harnesses", () => {
+  test("contains exactly the six known harnesses", () => {
     const names: string[] = HarnessName.all.map((h) => h);
-    expect(names.sort()).toEqual(["claude", "codex", "kiro", "kiro-ide"].sort());
+    expect(names.sort()).toEqual(["claude", "codex", "kiro", "kiro-ide", "opencode", "cursor"].sort());
   });
 
   test("edge case: is frozen (cannot be mutated at runtime)", () => {

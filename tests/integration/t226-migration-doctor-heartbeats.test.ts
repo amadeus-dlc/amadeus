@@ -14,6 +14,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
+  codexProjectTrustDoctorCheck,
   handleDoctor,
   hookHeartbeatDoctorCheck,
 } from "../../packages/framework/core/tools/amadeus-utility.ts";
@@ -22,6 +23,7 @@ import { hooksHealthDir } from "../../packages/framework/core/tools/amadeus-lib.
 const roots: string[] = [];
 const repoRoot = join(import.meta.dir, "..", "..");
 const savedEnv = {
+  codexHome: process.env.CODEX_HOME,
   harness: process.env.AMADEUS_HARNESS_DIR,
   migration: process.env.AMADEUS_MIGRATION_DOCTOR,
   node: process.env.NODE_ENV,
@@ -44,6 +46,7 @@ function restoreEnv(name: string, value: string | undefined): void {
 }
 
 afterEach(() => {
+  restoreEnv("CODEX_HOME", savedEnv.codexHome);
   restoreEnv("AMADEUS_HARNESS_DIR", savedEnv.harness);
   restoreEnv("AMADEUS_MIGRATION_DOCTOR", savedEnv.migration);
   restoreEnv("NODE_ENV", savedEnv.node);
@@ -188,5 +191,40 @@ describe("t226 migration doctor heartbeat inspection", () => {
 
     expect(exitCode).toBe(1);
     expect(output).toContain("Hook heartbeats: not inspected during migration");
+  });
+});
+
+describe("t226 codex project-trust doctor check", () => {
+  test("normal run with no config.toml fails loud with a fix", () => {
+    delete process.env.AMADEUS_MIGRATION_DOCTOR;
+    process.env.CODEX_HOME = root("codex-home-absent");
+    const result = codexProjectTrustDoctorCheck("/abs/project");
+    expect(result.pass).toBe(false);
+    expect(result.label).toContain('project trust: [projects."/abs/project"]');
+    expect(result.label).toContain("Codex skips all .codex hooks silently without it");
+    expect(result.fix).toContain("scripts/team-up.sh");
+  });
+
+  test("normal run passes when the project has a [projects] entry", () => {
+    delete process.env.AMADEUS_MIGRATION_DOCTOR;
+    const home = root("codex-home-present");
+    process.env.CODEX_HOME = home;
+    writeFileSync(
+      join(home, "config.toml"),
+      '[projects."/abs/project"]\ntrust_level = "trusted"\n',
+      "utf-8",
+    );
+    const result = codexProjectTrustDoctorCheck("/abs/project");
+    expect(result.pass).toBe(true);
+    expect(result.label).toContain('[projects."/abs/project"]');
+  });
+
+  test("migration mode skips the check without reading any config", () => {
+    process.env.AMADEUS_MIGRATION_DOCTOR = "1";
+    process.env.CODEX_HOME = root("codex-home-migration");
+    expect(codexProjectTrustDoctorCheck("/abs/project")).toEqual({
+      pass: true,
+      label: "project trust: not inspected during migration (seeded at team-up runtime)",
+    });
   });
 });

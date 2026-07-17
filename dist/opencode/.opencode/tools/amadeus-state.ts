@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { appendAuditEntry, appendAuditEntryUnlocked } from "./amadeus-audit.ts";
 import {
   activeIntent,
@@ -17,6 +17,7 @@ import {
   emitError,
   errorMessage,
   extractMarkdownSection,
+  fieldExists,
   findStageBySlug,
   findAllEvents,
   firstInScopeStageOfPhase,
@@ -36,6 +37,8 @@ import {
   parseStateStageSuffixes,
   readAllAuditShards,
   readStateFile,
+  checkQuestionsEvidence,
+  QUESTIONS_EVIDENCE_CUTOFF_YYMMDD,
   recordDir,
   relativeMemoryPath,
   relativeRecordDir,
@@ -468,7 +471,7 @@ function handleGet(args: string[]): void {
   console.log(value);
 }
 
-function handleSet(args: string[]): void {
+export function handleSet(args: string[]): void {
   if (args.length < 1) error("Usage: amadeus-state.ts set <field=value> ...");
   const pd = resolveProjectDir(projectDir);
   // C2b lost-update safety: hold the audit lock across read→decide→write so
@@ -478,13 +481,38 @@ function handleSet(args: string[]): void {
   withAuditLock(pd, () => {
   let content = readStateFile(pd);
 
+  // Parse every pair up front so field existence can be validated as one pass
+  // before any write. `set` must fail closed (Issue #1027): if a target field
+  // row is absent, setField silently no-ops, so the old code wrote an unchanged
+  // file and still reported `{"updated":true}` — a lie the caller trusts.
+  // Plain loops (no arrow callbacks): the complexity baseline keys anonymous
+  // functions by ordinal, so adding closures here would shift every later
+  // anonymous entry off its baseline row.
+  const pairs: { field: string; value: string }[] = [];
   for (const pair of args) {
     const eqIdx = pair.indexOf("=");
     if (eqIdx <= 0) error(`Invalid field=value pair: ${pair}`);
-    const field = pair.slice(0, eqIdx);
-    let value = pair.slice(eqIdx + 1);
+    pairs.push({ field: pair.slice(0, eqIdx), value: pair.slice(eqIdx + 1) });
+  }
 
+  // Pre-validate ALL fields and reject atomically with the full list of the
+  // missing ones (fail-at-first would hide later absences). On reject nothing
+  // is written — the state file, Last Updated included, stays byte-identical.
+  const missingMessages: string[] = [];
+  for (const { field } of pairs) {
+    if (!fieldExists(content, field)) {
+      missingMessages.push(
+        `Field not found in state file: "${field}". Cannot update — refusing to silently no-op.`,
+      );
+    }
+  }
+  if (missingMessages.length > 0) {
+    error(missingMessages.join("\n"));
+  }
+
+  for (const { field, value: raw } of pairs) {
     // Special values
+    let value = raw;
     if (value === "NOW") {
       value = isoTimestamp();
     } else if (value === "+1") {
@@ -500,6 +528,8 @@ function handleSet(args: string[]): void {
     content = setField(content, field, value);
   }
 
+  // Reached only when every field existed: the write is real, so the success
+  // report is now execution-derived (FR-2), not unconditional.
   writeStateFile(pd, content);
   console.log(JSON.stringify({ updated: true, fields: args.length }));
   });
@@ -1658,7 +1688,7 @@ function validateSlugInState(
 // --recovered marks a BACKFILLED gate row (the engine opening a gate the
 // conductor skipped, e.g. report's explicit-stage recovery) with
 // Recovered=true so audit consumers can tell backfills from organic opens.
-function handleGateStart(args: string[]): void {
+export function handleGateStart(args: string[]): void {
   if (args.length < 1) error("Usage: amadeus-state.ts gate-start <slug> [--artifacts <csv>] [--recovered]");
   const slug = args[0];
   let artifacts: string | undefined;
@@ -1677,6 +1707,35 @@ function handleGateStart(args: string[]): void {
   const stage = findStageBySlug(slug);
   if (!stage) error(`Unknown stage: ${slug}`);
   validateSlugInState(content, slug, "in-progress");
+
+  // E-OC1 evidence gate (#1101): refuse to open the approval gate when the
+  // stage's questions file carries a filled [Answer] without ruling/approval
+  // evidence. Fail-closed via error() BEFORE any transition is written, so a
+  // refusal leaves the checkbox untouched and STAGE_AWAITING_APPROVAL unemitted.
+  const rd = recordDir(pd);
+  // Enforcement cutoff (reviewer catch, PR #1106): 59/111 questions files in
+  // the live corpus predate the E-OC1 evidence-header convention, so applying
+  // the guard to pre-guard intents would hard-block unpark -> gate-start on
+  // history the norm explicitly does not reach ("no retroactive checks").
+  // Intents are dated by their record dir name (YYMMDD-...); only intents
+  // born on/after the guard's adoption day are enforced. The cutoff is
+  // canonical in amadeus-lib.ts (QUESTIONS_EVIDENCE_CUTOFF_YYMMDD), shared with
+  // the advisory answer-evidence sensor so the two never drift.
+  const intentDate = rd === null ? null : Number.parseInt(basename(rd).slice(0, 6), 10);
+  const enforced =
+    intentDate !== null &&
+    Number.isFinite(intentDate) &&
+    intentDate >= QUESTIONS_EVIDENCE_CUTOFF_YYMMDD;
+  if (rd !== null && enforced) {
+    const questionsPath = join(rd, stage.phase, slug, `${slug}-questions.md`);
+    const ev = checkQuestionsEvidence(questionsPath);
+    if (ev.kind === "fail" && ev.reason === "no-evidence") {
+      error(`Refusing to gate-start "${slug}": ${slug}-questions.md has a filled [Answer] but no ruling reference (E-code) or leader-approval timestamp line. Record the E-OC1 evidence in the questions header, then retry.`);
+    }
+    if (ev.kind === "fail" && ev.reason === "unparseable-timestamp") {
+      error(`Refusing to gate-start "${slug}": the approval evidence line in ${slug}-questions.md does not carry a parseable ISO timestamp. Fix the E-OC1 evidence header, then retry.`);
+    }
+  }
 
   content = setCheckbox(content, slug, "awaiting-approval");
   const timestamp = isoTimestamp();

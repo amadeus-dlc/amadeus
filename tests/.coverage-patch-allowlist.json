@@ -1,0 +1,14 @@
+[
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "lines": "878",
+    "reason": "handleDoctor .codex branch wiring line `results.push(codexProjectTrustDoctorCheck(projectDir))`. The judgment it dispatches is fully covered in-process by t226; handleDoctor itself is spawn-only (t83 header) and bun --coverage does not measure a spawned subprocess. Seam refactor already applied (#882 precedent, utility.ts:558-590) — this residual wiring line is the second-resort allowlist case per spawn-blindspot-two-step (ii).",
+    "expiry": "remove when handleDoctor gains an in-process driver test"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "lines": "884",
+    "reason": "handleDoctor .codex layer-2 hook-trust reminder label string (FR-2 #1065 relabel to make the two-layer structure explicit). A static pass:true advisory message-string row inside spawn-only handleDoctor — refactor is unnatural per spawn-blindspot-two-step (ii), which names message-string rows as the allowlist case.",
+    "expiry": "remove when handleDoctor gains an in-process driver test"
+  }
+]

@@ -1,4 +1,5 @@
 // covers: cli:amadeus-migrate(dry-run,apply)
+// size: large
 //
 // Public-interface contract for the deterministic upstream-v2 workspace
 // migration. Every assertion crosses the real process seam and observes only
