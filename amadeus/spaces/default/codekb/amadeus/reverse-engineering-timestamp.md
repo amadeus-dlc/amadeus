@@ -1,6 +1,17 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(最新: 260717-standing-delegation-gran)
+## 実行メタデータ(最新: 260717-answer-tag-vocab-fix)
+
+- Date: 2026-07-17
+- Observed at: HEAD `6598bfab19c9b401eeccb5cd9bcf1c9861099a57`(`git rev-parse HEAD` 実測、engineer-3 本線)
+- Intent: `260717-answer-tag-vocab-fix`(Issue #1127 — checkQuestionsEvidence 語彙衝突修正、bugfix スコープ)
+- Scope: `bugfix`
+- 手法: diff-refresh(c1)+述語/消費者/corpus 様式重点。base=`3346718`(祖先・距離56 最小 — rescan-base-ancestry)。Developer→Architect 直列(c3、独立再実測5点全一致)
+- Focus: ANSWER_TAG_RE(amadeus-lib.ts:1148)/ 消費者2全数(gate-start :1731・sensor :85 — import 消費で写経なし)/ corpus 396行(コロン391/非コロン5・trigger 形 committed 0件)/ テスト dist import 面・trigger unpinned
+- 現行結論: (a) コロン必須化+(c) ノルム様式追補の併用。9コピー regen 必須。非目標 = hasEcode ファイル粒度マスク(既存挙動)
+- Per-intent record: `re-scans/260717-answer-tag-vocab-fix.md`
+
+## 実行メタデータ(履歴: 260717-standing-delegation-gran)
 
 - Date: 2026-07-17
 - Observed at: HEAD `46f51091f0c8d5d39dc9790a218d03293ffdf060`(`git rev-parse HEAD` 実測、measurement-ref — scan-notes の全件数・行番号はこの HEAD で測定)
@@ -29,17 +40,17 @@
 ## 実行メタデータ(履歴: 260716-teamup-resume-size-drift)
 
 - Date: 2026-07-16
-- Observed at: HEAD `5761e65ce73a82b055590a50f483161e5df2abca`(`git rev-parse HEAD` 実測、conductor 本線 — scan-notes 参照)
-- Intent: `260716-teamup-resume-size-drift`(Issue #1081 — t-team-up-codex-resume の wall-clock drift。E-1081-FIX 裁定 C: size: large 宣言(PR #1090 着地済み)+短縮別 Issue #1087)
+- Observed at: HEAD `5761e65ce73a82b055590a50f483161e5df2abca`(`git rev-parse HEAD` 実測)
+- Intent: `260716-teamup-resume-size-drift`(Issue #1081 — t-team-up-codex-resume の wall-clock drift(declared=medium measured=large、31.3〜32.5s の3実行系恒常)。E-1081-FIX 裁定 C: size: large 宣言+短縮別 Issue)
 - Scope: `bugfix`
-- 手法: diff-refresh(cid:reverse-engineering:c1)。base=`6495e03a`(全 re-scans observed のうち HEAD 祖先・距離最小 86 — rescan-base-ancestry、非祖先 observed は除外)。Developer スキャン→Architect 合成の直列(c3、再照合7点全一致)
-- Focus: 対象テストの size/covers ヘッダ不在・test-size.ts の宣言パース(:279-291)と drift 上方向専用(:117)・run-tests.ts の観測専用出力(:915-923)・t-test-size-drift.test.ts の guard/purity・#1077 前例形
-- 現行結論: 宣言不在ゆえ static=medium が effectiveDeclared となり実測 large 帯(3実行系 31.3〜32.5s、修正時までに7点)と乖離 — 最上部 `// size: large` 1行で drift 消滅(strictly-greater 機構)。全ゲートは宣言<static 方向専用のため large 宣言で赤化なし
+- 手法: diff-refresh(cid:reverse-engineering:c1)。base=`6495e03a`(全 re-scans observed のうち HEAD 祖先・距離最小 86 — rescan-base-ancestry。非祖先 observed は除外)。Developer スキャン→Architect 合成の直列(c3)
+- Focus: 対象テストの size/covers ヘッダ不在・test-size.ts の宣言パース(:279-291 先頭40行)と drift 上方向専用(:117)・run-tests.ts の観測専用出力(:915-923)・t-test-size-drift.test.ts の guard/purity(:122-134/:192-195)・#1077 前例形(1 insertion)
+- 現行結論: 宣言不在ゆえ static=medium が effectiveDeclared となり実測 large 帯と乖離 — 最上部への `// size: large` 1行で drift 消滅(strictly-larger 機構)。全ゲートは宣言<static 方向専用のため large 宣言で赤化なし。落ちる実証は size: small 注入で drift-guard 赤
 - Per-intent record: `re-scans/260716-teamup-resume-size-drift.md`
 - 更新した成果物: 本ファイル(鮮度ポインタ+旧「最新: 260716-github-issue-912-tests-s」→履歴ラベル化)、`re-scans/260716-teamup-resume-size-drift.md`。**codekb body は全点温存**(churn 回避 — test-size 専用節は不在、size 機構3ファイルは区間 86 コミットで不変、1行 bugfix。cid:reverse-engineering:c1)
 - Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
 
-## 実行メタデータ（履歴: 260716-t224-size-large）
+## 実行メタデータ(履歴: 260716-t224-size-large)
 
 - Date: 2026-07-16
 - Observed at: `git rev-parse HEAD` = `720b0145b4b396b5c146b5c7271ff83f1da65243`
@@ -56,9 +67,7 @@
 - 更新成果物: `code-structure.md`（「テスト size 分類機構の観測」節を H1 直後に新設＋前「最新」= §13 label 節を履歴ラベル化 cid:reverse-engineering:c3-relabel）、本ファイル（鮮度ポインタ＋「最新: 260716-s13-label-clarity」→履歴ラベル化）、`re-scans/260716-t224-size-large.md`（per-intent re-scan 記録）。他 body 成果物は本 intent がテスト資産の1行 size 宣言のみで構造変化を伴わないため温存（churn 回避、cid:reverse-engineering:c1）。
 - Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。**本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。**
 
-
-
-## 実行メタデータ（履歴: 260716-s13-label-clarity）
+## 実行メタデータ(履歴: 260716-s13-label-clarity)
 
 - Date: 2026-07-16
 - Observed at: `git rev-parse HEAD` = `e97fdb6fc658d4cd36d4c30fc460c5b7e70e8c75`
@@ -74,8 +83,6 @@
 - Per-intent record: `re-scans/260716-s13-label-clarity.md`
 - 更新成果物: `code-structure.md`（「§13 learn-candidate label 面の観測」節を先頭新設＋前「最新」= parser/checkbox 節を履歴ラベル化 cid:reverse-engineering:c3-relabel）、本ファイル（鮮度ポインタ＋「最新: 260715-parser-checkbox-fixes」→履歴ラベル化）、`re-scans/260716-s13-label-clarity.md`（per-intent re-scan 記録）。他成果物は本 intent が docs prose 面のみで構造変化を伴わないため温存（churn 回避、cid:reverse-engineering:c1）。
 - Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。**本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。**
-
-
 
 ## 実行メタデータ(履歴: 260716-github-issue-912-tests-s)
 
@@ -94,8 +101,7 @@
 - 更新した成果物: `code-structure.md`(「t05 並列フレーク観測面 — 260716-github-issue-912」節を H1 直後に新設 = planted-failure 機序 / 並列制御の実態 / 先行修正3クラス / 修正3案評価。旧「最新」= parser/checkbox 欠陥面(260715-parser-checkbox-fixes)節見出しの「最新」→「履歴」降格(main 反映時点の最新節。harness port 節は既に履歴) cid:reverse-engineering:c3-relabel)、本ファイル(鮮度ポインタ + 旧「最新: 260715-parser-checkbox-fixes」→履歴ラベル化)、`re-scans/260716-github-issue-912-tests-s.md`(per-intent re-scan 記録)。他 body 成果物(architecture / business-overview / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment の7点)は base→observed でフォーカス面と無関係、かつ区間 diff 空で構造不変のため温存(churn 回避、cid:reverse-engineering:c1)。
 - Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。**本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。**
 
-
-## 実行メタデータ（履歴: 260715-parser-checkbox-fixes）
+## 実行メタデータ(履歴: 260715-parser-checkbox-fixes)
 
 - Date: 2026-07-16
 - Observed at: `git rev-parse HEAD` = `6495e03a12d9e7149c2e80b59f171a90607a2d2c`
@@ -111,7 +117,6 @@
 - Per-intent record: `re-scans/260715-parser-checkbox-fixes.md`
 - 更新成果物: `code-structure.md`（「parser/checkbox 欠陥面の観測」節を先頭新設＋前「最新」= canonical-settings 節を履歴ラベル化 cid:reverse-engineering:c3-relabel）、本ファイル（鮮度ポインタ＋「最新: 260709-canonical-settings」→履歴ラベル化）、`re-scans/260715-parser-checkbox-fixes.md`（per-intent re-scan 記録）。他成果物（architecture / business-overview / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment）は両欠陥が挙動欠陥で構造変化を伴わず、base→observed でフォーカス面外に破壊的変化がないため温存（churn 回避、cid:reverse-engineering:c1）。
 - Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。**本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。**
-
 
 ## 実行メタデータ(履歴: 260715-opencode-cursor-harness)
 
@@ -130,7 +135,7 @@
 - 更新した成果物: `code-structure.md`(「harness port 開放性の観測面」節を先頭新設 = open-set 3層 / 閉じ列挙9ファイル台帳 / promote:self 非自動 / doctor advisory 劣化 / 最小ファイル集合。旧「swarm driver 変更面の配置境界」節見出しの「最新」→「履歴」降格 cid:reverse-engineering:c3-relabel)、本ファイル(鮮度ポインタ + 旧「最新: 260713」→履歴ラベル化)、`re-scans/260715-opencode-cursor-harness.md`(per-intent re-scan 記録)。他 body 成果物(architecture / business-overview / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment の7点)は base→observed で本 intent 観測面(packaging 開放性・閉じ列挙)と無関係、かつ区間65コミットで構造不変(scan-notes フォーカス面8実測)のため温存(churn 回避、cid:reverse-engineering:c1)。
 - Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。**本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。**
 
-## 実行メタデータ（履歴: 260709-canonical-settings）
+## 実行メタデータ(履歴: 260709-canonical-settings)
 
 - Date: 2026-07-16
 - Observed at: `git rev-parse HEAD` = `e55cc25143717d84b3e7f1a543151f0b7c99b96f`
@@ -147,7 +152,7 @@
 - 更新成果物: `code-structure.md`（「canonical settings 観測面」節を先頭新設 = フォーカス面1〜7 の要点を file:line 付き転記）、本ファイル（鮮度ポインタ + 「最新: 260713-swarm-driver-migration」→履歴ラベル化 cid:reverse-engineering:c3-relabel）、`re-scans/260709-canonical-settings.md`（per-intent re-scan 記録）。他成果物（architecture / business-overview / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment）は Developer が本 intent 観測面で stale なしと判定し、base→observed で構造変化・挙動欠陥を伴わないため温存（churn 回避、cid:reverse-engineering:c1）。
 - Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。**本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。**
 
-## 実行メタデータ（履歴: 260713-swarm-driver-migration）
+## 実行メタデータ(履歴: 260713-swarm-driver-migration)
 
 - Date: 2026-07-13
 - Observed at: 2026-07-13T07:57:31Z
@@ -464,3 +469,44 @@ packaging 入力集合と source-unreferenced ギャップに焦点を絞った 
 - `code-quality-assessment.md` — #685・#670 のリスク評価節を追記、#675 を解消済みとして更新。
 - `business-overview.md` — 当該 intent の業務境界(2バグ)を追記。
 - `technology-stack.md`・`dependencies.md` — 変更なし(該当領域に新規依存・技術変更なし)、確認済みの旨のみ追記。
+
+## 実行メタデータ(履歴: 260716-codecov-fallback)
+
+- Date: 2026-07-16
+- Observed at: HEAD `e9ae95ef9`(origin/main #1054 マージ後の team branch。スキャン実施時 `d8ad5c3c1`、区間で対象ファイル無変更)
+- Intent: `260716-codecov-fallback`(Issue #1017 — 大型 PR で codecov/patch check-run が構造的に不生成になる観測(#982/#1046/#1047)の機序を codecov 側設定・worker ソースから確定し、「codecov をちゃんと通す(迂回禁止)」修正候補を設計へ渡す)
+- Scope: `bugfix`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh(cid:reverse-engineering:c1、E-L63 の base 選定則)。base=`8e8cc9b14d9c21e3e8282e3fdb6ae30db7f0f478`(祖先性 `git merge-base --is-ancestor` exit 0 実測、距離=**7**、祖先かつ距離最小の指定 base を採用)、observed=`e9ae95ef9`。**フォーカス2ファイル(`codecov.yml`・`.github/workflows/ci.yml`)の区間 diff は空** — repo 面は base..observed 区間で不変。codecov 側 worker/torngit の挙動は**外部一次ソース実測(取得日 2026-07-16、codecov/worker・codecov/shared の `main` raw)**であり repo 区間 diff の対象外。base/observed の真実源は本 intent の `inception/reverse-engineering/scan-notes.md` および `re-scans/260716-codecov-fallback.md`。
+- 実施体制: Developer(スキャン)→ conductor 補完実測(codecov worker/torngit 一次ソース)→ Architect(合成)の直列(cid:reverse-engineering:c3)
+- Focus: repo `codecov.yml`(`if_not_found: failure` :25、`ignore: tests/**` :9-17、`project` 不在)・codecov worker patch status 投稿3経路(W1 `mixins/status.py:112-118` / W2 `:155-167` / W3 `status/base.py:213-228` の TorngitClientError catch で不投稿)・torngit 2 diff 経路(`torngit/github.py` `get_commit_diff:1790-1812` の 406-prone / `get_compare:1815-` ページネーションなし)・不生成クラス突き合わせ(#982 diff API 406 / #1046 patch_totals null / #1047 test-only W2 期待に反し不投稿)・upload フラグレス(`ci.yml:168-178`)・CI 消費(`ci.yml:263-359` codecov-status waitForCheck)・既存テスト不在
+- 現行結論: repo の codecov 設定・CI 消費構造は区間 diff 空で不変。codecov/patch 不生成は設定(W1)ではなく **W3(notify 中の TorngitClientError→catch で無投稿)または通知前段の失敗**が有力。`if_not_found: failure→success` は W1 クラスのみを直し、W3(406)クラスは**どの公式設定でも投稿されない可能性**があり実 PR での挙動測定でのみ確定できる(⚠ 未実測、external-seam-vocab-measurement)。upload 側は主因でない(check-run 不生成時も upload green 実測)。修正候補は W1/W2/W3 の層別で requirements/選挙にて確定。
+- Per-intent record: `re-scans/260716-codecov-fallback.md`
+- 更新した成果物: `code-structure.md`(「codecov patch status 不生成の機序面 — 260716-codecov-fallback」節を H1 直後に新設 = codecov 設定 / worker 3経路 / torngit diff 経路 / 不生成クラス突き合わせ / CI 消費 / 既存テスト不在。旧「最新」= t05 並列フレーク観測面(260716-github-issue-912)節見出しの「最新」→「履歴」降格(見出し1行のみ、本文不変、cid:reverse-engineering:c3-relabel))、本ファイル(鮮度ポインタ + 旧「最新: 260716-github-issue-912-tests-s」→履歴ラベル化)、`re-scans/260716-codecov-fallback.md`(per-intent re-scan 記録)。他 body 成果物(architecture / business-overview / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment の7点)は base→observed でフォーカス面(CI 設定 + 外部サービス機序)と無関係、かつ repo 区間 diff 空で構造不変のため温存(churn 回避、cid:reverse-engineering:c1)。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。**本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。**
+
+## 実行メタデータ(履歴: 260716-opencode-plugins-hooks)
+
+- Date: 2026-07-16
+- Observed at: HEAD `3346718771f96f4f26cfe85691f2855a78cf1bdf`(`git rev-parse HEAD` 実測、engineer-3 本線)
+- Intent: `260716-opencode-plugins-hooks`(Issue #1049 — opencode plugins hooks 統合、amadeus スコープ)
+- Scope: `amadeus`
+- 手法: diff-refresh(c1)+opencode plugins 重点。base=`1e22d6a`(祖先・距離115 最小 — rescan-base-ancestry)。Developer→Architect 直列(c3、8点再照合全一致)
+- Focus: core hooks 11本 stdin/exit 契約 / Cursor アダプタ同型契約 / opencode manifest(hooks コピー済み・plugin dir 不在)/ 外部 seam(chat.message = HUMAN_TURN 写像可、tool.execute.* payload 一次ソース確定)
+- 現行結論: 実装面は配線プラグイン新設(core hooks 無改変)。stop は advisory 降格が安全(core は exit 2 不使用)。plugin dir 分離(harness/opencode/plugin/)が authoredExempt 不要で変更制御上望ましい(仮説)
+- Per-intent record: `re-scans/260716-opencode-plugins-hooks.md`
+
+## 実行メタデータ(履歴: 260716-installer-new-harnesses)
+
+- Date: 2026-07-16
+- Observed at: HEAD `1e22d6a889ca71cab82a056e07edc8a46110a297`(`git rev-parse HEAD` 実測)
+- Intent: `260716-installer-new-harnesses`(Issue #1048 — installer 閉じ列挙の opencode/cursor 対応、feature スコープ)
+- Scope: `feature`
+- 手法: diff-refresh(c1)+installer 重点(c2)。base=`5761e65`(祖先・距離41 最小 — rescan-base-ancestry)。Developer→Architect 直列(c3、再検証全点一致)
+- Focus: installer 閉じ列挙 5ファイル9箇所の全数再列挙 / 汎用機構のハードコード有無(0件)/ setup-pack-contract(変更不要)/ README docs 同期面(:58-59/:109)/ 全数性の二層分担 / ローカル install 検証手段(fakeHttp+codeload fixture)
+- 現行結論: 変更面は installer 8サイト+README 3箇所に閉じ、追加ロジック不要(列挙単一起点の自動伝播)。付随3面(runtime/migrate/self-install)は実測根拠付きで advisory/dogfood — pre-declared 分岐推奨
+- Per-intent record: `re-scans/260716-installer-new-harnesses.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ+旧最新の履歴化)、`re-scans/260716-installer-new-harnesses.md`。**codekb body は全点温存**(既存節 code-structure.md:79-129 が台帳を保持・全数再検証一致)
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
