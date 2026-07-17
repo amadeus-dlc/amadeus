@@ -136,6 +136,11 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 
 - 事前整理(standalone grilling 等)で裁定済みの intent では、intent-capture の質問を未決の判断のみに絞り、確定済み裁定は前提知識として成果物へ直接反映する — 質問の重複再演をしない(260717-mirror-issue-tool で実践、4+1問で完了) (learned 2026-07-17) <!-- cid:intent-capture:c1 -->
 
+- gh CLI への依存は scripts/ 配下の repo ローカル開発支援ツールに限定して許容する — 配布フレームワーク(packages/framework/、dist/、self-install)へは持ち込まない(Bun-only Forbidden との整合)。gh 不在・未認証は loud エラー(exit 1)、認証は gh keyring へ委譲しトークンを持たない(260717-mirror-issue-tool Q1 裁定) (learned 2026-07-17) <!-- cid:practices-discovery:gh-scripts-boundary -->
+- 宣言センサーの手動発火は成果物生成直後・reviewer ディスパッチ前に行う — manual-sensor-fire-before-gate-report の「ゲート報告前」をレビュー前へ前倒しする(reviewer のイテレーションをセンサー検出可能な欠陥に消費させない。260717-mirror-issue-tool で発火漏れ→reviewer が FAILED 検出のロスを2回実測) (learned 2026-07-17) <!-- cid:functional-design:sensor-before-reviewer -->
+- 上流入力ヘッダーは「本文に依拠箇所を書いた後」に本文の実参照から転記して作る — 宣言リストからの機械転記が本文未参照の装飾トークン(artifact-upstream-inputs-header 禁止パターン)を生む。consumes-first-drafting(宣言を先に読む)と対の出力側順序(260717-mirror-issue-tool で nfr-requirements/nfr-design の2ステージ連続再発を実測) (learned 2026-07-17) <!-- cid:nfr-design:body-derivation-before-header -->
+- エラー経路テストの green は「目的の分岐を実際に踏んだこと」を lcov の DA で実測確認してから完成扱いにする — 別経路が同じ exit code に到達する偽経路 green(260717 で単一 record 自動解決により no-active-intent テストが番号 parse 失敗経路で green だった実測)は assertion だけでは見えない。injection-surface-verify(注入面)と直交するテスト到達面の検査 (learned 2026-07-17) <!-- cid:build-and-test:error-path-reach-lcov -->
+
 ## Testing
 - Standardの中核はunit/integrationとし、performance/securityは承認済みNFRと実在境界へtraceして選定する。戦略名だけで検査を機械追加しない。既決strategy再述に留めず、stage定義の曖昧さは別途追跡する。 (learned 2026-07-12) <!-- cid:build-and-test:c1 -->
 - 攻撃面・依存・承認NFRを成果物で実測明記した場合のみ検査を比例選定する。既存必須scanや要求済み検査の省略根拠にはしない。 (learned 2026-07-12) <!-- cid:build-and-test:c3 -->
