@@ -8,7 +8,7 @@
 
 All event names follow `SUBJECT_PAST_VERB` — every event answers "what happened?"
 
-## Event Registry (73 events, 18 categories)
+## Event Registry (75 events, 19 categories)
 
 ### Workflow Lifecycle (4 events)
 
@@ -78,6 +78,15 @@ All event names follow `SUBJECT_PAST_VERB` — every event answers "what happene
 | `QUESTION_ANSWERED` | Question answered by user | Timestamp, Stage, Details | `tools/amadeus-log.ts answer` |
 | `DELEGATED_APPROVAL` | Leader session records a human-grounded approval into a remote conductor intent's audit dir (agent-team topology, #671) | Timestamp, Stage, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts, User Input | `tools/amadeus-state.ts delegate-approval` |
 | `DELEGATED_REJECTION` | Leader session records a human-grounded rejection into a remote conductor intent's audit dir; verb-scoped mirror of `DELEGATED_APPROVAL` (agent-team topology, #685) | Timestamp, Stage, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts, Feedback | `tools/amadeus-state.ts delegate-rejection` |
+
+### Standing Delegation Grants (2 events)
+
+Team-mode only, human-grounded like the delegations. A leader session, driven by a real human turn on its own ledger, issues a time-boxed standing grant that opens stage-gate approvals for the grant's TTL (default 4 hours) without a per-gate human turn. Phase-boundary gates are EXCLUDED by default and require the `--include-phase-boundary` opt-in. Both events carry the same issuer provenance coordinates as the delegations and are minted only by their trusted in-process writers (refused at the general audit CLI).
+
+| Event | When | Required Fields | Emitter |
+|-------|------|-----------------|---------|
+| `GRANT_ISSUED` | Leader issues a time-boxed standing stage-gate grant, grounded in a real human turn on its own ledger (Issue #1125) | Timestamp, Grant Id, Scope, Expires At, Includes Phase Boundary, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts, optional User Input | `tools/amadeus-state.ts grant-standing-delegation` |
+| `GRANT_REVOKED` | Leader revokes an outstanding standing grant by id, grounded in a real human turn (Issue #1125) | Timestamp, Grant Id, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | `tools/amadeus-state.ts revoke-standing-delegation` |
 
 ### Artifact Events (3 events — hook-emitted)
 

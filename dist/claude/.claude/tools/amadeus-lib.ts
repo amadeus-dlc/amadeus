@@ -2552,6 +2552,230 @@ export function verifyDelegatedProvenance(projectDir: string, block: string): bo
   return false;
 }
 
+// --- Standing delegation grants (Issue #1125) ---
+
+// Default time-to-live for a standing stage-gate grant: 4 hours. Fixed by the
+// E-SDG-RA Q4=A ruling (a normal working session's length) so a grant spans a
+// typical leader-away window and then lapses back to per-gate approval on its
+// own. No env override is provided ON PURPOSE (standing-approval-scope-limit):
+// the auto-approval window stays a fixed, auditable constant rather than a knob
+// a session could widen at runtime. Semantically DISTINCT from
+// DEFAULT_LOCK_STALE_MS — that bounds a stale audit LOCK; this bounds a
+// human-granted APPROVAL window (different meaning, different magnitude).
+export const DEFAULT_STANDING_GRANT_TTL_MS = 4 * 60 * 60 * 1000;
+
+// A parsed, currently-relevant standing grant. Built only via StandingGrant.parse
+// (class-free companion-object style): the type carries an isExpired predicate so
+// callers ask the grant rather than re-deriving the comparison.
+export type StandingGrant = {
+  readonly grantId: string;
+  readonly scope: "stage-gates";
+  readonly expiresAtMs: number;
+  readonly includesPhaseBoundary: boolean;
+  readonly issuerIntent: string;
+  readonly issuerShard: string;
+  readonly issuerHumanTs: string;
+  isExpired(nowMs: number): boolean;
+};
+
+// Field bundle for the StandingGrant factory (module-level named type so the
+// factory signature is a single runtime line — a multi-line inline type
+// annotation reads back as permanent DA:0 under bun --coverage).
+type StandingGrantFields = {
+  grantId: string;
+  expiresAtMs: number;
+  includesPhaseBoundary: boolean;
+  issuerIntent: string;
+  issuerShard: string;
+  issuerHumanTs: string;
+};
+
+// Internal factory: a frozen StandingGrant literal whose isExpired closes over
+// expiresAtMs. The grant lapses the instant `now` reaches its expiry.
+function makeStandingGrant(f: StandingGrantFields): StandingGrant {
+  return Object.freeze({
+    grantId: f.grantId,
+    scope: "stage-gates" as const,
+    expiresAtMs: f.expiresAtMs,
+    includesPhaseBoundary: f.includesPhaseBoundary,
+    issuerIntent: f.issuerIntent,
+    issuerShard: f.issuerShard,
+    issuerHumanTs: f.issuerHumanTs,
+    isExpired(nowMs: number): boolean {
+      return nowMs >= f.expiresAtMs;
+    },
+  });
+}
+
+// Companion object (parse seam). Separate value binding from the type of the same
+// name so callers read StandingGrant.parse(block) at the intended altitude.
+export const StandingGrant = {
+  // Build a StandingGrant from a GRANT_ISSUED audit block, or null when a required
+  // field is absent, the Scope is not "stage-gates", or Expires At is not a
+  // parseable date. Every unparseable block collapses to null so a malformed row
+  // can never masquerade as a valid grant.
+  parse(auditBlock: string): StandingGrant | null {
+    const grantId = auditBlockField(auditBlock, "Grant Id");
+    const scope = auditBlockField(auditBlock, "Scope");
+    const expiresAt = auditBlockField(auditBlock, "Expires At");
+    const includes = auditBlockField(auditBlock, "Includes Phase Boundary");
+    const issuerIntent = auditBlockField(auditBlock, "Issuer Intent");
+    const issuerShard = auditBlockField(auditBlock, "Issuer Shard");
+    const issuerHumanTs = auditBlockField(auditBlock, "Issuer Human Ts");
+    if (
+      !grantId ||
+      scope !== "stage-gates" ||
+      !expiresAt ||
+      includes === null ||
+      !issuerIntent ||
+      !issuerShard ||
+      !issuerHumanTs
+    ) {
+      return null;
+    }
+    const expiresAtMs = Date.parse(expiresAt);
+    if (Number.isNaN(expiresAtMs)) return null;
+    return makeStandingGrant({
+      grantId,
+      expiresAtMs,
+      includesPhaseBoundary: includes === "true",
+      issuerIntent,
+      issuerShard,
+      issuerHumanTs,
+    });
+  },
+};
+
+// Every Grant Id revoked by a GRANT_REVOKED block anywhere in the space. A
+// revocation may live in a different intent's shard than the issuance, so the
+// whole space is swept before any candidate is judged.
+function collectRevokedGrantIds(
+  projectDir: string,
+  space: string,
+  intents: string[],
+): Set<string> {
+  const revoked = new Set<string>();
+  for (const intent of intents) {
+    const audit = readAllAuditShards(projectDir, intent, space);
+    if (audit.length === 0) continue;
+    for (const ev of findAllEvents(audit, "GRANT_REVOKED")) {
+      const id = auditBlockField(ev.block, "Grant Id");
+      if (id) revoked.add(id);
+    }
+  }
+  return revoked;
+}
+
+// Judge ONE GRANT_ISSUED block: return the parsed grant when it qualifies as a
+// live grant, else null. Qualifies only when ALL hold: parse succeeds; scope is
+// "stage-gates"; it is not expired at `now`; its id is not revoked; and its
+// issuer HUMAN_TURN provenance physically exists (verifyDelegatedProvenance — the
+// grant block carries the same issuer coordinates a delegation does).
+function qualifiedStandingGrant(
+  projectDir: string,
+  block: string,
+  now: number,
+  revoked: Set<string>,
+): StandingGrant | null {
+  const grant = StandingGrant.parse(block);
+  if (grant === null) return null;
+  if (grant.scope !== "stage-gates") return null;
+  if (grant.isExpired(now)) return null;
+  if (revoked.has(grant.grantId)) return null;
+  if (!verifyDelegatedProvenance(projectDir, block)) return null;
+  return grant;
+}
+
+// Find the newest currently-valid standing grant across every intent's audit
+// shards in the active space, or null when none qualifies (see
+// qualifiedStandingGrant for the per-candidate predicate). Ties break to the
+// latest expiresAtMs. `now` is an argument (never Date.now() here) so the
+// decision is deterministic for a fixed corpus + clock. Every failure mode is
+// caught and collapses to null so a verification defect can never wedge a gate
+// (fail to per-gate approval, never fail open at the check).
+export function findActiveStandingGrant(
+  projectDir: string,
+  now: number,
+): StandingGrant | null {
+  try {
+    const space = activeSpace(projectDir);
+    const intents = listIntentDirs(projectDir, space);
+    const revoked = collectRevokedGrantIds(projectDir, space, intents);
+    let best: StandingGrant | null = null;
+    for (const intent of intents) {
+      const audit = readAllAuditShards(projectDir, intent, space);
+      if (audit.length === 0) continue;
+      for (const ev of findAllEvents(audit, "GRANT_ISSUED")) {
+        const grant = qualifiedStandingGrant(projectDir, ev.block, now, revoked);
+        if (grant && (best === null || grant.expiresAtMs > best.expiresAtMs)) {
+          best = grant;
+        }
+      }
+    }
+    return best;
+  } catch {
+    return null;
+  }
+}
+
+// Scopes whose walking-skeleton default is ON when the recorded stance is
+// "scope-dependent" (or the classify round-trip has not landed a value yet).
+// Canonical single definition — amadeus-orchestrate.ts imports this same set
+// for its gate:"unresolved" resolution, so the grant-side skeleton exclusion
+// below and the engine's own skeleton gating can never drift apart.
+export const SKELETON_ON_SCOPES: ReadonlySet<string> = new Set([
+  "enterprise",
+  "mvp",
+  "feature",
+  "poc",
+  "workshop",
+  "infra",
+]);
+
+// Decide whether a valid standing grant covers THIS gate. Single classifying
+// function:
+//   (a) phase-boundary gate — the slug's phase differs from the next in-scope
+//       stage's phase, OR there is no next stage (final) — is covered ONLY when
+//       the grant opted in via includesPhaseBoundary.
+//   (b) the FIRST in-scope construction stage is NEVER auto-covered (false)
+//       while the walking-skeleton gate is effectively on: recorded stance
+//       "on", or a non-"off" stance (raw "scope-dependent" / absent — the
+//       stance is persisted un-normalized) combined with a SKELETON_ON_SCOPES
+//       scope. Only an explicit "off" clears the exclusion — a human must see
+//       the skeleton before the remaining Bolts run.
+//   (c) any other ordinary stage gate is covered (true).
+// stateContent supplies Scope + Skeleton Stance; `graph` is the loaded stage
+// graph, passed in so the caller controls the read.
+export function standingGrantSatisfiesGate(
+  grant: StandingGrant,
+  slug: string,
+  stateContent: string,
+  graph: StageEntry[],
+): boolean {
+  const scope = getField(stateContent, "Scope") ?? "";
+  const current = graph.find((s) => s.slug === slug);
+  const next = scope ? nextInScopeStage(slug, scope, stateContent) : null;
+  const crossesPhaseBoundary = !next || (current != null && next.phase !== current.phase);
+  if (crossesPhaseBoundary) {
+    return grant.includesPhaseBoundary;
+  }
+  // Walking-skeleton gate: the first in-scope construction stage stays
+  // human-gated while the skeleton is effectively on. The stance field is
+  // persisted un-normalized ("on" | "off" | "scope-dependent" | absent), so a
+  // raw "scope-dependent" (or missing) value defers to the scope default —
+  // literal "on"-only matching would silently skip the exclusion for a
+  // greenfield scope that never completed the classify round-trip.
+  if (scope) {
+    const stance = getField(stateContent, "Skeleton Stance") ?? "";
+    const skeletonOn = stance === "on" || (stance !== "off" && SKELETON_ON_SCOPES.has(scope));
+    if (skeletonOn) {
+      const firstConstruction = firstInScopeStageOfPhase("construction", scope);
+      if (firstConstruction && firstConstruction.slug === slug) return false;
+    }
+  }
+  return true;
+}
+
 // True when any stage sits at [?] (awaiting-approval) in the state file: the
 // "a gate is actually OPEN" predicate for the per-harness preToolUse floors.
 // Without it a floor would keep refusing tool calls AFTER a legitimate approval

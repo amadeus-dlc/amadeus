@@ -858,6 +858,7 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "integration/t224-state-set-failclosed.test.ts",
     "integration/t-practices-promote-contract.test.ts",
     "integration/t-sensor-fire-hardening.test.ts",
+    "integration/t-standing-grant.test.ts",
     "integration/t-transition-guard-audit.test.ts",
     "integration/t102.test.ts",
     "integration/t104.test.ts",

@@ -154,6 +154,21 @@ gate-start  →  [?] AwaitingApproval
 
 `amadeus-state set-skeleton-stance <on|off|scope-dependent>` は、コンダクターが分類した walking-skeleton スタンスを `Skeleton Stance` フィールドに記録します。`Revision Count` と同様、これは状態ファイルに存在するランタイムメタデータであり、イベントに乗らず**監査行(audit row)を発行しません**。したがって下記の監査イベントタクソノミー表には現れません。これは状態機械の遷移ではなく、次の `amadeus-orchestrate next` が読み取って遅延された Construction Bolt-1 ゲート(walking-skeleton ラダー)を解決するための値です。classify のラウンドトリップが、この intent のスコープがゲート付き walking-skeleton Bolt 1 を要するかどうかを永続化し、`scope-dependent` はスコープマッピングのデフォルト(greenfield → skeleton-on、incremental → skeleton-off)にフォールバックします。
 
+### スタンディング委任グラント(チームモード、#1125)
+
+委任承認(#671)は実 human turn 1回につきリモートゲートを1つだけ開きます。長時間のエージェントチーム実行ではリーダーが毎ゲートを再承認することになります。**スタンディング委任グラント**はこれを償却します。リーダーセッションが自身の台帳の実 `HUMAN_TURN` に接地したうえで、TTL の間、ゲートごとの人間ターンなしにチーム全体のステージゲート承認を開く時限的グラントを発行します。
+
+```
+amadeus-state grant-standing-delegation [--scope stage-gates] [--ttl-ms <n>] [--include-phase-boundary] [--user-input <text>]
+amadeus-state revoke-standing-delegation --grant-id <8-hex id>
+```
+
+- **チームモード専用。** `AMADEUS_OPERATING_MODE=team` が唯一の判定元です。ソロモードは各ゲートを直接承認し、発行を拒否します。ゲートでのグラント参照もチームモードでのみ行われます。
+- **デフォルト TTL は4時間**(`DEFAULT_STANDING_GRANT_TTL_MS`。通常の作業セッション長)。経過後はグラントが自動的に失効し、ゲートごとの承認へ戻ります。env オーバーライドは意図的に設けず、自動承認ウィンドウは固定・監査可能な定数のままにします。
+- **フェーズ境界ゲートはデフォルトで除外(EXCLUDED)。** `--include-phase-boundary` でオプトインします。**walking-skeleton ゲート**(`Skeleton Stance` が `on` の間の、スコープ実行列の先頭 construction ステージ)は決して自動被覆されません。残りの Bolt を走らせる前に人間がスケルトンを確認する必要があります。
+- **プロベナンスは信頼ではなく証明。** `GRANT_ISSUED` は委任と同じ発行元座標(`Issuer Space/Intent/Shard/Human Ts`)を保持し、ゲートは `verifyDelegatedProvenance` が接地の `HUMAN_TURN` の実在を発行元シャードで確認した場合にのみグラントを honour します。`GRANT_ISSUED` / `GRANT_REVOKED` は presence-protected で、一般の `amadeus-audit append` CLI は mint を拒否するため、実 human turn を伴うこれらの verb だけが書き込めます。
+- 実 human turn ではなくグラントがゲートを開いた場合、結果の `GATE_APPROVED`(または `DELEGATED_APPROVAL`)行に、どのグラントが承認したかを記録する `Grant Id` フィールドが載ります。`amadeus --doctor` は現在有効なグラント(scope・残 TTL・phase-boundary オプトイン・発行元)または `none` を報告します。
+
 ---
 
 ## Session stream (hook-owned, independent)
@@ -217,6 +232,8 @@ session フックは発行前にアクティブな intent の `amadeus-state.md`
 | `GATE_REJECTED` | `tools/amadeus-state.ts` | `--feedback` が却下理由を捕捉 |
 | `DELEGATED_APPROVAL` | `tools/amadeus-state.ts` | `delegate-approval` が leader セッションの人間承認を、リモートの conductor intent の監査ディレクトリへ記録。conductor のゲートが検証する発行元 `(space, intent, shard, HUMAN_TURN タイムスタンプ)` を保持(#671) |
 | `DELEGATED_REJECTION` | `tools/amadeus-state.ts` | `delegate-rejection` が leader セッションの人間却下を、リモートの conductor intent の監査ディレクトリへ記録。`DELEGATED_APPROVAL` の verb 対称ミラーで、reject ゲートのみを開く(#685) |
+| `GRANT_ISSUED` | `tools/amadeus-state.ts` | `grant-standing-delegation` が leader セッションの時限的スタンディンググラントを記録。TTL の間、ゲートごとの人間ターンなしにチームモードのステージゲートを開く。`Grant Id`、`Scope`、`Expires At`、`Includes Phase Boundary` と発行元 `(space, intent, shard, HUMAN_TURN タイムスタンプ)` を保持(#1125) |
+| `GRANT_REVOKED` | `tools/amadeus-state.ts` | `revoke-standing-delegation` が未失効のスタンディンググラントを `Grant Id` で取り消す。leader 自身の台帳の実 human turn に接地(#1125) |
 
 ### User interaction
 

@@ -85,6 +85,7 @@ import {
   setStageSuffix,
   scopeGridPath,
   scopesDir,
+  findActiveStandingGrant,
   stagesInScope,
   stateFilePath,
   withAuditLock,
@@ -708,6 +709,26 @@ export function checkPhaseProgressConsistency(projectDir: string): DoctorCheck {
   return classifyPhaseProgressConsistency(scanned);
 }
 
+// Standing delegation grant status (#1125). Reports the newest currently-valid
+// standing grant (its scope, remaining TTL in minutes, phase-boundary opt-in, and
+// issuer intent) or "none" when per-gate approval is in force. Always pass:true —
+// the presence OR absence of a grant is a healthy state, this is informational.
+// `now` is a parameter so the in-process test drives it deterministically.
+export function standingGrantDoctorCheck(projectDir: string, now: number): DoctorCheck {
+  const grant = findActiveStandingGrant(projectDir, now);
+  if (grant === null) {
+    return { pass: true, label: "Standing delegation grant: none (per-gate approval required)" };
+  }
+  const remainingMin = Math.max(0, Math.round((grant.expiresAtMs - now) / 60000));
+  const phaseBoundary = grant.includesPhaseBoundary ? "INCLUDED" : "EXCLUDED";
+  return {
+    pass: true,
+    label:
+      `Standing delegation grant: ${grant.scope} / ${remainingMin}m left / ` +
+      `phase-boundary ${phaseBoundary} / issuer ${grant.issuerIntent}`,
+  };
+}
+
 export function handleDoctor(projectDir: string): void {
   const results: Array<{ pass: boolean; label: string; fix?: string }> = [];
   const isWindows = process.platform === "win32";
@@ -936,6 +957,11 @@ export function handleDoctor(projectDir: string): void {
   // checkPhaseProgressConsistency line: the judgment lives in the in-process-
   // tested settingsDoctorCheck seam.
   results.push(settingsDoctorCheck(projectDir));
+
+  // 4c. Standing delegation grant (#1125) — informational: is a team-mode
+  // standing grant currently opening stage gates, or is per-gate approval in
+  // force? Judgment lives in the in-process-tested standingGrantDoctorCheck seam.
+  results.push(standingGrantDoctorCheck(projectDir, Date.now()));
 
   // 5. Workspace shell ready (P4: no --init artifact to check). Readiness is the
   // SHIPPED SHELL: the harness engine dir (.claude/.kiro/.codex) present AND the
