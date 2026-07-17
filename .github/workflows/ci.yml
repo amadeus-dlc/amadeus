@@ -64,7 +64,7 @@ jobs:
               bun.lock|package.json|*/package.json|tsconfig*.json|biome.json|biome.jsonc|\
               .github/workflows/ci.yml|\
               scripts/*|tests/*|packages/framework/*|packages/setup/*|\
-              dist/*|.agents/*|.claude/*|.codex/*|.kiro/*|\
+              dist/*|.agents/*|.claude/*|.codex/*|.kiro/*|.cursor/*|.opencode/*|\
               AGENTS.md|CLAUDE.md)
                 ci=true
                 break
@@ -107,7 +107,7 @@ jobs:
       - name: Dist drift guard (dist/ regenerates byte-identically from core/ + harness/)
         run: bun run dist:check
 
-      - name: Self-install drift guard (.claude/.codex/.agents/CLAUDE.md in sync with dist/)
+      - name: Self-install drift guard (.claude/.codex/.agents/.cursor/.opencode/CLAUDE.md in sync with dist/)
         run: bun run promote:self:check
 
       - name: Tests - smoke + unit + integration

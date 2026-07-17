@@ -56,11 +56,12 @@ const write = (rel: string, content: string): void => {
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "t209-promote-self-"));
-  // Minimal dist fixture covering all managed dirs (claude/codex/agents/cursor).
+  // Minimal dist fixture covering all managed dirs (claude/codex/agents/cursor/opencode).
   write("dist/claude/.claude/tools/a.txt", "alpha\n");
   write("dist/codex/.codex/b.txt", "beta\n");
   write("dist/codex/.agents/c.txt", "gamma\n");
   write("dist/cursor/.cursor/d.txt", "delta\n");
+  write("dist/opencode/.opencode/e.txt", "epsilon\n");
   write("dist/codex/AGENTS.md", "@.agents/rules/amadeus.md\n\n# AI-DLC on Codex CLI\n\ngenerated\n");
   write(".claude/CLAUDE.md", "@.claude/rules/amadeus.md\n\n# Claude onboarding\n");
   write("AGENTS.md", "@.agents/rules/amadeus.md\n\n# Project rules\n");
@@ -144,8 +145,8 @@ describe("t209 promote-self dangling-symlink resilience", () => {
     expect(promoteSelfMain(["--no-build"], root)).toBe(0);
   });
 
-  test("PACKAGE_HARNESSES includes Cursor alongside Claude and Codex", () => {
-    expect([...PACKAGE_HARNESSES]).toEqual(["claude", "codex", "cursor"]);
+  test("PACKAGE_HARNESSES includes Cursor and OpenCode alongside Claude and Codex", () => {
+    expect([...PACKAGE_HARNESSES]).toEqual(["claude", "codex", "cursor", "opencode"]);
   });
 
   test("packageFreshnessArgs covers apply and check for every harness", () => {
@@ -153,12 +154,24 @@ describe("t209 promote-self dangling-symlink resilience", () => {
       ["scripts/package.ts", "claude"],
       ["scripts/package.ts", "codex"],
       ["scripts/package.ts", "cursor"],
+      ["scripts/package.ts", "opencode"],
     ]);
     expect(packageFreshnessArgs("check")).toEqual([
       ["scripts/package.ts", "claude", "--check"],
       ["scripts/package.ts", "codex", "--check"],
       ["scripts/package.ts", "cursor", "--check"],
+      ["scripts/package.ts", "opencode", "--check"],
     ]);
+  });
+
+  test("--apply installs OpenCode and preserves its activated config", () => {
+    const config = "{\n  \"permission\": \"ask\"\n}\n";
+    write(".opencode/opencode.json", config);
+
+    expect(promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
+    expect(readFileSync(join(root, ".opencode", "e.txt"), "utf-8")).toBe("epsilon\n");
+    expect(readFileSync(join(root, ".opencode", "opencode.json"), "utf-8")).toBe(config);
+    expect(promoteSelfMain(["--no-build"], root)).toBe(0);
   });
 
   test("runPackageFreshness drives the runner for each harness argv", () => {

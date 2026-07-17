@@ -29,6 +29,7 @@ const foreignPrefixContentAllowlist = new Set([
   ".claude/tools/amadeus-migrate.ts",
   ".codex/tools/amadeus-migrate.ts",
   ".cursor/tools/amadeus-migrate.ts",
+  ".opencode/tools/amadeus-migrate.ts",
   "docs/research/upstream-ai-dlc-v2.2.0-amadeus-main-workspace-differences.md",
   "docs/research/upstream-ai-dlc-v2.2.0-amadeus-main-workspace-differences.ja.md",
   "docs/guide/18-migrating-upstream-v2.md",

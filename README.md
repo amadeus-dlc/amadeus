@@ -321,7 +321,7 @@ bun scripts/package.ts            # regenerate every dist/<harness>/ from packag
 bun scripts/package.ts <name>     # regenerate one harness (e.g. claude, kiro-ide, codex)
 bun run dist:check               # byte-parity drift guard (run in CI)
 bun scripts/package.ts --check    # byte-parity drift guard (run in CI)
-bun run promote:self              # update this repo's project-local .claude/.codex self install
+bun run promote:self              # update this repo's project-local .claude/.codex/.agents/.cursor/.opencode self install
 bun run promote:self:check        # drift guard for the project-local self install
 ```
 

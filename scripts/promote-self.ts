@@ -3,7 +3,7 @@
 //
 // This is a project-local dogfood install, not a distributable build. The
 // packager still owns dist/; this script copies the generated Claude/Codex/
-// Cursor harness surfaces into the repository root so Amadeus can develop itself.
+// Cursor/OpenCode harness surfaces into the repository root so Amadeus can develop itself.
 // Contributor-only skill runtime files under contrib/skills/ are projected
 // into both harness discovery trees without entering dist/. Authoring-only
 // eval assets remain at the canonical contributor path.
@@ -39,6 +39,7 @@ const managedDirs: ManagedDir[] = [
   { src: "dist/codex/.codex", dst: ".codex" },
   { src: "dist/codex/.agents", dst: ".agents" },
   { src: "dist/cursor/.cursor", dst: ".cursor" },
+  { src: "dist/opencode/.opencode", dst: ".opencode" },
 ];
 
 const CONTRIBUTOR_SKILLS_ROOT = "contrib/skills";
@@ -91,6 +92,8 @@ const preserved = [
   ".codex/local/",
   // Local activation of the shipped hooks.json.example (same pattern as Codex).
   ".cursor/hooks.json",
+  // Local activation of the shipped opencode.json.example.
+  ".opencode/opencode.json",
 ];
 
 // Composed-scope runtime data: the adaptive composer APPENDS approved scopes to
@@ -145,7 +148,7 @@ function printUsage(): void {
       "usage: bun scripts/promote-self.ts [--check|--apply] [--no-build]",
       "",
       "  --check     verify project-local self install matches generated output (default)",
-      "  --apply     write .claude/, .codex/, .agents/, .cursor/, AGENTS.md, and CLAUDE.md",
+      "  --apply     write .claude/, .codex/, .agents/, .cursor/, .opencode/, AGENTS.md, and CLAUDE.md",
       "  --no-build  skip the package.ts freshness step",
     ].join("\n"),
   );
@@ -163,7 +166,7 @@ function run(cmd: string, args: string[]): void {
 // Harnesses whose dist trees feed the managedDirs self-install. Kept as data
 // so --apply/--check freshness can be asserted in-process without spawning
 // package.ts (bun --coverage cannot see spawned subprocesses).
-export const PACKAGE_HARNESSES = ["claude", "codex", "cursor"] as const;
+export const PACKAGE_HARNESSES = ["claude", "codex", "cursor", "opencode"] as const;
 
 export function packageFreshnessArgs(mode: Mode): string[][] {
   return PACKAGE_HARNESSES.map((harness) =>
