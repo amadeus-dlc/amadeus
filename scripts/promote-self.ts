@@ -160,6 +160,28 @@ function run(cmd: string, args: string[]): void {
   if (res.status !== 0) process.exit(res.status ?? 1);
 }
 
+// Harnesses whose dist trees feed the managedDirs self-install. Kept as data
+// so --apply/--check freshness can be asserted in-process without spawning
+// package.ts (bun --coverage cannot see spawned subprocesses).
+export const PACKAGE_HARNESSES = ["claude", "codex", "cursor"] as const;
+
+export function packageFreshnessArgs(mode: Mode): string[][] {
+  return PACKAGE_HARNESSES.map((harness) =>
+    mode === "apply"
+      ? ["scripts/package.ts", harness]
+      : ["scripts/package.ts", harness, "--check"],
+  );
+}
+
+export function runPackageFreshness(
+  mode: Mode,
+  runner: (cmd: string, args: string[]) => void = run,
+): void {
+  for (const args of packageFreshnessArgs(mode)) {
+    runner("bun", args);
+  }
+}
+
 // Dirents carry lstat-level type info, so symlinks are never followed: a
 // dangling symlink (e.g. inside a preserved subtree like .claude/worktrees/)
 // is yielded as a plain entry instead of crashing on a follow-the-link stat.
@@ -313,15 +335,7 @@ export function promoteSelfMain(argv: string[], repoRoot: string = REPO_ROOT): n
   const noBuild = argv.includes("--no-build");
 
   if (!noBuild) {
-    if (mode === "apply") {
-      run("bun", ["scripts/package.ts", "claude"]);
-      run("bun", ["scripts/package.ts", "codex"]);
-      run("bun", ["scripts/package.ts", "cursor"]);
-    } else {
-      run("bun", ["scripts/package.ts", "claude", "--check"]);
-      run("bun", ["scripts/package.ts", "codex", "--check"]);
-      run("bun", ["scripts/package.ts", "cursor", "--check"]);
-    }
+    runPackageFreshness(mode);
   }
 
   let expected: Map<string, Buffer>;

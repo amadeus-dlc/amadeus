@@ -29,8 +29,11 @@
 import { describe, expect, test } from "bun:test";
 import {
   COMPOSED_SCOPE_RE,
+  PACKAGE_HARNESSES,
   SCOPE_GRID_RE,
   mergeScopeGrid,
+  packageFreshnessArgs,
+  runPackageFreshness,
   scopeGridInSync,
 } from "../../scripts/promote-self.ts";
 
@@ -98,5 +101,32 @@ describe("t200 promote-self composed-scope preservation", () => {
   test("mergeScopeGrid overwrites unparseable dst content with dist bytes", () => {
     const want = grid(STOCK);
     expect(mergeScopeGrid(Buffer.from("junk", "utf-8"), want).equals(want)).toBe(true);
+  });
+});
+
+describe("t200 promote-self package freshness harness list", () => {
+  test("PACKAGE_HARNESSES includes Cursor alongside Claude and Codex", () => {
+    expect([...PACKAGE_HARNESSES]).toEqual(["claude", "codex", "cursor"]);
+  });
+
+  test("packageFreshnessArgs covers apply and check for every harness", () => {
+    expect(packageFreshnessArgs("apply")).toEqual([
+      ["scripts/package.ts", "claude"],
+      ["scripts/package.ts", "codex"],
+      ["scripts/package.ts", "cursor"],
+    ]);
+    expect(packageFreshnessArgs("check")).toEqual([
+      ["scripts/package.ts", "claude", "--check"],
+      ["scripts/package.ts", "codex", "--check"],
+      ["scripts/package.ts", "cursor", "--check"],
+    ]);
+  });
+
+  test("runPackageFreshness drives the runner for each harness argv", () => {
+    const calls: string[][] = [];
+    runPackageFreshness("apply", (_cmd, args) => {
+      calls.push(args);
+    });
+    expect(calls).toEqual(packageFreshnessArgs("apply"));
   });
 });
