@@ -1,12 +1,26 @@
-# Code Summary — hooks-config-conflict（Issue #770 / 工程1〜6）
+# Code Summary — hooks-config-conflict（Issue #770 / 工程1〜7）
 
 上流入力（consumes全数）: `code-generation-plan.md`、`../../../inception/requirements-analysis/requirements.md`（FR-1〜FR-4、NFR-1〜NFR-6、制約、E-770-RA裁定）、E-770-CG1（agmsg裁定 2026-07-18T02:02:48Z、self移行 production seam=A）、E-770-CG2（Codex helper配置=A: harness専用sourceからproject-local `.codex/tools/`へ投影）
 
 ## 現在の判定
 
-工程1〜6の実装、最新`origin/main`統合、配布同期、独立レビュー、deslop、focused / full回帰、local lcovとpatch coverage gate、branch push、Draft PR [#1212](https://github.com/amadeus-dlc/amadeus/pull/1212)の作成は完了した。tracked canonical `.codex/hooks.json.example` とignored per-clone active `.codex/hooks.json` の所有境界、起動前activation、意味doctor、self / packaged consumer別の移行契約を実装・検証済みである。
+工程1〜7の実装、最新`origin/main`統合、配布同期、独立レビュー、deslop、focused / full回帰、local lcovとpatch coverage gate、branch push、Draft PR [#1212](https://github.com/amadeus-dlc/amadeus/pull/1212)の作成は完了した。tracked canonical `.codex/hooks.json.example` とignored per-clone active `.codex/hooks.json` の所有境界、起動前activation、意味doctor、self / packaged consumer別の移行契約を実装・検証済みである。
 
-一方、実agmsg / Codex monitorのlive acceptanceは **PENDING** である。2026-07-18T02:28:59Zの実測ではdelivery modeは`monitor`、Codex app-serverは起動していたが、bridgeは旧名`codex`に結び付いたままで、登録済み`amadeus/codex-1`と`amadeus/codex-2`はいずれも`not running`だった。人間による再起動、最初のturn、一意pingのpush受信、leaderへの返信が未成立であるため、本Issue / Code Generationを完了扱いにしない。
+実agmsg / Codex monitorのlive acceptanceは、第1回の手動取得を不採用、第2回の曖昧な証跡を撤回したうえで、第3回にleaderの独立process監視付きで **PASS** した。`amadeus/codex-1` bridgeからこのthreadへ一意nonceが自動pushされ、verbatim返信がleaderへ到達した。通常CIとは別の必須live gateとして成立しており、残りはCI是正を含むPR ready化とConstruction phase boundaryである。
+
+## 実monitor live acceptance証跡（AC-4d / AC-4e）
+
+実行環境はagmsg `1.1.7`、Codex CLI `0.144.5`、delivery mode `monitor`、identity `amadeus/codex-1`、bridge `alive`（PID `29624`）である。
+
+| 時刻（UTC） | 観測 | 判定 |
+| --- | --- | --- |
+| 2026-07-18T10:53:54Z | leaderが第1回nonceを送信したが、こちらが明示的に`inbox.sh`を実行して取得した。受信方法を`manual`と申告した。 | 自動pushの証拠から除外 |
+| 2026-07-18T10:55:12Z〜10:57:51Z | 第2回nonceの自動pushと返信は成立したが、別用途のcoverage processに対する`write_stdin`待機をユーザーが「ポーリング」と観測した。`write_stdin`はagmsg inbox取得ではないものの、P2に従い曖昧な成立宣言を撤回した。 | 不採用 |
+| 2026-07-18T10:58:13Z | leaderが第3回nonce `LIVE-ACCEPT-3RD-20260718T105813Z-7129-770`を送信し、2秒間隔のprocess連続サンプリングを開始した。 | 検証開始 |
+| 2026-07-18T10:58:47Z | nonceをこのCodex threadの`agmsg delivered`自動pushだけで受信し、verbatim引用と`受信方法=auto-push`を`send.sh`で返信した。送信から返信まで34秒。 | push受信・返信成立 |
+| 2026-07-18T10:59:28Z | leaderが返信到達と、監視窓内の`inbox.sh` / `history.sh`実行0件を独立確認し、AC-4d成立を宣言した。 | **PASS** |
+
+第1回の手動取得と第2回の撤回も失敗証跡として残す。第3回はleader側のprocess連続サンプリングを加えたため、こちらの自己申告だけに依存しない。別identity `codex-2`のprocessは本acceptanceの受信経路ではなく、成立判定は`amadeus/codex-1` bridgeとnonceを受信したこのthreadに限定した。
 
 ## 実装内容
 
@@ -50,8 +64,8 @@
 
 ## 検証結果
 
-- focused 6ファイル合算: **137 pass / 1 skip / 0 fail / 2556 assertions**
-- `bun test tests/integration/t-codex-hooks-ownership.test.ts`: **16 pass / 0 fail**
+- focused 6ファイル合算: **138 pass / 1 skip / 0 fail / 2562 assertions**
+- `bun test tests/integration/t-codex-hooks-ownership.test.ts`: **17 pass / 0 fail / 221 assertions**
 - `bun test tests/integration/t-codex-hooks-migration.test.ts`: **48 pass / 1 skip / 0 fail**（macOSが不正UTF-8 filenameを作成できないためLinux専用1件のみskip）
 - `bun test tests/integration/t-codex-hooks-packaged-consumer.test.ts`: **2 pass / 0 fail / 76 assertions**
 - `bun test tests/integration/t-team-up-codex-resume.test.ts`: **46 pass / 0 fail / 436 assertions**
@@ -71,10 +85,9 @@
 ## 未完了ゲート
 
 - Draft PR [#1212](https://github.com/amadeus-dlc/amadeus/pull/1212)のready化、ユーザー明示承認後のmerge、公開・統合に伴う後続工程
-- 実monitorの人手再起動後live acceptance（bridge alive、一意ping push受信、返信到達）
 - Construction phase boundaryへ進む個別delegate（常任グラント対象外）
 
-これらは通常のhermetic testで代替しない。特にlive acceptanceが成立するまで[Issue #770](https://github.com/amadeus-dlc/amadeus/issues/770)は完了不可とする。
+live acceptanceは独立実測付きで成立済みである。残るPR ready化・CI・phase boundaryも省略せず、[Issue #770](https://github.com/amadeus-dlc/amadeus/issues/770)を先行して完了扱いしない。
 
 ## Review
 
@@ -90,6 +103,6 @@ Iteration 1のMajorはすべて解消された。Codex専用helperはharness sou
 | --- | --- | --- | --- | --- |
 | 1 | Minor | `code-summary.md`「主要な契約」 | 「欠落・余剰・誤配置・重複をreason codeで区別する」という記述は実装より強い。実装ではこれらを`TUPLE_MISMATCH`へ集約し、`missing` / `extra`診断で区別している。秘匿と判定能力に支障はなく、blockingではない。 | 後続artifact更新時に「JSON / 構造 / tuple mismatchをreason codeで区別し、tuple差分は秘匿済みmissing / extra診断で示す」と記述を合わせる。 |
 
-### 未完了の必須ゲート
+### Live acceptance追補
 
-実agmsg / Codex monitorのlive acceptanceは引き続き**PENDING**である。`scripts/run-codex.sh`からの人手再起動後に、monitor processの起動、新identityでのbridge接続、一意pingのpush受信、leaderへのreply到達を実測するまで、本IssueおよびCode Generationを完了扱いにしてはならない。このlive gateはhermetic testで代替しない。
+実agmsg / Codex monitorのlive acceptanceは、第3回nonce `LIVE-ACCEPT-3RD-20260718T105813Z-7129-770`で**PASS**した。leaderが送信から返信までの34秒と、同じ監視窓内の`inbox.sh` / `history.sh`実行0件を独立実測している。hermetic testで代替せず、実bridgeのauto-push受信と返信到達を証拠にした。

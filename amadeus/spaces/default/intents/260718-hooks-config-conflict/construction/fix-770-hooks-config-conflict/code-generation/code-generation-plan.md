@@ -49,11 +49,12 @@ Iteration 1のarchitecture reviewで、helperを`packages/framework/core/tools/`
    - deslop review後に `bun run coverage:ci` とpatch coverage gateを実行し、diff追加行の未カバーを0にする。
    - 別agentの `amadeus-architecture-reviewer-agent` で最大2 iteration、その後さらに独立した2名のレビューを受ける。指摘反映後に全ゲートを再実行してpush / PR作成へ進む。
 
-7. [ ] **実monitorのlive acceptanceを行う**
+7. [x] **実monitorのlive acceptanceを行う**
    - 手動 inbox pollerを停止し、実際の `./scripts/run-codex.sh` から新規セッションを起動する。
    - 最初のturn後にdelivery mode `monitor` とbridge `alive`を確認する。
    - 人間がセッションを再起動して1 turn送り、leaderから一意pingを送信する。手動`inbox.sh`なしでpush表示され、その返信がleaderへ届くことを確認する。
    - agmsg / Codex version、mode、bridge status、ping識別子、送受信時刻をevidenceへ記録する。失敗または未実施ならCode Generation / Issueを完了しない。
+   - 2026-07-18T10:59:28Z、第3回nonce `LIVE-ACCEPT-3RD-20260718T105813Z-7129-770`のauto-push受信とverbatim返信到達をleaderが確認した。bridgeはPID `29624`でalive、leader側の2秒間隔process監視で受信窓内の`inbox.sh` / `history.sh`実行0件を独立実測した。第1回の手動取得は証拠から除外し、第2回の曖昧な成立宣言はP2に従い撤回した経緯を`code-summary.md`へ記録した。
 
 ## 実装規律
 
