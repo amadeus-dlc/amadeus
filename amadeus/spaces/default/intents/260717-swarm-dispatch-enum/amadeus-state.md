@@ -11,7 +11,7 @@ issue-mirror は amadeus-mirror.ts を指し、Intent 名には使わない。In
 - **State Version**: 7
 - **Active Agent**: amadeus-developer-agent
 - **Worktree Path**:
-- **Bolt Refs**:
+- **Bolt Refs**: [driver-contract-core]
 - **Practices Affirmed Timestamp**: 2026-07-17T23:13:17Z
 
 - **Mirror Issue**: #1182
@@ -36,6 +36,8 @@ issue-mirror は amadeus-mirror.ts を指し、Intent 名には使わない。In
 - **Revision Count**: 0
 
 - **Skeleton Stance**: off
+- **Parked**: 2026-07-18T02:05:51Z
+- **Parked At Stage**: code-generation
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -96,7 +98,7 @@ Per unit: [TBD]
 - **Current Stage**: code-generation
 - **Next Stage**: build-and-test
 - **Status**: Running
-- **Last Updated**: 2026-07-18T02:03:52Z
+- **Last Updated**: 2026-07-18T02:05:51Z
 
 ## Session Resume Point
 - **Last Completed Stage**: nfr-design
