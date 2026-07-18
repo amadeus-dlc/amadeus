@@ -206,14 +206,39 @@ data file, and it is not in `settings.json` (it is read conductor-side at fan-ou
 time). You do not author it; you understand it so you know the runtime your data
 shapes.
 
-| `AMADEUS_USE_SWARM` | Driver | Behaviour |
-|---|---|---|
-| unset or not `"1"` | subagent floor | The conductor issues N parallel `Task` calls in one message, one per Unit. |
-| `"1"` | inline Dynamic Workflow | The conductor authors a `Workflow` whose JS owns the per-Unit pipeline and the iteration cap. |
-| `"1"` but Workflow tool unavailable | loud-degrade to the floor | The conductor falls back to the floor and passes `--degraded-from ultracode` so the referee emits `SWARM_DEGRADED`. |
+`AMADEUS_USE_SWARM` is a three-value enum — its only valid states are **unset**,
+`claude-ultra`, and `codex-ultra`. The conductor resolves the value against the
+running harness **once per batch**, before any worktree or spawn, via
+`amadeus-swarm.ts resolve --harness <self>`. The resolution is a static function
+of `(value, harness)`:
 
-Both drivers run the same five per-Unit stages and converge against the same
-project check. The difference is purely how the parallel work is dispatched. The
+| `AMADEUS_USE_SWARM` \ harness | claude | codex | kiro | kiro-ide |
+|---|---|---|---|---|
+| unset | subagent floor | subagent floor | subagent floor | subagent floor |
+| `claude-ultra` | `claude-ultra` (inline Dynamic Workflow) | degrade → floor (`requested=claude-ultra`) | degrade → floor (`requested=claude-ultra`) | degrade → floor (`requested=claude-ultra`) |
+| `codex-ultra` | degrade → floor (`requested=codex-ultra`) | `codex-ultra` (native fan-out, reasoning effort=ultra) | degrade → floor (`requested=codex-ultra`) | degrade → floor (`requested=codex-ultra`) |
+| `1`, `""`, or any other value | rejected — unknown value (fail-closed) | rejected — unknown value (fail-closed) | rejected — unknown value (fail-closed) | rejected — unknown value (fail-closed) |
+
+**Resolve → dispatch.** `resolve` prints a one-line JSON resolution and the
+conductor branches on it: `selected` dispatches that driver; `degrade` runs the
+subagent floor while passing `--degraded-from <requested>` so the referee emits
+`SWARM_DEGRADED` (the requested value is preserved in the audit); `rejected`
+stops the batch immediately — no worktree, no spawn, no `SWARM_STARTED`.
+
+**Breaking change.** The legacy `AMADEUS_USE_SWARM=1` no longer selects a driver
+— it is an unknown value and is **fail-closed**. There is no compatibility shim:
+a value the running harness cannot dispatch either loud-degrades (a sibling
+harness's ultra) or is rejected (`1` and every other unrecognised string).
+
+**Effort evidence limit (C-15).** In the `codex-ultra` selected case each child
+is spawned at reasoning effort=ultra: this is accepted by the API and the child
+runs to completion — there is no telemetry that ultra was actually applied.
+
+`opencode` and `cursor` carry no invoke-swarm dispatch instruction, so
+`AMADEUS_USE_SWARM` has no effect on them.
+
+All resolutions run the same five per-Unit stages and converge against the same
+project check; the difference is purely how the parallel work is dispatched. The
 runaway backstop lives in the harness's **Stop-hook ceiling**
 (`core/hooks/amadeus-stop.ts`, the `blockCap()` / `defaultBlockCap()` pair, exposed
 as `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`), outside the swarm tool itself. On this

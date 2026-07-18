@@ -113,10 +113,17 @@ implicit skill matching so 37 runner descriptions don't pollute the index).
   `writable_roots = ["<main repo>/.git"]` — template in the shipped
   `config.toml.example` template (linked worktrees resolve into `<main>/.git/worktrees/*`,
   so it must be the main repo's `.git`).
-- **Swarm floor = `codex exec` workers** — one headless worker per
-  Construction unit in its Bolt worktree (always `< /dev/null`), with the
-  same deterministic referee. `AMADEUS_USE_SWARM=1` has no Workflow tool here
-  and loud-degrades (`SWARM_DEGRADED` is audited).
+- **Construction swarm = native subagent fan-out** — one native subagent per
+  Construction unit in its Bolt worktree, converging against the same
+  deterministic referee. The conductor resolves `AMADEUS_USE_SWARM` against the
+  harness: unset selects the subagent floor; `codex-ultra` selects native
+  fan-out at reasoning effort=ultra; `claude-ultra` loud-degrades to the floor
+  (`SWARM_DEGRADED` is audited); the legacy `1` or any other value is rejected
+  fail-closed. **Breaking change**: the old headless `codex exec` per-unit
+  worker floor is retired — there is no `codex exec` fallback. For the
+  `codex-ultra` case, reasoning effort=ultra is accepted by the API and the
+  child runs to completion — there is no telemetry that ultra was actually
+  applied.
 - **Session lifecycle**: Codex has no SessionEnd event; an unclosed session
   is reconciled as an inferred `SESSION_ENDED` audit row at the next session
   start. The Codex-only PostCompact event re-injects the workflow mission

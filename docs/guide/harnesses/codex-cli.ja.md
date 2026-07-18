@@ -113,10 +113,16 @@
   `writable_roots = ["<main repo>/.git"]` が必要です — 同梱の
   `config.toml.example` テンプレートにあります(リンクされた worktree は
   `<main>/.git/worktrees/*` に解決されるため、メインリポジトリの `.git` でなければなりません)。
-- **Swarm フロア = `codex exec` ワーカー** — Bolt worktree 内で Construction
-  ユニットごとに 1 つのヘッドレスワーカー(常に `< /dev/null`)、同じ決定論的
-  レフェリーを使います。`AMADEUS_USE_SWARM=1` はここでは Workflow ツールを持たず、
-  loud-degrade します(`SWARM_DEGRADED` が監査されます)。
+- **Construction swarm = native subagent fan-out** — Bolt worktree 内で
+  Construction ユニットごとに 1 つの native subagent を spawn し、同じ決定論的
+  レフェリーに対して収束します。コンダクターは `AMADEUS_USE_SWARM` をハーネスに
+  対して解決します: 未設定は subagent floor、`codex-ultra` は reasoning
+  effort=ultra の native fan-out、`claude-ultra` は floor へ loud-degrade
+  (`SWARM_DEGRADED` が監査される)、旧来の `1` やその他の値は fail-closed で
+  rejected です。**破壊的変更**: 旧来のヘッドレス `codex exec` per-unit ワーカー
+  フロアは撤去され、`codex exec` フォールバックはありません。`codex-ultra` の
+  ケースでは、reasoning effort=ultra は API に受理され child は完了まで走りますが、
+  ultra が実適用されたことを示す telemetry はありません。
 - **セッションライフサイクル**: Codex には SessionEnd イベントがありません。
   閉じられなかったセッションは、次のセッション開始時に推論された `SESSION_ENDED`
   監査行として調整されます。Codex 専用の PostCompact イベントは compaction 後に
