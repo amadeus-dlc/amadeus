@@ -31,7 +31,7 @@
   - `packages/framework/harness/codex/onboarding.fills.ts:55`
   - `kiro` / `kiro-ide` の `SKILL.md` と `onboarding.fills.ts` 各1
 - **三値化時の欠落面**: `opencode` / `cursor` harness 源には `skills/amadeus/SKILL.md` が存在せず、dispatch 指示自体がない。三値 enum の指示追加は既存4 harness(claude/codex/kiro/kiro-ide)に限られ、opencode/cursor は別途判断が要る。
-- docs 契約: `docs/reference/08-construction-and-swarm.md:201-213`(driver seam 二値表)、`docs/reference/17-skill-system.md:122`。
+- docs 契約: `docs/harness-engineering/08-construction-and-swarm.md:201-213`(driver seam 二値表)、`docs/reference/17-skill-system.md:122`。
 
 ### 重点2 — referee 契約(`amadeus-swarm.ts`、789行、ステートレス3サブコマンド・状態ファイルなし :15)
 
@@ -79,7 +79,7 @@
 
 ### 重点7 — docs 面
 
-- 正規契約 = `docs/reference/08-construction-and-swarm.md`(:201-213 driver seam 表、:230- code-change 面)+ `docs/reference/17-skill-system.md:108-122`。
+- 正規契約 = `docs/harness-engineering/08-construction-and-swarm.md`(:201-213 driver seam 表、:230- code-change 面)+ `docs/reference/17-skill-system.md:108-122`。
 - 他 16 ファイル(`.md`/`.ja.md` 対): reference 03/06/12/13/14、guide 10/12/glossary、`guide/harnesses/{codex-cli,cursor,opencode,kiro-cli,kiro-ide}`、guide 18、harness-engineering 00。
 
 ### 重点8 — 区間構造変化(すべてフォーカス外)
