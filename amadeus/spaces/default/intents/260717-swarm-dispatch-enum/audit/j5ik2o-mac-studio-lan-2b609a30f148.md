@@ -2978,3 +2978,12 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Error Logged
+**Timestamp**: 2026-07-18T23:13:57Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-utility
+**Command**: amadeus-utility next --new-intent --scope amadeus 選挙の仕組みをノルムで支えるのではなくtsで基盤を作り、SKILLで薄くラップする。これについて、ideationだけやりたい。最後にissueに同期したい。scripts/amadeus-mirror.ts。やりとりはここであなたと私で。質問は私に
+**Error**: Usage: amadeus-utility <help|version|status|doctor|migrate|intent-birth|intent|space|space-create|codekb-path|detect|recompose|scope-change|config-change|set-status|detect-scope|resolve-env-scope|scope-table> [--project-dir <path>] [--scope <scope>] [--json]
+
+---
