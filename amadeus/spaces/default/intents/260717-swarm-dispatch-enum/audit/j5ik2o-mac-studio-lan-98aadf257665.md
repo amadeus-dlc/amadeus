@@ -2262,3 +2262,11 @@
 **Artifacts**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/delivery-planning/bolt-plan.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/delivery-planning/team-allocation.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/delivery-planning/risk-and-sequencing-rationale.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/delivery-planning/external-dependency-map.md
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-18T00:33:52Z
+**Event**: WORKFLOW_PARKED
+**Stage**: delivery-planning
+**Timestamp**: 2026-07-18T00:33:52Z
+
+---
