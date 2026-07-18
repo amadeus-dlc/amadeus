@@ -5967,3 +5967,90 @@
 **Failed count**: 0
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:47:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: f6177b03
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-18T02:47:45Z
+**Event**: SENSOR_FAILED
+**Fire id**: f6177b03
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/code-generation/code-generation-plan.md
+**Detail path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/.amadeus-sensors/code-generation/required-sections-f6177b03.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:47:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: be0703f4
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-18T02:47:45Z
+**Event**: SENSOR_FAILED
+**Fire id**: be0703f4
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/code-generation/code-generation-plan.md
+**Detail path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/.amadeus-sensors/code-generation/upstream-coverage-be0703f4.md
+**Findings count**: 3
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:47:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 36019a11
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/code-generation/code-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:47:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 36019a11
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/code-generation/code-summary.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:47:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: feacf72e
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/code-generation/code-summary.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-18T02:47:45Z
+**Event**: SENSOR_FAILED
+**Fire id**: feacf72e
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/code-generation/code-summary.md
+**Detail path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/.amadeus-sensors/code-generation/upstream-coverage-feacf72e.md
+**Findings count**: 4
+
+---
