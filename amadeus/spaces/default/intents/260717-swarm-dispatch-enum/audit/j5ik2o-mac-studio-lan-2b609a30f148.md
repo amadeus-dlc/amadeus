@@ -1088,3 +1088,225 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-18T02:03:10Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T02:03:11Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a9cca4c3785c38f0b
+**Message**: グラントは失効前に再発行しておいて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T02:03:30Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a9cb5778f1c711adb
+**Message**: 進捗状況教えて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T02:03:43Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ac779296fa000b123
+**Message**: PR #1200のレビューも進めて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T02:04:00Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a7c0d48d16282d900
+**Message**: 進捗状況教えて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T02:04:06Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a7ae7681d2bafeb35
+**Message**: 進捗状況教えて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T02:04:33Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: af015ae6885add0dd
+**Message**: 進捗状況教えて
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-18T02:06:00Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T02:06:38Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a0c496ec5f274168e
+**Message**: e1にはswarm-dispatch-enumの続きの手伝いか、次のバグを割り当てて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T02:06:48Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a20cb3e9c389a9e5c
+**Message**: e1に次のintentをアサインして
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T02:07:04Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a86307f6ab75aaa0d
+**Message**: e1に次のタスクを割り当てて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T02:07:15Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aea76b13116a4a754
+**Message**: e1に次のタスクを割り当てて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T02:07:31Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: afc915c2b5fa3d89a
+**Message**: e1に次のintentを割り当てて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T02:07:59Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a301955a592f7a176
+**Message**: e1に次のintentを割り当てて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T02:08:29Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a17ac311c44e42ca5
+**Message**: e1に次のタスクを割り当てて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T02:09:24Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a40e9021c1973eb14
+**Message**: e1に次のintentを割り当てて
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-18T02:23:19Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T02:23:40Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a76d7bf9ac1b77ca6
+**Message**: codex-2の返事きた？
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-18T02:25:52Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T02:26:38Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a13a8ed83bd4be512
+**Message**: ターミナル見てくる。ちょっと待って
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T02:27:53Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a00b4d12bbf288fb9
+**Message**: codex-2のターミナル見てくる
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-18T02:32:14Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T02:32:58Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ab7c1a0ef897a8f5f
+**Message**: 起票しといて
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-18T02:34:18Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T02:34:52Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ae0855420145e75e5
+**Message**: トークン計測のenhancement Issue起票しておいて
+
+---
+
+## Standing Grant Issued
+**Timestamp**: 2026-07-18T02:36:09Z
+**Event**: GRANT_ISSUED
+**Grant Id**: 936f7b81
+**Scope**: stage-gates
+**Expires At**: 2026-07-18T06:36:09.863Z
+**Includes Phase Boundary**: false
+**Issuer Space**: default
+**Issuer Intent**: 260717-swarm-dispatch-enum
+**Issuer Shard**: j5ik2o-mac-studio-lan-2b609a30f148.md
+**Issuer Human Ts**: 2026-07-18T02:34:18Z
+**User Input**: ユーザー常任指示(2026-07-17『ゲートは自動承認にしろ』)の同一 scope 更新 — f8f6b049 の失効(03:05Z)継続。phase boundary/PR merge は従来どおり除外
+
+---
