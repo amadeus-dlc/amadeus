@@ -2,6 +2,7 @@
 > This file is maintained by the orchestrator during stage execution. Add observations at the gate ritual, not by editing here directly.
 
 ## Interpretations
+- 2026-07-18T02:50:38Z — Bolt 1 完了: builder worktree 実装(全 green・落ちる実証・lcov)→ conductor 裏取り → referee check/finalize(complete --merge = AIDLC-data merge でありコード着地は PR 経由 — 実装コメント :65 で確定、当初の git merge 誤解を自己解消)→ PR #1204(main 起点 code のみ、mirror-bulk-diff-apply・fidelity 0)。U2 は U1 コード依存の直列につき PR マージ後に fork
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations
