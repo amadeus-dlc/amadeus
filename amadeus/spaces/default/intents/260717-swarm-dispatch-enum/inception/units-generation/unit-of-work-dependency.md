@@ -30,3 +30,7 @@ graph LR
 ## 並行実装ノート
 
 3 Unit は直列依存のため swarm 並行 fan-out の対象外(バッチ=1 unit ずつ)。ファイル交差(c6): U1=amadeus-swarm.ts/amadeus-audit.ts/tests、U2=harness/*/SKILL・emit・onboarding/tests、U3=docs/dist — 正本面の交差なし(dist 再生成は U3 に集約)。
+
+## Cross-unit 決定(construction 段の追記 — 申告付き)
+
+- CU-1(2026-07-18、U1 nfr-design レビュー是正で登録): C-15/C-14 開示の**禁止フレーズ集合の canonical は U1 `driver-contract-core/nfr-design/reliability-design.md` の RD-4**(フレーズ単位 6 句)。U2(RNR-W2/SNR-W2)・U3(RNR-D2/SNR-D2)の nfr-design/検証はこの集合を参照し、独立再定義しない。consumes 宣言外の cross-unit 参照であるため本欄を正規の参照経路とする(U2/U3 の ND 起草時は本欄経由で RD-4 を読む)
