@@ -2567,3 +2567,12 @@
 **Duration ms**: 36
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:43:27Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: acfca55fbee1004cb
+**Message**: ## レビュー結果\n\n対象: `<record>=amadeus/spaces/default/intents/260717-swarm-dispatch-enum` の `construction/driver-contract-core/functional-design/` 4成果物(business-logic-model.md / business-rules.md / domain-e
+
+---
