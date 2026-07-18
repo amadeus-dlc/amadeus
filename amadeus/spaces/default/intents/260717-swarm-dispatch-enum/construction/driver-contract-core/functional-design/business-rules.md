@@ -8,6 +8,8 @@
 - BR-2(fail-closed 前置): rejected は dispatch・worktree 作成・spawn・`SWARM_STARTED` のいずれよりも前(受け入れ = rejected ケースで audit シャードに SWARM_ 行が増えない・`git status` 差分ゼロ・worktree 一覧不変)
 - BR-3(degrade の一致): degraded の requested 値は raw そのまま(写像なし)。利用者向け表示(C3〜C5 prose)と `SWARM_DEGRADED` の Requested driver は同一値(受け入れ = t134 系 fixture で audit 行と CLI 出力の同値検査)
 - BR-4(emit 非重複): resolve は emit しない。`SWARM_DEGRADED` の唯一の emit 経路は prepare `--degraded-from`(既存 :402-407)— resolve 導入で経路を増やさない(受け入れ = resolve 実行前後で audit 行数不変)
+## 監査・referee 整合ルール
+
 - BR-5(Fallback 固定): `emitSwarmDegraded` の Fallback driver は `"subagent"` 固定(:291 維持 — ADR-3)。Requested driver のみ三値化
 - BR-6(referee 不変): prepare/check/finalize の引数・出力・exit code 契約は driver 語彙の値域以外変更しない(受け入れ = t134/t135/t207/t211 green、diff は語彙行に限定)
 - BR-7(エラー様式): rejected のエラーメッセージは許可値の列挙を含む(既存 `--degraded-from must be one of: ...` と同型の `DRIVER_VALUES.join(", ")` 由来 — 新しいマジック文字列を作らない)。文言の最終形は実装時に既存 idiom へ揃え、テストは許可値 3 語の包含で検証(文言 verbatim 固定はしない — 脆いテストの回避)

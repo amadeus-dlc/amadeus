@@ -2504,3 +2504,66 @@
 **Duration ms**: 36
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:39:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3ab1d725
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:39:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3ab1d725
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/functional-design/business-rules.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:39:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5776ad33
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:39:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5776ad33
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/functional-design/domain-entities.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:39:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: d4584e6b
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/functional-design/frontend-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:39:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: d4584e6b
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/functional-design/frontend-components.md
+**Duration ms**: 36
+
+---
