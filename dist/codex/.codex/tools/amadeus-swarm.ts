@@ -14,7 +14,7 @@
 //
 // THREE STATELESS SUBCOMMANDS (no iteration counter, no persisted state):
 //   prepare  --batch <n> --units <a,b,c> [--base <branch>] [--concurrency <n>]
-//            [--degraded-from <subagent|ultracode>] [--repo <name>]
+//            [--degraded-from <subagent|claude-ultra|codex-ultra>] [--repo <name>]
 //       Fork an isolated git worktree per unit (amadeus-worktree create +
 //       amadeus-bolt start --worktree) and emit SWARM_STARTED once for the batch.
 //       --repo (P7) selects the sibling repo the batch's worktrees fork inside (a
@@ -54,7 +54,7 @@
 // which judges "one more try vs unsatisfiable"), and the runaway backstop
 // (determinism -> the harness 8-block Stop-hook ceiling). A per-unit counter here
 // would make determinism do the knowledge job and is redundant on the other
-// drivers (the ultracode script's cap is its `for`-bound; /goal's is its
+// drivers (an ultra driver's cap is its own bound; /goal's is its
 // turn-clause). So this tool holds none of it: check is advisory, finalize is
 // authoritative (re-verifies at the merge gate), so a red unit cannot merge even
 // if the conductor lies or misremembers.
@@ -80,13 +80,59 @@ import { parseArgs, resolveConstructionRepo, resolveProjectDir, worktreePath } f
 const TOOLS_DIR = dirname(fileURLToPath(import.meta.url));
 
 // The typed reason enum the conductor branches on. budget-exhausted stays valid
-// for the ultracode driver's token ceiling; cap-exhausted is the loop-ended-
+// for an ultra driver's token ceiling; cap-exhausted is the loop-ended-
 // without-convergence sense; error covers a tamper / lying-claim / plumbing fault.
 type FailureReason = "unsatisfiable" | "budget-exhausted" | "cap-exhausted" | "error";
 
-// The driver the conductor degraded away from (records the loud downgrade).
-type DriverName = "subagent" | "ultracode";
-const DRIVER_VALUES: DriverName[] = ["subagent", "ultracode"];
+// The driver vocabulary: the subagent floor plus the two per-harness ultra
+// drivers. subagent is always available; claude-ultra is native to the Claude
+// harness and codex-ultra to the Codex harness. `--degraded-from` records which
+// ultra driver a loud downgrade fell away from.
+export type DriverName = "subagent" | "claude-ultra" | "codex-ultra";
+export const DRIVER_VALUES: readonly DriverName[] = ["subagent", "claude-ultra", "codex-ultra"];
+
+// The harnesses whose driver selection resolve arbitrates. Kept as a runtime
+// array (not a bare type union) so the `--harness` CLI check is a real array
+// membership test — a type-only union would erase at runtime and let an unknown
+// harness through.
+export type HarnessName = "claude" | "codex" | "kiro" | "kiro-ide";
+export const HARNESS_VALUES: readonly HarnessName[] = ["claude", "codex", "kiro", "kiro-ide"];
+
+// The static outcome of resolving AMADEUS_USE_SWARM against the running harness.
+// A discriminated union so the invalid state is unrepresentable: `rejected` keeps
+// only the raw string and carries NO driver field, so a caller cannot mistake a
+// rejected value for a dispatchable driver (parse-don't-validate, fail-closed).
+export type DriverResolution =
+  | { kind: "selected"; driver: DriverName }
+  | { kind: "degraded"; driver: "subagent"; requested: DriverName }
+  | { kind: "rejected"; raw: string; reason: "unknown-value" };
+
+// Resolve the requested driver from the raw AMADEUS_USE_SWARM value against the
+// running harness — the static env×harness decision (decision table in
+// construction/driver-contract-core/functional-design/business-logic-model.md).
+// raw is NOT trimmed: a whitespace-padded value is an unknown value (rejected),
+// not a normalised match. Runtime tool availability is NOT an input here — the
+// loud-degrade of a selected ultra driver when its harness tool is missing is the
+// conductor's concern (it then calls prepare with --degraded-from).
+export function resolveDriver(raw: string | undefined, harness: HarnessName): DriverResolution {
+  if (raw === undefined) {
+    // unset: the subagent floor is the only default. Every other value must be
+    // an explicit, recognised opt-in.
+    return { kind: "selected", driver: "subagent" };
+  }
+  if (raw === "claude-ultra" || raw === "codex-ultra") {
+    const nativeHarness: HarnessName = raw === "claude-ultra" ? "claude" : "codex";
+    if (harness === nativeHarness) {
+      return { kind: "selected", driver: raw };
+    }
+    // A recognised ultra driver that is not native to this harness degrades to
+    // the subagent floor, preserving the requested value for the audit trail.
+    return { kind: "degraded", driver: "subagent", requested: raw };
+  }
+  // Everything else — the empty string, the old "1", any unknown token — is
+  // rejected. Fail-closed: an unrecognised value never falls through to a floor.
+  return { kind: "rejected", raw, reason: "unknown-value" };
+}
 
 // The typed reasons the conductor may attribute to a DECLINED unit (one it did
 // not claim converged). Judging WHICH applies is the conductor's knowledge call
@@ -474,6 +520,8 @@ function handlePrepare(rest: string[]): void {
 
 // --- check ------------------------------------------------------------------
 
+// Exit 0 ONLY for a genuine convergence (green AND untampered) — the seam an
+// ultra driver and the conductor gate on (a worker's self-claim is never read).
 function handleCheck(rest: string[]): void {
   const { positional, flags } = parseArgs(rest);
   const projectDir = resolveProjectDir(flags["project-dir"]);
@@ -512,8 +560,6 @@ function handleCheck(rest: string[]): void {
   };
   if (verdict.tampered) out.detail = "protected test file was modified";
   console.log(JSON.stringify(out));
-  // Exit 0 ONLY for a genuine convergence — the seam the ultracode script and
-  // the conductor gate on (a worker's self-claim is never read).
   process.exit(genuine ? 0 : 1);
 }
 
@@ -640,7 +686,7 @@ export function handleFinalize(
       // The conductor did not claim this unit: its driver loop ended without
       // convergence. The conductor may attribute a typed reason via --reasons
       // (e.g. `unsatisfiable` when it judged the unit fundamentally unbuildable,
-      // `budget-exhausted` when the ultracode token ceiling stopped it); absent
+      // `budget-exhausted` when an ultra driver's token ceiling stopped it); absent
       // an attribution, `cap-exhausted` is the catch-all (the loop ended without
       // convergence and the conductor offered no finer classification).
       const reason = declinedReasons[unit] ?? "cap-exhausted";
@@ -722,6 +768,43 @@ export function handleFinalize(
   process.exit(failedCount > 0 || mergeFailures.length > 0 ? 2 : 0);
 }
 
+// --- resolve ----------------------------------------------------------------
+
+function isHarnessName(value: string | undefined): value is HarnessName {
+  return value !== undefined && (HARNESS_VALUES as readonly string[]).includes(value);
+}
+
+// `resolve --harness <name>`: read AMADEUS_USE_SWARM and print the static driver
+// resolution for the running harness. Read-only — no audit emit, no worktree, no
+// spawn (the SWARM_DEGRADED emit stays single-sourced in prepare's --degraded-from
+// path). selected/degraded → stdout JSON one-liner, exit 0; rejected or an invalid
+// --harness → the same fail idiom as the rest of this tool (stderr {error}, exit 1,
+// stdout empty). exit is injectable so the CLI wiring is driven in-process by the
+// tests (Bun coverage does not instrument spawned CLI processes).
+export function handleResolve(
+  rest: string[],
+  exit: (code: number) => void = process.exit,
+): void {
+  const { flags } = parseArgs(rest);
+  if (!isHarnessName(flags.harness)) {
+    console.error(JSON.stringify({ error: `--harness must be one of: ${HARNESS_VALUES.join(", ")}` }));
+    exit(1);
+    return;
+  }
+  const resolution = resolveDriver(process.env.AMADEUS_USE_SWARM, flags.harness);
+  if (resolution.kind === "rejected") {
+    console.error(
+      JSON.stringify({
+        error: `AMADEUS_USE_SWARM must be unset or one of: ${DRIVER_VALUES.join(", ")} — got ${JSON.stringify(resolution.raw)}`,
+      }),
+    );
+    exit(1);
+    return;
+  }
+  console.log(JSON.stringify(resolution));
+  exit(0);
+}
+
 // --- shared helpers ---------------------------------------------------------
 
 function splitCsv(value: string): string[] {
@@ -776,10 +859,13 @@ function main(): void {
     case "finalize":
       handleFinalize(rest);
       break;
+    case "resolve":
+      handleResolve(rest);
+      break;
     default:
       console.error(
         JSON.stringify({
-          error: `Unknown subcommand: ${subcommand ?? "(none)"}. Valid: prepare, check, finalize`,
+          error: `Unknown subcommand: ${subcommand ?? "(none)"}. Valid: prepare, check, finalize, resolve`,
         })
       );
       process.exit(1);

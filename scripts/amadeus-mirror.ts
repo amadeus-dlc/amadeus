@@ -80,8 +80,11 @@ export type SnapshotOutcome =
   | { kind: "ok"; snapshot: MirrorSnapshot }
   | { kind: "error"; message: string };
 
-// Count `- [x]` as approved; `[S]` rows leave the denominator (jump-skipped
-// stages are excluded from progress, mirroring the statusline convention).
+// Count `- [x]` as approved. Two kinds of skipped stage leave the denominator,
+// mirroring the statusline convention: (1) jump-skipped rows carry the `[S]`
+// checkbox mark; (2) scope-skipped rows keep a live checkbox (`[ ]`, `[x]`, …)
+// but carry a ` — SKIP` action suffix (written by setStageSuffix). Both are
+// excluded from progress.
 // ADR-3a: counts come from the target intent's own state file, never from the
 // active intent's runtime-graph summary.
 export function countStageProgress(stateContent: string): {
@@ -98,6 +101,7 @@ export function countStageProgress(stateContent: string): {
     const m = line.match(/^- \[(x|X| |-|\?|R|S)\] /);
     if (!m) continue;
     if (m[1] === "S") continue;
+    if (/ — SKIP\s*$/.test(line)) continue;
     total++;
     if (m[1].toLowerCase() === "x") approved++;
   }

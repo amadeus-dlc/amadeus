@@ -3743,7 +3743,10 @@ function handleConfigChange(projectDir: string, flags: Record<string, string>): 
 // set-status — atomically update statusline fields at stage start
 // ---------------------------------------------------------------------------
 
-function handleSetStatus(projectDir: string, flags: Record<string, string>): void {
+// Exported for in-process seam tests (t233): the retreat guard's read→compare→
+// write critical section is exercised directly rather than only via CLI spawn.
+// Not a stable public API.
+export function handleSetStatus(projectDir: string, flags: Record<string, string>): void {
   const sp = stateFilePath(projectDir, flags.intent, flags.space);
   if (!existsSync(sp)) die("No state file found. Start a workflow first by describing what to build (/amadeus \"build the auth service\").");
 
@@ -3756,17 +3759,40 @@ function handleSetStatus(projectDir: string, flags: Record<string, string>): voi
   const phase = (flags.phase || entry.phase).toUpperCase();
   const agent = flags.agent || entry.lead_agent;
 
-  let content = readStateFile(projectDir, flags.intent, flags.space);
-  content = setField(content, "Lifecycle Phase", phase);
-  content = setField(content, "Current Stage", stage);
-  content = setField(content, "Active Agent", agent);
-  content = setField(content, "In Progress", stage);
-  content = setField(content, "Status", "Running");
-  content = setField(content, "Last Updated", isoTimestamp());
-  content = setCheckbox(content, stage, "in-progress");
-  writeStateFile(projectDir, content, flags.intent, flags.space);
+  // #1170 retreat guard: hold the audit lock across re-read → compare → write.
+  // When --intent is omitted (the sole caller, the sync-statusline hook, never
+  // passes it) both this lock and the engine's completion writers (advance/set/
+  // checkbox) key on the workspace sentinel bucket, so their RMW sections are
+  // mutually exclusive — LOCK == the active-intent state file both write. A
+  // set-status that arrives after a stage was completed or moved to
+  // awaiting-approval is a late statusline sync for a stage that has since moved
+  // forward; writing "in-progress" over it would retreat the run-state and drop
+  // the completion. Suppress the write entirely and leave the file byte-identical.
+  withAuditLock(projectDir, () => {
+    const content = readStateFile(projectDir, flags.intent, flags.space);
+    let currentBox = "";
+    for (const cb of parseCheckboxes(content)) {
+      if (cb.slug === stage) {
+        currentBox = cb.state;
+        break;
+      }
+    }
+    if (currentBox === "completed" || currentBox === "awaiting-approval") {
+      process.stderr.write(`set-status: retreat write suppressed for "${stage}" (checkbox=${currentBox})\n`);
+      return;
+    }
 
-  process.stdout.write(`${JSON.stringify({ updated: true, phase, stage, agent })}\n`);
+    let next = setField(content, "Lifecycle Phase", phase);
+    next = setField(next, "Current Stage", stage);
+    next = setField(next, "Active Agent", agent);
+    next = setField(next, "In Progress", stage);
+    next = setField(next, "Status", "Running");
+    next = setField(next, "Last Updated", isoTimestamp());
+    next = setCheckbox(next, stage, "in-progress");
+    writeStateFile(projectDir, next, flags.intent, flags.space);
+
+    process.stdout.write(`${JSON.stringify({ updated: true, phase, stage, agent })}\n`);
+  }, flags.intent, flags.space);
 }
 
 // ---------------------------------------------------------------------------

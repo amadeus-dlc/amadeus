@@ -4,7 +4,7 @@
 
 ## 現在の判定
 
-工程1〜6の実装、配布同期、独立レビュー、deslop、focused / full回帰、local lcovとpatch coverage gateは完了した。tracked canonical `.codex/hooks.json.example` とignored per-clone active `.codex/hooks.json` の所有境界、起動前activation、意味doctor、self / packaged consumer別の移行契約を実装・検証済みである。
+工程1〜6の実装、最新`origin/main`統合、配布同期、独立レビュー、deslop、focused / full回帰、local lcovとpatch coverage gateは完了した。tracked canonical `.codex/hooks.json.example` とignored per-clone active `.codex/hooks.json` の所有境界、起動前activation、意味doctor、self / packaged consumer別の移行契約を実装・検証済みである。
 
 一方、実agmsg / Codex monitorのlive acceptanceは **PENDING** である。2026-07-18T02:28:59Zの実測ではdelivery modeは`monitor`、Codex app-serverは起動していたが、bridgeは旧名`codex`に結び付いたままで、登録済み`amadeus/codex-1`と`amadeus/codex-2`はいずれも`not running`だった。人間による再起動、最初のturn、一意pingのpush受信、leaderへの返信が未成立であるため、本Issue / Code Generationを完了扱いにしない。
 
@@ -57,7 +57,7 @@
 - `bun test tests/integration/t-team-up-codex-resume.test.ts`: **46 pass / 0 fail / 436 assertions**
 - `bun test tests/integration/t-run-codex-project-target.test.ts`: **15 pass / 0 fail / 60 assertions**
 - `bun test tests/unit/t150-codex-packaging.test.ts`: **10 pass / 0 fail**
-- `bun run coverage:ci`: **378 test files / 5368 assertions / 0 fail / RESULT: PASS**
+- `bun run coverage:ci`（最新`origin/main`統合後）: **380 test files / 5413 assertions / 0 fail / RESULT: PASS**
 - staged production diff × focused LCOV: **1001 measured / 1001 covered / 0 allowlisted / 0 uncovered**
 - staged diff × full LCOV: **852 measured / 852 covered / 0 allowlisted / 0 uncovered**
 - `bun run typecheck`: **PASS**
@@ -70,7 +70,7 @@
 
 ## 未完了ゲート
 
-- Bolt commit / push / PR作成、最新`origin/main`統合、公開・統合に伴う後続工程
+- Bolt push / PR作成、公開・統合に伴う後続工程
 - 実monitorの人手再起動後live acceptance（bridge alive、一意ping push受信、返信到達）
 - Construction phase boundaryへ進む個別delegate（常任グラント対象外）
 

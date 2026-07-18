@@ -132,7 +132,7 @@
     "tool_input": {
       "plan": [
         {
-          "step": "Running Intent Capture [intent-capture]",
+          "step": "Running User Stories [user-stories]",
           "status": "in_progress"
         },
         {

@@ -209,10 +209,13 @@ describe("t147 Kiro hook adapter (live-captured payload fixtures)", () => {
       const r = runAdapter(dir, "state-sync", FIXTURES.postToolUse_todo_create);
       expect(r.code).toBe(0);
       const after = readFileSync(seededStateFile(dir), "utf-8");
-      // The fixture's [intent-capture] slug dispatches set-status; assert the
-      // Current Stage field reflects it (robust to the fixture state already
-      // being on intent-capture: require the field present AND the heartbeat).
-      expect(/\*\*Current Stage\*\*:\s*intent-capture/.test(after)).toBe(true);
+      // E-SMF-CG1 (#1170): the payload's [user-stories] slug dispatches
+      // set-status for a FORWARD stage (pending in the seed), so the write lands
+      // and Current Stage reflects it. Prior to the retreat guard this asserted
+      // [intent-capture], a COMPLETED stage — the exact retreat #1170 now
+      // suppresses; the seam intent (dispatch + state-sync) is preserved by
+      // targeting a non-completed stage instead of the completed one.
+      expect(/\*\*Current Stage\*\*:\s*user-stories/.test(after)).toBe(true);
       expect(before).toBeDefined();
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -792,13 +795,17 @@ describe("t147 Kiro adapter — runCore forwards the payload cwd (#822)", () => 
         tool_name: "todo_list",
         tool_input: {
           command: "create",
-          tasks: [{ task_description: "Running Intent Capture [intent-capture]" }],
+          tasks: [{ task_description: "Running User Stories [user-stories]" }],
         },
       });
       expect(r.code).toBe(0);
-      // The payload workspace's state must be the one that syncs.
+      // E-SMF-CG1 (#1170): target a FORWARD stage (user-stories, pending in the
+      // seed) so the write lands — it also differs from the seed's Current Stage
+      // (requirements-analysis), keeping the payloadCwd-vs-scriptHome
+      // discrimination sharp. The payload workspace's state must be the one that
+      // syncs.
       const payloadState = readFileSync(seededStateFile(payloadCwd), "utf-8");
-      expect(/\*\*Current Stage\*\*:\s*intent-capture/.test(payloadState)).toBe(true);
+      expect(/\*\*Current Stage\*\*:\s*user-stories/.test(payloadState)).toBe(true);
       // And the launch-dir workspace must be left untouched (pre-fix it synced here).
       const scriptState = readFileSync(seededStateFile(scriptHome), "utf-8");
       expect(/\*\*Current Stage\*\*:\s*requirements-analysis/.test(scriptState)).toBe(true);
