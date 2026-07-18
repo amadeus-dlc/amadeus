@@ -5125,3 +5125,54 @@
 **Duration ms**: 31
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T02:01:09Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a1569748eddda1724
+**Message**: ## verdict: REVISE\n\n対象: `amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-design/`(5成果物)\n\n### 検証サマリ(観点1・2・4・6は実測クリア)\n\n**観点1(NR→設計 全数写像)**: `grep -oE` で NR 8件(
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:01:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4472c4ed
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:01:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4472c4ed
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-design/scalability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:01:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: 63944521
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:01:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: 63944521
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-design/scalability-design.md
+**Duration ms**: 32
+
+---
