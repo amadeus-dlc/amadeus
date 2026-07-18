@@ -11,7 +11,7 @@ issue-mirror は amadeus-mirror.ts を指し、Intent 名には使わない。In
 - **State Version**: 7
 - **Active Agent**: amadeus-developer-agent
 - **Worktree Path**:
-- **Bolt Refs**: driver-contract-core, harness-wiring
+- **Bolt Refs**: [docs-and-parity, driver-contract-core, harness-wiring]
 - **Practices Affirmed Timestamp**: 2026-07-17T23:13:17Z
 
 - **Mirror Issue**: #1182
