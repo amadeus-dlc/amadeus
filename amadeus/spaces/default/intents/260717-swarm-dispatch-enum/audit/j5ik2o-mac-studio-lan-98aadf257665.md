@@ -1867,3 +1867,96 @@
 **Duration ms**: 36
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:26:34Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: aead64b8439e70320
+**Message**: Good — units-generation is the stage awaiting this review's verdict, consistent with the assignment. I now have enough evidence to render a verdict.\n\n## Verdict: REVISE\n\nI independently re-derived the
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:27:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: afa28cc9
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/unit-of-work.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:27:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: afa28cc9
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/unit-of-work.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:27:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 29c29bd9
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/unit-of-work.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:27:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 29c29bd9
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/unit-of-work.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:27:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: e4e9dc02
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/unit-of-work-story-map.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:27:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: e4e9dc02
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/unit-of-work-story-map.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:27:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7831c437
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/unit-of-work-story-map.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:27:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7831c437
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/unit-of-work-story-map.md
+**Duration ms**: 34
+
+---

@@ -2,7 +2,7 @@
 
 上流入力(consumes 全数): `components.md`、`component-methods.md`、`services.md`、`component-dependency.md`、`decisions.md`、`requirements.md`。
 
-user-stories は本 scope で SKIP のため、価値記述は `requirements.md` Intent 分析の受益者(Construction 実行者・framework contributor)ベネフィットで代替する(先例 260717-state-mirror-fixes と同運用)。
+user-stories は本 scope で SKIP のため、価値記述は `requirements.md` Intent 分析の受益者(Construction 実行者・framework contributor)ベネフィットで代替する(先例 = `260717-mirror-issue-tool/inception/units-generation/unit-of-work-story-map.md`「user-stories ステージは本スコープ SKIP — intent-statement の成功指標を直接写像」— 実在を確認のうえ引用)。
 
 ## 価値の流れ(scope Value Stream Map の Unit 写像)
 

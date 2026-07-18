@@ -7,6 +7,7 @@
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations
+- 2026-07-18T00:27:47Z — reviewer REVISE(Critical 2/Minor 1)→ 全件是正: (1) 規模合算を真の控除式へ再計算 — C7 150-280 を U1 契約テスト 100-180+U2 parity/journey 50-100 に carve-up し、合算 345-675→295-575 = decisions.md 表の機械合算と一致(python で U1+U2+U3 = 表合算 を機械検証 True)。当初の U2 テスト 50-100 は表外加算で「独自再配分なし」主張と矛盾していた (2) story-map 先例引用を実在する 260717-mirror-issue-tool へ訂正(訂正前に自分で head 実読 — fix-diff-independent-reverify) (3) t207/t211 を U1 対象・受け入れへ明記
 <!-- example: 2026-05-29T10:14:32Z — skipped the optional caching layer the stage prose suggested; the dataset is small enough that it adds risk -->
 
 ## Tradeoffs
