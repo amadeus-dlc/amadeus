@@ -365,5 +365,12 @@
     "dirName": "260718-hooks-config-conflict",
     "scope": "bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019f7782-2ba8-78a4-b257-f69342978c2e",
+    "slug": "election-ts-foundation",
+    "dirName": "260718-election-ts-foundation",
+    "scope": "amadeus",
+    "status": "in-flight"
   }
 ]
