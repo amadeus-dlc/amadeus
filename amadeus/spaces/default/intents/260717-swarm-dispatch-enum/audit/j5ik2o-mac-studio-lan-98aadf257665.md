@@ -5185,3 +5185,11 @@
 **Message**: ## verdict: READY\n\n是正コミット `4f01c26ff`(`record(swarm-dispatch-enum): fix U3 ND finding (SCD-D2 assurance layer)`)を独立検証。\n\n### 是正 diff の実測確認\n\n`amadeus/spaces/default/intents/260717-swarm-dispatch-enum/co
 
 ---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-18T02:02:11Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: nfr-design
+**Artifacts**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/nfr-design/performance-design.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/nfr-design/security-design.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/nfr-design/scalability-design.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/nfr-design/reliability-design.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/nfr-design/logical-components.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/nfr-design/performance-design.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/nfr-design/security-design.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/nfr-design/scalability-design.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/nfr-design/reliability-design.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/nfr-design/logical-components.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-design/performance-design.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-design/security-design.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-design/scalability-design.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-design/reliability-design.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-design/logical-components.md
+
+---
