@@ -74,7 +74,7 @@ issue-mirror は amadeus-mirror.ts を指し、Intent 名には使わない。In
 
 ### CONSTRUCTION PHASE
 Per unit: [TBD]
-- [-] functional-design — EXECUTE
+- [?] functional-design — EXECUTE
 - [ ] nfr-requirements — EXECUTE
 - [ ] nfr-design — EXECUTE
 - [ ] infrastructure-design — SKIP
@@ -96,7 +96,7 @@ Per unit: [TBD]
 - **Current Stage**: functional-design
 - **Next Stage**: nfr-requirements
 - **Status**: Running
-- **Last Updated**: 2026-07-18T00:37:10Z
+- **Last Updated**: 2026-07-18T01:06:01Z
 
 ## Session Resume Point
 - **Last Completed Stage**: delivery-planning

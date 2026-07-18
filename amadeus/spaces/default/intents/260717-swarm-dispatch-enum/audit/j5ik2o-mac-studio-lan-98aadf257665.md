@@ -3198,3 +3198,11 @@
 **Message**: Append-only、正常。全4項目の是正が実測確認できた。\n\n## Verdict: READY\n\n対象: `amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/`(是正コミット `19114b040` の増分検分)\n\n### 実測結果\n
 
 ---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-18T01:06:01Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: functional-design
+**Artifacts**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/functional-design/business-logic-model.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/functional-design/business-rules.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/functional-design/domain-entities.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/functional-design/frontend-components.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/functional-design/business-logic-model.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/functional-design/business-rules.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/functional-design/domain-entities.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/functional-design/frontend-components.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/business-logic-model.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/business-rules.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/domain-entities.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/frontend-components.md
+
+---
