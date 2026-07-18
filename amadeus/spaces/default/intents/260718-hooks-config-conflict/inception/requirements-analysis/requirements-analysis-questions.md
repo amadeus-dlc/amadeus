@@ -31,7 +31,7 @@ leader 承認: 【承認待ち】
 
 - A. **活性化済み hooks を untrack / ignore する（推奨）** — tracked canonical は `.codex/hooks.json.example` に一本化し、`.codex/hooks.json` は `.claude/settings.local.json` と同様のローカル runtime file とする。現行 agmsg 1.1.7 と bridge再起動経路を変更せず、既存tracked fileは安全にindexから外す。代償として、template更新は既存活性化ファイルへ自動上書きせず、明示的なmigration / doctor案内で扱う。
 - B. **tracked static dispatcher + ignored sidecarへ分離する** — `.codex/hooks.json` はmachine-neutralなdispatcherとしてtrackedのまま維持し、agmsgのmode・絶対pathをignored sidecarへ移す。canonical drift guardを保てるが、Amadeusと外部agmsgの協調変更、旧agmsg fallback、Windows command、turn / monitor / both / off、restart / SessionEndの互換検証を #770 の完了条件に含める。
-- X. その他（所有者、Codexによる発見経路、migration、agmsg互換境界を具体化する）
+- X. Other (please specify) — 所有者、Codexによる発見経路、migration、agmsg互換境界を具体化する
 
 [Answer]:
 
@@ -42,6 +42,6 @@ leader 承認: 【承認待ち】
 - A. **self-repository + Codex配布契約を同時に修復する（推奨）** — rootのindex / ignoreに加え、Codex `dot-gitignore`、生成dist、活性化・migration文書、fresh packaged consumer fixtureを更新する。agmsgを利用する下流consumerにも同じ所有境界を提供する。
 - B. **self-repositoryだけを修復する** — rootのindex / ignore、self-promotion、self用活性化経路とfixtureだけを変更する。最小diffだが、配布済みCodex harnessのagmsg利用者には同じtracked dirtyリスクを既知のまま残す。
 - C. **段階化する** — #770ではself-repositoryだけを修復し、Codex配布契約はblocker・migration条件を明記した別Issueへ切り出す。初回PRは小さくなるが、全体の恒久解が完成するまでIssue間の追跡が必要になる。
-- X. その他（self / dist / setup / docs / migration / fixtureの境界を具体化する）
+- X. Other (please specify) — self / dist / setup / docs / migration / fixtureの境界を具体化する
 
 [Answer]:
