@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Codex active hooks are mutable per-clone runtime state. The tracked
+# canonical configuration is .codex/hooks.json.example.
+.codex/hooks.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -28,7 +28,7 @@ bugfixスコープ（全7 stages、InceptionはReverse EngineeringとRequirement
 
 ## 人間承認
 
-- [ ] Inception → Construction phase boundaryの個別delegateを受領する。
+- [x] Inception → Construction phase boundaryの個別delegateを受領した（gate open `2026-07-18T01:26:20Z`、issuer human turn `2026-07-18T01:27:15Z`、有効delegate `2026-07-18T01:27:25Z`）。
 
 ## 判定
 

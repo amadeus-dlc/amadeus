@@ -718,10 +718,17 @@ EOF
 }
 
 codex_member_cmd() {
-  local m="$1" wt="${2:-$BASE/$1}" role prompt command="codex" resume_arg="" resume_uuid="" codex_home
+  local m="$1" wt="${2:-$BASE/$1}" role prompt command="codex" resume_arg="" resume_uuid="" codex_home hooks_helper
   role="$(member_role "$m")"
   prompt="\$agmsg actas $role"
   codex_home="$HOME/.codex-$CODEX_IDENTITY"
+  hooks_helper="$wt/.codex/tools/amadeus-codex-hooks.ts"
+
+  [ -f "$hooks_helper" ] || {
+    echo "ERROR: missing Codex hooks helper in $wt" >&2
+    return 1
+  }
+  bun "$hooks_helper" activate --project-dir "$wt" >/dev/null || return 1
 
   # Under herdr messaging there is no agmsg monitor to drive and no `actas`
   # bootstrap prompt: launch the Codex CLI directly. The trust seed still runs

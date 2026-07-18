@@ -2810,7 +2810,7 @@ function approveArgs(slug: string, flags: ReportFlags): string[] {
 // atomic state tool, and emits a terminal `done` directive on success or an
 // `error` directive on a rejected transition. Mutation happens entirely inside
 // the spawned subcommand(s) — the engine itself writes nothing.
-function handleReport(args: string[], projectDir: string | undefined): void {
+export function handleReport(args: string[], projectDir: string | undefined): void {
   const flags = parseReportFlags(args);
 
   // Branch -1 — the --single stage-runner commit. A stage-runner reports
@@ -2836,6 +2836,29 @@ function handleReport(args: string[], projectDir: string | undefined): void {
   if (flags.skeletonStance !== undefined) {
     handleSkeletonStanceReport(flags.skeletonStance, projectDir);
     return;
+  }
+
+  // Branch 0.5 — the resume-choice ask round-trip. A resume answer is not a
+  // stage verdict: accepting it must neither approve the current gate nor
+  // mutate workflow state. Keep the accepted vocabulary deliberately narrow
+  // until the destructive Redo / Start Fresh choices and the target-bearing
+  // Jump choice have dedicated, correlated routes. Number 1 is the Codex
+  // numbered-prose rendering of the same Resume option.
+  if (!flags.result && !flags.stage && flags.userInput !== undefined) {
+    const answer = flags.userInput.trim().toLowerCase();
+    const isResumeAnswer =
+      answer === "1" ||
+      answer === "resume" ||
+      answer === "resume from last checkpoint" ||
+      answer === "resume from last checkpoint (recommended)";
+    if (isResumeAnswer) {
+      const pd = resolveProjectDir(projectDir);
+      if (loadStateFileIfPresent(pd)) {
+        const message = "Resume selected for the existing workflow. No stage transition was committed. Re-run `next` to continue from the current checkpoint.";
+        emit(printDirective(message));
+        return;
+      }
+    }
   }
 
   // A verdict is required: report commits the outcome of an acted directive, so

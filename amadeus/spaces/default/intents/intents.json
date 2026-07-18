@@ -336,7 +336,7 @@
     "slug": "state-mirror-fixes",
     "dirName": "260717-state-mirror-fixes",
     "scope": "amadeus",
-    "status": "in-flight"
+    "status": "complete"
   },
   {
     "uuid": "019f712a-ed49-7a85-8dba-26efb88df0db",
@@ -350,6 +350,20 @@
     "slug": "swarm-dispatch-enum",
     "dirName": "260717-swarm-dispatch-enum",
     "scope": "amadeus",
-    "status": "in-flight"
+    "status": "complete"
+  },
+  {
+    "uuid": "019f6f9b-e2f0-789e-85b3-ea7fb9c52ec3",
+    "slug": "test-pyramid-rebuild",
+    "dirName": "260717-test-pyramid-rebuild",
+    "scope": "amadeus",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f728e-549e-7aab-b02c-90ab691ba300",
+    "slug": "hooks-config-conflict",
+    "dirName": "260718-hooks-config-conflict",
+    "scope": "bugfix",
+    "status": "complete"
   }
 ]

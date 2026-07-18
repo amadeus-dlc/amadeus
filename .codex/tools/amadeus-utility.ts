@@ -729,6 +729,86 @@ export function standingGrantDoctorCheck(projectDir: string, now: number): Docto
   };
 }
 
+const CODEX_HOOKS_DOCTOR_REASONS = new Set([
+  "OK",
+  "CANONICAL_MISSING",
+  "CANONICAL_JSON_INVALID",
+  "CANONICAL_STRUCTURE_INVALID",
+  "CANONICAL_TUPLES_MISSING",
+  "ACTIVE_MISSING",
+  "ACTIVE_JSON_INVALID",
+  "ACTIVE_STRUCTURE_INVALID",
+  "TUPLE_MISMATCH",
+]);
+const CODEX_HOOKS_DOCTOR_KEYS = new Set([
+  "schemaVersion",
+  "command",
+  "pass",
+  "reason",
+  "label",
+  "fix",
+]);
+
+function codexHooksProjectDoctorCheck(projectDir: string): DoctorCheck {
+  const helper = join(projectDir, ".codex", "tools", "amadeus-codex-hooks.ts");
+  if (!existsSync(helper)) {
+    return {
+      pass: false,
+      label: "Codex hooks contract: project-local helper is missing",
+      fix: "restore `.codex/tools/amadeus-codex-hooks.ts` from the installed distribution",
+    };
+  }
+  const result = Bun.spawnSync(
+    ["bun", helper, "doctor", "--json", "--project-dir", projectDir],
+    { cwd: projectDir, stdout: "pipe", stderr: "ignore" },
+  );
+  let payload: unknown;
+  try {
+    payload = JSON.parse(result.stdout.toString()) as unknown;
+  } catch {
+    return {
+      pass: false,
+      label: "Codex hooks contract: project-local doctor returned invalid JSON",
+      fix: "restore the Codex hooks helper modules from the installed distribution",
+    };
+  }
+  if (
+    payload === null ||
+    typeof payload !== "object" ||
+    Array.isArray(payload)
+  ) {
+    return {
+      pass: false,
+      label: "Codex hooks contract: project-local doctor returned an invalid schema",
+      fix: "restore the Codex hooks helper modules from the installed distribution",
+    };
+  }
+  const row = payload as Record<string, unknown>;
+  const keys = Object.keys(row);
+  const schemaValid =
+    keys.length === (row.fix === undefined ? 5 : 6) &&
+    keys.every((key) => CODEX_HOOKS_DOCTOR_KEYS.has(key)) &&
+    row.schemaVersion === 1 &&
+    row.command === "doctor" &&
+    typeof row.pass === "boolean" &&
+    typeof row.reason === "string" &&
+    CODEX_HOOKS_DOCTOR_REASONS.has(row.reason) &&
+    typeof row.label === "string" &&
+    (row.fix === undefined || typeof row.fix === "string");
+  if (!schemaValid || (row.pass === true) !== (result.exitCode === 0)) {
+    return {
+      pass: false,
+      label: "Codex hooks contract: project-local doctor returned an invalid schema",
+      fix: "restore the Codex hooks helper modules from the installed distribution",
+    };
+  }
+  return {
+    pass: row.pass as boolean,
+    label: row.label as string,
+    ...(typeof row.fix === "string" ? { fix: row.fix } : {}),
+  };
+}
+
 export function handleDoctor(projectDir: string): void {
   const results: Array<{ pass: boolean; label: string; fix?: string }> = [];
   const isWindows = process.platform === "win32";
@@ -856,7 +936,6 @@ export function handleDoctor(projectDir: string): void {
   } else if (harness === ".codex") {
     for (const [file, what, from] of [
       ["config.toml", "model/provider/sandbox config", "dist/codex/.codex/config.toml.example"],
-      ["hooks.json", "hook wiring", "dist/codex/.codex/hooks.json.example"],
       ["rules/default.rules", "permission prefix rules", "dist/codex/.codex/rules/default.rules"],
     ] as const) {
       results.push({
@@ -865,13 +944,17 @@ export function handleDoctor(projectDir: string): void {
         fix: `copy from \`${from}\``,
       });
     }
+    results.push(codexHooksProjectDoctorCheck(projectDir));
     // Minimum Codex version pin (G10): SubagentStart/Stop agent_type carries
     // the real role name only from 0.139.0 (hyphenated agent TOMLs resolve
     // without registration from the same release). Older versions degrade
     // SUBAGENT_COMPLETED attribution and the agent transposition contract.
     const MIN_CODEX = [0, 139, 0] as const;
-    const codexVer = Bun.spawnSync(["codex", "--version"], { stdout: "pipe", stderr: "ignore" });
-    const verText = (codexVer.stdout?.toString() ?? "").trim();
+    const codexPath = Bun.which("codex");
+    const codexVer = codexPath
+      ? Bun.spawnSync([codexPath, "--version"], { stdout: "pipe", stderr: "ignore" })
+      : undefined;
+    const verText = (codexVer?.stdout?.toString() ?? "").trim();
     const verMatch = verText.match(/(\d+)\.(\d+)\.(\d+)/);
     if (!verMatch) {
       results.push({
@@ -3663,7 +3746,10 @@ function handleConfigChange(projectDir: string, flags: Record<string, string>): 
 // set-status — atomically update statusline fields at stage start
 // ---------------------------------------------------------------------------
 
-function handleSetStatus(projectDir: string, flags: Record<string, string>): void {
+// Exported for in-process seam tests (t233): the retreat guard's read→compare→
+// write critical section is exercised directly rather than only via CLI spawn.
+// Not a stable public API.
+export function handleSetStatus(projectDir: string, flags: Record<string, string>): void {
   const sp = stateFilePath(projectDir, flags.intent, flags.space);
   if (!existsSync(sp)) die("No state file found. Start a workflow first by describing what to build (/amadeus \"build the auth service\").");
 
@@ -3676,17 +3762,40 @@ function handleSetStatus(projectDir: string, flags: Record<string, string>): voi
   const phase = (flags.phase || entry.phase).toUpperCase();
   const agent = flags.agent || entry.lead_agent;
 
-  let content = readStateFile(projectDir, flags.intent, flags.space);
-  content = setField(content, "Lifecycle Phase", phase);
-  content = setField(content, "Current Stage", stage);
-  content = setField(content, "Active Agent", agent);
-  content = setField(content, "In Progress", stage);
-  content = setField(content, "Status", "Running");
-  content = setField(content, "Last Updated", isoTimestamp());
-  content = setCheckbox(content, stage, "in-progress");
-  writeStateFile(projectDir, content, flags.intent, flags.space);
+  // #1170 retreat guard: hold the audit lock across re-read → compare → write.
+  // When --intent is omitted (the sole caller, the sync-statusline hook, never
+  // passes it) both this lock and the engine's completion writers (advance/set/
+  // checkbox) key on the workspace sentinel bucket, so their RMW sections are
+  // mutually exclusive — LOCK == the active-intent state file both write. A
+  // set-status that arrives after a stage was completed or moved to
+  // awaiting-approval is a late statusline sync for a stage that has since moved
+  // forward; writing "in-progress" over it would retreat the run-state and drop
+  // the completion. Suppress the write entirely and leave the file byte-identical.
+  withAuditLock(projectDir, () => {
+    const content = readStateFile(projectDir, flags.intent, flags.space);
+    let currentBox = "";
+    for (const cb of parseCheckboxes(content)) {
+      if (cb.slug === stage) {
+        currentBox = cb.state;
+        break;
+      }
+    }
+    if (currentBox === "completed" || currentBox === "awaiting-approval") {
+      process.stderr.write(`set-status: retreat write suppressed for "${stage}" (checkbox=${currentBox})\n`);
+      return;
+    }
 
-  process.stdout.write(`${JSON.stringify({ updated: true, phase, stage, agent })}\n`);
+    let next = setField(content, "Lifecycle Phase", phase);
+    next = setField(next, "Current Stage", stage);
+    next = setField(next, "Active Agent", agent);
+    next = setField(next, "In Progress", stage);
+    next = setField(next, "Status", "Running");
+    next = setField(next, "Last Updated", isoTimestamp());
+    next = setCheckbox(next, stage, "in-progress");
+    writeStateFile(projectDir, next, flags.intent, flags.space);
+
+    process.stdout.write(`${JSON.stringify({ updated: true, phase, stage, agent })}\n`);
+  }, flags.intent, flags.space);
 }
 
 // ---------------------------------------------------------------------------

@@ -62,7 +62,7 @@
 //   .sh 7  lying-conductor guard (falsely-claimed re-verified)-> "7 lying-conductor: falsely-claimed-converged unit re-verify-refused"
 //   .sh 8  finalize anti-tamper (claimed tampered rejected)  -> "8 finalize anti-tamper: tampered claimed unit re-verify-rejected"
 //   .sh 9  mixed batch tally 1+1, SWARM_COMPLETED, exit 2    -> "9 finalize mixed batch: 1 converged + 1 failed; SWARM_COMPLETED; exit 2"
-//   .sh 10 loud-degrade prepare --degraded-from -> DEGRADED  -> "10 loud-degrade: prepare --degraded-from ultracode emits SWARM_DEGRADED"
+//   .sh 10 loud-degrade prepare --degraded-from -> DEGRADED  -> "10 loud-degrade: prepare --degraded-from claude-ultra emits SWARM_DEGRADED"
 //   .sh 11 path-confinement (../ --test-file typed error)    -> "11 path-confinement: a ../ --test-file is a typed error, not a disabled guard"
 //   .sh 12 conductor attribution (--reasons unsatisfiable)   -> "12 conductor attribution: --reasons unsatisfiable lands the typed reason"
 //   .sh 13 --reasons cannot override the lying-conductor guard-> "13 --reasons cannot launder a claimed-but-red unit (stays error)"
@@ -423,9 +423,9 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
   }, 120000);
 
   // ===========================================================================
-  // Case 10: loud-degrade — prepare --degraded-from ultracode emits SWARM_DEGRADED.
+  // Case 10: loud-degrade — prepare --degraded-from claude-ultra emits SWARM_DEGRADED.
   // ===========================================================================
-  test("10 loud-degrade: prepare --degraded-from ultracode emits SWARM_DEGRADED", () => {
+  test("10 loud-degrade: prepare --degraded-from claude-ultra emits SWARM_DEGRADED", () => {
     const proj = makeSwarmFixture();
     runRef(proj, [
       "prepare",
@@ -436,11 +436,11 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
       "--base",
       "main",
       "--degraded-from",
-      "ultracode",
+      "claude-ultra",
     ]);
-    // SWARM_DEGRADED fired, and it records the requested driver (ultracode).
+    // SWARM_DEGRADED fired, and it records the requested driver (claude-ultra).
     expect(eventCount(proj, "SWARM_DEGRADED")).toBe(1);
-    expect(auditBody(proj)).toContain("**Requested driver**: ultracode");
+    expect(auditBody(proj)).toContain("**Requested driver**: claude-ultra");
   }, 120000);
 
   // ===========================================================================

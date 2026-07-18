@@ -70,7 +70,7 @@ Sources of truth: `amadeus-dlc/amadeus` v2 branch (commit `9b77786`, as of 2026-
 ├── settings.json.example
 ├── settings.local.json.example
 └── VERSION
-.codex/                                                   # Codex CLI harness engine (generated, overwritten on upgrade)
+.codex/                                                   # Codex CLI engine (generated; local active hooks are preserved on upgrade)
 ├── agents/                                               # Codex subagent definitions (14 roles, .md + .toml)
 │   ├── amadeus-<role>-agent.md
 │   └── amadeus-<role>-agent.toml
@@ -113,8 +113,8 @@ Sources of truth: `amadeus-dlc/amadeus` v2 branch (commit `9b77786`, as of 2026-
 │       └── templates/
 ├── config.toml                                           # Codex project configuration (only when needed)
 ├── config.toml.example
-├── hooks.json                                            # Codex hook registration
-├── hooks.json.example
+├── hooks.json                                            # Local active Codex hooks (per-clone, mutable, gitignored)
+├── hooks.json.example                                    # Canonical Amadeus hooks (generated and committed)
 ├── trust-seed.toml                                       # Pre-seeding hook trust
 └── VERSION
 amadeus/
@@ -154,11 +154,13 @@ amadeus/
 | Path | Role | Manual edits | git |
 |---|---|---|---|
 | `.claude/` | Runtime engine for Claude Code. Generated from `dist/claude/` and promoted into the project | Do not edit directly. Edit `core/` or `harness/claude/`, then regenerate | Committed |
-| `.codex/` | Runtime engine for Codex CLI. Copied/promoted from `dist/codex/` | Do not edit directly. Edit `core/` or `harness/codex/`, then regenerate | Committed |
+| `.codex/` | Runtime engine for Codex CLI. Copied/promoted from `dist/codex/` | Do not edit generated files directly. The local active `hooks.json` may be updated by Codex integrations | Committed, except gitignored `.codex/hooks.json` |
 | `.agents/` | Skill distribution consumed by Codex. Includes `$amadeus` and every stage runner | Do not edit directly. Edit the generation source, then regenerate | Committed |
 | `amadeus/` | Harness-neutral AI-DLC workspace. Holds spaces, intents, state, audit, artifacts, and team memory | `memory/` and artifacts are normal review targets. Runtime scratch files should not be edited | Committed + partly gitignored |
 
 `agents/`, `amadeus-common/`, and `hooks/` are part of the engine, not AI-DLC output artifacts. User- and team-owned long-lived information belongs under `amadeus/spaces/<space>/memory/` and `amadeus/spaces/<space>/knowledge/`, not under a harness-specific engine directory.
+
+Within `.codex/`, hook ownership is deliberately split. The generated and committed `.codex/hooks.json.example` is the canonical Amadeus contract. The ignored `.codex/hooks.json` is the active, per-clone runtime file; Codex integrations may add non-Amadeus entries or rewrite its formatting without changing the tracked canonical file.
 
 ### 1.2 Canonical Workspace Settings
 

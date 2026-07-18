@@ -346,7 +346,12 @@ describe("t149 Codex hook adapter (live-captured payload fixtures)", () => {
       );
       expect(r.code).toBe(0);
       const after = readFileSync(seededStateFile(dir), "utf-8");
-      expect(/\*\*Current Stage\*\*:\s*intent-capture/.test(after)).toBe(true);
+      // E-SMF-CG1 (#1170): the plan step's [user-stories] slug dispatches
+      // set-status for a FORWARD stage (pending in the seed), so the write lands.
+      // Pre-guard this asserted [intent-capture], a COMPLETED stage — the retreat
+      // #1170 now suppresses. The state-sync seam is preserved via a non-completed
+      // target.
+      expect(/\*\*Current Stage\*\*:\s*user-stories/.test(after)).toBe(true);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

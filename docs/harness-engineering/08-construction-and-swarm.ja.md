@@ -101,13 +101,24 @@ checks have proven reliable.
 
 スウォームが物理的にどうファンアウトするかは環境変数によって選択され、これが **オペレーターのつまみ** であることは率直に述べておく価値があります。これは `.claude/` のデータファイルではなく、`settings.json` にもありません(ファンアウト時にコンダクター側で読まれます)。あなたはそれを執筆しません。あなたのデータが形づくるランタイムを知るために、それを理解します。
 
-| `AMADEUS_USE_SWARM` | ドライバ | 挙動 |
-|---|---|---|
-| 未設定または `"1"` でない | subagent floor | コンダクターは1つのメッセージで N 個の並列 `Task` 呼び出しを、Unit ごとに1つ発行します。 |
-| `"1"` | inline Dynamic Workflow | コンダクターは、その JS が Unit ごとのパイプラインと反復上限を所有する `Workflow` を執筆します。 |
-| `"1"` だが Workflow ツールが利用不可 | floor へ loud-degrade | コンダクターは floor にフォールバックし、`--degraded-from ultracode` を渡すのでレフェリーが `SWARM_DEGRADED` を発します。 |
+`AMADEUS_USE_SWARM` は三値 enum です — 有効な状態は **未設定**、`claude-ultra`、`codex-ultra` の三つだけです。コンダクターは実行中のハーネスに対してこの値を **バッチごとに1回**、worktree や spawn より前に `amadeus-swarm.ts resolve --harness <self>` で解決します。解決は `(値, ハーネス)` の静的関数です:
 
-両ドライバは同じ5つの Unit ごとのステージを実行し、同じプロジェクトチェックに対して収束します。違いは、純粋に並列作業がどうディスパッチされるかだけです。暴走に対するバックストップは、スウォームツール自体の外、ハーネスの **Stop-hook シーリング**(`core/hooks/amadeus-stop.ts`、`blockCap()` / `defaultBlockCap()` のペア、`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` として公開)に存在します。この自律 Construction パスでは、デフォルトのシーリングは **8ブロック** です(対話型のデフォルトは2。明示的な `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` は両方を上書きします)。ドライバのシーム契約は [Skill System § 6](../reference/17-skill-system.ja.md#6-the-swarm-referee-the-driver-seam-and-the-bolt-dag) にあります。
+| `AMADEUS_USE_SWARM` \ ハーネス | claude | codex | kiro | kiro-ide |
+|---|---|---|---|---|
+| 未設定 | subagent floor | subagent floor | subagent floor | subagent floor |
+| `claude-ultra` | `claude-ultra`(inline Dynamic Workflow) | degrade → floor(`requested=claude-ultra`) | degrade → floor(`requested=claude-ultra`) | degrade → floor(`requested=claude-ultra`) |
+| `codex-ultra` | degrade → floor(`requested=codex-ultra`) | `codex-ultra`(native fan-out、reasoning effort=ultra) | degrade → floor(`requested=codex-ultra`) | degrade → floor(`requested=codex-ultra`) |
+| `1`・`""`・その他の値 | rejected — 未知値(fail-closed) | rejected — 未知値(fail-closed) | rejected — 未知値(fail-closed) | rejected — 未知値(fail-closed) |
+
+**resolve → dispatch。** `resolve` は1行の JSON 解決を出力し、コンダクターはそれで分岐します: `selected` はそのドライバをディスパッチ、`degrade` は subagent floor を実行しつつ `--degraded-from <requested>` を渡してレフェリーが `SWARM_DEGRADED` を発する(requested 値は監査に保存される)、`rejected` はバッチを即停止する — worktree なし、spawn なし、`SWARM_STARTED` なし。
+
+**破壊的変更。** 旧来の `AMADEUS_USE_SWARM=1` はもはやドライバを選択しません — 未知値であり **fail-closed** です。互換シムはありません: 実行中のハーネスがディスパッチできない値は、loud-degrade する(兄弟ハーネスの ultra)か rejected される(`1` およびその他すべての未認識文字列)かのいずれかです。
+
+**effort の証拠限界(C-15)。** `codex-ultra` の selected ケースでは、各 child を reasoning effort=ultra で spawn します: これは API に受理され child は完了まで走りますが、ultra が実適用されたことを示す telemetry はありません。
+
+`opencode` と `cursor` は invoke-swarm dispatch 指示を持たないため、`AMADEUS_USE_SWARM` の影響を受けません。
+
+すべての解決は同じ5つの Unit ごとのステージを実行し、同じプロジェクトチェックに対して収束します。違いは、純粋に並列作業がどうディスパッチされるかだけです。暴走に対するバックストップは、スウォームツール自体の外、ハーネスの **Stop-hook シーリング**(`core/hooks/amadeus-stop.ts`、`blockCap()` / `defaultBlockCap()` のペア、`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` として公開)に存在します。この自律 Construction パスでは、デフォルトのシーリングは **8ブロック** です(対話型のデフォルトは2。明示的な `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` は両方を上書きします)。ドライバのシーム契約は [Skill System § 6](../reference/17-skill-system.ja.md#6-the-swarm-referee-the-driver-seam-and-the-bolt-dag) にあります。
 
 1つの判断だけはドライバとともに動きません: 失敗は自律モードに関係なく **常に停止して人間を再び関与させます**。これは `amadeus-common/protocols/stage-protocol.md:125`(「Halt-and-ask on failure」)に従います。レフェリーの `finalize` がその exit-2 エンベロープを返すと、コンダクターは人間にバトンを戻します。手放しモードはハッピーパスのゲートを取り除きますが、失敗の停止は大きく鳴らしたまま保ちます。
 

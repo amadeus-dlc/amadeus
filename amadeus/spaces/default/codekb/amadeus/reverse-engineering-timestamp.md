@@ -1,6 +1,58 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(最新: 260717-codekb-diff3-cleanup)
+## 実行メタデータ(最新: 260718-hooks-config-conflict)
+
+- Date: 2026-07-18(Asia/Tokyo)
+- Observed at: HEAD `594ba21d636218558b711b371c286f16731fb081`（`git rev-parse HEAD` 実測）
+- Intent: `260718-hooks-config-conflict`（[Issue #770](https://github.com/amadeus-dlc/amadeus/issues/770) — tracked `.codex/hooks.json` と agmsg monitor runtime state の所有権衝突。marker側は [PR #783](https://github.com/amadeus-dlc/amadeus/pull/783) で解決済み）
+- Scope: `bugfix`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh（cid:reverse-engineering:c1、E-L63 の base 選定則）。base=`e9a001105d253e14affb77417423d9f0b0360f9e`（全 `re-scans/*.md` observed のうち HEAD の祖先で距離最小。`git merge-base --is-ancestor` exit 0、`git rev-list --count e9a0011..HEAD`=**8**）、observed=`594ba21d636218558b711b371c286f16731fb081`。Developer scan→Architect synthesisの直列に、外部 agmsg reader／writerの独立対称走査を追加。
+- Focus: Codex `HOOK_WIRING`→example→active copy→trust reader、`promote-self` preserve、`run-codex.sh`／`team-up.sh`→agmsg shim／monitor、`delivery.sh`／SQLite JSON1 writer、mode reader、bridge restart、markerの現行不在、packaging／doctor／fixture／テスト空白。
+- 測定 ref: HEAD三者は同一 blob `8eeff909b38467415fdd63a93631db74f91e5b4f`（1925 bytes／93 lines）。現 worktree active fileは2021 bytes／改行0／diff 1 insertion・93 deletionsで、Amadeus 9 commandを保持しagmsg SessionStart／SessionEnd各1件と絶対 pathを追加。base..observedは15 files・+842/-31だがフォーカス契約変更0件。agmsgはローカル実体1.1.7をread-only直読。
+- 現行結論: root causeはtracked canonical activationとmutable per-machine runtime configが同じ`.codex/hooks.json`を所有すること。marker対策だけ、pretty-printだけ、Codex退役前提の運用だけでは恒久解にならない。active file untrack／ignoreとtracked static dispatcher + ignored sidecarは双方`【裁定待ち】`。
+- Per-intent record: `re-scans/260718-hooks-config-conflict.md`
+- 更新した成果物: `architecture.md`、`code-structure.md`、`component-inventory.md`、`technology-stack.md`、`dependencies.md`、`code-quality-assessment.md`、本ファイル、per-intent record。`business-overview.md`は事業目的不変、`api-documentation.md`はrepository所有の公開契約が未裁定のため温存。
+- Delivery boundary: 実装、外部 agmsg変更、main merge/rebase、Issue close、PR作成・更新は本scanで実施していない。既存dirty `.codex/hooks.json` と旧intent state/auditは変更していない。
+- Baseの真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有timestampはrepo-level freshness pointerであり、次回差分baseの真実源にはしない。
+
+## 実行メタデータ(履歴: 260717-swarm-dispatch-enum)
+
+- Date: 2026-07-18(Asia/Tokyo)
+- Observed at: HEAD `e9a001105d253e14affb77417423d9f0b0360f9e`(`git rev-parse HEAD` 実測)
+- Intent: `260717-swarm-dispatch-enum`([Issue #1157](https://github.com/amadeus-dlc/amadeus/issues/1157) — `AMADEUS_USE_SWARM` の三値 enum 化 `unset`/`claude-ultra`/`codex-ultra` + Codex 通常経路のセッション内 native subagent 並列化。Mirror Issue #1182)
+- Scope: `amadeus`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh(cid:reverse-engineering:c1)。base=`6495e03a12d9e7149c2e80b59f171a90607a2d2c`(全 `re-scans/*.md` observed のうち HEAD 祖先かつ距離最小。`git merge-base --is-ancestor 6495e03a12d9e7149c2e80b59f171a90607a2d2c HEAD` exit 0 実測、`git rev-list --count 6495e03a..HEAD`=**128**。rescan-base-ancestry)。日付が新しい squash tip の非祖先 observed は E-L63 に従い除外。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3、独立再照合で反証なし)
+- Focus: `AMADEUS_USE_SWARM` 全数188(実コード読み取りゼロ・conductor SKILL prose 二値 dispatch)・三値化改修サイト(claude SKILL:61 / codex SKILL:57,171 / onboarding.fills.ts / kiro・kiro-ide 各1、opencode/cursor は SKILL 不在の欠落面)・referee 契約(`amadeus-swarm.ts` 789行、ステートレス prepare/check/finalize、driver 型 `DriverName` :88-89 は swarm 内に閉じる)・6監査イベント(`SWARM_*`、Fallback `driver="subagent"` ハードコード :293)・Codex exec per-unit worker 経路(`codex/SKILL.md:57,171` / `emit.ts:81`)・旧 driver stack 不在確認(`AMADEUS_SWARM_DRIVER` adapter/driver スタック未着地)・テスト9件・docs 契約(08-construction-and-swarm.md:201-213 / 17-skill-system.md)
+- 測定 ref: 件数・行番号は observed HEAD `e9a001105` の実ファイル直読、区間変更は `git log 6495e03a..HEAD -- <path>` で実測(measurement-ref-in-artifacts)。swarm 正本 `amadeus-swarm.ts` の区間変更は0件。
+- 現行結論: swarm 正本・SKILL invoke-swarm dispatch 指示・swarm テスト群は区間 `6495e03a..HEAD`(128コミット)で**区間変更ゼロ**。関心 seam の実行コード・構造・API・依存は実質無変更。`AMADEUS_USE_SWARM` はエンジンのコードパスに一切読まれず、すべて conductor 側 SKILL prose の二値(`== "1"`)dispatch 指示 — 三値 enum 化は主に SKILL prose と監査 driver 語彙・Fallback ハードコードの改修面。区間の実変更はいずれも本 intent フォーカス面外(CI リファクタ・coverage-patch-gate 新設・無関係な新テスト群)。既決 `cid:feasibility:c1-2`(Codex native subagent 並列成立・effort telemetry 観測不能)を適用。
+- Per-intent record: `re-scans/260717-swarm-dispatch-enum.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「最新: 260717-codekb-diff3-cleanup」→履歴ラベル化)、`re-scans/260717-swarm-dispatch-enum.md`。**codekb body 9成果物は全点温存**(churn 回避 — swarm 正本の区間変更ゼロ、再照合で本文との矛盾なし、cid:reverse-engineering:c1)。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260717-state-mirror-fixes)
+
+- Date: 2026-07-18(Asia/Tokyo)
+- Observed at: HEAD `591b6a2a222357f41061128f1b5a93c7f7a877be`(`git rev-parse HEAD` 実測、worktree = `origin/main` 一致)
+- Intent: `260717-state-mirror-fixes`(bugfix batch: [Issue #1170](https://github.com/amadeus-dlc/amadeus/issues/1170) — set-status hook 経由の state.md 巻き戻り(checkbox `[-]` と Current Stage の lost-update)/ [Issue #1172](https://github.com/amadeus-dlc/amadeus/issues/1172) — `countStageProgress` が scope-SKIP を分母に混入)
+- Scope: `amadeus`
+- Project type: Brownfield
+- Repository: `amadeus`
+- 手法: diff-refresh(cid:reverse-engineering:c1、E-L63 の base 選定則)。base=`6495e03a12d9e7149c2e80b59f171a90607a2d2c`(全 `re-scans/*.md` の observed のうち HEAD 祖先かつ距離最小。`git merge-base --is-ancestor 6495e03a... HEAD` exit 0、`git rev-list --count 6495e03a..591b6a2a`=126)。squash マージで feature tip が HEAD の非祖先になる新しい observed(`0b5e24f8` 等の squash tip 群)は `--is-ancestor` exit 1 につき除外(cid:reverse-engineering:rescan-base-ancestry)。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3、独立再照合で反証なし)
+- Focus: **#1170** — state.md 書込経路の全数列挙(11 hook grep で内容ライターは `.claude/hooks/amadeus-sync-statusline.ts:69-73` の set-status spawn が唯一)+ `handleSetStatus`(`amadeus-utility.ts:3666-3690`)の無ロック read-modify-write の race window 機序確定。**#1172** — `scripts/amadeus-mirror.ts:87-105` `countStageProgress` の SKIP 分母欠陥 + scope-SKIP の現行様式実測(`- [ ] <stage> — SKIP` 空 checkbox 形、format-currency-grep)
+- 測定 ref: 件数・行番号は observed HEAD `591b6a2a2` の実ファイル直読(cid:measurement-ref-in-artifacts)。全 state 横断マーカー集計 `[ ] — SKIP`=717件 / `[ ] — EXECUTE`=70件 / `[x] — EXECUTE`=414件、`^- \[S\]` checkbox=**0件**(実コーパス不在)。区間 `6495e03a..591b6a2a`=126コミット
+- 現行結論: **2欠陥の機序を確定**。#1170 は `handleSetStatus` が `withAuditLock` を取らず(エンジン RMW ハンドラは全て保護、`amadeus-state.ts:251-266`)、S0 スナップショット読み→全文上書きで engine の advance を lost-update する。audit 非 emit のため巻き戻りは state.md のみ = Issue 症状と一致。set-status は intent フラグなしで active intent に解決し set-status 同士も相互 lost-update。#1172 は分母除外条件が checkbox `[S]`(実コーパス0件の runtime jump marker)のみで、実 scope-SKIP 様式 `[ ] — SKIP`(717件)が `total++` に混入(18/32 を返す、期待 18/18)。checkbox(実行状態)と suffix(計画)の直交2フィールドを混同したのが根本原因。テスト空白2件(t232 が捏造 `[S]` fixture で偽 green / t145 は set-status 経路 concurrency 未カバー)
+- Per-intent record: `re-scans/260717-state-mirror-fixes.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「最新: 260717-codekb-diff3-cleanup」→履歴ラベル化)、`re-scans/260717-state-mirror-fixes.md`、`code-quality-assessment.md`(#1170/#1172 の2欠陥 + 2テスト空白の観測節を新設、旧「最新」= swarm-driver-migration marker を履歴へ降格 cid:reverse-engineering:c3-relabel)。**他7 body 成果物(business-overview / architecture / code-structure / api-documentation / component-inventory / technology-stack / dependencies)は全点温存**(churn 回避 — Focus seam の state ロック機構・core 中立層/表層境界は区間126コミットで不変。cid:reverse-engineering:c1)
+- Delivery boundary: main merge/rebase、Issue close、GitHub 上のレビュー作成・更新操作は本 scan で実施していない。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260717-codekb-diff3-cleanup)
 
 - Date: 2026-07-18(Asia/Tokyo)
 - Observed at: HEAD `0b5e24f8ffeecb6648639adf4a8b1a257084efac`(`git rev-parse HEAD` 実測)
