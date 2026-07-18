@@ -29,7 +29,7 @@ graph LR
 
 ## 並行実装ノート
 
-3 Unit は直列依存のため swarm 並行 fan-out の対象外(バッチ=1 unit ずつ)。ファイル交差(c6): U1=amadeus-swarm.ts/amadeus-audit.ts/tests、U2=harness/*/SKILL・emit・onboarding/tests、U3=docs/dist — 正本面の交差なし(dist 再生成は U3 に集約)。
+3 Unit は直列依存のため swarm 並行 fan-out の対象外(バッチ=1 unit ずつ)。ファイル交差(c6): U1=amadeus-swarm.ts/amadeus-audit.ts/tests、U2=harness/*/SKILL・emit・onboarding/tests、U3=docs/dist — 正本面の交差なし。dist 再生成は**各 Bolt が自 diff 分を実施**(Mandated+CI dist:check 整合 — E-SDE-CG1 裁定 A 2026-07-18 3/3 による申告付き精密化。当初文言「dist 再生成は U3 に集約」は docs 面コピーの集約の意味に限定し、file 単位の非交差は維持: U1 の dist 面 = amadeus-swarm.ts コピーのみ / U3 = docs・SKILL コピー)。
 
 ## Cross-unit 決定(construction 段の追記 — 申告付き)
 
