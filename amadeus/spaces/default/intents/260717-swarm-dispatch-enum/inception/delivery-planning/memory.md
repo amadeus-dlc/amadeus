@@ -7,6 +7,7 @@
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations
+- 2026-07-18T00:34:44Z — external-dependency-map.md の required-sections FAILED(H2 不足)を生成直後センサーで自己捕捉・是正→PASSED(E-SDE-DP 両票付記の推奨に従い記録)
 <!-- example: 2026-05-29T10:14:32Z — skipped the optional caching layer the stage prose suggested; the dataset is small enough that it adds risk -->
 
 ## Tradeoffs
