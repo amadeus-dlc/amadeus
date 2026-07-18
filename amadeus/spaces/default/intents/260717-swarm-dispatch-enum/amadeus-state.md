@@ -9,7 +9,7 @@ issue-mirror は amadeus-mirror.ts を指し、Intent 名には使わない。In
 - **Scope**: amadeus
 - **Start Date**: 2026-07-17T19:09:33Z
 - **State Version**: 7
-- **Active Agent**: amadeus-developer-agent
+- **Active Agent**: amadeus-quality-agent
 - **Worktree Path**:
 - **Bolt Refs**: driver-contract-core, harness-wiring, docs-and-parity
 - **Practices Affirmed Timestamp**: 2026-07-17T23:13:17Z
@@ -29,8 +29,8 @@ issue-mirror は amadeus-mirror.ts を指し、Intent 名には使わない。In
 
 ## Execution Plan Summary
 - **Total Stages**: 18
-- **Completed**: 16
-- **In Progress**: code-generation
+- **Completed**: 17
+- **In Progress**: build-and-test
 
 ## Runtime State
 - **Revision Count**: 0
@@ -78,8 +78,8 @@ Per unit: [TBD]
 - [x] nfr-requirements — EXECUTE
 - [x] nfr-design — EXECUTE
 - [ ] infrastructure-design — SKIP
-- [?] code-generation — EXECUTE
-- [ ] build-and-test — EXECUTE
+- [x] code-generation — EXECUTE
+- [-] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
 
 ### OPERATION PHASE
@@ -93,12 +93,12 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: code-generation
-- **Next Stage**: build-and-test
+- **Current Stage**: build-and-test
+- **Next Stage**: none
 - **Status**: Running
-- **Last Updated**: 2026-07-18T05:03:46Z
+- **Last Updated**: 2026-07-18T05:05:28Z
 
 ## Session Resume Point
-- **Last Completed Stage**: nfr-design
-- **Next Action**: Execute Code Generation
+- **Last Completed Stage**: code-generation
+- **Next Action**: Execute Build And Test
 - **Pending Artifacts**: none
