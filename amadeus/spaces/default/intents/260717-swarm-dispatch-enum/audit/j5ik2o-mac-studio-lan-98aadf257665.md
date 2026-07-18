@@ -2906,3 +2906,172 @@
 **Message**: All four checks were already completed and verified with fresh evidence in my prior turn. Summary and final verdict below.\n\n## Iteration 2 是正確認 — intent 260717-swarm-dispatch-enum / functional-design 
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:56:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 82d5454f
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:56:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 82d5454f
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/business-logic-model.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:56:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: f4e99cbd
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:56:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: f4e99cbd
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/business-logic-model.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:56:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 94664b75
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/business-rules.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-18T00:56:48Z
+**Event**: SENSOR_FAILED
+**Fire id**: 94664b75
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/business-rules.md
+**Detail path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/.amadeus-sensors/functional-design/required-sections-94664b75.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:56:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5aa124c3
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:56:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5aa124c3
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/business-rules.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:56:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: a7dd945d
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:56:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: a7dd945d
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/domain-entities.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:56:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 95629ab6
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:56:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 95629ab6
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/domain-entities.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:56:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: fcee0f2d
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/frontend-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:56:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: fcee0f2d
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/frontend-components.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:56:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9265deb9
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/frontend-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:56:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9265deb9
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/frontend-components.md
+**Duration ms**: 33
+
+---
