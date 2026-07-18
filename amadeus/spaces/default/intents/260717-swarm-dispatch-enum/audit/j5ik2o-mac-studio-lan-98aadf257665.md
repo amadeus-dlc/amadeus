@@ -3980,3 +3980,213 @@
 **Message**: C-21 の誤引用は完全に消えており、working tree もクリーン(既にコミット済み)。\n\n## Verdict: READY\n\n### 実測結果\n\n**M1(security-requirements.md の N/A 根拠)— 是正確認**\n- 旧文: 「認証・認可・新規データ収集は非該当(C-21/C-22)」— C-21 は AWS 制約(`| C-21 | AWS | AWS a
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T01:24:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 69bb99b3
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/performance-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T01:24:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 69bb99b3
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/performance-requirements.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T01:24:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 79d0d51a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/performance-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T01:24:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 79d0d51a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/performance-requirements.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T01:24:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3923ee68
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/security-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T01:24:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3923ee68
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/security-requirements.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T01:24:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 28b35d90
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/security-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T01:24:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 28b35d90
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/security-requirements.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T01:24:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8092dcf4
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/scalability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T01:24:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8092dcf4
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/scalability-requirements.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T01:24:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 38595073
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/scalability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T01:24:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 38595073
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/scalability-requirements.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T01:24:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1fceaa45
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/reliability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T01:24:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1fceaa45
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/reliability-requirements.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T01:24:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 214db2b8
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/reliability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T01:24:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 214db2b8
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/reliability-requirements.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T01:24:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3b4bdc93
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/tech-stack-decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T01:24:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3b4bdc93
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/tech-stack-decisions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T01:24:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 66704f9a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/tech-stack-decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T01:24:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 66704f9a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/tech-stack-decisions.md
+**Duration ms**: 36
+
+---
