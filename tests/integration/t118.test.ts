@@ -8,15 +8,18 @@
 // engine binary `bun amadeus-orchestrate.ts next|report` (and the sibling tools
 // `bun amadeus-jump.ts resolve` / `bun amadeus-state.ts gate-start`) over a seeded
 // fixture and diffs the emitted directive / the audit.md the tool writes against
-// a frozen golden — the PROCESS boundary (exit codes, stdout JSON, file effects),
-// never an in-process call.
+// a frozen golden — the PROCESS boundary (exit codes, stdout JSON, file effects).
+// A narrow in-process twin below exists only to carry lcov for the resume-choice
+// handler branch; the spawned cases remain authoritative for the CLI contract.
 //
 // Why spawn (not in-process): the .sh shells out to FOUR binaries per walk and
 // asserts on (a) the directive JSON each emits on stdout, (b) the STAGE_STARTED
 // rows amadeus-state.ts appends to audit.md through report's
 // dispatcher, and (c) the no-state-created side effect of --init. The contract is
-// the subprocess boundary plus those side effects; an in-process twin would lose
-// the report-dispatcher → amadeus-state.ts subprocess seam the corpus exists to pin.
+// the subprocess boundary plus those side effects; replacing the corpus with an
+// in-process twin would lose the report-dispatcher → amadeus-state.ts subprocess
+// seam it exists to pin. The lcov carrier therefore supplements rather than
+// replaces the spawned resume round-trip.
 //
 // COVERS UNIT: the covers id is subcommand:amadeus-jump:resolve — the corpus's load-
 // bearing claim is engine-vs-tool AGREEMENT on jump DIRECTION. The engine
@@ -80,10 +83,11 @@
 // state-jumped.md, state-pre-workspace-detection.md, state-construction-bolt1.md).
 // Nothing is written under tests/fixtures/**. All temp dirs cleaned in afterAll.
 
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, spyOn, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { handleReport } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -173,6 +177,23 @@ function readAudit(p: string): string {
 // biome-ignore lint/suspicious/noExplicitAny: directives are a typed union; the test reads scalar fields
 function directive(r: CliResult): any {
   return JSON.parse(r.stdout.trim());
+}
+
+/**
+ * Drive report in-process only as the lcov carrier for the resume-choice branch.
+ * The spawned cases below remain the authority for the CLI boundary and file effects.
+ */
+function reportDirectiveInProcess(p: string, answer: string): Record<string, unknown> {
+  let raw = "";
+  const log = spyOn(console, "log").mockImplementation((value) => {
+    raw = String(value);
+  });
+  try {
+    handleReport(["--user-input", answer], p);
+  } finally {
+    log.mockRestore();
+  }
+  return JSON.parse(raw.trim()) as Record<string, unknown>;
 }
 
 /**
@@ -308,6 +329,61 @@ describe("t118 differential corpus — engine vs amadeus-jump resolve (migrated 
     const r = run(ORCHESTRATE, ["next", "--resume", "--project-dir", p]);
     expect(directive(r).kind).toBe("ask");
     expect(r.out).toContain("existing workflow was found");
+  });
+
+  test.each([["1"], ["Resume"]] as const)(
+    "SP4 round-trip: report --user-input %s resumes the current stage without approving it",
+    (answer) => {
+      const p = projWithState("state-jumped.md");
+      const before = readFileSync(statePath(p), "utf-8");
+      const auditBefore = readAudit(p);
+      expect(directive(run(ORCHESTRATE, ["next", "--resume", "--project-dir", p])).kind)
+        .toBe("ask");
+
+      const out = directive(
+        run(ORCHESTRATE, ["report", "--user-input", answer, "--project-dir", p]),
+      );
+      expect(out.kind).toBe("print");
+      expect(out.message).toContain("Re-run `next` to continue");
+      expect(readFileSync(statePath(p), "utf-8")).toBe(before);
+      expect(readAudit(p)).toBe(auditBefore);
+
+      const next = directive(run(ORCHESTRATE, ["next", "--project-dir", p]));
+      expect(next.kind).toBe("run-stage");
+      expect(next.stage).toBe("code-generation");
+    },
+  );
+
+  test.each([
+    ["1"],
+    ["Resume"],
+    ["Resume from last checkpoint"],
+    ["Resume from last checkpoint (Recommended)"],
+  ] as const)(
+    "SP4 in-process coverage: report --user-input %s reaches the non-mutating resume branch",
+    (answer) => {
+      const p = projWithState("state-jumped.md");
+      const before = readFileSync(statePath(p), "utf-8");
+      const auditBefore = readAudit(p);
+
+      const out = reportDirectiveInProcess(p, answer);
+
+      expect(out.kind).toBe("print");
+      expect(out.message).toContain("Re-run `next` to continue");
+      expect(readFileSync(statePath(p), "utf-8")).toBe(before);
+      expect(readAudit(p)).toBe(auditBefore);
+    },
+  );
+
+  test("SP4 in-process edge: Resume without an existing workflow does not claim success", () => {
+    const p = cleanProj();
+
+    const out = reportDirectiveInProcess(p, "Resume");
+
+    expect(out.kind).toBe("error");
+    expect(out.message).toContain("report requires --result");
+    expect(existsSync(statePath(p))).toBe(false);
+    expect(readAudit(p)).toBe("");
   });
 
   // ============================================================
