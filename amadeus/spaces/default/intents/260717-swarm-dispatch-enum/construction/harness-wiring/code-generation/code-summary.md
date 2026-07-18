@@ -1,6 +1,6 @@
 # Code Summary — harness-wiring(swarm-dispatch-enum / Issue #1157)
 
-上流入力(consumes 全数): `requirements.md`(FR-1 prose 面/FR-3/FR-5/FR-8 へ trace)、`business-logic-model.md`(dispatch フロー・精密化表の実装正)、`business-rules.md`(BR-W1〜W6 受け入れ)、`logical-components.md`(部品表)、`reliability-design.md`(RD-W1 retry slug 基準・RD-W2 証拠限界文)、`security-design.md`(SD-W3 c2 固定文)、`unit-of-work.md`(U2 受け入れ — t181 一致・headless 記述 0・旧 1 記述 0 へ trace)。
+上流入力(consumes 全数): `requirements.md`(FR-1 prose 面/FR-3/FR-5/FR-8 へ trace)、`business-logic-model.md`(dispatch フロー・精密化表の実装正)、`business-rules.md`(BR-W1〜W6 受け入れ)、`logical-components.md`(部品表)、`reliability-design.md`(RD-W1 retry slug 基準・RD-W2 証拠限界文)、`security-design.md`(SD-W3 c2 固定文)、`domain-entities.md`(unit slug⇔child の概念モデル — retry 手順文の正)、`performance-design.md`(PD-W2 resolve バッチ1回の手順順序)、`unit-of-work.md`(U2 受け入れ — t181 一致・headless 記述 0・旧 1 記述 0 へ trace)。
 
 ## 実装結果(bolt branch `bolt-harness-wiring`、amend 後 commit)
 
