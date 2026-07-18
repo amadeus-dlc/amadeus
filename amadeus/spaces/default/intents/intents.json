@@ -351,5 +351,12 @@
     "dirName": "260717-swarm-dispatch-enum",
     "scope": "amadeus",
     "status": "complete"
+  },
+  {
+    "uuid": "019f6f9b-e2f0-789e-85b3-ea7fb9c52ec3",
+    "slug": "test-pyramid-rebuild",
+    "dirName": "260717-test-pyramid-rebuild",
+    "scope": "amadeus",
+    "status": "complete"
   }
 ]
