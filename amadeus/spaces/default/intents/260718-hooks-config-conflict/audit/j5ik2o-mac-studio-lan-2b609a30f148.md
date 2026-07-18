@@ -23,3 +23,15 @@
 **User Input**: ユーザー再承認(AskUserQuestion 01:28Z 頃: 再発行する)— gate open 01:26:20Z 後の再接地。§13 E-770-RA13 0件成立(3/3)、Construction 進入承認込み
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-18T11:52:59Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: code-generation
+**Issuer Space**: default
+**Issuer Intent**: 260717-swarm-dispatch-enum
+**Issuer Shard**: j5ik2o-mac-studio-lan-2b609a30f148.md
+**Issuer Human Ts**: 2026-07-18T11:25:12Z
+**User Input**: ユーザー常任運用下の通常ステージゲート — E-770-CGBT 裁定受領済み・reviewer READY・PR #1212/#1216 マージ済み
+
+---
