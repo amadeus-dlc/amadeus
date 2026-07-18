@@ -3075,3 +3075,24 @@
 **Duration ms**: 33
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:57:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 15ffabdb
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:57:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 15ffabdb
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/business-rules.md
+**Duration ms**: 37
+
+---
