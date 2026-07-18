@@ -566,3 +566,36 @@
 **Message**: 進捗状況教えて
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:46:46Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a0425acb9ee435270
+**Message**: マージ承認揃ったらまとめて諮って
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:47:06Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a41bf512385629dd2
+**Message**: 進捗状況教えて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:47:38Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ad820eb47763f35b4
+**Message**: 進捗どう？
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-18T00:49:04Z
+**Event**: HUMAN_TURN
+
+---
