@@ -29,8 +29,8 @@ issue-mirror は amadeus-mirror.ts を指し、Intent 名には使わない。In
 
 ## Execution Plan Summary
 - **Total Stages**: 18
-- **Completed**: 13
-- **In Progress**: functional-design
+- **Completed**: 14
+- **In Progress**: nfr-requirements
 
 ## Runtime State
 - **Revision Count**: 0
@@ -74,8 +74,8 @@ issue-mirror は amadeus-mirror.ts を指し、Intent 名には使わない。In
 
 ### CONSTRUCTION PHASE
 Per unit: [TBD]
-- [?] functional-design — EXECUTE
-- [ ] nfr-requirements — EXECUTE
+- [x] functional-design — EXECUTE
+- [-] nfr-requirements — EXECUTE
 - [ ] nfr-design — EXECUTE
 - [ ] infrastructure-design — SKIP
 - [ ] code-generation — EXECUTE
@@ -93,12 +93,12 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: functional-design
-- **Next Stage**: nfr-requirements
+- **Current Stage**: nfr-requirements
+- **Next Stage**: nfr-design
 - **Status**: Running
-- **Last Updated**: 2026-07-18T01:06:01Z
+- **Last Updated**: 2026-07-18T01:08:33Z
 
 ## Session Resume Point
-- **Last Completed Stage**: delivery-planning
-- **Next Action**: Execute Functional Design
+- **Last Completed Stage**: functional-design
+- **Next Action**: Execute Nfr Requirements
 - **Pending Artifacts**: none
