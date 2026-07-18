@@ -5,7 +5,7 @@
 ## 要件
 
 - SNR-W1(NFR-5 / C-24): dispatch プロンプト・表示文言・監査に token/credential を含めない(受け入れ = SKILL 文言と表示モックの検査)
-- SNR-W2(C-14 開示の承継): Codex native fan-out は sandbox unrestricted 実測条件下の成立 — SKILL/onboarding に restricted profile 未実測の趣旨を持ち込まない(記述は U3 docs の C-15/C-14 開示に集約。受け入れ = U2 diff への禁止フレーズ導入 0 — 候補語彙: 「sandbox で保護」「安全に隔離される(無条件形)」「restricted でも動作」。確定語彙集合は nfr-design で固定(canonical = U1 driver-contract-core ND の RD-4。参照経路 = unit-of-work-dependency.md の Cross-unit 決定欄 CU-1))
+- SNR-W2(C-14 開示の承継): Codex native fan-out は sandbox unrestricted 実測条件下の成立 — SKILL/onboarding に restricted profile 未実測の趣旨を持ち込まない(記述は U3 docs の C-15/C-14 開示に集約。受け入れ = U2 diff への禁止フレーズ導入 0 — 確定語彙集合(RD-4 の canonical 6句 verbatim): 「実適用を確認」「必ず ultra で実行」「実適用を保証」「安全性を保証」「sandbox で保護」「restricted でも動作」。起草時候補「安全に隔離される(無条件形)」は不採用 — 既存正当文書(隔離書き込みの条件付き記述)との衝突リスクがあり、実質同義の確約は「sandbox で保護」「安全性を保証」で捕捉される(RD-4 確定時の理由をここに転記)(canonical = U1 driver-contract-core ND の RD-4。参照経路 = unit-of-work-dependency.md の Cross-unit 決定欄 CU-1))
 - SNR-W3(worktree 境界): **codex native fan-out の dispatch プロンプト**(本 intent で新規に書く唯一の spawn prose)に worktree 内相対パス限定・割当ツリー外 git 操作禁止を毎回含める(c2 規律の SKILL 焼き込み — BR-W6 の一次防御。claude/kiro 系の既存 dispatch prose は現行維持で対象外。受け入れ = codex SKILL の該当指示の実在 — t181 トークン)
 
 ## 検証

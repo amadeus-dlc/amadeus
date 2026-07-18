@@ -5,7 +5,7 @@
 ## 要件
 
 - RNR-D1(NFR-1 の文書面): 監査語彙の docs 記述(12-state-machine.md:367 / audit-format.md:202 の SWARM_DEGRADED 行)を三値後の事実へ更新し、audit enum・emit 実装と矛盾する記述を残さない(`business-logic-model.md` 写像表の C-1/M-1 是正行。受け入れ = 両行の grep で旧 =1 有効値記述 0)
-- RNR-D2(NFR-2 / C-15): effort 証拠限界の開示を docs に明記 — 「実測済み」と読める表現の禁止(BR-D3。禁止フレーズ語彙は U2 NR(RNR-W2)の候補「実適用を確認」「必ず ultra で実行」「保証」と同一集合を nfr-design で確定(canonical = U1 driver-contract-core ND の RD-4。参照経路 = unit-of-work-dependency.md の Cross-unit 決定欄 CU-1)。受け入れ = 開示併記の grep 実在+禁止フレーズ 0)
+- RNR-D2(NFR-2 / C-15): effort 証拠限界の開示を docs に明記 — 「実測済み」と読める表現の禁止(BR-D3。禁止フレーズ語彙は RD-4 の canonical 6句 verbatim: 「実適用を確認」「必ず ultra で実行」「実適用を保証」「安全性を保証」「sandbox で保護」「restricted でも動作」(canonical = U1 driver-contract-core ND の RD-4。参照経路 = unit-of-work-dependency.md の Cross-unit 決定欄 CU-1)。受け入れ = 開示併記の grep 実在+禁止フレーズ 0)
 - RNR-D3(drift ゼロ): dist:check / promote:self:check green を受け入れの正とし、手編集での「見かけ同期」を許さない(受け入れ = 両 check exit 0 — 生成再現性が正)
 
 ## 検証
