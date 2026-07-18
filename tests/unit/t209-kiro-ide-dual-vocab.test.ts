@@ -241,11 +241,14 @@ describe("t209 dist/kiro-ide adapter — both vocabularies fire end-to-end", () 
         cwd: dir,
         session_id: "t209-session",
         tool_name: "spec",
-        tool_input: { task: "Running Intent Capture [intent-capture]", status: "in_progress" },
+        tool_input: { task: "Running User Stories [user-stories]", status: "in_progress" },
       });
       expect(r.code).toBe(0);
       const after = readFileSync(seededStateFile(dir), "utf-8");
-      expect(/\*\*Current Stage\*\*:\s*intent-capture/.test(after)).toBe(true);
+      // E-SMF-CG1 (#1170): target a FORWARD stage (user-stories, pending in the
+      // seed) so the state-sync write lands. Pre-guard this asserted the COMPLETED
+      // [intent-capture] — the retreat #1170 now suppresses; the seam is preserved.
+      expect(/\*\*Current Stage\*\*:\s*user-stories/.test(after)).toBe(true);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -262,12 +265,14 @@ describe("t209 dist/kiro-ide adapter — both vocabularies fire end-to-end", () 
         tool_input: {
           command: "create",
           task_list_description: "Stage tasks",
-          tasks: [{ task_description: "Running Intent Capture [intent-capture]" }],
+          tasks: [{ task_description: "Running User Stories [user-stories]" }],
         },
       });
       expect(r.code).toBe(0);
       const after = readFileSync(seededStateFile(dir), "utf-8");
-      expect(/\*\*Current Stage\*\*:\s*intent-capture/.test(after)).toBe(true);
+      // E-SMF-CG1 (#1170): forward-stage target (user-stories) so the CLI-vocab
+      // state-sync write lands; non-regression against the completed-stage retreat.
+      expect(/\*\*Current Stage\*\*:\s*user-stories/.test(after)).toBe(true);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -390,12 +395,15 @@ describe("t209 kiro-ide adapter — runCore forwards the payload cwd (#822)", ()
         tool_name: "todo_list",
         tool_input: {
           command: "create",
-          tasks: [{ task_description: "Running Intent Capture [intent-capture]" }],
+          tasks: [{ task_description: "Running User Stories [user-stories]" }],
         },
       });
       expect(r.code).toBe(0);
+      // E-SMF-CG1 (#1170): forward-stage target (user-stories) that also differs
+      // from the seed's Current Stage (requirements-analysis), so the write lands
+      // on payloadCwd and the payloadCwd-vs-scriptHome discrimination stays sharp.
       const payloadState = readFileSync(seededStateFile(payloadCwd), "utf-8");
-      expect(/\*\*Current Stage\*\*:\s*intent-capture/.test(payloadState)).toBe(true);
+      expect(/\*\*Current Stage\*\*:\s*user-stories/.test(payloadState)).toBe(true);
       const scriptState = readFileSync(seededStateFile(scriptHome), "utf-8");
       expect(/\*\*Current Stage\*\*:\s*requirements-analysis/.test(scriptState)).toBe(true);
     } finally {

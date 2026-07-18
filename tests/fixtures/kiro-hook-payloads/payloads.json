@@ -50,7 +50,7 @@
     "tool_input": {
       "command": "create",
       "task_list_description": "Stage tasks",
-      "tasks": [{ "task_description": "Running Intent Capture [intent-capture]" }]
+      "tasks": [{ "task_description": "Running User Stories [user-stories]" }]
     },
     "tool_response": {
       "items": [
@@ -59,7 +59,7 @@
             "tasks": [
               {
                 "id": "1",
-                "task_description": "Running Intent Capture [intent-capture]",
+                "task_description": "Running User Stories [user-stories]",
                 "completed": false
               }
             ],
