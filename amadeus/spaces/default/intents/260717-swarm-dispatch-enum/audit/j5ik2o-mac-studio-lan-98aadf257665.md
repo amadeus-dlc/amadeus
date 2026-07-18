@@ -829,3 +829,276 @@
 **Agent**: amadeus-architect-agent
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:08:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6ed5f53e
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:08:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6ed5f53e
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/components.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:08:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: cd7d84d1
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:08:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: cd7d84d1
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/components.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:08:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2a1bb7b6
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/component-methods.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:08:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2a1bb7b6
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/component-methods.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:08:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5f449f4b
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/component-methods.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:08:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5f449f4b
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/component-methods.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:08:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6d74ce58
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/services.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:08:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6d74ce58
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/services.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:08:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8eb5ad78
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/services.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:08:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8eb5ad78
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/services.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:08:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 588921a7
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/component-dependency.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:08:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: 588921a7
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/component-dependency.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:08:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: e3c3707a
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/component-dependency.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:08:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: e3c3707a
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/component-dependency.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:08:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: e77ca5a2
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:08:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: e77ca5a2
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/decisions.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:08:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: ab8abb07
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:08:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: ab8abb07
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/decisions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:08:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: cf03efc1
+**Sensor ID**: answer-evidence
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/application-design-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:08:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: cf03efc1
+**Sensor ID**: answer-evidence
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/application-design-questions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:08:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: 59ad6794
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/application-design-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:08:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: 59ad6794
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/application-design-questions.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:08:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: aff78af7
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/application-design-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:08:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: aff78af7
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/application-design/application-design-questions.md
+**Duration ms**: 35
+
+---
