@@ -9,7 +9,7 @@ issue-mirror は amadeus-mirror.ts を指し、Intent 名には使わない。In
 - **Scope**: amadeus
 - **Start Date**: 2026-07-17T19:09:33Z
 - **State Version**: 7
-- **Active Agent**: amadeus-architect-agent
+- **Active Agent**: amadeus-delivery-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**: 2026-07-17T23:13:17Z
@@ -29,8 +29,8 @@ issue-mirror は amadeus-mirror.ts を指し、Intent 名には使わない。In
 
 ## Execution Plan Summary
 - **Total Stages**: 18
-- **Completed**: 11
-- **In Progress**: units-generation
+- **Completed**: 12
+- **In Progress**: delivery-planning
 
 ## Runtime State
 - **Revision Count**: 0
@@ -68,8 +68,8 @@ issue-mirror は amadeus-mirror.ts を指し、Intent 名には使わない。In
 - [ ] user-stories — SKIP
 - [ ] refined-mockups — SKIP
 - [x] application-design — EXECUTE
-- [?] units-generation — EXECUTE
-- [ ] delivery-planning — EXECUTE
+- [x] units-generation — EXECUTE
+- [-] delivery-planning — EXECUTE
 
 ### CONSTRUCTION PHASE
 Per unit: [TBD]
@@ -92,12 +92,12 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: INCEPTION
-- **Current Stage**: units-generation
-- **Next Stage**: delivery-planning
+- **Current Stage**: delivery-planning
+- **Next Stage**: functional-design
 - **Status**: Running
-- **Last Updated**: 2026-07-18T00:29:37Z
+- **Last Updated**: 2026-07-18T00:30:28Z
 
 ## Session Resume Point
-- **Last Completed Stage**: application-design
-- **Next Action**: Execute Units Generation
+- **Last Completed Stage**: units-generation
+- **Next Action**: Execute Delivery Planning
 - **Pending Artifacts**: none
