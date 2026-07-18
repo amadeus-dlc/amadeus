@@ -6807,3 +6807,97 @@
 **Reentrant**: true
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T04:42:40Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: ac15ba8688cf0ad53
+**Message**: Bolt 3(unit: docs-and-parity)を実装・検証・コミット完了しました。push はしていません。\n\n## 変更ファイル一覧(.md/.ja.md 対の完全性込み)\n\n**正本 docs(13ファイル — 全対そろい)**\n- `docs/harness-engineering/08-construction-and-swarm.md` / `.ja.md` — 二値表 → 
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T04:43:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 33abbfa0
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T04:43:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 33abbfa0
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/code-generation/code-generation-plan.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T04:43:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7a23f6c0
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T04:43:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7a23f6c0
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/code-generation/code-generation-plan.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T04:43:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: a598b7df
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/code-generation/code-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T04:43:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: a598b7df
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/code-generation/code-summary.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T04:43:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 84ed4405
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/code-generation/code-summary.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-18T04:43:47Z
+**Event**: SENSOR_FAILED
+**Fire id**: 84ed4405
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/code-generation/code-summary.md
+**Detail path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/.amadeus-sensors/code-generation/upstream-coverage-84ed4405.md
+**Findings count**: 2
+
+---
