@@ -60,7 +60,26 @@ const REQUIRED_TOKENS = [
   "required output paths are mandatory", // produces candidates: required half
   "optional output paths are candidates", // produces candidates: conditional half
   "Pass only artifact paths that exist", // reviewers never read omitted optionals
+  // Three-value swarm-driver dispatch (swarm-dispatch-enum / #1157): every shipped
+  // conductor SKILL must resolve the driver via the referee's `resolve` subcommand
+  // and name both native-ultra values, so a stale binary-era fork (AMADEUS_USE_SWARM=1
+  // / `ultracode`) trips. These three are genuinely common to all four trees: each
+  // SKILL runs `resolve --harness <self>` and describes both the ultra it dispatches
+  // and the ultra it degrades. The codex-only c2 dispatch discipline is asserted
+  // separately below (it must NOT be forced onto claude/kiro's unchanged prose).
+  "resolve --harness", // driver resolution runs before any prepare/spawn
+  "claude-ultra", // native-ultra vocabulary (selected on claude, degraded elsewhere)
+  "codex-ultra", // native-ultra vocabulary (selected on codex, degraded elsewhere)
 ];
+
+// The Codex conductor SKILL is the ONLY harness that authors new spawn prose in
+// this intent (native subagent fan-out), so it — and only it — must burn in the
+// c2 worktree-isolation discipline every child task inherits. Kept out of the
+// shared REQUIRED_TOKENS set on purpose: claude/kiro dispatch prose is unchanged
+// (their fan-out already reads "in its worktree"), and forcing this token onto
+// them would demand edits SNR-W3 explicitly scopes out.
+const CODEX_SKILL = "packages/framework/harness/codex/skills/amadeus/SKILL.md";
+const CODEX_C2_TOKEN = "worktree-relative paths only";
 
 describe("t181 per-harness conductor-SKILL freshness gate (P11 RESOLVE-2)", () => {
   const skills = harnessSkills();
@@ -101,5 +120,14 @@ describe("t181 per-harness conductor-SKILL freshness gate (P11 RESOLVE-2)", () =
       }
     }
     expect(missing).toEqual([]);
+  });
+
+  test("the Codex conductor SKILL burns the c2 worktree-isolation discipline into its native fan-out prose", () => {
+    // BR-W6(i) / SNR-W3: the one new spawn prose in this intent (codex native
+    // fan-out) must carry the c2 discipline verbatim so every child task inherits
+    // it — the primary defence against cross-worktree writes. Scoped to codex on
+    // purpose; the shared set above stays common to all four trees.
+    const body = readFileSync(join(REPO_ROOT, CODEX_SKILL), "utf-8");
+    expect(body.includes(CODEX_C2_TOKEN)).toBe(true);
   });
 });
