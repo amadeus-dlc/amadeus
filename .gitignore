@@ -3,6 +3,9 @@ node_modules/
 # agmsg codex-driver delivery-mode marker: per-clone runtime state, written
 # next to .codex/hooks.json by ~/.agents/skills/agmsg (see #770).
 .codex/agmsg-delivery-mode
+# Codex active hooks are mutable per-clone runtime state. The tracked
+# canonical configuration is .codex/hooks.json.example.
+.codex/hooks.json
 .env
 .DS_Store
 ._*
