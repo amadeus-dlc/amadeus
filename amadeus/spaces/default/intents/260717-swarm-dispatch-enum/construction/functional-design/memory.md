@@ -6,6 +6,7 @@
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations
+- 2026-07-18T00:55:56Z — U2 FD reviewer iteration 2 の初回最終出力が依頼と無関係の迷子テキスト(実在しないファイル名への質問)だったため破棄し、同 agent へ本題完遂を再指示 → 正常な verdict(READY、4確認全実測)を回収(instruction-like-text-rejection 準拠: 破棄+diary 記録+leader 報告)
 - 2026-07-18T00:43:57Z — FD 生成直後センサーで required-sections FAILED 3件(H2 不足)を自己捕捉・是正→全 PASSED(sensor-before-reviewer 実効)
 <!-- example: 2026-05-29T10:14:32Z — skipped the optional caching layer the stage prose suggested; the dataset is small enough that it adds risk -->
 
