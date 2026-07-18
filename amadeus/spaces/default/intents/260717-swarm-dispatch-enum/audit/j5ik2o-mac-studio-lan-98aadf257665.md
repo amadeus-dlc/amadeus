@@ -3440,3 +3440,138 @@
 **Duration ms**: 35
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T01:14:29Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: aedec9b533e7184f6
+**Message**: ## Verdict: REVISE\n\n対象: `amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/nfr-requirements/` の5ファイル。上流 `requirements.md`(NFR-1〜6)、`business-logic-model.md`、`
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T01:14:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: 545a6ba7
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/nfr-requirements/reliability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T01:14:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: 545a6ba7
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/nfr-requirements/reliability-requirements.md
+**Duration ms**: 48
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T01:14:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5d223e2b
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/nfr-requirements/reliability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T01:14:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5d223e2b
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/nfr-requirements/reliability-requirements.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T01:14:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: 08ab9b10
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/nfr-requirements/tech-stack-decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T01:14:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: 08ab9b10
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/nfr-requirements/tech-stack-decisions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T01:14:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: abc519a5
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/nfr-requirements/tech-stack-decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T01:14:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: abc519a5
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/nfr-requirements/tech-stack-decisions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T01:14:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: fc90c70d
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/nfr-requirements/security-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T01:14:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: fc90c70d
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/nfr-requirements/security-requirements.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T01:14:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: d7d3d5e7
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/nfr-requirements/security-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T01:14:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: d7d3d5e7
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/nfr-requirements/security-requirements.md
+**Duration ms**: 38
+
+---

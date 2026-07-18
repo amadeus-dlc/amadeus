@@ -11,4 +11,4 @@
 
 ## 検証
 
-- `requirements.md` NFR-6 の CI gate 維持が受け入れの正 — 追加ツールチェーン導入なし(明示 N/A)
+- NFR-6(CI gate 維持)は**適用対象**: U1 はコードと並行テストを作成し typecheck/lint/complexity/drift/test/coverage(patch gate 含む)を green に保つ — TSD-1/TSD-4(既存 CI gate の継承・追加ツールチェーンなし)で充足する。N/A なのは「新規ツールチェーンの導入判断」のみ
