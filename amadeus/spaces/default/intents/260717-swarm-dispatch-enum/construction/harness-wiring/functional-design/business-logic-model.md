@@ -1,6 +1,6 @@
 # Business Logic Model — harness-wiring(swarm-dispatch-enum / Issue #1157)
 
-上流入力(consumes 全数): `unit-of-work.md`、`unit-of-work-story-map.md`、`requirements.md`、`components.md`、`component-methods.md`、`services.md`。
+上流入力(consumes 全数): `unit-of-work.md`、`unit-of-work-story-map.md`、`requirements.md`、`components.md`、`component-methods.md`、`services.md`。追加で実依拠した上流: `decisions.md`(ADR-4)、`constraint-register.md`(C-17/C-18)。
 
 ## conductor dispatch フロー(全 harness 共通の SKILL prose 契約)
 

@@ -2753,3 +2753,138 @@
 **Duration ms**: 38
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:51:47Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: aab340cf38c50e22c
+**Message**: ## Verdict: REVISE\n\n対象intentの上流(requirements.md FR-1/3/5/8・NFR-2/3/4、application-design components.md C3〜C5・decisions.md ADR-2/4/5、constraint-register.md C-17/C-18)、および実コード(`packages/framework/core/to
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:52:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8834af58
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:52:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8834af58
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/functional-design/business-logic-model.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:52:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: ee496513
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:52:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: ee496513
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/functional-design/business-logic-model.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:52:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4010c00a
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:52:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4010c00a
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/functional-design/business-rules.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:52:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8bcab083
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:52:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8bcab083
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/functional-design/business-rules.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:52:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: ca77553f
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:52:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: ca77553f
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/functional-design/domain-entities.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:52:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 25cfecaf
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:52:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 25cfecaf
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/functional-design/domain-entities.md
+**Duration ms**: 38
+
+---
