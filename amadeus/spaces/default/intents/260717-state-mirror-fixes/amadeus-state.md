@@ -6,7 +6,7 @@
 - **Scope**: amadeus
 - **Start Date**: 2026-07-17T17:33:34Z
 - **State Version**: 7
-- **Active Agent**: amadeus-developer-agent
+- **Active Agent**: amadeus-pipeline-deploy-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**:
@@ -19,21 +19,19 @@
 - **Test Strategy**: Comprehensive
 
 ## Workspace State
-- **Project Root**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260718-021607-7058/engineer-1
+- **Project Root**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260718-073253-15ea/engineer-1
 - **Languages**: TypeScript
 - **Frameworks**: Unknown
 - **Build System**: bun (package.json)
 
 ## Execution Plan Summary
 - **Total Stages**: 18
-- **Completed**: 7
-- **In Progress**: reverse-engineering
+- **Completed**: 8
+- **In Progress**: practices-discovery
 
 ## Runtime State
 - **Revision Count**: 0
 
-- **Parked**: 2026-07-17T18:12:05Z
-- **Parked At Stage**: reverse-engineering
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -61,8 +59,8 @@
 - [x] approval-handoff — EXECUTE
 
 ### INCEPTION PHASE
-- [-] reverse-engineering — EXECUTE
-- [ ] practices-discovery — EXECUTE
+- [x] reverse-engineering — EXECUTE
+- [-] practices-discovery — EXECUTE
 - [ ] requirements-analysis — EXECUTE
 - [ ] user-stories — SKIP
 - [ ] refined-mockups — SKIP
@@ -91,12 +89,12 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: INCEPTION
-- **Current Stage**: reverse-engineering
-- **Next Stage**: practices-discovery
+- **Current Stage**: practices-discovery
+- **Next Stage**: requirements-analysis
 - **Status**: Running
-- **Last Updated**: 2026-07-17T18:12:05Z
+- **Last Updated**: 2026-07-17T23:06:46Z
 
 ## Session Resume Point
-- **Last Completed Stage**: approval-handoff
-- **Next Action**: Execute Reverse Engineering
+- **Last Completed Stage**: reverse-engineering
+- **Next Action**: Execute Practices Discovery
 - **Pending Artifacts**: none

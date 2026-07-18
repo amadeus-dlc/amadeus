@@ -1,8 +1,36 @@
 # コード品質評価
 
-> **最新の品質観測は intent `260713-swarm-driver-migration`（2026-07-13）**。以下の過去 intent 節に残る「本 intent」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
+> **最新の品質観測は intent `260717-state-mirror-fixes`(2026-07-18、下記「state-mirror-fixes の観測面」節)**。以下の過去 intent 節に残る「本 intent」「最新」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
 
-## swarm driver 契約の品質評価（2026-07-13、最新）
+## state-mirror-fixes の観測面 — set-status 無ロック RMW と countStageProgress SKIP 分母(2026-07-18、最新、#1170 #1172)
+
+現行コード基準 observed HEAD `591b6a2a222357f41061128f1b5a93c7f7a877be`(`git rev-parse HEAD` 実測、worktree = `origin/main` 一致)、base `6495e03a12d9e7149c2e80b59f171a90607a2d2c`(全 `re-scans/*.md` observed のうち HEAD 祖先・距離最小=126、cid:reverse-engineering:rescan-base-ancestry)からの diff-refresh。base/observed 決定過程と現物照合の真実源は本 intent の `inception/reverse-engineering/scan-notes.md` および `re-scans/260717-state-mirror-fixes.md`。件数・行番号は observed HEAD の実ファイル直読(cid:measurement-ref-in-artifacts)。Focus seam(set-status の無ロック RMW と state ロック機構)は区間126コミットで実質不変であり、確定した2欠陥は base より前から現存(#1170、pre-existing)または #1169 で新規導入(#1172)。
+
+### 確定欠陥1 — set-status の無ロック read-modify-write(#1170、S2 相当・pre-existing)
+
+- `handleSetStatus`(`packages/framework/core/tools/amadeus-utility.ts:3666-3690`)は `withAuditLock` を取らない無防備な RMW。`:3679` で state をスナップショット読み(S0)→ setField×6(Lifecycle Phase / Current Stage / Active Agent / In Progress / Status / Last Updated)+ `:3686` `setCheckbox(content, stage, "in-progress")` で `[-]` 化 → `:3687` `writeStateFile` で S0 ベースの全文上書き。関数内に `withAuditLock`/`acquireAuditLock` 呼び出しは皆無(関数内 grep 0)。
+- **唯一の非エンジン state.md 内容ライター**: state.md へ内容を書く hook は `.claude/hooks/amadeus-sync-statusline.ts:69-73` の `Bun.spawnSync(["bun", toolPath, "set-status", …])` のみ(11 hook 全数 grep で他10 hook は read・breadcrumb・heartbeat のみ)。TaskUpdate→in_progress ごとに発火(`:44` status ガード、`:50` activeForm `[slug]` 抽出)し、per-unit Construction では各 stage の TaskUpdate ごとに engine report/advance と競合する。
+- **対照(エンジン側は保護済み)**: `amadeus-state.ts` の全 RMW ハンドラ(`handleSet:500`、`handleAdvance:1223`、`handleFinalize:1454`、`handleCompleteWorkflow:1573` 等)は `withAuditLock`(`:251-266`)保護下。set-status だけがロックドメイン外にある片側非対称(cid:requirements-analysis:symmetric-pair-review の RMW ロック面)。
+- **自己記述コメントが未保護を明言**: `writeStateFile`(`amadeus-lib.ts:3562-3583`)のコメント(`:3578-3581`)— atomic rename は torn-write 防止のみで「Lost-update safety … is a SEPARATE, larger change tracked as a follow-up」。
+- **race 機序**: `B.read(S0) → A(エンジン).lock/write(S1) → B.write(S0')` で A の進行が古いスナップショット由来書込に上書きされ、checkbox `[-]` と Current Stage が巻き戻る。`handleSetStatus` は audit を一切 emit しない → 巻き戻りは state.md のみで audit は健全 = **Issue #1170 の症状(audit 健全・state 巻き戻り)と完全一致**。set-status は intent フラグなし(`:3667` `stateFilePath(projectDir)`)で active intent に解決するため、並行 builder/サブエージェントの set-status 同士も相互 lost-update する。
+
+### 確定欠陥2 — countStageProgress の SKIP 語彙取りこぼし(#1172、#1169 で新規導入)
+
+- `scripts/amadeus-mirror.ts:87-105` の `countStageProgress` は分母除外の唯一条件が checkbox `[S]`(`:100` `if (m[1] === "S") continue;`)。
+- **実様式との乖離(format-currency-grep 実測、cid:reverse-engineering:format-currency-grep-for-parser-intents)**: scope-SKIP の現行様式は `- [ ] <stage> — SKIP`(空 checkbox + 行末サフィックス)で、`[S]` checkbox ではない。全 state 横断集計: `[ ] — SKIP` **717件** / `[ ] — EXECUTE` 70件 / `[x] — EXECUTE` 414件 に対し、`grep -rn '^- \[S\]' amadeus/spaces/default/intents/*/amadeus-state.md` = **0件**(`[S]` は実コーパスに1件も存在しない runtime jump marker)。
+- 結果、scope-SKIP 行が `total++` に混入。260717-mirror-issue-tool の実データ(EXECUTE 18 / SKIP 14 / 全32行)で `countStageProgress` は 18/32 を返す(期待 18/18)— 症状再現確定。
+- **根本原因**: checkbox(実行状態、`setCheckbox` `amadeus-lib.ts:3785`)と suffix(計画、`setStageSuffix:3805`、コメント `:3799-3803`「setCheckbox owns the marker (run-state); this owns the suffix (the plan)」)は直交2フィールドだが、`countStageProgress` は checkbox だけ見て計画サフィックスを無視した。信頼できる分母信号は行末 `— EXECUTE`/`— SKIP`(計画)。
+
+### テスト空白(2件)
+
+- **t232 偽 green fixture**: `tests/unit/t232-amadeus-mirror.test.ts:72` の fixture が実在しない `[S]` 様式(`- [S] market-research — SKIP`)を捏造し `:82` で green。実様式 `[ ] X — SKIP` を fixture に含めていれば赤くなった(format-currency-grep-for-parser-intents 違反の典型)。修正 PR は実 state 由来 fixture を追加すべき。
+- **t145 の set-status 未カバー**: `tests/integration/t145-state-lock-concurrency.test.ts` はエンジンハンドラ(`set`/`reject`/`approve`/`skip` 等 `:26-27`)の C2b lost-update のみ対象。`set-status` はテスト本体ヒット 0(`grep -rln 'set-status' tests/`)→ #1170 の実欠陥経路(hook 書込)は concurrency 未カバー。
+
+### 品質機構への含意
+
+- 本バッチは2欠陥とも「片側だけ実装された非対称」+「実様式を含まない fixture の偽 green」という既知の再発クラスタ(cid:requirements-analysis:symmetric-pair-review / cid:reverse-engineering:format-currency-grep-for-parser-intents)。修正 intent は bugfix posture でリグレッションを第一級成果物とし、#1172 は実 state 由来 fixture の 18/18 assert、#1170 は set-status の `withAuditLock` 参加 + set-status ∥ advance の並列 spawn テスト(t145 様式拡張)を追加すべき。
+
+## swarm driver 契約の品質評価（2026-07-13、履歴 intent 260713-swarm-driver-migration）
 
 ### 現在確認できる強み
 
@@ -41,7 +69,7 @@
 > 「docs-batch10(2026-07-12)の観測面」節は履歴 intent `260711-docs-batch10`(#765 #764 #763 #728、documentation)の候補記録。続く p3-cleanup-batch8 節(#843 #846 #850 #851 #876 #877 #878、intent `260711-p3-cleanup-batch8`)・p2-repair-batch7 節(#834 #839 #844 #845 #849、intent `260711-p2-repair-batch7`)・p3-cleanup-batch5 節(#811 #822 #830 #730 #819 #831、intent `260710-p3-cleanup-batch5`)・p3-cleanup-batch4 節(#757 #758 #753 #739 #740 #784 — 全6件 2026-07-10 修正着地済み、PR #823/#821/#817/#818/#814/#815)・core-repair-batch3 節(#746 ほか9件、2026-07-11)・複雑度ゲート導入節(intent 260710-complexity-gate)・ tools-dispatch-batch 節(#774 / #785 / #787 / #788 / #789)・ bughunt-fix-batch 節(#771/#773/#775/#776/#779)・swarm-worktree-batch 節(#738/#748/#746/#760)・learnings-audit-batch 節(#754 / #745 / #761)・mint-presence-vectors 節(#755)・packaging source-unreferenced 節(intent 260710、#735)・delegate-answer-consume 節(intent 260710、#736)・kiro-stale-hooks 節(#719 / P3 source hygiene)・dynamic-test-size 節(#699 / #684 Phase D)・t92-worktree-hermeticity 節(#709)・packaging-repair-batch 節(#701/#702 = PR #711/#712 解決済み)は過去 intent の記録で、参照用に温存する。以降の「アーキテクチャ横断パターン」以下は `260709-bug-zero-batch`(#674〜#678/#668)の記録。
 > 「docs-repair-batch9(2026-07-11)の観測面」節は履歴 intent `260711-docs-repair-batch9`(#812 #824 #680 #885 #886)の記録。続く p3-cleanup-batch5 節(#811 #822 #830 #730 #819 #831 — 候補記録)・p3-cleanup-batch4 節(#757 #758 #753 #739 #740 #784 — 全6件 2026-07-10 修正着地済み、PR #823/#821/#817/#818/#814/#815)・core-repair-batch3 節(#746 ほか9件、2026-07-11)・複雑度ゲート導入節(intent 260710-complexity-gate)・ tools-dispatch-batch 節(#774 / #785 / #787 / #788 / #789)・ bughunt-fix-batch 節(#771/#773/#775/#776/#779)・swarm-worktree-batch 節(#738/#748/#746/#760)・learnings-audit-batch 節(#754 / #745 / #761)・mint-presence-vectors 節(#755)・packaging source-unreferenced 節(intent 260710、#735)・delegate-answer-consume 節(intent 260710、#736)・kiro-stale-hooks 節(#719 / P3 source hygiene)・dynamic-test-size 節(#699 / #684 Phase D)・t92-worktree-hermeticity 節(#709)・packaging-repair-batch 節(#701/#702 = PR #711/#712 解決済み)は前 intent の記録で、参照用に温存する。以降の「アーキテクチャ横断パターン」以下は `260709-bug-zero-batch`(#674〜#678/#668)の記録。
 >
-> **履歴ラベルの読み方**: 本ページ以下および `architecture.md` / `business-overview.md` / `api-documentation.md` の「本 intent」は、各節見出しで明示した過去 intent 内の自己参照である。current view は各ファイル先頭の `260713-swarm-driver-migration` 節だけであり、過去節を最新状態として読まない。
+> **履歴ラベルの読み方**: 本ページ以下および `architecture.md` / `business-overview.md` / `api-documentation.md` の「本 intent」は、各節見出しで明示した過去 intent 内の自己参照である。本ページ(`code-quality-assessment.md`)の current view は先頭の `260717-state-mirror-fixes` 節であり、`260713-swarm-driver-migration` 節以下は履歴。`architecture.md` / `business-overview.md` / `api-documentation.md` の current view は各ファイル先頭の `260713-swarm-driver-migration` 節(本 intent では未更新・温存)。いずれも過去節を最新状態として読まない。
 
 ## docs-batch10(2026-07-12)の観測面 — documentation 4欠陥の現物照合(#765 #764 #763 #728)
 
