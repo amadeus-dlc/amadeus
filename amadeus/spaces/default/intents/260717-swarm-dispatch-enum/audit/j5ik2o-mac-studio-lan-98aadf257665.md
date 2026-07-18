@@ -7039,3 +7039,408 @@
 **Agent**: amadeus-quality-agent
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T05:11:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: ae41d815
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/build-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T05:11:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: ae41d815
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/build-instructions.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T05:11:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 82f72867
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/build-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T05:11:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: 82f72867
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/build-instructions.md
+**Duration ms**: 31
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T05:11:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 03aa2120
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/unit-test-instructions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-18T05:11:33Z
+**Event**: SENSOR_FAILED
+**Fire id**: 03aa2120
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/unit-test-instructions.md
+**Detail path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/.amadeus-sensors/build-and-test/required-sections-03aa2120.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T05:11:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3d2f34ef
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/unit-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T05:11:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3d2f34ef
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/unit-test-instructions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T05:11:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7f551da6
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/integration-test-instructions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-18T05:11:33Z
+**Event**: SENSOR_FAILED
+**Fire id**: 7f551da6
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/integration-test-instructions.md
+**Detail path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/.amadeus-sensors/build-and-test/required-sections-7f551da6.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T05:11:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 95079415
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/integration-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T05:11:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: 95079415
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/integration-test-instructions.md
+**Duration ms**: 31
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T05:11:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3113cedd
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/performance-test-instructions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-18T05:11:33Z
+**Event**: SENSOR_FAILED
+**Fire id**: 3113cedd
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/performance-test-instructions.md
+**Detail path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/.amadeus-sensors/build-and-test/required-sections-3113cedd.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T05:11:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7b77a0ab
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/performance-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T05:11:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7b77a0ab
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/performance-test-instructions.md
+**Duration ms**: 30
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T05:11:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: be474e17
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/security-test-instructions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-18T05:11:33Z
+**Event**: SENSOR_FAILED
+**Fire id**: be474e17
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/security-test-instructions.md
+**Detail path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/.amadeus-sensors/build-and-test/required-sections-be474e17.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T05:11:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: e8804b99
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/security-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T05:11:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: e8804b99
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/security-test-instructions.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T05:11:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: a50a4c4d
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/build-and-test-summary.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-18T05:11:34Z
+**Event**: SENSOR_FAILED
+**Fire id**: a50a4c4d
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/build-and-test-summary.md
+**Detail path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/.amadeus-sensors/build-and-test/required-sections-a50a4c4d.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T05:11:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: 51ff3392
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/build-and-test-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T05:11:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: 51ff3392
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/build-and-test-summary.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T05:11:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3eceff43
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/build-test-results.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T05:11:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3eceff43
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/build-test-results.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T05:11:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: 498b1049
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/build-test-results.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T05:11:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: 498b1049
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/build-test-results.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T05:11:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8b98779d
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/unit-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T05:11:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8b98779d
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/unit-test-instructions.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T05:11:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3bf87860
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/integration-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T05:11:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3bf87860
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/integration-test-instructions.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T05:11:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: edffc2d8
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/performance-test-instructions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-18T05:11:54Z
+**Event**: SENSOR_FAILED
+**Fire id**: edffc2d8
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/performance-test-instructions.md
+**Detail path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/.amadeus-sensors/build-and-test/required-sections-edffc2d8.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T05:11:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 96052dda
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/security-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T05:11:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 96052dda
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/security-test-instructions.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T05:11:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: ad3f1b12
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/build-and-test-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T05:11:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: ad3f1b12
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/build-and-test/build-and-test-summary.md
+**Duration ms**: 34
+
+---
