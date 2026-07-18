@@ -35,6 +35,7 @@ issue-mirror は amadeus-mirror.ts を指し、Intent 名には使わない。In
 ## Runtime State
 - **Revision Count**: 0
 
+- **Skeleton Stance**: off
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
