@@ -30,7 +30,7 @@
 | 新規 | `packages/framework/harness/codex/tools/amadeus-codex-hooks-migration.ts` | self専用`migrate-self --target-ref`のpreflight、private backup、fast-forward、復旧、postconditionを実装 |
 | 新規 | `packages/framework/harness/codex/tools/amadeus-codex-hooks.ts` | `activate` / `doctor [--json]` / `migrate-self`のCLIと公開APIを実装 |
 | 変更 | `packages/framework/harness/codex/manifest.ts` | 上記3モジュールをCodex限定でproject-local `.codex/tools/`へ投影 |
-| 変更 | `packages/framework/core/tools/amadeus-utility.ts` | project-local helperを`doctor --json` subprocessとして呼び、固定schema・reason・exit codeを検証して意味doctorへ接続 |
+| 変更 | `packages/framework/core/tools/amadeus-utility.ts` | project-local helperを`doctor --json` subprocessとして呼び、固定schema・reason・exit codeを検証して意味doctorへ接続。Codex CLI不在時はversion probeを起動せず、doctorの`codex CLI on PATH`失敗行へ正規化 |
 | 変更 | `scripts/run-codex.sh` | agmsg Codex shimより前にactiveを活性化し、helper不在・活性化失敗をloud failureにする |
 | 変更 | `scripts/team-up.sh` | delivery writer / Codex member起動より前に各worktreeのactiveを活性化する |
 | 変更 | `.gitignore`、`packages/framework/harness/codex/dot-gitignore` | mutable activeをignore対象へ追加 |
@@ -60,6 +60,8 @@
 - ignore隔離 RED: 後続negation、nested `.codex/.gitignore`、`GIT_CONFIG_PARAMETERS`、XDG default ignoreで誤受理を再現。意味的`check-ignore`とambient設定隔離後は全件green。
 - recovery RED: merge失敗後にHEADだけ進むケースでactive消失、rename後permission finalization失敗でactive消失を再現。いずれもbackupからactiveを復元し、resetなし・backup保持へ修正。
 - diagnostic RED: command suffix、未知event / matcher / type、改行を含むGit path、固定JSON schemaの余剰field受理を再現。秘匿・escape・厳密schema検証後はgreen。
+- Linux CI RED: Codex CLI未導入環境で既存の`Bun.spawnSync(["codex", "--version"])`がthrowし、ownership 3件が`13 pass / 3 fail`となることを`PATH`隔離で再現した。`Bun.which("codex")`の存在確認と決定的spy回帰を追加し、同じ環境で`17 pass / 0 fail`へ反転した。
+- patch coverage gate RED: `handleDoctor`のin-process駆動追加により失効条件を満たした既存allowlist 2件のうち、移動前行番号`979`がstaleとして検出された。行番号を付け替えず2件とも削除し、対象行が実測coverageを持つことと`allowlisted 0 / uncovered 0`を確認した。
 - unsafe controls: dirty tracked activeへの直接merge、autostash付きpull、更新前`git rm --cached`が安全な代替にならないことを保持。
 
 ## 検証結果
@@ -71,9 +73,9 @@
 - `bun test tests/integration/t-team-up-codex-resume.test.ts`: **46 pass / 0 fail / 436 assertions**
 - `bun test tests/integration/t-run-codex-project-target.test.ts`: **15 pass / 0 fail / 60 assertions**
 - `bun test tests/unit/t150-codex-packaging.test.ts`: **10 pass / 0 fail**
-- `bun run coverage:ci`（最新`origin/main`統合後）: **380 test files / 5413 assertions / 0 fail / RESULT: PASS**
+- `bun run coverage:ci`（最新`origin/main` `9835c59cd`統合後）: **380 test files / 5421 assertions / 0 fail / RESULT: PASS**
 - staged production diff × focused LCOV: **1001 measured / 1001 covered / 0 allowlisted / 0 uncovered**
-- staged diff × full LCOV: **852 measured / 852 covered / 0 allowlisted / 0 uncovered**
+- staged diff × full LCOV: **857 measured / 857 covered / 0 allowlisted / 0 uncovered**
 - `bun run typecheck`: **PASS**
 - `bun run lint`: **exit 0**（既存complexity warningのみ、新規errorなし）。新規helper / manifest / focused testのBiome checkはwarning 0。
 - `bun run dist:check` / `bun run promote:self:check`: **PASS**（全harness / self-install同期）
