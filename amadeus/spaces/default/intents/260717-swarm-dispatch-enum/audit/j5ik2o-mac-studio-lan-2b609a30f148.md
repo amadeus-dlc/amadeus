@@ -224,3 +224,255 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:12:24Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a2773125d831563a2
+**Message**: 進捗どう？全体状況まとめて
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-18T00:13:25Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:13:45Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a4559530a32a9025a
+**Message**: つづけて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:13:48Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: af1d858c97ddb0d1b
+**Message**: 進捗どう？
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:15:21Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a1fd21cd4186089bd
+**Message**: 入力してきた
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-18T00:15:57Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:16:09Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: af1f5e6160a44591e
+**Message**: 進捗どう？
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:19:13Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ab2a7de261d0c207b
+**Message**: codex-2受理されたか確認して
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:19:16Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a04a6ae7ad1864a76
+**Message**: codex-2の承認は受理された？
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:19:31Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ac32417982fb1d8db
+**Message**: codex-2はApproved受理できたか確認して
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:20:32Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a8f2b1636baea60df
+**Message**: 進捗状況教えて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:21:55Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a589ebe861e1ea092
+**Message**: 進捗どう？
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-18T00:25:51Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:26:03Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: afd95de269a72e904
+**Message**: 進捗状況教えて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:27:10Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a5edffd7b4fc5ee4a
+**Message**: 進捗状況教えて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:27:17Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a71be9e7a9f0d6595
+**Message**: 1 いれた
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:27:35Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a3c1c2d9843b2b37d
+**Message**: 1いれた
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:27:46Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a69cbbd6a60f7da3c
+**Message**: 1いれた
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:29:57Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ae460e6224a788e35
+**Message**: 1 いれた
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:30:29Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a8fd2d94eb24237d7
+**Message**: 1いれた
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:30:48Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ad328a0cb8eae1c7f
+**Message**: 1いれた
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:31:51Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: abb29a9b5f6a49f83
+**Message**: 1いれた
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:33:01Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: af023f72c9b7ca33d
+**Message**: 1いれた
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:33:37Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a988c4a40c4bf3bf9
+**Message**: 1いれたよ
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:33:56Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a7760bf8a932fd41d
+**Message**: 承認する。Construction進入もOK
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:34:05Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a5caa00c8f271e615
+**Message**: 進入も承認する
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T00:34:25Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a1594d904dc43523f
+**Message**: delegate発行してConstruction進入も承認
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-18T00:36:24Z
+**Event**: HUMAN_TURN
+
+---
+
+## Delegated Approval
+**Timestamp**: 2026-07-18T00:36:29Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: delivery-planning
+**Issuer Space**: default
+**Issuer Intent**: 260717-swarm-dispatch-enum
+**Issuer Shard**: j5ik2o-mac-studio-lan-2b609a30f148.md
+**Issuer Human Ts**: 2026-07-18T00:36:24Z
+**User Input**: ユーザー承認(AskUserQuestion 00:35Z 頃: 発行し進入も承認)— §13 E-SDE-DP 0件成立(e1 後着込み 3/3)、Construction 進入(Bolt 3列直列)承認込み
+
+---
