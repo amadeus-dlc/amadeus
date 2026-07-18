@@ -5,6 +5,7 @@
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations
+- 2026-07-18T02:07:46Z — Bolt 1 実装前に UG「dist 再生成は U3 集約」と Mandated/CI dist:check の衝突を検出し deviation-stop → E-SDE-CG1 選挙 → A 採用 3/3(各 Bolt 自 diff 分 regen)。UG ノートを申告付きで精密化(裁定引用込み)
 <!-- example: 2026-05-29T10:14:32Z — skipped the optional caching layer the stage prose suggested; the dataset is small enough that it adds risk -->
 
 ## Tradeoffs
