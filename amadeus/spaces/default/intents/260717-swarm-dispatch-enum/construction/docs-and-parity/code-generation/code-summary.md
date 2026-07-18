@@ -1,6 +1,6 @@
 # Code Summary — docs-and-parity(swarm-dispatch-enum / Issue #1157)
 
-上流入力(consumes 全数): `requirements.md`(FR-9 の1行限定・FR-10 の同期面へ trace)、`business-logic-model.md`(写像表 = 変更対象の正)、`business-rules.md`(BR-D1〜D6 受け入れ)、`domain-entities.md`(語彙は U1 からの転記のみ)、`logical-components.md`(部品表)、`reliability-design.md`(RD-D1 監査語彙2行・RD-D2 開示定型)、`scalability-design.md`(SCD-D2 count-free)、`unit-of-work.md`(U3 受け入れへ trace)。
+上流入力(consumes 全数): `requirements.md`(FR-9 の1行限定・FR-10 の同期面へ trace)、`business-logic-model.md`(写像表 = 変更対象の正)、`business-rules.md`(BR-D1〜D6 受け入れ)、`domain-entities.md`(語彙は U1 からの転記のみ)、`logical-components.md`(部品表)、`reliability-design.md`(RD-D1 監査語彙2行・RD-D2 開示定型)、`scalability-design.md`(SCD-D2 count-free)、`security-design.md`(SD-D2 禁止句 diff grep の充足)、`performance-design.md`(PD-D1 既存2コマンド生成のみの充足)、`unit-of-work.md`(U3 受け入れへ trace)。
 
 ## 実装結果(bolt branch `bolt-docs-and-parity`、commit cb4362901)
 
