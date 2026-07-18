@@ -7,9 +7,9 @@ intent: `260718-hooks-config-conflict`（[Issue #770](https://github.com/amadeus
 
 <!-- 判定証跡（eoc1-evidence-in-questions-header）:
 判定: Q1 = 選挙必要（tracked canonical activation と mutable per-clone runtime state の恒久的な所有境界は、既決事項・実測から一意に導出できない）。Q2 = 選挙必要（self-repositoryだけを修復するか、Codex配布契約まで同時に修復するかは、Issueのclean fixture要件が対象を特定しておらず一意に導出できない）。テスト戦略は選挙不要（Issueのrestart要件、org / project / team品質契約、現行CIの外部依存境界から「必須hermetic CI + opt-in live acceptance」に一意導出）。
-leader 承認: 【承認待ち】
-選挙: E-770-RA として配信依頼予定
-裁定受領: 【裁定待ち】
+leader 承認: 2026-07-18T00:50:25Z（agmsg、leader → codex-1）— テスト戦略の選挙不要判定を承認し、Q1 / Q2 の選挙配信を受理
+選挙: E-770-RA としてleaderがblind配信（起草者推奨 A / A は開票後に公開）
+裁定受領: E-770-RA 開票 2026-07-18T00:52:33Z（agmsg、leader → codex-1）— Q1=A（e3 GoA 1 / e4 GoA 2、開票時2/3）、Q2=A（e3 GoA 1 / e4 GoA 1、開票時2/3）。Q1の留保必須票1件はAnswerとrequirementsへ転記。e1後着票は到着次第記録する。
 [Answer] は leader による判定承認と選挙裁定の受領後にのみ記入する（election-answer-after-ruling）。 -->
 
 ## E-OC1 判定（1問1行）
@@ -33,7 +33,7 @@ leader 承認: 【承認待ち】
 - B. **tracked static dispatcher + ignored sidecarへ分離する** — `.codex/hooks.json` はmachine-neutralなdispatcherとしてtrackedのまま維持し、agmsgのmode・絶対pathをignored sidecarへ移す。canonical drift guardを保てるが、Amadeusと外部agmsgの協調変更、旧agmsg fallback、Windows command、turn / monitor / both / off、restart / SessionEndの互換検証を #770 の完了条件に含める。
 - X. Other (please specify) — 所有者、Codexによる発見経路、migration、agmsg互換境界を具体化する
 
-[Answer]:
+[Answer]: A — 活性化済み `.codex/hooks.json` をuntrack / ignoreし、tracked canonicalを`.codex/hooks.json.example`へ一本化する（E-770-RA裁定、2026-07-18T00:52:33Z、agmsg一次記録）。留保転記（e4 GoA 2、1件中1件）: self-install / bootstrapでexample→activeを確実に活性化する自動copyまたは明文手順と、`.gitignore` + promote preserveを同時にテスト可能なACへ固定し、fresh cloneがAmadeus hookなしで無音動作しないことを実証する。
 
 ## Q2. 修復対象をどの配布境界まで含めるか？
 
@@ -44,4 +44,4 @@ leader 承認: 【承認待ち】
 - C. **段階化する** — #770ではself-repositoryだけを修復し、Codex配布契約はblocker・migration条件を明記した別Issueへ切り出す。初回PRは小さくなるが、全体の恒久解が完成するまでIssue間の追跡が必要になる。
 - X. Other (please specify) — self / dist / setup / docs / migration / fixtureの境界を具体化する
 
-[Answer]:
+[Answer]: A — self-repositoryとCodex配布契約を同時に修復する（E-770-RA裁定、2026-07-18T00:52:33Z、agmsg一次記録）。Codex `dot-gitignore`、生成dist、self-install、活性化 / migration文書、fresh packaged consumer fixtureまでを同一変更で同期する。`packages/setup`本体は、汎用copyで充足できる限り変更しない。
