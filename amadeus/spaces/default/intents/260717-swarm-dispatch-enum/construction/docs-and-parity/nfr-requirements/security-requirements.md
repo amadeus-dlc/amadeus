@@ -4,8 +4,8 @@
 
 ## 要件
 
-- SNR-D1(NFR-5 / C-24): docs・生成物に token/credential/内部パスの秘匿情報を含めない(受け入れ = 変更 docs の目視+既存 secrets 検査の枠内)
-- SNR-D2(C-14 開示): sandbox unrestricted 実測条件の開示を docs へ正確に転記 — 無条件の安全確約を書かない(`business-rules.md` BR-D3 の隣接面。禁止フレーズ語彙は U2 NR の候補と同一集合を nfr-design で確定)
+- SNR-D1(NFR-5 / C-24): docs・生成物に token/credential を含めない — NFR-5 の対象語彙のまま、由来のない基準を追加しない(受け入れ = 変更 docs の目視+既存 secrets 検査の枠内)
+- SNR-D2(C-14 開示): sandbox unrestricted 実測条件の開示を docs へ正確に転記 — 無条件の安全確約を書かない(`business-rules.md` BR-D3 の隣接面。禁止フレーズ語彙は U2 NR(SNR-W2)の候補と同一集合を nfr-design で確定。受け入れ = 禁止フレーズ 0 の grep)
 
 ## 検証
 
