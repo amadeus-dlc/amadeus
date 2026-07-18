@@ -875,3 +875,30 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T01:27:47Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a8d7aad4e21a2c738
+**Message**: 進捗状況教えて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T01:28:06Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ad2408a8148c154fa
+**Message**: 進捗状況教えて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T01:32:05Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a715ea29d9d881743
+**Message**: 進捗状況教えて
+
+---
