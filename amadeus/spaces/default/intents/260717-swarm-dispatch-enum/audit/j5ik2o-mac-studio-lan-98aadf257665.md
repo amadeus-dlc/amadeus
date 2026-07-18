@@ -3929,3 +3929,45 @@
 **Duration ms**: 38
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T01:22:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 94231093
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/nfr-requirements/scalability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T01:22:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: 94231093
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/nfr-requirements/scalability-requirements.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T01:22:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3152b25e
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/nfr-requirements/scalability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T01:22:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3152b25e
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/nfr-requirements/scalability-requirements.md
+**Duration ms**: 37
+
+---
