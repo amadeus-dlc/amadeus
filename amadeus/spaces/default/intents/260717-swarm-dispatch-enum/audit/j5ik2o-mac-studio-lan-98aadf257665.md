@@ -4292,3 +4292,11 @@
 **Message**: All four verification points check out. Confirming full verdict.\n\n## レビュー結果: READY\n\n**対象**: intent 260717-swarm-dispatch-enum / nfr-requirements(unit: docs-and-parity, U3) / iteration 2(是正確認)、是正コミット `
 
 ---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-18T01:31:42Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: nfr-requirements
+**Artifacts**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/nfr-requirements/performance-requirements.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/nfr-requirements/security-requirements.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/nfr-requirements/scalability-requirements.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/nfr-requirements/reliability-requirements.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/nfr-requirements/tech-stack-decisions.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/nfr-requirements/performance-requirements.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/nfr-requirements/security-requirements.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/nfr-requirements/scalability-requirements.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/nfr-requirements/reliability-requirements.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/nfr-requirements/tech-stack-decisions.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/performance-requirements.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/security-requirements.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/scalability-requirements.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/reliability-requirements.md,amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/nfr-requirements/tech-stack-decisions.md
+
+---
