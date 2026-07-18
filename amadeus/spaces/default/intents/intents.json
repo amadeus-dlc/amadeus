@@ -358,5 +358,12 @@
     "dirName": "260717-test-pyramid-rebuild",
     "scope": "amadeus",
     "status": "complete"
+  },
+  {
+    "uuid": "019f728e-549e-7aab-b02c-90ab691ba300",
+    "slug": "hooks-config-conflict",
+    "dirName": "260718-hooks-config-conflict",
+    "scope": "bugfix",
+    "status": "in-flight"
   }
 ]
