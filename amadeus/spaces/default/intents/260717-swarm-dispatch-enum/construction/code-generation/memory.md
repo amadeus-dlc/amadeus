@@ -6,6 +6,7 @@
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations
+- 2026-07-18T03:35:00Z — Bolt 2: 再接地 merge の ff-only 設定不発→pre-merge base で fork した worktree を discard→Bolt Refs 残骸掃除→再 fork(自己捕捉)。builder 完了後、codex swarm 節の否定形 codex exec 残存2箇所を conductor 引き取りで言い換え(BR-W3 字義充足、amend+再検証 green)。builder の t181 符号化判断は RD-W1 明示委任範囲と追認。PR #1207 発行(fidelity 0)
 - 2026-07-18T02:07:46Z — Bolt 1 実装前に UG「dist 再生成は U3 集約」と Mandated/CI dist:check の衝突を検出し deviation-stop → E-SDE-CG1 選挙 → A 採用 3/3(各 Bolt 自 diff 分 regen)。UG ノートを申告付きで精密化(裁定引用込み)
 <!-- example: 2026-05-29T10:14:32Z — skipped the optional caching layer the stage prose suggested; the dataset is small enough that it adds risk -->
 
