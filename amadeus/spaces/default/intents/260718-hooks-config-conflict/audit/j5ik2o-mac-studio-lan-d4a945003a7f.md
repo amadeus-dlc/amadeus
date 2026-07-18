@@ -1604,3 +1604,21 @@
 **Stage**: requirements-analysis
 
 ---
+
+## Error Logged
+**Timestamp**: 2026-07-18T01:31:54Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-bolt
+**Command**: amadeus-bolt --help
+**Error**: Unknown subcommand: --help. Valid: start, complete, fail, abort, set-autonomy, dispatch-event, hold-merge, release-merge
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-18T01:31:54Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-worktree
+**Command**: amadeus-worktree --help
+**Error**: Unknown subcommand: --help. Valid: create, merge, discard, list, verify, info
+
+---
