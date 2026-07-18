@@ -1656,3 +1656,214 @@
 **Agent**: amadeus-architect-agent
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:21:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: aed15edd
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/unit-of-work.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:21:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: aed15edd
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/unit-of-work.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:21:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: ec5f84d9
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/unit-of-work.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:21:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: ec5f84d9
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/unit-of-work.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:21:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: ec149bca
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/unit-of-work-dependency.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-18T00:21:15Z
+**Event**: SENSOR_FAILED
+**Fire id**: ec149bca
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/unit-of-work-dependency.md
+**Detail path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/.amadeus-sensors/units-generation/required-sections-ec149bca.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:21:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9ae3c925
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/unit-of-work-dependency.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:21:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9ae3c925
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/unit-of-work-dependency.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:21:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8955ee42
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/unit-of-work-story-map.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:21:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8955ee42
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/unit-of-work-story-map.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:21:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4a427d99
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/unit-of-work-story-map.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:21:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4a427d99
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/unit-of-work-story-map.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:21:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1615db08
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/units-generation-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:21:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1615db08
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/units-generation-questions.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:21:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: dc399336
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/units-generation-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:21:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: dc399336
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/units-generation-questions.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:21:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 18baf296
+**Sensor ID**: answer-evidence
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/units-generation-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:21:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 18baf296
+**Sensor ID**: answer-evidence
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/units-generation-questions.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T00:21:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6a73eb71
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/unit-of-work-dependency.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T00:21:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6a73eb71
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/inception/units-generation/unit-of-work-dependency.md
+**Duration ms**: 36
+
+---
