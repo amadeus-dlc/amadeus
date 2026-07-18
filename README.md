@@ -233,18 +233,49 @@ The shipped `config.toml.example` does not pin a provider or model; Codex uses y
 ```bash
 bunx @amadeus-dlc/setup install --harness codex --target your-project --yes
 cp -n your-project/.codex/config.toml.example your-project/.codex/config.toml
-cp -n your-project/.codex/hooks.json.example your-project/.codex/hooks.json
+bun your-project/.codex/tools/amadeus-codex-hooks.ts activate --project-dir your-project
 ```
 
 (Or run `bunx @amadeus-dlc/setup install` and answer the wizard's prompts — see [Install a harness](#install-a-harness) above for the `npx` form and `upgrade`.) This installs `.codex/` + `.agents/` + `amadeus/` + `AGENTS.md` into `your-project/`.
 
 The `amadeus/` shell ships the pre-built `amadeus/spaces/default/memory/` method tree the engine reads; `$amadeus --doctor` fails its "workspace shell ready" check without it.
 
-After copying, apply the `.gitignore` entries from the shipped `AGENTS.md` before your first workflow, pre-seed hook trust, then verify:
+Codex hooks have an explicit ownership boundary. `.codex/hooks.json.example` is
+the tracked canonical Amadeus configuration; `.codex/hooks.json` is an ignored,
+per-clone active file that Codex and tools such as agmsg may update. `activate`
+creates the active file only when it is absent. It never overwrites an existing
+active file, and it fails if that file no longer satisfies the canonical
+Amadeus hook contract. In this repository, `./scripts/run-codex.sh` and
+`scripts/team-up.sh` run the same activation before Codex or an agmsg writer.
+
+After installing, confirm that the shipped `.gitignore` contract (including
+`.codex/hooks.json`) and the entries from `AGENTS.md` are merged into the
+project before your first workflow. Then pre-seed hook trust and verify:
 
 ```bash
 bun .codex/tools/amadeus-utility.ts doctor
 ```
+
+The doctor parses the canonical and active JSON and compares the Amadeus
+adapter tuples semantically. It permits non-Amadeus entries, key or array
+ordering, whitespace, and minification differences, but fails on missing,
+misplaced, duplicate, obsolete, or invalid Amadeus tuples. Confirm both project
+trust and hook trust after activation.
+
+Existing installs have two distinct migration paths. The Amadeus self
+repository uses the target revision's externalized `migrate-self` helper to
+move the active file outside the repository, fast-forward, and restore the same
+bytes. A packaged consumer first upgrades the package without overwriting the
+active file, then its owner runs `git rm --cached -- .codex/hooks.json` and
+commits the ownership change. Do not interchange these procedures. See
+[Upgrading existing Codex installs safely](docs/guide/harnesses/codex-cli.md#upgrading-existing-codex-installs-safely)
+for the checked commands and backup policy.
+
+For monitor-bridge changes, hermetic tests are not the final acceptance. Stop
+manual inbox polling, launch through `./scripts/run-codex.sh`, verify the bridge
+after the first turn, have a human restart the session and send another turn,
+then prove that a unique ping is pushed without `inbox.sh` and that its reply
+reaches the sender. Keep the hooks backup until this live check passes.
 
 Invoke the orchestrator with `$amadeus` (or `/skills` → amadeus) followed by a scope or description. The [Codex guide](docs/guide/harnesses/codex-cli.md) covers the trust dialog, config merge, and sandbox/git notes in full.
 

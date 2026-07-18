@@ -729,6 +729,86 @@ export function standingGrantDoctorCheck(projectDir: string, now: number): Docto
   };
 }
 
+const CODEX_HOOKS_DOCTOR_REASONS = new Set([
+  "OK",
+  "CANONICAL_MISSING",
+  "CANONICAL_JSON_INVALID",
+  "CANONICAL_STRUCTURE_INVALID",
+  "CANONICAL_TUPLES_MISSING",
+  "ACTIVE_MISSING",
+  "ACTIVE_JSON_INVALID",
+  "ACTIVE_STRUCTURE_INVALID",
+  "TUPLE_MISMATCH",
+]);
+const CODEX_HOOKS_DOCTOR_KEYS = new Set([
+  "schemaVersion",
+  "command",
+  "pass",
+  "reason",
+  "label",
+  "fix",
+]);
+
+function codexHooksProjectDoctorCheck(projectDir: string): DoctorCheck {
+  const helper = join(projectDir, ".codex", "tools", "amadeus-codex-hooks.ts");
+  if (!existsSync(helper)) {
+    return {
+      pass: false,
+      label: "Codex hooks contract: project-local helper is missing",
+      fix: "restore `.codex/tools/amadeus-codex-hooks.ts` from the installed distribution",
+    };
+  }
+  const result = Bun.spawnSync(
+    ["bun", helper, "doctor", "--json", "--project-dir", projectDir],
+    { cwd: projectDir, stdout: "pipe", stderr: "ignore" },
+  );
+  let payload: unknown;
+  try {
+    payload = JSON.parse(result.stdout.toString()) as unknown;
+  } catch {
+    return {
+      pass: false,
+      label: "Codex hooks contract: project-local doctor returned invalid JSON",
+      fix: "restore the Codex hooks helper modules from the installed distribution",
+    };
+  }
+  if (
+    payload === null ||
+    typeof payload !== "object" ||
+    Array.isArray(payload)
+  ) {
+    return {
+      pass: false,
+      label: "Codex hooks contract: project-local doctor returned an invalid schema",
+      fix: "restore the Codex hooks helper modules from the installed distribution",
+    };
+  }
+  const row = payload as Record<string, unknown>;
+  const keys = Object.keys(row);
+  const schemaValid =
+    keys.length === (row.fix === undefined ? 5 : 6) &&
+    keys.every((key) => CODEX_HOOKS_DOCTOR_KEYS.has(key)) &&
+    row.schemaVersion === 1 &&
+    row.command === "doctor" &&
+    typeof row.pass === "boolean" &&
+    typeof row.reason === "string" &&
+    CODEX_HOOKS_DOCTOR_REASONS.has(row.reason) &&
+    typeof row.label === "string" &&
+    (row.fix === undefined || typeof row.fix === "string");
+  if (!schemaValid || (row.pass === true) !== (result.exitCode === 0)) {
+    return {
+      pass: false,
+      label: "Codex hooks contract: project-local doctor returned an invalid schema",
+      fix: "restore the Codex hooks helper modules from the installed distribution",
+    };
+  }
+  return {
+    pass: row.pass as boolean,
+    label: row.label as string,
+    ...(typeof row.fix === "string" ? { fix: row.fix } : {}),
+  };
+}
+
 export function handleDoctor(projectDir: string): void {
   const results: Array<{ pass: boolean; label: string; fix?: string }> = [];
   const isWindows = process.platform === "win32";
@@ -856,7 +936,6 @@ export function handleDoctor(projectDir: string): void {
   } else if (harness === ".codex") {
     for (const [file, what, from] of [
       ["config.toml", "model/provider/sandbox config", "dist/codex/.codex/config.toml.example"],
-      ["hooks.json", "hook wiring", "dist/codex/.codex/hooks.json.example"],
       ["rules/default.rules", "permission prefix rules", "dist/codex/.codex/rules/default.rules"],
     ] as const) {
       results.push({
@@ -865,6 +944,7 @@ export function handleDoctor(projectDir: string): void {
         fix: `copy from \`${from}\``,
       });
     }
+    results.push(codexHooksProjectDoctorCheck(projectDir));
     // Minimum Codex version pin (G10): SubagentStart/Stop agent_type carries
     // the real role name only from 0.139.0 (hyphenated agent TOMLs resolve
     // without registration from the same release). Older versions degrade

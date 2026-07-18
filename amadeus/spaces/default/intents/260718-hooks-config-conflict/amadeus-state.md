@@ -7,7 +7,7 @@
 - **Start Date**: 2026-07-18T00:09:18Z
 - **State Version**: 7
 - **Active Agent**: amadeus-developer-agent
-- **Worktree Path**:
+- **Worktree Path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hooks-config-conflict
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**:
 

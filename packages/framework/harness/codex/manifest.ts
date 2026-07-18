@@ -12,8 +12,8 @@
 //   - skills are NOT shipped in .codex/skills/ — Codex discovers skills at
 //     <project>/.agents/skills/, so skipRunnerGen is set and emit() composes
 //     the whole skill set (orchestrator + runners + session skills) there.
-//   - the only authored .codex/ file is the amadeus-codex-adapter.ts stdin shim
-//     (a harnessFile); the agent TOMLs in .codex/agents/ are emitted.
+//   - Codex-only authored .codex/ files are the adapter shim and hooks ownership
+//     helper modules (harnessFiles); the agent TOMLs in .codex/agents/ are emitted.
 
 import type { HarnessManifest } from "../../../../scripts/manifest-types.ts";
 import emit from "./emit.ts";
@@ -36,10 +36,20 @@ const manifest: HarnessManifest = {
     { src: "hooks", dst: "hooks" },
   ],
 
-  // The one authored .codex/ surface: the stdin adapter shim. The orchestrator
-  // skill is authored too but is EMITTED into .agents/skills/amadeus/ by emit().
+  // Codex-only runtime surfaces. The hooks ownership helper belongs to this
+  // harness rather than the shared core because no other harness has the
+  // canonical/active split or self-migration contract.
   harnessFiles: [
     { src: "hooks/amadeus-codex-adapter.ts", dst: "hooks/amadeus-codex-adapter.ts" },
+    { src: "tools/amadeus-codex-hooks.ts", dst: "tools/amadeus-codex-hooks.ts" },
+    {
+      src: "tools/amadeus-codex-hooks-contract.ts",
+      dst: "tools/amadeus-codex-hooks-contract.ts",
+    },
+    {
+      src: "tools/amadeus-codex-hooks-migration.ts",
+      dst: "tools/amadeus-codex-hooks-migration.ts",
+    },
     // Project-root .gitignore (beside .codex/, not inside it) — re-rooted under
     // amadeus/spaces/* for the workspace layout (SEED): cursors + machine-local
     // runtime ignored, the shared work (memory/codekb/registry/state/audit

@@ -1622,3 +1622,43 @@
 **Error**: Unknown subcommand: --help. Valid: create, merge, discard, list, verify, info
 
 ---
+
+## Worktree Created
+**Timestamp**: 2026-07-18T01:33:12Z
+**Event**: WORKTREE_CREATED
+**Bolt slug**: hooks-config-conflict
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hooks-config-conflict
+**Branch name**: bolt-hooks-config-conflict
+**Base branch**: codex-1/issue-770-hooks-config
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-18T01:33:18Z
+**Event**: BOLT_STARTED
+**Bolt names**: Issue 770 hooks config ownership
+**Batch number**: 1
+**Walking skeleton**: false
+**Bolt slug**: hooks-config-conflict
+
+---
+
+## State Forked
+**Timestamp**: 2026-07-18T01:33:18Z
+**Event**: STATE_FORKED
+**Bolt slug**: hooks-config-conflict
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-hooks-config-conflict
+**Source state hash**: 365a5eeaa0fa329fd338839187e5b23865a735aa808262a91aa183f3307c1c92
+**Target state hash**: 365a5eeaa0fa329fd338839187e5b23865a735aa808262a91aa183f3307c1c92
+
+---
+
+## Audit Forked
+**Timestamp**: 2026-07-18T01:33:18Z
+**Event**: AUDIT_FORKED
+**Bolt slug**: hooks-config-conflict
+**Source Audit Hash**: 12aaecc5acda4bd8902e0720c23aac0379f1fbf8448aab50dcaea4f099d75a85
+**Fork Boundary**: 50617
+**Reentrant**: true
+
+---
