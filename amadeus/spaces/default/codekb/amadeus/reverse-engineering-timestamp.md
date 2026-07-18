@@ -1,24 +1,6 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(最新: 260718-hooks-config-conflict)
-
-- Date: 2026-07-18(Asia/Tokyo)
-- Observed at: HEAD `594ba21d636218558b711b371c286f16731fb081`（`git rev-parse HEAD` 実測）
-- Intent: `260718-hooks-config-conflict`（[Issue #770](https://github.com/amadeus-dlc/amadeus/issues/770) — tracked `.codex/hooks.json` と agmsg monitor runtime state の所有権衝突。marker側は [PR #783](https://github.com/amadeus-dlc/amadeus/pull/783) で解決済み）
-- Scope: `bugfix`
-- Project type: Brownfield
-- Repository: `amadeus`
-- Stage: `reverse-engineering`(2.1)
-- 手法: diff-refresh（cid:reverse-engineering:c1、E-L63 の base 選定則）。base=`e9a001105d253e14affb77417423d9f0b0360f9e`（全 `re-scans/*.md` observed のうち HEAD の祖先で距離最小。`git merge-base --is-ancestor` exit 0、`git rev-list --count e9a0011..HEAD`=**8**）、observed=`594ba21d636218558b711b371c286f16731fb081`。Developer scan→Architect synthesisの直列に、外部 agmsg reader／writerの独立対称走査を追加。
-- Focus: Codex `HOOK_WIRING`→example→active copy→trust reader、`promote-self` preserve、`run-codex.sh`／`team-up.sh`→agmsg shim／monitor、`delivery.sh`／SQLite JSON1 writer、mode reader、bridge restart、markerの現行不在、packaging／doctor／fixture／テスト空白。
-- 測定 ref: HEAD三者は同一 blob `8eeff909b38467415fdd63a93631db74f91e5b4f`（1925 bytes／93 lines）。現 worktree active fileは2021 bytes／改行0／diff 1 insertion・93 deletionsで、Amadeus 9 commandを保持しagmsg SessionStart／SessionEnd各1件と絶対 pathを追加。base..observedは15 files・+842/-31だがフォーカス契約変更0件。agmsgはローカル実体1.1.7をread-only直読。
-- 現行結論: root causeはtracked canonical activationとmutable per-machine runtime configが同じ`.codex/hooks.json`を所有すること。marker対策だけ、pretty-printだけ、Codex退役前提の運用だけでは恒久解にならない。active file untrack／ignoreとtracked static dispatcher + ignored sidecarは双方`【裁定待ち】`。
-- Per-intent record: `re-scans/260718-hooks-config-conflict.md`
-- 更新した成果物: `architecture.md`、`code-structure.md`、`component-inventory.md`、`technology-stack.md`、`dependencies.md`、`code-quality-assessment.md`、本ファイル、per-intent record。`business-overview.md`は事業目的不変、`api-documentation.md`はrepository所有の公開契約が未裁定のため温存。
-- Delivery boundary: 実装、外部 agmsg変更、main merge/rebase、Issue close、PR作成・更新は本scanで実施していない。既存dirty `.codex/hooks.json` と旧intent state/auditは変更していない。
-- Baseの真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有timestampはrepo-level freshness pointerであり、次回差分baseの真実源にはしない。
-
-## 実行メタデータ(履歴: 260717-swarm-dispatch-enum)
+## 実行メタデータ(最新: 260717-swarm-dispatch-enum)
 
 - Date: 2026-07-18(Asia/Tokyo)
 - Observed at: HEAD `e9a001105d253e14affb77417423d9f0b0360f9e`(`git rev-parse HEAD` 実測)

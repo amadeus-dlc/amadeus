@@ -1,13 +1,6 @@
 # 技術スタック
 
-## Codex hooks／agmsg runtime スタック（intent 260718-hooks-config-conflict、2026-07-18、最新）
-
-- Amadeus 側は Bun／TypeScript の `emit.ts` が整形済み JSON template と trust seed を生成し、Codex は project 内の exact `.codex/hooks.json` を発見する。
-- 外部 agmsg 1.1.7 は Bash driver と SQLite3 JSON1 (`readfile`／`writefile`、`json_set`／`json_remove`)で同じ active JSON を read-modify-write する。monitor bridge は Node.js と Codex `app-server --listen ws://` を利用する。
-- 技術競合はライブラリバージョンではなく config ownership。pretty-print 化だけでは runtime entry と絶対 path の tracked diff が残る。
-- active file の untrack／ignore、または static dispatcher + ignored sidecar はともに `【裁定待ち】`。新規技術導入の要否も採用案の裁定後に決める。
-
-## multi-agent 実行スタック（intent 260713-swarm-driver-migration、2026-07-13、履歴）
+## multi-agent 実行スタック（intent 260713-swarm-driver-migration、2026-07-13、最新）
 
 | 実行面 | 現行技術 | プロセス境界 | 未解決の検証面 |
 | --- | --- | --- | --- |
@@ -15,7 +8,7 @@
 | Codex | `codex exec --skip-git-repo-check -C <worktree> ... < /dev/null` | Unit ごとの別 AI CLI process | `gpt-5.6-sol` Ultra の明示設定と native multi-agent委譲 event、各2 Unit以上 |
 | Kiro CLI／IDE | live native `subagent` tool | live Kiro session 内。現行 swarm は `kiro-cli chat --no-interactive` を起動しない | subagent tool-call trace と最大並列／trust の事前検査 |
 | Referee | Bun／TypeScript、Git、shell convergence command | AI worker とは独立した deterministic subprocess | requested／selected driver と native trace の correlation |
-| Packaging | Bun `scripts/package.ts`、manifest、`scripts/promote-self.ts` | source→`dist`→Claude／Codex／Cursor／OpenCode self-install | 6 harness 配布と4 harness project-local self-install の drift |
+| Packaging | Bun `scripts/package.ts`、manifest、`scripts/promote-self.ts` | source→`dist`→Claude／Codex self-install | 4 harness 配布と project-local self-install の drift |
 
 基盤言語は TypeScript（ESM）、ランタイムと package manager は Bun、状態隔離と merge は Git、テストは `bun:test` と自作 runner を維持する。新 driver 契約のために cloud SDK／Responses API／永続 daemon を追加する計画はない。capability probe はローカル CLI／live tool の振る舞いを検査し、credential や provider 生レスポンスを保存しない。
 
