@@ -568,6 +568,20 @@ describe("Codex hooks ownership", () => {
     ).toBe("structure-invalid");
   });
 
+  test("amadeus utility doctor reports a missing Codex CLI without throwing", () => {
+    const projectDir = freshSelfCheckout();
+    activateFixture(projectDir);
+    const originalWhich = Bun.which.bind(Bun);
+    const whichSpy = spyOn(Bun, "which").mockImplementation((command) =>
+      command === "codex" ? null : originalWhich(command),
+    );
+    try {
+      expect(runUtilityDoctorInProcess(projectDir)).toContain("codex CLI on PATH");
+    } finally {
+      whichSpy.mockRestore();
+    }
+  });
+
   test("amadeus utility doctor reports the semantic Codex hooks contract", () => {
     const projectDir = freshSelfCheckout();
     activateFixture(projectDir);

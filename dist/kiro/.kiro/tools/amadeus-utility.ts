@@ -950,8 +950,11 @@ export function handleDoctor(projectDir: string): void {
     // without registration from the same release). Older versions degrade
     // SUBAGENT_COMPLETED attribution and the agent transposition contract.
     const MIN_CODEX = [0, 139, 0] as const;
-    const codexVer = Bun.spawnSync(["codex", "--version"], { stdout: "pipe", stderr: "ignore" });
-    const verText = (codexVer.stdout?.toString() ?? "").trim();
+    const codexPath = Bun.which("codex");
+    const codexVer = codexPath
+      ? Bun.spawnSync([codexPath, "--version"], { stdout: "pipe", stderr: "ignore" })
+      : undefined;
+    const verText = (codexVer?.stdout?.toString() ?? "").trim();
     const verMatch = verText.match(/(\d+)\.(\d+)\.(\d+)/);
     if (!verMatch) {
       results.push({
