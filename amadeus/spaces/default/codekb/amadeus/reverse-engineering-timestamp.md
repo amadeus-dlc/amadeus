@@ -17,6 +17,23 @@
 - 更新した成果物: 本ファイル(鮮度ポインタ + 旧「最新: 260717-codekb-diff3-cleanup」→履歴ラベル化)、`re-scans/260717-swarm-dispatch-enum.md`。**codekb body 9成果物は全点温存**(churn 回避 — swarm 正本の区間変更ゼロ、再照合で本文との矛盾なし、cid:reverse-engineering:c1)。
 - Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
 
+## 実行メタデータ(履歴: 260717-state-mirror-fixes)
+
+- Date: 2026-07-18(Asia/Tokyo)
+- Observed at: HEAD `591b6a2a222357f41061128f1b5a93c7f7a877be`(`git rev-parse HEAD` 実測、worktree = `origin/main` 一致)
+- Intent: `260717-state-mirror-fixes`(bugfix batch: [Issue #1170](https://github.com/amadeus-dlc/amadeus/issues/1170) — set-status hook 経由の state.md 巻き戻り(checkbox `[-]` と Current Stage の lost-update)/ [Issue #1172](https://github.com/amadeus-dlc/amadeus/issues/1172) — `countStageProgress` が scope-SKIP を分母に混入)
+- Scope: `amadeus`
+- Project type: Brownfield
+- Repository: `amadeus`
+- 手法: diff-refresh(cid:reverse-engineering:c1、E-L63 の base 選定則)。base=`6495e03a12d9e7149c2e80b59f171a90607a2d2c`(全 `re-scans/*.md` の observed のうち HEAD 祖先かつ距離最小。`git merge-base --is-ancestor 6495e03a... HEAD` exit 0、`git rev-list --count 6495e03a..591b6a2a`=126)。squash マージで feature tip が HEAD の非祖先になる新しい observed(`0b5e24f8` 等の squash tip 群)は `--is-ancestor` exit 1 につき除外(cid:reverse-engineering:rescan-base-ancestry)。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3、独立再照合で反証なし)
+- Focus: **#1170** — state.md 書込経路の全数列挙(11 hook grep で内容ライターは `.claude/hooks/amadeus-sync-statusline.ts:69-73` の set-status spawn が唯一)+ `handleSetStatus`(`amadeus-utility.ts:3666-3690`)の無ロック read-modify-write の race window 機序確定。**#1172** — `scripts/amadeus-mirror.ts:87-105` `countStageProgress` の SKIP 分母欠陥 + scope-SKIP の現行様式実測(`- [ ] <stage> — SKIP` 空 checkbox 形、format-currency-grep)
+- 測定 ref: 件数・行番号は observed HEAD `591b6a2a2` の実ファイル直読(cid:measurement-ref-in-artifacts)。全 state 横断マーカー集計 `[ ] — SKIP`=717件 / `[ ] — EXECUTE`=70件 / `[x] — EXECUTE`=414件、`^- \[S\]` checkbox=**0件**(実コーパス不在)。区間 `6495e03a..591b6a2a`=126コミット
+- 現行結論: **2欠陥の機序を確定**。#1170 は `handleSetStatus` が `withAuditLock` を取らず(エンジン RMW ハンドラは全て保護、`amadeus-state.ts:251-266`)、S0 スナップショット読み→全文上書きで engine の advance を lost-update する。audit 非 emit のため巻き戻りは state.md のみ = Issue 症状と一致。set-status は intent フラグなしで active intent に解決し set-status 同士も相互 lost-update。#1172 は分母除外条件が checkbox `[S]`(実コーパス0件の runtime jump marker)のみで、実 scope-SKIP 様式 `[ ] — SKIP`(717件)が `total++` に混入(18/32 を返す、期待 18/18)。checkbox(実行状態)と suffix(計画)の直交2フィールドを混同したのが根本原因。テスト空白2件(t232 が捏造 `[S]` fixture で偽 green / t145 は set-status 経路 concurrency 未カバー)
+- Per-intent record: `re-scans/260717-state-mirror-fixes.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「最新: 260717-codekb-diff3-cleanup」→履歴ラベル化)、`re-scans/260717-state-mirror-fixes.md`、`code-quality-assessment.md`(#1170/#1172 の2欠陥 + 2テスト空白の観測節を新設、旧「最新」= swarm-driver-migration marker を履歴へ降格 cid:reverse-engineering:c3-relabel)。**他7 body 成果物(business-overview / architecture / code-structure / api-documentation / component-inventory / technology-stack / dependencies)は全点温存**(churn 回避 — Focus seam の state ロック機構・core 中立層/表層境界は区間126コミットで不変。cid:reverse-engineering:c1)
+- Delivery boundary: main merge/rebase、Issue close、GitHub 上のレビュー作成・更新操作は本 scan で実施していない。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
 ## 実行メタデータ(履歴: 260717-codekb-diff3-cleanup)
 
 - Date: 2026-07-18(Asia/Tokyo)

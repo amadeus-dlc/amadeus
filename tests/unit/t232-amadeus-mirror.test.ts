@@ -62,14 +62,16 @@ describe("t232 parseArgs (C1, S-3 boundary)", () => {
   });
 });
 
-describe("t232 countStageProgress (ADR-3a)", () => {
+describe("t232 countStageProgress (ADR-3a, #1172)", () => {
   const state = [
     "## Stage Progress",
     "",
     "### IDEATION PHASE",
     "- [x] intent-capture — EXECUTE",
     "- [x] feasibility — EXECUTE",
-    "- [S] market-research — SKIP",
+    // scope-skipped rows keep a live checkbox but carry the ` — SKIP` suffix
+    // (real setStageSuffix format); they leave the denominator (#1172).
+    "- [ ] market-research — SKIP",
     "- [-] scope-definition — EXECUTE",
     "- [ ] approval-handoff — EXECUTE",
     "- [?] team-formation — EXECUTE",
@@ -78,8 +80,82 @@ describe("t232 countStageProgress (ADR-3a)", () => {
     "- [x] this checkbox is outside Stage Progress and must not count",
   ].join("\n");
 
-  test("counts [x] as approved and excludes [S] from the denominator", () => {
+  test("counts [x] as approved and excludes scope-SKIP rows from the denominator", () => {
     expect(countStageProgress(state)).toEqual({ approved: 2, total: 5 });
+  });
+
+  test("excludes both skip forms: [S] jump-skip and ` — SKIP` scope-skip", () => {
+    // A jump-skipped stage that (unusually) carries an EXECUTE suffix is still
+    // excluded via the `[S]` mark; a scope-skipped stage that keeps a live
+    // checkbox is excluded via the ` — SKIP` suffix. Only the two EXECUTE rows
+    // with live checkboxes remain in the denominator.
+    const mixed = [
+      "## Stage Progress",
+      "",
+      "- [S] market-research — EXECUTE",
+      "- [ ] feasibility — SKIP",
+      "- [x] intent-capture — EXECUTE",
+      "- [ ] scope-definition — EXECUTE",
+    ].join("\n");
+    expect(countStageProgress(mixed)).toEqual({ approved: 1, total: 2 });
+  });
+
+  test("18 approved EXECUTE stages + 14 SKIP stages -> 18/18 (#1172)", () => {
+    // A synthetic full-workflow state: 18 in-scope stages all approved,
+    // 14 scope-skipped stages (real ` — SKIP` suffix). The template header and
+    // a phase comment row bracket them. SKIP rows must all leave the
+    // denominator so progress reads 18/18, not 18/32.
+    const executeStages = [
+      "workspace-scaffold",
+      "workspace-detection",
+      "state-init",
+      "intent-capture",
+      "scope-definition",
+      "reverse-engineering",
+      "requirements-analysis",
+      "practices-discovery",
+      "functional-design",
+      "nfr-requirements",
+      "nfr-design",
+      "infrastructure-design",
+      "units-generation",
+      "delivery-planning",
+      "code-generation",
+      "ci-pipeline",
+      "build-and-test",
+      "approval-handoff",
+    ];
+    const skipStages = [
+      "market-research",
+      "feasibility",
+      "team-formation",
+      "rough-mockups",
+      "refined-mockups",
+      "user-stories",
+      "application-design",
+      "deployment-pipeline",
+      "environment-provisioning",
+      "deployment-execution",
+      "observability-setup",
+      "incident-response",
+      "performance-validation",
+      "feedback-optimization",
+    ];
+    expect(executeStages.length).toBe(18);
+    expect(skipStages.length).toBe(14);
+    const lines = [
+      "## Stage Progress",
+      "",
+      "<!-- checkbox: [ ] pending, [x] approved, [S] skipped -->",
+      "### CONSTRUCTION PHASE",
+      ...executeStages.map((s) => `- [x] ${s} — EXECUTE`),
+      ...skipStages.map((s) => `- [ ] ${s} — SKIP`),
+    ];
+    expect(lines.length).toBe(4 + 18 + 14); // 36 total lines
+    expect(countStageProgress(lines.join("\n"))).toEqual({
+      approved: 18,
+      total: 18,
+    });
   });
 
   test("returns zeros for content without a Stage Progress section", () => {
