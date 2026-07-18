@@ -6139,3 +6139,24 @@
 **Findings count**: 1
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:48:38Z
+**Event**: SENSOR_FIRED
+**Fire id**: 376d7348
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/code-generation/code-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:48:38Z
+**Event**: SENSOR_PASSED
+**Fire id**: 376d7348
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/driver-contract-core/code-generation/code-summary.md
+**Duration ms**: 33
+
+---

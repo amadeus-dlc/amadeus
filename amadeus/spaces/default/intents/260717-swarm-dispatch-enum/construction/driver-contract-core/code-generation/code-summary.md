@@ -1,6 +1,6 @@
 # Code Summary — driver-contract-core(swarm-dispatch-enum / Issue #1157)
 
-上流入力(consumes 全数): `requirements.md`(FR-1/2/4 の受け入れへ trace)、`business-logic-model.md`(決定表の実装正)、`business-rules.md`(BR-1〜8 受け入れ)、`domain-entities.md`(型 verbatim)、`logical-components.md`(部品表)、`performance-design.md`(PD-1 純関数 — 実装 diff に I/O なしを充足)、`security-design.md`(SD-3 rejected 型構成を充足)。
+上流入力(consumes 全数): `requirements.md`(FR-1/2/4 の受け入れへ trace)、`business-logic-model.md`(決定表の実装正)、`business-rules.md`(BR-1〜8 受け入れ)、`domain-entities.md`(型 verbatim)、`logical-components.md`(部品表)、`unit-of-work.md`(U1 受け入れ基準 — t134/t135/t207/t211/t28 green・lcov 0 未カバーへ trace)、`performance-design.md`(PD-1 純関数 — 実装 diff に I/O なしを充足)、`security-design.md`(SD-3 rejected 型構成を充足)。
 
 ## 実装結果(bolt branch `bolt-driver-contract-core`、commit e131b003b)
 
