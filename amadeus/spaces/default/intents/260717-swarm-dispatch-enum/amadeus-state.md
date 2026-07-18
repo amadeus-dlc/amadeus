@@ -29,8 +29,8 @@ issue-mirror は amadeus-mirror.ts を指し、Intent 名には使わない。In
 
 ## Execution Plan Summary
 - **Total Stages**: 18
-- **Completed**: 17
-- **In Progress**: build-and-test
+- **Completed**: 18
+- **In Progress**: none
 
 ## Runtime State
 - **Revision Count**: 0
@@ -42,7 +42,7 @@ issue-mirror は amadeus-mirror.ts を指し、Intent 名には使わない。In
 - **Initialization**: Verified
 - **Ideation**: Verified
 - **Inception**: Verified
-- **Construction**: Active
+- **Construction**: Verified
 - **Operation**: Skipped
 
 ## Stage Progress
@@ -79,7 +79,7 @@ Per unit: [TBD]
 - [x] nfr-design — EXECUTE
 - [ ] infrastructure-design — SKIP
 - [x] code-generation — EXECUTE
-- [?] build-and-test — EXECUTE
+- [x] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
 
 ### OPERATION PHASE
@@ -95,10 +95,10 @@ Per unit: [TBD]
 - **Lifecycle Phase**: CONSTRUCTION
 - **Current Stage**: build-and-test
 - **Next Stage**: none
-- **Status**: Running
-- **Last Updated**: 2026-07-18T05:45:43Z
+- **Status**: Completed
+- **Last Updated**: 2026-07-18T05:46:27Z
 
 ## Session Resume Point
-- **Last Completed Stage**: code-generation
-- **Next Action**: Execute Build And Test
+- **Last Completed Stage**: build-and-test
+- **Next Action**: Workflow complete
 - **Pending Artifacts**: none
