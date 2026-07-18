@@ -1,6 +1,10 @@
 # Code Generation Plan — driver-contract-core(swarm-dispatch-enum / Issue #1157)
 
-上流入力(consumes 全数): FD 4成果物(`business-logic-model.md` の16セル決定表・`business-rules.md` BR-1〜8・`domain-entities.md` の型・`frontend-components.md` の CLI 出力契約)、ND 5成果物(`logical-components.md` の部品表・`reliability-design.md` RD-1〜4 ほか)、`unit-of-work.md` U1。
+上流入力(consumes 全数): `requirements.md`(FR-1/2/4/6/7 の受け入れ)、FD 4成果物(`business-logic-model.md` の16セル決定表・`business-rules.md` BR-1〜8・`domain-entities.md` の型・`frontend-components.md` の CLI 出力契約)、ND 5成果物(`logical-components.md` の部品表・`performance-design.md` PD-1 の純関数構成・`security-design.md` SD-1〜3 の fail-closed 型構成・`scalability-design.md`・`reliability-design.md` RD-1〜4)、`unit-of-work.md` U1。
+
+## 検証方針
+
+検証コマンド列と受け入れは `requirements.md` の FR 受け入れ・`performance-design.md`(I/O 非含有の実装レビュー)・`security-design.md`(rejected 型構成)に従う。
 
 ## 実施計画(worktree 隔離 builder — 実績)
 
