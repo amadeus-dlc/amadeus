@@ -6347,3 +6347,354 @@
 **Reentrant**: true
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T03:18:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: fc5786c8
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-harness-wiring/packages/framework/harness/codex/onboarding.fills.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T03:18:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: fc5786c8
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-harness-wiring/packages/framework/harness/codex/onboarding.fills.ts
+**Duration ms**: 1428
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T03:18:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2b35d97c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-harness-wiring/packages/framework/harness/codex/onboarding.fills.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T03:18:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2b35d97c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-harness-wiring/packages/framework/harness/codex/onboarding.fills.ts
+**Duration ms**: 993
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T03:21:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: cb4f4002
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-harness-wiring/packages/framework/harness/kiro/onboarding.fills.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T03:21:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: cb4f4002
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-harness-wiring/packages/framework/harness/kiro/onboarding.fills.ts
+**Duration ms**: 1563
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T03:21:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 136a8c5b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-harness-wiring/packages/framework/harness/kiro/onboarding.fills.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T03:21:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 136a8c5b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-harness-wiring/packages/framework/harness/kiro/onboarding.fills.ts
+**Duration ms**: 555
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T03:21:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 734206e8
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-harness-wiring/packages/framework/harness/kiro-ide/onboarding.fills.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T03:21:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 734206e8
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-harness-wiring/packages/framework/harness/kiro-ide/onboarding.fills.ts
+**Duration ms**: 1412
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T03:21:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: a52d2dbd
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-harness-wiring/packages/framework/harness/kiro-ide/onboarding.fills.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T03:21:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: a52d2dbd
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-harness-wiring/packages/framework/harness/kiro-ide/onboarding.fills.ts
+**Duration ms**: 571
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T03:22:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 68f31b2d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-harness-wiring/tests/unit/t181-conductor-skill-parity.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T03:22:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: 68f31b2d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-harness-wiring/tests/unit/t181-conductor-skill-parity.test.ts
+**Duration ms**: 1236
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T03:22:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: dead5603
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-harness-wiring/tests/unit/t181-conductor-skill-parity.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T03:22:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: dead5603
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-harness-wiring/tests/unit/t181-conductor-skill-parity.test.ts
+**Duration ms**: 473
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T03:22:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 752bfa80
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-harness-wiring/tests/unit/t181-conductor-skill-parity.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T03:22:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 752bfa80
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-harness-wiring/tests/unit/t181-conductor-skill-parity.test.ts
+**Duration ms**: 1216
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T03:22:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: a6b354f7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-harness-wiring/tests/unit/t181-conductor-skill-parity.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T03:22:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: a6b354f7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-harness-wiring/tests/unit/t181-conductor-skill-parity.test.ts
+**Duration ms**: 461
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T03:31:50Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: ac8bee30cc3329268
+**Message**: Committed cleanly (9db848c3e); worktree clean, not pushed. Bolt 2 (harness-wiring) complete.\n\n## Bolt 2 (harness-wiring) 完了報告 — intent 260717-swarm-dispatch-enum / Refs #1157\n\n### 変更ファイル一覧(18ファイル、すべて 
+
+---
+
+## Bolt Completed
+**Timestamp**: 2026-07-18T03:32:45Z
+**Event**: BOLT_COMPLETED
+**Bolt names**: harness-wiring
+**Batch number**: 2
+**Bolt slug**: harness-wiring
+
+---
+
+## State Merged
+**Timestamp**: 2026-07-18T03:32:46Z
+**Event**: STATE_MERGED
+**Bolt slug**: harness-wiring
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-harness-wiring
+**Source state hash**: 176fecfbee275527999833f7411ba134281dba4bfed9d59ba4f6f8bbfda05150
+**Target state hash**: 51c487d30a9fb9a12552d42d8f9f99441c541766db978e9a59787437bde22092
+**Conflict resolution**: clean
+
+---
+
+## Audit Merged
+**Timestamp**: 2026-07-18T03:32:46Z
+**Event**: AUDIT_MERGED
+**Bolt slug**: harness-wiring
+**Entries Merged**: 0
+**Source Audit Hash**: 1d54ebb6e6de8328a84846155fa6d3d90aaf91caeb5735a846abd29a7c9e6bb6
+**Fork Boundary**: 200014
+
+---
+
+## Swarm Unit Converged
+**Timestamp**: 2026-07-18T03:32:46Z
+**Event**: SWARM_UNIT_CONVERGED
+**Batch number**: 2
+**Unit name**: harness-wiring
+
+---
+
+## Swarm Completed
+**Timestamp**: 2026-07-18T03:32:46Z
+**Event**: SWARM_COMPLETED
+**Batch number**: 2
+**Converged count**: 1
+**Failed count**: 0
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T03:33:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2ce2ee48
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T03:33:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2ce2ee48
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/code-generation/code-generation-plan.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T03:33:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: f3778e5e
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T03:33:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: f3778e5e
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/code-generation/code-generation-plan.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T03:33:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 704e3f76
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/code-generation/code-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T03:33:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 704e3f76
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/code-generation/code-summary.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T03:33:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 669a1238
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/code-generation/code-summary.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-18T03:33:20Z
+**Event**: SENSOR_FAILED
+**Fire id**: 669a1238
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/harness-wiring/code-generation/code-summary.md
+**Detail path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/.amadeus-sensors/code-generation/upstream-coverage-669a1238.md
+**Findings count**: 2
+
+---
