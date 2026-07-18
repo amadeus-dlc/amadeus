@@ -3096,3 +3096,96 @@
 **Duration ms**: 37
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T01:03:38Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: aee1a1ab11fba7bfe
+**Message**: ## Verdict: **REVISE**\n\n対象: `amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/`(business-rules.md, business-logic-model.md, domain-entities.md, 
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T01:04:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8f0d59cf
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T01:04:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8f0d59cf
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/business-logic-model.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T01:04:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 93bccdd3
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T01:04:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 93bccdd3
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/business-logic-model.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T01:04:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5f2b4de3
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T01:04:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5f2b4de3
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/business-rules.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T01:04:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6b9fdebf
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T01:04:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6b9fdebf
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260717-swarm-dispatch-enum/construction/docs-and-parity/functional-design/business-rules.md
+**Duration ms**: 35
+
+---

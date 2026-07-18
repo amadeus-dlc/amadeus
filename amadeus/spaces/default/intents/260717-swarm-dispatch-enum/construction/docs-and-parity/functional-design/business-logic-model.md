@@ -10,6 +10,8 @@
 | `docs/reference/17-skill-system.md:108-122` §6 | 「`AMADEUS_USE_SWARM=1` selects ...」の二値記述 → 三値+loud-degrade+fail-closed の normative 契約へ置換 |
 | `docs/guide/harnesses/{codex-cli,kiro-cli,kiro-ide}.md`(+`.ja.md` 対) | 各 harness の swarm 節を FR-1 の該当列と同値へ(docs-language-ownership: 対訳同期) |
 | `docs/guide/harnesses/{opencode,cursor}.md`(+`.ja.md`) | 変更なし(FR-9 = 契約対象外。08 節の1行が唯一の言及) |
+| `docs/reference/12-state-machine.md:367`(+`.ja.md:367`) | 監査タクソノミ表の `SWARM_DEGRADED` 行 — 「`AMADEUS_USE_SWARM=1` was requested ...」を三値後の事実(`claude-ultra`/`codex-ultra` の他ハーネス要求時 loud-degrade。`1` は fail-closed)へ更新(reviewer C-1 指摘の回収 — 実測照合済み) |
+| `packages/framework/core/knowledge/amadeus-shared/audit-format.md:202` | `SWARM_DEGRADED` 行の説明文を同様に三値後の事実へ更新(ADR-3 が保護するのはフィールド集合であり説明文は更新対象 — 正本手書きファイルのため生成では直らない。promote:self で各配布面へ伝播) |
 
 ## 生成物同期(S-09 / C-12)
 
