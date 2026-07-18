@@ -67,7 +67,7 @@ issue-mirror は amadeus-mirror.ts を指し、Intent 名には使わない。In
 - [x] requirements-analysis — EXECUTE
 - [ ] user-stories — SKIP
 - [ ] refined-mockups — SKIP
-- [-] application-design — EXECUTE
+- [?] application-design — EXECUTE
 - [ ] units-generation — EXECUTE
 - [ ] delivery-planning — EXECUTE
 
@@ -95,7 +95,7 @@ Per unit: [TBD]
 - **Current Stage**: application-design
 - **Next Stage**: units-generation
 - **Status**: Running
-- **Last Updated**: 2026-07-18T00:02:58Z
+- **Last Updated**: 2026-07-18T00:18:23Z
 
 ## Session Resume Point
 - **Last Completed Stage**: requirements-analysis
