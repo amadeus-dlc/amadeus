@@ -18,12 +18,12 @@
 - Alternatives Rejected: B=lib 純関数のみ(実行時 CLI 面なし — C-16「prose だけに依存せず」を実行時に満たさない)/ C=新規独立ツール(語彙一対一が2ファイル分散、S-06 凝集低下+reuse inventory の新設根拠なし)
 - Security/Compliance: env 値はログへ raw のまま出すが token 類ではない(C-24 非該当)。Reversibility: 高(1 case+1 関数の加算)
 
-## ADR-3: `SWARM_DEGRADED` の Fallback driver ハードコード(:293)を維持する
+## ADR-3: `SWARM_DEGRADED` の Fallback driver ハードコード(:291)を維持する
 
 - Context: FR-3。降格先は全ケースで native floor(`subagent`)— FR-1 表に degrade 先の分岐が存在しない
 - Decision: `"subagent"` 固定を維持し、Requested driver のみ三値化する
 - Consequences: emit 面の変更が最小(surgical)。将来 degrade 先が複数化した場合のみパラメータ化する
-- Alternatives Rejected: fallback パラメータ化 — 現要件に消費者がなく、どのコードも消費しないフィールドの温床(検証劇場 Forbidden の予防)
+- Alternatives Rejected: (a) fallback パラメータ化 — 現要件に消費者がなく、どのコードも消費しないフィールドの温床(検証劇場 Forbidden の予防) (b) Fallback driver フィールド自体の削除 — audit-format.md:202 の既存監査契約(表示名・フィールド集合)を破る breaking で、FR-3 の「降格先を監査から再現」の読み手(監査解析)を壊す
 - Security/Compliance: 影響なし。Reversibility: 高
 
 ## ADR-4: Codex 通常 floor を native subagent 並列へ置換し headless `codex exec` を撤去する
@@ -39,7 +39,7 @@
 - Context: reuse inventory の対称 grep(absence-claim-grep-verify 追補の適用)実測 — 既存 env→driver 解決機構は 0 件(`grep -rn "resolveDriver|driverFor|selectDriver"` = 0)。既存 harness 列挙は `KNOWN_HARNESS_DIRS`(amadeus-lib.ts:121 = [".claude",".kiro",".codex",".opencode",".cursor"])のみ
 - Decision: `type HarnessName = "claude" | "codex" | "kiro" | "kiro-ide"` を C1 に新設
 - Consequences: dispatch consumer 集合(FR-9 で opencode/cursor 除外、kiro-ide を含む)を型で表現。KNOWN_HARNESS_DIRS とは意味論が異なる(あちらは install ディレクトリ列挙で kiro-ide を含まず opencode/cursor を含む)ため flat 再利用は FR-1 表と不整合
-- Alternatives Rejected: KNOWN_HARNESS_DIRS の再利用 — 集合が一致せず(:116 コメントも「source of truth ではない」と明記)、写像層が必要になり C-06 に反する
+- Alternatives Rejected: (a) KNOWN_HARNESS_DIRS の再利用 — 集合が一致せず(:116 コメントも「source of truth ではない」と明記)、写像層が必要になり C-06 に反する (b) KNOWN_HARNESS_DIRS からのサブセット型派生(`Extract<...>` 等)— dirs はドット付きディレクトリ名(".claude" 等)で dispatch consumer 名("claude"/"kiro-ide")と字面も要素も一致せず、派生には結局手書き写像が要る(派生の見かけの再利用が実は写像層)
 - Security/Compliance: 影響なし。Reversibility: 高
 
 ## 規模の正当化(数値・reuse inventory)

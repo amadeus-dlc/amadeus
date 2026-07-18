@@ -8,7 +8,7 @@
 
 現行実装の事実(RE `re-scans/260717-swarm-dispatch-enum.md`、`architecture.md` / `code-structure.md` の関心 seam は区間 128 コミットで不変):
 - `AMADEUS_USE_SWARM` の実コード読み取り(`process.env.AMADEUS_USE_SWARM`)は repo 全域でゼロ。読みは conductor prose(harness 別 SKILL.md)の二値判定(`== "1"`)のみ
-- driver 型は `amadeus-swarm.ts:88-89` の `DriverName = "subagent" | "ultracode"` に閉じ、`--degraded-from` は `:402-407` で検証、`SWARM_DEGRADED` の Fallback driver は `:293` で `"subagent"` ハードコード
+- driver 型は `amadeus-swarm.ts:88-89` の `DriverName = "subagent" | "ultracode"` に閉じ、`--degraded-from` は `:402-407` で検証、`SWARM_DEGRADED` の Fallback driver は `:291` で `"subagent"` ハードコード
 - Codex の通常 floor は headless `codex exec` per-unit workers(`harness/codex/skills/amadeus/SKILL.md:57,171`、`emit.ts:81`、`onboarding.fills.ts:42,55`)
 
 ## 機能要件

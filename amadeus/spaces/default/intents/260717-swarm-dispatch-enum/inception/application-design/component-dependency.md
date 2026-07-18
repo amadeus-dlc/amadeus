@@ -15,7 +15,7 @@
 | C8 dist/self-install | 生成経路で全面を複製 | 同左 | 同左 |
 
 - 逆流なし: C1 は他コンポーネントへ依存しない(語彙の単一始点 — C-06 の一対一を構造で担保)
-- Mermaid(テキスト代替: C1 → C2/C3/C4/C5 → C7、C1..C6 → C8):
+- Mermaid(テキスト代替: C1 → C2/C3/C4/C5/C6/C7、C1・C3・C4・C5 → C8、C2 → C7):
 
 ```mermaid
 graph TD

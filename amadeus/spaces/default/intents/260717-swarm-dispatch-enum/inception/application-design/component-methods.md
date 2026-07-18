@@ -14,7 +14,7 @@ const DRIVER_VALUES: DriverName[] = ["subagent", "claude-ultra", "codex-ultra"];
 type HarnessName = "claude" | "codex" | "kiro" | "kiro-ide";     // dispatch 指示を持つ consumer のみ(FR-9: opencode/cursor 対象外)
 ```
 
-### 解決関数(中核 signature — 確定。公開の形は【裁定待ち Q1】)
+### 解決関数(中核 signature+公開形 — 確定、Q1 裁定 A)
 
 ```ts
 type DriverResolution =
@@ -36,7 +36,7 @@ function resolveDriver(raw: string | undefined, harness: HarnessName): DriverRes
 ## C2: Degradation Audit
 
 ```ts
-function emitSwarmDegraded(batch: string, requested: DriverName): void; // Fallback driver は "subagent" 固定(:293 維持 — ADR-3)
+function emitSwarmDegraded(batch: string, requested: DriverName): void; // Fallback driver は "subagent" 固定(:291 維持 — ADR-3)
 ```
 
 ## C3〜C5: Conductor Wiring(prose — メソッドなし)

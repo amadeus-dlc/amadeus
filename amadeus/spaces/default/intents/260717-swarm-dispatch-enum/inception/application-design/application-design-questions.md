@@ -4,7 +4,7 @@
 
 ## 判定サマリ(E-OC1 3段順序)
 
-判定: 真に未決の設計判断は Q1 の 1 問のみ(選挙対象)。他の設計面は既決要件からの導出として選挙不要: FR-4 が driver 語彙の一対一(ultracode→claude-ultra 置換)を、FR-1 の表が harness 別挙動を、FR-7 が referee 意味論不変を確定済み。`SWARM_DEGRADED` の Fallback driver ハードコード(amadeus-swarm.ts:293)は降格先が常に native floor(subagent)であるため維持が要件から機械的に導出される(ADR に記録)。C-18(retry identity)は constraint-register が Functional Design への委任を明記済み。照合面: `requirements.md` FR-1〜FR-10/NFR-1〜6、`architecture.md`/`component-inventory.md` の swarm seam(区間無変更)、`team-practices.md` の Testing Posture。
+判定: 真に未決の設計判断は Q1 の 1 問のみ(選挙対象)。他の設計面は既決要件からの導出として選挙不要: FR-4 が driver 語彙の一対一(ultracode→claude-ultra 置換)を、FR-1 の表が harness 別挙動を、FR-7 が referee 意味論不変を確定済み。`SWARM_DEGRADED` の Fallback driver ハードコード(amadeus-swarm.ts:291)は降格先が常に native floor(subagent)であるため維持が要件から機械的に導出される(ADR に記録)。C-18(retry identity)は constraint-register が Functional Design への委任を明記済み。照合面: `requirements.md` FR-1〜FR-10/NFR-1〜6、`architecture.md`/`component-inventory.md` の swarm seam(区間無変更)、`team-practices.md` の Testing Posture。
 conductor e2 が 2026-07-18T00:03Z 頃に leader へ申告し、leader が 2026-07-18T00:04:32Z に承認した(agmsg 出典)。
 
 ## Q1: C-16 機械検証境界(selected driver / degraded-from / error の決定)の実現形

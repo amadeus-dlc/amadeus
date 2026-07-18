@@ -14,7 +14,7 @@
 ## C2: Degradation Audit(`amadeus-swarm.ts` emit 面+`amadeus-audit.ts`)
 
 - 責務: `SWARM_DEGRADED` の Requested driver を三値語彙で記録(FR-3/NFR-1)。audit イベント enum(amadeus-audit.ts:147-152、6 イベント)は**変更しない** — 変更は emit 側の値域のみ
-- 変更: `emitSwarmDegraded`(:285)の Requested driver 型を三値 `DriverName` に追随。Fallback driver `"subagent"` ハードコード(:293)は維持(ADR-3)
+- 変更: `emitSwarmDegraded`(:285)の Requested driver 型を三値 `DriverName` に追随。Fallback driver `"subagent"` ハードコード(:291)は維持(ADR-3)
 
 ## C3: Claude Conductor Wiring(`packages/framework/harness/claude/skills/amadeus/SKILL.md:61`)
 

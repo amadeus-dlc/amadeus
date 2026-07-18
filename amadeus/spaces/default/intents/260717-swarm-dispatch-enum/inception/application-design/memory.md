@@ -7,7 +7,7 @@
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations
-- (なし)
+- 2026-07-18T00:16:09Z — reviewer REVISE(Major 3/Minor 2)→ 全件是正: 【裁定待ち】見出し残存1(横断 grep 0 確認)/ ADR-3・ADR-5 へ第2代替案追記 / :293→:291 訂正(reviewer 指摘を自分の grep で再実測してから反映 — 承認済み requirements.md の同引用も事実訂正し本 diary へ記録。誤記の源は RE re-scan record で、そちらは着地済みのため次回 RE 差分で是正)/ Mermaid テキスト代替を図と一致化
 <!-- example: 2026-05-29T10:14:32Z — skipped the optional caching layer the stage prose suggested; the dataset is small enough that it adds risk -->
 
 ## Tradeoffs
