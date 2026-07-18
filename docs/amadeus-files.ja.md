@@ -70,7 +70,7 @@
 ├── settings.json.example
 ├── settings.local.json.example
 └── VERSION
-.codex/                                                   # Codex CLIハーネスのエンジン(生成物・上書き対象)
+.codex/                                                   # Codex CLIのエンジン(生成物。ローカルのactive hookは更新時も保持)
 ├── agents/                                               # Codex subagent定義(14 role、.md + .toml)
 │   ├── amadeus-<role>-agent.md
 │   └── amadeus-<role>-agent.toml
@@ -113,8 +113,8 @@
 │       └── templates/
 ├── config.toml                                           # Codexプロジェクト設定(必要時のみ)
 ├── config.toml.example
-├── hooks.json                                            # Codex hook登録
-├── hooks.json.example
+├── hooks.json                                            # Codex hookのactive file(per-clone、可変、gitignore)
+├── hooks.json.example                                    # Amadeus hookのcanonical(生成物、コミット対象)
 ├── trust-seed.toml                                       # hook trust事前投入用
 └── VERSION
 amadeus/
@@ -154,11 +154,13 @@ amadeus/
 | パス | 役割 | 手編集 | git |
 |---|---|---|---|
 | `.claude/` | Claude Code向けの実行エンジン。`dist/claude/` から昇格される生成物 | 原則しない。`core/` または `harness/claude/` を編集して再生成 | コミット |
-| `.codex/` | Codex CLI向けの実行エンジン。`dist/codex/` からコピー/昇格される生成物 | 原則しない。`core/` または `harness/codex/` を編集して再生成 | コミット |
+| `.codex/` | Codex CLI向けの実行エンジン。`dist/codex/` からコピー/昇格される生成物 | 生成物は原則として直接編集しない。ローカルのactive `hooks.json`はCodex連携が更新する場合がある | `.codex/hooks.json`を除いてコミット。active fileはgitignore |
 | `.agents/` | Codexがskillとして読む配布先。`$amadeus` と各stage runnerを含む | 原則しない。生成元を編集して再生成 | コミット |
 | `amadeus/` | AI-DLCの中立ワークスペース。space、intent、state、audit、artifact、team memoryを保持 | `memory/` と成果物は通常のレビュー対象。runtime一時ファイルは手編集しない | コミット + 一部gitignore |
 
 `agents/`、`amadeus-common/`、`hooks/` はエンジンの一部であり、AI-DLCが生成する成果物ではない。ユーザー/チームが継続的に育てる情報は、ハーネス別エンジン配下ではなく `amadeus/spaces/<space>/memory/` と `amadeus/spaces/<space>/knowledge/` に置く。
+
+`.codex/` 配下では、hookの所有者を意図的に分けている。生成してコミットする `.codex/hooks.json.example` がAmadeusのcanonicalであり、gitignoreする `.codex/hooks.json` がクローンごとのactive fileである。Codex連携がactive fileへAmadeus以外のentryを追加したり、整形を変えたりしても、tracked canonicalには影響しない。
 
 ### 1.2 正規のワークスペース設定
 

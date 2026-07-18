@@ -21,7 +21,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
@@ -35,6 +35,18 @@ function* walk(dir: string): Generator<string> {
     if (statSync(full).isDirectory()) yield* walk(full);
     else yield full;
   }
+}
+
+function divergentCoreTypeScriptFiles(subdir: string): string[] {
+  const dstDir = join(CODEX_DST, subdir);
+  return [...walk(dstDir)]
+    .filter((file) => file.endsWith(".ts"))
+    .filter((file) => !/amadeus-codex-[^/]+\.ts$/.test(file))
+    .filter((file) => {
+      const rel = file.slice(dstDir.length + 1);
+      return !readFileSync(file).equals(readFileSync(join(CLAUDE_SRC, subdir, rel)));
+    })
+    .map((file) => `${subdir}/${file.slice(dstDir.length + 1)}`);
 }
 
 describe("t150 dist/codex packaging parity + drift guard", () => {
@@ -55,17 +67,7 @@ describe("t150 dist/codex packaging parity + drift guard", () => {
     // tools/ + hooks/ carry the deterministic core. The codex adapter
     // (authored shell, amadeus-codex-*.ts) has no claude counterpart and is
     // exempt; everything else must match its source byte-for-byte.
-    const divergent: string[] = [];
-    for (const sub of ["tools", "hooks"]) {
-      const dstDir = join(CODEX_DST, sub);
-      for (const file of walk(dstDir)) {
-        if (!file.endsWith(".ts")) continue;
-        if (/amadeus-codex-[^/]+\.ts$/.test(file)) continue;
-        const rel = file.slice(dstDir.length + 1);
-        const src = join(CLAUDE_SRC, sub, rel);
-        if (!readFileSync(file).equals(readFileSync(src))) divergent.push(`${sub}/${rel}`);
-      }
-    }
+    const divergent = ["tools", "hooks"].flatMap(divergentCoreTypeScriptFiles);
     expect(divergent).toEqual([]);
   });
 
@@ -116,6 +118,12 @@ describe("t150 dist/codex packaging parity + drift guard", () => {
     // Matchers per the verified tool-name map.
     const postMatchers = wiring.hooks.PostToolUse.map((g) => g.matcher).sort();
     expect(postMatchers).toEqual(["Bash", "apply_patch", "update_plan"]);
+    expect(
+      Object.values(wiring.hooks).reduce(
+        (count, groups) => count + groups.length,
+        0,
+      ),
+    ).toBe(9);
     // Every registration routes through the single authored adapter.
     for (const groups of Object.values(wiring.hooks)) {
       for (const g of groups) {
@@ -124,6 +132,35 @@ describe("t150 dist/codex packaging parity + drift guard", () => {
         }
       }
     }
+  });
+
+  test("5b: package ships canonical/helper/ignore but never the local active hooks file", () => {
+    expect(existsSync(join(CODEX_DST, "hooks.json"))).toBe(false);
+    expect(existsSync(join(CODEX_DST, "hooks.json.example"))).toBe(true);
+
+    const helperSourceDir = join(
+      REPO_ROOT,
+      "packages",
+      "framework",
+      "harness",
+      "codex",
+      "tools",
+    );
+    for (const file of [
+      "amadeus-codex-hooks.ts",
+      "amadeus-codex-hooks-contract.ts",
+      "amadeus-codex-hooks-migration.ts",
+    ]) {
+      expect(readFileSync(join(CODEX_DST, "tools", file))).toEqual(
+        readFileSync(join(helperSourceDir, file)),
+      );
+    }
+
+    const ignoreLines = readFileSync(
+      join(REPO_ROOT, "dist", "codex", ".gitignore"),
+      "utf8",
+    ).split(/\r?\n/);
+    expect(ignoreLines).toContain(".codex/hooks.json");
   });
 
   test("6: the SHIPPED trust-seed.toml is exactly what emit.ts's trustEntries() produces", () => {
