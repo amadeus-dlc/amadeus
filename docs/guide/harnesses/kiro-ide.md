@@ -92,7 +92,7 @@ You will see a "Run Command Hook" line in chat each time one fires.
 | Gates & questions | `AskUserQuestion` widget | Numbered prose options (reply with a number); the questions FILE with `[Answer]:` tags stays the source of truth |
 | Statusline | Current stage + model + context % | Not available — use `/amadeus --status` and the progress line at each gate |
 | Subagent stages (2.1, 3.5) | `Task` tool | Kiro `subagent` tool → `amadeus-developer-agent` / `amadeus-architect-agent`; the IDE reads a delegate's tool grants from the agent `.md` frontmatter (`tools:`), injected at packaging - the agent-v1 JSONs are CLI-only |
-| Construction swarm | Parallel `Task` floor, optional ultracode Workflow | Subagent fan-out only; `AMADEUS_USE_SWARM=1` is announced as a no-op |
+| Construction swarm | subagent floor when unset; `claude-ultra` = inline Dynamic Workflow; `codex-ultra` loud-degrades to the floor; the legacy `1` / any unknown value is rejected fail-closed | Subagent fan-out only; `claude-ultra` / `codex-ultra` loud-degrade to the floor (`SWARM_DEGRADED`); the legacy `1` / any unknown value is rejected fail-closed |
 | Session audit events | `SESSION_STARTED/RESUMED/ENDED`, `SESSION_COMPACTED` | `SESSION_STARTED` / `SESSION_ENDED` (no pre-compaction event) |
 | MCP servers | None shipped by default | None shipped |
 

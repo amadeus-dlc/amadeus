@@ -364,7 +364,7 @@ Pre-registered for v0.6.0 in milestone 2. All six swarm events now emit from the
 | `SWARM_UNIT_FAILED` | `tools/amadeus-swarm.ts` | A swarm Unit failed the `finalize` re-verify (not claimed, claimed-but-red, or tampered) |
 | `SWARM_BATON_RETURNED` | `tools/amadeus-swarm.ts` | A swarm Unit returned the baton to the conductor for orchestrator-mediated coordination |
 | `SWARM_COMPLETED` | `tools/amadeus-swarm.ts` | All Units in the batch finished (converged or failed); batch closed |
-| `SWARM_DEGRADED` | `tools/amadeus-swarm.ts` | `AMADEUS_USE_SWARM=1` was requested but the Workflow tool was unavailable; the conductor ran the subagent floor |
+| `SWARM_DEGRADED` | `tools/amadeus-swarm.ts` | An ultra value (`claude-ultra` or `codex-ultra`) was requested on a harness that is not its native one, so the conductor loud-degraded to the subagent floor (the legacy `1` is fail-closed, not degraded) |
 
 Every event in the taxonomy is either backed by a real emitter or marked `Reserved (v0.4.0 PR N)` / `Reserved (v0.5.0 PR N)` / `Reserved (v0.6.0 PR N)` for a pre-registered upcoming consumer. The drift test enforces both halves — the `Reserved` early-skip applies only while the cell literally contains "Reserved"; consumer PRs replace it with the real emitter file path in the same commit they ship the emit call.
 
