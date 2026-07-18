@@ -5281,3 +5281,689 @@
 **Timestamp**: 2026-07-18T02:07:46Z
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:12:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: a8f2361f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:12:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: a8f2361f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+**Duration ms**: 1220
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:12:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 00d79d4b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:12:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 00d79d4b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+**Duration ms**: 957
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:12:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: e7ae745b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:12:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: e7ae745b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+**Duration ms**: 1157
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:12:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: a4f0ddf2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:12:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: a4f0ddf2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+**Duration ms**: 526
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:12:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9c942151
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:12:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9c942151
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+**Duration ms**: 1217
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:12:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 92a066ad
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:12:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 92a066ad
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+**Duration ms**: 517
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:13:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6ab99234
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:13:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6ab99234
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+**Duration ms**: 1171
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:13:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: bb2045b3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:13:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: bb2045b3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+**Duration ms**: 499
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:13:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6475ad91
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:13:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6475ad91
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+**Duration ms**: 1195
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:13:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7ac1b19e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:13:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7ac1b19e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+**Duration ms**: 524
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:13:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5c54d73c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:13:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5c54d73c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+**Duration ms**: 1191
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:13:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0bf22cb5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:13:26Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0bf22cb5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+**Duration ms**: 503
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:13:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 58d858fa
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:13:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: 58d858fa
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+**Duration ms**: 1169
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:13:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8313c441
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:13:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8313c441
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+**Duration ms**: 491
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:14:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 684bd75f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/tests/e2e/t134-swarm-referee.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:14:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: 684bd75f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/tests/e2e/t134-swarm-referee.test.ts
+**Duration ms**: 1387
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:14:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7b8d74e0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/tests/e2e/t134-swarm-referee.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:14:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7b8d74e0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/tests/e2e/t134-swarm-referee.test.ts
+**Duration ms**: 457
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:17:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: aa85b0b9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/tests/unit/t233-driver-resolution.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:17:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: aa85b0b9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/tests/unit/t233-driver-resolution.test.ts
+**Duration ms**: 1157
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:17:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3627757b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/tests/unit/t233-driver-resolution.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:17:46Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3627757b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/tests/unit/t233-driver-resolution.test.ts
+**Duration ms**: 450
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:17:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: f002d4c8
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/tests/unit/t233-driver-resolution.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:17:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: f002d4c8
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/tests/unit/t233-driver-resolution.test.ts
+**Duration ms**: 1205
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:17:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 601d27a2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/tests/unit/t233-driver-resolution.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:17:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: 601d27a2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/tests/unit/t233-driver-resolution.test.ts
+**Duration ms**: 494
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:17:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: e79d17ad
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/tests/unit/t233-driver-resolution.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:18:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: e79d17ad
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/tests/unit/t233-driver-resolution.test.ts
+**Duration ms**: 1181
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:18:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3455e6b8
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/tests/unit/t233-driver-resolution.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:18:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3455e6b8
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/tests/unit/t233-driver-resolution.test.ts
+**Duration ms**: 470
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:27:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4a76e4bf
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:27:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4a76e4bf
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+**Duration ms**: 1185
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:27:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 614354f4
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:27:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 614354f4
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+**Duration ms**: 519
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:27:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 611f5697
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:27:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 611f5697
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+**Duration ms**: 1184
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:27:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: c82c9bc9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:27:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: c82c9bc9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+**Duration ms**: 531
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:37:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: 43742ba8
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:37:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 43742ba8
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+**Duration ms**: 1388
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:37:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 63e5eff9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:37:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 63e5eff9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+**Duration ms**: 504
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:37:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 581a29ed
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:37:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: 581a29ed
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+**Duration ms**: 1208
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-18T02:37:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 48bb056c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-18T02:37:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: 48bb056c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core/packages/framework/core/tools/amadeus-swarm.ts
+**Duration ms**: 511
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T02:44:56Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: a49637dc3cdd1d312
+**Message**: Bolt 1(driver-contract-core)の実装が完了しました。commit 済み・push は未実施です。\n\n## 変更ファイル一覧(commit `e131b003b`、Refs #1157)\n\n正本:\n- `packages/framework/core/tools/amadeus-swarm.ts` — DriverName 三値化(ultracode 撤去)、Harness
+
+---
+
+## Bolt Completed
+**Timestamp**: 2026-07-18T02:45:55Z
+**Event**: BOLT_COMPLETED
+**Bolt names**: driver-contract-core
+**Batch number**: 1
+**Bolt slug**: driver-contract-core
+
+---
+
+## State Merged
+**Timestamp**: 2026-07-18T02:45:55Z
+**Event**: STATE_MERGED
+**Bolt slug**: driver-contract-core
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-driver-contract-core
+**Source state hash**: 9ce1024d9f90fd874dc5ba38bb7ea4939b957b10703aa222e6015772661d37e2
+**Target state hash**: 2f82b62270a973e8e3a4def18dcd34a7e33b762b0d8277ce3f3b79f57516fea7
+**Conflict resolution**: clean
+
+---
+
+## Audit Merged
+**Timestamp**: 2026-07-18T02:45:55Z
+**Event**: AUDIT_MERGED
+**Bolt slug**: driver-contract-core
+**Entries Merged**: 0
+**Source Audit Hash**: 415cfa3a4a81c5fb02d156288e09add08aa8dc0421ee91689769074bd896a452
+**Fork Boundary**: 169271
+
+---
+
+## Swarm Unit Converged
+**Timestamp**: 2026-07-18T02:45:55Z
+**Event**: SWARM_UNIT_CONVERGED
+**Batch number**: 1
+**Unit name**: driver-contract-core
+
+---
+
+## Swarm Completed
+**Timestamp**: 2026-07-18T02:45:55Z
+**Event**: SWARM_COMPLETED
+**Batch number**: 1
+**Converged count**: 1
+**Failed count**: 0
+
+---
