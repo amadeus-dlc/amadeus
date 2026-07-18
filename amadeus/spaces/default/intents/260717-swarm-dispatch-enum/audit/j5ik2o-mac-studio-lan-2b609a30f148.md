@@ -2774,3 +2774,45 @@
 **Message**: 進めて
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T11:46:11Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a0fa6cf3362eab198
+**Message**: 進めて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T11:46:21Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aee51cd05c0ca6fd3
+**Message**: #1219はマージしていいよ
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-18T11:46:50Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aa1b626887cdcc15b
+**Message**: B&T終わったらdelegateのaskよろしく
+
+---
+
+## Standing Grant Issued
+**Timestamp**: 2026-07-18T11:46:57Z
+**Event**: GRANT_ISSUED
+**Grant Id**: c9a08899
+**Scope**: stage-gates
+**Expires At**: 2026-07-18T15:46:57.609Z
+**Includes Phase Boundary**: false
+**Issuer Space**: default
+**Issuer Intent**: 260717-swarm-dispatch-enum
+**Issuer Shard**: j5ik2o-mac-studio-lan-2b609a30f148.md
+**Issuer Human Ts**: 2026-07-18T11:25:12Z
+**User Input**: ユーザー常任指示(2026-07-18『常任ゲート有効に』)の定期更新 — 298b725a 失効(09:45Z)後の再発行。phase boundary/PR merge 除外
+
+---
