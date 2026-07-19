@@ -4426,3 +4426,11 @@
 **Duration ms**: 37
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-19T23:08:49Z
+**Event**: WORKFLOW_PARKED
+**Stage**: units-generation
+**Timestamp**: 2026-07-19T23:08:49Z
+
+---
