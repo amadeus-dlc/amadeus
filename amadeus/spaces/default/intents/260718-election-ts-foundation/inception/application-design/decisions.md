@@ -17,10 +17,10 @@
 - **Consequences**: git 管理・checkpoint コミット対象(C-07)。`.gitignore` 変更不要(amadeus/ ツリーは既定で version 管理)
 - **Alternatives Rejected**: intent record 配下 — 非紐づき選挙の居場所がない。リポジトリ直下の専用 dir — space 多重化(将来)と不整合
 
-## ADR-3: 状態機械は6状態の指令ループ(FR-0 の実現形)
+## ADR-3: 状態機械は7状態の指令ループ(FR-0 の実現形 — E-ETF-FD2 Q2=A 追補で 6→7)
 
 - **Context**: directive-driven(D-13)— AI 無知識で完走
-- **Decision**: 選挙状態 = draft → open → collecting → tallied → recorded(+ any 時点の hold(要人間))。CLI `next --election <id>` が現状態から型付き指令(distribute/collect-wait/tally-ready/render/verify/done、hold は理由型付き)を返し、`report` が遷移をコミットする(amadeus-orchestrate の next/report ループへの構造的類推 — 直接の先例文書はなく、実在参照は architecture.md:32-40 の invoke-swarm directive と component-inventory.md swarm 節の orchestrate/referee 分離実測)
+- **Decision**: 選挙状態 = draft → open → collecting → tallied → **rendered** → recorded(+ any 時点の hold(要人間))— **7状態**(申告付き追補: E-ETF-FD2 Q2=A ユーザー裁定 2026-07-19。旧記載「6状態」は指令6種と状態5非hold値の個数矛盾を FD reviewer が鳩の巣論法で検出したため追補)。CLI `next --election <id>` が現状態から型付き指令(distribute/collect-wait/tally-ready/render/verify/done、hold は理由型付き)を返し、`report` が遷移をコミットする(amadeus-orchestrate の next/report ループへの構造的類推 — 直接の先例文書はなく、実在参照は architecture.md:32-40 の invoke-swarm directive と component-inventory.md swarm 節の orchestrate/referee 分離実測)
 - **Consequences**: SKILL は指令の転送のみ(FR-8 受け入れの構造前提)。手順知識の正本はこの状態機械+テスト
 - **Alternatives Rejected**: (a) サブコマンド直叩き(open→notify→…を AI が順序記憶)— FR-0 に反する(手順知識が AI 側に残る) (b) 全自動デーモン — 人間判断点(開票タイミング裁量・hold)を殺す(C-01 違反)
 

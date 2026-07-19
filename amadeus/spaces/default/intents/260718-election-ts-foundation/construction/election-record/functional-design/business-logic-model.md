@@ -5,9 +5,12 @@
 ## 記録生成フロー(C3 — FR-5a)
 
 ```
-renderGoaLine(electionCode, ballots):
+renderGoaLine(code: GoaLineCode, ballots):
   freq = GoA 値ごとの度数(受理済み票のみ、後着は別集計)
-  出力 = "GoA[E-<code>]: 1x<n> 2x<n> …"(度数 0 の値は省略 — 既存 team.md 実例の様式)
+  出力 = "GoA[<code>]: 1x<n> 2x<n> … 8x<n>" — **全8値を常時出力(度数0含む・省略しない)**
+    (旧起草の0省略は reviewer の実 parseGoaLine 実行で反証 — 8 bin 必須。実測導出の是正)
+  code は branded 型 GoaLineCode(^E-[A-Z0-9]+$ を parse で fail-closed — Q3=A 裁定。
+    複節コード(E-TPR-RE 等)は呼出側が英数圧縮形を与える。parseGoaLine のスキーマ変更なし = NFR-4 維持)
   制約: norm-metrics.ts parseGoaLine(:688)の round-trip で byte 互換(FR-5a 受け入れ)
 renderTimeline(events):
   "配信 <t> → <voter> <t> → … → 開票 <t> → 後着 <voter> <t>" の1行(persist-vote-timeline-field 様式)

@@ -10,6 +10,7 @@
 | next(hold) | hold 指令 JSON(reason+提示文) | — | 0(指令発行自体は成功) |
 | report(整合) | `{"committed": …}` | — | 0 |
 | report(不整合) | — | `{"error": "invalid-transition …"}` | 1 |
+| report(hold-resolved、resolution 付き) | `{"committed": …, "resumedTo": …}` | — | 0 |
 | 各 verb 成功/失敗 | JSON / — | — / `{"error": …}` | 0 / 1 |
 | 未知 verb・引数不足 | — | usage 1行 | 1 |
 

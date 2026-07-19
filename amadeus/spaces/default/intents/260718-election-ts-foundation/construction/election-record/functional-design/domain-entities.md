@@ -6,7 +6,8 @@
 
 | 型 | 形 | 由来 |
 |---|---|---|
-| `GoaFreq` | `Map<Goa, number>` 相当の度数(再計算関数から導出 — 保存しない) | FR-5a |
+| `GoaFreq` | `Map<Goa, number>` 相当の度数(再計算関数から導出 — 保存しない。Goa 型は U1 定義の 1-8 ブランド整数) | FR-5a |
+| `GoaLineCode` | `^E-[A-Z0-9]+$` の branded 型(スマートコンストラクタで fail-closed — Q3=A 裁定。parseGoaLine の受理域と一致) | FR-5a、C-08 |
 | `VerifyFinding` | `{ kind: "reservation-count" \| "ballot-count" \| "freq-mismatch" \| "timeline-order"; expected; actual }` | FR-6 |
 | `VerifyResult` | `Result<void, VerifyFinding[]>`(全 finding を列挙 — 最初の1件で打ち切らない) | FR-6b |
 | `TimelineEvent` | `{ kind: "distributed" \| "ballot" \| "tally" \| "late"; at: string; voter?: VoterId }` — 記帳実体は U2 所有、型は U1/U3 共有 | FR-2b/5a |
