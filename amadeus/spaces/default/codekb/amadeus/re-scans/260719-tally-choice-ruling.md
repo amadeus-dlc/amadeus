@@ -118,7 +118,7 @@ org.md `gradients-of-agreement-scale` の 8段(1 全面支持 / 2 軽微留保 /
 
 ## tally テスト blast radius(absence-claim-grep-verify)
 
-`tally(` の全呼び出しを全テストで grep(実測、7 箇所すべて `tests/unit/t234-election-model.test.ts`):
+`tally(` の全呼び出しを全テストで grep(実測、**8 箇所・呼び出し9回**すべて `tests/unit/t234-election-model.test.ts` — 当初「7 箇所」と誤記、RA reviewer M1 指摘で列挙(8行)からの機械再計算により是正。:119 は1行に2呼び出し):
 
 - :91 favor-majority → adopted(全 choiceInternalNo=1、GoA 1/2)
 - :102 GoA 8 → hold block
