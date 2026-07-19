@@ -17,6 +17,7 @@
 - **Stages to Skip**: 1.2 (market-research), 1.5 (team-formation), 1.6 (rough-mockups), 2.4 (user-stories), 2.5 (refined-mockups), 3.4 (infrastructure-design), 3.7 (ci-pipeline), 4.1 (deployment-pipeline), 4.2 (environment-provisioning), 4.3 (deployment-execution), 4.4 (observability-setup), 4.5 (incident-response), 4.6 (performance-validation), 4.7 (feedback-optimization)
 - **Depth**: Standard
 - **Test Strategy**: Comprehensive
+- **Construction Autonomy Mode**: autonomous
 
 ## Workspace State
 - **Project Root**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260718-073253-15ea/leader

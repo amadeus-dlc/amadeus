@@ -9049,3 +9049,82 @@
 **Duration ms**: 36
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T07:59:02Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: af466ad8875f9535f
+**Message**: スケルトン確認しました。マージ承認します
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-19T08:14:26Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state set Construction Autonomy Mode autonomous
+**Error**: Invalid field=value pair: Construction Autonomy Mode
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-19T08:14:30Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state set
+**Error**: Usage: amadeus-state.ts set <field=value> ...
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-19T08:14:30Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state set Construction Autonomy Mode=autonomous
+**Error**: Field not found in state file: "Construction Autonomy Mode". Cannot update — refusing to silently no-op.
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-19T08:14:42Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state
+**Error**: Unknown subcommand: undefined. Valid: get, set, set-skeleton-stance, checkbox, count, advance, finalize, complete-workflow, gate-start, approve, delegate-approval, delegate-rejection, grant-standing-delegation, revoke-standing-delegation, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark, declare-docs-only
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-19T08:14:46Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state set-skeleton-stance
+**Error**: Usage: amadeus-state.ts set-skeleton-stance <on|off|scope-dependent>
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-19T08:14:54Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-bolt
+**Command**: amadeus-bolt set-autonomy autonomous
+**Error**: Missing --mode <autonomous|gated>
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-19T08:14:57Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-bolt
+**Command**: amadeus-bolt set-autonomy --mode autonomous
+**Error**: State update failed: Field not found in state file: "Construction Autonomy Mode". Cannot update — refusing to silently no-op.
+
+---
+
+## Autonomy Mode Set
+**Timestamp**: 2026-07-19T08:15:27Z
+**Event**: AUTONOMY_MODE_SET
+**Mode**: autonomous
+
+---
