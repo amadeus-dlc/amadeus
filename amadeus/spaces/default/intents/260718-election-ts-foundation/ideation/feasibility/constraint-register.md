@@ -10,7 +10,7 @@
 | C-02 | blind 性 — 開票前に票が他投票者へ可視化されない | election-protocol(アンカリング防止) | 票の輸送は leader 宛 agmsg 私秘(Q3=A)。開票前の票ファイル共有禁止 |
 | C-03 | 留保転記の完全性 — GoA 2/3/6 票の留保は裁定・persist 文へ全数転記 | citation-reservation-preservation ほか | 構造化票形式に留保欄を必須フィールド化(Q6=A) |
 | C-04 | 記録は実行結果由来のみ — 集計・度数・タイムラインの手書き転記禁止 | P2/検証劇場 Forbidden | persist 文・GoA 行はツール生成のみ。手編集は検出対象 |
-| C-05 | チームモード限定 — ソロモードは選挙自体を適用しない | Operating Modes(既決) | ツールは team 判定外で fail-closed(誤用防止) |
+| C-05 | 【D-12 で改定 2026-07-19】輸送抽象 — team=agmsg メンバー投票 / solo=spawn サブエージェント投票。票に voter 種別(member/subagent)を必須属性として明記 | 当初「チームモード限定」→ ユーザー裁定 D-12(decision-log)で改定。ソロ規定「利用可能な独立レビュー手段を使う」の選挙への形式化 | 票構造・開票・記録は両モード共通。サブエージェントの構造的隔離が blind 性を無償保証 |
 | C-06 | 配布外(チーム内ツール) — framework dist へ含めない | Q1=A 裁定 | gh 依存可(scripts/ 境界)、Bun-only 制約は当面非適用。製品化時は再設計判断 |
 | C-07 | ファイル正本 — 選挙定義・開票記録は git 管理ファイルが唯一の正本、agmsg は短通知のみ | Q2=A 裁定 | agmsg-git-evidence-split の構造的解消。truncate クラス排除 |
 | C-08 | 既存様式との互換 — persist 文の GoA 行・PM-cid 行は `parseGoaLine`/`parsePmCidLine` の既存スキーマに適合 | norm-metrics 実装(PR #1112 テスト固定) | 蒸留ラウンドの下流消費を壊さない |

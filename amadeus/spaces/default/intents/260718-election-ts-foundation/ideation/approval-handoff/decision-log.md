@@ -17,6 +17,7 @@
 | D-09 | feasibility Q3 | blind 性 | A: ハイブリッド(票は leader 宛私秘→開票時一括ファイル化) | 同上 |
 | D-10 | scope-definition Q1 | MoSCoW | A: 全部 Must(Won't 厳格除外) | 2026-07-19T00:52:00Z |
 | D-11 | approval-handoff | ideation 最終ゲート | Approve(Go 条件付き) | 2026-07-19T01:08:00Z |
+| D-12 | (Inception 進入後の追加裁定) | ソロ選挙 | 取り込む — 輸送抽象(team=agmsg メンバー / solo=spawn サブエージェント)+票に voter 種別(member/subagent)を属性明記。裁定の重みの解釈は消費側(人間/PM)に委ねる。C-05 は本裁定により改定(申告付き) | 2026-07-19T01:35:00Z |
 
 ## 実施上の決定(ユーザー指示由来)
 
