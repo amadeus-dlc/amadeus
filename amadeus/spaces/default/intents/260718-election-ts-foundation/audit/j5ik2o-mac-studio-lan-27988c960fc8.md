@@ -10695,3 +10695,129 @@
 **Duration ms**: 33
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:19:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8a89f5ac
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260718-073253-15ea/engineer-1-bolt1/tests/e2e/t241-election-machine-executor.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:19:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8a89f5ac
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260718-073253-15ea/engineer-1-bolt1/tests/e2e/t241-election-machine-executor.test.ts
+**Duration ms**: 1495
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:19:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8196f9c0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260718-073253-15ea/engineer-1-bolt1/tests/e2e/t241-election-machine-executor.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:19:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8196f9c0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260718-073253-15ea/engineer-1-bolt1/tests/e2e/t241-election-machine-executor.test.ts
+**Duration ms**: 526
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:35:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6c93d69e
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-cli/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:35:18Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6c93d69e
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-cli/code-generation/code-generation-plan.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:35:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: 56ea3f18
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-cli/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:35:18Z
+**Event**: SENSOR_PASSED
+**Fire id**: 56ea3f18
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-cli/code-generation/code-generation-plan.md
+**Duration ms**: 31
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:35:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: 47d61c92
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-cli/code-generation/code-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:35:18Z
+**Event**: SENSOR_PASSED
+**Fire id**: 47d61c92
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-cli/code-generation/code-summary.md
+**Duration ms**: 31
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:35:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: 56ab0f2d
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-cli/code-generation/code-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:35:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: 56ab0f2d
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-cli/code-generation/code-summary.md
+**Duration ms**: 34
+
+---
