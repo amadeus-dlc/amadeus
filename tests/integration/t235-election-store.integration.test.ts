@@ -124,6 +124,10 @@ describe("t235 election-store", () => {
     expect(mat.ok).toBe(false);
     if (!mat.ok) expect(mat.error).toBe("io-error");
     rmSync(join(root, "E-STORE-1", "ballots"));
+    // (4) writeStoreFile catch: tmp write into a missing parent dir throws
+    const w = writeStoreFile(join(root, "no-such-dir", "x.json"), "DATA");
+    expect(w.ok).toBe(false);
+    if (!w.ok) expect(w.error).toBe("io-error");
   });
 
   test("materialize fixes the ballot set and books a tallied timeline event", () => {

@@ -67,6 +67,12 @@ describe("t234 election-model", () => {
     const broken = Ballot.parse({ voter: "alice" }, e.value);
     expect(broken.ok).toBe(false);
     if (!broken.ok) expect(broken.error).toBe("parse-failure");
+    const stringChoice = Ballot.parse(
+      { ...ballot("alice", 1), choiceInternalNo: "1" },
+      e.value,
+    );
+    expect(stringChoice.ok).toBe(false);
+    if (!stringChoice.ok) expect(stringChoice.error).toBe("parse-failure");
   });
 
   test("tally: zero-confirm favor-majority path establishes adopted", () => {
