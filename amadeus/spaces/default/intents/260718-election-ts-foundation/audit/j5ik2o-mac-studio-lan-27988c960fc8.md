@@ -11642,3 +11642,28 @@
 **Details**: Scope: amadeus, 18 stages completed
 
 ---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-19T11:36:57Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-19T11:36:57Z
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-19T11:37:05Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state complete-workflow
+**Error**: Usage: amadeus-state.ts complete-workflow <completed-slug> [--reason <text>]
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-19T11:37:12Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state complete-workflow 260718-election-ts-foundation --reason All 18 stages completed; 5 Bolts landed (#1227 #1231 #1233 #1235 #1236); FR-0 two-layer proof done
+**Error**: Unknown stage: 260718-election-ts-foundation
+
+---
