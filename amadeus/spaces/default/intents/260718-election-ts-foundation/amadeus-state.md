@@ -8,7 +8,7 @@
 - **State Version**: 7
 - **Active Agent**: amadeus-developer-agent
 - **Worktree Path**:
-- **Bolt Refs**:
+- **Bolt Refs**: [election-record, election-store, election-transport]
 - **Practices Affirmed Timestamp**:
 
 - **Mirror Issue**: #1222
@@ -34,8 +34,6 @@
 - **Revision Count**: 0
 
 - **Skeleton Stance**: scope-dependent
-- **Parked**: 2026-07-19T07:34:54Z
-- **Parked At Stage**: code-generation
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -96,7 +94,7 @@ Per unit: [TBD]
 - **Current Stage**: code-generation
 - **Next Stage**: build-and-test
 - **Status**: Running
-- **Last Updated**: 2026-07-19T07:34:54Z
+- **Last Updated**: 2026-07-19T08:26:17Z
 
 ## Session Resume Point
 - **Last Completed Stage**: nfr-design
