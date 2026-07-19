@@ -10,7 +10,7 @@
 | 検査テスト(tests/ 配下) | 禁止語彙 grep(BR-K1)+4節構造検査(BR-K3)+委譲文実在(BR-K4)+vacuity guard(BR-K2) | テストのみ(本番コードなし — 検査対象は tracked 固定ファイルのため integration 層。business-rules.md BR-K1 のテスト列) |
 | 実演手順(build-and-test 時) | ノルム無参照 subagent への SKILL+ツールパス供給・記録保存(business-logic-model.md 実演層) | record 成果物1点(非 CI) |
 
-- U6 は実行コードを持たない(performance-requirements.md/scalability-requirements.md の N/A 根拠と一体)。検査の信頼性は reliability-design.md の両側 fixture 設計、語彙境界は security-design.md の canonical 定数に従う(tech-stack-decisions.md の選定と一体)
+- U6 は実行コードを持たない(performance-requirements.md/scalability-requirements.md の N/A 根拠と一体)。検査の信頼性要求は **reliability-requirements.md の両側実測+vacuity guard 要件**(設計詳細は姉妹成果物 reliability-design.md)、語彙境界は **security-requirements.md の禁止語彙・blind 要件**(設計詳細は security-design.md)へ遡る(tech-stack-decisions.md の選定と一体 — reviewer Major 是正: 要件ファイルへの直接参照を明示)
 - 依存方向: U6 → U5 のみ(unit-of-work-dependency.md:14 — SKILL は CLI の指令ループを転送するだけ。構造行 :29)
 
 ## テスト配置

@@ -8026,3 +8026,96 @@
 **Duration ms**: 33
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T06:07:53Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: u6-nfr-design-reviewer
+**Agent ID**: au6-nfr-design-reviewer-09c661d44516c286
+**Message**: team-lead へレビュー結果を送付しました。\n\nU6(election-skill)の nfr-design 成果物5点を、nfr-requirements iter2 READY版・functional-design 4点・unit-of-work-dependency.md と全数突き合わせた結果、**NOT-READY**(Critical 1件、Major 1件)と判定しました。\n\n
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T06:08:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8f663c93
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T06:08:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8f663c93
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/nfr-design/security-design.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T06:08:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4c7dbe8a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T06:08:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4c7dbe8a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/nfr-design/security-design.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T06:08:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2c09830c
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T06:08:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2c09830c
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/nfr-design/logical-components.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T06:08:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: ddb31e35
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T06:08:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: ddb31e35
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/nfr-design/logical-components.md
+**Duration ms**: 33
+
+---

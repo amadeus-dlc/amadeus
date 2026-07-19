@@ -12,4 +12,4 @@ security-requirements.md の要件を次で実現する:
 
 ## 配置境界
 
-- contrib/skills/ 配置(scalability-requirements.md の到達2経路実測と一体)— 配布面(dist/)への投影なしを performance-requirements.md の常設負荷なしと合わせ、フレームワーク面への影響ゼロ(reliability-requirements.md の CI 非常設と同根)
+- contrib/skills/ 配置(到達ハーネス Claude/Codex の2経路実測は **security-requirements.md 配置と到達面節** — reviewer Critical 是正: scalability-requirements.md への取り違えを訂正)— 配布面(dist/)への投影なしを performance-requirements.md の常設負荷なしと合わせ、フレームワーク面への影響ゼロ(reliability-requirements.md の CI 非常設と同根)
