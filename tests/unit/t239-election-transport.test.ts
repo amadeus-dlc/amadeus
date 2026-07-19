@@ -12,6 +12,7 @@ import {
   type ShortNotification,
   type VoterId,
   type VoterTransport,
+  normalizeAt,
 } from "../../scripts/amadeus-election-transport";
 
 describe("BR-T1 — ShortNotification is structurally blind", () => {
@@ -117,5 +118,14 @@ describe("distribute — per-voter results over the voter set", () => {
     const results = distribute(transport, "E-T1", ["alice", "ghost"], (v) => `/views/${v}.json`);
     expect(results[0].result.ok).toBe(true);
     expect(results[1].result).toEqual({ ok: false, error: "voter-unknown" });
+  });
+});
+
+describe("t239 timestamp contract (PR #1231 minor 3)", () => {
+  test("normalizeAt pins seconds-precision ISO-8601 UTC at the mint funnel", () => {
+    expect(normalizeAt("2026-07-19T00:01:00.123Z")).toBe("2026-07-19T00:01:00Z");
+    expect(normalizeAt("2026-07-19T09:01:00+09:00")).toBe("2026-07-19T00:01:00Z");
+    expect(normalizeAt("2026-07-19T00:01:00Z")).toBe("2026-07-19T00:01:00Z");
+    expect(normalizeAt("not-a-date")).toBe("not-a-date"); // unparseable stays visible
   });
 });

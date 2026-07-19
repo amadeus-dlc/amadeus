@@ -171,9 +171,10 @@ describe("t234 election-model", () => {
     for (const entry of v1.ordered) {
       expect(Object.keys(entry).sort()).toEqual(["displayNo", "internalNo", "label"]);
     }
-    // identity mapping: displayNo -> internalNo is a bijection over choices
-    const mapped = new Set(v1.ordered.map((o) => o.internalNo));
-    expect(mapped.size).toBe(6);
+    // identity mapping: displayNo -> internalNo is a bijection over choices —
+    // membership fixed, not just cardinality (PR #1231 review minor 2)
+    const mapped = [...new Set(v1.ordered.map((o) => o.internalNo))].sort();
+    expect(mapped).toEqual([1, 2, 3, 4, 5, 6]);
   });
 
   test("shuffleView: two voters can see different orders under a fixed seed pair", () => {
@@ -209,6 +210,9 @@ describe("t234 election-model", () => {
     const tallyTime = "2026-07-19T01:00:00Z";
     const onTime = mustParse(ballot("alice", 1));
     expect(classifyLate(tallyTime, onTime)).toBeNull(); // submittedAt 00:00 <= tally
+    // equal boundary (PR #1231 review minor 1): exactly-at-tally is NOT late
+    const atBoundary = mustParse({ ...ballot("alice", 1), submittedAt: tallyTime });
+    expect(classifyLate(tallyTime, atBoundary)).toBeNull();
     const late = mustParse({ ...ballot("alice", 1), submittedAt: "2026-07-19T02:00:00Z" });
     const classified = classifyLate(tallyTime, late);
     expect(classified?.late).toBe(true);

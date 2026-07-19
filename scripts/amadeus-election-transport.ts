@@ -81,6 +81,15 @@ export interface VoterTransport {
 
 // --- internal factory — the ONLY DeliveryRecord construction path -----------
 
+// Timestamp contract (PR #1231 review minor 3): `at` is normalized to
+// seconds-precision ISO-8601 UTC (`YYYY-MM-DDThh:mm:ssZ`) at the single mint
+// funnel, so classifyLate's lexicographic comparisons never mix precisions.
+export function normalizeAt(at: string): string {
+  const parsed = new Date(at);
+  if (Number.isNaN(parsed.getTime())) return at; // leave unparseable input visible
+  return parsed.toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
 function makeDeliveryRecord(
   voter: VoterId,
   transport: TransportKind,
@@ -89,7 +98,7 @@ function makeDeliveryRecord(
 ): DeliveryRecord {
   // The brand is phantom at runtime (Object.keys never sees the symbol), so
   // DeliveryRecord instances deep-equal by their four data fields (BR-T4).
-  return Object.freeze({ voter, at, transport, provenance }) as unknown as DeliveryRecord;
+  return Object.freeze({ voter, at: normalizeAt(at), transport, provenance }) as unknown as DeliveryRecord;
 }
 
 // --- blind payload builders (input = ShortNotification only) ----------------

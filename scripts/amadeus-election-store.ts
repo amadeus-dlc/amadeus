@@ -26,15 +26,12 @@ import {
   ok,
   type Result,
   type TallyResult,
+  type TimelineEvent,
 } from "./amadeus-election-model";
 
 export type StoreError = "exists" | "duplicate" | "not-found" | "io-error" | "corrupt";
 
-export type TimelineEvent = {
-  kind: "distributed" | "ballot" | "tallied" | "late";
-  at: string;
-  detail: string;
-};
+export type { TimelineEvent } from "./amadeus-election-model";
 
 export function electionsRoot(projectDir: string, space = "default"): string {
   return join(projectDir, "amadeus", "spaces", space, "elections");
@@ -157,6 +154,7 @@ export const Store = {
         kind: "late",
         at: ballot.submittedAt,
         detail: `late ballot recorded: ${ballot.voter}${late.reexamRequired ? " (reexam required)" : ""}`,
+        voter: ballot.voter,
       });
     }
     const next: LedgerFile = { ballots: [...ledger.ballots, ballot], late: ledger.late };
@@ -166,6 +164,7 @@ export const Store = {
       kind: "ballot",
       at: ballot.submittedAt,
       detail: `ballot ${ballot.kind === "amend" ? "amendment" : "accepted"}: ${ballot.voter}`,
+      voter: ballot.voter,
     });
   },
 

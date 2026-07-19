@@ -12,7 +12,16 @@
 // (NFR-4). Codes are constrained to parseGoaLine's own accept domain
 // (`^E-[A-Z0-9]+$`) at construction, fail-closed.
 
-import { type Ballot, type Election, type Goa, err, ok, type Result, type TallyResult } from "./amadeus-election-model";
+import {
+  type Ballot,
+  type Election,
+  err,
+  type Goa,
+  ok,
+  type Result,
+  type TallyResult,
+  type TimelineEvent,
+} from "./amadeus-election-model";
 
 // --- GoaLineCode -----------------------------------------------------------
 
@@ -48,13 +57,9 @@ export const GoaFreq = {
 
 // --- timeline & verify types (domain-entities declared columns) -------------
 
-// Ledger event type shared U1/U3 (the recording entity is U2-owned). `voter` is
-// a plain string here — Bolt 1 has no VoterId brand and Ballot.voter is string.
-export type TimelineEvent = {
-  kind: "distributed" | "ballot" | "tally" | "late";
-  at: string;
-  voter?: string;
-};
+// Canonical TimelineEvent now lives in the U1 model (Bolt 3 declared
+// reconciliation — U2 persists, U3 renders, both depend only on U1).
+export type { TimelineEvent } from "./amadeus-election-model";
 
 export type VerifyFinding = {
   kind: "reservation-count" | "ballot-count" | "freq-mismatch" | "timeline-order";
@@ -86,7 +91,7 @@ function timelineSegment(e: TimelineEvent): string {
       return `配信 ${e.at}`;
     case "ballot":
       return `${e.voter ?? "?"} ${e.at}`;
-    case "tally":
+    case "tallied":
       return `開票 ${e.at}`;
     case "late":
       return `後着 ${e.voter ?? "?"} ${e.at}`;

@@ -148,9 +148,9 @@ describe("t238 election-record", () => {
     const ballots = [ballot("alice", 1), ballot("bob", 6)];
     const goodFreq = GoaFreq.fromVotes(ballots.map((b) => b.goa));
     const goodTimeline: TimelineEvent[] = [
-      { kind: "distributed", at: "2026-07-19T00:00:00Z" },
-      { kind: "ballot", at: "2026-07-19T00:01:00Z", voter: "alice" },
-      { kind: "tally", at: "2026-07-19T00:02:00Z" },
+      { kind: "distributed", at: "2026-07-19T00:00:00Z", detail: "" },
+      { kind: "ballot", at: "2026-07-19T00:01:00Z", detail: "", voter: "alice" },
+      { kind: "tallied", at: "2026-07-19T00:02:00Z", detail: "" },
     ];
     // Happy path: consistent record verifies clean.
     expect(verifySelf(2, ballots, goodFreq, goodTimeline).ok).toBe(true);
@@ -167,9 +167,9 @@ describe("t238 election-record", () => {
 
     // Timeline regression: tally precedes the ballot.
     const badTimeline: TimelineEvent[] = [
-      { kind: "distributed", at: "2026-07-19T00:00:00Z" },
-      { kind: "tally", at: "2026-07-19T00:02:00Z" },
-      { kind: "ballot", at: "2026-07-19T00:01:00Z", voter: "alice" },
+      { kind: "distributed", at: "2026-07-19T00:00:00Z", detail: "" },
+      { kind: "tallied", at: "2026-07-19T00:02:00Z", detail: "" },
+      { kind: "ballot", at: "2026-07-19T00:01:00Z", detail: "", voter: "alice" },
     ];
     const badOrder = verifySelf(2, ballots, goodFreq, badTimeline);
     expect(badOrder.ok).toBe(false);
@@ -186,9 +186,9 @@ describe("t238 election-record", () => {
     const e = election();
     const ballots = [ballot("alice", 2, "軽微な留保"), ballot("bob", 1)];
     const timeline: TimelineEvent[] = [
-      { kind: "distributed", at: "2026-07-19T00:00:00Z" },
-      { kind: "ballot", at: "2026-07-19T00:01:00Z", voter: "alice" },
-      { kind: "tally", at: "2026-07-19T00:02:00Z" },
+      { kind: "distributed", at: "2026-07-19T00:00:00Z", detail: "" },
+      { kind: "ballot", at: "2026-07-19T00:01:00Z", detail: "", voter: "alice" },
+      { kind: "tallied", at: "2026-07-19T00:02:00Z", detail: "" },
     ];
     const first = renderPersistDraft(code("E-DET1"), e, ESTABLISHED, ballots, timeline);
     const second = renderPersistDraft(code("E-DET1"), e, ESTABLISHED, ballots, timeline);
@@ -206,8 +206,8 @@ describe("t238 election-record", () => {
       ballot("dave", 1),
     ];
     const timeline: TimelineEvent[] = [
-      { kind: "distributed", at: "2026-07-19T00:00:00Z" },
-      { kind: "tally", at: "2026-07-19T00:02:00Z" },
+      { kind: "distributed", at: "2026-07-19T00:00:00Z", detail: "" },
+      { kind: "tallied", at: "2026-07-19T00:02:00Z", detail: "" },
     ];
     const draft = renderPersistDraft(code("E-RESV1"), e, ESTABLISHED, ballots, timeline);
     const reservationLines = draft.split("\n").filter((l) => l.startsWith("- 留保("));
@@ -222,10 +222,10 @@ describe("t238 election-record", () => {
 
   test("renderTimeline formats the four event kinds in order", () => {
     const line = renderTimeline([
-      { kind: "distributed", at: "t0" },
-      { kind: "ballot", at: "t1", voter: "alice" },
-      { kind: "tally", at: "t2" },
-      { kind: "late", at: "t3", voter: "zoe" },
+      { kind: "distributed", at: "t0", detail: "" },
+      { kind: "ballot", at: "t1", detail: "", voter: "alice" },
+      { kind: "tallied", at: "t2", detail: "" },
+      { kind: "late", at: "t3", detail: "", voter: "zoe" },
     ]);
     expect(line).toBe("配信 t0 → alice t1 → 開票 t2 → 後着 zoe t3");
   });
