@@ -5180,3 +5180,287 @@
 **Timestamp**: 2026-07-19T23:15:05Z
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T23:15:24Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a54c74d55b347831b
+**Message**: (何もなし — leaderの裁定通知待ちで自動進行中のため)
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-19T23:16:25Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-19T23:16:25Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-19T23:16:25Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: delivery-planning
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-19T23:16:25Z
+**Event**: GATE_APPROVED
+**Stage**: delivery-planning
+**Grant Id**: 22ab851b
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-19T23:16:25Z
+**Event**: STAGE_COMPLETED
+**Stage**: delivery-planning
+**Details**: Stage Delivery Planning approved by gate
+
+---
+
+## Phase Completion
+**Timestamp**: 2026-07-19T23:16:25Z
+**Event**: PHASE_COMPLETED
+**From phase**: inception
+**To phase**: construction
+**Stages completed**: 13
+
+---
+
+## Phase Verification
+**Timestamp**: 2026-07-19T23:16:25Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: inception → construction
+
+---
+
+## Phase Start
+**Timestamp**: 2026-07-19T23:16:25Z
+**Event**: PHASE_STARTED
+**Phase**: construction
+**Scope**: amadeus
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-19T23:16:25Z
+**Event**: STAGE_STARTED
+**Stage**: functional-design
+**Agent**: amadeus-architect-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:17:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: a66f463b
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:17:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: a66f463b
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/functional-design/business-logic-model.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:17:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: b87a8a3e
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:17:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: b87a8a3e
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/functional-design/business-rules.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:17:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: f88f4ed5
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/functional-design/domain-entities.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-19T23:17:55Z
+**Event**: SENSOR_FAILED
+**Fire id**: f88f4ed5
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/functional-design/domain-entities.md
+**Detail path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/.amadeus-sensors/functional-design/required-sections-f88f4ed5.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:17:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 36c5854d
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/functional-design/frontend-components.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-19T23:17:55Z
+**Event**: SENSOR_FAILED
+**Fire id**: 36c5854d
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/functional-design/frontend-components.md
+**Detail path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/.amadeus-sensors/functional-design/required-sections-36c5854d.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:17:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: baa88132
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:17:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: baa88132
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/functional-design/business-logic-model.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:17:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7e42a66f
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:17:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7e42a66f
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/functional-design/business-rules.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:17:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: aa527817
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:17:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: aa527817
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/functional-design/domain-entities.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:17:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 91f36bbb
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/functional-design/frontend-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:17:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: 91f36bbb
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/functional-design/frontend-components.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:18:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: ea65baa4
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:18:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: ea65baa4
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/functional-design/domain-entities.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:18:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2ecbd55b
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/functional-design/frontend-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:18:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2ecbd55b
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/functional-design/frontend-components.md
+**Duration ms**: 35
+
+---
