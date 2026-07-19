@@ -1,6 +1,23 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(最新: 260718-hooks-config-conflict)
+## 実行メタデータ(最新: 260718-election-ts-foundation)
+
+- Date: 2026-07-19(Asia/Tokyo)
+- Observed at: HEAD `c2e4975ff2abe0290d899fdbd04b856213175c7a`(`git rev-parse HEAD` 実測)
+- Intent: `260718-election-ts-foundation`(選挙4類型ライフサイクルの決定的 TS 基盤 + user-invocable SKILL 薄ラップ。チーム内ツール・配布外(W-04)、ソロ選挙も輸送抽象で取込 = D-12。本 intent は ideation のみ)
+- Scope: `amadeus`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh(cid:reverse-engineering:c1、E-L63 の base 選定則)。base=`e9a001105`(全 `re-scans/*.md` observed のうち HEAD 祖先で距離最小。`git merge-base --is-ancestor e9a001105 HEAD` exit 0 実測、`git rev-list --count e9a001105..HEAD`=**69**。base は 260717-swarm-dispatch-enum の observed に一致)、observed=`c2e4975ff2abe0290d899fdbd04b856213175c7a`。直前の鮮度ポインタが指した 260718-hooks-config-conflict の observed `594ba21d…` は `--is-ancestor`=**exit 1(非祖先)**の並行 squash tip につき base 候補から除外(cid:reverse-engineering:rescan-base-ancestry / re-timestamp-merge-resolution)。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3、独立再照合で反証なし)
+- 測定 ref: 件数・行番号は observed HEAD `c2e4975ff` の実ファイル直読、区間変更は `git log e9a001105..HEAD -- <path>` で実測(measurement-ref-in-artifacts)。フォーカス面(配布チャンネル/選挙 parse 資産/agmsg/mirror 前例/SKILL packaging/選挙ノルム)の区間変更は軽微(mirror 8行 = #1172 の `cd9865194`、norm メモリ追記のみ)。増分の大宗は codex-hooks 移行でフォーカス面と非交差。
+- 現行結論: **反証課題「local overlay チャンネルが存在しない」は反証** — `contrib/skills/` overlay(`promote-self.ts:45-46,229-236`、ヘッダ :7-9)が正本→`.claude/skills`+`.agents/skills` を **dist 非対象**で投影(既存例 `amadeus-upstream-sync` = dist 0件・self-install 3件を `git ls-files` 実測)。W-04 整合の SKILL 配置経路。最有力実装前例は `scripts/amadeus-mirror.ts`(dist/投影いずれも非対象・`amadeus-lib` 決定的状態読取・判別ユニオン Result・exit code 契約)。GoA/PM parse 資産(`amadeus-norm-metrics.ts:157-161` + `parseGoaLine`:688/`parsePmCidLine`:704)は区間変更ゼロ・never-estimates で S-05 生成側と byte 互換の対(C-08)。選挙ノルム機械化対象=13 cid(In-Scope)、隣接6+は W-01/02/03 で out。ライフサイクル契約は区間無変更。
+- Per-intent record: `re-scans/260718-election-ts-foundation.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「最新: 260718-hooks-config-conflict」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、`re-scans/260718-election-ts-foundation.md`、`architecture.md`(「contrib overlay 配布チャンネル(dist バイパス)」節を配布境界に新設)。**他 body 7成果物(business-overview / code-structure / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment)は全点温存**(churn 回避 — 実質の新規知識は contrib overlay の存在1点のみ、他フォーカス面は区間無変更で本文と矛盾なし。cid:reverse-engineering:c1)
+- Delivery boundary: 実装、main merge/rebase、Issue close、PR 作成・更新は本 scan で実施していない。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260718-hooks-config-conflict)
 
 - Date: 2026-07-18(Asia/Tokyo)
 - Observed at: HEAD `594ba21d636218558b711b371c286f16731fb081`（`git rev-parse HEAD` 実測）

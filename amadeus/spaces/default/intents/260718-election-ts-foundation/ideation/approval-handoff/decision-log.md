@@ -18,10 +18,12 @@
 | D-10 | scope-definition Q1 | MoSCoW | A: 全部 Must(Won't 厳格除外) | 2026-07-19T00:52:00Z |
 | D-11 | approval-handoff | ideation 最終ゲート | Approve(Go 条件付き) | 2026-07-19T01:08:00Z |
 | D-12 | (Inception 進入後の追加裁定) | ソロ選挙 | 取り込む — 輸送抽象(team=agmsg メンバー / solo=spawn サブエージェント)+票に voter 種別(member/subagent)を属性明記。裁定の重みの解釈は消費側(人間/PM)に委ねる。C-05 は本裁定により改定(申告付き) | 2026-07-19T01:35:00Z |
+| D-13 | (Inception 進入後の追加裁定) | directive-driven 原則 | 選挙プロトコルの正本は TS(状態機械+型+テスト)とし、AI は手順知識なしにツールの型付き指令の実行と報告のみで完走できる(amadeus-orchestrate の next/report ループと同型)。requirements の FR-0(最上位要件)の由来 | 2026-07-19T02:05:00Z |
+| D-14 | (実施範囲の改定) | Inception 継続 | 当初「ideation のみ」をユーザー指示により改定 — Inception を本セッションで継続実施(record への固定が目的)。Construction の実行判断は引き続きユーザー専権 | 2026-07-19T01:30:00Z |
 
 ## 実施上の決定(ユーザー指示由来)
 
-- 本 intent は ideation のみ実施し、approval-handoff 後に mirror Issue 同期(`scripts/amadeus-mirror.ts`)して park する
+- 本 intent は当初 ideation のみ実施の予定(approval-handoff 後に mirror Issue 同期して park)→ **D-14 で改定**: Inception を継続実施中。mirror #1222 は起票・同期済み
 - 明確化質問はユーザー直接裁定(エージェント選挙の本 intent 限定上書き)
 
 ## 未決の申し送り(将来 intent — intent-backlog F-01〜F-06 / X-01〜X-04 参照)
