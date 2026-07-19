@@ -5916,3 +5916,24 @@
 **Duration ms**: 35
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:29:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5b34df97
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/nfr-requirements/tech-stack-decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:29:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5b34df97
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/nfr-requirements/tech-stack-decisions.md
+**Duration ms**: 38
+
+---
