@@ -11367,3 +11367,27 @@
 **Duration ms**: 31
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T10:24:19Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a73325bd36df90b66
+**Message**: 進捗どうですか？
+
+---
+
+## Autonomy Mode Set
+**Timestamp**: 2026-07-19T10:24:33Z
+**Event**: AUTONOMY_MODE_SET
+**Mode**: gated
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-19T10:24:34Z
+**Event**: WORKFLOW_PARKED
+**Stage**: build-and-test
+**Timestamp**: 2026-07-19T10:24:34Z
+
+---
