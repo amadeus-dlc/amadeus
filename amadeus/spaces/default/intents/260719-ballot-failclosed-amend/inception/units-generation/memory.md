@@ -18,3 +18,5 @@
 
 - [2026-07-19T23:08Z] Deviation: Planning 工程(Step 3 質問ファイル+Step 5 プラン承認)を先行せず Generation 成果物を先に起草した順序逸脱 — reviewer iteration 1 Major が audit 実測(質問・GATE イベント 0件)で捕捉。是正: units-generation-questions.md を新設し E-OC1 判定(分解3根拠は全て上流の実測・裁定済み事実)を leader へ申告、承認をもってプラン承認を充足させる。原因: AD→UG の連続実行で分解結論が上流でほぼ確定済みという認知が工程スキップに滑った(stage ritual is ATOMIC への違反 — 結論の自明性は工程省略の根拠にならない、election-answer-after-ruling と同族)。
 - [2026-07-19T23:08Z] Interpretation: minor(W-1 ラベルの t241 束ね)を是正 — W-1 の対象は t238 のみ、t241 は components.md の非変更確認へ帰属を分離(mechanism-cite-verify-at-draft)。
+
+- [2026-07-19T23:14Z] Interpretation: iteration 2 = READY(両是正の閉包+退行なしを reviewer 実読確認)。Planning スキップは election-answer-after-ruling(手続きは結果が自明でも省略しない)の違反実例 — 新規学習でなく次回ローリング PM へ回付する分類。
