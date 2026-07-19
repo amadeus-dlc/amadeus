@@ -14,16 +14,24 @@
 
 `code-structure.md` が示すハーネス中立層 `packages/framework/core/tools/` 内で完結する機序:
 
-1. カーソル書き手は2箇所のみ — `amadeus-lib.ts:1729`(`setActiveIntentCursor`、intent 切替)と `:2147`(birth)。クリア経路はコードベースに存在しない。
+1. カーソルの書込経路は計3経路(レビュー是正で再列挙・実測): (i) `setActiveIntentCursor`(書込実体 `amadeus-lib.ts:1729`)を経由する birth(`birthIntent` 内の呼出 `:1921`)と intent 切替 verb(`amadeus-utility.ts:3083`) (ii) `migrateFlatLayout`(`amadeus-lib.ts:2031` 開始)内の直接 `writeFileSync`(`:2147` — flat レイアウト移行時のみ)。クリア経路はコードベースに存在しない。
 2. `handleCompleteWorkflow`(`amadeus-state.ts:1550-1680`)は registry status 前進(`updateIntentStatus(pd, dir, "complete")` :1668-1669)まで行うがカーソル非操作。
 3. 読み手 `activeIntent`(`amadeus-lib.ts:1059-1084`)は `records.includes(raw)`(:1074)のみで判定し registry status 不参照。**カーソル不在でも空間内 record が1件なら lone-intent fallback(:1080)で解決が継続する**(scratch 実証: 単一 intent ではカーソル削除だけで追記は止まらない)。
 4. 監査追記チェーン `appendAuditEntry`(`amadeus-audit.ts:281`)→ `ensureAuditFile`(:237)→ `auditFilePath`(`amadeus-lib.ts:2181`)→ `recordDir` → `activeIntent` の全段に status ゲートなし。追記到達フックは7つ(mint-presence, audit-logger, sensor-fire, session-start, session-end, validate-state, log-subagent — 主犯は mint-presence:73-74 の state 実在のみゲート)。
 
 ## 機能要件
 
-### FR-1: 修正方式【裁定待ち — E 選挙 Q1(A: complete 時 clear のみ / B: status ゲートのみ / C: 両方 / D: その他 / E: 修正しない)。裁定成立後に確定文を記入する】
+### FR-1: 修正方式 = C(clear+status ゲート防御層の両方)— E-CCCRA 裁定
 
-【裁定待ち】
+E-CCCRA(2026-07-19、favor 3-0 全会一致、GoA 1x1 2x2。record: `amadeus/spaces/default/elections/E-CCCRA/record.md`、取込コミット 4f636eea5)により **C: 両方** を採用する:
+
+- FR-1a(clear 側): `handleCompleteWorkflow` の完了処理で active-intent カーソルを解放する(set⇔clear 対称の回復)。解放は complete 時のみ(park 対象外 — E-OC1 Q2)。
+- FR-1b(防御層側): 参照先 intent の registry status が complete の場合、監査追記を停止する status ゲートを設ける(セッション横断・他クローン残留カーソル・lone-intent fallback を塞ぐ)。
+- 留保転記(留保必須票 2/2 全数 — E-CCCRA record verbatim):
+  - 留保(e2, GoA2): 「B の status ゲートは無音 no-op にせず stderr advisory(1行)を出す — サイレント失敗禁止(construction ガードレール)との整合のため。実装詳細は design 委譲で可。」
+  - 留保(e4, GoA2): 「B の status ゲートは監査追記チェーン(hooks→appendAuditEntry 経路)に限定して置き、activeIntent resolver 汎用には入れないこと — post-complete の正当読取(outcomes-pack/replay/session-cost が runtime summary 経由で activeIntent を使う: amadeus-runtime.ts:1198 実測)を壊さないため。同理由で D(resolver 除外)は回帰リスクあり」
+- 帰結: ゲートの配置は監査追記チェーン限定(resolver 非改変)を要件として確定し、advisory 文言・出力経路の詳細のみ design へ委譲する。
+- 引用注記(レビュー是正 — 選挙 record は既決のため非改変): 留保 e4 内の `amadeus-runtime.ts:1198` は `handleFragmentFork`(:1156 開始)内の呼出であり summary 経路ではない。post-complete 正当読取の実際の経路は `summarize()`(:964)等が `relativeRecordDir`/`recordDir` 経由で activeIntent を暗黙解決するものであり、留保の趣旨(resolver 汎用ゲートは post-complete 読取を壊す)はこの暗黙解決経路によって支持される。design 段は :1198 を根拠行として引き継がないこと。
 
 ### FR-2: 完了後追記の停止(受け入れ基準 — 方式に依らず不変)
 
@@ -66,5 +74,4 @@
 
 ## Open Questions
 
-- Q1 裁定(修正方式)— E 選挙結果待ち。
-- status ゲート採用時の配置(resolver / appendAuditEntry / 各フック)と判定不能時挙動 — 方式裁定後の設計段(bugfix スコープの次ステージ)で確定。
+- status ゲートの advisory 文言・出力経路の詳細と判定不能時挙動(NFR-3)— 設計段で確定(配置は監査追記チェーン限定で既決 — FR-1 留保 e4)。
