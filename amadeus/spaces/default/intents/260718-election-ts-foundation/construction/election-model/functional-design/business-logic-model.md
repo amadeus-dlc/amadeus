@@ -11,15 +11,15 @@
 | 1, 2, 3, 6 | 賛成側 | norm (i) |
 | 7, 8 | 反対側 | norm (i) |
 | 4 | 定足数除外(どちらにも数えない) | norm (v) |
-| 5 | 賛否に数えない。【E-ETF-FD Q1 裁定待ち — A: 2票以上で hold(discussion-needed) / B: 素通し(開票後の人間裁量)】 | norm (iii) |
+| 5 | 賛否に数えない。2票以上で hold(discussion-needed)(E-ETF-FD Q1=A 裁定) | norm (iii) |
 
 判定順序(先勝ち):
 
 ```
 tally(election, ballots):
   1. GoA 8 が1票以上         → hold(block)          # norm (iv) — 成立保留
-  2. 【Q1=A 採用時: GoA 5 が2票以上 → hold(discussion-needed)】
-  3. 有効票(賛成側+反対側)の定足数判定【E-ETF-FD Q2 裁定待ち — A: 有効票 0 で hold(quorum-short) / B: 過半着票閾値 / C: 実装時委任】
+  2. GoA 5 が2票以上         → hold(discussion-needed)  # Q1=A 裁定
+  3. 有効票(賛成側+反対側)= 0 → hold(quorum-short)   # Q2=A 裁定(最小定義・新定数なし)
   4. 賛成側 > 反対側          → established(adopted)
      反対側 > 賛成側          → established(rejected)
      同数                    → hold(tie)
@@ -49,14 +49,13 @@ Ballot.parse(raw, election):
   goa 数値 parse 失敗/1-8 外 → goa-out-of-range   # verification-numeric-parse: "five" 等は例外でなく型エラー
   goa ∈ {2,3,6} かつ reservation 空 → reservation-missing
   成功 → Ballot
-checkDuplicate(accepted, candidate):
-  同一 voter の既受理票あり(amend でない) → duplicate(拒否 — ADR-5)
+# 二重票 reject は C2 Store.appendBallot の所有(AD 契約 — U2 FD で詳細化)
 ```
 
-## Bolt 1 最小核(walking-skeleton 切り出し — bolt-plan)
+## Bolt 切り出しの参照(正本 = delivery-planning/bolt-plan.md — 本節は整合参照のみ)
 
-型一式+`Election.parse`+`Ballot.parse`(5クラス)+最小 `tally`(0件確認選挙 = zero-confirm: 賛成のみの単純確定パス)。シャッフル・early tally・後着・checkDuplicate の完全化は Bolt 2(model-complete)。
+Bolt 1(walking-skeleton)の U1 核 = **型一式+`Election.parse`+最小 `tally`(zero-confirm の単純確定パス)+trivial な票受理**(構文 parse のみ — 5クラス fail-closed 検証の完全化は bolt-plan どおり **Bolt 2**)。シャッフル・early tally・後着分類も Bolt 2(model-complete)。旧起草は 5クラス検証を Bolt 1 に含めており bolt-plan.md:11-12 と矛盾していた(reviewer Finding 1 是正 — bolt-plan 側を正とする)。
 
 ## エラー処理
 
-全 API は `Result<T, E>` を返す(throw しない — 判別ユニオン Result 既決)。エラーは呼び出し元(C6 CLI)が指令/exit code へ写像。
+**全ての fallible API(`Election.parse`/`Ballot.parse`)は `Result<T, E>` を返し throw しない**(判別ユニオン Result 既決)。全域関数(shuffleView/tally/canEarlyTally/classifyLate)は失敗しない設計のため素の値を返す(reviewer Finding 4 是正 — 過大主張の限定)。エラーは呼び出し元(C6 CLI)が指令/exit code へ写像。
