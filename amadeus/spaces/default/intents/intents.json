@@ -372,5 +372,12 @@
     "dirName": "260718-election-ts-foundation",
     "scope": "amadeus",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019f7947-d5c8-7490-a9f8-49258c1cbe56",
+    "slug": "mirror-productization",
+    "dirName": "260719-mirror-productization",
+    "scope": "amadeus",
+    "status": "in-flight"
   }
 ]
