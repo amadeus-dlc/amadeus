@@ -4555,3 +4555,24 @@
 **Duration ms**: 37
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:09:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: c28af2bd
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/inception/units-generation/units-generation-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:09:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: c28af2bd
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/inception/units-generation/units-generation-questions.md
+**Duration ms**: 40
+
+---
