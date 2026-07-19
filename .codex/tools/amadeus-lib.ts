@@ -1627,6 +1627,25 @@ export function readIntentRegistry(projectDir: string, space?: string): IntentRe
   return [];
 }
 
+// The registry status of the intent an audit append would target (#1248). The
+// append-side gate reads this to refuse post-complete appends: resolve the target
+// record the SAME way the audit shard does (activeIntent honours explicit intent
+// > cursor > lone-intent), then return its registry row's status. "unknown" for
+// every uncertainty — no record resolves, no registry, or no matching row — so
+// the gate only ever suppresses on a definite "complete" and never on a read
+// failure (the append continues, preserving the pre-#1248 behaviour for every
+// non-complete or unresolvable intent).
+export function intentStatusForAudit(projectDir: string, intent?: string, space?: string): string {
+  const dirName = activeIntent(projectDir, space, intent);
+  if (dirName === null) return "unknown";
+  // Plain loop (not .find) so no anonymous function is added — an inserted arrow
+  // would shift the complexity baseline's ordinal matching (complexity-baseline-ordinal).
+  for (const entry of readIntentRegistry(projectDir, space)) {
+    if (recordDirMatches(entry, dirName)) return entry.status;
+  }
+  return "unknown";
+}
+
 // --- The deterministic query layer: "what exists" (one source, two modes) ----
 //
 // listSpaces()/listIntents() are the single shared readers the verb handlers,
@@ -1729,6 +1748,22 @@ export function setActiveIntentCursor(projectDir: string, dirName: string, space
     writeFileSync(join(dir, ACTIVE_INTENT_POINTER), `${dirName}\n`, "utf-8");
   } catch {
     /* per-user cursor; best-effort */
+  }
+}
+
+// Clear the active-intent cursor when it still points at `dirName` (#1248). Read-
+// then-conditional-delete so a cursor already moved to another intent is left
+// untouched — only the exact intent that is completing releases its own pointer.
+// Best-effort and swallowed, mirroring setActiveIntentCursor: the cursor is
+// per-user state, never the source of truth (the registry is).
+export function clearActiveIntentCursor(projectDir: string, dirName: string, space?: string): void {
+  const cursor = join(intentsDir(projectDir, space), ACTIVE_INTENT_POINTER);
+  try {
+    if (readFileSync(cursor, "utf-8").trim() === dirName) {
+      rmSync(cursor);
+    }
+  } catch {
+    /* absent cursor or per-user write failure; best-effort */
   }
 }
 
