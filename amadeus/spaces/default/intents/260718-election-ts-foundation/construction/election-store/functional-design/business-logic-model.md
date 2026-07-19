@@ -6,7 +6,7 @@
 
 ```
 amadeus/spaces/<space>/elections/<選挙ID>/
-  election.json        # 定義(Election の直列化 — 正本)
+  election.json        # 定義(Election の直列化)+ **state フィールド(ElectionState の明示永続 — 正本。E-ETF-FD2 (3) 承認: component-methods C2『選挙状態の読取』を正とし導出でなく保存)**
   views/<voter>.json   # 配布ビュー(voter 別)
   ledger.json          # 受付台帳(受理票の追記列+投票済み/未着の導出元)
   ballots/             # 開票時実体化(materialize — S-07 blind 解除)
@@ -20,16 +20,22 @@ amadeus/spaces/<space>/elections/<選挙ID>/
 
 ```
 Store.create(election, views):    既存 ID → reject("exists")。dir 作成+定義+views 書込
-Store.appendBallot(ballot):       ledger 読取 → 同一 voter の既受理(非 amend)→ reject("duplicate")
-                                  amend → 原票保持のまま追記(ADR-5)。受理 → ledger 追記+timeline 記帳
+Store.appendBallot(ballot):       election.json の state を読取 —
+                                  state が tallied 以降 → **後着経路**: U1 classifyLate(tally.json の開票時刻, ballot) を U2 が呼び、
+                                    LateBallot(reexamRequired 含む)を ledger の late 区画へ追記+timeline late 記帳(ballots/ 本集計は不変)
+                                  それ以外 → 通常経路: 同一 voter の既受理(非 amend)→ reject("duplicate")
+                                    amend → 原票保持のまま追記(ADR-5)。受理 → ledger 追記+timeline 記帳(reviewer F4 是正 — 分岐と呼出主体を明記)
 Store.materialize(tallyResult):   ledger 全票 → ballots/ へ一括ファイル化+tally.json 書込(開票時点の票集合固定)
 Store.load / Store.status:        読取のみ。status = 投票済み/未着一覧(voters − ledger 受理者)— FR-3c
-Store.appendTimeline(event):      送信実行の結果からのみ呼ばれる(呼出契約 — 送らず記帳する経路を持たない。FR-2b の受け入れは U4 の統合テストで固定)
+Store.appendTimeline(event):      配信・票・開票・後着の4イベント種いずれも、**対応する操作の実行結果からのみ**呼ばれる
+                                  (結果を伴わない記帳経路を持たない — reviewer F3 是正で4種全体へ拡張。
+                                   FR-2b が要求するのは配信記帳の実行結果由来であり、その受け入れは U4 統合テストで固定。
+                                   票=appendBallot 受理時 / 開票=materialize 時 / 後着=後着受付時が各起点)
 ```
 
-## 並行性
+## 並行性(単一書込主体 — D-09 既決からの導出、E-ETF-FD2 (1) leader 承認 2026-07-19T03:22:09Z)
 
-選挙は追記型(ledger/timeline は append 列)で、単一 conductor 運用が前提。ロック機構は導入しない(必要が実測されたら別 Issue — 新規機構最小化)。torn-write は tmp+rename で防止。
+**store の書込主体は選挙 conductor(team モードでは leader)ただ1つ** — D-09(票は leader 宛私秘→開票時一括ファイル化)により、メンバーは elections/ を書かず、票は agmsg で conductor へ還流し conductor が `vote` verb を代行実行する。solo モードも conductor 1名。したがって複数プロセスの並行書込は構造的に発生せず、ロック機構は導入しない(lost-update の前提条件が成立しない)。torn-write は tmp+rename で防止。git マージ面も単一書込者のため通常の checkpoint コミットで足りる。
 
 ## Bolt 切り出しの参照(正本 = delivery-planning/bolt-plan.md)
 
