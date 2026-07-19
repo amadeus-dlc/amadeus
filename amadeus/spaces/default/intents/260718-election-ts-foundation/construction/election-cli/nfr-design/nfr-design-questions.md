@@ -1,6 +1,6 @@
 # NFR Design — Questions(election-cli)
 
-上流入力(consumes 全数): performance-requirements.md、security-requirements.md、scalability-requirements.md、reliability-requirements.md、tech-stack-decisions.md、business-logic-model.md
+上流入力(consumes 全数): performance-requirements.md、security-requirements.md、scalability-requirements.md、reliability-requirements.md、tech-stack-decisions.md、business-logic-model.md(注: 設計5ファイル側はこの宣言6項目+実引用分の superset — U3 iter2 で確立した役割差の整理に同じ)
 
 ## E-OC1 証跡
 
