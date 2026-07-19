@@ -32,7 +32,7 @@ tally(election, ballots):
 
 ```
 shuffleView(election, voter):
-  seed = fnv1a(electionId + ":" + voter)     # 具体 hash 関数は実装時選定(Bun 標準内、外部依存なし — NFR-1)
+  seed = fnv1a(electionId + ":" + voter)     # hash 関数は nfr-requirements tech-stack-decisions.md で fnv1a+mulberry32 に確定(申告付き是正 — 旧注記「実装時選定」との自己矛盾を reviewer が指摘)
   order = fisherYates(choices, mulberry32(seed))  # シード付き決定的 PRNG
   displayNo は order 上の連番、internalNo は Choice が保持
 ```

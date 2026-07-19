@@ -1,6 +1,6 @@
 # Security Requirements — election-model(nfr-requirements)
 
-> 上流入力(consumes 全数): business-logic-model.md、business-rules.md、requirements.md、technology-stack.md
+> 上流入力(consumes 全数): business-logic-model.md、business-rules.md、requirements.md
 
 ## 入力検証(fail-closed)
 
