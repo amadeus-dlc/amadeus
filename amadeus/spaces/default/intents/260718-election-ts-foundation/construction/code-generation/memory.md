@@ -9,6 +9,7 @@
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations
+- 2026-07-19T11:36:30Z — 【自己申告・手順違反】build-and-test delegate の cherry-pick が衝突(UU)のまま approve を先行実行してしまった(完遂確認の1手を欠いた — cherry-pick-n-partial-apply-check/E-SDE-CG4 c2 と同族)。直後に prefix 機械実測→theirs→マーカー4語彙 0→DELEGATED_APPROVAL 4件実測→continue→push で正規解消。approve 自体の妥当性は事後検証済み(issuerHumanTs 11:35:08Z > gate open・delegation 実在)。PM 材料として leader へ報告
 - 2026-07-19T09:57:00Z — Bolt 5 を Bolt 4 レビュー待ち中に先行着手(bolt-plan の並び依存に対し、変更ファイル実 diff 非交差 = c6 を根拠とする申告付き前倒し。PR #1236 本文・U6 code-generation-plan に記録)
 - 2026-07-19T09:57:30Z — #1227 レビューの状態シフト Major-2 は処置 (b)(申告付き FD 追補)で解消 — open verb が作成+公開の単一操作のため draft は内部中間状態、未公開定義への配布指令を出さない fail-closed 強化(U5 FD 指令表を改訂)
 <!-- example: 2026-05-29T10:14:32Z — skipped the optional caching layer the stage prose suggested; the dataset is small enough that it adds risk -->
