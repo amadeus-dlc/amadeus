@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GMEBT",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "範囲限定形なら価値を認める — nested quantifier 形(本件の (-[A-Z0-9]+)* 級)の regex 新設時に限る線形性実測は合理的で、ReDoS 事故・ハング実測が将来発生したらその範囲限定形で再提案してほしい(全 regex 一律義務は過剰のまま)。",
+  "rationale": "不採用(2)。根拠: (1) e1 build-test-results.md の実測(100KB で 3.4ms/5.3ms)は実在確認したが、これは合格実測でありインシデント・ニアミスの裏付けがない — §13 の採用実績は実測の失敗・ヒヤリハット起点が通例(P2)。 (2) 100KB/100ms の閾値は強制機構から導出されない発明定数(constants-from-code の緊張)。 (3) 対象入力は team 起草の record ファイルで敵対入力の脅威モデルが薄く、『拡張・新設 regex』全数への一律義務化は蒸留ラウンドが減らそうとしている churn を増やす。conductor 自身の不採用理由候補(汎用常識)に同意。採用成立時の受容度: 6。",
+  "submittedAt": "2026-07-19T22:10:50Z"
+}

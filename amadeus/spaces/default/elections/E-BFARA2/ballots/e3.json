@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFARA2",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "実測: tally(model.ts:320-337)の kind 非区別全走査と verify(election.ts:440 系)の同一母集団 recompute を確認 — 二重計上は verify で検出不能の主張どおり。A(per-voter 最新1票・同時刻 amend 優先)は amend の目的(訂正の効力発生)を決定的に実現し、ADR-5 の ledger 共存(store.ts:122-124 コメント実読)と両立、tally の純関数性も維持。B は amend を機械的に無効化し人間再集計へ退行(選挙 CLI 正本化 E-ETF-CANON の決定性趣旨に反する)。B 非採用受容度: 6。",
+  "submittedAt": "2026-07-19T22:10:29Z"
+}
