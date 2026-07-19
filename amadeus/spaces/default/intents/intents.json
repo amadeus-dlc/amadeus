@@ -379,5 +379,12 @@
     "dirName": "260719-mirror-productization",
     "scope": "amadeus",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019f7ae6-9d2a-719f-a990-daa24ed37df3",
+    "slug": "ballot-failclosed-amend",
+    "dirName": "260719-ballot-failclosed-amend",
+    "scope": "amadeus",
+    "status": "in-flight"
   }
 ]
