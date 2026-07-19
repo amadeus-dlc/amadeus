@@ -10821,3 +10821,129 @@
 **Duration ms**: 34
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:36:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: eb728bab
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260718-073253-15ea/engineer-1-bolt1/tests/integration/t242-election-skill-vocabulary.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:36:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: eb728bab
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260718-073253-15ea/engineer-1-bolt1/tests/integration/t242-election-skill-vocabulary.integration.test.ts
+**Duration ms**: 1188
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:36:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: a5362967
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260718-073253-15ea/engineer-1-bolt1/tests/integration/t242-election-skill-vocabulary.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:36:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: a5362967
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260718-073253-15ea/engineer-1-bolt1/tests/integration/t242-election-skill-vocabulary.integration.test.ts
+**Duration ms**: 512
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:49:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3dc07957
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:49:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3dc07957
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/code-generation/code-generation-plan.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:49:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: cc44aa5d
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:49:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: cc44aa5d
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/code-generation/code-generation-plan.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:49:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 824f934d
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/code-generation/code-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:49:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 824f934d
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/code-generation/code-summary.md
+**Duration ms**: 31
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:49:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: a9168c52
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/code-generation/code-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:49:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: a9168c52
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/code-generation/code-summary.md
+**Duration ms**: 33
+
+---
