@@ -1,0 +1,2050 @@
+# AI-DLC Audit Log
+
+## Workflow Start
+**Timestamp**: 2026-07-19T15:02:41Z
+**Event**: WORKFLOW_STARTED
+**Scope**: amadeus
+**Request**: /amadeus 選挙 CLI の ballot 受理境界を fail-closed 化する: (1) Issue #1252 — Ballot.parse に submittedAt の様式検証を追加(regex+Date の二段検証、NaN にならない ISO 風文字列の落ちる実証を含む) (2) Issue #1253 — amend ballot の提出経路を新設(vote verb の kind:amend 対応、tally 側 amend 解決規則の設計裁定込み)。修正面は scripts/amadeus-election-*.ts 系+テスト。
+
+---
+
+## Phase Start
+**Timestamp**: 2026-07-19T15:02:41Z
+**Event**: PHASE_STARTED
+**Phase**: initialization
+**Stage count**: 3
+**Scope**: amadeus
+
+---
+
+## Phase Skip
+**Timestamp**: 2026-07-19T15:02:41Z
+**Event**: PHASE_SKIPPED
+**Phase**: operation
+**Scope**: amadeus
+**Reason**: scope amadeus excludes operation
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-19T15:02:41Z
+**Event**: STAGE_STARTED
+**Stage**: workspace-scaffold
+**Agent**: orchestrator
+
+---
+
+## Workspace Scaffolded
+**Timestamp**: 2026-07-19T15:02:41Z
+**Event**: WORKSPACE_SCAFFOLDED
+**Request**: /amadeus 選挙 CLI の ballot 受理境界を fail-closed 化する: (1) Issue #1252 — Ballot.parse に submittedAt の様式検証を追加(regex+Date の二段検証、NaN にならない ISO 風文字列の落ちる実証を含む) (2) Issue #1253 — amend ballot の提出経路を新設(vote verb の kind:amend 対応、tally 側 amend 解決規則の設計裁定込み)。修正面は scripts/amadeus-election-*.ts 系+テスト。
+**Details**: Per-intent artifact dirs + space-level knowledge/ ensured (shell shipped by SEED)
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-19T15:02:41Z
+**Event**: STAGE_COMPLETED
+**Stage**: workspace-scaffold
+**Details**: Per-intent artifact dirs + space-level knowledge/ ensured
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-19T15:02:41Z
+**Event**: STAGE_STARTED
+**Stage**: workspace-detection
+**Agent**: orchestrator
+
+---
+
+## Workspace Scanned
+**Timestamp**: 2026-07-19T15:02:41Z
+**Event**: WORKSPACE_SCANNED
+**Project Type**: Brownfield
+**Languages**: TypeScript
+**Frameworks**: Unknown
+**Build System**: bun (package.json)
+**Details**: Deterministic rule-based scan
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-19T15:02:41Z
+**Event**: STAGE_COMPLETED
+**Stage**: workspace-detection
+**Details**: Classified Brownfield; languages=TypeScript; frameworks=Unknown
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-19T15:02:41Z
+**Event**: STAGE_STARTED
+**Stage**: state-init
+**Agent**: orchestrator
+
+---
+
+## Workspace Initialised
+**Timestamp**: 2026-07-19T15:02:41Z
+**Event**: WORKSPACE_INITIALISED
+**Request**: /amadeus 選挙 CLI の ballot 受理境界を fail-closed 化する: (1) Issue #1252 — Ballot.parse に submittedAt の様式検証を追加(regex+Date の二段検証、NaN にならない ISO 風文字列の落ちる実証を含む) (2) Issue #1253 — amend ballot の提出経路を新設(vote verb の kind:amend 対応、tally 側 amend 解決規則の設計裁定込み)。修正面は scripts/amadeus-election-*.ts 系+テスト。
+**Project Type**: Brownfield
+**Scope**: amadeus
+**Languages**: TypeScript
+**Frameworks**: Unknown
+**Build System**: bun (package.json)
+**Details**: 18 stages in scope, routing to intent-capture
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-19T15:02:41Z
+**Event**: STAGE_COMPLETED
+**Stage**: state-init
+**Details**: State initialized: amadeus scope, 18 stages, routing to intent-capture
+
+---
+
+## Phase Completion
+**Timestamp**: 2026-07-19T15:02:41Z
+**Event**: PHASE_COMPLETED
+**From phase**: initialization
+**To phase**: ideation
+**Stages completed**: 3
+
+---
+
+## Phase Verification
+**Timestamp**: 2026-07-19T15:02:41Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: initialization → ideation
+
+---
+
+## Phase Start
+**Timestamp**: 2026-07-19T15:02:41Z
+**Event**: PHASE_STARTED
+**Phase**: ideation
+**Scope**: amadeus
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-19T15:02:41Z
+**Event**: STAGE_STARTED
+**Stage**: intent-capture
+**Agent**: amadeus-product-agent
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-19T15:03:48Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-2/amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-capture-questions.md
+**Context**: ideation > intent-capture > intent-capture-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:03:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 295b9be3
+**Sensor ID**: required-sections
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-capture-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:03:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 295b9be3
+**Sensor ID**: required-sections
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-capture-questions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:03:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8d93a65f
+**Sensor ID**: upstream-coverage
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-capture-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:03:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8d93a65f
+**Sensor ID**: upstream-coverage
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-capture-questions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:03:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: eff25219
+**Sensor ID**: answer-evidence
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-capture-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:03:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: eff25219
+**Sensor ID**: answer-evidence
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-capture-questions.md
+**Duration ms**: 37
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-19T15:04:20Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-2/amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-capture-questions.md
+**Context**: ideation > intent-capture > intent-capture-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:04:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: cf9cf0ec
+**Sensor ID**: required-sections
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-capture-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:04:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: cf9cf0ec
+**Sensor ID**: required-sections
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-capture-questions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:04:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 79f171f3
+**Sensor ID**: upstream-coverage
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-capture-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:04:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 79f171f3
+**Sensor ID**: upstream-coverage
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-capture-questions.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:04:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 20bbe8d4
+**Sensor ID**: answer-evidence
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-capture-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:04:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 20bbe8d4
+**Sensor ID**: answer-evidence
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-capture-questions.md
+**Duration ms**: 36
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-19T15:04:47Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-2/amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-statement.md
+**Context**: ideation > intent-capture > intent-statement.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:04:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 495de929
+**Sensor ID**: required-sections
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-statement.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:04:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 495de929
+**Sensor ID**: required-sections
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-statement.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:04:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 12ddcbf0
+**Sensor ID**: upstream-coverage
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-statement.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:04:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 12ddcbf0
+**Sensor ID**: upstream-coverage
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-statement.md
+**Duration ms**: 36
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-19T15:05:07Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-2/amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/stakeholder-map.md
+**Context**: ideation > intent-capture > stakeholder-map.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:05:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 16c85ea2
+**Sensor ID**: required-sections
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/stakeholder-map.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:05:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: 16c85ea2
+**Sensor ID**: required-sections
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/stakeholder-map.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:05:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: c4486419
+**Sensor ID**: upstream-coverage
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/stakeholder-map.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:05:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: c4486419
+**Sensor ID**: upstream-coverage
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/stakeholder-map.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:05:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5145f995
+**Sensor ID**: required-sections
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-statement.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:05:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5145f995
+**Sensor ID**: required-sections
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-statement.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:05:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1dcd10a8
+**Sensor ID**: required-sections
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/stakeholder-map.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:05:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1dcd10a8
+**Sensor ID**: required-sections
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/stakeholder-map.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:05:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7b89f1d6
+**Sensor ID**: required-sections
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-capture-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:05:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7b89f1d6
+**Sensor ID**: required-sections
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-capture-questions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:05:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 44ea932c
+**Sensor ID**: upstream-coverage
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-statement.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:05:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: 44ea932c
+**Sensor ID**: upstream-coverage
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-statement.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:05:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: d68e0d59
+**Sensor ID**: upstream-coverage
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/stakeholder-map.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:05:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: d68e0d59
+**Sensor ID**: upstream-coverage
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/stakeholder-map.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:05:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4887f88c
+**Sensor ID**: upstream-coverage
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-capture-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:05:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4887f88c
+**Sensor ID**: upstream-coverage
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-capture-questions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:05:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: d7f795aa
+**Sensor ID**: answer-evidence
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-capture-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:05:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: d7f795aa
+**Sensor ID**: answer-evidence
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/intent-capture/intent-capture-questions.md
+**Duration ms**: 36
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T15:07:23Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ae7c05470e0e21f02
+**Message**: E-BFAIC の裁定が届いたら approve して次ステージへ進めて
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-19T15:07:24Z
+**Event**: WORKFLOW_PARKED
+**Stage**: intent-capture
+**Timestamp**: 2026-07-19T15:07:24Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T15:07:43Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: adda95dc1933dd35d
+**Message**: /amadeus --resume
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-19T15:08:23Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-19T15:08:23Z
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-19T15:08:28Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --result resume --user-input Resume from last checkpoint
+**Error**: Unknown --result "resume". report commits forward transitions only; accepted outcomes: approved, completed, complete, done.
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-19T15:08:33Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: intent-capture
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-19T15:08:33Z
+**Event**: GATE_APPROVED
+**Stage**: intent-capture
+**Grant Id**: 22d74683
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-19T15:08:33Z
+**Event**: STAGE_COMPLETED
+**Stage**: intent-capture
+**Details**: Stage Intent Capture approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-19T15:08:33Z
+**Event**: STAGE_STARTED
+**Stage**: feasibility
+**Agent**: amadeus-architect-agent
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-19T15:09:39Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-2/amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/feasibility-assessment.md
+**Context**: ideation > feasibility > feasibility-assessment.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:09:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: 19da180a
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/feasibility-assessment.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:09:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: 19da180a
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/feasibility-assessment.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:09:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: a536e66b
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/feasibility-assessment.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:09:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: a536e66b
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/feasibility-assessment.md
+**Duration ms**: 37
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-19T15:09:56Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-2/amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/constraint-register.md
+**Context**: ideation > feasibility > constraint-register.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:09:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9ad46bd8
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/constraint-register.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-19T15:09:56Z
+**Event**: SENSOR_FAILED
+**Fire id**: 9ad46bd8
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/constraint-register.md
+**Detail path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/.amadeus-sensors/feasibility/required-sections-9ad46bd8.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:09:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 408dd023
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/constraint-register.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:09:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 408dd023
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/constraint-register.md
+**Duration ms**: 38
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-19T15:10:16Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-2/amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/raid-log.md
+**Context**: ideation > feasibility > raid-log.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:10:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: e4744c66
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/raid-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:10:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: e4744c66
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/raid-log.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:10:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 22916b83
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/raid-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:10:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 22916b83
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/raid-log.md
+**Duration ms**: 35
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-19T15:10:32Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-2/amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/feasibility-questions.md
+**Context**: ideation > feasibility > feasibility-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:10:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: c11587fd
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/feasibility-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:10:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: c11587fd
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/feasibility-questions.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:10:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: f1fab93e
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/feasibility-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:10:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: f1fab93e
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/feasibility-questions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:10:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6dbd4299
+**Sensor ID**: answer-evidence
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/feasibility-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:10:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6dbd4299
+**Sensor ID**: answer-evidence
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/feasibility-questions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:10:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: ee9fb65e
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/feasibility-assessment.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:10:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: ee9fb65e
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/feasibility-assessment.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:10:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3ac547de
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/constraint-register.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-19T15:10:54Z
+**Event**: SENSOR_FAILED
+**Fire id**: 3ac547de
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/constraint-register.md
+**Detail path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/.amadeus-sensors/feasibility/required-sections-3ac547de.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:10:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2cba7a8b
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/raid-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:10:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2cba7a8b
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/raid-log.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:10:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8e2fc531
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/feasibility-assessment.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:10:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8e2fc531
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/feasibility-assessment.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:10:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1466ab21
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/constraint-register.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:10:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1466ab21
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/constraint-register.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:10:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 143f4faf
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/raid-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:10:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 143f4faf
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/raid-log.md
+**Duration ms**: 37
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-19T15:11:10Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-2/amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/constraint-register.md
+**Context**: ideation > feasibility > constraint-register.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:11:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: a763b50a
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/constraint-register.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:11:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: a763b50a
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/constraint-register.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:11:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: 88d622da
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/constraint-register.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:11:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: 88d622da
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/constraint-register.md
+**Duration ms**: 44
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:11:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 072cedd2
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/constraint-register.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:11:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 072cedd2
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/constraint-register.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:11:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 436132f0
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/feasibility-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:11:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 436132f0
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/feasibility-questions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:11:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 40aa39c8
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/feasibility-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:11:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 40aa39c8
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/feasibility-questions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:11:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 39ad4b0f
+**Sensor ID**: answer-evidence
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/feasibility-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:11:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 39ad4b0f
+**Sensor ID**: answer-evidence
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/feasibility/feasibility-questions.md
+**Duration ms**: 36
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-19T15:11:48Z
+**Event**: WORKFLOW_PARKED
+**Stage**: feasibility
+**Timestamp**: 2026-07-19T15:11:48Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T15:12:46Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a138725f610358f90
+**Message**: (waiting for E-BFAIC-style §13 ruling — no user input needed)
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T15:13:02Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a352aa0db3f9f7a73
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-19T15:13:25Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-19T15:13:25Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-19T15:13:35Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: feasibility
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-19T15:13:35Z
+**Event**: GATE_APPROVED
+**Stage**: feasibility
+**Grant Id**: 22d74683
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-19T15:13:35Z
+**Event**: STAGE_COMPLETED
+**Stage**: feasibility
+**Details**: Stage Feasibility & Constraints approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-19T15:13:35Z
+**Event**: STAGE_STARTED
+**Stage**: scope-definition
+**Agent**: amadeus-product-agent
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-19T15:14:10Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-2/amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-document.md
+**Context**: ideation > scope-definition > scope-document.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:14:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: cec8b408
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-document.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:14:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: cec8b408
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-document.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:14:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7cbdf72d
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-document.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:14:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7cbdf72d
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-document.md
+**Duration ms**: 37
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-19T15:14:25Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-2/amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/intent-backlog.md
+**Context**: ideation > scope-definition > intent-backlog.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:14:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 29caff20
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/intent-backlog.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:14:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 29caff20
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/intent-backlog.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:14:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: d5f2d1d8
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/intent-backlog.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:14:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: d5f2d1d8
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/intent-backlog.md
+**Duration ms**: 35
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-19T15:14:43Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-2/amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-definition-questions.md
+**Context**: ideation > scope-definition > scope-definition-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:14:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: c3673030
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-definition-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:14:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: c3673030
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-definition-questions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:14:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4dfc1901
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-definition-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:14:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4dfc1901
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-definition-questions.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:14:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 11441ca2
+**Sensor ID**: answer-evidence
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-definition-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:14:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 11441ca2
+**Sensor ID**: answer-evidence
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-definition-questions.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:14:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 239962b0
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-document.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:14:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: 239962b0
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-document.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:14:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7fe4254e
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/intent-backlog.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:14:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7fe4254e
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/intent-backlog.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:14:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: da3d20fb
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-document.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:14:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: da3d20fb
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-document.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:14:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: f58e6b4a
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/intent-backlog.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:14:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: f58e6b4a
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/intent-backlog.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:15:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: db19aee0
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-document.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:15:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: db19aee0
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-document.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:15:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: 72f3bac7
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/intent-backlog.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:15:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: 72f3bac7
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/intent-backlog.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:15:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: c33dff97
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-document.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:15:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: c33dff97
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-document.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:15:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: d4b9e1ba
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/intent-backlog.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:15:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: d4b9e1ba
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/intent-backlog.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:15:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 48e39bac
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-definition-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:15:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: 48e39bac
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-definition-questions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:15:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: c33af158
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-definition-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:15:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: c33af158
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-definition-questions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:15:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 66b45574
+**Sensor ID**: answer-evidence
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-definition-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:15:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: 66b45574
+**Sensor ID**: answer-evidence
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/scope-definition/scope-definition-questions.md
+**Duration ms**: 37
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-19T15:15:44Z
+**Event**: WORKFLOW_PARKED
+**Stage**: scope-definition
+**Timestamp**: 2026-07-19T15:15:44Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T15:16:10Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: af7c99c28581d6cd4
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-19T15:17:38Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-19T15:17:38Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-19T15:17:38Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: scope-definition
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-19T15:17:38Z
+**Event**: GATE_APPROVED
+**Stage**: scope-definition
+**Grant Id**: 22d74683
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-19T15:17:38Z
+**Event**: STAGE_COMPLETED
+**Stage**: scope-definition
+**Details**: Stage Scope Definition approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-19T15:17:38Z
+**Event**: STAGE_STARTED
+**Stage**: approval-handoff
+**Agent**: amadeus-delivery-agent
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-19T15:18:10Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-2/amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/initiative-brief.md
+**Context**: ideation > approval-handoff > initiative-brief.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:18:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: bf445a63
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/initiative-brief.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:18:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: bf445a63
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/initiative-brief.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:18:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: d594601c
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/initiative-brief.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:18:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: d594601c
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/initiative-brief.md
+**Duration ms**: 37
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-19T15:18:29Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-2/amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/decision-log.md
+**Context**: ideation > approval-handoff > decision-log.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:18:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: fcdc2bce
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/decision-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:18:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: fcdc2bce
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/decision-log.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:18:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 78cf4d50
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/decision-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:18:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: 78cf4d50
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/decision-log.md
+**Duration ms**: 37
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-19T15:18:41Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-2/amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/approval-handoff-questions.md
+**Context**: ideation > approval-handoff > approval-handoff-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:18:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: 46fd2db4
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/approval-handoff-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-19T15:18:41Z
+**Event**: SENSOR_FAILED
+**Fire id**: 46fd2db4
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/approval-handoff-questions.md
+**Detail path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/.amadeus-sensors/approval-handoff/required-sections-46fd2db4.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:18:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: 991dd28f
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/approval-handoff-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:18:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: 991dd28f
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/approval-handoff-questions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:18:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8df8f7b8
+**Sensor ID**: answer-evidence
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/approval-handoff-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:18:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8df8f7b8
+**Sensor ID**: answer-evidence
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/approval-handoff-questions.md
+**Duration ms**: 37
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-19T15:19:05Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-2/amadeus/spaces/default/intents/260719-ballot-failclosed-amend/verification/phase-check-ideation.md
+**Context**: verification > phase-check-ideation.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:19:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: dc1af6cd
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/verification/phase-check-ideation.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:19:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: dc1af6cd
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/verification/phase-check-ideation.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:19:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3c2fcf53
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/verification/phase-check-ideation.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-19T15:19:05Z
+**Event**: SENSOR_FAILED
+**Fire id**: 3c2fcf53
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/verification/phase-check-ideation.md
+**Detail path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/.amadeus-sensors/approval-handoff/upstream-coverage-3c2fcf53.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:19:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0b4a7f5b
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/initiative-brief.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:19:18Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0b4a7f5b
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/initiative-brief.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:19:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9f87a9bb
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/decision-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:19:18Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9f87a9bb
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/decision-log.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:19:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: 294fa59b
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/initiative-brief.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:19:18Z
+**Event**: SENSOR_PASSED
+**Fire id**: 294fa59b
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/initiative-brief.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:19:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: 05d8c57b
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/decision-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:19:18Z
+**Event**: SENSOR_PASSED
+**Fire id**: 05d8c57b
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/decision-log.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:19:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 18d54c8c
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/approval-handoff-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:19:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 18d54c8c
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/approval-handoff-questions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:19:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: ad33ffea
+**Sensor ID**: answer-evidence
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/approval-handoff-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:19:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: ad33ffea
+**Sensor ID**: answer-evidence
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/approval-handoff-questions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:19:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 31be7d01
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/approval-handoff-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:19:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 31be7d01
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/ideation/approval-handoff/approval-handoff-questions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:19:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7c25df9c
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/verification/phase-check-ideation.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:19:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7c25df9c
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/verification/phase-check-ideation.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T15:19:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3d61e5ba
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/verification/phase-check-ideation.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T15:19:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3d61e5ba
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/verification/phase-check-ideation.md
+**Duration ms**: 38
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-19T15:20:07Z
+**Event**: WORKFLOW_PARKED
+**Stage**: approval-handoff
+**Timestamp**: 2026-07-19T15:20:07Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T15:20:28Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: af10519a922f08770
+
+---
