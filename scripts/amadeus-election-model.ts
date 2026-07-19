@@ -286,9 +286,16 @@ export type LateBallot = {
   reexamRequired: boolean;
 };
 
+// Single source for the reexamination rule (a late block vote reopens the
+// question — early-tally-with-block-reopen). Consumed by classifyLate AND the
+// store's at-or-before-tally late fallback, so the rule cannot fork.
+export function lateReexamRequired(ballot: Ballot): boolean {
+  return ballot.goa === 8;
+}
+
 export function classifyLate(tallyTime: string, ballot: Ballot): LateBallot | null {
   if (ballot.submittedAt <= tallyTime) return null;
-  return { ballot, late: true, reexamRequired: ballot.goa === 8 };
+  return { ballot, late: true, reexamRequired: lateReexamRequired(ballot) };
 }
 
 // --- tally -----------------------------------------------------------------
