@@ -2442,3 +2442,62 @@
 **Timestamp**: 2026-07-19T20:38:28Z
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T20:41:47Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a1551ca2c0955ce47
+**Message**: Issue #1226(parseGoaLine の複節 E-code 拒否)修正 intent を conductor として進行中で、実装 PR #1256 はレビュー READY・CI green まで完了。build-and-test ゲートで park 中につき、§13 裁定・delegate 発行・マージ承認が届き次第 approve して完了処理へ進みます。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T22:15:51Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a2f0754f262f7fd25
+**Message**: Issue #1226(GoA regex 複節拒否)の修正 intent を conductor として遂行中。実装 PR #1256 はマージ済みで、残るは最終ステージ build-and-test の承認のみ。§13 選挙裁定と delegate 発行が届き次第 approve して intent を完了します。
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-19T22:22:21Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-19T22:22:21Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-19T22:22:23Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Recovered**: true
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-19T22:22:24Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state approve build-and-test --project-dir /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-1
+**Error**: Refusing to approve "build-and-test": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then approve. (autonomous Construction is exempt)
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-19T22:22:24Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --stage build-and-test --result complete
+**Error**: Transition rejected by amadeus-state.ts approve for "build-and-test": {"error":"Refusing to approve \"build-and-test\": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then approve. (autonomous Construction is exempt)"}
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-19T22:23:12Z
+**Event**: WORKFLOW_PARKED
+**Stage**: build-and-test
+**Timestamp**: 2026-07-19T22:23:12Z
+
+---
