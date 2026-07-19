@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Election } from "../../scripts/amadeus-election-model";
+import { Election, Goa } from "../../scripts/amadeus-election-model";
 import { Store, writeStoreFile } from "../../scripts/amadeus-election-store";
 
 const DEF = {
@@ -22,12 +22,14 @@ function election() {
 }
 
 function ballot(voter: string) {
+  const goa = Goa.parse(1);
+  if (!goa.ok) throw new Error("goa must parse");
   return {
     kind: "original" as const,
     electionId: "E-STORE-1",
     voter,
     choiceInternalNo: 1,
-    goa: 1 as never,
+    goa: goa.value,
     reservation: null,
     rationale: null,
     submittedAt: "2026-07-19T00:00:00Z",
