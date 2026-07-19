@@ -13,8 +13,9 @@ draft → open → collecting → tallied → rendered → recorded(終端)   # 
 
 | 現状態 | 指令 kind | payload | AI の実行 |
 |---|---|---|---|
-| draft | `distribute` | 未配信 voter 一覧+notify verb 呼出形 | notify 実行 → report |
-| open/collecting(未着あり) | `collect-wait` | 投票済み/未着一覧(status 由来)+early tally 可否 | 待機 or 催促判断(人間委譲)。early 可なら tally-ready も併記 |
+| draft | (指令なし — loud エラー) | **Bolt 1 申告付き追補(PR #1227 レビュー Major-2 処置 (b))**: open verb が作成と公開を単一操作で行うため draft は operation 内部の中間状態にのみ現れる。未公開定義への配布指令は fail-closed 強化として発行しない(機能等価 — open 完了直後に distribute が出る) | — |
+| open | `distribute` | 未配信 voter 一覧+notify verb 呼出形(verb/report フィールドで機械可読に名指し — M1 是正) | notify 実行 → report |
+| collecting(未着あり) | `collect-wait` | 投票済み/未着一覧(status 由来)+early tally 可否 | 待機 or 催促判断(人間委譲)。early 可なら tally-ready も併記 |
 | collecting(全着 or early 可) | `tally-ready` | tally verb 呼出形 | tally 実行 → report |
 | tallied | `render` | render verb 呼出形 | render 実行 → report(rendered へ) |
 | rendered | `verify` | verify verb 呼出形(self-check) | verify 実行 → report(recorded へ) |
@@ -27,7 +28,7 @@ draft → open → collecting → tallied → rendered → recorded(終端)   # 
 ## report の遷移コミット
 
 ```
-report --election <id> --result <distributed|ballots-collected|tallied|rendered|verified|hold-resolved>
+report --election <id> --result <distributed|tallied|rendered|verified|hold-resolved>   # ballots-collected は駆動実体なしにつき Bolt 1 是正で削除(reviewer m4 — 収集中の票到着は vote verb 自体が記帳し、状態は collecting のまま)
   → 状態遷移を store(U2)へコミット。不整合(現状態と result の不一致)は reject(fail-closed)
   hold-resolved は --resolution を必須で伴い、hold 理由別の復帰表に従う(Q2=A 裁定):
     | hold 理由 | resolution | 復帰先 |
@@ -59,3 +60,8 @@ Bolt 1 の U5 核 = 7状態の直進経路(draft→…→recorded)+next/report+*
 ## エラー処理
 
 全 verb は Result → exit code 写像。状態遷移の不整合・未知 verb は loud エラー(fail-closed)。--help フラグは実装しない(no-help-probe-on-mutating-verbs の教訓 — 未知引数は usage を stderr に出して exit 1)。
+
+## Bolt 1 実装追補(申告)
+
+- timeline イベント kind の directive-generated / sent 分離は Bolt 3(U4 輸送配線)で検討する(reviewer m5 — Bolt 1 の notify は指令生成のみを distributed として記帳)
+- Directive 型は各枝に verb/report フィールドを持ち、呼出側の kind→verb 写像を構造的に排除(M1 是正 — FR-0 の明文拘束)

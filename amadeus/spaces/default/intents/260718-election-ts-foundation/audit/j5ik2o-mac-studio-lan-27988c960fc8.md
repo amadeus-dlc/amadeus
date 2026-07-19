@@ -8989,3 +8989,63 @@
 **Timestamp**: 2026-07-19T07:34:54Z
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T07:35:10Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: af602f40fb4aa44a4
+**Message**: スケルトン確認しました。マージ承認します
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T07:36:24Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ac7e958faf8b10268
+**Message**: スケルトン確認しました。マージ承認します
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T07:52:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 93c66d23
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-cli/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T07:52:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 93c66d23
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-cli/functional-design/business-logic-model.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T07:52:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: c0e2bd8e
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-cli/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T07:52:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: c0e2bd8e
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-cli/functional-design/business-logic-model.md
+**Duration ms**: 36
+
+---
