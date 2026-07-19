@@ -19,7 +19,7 @@
 ## ADR-3: per-voter 解決は「定義1箇所・全消費面へ適用」(FR-4 (b) の実現 — iteration 1 Critical で改訂)
 
 - **Context**: tally・verify(recompute+GoA 度数+reservation 検査)・render(record 描画)が同一の解決済み母集団を使う必要(FR-4 (b))。iteration 1 レビューが実測で確定したとおり、tally 内部適用**だけ**では GoaFreq.fromVotes(election.ts:447 / record.ts:134)・checkGoaLine(:448)・verifyReservations(:450 / record.ts:148)・renderPersistDraft(election.ts:386)が未解決母集団のまま残り、amend 共存時に「裁定は正しいが GoA 行・留保数が二重計上」の乖離が verify を沈黙通過する。
-- **Decision**: `resolveBallots` を model の export 純関数として**1定義**し、消費面の全数(component-methods.md の適用点表 #1〜#3)へ適用する: tally 内部+handleVerify/handleRender の CLI 境界で明示適用。materialize の fixed set は blind lift のまま(correction trail — 集計値でないため非解決、消費側解決の契約)。resolver は冪等で多重適用無害。
+- **Decision**: `resolveBallots` を model の export 純関数として**1定義**し、消費面の全数(component-methods.md の適用点表 #1〜#3・#5 — #4 materialize のみ blind lift 契約で非適用)へ適用する: tally 内部+handleVerify(GoaFreq/checkGoaLine/verifyReservations/verifySelf)/handleRender の CLI 境界で明示適用。materialize の fixed set は blind lift のまま(correction trail — 集計値でないため非解決、消費側解決の契約)。resolver は冪等で多重適用無害。
 - **Consequences**: tally シグネチャ不変(呼び出し元 :353/:440 変更不要)。CLI 側の追加は handleVerify/handleRender の各1行。record.ts は引数経由で解決済みを受けるため無変更。乖離の构造的封鎖は「同一 resolver 定義」+「適用点の全数列挙表」で担保し、FR-4(a)(b) のテストが両面を固定する。
 - **Alternatives Rejected**: (a) tally 内部適用のみ(iteration 1 の原案)— freq/reservation/render が未解決のまま乖離し verify が沈黙する実測欠陥(review Critical #1)。(b) tally の戻り値に resolved リストを追加 — 全呼び出し元と TallyResult 消費側(tally.json スキーマ・t234)へ波及し、#1261(e1 の TallyResult 型拡張予定)との交差を広げる。(c) store 書込時に original を物理置換 — ADR-5(correction trail)違反。
 

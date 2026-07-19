@@ -53,6 +53,7 @@ export function resolveBallots(ballots: Ballot[]): Ballot[];
 | 2 | verify の GoA 度数・reservation 検査 | `handleVerify` で `const resolved = resolveBallots(ballots)` を1回導出し、GoaFreq.fromVotes(election.ts:447)/ checkGoaLine(:448)/ verifyReservations(:450)へ resolved を渡す |
 | 3 | render(record 描画) | `handleRender` の ballots(election.ts:372)を resolved にして renderPersistDraft(:386)へ渡す — record.ts:134 の freq と :137 の reservationLines は引数経由で解決済みになる(record.ts 自体は無変更) |
 | 4 | materialize の fixed set | **解決しない(blind lift のまま — store.ts:9 コメント・:223 実測)**。tally.json の ballots は全受理集合 = correction trail の保存面であり、集計値でない。消費側(#1〜#3)が読み出し時に解決する契約 |
+| 5 | verifySelf の自己検査 | `handleVerify` の verifySelf 呼び出し(election.ts:456)の両引数(`ballots.length`, `ballots`)を resolved 化(`resolved.length, resolved`)— verifySelf 内部の freq 再計算(record.ts:175-177)が #2 の resolved 由来 freq と同一母集団で比較され、freq-mismatch の偽陽性を封鎖(iteration 2 Critical の是正)。あわせて handleVerify 内は resolved 導出(:447 の直前)以降の全消費点(:447/:448/:450/:456)で `resolved` を明示使用し、生 `ballots` の残用途は :440 の tally 呼び出しのみ(tally 内部で解決)と宣言する |
 
 - classifyLate は受理時分類のため非解決(素の ballot 単位)— late lane の amend も post-tally 到着なら late のまま。
 - FR-4 (b) の充足構造: verify の recompute(tally 経由)と freq/reservation 検査(明示 resolved)が同一 resolver 定義を通るため乖離しない。record.md に描画される GoA 行・留保数と verify の再計算も同一 resolved 母集団(#2=#3)。
@@ -62,7 +63,7 @@ export function resolveBallots(ballots: Ballot[]): Ballot[];
 ### appendBallot の unknown-ref 照合(FR-3、E-BFARA3)
 
 ```ts
-export type StoreError = "not-found" | "corrupt" | "io-error" | "duplicate" | "unknown-ref";  // 追加
+export type StoreError = "exists" | "duplicate" | "not-found" | "io-error" | "corrupt" | "unknown-ref";  // 既存5値(store.ts:33 実測順)+ unknown-ref のみ追加
 // ballot.kind === "amend" のとき: accepted(ballots+late)から
 //   b.voter === ballot.ref.voter && b.submittedAt === ballot.ref.submittedAt && ballot.ref.electionId === electionId
 // の既存 ballot(original または先行 amend)を探し、不在なら err("unknown-ref")。dup 判定(:131-133)の直後に挿入。
