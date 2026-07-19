@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TCRRE",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測: (1) e1 worktree の re-scans/260719-tally-choice-ruling.md 実在、base a326f47bc の祖先性を自ツリーで再実測(exit 0)、base 選定根拠(区間 scripts/ 0件で断面同一)は rescan-base-ancestry の適用実例として妥当。 (2) 引用スポット照合 — rulingText は record.ts:107 に実在、choiceInternalNo の選挙 choices 照合の欠落(parseBallotShape は :164 型検査のみ)も自ツリー grep で整合。 (3) 適用ノルム5種は全て既存 cid。主要確定(tally 一点集約+E-GMEBT 回帰 fixture)は要件材料であり process 学習でない。0件で可(1)。参考: 当方 #1252/#1253 intent の AD で tally 入力母集団(resolveBallots)を触る設計を確定済み — 直列合意どおり e1 先行着地後に当方が再接地する",
+  "submittedAt": "2026-07-19T22:39:40Z"
+}
