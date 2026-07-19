@@ -386,5 +386,12 @@
     "dirName": "260719-goa-multiseg-ecode",
     "scope": "bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019f7c7f-3732-734b-abee-f303e3c719c4",
+    "slug": "tally-choice-ruling",
+    "dirName": "260719-tally-choice-ruling",
+    "scope": "bugfix",
+    "status": "in-flight"
   }
 ]
