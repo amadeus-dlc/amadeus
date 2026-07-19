@@ -11569,3 +11569,37 @@
 **Duration ms**: 34
 
 ---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-19T11:32:28Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Recovered**: true
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-19T11:32:28Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state approve build-and-test --project-dir /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260718-073253-15ea/engineer-1
+**Error**: Refusing to approve "build-and-test": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then approve. (autonomous Construction is exempt)
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-19T11:32:28Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --stage build-and-test --result completed
+**Error**: Transition rejected by amadeus-state.ts approve for "build-and-test": {"error":"Refusing to approve \"build-and-test\": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then approve. (autonomous Construction is exempt)"}
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-19T11:32:32Z
+**Event**: WORKFLOW_PARKED
+**Stage**: build-and-test
+**Timestamp**: 2026-07-19T11:32:32Z
+
+---
