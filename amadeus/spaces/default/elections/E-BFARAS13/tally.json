@@ -1,0 +1,38 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-19T22:32:30Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-BFARAS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e2 record をリードオンリー実測: (1) 留保転記の当事者照合 — E-BFARA1 の自票留保(normalizeAt の残置/除去を design で明示)が requirements FR-1(:12)へ verbatim 転記され、分母1(留保必須票 = 自分の GoA2 のみ)=転記1 の件数照合が成立 (2) 裁定転記 A/A/A は自分の受領裁定と一致、GoA 内訳表記(1x2 2x1 / 3-0)も自票と整合 (3) diary 3点は ruling-dependent-placeholder(裁定待ち欄の先取り禁止)/ reservation-transcription-count-check / fix-diff-independent-reverify(是正文の実測値転記)の適用実例で、いずれも既存 cid の射程内 (4) minor 是正(固定件数12→glob 全数列挙)は enumeration 系既存 cid の運用。新規ノルムの隙間なし、0件で可",
+      "submittedAt": "2026-07-19T22:26:27Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-BFARAS13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e2 record リードオンリー実測: diary 3点は ruling-dependent-placeholder(15:38 起草)/ reservation-transcription-count-check(分母1=転記1、E-BFARA1 の e4 GoA2 を FR-1 verbatim 確認)/ fix-diff-independent-reverify(minor 是正の件数 20 はレビュアー実測値の転記と明記)の適用実例。シャードの SENSOR_FAILED 6件は Stage slug 実測で approval-handoff(phase-check)と practices-discovery(timestamp)帰属の是正済み履歴、RA 成果物の最新 verdict は 22:24Z 台で全 PASSED — 『最新 FAILED 0件』の主張と整合。プロセス新規学習なし。0件で可(1)。",
+      "submittedAt": "2026-07-19T22:32:13Z"
+    }
+  ],
+  "resolutions": []
+}
