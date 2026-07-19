@@ -85,7 +85,17 @@ function storeFail(op: string, e: StoreError): 1 {
   return fail(`${op}: ${e}`);
 }
 
-function readTally(root: string, electionId: string): { result: TallyResult; ballots: unknown[] } | null {
+export type HoldResolution = {
+  reason: HoldReason;
+  resolution: string;
+  resumedTo: ElectionState;
+  at: string;
+};
+
+function readTally(
+  root: string,
+  electionId: string,
+): { result: TallyResult; ballots: unknown[]; talliedAt?: string; resolutions?: HoldResolution[] } | null {
   const path = join(root, electionId, "tally.json");
   if (!existsSync(path)) return null;
   try {
@@ -129,9 +139,8 @@ function directiveFor(
   if (state === "recorded") return { kind: "done", electionId, verb: null, report: null };
   if (state === "hold") {
     const t = readTally(root, electionId);
-    // TODO(Bolt 3): parse tally.json into a typed TallyResult and carry reason
-    // as HoldReason — the raw readTally cast retires with the U3 record work
-    // (reviewer m3).
+    // Follow-up: replace the raw readTally cast with a typed TallyResult parse
+    // (deliberate deferral — tracked in the Bolt 4 PR notes, not blocking).
     const reason = t !== null && t.result.kind === "hold" ? t.result.reason : "unknown";
     return { kind: "hold", electionId, reason, verb: null, report: null };
   }
@@ -195,6 +204,20 @@ function handleHoldResolved(root: string, electionId: string, resolution: string
       `invalid-transition: resolution "${resolution}" is not valid for hold reason "${t.result.reason}" (valid: ${Object.keys(table).join("/")})`,
     );
   }
+  // M1 (FR-4b): the human ruling is DURABLE — appended to tally.json before
+  // the state moves, so render/verify see the resolved ruling, and record.md
+  // can never stay on 保留 after a human has ruled (review #1235 M1).
+  const entry: HoldResolution = {
+    reason: t.result.reason,
+    resolution,
+    resumedTo,
+    at: normalizeAt(new Date().toISOString()),
+  };
+  const persisted = writeStoreFile(
+    join(root, electionId, "tally.json"),
+    JSON.stringify({ ...t, resolutions: [...(t.resolutions ?? []), entry] }, null, 2),
+  );
+  if (!persisted.ok) return storeFail("tally-resolution", persisted.error);
   const set = Store.setState(root, electionId, resumedTo);
   if (!set.ok) return storeFail("setState", set.error);
   out({ committed: "hold-resolved", resolution, resumedTo });
@@ -347,13 +370,30 @@ export function handleRender(root: string, electionId: string): number {
   const timeline = readTimeline(root, electionId);
   if (timeline === null) return fail("render: timeline.json missing or unreadable");
   const ballots = t.ballots as Parameters<typeof tally>[1];
-  const body = renderPersistDraft(code.value, loaded.value.election, t.result, ballots, timeline);
+  // A final human ruling over a hold takes precedence in the rendered ruling
+  // line (the stored tally result itself stays untouched — verify's recompute
+  // comparison remains valid); every ruling is also transcribed as a trail.
+  const resolutions = t.resolutions ?? [];
+  const finalRuling = resolutions.filter((r) => r.resumedTo === "tallied").at(-1);
+  const effective: TallyResult =
+    t.result.kind === "hold" && finalRuling !== undefined
+      ? {
+          kind: "established",
+          outcome: finalRuling.resolution === "adopted" ? "adopted" : "rejected",
+          counts: t.result.counts,
+        }
+      : t.result;
+  const body = renderPersistDraft(code.value, loaded.value.election, effective, ballots, timeline);
+  const trail = resolutions.map(
+    (r) => `- hold 裁定履歴: ${r.reason} → ${r.resolution}(${r.at}、復帰先 ${r.resumedTo})`,
+  );
   const lines = [
     `# Election Record — ${electionId}`,
     "",
     `- question: ${loaded.value.election.question}`,
     "",
     body,
+    ...(trail.length > 0 ? ["", ...trail] : []),
     "",
   ];
   // No timeline entry here: the ledger's four event kinds (distributed/ballot/

@@ -214,9 +214,13 @@ export const Store = {
       );
       if (!w.ok) return w;
     }
+    // Carry forward any hold-resolution history from a prior tally (a reopen
+    // re-tallies, but the human rulings already given must survive — FR-4b).
+    const prior = readJson<{ resolutions?: unknown[] }>(join(dir, "tally.json"));
+    const resolutions = prior.ok ? (prior.value.resolutions ?? []) : [];
     const w = writeStoreFile(
       join(dir, "tally.json"),
-      JSON.stringify({ result, talliedAt, ballots: ledger.value.ballots }, null, 2),
+      JSON.stringify({ result, talliedAt, ballots: ledger.value.ballots, resolutions }, null, 2),
     );
     if (!w.ok) return w;
     return Store.appendTimeline(root, electionId, {

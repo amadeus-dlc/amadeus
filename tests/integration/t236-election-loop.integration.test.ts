@@ -274,6 +274,49 @@ describe("t236 election directive loop", () => {
     expect(run(["notify", "--election", "E-LOOP1", "--transport", "carrier-pigeon"])).toBe(1);
   });
 
+  test("M1 closure (#1235): a human hold ruling persists — record.md renders the ruling, never a stale 保留", () => {
+    expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
+    expect(run(["report", "--election", "E-LOOP1", "--result", "distributed"])).toBe(0);
+    const b1 = writeJson("b1.json", {
+      electionId: "E-LOOP1",
+      voter: "alice",
+      voterKind: "member",
+      choiceInternalNo: 1,
+      goa: 8,
+      submittedAt: "2026-07-19T00:01:00Z",
+    });
+    expect(run(["vote", "--election", "E-LOOP1", "--file", b1])).toBe(0);
+    expect(run(["tally", "--election", "E-LOOP1"])).toBe(0);
+    expect(run(["report", "--election", "E-LOOP1", "--result", "tallied"])).toBe(0);
+    expect(lastJson().state).toBe("hold");
+    // the origin repro from review #1235 M1: human rules rejected...
+    expect(
+      run(["report", "--election", "E-LOOP1", "--result", "hold-resolved", "--resolution", "rejected"]),
+    ).toBe(0);
+    // ...the ruling is durable in tally.json...
+    const tallyFile = JSON.parse(readFileSync(join(
+      projectDir, "amadeus", "spaces", "default", "elections", "E-LOOP1", "tally.json",
+    ), "utf8"));
+    expect(tallyFile.resolutions.length).toBe(1);
+    expect(tallyFile.resolutions[0].resolution).toBe("rejected");
+    // ...and the rendered record shows the ruling, NOT 保留 (the old symptom)
+    expect(run(["next", "--election", "E-LOOP1"])).toBe(0);
+    expect(lastJson().kind).toBe("render");
+    expect(run(["render", "--election", "E-LOOP1"])).toBe(0);
+    const doc = readFileSync(join(
+      projectDir, "amadeus", "spaces", "default", "elections", "E-LOOP1", "record.md",
+    ), "utf8");
+    expect(doc).toContain("裁定: 不採用");
+    expect(doc).not.toContain("裁定: 保留");
+    expect(doc).toContain("hold 裁定履歴: block → rejected");
+    expect(run(["verify", "--election", "E-LOOP1"])).toBe(0);
+    expect(run(["report", "--election", "E-LOOP1", "--result", "rendered"])).toBe(0);
+    expect(run(["verify", "--election", "E-LOOP1"])).toBe(0);
+    expect(run(["report", "--election", "E-LOOP1", "--result", "verified"])).toBe(0);
+    expect(run(["next", "--election", "E-LOOP1"])).toBe(0);
+    expect(lastJson().kind).toBe("done");
+  });
+
   test("Bolt 4: residual error branches — hold-resolved guards, blocked views dir, corrupt timeline, reservation tamper", () => {
     // hold-resolved on a non-hold state is rejected
     expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
@@ -324,6 +367,9 @@ describe("t236 election directive loop", () => {
     const doc = readFileSync(recordPath, "utf8");
     writeFileSync(recordPath, doc.split("\n").filter((l) => !l.startsWith("- 留保(")).join("\n"));
     expect(run(["verify", "--election", "E-LOOP1"])).toBe(1);
+    // m3 isolation: the failure is specifically the reservation-transcription
+    // check (not a timeline-order finding firing first)
+    expect(JSON.parse(errs[errs.length - 1] ?? "{}").error).toContain("reservation");
     // blocked views dir: pre-place a plain file where views/ must go
     const dir2 = join(projectDir, "amadeus", "spaces", "default", "elections", "E-BLOCKV1");
     mkdirSync(dir2, { recursive: true });
