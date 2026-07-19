@@ -1,0 +1,38 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-19T23:28:06Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-BFAFD",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e2 record をリードオンリー実測: 成果物4点(business-logic-model/domain-entities/business-rules/frontend-components)は construction/ballot-acceptance-failclosed/functional-design/ の per-unit 様式で実在(ls 4件)、diary 4点 verbatim 確認 — (1) AD 正本の逐語継承(cross-unit-type-verbatim-check の単一 Unit 適用) (2) frontend-components の N/A 根拠充当(approval-handoff:c4 系の非捏造) (3) iteration 1 Major 2件の是正で AD services.md 側誤記の遡及修正+FD 整合節(実装様式実測で FD 側が正と確定する手順は fix-diff-independent-reverify 整合) (4) AD 遡及編集の自動発火 stage-mismatch 偽赤を自ステージ手動再発火で確定(manual-sensor-fire 追補4の適用 — audit 実測で 23:24:07Z に functional-design/application-design 両 stage の Passed を確認)。BR-6 への E-GMECG 追補反映は norm 即時適用の好例。iteration 2 READY。全て既存 cid の適用実例で新規学習なし、0件で可",
+      "submittedAt": "2026-07-19T23:27:52Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-BFAFD",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e2 record リードオンリー実測: 成果物4点は unit dir 様式 construction/ballot-acceptance-failclosed/functional-design/ に実在(find で全点確認 — diary は engine の memory_path 側で分置、degrade-scope-unit-dir-layout 整合)。diary に iteration 1 NOT-READY(Major 2: AD services.md 誤記の遡及是正=FD 側が実装様式実測で正 / FR-4(c) 未確定)→ iteration 2 READY の閉包記録、BR-6 への E-GMECG 追補反映(着地当日の即適用)を確認。観測は cross-unit-type-verbatim-check(単一 unit 版)等の適用実例でプロセス新規なし。0件で可(1)。",
+      "submittedAt": "2026-07-19T23:27:46Z"
+    }
+  ],
+  "resolutions": []
+}
