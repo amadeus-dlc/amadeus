@@ -10,7 +10,7 @@
 | 内部(非公開) | 7状態決定表・exit code 写像・argv parse — 実装詳細として非 export | なし(検証は CLI 経由の e2e+機械実行器) |
 
 - スタイルは functional-domain-modeling-ts 既決(project.md Code Style): ReportResult は判別ユニオン。CLI 層はドメイン型を持たず U1〜U4 の配線のみ(手書き argv parse — tech-stack-decisions.md の CLI フレームワーク却下と一体)
-- 依存方向: U5 → U1/U2/U3/U4 の4ユニット(unit-of-work-dependency.md:27 — depends_on 全部品)。U6 が U5 を転送(:29)
+- 依存方向: U5 → U1/U2/U3/U4 の4ユニット(unit-of-work-dependency.md:27 — depends_on 全部品)。U6 が U5 を転送(unit-of-work-dependency.md:14 — SKILL は CLI の指令ループを転送するだけ。構造行は :29)
 
 ## NFR 横断の設計制約
 
