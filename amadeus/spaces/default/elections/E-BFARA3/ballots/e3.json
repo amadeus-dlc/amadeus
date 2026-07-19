@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFARA3",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "実測: appendBallot(store.ts:124-135)は amend を dup 判定から除外するのみで ref 実在照合なし、BallotRef 3フィールド(model.ts:102)を確認。存在しない ref の amend が受理されると Q2-A の『最新1票採用』母集団を汚染しうる(original 不在 voter の amend が実質新規票化 = 受理境界 fail-open の再生産)。A の fail-closed 実在照合+unknown-ref 級 loud 拒否が #1252/#1253 の趣旨と整合。B 非採用受容度: 6(形式検証のみでも Q2-A 側で original 実在を要求すれば実害は限定されるが、拒否が遅延段へ移る分だけ診断性が落ちる)。",
+  "submittedAt": "2026-07-19T22:10:29Z"
+}

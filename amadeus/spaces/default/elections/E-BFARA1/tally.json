@@ -1,0 +1,49 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-19T22:12:09Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-BFARA1",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "#1252 クロスレビューで transport.ts:88-92 normalizeAt を実測済み — 正規化 funnel は既存設計の中心で、B はそれを ingestion で活かし非 ISO のみ遮断する parse-don't-validate 適合形。A(mint 正規形限定)は new Date().toISOString() の ms 形(エージェントの自然な生成形)を拒否し、投票失敗の摩擦を不必要に生む。classifyLate の辞書式比較は受理後 normalize で保証される。",
+      "submittedAt": "2026-07-19T22:10:03Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-BFARA1",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "A 採用時、vote 経路(election.ts:334)の normalizeAt 呼びの扱い(受理形に対し恒等となるため、残置か除去か)を design で明示すること — 残置なら『恒等の防御層』と注記、除去なら DeliveryRecord mint 側(transport)の用途は維持",
+      "rationale": "#1252 クロスレビュー(1人目)当事者。実測: t239:125-129 の4挙動ピン(ms 除去/TZ→UTC/恒等/素通し)を verbatim 確認、corpus 全12選挙の保存 submittedAt は非正規形0件(grep -vcE で機械確認)— 実入力は既に全て mint 正規形であり、A の regex ^秒精度UTC0 Date 有効性の二段は現実の書き手を1件も壊さない。A は parse-don't-validate(検証済み正規形を型で運ぶ)に最も忠実で、自分の #1252 verdict 補足(new Date 単独は日付のみ入力を通すため regex+Date 二段)とも一致。B の寛容受理+正規化は classifyLate の辞書式比較前提を『正規化の実施』という手続きに依存させ続ける — A なら保存形=受理形で依存自体が消える。ballot は機械生成(date -u)であり人間入力の利便性要求もない。自案非採用時: B=6(実害はないが契約が弱い)",
+      "submittedAt": "2026-07-19T22:10:42Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-BFARA1",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "実測: normalizeAt(transport.ts:87-92)は受理後適用(handleVote :334)を確認、date-only '2026-07-19' が new Date で有効(bun -e 実測 NaN=false)= B の new Date 併用でも日付のみ入力が素通りする穴を確認。ballot は自チームのスクリプトが mint する機械生成入力であり、mint 正規形限定(A)は parse-don't-validate と fail-closed(#1252 の趣旨)に合致、normalizeAt は恒等化して精度混在の温床も消える。B 非採用受容度: B なら 6(寛容受理+正規化は現行実態の保存として成立するが、date-only 素通りの追加封鎖が必要)。",
+      "submittedAt": "2026-07-19T22:10:29Z"
+    }
+  ],
+  "resolutions": []
+}

@@ -1,0 +1,25 @@
+{
+  "electionId": "E-BFARA3",
+  "kind": "clarification-question",
+  "question": "260719-ballot-failclosed-amend(#1253)RA Q3: amend の ref 検証の深さ(FR-3 の確定条件)。\n\n実測コンテキスト: BallotRef = { electionId, voter, submittedAt }(model.ts:102)。store の受理(appendBallot)は amend を dup 判定から除外するのみで ref の実在は見ない(store.ts:131-133)。\n\n各自コード実測のうえ GoA 付き投票。自案非採用時の受容度(6/7/8)を note に併記。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. fail-closed 実在照合 — 受理時に ref が ledger 上の同一 voter の既存 ballot(original または先行 amend)と一致することを検証し、不一致は新エラー分類(unknown-ref 級)で拒否"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. 形式検証のみ — ref の3フィールドの型・様式だけ検証し、実在照合はしない(存在しない ref の amend も受理される)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. その他(note に方式明記)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

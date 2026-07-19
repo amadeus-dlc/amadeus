@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GMEBT",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "範囲限定形なら価値を認める — nested quantifier 形(本件の (-[A-Z0-9]+)* 級)の regex 新設時に限る線形性実測は合理的で、ReDoS 事故・ハング実測が将来発生したらその範囲限定形で再提案してほしい(全 regex 一律義務は過剰のまま)。",
+      "rationale": "不採用(2)。根拠: (1) e1 build-test-results.md の実測(100KB で 3.4ms/5.3ms)は実在確認したが、これは合格実測でありインシデント・ニアミスの裏付けがない — §13 の採用実績は実測の失敗・ヒヤリハット起点が通例(P2)。 (2) 100KB/100ms の閾値は強制機構から導出されない発明定数(constants-from-code の緊張)。 (3) 対象入力は team 起草の record ファイルで敵対入力の脅威モデルが薄く、『拡張・新設 regex』全数への一律義務化は蒸留ラウンドが減らそうとしている churn を増やす。conductor 自身の不採用理由候補(汎用常識)に同意。採用成立時の受容度: 6。",
+      "submittedAt": "2026-07-19T22:10:50Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GMEBT",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "適用範囲を『不定長・外部由来入力(ログ行・ファイル本文・ユーザー入力)を消費する新設・拡張 regex』に限定し、固定様式の短トークン照合(SHA 形・slug 形等)には義務化しない — 一律義務化は cid 肥大と検証コスト増を招く。新規 cid でなく検証系既存ファミリ(落ちる実証系)への追補統合を推奨。",
+      "rationale": "e1 record 実測: build-test-results.md に『ReDoS 線形性 | conductor scratch | 100KB 敵対入力で 3.4ms / 5.3ms』の記録実在を確認。本 repo は regex ベースの parser/gate/ratchet が正本機構であり、backtracking 爆発は偽 hang として c5/監視系の診断コストに直結する — 汎用常識に留めず実測付き手順として persist する価値がある。採用(2)。",
+      "submittedAt": "2026-07-19T22:11:05Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GMEBT",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "不採用は『全 regex 変更への一律義務化』に対する判断であり、ReDoS 検査自体の価値は否定しない — 信頼境界外入力(外部 API 応答・ユーザー投稿等)を読む regex に限定した形での再提案なら支持する。また今回の実測記録(3成果物への固定)は良い実践として diary 維持で十分",
+      "rationale": "e1 record 実測: 3.4ms/5.3ms の実測は build-test-results.md:21 / security-test-instructions.md:13 / memory.md:15 の3箇所で整合記録されており事実として真正。しかし cid 化には不採用: (1) トリガー実害・ヒヤリハットが不在(実測は予防的 sanity で、何も落ちていない)— 本チームのノルム採用は実測インシデント起点が慣行 (2) 対象 regex(GOA_HEAD_RE 等)はアンカー付き・曖昧性のない線形構造で、入力も trusted repo ファイル(team.md)— ReDoS の脅威モデル外 (3) 100ms 閾値は対照実装の named constant に遡れない発明値(constants-from-code の懸念クラス) (4) 全 regex 変更への一律義務は蒸留ラウンドが削減対象とする ceremony 過剰の側。conductor 自身の不採用理由候補(汎用常識)に同意。自案非採用時: 採用=6",
+      "submittedAt": "2026-07-19T22:11:49Z"
+    }
+  ],
+  "late": []
+}

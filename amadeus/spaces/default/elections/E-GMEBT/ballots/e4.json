@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GMEBT",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "不採用は『全 regex 変更への一律義務化』に対する判断であり、ReDoS 検査自体の価値は否定しない — 信頼境界外入力(外部 API 応答・ユーザー投稿等)を読む regex に限定した形での再提案なら支持する。また今回の実測記録(3成果物への固定)は良い実践として diary 維持で十分",
+  "rationale": "e1 record 実測: 3.4ms/5.3ms の実測は build-test-results.md:21 / security-test-instructions.md:13 / memory.md:15 の3箇所で整合記録されており事実として真正。しかし cid 化には不採用: (1) トリガー実害・ヒヤリハットが不在(実測は予防的 sanity で、何も落ちていない)— 本チームのノルム採用は実測インシデント起点が慣行 (2) 対象 regex(GOA_HEAD_RE 等)はアンカー付き・曖昧性のない線形構造で、入力も trusted repo ファイル(team.md)— ReDoS の脅威モデル外 (3) 100ms 閾値は対照実装の named constant に遡れない発明値(constants-from-code の懸念クラス) (4) 全 regex 変更への一律義務は蒸留ラウンドが削減対象とする ceremony 過剰の側。conductor 自身の不採用理由候補(汎用常識)に同意。自案非採用時: 採用=6",
+  "submittedAt": "2026-07-19T22:11:49Z"
+}

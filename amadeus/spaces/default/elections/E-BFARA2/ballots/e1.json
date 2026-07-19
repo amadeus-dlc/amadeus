@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFARA2",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "#1253 クロスレビューで store.ts:122-134 の amend 共存受理(ADR-5 correction trail)を実測済み — A(per-voter 最新1票)は ledger 不変のまま集計だけを決定的に置換し、amend 経路の目的(CLI 内完結の訂正)と決定的関数原則に適合。B(人間再集計)は #1253 の動機(手是正の排除)を再導入する。",
+  "submittedAt": "2026-07-19T22:10:03Z"
+}
