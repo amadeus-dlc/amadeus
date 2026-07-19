@@ -2481,3 +2481,11 @@
 **Duration ms**: 38
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-19T20:25:28Z
+**Event**: WORKFLOW_PARKED
+**Stage**: practices-discovery
+**Timestamp**: 2026-07-19T20:25:28Z
+
+---
