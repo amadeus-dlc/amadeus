@@ -1284,3 +1284,45 @@
 **Timestamp**: 2026-07-19T23:13:24Z
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:36:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8e70b1b7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/amadeus-election-model.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:36:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8e70b1b7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/amadeus-election-model.ts
+**Duration ms**: 1914
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:36:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: c6cc3184
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/amadeus-election-model.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:36:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: c6cc3184
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/amadeus-election-model.ts
+**Duration ms**: 1128
+
+---

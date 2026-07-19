@@ -8,7 +8,7 @@
 - **State Version**: 7
 - **Active Agent**: amadeus-developer-agent
 - **Worktree Path**:
-- **Bolt Refs**:
+- **Bolt Refs**: fix-1261-tally-choice-ruling
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration
