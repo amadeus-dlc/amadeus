@@ -164,3 +164,11 @@
 **Message**: 検証 OK。「最新」= tally-choice-ruling の1件のみ、goa-multiseg は履歴降格、goa-multiseg ブロック全文保存(既存本文は無改変)、マーカー0件。合成完了です。\n\n---\n\n## 最終報告(reverse-engineering 合成 — 260719-tally-choice-ruling)\n\n### 1. 引用再実測(mechanism-cite-
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-19T22:38:37Z
+**Event**: WORKFLOW_PARKED
+**Stage**: reverse-engineering
+**Timestamp**: 2026-07-19T22:38:37Z
+
+---
