@@ -1,0 +1,11 @@
+# NFR Requirements — Questions(election-store)
+
+上流入力(consumes 全数): business-logic-model.md、business-rules.md、requirements.md、technology-stack.md
+
+## E-OC1 証跡
+
+質問 0 問 — 既決導出(1行): クラッシュ耐性は requirements-analysis:c4 の要件化+FD 既決の tmp+rename(C2)、単一書込主体は D-09 導出(E-ETF-FD2 (1) 承認済み)。E-OC1 3段: 判定申告 = agmsg 一括申告(U2〜U6)2026-07-19T04:26Z 頃 → **leader 一括承認 2026-07-19T04:27:21Z(agmsg)** → 本記載。
+
+## 質問一覧
+
+質問 0 問(本文なし)— 判定根拠と 3 段証跡は上節「E-OC1 証跡」を参照。
