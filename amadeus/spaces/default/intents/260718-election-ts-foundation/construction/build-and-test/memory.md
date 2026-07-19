@@ -12,3 +12,5 @@
 
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
+
+(検証対象の実装スコープは各ユニット code-generation-plan.md の Bolt 分割宣言に従う)

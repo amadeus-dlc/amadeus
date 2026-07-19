@@ -1,6 +1,6 @@
 # Security Test Instructions — election-ts-foundation
 
-> 上流入力(consumes 全数): code-generation 各ユニット code-summary.md、requirements.md、bolt-plan.md、team-practices.md
+> 上流入力(consumes 全数): code-generation 各ユニットの code-generation-plan.md と code-summary.md、requirements.md、bolt-plan.md、team-practices.md
 
 ## 検査項目(requirements.md の fail-closed/blind 要件の実測面)
 
@@ -12,3 +12,5 @@
 ## 実行
 
 上記は unit/integration 層に内包 — 個別コマンドは unit/integration の instructions を参照
+
+(検証対象の実装スコープは各ユニット code-generation-plan.md の Bolt 分割宣言に従う)

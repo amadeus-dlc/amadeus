@@ -1,6 +1,6 @@
 # Unit Test Instructions — election-ts-foundation
 
-> 上流入力(consumes 全数): code-generation 各ユニット code-summary.md、requirements.md、bolt-plan.md、team-practices.md
+> 上流入力(consumes 全数): code-generation 各ユニットの code-generation-plan.md と code-summary.md、requirements.md、bolt-plan.md、team-practices.md
 
 ## 対象と実行
 
@@ -13,5 +13,7 @@ bun test tests/unit/t239-election-transport.test.ts  # U4: 型面 blind・brand 
 ```
 
 ## 合格基準
+
+(検証対象の実装スコープは各ユニット code-generation-plan.md の Bolt 分割宣言に従う)
 
 全 pass(0 fail)。requirements.md FR-3b/FR-4/FR-5a の受け入れテストを内包(落ちる実証は各ファイル内の注入ケース)
