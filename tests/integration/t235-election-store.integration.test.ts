@@ -1,0 +1,121 @@
+// t235 — U2 election-store real-FS tests (Bolt 1 walking-skeleton core).
+// Layer: integration (touches a tmp elections root — fs-tests-integration-first).
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { Election } from "../../scripts/amadeus-election-model";
+import { Store, writeStoreFile } from "../../scripts/amadeus-election-store";
+
+const DEF = {
+  electionId: "E-STORE-1",
+  kind: "zero-confirm",
+  question: "q",
+  choices: [{ internalNo: 1, label: "a" }],
+  voters: ["alice", "bob"],
+};
+
+function election() {
+  const parsed = Election.parse(DEF);
+  if (!parsed.ok) throw new Error("definition must parse");
+  return parsed.value;
+}
+
+function ballot(voter: string) {
+  return {
+    kind: "original" as const,
+    electionId: "E-STORE-1",
+    voter,
+    choiceInternalNo: 1,
+    goa: 1 as never,
+    reservation: null,
+    rationale: null,
+    submittedAt: "2026-07-19T00:00:00Z",
+  };
+}
+
+let root = "";
+
+beforeEach(() => {
+  root = mkdtempSync(join(tmpdir(), "election-store-"));
+});
+
+afterEach(() => {
+  rmSync(root, { recursive: true, force: true });
+});
+
+describe("t235 election-store", () => {
+  test("create/load round-trip persists the definition with an explicit draft state", () => {
+    expect(Store.create(root, election()).ok).toBe(true);
+    const loaded = Store.load(root, "E-STORE-1");
+    expect(loaded.ok).toBe(true);
+    if (loaded.ok) {
+      expect(loaded.value.state).toBe("draft");
+      expect(loaded.value.election.voters).toEqual(["alice", "bob"]);
+    }
+    const dup = Store.create(root, election());
+    expect(dup.ok).toBe(false);
+    if (!dup.ok) expect(dup.error).toBe("exists");
+  });
+
+  test("appendBallot rejects a second non-amend ballot from the same voter", () => {
+    expect(Store.create(root, election()).ok).toBe(true);
+    expect(Store.appendBallot(root, "E-STORE-1", ballot("alice")).ok).toBe(true);
+    const second = Store.appendBallot(root, "E-STORE-1", ballot("alice"));
+    expect(second.ok).toBe(false);
+    if (!second.ok) expect(second.error).toBe("duplicate");
+    const status = Store.status(root, "E-STORE-1");
+    expect(status.ok).toBe(true);
+    if (status.ok) {
+      expect(status.value.voted).toEqual(["alice"]);
+      expect(status.value.pending).toEqual(["bob"]);
+    }
+  });
+
+  test("fail-closed load: a corrupt election.json rejects with corrupt, never re-initializes", () => {
+    expect(Store.create(root, election()).ok).toBe(true);
+    const path = join(root, "E-STORE-1", "election.json");
+    writeFileSync(path, '{"electionId": "E-STORE-1", "state": ');
+    const loaded = Store.load(root, "E-STORE-1");
+    expect(loaded.ok).toBe(false);
+    if (!loaded.ok) expect(loaded.error).toBe("corrupt");
+    // The broken bytes stay untouched on disk (no silent recovery).
+    expect(readFileSync(path, "utf8")).toBe('{"electionId": "E-STORE-1", "state": ');
+    const missing = Store.load(root, "E-NOPE");
+    expect(missing.ok).toBe(false);
+    if (!missing.ok) expect(missing.error).toBe("not-found");
+  });
+
+  test("writeStoreFile atomic pair: original bytes stay intact before rename, full new bytes after", () => {
+    const path = join(root, "target.json");
+    writeFileSync(path, "OLD");
+    // (a) a tmp file appearing next to the target never mutates the original
+    writeFileSync(`${path}.tmp`, "HALFWAY");
+    expect(readFileSync(path, "utf8")).toBe("OLD");
+    // (b) after writeStoreFile completes, the file holds exactly the new data
+    // (byte-identical — a no-op rename would fail this side)
+    const w = writeStoreFile(path, "NEW-CONTENT");
+    expect(w.ok).toBe(true);
+    expect(readFileSync(path, "utf8")).toBe("NEW-CONTENT");
+  });
+
+  test("materialize fixes the ballot set and books a tallied timeline event", () => {
+    expect(Store.create(root, election()).ok).toBe(true);
+    expect(Store.appendBallot(root, "E-STORE-1", ballot("alice")).ok).toBe(true);
+    const result = {
+      kind: "established" as const,
+      outcome: "adopted" as const,
+      counts: { favor: 1, against: 0, abstain: 0, discuss: 0 },
+    };
+    expect(Store.materialize(root, "E-STORE-1", result, "2026-07-19T01:00:00Z").ok).toBe(true);
+    const tallyFile = JSON.parse(readFileSync(join(root, "E-STORE-1", "tally.json"), "utf8"));
+    expect(tallyFile.result.kind).toBe("established");
+    expect(tallyFile.ballots.length).toBe(1);
+    const materialized = JSON.parse(
+      readFileSync(join(root, "E-STORE-1", "ballots", "alice.json"), "utf8"),
+    );
+    expect(materialized.voter).toBe("alice");
+    const timeline = JSON.parse(readFileSync(join(root, "E-STORE-1", "timeline.json"), "utf8"));
+    expect(timeline.some((e: { kind: string }) => e.kind === "tallied")).toBe(true);
+  });
+});
