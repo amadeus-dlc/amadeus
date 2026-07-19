@@ -16,3 +16,5 @@
 - [2026-07-19T22:38Z] Interpretation: E-BFARA1 e4 留保への design 回答 = ADR-1(normalizeAt 残置+恒等コメント)。留保の2択(残置/除去)のうち surgical・防御層維持で残置を選択し Alternatives に除去を記録。
 - [2026-07-19T22:38Z] Interpretation: 起草時引用の自己実測で2件是正 — tally 呼び出し元「5箇所」→ scripts 実測2箇所(:353/:440)、GoaFreq 消費行を :447/:448 実測値へ(ledger-count-mechanical-recalc / mechanism-cite-verify-at-draft の適用)。
 - [2026-07-19T22:38Z] Interpretation: #1262(receivedAt)はスコープ外と設計判定(受理境界の内側でない timeline 意味論)— e1 との直列合意も component-dependency に固定。
+
+- [2026-07-19T22:45Z] Deviation: reviewer iteration 1 = NOT-READY(Critical: resolveBallots の tally 内部単独適用では GoaFreq :447/record.ts:134・checkGoaLine :448・verifyReservations :450・renderPersistDraft :386 が未解決母集団のまま乖離し verify 沈黙 — 指摘全引用を独立再実測で確認 / Major: #1261/#1262・直列合意の出典不在)。是正: ADR-3 を「定義1箇所・全消費面適用」へ改訂(適用点の全数列挙表を component-methods に新設、materialize は blind lift 契約と訂正)、出典節を agmsg-git-evidence-split で新設。ADR-2 の文字化け(까지)も同時是正。

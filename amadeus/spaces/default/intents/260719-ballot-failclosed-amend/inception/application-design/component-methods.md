@@ -45,10 +45,17 @@ type BallotShape = { ...既存 8 フィールド; kind: "original" | "amend"; re
 export function resolveBallots(ballots: Ballot[]): Ballot[];
 ```
 
-- `tally(election, ballots)` は先頭で `const resolved = resolveBallots(ballots)` を適用(シグネチャ不変 — scripts 内の呼び出し元2箇所 = materialize 経路 election.ts:353 / verify recompute :440 の変更不要。`grep -rn "tally(" scripts/` 実測)。
-- verify の recompute(election.ts:440 → tally 経由)は tally 内解決により自動的に同一母集団(FR-4 (b) を単一 choke point で充足)。
-- `GoaFreq.fromVotes`(record 側 GoA 行)と `checkGoaLine` の母集団も同じ resolveBallots を通す(集計面の分裂禁止 — verify 内の消費実測: GoaFreq.fromVotes は election.ts:447、checkGoaLine は :448)。
-- classifyLate は受理時分類のため非解決(素の ballot 単位)— late lane の amend も post-tally 到着なら late のまま(FR-4 (c)、materialize の fixed set は tally 時点解決済み)。
+適用点の全数列挙(reviewer iteration 1 Critical の是正 — 定義は1箇所・適用は全消費面。resolveBallots は冪等のため多重適用は無害):
+
+| # | 消費面 | 適用方法(実測 file:line) |
+| --- | --- | --- |
+| 1 | tally の outcome 導出 | `tally` 先頭で内部適用(model.ts:321 — シグネチャ不変、呼び出し元 :353/:440 変更不要) |
+| 2 | verify の GoA 度数・reservation 検査 | `handleVerify` で `const resolved = resolveBallots(ballots)` を1回導出し、GoaFreq.fromVotes(election.ts:447)/ checkGoaLine(:448)/ verifyReservations(:450)へ resolved を渡す |
+| 3 | render(record 描画) | `handleRender` の ballots(election.ts:372)を resolved にして renderPersistDraft(:386)へ渡す — record.ts:134 の freq と :137 の reservationLines は引数経由で解決済みになる(record.ts 自体は無変更) |
+| 4 | materialize の fixed set | **解決しない(blind lift のまま — store.ts:9 コメント・:223 実測)**。tally.json の ballots は全受理集合 = correction trail の保存面であり、集計値でない。消費側(#1〜#3)が読み出し時に解決する契約 |
+
+- classifyLate は受理時分類のため非解決(素の ballot 単位)— late lane の amend も post-tally 到着なら late のまま。
+- FR-4 (b) の充足構造: verify の recompute(tally 経由)と freq/reservation 検査(明示 resolved)が同一 resolver 定義を通るため乖離しない。record.md に描画される GoA 行・留保数と verify の再計算も同一 resolved 母集団(#2=#3)。
 
 ## election-store
 
