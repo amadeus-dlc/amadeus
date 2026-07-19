@@ -5118,3 +5118,37 @@
 **Message**: Sensor firings are present for the corrected files. All 3 fixes verified against fresh evidence.\n\n## Review — Iteration 2\n\n### Verdict: READY\n\n### 是正確認\n\n| 元 Severity | Location | 確認結果 |\n|---|---|---|\n
 
 ---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-19T05:15:28Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: nfr-requirements
+**Recovered**: true
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-19T05:15:28Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state approve nfr-requirements --project-dir /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260718-073253-15ea/engineer-1
+**Error**: Refusing to approve "nfr-requirements": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then approve. (autonomous Construction is exempt)
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-19T05:15:28Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --stage nfr-requirements --result completed
+**Error**: Transition rejected by amadeus-state.ts approve for "nfr-requirements": {"error":"Refusing to approve \"nfr-requirements\": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then approve. (autonomous Construction is exempt)"}
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-19T05:15:55Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-requirements
+**Timestamp**: 2026-07-19T05:15:55Z
+
+---
