@@ -6133,3 +6133,260 @@
 **Timestamp**: 2026-07-19T23:41:18Z
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T23:41:41Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ad839e9c09019fc0f
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-19T23:42:50Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-19T23:42:50Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-19T23:42:51Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: nfr-requirements
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-19T23:42:51Z
+**Event**: GATE_APPROVED
+**Stage**: nfr-requirements
+**Grant Id**: 22ab851b
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-19T23:42:51Z
+**Event**: STAGE_COMPLETED
+**Stage**: nfr-requirements
+**Details**: Stage Nfr Requirements approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-19T23:42:51Z
+**Event**: STAGE_STARTED
+**Stage**: nfr-design
+**Agent**: amadeus-architect-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:43:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: 02c2fd9f
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:43:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: 02c2fd9f
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/nfr-design/performance-design.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:43:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: 61f40c72
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:43:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: 61f40c72
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/nfr-design/security-design.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:43:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0bb88b96
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:43:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0bb88b96
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/nfr-design/scalability-design.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:43:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: b1218fef
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:43:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: b1218fef
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/nfr-design/reliability-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:43:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: 23426d64
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:43:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: 23426d64
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/nfr-design/logical-components.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:43:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: f4a6f9d5
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:43:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: f4a6f9d5
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/nfr-design/performance-design.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:43:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: ed15a908
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:43:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: ed15a908
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/nfr-design/security-design.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:43:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: f8f6cbc0
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:43:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: f8f6cbc0
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/nfr-design/scalability-design.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:43:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5a4e48b5
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:43:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5a4e48b5
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/nfr-design/reliability-design.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:43:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: a3bc12f8
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:43:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: a3bc12f8
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/nfr-design/logical-components.md
+**Duration ms**: 40
+
+---
