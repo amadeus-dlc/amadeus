@@ -11400,3 +11400,172 @@
 **Message**: 進んでますか？
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T10:25:18Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ac803f9b00a063ce9
+**Message**: 進捗どうですか？
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T10:44:25Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a54b961b0a17f1952
+**Message**: 選挙TS基盤の実装は全5 Bolt完了し、残りはBolt 4/5のPR(#1235/#1236)のレビューとマージ待ちです。着地したら自動でmain再検証とFR-0実演を行いゲート報告に進みます。
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-19T11:21:50Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-19T11:21:50Z
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-19T11:25:26Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: 
+**Error**: report requires --result <outcome>. Accepted: approved, completed, complete, done (the verdict for the stage just acted on).
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T11:30:48Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: fr0-demo-agent
+**Agent ID**: afr0-demo-agent-e946fceaac29bed6
+**Message**: FR-0の実演を、スキル文書とCLI指令のみに従って完走しました。手順は自分で決めず、`next` が名指しした verb と report を字義どおり実行しただけです。\n\n## 実行した全コマンドと各 `next` の kind の列\n\n| # | コマンド | 結果 |\n|---|---|---|\n| 1 | `open --file def.json` | `{"opened":"E-FR
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T11:31:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6be9d9f1
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/build-and-test-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T11:31:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6be9d9f1
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/build-and-test-summary.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T11:31:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 66538fd0
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/build-and-test-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T11:31:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 66538fd0
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/build-and-test-summary.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T11:31:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2d6b7832
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/fr0-acceptance-demo.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T11:31:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2d6b7832
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/fr0-acceptance-demo.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T11:31:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 01381201
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/fr0-acceptance-demo.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T11:31:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 01381201
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/fr0-acceptance-demo.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T11:31:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: c9413525
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/build-test-results.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T11:31:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: c9413525
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/build-test-results.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T11:31:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: aab13612
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/build-test-results.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T11:31:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: aab13612
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/build-test-results.md
+**Duration ms**: 34
+
+---
