@@ -1269,3 +1269,11 @@
 **Message**: 実装前の設計ギャップを検出しました。逸脱に該当するため、**コードを一切書かずに停止**し、報告します。\n\n## 停止報告(逸脱: 実装前停止)\n\n### base SHA\n`afa872034955e74777403687ea37c975b9e83827`(origin/main HEAD、`bolt/fix-1261-tally-choice-ruling` を切り出し済み・変更なし)\n\n##
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-19T23:11:25Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-19T23:11:25Z
+
+---
