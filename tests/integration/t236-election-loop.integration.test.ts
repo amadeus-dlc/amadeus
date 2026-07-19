@@ -3,7 +3,7 @@
 // wiring lines are lcov-visible — seam-export-handler-amend). The spawn-based
 // FR-0 demonstration lives in tests/e2e/t237.
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { main } from "../../scripts/amadeus-election";
@@ -132,6 +132,49 @@ describe("t236 election directive loop", () => {
     const directive = lastJson();
     expect(directive.kind).toBe("hold");
     expect(directive.reason).toBe("block");
+  });
+
+  test("unreadable inputs and verify failure branches are loud", () => {
+    // open with a non-JSON definition file
+    const badDef = join(projectDir, "bad.json");
+    writeFileSync(badDef, "not json {");
+    expect(run(["open", "--file", badDef])).toBe(1);
+    // set up a real election through tally
+    expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
+    expect(run(["report", "--election", "E-LOOP-1", "--result", "distributed"])).toBe(0);
+    const b1 = writeJson("b1.json", {
+      electionId: "E-LOOP-1",
+      voter: "alice",
+      choiceInternalNo: 1,
+      goa: 1,
+      submittedAt: "2026-07-19T00:01:00Z",
+    });
+    // vote with a non-JSON ballot file
+    expect(run(["vote", "--election", "E-LOOP-1", "--file", badDef])).toBe(1);
+    expect(run(["vote", "--election", "E-LOOP-1", "--file", b1])).toBe(0);
+    expect(run(["tally", "--election", "E-LOOP-1"])).toBe(0);
+    expect(run(["render", "--election", "E-LOOP-1"])).toBe(0);
+    const tallyPath = join(
+      projectDir, "amadeus", "spaces", "default", "elections", "E-LOOP-1", "tally.json",
+    );
+    // verify mismatch: tamper the stored result (valid JSON, wrong outcome)
+    const stored = JSON.parse(readFileSync(tallyPath, "utf8"));
+    stored.result = {
+      kind: "established",
+      outcome: "rejected",
+      counts: stored.result.counts,
+    };
+    writeFileSync(tallyPath, JSON.stringify(stored));
+    expect(run(["verify", "--election", "E-LOOP-1"])).toBe(1);
+    // readTally catch: corrupt tally.json is treated as unreadable
+    writeFileSync(tallyPath, "{broken");
+    expect(run(["verify", "--election", "E-LOOP-1"])).toBe(1);
+    // restore a consistent tally, then drop record.md -> verify missing branch
+    expect(run(["tally", "--election", "E-LOOP-1"])).toBe(0);
+    rmSync(join(
+      projectDir, "amadeus", "spaces", "default", "elections", "E-LOOP-1", "record.md",
+    ));
+    expect(run(["verify", "--election", "E-LOOP-1"])).toBe(1);
   });
 
   test("duplicate vote and unusable verbs fail loudly", () => {

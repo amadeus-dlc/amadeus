@@ -1,7 +1,7 @@
 // t235 — U2 election-store real-FS tests (Bolt 1 walking-skeleton core).
 // Layer: integration (touches a tmp elections root — fs-tests-integration-first).
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Election } from "../../scripts/amadeus-election-model";
@@ -97,6 +97,33 @@ describe("t235 election-store", () => {
     const w = writeStoreFile(path, "NEW-CONTENT");
     expect(w.ok).toBe(true);
     expect(readFileSync(path, "utf8")).toBe("NEW-CONTENT");
+  });
+
+  test("io-error branches: unreadable file, dir-blocked create, dir-blocked materialize", () => {
+    // (1) readJson catch: file exists but is unreadable (permission 000)
+    expect(Store.create(root, election()).ok).toBe(true);
+    const path = join(root, "E-STORE-1", "election.json");
+    chmodSync(path, 0o000);
+    const unreadable = Store.load(root, "E-STORE-1");
+    chmodSync(path, 0o644);
+    expect(unreadable.ok).toBe(false);
+    if (!unreadable.ok) expect(unreadable.error).toBe("io-error");
+    // (2) create catch: the election dir path is blocked by a plain file
+    writeFileSync(join(root, "E-BLOCKED"), "not a dir");
+    const blocked = Store.create(root, { ...election(), electionId: "E-BLOCKED" });
+    expect(blocked.ok).toBe(false);
+    if (!blocked.ok) expect(blocked.error).toBe("io-error");
+    // (3) materialize catch: ballots/ path is blocked by a plain file
+    writeFileSync(join(root, "E-STORE-1", "ballots"), "not a dir");
+    const mat = Store.materialize(
+      root,
+      "E-STORE-1",
+      { kind: "hold", reason: "tie", counts: { favor: 0, against: 0, abstain: 0, discuss: 0 } },
+      "2026-07-19T01:00:00Z",
+    );
+    expect(mat.ok).toBe(false);
+    if (!mat.ok) expect(mat.error).toBe("io-error");
+    rmSync(join(root, "E-STORE-1", "ballots"));
   });
 
   test("materialize fixes the ballot set and books a tallied timeline event", () => {
