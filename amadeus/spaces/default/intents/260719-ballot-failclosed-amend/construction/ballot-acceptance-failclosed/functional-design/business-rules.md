@@ -20,6 +20,14 @@ SUBMITTED_AT_RE 不一致 **または** new Date が NaN → err("invalid-timest
 
 `resolveBallots(ballots)`: voter ごとに submittedAt 最大の1票、同時刻は amend 優先。適用点は AD 適用点表 #1〜#3・#5 の全数(tally 内部 / handleVerify の GoaFreq :447・checkGoaLine :448・verifyReservations :450・verifySelf :456 / handleRender :372→renderPersistDraft :386)。#4 materialize は blind lift 契約(非適用)。resolver は冪等。
 
+## BR-4b: classifyLate / late レーンとの整合(FR-4 (c) の確定 — AD 逐語継承)
+
+AD component-methods.md の確定を FD 契約として固定する: 「classifyLate は受理時分類のため非解決(素の ballot 単位)— late lane の amend も post-tally 到着なら late のまま」。すなわち:
+
+- classifyLate(model.ts:296-298)は resolveBallots を**適用しない** — 受理時点の個別 ballot の submittedAt と talliedAt の比較のみ(kind 非区別の現行挙動を維持)。
+- post-tally に到着した amend は late lane(store.ts:138-158 の分岐)へ入り、tally の fixed set(materialize 済み)には影響しない — 裁定の再計算は人間の再審判断(GoA 8 late の reexamRequired 経路は現行のまま)。
+- FR-4 (c) の受け入れ根拠: late lane の amend が resolved 母集団(#1〜#3・#5)に混入しないこと(fixed set は tally 時点で確定済み)をテストで固定。
+
 ## BR-5: 後方互換(FR-1(d)、FR-3(a)、NFR-3)
 
 kind 欠落 ballot・既存 mint 形 submittedAt の挙動完全不変。既存 corpus(実装時点の glob 全数)への遡及 sweep で両側実証(FR-2 — 固定件数ループ禁止)。

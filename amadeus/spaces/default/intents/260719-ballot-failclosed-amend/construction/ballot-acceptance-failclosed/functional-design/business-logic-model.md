@@ -7,17 +7,19 @@
 ```mermaid
 flowchart TD
   IN["ballot.json 入力"] --> P["Ballot.parse(6分類 BR-1/BR-2/BR-3 parse 段)"]
-  P -- err --> E1["vote: <分類> exit 1(loud)"]
+  P -- err --> E1["vote: 分類名 exit 1(loud)"]
   P -- ok --> N["normalizeAt(恒等 — ADR-1 注記)"]
   N --> S["Store.appendBallot(dup 判定 → BR-3 unknown-ref 照合)"]
-  S -- err --> E2["appendBallot: <StoreError> exit 1"]
-  S -- ok --> L["ledger 共存記録(ADR-5)+timeline"]
+  S -- err --> E2["appendBallot: StoreError 値 exit 1"]
+  S -- ok --> PT{"post-tally?(classifyLate BR-4b)"}
+  PT -- no --> L["ledger 共存記録(ADR-5)+timeline"]
+  PT -- yes --> LT["late lane 記録(store.ts:138-158)— fixed set 非影響・非解決"]
   L --> T["tally = resolveBallots 内部適用(BR-4 #1)"]
   L --> V["verify: resolved を :447/:448/:450/:456 へ(BR-4 #2/#5)"]
   L --> Rn["render: resolved を :386 へ(BR-4 #3)"]
 ```
 
-テキストフォールバック: 入力 → parse(6分類)→ normalizeAt(恒等)→ appendBallot(dup→unknown-ref)→ ledger 共存 → {tally, verify, render} は resolveBallots 済み母集団を消費(materialize のみ blind lift)。
+テキストフォールバック: 入力 → parse(6分類)→ normalizeAt(恒等)→ appendBallot(dup→unknown-ref)→ post-tally なら late lane(BR-4b、fixed set 非影響・非解決)/ 通常は ledger 共存 → {tally, verify, render} は resolveBallots 済み母集団を消費(materialize のみ blind lift)。
 
 ## 関数配置(AD components.md の見積りを継承)
 

@@ -8,7 +8,7 @@
 
 | verb | 変更 | 契約 |
 | --- | --- | --- |
-| `vote --election <id> --file <ballot.json>` | 受理域の変更 | (1) submittedAt が mint 正規形+実在日時でない ballot は `vote: invalid-timestamp` で exit 1(FR-1) (2) `kind:"amend"`+有効 ref の ballot が受理される(FR-3) (3) ref 不一致は `appendBallot failed: unknown-ref` で exit 1(E-BFARA3) |
+| `vote --election <id> --file <ballot.json>` | 受理域の変更 | (1) submittedAt が mint 正規形+実在日時でない ballot は `vote: invalid-timestamp` で exit 1(FR-1) (2) `kind:"amend"`+有効 ref の ballot が受理される(FR-3) (3) ref 不一致は `appendBallot: unknown-ref` で exit 1(E-BFARA3。表記は storeFail の実装様式 `${op}: ${e}`(election.ts:84-86)に一致させる — 初稿の `appendBallot failed:` は誤記で FD レビュー iteration 1 Major #1 により是正) |
 | `tally` / `verify` / `render` | 集計母集団の解決 | per-voter 最新1票(同時刻 amend 優先)で解決してから集計(FR-4)。original+amend 共存 ledger でも二重計上しない |
 | `next` / `status` / `open` / `notify` / `report` | 変更なし | — |
 
