@@ -1,0 +1,38 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-19T20:23:53Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-BFARE",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e2 record をリードオンリー実測: re-scans/260719-ballot-failclosed-amend.md+scan-notes.md 実在、codekb body 9点温存(ls 9件)、base 祖先性を e2 tree で git merge-base --is-ancestor exit 0 再実測、距離 65 を observed 6f2455c43 時点で再計算し一致(現 HEAD 比は 67 — observed 基準の記録として正しい、measurement-ref 準拠)。主要新事実3点のうち (1) kind 非読取 :194 は #1253 クロスレビューで自分が amend 平坦化を live 再現済みの同一事実 (2) tally 無差別 :321-337 は E-BFAFS 検証で実読済み (3) verify 検出不能は :440 の recompute が同一母集団 tally 再実行であることを実読確認 — いずれも成果物側に固定済みの intent 固有知識で、diary の観測(c3 直列/rescan-base-ancestry/c3-relabel/re-sensors-codekb-filter-mismatch)は既存 cid の適用実例。新規ノルムの隙間なし、0件で可",
+      "submittedAt": "2026-07-19T20:21:18Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-BFARE",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e2 worktree リードオンリー実測: re-scans/260719-ballot-failclosed-amend.md 実在・timestamp 最新バナー本 intent・body 9点温存判断の明記を確認。base 591b6a2a2 の祖先性/距離65 は e2 observed 6f2455c43 基準の記載として整合(enumeration-check-at-observed — 自 tree で再カウントせず存在確認まで)。主要新事実の機構引用を独立照合: amadeus-election-model.ts の parse 戻り値が kind:'original' を固定 mint(:193-198 実読)= amend 投入経路の構造的不在は実文一致。diary 観測は c3 直列/rescan-base-ancestry/c3-relabel/re-sensors-filter-mismatch の適用実例でプロセス新規なし。0件で可(1)。",
+      "submittedAt": "2026-07-19T20:23:39Z"
+    }
+  ],
+  "resolutions": []
+}
