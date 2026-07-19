@@ -3845,3 +3845,11 @@
 **Duration ms**: 37
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-19T22:49:59Z
+**Event**: WORKFLOW_PARKED
+**Stage**: application-design
+**Timestamp**: 2026-07-19T22:49:59Z
+
+---
