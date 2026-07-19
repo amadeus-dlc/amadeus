@@ -161,8 +161,9 @@ describe("t235 election-store", () => {
     expect(Store.appendBallot(root, "E-STORE-1", ballot("alice")).ok).toBe(true);
     const result = {
       kind: "established" as const,
-      outcome: "adopted" as const,
-      counts: { favor: 1, against: 0, abstain: 0, discuss: 0 },
+      winner: { internalNo: 1, label: "a" },
+      choiceCounts: [{ internalNo: 1, label: "a", count: 1 }],
+      goa: { favor: 1, against: 0, abstain: 0, discuss: 0 },
     };
     expect(Store.materialize(root, "E-STORE-1", result, "2026-07-19T01:00:00Z").ok).toBe(true);
     expect(Store.setState(root, "E-STORE-1", "tallied").ok).toBe(true);
@@ -215,8 +216,9 @@ describe("t235 election-store", () => {
     expect(Store.appendBallot(root, "E-STORE-1", ballot("alice")).ok).toBe(true);
     const result = {
       kind: "established" as const,
-      outcome: "adopted" as const,
-      counts: { favor: 1, against: 0, abstain: 0, discuss: 0 },
+      winner: { internalNo: 1, label: "a" },
+      choiceCounts: [{ internalNo: 1, label: "a", count: 1 }],
+      goa: { favor: 1, against: 0, abstain: 0, discuss: 0 },
     };
     expect(Store.materialize(root, "E-STORE-1", result, "2026-07-19T01:00:00Z").ok).toBe(true);
     const tallyFile = JSON.parse(readFileSync(join(root, "E-STORE-1", "tally.json"), "utf8"));

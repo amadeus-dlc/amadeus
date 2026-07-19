@@ -19,12 +19,12 @@ const DEF = {
   voters: ["alice", "bob"],
 };
 
-function ballot(voter: string, goa: number) {
+function ballot(voter: string, goa: number, choiceInternalNo = 1) {
   return {
     electionId: "E-TEST-1",
     voter,
     voterKind: "member",
-    choiceInternalNo: 1,
+    choiceInternalNo,
     goa,
     // GoA 2/3/6 require a reservation (norm (ii)) — supplied so fixtures stay
     // valid across all GoA values; reservation-missing has its own case.
@@ -85,14 +85,15 @@ describe("t234 election-model", () => {
     if (!stringChoice.ok) expect(stringChoice.error).toBe("parse-failure");
   });
 
-  test("tally: zero-confirm favor-majority path establishes adopted", () => {
+  test("tally: single-choice favor input establishes the sole choice as winner", () => {
     const e = Election.parse(DEF);
     if (!e.ok) throw new Error("definition must parse");
     const result = tally(e.value, [mustParse(ballot("alice", 1)), mustParse(ballot("bob", 2))]);
     expect(result.kind).toBe("established");
     if (result.kind === "established") {
-      expect(result.outcome).toBe("adopted");
-      expect(result.counts.favor).toBe(2);
+      expect(result.winner.internalNo).toBe(1);
+      expect(result.choiceCounts).toEqual([{ internalNo: 1, label: "0件で可", count: 2 }]);
+      expect(result.goa.favor).toBe(2);
     }
   });
 
@@ -137,15 +138,14 @@ describe("t234 election-model", () => {
     expect(withReservation.ok).toBe(true);
   });
 
-  test("tally full table: tie, rejected-majority, and discussion-needed branches", () => {
+  test("tally GoA holds: discussion-needed at 2+ GoA-5, a lone GoA-5 still establishes", () => {
     const e = Election.parse(DEF);
     if (!e.ok) throw new Error("definition must parse");
-    const tie = tally(e.value, [mustParse(ballot("alice", 1)), mustParse(ballot("bob", 7))]);
-    expect(tie.kind).toBe("hold");
-    if (tie.kind === "hold") expect(tie.reason).toBe("tie");
-    const rejected = tally(e.value, [mustParse(ballot("alice", 7)), mustParse(ballot("bob", 4))]);
-    expect(rejected.kind).toBe("established");
-    if (rejected.kind === "established") expect(rejected.outcome).toBe("rejected");
+    // GoA-axis favor===against no longer holds — with a single choice the sole
+    // choice wins once the GoA-consensus holds pass (choice winner, Issue #1261).
+    const single = tally(e.value, [mustParse(ballot("alice", 1)), mustParse(ballot("bob", 7))]);
+    expect(single.kind).toBe("established");
+    if (single.kind === "established") expect(single.winner.internalNo).toBe(1);
     const oneDiscuss = tally(e.value, [mustParse(ballot("alice", 5)), mustParse(ballot("bob", 1))]);
     expect(oneDiscuss.kind).toBe("established"); // a single 5 does not hold
     const twoDiscuss = tally(e.value, [mustParse(ballot("alice", 5)), mustParse(ballot("bob", 5))]);
@@ -219,6 +219,81 @@ describe("t234 election-model", () => {
     expect(classified?.reexamRequired).toBe(false);
     const lateBlock = mustParse({ ...ballot("bob", 8), submittedAt: "2026-07-19T02:00:00Z" });
     expect(classifyLate(tallyTime, lateBlock)?.reexamRequired).toBe(true);
+  });
+
+  // --- Issue #1261: choiceInternalNo decides the winner ---------------------
+
+  const twoChoice = (voters: string[]) =>
+    Election.parse({
+      ...DEF,
+      choices: [
+        { internalNo: 1, label: "c1" },
+        { internalNo: 2, label: "c2" },
+      ],
+      voters,
+    });
+
+  test("tally: winner is the choice with the most votes (E-GMEBT #1261 repro)", () => {
+    // The E-GMEBT ballots from Issue #1261: e2/e4 vote choice 2, e3 votes
+    // choice 1, all GoA 2. The GoA distribution is uniform, so a choice-blind
+    // tally cannot decide — the winner must come from choiceInternalNo.
+    const el = twoChoice(["e2", "e4", "e3"]);
+    if (!el.ok) throw new Error("definition must parse");
+    const ballots = [
+      mustParseIn(el.value, ballot("e2", 2, 2)),
+      mustParseIn(el.value, ballot("e4", 2, 2)),
+      mustParseIn(el.value, ballot("e3", 2, 1)),
+    ];
+    const result = tally(el.value, ballots);
+    expect(result.kind).toBe("established");
+    if (result.kind === "established") {
+      expect(result.winner.internalNo).toBe(2);
+      expect(result.choiceCounts).toEqual([
+        { internalNo: 1, label: "c1", count: 1 },
+        { internalNo: 2, label: "c2", count: 2 },
+      ]);
+    }
+  });
+
+  test("tally: GoA-4 abstentions are excluded from winner selection and choiceCounts", () => {
+    const el = twoChoice(["a", "b", "c"]);
+    if (!el.ok) throw new Error("definition must parse");
+    // c abstains (GoA 4) for choice 2 — that vote must not count for choice 2.
+    const ballots = [
+      mustParseIn(el.value, ballot("a", 1, 1)),
+      mustParseIn(el.value, ballot("b", 1, 1)),
+      mustParseIn(el.value, ballot("c", 4, 2)),
+    ];
+    const result = tally(el.value, ballots);
+    expect(result.kind).toBe("established");
+    if (result.kind === "established") {
+      expect(result.winner.internalNo).toBe(1);
+      expect(result.choiceCounts.find((c) => c.internalNo === 2)?.count).toBe(0);
+      expect(result.goa.abstain).toBe(1); // whole-set GoA count still records it
+    }
+  });
+
+  test("tally: a choice tie holds with reason tie", () => {
+    const el = twoChoice(["a", "b"]);
+    if (!el.ok) throw new Error("definition must parse");
+    const result = tally(el.value, [
+      mustParseIn(el.value, ballot("a", 1, 1)),
+      mustParseIn(el.value, ballot("b", 1, 2)),
+    ]);
+    expect(result.kind).toBe("hold");
+    if (result.kind === "hold") expect(result.reason).toBe("tie");
+  });
+
+  test("Ballot.parse rejects a choiceInternalNo not in the election (fail-closed)", () => {
+    const e = Election.parse(DEF); // single choice {internalNo: 1}
+    if (!e.ok) throw new Error("definition must parse");
+    for (const bad of [2, 0, -1]) {
+      const r = Ballot.parse(ballot("alice", 1, bad), e.value);
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error).toBe("unknown-choice");
+    }
+    // a valid choice still parses
+    expect(Ballot.parse(ballot("alice", 1, 1), e.value).ok).toBe(true);
   });
 });
 
