@@ -10311,3 +10311,387 @@
 **Failed count**: 0
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:04:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 62d7c8f0
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-store/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:04:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 62d7c8f0
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-store/code-generation/code-generation-plan.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:04:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2cd9a1b9
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-store/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-19T09:04:43Z
+**Event**: SENSOR_FAILED
+**Fire id**: 2cd9a1b9
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-store/code-generation/code-generation-plan.md
+**Detail path**: amadeus/spaces/default/intents/260718-election-ts-foundation/.amadeus-sensors/code-generation/upstream-coverage-2cd9a1b9.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:04:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2ff69f08
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-store/code-generation/code-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:04:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2ff69f08
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-store/code-generation/code-summary.md
+**Duration ms**: 31
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:04:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: a690bfaf
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-store/code-generation/code-summary.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-19T09:04:43Z
+**Event**: SENSOR_FAILED
+**Fire id**: a690bfaf
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-store/code-generation/code-summary.md
+**Detail path**: amadeus/spaces/default/intents/260718-election-ts-foundation/.amadeus-sensors/code-generation/upstream-coverage-a690bfaf.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:04:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 50654ab7
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-record/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:04:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 50654ab7
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-record/code-generation/code-generation-plan.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:04:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 60d3203a
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-record/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-19T09:04:44Z
+**Event**: SENSOR_FAILED
+**Fire id**: 60d3203a
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-record/code-generation/code-generation-plan.md
+**Detail path**: amadeus/spaces/default/intents/260718-election-ts-foundation/.amadeus-sensors/code-generation/upstream-coverage-60d3203a.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:04:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 96e9b4f6
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-record/code-generation/code-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:04:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 96e9b4f6
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-record/code-generation/code-summary.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:04:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: b50d5e0d
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-record/code-generation/code-summary.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-19T09:04:44Z
+**Event**: SENSOR_FAILED
+**Fire id**: b50d5e0d
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-record/code-generation/code-summary.md
+**Detail path**: amadeus/spaces/default/intents/260718-election-ts-foundation/.amadeus-sensors/code-generation/upstream-coverage-b50d5e0d.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:04:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: e0471a19
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-transport/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:04:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: e0471a19
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-transport/code-generation/code-generation-plan.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:04:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: f8db4815
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-transport/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-19T09:04:44Z
+**Event**: SENSOR_FAILED
+**Fire id**: f8db4815
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-transport/code-generation/code-generation-plan.md
+**Detail path**: amadeus/spaces/default/intents/260718-election-ts-foundation/.amadeus-sensors/code-generation/upstream-coverage-f8db4815.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:04:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 19203c4b
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-transport/code-generation/code-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:04:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 19203c4b
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-transport/code-generation/code-summary.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:04:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: b3736823
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-transport/code-generation/code-summary.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-19T09:04:44Z
+**Event**: SENSOR_FAILED
+**Fire id**: b3736823
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-transport/code-generation/code-summary.md
+**Detail path**: amadeus/spaces/default/intents/260718-election-ts-foundation/.amadeus-sensors/code-generation/upstream-coverage-b3736823.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:05:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: f3529f8c
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-store/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:05:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: f3529f8c
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-store/code-generation/code-generation-plan.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:05:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: ceb99af8
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-store/code-generation/code-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:05:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: ceb99af8
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-store/code-generation/code-summary.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:05:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0f18ce73
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-record/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:05:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0f18ce73
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-record/code-generation/code-generation-plan.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:05:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: ed3ef09c
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-record/code-generation/code-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:05:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: ed3ef09c
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-record/code-generation/code-summary.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:05:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 046a232b
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-transport/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:05:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 046a232b
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-transport/code-generation/code-generation-plan.md
+**Duration ms**: 31
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T09:05:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 93fabb50
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-transport/code-generation/code-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T09:05:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 93fabb50
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-transport/code-generation/code-summary.md
+**Duration ms**: 33
+
+---
