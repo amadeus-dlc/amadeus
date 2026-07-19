@@ -1,6 +1,6 @@
 # Reliability Design — election-record(nfr-design)
 
-> 上流入力(consumes 全数): performance-requirements.md、security-requirements.md、scalability-requirements.md、reliability-requirements.md、tech-stack-decisions.md、business-logic-model.md、business-rules.md、domain-entities.md
+> 上流入力(consumes 全数): performance-requirements.md、security-requirements.md、scalability-requirements.md、reliability-requirements.md、tech-stack-decisions.md、business-logic-model.md、business-rules.md
 
 ## 互換性設計(NFR-4 の実現機構)
 
@@ -13,3 +13,4 @@ reliability-requirements.md の byte 互換要件を次で実現する:
 
 - render(生成)⇔ verify(検査)の対称 API(symmetric-pair-review の構造化 — reliability-requirements.md 自己検査節)。verifySelf は render 出力を常時検査し、検査は3クラス(票数・度数再計算・時系列逆行 — BR-R4)の判別ユニオンで失敗理由を返す
 - fallible API は `Result<T, E>` で throw しない。observability は N/A(reliability-requirements.md Observability 節の設計反映 — 常駐なし、可視性は記録文書自体)
+- 信頼性機構が他 NFR を壊さない設計制約: 検査追加は単一走査内(performance-requirements.md O(n) 上限)、GoaLineCode 検証は構築時 1 回(security-requirements.md fail-closed と同一機構の共有)、リトライ・キャッシュ等の状態を持ち込まない(scalability-requirements.md ステートレス)。実装は tech-stack-decisions.md 選定の実 parseGoaLine import に依存

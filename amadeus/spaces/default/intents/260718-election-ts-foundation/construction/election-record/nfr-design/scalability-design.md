@@ -1,6 +1,6 @@
 # Scalability Design — election-record(nfr-design)
 
-> 上流入力(consumes 全数): performance-requirements.md、security-requirements.md、scalability-requirements.md、reliability-requirements.md、tech-stack-decisions.md、business-logic-model.md、business-rules.md、domain-entities.md
+> 上流入力(consumes 全数): performance-requirements.md、security-requirements.md、scalability-requirements.md、reliability-requirements.md、tech-stack-decisions.md、business-logic-model.md
 
 ## ステートレス設計
 
@@ -9,4 +9,5 @@
 
 ## 拡張面
 
-- GoA 行様式の拡張は NFR-4 により禁止(business-rules.md BR-R1 の byte 互換)— 拡張点を意図的に設けない設計(スキーマ変更は実装前停止→裁定の対象)
+- GoA 行様式の拡張は NFR-4 により禁止(reliability-requirements.md 互換性保証節の設計反映)— 拡張点を意図的に設けない(スキーマ変更は実装前停止→裁定の対象)
+- 規模前提(performance-requirements.md の投票者 14 名実測)と入力検証(security-requirements.md の GoaLineCode fail-closed)は選挙1件単位の設計に閉じ、スケール機構を要求しない。ランタイムは tech-stack-decisions.md の Bun 単一プロセスのまま
