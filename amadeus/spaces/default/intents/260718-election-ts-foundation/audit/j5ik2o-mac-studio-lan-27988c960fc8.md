@@ -5719,3 +5719,66 @@
 **Findings count**: 6
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T05:27:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 051f6a02
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/nfr-design-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T05:27:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 051f6a02
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/nfr-design-questions.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T05:27:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 28418165
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/nfr-design-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T05:27:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 28418165
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/nfr-design-questions.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T05:27:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 226741bd
+**Sensor ID**: answer-evidence
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/nfr-design-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T05:27:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 226741bd
+**Sensor ID**: answer-evidence
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/nfr-design-questions.md
+**Duration ms**: 33
+
+---
