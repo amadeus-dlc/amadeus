@@ -2,7 +2,7 @@
 
 <!-- E-OC1 選挙不要判定ヘッダ -->
 > **選挙不要判定(E-OC1)**: 全1問を選挙不要と判定する。根拠種別は判定行に記載。
-> 判定申告: 2026-07-19T23:08Z 頃 leader へ agmsg 送信。leader 承認: 【承認待ち — 承認受領後にタイムスタンプを記入し [Answer] を記入する】
+> 判定申告: 2026-07-19T23:08Z 頃 leader へ agmsg 送信。leader 承認: 2026-07-19T23:08:49Z(agmsg タイムスタンプ、根拠種別妥当・是正形適切と承認)
 > 経緯注記(レビュアー iteration 1 Major の是正): 本ファイルは Generation 成果物の起草**後**に作成された — Planning 工程(質問→プラン承認)の先行実施を失念した順序逸脱の事後是正であり、diary の Deviation に申告済み。プラン(単一 Unit 化)の承認は本問の E-OC1 承認をもって充足する。
 
 上流入力(consumes 全数): requirements.md、components.md、component-methods.md、services.md、component-dependency.md、decisions.md
@@ -17,4 +17,4 @@
 - E. 分解を design へ差し戻す
 - X. その他
 
-[Answer]:
+[Answer]: A(E-OC1 選挙不要判定 — leader 承認 2026-07-19T23:08:49Z。プラン承認を本承認で充足)

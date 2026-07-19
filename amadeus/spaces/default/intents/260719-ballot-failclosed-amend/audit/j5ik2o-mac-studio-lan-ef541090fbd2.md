@@ -4434,3 +4434,124 @@
 **Timestamp**: 2026-07-19T23:08:49Z
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T23:09:08Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a691cc7e84e21372c
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-19T23:09:17Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-19T23:09:17Z
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:09:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: 76600a73
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/inception/units-generation/units-generation-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-19T23:09:17Z
+**Event**: SENSOR_FAILED
+**Fire id**: 76600a73
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/inception/units-generation/units-generation-questions.md
+**Detail path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/.amadeus-sensors/units-generation/required-sections-76600a73.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:09:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: c825a614
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/inception/units-generation/units-generation-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:09:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: c825a614
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/inception/units-generation/units-generation-questions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:09:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7aac8c6f
+**Sensor ID**: answer-evidence
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/inception/units-generation/units-generation-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:09:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7aac8c6f
+**Sensor ID**: answer-evidence
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/inception/units-generation/units-generation-questions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:09:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: c3a9e91a
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/inception/units-generation/unit-of-work.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:09:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: c3a9e91a
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/inception/units-generation/unit-of-work.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:09:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: d7a4244f
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/inception/units-generation/unit-of-work.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:09:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: d7a4244f
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/inception/units-generation/unit-of-work.md
+**Duration ms**: 37
+
+---
