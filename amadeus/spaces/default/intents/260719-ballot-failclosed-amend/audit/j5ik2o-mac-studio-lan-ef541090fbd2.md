@@ -530,3 +530,20 @@
 **Duration ms**: 36
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T15:07:23Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ae7c05470e0e21f02
+**Message**: E-BFAIC の裁定が届いたら approve して次ステージへ進めて
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-19T15:07:24Z
+**Event**: WORKFLOW_PARKED
+**Stage**: intent-capture
+**Timestamp**: 2026-07-19T15:07:24Z
+
+---
