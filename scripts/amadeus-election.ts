@@ -236,6 +236,26 @@ export function handleOpen(root: string, filePath: string): number {
   return 0;
 }
 
+// Transport selection for notify: returns the port or a failure message.
+function buildTransport(
+  kind: string,
+  voters: Set<string>,
+  agmsg: { team: string | null; from: string | null; sendScript: string | null },
+): ReturnType<typeof createSubagentTransport> | string {
+  if (kind === "subagent") return createSubagentTransport({ voters });
+  if (kind !== "agmsg") return `notify: unknown transport "${kind}"`;
+  if (agmsg.team === null || agmsg.from === null) {
+    return "notify: --team and --from are required for --transport agmsg";
+  }
+  return createAgmsgTransport({
+    sendScriptPath:
+      agmsg.sendScript ?? join(homedir(), ".agents", "skills", "agmsg", "scripts", "send.sh"),
+    team: agmsg.team,
+    from: agmsg.from,
+    voters,
+  });
+}
+
 // notify drives the U4 transport port per voter. subagent (default) emits
 // DeliveryDirectives — no spawn, no record (Q1=B); agmsg spawns send.sh and
 // books a timeline entry per ACTUAL delivered outcome only (FR-2b).
@@ -248,24 +268,8 @@ export function handleNotify(
   const loaded = Store.load(root, electionId);
   if (!loaded.ok) return storeFail("load", loaded.error);
   const voters = loaded.value.election.voters;
-  const voterSet = new Set(voters);
-  let transport: ReturnType<typeof createSubagentTransport>;
-  if (transportKind === "agmsg") {
-    if (agmsg.team === null || agmsg.from === null) {
-      return fail("notify: --team and --from are required for --transport agmsg");
-    }
-    transport = createAgmsgTransport({
-      sendScriptPath:
-        agmsg.sendScript ?? join(homedir(), ".agents", "skills", "agmsg", "scripts", "send.sh"),
-      team: agmsg.team,
-      from: agmsg.from,
-      voters: voterSet,
-    });
-  } else if (transportKind === "subagent") {
-    transport = createSubagentTransport({ voters: voterSet });
-  } else {
-    return fail(`notify: unknown transport "${transportKind}"`);
-  }
+  const transport = buildTransport(transportKind, new Set(voters), agmsg);
+  if (typeof transport === "string") return fail(transport);
   const deliveries = distribute(transport, electionId, voters, (voter) =>
     join(root, electionId, "views", `${voter}.json`),
   );
@@ -355,6 +359,20 @@ export function handleRender(root: string, electionId: string): number {
   return 0;
 }
 
+// GoA-line half of verify: locate the line, round-trip it through the REAL
+// parseGoaLine, and compare against the recomputed frequency. Returns the
+// failure message or null.
+function checkGoaLine(document: string, freq: GoaFreq): string | null {
+  const goaLine = document.split("\n").find((l) => l.startsWith("GoA["));
+  if (goaLine === undefined) return "verify: record.md has no GoA line";
+  const parsedLine = parseGoaLine(goaLine);
+  if (!parsedLine.ok) return `verify: GoA line does not parse: ${parsedLine.error}`;
+  if (JSON.stringify(parsedLine.votes) !== JSON.stringify([...freq])) {
+    return "verify: GoA line does not match the recomputed frequency";
+  }
+  return null;
+}
+
 function readTimeline(root: string, electionId: string) {
   const path = join(root, electionId, "timeline.json");
   if (!existsSync(path)) return null;
@@ -381,14 +399,9 @@ export function handleVerify(root: string, electionId: string): number {
   const recordPath = join(root, electionId, "record.md");
   if (!existsSync(recordPath)) return fail("verify: record.md missing");
   const document = readFileSync(recordPath, "utf8");
-  const goaLine = document.split("\n").find((l) => l.startsWith("GoA["));
-  if (goaLine === undefined) return fail("verify: record.md has no GoA line");
-  const parsedLine = parseGoaLine(goaLine);
-  if (!parsedLine.ok) return fail(`verify: GoA line does not parse: ${parsedLine.error}`);
   const freq = GoaFreq.fromVotes(ballots.map((b) => b.goa));
-  if (JSON.stringify(parsedLine.votes) !== JSON.stringify([...freq])) {
-    return fail("verify: GoA line does not match the recomputed frequency");
-  }
+  const goaCheck = checkGoaLine(document, freq);
+  if (goaCheck !== null) return fail(goaCheck);
   const reservations = verifyReservations(ballots, document);
   if (!reservations.ok) {
     return fail(`verify: reservation transcription mismatch (${JSON.stringify(reservations.error)})`);
@@ -431,10 +444,23 @@ const FLAG_FIELDS: Record<
   "--send-script": "sendScript",
 };
 
+function readFlags(rest: string[]): Partial<ParsedArgs> | null {
+  const flags: Partial<ParsedArgs> = {};
+  for (let i = 0; i < rest.length; i += 2) {
+    const field = FLAG_FIELDS[rest[i] ?? ""];
+    const value = rest[i + 1];
+    if (field === undefined || value === undefined) return null;
+    flags[field] = value;
+  }
+  return flags;
+}
+
 export function parseArgs(argv: string[]): ParsedArgs | { usage: string } {
   const [verb, ...rest] = argv;
   if (verb === undefined) return { usage: USAGE };
-  const parsed: ParsedArgs = {
+  const flags = readFlags(rest);
+  if (flags === null) return { usage: USAGE };
+  return {
     verb,
     electionId: null,
     file: null,
@@ -445,14 +471,8 @@ export function parseArgs(argv: string[]): ParsedArgs | { usage: string } {
     team: null,
     from: null,
     sendScript: null,
+    ...flags,
   };
-  for (let i = 0; i < rest.length; i += 2) {
-    const field = FLAG_FIELDS[rest[i] ?? ""];
-    const value = rest[i + 1];
-    if (field === undefined || value === undefined) return { usage: USAGE };
-    parsed[field] = value;
-  }
-  return parsed;
 }
 
 // Verb dispatch table: every entry is total over ParsedArgs and returns
