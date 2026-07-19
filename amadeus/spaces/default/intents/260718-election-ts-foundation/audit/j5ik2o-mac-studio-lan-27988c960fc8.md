@@ -8171,3 +8171,65 @@
 **Message**: (空欄 — delegate 通知待ちの park 状態のため)
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T06:10:36Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a47b370154af803ce
+**Message**: (なし — delegate 待ちのため次の入力は leader 通知起点)
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-19T06:35:39Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T06:36:29Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a74164f4e86c36768
+**Message**: 候補1採用で裁定します、approve して進めてください
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-19T06:37:05Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T06:37:11Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: acb8700bfca174f74
+**Message**: (nothing)
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-19T06:38:11Z
+**Event**: GATE_APPROVED
+**Stage**: nfr-design
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-19T06:38:11Z
+**Event**: STAGE_COMPLETED
+**Stage**: nfr-design
+**Details**: Stage Nfr Design approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-19T06:38:11Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Agent**: amadeus-developer-agent
+
+---
