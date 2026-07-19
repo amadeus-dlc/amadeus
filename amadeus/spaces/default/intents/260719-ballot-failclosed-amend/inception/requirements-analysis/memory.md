@@ -15,3 +15,5 @@
 
 - [2026-07-19T20:38Z] Interpretation: 未決3点(受理幅/tally 解決規則/ref 検証深さ)は真の設計判断として選挙依頼 — E-OC1 対象外。裁定依存欄は【裁定待ち】プレースホルダのみ(ruling-dependent-placeholder)、裁定非依存の受け入れ基準は先行起草。
 - [2026-07-19T20:38Z] Interpretation: 質問の実測コンテキストは推奨を伏せた中立事実のみ記載(アンカリング防止、election-protocol)。
+
+- [2026-07-19T22:21Z] Interpretation: E-BFARA1〜3 裁定を受領し FR-1/3/4 を確定。留保必須票は e4 GoA2 の1件(E-BFARA1)のみで、questions [Answer] と requirements FR-1 の両方へ verbatim 転記(reservation-transcription-count-check: 分母1・転記1)。

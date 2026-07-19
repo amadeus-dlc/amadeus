@@ -3,6 +3,7 @@
 <!-- E-OC1 選挙不要判定ヘッダ -->
 > **判定**: 全3問とも**選挙必須**(真に未決の設計判断 — E-OC1 選挙不要判定の対象外)。leader へ blind 選挙の開催を依頼(2026-07-19T20:37Z 頃)。裁定受領後に [Answer] を記入する(election-answer-after-ruling)。
 > 実測コンテキストは scan-notes.md(RE 一次資料、コミット 18a92347d)に依拠。各問の判断材料は推奨を伏せた中立事実のみ記載(アンカリング防止)。
+> 裁定受領: E-BFARA1〜3 開票(leader 通知 2026-07-19T22:18:34Z、record = leader ブランチ 5e96f8766 の elections/E-BFARA{1,2,3}/record.md)。
 
 上流入力(consumes 全数): intent-statement.md、scope-document.md、business-overview.md、architecture.md、code-structure.md、team-practices.md
 
@@ -14,7 +15,7 @@
 - B. ISO-8601 幅広受理 — regex は日付+時刻+(ms 任意)+(Z or ±TZ)を許し、`new Date` 有効性と併せて受理後 normalizeAt で正規化(現行の寛容入力+正規化の挙動を保存し、非 ISO 形だけを遮断)
 - C. その他(note に方式明記)
 
-[Answer]:
+[Answer]: A(E-BFARA1 裁定 2026-07-19 開票、GoA 1x2 2x1。留保転記(e4, GoA2): vote 経路(election.ts:334)の normalizeAt の扱い — 恒等の防御層として残置か除去かを design で明示。残置なら注記、除去なら transport 側 mint 用途は維持)
 
 ## Q2: amend の tally 解決規則(FR-4 の確定条件)
 
@@ -24,7 +25,7 @@
 - B. amend 非計上 — amend は集計母集団に入れず、record のタイムライン注記のみ(裁定への反映は人間の再集計判断)
 - C. その他(note に方式明記)
 
-[Answer]:
+[Answer]: A(E-BFARA2 裁定 2026-07-19 開票、3-0 留保なし — per-voter 最新1票・同時刻 amend 優先)
 
 ## Q3: amend の ref 検証の深さ(FR-3 の確定条件)
 
@@ -34,4 +35,4 @@
 - B. 形式検証のみ — ref の3フィールドの型・様式だけ検証し、実在照合はしない(存在しない ref の amend も受理される)
 - C. その他(note に方式明記)
 
-[Answer]:
+[Answer]: A(E-BFARA3 裁定 2026-07-19 開票、3-0 留保なし — fail-closed 実在照合・unknown-ref 級 loud 拒否)
