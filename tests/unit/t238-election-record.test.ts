@@ -100,9 +100,12 @@ describe("t238 election-record", () => {
     expect(GoaLineCode.parse(42).ok).toBe(false);
     // The compressed alnum form parseGoaLine accepts is admitted.
     expect(GoaLineCode.parse("E-SDECG4").ok).toBe(true);
-    // Sanity: the rejected hyphen form indeed fails the real parseGoaLine too.
+    // Issue #1226: the real parseGoaLine now accepts the hyphenated
+    // multi-segment form and returns the ecode verbatim (GoaLineCode itself
+    // stays single-segment — that is a separate domain type).
     const hyphen = parseGoaLine("GoA[E-SDE-CG4]: 1x1 2x0 3x0 4x0 5x0 6x0 7x0 8x0");
-    expect(hyphen.ok).toBe(false);
+    expect(hyphen.ok).toBe(true);
+    if (hyphen.ok) expect(hyphen.ecode).toBe("E-SDE-CG4");
   });
 
   test("GoaFreq.fromVotes counts each bin from the accepted vote set", () => {
