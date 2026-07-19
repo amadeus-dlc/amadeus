@@ -59,8 +59,9 @@ function code(raw: string): GoaLineCode {
 
 const ESTABLISHED: TallyResult = {
   kind: "established",
-  outcome: "adopted",
-  counts: { favor: 2, against: 0, abstain: 0, discuss: 0 },
+  winner: { internalNo: 1, label: "0件で可" },
+  choiceCounts: [{ internalNo: 1, label: "0件で可", count: 2 }],
+  goa: { favor: 2, against: 0, abstain: 0, discuss: 0 },
 };
 
 describe("t238 election-record", () => {

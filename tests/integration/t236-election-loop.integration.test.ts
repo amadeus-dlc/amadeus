@@ -161,12 +161,13 @@ describe("t236 election directive loop", () => {
     const tallyPath = join(
       projectDir, "amadeus", "spaces", "default", "elections", "E-LOOP1", "tally.json",
     );
-    // verify mismatch: tamper the stored result (valid JSON, wrong outcome)
+    // verify mismatch: tamper the stored result (valid JSON, wrong choice count)
     const stored = JSON.parse(readFileSync(tallyPath, "utf8"));
     stored.result = {
       kind: "established",
-      outcome: "rejected",
-      counts: stored.result.counts,
+      winner: { internalNo: 1, label: "0件で可" },
+      choiceCounts: [{ internalNo: 1, label: "0件で可", count: 99 }],
+      goa: stored.result.goa,
     };
     writeFileSync(tallyPath, JSON.stringify(stored));
     expect(run(["verify", "--election", "E-LOOP1"])).toBe(1);

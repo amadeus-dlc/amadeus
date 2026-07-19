@@ -92,9 +92,14 @@ export const Election = {
 
 // --- ballots ---------------------------------------------------------------
 
+// Classification order convention: identifier checks first (unknown-election ->
+// unknown-voter -> unknown-choice), then content checks (goa-out-of-range ->
+// reservation-missing); parse-failure precedes all of them (structural). New
+// content-side classes insert after unknown-choice.
 export type BallotError =
   | "unknown-election"
   | "unknown-voter"
+  | "unknown-choice"
   | "goa-out-of-range"
   | "reservation-missing"
   | "parse-failure";
@@ -178,14 +183,17 @@ function parseBallotShape(raw: unknown): BallotShape | null {
 }
 
 export const Ballot = {
-  // Full 5-class fail-closed validation (FR-3a/3b, order: parse-failure ->
-  // unknown-election -> unknown-voter -> goa-out-of-range ->
+  // Full 6-class fail-closed validation (FR-3a/3b, order: parse-failure ->
+  // unknown-election -> unknown-voter -> unknown-choice -> goa-out-of-range ->
   // reservation-missing). GoA 2/3/6 require a reservation sentence (norm (ii)).
   parse(raw: unknown, election: Election): Result<Ballot, BallotError> {
     const shape = parseBallotShape(raw);
     if (shape === null) return err("parse-failure");
     if (shape.electionId !== election.electionId) return err("unknown-election");
     if (!election.voters.includes(shape.voter)) return err("unknown-voter");
+    if (!election.choices.some((c) => c.internalNo === shape.choiceInternalNo)) {
+      return err("unknown-choice");
+    }
     const goa = Goa.parse(shape.goa);
     if (!goa.ok) return err(goa.error);
     const needsReservation = goa.value === 2 || goa.value === 3 || goa.value === 6;
@@ -307,18 +315,31 @@ export type GoaCounts = {
   discuss: number; // GoA 5
 };
 
+// "tie" is now a CHOICE tie (two or more choices share the top vote count),
+// not the old GoA-axis favor===against tie (that branch is gone — the winner is
+// decided from choiceInternalNo, Issue #1261).
 export type HoldReason = "tie" | "block" | "quorum-short" | "discussion-needed";
 
+// Per-choice vote count over the winner-selection population (see tally).
+export type ChoiceCount = { internalNo: number; label: string; count: number };
+
 export type TallyResult =
-  | { kind: "established"; outcome: "adopted" | "rejected"; counts: GoaCounts }
+  | {
+      kind: "established";
+      winner: { internalNo: number; label: string };
+      choiceCounts: ChoiceCount[];
+      goa: GoaCounts;
+    }
   | { kind: "hold"; reason: HoldReason; counts: GoaCounts };
 
 const FAVOR = new Set([1, 2, 3, 6]);
 const AGAINST = new Set([7, 8]);
 
 // First-match decision order (functional-design business-logic-model.md):
-// block -> discussion-needed -> quorum-short -> majority/tie.
-export function tally(_election: Election, ballots: Ballot[]): TallyResult {
+// block -> discussion-needed -> quorum-short -> choice winner / choice tie.
+// The GoA-consensus holds are evaluated first, unchanged; only once they pass
+// does the choiceInternalNo winner decide the result (Issue #1261).
+export function tally(election: Election, ballots: Ballot[]): TallyResult {
   const counts: GoaCounts = { favor: 0, against: 0, abstain: 0, discuss: 0 };
   let blocks = 0;
   for (const b of ballots) {
@@ -328,10 +349,28 @@ export function tally(_election: Election, ballots: Ballot[]): TallyResult {
     else counts.discuss++;
     if (b.goa === 8) blocks++;
   }
+  // GoA is counted over EVERY ballot (whole-set GoaCounts) for these holds.
   if (blocks >= 1) return { kind: "hold", reason: "block", counts };
   if (counts.discuss >= 2) return { kind: "hold", reason: "discussion-needed", counts };
   if (counts.favor + counts.against === 0) return { kind: "hold", reason: "quorum-short", counts };
-  if (counts.favor > counts.against) return { kind: "established", outcome: "adopted", counts };
-  if (counts.against > counts.favor) return { kind: "established", outcome: "rejected", counts };
-  return { kind: "hold", reason: "tie", counts };
+  // Winner-selection population: the per-voter latest-resolved ballot set (amend
+  // is not yet implemented, so this is all original ballots) minus GoA-4
+  // abstentions. Choice tallies are simple vote counts over this population only
+  // (no choice x GoA cross distribution).
+  const eligible = ballots.filter((b) => b.goa !== 4);
+  const choiceCounts: ChoiceCount[] = election.choices.map((c) => ({
+    internalNo: c.internalNo,
+    label: c.label,
+    count: eligible.filter((b) => b.choiceInternalNo === c.internalNo).length,
+  }));
+  const top = choiceCounts.reduce((m, c) => Math.max(m, c.count), 0);
+  const leaders = choiceCounts.filter((c) => c.count === top);
+  if (leaders.length !== 1) return { kind: "hold", reason: "tie", counts };
+  const winner = leaders[0] as ChoiceCount;
+  return {
+    kind: "established",
+    winner: { internalNo: winner.internalNo, label: winner.label },
+    choiceCounts,
+    goa: counts,
+  };
 }

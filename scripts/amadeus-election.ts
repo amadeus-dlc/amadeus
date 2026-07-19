@@ -373,17 +373,23 @@ export function handleRender(root: string, electionId: string): number {
   // A final human ruling over a hold takes precedence in the rendered ruling
   // line (the stored tally result itself stays untouched — verify's recompute
   // comparison remains valid); every ruling is also transcribed as a trail.
+  // The human ruling is choice-blind (採用/不採用), so it cannot be a tally
+  // winner — it is rendered via renderPersistDraft's rulingOverride, not by
+  // synthesizing an established result (Issue #1261 ruling A).
   const resolutions = t.resolutions ?? [];
   const finalRuling = resolutions.filter((r) => r.resumedTo === "tallied").at(-1);
-  const effective: TallyResult =
+  const rulingOverride =
     t.result.kind === "hold" && finalRuling !== undefined
-      ? {
-          kind: "established",
-          outcome: finalRuling.resolution === "adopted" ? "adopted" : "rejected",
-          counts: t.result.counts,
-        }
-      : t.result;
-  const body = renderPersistDraft(code.value, loaded.value.election, effective, ballots, timeline);
+      ? `裁定: ${finalRuling.resolution === "adopted" ? "採用" : "不採用"}`
+      : undefined;
+  const body = renderPersistDraft(
+    code.value,
+    loaded.value.election,
+    t.result,
+    ballots,
+    timeline,
+    rulingOverride,
+  );
   const trail = resolutions.map(
     (r) => `- hold 裁定履歴: ${r.reason} → ${r.resolution}(${r.at}、復帰先 ${r.resumedTo})`,
   );
