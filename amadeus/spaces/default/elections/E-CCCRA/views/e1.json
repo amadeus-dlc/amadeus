@@ -1,0 +1,31 @@
+{
+  "electionId": "E-CCCRA",
+  "voter": "e1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "C. 両方(A の clear + B の防御層 — set⇔clear 対称の回復と、lone-intent fallback・他クローン残留カーソルを塞ぐ防御層の併用)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "B. 参照先 intent の status=complete 時に監査追記を no-op にする status ゲートのみ(Issue 提案2、セッション横断の防御層)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "A. complete-workflow 時に active-intent カーソルを clear するのみ(Issue 提案1)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 5,
+      "label": "E. 修正しない(運用回避の継続)"
+    },
+    {
+      "displayNo": 5,
+      "internalNo": 4,
+      "label": "D. その他の方式(activeIntent resolver 自体が complete を除外する等 — note に方式を明記)"
+    }
+  ]
+}
