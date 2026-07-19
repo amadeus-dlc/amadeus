@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TCRRA3",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "choice 別票数内訳のフィールド名・形は e2 intent の per-voter 最新解決(E-BFARA2=A)後の母集団を数える前提で設計すること — amend 導入後に『どの票を数えたか』が内訳の意味を変えるため、design で母集団定義を1文固定する",
+  "rationale": "#1261 レビュー当事者。A(winner+choice 内訳+GoaCounts 保持)を支持: (1) #1261 の実害は『record.md だけ読むと誤裁定に気づけない』ことで、人間の捕捉は ballots 実読を要した — choice 内訳の record 描画はこの検出コストを構造的に消す(監査可能性が本件の核心) (2) verify :440 の recompute 比較は内訳フィールドがあるほど強い自己検証になる (3) B の『ledger から再導出可能』は正しいが、record.md は選挙の人間向け正本であり再導出を人間に強いる設計は #1261 の教訓に逆行。波及(rulingText :107/t234/t238)は機械的で、blast radius は RE が既に列挙済み。自案非採用時: B=6",
+  "submittedAt": "2026-07-19T22:44:15Z"
+}
