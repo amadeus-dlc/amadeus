@@ -193,6 +193,14 @@ describe("t238 election-record", () => {
     const first = renderPersistDraft(code("E-DET1"), e, ESTABLISHED, ballots, timeline);
     const second = renderPersistDraft(code("E-DET1"), e, ESTABLISHED, ballots, timeline);
     expect(first).toEqual(second);
+    // hold ruling path renders its typed reason (covers the hold branch)
+    const HOLD = {
+      kind: "hold" as const,
+      reason: "tie" as const,
+      counts: { favor: 1, against: 1, abstain: 0, discuss: 0 },
+    };
+    const held = renderPersistDraft(code("E-DET1"), e, HOLD, ballots, timeline);
+    expect(held).toContain("保留(tie)");
   });
 
   // BR-R6: persist draft transcribes every reservation (GoA 2/3/6), and the
