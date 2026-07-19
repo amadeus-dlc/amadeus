@@ -5172,3 +5172,11 @@
 **Duration ms**: 39
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-19T23:15:05Z
+**Event**: WORKFLOW_PARKED
+**Stage**: delivery-planning
+**Timestamp**: 2026-07-19T23:15:05Z
+
+---
