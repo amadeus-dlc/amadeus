@@ -12,3 +12,7 @@
 
 - 決定性(requirements.md NFR-3)が監査の基盤: 同一の票集合から開票・配布ビューを再生成して記録と照合できる(business-logic-model.md 決定的シャッフル節の監査再現)。business-rules.md BR-10/BR-11 がテストで固定
 - 後着票・再審フラグ(classifyLate — BR-9)により開票後の到着も欠損なく記録へ写像される
+
+## Observability
+
+- 稼働中サービスが存在しないため observability 要求は N/A(反証可能な根拠: U1 は純関数層で常駐プロセスを持たない)。監査可視性は決定性による再計算(上節)と選挙記録(U3)が担う(U3 レビュー Minor 2 の横断是正 — 申告付き)

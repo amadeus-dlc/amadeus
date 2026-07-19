@@ -12,3 +12,7 @@
 - fallible API は `Result<T, E>` で throw しない(判別ユニオン Result 既決)。GoaLineCode 構築失敗・照合不一致は理由付き reject(business-logic-model.md)
 - verifySelf は自己の生成物への常時 self-check(requirements.md FR-6b — 票数不一致・度数再計算不一致・時系列逆行の3クラス、business-rules.md BR-R4 の落ちる実証付き)。生成と検査の対称性(symmetric-pair-review — render⇔verify)を構造で持つ
 - 可用性 SLO・バックアップは N/A(反証可能な根拠: 永続と耐障害性は U2 store の責務 — unit-of-work 境界。U3 は変換と検査のみ)。ランタイム障害面は既存スタック(technology-stack.md)のうち Bun/TS 言語ランタイムのみに閉じる
+
+## Observability
+
+- 稼働中サービスが存在しないため observability(監視・アラート・トレーシング)要求は N/A(反証可能な根拠: U3 は純関数変換層で常駐プロセスを持たない — business-logic-model.md の render/verify は CLI 単発実行の内部で呼ばれるのみ)。実行の可視性は選挙記録自体(タイムライン・timeline 検査 BR-R4)が担う
