@@ -20,6 +20,7 @@ function ballot(voter: string, goa: number) {
   return {
     electionId: "E-TEST-1",
     voter,
+    voterKind: "member",
     choiceInternalNo: 1,
     goa,
     submittedAt: "2026-07-19T00:00:00Z",
@@ -67,6 +68,9 @@ describe("t234 election-model", () => {
     const broken = Ballot.parse({ voter: "alice" }, e.value);
     expect(broken.ok).toBe(false);
     if (!broken.ok) expect(broken.error).toBe("parse-failure");
+    const badKind = Ballot.parse({ ...ballot("alice", 1), voterKind: "bot" }, e.value);
+    expect(badKind.ok).toBe(false);
+    if (!badKind.ok) expect(badKind.error).toBe("parse-failure");
     const stringChoice = Ballot.parse(
       { ...ballot("alice", 1), choiceInternalNo: "1" },
       e.value,

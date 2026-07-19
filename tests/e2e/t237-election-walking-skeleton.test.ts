@@ -43,6 +43,7 @@ describe("t237 election walking skeleton (e2e)", () => {
         JSON.stringify({
           electionId: "E-E2E-1",
           voter: "alice",
+          voterKind: "member",
           choiceInternalNo: 1,
           goa: 1,
           submittedAt: "2026-07-19T00:01:00Z",
@@ -50,31 +51,36 @@ describe("t237 election walking skeleton (e2e)", () => {
       );
 
       expect(cli(projectDir, ["open", "--file", def]).code).toBe(0);
-      // Forward whatever `next` names, never deciding ourselves (FR-0).
-      const steps: Array<{ expectKind: string; act: string[][]; report: string }> = [
-        { expectKind: "distribute", act: [["notify"]], report: "distributed" },
-        { expectKind: "collect-wait", act: [["vote", "--file", b1]], report: "" },
-        { expectKind: "tally-ready", act: [["tally"]], report: "tallied" },
-        { expectKind: "render", act: [["render"]], report: "rendered" },
-        { expectKind: "verify", act: [["verify"]], report: "verified" },
-      ];
-      for (const step of steps) {
+      // FR-0: execute exactly what each directive names (verb/report fields) —
+      // this loop holds no kind->verb mapping of its own. The only external
+      // input is the ballot arriving during collect-wait.
+      const seenKinds: string[] = [];
+      for (let guard = 0; guard < 20; guard++) {
         const next = cli(projectDir, ["next", "--election", "E-E2E-1"]);
         expect(next.code).toBe(0);
-        expect(JSON.parse(next.stdout).kind).toBe(step.expectKind);
-        for (const act of step.act) {
-          const r = cli(projectDir, [act[0] ?? "", ...act.slice(1), "--election", "E-E2E-1"]);
-          expect(r.code).toBe(0);
-        }
-        if (step.report !== "") {
+        const directive = JSON.parse(next.stdout);
+        seenKinds.push(directive.kind);
+        if (directive.kind === "done") break;
+        if (directive.kind === "collect-wait") {
           expect(
-            cli(projectDir, ["report", "--election", "E-E2E-1", "--result", step.report]).code,
+            cli(projectDir, ["vote", "--election", "E-E2E-1", "--file", b1]).code,
           ).toBe(0);
+          continue;
         }
+        expect(typeof directive.verb).toBe("string");
+        expect(cli(projectDir, [directive.verb, "--election", "E-E2E-1"]).code).toBe(0);
+        expect(
+          cli(projectDir, ["report", "--election", "E-E2E-1", "--result", directive.report]).code,
+        ).toBe(0);
       }
-      const done = cli(projectDir, ["next", "--election", "E-E2E-1"]);
-      expect(done.code).toBe(0);
-      expect(JSON.parse(done.stdout).kind).toBe("done");
+      expect(seenKinds).toEqual([
+        "distribute",
+        "collect-wait",
+        "tally-ready",
+        "render",
+        "verify",
+        "done",
+      ]);
     } finally {
       rmSync(projectDir, { recursive: true, force: true });
     }

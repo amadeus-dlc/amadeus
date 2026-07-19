@@ -28,6 +28,7 @@ function ballot(voter: string) {
     kind: "original" as const,
     electionId: "E-STORE-1",
     voter,
+    voterKind: "member" as const,
     choiceInternalNo: 1,
     goa: goa.value,
     reservation: null,

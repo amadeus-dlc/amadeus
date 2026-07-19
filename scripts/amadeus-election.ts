@@ -29,16 +29,20 @@ import { electionsRoot, Store, type StoreError, writeStoreFile } from "./amadeus
 const USAGE =
   "Usage: bun scripts/amadeus-election.ts <open|notify|vote|status|tally|render|verify|next|report> --election <id> [--file <path>] [--result <r>] [--project <dir>]";
 
+// Every actionable directive names the verb to execute and the report result
+// that commits the transition (FR-0: the caller forwards, never maps). verb
+// and report are null exactly when the next move is external input (ballots
+// arriving), terminal (done), or human judgement (hold).
 type Directive =
-  | { kind: "distribute"; electionId: string; voters: string[] }
-  | { kind: "collect-wait"; electionId: string; pending: string[] }
-  | { kind: "tally-ready"; electionId: string }
-  | { kind: "render"; electionId: string }
-  | { kind: "verify"; electionId: string }
-  | { kind: "done"; electionId: string }
-  | { kind: "hold"; electionId: string; reason: string };
+  | { kind: "distribute"; electionId: string; voters: string[]; verb: "notify"; report: "distributed" }
+  | { kind: "collect-wait"; electionId: string; pending: string[]; verb: null; report: null }
+  | { kind: "tally-ready"; electionId: string; verb: "tally"; report: "tallied" }
+  | { kind: "render"; electionId: string; verb: "render"; report: "rendered" }
+  | { kind: "verify"; electionId: string; verb: "verify"; report: "verified" }
+  | { kind: "done"; electionId: string; verb: null; report: null }
+  | { kind: "hold"; electionId: string; reason: string; verb: null; report: null };
 
-type ReportResult = "distributed" | "ballots-collected" | "tallied" | "rendered" | "verified";
+type ReportResult = "distributed" | "tallied" | "rendered" | "verified";
 
 function out(value: unknown): void {
   console.log(JSON.stringify(value));
@@ -81,22 +85,27 @@ function directiveFor(
   voters: string[],
   state: ElectionState,
 ): Directive | null {
-  if (state === "open") return { kind: "distribute", electionId, voters };
+  if (state === "open") {
+    return { kind: "distribute", electionId, voters, verb: "notify", report: "distributed" };
+  }
   if (state === "collecting") {
     const status = Store.status(root, electionId);
     if (!status.ok) return null;
     if (status.value.pending.length > 0) {
-      return { kind: "collect-wait", electionId, pending: status.value.pending };
+      return { kind: "collect-wait", electionId, pending: status.value.pending, verb: null, report: null };
     }
-    return { kind: "tally-ready", electionId };
+    return { kind: "tally-ready", electionId, verb: "tally", report: "tallied" };
   }
-  if (state === "tallied") return { kind: "render", electionId };
-  if (state === "rendered") return { kind: "verify", electionId };
-  if (state === "recorded") return { kind: "done", electionId };
+  if (state === "tallied") return { kind: "render", electionId, verb: "render", report: "rendered" };
+  if (state === "rendered") return { kind: "verify", electionId, verb: "verify", report: "verified" };
+  if (state === "recorded") return { kind: "done", electionId, verb: null, report: null };
   if (state === "hold") {
     const t = readTally(root, electionId);
+    // TODO(Bolt 3): parse tally.json into a typed TallyResult and carry reason
+    // as HoldReason — the raw readTally cast retires with the U3 record work
+    // (reviewer m3).
     const reason = t !== null && t.result.kind === "hold" ? t.result.reason : "unknown";
-    return { kind: "hold", electionId, reason };
+    return { kind: "hold", electionId, reason, verb: null, report: null };
   }
   return null; // draft: open verb has not finished publishing
 }
@@ -105,7 +114,6 @@ function directiveFor(
 
 const TRANSITIONS: Record<ReportResult, { from: ElectionState; to: ElectionState }> = {
   distributed: { from: "open", to: "collecting" },
-  "ballots-collected": { from: "collecting", to: "collecting" },
   tallied: { from: "collecting", to: "tallied" },
   rendered: { from: "tallied", to: "rendered" },
   verified: { from: "rendered", to: "recorded" },

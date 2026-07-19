@@ -71,6 +71,7 @@ describe("t236 election directive loop", () => {
     const b1 = writeJson("b1.json", {
       electionId: "E-LOOP-1",
       voter: "alice",
+      voterKind: "member",
       choiceInternalNo: 1,
       goa: 1,
       submittedAt: "2026-07-19T00:01:00Z",
@@ -78,6 +79,7 @@ describe("t236 election directive loop", () => {
     const b2 = writeJson("b2.json", {
       electionId: "E-LOOP-1",
       voter: "bob",
+      voterKind: "member",
       choiceInternalNo: 1,
       goa: 2,
       reservation: "軽微な留保",
@@ -119,6 +121,7 @@ describe("t236 election directive loop", () => {
     const b1 = writeJson("b1.json", {
       electionId: "E-LOOP-1",
       voter: "alice",
+      voterKind: "member",
       choiceInternalNo: 1,
       goa: 8,
       submittedAt: "2026-07-19T00:01:00Z",
@@ -145,6 +148,7 @@ describe("t236 election directive loop", () => {
     const b1 = writeJson("b1.json", {
       electionId: "E-LOOP-1",
       voter: "alice",
+      voterKind: "member",
       choiceInternalNo: 1,
       goa: 1,
       submittedAt: "2026-07-19T00:01:00Z",
@@ -182,6 +186,7 @@ describe("t236 election directive loop", () => {
     const b1 = writeJson("b1.json", {
       electionId: "E-LOOP-1",
       voter: "alice",
+      voterKind: "member",
       choiceInternalNo: 1,
       goa: 1,
       submittedAt: "2026-07-19T00:01:00Z",

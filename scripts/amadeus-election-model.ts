@@ -1,12 +1,15 @@
 // amadeus-election-model.ts — U1 election-model: pure domain layer for the
 // election TS foundation (intent 260718-election-ts-foundation, Bolt 1
-// walking-skeleton). Types + Election.parse + minimal tally + trivial ballot
-// acceptance. No fs/network/clock access — every fallible API returns a
+// walking-skeleton). Core types + Election.parse + minimal tally + trivial
+// ballot acceptance. No fs/network/clock access — every fallible API returns a
 // discriminated-union Result and never throws (functional-domain-modeling-ts).
 //
-// Bolt 1 scope (bolt-plan.md): full type set, structural parse only (the
-// 5-class fail-closed ballot validation completes in Bolt 2), zero-confirm
-// tally path. Shuffle / early-tally / late classification land in Bolt 2.
+// Bolt 1 scope (bolt-plan.md): the type surface the zero-confirm loop needs
+// (DefineError/DistributionView/LateBallot and friends arrive with their
+// consuming logic in Bolt 2), structural parse plus the GoA numeric boundary
+// (unknown-voter/reservation-missing complete the 5-class fail-closed set in
+// Bolt 2), zero-confirm tally path. Shuffle / early-tally / late
+// classification land in Bolt 2.
 
 export type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };
 
@@ -100,10 +103,16 @@ export type BallotError =
 
 export type BallotRef = { electionId: string; voter: string; submittedAt: string };
 
+// FR-3a required attribute (D-12): who cast the ballot — a team member over
+// agmsg or a solo-mode subagent. Recorded verbatim; weighting is the human
+// consumer's business (FR-7b).
+export type VoterKind = "member" | "subagent";
+
 export type OriginalBallot = {
   kind: "original";
   electionId: string;
   voter: string;
+  voterKind: VoterKind;
   choiceInternalNo: number;
   goa: Goa;
   reservation: string | null;
@@ -116,6 +125,7 @@ export type AmendBallot = {
   ref: BallotRef;
   electionId: string;
   voter: string;
+  voterKind: VoterKind;
   choiceInternalNo: number;
   goa: Goa;
   reservation: string | null;
@@ -127,7 +137,7 @@ export type Ballot = OriginalBallot | AmendBallot;
 
 export const Ballot = {
   // Bolt 1: structural parse + GoA numeric parse (tally consumes Goa, so the
-  // numeric boundary cannot be deferred). unknown-election/unknown-voter/
+  // numeric boundary cannot be deferred) + unknown-election. unknown-voter and
   // reservation-missing complete the fail-closed set in Bolt 2.
   parse(raw: unknown, election: Election): Result<Ballot, BallotError> {
     if (typeof raw !== "object" || raw === null) return err("parse-failure");
@@ -138,6 +148,7 @@ export const Ballot = {
     if (typeof r.choiceInternalNo !== "number" || typeof r.submittedAt !== "string") {
       return err("parse-failure");
     }
+    if (r.voterKind !== "member" && r.voterKind !== "subagent") return err("parse-failure");
     if (r.electionId !== election.electionId) return err("unknown-election");
     const goa = Goa.parse(r.goa);
     if (!goa.ok) return err(goa.error);
@@ -145,6 +156,7 @@ export const Ballot = {
       kind: "original",
       electionId: r.electionId,
       voter: r.voter,
+      voterKind: r.voterKind,
       choiceInternalNo: r.choiceInternalNo,
       goa: goa.value,
       reservation: typeof r.reservation === "string" ? r.reservation : null,
