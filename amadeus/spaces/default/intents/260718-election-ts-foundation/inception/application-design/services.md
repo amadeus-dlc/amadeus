@@ -9,7 +9,7 @@
 - 利用者: conductor/leader セッション(team)、solo セッション
 - 提供: 選挙1件のライフサイクル完走(open→distribute→collect→tally→record)を指令ループで駆動
 - 入口: `/amadeus-election` SKILL(C7)または `bun scripts/amadeus-election.ts next` 直叩き
-- 人間判断点(C-01 保存): hold(tie/block/quorum-short)指令は人間裁定を要求し、ツールは裁定の記録のみ行う
+- 人間判断点(C-01 保存): hold(tie/block/quorum-short/discussion-needed — E-ETF-FD Q1=A 裁定 2026-07-19 反映、FD reviewer Finding 5 の申告付き機械是正)指令は人間裁定を要求し、ツールは裁定の記録のみ行う
 
 ## SV-2: 記録・照合サービス(C3+C4)
 
