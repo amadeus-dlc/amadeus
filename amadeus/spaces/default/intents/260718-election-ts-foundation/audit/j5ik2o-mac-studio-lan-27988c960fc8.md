@@ -3690,3 +3690,45 @@
 **Findings count**: 3
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T04:41:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5d5cff0d
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-store/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T04:41:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5d5cff0d
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-store/functional-design/domain-entities.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T04:41:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: c3e66f7e
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-store/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T04:41:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: c3e66f7e
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-store/functional-design/domain-entities.md
+**Duration ms**: 32
+
+---
