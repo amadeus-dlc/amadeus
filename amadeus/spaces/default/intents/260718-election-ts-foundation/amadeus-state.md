@@ -8,7 +8,7 @@
 - **State Version**: 7
 - **Active Agent**: amadeus-developer-agent
 - **Worktree Path**:
-- **Bolt Refs**: [election-record, election-store, election-transport]
+- **Bolt Refs**: [empty list]
 - **Practices Affirmed Timestamp**:
 
 - **Mirror Issue**: #1222
