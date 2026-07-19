@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFARA3",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "BallotRef :102 と store :131-133(amend の dup 除外のみ・ref 実在非検証)は実読済み(#1253 verdict と E-BFARE 票で確認)。A(fail-closed 実在照合+unknown-ref 級の新分類)を支持: (1) 既存 Ballot.parse の5分類 fail-closed 様式(unknown-election→unknown-voter→…)と同型で、様式一貫性がある (2) Q2=A(per-voter 最新採用)と組み合わさる場合、ref 実在検証なしでは『original なき amend』が初票の偽装経路になり duplicate 意味論を迂回できる — 実在照合はこの抜け道を受理段で封鎖する (3) B(形式のみ)は dangling ref の意味論ゴミを ledger に恒久保存し、集計・record 描画の下流全てに防御を強いる — parse-don't-validate の逆行。自案非採用時: B=7(Q2 との組で偽装経路が開く)",
+  "submittedAt": "2026-07-19T22:10:42Z"
+}

@@ -1,0 +1,49 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-19T22:17:21Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-BFARA3",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Ballot.parse の5分類 fail-closed 設計(model.ts:184-204 実測済み)と整合するのは A — dangling ref の amend を受理すると E-BFARA2=A の per-voter 最新集計が存在しない original を上書きする不整合を作る。unknown-ref 級の新分類は #1252 の invalid-timestamp 追加と同型の受理段拒否。",
+      "submittedAt": "2026-07-19T22:10:03Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-BFARA3",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "BallotRef :102 と store :131-133(amend の dup 除外のみ・ref 実在非検証)は実読済み(#1253 verdict と E-BFARE 票で確認)。A(fail-closed 実在照合+unknown-ref 級の新分類)を支持: (1) 既存 Ballot.parse の5分類 fail-closed 様式(unknown-election→unknown-voter→…)と同型で、様式一貫性がある (2) Q2=A(per-voter 最新採用)と組み合わさる場合、ref 実在検証なしでは『original なき amend』が初票の偽装経路になり duplicate 意味論を迂回できる — 実在照合はこの抜け道を受理段で封鎖する (3) B(形式のみ)は dangling ref の意味論ゴミを ledger に恒久保存し、集計・record 描画の下流全てに防御を強いる — parse-don't-validate の逆行。自案非採用時: B=7(Q2 との組で偽装経路が開く)",
+      "submittedAt": "2026-07-19T22:10:42Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-BFARA3",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "実測: appendBallot(store.ts:124-135)は amend を dup 判定から除外するのみで ref 実在照合なし、BallotRef 3フィールド(model.ts:102)を確認。存在しない ref の amend が受理されると Q2-A の『最新1票採用』母集団を汚染しうる(original 不在 voter の amend が実質新規票化 = 受理境界 fail-open の再生産)。A の fail-closed 実在照合+unknown-ref 級 loud 拒否が #1252/#1253 の趣旨と整合。B 非採用受容度: 6(形式検証のみでも Q2-A 側で original 実在を要求すれば実害は限定されるが、拒否が遅延段へ移る分だけ診断性が落ちる)。",
+      "submittedAt": "2026-07-19T22:10:29Z"
+    }
+  ],
+  "resolutions": []
+}

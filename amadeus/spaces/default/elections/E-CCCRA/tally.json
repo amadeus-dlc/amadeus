@@ -1,0 +1,49 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-19T14:56:00Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CCCRA",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 3,
+      "goa": 2,
+      "reservation": "B の status ゲートは無音 no-op にせず stderr advisory(1行)を出す — サイレント失敗禁止(construction ガードレール)との整合のため。実装詳細は design 委譲で可。",
+      "rationale": "独立実測: 書き手2箇所(amadeus-lib.ts:1729/:2147)・clear 経路 grep 0 件・activeIntent の lone-intent fallback(:1077 records.length===1 で status 不参照のまま返却)を自ツリーで確認。fallback 実文により A 単独は単一 intent 空間で追記が止まらず(質問の scratch 再現とも整合)、per-clone カーソルのため他クローン残留も塞げない。B 単独は監査面のみで set⇔clear 非対称(症状の根)を温存し、activeIntent の他消費面が完了 intent を指し続ける。C は対称回復+セッション/クローン横断防御の両取りで、bugfix スコープ内の最小十分。D(resolver 除外)は全消費面へ波及し完了 intent の正当参照(record 検分等)を壊す恐れがあり blast radius 過大。自案非採用時の受容度: A/B/D 採用なら 6(不本意だが支持)。",
+      "submittedAt": "2026-07-19T14:52:02Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CCCRA",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 3,
+      "goa": 2,
+      "reservation": "B の status ゲートは監査追記チェーン(hooks→appendAuditEntry 経路)に限定して置き、activeIntent resolver 汎用には入れないこと — post-complete の正当読取(outcomes-pack/replay/session-cost が runtime summary 経由で activeIntent を使う: amadeus-runtime.ts:1198 実測)を壊さないため。同理由で D(resolver 除外)は回帰リスクあり",
+      "rationale": "#1248 クロスレビュー(2人目)当事者としての実測に基づく: A 単独は lone-intent fallback(amadeus-lib.ts:1080、scratch 再現済み)と他クローンの残留カーソル(カーソルは per-clone で complete したクローンの clear が他クローンへ届かない)の2穴が残る。B 単独は実害(シャード汚染)を全経路で塞ぐが、完了済み intent を指す stale カーソル自体は残り、#750 の parked 版と同型の解決不整合の温床になる。C は set⇔clear 対称の回復(symmetric-pair-review)+セッション横断防御層の両取りで、追加コストは小(clear 1箇所+ゲート1関数)。自案非採用時の受容度: B単独=6 / A単独=7 / D=7 / E=7",
+      "submittedAt": "2026-07-19T14:52:03Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CCCRA",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 3,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "自tree 実測: amadeus-lib.ts:387 の解決優先順位は explicit > active-intent cursor > lone-intent fallback であり、A の clear 単独では lone-intent fallback 経由の completed intent 再解決を塞げない。またカーソルは per-user/per-clone の gitignored 状態(amadeus-orchestrate.ts:510-511)につき、clear は自クローンにしか効かず他クローンの残留カーソルは B の status ゲートでしか防げない。set⇔clear 対称の回復(symmetric-pair-review)+防御層の C が両欠陥面を塞ぐ。",
+      "submittedAt": "2026-07-19T14:52:21Z"
+    }
+  ],
+  "resolutions": []
+}
