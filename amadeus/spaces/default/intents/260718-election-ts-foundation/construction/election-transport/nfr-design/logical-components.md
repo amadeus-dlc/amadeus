@@ -1,13 +1,13 @@
 # Logical Components — election-transport(nfr-design)
 
-> 上流入力(consumes 全数): performance-requirements.md、security-requirements.md、scalability-requirements.md、reliability-requirements.md、tech-stack-decisions.md、business-logic-model.md
+> 上流入力(consumes 全数): performance-requirements.md、security-requirements.md、scalability-requirements.md、reliability-requirements.md、tech-stack-decisions.md、business-logic-model.md、business-rules.md
 
 ## モジュール構成
 
 | コンポーネント | 責務 | 公開 API(狭い面のみ) |
 |---|---|---|
 | `scripts/amadeus-election-transport.ts` | U4 全体(輸送抽象+2実装)— 配置の典拠は unit-of-work.md U4 行+ADR-1(U-01=B 裁定) | 型: VoterTransport/DeliveryOutcome/DeliveryRecord/DeliveryDirective/ShortNotification/TransportError(domain-entities.md 宣言列)。関数: AgmsgTransport/SubagentTransport の notify(port 実装) |
-| 内部(非公開) | DeliveryRecord の module 内部ファクトリ(外部構築不能 — BR-T2)・spawn ラッパ | なし(テストは port 注入+integration 層) |
+| 内部(非公開) | DeliveryRecord の module 内部ファクトリ(外部構築不能 — business-rules.md:10 BR-T2)・spawn ラッパ(business-logic-model.md の輸送別フローの実装詳細) | なし(テストは port 注入+integration 層) |
 
 - スタイルは functional-domain-modeling-ts 既決(project.md Code Style): DeliveryOutcome/TransportError は判別ユニオン、DeliveryRecord はスマートコンストラクタ(内部ファクトリ)— 型で正しさを運ぶ箇所のみ包む
 - 依存方向: U4 → U1 のみ(unit-of-work-dependency.md:25 — depends_on: [election-model]。:12 の ShortNotification/DeliveryRecord 型依存)。U5 が U4 を配線(:27)
