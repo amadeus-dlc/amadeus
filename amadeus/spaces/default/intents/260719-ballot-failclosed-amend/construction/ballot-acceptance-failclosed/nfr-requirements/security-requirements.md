@@ -7,7 +7,7 @@
 | # | 要求 | 導出元 |
 | --- | --- | --- |
 | S-1 | システム境界(ballot JSON 入力)の全フィールドを fail-closed 検証 — 6分類ラダー(BR-1)+store 段 unknown-ref(BR-3)。無音受理の禁止(construction ガードレール「入力を検証・サニタイズ」の適用) | requirements.md FR-1/FR-3、business-rules.md BR-1〜BR-3 |
-| S-2 | 認証情報・シークレットの取扱いなし — ballot/ledger は平文 record(既存設計、変更なし)。新規の秘匿情報を導入しない | technology-stack.md(credential 非保存の既存方針) |
+| S-2 | 認証情報・シークレットの取扱いなし — BallotShape の全フィールド(domain-entities.md: electionId/voter/voterKind/choiceInternalNo/submittedAt/goa/reservation/rationale/kind/ref)に credential 相当が存在せず、本 Unit は新規フィールドとして kind/ref のみ追加(いずれも識別子)。実行系は technology-stack.md のとおり Bun/TS のローカル CLI で、ネットワーク境界・外部サービス認証は導入しない | domain-entities.md(フィールド定義の直接確認)+technology-stack.md(実行系の文脈) |
 | S-3 | 監査可能性: original の非破壊共存(ADR-5)+timeline 記録 — 訂正の来歴が record に残る(correction trail) | business-rules.md BR-3 |
 
 ## 脅威モデル注記
