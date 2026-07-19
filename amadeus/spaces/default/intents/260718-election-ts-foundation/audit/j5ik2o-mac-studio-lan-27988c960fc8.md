@@ -9128,3 +9128,87 @@
 **Mode**: autonomous
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T08:18:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: c74605f4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260718-073253-15ea/engineer-1-bolt1/scripts/amadeus-election-model.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T08:18:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: c74605f4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260718-073253-15ea/engineer-1-bolt1/scripts/amadeus-election-model.ts
+**Duration ms**: 1155
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T08:18:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 90a2a4ab
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260718-073253-15ea/engineer-1-bolt1/scripts/amadeus-election-model.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T08:18:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 90a2a4ab
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260718-073253-15ea/engineer-1-bolt1/scripts/amadeus-election-model.ts
+**Duration ms**: 506
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T08:25:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: aba10b5c
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/code-generation/code-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T08:25:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: aba10b5c
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/code-generation/code-summary.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T08:25:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: fc022dcc
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/code-generation/code-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T08:25:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: fc022dcc
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/code-generation/code-summary.md
+**Duration ms**: 32
+
+---

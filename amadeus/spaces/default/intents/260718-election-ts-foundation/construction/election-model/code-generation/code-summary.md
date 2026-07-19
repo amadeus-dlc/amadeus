@@ -13,3 +13,9 @@
 - 完了: 型一式+parse+tally(zero-confirm 完走に足る核 — bolt-plan.md Bolt 1 宣言どおり。requirements.md FR-4a の GoA 側割当と FR-0 指令ループの U1 面を充足、配置は unit-of-work.md U1 行の scripts/amadeus-election-model.ts)
 - Bolt 2 へ残余: 5クラス fail-closed 完全化(unknown-voter/reservation-missing)、shuffleView(fnv1a+mulberry32)、canEarlyTally、classifyLate、AmendBallot 受理ロジック(型は宣言済み)
 - 検証実測: typecheck/lint/--ci(coverage)/patch gate 387/387 / complexity gate 新規違反 0(全 exit code 個別捕捉 — PR #1227 本文に記録)
+
+## Bolt 2 追記(model-complete、PR #1231)
+
+- U1 完全化: 5クラス fail-closed(unknown-voter/reservation-missing 追加・判定順序 FD 固定)、shuffleView(fnv1a+mulberry32+Fisher-Yates — ADR-4)、canEarlyTally(BR-8 境界)、classifyLate(BR-9 reexam フラグ)。Ballot.parse は構造/意味の2段分割(complexity gate)
+- テスト: t234 拡張(business-rules.md BR-1/2/3/5/6/7/8/9 の全到達 — blind キー全数 assert・決定表全分岐・early tally 境界・後着2ケース)
+- 検証実測: typecheck/lint/dist/promote/coverage:ci 全 exit 0、patch gate 72/72、complexity gate 新規違反 0(PR #1231 本文に記録)
