@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import {
   chmodSync,
+  copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -14,6 +15,15 @@ import { join, resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dir, "../..");
 const TEAM_UP = join(ROOT, "scripts/team-up.sh");
+const CODEX_HOOKS_TOOLS = join(
+  ROOT,
+  "packages/framework/harness/codex/tools",
+);
+const CODEX_HOOKS_HELPER_FILES = [
+  "amadeus-codex-hooks.ts",
+  "amadeus-codex-hooks-contract.ts",
+  "amadeus-codex-hooks-migration.ts",
+];
 const tempDirs: string[] = [];
 
 afterEach(() => {
@@ -38,6 +48,15 @@ function commandFor(
   const home = homeOverride ?? mkdtempSync(join(tmpdir(), "amadeus-codex-home-"));
   if (!homeOverride) tempDirs.push(home);
   const identity = env.AGENT_IDENTITY ?? "corporate-1";
+  const wt = join(home, ".team-up-test-worktrees", member);
+  mkdirSync(join(wt, ".codex", "tools"), { recursive: true });
+  copyFileSync(
+    join(ROOT, ".codex", "hooks.json.example"),
+    join(wt, ".codex", "hooks.json.example"),
+  );
+  for (const file of CODEX_HOOKS_HELPER_FILES) {
+    copyFileSync(join(CODEX_HOOKS_TOOLS, file), join(wt, ".codex", "tools", file));
+  }
   const resolver = join(dir, "role-resume.sh");
   writeFileSync(resolver, `#!/usr/bin/env bash\n${resolverBody}\n`);
   chmodSync(resolver, 0o755);
@@ -52,10 +71,11 @@ function commandFor(
     cmd: [
       "bash",
       "-c",
-      `script="$1"; member="$2"; set --; TEAM_UP_LIB_ONLY=1 source "$script"; CONTINUE=${continueMode}; codex_member_cmd "$member"`,
+      `script="$1"; member="$2"; wt="$3"; set --; TEAM_UP_LIB_ONLY=1 source "$script"; CONTINUE=${continueMode}; codex_member_cmd "$member" "$wt"`,
       "_",
       TEAM_UP,
       member,
+      wt,
     ],
     env: {
       ...process.env,
@@ -64,7 +84,7 @@ function commandFor(
       TEAM_REPO: ROOT,
       ROLE_RESUME: roleResume,
       CODEX_MONITOR: "/usr/bin/true",
-      DELIVERY: join(dir, "missing-delivery.sh"),
+      DELIVERY: env.DELIVERY ?? join(dir, "missing-delivery.sh"),
     },
     stderr: "pipe",
     stdout: "pipe",
@@ -875,6 +895,34 @@ describe("team-up herdr-only launcher", () => {
 });
 
 describe("team-up Codex resume", () => {
+  test("activates Codex hooks before the delivery writer runs", () => {
+    const fixture = mkdtempSync(join(tmpdir(), "amadeus-team-up-delivery-"));
+    tempDirs.push(fixture);
+    const delivery = join(fixture, "delivery.sh");
+    const deliveryLog = join(fixture, "delivery.log");
+    writeFileSync(
+      delivery,
+      `#!/usr/bin/env bash
+set -eu
+wt="$4"
+test -f "$wt/.codex/hooks.json" || { echo "active hooks missing before delivery" >&2; exit 43; }
+printf "delivery-after-active\\n" >"\${DELIVERY_ORDER_LOG:?}"
+`,
+    );
+    chmodSync(delivery, 0o755);
+
+    const { result } = commandFor(
+      "engineer-1",
+      "exit 0",
+      { DELIVERY: delivery, DELIVERY_ORDER_LOG: deliveryLog },
+      undefined,
+      { continueMode: "0" },
+    );
+
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+    expect(readFileSync(deliveryLog, "utf8")).toBe("delivery-after-active\n");
+  });
+
   test("marks Codex member sessions as team mode", () => {
     const { result, home } = commandFor("engineer-1", "exit 0", {
       AGENT_IDENTITY: "personal",

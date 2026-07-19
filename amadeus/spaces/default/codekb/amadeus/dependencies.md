@@ -1,6 +1,33 @@
 # 依存関係
 
-## swarm driver の現行依存グラフ（intent 260713-swarm-driver-migration、2026-07-13、最新）
+## Codex hooks／agmsg の依存境界（intent 260718-hooks-config-conflict、2026-07-18、最新）
+
+```mermaid
+flowchart TD
+  Wiring["HOOK_WIRING: 9 Amadeus commands"]
+  Example["Tracked hooks.json.example"]
+  Active[".codex/hooks.json: tracked active config"]
+  Codex["Codex runtime and trust seed"]
+  Run["run-codex.sh or team-up.sh"]
+  Shim["agmsg codex-shim and monitor"]
+  Delivery["delivery.sh set monitor"]
+  Json1["SQLite JSON1 strip, add, compact write"]
+  Bridge["Codex app-server bridge"]
+  Dirty["Git dirty plus absolute local paths"]
+
+  Wiring --> Example --> Active --> Codex
+  Run --> Shim --> Delivery --> Json1 --> Active
+  Shim --> Bridge
+  Active --> Dirty
+```
+
+テキスト代替: Amadeus の `HOOK_WIRING` は tracked example を生成し、active `.codex/hooks.json` へコピーされた後に Codex runtime／trust seed が読む。別経路では `run-codex.sh` または `team-up.sh` が外部 agmsg shim／monitor を起動し、`delivery.sh set monitor` と SQLite JSON1 writer が同じ active file を書き換える。bridge delivery は成立する一方、tracked file には compact rewrite と絶対 skill／clone path が残る。
+
+agmsg 1.1.7 は package dependency ではなく `~/.agents/skills/agmsg/` にある外部 runtime dependency である。mode reader と writer はともに active hooks を真実源とし、monitor 起動ごとに再設定する（`type.conf:18-22`、`delivery.sh:63-220`、`codex-monitor.sh:194`）。[PR #783](https://github.com/amadeus-dlc/amadeus/pull/783) が防御した `.codex/agmsg-delivery-mode` は現行 source の reader／writer双方で不在であり、残件の依存境界ではない。
+
+恒久案は active file の untrack／ignore、または tracked static dispatcher + ignored sidecar の二案が `【裁定待ち】`。前者は外部 agmsg を変更せず現行 bridge 経路を維持できるが canonical migration が必要、後者は tracked canonical を維持できるが Amadeus／agmsg の協調変更と互換検証を要する。新規 package 依存の要否も裁定後に決める。
+
+## swarm driver の現行依存グラフ（intent 260713-swarm-driver-migration、2026-07-13、履歴）
 
 ```mermaid
 flowchart TD
@@ -17,7 +44,7 @@ flowchart TD
   Harness["Canonical harness source"]
   Package["scripts/package.ts"]
   Dist["dist per harness"]
-  Promote["Claude and Codex self-install"]
+  Promote["Claude, Codex, Cursor, and OpenCode self-install"]
 
   State --> Engine --> Directive --> Conductor --> Worker
   Conductor --> Referee
@@ -27,7 +54,7 @@ flowchart TD
   Harness --> Package --> Dist --> Promote
 ```
 
-テキスト代替: workflow state と runtime graph を engine が読み、driver-neutral な `invoke-swarm` を harness conductor へ渡す。conductor はハーネス固有 worker surface を選び、referee が準備した Unit worktree 上で実行する。Bolt は worktree lifecycle と merge を担い、referee が収束を再検証して監査へ記録する。別の生成依存として core／harness 正本を `scripts/package.ts` が各 `dist` へ投影し、Claude／Codex だけを self-install へ反映する。
+テキスト代替: workflow state と runtime graph を engine が読み、driver-neutral な `invoke-swarm` を harness conductor へ渡す。conductor はハーネス固有 worker surface を選び、referee が準備した Unit worktree 上で実行する。Bolt は worktree lifecycle と merge を担い、referee が収束を再検証して監査へ記録する。別の生成依存として core／harness 正本を `scripts/package.ts` が各 `dist` へ投影し、Claude／Codex／Cursor／OpenCode を self-install へ反映する。
 
 新契約で追加される依存は、core の deterministic selector、harness の capability probe／driver adapter、referee が受け取る driver-aware audit metadata、native event／trace classifier である。外部 package 追加は現時点で不要で、既存ローカル CLI と live tool を利用する。依存方向は selector→adapter→worker、選択結果→referee audit とし、referee から AI provider へ依存させないことが現行境界を保つ条件である。
 
@@ -91,7 +118,7 @@ flowchart TD
   PackageScript["scripts/package.ts"]
   Promote["scripts/promote-self.ts"]
   Dist["root dist/<name>/"]
-  Runtime["root .claude/.codex/.agents"]
+  Runtime["root .claude/.codex/.agents/.cursor/.opencode"]
   Tests["tests/"]
   CI[".github/workflows/ci.yml"]
 
@@ -106,7 +133,7 @@ flowchart TD
   CI --> Promote
 ```
 
-<!-- text fallback: packages/framework/{core,harness} が scripts/package.ts に取り込まれ root dist/<name>/ を生成し、promote-self 経由で root .claude/.codex/.agents に反映される。CI がこの一連を実行する。この経路は一連の bugfix intent(バッチ D 含む)で変更しない。 -->
+<!-- text fallback: packages/framework/{core,harness} が scripts/package.ts に取り込まれ root dist/<name>/ を生成し、promote-self 経由で Claude／Codex／Cursor／OpenCode の project-local tree に反映される。CI がこの一連を実行する。 -->
 
 ## #674/#675/#676/#668 の内部依存(`amadeus-lib.ts` 中心)
 

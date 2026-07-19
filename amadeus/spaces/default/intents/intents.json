@@ -350,6 +350,27 @@
     "slug": "swarm-dispatch-enum",
     "dirName": "260717-swarm-dispatch-enum",
     "scope": "amadeus",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f6f9b-e2f0-789e-85b3-ea7fb9c52ec3",
+    "slug": "test-pyramid-rebuild",
+    "dirName": "260717-test-pyramid-rebuild",
+    "scope": "amadeus",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f728e-549e-7aab-b02c-90ab691ba300",
+    "slug": "hooks-config-conflict",
+    "dirName": "260718-hooks-config-conflict",
+    "scope": "bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f7782-2ba8-78a4-b257-f69342978c2e",
+    "slug": "election-ts-foundation",
+    "dirName": "260718-election-ts-foundation",
+    "scope": "amadeus",
     "status": "in-flight"
   }
 ]

@@ -34,7 +34,6 @@ never hand-edit it (the drift guard fails CI).
    cp -r dist/codex/amadeus/   your-project/amadeus/      # the workspace shell (spaces/default/memory) — a sibling of .codex/, not inside it
    cp dist/codex/AGENTS.md   your-project/AGENTS.md   # or merge into yours
    cp -n your-project/.codex/config.toml.example your-project/.codex/config.toml
-   cp -n your-project/.codex/hooks.json.example your-project/.codex/hooks.json
    ```
 
    The `amadeus/` directory is the workspace shell — it ships the pre-built
@@ -43,11 +42,30 @@ never hand-edit it (the drift guard fails CI).
    `dist/codex/` tree at once). `$amadeus --doctor` fails its "workspace shell
    ready" check if it is missing.
 
-2. Apply the `.gitignore` entries from the shipped `AGENTS.md` § "Git
-   Integration" **before** starting a workflow — the per-clone audit shards
+2. Merge the shipped `dist/codex/.gitignore` contract and the entries from
+   `AGENTS.md` § "Git Integration" into the project's `.gitignore` **before**
+   starting a workflow — the per-clone audit shards
    under each intent's `audit/` are committed deliberately (each clone writes
    its own `<host>-<clone>.md`, so concurrent appends never git-conflict), while
-   per-user cursors and machine-local runtime state stay ignored.
+   per-user cursors and machine-local runtime state stay ignored. Do not
+   replace an existing project `.gitignore`; merge it. The shipped Codex
+   contract includes `.codex/hooks.json`.
+
+   Then activate the local hook file:
+
+   ```bash
+   cd your-project
+   bun .codex/tools/amadeus-codex-hooks.ts activate
+   ```
+
+   `.codex/hooks.json.example` is the generated, tracked canonical Amadeus
+   configuration. `.codex/hooks.json` is the ignored, per-clone active file
+   that Codex integrations such as agmsg may update. Activation copies the
+   canonical bytes only when the active file is absent. It preserves an
+   existing active file byte-for-byte and stops if that file no longer
+   satisfies the canonical Amadeus hook contract. In the Amadeus self
+   repository, `./scripts/run-codex.sh` and `scripts/team-up.sh` invoke the same
+   activation before launching Codex or applying an agmsg writer.
 
 3. Trust the project. Codex trust is **two layers**, and both must be
    pre-seeded in `$CODEX_HOME/config.toml`:
@@ -89,6 +107,253 @@ never hand-edit it (the drift guard fails CI).
    bun .codex/tools/amadeus-utility.ts doctor
    ```
 
+   The doctor parses both JSON files and compares the Amadeus adapter commands
+   as a multiset of `(event, matcher or null, type, command)` tuples. It accepts
+   non-Amadeus additions, key and array ordering, whitespace, and minification
+   changes. It fails on a missing or invalid file and on a missing, misplaced,
+   duplicate, or obsolete Amadeus tuple. Diagnostics list only the missing or
+   extra tuple and do not print the active JSON, local absolute paths, or
+   non-Amadeus commands. Confirm both trust layers after activation; activation
+   and doctor do not grant trust.
+
+## Upgrading existing Codex installs safely
+
+The Amadeus self repository and a project that consumed the packaged Codex
+distribution have different Git ownership. Use exactly one of the following
+procedures. In both cases, stop the Codex session and every agmsg writer or
+monitor first, and keep the external backup until the live monitor acceptance
+has passed.
+
+### Amadeus self repository
+
+Run this path only in the Amadeus source repository whose current revision
+still tracks `.codex/hooks.json`. Start with no staged, unmerged, untracked, or
+unrelated tracked changes; a writer-modified `.codex/hooks.json` is the only
+permitted worktree change. Fetch the revision containing the fix, extract that
+revision's helper outside the repository, and let the external helper perform
+the checked fast-forward:
+
+```bash
+set -euo pipefail
+amadeus_assert_external_path() {
+  bun -e '
+    import { existsSync, realpathSync } from "node:fs";
+    import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
+    const canonical = (value) =>
+      existsSync(value)
+        ? realpathSync(value)
+        : resolve(realpathSync(dirname(value)), basename(value));
+    const candidate = canonical(process.argv[1]);
+    for (const rootValue of process.argv.slice(2)) {
+      const root = realpathSync(rootValue);
+      const rel = relative(root, candidate);
+      const inside =
+        rel === "" ||
+        (rel !== ".." && !rel.startsWith(".." + sep) && !isAbsolute(rel));
+      if (inside) {
+        console.error("external path resolves inside a Git-owned directory: " + candidate);
+        process.exit(1);
+      }
+    }
+  ' -- "$1" "$AMADEUS_PROJECT_DIR" "$AMADEUS_GIT_COMMON_DIR"
+}
+
+AMADEUS_PROJECT_DIR="$(git rev-parse --show-toplevel)"
+cd "$AMADEUS_PROJECT_DIR"
+AMADEUS_GIT_COMMON_DIR="$(cd "$(git rev-parse --git-common-dir)" && pwd -P)"
+AMADEUS_MIGRATION_SOURCE_REF="main"
+git fetch --no-tags origin "$AMADEUS_MIGRATION_SOURCE_REF"
+AMADEUS_MIGRATION_TARGET_REF="FETCH_HEAD"
+AMADEUS_HELPER_DIR="$(mktemp -d)"
+AMADEUS_HELPER_PATH="$AMADEUS_HELPER_DIR/amadeus-codex-hooks.ts"
+AMADEUS_HELPER_CONTRACT_PATH="$AMADEUS_HELPER_DIR/amadeus-codex-hooks-contract.ts"
+AMADEUS_HELPER_MIGRATION_PATH="$AMADEUS_HELPER_DIR/amadeus-codex-hooks-migration.ts"
+amadeus_assert_external_path "$AMADEUS_HELPER_PATH"
+amadeus_assert_external_path "$AMADEUS_HELPER_CONTRACT_PATH"
+amadeus_assert_external_path "$AMADEUS_HELPER_MIGRATION_PATH"
+git cat-file -e "$AMADEUS_MIGRATION_TARGET_REF:.codex/tools/amadeus-codex-hooks.ts"
+git cat-file -e "$AMADEUS_MIGRATION_TARGET_REF:.codex/tools/amadeus-codex-hooks-contract.ts"
+git cat-file -e "$AMADEUS_MIGRATION_TARGET_REF:.codex/tools/amadeus-codex-hooks-migration.ts"
+git show "$AMADEUS_MIGRATION_TARGET_REF:.codex/tools/amadeus-codex-hooks.ts" \
+  > "$AMADEUS_HELPER_PATH"
+git show "$AMADEUS_MIGRATION_TARGET_REF:.codex/tools/amadeus-codex-hooks-contract.ts" \
+  > "$AMADEUS_HELPER_CONTRACT_PATH"
+git show "$AMADEUS_MIGRATION_TARGET_REF:.codex/tools/amadeus-codex-hooks-migration.ts" \
+  > "$AMADEUS_HELPER_MIGRATION_PATH"
+bun "$AMADEUS_HELPER_PATH" migrate-self \
+  --target-ref "$AMADEUS_MIGRATION_TARGET_REF" \
+  --project-dir "$AMADEUS_PROJECT_DIR"
+```
+
+Change `AMADEUS_MIGRATION_SOURCE_REF` only when the fix is on another fetched
+branch or tag. Before moving the active file, the helper verifies that the
+current revision tracks it, the target revision untracks it, tracks the
+canonical example and helper, ignores the active path, and is a fast-forward
+descendant. It also rejects unrelated, staged, unmerged, and untracked changes.
+It moves the active file to a private external directory, verifies SHA-256,
+runs `git merge --ff-only`, restores the same bytes, and verifies the restored
+file and retained backup against the original SHA-256. It also verifies zero
+unmerged paths, no stash-list change, a clean worktree, and a passing doctor.
+On success, record the printed `Backup` and `SHA-256` values and retain that
+backup. The executable preflight above resolves symlinks for all three helper
+modules and stops before any module is written if a destination is inside
+either the worktree or the Git common directory. The `git cat-file` checks also
+prove that the complete module set exists in the target revision before
+extraction starts.
+
+Confirm the visible postconditions as well:
+
+```bash
+if git ls-files --error-unmatch -- .codex/hooks.json >/dev/null 2>&1; then
+  echo "active hooks are still tracked" >&2
+  exit 1
+fi
+git check-ignore --quiet -- .codex/hooks.json
+git ls-files --error-unmatch -- .codex/hooks.json.example
+git diff --name-only --diff-filter=U
+git status --short
+bun .codex/tools/amadeus-utility.ts doctor
+```
+
+The `git diff` and `git status` commands must print nothing. Do not substitute
+`git pull`, `git stash`, an update-before `git rm --cached`, or broad
+`checkout`, `reset`, or `clean` commands. Those paths cannot preserve this
+dirty tracked-to-ignored transition safely.
+
+### Project using the packaged Codex distribution
+
+For a consumer project, the project owner controls the Git index and commit.
+Begin with no staged, unmerged, untracked, or unrelated tracked changes. A
+writer-modified `.codex/hooks.json` may be the only worktree change. Back up
+the active file outside both the worktree and its Git directory, record its
+SHA-256, and then run the package upgrade. The following helper function uses
+the already required Bun runtime, rather than a platform-specific checksum
+utility:
+
+```bash
+set -euo pipefail
+amadeus_hook_sha256() {
+  bun -e 'import { createHash } from "node:crypto"; import { readFileSync } from "node:fs"; const file = process.argv[1]; console.log(createHash("sha256").update(readFileSync(file)).digest("hex"))' -- "$1"
+}
+amadeus_assert_external_path() {
+  bun -e '
+    import { existsSync, realpathSync } from "node:fs";
+    import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
+    const canonical = (value) =>
+      existsSync(value)
+        ? realpathSync(value)
+        : resolve(realpathSync(dirname(value)), basename(value));
+    const candidate = canonical(process.argv[1]);
+    for (const rootValue of process.argv.slice(2)) {
+      const root = realpathSync(rootValue);
+      const rel = relative(root, candidate);
+      const inside =
+        rel === "" ||
+        (rel !== ".." && !rel.startsWith(".." + sep) && !isAbsolute(rel));
+      if (inside) {
+        console.error("external path resolves inside a Git-owned directory: " + candidate);
+        process.exit(1);
+      }
+    }
+  ' -- "$1" "$AMADEUS_PROJECT_DIR" "$AMADEUS_GIT_COMMON_DIR"
+}
+
+AMADEUS_PROJECT_DIR="$(git rev-parse --show-toplevel)"
+cd "$AMADEUS_PROJECT_DIR"
+AMADEUS_GIT_COMMON_DIR="$(cd "$(git rev-parse --git-common-dir)" && pwd -P)"
+git status --short
+while IFS= read -r AMADEUS_STATUS_LINE; do
+  case "$AMADEUS_STATUS_LINE" in
+    " M .codex/hooks.json") ;;
+    *) echo "unrelated worktree change blocks migration: $AMADEUS_STATUS_LINE" >&2; exit 1 ;;
+  esac
+done < <(git status --porcelain=v1 --untracked-files=all)
+AMADEUS_CONSUMER_BACKUP_DIR="$(mktemp -d)"
+AMADEUS_CONSUMER_BACKUP_PATH="$AMADEUS_CONSUMER_BACKUP_DIR/hooks.json"
+amadeus_assert_external_path "$AMADEUS_CONSUMER_BACKUP_PATH"
+chmod 700 "$AMADEUS_CONSUMER_BACKUP_DIR"
+cp .codex/hooks.json "$AMADEUS_CONSUMER_BACKUP_PATH"
+chmod 600 "$AMADEUS_CONSUMER_BACKUP_PATH"
+AMADEUS_ACTIVE_SHA_BEFORE="$(amadeus_hook_sha256 .codex/hooks.json)"
+test "$(amadeus_hook_sha256 "$AMADEUS_CONSUMER_BACKUP_PATH")" = \
+  "$AMADEUS_ACTIVE_SHA_BEFORE"
+
+bunx @amadeus-dlc/setup upgrade --harness codex \
+  --target "$AMADEUS_PROJECT_DIR" --yes
+
+test "$(amadeus_hook_sha256 .codex/hooks.json)" = "$AMADEUS_ACTIVE_SHA_BEFORE"
+git check-ignore --no-index --quiet -- .codex/hooks.json
+git ls-files --error-unmatch -- .codex/hooks.json.example
+test -f .codex/tools/amadeus-codex-hooks.ts
+git rm --cached -- .codex/hooks.json
+git add -- .agents .codex .gitignore AGENTS.md amadeus
+git diff --cached --stat
+git commit -m "chore: adopt local Codex hooks ownership"
+```
+
+The first `git status --short` may print nothing or only an unstaged
+`.codex/hooks.json` modification; the loop rejects every other status. The
+executable preflight resolves symlinks and stops before `cp` if the backup path
+is inside either the worktree or the Git common directory. The package upgrade
+must preserve the active bytes while adding the canonical example, ignore rule,
+and helper. The explicit `git add` pathspecs are the five packaged Codex roots;
+they avoid staging anything elsewhere in the project. Review the staged diff
+before committing. Because there were no unrelated pre-upgrade changes and the
+active file is now ignored, the commit contains the reviewed package upgrade
+and the consumer-owned index deletion together.
+
+These snippets require a POSIX-compatible shell. On POSIX filesystems,
+`chmod 700` on the backup directory and `chmod 600` on its file are enforced
+privacy guarantees. On native Windows, run the snippets only from Git Bash.
+Git Bash can execute the flow, but its `chmod` does not establish equivalent
+Windows ACL isolation on NTFS; place the temporary directory under a location
+already private to the current Windows account and verify its ACL before
+copying. The `0700`/`0600` guarantee must not be claimed on Windows.
+
+After the commit, verify the ownership and content contract:
+
+```bash
+test "$(amadeus_hook_sha256 .codex/hooks.json)" = "$AMADEUS_ACTIVE_SHA_BEFORE"
+test "$(amadeus_hook_sha256 "$AMADEUS_CONSUMER_BACKUP_PATH")" = \
+  "$AMADEUS_ACTIVE_SHA_BEFORE"
+if git ls-files --error-unmatch -- .codex/hooks.json >/dev/null 2>&1; then
+  echo "active hooks are still tracked" >&2
+  exit 1
+fi
+git check-ignore --quiet -- .codex/hooks.json
+git ls-files --error-unmatch -- .codex/hooks.json.example
+git diff --name-only --diff-filter=U
+git status --short
+bun .codex/tools/amadeus-utility.ts doctor
+```
+
+Again, the `git diff` and `git status` commands must print nothing. The setup
+tool, launcher, and doctor never edit the consumer's Git index or create this
+commit; `git rm --cached` is deliberately a consumer-owned step performed only
+after the package upgrade has preserved and backed up the active bytes. Recheck
+project and hook trust before launching Codex.
+
+## Live monitor acceptance
+
+Hermetic integration tests are the blocking CI gate, but they do not prove that
+the external agmsg/Codex push bridge starts and survives a real restart. When
+validating a monitor-bridge change, complete this opt-in check before calling
+the issue finished:
+
+1. Stop every manual `inbox.sh` poller, then launch a new Codex session from
+   `./scripts/run-codex.sh`.
+2. Send the first turn and confirm that delivery mode is `monitor` and the
+   bridge reports itself alive.
+3. Have a human stop and restart the session, then send one turn in the
+   restarted session.
+4. Have the leader send a unique ping. Confirm that it appears in the session
+   without any manual `inbox.sh`, and reply so the leader can confirm receipt.
+5. Record the agmsg and Codex versions, delivery mode, bridge status, ping
+   identifier, and send/receive timestamps.
+
+Do not remove either migration backup until this acceptance passes. A failure
+or an unperformed check leaves the monitor-bridge change incomplete.
+
 ## Use
 
 Invoke the orchestrator with `$amadeus` (or `/skills` → amadeus) followed by a
@@ -113,10 +378,17 @@ implicit skill matching so 37 runner descriptions don't pollute the index).
   `writable_roots = ["<main repo>/.git"]` — template in the shipped
   `config.toml.example` template (linked worktrees resolve into `<main>/.git/worktrees/*`,
   so it must be the main repo's `.git`).
-- **Swarm floor = `codex exec` workers** — one headless worker per
-  Construction unit in its Bolt worktree (always `< /dev/null`), with the
-  same deterministic referee. `AMADEUS_USE_SWARM=1` has no Workflow tool here
-  and loud-degrades (`SWARM_DEGRADED` is audited).
+- **Construction swarm = native subagent fan-out** — one native subagent per
+  Construction unit in its Bolt worktree, converging against the same
+  deterministic referee. The conductor resolves `AMADEUS_USE_SWARM` against the
+  harness: unset selects the subagent floor; `codex-ultra` selects native
+  fan-out at reasoning effort=ultra; `claude-ultra` loud-degrades to the floor
+  (`SWARM_DEGRADED` is audited); the legacy `1` or any other value is rejected
+  fail-closed. **Breaking change**: the old headless `codex exec` per-unit
+  worker floor is retired — there is no `codex exec` fallback. For the
+  `codex-ultra` case, reasoning effort=ultra is accepted by the API and the
+  child runs to completion — there is no telemetry that ultra was actually
+  applied.
 - **Session lifecycle**: Codex has no SessionEnd event; an unclosed session
   is reconciled as an inferred `SESSION_ENDED` audit row at the next session
   start. The Codex-only PostCompact event re-injects the workflow mission

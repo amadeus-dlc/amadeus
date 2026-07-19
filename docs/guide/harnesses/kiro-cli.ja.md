@@ -68,7 +68,7 @@ per-scope(`/amadeus-feature`)のランナースキルがインストールされ
 | ゲート & 質問 | `AskUserQuestion` ウィジェット | 番号付きプロンプトの選択肢(番号で返信)。`[Answer]:` タグ付きの質問ファイルがソースオブトゥルースのまま |
 | ステータスライン | 現在のステージ + モデル + コンテキスト % | 利用不可 — `/amadeus --status` と各ゲートの進捗行を使う |
 | サブエージェントステージ(2.1、3.5) | `Task` ツール | Kiro `subagent` ツール → `amadeus-developer-agent` / `amadeus-architect-agent` 設定 |
-| Construction swarm | 並列 `Task` フロア、任意の ultracode Workflow | サブエージェントの fan-out のみ。`AMADEUS_USE_SWARM=1` は no-op として告知される |
+| Construction swarm | 未設定時は subagent floor、`claude-ultra` = inline Dynamic Workflow、`codex-ultra` は floor へ loud-degrade、旧来の `1` / 未知値は fail-closed で rejected | サブエージェントの fan-out のみ。`claude-ultra` / `codex-ultra` は floor へ loud-degrade(`SWARM_DEGRADED`)、旧来の `1` / 未知値は fail-closed で rejected |
 | セッション監査イベント | `SESSION_STARTED/RESUMED/ENDED`、`SESSION_COMPACTED` | `SESSION_STARTED` のみ(Kiro には session-end / pre-compaction フックがない) |
 | 転送ループ強制(Stop フック) | 対話的 + ヘッドレス | 対話的セッションのみ — `--no-interactive` 実行は stop-hook ブロックを尊重しない |
 | 権限 | `settings.json` の allowlist | `amadeus` エージェント設定: `bun .kiro/tools/*` のみ事前承認、他のシェルコマンドはプロンプト |

@@ -1,8 +1,32 @@
 # コード品質評価
 
-> **最新の品質観測は intent `260717-state-mirror-fixes`(2026-07-18、下記「state-mirror-fixes の観測面」節)**。以下の過去 intent 節に残る「本 intent」「最新」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
+> **最新の品質観測は intent `260718-hooks-config-conflict`(2026-07-18、下記「hooks-config-conflict の観測面」節)**。以下の過去 intent 節に残る「本 intent」「最新」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
 
-## state-mirror-fixes の観測面 — set-status 無ロック RMW と countStageProgress SKIP 分母(2026-07-18、最新、#1170 #1172)
+## hooks-config-conflict の観測面 — tracked canonical と runtime writer の所有権衝突（2026-07-18、最新、Issue #770）
+
+現行コード基準 observed HEAD `594ba21d636218558b711b371c286f16731fb081`、base `e9a001105d253e14affb77417423d9f0b0360f9e`（祖先・距離8）からの diff-refresh。フォーカス契約は区間で変更0件であり、[Issue #770](https://github.com/amadeus-dlc/amadeus/issues/770) の再発は既存 repository 契約と外部 agmsg 1.1.7 writer の組合せが Codex 再導入で再顕在化したもの。
+
+### 確定 finding
+
+- HEAD の `.codex/hooks.json`、`.codex/hooks.json.example`、dist example は同一 blob（1925 bytes／93 lines）。一方、現 worktree の active file は2021 bytes／改行0、`1 insertion / 93 deletions` で、agmsg monitor の SessionStart／SessionEnd各1件と machine／clone絶対 path を持つ。
+- agmsg 所有 entry を除外した意味比較では、Amadeus の9 command と PostToolUse matcher は全て保持される。故障は hook 破壊ではなく、正常な runtime state が tracked canonical に書かれる所有権衝突である。
+- `delivery.sh` は既存 agmsg group を strip してから再追加するため entry 重複は防ぐが、SQLite JSON1 の compact rewrite と絶対 path 追加により tracked bytes は不変にならない。pretty-print だけでは受入条件を満たさない。
+- `codex-monitor.sh:194` と `scripts/team-up.sh:742-748` が monitor 設定を再適用するため、手動復元や `set off` は次の monitor 起動で再発する。
+- [PR #783](https://github.com/amadeus-dlc/amadeus/pull/783) は marker の ignore／preserveだけを解決済み。現行 agmsg 1.1.7 は marker を読まず書かず、hooks自体が mode source of truth である。
+
+### 回帰テストの空白と完了条件
+
+既存 `t150` は example の event／matcher、trust path、dist driftを、team-up integration は delivery呼出しを検証するが、fake delivery は active fileを書き換えない。次の回帰が欠落している。
+
+1. disposable Git fixtureで monitor登録前後の tracked bytes と `git status --porcelain` が不変。
+2. Amadeus 9 command／3 PostToolUse matcherを維持し、agmsg mode再設定で重複しない。
+3. tracked contentに skill／clone／userの絶対 pathがない。
+4. monitor→off→turn→monitor と Codex再起動後のbridge deliveryが成立する。
+5. `dist:check`／`promote:self:check`／trust seedを維持し、既存 dirty active fileを安全に移行する。
+
+恒久案A（active hooksのuntrack／ignore）と案B（tracked static dispatcher + ignored sidecar）は `【裁定待ち】`。実装PRは裁定後、上記fixtureを先に赤化し、diff追加行未カバー0を満たす必要がある。
+
+## state-mirror-fixes の観測面 — set-status 無ロック RMW と countStageProgress SKIP 分母(2026-07-18、履歴、#1170 #1172)
 
 現行コード基準 observed HEAD `591b6a2a222357f41061128f1b5a93c7f7a877be`(`git rev-parse HEAD` 実測、worktree = `origin/main` 一致)、base `6495e03a12d9e7149c2e80b59f171a90607a2d2c`(全 `re-scans/*.md` observed のうち HEAD 祖先・距離最小=126、cid:reverse-engineering:rescan-base-ancestry)からの diff-refresh。base/observed 決定過程と現物照合の真実源は本 intent の `inception/reverse-engineering/scan-notes.md` および `re-scans/260717-state-mirror-fixes.md`。件数・行番号は observed HEAD の実ファイル直読(cid:measurement-ref-in-artifacts)。Focus seam(set-status の無ロック RMW と state ロック機構)は区間126コミットで実質不変であり、確定した2欠陥は base より前から現存(#1170、pre-existing)または #1169 で新規導入(#1172)。
 
@@ -37,7 +61,7 @@
 - engine eligibility は autonomy、runtime graph、stage mode、walking-skeleton、成果物 coverage から決定される。#841 の「完了した batch 1 を再提示し続ける」欠陥は、`amadeus-orchestrate.ts:1792-1811` の最初の未完了 batch 選択で解消済みである。
 - referee は `prepare`／`check`／`finalize` を分離し、protected file の改竄、lying conductor、merge failure、baton return を real process／worktree で検証する既存 e2e を持つ。
 - packaging は `dist/<name>/` 全域の orphan scan（`scripts/package.ts:692-709`）と harness source-side unreferenced scan（`:711-725`）を持つ。過去の #701／#735 finding は解消済みである。
-- canonical source→4 harness `dist` の byte drift と、Claude／Codex self-install drift を決定的に検査する既存 gate がある。
+- canonical source→6 harness `dist` の byte drift と、Claude／Codex／Cursor／OpenCode self-install drift を決定的に検査する既存 gate がある。
 - Codex exec journey、Kiro ACP tool trace、Claude live journey という opt-in transport seam があり、live proof の土台を再利用できる。
 
 ### 未解決 finding
