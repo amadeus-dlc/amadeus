@@ -6081,3 +6081,55 @@
 **Message**: All previously-clean areas (BR/FR/NFR references, ADR-5, R-1 atomic write) still resolve correctly — no regression found. Verification complete.\n\n## Review\n\n**Verdict:** READY\n**Reviewer:** amadeus-ar
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:40:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: c6a0b6fb
+**Sensor ID**: linter
+**Stage slug**: nfr-requirements
+**Output path**: /private/tmp/claude-501/-Users-j5ik2o-worktrees-github-com-amadeus-dlc-amadeus-runs-20260719-231310-08a0-engineer-2/3ef57910-4c4a-4aa0-b405-ca9effafc300/scratchpad/write-ballot-tcrcgs13.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:40:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: c6a0b6fb
+**Sensor ID**: linter
+**Stage slug**: nfr-requirements
+**Output path**: /private/tmp/claude-501/-Users-j5ik2o-worktrees-github-com-amadeus-dlc-amadeus-runs-20260719-231310-08a0-engineer-2/3ef57910-4c4a-4aa0-b405-ca9effafc300/scratchpad/write-ballot-tcrcgs13.ts
+**Duration ms**: 867
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:40:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2e845d0b
+**Sensor ID**: type-check
+**Stage slug**: nfr-requirements
+**Output path**: /private/tmp/claude-501/-Users-j5ik2o-worktrees-github-com-amadeus-dlc-amadeus-runs-20260719-231310-08a0-engineer-2/3ef57910-4c4a-4aa0-b405-ca9effafc300/scratchpad/write-ballot-tcrcgs13.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:40:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2e845d0b
+**Sensor ID**: type-check
+**Stage slug**: nfr-requirements
+**Output path**: /private/tmp/claude-501/-Users-j5ik2o-worktrees-github-com-amadeus-dlc-amadeus-runs-20260719-231310-08a0-engineer-2/3ef57910-4c4a-4aa0-b405-ca9effafc300/scratchpad/write-ballot-tcrcgs13.ts
+**Duration ms**: 38
+**Note**: script-error: exit-1
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-19T23:41:18Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-requirements
+**Timestamp**: 2026-07-19T23:41:18Z
+
+---
