@@ -2,6 +2,7 @@
 > This file is maintained by the orchestrator during stage execution. Add observations at the gate ritual, not by editing here directly.
 
 ## Interpretations
+- 2026-07-19T10:2xZ — U4 builder 最終報告の遅延配送を照合: 回収済み内容と一致・新規指摘なし(late-verdict-diff-absorption)。worktree 側の未コミット state 差分は finalize の state 簿記で処理済み
 - 2026-07-19T09:55:00Z — swarm finalize は単一 --check-cmd を全 claimed ユニットの worktree で再検証する — ユニット固有テストを指定すると他 worktree に該当ファイルがなく偽赤(2/3 failed を実測)。ユニット別の finalize 呼出(--units/--claimed を単数)で解消。swarm-finalize-claimed-required の check-cmd 面の運用知識
 - 2026-07-19T09:55:30Z — squash マージ跨ぎの stacked ブランチは `git rebase --onto origin/main <旧base> <branch>` で衝突ゼロ transplant を実測(Bolt 4 を Bolt 3 PR 上に先行実装→#1233 着地後に載せ替え)。autonomous モードで PR 待ちを塞がない実務手順
 - 2026-07-19T09:56:00Z — GoaLineCode 域制約(Q3=A)は election ID 自体の入口検査に及ぶ — 複節形 fixture ID(E-LOOP-1 等)が設計どおり即拒否され、fixture を適合形へ更新(fail-closed が正しく機能した実測)
