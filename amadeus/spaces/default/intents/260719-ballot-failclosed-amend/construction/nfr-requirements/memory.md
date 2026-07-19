@@ -17,3 +17,5 @@
 - [2026-07-19T23:40Z] Interpretation: 性能・セキュリティの専用検査は承認 NFR 不在・新規入力境界なしで N/A(build-and-test:c1/c3、P-1 は regex 構造の直接論証へ — 初稿の E-GMEBT 裁定引用は provenance 欠落で reviewer が捕捉)。
 
 - [2026-07-19T23:50Z] Deviation: reviewer iteration 1 = NOT-READY(Critical: E-GMEBT 裁定引用の provenance 欠落 — 選挙自体は leader store に実在(state=recorded)し公式裁定=不採用(Issue #1261 のユーザー裁定)だが、初稿は開票通知未受領のまま裁定を bare 引用した = 検証可能な出典なしの先取り記入。reviewer の「不存在」判定は自 worktree 限定 grep によるもので存在面は誤りだが、provenance 欠落の指摘は正当 / Major×2: voters ≤6 の発明定数・S-2 の technology-stack 誤帰属)。是正: P-1 を regex 構造の直接論証+出典分離の補足へ、数値を実測値(全34選挙 voters 最大3、型は上限なし model.ts:55)へ、S-2 を domain-entities フィールド直接確認へ。是正 diff の新規引用は独立再実測済み(fix-diff-independent-reverify — model.ts:55 verbatim・record.md 注記 grep 3件)。
+
+- [2026-07-19T23:55Z] Interpretation: iteration 2 = READY(3所見の閉包を Issue #1261 本文・E-GMEBT store・model.ts:55・全34選挙 voters 実測の独立再計算で確認、退行なし)。reviewer の non-blocking 観測(per-unit ディレクトリに diary 不在)は、diary の正位置が engine の memory_path = construction/nfr-requirements/memory.md(ステージレベル)であるための誤解 — 実在確認済み。
