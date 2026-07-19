@@ -2032,3 +2032,11 @@
 **Duration ms**: 38
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-19T15:20:07Z
+**Event**: WORKFLOW_PARKED
+**Stage**: approval-handoff
+**Timestamp**: 2026-07-19T15:20:07Z
+
+---
