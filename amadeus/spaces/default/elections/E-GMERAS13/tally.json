@@ -1,0 +1,38 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-19T15:13:07Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GMERAS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e1 record をリードオンリー実測: (1) 留保転記の当事者照合 — E-GMERA1/E-GMERA3 の自票留保2件(GoA2)が FR-2(c)/FR-5 受け入れ基準へ verbatim 転記されていることを票原文と突き合わせて確認(留保必須票2件 vs 転記2件で件数一致、reservation-transcription-count-check 充足) (2) diary の違反実例2件(M2=mechanism-cite-verify-at-draft 起草時 verbatim 照合欠落 / M1=artifact-upstream-inputs-header 装飾トークン)はいずれも既存 cid の違反実例で、PM 回付が postmortem-two-tier の正規経路 (3) SENSOR_FAILED 0 / SENSOR_PASSED 57 を audit grep 実測 (4) 裁定転記3件(C/A/C、各 2-0)は自分の受領裁定と一致。新規ノルムの隙間なし、0件で可",
+      "submittedAt": "2026-07-19T15:12:10Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GMERAS13",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測(e1 worktree リードオンリー): requirements.md の留保転記を件数照合 — 留保必須票は E-GMERA1/E-GMERA3 の e4 GoA2 の2件(自分は両選挙 GoA1 投票者として分母を直接知る)、FR-2(c)/FR-5 に verbatim 転記2件で一致(reservation-transcription-count-check)。diary の違反実例2件(mechanism-cite-verify-at-draft 過大引用 / artifact-upstream-inputs-header 装飾トークン)は既存 cid の違反実例で PM 回付が適切、新規学習なし。FR-5 の t238 反転帰属(e1 intent 内)は自 intent 260719-ballot-failclosed-amend の C-2 非交差前提とも整合。0件で可(1)",
+      "submittedAt": "2026-07-19T15:12:35Z"
+    }
+  ],
+  "resolutions": []
+}
