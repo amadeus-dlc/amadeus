@@ -19,6 +19,7 @@ import { join } from "node:path";
 import {
   type Ballot,
   classifyLate,
+  lateReexamRequired,
   type Election,
   type ElectionState,
   err,
@@ -139,13 +140,13 @@ export const Store = {
       // persists reexamRequired for the human reexamination trail.
       const t = readJson<{ talliedAt: string }>(join(dir, "tally.json"));
       if (!t.ok) return t;
+      // A ballot arriving after the tallied transition but stamped at/before
+      // talliedAt still lands in the late lane (it missed the fixed set); the
+      // reexam rule is single-sourced in the model (PR #1233 review minor 2).
       const late = classifyLate(t.value.talliedAt, ballot) ?? {
         ballot,
         late: true as const,
-        // A ballot arriving after the tallied transition but stamped at/before
-        // talliedAt is still recorded in the late lane (it missed the fixed
-        // set); it reexamines only on GoA 8.
-        reexamRequired: ballot.goa === 8,
+        reexamRequired: lateReexamRequired(ballot),
       };
       const next: LedgerFile = { ballots: ledger.ballots, late: [...ledger.late, late] };
       const w = writeStoreFile(ledgerPath, JSON.stringify(next, null, 2));

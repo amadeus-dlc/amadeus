@@ -40,6 +40,7 @@ import {
   createAgmsgTransport,
   createSubagentTransport,
   distribute,
+  normalizeAt,
 } from "./amadeus-election-transport";
 import { parseGoaLine } from "../packages/framework/core/tools/amadeus-norm-metrics";
 import { electionsRoot, Store, type StoreError, writeStoreFile } from "./amadeus-election-store";
@@ -304,7 +305,11 @@ export function handleVote(root: string, electionId: string, filePath: string): 
   if (!loaded.ok) return storeFail("load", loaded.error);
   const parsed = Ballot.parse(raw, loaded.value.election);
   if (!parsed.ok) return fail(`vote: ${parsed.error}`);
-  const appended = Store.appendBallot(root, electionId, parsed.value);
+  // Timestamp precision funnel (PR #1233 review minor 3): every timestamp the
+  // CLI mints or accepts is normalized to seconds-precision ISO-8601 UTC, so
+  // classifyLate's lexicographic compare never mixes precisions.
+  const ballot = { ...parsed.value, submittedAt: normalizeAt(parsed.value.submittedAt) };
+  const appended = Store.appendBallot(root, electionId, ballot);
   if (!appended.ok) return storeFail("appendBallot", appended.error);
   out({ accepted: parsed.value.voter });
   return 0;
@@ -323,7 +328,7 @@ export function handleTally(root: string, electionId: string): number {
   const ledger = Store.ledger(root, electionId);
   if (!ledger.ok) return storeFail("ledger", ledger.error);
   const result = tally(loaded.value.election, ledger.value.ballots);
-  const materialized = Store.materialize(root, electionId, result, new Date().toISOString());
+  const materialized = Store.materialize(root, electionId, result, normalizeAt(new Date().toISOString()));
   if (!materialized.ok) return storeFail("materialize", materialized.error);
   out({ result });
   return 0;

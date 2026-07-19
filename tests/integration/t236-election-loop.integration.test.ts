@@ -274,6 +274,65 @@ describe("t236 election directive loop", () => {
     expect(run(["notify", "--election", "E-LOOP1", "--transport", "carrier-pigeon"])).toBe(1);
   });
 
+  test("Bolt 4: residual error branches — hold-resolved guards, blocked views dir, corrupt timeline, reservation tamper", () => {
+    // hold-resolved on a non-hold state is rejected
+    expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
+    expect(
+      run(["report", "--election", "E-LOOP1", "--result", "hold-resolved", "--resolution", "reopen"]),
+    ).toBe(1);
+    // walk to an established tally, then force state=hold on disk: the
+    // hold-without-hold-tally guard must reject loudly
+    expect(run(["report", "--election", "E-LOOP1", "--result", "distributed"])).toBe(0);
+    const b1 = writeJson("b1.json", {
+      electionId: "E-LOOP1",
+      voter: "alice",
+      voterKind: "member",
+      choiceInternalNo: 1,
+      goa: 1,
+      submittedAt: "2026-07-19T00:01:00Z",
+    });
+    expect(run(["vote", "--election", "E-LOOP1", "--file", b1])).toBe(0);
+    expect(run(["tally", "--election", "E-LOOP1"])).toBe(0);
+    const edir = join(projectDir, "amadeus", "spaces", "default", "elections", "E-LOOP1");
+    const efile = JSON.parse(readFileSync(join(edir, "election.json"), "utf8"));
+    writeFileSync(join(edir, "election.json"), JSON.stringify({ ...efile, state: "hold" }));
+    expect(
+      run(["report", "--election", "E-LOOP1", "--result", "hold-resolved", "--resolution", "reopen"]),
+    ).toBe(1);
+    writeFileSync(join(edir, "election.json"), JSON.stringify({ ...efile, state: "tallied" }));
+    // corrupt timeline.json -> render is loud
+    const timelinePath = join(edir, "timeline.json");
+    const timelineBytes = readFileSync(timelinePath, "utf8");
+    writeFileSync(timelinePath, "{broken");
+    expect(run(["render", "--election", "E-LOOP1"])).toBe(1);
+    writeFileSync(timelinePath, timelineBytes);
+    // reservation transcription tamper -> verify is loud
+    const b2 = writeJson("b2.json", {
+      electionId: "E-LOOP1",
+      voter: "bob",
+      voterKind: "member",
+      choiceInternalNo: 1,
+      goa: 2,
+      reservation: "軽微な留保",
+      submittedAt: "2026-07-19T00:02:00Z",
+    });
+    writeFileSync(join(edir, "election.json"), JSON.stringify({ ...efile, state: "collecting" }));
+    expect(run(["vote", "--election", "E-LOOP1", "--file", b2])).toBe(0);
+    expect(run(["tally", "--election", "E-LOOP1"])).toBe(0);
+    expect(run(["render", "--election", "E-LOOP1"])).toBe(0);
+    const recordPath = join(edir, "record.md");
+    const doc = readFileSync(recordPath, "utf8");
+    writeFileSync(recordPath, doc.split("\n").filter((l) => !l.startsWith("- 留保(")).join("\n"));
+    expect(run(["verify", "--election", "E-LOOP1"])).toBe(1);
+    // blocked views dir: pre-place a plain file where views/ must go
+    const dir2 = join(projectDir, "amadeus", "spaces", "default", "elections", "E-BLOCKV1");
+    mkdirSync(dir2, { recursive: true });
+    writeFileSync(join(dir2, "views"), "not a dir");
+    expect(
+      run(["open", "--file", writeJson("def2.json", { ...DEF, electionId: "E-BLOCKV1" })]),
+    ).toBe(1);
+  });
+
   test("duplicate vote and unusable verbs fail loudly", () => {
     expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
     const b1 = writeJson("b1.json", {
