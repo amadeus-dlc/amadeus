@@ -78,6 +78,9 @@ const STATE = join(TOOLS, "amadeus-state.ts");
 // cursor follows the born record, so the whole gate-start/approve walk resolves
 // to it. Fall back to flat for a not-yet-born project. The event stream + final
 // checkbox state are unchanged — only the LOCATION moved.
+// #1248: completing the workflow now RELEASES the active-intent cursor. After the
+// terminal complete-workflow the cursor is gone, so this helper mirrors the real
+// resolver (activeIntent) by falling back to the lone record dir before flat.
 function recordDirOf(p: string): string {
   const spaceCursor = join(p, "amadeus", "active-space");
   const space = existsSync(spaceCursor)
@@ -90,6 +93,13 @@ function recordDirOf(p: string): string {
     if (rec && existsSync(join(intentsDir, rec, "amadeus-state.md"))) {
       return join(intentsDir, rec);
     }
+  }
+  // Cursor absent (e.g. released on completion, #1248): resolve the lone record.
+  if (existsSync(intentsDir)) {
+    const records = readdirSync(intentsDir).filter((d) =>
+      existsSync(join(intentsDir, d, "amadeus-state.md")),
+    );
+    if (records.length === 1) return join(intentsDir, records[0]);
   }
   return join(p, "amadeus-docs");
 }

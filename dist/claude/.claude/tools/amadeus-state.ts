@@ -5,6 +5,7 @@ import { basename, join } from "node:path";
 import { appendAuditEntry, appendAuditEntryUnlocked } from "./amadeus-audit.ts";
 import {
   activeIntent,
+  clearActiveIntentCursor,
   activeSpace,
   auditShardDir,
   auditShardName,
@@ -1666,7 +1667,13 @@ export function handleCompleteWorkflow(args: string[]): void {
   // under the workspace lock already held (every intents.json mutation takes the
   // sentinel bucket). No-op for the legacy flat record (no registry row).
   const completedIntentDir = activeIntent(pd);
-  if (completedIntentDir) updateIntentStatus(pd, completedIntentDir, "complete");
+  if (completedIntentDir) {
+    updateIntentStatus(pd, completedIntentDir, "complete");
+    // Release the active-intent cursor once the row is "complete" (#1248) so the
+    // finished intent stops being the audit-append target and a fresh /amadeus
+    // resolves a new intent rather than re-attaching to the completed record.
+    clearActiveIntentCursor(pd, completedIntentDir);
+  }
   console.log(
     JSON.stringify({
       completed: completedSlug,
