@@ -10,7 +10,7 @@
 | 永続形式 | JSON ファイル(election.json/ledger.json ほか — business-logic-model.md レイアウト) | ファイル正本の既決(FR-1a C-07)。既存 record 系(intents.json 等)と同型で、git diff 可読・checkpoint コミット対象 |
 | 原子性 | Bun fs の tmp+rename(自前ヘルパー数行) | business-logic-model.md C2 既決の既習様式。外部ライブラリ(write-file-atomic 等)は依存最小方針+規模正当化により不採用 |
 | ロック | 導入しない | 単一書込主体(D-09 導出 — business-logic-model.md 並行性節)。mkdir ロック等の既存機構の流用も、前提(複数書込者)が成立しないため不要 |
-| テスト | bun test・integration 層(実 FS) | requirements.md NFR-2(fs-tests-integration-first)+business-rules.md のテスト列。クラッシュ注入(tmp 書込途中相当の状態 fixture)は transient-state-fixtures の類型で設計 |
+| テスト | bun test・integration 層(実 FS) | requirements.md NFR-2(fs-tests-integration-first)+business-rules.md のテスト列。クラッシュ注入(tmp 書込途中相当の状態 fixture)は transient-state-fixtures と**同型の設計判断の援用**(当該 cid の確定スコープは検査述語の corpus sweep — ここでは『コミットされない中間状態を明示的に fixture 化する』考え方のみを類推適用) |
 
 ## 却下した代替
 

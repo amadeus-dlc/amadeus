@@ -5,8 +5,8 @@
 ## クラッシュ耐性(requirements-analysis:c4 チェックリストの要件化 — 本ユニットの中核 NFR)
 
 - **全書込は atomic write(tmp+rename の既習様式)**(business-logic-model.md 操作フロー C2 — FD 既決)。書込途中クラッシュで元ファイルが半端な状態にならないことを、テストで検証可能な形に固定する: tmp ファイルへの書込完了前に元ファイルが不変であること+rename 後に全内容が新版であることを integration 層で assert(NFR-2)
-- fail-closed load: election.json/ledger.json の parse 失敗は `Result` の reject で返し、壊れたストアへの追記を拒否する(construction ガードレール — 統合境界のエラーハンドリング必須。無言の初期化・上書き復旧をしない)
-- 別 OS 面(c4): rename の原子性は同一ファイルシステム内で POSIX/Windows とも成立する既習前提。dangling symlink 等の Bun 実装差クラス(bun-readfilesync-dir-platform-divergence)は integration テストの注入設計時に考慮する
+- fail-closed load: election.json/ledger.json の parse 失敗は `StoreError` の専用 kind `"corrupt"` で reject し(io-error = fs 操作失敗と区別 — domain-entities.md へ申告付き追補済み)、壊れたストアへの追記を拒否する(construction ガードレール — 統合境界のエラーハンドリング必須。無言の初期化・上書き復旧をしない)
+- 別 OS 面(c4): POSIX 側の rename 原子性は既存 writeFileAtomic(amadeus-lib.ts:4240-4249 の tmp+rename 実装)で既習。**Windows 側は Bun/Node の実装依存で本 repo 内に検証済み先例がなく未検証** — 実装時に CI(Linux)+必要なら別 OS 実測で確認する(bun-readfilesync-dir-platform-divergence と同じ Bun 実装差クラスとして注入設計時に考慮)
 
 ## 耐久性と監査
 
