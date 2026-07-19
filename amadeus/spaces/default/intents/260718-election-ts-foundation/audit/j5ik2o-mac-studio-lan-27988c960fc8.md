@@ -10996,3 +10996,218 @@
 **Agent**: amadeus-quality-agent
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T10:02:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 578ecf45
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/build-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T10:02:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 578ecf45
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/build-instructions.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T10:02:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 970270ab
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/build-instructions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-19T10:02:20Z
+**Event**: SENSOR_FAILED
+**Fire id**: 970270ab
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/build-instructions.md
+**Detail path**: amadeus/spaces/default/intents/260718-election-ts-foundation/.amadeus-sensors/build-and-test/upstream-coverage-970270ab.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T10:02:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: bc4a153d
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/unit-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T10:02:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: bc4a153d
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/unit-test-instructions.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T10:02:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0a17ceb2
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/unit-test-instructions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-19T10:02:20Z
+**Event**: SENSOR_FAILED
+**Fire id**: 0a17ceb2
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/unit-test-instructions.md
+**Detail path**: amadeus/spaces/default/intents/260718-election-ts-foundation/.amadeus-sensors/build-and-test/upstream-coverage-0a17ceb2.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T10:02:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: b9b08e08
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/integration-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T10:02:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: b9b08e08
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/integration-test-instructions.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T10:02:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: ba0693d2
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/integration-test-instructions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-19T10:02:20Z
+**Event**: SENSOR_FAILED
+**Fire id**: ba0693d2
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/integration-test-instructions.md
+**Detail path**: amadeus/spaces/default/intents/260718-election-ts-foundation/.amadeus-sensors/build-and-test/upstream-coverage-ba0693d2.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T10:02:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 26e8a83a
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/performance-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T10:02:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 26e8a83a
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/performance-test-instructions.md
+**Duration ms**: 31
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T10:02:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: c20ca999
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/performance-test-instructions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-19T10:02:20Z
+**Event**: SENSOR_FAILED
+**Fire id**: c20ca999
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/performance-test-instructions.md
+**Detail path**: amadeus/spaces/default/intents/260718-election-ts-foundation/.amadeus-sensors/build-and-test/upstream-coverage-c20ca999.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T10:02:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 345e30fb
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/security-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T10:02:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 345e30fb
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/security-test-instructions.md
+**Duration ms**: 31
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T10:02:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: d80871a4
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/security-test-instructions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-19T10:02:21Z
+**Event**: SENSOR_FAILED
+**Fire id**: d80871a4
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/build-and-test/security-test-instructions.md
+**Detail path**: amadeus/spaces/default/intents/260718-election-ts-foundation/.amadeus-sensors/build-and-test/upstream-coverage-d80871a4.md
+**Findings count**: 1
+
+---
