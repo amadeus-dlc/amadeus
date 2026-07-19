@@ -2020,3 +2020,188 @@
 **Message**: ## Review\n\n**Verdict:** READY\n**Reviewer:** amadeus-architect-agent (adversarial review)\n**Date:** 2026-07-19T00:20:00Z\n**Iteration:** 3\n\n### iter2 是正の解消状況(実測)\n\n| # | 是正内容 | 検証結果 |\n|---|---|---|\n| #5(
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T04:09:42Z
+**Event**: SENSOR_FIRED
+**Fire id**: f35e0cb4
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T04:09:42Z
+**Event**: SENSOR_PASSED
+**Fire id**: f35e0cb4
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/functional-design/business-logic-model.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T04:09:42Z
+**Event**: SENSOR_FIRED
+**Fire id**: ac740afc
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T04:09:42Z
+**Event**: SENSOR_PASSED
+**Fire id**: ac740afc
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/functional-design/business-logic-model.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T04:09:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: d4b4dd41
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T04:09:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: d4b4dd41
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/functional-design/business-rules.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T04:09:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2dbbd7b7
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T04:09:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2dbbd7b7
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/functional-design/business-rules.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T04:09:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: a09b8b76
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T04:09:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: a09b8b76
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/functional-design/domain-entities.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T04:09:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 50ab75a7
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T04:09:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 50ab75a7
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/functional-design/domain-entities.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T04:09:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 23f01bd3
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/functional-design/frontend-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T04:09:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 23f01bd3
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/functional-design/frontend-components.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T04:09:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: eeb5444d
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/functional-design/frontend-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T04:09:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: eeb5444d
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-skill/functional-design/frontend-components.md
+**Duration ms**: 33
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-19T04:09:58Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state gate-start functional-design
+**Error**: Stage functional-design is in state 'awaiting-approval' but command requires one of: in-progress
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-19T04:10:35Z
+**Event**: WORKFLOW_PARKED
+**Stage**: functional-design
+**Timestamp**: 2026-07-19T04:10:35Z
+
+---
