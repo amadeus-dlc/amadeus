@@ -1427,3 +1427,11 @@
 **Message**: ## Review\n\n**Verdict:** NOT-READY\n**Reviewer:** amadeus-architect-agent (delegated review)\n**Date:** 2026-07-19T00:00:00Z (session)\n**Iteration:** 1\n**Scope:** `construction/election-cli/functional-de
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-19T03:22:18Z
+**Event**: WORKFLOW_PARKED
+**Stage**: functional-design
+**Timestamp**: 2026-07-19T03:22:18Z
+
+---
