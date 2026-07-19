@@ -8960,3 +8960,24 @@
 **Findings count**: 2
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T07:34:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 110f2962
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/code-generation/code-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T07:34:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: 110f2962
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/code-generation/code-summary.md
+**Duration ms**: 34
+
+---
