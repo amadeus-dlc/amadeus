@@ -9,7 +9,7 @@
 | 言語/ランタイム | TypeScript/ESM+Bun 直接実行 | requirements.md NFR-1+codekb technology-stack.md の既存スタック実測 |
 | agmsg 輸送 | `~/.agents/skills/agmsg/scripts/send.sh` の spawn(Bun.spawnSync、env: process.env 明示) | 既存 agmsg 導入の実測(technology-stack.md — Bash driver+SQLite の外部スタック)。API 直結・DB 直読は agmsg スキルの明示禁止(scripts 経由のみ)につき不採用。env 明示は bun-spawn-env-snapshot ノルム準拠 |
 | subagent 輸送 | DeliveryDirective 生成のみ(spawn は上位層) | E-ETF-FD2 Q1=B 裁定(business-logic-model.md — 無確認記帳の排除)。port 単一シグネチャは DeliveryOutcome 判別ユニオン(FD レビュー iter3 確定) |
-| テストシーム | VoterTransport port への fake 注入(テスト側ヘルパー) | construction ガードレール — 本番コードにテスト分岐なし。実 send.sh spawn の検証は integration 層(fs-tests-integration-first の配置軸) |
+| テストシーム | VoterTransport port への fake 注入(テスト側ヘルパー) | construction ガードレール — 本番コードにテスト分岐なし。実 send.sh spawn の検証は integration 層(fs-tests-integration-first の配置軸の**spawn 系テストへの類推適用** — cid 原義は FS 限定) |
 | lint/型検査 | Biome+tsc(既存配線) | ADR-1 Consequences — 新規配線なし |
 
 ## 却下した代替

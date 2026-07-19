@@ -6,7 +6,7 @@
 
 - **agmsg 送信の無音不達は既知の構造制約**(send.sh は未登録宛先でも成功を返す — agmsg-recipient-typo ノルムの実測)。したがって DeliveryRecord は「送信実行の記録」であり「到達の証明」ではないことを型注釈・ドキュメントで明示する(requirements.md FR-2b の記帳は送信実行の結果由来 — 到達確認は ack プロトコル = 人間系ノルムの領分で、U4 は僭称しない)
 - 送信失敗(exit 非0)は `TransportError("send-failed")` で fail-closed に返す(business-logic-model.md の輸送別エラーバリアント表)。subagent 輸送は send-failed 非到達(directive 生成のみ — 同表)
-- DeliveryRecord の生成は輸送実行の結果からのみ(business-rules.md BR-T3 — 落ちる実証は code-generation 時実施。送信せずに記帳する経路の非存在をテストで固定)
+- DeliveryRecord の生成は輸送実行の結果からのみ単段生成(business-rules.md **BR-T2**(FD :10 実測確認済み — reviewer 指摘の BR-T3 誤引用を是正)。fake send.sh の exit 0/1 での記録有無+notify 戻り値に record 非含有+外部構築不能の型面 assert で固定)
 
 ## 障害分類と Observability
 

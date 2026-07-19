@@ -10,5 +10,5 @@
 
 ## コマンド境界
 
-- agmsg 送信は send.sh への引数渡し — バッククォート・シェル展開を含む文字列を渡さない(agmsg-args-no-backquote ノルムの要件化。payload は構造データからの生成でユーザー入力の直結なし)
+- 主防御は型による構造排除: payload は ShortNotification(electionId+viewPath のみ)の構造データ生成でユーザー入力の直結なし(BR-T1 の型面 assert が強制)。send.sh 呼び出しは Bun.spawnSync の**配列引数渡し(シェル非経由)を要件とし、実装時に `sh -c` 非経由であることを実測確認する** — シェル経由でない限りバッククォート展開の攻撃面は構造的に存在しない(agmsg-args-no-backquote は人間のシェル入力規律であり本経路への転用はしない — reviewer 指摘の意味論適合是正)
 - 新規 runtime 依存なし(technology-stack.md の Bun/TS 現行構成+外部 agmsg は既存導入済みの実測)。認証は agmsg の登録機構へ委譲し U4 は資格情報を持たない
