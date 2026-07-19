@@ -1382,3 +1382,48 @@
 **Error**: Transition rejected by amadeus-state.ts approve for "functional-design": {"error":"Refusing to approve \"functional-design\": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then approve. (autonomous Construction is exempt)"}
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T03:18:41Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: aaed5ee1b2fd70d83
+**Message**: ## Review\n\n**Verdict:** NOT-READY\n**Reviewer:** amadeus-architect-agent (adversarial review)\n**Date:** 2026-07-19T00:00:00Z\n**Iteration:** 1\n\n### Findings\n\n| # | Severity | Location | Finding | Recomm
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T03:19:05Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a78122ddc074472d4
+**Message**: 検証のため関連する上流成果物(requirements.md, component-methods.md, decisions.md, unit-of-work.md, bolt-plan.md, election-model FD)をすべて実読し、election-store FD 4点との突き合わせを行った。以下、実測結果。\n\n## Review\n\n**Verdict:** NOT-READY
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T03:19:51Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a75e3f5858dee49f7
+**Message**: ## Review\n\n対象: `record/construction/election-skill/functional-design/` 配下4成果物(business-logic-model.md, business-rules.md, domain-entities.md, frontend-components.md)。上流(requirements.md FR-0/FR-8a/FR-8
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T03:20:25Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a7ffa66570b62c4ac
+**Message**: ## Review\n\n**Verdict:** NOT-READY\n**Reviewer:** amadeus-architect-agent\n**Date:** 2026-07-19T00:00:00Z\n**Iteration:** 1\n\n### Findings\n\n| # | Severity | Location | Finding | Recommendation |\n|---|---|-
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T03:20:53Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a85a6b0f731c5a18e
+**Message**: ## Review\n\n**Verdict:** NOT-READY\n**Reviewer:** amadeus-architect-agent (delegated review)\n**Date:** 2026-07-19T00:00:00Z (session)\n**Iteration:** 1\n**Scope:** `construction/election-cli/functional-de
+
+---

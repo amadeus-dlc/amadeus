@@ -2,7 +2,7 @@
 
 上流入力(consumes 全数): unit-of-work.md、unit-of-work-story-map.md、requirements.md、components.md、component-methods.md、services.md、decisions.md
 
-## SKILL 構造契約(C7 — FR-8、転送ループのみ)
+## SKILL 構造契約(C7 — FR-8a AC(ii)、転送ループのみ)
 
 SKILL.md(contrib/skills/amadeus-election/)の記述は次の4節に限定:
 
