@@ -6941,3 +6941,227 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Session End
+**Timestamp**: 2026-07-17T23:29:55Z
+**Event**: SESSION_ENDED
+**Reason**: inferred — Codex has no SessionEnd event (D-4); reconciled at next SessionStart. Prior session 019f716e-8fc1-7ba1-94c4-7078633af900 last seen 2026-07-17T18:55:00.672Z.
+
+---
+
+## Session Start
+**Timestamp**: 2026-07-17T23:29:55Z
+**Event**: SESSION_STARTED
+**Source**: startup
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T23:29:55Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T23:30:39Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T23:32:08Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T23:33:38Z
+**Event**: HUMAN_TURN
+
+---
+
+## Session End
+**Timestamp**: 2026-07-17T23:37:05Z
+**Event**: SESSION_ENDED
+**Reason**: inferred — Codex has no SessionEnd event (D-4); reconciled at next SessionStart. Prior session 019f7269-f926-7cf1-8e9a-92a62210ff96 last seen 2026-07-17T23:29:55.508Z.
+
+---
+
+## Session Start
+**Timestamp**: 2026-07-17T23:37:05Z
+**Event**: SESSION_STARTED
+**Source**: startup
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T23:37:05Z
+**Event**: HUMAN_TURN
+
+---
+
+## Session End
+**Timestamp**: 2026-07-17T23:37:39Z
+**Event**: SESSION_ENDED
+**Reason**: inferred — Codex has no SessionEnd event (D-4); reconciled at next SessionStart. Prior session 019f7270-6db4-75f1-8caf-5e94f8a4d1b9 last seen 2026-07-17T23:37:05.774Z.
+
+---
+
+## Session Resume
+**Timestamp**: 2026-07-17T23:37:39Z
+**Event**: SESSION_RESUMED
+**Source**: resume
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T23:37:39Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T23:37:46Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T23:39:31Z
+**Event**: HUMAN_TURN
+
+---
+
+## Swarm Started
+**Timestamp**: 2026-07-17T23:41:31Z
+**Event**: SWARM_STARTED
+**Batch number**: 99
+**Unit names**: probe-c13
+**Concurrency cap**: 1
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-17T23:41:31Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-worktree
+**Command**: amadeus-worktree --project-dir /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus create --slug probe-c13 --base main
+**Error**: [slug=probe-c13] Local base branch "main" differs from origin/main: local SHA e9a001105d253e14affb77417423d9f0b0360f9e, remote SHA b52121ec2481a57710074d5bc75c0be1e2039fd1. Run git fetch origin and fast-forward "main", or rerun with --allow-stale to intentionally use the local SHA.
+
+---
+
+## Swarm Started
+**Timestamp**: 2026-07-17T23:42:10Z
+**Event**: SWARM_STARTED
+**Batch number**: 99
+**Unit names**: probe-c13
+**Concurrency cap**: 1
+
+---
+
+## Worktree Created
+**Timestamp**: 2026-07-17T23:42:10Z
+**Event**: WORKTREE_CREATED
+**Bolt slug**: probe-c13
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-probe-c13
+**Branch name**: bolt-probe-c13
+**Base branch**: codex/probe-c13-base
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-17T23:42:10Z
+**Event**: BOLT_STARTED
+**Bolt names**: probe-c13
+**Batch number**: 99
+**Walking skeleton**: false
+**Bolt slug**: probe-c13
+
+---
+
+## State Forked
+**Timestamp**: 2026-07-17T23:42:10Z
+**Event**: STATE_FORKED
+**Bolt slug**: probe-c13
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-probe-c13
+**Source state hash**: 0558f6d6af9987ad12532e8365b23460d3c573a736eb12674efcd5ef06007086
+**Target state hash**: 0558f6d6af9987ad12532e8365b23460d3c573a736eb12674efcd5ef06007086
+
+---
+
+## Audit Forked
+**Timestamp**: 2026-07-17T23:42:10Z
+**Event**: AUDIT_FORKED
+**Bolt slug**: probe-c13
+**Source Audit Hash**: 64708480cf503f7319556c579a6f413ca8b3937e6fa7635d333c030fd6e1945a
+**Fork Boundary**: 203331
+**Reentrant**: true
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T23:48:39Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T23:48:57Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T23:50:07Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T23:53:00Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T23:53:51Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-17T23:57:48Z
+**Event**: HUMAN_TURN
+
+---
+
+## Scope Change
+**Timestamp**: 2026-07-17T23:58:37Z
+**Event**: SCOPE_CHANGED
+**Old Scope**: amadeus
+**New Scope**: bugfix
+**Stage Count Delta**: -11
+**Stages in Scope**: 7
+**Depth**: Minimal
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-18T00:02:51Z
+**Event**: HUMAN_TURN
+
+---
+
+## Session Compacted
+**Timestamp**: 2026-07-18T00:02:59Z
+**Event**: SESSION_COMPACTED
+**Current Stage**: build-and-test
+**State Validity**: valid
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-18T00:08:37Z
+**Event**: HUMAN_TURN
+
+---
