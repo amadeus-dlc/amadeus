@@ -9,4 +9,4 @@
 
 ## 同時実行
 
-- 書込は conductor 単一プロセス(U2 の単一書込主体構造に従属)。CLI の並行起動制御は導入しない(requirements.md FR-7a の team/solo 両モードとも書込主体は1つ)。実行形態は既存スタック(technology-stack.md 実測の Bun 単一プロセス直接実行)のまま
+- 書込は conductor 単一プロセス(U2 の単一書込主体構造に従属 — D-09 導出、U2 business-logic-model.md 並行性節)。CLI の並行起動制御は導入しない(team/solo 両モードとも書込主体は1つ — 同節の既承認導出。reviewer 指摘により FR-7a の誤引用を除去)。実行形態は既存スタック(technology-stack.md 実測の Bun 単一プロセス直接実行)のまま
