@@ -133,6 +133,18 @@ export type AmendBallot = {
 
 export type Ballot = OriginalBallot | AmendBallot;
 
+// Canonical ledger timeline event (single definition — U2 persists it, U3
+// renders it; both depend on U1 so the DAG stays acyclic). Bolt 3 declared
+// reconciliation: the U3 FD's "tally" kind / voter-only shape and the U2
+// implementation's "tallied"/detail shape are unified here (store is the
+// persisting owner; voter is carried explicitly for rendering).
+export type TimelineEvent = {
+  kind: "distributed" | "ballot" | "tallied" | "late";
+  at: string;
+  detail: string;
+  voter?: string;
+};
+
 type BallotShape = {
   electionId: string;
   voter: string;
