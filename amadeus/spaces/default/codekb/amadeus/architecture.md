@@ -1,6 +1,18 @@
 # アーキテクチャ
 
-> **2026-07-18 更新（intent `260718-hooks-config-conflict`、最新）**: [Issue #770](https://github.com/amadeus-dlc/amadeus/issues/770) の Codex hook 設定競合を、base `e9a001105d253e14affb77417423d9f0b0360f9e` から observed `594ba21d636218558b711b371c286f16731fb081` まで8コミットで diff-refresh。フォーカス契約の区間変更は0件で、現行コードと外部 agmsg 1.1.7 の reader／writer を再照合した。技術方針は `【裁定待ち】`。
+> **2026-07-19 更新（intent `260718-election-ts-foundation`、最新）**: 選挙 TS 基盤の配布境界を確定。反証課題「dist 非対象の local overlay チャンネルが存在しない」は反証され、`contrib/skills/` overlay が canonical→dist→self-install の3層に加わる4本目の配布チャンネル(dist バイパス)として実在することを確認(下記「contrib overlay 配布チャンネル」節)。base `e9a001105` → observed `c2e4975ff`(69コミット)で diff-refresh、フォーカス面の区間変更は軽微。
+
+> **2026-07-18 更新（intent `260718-hooks-config-conflict`、履歴）**: [Issue #770](https://github.com/amadeus-dlc/amadeus/issues/770) の Codex hook 設定競合を、base `e9a001105d253e14affb77417423d9f0b0360f9e` から observed `594ba21d636218558b711b371c286f16731fb081` まで8コミットで diff-refresh。フォーカス契約の区間変更は0件で、現行コードと外部 agmsg 1.1.7 の reader／writer を再照合した。技術方針は `【裁定待ち】`。
+
+## contrib overlay 配布チャンネル(dist バイパス、260718-election-ts-foundation)
+
+配布境界の従来理解は「canonical(`packages/framework/{core,harness}`)→ `scripts/package.ts` → `dist/<harness>/` → `promote-self.ts` → self-install ツリー(`.claude`/`.codex`/`.agents`/`.cursor`/`.opencode`)」の3層だが、これに **dist を経由しない4本目のチャンネル** が存在する — `contrib/skills/` overlay。`promote-self.ts` が正本 `contrib/skills/<name>/` を **dist に入れず** discovery ツリーへ直接投影する。
+
+- `CONTRIBUTOR_SKILLS_ROOT = "contrib/skills"`(`scripts/promote-self.ts:45`)、`CONTRIBUTOR_SKILL_DESTINATIONS = [".claude/skills", ".agents/skills"]`(:46)。投影ロジック :229-236(`walk` で全ファイル走査、`relFromSkills.split("/")[1] === "evals"` の authoring-only 資産はスキップ)。
+- ヘッダコメント(:7-9 verbatim):「Contributor-only skill runtime files under contrib/skills/ are projected into both harness discovery trees without entering dist/. Authoring-only eval assets remain at the canonical contributor path.」
+- 実測(`git ls-files`): 唯一の現存例 `contrib/skills/amadeus-upstream-sync/`(tracked 6ファイル)は `.claude/skills/amadeus-upstream-sync/`(3ファイル tracked、投影先)へ反映されるが `dist/claude/.claude/skills/` には **0件** = dist ドリフトガードの対象外。
+
+**設計含意**: 「配布外のチーム内ツール」(W-04)を dist ドリフトガードを汚さずに `.claude`/`.agents` の discovery ツリーへ載せる唯一の user-invocable 経路がこの overlay。決定的 TS ツール本体は `scripts/*.ts`(`amadeus-mirror.ts` 前例、dist・contrib 投影いずれも非対象の repo ローカル)が自然な家。`/amadeus-<name>` の user-invocable SKILL は runner-gen 管轄外(stage/scope runner のみ生成)のため contrib overlay 経由でしか成立しない。この境界は本 intent の設計(TS 本体の置き場所 = contrib 配下 or scripts、決定は application-design へ委任)が依存する。
 
 ## Codex hooks の二重所有境界（260718-hooks-config-conflict）
 
