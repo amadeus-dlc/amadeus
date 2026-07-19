@@ -133,39 +133,61 @@ export type AmendBallot = {
 
 export type Ballot = OriginalBallot | AmendBallot;
 
+type BallotShape = {
+  electionId: string;
+  voter: string;
+  voterKind: VoterKind;
+  choiceInternalNo: number;
+  submittedAt: string;
+  goa: unknown;
+  reservation: string | null;
+  rationale: string | null;
+};
+
+// Structural half of the validation: field presence and primitive types only.
+function parseBallotShape(raw: unknown): BallotShape | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const r = raw as Record<string, unknown>;
+  if (typeof r.electionId !== "string" || typeof r.voter !== "string") return null;
+  if (typeof r.choiceInternalNo !== "number" || typeof r.submittedAt !== "string") return null;
+  if (r.voterKind !== "member" && r.voterKind !== "subagent") return null;
+  const reservation =
+    typeof r.reservation === "string" && r.reservation.trim().length > 0 ? r.reservation : null;
+  return {
+    electionId: r.electionId,
+    voter: r.voter,
+    voterKind: r.voterKind,
+    choiceInternalNo: r.choiceInternalNo,
+    submittedAt: r.submittedAt,
+    goa: r.goa,
+    reservation,
+    rationale: typeof r.rationale === "string" ? r.rationale : null,
+  };
+}
+
 export const Ballot = {
   // Full 5-class fail-closed validation (FR-3a/3b, order: parse-failure ->
   // unknown-election -> unknown-voter -> goa-out-of-range ->
   // reservation-missing). GoA 2/3/6 require a reservation sentence (norm (ii)).
   parse(raw: unknown, election: Election): Result<Ballot, BallotError> {
-    if (typeof raw !== "object" || raw === null) return err("parse-failure");
-    const r = raw as Record<string, unknown>;
-    if (typeof r.electionId !== "string" || typeof r.voter !== "string") {
-      return err("parse-failure");
-    }
-    if (typeof r.choiceInternalNo !== "number" || typeof r.submittedAt !== "string") {
-      return err("parse-failure");
-    }
-    if (r.voterKind !== "member" && r.voterKind !== "subagent") return err("parse-failure");
-    if (r.electionId !== election.electionId) return err("unknown-election");
-    if (!election.voters.includes(r.voter)) return err("unknown-voter");
-    const goa = Goa.parse(r.goa);
+    const shape = parseBallotShape(raw);
+    if (shape === null) return err("parse-failure");
+    if (shape.electionId !== election.electionId) return err("unknown-election");
+    if (!election.voters.includes(shape.voter)) return err("unknown-voter");
+    const goa = Goa.parse(shape.goa);
     if (!goa.ok) return err(goa.error);
     const needsReservation = goa.value === 2 || goa.value === 3 || goa.value === 6;
-    const reservation = typeof r.reservation === "string" && r.reservation.trim().length > 0
-      ? r.reservation
-      : null;
-    if (needsReservation && reservation === null) return err("reservation-missing");
+    if (needsReservation && shape.reservation === null) return err("reservation-missing");
     return ok({
       kind: "original",
-      electionId: r.electionId,
-      voter: r.voter,
-      voterKind: r.voterKind,
-      choiceInternalNo: r.choiceInternalNo,
+      electionId: shape.electionId,
+      voter: shape.voter,
+      voterKind: shape.voterKind,
+      choiceInternalNo: shape.choiceInternalNo,
       goa: goa.value,
-      reservation,
-      rationale: typeof r.rationale === "string" ? r.rationale : null,
-      submittedAt: r.submittedAt,
+      reservation: shape.reservation,
+      rationale: shape.rationale,
+      submittedAt: shape.submittedAt,
     });
   },
 };
