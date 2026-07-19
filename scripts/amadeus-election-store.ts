@@ -1,7 +1,7 @@
 // amadeus-election-store.ts — U2 election-store: file I/O layer for the
-// election TS foundation (intent 260718-election-ts-foundation, Bolt 1
-// walking-skeleton core: create/load plus the minimal appendBallot/state/
-// timeline surface the zero-confirm loop needs). Layout (functional-design):
+// election TS foundation (intent 260718-election-ts-foundation; completed in
+// Bolt 3 io-record-transport: late-ballot lane via classifyLate, amend
+// coexistence, reexamRequired persistence). Layout (functional-design):
 //
 //   amadeus/spaces/<space>/elections/<electionId>/
 //     election.json   definition + explicit state field (source of truth)
@@ -18,21 +18,21 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "
 import { join } from "node:path";
 import {
   type Ballot,
+  classifyLate,
+  lateReexamRequired,
   type Election,
   type ElectionState,
   err,
+  type LateBallot,
   ok,
   type Result,
   type TallyResult,
+  type TimelineEvent,
 } from "./amadeus-election-model";
 
 export type StoreError = "exists" | "duplicate" | "not-found" | "io-error" | "corrupt";
 
-export type TimelineEvent = {
-  kind: "distributed" | "ballot" | "tallied" | "late";
-  at: string;
-  detail: string;
-};
+export type { TimelineEvent } from "./amadeus-election-model";
 
 export function electionsRoot(projectDir: string, space = "default"): string {
   return join(projectDir, "amadeus", "spaces", space, "elections");
@@ -67,7 +67,13 @@ function readJson<T>(path: string): Result<T, StoreError> {
 }
 
 type ElectionFile = Election & { state: ElectionState };
-type LedgerFile = { ballots: Ballot[] };
+type LedgerFile = { ballots: Ballot[]; late: LateBallot[] };
+
+// Older Bolt 1 ledgers lack the late lane; reading fills it in-memory only
+// (the file gains the field on the next append — no silent rewrite on load).
+function withLateLane(ledger: Partial<LedgerFile>): LedgerFile {
+  return { ballots: ledger.ballots ?? [], late: ledger.late ?? [] };
+}
 
 function dirOf(root: string, electionId: string): string {
   return join(root, electionId);
@@ -85,7 +91,7 @@ export const Store = {
     const file: ElectionFile = { ...election, state: "draft" };
     const w1 = writeStoreFile(join(dir, "election.json"), JSON.stringify(file, null, 2));
     if (!w1.ok) return w1;
-    const ledger: LedgerFile = { ballots: [] };
+    const ledger: LedgerFile = { ballots: [], late: [] };
     const w2 = writeStoreFile(join(dir, "ledger.json"), JSON.stringify(ledger, null, 2));
     if (!w2.ok) return w2;
     return writeStoreFile(join(dir, "timeline.json"), JSON.stringify([], null, 2));
@@ -106,26 +112,60 @@ export const Store = {
   },
 
   ledger(root: string, electionId: string): Result<LedgerFile, StoreError> {
-    return readJson<LedgerFile>(join(dirOf(root, electionId), "ledger.json"));
+    const read = readJson<Partial<LedgerFile>>(join(dirOf(root, electionId), "ledger.json"));
+    if (!read.ok) return read;
+    return ok(withLateLane(read.value));
   },
 
-  // Duplicate rejection applies for the whole election lifetime (FR-3b) and is
-  // checked before any path branches. Amend coexistence completes in Bolt 2.
+  // Duplicate rejection applies for the whole election lifetime (FR-3b) —
+  // checked first on every path, late lane included, before the state branch.
+  // Amend ballots coexist with their original (ADR-5: the original is never
+  // overwritten; both stay on the ledger, correction trail intact).
   appendBallot(root: string, electionId: string, ballot: Ballot): Result<void, StoreError> {
-    const ledgerPath = join(dirOf(root, electionId), "ledger.json");
-    const read = readJson<LedgerFile>(ledgerPath);
+    const dir = dirOf(root, electionId);
+    const ledgerPath = join(dir, "ledger.json");
+    const read = readJson<Partial<LedgerFile>>(ledgerPath);
     if (!read.ok) return read;
-    const dup = read.value.ballots.some(
+    const ledger = withLateLane(read.value);
+    const accepted = [...ledger.ballots, ...ledger.late.map((l) => l.ballot)];
+    const dup = accepted.some(
       (b) => b.voter === ballot.voter && b.kind !== "amend" && ballot.kind !== "amend",
     );
     if (dup) return err("duplicate");
-    const next: LedgerFile = { ballots: [...read.value.ballots, ballot] };
+    const loaded = Store.load(root, electionId);
+    if (!loaded.ok) return loaded;
+    const state = loaded.value.state;
+    if (state === "tallied" || state === "rendered" || state === "recorded" || state === "hold") {
+      // Late lane (FR-3d): classify against the fixed tally time; a late GoA 8
+      // persists reexamRequired for the human reexamination trail.
+      const t = readJson<{ talliedAt: string }>(join(dir, "tally.json"));
+      if (!t.ok) return t;
+      // A ballot arriving after the tallied transition but stamped at/before
+      // talliedAt still lands in the late lane (it missed the fixed set); the
+      // reexam rule is single-sourced in the model (PR #1233 review minor 2).
+      const late = classifyLate(t.value.talliedAt, ballot) ?? {
+        ballot,
+        late: true as const,
+        reexamRequired: lateReexamRequired(ballot),
+      };
+      const next: LedgerFile = { ballots: ledger.ballots, late: [...ledger.late, late] };
+      const w = writeStoreFile(ledgerPath, JSON.stringify(next, null, 2));
+      if (!w.ok) return w;
+      return Store.appendTimeline(root, electionId, {
+        kind: "late",
+        at: ballot.submittedAt,
+        detail: `late ballot recorded: ${ballot.voter}${late.reexamRequired ? " (reexam required)" : ""}`,
+        voter: ballot.voter,
+      });
+    }
+    const next: LedgerFile = { ballots: [...ledger.ballots, ballot], late: ledger.late };
     const w = writeStoreFile(ledgerPath, JSON.stringify(next, null, 2));
     if (!w.ok) return w;
     return Store.appendTimeline(root, electionId, {
       kind: "ballot",
       at: ballot.submittedAt,
-      detail: `ballot accepted: ${ballot.voter}`,
+      detail: `ballot ${ballot.kind === "amend" ? "amendment" : "accepted"}: ${ballot.voter}`,
+      voter: ballot.voter,
     });
   },
 
@@ -146,7 +186,7 @@ export const Store = {
     if (!loaded.ok) return loaded;
     const ledger = Store.ledger(root, electionId);
     if (!ledger.ok) return ledger;
-    const voted = ledger.value.ballots.map((b) => b.voter);
+    const voted = [...new Set(ledger.value.ballots.map((b) => b.voter))];
     const pending = loaded.value.election.voters.filter((v) => !voted.includes(v));
     return ok({ voted, pending, state: loaded.value.state });
   },
@@ -174,9 +214,13 @@ export const Store = {
       );
       if (!w.ok) return w;
     }
+    // Carry forward any hold-resolution history from a prior tally (a reopen
+    // re-tallies, but the human rulings already given must survive — FR-4b).
+    const prior = readJson<{ resolutions?: unknown[] }>(join(dir, "tally.json"));
+    const resolutions = prior.ok ? (prior.value.resolutions ?? []) : [];
     const w = writeStoreFile(
       join(dir, "tally.json"),
-      JSON.stringify({ result, talliedAt, ballots: ledger.value.ballots }, null, 2),
+      JSON.stringify({ result, talliedAt, ballots: ledger.value.ballots, resolutions }, null, 2),
     );
     if (!w.ok) return w;
     return Store.appendTimeline(root, electionId, {

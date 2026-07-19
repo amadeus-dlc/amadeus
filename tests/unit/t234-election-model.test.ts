@@ -3,8 +3,11 @@
 import { describe, expect, test } from "bun:test";
 import {
   Ballot,
+  canEarlyTally,
+  classifyLate,
   Election,
   Goa,
+  shuffleView,
   tally,
 } from "../../scripts/amadeus-election-model";
 
@@ -23,6 +26,9 @@ function ballot(voter: string, goa: number) {
     voterKind: "member",
     choiceInternalNo: 1,
     goa,
+    // GoA 2/3/6 require a reservation (norm (ii)) — supplied so fixtures stay
+    // valid across all GoA values; reservation-missing has its own case.
+    reservation: goa === 2 || goa === 3 || goa === 6 ? "留保あり" : undefined,
     submittedAt: "2026-07-19T00:00:00Z",
   };
 }
@@ -112,4 +118,118 @@ describe("t234 election-model", () => {
     const input = [mustParse(ballot("alice", 3)), mustParse(ballot("bob", 7))];
     expect(tally(e.value, input)).toEqual(tally(e.value, input));
   });
+
+  // --- Bolt 2 (model-complete) ---------------------------------------------
+
+  test("Ballot.parse full 5-class: unknown-voter and reservation-missing are fail-closed", () => {
+    const e = Election.parse(DEF);
+    if (!e.ok) throw new Error("definition must parse");
+    const stranger = Ballot.parse({ ...ballot("mallory", 1) }, e.value);
+    expect(stranger.ok).toBe(false);
+    if (!stranger.ok) expect(stranger.error).toBe("unknown-voter");
+    const noReservation = Ballot.parse({ ...ballot("alice", 2), reservation: undefined }, e.value);
+    expect(noReservation.ok).toBe(false);
+    if (!noReservation.ok) expect(noReservation.error).toBe("reservation-missing");
+    const blankReservation = Ballot.parse({ ...ballot("alice", 6), reservation: "  " }, e.value);
+    expect(blankReservation.ok).toBe(false);
+    if (!blankReservation.ok) expect(blankReservation.error).toBe("reservation-missing");
+    const withReservation = Ballot.parse(ballot("alice", 3), e.value);
+    expect(withReservation.ok).toBe(true);
+  });
+
+  test("tally full table: tie, rejected-majority, and discussion-needed branches", () => {
+    const e = Election.parse(DEF);
+    if (!e.ok) throw new Error("definition must parse");
+    const tie = tally(e.value, [mustParse(ballot("alice", 1)), mustParse(ballot("bob", 7))]);
+    expect(tie.kind).toBe("hold");
+    if (tie.kind === "hold") expect(tie.reason).toBe("tie");
+    const rejected = tally(e.value, [mustParse(ballot("alice", 7)), mustParse(ballot("bob", 4))]);
+    expect(rejected.kind).toBe("established");
+    if (rejected.kind === "established") expect(rejected.outcome).toBe("rejected");
+    const oneDiscuss = tally(e.value, [mustParse(ballot("alice", 5)), mustParse(ballot("bob", 1))]);
+    expect(oneDiscuss.kind).toBe("established"); // a single 5 does not hold
+    const twoDiscuss = tally(e.value, [mustParse(ballot("alice", 5)), mustParse(ballot("bob", 5))]);
+    expect(twoDiscuss.kind).toBe("hold");
+    if (twoDiscuss.kind === "hold") expect(twoDiscuss.reason).toBe("discussion-needed");
+  });
+
+  test("shuffleView: deterministic per (election, voter), blind key set, identity tally mapping", () => {
+    const wide = Election.parse({
+      ...DEF,
+      choices: [1, 2, 3, 4, 5, 6].map((n) => ({ internalNo: n, label: `c${n}` })),
+    });
+    if (!wide.ok) throw new Error("definition must parse");
+    const v1 = shuffleView(wide.value, "alice");
+    const v1again = shuffleView(wide.value, "alice");
+    expect(v1).toEqual(v1again); // deterministic
+    const v2 = shuffleView(wide.value, "bob");
+    const order1 = v1.ordered.map((o) => o.internalNo);
+    const order2 = v2.ordered.map((o) => o.internalNo);
+    expect(order1.sort()).toEqual(order2.slice().sort()); // same members
+    // BR-2 structural blind: exactly the declared keys, nothing else
+    expect(Object.keys(v1).sort()).toEqual(["electionId", "ordered", "voter"]);
+    for (const entry of v1.ordered) {
+      expect(Object.keys(entry).sort()).toEqual(["displayNo", "internalNo", "label"]);
+    }
+    // identity mapping: displayNo -> internalNo is a bijection over choices —
+    // membership fixed, not just cardinality (PR #1231 review minor 2)
+    const mapped = [...new Set(v1.ordered.map((o) => o.internalNo))].sort();
+    expect(mapped).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  test("shuffleView: two voters can see different orders under a fixed seed pair", () => {
+    const wide = Election.parse({
+      ...DEF,
+      choices: [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({ internalNo: n, label: `c${n}` })),
+    });
+    if (!wide.ok) throw new Error("definition must parse");
+    const orders = ["alice", "bob", "carol", "dave"].map((v) =>
+      shuffleView(wide.value, v).ordered.map((o) => o.internalNo).join(","),
+    );
+    // at least one pair differs (BR-1: order MAY differ across voters — with 8
+    // choices and 4 voters an all-identical outcome would mean a broken seed)
+    expect(new Set(orders).size).toBeGreaterThan(1);
+  });
+
+  test("canEarlyTally: boundary where one missing ballot can or cannot flip the outcome", () => {
+    const four = Election.parse({ ...DEF, voters: ["a", "b", "c", "d"] });
+    if (!four.ok) throw new Error("definition must parse");
+    const b = (voter: string, goa: number) =>
+      mustParseIn(four.value, { ...ballot(voter, goa), voter });
+    // favor 2, against 0, missing 2 -> 2 > 0+2 is false (flippable)
+    expect(canEarlyTally(four.value, [b("a", 1), b("b", 1)])).toBe(false);
+    // favor 3, against 0, missing 1 -> 3 > 0+1 (unflippable)
+    expect(canEarlyTally(four.value, [b("a", 1), b("b", 1), b("c", 1)])).toBe(true);
+    // a received GoA 8 always blocks early tally
+    expect(canEarlyTally(four.value, [b("a", 1), b("b", 1), b("c", 8)])).toBe(false);
+  });
+
+  test("classifyLate: post-tally ballots are late, GoA 8 flags reexamRequired", () => {
+    const e = Election.parse(DEF);
+    if (!e.ok) throw new Error("definition must parse");
+    const tallyTime = "2026-07-19T01:00:00Z";
+    const onTime = mustParse(ballot("alice", 1));
+    expect(classifyLate(tallyTime, onTime)).toBeNull(); // submittedAt 00:00 <= tally
+    // equal boundary (PR #1231 review minor 1): exactly-at-tally is NOT late
+    const atBoundary = mustParse({ ...ballot("alice", 1), submittedAt: tallyTime });
+    expect(classifyLate(tallyTime, atBoundary)).toBeNull();
+    const late = mustParse({ ...ballot("alice", 1), submittedAt: "2026-07-19T02:00:00Z" });
+    const classified = classifyLate(tallyTime, late);
+    expect(classified?.late).toBe(true);
+    expect(classified?.reexamRequired).toBe(false);
+    const lateBlock = mustParse({ ...ballot("bob", 8), submittedAt: "2026-07-19T02:00:00Z" });
+    expect(classifyLate(tallyTime, lateBlock)?.reexamRequired).toBe(true);
+  });
 });
+
+function mustParseIn(election: ReturnType<typeof mustParseElection>, raw: unknown) {
+  const b = Ballot.parse(raw, election);
+  if (!b.ok) throw new Error(`ballot must parse: ${b.error}`);
+  return b.value;
+}
+
+function mustParseElection() {
+  const e = Election.parse(DEF);
+  if (!e.ok) throw new Error("definition must parse");
+  return e.value;
+}
