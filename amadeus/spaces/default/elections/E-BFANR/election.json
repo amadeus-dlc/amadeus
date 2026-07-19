@@ -1,0 +1,20 @@
+{
+  "electionId": "E-BFANR",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260719-ballot-failclosed-amend / nfr-requirements(U1)ステージの §13 学習候補について、conductor は 0件を提案している。根拠: iteration 1 の Critical(E-GMEBT 裁定の provenance 欠落 bare 引用 = 先取り記入)は mechanism-cite-verify / agmsg-git-evidence-split 系の違反実例(次回 PM 回付)、Major×2(voters ≤6 発明定数・S-2 tech-stack 誤帰属)は constants-from-code / 既存 cid の違反実例で、いずれも新規学習なし。是正: 直接論証化+出典分離・実測値化(全34選挙 voters 最大3、型上限なし model.ts:55)・フィールド直接確認化 → iteration 2 READY(gh issue view / store / 実測再計算の独立検証で閉包・退行なし)。センサー最新 FAILED 0件。各自 e2 worktree の record をリードオンリー実測確認のうえ、0件でよいかを GoA 付きで投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 違反実例は PM 回付が適切、新規学習なし"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(票の note に候補と根拠 file:line を明記)"
+    }
+  ],
+  "voters": [
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

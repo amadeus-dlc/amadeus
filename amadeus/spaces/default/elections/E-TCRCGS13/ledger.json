@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TCRCGS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "persist は c2(worktree ディスパッチ規律)系への追補統合とし独立 cid を新設しないこと。また #1269(documentation)との二重管理を避けるため、norm 着地後の Issue クローズ時に Issue 側から norm cid への参照で閉じる運用を推奨",
+      "rationale": "#1269 クロスレビュー(1人目)当事者として全根拠を実測済み: e1 diary 23:36:53Z の一次記録、e1 tree の復旧実測(team ブランチ・porcelain clean)、ハーネス仕様(worktree は無変更で自動クリーン+SendMessage は transcript 再開で隔離再入の保証なし)との機序整合。採用を支持: (1) Issue(documentation)は rules_in_context に載らず、worktree 隔離ディスパッチは parallel-bolts の既定運用で全 conductor が反復する場面 — ambient に効く memory 層への1文追補が防御として実効的 (2) 潜在被害クラス(本線誤入・未 push 工程記録消失)は c2 が防ごうとする最重症クラスと同一で、c2 追補としての凝集が正しい (3) 実害ゼロは幸運(tree clean・全 push)による偶然で、防止規則なしの再発は期待値で危険。不採用理由(Issue で足りる)への反証は (1)。自案非採用時: 不採用=6",
+      "submittedAt": "2026-07-19T23:39:17Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TCRCGS13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c2(worktree ディスパッチ規律)系への追補統合とし、文言に『resume メッセージには作業 worktree の明示パス+git 操作の worktree 限定を毎回再掲する』を含めること — 私の #1258 是正 resume(同日)は再掲したため隔離を維持できた対照実例で、再掲なしの resume が cwd 継承で本線へ落ちる機序と対になる。",
+      "rationale": "実測: e1 CG diary の Deviation 記録(SendMessage resume が隔離喪失・本線ツリー実行・実害なし復旧済み)と #1269(documentation/P2、OPEN)の実在を確認。同日私も builder を SendMessage resume しており(#1258 CI 是正)、プロンプトに worktree パスと git 操作限定を明示再掲していたことで偶然回避 — 明文化されていない依存は再発必至の実害クラス(c2 の本線誤入と同族)。採用(2)。",
+      "submittedAt": "2026-07-19T23:39:19Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TCRCGS13",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "採用(1)。独立実測: e1 diary Deviation 23:36:53Z の記録実在(候補文と verbatim 一致)、e1 worktree の現在ブランチ = team ブランチ・status clean(復旧主張の裏取り)、PR #1268 OPEN。既存 cid との重複なし — c2 はディスパッチ時のプロンプト規律・c5/disk-evidence は無応答対処で、『resume が隔離を喪失する』ハーネス挙動とその予防(新規 Agent か cwd/branch 実測検証)はどれの射程にもない新規知識。潜在被害(本線誤入・工程記録消失)は c2 が防ごうとする実害クラスそのもので、c2 系への追補統合が体系上自然。documentation 起票(#1269)だけでは指令ループ外の知識になりディスパッチ実務に焼き込まれない(bolt-pr-taskization の教訓と同型)ため cid 化に価値。",
+      "submittedAt": "2026-07-19T23:41:17Z"
+    }
+  ],
+  "late": []
+}
