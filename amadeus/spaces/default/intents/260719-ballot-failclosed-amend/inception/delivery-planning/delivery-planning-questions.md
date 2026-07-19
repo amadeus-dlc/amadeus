@@ -2,7 +2,7 @@
 
 <!-- E-OC1 選挙不要判定ヘッダ -->
 > **選挙不要判定(E-OC1)**: 全1問を選挙不要と判定する。根拠種別は判定行に記載。
-> 判定申告: 2026-07-19T23:16Z 頃 leader へ agmsg 送信。leader 承認: 【承認待ち — 承認受領後にタイムスタンプを記入し [Answer] を記入する】
+> 判定申告: 2026-07-19T23:13Z 頃 leader へ agmsg 送信。leader 承認: 2026-07-19T23:14:27Z(agmsg タイムスタンプ、根拠種別妥当と承認)
 
 上流入力(consumes 全数): requirements.md、components.md、unit-of-work.md、unit-of-work-dependency.md、unit-of-work-story-map.md、team-practices.md(検証コマンド・レビュー体制の既決プラクティスは team-practices.md の live 温存版に従う)
 
@@ -16,8 +16,8 @@
 - E. その他へ委譲
 - X. その他
 
-[Answer]:
+[Answer]: A(E-OC1 選挙不要判定 — leader 承認 2026-07-19T23:14:27Z)
 
 ## 判定サマリ
 
-全1問を E-OC1 選挙不要(UG 裁定の機械導出+既決ノルム適用)で回答予定。承認受領後に記入する。
+全1問を E-OC1 選挙不要(UG 裁定の機械導出+既決ノルム適用)で回答済み(leader 承認 2026-07-19T23:14:27Z)。

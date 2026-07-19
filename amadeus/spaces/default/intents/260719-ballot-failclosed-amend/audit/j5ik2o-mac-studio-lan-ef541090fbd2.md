@@ -5109,3 +5109,66 @@
 **Duration ms**: 35
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:15:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: deef6b0f
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/inception/delivery-planning/delivery-planning-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:15:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: deef6b0f
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/inception/delivery-planning/delivery-planning-questions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:15:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8f8495d1
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/inception/delivery-planning/delivery-planning-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:15:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8f8495d1
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/inception/delivery-planning/delivery-planning-questions.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T23:15:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: b5c1c53b
+**Sensor ID**: answer-evidence
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/inception/delivery-planning/delivery-planning-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T23:15:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: b5c1c53b
+**Sensor ID**: answer-evidence
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/inception/delivery-planning/delivery-planning-questions.md
+**Duration ms**: 39
+
+---
