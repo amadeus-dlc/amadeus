@@ -379,5 +379,12 @@
     "dirName": "260719-mirror-productization",
     "scope": "amadeus",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019f7ac8-1612-7278-afdb-129ccaeedf93",
+    "slug": "cursor-complete-clear",
+    "dirName": "260719-cursor-complete-clear",
+    "scope": "bugfix",
+    "status": "in-flight"
   }
 ]

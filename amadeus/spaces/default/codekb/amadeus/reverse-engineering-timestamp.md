@@ -1,6 +1,23 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(最新: 260718-election-ts-foundation)
+## 実行メタデータ(最新: 260719-cursor-complete-clear)
+
+- Date: 2026-07-19(Asia/Tokyo)
+- Observed at: HEAD `a326f47bc0146a3b4285552f42b92fd61fb343a7`(`git rev-parse HEAD` 実測)
+- Intent: `260719-cursor-complete-clear`([Issue #1248](https://github.com/amadeus-dlc/amadeus/issues/1248) — intent 完了後の active-intent カーソル残留により、完了済み intent のシャードへ無期限に監査追記が続くモグラ叩き)
+- Scope: `bugfix`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh(cid:reverse-engineering:c1、E-L63 の base 選定則)。base=`591b6a2a222357f41061128f1b5a93c7f7a877be`(全 `re-scans/*.md` observed のうち HEAD 祖先で距離最小。`git merge-base --is-ancestor 591b6a2a2 HEAD` exit 0 実測、`git rev-list --count 591b6a2a2..HEAD`=**52**。base は 260717-state-mirror-fixes の observed に一致)、observed=`a326f47bc0146a3b4285552f42b92fd61fb343a7`。日付が新しい squash tip の非祖先 observed(`c2e4975ff` = 260718-election-ts-foundation、`594ba21d…` = 260718-hooks-config-conflict)は `--is-ancestor` exit 1 につき base 候補から除外(cid:reverse-engineering:rescan-base-ancestry)。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3、独立再照合で反証なし)
+- 測定 ref: 件数・行番号は observed HEAD `a326f47bc` の実ファイル直読、区間変更は `git log 591b6a2a2..HEAD -- <path>` で実測(measurement-ref-in-artifacts)。フォーカス面(カーソルライフサイクル・complete 経路・監査追記チェーン・フック群)の focus ファイル区間コミットは13件で **全13件が focus-hits=0**(`git show <sha> -- <focus files> | grep -icE` で機械計測)。区間の大宗は election TS 基盤 Bolt(#1227〜#1236)・swarm 三値化・codex hooks 分離でフォーカス面と非交差。
+- 現行結論: **カーソルの set⇔clear 非対称が欠陥の核心**(symmetric-pair-review)。書き手は `setActiveIntentCursor`(`amadeus-lib.ts:1725-1733`、書込 `:1729`)と birth 時書込(`:2147`)の2箇所のみで、clear 経路はコードベースに不在。`handleCompleteWorkflow`(`amadeus-state.ts:1550-1680`)は status 前進(`:1668-1669` `updateIntentStatus`)のみでカーソルを触らず、完了 intent を指したまま残留する。監査追記チェーン全段(`appendAuditEntry`→`ensureAuditFile`→`auditFilePath`→`recordDir`→`activeIntent`)に status ゲートが無く、`activeIntent`(`:1059-1084`)は `records.includes(raw)`(`:1074`)のみで registry status を参照しない。追記到達フックは7つ(主犯 `mint-presence:73-74`)。欠陥は base 時点から現存し区間内退行なし。修正2案(エンジン側 complete 時 clear / フック側 status ゲート防御層)は requirements/選挙で確定。
+- Per-intent record: `re-scans/260719-cursor-complete-clear.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「最新: 260718-election-ts-foundation」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、`re-scans/260719-cursor-complete-clear.md`、`architecture.md`(「active-intent カーソルの set⇔clear 非対称と監査ルーティング」節を新設 = 完了後シャード汚染の構造的機序)。**他 body 7成果物(business-overview / code-structure / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment)は全点温存**(churn 回避 — 実質の新規知識はカーソル set⇔clear 非対称と監査チェーンの status ゲート不在の構造的事実1点で、architecture.md へ集約。フォーカス面は既存構造の欠落(clear 経路不在)であり配置の追加・移動・品質評価の新規欠陥クラスタ導入を伴わない。cid:reverse-engineering:c1)
+- Delivery boundary: 実装、main merge/rebase、Issue close、PR 作成・更新は本 scan で実施していない。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260718-election-ts-foundation)
 
 - Date: 2026-07-19(Asia/Tokyo)
 - Observed at: HEAD `c2e4975ff2abe0290d899fdbd04b856213175c7a`(`git rev-parse HEAD` 実測)
