@@ -17,3 +17,4 @@
 - [2026-07-19T20:52Z] Interpretation: deslop はハーネス外スキルのため、architecture-reviewer の明示 slop 走査(不要コメント・過剰防御・any・ネスト観点、verdict §6)で同目的・同検証水準を充足(agents-skills-usage)。
 - [2026-07-19T20:52Z] Tradeoff: workspace_requires は経路 (b) Bolt Refs=fix-1248-cursor-clear(slug 形)+非 doc ソース実在ブランチで充足 — 過剰ミラー回避(mirror-merge-before-approve 追補)。
 - [2026-07-19T20:52Z] Interpretation: builder の初回 CI 赤4件は全て自変更起因を assertion 実文で帰属確定(local-ci-red-assertion-verbatim 適用)。t51 helper のカーソル前提追随は FR-1a 作用の必然的帰結として申告済み(無申告逸脱なし)。
+- [2026-07-19T20:52Z] Open question: e4 レビュー非ブロッキング所見 — post-complete の fork delta 遅着 merge(audit-merge 経路)も status ゲートで抑止される。現裁定の意図どおり(complete 後のシャード封鎖)だが、遅着 worktree merge の運用が将来必要になれば #1248 系の followup Issue で扱う。
