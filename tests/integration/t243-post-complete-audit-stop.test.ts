@@ -29,12 +29,17 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { appendAuditEntry } from "../../dist/claude/.claude/tools/amadeus-audit.ts";
+import {
+  appendAuditEntry,
+  handleAuditFork,
+  handleAuditMerge,
+} from "../../dist/claude/.claude/tools/amadeus-audit.ts";
 import {
   activeIntent,
   clearActiveIntentCursor,
   intentStatusForAudit,
   updateIntentStatus,
+  worktreePath,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // A registry-row shape for a seeded intent. dirName is stored verbatim so the
@@ -113,6 +118,22 @@ function withStderrCapture(fn: () => void): string {
     fn();
   } finally {
     process.stderr.write = original;
+  }
+  return captured;
+}
+
+// Swallow process.stdout writes for the duration of fn() (fork/merge emit JSON).
+function withStdoutCapture(fn: () => void): string {
+  const original = process.stdout.write.bind(process.stdout);
+  let captured = "";
+  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
+    captured += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString();
+    return true;
+  }) as typeof process.stdout.write;
+  try {
+    fn();
+  } finally {
+    process.stdout.write = original;
   }
   return captured;
 }
@@ -230,5 +251,33 @@ describe("t243 post-complete audit stop (#1248)", () => {
 
     expect(result.appended).toBe(true);
     expect(after).toBe(before === -1 ? 1 : before + 1);
+  });
+
+  // handleAuditMerge is otherwise spawn-only (t07 e2e); drive it in-process on an
+  // in-flight intent so the empty-delta merge path (the AppendAuditResult-typed
+  // `result` seam that emits AUDIT_MERGED) is measured (seam-export-handler-amend).
+  test("in-process audit fork→merge on an in-flight intent emits AUDIT_MERGED", () => {
+    const dir = "260720-alpha-aaaaaaaa";
+    const slug = "test-bolt";
+    const proj = track(buildWorkspace([{ dirName: dir, status: "in-flight" }], dir));
+
+    // Seed the main audit shard, then create the (non-git) worktree dir the fork
+    // only existsSync-checks, so fork copies main→worktree and merge folds it back.
+    appendAuditEntry("WORKFLOW_STARTED", { Scope: "bugfix" }, proj, dir);
+    mkdirSync(worktreePath(proj, slug), { recursive: true });
+
+    const out = withStdoutCapture(() => {
+      handleAuditFork(["--slug", slug], proj);
+      handleAuditMerge(["--slug", slug], proj);
+    });
+
+    // Both primitives report success on stdout and AUDIT_MERGED lands in the shard.
+    expect(out).toContain('"emitted":"AUDIT_FORKED"');
+    expect(out).toContain('"emitted":"AUDIT_MERGED"');
+    const auditDir = join(intentsDirOf(proj), dir, "audit");
+    const shard = readdirSync(auditDir)
+      .map((n) => readFileSync(join(auditDir, n), "utf-8"))
+      .join("\n");
+    expect(shard).toContain("**Event**: AUDIT_MERGED");
   });
 });

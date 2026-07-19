@@ -609,7 +609,7 @@ export function handleAuditFork(args: string[], projectDir: string): void {
 // is a trailing marker; merged-audit chronological order is preserved by the
 // order in which deltas were appended, not by AUDIT_MERGED timestamps.
 
-function handleAuditMerge(args: string[], projectDir: string): void {
+export function handleAuditMerge(args: string[], projectDir: string): void {
   const slug = parseSlugFlag(args, "audit-merge");
   // Same selector the state/audit fork used -> the SAME intent record on both
   // ends (vision §5). recordPrefix pins the worktree audit mirror.
