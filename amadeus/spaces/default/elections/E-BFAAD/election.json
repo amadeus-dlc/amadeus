@@ -1,0 +1,20 @@
+{
+  "electionId": "E-BFAAD",
+  "kind": "blocker",
+  "question": "260719-ballot-failclosed-amend / application-design のレビュー進行判断。経緯: iteration 1 NOT-READY(Critical=適用点列挙不足 / Major=出典不在)→是正、iteration 2 NOT-READY(新 Critical=verifySelf :456 の生 ballots 消費が適用点表から欠落 / Minor=StoreError 転記漏れ)→両方是正済み(適用点表 #5 追加・実測 union 化、:456 と record.ts:175-177 は conductor が独立実読で閉包確認済み)。reviewer_max_iterations=2 は消費済み。どちらで進めるか。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "(a) 第3イテレーションのレビューを追加実施 — 是正2点の機械的閉包の独立確認のみ(推定5分)"
+    },
+    {
+      "internalNo": 2,
+      "label": "(b) conductor 独立検証+ゲートで受理し進行(iteration 上限尊重、是正の独立確認は §13/ゲート報告の実測で担保)"
+    }
+  ],
+  "voters": [
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}
