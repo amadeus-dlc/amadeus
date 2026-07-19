@@ -20,7 +20,7 @@ DeliveryRecord    = { voter, at, transport: "agmsg" | "subagent", provenance: "s
 ```
 notify: send.sh を spawnSync(env: process.env 明示 — bun-spawn-env-snapshot)
         payload 文言 = "選挙 <ID> の配布ビュー: <viewPath> — vote verb で投票してください" 相当の短通知のみ
-        exit 0 → DeliveryRecord(at=実行時刻)/ 非0 → TransportError("send-failed")
+        exit 0 → DeliveryOutcome{kind:"delivered", record: DeliveryRecord(at=実行時刻)} / 非0 → TransportError("send-failed")
         DeliveryRecord は spawn 実行の戻りからのみ生成(送らず記帳の経路なし — FR-2b)
 ```
 
