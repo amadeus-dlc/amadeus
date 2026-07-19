@@ -6,7 +6,7 @@
 - **Scope**: amadeus
 - **Start Date**: 2026-07-19T15:02:41Z
 - **State Version**: 7
-- **Active Agent**: amadeus-product-agent
+- **Active Agent**: amadeus-architect-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**:
@@ -25,14 +25,12 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 18
-- **Completed**: 3
-- **In Progress**: intent-capture
+- **Completed**: 4
+- **In Progress**: feasibility
 
 ## Runtime State
 - **Revision Count**: 0
 
-- **Parked**: 2026-07-19T15:07:24Z
-- **Parked At Stage**: intent-capture
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -51,9 +49,9 @@
 - [x] state-init — EXECUTE
 
 ### IDEATION PHASE
-- [-] intent-capture — EXECUTE
+- [x] intent-capture — EXECUTE
 - [ ] market-research — SKIP
-- [ ] feasibility — EXECUTE
+- [-] feasibility — EXECUTE
 - [ ] scope-definition — EXECUTE
 - [ ] team-formation — SKIP
 - [ ] rough-mockups — SKIP
@@ -90,12 +88,12 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: IDEATION
-- **Current Stage**: intent-capture
-- **Next Stage**: feasibility
+- **Current Stage**: feasibility
+- **Next Stage**: scope-definition
 - **Status**: Running
-- **Last Updated**: 2026-07-19T15:07:24Z
+- **Last Updated**: 2026-07-19T15:08:33Z
 
 ## Session Resume Point
-- **Last Completed Stage**: state-init
-- **Next Action**: Execute intent-capture
+- **Last Completed Stage**: intent-capture
+- **Next Action**: Execute Feasibility & Constraints
 - **Pending Artifacts**: none
