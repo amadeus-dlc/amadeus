@@ -1,6 +1,6 @@
 # Scalability Requirements — election-model(nfr-requirements)
 
-> 上流入力(consumes 全数): business-logic-model.md、business-rules.md、requirements.md
+> 上流入力(consumes 全数): business-logic-model.md、business-rules.md、requirements.md、technology-stack.md
 
 ## 負荷前提と成長予測
 
@@ -10,3 +10,4 @@
 ## 同時実行
 
 - U1 は状態を持たない純関数(business-rules.md BR-11 — 環境時刻にも依存しない)。並行選挙 N 件は関数呼び出し N 回で自然にスケールし、共有可変状態が存在しないため同時実行制御を要求しない(書込直列化は U2 の単一書込主体 = conductor 設計の責務)
+- 実行形態は既存スタック(technology-stack.md 実測の Bun 単一プロセス直接実行)のまま — スケールのための追加プロセス・デーモン・外部サービスを要求しない

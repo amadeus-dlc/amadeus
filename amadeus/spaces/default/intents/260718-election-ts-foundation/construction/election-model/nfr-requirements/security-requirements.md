@@ -1,6 +1,6 @@
 # Security Requirements — election-model(nfr-requirements)
 
-> 上流入力(consumes 全数): business-logic-model.md、business-rules.md、requirements.md
+> 上流入力(consumes 全数): business-logic-model.md、business-rules.md、requirements.md、technology-stack.md
 
 ## 入力検証(fail-closed)
 
@@ -13,3 +13,4 @@
 - 認証情報・API キー・シークレットを扱わない(ADR-1 Security 節: gh 非依存・repo 外書込なし。票は開票後公開前提のチーム内データ)
 - blind 性は型で保証: DistributionView は推奨・先行票・他者状況のフィールドを持たない(business-rules.md BR-2 の構造的 blind — フィールド不在の compile 検査)
 - 認証・認可レイヤは導入しない(チームローカルツール — W-04 配布外。投票者正当性は voters 集合照合 = unknown-voter 拒否で担保)
+- 新規 runtime 依存を導入しないため、依存由来の攻撃面を既存スタック(technology-stack.md の Bun/TS 現行構成)から拡大しない

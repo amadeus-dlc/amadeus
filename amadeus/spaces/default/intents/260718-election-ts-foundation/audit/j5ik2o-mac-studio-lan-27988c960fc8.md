@@ -2750,3 +2750,66 @@
 **Duration ms**: 34
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T04:23:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: 89df50fd
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-requirements/security-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T04:23:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: 89df50fd
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-requirements/security-requirements.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T04:23:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: 20cd3a7e
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-requirements/scalability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T04:23:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: 20cd3a7e
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-requirements/scalability-requirements.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T04:23:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: 23d7c110
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-requirements/reliability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T04:23:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: 23d7c110
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-requirements/reliability-requirements.md
+**Duration ms**: 35
+
+---

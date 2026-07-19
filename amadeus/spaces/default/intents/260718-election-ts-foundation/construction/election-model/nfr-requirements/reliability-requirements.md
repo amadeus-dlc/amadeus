@@ -1,11 +1,11 @@
 # Reliability Requirements — election-model(nfr-requirements)
 
-> 上流入力(consumes 全数): business-logic-model.md、business-rules.md、requirements.md
+> 上流入力(consumes 全数): business-logic-model.md、business-rules.md、requirements.md、technology-stack.md
 
 ## 障害耐性とエラー処理
 
 - fallible API(`Election.parse`/`Ballot.parse`)は `Result<T, E>` を返し throw しない(business-logic-model.md エラー処理節 — 判別ユニオン Result 既決)。全域関数は失敗しない設計で素の値を返す
-- 回復可能性の分類: parse 失敗は回復可能(呼び出し元 C6 が拒否理由を指令/exit code へ写像)。U1 内に致命的エラー経路を持たない(fs/network I/O 非保有)
+- 回復可能性の分類: parse 失敗は回復可能(呼び出し元 C6 が拒否理由を指令/exit code へ写像)。U1 内に致命的エラー経路を持たない(fs/network I/O 非保有 — 外部プロセス・SQLite 等を含む既存 runtime スタック(technology-stack.md)のうち U1 が触れるのは Bun/TS 言語ランタイムのみ)
 - 可用性 SLO・バックアップ・DR は N/A(反証可能な根拠: U1 は永続を持たない純関数層 — 永続の耐障害性は U2 store の責務、unit-of-work 境界)
 
 ## 監査再現性
