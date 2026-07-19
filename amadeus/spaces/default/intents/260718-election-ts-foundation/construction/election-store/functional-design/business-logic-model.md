@@ -21,10 +21,11 @@ amadeus/spaces/<space>/elections/<選挙ID>/
 ```
 Store.create(election, views):    既存 ID → reject("exists")。dir 作成+定義+views 書込
 Store.appendBallot(ballot):       election.json の state を読取 —
+                                  **全経路共通の先頭検査**: 同一 voter の既受理(非 amend、late 区画含む)→ reject("duplicate")
+                                    (二重票拒否は全期間適用 — FR-3b。reviewer iter2 #5 是正: 後着経路の迂回を封鎖)
                                   state が tallied 以降 → **後着経路**: U1 classifyLate(tally.json の開票時刻, ballot) を U2 が呼び、
                                     LateBallot(reexamRequired 含む)を ledger の late 区画へ追記+timeline late 記帳(ballots/ 本集計は不変)
-                                  それ以外 → 通常経路: 同一 voter の既受理(非 amend)→ reject("duplicate")
-                                    amend → 原票保持のまま追記(ADR-5)。受理 → ledger 追記+timeline 記帳(reviewer F4 是正 — 分岐と呼出主体を明記)
+                                  それ以外 → 通常経路: amend → 原票保持のまま追記(ADR-5)。受理 → ledger 追記+timeline 記帳(reviewer F4 是正 — 分岐と呼出主体を明記。duplicate 検査は上の共通先頭検査で実施済み)
 Store.materialize(tallyResult):   ledger 全票 → ballots/ へ一括ファイル化+tally.json 書込(開票時点の票集合固定)
 Store.load / Store.status:        読取のみ。status = 投票済み/未着一覧(voters − ledger 受理者)— FR-3c
 Store.appendTimeline(event):      配信・票・開票・後着の4イベント種いずれも、**対応する操作の実行結果からのみ**呼ばれる

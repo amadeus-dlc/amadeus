@@ -7,7 +7,7 @@
 | # | ルール | 由来 | テスト |
 |---|---|---|---|
 | BR-S1 | create は既存 ID を reject(上書きしない) | FR-1a | 二重 create の reject |
-| BR-S2 | appendBallot: 同一 voter の2票目(非 amend)は reject("duplicate")— 最新優先にしない | FR-3b、ADR-5 | 二重票 reject+原票不変の byte assert |
+| BR-S2 | appendBallot: 同一 voter の2票目(非 amend)は**全期間**(開票前後を問わず、late 区画含む)reject("duplicate")— 最新優先にしない | FR-3b、ADR-5 | 二重票 reject+原票不変の byte assert+**開票後の重複後着 → reject ケース**(iter2 #5) |
 | BR-S3 | amend は原票保持のまま追記され、両票がタイムラインに残る | ADR-5 | amend 後の ledger 2エントリ+timeline 2イベント |
 | BR-S4 | status は投票済み/未着を voters−受理者の導出で返す(保存された一覧を持たない) | FR-3c | 受理進行に伴う status 変化 |
 | BR-S5 | materialize は開票時点の票集合を固定し、以後の後着は本集計ファイルへ混入しない | FR-4c/5b/3d | 開票後 appendBallot → ballots/ 不変+後着記帳 |

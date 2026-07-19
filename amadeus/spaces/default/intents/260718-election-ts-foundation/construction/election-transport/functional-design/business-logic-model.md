@@ -6,8 +6,11 @@
 
 ```
 interface VoterTransport {
-  notify(voter, payload: ShortNotification): Result<DeliveryRecord, TransportError>
+  notify(voter, payload: ShortNotification): Result<DeliveryOutcome, TransportError>
 }
+DeliveryOutcome = { kind: "delivered"; record: DeliveryRecord }       # agmsg — spawn exit 由来で即確定
+               | { kind: "directive"; directive: DeliveryDirective }  # subagent — 記帳は U5 report 時(Q1=B)
+  # port は単一シグネチャを保ち、輸送別の戻り実体は判別ユニオンで表現(reviewer iter2 #5 是正 — C5 抽象の一貫性回復)
 ShortNotification = { electionId, viewPath }   # 質問文・選択肢テキストのフィールドを型として持たない(FR-2a 型保証)
 DeliveryRecord    = { voter, at, transport: "agmsg" | "subagent", provenance: "spawn-exit" | "reported-by-conductor" }  # 実行結果からのみ構築(Q1=B)
 ```

@@ -10,7 +10,8 @@
 | `DeliveryRecord` | `{ voter: VoterId; at: string; transport: "agmsg" \| "subagent"; provenance: "spawn-exit" \| "reported-by-conductor" }` — **module 内部ファクトリでのみ構築**(公開コンストラクタ/リテラル生成経路なし — スマートコンストラクタで FR-2b の生成元制約を型面強制。reviewer F2 是正) | FR-2b/7b |
 | `DeliveryDirective` | `{ voter: VoterId; viewPath: string; spawnInstruction: string }` — subagent 経路の notify 戻り値(記帳ではない — Q1=B) | FR-2b/7a |
 | `TransportError` | `"send-failed" \| "voter-unknown" \| "view-missing"` | FR-2 |
-| `VoterTransport` | notify 1メソッドの interface(port — テストは fake 実装をテスト側に置く。本番コードにテスト分岐なし) | FR-7a、construction ガードレール |
+| `VoterTransport` | notify 1メソッドの interface(戻り値 = Result<DeliveryOutcome, TransportError> — port 単一シグネチャ。テストは fake 実装をテスト側に置く。本番コードにテスト分岐なし) | FR-7a、construction ガードレール |
+| `DeliveryOutcome` | `{ kind: "delivered"; record } \| { kind: "directive"; directive }` の判別ユニオン(輸送別の戻り実体 — iter2 #5) | FR-2b/7b |
 
 ## 不変条件
 
