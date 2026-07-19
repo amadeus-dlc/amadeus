@@ -1,0 +1,25 @@
+{
+  "electionId": "E-BFARA2",
+  "kind": "clarification-question",
+  "question": "260719-ballot-failclosed-amend(#1253)RA Q2: amend の tally 解決規則(FR-4 の確定条件)。\n\n実測コンテキスト: tally(model.ts:321-337)は ballots を kind 非区別で全走査(共存時は同一 voter 二重計上)。verify(election.ts:440)も同一母集団で recompute するため二重計上を検出できない。ADR-5(store.ts:122-124)は「original は上書きしない・両方 ledger に残る」を既決とする(集計規則は未決)。\n\n各自コード実測のうえ GoA 付き投票。自案非採用時の受容度(6/7/8)を note に併記。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. per-voter 最新1票 — tally 母集団構成時に voter ごとに submittedAt 最新の1票(同時刻なら amend 優先)だけを採用。ledger 上の共存(ADR-5)は不変、集計だけが置換される"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. amend 非計上 — amend は集計母集団に入れず、record のタイムライン注記のみ(裁定への反映は人間の再集計判断)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. その他(note に方式明記)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}
