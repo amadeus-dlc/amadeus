@@ -4,12 +4,10 @@
 // ballot acceptance. No fs/network/clock access — every fallible API returns a
 // discriminated-union Result and never throws (functional-domain-modeling-ts).
 //
-// Bolt 1 scope (bolt-plan.md): the type surface the zero-confirm loop needs
-// (DefineError/DistributionView/LateBallot and friends arrive with their
-// consuming logic in Bolt 2), structural parse plus the GoA numeric boundary
-// (unknown-voter/reservation-missing complete the 5-class fail-closed set in
-// Bolt 2), zero-confirm tally path. Shuffle / early-tally / late
-// classification land in Bolt 2.
+// Bolt 2 (model-complete) finishes the layer: full 5-class fail-closed ballot
+// validation, deterministic distribution views (fnv1a + mulberry32 +
+// Fisher-Yates), early tally, and late-ballot classification. Amend acceptance
+// stays with the store (C2 owns duplicate/amend bookkeeping — ADR-5).
 
 export type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };
 
@@ -136,9 +134,9 @@ export type AmendBallot = {
 export type Ballot = OriginalBallot | AmendBallot;
 
 export const Ballot = {
-  // Bolt 1: structural parse + GoA numeric parse (tally consumes Goa, so the
-  // numeric boundary cannot be deferred) + unknown-election. unknown-voter and
-  // reservation-missing complete the fail-closed set in Bolt 2.
+  // Full 5-class fail-closed validation (FR-3a/3b, order: parse-failure ->
+  // unknown-election -> unknown-voter -> goa-out-of-range ->
+  // reservation-missing). GoA 2/3/6 require a reservation sentence (norm (ii)).
   parse(raw: unknown, election: Election): Result<Ballot, BallotError> {
     if (typeof raw !== "object" || raw === null) return err("parse-failure");
     const r = raw as Record<string, unknown>;
@@ -150,8 +148,14 @@ export const Ballot = {
     }
     if (r.voterKind !== "member" && r.voterKind !== "subagent") return err("parse-failure");
     if (r.electionId !== election.electionId) return err("unknown-election");
+    if (!election.voters.includes(r.voter)) return err("unknown-voter");
     const goa = Goa.parse(r.goa);
     if (!goa.ok) return err(goa.error);
+    const needsReservation = goa.value === 2 || goa.value === 3 || goa.value === 6;
+    const reservation = typeof r.reservation === "string" && r.reservation.trim().length > 0
+      ? r.reservation
+      : null;
+    if (needsReservation && reservation === null) return err("reservation-missing");
     return ok({
       kind: "original",
       electionId: r.electionId,
@@ -159,12 +163,99 @@ export const Ballot = {
       voterKind: r.voterKind,
       choiceInternalNo: r.choiceInternalNo,
       goa: goa.value,
-      reservation: typeof r.reservation === "string" ? r.reservation : null,
+      reservation,
       rationale: typeof r.rationale === "string" ? r.rationale : null,
       submittedAt: r.submittedAt,
     });
   },
 };
+
+// --- distribution view (FR-1b/1c, ADR-4) -----------------------------------
+
+// Structurally blind: exactly these fields exist — no recommendation marker,
+// no prior votes, no peer status (BR-2 pins the key set).
+export type DistributionView = {
+  electionId: string;
+  voter: string;
+  ordered: Array<{ displayNo: number; internalNo: number; label: string }>;
+};
+
+// FNV-1a 32-bit — deterministic, non-cryptographic (the seed only orders a
+// display shuffle; this is not a security boundary — nfr tech-stack decision).
+export function fnv1a(input: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash >>> 0;
+}
+
+// mulberry32 — tiny deterministic PRNG over a 32-bit seed.
+function mulberry32(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Deterministic per-(election, voter) display order: seed = fnv1a(id + ":" +
+// voter), Fisher-Yates over the choice list. Ballots record internalNo, so
+// tallying is shuffle-invariant (BR-1).
+export function shuffleView(election: Election, voter: string): DistributionView {
+  const rand = mulberry32(fnv1a(`${election.electionId}:${voter}`));
+  const order = [...election.choices];
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    const a = order[i] as Choice;
+    order[i] = order[j] as Choice;
+    order[j] = a;
+  }
+  return {
+    electionId: election.electionId,
+    voter,
+    ordered: order.map((choice, idx) => ({
+      displayNo: idx + 1,
+      internalNo: choice.internalNo,
+      label: choice.label,
+    })),
+  };
+}
+
+// --- early tally (FR-4c) ----------------------------------------------------
+
+// True when the favor majority cannot be overturned even if every missing
+// ballot lands on the against side. Any received GoA 8 forces false (a block
+// hold precedes any majority claim — BR-8).
+export function canEarlyTally(election: Election, ballots: Ballot[]): boolean {
+  if (ballots.some((b) => b.goa === 8)) return false;
+  const counts = { favor: 0, against: 0 };
+  for (const b of ballots) {
+    if (FAVOR.has(b.goa)) counts.favor++;
+    else if (AGAINST.has(b.goa)) counts.against++;
+  }
+  const missing = election.voters.length - ballots.length;
+  return counts.favor > counts.against + missing;
+}
+
+// --- late classification (FR-3d) --------------------------------------------
+
+export type LateBallot = {
+  ballot: Ballot;
+  late: true;
+  // A late GoA 8 reopens the question of the established result
+  // (early-tally-with-block-reopen) — flagged, never auto-acted.
+  reexamRequired: boolean;
+};
+
+export function classifyLate(tallyTime: string, ballot: Ballot): LateBallot | null {
+  if (ballot.submittedAt <= tallyTime) return null;
+  return { ballot, late: true, reexamRequired: ballot.goa === 8 };
+}
 
 // --- tally -----------------------------------------------------------------
 
