@@ -15,7 +15,7 @@
 ## FR-2: 落ちる実証と遡及 sweep(#1252)
 
 - 落ちる実証: FR-1 (a)(b) の両ケースをテストで固定し、修正前コードへの注入で赤を実測してから完成扱いにする(落ちる実証は実行時に消費される行へ — inject-runtime-consumed-lines)。
-- 遡及 sweep(corpus-sweep-for-new-guards): leader worktree の既存 12 選挙 ledger の全 ballot(保存済み submittedAt)へ新検証述語を適用し、正当データが赤にならないことを実測する(両側実証)。
+- 遡及 sweep(corpus-sweep-for-new-guards): leader worktree の elections/ 配下に**実装時点で存在する全 election ディレクトリを glob で列挙**し、全 ledger の全 ballot(保存済み submittedAt)へ新検証述語を適用して正当データが赤にならないことを実測する(両側実証)。件数は固定しない — RE 観測時点(scan-notes.md、コミット 18a92347d)で 12 件だったが選挙実施のたび増加する(レビュー時点実測 20 件)。固定件数ループでの取りこぼしを禁止する。
 
 ## FR-3: amend ballot の提出経路(#1253)
 
