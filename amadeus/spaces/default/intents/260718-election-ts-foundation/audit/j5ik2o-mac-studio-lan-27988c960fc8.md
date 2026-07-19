@@ -5183,3 +5183,276 @@
 **Agent**: amadeus-architect-agent
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T05:21:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 099e471f
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T05:21:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 099e471f
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/performance-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T05:21:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8e84e4df
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T05:21:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8e84e4df
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/performance-design.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T05:21:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6c294879
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T05:21:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6c294879
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/security-design.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T05:21:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8e2cd946
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T05:21:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8e2cd946
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/security-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T05:21:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 26005b00
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T05:21:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 26005b00
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/scalability-design.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T05:21:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: b5008ad3
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T05:21:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: b5008ad3
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/scalability-design.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T05:21:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 88cd7188
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T05:21:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 88cd7188
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/reliability-design.md
+**Duration ms**: 31
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T05:21:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3f0c8cb1
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T05:21:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3f0c8cb1
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/reliability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T05:21:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7f36f223
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T05:21:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7f36f223
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/logical-components.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T05:21:26Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1085a167
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T05:21:26Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1085a167
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/logical-components.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T05:21:26Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2d2d92d6
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/nfr-design-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T05:21:26Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2d2d92d6
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/nfr-design-questions.md
+**Duration ms**: 31
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T05:21:26Z
+**Event**: SENSOR_FIRED
+**Fire id**: cfe4f118
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/nfr-design-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T05:21:26Z
+**Event**: SENSOR_PASSED
+**Fire id**: cfe4f118
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/nfr-design-questions.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-19T05:21:26Z
+**Event**: SENSOR_FIRED
+**Fire id**: 842c72c4
+**Sensor ID**: answer-evidence
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/nfr-design-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-19T05:21:26Z
+**Event**: SENSOR_PASSED
+**Fire id**: 842c72c4
+**Sensor ID**: answer-evidence
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260718-election-ts-foundation/construction/election-model/nfr-design/nfr-design-questions.md
+**Duration ms**: 31
+
+---
