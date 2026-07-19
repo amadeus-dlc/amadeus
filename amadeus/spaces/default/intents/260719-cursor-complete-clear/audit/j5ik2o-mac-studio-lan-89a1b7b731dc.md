@@ -2866,3 +2866,109 @@
 **Findings count**: 1
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-19T22:36:36Z
+**Event**: WORKFLOW_PARKED
+**Stage**: build-and-test
+**Timestamp**: 2026-07-19T22:36:36Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T22:36:51Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a5dc5218309b6f9f4
+**Message**: (no content)
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T22:37:23Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a84683bdbd126d413
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T22:39:42Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a42d61599bc25b029
+**Message**: delegate 発行して進めて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T22:40:02Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a4ae724b83a6d97f1
+**Message**: CI green を確認したらマージを進めてください
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-19T22:44:27Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a705af65e51998583
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-19T22:45:46Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-19T22:45:46Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-19T22:46:16Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-19T22:46:16Z
+**Event**: GATE_APPROVED
+**Stage**: build-and-test
+**Grant Id**: 22ab851b
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-19T22:46:16Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Details**: Stage Build And Test approved by gate
+
+---
+
+## Phase Completion
+**Timestamp**: 2026-07-19T22:46:16Z
+**Event**: PHASE_COMPLETED
+**From phase**: construction
+**To phase**: (end)
+**Stages completed**: 7
+
+---
+
+## Phase Verification
+**Timestamp**: 2026-07-19T22:46:16Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: construction → end
+
+---
+
+## Workflow Completion
+**Timestamp**: 2026-07-19T22:46:16Z
+**Event**: WORKFLOW_COMPLETED
+**Scope**: bugfix
+**Details**: Scope: bugfix, 7 stages completed
+
+---
