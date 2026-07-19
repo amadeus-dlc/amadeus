@@ -33,8 +33,8 @@
 - **Revision Count**: 0
 
 - **Skeleton Stance**: scope-dependent
-- **Parked**: 2026-07-19T05:15:55Z
-- **Parked At Stage**: nfr-requirements
+- **Parked**: 2026-07-19T06:09:54Z
+- **Parked At Stage**: nfr-design
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -75,7 +75,7 @@
 Per unit: [TBD]
 - [x] functional-design — EXECUTE
 - [x] nfr-requirements — EXECUTE
-- [-] nfr-design — EXECUTE
+- [?] nfr-design — EXECUTE
 - [ ] infrastructure-design — SKIP
 - [ ] code-generation — EXECUTE
 - [ ] build-and-test — EXECUTE
@@ -95,7 +95,7 @@ Per unit: [TBD]
 - **Current Stage**: nfr-design
 - **Next Stage**: code-generation
 - **Status**: Running
-- **Last Updated**: 2026-07-19T05:20:03Z
+- **Last Updated**: 2026-07-19T06:09:54Z
 
 ## Session Resume Point
 - **Last Completed Stage**: nfr-requirements

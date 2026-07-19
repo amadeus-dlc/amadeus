@@ -8128,3 +8128,37 @@
 **Message**: team-leadへ再レビュー結果(READY)を送付しました。iter1で指摘したCritical 1件・Major 1件は両方とも正確に是正されており、新たな欠陥は見つかりませんでした。U6(election-skill)のnfr-design成果物5点はREADYと判定します。
 
 ---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-19T06:09:30Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: nfr-design
+**Recovered**: true
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-19T06:09:30Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state approve nfr-design --project-dir /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260718-073253-15ea/engineer-1
+**Error**: Refusing to approve "nfr-design": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then approve. (autonomous Construction is exempt)
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-19T06:09:30Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --stage nfr-design --result completed
+**Error**: Transition rejected by amadeus-state.ts approve for "nfr-design": {"error":"Refusing to approve \"nfr-design\": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then approve. (autonomous Construction is exempt)"}
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-19T06:09:54Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-design
+**Timestamp**: 2026-07-19T06:09:54Z
+
+---
