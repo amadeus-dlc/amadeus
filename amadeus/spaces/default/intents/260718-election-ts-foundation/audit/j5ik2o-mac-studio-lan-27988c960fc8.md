@@ -174,3 +174,11 @@
 **Duration ms**: 35
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-19T02:59:25Z
+**Event**: WORKFLOW_PARKED
+**Stage**: functional-design
+**Timestamp**: 2026-07-19T02:59:25Z
+
+---
