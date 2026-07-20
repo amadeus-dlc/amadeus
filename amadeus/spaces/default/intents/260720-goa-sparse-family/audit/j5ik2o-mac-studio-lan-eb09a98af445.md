@@ -362,3 +362,349 @@
 **Timestamp**: 2026-07-20T02:55:32Z
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T02:56:36Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aef4e73f221e5c55f
+**Message**: /amadeus --resume
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T02:59:51Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a0e1c35b56c8fcacf
+**Message**: (waiting for leader's §13 ruling via monitor)
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T03:04:12Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T03:04:12Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T03:04:12Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: intent-capture
+**Recovered**: true
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-20T03:04:12Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state approve intent-capture --project-dir /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-4
+**Error**: Refusing to approve "intent-capture": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then approve. (autonomous Construction is exempt)
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-20T03:04:12Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --stage intent-capture --result approved
+**Error**: Transition rejected by amadeus-state.ts approve for "intent-capture": {"error":"Refusing to approve \"intent-capture\": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then approve. (autonomous Construction is exempt)"}
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-20T03:04:37Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --result resume --user-input resume
+**Error**: Unknown --result "resume". report commits forward transitions only; accepted outcomes: approved, completed, complete, done.
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T03:05:46Z
+**Event**: GATE_APPROVED
+**Stage**: intent-capture
+**Grant Id**: cabcb933
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T03:05:46Z
+**Event**: STAGE_COMPLETED
+**Stage**: intent-capture
+**Details**: Stage Intent Capture approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T03:05:46Z
+**Event**: STAGE_STARTED
+**Stage**: feasibility
+**Agent**: amadeus-architect-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: fa7f5d1e
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/feasibility-assessment.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:08:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: fa7f5d1e
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/feasibility-assessment.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: da3c3059
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/constraint-register.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:08:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: da3c3059
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/constraint-register.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: db8fa5fc
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/raid-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:08:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: db8fa5fc
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/raid-log.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4fe33ede
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/feasibility-assessment.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:08:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4fe33ede
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/feasibility-assessment.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8743676b
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/constraint-register.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:08:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8743676b
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/constraint-register.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: e9e889bf
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/raid-log.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T03:08:36Z
+**Event**: SENSOR_FAILED
+**Fire id**: e9e889bf
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/raid-log.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/feasibility/upstream-coverage-e9e889bf.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:09:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4c95c013
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/raid-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:09:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4c95c013
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/raid-log.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:09:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: 20924f71
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/feasibility-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:09:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: 20924f71
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/feasibility-questions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:09:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: 85253a4e
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/feasibility-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T03:09:31Z
+**Event**: SENSOR_FAILED
+**Fire id**: 85253a4e
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/feasibility-questions.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/feasibility/upstream-coverage-85253a4e.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:09:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: 528a6855
+**Sensor ID**: answer-evidence
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/feasibility-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:09:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: 528a6855
+**Sensor ID**: answer-evidence
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/feasibility-questions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:09:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: d323aa36
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/feasibility-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:09:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: d323aa36
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/feasibility-questions.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:09:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3b392fb4
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/raid-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:09:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3b392fb4
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/feasibility/raid-log.md
+**Duration ms**: 35
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T03:11:22Z
+**Event**: WORKFLOW_PARKED
+**Stage**: feasibility
+**Timestamp**: 2026-07-20T03:11:22Z
+
+---
