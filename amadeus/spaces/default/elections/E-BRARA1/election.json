@@ -1,0 +1,25 @@
+{
+  "electionId": "E-BRARA1",
+  "kind": "clarification-question",
+  "question": "260720-ballot-received-at(#1262)RA Q1: 時刻軸の修正方式(#1262 の核心)。\n\n背景(RE 実測): timeline の ballot/late イベントだけが at: ballot.submittedAt(store.ts:156/:166)で、distributed(election.ts:304)/tallied(store.ts:228)は機械時刻 — 非対称。verifySelf(record.ts:179-183)の隣接 at 単調検査が中継遅延票の混在で構造的に fail(E-BFARA1 実測: 受理順 [e1@22:10:03, e4@22:10:42, e3@22:10:29])。\n\n各自コード実測のうえ GoA 付き投票。自案非採用時の受容度(6/7/8)を note に併記。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. TimelineEvent に受理時刻フィールドを追加し、単調性検査を受理時刻軸へ移行。ballot イベントの at は申告値のまま表示用に保存(Issue 記載案。timelineSegment 描画・canonical 型への波及あり)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. ballot/late イベントの at の意味を受理時刻へ変更(申告値は ballot 側にのみ残る — フィールド追加なしで非対称解消、既存 timeline の at 値と意味が変わる破壊的変更)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. 単調性検査(timeline-order)を撤廃(検査価値の喪失 — 非推奨として提示)"
+    }
+  ],
+  "voters": [
+    "e2",
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

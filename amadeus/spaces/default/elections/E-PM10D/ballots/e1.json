@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PM10D",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "原候補の提案者として範囲限定形を支持(E-GMEBT 裁定の維持と両立 — 広義形の不採用はそのまま、信頼境界外・不定長入力の regex に限る完成条件化)。元実測(GOA_HEAD_RE 3.4ms/PM_CID_RE 5.3ms、100KB)はコスト1分未満で、対象限定により固定様式トークン照合への義務化肥大を防ぐ。E-GMEBT record の3名留保が本形を事前支持している。",
+  "submittedAt": "2026-07-20T01:52:55Z"
+}

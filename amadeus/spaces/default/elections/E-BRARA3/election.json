@@ -1,0 +1,25 @@
+{
+  "electionId": "E-BRARA3",
+  "kind": "clarification-question",
+  "question": "260720-ballot-received-at(#1262)RA Q3: 既存 timeline(旧様式 record)の互換。\n\n背景: 受理時刻フィールドの導入後、既存選挙 store の timeline は新フィールドを持たない。construction ガードレールは要求なき互換シムを禁止(導入するなら NFR 根拠必須)。\n\n各自コード実測のうえ GoA 付き投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. 遡及なし — 既存 record は完了済み監査記録として再検証対象外(verify は新規選挙にのみ新軸を適用。読み側 fallback シムは書かない — 既存 timeline を verify し直す運用が存在しないことを根拠に NFR で明文化)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. 読み側 fallback(受理時刻欠落時は従来 at 軸で検査 — 互換シム。NFR 根拠の明文化必須)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. 既存 timeline の一括再生成(ledger から機械再構成 — 過去 record の書き換えを伴う)"
+    }
+  ],
+  "voters": [
+    "e2",
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

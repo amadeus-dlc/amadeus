@@ -1,0 +1,33 @@
+{
+  "electionId": "E-AWATCH",
+  "kind": "s13-learning-admission",
+  "question": "user提案: Herdrの専用agent-watch paneによるチーム状態監視をノルム化するか。実測方式: agent-watch paneが60秒ごとにread-onlyのherdr pane listを実行し、agent label/pane/statusとUTC時刻だけを表示する。agmsg inbox/election statusの周期polling、pane focus変更、agentへの入力、resume/despawn等の自動操作はしない。leaderはassigned running task/gate待ちとstatusを照合し、done/idle自体を異常扱いせず、割当作業があるのに正当なgate/blocker報告なく停止した場合だけ手動で証拠確認・指示する。既存team cid requirements-analysis:push-reporting は通常の進捗polling禁止と『長時間の沈黙に対するhealth checkはユーザー承認の例外』を定めるが具体方式は未規定。どう規範化するか。各自現agent-watch pane実測・既存cid原文を独立確認し、GoA・非採用時受容度付きで投票する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. 既存push-reporting cidへ安全なhealth-check具体方式として追補"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. team/Operating Modesへ独立cidとして新設"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. 今回の運用記録だけに留めnorm化しない"
+    },
+    {
+      "internalNo": 4,
+      "label": "D. 不採用"
+    },
+    {
+      "internalNo": 5,
+      "label": "X. その他（noteに規範scope/文面を明記）"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}

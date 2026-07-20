@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TCRRA1",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "GoA 4(棄権)票の choice は勝者選出の母集団から除外することを design で明文化すること — 規則 (v)『4 は定足数除外』との整合。A の『単純票数』を無条件全票と読むとこの既存規則と衝突する",
+  "rationale": "#1261 レビュー当事者。tally :321/:334-335 の GoA-only 導出と choiceInternalNo 不参照は自分の全数 grep で確定済み。A(choice 多数決+GoA は成立軸)を支持: (1) E-GMEBT のユーザー裁定(choice 2-1 で不採用)と一致する読みであり、既決の人間裁定と整合する実装が最も安全 (2) GoA ノルムの選択型条項(自案非採用時の受容度を GoA で運ぶ)と役割分担が明確 — choice=何を選ぶか、GoA=どれだけ支持/受容するか (3) B の choice 別賛成側集計は『choice X+GoA 7』のような意味論不明な組を勝者選出に混ぜ、解釈規則が複雑化する。自案非採用時: B=6",
+  "submittedAt": "2026-07-19T22:44:15Z"
+}

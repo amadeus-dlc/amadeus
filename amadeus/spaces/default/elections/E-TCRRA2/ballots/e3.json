@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TCRRA2",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "choice 同数 tie はエスカレーション正準リスト (1)『選挙の可否同数』の直接該当であり、機械 tie-break(B)は人間裁定事項の機械化 = P4 逸脱。既存 hold 分岐(HoldReason :310 実読)へ tie を choice 軸で追加する A が最小拡張。B 非採用受容度: 7(正準リストとの矛盾を要件に持ち込むため不本意)。",
+  "submittedAt": "2026-07-19T22:44:10Z"
+}

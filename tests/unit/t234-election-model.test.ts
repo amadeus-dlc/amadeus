@@ -7,6 +7,7 @@ import {
   classifyLate,
   Election,
   Goa,
+  resolveBallots,
   shuffleView,
   tally,
 } from "../../scripts/amadeus-election-model";
@@ -19,12 +20,12 @@ const DEF = {
   voters: ["alice", "bob"],
 };
 
-function ballot(voter: string, goa: number) {
+function ballot(voter: string, goa: number, choiceInternalNo = 1) {
   return {
     electionId: "E-TEST-1",
     voter,
     voterKind: "member",
-    choiceInternalNo: 1,
+    choiceInternalNo,
     goa,
     // GoA 2/3/6 require a reservation (norm (ii)) — supplied so fixtures stay
     // valid across all GoA values; reservation-missing has its own case.
@@ -85,14 +86,15 @@ describe("t234 election-model", () => {
     if (!stringChoice.ok) expect(stringChoice.error).toBe("parse-failure");
   });
 
-  test("tally: zero-confirm favor-majority path establishes adopted", () => {
+  test("tally: single-choice favor input establishes the sole choice as winner", () => {
     const e = Election.parse(DEF);
     if (!e.ok) throw new Error("definition must parse");
     const result = tally(e.value, [mustParse(ballot("alice", 1)), mustParse(ballot("bob", 2))]);
     expect(result.kind).toBe("established");
     if (result.kind === "established") {
-      expect(result.outcome).toBe("adopted");
-      expect(result.counts.favor).toBe(2);
+      expect(result.winner.internalNo).toBe(1);
+      expect(result.choiceCounts).toEqual([{ internalNo: 1, label: "0件で可", count: 2 }]);
+      expect(result.goa.favor).toBe(2);
     }
   });
 
@@ -137,15 +139,14 @@ describe("t234 election-model", () => {
     expect(withReservation.ok).toBe(true);
   });
 
-  test("tally full table: tie, rejected-majority, and discussion-needed branches", () => {
+  test("tally GoA holds: discussion-needed at 2+ GoA-5, a lone GoA-5 still establishes", () => {
     const e = Election.parse(DEF);
     if (!e.ok) throw new Error("definition must parse");
-    const tie = tally(e.value, [mustParse(ballot("alice", 1)), mustParse(ballot("bob", 7))]);
-    expect(tie.kind).toBe("hold");
-    if (tie.kind === "hold") expect(tie.reason).toBe("tie");
-    const rejected = tally(e.value, [mustParse(ballot("alice", 7)), mustParse(ballot("bob", 4))]);
-    expect(rejected.kind).toBe("established");
-    if (rejected.kind === "established") expect(rejected.outcome).toBe("rejected");
+    // GoA-axis favor===against no longer holds — with a single choice the sole
+    // choice wins once the GoA-consensus holds pass (choice winner, Issue #1261).
+    const single = tally(e.value, [mustParse(ballot("alice", 1)), mustParse(ballot("bob", 7))]);
+    expect(single.kind).toBe("established");
+    if (single.kind === "established") expect(single.winner.internalNo).toBe(1);
     const oneDiscuss = tally(e.value, [mustParse(ballot("alice", 5)), mustParse(ballot("bob", 1))]);
     expect(oneDiscuss.kind).toBe("established"); // a single 5 does not hold
     const twoDiscuss = tally(e.value, [mustParse(ballot("alice", 5)), mustParse(ballot("bob", 5))]);
@@ -204,21 +205,232 @@ describe("t234 election-model", () => {
     expect(canEarlyTally(four.value, [b("a", 1), b("b", 1), b("c", 8)])).toBe(false);
   });
 
-  test("classifyLate: post-tally ballots are late, GoA 8 flags reexamRequired", () => {
+  test("classifyLate: lateness is decided on the receipt axis, GoA 8 flags reexamRequired", () => {
     const e = Election.parse(DEF);
     if (!e.ok) throw new Error("definition must parse");
     const tallyTime = "2026-07-19T01:00:00Z";
+    // Received before the tally -> on-time (null), even when submittedAt is late.
     const onTime = mustParse(ballot("alice", 1));
-    expect(classifyLate(tallyTime, onTime)).toBeNull(); // submittedAt 00:00 <= tally
-    // equal boundary (PR #1231 review minor 1): exactly-at-tally is NOT late
-    const atBoundary = mustParse({ ...ballot("alice", 1), submittedAt: tallyTime });
-    expect(classifyLate(tallyTime, atBoundary)).toBeNull();
-    const late = mustParse({ ...ballot("alice", 1), submittedAt: "2026-07-19T02:00:00Z" });
-    const classified = classifyLate(tallyTime, late);
+    expect(classifyLate(tallyTime, "2026-07-19T00:30:00Z", onTime)).toBeNull();
+    // equal boundary (PR #1231 review minor 1): received exactly-at-tally is NOT late
+    expect(classifyLate(tallyTime, tallyTime, onTime)).toBeNull();
+    // E-BRARA2 axis shift (Issue #1262): a ballot with an EARLY submittedAt but a
+    // receipt after the tally is late — the receipt time, not the claimed time,
+    // decides. Old submittedAt-axis code would call this on-time.
+    const earlyClaimLateReceipt = mustParse({
+      ...ballot("alice", 1),
+      submittedAt: "2026-07-19T00:00:00Z",
+    });
+    const classified = classifyLate(tallyTime, "2026-07-19T02:00:00Z", earlyClaimLateReceipt);
     expect(classified?.late).toBe(true);
     expect(classified?.reexamRequired).toBe(false);
-    const lateBlock = mustParse({ ...ballot("bob", 8), submittedAt: "2026-07-19T02:00:00Z" });
-    expect(classifyLate(tallyTime, lateBlock)?.reexamRequired).toBe(true);
+    // Conversely, a FUTURE submittedAt received before the tally is on-time.
+    const futureClaimEarlyReceipt = mustParse({
+      ...ballot("bob", 1),
+      submittedAt: "2026-07-19T05:00:00Z",
+    });
+    expect(classifyLate(tallyTime, "2026-07-19T00:45:00Z", futureClaimEarlyReceipt)).toBeNull();
+    const lateBlock = mustParse({ ...ballot("bob", 8), submittedAt: "2026-07-19T00:10:00Z" });
+    expect(classifyLate(tallyTime, "2026-07-19T02:00:00Z", lateBlock)?.reexamRequired).toBe(true);
+  });
+
+  // --- U1 ballot-acceptance-failclosed (invalid-timestamp / amend / resolve) --
+
+  test("Ballot.parse invalid-timestamp: mint-form regex + real-date, valid mint form passes", () => {
+    const e = Election.parse(DEF);
+    if (!e.ok) throw new Error("definition must parse");
+    // valid mint form (positive control): second-precision UTC with trailing Z
+    const good = Ballot.parse({ ...ballot("alice", 1), submittedAt: "2026-07-19T00:00:00Z" }, e.value);
+    expect(good.ok).toBe(true);
+    // the malformed forms every reject with invalid-timestamp (BR-2/BR-6):
+    const malformed = [
+      "__NOW__", // sentinel, not a timestamp — regex miss
+      "2026-07-19", // date only — regex miss (Date alone would accept this)
+      "2026-07-19T00:00:00.000Z", // millisecond form — not mint form
+      "2026-07-19T00:00:00+09:00", // TZ offset form — not mint form
+      "2026-13-45T99:99:99Z", // regex passes but not a real instant — Date NaN
+    ];
+    for (const submittedAt of malformed) {
+      const r = Ballot.parse({ ...ballot("alice", 1), submittedAt }, e.value);
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error).toBe("invalid-timestamp");
+    }
+  });
+
+  test("Ballot.parse order is deterministic: identity errors precede invalid-timestamp precedes goa", () => {
+    const e = Election.parse(DEF);
+    if (!e.ok) throw new Error("definition must parse");
+    // unknown-voter (identity) wins over a bad timestamp (content)
+    const strangerBadTs = Ballot.parse(
+      { ...ballot("mallory", 1), submittedAt: "nope" },
+      e.value,
+    );
+    expect(strangerBadTs.ok).toBe(false);
+    if (!strangerBadTs.ok) expect(strangerBadTs.error).toBe("unknown-voter");
+    // invalid-timestamp (earlier content check) wins over goa-out-of-range
+    const badTsBadGoa = Ballot.parse(
+      { ...ballot("alice", 9), submittedAt: "nope" },
+      e.value,
+    );
+    expect(badTsBadGoa.ok).toBe(false);
+    if (!badTsBadGoa.ok) expect(badTsBadGoa.error).toBe("invalid-timestamp");
+  });
+
+  test("Ballot.parse kind/ref: missing kind is original, amend requires a well-formed ref", () => {
+    const e = Election.parse(DEF);
+    if (!e.ok) throw new Error("definition must parse");
+    const validRef = { electionId: "E-TEST-1", voter: "alice", submittedAt: "2026-07-19T00:00:00Z" };
+    // missing kind -> original (backward compat FR-3a)
+    const noKind = Ballot.parse(ballot("alice", 1), e.value);
+    expect(noKind.ok).toBe(true);
+    if (noKind.ok) expect(noKind.value.kind).toBe("original");
+    // explicit original
+    const orig = Ballot.parse({ ...ballot("alice", 1), kind: "original" }, e.value);
+    expect(orig.ok).toBe(true);
+    if (orig.ok) expect(orig.value.kind).toBe("original");
+    // amend with valid ref -> amend, ref preserved verbatim
+    const amend = Ballot.parse({ ...ballot("alice", 1), kind: "amend", ref: validRef }, e.value);
+    expect(amend.ok).toBe(true);
+    if (amend.ok && amend.value.kind === "amend") expect(amend.value.ref).toEqual(validRef);
+    // amend missing ref -> parse-failure (structural)
+    const noRef = Ballot.parse({ ...ballot("alice", 1), kind: "amend" }, e.value);
+    expect(noRef.ok).toBe(false);
+    if (!noRef.ok) expect(noRef.error).toBe("parse-failure");
+    // amend ref of wrong type -> parse-failure
+    const badRef = Ballot.parse({ ...ballot("alice", 1), kind: "amend", ref: "x" }, e.value);
+    expect(badRef.ok).toBe(false);
+    if (!badRef.ok) expect(badRef.error).toBe("parse-failure");
+    // amend ref.submittedAt invalid -> parse-failure (same two-stage check)
+    const badRefTs = Ballot.parse(
+      { ...ballot("alice", 1), kind: "amend", ref: { ...validRef, submittedAt: "2026-07-19" } },
+      e.value,
+    );
+    expect(badRefTs.ok).toBe(false);
+    if (!badRefTs.ok) expect(badRefTs.error).toBe("parse-failure");
+    // any other kind value -> parse-failure (fail-closed)
+    const bogusKind = Ballot.parse({ ...ballot("alice", 1), kind: "revoke" }, e.value);
+    expect(bogusKind.ok).toBe(false);
+    if (!bogusKind.ok) expect(bogusKind.error).toBe("parse-failure");
+  });
+
+  test("resolveBallots: latest per voter, same-timestamp tie favors later arrival, idempotent", () => {
+    const early = mustParse({ ...ballot("alice", 1), submittedAt: "2026-07-19T00:00:00Z" });
+    const late = mustParse({ ...ballot("alice", 7), submittedAt: "2026-07-19T02:00:00Z" });
+    // (1) latest submittedAt wins for a voter
+    const r1 = resolveBallots([early, late]);
+    expect(r1.length).toBe(1);
+    expect(r1[0]?.goa as number).toBe(7);
+    // (2) same-timestamp tie: an amend appended after its target (later index)
+    // wins via >= (the store guarantees this ordering)
+    const original = mustParse({ ...ballot("alice", 1), submittedAt: "2026-07-19T00:00:00Z" });
+    const amend = mustParse({
+      ...ballot("alice", 7),
+      kind: "amend",
+      ref: { electionId: "E-TEST-1", voter: "alice", submittedAt: "2026-07-19T00:00:00Z" },
+      submittedAt: "2026-07-19T00:00:00Z",
+    });
+    const r2 = resolveBallots([original, amend]);
+    expect(r2.length).toBe(1);
+    expect(r2[0]?.kind).toBe("amend");
+    // (3) multiple voters -> one ballot each
+    const bob = mustParse({ ...ballot("bob", 2), submittedAt: "2026-07-19T00:10:00Z" });
+    const r3 = resolveBallots([early, late, bob]);
+    expect(r3.length).toBe(2);
+    expect([...new Set(r3.map((b) => b.voter))].sort()).toEqual(["alice", "bob"]);
+    // (4) idempotent: resolving a resolved list yields the same set
+    expect(resolveBallots(r3)).toEqual(r3);
+  });
+
+  test("classifyLate is per-ballot (non-resolving): a late amend stays its own late row", () => {
+    const tallyTime = "2026-07-19T01:00:00Z";
+    // classifyLate takes a single ballot, never a set — it structurally cannot
+    // resolve. A late amend is classified on its own receipt time (BR-4b: late
+    // lane amends are NOT resolved into the fixed set).
+    const lateAmend = mustParse({
+      ...ballot("alice", 1),
+      kind: "amend",
+      ref: { electionId: "E-TEST-1", voter: "alice", submittedAt: "2026-07-19T00:00:00Z" },
+      submittedAt: "2026-07-19T02:00:00Z",
+    });
+    const classified = classifyLate(tallyTime, "2026-07-19T02:00:00Z", lateAmend);
+    expect(classified?.late).toBe(true);
+    expect(classified?.ballot.kind).toBe("amend");
+    expect(classified?.reexamRequired).toBe(false);
+  });
+
+  // --- Issue #1261: choiceInternalNo decides the winner ---------------------
+
+  const twoChoice = (voters: string[]) =>
+    Election.parse({
+      ...DEF,
+      choices: [
+        { internalNo: 1, label: "c1" },
+        { internalNo: 2, label: "c2" },
+      ],
+      voters,
+    });
+
+  test("tally: winner is the choice with the most votes (E-GMEBT #1261 repro)", () => {
+    // The E-GMEBT ballots from Issue #1261: e2/e4 vote choice 2, e3 votes
+    // choice 1, all GoA 2. The GoA distribution is uniform, so a choice-blind
+    // tally cannot decide — the winner must come from choiceInternalNo.
+    const el = twoChoice(["e2", "e4", "e3"]);
+    if (!el.ok) throw new Error("definition must parse");
+    const ballots = [
+      mustParseIn(el.value, ballot("e2", 2, 2)),
+      mustParseIn(el.value, ballot("e4", 2, 2)),
+      mustParseIn(el.value, ballot("e3", 2, 1)),
+    ];
+    const result = tally(el.value, ballots);
+    expect(result.kind).toBe("established");
+    if (result.kind === "established") {
+      expect(result.winner.internalNo).toBe(2);
+      expect(result.choiceCounts).toEqual([
+        { internalNo: 1, label: "c1", count: 1 },
+        { internalNo: 2, label: "c2", count: 2 },
+      ]);
+    }
+  });
+
+  test("tally: GoA-4 abstentions are excluded from winner selection and choiceCounts", () => {
+    const el = twoChoice(["a", "b", "c"]);
+    if (!el.ok) throw new Error("definition must parse");
+    // c abstains (GoA 4) for choice 2 — that vote must not count for choice 2.
+    const ballots = [
+      mustParseIn(el.value, ballot("a", 1, 1)),
+      mustParseIn(el.value, ballot("b", 1, 1)),
+      mustParseIn(el.value, ballot("c", 4, 2)),
+    ];
+    const result = tally(el.value, ballots);
+    expect(result.kind).toBe("established");
+    if (result.kind === "established") {
+      expect(result.winner.internalNo).toBe(1);
+      expect(result.choiceCounts.find((c) => c.internalNo === 2)?.count).toBe(0);
+      expect(result.goa.abstain).toBe(1); // whole-set GoA count still records it
+    }
+  });
+
+  test("tally: a choice tie holds with reason tie", () => {
+    const el = twoChoice(["a", "b"]);
+    if (!el.ok) throw new Error("definition must parse");
+    const result = tally(el.value, [
+      mustParseIn(el.value, ballot("a", 1, 1)),
+      mustParseIn(el.value, ballot("b", 1, 2)),
+    ]);
+    expect(result.kind).toBe("hold");
+    if (result.kind === "hold") expect(result.reason).toBe("tie");
+  });
+
+  test("Ballot.parse rejects a choiceInternalNo not in the election (fail-closed)", () => {
+    const e = Election.parse(DEF); // single choice {internalNo: 1}
+    if (!e.ok) throw new Error("definition must parse");
+    for (const bad of [2, 0, -1]) {
+      const r = Ballot.parse(ballot("alice", 1, bad), e.value);
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error).toBe("unknown-choice");
+    }
+    // a valid choice still parses
+    expect(Ballot.parse(ballot("alice", 1, 1), e.value).ok).toBe(true);
   });
 });
 

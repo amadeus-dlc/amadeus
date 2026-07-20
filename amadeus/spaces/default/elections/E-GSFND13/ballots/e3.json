@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFND13",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "c1/c2不採用・c3採用を支持。c1はE-GSFND1のintent固有seam、c2はnumbers-from-command-output-only/verify-before-notifyの違反実例で新規性なし。c3は実regex対照で非anchored scannerがE-ABC-/E-ABC-xからvalid prefix E-ABCをmatchし、E-SDE-CG4は全長matchする一方、anchored GoaLineCode validatorは前2者をwhole-value拒否することを再現した。同じsegment文法を共有してもaccepted languageは別であり、設計引用時にanchoringと所有面を明記・対照testする追補は横断的に再利用できる。",
+  "submittedAt": "2026-07-20T08:02:09Z"
+}

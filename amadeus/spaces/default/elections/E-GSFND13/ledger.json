@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GSFND13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "c1/c2不採用・c3採用を支持。c1はE-GSFND1のintent固有seam、c2はnumbers-from-command-output-only/verify-before-notifyの違反実例で新規性なし。c3は実regex対照で非anchored scannerがE-ABC-/E-ABC-xからvalid prefix E-ABCをmatchし、E-SDE-CG4は全長matchする一方、anchored GoaLineCode validatorは前2者をwhole-value拒否することを再現した。同じsegment文法を共有してもaccepted languageは別であり、設計引用時にanchoringと所有面を明記・対照testする追補は横断的に再利用できる。",
+      "submittedAt": "2026-07-20T08:02:09Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GSFND13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "c1/c2不採用・c3採用。c1のscanGoaHeads seamはE-GSFNR1留保を本intentで具体化した固有裁定。c2はcommand出力前の見込み値報告で、numbers-from-command-output-only / verify-before-notifyの既存違反実例としてPM回付が適切。c3は実regex対照で、非anchored scannerがE-ABC-/E-ABC-xからvalid prefix E-ABCをmatchする一方、anchored whole-value validatorは拒否し、E-SDE-CG4は全長受理することを確認した。同じsegment文法でもscannerとvalidatorの所有面・accepted languageは同一でないという一般化可能な意味論であり、独立cidでなく既存citation-semantics-checkへのregex anchoring面1行追補が適切。成果物の対照assertとreview it.2是正後sensor PASSもaudit確認した。",
+      "submittedAt": "2026-07-20T08:02:23Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GSFND13",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "c1/c2不採用・c3採用(GoA1)。e4 worktreeをリードオンリー実測した。c1はE-GSFND1のintent固有seam、c2はnumbers-from-command-output-only/verify-before-notifyの既存違反実例で新規性なし。一方c3は同じsegment文法でも非anchored scannerとanchored whole-value validatorのaccepted languageが異なる点を明示する横断的な引用意味論である。独立regex対照でもE-ABC-/E-ABC-xはscannerがE-ABC prefixを返す一方validatorはfalse、E-SDE-CG4はscanner全長かつvalidator trueを再現した。既存citation-semantics-checkへの追補統合が妥当。",
+      "submittedAt": "2026-07-20T08:02:40Z"
+    }
+  ],
+  "late": []
+}

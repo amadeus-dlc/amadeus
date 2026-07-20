@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GMECG",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測: (1) ヒヤリハットの一次記録実在 — e1 diary 20:30:32Z Deviation+code-summary.md:29-31 の申告(fix 未コミットで checkout HEAD → 一時消失 → 即時回復)をリードオンリー確認。 (2) 既存 falling-proof-no-stash 原文(team.md)を照合 — 『復元は regen/再 checkout』は復元手段のみ規定し、fix コミット前の checkout HEAD が修正自体を消す時系列条件・復元 ref の明示を規定していない = 含意で足りるとの読みは原文実測で否定(不採用理由候補への反証)。stash 系(bare stash が修正を失う)と checkout 系(未コミットが消える)は同型の罠で追補統合が体系上も正しい。採用(1)",
+  "submittedAt": "2026-07-19T20:32:35Z"
+}

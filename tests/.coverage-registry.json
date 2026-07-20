@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 474,
+    "total": 478,
     "enumeratedByClass": {
-      "function": 245,
+      "function": 249,
       "audit": 75,
       "scope": 10,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 111,
+      "function": 115,
       "audit": 32,
       "scope": 10,
       "stage": 8,
@@ -1184,6 +1184,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:clearActiveIntentCursor",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t243-post-complete-audit-stop.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:CLONE_ID_FILE",
       "minMechanism": "none",
       "coveredBy": [],
@@ -1430,6 +1442,18 @@
       "coveredBy": [
         {
           "file": "tests/integration/t-ensure-stage-diary.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:ensureStageDiaryForDirective",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-diary-autogen-guard.test.ts",
           "mechanism": "none"
         }
       ],
@@ -1744,6 +1768,18 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:intentStatusForAudit",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t243-post-complete-audit-stop.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -2080,6 +2116,18 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:memoryPathNamesIntentRecord",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-diary-autogen-guard.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSPD2",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。是正後 practices-discovery-timestamp.md は wc -l=1 で、stage 正本の Discovered: <ISO-8601 timestamp> at commit <hash> と一致する。最新監査・detail を実読し、team-practices/discovered-rules/evidence は required-sections 3/3・upstream-coverage 3/3 PASS、timestamp は canonical shape のまま required-sections h2_count=0/findings=2 と upstream-coverage unreferenced=6 を advisory FAIL として正しく露出している。memory の Deviation は初回14行/H2 2個への偽緑化、E-USSPD 開票停止、正本復元を記録済み。これは E-FVEPD 採用規範の every sensor predicate と canonical shape の照合に、required-sections と upstream-coverage の双方が含まれる適用・違反実例であり、別の新規規範は不要。",
+  "submittedAt": "2026-07-20T07:23:47Z"
+}

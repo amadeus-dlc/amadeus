@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFAIC",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 worktree をリードオンリー実測: 成果物3点(intent-statement/stakeholder-map/intent-capture-questions)+memory.md の実在を ls 確認、diary 3点(intent-capture:c1 適用の全問 E-OC1 判定構成 / t238 除外方針=e1 #1226 intent との非交差 / tally amend 解決規則の design 段送り)を verbatim 確認、E-OC1 ヘッダに判定申告 15:03Z 頃+leader 承認 15:04:05Z の記載を確認、audit シャード grep で SENSOR_FAILED 0・SENSOR_PASSED 17 を実測。3点はいずれも intent-capture:c1・ディスパッチ要件・c6 非交差判定の適用実例であり新規学習なし。#1252/#1253 のクロスレビュー当事者(1人目)としても、質問構成が Issue 確定事実の範囲に収まっており未決事項の先取りがないことを確認。0件で可",
+  "submittedAt": "2026-07-19T15:07:24Z"
+}

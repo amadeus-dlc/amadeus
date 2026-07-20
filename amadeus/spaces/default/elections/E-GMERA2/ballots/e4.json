@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GMERA2",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "PM_CID_RE :161 の round=(E-[A-Z0-9]+) を verbatim 実測、複節 round= の corpus 実在 0 件も grep -rhoE で再確認(全ヒット0)。同一ファイル・同一欠陥形状・同一修正(ハイフン許容)であり、same-root-inventory は『同一 PR で修正するか Issue 化』の二択を許すが、修正コストがほぼゼロ(regex 1箇所+テスト1ケース)の本件で Issue 化を選ぶ理由がない。将来の複節ラウンド名(E-SDE-CG4 級の PM ラウンド)への先回りにもなる。自案非採用時: B=6",
+  "submittedAt": "2026-07-19T14:57:53Z"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CCCRE",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "修正PRが速やかに着地して残留機序ごと消えるなら persist 省略可 — 採否は修正の着地見込みで判断してよい",
+  "rationale": "候補1件: 『intent complete 後も active-intent カーソルは残留し、hooks(mint-presence/session/sensor)が完了済み intent のシャードへ追記継続する(#1248)。止血のカーソル削除は multi-intent workspace でのみ有効 — lone-intent では fallback(amadeus-lib.ts:1080)が完了済み record を解決し続け追記継続(scratch 再現で実測、Issue #1248 コメント参照)。修正着地までの運用知識』。根拠 file:line — amadeus-state.ts:1550-1680(complete-workflow にカーソル解放なし)/ amadeus-lib.ts:1729・:2147(カーソル書込は2箇所のみ・削除経路不存在)/ amadeus-lib.ts:1080(lone-intent fallback)。parked-intent-birth-workaround(PM3-7、#750 の parked 版)と同クラスの暫定運用知識であり、既存 cid の適用実例ではなく complete 版の新規追加に当たる",
+  "submittedAt": "2026-07-19T14:42:05Z"
+}

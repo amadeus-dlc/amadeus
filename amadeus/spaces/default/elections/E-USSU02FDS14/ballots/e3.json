@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSU02FDS14",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Aを支持。requirements-analysis:delegate-issue-commit-atomicはdelegate発行と監査シャードcommit/pushの配送運用を不可分にする手順であり、複数audit blockとstate writeのin-process transaction原子性、failure injection、再実行収束を扱わない。追補統合すると責務と適用stageが混ざる。独立cid functional-design:audit-batch-before-state-atomicityなら設計時にlogical transactionのcommit境界を固定し、後続実装テストへfailure boundaryを一意に渡せる。非採用時受容度: B=7（機序・責務の異なるcidへ混載）、X=6（同じfunctional-design責務を保つ別exact cidなら受容）。",
+  "submittedAt": "2026-07-20T12:02:43Z"
+}

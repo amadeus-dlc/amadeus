@@ -154,11 +154,16 @@ export const DEFAULT_DISTILL_K = 5;
 
 // FR-3 Phase B input schemas (parse-only). A GoA persist line (ADR-4):
 //   `GoA[E-<code>]: 1x<n> 2x<n> 3x<n> 4x<n> 5x<n> 6x<n> 7x<n> 8x<n>`
-const GOA_HEAD_RE = /^GoA\[(E-[A-Z0-9]+)\]:\s*(.+)$/;
+// The ADR-4 E-code accepts hyphenated multi-segment codes (e.g. E-SDE-CG4,
+// E-APG-CG13); the captured ecode is returned verbatim, unchanged. Note the
+// team.md real corpus also carries a sparse per-subquestion form
+// (`c1 1x2 2x1 / c2 ...`) that this parse does NOT cover — it accepts the
+// canonical 8-bin form only (tracked separately as its own Issue).
+const GOA_HEAD_RE = /^GoA\[(E-[A-Z0-9]+(?:-[A-Z0-9]+)*)\]:\s*(.+)$/;
 const GOA_TOKEN_RE = /^([1-8])x(\d+)$/;
 // A PM round record line (ADR-4):
 //   `PM-cid: <full-cid> incident=<one-line> round=<E-PMn>`
-const PM_CID_RE = /^PM-cid:\s+([a-z0-9-]+(?::[a-z0-9-]+)*)\s+incident=(.+)\s+round=(E-[A-Z0-9]+)$/;
+const PM_CID_RE = /^PM-cid:\s+([a-z0-9-]+(?::[a-z0-9-]+)*)\s+incident=(.+)\s+round=(E-[A-Z0-9]+(?:-[A-Z0-9]+)*)$/;
 
 // ---------------------------------------------------------------------------
 // Pure helpers.

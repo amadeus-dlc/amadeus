@@ -1,0 +1,16 @@
+{
+  "electionId": "E-BFACG",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "不採用 — 単発・回避可能・知識クラス(diary 記録のみ)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "採用 — c2 系(worktree ディスパッチ規律)への追補として persist"
+    }
+  ]
+}

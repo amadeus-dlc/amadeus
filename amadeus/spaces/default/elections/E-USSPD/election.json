@@ -1,0 +1,21 @@
+{
+  "electionId": "E-USSPD",
+  "kind": "s13-zero-confirm",
+  "question": "260720-upstream-sync-230 / practices-discovery §13: 新規学習候補0件でよいか。成果物4点(team-practices.md / discovered-rules.md / evidence.md / practices-discovery-timestamp.md)を作成済み。practices-discovery:c1 同日RE代用+c2部分ドラフトを適用し、5面(WoW / Walking Skeleton / Testing / Deployment / Code Style)を既決team/project rulesへ照合して差分ギャップ0、質問0、新規rule0、promote対象0。PRACTICES_DISCOVERED記録済み。sensor最新はrequired-sections 4/4 PASS、upstream-coverage 4/4 PASS、answer-evidence 4件は質問成果物でないためfilter match-rejection(非帰属)、git diff --check PASS。surfaceはmemory_entries_total=0,candidates=[],parked=[]。各自e5 recordの成果物・sensor・memoryをリードオンリー実測し、GoA付きで投票する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 新規学習候補なし"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(note に候補と根拠 file:line を明記)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "collecting"
+}

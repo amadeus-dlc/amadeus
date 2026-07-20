@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSDPS13R",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。final DPの5成果物とphase-checkを実読し、E-USSDP1R/2Rの採用内容・GoA・留保が逐語的に反映されていること、12 one-Unit Bolt、U01→U02→U09→U10→U11の限定progressive skeleton、plugin 4 Unitの独立review/rollback/verification境界、U11 e2e closure、残DAG最大4並行、WSJFなしが整合することを確認した。最終phase-check修正後、宣言5成果物とphase-checkはrequired-sections/upstream-coverageが全PASS、questionsはanswer-evidenceもPASSし、その後の最終増分reviewがREADY/findings0で、review後の対象変更はない。memory.mdはstage frontmatterのproduces 5件に含まれず、directiveでもmemory_pathとproducesが別フィールドのengine管理observation diaryであるため、手動全数発火のupstream-coverage FAILED6はconsumes引用を要求された非produces diary由来の既知advisoryという分類が妥当。c1/c2はいずれも本upstream-syncのDAG・裁定・既決team practiceを具体化したintent固有計画で、新規横断normではない。旧E-USSDPS13および誤前提の旧E-USSDP1/2は根拠に用いていない。",
+  "submittedAt": "2026-07-20T08:31:59Z"
+}

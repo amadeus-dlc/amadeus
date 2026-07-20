@@ -1,0 +1,26 @@
+{
+  "electionId": "E-USSDP2",
+  "voter": "e2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "C. 12 one-Unit strict sequential"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "A. risk-first / 12 one-Unit Bolts / 最大4並行 / WSJFなし"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 4,
+      "label": "X. その他(noteに順序・粒度・並行度を明記)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 2,
+      "label": "B. plugin4独立 + 非plugin8を約4 Boltへbundle"
+    }
+  ]
+}

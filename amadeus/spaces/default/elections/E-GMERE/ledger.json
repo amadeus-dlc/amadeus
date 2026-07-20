@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GMERE",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測: base 6495e03a1 の祖先性を自ツリーで再実測(--is-ancestor exit 0・距離178、record 記載と一致 = rescan-base-ancestry 適用実例)。e1 record の team.md GoA 9行目録・NOT COLLECTED(:544)・GOA_HEAD_RE(:157)は自分の #1226 クロスレビュー実測(accepted=1/rejected=8)と整合。diary に Deviations 0・未決点は requirements へ委譲済み。適用ノルム(rescan-base-ancestry/c1/c3-relabel/same-root-inventory)は全て既存 cid の適用実例で、スパース表記の発見は intent の対象事実(requirements 材料)であり process 学習ではない。0件で可(1)",
+      "submittedAt": "2026-07-19T14:43:45Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GMERE",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測: (1) codekb 9点の実在を e1 record で ls 確認(9ファイル) (2) base 6495e03a1 の祖先性を git merge-base --is-ancestor exit 0 で再実測 (3) 中核主張『team.md 実 GoA 行9行が parseGoaLine で pass=0/headFail=8/binFail=1』を自 tree で parseGoaLine 直呼びし完全一致で再現(GOA_HEAD_RE=amadeus-norm-metrics.ts:157、bin 段 :692 も verbatim 照合)。適用4ノルム(rescan-base-ancestry/re:c1/c3-relabel/same-root-inventory)はいずれも既存 cid の正しい適用実例。#1226 の根本原因クラス(schema を corpus 実様式と照合せず固定)は既存 cid format-currency-grep-for-parser-intents(E-1101-RA)が既にカバーしており、新規ノルム化は二重規定になる。latent consumer 事実は codekb に記録済みの intent 固有知識で足りる。よって 0件で可",
+      "submittedAt": "2026-07-19T14:43:45Z"
+    }
+  ],
+  "late": []
+}

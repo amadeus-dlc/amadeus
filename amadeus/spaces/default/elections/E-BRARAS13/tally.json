@@ -1,0 +1,38 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T00:42:30Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-BRARAS13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e1 record リードオンリー実測: 成果物3点実在、私の E-BRARA1 留保(canonical 1定義導出+波及最小化)が FR-1 へ verbatim 転記されていることを起案者として確認。diary に E-BRARA1〜3 全 A 採用(3-0)+留保3件の転記記録、reviewer 条件付き READY(GoA3)の条件 Major-1(FR-1 の遡及再検証誤読リスク)は要件文の曖昧さで既存ノルム違反実例に非該当・1句追記是正済みという分類も妥当(E-BRARA3=A の趣旨と整合)。プロセス新規なし。0件で可(1)。",
+      "submittedAt": "2026-07-20T00:41:49Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-BRARAS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e1 record をリードオンリー実測+当事者照合: (1) 留保分母を3 ledger 実読で再計算 — E-BRARA1 e3 GoA2 / E-BRARA2 e4 GoA2 / E-BRARA3 e4 GoA2 = 3件で質問の 3/3 と一致 (2) 自票留保2件の転記を起案者照合 — FR-3(store.ts:146-150 null-fallback の死码化トレース・削除裁定)と FR-4(移行窓 fixture+1点限定 NFR)がいずれも verbatim 転記 (3) 裁定 A/A/A は受領裁定と一致し、FR-1 の受け入れ基準が『E-BFARA1 実データを FR-5 の回帰 fixture として使うが record 自体は FR-4 により再検証しない』と両裁定の整合を明文化している点は citation-semantics 級の丁寧さ (4) reviewer 条件 Major-1(要件文の曖昧さ→1句追記是正)は成果物品質の通常イテレーションでノルム違反実例に該当せず、0件判定と整合。新規ノルムの隙間なし、0件で可",
+      "submittedAt": "2026-07-20T00:42:05Z"
+    }
+  ],
+  "resolutions": []
+}

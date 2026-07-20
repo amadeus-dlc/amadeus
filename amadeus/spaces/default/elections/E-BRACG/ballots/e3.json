@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BRACG",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e1 record リードオンリー実測: CG 成果物2点(plan/summary)が unit dir 様式で実在、diary に builder 完遂(隔離維持・逸脱なし — c2 追補2 の焼き込み適用)、E-BRARA2 e4 留保の premise 確認(null-fallback 同一秒境界の生存判定 = ruling-premise-closure-verification の適用)、transient 偽赤の確定記録(編集途中への自動発火 — manual-sensor-fire 追補4 と同族の既知偽赤クラスとして diary 固定)を確認。全て既存 cid の適用実例でプロセス新規なし。0件で可(1)。",
+  "submittedAt": "2026-07-20T01:32:18Z"
+}

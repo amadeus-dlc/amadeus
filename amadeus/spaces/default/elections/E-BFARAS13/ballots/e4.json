@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFARAS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record をリードオンリー実測: (1) 留保転記の当事者照合 — E-BFARA1 の自票留保(normalizeAt の残置/除去を design で明示)が requirements FR-1(:12)へ verbatim 転記され、分母1(留保必須票 = 自分の GoA2 のみ)=転記1 の件数照合が成立 (2) 裁定転記 A/A/A は自分の受領裁定と一致、GoA 内訳表記(1x2 2x1 / 3-0)も自票と整合 (3) diary 3点は ruling-dependent-placeholder(裁定待ち欄の先取り禁止)/ reservation-transcription-count-check / fix-diff-independent-reverify(是正文の実測値転記)の適用実例で、いずれも既存 cid の射程内 (4) minor 是正(固定件数12→glob 全数列挙)は enumeration 系既存 cid の運用。新規ノルムの隙間なし、0件で可",
+  "submittedAt": "2026-07-19T22:26:27Z"
+}

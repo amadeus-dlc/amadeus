@@ -1,0 +1,16 @@
+{
+  "electionId": "E-BRARA2",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "B. submittedAt 軸を維持(現状固定 t234:207-220 不変 — 中継遅延票が「late でないのに tally 後に受理」される穴は注記のみ)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "A. 受理時刻軸へ移行(late = 受理が tally 後 — 遅延の実態と一致。e2 の最新解決は submittedAt 軸のままで独立)"
+    }
+  ]
+}

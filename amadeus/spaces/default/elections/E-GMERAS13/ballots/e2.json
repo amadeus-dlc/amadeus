@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GMERAS13",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測(e1 worktree リードオンリー): requirements.md の留保転記を件数照合 — 留保必須票は E-GMERA1/E-GMERA3 の e4 GoA2 の2件(自分は両選挙 GoA1 投票者として分母を直接知る)、FR-2(c)/FR-5 に verbatim 転記2件で一致(reservation-transcription-count-check)。diary の違反実例2件(mechanism-cite-verify-at-draft 過大引用 / artifact-upstream-inputs-header 装飾トークン)は既存 cid の違反実例で PM 回付が適切、新規学習なし。FR-5 の t238 反転帰属(e1 intent 内)は自 intent 260719-ballot-failclosed-amend の C-2 非交差前提とも整合。0件で可(1)",
+  "submittedAt": "2026-07-19T15:12:35Z"
+}

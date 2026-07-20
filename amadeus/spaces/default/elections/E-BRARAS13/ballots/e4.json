@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BRARAS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e1 record をリードオンリー実測+当事者照合: (1) 留保分母を3 ledger 実読で再計算 — E-BRARA1 e3 GoA2 / E-BRARA2 e4 GoA2 / E-BRARA3 e4 GoA2 = 3件で質問の 3/3 と一致 (2) 自票留保2件の転記を起案者照合 — FR-3(store.ts:146-150 null-fallback の死码化トレース・削除裁定)と FR-4(移行窓 fixture+1点限定 NFR)がいずれも verbatim 転記 (3) 裁定 A/A/A は受領裁定と一致し、FR-1 の受け入れ基準が『E-BFARA1 実データを FR-5 の回帰 fixture として使うが record 自体は FR-4 により再検証しない』と両裁定の整合を明文化している点は citation-semantics 級の丁寧さ (4) reviewer 条件 Major-1(要件文の曖昧さ→1句追記是正)は成果物品質の通常イテレーションでノルム違反実例に該当せず、0件判定と整合。新規ノルムの隙間なし、0件で可",
+  "submittedAt": "2026-07-20T00:42:05Z"
+}

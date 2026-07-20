@@ -1,0 +1,36 @@
+{
+  "electionId": "E-FVEADS13R",
+  "voter": "e2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "c1+c2を採用、c3は不採用"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "c1のみ採用"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 6,
+      "label": "その他（noteに採否組合せを明記）"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 4,
+      "label": "c2のみ採用"
+    },
+    {
+      "displayNo": 5,
+      "internalNo": 2,
+      "label": "c1+c2+c3をすべて採用"
+    },
+    {
+      "displayNo": 6,
+      "internalNo": 5,
+      "label": "c1+c2+c3をすべて不採用"
+    }
+  ]
+}

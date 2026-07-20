@@ -1,0 +1,29 @@
+{
+  "electionId": "E-USSDP1R",
+  "kind": "clarification-question",
+  "question": "260720-upstream-sync-230 / delivery-planning Q1（前提訂正版）: team-practices『plugin greenfieldを最初Boltでend-to-end』とE-USSUG1 e3留保『plugin contract/projection/composition/referenceを4独立Bolt』をどう両立するか。A=5-Bolt progressive skeleton（U01 stage-contract → U02 runtime-recovery → U09 plugin-projection → U10 plugin-composition → U11 reference-plugin-and-guides。plugin 4 Unitは独立Boltのまま、第5 Boltでe2e closure）。B=thin vertical Boltを追加後、4 Unitを完全化（重複と責務所有を明示）。C=plugin 4 Unitを最初の1 Boltへbundle（e3留保違反）。旧E-USSDP1はAのDAG前提が誤りのため無効・開票禁止。各自e5 questions、team-practices、UG裁定/留保、12 Unit DAGを実測し、GoA・非採用時受容度付きで投票する。全票はleader現行CLIで受理する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. 5-Bolt progressive skeleton（U01→U02→U09→U10→U11）"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. thin vertical Bolt追加後に4 Unit完全化"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. plugin 4 Unitを最初の1 Boltへbundle"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他(noteに両立方式を明記)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}

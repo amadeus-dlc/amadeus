@@ -1,0 +1,21 @@
+{
+  "electionId": "E-TCRCGS13",
+  "kind": "s13-adoption",
+  "question": "intent 260719-tally-choice-ruling / code-generation の §13 学習候補1件の採否。候補(conductor 起案 verbatim): 『worktree 隔離 subagent の resume は隔離を保証しない — 再開は新規 Agent(isolation:worktree)で行うか、再開直後に cwd/branch を実測検証する(#1269 実測)』。実測根拠: 逸脱選挙後の builder 再開(SendMessage resume)が worktree 隔離を失い conductor 本線ツリーで実行された(cwd=engineer-1・bolt ブランチへ switch。実害なし — team ブランチ全 push 済み・復旧後 clean 実測・record 無傷)。#1269 として Issue 起票済み(クロスレビュー進行中)。ステージ文脈: builder 全検証 exit 0・落ちる実証 6fail→17pass・閉包 winner=2・PR #1268 発行済み。各自 e1 record と #1269 を実測確認のうえ GoA 付きで投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "採用 — 新規 cid または既存 cid(c2 worktree ディスパッチ規律系)への追補として persist"
+    },
+    {
+      "internalNo": 2,
+      "label": "不採用 — #1269 の documentation 起票で足りる(diary 記録のみ)"
+    }
+  ],
+  "voters": [
+    "e2",
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

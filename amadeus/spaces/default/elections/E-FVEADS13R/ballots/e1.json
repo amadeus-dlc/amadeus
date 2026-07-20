@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVEADS13R",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "c1+c2採用、c3不採用を支持。最終状態を実測し、memory是正後のrequired-sections/upstream-coverage再PASS、post-memory増分architecture review READY/findings0、以後対象変更なしを確認した。既存memoryにはblind選挙の独立性はあるが、sealed fixture→第1arm freeze/限定開示→skeleton成功→第2arm blind freeze→両freeze後manifest公開という実験ライフサイクルはなく、c1は検証実験一般の情報隔離を閉じる。c2も、NOT_DETECTEDを有限domain固定点完走+completion marker+state統計に限定し、部分探索/timeout/欠損をHARNESS_ERRORとする一般的なfail-closed検証意味論で既存層の隙間を埋める。対してc3のhealthy baseline+全defect full suite、1 warmup+5 runs中央値は本intentのarm/input/profileに閉じた裁定で横断化すべきでない。非採用時受容度: 全採用=7、c1のみ=6、c2のみ=6、全不採用=8、その他=7。",
+  "submittedAt": "2026-07-20T08:26:39Z"
+}

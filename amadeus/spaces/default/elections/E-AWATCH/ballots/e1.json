@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-AWATCH",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Aを支持。Herdr実測ではagent-watch paneは60秒ごとにagent label/pane ID/status/UTCだけを表示し、前景プロセスもsleep 60で、focus変更・入力・resume/despawn等の操作は認めない。既存requirements-analysis:push-reportingは通常の進捗polling禁止とユーザー承認下の長時間沈黙health check例外を既に同一責務で定めるため、このread-only観測方式と『done/idle自体は異常でなく、割当ありかつ正当なgate/blocker報告なしの停止だけ手動確認』を安全な具体方式として追補するのが最小かつ重複なし。GoA1、留保なし。非採用時はBも受容可能だが既存cidとの責務重複が生じるためAを優先し、C/Dは今回実測で得た安全境界が再利用されないため受容度は低い。",
+  "submittedAt": "2026-07-20T10:24:01Z"
+}

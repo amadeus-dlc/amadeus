@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSUG1",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Aを支持。AD実測でC2は実装420–760行+test650–1,050行、C4は520–850+650–1,000、C7はtest1,100–1,750+docs420–720とcomponent単位ではXL。recovery/gate・swarm/naming・routing/guard・iteration/preview、およびplugin contract/projection/composition/referenceを変更理由ごとに分ける12 Unitsなら、各Unitへtargeted test/docsを同乗させつつC1/C2/C5/filesystem transactionの既決seamとcycle-free DAGを維持し、最大4並行・小batchレビューに適合する。実装順はDPへ委譲するためUnit数増加が経済順序を先取りしない。非採用時受容度: B=8（C2/C7のXL集中）、C=5（中間案だがplugin変更理由の過凝集が残る）。",
+  "submittedAt": "2026-07-20T07:50:53Z"
+}

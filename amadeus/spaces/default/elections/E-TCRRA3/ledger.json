@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TCRRA3",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "choice 別票数内訳のフィールド名・形は e2 intent の per-voter 最新解決(E-BFARA2=A)後の母集団を数える前提で設計すること — amend 導入後に『どの票を数えたか』が内訳の意味を変えるため、design で母集団定義を1文固定する",
+      "rationale": "#1261 レビュー当事者。A(winner+choice 内訳+GoaCounts 保持)を支持: (1) #1261 の実害は『record.md だけ読むと誤裁定に気づけない』ことで、人間の捕捉は ballots 実読を要した — choice 内訳の record 描画はこの検出コストを構造的に消す(監査可能性が本件の核心) (2) verify :440 の recompute 比較は内訳フィールドがあるほど強い自己検証になる (3) B の『ledger から再導出可能』は正しいが、record.md は選挙の人間向け正本であり再導出を人間に強いる設計は #1261 の教訓に逆行。波及(rulingText :107/t234/t238)は機械的で、blast radius は RE が既に列挙済み。自案非採用時: B=6",
+      "submittedAt": "2026-07-19T22:44:15Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TCRRA3",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A 採用。winner+choice 別内訳+GoaCounts の保持は record.md の監査可能性(P2: 記録は実測事実のみ)と verify の recompute 等値比較の両方を強くする。B の『ledger から再導出可能』は正しいが、tally.json の fixed set は blind lift(store.ts:9、当方 AD レビューで実測)のため導出には解決規則の再適用が要り、内訳の明示保存が検証を1手にする。当方 intent(resolveBallots 母集団解決)との整合も A が自然 — 内訳は解決済み母集団から導出される値として仕様化可能。受容度: B=6。",
+      "submittedAt": "2026-07-19T22:44:20Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TCRRA3",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "内訳は choice 別の単純票数のみに限定(choice×GoA のクロス分布は持たない)— record 描画の監査可能性を確保しつつ型と fixture の肥大を抑える。",
+      "rationale": "実測: rulingText(record.ts:107-110)は outcome 2値から裁定行を描画し勝者 choice を表現できない。record.md はチームの共有裁定面(persist 文の GoA 度数分布行と同格)であり、winner label+票数内訳の描画は P2(実測事実のみを根拠)の record 面。verify の recompute 比較(election.ts:440 系)は型拡張に機械追随可能。B 非採用受容度: 6(ledger 再導出で監査は可能だが、record 単体で裁定根拠が読めない)。",
+      "submittedAt": "2026-07-19T22:44:10Z"
+    }
+  ],
+  "late": []
+}

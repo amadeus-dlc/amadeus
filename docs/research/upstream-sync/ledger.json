@@ -1,0 +1,492 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "https://github.com/awslabs/aidlc-workflows",
+    "baseline": {
+      "tag": "v2.2.0",
+      "commit": "eae912e09c42627fe51a0f1c26e0d2fc2d7e3bd4",
+      "status": "REVIEWED"
+    },
+    "target": {
+      "tag": "v2.3.0",
+      "commit": "29a31f7899731b53f2b8d7f76cd223f9a8a25859"
+    }
+  },
+  "amadeus": {
+    "repository": "git@github.com:amadeus-dlc/amadeus.git",
+    "comparison_commit": "a326f47bc0146a3b4285552f42b92fd61fb343a7"
+  },
+  "status": "PLANNED",
+  "report": "docs/research/upstream-sync/reports/v2.2.0-to-v2.3.0-plan.md",
+  "intent": null,
+  "created_at": "2026-07-20T04:40:49Z",
+  "updated_at": "2026-07-20T04:48:20Z",
+  "domains": [
+    {
+      "id": "engine-correctness",
+      "title": "Engine correctness fixes",
+      "approval": "APPROVED",
+      "approved_at": "2026-07-20T04:48:20Z",
+      "items": [
+        {
+          "id": "bolt-dag-selfheal",
+          "summary": "Recompute bolt_dag from unit-of-work-dependency.md when the runtime graph is stale or missing (2.2.14)",
+          "disposition": "ADAPT",
+          "local_state": "MISSING",
+          "rationale": "Amadeus twice observed the silent single-unit degrade and holds a manual norm workaround (recompile-before-construction-bolt-dag); the upstream fix mechanizes it read-side.",
+          "upstream_evidence": ["CHANGELOG.md#2.2.14", "51b515a"],
+          "local_evidence": ["a326f47bc:packages/framework/core/tools/amadeus-runtime.ts (no read-side recompute; grep)", "team norm cid:units-generation:recompile-before-construction-bolt-dag"],
+          "dependencies": [],
+          "risks": ["coverage-guard behavior change on stale graphs"],
+          "verification": ["t215-equivalent unit test", "bun run test:ci"],
+          "confidence": "HIGH"
+        },
+        {
+          "id": "gate-revision-backstop",
+          "summary": "Approve-time backfill of a skipped gate rejection with Recovered:true audit pair (2.2.11)",
+          "disposition": "ADAPT",
+          "local_state": "PARTIAL",
+          "rationale": "Amadeus backfills only an engine-opened gate-start (--recovered); the skipped-rejection backfill and Revision Count reconciliation are absent.",
+          "upstream_evidence": ["CHANGELOG.md#2.2.11", "48306cc"],
+          "local_evidence": ["a326f47bc:packages/framework/core/tools/amadeus-orchestrate.ts:3071"],
+          "dependencies": [],
+          "risks": ["audit provenance semantics; needs falling-proof tests"],
+          "verification": ["t205-equivalent unit test", "bun run test:ci"],
+          "confidence": "HIGH"
+        },
+        {
+          "id": "swarm-batch-advance",
+          "summary": "Autonomous swarm advances through every Bolt batch; run-scoped converged reads; finalize skips converged on merge failure (2.2.5)",
+          "disposition": "ADAPT",
+          "local_state": "PARTIAL",
+          "rationale": "Amadeus swarm is batch-parameterized and engine-emits invoke-swarm, but the multi-batch autonomous climb and merge-failure guard are unverified; verify first, port the gaps.",
+          "upstream_evidence": ["CHANGELOG.md#2.2.5", "a534ab7"],
+          "local_evidence": ["a326f47bc:packages/framework/core/tools/amadeus-swarm.ts:16-39", "a326f47bc:packages/framework/core/tools/amadeus-directive.ts:148-158"],
+          "dependencies": ["bolt-dag-selfheal"],
+          "risks": ["may resolve to EQUIVALENT after verification"],
+          "verification": ["behavior verification during inception", "t201-equivalent test if ported"],
+          "confidence": "MEDIUM"
+        },
+        {
+          "id": "help-routing",
+          "summary": "Help-shaped inputs route to help; 'help' reserved record name; safe unknown-intent errors (2.2.1)",
+          "disposition": "ADAPT",
+          "local_state": "PARTIAL",
+          "rationale": "Amadeus has a global help case but no verified intent-verb help interception or reserved-name refusal.",
+          "upstream_evidence": ["CHANGELOG.md#2.2.1", "ded69da"],
+          "local_evidence": ["a326f47bc:packages/framework/core/tools/amadeus-utility.ts:4200"],
+          "dependencies": [],
+          "risks": ["low"],
+          "verification": ["t178-equivalent routing tests"],
+          "confidence": "MEDIUM"
+        },
+        {
+          "id": "compose-pending-freshness",
+          "summary": "24h mtime bound on the compose-pending Stop-hook carve-out plus doctor marker row (2.2.8)",
+          "disposition": "ADOPT",
+          "local_state": "PARTIAL",
+          "rationale": "Amadeus has the marker carve-out and autonomy guard but no freshness bound and no doctor surfacing; an orphaned marker permanently disables enforcement.",
+          "upstream_evidence": ["CHANGELOG.md#2.2.8", "45035ea"],
+          "local_evidence": ["a326f47bc:packages/framework/core/hooks/amadeus-stop.ts:449-467"],
+          "dependencies": [],
+          "risks": ["low"],
+          "verification": ["t204-equivalent test"],
+          "confidence": "HIGH"
+        },
+        {
+          "id": "recompose-autonomy-guard",
+          "summary": "recompose refuses under autonomous Construction (2.2.8)",
+          "disposition": "ADOPT",
+          "local_state": "MISSING",
+          "rationale": "Amadeus recompose handler has no autonomy check; an unattended run could be reshaped with no human at the gate.",
+          "upstream_evidence": ["CHANGELOG.md#2.2.8", "45035ea"],
+          "local_evidence": ["a326f47bc:packages/framework/core/tools/amadeus-utility.ts:3450-3464 (no autonomy check)"],
+          "dependencies": [],
+          "risks": ["low"],
+          "verification": ["t194-equivalent test"],
+          "confidence": "HIGH"
+        },
+        {
+          "id": "learnings-memory-path",
+          "summary": "Per-intent memory_path in runtime graph and learnings surface (2.2.2)",
+          "disposition": "SKIP",
+          "local_state": "EQUIVALENT",
+          "rationale": "Amadeus independently reworked the per-intent record layout; the learnings surface consumes per-intent memory paths in daily production use (S13 elections).",
+          "upstream_evidence": ["CHANGELOG.md#2.2.2", "47904f3"],
+          "local_evidence": ["a326f47bc:packages/framework/core/tools/amadeus-directive.ts:71,136,177"],
+          "dependencies": [],
+          "risks": [],
+          "verification": [],
+          "confidence": "HIGH"
+        }
+      ]
+    },
+    {
+      "id": "engine-features",
+      "title": "Engine features",
+      "approval": "APPROVED",
+      "approved_at": "2026-07-20T04:48:20Z",
+      "items": [
+        {
+          "id": "unit-kind-pruning",
+          "summary": "kind: on units + produces_kinds: stage frontmatter prune the per-unit design matrix (2.2.18)",
+          "disposition": "ADAPT",
+          "local_state": "MISSING",
+          "rationale": "Reduces per-unit design overhead; requires Amadeus schema/engine/sensor changes and dist regeneration.",
+          "upstream_evidence": ["CHANGELOG.md#2.2.18", "831bd29"],
+          "local_evidence": ["a326f47bc:packages/framework/core/tools/amadeus-stage-schema.ts (no produces_kinds; grep)"],
+          "dependencies": ["stage-schema-extensions"],
+          "risks": ["schema ripple into all six dists"],
+          "verification": ["t207/t208-equivalent tests", "bun run dist:check", "bun run promote:self:check"],
+          "confidence": "HIGH"
+        },
+        {
+          "id": "unit-major-iteration",
+          "summary": "Opt-in Construction Iteration: unit-major walk + set-construction-iteration verb (2.2.13)",
+          "disposition": "ADAPT",
+          "local_state": "MISSING",
+          "rationale": "Zero-risk default (byte-identical when unset); gives the bolt plan an executable effect on design order.",
+          "upstream_evidence": ["CHANGELOG.md#2.2.13", "b2e1a55"],
+          "local_evidence": ["a326f47bc:packages/framework/core (no set-construction-iteration/unit-major; grep)"],
+          "dependencies": [],
+          "risks": ["directive/stage ordering assumptions in tests"],
+          "verification": ["t209/t210-equivalent tests"],
+          "confidence": "HIGH"
+        },
+        {
+          "id": "scope-cost-preview",
+          "summary": "Stage/gate counts at scope confirmation, birth prints, scope-change, validate-grid summary (2.2.12)",
+          "disposition": "ADAPT",
+          "local_state": "MISSING",
+          "rationale": "Counts read from the compiled grid; informs consent at scope confirm. Additive JSON.",
+          "upstream_evidence": ["CHANGELOG.md#2.2.12", "c4c08d6"],
+          "local_evidence": ["a326f47bc:packages/framework/core/tools (no 'Approval gates' strings; grep)"],
+          "dependencies": [],
+          "risks": ["low"],
+          "verification": ["t213/t214-equivalent tests"],
+          "confidence": "HIGH"
+        },
+        {
+          "id": "gate-next-stage-naming",
+          "summary": "Gate Approve options name the computed next in-scope stage via directive next_stage (2.2.6)",
+          "disposition": "ADAPT",
+          "local_state": "PARTIAL",
+          "rationale": "Amadeus computes next_stage in state directives; whether gate-option rendering consumes it is unverified — verify, then complete.",
+          "upstream_evidence": ["CHANGELOG.md#2.2.6", "7c02d48"],
+          "local_evidence": ["a326f47bc:packages/framework/core/tools/amadeus-state.ts:1542,2553", "no 'Continue to' render strings (grep)"],
+          "dependencies": [],
+          "risks": ["may resolve to EQUIVALENT after verification"],
+          "verification": ["t202-equivalent test"],
+          "confidence": "MEDIUM"
+        },
+        {
+          "id": "optional-produces",
+          "summary": "optional_produces: frontmatter exempts conditional artifacts from per-unit coverage (2.2.9)",
+          "disposition": "SKIP",
+          "local_state": "EQUIVALENT",
+          "rationale": "Already present in Amadeus schema, sensor, and orchestrate paths.",
+          "upstream_evidence": ["CHANGELOG.md#2.2.9", "7e83ef5"],
+          "local_evidence": ["a326f47bc:packages/framework/core/tools/amadeus-stage-schema.ts", "a326f47bc:packages/framework/core/tools/amadeus-sensor.ts", "a326f47bc:packages/framework/core/tools/amadeus-orchestrate.ts"],
+          "dependencies": [],
+          "risks": [],
+          "verification": [],
+          "confidence": "HIGH"
+        }
+      ]
+    },
+    {
+      "id": "workspace-detection",
+      "title": "Workspace detection",
+      "approval": "APPROVED",
+      "approved_at": "2026-07-20T04:48:20Z",
+      "items": [
+        {
+          "id": "nested-root-detection",
+          "summary": "Depth-1 fallback scan classifies nested projects Brownfield; Nested Root audit field; incremental-scope advisory (2.2.7)",
+          "disposition": "ADAPT",
+          "local_state": "MISSING",
+          "rationale": "Prevents skipped reverse-engineering on container-folder projects.",
+          "upstream_evidence": ["CHANGELOG.md#2.2.7", "8e723b1"],
+          "local_evidence": ["a326f47bc:packages/framework/core/tools (no nestedRoot; grep)"],
+          "dependencies": [],
+          "risks": ["low; additive signal"],
+          "verification": ["t203-equivalent test"],
+          "confidence": "HIGH"
+        },
+        {
+          "id": "submodule-detection",
+          "summary": ".gitmodules as sixth brownfield signal; uninitialized-submodule warnings at birth/doctor/detect (2.2.10)",
+          "disposition": "ADAPT",
+          "local_state": "MISSING",
+          "rationale": "Prevents Greenfield misclassification for submodule-based workspaces.",
+          "upstream_evidence": ["CHANGELOG.md#2.2.10", "242953e"],
+          "local_evidence": ["a326f47bc:packages/framework/core/tools (no gitmodules signal; grep)"],
+          "dependencies": [],
+          "risks": ["low; additive signal"],
+          "verification": ["t211/t212-equivalent tests"],
+          "confidence": "HIGH"
+        }
+      ]
+    },
+    {
+      "id": "harness-integration",
+      "title": "Harness integration",
+      "approval": "APPROVED",
+      "approved_at": "2026-07-20T04:48:20Z",
+      "items": [
+        {
+          "id": "execpath-spawn",
+          "summary": "Adapters respawn hooks via process.execPath instead of bare bun (2.2.3)",
+          "disposition": "ADOPT",
+          "local_state": "MISSING",
+          "rationale": "Amadeus cursor/codex/kiro/kiro-ide adapters spawn ['bun', ...]; GUI/minimal PATH environments lose the whole hook layer. Apply to all six harnesses including Amadeus-only cursor/opencode.",
+          "upstream_evidence": ["CHANGELOG.md#2.2.3", "ff7c15b"],
+          "local_evidence": ["a326f47bc:packages/framework/harness/cursor/hooks/amadeus-cursor-lib.ts:215", "a326f47bc:packages/framework/harness/codex/hooks/amadeus-codex-adapter.ts:164", "a326f47bc:packages/framework/harness/kiro/hooks/amadeus-kiro-adapter.ts:276,609", "a326f47bc:packages/framework/harness/kiro-ide/hooks/amadeus-kiro-adapter.ts:259"],
+          "dependencies": [],
+          "risks": ["deeper child spawns remain PATH-dependent (upstream known limitation) — inventory them"],
+          "verification": ["t149-equivalent adapter tests"],
+          "confidence": "HIGH"
+        },
+        {
+          "id": "kiro-ide-hook-context",
+          "summary": "Kiro IDE adapter reads USER_PROMPT env, audit-tail-gated payload-free hooks, robust path extraction, subagent identity, failed-tool guard, opt-in debug log (2.2.17)",
+          "disposition": "ADAPT",
+          "local_state": "PARTIAL",
+          "rationale": "Amadeus kiro-ide adapter still uses the 2s stdin race; the IDE never writes stdin, so context-dependent hooks no-op.",
+          "upstream_evidence": ["CHANGELOG.md#2.2.17", "300b640"],
+          "local_evidence": ["a326f47bc:packages/framework/harness/kiro-ide/hooks/amadeus-kiro-adapter.ts:59-70"],
+          "dependencies": [],
+          "risks": ["largest harness diff; behavior verified only on real Kiro IDE"],
+          "verification": ["t218-equivalent adapter tests"],
+          "confidence": "MEDIUM"
+        },
+        {
+          "id": "project-dir-quoting",
+          "summary": "Double-quote every $CLAUDE_PROJECT_DIR in shipped Claude settings (2.2.19)",
+          "disposition": "ADOPT",
+          "local_state": "MISSING",
+          "rationale": "Amadeus Claude settings are unquoted; a workspace path with a space breaks all hooks under word-splitting shells.",
+          "upstream_evidence": ["CHANGELOG.md#2.2.19", "6f597ce"],
+          "local_evidence": ["a326f47bc:packages/framework/harness/claude/settings.json.example (0 quoted matches; grep)"],
+          "dependencies": [],
+          "risks": ["low; string change + dist regen"],
+          "verification": ["t219-equivalent test", "bun run dist:check"],
+          "confidence": "HIGH"
+        },
+        {
+          "id": "agent-model-key",
+          "summary": "Rename agent frontmatter modelOverride: to model: (2.2.15)",
+          "disposition": "SKIP",
+          "local_state": "EQUIVALENT",
+          "rationale": "Amadeus agents already use the real model: key; no modelOverride exists anywhere.",
+          "upstream_evidence": ["CHANGELOG.md#2.2.15", "911b8cc"],
+          "local_evidence": ["a326f47bc:.claude/agents/amadeus-architecture-reviewer-agent.md (frontmatter model: sonnet)", "grep modelOverride over repo: empty"],
+          "dependencies": [],
+          "risks": [],
+          "verification": [],
+          "confidence": "HIGH"
+        }
+      ]
+    },
+    {
+      "id": "reviewer-quality",
+      "title": "Reviewer and agent quality",
+      "approval": "APPROVED",
+      "approved_at": "2026-07-20T04:48:20Z",
+      "items": [
+        {
+          "id": "reviewer-date-persona",
+          "summary": "Review sections use shell-sourced UTC date and name the reviewer persona; identity marker first line (2.2.4/2.2.17)",
+          "disposition": "ADOPT",
+          "local_state": "MISSING",
+          "rationale": "Amadeus reviewer templates carry no date-sourcing instruction; reviews risk inferred dates and producer attribution.",
+          "upstream_evidence": ["CHANGELOG.md#2.2.4", "220f52b"],
+          "local_evidence": ["a326f47bc:packages/framework/core/agents (no 'date -u' instruction; grep)"],
+          "dependencies": [],
+          "risks": ["low; prose change + dist regen"],
+          "verification": ["t200-equivalent test"],
+          "confidence": "HIGH"
+        },
+        {
+          "id": "reviewer-read-scope",
+          "summary": "Bound per-unit reviewer reads to unit artifacts plus directive.consumes shared contracts (2.2.16)",
+          "disposition": "ADAPT",
+          "local_state": "MISSING",
+          "rationale": "Per-unit review cost grows linearly with unit count without the bound; Amadeus stage-protocol/skills carry no read-scope constraint.",
+          "upstream_evidence": ["CHANGELOG.md#2.2.16", "7fa5479"],
+          "local_evidence": ["a326f47bc:packages/framework/core/amadeus-common + skills (no read-scope bound; grep)"],
+          "dependencies": [],
+          "risks": ["must propagate to all six harness orchestrator skills"],
+          "verification": ["t217-equivalent test"],
+          "confidence": "HIGH"
+        }
+      ]
+    },
+    {
+      "id": "plugin-mechanism",
+      "title": "Plugin mechanism (2.3.0)",
+      "approval": "APPROVED",
+      "approved_at": "2026-07-20T04:48:20Z",
+      "items": [
+        {
+          "id": "stage-schema-extensions",
+          "summary": "Stage schema accepts number, name, bundle, when, required_sections; core compiles byte-identically",
+          "disposition": "ADAPT",
+          "local_state": "MISSING",
+          "rationale": "Root dependency of the plugin mechanism; also shared by unit-kind-pruning schema work.",
+          "upstream_evidence": ["CHANGELOG.md#2.3.0", "e89162f"],
+          "local_evidence": ["a326f47bc:packages/framework/core/tools/amadeus-stage-schema.ts (no such keys; grep)"],
+          "dependencies": [],
+          "risks": ["schema ripple; byte-identical core compile must be proven"],
+          "verification": ["schema unit tests", "bun run dist:check"],
+          "confidence": "HIGH"
+        },
+        {
+          "id": "packager-plugin-projection",
+          "summary": "package.ts discovers plugins/<name>/, emits per-harness host-plugin projections, drift-guards dist/plugins/, plugin build seam",
+          "disposition": "ADAPT",
+          "local_state": "MISSING",
+          "rationale": "Amadeus packager must derive projections from its six harness manifests (upstream has four).",
+          "upstream_evidence": ["CHANGELOG.md#2.3.0", "e89162f"],
+          "local_evidence": ["a326f47bc:scripts/package.ts (0 plugin references; grep -c)"],
+          "dependencies": ["stage-schema-extensions"],
+          "risks": ["largest packaging change; orphan sweep must not touch dist/<harness>/"],
+          "verification": ["t188-equivalent integration test", "bun run dist:check", "bun run promote:self:check"],
+          "confidence": "HIGH"
+        },
+        {
+          "id": "plugin-compose-hook",
+          "summary": "Portable compose.ts: no-clobber stage copy, seam merge, idempotent fragment splicing, self-healing recompile, drop records, doctor surfacing",
+          "disposition": "ADAPT",
+          "local_state": "MISSING",
+          "rationale": "Port under the amadeus namespace and hooks-health dir conventions.",
+          "upstream_evidence": ["CHANGELOG.md#2.3.0", "e89162f"],
+          "local_evidence": ["a326f47bc: no compose.ts plugin hook in packages/framework"],
+          "dependencies": ["stage-schema-extensions", "packager-plugin-projection"],
+          "risks": ["merge semantics (set-union, hash-idempotent splice) need falling-proof tests"],
+          "verification": ["t188-equivalent integration test"],
+          "confidence": "HIGH"
+        },
+        {
+          "id": "test-pro-reference-plugin",
+          "summary": "plugins/test-pro reference plugin validated across harness projections",
+          "disposition": "ADAPT",
+          "local_state": "MISSING",
+          "rationale": "Reference plugin proves the mechanism end-to-end; re-project for six harnesses.",
+          "upstream_evidence": ["CHANGELOG.md#2.3.0", "e89162f"],
+          "local_evidence": ["a326f47bc: no plugins/ dir"],
+          "dependencies": ["plugin-compose-hook"],
+          "risks": ["low"],
+          "verification": ["plugin tests discovered by integration tier"],
+          "confidence": "HIGH"
+        },
+        {
+          "id": "plugin-docs",
+          "summary": "Plugin mechanism reference chapter + authoring guide + deferred-surfaces status list",
+          "disposition": "ADAPT",
+          "local_state": "MISSING",
+          "rationale": "Write Amadeus-path versions under docs/reference and docs/harness-engineering (English).",
+          "upstream_evidence": ["CHANGELOG.md#2.3.0", "e89162f"],
+          "local_evidence": ["a326f47bc:docs/reference (no plugin chapter)"],
+          "dependencies": ["plugin-compose-hook"],
+          "risks": ["low"],
+          "verification": ["docs review"],
+          "confidence": "HIGH"
+        }
+      ]
+    },
+    {
+      "id": "tests",
+      "title": "Tests",
+      "approval": "APPROVED",
+      "approved_at": "2026-07-20T04:48:20Z",
+      "items": [
+        {
+          "id": "ported-tests",
+          "summary": "Re-author upstream t199-t219/t188 and related integration/e2e coverage for adopted items inside Amadeus test layers",
+          "disposition": "ADAPT",
+          "local_state": "MISSING",
+          "rationale": "Tests accompany their items; honor Amadeus test norms (fs tests in integration tier, coverage registry regen, local lcov pre-push).",
+          "upstream_evidence": ["55 test paths in the tag diff"],
+          "local_evidence": ["a326f47bc:tests/ (Amadeus-native suite; upstream tests not present)"],
+          "dependencies": ["all adopted items"],
+          "risks": ["coverage ratchet/registry churn"],
+          "verification": ["bash tests/run-tests.sh --ci"],
+          "confidence": "HIGH"
+        }
+      ]
+    },
+    {
+      "id": "docs-generated",
+      "title": "Docs and generated trees",
+      "approval": "APPROVED",
+      "approved_at": "2026-07-20T04:48:20Z",
+      "items": [
+        {
+          "id": "docs-updates",
+          "summary": "Fold adopted-feature documentation updates into Amadeus docs (reference/guide/harness-engineering)",
+          "disposition": "ADAPT",
+          "local_state": "PARTIAL",
+          "rationale": "Amadeus docs are independent; adopt content for adopted features only, English, Amadeus paths.",
+          "upstream_evidence": ["39 docs paths in the tag diff"],
+          "local_evidence": ["a326f47bc:docs/"],
+          "dependencies": ["all adopted items"],
+          "risks": ["low"],
+          "verification": ["docs legacy-refs gate (t174)"],
+          "confidence": "HIGH"
+        },
+        {
+          "id": "dist-trees",
+          "summary": "248 changed/added dist/ paths in the upstream diff",
+          "disposition": "SKIP",
+          "local_state": "NOT_APPLICABLE",
+          "rationale": "Generated outputs; Amadeus regenerates via bun scripts/package.ts and bun run promote:self, never hand-copies upstream dist.",
+          "upstream_evidence": ["tag diff dist/ groups"],
+          "local_evidence": ["project norm: dist/<harness>/ never hand-edited"],
+          "dependencies": [],
+          "risks": [],
+          "verification": ["bun run dist:check", "bun run promote:self:check"],
+          "confidence": "HIGH"
+        },
+        {
+          "id": "roadmap-html",
+          "summary": "Upstream roadmap.html refresh (2.2.0 docs commit)",
+          "disposition": "SKIP",
+          "local_state": "NOT_APPLICABLE",
+          "rationale": "Amadeus ships no roadmap.html; upstream-repo-specific document.",
+          "upstream_evidence": ["b67798c"],
+          "local_evidence": ["a326f47bc: roadmap.html absent (ls)"],
+          "dependencies": [],
+          "risks": [],
+          "verification": [],
+          "confidence": "HIGH"
+        },
+        {
+          "id": "upstream-changelog",
+          "summary": "Upstream CHANGELOG.md/README.md/AGENTS.md edits",
+          "disposition": "SKIP",
+          "local_state": "NOT_APPLICABLE",
+          "rationale": "Amadeus forbids a hand-written CHANGELOG.md (release notes are generated by release.yml); README/AGENTS are fork-specific.",
+          "upstream_evidence": ["29a31f7", "tag diff top-level"],
+          "local_evidence": ["project Forbidden: never revive hand-written CHANGELOG.md"],
+          "dependencies": [],
+          "risks": [],
+          "verification": [],
+          "confidence": "HIGH"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "required": [
+      "targeted tests",
+      "bun run typecheck",
+      "bun run lint:check",
+      "bun run dist:check",
+      "bun run promote:self:check",
+      "bun run test:ci"
+    ],
+    "completed": []
+  },
+  "unresolved_items": []
+}
