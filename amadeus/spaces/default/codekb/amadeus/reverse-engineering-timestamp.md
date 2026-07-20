@@ -17,6 +17,23 @@
 - Delivery boundary: 実装コード、dist/self-install 再生成、commit、PR 操作は本 scan で未実施。
 - Base source of truth: 本 intent の per-intent record。共有 timestamp は freshness pointer であり、次回の differential base は `re-scans/` の到達可能 observed から決める。
 
+## 実行メタデータ(履歴: 260720-formal-verif-experiment)
+
+- Date: 2026-07-20(Asia/Tokyo)
+- Observed at: HEAD `1865bc902ff5ecb1e51caefc339aae18e015431b`(`git rev-parse HEAD` 実測一致。merge commit — origin/main 取込後の断面)
+- Intent: `260720-formal-verif-experiment`(選挙 CLI に対する形式検証(PBT / モデル検査)実験ハーネスの実現可能性 RE。既知5欠陥 #1268 / #1273 三系 / #1277 を「型緑・意味赤」の外科的注入面として使い検出力を実証する実験の下地観測)
+- Scope: `amadeus`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh(cid:reverse-engineering:c1、E-L63 の base 選定則)。`re-scans/*.md` 43ファイルを `Observed at` / `Observed commit` / 既存小文字ヘッダの様式差込みで全数走査し、観測 SHA を抽出できた42ファイルの祖先性と距離を機械照合した。自己 scan を除く距離最小の祖先 observed は `a326f47bc0146a3b4285552f42b92fd61fb343a7`(`260719-goa-multiseg-ecode` / `260719-cursor-complete-clear`、`git merge-base --is-ancestor a326f47bc 1865bc902` exit 0、`git rev-list --count a326f47bc..1865bc902`=**29**)であり、これを base に採用(rescan-base-ancestry)。非祖先 observed `c2e4975ff` の merge-base `bd147dc7b`(距離47)を使った旧選定を訂正した。observed=`1865bc902`。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3)。
+- 測定 ref: 全 file:line は Observed=HEAD `1865bc902` のワークツリー実ファイル直読(cid:measurement-ref-in-artifacts)。区間件数(29)はコマンド出力からの転記(numbers-from-command-output-only)。区間フォーカス変更は3コミット(#1268=`ea6acac53` / #1273=`a6f4a4522` / #1277=`e1fd1826b`)・4ファイル(model / store / record / 本体。transport は変更0件)で、いずれも本実験が再注入対象とする既知5欠陥の修正そのもの。
+- 現行結論: 選挙 CLI 5ファイル(model 464 / store 261 / record 224 / transport 207 / 本体 589 = 計1745行)に対し、既知5欠陥(#1268 winner=GoA 軸 model :445-463 / #1273-2a invalid-timestamp model :253 / #1273-2b amend 経路 `parseKindRef`:194-203・store :150-158 / #1273-2c per-voter `resolveBallots` model :431・本体 :381,:459 / #1277 timeline record :212-213)はいずれも**型緑・意味赤の外科的注入が可能**で、4欠陥が分離可能性=高・2b のみ中(2b/2c は意味連鎖)。選挙テスト(unit t234/t238/t239・integration t235/t236/t240/t242・e2e t237/t241)に **fast-check 使用ゼロ**、PBT 参照様式は setup-semver/setup-manifest/t204 の3本(固定 `PBT_SEED`・`numRuns` 100・`AMADEUS_PBT_DEEP=1` で 50k・dist コピー import の unit 層)。CI 面: `ci.yml` の `test:ci` は smoke+unit+integration のみで e2e 除外(package.json:15)、**t241(機械実行器)は「CI-resident」自称(:2-6)だが PR CI で未実行 = FR-0 意図との乖離(確信度高)**。実験ハーネスは unit/integration 層配置で CI+coverage 両ゲートに載る。CLI `--project` override(本体 :577-578)実在で scratch 隔離可能。原因の所在=**実験下地の観測**(バグ修正でなく形式検証実験の feasibility 確認)。
+- Per-intent record: `re-scans/260720-formal-verif-experiment.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「最新: 260720-diary-autogen-guard」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、`re-scans/260720-formal-verif-experiment.md`(新規)。**codekb body 8成果物(business-overview / architecture / code-structure / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment)は全点温存**(churn 回避 — 選挙 CLI 詳細は re-scans 管轄で `architecture.md`/`code-structure.md` と矛盾なし、実質の新規知識は 5欠陥の注入面確定・fast-check 不在と PBT 参照様式・t241 の CI-resident 自称と PR CI e2e 非実行の乖離・`--project` override による scratch 隔離の1クラスタのみで per-intent record に集約。cid:reverse-engineering:c1)。
+- Delivery boundary: 実装・修正コード、`bun scripts/package.ts`/`promote:self` による dist・self-install 再生成、main merge/rebase、Issue close、PR 作成・更新は本 scan で実施していない。区間フォーカス正本には既知5欠陥を修正した3コミット・4ファイルの変更があり、Observed の現行断面から逆変換可能な注入面を確定した。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
 ## 実行メタデータ(履歴: 260720-diary-autogen-guard)
 
 - Date: 2026-07-20(Asia/Tokyo)
