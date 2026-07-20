@@ -386,5 +386,12 @@
     "dirName": "260719-cursor-complete-clear",
     "scope": "bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019f7d6c-86e2-7592-bdee-eac3b9c9e72d",
+    "slug": "leader-store-sync",
+    "dirName": "260720-leader-store-sync",
+    "scope": "amadeus",
+    "status": "in-flight"
   }
 ]
