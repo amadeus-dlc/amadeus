@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-LSSFD",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e3 record リードオンリー実測: construction 配下に U1 FD 成果物の実在を確認。ADR→BR 写像漏れ→BR-8/9 追加→iteration 2 で ADR 4/4 全数写像の是正列は enumeration-completeness-review の違反実例+是正の教科書的処理で、PM 回付が適切。新規学習なし。0件で可。internalNo は view から機械 mint。",
+  "submittedAt": "2026-07-20T05:06:25Z"
+}
