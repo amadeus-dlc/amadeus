@@ -1,0 +1,38 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T04:28:34Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-DAGCG",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e1 record 実測: diary の c2 違反実例記録(04:26:38Z — 親 main checkout 誤編集→自己検知・完全復元・conductor 独立実測 status clean)と SENSOR_FAILED 2件の確定分類(誤編集の独立傍証+分類記録)を verbatim 確認、plan/summary の unit dir 実在、PR #1288 OPEN(レビュアー e2 指名済み)。c2 違反は既存 cid の違反実例として PM 回付が正規経路 — E-TCRCGS13/E-BFACG で採用済みの『worktree 隔離の前提2面』追補が既にこのクラスを縛っており、新規ノルムの隙間なし。誤編集の SENSOR_FAILED を独立傍証として分類記録した扱いは manual-sensor 追補3(全 intent シャード union 読み)の正しい適用。0件で可",
+      "submittedAt": "2026-07-20T04:28:10Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-DAGCG",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e1 record リードオンリー実測: CG 成果物実在・diary の c2 違反実例記録(親 main checkout への誤適用 → 自己検知・完全復元・conductor 独立実測)を確認、PR #1288 OPEN を gh 実測。c2 は本日追補2件が入ったばかりの活発 cid で、違反実例の PM 回付(トレンド計上)が正規経路 — 新規学習なし。0件で可(1)。",
+      "submittedAt": "2026-07-20T04:28:14Z"
+    }
+  ],
+  "resolutions": []
+}

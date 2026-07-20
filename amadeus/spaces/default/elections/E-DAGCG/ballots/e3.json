@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-DAGCG",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e1 record リードオンリー実測: CG 成果物実在・diary の c2 違反実例記録(親 main checkout への誤適用 → 自己検知・完全復元・conductor 独立実測)を確認、PR #1288 OPEN を gh 実測。c2 は本日追補2件が入ったばかりの活発 cid で、違反実例の PM 回付(トレンド計上)が正規経路 — 新規学習なし。0件で可(1)。",
+  "submittedAt": "2026-07-20T04:28:14Z"
+}
