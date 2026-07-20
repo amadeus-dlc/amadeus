@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-USSU08FD1",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "4条件の判定入力はcurrent Unit成果物と既にpassedなshared contractだけに限定し、owner解決のためのbrowse/searchを禁止すること。read前に単一path・reason・integration ID・owner evidence・承認/拒否をreviewer promptへ固定し、拒否時pass-list不変、承認時も当該invocation限りとする。最終ReviewのScope decisionと既存subagent/auditで同値追跡できるpositive/negative fixtureを必須とする。",
+      "rationale": "B。upstream 7fa5479は具体的integration pointとpassed contractによる単一owner解決時だけone-file spot-checkを許し、Amadeus Q&Aはread前path/reason開示を要求する。4条件closed predicateでread前に決定し、一時pass-listと既存review/subagent/auditへ記録すれば両契約をfail-closedに両立できる。Aは決定的に判定可能な各readへ新たな人間gateを追加してreviewを過度に停止し、Cは承認済みupstream carve-outを失ってcross-unit integrationのfalse NOT-READYを増やす。非採用時受容度: A=6、C=7。",
+      "submittedAt": "2026-07-20T14:59:31Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSU08FD1",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Bを支持(GoA1)。U08 questions、Iteration 1 Major、FR-5 item 17、C6 reviewerReadScope公開seam、既存review/subagent/audit境界を独立実測した。具体integration ID、passed contractの単一owner、shape確認理由、browse/search由来でない単一fileという4条件をread前にclosed predicateで検証し、成立時だけ一時pass-listへ追加する方式は、事前path/reason開示とupstream one-file carve-outを両立する。不成立はread 0でfinding化し、scope decisionを既存review/subagent/auditへ残すことで新権限gate/eventを増やさず反証可能。非採用時受容度: A=5(安全だがspot-checkごとの新human gateで既存stage permission境界と進行コストを増やす)、C=7(scopeは単純だが実在integration確認を失いfalse NOT-READYを増やす)、X=7(同等のpre-read closed predicateと監査証跡がなければ)。",
+      "submittedAt": "2026-07-20T14:59:43Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSU08FD1",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "4条件はread開始前にorchestratorが全件検証し、owner evidenceはpassed shared contractだけから単一fileへ解決すること。承認時も追加できるのはその1 pathだけで、2件目、directory、glob、browse/search由来は拒否する。承認/拒否、path、reason、owner evidence、scope decisionをprompt・最終Review・既存subagent/auditで再構成可能にし、拒否後readはreview無効とすること。",
+      "rationale": "Bを支持。FR-5 item 17とupstream 7fa5479はper-unit reviewerの既定read scopeをcurrent artifactsとpassed consumesへ閉じつつ、current Unitが具体的integration pointを明示しshared contractからownerを一意解決できる場合だけ単一owner fileのspot-checkを許す。4条件closed predicateをread前に評価し、一時pass-listへsingle pathだけ追加するBは、このcarve-outとAmadeusのpath/reason事前開示を決定的かつfail-closedに両立する。Aはspot-checkごとに新しい人間gateを追加し、既存stage gate数・review flowへ未承認のround-tripを持ち込む。Cはupstreamが意図した実在integrationのone-file検分を失い、shared contractだけでは閉じないshape確認をfalse NOT-READYへ寄せる。新eventを増やさず既存review/subagent/auditでscope decisionを追跡するBが最小十分である。",
+      "submittedAt": "2026-07-20T15:00:03Z"
+    }
+  ],
+  "late": []
+}
