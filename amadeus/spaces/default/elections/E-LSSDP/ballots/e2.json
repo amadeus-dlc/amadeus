@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-LSSDP",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e3 worktree リードオンリー実測: bolt-plan.md :9-11(単一 Bolt bolt/feat-1281-leader-sync、skeleton stance=scope-dependent の分類根拠明記 — brownfield 增分で off は org 既定と整合)、phase-check-inception.md の PASS 4行(FR→U1 全数写像・留保転記全数・bolt_dag recompile 非 null = recompile-before-construction-bolt-dag の執行実例・センサー終端)、memory.md 04:57Z の FAILED 8件是正+同クラス4連続の PM 継続申告。全て既存 cid の適用/違反実例で、新規の一般化可能な知見なし。",
+  "submittedAt": "2026-07-20T04:56:10Z"
+}

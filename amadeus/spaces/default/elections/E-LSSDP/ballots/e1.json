@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-LSSDP",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e3 record リードオンリー実測: 単一 Bolt 構成+phase-check-inception の boundary 追記+FR-2 引き渡し固定を確認。required-sections FAILED→是正の同クラス反復は PM トレンド申告の継続が適切(私の B&T/performance H2 不足とも同型)。既存 cid 適用実例のみ。0件で可。internalNo は view から機械 mint。",
+  "submittedAt": "2026-07-20T04:56:07Z"
+}
