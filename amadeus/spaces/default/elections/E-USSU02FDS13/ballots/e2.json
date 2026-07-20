@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSU02FDS13",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "採用候補: 『複数audit eventを不可分な1 transitionとして扱う契約では、lockによる直列化を原子性とみなさない。全blockを事前生成・検証し単一transaction identityでcommitし、各生成/commit/state-write境界のfailure injectionと再実行時の重複0を固定する』。独立cidを増やすより、既存のtransaction/atomicity系cidがあれば追補統合を優先する。",
+  "rationale": "0件は不可。U02固有の5 event名やpredicateはstage-localだが、初回reviewが捕捉した機序は横断的である。現appendAuditEntryUnlockedは1 blockごとにappendFileSyncし、withAuditLockは競合を直列化するだけで複数appendをall-or-nothingにしない。『lock範囲=transaction』という誤認は他の複数audit遷移でも再発し得る。最終4成果物はE-USSU02FD1 Aと留保を一致反映し、Iteration 2 READY/GoA1、最終required-sections 3/3・upstream-coverage 3/3・answer-evidence 1/1 PASSを確認した。一方、既存memory全域のaudit/atomic/batch/transaction/failure-boundary語彙走査では同じ規範を確認できなかったため、stage-local詳細を除いた上記候補をpersistすべきである。0件採用時の受容度=7。",
+  "submittedAt": "2026-07-20T11:59:10Z"
+}

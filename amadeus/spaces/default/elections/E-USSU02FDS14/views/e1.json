@@ -1,0 +1,21 @@
+{
+  "electionId": "E-USSU02FDS14",
+  "voter": "e1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "X. その他（noteにexact cidと責務一致を記載）"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "B. requirements-analysis:delegate-issue-commit-atomicへ追補統合"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "A. 独立cid functional-design:audit-batch-before-state-atomicityを新設"
+    }
+  ]
+}

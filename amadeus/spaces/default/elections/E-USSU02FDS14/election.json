@@ -1,0 +1,25 @@
+{
+  "electionId": "E-USSU02FDS14",
+  "kind": "learning-destination",
+  "question": "E-USSU02FDS13で採用した『複数audit eventの単一atomic commit+成功後state write+failure injection+再実行重複0』規範のpersist先を裁定する。memory全体検索でtransaction/atomicity系cidは requirements-analysis:delegate-issue-commit-atomic のみだが、これはdelegate発行→監査commit pushを不可分にする配送運用で、今回のaudit/state transactionとは責務・機序・適用面が異なる。どこへ収載するか。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. 独立cid functional-design:audit-batch-before-state-atomicityを新設"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. requirements-analysis:delegate-issue-commit-atomicへ追補統合"
+    },
+    {
+      "internalNo": 3,
+      "label": "X. その他（noteにexact cidと責務一致を記載）"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}
