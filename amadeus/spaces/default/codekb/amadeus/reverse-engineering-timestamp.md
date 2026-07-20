@@ -1,6 +1,23 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(最新: 260720-ballot-received-at)
+## 実行メタデータ(最新: 260720-goa-sparse-family)
+
+- Date: 2026-07-20(Asia/Tokyo)
+- Observed at: HEAD `71f67f4873210975823801b4603580ed99e248a8`(`git rev-parse HEAD` 実測一致)
+- Intent: `260720-goa-sparse-family`([Issue #1254](https://github.com/amadeus-dlc/amadeus/issues/1254) — `parseGoaLine` が team.md のサブ問別スパース GoA 表記を読めない)/ [#1255](https://github.com/amadeus-dlc/amadeus/issues/1255)(GoaLineCode 単節制約の撤去)/ [#1257](https://github.com/amadeus-dlc/amadeus/issues/1257)(ECODE_RE 複節整合)
+- Scope: `bugfix`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh(cid:reverse-engineering:c1、E-L63 の base 選定則)。base=`a326f47bc0146a3b4285552f42b92fd61fb343a7`(全 `re-scans/*.md` observed のうち HEAD 祖先で距離最小。`git merge-base --is-ancestor a326f47bc HEAD` **exit 0**、`git rev-list --count a326f47bc..HEAD`=**28**。直近 re-scan `260720-ballot-received-at` の Observed `37f8cf5e6` は `is-ancestor` **exit 1**=非祖先(並行 worktree squash tip)で除外、rescan-base-ancestry 準拠)、observed=`71f67f4873210975823801b4603580ed99e248a8`。区間 `a326f47bc..HEAD`(28コミット)には #1256 / #1268 / #1273 / #1277 の着地を含み、フォーカス5正本(`amadeus-norm-metrics.ts` / `amadeus-election-record.ts` / `amadeus-election.ts` / `t238-election-record.test.ts` / `t-norm-metrics.test.ts`)を触る区間変更は**4件**(`git log a326f47bc..HEAD -- <5 files>` 実測)。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3)。
+- 測定 ref: 全 file:line・件数は Observed=HEAD `71f67f487` のワークツリー実ファイル直読(cid:measurement-ref-in-artifacts)。team.md corpus 対照は現行 `parseGoaLine` を bun で occurrence 単位に直呼び。
+- 現行結論: **#1256(head regex 複節許容、`aaea9f636`)は着地済みで GoA 行の HEADFAIL は corpus 全17 occurrence で解消(headFail=0)。しかし #1254 は未解決** — team.md 実 GoA 行はすべてサブ問別スパース表記(`c1 1x2 2x1 / c2 …`)で、`parseGoaLine` は canonical 8-bin 形しか受理しないため bin 段(`amadeus-norm-metrics.ts:697` `tokens.length !== 8`)で **17/17 occurrence が BINFAIL**(実測 pass=0 / headFail=0 / binFail=17)。前 re-scan(#1256 未着地)の pass=0/headFail=8/binFail=1 から、head fix で HEADFAIL 8行が BINFAIL 側へ移った状態=「head を直しても bin でスパースが落ちる」という #1256 の RE 予測どおり。原因の所在は**設計**(GoA 行スキーマ導入 #1112 Bolt 2 が canonical 8-bin・非スパースに固定し team.md 実様式と未照合)。付随: #1257(`ECODE_RE = /\bE-[A-Z0-9]+/g` が複節を第1節へ切詰め `E-SDE-CG4`→`E-SDE`、#1256 で揃えた GOA_HEAD_RE/PM_CID_RE から取り残された非対称。`ecodeCount` 総数値は偶然正だが token 切詰)、#1255(`amadeus-election-record.ts:34` GoaLineCode 単節制約は #1254 根治後に撤去=**#1254→#1255 の順序依存**、t238:97-98 がピン)。選挙 store record.md は 55ファイル全て `renderGoaLine` の canonical 8-bin で、#1254 の parse 拡張は 8-bin 受理を壊さない後方互換が必須(store + t-norm-metrics 複節群 + t238:104-109 が依存)。
+- Per-intent record: `re-scans/260720-goa-sparse-family.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「最新: 260720-ballot-received-at」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、`re-scans/260720-goa-sparse-family.md`。**codekb body 9成果物(business-overview / architecture / code-structure / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment / practices)は全点温存**(churn 回避 — 実質の新規知識は「#1256 着地後も parseGoaLine がスパース表記を bin 段で全拒否(17/17)+ ECODE_RE の複節非整合(#1257)+ GoaLineCode 単節制約の #1254 連動(#1255)」の1クラスタのみ。bugfix の挙動欠陥で構造・API・依存・技術スタックの変化なし。詳細は per-intent record に集約。cid:reverse-engineering:c1)。
+- Delivery boundary: 実装・修正コード、`bun scripts/package.ts`/`promote:self` による dist・self-install 再生成、main merge/rebase、Issue close、PR 作成・更新は本 scan で未実施。norm-metrics 配布は正本1+dist6+self-install4=11コピー(`find` 実測 10+正本1)、election scripts は repo-local(配布0)。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260720-ballot-received-at)
 
 - Date: 2026-07-20(Asia/Tokyo)
 - Observed at: HEAD `37f8cf5e67cef77adfd82ef292303790f756c8fd`(`git rev-parse HEAD` 実測一致)
