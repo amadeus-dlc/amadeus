@@ -1,0 +1,38 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T03:11:54Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-LSSAH",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測(e3 worktree リードオンリー): AH 成果物3点+verification/phase-check-ideation.md 実在、questions に E-OC1 承認 03:08:02Z 記載を grep 確認。観測2点は approval-handoff:c3/c4 と required-sections 同型是正(H2 テンプレ機械化は既に PM10 蒸留意見で回付済み — データ報告扱いが適切)の既存 cid 適用実例。0件で可(1)",
+      "submittedAt": "2026-07-20T03:10:17Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-LSSAH",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e3 record 実測: brief+decision-log+questions 実在、verification/phase-check-ideation.md 実在、E-OC1 承認 03:08:02Z の記載一致を grep 確認、センサー最新全 PASSED。H2 同型是正の3ステージ連続は PM 蒸留データ報告のみが正しい扱い(自 intent でも同型を経験済み — required-sections H2 テンプレ機械化提案の裏付けがまた増えた)。未決の requirements 送りも正しい運用。0件で可",
+      "submittedAt": "2026-07-20T03:11:13Z"
+    }
+  ],
+  "resolutions": []
+}

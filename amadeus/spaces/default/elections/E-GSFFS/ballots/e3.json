@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFFS",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e4 record リードオンリー実測: feasibility 成果物+memory 実在(ls=5)、E-OC1 承認 TS 03:08:38Z 記載 grep 確認、判定 GO+前提条件(方式選挙)の構成は e2 の 260719 feasibility と同型(既習様式)。初回 upstream-coverage FAILED 2件は consumes-first-drafting/body-derivation の違反実例として PM 回付が適切(私も本日同型2件を自己捕捉しており violation トレンドの実データ)。0件で可(1)。",
+  "submittedAt": "2026-07-20T03:11:01Z"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-DAGRE",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "persist は独立 cid でなく調査系既存 cid(scratch-script-discipline の再現忠実性面、または restart-loss-triple-grounding 系の調査定型ファミリ)への1文追補とする — 調査定型の cid 分裂を避けるため。",
+  "rationale": "採用(2)。独立実測(e1 record リードオンリー): re-scans の決定的再現記録(pd 差のみで ✅/❌ 反転・read-only 解決子直評価・bun build 構文検証済み = instrumentation-syntax-check 適用)と diary の残存未知の非捏造フラグ(過去 env 値は復元不能と明示 — P2 準拠)を確認。既存 cid との重複なし — scratch-script-discipline は汚染防止、instrumentation-syntax-check は計装正しさで、『環境固有バグは ambient 入力(env/cursor/gitignored 状態)を第一容疑とし再現環境内 read-only プローブで確定する(隔離 worktree では再現しない)』という調査設計原則はどれの射程にもない。本セッションだけで環境固有クラス2件(#1248 cursor 残留 / #1279 pd-swap)が実測されており一般性がある。常識クラスの読みには『隔離 worktree で再現を試みて空振りするコストが実際に発生しうる(worktree 隔離が標準化した本チームでこそ罠)』が反証。受容度: 不採用=6。",
+  "submittedAt": "2026-07-20T03:09:56Z"
+}
