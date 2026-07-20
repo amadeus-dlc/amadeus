@@ -1337,3 +1337,400 @@
 **Message**: 全て整合しています。作業完了です。\n\n## 完了報告(intent 260720-leader-store-sync / Issue #1281、RE 2.1 Architect 合成)\n\n### 作成・更新ファイル一覧(絶対パス)\n\n1. **新規**: `/Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-2
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T03:24:32Z
+**Event**: WORKFLOW_PARKED
+**Stage**: reverse-engineering
+**Timestamp**: 2026-07-20T03:24:32Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T03:29:22Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a71cd589c12ce6cfd
+**Message**: チームの conductor として Issue #1281(leader 所有物の main 同期構造化)の intent を進行中で、ideation 完了・RE 完了済み、現在は §13 裁定待ちで park 中です。裁定受領後に requirements で方式選挙(A/C/併用)を leader へ依頼します。
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T03:33:20Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T03:33:20Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T03:33:20Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: reverse-engineering
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T03:33:20Z
+**Event**: GATE_APPROVED
+**Stage**: reverse-engineering
+**Grant Id**: cabcb933
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T03:33:20Z
+**Event**: STAGE_COMPLETED
+**Stage**: reverse-engineering
+**Details**: Stage Reverse Engineering approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T03:33:20Z
+**Event**: STAGE_STARTED
+**Stage**: practices-discovery
+**Agent**: amadeus-pipeline-deploy-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:34:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: d5745b4d
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/evidence.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:34:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: d5745b4d
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/evidence.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:34:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: 81a463a0
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/evidence.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T03:34:19Z
+**Event**: SENSOR_FAILED
+**Fire id**: 81a463a0
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/evidence.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/practices-discovery/upstream-coverage-81a463a0.md
+**Findings count**: 6
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:34:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: 26af64d9
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/discovered-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:34:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: 26af64d9
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/discovered-rules.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:34:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: 156eeb0c
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/discovered-rules.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T03:34:19Z
+**Event**: SENSOR_FAILED
+**Fire id**: 156eeb0c
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/discovered-rules.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/practices-discovery/upstream-coverage-156eeb0c.md
+**Findings count**: 6
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:34:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8593b03c
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/team-practices.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:34:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8593b03c
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/team-practices.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:34:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: 25f56d40
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/team-practices.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T03:34:19Z
+**Event**: SENSOR_FAILED
+**Fire id**: 25f56d40
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/team-practices.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/practices-discovery/upstream-coverage-25f56d40.md
+**Findings count**: 6
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:34:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7dac1b20
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/practices-discovery-timestamp.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T03:34:20Z
+**Event**: SENSOR_FAILED
+**Fire id**: 7dac1b20
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/practices-discovery-timestamp.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/practices-discovery/required-sections-7dac1b20.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:34:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9bf77872
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/practices-discovery-timestamp.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T03:34:20Z
+**Event**: SENSOR_FAILED
+**Fire id**: 9bf77872
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/practices-discovery-timestamp.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/practices-discovery/upstream-coverage-9bf77872.md
+**Findings count**: 6
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:34:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: e5813646
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/evidence.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:34:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: e5813646
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/evidence.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:34:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2eb6a9ea
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/evidence.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:34:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2eb6a9ea
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/evidence.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:34:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 663ae73a
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/discovered-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:34:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 663ae73a
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/discovered-rules.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:34:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4f6006a4
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/discovered-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:34:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4f6006a4
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/discovered-rules.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:34:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9e63c86b
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/team-practices.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:34:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9e63c86b
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/team-practices.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:34:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 28aa6dae
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/team-practices.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:34:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 28aa6dae
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/team-practices.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:34:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 946914cf
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/practices-discovery-timestamp.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:34:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 946914cf
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/practices-discovery-timestamp.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:34:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6c269d1f
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/practices-discovery-timestamp.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:34:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6c269d1f
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/practices-discovery/practices-discovery-timestamp.md
+**Duration ms**: 39
+
+---
