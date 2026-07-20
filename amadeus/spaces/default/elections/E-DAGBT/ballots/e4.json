@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-DAGBT",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e1 record 実測: B&T 成果物7点+memory 実在(ls 8件)、verification/phase-check-construction.md 実在(phase boundary 対応)、build-test-results の閉包 HELD 記録と PENDING 分離(PR #1288 マージのみ — 閉包条件明記)を確認。c2 違反実例は E-DAGCG で PM 回付済み、センサー既知2件の確定分類(インシデント傍証+transient)は E-DAGCG 投票時に diary で確認済みの内容と整合。既存 cid 適用実例のみ。0件で可",
+  "submittedAt": "2026-07-20T04:32:08Z"
+}
