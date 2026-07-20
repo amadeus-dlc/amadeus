@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GSFBTS13",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。固定head b3b3dd24930a17922cd5c21753b56c7fa21f009c のB&T成果物7件・memory・phase-checkと独立reviewをリードオンリー実測した。memory.mdのc1は、早期yieldを完了と誤認した後に成果物不在/process一覧で自己捕捉し、両実行停止・途中coverage隔離・単一processのexit 0追跡・391 files/5544 assertions確定・途中断面不採用まで記録している。これは既存report-final-values-only / verify-before-notifyの直接適用実例であり、新規の一般化可能な責務差分はない。",
+      "submittedAt": "2026-07-20T23:48:45Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GSFBTS13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可を支持。固定head b3b3dd24930a17922cd5c21753b56c7fa21f009c と最終B&T成果物・review・memoryを独立照合し、途中coverage断面は成果物不在とprocess一覧で破棄され、単一processのexit 0後に391 files / 5544 assertions / failed 0へ確定している。これは既存のreport-final-values-onlyとverify-before-notifyが直接規定する適用実例で、新規候補との差分はない。",
+      "submittedAt": "2026-07-20T23:49:12Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GSFBTS13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件は不可。c1のうち「途中断面を証拠・報告へ採用しない」は既存 cid:requirements-analysis:report-final-values-only / verify-before-notify の適用実例だが、「long-running実行の早期yieldを完了と見なさず、terminal exitと成果物を確認するまで同一出力先へ次のwriterを起動しない」という実行ライフサイクル規律は既存memory全層を早期yield・同一出力先・process終端等で検索しても不在。新規候補: 非終端yieldを受けた実行はsession/process handleでterminal exitまで追跡し、同一出力先のwriterは先行実行の終端・成果物隔離確認まで直列化する。既存normとの差分は通知/証拠の確定値規律ではなく、競合成果物生成を未然に防ぐwriter ownership・terminal-state規律である。固定head b3b3dd249、B&T results/memory/phase-check、追加review、sensor監査をread-only実測し、最終値391 files/5544 assertions、review READY、sensor16/16とc1自己捕捉を照合した。",
+      "submittedAt": "2026-07-20T23:50:07Z"
+    }
+  ],
+  "late": []
+}

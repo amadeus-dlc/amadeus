@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFBTS13",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。固定head b3b3dd24930a17922cd5c21753b56c7fa21f009c のB&T成果物7件・memory・phase-checkと独立reviewをリードオンリー実測した。memory.mdのc1は、早期yieldを完了と誤認した後に成果物不在/process一覧で自己捕捉し、両実行停止・途中coverage隔離・単一processのexit 0追跡・391 files/5544 assertions確定・途中断面不採用まで記録している。これは既存report-final-values-only / verify-before-notifyの直接適用実例であり、新規の一般化可能な責務差分はない。",
+  "submittedAt": "2026-07-20T23:48:45Z"
+}
