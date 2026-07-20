@@ -272,8 +272,7 @@ export const Ballot = {
 // always appended strictly after the ballot it references, so a same-timestamp
 // amend sits later in the array; "later arrival wins" therefore realizes
 // "amend beats its referenced ballot on a tie" without inspecting kind.
-// Idempotent (a resolved list resolves to itself) and pure. NOT wired into
-// tally/verify/render here — that is Bolt B.
+// Idempotent (a resolved list resolves to itself) and pure.
 export function resolveBallots(ballots: Ballot[]): Ballot[] {
   const byVoter = new Map<string, Ballot>();
   for (const b of ballots) {
