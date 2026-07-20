@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-LSSAH",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e3 record 実測: brief+decision-log+questions 実在、verification/phase-check-ideation.md 実在、E-OC1 承認 03:08:02Z の記載一致を grep 確認、センサー最新全 PASSED。H2 同型是正の3ステージ連続は PM 蒸留データ報告のみが正しい扱い(自 intent でも同型を経験済み — required-sections H2 テンプレ機械化提案の裏付けがまた増えた)。未決の requirements 送りも正しい運用。0件で可",
+  "submittedAt": "2026-07-20T03:11:13Z"
+}
