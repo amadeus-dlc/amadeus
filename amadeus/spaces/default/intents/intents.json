@@ -414,5 +414,12 @@
     "dirName": "260720-ballot-received-at",
     "scope": "bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019f7d6c-c0d1-7a7f-b17c-1fce8048fcd1",
+    "slug": "diary-autogen-guard",
+    "dirName": "260720-diary-autogen-guard",
+    "scope": "bugfix",
+    "status": "complete"
   }
 ]
