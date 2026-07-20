@@ -31,8 +31,6 @@
 ## Runtime State
 - **Revision Count**: 0
 
-- **Parked**: 2026-07-20T03:04:50Z
-- **Parked At Stage**: scope-definition
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -93,7 +91,7 @@ Per unit: [TBD]
 - **Current Stage**: scope-definition
 - **Next Stage**: approval-handoff
 - **Status**: Running
-- **Last Updated**: 2026-07-20T03:04:50Z
+- **Last Updated**: 2026-07-20T03:05:21Z
 
 ## Session Resume Point
 - **Last Completed Stage**: feasibility

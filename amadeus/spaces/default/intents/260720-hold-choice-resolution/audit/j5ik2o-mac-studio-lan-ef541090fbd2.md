@@ -928,3 +928,81 @@
 **Timestamp**: 2026-07-20T03:04:50Z
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T03:05:06Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a4d687644a6663832
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T03:05:21Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T03:05:21Z
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:05:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9c326ea7
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/scope-definition/scope-definition-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:05:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9c326ea7
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/scope-definition/scope-definition-questions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:05:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1d9ec983
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/scope-definition/scope-definition-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:05:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1d9ec983
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/scope-definition/scope-definition-questions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:05:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: d91d21cf
+**Sensor ID**: answer-evidence
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/scope-definition/scope-definition-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:05:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: d91d21cf
+**Sensor ID**: answer-evidence
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/scope-definition/scope-definition-questions.md
+**Duration ms**: 37
+
+---

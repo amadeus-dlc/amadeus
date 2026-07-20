@@ -2,7 +2,7 @@
 
 <!-- E-OC1 選挙不要判定ヘッダ -->
 > **選挙不要判定(E-OC1)**: 全1問を選挙不要と判定する。根拠種別は判定行に記載。
-> 判定申告: 2026-07-20T03:05Z 頃 leader へ agmsg 送信。leader 承認: 【承認待ち】
+> 判定申告: 2026-07-20T03:04Z 頃 leader へ agmsg 送信。leader 承認: 2026-07-20T03:05:00Z(agmsg タイムスタンプ、根拠種別妥当と承認)
 
 上流入力(consumes 全数): intent-statement.md、feasibility-assessment.md、constraint-register.md
 
@@ -16,8 +16,8 @@
 - E. 再検討
 - X. その他
 
-[Answer]:
+[Answer]: A(E-OC1 選挙不要判定 — leader 承認 2026-07-20T03:05:00Z)
 
 ## 判定サマリ
 
-全1問を E-OC1 選挙不要で回答予定。
+全1問を E-OC1 選挙不要で回答済み(leader 承認 2026-07-20T03:05:00Z)。
