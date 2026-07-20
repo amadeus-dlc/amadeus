@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PM10D",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "E-GMEBT 不採用票(GoA2)の留保起案者。自分の留保原文『信頼境界外入力を読む regex に限定した形なら再提案を支持』に対し、本候補は範囲限定(信頼境界外・不定長入力の新設/拡張 regex 限定+固定様式短トークンの明示除外)を正確に実装した再提案で、留保どおり支持する。E-GMEBT で挙げた不採用理由3点(実害不在/trusted 入力/一律義務の ceremony)のうち後2者は範囲限定で解消し、『実害不在』は予防規則の性質上、脅威モデル内(ReDoS の古典クラス)に限定されたことで正当化される。3名留保の収斂という成立過程も early-tally 系の正しい再審運用。採用",
+  "submittedAt": "2026-07-20T01:53:06Z"
+}

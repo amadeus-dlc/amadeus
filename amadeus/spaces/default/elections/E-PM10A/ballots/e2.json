@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PM10A",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "採用(1)。#1264 の S1 実測(team.md の pre-#1259 巻き戻し・E-GMECG 追補消失)は共有ファイル整合の実害クラスで、既存 norm-pr-from-main-base(起点規律)が守らない『overlay 内容の巻き戻し面』を正確に埋める。対照実践の傍証: 当方の record-sync(#1275)は一括 overlay でなく自 intent record+特定 codekb ファイルの選択 checkout+共有2ファイル(intents.json/re-timestamp)の明示 union 構成で、この罠を構造回避した — 選択方式でも全数突き合わせ規律は安全網として有効。",
+  "submittedAt": "2026-07-20T01:53:10Z"
+}
