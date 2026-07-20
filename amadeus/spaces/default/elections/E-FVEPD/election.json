@@ -1,0 +1,21 @@
+{
+  "electionId": "E-FVEPD",
+  "kind": "s13-zero-confirm",
+  "question": "260720-formal-verif-experiment / practices-discovery §13: 新規学習候補0件でよいか。成果物4点生成済み。独立4領域scan+ユーザー回答により、本intentのみ walking skeleton を使用し、team横断rule変更なし。主要sensorはPASS。timestampはstage仕様の1行形式とgeneric required-sections(>=2 H2)の衝突による advisory FAILのみ。§13 surface c1『同日RE codekbを証跡代用、gap0』は今回の独立scanで前提失効し、成果物も置換済み。各自、e6 record の成果物・sensor・memory をリードオンリー実測し、GoA付きで投票する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 新規学習候補なし"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(note に候補と根拠 file:line を明記)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}
