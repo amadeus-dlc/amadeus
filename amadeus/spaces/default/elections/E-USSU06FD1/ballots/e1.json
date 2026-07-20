@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSU06FD1",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "判別unionはC3の一回限りのWorkspaceScan境界で閉じ、birth/state projectorをexhaustive matchとしてinconclusive時に全mutation前rejectすること。detect/doctor/auditは同じsnapshotのadvisoryを投影し、classifiedな既定経路のhuman/JSON/state bytesをNFR-3どおり不変に保つこと。",
+  "rationale": "Aを支持。FR-3の受入条件はpermission failure fixtureでも誤ったGreenfield scaffoldを上書きしないことで、C3は一つのread-only WorkspaceScanをbirth/detect/doctor/JSONへ共通投影する既決境界である。現行detectWorkspaceはGreenfield/Brownfieldの二値projectTypeを返すため、root列挙不能・signal metadata読取不能・存在する.gitmodulesのparse可能entry 0件を空観測へ丸めるとGreenfield mutationへ到達しうる。classified/inconclusiveの判別unionなら分類証拠が揃わない状態を型で分離し、birth/state mutation前rejectをexhaustiveに強制しつつdetect/doctorでは同一advisoryを可視化できる。Bは各consumerのblocking-advisory guard呼出しに正しさを依存し、Cは実在signalのないworkspaceをBrownfieldと表示してReverse Engineeringへ誤誘導する。Aの型変更は相対的に大きいがC3 choke point内の既存scopeであり、FR-3/NFR-2のfail-closed要件を最も直接に満たす。",
+  "submittedAt": "2026-07-20T13:51:26Z"
+}
