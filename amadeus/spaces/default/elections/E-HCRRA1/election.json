@@ -1,0 +1,25 @@
+{
+  "electionId": "E-HCRRA1",
+  "kind": "clarification-question",
+  "question": "260720-hold-choice-resolution(#1267)RA Q1: choice 指定 resolution の追加は「ユーザー可視契約の変更」(正準リスト(4))に該当するか?\n\n実測コンテキスト: E-TCRCG は B 案(hold-resolution の choice 語彙化 = HOLD_RESOLUTIONS・t236 期待変更)を「ユーザー可視契約の変更 → 採用時はユーザーエスカレーション」と注記した。本 intent の対応方向は既存二値(tie: adopted/rejected — E-TCRCG=A で維持)を変更せず、tie に choice 指定の新値を追加する形(#1267 の対応方向)。既存の受理値・既存出力(裁定: 採用/不採用)・既存テストピン(t236:310 系)は不変で、新入力に対する新出力(裁定: choice label)だけが増える。\n\n各自実測確認のうえ GoA 付き投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. 非該当 — 既存契約の変更を伴わない追加(受理域拡大)でエスカレーション不要。RA はこの判定を成果物に明記して進行"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. 該当 — 新しい CLI 受理値と record 出力形の導入自体が契約変更。実装前にユーザーエスカレーションで承認を得る"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. その他(note に判定枠組みを明記)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

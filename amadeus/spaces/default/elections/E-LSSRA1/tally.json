@@ -1,0 +1,49 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T03:46:54Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-LSSRA1",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 3,
+      "goa": 2,
+      "reservation": "tool の除外規則は E-PM10A 述語(自所有物外 M ファイル全数の origin/main 突き合わせ+memory 層 main 版復元)を機械実装し、**落ちる実証(memory 巻き戻しを注入して赤)を tool 完成条件に含める**こと — #1264 の S1 再発をツールで構造封鎖するのが C 採用の意味であるため。",
+      "rationale": "C 採用。#1281 クロスレビュー(2人目)で自ら実測した機序 — 0件確認選挙は運搬車を持たず leader 所有物に終端イベントがない — の恒久解はノルム(契機)+機械化(抽出・除外・PR 生成)の両輪。A のみは 40選挙滞留の再発を人間の注意力に依存し、B のみは契機が未定義で使われない tool になる(guard-activator の教訓)。決定的導出可能性(elections 全量+auditShardName)は RE 実測済みで機械化の前提が立つ。受容度: A=6 / B=6。",
+      "submittedAt": "2026-07-20T03:41:51Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-LSSRA1",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 3,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "#1281 クロスレビュー1人目としての見立て(A 即応→C 恒久)と同一。抽出対象の決定的導出可能性(elections 全量+自クローンシャード)と E-PM10A の機械述語化可能性は私のレビューで実測済み — C(ノルムが契機・tool が実行)が検証劇場を作らない唯一の恒久形。",
+      "submittedAt": "2026-07-20T03:43:13Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-LSSRA1",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 3,
+      "goa": 2,
+      "reservation": "tool は E-PM10A の除外述語(自所有物外 M の main 突き合わせ・memory 層 main 復元)を機械実装し、落ちる実証+transient-state-fixtures 込みの corpus sweep を完成条件にすること。PR 生成は gh-scripts-boundary(scripts/ 限定・配布外)を維持",
+      "rationale": "#1264 S1 検出者当事者。手動 overlay が S1 を生んだ実測(E-PM10A の成立根拠)がそのまま A(手作業+ノルムのみ)の脆弱性の証明 — レビュー検出は事後で、発生源の機械封鎖(C)が正。B 単独は契機無定義で滞留リスク。クロスレビュー見立て2名(e1/e2)の収斂とも整合。自案非採用時: A=6 / B=6 / E=8(#1281 の実害クラス放置)",
+      "submittedAt": "2026-07-20T03:46:28Z"
+    }
+  ],
+  "resolutions": []
+}

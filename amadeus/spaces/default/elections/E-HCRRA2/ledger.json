@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-HCRRA2",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "実測: resolution は単一フラグ値(FLAG_FIELDS :477/:495)でテーブル引き検証。A(--resolution choice:〈n〉の値文法拡張)は『裁定は1フラグで完結する』現行意味論を保ち、prefix parse+internalNo 実在照合の二段は E-BFARA3(unknown-ref 実在照合)と同族の fail-closed 様式。B(新フラグ併設)は --resolution adopted --choice 2 のような組合せ矛盾の検証面を新設し複雑化。#1267 例示形とも一致。B 受容度: 6。",
+      "submittedAt": "2026-07-20T03:42:49Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HCRRA2",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "#1267 起票者 — 例示形 --resolution choice:<internalNo> は既存 --resolution funnel(FLAG_FIELDS :505・HOLD_RESOLUTIONS テーブル検証 :201-207)を単一入口のまま保つ。B の新フラグは --resolution との組合せ検証(両指定・片欠け)という新しい不整合空間を作る。prefix parse+internalNo 実在照合の二段は unknown-choice(#1261 で導入済み)と同型の fail-closed。",
+      "submittedAt": "2026-07-20T03:43:13Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HCRRA2",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A(--resolution choice:<n> の値文法拡張)を支持: (1) resolution の意味論は『裁定の内容』であり choice 指定はその一形態 — 単一フラグの責務凝集が正しく、B の2フラグ併設は組合せ検証(--resolution と --choice の同時指定・矛盾)という新しい不正状態空間を作る(parse-don't-validate の逆行) (2) prefix parse+internalNo 実在照合の二段は E-BFARA1 裁定(regex+Date 二段)と同型の受理検証様式で一貫 (3) handleHoldResolved のテーブル引き fail-closed(:201-207 — 実測済み)に prefix 分岐を足す最小変更。自案非採用時: B=6",
+      "submittedAt": "2026-07-20T03:46:28Z"
+    }
+  ],
+  "late": []
+}

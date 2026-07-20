@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRRA2",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "実測: resolution は単一フラグ値(FLAG_FIELDS :477/:495)でテーブル引き検証。A(--resolution choice:〈n〉の値文法拡張)は『裁定は1フラグで完結する』現行意味論を保ち、prefix parse+internalNo 実在照合の二段は E-BFARA3(unknown-ref 実在照合)と同族の fail-closed 様式。B(新フラグ併設)は --resolution adopted --choice 2 のような組合せ矛盾の検証面を新設し複雑化。#1267 例示形とも一致。B 受容度: 6。",
+  "submittedAt": "2026-07-20T03:42:49Z"
+}

@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-LSSRA2",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 3,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "C 採用。本セッションの実測パターン — 選挙は 3〜4 件バーストで発生し PM ラウンドは約1時間周期 — に対し、A 単独はバースト期の滞留を許し、B 単独は静穏期に無意味な PR を作りうる。二重契機(PM 毎+未同期 N 超過の早い方)が両モードをカバーする。N の named constant 化(design)は constants-from-code に整合。受容度: A=6 / B=6 / D=7(40選挙滞留の再発形)。",
+      "submittedAt": "2026-07-20T03:41:51Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-LSSRA2",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 3,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "本セッション実測: 40選挙の滞留は PM 周期の隙間(約12h、PM 未実施帯)で発生 — 時間契機(PM 毎)単独では夜間・集中選挙帯に脆弱で、量契機(N 超過)単独では閑散期に鮮度が落ちる。C(早い方)が両失敗様式を塞ぐ。N の named constant 化は選択肢 B の文言どおり design で。",
+      "submittedAt": "2026-07-20T03:43:13Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-LSSRA2",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 3,
+      "goa": 2,
+      "reservation": "N は named constant 化し、設計時に実測由来の根拠(本日の選挙バースト実測 — 数十件/時級)を付すこと(constants-from-code)",
+      "rationale": "C(PM ラウンド毎+未同期 N 超過の早い方)を支持: 本日実測で選挙は40件超のバースト到来があり、PM 周期(約1時間)単独では未同期滞留が数十件規模になる — クローン喪失時の裁定記録損失リスクは未同期件数に比例するため N 超過契機が実効的。一方バースト外では PM 同乗が床周期として無駄がない。D は #1281 の現状(滞留)を追認するだけ。自案非採用時: A=6 / B=6 / D=7",
+      "submittedAt": "2026-07-20T03:46:28Z"
+    }
+  ],
+  "late": []
+}

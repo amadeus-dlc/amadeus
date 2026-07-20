@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-LSSRA2",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 3,
+  "goa": 2,
+  "reservation": "N は named constant 化し、設計時に実測由来の根拠(本日の選挙バースト実測 — 数十件/時級)を付すこと(constants-from-code)",
+  "rationale": "C(PM ラウンド毎+未同期 N 超過の早い方)を支持: 本日実測で選挙は40件超のバースト到来があり、PM 周期(約1時間)単独では未同期滞留が数十件規模になる — クローン喪失時の裁定記録損失リスクは未同期件数に比例するため N 超過契機が実効的。一方バースト外では PM 同乗が床周期として無駄がない。D は #1281 の現状(滞留)を追認するだけ。自案非採用時: A=6 / B=6 / D=7",
+  "submittedAt": "2026-07-20T03:46:28Z"
+}

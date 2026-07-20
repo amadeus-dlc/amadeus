@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRRA3",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "design で『多肢 clarification 型の tie に二値(adopted/rejected)を使った場合』の描画・受理規則を明記すること — 勝者 choice が不定のまま裁定行が『採用』と描画される #1261 同族の曖昧受理を無音で通さない(警告 or choice 明示要求のどちらかを設計裁定)。二値が自然な単一提案型(s13-adoption)との使い分けを docs に1行",
+  "rationale": "A(共存)を支持: (1) B の除去は受理域縮小 = 契約変更でエスカレーション必須束ね — 追加価値(曖昧語彙の根絶)に対しコスト過大 (2) 単一提案型選挙(採用/不採用の2択)の tie では adopted は非曖昧で有意味 — 一律除去は正当用途を壊す (3) 既存 record(hold 裁定実績)との互換。ただし多肢型での二値使用は #1261 の曖昧クラス再導入になりうるため留保で設計義務化。自案非採用時: B=6(エスカレーション承認前提)",
+  "submittedAt": "2026-07-20T03:46:28Z"
+}

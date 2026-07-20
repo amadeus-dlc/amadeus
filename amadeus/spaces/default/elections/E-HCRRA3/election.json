@@ -1,0 +1,25 @@
+{
+  "electionId": "E-HCRRA3",
+  "kind": "clarification-question",
+  "question": "260720-hold-choice-resolution(#1267)RA Q3: tie の既存二値(adopted/rejected)と choice 指定の共存形は?\n\n実測コンテキスト: HOLD_RESOLUTIONS.tie = {adopted, rejected}(:70)。t236 の既存ピンは block 経路のみで tie の二値を直接ピンするテストは不在(RE 実測)。E-TCRCG=A は「hold 裁定行の二値表現維持」を裁定したが、その主対象は当時の全 hold 共通語彙 — tie 固有の語彙集合の増減は未裁定。二値の tie における意味論は「多肢で adopted が何を指すか」が曖昧(#1267 の元問題)。\n\n各自実測確認のうえ GoA 付き投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. 共存 — tie は {adopted, rejected, choice:<n>...} を受理(既存二値の後方互換維持。二値使用時の裁定行は現行どおり)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. tie のみ choice 指定へ置換 — tie から adopted/rejected を除去(受理域縮小 = 契約変更につき、採用時は Q1 の判定に関わらずユーザーエスカレーションへ束ねる)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. その他(note に方式明記)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

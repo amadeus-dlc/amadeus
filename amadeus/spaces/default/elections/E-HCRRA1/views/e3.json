@@ -1,0 +1,21 @@
+{
+  "electionId": "E-HCRRA1",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "A. 非該当 — 既存契約の変更を伴わない追加(受理域拡大)でエスカレーション不要。RA はこの判定を成果物に明記して進行"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "C. その他(note に判定枠組みを明記)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "B. 該当 — 新しい CLI 受理値と record 出力形の導入自体が契約変更。実装前にユーザーエスカレーションで承認を得る"
+    }
+  ]
+}

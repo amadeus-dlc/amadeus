@@ -1,0 +1,29 @@
+{
+  "electionId": "E-LSSRA2",
+  "kind": "clarification-question",
+  "question": "260720-leader-store-sync(#1281)RA Q2: 同期契機の定義(Q1 で A または C 系採用時に効力)。\n\n各自実測確認のうえ GoA 付き投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. ローリング PM ラウンド毎(postmortem-two-tier の第2層に同乗 — 約1時間周期)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. N 選挙毎(N は design で named constant 化)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. PM ラウンド毎+未同期 N 選挙超過の早い方(二重契機)"
+    },
+    {
+      "internalNo": 4,
+      "label": "D. leader 裁量(契機を定めない — 現状維持に近い)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e4"
+  ],
+  "state": "recorded"
+}

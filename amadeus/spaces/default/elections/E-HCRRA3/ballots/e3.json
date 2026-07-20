@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRRA3",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "置換は tie 限定とし block/discussion/quorum の語彙は不変を要件に明記。エスカレーション(Q1 判定に関わらず束ね)は B 選択肢の記載どおり必須手順として RA 成果物に固定。",
+  "rationale": "実測: HOLD_RESOLUTIONS.tie の adopted/rejected(:70)は多肢 tie で『どの choice の採用か』を運べない曖昧語彙(#1267 の元問題 — 私のクロスレビュー実測どおり)で、t236 に tie 二値の直接ピンは不在(grep -ci tie = 0)・hold 実績もゼロ(e2 RE)= 実消費者なき曖昧経路。org Forbidden(要求なき後方互換維持の禁止)の趣旨は A(共存)でなく B(置換)を支持 — 使われていない曖昧受理値を残すのは互換負債。受理域縮小のユーザーエスカレーションは1往復のプロセスコストで、恒久契約の明確さが勝る。A 受容度: 6(共存でも choice 指定が使える実利は満たす)。",
+  "submittedAt": "2026-07-20T03:42:49Z"
+}

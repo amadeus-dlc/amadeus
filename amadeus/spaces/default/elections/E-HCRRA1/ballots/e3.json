@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRRA1",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "非該当判定の成立条件を要件に明記すること — 既存受理値・既存出力・既存テストピン(t236:310 系)の不変を design/実装で機械確認し、不変が崩れる設計変更が生じた時点で Q1 を再判定(エスカレーションへ切替)する。",
+  "rationale": "実測: handleHoldResolved(:190-201)の HOLD_RESOLUTIONS テーブル引き fail-closed を確認 — 新値追加は既存値の意味論を変えない受理域拡大で、正準リスト(4)の『既存の要件・ユーザー可視契約・挙動の変更』に該当しない。intent 自体が Issue 選定(user decides)経由で承認済みであり、追加系機能はその承認範囲内。E-TCRCG の B 案注記(エスカレーション要)は既存二値語彙の変更を対象としており、本方向(追加)とは別物。B 受容度: 6。",
+  "submittedAt": "2026-07-20T03:42:49Z"
+}

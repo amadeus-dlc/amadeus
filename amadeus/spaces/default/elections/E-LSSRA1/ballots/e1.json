@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-LSSRA1",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 3,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "#1281 クロスレビュー1人目としての見立て(A 即応→C 恒久)と同一。抽出対象の決定的導出可能性(elections 全量+自クローンシャード)と E-PM10A の機械述語化可能性は私のレビューで実測済み — C(ノルムが契機・tool が実行)が検証劇場を作らない唯一の恒久形。",
+  "submittedAt": "2026-07-20T03:43:13Z"
+}
