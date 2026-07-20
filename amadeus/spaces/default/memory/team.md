@@ -298,6 +298,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 <!-- amadeus:practices-promote:END -->
 
+- 複数の test path を列挙してテストを実行する場合は、実行前に全 path の実在を機械確認し、実行後に期待ファイル数と runner の `Ran ... across M files` を照合する — Bun は不存在 path を無音で除外したまま exit 0 になり得るため、green だけでは意図したテスト母集団の全数実行を保証しない(report-final-values-only / numbers-from-command-output-only のテスト入力集合面の追補)。票: E-HCRBT2 配信 2026-07-20T07:44:25Z → e4 採用 07:44:38Z(受理 07:44:51Z) → e3 採用 07:45:03Z(受理 07:45:37Z) → e1 採用 07:45:33Z(受理 07:46:38Z) → 開票 07:47:14Z。GoA[E-HCRBT2]: 1x3 2x0 3x0 4x0 5x0 6x0 7x0 8x0 (learned 2026-07-20) <!-- cid:build-and-test:test-path-set-completeness -->
 ## Deployment
 
 <!-- amadeus:practices-promote:BEGIN -->
