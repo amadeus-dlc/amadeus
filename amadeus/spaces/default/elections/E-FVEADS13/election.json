@@ -1,0 +1,37 @@
+{
+  "electionId": "E-FVEADS13",
+  "kind": "s13-candidate-selection",
+  "question": "260720-formal-verif-experiment / application-design §13: 候補c1〜c3の採否。c1=blind実験を sealed fixture → 第1arm freeze/開示 → walking skeleton成功 → 第2arm blind freeze → 両freeze後manifest公開、という単一state machineで管理する。c2=TLCのNOT_DETECTEDは有限domain固定点探索のcompletion markerとstate統計が揃う場合のみ認め、部分探索・timeout・統計欠損はHARNESS_ERRORとする。c3=CIコストはhealthy baseline+全defectのarm full suiteを単位に1 warmup+5 runs中央値とする。e6推奨はc1/c2をproject Verificationへ採用し、c3は本実験固有profileとして不採用。各自AD成果物・reviewer履歴・sensor・memoryと既存memory層を独立実測し、GoA・非採用時受容度付きで投票する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "c1+c2を採用、c3は不採用"
+    },
+    {
+      "internalNo": 2,
+      "label": "c1+c2+c3をすべて採用"
+    },
+    {
+      "internalNo": 3,
+      "label": "c1のみ採用"
+    },
+    {
+      "internalNo": 4,
+      "label": "c2のみ採用"
+    },
+    {
+      "internalNo": 5,
+      "label": "c1+c2+c3をすべて不採用"
+    },
+    {
+      "internalNo": 6,
+      "label": "その他（noteに採否組合せを明記）"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "collecting"
+}
