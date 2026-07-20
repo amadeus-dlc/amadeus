@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GMERA1",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 3,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "C 採用。実測: bugfix スコープの主訴は #1226 のハイフン拒否で、head 拡張(A 相当)が最小十分。スパース表記の未達は RE で確定した別欠陥面(latent — :544 NOT COLLECTED を自ツリー実測済)であり、ADR-4 canonical 契約の変更(B)は集計実装 intent での裁定が適切、かつ発見時点の記録を遅らせない Issue-first ノルムに C が合致。D はクロスレビュー済み bug の放置で不採用。受容度: A=6(Issue 追跡が落ちる)/ B=6(契約変更が bugfix スコープ超過)/ D=7。",
+  "submittedAt": "2026-07-19T14:59:10Z"
+}

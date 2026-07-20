@@ -1,0 +1,16 @@
+{
+  "electionId": "E-BFAIC",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可 — 3点とも既存 cid・ディスパッチ要件の適用実例で新規学習なし"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(票の note に候補と根拠 file:line を明記)"
+    }
+  ]
+}

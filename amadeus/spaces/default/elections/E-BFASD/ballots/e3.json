@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFASD",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 worktree リードオンリー実測: scope-document は Must M-1〜M-5(5件)/Won't W-1〜W-6(6件)を表で実カウント一致、intent-backlog・questions 実在、E-OC1 承認 TS 15:15:01Z を questions ヘッダと [Answer] 両方で確認。シャード全体の SENSOR_FAILED 2件は両方 Stage slug: feasibility(constraint-register、E-BFAFS で是正済み履歴)で scope-definition 帰属は 0件 — 主張と整合。diary 2点は scope-definition:c2/c3 の適用実例で、境界1基準化は成果物固定のスコープ実務 = プロセス新規学習なし。0件で可(1)。後続検証者向けメモ: FAILED の帰属確認は audit 行の Stage slug で行うこと(シャード全体 grep の件数だけでは誤読する)。",
+  "submittedAt": "2026-07-19T15:16:45Z"
+}

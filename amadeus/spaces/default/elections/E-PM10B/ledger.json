@@ -1,0 +1,49 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-PM10B",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "起案者。#1271 レビューで全22ファイル偽陽性→再走査0件の対照を自己実測。マーカー検査は record-sync/norm PR レビューの毎回手順で、語彙・フラグの罠は再発必至クラス(同日私以外も検査を実施している)。conflict-marker-grep-before-commit への手法面追補は既存 cid の検査を強化するだけで肥大最小。採用(1)。",
+      "submittedAt": "2026-07-20T01:52:32Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-PM10B",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "既存 cid 群の「マーカー4語彙」表現(re-timestamp-merge-resolution / E-PM5 M2 等)との読み分けを追補文に1句明記すること — 本追補は『機械検査スクリプトの述語』を3語彙+単独 -cE に限定する規定であり、目視・手動検分の文脈で ======= を見ること自体は妨げない(admission check での矛盾判定回避)。",
+      "rationale": "独立実測: 私自身 #1271 準備で grep -cE 複数ファイル時の per-file 出力に足を取られ(grep -v :0 の後処理が必要だった)、======= は本 repo の md(setext 見出し・表罫線)で偽陽性になることを確認済み。",
+      "submittedAt": "2026-07-20T01:52:55Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-PM10B",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "追補文に『======= は <<<<<<< / >>>>>>> が必ず対で存在するため除外しても検出力は落ちない』の構造根拠を1句含めること — 語彙削減が検出弱化と誤読されないため",
+      "rationale": "自分の #1264/#1271/#1275 レビューのマーカー走査は ^={7}$ を含む4語彙で実施しており、markdown の setext 見出し下線(=7連ちょうど)と衝突する偽陽性リスクを自分も持っていた(0件は corpus に該当行がなかった僥倖)— 候補の偽陽性実測(#1271 初回 22ファイル全ヒット)は -c/-l 併用の出力混同と ======= 語彙の両因で、正準3語彙+grep -cE 単独への統一は自分の手順の欠陥も塞ぐ改善。conflict-marker-grep-before-commit への追補統合が正しい。採用",
+      "submittedAt": "2026-07-20T01:53:06Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-PM10B",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "追補文に『======= を検査したい場合は行頭アンカー+単独行完全一致(^=======$)に限る(setext 下線・md 罫線の偽陽性回避)』の1文を残してほしい — 3語彙単独では = 系マーカーの真の取り残し(理論上の希少ケース)を諦めることになるため、除外でなく条件付き縮退として記録するのが正確。",
+      "rationale": "採用(2)。-c/-l 併用の全件ヒット化と ======= の setext 偽陽性はいずれも実測クラス(#1271 レビューの22ファイル偽陽性→再走査0件)。当方も #1278 レビューで ^=======$ アンカー付き4語彙を使い偽陽性0だったが、アンカー忘れ1つで全 md が偽陽性化する脆い手順であることに同意 — 正準3語彙+grep -cE 単独への標準化は検査の再現性を上げる。留保はその縮退の条件付き明文化のみ。",
+      "submittedAt": "2026-07-20T01:53:10Z"
+    }
+  ],
+  "late": []
+}

@@ -1,0 +1,21 @@
+{
+  "electionId": "E-TCRRA1",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "A. choice 単純票数の多数決で勝者 choice を決定し、GoA は成立判定の軸として分離(8 block 1票で成立保留・5 が2票以上で追加議論等の既存 GoA 規則は全票横断で適用)— E-GMEBT のユーザー裁定と一致する読み"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "C. その他(note に方式明記)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "B. choice 別に賛成側 GoA(1-3,6)票数を数えて勝者決定(GoA を勝者選出にも使う — 棄権4の choice 票を勝者選出から除外する効果)"
+    }
+  ]
+}

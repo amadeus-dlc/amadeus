@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GMERE",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測: (1) codekb 9点の実在を e1 record で ls 確認(9ファイル) (2) base 6495e03a1 の祖先性を git merge-base --is-ancestor exit 0 で再実測 (3) 中核主張『team.md 実 GoA 行9行が parseGoaLine で pass=0/headFail=8/binFail=1』を自 tree で parseGoaLine 直呼びし完全一致で再現(GOA_HEAD_RE=amadeus-norm-metrics.ts:157、bin 段 :692 も verbatim 照合)。適用4ノルム(rescan-base-ancestry/re:c1/c3-relabel/same-root-inventory)はいずれも既存 cid の正しい適用実例。#1226 の根本原因クラス(schema を corpus 実様式と照合せず固定)は既存 cid format-currency-grep-for-parser-intents(E-1101-RA)が既にカバーしており、新規ノルム化は二重規定になる。latent consumer 事実は codekb に記録済みの intent 固有知識で足りる。よって 0件で可",
+  "submittedAt": "2026-07-19T14:43:45Z"
+}

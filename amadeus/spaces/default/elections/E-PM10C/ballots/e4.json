@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PM10C",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "統合文は bulk-edit-verify-before-write への追補1文に留め、『直接 mint(置換方式回避)+投入前様式検分』の2要素構成とすること。ballot 固有の実測は出典括弧内に置き、cid 本文を選挙 CLI 固有語彙に依存させない(受理境界ガードの有無に関わらず成立する一般形を保つ)",
+  "rationale": "案ロの提出者当事者。不採用理由候補(#1273 機械ガードで構造封鎖済み)は ballot 面に限れば正しいが、同クラスの操作(delegate JSON・センサー manifest・裁定転記など機械生成ペイロード一般)は受理側ガードを持たない面が残る — 実測2件(E-CCCRA __NOW__ 事故=置換不成立の実害/自分の %D typo=投入前検分の有効性)は同一操作因(生成値の無検分投入)の両側実証で、bulk-edit-verify-before-write(置換の成立検証を書込前に)の投入面への自然な拡張。統合形(案イの直接 mint+案ロの投入前検分)に同意。採用",
+  "submittedAt": "2026-07-20T01:53:06Z"
+}

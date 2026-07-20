@@ -1,0 +1,20 @@
+{
+  "electionId": "E-TCRRE",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260719-tally-choice-ruling(#1261)/ reverse-engineering ステージの §13 学習候補について、conductor は 0件を提案している。根拠: 適用ノルム(reverse-engineering:c1 差分リフレッシュ / c3 直列 / rescan-base-ancestry / symmetric-pair-review / mechanism-cite-verify)は全て既存 cid の適用実例で新規学習なし。成果物: codekb 9点+re-scans/260719-tally-choice-ruling.md、base a326f47bc(祖先 exit 0)、Architect 引用再実測4点全一致(tally :321/:334-335、Ballot.parse unknown-choice 欠落、rulingText :107 二値、verify :440 recompute)。主要確定: 修正集約点 = tally 一点+TallyResult 型拡張の波及(record.ts/t234/t238)、E-GMEBT が回帰 fixture。各自 e1 worktree の record をリードオンリー実測確認のうえ、0件でよいかを GoA 付きで投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 既存 cid の適用実例で新規学習なし"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(票の note に候補と根拠 file:line を明記)"
+    }
+  ],
+  "voters": [
+    "e2",
+    "e4"
+  ],
+  "state": "recorded"
+}

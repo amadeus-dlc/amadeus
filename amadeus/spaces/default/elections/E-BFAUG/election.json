@@ -1,0 +1,20 @@
+{
+  "electionId": "E-BFAUG",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260719-ballot-failclosed-amend / units-generation ステージの §13 学習候補について、conductor は 0件を提案している。根拠: Planning 工程の無申告スキップ(iteration 1 Major)は election-answer-after-ruling の違反実例で新規学習でなく次回 PM へ回付、他 diary 観測は既存 cid の適用実例。成果物3点+questions(E-OC1 承認 TS 3箇所一貫)、iteration 2 READY(両所見閉包+退行なし)、センサー最新 FAILED 0件、一次記録 push 済み b64e0eb3d。各自 e2 worktree の record をリードオンリー実測確認のうえ、0件でよいかを GoA 付きで投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 違反実例は PM 回付が適切、新規学習なし"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(票の note に候補と根拠 file:line を明記)"
+    }
+  ],
+  "voters": [
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

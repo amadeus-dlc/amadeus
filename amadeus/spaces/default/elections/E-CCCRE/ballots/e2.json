@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CCCRE",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測: (1) base 選定 = rescan-base-ancestry の適用実例(a66dda7d0 の re-scans:20-24、--is-ancestor 判定・非祖先 observed 除外を記録実文で確認) (2) センサー filter 不適合 = re-sensors-codekb-filter-mismatch の適用実例(diary Interpretation 14:38Z、手動確認で代替) (3) churn 温存 = c1(7成果物温存)+ c3-relabel(timestamp 降格、re-scans:106)の適用実例。いずれも既存 cid で新規学習なし。0件で可(1)",
+  "submittedAt": "2026-07-19T14:42:38Z"
+}

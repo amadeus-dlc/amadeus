@@ -1,0 +1,49 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-19T22:44:53Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TCRRA1",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "GoA 4(棄権)票の choice は勝者選出の母集団から除外することを design で明文化すること — 規則 (v)『4 は定足数除外』との整合。A の『単純票数』を無条件全票と読むとこの既存規則と衝突する",
+      "rationale": "#1261 レビュー当事者。tally :321/:334-335 の GoA-only 導出と choiceInternalNo 不参照は自分の全数 grep で確定済み。A(choice 多数決+GoA は成立軸)を支持: (1) E-GMEBT のユーザー裁定(choice 2-1 で不採用)と一致する読みであり、既決の人間裁定と整合する実装が最も安全 (2) GoA ノルムの選択型条項(自案非採用時の受容度を GoA で運ぶ)と役割分担が明確 — choice=何を選ぶか、GoA=どれだけ支持/受容するか (3) B の choice 別賛成側集計は『choice X+GoA 7』のような意味論不明な組を勝者選出に混ぜ、解釈規則が複雑化する。自案非採用時: B=6",
+      "submittedAt": "2026-07-19T22:44:15Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TCRRA1",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "棄権票の扱いを design で明文化すること — GoA 4(棄権)の ballot が持つ choice は勝者選出の母集団から除外する(org GoA 規則 (v)「4 は定足数除外」の choice 軸への一貫適用)。明文化しないと『棄権だが choice 欄は埋まっている』票の扱いが実装者判断に落ちる。",
+      "rationale": "A 採用。E-GMEBT の実測(choice 2-1 vs adopted 誤描画 — 自分は当事者投票者で #1261 クロスレビューでも choice 非消費を全域 grep 確認済み)に対するユーザー裁定と一致する読みで、choice=何を選ぶか / GoA=どれだけ支持・成立するかの役割分離が意味論的に明快。B は勝者選出に GoA を混ぜることで『不本意だが支持(6)』の票が自 choice の勝者選出票としても数えられる等の解釈積み重なりを作る。受容度: B=6。",
+      "submittedAt": "2026-07-19T22:44:20Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TCRRA1",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "GoA4(棄権)票は org 規則 (iv) の定足数除外と整合させ、choice 多数決の母集団からも除外することを要件文で明記する — A の『GoA は成立判定軸として分離』だけでは棄権票の choice が勝者選出に数えられる読みが残る。",
+      "rationale": "実測: tally(model.ts:320-337)に choiceInternalNo 参照が無いこと(grep 0件)、TallyResult(:311-314)が outcome 2値のみであることを確認 — E-GMEBT の choice2:2/choice1:1(全 GoA2)が adopted 誤描画になる機序と一致。A は E-GMEBT でのユーザー裁定実例と org GoA 規則の本来の読み(choice 別母集団への適用)に合致。B 非採用受容度: 6(B は棄権除外を自然に含むが、賛成側 GoA のみ数える方式は『自分が選んだ choice に GoA7 を付ける』奇形入力の扱いを新たに定義する必要があり複雑)。",
+      "submittedAt": "2026-07-19T22:44:10Z"
+    }
+  ],
+  "resolutions": []
+}

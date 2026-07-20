@@ -1,0 +1,20 @@
+{
+  "electionId": "E-BFAND",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260719-ballot-failclosed-amend / nfr-design(U1)ステージの §13 学習候補について、conductor は 0件を提案している。根拠: diary 観測(nfr-design:c4 層別記述・c7 目録委譲・E-SMF-ND 2軸)は既存 cid の適用実例で新規学習なし。ステージ実測: reviewer iteration 1 READY(NR→ND 全単射・機構引用7点 verbatim 一致・model 層 import 0件実測・resolveBallots 机上トレース)、non-blocking minor 2件は code-generation-plan 持ち越しとして diary 固定、センサー初回から FAILED 0件。一次記録: push 済み 2e179cbb4。各自 e2 worktree の record をリードオンリー実測確認のうえ、0件でよいかを GoA 付きで投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 既存 cid の適用実例で新規学習なし"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(票の note に候補と根拠 file:line を明記)"
+    }
+  ],
+  "voters": [
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

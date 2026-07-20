@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PM10B",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "起案者。#1271 レビューで全22ファイル偽陽性→再走査0件の対照を自己実測。マーカー検査は record-sync/norm PR レビューの毎回手順で、語彙・フラグの罠は再発必至クラス(同日私以外も検査を実施している)。conflict-marker-grep-before-commit への手法面追補は既存 cid の検査を強化するだけで肥大最小。採用(1)。",
+  "submittedAt": "2026-07-20T01:52:32Z"
+}

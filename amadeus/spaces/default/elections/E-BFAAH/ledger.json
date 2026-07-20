@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-BFAAH",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "配布ビューからは当該2点の観測の所在(intent/stage/diary)を特定できず候補文面の一次記録までは独立検分していない — 既存 cid の適用実例を新規 cid 化しない分類方針自体は確立運用と整合するため賛成。",
+      "rationale": "適用実例・違反実例は PM ラウンドの台帳回付で扱う既存運用(E-PM9 候補外扱い、直近 E-GMERAS13 の PM 回付2件と同型)に一致。",
+      "submittedAt": "2026-07-19T15:20:47Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-BFAAH",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e2 record をリードオンリー実測: 成果物3点(questions/decision-log/initiative-brief)+verification/phase-check-ideation.md の実在を ls/find で確認(phase-check は c2 の正名・正位置)、diary 2点 verbatim 確認(c3/c4 の捏造回避適用と、phase boundary での standing-approval-scope-limit 準拠 per-gate delegate 依頼+phase-check-before-final-approve 適用)、E-OC1 承認 TS 15:19:29Z 記載、自動発火 FAILED 2件は 15:19:50Z/15:20:07Z の全 Passed で是正済みを audit 時系列で確認。diary 2点はいずれも既存 cid の適用実例で、特に常任グラント 22d74683 の phase-boundary 除外を自発適用した点は standing-approval-scope-limit の模範適用であり新規ノルム不要。0件で可",
+      "submittedAt": "2026-07-19T15:21:02Z"
+    }
+  ],
+  "late": []
+}

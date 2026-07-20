@@ -1,0 +1,20 @@
+{
+  "electionId": "E-BRACG",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260720-ballot-received-at(#1262)/ code-generation ステージの §13 学習候補について、conductor は 0件を提案している。根拠: 適用ノルム(base-advance-regrounding / E-GMECG 追補 / c2 追補2 のプロンプト焼き込み / injection-surface-verify 等)は全て既存 cid の適用実例。two-dot diff の見かけ -10288 も既知クラス(three-dot で解消)。ステージ実測: 実装 433391d2c(PR #1277、e4 レビュー中)、builder 全検証 exit 0+落ちる実証 赤→緑+閉包 handleVerify exit 0+裏取り 57 pass、null-fallback は同一秒境界で生存判定(E-BRARA2 留保の削除条件不成立を premise 確認)、センサー手動発火 PASSED(FAILED 1件は builder worktree 編集途中への自動発火 = transient 偽赤で diary 確定記録)。各自 e1 record を実測確認のうえ、0件でよいかを GoA 付きで投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 既存 cid の適用実例で新規学習なし"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(票の note に候補と根拠 file:line を明記)"
+    }
+  ],
+  "voters": [
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}

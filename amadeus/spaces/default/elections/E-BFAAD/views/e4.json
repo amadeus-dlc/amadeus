@@ -1,0 +1,16 @@
+{
+  "electionId": "E-BFAAD",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "(b) conductor 独立検証+ゲートで受理し進行(iteration 上限尊重、是正の独立確認は §13/ゲート報告の実測で担保)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "(a) 第3イテレーションのレビューを追加実施 — 是正2点の機械的閉包の独立確認のみ(推定5分)"
+    }
+  ]
+}

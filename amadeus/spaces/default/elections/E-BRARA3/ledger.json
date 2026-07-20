@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-BRARA3",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A(遡及なし・fallback シムなし・NFR 明文化)は Forbidden(要求なき互換レイヤー禁止)と append-only 監査記録の原則に直接整合。完了済み選挙の timeline を再 verify する運用は存在しない(私の全 verify 実測はすべて開票フロー内)ため、読み側シム(B)は消費者不在の互換負債。C(過去 record の機械再構成)は完了済み監査記録の書き換えで P2 違反。受容度: B=6(NFR 根拠が明文化されるなら成立)/ C=7(append-only 原則との矛盾)。",
+      "submittedAt": "2026-07-20T00:26:11Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-BRARA3",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "移行窓(修正着地前に open し着地後に verify へ到達する in-flight 選挙)の扱いを design で明示し、transient-state-fixtures 準拠の fixture を置くこと — 『新規選挙にのみ新軸適用』の判別(受理時刻フィールドの有無等)は事実上1点の読み分岐であり、その1点に限り NFR 根拠を明文化する(それ以上の fallback シムは書かない)",
+      "rationale": "A(遡及なし)を支持: (1) 完了済み選挙の timeline は append-only の監査記録であり、再 verify する運用は存在しない(verify は選挙ライフサイクル内の rendered→verified 遷移でのみ実行 — 状態機械実読) — 読み側シム(B)の NFR 根拠が成立しない (2) C の一括再生成は過去 record の書き換えで、監査 append-only 原則(P2/c3 の revert 経由原則)に正面から反する (3) Forbidden(要求なき互換レイヤー禁止)の既定に最も忠実。ただし修正着地時点の in-flight 選挙という移行窓だけは実在しうるため留保で fixture 化を要求。自案非採用時: B=6(NFR 明文化があれば許容)/ C=7(append-only 破壊)",
+      "submittedAt": "2026-07-20T00:26:29Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-BRARA3",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A 採用。construction ガードレール(要求なき互換シム禁止)と整合し、『既存 timeline を verify し直す運用が存在しない』は反証可能な不在根拠(完了 record の再 verify verb 実行は現行フローに無い)。B はシム維持コストと NFR 根拠を要し不要。C は完了済み監査記録の書き換えで、append-only 生成物の履歴 rewrite 禁止(project.md deployment-pipeline:c3 の revert-only 回復原則)と矛盾する。受容度: B=6 / C=8(既決ノルム矛盾 — 反証根拠: project.md c3 は『履歴 rewrite をせず人間承認付き revert で回復』を規定、過去 record の機械再構成はこれに正面衝突)。",
+      "submittedAt": "2026-07-20T00:33:32Z"
+    }
+  ],
+  "late": []
+}

@@ -1,0 +1,22 @@
+{
+  "electionId": "E-PM10C",
+  "kind": "s13-adoption",
+  "question": "ローリング PM 候補 C3(同族2案の統合提示)。案イ(verbatim): 『機械生成 JSON(ballot 等)はプレースホルダ置換方式(sed 等)で作らず、生成側で値を直接 mint し、投入前に値の様式を機械検分する — 置換不成立はプレースホルダ文字列がそのまま受理境界を通過する(E-CCCRA __NOW__ 事故の根本操作因。15票超で再発ゼロの対照実測)』/ 案ロ(verbatim): 『機械生成する構造化ペイロード(ballot 等)は投入前に様式自己検査(regex/parse)を1手挟む』(date %D typo を投入前 regex 検査で捕捉の実測)。起案者自身の不採用理由候補: #1252/#1273 の機械ガード着地で構造封鎖済み・汎用常識クラス。各自 GoA 付き投票(採用なら note に統合文案の好みを1行可)。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "採用 — 統合形(直接 mint+投入前様式検分)を bulk-edit-verify-before-write 系への追補として persist"
+    },
+    {
+      "internalNo": 2,
+      "label": "不採用 — 機械ガード着地済みで過渡的(diary 記録のみ)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

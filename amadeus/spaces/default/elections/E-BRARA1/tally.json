@@ -1,0 +1,49 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T00:33:48Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-BRARA1",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "受理時刻フィールドの追加は canonical 1定義(TimelineEvent — E-ETF-BT で canonical lift 済み)への追加1点から導出し、描画側は単調性検査と遅延可視化に必要な面のみ更新する(不要な renderer への一律表示展開はしない — 波及最小化)。",
+      "rationale": "実測: ballot/late のみ at=submittedAt(store.ts:156/:166)で distributed(election.ts:304)/tallied(:228)は機械時刻の非対称、verifySelf 隣接単調検査(record.ts:179-183)が中継遅延で構造 fail することを verbatim 確認(E-BFARA1 の受理順実例も #1270 レビューで一次確認済み)。A は事象時刻(受理)と申告時刻の両方を監査可能に保ち P2 に最適合。B 非採用受容度: 6(意味論的には event log の at=事象時刻で正だが、申告値の timeline 可視性を失い遅延の監査が ledger 突き合わせ必須になる)。C は検査価値の喪失で 7。",
+      "submittedAt": "2026-07-20T00:26:11Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-BRARA1",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "#1262 クロスレビュー当事者。at 非対称(ballot/late のみ申告値 :156/:166、distributed :304/tallied :228 は機械時刻)と E-BFARA1 の非単調実測は自分の verdict と一致。A(受理時刻フィールド追加+単調検査の受理軸移行、at は申告値のまま表示保存)を支持: (1) 申告値と受理値は異なる意味の事実であり両方保存が監査として正 — B の at 意味変更は append-only ledger の既存 record と新 record で同名フィールドの意味が分岐する監査上の破壊的変更 (2) C の検査撤廃は検証価値の喪失で P2 に反し非推奨提示のとおり (3) 自分の #1262 verdict の期待挙動案(receivedAt 記録+単調性は receivedAt で検査、submittedAt は申告として保存)と完全一致。自案非採用時: B=7(監査意味論の破壊)/ C=7",
+      "submittedAt": "2026-07-20T00:26:29Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-BRARA1",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A 採用。#1262 クロスレビュー(2人目)で自ら実測した機序(at=submittedAt 2箇所・受理時刻無記録・E-BFARA1 の受理順 vs 申告順乖離)と一致する自然な解。B は timeline の at の既存意味(申告値)を書き換える破壊的変更で、過去 record との意味不整合を全消費面(render/verify/読者)に持ち込む。C は検査価値の放棄で非採用。受容度: B=6 / C=7。",
+      "submittedAt": "2026-07-20T00:33:32Z"
+    }
+  ],
+  "resolutions": []
+}

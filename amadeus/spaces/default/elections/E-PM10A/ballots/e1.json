@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PM10A",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立傍証: 私の record-sync 3本(#1263/#1271/#1278)は overlay を自 intent パス+特定 codekb ファイルに限定する狭域 checkout で memory 層巻き戻しを構造回避していた — 候補の是正(自 intent 外 M ファイルの main 突き合わせ)は同じ帰結を一般形で保証する。#1264 の E-GMECG 追補消失は S1 級の実害で追補価値は明確。",
+  "submittedAt": "2026-07-20T01:52:55Z"
+}

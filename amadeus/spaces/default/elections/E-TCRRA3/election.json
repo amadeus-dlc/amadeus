@@ -1,0 +1,25 @@
+{
+  "electionId": "E-TCRRA3",
+  "kind": "clarification-question",
+  "question": "260719-tally-choice-ruling(#1261)RA Q3: TallyResult 型拡張の形。\n\n背景: 現行 TallyResult(model.ts:312-314)は outcome:\"adopted\"|\"rejected\"+GoaCounts のみで多肢を表現不能。型変更は rulingText(record.ts:107)・verify(election.ts:440 recompute 比較)・t234/t238 fixture へ機械的波及。\n\n各自コード実測のうえ GoA 付き投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. winner(choiceInternalNo+label)+choice 別票数内訳+既存 GoaCounts を保持し、outcome は winner から導出(record.md の裁定行に勝者 choice label を描画 — 監査可能性最大、波及も最大)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. winner フィールドのみ追加(内訳は ledger から再導出可能として持たない — 波及最小)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. その他(note に方式明記)"
+    }
+  ],
+  "voters": [
+    "e2",
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}
