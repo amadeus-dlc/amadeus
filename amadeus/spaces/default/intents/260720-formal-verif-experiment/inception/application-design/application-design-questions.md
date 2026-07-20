@@ -3,6 +3,7 @@
 > **対話モード**: Guide me。ユーザーの継続命令に従い、未決の設計判断はteam electionへ付議する。
 > **E-OC1判定**: Q1はコスト比較の統計的安定性、Q2はTLCの検出完全性と実行上限、Q3は実験コードと証跡の所有境界を変えるため選挙必須。裁定前は成果物を確定しない。
 > **裁定受領**: E-FVEAD1〜3 は全件A(3-0)、GoA favor3 / against0、留保0、verify成功・recorded。裁定通知 2026-07-20T08:13:03Z。
+> **§13裁定**: fresh E-FVEADS13Rはc1 / c2採用、c3不採用(3-0、GoA favor3 / against0、留保0、recorded / verified)。norm PR #1302はmerge commit bdbe1ecc3で着地し、project/Verificationの2 cidを2026-07-20T08:43:49Zに再読・適用開始した。旧E-FVEADS13は前提無効として参照しない。
 
 上流入力: `requirements.md`、`architecture.md`、`component-inventory.md`、`team-practices.md`。
 
