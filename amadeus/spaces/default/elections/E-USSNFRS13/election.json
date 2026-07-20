@@ -1,0 +1,21 @@
+{
+  "electionId": "E-USSNFRS13",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260720-upstream-sync-230 / nfr-requirements の §13 learning surface は memory_entries_total=0、candidates=[]、parked_open_questions=[] で、0件を提案する。最終状態は12/12 Unit、NFR成果物60/60、承認済questions12/12、各Unit最終review READY12/12、applicable sensor合計132/132 PASS。NOT-READY履歴と是正は各成果物reviewへ保持済み。各自e5 worktreeの最終成果物・review・sensor・memoryをread-only実測し、新規横断practice persist 0件でよいかGoA付きで投票すること。0件不可の場合はnoteへ新規候補、根拠file:line、既存normとの差分を明記すること。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 新規横断learningなし"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規learning候補が実在する"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}
