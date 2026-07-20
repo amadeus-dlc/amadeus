@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVEDPS13",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "c1は今回の4 Bolt成果物の解釈、c2は既存projectのrisk-first、c3は既存blind freeze/reveal state machineの再述であり、独立規範としての新規性がないため不採用とする。c4は既存state machineに欠ける成立証拠を、identity/session/worktree/base SHA/input allowlist・hash/clean receipt/freeze SHA、禁止入力0件scan、全arm freeze後integrationという機械検証可能な契約として補完する。最終team-allocation/bolt-planに同契約が具体化され、final sensor窓は15 PASS・0 FAIL、3 Major是正後の増分review READYも実測したため採用に賛成する。非採用時受容度=7: 今回intentの成果物内では閉じるが、将来のblind比較で名称だけの分離を再発させる余地が残る。",
+  "submittedAt": "2026-07-20T09:30:21Z"
+}

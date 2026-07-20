@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVEDPS13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "c4の適用範囲を、arm間の情報隔離自体が実験妥当性の成立条件となるblind比較実験に限定すること。prompt/contextの0件検査は自己申告ではなく、Coordinatorが固定した公開input allowlist/hash、session/worktreeの実入力manifest、禁止path scan receiptを一次証拠とし、通常の並行Unit作業へ一律適用しないこと。",
+  "rationale": "c1〜c3不採用、c4採用を支持する。c1の4 Boltsは今回の8 Units/22-edge DAG固有、c2のhard risk-firstとc3のblind独立性優先は既存walking-skeleton/project規範および既決裁定の再記述であり、新規persistは重複する。一方c4は、名称上のrole分離ではなくauthor identity・session・worktree・base SHA・公開input allowlist/hash・clean receipt・freeze SHAと禁止入力0件receiptを要求し、integrationを全freeze後へ閉じるため、blind比較の再現性と非汚染性を第三者が検証できる横断的なVerification契約である。最終成果物への裁定留保反映、phase-check、09:27:15〜16Zの最終15 sensor PASS、初回Major3是正後09:27:49Z incremental review READY、E-FVEDP2 recordを実測した。非採用時受容度: choice2=3、choice3=2、choice4=4、choice5=5（c4同等の限定スコープを明記する場合）。",
+  "submittedAt": "2026-07-20T09:29:36Z"
+}
