@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRBT2",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "採用。e2 HEAD da36aa95ae の build-and-test memory、build-test-results、phase-check-construction をリードオンリー実読し、初回は不存在 path 2件を含んだまま Bun が exit 0 / 4 filesで偽緑、期待6 filesとの照合で自己捕捉後、rg --filesで実在パスを再解決して6 files / 36 tests / 260 assertions / 0 failへ是正した記録を確認した。独立対照でも実在t238 1件＋不存在1件のbun testがexit 0、Ran 13 tests across 1 fileとなり、不存在引数の無音除外を再現した。既存report-final-values-onlyは集計完了後の確定値、numbers-from-command-output-onlyは出力由来数値を規定するが、意図した入力テスト集合の実在・全数実行は保証しない。実行前の全path実在確認と実行後の期待file数照合は空隙を閉じる限定追補として新規性がある。非採用時も既存cidの違反実例としての温存を受容する。",
+  "submittedAt": "2026-07-20T07:44:38Z"
+}
