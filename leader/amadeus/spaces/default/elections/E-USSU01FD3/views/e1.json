@@ -1,0 +1,21 @@
+{
+  "electionId": "E-USSU01FD3",
+  "voter": "e1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "trim/dedupe/sort/block-formのstrong canonicalization"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "unknown predicate等を許すcompatibility緩和"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "upstream e89162f exact-shape（number ^\\d+\\.\\d+$、name/bundle非空string、required_sections非空string[]、when exactly-one producer-in-plan/non-empty slug、追加canonicalizationなし、absent bytes不変）"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "electionId": "E-USSU08FD1",
+  "voter": "e2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "spot-checkごとに人間承認gate"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "spot-check carve-outを廃止"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "4条件closed predicateでread前に決定的承認/拒否しsingle pathを一時pass-listへ追加、path/reason/owner evidence/scope decisionを既存review・subagent・auditで追跡、新eventなし"
+    }
+  ]
+}
