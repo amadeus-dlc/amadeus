@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-AWATCH",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Aを支持する。現agent-watch paneをread-only実測し、60秒間隔でagent label/pane/statusとUTC時刻だけを表示し、done/idle/workingの遷移を記録していることを確認した。これは既存push-reporting cidが例外許可する長時間沈黙時health-checkの具体的で安全な観測方式そのものであり、独立cid化より既存規範への限定追補が凝集的である。追補はHerdr-managed team sessionに限定し、agmsg inbox/election statusの周期polling、focus変更、入力、resume/despawn等のmutationを禁止し、done/idleを異常扱いせず、割当中なのに正当なgate/blocker報告なく停止した場合だけleaderが手動証拠確認する条件を保持すべきである。非採用時受容度: B=6、C=7、D=8、X=6。",
+  "submittedAt": "2026-07-20T10:23:47Z"
+}

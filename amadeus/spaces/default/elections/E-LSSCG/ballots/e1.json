@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-LSSCG",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件は不可。新規候補: 可変長pathspecを渡すGit計測は対象配列0件を明示no-opとして分岐し、末尾`--`だけのコマンドを実行しない。空pathspecは対象なしではなく全差分へ退化し、所有境界外の変更を誤集計するためである。独立実測: revision iteration 2で`owned.shardPaths=[]`時の`git diff --numstat origin/main --`がforeign 99行を`shardDeltaLines`へ混入し、修正前34 pass/1 fail→明示no-op後35 pass/0 fail・124 assertionsとなった。実装scripts/amadeus-leader-sync.ts:463-483とt245境界testを直読・再実行し35/0、対象Biome PASS、最新linter/type-check sensor PASSを確認。既存memoryを`empty pathspec`/`unscoped`/`numstat`等で全層検索したが同等規範はなく、E-PM10Aのowned-only目的を他のGit argv構築にも再利用可能なcode-generation規律として補完する。choice1は既存cidに同義の明示no-op契約が実在すると反証される場合のみ受容する。",
+  "submittedAt": "2026-07-20T11:41:49Z"
+}

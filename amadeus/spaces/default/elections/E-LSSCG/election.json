@@ -1,0 +1,21 @@
+{
+  "electionId": "E-LSSCG",
+  "kind": "s13-learning-candidates",
+  "question": "260720-leader-store-sync / code-generation の§13 surfaceを裁定する。最終成果物はplan+summary、実装scripts/amadeus-leader-sync.ts、unit/integration t245。review 2回で実Git falling proof、origin/main全elections corpus、create順序/owned-only、remote seq、cleanup、SyncError、empty shard unscoped numstatを閉包。最終実測はfocused 35 pass/124 assertions、typecheck/target Biome/coverage 593/593、full test:ci 389 files/5521 assertions/0 fail、linter/type-check sensor PASS。memory_entries_total=0、candidates=[]、open_questions=[]のため新規persist 0件を提案する。実装先行の手順逸脱は自己申告され、最終的に修正前34 pass/1 fail→修正後35/0のfalling proofへ固定。promote:self:checkは既存pr-review HTML orphan 2件でexit1だがpackage面は未変更。成果物・memory・review・検証値と既存normを独立実測し、0件でよいか裁定する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可（noteに新規候補を記載）"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e4"
+  ],
+  "state": "recorded"
+}

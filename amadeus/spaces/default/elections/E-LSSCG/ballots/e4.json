@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-LSSCG",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件は不可。新規候補: 可変 pathspec/対象集合を CLI へ渡す処理では、空集合を引数省略へ縮退させない。省略時に対象範囲が全体へ拡大する CLI（本件の git diff --numstat origin/main --）は、空集合を明示 no-op または loud 拒否とし、foreign 差分を注入して unscoped 呼出し0件を assertする。実測: scripts/amadeus-leader-sync.ts の syncStatus は owned.shardPaths=[] でも Git を呼び、fake Git の unscoped numstat 99行を shardDeltaLines=99 と誤集計した。review iteration 2 Major/GoA7で捕捉し、明示no-op後は修正前 focused 34 pass/1 fail→修正後35 pass/0 fail、shardDeltaLines=0・当該call=0で閉包。memory/team/projectを grep し、empty pathspecがscope全体へ意味拡大する境界の既存規範は見当たらず、一般化価値がある。実装先行の手順逸脱は、最終的に既存P2の落ちる実証とfix-diff-independent-reverifyを適用して閉包した違反実例であり別候補にはしない。",
+  "submittedAt": "2026-07-20T11:42:21Z"
+}
