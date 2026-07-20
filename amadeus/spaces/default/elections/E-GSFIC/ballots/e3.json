@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFIC",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e4 record リードオンリー実測: 成果物3点+memory 実在(ls)、E-OC1 承認 TS 02:53:44Z がヘッダ+[Answer] 両面に記載、diary 3点(c1 適用・未決3点の RA 委譲・#1279 環境データ+c6 非交差の相互確認)を実読 — 全て既存 cid の適用実例。#1279 成功環境データが engineer-4 でも追加された点は同 Issue の環境差仮説を強める観測(私の対照コメントと整合)。0件で可(1)。",
+  "submittedAt": "2026-07-20T02:56:00Z"
+}

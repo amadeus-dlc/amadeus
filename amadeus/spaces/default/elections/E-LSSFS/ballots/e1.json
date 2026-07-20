@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-LSSFS",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e3 record リードオンリー実測: feasibility 成果物4点実在・E-OC1 記入済み。C=GO/A=GO(暫定)/B=条件付きの実現可能性順は私の #1281 クロスレビュー見立て(A 即応→C 恒久)と整合し、観測は既存 cid 適用実例。0件で可(1)。",
+  "submittedAt": "2026-07-20T03:03:23Z"
+}

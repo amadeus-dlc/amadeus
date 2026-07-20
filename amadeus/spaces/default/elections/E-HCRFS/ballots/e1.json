@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRFS",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record リードオンリー実測: stale tree 実測→--no-ff 再接地(parents=2 機械確認)→全 seam 再実測の是正列は base-advance-regrounding(E-SDE-CG4 追補)の適用実例で、violation は measurement-ref-in-artifacts の PM 回付が適切。訂正後 seam 引用(model.ts:411-418 winner+choiceCounts / record.ts:120-127 / election.ts:390-392 rulingOverride)は私が #1261 実装の conductor として実面と一致することを確認。0件で可(1)。",
+  "submittedAt": "2026-07-20T03:03:23Z"
+}

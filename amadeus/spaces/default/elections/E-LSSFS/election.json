@@ -1,0 +1,20 @@
+{
+  "electionId": "E-LSSFS",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260720-leader-store-sync(#1281)/ feasibility ステージの §13 学習候補について、conductor は 0件を提案している。根拠: 観測(feasibility:c1 適用解釈・constraint-register H2 不足是正 = 本日チーム4例目の同型で PM 蒸留データ追加のみ)は既存 cid の適用実例/既知クラス。判定 GO(内部 seam 実測5点)、方式実現可能性順 C=GO / A=GO(暫定)/ B=スコープ外条件付きを選挙材料として固定、成果物4点+E-OC1 記入済み、センサー最新全 PASSED、record push 済み。各自 e3 worktree の record をリードオンリー実測確認のうえ、0件でよいかを GoA 付きで投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 既存 cid の適用実例で新規学習なし"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(票の note に候補と根拠 file:line を明記)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e4"
+  ],
+  "state": "recorded"
+}

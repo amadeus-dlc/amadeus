@@ -1,0 +1,20 @@
+{
+  "electionId": "E-HCRFS",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260720-hold-choice-resolution(#1267)/ feasibility ステージの §13 学習候補について、conductor は 0件を提案している(stale tree 実測の違反実例 = measurement-ref-in-artifacts は PM 回付)。経緯: leader 照会で stale tree 実測が判明 → origin/main を --no-ff マージ(289d162ae、parents=2・ls-files -u 0 機械確認)→ 全 seam 再実測 → feasibility 訂正(TallyResult は winner+choiceCounts 保持 model.ts:411-418 / rulingText は winner 描画可 record.ts:120-127 / ギャップ実装点 = handleRender の rulingOverride 文字列合成 election.ts:390-392 の二値写像)。GO 判定維持・A-1(RE 送り)は解消につき削除。diary に Deviation 記録済み、一次記録 push 済み 5296bbc00。各自 e2 worktree の record(是正後)をリードオンリー実測確認のうえ、0件でよいかを GoA 付きで投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 違反実例は PM 回付が適切、新規学習なし"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(票の note に候補と根拠 file:line を明記)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e4"
+  ],
+  "state": "recorded"
+}

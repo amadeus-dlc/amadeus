@@ -1,0 +1,38 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T03:03:32Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-HCRFS",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "是正の教訓を自分の検証にも適用し、訂正後引用3点を自 tree でなく origin/main 断面(git show)で照合 — TallyResult winner+choiceCounts(model.ts:411-418)/rulingText winner 描画(record.ts:120-127)/rulingOverride 二値合成(election.ts:390-392)全て verbatim 一致。是正マージ 289d162ae の parents=2 も e2 tree で機械確認(E-SDE-CG4 追補の完遂確認どおり)。stale tree 実測は measurement-ref-in-artifacts の違反実例で PM 回付が正規経路、是正手順自体は base-advance-regrounding+完遂機械確認の既存 cid 適用実例。A-1(RE 送り)の解消削除も stale 起因の項目につき正当。E-TCRCG 裁定当事者として、ギャップ実装点が :390-392 の二値写像に絞られた訂正は自分の裁定理解とも一致。0件で可",
+      "submittedAt": "2026-07-20T02:59:36Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HCRFS",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e2 record リードオンリー実測: stale tree 実測→--no-ff 再接地(parents=2 機械確認)→全 seam 再実測の是正列は base-advance-regrounding(E-SDE-CG4 追補)の適用実例で、violation は measurement-ref-in-artifacts の PM 回付が適切。訂正後 seam 引用(model.ts:411-418 winner+choiceCounts / record.ts:120-127 / election.ts:390-392 rulingOverride)は私が #1261 実装の conductor として実面と一致することを確認。0件で可(1)。",
+      "submittedAt": "2026-07-20T03:03:23Z"
+    }
+  ],
+  "resolutions": []
+}

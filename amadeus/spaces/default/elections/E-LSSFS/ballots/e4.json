@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-LSSFS",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e3 record をリードオンリー実測: 成果物4点+memory 実在(ls 5件)、diary 3点 verbatim(c1 適用対象の内部 seam 限定解釈/方式 B のスコープ外条件付き固定 — C-7 の election CLI 面 = 当方・e2 管轄への委譲は非交差運用として正しい/H2 不足是正)、方式実現可能性順 C/A/B の選挙材料固定を assessment :17-22 で確認、センサー最新全 Passed。H2 不足の同型4例目は既存の PM 蒸留提案(テンプレ機械化)のデータ追加であり新規ノルムでない。方式確定を requirements 選挙へ委譲する構成も election-answer-after-ruling 系の正しい運用。0件で可",
+  "submittedAt": "2026-07-20T02:56:23Z"
+}

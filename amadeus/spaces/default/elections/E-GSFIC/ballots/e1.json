@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFIC",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e4 record リードオンリー実測: 成果物3点+memory 実在、E-OC1 承認記載。diary 3点は c1/RA 委譲/c6 非交差の既存 cid 適用実例 — #1254/#1255/#1257 は私の起票 Issue で文脈保持者として整合確認。questions 初回 FAILED の時系列説明(E-OC1 承認前空欄)も正常。0件で可(1)。",
+  "submittedAt": "2026-07-20T03:03:23Z"
+}
