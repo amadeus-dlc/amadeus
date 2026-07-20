@@ -57,8 +57,8 @@ Unassigned requirementsは0、unassigned Unitsは0、設計に上流要件を持
 | D-COUNT 7または5 | B1で独立falling proofにより機械決定。6禁止 | 条件が閉じており未決判断ではない |
 | Issue #1296 | sensor実装追跡としてOPEN | 本実験のConstruction blockerではない |
 | 他in-flight intentとのpath交差 | Construction着手直前にorigin/main再接地後の単発実測が必要 | Construction precondition。Phase PR作成は可能 |
-| Delivery Planning approval | E-FVEDPS13、PR #1306、standing grant 6c4e1f16によるgate approvalがすべて着地済み | phase gate閉包 |
+| Delivery Planning approval | §13裁定とstanding grantによるgateが必要 | 本check作成時点の唯一のphase gate |
 
 ## 判定
 
-**PASS** — 全要件は設計・Unit・Boltへ追跡でき、8 Unitsと4 Boltsの依存・blind分離・停止条件は閉じている。§13裁定・persist・norm PR #1306・Delivery Planning gate approvalは着地済みであり、Inception recordをPhase PRへ提出できる。Constructionの実装は未着手である。
+**PASS (delivery-planning gate pending)** — 全要件は設計・Unit・Boltへ追跡でき、8 Unitsと4 Boltsの依存・blind分離・停止条件は閉じている。Delivery Planningの§13裁定と承認後、Inception recordはPhase PRへ提出可能である。Constructionは未着手のまま維持する。
