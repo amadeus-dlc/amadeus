@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSFS",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e5 record リードオンリー実測: feasibility 成果物4点実在(ls)。候補3件は feasibility:c1(外部前提の実測直検証)・feasibility:c2(RAID 現存再実測)・GO 判定様式の適用実例で新規性なし。0件で可。internalNo は view から機械 mint(本選挙も display/internal 逆順 — 機械転記で安全)。",
+  "submittedAt": "2026-07-20T05:05:49Z"
+}

@@ -1,6 +1,24 @@
 # API ドキュメント
 
-## swarm driver 関連の現行 CLI／directive 契約（2026-07-13、最新）
+## upstream-sync-230 の公開契約（2026-07-20、現在）
+
+Amadeus に HTTP service API はない。公開面は CLI、directive JSON、hook payload、stage/plugin manifest、生成ファイル契約である（測定 ref: core CLI 30、switch arms 134、core exports 501、setup exports 101、hooks 11）。
+
+| 契約 | 現行状態 | 24項目で必要な変更 |
+|---|---|---|
+| `amadeus-orchestrate.ts next/report` | directive JSON を stdout に返す | gate next-stage 名、DAG 自己修復、help 予約 routing |
+| `amadeus-swarm.ts prepare/check/finalize` | Unit worktree と merge 成否を決定 | 現行の全 batch 走査は EQUIVALENT 候補として固定テスト化 |
+| `amadeus-utility.ts compose/recompose` | Running workflow を再構成 | pending marker 鮮度と autonomy guard を fail-closed 化 |
+| stage frontmatter | 既存 schema の固定キー | `number` / `name` / `bundle` / `required_sections` / kind を追加、`when` 予約契約を明示変更 |
+| plugin manifest | 不在 | discovery、compose hook、projection、no-clobber、reference plugin を公開 |
+| harness hook adapter | 6ハーネス別 payload | `process.execPath` 経由 spawn、Kiro IDE 実 payload/context、project-dir quote |
+| `scripts/package.ts --check` | 6/6 PASS 実測 | plugin source/dist/host を byte/orphan/unreferenced 検査へ組み込む |
+
+`gate-next-stage-naming` は PARTIAL である。`amadeus-state.ts:1543,2560` の state/audit に next-stage 情報はあるが、ユーザーが消費する directive には投影されず、stage protocol の静的 prose に依存する。plugin API は非アクティブ時の出力バイト同一を保護する opt-in 契約とする。
+
+> 以下は過去 intent の履歴。
+
+## swarm driver 関連の現行 CLI／directive 契約（2026-07-13、履歴）
 
 ### `invoke-swarm` directive
 

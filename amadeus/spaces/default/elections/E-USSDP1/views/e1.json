@@ -1,0 +1,26 @@
+{
+  "electionId": "E-USSDP1",
+  "voter": "e1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "C. plugin 4 Unitを最初の1 Boltへbundle"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "B. thin vertical Bolt追加後に4 Unit完全化"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 4,
+      "label": "X. その他(noteに両立方式を明記)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 1,
+      "label": "A. 4-Bolt progressive skeleton"
+    }
+  ]
+}

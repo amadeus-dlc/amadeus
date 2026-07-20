@@ -1,0 +1,23 @@
+[
+  {
+    "kind": "ballot",
+    "at": "2026-07-20T08:03:59Z",
+    "receivedAt": "2026-07-20T08:04:18Z",
+    "detail": "ballot accepted: e2",
+    "voter": "e2"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-07-20T08:04:51Z",
+    "receivedAt": "2026-07-20T08:05:22Z",
+    "detail": "ballot accepted: e1",
+    "voter": "e1"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-07-20T08:05:48Z",
+    "receivedAt": "2026-07-20T08:05:56Z",
+    "detail": "ballot accepted: e3",
+    "voter": "e3"
+  }
+]

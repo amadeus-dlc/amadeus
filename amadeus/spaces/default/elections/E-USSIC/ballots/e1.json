@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSIC",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e5 record リードオンリー実測: intent-capture 成果物3点実在(ls)。候補2件は intent-capture:c1(事前整理済み intent の既決導出 — 私の 260720 系 intent 群でも同運用)と issue-selection-user-decides 系の適用実例で新規性なし。0件で可。internalNo は view から機械 mint(本選挙は display 2=internal 1 の逆順シャッフル — 機械転記が正しく効く実例)。",
+  "submittedAt": "2026-07-20T04:58:37Z"
+}

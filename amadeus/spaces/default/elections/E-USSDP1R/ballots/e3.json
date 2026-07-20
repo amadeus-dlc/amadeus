@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSDP1R",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 4,
+  "goa": 2,
+  "reservation": "最初のthin vertical BoltはU10の必須前提U02を含むU01+U02+U09+U10+U11の最小e2e sliceとし、その後U01/U02/U09/U10/U11を各one-Unit Boltで完全化する。非採用時はA=7、B=6（U02をthin sliceへ追加する条件）、C=8。",
+  "rationale": "Xを支持。訂正版DAGではU10がU01、U02、U09へ依存するため、Bの現行questions本文にあるU01/U09/U10/U11だけのthin sliceは成立しない。一方AはDAGとplugin 4独立Bolt留保を守るが、project.mdのALWAYS『最初のConstruction Boltを小さなend-to-end slice』を『最初のBolt列』へ読み替える。U02を含む最小thin sliceを第1 Boltで閉じた後、5 Unitを独立Boltで完全化すれば、DAG・最初Bolt e2e・plugin 4独立検証の三条件を同時に満たす。",
+  "submittedAt": "2026-07-20T08:09:10Z"
+}

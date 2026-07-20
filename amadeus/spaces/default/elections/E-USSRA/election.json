@@ -1,0 +1,21 @@
+{
+  "electionId": "E-USSRA",
+  "kind": "s13-zero-confirm",
+  "question": "260720-upstream-sync-230 / requirements-analysis §13: 新規学習候補0件でよいか。成果物2点=requirements.md / requirements-analysis-questions.md。E-OC1承認TS 2026-07-20T07:27:22Z、質問0。requirementsはFR-0〜8で24 ADOPT/ADAPT全ID+6 SKIP+plugin deferred+6 harness/4 self-install+4検証先行を固定。product-lead独立review iteration1 READY/GoA1/留保なし。sensor最新: requirements required-sections PASS/upstream-coverage PASS/answer-evidence filter rejection、questions upstream-coverage PASS/answer-evidence PASS、required-sections FAILはE-FVEPDの意図的marker advisory(canonical shape維持)、git diff --check PASS。surface entries=3: c1=E-OC1/既決照合適用、c2=承認済みverification contract適用、c3=review結果観測。いずれも新規横断practiceではないとの提案。各自e5の成果物・memory・review・sensorをリードオンリー実測し、GoA付きで投票する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — c1〜c3は既決規範・承認済みcontractの適用実例"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(noteに候補と根拠file:lineを明記)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}

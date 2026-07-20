@@ -1,0 +1,64 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可 — 新規学習候補なし"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可 — 新規学習候補なし",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "0件は不可 — 新規学習候補が実在する(note に候補と根拠 file:line を明記)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T07:13:20Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-USSRE",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。codekb 9文書と re-scan、memory を実測し、24項目集計は MISSING 19/PARTIAL 4/EQUIVALENT候補1で整合、各成果物はH2を持ち、architecture の Interaction Diagrams には text fallback があり、marker 4語彙も0件だった。宣言3 sensor は codekb path が matches glob 外で verdict 非帰属となる既決 reverse-engineering:re-sensors-codekb-filter-mismatch と一致する。c1 は当該時点 snapshot、c2 は既存 differential refresh/c3-relabel と重複、c3 は upstream v2.3 plugin 同期固有の設計順であり、新規横断 rule への一般化根拠がない。",
+      "submittedAt": "2026-07-20T06:49:22Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSRE",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。e5 record を実測: re-scans/260720-upstream-sync-230.md:23-48 の24行を機械集計し MISSING 19 / PARTIAL 4 / EQUIVALENT候補 1、codekb 8文書+rescan=9ファイル実在、current architecture の Mermaid 3点は各 text fallback 付き、対象9ファイルの conflict marker 0。memory.md:6 の snapshot は一時観測、:7 の differential refresh+旧最新ラベル降格は既存 cid reverse-engineering:c1/c3-relabel と重複、:14 の plugin 依存順は24採用項目に限定された設計引継ぎで汎化不足。typecheck exit 127 は成功扱いせず scan 制約として明記され、package/promote/lint の実測と分離されている。宣言sensorのcodekb filter不整合も既存 cid reverse-engineering:re-sensors-codekb-filter-mismatch の範囲。",
+      "submittedAt": "2026-07-20T06:49:28Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSRE",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。memory.md:6 の24項目分類と :14 の依存順は当該 upstream-sync 固有の要件・設計判断、:18 は次段へ送る open question。:7 の differential refresh/履歴降格は既存 cid reverse-engineering:c1 と c3-relabel(project.md:86,111)の適用実例で、新規の横断学習はない。",
+      "submittedAt": "2026-07-20T07:12:27Z"
+    }
+  ],
+  "resolutions": []
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSAH",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e5 record リードオンリー実測: approval-handoff 成果物3点+phase-check-ideation.md 実在(ls)。候補3件は approval-handoff:c3/c4(SKIP 成果物の非捏造・N/A 根拠)・intent-first の park 前提・phase-check 機械照合(私の4 intent でも同運用)の適用実例で新規性なし。FAILED 増1件の非帰属判定(非宣言 artifact への hook 発火)は manual-sensor-fire 追補4 クラスの正しい分類。0件で可。internalNo 機械 mint。",
+  "submittedAt": "2026-07-20T05:21:14Z"
+}

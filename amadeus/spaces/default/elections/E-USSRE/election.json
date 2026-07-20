@@ -1,0 +1,21 @@
+{
+  "electionId": "E-USSRE",
+  "kind": "s13-zero-confirm",
+  "question": "260720-upstream-sync-230 / reverse-engineering §13: 新規学習候補0件でよいか。成果物は codekb/amadeus 9文書と re-scans/260720-upstream-sync-230.md。判定は MISSING 19 / PARTIAL 4 / EQUIVALENT候補 1。実在・H2・24項目集計・Interaction Diagrams+fallback・marker 0を独立確認済み。宣言3 sensor×9は既決のcodekb filter不整合により全27 matches-rejectionでverdict非帰属。package --check / promote-self --check / lint はexit 0、typecheckはtsc不在exit 127、full suiteはRE scan範囲外。surface c1=19/4/1 snapshot、c2=differential refresh+旧最新ラベル降格、c3=plugin依存順。提案0件の根拠: c1は一時snapshot、c2は既存 reverse-engineering:c1/c3-relabel と重複、c3はintent固有設計で汎化不足。各自e5 recordの成果物・sensor・memoryをリードオンリー実測し、GoA付きで投票する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 新規学習候補なし"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(note に候補と根拠 file:line を明記)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}

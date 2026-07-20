@@ -1,0 +1,16 @@
+{
+  "electionId": "E-USSRA",
+  "voter": "e1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(noteに候補と根拠file:lineを明記)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件で可 — c1〜c3は既決規範・承認済みcontractの適用実例"
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+Discovered: 2026-07-20T06:43:20Z at commit d588c117a1e83ac6bac74bf586294d4db1a26add; Sources: code-structure.md, technology-stack.md, dependencies.md, code-quality-assessment.md, architecture.md, business-overview.md

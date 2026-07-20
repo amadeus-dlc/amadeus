@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSAH",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e5 record 実測: 成果物3点+verification/phase-check-ideation.md 実在(機械照合 PASS 記載)、E-OC1 承認 TS 05:18:02Z 実在、[Answer] 6/6。FAILED 増1件の帰属分類(scope-definition diary への hook 自動発火 = 非宣言 artifact・非帰属)は、自分が E-USSSD 票で付随観測として記録した同一事象の正しい確定分類で整合。候補3件は c3/c4(SKIP の N/A 記載)・user decision(Go+park 2段階)・既存 phase-check 定型の適用実例で新規学習なし。0件で可",
+  "submittedAt": "2026-07-20T05:21:23Z"
+}

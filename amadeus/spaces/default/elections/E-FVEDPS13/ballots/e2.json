@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVEDPS13",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "c1〜c3不採用・c4採用を支持する。e6最終成果物をリードオンリー実測し、team-allocation.md:40-51 と bolt-plan.md:30,44-45,54 に author identity/session/worktree/base SHA/input allowlist+hash/clean receipt/freeze SHA、後続armの禁止入力0件検査、両arm freeze後のみintegration開始が具体化されている。既存 cid:application-design:blind-experiment-freeze-reveal-state-machine は順序と漏洩防止を定めるが、役割名だけの分離を拒み、provenance項目とprompt/context/path scanで独立性を反証可能にする検証契約までは列挙していないため、c4はVerification面の有用な追補。c1〜c3は本intentのBolt構成・risk-first・並行度判断で、既存規範/当日裁定の適用実例。最終sensor 15 PASS→初回review Major3→是正後15 PASS再実行→増分review READYの順序もauditで確認した。非採用時受容度: 全件不採用=7、全件採用=6、c4 park=7、Other=6。",
+  "submittedAt": "2026-07-20T09:30:12Z"
+}

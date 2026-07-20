@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSUG1",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A。application-design実測ではC2が実装420–760行・test 650–1,050行、C4が実装520–850行・integration test 650–1,000行の大境界で、7 componentをそのままUnit化するBはC2/C4/C7のXL化とreview集中を招く。recovery/gate、swarm/naming、routing/guard、iteration/preview、およびplugin contract/projection/composition/referenceを変更理由とchange-control seamで分ける12 Unitは、既決のcycle-free DAG、C1/C2/C5統合点、filesystem transaction、test/docs同乗を維持しつつ、小batch・独立検証・最大4並行に最も適合する。非採用時はCの9 balancedを受容可能だが、plugin面の過凝集をdelivery planningでさらに小さなBoltへ抑える必要がある。BはXL Unitを許すため受容しない。",
+  "submittedAt": "2026-07-20T07:50:54Z"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSRA",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e5 HEAD 545e69c83 の requirements.md / requirements-analysis-questions.md / memory / audit をリードオンリー実測。機械カウントは numbered upstream items=24、FR headings=9(FR-0〜8)、SKIP=6、memory実エントリ=3。product-lead iteration1 READY / GoA1 / 留保なし、requirementsのrequired-sections/upstream-coverage/answer-evidence PASS、questionsのupstream-coverage/answer-evidence PASSを確認。questions required-sections FAILはH2を意図的に欠くmarker shapeに対するE-FVEPD既決advisoryの適用例。c1=E-OC1、c2=承認済みverification contract、c3=review観測で、いずれも新規横断practiceではないため0件で可。",
+  "submittedAt": "2026-07-20T07:33:36Z"
+}

@@ -1,6 +1,26 @@
 # コンポーネント棚卸し
 
-## Codex hooks／agmsg 競合コンポーネント（intent 260718-hooks-config-conflict、2026-07-18、最新）
+## upstream-sync-230 コンポーネント（2026-07-20、現在）
+
+| コンポーネント | 責務 | upstream-sync での役割 |
+|---|---|---|
+| Core tools（30 CLI） | state、graph、routing、swarm、learnings | D1/D2/D3/D6 の機械契約 |
+| Core hooks（11） | session、human turn、stop、sensor、status | compose freshness、Kiro context、plugin compose 発火 |
+| Agent personas（14） | stage 別の役割境界 | reviewer date/persona/read-scope 契約 |
+| Stage definitions（32） | phase/stage graph の正本 | schema extension、bundle、required sections |
+| Sensors（5） | artifact の決定的検査 | plugin/stage 投影の完全性 |
+| Harness adapters（69 files / 6面） | ホスト固有起動・payload・設定 | upstream 4面の変更を6面へ ADAPT |
+| `scripts/package.ts` | manifest discovery、clean sweep、drift guard | plugin source の6面 projection オーナー |
+| `scripts/promote-self.ts` | リポ内 self-install | closed-list 4面の投影オーナー |
+| `packages/setup` | 独立配布 CLI（101 exports） | 新規 runtime dependency を追加しない |
+| Tests（461 files） | unit/integration/e2e/smoke | 24項目の regression と ported tests |
+| Docs | guide/reference/harness engineering | plugin/schema/compose 契約を同期 |
+
+plugin は source component、`dist/plugins` cache、host projection の3コンポーネントに分け、manifest、dist clean-sweep、harness projection で所有権を分離する。
+
+> 以下は過去 intent の履歴。
+
+## Codex hooks／agmsg 競合コンポーネント（intent 260718-hooks-config-conflict、2026-07-18、履歴）
 
 | コンポーネント | 現行責務 | Issue #770 との関係 |
 | --- | --- | --- |
