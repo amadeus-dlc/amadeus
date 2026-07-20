@@ -2070,3 +2070,20 @@
 **Timestamp**: 2026-07-20T04:13:07Z
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T04:13:27Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a2abe00c4a1e21678
+**Message**: (裁定通知を待って続行)
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T04:24:49Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ac8188200d4f6deb0
+
+---
