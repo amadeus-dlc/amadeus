@@ -1490,3 +1490,218 @@
 **Timestamp**: 2026-07-20T03:33:02Z
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T03:33:25Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: af52ba58599539825
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T03:35:22Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T03:35:22Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T03:35:22Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: reverse-engineering
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T03:35:22Z
+**Event**: GATE_APPROVED
+**Stage**: reverse-engineering
+**Grant Id**: cabcb933
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T03:35:22Z
+**Event**: STAGE_COMPLETED
+**Stage**: reverse-engineering
+**Details**: Stage Reverse Engineering approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T03:35:22Z
+**Event**: STAGE_STARTED
+**Stage**: practices-discovery
+**Agent**: amadeus-pipeline-deploy-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:35:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: c1e8e055
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/practices-discovery/evidence.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:35:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: c1e8e055
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/practices-discovery/evidence.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:35:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2e00c1d1
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/practices-discovery/discovered-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:35:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2e00c1d1
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/practices-discovery/discovered-rules.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:35:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: e143dc64
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/practices-discovery/team-practices.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:35:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: e143dc64
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/practices-discovery/team-practices.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:35:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 52e29b0f
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/practices-discovery/practices-discovery-timestamp.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:35:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 52e29b0f
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/practices-discovery/practices-discovery-timestamp.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:35:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2e58231f
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/practices-discovery/evidence.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:35:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2e58231f
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/practices-discovery/evidence.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:35:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: ce413814
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/practices-discovery/discovered-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:35:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: ce413814
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/practices-discovery/discovered-rules.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:35:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 03da3bfe
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/practices-discovery/team-practices.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:35:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 03da3bfe
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/practices-discovery/team-practices.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:35:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9348faf6
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/practices-discovery/practices-discovery-timestamp.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:35:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9348faf6
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/practices-discovery/practices-discovery-timestamp.md
+**Duration ms**: 35
+
+---
