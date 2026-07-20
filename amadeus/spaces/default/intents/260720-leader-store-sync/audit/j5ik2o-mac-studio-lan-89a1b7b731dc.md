@@ -2231,3 +2231,893 @@
 **Message**: All three closure criteria verified against the actual source. Verdict below.\n\n## Review\n\n**READY**\n\nIteration 1 の Major(「gh pr create 機械化前例不在」の事実誤認)は是正で閉じている。以下、指定した3観点を自分の grep/実読で照合した。\n\n**(1) 訂正の実測
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T03:55:46Z
+**Event**: WORKFLOW_PARKED
+**Stage**: requirements-analysis
+**Timestamp**: 2026-07-20T03:55:46Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T03:59:06Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aa3e307f9deb313bc
+**Message**: Issue #1281(leader所有の選挙record・監査シャードのmain同期構造化)のintentをconductorとして進行中で、requirements-analysisが完了し§13裁定待ちでpark中です。裁定受領後にapproveしてapplication-design(同期tool+ノルムの設計)へ進みます。
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T04:09:15Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T04:09:15Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T04:09:15Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: requirements-analysis
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T04:09:16Z
+**Event**: GATE_APPROVED
+**Stage**: requirements-analysis
+**Grant Id**: cabcb933
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T04:09:16Z
+**Event**: STAGE_COMPLETED
+**Stage**: requirements-analysis
+**Details**: Stage Requirements Analysis approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T04:09:16Z
+**Event**: STAGE_STARTED
+**Stage**: application-design
+**Agent**: amadeus-architect-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:11:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0a9dc4e2
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:11:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0a9dc4e2
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/components.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:11:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4001fb50
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/components.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T04:11:01Z
+**Event**: SENSOR_FAILED
+**Fire id**: 4001fb50
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/components.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/application-design/upstream-coverage-4001fb50.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:11:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: e8653d8a
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-methods.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T04:11:01Z
+**Event**: SENSOR_FAILED
+**Fire id**: e8653d8a
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-methods.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/application-design/required-sections-e8653d8a.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:11:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: a8b79096
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-methods.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T04:11:01Z
+**Event**: SENSOR_FAILED
+**Fire id**: a8b79096
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-methods.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/application-design/upstream-coverage-a8b79096.md
+**Findings count**: 3
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:11:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: f7a2aae7
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/services.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:11:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: f7a2aae7
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/services.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:11:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 512a2766
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/services.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T04:11:02Z
+**Event**: SENSOR_FAILED
+**Fire id**: 512a2766
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/services.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/application-design/upstream-coverage-512a2766.md
+**Findings count**: 3
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:11:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1e22186a
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-dependency.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T04:11:02Z
+**Event**: SENSOR_FAILED
+**Fire id**: 1e22186a
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-dependency.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/application-design/required-sections-1e22186a.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:11:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: a0965ca4
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-dependency.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T04:11:02Z
+**Event**: SENSOR_FAILED
+**Fire id**: a0965ca4
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-dependency.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/application-design/upstream-coverage-a0965ca4.md
+**Findings count**: 4
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:11:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 12f9ab7f
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:11:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: 12f9ab7f
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/decisions.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:11:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0fb7ab40
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/decisions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T04:11:02Z
+**Event**: SENSOR_FAILED
+**Fire id**: 0fb7ab40
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/decisions.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/application-design/upstream-coverage-0fb7ab40.md
+**Findings count**: 3
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:11:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9a16a005
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:11:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9a16a005
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/components.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:11:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4e8e3669
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:11:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4e8e3669
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/components.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:11:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: a338fa94
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-methods.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T04:11:44Z
+**Event**: SENSOR_FAILED
+**Fire id**: a338fa94
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-methods.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/application-design/required-sections-a338fa94.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:11:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: a4e24c59
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-methods.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:11:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: a4e24c59
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-methods.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:11:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 92195a7a
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/services.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:11:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 92195a7a
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/services.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:11:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 537cc076
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/services.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:11:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 537cc076
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/services.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:11:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: e558d181
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-dependency.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T04:11:44Z
+**Event**: SENSOR_FAILED
+**Fire id**: e558d181
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-dependency.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/application-design/required-sections-e558d181.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:11:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: caa61f9f
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-dependency.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:11:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: caa61f9f
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-dependency.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:11:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 88dc8f2f
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:11:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 88dc8f2f
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/decisions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:11:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 835ca9f5
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:11:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 835ca9f5
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/decisions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:11:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5a878583
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-methods.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:11:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5a878583
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-methods.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:11:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: d1c264be
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-dependency.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:11:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: d1c264be
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-dependency.md
+**Duration ms**: 36
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-20T04:12:20Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-3/amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/decisions.md
+**Context**: inception > application-design > decisions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:12:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: c181ecca
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:12:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: c181ecca
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/decisions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:12:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: df4e1101
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:12:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: df4e1101
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/decisions.md
+**Duration ms**: 37
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T04:18:23Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: aaab220ab46a1d57d
+**Message**: ## Review\n\n**Verdict: NOT-READY**\n\n対象4ファイル(components.md / component-methods.md / services.md / component-dependency.md / decisions.md)を実読し、上流(requirements.md、scope-document.md)・codekb(architecture.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:19:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: fe13c112
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:19:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: fe13c112
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/components.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:19:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 452026a7
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:19:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 452026a7
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/components.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:19:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3ab0c686
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-methods.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:19:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3ab0c686
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-methods.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:19:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: feb34ce3
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-methods.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:19:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: feb34ce3
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-methods.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:19:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 46138857
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/services.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:19:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 46138857
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/services.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:19:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: c00b0293
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/services.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:19:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: c00b0293
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/services.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:19:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: bce0a0be
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-dependency.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:19:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: bce0a0be
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-dependency.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:19:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2792de01
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-dependency.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:19:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2792de01
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-dependency.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:19:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0e40866f
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:19:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0e40866f
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/decisions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:19:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8bad7bed
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:19:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8bad7bed
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/decisions.md
+**Duration ms**: 36
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T04:22:40Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a3f34d27c10485e44
+**Message**: ## Review\n\n対象是正5点のうち、3点は完全に閉じている。残り2点(規模見積の再計算漏れ、層別保証の1:1対応)に、まさに本イテレーションの是正が作った新しい不整合が残っており、閉包していない。\n\n### 是正1(Critical: E-LSSRA1 留保未反映)— 閉包 ✅\n\n`component-methods.md` 末尾「## 完成条件の実証シナリオ」を実読。E-LSSRA1 re
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:23:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: ef40af55
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:23:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: ef40af55
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/components.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:23:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 037ba5f4
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:23:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 037ba5f4
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/components.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:23:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 592b5e9e
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-dependency.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:23:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 592b5e9e
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-dependency.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:23:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 94e6bfbc
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-dependency.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:23:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 94e6bfbc
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/component-dependency.md
+**Duration ms**: 38
+
+---
