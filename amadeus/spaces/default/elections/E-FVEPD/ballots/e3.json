@@ -1,0 +1,16 @@
+{
+  "kind": "amend",
+  "ref": {
+    "electionId": "E-FVEPD",
+    "voter": "e3",
+    "submittedAt": "2026-07-20T06:49:22Z"
+  },
+  "electionId": "E-FVEPD",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立再実測で practices-discovery-timestamp.md を required-sections predicate へ2回直接適用し、両回 pass=false, h2_count=0, findings_count=2。stage 正本は同成果物を single line と要求する一方、sensor 正本は既定 H2>=2 を全mdへ適用し、正しい成果物が恒常的に赤になる。Issue #1284 はH2雛形焼き込みでsingle-line契約を壊すため非被覆、#1238は別問題、既存cidにmarker shape exemptionはない。各 produced canonical shape とpredicateを照合し、H2を意図的に欠く *-timestamp.md/*-questions.md をprose-heading floorから明示免除する候補の採用に賛成。",
+  "submittedAt": "2026-07-20T06:58:20Z"
+}

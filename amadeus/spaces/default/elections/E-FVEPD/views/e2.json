@@ -1,0 +1,16 @@
+{
+  "electionId": "E-FVEPD",
+  "voter": "e2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(note に候補と根拠 file:line を明記)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件で可 — 新規学習候補なし"
+    }
+  ]
+}
