@@ -12,3 +12,4 @@
 
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
+- [2026-07-20T03:18Z] Interpretation: c2(Must 5 — 効力条件列で C-1/C-2 裁定従属を明示し方式選挙を先取りしない)/c3(risk-first — B-1 裁定を最優先)適用。e2 非交差合意面を W-1、遡及書換の分離を W-4 に固定。E-OC1 承認 03:18:21Z。
