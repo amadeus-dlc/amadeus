@@ -1,0 +1,16 @@
+{
+  "electionId": "E-USSUGS13",
+  "voter": "e1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可 — c1はintent固有裁定の成果物固定"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "0件不可 — noteに新規横断学習候補を明記"
+    }
+  ]
+}

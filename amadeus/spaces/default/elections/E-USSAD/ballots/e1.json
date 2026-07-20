@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSAD",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。e5 recordで5成果物とquestionsの実在、24 itemの既存7 componentへの配置、SKIP/deferred境界、C6→C5→C4、atomic inspect/plan/validate/apply/drop、6 package/4 self-installの分離を確認した。memoryの4区分は全0で、成果物sensorとanswer-evidenceはPASS。初回architecture findings 5件の是正と既知questions marker advisoryはいずれも既存レビュー・marker契約の適用であり、新規横断学習を追加する根拠はない。",
+  "submittedAt": "2026-07-20T07:45:33Z"
+}

@@ -381,9 +381,9 @@
     "status": "in-flight"
   },
   {
-    "uuid": "019f7dcf-fc6c-74e1-8f50-12368857b855",
-    "slug": "formal-verif-experiment",
-    "dirName": "260720-formal-verif-experiment",
+    "uuid": "019f7ddf-6856-70ae-a130-e3317a3262f3",
+    "slug": "upstream-sync-230",
+    "dirName": "260720-upstream-sync-230",
     "scope": "amadeus",
     "status": "in-flight"
   },
@@ -427,6 +427,20 @@
     "slug": "diary-autogen-guard",
     "dirName": "260720-diary-autogen-guard",
     "scope": "bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f7dcf-fc6c-74e1-8f50-12368857b855",
+    "slug": "formal-verif-experiment",
+    "dirName": "260720-formal-verif-experiment",
+    "scope": "amadeus",
+    "status": "in-flight"
+  },
+  {
+    "uuid": "019f7d6c-e782-7647-95e7-a2960623e717",
+    "slug": "hold-choice-resolution",
+    "dirName": "260720-hold-choice-resolution",
+    "scope": "amadeus",
     "status": "complete"
   }
 ]

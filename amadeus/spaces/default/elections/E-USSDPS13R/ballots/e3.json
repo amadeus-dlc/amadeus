@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSDPS13R",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "最終DPを独立実測。5成果物・questions・phase-checkの最新公式sensorはPASS、post-fix reviewはREADY/findings 0で、E-USSDP1R/2Rの裁定・留保・少数案温存も成果物とphase-checkへ整合して反映済み。memory upstream FAILED 6はdelivery-planningの宣言producesがbolt-plan/team-allocation/risk-and-sequencing-rationale/external-dependency-map/questionsの5点でmemoryを含まないのに、engine管理observation diaryへconsumes 6種の参照を要求した手動全数発火であり、advisory分類は妥当。c1は本intentのWalking Skeleton限定例外、c2は同intentの具体的なBolt経済配置で、いずれも既決裁定の適用に留まり新規横断normではない。",
+  "submittedAt": "2026-07-20T08:30:58Z"
+}

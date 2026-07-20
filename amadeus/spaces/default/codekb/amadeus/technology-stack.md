@@ -1,6 +1,23 @@
 # 技術スタック
 
-## Codex hooks／agmsg runtime スタック（intent 260718-hooks-config-conflict、2026-07-18、最新）
+## upstream-sync-230 の現行技術スタック（2026-07-20、現在）
+
+| 層 | 技術／バージョン | 用途 |
+|---|---|---|
+| Runtime | Bun 1.3.13 | TypeScript CLI、hooks、tests、packaging |
+| Language | TypeScript ESM (`typescript` `^6.0.3`) | core/setup/harness/scripts/tests |
+| Formatter/Linter | Biome 2.4.16 | `lint:check`（593 files、208 warnings、16 infos） |
+| AI SDK | `@anthropic-ai/sdk` 0.3.158 | 一部ハーネス連携 |
+| Terminal | `@xterm/xterm` `^5.5.0`、`node-pty` 1.1.0 | setup/端末連携 |
+| Property testing | `fast-check` `^4.9.0` | generator/parser 契約の検査 |
+| Test runner | `bun test` | unit 216 / integration 159 / e2e 70 / smoke 14 files |
+| Distribution | manifest-driven `scripts/package.ts` | 6ハーネス dist、4面 self-install |
+
+`bun run lint:check` は exit 0、`bun scripts/package.ts --check` は6/6 PASS、`bun scripts/promote-self.ts --check --no-build` も exit 0 である。`bun run typecheck` は実行環境に `tsc` がなく exit 127、full test suite はこの RE で未実施である。plugin 機構のために runtime dependency を追加せず、Bun/TypeScript と既存 manifest/FS API で実装する。
+
+> 以下は過去 intent の履歴。
+
+## Codex hooks／agmsg runtime スタック（intent 260718-hooks-config-conflict、2026-07-18、履歴）
 
 - Amadeus 側は Bun／TypeScript の `emit.ts` が整形済み JSON template と trust seed を生成し、Codex は project 内の exact `.codex/hooks.json` を発見する。
 - 外部 agmsg 1.1.7 は Bash driver と SQLite3 JSON1 (`readfile`／`writefile`、`json_set`／`json_remove`)で同じ active JSON を read-modify-write する。monitor bridge は Node.js と Codex `app-server --listen ws://` を利用する。

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSAD",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可を支持。24 itemsの全配置、6 SKIP/deferredの非侵入、依存DAGとatomic drop、C6→C5→C4、6 package/4 self-installを成果物で確認した。初回review findingsは是正され再レビューREADY・追加finding 0、5成果物のrequired-sections/upstream-coverageとquestionsのanswer-evidenceは全PASS。questions required-sectionsの既知marker契約gapはE-FVEPDで既に横断候補化され、本stage固有の新規学習はない。",
+  "submittedAt": "2026-07-20T07:46:06Z"
+}

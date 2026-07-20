@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-USSDPS13R",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可を支持。最終phase-checkでunit-of-work-dependency/story-mapの全数写像が追記され、再発火したrequired-sections/upstream-coverageがPASS、その後の最終増分reviewもREADY/findings0で対象変更なしを確認した。memoryのupstream FAILED6は、stage正本のproducesがbolt-plan/team-allocation/risk-and-sequencing-rationale/external-dependency-map/delivery-planning-questionsの5件だけでmemoryを含まず、default_severity=advisoryのupstream-coverageをengine管理observation diaryへ手動発火した結果なので、宣言成果物のgate失敗ではないという分類が妥当。c1の5-Bolt限定例外・独立4境界・U11 closureとc2の12 one-Unit/risk-first/max4/WSJFなしはE-USSDP1R/2Rの当該24項目同期計画への適用であり、少数案もOpen Questionに温存済み。横断normへ一般化する新規知見はない。",
+      "submittedAt": "2026-07-20T08:30:48Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSDPS13R",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "最終DPを独立実測。5成果物・questions・phase-checkの最新公式sensorはPASS、post-fix reviewはREADY/findings 0で、E-USSDP1R/2Rの裁定・留保・少数案温存も成果物とphase-checkへ整合して反映済み。memory upstream FAILED 6はdelivery-planningの宣言producesがbolt-plan/team-allocation/risk-and-sequencing-rationale/external-dependency-map/questionsの5点でmemoryを含まないのに、engine管理observation diaryへconsumes 6種の参照を要求した手動全数発火であり、advisory分類は妥当。c1は本intentのWalking Skeleton限定例外、c2は同intentの具体的なBolt経済配置で、いずれも既決裁定の適用に留まり新規横断normではない。",
+      "submittedAt": "2026-07-20T08:30:58Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSDPS13R",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。final DPの5成果物とphase-checkを実読し、E-USSDP1R/2Rの採用内容・GoA・留保が逐語的に反映されていること、12 one-Unit Bolt、U01→U02→U09→U10→U11の限定progressive skeleton、plugin 4 Unitの独立review/rollback/verification境界、U11 e2e closure、残DAG最大4並行、WSJFなしが整合することを確認した。最終phase-check修正後、宣言5成果物とphase-checkはrequired-sections/upstream-coverageが全PASS、questionsはanswer-evidenceもPASSし、その後の最終増分reviewがREADY/findings0で、review後の対象変更はない。memory.mdはstage frontmatterのproduces 5件に含まれず、directiveでもmemory_pathとproducesが別フィールドのengine管理observation diaryであるため、手動全数発火のupstream-coverage FAILED6はconsumes引用を要求された非produces diary由来の既知advisoryという分類が妥当。c1/c2はいずれも本upstream-syncのDAG・裁定・既決team practiceを具体化したintent固有計画で、新規横断normではない。旧E-USSDPS13および誤前提の旧E-USSDP1/2は根拠に用いていない。",
+      "submittedAt": "2026-07-20T08:31:59Z"
+    }
+  ],
+  "late": []
+}

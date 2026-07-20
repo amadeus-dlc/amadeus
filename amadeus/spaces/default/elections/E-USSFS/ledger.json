@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-USSFS",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e5 record リードオンリー実測: feasibility 成果物4点実在(ls)。候補3件は feasibility:c1(外部前提の実測直検証)・feasibility:c2(RAID 現存再実測)・GO 判定様式の適用実例で新規性なし。0件で可。internalNo は view から機械 mint(本選挙も display/internal 逆順 — 機械転記で安全)。",
+      "submittedAt": "2026-07-20T05:05:49Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSFS",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e5 worktree(engineer-5)リードオンリー実測: feasibility 成果物4点+memory 実在(ls=5)、総合判定 GO 節実在、E-OC1 承認 TS 05:02:24Z 記載、[Answer] 6件記入済み(grep=6)。候補3件(AWS N/A / RAID 非引き継ぎ = feasibility:c2 の再実測原則 / 検証先行 GO)は既存ノルム適用実例の分類で妥当。0件で可(1)。",
+      "submittedAt": "2026-07-20T05:05:54Z"
+    }
+  ],
+  "late": []
+}

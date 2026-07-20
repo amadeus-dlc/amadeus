@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSRA",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。requirements.md は FR-0〜8、24 ADOPT/ADAPT、6 SKIP、4検証先行、plugin deferred、6 harness/4 self-install と検証契約を既決入力からトレースしており、product-lead audit も iteration 1 READY/GoA1/留保なし。memory.md のc1はE-OC1/既決照合、c2は承認済みverification contractのFR-0化、c3はreview結果の観測で、いずれも新規横断practiceではない。questionsのrequired-sections FAILはH2 0の意図的canonical shapeでE-FVEPD回収済みのsensor契約ギャップ適用例であり、本RA固有候補として重複採用しない。",
+  "submittedAt": "2026-07-20T07:33:43Z"
+}

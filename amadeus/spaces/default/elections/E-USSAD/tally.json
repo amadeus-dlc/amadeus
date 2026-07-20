@@ -1,0 +1,64 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可 — 新規横断学習なし"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可 — 新規横断学習なし",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "0件不可 — noteに新規学習候補を明記",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T07:47:16Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-USSAD",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。application-design memory は4区分とも実エントリ0。初回reviewの5 findings(item22所有、DAG、atomic drop、規模算術、C4/C5順序)は成果物固有の設計欠落として是正され、再レビューREADY/GoA1/留保0。24 item配置、6 SKIP/deferred非侵入、C6→C5→C4、6 package/4 self-install、atomic apply/dropが成果物へ閉包し、5成果物のrequired/upstream 10/10 PASS。questions H2 advisoryはE-FVEPD既知gapで重複候補にしない。新規横断学習なし。",
+      "submittedAt": "2026-07-20T07:45:57Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSAD",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可を支持。24 itemsの全配置、6 SKIP/deferredの非侵入、依存DAGとatomic drop、C6→C5→C4、6 package/4 self-installを成果物で確認した。初回review findingsは是正され再レビューREADY・追加finding 0、5成果物のrequired-sections/upstream-coverageとquestionsのanswer-evidenceは全PASS。questions required-sectionsの既知marker契約gapはE-FVEPDで既に横断候補化され、本stage固有の新規学習はない。",
+      "submittedAt": "2026-07-20T07:46:06Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSAD",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。e5 recordで5成果物とquestionsの実在、24 itemの既存7 componentへの配置、SKIP/deferred境界、C6→C5→C4、atomic inspect/plan/validate/apply/drop、6 package/4 self-installの分離を確認した。memoryの4区分は全0で、成果物sensorとanswer-evidenceはPASS。初回architecture findings 5件の是正と既知questions marker advisoryはいずれも既存レビュー・marker契約の適用であり、新規横断学習を追加する根拠はない。",
+      "submittedAt": "2026-07-20T07:45:33Z"
+    }
+  ],
+  "resolutions": []
+}
