@@ -6,7 +6,7 @@
 - **Scope**: amadeus
 - **Start Date**: 2026-07-20T02:50:58Z
 - **State Version**: 7
-- **Active Agent**: amadeus-delivery-agent
+- **Active Agent**: amadeus-architect-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**:
@@ -25,21 +25,20 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 18
-- **Completed**: 12
-- **In Progress**: delivery-planning
+- **Completed**: 15
+- **In Progress**: nfr-design
 
 ## Runtime State
 - **Revision Count**: 0
 
-- **Parked**: 2026-07-20T05:27:02Z
-- **Parked At Stage**: delivery-planning
+- **Skeleton Stance**: scope-dependent
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
 - **Initialization**: Verified
 - **Ideation**: Verified
-- **Inception**: Active
-- **Construction**: Pending
+- **Inception**: Verified
+- **Construction**: Active
 - **Operation**: Skipped
 
 ## Stage Progress
@@ -67,13 +66,13 @@
 - [ ] refined-mockups — SKIP
 - [x] application-design — EXECUTE
 - [x] units-generation — EXECUTE
-- [-] delivery-planning — EXECUTE
+- [x] delivery-planning — EXECUTE
 
 ### CONSTRUCTION PHASE
 Per unit: [TBD]
-- [ ] functional-design — EXECUTE
-- [ ] nfr-requirements — EXECUTE
-- [ ] nfr-design — EXECUTE
+- [x] functional-design — EXECUTE
+- [x] nfr-requirements — EXECUTE
+- [-] nfr-design — EXECUTE
 - [ ] infrastructure-design — SKIP
 - [ ] code-generation — EXECUTE
 - [ ] build-and-test — EXECUTE
@@ -89,13 +88,13 @@ Per unit: [TBD]
 - [ ] feedback-optimization — SKIP
 
 ## Current Status
-- **Lifecycle Phase**: INCEPTION
-- **Current Stage**: delivery-planning
-- **Next Stage**: functional-design
+- **Lifecycle Phase**: CONSTRUCTION
+- **Current Stage**: nfr-design
+- **Next Stage**: code-generation
 - **Status**: Running
-- **Last Updated**: 2026-07-20T05:27:02Z
+- **Last Updated**: 2026-07-20T07:48:57Z
 
 ## Session Resume Point
-- **Last Completed Stage**: units-generation
-- **Next Action**: Execute Delivery Planning
+- **Last Completed Stage**: nfr-requirements
+- **Next Action**: Execute Nfr Design
 - **Pending Artifacts**: none
