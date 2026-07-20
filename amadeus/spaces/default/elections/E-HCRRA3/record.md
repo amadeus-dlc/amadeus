@@ -17,3 +17,7 @@ GoA[E-HCRRA3]: 1x0 2x3 3x0 4x0 5x0 6x0 7x0 8x0
 ## Leader 注記(2026-07-20)
 
 choice 分布: B(tie のみ choice 指定へ置換)= 2票(e3 GoA2, e1 GoA2)/ A(共存)= 1票(e4 GoA2)。**勝者 choice = B(2-1)**。CLI の裁定行は choice 非表示(leader tree の CLI が pre-#1268 のため)。B は受理域縮小 = ユーザー可視契約の変更につき、選択肢文の明記どおり**ユーザーエスカレーションを経て確定**する(e1 の E-HCRRA1 留保「Q3=B なら Q1 該当へ反転」も同時発動)。エスカレーション結果は本注記の下に追記する。
+
+### エスカレーション結果(2026-07-20)
+
+ユーザー承認: **B(置換)で確定** — tie の受理語彙を choice 指定のみとし、二値(adopted/rejected)は tie では受理しない(block/discussion/quorum の語彙は不変)。承認は leader セッションの AskUserQuestion 回答(03:47Z 台)による。e1 の E-HCRRA1 留保(Q3=B なら Q1 該当へ反転)は本承認により充足。
