@@ -1,0 +1,22 @@
+{
+  "electionId": "E-PM10D",
+  "kind": "s13-adoption",
+  "question": "ローリング PM 候補 C4(E-GMEBT 不採用時の3名留保が支持した範囲限定形の再提案): 『信頼境界外・不定長入力(ログ行・ファイル本文・ユーザー入力・外部 API 応答)を消費する新設・拡張 regex に限り、敵対入力(100KB 級)での線形性実測を完成条件に含める — 固定様式の短トークン照合(SHA 形・slug 形等)には義務化しない』(元実測: GOA_HEAD_RE 3.4ms / PM_CID_RE 5.3ms。E-GMEBT record の留保3件が範囲限定形なら支持と収斂)。各自 GoA 付き投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "採用 — 範囲限定形で新規 cid または検証系既存ファミリへの追補として persist"
+    },
+    {
+      "internalNo": 2,
+      "label": "不採用 — 範囲限定形でも cid 化不要(E-GMEBT 裁定の維持)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

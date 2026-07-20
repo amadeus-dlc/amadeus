@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFAPD",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record をリードオンリー実測: 成果物4点+memory 実在(ls 5件)、diary 2点 verbatim(c1 の同日 RE codekb 証跡代用+差分ギャップ0で質問0件 / c2 の全セクション live 温存・promote なし)、discovered-rules の『新規候補0件』本文と evidence 5面カバレッジの記述を実読確認。センサーは成果物単位の時系列 awk で初回 FAILED 2件(team-practices/practices-discovery-timestamp)がいずれも append 順の後続 Passed で是正済み・最新 verdict FAILED 0件を確認。質問0件のため E-OC1 判定対象自体が不在という diary の整理も practices-discovery:c1 の差分質問方式に整合。2点とも既存 cid の適用実例で新規学習なし、0件で可",
+  "submittedAt": "2026-07-19T20:26:21Z"
+}

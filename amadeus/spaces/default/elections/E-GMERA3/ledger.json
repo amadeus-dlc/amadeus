@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GMERA3",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 3,
+      "goa": 2,
+      "reservation": "起票する GoaLineCode 拡張 Issue には『head 拡張着地後は parse 側が hyphen を受理するため圧縮 workaround の撤去は安全に可能』の前提と、撤去時に t238 の圧縮形受理テスト(:102 E-SDECG4 admitted)の扱いを明記すること",
+      "rationale": "t238:104-105(hyphen 形の parseGoaLine fail をピン留め)は head 拡張で必ず反転 — これは修正 PR に必須(実測: sed -n 94,106p で verbatim 確認)。GoaLineCode(GOA_LINE_CODE_RE :34、:28-31 コメントが #1226 を明記)は動作中の既知 workaround であり欠陥ではないため、bugfix スコープで scripts/ 面へ変更を広げる A は過大。B は非対称(parse は複節受理・write は単節圧縮)が無記録で残る。C が修正面の限定(amadeus-norm-metrics 系+テスト)と追跡可能性を両立し、Q1 の C 票とも整合。自案非採用時: A=6 / B=6",
+      "submittedAt": "2026-07-19T14:57:53Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GMERA3",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 3,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "C 採用。実測: t238:104-105 の Sanity assertion(parseGoaLine ok=false ピン)は head 拡張で必ず反転するため正テスト化は必須(B/C 共通)。GoaLineCode(record.ts:34、:31 に #1226 workaround 明記)の複節化(A)は record.md の GoA 行様式(BR-R1 byte 互換)と選挙 CLI の書込面へ波及し bugfix スコープ超過 — 圧縮 workaround は #1226 根治後も機能的に無害で、撤去は別 Issue で追跡するのが修正面の限定と追跡可能性の両立。受容度: A=6(根治完全形だが面が広い)/ B=6(workaround 撤去が無追跡になる)。",
+      "submittedAt": "2026-07-19T14:59:10Z"
+    }
+  ],
+  "late": []
+}

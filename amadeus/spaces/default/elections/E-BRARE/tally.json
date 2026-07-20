@@ -1,0 +1,38 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T00:22:03Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-BRARE",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "#1262 クロスレビュー(1人目)当事者。e1 record をリードオンリー実測: re-scans/260720-ballot-received-at.md 実在(18,849B)、base 262a86db9 の選定根拠(区間16コミットで scripts/tests/packages 変更0件 — #1268 未着地の明示も正確)は rescan-base-ancestry の正しい適用。引用を自ツリーで照合 — store.ts:156 と :166 の2箇所とも at: ballot.submittedAt(自分の #1262 verdict は :166 のみ引用しており、RE の2経路列挙はむしろ自分の列挙を上回る完全性)、verifySelf の単調検査ループ :179-183(自分の :182 引用と同一機構)、receivedAt は全5ファイル grep 0件で一致。requirements への未決6点の record 固定(特に e2 との3ファイル交差の直列/rebase 協調を delivery-planning へ明示)は c6 の正しい前倒し。RE センサー3種の手動代替も既知 cid(re-sensors-codekb-filter-mismatch)の適用。新規ノルムの隙間なし、0件で可",
+      "submittedAt": "2026-07-20T00:21:48Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-BRARE",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e1 record リードオンリー実測: re-scans/260720-ballot-received-at.md 実在、RE memory 実在。機構引用を自 tree で独立スポット照合 — store.ts:156/:166 の at: ballot.submittedAt は verbatim 一致、receivedAt は scripts 全域 grep 0件(#1262 のギャップ主張と一致)。RE センサー filter 不適合の手動代替は既知 cid(re-sensors-codekb-filter-mismatch)の適用。body 8点温存・未決6点の record 固定は c1 churn 回避の適用実例。プロセス新規なし。0件で可(1)。",
+      "submittedAt": "2026-07-20T00:21:48Z"
+    }
+  ],
+  "resolutions": []
+}

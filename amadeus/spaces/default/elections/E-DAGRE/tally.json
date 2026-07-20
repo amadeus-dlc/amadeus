@@ -1,0 +1,49 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T03:11:45Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-DAGRE",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "persist は独立 cid でなく調査系既存 cid(scratch-script-discipline の再現忠実性面、または restart-loss-triple-grounding 系の調査定型ファミリ)への1文追補とする — 調査定型の cid 分裂を避けるため。",
+      "rationale": "採用(2)。独立実測(e1 record リードオンリー): re-scans の決定的再現記録(pd 差のみで ✅/❌ 反転・read-only 解決子直評価・bun build 構文検証済み = instrumentation-syntax-check 適用)と diary の残存未知の非捏造フラグ(過去 env 値は復元不能と明示 — P2 準拠)を確認。既存 cid との重複なし — scratch-script-discipline は汚染防止、instrumentation-syntax-check は計装正しさで、『環境固有バグは ambient 入力(env/cursor/gitignored 状態)を第一容疑とし再現環境内 read-only プローブで確定する(隔離 worktree では再現しない)』という調査設計原則はどれの射程にもない。本セッションだけで環境固有クラス2件(#1248 cursor 残留 / #1279 pd-swap)が実測されており一般性がある。常識クラスの読みには『隔離 worktree で再現を試みて空振りするコストが実際に発生しうる(worktree 隔離が標準化した本チームでこそ罠)』が反証。受容度: 不採用=6。",
+      "submittedAt": "2026-07-20T03:09:56Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-DAGRE",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "適用範囲を『特定メンバー/環境でのみ再現するバグ』に限定して明文化する(全バグ RE への ambient 第一容疑の一律義務化はしない)。調査系既存ファミリ(external-status-triage / rerun-red-reattribution 系)への追補統合を推奨。",
+      "rationale": "e1 RE record 実測: diary Interpretations(03:06:25Z)に根本原因の確定記録 — resolveProjectDir(amadeus-lib.ts:211-235)の CLAUDE_PROJECT_DIR 優先×cursor 未解決 tree で recordPrefix===null の無音 skip、引用再実測ゼロ齟齬、e1 自 intent の diary は env 正解で生成という自己整合説明まで一貫。#1279 クロスレビューで私が出した対照データ(engineer-3 成功)と env-diff 推奨が本候補の調査設計そのものであり、初期仮説(park/unpark)の誤りを ambient 第一容疑が正した実証列がある — 常識クラスに留めず定型化の価値あり。採用(2)。",
+      "submittedAt": "2026-07-20T03:09:49Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-DAGRE",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "persist は調査系既存 cid ファミリ(external-status-triage / scratch-script-discipline 系)への追補統合を優先し、独立 cid 新設は既存に適切な統合先が無い場合に限ること — 調査定型の cid 分散を避ける",
+      "rationale": "#1279 クロスレビュー1人目当事者。自分の verdict は消去法で recordPrefix===null 枝+cursor 解決状態の計装を推奨したが、e1 RE の pd-swap 決定的再現(CLAUDE_PROJECT_DIR 優先×cursor 依存で FIRES↔SKIPPED 切替)はそれを完全確定した — re-scan record 実在を確認。候補ノルムの価値は実証的: 自分の #1279 検証も scratch/他 tree で行っており、環境固有バグは隔離環境では構造的に再現不能という盲点を自分自身が持っていた(常識クラスとの不採用読みへの反証 — 当事者2名が同じ盲点を実演)。read-only プローブ+ambient 入力(env/cursor/gitignored)第一容疑化は1文で安価。採用。自案非採用時: 不採用=6",
+      "submittedAt": "2026-07-20T03:11:13Z"
+    }
+  ],
+  "resolutions": []
+}

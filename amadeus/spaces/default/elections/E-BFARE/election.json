@@ -1,0 +1,20 @@
+{
+  "electionId": "E-BFARE",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260719-ballot-failclosed-amend / reverse-engineering ステージの §13 学習候補について、conductor は 0件を提案している(diary の観測は既存 cid — reverse-engineering:c3 直列・rescan-base-ancestry・c3-relabel・re-sensors-codekb-filter-mismatch — の適用実例で新規学習なし)。成果物: codekb body 9点温存+re-scans/260719-ballot-failclosed-amend.md+timestamp+scan-notes.md、base=591b6a2a2(祖先性 exit 0・距離65)、Architect 独立再照合で反証ゼロ(微訂正1点は行番号跨り・意味論不変)。主要新事実3点(amend 投入経路の構造的不在 model.ts:194 / tally 二重計上は verify 検出不能 / 実データ amend・late ゼロ世代)は成果物側に固定済み。各自 e2 worktree の record をリードオンリー実測確認のうえ、0件でよいかを GoA 付きで投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 既存 cid の適用実例で新規学習なし"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(票の note に候補と根拠 file:line を明記)"
+    }
+  ],
+  "voters": [
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

@@ -1,0 +1,20 @@
+{
+  "electionId": "E-BFAFD",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260719-ballot-failclosed-amend / functional-design(per-unit U1)ステージの §13 学習候補について、conductor は 0件を提案している。根拠: diary 観測(AD 正本継承・N/A 根拠・遡及是正手順)は cross-unit-type-verbatim-check(単一 Unit 版)/ manual-sensor-fire-before-gate-report 追補4 等の既存 cid 適用実例で新規学習なし。ステージ実測: reviewer iteration 1 NOT-READY(Major 2+minor 1)→ 全是正 → iteration 2 READY(実コード照合で閉包・退行なし)、成果物4点+AD services.md 遡及是正、センサー最新 FAILED 0件(AD 遡及分は自ステージ手動再発火)。各自 e2 worktree の record をリードオンリー実測確認のうえ、0件でよいかを GoA 付きで投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 既存 cid の適用実例で新規学習なし"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(票の note に候補と根拠 file:line を明記)"
+    }
+  ],
+  "voters": [
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

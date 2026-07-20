@@ -1,0 +1,21 @@
+{
+  "electionId": "E-BRARA2",
+  "kind": "clarification-question",
+  "question": "260720-ballot-received-at(#1262)RA Q2: classifyLate の時刻軸。\n\n背景: classifyLate(model.ts:296-297)は ballot.submittedAt <= tallyTime で late を判定 — 中継遅延票は「申告は tally 前・受理は tally 後」がありうる。e2 の per-voter 最新解決(E-BFARA2)は submittedAt 軸を使う(交差)。\n\n各自コード実測のうえ GoA 付き投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. 受理時刻軸へ移行(late = 受理が tally 後 — 遅延の実態と一致。e2 の最新解決は submittedAt 軸のままで独立)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. submittedAt 軸を維持(現状固定 t234:207-220 不変 — 中継遅延票が「late でないのに tally 後に受理」される穴は注記のみ)"
+    }
+  ],
+  "voters": [
+    "e2",
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

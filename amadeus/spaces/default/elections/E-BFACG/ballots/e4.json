@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFACG",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "c2 への追補は1文に留め、同日採用の E-TCRCGS13 追補(resume 隔離喪失)と同一 cid 内で隣接配置して『worktree 隔離の前提2面(fork 時=コミット済み状態のみ可視/resume 時=隔離非保証)』として読めるよう統合すること — 同族知識の分散を避ける",
+  "rationale": "e2 CG diary(00:40Z Deviation)を実測確認: plan.md が conductor tree 未コミットのまま fork され隔離 worktree に非存在 → builder 申告・プロンプト焼き込みで実害なし。採用を支持: (1) 機序はハーネスの決定的挙動(git worktree はコミット済み状態から切られる)で、ディスパッチ直前生成の成果物という c2 ファミリの死角が実測で顕在化した (2) E-TCRCGS13(resume 面)と対をなす fork 面の前提知識で、同一 cid への追補は凝集が正しい (3) 不採用理由(プロンプト焼き込みで回避可)への反証: 焼き込みは今回偶然の防御で、plan 参照型ディスパッチ(plan を worktree 内相対パスで指示する c2 の標準形)では実害化する — 予防は『fork 前にコミット』の1文で安価。自案非採用時: 不採用=6",
+  "submittedAt": "2026-07-20T00:44:03Z"
+}

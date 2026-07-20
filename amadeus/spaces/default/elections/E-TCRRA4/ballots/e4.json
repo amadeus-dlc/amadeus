@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TCRRA4",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "e1 PR の分類ラダー拡張時、スキーマコメントに分類順序の規約(現行5分類の順序+新分類の挿入位置)を明記し、e2 再接地時の統合が機械的になるようにすること",
+  "rationale": "本ギャップの発見者(#1261 verdict の隣接ギャップ指摘)。Ballot.parse :198 の無検証採用と unknown-voter との非対称は自分の実測。A(同一 PR で unknown-choice 追加)を支持: (1) same-root-inventory の第一選択(同一 PR 修正)に合致し、fail-open(実在しない choice 99 の受理)を最速で閉じる (2) choice が裁定信号へ昇格する本 intent でこそ unknown-choice は正しさ要件になる — tally が choice を数え始めた瞬間、不正 choice 番号は誤集計の直接原因になり、修正と検証は不可分 (3) e2 との衝突は直列合意済み(e1 先行→e2 再接地)の枠内で、base-advance-regrounding の通常運用。自案非採用時: B=6",
+  "submittedAt": "2026-07-19T22:44:15Z"
+}

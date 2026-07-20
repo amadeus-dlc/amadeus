@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TCRRA1",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "GoA4(棄権)票は org 規則 (iv) の定足数除外と整合させ、choice 多数決の母集団からも除外することを要件文で明記する — A の『GoA は成立判定軸として分離』だけでは棄権票の choice が勝者選出に数えられる読みが残る。",
+  "rationale": "実測: tally(model.ts:320-337)に choiceInternalNo 参照が無いこと(grep 0件)、TallyResult(:311-314)が outcome 2値のみであることを確認 — E-GMEBT の choice2:2/choice1:1(全 GoA2)が adopted 誤描画になる機序と一致。A は E-GMEBT でのユーザー裁定実例と org GoA 規則の本来の読み(choice 別母集団への適用)に合致。B 非採用受容度: 6(B は棄権除外を自然に含むが、賛成側 GoA のみ数える方式は『自分が選んだ choice に GoA7 を付ける』奇形入力の扱いを新たに定義する必要があり複雑)。",
+  "submittedAt": "2026-07-19T22:44:10Z"
+}

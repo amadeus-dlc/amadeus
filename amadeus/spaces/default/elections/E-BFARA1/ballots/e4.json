@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFARA1",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "A 採用時、vote 経路(election.ts:334)の normalizeAt 呼びの扱い(受理形に対し恒等となるため、残置か除去か)を design で明示すること — 残置なら『恒等の防御層』と注記、除去なら DeliveryRecord mint 側(transport)の用途は維持",
+  "rationale": "#1252 クロスレビュー(1人目)当事者。実測: t239:125-129 の4挙動ピン(ms 除去/TZ→UTC/恒等/素通し)を verbatim 確認、corpus 全12選挙の保存 submittedAt は非正規形0件(grep -vcE で機械確認)— 実入力は既に全て mint 正規形であり、A の regex ^秒精度UTC0 Date 有効性の二段は現実の書き手を1件も壊さない。A は parse-don't-validate(検証済み正規形を型で運ぶ)に最も忠実で、自分の #1252 verdict 補足(new Date 単独は日付のみ入力を通すため regex+Date 二段)とも一致。B の寛容受理+正規化は classifyLate の辞書式比較前提を『正規化の実施』という手続きに依存させ続ける — A なら保存形=受理形で依存自体が消える。ballot は機械生成(date -u)であり人間入力の利便性要求もない。自案非採用時: B=6(実害はないが契約が弱い)",
+  "submittedAt": "2026-07-19T22:10:42Z"
+}

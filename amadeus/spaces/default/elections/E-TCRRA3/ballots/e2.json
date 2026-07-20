@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TCRRA3",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A 採用。winner+choice 別内訳+GoaCounts の保持は record.md の監査可能性(P2: 記録は実測事実のみ)と verify の recompute 等値比較の両方を強くする。B の『ledger から再導出可能』は正しいが、tally.json の fixed set は blind lift(store.ts:9、当方 AD レビューで実測)のため導出には解決規則の再適用が要り、内訳の明示保存が検証を1手にする。当方 intent(resolveBallots 母集団解決)との整合も A が自然 — 内訳は解決済み母集団から導出される値として仕様化可能。受容度: B=6。",
+  "submittedAt": "2026-07-19T22:44:20Z"
+}

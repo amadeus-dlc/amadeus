@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TCRRA4",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "実測: Ballot.parse(:184-204)の :198 で choiceInternalNo を無検証採用 — 欠落自体は確認。ただし e2 の 260719-ballot-failclosed-amend が E-BFARA1/3 裁定で同じ分類ラダーへ invalid-timestamp/unknown-ref を追加中であり、同一ラダーの並行改変は shared-ledger-insert-collision 型の textual/意味論衝突と再接地負担を作る。分類追加は e2 バッチへ Issue 委譲で1箇所集約(B)が並行 intent 間の直列化原則(priority-vs-dependency (3))に整合。A 非採用受容度: 6(直列合意が leader 台帳で明文化されるなら A も成立)。",
+  "submittedAt": "2026-07-19T22:44:10Z"
+}

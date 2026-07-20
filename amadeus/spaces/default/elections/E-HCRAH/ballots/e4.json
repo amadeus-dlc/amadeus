@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRAH",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record 実測: 成果物3点+verification/phase-check-ideation.md 実在(正名正位置)、E-OC1 承認 03:08:23Z の記載一致を grep 確認、センサー FAILED 0。diary の c3/c4+boundary 手順は既存 cid 適用実例のみ。0件で可",
+  "submittedAt": "2026-07-20T03:11:13Z"
+}

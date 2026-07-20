@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFARA1",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "#1252 クロスレビューで transport.ts:88-92 normalizeAt を実測済み — 正規化 funnel は既存設計の中心で、B はそれを ingestion で活かし非 ISO のみ遮断する parse-don't-validate 適合形。A(mint 正規形限定)は new Date().toISOString() の ms 形(エージェントの自然な生成形)を拒否し、投票失敗の摩擦を不必要に生む。classifyLate の辞書式比較は受理後 normalize で保証される。",
+  "submittedAt": "2026-07-19T22:10:03Z"
+}

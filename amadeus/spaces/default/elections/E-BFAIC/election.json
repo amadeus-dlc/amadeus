@@ -1,0 +1,20 @@
+{
+  "electionId": "E-BFAIC",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260719-ballot-failclosed-amend / intent-capture ステージの §13 学習候補について、conductor は 0件を提案している。根拠: diary 3点((1) intent-capture:c1 適用(事前裁定済み事項の質問絞り込み) (2) t238 除外方針 (3) tally 側 amend 解決規則の design 段送り)はいずれも既存 cid・ディスパッチ要件の適用実例で新規学習なし。成果物3点実在・センサー SENSOR_FAILED 0件・E-OC1 承認 TS 15:04:05Z 記載済み。各自 e2 worktree の record をリードオンリー実測確認のうえ、0件でよいかを GoA 付きで投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 3点とも既存 cid・ディスパッチ要件の適用実例で新規学習なし"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(票の note に候補と根拠 file:line を明記)"
+    }
+  ],
+  "voters": [
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

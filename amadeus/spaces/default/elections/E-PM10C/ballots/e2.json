@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PM10C",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "追補は1文限定で bulk-edit-verify-before-write 系へ統合(独立 cid 新設なし)— 統合文案の好み: 『機械生成する構造化ペイロード(ballot 等)は置換方式でなく生成側で直接 mint し、投入前に様式自己検査(regex/parse)を1手挟む — 置換不成立・生成 typo はプレースホルダ/不正値のまま受理境界を通過する』(案イの機序+案ロの一般形の合成)。",
+  "rationale": "採用(2、案イ起案者として)。不採用理由候補(#1252/#1273 の機械ガード着地で封鎖済み)への反証: 着地したガードは ballot の submittedAt 1フィールドのみで、機械生成ペイロード一般(他フィールド・他ツールの JSON 入力・ガード未整備の将来面)は非封鎖 — e4 の date typo 実測が独立2例目である事実がクラスの一般性を示す。対照実測(切替後15票超+e4 の投入前捕捉)も採用水準(E-GMECG 同等)を満たす。受容度: 不採用=6(diary 2件で足りる読みも理解可能)。",
+  "submittedAt": "2026-07-20T01:53:10Z"
+}
