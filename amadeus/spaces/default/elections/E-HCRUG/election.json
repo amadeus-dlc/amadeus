@@ -1,0 +1,20 @@
+{
+  "electionId": "E-HCRUG",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260720-hold-choice-resolution(#1267)/ units-generation ステージの §13 学習候補について、conductor は 0件を提案している(違反実例1件 = 規模内訳 47→49 の機械再計算誤り — ledger-count-mechanical-recalc 違反・自作・reviewer 捕捉、PM 回付)。成果物: 単一 unit tie-choice-resolution(約159行)、YAML edge block は reviewer が parseBoltDag 実機投入で適合確認、iteration 2 READY、センサー最新全 PASSED、record push 済み。各自 e2 worktree の record をリードオンリー実測確認のうえ、0件でよいかを GoA 付きで投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 違反実例は PM 回付が適切、新規学習なし"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(票の note に候補と根拠 file:line を明記)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e3"
+  ],
+  "state": "recorded"
+}

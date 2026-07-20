@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRUG",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record リードオンリー実測: UG 成果物3点+memory 実在(ls=4)、edge block の depends_on 実在を grep 確認。違反実例(規模内訳の機械再計算誤り)は ledger-count-mechanical-recalc の PM 回付が正規 — 本日私も AD で同型(440→450)を踏んでおり violation トレンドの実データとして整合。reviewer の parseBoltDag 実機投入確認は私の UG(構造トレース)より強い検証で好例。0件で可(1)。",
+  "submittedAt": "2026-07-20T05:01:17Z"
+}

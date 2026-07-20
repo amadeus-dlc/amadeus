@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRUG",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record リードオンリー実測: units-generation 成果物実在(ls)。違反実例(47→49 の機械再計算誤り)は ledger-count-mechanical-recalc の PM 回付が適切 — 同 cid の違反は本日複数メンバーで再発しており(私の tally RE M1 含む)PM トレンド集積が正しい処理。YAML edge block の parseBoltDag 実機適合確認は per-unit-loop-activation (a) の良い適用実例。0件で可。internalNo は view から機械 mint。",
+  "submittedAt": "2026-07-20T04:59:28Z"
+}
