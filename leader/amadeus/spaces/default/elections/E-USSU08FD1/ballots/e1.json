@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSU08FD1",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "4条件はread開始前にorchestratorが全件検証し、owner evidenceはpassed shared contractだけから単一fileへ解決すること。承認時も追加できるのはその1 pathだけで、2件目、directory、glob、browse/search由来は拒否する。承認/拒否、path、reason、owner evidence、scope decisionをprompt・最終Review・既存subagent/auditで再構成可能にし、拒否後readはreview無効とすること。",
+  "rationale": "Bを支持。FR-5 item 17とupstream 7fa5479はper-unit reviewerの既定read scopeをcurrent artifactsとpassed consumesへ閉じつつ、current Unitが具体的integration pointを明示しshared contractからownerを一意解決できる場合だけ単一owner fileのspot-checkを許す。4条件closed predicateをread前に評価し、一時pass-listへsingle pathだけ追加するBは、このcarve-outとAmadeusのpath/reason事前開示を決定的かつfail-closedに両立する。Aはspot-checkごとに新しい人間gateを追加し、既存stage gate数・review flowへ未承認のround-tripを持ち込む。Cはupstreamが意図した実在integrationのone-file検分を失い、shared contractだけでは閉じないshape確認をfalse NOT-READYへ寄せる。新eventを増やさず既存review/subagent/auditでscope decisionを追跡するBが最小十分である。",
+  "submittedAt": "2026-07-20T15:00:03Z"
+}
