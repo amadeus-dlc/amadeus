@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSDP2R",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 4,
+  "goa": 2,
+  "reservation": "Q1のXと整合させ、第1 BoltをU01+U02+U09+U10+U11の最小e2e slice、その後5 Unitをone-Unit Boltで完全化し、残りDAGをrisk-first・最大4並行・WSJFなしとする。非採用時はA=6（最初Bolt契約からの逸脱を明記する条件）、B=7、C=7。",
+  "rationale": "Xを支持。one-Unit境界、risk-first、最大4並行、WSJFなしはAが妥当だが、Aの5-Bolt sequenceは第5 Boltまでe2eを閉じずproject.mdの最初Bolt契約を満たさない。Q1で示した依存完全なthin sliceを第1 Boltに置き、その後U01/U02/U09/U10/U11と残りUnitをDAG順のone-Unit Boltsで進めれば、review/rollback局所性と最大4並行を維持しつつwalking skeletonを逐語的に満たす。",
+  "submittedAt": "2026-07-20T08:09:10Z"
+}

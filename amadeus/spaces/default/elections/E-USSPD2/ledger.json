@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-USSPD2",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。是正後 practices-discovery-timestamp.md は正準単一行へ復元済み。memory.md:9 の c1 は、成果物正準 shape より一律 H2 sensor の偽緑を優先した違反と復元であり、E-FVEPD が採用した timestamp/questions marker artifact と prose-heading floor の契約ギャップ規範そのものの適用・違反実例である。E-FVEPD と別の新規学習はない。",
+      "submittedAt": "2026-07-20T07:23:36Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSPD2",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。是正後 practices-discovery-timestamp.md は wc -l=1 で、stage 正本の Discovered: <ISO-8601 timestamp> at commit <hash> と一致する。最新監査・detail を実読し、team-practices/discovered-rules/evidence は required-sections 3/3・upstream-coverage 3/3 PASS、timestamp は canonical shape のまま required-sections h2_count=0/findings=2 と upstream-coverage unreferenced=6 を advisory FAIL として正しく露出している。memory の Deviation は初回14行/H2 2個への偽緑化、E-USSPD 開票停止、正本復元を記録済み。これは E-FVEPD 採用規範の every sensor predicate と canonical shape の照合に、required-sections と upstream-coverage の双方が含まれる適用・違反実例であり、別の新規規範は不要。",
+      "submittedAt": "2026-07-20T07:23:47Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSPD2",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e5 是正後 record をリードオンリー実測。practices-discovery-timestamp.md は wc -l=1、`Discovered: ... at commit ...` の正準単一行へ復元済み。最新 audit は team-practices/discovered-rules/evidence の required-sections・upstream-coverage 各3/3 PASS、timestamp の required-sections は h2_count=0/findings=2、upstream-coverage は unreferenced=6 で意図どおり advisory FAIL。memory の実エントリ1件は、正準単一行を14行/H2 2個へ変形して偽緑化した違反実例であり、E-FVEPD が3-0/GoA1x3で採用した marker canonical shape と generic sensor 契約ギャップの規範を直接適用したもの。別の新規学習候補は認めず、0件で可。",
+      "submittedAt": "2026-07-20T07:25:09Z"
+    }
+  ],
+  "late": []
+}

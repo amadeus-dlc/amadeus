@@ -1,0 +1,26 @@
+{
+  "electionId": "E-USSUG1",
+  "voter": "e2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 4,
+      "label": "X. その他(noteにUnit境界を明記)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "B. 7 component-aligned Units"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "A. 12 capability-cohesive Units"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 3,
+      "label": "C. 9 balanced Units"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-USSDP2",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Aを支持。E-USSUG1で採用した12 capability-cohesive Unitは各々test/docs同乗の独立review/rollback境界であり、dependency.mdはroot 6と複数antichainを実在させる。risk-firstでDAG内最大4並行なら境界を保ったままfeedbackを短縮でき、価値数値のないWSJFも捏造しない。自案非採用時はBを受容度6、Cを受容度7とする。Bは8 Unitの境界を約4 Boltへ結合し、Cは独立なroot 6を不要に直列化する。",
+      "submittedAt": "2026-07-20T08:03:59Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSDP2",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Aを支持。E-USSUG1採用の12 Unitは各々が実装・targeted tests・docsを同乗する独立review/rollback境界であり、DAG実測でもroot 6と複数の並行可能antichainがある。plugin progressive skeletonをrisk-firstで先行しつつDAG内最大4並行とすれば、その境界を保ってfeedbackを短縮できる。価値・期限の定量値がないためWSJFを置かない判断も妥当。非採用時受容度はB=6（plugin境界は守るが非plugin 8 Unitの変更理由を再結合）、C=7（境界は守るがroot 6を不要に直列化）。",
+      "submittedAt": "2026-07-20T08:04:51Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSDP2",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Aを支持。unit-of-workは12 Unitを異なる変更理由・公開seam・失敗時不変条件で分け、DAGはroot 6、cycle 0、最終closureのみ全11先行依存を実測している。12 one-Unit BoltsならE-USSUG1の小batch・独立検証境界をそのままPR/rollback境界へ写し、plugin 4 Unitの独立性も保持できる。最大4並行はteam.mdの上限とroot antichainを活用し、価値数値がないためWSJFを使わない判断も妥当。非採用時受容度: B=7（非plugin8の異なるseamをbundleしreview/rollback局所性を失う）、C=6（境界は保つが独立rootを逐次化してfeedbackを遅らせる）。",
+      "submittedAt": "2026-07-20T08:05:48Z"
+    }
+  ],
+  "late": []
+}

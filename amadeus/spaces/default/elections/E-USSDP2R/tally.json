@@ -1,0 +1,74 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A. 5-Bolt skeleton先行 + 残りDAG risk-first / one-Unit / 最大4並行"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A. 5-Bolt skeleton先行 + 残りDAG risk-first / one-Unit / 最大4並行",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "B. plugin4独立 + 非plugin8を約4 Boltへbundle",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "C. 12 one-Unit strict sequential",
+        "count": 0
+      },
+      {
+        "internalNo": 4,
+        "label": "X. その他(noteに順序・粒度・並行度を明記)",
+        "count": 1
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T08:12:26Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-USSDP2R",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Aを支持。訂正後5-Bolt列はDAGのplugin closureとruntime-recovery前提を満たし、残るUnitはroot 6を含む複数antichainを持つ。12 capability-cohesive Unitのtest/docs同乗・review/rollback境界をone-Unit Boltで維持しつつ最大4並行にすればfeedbackを短縮でき、定量価値のないWSJFも捏造しない。非採用時受容度はB=6（非plugin境界を再結合）、C=7（並行可能性を不要に直列化）。",
+      "submittedAt": "2026-07-20T08:09:05Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSDP2R",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 4,
+      "goa": 2,
+      "reservation": "Q1のXと整合させ、第1 BoltをU01+U02+U09+U10+U11の最小e2e slice、その後5 Unitをone-Unit Boltで完全化し、残りDAGをrisk-first・最大4並行・WSJFなしとする。非採用時はA=6（最初Bolt契約からの逸脱を明記する条件）、B=7、C=7。",
+      "rationale": "Xを支持。one-Unit境界、risk-first、最大4並行、WSJFなしはAが妥当だが、Aの5-Bolt sequenceは第5 Boltまでe2eを閉じずproject.mdの最初Bolt契約を満たさない。Q1で示した依存完全なthin sliceを第1 Boltに置き、その後U01/U02/U09/U10/U11と残りUnitをDAG順のone-Unit Boltsで進めれば、review/rollback局所性と最大4並行を維持しつつwalking skeletonを逐語的に満たす。",
+      "submittedAt": "2026-07-20T08:09:10Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSDP2R",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Aを選択。実測DAGのU01→U09、U02+U09→U10、U10→U11を満たす5-Bolt skeletonを先行し、その後はroot 6と独立antichainを最大4並行で処理するため、risk-firstとfeedback速度を両立する。one-Unit BoltはUGで確定した12 capability ownerの独立review/rollback境界を保持し、数値価値のないWSJFを導入しない。Bは非plugin 8 Unitの境界を再結合し、CはDAGが許す並行性を失う。非採用時受容度: B=6、C=7、X=6。",
+      "submittedAt": "2026-07-20T08:09:56Z"
+    }
+  ],
+  "resolutions": []
+}

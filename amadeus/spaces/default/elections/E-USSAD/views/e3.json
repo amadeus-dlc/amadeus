@@ -1,0 +1,16 @@
+{
+  "electionId": "E-USSAD",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "0件不可 — noteに新規学習候補を明記"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件で可 — 新規横断学習なし"
+    }
+  ]
+}

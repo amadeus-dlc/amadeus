@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSPD2",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e5 是正後 record をリードオンリー実測。practices-discovery-timestamp.md は wc -l=1、`Discovered: ... at commit ...` の正準単一行へ復元済み。最新 audit は team-practices/discovered-rules/evidence の required-sections・upstream-coverage 各3/3 PASS、timestamp の required-sections は h2_count=0/findings=2、upstream-coverage は unreferenced=6 で意図どおり advisory FAIL。memory の実エントリ1件は、正準単一行を14行/H2 2個へ変形して偽緑化した違反実例であり、E-FVEPD が3-0/GoA1x3で採用した marker canonical shape と generic sensor 契約ギャップの規範を直接適用したもの。別の新規学習候補は認めず、0件で可。",
+  "submittedAt": "2026-07-20T07:25:09Z"
+}

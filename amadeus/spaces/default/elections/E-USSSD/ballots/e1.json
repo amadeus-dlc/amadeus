@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSSD",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e5 record リードオンリー実測: scope-definition 成果物3点+diary 実在(ls)。候補2件(MoSCoW 全 Must 化・Should/Could 不使用 / MEDIUM 検証先行配置)は scope-definition:c2(Must 限定+Won't 厳格除外)・c3(risk-first 優先)の適用実例で、260717 の同型裁定履歴とも一貫 — 新規性なし。0件で可。internalNo 機械 mint(逆順シャッフル)。",
+  "submittedAt": "2026-07-20T05:15:39Z"
+}

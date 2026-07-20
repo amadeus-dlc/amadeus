@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSSD",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e5 record をリードオンリー実測: 成果物3点+memory 実在、E-OC1 承認 05:13:12Z の記載(:13-14 — 3段順序の注記付き)確認、[Answer] 5/5、PU 束の実在、成果物3点の最新センサー verdict 全 Passed(05:14:26Z、Output path 単位)。付随観測: memory.md(diary)への自動発火 FAILED 1件(05:14:37Z)があるが、diary は宣言 artifact でないため成果物 verdict に非帰属(既知の自動発火クラス — 報告の『7発火全 PASSED』は宣言 artifact 発火の集計として整合)。候補2件(MoSCoW 計画写像で Should/Could 不設置/検証先行配置)は scope-definition:c2/c3 の適用実例で新規学習なし。0件で可",
+  "submittedAt": "2026-07-20T05:16:48Z"
+}
