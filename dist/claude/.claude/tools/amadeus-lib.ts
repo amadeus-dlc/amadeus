@@ -1126,6 +1126,65 @@ export function ensureStageDiary(
   return "created";
 }
 
+// The directive-time diary decision (#1279). ensureStageDiary's three outcomes,
+// plus two SKIP variants the chokepoint distinguishes:
+//   - skipped-unresolved: the memory_path fell back to the bare space prefix
+//     (recordPrefix was null) WHILE intent record dirs exist — a diary that
+//     SHOULD have been placed could not be. A loud stderr advisory is emitted.
+//   - skipped-prebirth: no intent record dirs exist yet (a genuine pre-birth
+//     shell). Silent by design — there is nothing to write into.
+export type StageDiaryOutcome =
+  | "created"
+  | "exists"
+  | "template-missing"
+  | "skipped-unresolved"
+  | "skipped-prebirth";
+
+// True when a memory diary path names a real PER-INTENT record. memoryPathFor
+// yields two shapes: with a resolved recordPrefix it is
+// `amadeus/spaces/<space>/intents/<record-dir>/<phase>/<slug>/memory.md`; with a
+// null recordPrefix it falls back to `.../intents/<phase>/<slug>/memory.md`. The
+// two are told apart by the segment IMMEDIATELY after `intents/`: a phase name
+// (PHASES) is the bare-space fallback, anything else is a record-dir name
+// (`<YYMMDD>-<label>` / `<slug>-<id8>`, which never equals a bare phase word).
+// This is the SINGLE value both the diary write and its guard derive from
+// (#1279) — no cursor re-resolution on a second route that could disagree with
+// the path already baked into the directive.
+export function memoryPathNamesIntentRecord(memoryPathRel: string): boolean {
+  const parts = memoryPathRel.split("/");
+  const i = parts.indexOf("intents");
+  if (i === -1 || i + 1 >= parts.length) return false;
+  return !(PHASES as readonly string[]).includes(parts[i + 1]);
+}
+
+// Directive-time stage-diary creation, anchored on the memory_path already baked
+// into the run-stage directive (#1279). Replaces the earlier chokepoint guard
+// `recordPrefix !== null && codekbCtx`, whose recordPrefix branch could disagree
+// with the memory_path (which masks a null recordPrefix with the bare space
+// prefix) and silently skip. Here the guard and the write derive from ONE value:
+//   - memory_path names a real record  -> ensureStageDiary (write / exists / …)
+//   - bare-space fallback + records exist -> loud stderr advisory (the #1279 bug)
+//   - bare-space fallback + no records    -> silent (genuine pre-birth shell)
+// stdout is never touched: the advisory is stderr-only, so the directive JSON is
+// unchanged.
+export function ensureStageDiaryForDirective(
+  projectDir: string,
+  memoryPathRel: string,
+  space: string,
+): StageDiaryOutcome {
+  if (memoryPathNamesIntentRecord(memoryPathRel)) {
+    return ensureStageDiary(projectDir, memoryPathRel);
+  }
+  const records = listIntentDirs(projectDir, space);
+  if (records.length > 0) {
+    console.error(
+      `amadeus: stage diary skipped — record prefix unresolved while ${records.length} intent record(s) exist (see #1279)`,
+    );
+    return "skipped-unresolved";
+  }
+  return "skipped-prebirth";
+}
+
 // E-OC1 evidence check for gate-start (#1101): the 3-step order (report the
 // no-election judgment -> leader approval -> only then fill [Answer]) is a
 // prose norm that slipped twice in one day, so gate-start enforces the

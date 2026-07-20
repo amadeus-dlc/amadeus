@@ -1,6 +1,23 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(最新: 260720-hold-choice-resolution)
+## 実行メタデータ(最新: 260720-diary-autogen-guard)
+
+- Date: 2026-07-20(Asia/Tokyo)
+- Observed at: HEAD `0b11036d5d990c9f5de98dc172222d8e2df4928a`(`git rev-parse HEAD` 実測一致、engineer-1 worktree)
+- Intent: `260720-diary-autogen-guard`([Issue #1279](https://github.com/amadeus-dlc/amadeus/issues/1279) — stage diary 自動生成が engineer-1 環境でのみ無音不発。同スコープ・同コードの engineer-3 は全ステージ ✅)
+- Scope: `bugfix`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh(cid:reverse-engineering:c1、E-L63 の base 選定則)。base=`37f8cf5e67cef77adfd82ef292303790f756c8fd`(直前の鮮度ポインタ `re-scans/260720-ballot-received-at.md` の Observed、全 `re-scans/*.md` observed のうち HEAD 祖先で距離最小。`git merge-base --is-ancestor 37f8cf5e6 HEAD` exit 0 実測、`git rev-list --count 37f8cf5e6..HEAD`=**17**。tally observed `262a86db9`=dist33・record 宣言 base `a326f47bc`=dist53 はいずれも祖先だが非最小のため base に採らず。rescan-base-ancestry / 距離最小の祖先を採用)、observed=`0b11036d5d990c9f5de98dc172222d8e2df4928a`。区間 `37f8cf5e6..HEAD`=17コミットは全て `record(ballot-received-at)` 工程記録+1 audit で、フォーカス正本 `amadeus-orchestrate.ts`(chokepoint :1168-1172)・`amadeus-lib.ts`(`relativeRecordDir`/`activeIntent`/`resolveProjectDir`)への `git log 37f8cf5e6..HEAD -- <両ファイル>`=**0件** = Observed=HEAD ワークツリー実測が base 断面と同一。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3、確約級引用4クラスタ(`resolveProjectDir`:211-235 / `activeIntent`:1059-1084 / `relativeRecordDir`:1217-1226 / chokepoint `amadeus-orchestrate.ts`:1172 + `codekbCtxFor`:889-891)を独立スポット再実測し反証なし)。
+- 測定 ref: 全 file:line は Observed=HEAD `0b11036d5` の engineer-1 worktree 実ファイル直読(cid:measurement-ref-in-artifacts)。intent-dir 件数(e1=46)はコマンド出力からの転記(numbers-from-command-output-only)。環境固有バグのため決定的再現は scratchpad の read-only probe のみ(正本・配布コピー未改変、instrumentation-syntax-check 準拠、cwd 変更・checkout/stash/reset・record/state 書換 verb 不使用)。
+- 現行結論: diary 自動生成の可否は chokepoint の guard `if (recordPrefix !== null && codekbCtx) ensureStageDiary(...)`(`amadeus-orchestrate.ts:1172`)で決まり、**❌ 枝は例外なく `recordPrefix === null`**(`codekbCtx` は `codekbCtxFor` :889-891 が常に object を返すため実 `next` 経路では never falsy — 除外)。`recordPrefix === null ⟺ activeIntent(pd) === null`(`relativeRecordDir`:1224 が null を返す)。e1 は intent record dir が46件あり lone-intent fallback(`activeIntent`:1080 `records.length === 1`)は発火しないため、`activeIntent` は `active-intent` cursor 解決に完全依存する。**pd(projectDir)が本質の可変軸**: `resolveProjectDir`:211-235 の優先順は ①--project-dir ②`CLAUDE_PROJECT_DIR` env ③script-path ④cwd で、②が③より先に効くためエンジンの pd は当該セッションの `CLAUDE_PROJECT_DIR` に支配される。cursor 非解決ツリー(main checkout=cursor 不在等)を指すと `activeIntent(pd)=null → recordPrefix=null → diary 無音 skip`。read-only probe で pd 差のみによる ✅/❌ の決定的反転を実証(e1 worktree=FIRES / main checkout=SKIPPED)。設計欠陥は guard が「pre-birth の正当 skip」と「intent 実在だが cursor/pd 解決失敗のバグ skip」を**無音で混同**すること(template-missing 枝は stderr 警告 :1121 を出すのに本 skip は無警告)。非対称性: audit/report/state 系は `--intent <record>` 明示アンカー(`amadeus-audit.ts:433`)で cursor 非依存のため、260719-tally の RE audit は tally 正シャードに着地しており「audit は正シャード・diary だけ不発」を説明する。原因の所在は**設計**(diary chokepoint に audit 同様の明示 intent アンカーを持たせず ambient cursor 解決のみに依存させた設計判断)。
+- Per-intent record: `re-scans/260720-diary-autogen-guard.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「最新: 260720-ballot-received-at」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、`re-scans/260720-diary-autogen-guard.md`。**codekb body 8成果物(business-overview / architecture / code-structure / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment)は全点温存**(churn 回避 — 実質の新規知識は「diary chokepoint guard が cursor/pd 非解決を無音 skip し pre-birth 正当 skip と混同+diary 経路が audit と非対称に ambient cursor 依存+pd 解決が `CLAUDE_PROJECT_DIR` 支配で環境固有」の1クラスタのみ。これは bugfix の環境依存挙動欠陥であり構造・API・依存・技術スタックの変化を伴わず、フォーカス正本の区間変更0件で本文と矛盾しない。詳細は per-intent record に集約済み。cid:reverse-engineering:c1)。
+- Delivery boundary: 実装・修正コード、`bun scripts/package.ts`/`promote:self` による dist・self-install 再生成、main merge/rebase、Issue close、PR 作成・更新は本 scan で実施していない。区間フォーカス正本変更0件のため dist ツリーは base と同一。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260720-hold-choice-resolution)
 
 - Date: 2026-07-20(Asia/Tokyo)
 - Observed at: HEAD `f6ab1e48d321e11ab6355fa315d505e28bd0273b`(`git rev-parse HEAD` 実測一致、subject = `record(hold-choice-resolution): approval-handoff approved (ideation complete)`)

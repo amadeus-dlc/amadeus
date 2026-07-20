@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-DAGRE",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "適用範囲を『特定メンバー/環境でのみ再現するバグ』に限定して明文化する(全バグ RE への ambient 第一容疑の一律義務化はしない)。調査系既存ファミリ(external-status-triage / rerun-red-reattribution 系)への追補統合を推奨。",
+  "rationale": "e1 RE record 実測: diary Interpretations(03:06:25Z)に根本原因の確定記録 — resolveProjectDir(amadeus-lib.ts:211-235)の CLAUDE_PROJECT_DIR 優先×cursor 未解決 tree で recordPrefix===null の無音 skip、引用再実測ゼロ齟齬、e1 自 intent の diary は env 正解で生成という自己整合説明まで一貫。#1279 クロスレビューで私が出した対照データ(engineer-3 成功)と env-diff 推奨が本候補の調査設計そのものであり、初期仮説(park/unpark)の誤りを ambient 第一容疑が正した実証列がある — 常識クラスに留めず定型化の価値あり。採用(2)。",
+  "submittedAt": "2026-07-20T03:09:49Z"
+}

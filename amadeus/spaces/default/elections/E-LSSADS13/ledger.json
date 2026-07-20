@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-LSSADS13",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "追補文に『クラス判定に迷う場合(機械検証可能と omission の混在・判定不能)は選挙へ倒す』の1文を含めること — 分岐規則の導入が「迷えば選挙」の一般原則を侵食しないため。",
+      "rationale": "採用(2)。両裁定の当事者として検証: E-BFAAD の残余(verifySelf の適用点列挙漏れ)は omission クラス → (a) 追加イテレーションが正しく、E-LSSAD の残余(合計450 未再計算・層別集合不一致)は機械検証可能クラス → (b) 受理が正しい — 候補の分岐基準は2裁定を貫く実判別子(是正の自己検証可能性)を正確に切り出している。自分は E-LSSAD で (a) に投票しユーザー裁定 (b) に覆られたが、本規則はその齟齬を「クラス相違」として説明し、以後の同型判断を選挙から執行へ移せる。早期の懸念には、2裁定が両分岐を1件ずつ覆いユーザー裁定が (b) 側を接地している点が反証。受容度: 不採用=6。",
+      "submittedAt": "2026-07-20T04:28:54Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-LSSADS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "persist 文は (1) 出典に E-BFAAD と E-LSSAD の両裁定(逆結論の2実例を貫く規則であること)を明記 (2)『機械検証可能』の判定は ledger-count-mechanical-recalc / fix-diff-independent-reverify の既存定義を参照する形で書き独自定義を作らない (3) 追補統合先は reviewer 予算・委任レビュー系の既存ファミリ(delegated-review-analysis-with-owned-verdict 近傍)とし新規 cid は統合先不在の場合のみ",
+      "rationale": "分岐基準の起案当事者(E-BFAAD で (a) を主張し E-LSSAD で (b) を主張した両票の整合根拠として articulate し、E-LSSAD 留保で diary 明記を要求した本人)。採用を支持: (1) 逆結論の2裁定を1規則が貫く形は『2裁定のみで早期』への最強の反証 — 規則が両裁定の説明変数であることは既に実証済みで、3例目を待つ価値より次回同型 blocker の選挙コスト削減が大きい (2) diary 埋没では次の conductor が再発明・再選挙する — ambient 化が目的 (3) 予算制度(reviewer_max_iterations)の運用解釈として構造的に反復する場面。自案非採用時: 不採用=6(diary 記録があるため次回再提案可能)",
+      "submittedAt": "2026-07-20T04:28:55Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-LSSADS13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "適用範囲を『reviewer イテレーション予算消費後の残余是正』に明示限定し、予算内の条件付き READY(reviewer 自身が是正確認を前置きで免除する形)へ拡大解釈しない1句を追補文に含めること。独立 cid でなく既存 reviewer 運用系への追補統合を優先。",
+      "rationale": "分岐基準(機械検証可能クラス vs 列挙 omission クラス)は P2(実測事実のみ)の受理面への自然な射影で原理的に健全。2裁定+同日の隣接実例(私の goa/tally RA では reviewer が件数訂正=機械検証可能クラスを『是正後 re-review 不要』と事前授権 — 予算内形だが同じ分岐直観)が収斂しており、E-DAGRE(2実例採用)の前例とも整合。",
+      "submittedAt": "2026-07-20T04:29:05Z"
+    }
+  ],
+  "late": []
+}
