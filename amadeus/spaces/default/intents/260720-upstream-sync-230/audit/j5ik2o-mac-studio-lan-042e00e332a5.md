@@ -7606,3 +7606,12 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Error Logged
+**Timestamp**: 2026-07-20T09:30:49Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: 
+**Error**: report requires --result <outcome>. Accepted: approved, completed, complete, done (the verdict for the stage just acted on).
+
+---
