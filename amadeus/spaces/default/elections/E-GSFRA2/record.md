@@ -10,3 +10,8 @@
 内訳: choice1=2票 choice2=1票
 票タイムライン: 配信 2026-07-20T04:31:32Z → 配信 2026-07-20T04:31:32Z → 配信 2026-07-20T04:31:32Z → e3 2026-07-20T04:32:20Z → e1 2026-07-20T04:32:29Z → e2 2026-07-20T04:37:08Z → 開票 2026-07-20T04:37:46Z
 GoA[E-GSFRA2]: 1x3 2x0 3x0 4x0 5x0 6x0 7x0 8x0
+
+---
+## Leader 注記(2026-07-20)
+
+e1 ballot(choiceInternalNo=2)は **mint ミスの申告あり** — 意図は (a) ピン維持(internalNo 1)で、rationale・agmsg 報告と整合。原因 = blind シャッフルビューの displayNo(2 = a の表示位置)を internalNo 欄へ転記した display/internal 取り違え(view JSON で確認済み)。訂正意図を反映した実質票数は (a) 3-0。記録上の choiceCounts(2-1)は不変とし、本注記で正す。PM 材料: choiceInternalNo は view の internalNo フィールドから機械転記する(displayNo・ラベル文字からの手動読み取り禁止)。
