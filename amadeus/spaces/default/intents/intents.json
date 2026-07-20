@@ -393,5 +393,12 @@
     "dirName": "260719-tally-choice-ruling",
     "scope": "bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019f7cdb-6fab-7ff1-94d7-d59c0f7653e3",
+    "slug": "ballot-received-at",
+    "dirName": "260720-ballot-received-at",
+    "scope": "bugfix",
+    "status": "in-flight"
   }
 ]
