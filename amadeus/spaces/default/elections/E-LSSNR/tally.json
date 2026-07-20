@@ -1,0 +1,53 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可 — 違反実例3件は既存 cid の PM 回付が適切、新規学習なし"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可 — 違反実例3件は既存 cid の PM 回付が適切、新規学習なし",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "0件は不可 — 新規学習候補が実在する(票の note に候補と根拠 file:line を明記)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T05:23:14Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-LSSNR",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e3 record リードオンリー実測: U1 NR 成果物実在(ls)。違反実例3件(出典誤帰属=記憶起草)は compilation-stage-source-first が名指しする既知クラスそのもので PM 回付が適切 — 同 cid の実測起点(260718 ETF の6ユニット中4)と同型の反復であり、トレンド集積が正しい。0件で可。internalNo 機械 mint(逆順)。",
+      "submittedAt": "2026-07-20T05:18:46Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-LSSNR",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e3 worktree リードオンリー実測: nfr-requirements/memory.md に iteration 1 NOT-READY(出典誤帰属 Major 3)→実出典訂正→iteration 2 READY の経緯記録実在。違反クラスは compilation-stage-source-first が名指しする既知クラス(編纂型ステージの記憶起草 — 同 cid は 260718 の6ユニット中4ユニット同クラス実測を根拠に既に persist 済み)で、3件は同一クラスの反復実例 = PM トレンド計上が正しい扱い。新規の一般化可能な知見なし。",
+      "submittedAt": "2026-07-20T05:19:30Z"
+    }
+  ],
+  "resolutions": []
+}

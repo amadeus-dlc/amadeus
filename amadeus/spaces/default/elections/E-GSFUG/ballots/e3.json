@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFUG",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e4 record リードオンリー実測: UG 成果物+memory 実在(ls=5)、edge block depends_on 実在(grep=1)、Planning 先行の E-OC1 承認 TS・bolt_dag 先行 recompile の diary 記録を確認。違反実例(consumes-first-drafting 再発)の PM 回付は正規 — 本日全メンバーで同型多発しており、私の PM 蒸留提案(テンプレ機械化)の裏付けがさらに増えた。shell 置換不適用→Edit 切替の自己運用も私の bulk-edit 教訓と同型で妥当。0件で可(1)。",
+  "submittedAt": "2026-07-20T05:21:17Z"
+}

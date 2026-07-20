@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-LSSNR",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e3 worktree リードオンリー実測: nfr-requirements/memory.md に iteration 1 NOT-READY(出典誤帰属 Major 3)→実出典訂正→iteration 2 READY の経緯記録実在。違反クラスは compilation-stage-source-first が名指しする既知クラス(編纂型ステージの記憶起草 — 同 cid は 260718 の6ユニット中4ユニット同クラス実測を根拠に既に persist 済み)で、3件は同一クラスの反復実例 = PM トレンド計上が正しい扱い。新規の一般化可能な知見なし。",
+  "submittedAt": "2026-07-20T05:19:30Z"
+}

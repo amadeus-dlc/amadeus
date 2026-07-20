@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-LSSNR",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e3 record リードオンリー実測: U1 NR 成果物実在(ls)。違反実例3件(出典誤帰属=記憶起草)は compilation-stage-source-first が名指しする既知クラスそのもので PM 回付が適切 — 同 cid の実測起点(260718 ETF の6ユニット中4)と同型の反復であり、トレンド集積が正しい。0件で可。internalNo 機械 mint(逆順)。",
+  "submittedAt": "2026-07-20T05:18:46Z"
+}
