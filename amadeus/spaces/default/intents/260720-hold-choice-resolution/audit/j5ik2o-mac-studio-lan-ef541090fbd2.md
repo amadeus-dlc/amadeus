@@ -4407,3 +4407,269 @@
 **Duration ms**: 32
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T05:26:29Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: aeae90eaa14a143f3
+**Message**: ## 判定: READY\n\n### 検証コマンドと結果\n\n**指摘1(P-2/SC-2 の choices 分布の機械集計)の検証**\n\n```bash\nfind . -path '*/elections/*/election.json' | wc -l\n# → 51 (成果物記載「本 worktree store 51本」と一致)\n\nfind . -path '*/elections/*/ele
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T05:26:43Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-requirements
+**Timestamp**: 2026-07-20T05:26:43Z
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T05:30:10Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T05:30:10Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T05:30:11Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: nfr-requirements
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T05:30:11Z
+**Event**: GATE_APPROVED
+**Stage**: nfr-requirements
+**Grant Id**: 1d87113b
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T05:30:11Z
+**Event**: STAGE_COMPLETED
+**Stage**: nfr-requirements
+**Details**: Stage Nfr Requirements approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T05:30:11Z
+**Event**: STAGE_STARTED
+**Stage**: nfr-design
+**Agent**: amadeus-architect-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:31:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: bac7c9e8
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:31:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: bac7c9e8
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/performance-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:31:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7c40a89a
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:31:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7c40a89a
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/security-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:31:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2eeefa7b
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:31:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2eeefa7b
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/scalability-design.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:31:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 37adb136
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:31:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 37adb136
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/reliability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:31:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0565e03e
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:31:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0565e03e
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/logical-components.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:31:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: c86d72b2
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:31:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: c86d72b2
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/performance-design.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:31:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9b98ef48
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:31:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9b98ef48
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/security-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:31:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5cd6c76a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:31:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5cd6c76a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/scalability-design.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:31:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: c4c989d6
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:31:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: c4c989d6
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/reliability-design.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:31:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: ff4c207d
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:31:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: ff4c207d
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/logical-components.md
+**Duration ms**: 37
+
+---
