@@ -23,36 +23,52 @@ function parseChoiceResolution(resolution: string): number | null
 // 実装: /^choice:(0|[1-9][0-9]*)$/ 一致時に Number、他は null(先頭ゼロ・空・非数値は null = fail 側)
 ```
 
-### handleHoldResolved の tie 分岐(FR-1 二段検証)
+### handleHoldResolved の tie/非-tie 相互排他分岐(FR-1 二段検証)
 
-既存のテーブル検証(:201-207 相当)の**前**に tie 専用分岐:
+現行コード(election.ts:201-207)は `const table = HOLD_RESOLUTIONS[t.result.reason]; const resumedTo = table[resolution]; if (resumedTo === undefined) return fail(...)` の **const 直列**であり分岐構造を持たない。これを **相互排他の if/else** へ置き換え、tie は generic table 検証を通らない(レビュー iteration 1 Critical の是正 — tie 分岐通過後に空テーブル lookup へ落ちる欠陥の封鎖):
 
 ```ts
+let resumedTo: ElectionState;
 if (t.result.reason === "tie") {
   const n = parseChoiceResolution(resolution);
-  const valid = loaded.value.election.choices.some((c) => c.internalNo === n);
-  if (n === null || !valid) {
-    return fail(`invalid-transition: resolution "${resolution}" is not valid for hold reason "tie" (valid: choice:<internalNo> of ${choices の internalNo 列挙})`);
+  const valid = n !== null && loaded.value.election.choices.some((c) => c.internalNo === n);
+  if (!valid) {
+    const nos = loaded.value.election.choices.map((c) => `choice:${c.internalNo}`).join("/");
+    return fail(
+      `invalid-transition: resolution "${resolution}" is not valid for hold reason "tie" (valid: ${nos})`,
+    );
   }
-  // resumedTo = "tallied" 固定(現行 tie の両値と同じ復帰先)
+  resumedTo = "tallied";   // 現行 tie の両値(adopted/rejected → tallied)と同一の復帰先
+} else {
+  const table = HOLD_RESOLUTIONS[t.result.reason];
+  const to = table[resolution];
+  if (to === undefined) {
+    return fail(
+      `invalid-transition: resolution "${resolution}" is not valid for hold reason "${t.result.reason}" (valid: ${Object.keys(table).join("/")})`,
+    );
+  }
+  resumedTo = to;
 }
 ```
 
-- 非 tie reason はテーブル検証そのまま(既存経路無変更 — E-TCRCG=A 維持)。
-- tie への adopted/rejected/未知値/不正 choice は全てこの分岐で loud 拒否(e4 留保の実装形+valid ヒント)。
+- **else 側(非 tie)は現行 :201-207 の字句をブロック内へ移すのみ** — 検証条件・エラー文言とも1文字も変えない(E-TCRCG=A 維持)。
+- tie への adopted/rejected/未知値/不正 choice は全て tie 側分岐で loud 拒否(e4 留保の実装形+実在 internalNo 列挙の valid ヒント)。
+- `HOLD_RESOLUTIONS.tie = {}` は「tie は if 側で処理されテーブルへ到達しない」ことの型面の表明であり、lookup されない(到達するなら設計欠陥 — 上記 if/else が構造的に防ぐ)。
 
 ### rulingOverride 合成の拡張(FR-3、election.ts:389-393 の後継)
 
 ```ts
+const electionChoices = loaded.value.election.choices;
 const choiceNo = finalRuling ? parseChoiceResolution(finalRuling.resolution) : null;
 const rulingOverride =
   t.result.kind === "hold" && finalRuling !== undefined
     ? choiceNo !== null
-      ? `裁定: ${choices.find((c) => c.internalNo === choiceNo)?.label ?? `choice ${choiceNo}`}(choice ${choiceNo} — tie 裁定)`
+      ? `裁定: ${electionChoices.find((c) => c.internalNo === choiceNo)?.label ?? `choice ${choiceNo}`}(choice ${choiceNo} — tie 裁定)`
       : `裁定: ${finalRuling.resolution === "adopted" ? "採用" : "不採用"}`   // 旧形(他 reason 由来)不変
     : undefined;
 ```
 
+- `electionChoices` = handleRender 内で load 済みの `loaded.value.election.choices`(handleHoldResolved スニペットと同一の取得元 — Minor 1 是正で明示)。
 - label 不在(choices 変更等の防御)は `choice <n>` 表記へ縮退(?? — 実在照合済み経路では到達しない防御行。lcov 対象外化に注意 = 実装時に到達可能性を判断し不要なら省く)。
 
 ## 永続化(FR-2)

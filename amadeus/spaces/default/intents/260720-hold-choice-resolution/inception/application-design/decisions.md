@@ -5,7 +5,7 @@
 ## ADR-1: tie の検証はテーブル空化+専用分岐(FR-1 の実装形)
 
 - **Context**: HOLD_RESOLUTIONS は静的 Record<string, ElectionState> で、choice:<n> は election ごとの動的値 — テーブル引きでは表現不能。
-- **Decision**: tie 行を `{}` に空化し、handleHoldResolved のテーブル検証の**前**に tie 専用分岐(parseChoiceResolution+choices 実在照合、resumedTo="tallied" 固定)を置く。エラー文言は既存様式+実在 internalNo 列挙の valid ヒント。
+- **Decision**: tie 行を `{}` に空化し、handleHoldResolved の resolution 検証を **tie/非-tie の相互排他 if/else** へ再構成する — tie 側は parseChoiceResolution+choices 実在照合で `resumedTo="tallied"` を直接代入し、**generic table 検証を通らない**(バイパスでなく到達しない構造)。else 側は現行 :201-207 の字句をブロック内へ移すのみで無変更。エラー文言は既存様式+実在 internalNo 列挙(`choice:<n>` 形)の valid ヒント。(iteration 1 Critical 是正: 直列 const のままでは tie の有効入力が空テーブル lookup で exit 1 になる制御フロー欠陥を、相互排他分岐の明示で封鎖)
 - **Consequences**: 非 tie reason の経路は1行も変わらない(E-TCRCG=A 維持の構造保証)。tie の二値投入は分岐で loud 拒否(e4 Q3 留保の実装形)。
 - **Alternatives Rejected**: (a) テーブル値を関数化(Record<string, ElectionState|Validator>)— 全 reason の検証コードパスが変わり blast radius 過大。(b) 事前に choices から動的テーブル生成(choice:1→tallied, ...)— 生成タイミングの二重管理と、エラー文言の valid 列挙が Object.keys 頼みになり choice 増加時に肥大。
 
