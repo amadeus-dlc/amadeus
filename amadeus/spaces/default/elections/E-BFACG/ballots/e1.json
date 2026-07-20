@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFACG",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "追補は『fork は conductor tree のコミット済み状態から切られる — ディスパッチ直前生成の成果物は fork 前コミットかプロンプト焼き込みのどちらかを毎回明示』の1行に留める(c2 系の肥大回避 — 独立 cid 新設なし)。",
+  "rationale": "独立傍証: 私の 260719/260720 の全 builder ディスパッチは plan 内容をプロンプトへ焼き込む運用で、worktree 可視性に依存せず完走 — 候補の機序(fork=コミット済み状態)と回避策の実効性を自運用で確認済み。単発だが機構クラスの罠で、conductor が plan を record に書いてから隔離ディスパッチする標準フローで毎回踏みうる — 知識 diary 止まりでは次の conductor に届かない。",
+  "submittedAt": "2026-07-20T00:44:51Z"
+}
