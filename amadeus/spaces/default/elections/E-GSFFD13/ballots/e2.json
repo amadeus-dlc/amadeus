@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFFD13",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件は不可。functional-design/memory.md:11 の実測では、UI非該当なのに optional frontend-components.md の残存を初回 reviewer/sensor scope が見落とした。修正後は必須3成果物+questions の4ファイル、optional 不在を全数確認済み。候補は既存 code-generation:produces-ls-check-after-generation への追補として、条件付き optional が非該当なら absence も含む produces 候補のディレクトリ全数列挙を reviewer scope 確定前に必須化する。",
+  "submittedAt": "2026-07-20T07:12:28Z"
+}
