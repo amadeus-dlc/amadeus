@@ -708,3 +708,162 @@
 **Timestamp**: 2026-07-20T03:11:22Z
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T03:11:49Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a59f288b704f52923
+**Message**: (裁定通知が届いたら unpark して requirements-analysis へ進めて)
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T03:15:56Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a151823c04f56cdc7
+**Message**: (no suggestion — 裁定通知待ちの待機状態)
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T03:17:05Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aaa6880f8febf1f1b
+**Message**: (silence)
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T03:17:16Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T03:17:16Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T03:17:16Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: feasibility
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T03:17:16Z
+**Event**: GATE_APPROVED
+**Stage**: feasibility
+**Grant Id**: cabcb933
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T03:17:16Z
+**Event**: STAGE_COMPLETED
+**Stage**: feasibility
+**Details**: Stage Feasibility & Constraints approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T03:17:16Z
+**Event**: STAGE_STARTED
+**Stage**: scope-definition
+**Agent**: amadeus-product-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:18:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8c35937f
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/scope-definition/scope-document.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:18:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8c35937f
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/scope-definition/scope-document.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:18:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0815d0f7
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/scope-definition/intent-backlog.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T03:18:15Z
+**Event**: SENSOR_FAILED
+**Fire id**: 0815d0f7
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/scope-definition/intent-backlog.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/scope-definition/required-sections-0815d0f7.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:18:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 66476b16
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/scope-definition/scope-document.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:18:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 66476b16
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/scope-definition/scope-document.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:18:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: f2989c4c
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/scope-definition/intent-backlog.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:18:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: f2989c4c
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/scope-definition/intent-backlog.md
+**Duration ms**: 38
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T03:18:26Z
+**Event**: WORKFLOW_PARKED
+**Stage**: scope-definition
+**Timestamp**: 2026-07-20T03:18:26Z
+
+---
