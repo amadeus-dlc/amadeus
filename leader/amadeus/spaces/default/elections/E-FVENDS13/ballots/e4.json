@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVENDS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。独立実測で8 Unitのnfr-design各6成果物=48件、stage memoryのInterpretations/Deviations/Tradeoffs実entry 0、直近sensor 100行中FAILED 0を確認した。最終一括reviewは同一48成果物を対象にCritical 0・新規Major 0・新規Minor 0、既知Major 7を再ラベルせずaggregate NOT-READYとして保持しており、未解決所見を偽READYへ丸めていない。既知7件は各Unit固有の実装契約で最終人間gateへ引き渡す対象であり、横断process norm候補ではない。Functional DesignのE-FVEFDS13でも同型の残存所見継承は0件裁定済みで、新規性を認めない。",
+  "submittedAt": "2026-07-20T16:04:47Z"
+}
