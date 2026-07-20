@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFCGS13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "c1採用、c2/c3不採用を支持。実装では head/newline/comment/paren/EOF の候補から最小offsetの boundary object（kind+offset）を選び、slash除去を boundary.kind=head の場合だけに限定している。追加testは `) prose` と HTML comment が後続headより先に来る複合順序で末尾slashを温存し、parseを sparse/empty-segment へfail-closedさせ、iteration 1で実害化した『offsetだけ保持して後方headの存在を理由に正規化』を直接回帰固定している。これは複数終端候補を持つparser/extractor一般へ移植可能な新規規範。c2のstale comment/citeは既存count-comment-sync-on-catalog-change+mechanism-cite-verify、c3の是正後全再検証は既存fix-diff-independent-reverify+report-final-values-onlyの適用実例で、新規採用不要。非採用時は0件でも実装品質・検証green自体は受容可能だが、再発防止知見の一般化を失うためchoice1を優先する。",
+  "submittedAt": "2026-07-20T10:02:10Z"
+}
