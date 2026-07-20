@@ -10,14 +10,13 @@
 - coverage registry: freshness / guards / ratchet OK。dist:check: 6 harness OK。
 - security grep: `GH_TOKEN|gh pr merge|--shell|shell:` の実装ヒット 0 件。
 
-## Full CI 初回
+## #1314 着地後の最終再検証
 
-- `bun run test:ci`: 393 files、5561 assertions、failed files 2、failed assertions 5、exit 2、RESULT FAIL。
-- `tests/integration/t-team-up-codex-resume.test.ts` で初回4件、直後の単独実行で11件の 5000ms timeout を観測した。integration verbose 再走では 46 pass / 0 fail となり、実装回帰でなく ambient 時間変動へ帰属した。
-- integration verbose 再走: 161 files / 2120 assertions / failed files 1 / failed assertions 1。失敗は `t199-generated-prefix-contract.test.ts` のみ。
-- 同テストは最新 main の upstream-sync 成果物9件（codekb 2、upstream-sync intent 5、docs/research 2）にある正当な `aidlc-` 引用を拒んだ。#1312 着地由来で本 intent の実装・AC外のため、Issue #1313 に証拠・影響・再現・完了条件を記録し、leader へ境界判断を依頼した。
+- GitHub 正本で PR #1314 の merge `44ec1481b6cb9efc74654080f68bc5fdec6c4996` と Issue #1313 の CLOSED を確認し、`origin/main` を 2-parent merge `a66582b05f82899f0fa760a6f0f0885932ca1028` で再接地した。競合 index は 0 件。
+- `bun test tests/integration/t199-generated-prefix-contract.test.ts`: 8 pass / 0 fail / 35 assertions / 1 file、exit 0。
+- `bun run test:ci`: 393 files / 5566 assertions / failed files 0 / failed assertions 0、exit 0、RESULT PASS。
+- runner が明示した Claude substrate 不在の derived live tests は契約どおり SKIP。AWS credential 不正による live SDK/substrate skip も同じく既存の環境契約であり、failed files / assertions には含まれない。
 
-## 未完了条件
+## 残るゲート条件
 
-- `t199-generated-prefix-contract.test.ts` の交差赤を、承認 scope を広げず閉包する責任主体を確定する。
-- 最終センサー、独立 reviewer、§13、GitHub CI Success を確認する。
+- 最終センサー、incremental reviewer、§13、GitHub CI Success、期限内 grant を確認する。これらの成立前は Completed としない。

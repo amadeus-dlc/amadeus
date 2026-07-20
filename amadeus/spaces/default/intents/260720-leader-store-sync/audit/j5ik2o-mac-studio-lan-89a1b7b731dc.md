@@ -6827,7 +6827,7 @@
 **Timestamp**: 2026-07-20T10:59:00Z
 **Event**: ERROR_LOGGED
 **Tool**: amadeus-orchestrate
-**Command**: 
+**Command**:
 **Error**: report requires --result <outcome>. Accepted: approved, completed, complete, done (the verdict for the stage just acted on).
 
 ---
@@ -7937,7 +7937,7 @@
 **Timestamp**: 2026-07-20T11:27:02Z
 **Event**: ERROR_LOGGED
 **Tool**: amadeus-orchestrate
-**Command**: 
+**Command**:
 **Error**: report requires --result <outcome>. Accepted: approved, completed, complete, done (the verdict for the stage just acted on).
 
 ---
@@ -8319,7 +8319,7 @@
 **Timestamp**: 2026-07-20T13:10:55Z
 **Event**: ERROR_LOGGED
 **Tool**: amadeus-orchestrate
-**Command**: 
+**Command**:
 **Error**: report requires --result <outcome>. Accepted: approved, completed, complete, done (the verdict for the stage just acted on).
 
 ---
@@ -8685,7 +8685,7 @@
 **Timestamp**: 2026-07-20T13:20:38Z
 **Event**: ERROR_LOGGED
 **Tool**: amadeus-orchestrate
-**Command**: 
+**Command**:
 **Error**: report requires --result <outcome>. Accepted: approved, completed, complete, done (the verdict for the stage just acted on).
 
 ---
@@ -9350,5 +9350,687 @@
 **Agent Type**: default
 **Agent ID**: 019f7f32-d761-7d73-aae5-638745b11714
 **Message**: ## Review\n\n**Verdict: READY**  \n**GoA: 2**\n\nReviewed scope内にブロッキング不備はありません。成果物の記述は実測と整合し、既知の全体CI赤を green と誤表現していません。\n\n- Focused test: **35 pass / 0 fail / 124 assertions**\n- Coverage: `amadeus-leader-
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-20T13:31:12Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-20T13:50:24Z
+**Event**: HUMAN_TURN
+
+---
+
+## Session Compacted
+**Timestamp**: 2026-07-20T13:51:15Z
+**Event**: SESSION_COMPACTED
+**Current Stage**: build-and-test
+**State Validity**: valid
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-20T14:28:43Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-20T14:29:46Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-20T14:37:44Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-20T14:38:19Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-20T14:48:40Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-20T14:59:07Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-20T15:08:55Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-20T20:39:10Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-20T22:52:41Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-20T23:01:46Z
+**Event**: HUMAN_TURN
+
+---
+
+## Session Compacted
+**Timestamp**: 2026-07-20T23:02:26Z
+**Event**: SESSION_COMPACTED
+**Current Stage**: build-and-test
+**State Validity**: valid
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-20T23:05:35Z
+**Event**: HUMAN_TURN
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-20T23:06:52Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**:
+**Error**: report requires --result <outcome>. Accepted: approved, completed, complete, done (the verdict for the stage just acted on).
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-20T23:10:04Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-3/amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/build-test-results.md
+**Context**: construction > build-and-test > build-test-results.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:10:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 68e5a601
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/build-test-results.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:10:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 68e5a601
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/build-test-results.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:10:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: b82df871
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/build-test-results.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:10:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: b82df871
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/build-test-results.md
+**Duration ms**: 32
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-20T23:10:04Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-3/amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/build-and-test-summary.md
+**Context**: construction > build-and-test > build-and-test-summary.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:10:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: f7829a23
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/build-and-test-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:10:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: f7829a23
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/build-and-test-summary.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:10:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: e5f2eb6c
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/build-and-test-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:10:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: e5f2eb6c
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/build-and-test-summary.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:10:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 76bfa955
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/build-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:10:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 76bfa955
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/build-instructions.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:10:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1b872679
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/build-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:10:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1b872679
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/build-instructions.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:10:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 870ce76b
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/unit-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:10:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 870ce76b
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/unit-test-instructions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:10:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 032d69ef
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/unit-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:10:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 032d69ef
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/unit-test-instructions.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:10:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: ec7ae69b
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/integration-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:10:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: ec7ae69b
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/integration-test-instructions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:10:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8852e6d2
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/integration-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:10:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8852e6d2
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/integration-test-instructions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:10:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 82aa4670
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/performance-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:10:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 82aa4670
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/performance-test-instructions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:10:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6e4d1a5f
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/performance-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:10:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6e4d1a5f
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/performance-test-instructions.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:10:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5a8f70f1
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/security-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:10:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5a8f70f1
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/security-test-instructions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:10:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: f6e38464
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/security-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:10:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: f6e38464
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/security-test-instructions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:10:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: c45cc0b6
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/build-and-test-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:10:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: c45cc0b6
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/build-and-test-summary.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:10:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 04f98cb0
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/build-and-test-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:10:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 04f98cb0
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/build-and-test-summary.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:10:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8604f08b
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/build-test-results.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:10:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8604f08b
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/build-test-results.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:10:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 74c874cd
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/build-test-results.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:10:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 74c874cd
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/build-and-test/build-test-results.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:10:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 47d62174
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: scripts/amadeus-leader-sync.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:10:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 47d62174
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: scripts/amadeus-leader-sync.ts
+**Duration ms**: 499
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:10:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: faf0f3b1
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/audit/j5ik2o-mac-studio-lan-89a1b7b731dc.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:10:46Z
+**Event**: SENSOR_PASSED
+**Fire id**: faf0f3b1
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/audit/j5ik2o-mac-studio-lan-89a1b7b731dc.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:10:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: c8d7f441
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/audit/j5ik2o-mac-studio-lan-89a1b7b731dc.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:10:46Z
+**Event**: SENSOR_PASSED
+**Fire id**: c8d7f441
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/audit/j5ik2o-mac-studio-lan-89a1b7b731dc.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:11:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5a9f4edd
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/audit/j5ik2o-mac-studio-lan-89a1b7b731dc.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:11:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5a9f4edd
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/audit/j5ik2o-mac-studio-lan-89a1b7b731dc.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:11:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 62d86232
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/audit/j5ik2o-mac-studio-lan-89a1b7b731dc.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:11:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 62d86232
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/audit/j5ik2o-mac-studio-lan-89a1b7b731dc.md
+**Duration ms**: 37
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-20T23:11:32Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state --help
+**Error**: Unknown subcommand: --help. Valid: get, set, set-skeleton-stance, checkbox, count, advance, finalize, complete-workflow, gate-start, approve, delegate-approval, delegate-rejection, grant-standing-delegation, revoke-standing-delegation, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark, declare-docs-only
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-20T23:11:32Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-utility
+**Command**: amadeus-utility --status
+**Error**: Usage: amadeus-utility <help|version|status|doctor|migrate|intent-birth|intent|space|space-create|codekb-path|detect|recompose|scope-change|config-change|set-status|detect-scope|resolve-env-scope|scope-table> [--project-dir <path>] [--scope <scope>] [--json]
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-20T23:14:46Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**:
+**Error**: report requires --result <outcome>. Accepted: approved, completed, complete, done (the verdict for the stage just acted on).
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T23:18:33Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: default
+**Agent ID**: 019f7f32-d761-7d73-aae5-638745b11714
+**Message**: ## Review\n\n**Verdict: REVISE**  \n**GoA: 2（diff-check是正後はREADY）**\n\n実装・テスト上の blocker は解除されています。\n\n- [PR #1314](https://github.com/amadeus-dlc/amadeus/pull/1314) は `44ec1481b6` でMERGED、Issue #1313はCLOSED。
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:18:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: d698af67
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/audit/j5ik2o-mac-studio-lan-89a1b7b731dc.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:18:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: d698af67
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/audit/j5ik2o-mac-studio-lan-89a1b7b731dc.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T23:18:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 549322c3
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/audit/j5ik2o-mac-studio-lan-89a1b7b731dc.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T23:18:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: 549322c3
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/audit/j5ik2o-mac-studio-lan-89a1b7b731dc.md
+**Duration ms**: 38
 
 ---

@@ -12,9 +12,9 @@
 ## 現在の判定
 
 - 実装焦点面は build-ready / test-ready。coverage は 593/593。
-- 全 CI 初回は 393 files / 5561 assertions のうち 2 files / 5 assertions が失敗した。`t-team-up-codex-resume.test.ts` の 5秒 timeout は verbose 再走で 46/46 green となり、ambient 時間変動へ帰属した。
-- 残る `t199-generated-prefix-contract.test.ts` 1件は、最新 main の upstream-sync 成果物9件が正当に引用する `aidlc-` を allowlist が拒む交差赤であり、scope 外の Issue #1313 に記録した。t245 は独立再実行で全 green。
-- scope 外の交差赤に対する leader 境界判断、最終 sensor、独立 reviewer、§13、GitHub CI が未完のため deployment-ready / Completed とは判定しない。
+- PR #1314 (`44ec1481b6cb9efc74654080f68bc5fdec6c4996`) 着地後に最新 `origin/main` へ競合 0 で再接地した。Issue #1313 は CLOSED。
+- t199 単独は 8 pass / 0 fail / 35 assertions / 1 file。続く full CI は 393 files / 5566 assertions / failure 0、RESULT PASS。
+- コード・テスト blocker は解除可能。最終 sensor、incremental reviewer、§13、GitHub CI Success、期限内 grant が未完のため deployment-ready / Completed とはまだ判定しない。
 
 ## 制約
 
