@@ -10,7 +10,7 @@
 | tie へ二値/不正 | `invalid-transition: resolution "<入力>" is not valid for hold reason "tie" (valid: choice:1/choice:2)` (2択選挙の例) | 1 |
 | record.md 裁定行(tie choice 裁定) | `裁定: <choice label>(choice <n> — tie 裁定)` | — |
 | record.md 裁定行(他 reason 二値) | `裁定: 採用` / `裁定: 不採用`(無変更) | — |
-| trail 行 | `tie → choice:<n>(<at>)`(既存 map の transparent 表示 — 無変更) | — |
+| trail 行 | `- hold 裁定履歴: tie → choice:<n>(<at>、復帰先 tallied)`(election.ts:403 の生成式 `- hold 裁定履歴: ${r.reason} → ${r.resolution}(${r.at}、復帰先 ${r.resumedTo})` の tie 具体形 — 生成式は無変更、resolution 値の transparent 表示) | — |
 
 ## 様式整合
 

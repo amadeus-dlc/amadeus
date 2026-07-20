@@ -1,1 +1,2 @@
 - [2026-07-20T05:10Z] Deviation: 初回センサー FAILED 5件(upstream-coverage 4 = 宣言6件中 components/services/story-map 未参照+required-sections 1)— consumes-first-drafting 違反実例(PM 回付、DP に続き2ステージ連続 = 自分の反復弱点)。是正: 宣言全数を本文実依拠付きで冒頭行へ、H2 追加、全 PASSED。
+- [2026-07-20T05:14Z] Deviation: reviewer iteration 1 = REVISE(Major 1: trail 行の verbatim 契約が election.ts:403 実文言と不一致 — prefix「- hold 裁定履歴: 」+ suffix「、復帰先 tallied」欠落 = verbatim-quote-with-cite 違反実例、PM 回付)。是正: 実生成式 verbatim+tie 具体形へ修正、iteration 2 で閉包確認。

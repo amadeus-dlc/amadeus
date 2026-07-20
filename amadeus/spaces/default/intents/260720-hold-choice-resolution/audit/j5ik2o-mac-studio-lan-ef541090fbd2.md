@@ -3864,3 +3864,54 @@
 **Duration ms**: 38
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T05:12:29Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: acbe1e3986fb23292
+**Message**: 検証コマンドと実測結果:\n\n```\ncd /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-2\ngrep -n "HOLD_RESOLUTIONS\|handleHoldResolved\|export type HoldResolution\|rulingOverri
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:12:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: cb7d745a
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/frontend-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:12:46Z
+**Event**: SENSOR_PASSED
+**Fire id**: cb7d745a
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/frontend-components.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:12:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6f94106a
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/frontend-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:12:46Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6f94106a
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/frontend-components.md
+**Duration ms**: 36
+
+---
