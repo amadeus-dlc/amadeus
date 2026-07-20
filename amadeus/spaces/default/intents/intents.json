@@ -421,5 +421,19 @@
     "dirName": "260720-goa-sparse-family",
     "scope": "amadeus",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019f7d6c-c0d1-7a7f-b17c-1fce8048fcd1",
+    "slug": "diary-autogen-guard",
+    "dirName": "260720-diary-autogen-guard",
+    "scope": "bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f7dcf-fc6c-74e1-8f50-12368857b855",
+    "slug": "formal-verif-experiment",
+    "dirName": "260720-formal-verif-experiment",
+    "scope": "amadeus",
+    "status": "in-flight"
   }
 ]

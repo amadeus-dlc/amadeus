@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-LSSADS13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "適用範囲を『reviewer イテレーション予算消費後の残余是正』に明示限定し、予算内の条件付き READY(reviewer 自身が是正確認を前置きで免除する形)へ拡大解釈しない1句を追補文に含めること。独立 cid でなく既存 reviewer 運用系への追補統合を優先。",
+  "rationale": "分岐基準(機械検証可能クラス vs 列挙 omission クラス)は P2(実測事実のみ)の受理面への自然な射影で原理的に健全。2裁定+同日の隣接実例(私の goa/tally RA では reviewer が件数訂正=機械検証可能クラスを『是正後 re-review 不要』と事前授権 — 予算内形だが同じ分岐直観)が収斂しており、E-DAGRE(2実例採用)の前例とも整合。",
+  "submittedAt": "2026-07-20T04:29:05Z"
+}

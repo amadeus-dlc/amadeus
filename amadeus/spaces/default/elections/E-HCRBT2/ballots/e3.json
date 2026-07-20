@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRBT2",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "採用を支持。Bunが不存在test pathを無音で無視しexit 0を返す挙動は、最終値の正確性だけでなく実行母集団の完全性を破る。実行前のpath全数実在確認と実行後の期待file数対runner集計照合は、report-final-values-onlyおよびnumbers-from-command-output-onlyを検証集合へ具体化する再利用可能な防御である。",
+  "submittedAt": "2026-07-20T07:45:03Z"
+}
