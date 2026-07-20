@@ -411,24 +411,27 @@ const AGAINST = new Set([7, 8]);
 // The GoA-consensus holds are evaluated first, unchanged; only once they pass
 // does the choiceInternalNo winner decide the result (Issue #1261).
 export function tally(election: Election, ballots: Ballot[]): TallyResult {
+  // BR-4 #1: resolve to each voter's latest ballot before any counting — an
+  // amend supersedes the voter's earlier ballot, so the superseded original
+  // must count toward neither the GoA-consensus holds nor the choice winner.
+  const resolved = resolveBallots(ballots);
   const counts: GoaCounts = { favor: 0, against: 0, abstain: 0, discuss: 0 };
   let blocks = 0;
-  for (const b of ballots) {
+  for (const b of resolved) {
     if (FAVOR.has(b.goa)) counts.favor++;
     else if (AGAINST.has(b.goa)) counts.against++;
     else if (b.goa === 4) counts.abstain++;
     else counts.discuss++;
     if (b.goa === 8) blocks++;
   }
-  // GoA is counted over EVERY ballot (whole-set GoaCounts) for these holds.
+  // GoA is counted over the resolved set (one ballot per voter) for these holds.
   if (blocks >= 1) return { kind: "hold", reason: "block", counts };
   if (counts.discuss >= 2) return { kind: "hold", reason: "discussion-needed", counts };
   if (counts.favor + counts.against === 0) return { kind: "hold", reason: "quorum-short", counts };
-  // Winner-selection population: the per-voter latest-resolved ballot set (amend
-  // is not yet implemented, so this is all original ballots) minus GoA-4
+  // Winner-selection population: the resolved per-voter ballot set minus GoA-4
   // abstentions. Choice tallies are simple vote counts over this population only
   // (no choice x GoA cross distribution).
-  const eligible = ballots.filter((b) => b.goa !== 4);
+  const eligible = resolved.filter((b) => b.goa !== 4);
   const choiceCounts: ChoiceCount[] = election.choices.map((c) => ({
     internalNo: c.internalNo,
     label: c.label,

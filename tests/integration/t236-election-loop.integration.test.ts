@@ -396,4 +396,86 @@ describe("t236 election directive loop", () => {
     expect(run(["bogus-verb", "--election", "E-LOOP1"])).toBe(2);
     expect(run([])).toBe(2);
   });
+
+  test("U1 amend flow: an amend supersedes the voter's original — vote closure, per-voter tally, verify green (BR-3/BR-4, FR-4b)", () => {
+    const twoChoice = {
+      electionId: "E-LOOP1",
+      kind: "choice",
+      question: "どちらの案か",
+      choices: [
+        { internalNo: 1, label: "案1" },
+        { internalNo: 2, label: "案2" },
+      ],
+      voters: ["alice", "bob"],
+    };
+    expect(run(["open", "--file", writeJson("def.json", twoChoice)])).toBe(0);
+    expect(run(["report", "--election", "E-LOOP1", "--result", "distributed"])).toBe(0);
+    // alice's original picks choice 1
+    const origAt = "2026-07-19T00:01:00Z";
+    const aliceOrig = writeJson("a1.json", {
+      electionId: "E-LOOP1",
+      voter: "alice",
+      voterKind: "member",
+      choiceInternalNo: 1,
+      goa: 1,
+      submittedAt: origAt,
+    });
+    expect(run(["vote", "--election", "E-LOOP1", "--file", aliceOrig])).toBe(0);
+    // alice amends to choice 2; ref points at her accepted original (BR-3)
+    const aliceAmend = writeJson("a2.json", {
+      electionId: "E-LOOP1",
+      voter: "alice",
+      voterKind: "member",
+      kind: "amend",
+      ref: { electionId: "E-LOOP1", voter: "alice", submittedAt: origAt },
+      choiceInternalNo: 2,
+      goa: 1,
+      submittedAt: "2026-07-19T00:02:00Z",
+    });
+    expect(run(["vote", "--election", "E-LOOP1", "--file", aliceAmend])).toBe(0);
+    // closure: the amend is recorded on the ledger as kind=amend, coexisting
+    // with the original (ADR-5) — both rows present, original untouched
+    const ledgerPath = join(
+      projectDir, "amadeus", "spaces", "default", "elections", "E-LOOP1", "ledger.json",
+    );
+    const ledger = JSON.parse(readFileSync(ledgerPath, "utf8"));
+    expect(ledger.ballots.length).toBe(2);
+    expect(ledger.ballots[0].kind).toBe("original");
+    expect(ledger.ballots[1].kind).toBe("amend");
+    // bob votes choice 2
+    const bob = writeJson("b.json", {
+      electionId: "E-LOOP1",
+      voter: "bob",
+      voterKind: "member",
+      choiceInternalNo: 2,
+      goa: 1,
+      submittedAt: "2026-07-19T00:03:00Z",
+    });
+    expect(run(["vote", "--election", "E-LOOP1", "--file", bob])).toBe(0);
+    // tally counts each voter once (per-voter resolved): alice's superseded
+    // original (choice 1) is NOT counted — choice 1 has 0 votes, choice 2 has 2
+    expect(run(["tally", "--election", "E-LOOP1"])).toBe(0);
+    const result = lastJson().result as {
+      kind: string;
+      winner?: { internalNo: number };
+      choiceCounts?: Array<{ internalNo: number; count: number }>;
+      goa?: { favor: number };
+    };
+    expect(result.kind).toBe("established");
+    expect(result.winner?.internalNo).toBe(2);
+    expect(result.choiceCounts?.find((c) => c.internalNo === 1)?.count).toBe(0);
+    expect(result.choiceCounts?.find((c) => c.internalNo === 2)?.count).toBe(2);
+    // resolved GoA: alice once + bob = favor 2 (not 3, which raw double-counting
+    // of alice's original + amend would give)
+    expect(result.goa?.favor).toBe(2);
+    // FR-4b: render/verify round-trip on the resolved set (symmetric — green)
+    expect(run(["report", "--election", "E-LOOP1", "--result", "tallied"])).toBe(0);
+    expect(run(["render", "--election", "E-LOOP1"])).toBe(0);
+    const doc = readFileSync(join(
+      projectDir, "amadeus", "spaces", "default", "elections", "E-LOOP1", "record.md",
+    ), "utf8");
+    // GoA line reflects the resolved set (two GoA-1), not three raw ballots
+    expect(doc).toContain("GoA[E-LOOP1]: 1x2 2x0 3x0 4x0 5x0 6x0 7x0 8x0");
+    expect(run(["verify", "--election", "E-LOOP1"])).toBe(0);
+  });
 });

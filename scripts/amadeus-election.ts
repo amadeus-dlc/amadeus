@@ -25,6 +25,7 @@ import {
   Election,
   type ElectionState,
   type HoldReason,
+  resolveBallots,
   shuffleView,
   type TallyResult,
   tally,
@@ -370,6 +371,9 @@ export function handleRender(root: string, electionId: string): number {
   const timeline = readTimeline(root, electionId);
   if (timeline === null) return fail("render: timeline.json missing or unreadable");
   const ballots = t.ballots as Parameters<typeof tally>[1];
+  // BR-4 #3: render the per-voter resolved set so the GoA line reflects each
+  // voter's latest ballot (matching verify's resolved recompute — symmetric).
+  const resolved = resolveBallots(ballots);
   // A final human ruling over a hold takes precedence in the rendered ruling
   // line (the stored tally result itself stays untouched — verify's recompute
   // comparison remains valid); every ruling is also transcribed as a trail.
@@ -386,7 +390,7 @@ export function handleRender(root: string, electionId: string): number {
     code.value,
     loaded.value.election,
     t.result,
-    ballots,
+    resolved,
     timeline,
     rulingOverride,
   );
@@ -443,6 +447,11 @@ export function handleVerify(root: string, electionId: string): number {
   const t = readTally(root, electionId);
   if (t === null) return fail("verify: tally.json missing or unreadable");
   const ballots = t.ballots as Parameters<typeof tally>[1];
+  // BR-4 #2/#5: verify against the per-voter resolved set. tally resolves
+  // internally, so the recompute takes raw ballots; the GoA-line frequency,
+  // reservation transcription, and self-check all consume the resolved set so
+  // an amended voter is counted once (matching render — symmetric).
+  const resolved = resolveBallots(ballots);
   const recomputed = tally(loaded.value.election, ballots);
   if (JSON.stringify(recomputed) !== JSON.stringify(t.result)) {
     return fail("verify: recomputed tally does not match stored result");
@@ -450,16 +459,16 @@ export function handleVerify(root: string, electionId: string): number {
   const recordPath = join(root, electionId, "record.md");
   if (!existsSync(recordPath)) return fail("verify: record.md missing");
   const document = readFileSync(recordPath, "utf8");
-  const freq = GoaFreq.fromVotes(ballots.map((b) => b.goa));
+  const freq = GoaFreq.fromVotes(resolved.map((b) => b.goa));
   const goaCheck = checkGoaLine(document, freq);
   if (goaCheck !== null) return fail(goaCheck);
-  const reservations = verifyReservations(ballots, document);
+  const reservations = verifyReservations(resolved, document);
   if (!reservations.ok) {
     return fail(`verify: reservation transcription mismatch (${JSON.stringify(reservations.error)})`);
   }
   const timeline = readTimeline(root, electionId);
   if (timeline === null) return fail("verify: timeline.json missing or unreadable");
-  const self = verifySelf(ballots.length, ballots, freq, timeline);
+  const self = verifySelf(resolved.length, resolved, freq, timeline);
   if (!self.ok) return fail(`verify: self-check findings ${JSON.stringify(self.error)}`);
   out({ verified: electionId });
   return 0;
