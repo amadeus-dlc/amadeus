@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVEPD",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件は不可。新規候補: marker artifact の宣言 shape と generic required-sections の適用契約を一致させる。根拠: packages/framework/core/amadeus-common/stages/inception/practices-discovery.md:39-42 は required-sections を stage 全体へ宣言する一方、同:98-106 は practices-discovery-timestamp.md を単一行必須とする。.codex/sensors/amadeus-required-sections.md:27-28 は全 output に >=2 H2 を要求し、実測 detail amadeus/spaces/default/intents/260720-formal-verif-experiment/.amadeus-sensors/practices-discovery/required-sections-61a61a61.md:3-15 は正しい単一行 artifact を h2_count=0/findings=2 で false にする。既存ノルム/Issue への回収なし。学習案: stage 契約が単一行 marker を要求する場合、generic H2 sensor は artifact 単位で除外するか専用 shape 検証へ置換し、恒常 advisory FAIL を正常扱いしない。",
+  "submittedAt": "2026-07-20T06:47:52Z"
+}

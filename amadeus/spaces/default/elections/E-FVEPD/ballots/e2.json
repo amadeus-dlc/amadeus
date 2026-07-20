@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVEPD",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件は不可。practices-discovery-timestamp.md の正準形は単一行で H2 を持たない一方、amadeus-sensor-required-sections.ts:134-147 は一律 H2>=2 を要求し、同一入力の独立2回実行はいずれも pass=false/h2_count=0。候補: 各 stage sensor predicate を成果物の canonical shape と全数照合し、意図的に H2 を持たない *-timestamp.md / *-questions.md 等の marker artifact を prose-heading floor から明示除外する。",
+  "submittedAt": "2026-07-20T07:12:26Z"
+}
