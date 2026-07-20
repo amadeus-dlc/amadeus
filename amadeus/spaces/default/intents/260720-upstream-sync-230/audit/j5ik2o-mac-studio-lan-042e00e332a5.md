@@ -7611,7 +7611,61 @@
 **Timestamp**: 2026-07-20T09:30:49Z
 **Event**: ERROR_LOGGED
 **Tool**: amadeus-orchestrate
-**Command**: 
+**Command**:
 **Error**: report requires --result <outcome>. Accepted: approved, completed, complete, done (the verdict for the stage just acted on).
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-20T09:36:04Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-20T09:37:58Z
+**Event**: HUMAN_TURN
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T09:38:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: a5b149c0
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/audit/j5ik2o-mac-studio-lan-042e00e332a5.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T09:38:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: a5b149c0
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/audit/j5ik2o-mac-studio-lan-042e00e332a5.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T09:38:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: dfa28ce9
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/audit/j5ik2o-mac-studio-lan-042e00e332a5.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T09:38:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: dfa28ce9
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/audit/j5ik2o-mac-studio-lan-042e00e332a5.md
+**Duration ms**: 40
 
 ---
