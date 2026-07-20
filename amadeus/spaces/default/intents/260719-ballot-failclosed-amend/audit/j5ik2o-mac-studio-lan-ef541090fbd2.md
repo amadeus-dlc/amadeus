@@ -7645,3 +7645,78 @@
 **Timestamp**: 2026-07-20T00:42:35Z
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T00:42:57Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a2bc51a2143d44d4b
+**Message**: 続けて
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T00:47:21Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T00:47:21Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T00:47:21Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Recovered**: true
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-20T00:47:21Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state approve code-generation --project-dir /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-2
+**Error**: Refusing to complete "code-generation": it is a code-producing stage (workspace_requires) but no source work is evident outside the amadeus/ workspace tree. In a git workspace this means no uncommitted change and no code in the last commit; otherwise no source file exists. Planning docs alone do not satisfy Code Generation - write the code to the workspace. If this Intent's produces are genuinely record-internal documents only, declare it first: amadeus-state.ts declare-docs-only --evidence "<approval reference>".
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-20T00:47:21Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --stage code-generation --result approved
+**Error**: Transition rejected by amadeus-state.ts approve for "code-generation": {"error":"Refusing to complete \"code-generation\": it is a code-producing stage (workspace_requires) but no source work is evident outside the amadeus/ workspace tree. In a git workspace this means no uncommitted change and no code in the last commit; otherwise no source file exists. Planning docs alone do not satisfy Code Generation - write the code to the workspace. If this Intent's produces are genuinely record-internal documents only, declare it first: amadeus-state.ts declare-docs-only --evidence \"<approval reference>\"."}
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-20T00:47:32Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state set --field Bolt Refs --value ballot-acceptance-failclosed
+**Error**: Invalid field=value pair: --field
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T00:47:38Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+**Grant Id**: 22ab851b
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T00:47:38Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: Stage Code Generation approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T00:47:38Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Agent**: amadeus-quality-agent
+
+---
