@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFBTS13",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可を支持。固定head b3b3dd24930a17922cd5c21753b56c7fa21f009c と最終B&T成果物・review・memoryを独立照合し、途中coverage断面は成果物不在とprocess一覧で破棄され、単一processのexit 0後に391 files / 5544 assertions / failed 0へ確定している。これは既存のreport-final-values-onlyとverify-before-notifyが直接規定する適用実例で、新規候補との差分はない。",
+  "submittedAt": "2026-07-20T23:49:12Z"
+}

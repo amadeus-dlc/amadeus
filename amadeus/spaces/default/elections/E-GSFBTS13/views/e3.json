@@ -1,0 +1,16 @@
+{
+  "electionId": "E-GSFBTS13",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可 — c1は既存normの適用実例で新規persistなし"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "0件は不可 — c1または別の新規learning候補をpersistする"
+    }
+  ]
+}

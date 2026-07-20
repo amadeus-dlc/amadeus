@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFBTS13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件は不可。c1のうち「途中断面を証拠・報告へ採用しない」は既存 cid:requirements-analysis:report-final-values-only / verify-before-notify の適用実例だが、「long-running実行の早期yieldを完了と見なさず、terminal exitと成果物を確認するまで同一出力先へ次のwriterを起動しない」という実行ライフサイクル規律は既存memory全層を早期yield・同一出力先・process終端等で検索しても不在。新規候補: 非終端yieldを受けた実行はsession/process handleでterminal exitまで追跡し、同一出力先のwriterは先行実行の終端・成果物隔離確認まで直列化する。既存normとの差分は通知/証拠の確定値規律ではなく、競合成果物生成を未然に防ぐwriter ownership・terminal-state規律である。固定head b3b3dd249、B&T results/memory/phase-check、追加review、sensor監査をread-only実測し、最終値391 files/5544 assertions、review READY、sensor16/16とc1自己捕捉を照合した。",
+  "submittedAt": "2026-07-20T23:50:07Z"
+}
