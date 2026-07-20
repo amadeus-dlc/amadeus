@@ -1,0 +1,25 @@
+{
+  "electionId": "E-FVEU4FD1",
+  "kind": "reviewer-exhaustion-question",
+  "question": "260720-formal-verif-experiment / U4 tla-arm-toolchain / functional-design。reviewer iteration1 NOT READY 4件を是正後、iteration2もNOT READY 3件（hold state/GoA式、複数invalid precedence、source span/queue proof）でreviewer_max_iterations=2に到達。stage-protocol §12aはiterations exhaustedならunresolved findingsを明記してapproval gateへ進むと規定し、per-unit gateは最終Unit後まで抑止される。iteration2後に承認済みscope内で、stateへのhold markers+TallyReceipt closed union、resolved GoA cardinality式+RecordHold条件、validation precedence UNKNOWN_CHOICE→INVALID_TIMESTAMP→UNKNOWN_REF、frozen invariant source map、CompleteExploration queue=0まで最小是正済み。最新sensor全PASS・diff-check PASSだが第三review未実施。U3の未READY依存も明示保持する。次の扱いを裁定する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. max-exhausted履歴を保持して次Unitへ進み最終FD gateで裁定"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. exceptional独立検証を先に要求しU4で停止"
+    },
+    {
+      "internalNo": 3,
+      "label": "X. その他（noteに検証境界と再開条件を記載）"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e4"
+  ],
+  "state": "recorded"
+}
