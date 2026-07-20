@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFFD13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件は不可、訂正提案1件を採用。独立再実測: functional-design directory は business-logic-model/business-rules/domain-entities/questions の4ファイル、conditional非該当 frontend-components.md は不存在。business-logic-model.md:63-64 に gate BLOCKED→削除→incremental READY(0/0/0)、memory.md:11 に候補全数列挙漏れの観測、audit:6764 付近に増分 reviewer READY、削除後の必須成果物 sensor PASS を確認。学習は新規 cid でなく既存 code-generation:produces-ls-check-after-generation へ『conditional/optional は非該当時の不存在も directory 全数で assert してから sensor/reviewer scope を確定する』として追補統合する。",
+  "submittedAt": "2026-07-20T06:54:20Z"
+}

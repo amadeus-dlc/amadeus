@@ -1,0 +1,64 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(note に候補と根拠 file:line を明記)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可 — 新規学習候補なし",
+        "count": 0
+      },
+      {
+        "internalNo": 2,
+        "label": "0件は不可 — 新規学習候補が実在する(note に候補と根拠 file:line を明記)",
+        "count": 3
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T07:13:22Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GSFFD13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件は不可。新規候補: conditional optional 成果物が後続判断で非該当になった場合、ゲート前検証は適用成果物の実在だけでなく非該当 candidate の不存在も assert し、旧 iteration の残存ファイルを削除する。根拠: business-logic-model.md:55-57 は UI 非該当かつ optional frontend-components.md を生成しないと明記する一方、frontend-components.md:1-10 が実在し、同 :8 は最終裁定の sparse/duplicate-label 等ではない古い拒否文言を保持する。review iteration 2 は READY 0/0/0、最終 sensor も3成果物のみ PASS のため、この stale optional artifact はレビュー対象集合とセンサー集合の外で無音残存した。これは条件反転後の optional output retraction を最終検証へ加える横断可能な新規学習である。",
+      "submittedAt": "2026-07-20T06:50:47Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GSFFD13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件は不可、訂正提案1件を採用。独立再実測: functional-design directory は business-logic-model/business-rules/domain-entities/questions の4ファイル、conditional非該当 frontend-components.md は不存在。business-logic-model.md:63-64 に gate BLOCKED→削除→incremental READY(0/0/0)、memory.md:11 に候補全数列挙漏れの観測、audit:6764 付近に増分 reviewer READY、削除後の必須成果物 sensor PASS を確認。学習は新規 cid でなく既存 code-generation:produces-ls-check-after-generation へ『conditional/optional は非該当時の不存在も directory 全数で assert してから sensor/reviewer scope を確定する』として追補統合する。",
+      "submittedAt": "2026-07-20T06:54:20Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GSFFD13",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件は不可。functional-design/memory.md:11 の実測では、UI非該当なのに optional frontend-components.md の残存を初回 reviewer/sensor scope が見落とした。修正後は必須3成果物+questions の4ファイル、optional 不在を全数確認済み。候補は既存 code-generation:produces-ls-check-after-generation への追補として、条件付き optional が非該当なら absence も含む produces 候補のディレクトリ全数列挙を reviewer scope 確定前に必須化する。",
+      "submittedAt": "2026-07-20T07:12:28Z"
+    }
+  ],
+  "resolutions": []
+}
