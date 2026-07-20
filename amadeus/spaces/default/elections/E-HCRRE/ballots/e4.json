@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRRE",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record をリードオンリー実測: re-scan 実在(24.6KB)、base 選定(6f2455c43 = HEAD 祖先で距離最小)と Observed 一致の記載を確認。E-TCRCG 裁定当事者として主要確定(gap point = rulingOverride 二値合成、tie hold-resolved・検証テストの全欠落、hold 実績ゼロの実データ空白)は自分の裁定理解・E-HCRFS 検証と整合。Architect の fresh-evidence 反証(rulingOverride が #1268 直近変更面 — blame 実測)を成果物へ反映した手順は restart-loss-triple-grounding 系の正しい適用。diary 3点は既存 cid 適用実例のみ。0件で可",
+  "submittedAt": "2026-07-20T03:34:57Z"
+}

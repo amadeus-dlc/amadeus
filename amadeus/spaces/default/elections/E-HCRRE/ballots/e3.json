@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRRE",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record リードオンリー実測: re-scans/260720-hold-choice-resolution.md 実在・timestamp 最新バナー=本 intent を確認。diary 3点(base 祖先性・c3 直列・ref 分離・Architect の blame 反証反映)は全て既存 cid 適用実例。未カバー面(tie hold-resolved 経路のテスト全欠落)の確定は #1267 私のクロスレビュー(HOLD_RESOLUTIONS tie 二値の実測)と整合。0件で可(1)。",
+  "submittedAt": "2026-07-20T03:33:52Z"
+}

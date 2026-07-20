@@ -1,0 +1,20 @@
+{
+  "electionId": "E-HCRRE",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260720-hold-choice-resolution(#1267)/ reverse-engineering ステージの §13 学習候補について、conductor は 0件を提案している。根拠: diary 3点は rescan-base-ancestry / reverse-engineering:c3 直列 / measurement-ref-in-artifacts / fresh-evidence 反証(Architect 再照合で rulingOverride が #1268 直近変更面と blame 実測 — 成果物へ反映済み)の適用実例。手動検証: body 9温存・3成果物実在・最新バナー1・履歴26温存・marker 0。主要確定: gap point verbatim / 未カバー面(tie hold-resolved・採用分岐・検証テスト全欠落)/ 実データ空白(hold 実績ゼロ・旧スキーマ)。一次記録 push 済み 970ae9ce4。各自 e2 worktree の record をリードオンリー実測確認のうえ、0件でよいかを GoA 付きで投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 既存 cid の適用実例で新規学習なし"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(票の note に候補と根拠 file:line を明記)"
+    }
+  ],
+  "voters": [
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}
