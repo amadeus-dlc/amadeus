@@ -1,6 +1,23 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(最新: 260720-diary-autogen-guard)
+## 実行メタデータ(現在: 260720-upstream-sync-230)
+
+- Date: 2026-07-20T06:43:32Z
+- Observed at: `545e69c836d46f7bec2fa351c8e668026eb5fad5`
+- Intent: `260720-upstream-sync-230`（upstream `awslabs/aidlc-workflows` v2.2.0→v2.3.0 の承認済み24 ADOPT/ADAPT を Amadeus へ同期）
+- Scope: `amadeus`（Depth Standard / Test Strategy Comprehensive）
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering` (2.1)
+- Method: differential refresh。base `a326f47bc0146a3b4285552f42b92fd61fb343a7`、observed `545e69c836d46f7bec2fa351c8e668026eb5fad5`、`git merge-base --is-ancestor` exit 0、distance 32。次点 `591b6a2a` は distance 84、日付が新しい非祖先 observed は exit 1 で除外。
+- Focus: plugin/schema/package/compose/test/docs、6 harness 適応を含む24 ADOPT/ADAPT。SKIP 6件は EQUIVALENT/生成物/フォーク固有として境界維持。
+- Measurement ref: Developer scan の observed HEAD 実ファイル直読。差分865 files、`+48,636/-241`、core tools 30、hooks 11、agents 14、stages 32、sensors 5、harness 69 files/6面、TS 621、tests 461。詳細 file:line と24判定は `architecture.md` 、品質検査は `code-quality-assessment.md` に記録。
+- Current conclusion: MISSING 19 / PARTIAL 4 / EQUIVALENT 候補 1。明確な縮小候補は `swarm-batch-advance`、`gate-next-stage-naming` は PARTIAL、plugin 機構が最大 block。
+- Updated artifacts: body 8成果物、本 freshness pointer、`re-scans/260720-upstream-sync-230.md`。既存本文は履歴として温存し、先頭の current view のみ追加／更新。
+- Delivery boundary: 実装コード、dist/self-install 再生成、commit、PR 操作は本 scan で未実施。
+- Base source of truth: 本 intent の per-intent record。共有 timestamp は freshness pointer であり、次回の differential base は `re-scans/` の到達可能 observed から決める。
+
+## 実行メタデータ(履歴: 260720-diary-autogen-guard)
 
 - Date: 2026-07-20(Asia/Tokyo)
 - Observed at: HEAD `0b11036d5d990c9f5de98dc172222d8e2df4928a`(`git rev-parse HEAD` 実測一致、engineer-1 worktree)

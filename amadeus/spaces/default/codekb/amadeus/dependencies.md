@@ -1,6 +1,33 @@
 # 依存関係
 
-## Codex hooks／agmsg の依存境界（intent 260718-hooks-config-conflict、2026-07-18、最新）
+## upstream-sync-230 の依存境界（2026-07-20、現在）
+
+```text
+stage-schema + unit-kind
+  -> graph/parser/directive/sensor
+  -> plugin discovery/package
+  -> 6 harness projection
+  -> compose/no-clobber/self-heal compile
+  -> dist
+  -> 4 harness self-install
+  -> tests/docs
+```
+
+最重要の内部依存は、`stage-schema-extensions` と `unit-kind-pruning` が同じ schema/graph blast radius を共有する点である。両者を別々に先行着地させると中間状態で parser/directive/sensor の契約が割れるため、共有設計を先に確定する。plugin 依存順は `stage-schema-extensions` → `packager-plugin-projection` → `plugin-compose-hook` → `test-pro-reference-plugin` / `plugin-docs` である。
+
+| 依存種別 | 境界 |
+|---|---|
+| Core → harness | upstream の4面前提を6ホストへ ADAPT |
+| Source → dist | `scripts/package.ts` が唯一の投影経路。手修正禁止 |
+| Dist → self-install | `promote-self.ts` の4ハーネス closed list。packager の6面 discovery と混同しない |
+| Plugin source → host | source、`dist/plugins`、host projection の所有権を分離し no-clobber を検査 |
+| Tests/docs → feature | D7/D8 は各採用項目と同じ着地単位に従属 |
+
+外部 package の主要依存は SDK 0.3.158、xterm `^5.5.0`、node-pty 1.1.0、fast-check `^4.9.0`、TypeScript `^6.0.3`、Biome 2.4.16。plugin 機構はこの集合へ新しい runtime dependency を追加しない。
+
+> 以下は過去 intent の履歴。
+
+## Codex hooks／agmsg の依存境界（intent 260718-hooks-config-conflict、2026-07-18、履歴）
 
 ```mermaid
 flowchart TD
