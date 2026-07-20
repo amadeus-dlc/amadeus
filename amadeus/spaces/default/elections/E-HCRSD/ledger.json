@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-HCRSD",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e2 record リードオンリー実測: 成果物3点実在(ls)、E-OC1 承認 TS 03:05:00Z 記載、diary 1点は scope-definition:c2/c3 既決様式の適用実例(#1267 は私がクロスレビュー2人目当事者 — スコープが E-TCRCG=A 裁定の hold-resolution choice 語彙化に閉じていることも文脈整合)。0件で可(1)。",
+      "submittedAt": "2026-07-20T03:06:05Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HCRSD",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e2 record をリードオンリー実測: 成果物3点+memory 実在(ls 4件)、Must/Won't = 5/5 を grep -cE 機械再計算、E-OC1 承認 03:05:00Z 記載、センサー最新全 Passed(03:05:22-24Z)。diary の c2/c3 適用と『e4 並行合意面を W-1 に固定』は当方(goa-sparse-family)との関数単位非交差合意の Won't 明文化で、非交差運用の当事者として整合確認。既存 cid 適用実例のみ、0件で可",
+      "submittedAt": "2026-07-20T03:06:16Z"
+    }
+  ],
+  "late": []
+}

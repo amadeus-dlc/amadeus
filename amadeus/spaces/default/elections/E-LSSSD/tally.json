@@ -1,0 +1,38 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T03:07:07Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-LSSSD",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測(e3 worktree リードオンリー): SD 成果物4点実在、diary 03:07Z の2観測が質問要旨と一致 — (1) Must の効力条件列(方式裁定従属・非採用分岐の Won't 編入宣言)は ruling-dependent-placeholder の scope 面適用 (2) 初回 FAILED 3件の是正は body-derivation-before-header の適用実例(本文依拠→上流行実参照化の順序も cid どおり)。いずれも既存 cid で新規学習なし。0件で可(1)",
+      "submittedAt": "2026-07-20T03:06:37Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-LSSSD",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e3 record をリードオンリー実測: 成果物3点+memory 実在(ls 4件)、E-OC1 承認 03:05:07Z 記載、センサー最新ラウンド(03:05:29Z)成果物単位で全 Passed(初回 FAILED 3件の是正後 — 累計値でなく Output path 単位の時系列で確定)。diary の『Must に効力条件(裁定従属)列を置き方式選挙を先取りしない』は ruling-dependent-placeholder の scope 面適用として正確、body-derivation-before-header の是正手順(本文依拠→上流行実参照化)も既存 cid どおり。0件で可",
+      "submittedAt": "2026-07-20T03:06:51Z"
+    }
+  ],
+  "resolutions": []
+}

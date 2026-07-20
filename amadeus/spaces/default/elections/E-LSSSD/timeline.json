@@ -1,0 +1,32 @@
+[
+  {
+    "kind": "distributed",
+    "at": "2026-07-20T03:06:06Z",
+    "detail": "delivered via agmsg: e2",
+    "voter": "e2"
+  },
+  {
+    "kind": "distributed",
+    "at": "2026-07-20T03:06:06Z",
+    "detail": "delivered via agmsg: e4",
+    "voter": "e4"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-07-20T03:06:37Z",
+    "receivedAt": "2026-07-20T03:06:37Z",
+    "detail": "ballot accepted: e2",
+    "voter": "e2"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-07-20T03:06:51Z",
+    "detail": "ballot accepted: e4",
+    "voter": "e4"
+  },
+  {
+    "kind": "tallied",
+    "at": "2026-07-20T03:07:07Z",
+    "detail": "tally: established"
+  }
+]

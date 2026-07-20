@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRSD",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record をリードオンリー実測: 成果物3点+memory 実在(ls 4件)、Must/Won't = 5/5 を grep -cE 機械再計算、E-OC1 承認 03:05:00Z 記載、センサー最新全 Passed(03:05:22-24Z)。diary の c2/c3 適用と『e4 並行合意面を W-1 に固定』は当方(goa-sparse-family)との関数単位非交差合意の Won't 明文化で、非交差運用の当事者として整合確認。既存 cid 適用実例のみ、0件で可",
+  "submittedAt": "2026-07-20T03:06:16Z"
+}
