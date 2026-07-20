@@ -1,0 +1,21 @@
+{
+  "electionId": "E-GMEBT",
+  "kind": "s13-adoption",
+  "question": "intent 260719-goa-multiseg-ecode / build-and-test の §13 学習候補1件の採否。候補(conductor 起案 verbatim): 『拡張・新設 regex は机上判定で終えず、敵対入力(100KB 級)での線形性を実測(閾値 100ms)してから完成扱いにする』— 根拠: 本 B&T の実測(GOA_HEAD_RE 3.4ms / PM_CID_RE 5.3ms、scratch 実行、build-test-results.md に記録)。conductor 自身が挙げる不採用理由候補: 汎用常識で cid 化過剰の読みも可。他の候補は 0件。各自 e1 record(build-test-results.md)を実測確認のうえ GoA 付きで投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "採用 — 新規 cid または既存 cid への追補として persist"
+    },
+    {
+      "internalNo": 2,
+      "label": "不採用 — 汎用常識で cid 化過剰(diary 記録のみ)"
+    }
+  ],
+  "voters": [
+    "e2",
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

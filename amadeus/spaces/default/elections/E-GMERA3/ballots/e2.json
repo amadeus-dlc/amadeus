@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GMERA3",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 3,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "C 採用。実測: t238:104-105 の Sanity assertion(parseGoaLine ok=false ピン)は head 拡張で必ず反転するため正テスト化は必須(B/C 共通)。GoaLineCode(record.ts:34、:31 に #1226 workaround 明記)の複節化(A)は record.md の GoA 行様式(BR-R1 byte 互換)と選挙 CLI の書込面へ波及し bugfix スコープ超過 — 圧縮 workaround は #1226 根治後も機能的に無害で、撤去は別 Issue で追跡するのが修正面の限定と追跡可能性の両立。受容度: A=6(根治完全形だが面が広い)/ B=6(workaround 撤去が無追跡になる)。",
+  "submittedAt": "2026-07-19T14:59:10Z"
+}

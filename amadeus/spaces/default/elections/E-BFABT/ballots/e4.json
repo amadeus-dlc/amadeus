@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFABT",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record をリードオンリー実測+当事者照合: 成果物7点+memory 実在(ls 8件)、diary 3点 verbatim、verification/phase-check-construction.md 実在、センサー最新全 Passed(00:49:34Z/00:49:37Z — 初回 H2 不足3件の是正後)。当事者照合: build-test-results の『builder 42/98 → e4 44/106 赤0(glob 追従実証)』は自分の PR #1273 レビュー実測値の正確な転記で、落ちる実証・live e2e の e4 独立再現の記載も自分の実施内容と一致。PASS/PENDING/N/A の3値判定分離(PENDING 閉包条件 = PR #1273 CI SUCCESS+マージ、N/A は反証可能根拠付き)は deployment-execution:c3 語彙と report-final-values-only の正しい適用。diary 3点は既存 cid の適用実例のみで新規学習なし、0件で可",
+  "submittedAt": "2026-07-20T00:50:41Z"
+}

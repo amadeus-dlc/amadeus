@@ -1,0 +1,21 @@
+{
+  "electionId": "E-DAGRE",
+  "kind": "s13-adoption",
+  "question": "intent 260720-diary-autogen-guard(#1279)/ reverse-engineering の §13 学習候補1件の採否。候補(conductor 起案 verbatim): 『環境固有(特定メンバーのみ再現)バグの RE は、再現環境内 read-only プローブ+ambient 入力(env・cursor・gitignored 状態)の第一容疑化を定型とする — 隔離 worktree では再現しない』(実測根拠: 本 RE の pd-swap 決定的再現 — recordPrefix===null が CLAUDE_PROJECT_DIR 優先×cursor 依存で FIRES↔SKIPPED を切替)。conductor 自身が挙げる不採用理由候補: 単発・調査設計の常識クラス。ステージ文脈: 根本原因確定・引用再実測4クラスタ全一致・修正5案の3直交軸整理済み。各自 e1 record を実測確認のうえ GoA 付きで投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "採用 — 新規 cid または調査系既存 cid への追補として persist"
+    },
+    {
+      "internalNo": 2,
+      "label": "不採用 — 常識クラス(diary 記録のみ)"
+    }
+  ],
+  "voters": [
+    "e2",
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFAADS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "persist は既存 cid(builder-prompt-sync-completion 系のディスパッチ定型ファミリ)への追補統合とし、独立 cid を新設しないこと — ディスパッチ定型文言の cid は蒸留ラウンドの高チャーン候補になりやすく、1文の追補に留めて肥大を避ける",
+  "rationale": "e2 diary をリードオンリー実測: iteration 2 の実インシデント(22:52Z Deviation — reviewer subagent が read-only 指示に反し component-methods.md へ『## Review』節を直接挿入→除去・verdict は diary へ保存)と iteration 3 の対照(22:55Z — 書込禁止の強化明示で再発ゼロ)を verbatim 確認。採用を支持: (1) 成果物中間への直接挿入は成果物汚染の実害クラスで、既存 cid の射程外 — instruction-like-text-rejection は入方向(指示風テキストの拒否)、spawned-agent-result-delivery は結果配送、c2 は git 操作の隔離であり、『レビュアーの出力面制約(書込禁止+verdict は最終テキストのみ)』を明示する規則は不在(diary 自身が非該当判断を記録済み) (2) 明示あり/なしの対照実測が揃っており E-GMECG と同じ採用水準を満たす (3) 単発事象との不採用読みには、subagent の成果物直接書込は検出が偶然(conductor の実読)に依存する無音汚染クラスであることが反証。自案非採用時: 不採用=6",
+  "submittedAt": "2026-07-19T22:55:55Z"
+}

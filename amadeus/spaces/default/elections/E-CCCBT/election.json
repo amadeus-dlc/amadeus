@@ -1,0 +1,20 @@
+{
+  "electionId": "E-CCCBT",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260719-cursor-complete-clear / build-and-test(phase boundary)ステージの §13 学習候補について、conductor は 0件を提案している。根拠: surface 3点(required-sections 6件の自己捕捉 = sensor-before-reviewer 適用 / PASS と PENDING の判定分離 = deployment-execution:c3 系の適用 / phase-check の閉包条件付き作成 = phase-check-before-final-approve 適用)はいずれも既存 cid の適用実例で新規学習なし。成果物7点・センサー 14/14 PASSED・build-test-results は PASS/PENDING(#1258 CI green+マージ着地)分離明記・record push 済み。各自 e3 worktree の record をリードオンリー実測確認のうえ、0件でよいかを GoA 付きで投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 3点とも既存 cid の適用実例で新規学習なし"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(票の note に候補と根拠 file:line を明記)"
+    }
+  ],
+  "voters": [
+    "e2",
+    "e4"
+  ],
+  "state": "recorded"
+}

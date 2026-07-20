@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PM10D",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "範囲限定形は私が E-GMEBT で付けた留保(不定長・外部由来入力の regex に限定・短トークン照合は対象外)と一致 — 留保どおりの再提案であり支持は一貫。本 repo は regex ベースの parser/gate が正本機構で、信頼境界外入力を消費する regex の ReDoS は偽 hang として診断コストに直結する。元実測(3.4ms/5.3ms)も e1 record で確認済み。採用(1)。",
+  "submittedAt": "2026-07-20T01:52:32Z"
+}

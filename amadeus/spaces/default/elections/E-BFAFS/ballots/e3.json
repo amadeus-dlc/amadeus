@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFAFS",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 worktree リードオンリー実測: 成果物4点実在(assessment=GO+設計裁定前提 / constraint-register / raid-log / questions E-OC1 記入済み)、feasibility の SENSOR 最新 verdict 全 PASSED を e2 シャード grep で確認。主発見の機構引用を独立照合 — tally は scripts/amadeus-election-model.ts:320-337 で ballots を kind(original/amend)判別なしに全件集計しており『amend 無差別集計』は実文一致(diary の model.ts:321-338 表記は同ファイルの短縮呼称)。diary 3点は feasibility:c1/c4 等既存 cid の適用実例で、主発見自体は成果物 C-4/R-1/D-1 に固定済み = プロセス学習の新規なし。0件で可(1)。",
+  "submittedAt": "2026-07-19T15:12:48Z"
+}

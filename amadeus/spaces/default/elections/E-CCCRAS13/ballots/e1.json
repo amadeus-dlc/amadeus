@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CCCRAS13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "配布ビューからは当該2点の観測の所在(intent/diary)が特定できず、候補文面の一次記録までは独立検分できていない — 「既存 cid の違反実例・適用実例は新規学習にしない」という分類自体は既存運用(E-PM9 候補外扱い等)と整合するため賛成。",
+  "rationale": "違反実例・適用実例は PM ラウンドの違反カウント・実例回付で扱うのが確立運用であり、新規 cid 化しない判断は既存ノルム体系と一致する。",
+  "submittedAt": "2026-07-19T15:07:46Z"
+}

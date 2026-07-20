@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFARA2",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "#1253 クロスレビュー当事者。tally :321-337 の kind 非区別全走査と verify :440 の同一母集団 recompute は実読済み(E-BFARE 票でも確認)。A(per-voter 最新1票・同時刻 amend 優先)は amend の存在目的(correction trail を保ったまま集計を訂正する — #1253 の動機実例 E-CCCRA で store 手是正を要した問題の解消)に唯一整合する。B(amend 非計上)は『CLI 内で訂正が完結する』という #1253 の受け入れ価値を空文化し、人間再集計の手作業を恒久化する — E-CCCRA の実例で必要だったのはまさに計上される訂正。ADR-5(ledger 共存不変)と A は直交し衝突しない(集計母集団の構成規則のみ変更)。設計注意点として、post-tally 遅着 amend の late lane 分類との相互作用は design 段で明示すべきだが、これは A の欠陥ではなく設計課題。自案非採用時: B=7(訂正機能の実効性が失われる)",
+  "submittedAt": "2026-07-19T22:10:42Z"
+}

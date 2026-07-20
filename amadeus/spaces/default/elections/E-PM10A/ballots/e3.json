@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PM10A",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "起案者。実測は #1264 の e4 S1 捕捉(team.md pre-#1259 巻き戻し・E-GMECG 追補消失)と是正コミットで一次記録済み。overlay 方式は record-sync の標準手順であり並行 norm 着地は常態 — 検査1手(自 intent 外 M 全数の main 突き合わせ)は安価で S1 級を構造的に防ぐ。採用(1)。",
+  "submittedAt": "2026-07-20T01:52:32Z"
+}

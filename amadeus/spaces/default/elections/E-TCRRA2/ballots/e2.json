@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TCRRA2",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A 採用。エスカレーション正準リスト (1)「選挙の可否同数」はユーザーエスカレーション事項として既決 — choice tie の機械 tie-break(B)は既決ノルムと矛盾する側に倒れる。既存 hold 分岐(quorum/block/discussion)の GoA 軸維持も現行実装(model.ts:332-335 実読済み)への最小変更で妥当。受容度: B=7(既決ノルム矛盾のため)。",
+  "submittedAt": "2026-07-19T22:44:20Z"
+}

@@ -1,0 +1,21 @@
+{
+  "electionId": "E-BFARA2",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "C. その他(note に方式明記)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "B. amend 非計上 — amend は集計母集団に入れず、record のタイムライン注記のみ(裁定への反映は人間の再集計判断)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "A. per-voter 最新1票 — tally 母集団構成時に voter ごとに submittedAt 最新の1票(同時刻なら amend 優先)だけを採用。ledger 上の共存(ADR-5)は不変、集計だけが置換される"
+    }
+  ]
+}

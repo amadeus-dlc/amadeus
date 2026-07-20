@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CCCRAS13",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測: (1) 列挙不足の実体を自ツリーで再現 — setActiveIntentCursor 呼出元は lib:1921 と utility:3083 の2件(grep)で、ACTIVE_INTENT_POINTER 直接 grep では落ちる構造を確認 = enumeration-completeness-review の違反実例。 (2) lib:2147 の帰属を awk で実測 — 包含関数は migrateFlatLayout(:2031)であり birth 帰属は誤り、e3 の訂正が正しい = mechanism-cite-verify 系の適用実例。8c47e7d33 の diary(iteration 2 READY・fix-diff-independent-reverify 適用)とも整合。いずれも既存 cid の違反/適用実例で新規学習なし。0件で可(1)",
+  "submittedAt": "2026-07-19T15:06:49Z"
+}

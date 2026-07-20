@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFARA3",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Ballot.parse の5分類 fail-closed 設計(model.ts:184-204 実測済み)と整合するのは A — dangling ref の amend を受理すると E-BFARA2=A の per-voter 最新集計が存在しない original を上書きする不整合を作る。unknown-ref 級の新分類は #1252 の invalid-timestamp 追加と同型の受理段拒否。",
+  "submittedAt": "2026-07-19T22:10:03Z"
+}

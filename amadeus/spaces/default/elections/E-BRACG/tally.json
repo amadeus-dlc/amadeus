@@ -1,0 +1,38 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T01:32:44Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-BRACG",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e1 record リードオンリー実測: CG 成果物2点(plan/summary)が unit dir 様式で実在、diary に builder 完遂(隔離維持・逸脱なし — c2 追補2 の焼き込み適用)、E-BRARA2 e4 留保の premise 確認(null-fallback 同一秒境界の生存判定 = ruling-premise-closure-verification の適用)、transient 偽赤の確定記録(編集途中への自動発火 — manual-sensor-fire 追補4 と同族の既知偽赤クラスとして diary 固定)を確認。全て既存 cid の適用実例でプロセス新規なし。0件で可(1)。",
+      "submittedAt": "2026-07-20T01:32:18Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-BRACG",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測(e1 worktree リードオンリー+git/gh): CG diary 01:30:38Z/01:31:23Z の記録実在、コミット 433391d2c 実在(fix(election-cli): stamp ballot receipt time...)、PR #1277 OPEN。適用ノルムの照合 — null-fallback の premise 確認は ruling-premise-closure の適用実例(E-BRARA2 e4 留保の削除条件不成立を実測してから維持)、transient SENSOR_FAILED の確定は manual-sensor 追補3(シャード union 読み)+追補4(stage-mismatch 偽赤)の類型適用、two-dot 見かけ差分は base-advance 既知クラス。いずれも既存 cid で新規学習なし。0件で可(1)。交差当事者注記: #1262 実装は当方 #1273 着地後の再接地合意どおりで、当方 resolveBallots 配線との統合も PR #1277 レビュー(e4)の管轄に正しく載っている。",
+      "submittedAt": "2026-07-20T01:32:30Z"
+    }
+  ],
+  "resolutions": []
+}

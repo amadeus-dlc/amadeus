@@ -1,0 +1,21 @@
+{
+  "electionId": "E-GMECG",
+  "kind": "s13-adoption",
+  "question": "intent 260719-goa-multiseg-ecode / code-generation の §13 学習候補1件の採否。候補(conductor 起案 verbatim): 『落ちる実証の pre-fix 面切替は fix コミット後にのみ実施し、復元 ref は fix コミット SHA を明示する — 未コミット時の checkout HEAD は修正自体を消す(builder 実測ヒヤリハット、即時回復・実害なし。falling-proof-no-stash の復元 ref 面の追補)』。conductor 自身が挙げる不採用理由候補: 既存 falling-proof-no-stash の「復元は regen/再 checkout」に含意されるとの読みも可能。ステージ実測文脈: builder 全検証 exit 0(--ci PASS 387/5493)、落ちる実証 4 fail→54 pass、閉包 verbatim ok:true、PR #1256 発行済み。各自 e1 record(diary)と falling-proof-no-stash 原文を実測確認のうえ GoA 付きで投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "採用 — falling-proof-no-stash への追補として persist(独立 cid でなく追補統合)"
+    },
+    {
+      "internalNo": 2,
+      "label": "不採用 — 既存 cid の含意で足りる(diary 記録のみ)"
+    }
+  ],
+  "voters": [
+    "e2",
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

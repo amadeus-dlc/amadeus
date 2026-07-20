@@ -1,0 +1,21 @@
+{
+  "electionId": "E-TCRRA4",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "B. Issue 化のみ(e2 の Ballot.parse 変更バッチへ委譲 — 分類追加を1箇所に集約)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "C. その他(note に方式明記)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "A. 同一 PR で unknown-choice 分類を追加(same-root-inventory の前者。e1 先行着地につき e2 が再接地時に自分の分類を統合 — 直列合意済みの順序と整合)"
+    }
+  ]
+}

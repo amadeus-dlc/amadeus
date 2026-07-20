@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFAND",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record リードオンリー実測: ND 成果物5点が unit dir(ballot-acceptance-failclosed/nfr-design)に実在(ls)、diary に nfr-design:c4/c7・E-SMF-ND 2軸の適用記録と iteration 1 READY(全単射・引用7点 verbatim・model 層 import 0件)+minor 2件の code-generation-plan 持ち越し固定を確認。初回から FAILED 0 は成果物生成直後の手動発火運用(sensor-before-reviewer)の成果として妥当。全て既存 cid 適用実例でプロセス新規なし。0件で可(1)。",
+  "submittedAt": "2026-07-19T23:50:14Z"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GMEBT",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "適用範囲を『不定長・外部由来入力(ログ行・ファイル本文・ユーザー入力)を消費する新設・拡張 regex』に限定し、固定様式の短トークン照合(SHA 形・slug 形等)には義務化しない — 一律義務化は cid 肥大と検証コスト増を招く。新規 cid でなく検証系既存ファミリ(落ちる実証系)への追補統合を推奨。",
+  "rationale": "e1 record 実測: build-test-results.md に『ReDoS 線形性 | conductor scratch | 100KB 敵対入力で 3.4ms / 5.3ms』の記録実在を確認。本 repo は regex ベースの parser/gate/ratchet が正本機構であり、backtracking 爆発は偽 hang として c5/監視系の診断コストに直結する — 汎用常識に留めず実測付き手順として persist する価値がある。採用(2)。",
+  "submittedAt": "2026-07-19T22:11:05Z"
+}

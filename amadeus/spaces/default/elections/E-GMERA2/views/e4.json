@@ -1,0 +1,16 @@
+{
+  "electionId": "E-GMERA2",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "B. Issue 化のみ(実在0件につきスコープ外 — 後者)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "A. 同一 PR で対称是正(same-root-inventory の前者。将来の複節ラウンド名にも先回り)"
+    }
+  ]
+}
