@@ -1,0 +1,23 @@
+<!-- INVARIANT: examples are single-line HTML comments so a fresh template parses to total=0 (MEMORY_EMPTY). Do NOT un-comment or split across lines. t100 guards this. -->
+> This file is maintained by the orchestrator during stage execution. Add observations at the gate ritual, not by editing here directly.
+
+## Interpretations
+<!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
+- 2026-07-20T00:19:08Z — Architect synthesis. Confidence-critical citations re-measured verbatim against Observed=HEAD `37f8cf5e6` with zero discrepancy: store.ts:156/166 `at: ballot.submittedAt` (late/normal lane), store.ts:228 `at: talliedAt` (tallied), record.ts:179-183 timeline-order monotonicity loop, election.ts:334 normalizeAt funnel + :456-457 verifySelf→fail. Reproving greps: `receivedAt` = 0 across scripts/tests/packages (absolute absence confirmed); distributed source election.ts:304 `at: d.result.value.record.at` (machine time); classifyLate model.ts:296-297 `if (ballot.submittedAt <= tallyTime) return null` (submittedAt axis). Per-intent record `re-scans/260720-ballot-received-at.md` is accurate as written — no correction applied.
+- 2026-07-20T00:19:08Z — Root cause is a design defect, not a coding slip: timeline `at` conflates two axes (voter self-declared submittedAt vs acceptance-side machine time) into one field. append order (= acceptance order) is monotone by construction, but each event carries submittedAt, so relay-delayed ballots make the two axes diverge. distributed/tallied already use machine time — the ballot/late lanes are the asymmetric half (symmetric-pair-review cluster).
+- 2026-07-20T00:19:08Z — timestamp pointer updated (c3-relabel): prior 最新 `260719-tally-choice-ruling` block downgraded to 履歴 with full text preserved, new 最新 `260720-ballot-received-at` prepended in the existing block format. codekb body 8 artifacts preserved (c1 churn avoidance) — the only new knowledge is the single acceptance-time-axis cluster; no structural / API / dependency / tech-stack change, focus-canonical interval diff is 0.
+
+## Deviations
+<!-- example: 2026-05-29T10:14:32Z — skipped the optional caching layer the stage prose suggested; the dataset is small enough that it adds risk -->
+
+## Tradeoffs
+<!-- example: 2026-05-29T10:14:32Z — picked TDD over BDD this run; the team is unit-first and the domain is well-understood -->
+
+## Open questions
+<!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
+- 2026-07-20T00:19:08Z — Fix-axis choice is unresolved and needs an election at requirements: (A) add a `receivedAt` field to the timeline event and move verifySelf monotonicity onto it, keeping submittedAt as a declared value; (B) redefine the existing `at` to mean acceptance time (breaking the field's meaning); (C) drop/relax the monotonicity check. A/B favoured; C forfeits verify's value. TimelineEvent (model.ts) is the canonical type persisted by store and rendered by record.ts timelineSegment — a field add ripples into render.
+- 2026-07-20T00:19:08Z — Acceptance-time capture point: handleVote (election.ts:334 neighbourhood, mint `normalizeAt(new Date().toISOString())`) vs inside appendBallot. Align with distributed (transport.ts now())/tallied (election.ts:354) machine-time idiom.
+- 2026-07-20T00:19:08Z — classifyLate axis (model.ts:296-297): keep late judgement on submittedAt (declared) or move to acceptance time. Tally fixed-set membership arguably belongs on acceptance time; submittedAt risks mis-classifying relay-delayed ballots as late. Crosses e2 FR-4(c) — the two intents must coordinate.
+- 2026-07-20T00:19:08Z — Existing timeline data compatibility: all leader elections/ timeline.json lack receivedAt. Read-time submittedAt fallback vs regeneration — a migration shim is disfavoured by the construction guardrail unless justified in NFR (trunk-based compat-debt avoidance).
+- 2026-07-20T00:19:08Z — e2 `260719-ballot-failclosed-amend` intersects on all three files (model/store/election) and specifically on store.ts appendBallot `at:` and election.ts handleVote — serialize or rebase-coordinate (c6, parallel-bolts); re-judge intersection on real diff before starting.
+- 2026-07-20T00:19:08Z — Regression-test shape: inject the E-BFARA1 acceptance-order fixture [e1@22:10:03, e4@22:10:42, e3@22:10:29] × submittedAt and assert verify red pre-fix / green post-fix (falling proof). Drive via in-process seam (verifySelf / appendBallot) with lcov active (fs-tests-integration-first). No `receivedAt`-axis test exists today (grep 0); t238:169-176 fixes only the tally-before-ballot non-monotone shape.
