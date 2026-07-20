@@ -1,6 +1,23 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(最新: 260719-cursor-complete-clear)
+## 実行メタデータ(最新: 260720-leader-store-sync)
+
+- Date: 2026-07-20(Asia/Tokyo)
+- Observed at: HEAD `c4e4fca1ab6113a6f4746cb4907cbc1472b0bed4`(`git rev-parse HEAD` 実測)
+- Intent: `260720-leader-store-sync`([Issue #1281](https://github.com/amadeus-dlc/amadeus/issues/1281) — leader 所有の選挙 store・監査シャードの main 同期を構造化する。sync PR 生成の機械化と E-PM10A 除外規則の焼き込み)
+- Scope: `amadeus`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh(cid:reverse-engineering:c1、E-L63 の base 選定則)。base=`a326f47bc`(全 `re-scans/*.md` observed のうち HEAD 祖先で距離最小。`git merge-base --is-ancestor a326f47bc HEAD` exit 0 実測、`git rev-list --count a326f47bc..HEAD`=**22**。base は 260719-cursor-complete-clear の observed に一致)、observed=`c4e4fca1ab6113a6f4746cb4907cbc1472b0bed4`。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3、独立再照合で反証なし — elections dir 数のみ origin/main 後続前進で 51→55 の軽微差、計測 ref 明記で分離)
+- 測定 ref: 正本コードの行番号は observed HEAD `c4e4fca1a` の実ファイル直読(measurement-ref-in-artifacts)。leader 同期の対象 = elections store・監査シャードの実配置件数は `origin/main`(ref 明記)で計測。区間コード面(scripts/packages/tests)は `git log a326f47bc..HEAD -- scripts/ packages/ tests/` = **出力0件**(交差ゼロ、区間22コミットは全て record/audit 系)。本 worktree の `elections/` は HEAD=7 dir・base=0 dir で origin/main の 55 dir と母数が異なるため件数は計測 ref を明記して混同を避けた。
+- 現行結論: leader 所有物は **決定的に機械同定可能** — 監査シャードは `auditShardName(projectDir)`(`amadeus-lib.ts:2838` export、host+`.amadeus-clone-id` 12桁 hex から `${host}-${cloneId}.md` を導出)、選挙 store は `elections/<E-code>/` per-dir 様式(election.json が state の source of truth)。同期運搬 tool の idiom は `scripts/amadeus-mirror.ts`(GhRunner port / no-shell spawn / exit 0-1-2 契約 / record tree=source of truth の一方向副作用)を踏襲可能だが、`gh pr create` は repo 全域 grep で NO_MATCH = 前例なしの新規 idiom。焼き込む除外規則は norm-pr-from-main-base・E-PM10A(共有ファイル巻き戻し防止)・weekly-distillation 構造免除。テストは t232 帯の unit(純関数 in-process)+ integration(fake GhRunner + tmp workspace)の2層様式を踏襲。区間コード面交差ゼロにつき関心 seam は base 時点から現行と同一。
+- Per-intent record: `re-scans/260720-leader-store-sync.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「最新: 260719-cursor-complete-clear」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、`re-scans/260720-leader-store-sync.md`、`architecture.md`(「leader 所有物の機械的同定と main 同期運搬」節を新設 = auditShardName 決定的導出 + elections per-dir 様式 + mirror.ts GhRunner idiom + gh pr create 前例不在 + 除外規則)。**他 body 7成果物(business-overview / code-structure / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment)は全点温存**(churn 回避 — 実質の新規知識は「leader 所有物の同定+同期運搬の構造」1cluster で architecture.md へ集約。区間コード面交差ゼロで既存本文と矛盾なし。cid:reverse-engineering:c1)
+- Delivery boundary: 実装、main merge/rebase、Issue close、PR 作成・更新は本 scan で実施していない。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260719-cursor-complete-clear)
 
 - Date: 2026-07-19(Asia/Tokyo)
 - Observed at: HEAD `a326f47bc0146a3b4285552f42b92fd61fb343a7`(`git rev-parse HEAD` 実測)

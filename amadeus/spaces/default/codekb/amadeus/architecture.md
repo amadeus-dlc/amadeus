@@ -1,10 +1,24 @@
 # アーキテクチャ
 
-> **2026-07-19 更新（intent `260719-cursor-complete-clear`、最新）**: [Issue #1248](https://github.com/amadeus-dlc/amadeus/issues/1248) の「完了 intent シャードへの無期限監査追記」を、base `591b6a2a2` → observed `a326f47bc`(52コミット)で diff-refresh。フォーカス面(カーソルライフサイクル・complete 経路・監査追記チェーン・フック群)の focus ファイル区間コミット13件は全て非交差。根本は active-intent カーソルの **set⇔clear 非対称** と監査ルーティングチェーンの status ゲート不在(下記「active-intent カーソルの set⇔clear 非対称と監査ルーティング」節)。
+> **2026-07-20 更新（intent `260720-leader-store-sync`、最新）**: [Issue #1281](https://github.com/amadeus-dlc/amadeus/issues/1281) の「leader 所有の選挙 store・監査シャードの main 同期の構造化」を、base `a326f47bc` → observed `c4e4fca1a`(22コミット、コード面交差ゼロ)で diff-refresh。leader 所有物は `auditShardName(projectDir)`(`amadeus-lib.ts:2838`)の決定的導出と elections の per-dir 様式で機械同定でき、同期運搬は `scripts/amadeus-mirror.ts` の GhRunner port を踏襲するが `gh pr create` は repo 前例なし(下記「leader 所有物の機械的同定と main 同期運搬」節)。
+
+> **2026-07-19 更新（intent `260719-cursor-complete-clear`、履歴）**: [Issue #1248](https://github.com/amadeus-dlc/amadeus/issues/1248) の「完了 intent シャードへの無期限監査追記」を、base `591b6a2a2` → observed `a326f47bc`(52コミット)で diff-refresh。フォーカス面(カーソルライフサイクル・complete 経路・監査追記チェーン・フック群)の focus ファイル区間コミット13件は全て非交差。根本は active-intent カーソルの **set⇔clear 非対称** と監査ルーティングチェーンの status ゲート不在(下記「active-intent カーソルの set⇔clear 非対称と監査ルーティング」節)。
 
 > **2026-07-19 更新（intent `260718-election-ts-foundation`、履歴）**: 選挙 TS 基盤の配布境界を確定。反証課題「dist 非対象の local overlay チャンネルが存在しない」は反証され、`contrib/skills/` overlay が canonical→dist→self-install の3層に加わる4本目の配布チャンネル(dist バイパス)として実在することを確認(下記「contrib overlay 配布チャンネル」節)。base `e9a001105` → observed `c2e4975ff`(69コミット)で diff-refresh、フォーカス面の区間変更は軽微。
 
 > **2026-07-18 更新（intent `260718-hooks-config-conflict`、履歴）**: [Issue #770](https://github.com/amadeus-dlc/amadeus/issues/770) の Codex hook 設定競合を、base `e9a001105d253e14affb77417423d9f0b0360f9e` から observed `594ba21d636218558b711b371c286f16731fb081` まで8コミットで diff-refresh。フォーカス契約の区間変更は0件で、現行コードと外部 agmsg 1.1.7 の reader／writer を再照合した。技術方針は `【裁定待ち】`。
+
+## leader 所有物の機械的同定と main 同期運搬(260720-leader-store-sync、Issue #1281)
+
+leader が所有し main へ同期すべき成果物は「選挙 store」と「監査シャード」の2クラスで、いずれも **決定的に同定可能** な構造を持つ。同期を運搬する tool の idiom は既存の `scripts/amadeus-mirror.ts` に前例があるが、sync PR 生成そのものは repo 内に前例が無い。
+
+- **選挙 store の per-dir 様式**: `amadeus/spaces/default/elections/<E-code>/` の per-dir 構成。各 dir は `election.json`(定義+`state` = source of truth)/ `ledger.json`(accepted-ballot append)/ `tally.json` / `timeline.json`(event append)/ `record.md`(裁定・票タイムライン・`GoA[...]`)/ `ballots/<voter>.json`(tally 時 materialize)/ `views/<voter>.json`(blind 配布)から成る。`election.json` スキーマ = `electionId`/`kind`/`question`/`choices[{internalNo,label}]`/`voters[]`/`state`(`E-CCCCG` 実測)。Store 読取は `scripts/amadeus-election-store.ts`(`electionsRoot`、`writeStoreFile` の tmp+rename アトミック書込、`readJson` fail-closed load)が既存様式。計測 ref = `origin/main`(tree 型 55 dir)。
+- **監査シャードの決定的 basename 導出**: `auditShardName(projectDir)`(`amadeus-lib.ts:2838` export)= `host`(`hostname()` 正規化・48文字 truncate)+ `cloneId`(`:2269`、`.amadeus-clone-id` の 12桁 hex トークン、`:2194`。per-clone・.gitignore 対象=非コミット)→ **`${host}-${cloneId}.md`**。シャードは各 intent record の `audit/<basename>` に配置(`:2181-2185`)。**tool は自クローンの basename を一呼び出しで導出し、全 intent record 横断で列挙して自クローン所有シャードを機械同定できる**(推測不要)。main 上の監査シャード `*.md` は `origin/main` で 100 件(非シャードの `code-summary.md`/`shard.md` は basename フィルタで除外要)。
+- **同期運搬の idiom(前例 = `amadeus-mirror.ts`)**: `main(argv, projectDir=PROJECT_DIR, run=spawnGh)` のデフォルト引数テストシーム(ADR-4)、判別ユニオン `ArgsOutcome`、`GhRunner = (args)=>GhResult` port、`spawnGh` の **no-shell 引数配列 spawn**(`env: process.env` 明示、exit code は子から読む)、exit code 契約 **0=ok / 1=fault / 2=usage**(header `:9-10` verbatim)。副作用は一方向(record tree=source of truth、書込は gh 呼び出し + `amadeus-state.md` の該当 field のみ、`intents.json` 非書込=WORKSPACE-lock 温存)、R-3 部分失敗は fail-loud で自動クローズしない。
+- **sync PR 生成は前例なしの新規 idiom**: `gh pr create` は `scripts/`・`packages/` の repo 全域 grep で NO_MATCH。既存 gh 機械化は mirror.ts の **issue** 系のみ。新 tool の gh spawn 面は mirror.ts の port/契約をそのまま踏襲できるが、PR 生成コマンド自体は初導入。
+- **機械化に焼き込む除外規則**: norm-pr-from-main-base(sync PR は origin/main から対象コミットのみの単独ブランチで切る)、E-PM10A(record-sync overlay の共有ファイル無音巻き戻しを防ぎ memory 層は main 版へ復元、GoA 1x4)、weekly-distillation 構造免除(Forbidden/Mandated はツール免除・ツールは信号提示のみ)。
+
+**設計含意**: leader 所有物の同定ロジックは既存 API(`auditShardName` + elections per-dir 列挙)で充足し新規発明は不要。tool 本体は `scripts/*.ts`(mirror.ts と同じ repo ローカル・dist/contrib 投影いずれも非対象)が自然な家で、gh spawn 面は既存 port を再利用し、新規面は sync PR 生成コマンドと除外規則の焼き込みに限定される。TS 本体の最終配置と CLI 契約は application-design/requirements へ委任する。
 
 ## active-intent カーソルの set⇔clear 非対称と監査ルーティング(260719-cursor-complete-clear、Issue #1248)
 
