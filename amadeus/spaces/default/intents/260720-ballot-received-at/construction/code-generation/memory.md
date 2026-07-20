@@ -12,3 +12,4 @@
 
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
+- 2026-07-20T01:30:38Z [Interpretation] builder 完遂(433391d2c、隔離維持、逸脱なし)。null-fallback は同一秒境界で生存判定(e4 留保の削除条件は不成立 — 条件付き裁定の premise 確認まで実施)。PR #1277 発行、e4 レビュー依頼。conductor 裏取り 57 pass+three-dot diff surgical 確認(two-dot の見かけ -10288 は main 前進の直接比較アーティファクト)。

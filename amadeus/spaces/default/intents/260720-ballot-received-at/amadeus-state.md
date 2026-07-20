@@ -8,7 +8,7 @@
 - **State Version**: 7
 - **Active Agent**: amadeus-developer-agent
 - **Worktree Path**:
-- **Bolt Refs**:
+- **Bolt Refs**: fix-1262-ballot-received-at
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration
@@ -32,8 +32,6 @@
 - **Revision Count**: 0
 
 - **Skeleton Stance**: scope-dependent
-- **Parked**: 2026-07-20T00:44:52Z
-- **Parked At Stage**: code-generation
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -94,7 +92,7 @@ Per unit: [TBD]
 - **Current Stage**: code-generation
 - **Next Stage**: build-and-test
 - **Status**: Running
-- **Last Updated**: 2026-07-20T00:44:52Z
+- **Last Updated**: 2026-07-20T01:08:03Z
 
 ## Session Resume Point
 - **Last Completed Stage**: requirements-analysis
