@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BRABT",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測(e1 worktree リードオンリー): B&T 成果物8ファイル(7+memory)実在、verification/ に phase-check-construction.md+inception の両方実在(phase-check-before-final-approve 適用)、build-test-results の PASS/PENDING 判定分離と『GATE FAILED 文字列は planted-failure fixture — assertion 実文で帰属確定』の記載(local-ci-red-assertion-verbatim の適用実例)、diary 01:34:35Z が質問要旨と一致。e4 の同一秒境界ピンテスト提案の PR コメント追跡扱いも非ブロッキング followup として適切。全て既存 cid 適用実例で新規学習なし。0件で可(1)",
+  "submittedAt": "2026-07-20T01:35:41Z"
+}
