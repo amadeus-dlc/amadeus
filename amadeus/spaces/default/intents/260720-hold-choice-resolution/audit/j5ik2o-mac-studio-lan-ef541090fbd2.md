@@ -1713,3 +1713,51 @@
 **Timestamp**: 2026-07-20T03:35:58Z
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T03:36:30Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: af75f339781cf396c
+**Message**: (継続待機 — leaderからの裁定通知を待ってください)
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T03:40:05Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T03:40:05Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T03:40:05Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: practices-discovery
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T03:40:05Z
+**Event**: GATE_APPROVED
+**Stage**: practices-discovery
+**Grant Id**: cabcb933
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T03:40:05Z
+**Event**: STAGE_COMPLETED
+**Stage**: practices-discovery
+**Details**: Stage Practices Discovery approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T03:40:05Z
+**Event**: STAGE_STARTED
+**Stage**: requirements-analysis
+**Agent**: amadeus-product-agent
+
+---
