@@ -1,0 +1,79 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "c1〜c3不採用、c4採用"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "c1〜c3不採用、c4採用",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "全件不採用（0件）",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "c1〜c4すべて採用",
+        "count": 0
+      },
+      {
+        "internalNo": 4,
+        "label": "c4はparkし今回は不採用",
+        "count": 0
+      },
+      {
+        "internalNo": 5,
+        "label": "X. その他（noteに採否集合を明記）",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T09:31:53Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-FVEDPS13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c4の適用範囲を、arm間の情報隔離自体が実験妥当性の成立条件となるblind比較実験に限定すること。prompt/contextの0件検査は自己申告ではなく、Coordinatorが固定した公開input allowlist/hash、session/worktreeの実入力manifest、禁止path scan receiptを一次証拠とし、通常の並行Unit作業へ一律適用しないこと。",
+      "rationale": "c1〜c3不採用、c4採用を支持する。c1の4 Boltsは今回の8 Units/22-edge DAG固有、c2のhard risk-firstとc3のblind独立性優先は既存walking-skeleton/project規範および既決裁定の再記述であり、新規persistは重複する。一方c4は、名称上のrole分離ではなくauthor identity・session・worktree・base SHA・公開input allowlist/hash・clean receipt・freeze SHAと禁止入力0件receiptを要求し、integrationを全freeze後へ閉じるため、blind比較の再現性と非汚染性を第三者が検証できる横断的なVerification契約である。最終成果物への裁定留保反映、phase-check、09:27:15〜16Zの最終15 sensor PASS、初回Major3是正後09:27:49Z incremental review READY、E-FVEDP2 recordを実測した。非採用時受容度: choice2=3、choice3=2、choice4=4、choice5=5（c4同等の限定スコープを明記する場合）。",
+      "submittedAt": "2026-07-20T09:29:36Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FVEDPS13",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "c1〜c3不採用・c4採用を支持する。e6最終成果物をリードオンリー実測し、team-allocation.md:40-51 と bolt-plan.md:30,44-45,54 に author identity/session/worktree/base SHA/input allowlist+hash/clean receipt/freeze SHA、後続armの禁止入力0件検査、両arm freeze後のみintegration開始が具体化されている。既存 cid:application-design:blind-experiment-freeze-reveal-state-machine は順序と漏洩防止を定めるが、役割名だけの分離を拒み、provenance項目とprompt/context/path scanで独立性を反証可能にする検証契約までは列挙していないため、c4はVerification面の有用な追補。c1〜c3は本intentのBolt構成・risk-first・並行度判断で、既存規範/当日裁定の適用実例。最終sensor 15 PASS→初回review Major3→是正後15 PASS再実行→増分review READYの順序もauditで確認した。非採用時受容度: 全件不採用=7、全件採用=6、c4 park=7、Other=6。",
+      "submittedAt": "2026-07-20T09:30:12Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FVEDPS13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "c1は今回の4 Bolt成果物の解釈、c2は既存projectのrisk-first、c3は既存blind freeze/reveal state machineの再述であり、独立規範としての新規性がないため不採用とする。c4は既存state machineに欠ける成立証拠を、identity/session/worktree/base SHA/input allowlist・hash/clean receipt/freeze SHA、禁止入力0件scan、全arm freeze後integrationという機械検証可能な契約として補完する。最終team-allocation/bolt-planに同契約が具体化され、final sensor窓は15 PASS・0 FAIL、3 Major是正後の増分review READYも実測したため採用に賛成する。非採用時受容度=7: 今回intentの成果物内では閉じるが、将来のblind比較で名称だけの分離を再発させる余地が残る。",
+      "submittedAt": "2026-07-20T09:30:21Z"
+    }
+  ],
+  "resolutions": []
+}
