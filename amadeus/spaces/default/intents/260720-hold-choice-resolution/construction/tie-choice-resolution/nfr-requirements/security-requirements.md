@@ -10,3 +10,7 @@
 | S-2 | 検証済み resolution のみ永続化(parse-don't-validate — 無効値が tally.json へ到達する経路を構造排除) | business-logic-model.md 検証境界 |
 | S-3 | 認証情報・秘匿情報は非関与(ローカル CLI、store は repo 内ファイル — technology-stack.md の credential 非保存方針の範囲内)。新規外部境界ゼロ | technology-stack.md |
 | S-4 | エラーメッセージは入力値と valid 列挙のみを含み、内部状態・パスを漏らさない(既存様式踏襲) | BR-2 |
+
+## 検証対応
+
+S-1/S-2 は FR-1/FR-4 の loud 拒否テスト・閉包テストが検証面。S-3/S-4 は変更面の構造(新規外部境界ゼロ・既存様式踏襲)で担保し、専用テストを追加しない。

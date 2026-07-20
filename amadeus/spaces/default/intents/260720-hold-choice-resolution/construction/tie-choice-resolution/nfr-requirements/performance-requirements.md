@@ -9,3 +9,7 @@
 | P-1 | parseChoiceResolution は O(入力長) — regex `/^choice:(0|[1-9][0-9]*)$/` は nested quantifier なし・アンカー付きの線形形。regex-linearity-untrusted-input の適用判定: --resolution は leader/ユーザーの CLI 引数(固定様式の短トークン照合に近い信頼側入力)であり 100KB 級実測の義務化対象外 — ただし形状が線形であることを設計時確認済み(本行がその記録) | BR-1、team.md regex-linearity cid |
 | P-2 | choices 実在照合は O(choices 数) の some — 実選挙の choices は 2〜4件(store 実測)で上限問題なし。性能テストは追加しない(強制メカニズム不在の数値目標を発明しない — constants-from-code) | BR-1、NFR 系ノルム |
 | P-3 | render/trail の追加コストは既存 map 1回の範囲内(生成式無変更) | business-logic-model.md render フロー |
+
+## 検証対応
+
+P-1 の線形性は設計時の形状確認で完結(実測義務なし — 適用判定を P-1 に記録)。P-2/P-3 は専用性能テストを追加しない判断そのものが要求(発明数値の排除)。

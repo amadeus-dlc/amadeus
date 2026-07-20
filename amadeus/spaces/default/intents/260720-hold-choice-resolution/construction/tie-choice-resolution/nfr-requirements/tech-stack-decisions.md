@@ -10,3 +10,7 @@
 | テスト | bun:test+tests/run-tests.sh(unit = parse 純関数 / integration = CLI 疎通 — NFR-2 の層区分) | requirements.md NFR-2(fs-tests-integration-first) |
 | 配布 | 非対象 — scripts/ は dist 非投影(business-rules.md BR-7 の SKILL 3面は .claude/.agents/contrib で dist/ 外) | business-rules.md BR-7、RE 実測 |
 | 新規ツール・ジョブ | なし(reuse: 既存 CI 5ゲート — 既存で代替できない新規機構ゼロ) | technology-stack.md、inception ガードレール(reuse inventory) |
+
+## 新規導入の不在確認
+
+新規 runtime 依存・新規ツール・新規 CI ジョブはゼロ(反証: components.md 変更一覧に依存追加行なし、package.json 非接触)。Bun-only Forbidden と gh-scripts-boundary の範囲内。
