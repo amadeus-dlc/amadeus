@@ -13,7 +13,7 @@
 - D. Brownfield の検証実験では walking skeleton を使わない、という team practice へ拡張する。
 - X. その他(自由記述)
 
-[Answer]: A — この intent に限り walking skeleton を使う。最初の Bolt で「1欠陥の再注入 → 1アーム実行 → 決定論的判定 → CI 証跡」を end-to-end で実証してから残りへ展開する。team 横断ルールは変更しない。
-**Answered at:** 2026-07-20T06:40:06Z
-**ユーザー直接承認:** 2026-07-20T06:40:06Z
+[Answer]: A — この intent に限り walking skeleton を使う。最初の Bolt で「1欠陥の再注入 → 1アーム実行 → 決定論的判定 → CI 証跡」を end-to-end で実証してから残りへ展開する。team 横断ルールは変更しない。  
+**Answered at:** 2026-07-20T06:40:06Z  
+**ユーザー直接承認:** 2026-07-20T06:40:06Z  
 **Mode:** Guide me
