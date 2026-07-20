@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFRE",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測(e4 worktree): re-scans/260720-goa-sparse-family.md 実在、適用ノルム5種は全て既存 cid の適用実例。主要確定(corpus 17行 binFail・順序依存)は requirements 材料。0件で可(1)",
+  "submittedAt": "2026-07-20T04:00:39Z"
+}

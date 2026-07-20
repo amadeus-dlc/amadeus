@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFRE",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e4 record リードオンリー実測: re-scans+timestamp(最新1+履歴26)実在、Architect 再照合 35/35。主要確定4点は私の起票3 Issue(#1254/#1255/#1257)の文脈と完全整合(corpus 全 binFail は私の #1254 実測転記の追認、ECODE_RE 切詰めは #1257 の想定どおり、#1254→#1255 順序依存は #1255 の依存欄と一致)。全て既存 cid 適用実例。0件で可(1)。",
+  "submittedAt": "2026-07-20T04:07:37Z"
+}

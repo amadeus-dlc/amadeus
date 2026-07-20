@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-LSSRAS13",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測(e3 worktree): RA 成果物実在、E-LSSRA1/2 裁定転記(留保分母3=転記3 の reviewer 機械照合記載)を確認。違反実例2件(absence-claim-grep-verify の .github/ 走査漏れ / bulk-edit の置換タプル誤り)は既存 cid の違反実例で PM 回付が適切 — 特に前者は自分の E-LSSRA1 票の『gh pr create 前例不在』前提を訂正する実測でもあり、裁定本質(C 採用)は不変と確認。0件で可(1)",
+  "submittedAt": "2026-07-20T04:00:39Z"
+}
