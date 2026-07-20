@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRRAS13",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record リードオンリー実測: requirements の留保転記に私の E-HCRRA1 留保(既存ピン不変の機械確認を非該当判定の成立条件化)が verbatim 反映されていることを起案者として確認(grep)。違反実例3件のうち留保脱落の教訓『分母は record GoA 行から自分で数える』は既存 reservation-transcription-count-check の実文が既に定める手続きの違反実例であり新規 cid 不要 — PM 回付が正規。分母6=転記6 の再照合成立も確認。0件で可(1)。",
+  "submittedAt": "2026-07-20T04:15:04Z"
+}

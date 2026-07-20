@@ -1,0 +1,20 @@
+{
+  "electionId": "E-GSFPD",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260720-goa-sparse-family(#1254/#1255/#1257)/ practices-discovery ステージの §13 学習候補について、conductor は 0件を提案している。根拠: practices-discovery:c1/c2 の適用実例+timestamp H2 不足 FAILED 1件の自己捕捉・是正(本日チーム同型の PM 蒸留データへ追加報告のみ)。成果物4点+memory 実在、センサー最新全 Passed、質問0件(ギャップ0)。各自 e4 worktree の record をリードオンリー実測確認のうえ、0件でよいかを GoA 付きで投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 既存 cid の適用実例で新規学習なし"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(票の note に候補と根拠 file:line を明記)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2"
+  ],
+  "state": "recorded"
+}

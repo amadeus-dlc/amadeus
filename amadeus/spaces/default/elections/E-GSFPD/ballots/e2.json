@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFPD",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測(e4 worktree、訂正申告後の現状態): PD 成果物5点実在・timestamp の上流入力行実在(是正済み確認)。c1/c2 適用+FAILED 自己捕捉是正(report-final-values-only 違反の PM 自己申告込み)は既存 cid 運用どおり。0件で可(1)",
+  "submittedAt": "2026-07-20T04:13:07Z"
+}

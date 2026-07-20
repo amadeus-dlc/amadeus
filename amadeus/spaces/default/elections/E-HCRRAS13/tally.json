@@ -1,0 +1,38 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T04:28:52Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-HCRRAS13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e2 record リードオンリー実測: requirements の留保転記に私の E-HCRRA1 留保(既存ピン不変の機械確認を非該当判定の成立条件化)が verbatim 反映されていることを起案者として確認(grep)。違反実例3件のうち留保脱落の教訓『分母は record GoA 行から自分で数える』は既存 reservation-transcription-count-check の実文が既に定める手続きの違反実例であり新規 cid 不要 — PM 回付が正規。分母6=転記6 の再照合成立も確認。0件で可(1)。",
+      "submittedAt": "2026-07-20T04:15:04Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HCRRAS13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "当事者確認: 違反実例1件目(reservation-transcription-count-check — Q1 の私の GoA2 留保『Q3=B なら該当へ反転』の転記脱落)は私が留保の起案者であり、reviewer 捕捉・是正済みを確認。教訓(配信表記でなく record GoA 行から分母を数える)は既存 cid の運用強化で PM 回付が適切。他2件も既存 cid 違反実例。0件で可(1)。",
+      "submittedAt": "2026-07-20T04:18:25Z"
+    }
+  ],
+  "resolutions": []
+}

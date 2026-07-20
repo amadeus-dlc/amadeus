@@ -1,0 +1,38 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T04:28:52Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GSFPD",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測(e4 worktree、訂正申告後の現状態): PD 成果物5点実在・timestamp の上流入力行実在(是正済み確認)。c1/c2 適用+FAILED 自己捕捉是正(report-final-values-only 違反の PM 自己申告込み)は既存 cid 運用どおり。0件で可(1)",
+      "submittedAt": "2026-07-20T04:13:07Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GSFPD",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "私の spot grep では e4 シャードに歴史的 SENSOR_FAILED 行が累積しており(12行 — 履歴と最新 verdict の区別は awk 集計に依拠)、最新状態全 Passed は conductor の是正申告+leader 補足を信頼する形の賛成 — 開票前に leader 側でも最新 verdict の独立確認があれば万全。",
+      "rationale": "timestamp H2 不足の自己捕捉・是正・PM 自己申告は report-final-values-only 違反の誠実な処理で、本日の同型集積(私の B&T でも同種の H2 不足→是正を実測)と一貫。0件で可(1)。",
+      "submittedAt": "2026-07-20T04:18:25Z"
+    }
+  ],
+  "resolutions": []
+}
