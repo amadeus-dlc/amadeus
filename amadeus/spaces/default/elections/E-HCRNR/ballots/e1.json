@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRNR",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record リードオンリー実測: U1 NR 成果物実在(ls)。Major 2件目(P-1 の regex-linearity 除外根拠に cid 非実在の『信頼側入力』基準)の是正は、**E-PM10D 提案者として cid 原文と照合** — 正しい除外軸は『固定様式の短トークン照合(SHA 形・slug 形等)には義務化しない』であり、是正後の読みは cid verbatim と一致。違反実例3件はいずれも既存 cid の PM 回付が適切。0件で可。internalNo 機械 mint。",
+  "submittedAt": "2026-07-20T05:27:38Z"
+}

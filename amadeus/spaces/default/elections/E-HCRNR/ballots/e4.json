@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRNR",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record 実測+独立再集計: diary の iteration 履歴 verbatim 確認、是正後の choices 件数主張『2〜5件』を leader store 全選挙の機械再集計で独立再現(レンジ 2-5 一致)。P-1 の regex-linearity 除外根拠是正(cid 非実在の『信頼側入力』基準 → 固定様式短トークン軸のみ)は、自分が E-PM10D の投票者として cid 原文(『固定様式の短トークン照合には義務化しない』)との一致を確認 — citation-semantics-check の正しい是正。違反実例3件(numbers/citation-semantics/H2)は全て既存 cid の PM 回付が正規経路。0件で可",
+  "submittedAt": "2026-07-20T05:27:42Z"
+}

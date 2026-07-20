@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFDP",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e4 worktree リードオンリー実測(送信前に出力確認済み): DP 成果物5点+questions 実在、phase-check-inception.md の PASS 5行(遡及・留保転記・AD→UG 写像・corpus 全域 21occ・bolt_dag non-null)実在、questions に E-OC1 承認 05:24:50Z 頃の記載、memory.md 05:27Z に consumes-first-drafting 本 intent 3回目の Deviation 記録実在。違反は既存 cid の反復トレンド(e3/e2 も同日同クラス複数 — チーム横断の反復弱点として PM 集計が正しい扱い)で、新規の一般化可能な知見なし。",
+  "submittedAt": "2026-07-20T05:27:46Z"
+}
