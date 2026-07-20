@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFRAS13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e4 record リードオンリー実測: 成果物2点+遡及是正実在、留保転記は reviewer 照合済み。違反実例2件(E-SDE-FD 全域 grep / ledger-count)は既存 cid の PM 回付が適切。E-LSSADS13 分岐(機械検証可能クラスの reviewer 事前判定付き閉包)の初適用も裁定どおり。choice 番号は view の internalNo フィールドから機械転記(E-GSFRA2 教訓の適用)。",
+  "submittedAt": "2026-07-20T04:52:40Z"
+}

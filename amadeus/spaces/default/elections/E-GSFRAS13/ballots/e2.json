@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFRAS13",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e4 worktree リードオンリー実測: memory.md 04:51Z Deviation に違反2件(E-SDE-FD 全域 grep 違反 = project.md 4件見落とし → 母集団 21 occurrence へ是正+正準抽出コマンド・測定 ref 明記 / ledger-count 違反 = 票数 2-0-1 へ tally.json 転記是正)が既存 cid 帰属で記録済み — いずれも既存規範の反復実例で PM トレンド計上が正しい。requirements.md :12-13 に E-GSFRA1 の e1/e2 留保が verbatim 転記済み(自分の fail-closed 境界留保の転記を当事者照合 — 一致)。裁定参照 3件・leader ブランチ SHA 明記も確認。新規の一般化可能な知見は見当たらない。",
+  "submittedAt": "2026-07-20T04:52:39Z"
+}

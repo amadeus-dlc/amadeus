@@ -1,0 +1,53 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可 — 違反実例は PM 回付が適切、新規学習なし"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可 — 違反実例は PM 回付が適切、新規学習なし",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "0件は不可 — 新規学習候補が実在する(票の note に候補と根拠 file:line を明記)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T04:53:05Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GSFRAS13",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e4 worktree リードオンリー実測: memory.md 04:51Z Deviation に違反2件(E-SDE-FD 全域 grep 違反 = project.md 4件見落とし → 母集団 21 occurrence へ是正+正準抽出コマンド・測定 ref 明記 / ledger-count 違反 = 票数 2-0-1 へ tally.json 転記是正)が既存 cid 帰属で記録済み — いずれも既存規範の反復実例で PM トレンド計上が正しい。requirements.md :12-13 に E-GSFRA1 の e1/e2 留保が verbatim 転記済み(自分の fail-closed 境界留保の転記を当事者照合 — 一致)。裁定参照 3件・leader ブランチ SHA 明記も確認。新規の一般化可能な知見は見当たらない。",
+      "submittedAt": "2026-07-20T04:52:39Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GSFRAS13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e4 record リードオンリー実測: 成果物2点+遡及是正実在、留保転記は reviewer 照合済み。違反実例2件(E-SDE-FD 全域 grep / ledger-count)は既存 cid の PM 回付が適切。E-LSSADS13 分岐(機械検証可能クラスの reviewer 事前判定付き閉包)の初適用も裁定どおり。choice 番号は view の internalNo フィールドから機械転記(E-GSFRA2 教訓の適用)。",
+      "submittedAt": "2026-07-20T04:52:40Z"
+    }
+  ],
+  "resolutions": []
+}
