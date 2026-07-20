@@ -1129,3 +1129,357 @@
 **Timestamp**: 2026-07-20T04:27:08Z
 
 ---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T04:29:19Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T04:29:19Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T04:29:19Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T04:29:19Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+**Grant Id**: cabcb933
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T04:29:19Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: Stage Code Generation approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T04:29:19Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Agent**: amadeus-quality-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:30:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 28ea6f8e
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/build-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:30:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: 28ea6f8e
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/build-instructions.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:30:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3739d650
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/build-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3739d650
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/build-instructions.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3ffc8c59
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/unit-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3ffc8c59
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/unit-test-instructions.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: c9524c22
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/unit-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: c9524c22
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/unit-test-instructions.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7bec6e40
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/integration-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7bec6e40
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/integration-test-instructions.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: d09018d6
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/integration-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: d09018d6
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/integration-test-instructions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: cf636ac0
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/performance-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: cf636ac0
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/performance-test-instructions.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: c0166f4f
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/performance-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: c0166f4f
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/performance-test-instructions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 323b2887
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/security-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 323b2887
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/security-test-instructions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9d4037d3
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/security-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9d4037d3
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/security-test-instructions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 59f0adec
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/build-and-test-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 59f0adec
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/build-and-test-summary.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: bd1ff133
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/build-and-test-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: bd1ff133
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/build-and-test-summary.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2d857476
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/build-test-results.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2d857476
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/build-test-results.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:30:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3a8ff57f
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/build-test-results.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:30:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3a8ff57f
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/construction/build-and-test/build-test-results.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:30:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: e1611a43
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: packages/framework/core/tools/amadeus-lib.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:30:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: e1611a43
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: packages/framework/core/tools/amadeus-lib.ts
+**Duration ms**: 499
+
+---
