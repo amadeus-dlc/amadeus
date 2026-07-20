@@ -1236,3 +1236,357 @@
 **Timestamp**: 2026-07-20T01:31:35Z
 
 ---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T01:33:01Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T01:33:01Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T01:33:01Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T01:33:01Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+**Grant Id**: 22ab851b
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T01:33:01Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: Stage Code Generation approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T01:33:01Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Agent**: amadeus-quality-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T01:34:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: 25ba0266
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/build-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T01:34:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: 25ba0266
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/build-instructions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T01:34:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: f610b305
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/build-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T01:34:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: f610b305
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/build-instructions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T01:34:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: e5f397bf
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/unit-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T01:34:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: e5f397bf
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/unit-test-instructions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T01:34:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: 541a6272
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/unit-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T01:34:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: 541a6272
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/unit-test-instructions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T01:34:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: 28a465c0
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/integration-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T01:34:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 28a465c0
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/integration-test-instructions.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T01:34:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2b93d001
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/integration-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T01:34:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2b93d001
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/integration-test-instructions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T01:34:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2ce4e8bb
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/performance-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T01:34:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2ce4e8bb
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/performance-test-instructions.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T01:34:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 660d6683
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/performance-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T01:34:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 660d6683
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/performance-test-instructions.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T01:34:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: a236cb1f
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/security-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T01:34:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: a236cb1f
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/security-test-instructions.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T01:34:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: cc2a369f
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/security-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T01:34:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: cc2a369f
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/security-test-instructions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T01:34:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5724178a
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/build-and-test-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T01:34:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5724178a
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/build-and-test-summary.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T01:34:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: aacf41b2
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/build-and-test-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T01:34:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: aacf41b2
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/build-and-test-summary.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T01:34:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 44bcc3f4
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/build-test-results.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T01:34:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 44bcc3f4
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/build-test-results.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T01:34:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: f6d7f2f0
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/build-test-results.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T01:34:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: f6d7f2f0
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260720-ballot-received-at/construction/build-and-test/build-test-results.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T01:34:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 05a4afc7
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: scripts/amadeus-election-record.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T01:34:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: 05a4afc7
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: scripts/amadeus-election-record.ts
+**Duration ms**: 495
+
+---
