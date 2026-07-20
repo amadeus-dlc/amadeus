@@ -4934,3 +4934,450 @@
 **Message**: ## Review\n\n**Verdict: READY**\n\nis 2 是正の閉包確認結果(iteration 1 Major 3件はすべて実在一次資料と整合):\n\n**P-1(technology-stack 出典)**: `performance-requirements.md` は「technology-stack.md の Bun 直接実行構成(コンパイル工程なし)」に差し替え済み。`am
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T05:17:58Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-requirements
+**Timestamp**: 2026-07-20T05:17:58Z
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T05:23:35Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T05:23:35Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T05:23:35Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: nfr-requirements
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T05:23:35Z
+**Event**: GATE_APPROVED
+**Stage**: nfr-requirements
+**Grant Id**: 1d87113b
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T05:23:35Z
+**Event**: STAGE_COMPLETED
+**Stage**: nfr-requirements
+**Details**: Stage Nfr Requirements approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T05:23:35Z
+**Event**: STAGE_STARTED
+**Stage**: nfr-design
+**Agent**: amadeus-architect-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1e3a7ddf
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/performance-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FAILED
+**Fire id**: 1e3a7ddf
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/performance-design.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/nfr-design/required-sections-1e3a7ddf.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 64618495
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: 64618495
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/performance-design.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: d99d2378
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/security-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FAILED
+**Fire id**: d99d2378
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/security-design.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/nfr-design/required-sections-d99d2378.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0bc28c0d
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0bc28c0d
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/security-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8c827b18
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/scalability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FAILED
+**Fire id**: 8c827b18
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/scalability-design.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/nfr-design/required-sections-8c827b18.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0c490f6a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0c490f6a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/scalability-design.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4b144c8d
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FAILED
+**Fire id**: 4b144c8d
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/nfr-design/required-sections-4b144c8d.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5d3b4577
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5d3b4577
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/reliability-design.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 67b62573
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: 67b62573
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/logical-components.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0b0c83c8
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0b0c83c8
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/logical-components.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 582647c4
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:24:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 582647c4
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/performance-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3a4e2652
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:24:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3a4e2652
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/security-design.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 54ff4466
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:24:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 54ff4466
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/scalability-design.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: ada2eea0
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:24:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: ada2eea0
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/reliability-design.md
+**Duration ms**: 36
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T05:28:55Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a60893801ae3c09ce
+**Message**: ## Review\n\n対象4ファイル+logical-components.md、上流(nfr-requirements 5点・FD business-logic-model/business-rules・AD component-dependency/components/component-methods)を実読し、要求⇔設計の全単射・層別保証・E-SMF-ND 2軸分離・断定的インベントリ・
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:29:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 74e213fa
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:29:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 74e213fa
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/security-design.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:29:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 227ff4db
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:29:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 227ff4db
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/security-design.md
+**Duration ms**: 30
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:29:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 07511a62
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:29:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 07511a62
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/performance-design.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:29:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: a099ca3d
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:29:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: a099ca3d
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/nfr-design/performance-design.md
+**Duration ms**: 31
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T05:30:26Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a2058bed5ef5b9198
+**Message**: ## Review\n\n**Iteration 2(最終) — 是正の閉包確認**\n\n対象是正 (1)〜(4) を実読で照合した。\n\n**(a) S-1〜S-3 の全単射 + S-4 継承明示 — 閉包確認**\n- security-design.md ヘッダ: 「S-1〜S-3(security-requirements.md)の実装形(S-4 は FD BR-3 で担保済み — 下記検証接続に継
+
+---
