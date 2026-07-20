@@ -31,6 +31,8 @@
 ## Runtime State
 - **Revision Count**: 0
 
+- **Parked**: 2026-07-20T08:45:17Z
+- **Parked At Stage**: functional-design
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -91,7 +93,7 @@ Per unit: [TBD]
 - **Current Stage**: functional-design
 - **Next Stage**: nfr-requirements
 - **Status**: Running
-- **Last Updated**: 2026-07-20T08:39:51Z
+- **Last Updated**: 2026-07-20T08:45:17Z
 
 ## Session Resume Point
 - **Last Completed Stage**: delivery-planning
