@@ -51,7 +51,7 @@ if (t.result.reason === "tie") {
 }
 ```
 
-- **else 側(非 tie)は現行 :201-207 の字句をブロック内へ移すのみ** — 検証条件・エラー文言とも1文字も変えない(E-TCRCG=A 維持)。
+- **else 側(非 tie)は現行 :201-207 をブロック内へ移す — 検証条件・エラー文言は無変更、変数名のみ `resumedTo`→`to` へリネーム**(外側 `let resumedTo` との shadowing 回避の必然リネーム。E-TCRCG=A 維持 — 挙動同一)。
 - tie への adopted/rejected/未知値/不正 choice は全て tie 側分岐で loud 拒否(e4 留保の実装形+実在 internalNo 列挙の valid ヒント)。
 - `HOLD_RESOLUTIONS.tie = {}` は「tie は if 側で処理されテーブルへ到達しない」ことの型面の表明であり、lookup されない(到達するなら設計欠陥 — 上記 if/else が構造的に防ぐ)。
 
