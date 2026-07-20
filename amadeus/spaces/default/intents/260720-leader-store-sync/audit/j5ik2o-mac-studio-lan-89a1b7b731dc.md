@@ -3121,3 +3121,69 @@
 **Duration ms**: 38
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T04:23:49Z
+**Event**: WORKFLOW_PARKED
+**Stage**: application-design
+**Timestamp**: 2026-07-20T04:23:49Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T04:27:23Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a20c96b1b6e7c30da
+**Message**: チームの conductor として Issue #1281(leader 所有物の main 同期構造化)の intent を進行中で、application-design まで完了しました。レビュー予算消費後の残余是正の扱い(第3イテレーション実施か受理か)について leader の判断待ちです。
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T04:27:53Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T04:27:53Z
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:27:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 48637447
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:27:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 48637447
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/components.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:27:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0ba8a6df
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:27:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0ba8a6df
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/inception/application-design/components.md
+**Duration ms**: 37
+
+---

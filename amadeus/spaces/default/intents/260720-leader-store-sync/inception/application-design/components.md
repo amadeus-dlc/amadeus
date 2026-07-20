@@ -22,3 +22,13 @@ FR-1=C(併用)に従い、実装は repo ローカル tool 1本+norm persist(B-3
 - **流用**: `GhRunner`/`spawnGh` 様式(`scripts/amadeus-mirror.ts` — port 注入のテストシーム込み)、tmp+rename アトミック書込様式(election-store)、t232 帯テスト様式。branch 命名は ci.yml:319-327 precedent の類推形(`sync/leader-…`)。
 - **新設根拠**: PR 生成の scripts/ 面前例は不在(ci.yml は CI shell ステップで tool 化されていない)— 既存で代替不能。
 - **非導入**: engine 変更・election CLI 変更・配布面追加(W-1〜W-3)。adapter/外部契約の先行着地なし(全コンポーネントは本 intent 内で配線完結 — N3 遵守)。
+
+## 検証記録(E-LSSAD 条件(i))
+
+合計見積 450 行は行別列挙からの機械再計算で固定(2026-07-20 conductor 実測):
+
+```
+python3 -c "rows=[80,90,70,90,60,60]; assert sum(rows)==450; print(sum(rows))"  # → 450
+```
+
+層別集合: port 消費 3 モジュール(C2/C4/C5)= mermaid の port 向けエッジ4本(EX→GIT / PC→GIT / PC→GH / ST→GIT)と過不足なし、C6 は port 非保持 — component-dependency.md の同名節と同一集合(grep 照合済み)。
