@@ -3915,3 +3915,297 @@
 **Duration ms**: 36
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T05:13:58Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a2f90ad30c4290c6f
+**Message**: ## レビュー結果(iteration 2、焦点確認)\n\n**verdict: READY**\n\n### 検証コマンドと結果\n\n```\n$ sed -n '402,404p' scripts/amadeus-election.ts\n  const trail = resolutions.map(\n    (r) => `- hold 裁定履歴: ${r.reason} → ${r.resoluti
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T05:14:16Z
+**Event**: WORKFLOW_PARKED
+**Stage**: functional-design
+**Timestamp**: 2026-07-20T05:14:16Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T05:14:26Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aa1ead33cefc333fd
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T05:14:49Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a798dbadf8de8eac6
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T05:17:29Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T05:17:29Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T05:17:29Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: functional-design
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T05:17:29Z
+**Event**: GATE_APPROVED
+**Stage**: functional-design
+**Grant Id**: 1d87113b
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T05:17:29Z
+**Event**: STAGE_COMPLETED
+**Stage**: functional-design
+**Details**: Stage Functional Design approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T05:17:29Z
+**Event**: STAGE_STARTED
+**Stage**: nfr-requirements
+**Agent**: amadeus-architect-agent
+
+---
+
+## Memory Empty
+**Timestamp**: 2026-07-20T05:17:30Z
+**Event**: MEMORY_EMPTY
+**Stage**: functional-design
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:18:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: c86fb7e5
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-requirements/performance-requirements.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:18:52Z
+**Event**: SENSOR_FAILED
+**Fire id**: c86fb7e5
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-requirements/performance-requirements.md
+**Detail path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/.amadeus-sensors/nfr-requirements/required-sections-c86fb7e5.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:18:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: 01298840
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-requirements/security-requirements.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:18:52Z
+**Event**: SENSOR_FAILED
+**Fire id**: 01298840
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-requirements/security-requirements.md
+**Detail path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/.amadeus-sensors/nfr-requirements/required-sections-01298840.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:18:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: 64ea14b3
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-requirements/scalability-requirements.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:18:52Z
+**Event**: SENSOR_FAILED
+**Fire id**: 64ea14b3
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-requirements/scalability-requirements.md
+**Detail path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/.amadeus-sensors/nfr-requirements/required-sections-64ea14b3.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:18:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1c795fa1
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-requirements/reliability-requirements.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:18:52Z
+**Event**: SENSOR_FAILED
+**Fire id**: 1c795fa1
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-requirements/reliability-requirements.md
+**Detail path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/.amadeus-sensors/nfr-requirements/required-sections-1c795fa1.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:18:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: a67afb59
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-requirements/tech-stack-decisions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:18:53Z
+**Event**: SENSOR_FAILED
+**Fire id**: a67afb59
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-requirements/tech-stack-decisions.md
+**Detail path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/.amadeus-sensors/nfr-requirements/required-sections-a67afb59.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:18:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: ad295405
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-requirements/performance-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:18:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: ad295405
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-requirements/performance-requirements.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:18:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: d18190a0
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-requirements/security-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:18:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: d18190a0
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-requirements/security-requirements.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:18:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6edb8da6
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-requirements/scalability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:18:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6edb8da6
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-requirements/scalability-requirements.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:18:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4a0bee2e
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-requirements/reliability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:18:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4a0bee2e
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-requirements/reliability-requirements.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:18:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6e33dcec
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-requirements/tech-stack-decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:18:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6e33dcec
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-requirements/tech-stack-decisions.md
+**Duration ms**: 35
+
+---
