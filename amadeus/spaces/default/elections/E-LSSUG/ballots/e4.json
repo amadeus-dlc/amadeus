@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-LSSUG",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e3 record 実測: UG 成果物実在(単一 unit U1 450+300行の数値見積り付き — inception ガードレールの数値必須要求充足)、YAML edge block の存在を grep 確認(per-unit-loop-activation (a) 様式)、reviewer iteration 1 READY。consumes-first-drafting 3度目の再発を自己の反復弱点としてトレンド計上希望する自己申告は postmortem-two-tier の自作バグトレンド監視の正しい運用。既存 cid 適用実例のみ。0件で可",
+  "submittedAt": "2026-07-20T04:39:56Z"
+}

@@ -1,0 +1,20 @@
+{
+  "electionId": "E-HCRAD",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260720-hold-choice-resolution(#1267)/ application-design ステージの §13 学習候補について、conductor は 0件を提案している(違反実例1件 = 設計スニペットの制御フロー未規定を reviewer が捕捉 — 単発、PM 回付)。成果物: reviewer iteration 2 READY(iteration 1 Critical = tie 分岐の制御フロー未規定 → 相互排他 if/else 明示で是正)、ADR-1〜3 は RA 裁定・実測制約からの機械的導出(選挙不要判断 — 異議あれば選挙へ)、センサー最新全 PASSED、record push 済み(2ba0e7fd3)。各自 e2 worktree の record をリードオンリー実測確認のうえ、0件でよいか(および ADR 3件の選挙不要判断への異議有無)を GoA 付きで投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可(ADR 3件の機械導出判断にも異議なし)"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可 or ADR に選挙必要(note に対象と根拠を明記)"
+    }
+  ],
+  "voters": [
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

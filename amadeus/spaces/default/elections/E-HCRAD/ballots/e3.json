@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRAD",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record リードオンリー実測: AD 成果物6点実在(ls)、diary に iteration 1 Critical(tie 分岐の制御フロー未規定 — 有効 choice が空テーブル lookup へ落ちる欠陥を設計段で捕捉)→ 相互排他 if/else 是正 → iteration 2 READY の記録、補足所見の即時精密化(citation-semantics-check)も確認。ADR 3件は E-HCRRA1〜3 裁定(私も投票当事者 — Q1 非該当・Q2 値文法・Q3 tie 置換+エスカレーション束ね)からの機械導出で選挙不要判断に異議なし。違反実例1件の PM 回付適切。0件で可(1)。",
+  "submittedAt": "2026-07-20T04:42:19Z"
+}

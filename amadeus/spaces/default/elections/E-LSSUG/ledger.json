@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-LSSUG",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e3 record 実測: UG 成果物実在(単一 unit U1 450+300行の数値見積り付き — inception ガードレールの数値必須要求充足)、YAML edge block の存在を grep 確認(per-unit-loop-activation (a) 様式)、reviewer iteration 1 READY。consumes-first-drafting 3度目の再発を自己の反復弱点としてトレンド計上希望する自己申告は postmortem-two-tier の自作バグトレンド監視の正しい運用。既存 cid 適用実例のみ。0件で可",
+      "submittedAt": "2026-07-20T04:39:56Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-LSSUG",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e3 worktree リードオンリー実測: unit-of-work.md U1 規模 450+300行(機械再計算値の明記 = measurement 系ノルム準拠)、unit-of-work-dependency.md の YAML edge block(units/depends_on 空配列)は parseBoltDag 文法適合形、memory.md 04:38Z に consumes-first-drafting 3度目再発の Deviation 記録実在 — 違反実例は既存 cid の反復であり新規学習でなく PM トレンド計上が正しい扱い(postmortem-two-tier)。単一 unit・依存なしの UG に新規の一般化可能な知見は見当たらない。",
+      "submittedAt": "2026-07-20T04:41:31Z"
+    }
+  ],
+  "late": []
+}
