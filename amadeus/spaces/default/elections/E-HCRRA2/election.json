@@ -1,0 +1,25 @@
+{
+  "electionId": "E-HCRRA2",
+  "kind": "clarification-question",
+  "question": "260720-hold-choice-resolution(#1267)RA Q2: choice 指定の CLI 構文はどれか?\n\n実測コンテキスト: 受理面は handleHoldResolved(election.ts:190-226)で、resolution は既存 --resolution フラグの文字列(FLAG_FIELDS :505)。検証は HOLD_RESOLUTIONS テーブル引き(:201-207、未知値 fail-closed)。tie の choice は election.json の choices[].internalNo(数値)で識別される。\n\n各自実測確認のうえ GoA 付き投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. --resolution choice:<internalNo>(既存フラグの値文法拡張 — #1267 例示形。テーブル検証は prefix parse+internalNo 実在照合の二段へ)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. 新フラグ --choice <internalNo> を併設(--resolution は二値専用のまま — フラグ責務分離、FLAG_FIELDS 追加)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. その他(note に構文明記)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

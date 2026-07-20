@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-LSSRA1",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 3,
+  "goa": 2,
+  "reservation": "tool は E-PM10A の除外述語(自所有物外 M の main 突き合わせ・memory 層 main 復元)を機械実装し、落ちる実証+transient-state-fixtures 込みの corpus sweep を完成条件にすること。PR 生成は gh-scripts-boundary(scripts/ 限定・配布外)を維持",
+  "rationale": "#1264 S1 検出者当事者。手動 overlay が S1 を生んだ実測(E-PM10A の成立根拠)がそのまま A(手作業+ノルムのみ)の脆弱性の証明 — レビュー検出は事後で、発生源の機械封鎖(C)が正。B 単独は契機無定義で滞留リスク。クロスレビュー見立て2名(e1/e2)の収斂とも整合。自案非採用時: A=6 / B=6 / E=8(#1281 の実害クラス放置)",
+  "submittedAt": "2026-07-20T03:46:28Z"
+}

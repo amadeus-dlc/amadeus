@@ -1,0 +1,26 @@
+{
+  "electionId": "E-LSSRA2",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "A. ローリング PM ラウンド毎(postmortem-two-tier の第2層に同乗 — 約1時間周期)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "C. PM ラウンド毎+未同期 N 選挙超過の早い方(二重契機)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 4,
+      "label": "D. leader 裁量(契機を定めない — 現状維持に近い)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 2,
+      "label": "B. N 選挙毎(N は design で named constant 化)"
+    }
+  ]
+}

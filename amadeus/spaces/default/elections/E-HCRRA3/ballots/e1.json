@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRRA3",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "除去は tie 語彙に限定し(block/discussion/quorum の二値は E-TCRCG=A どおり不変)、受理域縮小につき Q1 判定に関わらずユーザーエスカレーションへ束ねる(選択肢文の規定どおり)。",
+  "rationale": "org Forbidden『要求されない後方互換レイヤーを追加しない — 古い挙動は削除して置き換える』に整合。tie における adopted/rejected は多肢で意味論が曖昧(#1267 の元問題そのもの)で、tie の二値 resolution の使用実績は 0(全選挙 store で tie hold の解決例なし — E-GMEBT は block 経路)。誰も使っていない曖昧語彙の温存は compat 負債の新規計上に等しい。",
+  "submittedAt": "2026-07-20T03:43:13Z"
+}

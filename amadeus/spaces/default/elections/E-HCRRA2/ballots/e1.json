@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRRA2",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "#1267 起票者 — 例示形 --resolution choice:<internalNo> は既存 --resolution funnel(FLAG_FIELDS :505・HOLD_RESOLUTIONS テーブル検証 :201-207)を単一入口のまま保つ。B の新フラグは --resolution との組合せ検証(両指定・片欠け)という新しい不整合空間を作る。prefix parse+internalNo 実在照合の二段は unknown-choice(#1261 で導入済み)と同型の fail-closed。",
+  "submittedAt": "2026-07-20T03:43:13Z"
+}

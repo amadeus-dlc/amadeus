@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-LSSRA2",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 3,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "本セッション実測: 40選挙の滞留は PM 周期の隙間(約12h、PM 未実施帯)で発生 — 時間契機(PM 毎)単独では夜間・集中選挙帯に脆弱で、量契機(N 超過)単独では閑散期に鮮度が落ちる。C(早い方)が両失敗様式を塞ぐ。N の named constant 化は選択肢 B の文言どおり design で。",
+  "submittedAt": "2026-07-20T03:43:13Z"
+}

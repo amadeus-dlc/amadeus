@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-HCRRA1",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "非該当判定の成立条件を要件に明記すること — 既存受理値・既存出力・既存テストピン(t236:310 系)の不変を design/実装で機械確認し、不変が崩れる設計変更が生じた時点で Q1 を再判定(エスカレーションへ切替)する。",
+      "rationale": "実測: handleHoldResolved(:190-201)の HOLD_RESOLUTIONS テーブル引き fail-closed を確認 — 新値追加は既存値の意味論を変えない受理域拡大で、正準リスト(4)の『既存の要件・ユーザー可視契約・挙動の変更』に該当しない。intent 自体が Issue 選定(user decides)経由で承認済みであり、追加系機能はその承認範囲内。E-TCRCG の B 案注記(エスカレーション要)は既存二値語彙の変更を対象としており、本方向(追加)とは別物。B 受容度: 6。",
+      "submittedAt": "2026-07-20T03:42:49Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HCRRA1",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "非該当判定は『純追加(既存受理値・既存出力・既存テストピンの全てが不変)』が成立する場合に限る — Q3 で B(既存 tie 二値の除去=受理域縮小)を採る場合は該当へ反転し、Q3 選択肢文の規定どおりユーザーエスカレーションへ束ねること。",
+      "rationale": "前例整合: #1226(受理域の純拡大)は bugfix として無エスカレーションで着地、E-TCRCG B が該当とされたのは既存語彙・既存テスト期待の変更を伴ったため。#1267 起票者として、対応方向は新入力→新出力の追加でこの線上にある。",
+      "submittedAt": "2026-07-20T03:43:13Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HCRRA1",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "RA 成果物に判定根拠3点(既存受理値不変・既存出力不変・既存テストピン不変 — いずれも実測)を明記し、あわせて『スコープが既存語彙の置換・除去(E-TCRCG の B 案型)へ滑った瞬間にユーザーエスカレーションへ切替える』条件を1行固定すること(E-HCRRA3 で B が採用された場合は自動的にエスカレーション束ね)",
+      "rationale": "E-TCRCG 裁定当事者。E-TCRCG の注記が指した B 案は既存語彙・既存 t236 期待の変更(置換)であり、本 intent の対応方向(既存二値维持+tie への choice 指定の追加)は既存の受理値・出力・ピンを1つも変えない受理域拡大 — 正準リスト(4)の『既存の要件・ユーザー可視契約・挙動を変更』に該当しない。同型判例: invalid-timestamp/unknown-ref の追加(#1273)も新分類の追加として選挙裁定のみで進めた。『迷えばエスカレーション』原則は留保の滑り止め条件で担保。自案非採用時: B=6(過剰だが安全側)",
+      "submittedAt": "2026-07-20T03:46:28Z"
+    }
+  ],
+  "late": []
+}

@@ -1,0 +1,31 @@
+{
+  "electionId": "E-LSSRA1",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "A. 定期 sync の運用ノルム persist のみ(実装なし — leader 手作業+レビュー観点で E-PM10A を担保)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 5,
+      "label": "E. 対応しない"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "B. sync PR 生成 tool(scripts/)の機械化のみ(契機は leader 裁量のまま)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 4,
+      "label": "D. その他(note に方式明記)"
+    },
+    {
+      "displayNo": 5,
+      "internalNo": 3,
+      "label": "C. A+C 併用 — ノルムが契機を定義し、tool が抽出・除外・PR 生成を機械実行(e1 見立ての恒久形)"
+    }
+  ]
+}

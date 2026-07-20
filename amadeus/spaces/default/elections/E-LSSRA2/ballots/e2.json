@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-LSSRA2",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 3,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "C 採用。本セッションの実測パターン — 選挙は 3〜4 件バーストで発生し PM ラウンドは約1時間周期 — に対し、A 単独はバースト期の滞留を許し、B 単独は静穏期に無意味な PR を作りうる。二重契機(PM 毎+未同期 N 超過の早い方)が両モードをカバーする。N の named constant 化(design)は constants-from-code に整合。受容度: A=6 / B=6 / D=7(40選挙滞留の再発形)。",
+  "submittedAt": "2026-07-20T03:41:51Z"
+}

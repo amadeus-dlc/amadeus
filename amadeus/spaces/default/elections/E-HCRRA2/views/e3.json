@@ -1,0 +1,21 @@
+{
+  "electionId": "E-HCRRA2",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "C. その他(note に構文明記)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "A. --resolution choice:<internalNo>(既存フラグの値文法拡張 — #1267 例示形。テーブル検証は prefix parse+internalNo 実在照合の二段へ)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "B. 新フラグ --choice <internalNo> を併設(--resolution は二値専用のまま — フラグ責務分離、FLAG_FIELDS 追加)"
+    }
+  ]
+}

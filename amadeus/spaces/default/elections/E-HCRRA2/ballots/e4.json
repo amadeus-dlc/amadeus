@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRRA2",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A(--resolution choice:<n> の値文法拡張)を支持: (1) resolution の意味論は『裁定の内容』であり choice 指定はその一形態 — 単一フラグの責務凝集が正しく、B の2フラグ併設は組合せ検証(--resolution と --choice の同時指定・矛盾)という新しい不正状態空間を作る(parse-don't-validate の逆行) (2) prefix parse+internalNo 実在照合の二段は E-BFARA1 裁定(regex+Date 二段)と同型の受理検証様式で一貫 (3) handleHoldResolved のテーブル引き fail-closed(:201-207 — 実測済み)に prefix 分岐を足す最小変更。自案非採用時: B=6",
+  "submittedAt": "2026-07-20T03:46:28Z"
+}

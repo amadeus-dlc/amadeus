@@ -1,0 +1,21 @@
+{
+  "electionId": "E-HCRRA3",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "C. その他(note に方式明記)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "B. tie のみ choice 指定へ置換 — tie から adopted/rejected を除去(受理域縮小 = 契約変更につき、採用時は Q1 の判定に関わらずユーザーエスカレーションへ束ねる)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "A. 共存 — tie は {adopted, rejected, choice:<n>...} を受理(既存二値の後方互換維持。二値使用時の裁定行は現行どおり)"
+    }
+  ]
+}
