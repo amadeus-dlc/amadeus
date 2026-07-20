@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-LSSADS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "persist 文は (1) 出典に E-BFAAD と E-LSSAD の両裁定(逆結論の2実例を貫く規則であること)を明記 (2)『機械検証可能』の判定は ledger-count-mechanical-recalc / fix-diff-independent-reverify の既存定義を参照する形で書き独自定義を作らない (3) 追補統合先は reviewer 予算・委任レビュー系の既存ファミリ(delegated-review-analysis-with-owned-verdict 近傍)とし新規 cid は統合先不在の場合のみ",
+  "rationale": "分岐基準の起案当事者(E-BFAAD で (a) を主張し E-LSSAD で (b) を主張した両票の整合根拠として articulate し、E-LSSAD 留保で diary 明記を要求した本人)。採用を支持: (1) 逆結論の2裁定を1規則が貫く形は『2裁定のみで早期』への最強の反証 — 規則が両裁定の説明変数であることは既に実証済みで、3例目を待つ価値より次回同型 blocker の選挙コスト削減が大きい (2) diary 埋没では次の conductor が再発明・再選挙する — ambient 化が目的 (3) 予算制度(reviewer_max_iterations)の運用解釈として構造的に反復する場面。自案非採用時: 不採用=6(diary 記録があるため次回再提案可能)",
+  "submittedAt": "2026-07-20T04:28:55Z"
+}
