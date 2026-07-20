@@ -12,3 +12,4 @@
 
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
+- 2026-07-20T00:35:48Z [Interpretation] E-BRARA1〜3 全て A 採用(blind、各 3-0)。留保3件(canonical 1定義導出・null-fallback 死码トレース・移行窓 in-flight 明示+読み分岐1点限定)を [Answer]+FR-1/3/4+NFR-4 へ verbatim 転記。

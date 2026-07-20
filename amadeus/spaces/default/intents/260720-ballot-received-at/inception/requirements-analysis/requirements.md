@@ -24,10 +24,10 @@
 
 ## 3. 機能要件
 
-- **FR-1(受理時刻の記録と検査軸)**: 【裁定待ち — Q1】時刻軸の修正方式(受理時刻フィールド追加 / at 意味変更 / 検査撤廃)は選挙裁定で確定する。いずれの方式でも受け入れ基準: E-BFARA1 の受理順実データ([e1@22:10:03, e4@22:10:42, e3@22:10:29])で verify が **pass** すること(現行コードでは timeline-order fail — 回帰の固定点)。
+- **FR-1(受理時刻の記録と検査軸)**: 【E-BRARA1 裁定 = A(00:33:48Z 開票、3-0)】TimelineEvent に **receivedAt フィールドを追加**し、verifySelf の単調性検査を受理軸へ移行する。`at` は申告値のまま表示用に保存(FR-6 と整合)。【留保転記(e3, GoA2)】フィールド追加は **canonical 1定義(TimelineEvent — E-ETF-BT で canonical lift 済み)への追加1点から導出**し、描画側は単調性検査と遅延可視化に必要な面のみ更新する(不要な renderer への一律表示展開はしない — 波及最小化)。いずれの方式でも受け入れ基準: E-BFARA1 の受理順実データ([e1@22:10:03, e4@22:10:42, e3@22:10:29])で verify が **pass** すること(現行コードでは timeline-order fail — 回帰の固定点)。
 - **FR-2(受理時刻の採取点)**: 受理時刻は distributed(transport.ts:148)/tallied(election.ts:354)の既習機械時刻様式に揃えて mint する(採取点の関数配置は plan で確定 — 様式の新規発明禁止)。Date.now 直呼びは既存の normalizeAt funnel 経由の seconds-ISO に正規化。
-- **FR-3(classifyLate 軸)**: 【裁定待ち — Q2】late 判定の時刻軸は選挙裁定で確定する。
-- **FR-4(既存 record 互換)**: 【裁定待ち — Q3】既存 timeline の扱い(遡及なし / fallback シム / 再生成)は選挙裁定で確定する。互換分岐を導入する場合は NFR に根拠を明示(construction ガードレール)。
+- **FR-3(classifyLate 軸)**: 【E-BRARA2 裁定 = A(00:33:48Z 開票、3-0)】classifyLate も**受理軸へ移行**する(late = 受理が tally 後)。e2 の per-voter 最新解決(submittedAt 軸)は独立に維持。【留保転記(e4, GoA2)】store.ts:146-150 の null-fallback(classifyLate が null でも late 扱い)は移行後に死码化しうる — **design で机上トレースし、死码化する場合はコメント化でなく削除まで含めて裁定**する(消費されない分岐の残置は検証劇場 Forbidden の隣接クラス)。
+- **FR-4(既存 record 互換)**: 【E-BRARA3 裁定 = A(00:33:48Z 開票、3-0)】**遡及なし・シムなし** — 既存 record は完了済み監査記録として再検証対象外とし、根拠を NFR-4 に明文化。【留保転記(e4, GoA2)】**移行窓(修正着地前に open し着地後に verify へ到達する in-flight 選挙)の扱いを design で明示**し、transient-state-fixtures 準拠の fixture を置く。『新規選挙にのみ新軸適用』の判別(receivedAt フィールドの有無等)は事実上1点の読み分岐であり、**その1点に限り** NFR 根拠を明文化する(それ以上の fallback シムは書かない)。
 - **FR-5(テスト)**: (a) E-BFARA1 実データを verbatim 転写した回帰 fixture(中継遅延順の受理)で「修正前 fail / 修正後 pass」の両側を実証(落ちる実証は E-GMECG 追補準拠 — fix コミット後・SHA 明示復元) (b) 既存 t238 timeline-order(tallied-before-ballot 型)のグリーン維持 (c) 閉包: 起票の完走不能経路(verify exit 1)が実データで解消することを in-process 実測。
 - **FR-6(申告値の保存)**: submittedAt は申告値として ballot 上の保存を維持する(改変・破棄しない — 監査 trail)。
 
@@ -36,6 +36,7 @@
 - **NFR-1(決定性)**: verify の recompute 経路は同一 store に対し決定的。受理時刻 mint は受理操作の1回のみ(再実行で変わらない — store 永続値を正とする)。
 - **NFR-2(fail-closed 維持)**: timeline-order 検査は撤廃しない方向を既定とし(Q1=C は非推奨提示)、検査の意味(改竄・破損検出)を保つ。
 - **NFR-3(CI)**: typecheck / lint / tests --ci green。配布面なし(scripts/tests は dist 非対象)。
+- **NFR-4(遡及なしの根拠 — E-BRARA3=A)**: 既存選挙 record を verify し直す運用は存在しない(完了済み選挙は recorded 状態で終端し、E-BFARA1〜3 の手正規化はユーザー承認済みの是正として正)。よって読み側 fallback シムは書かず、新軸適用の判別は「receivedAt フィールドの有無」の1点の読み分岐に限定する(移行窓の in-flight 選挙の扱いは design で明示+transient fixture — FR-4 留保)。
 
 ## 5. 制約
 
@@ -52,6 +53,6 @@
 - e2 管轄(#1252/#1253: 受理検証・amend)。tie 語彙(#1267)。蒸留系(#1254/#1255/#1257)。
 - 過去 record の書き換え(Q3=C 裁定の場合を除く)。
 
-## 8. 未決事項(選挙裁定待ち)
+## 8. 未決事項
 
-Q1(時刻軸)/ Q2(classifyLate 軸)/ Q3(既存互換)。裁定受領後に [Answer]+FR-1/3/4 を確定文へ更新する。
+なし — Q1〜Q3 は E-BRARA1〜3(2026-07-20 開票 00:33:48Z、各 3-0 採用)で全て裁定済み。留保3件(Q1/Q2/Q3 各1件、全て GoA2)は questions の [Answer] と FR-1/FR-3/FR-4 へ verbatim 転記済み。
