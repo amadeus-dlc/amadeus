@@ -1,0 +1,25 @@
+{
+  "electionId": "E-FVEU5FD1",
+  "kind": "reviewer-exhaustion-question",
+  "question": "260720-formal-verif-experiment / U5 tla-invalid-timestamp-skeleton / functional-design。reviewer iteration1 NOT READY 3件を是正後、iteration2もNOT READY 3件（composition head実行時束縛、CI artifact proof schema、COMMIT failure矛盾）でreviewer_max_iterations=2に到達。iteration2後に承認済みscope内で、CompositionHead/resulting commit/treeをprecondition・各attempt・command/process receiptへbindし起動直前HEAD/tree/clean再検証、CI artifact exactly 2 rowsとexpected run1/2 bijection・DETECTED/counterexample/bundle/raw identities再hash、COMMITをdomain failure reasonから除外しtransport/head/lookup/corruptionを外部SkeletonCommitError化する最小是正済み。最新sensor全PASS・diff-check PASSだが第三review未実施。U3/U4 max-exhausted未READY依存を保持し、integration readinessを主張しない。次の扱いを裁定する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. max-exhausted履歴を保持して次Unitへ進み最終FD gateで裁定"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. exceptional独立検証を先に要求しU5で停止"
+    },
+    {
+      "internalNo": 3,
+      "label": "X. その他（noteに検証境界と再開条件を記載）"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e4"
+  ],
+  "state": "recorded"
+}
