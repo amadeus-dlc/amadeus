@@ -2734,3 +2734,785 @@
 **Timestamp**: 2026-07-20T05:09:42Z
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T05:10:05Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aee3048d939794618
+**Message**: (裁定通知を待機 — 提案なし)
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T05:17:08Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: af7e10b223374d704
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T05:17:32Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T05:17:32Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T05:17:32Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: application-design
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T05:17:32Z
+**Event**: GATE_APPROVED
+**Stage**: application-design
+**Grant Id**: 1d87113b
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T05:17:32Z
+**Event**: STAGE_COMPLETED
+**Stage**: application-design
+**Details**: Stage Application Design approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T05:17:32Z
+**Event**: STAGE_STARTED
+**Stage**: units-generation
+**Agent**: amadeus-architect-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:18:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 600a6e8e
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:18:16Z
+**Event**: SENSOR_FAILED
+**Fire id**: 600a6e8e
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/units-generation/required-sections-600a6e8e.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:18:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: dbc527b2
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-dependency.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:18:16Z
+**Event**: SENSOR_FAILED
+**Fire id**: dbc527b2
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-dependency.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/units-generation/required-sections-dbc527b2.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:18:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 459565b4
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-story-map.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:18:16Z
+**Event**: SENSOR_FAILED
+**Fire id**: 459565b4
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-story-map.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/units-generation/required-sections-459565b4.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:18:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: c93b42fd
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:18:16Z
+**Event**: SENSOR_FAILED
+**Fire id**: c93b42fd
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/units-generation/upstream-coverage-c93b42fd.md
+**Findings count**: 4
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:18:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 078fc247
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-dependency.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:18:16Z
+**Event**: SENSOR_FAILED
+**Fire id**: 078fc247
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-dependency.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/units-generation/upstream-coverage-078fc247.md
+**Findings count**: 4
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:18:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: dc5b66de
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-story-map.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:18:16Z
+**Event**: SENSOR_FAILED
+**Fire id**: dc5b66de
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-story-map.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/units-generation/upstream-coverage-dc5b66de.md
+**Findings count**: 4
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:18:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: 056400cc
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:18:46Z
+**Event**: SENSOR_FAILED
+**Fire id**: 056400cc
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/units-generation/required-sections-056400cc.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:18:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7ecdb5df
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-dependency.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:18:47Z
+**Event**: SENSOR_FAILED
+**Fire id**: 7ecdb5df
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-dependency.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/units-generation/required-sections-7ecdb5df.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:18:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: e37886d9
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-story-map.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:18:47Z
+**Event**: SENSOR_FAILED
+**Fire id**: e37886d9
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-story-map.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/units-generation/required-sections-e37886d9.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:18:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 283df444
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:18:47Z
+**Event**: SENSOR_FAILED
+**Fire id**: 283df444
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/units-generation/upstream-coverage-283df444.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:18:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6df3501d
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-dependency.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:18:47Z
+**Event**: SENSOR_FAILED
+**Fire id**: 6df3501d
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-dependency.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/units-generation/upstream-coverage-6df3501d.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:18:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 50b925e7
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-story-map.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:18:47Z
+**Event**: SENSOR_FAILED
+**Fire id**: 50b925e7
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-story-map.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/units-generation/upstream-coverage-50b925e7.md
+**Findings count**: 2
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-20T05:19:24Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-4/amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-dependency.md
+**Context**: inception > units-generation > unit-of-work-dependency.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:19:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: aac7b172
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-dependency.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:19:24Z
+**Event**: SENSOR_FAILED
+**Fire id**: aac7b172
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-dependency.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/units-generation/required-sections-aac7b172.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:19:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6393d4a3
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-dependency.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:19:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6393d4a3
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-dependency.md
+**Duration ms**: 37
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-20T05:19:37Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-4/amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work.md
+**Context**: inception > units-generation > unit-of-work.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:19:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: d503a8f6
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:19:37Z
+**Event**: SENSOR_FAILED
+**Fire id**: d503a8f6
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/units-generation/required-sections-d503a8f6.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:19:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 46b740f8
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:19:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: 46b740f8
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work.md
+**Duration ms**: 36
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-20T05:19:47Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-4/amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work.md
+**Context**: inception > units-generation > unit-of-work.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:19:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1ee8e098
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:19:47Z
+**Event**: SENSOR_FAILED
+**Fire id**: 1ee8e098
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/units-generation/required-sections-1ee8e098.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:19:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 753e1d50
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:19:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 753e1d50
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work.md
+**Duration ms**: 35
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-20T05:19:53Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-4/amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-story-map.md
+**Context**: inception > units-generation > unit-of-work-story-map.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:19:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: e29ac682
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-story-map.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:19:53Z
+**Event**: SENSOR_FAILED
+**Fire id**: e29ac682
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-story-map.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/units-generation/required-sections-e29ac682.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:19:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 62d6c2a1
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-story-map.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:19:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 62d6c2a1
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-story-map.md
+**Duration ms**: 36
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-20T05:20:00Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-4/amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-story-map.md
+**Context**: inception > units-generation > unit-of-work-story-map.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:20:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: db288605
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-story-map.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:20:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: db288605
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-story-map.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/units-generation/required-sections-db288605.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:20:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 959e2d5c
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-story-map.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:20:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 959e2d5c
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-story-map.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:20:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: b8732a86
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:20:17Z
+**Event**: SENSOR_FAILED
+**Fire id**: b8732a86
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/units-generation/required-sections-b8732a86.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:20:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: e92d1587
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-dependency.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:20:17Z
+**Event**: SENSOR_FAILED
+**Fire id**: e92d1587
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-dependency.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/units-generation/required-sections-e92d1587.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:20:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: 53a1802a
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-story-map.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:20:17Z
+**Event**: SENSOR_FAILED
+**Fire id**: 53a1802a
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-story-map.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/units-generation/required-sections-53a1802a.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:20:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: 45c0d22b
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/units-generation-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:20:17Z
+**Event**: SENSOR_FAILED
+**Fire id**: 45c0d22b
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/units-generation-questions.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/units-generation/required-sections-45c0d22b.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:20:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: a065af07
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:20:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: a065af07
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:20:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: 872b5c11
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-dependency.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:20:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: 872b5c11
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-dependency.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:20:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9636c720
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-story-map.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:20:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9636c720
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/unit-of-work-story-map.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:20:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: 48715bbf
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/units-generation-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:20:17Z
+**Event**: SENSOR_FAILED
+**Fire id**: 48715bbf
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/units-generation-questions.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/units-generation/upstream-coverage-48715bbf.md
+**Findings count**: 3
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:20:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: e94a54bd
+**Sensor ID**: answer-evidence
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/units-generation-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:20:18Z
+**Event**: SENSOR_PASSED
+**Fire id**: e94a54bd
+**Sensor ID**: answer-evidence
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/units-generation/units-generation-questions.md
+**Duration ms**: 35
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T05:20:40Z
+**Event**: WORKFLOW_PARKED
+**Stage**: units-generation
+**Timestamp**: 2026-07-20T05:20:40Z
+
+---
