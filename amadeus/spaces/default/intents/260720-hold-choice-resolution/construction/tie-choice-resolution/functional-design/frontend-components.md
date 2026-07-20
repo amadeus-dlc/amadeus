@@ -1,6 +1,6 @@
 # Frontend Components — U1 tie-choice-resolution
 
-上流入力(consumes 全数): requirements.md、component-methods.md、unit-of-work.md — UI レス CLI のため出力契約(ui-less-mockups-as-output-contract 準拠)を requirements.md FR-1/FR-3 の文言と component-methods.md のエラー様式から確定。
+上流入力(consumes 全数): requirements.md、components.md、component-methods.md、services.md、unit-of-work.md、unit-of-work-story-map.md — UI レス CLI のため出力契約(ui-less-mockups-as-output-contract 準拠)を requirements.md FR-1/FR-3 の文言・component-methods.md のエラー様式・services.md の利用者影響から確定。record 描画行は unit-of-work-story-map.md の閲覧ステップ、SKILL 3面の対象は components.md の docs 行に対応。検証工程は unit-of-work.md U1 の完成条件へ引き渡す。
 
 ## 出力契約(CLI = UI 相当面)
 

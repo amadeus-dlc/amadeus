@@ -1,6 +1,6 @@
 # Business Logic Model — U1 tie-choice-resolution
 
-上流入力(consumes 全数): requirements.md、component-methods.md、unit-of-work.md — フローは component-methods.md の相互排他分岐設計を requirements.md FR-1〜FR-3 の受け入れ条件へ写像し、検証境界は unit-of-work.md U1 の完成条件から導出。
+上流入力(consumes 全数): requirements.md、components.md、component-methods.md、services.md、unit-of-work.md、unit-of-work-story-map.md — フローは component-methods.md の相互排他分岐設計を requirements.md FR-1〜FR-3 へ写像、CLI 契約面は services.md の verb 変更表、変更ファイル境界は components.md の変更一覧、検証境界は unit-of-work.md U1 完成条件、誤裁定シナリオは unit-of-work-story-map.md のジャーニー2行目(loud 拒否)から導出。
 
 ## フロー: hold-resolved(tie)
 

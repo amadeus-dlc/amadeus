@@ -1,0 +1,1 @@
+- [2026-07-20T05:10Z] Deviation: 初回センサー FAILED 5件(upstream-coverage 4 = 宣言6件中 components/services/story-map 未参照+required-sections 1)— consumes-first-drafting 違反実例(PM 回付、DP に続き2ステージ連続 = 自分の反復弱点)。是正: 宣言全数を本文実依拠付きで冒頭行へ、H2 追加、全 PASSED。

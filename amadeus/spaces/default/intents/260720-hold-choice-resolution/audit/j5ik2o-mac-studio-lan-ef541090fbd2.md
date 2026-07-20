@@ -3696,3 +3696,171 @@
 **Findings count**: 2
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:07:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 06a5c1b0
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:07:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: 06a5c1b0
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/business-logic-model.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:07:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: b5013850
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:07:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: b5013850
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/business-rules.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:07:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: f18c7651
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:07:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: f18c7651
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/domain-entities.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:07:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7db23e13
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/frontend-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:07:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7db23e13
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/frontend-components.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:07:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9dc3a06e
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:07:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9dc3a06e
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/business-logic-model.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:07:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 56729e7e
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:07:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: 56729e7e
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/business-rules.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:07:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4d7c032b
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:07:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4d7c032b
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/domain-entities.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:07:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 96857979
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/frontend-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:07:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: 96857979
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/frontend-components.md
+**Duration ms**: 38
+
+---

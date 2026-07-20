@@ -1,6 +1,6 @@
 # Business Rules — U1 tie-choice-resolution
 
-上流入力(consumes 全数): requirements.md、component-methods.md、unit-of-work.md — BR は requirements.md の FR 受け入れ条件を実装可能な規則へ具体化し、書式は component-methods.md のスニペット、検証は unit-of-work.md U1 の完成条件と1:1。
+上流入力(consumes 全数): requirements.md、components.md、component-methods.md、services.md、unit-of-work.md、unit-of-work-story-map.md — BR は requirements.md の FR 受け入れ条件を規則化(書式 = component-methods.md スニペット、CLI 契約 = services.md、docs 3面 = components.md の docs 行、検証 = unit-of-work.md U1 完成条件と1:1)。BR-2 の誤入力シナリオは unit-of-work-story-map.md ジャーニーの loud 拒否行に対応。
 
 ## 規則
 
@@ -14,3 +14,7 @@
 | BR-6 | tie 裁定の resumedTo は "tallied" 固定(現行 tie 両値と同一復帰先) | FR-1/AD ADR-1 |
 | BR-7 | SKILL.md へ使い分け1行(単一提案型 = 二値 / 多肢 tie = choice:<n>)を3面同一内容で追加(cmp 一致を検証) | FR-4 |
 | BR-8 | t238(rulingText)・t241 は非接触。既存 t236 の block 経路テストは無変更 green | FR-5 |
+
+## 規則の検証対応
+
+全 BR は FR 由来列で requirements.md へ遡及可能。BR-1/BR-2/BR-5 の文言は frontend-components.md の出力契約と同一文字列(テスト assert の導出元を一元化 — canonical 1定義)。

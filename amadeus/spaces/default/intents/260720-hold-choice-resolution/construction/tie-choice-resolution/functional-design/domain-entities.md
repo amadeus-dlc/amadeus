@@ -1,6 +1,6 @@
 # Domain Entities — U1 tie-choice-resolution
 
-上流入力(consumes 全数): requirements.md、component-methods.md、unit-of-work.md — 型の変更有無は requirements.md FR-2(スキーマ不変)と component-methods.md の型設計に従い、配置は unit-of-work.md U1 の変更面に限定。
+上流入力(consumes 全数): requirements.md、components.md、component-methods.md、services.md、unit-of-work.md、unit-of-work-story-map.md — 型の変更有無は requirements.md FR-2(スキーマ不変)と component-methods.md の型設計に従い、配置は components.md の変更一覧と unit-of-work.md U1 の変更面に限定(services.md の契約変更は型変更を要しないこと、unit-of-work-story-map.md の永続化ステップが HoldResolution 無変更で成立することの反証確認込み)。
 
 ## 型(変更なし — 参照のみ)
 
