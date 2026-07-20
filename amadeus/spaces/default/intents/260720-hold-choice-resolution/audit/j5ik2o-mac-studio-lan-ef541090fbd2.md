@@ -739,3 +739,11 @@
 **Duration ms**: 36
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T02:58:02Z
+**Event**: WORKFLOW_PARKED
+**Stage**: feasibility
+**Timestamp**: 2026-07-20T02:58:02Z
+
+---
