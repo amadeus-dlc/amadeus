@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVEU5FD1",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "U5 を READY と再ラベルせず、最終 Functional Design ゲートで iteration 2 の3所見（composition head実行時束縛、CI artifact proof schema、COMMIT failure矛盾）、対応した正確な file:line、最新 sensor PASS、第三レビュー未実施を列挙すること。U3/U4 の max-exhausted・未再レビュー依存を保持し、最終人間裁定前に integration readiness、walking-skeleton completion、code-generation可を主張しないこと。",
+  "rationale": "A は stage-protocol §12a の reviewer_max_iterations 到達時の処理と、非最終 Unit の per-unit forwarding に一致する。最終成果物では CompositionHead/resulting commit/tree の起動直前再検証と receipt 束縛、CI artifact exactly two rows と run 1/2 bijection・identity再hash、COMMITをdomain failureから除外した SkeletonCommitError 化を実測し、最新sensorもPASSしている。一方で是正後の独立第三レビューはなく意味閉包は最終人間ゲートへ残るため GoA 2 とする。B は既定maxを越える例外的レビューを追加する。非採用時受容度: B=7、X=6。",
+  "submittedAt": "2026-07-20T13:48:33Z"
+}
