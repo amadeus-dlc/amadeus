@@ -370,3 +370,228 @@
 **Timestamp**: 2026-07-20T02:50:06Z
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T02:50:56Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a75b412c519805123
+**Message**: (waiting for e4's agreement and the §13 ruling — continue)
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T02:51:21Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a56930ea59fdfea56
+**Message**: (§13裁定通知を待って続行)
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T02:53:01Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T02:53:01Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T02:53:01Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: intent-capture
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T02:53:01Z
+**Event**: GATE_APPROVED
+**Stage**: intent-capture
+**Grant Id**: cabcb933
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T02:53:01Z
+**Event**: STAGE_COMPLETED
+**Stage**: intent-capture
+**Details**: Stage Intent Capture approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T02:53:01Z
+**Event**: STAGE_STARTED
+**Stage**: feasibility
+**Agent**: amadeus-architect-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T02:54:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 08ce5f06
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/feasibility/feasibility-assessment.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T02:54:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 08ce5f06
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/feasibility/feasibility-assessment.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T02:54:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: d377f08f
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/feasibility/constraint-register.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T02:54:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: d377f08f
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/feasibility/constraint-register.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T02:54:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9fe3bbea
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/feasibility/raid-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T02:54:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9fe3bbea
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/feasibility/raid-log.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T02:54:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 78ef2d7a
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/feasibility/feasibility-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T02:54:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 78ef2d7a
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/feasibility/feasibility-questions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T02:54:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 78cdf271
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/feasibility/feasibility-assessment.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T02:54:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 78cdf271
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/feasibility/feasibility-assessment.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T02:54:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: e6e18e1e
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/feasibility/constraint-register.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T02:54:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: e6e18e1e
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/feasibility/constraint-register.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T02:54:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: ab0eab4a
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/feasibility/raid-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T02:54:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: ab0eab4a
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/feasibility/raid-log.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T02:54:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6e4f9afd
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/feasibility/feasibility-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T02:54:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6e4f9afd
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/feasibility/feasibility-questions.md
+**Duration ms**: 36
+
+---
