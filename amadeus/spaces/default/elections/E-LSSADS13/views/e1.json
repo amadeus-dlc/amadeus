@@ -1,0 +1,16 @@
+{
+  "electionId": "E-LSSADS13",
+  "voter": "e1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "採用 — reviewer 予算運用系の新規 cid または既存 cid への追補として persist"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "不採用 — 2裁定のみで早期(diary 記録のみ・次回同型裁定で再提案)"
+    }
+  ]
+}
