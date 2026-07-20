@@ -2,6 +2,8 @@
 
 上流入力(consumes 全数): requirements.md、application-design 5成果物、units-generation 3成果物、delivery-planning 5成果物 — 各行の検証は下記の実測に基づく。
 
+## 検証結果
+
 | 検証項目 | 結果 | 根拠(実測) |
 | --- | --- | --- |
 | 要件→設計→unit の接続 | PASS | FR-1〜FR-5 → AD(components/component-methods、ADR-1〜3)→ U1 受け入れ条件の全数写像。orphan なし(UG reviewer が FR カバレッジ欠落なしを独立確認) |

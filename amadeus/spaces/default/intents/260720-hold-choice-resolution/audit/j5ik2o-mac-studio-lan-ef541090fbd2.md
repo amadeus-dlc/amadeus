@@ -3423,3 +3423,24 @@
 **Findings count**: 1
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:04:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: a595df58
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/verification/phase-check-inception.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:04:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: a595df58
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/verification/phase-check-inception.md
+**Duration ms**: 39
+
+---
