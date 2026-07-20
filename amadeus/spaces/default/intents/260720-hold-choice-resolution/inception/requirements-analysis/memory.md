@@ -17,3 +17,5 @@
 
 - [2026-07-20T04:03Z] Interpretation: E-HCRRA1〜3 裁定受領。Q3=B により Q1 の反転条件(e1 留保)が発動し、ユーザーエスカレーションで B 承認済み(03:47Z 台)— 契約変更は承認済み前提として要件化。留保転記は Q1 2件+Q3 3件 = 分母5・転記5(questions [Answer] と requirements 本文の両面)。
 - [2026-07-20T04:03Z] Interpretation: e4 留保(二値の曖昧受理を無音で通さない)は B 置換下では「tie への二値 loud 拒否+有効形ヒント」として FR-1 受け入れ基準化 — 警告 or 明示要求の設計裁定は置換により拒否一択へ自然解決。
+
+- [2026-07-20T04:10Z] Deviation: reviewer iteration 1 = NOT-READY(Major 3: Q1 留保の e1 分脱落 — leader 配信の「2件」表記に依拠し record 原文の GoA 2x3 を自分で照合しなかった reservation-transcription-count-check 違反 / t241 の W-1 誤帰属 = mechanism-cite-verify 違反 / NFR-3 の ref 欠落 = measurement-ref 違反)。是正: e1 留保を record 原文 verbatim で追記(diff 照合済み)・e4 留保も原文精密化・3名表記化・t238/t241 の根拠分離・NFR-3 の両 ref 併記+定性化。教訓 = 留保件数の分母は配信文でなく record の GoA 行から自分で数える。
