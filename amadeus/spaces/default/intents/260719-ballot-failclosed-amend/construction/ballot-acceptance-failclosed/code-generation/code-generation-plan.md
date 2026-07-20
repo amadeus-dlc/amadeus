@@ -1,6 +1,8 @@
 # Code Generation Plan — U1 ballot-acceptance-failclosed
 
-上流入力(consumes 全数): business-rules.md、business-logic-model.md、domain-entities.md、reliability-design.md、logical-components.md(ND 全5点)、unit-of-work.md
+上流入力(consumes 全数): requirements.md、business-logic-model.md、business-rules.md、domain-entities.md、performance-design.md、security-design.md、unit-of-work.md(補助参照: reliability-design.md、logical-components.md)
+
+実装は requirements.md の FR-1〜FR-5、business-logic-model.md の処理フロー、performance-design.md の Map 単一走査、security-design.md の二層 fail-closed、unit-of-work.md の U1 受け入れ条件に従う。
 
 ## 2段構えの実装計画(e1 #1261 = PR #1268 直列合意)
 

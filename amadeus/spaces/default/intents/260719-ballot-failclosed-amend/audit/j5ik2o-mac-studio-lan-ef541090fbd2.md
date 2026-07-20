@@ -7553,3 +7553,87 @@
 **Findings count**: 5
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T00:42:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 392a194b
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T00:42:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 392a194b
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/code-generation/code-generation-plan.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T00:42:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 66bc825b
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/code-generation/code-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T00:42:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 66bc825b
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/code-generation/code-summary.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T00:42:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9ee1e809
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T00:42:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9ee1e809
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/code-generation/code-generation-plan.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T00:42:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: de5f5b06
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/code-generation/code-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T00:42:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: de5f5b06
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260719-ballot-failclosed-amend/construction/ballot-acceptance-failclosed/code-generation/code-summary.md
+**Duration ms**: 38
+
+---

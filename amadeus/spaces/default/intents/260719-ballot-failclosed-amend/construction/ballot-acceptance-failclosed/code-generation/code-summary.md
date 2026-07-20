@@ -1,6 +1,8 @@
 # Code Summary — U1 ballot-acceptance-failclosed
 
-上流入力(consumes 全数): code-generation-plan.md、business-rules.md、domain-entities.md、reliability-design.md
+上流入力(consumes 全数): requirements.md、business-logic-model.md、business-rules.md、domain-entities.md、performance-design.md、security-design.md、unit-of-work.md(+code-generation-plan.md)
+
+実装は requirements.md FR-1〜FR-5 と unit-of-work.md の U1 受け入れ条件を充足し、business-logic-model.md のフロー・performance-design.md の O(n) 設計・security-design.md の二層 fail-closed を実装で実現した。
 
 ## 実装(bolt/ballot-acceptance-failclosed、HEAD 91fc00105e89edd5b33111700009864be7342824、push 済み)
 
