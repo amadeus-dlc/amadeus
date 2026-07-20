@@ -1,0 +1,16 @@
+{
+  "electionId": "E-LSSAD",
+  "voter": "e2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "(b) conductor 独立検証+ゲートで受理し進行(python assert 再計算が機械閉包を担保)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "(a) 閉包確認限定の第3イテレーション(残余2点のみ・推定5分 — E-BFAAD 前例の踏襲)"
+    }
+  ]
+}

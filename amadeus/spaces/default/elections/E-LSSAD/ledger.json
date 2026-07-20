@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-LSSAD",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "第3イテレーションのスコープは E-BFAAD 前例の e3 留保と同型に『残余2点(数値1行+集合1行)の閉包確認のみ・新規探索禁止・5分で閉じない発見は再エスカレーション』で厳格限定すること。",
+      "rationale": "(a) 採用。E-BFAAD(自 intent の同型判断)の当事者として前例踏襲を推す — 機械修正でも「是正 diff 自体の独立確認」を reviewer の目で1回通すことが fix-diff-independent-reverify の趣旨に最も忠実で、コストは実測5分級(E-BFAAD 第3回の実績)。(b) は conductor の python assert が既に機械閉包を担保しており合理的だが、iteration 予算消費後の受理判断を conductor 単独に置く前例を作るより、閉包限定レビューの軽量前例を維持する方が体系的に安全。受容度: (b)=6。",
+      "submittedAt": "2026-07-20T04:24:38Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-LSSAD",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "(1) python assert の再計算スクリプトと出力を record(diary or 成果物注記)へ固定し、ゲート報告の数値は assert 出力からの転記のみとすること(numbers-from-command-output-only) (2) E-BFAAD 前例との判断分岐を diary に1行明記すること — 『列挙 omission クラス(自己検証が構造的に不能)= 第3イテレーション/機械数値・集合クラス(決定的 assert で閉包可能)= conductor 検証受理』の分岐基準を前例として残す",
+      "rationale": "E-BFAAD の (a) 票の起案者として、本件は同型でなく異クラスと判定する: E-BFAAD の残余は列挙 omission(検索語依存で起草者再確認が原理的に効かない — 第3イテレーション必須の根拠)だったのに対し、本件の残余2点は数値合計と層別集合の機械検証可能クラスで、ledger-count-mechanical-recalc が定めるとおり機械再計算こそが正当な検証手段 — conductor の python assert 実施+fix-diff-independent-reverify の diary 記録で閉包は決定的に担保される。reviewer 自身の『1〜2行の機械的修正』評価とも整合。(b) を支持。自案非採用時: (a)=6(5分の追加コストは小さく安全側)",
+      "submittedAt": "2026-07-20T04:24:46Z"
+    }
+  ],
+  "late": []
+}

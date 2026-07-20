@@ -1,0 +1,20 @@
+{
+  "electionId": "E-LSSAD",
+  "kind": "blocker",
+  "question": "260720-leader-store-sync(#1281)/ application-design のレビュー進行判断(E-BFAAD 前例と同型)。経緯: iteration 1 NOT-READY(Critical 1+Major 2+Minor 2)→5点是正、iteration 2 で是正1/2/5 閉包確認+是正 diff 由来の機械的残余2点(合計450 未再計算・層別集合不一致)→ conductor が機械修正+python assert 再計算で閉包(fix-diff-independent-reverify 実施・diary 記録)。iteration 予算2は消費済み。残余は数値1行+集合1行の機械修正で、reviewer も「1〜2行の機械的修正」と評価。どちらで進めるか。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "(a) 閉包確認限定の第3イテレーション(残余2点のみ・推定5分 — E-BFAAD 前例の踏襲)"
+    },
+    {
+      "internalNo": 2,
+      "label": "(b) conductor 独立検証+ゲートで受理し進行(python assert 再計算が機械閉包を担保)"
+    }
+  ],
+  "voters": [
+    "e2",
+    "e4"
+  ],
+  "state": "collecting"
+}
