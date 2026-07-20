@@ -333,7 +333,12 @@ export function handleVote(root: string, electionId: string, filePath: string): 
   // CLI mints or accepts is normalized to seconds-precision ISO-8601 UTC, so
   // classifyLate's lexicographic compare never mixes precisions.
   const ballot = { ...parsed.value, submittedAt: normalizeAt(parsed.value.submittedAt) };
-  const appended = Store.appendBallot(root, electionId, ballot);
+  // Mint the receipt time now (Issue #1262): this is when the conductor actually
+  // accepted the ballot, independent of the voter's self-reported submittedAt.
+  // The store stamps it on the timeline so verify checks monotonicity on the
+  // receipt axis (mint→pass, same shape as tally's talliedAt).
+  const receivedAt = normalizeAt(new Date().toISOString());
+  const appended = Store.appendBallot(root, electionId, ballot, receivedAt);
   if (!appended.ok) return storeFail("appendBallot", appended.error);
   out({ accepted: parsed.value.voter });
   return 0;
