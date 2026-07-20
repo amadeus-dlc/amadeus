@@ -945,3 +945,207 @@
 **Timestamp**: 2026-07-20T03:18:56Z
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T03:19:17Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ac4a23abb5fa8f36a
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T03:20:54Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T03:20:54Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T03:20:55Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: scope-definition
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T03:20:55Z
+**Event**: GATE_APPROVED
+**Stage**: scope-definition
+**Grant Id**: cabcb933
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T03:20:55Z
+**Event**: STAGE_COMPLETED
+**Stage**: scope-definition
+**Details**: Stage Scope Definition approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T03:20:55Z
+**Event**: STAGE_STARTED
+**Stage**: approval-handoff
+**Agent**: amadeus-delivery-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:21:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: b7a34f47
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/approval-handoff/initiative-brief.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:21:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: b7a34f47
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/approval-handoff/initiative-brief.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:21:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4aa780f5
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/approval-handoff/decision-log.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T03:21:48Z
+**Event**: SENSOR_FAILED
+**Fire id**: 4aa780f5
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/approval-handoff/decision-log.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/approval-handoff/required-sections-4aa780f5.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:21:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: d4130cdb
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/approval-handoff/initiative-brief.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:21:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: d4130cdb
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/approval-handoff/initiative-brief.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:21:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: aae6a5b0
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/approval-handoff/decision-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:21:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: aae6a5b0
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/approval-handoff/decision-log.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:22:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0d8c3bfb
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/approval-handoff/approval-handoff-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T03:22:07Z
+**Event**: SENSOR_FAILED
+**Fire id**: 0d8c3bfb
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/approval-handoff/approval-handoff-questions.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/approval-handoff/required-sections-0d8c3bfb.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:22:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: a359c5eb
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/approval-handoff/approval-handoff-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:22:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: a359c5eb
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/approval-handoff/approval-handoff-questions.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:22:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: f5b84dff
+**Sensor ID**: answer-evidence
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/approval-handoff/approval-handoff-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:22:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: f5b84dff
+**Sensor ID**: answer-evidence
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/approval-handoff/approval-handoff-questions.md
+**Duration ms**: 37
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T03:22:14Z
+**Event**: WORKFLOW_PARKED
+**Stage**: approval-handoff
+**Timestamp**: 2026-07-20T03:22:14Z
+
+---

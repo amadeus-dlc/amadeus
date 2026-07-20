@@ -6,7 +6,7 @@
 - **Scope**: amadeus
 - **Start Date**: 2026-07-20T02:50:58Z
 - **State Version**: 7
-- **Active Agent**: amadeus-product-agent
+- **Active Agent**: amadeus-delivery-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**:
@@ -25,14 +25,14 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 18
-- **Completed**: 5
-- **In Progress**: scope-definition
+- **Completed**: 6
+- **In Progress**: approval-handoff
 
 ## Runtime State
 - **Revision Count**: 0
 
-- **Parked**: 2026-07-20T03:18:56Z
-- **Parked At Stage**: scope-definition
+- **Parked**: 2026-07-20T03:22:14Z
+- **Parked At Stage**: approval-handoff
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -54,10 +54,10 @@
 - [x] intent-capture — EXECUTE
 - [ ] market-research — SKIP
 - [x] feasibility — EXECUTE
-- [-] scope-definition — EXECUTE
+- [x] scope-definition — EXECUTE
 - [ ] team-formation — SKIP
 - [ ] rough-mockups — SKIP
-- [ ] approval-handoff — EXECUTE
+- [-] approval-handoff — EXECUTE
 
 ### INCEPTION PHASE
 - [ ] reverse-engineering — EXECUTE
@@ -90,12 +90,12 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: IDEATION
-- **Current Stage**: scope-definition
-- **Next Stage**: approval-handoff
+- **Current Stage**: approval-handoff
+- **Next Stage**: reverse-engineering
 - **Status**: Running
-- **Last Updated**: 2026-07-20T03:18:56Z
+- **Last Updated**: 2026-07-20T03:22:14Z
 
 ## Session Resume Point
-- **Last Completed Stage**: feasibility
-- **Next Action**: Execute Scope Definition
+- **Last Completed Stage**: scope-definition
+- **Next Action**: Execute Approval Handoff
 - **Pending Artifacts**: none
