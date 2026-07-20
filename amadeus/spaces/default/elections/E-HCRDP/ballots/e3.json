@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRDP",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record リードオンリー実測(是正後状態): DP 成果物5点+memory(ls=6)・phase-check-inception.md 実在、phase-check への最新センサー verdict PASSED(是正→再発火の時系列末尾を実測)。違反実例2件(consumes-first-drafting / report-final-values-only の先取り報告)はいずれも既存 cid の PM 回付が正規 — 後者は私も本日 DP で同型(phase-check 未作成のまま報告)を自己捕捉しており、トレンド実データとして整合。0件で可(1)。",
+  "submittedAt": "2026-07-20T05:05:18Z"
+}

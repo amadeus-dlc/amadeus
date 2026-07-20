@@ -1,0 +1,53 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可 — 違反実例は PM 回付が適切、新規学習なし"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可 — 違反実例は PM 回付が適切、新規学習なし",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "0件は不可 — 新規学習候補が実在する(票の note に候補と根拠 file:line を明記)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T05:05:39Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-HCRDP",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e2 record リードオンリー実測: verification/phase-check-inception.md 実在(ls)+bolt_dag 非 null 実測の記載を grep 確認(recompile-before-construction-bolt-dag の適用実例)。違反実例(DP 初回 upstream-coverage FAILED 4件)は consumes-first-drafting の PM 回付が適切 — 本日チーム同型の反復で PM トレンド材料。0件で可。internalNo は view から機械 mint。",
+      "submittedAt": "2026-07-20T05:04:40Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HCRDP",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e2 record リードオンリー実測(是正後状態): DP 成果物5点+memory(ls=6)・phase-check-inception.md 実在、phase-check への最新センサー verdict PASSED(是正→再発火の時系列末尾を実測)。違反実例2件(consumes-first-drafting / report-final-values-only の先取り報告)はいずれも既存 cid の PM 回付が正規 — 後者は私も本日 DP で同型(phase-check 未作成のまま報告)を自己捕捉しており、トレンド実データとして整合。0件で可(1)。",
+      "submittedAt": "2026-07-20T05:05:18Z"
+    }
+  ],
+  "resolutions": []
+}
