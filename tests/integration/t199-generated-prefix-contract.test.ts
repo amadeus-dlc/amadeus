@@ -43,6 +43,25 @@ const foreignPrefixContentAllowlist = new Set([
   ".agents/skills/amadeus-upstream-sync/references/artifact-contracts.md",
   "tests/fixtures/upstream-v2-migration/operational-tokens.txt",
 ]);
+
+function allowsForeignPrefixContent(file: string): boolean {
+  return (
+    foreignPrefixContentAllowlist.has(file) ||
+    /^amadeus\/spaces\/[^/]+\/(?:codekb|intents\/[^/]+)\//.test(file) ||
+    file.startsWith("docs/research/upstream-sync/")
+  );
+}
+
+function foreignPrefixViolations(file: string, body: Buffer): string[] {
+  const offenders: string[] = [];
+  for (const forbidden of forbiddenPrefixes) {
+    if (file.includes(forbidden)) offenders.push(`${file}: path contains ${forbidden}`);
+    if (body.includes(Buffer.from(forbidden)) && !allowsForeignPrefixContent(file)) {
+      offenders.push(`${file}: content contains ${forbidden}`);
+    }
+  }
+  return offenders;
+}
 const previousCommandName = ["ai", "dlc"].join("");
 const previousEnvPrefix = ["AI", "DLC", "_"].join("");
 const forbiddenToolSurfaces = [
@@ -113,6 +132,55 @@ function trackedAuthoredFiles(): string[] {
 }
 
 describe("authored source naming prefix contract", () => {
+  test("versioned workflow records may quote foreign framework prefixes as evidence", () => {
+    expect(
+      allowsForeignPrefixContent(
+        "amadeus/spaces/default/intents/260720-upstream-sync-230/inception/requirements-analysis/requirements.md",
+      ),
+    ).toBe(true);
+  });
+
+  test("versioned code knowledge records may quote foreign framework prefixes as evidence", () => {
+    expect(
+      allowsForeignPrefixContent(
+        "amadeus/spaces/default/codekb/amadeus/business-overview.md",
+      ),
+    ).toBe(true);
+  });
+
+  test("upstream research records may quote foreign framework prefixes as evidence", () => {
+    expect(
+      allowsForeignPrefixContent(
+        "docs/research/upstream-sync/reports/v2.2.0-to-v2.3.0-plan.md",
+      ),
+    ).toBe(true);
+  });
+
+  test("ordinary authored source content does not gain the evidence exemption", () => {
+    const foreignPrefix = forbiddenPrefixes[0];
+    expect(
+      foreignPrefixViolations(
+        "packages/framework/core/tools/example.ts",
+        Buffer.from(`const legacyName = "${foreignPrefix}example";`),
+      ),
+    ).toEqual([
+      `packages/framework/core/tools/example.ts: content contains ${foreignPrefix}`,
+    ]);
+  });
+
+  test("foreign prefixes remain forbidden in evidence record paths", () => {
+    const foreignPrefix = forbiddenPrefixes[0];
+    const evidencePath = `docs/research/upstream-sync/${foreignPrefix}report.md`;
+    expect(
+      foreignPrefixViolations(
+        evidencePath,
+        Buffer.from(`Evidence quotes ${foreignPrefix}report.md`),
+      ),
+    ).toEqual([
+      `${evidencePath}: path contains ${foreignPrefix}`,
+    ]);
+  });
+
   test("tracked authored files include the prefixed framework surfaces", () => {
     const tracked = trackedAuthoredFiles();
     expect(tracked).toContain(`packages/framework/core/${commonDirName}/conductor.md`);
@@ -130,12 +198,7 @@ describe("authored source naming prefix contract", () => {
     const offenders: string[] = [];
     for (const file of trackedAuthoredFiles()) {
       const body = readFileSync(join(REPO_ROOT, file));
-      for (const forbidden of forbiddenPrefixes) {
-        if (file.includes(forbidden)) offenders.push(`${file}: path contains ${forbidden}`);
-        if (body.includes(Buffer.from(forbidden)) && !foreignPrefixContentAllowlist.has(file)) {
-          offenders.push(`${file}: content contains ${forbidden}`);
-        }
-      }
+      offenders.push(...foreignPrefixViolations(file, body));
     }
     expect(offenders).toEqual([]);
   });
