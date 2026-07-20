@@ -12,3 +12,4 @@
 
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
+- 2026-07-20T03:19:54Z [Interpretation] E-DAGRA1〜3 全て A(Q1/Q3 全員 GoA1、Q2 留保1件 = 到達可能性トレース→到達不能なら書かない)。留保を FR-2 へ verbatim 転記。Q3 起票義務は #1287 で履行(pd 解決順の ADR 級 Issue)。
