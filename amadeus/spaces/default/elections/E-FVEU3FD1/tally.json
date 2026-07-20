@@ -1,0 +1,69 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A. max-exhausted履歴を保持して次Unitへ進み最終FD gateで裁定"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A. max-exhausted履歴を保持して次Unitへ進み最終FD gateで裁定",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "B. exceptional独立検証を先に要求しU3で停止",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "X. その他（noteに検証境界と再開条件を記載）",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T13:23:47Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-FVEU3FD1",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Aを支持する。stage-protocol.md §12a:887-889 は reviewer_max_iterations 到達時に未解決所見を明示して approval gate へ進むと規定し、per-unit stage では最終Unitまで個別gateが抑止される。U3 iteration 2後の成果物を実読すると、writer raceはstore単一writer lock内のhead再確認+共通successor transaction directoryのexclusive atomic rename、envelope mutationはfinal envelope hashと両ledger coordinates/hash-chain再検証、finding unionはIDENTITY_CORRUPTION/CHAIN_DRIFT/STORE_FAILURE等のdiscriminator+causeへ是正済みで、最新sensorも全PASS。第三レビューを例外追加せず、NOT-READY履歴と未レビュー是正を温存して次Unitへ進み、最終FD gateで明示的に裁定するのが既定プロトコルと検証境界に整合する。",
+      "submittedAt": "2026-07-20T13:22:36Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FVEU3FD1",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "U3をREADYへ読み替えないこと。最終Functional Design gateではiteration 2の3 finding（writer race、envelope改変検出、finding union不足）、各最小是正へのfile:line写像、最新sensor PASS、第三review未実施を未解決findingとして明示し、人間がその状態を裁定できる形で提示すること。後続Unitの設計がU3契約へ依存する場合も、この未再review状態をconsumes側へ明記する。",
+      "rationale": "Aを支持。stage-protocol §12aはreviewer_max_iterations=2の消尽後、未解決findingを明記してapproval gateへ進むと明示しており、Functional Designはfor_each unit-of-workのため各Unit reviewer budgetが独立し、gate=falseのUnitは次Unitへ進み、全Unit完成後の単一gateで裁定する。Bの第三review必須化はこの上限とper-unit forwarding契約を例外的に上書きする。実測上、iteration 2後の最終成果物には単一writer lock中のrunner/store head再確認と共通successor atomic rename、ledger coordinatesとfinal envelope hash、IncompleteMatrix findingsのclosed discriminator/causeがbusiness-logic/domain/business-rulesへ反映され、13:20:20Z以降のrequired-sections/upstream-coverage全対象とanswer-evidenceがPASSしている。ただしsemantic closureは第三review未実施なので、Aで履歴を保持し最終FD gateの明示的判断へ委ねるのがprotocol準拠。非採用時受容度: B=7、X=6。",
+      "submittedAt": "2026-07-20T13:22:37Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FVEU3FD1",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "最終Functional Design gateではU3をREADY扱いせず、iteration 2の未解決3 finding、上限到達後に行った3点の是正、第三review未実施を明示してstage全体として裁定すること。以後sensor失敗または承認scope逸脱が判明した場合は次Unit進行の根拠にせず停止する。",
+      "rationale": "Aを支持。stage-protocol §12aはreviewer_max_iterations到達時にunresolved findingsを明記してapproval gateへ進むと明定し、per-unit gate:falseでは最終Unit後のstage gateまで進行する。実測上、iteration 1はNOT READY 4件、iteration 2もNOT READY 3件で上限2回へ到達している。その後、single-writer lock中のhead再確認と共通successor atomic rename、ledger coordinatesとfinal envelope hash、Incomplete findingsのclosed discriminator/causeが成果物へ最小反映され、対象sensorは最新PASS、git diff --checkもPASSだった。ただし第三reviewはなくREADYへの転換証拠はないため、履歴を保存したまま次Unitへ進み、最終FD gateで人間が未解決リスク込みで裁定するAが規約どおりである。Bは既定の上限到達分岐を越える例外レビューを新設するため、別の既存規範または新たな決定的blockerがない現状では選ばない。",
+      "submittedAt": "2026-07-20T13:23:06Z"
+    }
+  ],
+  "resolutions": []
+}

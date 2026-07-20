@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVEU4FD1",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "最終Functional Design gateではU4をREADY扱いせず、iteration 2の未解決3 finding、上限到達後の3点是正、第三review未実施、およびU3の未READY依存を明示してstage全体として裁定すること。以後sensor失敗または承認scope逸脱が判明した場合は停止する。",
+  "rationale": "Aを支持。stage-protocol §12aはreviewer_max_iterations到達時にunresolved findingsを明記してapproval gateへ進むと規定し、per-unit gateは最終Unit後まで抑止される。独立実測ではiteration 1がNOT READY 4件、iteration 2もNOT READY 3件で上限2回へ到達。その後、stateのhold markersとTallyReceipt closed union、resolved集合上のGoA cardinality式とRecordHold条件、UNKNOWN_CHOICE→INVALID_TIMESTAMP→UNKNOWN_REFのprecedence、frozen invariant source map、CompleteExploration queue=0が成果物へ反映され、対象sensorは最新全PASS、git diff --checkもPASSだった。またU3依存はDESIGNED_PENDING_U3_HUMAN_GATEとして非READYを保持する。ただし第三reviewはなくREADYへの転換証拠はないため、履歴を保存して次Unitへ進み、最終FD gateで人間がU3/U4の未解決リスク込みで裁定するAが規約どおりである。Bは既定上限を越える例外レビューを新設するため、別の既存規範または新たな決定的blockerがない現状では選ばない。",
+  "submittedAt": "2026-07-20T13:39:39Z"
+}
