@@ -292,3 +292,73 @@
 **Timestamp**: 2026-07-20T02:49:44Z
 
 ---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T02:50:03Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T02:50:03Z
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T02:50:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: d00404c8
+**Sensor ID**: required-sections
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/intent-capture/intent-capture-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T02:50:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: d00404c8
+**Sensor ID**: required-sections
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/intent-capture/intent-capture-questions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T02:50:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 11c0b40d
+**Sensor ID**: upstream-coverage
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/intent-capture/intent-capture-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T02:50:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: 11c0b40d
+**Sensor ID**: upstream-coverage
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/intent-capture/intent-capture-questions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T02:50:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: cc5a4c49
+**Sensor ID**: answer-evidence
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/intent-capture/intent-capture-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T02:50:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: cc5a4c49
+**Sensor ID**: answer-evidence
+**Stage slug**: intent-capture
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/intent-capture/intent-capture-questions.md
+**Duration ms**: 36
+
+---
