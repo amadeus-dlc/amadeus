@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRIC",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record リードオンリー実測: intent-capture 成果物3点+questions 実在(E-OC1/承認 grep 6 hit)。diary 2点は intent-capture:c1(事前整理済み intent の質問絞り込み)と契約変更該当性の RA 送り — いずれも既存 cid の適用実例で、私の3 intent の同ステージ運用とも同型。0件で可(1)。",
+  "submittedAt": "2026-07-20T02:52:38Z"
+}

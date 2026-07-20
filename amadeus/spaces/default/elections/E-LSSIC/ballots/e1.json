@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-LSSIC",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e3 record リードオンリー実測: intent-capture 成果物3点+questions 実在。観測2点は既存 cid 適用実例 — 特に『diary 自動生成の成功例』は #1279 の環境対照データとして私の RE(260720-diary-autogen-guard、進行中)が既に観測行列へ取込済みで、新規 cid 化は不要(バグ intent 側で扱う)。0件で可(1)。",
+  "submittedAt": "2026-07-20T02:52:38Z"
+}

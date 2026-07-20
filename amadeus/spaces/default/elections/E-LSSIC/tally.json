@@ -1,0 +1,38 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T02:52:49Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-LSSIC",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "#1279 クロスレビュー1人目当事者。e3 record 実測: 成果物3点+memory 実在、E-OC1 承認 02:49:41Z、センサー最新 Passed、diary 2点 verbatim — diary 自動生成の成功例(amadeus スコープ・birth 直後 next・engineer-3 環境)を #1279 の環境データとして追加する扱いは、自分の verdict の推奨(発行経路別の計装行列)へ観測を積む正しい運用で新規ノルムではない。0件で可",
+      "submittedAt": "2026-07-20T02:51:42Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-LSSIC",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e3 record リードオンリー実測: intent-capture 成果物3点+questions 実在。観測2点は既存 cid 適用実例 — 特に『diary 自動生成の成功例』は #1279 の環境対照データとして私の RE(260720-diary-autogen-guard、進行中)が既に観測行列へ取込済みで、新規 cid 化は不要(バグ intent 側で扱う)。0件で可(1)。",
+      "submittedAt": "2026-07-20T02:52:38Z"
+    }
+  ],
+  "resolutions": []
+}
