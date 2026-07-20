@@ -104,9 +104,19 @@ const RESERVATION_GOA = new Set<number>([2, 3, 6]);
 // renderPersistDraft and counted by verifyReservations (one contract, two ends).
 const RESERVATION_LINE_RE = /^- 留保\(/;
 
+// The ruling line for an automatically-tallied result: an established result
+// names the winning choice and its vote count, followed by the per-choice
+// breakdown line (Issue #1261 — the ruling must reflect choiceInternalNo, not a
+// choice-blind adopted/rejected). A hold names its typed reason. A human ruling
+// over a hold is rendered separately (see renderPersistDraft's rulingOverride).
 function rulingText(result: TallyResult): string {
   if (result.kind === "established") {
-    return `裁定: ${result.outcome === "adopted" ? "採用" : "不採用"}`;
+    const winnerCount =
+      result.choiceCounts.find((c) => c.internalNo === result.winner.internalNo)?.count ?? 0;
+    const breakdown = result.choiceCounts
+      .map((c) => `choice${c.internalNo}=${c.count}票`)
+      .join(" ");
+    return `裁定: ${result.winner.label}(choice ${result.winner.internalNo}: ${winnerCount}票)\n内訳: ${breakdown}`;
   }
   return `裁定: 保留(${result.reason})`;
 }
@@ -124,16 +134,21 @@ function reservationLines(ballots: Ballot[]): string[] {
 // Persist-draft skeleton: ruling + full reservation transcription (BR-R6, one
 // line per GoA 2/3/6 ballot — citation-reservation-preservation) + timeline
 // line + GoA line. Total over validated inputs; deterministic (BR-R5).
+// `rulingOverride`, when supplied, replaces the derived ruling line verbatim.
+// It carries a human hold-resolution ruling (裁定: 採用 / 裁定: 不採用), which is
+// choice-blind and therefore not expressible as a tally winner — the caller
+// computes it from the resolution and passes it in (Issue #1261 ruling A).
 export function renderPersistDraft(
   code: GoaLineCode,
   _election: Election,
   result: TallyResult,
   ballots: Ballot[],
   timeline: TimelineEvent[],
+  rulingOverride?: string,
 ): string {
   const freq = GoaFreq.fromVotes(ballots.map((b) => b.goa));
   return [
-    rulingText(result),
+    rulingOverride ?? rulingText(result),
     ...reservationLines(ballots),
     `票タイムライン: ${renderTimeline(timeline)}`,
     renderGoaLine(code, freq),

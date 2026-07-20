@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TCRCGS13",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "採用(1)。独立実測: e1 diary Deviation 23:36:53Z の記録実在(候補文と verbatim 一致)、e1 worktree の現在ブランチ = team ブランチ・status clean(復旧主張の裏取り)、PR #1268 OPEN。既存 cid との重複なし — c2 はディスパッチ時のプロンプト規律・c5/disk-evidence は無応答対処で、『resume が隔離を喪失する』ハーネス挙動とその予防(新規 Agent か cwd/branch 実測検証)はどれの射程にもない新規知識。潜在被害(本線誤入・工程記録消失)は c2 が防ごうとする実害クラスそのもので、c2 系への追補統合が体系上自然。documentation 起票(#1269)だけでは指令ループ外の知識になりディスパッチ実務に焼き込まれない(bolt-pr-taskization の教訓と同型)ため cid 化に価値。",
+  "submittedAt": "2026-07-19T23:41:17Z"
+}
