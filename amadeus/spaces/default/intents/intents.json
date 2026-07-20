@@ -400,5 +400,12 @@
     "dirName": "260719-tally-choice-ruling",
     "scope": "bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019f7ae6-9d2a-719f-a990-daa24ed37df3",
+    "slug": "ballot-failclosed-amend",
+    "dirName": "260719-ballot-failclosed-amend",
+    "scope": "amadeus",
+    "status": "complete"
   }
 ]
