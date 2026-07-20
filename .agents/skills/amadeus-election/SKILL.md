@@ -44,6 +44,7 @@ bun scripts/amadeus-election.ts next --election <id>
 `hold` 指令・エラー・およびあらゆる判断点は人間の裁定事項である。このスキルは解決を試みない:
 
 - `hold` 指令の `reason` と、CLI が出力した選択肢をそのまま人間へ提示する。
+- 単一提案型の hold は二値裁定、多肢 tie の hold は `choice:<internalNo>` を人間の裁定として使う。
 - 人間が解決を告げたら `report --election <id> --result hold-resolved --resolution <人間の裁定>` を実行し、転送節のループへ戻る。
 - 催促するかどうか・いつ開票するか等の裁量も人間へ委ねる(このスキルは待つだけである)。
 

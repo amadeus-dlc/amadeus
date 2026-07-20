@@ -67,11 +67,16 @@ type ReportResult = "distributed" | "tallied" | "rendered" | "verified" | "hold-
 // Per-reason resume table (FD hold-resolved rows): which resolutions a hold
 // reason accepts and where the state machine resumes.
 const HOLD_RESOLUTIONS: Record<HoldReason, Record<string, ElectionState>> = {
-  tie: { adopted: "tallied", rejected: "tallied" },
+  tie: {},
   block: { adopted: "tallied", rejected: "tallied", reopen: "collecting" },
   "quorum-short": { "resume-collecting": "collecting", "close-rejected": "tallied" },
   "discussion-needed": { discussed: "collecting" },
 };
+
+export function parseChoiceResolution(resolution: string): number | null {
+  const match = /^choice:([1-9][0-9]*)$/.exec(resolution);
+  return match === null ? null : Number(match[1]);
+}
 
 function out(value: unknown): void {
   console.log(JSON.stringify(value));
@@ -198,11 +203,22 @@ function handleHoldResolved(root: string, electionId: string, resolution: string
   if (t === null || t.result.kind !== "hold") {
     return fail("invalid-transition: hold state without a hold tally result");
   }
-  const table = HOLD_RESOLUTIONS[t.result.reason];
-  const resumedTo = table[resolution];
+  let resumedTo: ElectionState | undefined;
+  let validResolutions: string;
+  if (t.result.reason === "tie") {
+    const choiceInternalNo = parseChoiceResolution(resolution);
+    validResolutions = loaded.value.election.choices.map((choice) => `choice:${choice.internalNo}`).join("/");
+    if (choiceInternalNo !== null && loaded.value.election.choices.some((choice) => choice.internalNo === choiceInternalNo)) {
+      resumedTo = "tallied";
+    }
+  } else {
+    const table = HOLD_RESOLUTIONS[t.result.reason];
+    resumedTo = table[resolution];
+    validResolutions = Object.keys(table).join("/");
+  }
   if (resumedTo === undefined) {
     return fail(
-      `invalid-transition: resolution "${resolution}" is not valid for hold reason "${t.result.reason}" (valid: ${Object.keys(table).join("/")})`,
+      `invalid-transition: resolution "${resolution}" is not valid for hold reason "${t.result.reason}" (valid: ${validResolutions})`,
     );
   }
   // M1 (FR-4b): the human ruling is DURABLE — appended to tally.json before
@@ -382,15 +398,17 @@ export function handleRender(root: string, electionId: string): number {
   // A final human ruling over a hold takes precedence in the rendered ruling
   // line (the stored tally result itself stays untouched — verify's recompute
   // comparison remains valid); every ruling is also transcribed as a trail.
-  // The human ruling is choice-blind (採用/不採用), so it cannot be a tally
-  // winner — it is rendered via renderPersistDraft's rulingOverride, not by
-  // synthesizing an established result (Issue #1261 ruling A).
   const resolutions = t.resolutions ?? [];
   const finalRuling = resolutions.filter((r) => r.resumedTo === "tallied").at(-1);
-  const rulingOverride =
-    t.result.kind === "hold" && finalRuling !== undefined
-      ? `裁定: ${finalRuling.resolution === "adopted" ? "採用" : "不採用"}`
-      : undefined;
+  let rulingOverride: string | undefined;
+  if (t.result.kind === "hold" && finalRuling !== undefined) {
+    const choiceInternalNo = parseChoiceResolution(finalRuling.resolution);
+    const choice = loaded.value.election.choices.find((candidate) => candidate.internalNo === choiceInternalNo);
+    rulingOverride =
+      choice === undefined
+        ? `裁定: ${finalRuling.resolution === "adopted" ? "採用" : "不採用"}`
+        : `裁定: ${choice.label}(choice ${choice.internalNo} — tie 裁定)`;
+  }
   const body = renderPersistDraft(
     code.value,
     loaded.value.election,
