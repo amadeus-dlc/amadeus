@@ -1,0 +1,25 @@
+{
+  "electionId": "E-USSU10FD2",
+  "kind": "design-decision",
+  "question": "260720-upstream-sync-230 / U10 plugin-composition / functional-design。host/record/audit三面atomicityの正準方式を裁定する。Iteration 1 reviewerは、handled failureだけでなくprocess crash・commit途中でも三面不変を満たす回復方式が未定義というblocking findingを報告した。成果物・上流契約・NFR-2を独立実測して選択する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "workspace lock下のtransaction journalと全preimageでwrite-setを管理し、handled failureは即時復元、crashは次操作前にpre-stateへ回復"
+    },
+    {
+      "internalNo": 2,
+      "label": "whole-workspace directory swap"
+    },
+    {
+      "internalNo": 3,
+      "label": "best-effort rollbackのみ"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}
