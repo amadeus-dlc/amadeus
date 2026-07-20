@@ -101,3 +101,5 @@
 ## 補足: RE センサーの構造的 matches-rejection(既知クラス)
 
 - 本ステージ宣言センサー(required-sections/upstream-coverage/answer-evidence)は codekb 出力パスが sensor filter に不適合で常に matches-rejection(cid:re-sensors-codekb-filter-mismatch、team.md)。RE 成果物検証は conductor 手動確認が主。
+
+> 訂正(2026-07-20、RA reviewer 指摘 → conductor 再実測): 「gh pr create 前例不在」は scripts/packages 面に限る — `.github/workflows/ci.yml:319-327` に CI shell ステップの precedent(app-token 認証・metrics/snapshot ブランチ命名・auto-merge)が実在する。当初 grep の走査範囲が .github/ を欠いた実測漏れ(absence-claim-grep-verify 違反実例)。
