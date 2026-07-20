@@ -1,0 +1,13 @@
+{
+  "stage_slug": "practices-discovery",
+  "selections": [
+    {
+      "candidate_id": "e-fvepd-marker-heading-floor",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Verification",
+      "text": "ALWAYS approval 前に produced artifact の canonical shape と sensor predicate を照合し、H2 を意図的に欠く \"*-timestamp.md\" と \"*-questions.md\" を prose-heading floor から明示的に免除する。",
+      "source": "user_addition"
+    }
+  ]
+}
