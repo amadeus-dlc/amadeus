@@ -102,6 +102,35 @@ function seedCreateWorktree(args: string[]): void {
 }
 
 describe("t245 real filesystem ownership and transient corpus", () => {
+  test("prepare materializes origin/main in a single-branch shallow clone", () => {
+    const remote = mkdtempSync(join(tmpdir(), "leader-sync-shallow-origin-"));
+    const source = mkdtempSync(join(tmpdir(), "leader-sync-shallow-source-"));
+    const clone = mkdtempSync(join(tmpdir(), "leader-sync-shallow-clone-"));
+    roots.push(remote, source, clone);
+    gitStdout(["init", "--bare"], remote);
+    gitStdout(["init", "-b", "main"], source);
+    gitStdout(["config", "user.email", "t245@example.com"], source);
+    gitStdout(["config", "user.name", "t245"], source);
+    mkdirSync(join(source, ELECTION, ".."), { recursive: true });
+    writeFileSync(join(source, ELECTION), '{"electionId":"E-NEW"}\n');
+    writeFileSync(join(source, ".gitignore"), "amadeus/.amadeus-clone-id\n");
+    gitStdout(["add", "--", ".gitignore", ELECTION], source);
+    gitStdout(["commit", "-m", "seed main"], source);
+    gitStdout(["remote", "add", "origin", remote], source);
+    gitStdout(["push", "origin", "main", "main:feature"], source);
+    rmSync(clone, { recursive: true, force: true });
+    gitStdout([
+      "clone", "--depth", "1", "--single-branch", "--branch", "feature",
+      `file://${remote}`, clone,
+    ], source);
+    mkdirSync(join(clone, "amadeus"), { recursive: true });
+    writeFileSync(join(clone, "amadeus", ".amadeus-clone-id"), `${CLONE}\n`);
+
+    expect(spawnGit(["rev-parse", "--verify", "origin/main"], clone).kind).toBe("error");
+    expect(handlePlan(clone, spawnGit)).toBe(0);
+    expect(spawnGit(["rev-parse", "--verify", "origin/main"], clone).kind).toBe("ok");
+  });
+
   test("resolves all election files and only this clone shard", () => {
     const root = workspace();
     const other = join(root, "amadeus", "spaces", "default", "intents", "other", "audit");

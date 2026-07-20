@@ -557,7 +557,10 @@ function prepare(
   projectDir: string,
   git: GitRunner,
 ): { owned: OwnedSet; diffs: FileDiff[]; cloneShardName: string } {
-  requireOk(git(["fetch", "origin", "main"], projectDir), "git fetch origin main");
+  requireOk(
+    git(["fetch", "origin", "+refs/heads/main:refs/remotes/origin/main"], projectDir),
+    "git fetch origin main into origin/main",
+  );
   const cloneId = readCloneId(projectDir);
   if (cloneId === null) {
     throwSync("clone-id-missing", "amadeus/.amadeus-clone-id is absent or invalid");
