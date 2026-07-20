@@ -209,6 +209,9 @@ describe("t245 real filesystem ownership and transient corpus", () => {
     const scratch = mkdtempSync(join(tmpdir(), "leader-sync-origin-corpus-"));
     roots.push(scratch);
     const root = join(scratch, "worktree");
+    gitStdout([
+      "fetch", "origin", "+refs/heads/main:refs/remotes/origin/main",
+    ], projectDir);
     gitStdout(["worktree", "add", "--detach", root, "origin/main"], projectDir);
     try {
       const owned = resolveOwnedSet(root, SHARD);
