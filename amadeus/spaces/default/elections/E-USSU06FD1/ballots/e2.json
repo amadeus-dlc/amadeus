@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSU06FD1",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A。FR-3はpermission failureを決定的に扱い、誤Greenfield scaffoldを禁止する。classified/inconclusive判別unionなら、root列挙不能・signal metadata読取不能・.gitmodules present but parseable entry 0を有効なGreenfield/Brownfieldから分離し、birth/state projectorがmutation前に網羅的にrejectできる。detect/doctorは同一WorkspaceScanをread-onlyに投影してadvisoryを表示でき、C3の単一snapshotにも整合する。Bはconsumer側guardの呼び忘れで不正状態を消費でき、Cは実在signalなしをBrownfieldと偽分類する。既定の完全観測・無signal経路はclassified Greenfieldとして既存出力byte-identicalを維持すること。非採用時受容度: B=6、C=5、X=5。",
+  "submittedAt": "2026-07-20T13:51:14Z"
+}
