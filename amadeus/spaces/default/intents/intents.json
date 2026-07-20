@@ -421,5 +421,12 @@
     "dirName": "260720-diary-autogen-guard",
     "scope": "bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019f7dcf-fc6c-74e1-8f50-12368857b855",
+    "slug": "formal-verif-experiment",
+    "dirName": "260720-formal-verif-experiment",
+    "scope": "amadeus",
+    "status": "in-flight"
   }
 ]
