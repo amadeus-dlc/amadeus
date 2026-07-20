@@ -2955,3 +2955,428 @@
 **Duration ms**: 36
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T04:58:06Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a518ed4e36368bd5c
+**Message**: Machine-recalculation confirms both figures the fix introduced: 38+8+1×3 = 49（実装）、49+110 = 159（合計）。\n\n## 検証結果\n\n**検証コマンドと結果**\n\n```\n$ python3 -c "print(38+8+1*3)"\n49\n$ python3 -c "print(38+8+1*3+110)"\n15
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T04:58:40Z
+**Event**: WORKFLOW_PARKED
+**Stage**: units-generation
+**Timestamp**: 2026-07-20T04:58:40Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T04:58:53Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a50653d4d31a506a2
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T05:01:52Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T05:01:52Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T05:01:52Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: units-generation
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T05:01:52Z
+**Event**: GATE_APPROVED
+**Stage**: units-generation
+**Grant Id**: cabcb933
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T05:01:52Z
+**Event**: STAGE_COMPLETED
+**Stage**: units-generation
+**Details**: Stage Units Generation approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T05:01:52Z
+**Event**: STAGE_STARTED
+**Stage**: delivery-planning
+**Agent**: amadeus-delivery-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:02:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: e7ecfb29
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/bolt-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:02:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: e7ecfb29
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/bolt-plan.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:02:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8f22c480
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/team-allocation.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:02:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8f22c480
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/team-allocation.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:02:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: b75a7a25
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/risk-and-sequencing-rationale.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:02:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: b75a7a25
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/risk-and-sequencing-rationale.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:02:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 673ddccd
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/external-dependency-map.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:02:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 673ddccd
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/external-dependency-map.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:02:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: f6ec3737
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/bolt-plan.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:02:48Z
+**Event**: SENSOR_FAILED
+**Fire id**: f6ec3737
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/bolt-plan.md
+**Detail path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/.amadeus-sensors/delivery-planning/upstream-coverage-f6ec3737.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:02:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 29ec27ed
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/team-allocation.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:02:48Z
+**Event**: SENSOR_FAILED
+**Fire id**: 29ec27ed
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/team-allocation.md
+**Detail path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/.amadeus-sensors/delivery-planning/upstream-coverage-29ec27ed.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:02:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9f543c15
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/risk-and-sequencing-rationale.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:02:48Z
+**Event**: SENSOR_FAILED
+**Fire id**: 9f543c15
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/risk-and-sequencing-rationale.md
+**Detail path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/.amadeus-sensors/delivery-planning/upstream-coverage-9f543c15.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:02:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9c083f06
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/external-dependency-map.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:02:48Z
+**Event**: SENSOR_FAILED
+**Fire id**: 9c083f06
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/external-dependency-map.md
+**Detail path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/.amadeus-sensors/delivery-planning/upstream-coverage-9c083f06.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:02:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4a1b10a0
+**Sensor ID**: answer-evidence
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/delivery-planning-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:02:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4a1b10a0
+**Sensor ID**: answer-evidence
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/delivery-planning-questions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3f9d63d3
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/bolt-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3f9d63d3
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/bolt-plan.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: 50b20abb
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/bolt-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: 50b20abb
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/bolt-plan.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7aac813a
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/team-allocation.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7aac813a
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/team-allocation.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: 854bc8f7
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/team-allocation.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: 854bc8f7
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/team-allocation.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0cfbcbee
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/risk-and-sequencing-rationale.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0cfbcbee
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/risk-and-sequencing-rationale.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: defb0fa2
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/risk-and-sequencing-rationale.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: defb0fa2
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/risk-and-sequencing-rationale.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: d594a664
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/external-dependency-map.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: d594a664
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/external-dependency-map.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7c93054c
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/external-dependency-map.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7c93054c
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/external-dependency-map.md
+**Duration ms**: 36
+
+---
