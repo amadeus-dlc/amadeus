@@ -266,3 +266,11 @@
 **Message**: All synthesis work is complete. I did not run any git state-changing commands (checkpoint commits are the conductor's; the git-state prohibition is respected). Here is the synthesis return.\n\n## Revers
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T03:08:25Z
+**Event**: WORKFLOW_PARKED
+**Stage**: reverse-engineering
+**Timestamp**: 2026-07-20T03:08:25Z
+
+---
