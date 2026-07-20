@@ -1,0 +1,64 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "0件は不可（noteにcandidate id・scope・本文・追加事項を記載）",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T16:06:04Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-FVENDS13",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可を支持する。NFR Design成果物は8 Unit×6=48件で、sorted shasum列の再hashは配布されたaggregate SHA256 2e8aa6c9b6c9c5d7c09246e60027b1a29490980463fdfa712423e144d7a58554と一致した。最終sensor列は84 fired/84 passed、git diff --checkも成功し、stage memoryは観測0のテンプレートのみ。最終architecture reviewは同一snapshotでCritical 0・新規Major 0・新規Minor 0を確認し、aggregate NOT-READYは各Unit review上限後の既知Major 7件を保持するためである。7件は当該設計成果物内の未解決実装契約で、今回新たに一般化すべきprocess norm surfaceではない。",
+      "submittedAt": "2026-07-20T16:04:25Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FVENDS13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可を支持する。独立実測で8 Unit×6=48成果物、最新required-sections 48/48 PASS・upstream-coverage 48/48 PASS・answer-evidence 8/8 PASS・FAILED 0、git diff --check PASSを確認した。sorted 48 filesの各SHA-256行を再hashしたaggregateも2e8aa6c9b6c9c5d7c09246e60027b1a29490980463fdfa712423e144d7a58554で一致。最終一括reviewは同一snapshotに対しCritical 0・新規Major 0・新規Minor 0で、既知Major 7を消去・再ラベルせず保持したためaggregate NOT-READYである。7件は当該実験の未解決実装契約で、解決前に一般practiceへpersistすべき学習ではない。stage memoryは空で、既存memoryにnfr-designのinventory確定後導出・保証機構の層別化・body由来header等のprocess normが既にあるため、新規persist候補0が妥当。",
+      "submittedAt": "2026-07-20T16:04:34Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FVENDS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。独立実測で8 Unitのnfr-design各6成果物=48件、stage memoryのInterpretations/Deviations/Tradeoffs実entry 0、直近sensor 100行中FAILED 0を確認した。最終一括reviewは同一48成果物を対象にCritical 0・新規Major 0・新規Minor 0、既知Major 7を再ラベルせずaggregate NOT-READYとして保持しており、未解決所見を偽READYへ丸めていない。既知7件は各Unit固有の実装契約で最終人間gateへ引き渡す対象であり、横断process norm候補ではない。Functional DesignのE-FVEFDS13でも同型の残存所見継承は0件裁定済みで、新規性を認めない。",
+      "submittedAt": "2026-07-20T16:04:47Z"
+    }
+  ],
+  "resolutions": []
+}
