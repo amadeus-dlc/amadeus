@@ -262,3 +262,11 @@
 **Agent**: amadeus-product-agent
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T00:24:25Z
+**Event**: WORKFLOW_PARKED
+**Stage**: requirements-analysis
+**Timestamp**: 2026-07-20T00:24:25Z
+
+---
