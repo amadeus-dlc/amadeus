@@ -584,3 +584,293 @@
 **Duration ms**: 37
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T02:55:12Z
+**Event**: WORKFLOW_PARKED
+**Stage**: feasibility
+**Timestamp**: 2026-07-20T02:55:12Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T02:59:13Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a3c43067fb9bee32b
+**Message**: チームで amadeus フレームワークのバグ修正・改善を並行運行中です。担当の #1248 修正は main 着地済みで完了し、現在は新 intent(#1281 leader 所有物の main 同期構造化)の feasibility を終えて §13 裁定待ちです。裁定受領後に approve して次ステージへ進みます。
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T03:03:56Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T03:03:56Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T03:03:56Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: feasibility
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T03:03:56Z
+**Event**: GATE_APPROVED
+**Stage**: feasibility
+**Grant Id**: cabcb933
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T03:03:56Z
+**Event**: STAGE_COMPLETED
+**Stage**: feasibility
+**Details**: Stage Feasibility & Constraints approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T03:03:56Z
+**Event**: STAGE_STARTED
+**Stage**: scope-definition
+**Agent**: amadeus-product-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:05:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 97db6ab0
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/scope-definition/scope-document.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:05:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 97db6ab0
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/scope-definition/scope-document.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:05:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: e70cc2dc
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/scope-definition/scope-document.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:05:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: e70cc2dc
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/scope-definition/scope-document.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:05:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: e6821f43
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/scope-definition/intent-backlog.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T03:05:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: e6821f43
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/scope-definition/intent-backlog.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/scope-definition/required-sections-e6821f43.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:05:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9747c688
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/scope-definition/intent-backlog.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T03:05:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: 9747c688
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/scope-definition/intent-backlog.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/scope-definition/upstream-coverage-9747c688.md
+**Findings count**: 3
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:05:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3dc6d8f4
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/scope-definition/scope-definition-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:05:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3dc6d8f4
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/scope-definition/scope-definition-questions.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:05:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 74c62cd2
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/scope-definition/scope-definition-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T03:05:01Z
+**Event**: SENSOR_FAILED
+**Fire id**: 74c62cd2
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/scope-definition/scope-definition-questions.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/scope-definition/upstream-coverage-74c62cd2.md
+**Findings count**: 3
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:05:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 81be25bc
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/scope-definition/intent-backlog.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:05:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: 81be25bc
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/scope-definition/intent-backlog.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:05:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3cda30f4
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/scope-definition/intent-backlog.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:05:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3cda30f4
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/scope-definition/intent-backlog.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:05:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 102a2799
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/scope-definition/scope-definition-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:05:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: 102a2799
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/scope-definition/scope-definition-questions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:05:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: f0e15d75
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/scope-definition/scope-definition-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:05:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: f0e15d75
+**Sensor ID**: upstream-coverage
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/scope-definition/scope-definition-questions.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:05:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 96d2d9cf
+**Sensor ID**: answer-evidence
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/scope-definition/scope-definition-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:05:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: 96d2d9cf
+**Sensor ID**: answer-evidence
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/scope-definition/scope-definition-questions.md
+**Duration ms**: 38
+
+---
