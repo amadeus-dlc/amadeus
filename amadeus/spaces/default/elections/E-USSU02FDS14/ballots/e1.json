@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSU02FDS14",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Aを支持する。E-USSU02FDS13の2-1裁定で採用された横断規範は、複数audit eventとstate writeを一つの論理transactionとして扱うFunctional Design責務であり、lock直列化とall-or-nothing commitの区別、全block事前生成・検証、transaction identity、failure-boundary injection、再実行重複0を規定する。memory全層をatomic/transaction/不可分/partial write/failure injection/audit lock等で再検索した結果、既存候補はrequirements-analysis:delegate-issue-commit-atomicのみだったが、これはdelegate発行から監査シャード専用commit・pushまでを不可分にする配送運用で、対象artifact・失敗境界・適用stageが異なる。そこへの追補はcid責務を混在させるため、functional-design:audit-batch-before-state-atomicityを独立新設するのが妥当。非採用時は、同じFunctional Design責務を既に持つexact cidが実在すると反証されるXのみ受容する。",
+  "submittedAt": "2026-07-20T12:02:56Z"
+}
