@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSU10FD1",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "shared fileのbase/precondition、plugin contribution、適用順、期待post-stateをcanonical identityで記録し、drop時はcurrent一致を全mutation前に検証したうえで残存寄与を決定的順序で再構築すること。user driftや寄与identity不一致はhost/record/auditを一切変更せずloud rejectする統合fixtureを必須とする。",
+  "rationale": "A。FR-6は宣言seam merge/fragment spliceとdropを同時に要求し、NFR-2は衝突・部分write時の既存bytes不変を要求する。path所有だけではshared file内のplugin寄与とuser bytesを区別できないため、contribution単位のrecordとcompose前提/post-state照合が必要である。Aは複数plugin共存時も対象寄与だけを除き残存寄与を再構築できる。Bは全snapshotの逆適用なので原則LIFOに制限され、他plugin/user edit後の任意dropを閉じない。Cは承認済みcompose/drop契約を実質縮退させる。非採用時受容度: B=6、C=7。",
+  "submittedAt": "2026-07-20T14:29:20Z"
+}

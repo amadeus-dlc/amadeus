@@ -1,0 +1,69 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "workspace lock下のtransaction journalと全preimageでwrite-setを管理し、handled failureは即時復元、crashは次操作前にpre-stateへ回復"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "workspace lock下のtransaction journalと全preimageでwrite-setを管理し、handled failureは即時復元、crashは次操作前にpre-stateへ回復",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "whole-workspace directory swap",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "best-effort rollbackのみ",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T14:30:54Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-USSU10FD2",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "journalは最初のcanonical mutation前に全write-set/preimageとPREPARED状態をdurable化し、host/record/audit完了後だけCOMMITTEDへ遷移すること。次操作はlock取得後に未完了journalを検出し、current/preimage整合を検証して冪等にpre-stateへ回復する。回復中のdrift/corruptionは追加mutationせずloud停止するcrash-point全数fixtureを必須とする。",
+      "rationale": "A。temp treeは検証前failureを隔離できるが、成功後にhost/record/auditを別々に反映するcommit区間のprocess crashは防げない。workspace lock下でdurable journalと全preimageを先行記録し、handled failureを即時復元、crashを次操作前に回復する方式ならNFR-2の三面不変を回復可能なtransactionとして閉じられる。Bのwhole-workspace swapは異なる所有面を一つのrename境界へ安全に含められず変更範囲も過大、Cはcrash時部分commitを許してNFR-2に反する。非採用時受容度: B=7、C=8。",
+      "submittedAt": "2026-07-20T14:29:20Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSU10FD2",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "journalは最初のcanonical mutation前に同一workspace lock下でdurableに確定し、transaction id、phase、host/record/auditの全write-setとpreimageを保持すること。回復は同じlock下でidempotentにpre-stateへ収束し、未回復journalがある間は新規compose/dropを開始しないこと。",
+      "rationale": "Aを支持。Application Designはtemp treeで検証後にhost、composition record、auditを一度だけcommitし、NFR-2はhandled failureだけでなく部分writeを成功へ読み替えず既存正本・生成物・stateを不変にする。三面は複数pathへ跨るため、commit中のprocess crashを単一renameだけで不可分にできない。workspace lock下でwrite-ahead transaction journalと全preimageを確定し、handled failureは即時復元、crashは次操作前に同一transactionをidempotent回復するAなら、三面のpre-state収束と新規操作の直列化を証明できる。Bのwhole-workspace swapは.gitや作業rootを含む過大なownershipとなり、record/auditを含む実用的な単一atomic renameを保証できない。Cのbest-effort rollbackは回復失敗やcrash後の部分状態を許し、NFR-2に直接反する。",
+      "submittedAt": "2026-07-20T14:29:56Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSU10FD2",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Aを支持(GoA1)。e5のU10成果物、Iteration 1 reviewer、servicesのworkspace単位atomic契約、ADR-3、NFR-2を独立実測した。temp tree検証だけではcanonical host・record・auditのcommit途中失敗/process crashを閉じない。Aは既存workspace lock下でjournalと全write-set preimageを永続化し、handled failureは即時復元、crashは次操作前にpre-state回復してから進めるため三面不変を機械検証可能にする。非採用時受容度: B=6(単一directory swapに三面を包含できれば強いがworkspace root/.git/実行中cwdとの適合と既存transaction再利用が弱い)、C=9(best-effortはNFR-2の失敗時不変とcrash recoveryを満たさない)、X=7(同等のdurable recovery protocolがなければ)。",
+      "submittedAt": "2026-07-20T14:30:25Z"
+    }
+  ],
+  "resolutions": []
+}

@@ -1,0 +1,21 @@
+{
+  "electionId": "E-USSU10FD2",
+  "voter": "e2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "workspace lock下のtransaction journalと全preimageでwrite-setを管理し、handled failureは即時復元、crashは次操作前にpre-stateへ回復"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "whole-workspace directory swap"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "best-effort rollbackのみ"
+    }
+  ]
+}
