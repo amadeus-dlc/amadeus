@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSU02FDS13",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件は不可。成果物・E-USSU02FD1 record・Iteration 2 READY/GoA1・最新sensor PASSを実測し、設計閉包自体は確認した。一方、既存memoryには『audit lock内の逐次appendは複数eventの原子性を与えない』という横断則がなく、今回の初回reviewで実在コードのlock=直列化とlogical transaction=原子性の混同が顕在化したためstage-localに留まらない。新規候補(project/Corrections): 複数audit eventとstate writeを1つの論理transactionとして適用する場合、lock内の逐次appendをatomicとみなさず、全blockを事前生成・全数検証して単一atomic commitし、stateはその成功後に1回writeする。各生成/検証/commit境界とcommit後state失敗をfailure injectionし、呼出前audit/state bytes不変またはtransaction identityによるaudit重複0の収束をassertする。",
+  "submittedAt": "2026-07-20T11:58:36Z"
+}
