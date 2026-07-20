@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVENDS13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可を支持する。独立実測で8 Unit×6=48成果物、最新required-sections 48/48 PASS・upstream-coverage 48/48 PASS・answer-evidence 8/8 PASS・FAILED 0、git diff --check PASSを確認した。sorted 48 filesの各SHA-256行を再hashしたaggregateも2e8aa6c9b6c9c5d7c09246e60027b1a29490980463fdfa712423e144d7a58554で一致。最終一括reviewは同一snapshotに対しCritical 0・新規Major 0・新規Minor 0で、既知Major 7を消去・再ラベルせず保持したためaggregate NOT-READYである。7件は当該実験の未解決実装契約で、解決前に一般practiceへpersistすべき学習ではない。stage memoryは空で、既存memoryにnfr-designのinventory確定後導出・保証機構の層別化・body由来header等のprocess normが既にあるため、新規persist候補0が妥当。",
+  "submittedAt": "2026-07-20T16:04:34Z"
+}
