@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-FVEU4FD1",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Aを支持する。stage-protocol.md §12a:887-889 はreviewer_max_iterations到達時に未解決所見を明示してapproval gateへ進むと規定する。U4最新成果物を実読すると、iteration 2後の3点は、hold marker列+TallyReceipt closed unionとresolved集合上のGoA cardinality/RecordHold条件、UNKNOWN_CHOICE→INVALID_TIMESTAMP→UNKNOWN_REFの最初の1 error優先、invariant nameからmodule source span/formula identityへのfrozen mapとCompleteExplorationのqueue=0証拠へ最小是正済み。最新sensor全PASSで、U3未READY依存もDESIGNED_PENDING_U3_HUMAN_GATEとして保持しintegration完成を先取りしていない。例外的第三reviewを追加せず、NOT-READY履歴と未レビュー是正を温存して次Unitへ進み、最終FD gateでU3依存込みに明示裁定するのが既定プロトコルに整合する。",
+      "submittedAt": "2026-07-20T13:39:28Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FVEU4FD1",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "U4 を READY と再ラベルせず、最終 Functional Design ゲートで iteration 2 の未解決3所見、対応した正確な file:line、最新 sensor PASS、第三者再レビュー未実施を列挙すること。U3 の未解決依存も維持し、U4 契約を消費する後続 Unit は U3/U4 の max-exhausted・未再レビュー状態を明記して integration readiness を主張しないこと。",
+      "rationale": "A は stage-protocol §12a の reviewer_max_iterations 到達時の処理と、非最終 Unit の per-unit forwarding に一致する。最終成果物では hold union、GoA cardinality、複数 invalid の優先順位、source span、queue=0 の是正と最新 sensor PASS を実測した。一方で是正後の独立レビューはなく意味閉包は最終人間ゲートへ残るため GoA 2 とする。B は既定 max を越える例外的第三レビューを新設する。非採用時受容度: B=7、X=6。",
+      "submittedAt": "2026-07-20T13:39:41Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FVEU4FD1",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "最終Functional Design gateではU4をREADY扱いせず、iteration 2の未解決3 finding、上限到達後の3点是正、第三review未実施、およびU3の未READY依存を明示してstage全体として裁定すること。以後sensor失敗または承認scope逸脱が判明した場合は停止する。",
+      "rationale": "Aを支持。stage-protocol §12aはreviewer_max_iterations到達時にunresolved findingsを明記してapproval gateへ進むと規定し、per-unit gateは最終Unit後まで抑止される。独立実測ではiteration 1がNOT READY 4件、iteration 2もNOT READY 3件で上限2回へ到達。その後、stateのhold markersとTallyReceipt closed union、resolved集合上のGoA cardinality式とRecordHold条件、UNKNOWN_CHOICE→INVALID_TIMESTAMP→UNKNOWN_REFのprecedence、frozen invariant source map、CompleteExploration queue=0が成果物へ反映され、対象sensorは最新全PASS、git diff --checkもPASSだった。またU3依存はDESIGNED_PENDING_U3_HUMAN_GATEとして非READYを保持する。ただし第三reviewはなくREADYへの転換証拠はないため、履歴を保存して次Unitへ進み、最終FD gateで人間がU3/U4の未解決リスク込みで裁定するAが規約どおりである。Bは既定上限を越える例外レビューを新設するため、別の既存規範または新たな決定的blockerがない現状では選ばない。",
+      "submittedAt": "2026-07-20T13:39:39Z"
+    }
+  ],
+  "late": []
+}
