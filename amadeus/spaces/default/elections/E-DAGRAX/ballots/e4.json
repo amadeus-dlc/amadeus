@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-DAGRAX",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "反証を自ツリーで実測: memoryPathFor(orchestrate.ts:593-595)= recordPrefix ?? relativeSpaceRecordPrefix() で、バグ条件(recordPrefix null)下の memory_path は bare prefix となり intent slug を含まない — reviewer C-1 の反証は正しく、自分の E-DAGRA1 票の根拠 (2)(memory_path は slug 既含の決定的情報源)も同じ誤前提に乗っていたことを当事者として認める。追認を支持: (1) 裁定の本質(明示 intent アンカー導入 = audit 対称化・E-DAGRA3 の経路限定)は前提誤りと独立に成立 — 自票の根拠 (1)(symmetric-pair-review の根治)は不変 (2) アンカー材料の調達手段のみ design 委譲へ縮退する訂正は、前提不成立時に『実装を止めて再裁定』でなく『裁定本質を保存し可変部を委譲』する ruling-premise-closure-verification の正しい最小形 (3) 誤前提の混入源特定(質問起草側・RE 無実)と mechanism-cite-verify-at-draft 違反の自己申告も透明。再選挙(2)は本質が不変のためコスト過大。追認",
+  "submittedAt": "2026-07-20T03:26:32Z"
+}

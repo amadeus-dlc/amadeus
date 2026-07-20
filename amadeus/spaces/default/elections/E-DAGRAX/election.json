@@ -1,0 +1,21 @@
+{
+  "electionId": "E-DAGRAX",
+  "kind": "blocker",
+  "question": "260720-diary-autogen-guard(#1279)— E-DAGRA1 裁定の前提訂正の追認(ruling-premise-closure-verification)。経緯: reviewer Critical C-1 が E-DAGRA1=A の選択肢文中の前提「memory_path 由来(intent slug 既含)」を実コードで反証 — memoryPathFor(orchestrate.ts:594)は recordPrefix ?? bare prefix で、バグ条件下では memory_path 自体が slug を欠く(conductor 自己再実測で確定。誤前提の混入源は質問起草側 — RE record は無実、mechanism-cite-verify-at-draft 違反として自己申告済み)。訂正内容: 裁定の本質(明示 intent アンカーの導入・audit 対称化・E-DAGRA3 の diary 経路限定)は維持し、アンカー材料の調達手段のみ design 委譲へ変更(requirements 是正済み・push 済み)。この前提訂正を追認するかを GoA 付きで投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "追認 — 裁定本質(明示アンカー・対称化・経路限定)は不変で、調達手段の design 委譲は前提訂正の正しい最小形"
+    },
+    {
+      "internalNo": 2,
+      "label": "追認せず — E-DAGRA1 を再選挙にかける(note に理由と file:line)"
+    }
+  ],
+  "voters": [
+    "e2",
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

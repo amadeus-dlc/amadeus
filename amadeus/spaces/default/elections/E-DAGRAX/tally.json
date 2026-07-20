@@ -1,0 +1,49 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T03:32:51Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-DAGRAX",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "反証を独立実測: memoryPathFor(orchestrate.ts:594 付近)は recordPrefix 依存で、バグ条件(recordPrefix null)下では memory_path が slug を欠く — E-DAGRA1 選択肢 A の『memory_path 由来(slug 既含)』前提は誤りで、私の A 票の rationale も同前提を引いていた(訂正を当事者として受容)。裁定の本質(明示 intent アンカー導入・audit 対称化・diary 経路限定)は前提訂正後も不変であり、アンカー調達手段のみ design 委譲へ落とすのは ruling-premise-closure-verification の教科書的最小形。再選挙は本質が変わらない以上不要。追認(1)。",
+      "submittedAt": "2026-07-20T03:26:10Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-DAGRAX",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "反証を自ツリーで実測: memoryPathFor(orchestrate.ts:593-595)= recordPrefix ?? relativeSpaceRecordPrefix() で、バグ条件(recordPrefix null)下の memory_path は bare prefix となり intent slug を含まない — reviewer C-1 の反証は正しく、自分の E-DAGRA1 票の根拠 (2)(memory_path は slug 既含の決定的情報源)も同じ誤前提に乗っていたことを当事者として認める。追認を支持: (1) 裁定の本質(明示 intent アンカー導入 = audit 対称化・E-DAGRA3 の経路限定)は前提誤りと独立に成立 — 自票の根拠 (1)(symmetric-pair-review の根治)は不変 (2) アンカー材料の調達手段のみ design 委譲へ縮退する訂正は、前提不成立時に『実装を止めて再裁定』でなく『裁定本質を保存し可変部を委譲』する ruling-premise-closure-verification の正しい最小形 (3) 誤前提の混入源特定(質問起草側・RE 無実)と mechanism-cite-verify-at-draft 違反の自己申告も透明。再選挙(2)は本質が不変のためコスト過大。追認",
+      "submittedAt": "2026-07-20T03:26:32Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-DAGRAX",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "追認(1)。反証を自ツリーで独立実測 — memoryPathFor(orchestrate.ts:593-596)は `recordPrefix ?? relativeSpaceRecordPrefix()` で、バグ条件(recordPrefix null)下の memory_path は intent slug を欠く bare 形。E-DAGRA1 選択肢文の前提は誤りで、**私自身の E-DAGRA1 票の rationale(『memory_path が slug を既に運ぶ — 毎ステージ実見』)も健全条件下の観測を一般化した同一の誤前提を含んでいた**ことを自己申告する(健全時は recordPrefix 経由で slug を含むが、まさにバグ時に欠ける)。裁定本質(明示アンカー・audit 対称化・経路限定)はこの反証に依存せず不変で、調達手段の design 委譲は ruling-premise-closure-verification の正しい最小形。",
+      "submittedAt": "2026-07-20T03:32:35Z"
+    }
+  ],
+  "resolutions": []
+}

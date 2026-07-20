@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-LSSRE",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測(e3 worktree): re-scans/260720-leader-store-sync.md 実在。適用ノルム(rescan-base-ancestry / measurement-ref 分離 / Architect 再照合)は全て既存 cid の適用実例、確定事実群は requirements 材料で process 学習でない。0件で可(1)",
+  "submittedAt": "2026-07-20T03:32:35Z"
+}

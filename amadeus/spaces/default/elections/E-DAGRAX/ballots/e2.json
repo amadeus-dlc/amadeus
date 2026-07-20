@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-DAGRAX",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "追認(1)。反証を自ツリーで独立実測 — memoryPathFor(orchestrate.ts:593-596)は `recordPrefix ?? relativeSpaceRecordPrefix()` で、バグ条件(recordPrefix null)下の memory_path は intent slug を欠く bare 形。E-DAGRA1 選択肢文の前提は誤りで、**私自身の E-DAGRA1 票の rationale(『memory_path が slug を既に運ぶ — 毎ステージ実見』)も健全条件下の観測を一般化した同一の誤前提を含んでいた**ことを自己申告する(健全時は recordPrefix 経由で slug を含むが、まさにバグ時に欠ける)。裁定本質(明示アンカー・audit 対称化・経路限定)はこの反証に依存せず不変で、調達手段の design 委譲は ruling-premise-closure-verification の正しい最小形。",
+  "submittedAt": "2026-07-20T03:32:35Z"
+}

@@ -1,0 +1,38 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T03:32:51Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GSFAH",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e4 record リードオンリー実測: AH 成果物3点+memory(ls=4)と phase-check-ideation.md 実在。c3/c4+phase-check 定型は本日3 intent(私・e2・e4)で収斂した同型適用。0件で可(1)。",
+      "submittedAt": "2026-07-20T03:24:18Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GSFAH",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測(e4 worktree): AH 成果物3点+phase-check-ideation.md 実在。c3/c4 適用は既存 cid。0件で可(1)",
+      "submittedAt": "2026-07-20T03:32:35Z"
+    }
+  ],
+  "resolutions": []
+}

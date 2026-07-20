@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-LSSRE",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e3 record をリードオンリー実測: re-scan 実在(14KB)、base 祖先性 exit 0 記載、auditShardName :2838 を e3 tree(observed HEAD c4e4fca1a — record が測定 ref を明示)で照合し一致。自分は最初に自分の origin/main 断面(post-#1277 の行シフト後)で照合して不一致に見えたが、record の測定 ref 明示により enumeration-check-at-observed の手順(相手 observed 時点での照合)へ自己修正して確定 — この ref 明示は measurement-ref-in-artifacts の模範適用で、行番号(observed HEAD)と件数(origin/main)の測定面分離も正確。観測は既存 cid の適用実例のみ。0件で可",
+      "submittedAt": "2026-07-20T03:25:45Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-LSSRE",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測(e3 worktree): re-scans/260720-leader-store-sync.md 実在。適用ノルム(rescan-base-ancestry / measurement-ref 分離 / Architect 再照合)は全て既存 cid の適用実例、確定事実群は requirements 材料で process 学習でない。0件で可(1)",
+      "submittedAt": "2026-07-20T03:32:35Z"
+    }
+  ],
+  "late": []
+}

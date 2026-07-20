@@ -1,0 +1,16 @@
+{
+  "electionId": "E-DAGRAX",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "追認 — 裁定本質(明示アンカー・対称化・経路限定)は不変で、調達手段の design 委譲は前提訂正の正しい最小形"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "追認せず — E-DAGRA1 を再選挙にかける(note に理由と file:line)"
+    }
+  ]
+}

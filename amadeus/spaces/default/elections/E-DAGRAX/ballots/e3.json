@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-DAGRAX",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "反証を独立実測: memoryPathFor(orchestrate.ts:594 付近)は recordPrefix 依存で、バグ条件(recordPrefix null)下では memory_path が slug を欠く — E-DAGRA1 選択肢 A の『memory_path 由来(slug 既含)』前提は誤りで、私の A 票の rationale も同前提を引いていた(訂正を当事者として受容)。裁定の本質(明示 intent アンカー導入・audit 対称化・diary 経路限定)は前提訂正後も不変であり、アンカー調達手段のみ design 委譲へ落とすのは ruling-premise-closure-verification の教科書的最小形。再選挙は本質が変わらない以上不要。追認(1)。",
+  "submittedAt": "2026-07-20T03:26:10Z"
+}
