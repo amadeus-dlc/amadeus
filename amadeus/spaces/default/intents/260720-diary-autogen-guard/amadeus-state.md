@@ -8,7 +8,7 @@
 - **State Version**: 7
 - **Active Agent**: amadeus-developer-agent
 - **Worktree Path**:
-- **Bolt Refs**:
+- **Bolt Refs**: fix-1279-diary-autogen-guard
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration

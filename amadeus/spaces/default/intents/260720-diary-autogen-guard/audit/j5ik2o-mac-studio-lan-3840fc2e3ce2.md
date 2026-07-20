@@ -648,3 +648,476 @@
 **Agent**: amadeus-developer-agent
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:48:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3d0867f9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/packages/framework/core/tools/amadeus-lib.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:48:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3d0867f9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/packages/framework/core/tools/amadeus-lib.ts
+**Duration ms**: 1772
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:48:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: f54c62e8
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/packages/framework/core/tools/amadeus-lib.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:49:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: f54c62e8
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/packages/framework/core/tools/amadeus-lib.ts
+**Duration ms**: 1154
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:49:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: d5b78b2e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/packages/framework/core/tools/amadeus-orchestrate.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:49:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: d5b78b2e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/packages/framework/core/tools/amadeus-orchestrate.ts
+**Duration ms**: 1305
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:49:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: e5a9b79f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/packages/framework/core/tools/amadeus-orchestrate.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T03:49:10Z
+**Event**: SENSOR_FAILED
+**Fire id**: e5a9b79f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/packages/framework/core/tools/amadeus-orchestrate.ts
+**Detail path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/.amadeus-sensors/code-generation/type-check-e5a9b79f.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:49:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 95fce0f5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/packages/framework/core/tools/amadeus-orchestrate.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:49:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: 95fce0f5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/packages/framework/core/tools/amadeus-orchestrate.ts
+**Duration ms**: 1549
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:49:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 91f9a6dc
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/packages/framework/core/tools/amadeus-orchestrate.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:49:38Z
+**Event**: SENSOR_PASSED
+**Fire id**: 91f9a6dc
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/packages/framework/core/tools/amadeus-orchestrate.ts
+**Duration ms**: 633
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:51:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 29b31589
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/tests/integration/t-diary-autogen-guard.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:51:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 29b31589
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/tests/integration/t-diary-autogen-guard.test.ts
+**Duration ms**: 1346
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:51:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: f6aed2cc
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/tests/integration/t-diary-autogen-guard.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:51:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: f6aed2cc
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/tests/integration/t-diary-autogen-guard.test.ts
+**Duration ms**: 494
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:53:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: c65187a1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/packages/framework/core/tools/amadeus-lib.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:53:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: c65187a1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/packages/framework/core/tools/amadeus-lib.ts
+**Duration ms**: 1330
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:53:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: eed1e935
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/packages/framework/core/tools/amadeus-lib.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:53:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: eed1e935
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/packages/framework/core/tools/amadeus-lib.ts
+**Duration ms**: 1031
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:53:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: db28f8f4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/packages/framework/core/tools/amadeus-orchestrate.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:53:26Z
+**Event**: SENSOR_PASSED
+**Fire id**: db28f8f4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/packages/framework/core/tools/amadeus-orchestrate.ts
+**Duration ms**: 1328
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:53:26Z
+**Event**: SENSOR_FIRED
+**Fire id**: 95e888e3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/packages/framework/core/tools/amadeus-orchestrate.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T03:53:26Z
+**Event**: SENSOR_FAILED
+**Fire id**: 95e888e3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/packages/framework/core/tools/amadeus-orchestrate.ts
+**Detail path**: amadeus/spaces/default/intents/260720-diary-autogen-guard/.amadeus-sensors/code-generation/type-check-95e888e3.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:53:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: fb356a2a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/packages/framework/core/tools/amadeus-orchestrate.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:53:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: fb356a2a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/packages/framework/core/tools/amadeus-orchestrate.ts
+**Duration ms**: 1312
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:53:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: c905dd37
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/packages/framework/core/tools/amadeus-orchestrate.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:53:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: c905dd37
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/packages/framework/core/tools/amadeus-orchestrate.ts
+**Duration ms**: 594
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:54:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5e194ea4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/tests/integration/t-diary-autogen-guard.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:54:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5e194ea4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/tests/integration/t-diary-autogen-guard.test.ts
+**Duration ms**: 1680
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:54:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: bb2ff005
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/tests/integration/t-diary-autogen-guard.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:54:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: bb2ff005
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/tests/integration/t-diary-autogen-guard.test.ts
+**Duration ms**: 499
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:23:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: f5bf9d69
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/tests/integration/t-diary-autogen-guard.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:23:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: f5bf9d69
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/tests/integration/t-diary-autogen-guard.test.ts
+**Duration ms**: 1318
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:23:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9e326bde
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/tests/integration/t-diary-autogen-guard.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:23:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9e326bde
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/tests/integration/t-diary-autogen-guard.test.ts
+**Duration ms**: 528
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:23:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: c29655de
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/tests/integration/t-diary-autogen-guard.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:23:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: c29655de
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/tests/integration/t-diary-autogen-guard.test.ts
+**Duration ms**: 1373
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:23:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: d25e5928
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/tests/integration/t-diary-autogen-guard.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:23:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: d25e5928
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-a3bb761791292310e/tests/integration/t-diary-autogen-guard.test.ts
+**Duration ms**: 933
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T04:24:35Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: a3bb761791292310e
+**Message**: All steps complete. Local HEAD matches remote.\n\n## 実装完了報告(Issue #1279 — stage diary 自動生成の無音不発)\n\n**SHA**: base `d85dc3d65f1e2f733217f5dcc32c21f37530261e` / fix `9d99ce9ee16894f80cad1c5ff683a0a13ba4eec5
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:26:38Z
+**Event**: SENSOR_FIRED
+**Fire id**: 158e31c2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-lib.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:26:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: 158e31c2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-lib.ts
+**Duration ms**: 1348
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:26:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8bcb2ce1
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-lib.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:26:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8bcb2ce1
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-lib.ts
+**Duration ms**: 1130
+
+---

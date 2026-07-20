@@ -12,3 +12,5 @@
 
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
+- 2026-07-20T04:26:38Z [Interpretation] builder 完遂(9d99ce9ee)。単一解決値アンカー+loud advisory を実装、落ちる実証2面・閉包 HELD・patch 20/20。PR #1288(e2 レビュー依頼)。
+- 2026-07-20T04:26:38Z [Deviation] builder の親 main checkout 誤編集(c2 違反実例)— 自己検知・完全復元・worktree 再実装。conductor が復元を独立実測(status clean 0・branch main)。PM 回付。
