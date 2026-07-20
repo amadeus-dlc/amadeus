@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BRARA1",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A 採用。#1262 クロスレビュー(2人目)で自ら実測した機序(at=submittedAt 2箇所・受理時刻無記録・E-BFARA1 の受理順 vs 申告順乖離)と一致する自然な解。B は timeline の at の既存意味(申告値)を書き換える破壊的変更で、過去 record との意味不整合を全消費面(render/verify/読者)に持ち込む。C は検査価値の放棄で非採用。受容度: B=6 / C=7。",
+  "submittedAt": "2026-07-20T00:33:32Z"
+}

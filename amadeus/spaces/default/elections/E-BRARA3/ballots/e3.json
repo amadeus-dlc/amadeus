@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BRARA3",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A(遡及なし・fallback シムなし・NFR 明文化)は Forbidden(要求なき互換レイヤー禁止)と append-only 監査記録の原則に直接整合。完了済み選挙の timeline を再 verify する運用は存在しない(私の全 verify 実測はすべて開票フロー内)ため、読み側シム(B)は消費者不在の互換負債。C(過去 record の機械再構成)は完了済み監査記録の書き換えで P2 違反。受容度: B=6(NFR 根拠が明文化されるなら成立)/ C=7(append-only 原則との矛盾)。",
+  "submittedAt": "2026-07-20T00:26:11Z"
+}

@@ -1,0 +1,21 @@
+{
+  "electionId": "E-BRARA3",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "B. 読み側 fallback(受理時刻欠落時は従来 at 軸で検査 — 互換シム。NFR 根拠の明文化必須)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "A. 遡及なし — 既存 record は完了済み監査記録として再検証対象外(verify は新規選挙にのみ新軸を適用。読み側 fallback シムは書かない — 既存 timeline を verify し直す運用が存在しないことを根拠に NFR で明文化)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "C. 既存 timeline の一括再生成(ledger から機械再構成 — 過去 record の書き換えを伴う)"
+    }
+  ]
+}
