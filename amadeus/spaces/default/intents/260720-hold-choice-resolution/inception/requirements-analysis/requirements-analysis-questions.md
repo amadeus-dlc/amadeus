@@ -3,6 +3,7 @@
 <!-- E-OC1 選挙不要判定ヘッダ -->
 > **判定**: 全3問とも**選挙必須**(真に未決 — Q1 は正準リスト(4)該当性のノルム解釈、Q2/Q3 は設計判断。C-4 単独決定禁止)。leader へ blind 選挙の開催を依頼。裁定受領後に [Answer] 記入(election-answer-after-ruling)。
 > 実測コンテキストは scan-notes.md(RE 一次資料)に依拠。推奨は伏せた中立事実のみ記載(アンカリング防止)。
+> 裁定受領: E-HCRRA1〜3 開票(leader 通知 03:59:29Z、正本 = leader ブランチ dfb076f01 の elections/E-HCRRA{1,2,3}/record.md — Q3=B のユーザーエスカレーション承認追記込み)。
 
 上流入力(consumes 全数): intent-statement.md、scope-document.md、business-overview.md、architecture.md、code-structure.md、team-practices.md
 
@@ -14,7 +15,7 @@
 - B. 該当 — 新しい CLI 受理値と record 出力形の導入自体が契約変更。実装前にユーザーエスカレーションで承認を得る
 - C. その他(note に判定枠組みを明記)
 
-[Answer]:
+[Answer]: A(E-HCRRA1 裁定 2026-07-20 開票、3-0。留保転記(e3, GoA2): 非該当成立条件(既存受理値・出力・t236:310 系ピンの不変)を要件に明記し、崩れたら再判定 / 留保転記(e4, GoA2): 置換へ滑った瞬間のエスカレーション切替条件を明記。**注記: Q3=B 採用により e1 留保(該当へ反転)が発動し、ユーザーエスカレーション実施 → B 承認済み(03:47Z 台、E-HCRRA3 record 追記)— 反転条件は充足済み**)
 
 ## Q2: choice 指定の CLI 構文はどれか?
 
@@ -24,7 +25,7 @@
 - B. 新フラグ `--choice <internalNo>` を併設(`--resolution` は二値専用のまま — フラグ責務分離、FLAG_FIELDS 追加)
 - C. その他(note に構文明記)
 
-[Answer]:
+[Answer]: A(E-HCRRA2 裁定 2026-07-20 開票、3-0 — --resolution choice:<internalNo> の値文法拡張)
 
 ## Q3: tie の既存二値(adopted/rejected)と choice 指定の共存形は?
 
@@ -34,4 +35,4 @@
 - B. tie のみ choice 指定へ置換 — tie から adopted/rejected を除去(受理域の縮小 = 契約変更につき、採用時は Q1 の判定に関わらずユーザーエスカレーションへ束ねる)
 - C. その他(note に方式明記)
 
-[Answer]:
+[Answer]: B(E-HCRRA3 裁定 2026-07-20 開票、choice 多数 2-1+**ユーザーエスカレーション承認で確定**(03:47Z 台)。留保転記(e3, GoA2): 置換は tie 限定・block/discussion/quorum の語彙不変を要件に明記、エスカレーションは必須手順として RA 成果物に固定 / 留保転記(e1, GoA2): 除去は tie 語彙限定(他 reason の二値は E-TCRCG=A どおり不変)、受理域縮小につきユーザーエスカレーションへ束ねる(実施済み) / 留保転記(e4, GoA2): 多肢 tie での二値使用の曖昧受理を無音で通さない設計義務 — B では tie の二値が loud 拒否となる実装が該当。二値が自然な単一提案型(s13-adoption)との使い分けを docs に1行)
