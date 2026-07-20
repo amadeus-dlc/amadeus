@@ -1,0 +1,31 @@
+{
+  "electionId": "E-AWATCH",
+  "voter": "e1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "B. team/Operating Modesへ独立cidとして新設"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "C. 今回の運用記録だけに留めnorm化しない"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 4,
+      "label": "D. 不採用"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 5,
+      "label": "X. その他（noteに規範scope/文面を明記）"
+    },
+    {
+      "displayNo": 5,
+      "internalNo": 1,
+      "label": "A. 既存push-reporting cidへ安全なhealth-check具体方式として追補"
+    }
+  ]
+}

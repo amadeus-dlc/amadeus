@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-AWATCH",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A(既存push-reporting cidへの追補)を支持。Herdr内からagent-watch pane w1:p8をread-only実測し、60秒ごとにagent label/pane/statusとUTC時刻だけを表示し、done/idle/workingの遷移を観測できることを確認した。pane list/get/read以外のfocus/input/resume/despawn操作やagmsg inbox/election status pollingは行っていない。これはpush-reportingが既に許す『長時間の沈黙に対するユーザー承認health check』の具体的かつ非侵襲な観測方式で、独立cidにすると進捗polling禁止との関係が分散する。追補文はread-only status観測に限定し、done/idleを異常扱いせず、割当中なのに正当なgate/blocker報告なく停止した場合だけleaderが手動で証拠確認・指示する境界を保持すべき。非採用時受容度: B=6、C=7、D=8、Other=6。",
+  "submittedAt": "2026-07-20T10:23:28Z"
+}
