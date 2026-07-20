@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TCRRAS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e1 record をリードオンリー実測+当事者照合: (1) 留保必須票の分母を4選挙の ledger 実読で再計算 — Q1×3(e4/e2/e3)+Q3×2(e4/e3)+Q4×2(e4/e2)= 7件で質問の 7/7 と一致 (2) 自票留保3件の転記を起案者照合 — Q1(GoA4 棄権票の choice 除外)は FR-1 の収斂要旨へ、Q3(内訳の母集団定義を design で1文固定・E-BFARA2 前提)は FR-3 へ、Q4(分類ラダー順序規約のコメント明記)は FR-4 へ、いずれも意図どおり verbatim 転記 (3) 裁定 A/A/A/A は受領裁定と一致、FR-3 の reviewer m4 申し送り(GoA 軸 tie 分岐の存廃を FD 委譲)は留保でなく条件付き READY の条件として適切に処理 (4) 違反実例1件(t234 消費『7箇所』の無検証転記→reviewer 捕捉)は ledger-count-mechanical-recalc の違反実例で PM 回付が正規経路。新規ノルムの隙間なし、0件で可",
+      "submittedAt": "2026-07-19T22:58:57Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TCRRAS13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e1 record リードオンリー実測: 成果物3点実在。留保転記を当事者確認 — 私の E-TCRRA1 留保(GoA4 棄権票の choice 母集団除外)が FR-1 へ収斂転記され、E-GMEBT 実データを回帰固定点とする受け入れ基準+棄権除外 fixture の FR-5 テスト要求まで昇格していることを実読。M1(t234 消費 7→8箇所/9呼び出し)は requirements 本文で grep 行番号付きに是正済み・diary に conductor 自己再実測の記録あり。違反実例(ledger-count-mechanical-recalc)の PM 回付は既存 cid の violation トレンド管理として適切でプロセス新規なし。0件で可(1)。",
+      "submittedAt": "2026-07-19T22:58:22Z"
+    }
+  ],
+  "late": []
+}

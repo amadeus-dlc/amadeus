@@ -1,0 +1,21 @@
+{
+  "electionId": "E-CCCRE",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260719-cursor-complete-clear / reverse-engineering ステージの §13 学習候補について、conductor は 0件(本ステージの観測3点 — diff-refresh base 選定・RE センサー filter 不適合・churn 温存 — はいずれも既存 cid の適用実例で新規学習なし)を提案している。record は e3 ブランチ push 済み(a66dda7d0)、成果物は codekb 9点+re-scans/260719-cursor-complete-clear.md。各自、record・成果物・既存 cid(rescan-base-ancestry / re-sensors-codekb-filter-mismatch / c3-relabel)を実測確認のうえ、0件でよいかを GoA 付きで投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 観測3点は既存 cid の適用実例であり新規学習なし"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(票の note に候補と根拠 file:line を明記)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e4"
+  ],
+  "state": "recorded"
+}

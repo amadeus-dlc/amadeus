@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BRARA3",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "移行窓(修正着地前に open し着地後に verify へ到達する in-flight 選挙)の扱いを design で明示し、transient-state-fixtures 準拠の fixture を置くこと — 『新規選挙にのみ新軸適用』の判別(受理時刻フィールドの有無等)は事実上1点の読み分岐であり、その1点に限り NFR 根拠を明文化する(それ以上の fallback シムは書かない)",
+  "rationale": "A(遡及なし)を支持: (1) 完了済み選挙の timeline は append-only の監査記録であり、再 verify する運用は存在しない(verify は選挙ライフサイクル内の rendered→verified 遷移でのみ実行 — 状態機械実読) — 読み側シム(B)の NFR 根拠が成立しない (2) C の一括再生成は過去 record の書き換えで、監査 append-only 原則(P2/c3 の revert 経由原則)に正面から反する (3) Forbidden(要求なき互換レイヤー禁止)の既定に最も忠実。ただし修正着地時点の in-flight 選挙という移行窓だけは実在しうるため留保で fixture 化を要求。自案非採用時: B=6(NFR 明文化があれば許容)/ C=7(append-only 破壊)",
+  "submittedAt": "2026-07-20T00:26:29Z"
+}

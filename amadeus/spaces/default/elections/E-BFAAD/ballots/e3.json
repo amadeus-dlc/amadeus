@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFAAD",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "第3イテレーションのスコープは『是正2点の閉包確認のみ』に厳格限定(新規面の探索的レビューはしない)— iteration 予算の趣旨を保ちつつ独立確認を足す趣旨。5分で閉じない発見が出た場合のみ再エスカレーション。",
+  "rationale": "実測: election.ts:456 の verifySelf(ballots.length, ballots, ...) の生 ballots 消費が現存し、e2 の component-methods.md 適用点表 #5 に resolved 化是正が正しく反映されていることを独立実読で確認。ただし iteration 2 で新 Critical が出た履歴があり、是正 diff 自体の独立再実測(fix-diff-independent-reverify)を conductor 自己確認だけで閉じるのは P1(独立検証された合意)に対して弱い。閉包限定の第3イテレーション(a)は低コストで独立性を回復する。(b) 非採用受容度: 6(私の本票での :456/#5 照合が事実上の独立確認になっているため、(b) でも実質リスクは小)。",
+  "submittedAt": "2026-07-19T22:50:54Z"
+}

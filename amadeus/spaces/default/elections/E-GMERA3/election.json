@@ -1,0 +1,24 @@
+{
+  "electionId": "E-GMERA3",
+  "kind": "clarification-question",
+  "question": "260719-goa-multiseg-ecode(Issue #1226)RA Q3: t238:104 / GoaLineCode(選挙 CLI 側)の連動裁定。\n\n背景: tests/unit/t238-election-record.test.ts:104 が現行バグ挙動をピン留め(parseGoaLine(\"GoA[E-SDE-CG4]: …\").ok === false を expect)— head 拡張でこの assertion は必ず反転する。GoaLineCode(scripts/amadeus-election-record.ts:34 GOA_LINE_CODE_RE=/^E-[A-Z0-9]+$/)は #1226 の既知 workaround(:31 コメント明記)で、選挙 CLI は複節 election id を alnum 圧縮形へ変換して GoA 行を書いている。\n\n各自コード実測のうえ GoA 付き投票。自案非採用時の受容度(6/7/8)を note に併記。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. t238:104 を複節受理の正テストへ反転+GoaLineCode も複節受理へ拡張し圧縮 workaround を撤去(根治の完全形、scripts/ 面へ変更が広がる)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. t238:104 の反転のみ。GoaLineCode は単節維持(parse 側だけ受理域を広げる非対称を明文化 — 修正面を amadeus-norm-metrics.ts 系+テストに保つ)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. B+GoaLineCode 拡張を別 Issue 起票(修正面の限定と追跡可能性の両立)"
+    }
+  ],
+  "voters": [
+    "e2",
+    "e4"
+  ],
+  "state": "recorded"
+}

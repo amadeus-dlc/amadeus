@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BRARE",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e1 record リードオンリー実測: re-scans/260720-ballot-received-at.md 実在、RE memory 実在。機構引用を自 tree で独立スポット照合 — store.ts:156/:166 の at: ballot.submittedAt は verbatim 一致、receivedAt は scripts 全域 grep 0件(#1262 のギャップ主張と一致)。RE センサー filter 不適合の手動代替は既知 cid(re-sensors-codekb-filter-mismatch)の適用。body 8点温存・未決6点の record 固定は c1 churn 回避の適用実例。プロセス新規なし。0件で可(1)。",
+  "submittedAt": "2026-07-20T00:21:48Z"
+}

@@ -1,0 +1,21 @@
+{
+  "electionId": "E-TCRCG",
+  "voter": "e2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "A(builder 推奨・最小)= 人間解決 hold の裁定行は二値表現を維持(tally 結果のみ winner 描画。renderPersistDraft に ruling-line override を追加。t236 期待不変)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "B = hold-resolution を choice ベースへ改定(人間が勝者 choice を選ぶ語彙へ — HOLD_RESOLUTIONS・t236 期待変更。ユーザー可視契約の変更 → 採用時はユーザーエスカレーション必須)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "C = その他(note に方式明記)"
+    }
+  ]
+}

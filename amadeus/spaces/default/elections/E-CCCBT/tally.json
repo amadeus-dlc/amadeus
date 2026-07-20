@@ -1,0 +1,38 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-19T22:39:20Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CCCBT",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e3 record をリードオンリー実測: 成果物7点+memory 実在(ls 8件)、diary 4点 verbatim 確認、build-test-results の PASS/PENDING 判定分離(:38-39 — PASS=ローカル全検証・落ちる実証・閉包 / PENDING=CI Success green+マージ着地、閉包条件 = head 176811547 の CI SUCCESS を明記)を実読、phase-check-construction.md 実在、センサー最新ラウンド(22:35:30-31Z)全 Passed を audit 時系列 awk で確認(初回 required-sections FAILED 6件→H2 是正→再発火の自己捕捉経緯も diary と整合)。引用される自分の増分再確認(22:34:41Z READY 維持)も実時刻と一致。surface 3点は sensor-before-reviewer / deployment-execution:c3 の判定分離語彙 / phase-check-before-final-approve の適用実例で、新規ノルムの隙間なし。0件で可",
+      "submittedAt": "2026-07-19T22:37:46Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CCCBT",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測(e3 worktree リードオンリー): (1) diary Deviation 22:38Z — required-sections 6件の自己捕捉→H2 是正→14/14 PASSED の記録実在(sensor-before-reviewer 適用) (2) build-test-results.md の PASS/PENDING 判定分離実文を確認 — PASS(ローカル全検証・落ちる実証・閉包)と PENDING(#1258 CI green・マージ着地、閉包条件 = head 176811547 の CI SUCCESS)が明示分離(deployment-execution:c3 語彙+report-final-values-only 適用) (3) 成果物7点 ls 実在。3点とも既存 cid の適用実例で新規学習なし。0件で可(1)",
+      "submittedAt": "2026-07-19T22:39:10Z"
+    }
+  ],
+  "resolutions": []
+}

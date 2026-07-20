@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFARE",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 worktree リードオンリー実測: re-scans/260719-ballot-failclosed-amend.md 実在・timestamp 最新バナー本 intent・body 9点温存判断の明記を確認。base 591b6a2a2 の祖先性/距離65 は e2 observed 6f2455c43 基準の記載として整合(enumeration-check-at-observed — 自 tree で再カウントせず存在確認まで)。主要新事実の機構引用を独立照合: amadeus-election-model.ts の parse 戻り値が kind:'original' を固定 mint(:193-198 実読)= amend 投入経路の構造的不在は実文一致。diary 観測は c3 直列/rescan-base-ancestry/c3-relabel/re-sensors-filter-mismatch の適用実例でプロセス新規なし。0件で可(1)。",
+  "submittedAt": "2026-07-19T20:23:39Z"
+}

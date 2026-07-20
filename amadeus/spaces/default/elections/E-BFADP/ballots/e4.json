@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFADP",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record をリードオンリー実測: 成果物5点+memory 実在(ls 6件)、diary 2点 verbatim(approval-handoff:c3 の未確定 schedule 非捏造+単一 Bolt のラダープロンプト非発生明記 / phase boundary 手順 = phase-check-before-final-approve 適用とグラント 22ab851b の boundary 込み適用)、verification/phase-check-inception.md 実在(正名・正位置)、E-OC1 承認 TS 23:14:27Z 記載、センサー最新 verdict 全 Passed(23:15:03Z/23:15:05Z — 初回 FAILED 6件の是正後)。単一 Bolt 計画の walking-skeleton 対象外判定は org 既決(bugfix スコープはスケルトンのセレモニースキップ)の正しい適用で、e1 #1261 との直列合意の完了条件固定も E-TCRRA4 裁定当事者として整合。2点とも既存 cid の適用実例で新規学習なし、0件で可",
+  "submittedAt": "2026-07-19T23:15:56Z"
+}

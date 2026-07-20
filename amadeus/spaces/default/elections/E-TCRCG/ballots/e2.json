@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TCRCG",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A 採用。実測: HOLD_RESOLUTIONS(election.ts:69-71)の語彙は adopted/rejected/reopen/resume-collecting/close-rejected の二値+運用値で、handleRender の合成(:378-386)は resolution==='adopted' の二値分岐、t236:309-310 は『裁定: 不採用』をピン — いずれも人間裁定経路の現行契約。E-TCRRA 裁定の射程は tally 自動集計の choice 化であり人間裁定語彙は未裁定という builder の停止判断は正確(deviation-stop-before-implement の模範)。A は未裁定面を現行契約のまま温存し変更面を tally 側に限定する最小形で、人間 hold 裁定は裁定文自体が意味を運ぶため二値で機能十分(E-CCCRA の hold-resolved 実運用でも裁定テキストが正でありユーザー可視の不足なし)。B の choice 語彙化は将来価値があるが、ユーザー可視契約変更+HOLD_RESOLUTIONS/t236 改定を今回の bugfix に同乗させる必然がない — 必要になった時に Issue-first で。受容度: B=6(エスカレーション経由なら)。",
+  "submittedAt": "2026-07-19T23:12:34Z"
+}

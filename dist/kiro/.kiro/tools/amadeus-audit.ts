@@ -3,9 +3,11 @@ import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, stat
 import { dirname } from "node:path";
 import {
   acquireAuditLock,
+  activeIntent,
   auditBlockField,
   auditFilePath,
   errorMessage,
+  intentStatusForAudit,
   isoTimestamp,
   parseFieldArgs,
   relativeRecordDir,
@@ -15,6 +17,14 @@ import {
   worktreeAuditFilePath,
   worktreePath,
 } from "./amadeus-lib.ts";
+
+// The append outcome (#1248). A completed intent stops accepting audit appends:
+// the gate returns the `appended: false` arm so a caller can distinguish a real
+// write from a post-complete suppression. Both arms carry event + timestamp so
+// existing consumers that only read `.timestamp`/`.event` are unaffected.
+export type AppendAuditResult =
+  | { appended: true; event: string; timestamp: string }
+  | { appended: false; reason: "intent-complete"; event: string; timestamp: string };
 
 // --- Canonical event types (73) ---
 // See docs/reference/12-state-machine.md for the state transitions that emit each event.
@@ -284,7 +294,7 @@ export function appendAuditEntry(
   projectDir: string,
   intent?: string,
   space?: string
-): { appended: true; event: string; timestamp: string } {
+): AppendAuditResult {
   if (!VALID_EVENT_TYPES.has(eventType)) {
     throw new Error(
       `Invalid event type: ${eventType}. Must be one of: ${[...VALID_EVENT_TYPES].join(", ")}`
@@ -317,11 +327,24 @@ export function appendAuditEntryUnlocked(
   projectDir: string,
   intent?: string,
   space?: string
-): { appended: true; event: string; timestamp: string } {
+): AppendAuditResult {
   if (!VALID_EVENT_TYPES.has(eventType)) {
     throw new Error(
       `Invalid event type: ${eventType}. Must be one of: ${[...VALID_EVENT_TYPES].join(", ")}`
     );
+  }
+
+  // Post-complete audit stop (#1248): once the target intent's registry row is
+  // "complete", the audit ledger is sealed — refuse the append and report it so
+  // the caller never records events past the workflow's terminal marker. Gated on
+  // the definite "complete" only; "unknown" (unresolved/read failure) falls
+  // through to the append, preserving pre-#1248 behaviour.
+  if (intentStatusForAudit(projectDir, intent, space) === "complete") {
+    const targetDir = activeIntent(projectDir, space, intent) ?? "(unresolved)";
+    process.stderr.write(
+      `amadeus-audit: suppressed ${eventType} append — target intent ${targetDir} is complete (#1248)\n`
+    );
+    return { appended: false, reason: "intent-complete", event: eventType, timestamp: isoTimestamp() };
   }
 
   const heading = EVENT_HEADINGS[eventType] || eventType;
@@ -586,7 +609,7 @@ export function handleAuditFork(args: string[], projectDir: string): void {
 // is a trailing marker; merged-audit chronological order is preserved by the
 // order in which deltas were appended, not by AUDIT_MERGED timestamps.
 
-function handleAuditMerge(args: string[], projectDir: string): void {
+export function handleAuditMerge(args: string[], projectDir: string): void {
   const slug = parseSlugFlag(args, "audit-merge");
   // Same selector the state/audit fork used -> the SAME intent record on both
   // ends (vision §5). recordPrefix pins the worktree audit mirror.
@@ -706,7 +729,7 @@ function handleAuditMerge(args: string[], projectDir: string): void {
   // detect the orphan-delta case (delta in main, AUDIT_FORKED present, no
   // AUDIT_MERGED, ERROR_LOGGED with matching forkTs).
   let entriesMerged = 0;
-  let result: { appended: true; event: string; timestamp: string };
+  let result: AppendAuditResult;
   try {
     const trimmed = delta.trim();
     if (trimmed !== "") {

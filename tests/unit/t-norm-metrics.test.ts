@@ -615,3 +615,59 @@ describe("PhaseBSchemas (parseGoaLine / parsePmCidLine)", () => {
     expect(parsePmCidLine("totally unrelated line").ok).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Issue #1226: hyphenated multi-segment E-codes (e.g. E-TPR-RE, E-SDE-CG4)
+// must parse — the ADR-4 schema regex previously stopped at the first hyphen
+// and rejected every real team.md GoA/PM-cid line carrying a multi-segment
+// code. The captured ecode is returned verbatim (no transform).
+// ---------------------------------------------------------------------------
+
+describe("PhaseBSchemas multi-segment E-codes (Issue #1226)", () => {
+  test("parseGoaLine accepts a hyphenated multi-segment E-code, verbatim", () => {
+    const r = parseGoaLine("GoA[E-TPR-RE]: 1x3 2x0 3x0 4x0 5x0 6x0 7x0 8x0");
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.ecode).toBe("E-TPR-RE");
+      expect(r.votes).toEqual([3, 0, 0, 0, 0, 0, 0, 0]);
+    }
+  });
+
+  test("parseGoaLine accepts other real team.md multi-segment forms", () => {
+    const a = parseGoaLine("GoA[E-SDE-CG4]: 1x1 2x0 3x0 4x0 5x0 6x0 7x0 8x0");
+    expect(a.ok).toBe(true);
+    if (a.ok) expect(a.ecode).toBe("E-SDE-CG4");
+    const b = parseGoaLine("GoA[E-APG-CG13]: 1x2 2x0 3x0 4x0 5x0 6x0 7x0 8x0");
+    expect(b.ok).toBe(true);
+    if (b.ok) expect(b.ecode).toBe("E-APG-CG13");
+  });
+
+  test("parseGoaLine keeps single-segment backward compatibility", () => {
+    const a = parseGoaLine("GoA[E-PM1]: 1x4 2x0 3x1 4x0 5x0 6x2 7x0 8x0");
+    expect(a.ok).toBe(true);
+    if (a.ok) expect(a.ecode).toBe("E-PM1");
+    const b = parseGoaLine("GoA[E-PM9]: 1x3 2x0 3x0 4x0 5x0 6x0 7x0 8x0");
+    expect(b.ok).toBe(true);
+    if (b.ok) expect(b.ecode).toBe("E-PM9");
+  });
+
+  test("parsePmCidLine accepts a multi-segment round token", () => {
+    const r = parsePmCidLine("PM-cid: reverse-engineering:rescan-base-ancestry incident=x round=E-TPR-RE");
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.round).toBe("E-TPR-RE");
+  });
+
+  test("parsePmCidLine keeps single-segment round backward compatibility", () => {
+    const r = parsePmCidLine("PM-cid: requirements-analysis:merge-approval-latency incident=x round=E-PM3");
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.round).toBe("E-PM3");
+  });
+
+  // The sparse per-subquestion form (`c1 2x2 7x1 / c2 1x3`) is NOT covered by
+  // this parse — only the canonical 8-bin form is. Pin the current failing
+  // behaviour so any future support is a deliberate, tested change.
+  // Tracked separately as its own Issue.
+  test("parseGoaLine rejects the sparse per-subquestion form", () => {
+    expect(parseGoaLine("GoA[E-SMF-BT]: c1 2x2 7x1 / c2 1x3").ok).toBe(false);
+  });
+});

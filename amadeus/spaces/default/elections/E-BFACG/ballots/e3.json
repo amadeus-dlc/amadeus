@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFACG",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 CG diary 実測: Deviation 記録(plan が conductor tree 未コミットのまま fork され隔離 worktree に非存在 — builder 申告・プロンプト焼き込みで実害なし・以後 fork 前コミット)の実在を確認。単発ではない: 私の #1248 Bolt(同日)でも plan.md は record 側にあり bolt worktree(origin/main 起点)から不可視のため、全要求をプロンプトへ焼き込む同型回避を独立にやっている — conductor が plan を書いてから fork する標準フローで毎回踏む構造であり、『fork は コミット済み状態から』の1行 c2 追補は安価で再発を構造的に断つ。採用(1)。",
+  "submittedAt": "2026-07-20T00:43:45Z"
+}

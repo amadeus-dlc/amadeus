@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFAAD",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "実測確認: verifySelf の生 ballots 消費(election.ts:456)と diary の iteration 履歴(it.1 Critical=適用点列挙不足 → it.2 で新 Critical=同じ適用点表の列挙欠落が再発)を独立実読。(a) 第3イテレーション追加を支持: (1) it.2 が新 Critical を出した事実は『まだレビューが実指摘を生んでいる』状態で、ここで独立確認なしに閉じるのはリスク非対称(5分 vs 設計欠陥の下流流出) (2) 欠落したのが適用点の列挙表という点が決定的 — enumeration-completeness-review / enumeration-reverify-at-implementation の教訓どおり、列挙 omission は起草者の再確認では構造的に検出できない(検索語依存)ため、conductor 独立検証(b)は原理的にこのクラスへの保証力が弱い (3) スコープを『是正2点の機械的閉包確認のみ』に限定すれば iteration 予算の趣旨(発散防止)とも両立する。自案非採用時: (b)=6(ゲート報告の実測透明化が担保になるため不本意だが支持)",
+  "submittedAt": "2026-07-19T22:51:09Z"
+}

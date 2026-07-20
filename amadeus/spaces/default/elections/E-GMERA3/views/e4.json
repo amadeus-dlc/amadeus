@@ -1,0 +1,21 @@
+{
+  "electionId": "E-GMERA3",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "B. t238:104 の反転のみ。GoaLineCode は単節維持(parse 側だけ受理域を広げる非対称を明文化 — 修正面を amadeus-norm-metrics.ts 系+テストに保つ)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "C. B+GoaLineCode 拡張を別 Issue 起票(修正面の限定と追跡可能性の両立)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "A. t238:104 を複節受理の正テストへ反転+GoaLineCode も複節受理へ拡張し圧縮 workaround を撤去(根治の完全形、scripts/ 面へ変更が広がる)"
+    }
+  ]
+}

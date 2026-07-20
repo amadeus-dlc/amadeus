@@ -1,0 +1,38 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-19T23:47:18Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TCRBT",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e1 record リードオンリー実測: B&T 成果物7点+memory.md(ls=8)と phase-check-construction.md の実在を確認。diary の閉包記録に『e3 の実 ledger 両版対照』とあり、これは私の #1268 レビュー実測(pre-fix adopted 誤/post-fix winner=2)を指す — 当事者として一致確認。センサー FAILED 1件(performance H2 不足 23:44:51Z)→是正→PASSED(23:45:20Z)は是正ループの正常系で、私の B&T(H2 不足 6件是正)と同型。適用ノルムは全て既存 cid の適用実例(E-GMECG 追補の初適用含む)でプロセス新規なし。0件で可(1)。",
+      "submittedAt": "2026-07-19T23:46:44Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TCRBT",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e1 record をリードオンリー実測: 成果物7点+memory 実在(ls 8件)、diary 2点 verbatim(実測サマリ+FAILED 1件の正常系是正)、verification/phase-check-construction.md 実在、センサー最終ラウンド全 Passed(23:45:20Z/23:46:10Z — H2 不足の実指摘→是正の経緯は diary と一致)。E-GMECG 追補の初適用を build-test-results.md:15 で verbatim 確認(『base 切替 → 6 fail → fix SHA 明示復元 → 17 pass・tree clean』)— 自分がレビュー・投票した追補が採用当日に正しく運用された対照実例で、新規学習でなく既存(新設)cid の適用実例。PENDING の分離(PR #1268 マージのみ)も report-final-values-only 準拠。0件で可",
+      "submittedAt": "2026-07-19T23:47:05Z"
+    }
+  ],
+  "resolutions": []
+}

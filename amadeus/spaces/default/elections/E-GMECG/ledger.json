@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GMECG",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測: (1) ヒヤリハットの一次記録実在 — e1 diary 20:30:32Z Deviation+code-summary.md:29-31 の申告(fix 未コミットで checkout HEAD → 一時消失 → 即時回復)をリードオンリー確認。 (2) 既存 falling-proof-no-stash 原文(team.md)を照合 — 『復元は regen/再 checkout』は復元手段のみ規定し、fix コミット前の checkout HEAD が修正自体を消す時系列条件・復元 ref の明示を規定していない = 含意で足りるとの読みは原文実測で否定(不採用理由候補への反証)。stash 系(bare stash が修正を失う)と checkout 系(未コミットが消える)は同型の罠で追補統合が体系上も正しい。採用(1)",
+      "submittedAt": "2026-07-19T20:32:35Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GMECG",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "実測確認: e1 diary の Deviation(2026-07-19T20:30:32Z — builder が fix 未コミットで checkout HEAD 実行し修正を一時消失、即時回復・申告記載)を verbatim 確認、falling-proof-no-stash 原文(team.md:267)に『復元は regen/再 checkout』とあるが commit-first の前提条件と復元 ref の明示要求は不在であることを確認。不採用理由候補の『含意で足りる』読みに対する反証は本ヒヤリハット自体 — 既存 cid が存在する状態で発生した実例であり、含意は執行力を持たなかった。追補は1文で肥大なし、fix 消失という falling-proof-injection-one-set と同族のデータ喪失クラスを事前遮断する。PR #1256 レビュアーとして builder の全検証 exit 0・落ちる実証 4fail→54pass・閉包 ok:true はレビューで独立確認済みの事実とも整合。追補統合(独立 cid 化しない)の形式も既存慣行どおり。採用",
+      "submittedAt": "2026-07-19T20:33:14Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GMECG",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e1 record 実測: diary Deviations 2026-07-19T20:30:32Z に『fix 未コミットで checkout HEAD 実行し修正を一時消失(即時回復)』の実インシデント記載を確認。falling-proof-no-stash 原文(team.md)は『復元は regen/再 checkout』とのみ規定し、復元 ref の明示・fix コミット先行を規定していない — 未コミット時の checkout HEAD が修正自体を消す穴は原文の含意で塞がっていない実ギャップ。追補統合(独立 cid 化しない)の起案形も既存慣行と整合。採用(1)。なお同型リスクは本日私の Bolt でも該当しうるため、採用時は即適用します。",
+      "submittedAt": "2026-07-19T20:34:42Z"
+    }
+  ],
+  "late": []
+}

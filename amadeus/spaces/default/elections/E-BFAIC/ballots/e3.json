@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFAIC",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 worktree をリードオンリー実測: diary 3点(intent-capture:c1 適用 / t238 除外方針=ディスパッチ要件(4) / tally amend 規則の design 段送り=要件(5))はいずれも既存 cid・ディスパッチ要件の適用実例で新規学習なし。E-OC1 ヘッダに承認 TS 15:04:05Z 記載・全4問判定行あり、成果物3点(intent-statement/stakeholder-map/questions)実在、SENSOR_FAILED 0 件を e2 シャード grep で確認。0件で可(1)。",
+  "submittedAt": "2026-07-19T15:07:32Z"
+}
