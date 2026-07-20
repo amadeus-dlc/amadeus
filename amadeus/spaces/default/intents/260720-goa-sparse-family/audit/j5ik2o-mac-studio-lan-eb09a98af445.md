@@ -3516,3 +3516,1024 @@
 **Timestamp**: 2026-07-20T05:20:40Z
 
 ---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T05:23:37Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T05:23:37Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T05:23:37Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: units-generation
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T05:23:37Z
+**Event**: GATE_APPROVED
+**Stage**: units-generation
+**Grant Id**: 1d87113b
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T05:23:37Z
+**Event**: STAGE_COMPLETED
+**Stage**: units-generation
+**Details**: Stage Units Generation approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T05:23:37Z
+**Event**: STAGE_STARTED
+**Stage**: delivery-planning
+**Agent**: amadeus-delivery-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: 590d9c24
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/bolt-plan.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:24:27Z
+**Event**: SENSOR_FAILED
+**Fire id**: 590d9c24
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/bolt-plan.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/delivery-planning/required-sections-590d9c24.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9faf0973
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/team-allocation.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:24:27Z
+**Event**: SENSOR_FAILED
+**Fire id**: 9faf0973
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/team-allocation.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/delivery-planning/required-sections-9faf0973.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: b9176660
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/risk-and-sequencing-rationale.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FAILED
+**Fire id**: b9176660
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/risk-and-sequencing-rationale.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/delivery-planning/required-sections-b9176660.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3da6f039
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/external-dependency-map.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FAILED
+**Fire id**: 3da6f039
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/external-dependency-map.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/delivery-planning/required-sections-3da6f039.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6f89169f
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/bolt-plan.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FAILED
+**Fire id**: 6f89169f
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/bolt-plan.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/delivery-planning/upstream-coverage-6f89169f.md
+**Findings count**: 3
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3d37ff1b
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/team-allocation.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FAILED
+**Fire id**: 3d37ff1b
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/team-allocation.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/delivery-planning/upstream-coverage-3d37ff1b.md
+**Findings count**: 3
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5425d4b2
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/risk-and-sequencing-rationale.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FAILED
+**Fire id**: 5425d4b2
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/risk-and-sequencing-rationale.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/delivery-planning/upstream-coverage-5425d4b2.md
+**Findings count**: 3
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: b2e9b05b
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/external-dependency-map.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:24:28Z
+**Event**: SENSOR_FAILED
+**Fire id**: b2e9b05b
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/external-dependency-map.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/delivery-planning/upstream-coverage-b2e9b05b.md
+**Findings count**: 3
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-20T05:24:48Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-4/amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/bolt-plan.md
+**Context**: inception > delivery-planning > bolt-plan.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: db8aa4a3
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/bolt-plan.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:24:48Z
+**Event**: SENSOR_FAILED
+**Fire id**: db8aa4a3
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/bolt-plan.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/delivery-planning/required-sections-db8aa4a3.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 41fe322d
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/bolt-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:24:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 41fe322d
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/bolt-plan.md
+**Duration ms**: 35
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-20T05:24:59Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-4/amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/bolt-plan.md
+**Context**: inception > delivery-planning > bolt-plan.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: ae39e29e
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/bolt-plan.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:24:59Z
+**Event**: SENSOR_FAILED
+**Fire id**: ae39e29e
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/bolt-plan.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/delivery-planning/required-sections-ae39e29e.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:24:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1f232341
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/bolt-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:24:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1f232341
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/bolt-plan.md
+**Duration ms**: 35
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-20T05:25:37Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-4/amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/team-allocation.md
+**Context**: inception > delivery-planning > team-allocation.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:25:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 437e6d70
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/team-allocation.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:25:37Z
+**Event**: SENSOR_FAILED
+**Fire id**: 437e6d70
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/team-allocation.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/delivery-planning/required-sections-437e6d70.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:25:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: a7b7a4a3
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/team-allocation.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:25:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: a7b7a4a3
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/team-allocation.md
+**Duration ms**: 33
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-20T05:25:44Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-4/amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/team-allocation.md
+**Context**: inception > delivery-planning > team-allocation.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:25:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 82ea1e2b
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/team-allocation.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:25:44Z
+**Event**: SENSOR_FAILED
+**Fire id**: 82ea1e2b
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/team-allocation.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/delivery-planning/required-sections-82ea1e2b.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:25:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 52eaf56c
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/team-allocation.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:25:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 52eaf56c
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/team-allocation.md
+**Duration ms**: 33
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-20T05:25:52Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-4/amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/risk-and-sequencing-rationale.md
+**Context**: inception > delivery-planning > risk-and-sequencing-rationale.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:25:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: fcfc0100
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/risk-and-sequencing-rationale.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:25:52Z
+**Event**: SENSOR_FAILED
+**Fire id**: fcfc0100
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/risk-and-sequencing-rationale.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/delivery-planning/required-sections-fcfc0100.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:25:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: e7d33f51
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/risk-and-sequencing-rationale.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:25:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: e7d33f51
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/risk-and-sequencing-rationale.md
+**Duration ms**: 33
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-20T05:26:00Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-4/amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/risk-and-sequencing-rationale.md
+**Context**: inception > delivery-planning > risk-and-sequencing-rationale.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:26:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 966c23ff
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/risk-and-sequencing-rationale.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:26:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: 966c23ff
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/risk-and-sequencing-rationale.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/delivery-planning/required-sections-966c23ff.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:26:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: c9f39f8e
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/risk-and-sequencing-rationale.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:26:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: c9f39f8e
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/risk-and-sequencing-rationale.md
+**Duration ms**: 33
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-20T05:26:07Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-4/amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/external-dependency-map.md
+**Context**: inception > delivery-planning > external-dependency-map.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:26:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: d2b2370c
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/external-dependency-map.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:26:07Z
+**Event**: SENSOR_FAILED
+**Fire id**: d2b2370c
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/external-dependency-map.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/delivery-planning/required-sections-d2b2370c.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:26:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 76597655
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/external-dependency-map.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:26:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: 76597655
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/external-dependency-map.md
+**Duration ms**: 34
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-20T05:26:15Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-4/amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/external-dependency-map.md
+**Context**: inception > delivery-planning > external-dependency-map.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:26:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 11321220
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/external-dependency-map.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:26:15Z
+**Event**: SENSOR_FAILED
+**Fire id**: 11321220
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/external-dependency-map.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/delivery-planning/required-sections-11321220.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:26:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 47da8b87
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/external-dependency-map.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:26:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 47da8b87
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/external-dependency-map.md
+**Duration ms**: 32
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-20T05:26:22Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-4/amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/delivery-planning-questions.md
+**Context**: inception > delivery-planning > delivery-planning-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:26:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: f281f45d
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/delivery-planning-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:26:22Z
+**Event**: SENSOR_FAILED
+**Fire id**: f281f45d
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/delivery-planning-questions.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/delivery-planning/required-sections-f281f45d.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:26:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: ef1dda4d
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/delivery-planning-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:26:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: ef1dda4d
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/delivery-planning-questions.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:26:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: e29d3d20
+**Sensor ID**: answer-evidence
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/delivery-planning-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:26:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: e29d3d20
+**Sensor ID**: answer-evidence
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/delivery-planning-questions.md
+**Duration ms**: 33
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-20T05:26:35Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-4/amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/delivery-planning-questions.md
+**Context**: inception > delivery-planning > delivery-planning-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:26:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: e37af79b
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/delivery-planning-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:26:35Z
+**Event**: SENSOR_FAILED
+**Fire id**: e37af79b
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/delivery-planning-questions.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/delivery-planning/required-sections-e37af79b.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:26:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: e3ca6d8b
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/delivery-planning-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:26:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: e3ca6d8b
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/delivery-planning-questions.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:26:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: f3c4dcfd
+**Sensor ID**: answer-evidence
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/delivery-planning-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:26:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: f3c4dcfd
+**Sensor ID**: answer-evidence
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/delivery-planning-questions.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:26:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 13e1235f
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/bolt-plan.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:26:44Z
+**Event**: SENSOR_FAILED
+**Fire id**: 13e1235f
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/bolt-plan.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/delivery-planning/required-sections-13e1235f.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:26:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: a5435d91
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/team-allocation.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:26:44Z
+**Event**: SENSOR_FAILED
+**Fire id**: a5435d91
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/team-allocation.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/delivery-planning/required-sections-a5435d91.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:26:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: e361137a
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/risk-and-sequencing-rationale.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:26:44Z
+**Event**: SENSOR_FAILED
+**Fire id**: e361137a
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/risk-and-sequencing-rationale.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/delivery-planning/required-sections-e361137a.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:26:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: ddad7c38
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/external-dependency-map.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:26:44Z
+**Event**: SENSOR_FAILED
+**Fire id**: ddad7c38
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/external-dependency-map.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/delivery-planning/required-sections-ddad7c38.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:26:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 850a8b07
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/delivery-planning-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:26:44Z
+**Event**: SENSOR_FAILED
+**Fire id**: 850a8b07
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/delivery-planning-questions.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/delivery-planning/required-sections-850a8b07.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:26:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 429b9e60
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/bolt-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:26:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 429b9e60
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/bolt-plan.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:26:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9e2a06e9
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/team-allocation.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:26:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9e2a06e9
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/team-allocation.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:26:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: bdf28073
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/risk-and-sequencing-rationale.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:26:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: bdf28073
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/risk-and-sequencing-rationale.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:26:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 345f179b
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/external-dependency-map.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:26:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 345f179b
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/external-dependency-map.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:26:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5e39692a
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/delivery-planning-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:26:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5e39692a
+**Sensor ID**: upstream-coverage
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/delivery-planning-questions.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:26:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 30ddd9fc
+**Sensor ID**: answer-evidence
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/delivery-planning-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:26:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 30ddd9fc
+**Sensor ID**: answer-evidence
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/delivery-planning/delivery-planning-questions.md
+**Duration ms**: 32
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T05:27:02Z
+**Event**: WORKFLOW_PARKED
+**Stage**: delivery-planning
+**Timestamp**: 2026-07-20T05:27:02Z
+
+---
