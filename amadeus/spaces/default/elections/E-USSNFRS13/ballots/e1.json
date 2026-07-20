@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSNFRS13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。e5 worktreeをread-only実測し、Unit配下12ディレクトリ×6ファイル（NFR成果物60＋承認済questions12）、各Unitの最終READY review、stage memoryの実entry 0件、audit上の最終sensor PASS列を照合した。NOT-READY履歴は同じprimary artifact内でfinding・是正・READYへ閉包され、NFR-5/6の欠落是正や未承認回数制約の撤回などは既存review/verify-before-notify/report-final-values-onlyの適用である。新規に横断persistすべきpracticeとの差分は認めない。GoA1、留保なし。",
+  "submittedAt": "2026-07-20T23:57:38Z"
+}
