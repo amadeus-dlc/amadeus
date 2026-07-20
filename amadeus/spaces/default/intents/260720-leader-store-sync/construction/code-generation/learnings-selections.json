@@ -1,0 +1,13 @@
+{
+  "stage_slug": "code-generation",
+  "selections": [
+    {
+      "candidate_id": "e-lsscg-empty-argv-unscoped-guard",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "可変長 scope/path 集合を CLI argv へ展開する処理は、空集合を明示 no-op または loud failure へ閉じ、引数省略で CLI 既定の unscoped 全域へ拡張させない。foreign 応答の negative control と unscoped 呼出し0件を assert する。E-PM10A の owned-only/Git 計測規律の argv 境界への追補。実害: leader-owned 対象が空のとき git numstat の pathspec が消え、全リポジトリ差分を leader-owned と誤計測し得た。票: E-LSSCG 配信 2026-07-20T11:40:27Z → e2 11:41:34Z(受理11:41:48Z) → e1 11:41:49Z(受理11:42:23Z) → e4 11:42:21Z(受理11:42:44Z) → 開票11:43:06Z。GoA[E-LSSCG]: 1x3 2x0 3x0 4x0 5x0 6x0 7x0 8x0",
+      "source": "user_addition"
+    }
+  ]
+}
