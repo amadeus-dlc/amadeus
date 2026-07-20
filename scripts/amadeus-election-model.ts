@@ -149,6 +149,10 @@ export type TimelineEvent = {
   at: string;
   detail: string;
   voter?: string;
+  // Receipt (append) time minted by the CLI (Issue #1262): `at` is the claimed
+  // instant, `receivedAt` the order the conductor actually accepted the event.
+  // Optional — its absence marks a pre-fix in-flight record (migration window).
+  receivedAt?: string;
 };
 
 // Mint normal form for submittedAt: second-precision UTC with a trailing Z
@@ -371,8 +375,19 @@ export function lateReexamRequired(ballot: Ballot): boolean {
   return ballot.goa === 8;
 }
 
-export function classifyLate(tallyTime: string, ballot: Ballot): LateBallot | null {
-  if (ballot.submittedAt <= tallyTime) return null;
+// Lateness is decided on the RECEIPT axis (E-BRARA2, Issue #1262): a ballot is
+// late when the conductor accepted it after the tally was fixed, regardless of
+// its self-reported submittedAt. An agmsg-relayed ballot can carry an early
+// submittedAt yet arrive after tally (relay delay) — the receipt time is the
+// only monotonic, tamper-resistant ordering. `receivedAt` is supplied by the
+// caller (mint→pass, same shape as materialize's talliedAt); the per-voter
+// resolveBallots axis stays on submittedAt and is deliberately independent.
+export function classifyLate(
+  tallyTime: string,
+  receivedAt: string,
+  ballot: Ballot,
+): LateBallot | null {
+  if (receivedAt <= tallyTime) return null;
   return { ballot, late: true, reexamRequired: lateReexamRequired(ballot) };
 }
 

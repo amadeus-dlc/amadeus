@@ -37,6 +37,13 @@ function ballot(voter: string) {
   };
 }
 
+// Issue #1262: appendBallot now takes the receipt (accept) time. These store
+// tests do not assert on receivedAt itself, so pre-tally appends thread a single
+// early value; the late-lane tests pass a post-tally value so the receipt axis
+// (not the fallback) drives the late classification.
+const RECV = "2026-07-19T00:00:00Z";
+const RECV_LATE = "2026-07-19T02:00:00Z";
+
 let root = "";
 
 beforeEach(() => {
@@ -63,8 +70,8 @@ describe("t235 election-store", () => {
 
   test("appendBallot rejects a second non-amend ballot from the same voter", () => {
     expect(Store.create(root, election()).ok).toBe(true);
-    expect(Store.appendBallot(root, "E-STORE-1", ballot("alice")).ok).toBe(true);
-    const second = Store.appendBallot(root, "E-STORE-1", ballot("alice"));
+    expect(Store.appendBallot(root, "E-STORE-1", ballot("alice"), RECV).ok).toBe(true);
+    const second = Store.appendBallot(root, "E-STORE-1", ballot("alice"), RECV);
     expect(second.ok).toBe(false);
     if (!second.ok) expect(second.error).toBe("duplicate");
     const status = Store.status(root, "E-STORE-1");
@@ -136,14 +143,14 @@ describe("t235 election-store", () => {
   test("amend coexistence: the original ballot survives and both rows stay on the ledger (ADR-5)", () => {
     expect(Store.create(root, election()).ok).toBe(true);
     const original = ballot("alice");
-    expect(Store.appendBallot(root, "E-STORE-1", original).ok).toBe(true);
+    expect(Store.appendBallot(root, "E-STORE-1", original, RECV).ok).toBe(true);
     const amend = {
       ...ballot("alice"),
       kind: "amend" as const,
       ref: { electionId: "E-STORE-1", voter: "alice", submittedAt: original.submittedAt },
       submittedAt: "2026-07-19T00:30:00Z",
     };
-    expect(Store.appendBallot(root, "E-STORE-1", amend).ok).toBe(true);
+    expect(Store.appendBallot(root, "E-STORE-1", amend, RECV).ok).toBe(true);
     const ledger = Store.ledger(root, "E-STORE-1");
     expect(ledger.ok).toBe(true);
     if (ledger.ok) {
@@ -158,7 +165,7 @@ describe("t235 election-store", () => {
 
   test("late lane: post-tally ballots are recorded late with reexamRequired on GoA 8 (FR-3d)", () => {
     expect(Store.create(root, election()).ok).toBe(true);
-    expect(Store.appendBallot(root, "E-STORE-1", ballot("alice")).ok).toBe(true);
+    expect(Store.appendBallot(root, "E-STORE-1", ballot("alice"), RECV).ok).toBe(true);
     const result = {
       kind: "established" as const,
       winner: { internalNo: 1, label: "a" },
@@ -169,7 +176,7 @@ describe("t235 election-store", () => {
     expect(Store.setState(root, "E-STORE-1", "tallied").ok).toBe(true);
     // bob arrives after the tally time -> late lane, no reexam (GoA 1)
     const lateBob = { ...ballot("bob"), submittedAt: "2026-07-19T02:00:00Z" };
-    expect(Store.appendBallot(root, "E-STORE-1", lateBob).ok).toBe(true);
+    expect(Store.appendBallot(root, "E-STORE-1", lateBob, RECV_LATE).ok).toBe(true);
     const ledger = Store.ledger(root, "E-STORE-1");
     expect(ledger.ok).toBe(true);
     if (ledger.ok) {
@@ -179,7 +186,7 @@ describe("t235 election-store", () => {
     }
     // duplicate check spans the late lane: bob cannot vote again
     const again = { ...ballot("bob"), submittedAt: "2026-07-19T03:00:00Z" };
-    const rejected = Store.appendBallot(root, "E-STORE-1", again);
+    const rejected = Store.appendBallot(root, "E-STORE-1", again, RECV_LATE);
     expect(rejected.ok).toBe(false);
     if (!rejected.ok) expect(rejected.error).toBe("duplicate");
     // a late GoA 8 persists reexamRequired
@@ -202,7 +209,7 @@ describe("t235 election-store", () => {
       goa: goa8.value,
       submittedAt: "2026-07-19T02:00:00Z",
     };
-    expect(Store.appendBallot(root, "E-LATE-8", lateBlock).ok).toBe(true);
+    expect(Store.appendBallot(root, "E-LATE-8", lateBlock, RECV_LATE).ok).toBe(true);
     const l2 = Store.ledger(root, "E-LATE-8");
     if (l2.ok) expect(l2.value.late[0]?.reexamRequired).toBe(true);
     const timeline = JSON.parse(
@@ -213,7 +220,7 @@ describe("t235 election-store", () => {
 
   test("materialize fixes the ballot set and books a tallied timeline event", () => {
     expect(Store.create(root, election()).ok).toBe(true);
-    expect(Store.appendBallot(root, "E-STORE-1", ballot("alice")).ok).toBe(true);
+    expect(Store.appendBallot(root, "E-STORE-1", ballot("alice"), RECV).ok).toBe(true);
     const result = {
       kind: "established" as const,
       winner: { internalNo: 1, label: "a" },
@@ -237,7 +244,7 @@ describe("t235 election-store", () => {
   test("appendBallot rejects an amend whose ref matches no accepted ballot, leaving the ledger unchanged", () => {
     expect(Store.create(root, election()).ok).toBe(true);
     const original = ballot("alice");
-    expect(Store.appendBallot(root, "E-STORE-1", original).ok).toBe(true);
+    expect(Store.appendBallot(root, "E-STORE-1", original, RECV).ok).toBe(true);
     // ref.submittedAt points at a ballot that was never accepted
     const amend = {
       ...ballot("alice"),
@@ -245,7 +252,7 @@ describe("t235 election-store", () => {
       ref: { electionId: "E-STORE-1", voter: "alice", submittedAt: "2026-07-18T00:00:00Z" },
       submittedAt: "2026-07-19T00:30:00Z",
     };
-    const rejected = Store.appendBallot(root, "E-STORE-1", amend);
+    const rejected = Store.appendBallot(root, "E-STORE-1", amend, RECV);
     expect(rejected.ok).toBe(false);
     if (!rejected.ok) expect(rejected.error).toBe("unknown-ref");
     // fail-closed: no partial write — the ledger still holds only the original,
@@ -266,14 +273,14 @@ describe("t235 election-store", () => {
   test("appendBallot accepts an amend whose ref matches an accepted ballot and books an amendment timeline row", () => {
     expect(Store.create(root, election()).ok).toBe(true);
     const original = ballot("alice");
-    expect(Store.appendBallot(root, "E-STORE-1", original).ok).toBe(true);
+    expect(Store.appendBallot(root, "E-STORE-1", original, RECV).ok).toBe(true);
     const amend = {
       ...ballot("alice"),
       kind: "amend" as const,
       ref: { electionId: "E-STORE-1", voter: "alice", submittedAt: original.submittedAt },
       submittedAt: "2026-07-19T00:30:00Z",
     };
-    expect(Store.appendBallot(root, "E-STORE-1", amend).ok).toBe(true);
+    expect(Store.appendBallot(root, "E-STORE-1", amend, RECV).ok).toBe(true);
     // original coexists (ADR-5) — both rows on the ledger
     const ledger = Store.ledger(root, "E-STORE-1");
     expect(ledger.ok).toBe(true);

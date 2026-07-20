@@ -89,8 +89,16 @@ function timelineSegment(e: TimelineEvent): string {
   switch (e.kind) {
     case "distributed":
       return `配信 ${e.at}`;
-    case "ballot":
-      return `${e.voter ?? "?"} ${e.at}`;
+    case "ballot": {
+      // Co-display the receipt time only when it diverges from the claimed time
+      // (delay visualization, Issue #1262) — a same-instant receipt adds no
+      // signal. Scoped to the ballot row per the E-BRARA1 e3 reservation (no
+      // blanket receivedAt expansion across the other event renderers).
+      const base = `${e.voter ?? "?"} ${e.at}`;
+      return e.receivedAt !== undefined && e.receivedAt !== e.at
+        ? `${base}(受理 ${e.receivedAt})`
+        : base;
+    }
     case "tallied":
       return `開票 ${e.at}`;
     case "late":
@@ -192,8 +200,17 @@ export function verifySelf(
     findings.push({ kind: "freq-mismatch", expected: storedFreq.join(","), actual: recomputed.join(",") });
   }
   for (let i = 1; i < timeline.length; i++) {
-    const prev = timeline[i - 1].at;
-    const cur = timeline[i].at;
+    // Monotonicity is checked on the RECEIPT axis (Issue #1262): an agmsg-relayed
+    // ballot can be accepted out of submittedAt order (relay delay), so the
+    // claimed `at` is legitimately non-monotonic while the receipt order (the
+    // append order) is monotonic. `receivedAt ?? at` is the single read fork —
+    // every ballot/late event minted after the fix carries receivedAt; a pre-fix
+    // in-flight record (opened before the fix) has none and is checked on the
+    // legacy `at` axis. That fallback exists only for records already open at the
+    // migration: no election is ever re-verified after the fix lands, so a new
+    // election always has receivedAt on every timeline event.
+    const prev = timeline[i - 1].receivedAt ?? timeline[i - 1].at;
+    const cur = timeline[i].receivedAt ?? timeline[i].at;
     if (cur < prev) findings.push({ kind: "timeline-order", expected: prev, actual: cur });
   }
   return findings.length === 0 ? ok(undefined) : err(findings);

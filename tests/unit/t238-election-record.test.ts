@@ -241,4 +241,70 @@ describe("t238 election-record", () => {
     ]);
     expect(line).toBe("配信 t0 → alice t1 → 開票 t2 → 後着 zoe t3");
   });
+
+  // --- Issue #1262: receipt-axis timeline monotonicity (E-BFARA1) -----------
+
+  // Verbatim relay-delay fixture (E-BFARA1): three ballots accepted in receipt
+  // order e1 → e4 → e3, where e3 was relayed over agmsg and landed last despite
+  // an earlier submittedAt. By the claimed `at` the sequence is non-monotonic
+  // (e3's 22:10:29 precedes e4's 22:10:42), which is exactly the legitimate
+  // election a submittedAt-axis verify used to reject.
+  function relayTimeline(withReceipt: boolean): TimelineEvent[] {
+    const rows: Array<{ voter: string; at: string; receivedAt: string }> = [
+      { voter: "e1", at: "2026-07-19T22:10:03Z", receivedAt: "2026-07-19T22:10:05Z" },
+      { voter: "e4", at: "2026-07-19T22:10:42Z", receivedAt: "2026-07-19T22:10:44Z" },
+      { voter: "e3", at: "2026-07-19T22:10:29Z", receivedAt: "2026-07-19T22:10:50Z" },
+    ];
+    return rows.map((r) => ({
+      kind: "ballot",
+      at: r.at,
+      detail: `ballot accepted: ${r.voter}`,
+      voter: r.voter,
+      ...(withReceipt ? { receivedAt: r.receivedAt } : {}),
+    }));
+  }
+
+  test("E-BFARA1: a relay-delayed ballot set verifies green on the receipt axis", () => {
+    // ballots + freq are internally consistent so the only class that can fire
+    // is timeline-order — isolating the axis under test.
+    const ballots = [ballot("e1", 1), ballot("e4", 1), ballot("e3", 2)];
+    const freq = GoaFreq.fromVotes(ballots.map((b) => b.goa));
+    const timeline = relayTimeline(true);
+    // Pre-fix (submittedAt axis) this yields a timeline-order finding; post-fix
+    // (receipt axis, monotonic receivedAt) it is green.
+    const result = verifySelf(ballots.length, ballots, freq, timeline);
+    expect(result.ok).toBe(true);
+  });
+
+  // transient-state-fixtures: a record opened BEFORE the fix has no receivedAt on
+  // its timeline (in-flight at migration). verifySelf must fall back to the
+  // legacy `at` axis for it — the other side of the single read fork.
+  test("E-BFARA1 migration window: a pre-fix (receivedAt-less) timeline uses the legacy at axis", () => {
+    const ballots = [ballot("e1", 1), ballot("e4", 1), ballot("e3", 2)];
+    const freq = GoaFreq.fromVotes(ballots.map((b) => b.goa));
+    const legacy = relayTimeline(false);
+    const result = verifySelf(ballots.length, ballots, freq, legacy);
+    // Non-monotonic on `at` -> a timeline-order finding is expected (no crash,
+    // no silent pass — the fallback preserves the old behavior for old records).
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.some((f) => f.kind === "timeline-order")).toBe(true);
+    }
+  });
+
+  test("timelineSegment co-displays the receipt time on a ballot row only when it diverges", () => {
+    // delayed receipt -> annotated
+    const delayed = renderTimeline([
+      { kind: "ballot", at: "22:10:29", detail: "", voter: "e3", receivedAt: "22:10:50" },
+    ]);
+    expect(delayed).toBe("e3 22:10:29(受理 22:10:50)");
+    // same instant -> no annotation (no added signal)
+    const same = renderTimeline([
+      { kind: "ballot", at: "22:10:03", detail: "", voter: "e1", receivedAt: "22:10:03" },
+    ]);
+    expect(same).toBe("e1 22:10:03");
+    // absent receivedAt (pre-fix row) -> no annotation
+    const legacy = renderTimeline([{ kind: "ballot", at: "t1", detail: "", voter: "alice" }]);
+    expect(legacy).toBe("alice t1");
+  });
 });

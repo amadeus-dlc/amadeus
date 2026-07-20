@@ -205,21 +205,33 @@ describe("t234 election-model", () => {
     expect(canEarlyTally(four.value, [b("a", 1), b("b", 1), b("c", 8)])).toBe(false);
   });
 
-  test("classifyLate: post-tally ballots are late, GoA 8 flags reexamRequired", () => {
+  test("classifyLate: lateness is decided on the receipt axis, GoA 8 flags reexamRequired", () => {
     const e = Election.parse(DEF);
     if (!e.ok) throw new Error("definition must parse");
     const tallyTime = "2026-07-19T01:00:00Z";
+    // Received before the tally -> on-time (null), even when submittedAt is late.
     const onTime = mustParse(ballot("alice", 1));
-    expect(classifyLate(tallyTime, onTime)).toBeNull(); // submittedAt 00:00 <= tally
-    // equal boundary (PR #1231 review minor 1): exactly-at-tally is NOT late
-    const atBoundary = mustParse({ ...ballot("alice", 1), submittedAt: tallyTime });
-    expect(classifyLate(tallyTime, atBoundary)).toBeNull();
-    const late = mustParse({ ...ballot("alice", 1), submittedAt: "2026-07-19T02:00:00Z" });
-    const classified = classifyLate(tallyTime, late);
+    expect(classifyLate(tallyTime, "2026-07-19T00:30:00Z", onTime)).toBeNull();
+    // equal boundary (PR #1231 review minor 1): received exactly-at-tally is NOT late
+    expect(classifyLate(tallyTime, tallyTime, onTime)).toBeNull();
+    // E-BRARA2 axis shift (Issue #1262): a ballot with an EARLY submittedAt but a
+    // receipt after the tally is late — the receipt time, not the claimed time,
+    // decides. Old submittedAt-axis code would call this on-time.
+    const earlyClaimLateReceipt = mustParse({
+      ...ballot("alice", 1),
+      submittedAt: "2026-07-19T00:00:00Z",
+    });
+    const classified = classifyLate(tallyTime, "2026-07-19T02:00:00Z", earlyClaimLateReceipt);
     expect(classified?.late).toBe(true);
     expect(classified?.reexamRequired).toBe(false);
-    const lateBlock = mustParse({ ...ballot("bob", 8), submittedAt: "2026-07-19T02:00:00Z" });
-    expect(classifyLate(tallyTime, lateBlock)?.reexamRequired).toBe(true);
+    // Conversely, a FUTURE submittedAt received before the tally is on-time.
+    const futureClaimEarlyReceipt = mustParse({
+      ...ballot("bob", 1),
+      submittedAt: "2026-07-19T05:00:00Z",
+    });
+    expect(classifyLate(tallyTime, "2026-07-19T00:45:00Z", futureClaimEarlyReceipt)).toBeNull();
+    const lateBlock = mustParse({ ...ballot("bob", 8), submittedAt: "2026-07-19T00:10:00Z" });
+    expect(classifyLate(tallyTime, "2026-07-19T02:00:00Z", lateBlock)?.reexamRequired).toBe(true);
   });
 
   // --- U1 ballot-acceptance-failclosed (invalid-timestamp / amend / resolve) --
@@ -332,7 +344,7 @@ describe("t234 election-model", () => {
   test("classifyLate is per-ballot (non-resolving): a late amend stays its own late row", () => {
     const tallyTime = "2026-07-19T01:00:00Z";
     // classifyLate takes a single ballot, never a set — it structurally cannot
-    // resolve. A late amend is classified on its own submittedAt (BR-4b: late
+    // resolve. A late amend is classified on its own receipt time (BR-4b: late
     // lane amends are NOT resolved into the fixed set).
     const lateAmend = mustParse({
       ...ballot("alice", 1),
@@ -340,7 +352,7 @@ describe("t234 election-model", () => {
       ref: { electionId: "E-TEST-1", voter: "alice", submittedAt: "2026-07-19T00:00:00Z" },
       submittedAt: "2026-07-19T02:00:00Z",
     });
-    const classified = classifyLate(tallyTime, lateAmend);
+    const classified = classifyLate(tallyTime, "2026-07-19T02:00:00Z", lateAmend);
     expect(classified?.late).toBe(true);
     expect(classified?.ballot.kind).toBe("amend");
     expect(classified?.reexamRequired).toBe(false);
