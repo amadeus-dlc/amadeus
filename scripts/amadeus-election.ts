@@ -74,7 +74,7 @@ const HOLD_RESOLUTIONS: Record<HoldReason, Record<string, ElectionState>> = {
 };
 
 export function parseChoiceResolution(resolution: string): number | null {
-  const match = /^choice:([1-9][0-9]*)$/.exec(resolution);
+  const match = /^choice:(0|[1-9][0-9]*)$/.exec(resolution);
   return match === null ? null : Number(match[1]);
 }
 

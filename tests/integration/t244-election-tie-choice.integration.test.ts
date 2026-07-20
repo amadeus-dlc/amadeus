@@ -9,7 +9,7 @@ const DEFINITION = {
   kind: "clarification",
   question: "Which choice wins?",
   choices: [
-    { internalNo: 1, label: "Alpha" },
+    { internalNo: 0, label: "Alpha" },
     { internalNo: 2, label: "Beta" },
   ],
   voters: ["alice", "bob"],
@@ -45,7 +45,7 @@ function openTieElection(): void {
       electionId: "E-TIE1",
       voter,
       voterKind: "member",
-      choiceInternalNo: index + 1,
+      choiceInternalNo: DEFINITION.choices[index].internalNo,
       goa: 1,
       submittedAt: `2026-07-20T06:0${index}:00Z`,
     });
@@ -85,6 +85,21 @@ describe("tie choice resolution integration", () => {
     expect(record).toContain("hold 裁定履歴: tie → choice:2");
   });
 
+  test("accepts internal choice zero and renders its winner label", () => {
+    openTieElection();
+
+    expect(
+      run(["report", "--election", "E-TIE1", "--result", "hold-resolved", "--resolution", "choice:0"]),
+    ).toBe(0);
+    const tally = JSON.parse(readFileSync(electionPath("tally.json"), "utf8"));
+    expect(tally.resolutions.at(-1)).toMatchObject({ reason: "tie", resolution: "choice:0", resumedTo: "tallied" });
+
+    expect(run(["render", "--election", "E-TIE1"])).toBe(0);
+    const record = readFileSync(electionPath("record.md"), "utf8");
+    expect(record).toContain("裁定: Alpha(choice 0 — tie 裁定)");
+    expect(record).toContain("hold 裁定履歴: tie → choice:0");
+  });
+
   test("rejects binary, malformed, and absent choices before persistence", () => {
     openTieElection();
 
@@ -94,7 +109,7 @@ describe("tie choice resolution integration", () => {
       ).toBe(1);
       const error = JSON.parse(errors.at(-1) ?? "{}").error as string;
       expect(error).toContain(`resolution "${resolution}" is not valid for hold reason "tie"`);
-      expect(error).toContain("valid: choice:1/choice:2");
+      expect(error).toContain("valid: choice:0/choice:2");
       const tally = JSON.parse(readFileSync(electionPath("tally.json"), "utf8"));
       expect(tally.resolutions ?? []).toEqual([]);
     }
