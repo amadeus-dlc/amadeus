@@ -874,3 +874,326 @@
 **Duration ms**: 38
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T03:05:54Z
+**Event**: WORKFLOW_PARKED
+**Stage**: scope-definition
+**Timestamp**: 2026-07-20T03:05:54Z
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T03:07:17Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T03:07:17Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T03:07:17Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: scope-definition
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T03:07:17Z
+**Event**: GATE_APPROVED
+**Stage**: scope-definition
+**Grant Id**: cabcb933
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T03:07:17Z
+**Event**: STAGE_COMPLETED
+**Stage**: scope-definition
+**Details**: Stage Scope Definition approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T03:07:17Z
+**Event**: STAGE_STARTED
+**Stage**: approval-handoff
+**Agent**: amadeus-delivery-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7a827c7f
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/initiative-brief.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:08:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7a827c7f
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/initiative-brief.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4fcf3e7d
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/initiative-brief.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:08:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4fcf3e7d
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/initiative-brief.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: bee56345
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/decision-log.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T03:08:22Z
+**Event**: SENSOR_FAILED
+**Fire id**: bee56345
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/decision-log.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/approval-handoff/required-sections-bee56345.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: c82738d1
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/decision-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:08:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: c82738d1
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/decision-log.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: a992cbbf
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/approval-handoff-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T03:08:22Z
+**Event**: SENSOR_FAILED
+**Fire id**: a992cbbf
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/approval-handoff-questions.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/approval-handoff/required-sections-a992cbbf.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: bb4fc3e8
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/approval-handoff-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T03:08:22Z
+**Event**: SENSOR_FAILED
+**Fire id**: bb4fc3e8
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/approval-handoff-questions.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/approval-handoff/upstream-coverage-bb4fc3e8.md
+**Findings count**: 4
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9e2730ca
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/initiative-brief.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:08:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9e2730ca
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/initiative-brief.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3bb9fc11
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/initiative-brief.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:08:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3bb9fc11
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/initiative-brief.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 76569be2
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/decision-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:08:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 76569be2
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/decision-log.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: a0d4720a
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/decision-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:08:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: a0d4720a
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/decision-log.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2939d958
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/approval-handoff-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:08:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2939d958
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/approval-handoff-questions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: a351ffb0
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/approval-handoff-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:08:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: a351ffb0
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/approval-handoff-questions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 79ac2f6c
+**Sensor ID**: answer-evidence
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/approval-handoff-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:08:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 79ac2f6c
+**Sensor ID**: answer-evidence
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/ideation/approval-handoff/approval-handoff-questions.md
+**Duration ms**: 37
+
+---
