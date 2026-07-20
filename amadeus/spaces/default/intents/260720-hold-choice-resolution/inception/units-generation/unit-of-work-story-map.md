@@ -12,4 +12,6 @@
 | record.md 閲覧 | 「裁定: 採用」— どの choice か読めない | 「裁定: <label>(choice <n> — tie 裁定)」 | FR-3 |
 | 他 reason の hold(block 等) | 二値裁定 | 無変更(E-TCRCG=A) | FR-1/FR-5 |
 
+## Unit 対応
+
 全ステップが U1 単体で閉包する(部分着地で価値が出ない凝集ジャーニーのため単一 unit — unit-of-work.md の分割判断と整合)。

@@ -2664,3 +2664,45 @@
 **Duration ms**: 39
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:53:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: 52a1e299
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/units-generation/unit-of-work-dependency.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:53:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: 52a1e299
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/units-generation/unit-of-work-dependency.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:53:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: 47e27412
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/units-generation/unit-of-work-story-map.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:53:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: 47e27412
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/units-generation/unit-of-work-story-map.md
+**Duration ms**: 37
+
+---
