@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRBT2",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "採用。e2 recordで、存在しないtest path 2件をBunが黙って無視しexit 0、期待6 filesに対して4 filesのみ実行した偽緑を、runner出力との件数照合で捕捉し、実在path再解決後に6 files/36 tests/260 assertionsへ是正した事実を確認した。既存report-final-values-onlyは確定時点、numbers-from-command-output-onlyは数値の出所を規律するが、列挙した母集団自体の実在・完全性は保証しないため、同cid群へのテスト母集団面の追補は非重複で再利用可能。非採用なら違反実例としての保存は受容するが、同じ偽緑の再発防止力が弱い。",
+  "submittedAt": "2026-07-20T07:45:33Z"
+}

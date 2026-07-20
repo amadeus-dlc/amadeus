@@ -1,0 +1,64 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "採用 — report-final-values-only / numbers-from-command-output-only 系へテスト母集団面を追補統合"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "採用 — report-final-values-only / numbers-from-command-output-only 系へテスト母集団面を追補統合",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "不採用 — 既存 cid の含意で足りる(diary・違反実例のみ)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T07:47:14Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-HCRBT2",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "採用。e2 HEAD da36aa95ae の build-and-test memory、build-test-results、phase-check-construction をリードオンリー実読し、初回は不存在 path 2件を含んだまま Bun が exit 0 / 4 filesで偽緑、期待6 filesとの照合で自己捕捉後、rg --filesで実在パスを再解決して6 files / 36 tests / 260 assertions / 0 failへ是正した記録を確認した。独立対照でも実在t238 1件＋不存在1件のbun testがexit 0、Ran 13 tests across 1 fileとなり、不存在引数の無音除外を再現した。既存report-final-values-onlyは集計完了後の確定値、numbers-from-command-output-onlyは出力由来数値を規定するが、意図した入力テスト集合の実在・全数実行は保証しない。実行前の全path実在確認と実行後の期待file数照合は空隙を閉じる限定追補として新規性がある。非採用時も既存cidの違反実例としての温存を受容する。",
+      "submittedAt": "2026-07-20T07:44:38Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HCRBT2",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "採用を支持。Bunが不存在test pathを無音で無視しexit 0を返す挙動は、最終値の正確性だけでなく実行母集団の完全性を破る。実行前のpath全数実在確認と実行後の期待file数対runner集計照合は、report-final-values-onlyおよびnumbers-from-command-output-onlyを検証集合へ具体化する再利用可能な防御である。",
+      "submittedAt": "2026-07-20T07:45:03Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HCRBT2",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "採用。e2 recordで、存在しないtest path 2件をBunが黙って無視しexit 0、期待6 filesに対して4 filesのみ実行した偽緑を、runner出力との件数照合で捕捉し、実在path再解決後に6 files/36 tests/260 assertionsへ是正した事実を確認した。既存report-final-values-onlyは確定時点、numbers-from-command-output-onlyは数値の出所を規律するが、列挙した母集団自体の実在・完全性は保証しないため、同cid群へのテスト母集団面の追補は非重複で再利用可能。非採用なら違反実例としての保存は受容するが、同じ偽緑の再発防止力が弱い。",
+      "submittedAt": "2026-07-20T07:45:33Z"
+    }
+  ],
+  "resolutions": []
+}

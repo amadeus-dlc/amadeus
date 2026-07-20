@@ -1,0 +1,80 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(note に候補と根拠 file:line を明記)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可 — 新規学習候補なし",
+        "count": 0
+      },
+      {
+        "internalNo": 2,
+        "label": "0件は不可 — 新規学習候補が実在する(note に候補と根拠 file:line を明記)",
+        "count": 3
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T07:13:18Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-FVEPD",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件は不可。新規候補: marker artifact の宣言 shape と generic required-sections の適用契約を一致させる。根拠: packages/framework/core/amadeus-common/stages/inception/practices-discovery.md:39-42 は required-sections を stage 全体へ宣言する一方、同:98-106 は practices-discovery-timestamp.md を単一行必須とする。.codex/sensors/amadeus-required-sections.md:27-28 は全 output に >=2 H2 を要求し、実測 detail amadeus/spaces/default/intents/260720-formal-verif-experiment/.amadeus-sensors/practices-discovery/required-sections-61a61a61.md:3-15 は正しい単一行 artifact を h2_count=0/findings=2 で false にする。既存ノルム/Issue への回収なし。学習案: stage 契約が単一行 marker を要求する場合、generic H2 sensor は artifact 単位で除外するか専用 shape 検証へ置換し、恒常 advisory FAIL を正常扱いしない。",
+      "submittedAt": "2026-07-20T06:47:52Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FVEPD",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "memory.md の旧解釈は履歴として残せるが、同 stage 内で前提失効したことを追記すると証跡が明確になる。これは record 整合の局所是正であり、新規 §13 persist 候補とはしない。",
+      "rationale": "0件で可。discovered-rules/evidence/team-practices/questions を実測し、ユーザー選択 A は本 intent 限定の walking skeleton として一貫し、横断 rule の変更はない。required-sections の唯一の FAIL は practices-discovery-timestamp.md に対する H2>=2 要求だが、stage 正本は同成果物を single line と明記しており advisory sensor の構造衝突である。PM10 の required-sections 機械化候補および既存 sensor 運用知識の範囲で、新規学習追加性はない。",
+      "submittedAt": "2026-07-20T06:49:22Z"
+    },
+    {
+      "kind": "amend",
+      "ref": {
+        "electionId": "E-FVEPD",
+        "voter": "e3",
+        "submittedAt": "2026-07-20T06:49:22Z"
+      },
+      "electionId": "E-FVEPD",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立再実測で practices-discovery-timestamp.md を required-sections predicate へ2回直接適用し、両回 pass=false, h2_count=0, findings_count=2。stage 正本は同成果物を single line と要求する一方、sensor 正本は既定 H2>=2 を全mdへ適用し、正しい成果物が恒常的に赤になる。Issue #1284 はH2雛形焼き込みでsingle-line契約を壊すため非被覆、#1238は別問題、既存cidにmarker shape exemptionはない。各 produced canonical shape とpredicateを照合し、H2を意図的に欠く *-timestamp.md/*-questions.md をprose-heading floorから明示免除する候補の採用に賛成。",
+      "submittedAt": "2026-07-20T06:58:20Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FVEPD",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件は不可。practices-discovery-timestamp.md の正準形は単一行で H2 を持たない一方、amadeus-sensor-required-sections.ts:134-147 は一律 H2>=2 を要求し、同一入力の独立2回実行はいずれも pass=false/h2_count=0。候補: 各 stage sensor predicate を成果物の canonical shape と全数照合し、意図的に H2 を持たない *-timestamp.md / *-questions.md 等の marker artifact を prose-heading floor から明示除外する。",
+      "submittedAt": "2026-07-20T07:12:26Z"
+    }
+  ],
+  "resolutions": []
+}

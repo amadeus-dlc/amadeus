@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVEADS13R",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "c1+c2を採用、c3は不採用。最終e6成果物を実測し、c1はsealed registryとfreeze/開示順を単一fail-closed state machineにしてblind比較の情報漏洩を構造的に防ぎ、walking skeleton失敗時の第2arm開始禁止まで一般化できるため、project Verificationの横断規範として新規性がある。c2はTLC等の有限探索でNOT_DETECTEDを主張するための必要証拠をcompletion marker+state統計+固定点到達へ限定し、部分探索/timeout/統計欠損をHARNESS_ERRORへ分離する普遍的な偽陰性防止規則で、既存memory層に同等規範はない。c3の1 warmup+5 full-suite中央値はE-FVEAD1裁定と本実験のD-COUNT/120秒profileに依存する定数で横断persistには狭すぎる。最終sensorはquestions/5成果物/memoryの15 terminalがPASS、memory修正後post-memory増分reviewもREADY/findings0で、review後の対象変更なしを確認した。非採用時受容度: 全採用=6(c3の過剰一般化)、c1のみ=7、c2のみ=7、全不採用=8、その他=6。",
+  "submittedAt": "2026-07-20T08:26:49Z"
+}
