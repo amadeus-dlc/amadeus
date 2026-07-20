@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVENDS13R",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可を支持する。独立実測でNFR Design成果物48件、最新required-sections 48/48 PASS・upstream-coverage 48/48 PASS・answer-evidence 8/8 PASS・FAILED 0、git diff --check PASSを確認した。sorted 48 filesの各SHA-256行を再hashしたaggregateも973937901b120b0e3b7720a75de9b0ef826ac0303ccecfe10c03420f3ed380f6で一致。最終独立reviewは同snapshotをREADY、Critical 0/Major 0/Minor 0とし、旧Major 7のlock owner durability、reservation lifecycle、handoff/terminal、resume/telemetry等は各Unit成果物で閉包されている。これらは当該実験の実装契約であり、横断process normへ一般化する新観測ではない。stage memoryは空で、amadeus-learnings surfaceもmemory_entries_total=0/candidates=[]/parked_open_questions=[]を再現したため、新規persist候補0が妥当。",
+  "submittedAt": "2026-07-20T21:41:33Z"
+}
