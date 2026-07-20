@@ -3380,3 +3380,46 @@
 **Duration ms**: 36
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: b1d17a6a
+**Sensor ID**: answer-evidence
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/delivery-planning-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: b1d17a6a
+**Sensor ID**: answer-evidence
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/inception/delivery-planning/delivery-planning-questions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 85684a43
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/verification/phase-check-inception.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:03:56Z
+**Event**: SENSOR_FAILED
+**Fire id**: 85684a43
+**Sensor ID**: required-sections
+**Stage slug**: delivery-planning
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/verification/phase-check-inception.md
+**Detail path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/.amadeus-sensors/delivery-planning/required-sections-85684a43.md
+**Findings count**: 1
+
+---
