@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVENFRS13",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可を支持する。最終ツリーでNFR成果物は8 Unit×6件=48件、stage memoryは観測0のテンプレートのみである。最終sensor列はrequired-sections/upstream-coverage/answer-evidenceを含めSENSOR_FAILED 0、git diff --checkも成功。U7はE-FVEU7NFR1の限定是正後に例外独立review READY（Critical/Major/Minor 0）、U8もiteration 1の3件を閉包してREADY（0/0/0）。U1-U6の残件は成果物固有の未解決事項としてREADYへ読み替えず最終人間gateへ明示継承されており、今回新たにmemoryへ一般化すべき横断学習ではない。",
+  "submittedAt": "2026-07-20T15:28:02Z"
+}

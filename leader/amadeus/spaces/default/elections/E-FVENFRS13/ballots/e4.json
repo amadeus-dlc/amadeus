@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVENFRS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。独立実測で8 Unitのnfr-requirements各6成果物=48件、stage memoryのInterpretations/Deviations/Tradeoffs実entry 0、直近sensor 80行中FAILED 0を確認した。U7はE-FVEU7NFR1裁定どおりmax-exhausted履歴を保持した限定是正後の例外独立reviewがREADY 0/0/0、U8もiteration 1のMajor3閉包後READY 0/0/0。U1-U6の残存所見はREADY・統合可・code-generation可へ読み替えず最終人間gateへ継承する既存手続きであり、新規横断規範へ蒸留すべき追加知見ではない。E-FVEU7NFR1の例外対応も当該3 findingに限定された裁定で、一般的なreview上限延長則としてpersistしないのが妥当。",
+  "submittedAt": "2026-07-20T15:27:41Z"
+}
