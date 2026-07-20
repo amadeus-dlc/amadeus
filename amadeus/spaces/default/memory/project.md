@@ -153,7 +153,6 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - raw WSJF より dependency と risk-first を優先し、worktree isolation proof を最初の hard stop とした。未証明の基盤に依存する価値面を先行着地させないためである。 (learned 2026-07-17) <!-- cid:scope-definition:c3 -->
 - Team Formation が SKIP された Initiative Approval & Handoff では、未確定の named mob や Construction schedule を捏造しない。Ideation で確約する resource は Inception の分析と人間 gate までに限定し、Unit と依存が確定した後の Delivery Planning で Construction の staffing と schedule を承認する。 (learned 2026-07-17) <!-- cid:approval-handoff:c3 -->
 - Initiative Approval & Handoff で optional upstream stage が SKIP されている場合、存在しない competitive analysis・team assessment・wireframes 等を補完しない。各 handoff 成果物で N/A の根拠、代わりに使う内部証拠、後続の decision point を明示する。 (learned 2026-07-17) <!-- cid:approval-handoff:c4 -->
-- squash マージ運用下で全 re-scans の observed が HEAD 非祖先になった場合、rescan-base-ancestry の祖先条件を機械的に遡らず(最古参祖先は数百コミット前になり再走査が不合理)、最新 observed と HEAD の merge-base を実効 diff base に採用する — 260720-formal-verif-experiment RE 実測: 祖先 observed 最古参は697コミット前、merge-base bd147dc7b 採用で実質区間のみの差分更新に成功(ユーザー直接裁定 2026-07-20)(learned 2026-07-20) <!-- cid:reverse-engineering:rescan-base-merge-base-fallback -->
 ## Testing
 - Standardの中核はunit/integrationとし、performance/securityは承認済みNFRと実在境界へtraceして選定する。戦略名だけで検査を機械追加しない。既決strategy再述に留めず、stage定義の曖昧さは別途追跡する。 (learned 2026-07-12) <!-- cid:build-and-test:c1 -->
 - 攻撃面・依存・承認NFRを成果物で実測明記した場合のみ検査を比例選定する。既存必須scanや要求済み検査の省略根拠にはしない。 (learned 2026-07-12) <!-- cid:build-and-test:c3 -->
