@@ -1,0 +1,21 @@
+{
+  "electionId": "E-FVEU7NFR1",
+  "voter": "e2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "max-exhausted履歴と未解決Major3を保持して次Unitへ進み、最終NFR gateで人間裁定"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "その他（noteに具体案を記載）"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "上限後に3点を是正し、例外的な独立reviewを実施してから進む"
+    }
+  ]
+}

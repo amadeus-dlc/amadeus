@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVEU7NFR1",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "iteration1/2とmax-exhaustedの履歴を改変せず、例外対応は未解決Major 3件の最小十分な是正に限定すること。是正後の全sensor最終PASSと、是正後同一headを対象にした独立review READYを得るまで次Unitへ進めないこと。",
+  "rationale": "choice1を支持する。最新sensor/diffがPASSでも、Iteration 2はCritical 0 / Major 3 / Minor 0のNOT READYであり、(1) complete suiteはsuite startから最終cell atomic publishまで120秒なのに現NFRがprocess 120秒+publish 20秒を許す、(2) U3 suite-result manifestの先commit→identity参照terminal→両store再読後のみnext ordinalというcross-store順序が閉じていない、(3) crash resume時のOS cpuset/memory lease再取得とResourcePolicyIdentity完全一致・不一致時のrevision INCOMPLETE closeが未定義、を成果物と上流契約で再現した。これらは当初AC内の実装可能性・recovery correctnessであり、最終gateへ未解決のまま送るのは『未完了をDoneとしない』収束原則に反する。",
+  "submittedAt": "2026-07-20T15:17:03Z"
+}
