@@ -1006,3 +1006,11 @@
 **Duration ms**: 37
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T03:05:24Z
+**Event**: WORKFLOW_PARKED
+**Stage**: scope-definition
+**Timestamp**: 2026-07-20T03:05:24Z
+
+---
