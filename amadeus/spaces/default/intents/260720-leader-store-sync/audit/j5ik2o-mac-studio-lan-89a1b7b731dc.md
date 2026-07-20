@@ -4028,3 +4028,519 @@
 **Duration ms**: 38
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T04:55:51Z
+**Event**: WORKFLOW_PARKED
+**Stage**: delivery-planning
+**Timestamp**: 2026-07-20T04:55:51Z
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T04:56:58Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T04:56:58Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T04:56:58Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: delivery-planning
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T04:56:58Z
+**Event**: GATE_APPROVED
+**Stage**: delivery-planning
+**Grant Id**: cabcb933
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T04:56:58Z
+**Event**: STAGE_COMPLETED
+**Stage**: delivery-planning
+**Details**: Stage Delivery Planning approved by gate
+
+---
+
+## Phase Completion
+**Timestamp**: 2026-07-20T04:56:58Z
+**Event**: PHASE_COMPLETED
+**From phase**: inception
+**To phase**: construction
+**Stages completed**: 13
+
+---
+
+## Phase Verification
+**Timestamp**: 2026-07-20T04:56:58Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: inception → construction
+
+---
+
+## Phase Start
+**Timestamp**: 2026-07-20T04:56:58Z
+**Event**: PHASE_STARTED
+**Phase**: construction
+**Scope**: amadeus
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T04:56:58Z
+**Event**: STAGE_STARTED
+**Stage**: functional-design
+**Agent**: amadeus-architect-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:58:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2df3b676
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/domain-entities.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T04:58:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: 2df3b676
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/domain-entities.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/functional-design/required-sections-2df3b676.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:58:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: b796c171
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/domain-entities.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T04:58:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: b796c171
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/domain-entities.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/functional-design/upstream-coverage-b796c171.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:58:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 90c9ad38
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:58:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 90c9ad38
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/business-logic-model.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:58:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 192e8acd
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/business-logic-model.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T04:58:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: 192e8acd
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/business-logic-model.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/functional-design/upstream-coverage-192e8acd.md
+**Findings count**: 4
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:58:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 646abc9d
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/business-rules.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T04:58:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: 646abc9d
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/business-rules.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/functional-design/required-sections-646abc9d.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:58:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 90b75587
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/business-rules.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T04:58:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: 90b75587
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/business-rules.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/functional-design/upstream-coverage-90b75587.md
+**Findings count**: 4
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:58:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 20159566
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/frontend-components.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T04:58:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: 20159566
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/frontend-components.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/functional-design/required-sections-20159566.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:58:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 81b56891
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/frontend-components.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T04:58:01Z
+**Event**: SENSOR_FAILED
+**Fire id**: 81b56891
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/frontend-components.md
+**Detail path**: amadeus/spaces/default/intents/260720-leader-store-sync/.amadeus-sensors/functional-design/upstream-coverage-81b56891.md
+**Findings count**: 3
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:58:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: a6d59429
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:58:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: a6d59429
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/domain-entities.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:58:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2ac567d0
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:58:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2ac567d0
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/domain-entities.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:58:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7aa26b42
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:58:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7aa26b42
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/business-logic-model.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:58:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: d64a4509
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:58:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: d64a4509
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/business-logic-model.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:58:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0a2af32b
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:58:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0a2af32b
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/business-rules.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:58:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1fed87d8
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:58:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1fed87d8
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/business-rules.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:58:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9021aaa1
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/frontend-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:58:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9021aaa1
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/frontend-components.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:58:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: e84dff2a
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/frontend-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:58:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: e84dff2a
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/frontend-components.md
+**Duration ms**: 37
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T05:03:34Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: ade0a2f488b428659
+**Message**: ## Review\n\n**Verdict: NOT-READY**(是正1件で解消見込み — 軽微)\n\n### 検証手法\n`domain-entities.md` / `business-logic-model.md` / `business-rules.md` / `frontend-components.md`(FD、construction/leader-sync-tool/function
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: 173f4d20
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: 173f4d20
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/business-rules.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 261dcbc0
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 261dcbc0
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/business-rules.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: d581f56e
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: d581f56e
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/domain-entities.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 59b66f37
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 59b66f37
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-leader-store-sync/construction/leader-sync-tool/functional-design/domain-entities.md
+**Duration ms**: 37
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T05:04:46Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a2e51cbd510e87de5
+**Message**: C-8はrequirements.mdの制約継承リストに実在(:58「C-8(elections read-only)」)。BR-9の出典参照は妥当。\n\n以上を踏まえ、閉包確認完了。\n\n## Review\n\n**Verdict: READY**\n\n是正の閉包確認結果:\n\n**(a) ADR-2 → BR-8 の写像成立、ADR 1〜4 全数再列挙**\n- ADR-1(GhRunner port・n
+
+---
