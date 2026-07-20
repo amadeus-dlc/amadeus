@@ -435,5 +435,12 @@
     "dirName": "260720-formal-verif-experiment",
     "scope": "amadeus",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019f7d6c-e782-7647-95e7-a2960623e717",
+    "slug": "hold-choice-resolution",
+    "dirName": "260720-hold-choice-resolution",
+    "scope": "amadeus",
+    "status": "complete"
   }
 ]

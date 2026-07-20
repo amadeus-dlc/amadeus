@@ -8185,3 +8185,47 @@
 **Details**: Scope: amadeus, 18 stages completed
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T01:32:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: b78cf90b
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: /private/tmp/claude-501/-Users-j5ik2o-worktrees-github-com-amadeus-dlc-amadeus-runs-20260719-231310-08a0-engineer-2/3ef57910-4c4a-4aa0-b405-ca9effafc300/scratchpad/write-ballot-bracg.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T01:32:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: b78cf90b
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: /private/tmp/claude-501/-Users-j5ik2o-worktrees-github-com-amadeus-dlc-amadeus-runs-20260719-231310-08a0-engineer-2/3ef57910-4c4a-4aa0-b405-ca9effafc300/scratchpad/write-ballot-bracg.ts
+**Duration ms**: 40
+**Note**: script-error: exit-1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T01:52:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6618341a
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: /private/tmp/claude-501/-Users-j5ik2o-worktrees-github-com-amadeus-dlc-amadeus-runs-20260719-231310-08a0-engineer-2/3ef57910-4c4a-4aa0-b405-ca9effafc300/scratchpad/write-ballots-pm10.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T01:52:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6618341a
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: /private/tmp/claude-501/-Users-j5ik2o-worktrees-github-com-amadeus-dlc-amadeus-runs-20260719-231310-08a0-engineer-2/3ef57910-4c4a-4aa0-b405-ca9effafc300/scratchpad/write-ballots-pm10.ts
+**Duration ms**: 36
+**Note**: script-error: exit-1
+
+---
