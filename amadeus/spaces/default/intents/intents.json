@@ -381,6 +381,13 @@
     "status": "in-flight"
   },
   {
+    "uuid": "019f7ddf-6856-70ae-a130-e3317a3262f3",
+    "slug": "upstream-sync-230",
+    "dirName": "260720-upstream-sync-230",
+    "scope": "amadeus",
+    "status": "in-flight"
+  },
+  {
     "uuid": "019f7ac8-5be3-7e8a-a8c7-28d89977796e",
     "slug": "goa-multiseg-ecode",
     "dirName": "260719-goa-multiseg-ecode",

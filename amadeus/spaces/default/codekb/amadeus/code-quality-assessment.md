@@ -1,8 +1,37 @@
 # コード品質評価
 
-> **最新の品質観測は intent `260718-hooks-config-conflict`(2026-07-18、下記「hooks-config-conflict の観測面」節)**。以下の過去 intent 節に残る「本 intent」「最新」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
+> **現在の品質観測は intent `260720-upstream-sync-230`(2026-07-20、下記「upstream v2.3.0 同期の品質評価」節)**。以下の過去 intent 節に残る「本 intent」「最新」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
 
-## hooks-config-conflict の観測面 — tracked canonical と runtime writer の所有権衝突（2026-07-18、最新、Issue #770）
+## upstream v2.3.0 同期の品質評価（260720-upstream-sync-230）
+
+実測基準は base `a326f47bc0146a3b4285552f42b92fd61fb343a7`、observed `545e69c836d46f7bec2fa351c8e668026eb5fad5`、祖先性 exit 0、距離32。差分は865 files、`+48,636/-241` だが、大半は選挙 record、生成投影、工程記録であり、24項目の実装済み根拠として数えていない。次点 observed `591b6a2a` は距離84、他の日付が新しい observed は非祖先（exit 1）のため base 候補から除外した。
+
+### 24項目の品質サマリ
+
+| 判定 | 件数 | 識別子 |
+|---|---:|---|
+| MISSING | 19 | 1,4-9,11-13,15-23 |
+| PARTIAL | 4 | 2 gate-revision-backstop、10 gate-next-stage-naming、14 kiro-ide-hook-context、24 docs-updates |
+| EQUIVALENT 候補 | 1 | 3 swarm-batch-advance |
+
+EQUIVALENT 候補は、`amadeus-orchestrate.ts:1961-1972` の全 batch 走査と `amadeus-swarm.ts:724-769` の merge failure 降格を upstream 契約と対応させた結果である。後続 requirements で回帰テストによる確証後、実装項目から外す候補とする。PARTIAL は内部情報・一部 adapter・一般 docs があるだけで、公開契約の完了は意味しない。
+
+### テスト・ドリフトガード
+
+- Tests: 461 files（unit 216 / integration 159 / e2e 70 / smoke 14）。upstream t199-t219/t188 相当は未移植。
+- `bun scripts/package.ts --check`: exit 0、6/6 harness PASS。
+- `bun scripts/promote-self.ts --check --no-build`: exit 0。
+- `bun run lint:check`: exit 0、593 files、208 warnings、16 infos。
+- `bun run typecheck`: exit 127（`tsc` 不在）。型品質の green 根拠にはしない。
+- Full tests: RE では未実施。Construction の完了判定に流用しない。
+
+### 保守性リスク
+
+巨大ファイルは `amadeus-lib.ts` 6,070行、`amadeus-utility.ts` 4,281行、`amadeus-migrate.ts` 3,823行、`amadeus-state.ts` 3,562行、`amadeus-orchestrate.ts` 3,215行。認知複雑度の高い例は stop 145（`:520`）、swarm 54（`:601`）、stage-schema 49（`:136`）。今回は新しい共通 abstraction を先に作らず、schema、packager、host adapter の既存チョークポイントに最小変更を置く。plugin は最大 block で、non-active の byte-identical、no-clobber、6面 projection を同時に検証しなければならない。
+
+> 以下は過去 intent の履歴。
+
+## hooks-config-conflict の観測面 — tracked canonical と runtime writer の所有権衝突（2026-07-18、履歴、Issue #770）
 
 現行コード基準 observed HEAD `594ba21d636218558b711b371c286f16731fb081`、base `e9a001105d253e14affb77417423d9f0b0360f9e`（祖先・距離8）からの diff-refresh。フォーカス契約は区間で変更0件であり、[Issue #770](https://github.com/amadeus-dlc/amadeus/issues/770) の再発は既存 repository 契約と外部 agmsg 1.1.7 writer の組合せが Codex 再導入で再顕在化したもの。
 
@@ -93,7 +122,7 @@
 > 「docs-batch10(2026-07-12)の観測面」節は履歴 intent `260711-docs-batch10`(#765 #764 #763 #728、documentation)の候補記録。続く p3-cleanup-batch8 節(#843 #846 #850 #851 #876 #877 #878、intent `260711-p3-cleanup-batch8`)・p2-repair-batch7 節(#834 #839 #844 #845 #849、intent `260711-p2-repair-batch7`)・p3-cleanup-batch5 節(#811 #822 #830 #730 #819 #831、intent `260710-p3-cleanup-batch5`)・p3-cleanup-batch4 節(#757 #758 #753 #739 #740 #784 — 全6件 2026-07-10 修正着地済み、PR #823/#821/#817/#818/#814/#815)・core-repair-batch3 節(#746 ほか9件、2026-07-11)・複雑度ゲート導入節(intent 260710-complexity-gate)・ tools-dispatch-batch 節(#774 / #785 / #787 / #788 / #789)・ bughunt-fix-batch 節(#771/#773/#775/#776/#779)・swarm-worktree-batch 節(#738/#748/#746/#760)・learnings-audit-batch 節(#754 / #745 / #761)・mint-presence-vectors 節(#755)・packaging source-unreferenced 節(intent 260710、#735)・delegate-answer-consume 節(intent 260710、#736)・kiro-stale-hooks 節(#719 / P3 source hygiene)・dynamic-test-size 節(#699 / #684 Phase D)・t92-worktree-hermeticity 節(#709)・packaging-repair-batch 節(#701/#702 = PR #711/#712 解決済み)は過去 intent の記録で、参照用に温存する。以降の「アーキテクチャ横断パターン」以下は `260709-bug-zero-batch`(#674〜#678/#668)の記録。
 > 「docs-repair-batch9(2026-07-11)の観測面」節は履歴 intent `260711-docs-repair-batch9`(#812 #824 #680 #885 #886)の記録。続く p3-cleanup-batch5 節(#811 #822 #830 #730 #819 #831 — 候補記録)・p3-cleanup-batch4 節(#757 #758 #753 #739 #740 #784 — 全6件 2026-07-10 修正着地済み、PR #823/#821/#817/#818/#814/#815)・core-repair-batch3 節(#746 ほか9件、2026-07-11)・複雑度ゲート導入節(intent 260710-complexity-gate)・ tools-dispatch-batch 節(#774 / #785 / #787 / #788 / #789)・ bughunt-fix-batch 節(#771/#773/#775/#776/#779)・swarm-worktree-batch 節(#738/#748/#746/#760)・learnings-audit-batch 節(#754 / #745 / #761)・mint-presence-vectors 節(#755)・packaging source-unreferenced 節(intent 260710、#735)・delegate-answer-consume 節(intent 260710、#736)・kiro-stale-hooks 節(#719 / P3 source hygiene)・dynamic-test-size 節(#699 / #684 Phase D)・t92-worktree-hermeticity 節(#709)・packaging-repair-batch 節(#701/#702 = PR #711/#712 解決済み)は前 intent の記録で、参照用に温存する。以降の「アーキテクチャ横断パターン」以下は `260709-bug-zero-batch`(#674〜#678/#668)の記録。
 >
-> **履歴ラベルの読み方**: 本ページ以下および `architecture.md` / `business-overview.md` / `api-documentation.md` の「本 intent」は、各節見出しで明示した過去 intent 内の自己参照である。本ページ(`code-quality-assessment.md`)の current view は先頭の `260717-state-mirror-fixes` 節であり、`260713-swarm-driver-migration` 節以下は履歴。`architecture.md` / `business-overview.md` / `api-documentation.md` の current view は各ファイル先頭の `260713-swarm-driver-migration` 節(本 intent では未更新・温存)。いずれも過去節を最新状態として読まない。
+> **履歴ラベルの読み方**: 本ページ以下および `architecture.md` / `business-overview.md` / `api-documentation.md` の「本 intent」は、各節見出しで明示した過去 intent 内の自己参照である。各ファイルの current view は先頭の `260720-upstream-sync-230` 節だけであり、それより下は履歴として読む。
 
 ## docs-batch10(2026-07-12)の観測面 — documentation 4欠陥の現物照合(#765 #764 #763 #728)
 

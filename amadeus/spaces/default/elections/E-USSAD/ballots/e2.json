@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSAD",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。application-design memory は4区分とも実エントリ0。初回reviewの5 findings(item22所有、DAG、atomic drop、規模算術、C4/C5順序)は成果物固有の設計欠落として是正され、再レビューREADY/GoA1/留保0。24 item配置、6 SKIP/deferred非侵入、C6→C5→C4、6 package/4 self-install、atomic apply/dropが成果物へ閉包し、5成果物のrequired/upstream 10/10 PASS。questions H2 advisoryはE-FVEPD既知gapで重複候補にしない。新規横断学習なし。",
+  "submittedAt": "2026-07-20T07:45:57Z"
+}

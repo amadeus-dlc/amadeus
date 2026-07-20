@@ -1,0 +1,29 @@
+{
+  "electionId": "E-USSUG1",
+  "kind": "clarification-question",
+  "question": "260720-upstream-sync-230 / units-generation Q1: Unit granularityをどう固定するか。A=12 capability-cohesive Units(C2をrecovery/gate・swarm/naming・routing/guard・iteration/previewへ、pluginをcontract/projection/composition/referenceへ分割、tests/docs同乗、closure Unit。小batch/独立検証/最大4並行に適合する一方contract管理増)。B=7 component-aligned(C1-C7そのまま、単純だがC2/C7がXL)。C=9 balanced(C2のみ3分割、管理中間だがplugin変更理由が過凝集)。実装順/critical path/Bolt優先はdelivery-planningへ委譲。boundary=capability+change-control seam、dependency=cycle-free DAG、integration=C1/C2/C5+filesystem transaction、deployment=repo embeddedは既決。各自e5 questions/application-design成果物をリードオンリー実測し、GoA・非採用時受容度付きで投票する。全票はleader現行CLIで受理する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. 12 capability-cohesive Units"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. 7 component-aligned Units"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. 9 balanced Units"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他(noteにUnit境界を明記)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}

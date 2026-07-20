@@ -1,6 +1,29 @@
 # ビジネス概要
 
-## 260713-swarm-driver-migration の業務境界（2026-07-13、最新）
+## 260720-upstream-sync-230 の業務境界（2026-07-20、現在）
+
+Amadeus は、単一の AI-DLC core を6ハーネス（Claude Code、Codex、Cursor、Kiro CLI、Kiro IDE、OpenCode）へ決定的に投影する brownfield フレームワークである。本 intent は、承認済みの upstream `awslabs/aidlc-workflows` v2.2.0→v2.3.0 同期計画を実装可能な要件・設計へ落とすため、24件の ADOPT/ADAPT 項目を現行コード `545e69c836d46f7bec2fa351c8e668026eb5fad5` で再照合した差分リフレッシュである。
+
+利用者価値は、既存ワークフローの正しさを回復しつつ、プラグインを「非アクティブなら現行 core とバイト同一、アクティブなら明示的な compose・投影・テスト契約として働く」拡張点として追加することにある。対象は次の8業務ドメインで、すべて Must として承認済みである。
+
+| ドメイン | 項目数 | 現在の意味 |
+|---|---:|---|
+| D1 エンジン正しさ | 6 | DAG 自己修復、ゲート回復、help/compose/recompose の fail-closed 化 |
+| D2 エンジン機能 | 4 | Unit kind、major iteration、cost preview、次ステージ名の公開 |
+| D3 workspace 検出 | 2 | nested root と submodule を advisory として検出 |
+| D4 ハーネス統合 | 3 | `execPath`、Kiro IDE context、project-dir quote を6面へ適応 |
+| D5 reviewer 品質 | 2 | 日付・persona と bounded read scope を明文化 |
+| D6 プラグイン | 5 | schema→packager→compose→reference plugin→docs の最小閉路 |
+| D7 テスト | 1 | upstream 由来シナリオを現行 Bun テストへ再著作 |
+| D8 文書 | 1 | 採用した公開契約だけを利用者・開発者文書へ同期 |
+
+Developer scan の現状判定は MISSING 19、PARTIAL 4、EQUIVALENT 候補 1（測定 ref: `a326f47bc..545e69c8`、24項目の file:line 照合）である。明確な縮小候補は D1-3 `swarm-batch-advance` のみで、D2-10 `gate-next-stage-naming` は state/audit 内部情報があるだけで directive 契約としては未完成である。最大の新規価値かつ最大の実装ブロックは D6 プラグイン機構であり、schema と Unit kind の共有 blast radius、6ハーネス投影、source/dist/self-install の所有権分離を同時に満たす必要がある。
+
+成功条件は、(1) 24項目を MISSING/PARTIAL/EQUIVALENT の実測から再確定する、(2) `packages/framework/core/` と `packages/framework/harness/{name}/` を正本として6ハーネスの生成物を同期する、(3) `bun scripts/package.ts --check` と `bun scripts/promote-self.ts --check --no-build` を維持する、(4) 採用項目ごとの回帰テストと docs を同じ着地単位へ含める、である。SKIP 6件（既存 EQUIVALENT 3件、生成物・フォーク固有3件）は履歴境界として維持する。
+
+> 以下は過去 intent の業務境界であり、今回の current marker ではない。
+
+## 260713-swarm-driver-migration の業務境界（2026-07-13、履歴）
 
 Amadeus の Construction では、依存関係を持つ複数 Unit を同一バッチで実装し、Unit ごとの隔離 worktree と決定的な収束判定を組み合わせる。現行の公開スイッチ `AMADEUS_USE_SWARM` は boolean だが、実際の実行方式は Claude Code の `Task`／Dynamic `Workflow`、Codex の Unit ごとの `codex exec`、Kiro の native `subagent` とハーネスごとに異なる。この差を利用者が明示・検証できる共通 driver 契約は、観測コミット `cf3dc88b46a2b23bcfd71b1136632d1739cdd7e5` 時点では未実装である。
 

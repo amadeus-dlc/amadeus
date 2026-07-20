@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSUGS13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。e5成果物で12 Unit、LOC合計5,840–9,770、24 itemのprimary ownership、plugin contract/projection/composition/referenceの独立境界、cycle-free YAML DAGとe3留保のDelivery Planning引継ぎを確認し、reviewer READY/findings 0および最新sensor PASSをaudit照合した。12分割は本intentの24項目とC1–C7変更理由に固有で、実装順・critical pathを定めないという限定も成果物DAGに既に固定されている。横断norm化は他intentの適切なUnit粒度を不当に拘束するため不要。",
+  "submittedAt": "2026-07-20T07:59:35Z"
+}

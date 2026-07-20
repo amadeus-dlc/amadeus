@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSRE",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。e5 record を実測: re-scans/260720-upstream-sync-230.md:23-48 の24行を機械集計し MISSING 19 / PARTIAL 4 / EQUIVALENT候補 1、codekb 8文書+rescan=9ファイル実在、current architecture の Mermaid 3点は各 text fallback 付き、対象9ファイルの conflict marker 0。memory.md:6 の snapshot は一時観測、:7 の differential refresh+旧最新ラベル降格は既存 cid reverse-engineering:c1/c3-relabel と重複、:14 の plugin 依存順は24採用項目に限定された設計引継ぎで汎化不足。typecheck exit 127 は成功扱いせず scan 制約として明記され、package/promote/lint の実測と分離されている。宣言sensorのcodekb filter不整合も既存 cid reverse-engineering:re-sensors-codekb-filter-mismatch の範囲。",
+  "submittedAt": "2026-07-20T06:49:28Z"
+}

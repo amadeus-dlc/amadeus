@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-USSDP1",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "追加するthin vertical Boltはplugin e2e成立に必要な最小断面だけに限定し、U01/U09/U10/U11の責務所有・独立review/rollback境界を移さず、後続4 Boltとの重複を明示すること。",
+      "rationale": "Bを支持。team-practices.md:11はgreenfield pluginを最初のConstruction Boltでend-to-endに閉じる明文契約で、Aの『最初のBolt列』への読み替えは契約を弱める。CはE-USSUG1 e3留保とdependency.md:62の4独立Boltを直接破る。Bだけが最初Boltのe2eと4独立Boltを同時に保つ。自案非採用時はAを受容度6で受け入れるが、既存normからの意図的逸脱として明記が必要。",
+      "submittedAt": "2026-07-20T08:03:59Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSDP1",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Aを支持。team-practicesのgreenfield pluginを最初Boltでend-to-endに閉じる規律は、E-USSUG1で裁定された12 capability-cohesive Unitとe3留保（stage-contract/plugin-projection/plugin-composition/referenceを4独立Bolt）を後から束ねる根拠にはならない。実DAGではplugin-projection→plugin-composition→referenceが直列で、compositionはruntime-recoveryにも依存するため、4 plugin Unitを独立検証するprogressive skeleton列（必要なU02を途中に先行）として閉じるAが両契約を最小逸脱で満たす。非採用時受容度はB=6（最初にe2eを得るが同一Unitを複数Boltへ重複）、C=8（独立4 Bolt留保を直接破る）。",
+      "submittedAt": "2026-07-20T08:04:51Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSDP1",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "thin vertical Boltは最小核に限定し、後続のU01/U09/U10/U11各Boltで責務・検証証拠を重複なく完結させる。非採用時はAをGoA6で受容するが、project.mdの『最初のConstruction Bolt』からの限定逸脱をDelivery Planning成果物へ明記すること。Cは独立4 Bolt留保を破るためGoA7。",
+      "rationale": "Bを支持。project.md:13および:76はgreenfield要素を最初のConstruction Boltで小さくend-to-endに閉じるALWAYS契約であり、Aの『最初のBolt列』読替は逐語契約を満たさない。一方、DAGはU01→U09→U10→U11の依存を示し、E-USSUG1留保は4 Unitを独立検証可能Boltに保つことを要求する。最初のthin vertical Boltで最小のcontract/projection/composition/reference経路だけをゲートし、その後4 Unitを各独立Boltで完全化するBだけが両方を満たす。",
+      "submittedAt": "2026-07-20T08:05:40Z"
+    }
+  ],
+  "late": []
+}

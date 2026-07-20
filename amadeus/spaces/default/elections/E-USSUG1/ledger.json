@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-USSUG1",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Aを支持。AD実測でC2は実装420–760行+test650–1,050行、C4は520–850+650–1,000、C7はtest1,100–1,750+docs420–720とcomponent単位ではXL。recovery/gate・swarm/naming・routing/guard・iteration/preview、およびplugin contract/projection/composition/referenceを変更理由ごとに分ける12 Unitsなら、各Unitへtargeted test/docsを同乗させつつC1/C2/C5/filesystem transactionの既決seamとcycle-free DAGを維持し、最大4並行・小batchレビューに適合する。実装順はDPへ委譲するためUnit数増加が経済順序を先取りしない。非採用時受容度: B=8（C2/C7のXL集中）、C=5（中間案だがplugin変更理由の過凝集が残る）。",
+      "submittedAt": "2026-07-20T07:50:53Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSUG1",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A。application-design実測ではC2が実装420–760行・test 650–1,050行、C4が実装520–850行・integration test 650–1,000行の大境界で、7 componentをそのままUnit化するBはC2/C4/C7のXL化とreview集中を招く。recovery/gate、swarm/naming、routing/guard、iteration/preview、およびplugin contract/projection/composition/referenceを変更理由とchange-control seamで分ける12 Unitは、既決のcycle-free DAG、C1/C2/C5統合点、filesystem transaction、test/docs同乗を維持しつつ、小batch・独立検証・最大4並行に最も適合する。非採用時はCの9 balancedを受容可能だが、plugin面の過凝集をdelivery planningでさらに小さなBoltへ抑える必要がある。BはXL Unitを許すため受容しない。",
+      "submittedAt": "2026-07-20T07:50:54Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSUG1",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "非採用時はCを、pluginのcontract/projection/composition/referenceをDelivery Planningで独立検証可能なBoltへ分ける条件で受容する。BはC2とC7がXLのままreview・falling proof・再実行の局所性を失うため受容しない。",
+      "rationale": "Aを支持。C2はrecovery/gate、swarm/naming、routing/guard、iteration/previewで状態遷移と検証oracleが異なり、pluginもcontract、projection、composition、referenceで所有seamと失敗時不変条件が異なる。12 Unitなら各変更理由へtests/docsを同乗し、cycle-free DAG上で最大4並行と小batchを保ちながら、最後のevidence/ledger closureまで局所的に検証できる。増えるcontract管理は既決のC1 typed contractとC2/C5/filesystem seamで明示的に制御可能。",
+      "submittedAt": "2026-07-20T07:50:53Z"
+    }
+  ],
+  "late": []
+}
