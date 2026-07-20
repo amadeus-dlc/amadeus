@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-USSNFRS13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可を支持。e5最終worktreeを独立実測し、12 Unitそれぞれ5成果物で計60件、questions 12件、最終READY marker 12件、各Unit sensor 11/11 PASSの記録を確認した。memoryは全4区分が空で、NOT-READY履歴（U10 durable commit意味論など）は同一成果物内の是正と再reviewで閉包され、特定Unit契約の整合化に留まる。既存normから差分のある横断practice候補はない。",
+      "submittedAt": "2026-07-20T23:57:06Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSNFRS13",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。e5 worktreeをリードオンリー実測し、12 Unit、NFR成果物60件、回答済questions 12/12、各Unitのprimary performance artifactにある最終review READY 12/12、正準applicable sensor集合132/132 PASS・FAILED 0を機械再計算した。nfr-requirements/memory.mdは非コメントentry 0で、NOT-READY履歴の是正は各成果物review内に保持されている。Unit固有NFRの機械投影と既存review/sensor運用を越える新規横断practice候補は見当たらない。",
+      "submittedAt": "2026-07-20T23:57:30Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSNFRS13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。e5 worktreeをread-only実測し、Unit配下12ディレクトリ×6ファイル（NFR成果物60＋承認済questions12）、各Unitの最終READY review、stage memoryの実entry 0件、audit上の最終sensor PASS列を照合した。NOT-READY履歴は同じprimary artifact内でfinding・是正・READYへ閉包され、NFR-5/6の欠落是正や未承認回数制約の撤回などは既存review/verify-before-notify/report-final-values-onlyの適用である。新規に横断persistすべきpracticeとの差分は認めない。GoA1、留保なし。",
+      "submittedAt": "2026-07-20T23:57:38Z"
+    }
+  ],
+  "late": []
+}

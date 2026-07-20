@@ -1,0 +1,16 @@
+{
+  "electionId": "E-USSNFRS13",
+  "voter": "e2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "0件は不可 — 新規learning候補が実在する"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件で可 — 新規横断learningなし"
+    }
+  ]
+}

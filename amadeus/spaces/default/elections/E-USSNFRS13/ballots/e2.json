@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSNFRS13",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。e5 worktreeをリードオンリー実測し、12 Unit、NFR成果物60件、回答済questions 12/12、各Unitのprimary performance artifactにある最終review READY 12/12、正準applicable sensor集合132/132 PASS・FAILED 0を機械再計算した。nfr-requirements/memory.mdは非コメントentry 0で、NOT-READY履歴の是正は各成果物review内に保持されている。Unit固有NFRの機械投影と既存review/sensor運用を越える新規横断practice候補は見当たらない。",
+  "submittedAt": "2026-07-20T23:57:30Z"
+}
