@@ -4673,3 +4673,54 @@
 **Duration ms**: 37
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T05:34:50Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a0516d96228c06937
+**Message**: Exists — good. Now finalizing the verdict.\n\n## レビュー結果: REVISE\n\n**対象**: intent 260720-hold-choice-resolution (#1267)、construction/tie-choice-resolution/nfr-design/ の5成果物(performance-design.md, security
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:35:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: 907ef78c
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:35:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: 907ef78c
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/logical-components.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:35:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: 95af2bc2
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:35:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: 95af2bc2
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/nfr-design/logical-components.md
+**Duration ms**: 33
+
+---
