@@ -1615,3 +1615,392 @@
 **Duration ms**: 40
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T04:11:22Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a341f9e13ae32cd27
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T04:25:02Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ac4ea879fc2fde0fe
+**Message**: (裁定を待機 — 提案なし)
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T04:28:24Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a618bd30d207d9af1
+**Message**: (裁定通知を待機)
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T04:29:12Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a810aea8f514a97b0
+**Message**: (裁定通知を待機 — 提案なし)
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T04:29:16Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T04:29:16Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T04:29:16Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: practices-discovery
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T04:29:16Z
+**Event**: GATE_APPROVED
+**Stage**: practices-discovery
+**Grant Id**: cabcb933
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T04:29:16Z
+**Event**: STAGE_COMPLETED
+**Stage**: practices-discovery
+**Details**: Stage Practices Discovery approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T04:29:16Z
+**Event**: STAGE_STARTED
+**Stage**: requirements-analysis
+**Agent**: amadeus-product-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:30:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 871dace8
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/requirements-analysis/requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:30:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 871dace8
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/requirements-analysis/requirements.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:30:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 21ca8ff0
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/requirements-analysis/requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:30:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 21ca8ff0
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/requirements-analysis/requirements.md
+**Duration ms**: 37
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T04:32:27Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a43e265cdbfdadf18
+**Message**: (裁定通知が届くまで待機を継続してください)
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T04:32:49Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ae6e627fb5c136c9d
+**Message**: 継続
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T04:34:01Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: adf0b4b2c167399e7
+**Message**: (選挙裁定・ディスパッチ待ちのため提案なし)
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T04:35:39Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ac8ab1d98ec3e2a98
+**Message**: (継続待機 — 選挙裁定・ディスパッチは agmsg Monitor 経由で自動着信)
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:40:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 277056a3
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/requirements-analysis/requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:40:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 277056a3
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/requirements-analysis/requirements.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:40:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6bce5b5d
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/requirements-analysis/requirements-analysis-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:40:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6bce5b5d
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/requirements-analysis/requirements-analysis-questions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:40:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: e4d28732
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/requirements-analysis/requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:40:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: e4d28732
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/requirements-analysis/requirements.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:40:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1d38e6b9
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/requirements-analysis/requirements-analysis-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T04:40:25Z
+**Event**: SENSOR_FAILED
+**Fire id**: 1d38e6b9
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/requirements-analysis/requirements-analysis-questions.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/requirements-analysis/upstream-coverage-1d38e6b9.md
+**Findings count**: 4
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:40:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 35176703
+**Sensor ID**: answer-evidence
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/requirements-analysis/requirements-analysis-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:40:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 35176703
+**Sensor ID**: answer-evidence
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/requirements-analysis/requirements-analysis-questions.md
+**Duration ms**: 37
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T04:46:36Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-product-lead-agent
+**Agent ID**: a8dfd00e3690a141d
+**Message**: ## Verdict: NOT-READY\n\n### Critical\n\n1. **corpus-sweep の母集団が実データの一部を無申告で除外している(FR-1 AC(i)、file: `requirements.md:12`)** — FR-1 の受け入れ基準は「team.md 実 corpus 17行(RE 実測、occurrence 単位)に対する採用方式での全数 sweep 両側実証
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:48:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: bd98cc65
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/requirements-analysis/requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:48:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: bd98cc65
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/requirements-analysis/requirements.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:48:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: 97e72195
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/requirements-analysis/requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:48:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: 97e72195
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/requirements-analysis/requirements.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:48:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: e714bad2
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/scope-definition/scope-document.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:48:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: e714bad2
+**Sensor ID**: required-sections
+**Stage slug**: scope-definition
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/ideation/scope-definition/scope-document.md
+**Duration ms**: 36
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T04:51:08Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-product-lead-agent
+**Agent ID**: ac84896609a413a48
+**Message**: ## Iteration 2 レビュー結果 — requirements-analysis(260720-goa-sparse-family)\n\n**verdict: NOT-READY**\n\niteration 1 の5所見のうち4件は実測で閉包を確認できたが、所見3(consumes 装飾トークン)は一部未閉包。claimed-closed の項目が実際には閉じていない状態でエンジニアリングへ
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:51:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8486f5d9
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/requirements-analysis/requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:51:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8486f5d9
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/requirements-analysis/requirements.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:51:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5b0278b6
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/requirements-analysis/requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:51:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5b0278b6
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/requirements-analysis/requirements.md
+**Duration ms**: 37
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T04:51:43Z
+**Event**: WORKFLOW_PARKED
+**Stage**: requirements-analysis
+**Timestamp**: 2026-07-20T04:51:43Z
+
+---

@@ -134,3 +134,7 @@ GoA[E-BFARA1]: 1x2 2x1 3x0 4x0 5x0 6x0 7x0 8x0
 - 一次原因(スパース bin 段落ち)は確定。**#1256 は head を直したが #1254 の実様式には未到達**(head 複節は前提条件、スパース bin が本丸)。
 - codekb body 9成果物(business-overview / architecture / code-structure / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment / practices)は**全点温存**が妥当 — 実質の新規知識は「#1256 着地後も parseGoaLine がスパース表記を bin 段で全拒否(17/17)+ ECODE_RE の複節非整合(#1257)+ GoaLineCode 単節制約の #1254 連動(#1255)」の1クラスタのみ。bugfix の挙動欠陥であり構造・API・依存・技術スタックの変化を伴わず、フォーカス正本の区間変更は #1256 の head fix 1件(スパース面は未変更)。詳細は本 per-intent record に集約。
 - 修正の実価値: (i) 手書き team.md corpus を蒸留 aggregation の入力に載せられるようにする(将来の GoA-variance 集計の正しさ担保)、(ii) t670 ピンと GoaLineCode compression workaround の解消。要件はこの実影響範囲(現状 live 集計は未実装 = latent)を明記すべき。
+
+## 補遺(2026-07-20 RA reviewer C-1 是正)
+
+初回スキャンの corpus 測定は team.md 単独 grep で、同一スキーマの project.md 4 occurrence(全スパース・binFail — parseGoaLine 直呼び実測)を見落としていた(E-SDE-FD 追補「対象語彙の repo 全域 grep」の違反実例、PM 回付)。正準抽出 grep -o 'GoA\[E-[A-Z0-9-]*\]:' による全域再測定: team.md 17+project.md 4 = **21 occurrence**(phases/ 0、record/docs 面は引用のみ)。

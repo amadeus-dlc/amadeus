@@ -8,7 +8,7 @@ intent-statement.md の3ギャップと feasibility-assessment.md の GO 判定(
 
 | ID | Must | 効力条件 |
 |---|---|---|
-| M-1 | #1254: team.md 実 corpus(14行)の GoA 行が読める状態にする | 方式 (a)/(b)/(c) は RA 選挙(C-1)従属 |
+| M-1 | #1254: memory 層 corpus(team.md+project.md — RA reviewer C-1 是正で全域化、着手時実測を正とする)の GoA 行が読める状態にする | 方式 (a)/(b)/(c) は RA 選挙(C-1)従属 |
 | M-2 | #1255: GoaLineCode 複節拡張+圧縮 workaround 撤去(record.md へ自然形 E-code) | t238:102 の扱い・読み側後方互換は RA/design 選挙(C-2)従属 |
 | M-3 | #1257: ECODE_RE 複節整合(count 不変の対照テスト固定) | なし(裁定済み — count-only 消費の実測確定) |
 | M-4 | 落ちる実証+corpus 全数 sweep 両側実証(C-7) | なし |
