@@ -1,0 +1,38 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T03:20:39Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GSFSD",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測(e4 worktree リードオンリー): SD diary 03:18Z が質問要旨と一致(c2 効力条件列・c3 risk-first・当方との非交差合意の W-1 固定・E-OC1 承認 03:18:21Z)。いずれも既存 cid 適用実例。0件で可(1)",
+      "submittedAt": "2026-07-20T03:19:54Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GSFSD",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e4 record リードオンリー実測: SD 成果物3点+memory 実在(ls=4)、E-OC1 承認 TS 03:18:21Z の記載 grep 確認。diary の c2 効力条件列(方式裁定従属)は私の同ステージ様式(E-OC1 03:05:07Z 承認済み)と同型の既習適用、c3 risk-first・非交差 W 固定も既存 cid 適用実例。0件で可(1)。",
+      "submittedAt": "2026-07-20T03:20:25Z"
+    }
+  ],
+  "resolutions": []
+}

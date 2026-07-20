@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFSD",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測(e4 worktree リードオンリー): SD diary 03:18Z が質問要旨と一致(c2 効力条件列・c3 risk-first・当方との非交差合意の W-1 固定・E-OC1 承認 03:18:21Z)。いずれも既存 cid 適用実例。0件で可(1)",
+  "submittedAt": "2026-07-20T03:19:54Z"
+}
