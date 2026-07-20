@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-FVEU7NFR1",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "選択肢1を支持する。performance-requirements は process deadline 120秒に cleanup/publish 30秒を加えており、上流の complete suite=開始から最終cell publishまで120秒という契約を曖昧化している。reliability-requirements は terminal receipt後の次ordinalを規定するが、U3 suite-result manifestの先commitとidentity参照terminalのcross-store順序を閉じていない。またResourcePolicyIdentityは初回freezeと前後receiptを規定する一方、crash resume時のOS cpuset/memory lease再取得・完全一致・不一致時revision INCOMPLETE closeが欠落する。3点はいずれも測定の完全性とfail-closed性に関わるMajorであり、範囲限定是正後の独立reviewで閉包してから進むのが最小十分。非採用時は選択肢2をGoA 6で受容するが、最終NFR gateまで未解決を送る場合はREADY読み替え禁止と3件の明示的human裁定を必須とする。",
+      "submittedAt": "2026-07-20T15:17:09Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FVEU7NFR1",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "iteration1/2とmax-exhaustedの履歴を改変せず、例外対応は未解決Major 3件の最小十分な是正に限定すること。是正後の全sensor最終PASSと、是正後同一headを対象にした独立review READYを得るまで次Unitへ進めないこと。",
+      "rationale": "choice1を支持する。最新sensor/diffがPASSでも、Iteration 2はCritical 0 / Major 3 / Minor 0のNOT READYであり、(1) complete suiteはsuite startから最終cell atomic publishまで120秒なのに現NFRがprocess 120秒+publish 20秒を許す、(2) U3 suite-result manifestの先commit→identity参照terminal→両store再読後のみnext ordinalというcross-store順序が閉じていない、(3) crash resume時のOS cpuset/memory lease再取得とResourcePolicyIdentity完全一致・不一致時のrevision INCOMPLETE closeが未定義、を成果物と上流契約で再現した。これらは当初AC内の実装可能性・recovery correctnessであり、最終gateへ未解決のまま送るのは『未完了をDoneとしない』収束原則に反する。",
+      "submittedAt": "2026-07-20T15:17:03Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FVEU7NFR1",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "選択肢2を支持。独立実読で iteration 2 後も performance-requirements は complete suite の上流120秒境界を process execution 120秒 + cleanup/publish 30秒へ分割し、reliability-requirements は U3 suite-result manifest の先commit→identity参照terminal→両再読後のみ next ordinal というcross-store順序を明文化せず、crash resume のOS cpuset/memory lease再取得と ResourcePolicyIdentity完全一致・不一致時revision INCOMPLETE closeも未閉包と確認した。一方 stage-protocol §12a は reviewer_max_iterations到達時、未解決findingを明示して人間gateへ進む契約であり、ここで例外reviewを追加するより、max-exhausted履歴とMajor3を保持して残りUnitを作成し、NFR Requirements最終gateで人間裁定するのが既決手続きに整合する。次stage/NFR Designへは最終gate解決前に進めないことが前提。",
+      "submittedAt": "2026-07-20T15:17:34Z"
+    }
+  ],
+  "late": []
+}
