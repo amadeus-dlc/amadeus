@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSFDS13R",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "c5-c6ともskipを支持する。c5はE-USSU01FD3 record（choice1 3-0/GoA1x3）とU01 questions・3成果物にupstream exact-shape、追加canonicalizationなし、absent bytes不変が一致し、Iteration 2 READY/3 sensor PASSまで反証可能に閉じている。c6もE-USSU08FD1 record（choice2 3-0、GoA1x1/2x2、留保2件）とU08 questions・3成果物にread前4条件AND、single owner path、invocation限定pass-list、既存Review/subagent/audit追跡が意味保存され、Iteration 2 READY/3 sensor PASSを確認した。いずれも当該Unit固有の実装契約で、既存memoryへの一般practice化は責務重複・過剰一般化になるため、次回向け追加も不要。",
+  "submittedAt": "2026-07-20T15:10:17Z"
+}
