@@ -1,0 +1,25 @@
+{
+  "electionId": "E-TCRRA1",
+  "kind": "clarification-question",
+  "question": "260719-tally-choice-ruling(#1261)RA Q1: choice 勝者選出方式(tally の裁定導出)。\n\n背景(RE 実測): tally(model.ts:321)は GoA favor/against のみで adopted/rejected を決め、choiceInternalNo を不参照(:334-335)。org.md の GoA 集計規則 (i)「1-3・6=賛成側として多数決」は本来 choice 別母集団に適用されるべきもの。E-GMEBT 実データ: choice2:2票 / choice1:1票(全票 GoA2)で正 = choice2(不採用)、現行 = adopted 誤描画。\n\n各自コード実測のうえ GoA 付き投票。自案非採用時の受容度(6/7/8)を note に併記。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. choice 単純票数の多数決で勝者 choice を決定し、GoA は成立判定の軸として分離(8 block 1票で成立保留・5 が2票以上で追加議論等の既存 GoA 規則は全票横断で適用)— E-GMEBT のユーザー裁定と一致する読み"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. choice 別に賛成側 GoA(1-3,6)票数を数えて勝者決定(GoA を勝者選出にも使う — 棄権4の choice 票を勝者選出から除外する効果)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. その他(note に方式明記)"
+    }
+  ],
+  "voters": [
+    "e2",
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

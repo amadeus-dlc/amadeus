@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CCCBT",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測(e3 worktree リードオンリー): (1) diary Deviation 22:38Z — required-sections 6件の自己捕捉→H2 是正→14/14 PASSED の記録実在(sensor-before-reviewer 適用) (2) build-test-results.md の PASS/PENDING 判定分離実文を確認 — PASS(ローカル全検証・落ちる実証・閉包)と PENDING(#1258 CI green・マージ着地、閉包条件 = head 176811547 の CI SUCCESS)が明示分離(deployment-execution:c3 語彙+report-final-values-only 適用) (3) 成果物7点 ls 実在。3点とも既存 cid の適用実例で新規学習なし。0件で可(1)",
+  "submittedAt": "2026-07-19T22:39:10Z"
+}

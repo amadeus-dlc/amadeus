@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-BFAFS",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e2 worktree リードオンリー実測: 成果物4点実在(assessment=GO+設計裁定前提 / constraint-register / raid-log / questions E-OC1 記入済み)、feasibility の SENSOR 最新 verdict 全 PASSED を e2 シャード grep で確認。主発見の機構引用を独立照合 — tally は scripts/amadeus-election-model.ts:320-337 で ballots を kind(original/amend)判別なしに全件集計しており『amend 無差別集計』は実文一致(diary の model.ts:321-338 表記は同ファイルの短縮呼称)。diary 3点は feasibility:c1/c4 等既存 cid の適用実例で、主発見自体は成果物 C-4/R-1/D-1 に固定済み = プロセス学習の新規なし。0件で可(1)。",
+      "submittedAt": "2026-07-19T15:12:48Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-BFAFS",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e2 record をリードオンリー実測: 成果物4点+memory の実在 ls 確認、diary 3点 verbatim 確認、主発見『tally は無差別集計』を自ツリーの model.ts:321-338 実読で裏取り(for (const b of ballots) — voter 重複解決なし、amend 共存時の二重計上は構造的に正しい指摘)。C-4/R-1/D-1 への固定と E-OC1 ヘッダ(未決の tally 解決規則を design 段選挙へ委譲)も確認。SENSOR_FAILED(15:10:54Z constraint-register)は 15:11:10Z/15:11:25Z の Passed で是正済みを audit 時系列で確認。diary 3点は feasibility:c1 適用範囲解釈・成果物固定・GO 形式選択のいずれも既存 cid(feasibility:c1/c4)とディスパッチ要件の適用実例で新規学習なし。#1253 クロスレビュー当事者として、主発見が自分の verdict の『tally は amend を解決しない(共存したまま)』とも整合することを確認。0件で可",
+      "submittedAt": "2026-07-19T15:12:59Z"
+    }
+  ],
+  "late": []
+}

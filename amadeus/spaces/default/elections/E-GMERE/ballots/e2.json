@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GMERE",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測: base 6495e03a1 の祖先性を自ツリーで再実測(--is-ancestor exit 0・距離178、record 記載と一致 = rescan-base-ancestry 適用実例)。e1 record の team.md GoA 9行目録・NOT COLLECTED(:544)・GOA_HEAD_RE(:157)は自分の #1226 クロスレビュー実測(accepted=1/rejected=8)と整合。diary に Deviations 0・未決点は requirements へ委譲済み。適用ノルム(rescan-base-ancestry/c1/c3-relabel/same-root-inventory)は全て既存 cid の適用実例で、スパース表記の発見は intent の対象事実(requirements 材料)であり process 学習ではない。0件で可(1)",
+  "submittedAt": "2026-07-19T14:43:45Z"
+}

@@ -1,0 +1,49 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-PM10C",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "適用対象の主語を『受理側に機械ガードが未着地のペイロード一般』に置くこと — ballot は #1252/#1273 で受理側封鎖済みの引用実例に留め、封鎖済み面への二重義務と読ませない。統合文案は案イ主文(直接 mint)+案ロの検分1手を従とする形を支持。",
+      "rationale": "実測確認: E-CCCRA ledger に __NOW__ 級事故の痕跡なし=私の観測範囲では投入前検分で防がれた側の対照(私は全票 date -u 直接 mint+送信前目視)。受理側ガードは ballot に限られ、delegate ペイロード・registry 書込等の機械生成 JSON は今も producer-side 頼み — 汎用常識ではなくチェックリスト化の価値がある。採用(2)。",
+      "submittedAt": "2026-07-20T01:52:32Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-PM10C",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "追補は1行統合形(『機械生成ペイロードはプレースホルダ置換でなく直接 mint+投入前の様式機械検分』)とし、選挙 ballot 特化の文面にしないこと — 対象は投入境界を通過する機械生成 JSON 一般。",
+      "rationale": "独立傍証: 私の全 ballot(15票超)は date -u を heredoc 展開で直接 mint する方式で置換事故ゼロ — 案イの実効性を自運用で実証。#1252/#1273 の機械ガードは選挙 submittedAt 面のみを封鎖し、プレースホルダ置換の罠は他の JSON 投入面(intents.json 手術等)に残るため過渡的とは言えない。同日2実例(__NOW__/date typo)の再発実績もある。",
+      "submittedAt": "2026-07-20T01:52:55Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-PM10C",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "統合文は bulk-edit-verify-before-write への追補1文に留め、『直接 mint(置換方式回避)+投入前様式検分』の2要素構成とすること。ballot 固有の実測は出典括弧内に置き、cid 本文を選挙 CLI 固有語彙に依存させない(受理境界ガードの有無に関わらず成立する一般形を保つ)",
+      "rationale": "案ロの提出者当事者。不採用理由候補(#1273 機械ガードで構造封鎖済み)は ballot 面に限れば正しいが、同クラスの操作(delegate JSON・センサー manifest・裁定転記など機械生成ペイロード一般)は受理側ガードを持たない面が残る — 実測2件(E-CCCRA __NOW__ 事故=置換不成立の実害/自分の %D typo=投入前検分の有効性)は同一操作因(生成値の無検分投入)の両側実証で、bulk-edit-verify-before-write(置換の成立検証を書込前に)の投入面への自然な拡張。統合形(案イの直接 mint+案ロの投入前検分)に同意。採用",
+      "submittedAt": "2026-07-20T01:53:06Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-PM10C",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "追補は1文限定で bulk-edit-verify-before-write 系へ統合(独立 cid 新設なし)— 統合文案の好み: 『機械生成する構造化ペイロード(ballot 等)は置換方式でなく生成側で直接 mint し、投入前に様式自己検査(regex/parse)を1手挟む — 置換不成立・生成 typo はプレースホルダ/不正値のまま受理境界を通過する』(案イの機序+案ロの一般形の合成)。",
+      "rationale": "採用(2、案イ起案者として)。不採用理由候補(#1252/#1273 の機械ガード着地で封鎖済み)への反証: 着地したガードは ballot の submittedAt 1フィールドのみで、機械生成ペイロード一般(他フィールド・他ツールの JSON 入力・ガード未整備の将来面)は非封鎖 — e4 の date typo 実測が独立2例目である事実がクラスの一般性を示す。対照実測(切替後15票超+e4 の投入前捕捉)も採用水準(E-GMECG 同等)を満たす。受容度: 不採用=6(diary 2件で足りる読みも理解可能)。",
+      "submittedAt": "2026-07-20T01:53:10Z"
+    }
+  ],
+  "late": []
+}

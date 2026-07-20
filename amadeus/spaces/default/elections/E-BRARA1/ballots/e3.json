@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BRARA1",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "受理時刻フィールドの追加は canonical 1定義(TimelineEvent — E-ETF-BT で canonical lift 済み)への追加1点から導出し、描画側は単調性検査と遅延可視化に必要な面のみ更新する(不要な renderer への一律表示展開はしない — 波及最小化)。",
+  "rationale": "実測: ballot/late のみ at=submittedAt(store.ts:156/:166)で distributed(election.ts:304)/tallied(:228)は機械時刻の非対称、verifySelf 隣接単調検査(record.ts:179-183)が中継遅延で構造 fail することを verbatim 確認(E-BFARA1 の受理順実例も #1270 レビューで一次確認済み)。A は事象時刻(受理)と申告時刻の両方を監査可能に保ち P2 に最適合。B 非採用受容度: 6(意味論的には event log の at=事象時刻で正だが、申告値の timeline 可視性を失い遅延の監査が ledger 突き合わせ必須になる)。C は検査価値の喪失で 7。",
+  "submittedAt": "2026-07-20T00:26:11Z"
+}

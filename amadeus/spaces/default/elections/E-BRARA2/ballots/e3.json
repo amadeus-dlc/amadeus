@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BRARA2",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "実測: classifyLate(model.ts:296-297)の ballot.submittedAt <= tallyTime を verbatim 確認。late の意味は『集計に間に合ったか』であり、それは受理事実で決まる — 申告 tally 前・受理 tally 後の票は集計不能なのに non-late になる B の穴は判定の嘘。A(受理軸)が遅延実態と一致し、e2 の per-voter 最新解決(E-BFARA2 = submittedAt 軸)は『どの票が最新の意思か』の別問題で独立 — 交差なしの主張に同意。B 非採用受容度: 6(注記運用でも当面の実害は限定)。",
+  "submittedAt": "2026-07-20T00:26:11Z"
+}

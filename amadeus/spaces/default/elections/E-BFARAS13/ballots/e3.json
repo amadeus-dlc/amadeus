@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFARAS13",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record リードオンリー実測: diary 3点は ruling-dependent-placeholder(15:38 起草)/ reservation-transcription-count-check(分母1=転記1、E-BFARA1 の e4 GoA2 を FR-1 verbatim 確認)/ fix-diff-independent-reverify(minor 是正の件数 20 はレビュアー実測値の転記と明記)の適用実例。シャードの SENSOR_FAILED 6件は Stage slug 実測で approval-handoff(phase-check)と practices-discovery(timestamp)帰属の是正済み履歴、RA 成果物の最新 verdict は 22:24Z 台で全 PASSED — 『最新 FAILED 0件』の主張と整合。プロセス新規学習なし。0件で可(1)。",
+  "submittedAt": "2026-07-19T22:32:13Z"
+}

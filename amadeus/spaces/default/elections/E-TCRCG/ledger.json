@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TCRCG",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "実測: HOLD_RESOLUTIONS(election.ts:69-71)の resolution 語彙は adopted/rejected/reopen/resume 系の choice-blind 二値+遷移で、handleRender の hold 合成(:378-386)は resolution===adopted の二値分岐 — plan の winner 正を機械適用すると型不正になるギャップは実在。A(人間解決 hold は二値表現維持・tally 結果のみ winner 描画・ruling-line override)は #1261 の bugfix スコープ(tally 自動集計の choice 化)に閉じ、ユーザー可視契約(HOLD_RESOLUTIONS 語彙・t236 期待)を不変に保つ最小解。B(hold-resolution の choice 語彙化)は人間裁定 UX の仕様変更で正準リスト(4)事項 — 将来 multi-choice tie の人間解決で choice 指定が必要になった時に別 Issue/intent として設計するのが筋(E-TCRRA2 裁定も tie を hold へ倒すことまでしか定めていない)。builder の実装前停止は deviation-stop-before-implement の模範実施。B 非採用受容度: 6(ユーザーエスカレーション経由で B が選ばれても実装可能な独立変更)。",
+      "submittedAt": "2026-07-19T23:12:22Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TCRCG",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A 採用。実測: HOLD_RESOLUTIONS(election.ts:69-71)の語彙は adopted/rejected/reopen/resume-collecting/close-rejected の二値+運用値で、handleRender の合成(:378-386)は resolution==='adopted' の二値分岐、t236:309-310 は『裁定: 不採用』をピン — いずれも人間裁定経路の現行契約。E-TCRRA 裁定の射程は tally 自動集計の choice 化であり人間裁定語彙は未裁定という builder の停止判断は正確(deviation-stop-before-implement の模範)。A は未裁定面を現行契約のまま温存し変更面を tally 側に限定する最小形で、人間 hold 裁定は裁定文自体が意味を運ぶため二値で機能十分(E-CCCRA の hold-resolved 実運用でも裁定テキストが正でありユーザー可視の不足なし)。B の choice 語彙化は将来価値があるが、ユーザー可視契約変更+HOLD_RESOLUTIONS/t236 改定を今回の bugfix に同乗させる必然がない — 必要になった時に Issue-first で。受容度: B=6(エスカレーション経由なら)。",
+      "submittedAt": "2026-07-19T23:12:34Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TCRCG",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "A 採用時、多肢 choice の tie 由来 hold を人間が解決するケースで二値語彙(adopted/rejected)が『どの choice が勝者か』を表現できないギャップの追跡 Issue を起票すること(E-TCRRA2=A で choice tie→hold が正規経路になったため、この表現ギャップは将来必ず顕在化する — 発見時点の記録を遅らせないノルムに従う)",
+      "rationale": "実測: HOLD_RESOLUTIONS の二値語彙(election.ts:69-71)・handleRender の hold 裁定合成(:378-386 — finalRuling.resolution を established/outcome 二値へ写像)・t236 の『裁定: 不採用』期待(t236-election-loop.integration.test.ts:309-311)を全て verbatim 確認 — ギャップは実在し、builder の実装前停止(deviation-stop-before-implement)は正しい適用。A を支持: (1) E-TCRRA 裁定の射程は tally 自動集計の choice 化であり、人間 hold 裁定の語彙は未裁定 — 未裁定面を bugfix 内で拡大改定する B はスコープ超過かつユーザー可視契約変更(正準リスト(4))で、本 intent の主訴(#1261 誤裁定描画)の解消に不要 (2) A の ruling-line override は tally 経路(winner 描画)と人間裁定経路(二値)の分離を型で明示し、#1261 の修正価値を損なわない (3) t236 期待不変 = 既存ユーザー可視契約の保存。自案非採用時: B=6(エスカレーション承認が得られるなら意味論的により一貫するため)/ C 該当なし",
+      "submittedAt": "2026-07-19T23:12:42Z"
+    }
+  ],
+  "late": []
+}

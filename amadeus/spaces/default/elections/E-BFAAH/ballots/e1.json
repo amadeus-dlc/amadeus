@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFAAH",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "配布ビューからは当該2点の観測の所在(intent/stage/diary)を特定できず候補文面の一次記録までは独立検分していない — 既存 cid の適用実例を新規 cid 化しない分類方針自体は確立運用と整合するため賛成。",
+  "rationale": "適用実例・違反実例は PM ラウンドの台帳回付で扱う既存運用(E-PM9 候補外扱い、直近 E-GMERAS13 の PM 回付2件と同型)に一致。",
+  "submittedAt": "2026-07-19T15:20:47Z"
+}

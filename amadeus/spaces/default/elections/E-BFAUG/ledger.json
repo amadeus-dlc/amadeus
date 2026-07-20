@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-BFAUG",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e2 record をリードオンリー実測: 成果物3点+questions 実在(ls 5件)、E-OC1 承認 TS 23:08:49Z が questions の3箇所(:5/:20/:24)で一貫、Planning 工程スキップの Deviation は diary(23:08Z)に原因分析付きで申告され questions ヘッダの経緯注記でも透明化、iteration 2 READY(両所見閉包)、センサー最新 verdict 全 Passed(23:09:35Z/23:10:45Z)。違反実例の分類も妥当 — 『結論が自明でも工程を省略しない』は election-answer-after-ruling の既存原則の違反実例であり、PM 回付(違反実例カウント)が正規経路で新規ノルム不要。E-TCRRA4 の自票留保(ラダー挿入位置原則)が dependency へ外部依存として固定されている点も裁定当事者として整合確認。0件で可",
+      "submittedAt": "2026-07-19T23:11:37Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-BFAUG",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e2 record リードオンリー実測: 成果物3点+questions 実在、diary に Planning スキップの Deviation 記録(reviewer が audit 実測 = 質問・GATE イベント 0件で捕捉)と『結論の自明性は工程省略の根拠にならない — election-answer-after-ruling 同族の違反実例』の自己分類、iteration 2 READY 記録を確認。UG 帰属センサーの時系列末尾(23:09:17-35Z)は両成果物とも PASSED で『最新 FAILED 0件』と整合(FAILED は是正前履歴)。違反実例の PM 回付は適切、新規プロセス学習なし。0件で可(1)。",
+      "submittedAt": "2026-07-19T23:11:50Z"
+    }
+  ],
+  "late": []
+}
