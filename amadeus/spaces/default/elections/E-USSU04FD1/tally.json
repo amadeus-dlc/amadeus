@@ -1,0 +1,69 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A. Stop hook best-effort削除 + doctor read-only"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A. Stop hook best-effort削除 + doctor read-only",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "B. stale保持 + doctor報告・手動修復",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "X. その他（noteにjanitor ownership/削除契約を明記）",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T10:40:57Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-USSU04FD1",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Aを支持。e5 questions、FR-1 item5/C2 seam・invariant、upstream 45035ea一次差分をread-only照合した。一次実装はStop hookでmtime>24hをstale orphanと判定後、unlinkSyncをbest-effort実行し、削除失敗でもcarve-outを拒否してforwarding-loop enforcementを維持する。doctorは別経路でmarkerを変更せずfresh advisory PASS/stale FAIL+remediationを返す。C2のrejected/failed時marker不変はrecompose等の拒否結果に対するpartial-write禁止であり、stale観測後のjanitor成功は正常cleanupなので競合しない。AはADOPT disposition、自己回復、次turnのclean stateを同時に保ち、失敗時安全性もunlink成否から分離できる。GoA1、留保なし。非採用時はBも診断証拠保持を優先する方針として受容可能だが、永続orphanとupstreamからの意図的逸脱を残すためAより低い。Xはjanitor ownershipと削除失敗時のcarve-out拒否を同等以上に明記する場合のみ受容する。",
+      "submittedAt": "2026-07-20T10:37:49Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSU04FD1",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "C2のrejected/failed marker不変と衝突させないため、stale削除はcarve-out拒否結果の副作用ではなく、freshness判定後の独立したbest-effort janitor outcomeとして設計・記録すること。unlink失敗でもblock判断は不変、doctorはread-onlyを維持し、fresh保持/stale削除/unlink失敗の3経路を対照testで固定する。",
+      "rationale": "Aを支持。公式 upstream commit 45035ea1ad988b7d1a8c9215679f6662879a91ac の一次差分ではStop hookが24h超のmarkerをcarve-outに使わずbest-effort unlinkし、doctorはfresh=advisory PASS/stale=FAILのread-only probeである。同期ledgerもcompose-pending-freshnessをADOPT/HIGHと確定しており、AがADOPT dispositionと回帰testを最小差分で保つ。Bはmarker不変には単純だが、upstreamの自動復旧を意図的に失い、orphanが手動修復まで残る。A非採用でBなら受容度6。",
+      "submittedAt": "2026-07-20T10:37:56Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSU04FD1",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Aを支持する。upstream 45035ea一次差分ではStop hookがmarkerのmtimeを共有TTLで判定し、staleならcarve-outを拒否した上でunlinkSyncをbest-effort実行し、unlink失敗でもstop判断を変えない。一方doctorはfresh advisory PASS / stale FAIL+remediationのread-only probeである。これはADOPT dispositionに最も忠実で、crash後のstale markerがforwarding-loop enforcementを恒久的に弱める状態を次のStop時に自動回収する。FR-1 item5のdoctor表示と両立し、C2のrejected/failed marker不変はrecompose等の拒否経路に対する不変条件であって、Stop hookがstale orphanをjanitor成功として回収する経路とは分離できる。非採用時受容度: B=6、X=7。",
+      "submittedAt": "2026-07-20T10:38:24Z"
+    }
+  ],
+  "resolutions": []
+}

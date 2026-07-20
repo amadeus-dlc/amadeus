@@ -1,0 +1,21 @@
+{
+  "electionId": "E-USSU04FDS13",
+  "kind": "s13-learning-candidates",
+  "question": "260720-upstream-sync-230 / U04 routing-and-autonomy-guards / functional-design の§13 surfaceを裁定する。E-USSU04FD1 A（Stop hook best-effort stale削除+doctor read-only）とE-USSU04FD2 A（upstream同型優先、autonomous時janitor N/A・stale保持）を転記済み。3成果物最終化、frontend N/A。最終sensorはrequired-sections 3/3 PASS、upstream-coverage 3/3 PASS、answer-evidence PASS、Markdown filter外、diff-check PASS。review Iteration1 NEEDS REVISION 1件をFD2裁定と最小是正で閉じ、Iteration2 READY/findings0/GoA1。memory_entries_total=0、candidates=[]、parked_open_questions=[]のため新規persist 0件を提案する。成果物・裁定転記・review・sensor・既存normを独立実測し、0件でよいか裁定する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可（noteに新規候補を記載）"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}

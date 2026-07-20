@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSU04FD2",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Aを支持。e5 architecture review、E-USSU04FD1 record/e2 GoA2留保、upstream 45035ea一次差分をread-only照合した。upstreamはisPendingComposeStop先頭でautonomousならmarker未読のままfalseを返すため、autonomous時はcarve-out拒否・janitor N/A・marker保持が既存のADOPT契約である。e2留保のdecision/cleanup分離はfreshnessを実際に評価してstaleを得た経路で、unlink成否がcarve-out判断を変えないことを求めるものとして満たせる。Bはautonomousでもmarkerを読み削除する新しいADAPTであり、FR-1 item5、E-USSU04FD1多数裁定、収束時の最小十分scopeを越える。Aを明記し、fresh保持/stale削除/unlink失敗/autonomous保持の4対照testで分岐を固定するのが反証可能。GoA1、留保なし。非採用時はBもjanitor責務の完全直交を優先する設計として受容可能だが、upstream逸脱と追加I/Oを伴うためAより低い。Xはupstream同型・autonomous保持・unlink失敗時のdecision不変を同等に守る場合のみ受容する。",
+  "submittedAt": "2026-07-20T10:46:55Z"
+}

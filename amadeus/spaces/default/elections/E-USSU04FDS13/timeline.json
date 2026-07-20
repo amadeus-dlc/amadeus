@@ -1,0 +1,46 @@
+[
+  {
+    "kind": "distributed",
+    "at": "2026-07-20T11:42:35Z",
+    "detail": "delivered via agmsg: e1",
+    "voter": "e1"
+  },
+  {
+    "kind": "distributed",
+    "at": "2026-07-20T11:42:35Z",
+    "detail": "delivered via agmsg: e2",
+    "voter": "e2"
+  },
+  {
+    "kind": "distributed",
+    "at": "2026-07-20T11:42:35Z",
+    "detail": "delivered via agmsg: e3",
+    "voter": "e3"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-07-20T11:43:12Z",
+    "receivedAt": "2026-07-20T11:43:26Z",
+    "detail": "ballot accepted: e3",
+    "voter": "e3"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-07-20T11:43:16Z",
+    "receivedAt": "2026-07-20T11:43:32Z",
+    "detail": "ballot accepted: e2",
+    "voter": "e2"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-07-20T11:43:24Z",
+    "receivedAt": "2026-07-20T11:43:40Z",
+    "detail": "ballot accepted: e1",
+    "voter": "e1"
+  },
+  {
+    "kind": "tallied",
+    "at": "2026-07-20T11:44:13Z",
+    "detail": "tally: established"
+  }
+]

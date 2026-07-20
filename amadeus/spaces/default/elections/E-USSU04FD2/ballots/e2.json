@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSU04FD2",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Aを支持。公式upstream 45035ea1ad9ではisPendingComposeStopがautonomousを先頭でfalse返却し、その後にのみmarker stat/freshness/janitorを行うため、autonomous時janitor N/Aが一次実装と一致する。E-USSU04FD1のe2留保にいう独立janitor outcomeは、freshness判定へ到達した通常経路でunlink成否とcarve-out拒否判断を分離する趣旨であり、autonomous guardより前へjanitorを移すADAPTまでは要求しない。autonomous中はmarkerが残ってもcarve-outを無効化できず、doctorはread-onlyで観測可能、非autonomous復帰後の次回Stopでstale cleanupされる。4対照testで境界を固定するAが最小十分。A非採用でBなら受容度6。",
+  "submittedAt": "2026-07-20T10:46:37Z"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSU04FD2",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Aを支持する。upstream 45035ea一次差分では isPendingComposeStop が Construction Autonomy Mode=autonomous を最初に判定して return false し、その後に初めて composeMarkerPath、existsSync、statSync、stale時unlinkSyncへ進むため、autonomousではmarker未観測・janitor非実行が明示的な正本順序である。E-USSU04FD1の裁定はstaleを観測したStop経路でbest-effort削除しdoctorをread-onlyとするもので、autonomous時の観測強制までは裁定していない。e2留保の独立outcomeはunlink成否がcarve-out拒否を反転しない責務分離としてAでも満たせる。BはupstreamからのADAPTとautonomous時の追加side effectを導入するため、承認済みADOPT境界と収束原則ではAが最小十分。非採用時受容度: B=4、X=7。",
+  "submittedAt": "2026-07-20T11:38:35Z"
+}

@@ -1,0 +1,69 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A. upstream同型優先・autonomousはjanitor N/Aで保持"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A. upstream同型優先・autonomousはjanitor N/Aで保持",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "B. janitor完全直交・autonomousでもstale削除",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "X. その他（noteにautonomous時契約を明記）",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T11:39:29Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-USSU04FD2",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Aを支持。公式upstream 45035ea1ad9ではisPendingComposeStopがautonomousを先頭でfalse返却し、その後にのみmarker stat/freshness/janitorを行うため、autonomous時janitor N/Aが一次実装と一致する。E-USSU04FD1のe2留保にいう独立janitor outcomeは、freshness判定へ到達した通常経路でunlink成否とcarve-out拒否判断を分離する趣旨であり、autonomous guardより前へjanitorを移すADAPTまでは要求しない。autonomous中はmarkerが残ってもcarve-outを無効化できず、doctorはread-onlyで観測可能、非autonomous復帰後の次回Stopでstale cleanupされる。4対照testで境界を固定するAが最小十分。A非採用でBなら受容度6。",
+      "submittedAt": "2026-07-20T10:46:37Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSU04FD2",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Aを支持。e5 architecture review、E-USSU04FD1 record/e2 GoA2留保、upstream 45035ea一次差分をread-only照合した。upstreamはisPendingComposeStop先頭でautonomousならmarker未読のままfalseを返すため、autonomous時はcarve-out拒否・janitor N/A・marker保持が既存のADOPT契約である。e2留保のdecision/cleanup分離はfreshnessを実際に評価してstaleを得た経路で、unlink成否がcarve-out判断を変えないことを求めるものとして満たせる。Bはautonomousでもmarkerを読み削除する新しいADAPTであり、FR-1 item5、E-USSU04FD1多数裁定、収束時の最小十分scopeを越える。Aを明記し、fresh保持/stale削除/unlink失敗/autonomous保持の4対照testで分岐を固定するのが反証可能。GoA1、留保なし。非採用時はBもjanitor責務の完全直交を優先する設計として受容可能だが、upstream逸脱と追加I/Oを伴うためAより低い。Xはupstream同型・autonomous保持・unlink失敗時のdecision不変を同等に守る場合のみ受容する。",
+      "submittedAt": "2026-07-20T10:46:55Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSU04FD2",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Aを支持する。upstream 45035ea一次差分では isPendingComposeStop が Construction Autonomy Mode=autonomous を最初に判定して return false し、その後に初めて composeMarkerPath、existsSync、statSync、stale時unlinkSyncへ進むため、autonomousではmarker未観測・janitor非実行が明示的な正本順序である。E-USSU04FD1の裁定はstaleを観測したStop経路でbest-effort削除しdoctorをread-onlyとするもので、autonomous時の観測強制までは裁定していない。e2留保の独立outcomeはunlink成否がcarve-out拒否を反転しない責務分離としてAでも満たせる。BはupstreamからのADAPTとautonomous時の追加side effectを導入するため、承認済みADOPT境界と収束原則ではAが最小十分。非採用時受容度: B=4、X=7。",
+      "submittedAt": "2026-07-20T11:38:35Z"
+    }
+  ],
+  "resolutions": []
+}

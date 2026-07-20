@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSU04FD1",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "C2のrejected/failed marker不変と衝突させないため、stale削除はcarve-out拒否結果の副作用ではなく、freshness判定後の独立したbest-effort janitor outcomeとして設計・記録すること。unlink失敗でもblock判断は不変、doctorはread-onlyを維持し、fresh保持/stale削除/unlink失敗の3経路を対照testで固定する。",
+  "rationale": "Aを支持。公式 upstream commit 45035ea1ad988b7d1a8c9215679f6662879a91ac の一次差分ではStop hookが24h超のmarkerをcarve-outに使わずbest-effort unlinkし、doctorはfresh=advisory PASS/stale=FAILのread-only probeである。同期ledgerもcompose-pending-freshnessをADOPT/HIGHと確定しており、AがADOPT dispositionと回帰testを最小差分で保つ。Bはmarker不変には単純だが、upstreamの自動復旧を意図的に失い、orphanが手動修復まで残る。A非採用でBなら受容度6。",
+  "submittedAt": "2026-07-20T10:37:56Z"
+}

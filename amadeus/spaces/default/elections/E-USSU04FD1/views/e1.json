@@ -1,0 +1,21 @@
+{
+  "electionId": "E-USSU04FD1",
+  "voter": "e1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "X. その他（noteにjanitor ownership/削除契約を明記）"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "B. stale保持 + doctor報告・手動修復"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "A. Stop hook best-effort削除 + doctor read-only"
+    }
+  ]
+}

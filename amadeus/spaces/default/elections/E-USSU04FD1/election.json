@@ -1,0 +1,25 @@
+{
+  "electionId": "E-USSU04FD1",
+  "kind": "clarification-question",
+  "question": "260720-upstream-sync-230 / U04 routing-and-autonomy-guards / functional-design Q1: stale compose markerのjanitor ownershipと削除契約をどう固定するか。前提反証: upstream 45035eaのStop hookはstale markerをcarve-out拒否するだけでなくbest-effort unlinkし、doctorはread-only。一方、承認済みFR-1 item5は24h以内のみ有効・staleはcarve-out不使用・doctorがstaleと修復方法表示まで、C2 rejected/failed invariantはmarker不変を規定し、stale markerの削除有無を一意に固定しない。A=upstream同型でStop hookがbest-effort削除しdoctorはread-only、B=stale markerを保持しdoctorが報告・手動修復、X=その他。各自e5 questions、upstream 45035ea一次差分、FR-1/C2をリードオンリー実測し、GoA・非採用時受容度付きで投票する。全票はleader現行CLIで受理する。10:35:47ZのE-OC1承認は前提反証により未執行・無効。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. Stop hook best-effort削除 + doctor read-only"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. stale保持 + doctor報告・手動修復"
+    },
+    {
+      "internalNo": 3,
+      "label": "X. その他（noteにjanitor ownership/削除契約を明記）"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}

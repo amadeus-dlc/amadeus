@@ -1,0 +1,64 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "0件は不可（noteに新規候補を記載）",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T11:44:13Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-USSU04FDS13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可を支持する。e5最終成果物3点でE-USSU04FD1/2の裁定が一致して転記され、business-rulesのBR-U04-11/13・4経路検証、business-logic-modelのautonomous先頭returnとnon-autonomous独立janitor、questionsの両Answerが相互整合する。reviewはIteration1の単一不整合をFD2裁定で閉じ、Iteration2 READY/findings0/GoA1を実測。最終auditでrequired-sectionsとupstream-coverageが3成果物すべてPASS、answer-evidence PASSを確認した。memoryのInterpretations/Deviations/Tradeoffs/Open questionsは全て空で、観測は既存裁定の適用とレビュー閉包に限られ、新規の横断practice候補はない。",
+      "submittedAt": "2026-07-20T11:43:12Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSU04FDS13",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。U04最終3成果物とquestions、E-USSU04FD1/FD2 recordを全読し、FD1のe2留保（decisionとjanitor outcome分離）とFD2のautonomous先頭return/janitor N/Aがbusiness logic・BR-U04-11/13/14・domain relationships・4対照testへ一貫転記されていることを確認。review iteration1の曖昧性はP1の追加選挙と既存citation-reservation-preservation/citation-semantics-checkの適用で閉包され、iteration2 READY/findings0/GoA1。最終sensorは3成果物required/upstream PASS、questions answer-evidence PASS、memory 4区分0。設計交差の明示は既存decision tableと裁定運用の適用実例であり、新規横断normへ昇格する反復性はない。",
+      "submittedAt": "2026-07-20T11:43:16Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSU04FDS13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。U04 FDの3成果物+questions、E-USSU04FD1/2転記、functional-design memory、auditを独立実測した。autonomous先頭return・marker未読・janitor N/A・stale保持と、non-autonomous時だけのfreshness判定/独立janitorが全成果物で一致し、fresh保持/stale削除/unlink失敗でもblock不変/autonomous保持の4対照test契約も明示されている。最終sensorは3成果物のrequired-sections/upstream-coverage 6件とanswer-evidenceがPASS、review Iteration2 READY/findings0/GoA1、review追記後のbusiness-logic-model両sensorもPASS、diff-check PASS、memory実entry 0を確認した。Iteration1 findingは既決janitor責務とupstream autonomous先頭returnの優先関係という設計上の未決で、E-USSU04FD2により閉包済み。既存memoryのupstream一次根拠・裁定転記・verbatim照合規律の適用例であり、新規横断practiceへpersistする追加性はない。choice2は同等既存規範に未収録の再利用可能候補が具体的証拠付きで示される場合のみ受容する。",
+      "submittedAt": "2026-07-20T11:43:24Z"
+    }
+  ],
+  "resolutions": []
+}

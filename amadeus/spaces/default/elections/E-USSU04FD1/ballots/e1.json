@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSU04FD1",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Aを支持。e5 questions、FR-1 item5/C2 seam・invariant、upstream 45035ea一次差分をread-only照合した。一次実装はStop hookでmtime>24hをstale orphanと判定後、unlinkSyncをbest-effort実行し、削除失敗でもcarve-outを拒否してforwarding-loop enforcementを維持する。doctorは別経路でmarkerを変更せずfresh advisory PASS/stale FAIL+remediationを返す。C2のrejected/failed時marker不変はrecompose等の拒否結果に対するpartial-write禁止であり、stale観測後のjanitor成功は正常cleanupなので競合しない。AはADOPT disposition、自己回復、次turnのclean stateを同時に保ち、失敗時安全性もunlink成否から分離できる。GoA1、留保なし。非採用時はBも診断証拠保持を優先する方針として受容可能だが、永続orphanとupstreamからの意図的逸脱を残すためAより低い。Xはjanitor ownershipと削除失敗時のcarve-out拒否を同等以上に明記する場合のみ受容する。",
+  "submittedAt": "2026-07-20T10:37:49Z"
+}

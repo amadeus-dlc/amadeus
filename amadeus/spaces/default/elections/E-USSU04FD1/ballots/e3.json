@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSU04FD1",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Aを支持する。upstream 45035ea一次差分ではStop hookがmarkerのmtimeを共有TTLで判定し、staleならcarve-outを拒否した上でunlinkSyncをbest-effort実行し、unlink失敗でもstop判断を変えない。一方doctorはfresh advisory PASS / stale FAIL+remediationのread-only probeである。これはADOPT dispositionに最も忠実で、crash後のstale markerがforwarding-loop enforcementを恒久的に弱める状態を次のStop時に自動回収する。FR-1 item5のdoctor表示と両立し、C2のrejected/failed marker不変はrecompose等の拒否経路に対する不変条件であって、Stop hookがstale orphanをjanitor成功として回収する経路とは分離できる。非採用時受容度: B=6、X=7。",
+  "submittedAt": "2026-07-20T10:38:24Z"
+}

@@ -1,0 +1,21 @@
+{
+  "electionId": "E-USSU04FD2",
+  "voter": "e1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "B. janitor完全直交・autonomousでもstale削除"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "X. その他（noteにautonomous時契約を明記）"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "A. upstream同型優先・autonomousはjanitor N/Aで保持"
+    }
+  ]
+}
