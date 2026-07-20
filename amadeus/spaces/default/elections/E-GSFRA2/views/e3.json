@@ -1,0 +1,16 @@
+{
+  "electionId": "E-GSFRA2",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "(a) 圧縮形受理ピンを維持(旧 record 互換の明示的保証としてテスト温存・新規書込のみ自然形へ)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "(b) ピン削除(受理は regex 上残るがテスト保証は自然形のみ)"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GSFRA2",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "#1255 起票者(E-GMERA3 留保の履行当事者)。既存 store 55ファイルの機械生成行は全て圧縮単節 code — これは実在する読み取り要件であり『要求されない互換』ではない(org Forbidden の例外条件=要件明示に該当)。regex 拡大の superset 上で受理はゼロコスト、ピン維持 (a) はその保証を反証可能なテストとして文書化する P2 適合形。私の #1255 本文の『撤去時に :102 の扱いを明記』の設計裁定として (a) が正答。",
+      "submittedAt": "2026-07-20T04:32:29Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GSFRA2",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "(a) ピン維持を支持。既存 store 55ファイルの機械生成 tally 行が全て圧縮単節 code(RE 実測)= 実データの互換保証はテストで明示ピンすべき対象(corpus-sweep-for-new-guards の『正当な既存データで赤くならない』側の恒久固定)。regex 上の受理だけでテスト保証を外す (b) は将来リファクタでの無音互換破壊を許す(受容度 6)。E-GMERA3 留保の履行として整合。",
+      "submittedAt": "2026-07-20T04:32:20Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GSFRA2",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "(a) 採用 — 圧縮形受理ピンを維持。根拠: 既存選挙 store の機械生成 tally 行は圧縮単節 code(RE 実測 55ファイル、当方も leader store をリードオンリー参照で code 形式の実在を確認)であり、append-only の既存記録が読めることは互換シムでなく「実データ可読性の契約」— Forbidden の後方互換レイヤー禁止(要求なき二重実装)には該当しない(実装は regex 受理域ひとつで二重実装なし)。テストピンの価値は将来の regex 厳格化が旧 record を無音で読めなくする回帰の loud 検出にあり、(b) のピン削除は受理域が文法上残っても保証が消え、まさにその無音回帰を許す。falling-proof 済みの回帰ピンを能動的に外す積極理由がない。受容度: (b)=7(実 corpus 55件の保証放棄)。",
+      "submittedAt": "2026-07-20T04:37:08Z"
+    }
+  ],
+  "late": []
+}

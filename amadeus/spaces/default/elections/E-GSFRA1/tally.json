@@ -1,0 +1,69 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "(a) parse 側スパース受理(bin 段拡張 — corpus 17行が即読める・ADR-4 契約拡張)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "(a) parse 側スパース受理(bin 段拡張 — corpus 17行が即読める・ADR-4 契約拡張)",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "(b) persist 様式側 canonical 化(以後の手書き persist を 8-bin へ — 既存17行は読めないまま・遡及是正は W-4 で別 norm PR 分離済み)",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "(c) 両対応",
+        "count": 1
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T04:37:25Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GSFRA1",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "(b) 成分(以後の手書き persist の 8-bin 化)はコード変更でなくノルム改定なので、本 intent のコード面と混ぜず norm PR トラック(W-4 と同枠)で扱うこと — (c) を採る場合もこの分離を維持。",
+      "rationale": "#1254 起票者。起票目的は『集計実装前に corpus 17行を読める状態にする』ことで、(a) だけが即時にそれを達成する((b) 単独は既存17行が読めないままで W-4 遡及待ち = 起票時の undercount が温存)。私の起票時実測(pass=0/headFail=8→binFail 移行)が (a) の必要性の一次根拠。受容度: (c)=2(実質 a 含有で受容)/(b) 単独=7(目的不達)。",
+      "submittedAt": "2026-07-20T04:32:29Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GSFRA1",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 3,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "(c) 両対応を支持。理由: 読み側と書き側は責務が別 — 既存17行(手書き persist の実 corpus、binFail 17 実測)は歴史記録であり、(a) の parse 側スパース受理が『書かれてしまった実データを読める』唯一の非破壊手段。一方 persist は今後も人間の手書きで、canonical 8-bin ノルム(b)なしでは sparse 行が増え続ける — 入口と出口の両方を塞ぐ (c) が恒久形。(b) 単独は17行が distill 実装時に silent data loss になる(受容度 7)。(a) 単独は将来の sparse 増殖を許す(受容度 6)。私自身 GoA 行の手書き persist 経験者として、8-bin 全記載の手間は軽微でノルム化に無理はない。",
+      "submittedAt": "2026-07-20T04:32:20Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GSFRA1",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "スパース受理の受理域境界を fail-closed で明文化すること — 受理するのは「出現 bin の部分集合(各 bin 1-8 の範囲内・重複なし・順序昇順は非要求)」に限り、重複 bin・範囲外 bin・数値不正は loud 拒否。受理域拡大が無検証受理へ滑らないため(verification-numeric-parse の系譜)。",
+      "rationale": "(a) 採用。独立実測: 自 tree で GoA 行 17件(team.md 13+project.md 4)を grep 確認 — 全行スパース(present bin のみ)で、canonical 8-bin の実例ゼロ。書き手が人間の手書き persist 文である以上、ゼロ bin 込み 8-bin 強制は記入セレモニーとタイポ源(ledger-count 系の実測クラス)を増やすだけで、読者にも機械にも利得がない — de-facto 標準は既にスパース形。パーサを実 corpus に合わせる (a) が parse-don't-validate の正道で、17行が即時可読になる。(b) は実データ17行を恒久 dead にし人間へ負担転嫁、(c) は (a) 成立後の (b) が二重様式の管理コストのみ残す。受容度: (c)=6(過剰だが実害小)、(b)=7(corpus を殺す)。",
+      "submittedAt": "2026-07-20T04:37:08Z"
+    }
+  ],
+  "resolutions": []
+}

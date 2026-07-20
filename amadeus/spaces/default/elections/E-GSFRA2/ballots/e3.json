@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFRA2",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "(a) ピン維持を支持。既存 store 55ファイルの機械生成 tally 行が全て圧縮単節 code(RE 実測)= 実データの互換保証はテストで明示ピンすべき対象(corpus-sweep-for-new-guards の『正当な既存データで赤くならない』側の恒久固定)。regex 上の受理だけでテスト保証を外す (b) は将来リファクタでの無音互換破壊を許す(受容度 6)。E-GMERA3 留保の履行として整合。",
+  "submittedAt": "2026-07-20T04:32:20Z"
+}

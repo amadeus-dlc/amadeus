@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFRA1",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "(b) 成分(以後の手書き persist の 8-bin 化)はコード変更でなくノルム改定なので、本 intent のコード面と混ぜず norm PR トラック(W-4 と同枠)で扱うこと — (c) を採る場合もこの分離を維持。",
+  "rationale": "#1254 起票者。起票目的は『集計実装前に corpus 17行を読める状態にする』ことで、(a) だけが即時にそれを達成する((b) 単独は既存17行が読めないままで W-4 遡及待ち = 起票時の undercount が温存)。私の起票時実測(pass=0/headFail=8→binFail 移行)が (a) の必要性の一次根拠。受容度: (c)=2(実質 a 含有で受容)/(b) 単独=7(目的不達)。",
+  "submittedAt": "2026-07-20T04:32:29Z"
+}

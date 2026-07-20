@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFRA1",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "スパース受理の受理域境界を fail-closed で明文化すること — 受理するのは「出現 bin の部分集合(各 bin 1-8 の範囲内・重複なし・順序昇順は非要求)」に限り、重複 bin・範囲外 bin・数値不正は loud 拒否。受理域拡大が無検証受理へ滑らないため(verification-numeric-parse の系譜)。",
+  "rationale": "(a) 採用。独立実測: 自 tree で GoA 行 17件(team.md 13+project.md 4)を grep 確認 — 全行スパース(present bin のみ)で、canonical 8-bin の実例ゼロ。書き手が人間の手書き persist 文である以上、ゼロ bin 込み 8-bin 強制は記入セレモニーとタイポ源(ledger-count 系の実測クラス)を増やすだけで、読者にも機械にも利得がない — de-facto 標準は既にスパース形。パーサを実 corpus に合わせる (a) が parse-don't-validate の正道で、17行が即時可読になる。(b) は実データ17行を恒久 dead にし人間へ負担転嫁、(c) は (a) 成立後の (b) が二重様式の管理コストのみ残す。受容度: (c)=6(過剰だが実害小)、(b)=7(corpus を殺す)。",
+  "submittedAt": "2026-07-20T04:37:08Z"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFRA1",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 3,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "(c) 両対応を支持。理由: 読み側と書き側は責務が別 — 既存17行(手書き persist の実 corpus、binFail 17 実測)は歴史記録であり、(a) の parse 側スパース受理が『書かれてしまった実データを読める』唯一の非破壊手段。一方 persist は今後も人間の手書きで、canonical 8-bin ノルム(b)なしでは sparse 行が増え続ける — 入口と出口の両方を塞ぐ (c) が恒久形。(b) 単独は17行が distill 実装時に silent data loss になる(受容度 7)。(a) 単独は将来の sparse 増殖を許す(受容度 6)。私自身 GoA 行の手書き persist 経験者として、8-bin 全記載の手間は軽微でノルム化に無理はない。",
+  "submittedAt": "2026-07-20T04:32:20Z"
+}

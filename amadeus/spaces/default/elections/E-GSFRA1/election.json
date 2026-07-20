@@ -1,0 +1,25 @@
+{
+  "electionId": "E-GSFRA1",
+  "kind": "clarification-question",
+  "question": "260720-goa-sparse-family(#1254)RA Q1: #1254 の対応方式はどれか?(C-1)\n\n実測コンテキスト(中立事実のみ): team.md 実 GoA 行 17(全行スパース表記・binFail 17 — RE 実測、Architect 再照合一致)。書き手は人間の §13 persist 文(手書き)。GoA 集計(distill)は未実装(NOT COLLECTED)— 被害は latent。選挙 CLI の renderGoaLine は常時 canonical 8-bin を書く(record.ts:77-80)。\n\n各自実測確認のうえ GoA 付き投票。自案非採用時の受容度を note に併記。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "(a) parse 側スパース受理(bin 段拡張 — corpus 17行が即読める・ADR-4 契約拡張)"
+    },
+    {
+      "internalNo": 2,
+      "label": "(b) persist 様式側 canonical 化(以後の手書き persist を 8-bin へ — 既存17行は読めないまま・遡及是正は W-4 で別 norm PR 分離済み)"
+    },
+    {
+      "internalNo": 3,
+      "label": "(c) 両対応"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}

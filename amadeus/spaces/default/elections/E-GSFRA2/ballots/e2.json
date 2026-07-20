@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFRA2",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "(a) 採用 — 圧縮形受理ピンを維持。根拠: 既存選挙 store の機械生成 tally 行は圧縮単節 code(RE 実測 55ファイル、当方も leader store をリードオンリー参照で code 形式の実在を確認)であり、append-only の既存記録が読めることは互換シムでなく「実データ可読性の契約」— Forbidden の後方互換レイヤー禁止(要求なき二重実装)には該当しない(実装は regex 受理域ひとつで二重実装なし)。テストピンの価値は将来の regex 厳格化が旧 record を無音で読めなくする回帰の loud 検出にあり、(b) のピン削除は受理域が文法上残っても保証が消え、まさにその無音回帰を許す。falling-proof 済みの回帰ピンを能動的に外す積極理由がない。受容度: (b)=7(実 corpus 55件の保証放棄)。",
+  "submittedAt": "2026-07-20T04:37:08Z"
+}

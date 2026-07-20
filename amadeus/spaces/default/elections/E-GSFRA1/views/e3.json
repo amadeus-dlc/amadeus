@@ -1,0 +1,21 @@
+{
+  "electionId": "E-GSFRA1",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "(b) persist 様式側 canonical 化(以後の手書き persist を 8-bin へ — 既存17行は読めないまま・遡及是正は W-4 で別 norm PR 分離済み)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "(c) 両対応"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "(a) parse 側スパース受理(bin 段拡張 — corpus 17行が即読める・ADR-4 契約拡張)"
+    }
+  ]
+}

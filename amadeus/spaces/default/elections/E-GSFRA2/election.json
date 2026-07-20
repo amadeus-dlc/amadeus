@@ -1,0 +1,21 @@
+{
+  "electionId": "E-GSFRA2",
+  "kind": "clarification-question",
+  "question": "260720-goa-sparse-family(#1255)RA Q2: t238:102 の圧縮形受理ピンと圧縮 code の扱いは?(C-2、E-GMERA3 留保の履行)\n\n実測コンテキスト(中立事実のみ): GOA_LINE_CODE_RE 複節化は受理域の拡大 — 圧縮形(E-SDECG4)は拡大後も文法上有効な受理域に含まれる。既存選挙 store 55ファイルの機械生成 tally 行は全て圧縮単節 code+canonical 8-bin(RE 実測)— 読み側は regex 拡大により構造的に後方互換。t238:102 は圧縮形の受理を正テストでピン。\n\n各自実測確認のうえ GoA 付き投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "(a) 圧縮形受理ピンを維持(旧 record 互換の明示的保証としてテスト温存・新規書込のみ自然形へ)"
+    },
+    {
+      "internalNo": 2,
+      "label": "(b) ピン削除(受理は regex 上残るがテスト保証は自然形のみ)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}
