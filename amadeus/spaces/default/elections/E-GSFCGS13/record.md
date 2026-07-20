@@ -1,0 +1,8 @@
+# Election Record — E-GSFCGS13
+
+- question: 260720-goa-sparse-family / code-generation §13: 最終実装・review iteration2 READY・全検証green後のsurfaceをどう採否するか。c1候補=複数の構造終端候補を持つextractor/parserは最小offsetだけでなく選択された終端kindを保持し、kind依存の正規化は実際に選ばれたkindにだけ適用する。単独境界testに加え、前方boundaryの後ろに別候補がある複合順序testを置く（review iteration1でprovenance boundary後の同一行別GoA headによりslashを誤除去しsilent repairした実害）。c2=canonical-onlyコメント/line cite staleは既存count-comment-sync-on-catalog-change+mechanism-cite-verifyの適用実例として不採用提案。c3=review fix後の全再検証は既存fix-diff-independent-reverify+report-final-values-onlyの適用実例として不採用提案。各自e4最終成果物・実装・review履歴・memoryをリードオンリー実測し、GoA・非採用時受容度付きで投票する。全票はleader現行CLIで受理する。
+
+裁定: c1採用、c2/c3不採用(choice 1: 3票)
+内訳: choice1=3票 choice2=0票 choice3=0票 choice4=0票
+票タイムライン: e2 2026-07-20T09:59:50Z(受理 2026-07-20T10:00:14Z) → e3 2026-07-20T09:59:34Z(受理 2026-07-20T10:00:22Z) → e1 2026-07-20T10:02:10Z(受理 2026-07-20T10:01:17Z) → 開票 2026-07-20T10:01:51Z
+GoA[E-GSFCGS13]: 1x3 2x0 3x0 4x0 5x0 6x0 7x0 8x0

@@ -1,0 +1,26 @@
+{
+  "electionId": "E-GSFCGS13",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "c1採用、c2/c3不採用"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 4,
+      "label": "X. その他（noteに採否集合を明記）"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "c1〜c3すべて不採用（0件）"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 3,
+      "label": "c1〜c3すべて採用"
+    }
+  ]
+}
