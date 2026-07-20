@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-DAGRA2",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "Q1=A 採用時、本 advisory 分岐(record dir 実在×recordPrefix null)が実行到達可能かを design で机上トレースし、到達可能な残余異常経路を1つ以上明記すること — 到達不能なら分岐は書かない(消費されない検証分岐の残置は検証劇場 Forbidden の隣接クラス)。到達可能なら #1258 の B 防御層と同型の defense-in-depth として妥当",
+      "rationale": "自分の #1279 verdict の中核指摘(guard スキップが設計として無音 — 正当 skip とバグ skip の識別不能)への直接対応。A を支持: (1) 無音失敗の禁止(construction ガードレール)と stdout-directive-stderr-advisory 契約に整合 (2) #1248/#1258 で確立した『機構修正+横断防御層』の2層パターンの検出面適用 (3) template-missing 枝だけ警告がある非一貫の解消。自案非採用時: B=6",
+      "submittedAt": "2026-07-20T03:16:48Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-DAGRA2",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A 採用。Q1=A の書込保証があっても、識別可能なバグ skip(record dir 実在×null)の stderr advisory は防御層として安価で、無音 no-op を残さない原則(私の E-CCCRA 票の留保と同型)・stdout-directive-stderr-advisory の既存契約に整合。template-missing 枝だけ警告がある非一貫の解消にもなる。受容度: B=6。",
+      "submittedAt": "2026-07-20T03:17:13Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-DAGRA2",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "guard の正当 skip(birth 前)とバグ skip(record 実在×null)の無音混同は実測済み機序。A の条件付き loud 化(record dir 実在時のみ)は偽陽性を作らず、stdout-directive-stderr-advisory 契約と #1248 FR-1b advisory(私の実装)の既習様式に整合。Q1=A と防御層で併存可能な点も P2 的に正しい。B 受容度: 6。",
+      "submittedAt": "2026-07-20T03:16:52Z"
+    }
+  ],
+  "late": []
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-DAGRA3",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "(d) pd 解決順の変更は全ツール横断の ADR 級(hook 版 resolveProjectDirFromHook :288-303 も同順序で、変更の blast radius は框架全域)— 別 Issue が正。(e) cursor lifecycle は #1258(私の実装、c499c1efb 着地)で clear+status ゲート済みの面であり、本 intent が触ると同根再修正の衝突を作る。A(両方スコープ外・diary 経路限定の surgical)が P5 整合。B 受容度: 6。",
+  "submittedAt": "2026-07-20T03:16:52Z"
+}

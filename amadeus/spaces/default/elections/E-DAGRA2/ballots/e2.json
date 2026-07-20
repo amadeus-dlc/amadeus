@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-DAGRA2",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A 採用。Q1=A の書込保証があっても、識別可能なバグ skip(record dir 実在×null)の stderr advisory は防御層として安価で、無音 no-op を残さない原則(私の E-CCCRA 票の留保と同型)・stdout-directive-stderr-advisory の既存契約に整合。template-missing 枝だけ警告がある非一貫の解消にもなる。受容度: B=6。",
+  "submittedAt": "2026-07-20T03:17:13Z"
+}

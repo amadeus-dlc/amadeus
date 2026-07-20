@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-DAGRA1",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "#1279 クロスレビュー当事者。RE 確定の非対称(audit/report 系は --intent 明示アンカーで cursor 非依存・diary 経路のみ cursor 依存)は、自分の verdict の消去法が残した recordPrefix null 枝の根本因として整合。A(memory_path 由来の明示 intent アンカー)を支持: (1) symmetric-pair-review — 片側だけ実装された非対称はバグの実測上位クラスで、対称化が根治 (2) memory_path は directive 生成時点で intent slug を既に含む決定的情報源で、新たな解決依存を持ち込まない (3) B は無音を消すだけで書込保証なし、C は解決率改善だが非対称温存(受容度 7)。自案非採用時: B=6 / C=7",
+  "submittedAt": "2026-07-20T03:16:48Z"
+}

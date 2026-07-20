@@ -1,0 +1,21 @@
+{
+  "electionId": "E-DAGRA3",
+  "kind": "clarification-question",
+  "question": "260720-diary-autogen-guard(#1279)RA Q3: 環境・lifecycle 軸(軸(iii))のスコープ。\n\n背景: (d) pd 解決順の見直し(CLAUDE_PROJECT_DIR 優先の再考)は全ツール横断で ADR 級。(e) cursor lifecycle 堅牢化は e2 の #1258(c499c1efb)と同面。\n\n各自コード実測のうえ GoA 付き投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. 両方ともスコープ外 — (d) は別 Issue 起票(ADR 前提の独立 intent)、(e) は #1258 着地済み面として触れない(修正面を diary 経路に限定 — 最小 surgical)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. (d) のみ別 Issue、(e) の cursor 再解決を Q1=C と組み合わせて本 intent に含める"
+    }
+  ],
+  "voters": [
+    "e2",
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-DAGRA2",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "Q1=A 採用時、本 advisory 分岐(record dir 実在×recordPrefix null)が実行到達可能かを design で机上トレースし、到達可能な残余異常経路を1つ以上明記すること — 到達不能なら分岐は書かない(消費されない検証分岐の残置は検証劇場 Forbidden の隣接クラス)。到達可能なら #1258 の B 防御層と同型の defense-in-depth として妥当",
+  "rationale": "自分の #1279 verdict の中核指摘(guard スキップが設計として無音 — 正当 skip とバグ skip の識別不能)への直接対応。A を支持: (1) 無音失敗の禁止(construction ガードレール)と stdout-directive-stderr-advisory 契約に整合 (2) #1248/#1258 で確立した『機構修正+横断防御層』の2層パターンの検出面適用 (3) template-missing 枝だけ警告がある非一貫の解消。自案非採用時: B=6",
+  "submittedAt": "2026-07-20T03:16:48Z"
+}

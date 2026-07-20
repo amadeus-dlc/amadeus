@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-DAGRA1",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A 採用。audit 系の --intent 明示アンカー(amadeus-audit.ts:433 — 実測済み既存様式)との対称化が本質修正で、symmetric-pair-review の『片側だけ実装された非対称』クラスタの正解形。memory_path が intent slug を既に運んでいる事実(私は毎ステージ directive で実見)により追加情報源も不要。B は検出のみで書込保証がなく human-ruling…ならぬ diary-persist の保証にならない。C は非対称温存。受容度: B=6 / C=6。",
+  "submittedAt": "2026-07-20T03:17:13Z"
+}

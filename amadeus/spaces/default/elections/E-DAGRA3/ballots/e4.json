@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-DAGRA3",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A(両方スコープ外)を支持: (1) (d) pd 解決順見直しは全ツール横断の挙動変更で ADR 級 — bugfix 内で触るのは blast radius 過大、別 Issue の独立 intent が正(dist-relocation を internal refactor と扱わない Forbidden の同族判断) (2) (e) cursor lifecycle は #1258(自分がレビューした C 裁定実装)で着地済みの面で、再改修は c6 交差を新設するだけ (3) Q1=A が memory_path アンカーで cursor 依存自体を diary 経路から外すため、(e) を組み合わせる B の動機(解決率向上)は消える。surgical の原則どおり。自案非採用時: B=6",
+  "submittedAt": "2026-07-20T03:16:48Z"
+}

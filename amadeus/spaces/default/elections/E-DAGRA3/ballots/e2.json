@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-DAGRA3",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A 採用。(d) pd 解決順は全ツール横断の ADR 級で bugfix への同乗は blast radius 過大(intents-json 級の広域影響)、(e) は #1258 着地済み面 — いずれも surgical 原則(P5)と Won't 規律の正しい適用。Q1=A なら (e) の再解決も不要。受容度: B=6。",
+  "submittedAt": "2026-07-20T03:17:13Z"
+}

@@ -1,0 +1,49 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T03:17:37Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-DAGRA3",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A(両方スコープ外)を支持: (1) (d) pd 解決順見直しは全ツール横断の挙動変更で ADR 級 — bugfix 内で触るのは blast radius 過大、別 Issue の独立 intent が正(dist-relocation を internal refactor と扱わない Forbidden の同族判断) (2) (e) cursor lifecycle は #1258(自分がレビューした C 裁定実装)で着地済みの面で、再改修は c6 交差を新設するだけ (3) Q1=A が memory_path アンカーで cursor 依存自体を diary 経路から外すため、(e) を組み合わせる B の動機(解決率向上)は消える。surgical の原則どおり。自案非採用時: B=6",
+      "submittedAt": "2026-07-20T03:16:48Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-DAGRA3",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A 採用。(d) pd 解決順は全ツール横断の ADR 級で bugfix への同乗は blast radius 過大(intents-json 級の広域影響)、(e) は #1258 着地済み面 — いずれも surgical 原則(P5)と Won't 規律の正しい適用。Q1=A なら (e) の再解決も不要。受容度: B=6。",
+      "submittedAt": "2026-07-20T03:17:13Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-DAGRA3",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "(d) pd 解決順の変更は全ツール横断の ADR 級(hook 版 resolveProjectDirFromHook :288-303 も同順序で、変更の blast radius は框架全域)— 別 Issue が正。(e) cursor lifecycle は #1258(私の実装、c499c1efb 着地)で clear+status ゲート済みの面であり、本 intent が触ると同根再修正の衝突を作る。A(両方スコープ外・diary 経路限定の surgical)が P5 整合。B 受容度: 6。",
+      "submittedAt": "2026-07-20T03:16:52Z"
+    }
+  ],
+  "resolutions": []
+}

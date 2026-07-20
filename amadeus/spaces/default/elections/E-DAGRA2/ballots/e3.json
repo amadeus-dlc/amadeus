@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-DAGRA2",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "guard の正当 skip(birth 前)とバグ skip(record 実在×null)の無音混同は実測済み機序。A の条件付き loud 化(record dir 実在時のみ)は偽陽性を作らず、stdout-directive-stderr-advisory 契約と #1248 FR-1b advisory(私の実装)の既習様式に整合。Q1=A と防御層で併存可能な点も P2 的に正しい。B 受容度: 6。",
+  "submittedAt": "2026-07-20T03:16:52Z"
+}

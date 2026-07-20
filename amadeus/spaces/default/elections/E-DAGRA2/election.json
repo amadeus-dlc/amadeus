@@ -1,0 +1,21 @@
+{
+  "electionId": "E-DAGRA2",
+  "kind": "clarification-question",
+  "question": "260720-diary-autogen-guard(#1279)RA Q2: 検出契約(軸(i) — 正当 skip とバグ skip の識別)。\n\n背景: guard は「birth 前 shell(正当 skip)」と「intent 実在だが解決失敗(バグ)」を無音混同。template-missing 枝のみ stderr 警告あり(非一貫)。\n\n各自コード実測のうえ GoA 付き投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. バグ skip 側を stderr advisory で loud 化(intent record dir 実在×recordPrefix null の場合のみ警告 — stdout-directive-stderr-advisory 契約に整合。Q1=A 採用時も防御層として併存可)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. loud 化しない(Q1 の書込保証で十分 — 警告の追加ノイズ回避)"
+    }
+  ],
+  "voters": [
+    "e2",
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

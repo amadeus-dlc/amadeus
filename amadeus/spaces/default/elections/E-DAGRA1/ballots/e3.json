@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-DAGRA1",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "実測: resolveProjectDir の CLAUDE_PROJECT_DIR 優先(lib.ts:214-216)と audit の --intent 明示アンカー経路(amadeus-audit.ts:433 付近)を実読 — diary 経路のみ cursor 依存の非対称は #1248 RE で私が記録した audit ルーティング機序とも整合。A(memory_path 由来 intent での明示アンカー)は symmetric-pair-review の対称回復そのもので、既に directive が持つ情報から導出する決定的修正 = 最高レバレッジ。C は非対称温存・B は書込非保証。受容度: B=6 / C=6。",
+  "submittedAt": "2026-07-20T03:16:52Z"
+}

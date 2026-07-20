@@ -1,0 +1,21 @@
+{
+  "electionId": "E-DAGRA1",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "C. null 時の再解決リトライ(cursor 再読/lone-intent 緩和)— 解決率は上がるが根本の非対称は残る"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "A. diary 経路への明示 intent アンカー導入 — directive の memory_path(intent slug を既に含む)由来の intent で ensureStageDiary を駆動(audit 系と対称化 — 非対称の解消、最高レバレッジ)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "B. recordPrefix null かつ intent 実在時をエラー化(loud fail)— 書込は保証しないが無音は消える"
+    }
+  ]
+}

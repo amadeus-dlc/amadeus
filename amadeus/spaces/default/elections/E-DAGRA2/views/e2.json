@@ -1,0 +1,16 @@
+{
+  "electionId": "E-DAGRA2",
+  "voter": "e2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "B. loud 化しない(Q1 の書込保証で十分 — 警告の追加ノイズ回避)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "A. バグ skip 側を stderr advisory で loud 化(intent record dir 実在×recordPrefix null の場合のみ警告 — stdout-directive-stderr-advisory 契約に整合。Q1=A 採用時も防御層として併存可)"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "electionId": "E-DAGRA1",
+  "kind": "clarification-question",
+  "question": "260720-diary-autogen-guard(#1279)RA Q1: 書込保証の修正方式(3直交軸のうち軸(ii) — 本 intent の中核)。\n\n背景(RE 確定): diary chokepoint(orchestrate.ts:1172)の guard recordPrefix !== null は activeIntent の cursor 解決に完全依存し、pd(CLAUDE_PROJECT_DIR 優先 — lib.ts:215-216)が cursor 非解決ツリーを指すと無音 skip。audit/report 系は --intent 明示アンカー(amadeus-audit.ts:433)で cursor 非依存 — diary 経路のみ非対称に脆弱(pd-swap の決定的再現あり)。\n\n各自コード実測のうえ GoA 付き投票。自案非採用時の受容度を note に併記。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. diary 経路への明示 intent アンカー導入 — directive の memory_path(intent slug を既に含む)由来の intent で ensureStageDiary を駆動(audit 系と対称化 — 非対称の解消、最高レバレッジ)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. recordPrefix null かつ intent 実在時をエラー化(loud fail)— 書込は保証しないが無音は消える"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. null 時の再解決リトライ(cursor 再読/lone-intent 緩和)— 解決率は上がるが根本の非対称は残る"
+    }
+  ],
+  "voters": [
+    "e2",
+    "e3",
+    "e4"
+  ],
+  "state": "recorded"
+}

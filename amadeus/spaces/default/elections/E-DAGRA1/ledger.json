@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-DAGRA1",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "#1279 クロスレビュー当事者。RE 確定の非対称(audit/report 系は --intent 明示アンカーで cursor 非依存・diary 経路のみ cursor 依存)は、自分の verdict の消去法が残した recordPrefix null 枝の根本因として整合。A(memory_path 由来の明示 intent アンカー)を支持: (1) symmetric-pair-review — 片側だけ実装された非対称はバグの実測上位クラスで、対称化が根治 (2) memory_path は directive 生成時点で intent slug を既に含む決定的情報源で、新たな解決依存を持ち込まない (3) B は無音を消すだけで書込保証なし、C は解決率改善だが非対称温存(受容度 7)。自案非採用時: B=6 / C=7",
+      "submittedAt": "2026-07-20T03:16:48Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-DAGRA1",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A 採用。audit 系の --intent 明示アンカー(amadeus-audit.ts:433 — 実測済み既存様式)との対称化が本質修正で、symmetric-pair-review の『片側だけ実装された非対称』クラスタの正解形。memory_path が intent slug を既に運んでいる事実(私は毎ステージ directive で実見)により追加情報源も不要。B は検出のみで書込保証がなく human-ruling…ならぬ diary-persist の保証にならない。C は非対称温存。受容度: B=6 / C=6。",
+      "submittedAt": "2026-07-20T03:17:13Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-DAGRA1",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "実測: resolveProjectDir の CLAUDE_PROJECT_DIR 優先(lib.ts:214-216)と audit の --intent 明示アンカー経路(amadeus-audit.ts:433 付近)を実読 — diary 経路のみ cursor 依存の非対称は #1248 RE で私が記録した audit ルーティング機序とも整合。A(memory_path 由来 intent での明示アンカー)は symmetric-pair-review の対称回復そのもので、既に directive が持つ情報から導出する決定的修正 = 最高レバレッジ。C は非対称温存・B は書込非保証。受容度: B=6 / C=6。",
+      "submittedAt": "2026-07-20T03:16:52Z"
+    }
+  ],
+  "late": []
+}
