@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSU02FD1",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Aを支持。現行emitAuditはlock保持中でもappendAuditEntryUnlockedをイベントごとに呼び、各呼出しはappendFileSyncを即時実行するため、lockは直列化だけで5行の原子性を与えない。U02のquestionsはrecovery失敗時にpartial state/auditを残さないと固定し、NFR-2とADR-5も既存transactionで一度だけ適用する契約である。5行を同一bufferへ構築して単一appendし、成功後に最終stateを1回writeするAだけがこの契約を直接満たす。各イベント生成/append境界のfailure injectionでaudit/state差分0と再実行no-opを固定すべき。非採用時受容度: B=7（partial prefixを正当化し既決no-partial契約と衝突）、X=6（同等以上の単一commit方式を明記する場合のみ受容）。",
+  "submittedAt": "2026-07-20T11:52:43Z"
+}

@@ -1,0 +1,25 @@
+{
+  "electionId": "E-USSU02FD1",
+  "kind": "design-question",
+  "question": "260720-upstream-sync-230 / U02 runtime-recovery / functional-design。reviewerが現設計の逐次audit emitと承認済み契約の衝突を検出した。実コードではamadeus-state.tsのemitAuditがlock内でappendAuditEntryUnlockedを各行ごとに呼び、amadeus-audit.tsのwithAuditLockは直列化のみで複数appendの原子性を提供しない。recovered GATE_REJECTED→STAGE_REVISING→STAGE_AWAITING_APPROVAL→通常GATE_APPROVED→STAGE_COMPLETEDの途中でappend失敗するとpartial auditが残り、Q&Aのrecovery失敗時no partial state/auditおよびNFR-2に反する。どの契約で閉じるか。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. 5行を単一batch appendし成功後stateを1回write"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. 逐次emitを維持しpartial prefixを次回suffix補完"
+    },
+    {
+      "internalNo": 3,
+      "label": "X. その他（noteに原子性・失敗・再実行契約を明記）"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}

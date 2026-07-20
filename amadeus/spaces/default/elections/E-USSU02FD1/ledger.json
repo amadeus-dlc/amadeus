@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-USSU02FD1",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Aを支持。現行emitAuditはlock保持中でもappendAuditEntryUnlockedをイベントごとに呼び、各呼出しはappendFileSyncを即時実行するため、lockは直列化だけで5行の原子性を与えない。U02のquestionsはrecovery失敗時にpartial state/auditを残さないと固定し、NFR-2とADR-5も既存transactionで一度だけ適用する契約である。5行を同一bufferへ構築して単一appendし、成功後に最終stateを1回writeするAだけがこの契約を直接満たす。各イベント生成/append境界のfailure injectionでaudit/state差分0と再実行no-opを固定すべき。非採用時受容度: B=7（partial prefixを正当化し既決no-partial契約と衝突）、X=6（同等以上の単一commit方式を明記する場合のみ受容）。",
+      "submittedAt": "2026-07-20T11:52:43Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSU02FD1",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "Aの『単一batch append』は5 blockを全てメモリ上で生成・検証してから1回の監査commitとして扱い、単なる5回emitの同一lock化やpartial writeを許容するappendFileSync 1回への言い換えにしないこと。append失敗時にaudit/state双方を呼出前bytesへ戻す仕組みと、batch成功後のstate write失敗時の再実行・重複防止契約をfailure injectionで固定すること。",
+      "rationale": "Aを支持。現appendAuditEntryUnlockedは1 blockごとにappendFileSyncを実行し、withAuditLockは競合を直列化するだけなので、回収3行と通常承認2行の途中失敗でpartial prefixが残る。これはQ&Aの部分state/audit禁止およびNFR-2と衝突する。5行を事前生成した単一batchとしてcommitし、成功後に最終stateを1回だけ書くAが、既存の最終state一括書込を維持しつつ失敗面を最小化する。Bはpartial prefixを正規状態として受け入れ、suffix判定・重複防止を次回実行へ持ち越して契約と検証を複雑化する。非採用時受容度: B=5、X=7。",
+      "submittedAt": "2026-07-20T11:53:16Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSU02FD1",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Aを支持する。承認済み契約はrecovery失敗時のpartial state/audit 0とNFR-2の失敗時正本不変であり、現行emitAudit→appendAuditEntryUnlockedの逐次5回appendはlockによる直列化しか提供せず、途中失敗でprefixを残すため契約を満たさない。Recovered 3行と通常GATE_APPROVED/STAGE_COMPLETEDの全5行を事前生成し、単一batch append成功後に最終stateを1回writeすれば、audit/stateのcommit境界を一致させ、各append境界failure-injectionで双方差分0を検証できる。Bはpartial prefixを正規状態として導入し、suffix判定・再実行契約を新設して複雑化するうえ、既決のpartial audit 0に反する。非採用時は、同じall-or-nothing契約を満たしfailure-injectionでaudit/state差分0を証明するXのみ受容可能。",
+      "submittedAt": "2026-07-20T11:53:09Z"
+    }
+  ],
+  "late": []
+}

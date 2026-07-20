@@ -1,0 +1,21 @@
+{
+  "electionId": "E-USSU02FD1",
+  "voter": "e1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "A. 5行を単一batch appendし成功後stateを1回write"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "X. その他（noteに原子性・失敗・再実行契約を明記）"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "B. 逐次emitを維持しpartial prefixを次回suffix補完"
+    }
+  ]
+}

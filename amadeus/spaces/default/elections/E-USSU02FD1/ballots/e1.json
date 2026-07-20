@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSU02FD1",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Aを支持する。承認済み契約はrecovery失敗時のpartial state/audit 0とNFR-2の失敗時正本不変であり、現行emitAudit→appendAuditEntryUnlockedの逐次5回appendはlockによる直列化しか提供せず、途中失敗でprefixを残すため契約を満たさない。Recovered 3行と通常GATE_APPROVED/STAGE_COMPLETEDの全5行を事前生成し、単一batch append成功後に最終stateを1回writeすれば、audit/stateのcommit境界を一致させ、各append境界failure-injectionで双方差分0を検証できる。Bはpartial prefixを正規状態として導入し、suffix判定・再実行契約を新設して複雑化するうえ、既決のpartial audit 0に反する。非採用時は、同じall-or-nothing契約を満たしfailure-injectionでaudit/state差分0を証明するXのみ受容可能。",
+  "submittedAt": "2026-07-20T11:53:09Z"
+}
