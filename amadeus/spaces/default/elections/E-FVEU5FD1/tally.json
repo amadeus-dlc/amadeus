@@ -1,0 +1,69 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A. max-exhausted履歴を保持して次Unitへ進み最終FD gateで裁定"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A. max-exhausted履歴を保持して次Unitへ進み最終FD gateで裁定",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "B. exceptional独立検証を先に要求しU5で停止",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "X. その他（noteに検証境界と再開条件を記載）",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T13:49:16Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-FVEU5FD1",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Aを支持する。stage-protocol.md §12a:887-889 はreviewer_max_iterations到達時に未解決所見を明示してapproval gateへ進むと規定する。U5最新成果物を実読すると、iteration 2後の3点は、CompositionHead/resulting commit/treeをprecondition・各attempt・command/process receiptへ固定し各run起動直前にHEAD/tree/cleanを再検証、SkeletonCiArtifactのexactly two attemptsとrunNo 1/2のbijection・各DETECTED/counterexample/CellResult/bundle/raw/command/process identityの再検証、domain failure reasonからtransport/head/lookup/corruptionを除外しSkeletonCommitErrorとしてevent外へ返す設計へ最小是正済み。最新sensor全PASSで、U3/U4の未READY依存もDESIGNED_BLOCKED_ON_U3_U4_GATEとして保持しintegration readinessを先取りしていない。例外的第三reviewを追加せず、NOT-READY履歴と未レビュー是正を最終FD gateへ集約して明示裁定するのが既定プロトコルに整合する。",
+      "submittedAt": "2026-07-20T13:48:14Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FVEU5FD1",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "最終Functional Design gateではU5をREADY扱いせず、iteration 2の未解決3 finding、上限到達後の3点是正、第三review未実施、およびU3/U4の未READY依存を明示してstage全体として裁定すること。以後sensor失敗または承認scope逸脱が判明した場合は停止する。",
+      "rationale": "Aを支持。stage-protocol §12aはreviewer_max_iterations到達時にunresolved findingsを明記してapproval gateへ進むと規定し、per-unit gateは最終Unit後まで抑止される。独立実測ではiteration 1がNOT READY 3件、iteration 2もNOT READY 3件で上限2回へ到達。その後、CompositionHead/resulting commit/treeのprecondition・attempt・command/process receiptへの束縛と起動直前HEAD/tree/clean再検証、CI artifact exactly two rowsとexpected run 1/2のbijectionおよび各identity再hash、COMMITをdomain failure reasonから除外してtransport/head/lookup/corruptionをSkeletonCommitErrorへ分離する修正が成果物へ反映された。対象sensorは最新全PASS、git diff --checkもPASSで、U3/U4依存もDESIGNED_BLOCKED_ON_U3_U4_GATEとして非READYを保持する。ただし第三reviewはなくREADYへの転換証拠はないため、履歴を保存して次Unitへ進み、最終FD gateで人間がU3/U4/U5の未解決リスク込みで裁定するAが規約どおりである。Bは既定上限を越える例外レビューを新設するため、別の既存規範または新たな決定的blockerがない現状では選ばない。",
+      "submittedAt": "2026-07-20T13:48:15Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FVEU5FD1",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "U5 を READY と再ラベルせず、最終 Functional Design ゲートで iteration 2 の3所見（composition head実行時束縛、CI artifact proof schema、COMMIT failure矛盾）、対応した正確な file:line、最新 sensor PASS、第三レビュー未実施を列挙すること。U3/U4 の max-exhausted・未再レビュー依存を保持し、最終人間裁定前に integration readiness、walking-skeleton completion、code-generation可を主張しないこと。",
+      "rationale": "A は stage-protocol §12a の reviewer_max_iterations 到達時の処理と、非最終 Unit の per-unit forwarding に一致する。最終成果物では CompositionHead/resulting commit/tree の起動直前再検証と receipt 束縛、CI artifact exactly two rows と run 1/2 bijection・identity再hash、COMMITをdomain failureから除外した SkeletonCommitError 化を実測し、最新sensorもPASSしている。一方で是正後の独立第三レビューはなく意味閉包は最終人間ゲートへ残るため GoA 2 とする。B は既定maxを越える例外的レビューを追加する。非採用時受容度: B=7、X=6。",
+      "submittedAt": "2026-07-20T13:48:33Z"
+    }
+  ],
+  "resolutions": []
+}
