@@ -1014,3 +1014,228 @@
 **Timestamp**: 2026-07-20T03:05:24Z
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T03:05:37Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aa75ab99d51510e00
+**Message**: (裁定通知を待って続行)
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T03:06:48Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a31e81408c659efe6
+**Message**: (待機継続 — 裁定通知が届き次第続行)
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T03:07:17Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T03:07:17Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T03:07:17Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: scope-definition
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T03:07:17Z
+**Event**: GATE_APPROVED
+**Stage**: scope-definition
+**Grant Id**: cabcb933
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T03:07:17Z
+**Event**: STAGE_COMPLETED
+**Stage**: scope-definition
+**Details**: Stage Scope Definition approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T03:07:17Z
+**Event**: STAGE_STARTED
+**Stage**: approval-handoff
+**Agent**: amadeus-delivery-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: aeaa885e
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/approval-handoff/initiative-brief.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:08:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: aeaa885e
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/approval-handoff/initiative-brief.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5e66e16e
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/approval-handoff/decision-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:08:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5e66e16e
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/approval-handoff/decision-log.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 93e3209f
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/approval-handoff/approval-handoff-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:08:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 93e3209f
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/approval-handoff/approval-handoff-questions.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 71c94a7d
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/verification/phase-check-ideation.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:08:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 71c94a7d
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/verification/phase-check-ideation.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 27ae7601
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/approval-handoff/initiative-brief.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:08:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 27ae7601
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/approval-handoff/initiative-brief.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: b735d3df
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/approval-handoff/decision-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:08:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: b735d3df
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/approval-handoff/decision-log.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3c558099
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/approval-handoff/approval-handoff-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:08:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3c558099
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/ideation/approval-handoff/approval-handoff-questions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T03:08:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6665cece
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/verification/phase-check-ideation.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T03:08:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6665cece
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/verification/phase-check-ideation.md
+**Duration ms**: 36
+
+---
