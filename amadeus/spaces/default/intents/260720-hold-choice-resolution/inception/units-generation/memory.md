@@ -12,3 +12,4 @@
 
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
+- [2026-07-20T05:00Z] Deviation: reviewer iteration 1 = REVISE(Major 1: 規模内訳 47→正 49 の機械再計算誤り = ledger-count-mechanical-recalc 違反実例、自作 — PM 回付)。是正: 機械再計算コマンド併記で 49/159 へ訂正、iteration 2 で閉包確認。
