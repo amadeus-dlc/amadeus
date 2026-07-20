@@ -3,7 +3,7 @@
 // parseGoaLine is imported in-process for byte-compat round-trip (BR-R1); the
 // import touches no fs, so it stays in the unit layer (tech-stack-decisions.md).
 import { describe, expect, test } from "bun:test";
-import { parseGoaLine } from "../../packages/framework/core/tools/amadeus-norm-metrics";
+import { ECODE_RE, parseGoaLine } from "../../packages/framework/core/tools/amadeus-norm-metrics";
 import {
   type Ballot,
   Election,
@@ -92,10 +92,9 @@ describe("t238 election-record", () => {
     if (parsed.ok) expect(parsed.votes).toEqual([2, 0, 1, 0, 0, 3, 0, 0]);
   });
 
-  // BR-R1: fail-closed on multi-segment hyphen codes (parseGoaLine's own domain).
-  test("BR-R1: GoaLineCode is fail-closed on multi-segment hyphen codes", () => {
-    expect(GoaLineCode.parse("E-SDE-CG4").ok).toBe(false);
-    expect(GoaLineCode.parse("E-TPR-RE").ok).toBe(false);
+  test("BR-R1: GoaLineCode accepts natural multi-segment and compressed legacy codes", () => {
+    expect(GoaLineCode.parse("E-SDE-CG4").ok).toBe(true);
+    expect(GoaLineCode.parse("E-TPR-RE").ok).toBe(true);
     expect(GoaLineCode.parse("PM9").ok).toBe(false);
     expect(GoaLineCode.parse("e-lower").ok).toBe(false);
     expect(GoaLineCode.parse(42).ok).toBe(false);
@@ -107,6 +106,15 @@ describe("t238 election-record", () => {
     const hyphen = parseGoaLine("GoA[E-SDE-CG4]: 1x1 2x0 3x0 4x0 5x0 6x0 7x0 8x0");
     expect(hyphen.ok).toBe(true);
     if (hyphen.ok) expect(hyphen.ecode).toBe("E-SDE-CG4");
+  });
+
+  test("occurrence scanning and whole-value validation have intentionally different accepted languages", () => {
+    for (const raw of ["E-ABC-", "E-ABC-x"]) {
+      expect(raw.match(ECODE_RE)).toEqual(["E-ABC"]);
+      expect(GoaLineCode.parse(raw).ok).toBe(false);
+    }
+    for (const raw of ["E-A", "E-A-B2", "E-SDECG4"]) expect(GoaLineCode.parse(raw).ok).toBe(true);
+    for (const raw of ["e-a", "E--A", "E-A-", "-E-A", 42]) expect(GoaLineCode.parse(raw).ok).toBe(false);
   });
 
   test("GoaFreq.fromVotes counts each bin from the accepted vote set", () => {
