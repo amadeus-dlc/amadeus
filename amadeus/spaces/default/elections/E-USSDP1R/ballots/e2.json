@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSDP1R",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "5-Bolt列をWalking Skeletonの限定的な例外解釈としてDelivery Planningへ明記し、U01/U09/U10/U11の独立review・rollback・verification境界を崩さず、U11でend-to-end closureを必須化すること。",
+  "rationale": "Aを選択。実測したDAGではU09はU01、U10はU01/U02/U09、U11はU09/U10へ依存するため、U01→U02→U09→U10→U11が依存を守る最短progressive sequenceである。plugin contract/projection/composition/referenceの4独立BoltというE-USSUG1留保も維持できる。Bは最初のe2eを逐語的に満たす一方、同じUnitをthin Boltと完全化Boltへ重複配賦して12 Unitの責務境界を弱める。Cは4独立Bolt条件へ直接反する。非採用時受容度: B=6、C=8、X=6。",
+  "submittedAt": "2026-07-20T08:09:56Z"
+}

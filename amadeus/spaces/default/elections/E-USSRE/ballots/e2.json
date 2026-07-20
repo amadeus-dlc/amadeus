@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSRE",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。memory.md:6 の24項目分類と :14 の依存順は当該 upstream-sync 固有の要件・設計判断、:18 は次段へ送る open question。:7 の differential refresh/履歴降格は既存 cid reverse-engineering:c1 と c3-relabel(project.md:86,111)の適用実例で、新規の横断学習はない。",
+  "submittedAt": "2026-07-20T07:12:27Z"
+}

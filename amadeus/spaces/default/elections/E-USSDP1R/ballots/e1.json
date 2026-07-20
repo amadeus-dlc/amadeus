@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSDP1R",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Aを支持。訂正後DAGを実測するとU09はU01、U10はU01/U02/U09、U11はU09/U10に依存するため、U01→U02→U09→U10→U11がe2e closureまでの正しい初期列である。pluginのcontract/projection/composition/referenceは独立BoltのままE-USSUG1留保を守り、第5 Boltでgreenfield skeletonを閉じる限定解釈が最小逸脱。非採用時受容度はB=6（責務重複）、C=8（独立4 Bolt留保違反）。",
+  "submittedAt": "2026-07-20T08:09:05Z"
+}

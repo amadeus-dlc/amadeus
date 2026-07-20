@@ -1,0 +1,64 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可 — c1〜c3は既決規範・承認済みcontractの適用実例"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可 — c1〜c3は既決規範・承認済みcontractの適用実例",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "0件は不可 — 新規学習候補が実在する(noteに候補と根拠file:lineを明記)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T07:35:25Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-USSRA",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e5 HEAD 545e69c83 の requirements.md / requirements-analysis-questions.md / memory / audit をリードオンリー実測。機械カウントは numbered upstream items=24、FR headings=9(FR-0〜8)、SKIP=6、memory実エントリ=3。product-lead iteration1 READY / GoA1 / 留保なし、requirementsのrequired-sections/upstream-coverage/answer-evidence PASS、questionsのupstream-coverage/answer-evidence PASSを確認。questions required-sections FAILはH2を意図的に欠くmarker shapeに対するE-FVEPD既決advisoryの適用例。c1=E-OC1、c2=承認済みverification contract、c3=review観測で、いずれも新規横断practiceではないため0件で可。",
+      "submittedAt": "2026-07-20T07:33:36Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSRA",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。requirements.md は FR-0〜8、24 ADOPT/ADAPT、6 SKIP、4検証先行、plugin deferred、6 harness/4 self-install と検証契約を既決入力からトレースしており、product-lead audit も iteration 1 READY/GoA1/留保なし。memory.md のc1はE-OC1/既決照合、c2は承認済みverification contractのFR-0化、c3はreview結果の観測で、いずれも新規横断practiceではない。questionsのrequired-sections FAILはH2 0の意図的canonical shapeでE-FVEPD回収済みのsensor契約ギャップ適用例であり、本RA固有候補として重複採用しない。",
+      "submittedAt": "2026-07-20T07:33:43Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSRA",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。e5 の requirements.md / requirements-analysis-questions.md / memory.md、product-lead iteration 1 READY GoA1、最新 sensor/detail を実読した。機械列挙で item ID 1〜24 が欠落なく存在し、6 SKIP、4検証先行、plugin deferred、6 harness / 4 self-install、byte-identical、fail-closed/atomicity、項目別受入基準とtraceabilityを確認。questions の required-sections FAIL(h2_count=0)は canonical marker shape を維持した E-FVEPD 規範の既知 advisory、upstream-coverage/answer-evidence は PASS。memory c1〜c3 は E-OC1承認・既決verification contract・独立review結果の適用/観測であり、新規横断practiceの追加性はない。",
+      "submittedAt": "2026-07-20T07:33:59Z"
+    }
+  ],
+  "resolutions": []
+}

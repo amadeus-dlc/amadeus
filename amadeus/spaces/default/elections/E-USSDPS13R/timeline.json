@@ -1,0 +1,28 @@
+[
+  {
+    "kind": "ballot",
+    "at": "2026-07-20T08:30:48Z",
+    "receivedAt": "2026-07-20T08:31:01Z",
+    "detail": "ballot accepted: e1",
+    "voter": "e1"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-07-20T08:30:58Z",
+    "receivedAt": "2026-07-20T08:31:23Z",
+    "detail": "ballot accepted: e3",
+    "voter": "e3"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-07-20T08:31:59Z",
+    "receivedAt": "2026-07-20T08:32:30Z",
+    "detail": "ballot accepted: e2",
+    "voter": "e2"
+  },
+  {
+    "kind": "tallied",
+    "at": "2026-07-20T08:36:18Z",
+    "detail": "tally: established"
+  }
+]

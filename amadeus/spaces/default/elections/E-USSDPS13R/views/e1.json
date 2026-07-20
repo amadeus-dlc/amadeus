@@ -1,0 +1,16 @@
+{
+  "electionId": "E-USSDPS13R",
+  "voter": "e1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "0件は不可（noteに新規横断候補を明記）"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件で可（c1/c2はintent固有の裁定適用）"
+    }
+  ]
+}

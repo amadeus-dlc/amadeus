@@ -1,0 +1,29 @@
+{
+  "electionId": "E-USSDP2R",
+  "kind": "clarification-question",
+  "question": "260720-upstream-sync-230 / delivery-planning Q2（前提訂正版）: 12 Unitの実装順・Bolt粒度・並行度をどう固定するか。A=U01→U02→U09→U10→U11の5-Bolt progressive skeletonを先行し、その後は残りDAGをrisk-first・one-Unit Bolts・最大4並行・WSJFなしで進める。B=plugin4独立+非plugin8を約4 Boltへbundle。C=12 one-Unit strict sequential。旧E-USSDP2はAに訂正前の依存順を含むため無効・開票禁止。external依存なし、team-formation SKIP、developer-agent、short-lived PR squash、leader mergeは既決。各自e5 questions/UG成果物/DAGを実測しGoA・非採用時受容度付きで投票する。全票はleader現行CLIで受理する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. 5-Bolt skeleton先行 + 残りDAG risk-first / one-Unit / 最大4並行"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. plugin4独立 + 非plugin8を約4 Boltへbundle"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. 12 one-Unit strict sequential"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他(noteに順序・粒度・並行度を明記)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}

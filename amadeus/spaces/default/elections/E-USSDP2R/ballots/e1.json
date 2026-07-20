@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSDP2R",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Aを支持。訂正後5-Bolt列はDAGのplugin closureとruntime-recovery前提を満たし、残るUnitはroot 6を含む複数antichainを持つ。12 capability-cohesive Unitのtest/docs同乗・review/rollback境界をone-Unit Boltで維持しつつ最大4並行にすればfeedbackを短縮でき、定量価値のないWSJFも捏造しない。非採用時受容度はB=6（非plugin境界を再結合）、C=7（並行可能性を不要に直列化）。",
+  "submittedAt": "2026-07-20T08:09:05Z"
+}

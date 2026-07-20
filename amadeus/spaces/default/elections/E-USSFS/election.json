@@ -1,0 +1,20 @@
+{
+  "electionId": "E-USSFS",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260720-upstream-sync-230 / feasibility ステージの §13 学習候補について、conductor(e5)は 0件を提案している。根拠: 候補3件(AWS N/A 判定 / RAID 非引き継ぎ判断 / MEDIUM 4項目の検証先行 GO)はいずれも既存ノルムの適用実例。成果物4点実在、総合判定 GO(無条件)、センサー全4成果物の最新 verdict PASSED(履歴 FAILED 3件は是正済み/ゲート非対象)、E-OC1 承認済み(05:02:24Z)・[Answer] 6/6 記入済み。各自 e5 worktree(engineer-5)の record をリードオンリー実測確認のうえ、0件でよいかを GoA 付きで投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 既存ノルムの適用実例で新規学習なし"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(票の note に候補と根拠 file:line を明記)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e3"
+  ],
+  "state": "recorded"
+}

@@ -1,0 +1,21 @@
+{
+  "electionId": "E-USSDPS13",
+  "kind": "s13-zero-confirm",
+  "question": "260720-upstream-sync-230 / delivery-planning §13: 学習候補0件でよいか。surface c1=E-USSDP1Rで採用した5-Bolt progressive skeleton限定例外、plugin独立review/rollback/verification境界、U11 e2e closure。c2=E-USSDP2Rで採用したrisk-first・12 one-Unit Bolts・最大4並行・WSJFなし、および旧E-USSDP1/2の誤前提無効化。e5は双方とも当該upstream-sync intent固有の計画・既決裁定の適用であり、新規横断normではないためpersist 0件を提案。e3少数案X/GoA2はDelivery PlanningのOpen Questionとしてpark済み。各自e5 Delivery Planning成果物・reviewer履歴・memory・E-USSDP1R/2R recordを独立実測し、GoA付きで投票する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可（c1/c2はintent固有の裁定適用）"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可（noteに新規横断候補を明記）"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "collecting"
+}
