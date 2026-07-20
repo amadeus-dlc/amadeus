@@ -1323,3 +1323,274 @@
 **Timestamp**: 2026-07-20T03:49:40Z
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T03:50:10Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ac217790e95a0be56
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T04:09:33Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T04:09:33Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T04:09:33Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: reverse-engineering
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T04:09:33Z
+**Event**: GATE_APPROVED
+**Stage**: reverse-engineering
+**Grant Id**: cabcb933
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T04:09:33Z
+**Event**: STAGE_COMPLETED
+**Stage**: reverse-engineering
+**Details**: Stage Reverse Engineering approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T04:09:33Z
+**Event**: STAGE_STARTED
+**Stage**: practices-discovery
+**Agent**: amadeus-pipeline-deploy-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:09:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2a584c27
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/practices-discovery/evidence.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T04:10:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: 2a584c27
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/practices-discovery/evidence.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/practices-discovery/required-sections-2a584c27.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:10:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 21586c4c
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/practices-discovery/discovered-rules.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T04:10:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: 21586c4c
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/practices-discovery/discovered-rules.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/practices-discovery/required-sections-21586c4c.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:10:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: d8abbece
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/practices-discovery/team-practices.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T04:10:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: d8abbece
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/practices-discovery/team-practices.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/practices-discovery/required-sections-d8abbece.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:10:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 935e3d24
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/practices-discovery/practices-discovery-timestamp.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T04:10:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: 935e3d24
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/practices-discovery/practices-discovery-timestamp.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/practices-discovery/required-sections-935e3d24.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:10:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8f14f563
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/practices-discovery/evidence.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:10:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8f14f563
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/practices-discovery/evidence.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:10:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6b0ae43b
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/practices-discovery/discovered-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:10:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6b0ae43b
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/practices-discovery/discovered-rules.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:10:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 86263872
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/practices-discovery/team-practices.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:10:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 86263872
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/practices-discovery/team-practices.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:10:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 97c2f840
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/practices-discovery/practices-discovery-timestamp.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T04:10:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: 97c2f840
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/practices-discovery/practices-discovery-timestamp.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/practices-discovery/upstream-coverage-97c2f840.md
+**Findings count**: 6
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:10:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2be584a6
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/practices-discovery/practices-discovery-timestamp.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:10:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2be584a6
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/practices-discovery/practices-discovery-timestamp.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:10:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 62cec886
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/practices-discovery/practices-discovery-timestamp.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T04:10:20Z
+**Event**: SENSOR_FAILED
+**Fire id**: 62cec886
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/practices-discovery/practices-discovery-timestamp.md
+**Detail path**: amadeus/spaces/default/intents/260720-goa-sparse-family/.amadeus-sensors/practices-discovery/upstream-coverage-62cec886.md
+**Findings count**: 6
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T04:10:21Z
+**Event**: WORKFLOW_PARKED
+**Stage**: practices-discovery
+**Timestamp**: 2026-07-20T04:10:21Z
+
+---

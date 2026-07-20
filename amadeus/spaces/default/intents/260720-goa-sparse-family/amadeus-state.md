@@ -6,7 +6,7 @@
 - **Scope**: amadeus
 - **Start Date**: 2026-07-20T02:50:58Z
 - **State Version**: 7
-- **Active Agent**: amadeus-developer-agent
+- **Active Agent**: amadeus-pipeline-deploy-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**:
@@ -25,14 +25,14 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 18
-- **Completed**: 7
-- **In Progress**: reverse-engineering
+- **Completed**: 8
+- **In Progress**: practices-discovery
 
 ## Runtime State
 - **Revision Count**: 0
 
-- **Parked**: 2026-07-20T03:49:40Z
-- **Parked At Stage**: reverse-engineering
+- **Parked**: 2026-07-20T04:10:21Z
+- **Parked At Stage**: practices-discovery
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -60,8 +60,8 @@
 - [x] approval-handoff — EXECUTE
 
 ### INCEPTION PHASE
-- [-] reverse-engineering — EXECUTE
-- [ ] practices-discovery — EXECUTE
+- [x] reverse-engineering — EXECUTE
+- [-] practices-discovery — EXECUTE
 - [ ] requirements-analysis — EXECUTE
 - [ ] user-stories — SKIP
 - [ ] refined-mockups — SKIP
@@ -90,12 +90,12 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: INCEPTION
-- **Current Stage**: reverse-engineering
-- **Next Stage**: practices-discovery
+- **Current Stage**: practices-discovery
+- **Next Stage**: requirements-analysis
 - **Status**: Running
-- **Last Updated**: 2026-07-20T03:49:40Z
+- **Last Updated**: 2026-07-20T04:10:21Z
 
 ## Session Resume Point
-- **Last Completed Stage**: approval-handoff
-- **Next Action**: Execute Reverse Engineering
+- **Last Completed Stage**: reverse-engineering
+- **Next Action**: Execute Practices Discovery
 - **Pending Artifacts**: none
