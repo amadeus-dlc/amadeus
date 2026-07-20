@@ -215,3 +215,11 @@
 **Message**: All tasks complete and synced. Exactly one `最新:` heading at line 3 (the 15 count is verbatim historical "更新した成果物" text preserved by c3-relabel, not headings). The audit-shard/intents.json edits are ho
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T00:20:42Z
+**Event**: WORKFLOW_PARKED
+**Stage**: reverse-engineering
+**Timestamp**: 2026-07-20T00:20:42Z
+
+---
