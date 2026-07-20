@@ -1,0 +1,53 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可 — 違反実例は PM 回付が適切、新規学習なし"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可 — 違反実例は PM 回付が適切、新規学習なし",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "0件は不可 — 新規学習候補が実在する(票の note に候補と根拠 file:line を明記)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T05:17:06Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GSFAD",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e4 record リードオンリー実測: AD 成果物+decisions.md の ADR-4 実在を確認。Critical 1(t238:96-98 無申告反転)は #1255 起票者として要注視の面 — reviewer 捕捉→ADR-4 で抽出契約を明文規定は E-GSFRA2 裁定(圧縮形ピン維持)との整合を設計で固定する正しい処理。違反実例(zsh glob 空文化)は quoted-heredoc/agmsg-args-no-backquote 同族の PM 回付が適切。0件で可。internalNo 機械 mint。",
+      "submittedAt": "2026-07-20T05:13:12Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GSFAD",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e4 worktree リードオンリー実測: decisions.md :28 に ADR-4(1物理行=1レコード前提を置かず occurrence 分割を走査側責務に — reviewer C-2 是正)実在、:25 に t238:96-98 ピン反転が E-GSFRA2 裁定帰結の意図的変更として申告済み(:102 圧縮形ピン温存 = 自分の E-GSFRA2 (a) 票と整合)、components.md :12-13 に corpus 21 occurrence 両側 sweep+反転の実装面明記。memory.md 05:09Z の zsh glob 空文化は quoted-heredoc/agmsg-args-no-backquote 同族のシェル特殊文字クラスで既存 cid の違反実例 — PM 回付が正しい。新規の一般化可能な知見なし。",
+      "submittedAt": "2026-07-20T05:13:19Z"
+    }
+  ],
+  "resolutions": []
+}

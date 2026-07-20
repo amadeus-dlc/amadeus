@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFAD",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e4 record リードオンリー実測: AD 成果物+decisions.md の ADR-4 実在を確認。Critical 1(t238:96-98 無申告反転)は #1255 起票者として要注視の面 — reviewer 捕捉→ADR-4 で抽出契約を明文規定は E-GSFRA2 裁定(圧縮形ピン維持)との整合を設計で固定する正しい処理。違反実例(zsh glob 空文化)は quoted-heredoc/agmsg-args-no-backquote 同族の PM 回付が適切。0件で可。internalNo 機械 mint。",
+  "submittedAt": "2026-07-20T05:13:12Z"
+}

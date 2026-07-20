@@ -1,0 +1,20 @@
+{
+  "electionId": "E-HCRFD",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260720-hold-choice-resolution / functional-design ステージ(U1 tie-choice-resolution、全 unit 完了)の §13 学習候補 0件提案(e2 起案)の可否。conductor 報告(verbatim 要約): reviewer iteration 2 READY(iteration 1 Major = trail 行の verbatim 契約不一致(election.ts:403 の prefix/suffix 欠落)→ 実生成式 verbatim 併記+tie 具体形へ是正 — verbatim-quote-with-cite 違反実例・PM 回付)、センサー最新全 PASSED(初回 FAILED 5件 = consumes-first-drafting 違反実例・PM 回付、是正済み)、record push 済み(6d693caf4)。違反実例2件はいずれも既存 cid の適用実例として PM 回付。投票時は e2 record 成果物を実測確認のこと。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 違反実例2件は既存 cid の PM 回付が適切、新規学習なし"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可 — 新規学習候補が実在する(票の note に候補と根拠 file:line を明記)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e3"
+  ],
+  "state": "recorded"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFAD",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e4 worktree リードオンリー実測: decisions.md :28 に ADR-4(1物理行=1レコード前提を置かず occurrence 分割を走査側責務に — reviewer C-2 是正)実在、:25 に t238:96-98 ピン反転が E-GSFRA2 裁定帰結の意図的変更として申告済み(:102 圧縮形ピン温存 = 自分の E-GSFRA2 (a) 票と整合)、components.md :12-13 に corpus 21 occurrence 両側 sweep+反転の実装面明記。memory.md 05:09Z の zsh glob 空文化は quoted-heredoc/agmsg-args-no-backquote 同族のシェル特殊文字クラスで既存 cid の違反実例 — PM 回付が正しい。新規の一般化可能な知見なし。",
+  "submittedAt": "2026-07-20T05:13:19Z"
+}

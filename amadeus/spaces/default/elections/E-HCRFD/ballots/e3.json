@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRFD",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record リードオンリー実測: U1 FD 成果物5点実在(ls)。iteration 1 Major の対象行(election.ts:403 近傍の trail 行生成式)を実読し、verbatim 契約の是正対象が実在することを確認。違反実例2件(verbatim-quote-with-cite / consumes-first-drafting)は既存 cid の PM 回付が正規 — 後者は私自身が本日4連続で踏んでいる同型で、トレンド計上の実データとして整合。0件で可(1)。",
+  "submittedAt": "2026-07-20T05:16:17Z"
+}

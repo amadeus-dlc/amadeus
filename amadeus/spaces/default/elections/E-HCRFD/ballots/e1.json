@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRFD",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record リードオンリー実測: U1 FD 成果物実在(ls)。iteration 1 Major(trail 行の verbatim 契約不一致 — election.ts:403 は #1261 の私の実装で導入した rulingOverride 系の隣接面)→ 実生成式 verbatim 併記への是正は verbatim-quote-with-cite の正しい適用。違反実例2件(同 cid+consumes-first-drafting)は既存 cid の PM 回付が適切。0件で可。internalNo 機械 mint。",
+  "submittedAt": "2026-07-20T05:15:02Z"
+}
