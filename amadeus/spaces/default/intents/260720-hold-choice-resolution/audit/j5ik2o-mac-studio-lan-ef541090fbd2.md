@@ -1705,3 +1705,11 @@
 **Duration ms**: 35
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T03:35:58Z
+**Event**: WORKFLOW_PARKED
+**Stage**: practices-discovery
+**Timestamp**: 2026-07-20T03:35:58Z
+
+---
