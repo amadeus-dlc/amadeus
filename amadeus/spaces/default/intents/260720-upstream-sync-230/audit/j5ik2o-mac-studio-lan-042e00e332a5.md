@@ -869,3 +869,596 @@
 **Duration ms**: 37
 
 ---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T05:00:52Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: intent-capture
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T05:00:52Z
+**Event**: GATE_APPROVED
+**Stage**: intent-capture
+**Grant Id**: cabcb933
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T05:00:52Z
+**Event**: STAGE_COMPLETED
+**Stage**: intent-capture
+**Details**: Stage Intent Capture approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T05:00:52Z
+**Event**: STAGE_STARTED
+**Stage**: feasibility
+**Agent**: amadeus-architect-agent
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-20T05:02:07Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5/amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-questions.md
+**Context**: ideation > feasibility > feasibility-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:02:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 39632b73
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:02:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: 39632b73
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-questions.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:02:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1cd4add6
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:02:07Z
+**Event**: SENSOR_FAILED
+**Fire id**: 1cd4add6
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-questions.md
+**Detail path**: amadeus/spaces/default/intents/260720-upstream-sync-230/.amadeus-sensors/feasibility/upstream-coverage-1cd4add6.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:02:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2fcbc7f1
+**Sensor ID**: answer-evidence
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:02:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2fcbc7f1
+**Sensor ID**: answer-evidence
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-questions.md
+**Duration ms**: 37
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-20T05:02:51Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5/amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-assessment.md
+**Context**: ideation > feasibility > feasibility-assessment.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:02:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0093fedd
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-assessment.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:02:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0093fedd
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-assessment.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:02:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: a88b541c
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-assessment.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:02:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: a88b541c
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-assessment.md
+**Duration ms**: 37
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-20T05:03:04Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5/amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/constraint-register.md
+**Context**: ideation > feasibility > constraint-register.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 88c28222
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/constraint-register.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 88c28222
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/constraint-register.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: f67dc789
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/constraint-register.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: f67dc789
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/constraint-register.md
+**Duration ms**: 38
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-20T05:03:31Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5/amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/raid-log.md
+**Context**: ideation > feasibility > raid-log.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: 66320cc9
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/raid-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: 66320cc9
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/raid-log.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: d5f52211
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/raid-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: d5f52211
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/raid-log.md
+**Duration ms**: 39
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-20T05:03:50Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5/amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/memory.md
+**Context**: ideation > feasibility > memory.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6a004451
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/memory.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6a004451
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/memory.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8217ce40
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/memory.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:03:50Z
+**Event**: SENSOR_FAILED
+**Fire id**: 8217ce40
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/memory.md
+**Detail path**: amadeus/spaces/default/intents/260720-upstream-sync-230/.amadeus-sensors/feasibility/upstream-coverage-8217ce40.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3a6a0b90
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-assessment.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3a6a0b90
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-assessment.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: f4602142
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/constraint-register.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: f4602142
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/constraint-register.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6380d47b
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/raid-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6380d47b
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/raid-log.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: db20f784
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: db20f784
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-questions.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0992dbda
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-assessment.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0992dbda
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-assessment.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: b84d348d
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/constraint-register.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: b84d348d
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/constraint-register.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8e7c4218
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/raid-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8e7c4218
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/raid-log.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 23ac5aff
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:03:57Z
+**Event**: SENSOR_FAILED
+**Fire id**: 23ac5aff
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-questions.md
+**Detail path**: amadeus/spaces/default/intents/260720-upstream-sync-230/.amadeus-sensors/feasibility/upstream-coverage-23ac5aff.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:03:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 19f6f59e
+**Sensor ID**: answer-evidence
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:03:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: 19f6f59e
+**Sensor ID**: answer-evidence
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-questions.md
+**Duration ms**: 39
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-20T05:04:19Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5/amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-questions.md
+**Context**: ideation > feasibility > feasibility-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:04:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: f6da05dd
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:04:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: f6da05dd
+**Sensor ID**: required-sections
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-questions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:04:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4f81751f
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:04:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4f81751f
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-questions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:04:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: df52898e
+**Sensor ID**: answer-evidence
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:04:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: df52898e
+**Sensor ID**: answer-evidence
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-questions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:04:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9bfdc45c
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:04:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9bfdc45c
+**Sensor ID**: upstream-coverage
+**Stage slug**: feasibility
+**Output path**: amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/feasibility/feasibility-questions.md
+**Duration ms**: 37
+
+---
