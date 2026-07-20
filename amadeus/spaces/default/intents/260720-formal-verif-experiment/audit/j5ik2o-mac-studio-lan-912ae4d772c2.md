@@ -1657,3 +1657,118 @@
 **Message**: レビューが成立したらマージまで進めて
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T04:59:39Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a64024108a5d32186
+**Message**: e1のレビューが通ったらマージして
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T05:06:26Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a4491e1af22622974
+**Message**: 形式仕様検証実験の intent を ideation 完了まで回して park 済み、record PR #1291 とミラー Issue #1292 を発行。e1 指摘の §13 記録是正も push 済みで、次はレビュー成立後にあなたのマージ承認です。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T05:12:29Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a4371e99db82c0576
+**Message**: 形式仕様検証実験(TLA+ vs TS判定器の2アーム対照)のintentをideation完了までパークし、record PR #1291マージ・ミラーIssue #1292更新も済みました。次はあなたの実験着手判断待ちです(再開は /amadeus --resume)。
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-20T05:15:02Z
+**Event**: HUMAN_TURN
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T05:15:17Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T05:15:17Z
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-20T05:15:27Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --result completed --user-input Resume from last checkpoint
+**Error**: Stage "reverse-engineering" is still in-progress. To approve a gated stage that has not entered awaiting-approval, report the acted directive explicitly with --stage "reverse-engineering" so the engine cannot mistake a freshly advanced Current Stage for the completed one.
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T05:22:55Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: a840f5dabd377af32
+**Message**: I have all the evidence needed. Compiling the scan report.\n\n---\n\n# reverse-engineering スキャン結果 — intent `260720-formal-verif-experiment`\n\n## (1) 区間サマリ\n\n- **base**: `bd147dc7b`(前回スキャン observed との merge-
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T05:27:08Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architect-agent
+**Agent ID**: a5f3406cfaaf4e0be
+**Message**: 両ファイルの書込を完了しました。git 操作(commit/checkout 等)は実施していません。\n\n## 書き込んだファイル\n\n### 1. `amadeus/spaces/default/codekb/amadeus/re-scans/260720-formal-verif-experiment.md`(新規)\nH2 見出し構成:\n- `## 実行メタデータ`\n- `## フォーカス面知見
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-20T05:29:23Z
+**Event**: HUMAN_TURN
+
+---
+
+## Rule Learned
+**Timestamp**: 2026-07-20T05:30:38Z
+**Event**: RULE_LEARNED
+**Stage**: reverse-engineering
+**Candidate-ID**: rescan-base-merge-base-fallback
+**Destination**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-6/amadeus/spaces/default/memory/project.md
+**Heading**: ## Corrections
+**Source**: orchestrator
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T05:31:00Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: reverse-engineering
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T05:31:00Z
+**Event**: GATE_APPROVED
+**Stage**: reverse-engineering
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T05:31:00Z
+**Event**: STAGE_COMPLETED
+**Stage**: reverse-engineering
+**Details**: Stage Reverse Engineering approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T05:31:00Z
+**Event**: STAGE_STARTED
+**Stage**: practices-discovery
+**Agent**: amadeus-pipeline-deploy-agent
+
+---
