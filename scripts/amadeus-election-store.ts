@@ -30,7 +30,13 @@ import {
   type TimelineEvent,
 } from "./amadeus-election-model";
 
-export type StoreError = "exists" | "duplicate" | "not-found" | "io-error" | "corrupt";
+export type StoreError =
+  | "exists"
+  | "duplicate"
+  | "not-found"
+  | "io-error"
+  | "corrupt"
+  | "unknown-ref";
 
 export type { TimelineEvent } from "./amadeus-election-model";
 
@@ -132,6 +138,19 @@ export const Store = {
       (b) => b.voter === ballot.voter && b.kind !== "amend" && ballot.kind !== "amend",
     );
     if (dup) return err("duplicate");
+    // BR-3 fail-closed: an amend must reference an existing accepted ballot from
+    // the same voter (original or a prior amend) matching electionId/voter/
+    // submittedAt. Checked here in the read phase — before any write — so an
+    // unknown ref fails with no partial write (R-1 atomicity).
+    if (ballot.kind === "amend") {
+      const found = accepted.some(
+        (b) =>
+          b.voter === ballot.ref.voter &&
+          b.electionId === ballot.ref.electionId &&
+          b.submittedAt === ballot.ref.submittedAt,
+      );
+      if (!found) return err("unknown-ref");
+    }
     const loaded = Store.load(root, electionId);
     if (!loaded.ok) return loaded;
     const state = loaded.value.state;
