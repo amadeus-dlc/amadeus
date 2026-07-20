@@ -14,3 +14,4 @@
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
 - [2026-07-20T04:10Z] Interpretation: c1(同日 RE 代用・4面ギャップ0)+c2(live 全温存・promote なし)適用。質問 0件のため E-OC1 判定対象自体が不在。
 - [2026-07-20T04:10Z] Deviation: timestamp の required-sections FAILED(H2 不足 — 本日チーム同型 N 例目)→ H2 2節化で PASSED。PM 蒸留データ(H2 テンプレ機械化提案)へ追加。
+- [2026-07-20T04:10Z] Deviation: ゲート報告を再発火の集計完了前に送信し、timestamp の upstream-coverage FAILED 1件が残存していた(report-final-values-only 違反 — 自己捕捉)。宣言 consume 6点の実参照化で是正・再発火 Passed。leader へ訂正報告済み。

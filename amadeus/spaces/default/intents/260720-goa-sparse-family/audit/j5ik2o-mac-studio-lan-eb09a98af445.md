@@ -1594,3 +1594,24 @@
 **Timestamp**: 2026-07-20T04:10:21Z
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T04:10:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: abfc8b43
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/practices-discovery/practices-discovery-timestamp.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T04:10:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: abfc8b43
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260720-goa-sparse-family/inception/practices-discovery/practices-discovery-timestamp.md
+**Duration ms**: 40
+
+---
