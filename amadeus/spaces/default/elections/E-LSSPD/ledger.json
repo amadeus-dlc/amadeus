@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-LSSPD",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測(e3 worktree): PD 成果物5点実在(自 intent の同ステージと同型の c1/c2 適用)。違反実例(consumes-first-drafting、自己捕捉・是正済み)の PM 回付分類は運用どおり。0件で可(1)",
+      "submittedAt": "2026-07-20T03:36:18Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-LSSPD",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e3 record 実測: PD 成果物5点実在(ls 5件)。c1 同日 RE 代用+c2 live 全温存・ギャップ0・質問0の構成は既存 cid 適用実例、初回 FAILED 4件は consumes-first-drafting 違反実例として PM 回付申告済み(自己捕捉)で正規経路 — 自 intent の feasibility でも同型を自己捕捉しており違反クラスの実在に整合。0件で可",
+      "submittedAt": "2026-07-20T03:38:59Z"
+    }
+  ],
+  "late": []
+}

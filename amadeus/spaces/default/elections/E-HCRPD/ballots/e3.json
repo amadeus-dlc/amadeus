@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HCRPD",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record リードオンリー実測: PD 成果物4点+memory 実在(ls=5)、evidence.md の二重代用宣言(同日 RE observed f6ab1e48d+前 intent PD)と差分ギャップ0を実読。c1/c2 適用は私の同ステージ(数分前)と同型で妥当。0件で可(1)。",
+  "submittedAt": "2026-07-20T03:36:35Z"
+}

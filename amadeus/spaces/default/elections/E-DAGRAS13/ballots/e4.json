@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-DAGRAS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e1 record 実測+当事者照合: 自票留保(E-DAGRA2 GoA2 — 分岐到達可能性の机上トレース・到達不能なら書かない)が FR-2 へ verbatim 転記(分母1=転記1)、E-DAGRA3=A の FR-3(diary 経路限定・別 Issue 分離)は自分の裁定理解と一致し #1287 起票義務も履行済み、E-DAGRAX 前提訂正の全反映も追認当事者として整合。phase-check-inception.md 実在。reviewer C-1(起草誤前提)は mechanism-cite-verify-at-draft 違反として PM 計上済みで正規経路。FR-4 の両側テスト+E-GMECG 準拠実証の要件化も既存 cid の正しい写像。0件で可",
+  "submittedAt": "2026-07-20T03:38:59Z"
+}
