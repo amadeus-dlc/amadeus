@@ -493,3 +493,11 @@
 **Duration ms**: 40
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T00:41:18Z
+**Event**: WORKFLOW_PARKED
+**Stage**: requirements-analysis
+**Timestamp**: 2026-07-20T00:41:18Z
+
+---
