@@ -1,0 +1,13 @@
+{
+  "stage_slug": "code-generation",
+  "selections": [
+    {
+      "candidate_id": "c1",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "複数の構造終端候補を持つ extractor/parser は、最小 offset だけでなく選択された終端 kind を保持し、kind 依存の正規化は実際に選ばれた kind にのみ適用する。単独境界 test に加え、前方 boundary の後ろに別候補がある複合順序 test を置く（E-GSFCGS13 2026-07-20: c1 採用 3-0、GoA 1x3・留保0。票タイムライン: e2 09:59:50Z〔受理10:00:14Z〕→e3 09:59:34Z〔受理10:00:22Z〕→e1 10:02:10Z〔受理10:01:17Z〕→開票10:01:51Z。review iteration 1 で provenance boundary 後の同一行別 GoA head により slash を誤除去し silent repair した実害）",
+      "source": "orchestrator"
+    }
+  ]
+}
