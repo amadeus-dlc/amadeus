@@ -1,0 +1,21 @@
+{
+  "electionId": "E-USSU02FDS13",
+  "kind": "s13-learning-candidates",
+  "question": "260720-upstream-sync-230 / U02 runtime-recovery / functional-design の§13 surfaceを裁定する。E-USSU02FD1 Aにより、recovered 3+通常approval 2の5 blockを全数事前生成/検証し、既存audit lock内の単一atomic commitとする。1行emit5回やpartial write可能なappend1回は禁止。生成/検証/commit失敗はaudit/state呼出前bytes維持、batch成功後state write失敗はtransaction identity+完全batchでaudit重複0のstate収束、全failure boundary injectionを成果物へ反映済み。最終sensor required-sections 3/3 PASS、upstream-coverage 3/3 PASS、answer-evidence PASS、diff-check PASS。増分review Iteration2 READY/GoA1/findings0。memory_entries_total=0、candidates=[]、parked_open_questions=[]で、FD1はstage-local設計裁定のため新規persist 0件を提案する。成果物・裁定/留保転記・review・sensor・既存normを独立実測して裁定する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可（noteに新規候補を記載）"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}
