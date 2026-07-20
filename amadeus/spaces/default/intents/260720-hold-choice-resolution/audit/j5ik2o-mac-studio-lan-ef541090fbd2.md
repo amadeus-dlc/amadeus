@@ -3444,3 +3444,255 @@
 **Duration ms**: 39
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-20T05:04:23Z
+**Event**: WORKFLOW_PARKED
+**Stage**: delivery-planning
+**Timestamp**: 2026-07-20T05:04:23Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-20T05:04:36Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aa462d4c87e031ea5
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-20T05:05:50Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-20T05:05:50Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-20T05:05:50Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: delivery-planning
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-20T05:05:50Z
+**Event**: GATE_APPROVED
+**Stage**: delivery-planning
+**Grant Id**: cabcb933
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-20T05:05:50Z
+**Event**: STAGE_COMPLETED
+**Stage**: delivery-planning
+**Details**: Stage Delivery Planning approved by gate
+
+---
+
+## Phase Completion
+**Timestamp**: 2026-07-20T05:05:50Z
+**Event**: PHASE_COMPLETED
+**From phase**: inception
+**To phase**: construction
+**Stages completed**: 13
+
+---
+
+## Phase Verification
+**Timestamp**: 2026-07-20T05:05:50Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: inception → construction
+
+---
+
+## Phase Start
+**Timestamp**: 2026-07-20T05:05:50Z
+**Event**: PHASE_STARTED
+**Phase**: construction
+**Scope**: amadeus
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-20T05:05:50Z
+**Event**: STAGE_STARTED
+**Stage**: functional-design
+**Agent**: amadeus-architect-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:06:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: d4611923
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:06:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: d4611923
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/business-logic-model.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:06:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3d90c94f
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/business-rules.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:06:49Z
+**Event**: SENSOR_FAILED
+**Fire id**: 3d90c94f
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/business-rules.md
+**Detail path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/.amadeus-sensors/functional-design/required-sections-3d90c94f.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:06:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 108853bc
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:06:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 108853bc
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/domain-entities.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:06:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: ec4f9a91
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/frontend-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-20T05:06:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: ec4f9a91
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/frontend-components.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:06:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4d81239a
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/business-logic-model.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:06:49Z
+**Event**: SENSOR_FAILED
+**Fire id**: 4d81239a
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/business-logic-model.md
+**Detail path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/.amadeus-sensors/functional-design/upstream-coverage-4d81239a.md
+**Findings count**: 3
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:06:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3d4b813e
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/business-rules.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:06:49Z
+**Event**: SENSOR_FAILED
+**Fire id**: 3d4b813e
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/business-rules.md
+**Detail path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/.amadeus-sensors/functional-design/upstream-coverage-3d4b813e.md
+**Findings count**: 3
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:06:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 69995988
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/domain-entities.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:06:50Z
+**Event**: SENSOR_FAILED
+**Fire id**: 69995988
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/domain-entities.md
+**Detail path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/.amadeus-sensors/functional-design/upstream-coverage-69995988.md
+**Findings count**: 3
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-20T05:06:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: d4d001b1
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/frontend-components.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-20T05:06:50Z
+**Event**: SENSOR_FAILED
+**Fire id**: d4d001b1
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/construction/tie-choice-resolution/functional-design/frontend-components.md
+**Detail path**: amadeus/spaces/default/intents/260720-hold-choice-resolution/.amadeus-sensors/functional-design/upstream-coverage-d4d001b1.md
+**Findings count**: 2
+
+---
