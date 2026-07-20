@@ -9,10 +9,10 @@
 - Project type: Brownfield
 - Repository: `amadeus`
 - Stage: `reverse-engineering`(2.1)
-- 手法: diff-refresh(cid:reverse-engineering:c1、E-L63 の base 選定則)。`re-scans/*.md` 43ファイルを `Observed at` / `Observed commit` / 既存小文字ヘッダの様式差込みで全数走査し、観測 SHA を抽出できた42ファイルについて HEAD `1865bc902` への祖先性と距離を機械照合した。自己 scan を除く祖先 observed の距離最小は `re-scans/260719-goa-multiseg-ecode.md` および `260719-cursor-complete-clear.md` の `a326f47bc0146a3b4285552f42b92fd61fb343a7`(`git merge-base --is-ancestor a326f47bc 1865bc902` exit 0、`git rev-list --count a326f47bc..1865bc902`=**29**)であり、これを base に採用(rescan-base-ancestry)。直近と誤認した非祖先 observed `c2e4975ff` の merge-base `bd147dc7b`(距離47)を使う必要はなかった。observed=`1865bc902`。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3)。
-- 測定 ref: 全 file:line は Observed=HEAD `1865bc902` のワークツリー実ファイル直読(cid:measurement-ref-in-artifacts)。区間コミットの実質構成は `git log a326f47bc..1865bc902` から導出。件数(区間29)はコマンド出力からの転記(numbers-from-command-output-only)。
+- 手法: diff-refresh(cid:reverse-engineering:c1、E-L63 の base 選定則)。base=`bd147dc7b907`。直近 observed `c2e4975ff`(260718-election-ts-foundation の観測 HEAD)は squash マージ運用により HEAD `1865bc902` の**非祖先**(`git merge-base --is-ancestor c2e4975ff HEAD` exit 1 実測)であるため、その merge-base `git merge-base c2e4975ff HEAD`=`bd147dc7b` を実効 base に採用(rescan-base-ancestry の趣旨適用 — 非祖先 observed は base に採らず、到達可能な merge-base を実効 base とする)。`git merge-base --is-ancestor bd147dc7b HEAD` exit 0(祖先性実測)、`git rev-list --count bd147dc7b..HEAD`=**47**(区間 = 選挙 CLI Bolt 1-5 + 欠陥修正3本 + 非フォーカスの engine/cursor/parseGoaLine 変更 + origin/main 取込 merge)。observed=`1865bc902`。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3)。
+- 測定 ref: 全 file:line は Observed=HEAD `1865bc902` のワークツリー実ファイル直読(cid:measurement-ref-in-artifacts)。区間コミットの実質構成は `git log bd147dc7b..HEAD` から導出。件数(区間47)はコマンド出力からの転記(numbers-from-command-output-only)。
 
-区間 `a326f47bc..1865bc902` の選挙 CLI 5正本への変更は3コミット(#1268=`ea6acac53` / #1273=`a6f4a4522` / #1277=`e1fd1826b`)・4ファイル(model / store / record / 本体。transport は変更0件)。これらは本実験で再注入する既知5欠陥を修正したコミットそのものであり、Observed 直読で確定した注入面・行番号・分離可能性を支持する。区間外の Bolt 1-5 を実質構成に含めた旧記述を訂正した。
+区間 `bd147dc7b..HEAD` の実質 = 選挙 CLI Bolt 1-5(#1227 / #1231 / #1233 / #1235 / #1236)+ 欠陥修正3本(#1268=`ea6acac53` / #1273=`a6f4a4522` / #1277=`e1fd1826b`)+ 非フォーカス(#1288 engine / #1258 cursor / #1256 parseGoaLine 拡張)+ origin/main 取込 merge。
 
 ## フォーカス面知見
 
@@ -59,4 +59,4 @@
 ## Delivery boundary
 
 - 実装・修正コード、`bun scripts/package.ts` / `promote:self` による dist・self-install 再生成、main merge/rebase、Issue close、PR 作成・更新は本 scan で実施していない。
-- 本 scan は観測のみ。区間フォーカス正本には既知5欠陥を修正した3コミット・4ファイルの変更があり、その現行断面から逆変換可能な注入面を確定した。codekb body 8成果物は全点温存(churn 回避、cid:reverse-engineering:c1)。実質の新規知識は「5欠陥の型緑・意味赤な注入面確定」「選挙テストの fast-check 不在と PBT 参照様式3本」「t241 の CI-resident 自称と PR CI e2e 非実行の乖離」「`--project` override による scratch 隔離可能性」の1クラスタのみで、本 re-scans に集約。
+- 本 scan は観測のみ。区間フォーカス正本(選挙 CLI 5ファイル)への破壊的変更0件で、codekb body 8成果物は全点温存(churn 回避、cid:reverse-engineering:c1)。実質の新規知識は「5欠陥の型緑・意味赤な注入面確定」「選挙テストの fast-check 不在と PBT 参照様式3本」「t241 の CI-resident 自称と PR CI e2e 非実行の乖離」「`--project` override による scratch 隔離可能性」の1クラスタのみで、本 re-scans に集約。
