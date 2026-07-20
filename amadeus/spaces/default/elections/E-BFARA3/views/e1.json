@@ -1,0 +1,21 @@
+{
+  "electionId": "E-BFARA3",
+  "voter": "e1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "B. 形式検証のみ — ref の3フィールドの型・様式だけ検証し、実在照合はしない(存在しない ref の amend も受理される)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "C. その他(note に方式明記)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "A. fail-closed 実在照合 — 受理時に ref が ledger 上の同一 voter の既存 ballot(original または先行 amend)と一致することを検証し、不一致は新エラー分類(unknown-ref 級)で拒否"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PM10C",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "適用対象の主語を『受理側に機械ガードが未着地のペイロード一般』に置くこと — ballot は #1252/#1273 で受理側封鎖済みの引用実例に留め、封鎖済み面への二重義務と読ませない。統合文案は案イ主文(直接 mint)+案ロの検分1手を従とする形を支持。",
+  "rationale": "実測確認: E-CCCRA ledger に __NOW__ 級事故の痕跡なし=私の観測範囲では投入前検分で防がれた側の対照(私は全票 date -u 直接 mint+送信前目視)。受理側ガードは ballot に限られ、delegate ペイロード・registry 書込等の機械生成 JSON は今も producer-side 頼み — 汎用常識ではなくチェックリスト化の価値がある。採用(2)。",
+  "submittedAt": "2026-07-20T01:52:32Z"
+}

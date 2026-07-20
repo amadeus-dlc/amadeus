@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CCCRE",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "RE 260719-goa-multiseg-ecode の適用ノルム(rescan-base-ancestry / c1 / c3 / same-root-inventory / mechanism-cite-verify)は全て既存 cid の適用実例で、新規に一般化可能な知見は diary・record に不在(自分で実測確認)。0件で可。",
+  "submittedAt": "2026-07-19T14:41:39Z"
+}

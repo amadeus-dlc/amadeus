@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFAND",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record をリードオンリー実測: 成果物5点(security/scalability/logical-components/reliability/performance)の per-unit 実在、diary 2点 verbatim(c4 層別記述+E-SMF-ND 2軸の反映 / c7 の断定的インベントリ回避と plan 委譲)、iteration 1 READY と non-blocking minor 2件の plan 持ち越し固定を確認。ND 成果物へのセンサー verdict は Output path 単位の正確な awk 集計で 20行全 Passed・FAILED 0(『初回から FAILED 0件』の主張と一致 — シャード全体の FAILED 23件は他ステージ累積分で本ステージ非帰属)。minor (1) の『amend は参照先より配列後方 — unknown-ref 照合が保証する構造的不変』は E-BFARA2/3 裁定(自分が投票)の帰結の正しい読みで、plan への1行明示は妥当な持ち越し。既存 cid の適用実例のみ、0件で可",
+  "submittedAt": "2026-07-19T23:50:40Z"
+}

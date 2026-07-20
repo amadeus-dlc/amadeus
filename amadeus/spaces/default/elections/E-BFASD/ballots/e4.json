@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFASD",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record をリードオンリー実測: 成果物3点+memory 実在(ls 4件)、Must/Won't 件数を grep -c で機械再計算し 5/6 一致(ledger-count-mechanical-recalc 充足)、backlog B 行 4件一致、E-OC1 ヘッダに判定申告 15:14Z 頃+leader 承認 15:15:01Z 記載、当該ステージ成果物への sensor verdict は最新まで全 Passed(15:15:28Z/15:15:44Z)を audit 時系列で確認。diary 2点は scope-definition:c2(Must のみ・厳格 Won't)/c3(risk-first)の適用実例と境界1基準化(スコープ運用の明確化で intent 固有)であり、新規ノルムの隙間なし。W-2/W-3 の e1 intent 裁定済み Issue 群との二重起票回避も E-GMERA3 裁定当事者として整合確認。0件で可",
+  "submittedAt": "2026-07-19T15:16:39Z"
+}

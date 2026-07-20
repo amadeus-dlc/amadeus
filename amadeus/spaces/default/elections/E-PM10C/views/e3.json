@@ -1,0 +1,16 @@
+{
+  "electionId": "E-PM10C",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "不採用 — 機械ガード着地済みで過渡的(diary 記録のみ)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "採用 — 統合形(直接 mint+投入前様式検分)を bulk-edit-verify-before-write 系への追補として persist"
+    }
+  ]
+}

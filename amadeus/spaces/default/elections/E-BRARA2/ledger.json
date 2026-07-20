@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-BRARA2",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "実測: classifyLate(model.ts:296-297)の ballot.submittedAt <= tallyTime を verbatim 確認。late の意味は『集計に間に合ったか』であり、それは受理事実で決まる — 申告 tally 前・受理 tally 後の票は集計不能なのに non-late になる B の穴は判定の嘘。A(受理軸)が遅延実態と一致し、e2 の per-voter 最新解決(E-BFARA2 = submittedAt 軸)は『どの票が最新の意思か』の別問題で独立 — 交差なしの主張に同意。B 非採用受容度: 6(注記運用でも当面の実害は限定)。",
+      "submittedAt": "2026-07-20T00:26:11Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-BRARA2",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "store.ts:146-150 の null-fallback(state 到着で classifyLate が null でも late 扱いする既存分岐 — 実読済み)は受理軸移行後に意味が変わる: 受理が tally 後なら受理軸 classifyLate は常に late を返し fallback が死码化しうる。design で机上トレースし、死码化する場合はコメント化でなく削除まで含めて裁定すること(消費されない分岐の残置は検証劇場 Forbidden の隣接クラス)",
+      "rationale": "自分の #1262 verdict で『classifyLate も同じ申告時刻依存 — receivedAt 導入時に late lane の判定時刻も同時裁定すべき(same-root-inventory)』と指摘した当事者。A(受理軸移行)を支持: late の意味は『固定された集計セットに間に合わなかった』であり、それを決めるのは受理の時刻 — 申告軸(B)では中継遅延票が『late でないのに tally 後受理』となり、:146-150 の fallback で結局 late lane 行きになるが classifyLate の判定と fallback の判定が矛盾したまま残る。e2 の per-voter 最新解決(E-BFARA2=A)は投票者意図の順序付けで submittedAt 軸が正 — 軸の使い分け(意図=申告/成立=受理)は意味論として一貫し、A の注記どおり独立。自案非採用時: B=6(穴は注記で管理可能だが矛盾は残る)",
+      "submittedAt": "2026-07-20T00:26:29Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-BRARA2",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A 採用(交差当事者として)。late の実体は『tally の fixed set に物理的に入れなかった票』であり、fixed set への包含は受理時刻で決まる(materialize は受理済み ballots の blind lift — 自 intent の RE/AD で実測済み)。submittedAt 軸維持(B)は『申告 pre-tally・受理 post-tally』票が not-late 判定なのに fixed set 不在という機構矛盾の穴を残す。当方の per-voter 最新解決(E-BFARA2)は投票者意図の新しさ = submittedAt 軸で、遅延判定 = 受理軸とは独立(質問の交差整理どおり、BR-4b の非解決契約とも両立)。受容度: B=6。",
+      "submittedAt": "2026-07-20T00:33:32Z"
+    }
+  ],
+  "late": []
+}

@@ -30,7 +30,13 @@ import {
   type TimelineEvent,
 } from "./amadeus-election-model";
 
-export type StoreError = "exists" | "duplicate" | "not-found" | "io-error" | "corrupt";
+export type StoreError =
+  | "exists"
+  | "duplicate"
+  | "not-found"
+  | "io-error"
+  | "corrupt"
+  | "unknown-ref";
 
 export type { TimelineEvent } from "./amadeus-election-model";
 
@@ -121,7 +127,12 @@ export const Store = {
   // checked first on every path, late lane included, before the state branch.
   // Amend ballots coexist with their original (ADR-5: the original is never
   // overwritten; both stay on the ledger, correction trail intact).
-  appendBallot(root: string, electionId: string, ballot: Ballot): Result<void, StoreError> {
+  appendBallot(
+    root: string,
+    electionId: string,
+    ballot: Ballot,
+    receivedAt: string,
+  ): Result<void, StoreError> {
     const dir = dirOf(root, electionId);
     const ledgerPath = join(dir, "ledger.json");
     const read = readJson<Partial<LedgerFile>>(ledgerPath);
@@ -132,6 +143,19 @@ export const Store = {
       (b) => b.voter === ballot.voter && b.kind !== "amend" && ballot.kind !== "amend",
     );
     if (dup) return err("duplicate");
+    // BR-3 fail-closed: an amend must reference an existing accepted ballot from
+    // the same voter (original or a prior amend) matching electionId/voter/
+    // submittedAt. Checked here in the read phase — before any write — so an
+    // unknown ref fails with no partial write (R-1 atomicity).
+    if (ballot.kind === "amend") {
+      const found = accepted.some(
+        (b) =>
+          b.voter === ballot.ref.voter &&
+          b.electionId === ballot.ref.electionId &&
+          b.submittedAt === ballot.ref.submittedAt,
+      );
+      if (!found) return err("unknown-ref");
+    }
     const loaded = Store.load(root, electionId);
     if (!loaded.ok) return loaded;
     const state = loaded.value.state;
@@ -140,10 +164,13 @@ export const Store = {
       // persists reexamRequired for the human reexamination trail.
       const t = readJson<{ talliedAt: string }>(join(dir, "tally.json"));
       if (!t.ok) return t;
-      // A ballot arriving after the tallied transition but stamped at/before
-      // talliedAt still lands in the late lane (it missed the fixed set); the
-      // reexam rule is single-sourced in the model (PR #1233 review minor 2).
-      const late = classifyLate(t.value.talliedAt, ballot) ?? {
+      // Reached only after tally, so receivedAt (minted now) is at/after
+      // talliedAt. classifyLate returns non-null whenever receivedAt strictly
+      // exceeds talliedAt; the fallback covers the same-second boundary
+      // (receivedAt === talliedAt → null) where the ballot still missed the
+      // fixed set and must land late anyway. The reexam rule is single-sourced
+      // in the model (PR #1233 review minor 2).
+      const late = classifyLate(t.value.talliedAt, receivedAt, ballot) ?? {
         ballot,
         late: true as const,
         reexamRequired: lateReexamRequired(ballot),
@@ -154,6 +181,7 @@ export const Store = {
       return Store.appendTimeline(root, electionId, {
         kind: "late",
         at: ballot.submittedAt,
+        receivedAt,
         detail: `late ballot recorded: ${ballot.voter}${late.reexamRequired ? " (reexam required)" : ""}`,
         voter: ballot.voter,
       });
@@ -164,6 +192,7 @@ export const Store = {
     return Store.appendTimeline(root, electionId, {
       kind: "ballot",
       at: ballot.submittedAt,
+      receivedAt,
       detail: `ballot ${ballot.kind === "amend" ? "amendment" : "accepted"}: ${ballot.voter}`,
       voter: ballot.voter,
     });

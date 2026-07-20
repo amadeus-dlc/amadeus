@@ -1,0 +1,60 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 4,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T01:53:41Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-PM10A",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "起案者。実測は #1264 の e4 S1 捕捉(team.md pre-#1259 巻き戻し・E-GMECG 追補消失)と是正コミットで一次記録済み。overlay 方式は record-sync の標準手順であり並行 norm 着地は常態 — 検査1手(自 intent 外 M 全数の main 突き合わせ)は安価で S1 級を構造的に防ぐ。採用(1)。",
+      "submittedAt": "2026-07-20T01:52:32Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-PM10A",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立傍証: 私の record-sync 3本(#1263/#1271/#1278)は overlay を自 intent パス+特定 codekb ファイルに限定する狭域 checkout で memory 層巻き戻しを構造回避していた — 候補の是正(自 intent 外 M ファイルの main 突き合わせ)は同じ帰結を一般形で保証する。#1264 の E-GMECG 追補消失は S1 級の実害で追補価値は明確。",
+      "submittedAt": "2026-07-20T01:52:55Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-PM10A",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "#1264 の S1 検出者当事者。実測根拠は自分の verdict そのもの: merge-base(E-GMECG 1件)vs head(0件)の機械照合で stale team.md 上書きを捕捉、是正指示(git checkout origin/main -- team.md)も候補文の是正形と一致。overlay 方式は record-sync の常用手技で base 前進との交差は構造的に反復する — レビュー検出(事後)だけに依存せず作成側手順(自 intent 外 M ファイルの main 突き合わせ+memory 層 main 復元)で発生源を塞ぐのが正しい。norm-pr-from-main-base への追補統合も凝集が正しい。採用",
+      "submittedAt": "2026-07-20T01:53:06Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-PM10A",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "採用(1)。#1264 の S1 実測(team.md の pre-#1259 巻き戻し・E-GMECG 追補消失)は共有ファイル整合の実害クラスで、既存 norm-pr-from-main-base(起点規律)が守らない『overlay 内容の巻き戻し面』を正確に埋める。対照実践の傍証: 当方の record-sync(#1275)は一括 overlay でなく自 intent record+特定 codekb ファイルの選択 checkout+共有2ファイル(intents.json/re-timestamp)の明示 union 構成で、この罠を構造回避した — 選択方式でも全数突き合わせ規律は安全網として有効。",
+      "submittedAt": "2026-07-20T01:53:10Z"
+    }
+  ],
+  "resolutions": []
+}

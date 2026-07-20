@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFAPD",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 worktree リードオンリー実測: 成果物4点(evidence/discovered-rules/team-practices/timestamp)実在、diary 2点は practices-discovery:c1(同日 RE codekb 証跡代用)/c2(live 温存部分ドラフト)の適用実例で質問 0 件も差分ギャップ 0 由来を確認。プロセス新規学習なし。0件で可(1)。",
+  "submittedAt": "2026-07-19T20:34:42Z"
+}

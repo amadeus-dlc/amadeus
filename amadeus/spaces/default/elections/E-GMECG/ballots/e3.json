@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GMECG",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e1 record 実測: diary Deviations 2026-07-19T20:30:32Z に『fix 未コミットで checkout HEAD 実行し修正を一時消失(即時回復)』の実インシデント記載を確認。falling-proof-no-stash 原文(team.md)は『復元は regen/再 checkout』とのみ規定し、復元 ref の明示・fix コミット先行を規定していない — 未コミット時の checkout HEAD が修正自体を消す穴は原文の含意で塞がっていない実ギャップ。追補統合(独立 cid 化しない)の起案形も既存慣行と整合。採用(1)。なお同型リスクは本日私の Bolt でも該当しうるため、採用時は即適用します。",
+  "submittedAt": "2026-07-19T20:34:42Z"
+}

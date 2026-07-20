@@ -1,0 +1,21 @@
+{
+  "electionId": "E-BFARA1",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "C. その他(note に方式明記)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "B. ISO-8601 幅広受理 — 日付+時刻+(ms 任意)+(Z or ±TZ)を許し、new Date 有効性と併せて受理後 normalizeAt で正規化(現行の寛容入力+正規化を保存、非 ISO 形だけ遮断)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "A. mint 正規形限定 — regex ^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$ に一致し、かつ new Date が有効な入力のみ受理(ms・TZ オフセット形は拒否。normalizeAt は恒等変換になる)"
+    }
+  ]
+}

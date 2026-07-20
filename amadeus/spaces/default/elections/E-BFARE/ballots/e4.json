@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFARE",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record をリードオンリー実測: re-scans/260719-ballot-failclosed-amend.md+scan-notes.md 実在、codekb body 9点温存(ls 9件)、base 祖先性を e2 tree で git merge-base --is-ancestor exit 0 再実測、距離 65 を observed 6f2455c43 時点で再計算し一致(現 HEAD 比は 67 — observed 基準の記録として正しい、measurement-ref 準拠)。主要新事実3点のうち (1) kind 非読取 :194 は #1253 クロスレビューで自分が amend 平坦化を live 再現済みの同一事実 (2) tally 無差別 :321-337 は E-BFAFS 検証で実読済み (3) verify 検出不能は :440 の recompute が同一母集団 tally 再実行であることを実読確認 — いずれも成果物側に固定済みの intent 固有知識で、diary の観測(c3 直列/rescan-base-ancestry/c3-relabel/re-sensors-codekb-filter-mismatch)は既存 cid の適用実例。新規ノルムの隙間なし、0件で可",
+  "submittedAt": "2026-07-19T20:21:18Z"
+}

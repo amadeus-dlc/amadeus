@@ -1,0 +1,16 @@
+{
+  "electionId": "E-DAGRE",
+  "voter": "e2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "採用 — 新規 cid または調査系既存 cid への追補として persist"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "不採用 — 常識クラス(diary 記録のみ)"
+    }
+  ]
+}

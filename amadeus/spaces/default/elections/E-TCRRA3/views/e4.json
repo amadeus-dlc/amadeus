@@ -1,0 +1,21 @@
+{
+  "electionId": "E-TCRRA3",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "A. winner(choiceInternalNo+label)+choice 別票数内訳+既存 GoaCounts を保持し、outcome は winner から導出(record.md の裁定行に勝者 choice label を描画 — 監査可能性最大、波及も最大)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "C. その他(note に方式明記)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "B. winner フィールドのみ追加(内訳は ledger から再導出可能として持たない — 波及最小)"
+    }
+  ]
+}

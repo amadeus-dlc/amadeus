@@ -1,6 +1,91 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(最新: 260718-election-ts-foundation)
+## 実行メタデータ(最新: 260720-ballot-received-at)
+
+- Date: 2026-07-20(Asia/Tokyo)
+- Observed at: HEAD `37f8cf5e67cef77adfd82ef292303790f756c8fd`(`git rev-parse HEAD` 実測一致)
+- Intent: `260720-ballot-received-at`([Issue #1262](https://github.com/amadeus-dlc/amadeus/issues/1262) — agmsg 中継票に受理側機械時刻 `receivedAt` が無く、中継遅延で timeline の `at` 列が非単調化し、正当な選挙が verify の `timeline-order` finding で完走不能になる)
+- Scope: `bugfix`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh(cid:reverse-engineering:c1、E-L63 の base 選定則)。base=`262a86db9b2a47b59ac0b1287e540295ca212378`(直近 re-scan `re-scans/260719-tally-choice-ruling.md` の Observed、全 `re-scans/*.md` observed のうち HEAD 祖先。`git merge-base --is-ancestor 262a86db9 HEAD` exit 0 実測)、observed=`37f8cf5e67cef77adfd82ef292303790f756c8fd`。区間 `262a86db9..HEAD`=16コミットだが `git log 262a86db9..HEAD -- scripts/ tests/ packages/`=**0件**(全て `record(tally-choice-ruling)` の工程記録コミット)で、フォーカス正本 `scripts/amadeus-election*.ts`+`tests/` は区間内無変更 = Observed=HEAD ワークツリー実測が base 断面と同一(rescan-base-ancestry 準拠)。#1268(tally winner 化)は本ブランチの区間には未着地(`scripts/` diff 0件で確認)。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3、確約級引用3クラスタ+反証2 grep を独立スポット再実測し反証なし)。
+- 測定 ref: 全 file:line は Observed=HEAD `37f8cf5e6` のワークツリー実ファイル直読(cid:measurement-ref-in-artifacts)。回避運用の非単調実データは leader tree のリードオンリー実測(正規化コミット `5e96f8766`)、e2 交差は e2 worktree(branch `team/.../engineer-2` @ `67cf31165`)のリードオンリー実測。
+- 現行結論: バグの一次原因は `scripts/amadeus-election-store.ts` の `appendBallot` が timeline イベントの `at` に投票者自己申告時刻 `ballot.submittedAt` をそのまま書く(:156 late lane / :166 normal lane、verbatim 再実測済み)ことにある。受理側機械時刻 `receivedAt` は scripts/tests/packages 全域 **0件**(反証 grep 実測)。verify の `verifySelf`(`amadeus-election-record.ts:179-183`、隣接 `at` の辞書式単調検査)が agmsg 中継票(sender submittedAt 保持のまま受理遅延)と CLI 直接票の混在で `cur < prev` を検出し `timeline-order` finding を返すため、`handleVerify`(`amadeus-election.ts:456-457`)が fail=exit 1 → 状態機械が `recorded`(=done)へ遷移不能。原因の所在は**設計** — timeline の時刻軸として submittedAt(投票者申告)を採用し受理境界の機械時刻を捨てる設計判断が intent `260718-election-ts-foundation`(Bolt 1〜4)でなされ、中継 vs 直接混在シナリオが requirements/functional-design/テストで未固定。distributed(`election.ts:304` `at: d.result.value.record.at`)/tallied(`store.ts:228` `at: talliedAt`)は既に機械時刻を使う非対称(symmetric-pair-review クラス)。実害は E-BFARA1/2/3(2026-07-19)で顕在化し、ユーザー承認のうえ timeline 配列を `at` 昇順ソート(時刻値不変・並び正規化のみ)して verify 通過させる暫定運用で回避(leader コミット `5e96f8766`)。e2 `260719-ballot-failclosed-amend`(#1252/#1253)と同一3ファイル(`amadeus-election-model.ts`/`-store.ts`/`.ts`)を編集する高交差=直列化 or merge 協調前提。
+- Per-intent record: `re-scans/260720-ballot-received-at.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「最新: 260719-tally-choice-ruling」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、`re-scans/260720-ballot-received-at.md`。**codekb body 8成果物(business-overview / architecture / code-structure / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment)は全点温存**(churn 回避 — 実質の新規知識は「timeline の `at` が submittedAt 軸で受理境界機械時刻を捨てる+verify 単調性検査が中継/直接混在で偽 fail+受理側 receivedAt の絶対不在(distributed/tallied との非対称)」の1クラスタのみ。これは bugfix の挙動欠陥であり構造・API・依存・技術スタックの変化を伴わず、フォーカス正本の区間変更0件で本文と矛盾しない。詳細は per-intent record に集約済み。cid:reverse-engineering:c1)。
+- Delivery boundary: 実装・修正コード、`bun scripts/package.ts`/`promote:self` による dist・self-install 再生成、main merge/rebase、Issue close、PR 作成・更新は本 scan で実施していない。区間 `scripts/` 変更0件のため dist 16ツリーは base と同一。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260719-tally-choice-ruling)
+
+- Date: 2026-07-20(Asia/Tokyo)
+- Observed at: HEAD `262a86db9b2a47b59ac0b1287e540295ca212378`(`git rev-parse HEAD` 実測一致)
+- Intent: `260719-tally-choice-ruling`([Issue #1261](https://github.com/amadeus-dlc/amadeus/issues/1261) — 選挙 CLI の `tally` が `choiceInternalNo` を裁定導出に使わず、多肢選挙で choice 多数を無視して GoA favor/against のみで outcome を決める)
+- Scope: `bugfix`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh(cid:reverse-engineering:c1、E-L63 の base 選定則)。base=`a326f47bc0146a3b4285552f42b92fd61fb343a7`(直近 re-scan `re-scans/260719-goa-multiseg-ecode.md` の Observed、全 `re-scans/*.md` observed のうち HEAD 祖先。`git merge-base --is-ancestor a326f47bc HEAD` exit 0 実測、`git rev-list --count a326f47bc..HEAD`=**20**。rescan-base-ancestry / 距離最小の祖先を採用)、observed=`262a86db9b2a47b59ac0b1287e540295ca212378`。区間 `a326f47bc..HEAD`=20コミットだが `git log a326f47bc..HEAD -- scripts/`=**0件**(工程記録+delegate 取込のみ)で、フォーカス正本 `scripts/amadeus-election*.ts` は区間内無変更 = Observed=HEAD ワークツリー実測が base 断面と同一。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3、確約級引用3点を独立スポット再実測し反証なし)。
+- 測定 ref: 全 file:line は Observed=HEAD `262a86db9` のワークツリー実ファイル直読(cid:measurement-ref-in-artifacts)。E-GMEBT 実データは leader tree `55af93d95` の `elections/E-GMEBT/` リードオンリー実測。区間変更は `git log a326f47bc..HEAD -- <path>` で実測。
+- 現行結論: バグの一次原因は `scripts/amadeus-election-model.ts:321` `tally(_election, ballots)` が第1引数 election を明示 underscore で捨て、`choiceInternalNo` を裁定導出に一切参照せず GoA の favor/against 集計(FAVOR={1,2,3,6} / AGAINST={7,8})だけで `outcome:"adopted"|"rejected"` を決めること(:334-335)。`TallyResult`(:312-314)は choice 内訳フィールドを持たない。原因の所在は**設計** — tally は intent `260718-election-ts-foundation` Bolt 1 walking-skeleton の "minimal tally"(GoA-only)として導入され、以後の Bolt でも choice 集計が設計されなかった設計時欠落。choice は受理(model.ts:198)→ store(store.ts:161)→ materialize(store.ts:223)まで運ばれるが、tally で脱落し render(record.ts:107 rulingText は outcome のみ)へ流れる。verify(election.ts:440)は tally を recompute するため**修正は tally 一点に集約すれば verify も自動追随**する。隣接ギャップ: `Ballot.parse`(:184-204)の5分類 fail-closed に `unknown-choice` 照合がなく、unknown-voter と対称の欠落(symmetric-pair-review クラス)。実害は E-GMEBT で顕在(全票 GoA2 で favor=3/against=0 → `adopted` 誤描画、正は choice 多数 2-1 で不採用。leader 注記でユーザー裁定「不採用」へ是正済み)。tally 呼び出しは t234 の7箇所のみ(fixture は choiceInternalNo:1 固定)、choice 多数決の assert は全域0件。e2 `260719-ballot-failclosed-amend` と同一関数 `tally`(母集団 per-voter 化)+`Ballot.parse`(分類追加)で**強交差=直列化前提**。
+- Per-intent record: `re-scans/260719-tally-choice-ruling.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「最新: 260719-goa-multiseg-ecode」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、`re-scans/260719-tally-choice-ruling.md`。**codekb body 8成果物(business-overview / architecture / code-structure / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment)は全点温存**(churn 回避 — 実質の新規知識は「tally が choice-blind で裁定を導出+検証チェーン(verify recompute)が tally 修正に自動追随+受理段の unknown-choice 対称欠落」の1クラスタのみ。これは bugfix の挙動欠陥であり構造・API・依存・技術スタックの変化を伴わず、フォーカス正本の区間変更0件で本文と矛盾しない。詳細は per-intent record に集約済み。cid:reverse-engineering:c1)。
+- Delivery boundary: 実装・修正コード、`bun scripts/package.ts`/`promote:self` による dist・self-install 再生成、main merge/rebase、Issue close、PR 作成・更新は本 scan で実施していない。区間 `scripts/` 変更0件のため dist 20ツリーは base と同一。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260719-ballot-failclosed-amend)
+
+- Date: 2026-07-20(Asia/Tokyo)
+- Observed at: HEAD `6f2455c43b7dbadafec83ab3d0b57d9fc8e5156c`(`git rev-parse HEAD` 実測)
+- Intent: `260719-ballot-failclosed-amend`(選挙 CLI の ballot 受理境界における fail-open / kind 無差別集計の RE。Issue #1252/#1253。本 intent は ideation 起点)
+- Scope: `amadeus`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh(cid:reverse-engineering:c1、E-L63 の base 選定則)。base=`591b6a2a222357f41061128f1b5a93c7f7a877be`、observed=`6f2455c43b7dbadafec83ab3d0b57d9fc8e5156c`。祖先性 `git merge-base --is-ancestor 591b6a2a2 6f2455c43` **exit 0 実測**、距離 `git rev-list --count 591b6a2a2..6f2455c43`=**65**。非祖先 observed(並行 squash tip 等)は base 候補から構造的に除外(cid:reverse-engineering:rescan-base-ancestry / re-timestamp-merge-resolution)。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3、独立再照合で反証ゼロ)。
+- 測定 ref: 行番号・件数は observed HEAD `6f2455c43` の実ファイル直読、区間変更は `git log 591b6a2a2..6f2455c43 -- scripts/` で実測(measurement-ref-in-artifacts)。
+- 現行結論: 選挙 CLI ballot 受理パイプラインの **fail-open 3点**(いずれも #1231/#1235 の設計時ギャップ、区間内退行ではない): (1) **kind 非読取** — `Ballot.parse`(`amadeus-election-model.ts:180`)が raw kind を無視し `kind:"original"` 固定(`:194`)、`parseBallotShape`(`:160-178`)も kind 非参照 → vote verb 経由の amend 投入経路が構造的に不在。(2) **normalizeAt 素通し** — `amadeus-election-transport.ts:87-91` が NaN 時に入力を無検証で返す fail-open(`:90`)。(3) **tally 無差別集計** — dup(`store.ts:131-133`)は amend 除外、`classifyLate`(`model.ts:296-298`)/`tally`(`model.ts:321-337`)は kind 非区別で original+amend の二重計上、`verify`(`election.ts:440` recompute)でも検出不能。実データ 12件は全 kind=original・全 late=[](amend/late ゼロ世代)。配布: `amadeus-election*.ts` は dist 投影0件、SKILL のみ3面(`.agents`/`.claude`/`contrib`)。
+- Per-intent record: `re-scans/260719-ballot-failclosed-amend.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「最新: 260718-election-ts-foundation」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、`re-scans/260719-ballot-failclosed-amend.md`。**body 9成果物は全点温存**(churn 回避 — 実質の新規知識は選挙 CLI 受理境界の fail-open 3点のみで本 re-scan/scan-notes に収載、`architecture.md` には ballot 受理境界を扱う選挙 CLI アーキテクチャ節が不在で新設は churn。cid:reverse-engineering:c1)。
+- Delivery boundary: 実装、main merge/rebase、Issue close、PR 作成・更新は本 scan で実施していない。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260719-goa-multiseg-ecode)
+
+- Date: 2026-07-19(Asia/Tokyo)
+- Observed at: HEAD `a326f47bc0146a3b4285552f42b92fd61fb343a7`(`git rev-parse HEAD` 実測)
+- Intent: `260719-goa-multiseg-ecode`([Issue #1226](https://github.com/amadeus-dlc/amadeus/issues/1226) — `parseGoaLine` の `GOA_HEAD_RE` がハイフン複節 E-code(`E-SDE-CG4` 等)を head 段で拒否)
+- Scope: `bugfix`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh(cid:reverse-engineering:c1、E-L63 の base 選定則)。base=`6495e03a12d9e7149c2e80b59f171a90607a2d2c`(全 `re-scans/*.md` observed のうち HEAD 祖先で距離最小。`git merge-base --is-ancestor 6495e03a12d9e7149c2e80b59f171a90607a2d2c HEAD` exit 0 実測、`git rev-list --count 6495e03a..HEAD`=**178**。日付が新しい squash tip の非祖先 observed は cid:reverse-engineering:rescan-base-ancestry に従い除外)、observed=`a326f47bc0146a3b4285552f42b92fd61fb343a7`。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3、独立再照合で反証なし)。
+- 測定 ref: 件数・行番号は observed HEAD `a326f47bc` のワークツリー実ファイル直読、区間変更は `git log 6495e03a..HEAD -- <path>` で実測(cid:measurement-ref-in-artifacts)。フォーカス正本 `amadeus-norm-metrics.ts`+dist+tests に触れた区間変更は2件のみ(`0ab3f22c4` Bolt 1 rank、`b48f89bf0` PR #1112 Bolt 2 で `parseGoaLine`/`GOA_HEAD_RE`/テスト固定を導入)。
+- 現行結論: バグの一次原因は `packages/framework/core/tools/amadeus-norm-metrics.ts:157` `GOA_HEAD_RE = /^GoA\[(E-[A-Z0-9]+)\]:\s*(.+)$/` が複節ハイフン E-code を許容しないこと(新規 regression でなく PR #1112 Bolt 2 の schema 設計時欠陥)。**ただし regex 修正は必要条件だが十分条件ではない**: team.md の実 GoA 行9行(distinct E-code)はすべてサブ問別スパース表記(`c1 1x2 2x1 / c2 …`)で canonical 8-bin 形は0行 — hyphen 許容後も bin 段 `:692`(`tokens.length !== 8`)で BINFAIL に反転し 9行中0行が parse する(`parseGoaLine` 直呼びで pass=0/headFail=8/binFail=1 を実測)。被害面は現状 **latent**: `parseGoaLine`/`parsePmCidLine` は蒸留(`collectMetrics`/`distillCandidates`)から集計消費されず、`:544` で `GoA-variance … NOT COLLECTED` を明示出力(header comment :38-44「aggregation is future」)。唯一の live consumer は `scripts/amadeus-election.ts:413 checkGoaLine` だが、round-trip する record.md 行は `scripts/amadeus-election-record.ts:77 renderGoaLine` が compressed 非ハイフン+canonical 8-bin で書くため #1226 を踏まない。同根の `PM_CID_RE :161` round= も非ハイフン制約(複節 round 実在0件・潜在のみ)。`scripts/amadeus-election-record.ts:34 GoaLineCode`(`GOA_LINE_CODE_RE=/^E-[A-Z0-9]+$/`、#1226 コメント :31)は #1226 の既知 write 段 workaround。テスト `t238-election-record.test.ts:104` が現行バグ挙動(hyphen 形の `parseGoaLine` 失敗)をピン留め = 修正で assertion 反転必須。
+- Per-intent record: `re-scans/260719-goa-multiseg-ecode.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「最新: 260718-election-ts-foundation」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、`re-scans/260719-goa-multiseg-ecode.md`。**codekb body 8成果物(business-overview / architecture / code-structure / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment)は全点温存**(churn 回避 — 実質の新規知識は「GOA_HEAD_RE 複節拒否+corpus スパース様式乖離+蒸留 parse-only」の1クラスタのみで、これは bugfix の欠陥挙動であり構造・API・依存・技術スタックの変化を伴わない。フォーカス正本の区間変更は2件のみで parse schema 以外の本文と矛盾せず、詳細は per-intent record に集約済み。cid:reverse-engineering:c1)。
+- Delivery boundary: 実装・修正コード、`bun scripts/package.ts`/`promote:self` による dist・self-install 再生成、main merge/rebase、Issue close、PR 作成・更新は本 scan で実施していない。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260719-cursor-complete-clear)
+
+- Date: 2026-07-19(Asia/Tokyo)
+- Observed at: HEAD `a326f47bc0146a3b4285552f42b92fd61fb343a7`(`git rev-parse HEAD` 実測)
+- Intent: `260719-cursor-complete-clear`([Issue #1248](https://github.com/amadeus-dlc/amadeus/issues/1248) — intent 完了後の active-intent カーソル残留により、完了済み intent のシャードへ無期限に監査追記が続くモグラ叩き)
+- Scope: `bugfix`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh(cid:reverse-engineering:c1、E-L63 の base 選定則)。base=`591b6a2a222357f41061128f1b5a93c7f7a877be`(全 `re-scans/*.md` observed のうち HEAD 祖先で距離最小。`git merge-base --is-ancestor 591b6a2a2 HEAD` exit 0 実測、`git rev-list --count 591b6a2a2..HEAD`=**52**。base は 260717-state-mirror-fixes の observed に一致)、observed=`a326f47bc0146a3b4285552f42b92fd61fb343a7`。日付が新しい squash tip の非祖先 observed(`c2e4975ff` = 260718-election-ts-foundation、`594ba21d…` = 260718-hooks-config-conflict)は `--is-ancestor` exit 1 につき base 候補から除外(cid:reverse-engineering:rescan-base-ancestry)。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3、独立再照合で反証なし)
+- 測定 ref: 件数・行番号は observed HEAD `a326f47bc` の実ファイル直読、区間変更は `git log 591b6a2a2..HEAD -- <path>` で実測(measurement-ref-in-artifacts)。フォーカス面(カーソルライフサイクル・complete 経路・監査追記チェーン・フック群)の focus ファイル区間コミットは13件で **全13件が focus-hits=0**(`git show <sha> -- <focus files> | grep -icE` で機械計測)。区間の大宗は election TS 基盤 Bolt(#1227〜#1236)・swarm 三値化・codex hooks 分離でフォーカス面と非交差。
+- 現行結論: **カーソルの set⇔clear 非対称が欠陥の核心**(symmetric-pair-review)。書き手は `setActiveIntentCursor`(`amadeus-lib.ts:1725-1733`、書込 `:1729`)と birth 時書込(`:2147`)の2箇所のみで、clear 経路はコードベースに不在。`handleCompleteWorkflow`(`amadeus-state.ts:1550-1680`)は status 前進(`:1668-1669` `updateIntentStatus`)のみでカーソルを触らず、完了 intent を指したまま残留する。監査追記チェーン全段(`appendAuditEntry`→`ensureAuditFile`→`auditFilePath`→`recordDir`→`activeIntent`)に status ゲートが無く、`activeIntent`(`:1059-1084`)は `records.includes(raw)`(`:1074`)のみで registry status を参照しない。追記到達フックは7つ(主犯 `mint-presence:73-74`)。欠陥は base 時点から現存し区間内退行なし。修正2案(エンジン側 complete 時 clear / フック側 status ゲート防御層)は requirements/選挙で確定。
+- Per-intent record: `re-scans/260719-cursor-complete-clear.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「最新: 260718-election-ts-foundation」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、`re-scans/260719-cursor-complete-clear.md`、`architecture.md`(「active-intent カーソルの set⇔clear 非対称と監査ルーティング」節を新設 = 完了後シャード汚染の構造的機序)。**他 body 7成果物(business-overview / code-structure / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment)は全点温存**(churn 回避 — 実質の新規知識はカーソル set⇔clear 非対称と監査チェーンの status ゲート不在の構造的事実1点で、architecture.md へ集約。フォーカス面は既存構造の欠落(clear 経路不在)であり配置の追加・移動・品質評価の新規欠陥クラスタ導入を伴わない。cid:reverse-engineering:c1)
+- Delivery boundary: 実装、main merge/rebase、Issue close、PR 作成・更新は本 scan で実施していない。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260718-election-ts-foundation)
 
 - Date: 2026-07-19(Asia/Tokyo)
 - Observed at: HEAD `c2e4975ff2abe0290d899fdbd04b856213175c7a`(`git rev-parse HEAD` 実測)

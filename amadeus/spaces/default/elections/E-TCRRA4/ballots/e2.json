@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TCRRA4",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "e1 の unknown-choice 挿入位置を『識別子の検証 → 内容の検証』の順序原則で明示すること — unknown-voter 直後(識別子系)へ置けば、当方が再接地時に追加する invalid-timestamp(内容側先頭、E-BFARA1)との統合が機械的になり、分類ラダーの順序衝突が消える(当方 AD の ADR-4 と同一原則)。",
+  "rationale": "A 採用(再接地負担の当事者として)。unknown-choice は #1261 の欠陥(choice 意味論の欠落)の隣接ギャップで所有権は e1 側が正しく、same-root-inventory の同一 PR 修正が第一選択。直列合意(e1 先行→当方 CG 再接地)済みのため統合コストは当方が払う設計で、留保の挿入位置原則が守られれば textual 統合は機械的。B は当方 intent へのスコープ移譲で Issue 境界(#1261 の対称欠落を #1252 が引き取る)を曖昧にする。受容度: B=6。",
+  "submittedAt": "2026-07-19T22:44:20Z"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-DAGRE",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "persist は調査系既存 cid ファミリ(external-status-triage / scratch-script-discipline 系)への追補統合を優先し、独立 cid 新設は既存に適切な統合先が無い場合に限ること — 調査定型の cid 分散を避ける",
+  "rationale": "#1279 クロスレビュー1人目当事者。自分の verdict は消去法で recordPrefix===null 枝+cursor 解決状態の計装を推奨したが、e1 RE の pd-swap 決定的再現(CLAUDE_PROJECT_DIR 優先×cursor 依存で FIRES↔SKIPPED 切替)はそれを完全確定した — re-scan record 実在を確認。候補ノルムの価値は実証的: 自分の #1279 検証も scratch/他 tree で行っており、環境固有バグは隔離環境では構造的に再現不能という盲点を自分自身が持っていた(常識クラスとの不採用読みへの反証 — 当事者2名が同じ盲点を実演)。read-only プローブ+ambient 入力(env/cursor/gitignored)第一容疑化は1文で安価。採用。自案非採用時: 不採用=6",
+  "submittedAt": "2026-07-20T03:11:13Z"
+}

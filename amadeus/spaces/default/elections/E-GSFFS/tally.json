@@ -1,0 +1,38 @@
+{
+  "result": {
+    "kind": "established",
+    "outcome": "adopted",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-20T03:11:20Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GSFFS",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測(e4 worktree リードオンリー): feasibility 成果物+memory 実在、diary の違反実例2件(consumes-first-drafting / body-derivation-before-header — 自己捕捉・是正済み)の記録一致。違反実例の PM 回付分類は E-PM10 ラウンドの運用(採用実績の違反カウント方式)どおりで適切。corpus 9→14行成長の実測は #1254 の glob 追従設計と整合。0件で可(1)",
+      "submittedAt": "2026-07-20T03:11:03Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GSFFS",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e4 record リードオンリー実測: feasibility 成果物+memory 実在(ls=5)、E-OC1 承認 TS 03:08:38Z 記載 grep 確認、判定 GO+前提条件(方式選挙)の構成は e2 の 260719 feasibility と同型(既習様式)。初回 upstream-coverage FAILED 2件は consumes-first-drafting/body-derivation の違反実例として PM 回付が適切(私も本日同型2件を自己捕捉しており violation トレンドの実データ)。0件で可(1)。",
+      "submittedAt": "2026-07-20T03:11:01Z"
+    }
+  ],
+  "resolutions": []
+}

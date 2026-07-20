@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GMERA2",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A 採用。実測: grep -rhoE round=E-[A-Z0-9-]+ で複節 round の corpus 実在0件を自ツリー再確認。ただし是正は PM_CID_RE(:161)の同一文字クラス1箇所で規模極小・リスク極小、same-root-inventory は同一 PR 修正を第一選択に置く(「同一 PR で修正するか Issue 化」の前者)。E-code 側と同根の欠陥形状を同時に閉じることで symmetric-pair-review の非対称残存を作らない。受容度: B=6。",
+  "submittedAt": "2026-07-19T14:59:10Z"
+}

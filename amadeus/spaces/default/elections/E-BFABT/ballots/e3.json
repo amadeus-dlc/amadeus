@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFABT",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record リードオンリー実測: B&T 成果物7点+memory(ls=8)と phase-check-construction.md 実在。diary 3点は既実施検証の成果物化(私の cursor-complete-clear B&T と同型と明記 — 当事者として様式一致を確認)・PENDING 判定分離(report-final-values-only)・phase-check-before-final-approve の適用実例。glob 追従の実証(42/98→44/106 の件数自動追従)は FR 設計の狙いどおりの観測で新規プロセスでない。H2 不足 FAILED→是正も正常系(同型3例目)。0件で可(1)。",
+  "submittedAt": "2026-07-20T00:50:19Z"
+}

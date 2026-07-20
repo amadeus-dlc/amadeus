@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CCCRA",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 3,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "自tree 実測: amadeus-lib.ts:387 の解決優先順位は explicit > active-intent cursor > lone-intent fallback であり、A の clear 単独では lone-intent fallback 経由の completed intent 再解決を塞げない。またカーソルは per-user/per-clone の gitignored 状態(amadeus-orchestrate.ts:510-511)につき、clear は自クローンにしか効かず他クローンの残留カーソルは B の status ゲートでしか防げない。set⇔clear 対称の回復(symmetric-pair-review)+防御層の C が両欠陥面を塞ぐ。",
+  "submittedAt": "2026-07-19T14:52:21Z"
+}

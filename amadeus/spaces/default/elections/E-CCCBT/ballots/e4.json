@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CCCBT",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e3 record をリードオンリー実測: 成果物7点+memory 実在(ls 8件)、diary 4点 verbatim 確認、build-test-results の PASS/PENDING 判定分離(:38-39 — PASS=ローカル全検証・落ちる実証・閉包 / PENDING=CI Success green+マージ着地、閉包条件 = head 176811547 の CI SUCCESS を明記)を実読、phase-check-construction.md 実在、センサー最新ラウンド(22:35:30-31Z)全 Passed を audit 時系列 awk で確認(初回 required-sections FAILED 6件→H2 是正→再発火の自己捕捉経緯も diary と整合)。引用される自分の増分再確認(22:34:41Z READY 維持)も実時刻と一致。surface 3点は sensor-before-reviewer / deployment-execution:c3 の判定分離語彙 / phase-check-before-final-approve の適用実例で、新規ノルムの隙間なし。0件で可",
+  "submittedAt": "2026-07-19T22:37:46Z"
+}

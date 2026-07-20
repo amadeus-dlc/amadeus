@@ -1,0 +1,20 @@
+{
+  "electionId": "E-GMERA2",
+  "kind": "clarification-question",
+  "question": "260719-goa-multiseg-ecode(Issue #1226)RA Q2: PM_CID_RE round= の同根是正(same-root-inventory)。\n\n背景: amadeus-norm-metrics.ts:161 の round=(E-[A-Z0-9]+) も同一の非ハイフン制約(同根欠陥)。ただし複節 round 値の corpus 実在は0件(grep -rhoE \"round=E-[A-Z0-9-]+\" 空)— 潜在のみ。\n\n各自コード実測のうえ GoA 付き投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. 同一 PR で対称是正(same-root-inventory の前者。将来の複節ラウンド名にも先回り)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. Issue 化のみ(実在0件につきスコープ外 — 後者)"
+    }
+  ],
+  "voters": [
+    "e2",
+    "e4"
+  ],
+  "state": "recorded"
+}

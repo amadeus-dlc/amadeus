@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TCRCGS13",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "c2(worktree ディスパッチ規律)系への追補統合とし、文言に『resume メッセージには作業 worktree の明示パス+git 操作の worktree 限定を毎回再掲する』を含めること — 私の #1258 是正 resume(同日)は再掲したため隔離を維持できた対照実例で、再掲なしの resume が cwd 継承で本線へ落ちる機序と対になる。",
+  "rationale": "実測: e1 CG diary の Deviation 記録(SendMessage resume が隔離喪失・本線ツリー実行・実害なし復旧済み)と #1269(documentation/P2、OPEN)の実在を確認。同日私も builder を SendMessage resume しており(#1258 CI 是正)、プロンプトに worktree パスと git 操作限定を明示再掲していたことで偶然回避 — 明文化されていない依存は再発必至の実害クラス(c2 の本線誤入と同族)。採用(2)。",
+  "submittedAt": "2026-07-19T23:39:19Z"
+}

@@ -381,6 +381,41 @@
     "status": "in-flight"
   },
   {
+    "uuid": "019f7ac8-5be3-7e8a-a8c7-28d89977796e",
+    "slug": "goa-multiseg-ecode",
+    "dirName": "260719-goa-multiseg-ecode",
+    "scope": "bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f7ac8-1612-7278-afdb-129ccaeedf93",
+    "slug": "cursor-complete-clear",
+    "dirName": "260719-cursor-complete-clear",
+    "scope": "bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f7c7f-3732-734b-abee-f303e3c719c4",
+    "slug": "tally-choice-ruling",
+    "dirName": "260719-tally-choice-ruling",
+    "scope": "bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f7ae6-9d2a-719f-a990-daa24ed37df3",
+    "slug": "ballot-failclosed-amend",
+    "dirName": "260719-ballot-failclosed-amend",
+    "scope": "amadeus",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f7cdb-6fab-7ff1-94d7-d59c0f7653e3",
+    "slug": "ballot-received-at",
+    "dirName": "260720-ballot-received-at",
+    "scope": "bugfix",
+    "status": "complete"
+  },
+  {
     "uuid": "019f7d6f-1075-74a9-b42b-56e2bf650f94",
     "slug": "goa-sparse-family",
     "dirName": "260720-goa-sparse-family",

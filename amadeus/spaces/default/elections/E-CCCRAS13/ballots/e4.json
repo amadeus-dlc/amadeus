@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CCCRAS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測(当事者として自票の誤りも再検証): (1) surface 2 の runtime:1198 誤引用は自分の E-CCCRA 留保の引用であり、自 tree で :1198 の包含関数が handleFragmentFork(:1156 開始)であること・summary 経路の実際の解決が summarize(:964)配下の relativeRecordDir(:363/:1197)暗黙解決であることを再実測 — record の注記は正確で、留保の趣旨自体は維持される。これは mechanism-cite-verify-at-draft(実在と意味論の両確認)の意味論側の違反実例で、既存 cid の射程内。 (2) 書込3経路(lib:1921 birth / utility:3083 切替 verb / lib:2147 migrate 直接書込)を grep で再列挙し record の是正列挙と一致 — 起草時 2箇所説の列挙不足は enumeration-completeness-review の違反実例。いずれも新規ノルムの隙間ではなく既存 cid の実例につき 0件で可。record は reviewer iteration 2 READY・注記による design への誤引継ぎ遮断も確認",
+  "submittedAt": "2026-07-19T15:06:35Z"
+}

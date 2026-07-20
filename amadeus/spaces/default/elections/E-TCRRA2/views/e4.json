@@ -1,0 +1,21 @@
+{
+  "electionId": "E-TCRRA2",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "A. choice tie は hold(人間エスカレーション)へ倒す — 正準リスト (1) と整合。既存 hold 分岐(quorum/block/discussion)は GoA 軸のまま維持し、tie 判定だけ choice 軸を追加"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "C. その他(note に方式明記)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "B. choice tie は GoA 賛成側合計の多い方を勝者とする(tie-break を機械化、hold は現行分岐のみ)"
+    }
+  ]
+}

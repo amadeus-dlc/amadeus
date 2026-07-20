@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GMERA3",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 3,
+  "goa": 2,
+  "reservation": "起票する GoaLineCode 拡張 Issue には『head 拡張着地後は parse 側が hyphen を受理するため圧縮 workaround の撤去は安全に可能』の前提と、撤去時に t238 の圧縮形受理テスト(:102 E-SDECG4 admitted)の扱いを明記すること",
+  "rationale": "t238:104-105(hyphen 形の parseGoaLine fail をピン留め)は head 拡張で必ず反転 — これは修正 PR に必須(実測: sed -n 94,106p で verbatim 確認)。GoaLineCode(GOA_LINE_CODE_RE :34、:28-31 コメントが #1226 を明記)は動作中の既知 workaround であり欠陥ではないため、bugfix スコープで scripts/ 面へ変更を広げる A は過大。B は非対称(parse は複節受理・write は単節圧縮)が無記録で残る。C が修正面の限定(amadeus-norm-metrics 系+テスト)と追跡可能性を両立し、Q1 の C 票とも整合。自案非採用時: A=6 / B=6",
+  "submittedAt": "2026-07-19T14:57:53Z"
+}
