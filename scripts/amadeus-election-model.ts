@@ -97,12 +97,13 @@ export const Election = {
 // reservation-missing); parse-failure precedes all of them (structural). New
 // content-side classes insert after unknown-choice.
 export type BallotError =
+  | "parse-failure"
   | "unknown-election"
   | "unknown-voter"
   | "unknown-choice"
+  | "invalid-timestamp" // E-BFARA1: mint-normal-form only (regex + real-date)
   | "goa-out-of-range"
-  | "reservation-missing"
-  | "parse-failure";
+  | "reservation-missing";
 
 export type BallotRef = { electionId: string; voter: string; submittedAt: string };
 
@@ -150,7 +151,22 @@ export type TimelineEvent = {
   voter?: string;
 };
 
-type BallotShape = {
+// Mint normal form for submittedAt: second-precision UTC with a trailing Z
+// (E-BFARA1). The regex fixes the *shape*; new Date fixes *existence* — the two
+// are complementary (Date alone accepts a date-only string; the regex alone
+// accepts an impossible instant like 2026-13-45T99:99:99Z). Module scope so the
+// literal is compiled once (bun-inbody-comment-da0).
+const SUBMITTED_AT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+
+// Two-stage validity: mint-form shape AND a real calendar instant. Shared by
+// the ballot's own submittedAt (Ballot.parse -> invalid-timestamp) and an
+// amend's ref.submittedAt (parseBallotShape -> parse-failure).
+function isValidSubmittedAt(s: string): boolean {
+  if (!SUBMITTED_AT_RE.test(s)) return false;
+  return !Number.isNaN(new Date(s).getTime());
+}
+
+type BallotShapeBase = {
   electionId: string;
   voter: string;
   voterKind: VoterKind;
@@ -161,6 +177,27 @@ type BallotShape = {
   rationale: string | null;
 };
 
+// kind/ref carried on the shape so Ballot.parse builds the right variant.
+// A missing kind means "original" (backward compat, FR-3a); any string other
+// than "original"/"amend" fails closed (parse-failure).
+type BallotShape =
+  | (BallotShapeBase & { kind: "original"; ref: null })
+  | (BallotShapeBase & { kind: "amend"; ref: BallotRef });
+
+// kind/ref discriminator (FR-3): a missing kind means "original"; "amend"
+// requires a well-formed ref; any other kind value fails closed. Split out of
+// parseBallotShape so that function stays under the complexity threshold.
+function parseKindRef(
+  kind: unknown,
+  refRaw: unknown,
+): { kind: "original"; ref: null } | { kind: "amend"; ref: BallotRef } | null {
+  if (kind === undefined || kind === "original") return { kind: "original", ref: null };
+  if (kind !== "amend") return null;
+  const ref = parseBallotRef(refRaw);
+  if (ref === null) return null;
+  return { kind: "amend", ref };
+}
+
 // Structural half of the validation: field presence and primitive types only.
 function parseBallotShape(raw: unknown): BallotShape | null {
   if (typeof raw !== "object" || raw === null) return null;
@@ -168,9 +205,11 @@ function parseBallotShape(raw: unknown): BallotShape | null {
   if (typeof r.electionId !== "string" || typeof r.voter !== "string") return null;
   if (typeof r.choiceInternalNo !== "number" || typeof r.submittedAt !== "string") return null;
   if (r.voterKind !== "member" && r.voterKind !== "subagent") return null;
+  const kindRef = parseKindRef(r.kind, r.ref);
+  if (kindRef === null) return null;
   const reservation =
     typeof r.reservation === "string" && r.reservation.trim().length > 0 ? r.reservation : null;
-  return {
+  const base: BallotShapeBase = {
     electionId: r.electionId,
     voter: r.voter,
     voterKind: r.voterKind,
@@ -180,12 +219,25 @@ function parseBallotShape(raw: unknown): BallotShape | null {
     reservation,
     rationale: typeof r.rationale === "string" ? r.rationale : null,
   };
+  return { ...base, ...kindRef };
+}
+
+// An amend's ref: all three fields present and typed, submittedAt in mint form.
+// Any deviation is structural (returns null -> parse-failure).
+function parseBallotRef(raw: unknown): BallotRef | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const r = raw as Record<string, unknown>;
+  if (typeof r.electionId !== "string" || typeof r.voter !== "string") return null;
+  if (typeof r.submittedAt !== "string" || !isValidSubmittedAt(r.submittedAt)) return null;
+  return { electionId: r.electionId, voter: r.voter, submittedAt: r.submittedAt };
 }
 
 export const Ballot = {
-  // Full 6-class fail-closed validation (FR-3a/3b, order: parse-failure ->
-  // unknown-election -> unknown-voter -> unknown-choice -> goa-out-of-range ->
-  // reservation-missing). GoA 2/3/6 require a reservation sentence (norm (ii)).
+  // Full 7-class fail-closed validation (FR-1/FR-3, order: parse-failure ->
+  // unknown-election -> unknown-voter -> unknown-choice -> invalid-timestamp ->
+  // goa-out-of-range -> reservation-missing). Identifiers (election/voter/
+  // choice) are checked before content; invalid-timestamp heads the content
+  // half (BR-1). GoA 2/3/6 require a reservation sentence (norm (ii)).
   parse(raw: unknown, election: Election): Result<Ballot, BallotError> {
     const shape = parseBallotShape(raw);
     if (shape === null) return err("parse-failure");
@@ -194,12 +246,12 @@ export const Ballot = {
     if (!election.choices.some((c) => c.internalNo === shape.choiceInternalNo)) {
       return err("unknown-choice");
     }
+    if (!isValidSubmittedAt(shape.submittedAt)) return err("invalid-timestamp");
     const goa = Goa.parse(shape.goa);
     if (!goa.ok) return err(goa.error);
     const needsReservation = goa.value === 2 || goa.value === 3 || goa.value === 6;
     if (needsReservation && shape.reservation === null) return err("reservation-missing");
-    return ok({
-      kind: "original",
+    const base = {
       electionId: shape.electionId,
       voter: shape.voter,
       voterKind: shape.voterKind,
@@ -208,9 +260,27 @@ export const Ballot = {
       reservation: shape.reservation,
       rationale: shape.rationale,
       submittedAt: shape.submittedAt,
-    });
+    };
+    if (shape.kind === "amend") return ok({ kind: "amend", ref: shape.ref, ...base });
+    return ok({ kind: "original", ...base });
   },
 };
+
+// Per-voter resolution (BR-4): for each voter keep the single ballot with the
+// greatest submittedAt; on an equal-timestamp tie, later arrival wins (>=).
+// Structural invariant — the store's unknown-ref check guarantees an amend is
+// always appended strictly after the ballot it references, so a same-timestamp
+// amend sits later in the array; "later arrival wins" therefore realizes
+// "amend beats its referenced ballot on a tie" without inspecting kind.
+// Idempotent (a resolved list resolves to itself) and pure.
+export function resolveBallots(ballots: Ballot[]): Ballot[] {
+  const byVoter = new Map<string, Ballot>();
+  for (const b of ballots) {
+    const cur = byVoter.get(b.voter);
+    if (cur === undefined || b.submittedAt >= cur.submittedAt) byVoter.set(b.voter, b);
+  }
+  return [...byVoter.values()];
+}
 
 // --- distribution view (FR-1b/1c, ADR-4) -----------------------------------
 
@@ -340,24 +410,27 @@ const AGAINST = new Set([7, 8]);
 // The GoA-consensus holds are evaluated first, unchanged; only once they pass
 // does the choiceInternalNo winner decide the result (Issue #1261).
 export function tally(election: Election, ballots: Ballot[]): TallyResult {
+  // BR-4 #1: resolve to each voter's latest ballot before any counting — an
+  // amend supersedes the voter's earlier ballot, so the superseded original
+  // must count toward neither the GoA-consensus holds nor the choice winner.
+  const resolved = resolveBallots(ballots);
   const counts: GoaCounts = { favor: 0, against: 0, abstain: 0, discuss: 0 };
   let blocks = 0;
-  for (const b of ballots) {
+  for (const b of resolved) {
     if (FAVOR.has(b.goa)) counts.favor++;
     else if (AGAINST.has(b.goa)) counts.against++;
     else if (b.goa === 4) counts.abstain++;
     else counts.discuss++;
     if (b.goa === 8) blocks++;
   }
-  // GoA is counted over EVERY ballot (whole-set GoaCounts) for these holds.
+  // GoA is counted over the resolved set (one ballot per voter) for these holds.
   if (blocks >= 1) return { kind: "hold", reason: "block", counts };
   if (counts.discuss >= 2) return { kind: "hold", reason: "discussion-needed", counts };
   if (counts.favor + counts.against === 0) return { kind: "hold", reason: "quorum-short", counts };
-  // Winner-selection population: the per-voter latest-resolved ballot set (amend
-  // is not yet implemented, so this is all original ballots) minus GoA-4
+  // Winner-selection population: the resolved per-voter ballot set minus GoA-4
   // abstentions. Choice tallies are simple vote counts over this population only
   // (no choice x GoA cross distribution).
-  const eligible = ballots.filter((b) => b.goa !== 4);
+  const eligible = resolved.filter((b) => b.goa !== 4);
   const choiceCounts: ChoiceCount[] = election.choices.map((c) => ({
     internalNo: c.internalNo,
     label: c.label,

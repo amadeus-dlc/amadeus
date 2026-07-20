@@ -231,4 +231,61 @@ describe("t235 election-store", () => {
     const timeline = JSON.parse(readFileSync(join(root, "E-STORE-1", "timeline.json"), "utf8"));
     expect(timeline.some((e: { kind: string }) => e.kind === "tallied")).toBe(true);
   });
+
+  // --- U1 ballot-acceptance-failclosed (BR-3 unknown-ref) -------------------
+
+  test("appendBallot rejects an amend whose ref matches no accepted ballot, leaving the ledger unchanged", () => {
+    expect(Store.create(root, election()).ok).toBe(true);
+    const original = ballot("alice");
+    expect(Store.appendBallot(root, "E-STORE-1", original).ok).toBe(true);
+    // ref.submittedAt points at a ballot that was never accepted
+    const amend = {
+      ...ballot("alice"),
+      kind: "amend" as const,
+      ref: { electionId: "E-STORE-1", voter: "alice", submittedAt: "2026-07-18T00:00:00Z" },
+      submittedAt: "2026-07-19T00:30:00Z",
+    };
+    const rejected = Store.appendBallot(root, "E-STORE-1", amend);
+    expect(rejected.ok).toBe(false);
+    if (!rejected.ok) expect(rejected.error).toBe("unknown-ref");
+    // fail-closed: no partial write — the ledger still holds only the original,
+    // and the timeline booked no amendment event
+    const ledger = Store.ledger(root, "E-STORE-1");
+    expect(ledger.ok).toBe(true);
+    if (ledger.ok) {
+      expect(ledger.value.ballots.length).toBe(1);
+      expect(ledger.value.ballots[0]).toEqual(original);
+    }
+    const timeline = JSON.parse(readFileSync(join(root, "E-STORE-1", "timeline.json"), "utf8"));
+    const amendmentRows = timeline.filter(
+      (e: { detail?: string }) => e.detail === "ballot amendment: alice",
+    );
+    expect(amendmentRows.length).toBe(0);
+  });
+
+  test("appendBallot accepts an amend whose ref matches an accepted ballot and books an amendment timeline row", () => {
+    expect(Store.create(root, election()).ok).toBe(true);
+    const original = ballot("alice");
+    expect(Store.appendBallot(root, "E-STORE-1", original).ok).toBe(true);
+    const amend = {
+      ...ballot("alice"),
+      kind: "amend" as const,
+      ref: { electionId: "E-STORE-1", voter: "alice", submittedAt: original.submittedAt },
+      submittedAt: "2026-07-19T00:30:00Z",
+    };
+    expect(Store.appendBallot(root, "E-STORE-1", amend).ok).toBe(true);
+    // original coexists (ADR-5) — both rows on the ledger
+    const ledger = Store.ledger(root, "E-STORE-1");
+    expect(ledger.ok).toBe(true);
+    if (ledger.ok) {
+      expect(ledger.value.ballots.length).toBe(2);
+      expect(ledger.value.ballots[0]).toEqual(original);
+      expect(ledger.value.ballots[1]?.kind).toBe("amend");
+    }
+    // timeline books "ballot amendment: <voter>" (BR-3)
+    const timeline = JSON.parse(readFileSync(join(root, "E-STORE-1", "timeline.json"), "utf8"));
+    expect(
+      timeline.some((e: { detail?: string }) => e.detail === "ballot amendment: alice"),
+    ).toBe(true);
+  });
 });
