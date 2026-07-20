@@ -1,0 +1,33 @@
+{
+  "electionId": "E-FVEDPS13",
+  "kind": "s13-selection",
+  "question": "260720-formal-verif-experiment / delivery-planning §13: 固定順完了（最終成果物+memory+phase-check、15 sensors全PASS、初回review Major3是正、全15再PASS、増分review READY）。surface c1=4 Boltsをblind証拠閉包順として解釈、c2=数値WSJF不使用のhard risk-first、c3=並列度よりblind独立性優先は既存project規範と今回裁定に重複する。新規候補c4: blind比較実験の役割分離は名称だけで成立扱いにせず、各armのauthor identity・session・worktree・base SHA・公開input allowlist/hash・clean receipt・freeze SHAを記録する。後続armのprompt/context/path scanで先行arm evidence・他arm path・sealed fixtureが0件であることを機械確認し、integrationは全arm freeze後だけ開始する。project/Verification候補。どう採否するか。各自e6最終成果物/review/E-FVEDP2 recordをリードオンリー実測し、GoA・非採用時受容度付きで投票する。全票はleader現行CLIで受理する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "c1〜c3不採用、c4採用"
+    },
+    {
+      "internalNo": 2,
+      "label": "全件不採用（0件）"
+    },
+    {
+      "internalNo": 3,
+      "label": "c1〜c4すべて採用"
+    },
+    {
+      "internalNo": 4,
+      "label": "c4はparkし今回は不採用"
+    },
+    {
+      "internalNo": 5,
+      "label": "X. その他（noteに採否集合を明記）"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}
