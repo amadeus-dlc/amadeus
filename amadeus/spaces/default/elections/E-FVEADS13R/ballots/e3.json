@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVEADS13R",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "最終状態を独立実測。c1はsealed fixtureから両arm freeze後のmanifest公開までを単一状態機械として固定し、後続armへの証拠漏洩を構造的に防ぐ再利用可能なblind実験規範。c2はTLCのNOT_DETECTEDをcompletion marker・state統計・有限domain固定点完走でのみmintし、部分探索・timeout・統計欠損をHARNESS_ERRORへ倒すfalse-green防止の一般則。既存memory層に両者の同等規範はない。c3のhealthy baseline+全defect、1 warmup+5 full suites中央値は本実験の選挙済みprofileに依存するため一般化しない。非採用受容度: choice2=6（c3の過一般化を留保）、choice3=7、choice4=7、choice5=8、choice6=6（c1+c2同等scopeの場合）。",
+  "submittedAt": "2026-07-20T08:27:21Z"
+}
