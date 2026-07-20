@@ -19,13 +19,14 @@
 
 ## 検証結果
 
-- 対象・回帰: t236、t242、t244 の計21テスト、200 assertions、0 fail。
+- 対象・回帰: t236、t238、t241、t242、t244 の計36テスト、260 assertions、0 fail。
 - 落ちる実証: fix commit `0cba405ac4224576e00afa9b3d021c2a8206f59a` の確定後、`scripts/amadeus-election.ts` だけを pre-fix `25684c7a4` へ切り替えると新規テストが3 fail・exit 1。fix SHA で対象ファイルを復元し byte-identical を確認した。
 - 全 CI coverage: 391 test files、5525 assertions、0 fail。Claude substrate 不在により既存の live SDK 系は skip。
 - patch coverage: 追加24行中24行 covered、allowlist 0、uncovered 0。
 - `bun run typecheck`、`bun run lint`、`bun run dist:check`、`bun run promote:self:check`: 全て exit 0。lint の既存 complexity warning は変更面外で、新規 error はない。
 - linter / type-check センサー: 両方 `SENSOR_PASSED`。
-- SKILL 3面: byte-identical。`tests/unit/t238-election-record.test.ts` と `tests/e2e/t241-election-complete.test.ts` は非接触。
+- 既存 store sweep（実装時 worktree、fix commit `0cba405ac`）: glob 56件、`hold=0`、`winner` schema 保持=0、非空 `resolutions=0`。load は pre-fix / fix とも56/56成功。verify は #1268 以前の stored result と現 tally 再計算の winner schema 差により pre-fix / fix とも0/56成功だが、56件それぞれの exit code と stderr を全数比較して差分0を確認した（同一 store bytes に対する非退行実測、pre-fix ref `25684c7a4`）。
+- SKILL 3面: byte-identical。`tests/unit/t238-election-record.test.ts` と `tests/e2e/t241-election-machine-executor.test.ts` は非接触。
 
 ## 逸脱
 

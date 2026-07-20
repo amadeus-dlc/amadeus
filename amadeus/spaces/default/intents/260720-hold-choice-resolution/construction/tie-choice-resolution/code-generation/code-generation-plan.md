@@ -10,7 +10,7 @@
 - [x] Step 4: `handleRender` の `rulingOverride` を choice resolution に対応させ、`裁定: <label>(choice <n> — tie 裁定)` を `renderPersistDraft` へ渡す。非 tie の二値描画は維持する（FR-3、BR-5、P-3）。
 - [x] Step 5: pure parse の unit テストと、tie hold→choice resolution→tally 永続化→render の integration テストを追加する。happy path、二値拒否、非数値・先頭ゼロ・非実在 choice、非 tie 回帰を実測し、`t238` と `t241` は非接触を確認する（FR-4、FR-5、Comprehensive test strategy）。既存 Bun runner を使うため test configuration は変更しない。
 - [x] Step 6: `.claude/skills/amadeus-election/SKILL.md`、`.agents/skills/amadeus-election/SKILL.md`、`contrib/skills/amadeus-election/SKILL.md` に、単一提案型は二値・多肢 tie は `choice:<n>` を使う1行を同一内容で追加し、3面の同期を機械確認する（FR-4、BR-7）。正本・配布境界の設計に従い `dist/` 再生成は行わない。
-- [x] Step 7: 対象テスト、typecheck、lint、coverage、dist/self-install drift guard、`--ci` を実行する。fix commit 後に pre-fix 面へ限定切替して新規テストの赤を実証し、fix commit SHA で復元して全 green を再確認する（FR-4、FR-5）。
+- [x] Step 7: 対象テスト、typecheck、lint、coverage、dist/self-install drift guard、`--ci`、既存 store 全数の load/verify 非退行 sweep を実行する。fix commit 後に pre-fix 面へ限定切替して新規テストの赤を実証し、fix commit SHA で復元して全 green を再確認する（FR-4、FR-5、NFR-3）。
 
 ## 完成条件
 
