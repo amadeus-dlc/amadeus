@@ -1,0 +1,16 @@
+{
+  "electionId": "E-USSFDS13",
+  "voter": "e2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "c1-c4すべてskip、次回向け追加なし"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "1件以上keep（noteにcandidate id・scope project/team・採用本文・次回向け追加事項を記載）"
+    }
+  ]
+}
