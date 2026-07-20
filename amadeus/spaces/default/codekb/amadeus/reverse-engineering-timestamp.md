@@ -17,6 +17,23 @@
 - Delivery boundary: 実装・修正コード、`bun scripts/package.ts`/`promote:self` による dist・self-install 再生成、main merge/rebase、Issue close、PR 作成・更新は本 scan で実施していない。区間フォーカス正本変更0件のため dist ツリーは base と同一。
 - Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
 
+## 実行メタデータ(履歴: 260720-hold-choice-resolution)
+
+- Date: 2026-07-20(Asia/Tokyo)
+- Observed at: HEAD `f6ab1e48d321e11ab6355fa315d505e28bd0273b`(`git rev-parse HEAD` 実測一致、subject = `record(hold-choice-resolution): approval-handoff approved (ideation complete)`)
+- Intent: `260720-hold-choice-resolution`([Issue #1267](https://github.com/amadeus-dlc/amadeus/issues/1267) — 選挙 CLI の hold-resolution に勝者 choice 指定を追加する。多肢 choice tie 由来の hold を人間解決する際、二値語彙 adopted/rejected では勝者 choice を表現できないギャップ。E-TCRCG e4 留保の履行)
+- Scope: `amadeus`(enhancement — bugfix ではない)
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh(cid:reverse-engineering:c1、E-L63 の base 選定則)。base=`6f2455c43b7dbadafec83ab3d0b57d9fc8e5156c`(全 `re-scans/*.md` observed のうち HEAD 祖先で距離最小 = `re-scans/260719-ballot-failclosed-amend.md` の Observed。`git merge-base --is-ancestor 6f2455c43 f6ab1e48d` exit 0 実測、`git rev-list --count 6f2455c43..f6ab1e48d`=**87**)、observed=`f6ab1e48d321e11ab6355fa315d505e28bd0273b`。より新しい re-scan observed `37f8cf5e6`(260720-ballot-received-at)・`262a86db9`(260719-tally-choice-ruling)は本 HEAD の**非祖先**(`--is-ancestor` exit 1、並行 intent の squash tip)につき base 候補から除外(cid:reverse-engineering:rescan-base-ancestry / re-timestamp-merge-resolution)。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3、確約級引用5クラスタ+区間交差の帰属を独立スポット再実測 = **1点反証**あり)。
+- 測定 ref: 全 file:line は Observed=HEAD `f6ab1e48d` のワークツリー実ファイル直読(cid:measurement-ref-in-artifacts)。区間変更は `git log/diff 6f2455c43..f6ab1e48d -- <path>`、crossing 帰属は `git blame`/`git show 6f2455c43:<file>` で実測。実データ census は本 worktree(engineer-2、`f6ab1e48d`)の `amadeus/**/elections/**/tally.json` 実測。
+- 現行結論: 本 intent は**enhancement**(scope `amadeus`)で原因所在の該当なし。多肢 choice tie の hold(`model.ts:456` `{kind:"hold", reason:"tie"}`)を人間解決するとき、resolution 語彙 `tie: {adopted, rejected}`(`election.ts:70`、二値)は**勝者 choice を表現できない**。裁定は `rulingOverride`(`election.ts:389-393`)で `採用`/`不採用` へ二値写像され勝者 choice ラベルが描画に出ない。#1267 は `--resolution choice:<internalNo>` 形の受理を `renderPersistDraft` の winner 描画経路(`record.ts:120-131` established winner label 相当)へ合流させ、human-ruling-persist-through 準拠で record.md 反映まで実装する。拡張5面(語彙テーブル `election.ts:69-74` / fail-closed 検証 `:201-208` / 二値写像 `:389-393` / 永続 `HoldResolution` 型 `:89-94` / tie 発生源 `model.ts:442-456`)はすべて Observed に実在し機序確定。**1点反証(区間交差)**: Developer scan の「rulingOverride 本体は未変更(Bolt 4 由来)」は誤り — `rulingOverride`(`election.ts:389-393` + `record.ts:155/159` param)は区間内の **#1268(`ea6acac53`、2026-07-20)が `effective:TallyResult` established 合成から再形成した直近変更面**(`git blame` / `git show 6f2455c43:` 実測)。HOLD_RESOLUTIONS(:69-74)・handleHoldResolved(:190-226)の未変更判定は正しい。tie hold・resolution の本番実績ゼロ(本 worktree tally.json 51件は全て旧 outcome スキーマ、hold 0/winner-schema 0/非空 resolutions 0。Developer leader-tree 計数 62 との差は worktree ref 差で定性結論は一致)、tie hold-resolved / 採用分岐 / tie resolution 検証のテストも全欠落。e4 バッチ面(GoaLineCode/renderGoaLine/handleOpen/norm-metrics)は関数レベル非交差を裏取り。
+- Per-intent record: `re-scans/260720-hold-choice-resolution.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「最新: 260720-ballot-received-at」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、`re-scans/260720-hold-choice-resolution.md`。**codekb body 8成果物(business-overview / architecture / code-structure / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment)は全点温存**(churn 回避 — 実質の新規知識は「hold-resolution が tie 勝者 choice を表現できない enhancement ギャップ + 拡張面 rulingOverride が #1268 の直近変更面である crossing 事実 + tie hold/resolution の本番・テスト双方の空白」の1クラスタのみ。既存機構への機能追加であり構造・API・依存・技術スタックの現状を変えず、詳細は per-intent record に集約済み。cid:reverse-engineering:c1)。
+- Delivery boundary: 実装・修正コード、`bun scripts/package.ts`/`promote:self` による dist・self-install 再生成、main merge/rebase、Issue close、PR 作成・更新は本 scan で実施していない。区間 `scripts/` は #1268/#1273/#1277 の3本が変更しているが、本 intent の実装は未着手。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
 ## 実行メタデータ(履歴: 260720-ballot-received-at)
 
 - Date: 2026-07-20(Asia/Tokyo)
