@@ -129,25 +129,14 @@ function hasExactFingerprintKeys(record: Record<string, unknown>): boolean {
   );
 }
 
-function hasFingerprintStrings(
-  record: Record<string, unknown>,
-): record is Record<string, unknown> & {
-  id: string;
-  modalTitle: string;
-  herdrVersion: string;
-  codexVersion: string;
-} {
-  return ["id", "modalTitle", "herdrVersion", "codexVersion"].every((key) => {
-    const value = record[key];
-    return typeof value === "string" && value.length > 0;
-  });
-}
-
 export function parseSafetyWaitFingerprint(raw: unknown): SafetyWaitFingerprint | null {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return null;
   const record = raw as Record<string, unknown>;
   if (!hasExactFingerprintKeys(record)) return null;
-  if (!hasFingerprintStrings(record)) return null;
+  const stringFields = [record.id, record.modalTitle, record.herdrVersion, record.codexVersion];
+  if (!stringFields.every((value) => typeof value === "string" && value.length > 0)) {
+    return null;
+  }
   if (
     record.schemaVersion !== 1 ||
     typeof record.columns !== "number" ||
@@ -157,7 +146,9 @@ export function parseSafetyWaitFingerprint(raw: unknown): SafetyWaitFingerprint 
     !Number.isInteger(record.rows) ||
     record.rows <= 0 ||
     typeof record.visibleText !== "string" ||
-    !normalizeLineEndings(record.visibleText).split("\n").includes(record.modalTitle)
+    !normalizeLineEndings(record.visibleText)
+      .split("\n")
+      .includes(record.modalTitle as string)
   ) {
     return null;
   }
