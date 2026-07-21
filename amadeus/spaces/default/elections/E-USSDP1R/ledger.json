@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-USSDP1R",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Aを支持。訂正後DAGを実測するとU09はU01、U10はU01/U02/U09、U11はU09/U10に依存するため、U01→U02→U09→U10→U11がe2e closureまでの正しい初期列である。pluginのcontract/projection/composition/referenceは独立BoltのままE-USSUG1留保を守り、第5 Boltでgreenfield skeletonを閉じる限定解釈が最小逸脱。非採用時受容度はB=6（責務重複）、C=8（独立4 Bolt留保違反）。",
+      "submittedAt": "2026-07-20T08:09:05Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSDP1R",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 4,
+      "goa": 2,
+      "reservation": "最初のthin vertical BoltはU10の必須前提U02を含むU01+U02+U09+U10+U11の最小e2e sliceとし、その後U01/U02/U09/U10/U11を各one-Unit Boltで完全化する。非採用時はA=7、B=6（U02をthin sliceへ追加する条件）、C=8。",
+      "rationale": "Xを支持。訂正版DAGではU10がU01、U02、U09へ依存するため、Bの現行questions本文にあるU01/U09/U10/U11だけのthin sliceは成立しない。一方AはDAGとplugin 4独立Bolt留保を守るが、project.mdのALWAYS『最初のConstruction Boltを小さなend-to-end slice』を『最初のBolt列』へ読み替える。U02を含む最小thin sliceを第1 Boltで閉じた後、5 Unitを独立Boltで完全化すれば、DAG・最初Bolt e2e・plugin 4独立検証の三条件を同時に満たす。",
+      "submittedAt": "2026-07-20T08:09:10Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSDP1R",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "5-Bolt列をWalking Skeletonの限定的な例外解釈としてDelivery Planningへ明記し、U01/U09/U10/U11の独立review・rollback・verification境界を崩さず、U11でend-to-end closureを必須化すること。",
+      "rationale": "Aを選択。実測したDAGではU09はU01、U10はU01/U02/U09、U11はU09/U10へ依存するため、U01→U02→U09→U10→U11が依存を守る最短progressive sequenceである。plugin contract/projection/composition/referenceの4独立BoltというE-USSUG1留保も維持できる。Bは最初のe2eを逐語的に満たす一方、同じUnitをthin Boltと完全化Boltへ重複配賦して12 Unitの責務境界を弱める。Cは4独立Bolt条件へ直接反する。非採用時受容度: B=6、C=8、X=6。",
+      "submittedAt": "2026-07-20T08:09:56Z"
+    }
+  ],
+  "late": []
+}

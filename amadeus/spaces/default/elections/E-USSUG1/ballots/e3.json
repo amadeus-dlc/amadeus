@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSUG1",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "非採用時はCを、pluginのcontract/projection/composition/referenceをDelivery Planningで独立検証可能なBoltへ分ける条件で受容する。BはC2とC7がXLのままreview・falling proof・再実行の局所性を失うため受容しない。",
+  "rationale": "Aを支持。C2はrecovery/gate、swarm/naming、routing/guard、iteration/previewで状態遷移と検証oracleが異なり、pluginもcontract、projection、composition、referenceで所有seamと失敗時不変条件が異なる。12 Unitなら各変更理由へtests/docsを同乗し、cycle-free DAG上で最大4並行と小batchを保ちながら、最後のevidence/ledger closureまで局所的に検証できる。増えるcontract管理は既決のC1 typed contractとC2/C5/filesystem seamで明示的に制御可能。",
+  "submittedAt": "2026-07-20T07:50:53Z"
+}

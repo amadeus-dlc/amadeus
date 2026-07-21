@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BRARA3",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A 採用。construction ガードレール(要求なき互換シム禁止)と整合し、『既存 timeline を verify し直す運用が存在しない』は反証可能な不在根拠(完了 record の再 verify verb 実行は現行フローに無い)。B はシム維持コストと NFR 根拠を要し不要。C は完了済み監査記録の書き換えで、append-only 生成物の履歴 rewrite 禁止(project.md deployment-pipeline:c3 の revert-only 回復原則)と矛盾する。受容度: B=6 / C=8(既決ノルム矛盾 — 反証根拠: project.md c3 は『履歴 rewrite をせず人間承認付き revert で回復』を規定、過去 record の機械再構成はこれに正面衝突)。",
+  "submittedAt": "2026-07-20T00:33:32Z"
+}

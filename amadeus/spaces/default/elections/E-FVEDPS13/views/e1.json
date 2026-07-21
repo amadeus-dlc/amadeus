@@ -1,0 +1,31 @@
+{
+  "electionId": "E-FVEDPS13",
+  "voter": "e1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 5,
+      "label": "X. その他（noteに採否集合を明記）"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "c1〜c4すべて採用"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "c1〜c3不採用、c4採用"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 2,
+      "label": "全件不採用（0件）"
+    },
+    {
+      "displayNo": 5,
+      "internalNo": 4,
+      "label": "c4はparkし今回は不採用"
+    }
+  ]
+}

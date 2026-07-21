@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TCRRA2",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A(choice tie は hold で人間エスカレーション)を支持。エスカレーション正準リスト (1)『選挙の可否同数』は既決ノルムであり、tie の機械 tie-break(B)はこの既決規範と正面衝突する — 実装が規範を上書きする形になり選挙不要(既決適用)の原則にも反する。既存 hold 分岐(block/discussion/quorum)の GoA 軸維持+tie の choice 軸追加という A の構成は変更最小で、TallyResult の hold reason に tie が既在(model.ts:311 HoldReason に tie 実在 — 自ツリー実測)のため型変更も不要。自案非採用時: B=7(既決ノルム衝突)",
+  "submittedAt": "2026-07-19T22:44:15Z"
+}

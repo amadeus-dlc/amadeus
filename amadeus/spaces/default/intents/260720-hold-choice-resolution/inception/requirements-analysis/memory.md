@@ -1,0 +1,23 @@
+<!-- INVARIANT: examples are single-line HTML comments so a fresh template parses to total=0 (MEMORY_EMPTY). Do NOT un-comment or split across lines. t100 guards this. -->
+> This file is maintained by the orchestrator during stage execution. Add observations at the gate ritual, not by editing here directly.
+
+## Interpretations
+<!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
+
+## Deviations
+<!-- example: 2026-05-29T10:14:32Z — skipped the optional caching layer the stage prose suggested; the dataset is small enough that it adds risk -->
+
+## Tradeoffs
+<!-- example: 2026-05-29T10:14:32Z — picked TDD over BDD this run; the team is unit-first and the domain is well-understood -->
+
+## Open questions
+<!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
+
+- [2026-07-20T03:41Z] Interpretation: B-1 どおり Q1(契約該当性のノルム解釈)を選挙先頭に置き、Q2/Q3(構文・共存形)と同時配信 — Q1=B なら実装前エスカレーションを RA 内で確定する構え。裁定依存欄はプレースホルダのみ(ruling-dependent-placeholder)。
+
+- [2026-07-20T04:03Z] Interpretation: E-HCRRA1〜3 裁定受領。Q3=B により Q1 の反転条件(e1 留保)が発動し、ユーザーエスカレーションで B 承認済み(03:47Z 台)— 契約変更は承認済み前提として要件化。留保転記は Q1 2件+Q3 3件 = 分母5・転記5(questions [Answer] と requirements 本文の両面)。
+- [2026-07-20T04:03Z] Interpretation: e4 留保(二値の曖昧受理を無音で通さない)は B 置換下では「tie への二値 loud 拒否+有効形ヒント」として FR-1 受け入れ基準化 — 警告 or 明示要求の設計裁定は置換により拒否一択へ自然解決。
+
+- [2026-07-20T04:10Z] Deviation: reviewer iteration 1 = NOT-READY(Major 3: Q1 留保の e1 分脱落 — leader 配信の「2件」表記に依拠し record 原文の GoA 2x3 を自分で照合しなかった reservation-transcription-count-check 違反 / t241 の W-1 誤帰属 = mechanism-cite-verify 違反 / NFR-3 の ref 欠落 = measurement-ref 違反)。是正: e1 留保を record 原文 verbatim で追記(diff 照合済み)・e4 留保も原文精密化・3名表記化・t238/t241 の根拠分離・NFR-3 の両 ref 併記+定性化。教訓 = 留保件数の分母は配信文でなく record の GoA 行から自分で数える。
+
+- [2026-07-20T04:12Z] Interpretation: iteration 2 = READY(3 Major 閉包・分母6=転記6の機械照合成立)。non-blocking 残留(e3 留保の「機械確認」圧縮)を NFR-1 への1行追記で完全化(是正は reviewer 推奨どおり)。

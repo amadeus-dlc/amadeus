@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFND13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "c1/c2不採用・c3採用。c1のscanGoaHeads seamはE-GSFNR1留保を本intentで具体化した固有裁定。c2はcommand出力前の見込み値報告で、numbers-from-command-output-only / verify-before-notifyの既存違反実例としてPM回付が適切。c3は実regex対照で、非anchored scannerがE-ABC-/E-ABC-xからvalid prefix E-ABCをmatchする一方、anchored whole-value validatorは拒否し、E-SDE-CG4は全長受理することを確認した。同じsegment文法でもscannerとvalidatorの所有面・accepted languageは同一でないという一般化可能な意味論であり、独立cidでなく既存citation-semantics-checkへのregex anchoring面1行追補が適切。成果物の対照assertとreview it.2是正後sensor PASSもaudit確認した。",
+  "submittedAt": "2026-07-20T08:02:23Z"
+}

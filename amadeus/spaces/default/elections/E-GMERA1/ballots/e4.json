@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GMERA1",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 3,
+  "goa": 2,
+  "reservation": "別 Issue には『head 拡張後もスパース行9行は bin 段 :692 で fail する』実測(pass=0/headFail=8→binFail 移行)を転記し、集計実装 intent の RE が再測定しなくて済む形で残すこと",
+  "rationale": "bugfix スコープの surgical 原則(P5)に従い修正は主訴(head 段 hyphen 拒否)に限定するのが正。B のスパース受理は ADR-4 canonical 契約の変更+集計未実装(:544 NOT COLLECTED を verbatim 実測)下での先行設計となり、仕様変更に近くスコープ超過。ただし A 単独では『regex 修正は十分条件でない』という RE の中核発見(pass=0/headFail=8/binFail=1 — 自 tree の parseGoaLine 直呼びで完全一致再現済み)が追跡不能になるため、Issue 起票で発見時点の記録を残す C が既存ノルム(発見時 Issue 起票)とも整合。自案非採用時: A=6(発見が record にのみ残る)/ B=7(スコープ超過)/ D=7(主訴放置)",
+  "submittedAt": "2026-07-19T14:57:53Z"
+}

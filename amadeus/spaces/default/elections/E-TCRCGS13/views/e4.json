@@ -1,0 +1,16 @@
+{
+  "electionId": "E-TCRCGS13",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "採用 — 新規 cid または既存 cid(c2 worktree ディスパッチ規律系)への追補として persist"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "不採用 — #1269 の documentation 起票で足りる(diary 記録のみ)"
+    }
+  ]
+}

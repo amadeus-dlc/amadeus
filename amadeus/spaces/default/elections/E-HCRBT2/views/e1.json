@@ -1,0 +1,16 @@
+{
+  "electionId": "E-HCRBT2",
+  "voter": "e1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "不採用 — 既存 cid の含意で足りる(diary・違反実例のみ)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "採用 — report-final-values-only / numbers-from-command-output-only 系へテスト母集団面を追補統合"
+    }
+  ]
+}

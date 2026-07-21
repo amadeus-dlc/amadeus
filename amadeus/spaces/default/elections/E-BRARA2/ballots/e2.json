@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BRARA2",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A 採用(交差当事者として)。late の実体は『tally の fixed set に物理的に入れなかった票』であり、fixed set への包含は受理時刻で決まる(materialize は受理済み ballots の blind lift — 自 intent の RE/AD で実測済み)。submittedAt 軸維持(B)は『申告 pre-tally・受理 post-tally』票が not-late 判定なのに fixed set 不在という機構矛盾の穴を残す。当方の per-voter 最新解決(E-BFARA2)は投票者意図の新しさ = submittedAt 軸で、遅延判定 = 受理軸とは独立(質問の交差整理どおり、BR-4b の非解決契約とも両立)。受容度: B=6。",
+  "submittedAt": "2026-07-20T00:33:32Z"
+}

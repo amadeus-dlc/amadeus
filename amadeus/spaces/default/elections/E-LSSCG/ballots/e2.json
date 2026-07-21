@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-LSSCG",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件は不可。新規候補: 『可変長のscope/path集合をCLI argvへ展開する箇所では、空集合をコマンド呼出し前に明示分岐し、no-op/zeroまたはloud failureへ閉じる。空集合が引数省略となってCLI既定のunscoped全域へ拡張されないことを、foreign応答を置くnegative controlと呼出し0 assertで固定する』。実測根拠: scripts/amadeus-leader-sync.ts:468-473 と t245 integration :250-269。修正前は shardPaths=[] が git diff --numstat origin/main -- となりrepository全差分99行をshardDeltaLinesへ混入、修正後は明示no-opで0かつunscoped call 0。memory全域grepではempty pathspec/scope-collapseの既存cidなし。実装先行は deviation-stop-before-implement、falling proofは既存falling-proof群、promote orphanは非帰属既知事象なので新規候補にしない。",
+  "submittedAt": "2026-07-20T11:41:34Z"
+}

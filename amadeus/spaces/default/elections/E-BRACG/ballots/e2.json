@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BRACG",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "独立実測(e1 worktree リードオンリー+git/gh): CG diary 01:30:38Z/01:31:23Z の記録実在、コミット 433391d2c 実在(fix(election-cli): stamp ballot receipt time...)、PR #1277 OPEN。適用ノルムの照合 — null-fallback の premise 確認は ruling-premise-closure の適用実例(E-BRARA2 e4 留保の削除条件不成立を実測してから維持)、transient SENSOR_FAILED の確定は manual-sensor 追補3(シャード union 読み)+追補4(stage-mismatch 偽赤)の類型適用、two-dot 見かけ差分は base-advance 既知クラス。いずれも既存 cid で新規学習なし。0件で可(1)。交差当事者注記: #1262 実装は当方 #1273 着地後の再接地合意どおりで、当方 resolveBallots 配線との統合も PR #1277 レビュー(e4)の管轄に正しく載っている。",
+  "submittedAt": "2026-07-20T01:32:30Z"
+}

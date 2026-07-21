@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-USSPD",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。memory.md は4区分とも空。evidence.md:5-21 は同日 RE の代用と5面の既決ルール被覆を実証し、discovered-rules.md:5-15 / team-practices.md:5-13 は practices-discovery:c1/c2、Walking Skeleton、生成投影同期、公開契約テスト、手動 release 契約の適用確認に留まる。新規の横断学習候補はない。",
+      "submittedAt": "2026-07-20T07:19:39Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSPD",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件は不可。新規候補（E-FVEPD で提示済みの同一候補を本 intent の追加実証として採用）: ALWAYS compare every stage sensor predicate with each produced artifact's canonical shape before approval; explicitly exempt marker artifacts such as *-timestamp.md and *-questions.md from prose-heading floors when their declared shape intentionally lacks H2 headings. 根拠: e5 の .codex/amadeus-common/stages/inception/practices-discovery.md:98-106 は practices-discovery-timestamp.md を単一行 Discovered: <ISO-8601 timestamp> at commit <hash> と規定するが、実成果物は14行・H2見出し2個（同成果物:1-14）。監査では required-sections が同成果物を PASSED としており、canonical shape 違反を H2 prose 化で偽緑にした。memory_entries_total=0/candidates=[] はこの横断ギャップを回収していない。team-practices/discovered-rules/evidence の差分0判断自体は c1/c2 と既決ルール照合に整合する。",
+      "submittedAt": "2026-07-20T07:20:27Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-USSPD",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e5 record をリードオンリー実測。team-practices.md / discovered-rules.md / evidence.md / practices-discovery-timestamp.md の4点を確認し、Way of Working / Walking Skeleton / Testing / Deployment / Code Style の5面が team.md / project.md の既決規則で被覆されることを原文照合した。最新 audit は required-sections 4/4・upstream-coverage 4/4 が全て SENSOR_PASSED、PRACTICES_DISCOVERED 記録済み、git diff --check PASS。stage memory はテンプレートのみで実エントリ0。新規の横断学習候補は認めず、0件で可。表示順では2番目、internalNo=1 を機械確認して mint。",
+      "submittedAt": "2026-07-20T07:20:25Z"
+    }
+  ],
+  "late": []
+}

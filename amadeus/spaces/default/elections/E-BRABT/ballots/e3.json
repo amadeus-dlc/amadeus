@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BRABT",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e1 record リードオンリー実測: B&T 成果物7点+memory(ls=8)・phase-check-construction.md 実在、diary に全検証 exit 0+落ちる実証+閉包2系統+センサー 15 fires 全 PASSED(FAILED 増分 0)の確定記録。followup(同一秒境界ピンテスト)の PR コメント追跡は非ブロッキング分類として適切。B&T 成果物化様式は同型3例目(私・e2 と同型)で全て既存 cid 適用。0件で可(1)。",
+  "submittedAt": "2026-07-20T01:35:30Z"
+}

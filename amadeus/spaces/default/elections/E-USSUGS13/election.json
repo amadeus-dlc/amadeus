@@ -1,0 +1,21 @@
+{
+  "electionId": "E-USSUGS13",
+  "kind": "s13-adoption",
+  "question": "260720-upstream-sync-230 / units-generation §13候補0件確認。成果物3件完成、E-USSUG1 A=12 Unitsとe3 GoA2留保をquestions/dependency/story-mapへ全数転記。独立reviewer READY/findings0/GoA favor1/留保0。LOC再加算5,840–9,770、24/24 primary owner、SKIP/deferred侵入0、YAML 12/duplicate0/unknown0/self0/cycle0/root6、plugin4 Unit独立境界を確認。sensorは3成果物 required-sections+upstream-coverage全6 PASS、questions answer-evidence PASS。surface c1=12 capability-cohesive Units案を3-0採用し、実装順やcritical pathは定めずcomponent変更理由と独立検証境界だけをDAGへ写像する、というintent固有裁定。新規横断norm化不要との提案。parked open questionはe3留保のDelivery Planning引継ぎ。各自e5成果物/reviewer/sensor/memoryを実測しGoA付きで投票する。全票はleader現行CLIで受理する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — c1はintent固有裁定の成果物固定"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件不可 — noteに新規横断学習候補を明記"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}

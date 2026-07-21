@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TCRRA3",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "内訳は choice 別の単純票数のみに限定(choice×GoA のクロス分布は持たない)— record 描画の監査可能性を確保しつつ型と fixture の肥大を抑える。",
+  "rationale": "実測: rulingText(record.ts:107-110)は outcome 2値から裁定行を描画し勝者 choice を表現できない。record.md はチームの共有裁定面(persist 文の GoA 度数分布行と同格)であり、winner label+票数内訳の描画は P2(実測事実のみを根拠)の record 面。verify の recompute 比較(election.ts:440 系)は型拡張に機械追随可能。B 非採用受容度: 6(ledger 再導出で監査は可能だが、record 単体で裁定根拠が読めない)。",
+  "submittedAt": "2026-07-19T22:44:10Z"
+}

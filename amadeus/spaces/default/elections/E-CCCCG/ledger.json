@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-CCCCG",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "配布ビューからは対象ステージ・観測の所在が特定できず一次記録の独立検分は限定的 — 分類方針(適用実例は PM 台帳回付・新規 cid 化しない)への同意として賛成。",
+      "rationale": "直近ラウンドの同型裁定(E-GMERE/E-GMERAS13/E-CCCRAS13/E-BFAAH)と一貫。",
+      "submittedAt": "2026-07-19T22:10:22Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-CCCCG",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "PR #1258 の独立レビュアー当事者として、ステージ実測主張の大半(留保2件充足・origin repro 閉包・消費6箇所再列挙・READY)は自分の実測と一致済み。e3 CG diary をリードオンリー実測: 4 Interpretation+1 Open question はいずれも既存 cid の適用実例(degrade-scope-unit-dir-layout / agents-skills-usage の同等手段充足 / bolt-refs-slug-form+mirror-merge-before-approve の経路(b) / local-ci-red-assertion-verbatim の帰属確定)で、自分の非ブロッキング所見(fork delta 遅着 merge の抑止)も Open question として followup 判断へ正しく記録されている。落ちる実証 pre-fix 面切替の実施は E-GMECG で採用済みの追補(commit-first)に従っており新規性なし。新規ノルムの隙間なし、0件で可",
+      "submittedAt": "2026-07-19T22:11:49Z"
+    }
+  ],
+  "late": []
+}

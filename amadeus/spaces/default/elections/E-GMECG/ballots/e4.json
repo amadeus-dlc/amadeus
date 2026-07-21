@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GMECG",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "実測確認: e1 diary の Deviation(2026-07-19T20:30:32Z — builder が fix 未コミットで checkout HEAD 実行し修正を一時消失、即時回復・申告記載)を verbatim 確認、falling-proof-no-stash 原文(team.md:267)に『復元は regen/再 checkout』とあるが commit-first の前提条件と復元 ref の明示要求は不在であることを確認。不採用理由候補の『含意で足りる』読みに対する反証は本ヒヤリハット自体 — 既存 cid が存在する状態で発生した実例であり、含意は執行力を持たなかった。追補は1文で肥大なし、fix 消失という falling-proof-injection-one-set と同族のデータ喪失クラスを事前遮断する。PR #1256 レビュアーとして builder の全検証 exit 0・落ちる実証 4fail→54pass・閉包 ok:true はレビューで独立確認済みの事実とも整合。追補統合(独立 cid 化しない)の形式も既存慣行どおり。採用",
+  "submittedAt": "2026-07-19T20:33:14Z"
+}

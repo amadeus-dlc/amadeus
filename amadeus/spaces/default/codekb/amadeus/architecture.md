@@ -1,8 +1,109 @@
 # アーキテクチャ
 
-> **2026-07-19 更新（intent `260718-election-ts-foundation`、最新）**: 選挙 TS 基盤の配布境界を確定。反証課題「dist 非対象の local overlay チャンネルが存在しない」は反証され、`contrib/skills/` overlay が canonical→dist→self-install の3層に加わる4本目の配布チャンネル(dist バイパス)として実在することを確認(下記「contrib overlay 配布チャンネル」節)。base `e9a001105` → observed `c2e4975ff`(69コミット)で diff-refresh、フォーカス面の区間変更は軽微。
+> **2026-07-20 更新（intent `260720-upstream-sync-230`、現在）**: base `a326f47bc0146a3b4285552f42b92fd61fb343a7` → observed `545e69c836d46f7bec2fa351c8e668026eb5fad5`（32コミット）の differential refresh。24 ADOPT/ADAPT の主戦場は「stage schema + Unit kind」から graph/parser/directive/sensor、plugin discovery/package、6 harness projection、compose/no-clobber/self-heal compile、dist、4 harness self-install、tests/docs へ流れる変更鏖である。件数は Developer scan 実測（core tools 30、hooks 11、agents 14、stages 32、sensors 5、harness 六面 69 files）に基づく。
+
+## upstream v2.3.0 同期の現行アーキテクチャ（260720-upstream-sync-230）
+
+Amadeus は one-core-many-harnesses を維持する。`packages/framework/core/` がエンジン・stage・protocol・knowledge の正本、`packages/framework/harness/{name}/` がホスト固有 adapter の正本、`scripts/package.ts` が六ハーネスの `dist/` を生成する。セルフインストールはうち4ハーネスの closed list であり、packager の6ハーネス open set と区別する（測定 ref: `scripts/package.ts:63-72,166-176,587-729`）。
+
+```mermaid
+flowchart LR
+  Schema["stage schema + Unit kind"] --> Graph["graph / parser / directive / sensor"]
+  Graph --> Plugin["plugin discovery + compose"]
+  Plugin --> Package["scripts/package.ts"]
+  Core["packages/framework/core"] --> Package
+  Harness["packages/framework/harness/<name>"] --> Package
+  Package --> Dist["dist: 6 harnesses"]
+  Dist --> Install["self-install: 4 harnesses"]
+  Graph --> Tests["Bun tests"]
+  Plugin --> Docs["user + developer docs"]
+```
+<!-- Text fallback: stage schema と Unit kind が graph/parser/directive/sensor へ波及し、plugin discovery/compose と core/harness 正本を packager が6ハーネス dist へ投影する。dist のうち4面を self-install し、同じ契約を tests/docs が検証する。 -->
+
+### 24項目の構造判定
+
+| # | 識別子 | 判定 | 構造根拠（observed） |
+|---:|---|---|---|
+| 1 | bolt-dag-selfheal | MISSING | `amadeus-orchestrate.ts:737-750` は null を無音 degrade |
+| 2 | gate-revision-backstop | PARTIAL | `:3064-3080` は engine-opened gate のみ回復 |
+| 3 | swarm-batch-advance | EQUIVALENT 候補 | `:1961-1972` が全 batch 走査、`amadeus-swarm.ts:724-769` が merge failure 降格 |
+| 4 | help-routing | MISSING | `amadeus-utility.ts:3058-3081` は `intent help` を target 扱い |
+| 5 | compose-pending-freshness | MISSING | `amadeus-stop.ts:441-465` は marker 存在のみ判定 |
+| 6 | recompose-autonomy-guard | MISSING | `amadeus-utility.ts:3460-3503` は Running のみ検査 |
+| 7 | unit-kind-pruning | MISSING | `produces_kinds` 契約なし |
+| 8 | unit-major-iteration | MISSING | major iteration 契約なし |
+| 9 | scope-cost-preview | MISSING | scope 費用 preview なし |
+| 10 | gate-next-stage-naming | PARTIAL | state/audit に next stage はあるが directive に非投影 |
+| 11 | nested-root-detection | MISSING | workspace scanner に nested root signal なし |
+| 12 | submodule-detection | MISSING | `amadeus-utility.ts:2340-2424` に `.gitmodules` advisory なし |
+| 13 | execpath-spawn | MISSING | adapter 5サイトが bare `bun` |
+| 14 | kiro-ide-hook-context | PARTIAL | adapter `:58-99` に stdin race、IDE payload 分類契約不在 |
+| 15 | project-dir-quoting | MISSING | settings example の `$CLAUDE_PROJECT_DIR` 13件が quote 0 |
+| 16 | reviewer-date-persona | MISSING | reviewer 指示に `date -u`/persona 契約なし |
+| 17 | reviewer-read-scope | MISSING | `stage-protocol.md:866-872` は全 artifact 読み |
+| 18 | stage-schema-extensions | MISSING | number/name/bundle/required_sections なし、`when` は予約拒否 |
+| 19 | packager-plugin-projection | MISSING | plugin discovery/projection なし |
+| 20 | plugin-compose-hook | MISSING | compose hook なし |
+| 21 | test-pro-reference-plugin | MISSING | reference plugin なし |
+| 22 | plugin-docs | MISSING | plugin/docs/packager seam の契約なし |
+| 23 | ported-tests | MISSING | upstream t199-t219/t188 相当の現行再著作なし |
+| 24 | docs-updates | PARTIAL | 基盤 docs は広いが採用機能/plugin は未記載 |
+
+## Interaction Diagrams
+
+### plugin 活性化からハーネス投影まで
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant C as Compose
+  participant S as Stage schema
+  participant P as Packager
+  participant H as Harness projection
+  participant V as Drift checks
+  U->>C: plugin を選択
+  C->>S: bundle / required sections / kind を解決
+  S->>P: 正規化済み manifest を渡す
+  P->>H: 6ハーネス用に適応投影
+  H->>V: byte / orphan / unreferenced を検査
+  V-->>U: 成功または loud failure
+```
+<!-- Text fallback: ユーザーが plugin を選ぶと compose が schema 契約を解決し、packager が6ハーネスに適応投影した後、byte/orphan/unreferenced 検査が結果を返す。 -->
+
+### Construction swarm の現行同等経路
+
+```mermaid
+sequenceDiagram
+  participant O as Orchestrator
+  participant D as bolt_dag
+  participant W as Unit worktrees
+  participant R as Swarm referee
+  O->>D: 全 batch を走査
+  D-->>O: 最初の未完了 batch
+  O->>W: Unit を隔離実行
+  W->>R: check / finalize
+  R-->>O: merge 成功のみ converged
+```
+<!-- Text fallback: orchestrator が bolt DAG の全 batch から未完了分を選び、Unit worktree を実行し、referee が check/finalize と merge 結果を反映する。このため swarm-batch-advance は EQUIVALENT 候補である。 -->
+
+> 以下は過去 intent の履歴であり、今回の current marker ではない。
+
+> **2026-07-19 更新（intent `260719-cursor-complete-clear`、履歴）**: [Issue #1248](https://github.com/amadeus-dlc/amadeus/issues/1248) の「完了 intent シャードへの無期限監査追記」を、base `591b6a2a2` → observed `a326f47bc`(52コミット)で diff-refresh。フォーカス面(カーソルライフサイクル・complete 経路・監査追記チェーン・フック群)の focus ファイル区間コミット13件は全て非交差。根本は active-intent カーソルの **set⇔clear 非対称** と監査ルーティングチェーンの status ゲート不在(下記「active-intent カーソルの set⇔clear 非対称と監査ルーティング」節)。
+
+> **2026-07-19 更新（intent `260718-election-ts-foundation`、履歴）**: 選挙 TS 基盤の配布境界を確定。反証課題「dist 非対象の local overlay チャンネルが存在しない」は反証され、`contrib/skills/` overlay が canonical→dist→self-install の3層に加わる4本目の配布チャンネル(dist バイパス)として実在することを確認(下記「contrib overlay 配布チャンネル」節)。base `e9a001105` → observed `c2e4975ff`(69コミット)で diff-refresh、フォーカス面の区間変更は軽微。
 
 > **2026-07-18 更新（intent `260718-hooks-config-conflict`、履歴）**: [Issue #770](https://github.com/amadeus-dlc/amadeus/issues/770) の Codex hook 設定競合を、base `e9a001105d253e14affb77417423d9f0b0360f9e` から observed `594ba21d636218558b711b371c286f16731fb081` まで8コミットで diff-refresh。フォーカス契約の区間変更は0件で、現行コードと外部 agmsg 1.1.7 の reader／writer を再照合した。技術方針は `【裁定待ち】`。
+
+## active-intent カーソルの set⇔clear 非対称と監査ルーティング(260719-cursor-complete-clear、Issue #1248)
+
+active-intent カーソル(per-user、`ACTIVE_INTENT_POINTER = "active-intent"` `amadeus-lib.ts:400`)は監査シャードのルーティング先を決める単一の状態だが、その**ライフサイクルが片側だけ実装された非対称**になっており、これが完了 intent シャードへの無期限追記(モグラ叩き)の構造的原因である。
+
+- **set は2経路、clear は0経路**: 書き手は `setActiveIntentCursor`(`amadeus-lib.ts:1725-1733`、書込 `:1729`。呼び出し元 = intent 作成ヘルパー `:1921` と intent 切替 verb `amadeus-utility.ts:3083`)と birth 時書込(`amadeus-lib.ts:2147`)の2箇所のみ。カーソルを消す関数(`clearActiveIntent` 等)はコードベースに存在しない(repo 全域 grep で確認)。intent ライフサイクルの終端(complete)に対応する clear が欠落 = symmetric-pair-review が指す「片側だけ実装された非対称」クラスタ。
+- **complete はカーソルを触らない**: `handleCompleteWorkflow`(`amadeus-state.ts:1550-1680`)は `Status: Completed` 設定・監査4行 emit・`writeStateFile` の後、registry status 前進のみ(`:1668-1669` `updateIntentStatus(pd, dir, "complete")`)。カーソルは完了 intent を指したまま残留する。
+- **監査ルーティングチェーンに status ゲートが無い**: `appendAuditEntry`(`amadeus-audit.ts:281`)→ `ensureAuditFile`(`:237-247`、無条件 dir/ファイル作成)→ `auditFilePath`(`amadeus-lib.ts:2181-2185`)→ `recordDir`(`:1095`)→ `activeIntent`(`:1059-1084`)。`activeIntent` の判定は `records.includes(raw)`(`:1074`)のみで **intents.json の status を参照しない** — record dir が実在する限り Completed でもカーソル値を返す。全段に status 参照が無いため、残留カーソルがある限り監査は完了 intent のシャードへ append され続ける。
+- **追記到達フックは7つ**: `mint-presence`(主犯、`:73-74` ゲートは state ファイル存在のみで status ガード無し・毎ターン HUMAN_TURN 追記)、`audit-logger`、`sensor-fire`、`session-start`、`session-end`、`validate-state`、`log-subagent`。すべて共通末端 `appendAuditEntry`→`auditFilePath`→`activeIntent` を通る。非到達4フック(`stop` は読取専用、`statusline`/`runtime-compile`/`sync-statusline`)。
+
+対称性を補う修正方向は2案(complete 時にカーソルを clear するエンジン側修正 / 監査ルーティングで参照先 registry status が `complete` のとき追記を no-op にするフック側防御層)で、選択は requirements/選挙で確定する。欠陥は base `591b6a2a2` 時点から現存し、区間52コミットに退行・再導入はない。
 
 ## contrib overlay 配布チャンネル(dist バイパス、260718-election-ts-foundation)
 

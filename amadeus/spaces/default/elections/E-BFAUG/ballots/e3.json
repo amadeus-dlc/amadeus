@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFAUG",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record リードオンリー実測: 成果物3点+questions 実在、diary に Planning スキップの Deviation 記録(reviewer が audit 実測 = 質問・GATE イベント 0件で捕捉)と『結論の自明性は工程省略の根拠にならない — election-answer-after-ruling 同族の違反実例』の自己分類、iteration 2 READY 記録を確認。UG 帰属センサーの時系列末尾(23:09:17-35Z)は両成果物とも PASSED で『最新 FAILED 0件』と整合(FAILED は是正前履歴)。違反実例の PM 回付は適切、新規プロセス学習なし。0件で可(1)。",
+  "submittedAt": "2026-07-19T23:11:50Z"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PM10B",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "既存 cid 群の「マーカー4語彙」表現(re-timestamp-merge-resolution / E-PM5 M2 等)との読み分けを追補文に1句明記すること — 本追補は『機械検査スクリプトの述語』を3語彙+単独 -cE に限定する規定であり、目視・手動検分の文脈で ======= を見ること自体は妨げない(admission check での矛盾判定回避)。",
+  "rationale": "独立実測: 私自身 #1271 準備で grep -cE 複数ファイル時の per-file 出力に足を取られ(grep -v :0 の後処理が必要だった)、======= は本 repo の md(setext 見出し・表罫線)で偽陽性になることを確認済み。",
+  "submittedAt": "2026-07-20T01:52:55Z"
+}

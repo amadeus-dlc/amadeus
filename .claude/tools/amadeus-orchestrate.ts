@@ -87,7 +87,7 @@ import {
   codekbRepoName,
   classifyMigrationRequest,
   type MigrationRequest,
-  ensureStageDiary,
+  ensureStageDiaryForDirective,
   errorMessage,
   firstInScopeStageOfPhase,
   getField,
@@ -1165,11 +1165,16 @@ function buildRunStageDirective(
     stage_file: stageFileFor(node.phase, node.slug),
   };
   // Deterministic diary creation at the single chokepoint every issuance path
-  // (advance / jump / birth / resume / --single) funnels through. Skipped when
-  // the record prefix is unresolved (pre-birth shell — no intent dir to write
-  // into) or no ctx carries a live projectDir. ensureStageDiary never
-  // overwrites an existing diary (#1080).
-  if (recordPrefix !== null && codekbCtx) ensureStageDiary(codekbCtx.projectDir, directive.memory_path);
+  // (advance / jump / birth / resume / --single) funnels through. The decision
+  // is anchored on the SAME memory_path baked into the directive (#1279): a
+  // resolved recordPrefix writes the diary, the bare-space fallback (null
+  // recordPrefix) with records on disk emits a loud advisory instead of a silent
+  // skip, and a true pre-birth shell stays silent. codekbCtx is still required —
+  // it carries the live projectDir; the ctx-less test/default path writes
+  // nothing. ensureStageDiary never overwrites an existing diary (#1080).
+  if (codekbCtx) {
+    ensureStageDiaryForDirective(codekbCtx.projectDir, directive.memory_path, codekbCtx.space);
+  }
   if (absent.length > 0) directive.consumes_absent = absent;
   if (resolvedProduces.optional.length > 0) {
     directive.optional_produces = resolvedProduces.optional;

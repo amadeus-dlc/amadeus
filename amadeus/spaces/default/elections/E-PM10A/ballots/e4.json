@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PM10A",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "#1264 の S1 検出者当事者。実測根拠は自分の verdict そのもの: merge-base(E-GMECG 1件)vs head(0件)の機械照合で stale team.md 上書きを捕捉、是正指示(git checkout origin/main -- team.md)も候補文の是正形と一致。overlay 方式は record-sync の常用手技で base 前進との交差は構造的に反復する — レビュー検出(事後)だけに依存せず作成側手順(自 intent 外 M ファイルの main 突き合わせ+memory 層 main 復元)で発生源を塞ぐのが正しい。norm-pr-from-main-base への追補統合も凝集が正しい。採用",
+  "submittedAt": "2026-07-20T01:53:06Z"
+}

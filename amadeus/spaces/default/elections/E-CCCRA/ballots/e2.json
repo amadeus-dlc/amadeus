@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-CCCRA",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 3,
+  "goa": 2,
+  "reservation": "B の status ゲートは無音 no-op にせず stderr advisory(1行)を出す — サイレント失敗禁止(construction ガードレール)との整合のため。実装詳細は design 委譲で可。",
+  "rationale": "独立実測: 書き手2箇所(amadeus-lib.ts:1729/:2147)・clear 経路 grep 0 件・activeIntent の lone-intent fallback(:1077 records.length===1 で status 不参照のまま返却)を自ツリーで確認。fallback 実文により A 単独は単一 intent 空間で追記が止まらず(質問の scratch 再現とも整合)、per-clone カーソルのため他クローン残留も塞げない。B 単独は監査面のみで set⇔clear 非対称(症状の根)を温存し、activeIntent の他消費面が完了 intent を指し続ける。C は対称回復+セッション/クローン横断防御の両取りで、bugfix スコープ内の最小十分。D(resolver 除外)は全消費面へ波及し完了 intent の正当参照(record 検分等)を壊す恐れがあり blast radius 過大。自案非採用時の受容度: A/B/D 採用なら 6(不本意だが支持)。",
+  "submittedAt": "2026-07-19T14:52:02Z"
+}

@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TCRRA4",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "e1 PR の分類ラダー拡張時、スキーマコメントに分類順序の規約(現行5分類の順序+新分類の挿入位置)を明記し、e2 再接地時の統合が機械的になるようにすること",
+      "rationale": "本ギャップの発見者(#1261 verdict の隣接ギャップ指摘)。Ballot.parse :198 の無検証採用と unknown-voter との非対称は自分の実測。A(同一 PR で unknown-choice 追加)を支持: (1) same-root-inventory の第一選択(同一 PR 修正)に合致し、fail-open(実在しない choice 99 の受理)を最速で閉じる (2) choice が裁定信号へ昇格する本 intent でこそ unknown-choice は正しさ要件になる — tally が choice を数え始めた瞬間、不正 choice 番号は誤集計の直接原因になり、修正と検証は不可分 (3) e2 との衝突は直列合意済み(e1 先行→e2 再接地)の枠内で、base-advance-regrounding の通常運用。自案非採用時: B=6",
+      "submittedAt": "2026-07-19T22:44:15Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TCRRA4",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "e1 の unknown-choice 挿入位置を『識別子の検証 → 内容の検証』の順序原則で明示すること — unknown-voter 直後(識別子系)へ置けば、当方が再接地時に追加する invalid-timestamp(内容側先頭、E-BFARA1)との統合が機械的になり、分類ラダーの順序衝突が消える(当方 AD の ADR-4 と同一原則)。",
+      "rationale": "A 採用(再接地負担の当事者として)。unknown-choice は #1261 の欠陥(choice 意味論の欠落)の隣接ギャップで所有権は e1 側が正しく、same-root-inventory の同一 PR 修正が第一選択。直列合意(e1 先行→当方 CG 再接地)済みのため統合コストは当方が払う設計で、留保の挿入位置原則が守られれば textual 統合は機械的。B は当方 intent へのスコープ移譲で Issue 境界(#1261 の対称欠落を #1252 が引き取る)を曖昧にする。受容度: B=6。",
+      "submittedAt": "2026-07-19T22:44:20Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TCRRA4",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "実測: Ballot.parse(:184-204)の :198 で choiceInternalNo を無検証採用 — 欠落自体は確認。ただし e2 の 260719-ballot-failclosed-amend が E-BFARA1/3 裁定で同じ分類ラダーへ invalid-timestamp/unknown-ref を追加中であり、同一ラダーの並行改変は shared-ledger-insert-collision 型の textual/意味論衝突と再接地負担を作る。分類追加は e2 バッチへ Issue 委譲で1箇所集約(B)が並行 intent 間の直列化原則(priority-vs-dependency (3))に整合。A 非採用受容度: 6(直列合意が leader 台帳で明文化されるなら A も成立)。",
+      "submittedAt": "2026-07-19T22:44:10Z"
+    }
+  ],
+  "late": []
+}

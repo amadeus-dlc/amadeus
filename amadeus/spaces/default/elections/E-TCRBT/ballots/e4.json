@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TCRBT",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e1 record をリードオンリー実測: 成果物7点+memory 実在(ls 8件)、diary 2点 verbatim(実測サマリ+FAILED 1件の正常系是正)、verification/phase-check-construction.md 実在、センサー最終ラウンド全 Passed(23:45:20Z/23:46:10Z — H2 不足の実指摘→是正の経緯は diary と一致)。E-GMECG 追補の初適用を build-test-results.md:15 で verbatim 確認(『base 切替 → 6 fail → fix SHA 明示復元 → 17 pass・tree clean』)— 自分がレビュー・投票した追補が採用当日に正しく運用された対照実例で、新規学習でなく既存(新設)cid の適用実例。PENDING の分離(PR #1268 マージのみ)も report-final-values-only 準拠。0件で可",
+  "submittedAt": "2026-07-19T23:47:05Z"
+}

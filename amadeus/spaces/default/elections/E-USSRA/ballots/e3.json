@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSRA",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。e5 の requirements.md / requirements-analysis-questions.md / memory.md、product-lead iteration 1 READY GoA1、最新 sensor/detail を実読した。機械列挙で item ID 1〜24 が欠落なく存在し、6 SKIP、4検証先行、plugin deferred、6 harness / 4 self-install、byte-identical、fail-closed/atomicity、項目別受入基準とtraceabilityを確認。questions の required-sections FAIL(h2_count=0)は canonical marker shape を維持した E-FVEPD 規範の既知 advisory、upstream-coverage/answer-evidence は PASS。memory c1〜c3 は E-OC1承認・既決verification contract・独立review結果の適用/観測であり、新規横断practiceの追加性はない。",
+  "submittedAt": "2026-07-20T07:33:59Z"
+}

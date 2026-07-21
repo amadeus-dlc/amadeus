@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSRE",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。codekb 9文書と re-scan、memory を実測し、24項目集計は MISSING 19/PARTIAL 4/EQUIVALENT候補1で整合、各成果物はH2を持ち、architecture の Interaction Diagrams には text fallback があり、marker 4語彙も0件だった。宣言3 sensor は codekb path が matches glob 外で verdict 非帰属となる既決 reverse-engineering:re-sensors-codekb-filter-mismatch と一致する。c1 は当該時点 snapshot、c2 は既存 differential refresh/c3-relabel と重複、c3 は upstream v2.3 plugin 同期固有の設計順であり、新規横断 rule への一般化根拠がない。",
+  "submittedAt": "2026-07-20T06:49:22Z"
+}

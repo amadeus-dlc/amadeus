@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFANR",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record リードオンリー実測: NR 成果物は unit dir(ballot-acceptance-failclosed/nfr-requirements)+diary は engine memory_path 側の分置を確認。diary に iteration 1 Critical(E-GMEBT 裁定の provenance 欠落 bare 引用 — #1268 レビューで私も同選挙の公式裁定=不採用を実測しており整合)と是正→iteration 2 READY の記録実在。model.ts:55 の voters: string[](型上限なし)を実読 — ≤6 発明定数の是正根拠と一致。3所見とも mechanism-cite-verify / agmsg-git-evidence-split / constants-from-code の違反実例で PM 回付が適切、新規プロセス学習なし。0件で可(1)。",
+  "submittedAt": "2026-07-19T23:40:51Z"
+}

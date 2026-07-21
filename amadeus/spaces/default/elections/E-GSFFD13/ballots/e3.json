@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-GSFFD13",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件は不可。新規候補: conditional optional 成果物が後続判断で非該当になった場合、ゲート前検証は適用成果物の実在だけでなく非該当 candidate の不存在も assert し、旧 iteration の残存ファイルを削除する。根拠: business-logic-model.md:55-57 は UI 非該当かつ optional frontend-components.md を生成しないと明記する一方、frontend-components.md:1-10 が実在し、同 :8 は最終裁定の sparse/duplicate-label 等ではない古い拒否文言を保持する。review iteration 2 は READY 0/0/0、最終 sensor も3成果物のみ PASS のため、この stale optional artifact はレビュー対象集合とセンサー集合の外で無音残存した。これは条件反転後の optional output retraction を最終検証へ加える横断可能な新規学習である。",
+  "submittedAt": "2026-07-20T06:50:47Z"
+}

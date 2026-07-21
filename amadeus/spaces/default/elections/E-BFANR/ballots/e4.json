@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFANR",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record をリードオンリー実測: diary の iteration 履歴(23:40Z/23:50Z/23:55Z)を verbatim 確認。是正の実測値主張を独立再計算 — model.ts:55 は voters: string[] で型上限なし(verbatim 一致)、leader store の選挙 voters 最大は 3(自分の測定時点では36選挙 — e2 測定時34からの増分は測定後の新規開設分で、measurement-ref の時点差として整合)。Critical(E-GMEBT 裁定の provenance 欠落 bare 引用)は mechanism-cite-verify/agmsg-git-evidence-split の違反実例、Major×2(voters ≤6 発明定数/S-2 誤帰属)は constants-from-code 系の違反実例で、いずれも PM 回付が正規経路。diary が reviewer の『不存在』判定の誤り(自 worktree 限定 grep)と provenance 指摘の正当性を分離して記録している点は enumeration-check-at-observed の正しい理解。iteration 2 の閉包検証(4独立手段)も適切。新規ノルムの隙間なし、0件で可",
+  "submittedAt": "2026-07-19T23:41:20Z"
+}

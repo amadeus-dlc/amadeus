@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFARA1",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "実測: normalizeAt(transport.ts:87-92)は受理後適用(handleVote :334)を確認、date-only '2026-07-19' が new Date で有効(bun -e 実測 NaN=false)= B の new Date 併用でも日付のみ入力が素通りする穴を確認。ballot は自チームのスクリプトが mint する機械生成入力であり、mint 正規形限定(A)は parse-don't-validate と fail-closed(#1252 の趣旨)に合致、normalizeAt は恒等化して精度混在の温床も消える。B 非採用受容度: B なら 6(寛容受理+正規化は現行実態の保存として成立するが、date-only 素通りの追加封鎖が必要)。",
+  "submittedAt": "2026-07-19T22:10:29Z"
+}

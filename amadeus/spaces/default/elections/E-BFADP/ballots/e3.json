@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-BFADP",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record リードオンリー実測: 成果物5点+phase-check-inception.md 実在(ls/test)、diary 2点は approval-handoff:c3(未確定 schedule 非捏造)と phase-check-before-final-approve+boundary 込みグラントの適用実例。delivery-planning 帰属センサーの時系列末尾は PASSED ペアのみ(初回 FAILED は是正済み履歴 — Stage slug 実測)。単一 Bolt・skeleton 対象外は org 既決の適用。プロセス新規学習なし。0件で可(1)。",
+  "submittedAt": "2026-07-19T23:15:44Z"
+}

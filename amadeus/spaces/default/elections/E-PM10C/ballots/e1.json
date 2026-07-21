@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-PM10C",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "追補は1行統合形(『機械生成ペイロードはプレースホルダ置換でなく直接 mint+投入前の様式機械検分』)とし、選挙 ballot 特化の文面にしないこと — 対象は投入境界を通過する機械生成 JSON 一般。",
+  "rationale": "独立傍証: 私の全 ballot(15票超)は date -u を heredoc 展開で直接 mint する方式で置換事故ゼロ — 案イの実効性を自運用で実証。#1252/#1273 の機械ガードは選挙 submittedAt 面のみを封鎖し、プレースホルダ置換の罠は他の JSON 投入面(intents.json 手術等)に残るため過渡的とは言えない。同日2実例(__NOW__/date typo)の再発実績もある。",
+  "submittedAt": "2026-07-20T01:52:55Z"
+}

@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-LSSCG",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件は不可。新規候補: 『可変長のscope/path集合をCLI argvへ展開する箇所では、空集合をコマンド呼出し前に明示分岐し、no-op/zeroまたはloud failureへ閉じる。空集合が引数省略となってCLI既定のunscoped全域へ拡張されないことを、foreign応答を置くnegative controlと呼出し0 assertで固定する』。実測根拠: scripts/amadeus-leader-sync.ts:468-473 と t245 integration :250-269。修正前は shardPaths=[] が git diff --numstat origin/main -- となりrepository全差分99行をshardDeltaLinesへ混入、修正後は明示no-opで0かつunscoped call 0。memory全域grepではempty pathspec/scope-collapseの既存cidなし。実装先行は deviation-stop-before-implement、falling proofは既存falling-proof群、promote orphanは非帰属既知事象なので新規候補にしない。",
+      "submittedAt": "2026-07-20T11:41:34Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-LSSCG",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件は不可。新規候補: 可変長pathspecを渡すGit計測は対象配列0件を明示no-opとして分岐し、末尾`--`だけのコマンドを実行しない。空pathspecは対象なしではなく全差分へ退化し、所有境界外の変更を誤集計するためである。独立実測: revision iteration 2で`owned.shardPaths=[]`時の`git diff --numstat origin/main --`がforeign 99行を`shardDeltaLines`へ混入し、修正前34 pass/1 fail→明示no-op後35 pass/0 fail・124 assertionsとなった。実装scripts/amadeus-leader-sync.ts:463-483とt245境界testを直読・再実行し35/0、対象Biome PASS、最新linter/type-check sensor PASSを確認。既存memoryを`empty pathspec`/`unscoped`/`numstat`等で全層検索したが同等規範はなく、E-PM10Aのowned-only目的を他のGit argv構築にも再利用可能なcode-generation規律として補完する。choice1は既存cidに同義の明示no-op契約が実在すると反証される場合のみ受容する。",
+      "submittedAt": "2026-07-20T11:41:49Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-LSSCG",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件は不可。新規候補: 可変 pathspec/対象集合を CLI へ渡す処理では、空集合を引数省略へ縮退させない。省略時に対象範囲が全体へ拡大する CLI（本件の git diff --numstat origin/main --）は、空集合を明示 no-op または loud 拒否とし、foreign 差分を注入して unscoped 呼出し0件を assertする。実測: scripts/amadeus-leader-sync.ts の syncStatus は owned.shardPaths=[] でも Git を呼び、fake Git の unscoped numstat 99行を shardDeltaLines=99 と誤集計した。review iteration 2 Major/GoA7で捕捉し、明示no-op後は修正前 focused 34 pass/1 fail→修正後35 pass/0 fail、shardDeltaLines=0・当該call=0で閉包。memory/team/projectを grep し、empty pathspecがscope全体へ意味拡大する境界の既存規範は見当たらず、一般化価値がある。実装先行の手順逸脱は、最終的に既存P2の落ちる実証とfix-diff-independent-reverifyを適用して閉包した違反実例であり別候補にはしない。",
+      "submittedAt": "2026-07-20T11:42:21Z"
+    }
+  ],
+  "late": []
+}

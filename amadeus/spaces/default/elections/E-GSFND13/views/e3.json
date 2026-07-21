@@ -1,0 +1,21 @@
+{
+  "electionId": "E-GSFND13",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "X. その他(noteに候補別の採否・統合先を明記)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "全件不採用 — c3も既存規範の含意で足りる"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "c1/c2不採用・c3採用 — citation-semantics-checkへregex anchoring面を追補統合"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSDPS13R",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可を支持。最終phase-checkでunit-of-work-dependency/story-mapの全数写像が追記され、再発火したrequired-sections/upstream-coverageがPASS、その後の最終増分reviewもREADY/findings0で対象変更なしを確認した。memoryのupstream FAILED6は、stage正本のproducesがbolt-plan/team-allocation/risk-and-sequencing-rationale/external-dependency-map/delivery-planning-questionsの5件だけでmemoryを含まず、default_severity=advisoryのupstream-coverageをengine管理observation diaryへ手動発火した結果なので、宣言成果物のgate失敗ではないという分類が妥当。c1の5-Bolt限定例外・独立4境界・U11 closureとc2の12 one-Unit/risk-first/max4/WSJFなしはE-USSDP1R/2Rの当該24項目同期計画への適用であり、少数案もOpen Questionに温存済み。横断normへ一般化する新規知見はない。",
+  "submittedAt": "2026-07-20T08:30:48Z"
+}

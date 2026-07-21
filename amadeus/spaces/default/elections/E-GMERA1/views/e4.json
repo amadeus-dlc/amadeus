@@ -1,0 +1,26 @@
+{
+  "electionId": "E-GMERA1",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 4,
+      "label": "D. 修正見送り(集計実装時に一括対応)— Issue を将来 intent へ委ねる"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "C. head 拡張のみ+スパース表記の未達を別 Issue 起票(A の明文化+追跡可能性)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "B. head 拡張+サブ問別スパース表記の受理(/ 区切りサブ問・欠落 bin=0)まで parse 契約を corpus 実様式へ拡張(集計実装時に再修正不要、ただし変更規模と ADR-4 canonical 形の契約変更を伴う)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 1,
+      "label": "A. head regex 拡張のみ(E-[A-Z0-9]+(-[A-Z0-9]+)*)。parse 契約は canonical 8-bin 維持、既存スパース行対象外をスキーマコメント・テストで明文化(最小変更・スパース問題は集計実装時に再裁定)"
+    }
+  ]
+}

@@ -1126,6 +1126,65 @@ export function ensureStageDiary(
   return "created";
 }
 
+// The directive-time diary decision (#1279). ensureStageDiary's three outcomes,
+// plus two SKIP variants the chokepoint distinguishes:
+//   - skipped-unresolved: the memory_path fell back to the bare space prefix
+//     (recordPrefix was null) WHILE intent record dirs exist — a diary that
+//     SHOULD have been placed could not be. A loud stderr advisory is emitted.
+//   - skipped-prebirth: no intent record dirs exist yet (a genuine pre-birth
+//     shell). Silent by design — there is nothing to write into.
+export type StageDiaryOutcome =
+  | "created"
+  | "exists"
+  | "template-missing"
+  | "skipped-unresolved"
+  | "skipped-prebirth";
+
+// True when a memory diary path names a real PER-INTENT record. memoryPathFor
+// yields two shapes: with a resolved recordPrefix it is
+// `amadeus/spaces/<space>/intents/<record-dir>/<phase>/<slug>/memory.md`; with a
+// null recordPrefix it falls back to `.../intents/<phase>/<slug>/memory.md`. The
+// two are told apart by the segment IMMEDIATELY after `intents/`: a phase name
+// (PHASES) is the bare-space fallback, anything else is a record-dir name
+// (`<YYMMDD>-<label>` / `<slug>-<id8>`, which never equals a bare phase word).
+// This is the SINGLE value both the diary write and its guard derive from
+// (#1279) — no cursor re-resolution on a second route that could disagree with
+// the path already baked into the directive.
+export function memoryPathNamesIntentRecord(memoryPathRel: string): boolean {
+  const parts = memoryPathRel.split("/");
+  const i = parts.indexOf("intents");
+  if (i === -1 || i + 1 >= parts.length) return false;
+  return !(PHASES as readonly string[]).includes(parts[i + 1]);
+}
+
+// Directive-time stage-diary creation, anchored on the memory_path already baked
+// into the run-stage directive (#1279). Replaces the earlier chokepoint guard
+// `recordPrefix !== null && codekbCtx`, whose recordPrefix branch could disagree
+// with the memory_path (which masks a null recordPrefix with the bare space
+// prefix) and silently skip. Here the guard and the write derive from ONE value:
+//   - memory_path names a real record  -> ensureStageDiary (write / exists / …)
+//   - bare-space fallback + records exist -> loud stderr advisory (the #1279 bug)
+//   - bare-space fallback + no records    -> silent (genuine pre-birth shell)
+// stdout is never touched: the advisory is stderr-only, so the directive JSON is
+// unchanged.
+export function ensureStageDiaryForDirective(
+  projectDir: string,
+  memoryPathRel: string,
+  space: string,
+): StageDiaryOutcome {
+  if (memoryPathNamesIntentRecord(memoryPathRel)) {
+    return ensureStageDiary(projectDir, memoryPathRel);
+  }
+  const records = listIntentDirs(projectDir, space);
+  if (records.length > 0) {
+    console.error(
+      `amadeus: stage diary skipped — record prefix unresolved while ${records.length} intent record(s) exist (see #1279)`,
+    );
+    return "skipped-unresolved";
+  }
+  return "skipped-prebirth";
+}
+
 // E-OC1 evidence check for gate-start (#1101): the 3-step order (report the
 // no-election judgment -> leader approval -> only then fill [Answer]) is a
 // prose norm that slipped twice in one day, so gate-start enforces the
@@ -1627,6 +1686,25 @@ export function readIntentRegistry(projectDir: string, space?: string): IntentRe
   return [];
 }
 
+// The registry status of the intent an audit append would target (#1248). The
+// append-side gate reads this to refuse post-complete appends: resolve the target
+// record the SAME way the audit shard does (activeIntent honours explicit intent
+// > cursor > lone-intent), then return its registry row's status. "unknown" for
+// every uncertainty — no record resolves, no registry, or no matching row — so
+// the gate only ever suppresses on a definite "complete" and never on a read
+// failure (the append continues, preserving the pre-#1248 behaviour for every
+// non-complete or unresolvable intent).
+export function intentStatusForAudit(projectDir: string, intent?: string, space?: string): string {
+  const dirName = activeIntent(projectDir, space, intent);
+  if (dirName === null) return "unknown";
+  // Plain loop (not .find) so no anonymous function is added — an inserted arrow
+  // would shift the complexity baseline's ordinal matching (complexity-baseline-ordinal).
+  for (const entry of readIntentRegistry(projectDir, space)) {
+    if (recordDirMatches(entry, dirName)) return entry.status;
+  }
+  return "unknown";
+}
+
 // --- The deterministic query layer: "what exists" (one source, two modes) ----
 //
 // listSpaces()/listIntents() are the single shared readers the verb handlers,
@@ -1729,6 +1807,22 @@ export function setActiveIntentCursor(projectDir: string, dirName: string, space
     writeFileSync(join(dir, ACTIVE_INTENT_POINTER), `${dirName}\n`, "utf-8");
   } catch {
     /* per-user cursor; best-effort */
+  }
+}
+
+// Clear the active-intent cursor when it still points at `dirName` (#1248). Read-
+// then-conditional-delete so a cursor already moved to another intent is left
+// untouched — only the exact intent that is completing releases its own pointer.
+// Best-effort and swallowed, mirroring setActiveIntentCursor: the cursor is
+// per-user state, never the source of truth (the registry is).
+export function clearActiveIntentCursor(projectDir: string, dirName: string, space?: string): void {
+  const cursor = join(intentsDir(projectDir, space), ACTIVE_INTENT_POINTER);
+  try {
+    if (readFileSync(cursor, "utf-8").trim() === dirName) {
+      rmSync(cursor);
+    }
+  } catch {
+    /* absent cursor or per-user write failure; best-effort */
   }
 }
 

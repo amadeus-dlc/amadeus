@@ -1,6 +1,26 @@
 # コード構造
 
-## Codex hooks 設定競合の観測面（最新: 260718-hooks-config-conflict）
+## upstream-sync-230 の変更面（2026-07-20、現在）
+
+現行 observed `545e69c836d46f7bec2fa351c8e668026eb5fad5` の構成は、core tools 30、hooks 11、agents 14、stages 32、sensors 5、6ハーネス固有 69 files、TypeScript 621 files、tests 461 files（unit 216 / integration 159 / e2e 70 / smoke 14）である（測定 ref: Developer scan の `find`/test runner 分類、observed HEAD）。主要変更面は次の通り。
+
+| 正本面 | 現行責務 | upstream-sync の変更点 |
+|---|---|---|
+| `packages/framework/core/tools/amadeus-stage-schema.ts` | stage frontmatter の検査 | number/name/bundle/required_sections、Unit kind の schema 追加 |
+| `packages/framework/core/tools/amadeus-graph.ts` / parser | stage graph 構築 | kind 別 pruning、plugin 由来 stage の正規化 |
+| `packages/framework/core/tools/amadeus-orchestrate.ts` | directive routing（134 switch arms） | DAG 自己修復、gate/help/compose/recompose、next-stage 投影 |
+| `packages/framework/core/tools/amadeus-utility.ts` | workspace/scope/compose CLI | nested/submodule、cost preview、help/autonomy guard |
+| `packages/framework/core/hooks/` | session・stop・state・sensor 契約 | compose marker 鮮度と Kiro IDE context の適応 |
+| `packages/framework/harness/{name}/` | 6ホスト固有 adapter | `execPath`、quote、plugin host projection |
+| `scripts/package.ts` | manifest から6ハーネスを自動発見 | plugin source の discovery/projection/no-clobber |
+| `scripts/promote-self.ts` | 4ハーネスを self-install | dist 済み plugin の closed-list 投影 |
+| `tests/` | Bun テストと drift/coverage ゲート | 24項目の回帰、upstream t199-t219/t188 再著作 |
+
+plugin の source、`dist/plugins`、host projection は別オーナーとする。source を manifest に追加しただけで host tree へ漏らしてはならず、`scripts/package.ts` の byte/orphan/unreferenced 検査（`:643-729`）を所有境界の最終ガードにする。`when` は現在 schema が予約語として拒否するため、今回の公開契約変更として扱い、暗黙に受理しない。
+
+> 以下は過去 intent の履歴。
+
+## Codex hooks 設定競合の観測面（履歴: 260718-hooks-config-conflict）
 
 [Issue #770](https://github.com/amadeus-dlc/amadeus/issues/770) の writer／reader を observed HEAD `594ba21d636218558b711b371c286f16731fb081` と外部 agmsg 1.1.7 で対称走査した。base `e9a001105d253e14affb77417423d9f0b0360f9e` は observed の祖先（距離8）で、フォーカスファイルの区間契約変更は0件。
 
