@@ -1,0 +1,4 @@
+changelog:
+  exclude:
+    authors:
+      - amadeus-dlc-bot[bot]
