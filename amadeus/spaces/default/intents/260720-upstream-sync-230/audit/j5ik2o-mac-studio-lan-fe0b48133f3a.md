@@ -1262,3 +1262,315 @@
 **Error**: report requires --result <outcome>. Accepted: approved, completed, complete, done (the verdict for the stage just acted on).
 
 ---
+
+## Error Logged
+**Timestamp**: 2026-07-21T23:36:23Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: 
+**Error**: report requires --result <outcome>. Accepted: approved, completed, complete, done (the verdict for the stage just acted on).
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-21T23:40:23Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: 
+**Error**: report requires --result <outcome>. Accepted: approved, completed, complete, done (the verdict for the stage just acted on).
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-21T23:43:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: de39fd13
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/packages/framework/core/tools/amadeus-lib.ts
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-21T23:43:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: 368e21d5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/packages/framework/core/tools/amadeus-lib.ts
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-21T23:43:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0c7fd0ff
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/packages/framework/core/tools/amadeus-orchestrate.ts
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-21T23:43:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: c73e904f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/packages/framework/core/tools/amadeus-orchestrate.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-21T23:43:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: de39fd13
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/packages/framework/core/tools/amadeus-lib.ts
+**Duration ms**: 720
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-21T23:43:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0c7fd0ff
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/packages/framework/core/tools/amadeus-orchestrate.ts
+**Duration ms**: 692
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-21T23:43:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 368e21d5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/packages/framework/core/tools/amadeus-lib.ts
+**Duration ms**: 1233
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-21T23:43:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: c73e904f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/packages/framework/core/tools/amadeus-orchestrate.ts
+**Duration ms**: 1201
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-21T23:43:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5999e557
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/packages/framework/core/tools/amadeus-state.ts
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-21T23:43:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: df73c847
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/packages/framework/core/tools/amadeus-state.ts
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-21T23:43:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9b64386b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/tests/unit/t186-foreach-per-unit-iteration.test.ts
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-21T23:43:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: d185ddc4
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/tests/unit/t186-foreach-per-unit-iteration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-21T23:43:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5999e557
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/packages/framework/core/tools/amadeus-state.ts
+**Duration ms**: 750
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-21T23:43:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9b64386b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/tests/unit/t186-foreach-per-unit-iteration.test.ts
+**Duration ms**: 700
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-21T23:43:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: df73c847
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/packages/framework/core/tools/amadeus-state.ts
+**Duration ms**: 968
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-21T23:43:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: d185ddc4
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/tests/unit/t186-foreach-per-unit-iteration.test.ts
+**Duration ms**: 917
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-21T23:43:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3c35f77f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/tests/integration/t199-generated-prefix-contract.test.ts
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-21T23:43:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: 538f4104
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/tests/unit/t247-runtime-recovery.test.ts
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-21T23:43:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8730f721
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/tests/integration/t199-generated-prefix-contract.test.ts
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-21T23:43:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2d6eaad7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/tests/unit/t247-runtime-recovery.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-21T23:43:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3c35f77f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/tests/integration/t199-generated-prefix-contract.test.ts
+**Duration ms**: 664
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-21T23:43:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 538f4104
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/tests/unit/t247-runtime-recovery.test.ts
+**Duration ms**: 649
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-21T23:43:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2d6eaad7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/tests/unit/t247-runtime-recovery.test.ts
+**Duration ms**: 915
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-21T23:43:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8730f721
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/tests/integration/t199-generated-prefix-contract.test.ts
+**Duration ms**: 923
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-21T23:43:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 64cc50c1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/tests/integration/t247-runtime-recovery.test.ts
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-21T23:43:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 22ac1790
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/tests/integration/t247-runtime-recovery.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-21T23:43:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 64cc50c1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/tests/integration/t247-runtime-recovery.test.ts
+**Duration ms**: 487
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-21T23:43:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 22ac1790
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260719-231310-08a0/engineer-5-resume-20260722/tests/integration/t247-runtime-recovery.test.ts
+**Duration ms**: 766
+
+---

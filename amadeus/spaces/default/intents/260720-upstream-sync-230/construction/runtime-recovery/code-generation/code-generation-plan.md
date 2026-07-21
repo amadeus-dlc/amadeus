@@ -15,6 +15,10 @@ User Stories stageはengine正本で`SKIP`されている。そのためstory-to
 - `amadeus-state.ts` と `amadeus-audit.ts` は既存approve / audit lock内で5 blockの生成・検証・atomic commit・state retryを行う。新event、store、service、runtime dependencyは追加しない。
 - `validateRecoveredApprovalBatch`は`amadeus-state.ts`内部helperのままとし、production approve pathから検証する。CLI、event、export、永続化、runtime serviceの契約を増やさない。
 
+## Test strategy applicability
+
+active test strategyは`Comprehensive`である。U02は既存CLI内部のread-side recoveryとapprove handler atomicityだけを変更し、利用者journey、UI、外部service、network、databaseを追加しないため、独立したE2E test fileは非該当と判断した。代替としてunit fileでpure recovery matrixを、integration fileでhermetic workspace上の実CLI subprocess、production `handleNext` / `handleApprove`、audit/state filesystem boundary、failure injectionをend-to-endに駆動する。この適用判断によりtest configurationは既存`bun:test` / `tests/run-tests.ts`を維持し、新規E2E harnessやconfigを追加しない。
+
 ## 手順
 
 | Step | 状態 | 作業 | Captured intentへの対応 |
@@ -22,7 +26,7 @@ User Stories stageはengine正本で`SKIP`されている。そのためstory-to
 | 1 | [x] | 上流requirements、functional/NFR design、既存runtime/orchestrate/state/audit ownerを照合する。 | approved v2.2.0→v2.3.0 sync planのU02 runtime correctness範囲を確定する。 |
 | 2 | [x] | `t247` unitでDAG source/cache matrix、canonical comparison、revision chronology/predicateをRED固定する。 | U02 ADOPT/ADAPT項目を決定的なunit契約へ落とす。 |
 | 3 | [x] | `t247` integrationで3 consumer同一Unit集合、diagnostic、approve 5-block atomicity、failure injection、state-write retryをRED固定する。 | U02 ADOPT/ADAPT項目をproduction path契約へ落とす。 |
-| 4 | [x] | Comprehensive test strategyを既存Bun test runner、`tests/run-tests.ts`、`package.json`の`test:ci` / `coverage:ci`、既存coverage registry / ratchet / allowlistへ接続する。新しいtest configuration fileは不要であり、既存設定が不変であることを検証する。 | approved sync planを既存repository test configuration内で検証し、scopeを増やさない。 |
+| 4 | [x] | Comprehensive test strategyを既存Bun test runner、`tests/run-tests.ts`、`package.json`の`test:ci` / `coverage:ci`、既存coverage registry / ratchet / allowlistへ接続する。独立E2E fileの非該当判断とintegration production-pathによる代替を固定し、新しいtest configuration fileが不要で既存設定が不変であることを検証する。 | approved sync planを既存repository test configuration内で検証し、scopeを増やさない。 |
 | 5 | [x] | `recoverBoltDag`を既存`parseBoltDag`再利用で実装し、artifact absentだけを`none`、broken sourceを`malformed`にする。 | U02のBolt DAG self-heal ADOPT/ADAPTを実装する。 |
 | 6 | [x] | orchestrateのDAG read-sideを単一recovery resultへ接続し、runtime graphへのwrite 0を維持する。 | approved sync planのruntime consumer convergenceを実装する。 |
 | 7 | [x] | `recoverGateRevision`をTimestamp順、同一shard内buffer position、cross-shard timestamp collisionのfail-closed、organic anchor、human pivot、declared producesだけのclosed predicateとして実装する。 | U02のgate revision backstop ADOPT/ADAPTを実装する。 |
@@ -30,8 +34,8 @@ User Stories stageはengine正本で`SKIP`されている。そのためstory-to
 | 9 | [x] | t247 RED→GREENと既存t133/t186/t211/t115/t17回帰を完走する。 | U02変更が既存runtime contractを退行させないことを証明する。 |
 | 10 | [x] | typecheck、lint、complexityをGREENにし、追加公開面が正準2 seamだけであることを固定する。 | approved sync planの品質制約を満たす。 |
 | 11 | [x] | package 6面とself-install 4面を正規generatorだけで再生成し、dist/promote drift 0を確認する。 | v2.3.0 sync成果を全harnessへ正規投影する。 |
-| 12 | [x] | full CI→coverageを他runnerなしで直列実行し、赤0、patch coverage 100%、coverage allowlist 0を確認する。 | approved sync planのrepository全体互換性を証明する。 |
-| 13 | [ ] | 最終directive sensors、code-summary、hash、独立review、Formal I2、§13を完了する。 | captured intentのU02をengine正本へREADYとして返す。 |
+| 12 | [x] | `origin/main`取り込み後の標準runnerをparallelism 4で使用し、full CI→coverage、赤0、patch coverage 100%、coverage allowlist 0を確認する。 | approved sync planのrepository全体互換性を証明する。 |
+| 13 | [x] | 最終directive sensors、code-summary、hash、独立review、Formal I2、§13を完了する。Formal I2の上限到達後はfindingを是正し、人間承認で進行判断を確定した。 | captured intentのU02をengine正本へ完了済みとして返す。 |
 
 ## 禁止事項
 
@@ -62,3 +66,18 @@ stage contract違反、公開境界の自己矛盾、変更・検証証跡の列
 - U02の公開seamをrecoverBoltDag/recoverGateRevisionの2件に限定するとしながらvalidateRecoveredApprovalBatchをexportしており、unit-of-work、plan、summary間で公開境界が自己矛盾している。
 - code-summary.mdは変更した既存DAG fixture 4件、audit drift meta-test、t186/t199 fixture、生成投影の正確なpathを列挙せず、coverage CIのlog pathも示していないため、Files created/modifiedと最終検証証跡をscope成果物だけから追跡できない。
 - 複数audit shardでTimestampが同一かつshard内bufferPositionも同一になり得る場合の決定的tie-breakが定義されず、Timestamp+bufferPositionだけではNFR-1のtotal orderを保証できない。
+
+## Review — Iteration 2
+
+- **Verdict:** NOT-READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-07-21T23:47:41Z
+- **Iteration:** 2
+- **Scope decision:** none
+
+Formal I1の4件はscope内で是正を確認したが、stage完了条件と承認済みplanに対する新たな違反が2件残る。
+
+### Findings
+
+- active test strategyをComprehensiveと明記している一方、planとsummaryにはunit/integration testしかなく、stage definitionが要求するE2E test fileの計画・実装・結果がない。E2Eを非該当とするなら、その適用判断と代替検証をplan/summaryへ明示する必要がある。
+- code-generation-planは別Unit成果物の手編集を禁止しているが、code-summaryはrouting-and-autonomy-guards Unitのcode-summary.mdを変更したと記録しており直接矛盾する。別Unitのfreeze済みレビュー証跡を遡及変更するblast radiusも未処理であるため、変更を戻すか、承認済みdeviationとして理由・影響・再検証を記録する必要がある。
