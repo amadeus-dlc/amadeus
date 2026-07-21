@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TSWRAG1",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "recorded人間判断契約に基づくoriginal投票。一次証拠としてleader worktreeのrequirements.md、requirements-analysis-questions.md、audit上のsensor/review記録をread-only独立実測した。E-TSWRA1〜3のchoice1は、current runのleader+全engineer Codex pane、Keep waiting選択中の完全visible fingerprint時のみEnter 1回、paneごとのsupervisor/fresh-resume/rearm/cleanupとして要件へ反映済みである。review iteration 1のBLOCKER 2件とMAJOR 1件は、原子的なsupervisor一意排他、二重読取から送信直前までのsession/role/ephemeral pane identity再照合、Herdr 0.7.1/Codex 0.144.6 allowlistとclosed fingerprint/negative fixtureへ具体化されている。iteration 2のpoll/stability衝突も、通常pollを前回完了から次回開始まで1,000ms以上、候補後stability readを即時かつ初回読取完了から完了まで1,000ms以下、送信TTLを初回読取完了から送信開始まで1,000msとして分離し、FR-2/FR-3/NFR/ACで整合している。required-sections/upstream-coverage/answer-evidenceは全PASSであり、要件境界は実装可能なためApproveを支持する。非採用時は、現行FR/ACの時間起点・排他・identity照合・fingerprint schemaに残る実装不能または安全上の矛盾がfile/line一次証拠付きで示される場合のみRequest Changesを受容する。",
+  "submittedAt": "2026-07-21T02:47:47Z"
+}

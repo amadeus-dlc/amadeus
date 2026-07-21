@@ -1,0 +1,29 @@
+{
+  "electionId": "E-TSWRA1",
+  "kind": "clarification-question",
+  "question": "260721-teamup-safety-wait / requirements-analysis Q1: safety-wait自動解除の対象pane境界をどう固定するか。既決境界はteam-up管理下のcurrent session/run/Codex pane限定で、別session・Claude pane・shell prompt・通常質問・approval・composerは対象外。A=team-upが現在runで起動したleaderと全engineerのCodex pane、B=engineerのCodex paneのみ、C=leaderのCodex paneのみ、X=その他。各自 business-overview.md、architecture.md、code-structure.md、scripts/team-up.shと関連integration testsをリードオンリー実測し、GoA・自案非採用時受容度付きで投票する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. current runのleader + 全engineerのCodex pane"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. current runのengineer Codex paneのみ"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. current runのleader Codex paneのみ"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他（noteに対象pane境界を明記）"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}

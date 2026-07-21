@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TSWRES13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "一次証拠として codekb re-scan 260721-teamup-safety-wait.md、同 Intent の reverse-engineering/memory.md、code-structure.md を実測した。c1は既知Codex safety-wait UIだけを対象にする当該修正の解釈、c2はteam-upが所有するHerdr lifecycle境界の配置判断、c3はresume時のrole再解決と0件/複数件fail-closedという具体設計であり、3件とも一般化済みの新規normではなくIntent固有のdiary判断として保持するのが妥当。Herdr 0.7.1のANSI/wrap正規化とCodex version allowlistも未確定である。非採用時受容度は中程度で、いずれかをpersistする場合でも複数Intentに跨る反復証拠、既存上位normとの非重複、fail-closed境界が実証されれば受容する。",
+  "submittedAt": "2026-07-21T02:16:55Z"
+}

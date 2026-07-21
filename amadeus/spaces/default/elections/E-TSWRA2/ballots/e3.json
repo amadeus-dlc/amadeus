@@ -1,0 +1,16 @@
+{
+  "kind": "amend",
+  "ref": {
+    "electionId": "E-TSWRA2",
+    "voter": "e3",
+    "submittedAt": "2026-07-21T02:29:17Z"
+  },
+  "electionId": "E-TSWRA2",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "recorded人間裁定に基づくhuman-authorized再提出。一次証拠としてCodeKB re-scan/architectureとscripts/team-msg.shのHerdr seamを再確認した。read→sendは非原子的でTOCTOUが残り、agent sendとEnter submitは二段契約である。visible二重読取、完全fingerprint、one-shot、解除再確認を満たし、Keep waiting選択中を証明した場合だけEnterを1回送るAが最小権限である。非採用時は、固定key移動の全状態がversion別fingerprintと再読取fixtureで閉じる場合に限りBを受容し、曖昧一致・scrollback・周期入力は受容しない。",
+  "submittedAt": "2026-07-21T02:35:04Z"
+}

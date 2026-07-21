@@ -1,0 +1,26 @@
+{
+  "electionId": "E-TSWCGFIX1",
+  "voter": "e1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 4,
+      "label": "X. その他 — noteにfixture provenanceとproduction enable条件を明記"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "A. hard stop維持 — 次回modal出現時に操作前visible bytesをread-only captureして再開"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "C. screenshotをtext転記してproduction入力を有効化"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 2,
+      "label": "B. screenshot由来fixtureで実装・testするがproduction入力はlive bytes検証まで無効"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TSWCGCAP1",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "plan/requirements/E-TSWCGFIX1 recordと実環境をread-only照合した。実測versionはherdr 0.7.1 / codex-cli 0.144.6でallowlistと一致する。既存裁定はcurrent runでpositive visible bytesが0件のためhard stopとし、OCRや待機文だけをfixtureにしない境界である。choice 1はcurrent run 7 paneへの入力0件を保ち、隔離disposable workspace/paneだけで既知modalを誘発し、操作前visible/text exact bytes、全choice順、Keep waiting選択marker、confirm guidance、columns、versionとsession/run provenanceをcaptureし、秘密・個人情報検査後に閉じたfixtureへ固定するため、この境界を弱めず停滞を解消できる。capture前のEnter/矢印/selection移動禁止、capture後の隔離workspace停止、production enableはfixture/test固定後だけという条件もplanのfail-closed方針に整合する。非採用時受容条件: disposable paneがcurrent runと十分に隔離できない、allowlist版を再現できない、操作前exact visible bytesまたはKeep waiting現在選択markerを取得できない、provenance/privacy検査を閉じられない場合はchoice 2へ戻りpassive監視とhard stop維持を受容する。positive fixtureなしでfingerprintを弱めるchoice 3は受容しない。",
+  "submittedAt": "2026-07-21T06:41:35Z"
+}

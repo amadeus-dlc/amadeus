@@ -1,0 +1,21 @@
+{
+  "electionId": "E-TSWCGP1",
+  "kind": "clarification-question",
+  "question": "260721-teamup-safety-wait / Code Generation: 承認前plan SHA-256 7c8f040094c3679ea25d6a77ea8150556b768a1d621556f518dbb7d5bd5e1ac5を採用するか。暗黙の単一Unitとしてpure fingerprint、Herdr 0.7.1 adapter、pane単位latch/rearm、team-up fresh/resume/kill/failure lifecycleだけを所有する。Minimal strategyに基づく12 Stepsのtest-first実装で、production 250〜400 LOC、test 250〜450 LOC、positive fixture捕捉不能・production 400 LOC到達・対象file追加・禁止境界変更が必要な場合は停止する。対象は新helper、team-up.sh、unit test、既存resume integration test、閉じたfixture、recordに限定し、実HerdrへのEnterは検証で送らない。各自plan、requirements、codekb、現行team-up/既存testをリードオンリー実測し、GoAと非採用時受容度付きで投票する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "Approve Plan — 現planでtest-first実装へ進む"
+    },
+    {
+      "internalNo": 2,
+      "label": "Request Changes — noteに修正Step/境界を明記"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}

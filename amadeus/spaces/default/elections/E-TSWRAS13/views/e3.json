@@ -1,0 +1,16 @@
+{
+  "electionId": "E-TSWRAS13",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "0件は不可 — noteに候補と一般化根拠を明記"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件で可 — 新規永続学習なし"
+    }
+  ]
+}

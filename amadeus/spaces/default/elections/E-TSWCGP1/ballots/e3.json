@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TSWCGP1",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "一次証拠として、code-generation-plan.mdのSHA-256が選挙定義の7c8f040094c3679ea25d6a77ea8150556b768a1d621556f518dbb7d5bd5e1ac5と一致することを実測した。planの12 Stepsはrequirementsの対象run内leader/engineer限定、CRLF→LF以外のcanonicalization禁止、同一pane identityの再確認、単発latchと2回不在rearm、supervisor lock/lifecycle、Herdr 0.7.1とCodex CLI 0.144.6のfixture境界へ対応し、CodeKBが示すteam-up.shのlifecycle所有、専用helper、role再解決、既存resume integration testとも整合する。さらに実Herdr入力禁止、test-first、production 400 LOC・対象file追加・positive fixture捕捉不能・境界変更時の再停止が明記されており、既決責務外への拡張を防げるためApprove Planを支持する。非採用時は、具体的な未充足FR/ACまたは境界矛盾を一次証拠付きで示すRequest Changesであれば受容するが、現時点のread-only実測ではその根拠を確認していない。",
+  "submittedAt": "2026-07-21T03:04:49Z"
+}

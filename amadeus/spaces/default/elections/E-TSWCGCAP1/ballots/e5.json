@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TSWCGCAP1",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "choice1を支持する。一次証拠: plan Step1とrequirements FR-2/AC-10はHerdr visible/text exact bytes、Keep waiting現在選択marker、title/説明/全choice順/guidance/pane列数、support versionを完全fingerprintとし、capture不能時はproduction入力を有効化しない。E-TSWCGFIX1はpositive 0件のため操作前exact bytes取得までhard stopをrecorded化した。現環境でHERDR_ENV=1、herdr 0.7.1、codex-cli 0.144.6をread-only実測した。隔離disposable workspace/paneだけでmodalを誘発し、capture前のEnter/矢印/selection入力を0、current runの7 pane入力を0、raw bytesとworkspace/tab/pane/session/run provenanceを操作前保存し、秘密・個人情報検査後にfixture化して隔離workspaceを停止する案は、FIX1のexact-capture条件を弱めずcurrent runの誤入力面を分離する。取得後も既承認test-first/fail-closed契約を維持する。非採用時受容度: 隔離paneでmodal誘発自体がcurrent-runへ状態共有する、操作前raw bytes/provenanceを確保できない、または安全な隔離cleanupを証明できない一次証拠が出た場合はchoice2のpassive監視継続を受容する。positive fixtureなしのchoice3は完全fingerprint契約を空洞化するため受容しない。",
+  "submittedAt": "2026-07-20T21:41:00Z"
+}

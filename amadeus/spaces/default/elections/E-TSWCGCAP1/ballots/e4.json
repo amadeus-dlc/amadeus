@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TSWCGCAP1",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "choice 1をGoA 1・留保なしで支持する。一次証拠としてleader正本のplan/requirements、E-TSWCGFIX1 record、ローカルversionをread-only実測し、herdr 0.7.1 / codex-cli 0.144.6がsupport allowlistと一致することを確認した。E-TSWCGFIX1はcurrent 7 paneのpositive exact visible bytes 0件を理由にproduction入力hard stopを固定し、plan Step 1/requirements AC-10は同allowlist版でKeep waiting選択marker、title、説明全文、choices全集合と順序、confirm guidance、pane列数を操作前visible bytesから閉じるまで自動入力を禁止する。推奨案はcurrent runの7 paneへ入力せず、別session/runの隔離disposable workspace/paneでのみmodalを誘発し、Enter・矢印・selection移動前にraw visible/text bytesと全provenanceをcaptureし、秘密/個人情報検査後にfixture化して隔離workspaceを停止するため、E-TSWCGFIX1のcapture品質とcurrent-run入力0境界を維持しつつStep 1を解除できる。非採用時受容度は中程度で、choice 2は隔離paneでもallowlist版modalを決定的・安全に再現できない一次証拠、または誘発がcurrent run/外部状態へ波及する証拠がある場合に受容する。choice 3はpositive fixtureなしで完全fingerprint契約を弱めるため受容しない。",
+  "submittedAt": "2026-07-21T06:42:00Z"
+}

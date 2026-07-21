@@ -1,0 +1,80 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "Approve Plan — 現planでtest-first実装へ進む"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "Approve Plan — 現planでtest-first実装へ進む",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "Request Changes — noteに修正Step/境界を明記",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-21T03:08:11Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TSWCGP1",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "recorded人間裁定に基づきApprove Planを支持する。一次証拠としてcode-generation-plan.mdを再実測し、SHA-256は7c8f040094c3679ea25d6a77ea8150556b768a1d621556f518dbb7d5bd5e1ac5で選挙定義と一致した。同planは12 StepsをFR-1〜6・AC-1〜10へtraceし、所有をpure fingerprint、Herdr 0.7.1 adapter、pane単位latch/rearm、team-up fresh/resume/kill/failure lifecycleへ限定する。test-first、対象files、production 250〜400 LOC/test 250〜450 LOC、positive fixture捕捉不能・production 400 LOC到達・禁止境界変更時の停止、実Herdr pane入力0、PR非mergeの境界も明記され、既決requirementsから逸脱せず実装開始条件として十分閉じている。非採用時受容度は高く、Request Changesが未追跡FR/AC、完全fingerprint不能、対象file追加、LOC上限到達、または既存team-up lifecycleとの不整合を一次証拠とStep単位で示す場合は再計画を受容する。抽象的懸念のみで既決境界を拡張する変更は受容しない。",
+      "submittedAt": "2026-07-21T03:04:02Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TSWCGP1",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "一次証拠として、code-generation-plan.mdのSHA-256が選挙定義の7c8f040094c3679ea25d6a77ea8150556b768a1d621556f518dbb7d5bd5e1ac5と一致することを実測した。planの12 Stepsはrequirementsの対象run内leader/engineer限定、CRLF→LF以外のcanonicalization禁止、同一pane identityの再確認、単発latchと2回不在rearm、supervisor lock/lifecycle、Herdr 0.7.1とCodex CLI 0.144.6のfixture境界へ対応し、CodeKBが示すteam-up.shのlifecycle所有、専用helper、role再解決、既存resume integration testとも整合する。さらに実Herdr入力禁止、test-first、production 400 LOC・対象file追加・positive fixture捕捉不能・境界変更時の再停止が明記されており、既決責務外への拡張を防げるためApprove Planを支持する。非採用時は、具体的な未充足FR/ACまたは境界矛盾を一次証拠付きで示すRequest Changesであれば受容するが、現時点のread-only実測ではその根拠を確認していない。",
+      "submittedAt": "2026-07-21T03:04:49Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TSWCGP1",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "一次証拠としてplan、requirements、codekb、scripts/team-up.sh、既存testsをread-only実測した。plan SHA-256は7c8f040094c3679ea25d6a77ea8150556b768a1d621556f518dbb7d5bd5e1ac5で選挙対象と一致し、FR-1〜6/AC-1〜10を12 Stepsへtraceしている。所有範囲はpure fingerprint、Herdr 0.7.1 adapter、pane単位latch/rearm、fresh/resume/kill/failure lifecycleに限定され、test-first、対象files、production/test LOC、再停止条件、実pane入力禁止、PR非merge境界が明記されている。codekbは同じteam-up所有Herdr境界とfail-closed条件を支持し、現行team-up.shにはrole/session/pane lifecycle seam、既存resume/msg-backend testsにはfake Herdrと非退行seamがある。requirements末尾には旧poll/stability findingのNOT READY文面が残るが、規範本文は通常pollとimmediate stability readを分離済みで、recorded requirements gateおよび本判断契約によりplan開始境界は確定しているためApprove Planを支持する。非採用時受容度: Request Changesが採用されても、修正Stepと境界が具体的な一次証拠に結び付き、既決のfail-closed・実pane入力禁止・対象file/LOC・再停止条件を弱めず、実装開始前にplanへ限定して解消するなら受容する。",
+      "submittedAt": "2026-07-21T03:04:52Z"
+    },
+    {
+      "kind": "amend",
+      "ref": {
+        "electionId": "E-TSWCGP1",
+        "voter": "e1",
+        "submittedAt": "2026-07-21T03:04:02Z"
+      },
+      "electionId": "E-TSWCGP1",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "human-authorized evidence-correction amend。既存original票のchoice 1 / GoA 1 / reservation nullを維持する。一次証拠としてrequirements.md Review欄を再実測し、実際の独立review 2回、最終修正による通常poll・即時stability read・送信transaction TTLの分離、E-TSWRAG1 choice 1=2票/GoA 1=2票/留保なしのrecorded承認、未解決finding 0へ訂正されたことを確認した。再sensorもrequired-sections 1efb483b、upstream-coverage 6167e7b0、answer-evidence a1d24257が全PASSで、diff-checkもPASSしている。FR/NFR/AC本文は不変で、code-generation-plan.mdのSHA-256も7c8f040094c3679ea25d6a77ea8150556b768a1d621556f518dbb7d5bd5e1ac5のままであるため、12 Stepsのtest-first計画と所有・LOC・停止・実pane入力0・PR非merge境界を承認する判断は変わらない。非採用時受容度は高く、未追跡FR/AC、完全fingerprint不能、対象file追加、LOC上限到達、または既存team-up lifecycleとの不整合が一次証拠とStep単位で示される場合はRequest Changesと再計画を受容する。抽象的懸念だけによる既決境界拡張は受容しない。",
+      "submittedAt": "2026-07-21T03:07:56Z"
+    }
+  ],
+  "resolutions": []
+}

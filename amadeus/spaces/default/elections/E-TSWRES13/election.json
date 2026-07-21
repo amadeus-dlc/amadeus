@@ -1,0 +1,45 @@
+{
+  "electionId": "E-TSWRES13",
+  "kind": "s13-adoption",
+  "question": "intent 260721-teamup-safety-wait / reverse-engineering §13 学習候補3件の採否。c1=『禁止』を server-side safety check 無効化でなく team-up 管理下の既知 Codex safety-wait UI自動解除と解釈（公開option/approval bypassでは無効化不可）。c2=agmsg bridge拡張でなく team-up所有Herdr境界の専用supervisor候補（bridgeにmodal APIなし、team-upがlifecycle所有）。c3=pane ID永続化でなくrole名再解決を基準案（resume適合、0件/複数件fail-closed）。parked=Herdr 0.7.1のANSI/wrap正規化とCodex version allowlist。各自 codekb re-scan・reverse-engineering memory・実装境界をリードオンリー実測し、一般化可能な新規normだけを採用する。単一選択で3候補の全組合せを表す。GoAと非採用時受容度付きで投票する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "追加なし — 3件ともIntent固有の設計判断としてdiaryに留める"
+    },
+    {
+      "internalNo": 2,
+      "label": "c1のみ採用"
+    },
+    {
+      "internalNo": 3,
+      "label": "c2のみ採用"
+    },
+    {
+      "internalNo": 4,
+      "label": "c3のみ採用"
+    },
+    {
+      "internalNo": 5,
+      "label": "c1+c2を採用"
+    },
+    {
+      "internalNo": 6,
+      "label": "c1+c3を採用"
+    },
+    {
+      "internalNo": 7,
+      "label": "c2+c3を採用"
+    },
+    {
+      "internalNo": 8,
+      "label": "c1+c2+c3を採用"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}

@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TSWRES13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "一次証拠として codekb re-scan 260721-teamup-safety-wait.md と同 intent の reverse-engineering/memory.md を実測した。c1 は当該要求の『禁止』を既知 Codex safety-wait UI の自動解除へ限定する解釈、c2 は modal API を持たない agmsg bridge と lifecycle を所有する team-up/Herdr 境界の選択、c3 は現行 run record と resume に合わせた role 名再解決の基準案である。さらに Herdr 0.7.1 の ANSI/wrap 正規化と Codex version allowlist が未確定で、3件はいずれも現 intent の製品・version・所有境界へ強く依存する。安定した一般 norm として昇格するには時期尚早なため、追加なしを支持する。非採用となり一部候補が採用されても、適用範囲、version drift、0件/複数件 fail-closed、server-side safety 非無効化を norm 本文に限定して保存するなら受容する。",
+      "submittedAt": "2026-07-21T02:15:32Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TSWRES13",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "追加なしを支持。一次証拠として scripts/team-up.sh:143-151,211-243 はHerdr session/pane生成とlabel ownershipをteam-up内に置き、同:720-769 はHerdr backendをagmsg monitor/role-resumeから分離している。scripts/team-msg.sh:56-78,125-150 はrole名をagent名へ解決し、実行時agent listからpane_idを得て送信する既存境界を示す一方、0件はfailするが複数件fail-closedは未実装である。codekb re-scanは焦点7ファイルのbase→observed差分0、Herdr read→send間のTOCTOU残存、完全fingerprint等の要件候補を記録し、reverse-engineering memoryはANSI/wrap正規化とCodex version allowlistをopen questionとして残す。よってc1は本Intentの要求解釈、c2/c3は未確定の設計候補で、一般化済み新規normとしてpersistする成熟度にない。非採用時受容度: c3のみ採用（choice 4）は一意再解決と0件/複数件fail-closedの対照test成立後なら6、c1/c2を含む他案は現時点では7。",
+      "submittedAt": "2026-07-21T02:16:49Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TSWRES13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "一次証拠として codekb re-scan 260721-teamup-safety-wait.md、同 Intent の reverse-engineering/memory.md、code-structure.md を実測した。c1は既知Codex safety-wait UIだけを対象にする当該修正の解釈、c2はteam-upが所有するHerdr lifecycle境界の配置判断、c3はresume時のrole再解決と0件/複数件fail-closedという具体設計であり、3件とも一般化済みの新規normではなくIntent固有のdiary判断として保持するのが妥当。Herdr 0.7.1のANSI/wrap正規化とCodex version allowlistも未確定である。非採用時受容度は中程度で、いずれかをpersistする場合でも複数Intentに跨る反復証拠、既存上位normとの非重複、fail-closed境界が実証されれば受容する。",
+      "submittedAt": "2026-07-21T02:16:55Z"
+    }
+  ],
+  "late": []
+}
