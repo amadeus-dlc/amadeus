@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TSWRAG1",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "recorded人間判断契約に基づくoriginal投票。一次証拠としてleader worktreeのrequirements.md、requirements-analysis-questions.md、audit上のsensor/review記録をread-only独立実測した。E-TSWRA1〜3のchoice1は、current runのleader+全engineer Codex pane、Keep waiting選択中の完全visible fingerprint時のみEnter 1回、paneごとのsupervisor/fresh-resume/rearm/cleanupとして要件へ反映済みである。review iteration 1のBLOCKER 2件とMAJOR 1件は、原子的なsupervisor一意排他、二重読取から送信直前までのsession/role/ephemeral pane identity再照合、Herdr 0.7.1/Codex 0.144.6 allowlistとclosed fingerprint/negative fixtureへ具体化されている。iteration 2のpoll/stability衝突も、通常pollを前回完了から次回開始まで1,000ms以上、候補後stability readを即時かつ初回読取完了から完了まで1,000ms以下、送信TTLを初回読取完了から送信開始まで1,000msとして分離し、FR-2/FR-3/NFR/ACで整合している。required-sections/upstream-coverage/answer-evidenceは全PASSであり、要件境界は実装可能なためApproveを支持する。非採用時は、現行FR/ACの時間起点・排他・identity照合・fingerprint schemaに残る実装不能または安全上の矛盾がfile/line一次証拠付きで示される場合のみRequest Changesを受容する。",
+      "submittedAt": "2026-07-21T02:47:47Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TSWRAG1",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Approve。一次証拠としてrequirements-analysis-questions.md:3-38はrecorded E-TSWRA1〜3のchoice 1を対象pane・許可入力・pane別lifecycleへ逐語反映する。requirements.md:13-45はcurrent runのleader+全engineer Codex pane、0/複数role fail-closed、完全visible fingerprint、二重読取、Enter 1回、atomic supervisor排他、ephemeral pane identity再照合、fresh/resume/kill/rollback cleanupを閉じる。iteration 1の排他・pane同一性・fingerprint oracleは同:138-156で解消済み。iteration 2残件の時間衝突は同:23で候補後stability readを通常poll待ちなし・読取完了間1,000ms以下、同:29で送信開始までTTL 1,000ms、同:62で通常poll完了間隔1,000ms以上と別契約に分離され、AC-1(:119)まで同一定義になった。audit 2026-07-21T02:44:33Zのlatest required-sections/upstream-coverage/answer-evidenceは全SENSOR_PASSED。非採用時受容度: Request Changesは残存矛盾を具体的なFR/AC行と再現不能oracleで示す場合6、既に閉じたreview findingの再提示のみなら7。",
+      "submittedAt": "2026-07-21T02:47:59Z"
+    }
+  ],
+  "late": []
+}

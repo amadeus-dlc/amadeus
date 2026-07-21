@@ -1,0 +1,26 @@
+{
+  "electionId": "E-TSWRA1",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 4,
+      "label": "X. その他（noteに対象pane境界を明記）"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "C. current runのleader Codex paneのみ"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "B. current runのengineer Codex paneのみ"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 1,
+      "label": "A. current runのleader + 全engineerのCodex pane"
+    }
+  ]
+}

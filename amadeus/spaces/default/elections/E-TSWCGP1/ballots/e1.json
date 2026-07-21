@@ -1,0 +1,16 @@
+{
+  "kind": "amend",
+  "ref": {
+    "electionId": "E-TSWCGP1",
+    "voter": "e1",
+    "submittedAt": "2026-07-21T03:04:02Z"
+  },
+  "electionId": "E-TSWCGP1",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "human-authorized evidence-correction amend。既存original票のchoice 1 / GoA 1 / reservation nullを維持する。一次証拠としてrequirements.md Review欄を再実測し、実際の独立review 2回、最終修正による通常poll・即時stability read・送信transaction TTLの分離、E-TSWRAG1 choice 1=2票/GoA 1=2票/留保なしのrecorded承認、未解決finding 0へ訂正されたことを確認した。再sensorもrequired-sections 1efb483b、upstream-coverage 6167e7b0、answer-evidence a1d24257が全PASSで、diff-checkもPASSしている。FR/NFR/AC本文は不変で、code-generation-plan.mdのSHA-256も7c8f040094c3679ea25d6a77ea8150556b768a1d621556f518dbb7d5bd5e1ac5のままであるため、12 Stepsのtest-first計画と所有・LOC・停止・実pane入力0・PR非merge境界を承認する判断は変わらない。非採用時受容度は高く、未追跡FR/AC、完全fingerprint不能、対象file追加、LOC上限到達、または既存team-up lifecycleとの不整合が一次証拠とStep単位で示される場合はRequest Changesと再計画を受容する。抽象的懸念だけによる既決境界拡張は受容しない。",
+  "submittedAt": "2026-07-21T03:07:56Z"
+}

@@ -1,6 +1,29 @@
 # 依存関係
 
-## Codex hooks／agmsg の依存境界（intent 260718-hooks-config-conflict、2026-07-18、最新）
+## safety-wait 自動解除の依存境界（intent 260721-teamup-safety-wait、最新）
+
+```text
+team-up.sh
+  ├─ run record: runtime / session / instance / member path
+  ├─ Herdr session + role-labelled pane
+  │    └─ dismiss supervisor candidate
+  │         ├─ visible fingerprint matcher
+  │         ├─ one-shot latch / rate limit / cleanup
+  │         └─ Herdr read + limited key input
+  └─ run-codex.sh
+       └─ agmsg shim → Codex TUI
+
+agmsg bridge ── turn/start message delivery only ──> Codex
+```
+
+## 結合と分離の判断
+
+- supervisor は `team-up.sh` の session/member lifecycle に依存するが、agmsg bridge の内部実装には依存させない。
+- fingerprint matcher は Herdr の生 CLI 呼出しから分離し、固定 fixture だけで positive／negative 判定を検証可能にする。
+- pane ID を永続依存にせず role 名から解決する場合、role 一意性と named instance の session 分離が前提になる。
+- 外部追加 dependency は不要。Herdr 0.7.1 と Codex 0.144.6 の runtime 契約が互換性依存であり、drift 時は fail-closed とする。
+
+## Codex hooks／agmsg の依存境界（intent 260718-hooks-config-conflict、2026-07-18、履歴）
 
 ```mermaid
 flowchart TD

@@ -1,6 +1,17 @@
 # ビジネス概要
 
-## 260713-swarm-driver-migration の業務境界（2026-07-13、最新）
+## 260721-teamup-safety-wait の業務境界（2026-07-21、最新）
+
+`scripts/team-up.sh` は、leader と複数 engineer の worktree、Herdr pane、Codex／Claude runtime、agmsg／Herdr messaging を一括起動・再開・停止するチーム運用ランチャーである。本 intent の利用者価値は、Codex が通常作業中に表示する `Additional safety checks` モーダルで無人メンバーが停止した場合に、対象 Codex pane だけを安全に継続させ、仕掛かり作業の完了を妨げないことである。
+
+## 今回の成功境界と非目標
+
+- 対象は `team-up.sh` が所有する現在の session／member／Codex pane に限定する。通常の質問、approval、composer、shell prompt、別 session の pane は操作しない。
+- 実現するのは既知 UI fingerprint を検出した後の `Keep waiting` 自動選択であり、サーバー側 safety check 自体の無効化ではない。
+- Codex／Herdr の表示・CLI 契約が変わった場合は警告して停止する。曖昧一致、scrollback 一致、一定間隔の Enter 注入は採用しない。
+- leader の実務代行、メンバーの新規 scope 開始、既存 pane の再 spawn は対象外である。
+
+## 260713-swarm-driver-migration の業務境界（2026-07-13、履歴）
 
 Amadeus の Construction では、依存関係を持つ複数 Unit を同一バッチで実装し、Unit ごとの隔離 worktree と決定的な収束判定を組み合わせる。現行の公開スイッチ `AMADEUS_USE_SWARM` は boolean だが、実際の実行方式は Claude Code の `Task`／Dynamic `Workflow`、Codex の Unit ごとの `codex exec`、Kiro の native `subagent` とハーネスごとに異なる。この差を利用者が明示・検証できる共通 driver 契約は、観測コミット `cf3dc88b46a2b23bcfd71b1136632d1739cdd7e5` 時点では未実装である。
 

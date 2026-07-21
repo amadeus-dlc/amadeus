@@ -1,6 +1,26 @@
 # コード構造
 
-## Codex hooks 設定競合の観測面（最新: 260718-hooks-config-conflict）
+## safety-wait 修正面の配置境界（最新: 260721-teamup-safety-wait）
+
+| ファイル | 現行責務 | 今回との関係 |
+| --- | --- | --- |
+| `scripts/team-up.sh` | 1075行の run／worktree／Herdr layout／runtime launcher | supervisor の lifecycle と session/member 限定情報を接続する所有境界 |
+| `scripts/run-codex.sh` | Codex hooks activate、identity別 `CODEX_HOME`、shim 経由起動 | TUI の生成元。approval bypass は safety-buffering UIを無効化しない |
+| `scripts/team-msg.sh` | agmsg／Herdr message transport | `agent send` + `pane send-keys enter` の既存入力前例。ただし modal supervisor の配置先ではない |
+| `tests/integration/t-team-up-codex-resume.test.ts` | Codex fresh／resume／kill／named instance の launcher fixture | supervisor lifecycle と pane 再解決の主回帰面 |
+| `tests/integration/t-team-up-msg-backend.test.ts` | backend 保存・resume・monitor 分岐 | agmsg／Herdr backend による supervisor 適用条件を検査 |
+| `tests/integration/t-team-msg.test.ts` | Herdr 送信・idle wait・Enter 契約 | 既存 send seam の非退行を検査 |
+| `tests/integration/t-run-codex-project-target.test.ts` | Codex project target と hooks activate | launcher wrapper の非退行を検査 |
+
+## 推奨モジュール境界
+
+`team-up.sh` に判定ロジックと長寿命 loop を直接追加せず、単一目的の shell helper または小さな決定的 helper に分離する。helper は「visible 出力→判定」という純粋な fingerprint seam と、「role→pane 解決／read／send／cleanup」という Herdr adapter seam を分ける。`team-up.sh` 側の変更は、Codex pane 作成後の supervisor 起動、run record に必要な限定メタデータ、kill／異常終了時 cleanup に絞る。既存 pane ID 非永続化契約を維持する場合、resume では agent list の role 名から毎回一意解決する。
+
+## 差分観測
+
+到達可能 base `a326f47bc0146a3b4285552f42b92fd61fb343a7` から observed `3e349465b07ea415fd1303a072d161438d6bbf3c` まで131コミットあるが、上表の焦点7ファイルは区間変更0である。今回の設計は observed HEAD の live code と Herdr 0.7.1 実機契約に基づく。
+
+## Codex hooks 設定競合の観測面（履歴: 260718-hooks-config-conflict）
 
 [Issue #770](https://github.com/amadeus-dlc/amadeus/issues/770) の writer／reader を observed HEAD `594ba21d636218558b711b371c286f16731fb081` と外部 agmsg 1.1.7 で対称走査した。base `e9a001105d253e14affb77417423d9f0b0360f9e` は observed の祖先（距離8）で、フォーカスファイルの区間契約変更は0件。
 

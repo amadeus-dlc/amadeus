@@ -1,0 +1,16 @@
+{
+  "kind": "amend",
+  "ref": {
+    "electionId": "E-TSWRA1",
+    "voter": "e3",
+    "submittedAt": "2026-07-21T02:29:17Z"
+  },
+  "electionId": "E-TSWRA1",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "recorded人間裁定に基づくhuman-authorized再提出。一次証拠としてCodeKBのbusiness-overview/architecture/code-structure/re-scanとscripts/team-up.shを再確認した。team-upはcurrent runのleaderと全engineerを同じmember集合として生成し、各Codex paneのfresh/resume/kill lifecycleを所有する。leaderまたはengineerだけを除外する責務差はなく、current runのleader+全engineer Codex paneを対象とするAを支持する。非採用時は、片側除外の一次証拠と責務差が示され、current-run/Codex限定が維持される場合のみ受容する。",
+  "submittedAt": "2026-07-21T02:35:04Z"
+}

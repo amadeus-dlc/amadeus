@@ -414,5 +414,12 @@
     "dirName": "260720-ballot-received-at",
     "scope": "bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019f8263-3d92-79d5-be23-96e8990d0f97",
+    "slug": "teamup-safety-wait",
+    "dirName": "260721-teamup-safety-wait",
+    "scope": "bugfix",
+    "status": "complete"
   }
 ]

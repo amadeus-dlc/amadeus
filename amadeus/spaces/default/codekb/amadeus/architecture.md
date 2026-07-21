@@ -1,5 +1,46 @@
 # アーキテクチャ
 
+## Codex safety-wait 自動解除境界（260721-teamup-safety-wait、最新）
+
+現行の所有境界は `team-up.sh` → Herdr session／pane → `run-codex.sh` → Codex TUI である。agmsg の codex monitor／shim／bridge は turn 開始や message boundary で入力を注入するが、TUI モーダルを識別・選択する API は持たない。一方 Herdr 0.7.1 には、repo 内で利用実績のある `agent send` と `pane send-keys ... enter`、実機で確認済みの visible pane 読取・output wait seam がある。このため自動解除の責務は bridge ではなく、`team-up.sh` が起動した Codex pane を管理する Herdr 境界に置く。
+
+設計候補は **Codex pane 専用 dismiss supervisor** である。1075行の launcher 本体へ監視ループを埋め込まず、fingerprint 判定・latch・rate limit・cleanup を凝集した狭い helper とし、`team-up.sh` は pane 生成後の起動と session 終了時の停止だけを所有する。pane ID は現行 run record に永続化されないため、再開時は session 内の role 名から一意に再解決し、0件／複数件なら fail-closed とする。
+
+### Interaction Diagrams
+
+```mermaid
+sequenceDiagram
+  participant TeamUp as team-up.sh
+  participant Supervisor as dismiss supervisor
+  participant Herdr as Herdr session
+  participant Codex as Codex TUI
+  TeamUp->>Herdr: Codex member pane を起動
+  TeamUp->>Supervisor: session と member role を限定して起動
+  Supervisor->>Herdr: role から pane を一意解決
+  loop rate limit 付き監視
+    Supervisor->>Herdr: visible 出力を二重読取
+    Herdr-->>Supervisor: 現在表示中の画面
+    Supervisor->>Supervisor: 完全 fingerprint と one-shot latch を検査
+    alt 既知 safety-wait が安定表示
+      Supervisor->>Herdr: 対象 pane に選択と Enter
+      Supervisor->>Herdr: 解除を再読取で確認
+    else 不一致・曖昧・version drift
+      Supervisor->>Supervisor: 警告して無操作または停止
+    end
+  end
+  Herdr-->>Supervisor: pane または session 終了
+  Supervisor->>Supervisor: latch と監視資源を cleanup
+```
+
+テキスト代替: `team-up.sh` は Codex member pane を起動した後、session と role を限定して supervisor を起動する。supervisor は role から pane を一意に解決し、現在の visible 出力を二重に読み、`Additional safety checks`、`Keep waiting`、confirm guidance を含む完全 fingerprint が安定している場合だけ one-shot で選択と Enter を送る。解除を再読取で確認し、曖昧一致、version drift、pane／session 消失時は入力せず停止・清掃する。
+
+## 既知の限界と設計判断
+
+- Herdr には read→send を単一原子的操作にする primitive がないため TOCTOU リスクはゼロにできない。二重読取、短い有効期限、one-shot latch、解除確認で露出を限定する。
+- `visible` だけを判断源とし、`recent`／`recent-unwrapped`／scrollback は fingerprint 判定に使わない。過去画面への誤反応を防ぐ。
+- Codex／Herdr の対応 version と完全 fingerprint を明示し、表示順、既定選択、ANSI／wrap の契約が変われば fail-closed にする。
+- bridge は通常メッセージ配送の責務を維持し、モーダル操作を追加しない。責務の混在と外部 agmsg への不要な変更を避ける。
+
 > **2026-07-19 更新（intent `260719-cursor-complete-clear`、最新）**: [Issue #1248](https://github.com/amadeus-dlc/amadeus/issues/1248) の「完了 intent シャードへの無期限監査追記」を、base `591b6a2a2` → observed `a326f47bc`(52コミット)で diff-refresh。フォーカス面(カーソルライフサイクル・complete 経路・監査追記チェーン・フック群)の focus ファイル区間コミット13件は全て非交差。根本は active-intent カーソルの **set⇔clear 非対称** と監査ルーティングチェーンの status ゲート不在(下記「active-intent カーソルの set⇔clear 非対称と監査ルーティング」節)。
 
 > **2026-07-19 更新（intent `260718-election-ts-foundation`、履歴）**: 選挙 TS 基盤の配布境界を確定。反証課題「dist 非対象の local overlay チャンネルが存在しない」は反証され、`contrib/skills/` overlay が canonical→dist→self-install の3層に加わる4本目の配布チャンネル(dist バイパス)として実在することを確認(下記「contrib overlay 配布チャンネル」節)。base `e9a001105` → observed `c2e4975ff`(69コミット)で diff-refresh、フォーカス面の区間変更は軽微。

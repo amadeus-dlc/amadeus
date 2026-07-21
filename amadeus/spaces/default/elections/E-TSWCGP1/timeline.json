@@ -1,0 +1,67 @@
+[
+  {
+    "kind": "distributed",
+    "at": "2026-07-21T03:03:10Z",
+    "detail": "delivered via agmsg: e1",
+    "voter": "e1"
+  },
+  {
+    "kind": "distributed",
+    "at": "2026-07-21T03:03:10Z",
+    "detail": "delivered via agmsg: e2",
+    "voter": "e2"
+  },
+  {
+    "kind": "distributed",
+    "at": "2026-07-21T03:03:10Z",
+    "detail": "delivered via agmsg: e3",
+    "voter": "e3"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-07-21T03:04:02Z",
+    "receivedAt": "2026-07-21T03:04:30Z",
+    "detail": "ballot accepted: e1",
+    "voter": "e1"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-07-21T03:04:49Z",
+    "receivedAt": "2026-07-21T03:05:02Z",
+    "detail": "ballot accepted: e3",
+    "voter": "e3"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-07-21T03:04:52Z",
+    "receivedAt": "2026-07-21T03:05:13Z",
+    "detail": "ballot accepted: e2",
+    "voter": "e2"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-07-21T03:07:56Z",
+    "receivedAt": "2026-07-21T03:08:11Z",
+    "detail": "ballot amendment: e1",
+    "voter": "e1"
+  },
+  {
+    "kind": "tallied",
+    "at": "2026-07-21T03:08:11Z",
+    "detail": "tally: established"
+  },
+  {
+    "kind": "late",
+    "at": "2026-07-21T03:07:58Z",
+    "receivedAt": "2026-07-21T03:08:11Z",
+    "detail": "late ballot recorded: e3",
+    "voter": "e3"
+  },
+  {
+    "kind": "late",
+    "at": "2026-07-21T03:07:48Z",
+    "receivedAt": "2026-07-21T03:08:24Z",
+    "detail": "late ballot recorded: e2",
+    "voter": "e2"
+  }
+]

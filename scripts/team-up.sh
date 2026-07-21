@@ -54,6 +54,7 @@ CODEX_IDENTITY="$AGENT_IDENTITY"
 RUNTIME="${TEAM_RUNTIME:-claude}"
 RUNTIME_EXPLICIT=0
 HERDR="${HERDR:-herdr}"
+SAFETY_WAIT_HELPER="$REPO/scripts/team-up-codex-safety-wait.ts"
 # Number of engineer members (leader is always added on top). Selectable per
 # fresh run with -2/-4/-6; defaults to 6. A resumed run reads its saved size.
 TEAM_SIZE="${TEAM_ENGINEERS:-6}"
@@ -206,6 +207,188 @@ mux_kill() {
     # server not running: still delete any persisted session state
     "$HERDR" session delete "$1" >/dev/null 2>&1 && echo "killed session $1" || echo "no session $1"
   fi
+}
+
+safety_wait_process_matches() {
+  local pid="$1" run_record="$2" role="$3" command session run_id
+  case "$pid" in
+  "" | *[!0-9]*) return 1 ;;
+  esac
+  kill -0 "$pid" 2>/dev/null || return 1
+  command="$(ps -p "$pid" -o command= 2>/dev/null)" || return 1
+  session="$(cat "$run_record/session" 2>/dev/null)" || return 1
+  run_id="$(basename "$run_record")"
+  case "$command" in
+  *"$SAFETY_WAIT_HELPER supervise --session $session --run $run_id --role $role --run-record $run_record"*)
+    return 0
+    ;;
+  *) return 1 ;;
+  esac
+}
+
+safety_wait_role_for_member() {
+  if [ "$1" = "leader" ]; then
+    printf 'leader\n'
+  else
+    printf 'e%s\n' "${1#engineer-}"
+  fi
+}
+
+stop_safety_wait_supervisors() {
+  local run_record="$1" m role member_record owner state i
+  [ -d "$run_record/members" ] || return 0
+  for m in $(members_for "$(record_size "$run_record")"); do
+    role="$(safety_wait_role_for_member "$m")"
+    member_record="$run_record/members/$m"
+    state="$(safety_wait_stop_state "$member_record" "$run_record" "$role")"
+    if [ "$state" = "ambiguous" ]; then
+      echo "ERROR: safety-wait owner is ambiguous for $role" >&2
+      return 1
+    fi
+  done
+  for m in $(members_for "$(record_size "$run_record")"); do
+    role="$(safety_wait_role_for_member "$m")"
+    member_record="$run_record/members/$m"
+    [ -f "$member_record/safety-wait.lock/owner" ] || continue
+    owner="$(cat "$member_record/safety-wait.lock/owner" 2>/dev/null || true)"
+    if safety_wait_process_matches "$owner" "$run_record" "$role"; then
+      kill "$owner" 2>/dev/null || true
+      for i in $(seq 1 20); do
+        kill -0 "$owner" 2>/dev/null || break
+        sleep 0.05
+      done
+      if safety_wait_process_matches "$owner" "$run_record" "$role"; then
+        kill -KILL "$owner" 2>/dev/null || true
+      fi
+    fi
+    rm -f "$member_record/safety-wait.pid"
+    rm -rf -- "$member_record/safety-wait.lock"
+  done
+}
+
+safety_wait_stop_state() {
+  local member_record="$1" run_record="$2" role="$3" owner lock_dir
+  lock_dir="$member_record/safety-wait.lock"
+  if [ ! -e "$member_record/safety-wait.pid" ] && [ ! -e "$lock_dir" ]; then
+    printf 'none\n'
+    return
+  fi
+  [ -d "$lock_dir" ] && [ -f "$lock_dir/owner" ] || {
+    printf 'ambiguous\n'
+    return
+  }
+  owner="$(cat "$lock_dir/owner" 2>/dev/null || true)"
+  case "$owner" in
+  "" | *[!0-9]*) printf 'ambiguous\n'; return ;;
+  esac
+  if safety_wait_process_matches "$owner" "$run_record" "$role"; then
+    printf 'owned-live\n'
+  elif kill -0 "$owner" 2>/dev/null; then
+    printf 'ambiguous\n'
+  else
+    printf 'owner-dead\n'
+  fi
+}
+
+safety_wait_start_state() {
+  local member_record="$1" run_record="$2" role="$3" owner pid lock_dir
+  lock_dir="$member_record/safety-wait.lock"
+  if [ ! -e "$member_record/safety-wait.pid" ] && [ ! -e "$lock_dir" ]; then
+    printf 'none\n'
+    return
+  fi
+  [ -d "$lock_dir" ] && [ -f "$lock_dir/owner" ] &&
+    [ -f "$member_record/safety-wait.pid" ] || {
+    printf 'ambiguous\n'
+    return
+  }
+  owner="$(cat "$lock_dir/owner" 2>/dev/null || true)"
+  pid="$(cat "$member_record/safety-wait.pid" 2>/dev/null || true)"
+  case "$owner:$pid" in
+  *[!0-9:]* | :* | *:) printf 'ambiguous\n'; return ;;
+  esac
+  if [ "$owner" != "$pid" ]; then
+    printf 'ambiguous\n'
+  elif safety_wait_process_matches "$owner" "$run_record" "$role"; then
+    printf 'owned-live\n'
+  elif kill -0 "$owner" 2>/dev/null; then
+    printf 'ambiguous\n'
+  else
+    printf 'owner-dead\n'
+  fi
+}
+
+rollback_safety_wait_starts() {
+  local run_record="$1" acquired="$2" m role member_record owner
+  for m in $acquired; do
+    role="$(safety_wait_role_for_member "$m")"
+    member_record="$run_record/members/$m"
+    owner="$(cat "$member_record/safety-wait.lock/owner" 2>/dev/null || true)"
+    if safety_wait_process_matches "$owner" "$run_record" "$role"; then
+      kill "$owner" 2>/dev/null || true
+    fi
+    rm -f "$member_record/safety-wait.pid"
+    rm -rf -- "$member_record/safety-wait.lock"
+  done
+}
+
+start_safety_wait_supervisors() {
+  local m role member_record pid lock_dir state acquired=""
+  [ "$RUNTIME" = "codex" ] || return 0
+  [ -f "$SAFETY_WAIT_HELPER" ] || {
+    echo "ERROR: missing Codex safety-wait helper: $SAFETY_WAIT_HELPER" >&2
+    return 1
+  }
+  bun "$SAFETY_WAIT_HELPER" production-enabled >/dev/null 2>&1 || return 0
+  for m in $(members_for "$TEAM_SIZE"); do
+    role="$(safety_wait_role_for_member "$m")"
+    member_record="$RUN_RECORD/members/$m"
+    state="$(safety_wait_start_state "$member_record" "$RUN_RECORD" "$role")"
+    if [ "$state" = "ambiguous" ]; then
+      echo "ERROR: safety-wait owner is ambiguous for $role" >&2
+      return 1
+    fi
+    if [ "$state" != "owned-live" ] && ! bun "$SAFETY_WAIT_HELPER" role-ready \
+      --session "$S" --role "$role" --herdr "$HERDR" >/dev/null 2>&1; then
+      echo "ERROR: safety-wait role pane is not ready for $role" >&2
+      return 1
+    fi
+  done
+  for m in $(members_for "$TEAM_SIZE"); do
+    role="$(safety_wait_role_for_member "$m")"
+    member_record="$RUN_RECORD/members/$m"
+    lock_dir="$member_record/safety-wait.lock"
+    state="$(safety_wait_start_state "$member_record" "$RUN_RECORD" "$role")"
+    [ "$state" = "owned-live" ] && continue
+    if [ "$state" = "owner-dead" ]; then
+      rm -f "$member_record/safety-wait.pid"
+      rm -rf -- "$lock_dir"
+    fi
+    if ! mkdir "$lock_dir" 2>/dev/null; then
+      echo "ERROR: safety-wait owner is ambiguous for $role" >&2
+      rollback_safety_wait_starts "$RUN_RECORD" "$acquired"
+      return 1
+    fi
+    acquired="$acquired $m"
+  done
+  for m in $acquired; do
+    role="$(safety_wait_role_for_member "$m")"
+    member_record="$RUN_RECORD/members/$m"
+    lock_dir="$member_record/safety-wait.lock"
+    nohup bun "$SAFETY_WAIT_HELPER" supervise \
+      --session "$S" --run "$RUN_ID" --role "$role" --run-record "$RUN_RECORD" \
+      --herdr "$HERDR" >/dev/null 2>"$member_record/safety-wait.log" &
+    pid=$!
+    disown 2>/dev/null || true
+    printf '%s\n' "$pid" >"$member_record/safety-wait.pid"
+    printf '%s\n' "$pid" >"$lock_dir/owner"
+    sleep 0.05
+    if ! safety_wait_process_matches "$pid" "$RUN_RECORD" "$role"; then
+      echo "ERROR: safety-wait supervisor failed to start for $role" >&2
+      rollback_safety_wait_starts "$RUN_RECORD" "$acquired"
+      return 1
+    fi
+  done
 }
 
 # mux_pane_label <session> <pane> <label> — name the pane after its member.
@@ -511,6 +694,7 @@ while [ "$#" -gt 0 ]; do
     if [ -n "$active_run" ]; then
       saved_mux="$(cat "$INSTANCE_DIR/runs/$active_run/mux" 2>/dev/null || true)"
       [ "$saved_mux" = "herdr" ] || reject_legacy_run "$active_run" "$saved_mux"
+      stop_safety_wait_supervisors "$INSTANCE_DIR/runs/$active_run"
     fi
     mux_kill "$S"
     if [ -n "$active_run" ]; then
@@ -856,6 +1040,7 @@ handle_exit() {
   local rc=$?
   trap - EXIT
   if [ "$rc" -ne 0 ] && [ "$RUN_PREPARING" = "1" ]; then
+    [ -n "$RUN_RECORD" ] && stop_safety_wait_supervisors "$RUN_RECORD"
     if [ "$AGENTS_STARTED" = "0" ]; then
       rollback_prepared_run
     elif [ -d "$RUN_RECORD" ]; then
@@ -1013,6 +1198,7 @@ if mux_has_session "$S"; then
       fi
     fi
     echo "herdr session '$S' already exists — attaching instead." >&2
+    start_safety_wait_supervisors || exit 1
     mux_attach "$S"
     exit 0
   fi
@@ -1061,6 +1247,7 @@ P_TOP_RIGHT="$(mux_split "$S" "$P_LEADER" h 50 "$(member_worktree "${right[0]}")
 stack_column "$P_TOP_LEFT" "${left[@]:1}"
 stack_column "$P_TOP_RIGHT" "${right[@]:1}"
 
+start_safety_wait_supervisors || exit 1
 mux_attach "$S"
 if [ -n "$RUN_ID" ]; then
   printf 'running\n' >"$RUN_RECORD/status"

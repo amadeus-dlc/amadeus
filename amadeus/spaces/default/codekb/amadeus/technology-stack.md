@@ -1,6 +1,18 @@
 # 技術スタック
 
-## Codex hooks／agmsg runtime スタック（intent 260718-hooks-config-conflict、2026-07-18、最新）
+## safety-wait 自動解除の現行スタック（intent 260721-teamup-safety-wait、最新）
+
+- **Shell**: Bash (`set -euo pipefail`) が `team-up.sh`、`run-codex.sh`、`team-msg.sh` を構成する。長寿命監視を追加する場合も launcher から分離した狭い helper が適する。
+- **Multiplexer**: Herdr 0.7.1。session／workspace／pane／agent 管理と pane input seam を提供する。read→send の原子的 primitive は確認できない。
+- **Agent runtime**: Codex CLI 0.144.6。`Additional safety checks` は approval／sandbox とは別の safety-buffering UIで、公開された無効化 option は観測されていない。
+- **Messaging runtime**: 外部 agmsg の codex-monitor／shim／bridge。turn/start 配送用であり modal controller ではない。
+- **Test**: Bun `bun:test`、TypeScript `^6.0.3`、偽 Herdr／偽 agmsg fixture。新規 production dependency は不要な設計候補である。
+
+## version drift 方針
+
+Codex の文言・表示順・既定選択、または Herdr の read／input 契約が対応範囲外なら自動操作を止める。version allowlist と fingerprint のどちらか一方だけで許可せず、両方が一致する場合だけ動作させる。
+
+## Codex hooks／agmsg runtime スタック（intent 260718-hooks-config-conflict、2026-07-18、履歴）
 
 - Amadeus 側は Bun／TypeScript の `emit.ts` が整形済み JSON template と trust seed を生成し、Codex は project 内の exact `.codex/hooks.json` を発見する。
 - 外部 agmsg 1.1.7 は Bash driver と SQLite3 JSON1 (`readfile`／`writefile`、`json_set`／`json_remove`)で同じ active JSON を read-modify-write する。monitor bridge は Node.js と Codex `app-server --listen ws://` を利用する。

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TSWRA3",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "一次証拠としてscripts/team-up.shのfresh/resume/--kill/rollback経路、code-structure.md、t-team-up-codex-resume.test.tsのlifecycle seamを実測した。pane IDはrun recordへ永続化されずrole名が安定識別子であり、各paneを0件/複数件時fail-closedで一意再解決する必要がある。paneごとのsupervisorをfresh/resumeで起動し、modal消失後だけrearmし、pane/session/run終了・kill・rollbackでcleanupするchoice 1が既存所有境界と再開動作に一致する。非採用時受容度は中程度で、pane数に対する具体的な資源制約が一次証拠で示されればsession単一巡回も受容するが、誤pane入力防止と同等の一意解決・latch・cleanupが必須である。",
+  "submittedAt": "2026-07-21T02:35:04Z"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TSWCGCAP1",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "choice 1を支持する。一次証拠として、承認済みplan SHA 7c8f040094c3679ea25d6a77ea8150556b768a1d621556f518dbb7d5bd5e1ac5のStep 1はpositive実表示のexact visible bytes、閉じたvariant schema、Herdr/Codex allowlistをproduction enableの前提とし、requirements FR-2/3とAC-1/10はCRLF→LF以外の正規化、Keep waiting現在選択marker、title・説明全文・全choice順・confirm guidance・pane列数、二重読取・短TTL・送信直前identity再解決を要求する。E-TSWCGFIX1はOCR/画像転記を退け自然出現までhard stopとしていたが、実測ではherdr 0.7.1、codex-cli 0.144.6、current run 7 paneのpassive visible監視でpositive完全fingerprintは0件、入力0件のまま停止が継続している。current runと分離したdisposable workspace/paneで、同一allowlist版を用い、capture完了までEnter・矢印・selection変更を0件とし、modal出現直後の操作前raw visible textとworkspace/tab/pane/session/run/version/columns provenanceを取得して秘密・個人情報を除外後fixture/testへ固定し、隔離workspaceを停止する案は、安全境界を弱めずStep 1を閉じる最小経路である。非採用時はchoice 2を受容できるが、自然出現までproduction disableとhard stopを維持し、current run入力0件と継続監視を証明できることが条件で、納期は不定となる。choice 3はpositive oracleなしで完全fingerprintを実装できず受容しない。choice 4はchoice 1以上に隔離・provenance・入力禁止・production enable条件を厳格化する具体案の場合のみ受容する。",
+  "submittedAt": "2026-07-21T06:40:37Z"
+}

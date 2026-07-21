@@ -1,0 +1,16 @@
+{
+  "kind": "amend",
+  "ref": {
+    "electionId": "E-TSWRA3",
+    "voter": "e3",
+    "submittedAt": "2026-07-21T02:29:17Z"
+  },
+  "electionId": "E-TSWRA3",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "recorded人間裁定に基づくhuman-authorized再提出。一次証拠としてCodeKB architecture/code-structureとscripts/team-up.shのfresh/resume/kill/rollback経路を再確認した。pane IDは永続化されずrole名は安定しており、pane単位supervisor、role一意再解決、0件/複数件fail-closed、modal消失確認後rearm、pane/session/run cleanupが既存lifecycleに整合するためAを支持する。非採用時は、session単一supervisorがpane別latch/rate-limit/cleanup/一意解決を同等に隔離する証拠があればBを受容する。",
+  "submittedAt": "2026-07-21T02:35:04Z"
+}

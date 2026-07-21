@@ -1,6 +1,24 @@
 # API ドキュメント
 
-## swarm driver 関連の現行 CLI／directive 契約（2026-07-13、最新）
+## safety-wait supervisor が依存する内部 CLI 契約（最新: 260721-teamup-safety-wait）
+
+この intent は HTTP API を追加しない。設計対象は `team-up.sh` から Herdr CLI へ接続する内部運用 API である。
+
+| 契約 | 入力 | 成功結果 | fail-closed 条件 |
+| --- | --- | --- | --- |
+| role→pane 解決 | session、member role | pane ID が一意 | 0件、複数件、session 消失 |
+| visible 読取 | session、pane ID、`source=visible` | 現在画面のみ | read error、partial／ANSI／wrap が正規化契約外 |
+| output wait | pane、既知 fingerprint、timeout | 候補画面の到着 | timeout、version drift |
+| 選択注入 | 対象 pane、限定 key、`enter` | 現在 modal を1回送信 | latch 済み、rate limit、再読取不一致 |
+| 解除確認 | 同一 pane の visible 再読取 | fingerprint 消失 | 残留時は再連打せず警告停止 |
+
+## 既存 launcher／bridge 契約
+
+- `run-codex.sh` は `--dangerously-bypass-approvals-and-sandbox` を付けて Codex shim を起動するが、これは approval／sandbox 契約であり safety-buffering UI の抑止 APIではない。
+- agmsg codex-monitor／shim／bridge は turn/start 注入を担い、TUI modal 操作 API を公開しない。今回その外部 API を拡張しない。
+- `team-msg.sh` の Herdr backend は `agent send` の後に `pane send-keys ... enter` を送る既存入力契約を持つ。supervisor は自由文を送らず、完全 fingerprint 成立時の限定 key 操作だけを行う。
+
+## swarm driver 関連の現行 CLI／directive 契約（2026-07-13、履歴）
 
 ### `invoke-swarm` directive
 

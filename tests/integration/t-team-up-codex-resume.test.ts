@@ -15,6 +15,7 @@ import { join, resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dir, "../..");
 const TEAM_UP = join(ROOT, "scripts/team-up.sh");
+const SAFETY_WAIT = join(ROOT, "scripts/team-up-codex-safety-wait.ts");
 const CODEX_HOOKS_TOOLS = join(
   ROOT,
   "packages/framework/harness/codex/tools",
@@ -110,12 +111,28 @@ function createCliFixture() {
   mkdirSync(repo, { recursive: true });
   mkdirSync(bin, { recursive: true });
   mkdirSync(herdrState, { recursive: true });
+  mkdirSync(join(repo, "scripts"), { recursive: true });
 
   git(repo, "init", "-q", "-b", "main");
   git(repo, "config", "user.email", "team-up@example.com");
   git(repo, "config", "user.name", "Team Up Test");
   writeFileSync(join(repo, "README.md"), "fixture\n");
-  git(repo, "add", "README.md");
+  writeFileSync(
+    join(repo, "scripts", "team-up-codex-safety-wait.ts"),
+    `const args = process.argv.slice(2);
+if (args[0] === "production-enabled") process.exit(0);
+const roleIndex = args.indexOf("--role");
+const role = roleIndex >= 0 ? args[roleIndex + 1] : "";
+if (args[0] === "role-ready") {
+  process.exit(process.env.FAKE_SAFETY_WAIT_ROLE_READY_FAIL_ROLE === role ? 9 : 0);
+}
+if (args[0] !== "supervise") process.exit(2);
+if (process.env.FAKE_SAFETY_WAIT_FAIL_ROLE === role) process.exit(9);
+process.on("SIGTERM", () => process.exit(0));
+setInterval(() => {}, 1_000);
+`,
+  );
+  git(repo, "add", "README.md", "scripts/team-up-codex-safety-wait.ts");
   git(repo, "commit", "-qm", "fixture");
 
   // Fake herdr binary. team-up.sh drives herdr through `--session <name>
@@ -246,6 +263,22 @@ describe("team-up run lifecycle", () => {
     expect(result.stdout.toString()).toContain("TEAM_INSTANCE");
   });
 
+  test("production safety-wait is enabled without a test-fixture injection path", () => {
+    const source = readFileSync(SAFETY_WAIT, "utf8");
+    expect(source).not.toContain("tests/fixtures");
+    expect(source).not.toContain("test-only-positive");
+    expect(source).not.toContain("process.env");
+    expect(source).not.toContain("Bun.env");
+    expect(source).not.toContain("--fixture");
+    expect(source).not.toContain("--fingerprint");
+    const command = Bun.spawnSync(["bun", SAFETY_WAIT, "production-enabled"], {
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    expect(command.exitCode).toBe(0);
+    expect(command.stdout.toString()).toBe("");
+  });
+
   test("a fresh launch creates one isolated worktree and branch per role from HEAD", () => {
     const fixture = createCliFixture();
     const baseCommit = git(fixture.repo, "rev-parse", "HEAD");
@@ -357,6 +390,231 @@ describe("team-up run lifecycle", () => {
         },
       ),
     );
+  });
+
+  test("Codex fresh, resume, and kill own one safety-wait supervisor per role", () => {
+    const fixture = createCliFixture();
+    const members = [
+      "leader",
+      "engineer-1",
+      "engineer-2",
+      "engineer-3",
+      "engineer-4",
+      "engineer-5",
+      "engineer-6",
+    ];
+    const runRecord = join(fixture.state, "runs", "run-001");
+    const readPids = () =>
+      members.map((member) =>
+        Number(readFileSync(join(runRecord, "members", member, "safety-wait.pid"), "utf8")),
+      );
+
+    try {
+      const fresh = Bun.spawnSync({
+        cmd: ["bash", TEAM_UP, "--codex"],
+        env: fixture.env,
+        stderr: "pipe",
+        stdout: "pipe",
+      });
+      expect(fresh.exitCode, fresh.stderr.toString()).toBe(0);
+      const freshPids = readPids();
+      expect(new Set(freshPids).size).toBe(7);
+      for (const pid of freshPids) expect(() => process.kill(pid, 0)).not.toThrow();
+
+      const resumed = Bun.spawnSync({
+        cmd: ["bash", TEAM_UP, "-c"],
+        env: fixture.env,
+        stderr: "pipe",
+        stdout: "pipe",
+      });
+      expect(resumed.exitCode, resumed.stderr.toString()).toBe(0);
+      expect(readPids()).toEqual(freshPids);
+
+      const killed = Bun.spawnSync({
+        cmd: ["bash", TEAM_UP, "--kill"],
+        env: fixture.env,
+        stderr: "pipe",
+        stdout: "pipe",
+      });
+      expect(killed.exitCode, killed.stderr.toString()).toBe(0);
+      for (const pid of freshPids) expect(() => process.kill(pid, 0)).toThrow();
+      for (const member of members) {
+        expect(existsSync(join(runRecord, "members", member, "safety-wait.pid"))).toBe(false);
+      }
+    } finally {
+      Bun.spawnSync({ cmd: ["bash", TEAM_UP, "--kill"], env: fixture.env });
+    }
+  });
+
+  test("kill does not signal a safety-wait process owned by another run", async () => {
+    const fixture = createCliFixture();
+    const runRecord = join(fixture.state, "runs", "run-001");
+    const memberRecord = join(runRecord, "members", "leader");
+    const fresh = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "--codex"],
+      env: fixture.env,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    expect(fresh.exitCode, fresh.stderr.toString()).toBe(0);
+    const ownedPid = Number(readFileSync(join(memberRecord, "safety-wait.pid"), "utf8"));
+    const foreign = Bun.spawn({
+      cmd: [
+        "bun",
+        join(fixture.repo, "scripts", "team-up-codex-safety-wait.ts"),
+        "supervise",
+        "--session",
+        "foreign-session",
+        "--run",
+        "foreign-run",
+        "--role",
+        "leader",
+        "--run-record",
+        join(fixture.state, "runs", "foreign-run"),
+      ],
+      env: fixture.env,
+      stderr: "ignore",
+      stdout: "ignore",
+    });
+    await Bun.sleep(50);
+    writeFileSync(join(memberRecord, "safety-wait.pid"), `${foreign.pid}\n`);
+
+    try {
+      const killed = Bun.spawnSync({
+        cmd: ["bash", TEAM_UP, "--kill"],
+        env: fixture.env,
+        stderr: "pipe",
+        stdout: "pipe",
+      });
+      expect(killed.exitCode, killed.stderr.toString()).toBe(0);
+      const foreignStillRunning = await Promise.race([
+        foreign.exited.then(() => false),
+        Bun.sleep(100).then(() => true),
+      ]);
+      expect(foreignStillRunning).toBe(true);
+      expect(() => process.kill(ownedPid, 0)).toThrow();
+    } finally {
+      for (const pid of [ownedPid, foreign.pid]) {
+        try {
+          process.kill(pid, "SIGTERM");
+        } catch {}
+      }
+      await foreign.exited;
+    }
+  });
+
+  test("resume refuses mismatched pid and owner metadata without replacing either process", async () => {
+    const fixture = createCliFixture();
+    const runRecord = join(fixture.state, "runs", "run-001");
+    const memberRecord = join(runRecord, "members", "leader");
+    const fresh = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "--codex"],
+      env: fixture.env,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    expect(fresh.exitCode, fresh.stderr.toString()).toBe(0);
+    const ownedPid = Number(readFileSync(join(memberRecord, "safety-wait.pid"), "utf8"));
+    const foreign = Bun.spawn({
+      cmd: ["bun", join(fixture.repo, "scripts", "team-up-codex-safety-wait.ts"), "supervise", "--role", "leader"],
+      env: fixture.env,
+      stderr: "ignore",
+      stdout: "ignore",
+    });
+    await Bun.sleep(50);
+    writeFileSync(join(memberRecord, "safety-wait.pid"), `${foreign.pid}\n`);
+
+    try {
+      const resumed = Bun.spawnSync({
+        cmd: ["bash", TEAM_UP, "-c"],
+        env: fixture.env,
+        stderr: "pipe",
+        stdout: "pipe",
+      });
+      expect(resumed.exitCode).not.toBe(0);
+      expect(resumed.stderr.toString()).toContain("ambiguous");
+      expect(() => process.kill(ownedPid, 0)).not.toThrow();
+      expect(() => process.kill(foreign.pid, 0)).not.toThrow();
+      expect(Number(readFileSync(join(memberRecord, "safety-wait.pid"), "utf8"))).toBe(
+        foreign.pid,
+      );
+      expect(
+        Number(readFileSync(join(memberRecord, "safety-wait.lock", "owner"), "utf8")),
+      ).toBe(ownedPid);
+    } finally {
+      for (const pid of [ownedPid, foreign.pid]) {
+        try {
+          process.kill(pid, "SIGTERM");
+        } catch {}
+      }
+      await foreign.exited;
+      Bun.spawnSync({ cmd: ["bash", TEAM_UP, "--kill"], env: fixture.env });
+    }
+  });
+
+  test("a dead owner is not reacquired when the role pane cannot be revalidated", async () => {
+    const fixture = createCliFixture();
+    const memberRecord = join(
+      fixture.state,
+      "runs",
+      "run-001",
+      "members",
+      "leader",
+    );
+    const fresh = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "--codex"],
+      env: fixture.env,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    expect(fresh.exitCode, fresh.stderr.toString()).toBe(0);
+    const deadPid = Number(readFileSync(join(memberRecord, "safety-wait.pid"), "utf8"));
+    process.kill(deadPid, "SIGTERM");
+    await Bun.sleep(100);
+
+    try {
+      const resumed = Bun.spawnSync({
+        cmd: ["bash", TEAM_UP, "-c"],
+        env: { ...fixture.env, FAKE_SAFETY_WAIT_ROLE_READY_FAIL_ROLE: "leader" },
+        stderr: "pipe",
+        stdout: "pipe",
+      });
+      expect(resumed.exitCode).not.toBe(0);
+      expect(resumed.stderr.toString()).toContain("role pane is not ready");
+      expect(Number(readFileSync(join(memberRecord, "safety-wait.pid"), "utf8"))).toBe(
+        deadPid,
+      );
+      expect(
+        Number(readFileSync(join(memberRecord, "safety-wait.lock", "owner"), "utf8")),
+      ).toBe(deadPid);
+    } finally {
+      Bun.spawnSync({ cmd: ["bash", TEAM_UP, "--kill"], env: fixture.env });
+    }
+  });
+
+  test("a safety-wait launch failure cleans every started supervisor", () => {
+    const fixture = createCliFixture();
+    const result = Bun.spawnSync({
+      cmd: ["bash", TEAM_UP, "--codex"],
+      env: { ...fixture.env, FAKE_SAFETY_WAIT_FAIL_ROLE: "e3" },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr.toString()).toContain("failed to start for e3");
+    const runRecord = join(fixture.state, "runs", "run-001");
+    for (const member of [
+      "leader",
+      "engineer-1",
+      "engineer-2",
+      "engineer-3",
+      "engineer-4",
+      "engineer-5",
+      "engineer-6",
+    ]) {
+      expect(existsSync(join(runRecord, "members", member, "safety-wait.pid"))).toBe(false);
+    }
   });
 
   test("a fresh Claude launch pre-registers every role with agmsg", () => {

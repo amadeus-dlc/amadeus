@@ -1,6 +1,22 @@
 # コンポーネント棚卸し
 
-## Codex hooks／agmsg 競合コンポーネント（intent 260718-hooks-config-conflict、2026-07-18、最新）
+## safety-wait 自動解除コンポーネント（intent 260721-teamup-safety-wait、最新）
+
+| コンポーネント | 責務 | 依存先 | 変更方針 |
+| --- | --- | --- | --- |
+| Team launcher | run、worktree、session、pane、runtime lifecycle | Git、Herdr、runtime wrapper | supervisor の起動／cleanup 接続だけを追加 |
+| Dismiss supervisor（候補） | Codex pane 限定監視、latch、rate limit、解除確認 | Herdr adapter、fingerprint matcher | 狭い新 helper として凝集 |
+| Fingerprint matcher（候補） | visible 画面が既知 safety-wait か決定的判定 | 既知 Codex UI 契約 | 通常 question 等を必ず拒否する純粋 seam |
+| Herdr adapter | role→pane 解決、visible read、wait、限定 key input | Herdr 0.7.1 CLI | read→send 非原子性を二重読取で緩和 |
+| Codex runtime wrapper | hooks activate、identity、shim 起動 | mise、agmsg shim、Codex | safety UI 無効化責務は持たせない |
+| agmsg bridge | turn/start message delivery | external agmsg runtime | 変更なし。modal 操作を混在させない |
+| Integration fixtures | launcher／backend／transport の偽 Herdr 検証 | Bun test | negative matrix と lifecycle を追加する候補 |
+
+## lifecycle 所有
+
+supervisor は fresh、resume、named instance の各 Codex member に限定して起動し、pane 消失、session kill、launcher rollback で終了する。複数 pane は role と session の組で分離し、leader／各 engineer の latch を共有しない。Claude runtime と対象外 backend では起動しない。
+
+## Codex hooks／agmsg 競合コンポーネント（intent 260718-hooks-config-conflict、2026-07-18、履歴）
 
 | コンポーネント | 現行責務 | Issue #770 との関係 |
 | --- | --- | --- |

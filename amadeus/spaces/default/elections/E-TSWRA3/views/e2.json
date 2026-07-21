@@ -1,0 +1,26 @@
+{
+  "electionId": "E-TSWRA3",
+  "voter": "e2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "C. session最初の1回だけ解除しrearmしない"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 4,
+      "label": "X. その他（noteに起動・rearm・cleanup契約を明記）"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "A. paneごとsupervisor + fresh/resume起動 + modal消失後rearm + lifecycle cleanup"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 2,
+      "label": "B. session単一supervisorで対象paneを巡回"
+    }
+  ]
+}

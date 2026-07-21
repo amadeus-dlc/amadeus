@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TSWRA1",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Aを支持。一次証拠としてscripts/team-up.sh:5-18はcurrent runをleader+N engineersの単一Herdr sessionとして起動し、同:645-650はleader/eNのroleを共通に解決、同:720-745は各Codex memberを同じcodex_member_cmd境界でfresh/resume可能なrunへ結線する。CodeKB re-scan:10-16は対象をteam-up所有Herdr境界のCodex paneに限定し、別session・Claude・shell prompt等への入力禁止を固定する。leaderだけ又はengineerだけを除外する一次根拠はなく、current runの全Codex paneが閉じた対象集合である。非採用時受容度: Bはleader停滞を残すため7、Cはengineer停滞を残すため7、Xはcurrent-run Codex限定をさらに厳密化する具体的証拠があれば6。",
+  "submittedAt": "2026-07-21T02:33:29Z"
+}

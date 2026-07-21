@@ -1,6 +1,20 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(最新: 260720-ballot-received-at)
+## 実行メタデータ（最新: 260721-teamup-safety-wait）
+
+- Date: 2026-07-21T02:02:12Z
+- Observed commit: `3e349465b07ea415fd1303a072d161438d6bbf3c`
+- Intent: `260721-teamup-safety-wait`（bugfix）
+- Repository: `amadeus`（単一 repo）
+- Stage: `reverse-engineering`（2.1）
+- Base commit: `a326f47bc0146a3b4285552f42b92fd61fb343a7`。`git merge-base --is-ancestor` 成功、observed まで131コミット。共有 freshness pointer の `37f8cf5e...` は非祖先のため base に使用していない。
+- Focus: `scripts/team-up.sh` → Herdr pane → Codex TUI の safety-buffering UI。関連面は `scripts/run-codex.sh`、`scripts/team-msg.sh`、Codex launcher／resume／messaging integration tests、外部 agmsg monitor／shim／bridge。
+- Differential result: 焦点7ファイルは base→observed で変更0。live code、Herdr 0.7.1、Codex 0.144.6 の観測をもとに9成果物を刷新した。
+- Architectural conclusion: team-up 所有の Herdr 境界に Codex pane 専用 dismiss supervisor を置く候補が最小責務。完全 visible fingerprint、二重読取、one-shot latch、rate limit、session/member 限定、解除確認、cleanup、version drift fail-closed を必須とする。server-side safety check 自体は無効化しない。
+- Per-intent record: `re-scans/260721-teamup-safety-wait.md`
+- Base の真実源: 到達可能な per-intent `re-scans/*.md` の Observed commit。本共有ファイルは freshness pointer のみで、次回差分 base の真実源ではない。
+
+## 実行メタデータ(履歴: 260720-ballot-received-at)
 
 - Date: 2026-07-20(Asia/Tokyo)
 - Observed at: HEAD `37f8cf5e67cef77adfd82ef292303790f756c8fd`(`git rev-parse HEAD` 実測一致)

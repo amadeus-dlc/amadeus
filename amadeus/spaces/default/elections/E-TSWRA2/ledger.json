@@ -1,0 +1,54 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TSWRA2",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "一次証拠として CodeKB re-scan と architecture.md、scripts/team-msg.sh の Herdr seam を実測した。Herdrのread→send間には原子的primitiveがなくTOCTOUが残り、team-msg.shでもagent sendは入力配置、pane send-keys enterがsubmitという二段契約である。CodeKBはvisibleのみの二重読取、完全fingerprint、one-shot latch、解除再確認、曖昧一致・scrollback・周期Enterの禁止を要求する。既知の別選択状態から移動keyを送るBは入力回数と状態遷移を増やし、Cは自動解除の価値を満たさないため、Keep waiting選択中を安定して証明した場合だけEnterを1回送るAが最小権限である。非採用時は、固定key移動のversion別fingerprintと各送信後再読取が実機fixtureで閉じるならBを限定受容するが、曖昧一致や周期入力は受容しない。",
+      "submittedAt": "2026-07-21T02:29:17Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TSWRA2",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Aを支持。一次証拠としてCodeKB re-scan:12-16は完全visible fingerprint、二重読取、one-shot latch、解除確認、version drift fail-closedを要求し、Herdr read→send間にatomic primitiveがないTOCTOUと通常question/approval/composer/曖昧scrollbackへの入力禁止を明記する。scripts/team-msg.sh:125-150はread/agent sendとpane Enterが分離した非atomic seamである。したがって既知modalかつKeep waitingが現在選択中であることを安定読取で証明した場合のEnter 1回が最小権限で、固定key移動は余分な状態遷移を増やす。非採用時受容度: Bはversion-pinned fingerprint+再読取+失敗時入力0が実証されれば6、Cは自動解除要件を満たさないため7、XはAより狭いfail-closed操作なら6。",
+      "submittedAt": "2026-07-21T02:33:29Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TSWRA2",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "一次証拠としてarchitecture.mdのHerdr境界とscripts/team-msg.shのread/send seamを実測した。既存送信は入力とEnterが別操作で原子的ではなく、scrollbackや部分一致からの入力は誤作動余地がある。一方、visible paneを二重読取し、既知Additional safety checks全文とKeep waitingの現在選択状態を完全fingerprintで安定確認した直後だけEnterを1回送る契約なら、選択移動やapproval bypassを導入せずfail-closedを維持できるためchoice 1を支持する。非採用時受容度は中程度で、現行TUIが完全fingerprintを安定提示できない一次証拠が得られた場合は警告のみのchoice 3を受容するが、曖昧一致や固定key移動は受容しない。",
+      "submittedAt": "2026-07-21T02:35:03Z"
+    },
+    {
+      "kind": "amend",
+      "ref": {
+        "electionId": "E-TSWRA2",
+        "voter": "e3",
+        "submittedAt": "2026-07-21T02:29:17Z"
+      },
+      "electionId": "E-TSWRA2",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "recorded人間裁定に基づくhuman-authorized再提出。一次証拠としてCodeKB re-scan/architectureとscripts/team-msg.shのHerdr seamを再確認した。read→sendは非原子的でTOCTOUが残り、agent sendとEnter submitは二段契約である。visible二重読取、完全fingerprint、one-shot、解除再確認を満たし、Keep waiting選択中を証明した場合だけEnterを1回送るAが最小権限である。非採用時は、固定key移動の全状態がversion別fingerprintと再読取fixtureで閉じる場合に限りBを受容し、曖昧一致・scrollback・周期入力は受容しない。",
+      "submittedAt": "2026-07-21T02:35:04Z"
+    }
+  ],
+  "late": []
+}

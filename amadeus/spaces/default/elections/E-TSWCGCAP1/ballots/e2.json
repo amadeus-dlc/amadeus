@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TSWCGCAP1",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "一次証拠として、requirements FR-2（19-24行）はvisible/text exact bytes、CRLF→LF以外の正規化禁止、title・説明全文・全choice順・Keep waiting選択marker・confirm guidance・pane列数・versionのclosed fixtureを要求し、FR-3（28-31行）は完全fingerprint成立直後だけEnter 1回、選択移動・文字列・複数Enterを禁止する。allowlistはrequirements 90行およびplan 18/43行のherdr 0.7.1／codex-cli 0.144.6だけであり、実コマンドでも同versionを確認した。E-TSWCGFIX1はスクリーンショット/OCR代替を退け、操作前の正確なvisible bytes取得までhard stopと裁定している。今回のchoice 1はこのcapture provenanceを弱めず、current runの7 paneへの入力を0件のまま、別のdisposable workspace/paneでのみmodalを誘発し、操作前capture、Enter・矢印・selection移動禁止、capture後の隔離workspace停止を条件とするため、current-run安全境界とexact fixture要件を両立する。取得後もclosed fixtureとnegative casesをtest-first固定してからproductionを有効化するのでGoA 1・留保なしで支持する。非採用は、disposable paneがcurrent session/runから機械的に隔離されていない、version／workspace・tab・pane・session・run provenanceやpane列数を完全記録できない、誘発にcurrent run入力・selection移動・approval bypassが必要、またはcapture bytesにsecret／個人情報が含まれ安全にfixture化できない場合に受容し、その場合はchoice 2のpassive visible監視へ戻してhard stopを維持する。positive fixtureなしのfingerprint再設計やOCR転記による有効化は受容しない。",
+  "submittedAt": "2026-07-21T06:40:02Z"
+}

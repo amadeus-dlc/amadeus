@@ -1,0 +1,29 @@
+{
+  "electionId": "E-TSWRA2",
+  "kind": "clarification-question",
+  "question": "260721-teamup-safety-wait / requirements-analysis Q2: 対象Codex paneへ許可する操作契約をどう固定するか。既決境界はAdditional safety checksの既知UIだけでKeep waitingを選択し、server-side safety check無効化・approval bypass・agmsg bridge拡張・曖昧一致・scrollback反応・周期的Enter注入は禁止。A=完全visible fingerprintがKeep waitingの現在選択状態まで安定して証明した場合だけEnterを1回、B=既知の別選択状態から固定keyでKeep waitingへ移動し再読取後Enterを1回、C=検出時に警告のみで入力しない、X=その他。各自CodeKBとHerdr read/send seam、scripts/team-msg.shのsend/submit契約、関連testsをリードオンリー実測し、GoA・自案非採用時受容度付きで投票する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. Keep waiting選択中を完全fingerprintで証明した場合だけEnterを1回"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. 固定keyでKeep waitingへ移動し再読取後Enterを1回"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. 警告のみで入力しない"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他（noteに許可操作とfail-closed条件を明記）"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}

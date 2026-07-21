@@ -1,8 +1,30 @@
 # コード品質評価
 
-> **最新の品質観測は intent `260718-hooks-config-conflict`(2026-07-18、下記「hooks-config-conflict の観測面」節)**。以下の過去 intent 節に残る「本 intent」「最新」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
+## team-up safety-wait の品質評価（2026-07-21、最新）
 
-## hooks-config-conflict の観測面 — tracked canonical と runtime writer の所有権衝突（2026-07-18、最新、Issue #770）
+### 強み
+
+- launcher には Herdr session／pane 作成、role label、resume、named instance、kill、rollback の明確な lifecycle seam がある。
+- `team-msg.sh` には role→pane 解決と `agent send` + `pane send-keys enter` の実績があり、偽 Herdr fixture で検証されている。
+- 対象7ファイルは base→observed の131コミットで変更0であり、設計対象の現行契約は差分ノイズを受けていない。
+
+### リスクと技術的負債
+
+- `team-up.sh` は1075行の巨大 launcher であり、監視 loop をインライン追加すると責務とテスト surface がさらに拡散する。
+- Herdr read→send は非原子的で TOCTOU が残る。完全排除はできず、二重読取、短い有効期限、one-shot latch、解除確認が必要である。
+- safety UI は外部 Codex 表示契約で、文言、ANSI、wrap、表示順、既定選択の drift が誤入力につながる。allowlist 不一致時の fail-closed が必須である。
+- Developer scan ではテスト未実行。現状のテスト green はこの stage の証拠に含めない。
+
+### 必須回帰マトリクス
+
+- positive: 完全 fingerprint の安定二重観測後に対象 pane へ一度だけ送信し、解除を確認する。
+- negative: 通常 question、approval、composer、shell prompt、partial／ANSI／wrap、表示順変更、default変更では Enter を送らない。
+- lifecycle: 複数 pane、resume、named instance、pane 消失、session kill、launcher rollback、version drift を検証する。
+- transport: `team-msg.sh` の通常 message 配送と agmsg bridge の turn/start 配送を退行させない。
+
+> **直前の品質観測は intent `260718-hooks-config-conflict`(2026-07-18、下記「hooks-config-conflict の観測面」節)**。以下の過去 intent 節に残る「本 intent」「最新」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
+
+## hooks-config-conflict の観測面 — tracked canonical と runtime writer の所有権衝突（2026-07-18、履歴、Issue #770）
 
 現行コード基準 observed HEAD `594ba21d636218558b711b371c286f16731fb081`、base `e9a001105d253e14affb77417423d9f0b0360f9e`（祖先・距離8）からの diff-refresh。フォーカス契約は区間で変更0件であり、[Issue #770](https://github.com/amadeus-dlc/amadeus/issues/770) の再発は既存 repository 契約と外部 agmsg 1.1.7 writer の組合せが Codex 再導入で再顕在化したもの。
 

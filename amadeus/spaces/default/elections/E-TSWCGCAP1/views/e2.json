@@ -1,0 +1,26 @@
+{
+  "electionId": "E-TSWCGCAP1",
+  "voter": "e2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "positive fixtureなしでfingerprint実装を再設計する"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "隔離disposable paneで安全にmodalを誘発・操作前captureし、test-first実装へ進む（推奨）"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 4,
+      "label": "その他 — noteにcapture隔離・入力境界・provenance・実装再開条件を明記"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 2,
+      "label": "current runのpassive visible監視のみを継続し、自然出現まで実装を止める"
+    }
+  ]
+}
