@@ -12,6 +12,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { main as safetyWaitMain } from "../../scripts/team-up-codex-safety-wait.ts";
 
 const ROOT = resolve(import.meta.dir, "../..");
 const TEAM_UP = join(ROOT, "scripts/team-up.sh");
@@ -248,6 +249,98 @@ printf '%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "\${AGMSG_RESOLVE_PROJECT:-}" 
 }
 
 describe("team-up run lifecycle", () => {
+  test("the safety-wait CLI validates commands and supervises only an active exact run", async () => {
+    const root = mkdtempSync(join(tmpdir(), "amadeus-safety-wait-cli-"));
+    tempDirs.push(root);
+    const command = join(root, "fake-command");
+    const runRecord = join(root, "runs", "run-001");
+    mkdirSync(runRecord, { recursive: true });
+    writeFileSync(join(runRecord, "session"), "test-session\n");
+    writeFileSync(join(runRecord, "runtime"), "codex\n");
+    writeFileSync(join(runRecord, "status"), "stopped\n");
+    writeFileSync(
+      command,
+      `#!/bin/sh
+if [ "$1" = "--version" ]; then
+  printf 'herdr 0.7.1\\n'
+  exit 0
+fi
+printf '{"result":{"agents":[]}}\\n'
+`,
+    );
+    chmodSync(command, 0o755);
+
+    expect(await safetyWaitMain(["production-enabled"])).toBe(0);
+    expect(await safetyWaitMain([])).toBe(2);
+    expect(
+      await safetyWaitMain(["unknown", "--session", "test-session", "--role", "e1"]),
+    ).toBe(2);
+    expect(
+      await safetyWaitMain(["role-ready", "--session", "test-session", "--role", "e0"]),
+    ).toBe(2);
+    expect(
+      await safetyWaitMain([
+        "role-ready",
+        "--session",
+        "test-session",
+        "--role",
+        "e1",
+        "--herdr",
+        command,
+      ]),
+    ).toBe(3);
+    expect(
+      await safetyWaitMain([
+        "role-ready",
+        "--session",
+        "test-session",
+        "--role",
+        "e1",
+        "--herdr",
+        join(root, "missing-command"),
+      ]),
+    ).toBe(3);
+    expect(
+      await safetyWaitMain(["supervise", "--session", "test-session", "--role", "e1"]),
+    ).toBe(2);
+    expect(
+      await safetyWaitMain([
+        "supervise",
+        "--session",
+        "test-session",
+        "--role",
+        "e1",
+        "--run",
+        "run-001",
+        "--run-record",
+        runRecord,
+        "--herdr",
+        command,
+        "--codex",
+        command,
+      ]),
+    ).toBe(3);
+
+    writeFileSync(join(runRecord, "status"), "running\n");
+    expect(
+      await safetyWaitMain([
+        "supervise",
+        "--session",
+        "test-session",
+        "--role",
+        "e1",
+        "--run",
+        "run-001",
+        "--run-record",
+        runRecord,
+        "--herdr",
+        command,
+        "--codex",
+        command,
+      ]),
+    ).toBe(3);
+  });
+
   test("help explains the fresh and resume lifecycle commands", () => {
     const result = Bun.spawnSync({
       cmd: ["bash", TEAM_UP, "--help"],

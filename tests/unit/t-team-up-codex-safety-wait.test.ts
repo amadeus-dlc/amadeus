@@ -1,13 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import testOnlyPositive from "../fixtures/team-up-codex-safety-wait/test-only-positive.json";
 import {
   evaluateFingerprint,
   evaluateProductionFingerprint,
   HerdrSafetyWaitAdapter,
-  main,
   parseSafetyWaitFingerprint,
   productionActivationEnabled,
   roleToAgentLabel,
@@ -25,97 +21,6 @@ function readFingerprint(): SafetyWaitFingerprint {
 const TEST_CONFIRMED_ABSENT_TEXT = "test-only confirmed absence";
 
 describe("team-up Codex safety-wait activation", () => {
-  test("the CLI entrypoint validates commands and supervises only an active exact run", async () => {
-    const root = mkdtempSync(join(tmpdir(), "amadeus-safety-wait-cli-"));
-    const command = join(root, "fake-command");
-    const runRecord = join(root, "runs", "run-001");
-    mkdirSync(runRecord, { recursive: true });
-    writeFileSync(join(runRecord, "session"), "test-session\n");
-    writeFileSync(join(runRecord, "runtime"), "codex\n");
-    writeFileSync(join(runRecord, "status"), "stopped\n");
-    writeFileSync(
-      command,
-      `#!/bin/sh
-if [ "$1" = "--version" ]; then
-  printf 'herdr 0.7.1\\n'
-  exit 0
-fi
-printf '{"result":{"agents":[]}}\\n'
-`,
-    );
-    chmodSync(command, 0o755);
-
-    try {
-      expect(await main(["production-enabled"])).toBe(0);
-      expect(await main([])).toBe(2);
-      expect(await main(["unknown", "--session", "test-session", "--role", "e1"])).toBe(2);
-      expect(await main(["role-ready", "--session", "test-session", "--role", "e0"])).toBe(2);
-      expect(
-        await main([
-          "role-ready",
-          "--session",
-          "test-session",
-          "--role",
-          "e1",
-          "--herdr",
-          command,
-        ]),
-      ).toBe(3);
-      expect(
-        await main([
-          "role-ready",
-          "--session",
-          "test-session",
-          "--role",
-          "e1",
-          "--herdr",
-          join(root, "missing-command"),
-        ]),
-      ).toBe(3);
-      expect(
-        await main(["supervise", "--session", "test-session", "--role", "e1"]),
-      ).toBe(2);
-      expect(
-        await main([
-          "supervise",
-          "--session",
-          "test-session",
-          "--role",
-          "e1",
-          "--run",
-          "run-001",
-          "--run-record",
-          runRecord,
-          "--herdr",
-          command,
-          "--codex",
-          command,
-        ]),
-      ).toBe(3);
-
-      writeFileSync(join(runRecord, "status"), "running\n");
-      expect(
-        await main([
-          "supervise",
-          "--session",
-          "test-session",
-          "--role",
-          "e1",
-          "--run",
-          "run-001",
-          "--run-record",
-          runRecord,
-          "--herdr",
-          command,
-          "--codex",
-          command,
-        ]),
-      ).toBe(3);
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
-
   test("the test fingerprint schema rejects missing and additional fields", () => {
     const valid = testOnlyPositive as Record<string, unknown>;
     expect(parseSafetyWaitFingerprint(valid)?.id).toBe("test-only-positive");
