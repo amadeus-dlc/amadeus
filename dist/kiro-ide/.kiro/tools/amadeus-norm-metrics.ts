@@ -747,10 +747,7 @@ export function extractGoaRecords(text: string): string[] {
   return extractGoaRecordsWithSearch(text, boundaryIndexOf);
 }
 
-export function _extractGoaRecordsScanForTests(text: string): {
-  records: string[];
-  boundarySearchChars: number;
-} {
+export function _extractGoaRecordsScanForTests(text: string) {
   let boundarySearchChars = 0;
   const records = extractGoaRecordsWithSearch(text, (haystack, needle) => {
     boundarySearchChars += haystack.length;
