@@ -264,22 +264,25 @@ stop_safety_wait_supervisors() {
     rm -f "$member_record/safety-wait.pid"
     rm -rf -- "$member_record/safety-wait.lock"
   done
+  return 0
 }
 
 safety_wait_stop_state() {
   local member_record="$1" run_record="$2" role="$3" owner lock_dir
   lock_dir="$member_record/safety-wait.lock"
+  # The classifier result travels on stdout. Bash 5 can otherwise preserve the
+  # failing EXIT-trap status through a bare return in command substitution.
   if [ ! -e "$member_record/safety-wait.pid" ] && [ ! -e "$lock_dir" ]; then
     printf 'none\n'
-    return
+    return 0
   fi
   [ -d "$lock_dir" ] && [ -f "$lock_dir/owner" ] || {
     printf 'ambiguous\n'
-    return
+    return 0
   }
   owner="$(cat "$lock_dir/owner" 2>/dev/null || true)"
   case "$owner" in
-  "" | *[!0-9]*) printf 'ambiguous\n'; return ;;
+  "" | *[!0-9]*) printf 'ambiguous\n'; return 0 ;;
   esac
   if safety_wait_process_matches "$owner" "$run_record" "$role"; then
     printf 'owned-live\n'
