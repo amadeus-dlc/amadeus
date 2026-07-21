@@ -42,4 +42,4 @@ HOOKS_HELPER="$PROJECT_DIR/.codex/tools/amadeus-codex-hooks.ts"
 }
 bun "$HOOKS_HELPER" activate --project-dir "$PROJECT_DIR" >/dev/null
 
-exec mise exec -- "${HOME}/.agents/skills/agmsg/scripts/drivers/types/codex/codex-shim.sh" --dangerously-bypass-approvals-and-sandbox "$@"
+exec codex --dangerously-bypass-approvals-and-sandbox "$@"

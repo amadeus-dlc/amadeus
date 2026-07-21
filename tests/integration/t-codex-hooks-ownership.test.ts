@@ -248,7 +248,7 @@ describe("Codex hooks ownership", () => {
     }
   });
 
-  test("run-codex activates hooks before the Codex shim starts", () => {
+  test("run-codex activates hooks before the Codex command starts", () => {
     const projectDir = mkdtempSync(join(tmpdir(), "amadeus-run-codex-"));
     const home = mkdtempSync(join(tmpdir(), "amadeus-run-codex-home-"));
     tempDirs.push(projectDir, home);
@@ -258,19 +258,11 @@ describe("Codex hooks ownership", () => {
       join(projectDir, ".codex", "hooks.json.example"),
     );
     const binDir = join(home, ".agents", "bin");
-    const shimDir = join(home, ".agents", "skills", "agmsg", "scripts", "drivers", "types", "codex");
     mkdirSync(binDir, { recursive: true });
-    mkdirSync(shimDir, { recursive: true });
-    const mise = join(binDir, "mise");
-    writeFileSync(
-      mise,
-      '#!/usr/bin/env bash\nset -eu\n[ "$1" = "exec" ]\nshift\n[ "$1" = "--" ]\nshift\nexec "$@"\n',
-    );
-    chmodSync(mise, 0o755);
-    const shim = join(shimDir, "codex-shim.sh");
+    const shim = join(binDir, "codex");
     writeFileSync(
       shim,
-      '#!/usr/bin/env bash\nset -eu\ntest -f "$PWD/.codex/hooks.json" || { echo "active hooks missing before shim" >&2; exit 42; }\nprintf "shim-started\\n"\n',
+      '#!/usr/bin/env bash\nset -eu\ntest -f "$PWD/.codex/hooks.json" || { echo "active hooks missing before command" >&2; exit 42; }\nprintf "codex-started\\n"\n',
     );
     chmodSync(shim, 0o755);
 
@@ -283,7 +275,7 @@ describe("Codex hooks ownership", () => {
     });
 
     expect(launched.exitCode, launched.stderr.toString()).toBe(0);
-    expect(launched.stdout.toString()).toContain("shim-started");
+    expect(launched.stdout.toString()).toContain("codex-started");
     expect(readFileSync(join(projectDir, ".codex", "hooks.json"))).toEqual(
       readFileSync(join(projectDir, ".codex", "hooks.json.example")),
     );

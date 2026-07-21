@@ -35,33 +35,18 @@ function createFixture() {
   const missingProject = join(fixture, "missing");
   const home = join(fixture, "home");
   const binDir = join(home, ".agents", "bin");
-  const shimDir = join(
-    home,
-    ".agents",
-    "skills",
-    "agmsg",
-    "scripts",
-    "drivers",
-    "types",
-    "codex",
-  );
   for (const project of [currentProject, targetProject, secondTarget]) {
     mkdirSync(join(project, ".codex", "tools"), { recursive: true });
     writeFileSync(join(project, ".codex", "tools", "amadeus-codex-hooks.ts"), "");
   }
   mkdirSync(binDir, { recursive: true });
-  mkdirSync(shimDir, { recursive: true });
 
   writeExecutable(
     join(binDir, "bun"),
     '#!/usr/bin/env bash\nset -eu\nprintf "%s\\n" "$@" >"$RUN_CODEX_ACTIVATE_LOG"\n',
   );
   writeExecutable(
-    join(binDir, "mise"),
-    '#!/usr/bin/env bash\nset -eu\n[ "$1" = "exec" ]\nshift\n[ "$1" = "--" ]\nshift\nexec "$@"\n',
-  );
-  writeExecutable(
-    join(shimDir, "codex-shim.sh"),
+    join(binDir, "codex"),
     `#!/usr/bin/env bash
 set -eu
 project="$PWD"
