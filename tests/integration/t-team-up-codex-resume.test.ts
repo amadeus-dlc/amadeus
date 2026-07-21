@@ -41,7 +41,11 @@ function commandFor(
   resolverBody: string,
   env: Record<string, string> = {},
   homeOverride?: string,
-  opts: { continueMode?: "0" | "1"; roleResumeOverride?: string } = {},
+  opts: {
+    continueMode?: "0" | "1";
+    msgBackend?: "agmsg" | "herdr";
+    roleResumeOverride?: string;
+  } = {},
 ) {
   const dir = mkdtempSync(join(tmpdir(), "amadeus-team-up-"));
   tempDirs.push(dir);
@@ -71,7 +75,7 @@ function commandFor(
     cmd: [
       "bash",
       "-c",
-      `script="$1"; member="$2"; wt="$3"; set --; TEAM_UP_LIB_ONLY=1 source "$script"; CONTINUE=${continueMode}; codex_member_cmd "$member" "$wt"`,
+      `script="$1"; member="$2"; wt="$3"; set --; TEAM_UP_LIB_ONLY=1 source "$script"; CONTINUE=${continueMode}; MSG_BACKEND=${opts.msgBackend ?? "agmsg"}; codex_member_cmd "$member" "$wt"`,
       "_",
       TEAM_UP,
       member,
@@ -895,6 +899,36 @@ describe("team-up herdr-only launcher", () => {
 });
 
 describe("team-up Codex resume", () => {
+  test("Codex engineers disable request_user_input without changing the leader", () => {
+    for (const msgBackend of ["agmsg", "herdr"] as const) {
+      for (const continueMode of ["0", "1"] as const) {
+        const engineer = commandFor("engineer-1", 'printf "thread-engineer-1"', {}, undefined, {
+          continueMode,
+          msgBackend,
+        });
+        expect(engineer.result.exitCode, engineer.result.stderr.toString()).toBe(0);
+        expect(engineer.result.stdout.toString()).toContain(
+          "--disable default_mode_request_user_input",
+        );
+        if (msgBackend === "agmsg" && continueMode === "1") {
+          const command = engineer.result.stdout.toString();
+          expect(command.indexOf("--disable default_mode_request_user_input")).toBeLessThan(
+            command.indexOf("thread-engineer-1"),
+          );
+        }
+
+        const leader = commandFor("leader", 'printf "thread-leader"', {}, undefined, {
+          continueMode,
+          msgBackend,
+        });
+        expect(leader.result.exitCode, leader.result.stderr.toString()).toBe(0);
+        expect(leader.result.stdout.toString()).not.toContain(
+          "default_mode_request_user_input",
+        );
+      }
+    }
+  });
+
   test("activates Codex hooks before the delivery writer runs", () => {
     const fixture = mkdtempSync(join(tmpdir(), "amadeus-team-up-delivery-"));
     tempDirs.push(fixture);
@@ -943,7 +977,9 @@ printf "delivery-after-active\\n" >"\${DELIVERY_ORDER_LOG:?}"
     const { result } = commandFor("engineer-1", 'printf "thread-engineer-1"');
     const command = result.stdout.toString();
     expect(result.exitCode, result.stderr.toString()).toBe(0);
-    expect(command).toContain("--codex-command resume -- thread-engineer-1");
+    expect(command).toContain(
+      "--codex-command resume -- --disable default_mode_request_user_input thread-engineer-1",
+    );
     expect(command).not.toContain("--last");
   });
 
