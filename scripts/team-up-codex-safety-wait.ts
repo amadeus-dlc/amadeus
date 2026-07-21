@@ -557,7 +557,7 @@ async function supervise(
   return 3;
 }
 
-async function main(argv: readonly string[]): Promise<number> {
+export async function main(argv: readonly string[]): Promise<number> {
   if (argv[0] === "production-enabled") {
     return productionActivationEnabled() ? 0 : 3;
   }
