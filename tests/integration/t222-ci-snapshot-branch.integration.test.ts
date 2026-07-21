@@ -55,7 +55,8 @@ describe("t222 CI snapshot publication boundary", () => {
     const coverageJob = yaml.split("  coverage:")[1]?.split("\n  metrics-snapshot:")[0] ?? "";
     const snapshotJob = yaml.split("  metrics-snapshot:")[1]?.split("\n  ci-success:")[0] ?? "";
 
-    expect(coverageJob).toContain("- changes\n      - check");
+    expect(coverageJob).toContain("needs: changes");
+    expect(coverageJob).not.toContain("- check");
     expect(coverageJob).toContain(`if: \${{ needs.changes.outputs.ci == 'true' }}`);
     expect(coverageJob).toContain("bun tests/coverage-project-gate.ts --check");
     expect(coverageJob).toContain("bun tests/coverage-patch-gate.ts --check");

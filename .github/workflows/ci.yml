@@ -124,9 +124,8 @@ jobs:
 
   coverage:
     name: Coverage Report
-    needs:
-      - changes
-      - check
+    # Run alongside check after change detection; CI Success joins both jobs.
+    needs: changes
     if: ${{ needs.changes.outputs.ci == 'true' }}
     runs-on: ubuntu-latest
     # Head suite + (cache-miss) merge-base suite for the relative gate.
