@@ -160,14 +160,12 @@ describe("t52 — meta-test on t48 drift detection (migrated from t52-drift-meta
 
   test("forward check catches a renamed emission [.sh test 1]", () => {
     const sb = makeSandbox();
-    // Rename the GATE_APPROVED emission at its call site. The forward check then
-    // loses the emission site for the GATE_APPROVED doc row (t48:745 source).
+    // Rename every GATE_APPROVED emission in the emitter module. Recovery may
+    // add another legitimate call site, so changing only the first occurrence
+    // would no longer remove the event from the detector's source surface.
     const f = distFile(sb, STATE_TS);
     const before = readFileSync(f, "utf-8");
-    const after = before.replace(
-      'emitAudit(pd, "GATE_APPROVED"',
-      'emitAudit(pd, "GATE_APPROVED_RENAMED"',
-    );
+    const after = before.replaceAll('"GATE_APPROVED"', '"GATE_APPROVED_RENAMED"');
     expect(after).not.toBe(before); // the pattern must have actually matched
     writeFileSync(f, after);
 

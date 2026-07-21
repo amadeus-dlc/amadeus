@@ -32,9 +32,15 @@ import { repointHarnessIncludes } from "./amadeus-includes.ts";
 import {
   activeIntent,
   activeSpace,
+  assertRecomposeAllowed,
+  AUTONOMY_MODE_FIELD,
   auditFilePath,
   auditShards,
   birthIntent,
+  classifyHelpIntent,
+  COMPOSE_MARKER_RELATIVE_PATH,
+  COMPOSE_MARKER_TTL_MS,
+  type ConstructionAutonomy,
   DEFAULT_SPACE,
   detectLeakedLocks,
   docsDir,
@@ -48,6 +54,7 @@ import {
   holdsAuditLock,
   hooksHealthDir,
   intentsDir,
+  inspectComposeMarker,
   isoTimestamp,
   isPackageJson,
   codekbRepoName,
@@ -57,6 +64,7 @@ import {
   listSpaces,
   loadAgents,
   loadScopeMapping,
+  type MarkerObservation,
   CHECKBOX_MAP,
   STAGE_PROGRESS_HEADER_COMMENT,
   loadStageGraph,
@@ -133,6 +141,14 @@ function die(msg: string): never {
   const pd = resolveProjectDir(explicitPd);
   const command = `amadeus-utility ${args.join(" ")}`.trim();
   emitError(pd, "amadeus-utility", command, msg);
+}
+
+// Reserved-namespace and autonomy refusals must precede every workflow/audit
+// mutation. `die()` deliberately emits ERROR_LOGGED, so these guards use the
+// same loud non-zero CLI shape without touching the audit ledger.
+function refuseWithoutAudit(msg: string): never {
+  process.stderr.write(`${msg}\n`);
+  process.exit(1);
 }
 
 // Thin wrapper around the canonical appendAuditEntry. All events must be in
@@ -823,6 +839,46 @@ export function handleDoctor(projectDir: string): void {
       ? "install via `npm install -g bun` or `powershell -c \"irm bun.sh/install.ps1 | iex\"`"
       : "install via `curl -fsSL https://bun.sh/install | bash`",
   });
+
+  // The compose marker uses the same pure freshness projection as the Stop
+  // hook. Doctor only observes it: stale or unreadable markers are reported
+  // loudly, but this read-only diagnostic never deletes or rewrites them.
+  const composeMarkerPath = join(projectDir, COMPOSE_MARKER_RELATIVE_PATH);
+  let composeMarkerObservation: MarkerObservation;
+  try {
+    composeMarkerObservation = {
+      kind: "present" as const,
+      path: composeMarkerPath,
+      mtimeMs: lstatSync(composeMarkerPath).mtimeMs,
+    };
+  } catch (e) {
+    composeMarkerObservation = (e as NodeJS.ErrnoException).code === "ENOENT"
+      ? { kind: "absent" as const, path: composeMarkerPath }
+      : { kind: "unreadable" as const, path: composeMarkerPath, reason: errorMessage(e) };
+  }
+  const composeMarker = inspectComposeMarker(
+    composeMarkerObservation,
+    Date.now(),
+    COMPOSE_MARKER_TTL_MS,
+  );
+  if (composeMarker.kind === "fresh") {
+    results.push({
+      pass: true,
+      label: `Compose approval marker: fresh (${composeMarker.ageMs}ms old, advisory)`,
+    });
+  } else if (composeMarker.kind === "stale") {
+    results.push({
+      pass: false,
+      label: `Compose approval marker: stale (${composeMarker.ageMs}ms old)`,
+      fix: `remove ${composeMarker.path} after confirming no compose approval is pending`,
+    });
+  } else if (composeMarker.kind === "unreadable") {
+    results.push({
+      pass: false,
+      label: `Compose approval marker: unreadable (${composeMarker.reason})`,
+      fix: `restore read access to ${composeMarker.path} or remove it after confirming no compose approval is pending`,
+    });
+  }
 
   // 2. Hook presence — every framework hook is TypeScript, run via bun (no
   // executable bit needed). The core hook bodies ship in EVERY harness tree; the
@@ -2520,6 +2576,11 @@ function ensureWorkspaceDirs(projectDir: string): void {
 // the workflow to its first post-init stage — relocated here, now writing into
 // the BORN intent's record (the active-intent cursor set first makes the
 // default-resolving state/audit helpers resolve there).
+function isReservedHelpRecordName(raw: string, maxLength: number): boolean {
+  const slug = slugify(raw, maxLength);
+  return classifyHelpIntent([raw]).kind === "help" || classifyHelpIntent([slug]).kind === "help";
+}
+
 export function handleIntentBirth(projectDir: string, flags: Record<string, string>): void {
   // Default to poc when --scope is omitted. Matches the orchestrator's
   // ultimate fallback in SKILL.md and makes direct tool invocations
@@ -2539,6 +2600,15 @@ export function handleIntentBirth(projectDir: string, flags: Record<string, stri
   const testStrategyOverride = flags["test-strategy"];
   if (testStrategyOverride && !VALID_TEST_STRATEGIES[testStrategyOverride.toLowerCase()]) {
     die(`Unknown test strategy: "${testStrategyOverride}". Valid: minimal, standard, comprehensive.`);
+  }
+
+  const description = flags.arguments?.trim();
+  const label = flags.label?.trim();
+  const slugSource = label || description || scope;
+  if (isReservedHelpRecordName(slugSource, 24)) {
+    refuseWithoutAudit(
+      `Reserved intent name "${slugSource}" cannot be created. Choose a non-help intent name.`,
+    );
   }
 
   // Resolve the repo set the intent touches (P7 multi-repo): an explicit
@@ -2597,9 +2667,6 @@ export function handleIntentBirth(projectDir: string, flags: Record<string, stri
     // freeform --arguments (truncated — may cut mid-phrase, the pre-LLM behaviour),
     // else the scope token. The full --arguments text still flows to the audit
     // Request + state Project fields below (verbose prose belongs there, not the dir).
-    const description = flags.arguments?.trim();
-    const label = flags.label?.trim();
-    const slugSource = label || description || scope;
     const slug = slugify(slugSource, 24);
     birthIntent(projectDir, slug, activeSpace(projectDir), scope, repos);
 
@@ -3070,14 +3137,14 @@ function handleIntent(projectDir: string, positional: string[], flags: Record<st
     const bySlug = intents.filter((i) => i.slug === target && i.dirName !== null);
     if (bySlug.length === 1) match = bySlug[0];
     else if (bySlug.length > 1) {
-      die(
+      refuseWithoutAudit(
         `Ambiguous intent "${target}" in space "${space}" (${bySlug.length} match). Use the full record-dir name: ${bySlug.map((i) => i.dirName).join(", ")}.`
       );
     }
   }
   if (!match || match.dirName === null) {
-    die(
-      `Unknown intent "${target}" in space "${space}". Run /amadeus intent to list, or describe what to build to start a new one.`
+    refuseWithoutAudit(
+      `Unknown intent "${target}" in space "${space}". Run /amadeus intent to list existing intents.`
     );
   }
   setActiveIntentCursor(projectDir, match.dirName, space);
@@ -3121,8 +3188,8 @@ function handleSpace(projectDir: string, positional: string[], flags: Record<str
   const target = slugify(raw);
   const spaces = listSpaces(projectDir);
   if (!spaces.some((s) => s.name === target)) {
-    die(
-      `Unknown space "${target}". Existing: ${spaces.map((s) => s.name).join(", ")}. Create it with /amadeus space-create ${target}.`
+    refuseWithoutAudit(
+      `Unknown space "${target}". Existing: ${spaces.map((s) => s.name).join(", ")}. Run /amadeus space to list existing spaces.`
     );
   }
   setActiveSpaceCursor(projectDir, target);
@@ -3216,6 +3283,11 @@ function handleSpaceCreate(projectDir: string, positional: string[], _flags: Rec
   const raw = positional[1];
   if (!raw) die("Usage: amadeus-utility space-create <name>");
   const name = slugify(raw);
+  if (isReservedHelpRecordName(raw, 48)) {
+    refuseWithoutAudit(
+      `Reserved space name "${raw}" cannot be created. Choose a non-help space name.`,
+    );
+  }
   const dest = join(spacesRoot(projectDir), name);
   if (existsSync(dest)) die(`Space "${name}" already exists at ${dest}.`);
 
@@ -3457,6 +3529,23 @@ Completed: ${completedCount}/${executeStages.length}
 // the verb is inert when unused.
 // ---------------------------------------------------------------------------
 
+function assertRecomposeStateAllowed(content: string): void {
+  const rawAutonomy = getField(content, AUTONOMY_MODE_FIELD)?.trim();
+  const autonomy: ConstructionAutonomy = rawAutonomy === undefined || rawAutonomy === ""
+    ? "unset"
+    : rawAutonomy === "autonomous" || rawAutonomy === "gated" || rawAutonomy === "unset"
+      ? rawAutonomy
+      : refuseWithoutAudit(
+          `Unknown Construction Autonomy Mode: "${rawAutonomy}". Expected autonomous, gated, or unset.`,
+        );
+  const recomposeGuard = assertRecomposeAllowed(autonomy);
+  if (recomposeGuard.kind === "denied") {
+    refuseWithoutAudit(
+      "Cannot recompose during autonomous Construction: a human gate is required. Switch to gated mode or wait for the swarm to finish.",
+    );
+  }
+}
+
 function handleRecompose(projectDir: string, flags: Record<string, string>): void {
   const skipList = (flags.skip ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   const addList = (flags.add ?? "").split(",").map((s) => s.trim()).filter(Boolean);
@@ -3475,6 +3564,7 @@ function handleRecompose(projectDir: string, flags: Record<string, string>): voi
 
   withAuditLock(projectDir, () => {
     let content = readStateFile(projectDir, flags.intent, flags.space);
+    assertRecomposeStateAllowed(content);
     // Only a RUNNING workflow has a live plan to re-shape. A Completed (or
     // Parked/terminated) state file is a terminal record: flipping its rows
     // would grow Total Stages under a summary computed at completion and
@@ -4193,6 +4283,10 @@ function handleMigrate(
 export function runUtilityMain(): void {
   const rawArgs = process.argv.slice(2);
   const { positional, flags } = parseArgs(rawArgs);
+  if (rawArgs.includes("--help") || classifyHelpIntent(positional).kind === "help") {
+    handleHelp();
+    return;
+  }
   const subcommand = positional[0];
   const projectDir = resolveProjectDir(flags["project-dir"]);
 

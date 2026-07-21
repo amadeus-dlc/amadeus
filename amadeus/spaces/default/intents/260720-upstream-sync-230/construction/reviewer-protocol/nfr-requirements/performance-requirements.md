@@ -6,12 +6,12 @@
 
 | ID | 要件 | 合格条件 |
 |---|---|---|
-| PERF-U08-01 | `reviewerReadScope`はstage definition、Q&A、current Unitの実在成果物、per-unit時のpassed consumesからclosed pass-listを決定的に作る。 | missing optional、memory、plan、reasoning、record root、sibling artifactが既定listに0件。 |
-| PERF-U08-02 | spot-checkは4条件ANDをread前に評価し、承認時も単一owner fileだけを当該invocationへ追加する。 | directory/glob/grep/browse/search、2 file目、次iterationへの暗黙継承が0件。 |
+| PERF-U08-01 | `reviewerReadScope`は`stage_file`、current Unitの実在`produces`、present consumesからclosed pass-listを決定的に作り、Q&Aは`directive.consumes`明示時だけ含める。 | missing optional、memory、plan、reasoning、record root、sibling artifact、未宣言Q&Aが既定listに0件。 |
+| PERF-U08-02 | spot-check requestは4条件ANDを`check-read`で評価し、承認時も単一owner fileだけを当該invocationへ追加する。 | directory/glob/grep/browse/search、2 file目、次iterationへの暗黙継承がaccepted transcriptに0件。 |
 | PERF-U08-03 | runtime UTCはReview書込直前の単一`date -u +%Y-%m-%dT%H:%M:%SZ`出力を使う。 | 固定日付・モデル推定・複数command retryを使わず、有効な1 timestampを4-field Reviewへ渡す。 |
 | PERF-U08-04 | validationはstage定義由来のtoolだけをpass-list成果物へ実行する。 | ad-hoc recursive scanとscope拡大が0件。 |
 
-directory全走査、record全体scan、owner探索browse、無制限retryを追加しない。spot-checkの対象は承認済み単一pathであり、review workloadをsibling Unit数へ比例させない。
+directory全走査、record全体scan、owner探索browse、無制限retryを追加しない。spot-checkのdeclared requestは承認済み単一pathであり、review workloadをsibling Unit数へ比例させない。actual syscall/tool-read捕捉用のproxy/sandboxは追加しない。
 
 ## Resource・verification境界
 
@@ -24,6 +24,8 @@ targeted testではpass-list構築、date command、positive/negative spot-check
 PERF-U08-01〜04は`business-rules.md`のBR-U08-01、06〜17、`business-logic-model.md`のFlow A〜C、`requirements.md`のFR-5とNFR-1〜8、`technology-stack.md`のBun/TypeScript/test stackに対応する。
 
 ## Review — Iteration 1
+
+> 注記: 以下はE-USSU08CGD1以前のhistorical review recordである。規範上のread-scope意味論は、§12a declared pass-list、`check-read`唯一受理、`complete-review` transcript再検証、actual invisible read非要件というrecorded裁定で置換する。
 
 - **Verdict:** READY
 - **Reviewer:** amadeus-architecture-reviewer-agent

@@ -422,6 +422,17 @@ describe("t212 optional_produces per-unit routing and coverage", () => {
   function seedProject(): string {
     const project = createTestProject();
     projects.push(project);
+    const dependencyDir = join(
+      seededRecordDir(project),
+      "inception",
+      "units-generation",
+    );
+    mkdirSync(dependencyDir, { recursive: true });
+    writeFileSync(
+      join(dependencyDir, "unit-of-work-dependency.md"),
+      "# Unit dependencies\n\n```yaml\nunits:\n  - name: alpha\n    depends_on: []\n  - name: beta\n    depends_on: []\n```\n",
+      "utf-8",
+    );
     writeFileSync(
       seededStateFile(project),
       `# AI-DLC State Tracking

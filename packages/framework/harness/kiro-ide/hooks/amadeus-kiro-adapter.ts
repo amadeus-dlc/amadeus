@@ -27,83 +27,81 @@
 // where <target> ∈ session-start | audit-and-sensors | runtime-compile |
 //                  state-sync | log-subagent | stop
 
-import { dirname, join } from "node:path";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+} from "node:fs";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  activeIntent,
+  activeSpace,
   hasOpenGate,
+  hooksHealthDir,
   humanActedSinceGate,
   humanPresenceGuardDisabled,
   isAutonomousMode,
   isMachineInjectedTurnText,
+  readAllAuditShards,
+  recordHookDrop,
+  resolveProjectDirFromHook,
   stateFilePath,
 } from "../tools/amadeus-lib.ts";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
-import { isSubagentTool, mapStateSyncInput } from "./amadeus-kiro-vocab.ts";
-import { existsSync, readFileSync } from "node:fs";
+import { isSubagentTool, parseKiroIdeHookContext } from "./amadeus-kiro-vocab.ts";
+import { spawnHookWithRuntime } from "./amadeus-kiro-hook-runtime.ts";
 
 const HOOKS_DIR = dirname(fileURLToPath(import.meta.url));
 const target = process.argv[2] ?? "";
 
-interface KiroHookInput {
-  hook_event_name?: string;
-  cwd?: string;
-  session_id?: string;
-  tool_name?: string;
-  tool_input?: Record<string, unknown>;
-  tool_response?: unknown;
-  prompt?: string;
-  assistant_response?: string;
-}
+const rawUserPrompt = process.env.USER_PROMPT;
+const parsedContext = parseKiroIdeHookContext(rawUserPrompt);
+const kiro = parsedContext.kind === "ok" ? parsedContext.value : {};
+const projectDir = resolveProjectDirFromHook(import.meta.url);
 
-let kiro: KiroHookInput = {};
-if (!process.stdin.isTTY) {
+function debugEnabled(): boolean {
+  if (process.env.AMADEUS_KIRO_IDE_HOOK_DEBUG === "1") return true;
   try {
-    // Race stdin against a timeout. The IDE may open stdin but never write or
-    // close it, causing Bun.stdin.text() to hang forever. A 2s timeout covers
-    // the CLI case (payload arrives instantly) and avoids blocking the IDE.
-    const text = await Promise.race([
-      Bun.stdin.text(),
-      new Promise<string>((resolve) => setTimeout(() => resolve(""), 2000)),
-    ]);
-    if (text.length > 0) kiro = JSON.parse(text) as KiroHookInput;
+    return statSync(join(projectDir, "amadeus", ".amadeus-hook-debug")).isFile();
   } catch {
-    process.exit(0); // malformed stdin — advisory hooks fail open
+    return false;
   }
 }
 
-// The workspace the payload names — forwarded as the core-hook subprocess cwd so
-// resolveProjectDirFromHook resolves the SAME dir the engine wrote from (#822).
-// Without this the core hook inherits the adapter's launch dir (the main checkout
-// under a worktree session) and mis-resolves the record — symmetric to codex.
-const projectDir = kiro.cwd ?? process.cwd();
+function debug(message: string): void {
+  if (!debugEnabled()) return;
+  try {
+    const healthDir = hooksHealthDir(projectDir);
+    mkdirSync(healthDir, { recursive: true });
+    appendFileSync(join(healthDir, "hook-debug.log"), `${message}\n`, "utf8");
+  } catch {
+    // Debug output is optional and must never affect hook behavior.
+  }
+}
+
+debug(`target=${target} context=${parsedContext.kind}`);
 
 // --- mint: record a HUMAN_TURN event on prompt submit ---
 //
-// Wired by amadeus-mint.kiro.hook (promptSubmit). stdin is empty on Kiro IDE (the
-// race-to-2s above), so this carries NO intent context - but appendAuditEntry
-// resolves the active intent from the on-disk cursor
-// (amadeus/spaces/<space>/intents/active-intent) using only cwd, so the event lands
-// in the correct per-intent shard with no payload. One ledger event per human
-// turn; no marker file, no turn counter. Gated on workflow state existing (same
-// self-gate as the core mint hook) so a prompt in a project that never ran the
-// framework does not scaffold audit shards. Fail-open (try/catch, exit 0) so a
-// mint failure never blocks the human's turn.
-//
-// Classify the prompt through the SHARED lib predicate (the same catalog the core
-// mint hook uses) BEFORE minting: a machine-injected turn must NOT scaffold a
-// phantom HUMAN_TURN (#755/#811). CONSTRAINT (#811): on the real Kiro IDE stdin is
-// empty (the race-to-2s above), so `kiro.prompt` is undefined and this guard is
-// INERT in production — it fails open (mints), the same fail-open the core hook
-// uses. The guard only bites when a payload actually carries a prompt body (e.g. a
-// Kiro CLI-style pipe), which is the case the contract test drives; a fully
-// payload-less UserPromptSubmit cannot be classified by any harness.
+// Wired by amadeus-mint.kiro.hook (promptSubmit). Kiro IDE supplies the raw
+// prompt in USER_PROMPT. Classify that text through the shared predicate before
+// minting so machine-injected turns cannot create phantom HUMAN_TURN entries.
+// JSON tool contexts belong to the other hook targets and are deliberately not
+// inspected for nested prompt fields. Missing input fails open, matching the core
+// mint hook. The on-disk state self-gate prevents scaffolding outside workflows,
+// and all failures remain advisory.
 if (target === "mint") {
   try {
-    const pd = kiro.cwd ?? process.cwd();
     const machineInjected =
-      typeof kiro.prompt === "string" && isMachineInjectedTurnText(kiro.prompt);
-    if (existsSync(stateFilePath(pd)) && !machineInjected) {
-      appendAuditEntry("HUMAN_TURN", {}, pd);
+      parsedContext.kind !== "ok" &&
+      typeof rawUserPrompt === "string" &&
+      isMachineInjectedTurnText(rawUserPrompt);
+    if (existsSync(stateFilePath(projectDir)) && !machineInjected) {
+      appendAuditEntry("HUMAN_TURN", {}, projectDir);
     }
   } catch {
     /* advisory - mint never blocks the turn */
@@ -125,8 +123,8 @@ if (target === "mint") {
 // read/parse error (advisory).
 if (target === "block") {
   try {
-    const pd = kiro.cwd ?? process.cwd();
-    const sp = stateFilePath(pd);
+    const pd = projectDir;
+    const sp = stateFilePath(projectDir);
     const content = existsSync(sp) ? readFileSync(sp, "utf-8") : null;
     // Carve-outs first: autonomous Construction, the deterministic off-switch,
     // and no-open-gate (nothing awaits approval, so nothing to floor).
@@ -149,15 +147,92 @@ if (target === "block") {
 // match on. Both alias and canonical forms are accepted defensively.
 function canonicalTool(name: string): string {
   if (name === "write" || name === "fs_write") return "Write";
+  if (name === "str_replace" || name === "fs_append") return "Edit";
   if (name === "shell" || name === "execute_bash") return "Bash";
   return name;
+}
+
+function writtenPath(toolName: string, result: string): string | null {
+  const trimmed = result.trim();
+  const match =
+    toolName === "fs_write" || toolName === "write"
+      ? trimmed.match(/^Created the (.+) file\.$/)
+      : toolName === "fs_append"
+        ? trimmed.match(/^Appended the text to the (.+) file\.$/)
+        : toolName === "str_replace"
+          ? trimmed.match(/^Replaced text in (.+?)(?: \([^\r\n)]+\))?\.?$/)
+          : null;
+  const path = match?.[1]?.trim() ?? "";
+  return path.length > 0 ? path : null;
+}
+
+function realPathIncludingMissing(candidate: string): string {
+  let existing = resolve(candidate);
+  const missing: string[] = [];
+  while (!existsSync(existing)) {
+    const parent = dirname(existing);
+    if (parent === existing) return resolve(candidate);
+    missing.unshift(basename(existing));
+    existing = parent;
+  }
+  return resolve(realpathSync(existing), ...missing);
+}
+
+function containedProjectPath(candidate: string): string | null {
+  const root = realPathIncludingMissing(projectDir);
+  const path = isAbsolute(candidate) ? candidate : resolve(projectDir, candidate);
+  const fromRoot = relative(root, realPathIncludingMissing(path));
+  if (fromRoot === ".." || fromRoot.startsWith(`..${sep}`) || isAbsolute(fromRoot)) return null;
+  return path;
+}
+
+function agentIdentity(result: string): string {
+  for (const line of result.split(/\r?\n/).slice(0, 8)) {
+    const match = line.match(
+      /^\s*(?:[-*]\s*)?\*{0,2}(?:Reviewer|Agent)(?::\*{0,2}|\*{0,2}\s*:)\s*(.+?)\s*$/i,
+    );
+    const identity = match?.[1]?.replace(/\*+$/, "").trim() ?? "";
+    if (identity.length > 0) return identity;
+  }
+  return "unknown";
+}
+
+function latestUnfinishedStartedStage(): string | null {
+  let state: string;
+  try {
+    state = readFileSync(stateFilePath(projectDir), "utf8");
+  } catch {
+    return null;
+  }
+  if (/^- \*\*Status\*\*:\s*(?:Completed|Complete|Paused|Parked)\s*$/im.test(state)) {
+    return null;
+  }
+  if (/^- \*\*Runtime State\*\*:\s*Parked\s*$/im.test(state)) return null;
+  if (/^- \*\*Parked At Stage\*\*:\s*\S+\s*$/im.test(state)) return null;
+
+  const space = activeSpace(projectDir);
+  const intent = activeIntent(projectDir, space) ?? undefined;
+  const candidates = readAllAuditShards(projectDir, intent, space)
+    .split(/\n---\n/)
+    .flatMap((block) => {
+      if (!/^\*\*Event\*\*:\s*STAGE_STARTED\s*$/m.test(block)) return [];
+      const stage = block.match(/^\*\*Stage\*\*:\s*([a-z][a-z0-9-]*)\s*$/m)?.[1];
+      const timestamp = block.match(/^\*\*Timestamp\*\*:\s*(\S+)\s*$/m)?.[1];
+      return stage && timestamp ? [{ stage, timestamp }] : [];
+    })
+    .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+  const stage = candidates.at(-1)?.stage;
+  if (!stage) return null;
+  const escaped = stage.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const checkbox = state.match(new RegExp(`^- \\[([^\\]]+)\\] ${escaped} —`, "m"))?.[1];
+  return checkbox === "x" || checkbox === "S" || checkbox === undefined ? null : stage;
 }
 
 type Forward = { hook: string; input: Record<string, unknown> } | null;
 
 function buildForward(): Forward {
-  const tool = canonicalTool(kiro.tool_name ?? "");
-  const ti = kiro.tool_input ?? {};
+  const toolName = kiro.toolName ?? "";
+  const tool = canonicalTool(toolName);
 
   switch (target) {
     case "session-start":
@@ -170,63 +245,70 @@ function buildForward(): Forward {
       };
 
     case "audit-and-sensors": {
-      // postToolUse(write) → audit-logger THEN sensor-fire (both ship core).
-      if (tool !== "Write") return null;
-      const filePath = (ti.path as string) ?? (ti.file_path as string) ?? "";
-      if (!filePath) return null;
+      if (tool !== "Write" && tool !== "Edit") return null;
+      if (kiro.toolSuccess !== true) return null;
+      const extracted = writtenPath(toolName, kiro.toolResult ?? "");
+      if (extracted === null) {
+        recordHookDrop(
+          projectDir,
+          "kiro-ide-adapter",
+          `audit-and-sensors: successful ${toolName || "unknown"} result did not match a known path form`,
+        );
+        return null;
+      }
+      const filePath = containedProjectPath(extracted);
+      if (filePath === null) {
+        recordHookDrop(
+          projectDir,
+          "kiro-ide-adapter",
+          `audit-and-sensors: ${toolName || "unknown"} path is outside project root`,
+        );
+        return null;
+      }
       return {
         hook: "__audit_and_sensors__", // handled specially below (two hooks)
         input: {
           hook_event_name: "PostToolUse",
-          tool_name: "Write",
+          tool_name: tool,
           tool_input: { file_path: filePath },
         },
       };
     }
 
     case "runtime-compile": {
-      if (tool !== "Bash") return null;
       return {
         hook: "amadeus-runtime-compile.ts",
         input: {
           hook_event_name: "PostToolUse",
-          ...(kiro.session_id ? { session_id: kiro.session_id } : {}),
           tool_name: "Bash",
-          tool_input: { command: (ti.command as string) ?? "" },
-          ...(kiro.tool_response !== undefined
-            ? { tool_response: kiro.tool_response }
-            : {}),
+          tool_input: { source: "ide-audit-sync" },
         },
       };
     }
 
     case "state-sync": {
-      // Dual vocabulary (#753): CLI `todo_list` (command-shaped create) or IDE
-      // `spec` (task-status shaped) — mapping lives in amadeus-kiro-vocab.ts,
-      // mirroring the canonicalTool() both-vocabularies pattern above.
-      const mapped = mapStateSyncInput(kiro.tool_name ?? "", ti);
-      if (mapped === null) return null;
+      const stage = latestUnfinishedStartedStage();
+      if (stage === null) return null;
       return {
         hook: "amadeus-sync-statusline.ts",
         input: {
           hook_event_name: "PostToolUse",
           tool_name: "TaskUpdate",
-          tool_input: { status: mapped.status, activeForm: mapped.activeForm },
+          tool_input: { status: "in_progress", activeForm: `Running stage [${stage}]` },
         },
       };
     }
 
     case "log-subagent": {
-      // Dual vocabulary (#753): CLI `subagent` or IDE `invoke_sub_agent`.
-      if (!isSubagentTool(kiro.tool_name ?? "")) return null;
-      const stages = (ti.stages as Array<{ role?: string }>) ?? [];
-      const roles = [...new Set(stages.map((s) => s.role ?? "unknown"))].join(",");
+      if (!isSubagentTool(toolName)) return null;
+      if (kiro.toolSuccess !== true) return null;
+      const result = kiro.toolResult ?? "";
       return {
         hook: "amadeus-log-subagent.ts",
         input: {
           hook_event_name: "SubagentStop",
-          agent_type: roles || "unknown",
-          agent_id: kiro.session_id ?? "",
+          agent_type: agentIdentity(result),
+          last_assistant_message: result.slice(0, 200),
         },
       };
     }
@@ -239,7 +321,6 @@ function buildForward(): Forward {
         hook: "amadeus-stop.ts",
         input: {
           hook_event_name: "Stop",
-          ...(kiro.session_id ? { session_id: kiro.session_id } : {}),
           stop_hook_active: false,
         },
       };
@@ -256,7 +337,7 @@ function buildForward(): Forward {
 }
 
 function runCore(hookFile: string, input: Record<string, unknown>): { stdout: string; code: number } {
-  const r = Bun.spawnSync(["bun", join(HOOKS_DIR, hookFile)], {
+  const r = spawnHookWithRuntime([join(HOOKS_DIR, hookFile)], {
     stdin: Buffer.from(JSON.stringify(input), "utf-8"),
     stdout: "pipe",
     stderr: "ignore",

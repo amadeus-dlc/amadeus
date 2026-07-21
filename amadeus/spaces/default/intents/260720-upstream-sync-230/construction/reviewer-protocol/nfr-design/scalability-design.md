@@ -8,8 +8,8 @@
 |---|---|---|
 | package projection | 現行6 harness | authored sourceから既存generatorで全数導出 |
 | self-install | 既存4面 | closed listを既存promote/checkで全数検査 |
-| default review scope | current Unit、stage、Q&A、実在成果物、passed consumes | `reviewerReadScope`で決定的に構築 |
-| spot-check expansion | 4条件成立時の単一owner file | 当該invocationだけに1 path追加 |
+| default declared scope | `stage_file`、current Unitの実在`produces`、present consumes。Q&Aは`directive.consumes`明示時だけ | `reviewerReadScope`でauthoritative setを決定的に構築 |
+| spot-check expansion | `check-read`で4条件成立時の単一owner file | 当該invocationだけに1 path追加 |
 | Review record | Verdict、Reviewer、Date、Iteration | `runtimeReviewIdentity`で4 fieldを一体生成 |
 
 6 harness、4 self-install、単一file、4 fieldは承認済みclosed contractであり、需要予測値ではない。harnessやschemaを増やす場合は正本とscopeの再承認を必要とし、本Unitから動的発見しない。
@@ -18,11 +18,11 @@
 
 authored coreのreviewer persona、reviewing knowledge、stage protocolと、harness別orchestrator skillの契約を正本側で更新し、既存package generatorで6面へ投影する。同一source/manifestから同一bytesを得て、source/projection drift、欠落、重複を非0にする。generated treeやdistを第二正本にしない。
 
-reviewer invocationはengineが渡した明示path集合だけを使い、record rootや`construction/*/`を走査しない。sibling Unitが増えてもdefault read数を増やさず、owner不明・複数時はscopeを拡大せずcontract findingへ閉じる。
+reviewer invocationはengineが渡したauthoritative declared path集合だけを使い、record rootや`construction/*/`を走査するrequestを受理しない。sibling Unitが増えてもdefault request数を増やさず、owner不明・複数時はscopeを拡大せずcontract findingへ閉じる。
 
 ## Capacity fixture
 
-table-driven fixtureで6 harness、4 self-install、current Unit scope、単一file carve-out、4-field Reviewを全数検査する。directory、複数file、次iteration継承、sibling browseが0件であることをnegative fixtureで固定する。parallel worker、cache、queue、load balancer、autoscaling、AWS infrastructureは追加しない。
+table-driven fixtureで6 harness、4 self-install、current Unit scope、単一file carve-out、4-field Reviewを全数検査する。directory、複数file、次iteration継承、sibling browse、transcript bypass/tamperがaccepted resultに0件であることをnegative fixtureで固定する。parallel worker、cache、queue、load balancer、autoscaling、AWS infrastructureは追加しない。
 
 ## トレーサビリティ
 

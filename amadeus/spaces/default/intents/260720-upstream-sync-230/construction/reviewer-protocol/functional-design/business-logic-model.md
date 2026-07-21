@@ -17,25 +17,25 @@ function reviewerReadScope(unit: UnitRef, consumes: readonly ArtifactRef[]): Rea
 function runtimeReviewIdentity(persona: ReviewerPersona, utcDate: string): ReviewHeader;
 ```
 
-`reviewerReadScope`はorchestrator所有で、current Unitのstage definition、Q&A、実在成果物とpassed `consumes`からclosed scopeを作り、後述のspot-check predicateをread前に適用する。`runtimeReviewIdentity`はreviewer実行境界でpersonaと実測UTCを検証し、invalidならReview headerを作らない。pass-list構築、owner解決、scope decision記録、date command実行は内部helperで、追加public APIではない。
+`reviewerReadScope`はorchestrator所有で、current Unitの`stage_file`、実在`produces`とpresent `consumes`から§12aのauthoritative declared scopeを作る。Q&Aは`directive.consumes`に明示された場合だけ含め、path探索で補わない。`runtimeReviewIdentity`はreviewer実行境界でpersonaと実測UTCを検証し、invalidならReview headerを作らない。pass-list構築、owner解決、`check-read`、Scope decision transcript再検証、date command実行は内部helperで、追加public APIではない。
 
 ## Flow A: invocation pass-list
 
-1. orchestratorの`reviewerReadScope(unit, consumes)`はengine directiveからstage definition、Q&A、required成果物、実在するoptional成果物を列挙する。存在しないoptional候補は渡さない。
+1. orchestratorの`reviewerReadScope(unit, consumes)`はengine directiveから`stage_file`、required成果物、実在するoptional成果物、present `consumes`を列挙する。存在しないoptional候補は渡さず、Q&Aは`directive.consumes`に明示された場合だけ含める。
 2. `directive.unit`があるper-unit stageでは、`directive.consumes`の解決済みpathを全て追加する。これはcross-unit境界を固定するupstream artifactであり、reviewerが sibling designを探す代替ではない。
 3. `memory.md`、`plan.md`、reasoning file、record rootはpass-listへ含めない。
-4. pass-listは重複を除いて決定的に保持し、reviewer promptへpathを明示する。reviewerは受領集合をread scopeの既定値とする。spot-checkで承認されたpathはこのinvocationだけに追加し、次iterationへ暗黙継承しない。
+4. pass-listは重複を除いて決定的に保持し、reviewer promptへpathを明示する。このdeclared pass-listをauthoritative scopeとする。spot-checkで承認されたpathはこのinvocationだけに追加し、次iterationへ暗黙継承しない。
 5. validation toolがstage definitionにある場合は、pass-list内成果物へ実行して結果をfindingへ含める。
 
 ## Flow B: bounded review
 
-1. reviewerはstage definitionで期待shape、Q&Aで確定判断、current Unit artifactsで実際の成果、passed consumesでshared contractを確認する。
-2. current Unit外の`construction/<other-unit>/`は、file openだけでなくgrep、glob、shell patternによる横断検索もsibling readとして禁止する。`construction/*/`は検索ではなくscope違反である。
+1. reviewerはstage definitionで期待shape、current Unit artifactsで実際の成果、passed consumesでshared contractを確認する。Q&Aが`directive.consumes`に明示されている場合は、そのpathから確定判断を確認する。
+2. current Unit外の`construction/<other-unit>/`を対象とするfile open、grep、glob、shell patternのrequestをdeclared transcriptで禁止する。`construction/*/`はowner探索として受理しない。
 3. passed system-wide contractに他Unit entryがあっても、current Unit artifactから参照されないことをfindingにしない。current Unitの参照がpassed contract内で実在・整合することだけを検査する。
-4. spot-checkはread前にclosed predicateを評価する。(a) current Unit artifactが具体的integration IDを明示、(b) passed contractが単一owner pathを解決、(c) claimed shape確認に必要な非空reasonがある、(d) pathが単一fileでdirectory/glob/grep/shell wildcardやbrowse/search由来でない、の4条件が全て成立する時だけ自動承認する。
-5. orchestratorはread前のreviewer promptへ`decision=approved | rejected`、path、reason、integration ID、owner evidenceを固定する。approved時だけ単一owner pathを当該invocation限定pass-listへ追加する。current Unitとpassed contract以外をowner解決根拠に使わない。
-6. 一条件でも欠ける、owner 0/複数、path不一致、2 file目ならrejectedで追加read 0とし、current designまたはshared contractへのfindingに閉じる。拒否後またはdecision記録前のreadはscope violationで、そのreview全体を完了証拠に使わない。
-7. decisionと同じpath/reason/ID/evidenceをsubagent prompt/resultと最終Reviewの`Scope decision`へ残し、既存auditのsubagent記録から追跡する。新しいaudit eventは追加しない。同一decisionの再実行は記録を増殖させない。
+4. spot-check requestは`check-read`だけがclosed predicateを評価する。(a) current Unit artifactが具体的integration IDを明示、(b) passed contractが単一owner pathを解決、(c) claimed shape確認に必要な非空reasonがある、(d) pathが単一fileでdirectory/glob/grep/shell wildcardやbrowse/search由来でない、の4条件が全て成立する時だけ自動承認する。
+5. orchestratorはrequest前のreviewer promptへ`decision=approved | rejected`、path、reason、integration ID、owner evidenceを固定する。approved時だけ単一owner pathを当該invocation限定pass-listへ追加する。current Unitとpassed contract以外をowner解決根拠に使わない。
+6. 一条件でも欠ける、owner 0/複数、path不一致、2 file目ならrejectedでaccepted request 0とし、current designまたはshared contractへのfindingに閉じる。`check-read`を通らない、rejected、approved path外、2 file目のrequestを含むresultはReview/READY証拠に使わない。
+7. decisionと同じpath/reason/ID/evidenceをsubagent prompt/result間のtransient Scope decision transcriptとして渡す。`complete-review`はrun-stage directive、current artifacts、passed consumesから全entryを再検証し、bypassや改竄を拒否したうえで、同内容のScope decision projectionを最終Reviewへ永続記録する。既存auditはsubagent identity/completionを保持し、新しいaudit event、read ledger、storeは追加しない。同一decisionの再実行はReview projectionを増殖させない。
 8. verdictとfindingをprimary artifactの`## Review`へappendする。reviewerはそれ以外のartifactを変更しない。
 
 ## Flow C: runtime review identity
@@ -56,19 +56,24 @@ function runtimeReviewIdentity(persona: ReviewerPersona, utcDate: string): Revie
 ## Failure decisions
 
 - date commandがnon-zero、空、複数行、不正形式ならReviewを確定せずloud failureにする。推定timestampで補わない。
-- pass-list外readを必要と感じても、その場でscopeを広げない。spot-checkの4条件decisionをread前に通せない場合はshared contract不足のfindingとしてorchestratorへ返す。
-- sibling横断patternが検出されたreviewはread-scope違反であり、その結果を独立review完了証拠に使わない。
-- rejected decision後、decision記録前、またはapproved path以外へのreadもscope違反であり、同じくreviewを無効にする。
+- pass-list外readを必要と感じても、その場でscopeを広げない。spot-check requestを`check-read`へ通せない場合はshared contract不足のfindingとしてorchestratorへ返す。
+- sibling横断pattern、rejected、approved path外、2 file目をdeclared request/resultが含む場合、その結果を独立review完了証拠に使わない。
+- `check-read` receiptのbypass、prompt/result間のtranscript改竄、directive/artifacts/consumesから再現不能なentryは`complete-review`が拒否する。
+- 全6 harnessの実tool/syscall readを不可視領域まで捕捉することは要件にしない。read proxy/sandboxを追加せず、authoritativeなdeclared pass-listとtranscriptの検証へ境界を閉じる。
 - projection driftはgeneratorから修復し、生成物側を正本に昇格させない。
 
 ## 検証シナリオ
 
 - date template2種がexact commandとguess禁止を持ち、Reviewer fieldがproduct/architectureのchecker personaを指す。
-- per-unit pass-listはcurrent artifacts、stage、Q&A、consumesを含み、missing optional、memory、plan、sibling artifactを含まない。
-- file open、grep、glob、shell wildcardの各sibling accessをnegative fixtureで拒否する。
-- positive fixtureは4条件成立、read前decision記録、当該invocationだけの単一owner path追加、Review/subagent/audit追跡を全てassertする。
-- negative fixtureはIDなし、owner 0/複数、reason空、path不一致、directory/glob/grep/shell wildcard、browse/search由来、2 file目、事後記録、拒否後readを全数拒否し、review無効をassertする。
+- per-unit pass-listは`stage_file`、current Unitの実在`produces`、present `consumes`を含み、Q&Aは`directive.consumes`に明示された場合だけ含む。missing optional、memory、plan、sibling artifactを含まない。
+- file open、grep、glob、shell wildcardの各sibling requestをnegative fixtureで拒否する。
+- positive fixtureは4条件成立、request前decision記録、`check-read`受理、当該invocationだけの単一owner path追加、prompt/result transcriptとReviewの再検証済みprojection一致を全てassertする。
+- negative fixtureはIDなし、owner 0/複数、reason空、path不一致、directory/glob/grep/shell wildcard、browse/search由来、2 file目、事後記録、rejected/outside request、`check-read` bypass、transcript改竄を全数拒否し、Review/READY不受理をassertする。
 - core正本と6 harness projection、package/promote checksが一致する。
+
+## Design reconciliation — E-USSU08CGD1
+
+E-USSU08CGP2のBlock後、E-USSU08CGD1はchoice1 Aを6–0、GoA 6–0でrecordedした。本節以前の規範記述は上記declared-scope境界で解釈し、後掲の過去Reviewにある「実read発生の完全検知」相当の表現は本裁定で置換する。authoritative scopeは既存wireが渡す`stage_file`、実在`produces`、present `consumes`の§12a declared pass-listで、Q&Aは`directive.consumes`明示時だけ含む。追加requestの唯一受理経路は`check-read`、Review/READY受理前の正本検証は`complete-review`によるScope decision transcript全件再計算である。transcriptはprompt/result間だけtransientで、最終Reviewには再検証済みprojectionを永続記録する。actual invisible readは非要件であり、新audit/event/store/proxy/sandboxを追加しない。
 
 ## Review — Iteration 1
 

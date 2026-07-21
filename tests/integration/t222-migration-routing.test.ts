@@ -1100,6 +1100,18 @@ describe("Kiro advancing guard parity", () => {
         ),
         join(hooks, "amadeus-kiro-adapter.ts"),
       );
+      cpSync(
+        join(
+          REPO_ROOT,
+          "packages",
+          "framework",
+          "harness",
+          "kiro",
+          "hooks",
+          "amadeus-kiro-hook-runtime.ts",
+        ),
+        join(hooks, "amadeus-kiro-hook-runtime.ts"),
+      );
       const runAdapter = (target: string, payload: Record<string, unknown>) =>
         spawnSync(process.execPath, [join(hooks, "amadeus-kiro-adapter.ts"), target], {
           cwd: project,
