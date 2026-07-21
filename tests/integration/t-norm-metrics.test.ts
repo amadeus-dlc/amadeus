@@ -15,7 +15,14 @@
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import {
+  ECODE_RE,
+  extractGoaRecords,
+  parseGoaLine,
+  scanGoaHeads,
+} from "../../packages/framework/core/tools/amadeus-norm-metrics.ts";
 import { AMADEUS_SRC, REPO_ROOT } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
@@ -35,6 +42,16 @@ function citesFor(stdout: string, cid: string): number {
   return -1;
 }
 
+function markdownBodies(dir: string): string[] {
+  const bodies: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) bodies.push(...markdownBodies(path));
+    else if (entry.isFile() && entry.name.endsWith(".md")) bodies.push(readFileSync(path, "utf8"));
+  }
+  return bodies;
+}
+
 describe("amadeus-norm-metrics rank (cli spawn boundary)", () => {
   test("rank --json against the shipped memory layer exits 0 with valid JSON", () => {
     const r = spawnSync(BUN, [TOOL, "rank", "--json", "--top", "5"], {
@@ -46,6 +63,29 @@ describe("amadeus-norm-metrics rank (cli spawn boundary)", () => {
     expect(Array.isArray(parsed.rows)).toBe(true);
     expect(parsed.rows.length).toBeLessThanOrEqual(5);
     expect(typeof parsed.uncounted.org).toBe("number");
+  });
+
+  test("real memory corpus keeps head/extraction totals and classifies every record", () => {
+    const bodies = markdownBodies(REAL_MEMORY);
+    let heads = 0;
+    let records = 0;
+    let accepted = 0;
+    let rejected = 0;
+    let oldEcodes = 0;
+    let newEcodes = 0;
+    for (const body of bodies) {
+      heads += scanGoaHeads(body).offsets.length;
+      const extracted = extractGoaRecords(body);
+      records += extracted.length;
+      for (const record of extracted) parseGoaLine(record).ok ? accepted++ : rejected++;
+      oldEcodes += (body.match(/\bE-[A-Z0-9]+/g) ?? []).length;
+      newEcodes += (body.match(ECODE_RE) ?? []).length;
+    }
+    expect(records).toBe(heads);
+    expect(accepted + rejected).toBe(records);
+    expect(accepted).toBeGreaterThan(0);
+    expect(rejected).toBeGreaterThan(0);
+    expect(newEcodes).toBe(oldEcodes);
   });
 
   test("rank (table form) exits 0 and prints the loud NOT-COLLECTED lines", () => {

@@ -127,8 +127,9 @@ const DEF_MARKER_RE = /<!--\s*cid:([a-z0-9-]+(?::[a-z0-9-]+)*)\s*-->/g;
 // before `cid` and after the path must not be [a-z0-9-]) so `cid:code` inside
 // `cid:code-generation` is captured whole, never as a fragment.
 const CITE_RE = /(?<![a-z0-9-])cid:([a-z0-9-]+(?::[a-z0-9-]+)*)(?![a-z0-9-])/g;
-// An E-code election id: `E-` followed by uppercase/digits (E-PM1, E-L59, …).
-const ECODE_RE = /\bE-[A-Z0-9]+/g;
+// A non-anchored E-code occurrence scanner. Whole-value validation is owned by
+// the election record layer and intentionally has a narrower accepted language.
+export const ECODE_RE = /\bE-[A-Z0-9]+(?:-[A-Z0-9]+)*/g;
 // An ISO date (YYYY-MM-DD). Lexicographic max == chronological max.
 const ISO_DATE_RE = /20\d{2}-\d{2}-\d{2}/g;
 // A recorded adoption vote, e.g. "採用 4/4". Two+ on one line = a churn signal.
@@ -152,15 +153,13 @@ export const CHURN_THRESHOLD = 2;
 // review in one weekly round (matches the refined-mockups M2 worked example).
 export const DEFAULT_DISTILL_K = 5;
 
-// FR-3 Phase B input schemas (parse-only). A GoA persist line (ADR-4):
-//   `GoA[E-<code>]: 1x<n> 2x<n> 3x<n> 4x<n> 5x<n> 6x<n> 7x<n> 8x<n>`
-// The ADR-4 E-code accepts hyphenated multi-segment codes (e.g. E-SDE-CG4,
-// E-APG-CG13); the captured ecode is returned verbatim, unchanged. Note the
-// team.md real corpus also carries a sparse per-subquestion form
-// (`c1 1x2 2x1 / c2 ...`) that this parse does NOT cover — it accepts the
-// canonical 8-bin form only (tracked separately as its own Issue).
+// FR-3 Phase B input schemas. A GoA persist line (ADR-4) is either canonical
+// (`1x<n> ... 8x<n>`) or sparse per-subquestion (`c1 1x<n> / c2 2x<n>`).
+// Hyphenated multi-segment E-codes are returned verbatim, unchanged.
 const GOA_HEAD_RE = /^GoA\[(E-[A-Z0-9]+(?:-[A-Z0-9]+)*)\]:\s*(.+)$/;
 const GOA_TOKEN_RE = /^([1-8])x(\d+)$/;
+const GOA_SPARSE_LABEL_RE = /^[cC][1-9][0-9]*$/;
+const GOA_SCAN_HEAD_RE = /GoA\[E-[A-Z0-9]+(?:-[A-Z0-9]+)*\]:/g;
 // A PM round record line (ADR-4):
 //   `PM-cid: <full-cid> incident=<one-line> round=<E-PMn>`
 const PM_CID_RE = /^PM-cid:\s+([a-z0-9-]+(?::[a-z0-9-]+)*)\s+incident=(.+)\s+round=(E-[A-Z0-9]+(?:-[A-Z0-9]+)*)$/;
@@ -674,6 +673,12 @@ export interface GoaBreakdown {
   ok: true;
   ecode: string;
   votes: [number, number, number, number, number, number, number, number];
+  segments?: GoaSegment[];
+}
+
+export interface GoaSegment {
+  label: string;
+  votes: [number, number, number, number, number, number, number, number];
 }
 
 /** One PM-round incident record parsed from a `PM-cid:` line. */
@@ -689,11 +694,120 @@ export interface ParseFailure {
   error: string;
 }
 
+export interface GoaHeadScan {
+  offsets: number[];
+  execCalls: number;
+}
+
+/** Locate every valid GoA head with the same forward loop used by extraction. */
+export function scanGoaHeads(text: string): GoaHeadScan {
+  const re = new RegExp(GOA_SCAN_HEAD_RE.source, GOA_SCAN_HEAD_RE.flags);
+  const offsets: number[] = [];
+  let execCalls = 0;
+  while (true) {
+    execCalls++;
+    const match = re.exec(text);
+    if (match === null) break;
+    offsets.push(match.index);
+  }
+  return { offsets, execCalls };
+}
+
+type GoaBoundarySearch = (haystack: string, needle: string) => number;
+
+const boundaryIndexOf: GoaBoundarySearch = (haystack, needle) => haystack.indexOf(needle);
+
+function extractGoaRecordsWithSearch(text: string, search: GoaBoundarySearch): string[] {
+  const { offsets } = scanGoaHeads(text);
+  const records: string[] = [];
+  for (let i = 0; i < offsets.length; i++) {
+    const start = offsets[i];
+    const nextHead = offsets[i + 1];
+    const span = text.slice(start, nextHead ?? text.length);
+    const newline = search(span, "\n");
+    const comment = search(span, "<!--");
+    const closeParen = search(span, ")");
+    const boundaries = [
+      { kind: nextHead === undefined ? "eof" : "head", offset: span.length },
+      ...(newline === -1 ? [] : [{ kind: "newline", offset: newline }]),
+      ...(comment === -1 ? [] : [{ kind: "comment", offset: comment }]),
+      ...(closeParen === -1 ? [] : [{ kind: "paren", offset: closeParen }]),
+    ];
+    const boundary = boundaries.reduce((first, candidate) => candidate.offset < first.offset ? candidate : first);
+    let candidate = span.slice(0, boundary.offset);
+    if (boundary.kind === "head") candidate = candidate.replace(/\s*\/\s*$/, "");
+    records.push(candidate.trim());
+  }
+  return records;
+}
+
+/** Split corpus text into ordered GoA record candidates without repairing an
+ * invalid body. A slash is removed only when it separates adjacent heads. */
+export function extractGoaRecords(text: string): string[] {
+  return extractGoaRecordsWithSearch(text, boundaryIndexOf);
+}
+
+export function _extractGoaRecordsScanForTests(text: string) {
+  let boundarySearchChars = 0;
+  const records = extractGoaRecordsWithSearch(text, (haystack, needle) => {
+    boundarySearchChars += haystack.length;
+    return haystack.indexOf(needle);
+  });
+  return { records, boundarySearchChars };
+}
+
+function emptyGoaVotes(): [number, number, number, number, number, number, number, number] {
+  return [0, 0, 0, 0, 0, 0, 0, 0];
+}
+
+function parseSparseGoaSegment(rawSegment: string): GoaSegment | ParseFailure {
+  const segment = rawSegment.trim();
+  if (segment === "") return { ok: false, error: "sparse/empty-segment: empty segment" };
+  const tokens = segment.split(/\s+/);
+  const label = tokens.shift() ?? "";
+  if (!GOA_SPARSE_LABEL_RE.test(label)) {
+    return { ok: false, error: `sparse/malformed-token: invalid label ${label}` };
+  }
+  if (tokens.length === 0) return { ok: false, error: `sparse/malformed-token: missing vote bin for ${label}` };
+  const votes = emptyGoaVotes();
+  let previousBin = 0;
+  for (const token of tokens) {
+    const shaped = /^(\d+)x(\d+)$/.exec(token);
+    if (shaped === null) return { ok: false, error: `sparse/malformed-token: ${token}` };
+    const bin = Number(shaped[1]);
+    if (bin < 1 || bin > 8 || bin <= previousBin) {
+      return { ok: false, error: `sparse/bin-sequence: ${token}` };
+    }
+    votes[bin - 1] = Number(shaped[2]);
+    previousBin = bin;
+  }
+  return { label, votes };
+}
+
+function parseSparseGoaBody(ecode: string, body: string): GoaBreakdown | ParseFailure {
+  const segments: GoaSegment[] = [];
+  const labels = new Set<string>();
+  for (const rawSegment of body.split("/")) {
+    const parsed = parseSparseGoaSegment(rawSegment);
+    if ("ok" in parsed) return parsed;
+    const key = parsed.label.toLowerCase();
+    if (labels.has(key)) return { ok: false, error: `sparse/duplicate-label: ${parsed.label}` };
+    labels.add(key);
+    segments.push(parsed);
+  }
+  const votes = emptyGoaVotes();
+  for (const segment of segments) {
+    for (let i = 0; i < votes.length; i++) votes[i] += segment.votes[i];
+  }
+  return { ok: true, ecode, votes, segments };
+}
+
 /** Parse `GoA[E-<code>]: 1x<n> 2x<n> ... 8x<n>` into a GoaBreakdown, or fail. */
 export function parseGoaLine(line: string): GoaBreakdown | ParseFailure {
   const head = GOA_HEAD_RE.exec(line.trim());
   if (head === null) return { ok: false, error: `not a GoA line: ${line}` };
   const tokens = head[2].trim().split(/\s+/);
+  if (GOA_SPARSE_LABEL_RE.test(tokens[0])) return parseSparseGoaBody(head[1], head[2].trim());
   if (tokens.length !== 8) return { ok: false, error: `expected 8 vote bins, got ${tokens.length}` };
   const votes: number[] = [];
   for (let i = 0; i < 8; i++) {

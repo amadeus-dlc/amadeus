@@ -17,6 +17,7 @@ import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import type { RuleFile } from "../../packages/framework/core/tools/amadeus-graph.ts";
 import {
+  _extractGoaRecordsScanForTests,
   amendmentCountOf,
   buildRows,
   CHURN_THRESHOLD,
@@ -24,6 +25,8 @@ import {
   collectMetrics,
   DEFAULT_DISTILL_K,
   distillCandidates,
+  ECODE_RE,
+  extractGoaRecords,
   main,
   normaliseCid,
   parseArgs,
@@ -34,6 +37,7 @@ import {
   renderDistillTable,
   renderJson,
   renderTable,
+  scanGoaHeads,
   type RuleLine,
   scanCitations,
   ZERO_CITE_THRESHOLD_DAYS,
@@ -596,6 +600,52 @@ describe("PhaseBSchemas (parseGoaLine / parsePmCidLine)", () => {
     expect(parseGoaLine("GoA[E-PM1]: 1xz 2x0 3x1 4x0 5x0 6x0 7x0 8x0").ok).toBe(false); // non-numeric count
   });
 
+  test("parseGoaLine accepts sparse labelled segments and aggregates missing bins as zero", () => {
+    const r = parseGoaLine("GoA[E-SPARSE-1]: c1 2x2 7x1 / C2 1x3");
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.votes).toEqual([3, 2, 0, 0, 0, 0, 1, 0]);
+      expect(r.segments).toEqual([
+        { label: "c1", votes: [0, 2, 0, 0, 0, 0, 1, 0] },
+        { label: "C2", votes: [3, 0, 0, 0, 0, 0, 0, 0] },
+      ]);
+    }
+  });
+
+  test("canonical GoA remains segment-free and sparse labels preserve case", () => {
+    const canonical = parseGoaLine("GoA[E-PM1]: 1x4 2x0 3x1 4x0 5x0 6x2 7x0 8x0");
+    expect(canonical.ok).toBe(true);
+    if (canonical.ok) expect(canonical.segments).toBeUndefined();
+    const upper = parseGoaLine("GoA[E-SPARSE-2]: C1 1x1");
+    expect(upper.ok).toBe(true);
+    if (upper.ok) expect(upper.segments?.[0].label).toBe("C1");
+  });
+
+  test("sparse parsing rejects all four failure classes atomically", () => {
+    const cases = [
+      ["GoA[E-X]: c1 1x1 / C1 2x1", "sparse/duplicate-label:"],
+      ["GoA[E-X]: c1 2x1 1x1", "sparse/bin-sequence:"],
+      ["GoA[E-X]: c1 1x1 / nope 2x1", "sparse/malformed-token:"],
+      ["GoA[E-X]: c1 1x1 /", "sparse/empty-segment:"],
+    ] as const;
+    for (const [line, prefix] of cases) {
+      const r = parseGoaLine(line);
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error.startsWith(prefix)).toBe(true);
+    }
+  });
+
+  test("sparse bins are 1..8, strictly ascending, unique, and tokens are never skipped", () => {
+    for (const line of [
+      "GoA[E-X]: c1 9x1",
+      "GoA[E-X]: c1 1x1 1x2",
+      "GoA[E-X]: c1 1xz",
+      "GoA[E-X]: c1 1x1 garbage",
+      "GoA[E-X]: / c1 1x1",
+      "GoA[E-X]: c1 1x1 / / c2 2x1",
+    ]) expect(parseGoaLine(line).ok).toBe(false);
+  });
+
   test("parsePmCidLine parses the PM round record (ADR-4)", () => {
     const r = parsePmCidLine(
       "PM-cid: requirements-analysis:merge-approval-latency incident=誤マージ誘発の懸念 round=E-PM3",
@@ -613,6 +663,61 @@ describe("PhaseBSchemas (parseGoaLine / parsePmCidLine)", () => {
     expect(r.ok && r.cid).toBe("code-generation:c2");
     expect(parsePmCidLine("PM-cid: no round token here").ok).toBe(false);
     expect(parsePmCidLine("totally unrelated line").ok).toBe(false);
+  });
+});
+
+describe("GoA corpus scanner/extractor", () => {
+  test("extractGoaRecords bounds boundary searches to partitioned record spans", () => {
+    const scan = (count: number): number => {
+      const text = "GoA[E-SCALE]: c1 1x1 / ".repeat(count);
+      const result = _extractGoaRecordsScanForTests(text);
+      expect(result.records).toHaveLength(count);
+      expect(result.boundarySearchChars).toBe(text.length * 3);
+      return result.boundarySearchChars;
+    };
+    expect(scan(4_000)).toBe(scan(1_000) * 4);
+  });
+
+  test.each([1, 2, 4])("scanGoaHeads uses one production forward loop (N=%i)", (n) => {
+    const block = "GoA[E-SCALE]: c1 1x1\n";
+    const text = block.repeat(n);
+    const scan = scanGoaHeads(text);
+    expect(scan.offsets).toHaveLength(n);
+    expect(extractGoaRecords(text)).toHaveLength(n);
+    expect(scan.execCalls).toBe(scan.offsets.length + 1);
+    for (let i = 1; i < scan.offsets.length; i++) expect(scan.offsets[i]).toBeGreaterThan(scan.offsets[i - 1]);
+  });
+
+  test("extractGoaRecords separates same-line heads and preserves invalid trailing separators", () => {
+    const text =
+      "prefix GoA[E-A]: c1 1x1 / GoA[E-B-C]: C2 2x2) provenance\n" +
+      "GoA[E-D]: c3 3x3 /\n";
+    expect(extractGoaRecords(text)).toEqual([
+      "GoA[E-A]: c1 1x1",
+      "GoA[E-B-C]: C2 2x2",
+      "GoA[E-D]: c3 3x3 /",
+    ]);
+    expect(parseGoaLine(extractGoaRecords(text)[2]).ok).toBe(false);
+  });
+
+  test("provenance before a later same-line head preserves an invalid trailing separator", () => {
+    for (const provenance of [") prose ", "<!-- cid:x --> prose "]) {
+      const records = extractGoaRecords(`GoA[E-A]: c1 1x1 /${provenance}GoA[E-B]: c2 2x1`);
+      expect(records).toEqual(["GoA[E-A]: c1 1x1 /", "GoA[E-B]: c2 2x1"]);
+      const first = parseGoaLine(records[0]);
+      expect(first.ok).toBe(false);
+      if (!first.ok) expect(first.error.startsWith("sparse/empty-segment:")).toBe(true);
+    }
+  });
+});
+
+describe("E-code occurrence matcher", () => {
+  test("multi-segment matching expands the token without changing occurrence count", () => {
+    const corpus = "E-PM1 E-SDE-CG4 E-APG-CG13";
+    const oldMatches = corpus.match(/\bE-[A-Z0-9]+/g) ?? [];
+    const newMatches = corpus.match(ECODE_RE) ?? [];
+    expect(newMatches).toHaveLength(oldMatches.length);
+    expect(newMatches).toEqual(["E-PM1", "E-SDE-CG4", "E-APG-CG13"]);
   });
 });
 
@@ -663,11 +768,9 @@ describe("PhaseBSchemas multi-segment E-codes (Issue #1226)", () => {
     if (r.ok) expect(r.round).toBe("E-PM3");
   });
 
-  // The sparse per-subquestion form (`c1 2x2 7x1 / c2 1x3`) is NOT covered by
-  // this parse — only the canonical 8-bin form is. Pin the current failing
-  // behaviour so any future support is a deliberate, tested change.
-  // Tracked separately as its own Issue.
-  test("parseGoaLine rejects the sparse per-subquestion form", () => {
-    expect(parseGoaLine("GoA[E-SMF-BT]: c1 2x2 7x1 / c2 1x3").ok).toBe(false);
+  test("parseGoaLine accepts the sparse per-subquestion form", () => {
+    const r = parseGoaLine("GoA[E-SMF-BT]: c1 2x2 7x1 / c2 1x3");
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.votes).toEqual([3, 2, 0, 0, 0, 0, 1, 0]);
   });
 });

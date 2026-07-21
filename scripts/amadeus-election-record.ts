@@ -7,10 +7,10 @@
 // out of scope here (functional-design frontend-components N/A).
 //
 // The GoA line is byte-compatible with the real parseGoaLine
-// (packages/framework/core/tools/amadeus-norm-metrics.ts:688): renderGoaLine
-// carries the whole mapping burden so parseGoaLine's schema never changes
-// (NFR-4). Codes are constrained to parseGoaLine's own accept domain
-// (`^E-[A-Z0-9]+$`) at construction, fail-closed.
+// (packages/framework/core/tools/amadeus-norm-metrics.ts): renderGoaLine
+// carries the whole mapping burden so parseGoaLine's canonical schema never
+// changes. Codes are constrained to parseGoaLine's own multi-segment accept
+// domain at construction, fail-closed.
 
 import {
   type Ballot,
@@ -25,13 +25,11 @@ import {
 
 // --- GoaLineCode -----------------------------------------------------------
 
-// A norm-election E-code in parseGoaLine's accept domain: `E-` then one run of
-// upper-case letters and digits, no further hyphens. Multi-segment codes like
-// `E-SDE-CG4` are rejected here — the caller supplies the alnum-compressed form
-// parseGoaLine can round-trip (the hyphenated-corpus gap is Issue #1226).
+// Natural multi-segment codes are accepted; compressed single-segment legacy
+// values remain accepted for stored-record compatibility.
 export type GoaLineCode = string & { readonly __brand: "GoaLineCode" };
 
-const GOA_LINE_CODE_RE = /^E-[A-Z0-9]+$/;
+const GOA_LINE_CODE_RE = /^E-[A-Z0-9]+(?:-[A-Z0-9]+)*$/;
 
 export const GoaLineCode = {
   parse(raw: unknown): Result<GoaLineCode, "goa-code-invalid"> {

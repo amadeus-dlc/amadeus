@@ -30,7 +30,7 @@ describe("t237 election walking skeleton (e2e)", () => {
       writeFileSync(
         def,
         JSON.stringify({
-          electionId: "E-E2E1",
+          electionId: "E-E2E-1",
           kind: "zero-confirm",
           question: "0件でよいか",
           choices: [{ internalNo: 1, label: "0件で可" }],
@@ -41,7 +41,7 @@ describe("t237 election walking skeleton (e2e)", () => {
       writeFileSync(
         b1,
         JSON.stringify({
-          electionId: "E-E2E1",
+          electionId: "E-E2E-1",
           voter: "alice",
           voterKind: "member",
           choiceInternalNo: 1,
@@ -56,21 +56,21 @@ describe("t237 election walking skeleton (e2e)", () => {
       // input is the ballot arriving during collect-wait.
       const seenKinds: string[] = [];
       for (let guard = 0; guard < 20; guard++) {
-        const next = cli(projectDir, ["next", "--election", "E-E2E1"]);
+        const next = cli(projectDir, ["next", "--election", "E-E2E-1"]);
         expect(next.code).toBe(0);
         const directive = JSON.parse(next.stdout);
         seenKinds.push(directive.kind);
         if (directive.kind === "done") break;
         if (directive.kind === "collect-wait") {
           expect(
-            cli(projectDir, ["vote", "--election", "E-E2E1", "--file", b1]).code,
+            cli(projectDir, ["vote", "--election", "E-E2E-1", "--file", b1]).code,
           ).toBe(0);
           continue;
         }
         expect(typeof directive.verb).toBe("string");
-        expect(cli(projectDir, [directive.verb, "--election", "E-E2E1"]).code).toBe(0);
+        expect(cli(projectDir, [directive.verb, "--election", "E-E2E-1"]).code).toBe(0);
         expect(
-          cli(projectDir, ["report", "--election", "E-E2E1", "--result", directive.report]).code,
+          cli(projectDir, ["report", "--election", "E-E2E-1", "--result", directive.report]).code,
         ).toBe(0);
       }
       expect(seenKinds).toEqual([
