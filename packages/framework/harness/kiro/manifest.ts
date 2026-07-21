@@ -54,6 +54,7 @@ const manifest: HarnessManifest = {
     { src: "agents/amadeus-architecture-reviewer-agent.json", dst: "agents/amadeus-architecture-reviewer-agent.json" },
     { src: "agents/amadeus-composer-agent.json", dst: "agents/amadeus-composer-agent.json" },
     { src: "hooks/amadeus-kiro-adapter.ts", dst: "hooks/amadeus-kiro-adapter.ts" },
+    { src: "hooks/amadeus-kiro-hook-runtime.ts", dst: "hooks/amadeus-kiro-hook-runtime.ts" },
     { src: "settings/cli.json", dst: "settings/cli.json" },
     // Project-root .gitignore (beside .kiro/, not inside it) — re-rooted under
     // amadeus/spaces/* for the workspace layout (SEED): cursors + machine-local

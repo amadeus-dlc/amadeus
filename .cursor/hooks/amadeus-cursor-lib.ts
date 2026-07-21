@@ -211,8 +211,36 @@ export interface AdapterResult {
 // fold runtime env changes into the child automatically).
 export type SpawnFn = (hookFile: string, input: string, projectDir: string) => { stdout: string; code: number };
 
+type HookInput = {
+  cwd: string;
+  stdin?: Uint8Array;
+  stdout: "pipe";
+  stderr: "pipe" | "ignore";
+  env?: Record<string, string | undefined>;
+};
+
+type SpawnResult = {
+  stdout: Uint8Array;
+  stderr: Uint8Array;
+  exitCode: number;
+  signalCode?: string;
+};
+
+export function spawnHookWithRuntime(
+  args: readonly string[],
+  input: HookInput,
+): SpawnResult {
+  const result = Bun.spawnSync([process.execPath, ...args], input);
+  return {
+    stdout: result.stdout,
+    stderr: result.stderr ?? new Uint8Array(),
+    exitCode: result.exitCode,
+    signalCode: result.signalCode,
+  };
+}
+
 export function defaultSpawn(hookFile: string, input: string, projectDir: string): { stdout: string; code: number } {
-  const r = Bun.spawnSync(["bun", join(HOOKS_DIR, hookFile)], {
+  const r = spawnHookWithRuntime([join(HOOKS_DIR, hookFile)], {
     stdin: Buffer.from(input, "utf-8"),
     stdout: "pipe",
     stderr: "ignore",

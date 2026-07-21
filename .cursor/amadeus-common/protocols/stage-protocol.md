@@ -863,22 +863,31 @@ If the `run-stage` directive includes a `reviewer` field (non-null), the orchest
 
 ### Flow
 
-1. **Invoke reviewer sub-agent.** Delegate to the reviewer agent named in `directive.reviewer`. Pass:
-   - The stage definition file path (`directive.stage_file`)
-   - The Q&A file path (e.g., `<record>/<phase>/<stage>/<stage>-questions.md`)
-   - Every artifact path that exists after evaluating optional-output conditions. Start from `directive.produces`, require every path not listed in `directive.optional_produces`, and omit optional candidates that were not produced.
-   - The validation tools list from the stage definition's frontmatter (if any)
+1. **Build the authoritative declared pass-list.** Before spawning the reviewer, pass the unchanged current `run-stage` directive JSON on stdin to:
 
-   Do NOT pass: `memory.md` (builder's diary) or any plan/reasoning files. The reviewer forms independent judgment.
+   ```bash
+   bun .cursor/tools/amadeus-reviewer-runtime.ts scope
+   ```
 
-2. **Reviewer executes.** The reviewer sub-agent:
-   - Reads the stage definition to understand what SHOULD have been produced
-   - Reads the Q&A to understand context and constraints
-   - Reads every supplied, existing artifact to evaluate what WAS produced; it never attempts to read an omitted optional candidate
-   - Runs any validation tools listed (via shell) and includes results in findings
-   - Appends a `## Review` section to the primary artifact file with verdict: READY or NOT-READY
+   The command validates the existing directive, returns a fresh transient `invocationId`, and derives its complete read scope only from `directive.stage_file`, the current Unit's required and existing optional `directive.produces`, and present `directive.consumes`. A Q&A file is included only when it is one of those explicit consumes. Missing required outputs fail the review; missing optional outputs and absent consumes are omitted. The command never discovers a Q&A file or scans the record, sibling units, `memory.md`, plan, or reasoning files.
 
-3. **Read verdict.** After the reviewer returns, read the `## Review` section from the primary artifact:
+2. **Invoke the reviewer sub-agent.** Delegate to the exact checker named in `directive.reviewer`. Pass the stage definition, validation tools named by that definition, and only the authoritative paths returned by `scope`, together with its `invocationId`, the current positive iteration, and an empty transient Scope decision transcript. Preserve this `invocationId + iteration` exactly through prompt, request, decision, and result. The reviewer result starts with `Reviewer: <directive.reviewer>` and carries invocation ID, verdict, iteration, summary, findings, transcript, and requested-read paths. The reviewer does not write the artifact.
+
+   A reviewer that needs an integration spot-check must declare, before reading it, a concrete integration ID found in a current artifact, the single owner path from the passed contracts, a non-empty reason, and one literal file path. The conductor sends the same directive, `invocationId`, positive iteration, current transcript, and declared request to internal `check-read`. Its canonical decision and digest are bound to that `invocationId + iteration`; only an approved stdout decision permits that one read in this invocation. Missing ID, zero/multiple owners, path mismatch, directory/two-file, open/grep/glob/shell wildcard/browse/search, a second request, or replay across invocation/iteration is rejected. The transcript exists only in the prompt/result carrier; it is not a directive field, audit event, ledger, or store.
+
+   ```bash
+   bun .cursor/tools/amadeus-reviewer-runtime.ts check-read
+   ```
+
+3. **Validate and append the Review.** Pass `{ directive, invocationId, result }` on stdin to internal `complete-review`; result and every transcript entry carry the same invocation ID and iteration. It rebuilds the scope and every canonical Scope decision from the directive, current artifacts, and passed consumes. Bypass, tampering, invocation/iteration replay, rejected/outside/second requests, invalid scope/persona/result fields, or an exhausted iteration fail non-zero without Review or READY evidence. Otherwise it runs `date -u +%Y-%m-%dT%H:%M:%SZ` exactly once immediately before a new write, validates that output with the runtime identity seam, and appends a non-growing `## Review — Iteration N` projection to the primary artifact. Re-accepting an existing projection extracts only that iteration's block, requires exactly one Verdict/Reviewer/Date/Iteration/Scope decision field in it, and validates its existing Date without minting a replacement. The durable projection includes **Verdict**, **Reviewer**, **Date**, **Iteration**, and the revalidated **Scope decision** (`none` when there was no request).
+
+   ```bash
+   bun .cursor/tools/amadeus-reviewer-runtime.ts complete-review
+   ```
+
+   These three modes are §12a-only internal conductor adapters. They are not public CLI/help/utility commands and add no directive, event, or audit shape.
+
+4. **Read verdict.** Only after `complete-review` succeeds, read the final Review section from the primary artifact:
    - **READY** → proceed to §13 learnings ritual then the approval gate
    - **NOT-READY** and `reviewIterations < reviewer_max_iterations` (default 2):
      - Increment review iteration counter
@@ -890,8 +899,8 @@ If the `run-stage` directive includes a `reviewer` field (non-null), the orchest
 
 ### Parallelism (per-unit stages)
 
-Reviewer runs are **read-only and side-effect-free** (the only write is appending
-`## Review` to that unit's own primary artifact), so reviews of DIFFERENT units
+Reviewer runs are **read-only and side-effect-free** (the conductor's validated
+`complete-review` adapter performs the only write to that unit's own primary artifact), so reviews of DIFFERENT units
 never contend. On a per-unit Construction stage (`for_each: unit-of-work`), do
 not serialize draft→review→fix per unit. Instead:
 
@@ -909,9 +918,10 @@ sequential by definition.
 
 ### What the reviewer does NOT do
 
-- Does not modify the artifact beyond appending `## Review`
+- Does not modify the artifact; only the conductor's validated `complete-review` adapter appends the Review
 - Does not communicate with the builder directly (all mediated by orchestrator)
 - Does not access the builder's plan.md or memory.md
+- Does not discover or request files outside the declared scope except one pre-approved `check-read` integration spot-check
 - Does not block the workflow — the human always gets final say at the gate
 - Does not fire for stages without a `reviewer` field in the directive
 

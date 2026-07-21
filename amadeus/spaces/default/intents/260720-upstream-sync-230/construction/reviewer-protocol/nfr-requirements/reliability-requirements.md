@@ -8,19 +8,19 @@
 |---|---|---|---|
 | REL-U08-01 | date command non-zero、空、複数行、不正形式 | Review headerを確定せずloud failure。推定値で補わない。 | date positive/negative fixture。 |
 | REL-U08-02 | checker personaまたは4-field欠落 | READY証拠に使わない。 | architecture/product reviewer fixture。 |
-| REL-U08-03 | pass-list外read要求 | 4条件decisionをread前に通せなければcontract findingへ閉じる。 | rejected fixtureで追加read 0。 |
-| REL-U08-04 | rejected後、decision前、approved path外、2 file目のread | review全体を無効にし、独立review完了証拠へ数えない。 | violation fixture全数。 |
+| REL-U08-03 | pass-list外request | 4条件decisionを`check-read`へrequest前に通せなければcontract findingへ閉じる。 | rejected fixtureでaccepted request 0。 |
+| REL-U08-04 | `check-read` bypass、transcript改竄、rejected、approved path外、2 file目requestをresultが宣言 | `complete-review`で拒否し、独立review完了証拠へ数えない。 | violation fixture全数。 |
 | REL-U08-05 | projection drift | authored sourceを正としgenerator checkを失敗させる。 | 6 harness drift test。 |
 | REL-U08-06 | repeated decision | 既存記録面で同値追跡し、記録を増殖させない。 | idempotency fixture。 |
 
-reviewerはprimary artifactのReview append以外を変更しない。scope violationを含むfinding内容が正しくても、そのreviewをREADYへ昇格させない。
+reviewerはprimary artifactのReview append以外を変更しない。invalidなdeclared transcriptを含むfinding内容が正しくても、そのreviewをREADYへ昇格させない。actual invisible readの完全捕捉は本Unitの信頼性要件にしない。
 
 ## Determinismとobservability
 
-- 同一UnitRef、passed consumes、実在artifact集合から同一closed pass-listを得る。
+- 同一UnitRef、`stage_file`、present consumes、実在`produces`集合から同一closed pass-listを得る。Q&Aは`directive.consumes`明示時だけ含める。
 - Reviewには実checker persona、直前UTC、Verdict、Iterationを記録し、subagent result先頭でもidentityを機械抽出可能にする。
-- spot-check decisionのpath、reason、integration ID、owner evidence、approved/rejectedをReviewと既存subagent/auditへ同値記録する。
-- 新audit event、retention、metrics backend、trace collector、alert thresholdを追加しない。
+- spot-check decisionのpath、reason、integration ID、owner evidence、approved/rejectedはsubagent prompt/result間のtransient transcriptで渡し、`complete-review`が同じ正準入力から再検証したprojectionを最終Reviewへ永続記録する。
+- 新audit event、read ledger、store、retention、metrics backend、trace collector、alert thresholdを追加しない。
 - missing optionalやunreferenced sibling contract entryをfalse findingへ変換しない。
 
 ## Verification gate

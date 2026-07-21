@@ -85,6 +85,7 @@ import {
   activeSpace,
   type CheckboxLine,
   codekbRepoName,
+  classifyHelpIntent,
   classifyMigrationRequest,
   type MigrationRequest,
   ensureStageDiaryForDirective,
@@ -101,12 +102,14 @@ import {
   relativeCodekbDir,
   relativeRecordDir,
   relativeSpaceRecordPrefix,
+  recoverBoltDag,
   resolveProjectDir,
   runtimeGraphPath,
   type StageEntry,
   stateFilePath,
   validScopes,
   harnessDir,
+  unitDependencyPath,
   WORKSPACE_VERBS,
   SKELETON_ON_SCOPES,
 } from "./amadeus-lib.ts";
@@ -339,6 +342,10 @@ interface ParsedFlags {
   projectDir?: string;
 }
 
+function normalizeHelpArgs(args: string[]): string[] {
+  return classifyHelpIntent(args).kind === "help" ? ["--help"] : args;
+}
+
 // Extract the flags the `next` decision rule consumes. --project-dir is pulled
 // out by the caller before this runs; here we read scope/stage/phase/depth/
 // test-strategy, the boolean mode flags (--resume/--single), and detect a
@@ -347,6 +354,7 @@ interface ParsedFlags {
 // flag extraction — the value of a valued flag is the following argv token.
 function parseNextFlags(args: string[]): ParsedFlags {
   const flags: ParsedFlags = {};
+  args = normalizeHelpArgs(args);
   const intentWords: string[] = [];
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
@@ -734,20 +742,42 @@ function readAutonomyMode(stateContent: string | null): "autonomous" | null {
 // `batches` array (each inner array is one parallel batch = one topological
 // level) or null when there is no graph file or no bolt_dag node. A pure read:
 // an absent graph is a legitimate branch (the swarm simply does not trigger).
+const reportedBoltDagRecoveries = new Set<string>();
+
 function readBoltDagBatches(projectDir: string): string[][] | null {
-  const path = runtimeGraphPath(projectDir);
-  if (!existsSync(path)) return null;
+  const runtimePath = runtimeGraphPath(projectDir);
+  let cached: unknown;
   try {
-    const graph: unknown = JSON.parse(readFileSync(path, "utf-8"));
+    const graph: unknown = JSON.parse(readFileSync(runtimePath, "utf-8"));
     if (graph !== null && typeof graph === "object" && "bolt_dag" in graph) {
-      const boltDag = (graph as { bolt_dag?: { batches?: unknown } }).bolt_dag;
-      const batches = boltDag?.batches;
-      if (Array.isArray(batches)) return batches as string[][];
+      cached = (graph as { bolt_dag?: unknown }).bolt_dag;
     }
   } catch {
-    // Malformed runtime graph — fail safe to "no DAG"; the swarm does not fire.
+    cached = existsSync(runtimePath) ? null : undefined;
   }
-  return null;
+
+  const canonicalPath = unitDependencyPath(projectDir);
+  const source = existsSync(canonicalPath)
+    ? (() => {
+        try {
+          return { kind: "content" as const, path: canonicalPath, body: readFileSync(canonicalPath, "utf-8") };
+        } catch (error) {
+          return { kind: "unreadable" as const, path: canonicalPath, detail: errorMessage(error) };
+        }
+      })()
+    : { kind: "absent" as const, path: canonicalPath };
+  const recovery = recoverBoltDag(cached, source);
+  if (recovery.kind === "none") return null;
+  if (recovery.kind === "malformed") {
+    throw new Error(`Bolt DAG recovery failed (${recovery.reason}): ${recovery.detail}`);
+  }
+  if (recovery.healed && !reportedBoltDagRecoveries.has(canonicalPath)) {
+    reportedBoltDagRecoveries.add(canonicalPath);
+    console.error(
+      `BOLT_DAG_RECOVERED reason=${recovery.healingReason} batches=${recovery.batches.length} source=${canonicalPath} repair="bun .codex/tools/amadeus-runtime.ts compile"`,
+    );
+  }
+  return recovery.batches.map((batch) => [...batch]);
 }
 
 // True when `node` is the SKELETON-GATE stage for `scope` — the FIRST

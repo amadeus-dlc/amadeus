@@ -12,7 +12,7 @@ U08の設計判断は承認済みRequirements Analysis、ADR-7/C6、Units Genera
 
 - Reviewの日付はreviewer実行時の`date -u +%Y-%m-%dT%H:%M:%SZ`出力から取得し、モデル推定値や固定日付を使わない。
 - reviewer persona/identityをReviewの先頭行に明示し、producer自身のreviewと誤認させない。
-- per-unit reviewerの既定allow-listは、対象Unitの実在成果物、stage definition、Q&A、engineが渡した`directive.consumes`だけとする。
+- per-unit reviewerの既定allow-listは、engineが渡した`stage_file`、対象Unitの実在`produces`、present `directive.consumes`だけとし、Q&Aは`directive.consumes`に明示された場合だけ含める。
 - omitted optional artifact、他Unit成果物、builderの`memory.md` / `plan.md`、record全体の再帰読取は禁止する。
 - 追加readが不可避な場合は、読む前にpathと理由を明示し、対象findingに必要な最小範囲へ限定する。
 - persona、stage protocol、orchestrator skill、reviewing knowledgeの正本を更新し、generatorで6 harnessへ投影する。`dist/`は手編集しない。
@@ -41,8 +41,8 @@ E-OC1分類（`2026-07-20T14:55:47Z`）により、本問は未決design judgmen
 
 ### 必要test
 
-- positive: current designが具体的IDを明示し、passed contractが単一owner fileを解決し、path/reasonをread前に記録した場合だけ1 fileを読める。
-- negative: ID未記載、owner 0/複数、reason空、path不一致、directory/glob/grep/shell wildcard、2 file目、事後記録、拒否後readを全てscope violationとしてreview無効化する。
-- 承認/拒否の再実行でpass-listと監査記録が増殖せず、拒否時はsibling bytes・Review本文・auditに未承認read成功証拠が残らないことを検証する。
+- positive: current designが具体的IDを明示し、passed contractが単一owner fileを解決し、path/reasonをrequest前に記録して`check-read`が受理した場合だけdeclared pass-listへ1 fileを追加できる。
+- negative: ID未記載、owner 0/複数、reason空、path不一致、directory/glob/grep/shell wildcard、2 file目、事後記録、rejected/outside request、`check-read` bypass、Scope decision transcript改竄をReview/READY証拠として拒否する。
+- 承認/拒否の再実行でpass-listとtranscriptが増殖せず、`complete-review`がdirective、current artifacts、passed consumesから全entryを再現できることを検証する。実tool/syscallによる不可視readの完全捕捉は検証対象にしない。
 
-[Answer]: B。E-USSU08FD1で3–0、GoA favor 3、留保なし。orchestratorはread前に、(1) current designの具体的integration ID、(2) passed contractから一意解決したsingle owner path、(3) claimed shape確認に必要な非空reason、(4) directory/glob/grep/shell wildcardやbrowse/search由来でない単一file path、の4条件ANDを評価する。全成立時だけapproved pathを当該invocation限定pass-listへ追加し、欠落・owner 0/複数・path不一致ならrejectedで追加read 0とする。decision/path/reason/ID/owner evidenceはread前にreviewer promptへ固定し、最終Reviewと既存subagent/auditで追跡する。新eventは追加しない。拒否後・decision前・approved path外のreadはreview全体を無効にする。根拠: `leader/amadeus/spaces/default/elections/E-USSU08FD1/record.md`。
+[Answer]: B。E-USSU08FD1で3–0、GoA favor 3、留保なし。さらにcode-generation planの実装可能性検査でactual invisible readの全6 harness共通監視が既存scopeでは成立しないことが判明し、E-USSU08CGD1はchoice1 Aを6–0、GoA 6–0でrecordedした。authoritative scopeは既存wireが渡す`stage_file`、実在`produces`、present `consumes`の§12a declared pass-listとし、Q&Aは`directive.consumes`明示時だけ含める。orchestratorはrequest前に、(1) current designの具体的integration ID、(2) passed contractから一意解決したsingle owner path、(3) claimed shape確認に必要な非空reason、(4) directory/glob/grep/shell wildcardやbrowse/search由来でない単一file path、の4条件ANDを`check-read`で評価する。全成立時だけapproved pathを当該invocation限定pass-listへ追加する。decision/path/reason/ID/owner evidenceはprompt/result間のtransient Scope decision transcriptとして渡し、`complete-review`がdirective/current artifacts/passed consumesから全件再検証した同内容を最終ReviewのScope decision projectionとして永続記録する。bypass、改竄、rejected/outside/2 file目requestを含むresultはReview/READY証拠として受理しない。actual invisible readは非要件で、新event/read ledger/store/proxy/sandboxは追加しない。根拠: `leader/amadeus/spaces/default/elections/E-USSU08FD1/record.md`、`leader/amadeus/spaces/default/elections/E-USSU08CGD1/record.md`。

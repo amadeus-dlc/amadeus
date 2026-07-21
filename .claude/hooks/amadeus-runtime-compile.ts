@@ -21,12 +21,13 @@
 // compile's own audit emits cannot re-trigger the compile.
 
 import { spawnSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   activeIntent,
   activeSpace,
   armMigrationStopLatch,
+  auditShards,
   type ClaudeCodeHookInput,
   errorMessage,
   hooksHealthDir,
@@ -37,6 +38,7 @@ import {
   readAllAuditShards,
   recordHookDrop,
   resolveProjectDirFromHook,
+  runtimeGraphPath,
   harnessDir,
 } from "../tools/amadeus-lib.ts";
 
@@ -57,6 +59,7 @@ try {
   process.exit(0);
 }
 const command: string = parsed.tool_input?.command ?? "";
+const ideAuditMode = parsed.tool_input?.source === "ide-audit-sync";
 
 // A rejected public migration dispatch is also terminal. It ran no utility, so
 // the execution branch below cannot arm the Stop latch; without this response-
@@ -94,8 +97,10 @@ if (isMigrationExecutionCommand(command, projectDir)) {
 const amadeusTransitionTool = /\bbun\b.*\.(?:claude|kiro|codex)\/tools\/amadeus-(state|jump|bolt|utility)\.ts\b/;
 const amadeusOrchestrateReport = /\bbun\b.*\.(?:claude|kiro|codex)\/tools\/amadeus-orchestrate\.ts\b.*\breport\b/;
 const amadeusRuntimeRef = /\bbun\b.*\.(?:claude|kiro|codex)\/tools\/amadeus-runtime\.ts\b/;
-if (amadeusRuntimeRef.test(command)) process.exit(0);
-if (!amadeusTransitionTool.test(command) && !amadeusOrchestrateReport.test(command)) process.exit(0);
+if (!ideAuditMode) {
+  if (amadeusRuntimeRef.test(command)) process.exit(0);
+  if (!amadeusTransitionTool.test(command) && !amadeusOrchestrateReport.test(command)) process.exit(0);
+}
 
 // 4. Audit read — across EVERY per-clone shard of the ACTIVE intent, NOT this
 //    hook process's own PID/clone shard. The state tool that wrote the
@@ -138,6 +143,24 @@ const last3 = blocks.slice(-3);
 const transitionRegex = /^\*\*Event\*\*:\s*(GATE_APPROVED|STAGE_STARTED|STAGE_AWAITING_APPROVAL|AUDIT_MERGED|WORKFLOW_COMPLETED)\s*$/m;
 const hasTransition = last3.some((b) => transitionRegex.test(b));
 if (!hasTransition) process.exit(0);
+
+// Kiro IDE emits payload-free shell hooks. Its synthetic source marker reaches
+// this audit-tail path after every shell call, so the runtime graph itself is the
+// idempotency receipt: when it is at least as new as every active audit shard,
+// this exact audit revision was already compiled. Other harnesses retain the
+// command-filtered behavior above unchanged.
+if (ideAuditMode) {
+  try {
+    const newestAuditMtime = Math.max(
+      ...auditShards(projectDir, intent, space).map((path) => statSync(path).mtimeMs),
+    );
+    if (statSync(runtimeGraphPath(projectDir, intent, space)).mtimeMs >= newestAuditMtime) {
+      process.exit(0);
+    }
+  } catch {
+    // A missing graph or racing shard means compile once and recreate the receipt.
+  }
+}
 
 // 8. Dispatch — sync subprocess. Hook waits for completion. On non-zero
 //    exit, record the drop for `--doctor` to surface; never block the

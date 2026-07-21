@@ -428,6 +428,100 @@ export const WORKSPACE_VERBS: ReadonlySet<string> = new Set([
   "intent",
 ]);
 
+export type HelpRouting =
+  | { kind: "help"; source: "bare" | "read-only-flag" | "workspace-verb" }
+  | { kind: "workspace-command"; verb: "intent" | "space" | "space-create"; arg?: string }
+  | { kind: "freeform"; words: readonly string[] };
+
+/**
+ * Classify the reserved help forms without stealing ordinary intent prose.
+ * Every command surface consumes this table so engine, pre-LLM dispatch, and
+ * direct utility invocation cannot disagree about the `help` namespace.
+ */
+export function classifyHelpIntent(tokens: readonly string[]): HelpRouting {
+  if (tokens.length === 1 && (tokens[0] === "help" || tokens[0] === "-h")) {
+    return { kind: "help", source: "bare" };
+  }
+  if (tokens.includes("--help")) {
+    return { kind: "help", source: "read-only-flag" };
+  }
+
+  const verb = tokens[0];
+  if (verb === "intent" || verb === "space") {
+    const arg = tokens[1];
+    if (arg === "help" || arg === "-h") {
+      return { kind: "help", source: "workspace-verb" };
+    }
+  }
+  if (verb === "intent" || verb === "space" || verb === "space-create") {
+    const arg = tokens[1];
+    return arg === undefined
+      ? { kind: "workspace-command", verb }
+      : { kind: "workspace-command", verb, arg };
+  }
+  return { kind: "freeform", words: [...tokens] };
+}
+
+export type MarkerObservation =
+  | { kind: "absent"; path: string }
+  | { kind: "present"; path: string; mtimeMs: number }
+  | { kind: "unreadable"; path: string; reason: string };
+
+export type MarkerFreshness =
+  | { kind: "absent"; path: string }
+  | { kind: "fresh" | "stale"; path: string; ageMs: number; ttlMs: number }
+  | { kind: "unreadable"; path: string; reason: string };
+
+export const COMPOSE_MARKER_RELATIVE_PATH = join("amadeus", ".amadeus-compose-pending");
+export const COMPOSE_MARKER_TTL_MS = 24 * 60 * 60 * 1000;
+
+/** Pure freshness projection shared by the Stop hook and doctor. */
+export function inspectComposeMarker(
+  observation: MarkerObservation,
+  nowMs: number,
+  ttlMs: number,
+): MarkerFreshness {
+  if (!Number.isFinite(ttlMs) || !Number.isInteger(ttlMs) || ttlMs <= 0) {
+    throw new Error("Compose marker TTL must be a positive finite integer.");
+  }
+  if (observation.kind !== "present") return observation;
+  if (!Number.isFinite(observation.mtimeMs)) {
+    return { kind: "unreadable", path: observation.path, reason: "non-finite-mtime" };
+  }
+  if (observation.mtimeMs < 0) {
+    return { kind: "unreadable", path: observation.path, reason: "negative-mtime" };
+  }
+  const ageMs = Math.max(0, nowMs - observation.mtimeMs);
+  return {
+    kind: ageMs <= ttlMs ? "fresh" : "stale",
+    path: observation.path,
+    ageMs,
+    ttlMs,
+  };
+}
+
+export type ConstructionAutonomy = "autonomous" | "gated" | "unset";
+export type RecomposeGuardResult =
+  | { kind: "allowed"; autonomy: "gated" | "unset" }
+  | {
+      kind: "denied";
+      autonomy: "autonomous";
+      reason: "human-gate-required";
+      remediation: "switch-to-gated-or-wait-for-swarm";
+    };
+
+/** Pure policy projection; callers own user-visible refusal and mutation ordering. */
+export function assertRecomposeAllowed(autonomy: ConstructionAutonomy): RecomposeGuardResult {
+  return autonomy === "autonomous"
+    ? {
+        kind: "denied",
+        autonomy,
+        reason: "human-gate-required",
+        remediation: "switch-to-gated-or-wait-for-swarm",
+      }
+    : { kind: "allowed", autonomy };
+}
+
 // A classified terminal command: the amadeus-utility.ts subcommand to run, plus an
 // optional positional arg (the <name> for a workspace verb). `source` records
 // which family matched, for diagnostics.
@@ -931,18 +1025,26 @@ export function consumeMigrationPendingDecision(
 // (read-only flag anywhere; workspace verb only at index 0) so the seam and the
 // engine can never disagree about what is terminal.
 export function classifyTerminalCommand(args: string[]): TerminalCommand | null {
-  for (let i = 0; i < args.length; i++) {
-    const a = args[i];
-    if (READ_ONLY_FLAGS.has(a)) {
-      return { subcommand: a.replace(/^--/, ""), source: "read-only-flag" };
+  for (const arg of args) {
+    if (READ_ONLY_FLAGS.has(arg) && arg !== "--help") {
+      return { subcommand: arg.replace(/^--/, ""), source: "read-only-flag" };
     }
-    if (i === 0 && WORKSPACE_VERBS.has(a)) {
-      const next = args[i + 1];
-      const arg = next !== undefined && !next.startsWith("--") ? next : undefined;
-      return arg !== undefined
-        ? { subcommand: a, arg, source: "workspace-verb" }
-        : { subcommand: a, source: "workspace-verb" };
-    }
+  }
+
+  const routing = classifyHelpIntent(args);
+  if (routing.kind === "help") {
+    return {
+      subcommand: "help",
+      source: routing.source === "workspace-verb" ? "workspace-verb" : "read-only-flag",
+    };
+  }
+  if (routing.kind === "workspace-command") {
+    const arg = routing.arg !== undefined && !routing.arg.startsWith("--")
+      ? routing.arg
+      : undefined;
+    return arg === undefined
+      ? { subcommand: routing.verb, source: "workspace-verb" }
+      : { subcommand: routing.verb, arg, source: "workspace-verb" };
   }
   return null;
 }
@@ -5977,6 +6079,158 @@ export function parseBoltDag(body: string): BoltDagParse {
     return { ok: false, reason: "cyclic", detail: "dependency cycle detected" };
   }
   return { ok: true, units: edges, batches };
+}
+
+export type BoltDagCanonicalSource =
+  | { readonly kind: "absent"; readonly path: string }
+  | { readonly kind: "content"; readonly path: string; readonly body: string }
+  | { readonly kind: "unreadable"; readonly path: string; readonly detail: string };
+
+export type BoltDagRecovery =
+  | { readonly kind: "none" }
+  | {
+      readonly kind: "malformed";
+      readonly reason: "unreadable" | "missing-block" | "malformed" | "cycle";
+      readonly detail: string;
+    }
+  | {
+      readonly kind: "ok";
+      readonly batches: readonly (readonly string[])[];
+      readonly healed: boolean;
+      readonly source: "cache" | "canonical";
+      readonly healingReason: "missing" | "empty" | "malformed" | "mismatch" | null;
+    };
+
+function cachedBoltDagBatches(cache: unknown): string[][] | null {
+  if (cache === null || typeof cache !== "object") return null;
+  const batches = (cache as { readonly batches?: unknown }).batches;
+  if (!Array.isArray(batches) || batches.length === 0) return null;
+  const seen = new Set<string>();
+  const valid: string[][] = [];
+  for (const batch of batches) {
+    if (!Array.isArray(batch) || batch.length === 0) return null;
+    const names: string[] = [];
+    for (const name of batch) {
+      if (typeof name !== "string" || name.trim() === "" || seen.has(name)) return null;
+      seen.add(name);
+      names.push(name);
+    }
+    valid.push(names);
+  }
+  return valid;
+}
+
+/** Reconcile the disposable runtime DAG cache with its canonical dependency artifact. */
+export function recoverBoltDag(cache: unknown, source: BoltDagCanonicalSource): BoltDagRecovery {
+  if (source.kind === "absent") return { kind: "none" };
+  if (source.kind === "unreadable") {
+    return { kind: "malformed", reason: "unreadable", detail: source.detail };
+  }
+
+  const parsed = parseBoltDag(source.body);
+  if (!parsed.ok) {
+    return {
+      kind: "malformed",
+      reason: parsed.reason === "absent" ? "missing-block" : parsed.reason === "cyclic" ? "cycle" : "malformed",
+      detail: parsed.detail,
+    };
+  }
+
+  const canonical = parsed.batches;
+  const cached = cachedBoltDagBatches(cache);
+  if (cached !== null && JSON.stringify(cached) === JSON.stringify(canonical)) {
+    return { kind: "ok", batches: cached, healed: false, source: "cache", healingReason: null };
+  }
+  const cacheBatches = cache !== null && typeof cache === "object"
+    ? (cache as { readonly batches?: unknown }).batches
+    : undefined;
+  const healingReason = cache === undefined
+    ? "missing"
+    : Array.isArray(cacheBatches) && cacheBatches.length === 0
+      ? "empty"
+      : cached === null
+        ? "malformed"
+        : "mismatch";
+  return { kind: "ok", batches: canonical, healed: true, source: "canonical", healingReason };
+}
+
+export type RevisionEvidenceEvent = {
+  readonly kind:
+    | "STAGE_STARTED"
+    | "STAGE_AWAITING_APPROVAL"
+    | "HUMAN_TURN"
+    | "ARTIFACT_CREATED"
+    | "ARTIFACT_UPDATED"
+    | "GATE_REJECTED";
+  readonly timestamp: string;
+  readonly bufferPosition: number;
+  readonly stage: string | null;
+  readonly file: string | null;
+  readonly recovered: boolean;
+};
+
+export type GateRevisionRecovery =
+  | { readonly kind: "not-needed"; readonly reason: string }
+  | { readonly kind: "recovered"; readonly nextRevisionCount: number; readonly transactionId: string };
+
+type GateRevisionOptions = {
+  readonly stage: string;
+  readonly produces: readonly string[];
+  readonly revisionCount: number;
+  readonly autonomous?: boolean;
+  readonly disabled?: boolean;
+};
+
+function isDeclaredRevisionWrite(event: RevisionEvidenceEvent, produces: readonly string[]): boolean {
+  if (event.kind !== "ARTIFACT_CREATED" && event.kind !== "ARTIFACT_UPDATED") return false;
+  if (event.file === null) return false;
+  return produces.includes(event.file);
+}
+
+/** Derive a missing gate revision solely from durable audit evidence. */
+export function recoverGateRevision(
+  evidence: readonly RevisionEvidenceEvent[],
+  options: GateRevisionOptions,
+): GateRevisionRecovery {
+  if (options.autonomous) return { kind: "not-needed", reason: "autonomous" };
+  if (options.disabled) return { kind: "not-needed", reason: "disabled" };
+
+  const ordered = [...evidence].sort(
+    (left, right) => left.timestamp.localeCompare(right.timestamp) || left.bufferPosition - right.bufferPosition,
+  );
+  let anchorIndex = -1;
+  let anchorKind: "STAGE_STARTED" | "STAGE_AWAITING_APPROVAL" | null = null;
+  for (let index = 0; index < ordered.length; index += 1) {
+    const item = ordered[index]!;
+    if (item.stage !== options.stage || item.recovered) continue;
+    if (item.kind === "STAGE_STARTED" || item.kind === "STAGE_AWAITING_APPROVAL") {
+      anchorIndex = index;
+      anchorKind = item.kind;
+    }
+  }
+  if (anchorIndex < 0 || anchorKind === null) return { kind: "not-needed", reason: "anchor-missing" };
+
+  const afterAnchor = ordered.slice(anchorIndex + 1);
+  if (afterAnchor.some((item) => !item.recovered && item.stage === options.stage && item.kind === "GATE_REJECTED")) {
+    return { kind: "not-needed", reason: "rejected" };
+  }
+  const humanOffset = afterAnchor.findIndex((item) => item.kind === "HUMAN_TURN");
+  if (humanOffset < 0) return { kind: "not-needed", reason: "human-turn-missing" };
+  const humanIndex = anchorIndex + 1 + humanOffset;
+  const hasLaterWrite = ordered.slice(humanIndex + 1).some((item) => isDeclaredRevisionWrite(item, options.produces));
+  if (!hasLaterWrite) return { kind: "not-needed", reason: "revision-write-missing" };
+  if (
+    anchorKind === "STAGE_STARTED" &&
+    !ordered.slice(anchorIndex + 1, humanIndex).some((item) => isDeclaredRevisionWrite(item, options.produces))
+  ) {
+    return { kind: "not-needed", reason: "initial-write-missing" };
+  }
+
+  const transactionId = createHash("sha256")
+    .update(`${options.stage}\0${ordered[anchorIndex]!.timestamp}\0${ordered[humanIndex]!.timestamp}\0${options.revisionCount + 1}`)
+    .digest("hex")
+    .slice(0, 24);
+  return { kind: "recovered", nextRevisionCount: options.revisionCount + 1, transactionId };
 }
 
 // --- Stop-hook engine-engagement classifier ------------------------------------
