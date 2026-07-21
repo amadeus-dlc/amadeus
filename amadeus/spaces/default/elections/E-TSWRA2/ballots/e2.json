@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TSWRA2",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Aを支持。一次証拠としてCodeKB re-scan:12-16は完全visible fingerprint、二重読取、one-shot latch、解除確認、version drift fail-closedを要求し、Herdr read→send間にatomic primitiveがないTOCTOUと通常question/approval/composer/曖昧scrollbackへの入力禁止を明記する。scripts/team-msg.sh:125-150はread/agent sendとpane Enterが分離した非atomic seamである。したがって既知modalかつKeep waitingが現在選択中であることを安定読取で証明した場合のEnter 1回が最小権限で、固定key移動は余分な状態遷移を増やす。非採用時受容度: Bはversion-pinned fingerprint+再読取+失敗時入力0が実証されれば6、Cは自動解除要件を満たさないため7、XはAより狭いfail-closed操作なら6。",
+  "submittedAt": "2026-07-21T02:33:29Z"
+}

@@ -1,0 +1,74 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A. hard stop維持 — 次回modal出現時に操作前visible bytesをread-only captureして再開"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A. hard stop維持 — 次回modal出現時に操作前visible bytesをread-only captureして再開",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "B. screenshot由来fixtureで実装・testするがproduction入力はlive bytes検証まで無効",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "C. screenshotをtext転記してproduction入力を有効化",
+        "count": 0
+      },
+      {
+        "internalNo": 4,
+        "label": "X. その他 — noteにfixture provenanceとproduction enable条件を明記",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-21T03:15:10Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TSWCGFIX1",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "recorded人間裁定に基づきhard stop維持を支持する。一次証拠としてHerdr 0.7.1/Codex 0.144.6のcurrent 7 paneをvisible readで確認したがpositive exact text bytesは0件だった。指定実画面2枚のread-only比較では、同系title/confirm guidanceでも、画像1は2択でKeep waitingが第1かつ選択中、画像2は3択でRetryが第1かつ選択中、Keep waitingが第2であり、choice全集合・順序・selection marker・説明がvariantごとに異なる。画像はUI構造証拠であってHerdr visible exact bytesではないため、OCR転記でproduction入力を有効化すると完全fingerprintを弱める。次回modal出現時の操作前pane read exact bytesだけをprovenanceとし、allowlist版、Keep waiting現在選択、title/説明全文/choices全集合と順序/selection marker/confirm guidance/pane列数をvariant単位でfixture/test固定するまでproduction disableとするAが安全境界に一致する。非採用時受容度は低いが、Bはscreenshot由来fixtureをproductionから機械的に到達不能に保ち、live exact bytes取得後に全fixtureを置換・再承認する強制gateが証明される場合に限りtest scaffold用途として受容する。Cは受容しない。",
+      "submittedAt": "2026-07-21T03:14:18Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TSWCGFIX1",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "一次証拠としてplan、requirements、Herdr visible read契約、current 7 Codex pane、指定2画像をread-only実測した。7 paneのvisible viewportにはAdditional safety checks/Keep waiting一致が0件で、positive exact bytesは取得不能だった。画像1はKeep waiting選択中の2択、画像2はRetry with a faster model選択中の3択で、titleとconfirm guidanceは共通する一方、説明、choices全集合と順序、selectionが異なる。画像はUI variantの構造証拠だがHerdr visible text bytesではない。plan Step 1とrequirements FR-2/AC-10はCRLF→LF以外の正規化禁止、完全fingerprint、positive capture不能時の停止を要求するため、次回modal出現時の操作前pane read --source visible --format text exact bytesだけをprovenanceとし、allowlist版・Keep waiting選択・title/説明全文/choices順/marker/guidance/pane列数をvariant単位でfixture/test固定するまでhard stopを維持する。非採用時受容度: Bが採用されてもscreenshot由来fixtureを明確に非production・暫定test専用とし、live exact bytes取得までproduction入力を技術的に無効化するなら受容する。OCR転記だけでproductionを有効化するCは受容しない。",
+      "submittedAt": "2026-07-21T03:14:19Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TSWCGFIX1",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "一次証拠として、herdr 0.7.1 / codex-cli 0.144.6のcurrent workspace 7 Codex paneを明示IDの`pane read --source visible --format text`だけでread-only確認し、Keep waiting選択中positive modalは0件だった。指定2画像も比較し、共通title/guidanceに対して2択variantはKeep waitingが先頭選択、3択variantはRetryが先頭選択でKeep waitingが2番目となり、説明・choices全集合と順序・selectionが異なることを確認した。画像はUI構造証拠であってexact visible bytesではない。plan/requirementsはallowlist版のtitle、説明全文、choices全集合と順序、selection marker、confirm guidance、pane列数をvariant単位の実visible bytesで閉じ、capture不能ならproduction入力を有効化しないため、hard stop維持を支持する。非採用時は、production入力経路が構造的に無効であることを独立testで証明し、画像由来情報をproduction fixtureへ流用せず、live exact bytes取得後に再承認する限定案なら検討可能だが、現契約下では実装先行よりhard stopが安全境界を最も明確に保つ。",
+      "submittedAt": "2026-07-21T03:14:24Z"
+    }
+  ],
+  "resolutions": []
+}

@@ -1,0 +1,16 @@
+{
+  "electionId": "E-TSWRAG1",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "Approve — 要件を確定し次stageへ進む"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "Request Changes — noteに未解決箇所と修正条件を明記"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TSWCGP1",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "一次証拠としてplan、requirements、codekb、scripts/team-up.sh、既存testsをread-only実測した。plan SHA-256は7c8f040094c3679ea25d6a77ea8150556b768a1d621556f518dbb7d5bd5e1ac5で選挙対象と一致し、FR-1〜6/AC-1〜10を12 Stepsへtraceしている。所有範囲はpure fingerprint、Herdr 0.7.1 adapter、pane単位latch/rearm、fresh/resume/kill/failure lifecycleに限定され、test-first、対象files、production/test LOC、再停止条件、実pane入力禁止、PR非merge境界が明記されている。codekbは同じteam-up所有Herdr境界とfail-closed条件を支持し、現行team-up.shにはrole/session/pane lifecycle seam、既存resume/msg-backend testsにはfake Herdrと非退行seamがある。requirements末尾には旧poll/stability findingのNOT READY文面が残るが、規範本文は通常pollとimmediate stability readを分離済みで、recorded requirements gateおよび本判断契約によりplan開始境界は確定しているためApprove Planを支持する。非採用時受容度: Request Changesが採用されても、修正Stepと境界が具体的な一次証拠に結び付き、既決のfail-closed・実pane入力禁止・対象file/LOC・再停止条件を弱めず、実装開始前にplanへ限定して解消するなら受容する。",
+  "submittedAt": "2026-07-21T03:04:52Z"
+}

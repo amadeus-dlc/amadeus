@@ -1,0 +1,46 @@
+{
+  "electionId": "E-TSWRES13",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 7,
+      "label": "c2+c3を採用"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "追加なし — 3件ともIntent固有の設計判断としてdiaryに留める"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 6,
+      "label": "c1+c3を採用"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 2,
+      "label": "c1のみ採用"
+    },
+    {
+      "displayNo": 5,
+      "internalNo": 3,
+      "label": "c2のみ採用"
+    },
+    {
+      "displayNo": 6,
+      "internalNo": 5,
+      "label": "c1+c2を採用"
+    },
+    {
+      "displayNo": 7,
+      "internalNo": 8,
+      "label": "c1+c2+c3を採用"
+    },
+    {
+      "displayNo": 8,
+      "internalNo": 4,
+      "label": "c3のみ採用"
+    }
+  ]
+}

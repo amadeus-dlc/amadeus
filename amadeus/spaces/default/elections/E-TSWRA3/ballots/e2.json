@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TSWRA3",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Aを支持。一次証拠としてscripts/team-up.sh:178-208はsession存在確認とstop/delete cleanup、同:211-262はpane単位の生成・label・run、同:720-769はCodex fresh/resume lifecycleを所有する。scripts/team-msg.sh:56-78,125-150はrole名からruntime agent/paneを再解決して操作する既存seamを示す。CodeKB re-scan:12はpane supervisor、one-shot latch、modal消失確認、session/pane cleanupを要求するため、pane別隔離、fresh/resume起動、消失後rearm、終了/kill/rollback cleanupが既存ownershipに一致する。非採用時受容度: Bはpane間隔離・巡回遅延・一件失敗時の他pane継続を証明できれば6、Cは再発modalを放置するため7、Xは同等以上に閉じたlifecycleなら6。",
+  "submittedAt": "2026-07-21T02:33:29Z"
+}

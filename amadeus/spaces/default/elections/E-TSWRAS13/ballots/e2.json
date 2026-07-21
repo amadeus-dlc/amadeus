@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TSWRAS13",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。一次証拠としてrequirements-analysis/memory.mdはInterpretations/Deviations/Tradeoffs/Open questionsの4区分すべて実entry 0。requirements.md:7,13-45,56-76はrecorded RA1〜3、完全fingerprint/二重読取/短TTL/one-shot/atomic supervisor/fail-closedを当Intentの検証可能要件へ固定し、review iteration 1の3件とiteration 2のpoll/stability衝突も同:138-166及び最終FR-2/FR-3/NFR/AC-1で解消済み。既存team.mdにはcid:requirements-analysis:learnings-election、gate-report-s13-bundling、s13-before-approve-under-auto-delegate、election-cli-canonicalが選挙/0件確認/永続化手順を既に覆う。今回固有のHerdr UI契約を横断normとして重複persistする新規性はない。非採用時受容度: choice 2は既存cidとの差分と複数Intentでの再利用証拠を伴う具体候補が示される場合6、当Intent仕様の再掲のみなら7。",
+  "submittedAt": "2026-07-21T02:51:13Z"
+}

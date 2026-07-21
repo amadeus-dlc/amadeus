@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TSWRES13",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "追加なしを支持。一次証拠として scripts/team-up.sh:143-151,211-243 はHerdr session/pane生成とlabel ownershipをteam-up内に置き、同:720-769 はHerdr backendをagmsg monitor/role-resumeから分離している。scripts/team-msg.sh:56-78,125-150 はrole名をagent名へ解決し、実行時agent listからpane_idを得て送信する既存境界を示す一方、0件はfailするが複数件fail-closedは未実装である。codekb re-scanは焦点7ファイルのbase→observed差分0、Herdr read→send間のTOCTOU残存、完全fingerprint等の要件候補を記録し、reverse-engineering memoryはANSI/wrap正規化とCodex version allowlistをopen questionとして残す。よってc1は本Intentの要求解釈、c2/c3は未確定の設計候補で、一般化済み新規normとしてpersistする成熟度にない。非採用時受容度: c3のみ採用（choice 4）は一意再解決と0件/複数件fail-closedの対照test成立後なら6、c1/c2を含む他案は現時点では7。",
+  "submittedAt": "2026-07-21T02:16:49Z"
+}

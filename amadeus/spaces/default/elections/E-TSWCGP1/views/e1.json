@@ -1,0 +1,16 @@
+{
+  "electionId": "E-TSWCGP1",
+  "voter": "e1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "Request Changes — noteに修正Step/境界を明記"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "Approve Plan — 現planでtest-first実装へ進む"
+    }
+  ]
+}

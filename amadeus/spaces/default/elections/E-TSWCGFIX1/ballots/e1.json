@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TSWCGFIX1",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "recorded人間裁定に基づきhard stop維持を支持する。一次証拠としてHerdr 0.7.1/Codex 0.144.6のcurrent 7 paneをvisible readで確認したがpositive exact text bytesは0件だった。指定実画面2枚のread-only比較では、同系title/confirm guidanceでも、画像1は2択でKeep waitingが第1かつ選択中、画像2は3択でRetryが第1かつ選択中、Keep waitingが第2であり、choice全集合・順序・selection marker・説明がvariantごとに異なる。画像はUI構造証拠であってHerdr visible exact bytesではないため、OCR転記でproduction入力を有効化すると完全fingerprintを弱める。次回modal出現時の操作前pane read exact bytesだけをprovenanceとし、allowlist版、Keep waiting現在選択、title/説明全文/choices全集合と順序/selection marker/confirm guidance/pane列数をvariant単位でfixture/test固定するまでproduction disableとするAが安全境界に一致する。非採用時受容度は低いが、Bはscreenshot由来fixtureをproductionから機械的に到達不能に保ち、live exact bytes取得後に全fixtureを置換・再承認する強制gateが証明される場合に限りtest scaffold用途として受容する。Cは受容しない。",
+  "submittedAt": "2026-07-21T03:14:18Z"
+}

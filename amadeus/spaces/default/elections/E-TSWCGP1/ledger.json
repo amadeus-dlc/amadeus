@@ -1,0 +1,95 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TSWCGP1",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "recorded人間裁定に基づきApprove Planを支持する。一次証拠としてcode-generation-plan.mdを再実測し、SHA-256は7c8f040094c3679ea25d6a77ea8150556b768a1d621556f518dbb7d5bd5e1ac5で選挙定義と一致した。同planは12 StepsをFR-1〜6・AC-1〜10へtraceし、所有をpure fingerprint、Herdr 0.7.1 adapter、pane単位latch/rearm、team-up fresh/resume/kill/failure lifecycleへ限定する。test-first、対象files、production 250〜400 LOC/test 250〜450 LOC、positive fixture捕捉不能・production 400 LOC到達・禁止境界変更時の停止、実Herdr pane入力0、PR非mergeの境界も明記され、既決requirementsから逸脱せず実装開始条件として十分閉じている。非採用時受容度は高く、Request Changesが未追跡FR/AC、完全fingerprint不能、対象file追加、LOC上限到達、または既存team-up lifecycleとの不整合を一次証拠とStep単位で示す場合は再計画を受容する。抽象的懸念のみで既決境界を拡張する変更は受容しない。",
+      "submittedAt": "2026-07-21T03:04:02Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TSWCGP1",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "一次証拠として、code-generation-plan.mdのSHA-256が選挙定義の7c8f040094c3679ea25d6a77ea8150556b768a1d621556f518dbb7d5bd5e1ac5と一致することを実測した。planの12 Stepsはrequirementsの対象run内leader/engineer限定、CRLF→LF以外のcanonicalization禁止、同一pane identityの再確認、単発latchと2回不在rearm、supervisor lock/lifecycle、Herdr 0.7.1とCodex CLI 0.144.6のfixture境界へ対応し、CodeKBが示すteam-up.shのlifecycle所有、専用helper、role再解決、既存resume integration testとも整合する。さらに実Herdr入力禁止、test-first、production 400 LOC・対象file追加・positive fixture捕捉不能・境界変更時の再停止が明記されており、既決責務外への拡張を防げるためApprove Planを支持する。非採用時は、具体的な未充足FR/ACまたは境界矛盾を一次証拠付きで示すRequest Changesであれば受容するが、現時点のread-only実測ではその根拠を確認していない。",
+      "submittedAt": "2026-07-21T03:04:49Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TSWCGP1",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "一次証拠としてplan、requirements、codekb、scripts/team-up.sh、既存testsをread-only実測した。plan SHA-256は7c8f040094c3679ea25d6a77ea8150556b768a1d621556f518dbb7d5bd5e1ac5で選挙対象と一致し、FR-1〜6/AC-1〜10を12 Stepsへtraceしている。所有範囲はpure fingerprint、Herdr 0.7.1 adapter、pane単位latch/rearm、fresh/resume/kill/failure lifecycleに限定され、test-first、対象files、production/test LOC、再停止条件、実pane入力禁止、PR非merge境界が明記されている。codekbは同じteam-up所有Herdr境界とfail-closed条件を支持し、現行team-up.shにはrole/session/pane lifecycle seam、既存resume/msg-backend testsにはfake Herdrと非退行seamがある。requirements末尾には旧poll/stability findingのNOT READY文面が残るが、規範本文は通常pollとimmediate stability readを分離済みで、recorded requirements gateおよび本判断契約によりplan開始境界は確定しているためApprove Planを支持する。非採用時受容度: Request Changesが採用されても、修正Stepと境界が具体的な一次証拠に結び付き、既決のfail-closed・実pane入力禁止・対象file/LOC・再停止条件を弱めず、実装開始前にplanへ限定して解消するなら受容する。",
+      "submittedAt": "2026-07-21T03:04:52Z"
+    },
+    {
+      "kind": "amend",
+      "ref": {
+        "electionId": "E-TSWCGP1",
+        "voter": "e1",
+        "submittedAt": "2026-07-21T03:04:02Z"
+      },
+      "electionId": "E-TSWCGP1",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "human-authorized evidence-correction amend。既存original票のchoice 1 / GoA 1 / reservation nullを維持する。一次証拠としてrequirements.md Review欄を再実測し、実際の独立review 2回、最終修正による通常poll・即時stability read・送信transaction TTLの分離、E-TSWRAG1 choice 1=2票/GoA 1=2票/留保なしのrecorded承認、未解決finding 0へ訂正されたことを確認した。再sensorもrequired-sections 1efb483b、upstream-coverage 6167e7b0、answer-evidence a1d24257が全PASSで、diff-checkもPASSしている。FR/NFR/AC本文は不変で、code-generation-plan.mdのSHA-256も7c8f040094c3679ea25d6a77ea8150556b768a1d621556f518dbb7d5bd5e1ac5のままであるため、12 Stepsのtest-first計画と所有・LOC・停止・実pane入力0・PR非merge境界を承認する判断は変わらない。非採用時受容度は高く、未追跡FR/AC、完全fingerprint不能、対象file追加、LOC上限到達、または既存team-up lifecycleとの不整合が一次証拠とStep単位で示される場合はRequest Changesと再計画を受容する。抽象的懸念だけによる既決境界拡張は受容しない。",
+      "submittedAt": "2026-07-21T03:07:56Z"
+    }
+  ],
+  "late": [
+    {
+      "ballot": {
+        "kind": "amend",
+        "ref": {
+          "electionId": "E-TSWCGP1",
+          "voter": "e3",
+          "submittedAt": "2026-07-21T03:04:49Z"
+        },
+        "electionId": "E-TSWCGP1",
+        "voter": "e3",
+        "voterKind": "member",
+        "choiceInternalNo": 1,
+        "goa": 1,
+        "reservation": null,
+        "rationale": "human-authorized evidence-correction amendとして既存choice 1 / GoA 1 / 留保なしを維持する。一次証拠を再実測し、requirements.md末尾Reviewは旧NOT READYではなく最終状態APPROVED（E-TSWRAG1 recorded）へ訂正され、iteration 1の排他・ephemeral pane identity・timing/fingerprint指摘とiteration 2の通常poll/stability read衝突がFR-2〜5、NFR、AC-1/8〜10へ反映済み、最終poll間隔・即時stability read・送信TTLの起点/終点が分離され、未解決finding 0と記録されている。auditでは再sensor required-sections=1efb483b、upstream-coverage=6167e7b0、answer-evidence=a1d24257がすべてSENSOR_PASSEDで、git diff --checkもexit 0だった。plan SHA-256は引き続き7c8f040094c3679ea25d6a77ea8150556b768a1d621556f518dbb7d5bd5e1ac5で不変であり、FR/NFR/AC本文と12 Stepsの意味論も既存投票理由どおり整合する。非採用時は、訂正後Reviewまたはsensorとplanの間に具体的な矛盾や未追跡FR/ACを一次証拠付きで示すRequest Changesであれば受容するが、現再検証ではその根拠を確認していない。",
+        "submittedAt": "2026-07-21T03:07:58Z"
+      },
+      "late": true,
+      "reexamRequired": false
+    },
+    {
+      "ballot": {
+        "kind": "amend",
+        "ref": {
+          "electionId": "E-TSWCGP1",
+          "voter": "e2",
+          "submittedAt": "2026-07-21T03:04:52Z"
+        },
+        "electionId": "E-TSWCGP1",
+        "voter": "e2",
+        "voterKind": "member",
+        "choiceInternalNo": 1,
+        "goa": 1,
+        "reservation": null,
+        "rationale": "human-authorized evidence-correction amendとして既存original票を参照し、choice 1 / GoA 1 / 留保なしを維持する。一次証拠をread-only再検証した結果、requirements.md Review欄は最終状態APPROVEDへ訂正され、iteration 1の三finding解消、iteration 2のpoll/stability衝突、最終修正による通常poll間隔・immediate stability read・送信transaction TTLの起点終点分離、E-TSWRAG1 recorded承認、未解決finding 0を正確に記録している。plan SHA-256は7c8f040094c3679ea25d6a77ea8150556b768a1d621556f518dbb7d5bd5e1ac5で不変。auditではrequired-sections=1efb483b、upstream-coverage=6167e7b0、answer-evidence=a1d24257がすべてSENSOR_PASSEDで、git diff --checkもPASSした。FR/NFR/AC本文とplan意味論に変更はなく、既存originalのApprove Plan判断を支持する。非採用時受容度: Request Changesが採用されても、未充足FR/ACまたは境界矛盾を一次証拠とStep単位で示し、fail-closed・実pane入力禁止・対象file/LOC・再停止条件を弱めず実装開始前にplanへ限定して解消するなら受容する。",
+        "submittedAt": "2026-07-21T03:07:48Z"
+      },
+      "late": true,
+      "reexamRequired": false
+    }
+  ]
+}

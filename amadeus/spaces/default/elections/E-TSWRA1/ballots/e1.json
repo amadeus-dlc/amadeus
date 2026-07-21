@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TSWRA1",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "一次証拠としてbusiness-overview.md、architecture.md、code-structure.md、scripts/team-up.shのfresh/resume/member起動境界を実測した。team-upはcurrent runのleaderとengineer双方のCodex pane lifecycleを所有し、別session・shell・Claude paneは所有境界外である。したがってcurrent runでteam-upが起動したleaderと全engineerのCodex paneを対象とするchoice 1が既存ownershipと一致する。非採用時受容度は中程度で、leaderまたはengineerを除外すべき固有の安全上の差異がpane lifecycleの一次証拠で示される場合は狭い境界を受容する。",
+  "submittedAt": "2026-07-21T02:35:02Z"
+}

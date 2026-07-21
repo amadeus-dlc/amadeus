@@ -1,0 +1,32 @@
+{
+  "electionId": "E-TSWCGCAP1",
+  "kind": "code-generation-capture-remediation",
+  "question": "260721-teamup-safety-wait / code-generation Step1のpositive fixture取得方法を裁定する。passive監視では実装が進まず、正式owner e1の工程が停止している。推奨はcurrent runの7 paneへ入力せず、隔離したdisposable Herdr workspace/paneでsupport allowlist版Herdr 0.7.1・codex-cli 0.144.6を使用し、既知のAdditional safety checks modalを安全に誘発する。modal出現後は操作前にvisible/text raw bytes、title、説明、全choice順、Keep waiting選択marker、confirm guidance、pane columns、version、workspace/tab/pane/session/run provenanceを取得し、秘密・個人情報を検査してfixture化する。隔離paneではcapture完了前のEnter・矢印・selection移動を禁止し、current runへの入力は0件、capture後は隔離workspaceを停止する。取得後は既承認planどおりtest-first実装、Code Generation、Build & Test、Intent完了、commit/push/PRまで自動継続し、mergeは禁止する。全6名がplan、requirements、E-TSWCGFIX1境界、Herdr/Codex versionと隔離性をread-only照合し、一次証拠と非採用時受容度を記録する。同数は人間裁定。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "隔離disposable paneで安全にmodalを誘発・操作前captureし、test-first実装へ進む（推奨）"
+    },
+    {
+      "internalNo": 2,
+      "label": "current runのpassive visible監視のみを継続し、自然出現まで実装を止める"
+    },
+    {
+      "internalNo": 3,
+      "label": "positive fixtureなしでfingerprint実装を再設計する"
+    },
+    {
+      "internalNo": 4,
+      "label": "その他 — noteにcapture隔離・入力境界・provenance・実装再開条件を明記"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3",
+    "e4",
+    "e5",
+    "e6"
+  ],
+  "state": "recorded"
+}

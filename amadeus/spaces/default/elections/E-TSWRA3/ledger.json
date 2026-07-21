@@ -1,0 +1,54 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TSWRA3",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "一次証拠として CodeKB architecture.md/code-structure.md、scripts/team-up.shのfresh/resume/--kill/rollback経路とrole命名を実測した。team-upはpane/session/member lifecycleを所有する一方、pane IDをrun recordへ永続化せず、role名はleader/engineer-Nとして安定している。CodeKBもpane専用の狭いsupervisor、resume時のrole一意再解決、0件/複数件fail-closed、modal消失確認、pane/session終了時cleanupを設計境界としている。paneごとのAは対象混同を避け、再発するmodalへ解除確認後のみrearmでき、fresh/resume/kill/rollbackへ対称に接続できる。非採用時は、session単一supervisorがpane別latch・rate limit・cleanup・一意解決を同等に隔離する証拠があればBを受容するが、最初の1回だけで再発を放置するCは要求未達として受容しない。",
+      "submittedAt": "2026-07-21T02:29:17Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TSWRA3",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "Aを支持。一次証拠としてscripts/team-up.sh:178-208はsession存在確認とstop/delete cleanup、同:211-262はpane単位の生成・label・run、同:720-769はCodex fresh/resume lifecycleを所有する。scripts/team-msg.sh:56-78,125-150はrole名からruntime agent/paneを再解決して操作する既存seamを示す。CodeKB re-scan:12はpane supervisor、one-shot latch、modal消失確認、session/pane cleanupを要求するため、pane別隔離、fresh/resume起動、消失後rearm、終了/kill/rollback cleanupが既存ownershipに一致する。非採用時受容度: Bはpane間隔離・巡回遅延・一件失敗時の他pane継続を証明できれば6、Cは再発modalを放置するため7、Xは同等以上に閉じたlifecycleなら6。",
+      "submittedAt": "2026-07-21T02:33:29Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TSWRA3",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "一次証拠としてscripts/team-up.shのfresh/resume/--kill/rollback経路、code-structure.md、t-team-up-codex-resume.test.tsのlifecycle seamを実測した。pane IDはrun recordへ永続化されずrole名が安定識別子であり、各paneを0件/複数件時fail-closedで一意再解決する必要がある。paneごとのsupervisorをfresh/resumeで起動し、modal消失後だけrearmし、pane/session/run終了・kill・rollbackでcleanupするchoice 1が既存所有境界と再開動作に一致する。非採用時受容度は中程度で、pane数に対する具体的な資源制約が一次証拠で示されればsession単一巡回も受容するが、誤pane入力防止と同等の一意解決・latch・cleanupが必須である。",
+      "submittedAt": "2026-07-21T02:35:04Z"
+    },
+    {
+      "kind": "amend",
+      "ref": {
+        "electionId": "E-TSWRA3",
+        "voter": "e3",
+        "submittedAt": "2026-07-21T02:29:17Z"
+      },
+      "electionId": "E-TSWRA3",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "recorded人間裁定に基づくhuman-authorized再提出。一次証拠としてCodeKB architecture/code-structureとscripts/team-up.shのfresh/resume/kill/rollback経路を再確認した。pane IDは永続化されずrole名は安定しており、pane単位supervisor、role一意再解決、0件/複数件fail-closed、modal消失確認後rearm、pane/session/run cleanupが既存lifecycleに整合するためAを支持する。非採用時は、session単一supervisorがpane別latch/rate-limit/cleanup/一意解決を同等に隔離する証拠があればBを受容する。",
+      "submittedAt": "2026-07-21T02:35:04Z"
+    }
+  ],
+  "late": []
+}

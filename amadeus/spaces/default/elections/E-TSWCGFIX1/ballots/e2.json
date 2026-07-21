@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TSWCGFIX1",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "一次証拠としてplan、requirements、Herdr visible read契約、current 7 Codex pane、指定2画像をread-only実測した。7 paneのvisible viewportにはAdditional safety checks/Keep waiting一致が0件で、positive exact bytesは取得不能だった。画像1はKeep waiting選択中の2択、画像2はRetry with a faster model選択中の3択で、titleとconfirm guidanceは共通する一方、説明、choices全集合と順序、selectionが異なる。画像はUI variantの構造証拠だがHerdr visible text bytesではない。plan Step 1とrequirements FR-2/AC-10はCRLF→LF以外の正規化禁止、完全fingerprint、positive capture不能時の停止を要求するため、次回modal出現時の操作前pane read --source visible --format text exact bytesだけをprovenanceとし、allowlist版・Keep waiting選択・title/説明全文/choices順/marker/guidance/pane列数をvariant単位でfixture/test固定するまでhard stopを維持する。非採用時受容度: Bが採用されてもscreenshot由来fixtureを明確に非production・暫定test専用とし、live exact bytes取得までproduction入力を技術的に無効化するなら受容する。OCR転記だけでproductionを有効化するCは受容しない。",
+  "submittedAt": "2026-07-21T03:14:19Z"
+}

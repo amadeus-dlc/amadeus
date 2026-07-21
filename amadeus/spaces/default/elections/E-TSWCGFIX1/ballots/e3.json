@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TSWCGFIX1",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "一次証拠として、herdr 0.7.1 / codex-cli 0.144.6のcurrent workspace 7 Codex paneを明示IDの`pane read --source visible --format text`だけでread-only確認し、Keep waiting選択中positive modalは0件だった。指定2画像も比較し、共通title/guidanceに対して2択variantはKeep waitingが先頭選択、3択variantはRetryが先頭選択でKeep waitingが2番目となり、説明・choices全集合と順序・selectionが異なることを確認した。画像はUI構造証拠であってexact visible bytesではない。plan/requirementsはallowlist版のtitle、説明全文、choices全集合と順序、selection marker、confirm guidance、pane列数をvariant単位の実visible bytesで閉じ、capture不能ならproduction入力を有効化しないため、hard stop維持を支持する。非採用時は、production入力経路が構造的に無効であることを独立testで証明し、画像由来情報をproduction fixtureへ流用せず、live exact bytes取得後に再承認する限定案なら検討可能だが、現契約下では実装先行よりhard stopが安全境界を最も明確に保つ。",
+  "submittedAt": "2026-07-21T03:14:24Z"
+}

@@ -1,0 +1,29 @@
+{
+  "electionId": "E-TSWCGFIX1",
+  "kind": "clarification-question",
+  "question": "260721-teamup-safety-wait / Code Generation Step 1: current sessionの7 Codex paneをread-only確認したが、Keep waiting選択中のpositive modalは0件で、正確なHerdr visible text fixtureを取得できなかった。ユーザー提供スクリーンショットは実画面の一次証拠だがpane readの正確なtext bytesではない。完全fingerprintと実pane入力安全性を維持してfixtureをどう確定するか。各自plan、requirements、添付実画面証拠、Herdr visible read契約をリードオンリー実測し、GoAと非採用時受容度付きで投票する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. hard stop維持 — 次回modal出現時に操作前visible bytesをread-only captureして再開"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. screenshot由来fixtureで実装・testするがproduction入力はlive bytes検証まで無効"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. screenshotをtext転記してproduction入力を有効化"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他 — noteにfixture provenanceとproduction enable条件を明記"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}

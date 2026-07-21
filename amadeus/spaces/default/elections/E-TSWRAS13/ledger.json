@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TSWRAS13",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。一次証拠としてrequirements-analysis/memory.mdはInterpretations/Deviations/Tradeoffs/Open questionsの4区分すべて実entry 0。requirements.md:7,13-45,56-76はrecorded RA1〜3、完全fingerprint/二重読取/短TTL/one-shot/atomic supervisor/fail-closedを当Intentの検証可能要件へ固定し、review iteration 1の3件とiteration 2のpoll/stability衝突も同:138-166及び最終FR-2/FR-3/NFR/AC-1で解消済み。既存team.mdにはcid:requirements-analysis:learnings-election、gate-report-s13-bundling、s13-before-approve-under-auto-delegate、election-cli-canonicalが選挙/0件確認/永続化手順を既に覆う。今回固有のHerdr UI契約を横断normとして重複persistする新規性はない。非採用時受容度: choice 2は既存cidとの差分と複数Intentでの再利用証拠を伴う具体候補が示される場合6、当Intent仕様の再掲のみなら7。",
+      "submittedAt": "2026-07-21T02:51:13Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TSWRAS13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "recorded人間判断契約に基づくoriginal投票。一次証拠としてrequirements-analysis memory、requirements.md、review履歴、既存team/project規範をread-only実測した。memoryのInterpretations/Deviations/Tradeoffs/Open questionsは実entry 0件である。E-TSWRA1〜3の対象pane・許可入力・supervisor lifecycleと、reviewで追加した一意排他、ephemeral pane identity再照合、closed fingerprint/version、poll/stability/TTL分離は当該IntentのFR/NFR/ACへ具体的に固定済みである。HerdrのsendとEnter submitの二段契約、fail-closed検証、選挙・報告運用は既存team規範に存在し、今回の適用から独立した新規横断normは見つからないため0件で可を支持する。非採用時は、既存normとの差分、複数Intentで再利用できる一般化範囲、反証可能な適用条件が具体的に示される候補なら採用を受容するが、当該UI/version/Intentに密着した設計詳細の永続化は受容しない。",
+      "submittedAt": "2026-07-21T02:52:02Z"
+    }
+  ],
+  "late": []
+}

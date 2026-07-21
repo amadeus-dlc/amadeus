@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TSWRA2",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "一次証拠としてarchitecture.mdのHerdr境界とscripts/team-msg.shのread/send seamを実測した。既存送信は入力とEnterが別操作で原子的ではなく、scrollbackや部分一致からの入力は誤作動余地がある。一方、visible paneを二重読取し、既知Additional safety checks全文とKeep waitingの現在選択状態を完全fingerprintで安定確認した直後だけEnterを1回送る契約なら、選択移動やapproval bypassを導入せずfail-closedを維持できるためchoice 1を支持する。非採用時受容度は中程度で、現行TUIが完全fingerprintを安定提示できない一次証拠が得られた場合は警告のみのchoice 3を受容するが、曖昧一致や固定key移動は受容しない。",
+  "submittedAt": "2026-07-21T02:35:03Z"
+}

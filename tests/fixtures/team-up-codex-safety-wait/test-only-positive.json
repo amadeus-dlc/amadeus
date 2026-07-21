@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "id": "test-only-positive",
+  "modalTitle": "Additional safety checks",
+  "herdrVersion": "0.7.1",
+  "codexVersion": "codex-cli 0.144.6",
+  "columns": 120,
+  "rows": 34,
+  "visibleText": "Additional safety checks\nThis request requires additional safety checks, which can take extra time.\n› 1. Keep waiting\n  2. Learn more\nPress enter to confirm or esc to go back"
+}

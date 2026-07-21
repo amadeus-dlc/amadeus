@@ -1,0 +1,29 @@
+{
+  "electionId": "E-TSWRA3",
+  "kind": "clarification-question",
+  "question": "260721-teamup-safety-wait / requirements-analysis Q3: dismiss supervisorのlifecycle契約をどう固定するか。現行team-upはfresh/resume/--killとpane/session lifecycleを所有し、pane IDはrun recordへ永続化しない。A=paneごとのsupervisorをfresh/resumeで起動しrole名からpaneを一意再解決、modal消失確認後のみrearm、pane/session/run終了・--kill・rollbackでcleanup、B=session単一supervisorが対象paneを巡回、C=sessionで最初の1回だけ解除し再armしない、X=その他。各自CodeKB、scripts/team-up.shのfresh/resume/kill/rollback経路、t-team-up-codex-resume.test.tsをリードオンリー実測し、GoA・自案非採用時受容度付きで投票する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. paneごとsupervisor + fresh/resume起動 + modal消失後rearm + lifecycle cleanup"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. session単一supervisorで対象paneを巡回"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. session最初の1回だけ解除しrearmしない"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他（noteに起動・rearm・cleanup契約を明記）"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}

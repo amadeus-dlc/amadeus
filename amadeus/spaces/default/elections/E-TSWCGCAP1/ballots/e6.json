@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TSWCGCAP1",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "choice 1 / GoA 1 / 留保なしを支持する。一次証拠として実行環境がHERDR_ENV=1であること、`herdr --version`=0.7.1、`codex --version`=codex-cli 0.144.6をread-only実測した。requirements.md:19-24,28-30,90,104はvisible exact bytes、title/説明/全choice順/Keep waiting選択marker/guidance/列数のclosed fingerprint、version drift時の入力0、positive capture不能時のproduction無効を要求する。plan.md:18,39,43,86もpositive実表示をproduction前に固定し、current paneへのlive Enterを行わず検証入力をfake Herdrへ限定する。E-TSWCGFIX1 recordはcurrent 7 paneでpositive exact bytes 0件を確認し、次回modalの操作前captureまでhard stopと裁定している。今回案はこのhard stopを弱めず、current runとは別のdisposable workspace/paneだけでmodalを出し、capture前のEnter・矢印・selection移動を0件、current run入力を全工程0件に固定し、操作前raw visible/text bytesとversion・workspace/tab/pane/session/run provenanceを取得後に隔離workspaceを停止するため、E-TSWCGFIX1の『次回modal・操作前capture』を安全に満たせる。passive監視を続けるchoice 2は安全だが進行不能を解消せず、positive fixtureなしのchoice 3はrequirements/planのfail-closed条件に反する。非採用時は、disposable topologyがcurrent runと別sessionであることを一意に証明できない、modal誘発がcurrent runへ伝播する、capture前入力0をaction provenanceで保証できない、またはsecret/個人情報検査を安全に完了できない一次証拠が成立する場合に限りchoice 2のhard stop継続を受容する。その場合もscreenshot/OCR由来fixtureでproductionを有効化する案は受容しない。",
+  "submittedAt": "2026-07-21T06:41:05Z"
+}
