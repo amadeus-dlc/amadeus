@@ -286,14 +286,19 @@ describe("team-up messaging backend launch", () => {
 });
 
 describe("team-up member command backend wiring", () => {
-  function claudeCmd(msgBackend: string) {
+  function claudeCmd(
+    msgBackend: string,
+    member = "engineer-1",
+    continueMode: "0" | "1" = "0",
+  ) {
     return Bun.spawnSync({
       cmd: [
         "bash",
         "-c",
-        `script="$1"; set --; TEAM_UP_LIB_ONLY=1 source "$script"; CONTINUE=0; MSG_BACKEND=${msgBackend}; claude_member_cmd engineer-1 /tmp/wt`,
+        `script="$1"; member="$2"; set --; TEAM_UP_LIB_ONLY=1 source "$script"; CONTINUE=${continueMode}; MSG_BACKEND=${msgBackend}; claude_member_cmd "$member" /tmp/wt`,
         "_",
         TEAM_UP,
+        member,
       ],
       env: { ...process.env, DELIVERY: "/path/that/does/not/exist" },
       stderr: "pipe",
@@ -316,6 +321,23 @@ describe("team-up member command backend wiring", () => {
     const cmd = result.stdout.toString();
     expect(cmd).toContain("TEAM_MSG=herdr");
     expect(cmd).not.toContain("/agmsg");
+  });
+
+  test("Claude engineers disable AskUserQuestion without changing the leader", () => {
+    for (const backend of ["agmsg", "herdr"]) {
+      for (const continueMode of ["0", "1"] as const) {
+        const engineer = claudeCmd(backend, "engineer-1", continueMode);
+        expect(engineer.exitCode, engineer.stderr.toString()).toBe(0);
+        expect(engineer.stdout.toString()).toContain(
+          "--disallowedTools AskUserQuestion",
+        );
+
+        const leader = claudeCmd(backend, "leader", continueMode);
+        expect(leader.exitCode, leader.stderr.toString()).toBe(0);
+        expect(leader.stdout.toString()).not.toContain("--disallowedTools");
+        expect(leader.stdout.toString()).not.toContain("AskUserQuestion");
+      }
+    }
   });
 
   function claudeCmdWithRunRecord(msgBackend: string) {
