@@ -57,11 +57,10 @@ metadata already names the sender.
 
 - **claude** members launch without any agmsg installation (`AGMSG_ROOT` may be
   absent entirely).
-- **codex** members still require the agmsg skill to be installed: the codex
-  launcher (`scripts/run-codex.sh`) execs the agmsg codex shim internally, so
-  the herdr backend changes codex messaging, not the codex launch path
-  (per-intent ruling E-TMB-CG, 2026-07-17). Removing that shim dependency is a
-  possible future enhancement.
+- **codex** members launch the `codex` command resolved from `PATH`. An optional
+  agmsg shim can still take precedence through `~/.agents/bin`, but the launcher
+  does not require mise or an agmsg installation. The user's environment owns
+  Codex installation and version selection.
 
 ## Send audit log
 
