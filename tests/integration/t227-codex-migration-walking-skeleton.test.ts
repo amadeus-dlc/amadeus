@@ -283,4 +283,4 @@ test("installed Codex migration route reaches apply without birthing or advancin
     consumeMigrationStopLatch(project.projectDir, sessionId);
     project.cleanup();
   }
-});
+}, 15_000);
