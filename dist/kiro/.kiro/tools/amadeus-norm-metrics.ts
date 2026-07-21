@@ -713,30 +713,50 @@ export function scanGoaHeads(text: string): GoaHeadScan {
   return { offsets, execCalls };
 }
 
-/** Split corpus text into ordered GoA record candidates without repairing an
- * invalid body. A slash is removed only when it separates adjacent heads. */
-export function extractGoaRecords(text: string): string[] {
+type GoaBoundarySearch = (haystack: string, needle: string) => number;
+
+const boundaryIndexOf: GoaBoundarySearch = (haystack, needle) => haystack.indexOf(needle);
+
+function extractGoaRecordsWithSearch(text: string, search: GoaBoundarySearch): string[] {
   const { offsets } = scanGoaHeads(text);
   const records: string[] = [];
   for (let i = 0; i < offsets.length; i++) {
     const start = offsets[i];
     const nextHead = offsets[i + 1];
-    const newline = text.indexOf("\n", start);
-    const comment = text.indexOf("<!--", start);
-    const closeParen = text.indexOf(")", start);
+    const span = text.slice(start, nextHead ?? text.length);
+    const newline = search(span, "\n");
+    const comment = search(span, "<!--");
+    const closeParen = search(span, ")");
     const boundaries = [
-      { kind: "eof", offset: text.length },
-      ...(nextHead === undefined ? [] : [{ kind: "head", offset: nextHead }]),
+      { kind: nextHead === undefined ? "eof" : "head", offset: span.length },
       ...(newline === -1 ? [] : [{ kind: "newline", offset: newline }]),
       ...(comment === -1 ? [] : [{ kind: "comment", offset: comment }]),
       ...(closeParen === -1 ? [] : [{ kind: "paren", offset: closeParen }]),
     ];
     const boundary = boundaries.reduce((first, candidate) => candidate.offset < first.offset ? candidate : first);
-    let candidate = text.slice(start, boundary.offset);
+    let candidate = span.slice(0, boundary.offset);
     if (boundary.kind === "head") candidate = candidate.replace(/\s*\/\s*$/, "");
     records.push(candidate.trim());
   }
   return records;
+}
+
+/** Split corpus text into ordered GoA record candidates without repairing an
+ * invalid body. A slash is removed only when it separates adjacent heads. */
+export function extractGoaRecords(text: string): string[] {
+  return extractGoaRecordsWithSearch(text, boundaryIndexOf);
+}
+
+export function _extractGoaRecordsScanForTests(text: string): {
+  records: string[];
+  boundarySearchChars: number;
+} {
+  let boundarySearchChars = 0;
+  const records = extractGoaRecordsWithSearch(text, (haystack, needle) => {
+    boundarySearchChars += haystack.length;
+    return haystack.indexOf(needle);
+  });
+  return { records, boundarySearchChars };
 }
 
 function emptyGoaVotes(): [number, number, number, number, number, number, number, number] {

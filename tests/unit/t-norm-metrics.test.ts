@@ -17,6 +17,7 @@ import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import type { RuleFile } from "../../packages/framework/core/tools/amadeus-graph.ts";
 import {
+  _extractGoaRecordsScanForTests,
   amendmentCountOf,
   buildRows,
   CHURN_THRESHOLD,
@@ -666,6 +667,17 @@ describe("PhaseBSchemas (parseGoaLine / parsePmCidLine)", () => {
 });
 
 describe("GoA corpus scanner/extractor", () => {
+  test("extractGoaRecords bounds boundary searches to partitioned record spans", () => {
+    const scan = (count: number): number => {
+      const text = "GoA[E-SCALE]: c1 1x1 / ".repeat(count);
+      const result = _extractGoaRecordsScanForTests(text);
+      expect(result.records).toHaveLength(count);
+      expect(result.boundarySearchChars).toBe(text.length * 3);
+      return result.boundarySearchChars;
+    };
+    expect(scan(4_000)).toBe(scan(1_000) * 4);
+  });
+
   test.each([1, 2, 4])("scanGoaHeads uses one production forward loop (N=%i)", (n) => {
     const block = "GoA[E-SCALE]: c1 1x1\n";
     const text = block.repeat(n);
