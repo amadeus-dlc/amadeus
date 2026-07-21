@@ -19,6 +19,7 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(changesJob).toContain("packages/framework/*");
     expect(checkJob).toContain("needs: changes");
     expect(checkJob).toContain(`if: \${{ needs.changes.outputs.ci == 'true' }}`);
+    expect(checkJob).toContain("bun run test:ci -- -P 4");
   });
 
   test("repository workflow change detector has valid Bash syntax", () => {
@@ -60,6 +61,7 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(coverageJob).toContain(`if: \${{ needs.changes.outputs.ci == 'true' }}`);
     expect(coverageJob).toContain("bun tests/coverage-project-gate.ts --check");
     expect(coverageJob).toContain("bun tests/coverage-patch-gate.ts --check");
+    expect(coverageJob).toContain("bun run coverage:ci -- -P 4");
     expect(coverageJob).toContain("fetch-depth: 0");
     expect(coverageJob).toContain("AMADEUS_PATCH_BASE_REF: origin/${{ github.event.pull_request.base.ref }}");
     // relative gate (E-CV2): live merge-base measurement compared through the

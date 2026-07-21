@@ -111,7 +111,7 @@ jobs:
         run: bun run promote:self:check
 
       - name: Tests - smoke + unit + integration
-        run: bun run test:ci
+        run: bun run test:ci -- -P 4
 
       - name: Upload dynamic test-size report (#684 Phase D / #699, advisory)
         if: always()
@@ -151,7 +151,7 @@ jobs:
         run: pip install lizard==1.23.0
 
       - name: Generate coverage reports
-        run: bun run coverage:ci
+        run: bun run coverage:ci -- -P 4
 
       - name: Project coverage gate
         run: bun tests/coverage-project-gate.ts --check
@@ -201,7 +201,7 @@ jobs:
           # they may be compared (E-CV2 e1 reservation: never compare against
           # a partial base measurement — fail closed).
           status=0
-          bun run coverage:ci || status=$?
+          bun run coverage:ci -- -P 4 || status=$?
           if [[ ! -s coverage/lcov.info || ! -s coverage/coverage-totals.json ]]; then
             echo "::error::base coverage artifacts incomplete (coverage:ci exit ${status}); refusing to compare"
             exit 1
