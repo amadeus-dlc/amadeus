@@ -56,6 +56,15 @@ function writeJson(name: string, value: unknown): string {
 }
 
 describe("t236 election directive loop", () => {
+  test("open accepts natural multi-segment ids and rejects malformed ids loudly", () => {
+    expect(run(["open", "--file", writeJson("natural.json", { ...DEF, electionId: "E-SDE-CG4" })])).toBe(0);
+    for (const [i, electionId] of ["e-lower", "E--EMPTY", "E-TRAIL-", "-E-LEAD"].entries()) {
+      expect(run(["open", "--file", writeJson(`bad-${i}.json`, { ...DEF, electionId })])).toBe(1);
+      expect(errs.at(-1)).toContain("^E-[A-Z0-9]+(-[A-Z0-9]+)*$");
+    }
+    expect(run(["open", "--file", writeJson("non-string.json", { ...DEF, electionId: 42 })])).toBe(1);
+  });
+
   test("zero-confirm election walks open -> distribute -> collect -> tally -> render -> verify -> recorded", () => {
     expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
 

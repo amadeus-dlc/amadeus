@@ -255,7 +255,7 @@ export function handleOpen(root: string, filePath: string): number {
   // The election id doubles as the GoA-line code (Q3=A) — refuse ids the record
   // layer could not render (fail-closed at the entrance, not at render time).
   const code = GoaLineCode.parse(parsed.value.electionId);
-  if (!code.ok) return fail(`open: electionId is not a valid GoA-line code (^E-[A-Z0-9]+$)`);
+  if (!code.ok) return fail(`open: electionId is not a valid GoA-line code (^E-[A-Z0-9]+(-[A-Z0-9]+)*$)`);
   const created = Store.create(root, parsed.value);
   if (!created.ok) return storeFail("create", created.error);
   // Blind per-voter views (FR-1b/1c): deterministic shuffle, written up front
