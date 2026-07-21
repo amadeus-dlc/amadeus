@@ -757,15 +757,16 @@ function readBoltDagBatches(projectDir: string): string[][] | null {
   }
 
   const canonicalPath = unitDependencyPath(projectDir);
-  const source = existsSync(canonicalPath)
-    ? (() => {
-        try {
-          return { kind: "content" as const, path: canonicalPath, body: readFileSync(canonicalPath, "utf-8") };
-        } catch (error) {
-          return { kind: "unreadable" as const, path: canonicalPath, detail: errorMessage(error) };
-        }
-      })()
-    : { kind: "absent" as const, path: canonicalPath };
+  const source = (() => {
+    try {
+      return { kind: "content" as const, path: canonicalPath, body: readFileSync(canonicalPath, "utf-8") };
+    } catch (error) {
+      if (error !== null && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+        return { kind: "absent" as const, path: canonicalPath };
+      }
+      return { kind: "unreadable" as const, path: canonicalPath, detail: errorMessage(error) };
+    }
+  })();
   const recovery = recoverBoltDag(cached, source);
   if (recovery.kind === "none") return null;
   if (recovery.kind === "malformed") {
@@ -774,7 +775,7 @@ function readBoltDagBatches(projectDir: string): string[][] | null {
   if (recovery.healed && !reportedBoltDagRecoveries.has(canonicalPath)) {
     reportedBoltDagRecoveries.add(canonicalPath);
     console.error(
-      `BOLT_DAG_RECOVERED reason=${recovery.healingReason} batches=${recovery.batches.length} source=${canonicalPath} repair="bun .codex/tools/amadeus-runtime.ts compile"`,
+      `BOLT_DAG_RECOVERED reason=${recovery.healingReason} batches=${recovery.batches.length} source=${canonicalPath} repair="bun ${harnessDir()}/tools/amadeus-runtime.ts compile"`,
     );
   }
   return recovery.batches.map((batch) => [...batch]);

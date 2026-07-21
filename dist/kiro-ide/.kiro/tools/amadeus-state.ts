@@ -267,6 +267,8 @@ const RECOVERY_BATCH_EVENTS = [
   "GATE_APPROVED",
   "STAGE_COMPLETED",
 ] as const;
+const RECOVERED_REVISION_FEEDBACK =
+  "Recovered from durable artifact evidence; original feedback was not recorded";
 
 // --- Audit emission helper ---
 // Uses the throw-on-error appendAuditEntry (not handleAppend which writes JSON to stdout).
@@ -1918,7 +1920,7 @@ function declaredProducePaths(
   const absoluteRecord = recordDir(pd);
   const relativeRecord = relativeRecordDir(pd);
   if (absoluteRecord === null || relativeRecord === null) return [];
-  let ownerSegments = [stage.phase, stage.slug];
+  let ownerPaths = [[stage.phase, stage.slug]];
   if (stage.for_each === "unit-of-work") {
     const dependencyPath = unitDependencyPath(pd);
     if (!existsSync(dependencyPath)) return [];
@@ -1933,19 +1935,22 @@ function declaredProducePaths(
       return [];
     }
     if (source.kind !== "ok") return [];
-    const unit = source.batches.flat().at(-1);
-    if (unit === undefined) return [];
-    ownerSegments = ["construction", unit, stage.slug];
+    const units = source.batches.flat();
+    if (units.length === 0) return [];
+    ownerPaths = units.map((unit) => ["construction", unit, stage.slug]);
   }
-  return names.flatMap((name) => {
-    const fileName = `${name}.md`;
-    return [join(absoluteRecord, ...ownerSegments, fileName), `${relativeRecord}/${ownerSegments.join("/")}/${fileName}`];
-  });
+  return ownerPaths.flatMap((ownerSegments) =>
+    names.flatMap((name) => {
+      const fileName = `${name}.md`;
+      return [join(absoluteRecord, ...ownerSegments, fileName), `${relativeRecord}/${ownerSegments.join("/")}/${fileName}`];
+    })
+  );
 }
 
 function completedRecoveryRevision(
   raw: string,
   slug: string,
+  stageName: string,
   expectedTransactionId: string,
   expectedRevision: number,
 ): number | null {
@@ -1962,8 +1967,14 @@ function completedRecoveryRevision(
   }
   const blocks = byTransaction.get(expectedTransactionId);
   if (blocks === undefined) return null;
-  const revision = completedTransactionRevision(blocks, sourceBlocks, slug);
-  return revision === expectedRevision ? revision : null;
+  return completedTransactionRevision(
+    blocks,
+    sourceBlocks,
+    slug,
+    stageName,
+    expectedTransactionId,
+    expectedRevision,
+  );
 }
 
 type PositionedAuditBlock = { readonly block: string; readonly position: number };
@@ -1972,16 +1983,55 @@ function completedTransactionRevision(
   blocks: readonly PositionedAuditBlock[],
   sourceBlocks: readonly string[],
   slug: string,
+  stageName: string,
+  transactionId: string,
+  revisionCount: number,
 ): number | null {
+  const candidates: CompletedTransactionWindow[] = [];
+  for (let start = 0; start <= blocks.length - RECOVERY_BATCH_EVENTS.length; start += 1) {
+    const candidate = validatedTransactionWindow(
+      blocks.slice(start, start + RECOVERY_BATCH_EVENTS.length),
+      slug,
+      stageName,
+      transactionId,
+      revisionCount,
+    );
+    if (candidate !== null) candidates.push(candidate);
+  }
+  if (candidates.length !== 1) return null;
+  const { timestamp, terminal } = candidates[0]!;
+  if (sourceBlocks.some((block, position) => isNewerOrganicAnchor(block, position, slug, timestamp, terminal.position))) return null;
+  return revisionCount;
+}
+
+type CompletedTransactionWindow = {
+  readonly timestamp: string;
+  readonly terminal: PositionedAuditBlock;
+};
+
+function validatedTransactionWindow(
+  blocks: readonly PositionedAuditBlock[],
+  slug: string,
+  stageName: string,
+  transactionId: string,
+  revisionCount: number,
+): CompletedTransactionWindow | null {
   if (blocks.length !== RECOVERY_BATCH_EVENTS.length) return null;
-  const events = blocks.map(({ block }) => auditBlockField(block, "Event"));
-  if (!events.every((event, index) => event === RECOVERY_BATCH_EVENTS[index])) return null;
-  if (!blocks.slice(0, 3).every(({ block }) => auditBlockField(block, "Recovered") === "true")) return null;
-  const terminal = blocks.at(-1)!;
-  const terminalTimestamp = auditBlockField(terminal.block, "Timestamp") ?? "";
-  if (sourceBlocks.some((block, position) => isNewerOrganicAnchor(block, position, slug, terminalTimestamp, terminal.position))) return null;
-  const revision = Number.parseInt(auditBlockField(blocks[1]!.block, "Revision count") ?? "", 10);
-  return Number.isFinite(revision) ? revision : null;
+  if (!blocks.every(({ position }, index) => position === blocks[0]!.position + index)) return null;
+  const timestamp = auditBlockField(blocks[0]!.block, "Timestamp");
+  if (timestamp === null) return null;
+  try {
+    validateRecoveredApprovalBatch(blocks.map(({ block }) => block), {
+      slug,
+      stageName,
+      timestamp,
+      transactionId,
+      revisionCount,
+    });
+  } catch {
+    return null;
+  }
+  return { timestamp, terminal: blocks.at(-1)! };
 }
 
 function isNewerOrganicAnchor(
@@ -2036,6 +2086,9 @@ function recoveredApprovalBlockIssue(
   if (auditBlockField(block, "Transaction Id") !== input.transactionId) return `transaction ${index + 1}`;
   const recovered = auditBlockField(block, "Recovered");
   if (index < 3 ? recovered !== "true" : recovered !== null) return `recovered ${index + 1}`;
+  if (index < 2 && auditBlockField(block, "Feedback") !== RECOVERED_REVISION_FEEDBACK) {
+    return `feedback ${index + 1}`;
+  }
   return null;
 }
 
@@ -2065,13 +2118,18 @@ function buildRecoveredApprovalBatch(input: RecoveredApprovalBatchInput): string
       heading: "Gate Rejected",
       event: "GATE_REJECTED",
       timestamp: input.timestamp,
-      fields: { ...common, Recovered: "true" },
+      fields: { ...common, Feedback: RECOVERED_REVISION_FEEDBACK, Recovered: "true" },
     }),
     approvalAuditBlock({
       heading: "Stage Revising",
       event: "STAGE_REVISING",
       timestamp: input.timestamp,
-      fields: { ...common, "Revision count": String(input.revisionCount), Recovered: "true" },
+      fields: {
+        ...common,
+        "Revision count": String(input.revisionCount),
+        Feedback: RECOVERED_REVISION_FEEDBACK,
+        Recovered: "true",
+      },
     }),
     approvalAuditBlock({
       heading: "Stage Awaiting Approval",
@@ -2119,7 +2177,7 @@ type ApprovalAuthorization = {
 function authorizeApproval(
   pd: string,
   content: string,
-  stage: { readonly slug: string; readonly phase: string; readonly for_each?: string; readonly produces?: readonly string[] },
+  stage: { readonly name: string; readonly slug: string; readonly phase: string; readonly for_each?: string; readonly produces?: readonly string[] },
 ): ApprovalAuthorization {
   const audit = readAllAuditShards(pd);
   const currentRevision = Number.parseInt(getField(content, "Revision Count") ?? "0", 10);
@@ -2133,7 +2191,7 @@ function authorizeApproval(
       KNOWN_CODEKB_STAGES.has(stage.slug),
   });
   const committedRevision = recovery.kind === "recovered"
-    ? completedRecoveryRevision(audit, stage.slug, recovery.transactionId, recovery.nextRevisionCount)
+    ? completedRecoveryRevision(audit, stage.slug, stage.name, recovery.transactionId, recovery.nextRevisionCount)
     : null;
   const grantId = committedRevision === null
     ? assertHumanPresentForGateResolution(pd, content, stage.slug, "approve")
@@ -2182,8 +2240,11 @@ function emitApprovalAudit(pd: string, input: ApprovalAuditInput): void {
       Details: `Stage ${input.stageName} approved by gate`,
     });
   } catch (e) {
-    if (e instanceof Error && e.name === "RecoveryBatchValidationError") {
-      console.error(JSON.stringify({ error: errorMessage(e) }));
+    if (input.recovery?.kind === "recovered") {
+      const detail = e instanceof Error && e.name === "RecoveryBatchValidationError"
+        ? errorMessage(e)
+        : `Audit emission failed: ${errorMessage(e)}`;
+      console.error(JSON.stringify({ error: detail }));
       process.exit(1);
     }
     error(`Audit emission failed: ${errorMessage(e)}`);

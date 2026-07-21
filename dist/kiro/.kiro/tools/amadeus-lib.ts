@@ -6060,7 +6060,16 @@ export function parseBoltDag(body: string): BoltDagParse {
     names.add(u.name);
   }
   for (const u of edges) {
+    const dependencies = new Set<string>();
     for (const dep of u.depends_on) {
+      if (dependencies.has(dep)) {
+        return {
+          ok: false,
+          reason: "malformed",
+          detail: `unit "${u.name}" has duplicate dependency "${dep}"`,
+        };
+      }
+      dependencies.add(dep);
       if (dep === u.name) {
         return { ok: false, reason: "malformed", detail: `unit "${u.name}" depends on itself` };
       }
@@ -6184,7 +6193,18 @@ type GateRevisionOptions = {
 function isDeclaredRevisionWrite(event: RevisionEvidenceEvent, produces: readonly string[]): boolean {
   if (event.kind !== "ARTIFACT_CREATED" && event.kind !== "ARTIFACT_UPDATED") return false;
   if (event.file === null) return false;
-  return produces.includes(event.file);
+  const file = revisionArtifactComparisonKey(event.file);
+  return produces.some((path) => revisionArtifactComparisonKey(path) === file);
+}
+
+function revisionArtifactComparisonKey(path: string): string {
+  const normalized = path.replace(/\\/g, "/");
+  const marker = "amadeus/spaces/";
+  const markerIndex = normalized.indexOf(marker);
+  if (markerIndex === 0 || (markerIndex > 0 && normalized[markerIndex - 1] === "/")) {
+    return normalized.slice(markerIndex);
+  }
+  return normalized;
 }
 
 /** Derive a missing gate revision solely from durable audit evidence. */

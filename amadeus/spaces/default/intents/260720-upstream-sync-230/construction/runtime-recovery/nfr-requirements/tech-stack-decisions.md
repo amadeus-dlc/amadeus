@@ -8,7 +8,7 @@
 |---|---|---|
 | Runtime/Language | Bun 1.3.13 / TypeScript ESM | 既存orchestrate/state/audit/toolsと同じ境界を維持する。 |
 | DAG source | `unit-of-work-dependency.md` + existing pure parser | runtime graphをcacheとして自己修復できる。 |
-| Chronology | Timestamp + buffer position sort | shard filenameに依存せず同値timestampを決定化する。 |
+| Chronology | cross-shard Timestamp collision rejection + Timestamp / shard-local buffer position sort | 証明不能なshard間同値timestampをfail-closedにし、filenameや列挙順へ依存しない。 |
 | Atomicity | 既存audit lock内のvalidated batch commit | 5 blockのpartial appendを防ぐ。 |
 | Idempotency | 既決transaction identity + complete batch detection | state write failure後にaudit重複0で収束する。 |
 | Packaging | manifest-driven 6 harness projection | sourceを正本としdist手編集を防ぐ。 |

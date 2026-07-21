@@ -8,7 +8,7 @@
 |---|---|---|---|
 | dependency artifact→resolver | existing readable canonical artifact | parse/edge/cycle validation | broken sourceのzero-unit降格 |
 | runtime cache→consumers | well-formed cache equal to canonical batches | source優先comparison | cache-only fallback、consumer別Unit集合 |
-| audit shards→revision predicate | related 6 events + declared-produces paths | Timestamp+buffer position normalization | filename順、memory/questions/他Unit証拠 |
+| audit shards→revision predicate | related 6 events + declared-produces paths | cross-shard Timestamp collision拒否後、Timestamp+shard-local buffer position normalization | filename/shard indexによる推測順序、memory/questions/他Unit証拠 |
 | human evidence→backfill | organic anchor + pivot + produces write + reject absence | closed predicate、autonomous/off skip | human不在backfill、recovered anchor再利用 |
 | approve batch→disk | fully generated/validated 5 blocks | existing lock内single atomic commit | partial append、中間state write |
 
@@ -16,7 +16,7 @@
 
 artifact absentだけをgenuine zero-unitとして`none`にする。artifactが存在する場合のread/parse/edge/cycle failureは`malformed`としてloudに返し、Unit 0やsingle iterationへ降格しない。read-side healはdiagnosticだけでpersistent writeを行わない。
 
-revision evidenceは対象stageとdeclared producesへ閉じる。recorded reject、証拠不足、autonomous Construction、off-switchではbackfill falseとし、既存approval bytes互換を維持する。codekb特殊layoutや新consumerへscopeを広げない。
+revision evidenceは対象stageとdeclared producesへ閉じる。異なるaudit shardでTimestampが衝突した場合はchronologyを証明できないためevidence全体を棄却し、filenameやshard indexをtie-breakにしない。recorded reject、証拠不足、autonomous Construction、off-switchでもbackfill falseとし、既存approval bytes互換を維持する。codekb特殊layoutや新consumerへscopeを広げない。
 
 ## Atomicity・idempotency controls
 

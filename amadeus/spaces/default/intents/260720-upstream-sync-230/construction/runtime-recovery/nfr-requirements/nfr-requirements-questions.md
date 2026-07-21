@@ -8,7 +8,7 @@
 
 ## 質問不要の根拠
 
-- Performance/scalability: dependency正本とruntime cacheのpure resolution、timestamp+buffer positionの有界audit evidence normalizationであり、新service SLOはない。
+- Performance/scalability: dependency正本とruntime cacheのpure resolution、cross-shard timestamp collisionをfail-closedにしたtimestamp+shard-local buffer positionの有界audit evidence normalizationであり、新service SLOはない。
 - Security: malformed sourceをzero-unitへ降格せず、autonomous/off-switchではrevision backstopを実行しない。
 - Reliability: read-side mutation 0、5 block事前生成/全数検証/単一atomic audit commit、state 1回write、state failure後のidempotent convergenceが裁定済みである。
 - Observability: healed diagnosticとRecovered provenanceを既存stderr/auditへ投影し、新eventや保持期間を追加しない。
@@ -18,4 +18,4 @@
 
 ## [Answer]
 
-[Answer]: 質問0問で可。E-OC1でleader承認済み（`2026-07-20T15:33:08Z`）。承認範囲はE-USSU02FD1=A、BR-U02-01〜24、Requirements NFR-1〜8、technology-stackの機械導出に限定する。dependency正本優先DAG recovery、none/ok/malformed、read-side mutation 0、全consumer同一Unit集合、Timestamp+buffer position chronology、revision evidence closed predicate、autonomous/off-switch skip、5 block事前生成/全数検証/単一atomic audit commit、最終state 1回write、state failure後のaudit重複0・収束、既存Bun/TypeScript/audit lock stackを維持する。新atomicity/evidence/degrade/failure policy、public API、dependency、network、database、queue、UI、保持期間、SLOは追加しない。
+[Answer]: 質問0問で可。E-OC1でleader承認済み（`2026-07-20T15:33:08Z`）。承認範囲はE-USSU02FD1=A、BR-U02-01〜24、Requirements NFR-1〜8、technology-stackの機械導出に限定する。dependency正本優先DAG recovery、none/ok/malformed、read-side mutation 0、全consumer同一Unit集合、cross-shard Timestamp collisionのfail-closedとTimestamp+shard-local buffer position chronology、revision evidence closed predicate、autonomous/off-switch skip、5 block事前生成/全数検証/単一atomic audit commit、最終state 1回write、state failure後のaudit重複0・収束、既存Bun/TypeScript/audit lock stackを維持する。新atomicity/evidence/degrade/failure policy、public API、dependency、network、database、queue、UI、保持期間、SLOは追加しない。

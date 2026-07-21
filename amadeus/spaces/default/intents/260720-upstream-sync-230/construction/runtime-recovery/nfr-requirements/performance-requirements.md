@@ -8,7 +8,7 @@
 |---|---|---|
 | PERF-U02-01 | DAG recoveryはruntime cacheと単一dependency正本をparseし、canonical batchを比較する。 | consumer別fallbackやdirectory sweep 0。 |
 | PERF-U02-02 | per-unit loop、coverage guard、swarmは同じresolution resultを共有する。 | 同一snapshotでUnit集合差分0。 |
-| PERF-U02-03 | revision evidenceは関連6 eventだけをTimestamp+buffer positionでinterleaveする。 | shard filename順への依存0。 |
+| PERF-U02-03 | revision evidenceはcross-shard Timestamp collisionをfail-closedにし、衝突がない関連6 eventだけをTimestamp+shard-local buffer positionでinterleaveする。 | shard filename順・列挙順への依存0。 |
 | PERF-U02-04 | approve recoveryは5 blockをmemory上で生成・検証後、既存lock内で単一commitする。 | 5回の逐次emit 0、中間state write 0。 |
 
 絶対処理時間を契約化せず、入力件数に対する決定的parse/sortと無制限retry・pollingなしを要求する。read-side healはpersistent writeを行わず、次のruntime compileへ修復を委ねる。
@@ -38,7 +38,7 @@ PERF-U02-01〜04は`business-rules.md`のBR-U02-01〜24、`business-logic-model.
 
 - E-USSU02FD1=AとBR-U02-01〜24をNFRへ機械導出しており、dependency artifact absentだけを`none`、valid sourceを`ok`、unreadable/malformed/cyclic sourceを`malformed`とするclosed resultを維持する。broken sourceをzero-unitへ降格しない。
 - canonical artifact優先、read-side mutation 0、per-unit loop・coverage guard・swarmの同一resolved Unit集合が一貫し、consumer別fallbackやpersistent read-side healを追加していない。
-- audit evidenceは関連6 eventをTimestamp昇順＋同値buffer position順へ正規化し、organic anchor、human pivot、declared-produces write、reject absenceのclosed predicateへ限定する。reviewer append、memory、questions、他Unit、non-producesを証拠へ広げない。
+- audit evidenceはcross-shard Timestamp collisionを棄却し、衝突がない関連6 eventをTimestamp昇順＋同一shard内の同値buffer position順へ正規化する。organic anchor、human pivot、declared-produces write、reject absenceのclosed predicateへ限定し、reviewer append、memory、questions、他Unit、non-producesを証拠へ広げない。
 - approve recoveryは5 blockを事前生成・全数検証し、既存audit lock内の単一atomic commit後に最終stateを1回だけwriteする。生成・検証・commit失敗はaudit/state双方を不変にする。
 - atomic audit commit後のstate write失敗は既決transaction identityと完全batch検出により、次回audit追加0で同じ最終stateへ収束する。不完全batchを成功扱いするrecoveryはない。
 - NFR-5のtargeted testsと5つの最終gate、NFR-6のpatch追加行未カバー0、計測済みmoduleへのin-process seam、既決waiver条件が明記されている。

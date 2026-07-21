@@ -1,8 +1,9 @@
 // covers: runtime-recovery:production-paths
 // @test-size medium
 
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { spawnSync } from "node:child_process";
+import * as nodeFs from "node:fs";
 import {
   appendFileSync,
   chmodSync,
@@ -11,11 +12,13 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
+import { _resetStageGraphForTests } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import { handleApprove } from "../../packages/framework/core/tools/amadeus-state.ts";
 import {
   cleanupTestProject,
@@ -107,7 +110,12 @@ afterEach(() => {
   while (tempDirs.length > 0) rmSync(tempDirs.pop()!, { recursive: true, force: true });
 });
 
-function run(tool: string, project: string, args: string[]) {
+function run(
+  tool: string,
+  project: string,
+  args: string[],
+  envOverrides: Record<string, string> = {},
+) {
   return spawnSync(process.execPath, [tool, ...args, "--project-dir", project], {
     cwd: project,
     encoding: "utf-8",
@@ -118,6 +126,7 @@ function run(tool: string, project: string, args: string[]) {
       AMADEUS_SCOPE_MAPPING: SCOPE_GRID,
       AMADEUS_SKIP_ARTIFACT_GUARD: "1",
       AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "1",
+      ...envOverrides,
     },
   });
 }
@@ -194,6 +203,37 @@ function seedRevisionProject(): string {
   return project;
 }
 
+function seedPerUnitRevisionProject(updatedUnit: string): string {
+  const project = createTestProject();
+  projects.push(project);
+  seedStateFile(project, join(FIXTURES_DIR, "state-jumped.md"));
+  const dependencyDir = join(seededRecordDir(project), "inception", "units-generation");
+  mkdirSync(dependencyDir, { recursive: true });
+  writeFileSync(
+    join(dependencyDir, "unit-of-work-dependency.md"),
+    "# Units\n\n```yaml\nunits:\n  - name: unit-a\n    depends_on: []\n  - name: unit-b\n    depends_on: [unit-a]\n```\n",
+  );
+  expect(run(STATE, project, ["gate-start", "code-generation"]).status).toBe(0);
+  appendFileSync(
+    seededAuditShard(project),
+    `
+## Human Turn
+**Timestamp**: 2999-01-01T00:00:00Z
+**Event**: HUMAN_TURN
+
+---
+
+## Artifact Updated
+**Timestamp**: 2999-01-01T00:00:01Z
+**Event**: ARTIFACT_UPDATED
+**File**: amadeus/spaces/default/intents/fixture-8000000000000001/construction/${updatedUnit}/code-generation/code-summary.md
+
+---
+`,
+  );
+  return project;
+}
+
 function seedPhaseCheck(project: string, phase: string): void {
   const verification = join(seededRecordDir(project), "verification");
   mkdirSync(verification, { recursive: true });
@@ -205,11 +245,11 @@ describe("t247 Bolt DAG recovery production path", () => {
     const project = seedDagProject(
       "# Units\n\n```yaml\nunits:\n  - name: alpha\n    depends_on: []\n  - name: beta\n    depends_on: []\n```\n",
     );
-    const result = run(ORCHESTRATE, project, ["next"]);
+    const result = run(ORCHESTRATE, project, ["next"], { AMADEUS_HARNESS_DIR: ".kiro" });
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout)).toMatchObject({ kind: "run-stage", unit: "alpha" });
     expect(result.stderr).toContain("BOLT_DAG_RECOVERED reason=mismatch batches=1");
-    expect(result.stderr).toContain('repair="bun .codex/tools/amadeus-runtime.ts compile"');
+    expect(result.stderr).toContain('repair="bun .kiro/tools/amadeus-runtime.ts compile"');
     expect(JSON.parse(readFileSync(join(seededRecordDir(project), "runtime-graph.json"), "utf-8"))).toEqual({
       bolt_dag: { batches: [["beta"], ["alpha"]] },
     });
@@ -246,6 +286,9 @@ describe("t247 gate revision recovery production path", () => {
       "STAGE_COMPLETED",
     ]);
     expect(transactionBlocks.slice(0, 3).every((block) => block.includes("**Recovered**: true"))).toBe(true);
+    expect(transactionBlocks.slice(0, 2).every((block) =>
+      block.includes("**Feedback**: Recovered from durable artifact evidence; original feedback was not recorded")
+    )).toBe(true);
     expect(new Set(transactionBlocks.map((block) => /\*\*Transaction Id\*\*: (\S+)/.exec(block)?.[1])).size).toBe(1);
   });
 
@@ -271,10 +314,9 @@ describe("t247 gate revision recovery production path", () => {
 });
 
 describe("t247 recovery in-process coverage seams", () => {
-  test("authored orchestrator heals once and fails loud on an unreadable canonical source", () => {
-    const project = seedDagProject(
-      "# Units\n\n```yaml\nunits:\n  - name: alpha\n    depends_on: []\n  - name: beta\n    depends_on: []\n```\n",
-    );
+  test("authored orchestrator heals once and fails loud on an inaccessible or unreadable canonical source", () => {
+    const canonical = "# Units\n\n```yaml\nunits:\n  - name: alpha\n    depends_on: []\n  - name: beta\n    depends_on: []\n```\n";
+    const project = seedDagProject(canonical);
     const healed = inProject(project, () => handleNext([], project));
     expect(healed.code).toBeNull();
     expect(JSON.parse(healed.stdout)).toMatchObject({ kind: "run-stage", unit: "alpha" });
@@ -286,6 +328,34 @@ describe("t247 recovery in-process coverage seams", () => {
       "units-generation",
       "unit-of-work-dependency.md",
     );
+    rmSync(canonicalPath);
+    const absent = inProject(project, () => handleNext([], project));
+    expect(absent.code).toBeNull();
+    expect(JSON.parse(absent.stdout)).toMatchObject({ kind: "run-stage", stage: "functional-design" });
+    writeFileSync(canonicalPath, canonical);
+
+    const originalExistsSync = nodeFs.existsSync;
+    const originalReadFileSync = nodeFs.readFileSync;
+    const existsSpy = spyOn(nodeFs, "existsSync").mockImplementation(
+      ((path) => String(path) === canonicalPath ? false : originalExistsSync(path)) as typeof nodeFs.existsSync,
+    );
+    const readSpy = spyOn(nodeFs, "readFileSync").mockImplementation(
+      ((path, options) => {
+        if (String(path) === canonicalPath) {
+          throw Object.assign(new Error("injected canonical access failure"), { code: "EACCES" });
+        }
+        return originalReadFileSync(path, options);
+      }) as typeof nodeFs.readFileSync,
+    );
+    try {
+      expect(() => inProject(project, () => handleNext([], project))).toThrow(
+        "Bolt DAG recovery failed (unreadable): injected canonical access failure",
+      );
+    } finally {
+      readSpy.mockRestore();
+      existsSpy.mockRestore();
+    }
+
     rmSync(canonicalPath);
     mkdirSync(canonicalPath);
     expect(() => inProject(project, () => handleNext([], project))).toThrow(
@@ -301,13 +371,90 @@ describe("t247 recovery in-process coverage seams", () => {
 
     const approved = inProject(project, () => handleApprove(["feasibility"]));
     expect(approved.code).toBeNull();
-    expect(readFileSync(auditPath, "utf-8").match(/\*\*Transaction Id\*\*:/g)?.length).toBe(5);
+    const approvedAudit = readFileSync(auditPath, "utf-8");
+    expect(approvedAudit.match(/\*\*Transaction Id\*\*:/g)?.length).toBe(5);
 
     writeFileSync(statePath, stateBefore);
+    const persistedTamper = approvedAudit.replace(
+      "**Feedback**: Recovered from durable artifact evidence; original feedback was not recorded",
+      "**Feedback**: tampered",
+    );
+    expect(persistedTamper).not.toBe(approvedAudit);
+    writeFileSync(auditPath, persistedTamper);
+    const refused = run(STATE, project, ["approve", "feasibility"], {
+      AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "0",
+    });
+    expect(refused.status).toBe(1);
+    expect(refused.stderr).toContain("a real human has not acted at this gate");
+    expect(readFileSync(statePath, "utf-8")).toBe(stateBefore);
+    expect(readFileSync(auditPath, "utf-8").startsWith(persistedTamper)).toBe(true);
+
+    writeFileSync(auditPath, approvedAudit);
     const replayed = inProject(project, () => handleApprove(["feasibility"]));
     expect(replayed.code).toBeNull();
     expect(readFileSync(auditPath, "utf-8").match(/\*\*Transaction Id\*\*:/g)?.length).toBe(5);
     expect(readFileSync(statePath, "utf-8")).toContain("- **Revision Count**: 1");
+  });
+
+  test("a valid batch rebuilt after a malformed batch survives a state-write retry", () => {
+    const project = seedRevisionProject();
+    const statePath = seededStateFile(project);
+    const auditPath = seededAuditShard(project);
+    const stateBefore = readFileSync(statePath, "utf-8");
+    expect(inProject(project, () => handleApprove(["feasibility"])).code).toBeNull();
+
+    writeFileSync(statePath, stateBefore);
+    const tampered = readFileSync(auditPath, "utf-8").replace(
+      "**Feedback**: Recovered from durable artifact evidence; original feedback was not recorded",
+      "**Feedback**: tampered",
+    );
+    writeFileSync(auditPath, tampered);
+
+    chmodSync(statePath, 0o444);
+    const rebuildWithFailedStateWrite = run(STATE, project, ["approve", "feasibility"]);
+    chmodSync(statePath, 0o644);
+    expect(rebuildWithFailedStateWrite.status).toBe(1);
+    expect(readFileSync(auditPath, "utf-8").match(/\*\*Transaction Id\*\*:/g)?.length).toBe(10);
+    expect(readFileSync(statePath, "utf-8")).toBe(stateBefore);
+
+    const replayedInProcess = inProject(project, () => handleApprove(["feasibility"]));
+    expect(replayedInProcess.code).toBeNull();
+    expect(readFileSync(auditPath, "utf-8").match(/\*\*Transaction Id\*\*:/g)?.length).toBe(10);
+    expect(readFileSync(statePath, "utf-8")).toContain("- **Revision Count**: 1");
+
+    writeFileSync(statePath, stateBefore);
+    const retried = run(STATE, project, ["approve", "feasibility"], {
+      AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "0",
+    });
+    expect(retried.status).toBe(0);
+    expect(readFileSync(auditPath, "utf-8").match(/\*\*Transaction Id\*\*:/g)?.length).toBe(10);
+    expect(readFileSync(statePath, "utf-8")).toContain("- **Revision Count**: 1");
+  });
+
+  test("multiple valid windows with the same transaction identity fail closed", () => {
+    const project = seedRevisionProject();
+    const statePath = seededStateFile(project);
+    const auditPath = seededAuditShard(project);
+    const stateBefore = readFileSync(statePath, "utf-8");
+    expect(inProject(project, () => handleApprove(["feasibility"])).code).toBeNull();
+
+    const committedAudit = readFileSync(auditPath, "utf-8");
+    const duplicateBatch = committedAudit
+      .split("\n---\n")
+      .filter((block) => block.includes("**Transaction Id**:"))
+      .map((block) => `${block}\n---\n`)
+      .join("");
+    expect(duplicateBatch).not.toBe("");
+    appendFileSync(auditPath, duplicateBatch);
+    writeFileSync(statePath, stateBefore);
+
+    const refused = run(STATE, project, ["approve", "feasibility"], {
+      AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "0",
+    });
+    expect(refused.status).toBe(1);
+    expect(refused.stderr).toContain("a real human has not acted at this gate");
+    expect(readFileSync(auditPath, "utf-8").match(/\*\*Transaction Id\*\*:/g)?.length).toBe(10);
+    expect(readFileSync(statePath, "utf-8")).toBe(stateBefore);
   });
 
   test("a completed recovery batch cannot authorize a newer organic gate", () => {
@@ -368,14 +515,42 @@ describe("t247 recovery in-process coverage seams", () => {
     expect(readFileSync(auditPath, "utf-8").match(/\*\*Transaction Id\*\*:/g)?.length).toBe(5);
   });
 
-  test("a sibling Unit artifact write cannot recover the current per-Unit gate", () => {
+  test("an unreadable audit shard disables revision recovery without blocking organic approval", () => {
+    const project = seedRevisionProject();
+    const auditDir = join(seededRecordDir(project), "audit");
+    symlinkSync(join(auditDir, "missing-target"), join(auditDir, "unreadable.md"));
+
+    const approved = inProject(project, () => handleApprove(["feasibility"]));
+    expect(approved.code).toBeNull();
+    expect(readFileSync(seededStateFile(project), "utf-8")).toContain("- **Revision Count**: 0");
+    expect(readFileSync(seededAuditShard(project), "utf-8")).not.toContain("**Transaction Id**:");
+  });
+
+  test("a canonical sibling Unit artifact write recovers the stage-wide per-Unit gate", () => {
+    const project = seedPerUnitRevisionProject("unit-a");
+    const approved = inProject(project, () => handleApprove(["code-generation"]));
+    expect(approved.code).toBeNull();
+    expect(readFileSync(seededStateFile(project), "utf-8")).toContain("- **Revision Count**: 1");
+    expect(readFileSync(seededAuditShard(project), "utf-8").match(/\*\*Transaction Id\*\*:/g)?.length).toBe(5);
+  });
+
+  test("a non-canonical Unit artifact write cannot recover the stage-wide per-Unit gate", () => {
+    const project = seedPerUnitRevisionProject("unit-c");
+    const approved = inProject(project, () => handleApprove(["code-generation"]));
+    expect(approved.code).toBeNull();
+    expect(readFileSync(seededStateFile(project), "utf-8")).toContain("- **Revision Count**: 0");
+    expect(readFileSync(seededAuditShard(project), "utf-8")).not.toContain("**Transaction Id**:");
+  });
+
+  test("an unreadable Unit dependency artifact disables per-Unit recovery", () => {
     const project = createTestProject();
     projects.push(project);
     seedStateFile(project, join(FIXTURES_DIR, "state-jumped.md"));
     const dependencyDir = join(seededRecordDir(project), "inception", "units-generation");
     mkdirSync(dependencyDir, { recursive: true });
+    const dependencyPath = join(dependencyDir, "unit-of-work-dependency.md");
     writeFileSync(
-      join(dependencyDir, "unit-of-work-dependency.md"),
+      dependencyPath,
       "# Units\n\n```yaml\nunits:\n  - name: unit-a\n    depends_on: []\n  - name: unit-b\n    depends_on: [unit-a]\n```\n",
     );
     expect(run(STATE, project, ["gate-start", "code-generation"]).status).toBe(0);
@@ -391,15 +566,29 @@ describe("t247 recovery in-process coverage seams", () => {
 ## Artifact Updated
 **Timestamp**: 2999-01-01T00:00:01Z
 **Event**: ARTIFACT_UPDATED
-**File**: /workspace/amadeus/spaces/default/intents/example/construction/unit-a/code-generation/code-summary.md
+**File**: amadeus/spaces/default/intents/fixture-8000000000000001/construction/unit-b/code-generation/code-summary.md
 
 ---
 `,
     );
-    const approved = inProject(project, () => handleApprove(["code-generation"]));
-    expect(approved.code).toBeNull();
-    expect(readFileSync(seededStateFile(project), "utf-8")).toContain("- **Revision Count**: 0");
-    expect(readFileSync(seededAuditShard(project), "utf-8")).not.toContain("**Transaction Id**:");
+
+    const originalReadFileSync = nodeFs.readFileSync;
+    const readSpy = spyOn(nodeFs, "readFileSync").mockImplementation(
+      ((path, options) => {
+        if (String(path) === dependencyPath) {
+          throw Object.assign(new Error("injected dependency read failure"), { code: "EIO" });
+        }
+        return originalReadFileSync(path, options);
+      }) as typeof nodeFs.readFileSync,
+    );
+    try {
+      const approved = inProject(project, () => handleApprove(["code-generation"]));
+      expect(approved.code).toBeNull();
+      expect(readFileSync(seededStateFile(project), "utf-8")).toContain("- **Revision Count**: 0");
+      expect(readFileSync(seededAuditShard(project), "utf-8")).not.toContain("**Transaction Id**:");
+    } finally {
+      readSpy.mockRestore();
+    }
   });
 
   test.each([
@@ -456,6 +645,14 @@ describe("t247 recovery in-process coverage seams", () => {
           'fields: { ...common, "Transaction Id": "tampered", Recovered: "true" },',
         ),
     ],
+    [
+      "feedback field",
+      (source: string) =>
+        source.replace(
+          "Feedback: RECOVERED_REVISION_FEEDBACK,",
+          'Feedback: "tampered",',
+        ),
+    ],
   ])("a malformed recovery batch (%s) is rejected before audit or state commit", (_name, mutate) => {
     const project = seedRevisionProject();
     const statePath = seededStateFile(project);
@@ -479,17 +676,49 @@ describe("t247 recovery in-process coverage seams", () => {
     expect(readFileSync(statePath, "utf-8")).toBe(stateBefore);
   });
 
+  test("a recovery batch derived from malformed stage metadata is rejected in-process", () => {
+    const project = seedRevisionProject();
+    const statePath = seededStateFile(project);
+    const auditPath = seededAuditShard(project);
+    const stateBefore = readFileSync(statePath, "utf-8");
+    const auditBefore = readFileSync(auditPath, "utf-8");
+    const sandbox = mkdtempSync(join(tmpdir(), "amadeus-recovery-stage-graph-"));
+    tempDirs.push(sandbox);
+    const graphPath = join(sandbox, "stage-graph.json");
+    const graph = JSON.parse(readFileSync(STAGE_GRAPH, "utf-8")) as Array<Record<string, unknown>>;
+    const feasibility = graph.find((stage) => stage.slug === "feasibility");
+    expect(feasibility).toBeDefined();
+    feasibility!.name = "Feasibility & Constraints\nmalformed";
+    writeFileSync(graphPath, `${JSON.stringify(graph, null, 2)}\n`);
+
+    const result = inProject(project, () => {
+      process.env.AMADEUS_STAGE_GRAPH = graphPath;
+      _resetStageGraphForTests();
+      try {
+        handleApprove(["feasibility"]);
+      } finally {
+        _resetStageGraphForTests();
+      }
+    });
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("Recovery batch validation failed: completion details");
+    expect(readFileSync(auditPath, "utf-8")).toBe(auditBefore);
+    expect(readFileSync(statePath, "utf-8")).toBe(stateBefore);
+  });
+
   test("authored approve reports an atomic audit write failure", () => {
     const project = seedRevisionProject();
-    const auditDir = join(seededRecordDir(project), "audit");
-    chmodSync(auditDir, 0o555);
-    try {
-      const failed = inProject(project, () => handleApprove(["feasibility"]));
-      expect(failed.code).toBe(1);
-      expect(failed.stderr).toContain("Audit emission failed");
-    } finally {
-      chmodSync(auditDir, 0o755);
-    }
+    const statePath = seededStateFile(project);
+    const auditPath = seededAuditShard(project);
+    const stateBefore = readFileSync(statePath, "utf-8");
+    const auditBefore = readFileSync(auditPath, "utf-8");
+    mkdirSync(`${auditPath}.tmp`);
+
+    const failed = run(STATE, project, ["approve", "feasibility"]);
+    expect(failed.status).toBe(1);
+    expect(failed.stderr).toContain("Audit emission failed");
+    expect(readFileSync(auditPath, "utf-8")).toBe(auditBefore);
+    expect(readFileSync(statePath, "utf-8")).toBe(stateBefore);
   });
 
   test.each([

@@ -3,6 +3,7 @@
 
 import { describe, expect, test } from "bun:test";
 import {
+  parseBoltDag,
   recoverBoltDag,
   recoverGateRevision,
   type RevisionEvidenceEvent,
@@ -65,6 +66,42 @@ describe("t247 recoverBoltDag", () => {
       reason: "missing-block",
     });
   });
+
+  test("duplicate dependency edges are malformed canonical input", () => {
+    const duplicateEdge = `# Unit dependencies
+
+\`\`\`yaml
+units:
+  - name: api
+    depends_on: [db, db]
+  - name: db
+    depends_on: []
+\`\`\`
+`;
+    expect(parseBoltDag(duplicateEdge)).toEqual({
+      ok: false,
+      reason: "malformed",
+      detail: 'unit "api" has duplicate dependency "db"',
+    });
+  });
+
+  test("cyclic canonical dependencies fail closed", () => {
+    const cyclic = `# Unit dependencies
+
+\`\`\`yaml
+units:
+  - name: api
+    depends_on: [db]
+  - name: db
+    depends_on: [api]
+\`\`\`
+`;
+    expect(parseBoltDag(cyclic)).toEqual({
+      ok: false,
+      reason: "cyclic",
+      detail: "dependency cycle detected",
+    });
+  });
 });
 
 function event(
@@ -125,23 +162,78 @@ describe("t247 recoverGateRevision", () => {
     expect(recoverGateRevision(good.filter((e) => e.bufferPosition !== 2), { stage: "code-generation", produces: PRODUCES, revisionCount: 0 }).kind).toBe("not-needed");
   });
 
-  test("a sibling Unit write cannot satisfy the current Unit revision window", () => {
+  test("stage-wide per-Unit gates accept every declared Unit and reject undeclared Units", () => {
+    const unitA = "/record/construction/unit-a/code-generation/code-summary.md";
+    const unitB = "/record/construction/unit-b/code-generation/code-summary.md";
     const events = [
       event("ARTIFACT_CREATED", "2026-01-01T00:00:00Z", 1, {
-        file: "/record/construction/unit-a/code-generation/code-summary.md",
+        file: unitA,
       }),
       event("STAGE_AWAITING_APPROVAL", "2026-01-01T00:00:01Z", 2),
       event("HUMAN_TURN", "2026-01-01T00:00:02Z", 3, { stage: null }),
       event("ARTIFACT_UPDATED", "2026-01-01T00:00:03Z", 4, {
-        file: "/record/construction/unit-b/code-generation/code-summary.md",
+        file: unitB,
       }),
     ];
     expect(
       recoverGateRevision(events, {
         stage: "code-generation",
-        produces: ["/record/construction/unit-a/code-generation/code-summary.md"],
+        produces: [unitA, unitB],
         revisionCount: 0,
       }),
+    ).toMatchObject({ kind: "recovered", nextRevisionCount: 1 });
+    expect(
+      recoverGateRevision(events, {
+        stage: "code-generation",
+        produces: [unitA],
+        revisionCount: 0,
+      }),
+    ).toEqual({ kind: "not-needed", reason: "revision-write-missing" });
+  });
+
+  test("Windows absolute paths match their forward-slash audit projection", () => {
+    const windowsPath = "C:\\workspace\\record\\construction\\unit-a\\code-generation\\code-summary.md";
+    const events = [
+      event("STAGE_AWAITING_APPROVAL", "2026-01-01T00:00:01Z", 1),
+      event("HUMAN_TURN", "2026-01-01T00:00:02Z", 2, { stage: null }),
+      event("ARTIFACT_UPDATED", "2026-01-01T00:00:03Z", 3, {
+        file: windowsPath.replace(/\\/g, "/"),
+      }),
+    ];
+    expect(
+      recoverGateRevision(events, {
+        stage: "code-generation",
+        produces: [windowsPath],
+        revisionCount: 0,
+      }),
+    ).toMatchObject({ kind: "recovered", nextRevisionCount: 1 });
+  });
+
+  test("record-relative suffixes survive a worktree path change", () => {
+    const suffix = "amadeus/spaces/default/intents/example-12345678/construction/unit-a/code-generation/code-summary.md";
+    const events = [
+      event("STAGE_AWAITING_APPROVAL", "2026-01-01T00:00:01Z", 1),
+      event("HUMAN_TURN", "2026-01-01T00:00:02Z", 2, { stage: null }),
+      event("ARTIFACT_UPDATED", "2026-01-01T00:00:03Z", 3, {
+        file: `/old/worktree/${suffix}`,
+      }),
+    ];
+    expect(
+      recoverGateRevision(events, {
+        stage: "code-generation",
+        produces: [`/new/worktree/${suffix}`],
+        revisionCount: 0,
+      }),
+    ).toMatchObject({ kind: "recovered", nextRevisionCount: 1 });
+    expect(
+      recoverGateRevision(
+        events.map((item) => item.file === null ? item : { ...item, file: `/old/worktree/prefix${suffix}` }),
+        {
+          stage: "code-generation",
+          produces: [`/new/worktree/${suffix}`],
+          revisionCount: 0,
+        },
+      ),
     ).toEqual({ kind: "not-needed", reason: "revision-write-missing" });
   });
 });

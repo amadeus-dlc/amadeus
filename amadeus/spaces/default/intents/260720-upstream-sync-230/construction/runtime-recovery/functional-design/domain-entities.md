@@ -59,6 +59,11 @@ type RevisionEvidenceEvent = {
   recovered: boolean;
 };
 
+type ShardedRevisionEvidenceEvent = {
+  sourceShard: string;
+  event: RevisionEvidenceEvent;
+};
+
 type GateRevisionEvidence = {
   anchor: { kind: "gate-open" | "stage-start"; index: number };
   firstHumanIndex: number;
@@ -68,7 +73,7 @@ type GateRevisionEvidence = {
 };
 ```
 
-eventは全shardから抽出した後に`timestamp, bufferPosition`でtotal order化する。timestamp同値時のpositionは決定的tie-breakであり、clone filenameをchronologyに使わない。
+`sourceShard`はcross-shard Timestamp collisionの検出だけに使い、chronologyのtie-breakには使わない。異なるshardに同じTimestampがあればevidence setをambiguousとして棄却する。衝突がない入力だけをTimestamp順、同一shard・同一Timestampは`bufferPosition`順でtotal order化するため、clone filenameやshard列挙順は結果へ影響しない。
 
 ## Recovery result and transaction plan
 

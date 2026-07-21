@@ -20,7 +20,7 @@
 
 | ID | ルール | 失敗時 |
 |---|---|---|
-| BR-U02-10 | shard filename順でなくTimestamp+buffer positionで全関連eventをinterleaveする。 | chronology test失敗 |
+| BR-U02-10 | cross-shardでTimestampが衝突したevidence setはchronology不明としてfail-closedにする。衝突がない場合だけTimestamp順、同一shard・同一Timestampはshard-local buffer position順で全関連eventをinterleaveし、filenameやshard indexをtie-breakにしない。 | 推測順序によるbackfill禁止 |
 | BR-U02-11 | anchorは最後のorganic gate-open、またはより新しい/唯一のstage-start。Recovered gate-openは除外する。 | false negative防止 |
 | BR-U02-12 | anchor後のrecorded rejectが1件でもあればbackfillしない。 | 二重reject禁止 |
 | BR-U02-13 | 最初のpost-anchor HUMAN_TURN後のdeclared produces writeだけをrevision証拠にする。 | reviewer append誤認禁止 |
@@ -69,7 +69,7 @@
 
 - DAG recoveryはpure parserの既存fixtureを再利用し、consumerごとにUnit集合の同一性をassertする。
 - gate backstopはaudit blockの件数だけでなく、chronological order、transaction identity、Recovered field、Revision Count、最終checkbox、state byte差を検査する。
-- multi-shard fixtureはlexical filename順とtimestamp順を意図的に反転し、timestamp sortのload-bearing性を固定する。
+- multi-shard fixtureはlexical filename順とtimestamp順を意図的に反転し、timestamp sortのload-bearing性を固定する。cross-shard同一Timestamp fixtureはfilename順を両方向に入れ替えてもbackfillしないことを固定する。
 - 5 blockの各生成・検証境界とatomic commit失敗ではaudit/stateとも呼出前bytesとの差分0を検査する。
 - batch成功後のstate write failure injectionでは、second runが完全batchを再利用してaudit追加0のまま最終stateへ収束することを検査する。
 - second runはheal result決定性と、成功済みbackfillのno-opも検査する。

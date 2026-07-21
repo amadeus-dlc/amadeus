@@ -50,7 +50,7 @@ U04 の実装と Formal Iteration 1 の是正、targeted / 全体検証、生成
 | normalized exact patch gate | PASS、174 measured / 174 covered / allowlist 0 / uncovered 0。Bun LCOV が実行済み catch body を物理行へ対応づけるよう、janitor の catch header/body を同一行へ coalesce した。 |
 | directive sensors | `linter` 6/6、`type-check` 6/6、合計12/12 PASS。 |
 
-既知 M16 は本 Unit 外の共有 tracked artifact に残る `aidlc-` prefix baselineであり、leader が既知例外として受理済みである。t199、allowlist、self-exclusion、別 Unit の差分には触れていない。
+既知 M16 は本 Unit 外の共有 tracked artifact に残る旧 upstream prefix baselineであり、leader が既知例外として受理済みである。t199、allowlist、self-exclusion、別 Unit の差分には触れていない。
 
 ## Sensor fire IDs
 

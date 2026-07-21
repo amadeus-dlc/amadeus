@@ -10,7 +10,7 @@ valid sourceではcanonical batchesを一度生成し、cache欠落・空・malf
 
 ## Revision evidence path
 
-`recoverGateRevision(events, stageContract)`は全audit shardから関連6 eventだけを抽出し、Timestamp昇順、同値は元buffer position順で一回sortする。対象stage/unit、declared produces path suffixへfilterし、memory、questions、reviewer append、他Unit、non-producesを証拠へ入れない。
+adapterは全audit shardから関連6 eventだけを抽出し、cross-shard Timestamp collisionを一回検査する。衝突時はfilenameやshard indexで推測順序を作らず空evidenceへfail-closedする。衝突がない場合だけ`recoverGateRevision(events, stageContract)`へ渡し、Timestamp昇順、同一shard・同一Timestampは元buffer position順で一回sortする。対象stage/unit、declared produces path suffixへfilterし、memory、questions、reviewer append、他Unit、non-producesを証拠へ入れない。
 
 organic gate-openまたはstage-start fallbackをanchor、最初のhuman turnをpivotとし、pivot後のdeclared-produces writeとreject absenceをclosed predicateで評価する。filename順、無制限scan retry、wall-clock thresholdは使わない。
 
@@ -22,7 +22,7 @@ predicate true時はRecovered 3 blockとnormal approval 2 block、最終state bu
 
 ## Verification・resource境界
 
-cache/source matrix、large/multi-shard chronology、timestamp tie、5 block各failure boundary、state-write failure second runをfixture化する。daemon、network、database、queue、別cache/storeを追加しない。
+cache/source matrix、large/multi-shard chronology、同一shard timestamp tie、cross-shard timestamp collisionのfilename順両方向fail-closed、5 block各failure boundary、state-write failure second runをfixture化する。daemon、network、database、queue、別cache/storeを追加しない。
 
 ## トレーサビリティ
 

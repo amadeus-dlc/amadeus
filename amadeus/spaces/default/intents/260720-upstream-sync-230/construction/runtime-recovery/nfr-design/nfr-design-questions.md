@@ -9,7 +9,7 @@
 ## 質問不要の根拠
 
 - DAG recovery: `recoverBoltDag`はcanonical dependency artifact、runtime cache、none/ok/malformed closed result、3 consumer共通Unit集合、read-side mutation 0へ固定済みである。
-- Gate revision: `recoverGateRevision`は関連6 event、Timestamp+buffer position、organic anchor/human pivot/declared-produces write/reject absenceのclosed predicateだけを使う。
+- Gate revision: adapterはcross-shard Timestamp collisionをfail-closedにし、`recoverGateRevision`は衝突がない関連6 event、Timestamp+shard-local buffer position、organic anchor/human pivot/declared-produces write/reject absenceのclosed predicateだけを使う。
 - Atomicity: Recovered 3 + normal 2の5 blockをmemory生成・全数検証し、既存lock内で単一atomic commit後に最終stateを1回writeする。failure時双方bytes不変、commit後state failureは完全batch再利用で収束する。
 - Scalability: 3 consumer、6 harness、4 self-installの既決closed inventoryをgenerator/fixtureで全数検査する。
 - Logical components: DAG source parser/resolver、runtime consumer adapters、audit evidence normalizer、revision predicate、batch builder/validator、既存audit-lock commit/state writer、package/test境界へ閉じる。

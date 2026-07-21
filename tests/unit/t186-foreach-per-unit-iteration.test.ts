@@ -122,6 +122,11 @@ ${stanceLine}
 - **Depth**: Standard
 - **Test Strategy**: Standard
 
+## Execution Plan Summary
+- **Total Stages**: 6
+- **Completed**: 0
+- **In Progress**: ${current}
+
 ## Stage Progress
 
 ### CONSTRUCTION PHASE
@@ -139,6 +144,10 @@ ${stanceLine}
 - **Lifecycle Phase**: CONSTRUCTION
 - **Current Stage**: ${current}
 - **Status**: Running
+- **Last Updated**: 2026-07-20T00:00:00Z
+
+## Session Resume Point
+- **Last Completed Stage**: application-design
 `;
 }
 

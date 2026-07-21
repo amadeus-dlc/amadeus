@@ -7,7 +7,7 @@
 | ID | Dimension | Target | Evidence |
 |---|---|---|---|
 | SCALE-U02-01 | Unit consumers | per-unit loop、coverage guard、swarmの3 consumerが同じresolved batchesを使う。 | Unit集合差分0。 |
-| SCALE-U02-02 | audit chronology | 全shardの関連eventをTimestamp+buffer positionで単一順序へ正規化する。 | filename順逆転fixtureでも同一predicate。 |
+| SCALE-U02-02 | audit chronology | cross-shard Timestamp collisionはfail-closedにし、衝突がない関連eventだけをTimestamp+shard-local buffer positionで単一順序へ正規化する。 | filename順逆転fixtureでも同一predicate、collision fixtureは常にbackfillなし。 |
 | SCALE-U02-03 | package projection | authored sourceから現行6 harnessへ決定的に投影する。 | source/projection drift 0。 |
 | SCALE-U02-04 | self-install | 現行4面closed listを変更しない。 | promote-self checkで対象不変。 |
 
@@ -22,7 +22,7 @@
 
 ## Validation
 
-large/multi-shard fixtureでもdeterministic ordering、same Unit set、second-run no-opを検証する。cache mismatch、cycle、unknown edge、timestamp tieを対照fixtureで固定する。
+large/multi-shard fixtureでもdeterministic ordering、same Unit set、second-run no-opを検証する。cache mismatch、cycle、unknown edge、同一shard timestamp tie、cross-shard timestamp collisionのfail-closedを対照fixtureで固定する。
 
 ## トレーサビリティ
 
