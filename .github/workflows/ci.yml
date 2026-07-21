@@ -122,14 +122,12 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-  coverage:
-    name: Coverage Report
-    # Run alongside check after change detection; CI Success joins both jobs.
+  coverage-head:
+    name: Coverage Report (head)
     needs: changes
     if: ${{ needs.changes.outputs.ci == 'true' }}
     runs-on: ubuntu-latest
-    # Head suite + (cache-miss) merge-base suite for the relative gate.
-    timeout-minutes: 40
+    timeout-minutes: 20
     permissions:
       contents: read
       id-token: write
@@ -171,6 +169,38 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: amadeus-coverage-report
+          path: |
+            coverage/lcov.info
+            coverage/html
+            coverage/coverage-totals.json
+            coverage/tests-totals.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  coverage-base:
+    name: Coverage Report (base)
+    needs: changes
+    if: ${{ needs.changes.outputs.ci == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up bun
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
       - name: Resolve merge-base for the relative coverage gate
         if: ${{ github.event_name == 'pull_request' }}
         id: merge-base
@@ -187,19 +217,12 @@ jobs:
           path: /tmp/base-coverage-totals.json
           key: relative-coverage-base-${{ steps.merge-base.outputs.sha }}
 
-      - name: Measure base coverage (merge-base worktree)
+      - name: Measure base coverage
         if: ${{ github.event_name == 'pull_request' && steps.base-cache.outputs.cache-hit != 'true' }}
         run: |
           set -euo pipefail
-          BASE_WT=/tmp/relative-coverage-base
-          git worktree add --detach "$BASE_WT" "${{ steps.merge-base.outputs.sha }}"
-          cd "$BASE_WT"
+          git checkout --detach "${{ steps.merge-base.outputs.sha }}"
           bun install --frozen-lockfile
-          # The base suite VERDICT (wall-clock drift and other post-hoc gates)
-          # must not poison the relative gate (E-CV2 D4). Capture the exit
-          # code, then require the coverage artifacts to be complete before
-          # they may be compared (E-CV2 e1 reservation: never compare against
-          # a partial base measurement — fail closed).
           status=0
           bun run coverage:ci -- -P 4 || status=$?
           if [[ ! -s coverage/lcov.info || ! -s coverage/coverage-totals.json ]]; then
@@ -211,13 +234,61 @@ jobs:
           fi
           cp coverage/coverage-totals.json /tmp/base-coverage-totals.json
 
+      - name: Upload base coverage totals
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: amadeus-base-coverage-totals
+          path: /tmp/base-coverage-totals.json
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Base coverage not required
+        if: ${{ github.event_name != 'pull_request' }}
+        run: echo "Base coverage is only required for pull requests"
+
+  coverage:
+    name: Coverage Report
+    needs:
+      - changes
+      - coverage-head
+      - coverage-base
+    if: ${{ always() && needs.changes.outputs.ci == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require coverage jobs
+        run: |
+          test "${{ needs.coverage-head.result }}" = success
+          test "${{ needs.coverage-base.result }}" = success
+
+      - name: Checkout
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/checkout@v4
+
+      - name: Set up bun
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Download head coverage totals
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: amadeus-coverage-report
+          path: coverage
+
+      - name: Download base coverage totals
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: amadeus-base-coverage-totals
+          path: /tmp
+
       - name: Relative coverage gate (head vs merge-base)
         if: ${{ github.event_name == 'pull_request' }}
         env:
-          # Reuses the project gate comparator (BigInt, -0.02pp) with the
-          # baseline seam pointed at the live merge-base measurement (E-CV2
-          # D1/D2). The gate itself validates the base totals (parse-don't-
-          # validate: missing/malformed/empty all fail closed).
           AMADEUS_COVERAGE_PROJECT_BASELINE: /tmp/base-coverage-totals.json
         run: |
           set -euo pipefail
@@ -229,19 +300,6 @@ jobs:
             cat /tmp/relative-gate-summary.txt
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload coverage artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: amadeus-coverage-report
-          path: |
-            coverage/lcov.info
-            coverage/html
-            coverage/coverage-totals.json
-            coverage/tests-totals.json
-          if-no-files-found: warn
-          retention-days: 14
 
 
   # Main-only and intentionally outside ci-success: metrics publication must
