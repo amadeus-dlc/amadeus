@@ -610,7 +610,10 @@ has_history() {
 }
 
 claude_member_cmd() {
-  local m="$1" wt="${2:-$BASE/$1}" args="" init_prompt="/agmsg mode monitor"
+  local m="$1" wt="${2:-$BASE/$1}" args="" init_prompt="/agmsg mode monitor" interaction_args=""
+  case "$m" in
+  engineer-*) interaction_args="--disallowedTools AskUserQuestion" ;;
+  esac
   if [ "$CONTINUE" = "1" ]; then
     args="--continue"
   fi
@@ -638,8 +641,8 @@ claude_member_cmd() {
     log_env="TEAM_MSG_LOG_DIR=$(printf '%q' "$RUN_RECORD") "
   fi
   # keep the pane open after claude exits so crashes stay inspectable
-  printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team %sTEAM_MSG=%q CLAUDE_IDENTITY=%q %q %s %q; exec $SHELL -l' \
-    "$wt" "$log_env" "$MSG_BACKEND" "$CLAUDE_IDENTITY" "$REPO/scripts/run-claude.sh" "$args" "$init_prompt"
+  printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team %sTEAM_MSG=%q CLAUDE_IDENTITY=%q %q %s %s %q; exec $SHELL -l' \
+    "$wt" "$log_env" "$MSG_BACKEND" "$CLAUDE_IDENTITY" "$REPO/scripts/run-claude.sh" "$args" "$interaction_args" "$init_prompt"
 }
 
 member_role() {
@@ -718,9 +721,12 @@ EOF
 }
 
 codex_member_cmd() {
-  local m="$1" wt="${2:-$BASE/$1}" role prompt command="codex" resume_arg="" resume_uuid="" codex_home hooks_helper
+  local m="$1" wt="${2:-$BASE/$1}" role prompt command="codex" resume_arg="" resume_uuid="" codex_home hooks_helper interaction_args=""
   role="$(member_role "$m")"
   prompt="\$agmsg actas $role"
+  case "$m" in
+  engineer-*) interaction_args="--disable default_mode_request_user_input" ;;
+  esac
   codex_home="$HOME/.codex-$CODEX_IDENTITY"
   hooks_helper="$wt/.codex/tools/amadeus-codex-hooks.ts"
 
@@ -741,8 +747,8 @@ codex_member_cmd() {
     if [ -n "${RUN_RECORD:-}" ]; then
       log_env="TEAM_MSG_LOG_DIR=$(printf '%q' "$RUN_RECORD") "
     fi
-    printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team %sTEAM_MSG=%q CODEX_IDENTITY=%q %q; exec $SHELL -l' \
-      "$wt" "$log_env" "$MSG_BACKEND" "$CODEX_IDENTITY" "$REPO/scripts/run-codex.sh"
+    printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team %sTEAM_MSG=%q CODEX_IDENTITY=%q %q %s; exec $SHELL -l' \
+      "$wt" "$log_env" "$MSG_BACKEND" "$CODEX_IDENTITY" "$REPO/scripts/run-codex.sh" "$interaction_args"
     return 0
   fi
 
@@ -780,8 +786,8 @@ codex_member_cmd() {
   # AGMSG_CODEX_ROLE disambiguates old role registrations that may coexist in
   # a reused worktree. TEAM_MSG is propagated so the member's team-msg.sh uses
   # the same backend. Keep the pane open after Codex exits for inspection.
-  printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team TEAM_MSG=%q CODEX_IDENTITY=%q CODEX_HOME=%q AGMSG_CODEX_ROLE=%q %q --project %q --codex-command %q -- %s %q; exec $SHELL -l' \
-    "$wt" "$MSG_BACKEND" "$CODEX_IDENTITY" "$codex_home" "$role" "$CODEX_MONITOR" "$wt" "$command" "$resume_arg" "$prompt"
+  printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team TEAM_MSG=%q CODEX_IDENTITY=%q CODEX_HOME=%q AGMSG_CODEX_ROLE=%q %q --project %q --codex-command %q -- %s %s %q; exec $SHELL -l' \
+    "$wt" "$MSG_BACKEND" "$CODEX_IDENTITY" "$codex_home" "$role" "$CODEX_MONITOR" "$wt" "$command" "$interaction_args" "$resume_arg" "$prompt"
 }
 
 member_cmd() {
