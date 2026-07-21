@@ -431,7 +431,8 @@ bash tests/run-tests.sh       # POSIX compatibility wrapper
                 # driver traces to tests/logs/
 --filter PAT    # Only run tests whose filename matches extended regex PAT
 --parallel N    # Run up to N test files concurrently within a tier (alias: -P N).
-                # Default: 1 (serial). Smoke and unit tiers are always serial.
+                # Default: min(available CPU cores, 4). Smoke and unit tiers
+                # are always serial.
 ```
 
 Live SDK and TUI harness drivers default to project-only Claude setting sources.
@@ -448,7 +449,7 @@ explicitly to keep those files on their in-test SKIP path.
 
 ## Parallel Execution
 
-`--parallel N` (or `-P N`) runs up to N test files concurrently within a tier. Default is serial (`1`).
+`--parallel N` (or `-P N`) runs up to N test files concurrently within a tier. By default the runner uses the smaller of the available CPU count and `4`; pass `-P 1` for a serial debugging run.
 
 **When it helps.** Integration and e2e levels each spend most of their wall-clock on `claude -p` subprocess startup and LLM turns. These tests are already filesystem-isolated — `setup_integration_project` scaffolds a fresh `$PROJ` per test — so they can run side-by-side without interfering.
 

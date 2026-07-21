@@ -1,5 +1,5 @@
 // size: large
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, setDefaultTimeout, test } from "bun:test";
 import {
   chmodSync,
   copyFileSync,
@@ -27,6 +27,11 @@ const CODEX_HOOKS_HELPER_FILES = [
   "amadeus-codex-hooks-migration.ts",
 ];
 const tempDirs: string[] = [];
+
+// These process- and Git-heavy tests share the runner with other files under
+// -P N. Keep functional assertions strict without treating CPU contention as a
+// product failure.
+setDefaultTimeout(15_000);
 
 afterEach(() => {
   for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });

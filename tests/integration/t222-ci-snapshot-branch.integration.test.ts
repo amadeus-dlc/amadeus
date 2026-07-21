@@ -19,6 +19,7 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(changesJob).toContain("packages/framework/*");
     expect(checkJob).toContain("needs: changes");
     expect(checkJob).toContain(`if: \${{ needs.changes.outputs.ci == 'true' }}`);
+    expect(checkJob).toContain("bun run test:ci -- -P 4");
   });
 
   test("repository workflow change detector has valid Bash syntax", () => {
@@ -52,22 +53,26 @@ describe("t222 CI snapshot publication boundary", () => {
 
   test("repository workflow gates coverage (project + patch) and snapshots on CI-relevant changes", () => {
     const yaml = readFileSync(join(import.meta.dir, "../../.github/workflows/ci.yml"), "utf8");
+    const headJob = yaml.split("  coverage-head:")[1]?.split("\n  coverage-base:")[0] ?? "";
+    const baseJob = yaml.split("  coverage-base:")[1]?.split("\n  coverage:")[0] ?? "";
     const coverageJob = yaml.split("  coverage:")[1]?.split("\n  metrics-snapshot:")[0] ?? "";
     const snapshotJob = yaml.split("  metrics-snapshot:")[1]?.split("\n  ci-success:")[0] ?? "";
 
-    expect(coverageJob).toContain("- changes\n      - check");
-    expect(coverageJob).toContain(`if: \${{ needs.changes.outputs.ci == 'true' }}`);
-    expect(coverageJob).toContain("bun tests/coverage-project-gate.ts --check");
-    expect(coverageJob).toContain("bun tests/coverage-patch-gate.ts --check");
-    expect(coverageJob).toContain("fetch-depth: 0");
-    expect(coverageJob).toContain("AMADEUS_PATCH_BASE_REF: origin/${{ github.event.pull_request.base.ref }}");
+    expect(headJob).toContain("needs: changes");
+    expect(baseJob).toContain("needs: changes");
+    expect(headJob).toContain("bun tests/coverage-project-gate.ts --check");
+    expect(headJob).toContain("bun tests/coverage-patch-gate.ts --check");
+    expect(headJob).toContain("bun run coverage:ci -- -P 4");
+    expect(headJob).toContain("fetch-depth: 0");
+    expect(headJob).toContain("AMADEUS_PATCH_BASE_REF: origin/${{ github.event.pull_request.base.ref }}");
     // relative gate (E-CV2): live merge-base measurement compared through the
     // project-gate baseline seam, verdict-independent base run, cache keyed by
     // merge-base sha, artifact completeness verified before comparison
     expect(coverageJob).toContain("Relative coverage gate (head vs merge-base)");
     expect(coverageJob).toContain("AMADEUS_COVERAGE_PROJECT_BASELINE: /tmp/base-coverage-totals.json");
-    expect(coverageJob).toContain("key: relative-coverage-base-${{ steps.merge-base.outputs.sha }}");
-    expect(coverageJob).toContain("base coverage artifacts incomplete");
+    expect(baseJob).toContain("key: relative-coverage-base-${{ steps.merge-base.outputs.sha }}");
+    expect(baseJob).toContain("base coverage artifacts incomplete");
+    expect(coverageJob).toContain("- coverage-head\n      - coverage-base");
     // codecov is fully removed — no upload step, no waiting job (#1017 migration)
     expect(yaml).not.toContain("codecov");
     expect(yaml).not.toContain("Codecov");

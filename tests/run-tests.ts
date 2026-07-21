@@ -19,7 +19,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { homedir, tmpdir } from "node:os";
+import { availableParallelism, homedir, tmpdir } from "node:os";
 import { basename, delimiter, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildMeta, renderMeta, type MetaCounts } from "./lib/bun-junit-to-meta.ts";
@@ -42,6 +42,7 @@ import {
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(SCRIPT_DIR, "..");
 const BUN = process.execPath;
+const DEFAULT_PARALLEL = Math.min(availableParallelism(), 4);
 
 function coverageSourcePathContext(): CoverageSourcePathContext {
   const tempRoots = new Set<string>();
@@ -126,7 +127,8 @@ OUTPUT MODIFIERS (combinable with any tier/profile):
                   driver traces to tests/logs/
   --filter PAT    Only run tests whose filename matches extended regex PAT
   --parallel N    Run up to N test files concurrently within a tier (alias: -P N).
-                  Default: 1 (serial). Smoke and unit tiers always run serially.
+                  Default: min(available CPU cores, 4). Smoke and unit tiers
+                  always run serially.
                   Recommended range: 1-8. See docs/reference/09-testing.md.
 
   -h, --help      Show this help and exit
@@ -160,7 +162,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     verbose: false,
     debug: false,
     filter: "",
-    parallel: 1,
+    parallel: DEFAULT_PARALLEL,
     fullProfile: false,
   };
   let levelSelected = false;
