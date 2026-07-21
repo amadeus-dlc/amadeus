@@ -1,0 +1,50 @@
+import { afterAll, describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { canonicalIdentity } from "../../scripts/formal-verif/canonical.ts";
+import type { CellResult } from "../../scripts/formal-verif/contract.ts";
+import type { AuthorizedProcessRequest } from "../../scripts/formal-verif/execution-policy.ts";
+import { executeCell, runArmSuite, type CellEvidenceInput, type CellNormalizer, type EvidenceStorePort, type MonotonicClock, type ProcessPort, type RawProcessOutcome } from "../../scripts/formal-verif/execution-evidence.ts";
+
+const snapshotRoot = mkdtempSync(join(tmpdir(), "fv-runner-snapshot-"));
+mkdirSync(join(snapshotRoot, "bin")); writeFileSync(join(snapshotRoot, "bin/tool"), "tool"); writeFileSync(join(snapshotRoot, "input"), "input"); chmodSync(join(snapshotRoot, "bin/tool"), 0o444); chmodSync(join(snapshotRoot, "input"), 0o444);
+const fileHash = (value: string) => createHash("sha256").update(value).digest("hex");
+const snapshotFiles = [{ path: "bin/tool", sha256: fileHash("tool") }, { path: "input", sha256: fileHash("input") }];
+const snapshotIdentity = canonicalIdentity({ executableVersion: "1", files: snapshotFiles }, "amadeus.formal-verif.execution-snapshot.v1").sha256;
+afterAll(() => rmSync(snapshotRoot, { recursive: true, force: true }));
+const request = (subject = "HEALTHY_BASELINE"): AuthorizedProcessRequest => { const value = { revisionIdentity: "9".repeat(64), argv: ["bin/tool"], cwd: ".", environment: {}, inputPaths: ["input"], outputPath: "out", arm: "tla" as const, subject, armSha: "a".repeat(64), baselineSha: "b".repeat(64), inputSetHash: "c".repeat(64), snapshotRoot, snapshotIdentity, executableVersion: "1", environmentKeys: [] as string[], snapshotFiles }; return { ...value, authorizationIdentity: canonicalIdentity(value, "amadeus.formal-verif.authorized-process.v1").sha256 }; };
+const outcome = (override: Partial<RawProcessOutcome> = {}): RawProcessOutcome => ({ exitCode: 0, signal: null, stdout: new Uint8Array([1]), stderr: new Uint8Array([2]), timedOut: false, completedExploration: true, toolVersions: { tool: "1" }, ...override });
+const cell = (subject = "HEALTHY_BASELINE", verdict: CellResult["verdict"] = "NOT_DETECTED"): CellResult => ({ schemaVersion: 1, arm: "tla", fixtureId: subject, baselineSha: "b".repeat(64), armSha: "a".repeat(64), verdict, exitCode: 0, toolVersions: { tool: "1" }, seedOrBound: { bound: 1 }, startedAt: "2026-07-20T00:00:00Z", finishedAt: "2026-07-20T00:00:01Z", counterexampleId: null, evidencePaths: [] });
+
+function harness(options: { outcome?: RawProcessOutcome; normalizeError?: boolean; storeError?: boolean; throwProcess?: boolean; times?: number[] } = {}) {
+  const published: CellEvidenceInput[] = [];
+  const calls: string[] = [];
+  const timeouts: number[] = [];
+  let normalizeCalls = 0;
+  const times = [...(options.times ?? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])]; let last = 0;
+  const clock: MonotonicClock = { nowMs: () => { last = times.shift() ?? last; return last; }, utcNow: () => "2026-07-20T00:00:00Z" };
+  const process: ProcessPort = { execute: async (value, timeout) => { calls.push(value.subject); timeouts.push(timeout); if (options.throwProcess) throw new Error("spawn failed"); return options.outcome ?? outcome(); } };
+  const normalizer: CellNormalizer = { normalize: (_raw, value) => { normalizeCalls++; return options.normalizeError ? { ok: false, error: { kind: "NormalizationError", message: "bad schema" } } : { ok: true, value: cell(value.subject) }; } };
+  const store: EvidenceStorePort = { publishCell: async (value) => { published.push(value); return options.storeError ? { ok: false, error: { kind: "EvidencePublishError", message: "disk full" } } : { ok: true, value: { kind: "VerifiedExecutionReceipt", bundleId: value.key.subject.padEnd(64, "0").slice(0, 64), envelopeHash: "e".repeat(64), runnerHead: "r", storeHead: "s", runnerSequence: published.length - 1, storeSequence: published.length - 1 } }; } };
+  return { dependencies: { clock, process, normalizer, store }, published, calls, timeouts, normalizeCalls: () => normalizeCalls };
+}
+
+describe("formal verification execution runner", () => {
+  test("executes one authorized cell and publishes its raw evidence", async () => { const h = harness(); const result = await executeCell(request(), { arm: "tla", subject: "HEALTHY_BASELINE", sample: { kind: "MEASURED", runNo: 1 } }, 0, 100, h.dependencies); expect(result.ok).toBe(true); expect(h.calls).toEqual(["HEALTHY_BASELINE"]); expect(h.published[0]?.stdout).toEqual(new Uint8Array([1])); });
+  test("normalization failure is persisted as HARNESS_ERROR", async () => { const h = harness({ normalizeError: true }); const result = await executeCell(request(), { arm: "tla", subject: "HEALTHY_BASELINE", sample: { kind: "MEASURED", runNo: 1 } }, 0, 100, h.dependencies); expect(result.ok && result.result.verdict).toBe("HARNESS_ERROR"); });
+  test("timeout is persisted as HARNESS_ERROR", async () => { const h = harness({ outcome: outcome({ timedOut: true, completedExploration: false }) }); const result = await executeCell(request(), { arm: "tla", subject: "HEALTHY_BASELINE", sample: { kind: "MEASURED", runNo: 1 } }, 0, 100, h.dependencies); expect(result.ok && result.result.verdict).toBe("HARNESS_ERROR"); });
+  test("incomplete exploration is persisted as HARNESS_ERROR", async () => { const h = harness({ outcome: outcome({ completedExploration: false }) }); const result = await executeCell(request(), { arm: "tla", subject: "HEALTHY_BASELINE", sample: { kind: "MEASURED", runNo: 1 } }, 0, 100, h.dependencies); expect(result.ok && result.result.verdict).toBe("HARNESS_ERROR"); });
+  test("non-zero exit bypasses a permissive normalizer and is HARNESS_ERROR", async () => { const h = harness({ outcome: outcome({ exitCode: 2 }) }); const result = await executeCell(request(), { arm: "tla", subject: "HEALTHY_BASELINE", sample: { kind: "MEASURED", runNo: 1 } }, 0, 100, h.dependencies); expect(result.ok && result.result.verdict).toBe("HARNESS_ERROR"); expect(h.normalizeCalls()).toBe(0); });
+  test("signal termination bypasses the normalizer and is HARNESS_ERROR", async () => { const h = harness({ outcome: outcome({ exitCode: null, signal: "SIGKILL" }) }); const result = await executeCell(request(), { arm: "tla", subject: "HEALTHY_BASELINE", sample: { kind: "MEASURED", runNo: 1 } }, 0, 100, h.dependencies); expect(result.ok && result.result.verdict).toBe("HARNESS_ERROR"); expect(h.normalizeCalls()).toBe(0); });
+  test("spawn failure is persisted as HARNESS_ERROR evidence", async () => { const h = harness({ throwProcess: true }); const result = await executeCell(request(), { arm: "tla", subject: "HEALTHY_BASELINE", sample: { kind: "MEASURED", runNo: 1 } }, 0, 100, h.dependencies); expect(result.ok && result.result.verdict).toBe("HARNESS_ERROR"); });
+  test("store failure is not converted to a verdict", async () => { const h = harness({ storeError: true }); const result = await executeCell(request(), { arm: "tla", subject: "HEALTHY_BASELINE", sample: { kind: "MEASURED", runNo: 1 } }, 0, 100, h.dependencies); expect(!result.ok && result.error.kind).toBe("EvidencePublishError"); });
+  test("rejects an expired deadline before process execution", async () => { const h = harness({ times: [100] }); const result = await executeCell(request(), { arm: "tla", subject: "HEALTHY_BASELINE", sample: { kind: "MEASURED", runNo: 1 } }, 0, 100, h.dependencies); expect(result.ok).toBe(false); expect(h.calls).toEqual([]); });
+  test("rejects request and cell identity drift", async () => { const h = harness(); const result = await executeCell(request(), { arm: "tla", subject: "OTHER", sample: { kind: "MEASURED", runNo: 1 } }, 0, 100, h.dependencies); expect(result.ok).toBe(false); });
+  test("subtracts publish reserve from the process timeout", async () => { const h = harness({ times: [10, 10, 11, 12, 13] }); await executeCell(request(), { arm: "tla", subject: "HEALTHY_BASELINE", sample: { kind: "MEASURED", runNo: 1 } }, 0, 100, h.dependencies, 25); expect(h.timeouts).toEqual([65]); });
+  test("rechecks the authorized snapshot seal before spawn", async () => { const h = harness(); const altered = { ...request(), snapshotFiles: [{ path: "bin/tool", sha256: "f".repeat(64) }, ...request().snapshotFiles.slice(1)] }; const result = await executeCell(altered, { arm: "tla", subject: "HEALTHY_BASELINE", sample: { kind: "MEASURED", runNo: 1 } }, 0, 100, h.dependencies); expect(result.ok).toBe(false); expect(h.calls).toEqual([]); });
+  test("runs canonical subjects serially", async () => { const h = harness({ times: Array.from({ length: 40 }, (_, index) => index) }); const result = await runArmSuite({ arm: "tla", subjects: ["HEALTHY_BASELINE", "D1"], sample: { kind: "MEASURED", runNo: 1 }, suiteDeadlineMs: 100, publishReserveMs: 1, createRequest: request }, h.dependencies); expect(result.kind).toBe("CompleteSuite"); expect(h.calls).toEqual(["HEALTHY_BASELINE", "D1"]); });
+  test("stops before spawn when publish reserve is reached", async () => { const h = harness({ times: [99, 99] }); const result = await runArmSuite({ arm: "tla", subjects: ["HEALTHY_BASELINE", "D1"], sample: { kind: "MEASURED", runNo: 1 }, suiteDeadlineMs: 100, publishReserveMs: 1, createRequest: request }, h.dependencies); expect(result.kind).toBe("IncompleteSuite"); expect(h.calls).toEqual([]); });
+  test("continues after a persisted HARNESS_ERROR cell", async () => { const h = harness({ outcome: outcome({ timedOut: true, completedExploration: false }), times: Array.from({ length: 40 }, (_, index) => index) }); const result = await runArmSuite({ arm: "tla", subjects: ["HEALTHY_BASELINE", "D1"], sample: { kind: "MEASURED", runNo: 1 }, suiteDeadlineMs: 100, publishReserveMs: 1, createRequest: request }, h.dependencies); expect(result.kind).toBe("CompleteSuite"); expect(h.calls).toEqual(["HEALTHY_BASELINE", "D1"]); });
+});

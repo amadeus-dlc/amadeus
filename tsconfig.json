@@ -16,6 +16,6 @@
     "packages/framework/core/tools/*.ts",
     "packages/framework/harness/*/*.ts",
     "packages/setup/src/**/*.ts",
-    "scripts/*.ts"
+    "scripts/**/*.ts"
   ]
 }
