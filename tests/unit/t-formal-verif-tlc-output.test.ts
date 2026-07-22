@@ -2,10 +2,11 @@ import { describe, expect, test } from "bun:test";
 import {
   createFrozenTlaModelReceipt,
   generateFrozenTlaModel,
-  normalizeTlcExploration,
-  parseTlcOutput174,
 } from "../../scripts/formal-verif/tla-arm.ts";
-import { FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY } from "../../scripts/formal-verif/tlc-toolchain.ts";
+import {
+  FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY,
+  parseTlcOutput174,
+} from "../../scripts/formal-verif/tlc-toolchain.ts";
 
 const encoder = new TextEncoder();
 
@@ -137,6 +138,20 @@ describe("TLC 1.7.4 -tool closed output grammar", () => {
       ...context,
       verifiedArtifactDescriptorIdentity: "0".repeat(64),
     }).kind).toBe("HARNESS_ERROR");
+    for (const override of [
+      { expectedModuleName: "OtherModule" },
+      { expectedModulePath: "/workspace/OtherModule.tla" },
+      { expectedStandardModuleDirectory: "relative/stdlib" },
+    ]) {
+      expect(parseTlcOutput174({
+        chunks: [encoder.encode(successOutput)],
+        exitCode: 0,
+        signal: null,
+        timedOut: false,
+        ...context,
+        ...override,
+      }).kind).toBe("HARNESS_ERROR");
+    }
 
     const missingExpectedPair = successOutput
       .replace("Parsing file /workspace/FormalElection.tla\n", "")
@@ -459,61 +474,5 @@ describe("TLC 1.7.4 -tool closed output grammar", () => {
       modelReceipt: forgedReceipt,
     });
     expect(result.kind).toBe("HARNESS_ERROR");
-  });
-});
-
-describe("TLC exploration cell normalizer", () => {
-  const metadata = {
-    fixtureId: "OPAQUE_SUBJECT",
-    baselineSha: "b".repeat(64),
-    armSha: "a".repeat(64),
-    startedAt: "2026-07-21T00:00:00Z",
-    finishedAt: "2026-07-21T00:00:01Z",
-    evidencePaths: ["evidence/tlc-stdout.bin"],
-  };
-
-  test("normalizes a closed complete exploration to a U1 NOT_DETECTED cell", () => {
-    const result = normalizeTlcExploration({
-      exploration: parse(successOutput),
-      exitCode: 0,
-      ...metadata,
-    });
-    expect(result).toMatchObject({
-      ok: true,
-      value: {
-        schemaVersion: 1,
-        arm: "tla",
-        fixtureId: "OPAQUE_SUBJECT",
-        verdict: "NOT_DETECTED",
-        exitCode: 0,
-        counterexampleId: null,
-        toolVersions: { tlc: "1.7.4" },
-        seedOrBound: { workers: 1 },
-      },
-    });
-  });
-
-  test("normalizes only an exit-12 counterexample to a DETECTED cell", () => {
-    const exploration = parse(counterexampleOutput(), { exitCode: 12 });
-    const normalized = normalizeTlcExploration({ exploration, exitCode: 12, ...metadata });
-    expect(normalized).toMatchObject({
-      ok: true,
-      value: { verdict: "DETECTED", exitCode: 12 },
-    });
-    if (!normalized.ok) throw new Error("expected normalized counterexample");
-    expect(normalized.value.counterexampleId).toMatch(/^[0-9a-f]{64}$/);
-    expect(normalizeTlcExploration({ exploration, exitCode: 0, ...metadata })).toMatchObject({
-      ok: false,
-      error: { kind: "NormalizationError" },
-    });
-  });
-
-  test("preserves a closed parser failure as a HARNESS_ERROR cell", () => {
-    const exploration = parse(`${successOutput}forged suffix\n`);
-    expect(exploration.kind).toBe("HARNESS_ERROR");
-    expect(normalizeTlcExploration({ exploration, exitCode: 0, ...metadata })).toMatchObject({
-      ok: true,
-      value: { verdict: "HARNESS_ERROR", exitCode: 0, counterexampleId: null },
-    });
   });
 });

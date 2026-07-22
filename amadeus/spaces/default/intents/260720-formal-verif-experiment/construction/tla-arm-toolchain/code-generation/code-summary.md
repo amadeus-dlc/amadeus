@@ -4,18 +4,18 @@
 
 U4 `tla-arm-toolchain`の18 Stepsを完了した。closed finite profileからのTLA+ module / cfg生成、TLC tools 1.7.4 artifactの固定取得とdurable cache、OpenJDK 26.0.1 snapshot、Darwin sandbox下のoffline実行、TLC 1.7.4専用stream parser、U1 `CellResult`への正規化をU4-owned surfaceとして実装した。U3 Evidence Storeへ直接接続せず、U5がraw outcome / manifest / capabilityをbridgeできる境界に留めている。
 
-recorded人間裁定により、hard capは`tlc-toolchain.ts`、`tla-arm.ts`、`fs-tlc-toolchain.ts`のproduction 3 file限定で3,200物理LOCである。最終実測は3,143 / 3,200 LOCで、57 LOCの余裕を維持した。barrel `index.ts`は別途67 LOCである。
+recorded人間裁定により、hard capは`tlc-toolchain.ts`、`tla-arm.ts`、`fs-tlc-toolchain.ts`のproduction 3 file限定で3,200物理LOCである。Formal Review Iteration 2 finding closure後の最終実測は3,200 / 3,200 LOCである。barrel `index.ts`は別途64 LOCである。
 
 | 区分 | ファイル | LOC | 内容 |
 | --- | --- | ---: | --- |
-| model/parser | `scripts/formal-verif/tla-arm.ts` | 1,288 | closed action/profile、finite TLA+ model/cfg/source map、TLC 1.7.4 parser、normalizer |
-| domain | `scripts/formal-verif/tlc-toolchain.ts` | 479 | fixed artifact descriptor、capability/receipt、JDK/profile/run manifest、closed error union |
-| adapter | `scripts/formal-verif/fs-tlc-toolchain.ts` | 1,376 | bounded HTTPS、durable cache、JDK snapshot、Darwin sandbox、process lifecycle |
-| export | `scripts/formal-verif/index.ts` | 67 | U4の必要最小public surface |
-| unit | `tests/unit/t-formal-verif-{tla-model,tlc-output,tlc-toolchain,tlc-public-surface}.test.ts` | 1,509 | model/parser/domain/exportのpositive・boundary・negative |
-| integration | `tests/integration/t-formal-verif-tlc-{cache,runtime}.integration.test.ts` | 1,242 | cache crash/corruption、JDK/sandbox/process lifecycle |
+| model | `scripts/formal-verif/tla-arm.ts` | 874 | closed action/profile、finite TLA+ model/cfg/source map、fixed receipt |
+| protocol/domain | `scripts/formal-verif/tlc-toolchain.ts` | 870 | fixed artifact descriptor、capability/receipt、JDK/profile/run manifest、TLC 1.7.4 parser、closed error union |
+| adapter/composition | `scripts/formal-verif/fs-tlc-toolchain.ts` | 1,456 | internal artifact lifecycle、internal JDK/sandbox/process runtime、issued outcomeのprivate正規化、public composition facade |
+| export | `scripts/formal-verif/index.ts` | 64 | U4の必要最小public surface |
+| unit | `tests/unit/t-formal-verif-{tla-model,tlc-output,tlc-toolchain,tlc-public-surface}.test.ts` | 1,462 | model/parser/domain/exportのpositive・boundary・negative |
+| integration | `tests/integration/t-formal-verif-tlc-{cache,runtime}.integration.test.ts` | 1,368 | cache crash/corruption、JDK/sandbox/process lifecycle、JDK設定fail-closed、capability・direct module境界 |
 | E2E | `tests/e2e/t-formal-verif-tla-toolchain.test.ts` | 113 | U4単独acquire→verify→prepare→run→normalize |
-| support | `tests/formal-verif/support/tla-{toolchain-harness,mutation-probe,real-toolchain-probe}.ts` | 656 | deterministic harness、mutation、実toolchain probe |
+| support | `tests/formal-verif/support/tla-{toolchain-harness,mutation-probe,real-toolchain-probe}.ts` | 666 | deterministic harness、mutation、実toolchain probe |
 | config | `.gitignore` | 1行追加 | `/.cache/formal-verif/`だけをignore |
 
 ## 主要な実装判断
@@ -26,17 +26,27 @@ recorded人間裁定により、hard capは`tlc-toolchain.ts`、`tla-arm.ts`、`
 - 標準moduleは、runごとに作るprivateで空の`.tlc-stdlib` canonical directoryへJVMの`java.io.tmpdir`を固定し、`Naturals.tla`、`Sequences.tla`、`FiniteSets.tla`、`TLC.tla`のexact originだけを受理する。workspace shadowとbasename-only forged pathはspawn前またはparse時に拒否する。
 - Darwin sandboxはdefault denyを維持し、TLCのlocal Java RMI bindに必要なlocalhost inboundだけを許可する。active-listener TCP、UDP、DNSを含むoutbound probeはすべて拒否し、provider/probe不成立時にunsandboxed fallbackしない。
 - OpenJDK snapshot、artifact cache、reservation/lock/staging/quarantine、flush/rename/sync、process group timeout/terminate/kill、16 MiB stream capをdurableかつ再検証可能なlifecycleとして実装した。
+- outcome→`CellResult`変換は`fs-tlc-toolchain.ts`のmodule-private `normalizeIssuedExploration`に置き、同一instanceが発行した`PreparedTlcRun` / `RawTlcOutcome`の結合を検証した後だけ呼ぶ。root barrelとdirect moduleの双方から変換器をimportできず、caller-crafted COMPLETE/exit 0では`NOT_DETECTED`を生成できない。
+- `FsTlcArtifactCache`と`FsTlcRuntime`をinternal componentへ分け、exported `FsTlcToolchain`を5 methodのcomposition facadeへ限定した。TLC grammarの所有権はprotocol/domain fileへ移し、finite election modelからprocess output責務を除いた。
+- 実TLC probeは`JAVA_HOME`を必須とし、canonical化したOpenJDK 26.0.1 rootだけを受理する。開発者固有pathへのfallbackは持たない。
+- lizard complexity gateのU4 production対象は全function CCN 15以下である。parser測定境界、lifecycle payload/order、run manifest identity validation、action validation、receipt validation、JDK inspection/snapshot reuseを意味単位に分割した。
 
 ## Test Coverage
 
-- U4 focused 7 files: **103 pass / 0 fail / 643 expects**
-- 全formal-verif regression 33 files: **497 pass / 0 fail / 1,396 expects**
-- tier runner: Unit **20 files / 321 assertions**、Integration **9 files / 139 assertions**、E2E **4 files / 37 assertions**、すべてPASS
+- U4 focused 7 files: **104 pass / 0 fail / 649 expects**
+- 全formal-verif regression 33 files: **498 pass / 0 fail / 1,402 expects**
+- tier runner: Unit **20 files / 319 assertions**、Integration **9 files / 142 assertions**、E2E **4 files / 37 assertions**、すべてPASS
 - `bun run typecheck`: PASS
 - `bun run lint:check`: PASS（advisory warningのみ）
 - `bun run check`: PASS（advisory warningのみ）
 - `bun run dist:check`: claude / codex / cursor / kiro / kiro-ide / opencodeの6 harnessすべてPASS
+- `bun run promote:self:check`: PASS
 - `git diff --exit-code -- packages/framework packages/setup dist package.json bun.lock .github`: PASS
+- `git diff --check`: PASS
+- full coverage runner: **420 files / 5,987 assertions**を実行し、failureはU4外の既知3件（U1〜U3 complexity 20 functions、U1〜U3 test-size 5 files、upstream-sync/codekb generated-prefix 9 files）のみ
+- project coverage gate: **74.5548%**、baseline 40.9395%、delta **+33.6153pp**、PASS
+- checkpoint以降のworking diff coverage: measurable added **362 / 362 covered**、allowlisted 0、uncovered 0、PASS
+- U4 production complexity: lizard CCN > 15は**0件**。repository全体gateに残る20件はU1〜U3の既存範囲で、U4では変更しない。
 
 主な固定反証は、closed cardinality/field drift、unknown choice、invalid submittedAt、amend budget、resolution、cutoff snapshot、TLC envelope/payload/statistics/traceのnear miss、stdlib origin偽装、artifact/JDK/profile/run identity drift、redirect/deadline/body cap、lock/reservation/crash window、sandbox outbound、PATH/env/argv drift、timeout/signal/output capである。
 
@@ -45,19 +55,20 @@ recorded人間裁定により、hard capは`tlc-toolchain.ts`、`tla-arm.ts`、`
 ### 正常run
 
 - 実行: TLC tools 1.7.4、OpenJDK 26.0.1、`-XX:+UseParallelGC`、workers 1、明示`-tool`、Darwin sandbox
-- evidence root: `/var/folders/3s/p2xl_vd524b4lk78cb6fz5nh0000gn/T/amadeus-u4-real-facade-t4EUw4`
+- evidence root: `/var/folders/3s/p2xl_vd524b4lk78cb6fz5nh0000gn/T/amadeus-u4-real-facade-L8w4g8`
 - artifact descriptor identity: `d716a11edb04e301d7cdc91c31843bca76e5031f4fe92b2080d38c5d19a3b313`
 - artifact SHA-256: `936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88`
-- artifact receipt: `4e3c1b0ba10efd7ed7ad396979e99c575b03803c101b440793ee20c8714a8482`
+- artifact bytes: `2,274,532`
+- artifact receipt: `31b0e83d3773cde5e5cf86f0032dc76b73eb91bb11eed7cc9acf16663c61d50c`
 - model identity: `dee3d8a63552f041abb0bb8f64d458dd6b230cf6c91cc609ba6c7a9b71970d66`
-- run identity: `67f514b8a6cd26a84cca35be513b06dda7e18fed7b12670ea1c60e223efe2082`
-- JDK snapshot identity: `f97b30e9cc100a792a318ea2fdcdb523ecd3c5787f577787646dab7d1d816d59`
-- sandbox receipt identity: `d40c3b79bfa786e4f15d57c51067b7ffc0abc9a60f45da8c1b5c2658f46783a3`
+- run identity: `b6faeab34e57af1e25114979d2e91d05f7db4384a44de33bc61fe281ba111198`
+- JDK snapshot identity: `330988580f759bdfbdd569ad46b8599fe26c24056c413217339858bd838e956b`
+- sandbox receipt identity: `20f74d0bc28e1d0c7eecc18bbc3936989971e819c0d876510e19bb28f5f30ac1`
 - process: exit 0、signal null、timeout false、output-limit false、stderr empty
-- stdout SHA-256: `1d029c31928b165422955d44d75592e25cd31cadb32887548eae58ef8b2cc84e`
+- stdout SHA-256: `1f7cfa5aaa0c17c542967048fc7807d4677e2978e14af04d138817aa38161431`
 - stderr SHA-256: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
 - verdict: `NOT_DETECTED`
-- UTC: `2026-07-21T15:36:49.213Z`〜`2026-07-21T15:38:36.996Z`
+- UTC: `2026-07-21T21:53:50.322Z`〜`2026-07-21T21:55:38.905Z`
 
 SANYが観測したmodule originは、workspaceの`FormalElection.tla`と、同workspaceのprivate `.tlc-stdlib`配下にある`Naturals.tla`、`Sequences.tla`、`FiniteSets.tla`、`TLC.tla`のexact pathだけである。
 
@@ -89,39 +100,40 @@ ParallelGCを外した独立実runではTLC 1.7.4の`2401:3` warningを観測し
 
 ## 最終output hash・Sensor証跡
 
-2026-07-21T15:45Z時点のoutput SHA-256と、各変更TSへ最終発火したlinter/type-check sensor IDを正本とする。14 TS × 2 = 28件すべてPASSした。
+Formal Review Iteration 2 finding closure後のoutput SHA-256を正本とする。変更した7 TSへ2026-07-21T21:51Zにlinter/type-checkを再発火し、hard-cap最終調整後の`fs-tlc-toolchain.ts`だけ22:02Zに再発火した。下表の最新14 pairはすべてPASS、FAILED / BUDGET_OVERRIDE / orphanは0件だった。
 
 | 出力 | SHA-256 | linter | type-check |
 | --- | --- | --- | --- |
-| `tla-arm.ts` | `12745b662ac8d79b2c6ea81574fb04b2c85ce20366c8e1f3c2cba7a965c84fc7` | `adaab54f` | `5faac420` |
-| `tlc-toolchain.ts` | `fa6bd7284c9b313606531b511135ddc8d93900c9856c8e90a5f66b5facd2bad6` | `5fdf37b1` | `6940912f` |
-| `fs-tlc-toolchain.ts` | `c5f6e2d98fa8cb470990f9d6652bfd1564d2a5f928485ae20dd7129d53eb6b60` | `2acb369d` | `1159fe51` |
-| `index.ts` | `592f46cd9637017fb31648de2d472778a9cb0f91cddbc7327df25c7c194025c0` | `4af974da` | `19b4c2bf` |
-| `t-formal-verif-tla-model.test.ts` | `3eb6a075aa001f9ca2548b79cd71c6ff44a9aee069cf07e7dabb9e61357f65e7` | `e2a1ec6b` | `f3843270` |
-| `t-formal-verif-tlc-output.test.ts` | `5ca32ce1b3073d7375d89f5047f99a7c20f8374fbe39789676c83c08f829add6` | `46864c4d` | `efe9e7ec` |
-| `t-formal-verif-tlc-toolchain.test.ts` | `19d91f88022d1e1db0ded77ff2ba5d83f7c59688e033401a684615cf9e61036d` | `18515dfb` | `2bc528be` |
-| `t-formal-verif-tlc-public-surface.test.ts` | `7a38396fd59c83d3075a7e050ea3bef491e22c41619fc9c6954125baeda8d482` | `5b8c9e70` | `7ff64986` |
-| `t-formal-verif-tlc-cache.integration.test.ts` | `c9e6d0250d51afdb87c5c36831144b0d4829a932406f9c30d67726e5dafdba14` | `6c5ace2f` | `1d5b7399` |
-| `t-formal-verif-tlc-runtime.integration.test.ts` | `8c801ae93187c9585bc6a685d55e700e11de54f4fe97f0c512ae87e184d0e43e` | `13200c40` | `de02ec25` |
-| `t-formal-verif-tla-toolchain.test.ts` | `a7cf2bca47497acd409ee4e25ef12fd581ca68f7757c494448d8711e7c15949b` | `486c4223` | `ec9892fa` |
-| `tla-toolchain-harness.ts` | `81936ec6bb94dc59ae5d4d6abdf682b73d98a58683b4249dca16917428ef99c4` | `9c917454` | `09a1b453` |
-| `tla-mutation-probe.ts` | `cb730dc5e0a522c77df883c8dea29b187038cccfc4b6a49ccadd493a5848067f` | `d2121f28` | `c57f3416` |
-| `tla-real-toolchain-probe.ts` | `2b211bf3ca1d9562cf0602d788d15f3217f13f87fa765099cf15cc789df36aca` | `37fb7a61` | `5704fc46` |
+| `tla-arm.ts` | `86bfd0aa01695e32408076114faa3d5fb105beadc11a949e811821d45f6a9639` | `b4c8254e` | `2f764fd6` |
+| `tlc-toolchain.ts` | `0d2484f370c8630689cbcaf411cdd65174deefb44107a425d4917c889818082e` | `baea4322` | `5ab885c9` |
+| `fs-tlc-toolchain.ts` | `f7cc25cc3eaa48f59b022af64d3320135b995e1cba754f99dd70447e193de7ab` | `a3e29fa7` | `e5cfd376` |
+| `index.ts` | `d34ee28c38d64fcc443444b52fe2c5f523505901154079e6be6c01cbcee22ea4` | `395278e6` | `993cf0f4` |
+| `t-formal-verif-tla-model.test.ts` | `3eb6a075aa001f9ca2548b79cd71c6ff44a9aee069cf07e7dabb9e61357f65e7` | `fd51353e` | `f4f44425` |
+| `t-formal-verif-tlc-output.test.ts` | `65bac9eb91b430039976a69663adecaa0ce8905e27f7cf6516413204c46d2734` | `937cbdc1` | `3ee0728a` |
+| `t-formal-verif-tlc-toolchain.test.ts` | `a05b1a796d503232cc21b35846523593311c0002b40d2d451bdeee408ae92c79` | `98b51cd7` | `5948b8b4` |
+| `t-formal-verif-tlc-public-surface.test.ts` | `e8151bfc0fa47a1b3f330f1aaeb0b004d987c81fd333505c2c6468d86561692d` | `f6c1574f` | `94b1c37f` |
+| `t-formal-verif-tlc-cache.integration.test.ts` | `62a1adcdcb03ef1353f329bc61f6f1b9b9328aa55e790c69bad8f12cf07e29ce` | `93a9dbe4` | `2a37cdce` |
+| `t-formal-verif-tlc-runtime.integration.test.ts` | `b9e48e8f4d6dba105c9b3fe8336ec4c73b459126c4ed03380ff26e52cf4bb45f` | `75809d34` | `3daaaa17` |
+| `t-formal-verif-tla-toolchain.test.ts` | `a7cf2bca47497acd409ee4e25ef12fd581ca68f7757c494448d8711e7c15949b` | `ce130c33` | `1849391b` |
+| `tla-toolchain-harness.ts` | `7d7a5187d7a3b9b04af60bdb7665a204ce44bd7ca2df2110354e0fbf18e194dd` | `4be11f31` | `db49773e` |
+| `tla-mutation-probe.ts` | `cb730dc5e0a522c77df883c8dea29b187038cccfc4b6a49ccadd493a5848067f` | `437839d7` | `e07130a9` |
+| `tla-real-toolchain-probe.ts` | `118ef8cbfe7cad9bf78d78219f3d2368f769b1f8b72849a41eaa07aa8373bed3` | `0a55232e` | `6f12860e` |
 
 `answer-evidence`はcode-generationで新規・変更した`*-questions.md`がないため非該当である。
 
 ## 境界確認と計画差分
 
-- Units Generation時のproduction forecastを超えたため、e2の独立forecastとrecorded人間裁定を経て、責務・DAG・Unit境界を変えずに3-file hard capを3,200 LOCへ変更した。最終値は3,143 LOCである。
+- Units Generation時のproduction forecastを超えたため、e2の独立forecastとrecorded人間裁定を経て、責務・DAG・Unit境界を変えずに3-file hard capを3,200 LOCへ変更した。Formal Review Iteration 2 finding closure後の最終値は3,200 LOCである。
 - Functional Designのpost-tally記述とfixed receiptが同時充足不能だったため、production election storeの一次証拠とleader契約に従い、accepted prefixのcutoff snapshotと共通late laneへ機械是正した。既存裁定履歴は遡及変更していない。
 - e2の独立pre-reviewで、basename一致だけの標準module originを受理する反例が成立した。expected private stdlib directoryとのexact canonical path binding、空/private directory、workspace shadow拒否へ是正し、3種類のforged pathとshadowを固定回帰にした。
 - Darwin sandboxはJava RMIのlocal bindに必要なlocalhost inboundだけを許可する。これはnetwork-denied責務を弱める一般例外ではなく、active-listener TCP、UDP、DNSのoutbound denialを実測したprovider限定条件である。
 - Step 16のreal mutation / real toolchain証跡のためsupportを2ファイル追加した。production責務やpublic surfaceは増やしていない。
 - U2 Registry、U3 Evidence Store、U5〜U8、TS oracle、fixture payload/reveal、D-COUNT/injection、eligibility/Pareto/reportへの禁止依存は0件である。`CellResult`正規化に必要なU1 `fixtureId` / baseline / arm bindingだけを保持する。framework/setup/dist/package/lockfile/CI差分も0件である。
-- `tsconfig.json`、state/audit、U1〜U3の既存dirtyはU4着手前またはorchestrator/sensor由来であり、U4実装では手編集していない。global `git diff --check`は既存audit shardのtrailing whitespaceで非0だが、U4 output由来のwhitespace findingはない。
-- 実装・検証上の未解決blockerはない。commit、push、PR、mergeは実施していない。
+- checkpoint `fb7165c10b2b10ab9ced9338243434b96dfeb7ef`から専用worktreeを作り、既存e6 worktreeと未追跡scratchには触れていない。新worktreeのstate/audit差分はorchestrator/sensor由来である。
+- global `git diff --check`はPASSした。
+- commit、push、PR、mergeは未実施である。実装上の未解決blockerはなく、全coverageのU4外baseline failureだけをissue候補として分離記録する。
 
-## pre-review / spot-check finding closure
+## pre-review / Formal Review finding closure
 
 | 反例 | closure | 固定回帰 |
 | --- | --- | --- |
@@ -130,9 +142,13 @@ ParallelGCを外した独立実runではTLC 1.7.4の`2401:3` warningを観測し
 | malformed progress、generated < distinct、terminal後marker | code別payload grammarとsingleton/order/EOFを検証し、impossible statisticsとFinished後のsemantic/progressを拒否 | malformed progress、impossible statistics、post-Finished progress/state/successをreject |
 | invariantが状態述語だけでaction誤動作を捉えない | `UnknownChoiceAction`、`InvalidTimestampAction`、`BadAmendStep`、`BadResolutionStep`を独立定義し、各invariantを`ENABLED`/`~ENABLED`のaction obligationへ結合 | 4 action obligationのsource固定と上記4 real mutation |
 | 非terminal状態でもstutterして探索完了し得る | `TerminalStutter == Terminal /\ UNCHANGED vars`とし、`Terminal`をtally済み・submission枯渇・hold処理済みへ限定。`Next`に無条件stutterを置かない | `SpendableSubmission`、`Terminal`、`TerminalStutter`とclosed `Next`のsource固定 |
+| Formal Review I1: root exportされたnormalizerでissued capability検証を迂回可能 | root barrelから変換器を除外し、`FsTlcToolchain.normalize`をpublic正規化入口に限定 | root public surfaceで変換器不在を固定 |
+| Formal Review I1: model/parserとartifact/runtime/facadeの責務集約 | TLC parser/normalizerを`tlc-toolchain.ts`へ移し、`FsTlcArtifactCache`・`FsTlcRuntime`をinternal component、`FsTlcToolchain`をcomposition facadeへ分離 | parser ownershipとexported constructor名をpublic surface/unit testで固定、全function CCN 15以下、production 3 file 3,200 / 3,200 LOC |
+| Formal Review I1: 実probeの開発者固有JDK fallback | `JAVA_HOME`を必須化し、realpath後のOpenJDK 26.0.1検証へ一本化。hard-coded pathを削除 | `JAVA_HOME`なしを明示してconfiguration errorを要求するintegration testと、fresh real TLC正常run |
+| Formal Review I2: `tlc-toolchain.ts`のdirect importでroot除外を迂回可能 | 変換器と専用input/error型をprotocol/domain moduleから削除し、issued capability照合後だけ呼ぶmodule-private変換へ移動。issuer/factoryは追加していない | direct moduleのruntime keysに`normalizeTlcExploration`がないことをnegative-firstで固定し、issued COMPLETE / COUNTEREXAMPLE / parser failure / invalid bindingをconcrete facade integrationで固定 |
 
-spot-check時点の旧・追加findingはすべてclosure済みであり、独立reviewへ渡す未解決実装findingは0件である。
+Formal Review Iteration 2はCritical finding付きのREVISEだった。reviewer budgetは2 / 2で上限到達したため第3回reviewは起動せず、findingを上記のとおりnegative-firstで閉じ、focused / formal / tier / type / lint / dist / coverage / sensor / fresh real TLCを再実行した。未解決U4実装findingは0件であり、§12aの「READYまたはiterations exhausted」に従って§13へ進む。
 
 ## 独立reviewへの引継ぎ
 
-e2のpre-review C1是正後にproduction・test・supportの全hashを再固定し、focused / formal / tier / typecheck / lint / check / dist / boundary / sensorを再実行した。独立reviewerには、承認済みplan、U4全差分、C1反例とclosure、4 mutation、正常・反例の実TLC raw evidence、上記検証・sensor証跡を渡す。最終review結果が出るまではU4を自己閉包せず、次Unit・次stageへ進まない。
+Formal Review Iteration 2でdirect module exportの残存迂回を検出し、reviewer budget上限内の最終review結果はREVISEだった。finding closure後はdirect import不在、issued capability binding、3-file 3,200 LOC、U4 CCN超過0件、working-diff coverage 100%、fresh real TLC `NOT_DETECTED`、全最終sensor PASSまで再固定した。review自体は2回実施済みであり、engine正本のiteration上限に従ってcode-generationを閉じる。

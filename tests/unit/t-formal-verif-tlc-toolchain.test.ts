@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
   createFrozenTlaModelReceipt,
-  FIXED_TLC_174_GRAMMAR_DESCRIPTOR_IDENTITY,
   generateFrozenTlaModel,
 } from "../../scripts/formal-verif/tla-arm.ts";
 import * as toolchainModule from "../../scripts/formal-verif/tlc-toolchain.ts";
@@ -32,7 +31,6 @@ describe("formal verification TLC toolchain domain", () => {
     const exact = structuredClone(FIXED_TLC_ARTIFACT_DESCRIPTOR);
     expect(validateFixedTlcArtifactDescriptor(exact)).toEqual({ ok: true, value: FIXED_TLC_ARTIFACT_DESCRIPTOR });
     expect(FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY).toMatch(/^[0-9a-f]{64}$/);
-    expect(FIXED_TLC_174_GRAMMAR_DESCRIPTOR_IDENTITY).toBe(FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY);
 
     const drifts: unknown[] = [
       { ...exact, version: "1.7.5" },

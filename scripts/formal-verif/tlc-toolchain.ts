@@ -1,8 +1,12 @@
 import { canonicalIdentity } from "./canonical.ts";
 import { isUtcInstant, type CellResult, type Result } from "./contract.ts";
 import {
+  TLA_NAMED_INVARIANTS,
   validateFrozenTlaModelReceipt,
+  type FrozenTlaModelBundle,
   type FrozenTlaModelReceipt,
+  type TlaInvariantSourceLocation,
+  type TlaNamedInvariant,
 } from "./tla-arm.ts";
 
 function deepFreeze<T>(value: T): T {
@@ -95,6 +99,389 @@ export const DARWIN_NETWORK_DENY_POLICY_IDENTITY = canonicalIdentity({
   probes: ["TCP_LOOPBACK", "UDP_LOOPBACK", "DNS"],
 }, SANDBOX_POLICY_DOMAIN).sha256;
 export const MAX_TLC_STREAM_BYTES = 16 * 1024 * 1024;
+interface TlcEnvelope {
+  code: number;
+  severity: number;
+  payload: string;
+}
+
+export interface TlcOutputInput {
+  chunks: Uint8Array[];
+  exitCode: number | null;
+  signal: string | null;
+  timedOut: boolean;
+  expectedModuleName: string;
+  expectedModulePath: string;
+  expectedStandardModuleDirectory: string;
+  verifiedArtifactDescriptorIdentity: string;
+  modelReceipt: FrozenTlaModelReceipt;
+}
+export interface CompleteTlcExploration {
+  kind: "COMPLETE";
+  generatedStates: number;
+  distinctStates: number;
+  statesLeftOnQueue: 0;
+  searchDepth: number;
+  completionMarker: "Model checking completed. No error has been found.";
+  terminationReason: "EXHAUSTED";
+}
+export interface TlcTraceState {
+  ordinal: number;
+  label: string;
+  body: string[];
+}
+export interface CounterexampleTlcExploration {
+  kind: "COUNTEREXAMPLE";
+  invariant: string;
+  sourceLocation: TlaInvariantSourceLocation;
+  trace: TlcTraceState[];
+  counterexampleIdentity: string;
+  generatedStates: number;
+  distinctStates: number;
+  statesLeftOnQueue: number;
+  searchDepth: number;
+}
+export interface FailedTlcExploration {
+  kind: "HARNESS_ERROR";
+  reason: "TIMEOUT" | "SIGNAL" | "OUTPUT_CAPACITY" | "UTF8" | "GRAMMAR" | "OUTCOME_MISMATCH";
+  detail: string;
+}
+export type TlcExploration = CompleteTlcExploration | CounterexampleTlcExploration | FailedTlcExploration;
+
+const MAX_TLC_OUTPUT_BYTES = 16 * 1024 * 1024;
+const START = /^@!@!@STARTMSG ([0-9]+):([0-9]+) @!@!@$/;
+const END = /^@!@!@ENDMSG ([0-9]+) @!@!@$/;
+const ALLOWED_CODES = new Map<number, { severity: number; repeat: boolean }>([
+  [2262, { severity: 0, repeat: false }],
+  [2187, { severity: 0, repeat: false }],
+  [2220, { severity: 0, repeat: false }],
+  [2219, { severity: 0, repeat: false }],
+  [2185, { severity: 0, repeat: false }],
+  [2189, { severity: 0, repeat: false }],
+  [2190, { severity: 0, repeat: false }],
+  [2193, { severity: 0, repeat: false }],
+  [2200, { severity: 0, repeat: true }],
+  [2199, { severity: 0, repeat: false }],
+  [2194, { severity: 0, repeat: false }],
+  [2268, { severity: 0, repeat: false }],
+  [2186, { severity: 0, repeat: false }],
+  [2110, { severity: 1, repeat: false }],
+  [2121, { severity: 1, repeat: false }],
+  [2217, { severity: 4, repeat: true }],
+]);
+
+function failed(reason: FailedTlcExploration["reason"], detail: string): FailedTlcExploration {
+  return { kind: "HARNESS_ERROR", reason, detail };
+}
+
+function decodeChunks(chunks: Uint8Array[]): string | FailedTlcExploration {
+  let total = 0;
+  for (const chunk of chunks) {
+    total += chunk.byteLength;
+    if (!Number.isSafeInteger(total) || total > MAX_TLC_OUTPUT_BYTES) return failed("OUTPUT_CAPACITY", "TLC stdout exceeds 16 MiB");
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  try {
+    const decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    const normalized = decoded.replaceAll("\r\n", "\n");
+    if (normalized.includes("\r")) return failed("GRAMMAR", "lone carriage return");
+    if (!normalized.endsWith("\n")) return failed("GRAMMAR", "stdout is not LF/EOF closed");
+    return normalized;
+  } catch {
+    return failed("UTF8", "stdout is not valid UTF-8");
+  }
+}
+
+const STANDARD_MODULES = ["Naturals", "Sequences", "FiniteSets", "TLC"] as const;
+function parsedAuxiliaryModule(line: string, input: TlcOutputInput): string | null {
+  if (line === `Parsing file ${input.expectedModulePath}`) return input.expectedModuleName;
+  const directory = input.expectedStandardModuleDirectory.replace(/\/+$/, "");
+  return STANDARD_MODULES.find((module) => line === `Parsing file ${directory}/${module}.tla`) ?? null;
+}
+
+type EnvelopeRead = { ok: true; envelope: TlcEnvelope; next: number; repeat: boolean } | { ok: false; error: FailedTlcExploration };
+
+function readEnvelope(lines: string[], startIndex: number): EnvelopeRead {
+  const start = START.exec(lines[startIndex]!);
+  if (start === null) return { ok: false, error: failed("GRAMMAR", `unframed output at line ${startIndex + 1}`) };
+  const code = Number(start[1]);
+  const severity = Number(start[2]);
+  const spec = ALLOWED_CODES.get(code);
+  if (spec === undefined || severity !== spec.severity || severity === 3) {
+    return { ok: false, error: failed("GRAMMAR", `unknown code or severity ${code}:${severity}`) };
+  }
+  const payload: string[] = [];
+  for (let index = startIndex + 1; index < lines.length; index += 1) {
+    const candidate = lines[index]!;
+    if (START.test(candidate)) return { ok: false, error: failed("GRAMMAR", `nested STARTMSG for ${code}`) };
+    const end = END.exec(candidate);
+    if (end === null) {
+      payload.push(candidate);
+      continue;
+    }
+    if (Number(end[1]) !== code) return { ok: false, error: failed("GRAMMAR", `mismatched ENDMSG for ${code}`) };
+    return { ok: true, envelope: { code, severity, payload: payload.join("\n") }, next: index + 1, repeat: spec.repeat };
+  }
+  return { ok: false, error: failed("GRAMMAR", `unclosed STARTMSG for ${code}`) };
+}
+
+function parseEnvelopes(output: string, input: TlcOutputInput): TlcEnvelope[] | FailedTlcExploration {
+  const lines = output.split("\n");
+  lines.pop();
+  const envelopes: TlcEnvelope[] = [];
+  const seen = new Map<number, number>();
+  const moduleTranscript: string[] = [];
+  for (let index = 0; index < lines.length;) {
+    const line = lines[index]!;
+    const parsedModule = parsedAuxiliaryModule(line, input);
+    if (parsedModule !== null) {
+      if (seen.get(2220) !== 1 || seen.has(2219)) return failed("GRAMMAR", "parsed module outside SANY envelope window");
+      moduleTranscript.push(`P:${parsedModule}`);
+      index += 1;
+      continue;
+    }
+    const semantic = /^Semantic processing of module ([A-Za-z_][A-Za-z0-9_]*)$/.exec(line)?.[1];
+    if (semantic !== undefined) {
+      if (seen.get(2220) !== 1 || seen.has(2219)) return failed("GRAMMAR", "semantic module outside SANY envelope window");
+      moduleTranscript.push(`S:${semantic}`);
+      index += 1;
+      continue;
+    }
+    const read = readEnvelope(lines, index);
+    if (!read.ok) return read.error;
+    const occurrences = (seen.get(read.envelope.code) ?? 0) + 1;
+    if (occurrences > 1 && !read.repeat) return failed("GRAMMAR", `duplicate singleton code ${read.envelope.code}`);
+    seen.set(read.envelope.code, occurrences);
+    envelopes.push(read.envelope);
+    index = read.next;
+  }
+  const expectedTranscript = [
+    `P:${input.expectedModuleName}`,
+    ...STANDARD_MODULES.map((module) => `P:${module}`),
+    ...STANDARD_MODULES.map((module) => `S:${module}`),
+    `S:${input.expectedModuleName}`,
+  ];
+  if (
+    moduleTranscript.length !== expectedTranscript.length
+    || moduleTranscript.some((entry, index) => entry !== expectedTranscript[index])
+  ) {
+    return failed("GRAMMAR", "SANY module transcript differs from the fixed expected sequence");
+  }
+  return envelopes;
+}
+
+function only(envelopes: TlcEnvelope[], code: number): TlcEnvelope | undefined {
+  return envelopes.find((envelope) => envelope.code === code);
+}
+
+function count(envelopes: TlcEnvelope[], code: number): number {
+  return envelopes.filter((envelope) => envelope.code === code).length;
+}
+
+function safeInteger(value: string): number | null {
+  if (!/^(?:0|[1-9][0-9]*)$/.test(value)) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
+function safeFormattedInteger(value: string): number | null {
+  if (!/^(?:0|[1-9][0-9]{0,2}(?:,[0-9]{3})*)$/.test(value)) return null;
+  return safeInteger(value.replaceAll(",", ""));
+}
+
+function parseStatistics(payload: string): { generated: number; distinct: number; queue: number } | null {
+  const match = /^([0-9]+) states generated, ([0-9]+) distinct states found, ([0-9]+) states left on queue\.$/.exec(payload);
+  if (match === null) return null;
+  const generated = safeInteger(match[1]!);
+  const distinct = safeInteger(match[2]!);
+  const queue = safeInteger(match[3]!);
+  return generated === null || distinct === null || queue === null || generated < distinct || distinct < queue
+    ? null
+    : { generated, distinct, queue };
+}
+
+function validProgress(payload: string): boolean {
+  const match = /^Progress\(([0-9]+)\)(?: at \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})?: ([0-9][0-9,]*) states generated(?: \(([0-9][0-9,]*) s\/min\))?, ([0-9][0-9,]*) distinct states found(?: \(([0-9][0-9,]*) ds\/min\))?, ([0-9][0-9,]*) states left on queue\.$/.exec(payload);
+  if (match === null) return false;
+  const values = [safeInteger(match[1]!), ...match.slice(2).filter((value): value is string => value !== undefined).map(safeFormattedInteger)];
+  if (values.some((value) => value === null)) return false;
+  const generated = safeFormattedInteger(match[2]!);
+  const distinct = safeFormattedInteger(match[4]!);
+  const queue = safeFormattedInteger(match[6]!);
+  return generated !== null && distinct !== null && queue !== null && generated >= distinct && distinct >= queue;
+}
+
+function parseDepth(payload: string): number | null {
+  const match = /^The depth of the complete state graph search is ([0-9]+)\.$/.exec(payload);
+  return match === null ? null : safeInteger(match[1]!);
+}
+
+function validOutdegree(payload: string): boolean {
+  const match = /^The average outdegree of the complete state graph is ([0-9]+) \(minimum is ([0-9]+), the maximum ([0-9]+) and the 95th percentile is ([0-9]+)\)\.$/.exec(payload);
+  if (match === null) return false;
+  const [average, minimum, maximum, percentile] = match.slice(1).map(safeInteger);
+  return average !== null
+    && minimum !== null
+    && maximum !== null
+    && percentile !== null
+    && minimum <= maximum
+    && average <= maximum
+    && percentile >= minimum
+    && percentile <= maximum;
+}
+
+function validateLifecyclePayloads(envelopes: TlcEnvelope[]): string | null {
+  for (const code of [2262, 2187, 2220, 2219, 2185, 2189, 2190, 2199, 2194, 2186]) {
+    if (count(envelopes, code) !== 1) return `required lifecycle code ${code} must occur once`;
+  }
+  const payloadChecks: Array<[number, RegExp]> = [
+    [2262, /^TLC2 Version 2\.19 of 08 August 2024 \(rev: 5a47802\)$/],
+    [2187, /^Running breadth-first search Model-Checking .+ with 1 worker(?:\.| on .+)$/],
+    [2220, /^Starting SANY\.\.\.$/],
+    [2219, /^SANY finished\.$/],
+    [2185, /^Starting\.\.\. \(.+\)$/],
+    [2189, /^Computing initial states\.\.\.$/],
+    [2190, /^Finished computing initial states: [0-9]+ distinct state(?:s)? generated at .+\.$/],
+    [2186, /^Finished in .+ at \(.+\)$/],
+  ];
+  for (const [code, pattern] of payloadChecks) if (!pattern.test(only(envelopes, code)!.payload)) return `invalid payload for code ${code}`;
+  if (envelopes.filter(({ code }) => code === 2200).some(({ payload }) => !validProgress(payload))) return "invalid payload for code 2200";
+  const outdegree = only(envelopes, 2268);
+  if (outdegree !== undefined && !validOutdegree(outdegree.payload)) return "invalid payload for code 2268";
+  return null;
+}
+
+function validateLifecycleOrder(envelopes: TlcEnvelope[]): string | null {
+  const codes = envelopes.map(({ code }) => code);
+  const prefix = [2262, 2187, 2220, 2219, 2185, 2189, 2190];
+  if (prefix.some((code, index) => codes[index] !== code)) return "lifecycle prefix codes are out of order";
+  let index = prefix.length;
+  while (codes[index] === 2200) index += 1;
+  if (codes[index] === 2193) {
+    index += 1;
+  } else {
+    if (codes[index] !== 2110 || codes[index + 1] !== 2121) return "semantic terminal header is out of order";
+    index += 2;
+    const firstState = index;
+    while (codes[index] === 2217) index += 1;
+    if (index - firstState < 2) return "counterexample terminal requires at least two ordered states";
+  }
+  while (codes[index] === 2200) index += 1;
+  if (codes[index] !== 2199 || codes[index + 1] !== 2194) return "statistics and depth terminals are out of order";
+  index += 2;
+  if (codes[index] === 2268) index += 1;
+  if (codes[index] !== 2186 || index + 1 !== codes.length) return "Finished must be the final terminal marker";
+  return null;
+}
+
+function validateLifecycle(envelopes: TlcEnvelope[]): string | null {
+  return validateLifecyclePayloads(envelopes) ?? validateLifecycleOrder(envelopes);
+}
+
+const TRACE_STATE_VARIABLES = ["initialBudget", "amendBudget", "accepted", "holdMarkers", "holdBudget", "tally", "reexamRequired"] as const;
+
+function parseTrace(envelopes: TlcEnvelope[]): TlcTraceState[] | null {
+  const trace: TlcTraceState[] = [];
+  for (const envelope of envelopes.filter(({ code }) => code === 2217)) {
+    const lines = envelope.payload.split("\n");
+    const header = /^([0-9]+): (.+)$/.exec(lines[0] ?? "");
+    if (header === null) return null;
+    const ordinal = safeInteger(header[1]!);
+    const label = header[2]!;
+    const validLabel = ordinal === 1
+      ? label === "<Initial predicate>"
+      : /^<Next line [1-9][0-9]*, col [1-9][0-9]* to line [1-9][0-9]*, col [1-9][0-9]* of module FormalElection>$/.test(label);
+    const variables = lines.slice(1).flatMap((line) => /^\/\\ ([A-Za-z_][A-Za-z0-9_]*) =/.exec(line)?.[1] ?? []);
+    if (ordinal === null || ordinal !== trace.length + 1 || !validLabel
+      || variables.length !== TRACE_STATE_VARIABLES.length
+      || variables.some((name, index) => name !== TRACE_STATE_VARIABLES[index])) return null;
+    trace.push({ ordinal, label: header[2]!, body: lines.slice(1) });
+  }
+  return trace;
+}
+
+interface TlcStatistics { generated: number; distinct: number; queue: number }
+
+const FINGERPRINT_PROBABILITY = String.raw`(?:0(?:\.0+)?|[1-9][0-9]*(?:\.[0-9]+)?E[+-][0-9]+)`;
+const COMPLETE_PAYLOAD = new RegExp(
+  String.raw`^Model checking completed\. No error has been found\.\n  Estimates of the probability that TLC did not check all reachable states\n  because two distinct states had the same fingerprint:\n  calculated \(optimistic\):  val = ${FINGERPRINT_PROBABILITY}(?:\n  based on the actual fingerprints:  val = ${FINGERPRINT_PROBABILITY})?$`,
+);
+
+function completeExploration(input: TlcOutputInput, parsed: TlcEnvelope[], statistics: TlcStatistics, depth: number): TlcExploration {
+  if (!COMPLETE_PAYLOAD.test(only(parsed, 2193)!.payload) || input.exitCode !== 0 || statistics.queue !== 0) {
+    return failed("OUTCOME_MISMATCH", "success markers, exit code, or queue disagree");
+  }
+  return {
+    kind: "COMPLETE",
+    generatedStates: statistics.generated,
+    distinctStates: statistics.distinct,
+    statesLeftOnQueue: 0,
+    searchDepth: depth,
+    completionMarker: "Model checking completed. No error has been found.",
+    terminationReason: "EXHAUSTED",
+  };
+}
+
+function counterexampleExploration(input: TlcOutputInput, parsed: TlcEnvelope[], statistics: TlcStatistics, depth: number, model: FrozenTlaModelBundle): TlcExploration {
+  if (input.exitCode !== 12 || count(parsed, 2110) !== 1 || count(parsed, 2121) !== 1 || count(parsed, 2217) < 2) {
+    return failed("OUTCOME_MISMATCH", "counterexample markers and exit code disagree");
+  }
+  const invariantMatch = /^Invariant ([A-Za-z_][A-Za-z0-9_]*) is violated\.$/.exec(only(parsed, 2110)!.payload);
+  if (invariantMatch === null || only(parsed, 2121)!.payload !== "The behavior up to this point is:") return failed("GRAMMAR", "invalid counterexample header");
+  const invariantName = invariantMatch[1]!;
+  if (!TLA_NAMED_INVARIANTS.includes(invariantName as TlaNamedInvariant)) return failed("GRAMMAR", "counterexample invariant is outside the frozen set");
+  const sourceLocation = model.invariantSourceMap[invariantName as TlaNamedInvariant];
+  const trace = parseTrace(parsed);
+  if (sourceLocation === undefined || trace === null) return failed("GRAMMAR", "counterexample source map or trace is invalid");
+  return {
+    kind: "COUNTEREXAMPLE",
+    invariant: invariantName,
+    sourceLocation,
+    trace,
+    counterexampleIdentity: canonicalIdentity({ invariantName, sourceLocation, trace }, "amadeus.formal-verif.tlc.counterexample.v1").sha256,
+    generatedStates: statistics.generated,
+    distinctStates: statistics.distinct,
+    statesLeftOnQueue: statistics.queue,
+    searchDepth: depth,
+  };
+}
+
+function hasFrozenModelOutputBinding(input: TlcOutputInput): boolean {
+  return input.expectedModuleName === "FormalElection"
+    && input.expectedModulePath.split(/[\\/]/).at(-1) === "FormalElection.tla"
+    && input.expectedStandardModuleDirectory.startsWith("/");
+}
+
+export function parseTlcOutput174(input: TlcOutputInput): TlcExploration {
+  if (input.timedOut) return failed("TIMEOUT", "TLC process exceeded its deadline");
+  if (input.signal !== null) return failed("SIGNAL", `TLC process ended with signal ${input.signal}`);
+  if (input.verifiedArtifactDescriptorIdentity !== FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY) {
+    return failed("GRAMMAR", "TLC output is not bound to the fixed verified artifact descriptor");
+  }
+  const model = validateFrozenTlaModelReceipt(input.modelReceipt);
+  if (!model.ok) return failed("GRAMMAR", `TLC output model receipt is invalid: ${model.error.message}`);
+  if (!hasFrozenModelOutputBinding(input)) return failed("GRAMMAR", "TLC output module path is not bound to the frozen model");
+  const decoded = decodeChunks(input.chunks);
+  if (typeof decoded !== "string") return decoded;
+  const parsed = parseEnvelopes(decoded, input);
+  if (!Array.isArray(parsed)) return parsed;
+  const lifecycleError = validateLifecycle(parsed);
+  if (lifecycleError !== null) return failed("GRAMMAR", lifecycleError);
+  const statistics = parseStatistics(only(parsed, 2199)!.payload);
+  const depth = parseDepth(only(parsed, 2194)!.payload);
+  if (statistics === null || depth === null) return failed("GRAMMAR", "invalid statistics or depth payload");
+  const hasSuccess = count(parsed, 2193) === 1;
+  const hasViolation = count(parsed, 2110) === 1 || count(parsed, 2121) === 1 || count(parsed, 2217) > 0;
+  if (hasSuccess === hasViolation) return failed("GRAMMAR", "exactly one terminal semantic class is required");
+  return hasSuccess
+    ? completeExploration(input, parsed, statistics, depth)
+    : counterexampleExploration(input, parsed, statistics, depth, model.value);
+}
 
 export interface JdkDistributionEntry {
   readonly kind: "FILE" | "SYMLINK";
@@ -291,6 +678,16 @@ export interface TlcRunManifest {
   readonly runIdentity: string;
 }
 
+function hasFixedManifestArtifact(input: TlcRunManifestInput): boolean {
+  return input.artifact.kind === "VerifiedTlcArtifact" && input.artifact.descriptorIdentity === FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY && input.artifact.actualSha256 === FIXED_TLC_ARTIFACT_DESCRIPTOR.sha256 && Number.isSafeInteger(input.artifact.byteLength) && input.artifact.byteLength > 0 && input.artifact.byteLength <= FIXED_TLC_ARTIFACT_DESCRIPTOR.maxBytes && SHA256.test(input.artifact.receiptIdentity);
+}
+function hasBoundManifestJdk(input: TlcRunManifestInput, rebuilt: ReturnType<typeof createJdkDistributionManifest>): boolean {
+  return rebuilt.ok && rebuilt.value.manifestIdentity === input.jdk.manifestIdentity && SHA256.test(input.jdk.javaVersionReceiptIdentity) && input.jdk.snapshotIdentity === createJdkSnapshotIdentity(rebuilt.value, input.jdk.javaVersionReceiptIdentity) && input.jdk.snapshotRoot.length > 0 && input.jdk.javaExecutablePath === rebuilt.value.javaExecutablePath && isUtcInstant(input.jdk.verifiedAt);
+}
+function hasBoundManifestSandbox(input: TlcRunManifestInput): boolean {
+  return input.sandbox.kind === "VerifiedSandbox" && input.sandbox.providerIdentity === DARWIN_SANDBOX_PROVIDER_IDENTITY && input.sandbox.policyIdentity === DARWIN_NETWORK_DENY_POLICY_IDENTITY && SHA256.test(input.sandbox.receiptIdentity) && isUtcInstant(input.sandbox.checkedAt);
+}
+
 /** This pure envelope binds identities but never authorizes a process spawn. */
 export function createTlcRunManifest(
   input: TlcRunManifestInput,
@@ -298,9 +695,9 @@ export function createTlcRunManifest(
   const fail = (message: string): Result<never, ToolchainDomainError> => ({ ok: false, error: { kind: "RunManifestError", message } });
   const rebuiltJdk = createJdkDistributionManifest({ vendor: input.jdk.manifest.vendor, version: input.jdk.manifest.version, javaExecutablePath: input.jdk.manifest.javaExecutablePath, javaExecutableSha256: input.jdk.manifest.javaExecutableSha256, entries: input.jdk.manifest.entries });
   const validatedModel = validateFrozenTlaModelReceipt(input.modelReceipt);
-  if (input.artifact.kind !== "VerifiedTlcArtifact" || input.artifact.descriptorIdentity !== FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY || input.artifact.actualSha256 !== FIXED_TLC_ARTIFACT_DESCRIPTOR.sha256 || !Number.isSafeInteger(input.artifact.byteLength) || input.artifact.byteLength <= 0 || input.artifact.byteLength > FIXED_TLC_ARTIFACT_DESCRIPTOR.maxBytes || !SHA256.test(input.artifact.receiptIdentity)) return fail("artifact structure differs from the fixed descriptor");
-  if (!rebuiltJdk.ok || rebuiltJdk.value.manifestIdentity !== input.jdk.manifestIdentity || !SHA256.test(input.jdk.javaVersionReceiptIdentity) || input.jdk.snapshotIdentity !== createJdkSnapshotIdentity(rebuiltJdk.value, input.jdk.javaVersionReceiptIdentity) || input.jdk.snapshotRoot.length === 0 || input.jdk.javaExecutablePath !== rebuiltJdk.value.javaExecutablePath || !isUtcInstant(input.jdk.verifiedAt)) return fail("JDK snapshot structure is not identity-bound");
-  if (input.sandbox.kind !== "VerifiedSandbox" || input.sandbox.providerIdentity !== DARWIN_SANDBOX_PROVIDER_IDENTITY || input.sandbox.policyIdentity !== DARWIN_NETWORK_DENY_POLICY_IDENTITY || !SHA256.test(input.sandbox.receiptIdentity) || !isUtcInstant(input.sandbox.checkedAt)) return fail("sandbox structure is not identity-bound");
+  if (!hasFixedManifestArtifact(input)) return fail("artifact structure differs from the fixed descriptor");
+  if (!hasBoundManifestJdk(input, rebuiltJdk)) return fail("JDK snapshot structure is not identity-bound");
+  if (!hasBoundManifestSandbox(input)) return fail("sandbox structure is not identity-bound");
   if (!validatedModel.ok) return fail(`model receipt is invalid: ${validatedModel.error.message}`);
   if (![input.modulePath, input.cfgPath, input.subjectAlias, input.cwd].every((value) => value.length > 0 && !value.includes("\0"))) return fail("run paths and subject alias must be non-empty");
   if (!Number.isSafeInteger(input.deadlineMs) || input.deadlineMs <= 0 || input.deadlineMs > 120_000) return fail("run deadline must be within the fixed 120 second budget");
@@ -341,16 +738,13 @@ export interface TlcOperationError {
   readonly message: string;
   readonly cause?: string;
 }
-
 export type TlcToolchainError = ToolchainDomainError | TlcOperationError;
-
 export interface TlcClosedEnvironment {
   readonly JAVA_HOME: string;
   readonly LANG: "en_US.UTF-8";
   readonly LC_ALL: "en_US.UTF-8";
   readonly TZ: "UTC";
 }
-
 export interface TlcPrepareInput {
   readonly artifact: VerifiedTlcArtifact;
   readonly modelReceipt: FrozenTlaModelReceipt;
@@ -359,7 +753,6 @@ export interface TlcPrepareInput {
   readonly subjectAlias: string;
   readonly deadlineMs: number;
 }
-
 /** Concrete filesystem adapters must issue and recognize these objects with private instance state. */
 export interface PreparedTlcRun {
   readonly artifact: VerifiedTlcArtifact;
@@ -369,7 +762,6 @@ export interface PreparedTlcRun {
   readonly manifest: TlcRunManifest;
   readonly environment: TlcClosedEnvironment;
 }
-
 export interface RawTlcOutcome {
   readonly exitCode: number | null;
   readonly signal: string | null;
@@ -382,7 +774,6 @@ export interface RawTlcOutcome {
   readonly timedOut: boolean;
   readonly outputLimitExceeded: boolean;
 }
-
 export interface TlcCellBinding {
   readonly fixtureId: string;
   readonly baselineSha: string;

@@ -5,7 +5,7 @@ import { hostname } from "node:os";
 import { dirname, join } from "node:path";
 import { canonicalIdentity } from "./canonical.ts";
 import type { Result } from "./contract.ts";
-import { createTransaction, type CommitReceipt, type ProvenanceError, type ProvenanceEvent, type ProvenanceStorePort } from "./provenance.ts";
+import { createTransaction, foldLedger, type CommitReceipt, type FoldedLedger, type ProvenanceError, type ProvenanceEvent, type ProvenanceStorePort } from "./provenance.ts";
 
 interface StoredTransaction { transactionId: string; previousHead: string | null; head: string; events: readonly ProvenanceEvent[] }
 export type DurabilityPhase = "after-write" | "after-file-sync" | "after-rename" | "after-directory-sync";
@@ -13,6 +13,30 @@ export type StoreObjectKind = "transaction" | "successor" | "lock";
 export type FailureInjector = (kind: StoreObjectKind, phase: DurabilityPhase) => void;
 interface LockOwner { version: 1; host: string; pid: number; processStartedAt: string; nonce: string; createdAt: string }
 interface SuccessorRecord { head: string; previousHead: string | null; transactionId: string }
+
+const VERIFIED_LEDGER_AUTHORITY = Symbol("verified provenance ledger authority");
+const verifiedLedgers = new WeakSet<object>();
+function deepFreeze<T>(value: T): T {
+  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
+    for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
+    Object.freeze(value);
+  }
+  return value;
+}
+export class VerifiedProvenanceLedger {
+  private constructor(readonly ledger: FoldedLedger, readonly storeHead: string | null) {
+    deepFreeze(ledger);
+    verifiedLedgers.add(this);
+    Object.freeze(this);
+  }
+  static mint(authority: symbol, ledger: FoldedLedger, storeHead: string | null): VerifiedProvenanceLedger {
+    if (authority !== VERIFIED_LEDGER_AUTHORITY) throw new Error("verified provenance ledger authority mismatch");
+    return new VerifiedProvenanceLedger(ledger, storeHead);
+  }
+}
+export function isVerifiedProvenanceLedger(value: unknown): value is VerifiedProvenanceLedger {
+  return typeof value === "object" && value !== null && verifiedLedgers.has(value);
+}
 
 function processStartedAt(pid: number): string | null {
   const result = spawnSync("ps", ["-o", "lstart=", "-p", String(pid)], { encoding: "utf8" });
@@ -147,6 +171,28 @@ export class FsProvenanceStoreAdapter implements ProvenanceStorePort {
       head = next[0].head;
       if (visited.has(head)) throw new Error("successor cycle");
       visited.add(head);
+    }
+  }
+  readLedger(): Result<VerifiedProvenanceLedger, ProvenanceError> {
+    try {
+      this.recover();
+      const successors = this.successorRecords();
+      const events: ProvenanceEvent[] = [];
+      let storeHead: string | null = null;
+      for (;;) {
+        const next = successors.filter((record) => record.previousHead === storeHead);
+        if (next.length === 0) break;
+        if (next.length !== 1) throw new Error("corrupt successor fork");
+        const transaction = this.validatedTransaction(next[0]!.transactionId);
+        events.push(...transaction.events);
+        storeHead = next[0]!.head;
+      }
+      if (successors.length > 0 && storeHead !== this.currentHead()) throw new Error("successor chain is incomplete");
+      const folded = foldLedger(events);
+      if (!folded.ok) return folded;
+      return { ok: true, value: VerifiedProvenanceLedger.mint(VERIFIED_LEDGER_AUTHORITY, folded.value, storeHead) };
+    } catch {
+      return { ok: false, error: { kind: "TransactionCorruptionError", message: "stored ledger is unreadable" } };
     }
   }
   async findTransaction(transactionId: string): Promise<Result<CommitReceipt | null, ProvenanceError>> {

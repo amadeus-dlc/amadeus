@@ -1,10 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   DarwinSandboxExecProvider,
-  FsTlcArtifactCache,
+  FsTlcToolchain,
   NodeArtifactNetworkPort,
   NodeFileDigestPort,
   NodeJavaVersionPort,
@@ -16,7 +16,11 @@ import {
   generateFrozenTlaModel,
 } from "../../../scripts/formal-verif/tla-arm.ts";
 
-const JDK_ROOT = "/Users/j5ik2o/.local/share/mise/installs/java/temurin-26.0.1+8";
+const configuredJdkRoot = process.env.JAVA_HOME;
+if (!configuredJdkRoot) {
+  throw new Error("JAVA_HOME is required and must point to OpenJDK 26.0.1");
+}
+const JDK_ROOT = realpathSync(configuredJdkRoot);
 
 function joinChunks(chunks: readonly Uint8Array[]): Uint8Array {
   const joined = new Uint8Array(chunks.reduce((total, chunk) => total + chunk.byteLength, 0));
@@ -43,7 +47,7 @@ writeFileSync(modulePath, model.moduleBytes);
 writeFileSync(cfgPath, model.cfgBytes);
 
 const processes = new NodeTlcProcessPort();
-const toolchain = new FsTlcArtifactCache(join(root, "cache"), {
+const toolchain = new FsTlcToolchain(join(root, "cache"), {
   network: new NodeArtifactNetworkPort(),
   digest: new NodeFileDigestPort(),
   reservation: new NodePhysicalReservationPort(),

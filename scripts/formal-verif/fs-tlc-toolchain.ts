@@ -27,8 +27,8 @@ import {
 } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { canonicalIdentity } from "./canonical.ts";
-import { isUtcInstant, type CellResult, type Result } from "./contract.ts";
-import { normalizeTlcExploration, parseTlcOutput174, validateFrozenTlaModelReceipt, type TlcExploration } from "./tla-arm.ts";
+import { isUtcInstant, parseCellResult, type CellResult, type Result } from "./contract.ts";
+import { validateFrozenTlaModelReceipt } from "./tla-arm.ts";
 import {
   createJdkDistributionManifest,
   createJdkSnapshotIdentity,
@@ -40,6 +40,7 @@ import {
   FIXED_TLC_ARTIFACT_DESCRIPTOR,
   FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY,
   MAX_TLC_STREAM_BYTES,
+  parseTlcOutput174,
   type JdkDistributionEntry,
   type JdkDistributionManifest,
   type PreparedTlcRun,
@@ -48,6 +49,7 @@ import {
   type SandboxProbeKind,
   type SandboxProbeObservation,
   type TlcClosedEnvironment,
+  type TlcExploration,
   type TlcNormalizationInput,
   type TlcPrepareInput,
   type TlcToolchainFacade,
@@ -56,6 +58,53 @@ import {
   type VerifiedSandbox,
   type VerifiedTlcArtifact,
 } from "./tlc-toolchain.ts";
+
+interface TlcCellNormalizationInput {
+  exploration: TlcExploration;
+  fixtureId: string; baselineSha: string; armSha: string;
+  exitCode: number | null;
+  startedAt: string; finishedAt: string;
+  evidencePaths: string[];
+}
+
+function explorationExitCodeMatches(exploration: TlcExploration, exitCode: number | null): boolean {
+  if (exploration.kind === "COMPLETE") return exitCode === 0;
+  if (exploration.kind === "COUNTEREXAMPLE") return exitCode === 12;
+  return true;
+}
+
+function explorationVerdict(exploration: TlcExploration): CellResult["verdict"] {
+  if (exploration.kind === "COMPLETE") return "NOT_DETECTED";
+  if (exploration.kind === "COUNTEREXAMPLE") return "DETECTED";
+  return "HARNESS_ERROR";
+}
+
+function explorationCounterexampleId(exploration: TlcExploration): string | null { return exploration.kind === "COUNTEREXAMPLE" ? exploration.counterexampleIdentity : null; }
+
+function cellNormalizationFailure(message: string) { return { ok: false as const, error: { message } }; }
+
+const normalizeIssuedExploration = (input: TlcCellNormalizationInput) => {
+  if (!explorationExitCodeMatches(input.exploration, input.exitCode)) {
+    return cellNormalizationFailure("exploration kind and process exit code disagree");
+  }
+  const parsed = parseCellResult({
+    schemaVersion: 1,
+    arm: "tla",
+    fixtureId: input.fixtureId,
+    baselineSha: input.baselineSha,
+    armSha: input.armSha,
+    verdict: explorationVerdict(input.exploration),
+    exitCode: input.exitCode,
+    toolVersions: { tlc: "1.7.4" },
+    seedOrBound: { workers: 1, voters: 3, choices: 3, maxInitialPerVoter: 1, maxAmendPerVoter: 1, maxHold: 1 },
+    startedAt: input.startedAt,
+    finishedAt: input.finishedAt,
+    counterexampleId: explorationCounterexampleId(input.exploration),
+    evidencePaths: [...input.evidencePaths],
+  });
+  if (!parsed.ok) return cellNormalizationFailure(`${parsed.error.path}: ${parsed.error.message}`);
+  return parsed;
+};
 
 const CONNECT_MS = 10_000;
 const HEADERS_MS = 30_000;
@@ -210,7 +259,7 @@ interface CapacityRecord {
   state: "RESERVING" | "ACTIVE";
 }
 
-export interface FsTlcArtifactCacheDependencies {
+export interface FsTlcToolchainDependencies {
   network: ArtifactNetworkPort;
   digest: FileDigestPort;
   reservation: PhysicalReservationPort;
@@ -500,6 +549,10 @@ async function collectUnbounded(stream: AsyncIterable<Uint8Array>): Promise<Uint
   return chunks;
 }
 
+function assertSealedJdkFile(mode: number, sealed: boolean, relativePath: string): void {
+  if (sealed && ((mode & 0o222) !== 0 || (relativePath === "bin/java" && (mode & 0o111) === 0))) toolchainAbort("PreparationError", "JDK_SEAL", `JDK snapshot file mode is not sealed: ${relativePath}`);
+}
+
 function inspectJdk(rootPath: string, sealed = false): JdkDistributionManifest {
   let root: string;
   try { root = realpathSync(rootPath); } catch (cause) {
@@ -518,7 +571,7 @@ function inspectJdk(rootPath: string, sealed = false): JdkDistributionManifest {
         if (!pathInside(root, actual)) toolchainAbort("PreparationError", "JDK_ESCAPE", `JDK directory escapes its distribution root: ${relativePath}`);
         visit(path, relativePath);
       } else if (stat.isFile()) {
-        if (sealed && ((stat.mode & 0o222) !== 0 || (relativePath === "bin/java" && (stat.mode & 0o111) === 0))) toolchainAbort("PreparationError", "JDK_SEAL", `JDK snapshot file mode is not sealed: ${relativePath}`);
+        assertSealedJdkFile(stat.mode, sealed, relativePath);
         const actual = realpathSync(path);
         if (!pathInside(root, actual)) toolchainAbort("PreparationError", "JDK_ESCAPE", `JDK file escapes its distribution root: ${relativePath}`);
         const digest = hashFile(path);
@@ -607,19 +660,14 @@ const receiptBody = (receipt: TlcArtifactReceipt) => ({
   jdkVersion: receipt.jdkVersion,
 });
 
-export class FsTlcArtifactCache implements TlcToolchainFacade {
+class FsTlcArtifactCache {
   readonly #namespace: string;
   readonly #cachePath: string;
   readonly #receiptPath: string;
   readonly #cacheRef: string;
   readonly #issuedArtifacts = new WeakSet<VerifiedTlcArtifact>();
-  readonly #issuedJdks = new WeakSet<VerifiedJdkSnapshot>();
-  readonly #issuedSandboxes = new WeakMap<VerifiedSandbox, SandboxProbeReceipt>();
-  readonly #issuedPrepared = new WeakSet<PreparedTlcRun>();
-  readonly #issuedOutcomes = new WeakMap<RawTlcOutcome, PreparedTlcRun>();
-  #jdkSnapshot: VerifiedJdkSnapshot | undefined;
 
-  constructor(readonly root: string, private readonly dependencies: FsTlcArtifactCacheDependencies) {
+  constructor(readonly root: string, private readonly dependencies: FsTlcToolchainDependencies) {
     this.#namespace = join(root, FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY);
     this.#cachePath = join(this.#namespace, FIXED_TLC_ARTIFACT_DESCRIPTOR.fileName);
     this.#receiptPath = join(this.#namespace, "receipt.json");
@@ -1025,7 +1073,7 @@ export class FsTlcArtifactCache implements TlcToolchainFacade {
     return outcome!;
   }
 
-  #verifyArtifact(artifact: VerifiedTlcArtifact, kind: "PreparationError" | "InvocationError" = "PreparationError"): void {
+  verifyIssuedArtifact(artifact: VerifiedTlcArtifact, kind: "PreparationError" | "InvocationError" = "PreparationError"): void {
     if (!this.#issuedArtifacts.has(artifact) || artifact.cachePath !== this.#cachePath) {
       toolchainAbort(kind, "ARTIFACT_CAPABILITY", "artifact was not issued by this toolchain instance");
     }
@@ -1035,18 +1083,36 @@ export class FsTlcArtifactCache implements TlcToolchainFacade {
       toolchainAbort(kind, "ARTIFACT_DRIFT", "issued artifact no longer matches its immutable cache and receipt");
     }
   }
+}
+
+class FsTlcRuntime {
+  readonly #issuedJdks = new WeakSet<VerifiedJdkSnapshot>();
+  readonly #issuedSandboxes = new WeakMap<VerifiedSandbox, SandboxProbeReceipt>();
+  readonly #issuedPrepared = new WeakSet<PreparedTlcRun>();
+  readonly #issuedOutcomes = new WeakMap<RawTlcOutcome, PreparedTlcRun>();
+  #jdkSnapshot: VerifiedJdkSnapshot | undefined;
+
+  constructor(
+    private readonly artifacts: FsTlcArtifactCache,
+    private readonly dependencies: FsTlcToolchainDependencies,
+  ) {}
+
+  async #reuseIssuedJdk(distribution: JdkDistributionManifest, snapshotRoot: string, deadlineMs: number): Promise<VerifiedJdkSnapshot | undefined> {
+    const issued = this.#jdkSnapshot;
+    if (!issued) return undefined;
+    const rebuilt = inspectJdk(snapshotRoot, true);
+    if (rebuilt.manifestIdentity !== distribution.manifestIdentity || rebuilt.manifestIdentity !== issued.manifestIdentity) toolchainAbort("PreparationError", "JDK_DRIFT", "sealed JDK snapshot changed after issuance");
+    if (await this.#verifyJavaVersion(issued, deadlineMs, "PreparationError") !== issued.javaVersionReceiptIdentity) toolchainAbort("PreparationError", "JDK_VERSION_DRIFT", "java version receipt changed after issuance");
+    return issued;
+  }
 
   async #snapshotJdk(deadlineMs: number): Promise<VerifiedJdkSnapshot> {
     const distributionRoot = this.dependencies.jdkDistributionRoot;
     const snapshotRoot = this.dependencies.jdkSnapshotRoot;
     if (!distributionRoot || !snapshotRoot) toolchainAbort("PreparationError", "JDK_CONFIGURATION", "JDK distribution and snapshot roots are required");
     const distribution = inspectJdk(distributionRoot);
-    if (this.#jdkSnapshot) {
-      const rebuilt = inspectJdk(snapshotRoot, true);
-      if (rebuilt.manifestIdentity !== distribution.manifestIdentity || rebuilt.manifestIdentity !== this.#jdkSnapshot.manifestIdentity) toolchainAbort("PreparationError", "JDK_DRIFT", "sealed JDK snapshot changed after issuance");
-      if (await this.#verifyJavaVersion(this.#jdkSnapshot, deadlineMs, "PreparationError") !== this.#jdkSnapshot.javaVersionReceiptIdentity) toolchainAbort("PreparationError", "JDK_VERSION_DRIFT", "java version receipt changed after issuance");
-      return this.#jdkSnapshot;
-    }
+    const issued = await this.#reuseIssuedJdk(distribution, snapshotRoot, deadlineMs);
+    if (issued) return issued;
     if (existsSync(snapshotRoot)) toolchainAbort("PreparationError", "JDK_SNAPSHOT_EXISTS", "JDK snapshot root already exists before issuance");
     mkdirSync(snapshotRoot, { recursive: true, mode: 0o700 });
     const directories = new Set<string>([snapshotRoot]);
@@ -1153,7 +1219,7 @@ export class FsTlcArtifactCache implements TlcToolchainFacade {
 
   async prepare(input: TlcPrepareInput): Promise<Result<PreparedTlcRun, TlcToolchainError>> {
     try {
-      this.#verifyArtifact(input.artifact);
+      this.artifacts.verifyIssuedArtifact(input.artifact);
       const workspaceRoot = this.dependencies.workspaceRoot;
       if (!workspaceRoot) toolchainAbort("PreparationError", "WORKSPACE_CONFIGURATION", "closed runtime workspace root is required");
       const actualWorkspace = realpathSync(workspaceRoot);
@@ -1194,7 +1260,7 @@ export class FsTlcArtifactCache implements TlcToolchainFacade {
     const startingRemainingMs = this.dependencies.suiteRemainingMs?.() ?? prepared.manifest.deadlineMs;
     if (!Number.isSafeInteger(publishReserveMs) || publishReserveMs! <= 0 || !Number.isSafeInteger(startingRemainingMs) || startingRemainingMs <= publishReserveMs!) return { ok: false, error: { kind: "InvocationError", code: "DEADLINE", message: "suite budget cannot cover the fixed evidence publish reserve" } };
     try {
-      this.#verifyArtifact(prepared.artifact, "InvocationError");
+      this.artifacts.verifyIssuedArtifact(prepared.artifact, "InvocationError");
       this.#verifyCanonicalSources(prepared.manifest.modulePath, prepared.manifest.cfgPath, prepared.manifest.cwd, "InvocationError");
       this.#verifyStandardModuleDirectory(prepared.manifest.cwd, false, "InvocationError");
       if (sourceIdentity(prepared.manifest.modulePath, "amadeus.formal-verif.tla.module.v1", "InvocationError") !== prepared.manifest.moduleIdentity || sourceIdentity(prepared.manifest.cfgPath, "amadeus.formal-verif.tla.cfg.v1", "InvocationError") !== prepared.manifest.cfgIdentity) toolchainAbort("InvocationError", "SOURCE_DRIFT", "module or cfg bytes changed before spawn");
@@ -1365,7 +1431,7 @@ export class FsTlcArtifactCache implements TlcToolchainFacade {
         : input.outcome.stderrChunks.some((chunk) => chunk.byteLength > 0)
           ? { kind: "HARNESS_ERROR", reason: "GRAMMAR", detail: "TLC stderr was not empty" }
           : parseTlcOutput174({ chunks: [...input.outcome.stdoutChunks], exitCode: input.outcome.exitCode, signal: input.outcome.signal, timedOut: input.outcome.timedOut, expectedModuleName: basename(input.prepared.manifest.modulePath, ".tla"), expectedModulePath: input.prepared.manifest.modulePath, expectedStandardModuleDirectory: standardModuleDirectory, verifiedArtifactDescriptorIdentity: input.prepared.artifact.descriptorIdentity, modelReceipt: input.prepared.modelReceipt });
-      const normalized = normalizeTlcExploration({ exploration, fixtureId: input.binding.fixtureId, baselineSha: input.binding.baselineSha, armSha: input.binding.armSha, exitCode: input.outcome.exitCode, startedAt: input.binding.startedAt, finishedAt: input.binding.finishedAt, evidencePaths: [...input.binding.evidencePaths] });
+      const normalized = normalizeIssuedExploration({ exploration, fixtureId: input.binding.fixtureId, baselineSha: input.binding.baselineSha, armSha: input.binding.armSha, exitCode: input.outcome.exitCode, startedAt: input.binding.startedAt, finishedAt: input.binding.finishedAt, evidencePaths: [...input.binding.evidencePaths] });
       return normalized.ok ? normalized : { ok: false, error: { kind: "NormalizationError", code: "CELL_RESULT", message: normalized.error.message } };
     } catch (cause) {
       return { ok: false, error: cause instanceof ToolchainFailure ? cause.value : { kind: "NormalizationError", code: "OUTPUT", message: "TLC normalization failed", cause: String(cause) } };
@@ -1373,4 +1439,18 @@ export class FsTlcArtifactCache implements TlcToolchainFacade {
   }
 }
 
-export { FsTlcArtifactCache as FsTlcToolchain };
+export class FsTlcToolchain implements TlcToolchainFacade {
+  readonly #artifacts: FsTlcArtifactCache;
+  readonly #runtime: FsTlcRuntime;
+
+  constructor(readonly root: string, dependencies: FsTlcToolchainDependencies) {
+    this.#artifacts = new FsTlcArtifactCache(root, dependencies);
+    this.#runtime = new FsTlcRuntime(this.#artifacts, dependencies);
+  }
+
+  acquire() { return this.#artifacts.acquire(); }
+  verifyOffline() { return this.#artifacts.verifyOffline(); }
+  prepare(input: TlcPrepareInput) { return this.#runtime.prepare(input); }
+  run(prepared: PreparedTlcRun) { return this.#runtime.run(prepared); }
+  normalize(input: TlcNormalizationInput) { return this.#runtime.normalize(input); }
+}

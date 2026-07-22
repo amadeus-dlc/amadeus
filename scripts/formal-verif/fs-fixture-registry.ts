@@ -18,7 +18,29 @@ export interface RegistryStoreDependencies {
 export interface LockOwner { host: string; pid: number; processStartedAt: string; nonce: string; createdAt: string; operationIdentity: string }
 export interface CapacityClaim { reservationId: string; revisionId: string; baselineSha: string; reservedBytes: number; backingLength: number; backingHash: string; owner: RegistryStoreDependencies["owner"]; state: "ACTIVE"; claimIdentity: string }
 export interface DisclosureCommit { event: { eventId: string; ordinal: number; arm: ArmId; worktree: string; fixtureAlias: string; frozenEventId: string; sealedIdentity: string; disclosureHash: string; grantIdentity: string; at: string }; grant: DisclosureAuthorization & { eventId: string; grantIdentity: string } }
-export interface MaterializationReceipt { grantIdentity: string; destination: string; materializedIdentity: string; receiptIdentity: string }
+interface MaterializationReceiptBody { grantIdentity: string; authorizationIdentity: string; frozenEventId: string; fixtureAlias: string; sealIdentity: string; baselineSha: string; injectionSha: string; injectionPatchIdentity: string; destination: string; materializedIdentity: string }
+const MATERIALIZATION_AUTHORITY = Symbol("verified materialization authority");
+const verifiedMaterializations = new WeakSet<object>();
+export class MaterializationReceipt {
+  private constructor(body: MaterializationReceiptBody, readonly receiptIdentity: string) { Object.assign(this, body); verifiedMaterializations.add(this); Object.freeze(this); }
+  readonly grantIdentity!: string;
+  readonly authorizationIdentity!: string;
+  readonly frozenEventId!: string;
+  readonly fixtureAlias!: string;
+  readonly sealIdentity!: string;
+  readonly baselineSha!: string;
+  readonly injectionSha!: string;
+  readonly injectionPatchIdentity!: string;
+  readonly destination!: string;
+  readonly materializedIdentity!: string;
+  static mint(authority: symbol, body: MaterializationReceiptBody): MaterializationReceipt {
+    if (authority !== MATERIALIZATION_AUTHORITY) throw new Error("verified materialization authority mismatch");
+    return new MaterializationReceipt(body, canonicalIdentity(body, "amadeus.formal-verif.materialization-receipt.v1").sha256);
+  }
+}
+export function isVerifiedMaterializationReceipt(value: unknown): value is MaterializationReceipt {
+  return typeof value === "object" && value !== null && verifiedMaterializations.has(value);
+}
 
 const SHA = /^[0-9a-f]{64}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -290,7 +312,30 @@ class FixtureRegistryStore {
     try { for (const arm of readdirSync(join(this.root, "disclosures"))) for (const alias of readdirSync(join(this.root, "disclosures", arm))) { const commit = this.readDisclosureCommit(join(this.root, "disclosures", arm, alias)); if (!commit.ok) return commit; if (commit.value.grant.grantIdentity === grantIdentity) return commit; } } catch (cause) { return fail("DisclosureError", "grant lookup failed", String(cause)); } return fail("DisclosureError", "grant is unknown");
   }
   materializeDisclosure(grantIdentity: string, worktree: string, destinationRoot: string, destination: string): Result<MaterializationReceipt, RegistryError> {
-    return this.locked({ kind: "MATERIALIZE", grantIdentity, worktree, destination }, () => { if (!this.dependencies.sandboxAvailable()) return fail("DisclosureError", "filesystem sandbox capability is unavailable"); const found = this.findGrant(grantIdentity); if (!found.ok) return found; const { grant, event } = found.value; if (grant.grantIdentity !== grantIdentity || grant.worktree !== worktree || !grant.destinationPrefixes.some((prefix: string) => destination === prefix || destination.startsWith(`${prefix}/`)) || !safe(destination)) return fail("DisclosureError", "grant event, worktree, or destination binding is invalid"); const seal = this.readSeal(grant.sealedIdentity); if (!seal.ok || event.disclosureHash !== seal.value.fixture.disclosurePayloadIdentity || event.sealedIdentity !== seal.value.fixture.sealIdentity || event.fixtureAlias !== seal.value.fixture.fixtureAlias) return fail("DisclosureError", "disclosure event does not bind the durable seal"); const active = this.requireActive(grant.universeIdentity, seal.value.fixture.baselineSha); if (!active.ok) return active; const final = resolve(destinationRoot, destination); const rel = relative(resolve(destinationRoot), final); if (rel.startsWith("..") || /^[\\/]/.test(rel)) return fail("DisclosureError", "materialization path escapes worktree"); const prior = join(this.root, "materializations", grantIdentity); const receiptBody = { grantIdentity, destination, materializedIdentity: fixturePayloadIdentity(seal.value.payloads) }; const receipt: MaterializationReceipt = { ...receiptBody, receiptIdentity: canonicalIdentity(receiptBody, "amadeus.formal-verif.materialization-receipt.v1").sha256 }; if (existsSync(prior)) { const stored = JSON.parse(readFileSync(join(prior, "receipt.json"), "utf8")); return JSON.stringify(stored) === JSON.stringify(receipt) && this.directoryMatches(final, seal.value.payloads) ? { ok: true, value: receipt } : fail("DisclosureError", "single-use grant replay drifted"); } if (existsSync(final) && !this.directoryMatches(final, seal.value.payloads)) return fail("DisclosureError", "materialization destination already exists with different bytes"); if (!existsSync(final)) { mkdirSync(dirname(final), { recursive: true }); const staging = mkdtempSync(join(dirname(final), `.grant-${grantIdentity}-`)); try { for (const [path, value] of Object.entries(seal.value.payloads)) this.durableFile(join(staging, path), value); this.syncDirectory(staging); renameSync(staging, final); this.syncDirectory(dirname(final)); } catch (cause) { rmSync(staging, { recursive: true, force: true }); return fail("DisclosureError", "materialization commit failed", String(cause)); } } this.inject?.("before-receipt"); const committed = this.commitDirectory("materializations", grantIdentity, { "receipt.json": bytes(receipt) }); return committed.ok ? { ok: true, value: receipt } : committed; });
+    return this.locked({ kind: "MATERIALIZE", grantIdentity, worktree, destination }, () => {
+      if (!this.dependencies.sandboxAvailable()) return fail("DisclosureError", "filesystem sandbox capability is unavailable");
+      const found = this.findGrant(grantIdentity); if (!found.ok) return found;
+      const { grant, event } = found.value;
+      if (grant.grantIdentity !== grantIdentity || grant.worktree !== worktree || !grant.destinationPrefixes.some((prefix: string) => destination === prefix || destination.startsWith(`${prefix}/`)) || !safe(destination)) return fail("DisclosureError", "grant event, worktree, or destination binding is invalid");
+      const seal = this.readSeal(grant.sealedIdentity);
+      if (!seal.ok || event.disclosureHash !== seal.value.fixture.disclosurePayloadIdentity || event.sealedIdentity !== seal.value.fixture.sealIdentity || event.fixtureAlias !== seal.value.fixture.fixtureAlias) return fail("DisclosureError", "disclosure event does not bind the durable seal");
+      const active = this.requireActive(grant.universeIdentity, seal.value.fixture.baselineSha); if (!active.ok) return active;
+      const final = resolve(destinationRoot, destination); const rel = relative(resolve(destinationRoot), final);
+      if (rel.startsWith("..") || /^[\\/]/.test(rel)) return fail("DisclosureError", "materialization path escapes worktree");
+      const fixture = seal.value.fixture;
+      const receipt = MaterializationReceipt.mint(MATERIALIZATION_AUTHORITY, { grantIdentity, authorizationIdentity: grant.authorizationIdentity, frozenEventId: event.frozenEventId, fixtureAlias: fixture.fixtureAlias, sealIdentity: fixture.sealIdentity, baselineSha: fixture.baselineSha, injectionSha: fixture.injectionSha, injectionPatchIdentity: fixture.patchIdentity, destination, materializedIdentity: fixturePayloadIdentity(seal.value.payloads) });
+      const prior = join(this.root, "materializations", grantIdentity);
+      if (existsSync(prior)) { const stored = JSON.parse(readFileSync(join(prior, "receipt.json"), "utf8")); return JSON.stringify(stored) === JSON.stringify(receipt) && this.directoryMatches(final, seal.value.payloads) ? { ok: true, value: receipt } : fail("DisclosureError", "single-use grant replay drifted"); }
+      if (existsSync(final) && !this.directoryMatches(final, seal.value.payloads)) return fail("DisclosureError", "materialization destination already exists with different bytes");
+      if (!existsSync(final)) {
+        mkdirSync(dirname(final), { recursive: true }); const staging = mkdtempSync(join(dirname(final), `.grant-${grantIdentity}-`));
+        try { for (const [path, value] of Object.entries(seal.value.payloads)) this.durableFile(join(staging, path), value); this.syncDirectory(staging); renameSync(staging, final); this.syncDirectory(dirname(final)); }
+        catch (cause) { rmSync(staging, { recursive: true, force: true }); return fail("DisclosureError", "materialization commit failed", String(cause)); }
+      }
+      this.inject?.("before-receipt");
+      const committed = this.commitDirectory("materializations", grantIdentity, { "receipt.json": bytes(receipt) });
+      return committed.ok ? { ok: true, value: receipt } : committed;
+    });
   }
 
   private verifyPromotionIndex(universe: DefectUniverse, permission: ManifestPromotionPermission, fixtures: readonly SealedFixture[]): Result<void, RegistryError> {

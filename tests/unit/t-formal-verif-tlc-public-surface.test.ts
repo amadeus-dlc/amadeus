@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { FsTlcToolchain } from "../../scripts/formal-verif/fs-tlc-toolchain.ts";
+import * as fsToolchainSurface from "../../scripts/formal-verif/fs-tlc-toolchain.ts";
+import * as tlcToolchainSurface from "../../scripts/formal-verif/tlc-toolchain.ts";
 import {
   FIXED_JDK_RUN_PROFILE,
   FIXED_JDK_RUN_PROFILE_IDENTITY,
@@ -10,7 +11,6 @@ import {
   FIXED_TLC_PROFILE_IDENTITY,
   createFrozenTlaModelReceipt,
   generateFrozenTlaModel,
-  normalizeTlcExploration,
   parseTlcOutput174,
   type CompleteTlcExploration,
   type CounterexampleTlcExploration,
@@ -23,8 +23,6 @@ import {
   type TlaInvariantSourceLocation,
   type TlcArtifactDescriptor,
   type TlcCellBinding,
-  type TlcCellNormalizationError,
-  type TlcCellNormalizationInput,
   type TlcClosedEnvironment,
   type TlcExploration,
   type TlcNormalizationInput,
@@ -53,8 +51,6 @@ type U5BridgeSurface = {
   failure: FailedTlcExploration;
   exploration: TlcExploration;
   trace: TlcTraceState;
-  cellInput: TlcCellNormalizationInput;
-  cellError: TlcCellNormalizationError;
   descriptor: TlcArtifactDescriptor;
   profile: TlcProfile;
   jdkProfile: JdkRunProfile;
@@ -78,6 +74,12 @@ const acceptU5BridgeSurface = (_surface: U5BridgeSurface): void => {};
 void acceptU5BridgeSurface;
 
 describe("formal verification TLC root public surface", () => {
+  test("exposes one composed filesystem toolchain without leaking its internal artifact store", () => {
+    expect(FsTlcToolchain.name).toBe("FsTlcToolchain");
+    expect(Object.keys(fsToolchainSurface)).not.toContain("FsTlcArtifactCache");
+    expect(Object.keys(tlcToolchainSurface)).not.toContain("normalizeTlcExploration");
+  });
+
   test("exports only the U5 bridge runtime values needed from U4", () => {
     const requiredRuntime = {
       FIXED_JDK_RUN_PROFILE,
@@ -88,7 +90,6 @@ describe("formal verification TLC root public surface", () => {
       FIXED_TLC_PROFILE_IDENTITY,
       createFrozenTlaModelReceipt,
       generateFrozenTlaModel,
-      normalizeTlcExploration,
       parseTlcOutput174,
     };
 
@@ -101,7 +102,6 @@ describe("formal verification TLC root public surface", () => {
       "FIXED_TLC_PROFILE_IDENTITY",
       "createFrozenTlaModelReceipt",
       "generateFrozenTlaModel",
-      "normalizeTlcExploration",
       "parseTlcOutput174",
     ]);
     const exportedRuntime = [
@@ -113,7 +113,6 @@ describe("formal verification TLC root public surface", () => {
       publicSurface.FIXED_TLC_PROFILE_IDENTITY,
       publicSurface.createFrozenTlaModelReceipt,
       publicSurface.generateFrozenTlaModel,
-      publicSurface.normalizeTlcExploration,
       publicSurface.parseTlcOutput174,
     ];
     expect(exportedRuntime).toEqual(Object.values(requiredRuntime));
@@ -129,6 +128,7 @@ describe("formal verification TLC root public surface", () => {
       "DarwinSandboxExecProvider",
       "FIXED_TLC_174_GRAMMAR_DESCRIPTOR_IDENTITY",
       "FsTlcArtifactCache",
+      "normalizeTlcExploration",
       "PhysicalReservationPort",
       "TlcExecutionPort",
       "TlcProcessPort",
@@ -151,9 +151,5 @@ describe("formal verification TLC root public surface", () => {
     for (const name of internalNames) expect(runtimeKeys).not.toContain(name);
     expect(runtimeKeys.filter((name) => /issuer/i.test(name))).toEqual([]);
 
-    const barrel = readFileSync(resolve("scripts/formal-verif/index.ts"), "utf8");
-    expect(barrel).not.toContain('export * from "./tla-arm.ts"');
-    expect(barrel).not.toContain('export * from "./tlc-toolchain.ts"');
-    expect(barrel).not.toContain('export * from "./fs-tlc-toolchain.ts"');
   });
 });

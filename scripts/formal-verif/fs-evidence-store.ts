@@ -30,6 +30,27 @@ interface StoredMetadata {
 
 interface LockOwner { host: string; pid: number; processStartedAt: string; nonce: string; createdAt: string }
 interface Reservation { revisionIdentity: string; reservedBytes: number; usedBytes: number; bundleIds: string[]; status: "ACTIVE" }
+const RESERVATION_AUTHORITY = Symbol("verified capacity reservation authority");
+const TEST_RESERVATION_POLICY = Symbol("evidence store test reservation policy");
+const verifiedReservations = new WeakSet<object>();
+interface InternalReservationPolicy { token: typeof TEST_RESERVATION_POLICY; backingBytes: number }
+
+export class VerifiedCapacityReservation {
+  private constructor(
+    readonly revisionIdentity: string,
+    readonly reservedBytes: number,
+    readonly evidenceRootIdentity: string,
+    readonly reservationIdentity: string,
+  ) { verifiedReservations.add(this); Object.freeze(this); }
+  static mint(authority: symbol, revisionIdentity: string, reservedBytes: number, evidenceRootIdentity: string): VerifiedCapacityReservation {
+    if (authority !== RESERVATION_AUTHORITY) throw new Error("verified capacity reservation authority mismatch");
+    const body = { revisionIdentity, reservedBytes, evidenceRootIdentity };
+    return new VerifiedCapacityReservation(revisionIdentity, reservedBytes, evidenceRootIdentity, canonicalIdentity(body, "amadeus.formal-verif.capacity-reservation.v1").sha256);
+  }
+}
+export function isVerifiedCapacityReservation(value: unknown): value is VerifiedCapacityReservation {
+  return typeof value === "object" && value !== null && verifiedReservations.has(value);
+}
 
 function isIsoDateTime(value: unknown): value is string {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)) return false;
@@ -102,6 +123,7 @@ export class FsEvidenceStoreAdapter implements EvidenceStorePort {
     private readonly clock: MonotonicClock,
     private readonly inject?: EvidenceStoreFailureInjector,
     private readonly capacityBytes = Number.POSITIVE_INFINITY,
+    private readonly reservationPolicy?: InternalReservationPolicy,
   ) { mkdirSync(root, { recursive: true }); }
 
   private transactions(): string { return join(this.root, "transactions"); }
@@ -190,7 +212,7 @@ export class FsEvidenceStoreAdapter implements EvidenceStorePort {
     return readdirSync(this.reservations()).filter((name) => name.endsWith(".json")).map((name) => JSON.parse(readFileSync(join(this.reservations(), name), "utf8")) as Reservation).filter((value) => value.status === "ACTIVE");
   }
 
-  reserveCapacity(revisionIdentity: string, bytes: number): Result<{ revisionIdentity: string; bytes: number }, EvidenceError> {
+  reserveCapacity(revisionIdentity: string, bytes: number): Result<VerifiedCapacityReservation, EvidenceError> {
     if (!/^[0-9a-f]{64}$/.test(revisionIdentity) || !Number.isSafeInteger(bytes) || bytes <= 0) return failure("EvidencePublishError", "invalid capacity reservation");
     const owner = this.acquire();
     if (!owner) return failure("EvidencePublishError", "live evidence writer already active");
@@ -199,13 +221,15 @@ export class FsEvidenceStoreAdapter implements EvidenceStorePort {
       if (existsSync(this.reservationPath(revisionIdentity))) return failure("EvidencePublishError", "reservation already exists");
       const active = this.activeReservations().reduce((sum, value) => sum + value.reservedBytes, 0);
       if (active + bytes > this.capacityBytes) return failure("EvidencePublishError", "insufficient store capacity");
+      const backingBytes = this.reservationPolicy?.token === TEST_RESERVATION_POLICY ? Math.min(bytes, this.reservationPolicy.backingBytes) : bytes;
       const fd = openSync(this.reservationBytesPath(revisionIdentity), "wx", 0o600);
-      try { const chunk = new Uint8Array(Math.min(bytes, 64 * 1024)); for (let remaining = bytes; remaining > 0;) { const count = Math.min(remaining, chunk.length); writeSync(fd, chunk, 0, count); remaining -= count; } fsyncSync(fd); } finally { closeSync(fd); }
+      try { const chunk = new Uint8Array(Math.min(backingBytes, 64 * 1024)); for (let remaining = backingBytes; remaining > 0;) { const count = Math.min(remaining, chunk.length); writeSync(fd, chunk, 0, count); remaining -= count; } fsyncSync(fd); } finally { closeSync(fd); }
       const reservation: Reservation = { revisionIdentity, reservedBytes: bytes, usedBytes: 0, bundleIds: [], status: "ACTIVE" };
       writeDurable(this.reservationPath(revisionIdentity), new TextEncoder().encode(JSON.stringify(reservation)));
       syncDirectory(this.reservations());
       syncDirectory(this.root);
-      return { ok: true, value: { revisionIdentity, bytes } };
+      const evidenceRootIdentity = canonicalIdentity({ root: this.root }, "amadeus.formal-verif.evidence-root.v1").sha256;
+      return { ok: true, value: VerifiedCapacityReservation.mint(RESERVATION_AUTHORITY, revisionIdentity, bytes, evidenceRootIdentity) };
     } catch (cause) {
       rmSync(this.reservationPath(revisionIdentity), { force: true });
       rmSync(this.reservationBytesPath(revisionIdentity), { force: true });
@@ -316,4 +340,9 @@ export class FsEvidenceStoreAdapter implements EvidenceStorePort {
       return failure("EvidenceIdentityError", cause instanceof Error ? cause.message : String(cause));
     }
   }
+}
+
+export function createFsEvidenceStoreForTesting(root: string, clock: MonotonicClock, backingBytes = 64 * 1024): FsEvidenceStoreAdapter {
+  if (!Number.isSafeInteger(backingBytes) || backingBytes <= 0) throw new TypeError("test reservation backing bytes must be positive");
+  return new FsEvidenceStoreAdapter(root, clock, undefined, Number.POSITIVE_INFINITY, { token: TEST_RESERVATION_POLICY, backingBytes });
 }

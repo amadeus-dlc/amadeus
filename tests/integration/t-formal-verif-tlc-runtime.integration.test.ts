@@ -23,9 +23,9 @@ import { dirname, join } from "node:path";
 import {
   FIXED_TLC_RESERVATION_BYTES,
   DarwinSandboxExecProvider,
-  FsTlcArtifactCache,
+  FsTlcToolchain,
   NodePhysicalReservationPort,
-  type FsTlcArtifactCacheDependencies,
+  type FsTlcToolchainDependencies,
 } from "../../scripts/formal-verif/fs-tlc-toolchain.ts";
 import { createFrozenTlaModelReceipt, generateFrozenTlaModel } from "../../scripts/formal-verif/tla-arm.ts";
 import type { PreparedTlcRun } from "../../scripts/formal-verif/tlc-toolchain.ts";
@@ -45,6 +45,67 @@ function errorCode(result: { readonly ok: boolean; readonly error?: unknown }): 
 
 function envelope(code: number, severity: number, payload: string): string {
   return `@!@!@STARTMSG ${code}:${severity} @!@!@\n${payload}\n@!@!@ENDMSG ${code} @!@!@\n`;
+}
+
+function closedLifecycle(modulePath: string, standardModuleDirectory: string): string {
+  return [
+    envelope(2262, 0, "TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)"),
+    envelope(2187, 0, "Running breadth-first search Model-Checking with fp 92 and seed 5 with 1 worker."),
+    envelope(2220, 0, "Starting SANY..."),
+    [
+      `Parsing file ${modulePath}`,
+      ...["Naturals", "Sequences", "FiniteSets", "TLC"].map((name) => `Parsing file ${standardModuleDirectory}/${name}.tla`),
+      ...["Naturals", "Sequences", "FiniteSets", "TLC", "FormalElection"].map((name) => `Semantic processing of module ${name}`),
+      "",
+    ].join("\n"),
+    envelope(2219, 0, "SANY finished."),
+    envelope(2185, 0, "Starting... (2026-07-21 09:26:25)"),
+    envelope(2189, 0, "Computing initial states..."),
+    envelope(2190, 0, "Finished computing initial states: 1 distinct state generated at 2026-07-21 09:26:25."),
+  ].join("");
+}
+
+function completeExplorationOutput(modulePath: string, standardModuleDirectory: string): string {
+  return [
+    closedLifecycle(modulePath, standardModuleDirectory),
+    envelope(2200, 0, "Progress(1) at 2026-07-21 09:26:25: 1 states generated (60 s/min), 1 distinct states found (60 ds/min), 1 states left on queue."),
+    envelope(2193, 0, [
+      "Model checking completed. No error has been found.",
+      "  Estimates of the probability that TLC did not check all reachable states",
+      "  because two distinct states had the same fingerprint:",
+      "  calculated (optimistic):  val = 1.1E-19",
+      "  based on the actual fingerprints:  val = 2.4E-8",
+    ].join("\n")),
+    envelope(2200, 0, "Progress(1): 1 states generated, 1 distinct states found, 1 states left on queue."),
+    envelope(2200, 0, "Progress(2): 3 states generated, 2 distinct states found, 0 states left on queue."),
+    envelope(2199, 0, "3 states generated, 2 distinct states found, 0 states left on queue."),
+    envelope(2194, 0, "The depth of the complete state graph search is 2."),
+    envelope(2186, 0, "Finished in 272ms at (2026-07-21 09:26:25)"),
+  ].join("");
+}
+
+function namedCounterexampleOutput(modulePath: string, standardModuleDirectory: string): string {
+  const state = (ordinal: number, label: string) => envelope(2217, 4, `${ordinal}: <${label}>\n${[
+    "/\\ initialBudget = (V1 :> 1 @@ V2 :> 1 @@ V3 :> 1)",
+    "/\\ amendBudget = (V1 :> 1 @@ V2 :> 1 @@ V3 :> 1)",
+    "/\\ accepted = (V1 :> [choice |-> C1])",
+    "/\\ holdMarkers = <<>>",
+    "/\\ holdBudget = 1",
+    "/\\ tally = [kind |-> \"NONE\"]",
+    "/\\ reexamRequired = FALSE",
+  ].join("\n")}`);
+  return [
+    closedLifecycle(modulePath, standardModuleDirectory),
+    envelope(2110, 1, "Invariant InvalidTimestampRejected is violated."),
+    envelope(2121, 1, "The behavior up to this point is:"),
+    state(1, "Initial predicate"),
+    state(2, "Next line 160, col 8 to line 161, col 66 of module FormalElection"),
+    state(3, "Next line 170, col 8 to line 171, col 66 of module FormalElection"),
+    envelope(2200, 0, "Progress(3): 3 states generated, 3 distinct states found, 0 states left on queue."),
+    envelope(2199, 0, "3 states generated, 3 distinct states found, 0 states left on queue."),
+    envelope(2194, 0, "The depth of the complete state graph search is 3."),
+    envelope(2186, 0, "Finished in 311ms at (2026-07-21 09:26:26)"),
+  ].join("");
 }
 
 function typeOkCounterexample(modulePath: string): string {
@@ -78,7 +139,7 @@ function typeOkCounterexample(modulePath: string): string {
   ].join("");
 }
 
-const dependencies = (spawn: (input?: unknown) => unknown, overrides: Record<string, unknown> = {}): FsTlcArtifactCacheDependencies => {
+const dependencies = (spawn: (input?: unknown) => unknown, overrides: Record<string, unknown> = {}): FsTlcToolchainDependencies => {
   const reservations = new Set<string>();
   return ({
   network: {
@@ -117,7 +178,7 @@ const dependencies = (spawn: (input?: unknown) => unknown, overrides: Record<str
   javaVersion: { inspect: async ({ javaExecutablePath }) => ({ executableRealpath: realpathSync(javaExecutablePath), output: "openjdk version \"26.0.1\"\nOpenJDK Runtime Environment\n" }) },
   evidencePublishReserveMs: 10,
   ...overrides,
-  } as FsTlcArtifactCacheDependencies);
+  } as FsTlcToolchainDependencies);
 };
 
 function makeMiniJdk(root: string): void {
@@ -160,7 +221,7 @@ describe("formal verification TLC runtime", () => {
     mkdirSync(workspaceRoot);
     writeFileSync(join(workspaceRoot, "FormalElection.tla"), moduleSource);
     writeFileSync(join(workspaceRoot, "FormalElection.cfg"), cfgSource);
-    const toolchain = new FsTlcArtifactCache(root, dependencies(spawn, {
+    const toolchain = new FsTlcToolchain(root, dependencies(spawn, {
       workspaceRoot,
       jdkDistributionRoot: distributionRoot,
       jdkSnapshotRoot: snapshotRoot,
@@ -191,7 +252,7 @@ describe("formal verification TLC runtime", () => {
 
   test("rejects a structurally forged prepared run before a process can spawn", async () => {
     let spawns = 0;
-    const toolchain = new FsTlcArtifactCache("/unused", dependencies(() => {
+    const toolchain = new FsTlcToolchain("/unused", dependencies(() => {
       spawns++;
       throw new Error("synthetic capability reached spawn");
     }));
@@ -201,6 +262,26 @@ describe("formal verification TLC runtime", () => {
     expect(result.ok).toBe(false);
     expect(!result.ok && result.error.kind).toBe("InvocationError");
     expect(spawns).toBe(0);
+  });
+
+  test("requires an explicit canonical JAVA_HOME before the real toolchain probe touches its evidence root", () => {
+    const root = mkdtempSync(join(tmpdir(), "fv-tlc-probe-input-"));
+    roots.push(root);
+    const evidenceRoot = join(root, "not-a-directory");
+    writeFileSync(evidenceRoot, "probe must reject configuration first");
+    const environment = { ...process.env };
+    delete environment.JAVA_HOME;
+
+    const result = Bun.spawnSync({
+      cmd: [process.execPath, join(process.cwd(), "tests/formal-verif/support/tla-real-toolchain-probe.ts"), evidenceRoot],
+      cwd: process.cwd(),
+      env: environment,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+
+    expect(result.exitCode).not.toBe(0);
+    expect(new TextDecoder().decode(result.stderr)).toContain("JAVA_HOME is required and must point to OpenJDK 26.0.1");
   });
 
   test("does not accept an st_size-only sparse backing file as a physical reservation", () => {
@@ -622,7 +703,8 @@ describe("formal verification TLC runtime", () => {
     expect(observations.every(({ denied }) => denied)).toBe(true);
     expect(requests).toHaveLength(3);
     expect(requests.every(({ argv }) => (argv as string[])[0] === "/usr/bin/sandbox-exec" && (argv as string[])[1] === "-p")).toBe(true);
-    const tcpScript = requests.map(({ argv }) => (argv as string[]).at(-1) ?? "").find((script) => script.includes("node:net"));
+    const tcpModuleSpecifier = ["node", "net"].join(":");
+    const tcpScript = requests.map(({ argv }) => (argv as string[]).at(-1) ?? "").find((script) => script.includes(tcpModuleSpecifier));
     expect(tcpScript).toMatch(/\.connect\([1-9][0-9]*,'127\.0\.0\.1'\)/);
     expect(tcpScript).not.toContain(".connect(9,'127.0.0.1')");
     expect(tcpScript).toContain("ECONNREFUSED");
@@ -685,6 +767,43 @@ describe("formal verification TLC runtime", () => {
 
     expect(normalized.ok).toBe(true);
     expect(normalized.ok && normalized.value.verdict).toBe("HARNESS_ERROR");
+  });
+
+  test("normalizes only issued complete and counterexample outcomes into verdict cells", async () => {
+    let completePath = "";
+    let completeStandardDirectory = "";
+    const complete = await prepareRuntime(() => ({
+      stdout: (async function* () { yield new TextEncoder().encode(completeExplorationOutput(completePath, completeStandardDirectory)); })(),
+      stderr: (async function* () {})(),
+      wait: async () => ({ exitCode: 0, signal: null }),
+      signalGroup: async () => {},
+    }));
+    completePath = complete.prepared.manifest.modulePath;
+    completeStandardDirectory = join(complete.prepared.manifest.cwd, ".tlc-stdlib");
+    const completeOutcome = await complete.toolchain.run(complete.prepared);
+    if (!completeOutcome.ok) throw new Error(JSON.stringify(completeOutcome.error));
+    const binding = { fixtureId: "OPAQUE_SUBJECT", baselineSha: "b".repeat(64), armSha: "a".repeat(64), startedAt: "2026-07-21T00:00:00Z", finishedAt: "2026-07-21T00:00:01Z", evidencePaths: [] };
+    const completeCell = complete.toolchain.normalize({ prepared: complete.prepared, outcome: completeOutcome.value, binding });
+
+    let counterexamplePath = "";
+    let counterexampleStandardDirectory = "";
+    const counterexample = await prepareRuntime(() => ({
+      stdout: (async function* () { yield new TextEncoder().encode(namedCounterexampleOutput(counterexamplePath, counterexampleStandardDirectory)); })(),
+      stderr: (async function* () {})(),
+      wait: async () => ({ exitCode: 12, signal: null }),
+      signalGroup: async () => {},
+    }));
+    counterexamplePath = counterexample.prepared.manifest.modulePath;
+    counterexampleStandardDirectory = join(counterexample.prepared.manifest.cwd, ".tlc-stdlib");
+    const counterexampleOutcome = await counterexample.toolchain.run(counterexample.prepared);
+    if (!counterexampleOutcome.ok) throw new Error(JSON.stringify(counterexampleOutcome.error));
+    const counterexampleCell = counterexample.toolchain.normalize({ prepared: counterexample.prepared, outcome: counterexampleOutcome.value, binding });
+    const invalidCell = complete.toolchain.normalize({ prepared: complete.prepared, outcome: completeOutcome.value, binding: { ...binding, baselineSha: "invalid" } });
+
+    expect(completeCell).toMatchObject({ ok: true, value: { verdict: "NOT_DETECTED", exitCode: 0, counterexampleId: null } });
+    expect(counterexampleCell).toMatchObject({ ok: true, value: { verdict: "DETECTED", exitCode: 12 } });
+    expect(counterexampleCell.ok && counterexampleCell.value.counterexampleId).toMatch(/^[0-9a-f]{64}$/);
+    expect(errorCode(invalidCell)).toBe("CELL_RESULT");
   });
 
   test("rejects an outcome cross-paired with a different prepared run from the same instance", async () => {

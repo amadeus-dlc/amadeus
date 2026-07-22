@@ -1,12 +1,9 @@
 import { canonicalIdentity } from "../../../scripts/formal-verif/canonical.ts";
-import type { CellResult, Result } from "../../../scripts/formal-verif/contract.ts";
+import { parseCellResult, type CellResult, type Result } from "../../../scripts/formal-verif/contract.ts";
 import {
   createFrozenTlaModelReceipt,
   generateFrozenTlaModel,
-  normalizeTlcExploration,
-  parseTlcOutput174,
   type FrozenTlaModelBundle,
-  type TlcExploration,
 } from "../../../scripts/formal-verif/tla-arm.ts";
 import {
   DARWIN_NETWORK_DENY_POLICY_IDENTITY,
@@ -18,9 +15,11 @@ import {
   createJdkSnapshotIdentity,
   createSandboxProbeReceipt,
   createTlcRunManifest,
+  parseTlcOutput174,
   type PreparedTlcRun,
   type RawTlcOutcome,
   type TlcCellBinding,
+  type TlcExploration,
   type TlcPrepareInput,
   type TlcToolchainError,
   type TlcToolchainFacade,
@@ -325,19 +324,26 @@ function createSyntheticFacade(scenario: SyntheticTlcScenario): SyntheticFacade 
         verifiedArtifactDescriptorIdentity: prepared.artifact.descriptorIdentity,
         modelReceipt: prepared.modelReceipt,
       });
-      const normalized = normalizeTlcExploration({
-        exploration: observedExploration,
+      const normalized = parseCellResult({
+        schemaVersion: 1,
+        arm: "tla",
         fixtureId: binding.fixtureId,
         baselineSha: binding.baselineSha,
         armSha: binding.armSha,
+        verdict: observedExploration.kind === "COMPLETE"
+          ? "NOT_DETECTED"
+          : observedExploration.kind === "COUNTEREXAMPLE" ? "DETECTED" : "HARNESS_ERROR",
         exitCode: outcome.exitCode,
+        toolVersions: { tlc: "1.7.4" },
+        seedOrBound: { workers: 1, voters: 3, choices: 3, maxInitialPerVoter: 1, maxAmendPerVoter: 1, maxHold: 1 },
         startedAt: binding.startedAt,
         finishedAt: binding.finishedAt,
+        counterexampleId: observedExploration.kind === "COUNTEREXAMPLE" ? observedExploration.counterexampleIdentity : null,
         evidencePaths: [...binding.evidencePaths],
       });
       return normalized.ok
         ? normalized
-        : operationFailure("NormalizationError", "SYNTHETIC_CELL_REJECTED", normalized.error.message);
+        : operationFailure("NormalizationError", "SYNTHETIC_CELL_REJECTED", `${normalized.error.path}: ${normalized.error.message}`);
     },
   };
   return { facade, calls, exploration: () => observedExploration };

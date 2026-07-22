@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   FIXED_TLC_RESERVATION_BYTES,
-  FsTlcArtifactCache,
+  FsTlcToolchain,
   type ArtifactNetworkPort,
   type FileDigestPort,
   type PhysicalReservationPort,
@@ -81,6 +81,13 @@ class FakeNetwork implements ArtifactNetworkPort {
 }
 
 describe("formal verification TLC artifact cache", () => {
+  test("keeps wildcard implementation exports behind the root barrel", () => {
+    const barrel = readFileSync(join(process.cwd(), "scripts/formal-verif/index.ts"), "utf8");
+    expect(barrel).not.toContain('export * from "./tla-arm.ts"');
+    expect(barrel).not.toContain('export * from "./tlc-toolchain.ts"');
+    expect(barrel).not.toContain('export * from "./fs-tlc-toolchain.ts"');
+  });
+
   const roots: string[] = [];
   afterEach(() => roots.splice(0).forEach((root) => { rmSync(root, { recursive: true, force: true }); }));
 
@@ -90,7 +97,7 @@ describe("formal verification TLC artifact cache", () => {
     const network = new FakeNetwork();
     const reservation = new FakeReservation();
     const digest = new FixtureDigest();
-    const cache = new FsTlcArtifactCache(root, {
+    const cache = new FsTlcToolchain(root, {
       network,
       digest,
       reservation,
@@ -129,7 +136,7 @@ describe("formal verification TLC artifact cache", () => {
     };
     writeFileSync(lockPath, JSON.stringify(originalOwner));
     const network = new FakeNetwork();
-    const cache = new FsTlcArtifactCache(root, {
+    const cache = new FsTlcToolchain(root, {
       network,
       digest: new FixtureDigest(),
       reservation: new FakeReservation(),
@@ -175,13 +182,13 @@ describe("formal verification TLC artifact cache", () => {
         }
       },
     };
-    const cache = new FsTlcArtifactCache(root, dependencies);
+    const cache = new FsTlcToolchain(root, dependencies);
 
     const interrupted = await cache.acquire();
 
     expect(interrupted.ok).toBe(false);
     expect(reservation.active.size).toBe(1);
-    expect(await new FsTlcArtifactCache(root, dependencies).acquire()).toEqual(cache.verifyOffline());
+    expect(await new FsTlcToolchain(root, dependencies).acquire()).toEqual(cache.verifyOffline());
     expect(network.requests).toBe(1);
     expect(reservation.active.size).toBe(0);
     expect(existsSync(join(root, FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY, ".capacity-released.json"))).toBe(true);
@@ -209,11 +216,11 @@ describe("formal verification TLC artifact cache", () => {
     };
     const namespace = join(root, FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY);
 
-    expect((await new FsTlcArtifactCache(root, dependencies).acquire()).ok).toBe(false);
+    expect((await new FsTlcToolchain(root, dependencies).acquire()).ok).toBe(false);
     expect(existsSync(join(namespace, ".capacity-active.json"))).toBe(true);
     expect(existsSync(join(namespace, ".capacity-reserving.json"))).toBe(true);
 
-    expect((await new FsTlcArtifactCache(root, dependencies).acquire()).ok).toBe(true);
+    expect((await new FsTlcToolchain(root, dependencies).acquire()).ok).toBe(true);
     expect(existsSync(join(namespace, ".capacity-reserving.json"))).toBe(false);
     expect(existsSync(join(namespace, ".capacity-active.json"))).toBe(false);
     expect(existsSync(join(namespace, ".capacity-released.json"))).toBe(true);
@@ -239,7 +246,7 @@ describe("formal verification TLC artifact cache", () => {
       partial = false;
       reservation.active.delete(path);
     };
-    const cache = new FsTlcArtifactCache(root, {
+    const cache = new FsTlcToolchain(root, {
       network: new FakeNetwork(), digest: new FixtureDigest(), reservation,
       clock: { nowMs: () => 0, utcNow: () => "2026-07-21T00:00:00Z" },
       owner: { host: "test-host", pid: 42, processStartedAt: "test-process-start" }, liveness: () => "dead",
@@ -273,13 +280,13 @@ describe("formal verification TLC artifact cache", () => {
         }
       },
     };
-    const cache = new FsTlcArtifactCache(root, dependencies);
+    const cache = new FsTlcToolchain(root, dependencies);
 
     const interrupted = await cache.acquire();
 
     expect(interrupted.ok).toBe(false);
     expect(reservation.active.size).toBe(0);
-    expect(await new FsTlcArtifactCache(root, dependencies).acquire()).toEqual(cache.verifyOffline());
+    expect(await new FsTlcToolchain(root, dependencies).acquire()).toEqual(cache.verifyOffline());
     expect(network.requests).toBe(1);
     expect(existsSync(join(root, FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY, ".capacity-active.json"))).toBe(false);
     expect(existsSync(join(root, FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY, ".capacity-released.json"))).toBe(true);
@@ -305,7 +312,7 @@ describe("formal verification TLC artifact cache", () => {
         };
       },
     };
-    const cache = new FsTlcArtifactCache(root, {
+    const cache = new FsTlcToolchain(root, {
       network,
       digest: new FixtureDigest(),
       reservation,
@@ -334,7 +341,7 @@ describe("formal verification TLC artifact cache", () => {
     roots.push(root);
     const reservation = new FakeReservation();
     let nowCalls = 0;
-    const cache = new FsTlcArtifactCache(root, {
+    const cache = new FsTlcToolchain(root, {
       network: { request: () => new Promise(() => {}) }, digest: new FixtureDigest(), reservation,
       clock: { nowMs: () => nowCalls++ === 0 ? 0 : 29_999, utcNow: () => "2026-07-21T00:00:00Z" },
       owner: { host: "test-host", pid: 42, processStartedAt: "test-process-start" }, liveness: () => "dead",
@@ -353,7 +360,7 @@ describe("formal verification TLC artifact cache", () => {
     roots.push(root);
     const reservation = new FakeReservation();
     const times = [0, 0, 119_999];
-    const cache = new FsTlcArtifactCache(root, {
+    const cache = new FsTlcToolchain(root, {
       network: { request: async (input) => ({
         status: 302, headers: { location: "https://objects.githubusercontent.com/tla2tools.jar" },
         connectedAtMs: input.startedAtMs, headersAtMs: input.startedAtMs,
@@ -397,7 +404,7 @@ describe("formal verification TLC artifact cache", () => {
         };
       },
     };
-    const cache = new FsTlcArtifactCache(root, {
+    const cache = new FsTlcToolchain(root, {
       network,
       digest: new FixtureDigest(),
       reservation: new FakeReservation(),
@@ -449,7 +456,7 @@ describe("formal verification TLC artifact cache", () => {
       const root = mkdtempSync(join(tmpdir(), `fv-tlc-cache-fd-${index}-`));
       roots.push(root);
       let crash = true;
-      const cache = new FsTlcArtifactCache(root, {
+      const cache = new FsTlcToolchain(root, {
         network: new FakeNetwork(),
         digest: new FixtureDigest(),
         reservation: new FakeReservation(),
@@ -488,7 +495,7 @@ describe("formal verification TLC artifact cache", () => {
       },
     };
     const reservation = new FakeReservation();
-    const cache = new FsTlcArtifactCache(root, {
+    const cache = new FsTlcToolchain(root, {
       network,
       digest: new FixtureDigest(),
       reservation,
