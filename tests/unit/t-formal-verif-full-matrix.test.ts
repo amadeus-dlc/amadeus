@@ -123,6 +123,24 @@ describe("full-matrix validation and evidence", () => {
     const matrix = verifyFullMatrix(inputSet, schedule, run);
     expect(matrix.kind === "CompleteMatrix" && matrix.expectedCellCount).toBe(72);
   });
+  test("a schedule bound to a different input set is INPUT_DRIFT, not CompleteMatrix", async () => {
+    // Third-review repro (E-FVEU7NFR1 residual Major 1): identical subjects but a
+    // foreign manifest identity used to validate as CompleteMatrix because the
+    // validator never compared the schedule's input-set binding.
+    const { schedule, run } = await completeRun(7, aliases7);
+    const foreign = compileInputSet(manifest(7, aliases7, { manifestIdentity: sha("other-manifest") }), sha("base"));
+    if (!foreign.ok) throw new Error(foreign.error.message);
+    const matrix = verifyFullMatrix(foreign.value, schedule, run);
+    expect(matrix.kind).toBe("IncompleteMatrix");
+    expect(matrix.kind === "IncompleteMatrix" && matrix.findings.map((f) => f.kind)).toEqual(["INPUT_DRIFT"]);
+  });
+  test("a run bound to a different schedule is INPUT_DRIFT", async () => {
+    const { inputSet, schedule, run } = await completeRun(7, aliases7);
+    const drifted = { ...run, scheduleId: sha("other-schedule") };
+    const matrix = verifyFullMatrix(inputSet, schedule, drifted);
+    expect(matrix.kind).toBe("IncompleteMatrix");
+    expect(matrix.kind === "IncompleteMatrix" && matrix.findings.some((f) => f.kind === "INPUT_DRIFT")).toBe(true);
+  });
   test("a timed-out suite produces a SUITE_TIMEOUT finding and blocks completion", async () => {
     const { inputSet, schedule, run } = await completeRun(7, aliases7, fakeRunner({ incompleteOrdinals: [3] }));
     const matrix = verifyFullMatrix(inputSet, schedule, run);
