@@ -247,9 +247,6 @@ export const Ballot = {
     if (shape === null) return err("parse-failure");
     if (shape.electionId !== election.electionId) return err("unknown-election");
     if (!election.voters.includes(shape.voter)) return err("unknown-voter");
-    if (!election.choices.some((c) => c.internalNo === shape.choiceInternalNo)) {
-      return err("unknown-choice");
-    }
     if (!isValidSubmittedAt(shape.submittedAt)) return err("invalid-timestamp");
     const goa = Goa.parse(shape.goa);
     if (!goa.ok) return err(goa.error);
