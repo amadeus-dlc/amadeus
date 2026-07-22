@@ -1,0 +1,16 @@
+{
+  "electionId": "E-TPRRAS13",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "採用 — cid:reservation-transcription-count-check への追補として persist"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "不採用 — 既存 cid の含意で足りる(diary 記録のみ)"
+    }
+  ]
+}

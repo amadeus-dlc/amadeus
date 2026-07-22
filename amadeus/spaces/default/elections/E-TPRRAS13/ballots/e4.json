@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TPRRAS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "採用(1)。実測確認: (a) e1 RA diary Deviations 22:43:19Z に iteration 1(Major2+Minor1)/iteration 2(Major1+Minor1)の指摘・是正記録が実在 (b) requirements.md :64-65 に FR-5 [e3] 前半節欠落(Major)・FR-4 [e4] 出典簡略化(Minor)の grep 機械閉包(record.md/requirements.md 各1 hit)記録実在 — FR-4 [e4] は私自身の留保で、E-TPRRA2 record.md 原文と requirements.md :17 の逐語一致を自分でも確認した (c) 機序の妥当性: 件数照合(既存 cid)は GoA2/3/6 票数 vs 転記件数の照合であり、誤帰属(話者ラベル取り違え)と部分欠落(エントリ実在のまま節脱落)はいずれも件数不変で構造的に green 通過する — per-voter 逐語照合(record 原文の部分文字列 grep)がこの盲点を機械的に埋める。既存 cid への追補統合は二重規定回避の既習様式に沿う。",
+  "submittedAt": "2026-07-22T22:46:09Z"
+}
