@@ -7,9 +7,10 @@ import type { MonotonicClock, SampleKey, SuiteRunResult } from "./execution-evid
 
 // U7 owns serial full-matrix measurement and raw cost derivation only. Manifest promotion,
 // arm oracle, eligibility, winner selection, and report rendering belong to other units.
-// U3/U4/U5 have not passed a third review, so U7 never claims integration/benchmark completion.
-export type MatrixIntegrationStatus = "DESIGNED_BLOCKED_ON_U3_U4_U5_GATE";
-export const MATRIX_INTEGRATION_STATUS: MatrixIntegrationStatus = "DESIGNED_BLOCKED_ON_U3_U4_U5_GATE";
+// The U3/U4/U5 third reviews ran 2026-07-22 (record: verification/final-fd-gate-dossier.md)
+// and the final FD gate human ruling lifted the DESIGNED_BLOCKED_ON_U3_U4_U5_GATE status.
+export type MatrixIntegrationStatus = "FINAL_FD_GATE_RULED_READY";
+export const MATRIX_INTEGRATION_STATUS: MatrixIntegrationStatus = "FINAL_FD_GATE_RULED_READY";
 
 export const SUITE_TIMEOUT_MS = 120_000;
 export const HEALTHY_BASELINE = "HEALTHY_BASELINE";
@@ -67,6 +68,7 @@ export type MatrixFinding =
   | { kind: "DUPLICATE"; key: MatrixCellKey }
   | { kind: "IDENTITY_CORRUPTION"; ordinal: number; cause: string }
   | { kind: "CHAIN_DRIFT"; ordinal: number; cause: string }
+  | { kind: "INPUT_DRIFT"; cause: string }
   | { kind: "NON_DETERMINISTIC"; arm: ArmId; subject: string };
 
 export type FullMatrixValidation =
@@ -146,8 +148,18 @@ export async function runFullMatrix(schedule: MeasurementSchedule, inputSet: Can
 
 function cellKeyId(key: MatrixCellKey): string { return `${key.arm}\0${key.sampleKind}\0${key.runNo}\0${key.subject}`; }
 
-export function verifyFullMatrix(inputSet: CanonicalInputSet, schedule: MeasurementSchedule, run: FullMatrixRun): FullMatrixValidation {
+// BR-01/BR-04 identity binding at the validator layer: a schedule compiled
+// from a different input set must never validate this matrix as complete,
+// even on call paths that skip buildMatrixEvidence.
+function inputBindingFindings(inputSet: CanonicalInputSet, schedule: MeasurementSchedule, run: FullMatrixRun): MatrixFinding[] {
   const findings: MatrixFinding[] = [];
+  if (schedule.inputSetIdentity !== inputSet.inputSetIdentity) findings.push({ kind: "INPUT_DRIFT", cause: "schedule is not bound to this input set identity" });
+  if (run.scheduleId !== schedule.scheduleId) findings.push({ kind: "INPUT_DRIFT", cause: "run is not bound to this schedule" });
+  return findings;
+}
+
+export function verifyFullMatrix(inputSet: CanonicalInputSet, schedule: MeasurementSchedule, run: FullMatrixRun): FullMatrixValidation {
+  const findings: MatrixFinding[] = [...inputBindingFindings(inputSet, schedule, run)];
   if (run.receipts.length !== schedule.entries.length) findings.push({ kind: "CHAIN_DRIFT", ordinal: -1, cause: "receipt count does not match schedule" });
   run.receipts.forEach((receipt, index) => {
     const entry = schedule.entries[index];

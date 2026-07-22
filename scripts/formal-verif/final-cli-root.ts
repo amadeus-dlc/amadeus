@@ -3,11 +3,11 @@ import { type CommandHandler, type CommandKind, COMMAND_KINDS, CommandRouter, ty
 
 // The final CLI root is wiring-only. It direct-imports and injects every concrete handler exactly
 // once into the U1 dispatcher and owns nothing else: no eligibility, Pareto, Alloy, or report
-// logic lives here. Because U3/U4/U5 have not passed a third review and U7 carries two residual
-// Major findings, and no final FD human ruling has been given, the composition is permanently
-// DESIGNED_BLOCKED and never claims integration readiness or completion.
-export type FinalCompositionStatus = "DESIGNED_BLOCKED_ON_FINAL_FD_GATE";
-export const FINAL_COMPOSITION_STATUS: FinalCompositionStatus = "DESIGNED_BLOCKED_ON_FINAL_FD_GATE";
+// logic lives here. The final FD gate human ruling of 2026-07-22 (record:
+// verification/final-fd-gate-ruling.md) confirmed the U3/U4/U5 third reviews, closed U7's
+// residual Majors (PR #1342 + BR-19 amendment option b), and lifted the DESIGNED_BLOCKED status.
+export type FinalCompositionStatus = "FINAL_FD_GATE_RULED_READY";
+export const FINAL_COMPOSITION_STATUS: FinalCompositionStatus = "FINAL_FD_GATE_RULED_READY";
 
 export interface HandlerBinding { command: CommandKind; handler: CommandHandler; adapterIdentity: string }
 export interface WiringError { kind: "WiringError"; code: "MISSING" | "DUPLICATE" | "UNKNOWN"; message: string }
