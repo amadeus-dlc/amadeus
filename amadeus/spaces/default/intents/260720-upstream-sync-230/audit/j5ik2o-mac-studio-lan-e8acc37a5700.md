@@ -397,3 +397,52 @@
 **Failed count**: 0
 
 ---
+
+## Swarm Started
+**Timestamp**: 2026-07-22T04:41:11Z
+**Event**: SWARM_STARTED
+**Batch number**: 4
+**Unit names**: reference-plugin-and-guides
+**Concurrency cap**: 1
+
+---
+
+## Worktree Created
+**Timestamp**: 2026-07-22T04:41:11Z
+**Event**: WORKTREE_CREATED
+**Bolt slug**: reference-plugin-and-guides
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-reference-plugin-and-guides
+**Branch name**: bolt-reference-plugin-and-guides
+**Base branch**: resume-usync-230-takeover
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-22T04:41:12Z
+**Event**: BOLT_STARTED
+**Bolt names**: reference-plugin-and-guides
+**Batch number**: 4
+**Walking skeleton**: false
+**Bolt slug**: reference-plugin-and-guides
+
+---
+
+## State Forked
+**Timestamp**: 2026-07-22T04:41:12Z
+**Event**: STATE_FORKED
+**Bolt slug**: reference-plugin-and-guides
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-reference-plugin-and-guides
+**Source state hash**: 2bc2310dfc2bc7b33aa75a6b3666154287300ceec8d9cee880697a866cfff82a
+**Target state hash**: 2bc2310dfc2bc7b33aa75a6b3666154287300ceec8d9cee880697a866cfff82a
+
+---
+
+## Audit Forked
+**Timestamp**: 2026-07-22T04:41:12Z
+**Event**: AUDIT_FORKED
+**Bolt slug**: reference-plugin-and-guides
+**Source Audit Hash**: c6dc70b89c4f655bd9fa1abca4b34df2856f4908f8a2466e7159ec8694bcd114
+**Fork Boundary**: 12549
+**Reentrant**: true
+
+---
