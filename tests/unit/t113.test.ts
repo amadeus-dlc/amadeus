@@ -346,6 +346,31 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
   });
 
   // ============================================================
+  // next_stage on a run-stage directive (FR-2 item 10, upstream-sync-230 U03)
+  // ============================================================
+  // next_stage is an optional run-stage field, present only on a gate-carrying
+  // main-workflow directive. It is `string | null`: a stage slug for a real next
+  // in-scope stage, or null at the terminal. Absent is fine; a string validates;
+  // null validates (the explicit terminal signal); a non-string non-null value is
+  // rejected naming kind+field.
+
+  test("run-stage next_stage string slug -> VALID", () => {
+    expect(errs({ ...runStage(), next_stage: "units-generation" })).toBe("VALID");
+  });
+
+  test("run-stage next_stage null (terminal) -> VALID", () => {
+    expect(errs({ ...runStage(), next_stage: null })).toBe("VALID");
+  });
+
+  test("run-stage next_stage non-string non-null -> rejected", () => {
+    const r = validateDirective({ ...runStage(), next_stage: 7 });
+    expect(r.valid).toBe(false);
+    expect(errs({ ...runStage(), next_stage: 7 })).toContain(
+      "run-stage: next_stage must be string or null, got number",
+    );
+  });
+
+  // ============================================================
   // mode enum miss on run-stage (1 assertion)
   // .sh lines 179-180
   // ============================================================

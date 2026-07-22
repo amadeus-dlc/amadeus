@@ -49,6 +49,7 @@ import {
   stateFilePath,
 } from "../tools/amadeus-lib.ts";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
+import { spawnHookWithRuntime } from "./amadeus-kiro-hook-runtime.ts";
 
 const HOOKS_DIR = dirname(fileURLToPath(import.meta.url));
 const target = process.argv[2] ?? "";
@@ -273,7 +274,7 @@ if (target === "verb-intercept") {
   const cwd = kiro.cwd ?? process.cwd();
   const utilArgs = [join(".kiro", "tools", "amadeus-utility.ts"), cmd.subcommand];
   if (cmd.arg !== undefined) utilArgs.push(cmd.arg);
-  const run = Bun.spawnSync(["bun", ...utilArgs], { cwd, stdout: "pipe", stderr: "pipe" });
+  const run = spawnHookWithRuntime(utilArgs, { cwd, stdout: "pipe", stderr: "pipe" });
   const out = ((run.stdout?.toString() ?? "") + (run.stderr?.toString() ?? "")).trim();
 
   // Turn-scoped latch: a terminal command was handled OFF-BAND this turn (the
@@ -606,7 +607,7 @@ function buildForward(): Forward {
 }
 
 function runCore(hookFile: string, input: Record<string, unknown>): { stdout: string; code: number } {
-  const r = Bun.spawnSync(["bun", join(HOOKS_DIR, hookFile)], {
+  const r = spawnHookWithRuntime([join(HOOKS_DIR, hookFile)], {
     stdin: Buffer.from(JSON.stringify(input), "utf-8"),
     stdout: "pipe",
     stderr: "ignore",

@@ -1,6 +1,24 @@
 [
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "424-426",
+    "reason": "main() dispatch case for the set-construction-iteration verb (U05, FR-2 item 8). main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handler it dispatches (handleSetConstructionIteration) is driven in-process by tests/integration/t250 (valid path). Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
+    "expiry": "remove when main() gains an in-process argv driver"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "4073-4074",
+    "reason": "Usage-error emit in handleSetConstructionIteration for the missing-argument branch (U05). error() is `never` (process.exit), so driving this arm in-process would terminate the test runner; it is exercised by the shipped-subprocess reject case in tests/integration/t250 (exit code + byte-identity asserted). Spawn-only error-exit row per spawn-blindspot-two-step (ii); the happy path is covered in-process by the same file's in-process handler drive.",
+    "expiry": "remove if error() gains a test-injectable non-exiting seam"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "4081",
+    "reason": "Mutation-before-reject error() emit in handleSetConstructionIteration for an invalid iteration token (U05). error() is `never` (process.exit); the reject DECISION (parseConstructionIteration returning !ok) is fully covered in-process by tests/unit/t250, and the handler's reject-with-no-mutation contract is exercised by the shipped-subprocess case in tests/integration/t250 (exit code + state byte-identity). Spawn-only error-exit row per spawn-blindspot-two-step (ii).",
+    "expiry": "remove if error() gains a test-injectable non-exiting seam"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
     "lines": "408-413",
     "reason": "main() dispatch cases for the grant-standing-delegation / revoke-standing-delegation verbs (#1125). main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handlers they dispatch (handleGrantStandingDelegation / handleRevokeStandingDelegation) are fully covered in-process by t-standing-grant. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
     "expiry": "remove when main() gains an in-process argv driver"
@@ -12,8 +30,14 @@
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "lines": "3808-3809",
+    "reason": "Birth advisory message-string rows for the >1-nested-candidate case in handleIntentBirthStateBuild. Reaching this advisory requires driving a full intent birth, which needs a completely seeded workspace (memory/rules) — canonical in-process birth is impractical (no-canonical-direct-execution), and error()/die paths in birth are process.exit. The IDENTICAL not-auto-selected condition on the sibling detect surface (handleDetect) IS covered in-process by tests/integration/t249-canonical-nested-advisory; this is the same additive stdout advisory row. Message-string rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii).",
+    "expiry": "remove when a canonical in-process intent-birth harness (seeded workspace) drives the multiple-nested advisory"
+  },
+  {
     "file": "packages/framework/core/tools/amadeus-lib.ts",
-    "lines": "2719",
+    "lines": "2916",
     "reason": "Defensive `catch {}` in findActiveStandingGrant that returns null so a verification defect can never wedge a gate (design contract E-SDG: throws collapse to per-gate approval, never fail-open at the check). No natural corpus input throws inside the scan (listIntentDirs / readAllAuditShards / StandingGrant.parse / verifyDelegatedProvenance all swallow their own IO errors), so the catch arm is unreachable by a black-box test; the happy scan and every classification branch are covered in-process by t-standing-grant.",
     "expiry": "remove if the scan grows a throw path a test can inject"
   },
@@ -190,5 +214,17 @@
     "lines": "120",
     "reason": "Catch arm mapping malformed JSON bytes to a parse failure inside decodeJson; sibling tests drive it via the spawn-only e2e contract harness.",
     "expiry": "remove when the formal-verif e2e suite joins the CI coverage profile"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-lib.ts",
+    "lines": "4402-4403",
+    "reason": "Race-loser arm of the reap-mutex CAS recovery: renameSync of a stale mutex fails only when a competing recoverer won the rename in the same sub-syscall window; unreachable deterministically without pausing mid-function. Fail-safe (returns false; the waiter retries). Same class as the fixture-proof.ts:57 defensive-catch precedent.",
+    "expiry": "remove if acquireReapMutex gains an injected fs port"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-lib.ts",
+    "lines": "4413-4415",
+    "reason": "Race-loser arm after a successful stale-mutex steal: the fresh mkdir fails only when a competitor re-created the mutex in the same sub-syscall window; unreachable deterministically without pausing mid-function. Fail-safe (returns false; the waiter retries).",
+    "expiry": "remove if acquireReapMutex gains an injected fs port"
   }
 ]

@@ -16,6 +16,11 @@ produces:
   - domain-entities
 optional_produces:
   - frontend-components
+produces_kinds:
+  business-logic-model: [service, ui, library]
+  business-rules: [service, spec, library]
+  domain-entities: [service, spec, library]
+  frontend-components: [ui]
 consumes:
   - artifact: unit-of-work
     required: true

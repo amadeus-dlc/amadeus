@@ -29,6 +29,9 @@ export interface StageEntry {
   produces?: string[];
   // Artifacts the stage may write per unit. See GraphStage for runtime use.
   optional_produces?: string[];
+  // Unit kinds for which a produced artifact applies. An absent map entry
+  // means the artifact applies to every kind.
+  produces_kinds?: Record<string, UnitKind[]>;
   consumes?: Array<{ artifact: string; required: boolean; conditional_on?: string }>;
   requires_stage?: string[];
   scopes?: string[];
@@ -41,6 +44,40 @@ export interface StageEntry {
   // approve/advance: a code-generation stage that wrote only its markdown
   // produces[] docs but no actual code must not pass (issue #366).
   workspace_requires?: boolean;
+  bundle?: string;
+  when?: { "producer-in-plan": string };
+  required_sections?: string[];
+}
+
+export const UNIT_KINDS = [
+  "service",
+  "spec",
+  "ui",
+  "packaging",
+  "library",
+] as const;
+
+export type UnitKind = (typeof UNIT_KINDS)[number];
+
+export type ContractResult<T> =
+  | { valid: true; data: T }
+  | { valid: false; errors: string[] };
+
+/** Validate an untrusted unit kind against the one closed vocabulary. */
+export function normalizeUnitKind(raw: unknown): ContractResult<UnitKind> {
+  if (
+    typeof raw === "string" &&
+    (UNIT_KINDS as readonly string[]).includes(raw)
+  ) {
+    return { valid: true, data: raw as UnitKind };
+  }
+  const actual = typeof raw === "string" ? `"${raw}"` : String(raw);
+  return {
+    valid: false,
+    errors: [
+      `unit kind must be one of ${UNIT_KINDS.join(" | ")}, got ${actual}`,
+    ],
+  };
 }
 
 export interface ScopeDefinition {
@@ -427,6 +464,100 @@ export const WORKSPACE_VERBS: ReadonlySet<string> = new Set([
   "space-create",
   "intent",
 ]);
+
+export type HelpRouting =
+  | { kind: "help"; source: "bare" | "read-only-flag" | "workspace-verb" }
+  | { kind: "workspace-command"; verb: "intent" | "space" | "space-create"; arg?: string }
+  | { kind: "freeform"; words: readonly string[] };
+
+/**
+ * Classify the reserved help forms without stealing ordinary intent prose.
+ * Every command surface consumes this table so engine, pre-LLM dispatch, and
+ * direct utility invocation cannot disagree about the `help` namespace.
+ */
+export function classifyHelpIntent(tokens: readonly string[]): HelpRouting {
+  if (tokens.length === 1 && (tokens[0] === "help" || tokens[0] === "-h")) {
+    return { kind: "help", source: "bare" };
+  }
+  if (tokens.includes("--help")) {
+    return { kind: "help", source: "read-only-flag" };
+  }
+
+  const verb = tokens[0];
+  if (verb === "intent" || verb === "space") {
+    const arg = tokens[1];
+    if (arg === "help" || arg === "-h") {
+      return { kind: "help", source: "workspace-verb" };
+    }
+  }
+  if (verb === "intent" || verb === "space" || verb === "space-create") {
+    const arg = tokens[1];
+    return arg === undefined
+      ? { kind: "workspace-command", verb }
+      : { kind: "workspace-command", verb, arg };
+  }
+  return { kind: "freeform", words: [...tokens] };
+}
+
+export type MarkerObservation =
+  | { kind: "absent"; path: string }
+  | { kind: "present"; path: string; mtimeMs: number }
+  | { kind: "unreadable"; path: string; reason: string };
+
+export type MarkerFreshness =
+  | { kind: "absent"; path: string }
+  | { kind: "fresh" | "stale"; path: string; ageMs: number; ttlMs: number }
+  | { kind: "unreadable"; path: string; reason: string };
+
+export const COMPOSE_MARKER_RELATIVE_PATH = join("amadeus", ".amadeus-compose-pending");
+export const COMPOSE_MARKER_TTL_MS = 24 * 60 * 60 * 1000;
+
+/** Pure freshness projection shared by the Stop hook and doctor. */
+export function inspectComposeMarker(
+  observation: MarkerObservation,
+  nowMs: number,
+  ttlMs: number,
+): MarkerFreshness {
+  if (!Number.isFinite(ttlMs) || !Number.isInteger(ttlMs) || ttlMs <= 0) {
+    throw new Error("Compose marker TTL must be a positive finite integer.");
+  }
+  if (observation.kind !== "present") return observation;
+  if (!Number.isFinite(observation.mtimeMs)) {
+    return { kind: "unreadable", path: observation.path, reason: "non-finite-mtime" };
+  }
+  if (observation.mtimeMs < 0) {
+    return { kind: "unreadable", path: observation.path, reason: "negative-mtime" };
+  }
+  const ageMs = Math.max(0, nowMs - observation.mtimeMs);
+  return {
+    kind: ageMs <= ttlMs ? "fresh" : "stale",
+    path: observation.path,
+    ageMs,
+    ttlMs,
+  };
+}
+
+export type ConstructionAutonomy = "autonomous" | "gated" | "unset";
+export type RecomposeGuardResult =
+  | { kind: "allowed"; autonomy: "gated" | "unset" }
+  | {
+      kind: "denied";
+      autonomy: "autonomous";
+      reason: "human-gate-required";
+      remediation: "switch-to-gated-or-wait-for-swarm";
+    };
+
+/** Pure policy projection; callers own user-visible refusal and mutation ordering. */
+export function assertRecomposeAllowed(autonomy: ConstructionAutonomy): RecomposeGuardResult {
+  return autonomy === "autonomous"
+    ? {
+        kind: "denied",
+        autonomy,
+        reason: "human-gate-required",
+        remediation: "switch-to-gated-or-wait-for-swarm",
+      }
+    : { kind: "allowed", autonomy };
+}
 
 // A classified terminal command: the amadeus-utility.ts subcommand to run, plus an
 // optional positional arg (the <name> for a workspace verb). `source` records
@@ -931,18 +1062,26 @@ export function consumeMigrationPendingDecision(
 // (read-only flag anywhere; workspace verb only at index 0) so the seam and the
 // engine can never disagree about what is terminal.
 export function classifyTerminalCommand(args: string[]): TerminalCommand | null {
-  for (let i = 0; i < args.length; i++) {
-    const a = args[i];
-    if (READ_ONLY_FLAGS.has(a)) {
-      return { subcommand: a.replace(/^--/, ""), source: "read-only-flag" };
+  for (const arg of args) {
+    if (READ_ONLY_FLAGS.has(arg) && arg !== "--help") {
+      return { subcommand: arg.replace(/^--/, ""), source: "read-only-flag" };
     }
-    if (i === 0 && WORKSPACE_VERBS.has(a)) {
-      const next = args[i + 1];
-      const arg = next !== undefined && !next.startsWith("--") ? next : undefined;
-      return arg !== undefined
-        ? { subcommand: a, arg, source: "workspace-verb" }
-        : { subcommand: a, source: "workspace-verb" };
-    }
+  }
+
+  const routing = classifyHelpIntent(args);
+  if (routing.kind === "help") {
+    return {
+      subcommand: "help",
+      source: routing.source === "workspace-verb" ? "workspace-verb" : "read-only-flag",
+    };
+  }
+  if (routing.kind === "workspace-command") {
+    const arg = routing.arg !== undefined && !routing.arg.startsWith("--")
+      ? routing.arg
+      : undefined;
+    return arg === undefined
+      ? { subcommand: routing.verb, source: "workspace-verb" }
+      : { subcommand: routing.verb, arg, source: "workspace-verb" };
   }
   return null;
 }
@@ -4189,20 +4328,94 @@ function stampMatches(dir: string, judged: LockOwner | null): boolean {
 // This preserves both invariants atomically — a live (fresh, under-threshold)
 // holder is never destroyed, and exactly one reaper ever frees a given stale dir.
 //
-// RESIDUAL (documented, not silently shipped): the only remaining mutual-
-// exclusion gap is the restore in step 3 — between renaming a wrongly-grabbed
-// fresh lock OUT of lockDir and renaming it BACK, a third process can mkdir
-// lockDir (seeing it momentarily empty); the restore then fails EEXIST and two
-// processes briefly believe they hold the lock. This requires THREE specific
-// interleavings in a sub-microsecond rename↔mkdir window (a competitor must
-// re-acquire before our first rename, AND a third process must mkdir between our
-// two renames) — orders of magnitude narrower than the pre-CAS decide→rename
-// window, and the lock protects an idempotent audit-first transaction (re-run
-// safe). A kernel-atomic compare-and-swap on a directory does not exist in
-// portable POSIX (rename + mkdir are separate syscalls), so closing it fully
-// needs a different primitive (e.g. O_EXCL lockfile with fcntl); tracked as a
-// known limitation, acceptable for this phase given the blast radius.
+// REAP MUTEX (#1344 — the formerly-documented residual, measured in the wild):
+// the restore in step 3 used to leave a vacancy window — between renaming a
+// wrongly-grabbed fresh lock OUT of lockDir and renaming it BACK, a third
+// process could mkdir lockDir; the restore then failed ENOTEMPTY and the
+// wrongly-grabbed holder's stamp was silently discarded (two concurrent
+// holders — deterministically reproduced 2026-07-22, issue #1344). The gap
+// existed because the staleness DECISION could be made on a stamp read long
+// before the steal rename. The fix serialises reapers on a sibling mkdir mutex
+// (`<lockDir>.reap`): the decision read now happens INSIDE the mutex,
+// immediately before the rename. A fresh holder can only appear at lockDir
+// after a vacancy (the old dir gone), and a vacancy makes our rename fail
+// ENOENT — so with the read and rename both under the mutex, the steal can
+// only ever move the exact incarnation that was just judged stale. The
+// stampMatches verify in step 2 is kept as defense-in-depth. A reaper killed
+// while holding the mutex is recovered by age (reapMutexStaleMs) via the same
+// CAS-rename idiom, and mutex loss is fail-safe: the waiter just retries.
 function reapStaleLock(lockDir: string): boolean {
+  if (!acquireReapMutex(lockDir)) return false; // another reaper is mid-steal — let it finish
+  try {
+    return reapStaleLockUnderMutex(lockDir);
+  } finally {
+    try {
+      rmSync(reapMutexPath(lockDir), { recursive: true, force: true });
+    } catch {
+      // leftover mutex is recovered by age on the next reap attempt
+    }
+  }
+}
+
+// Staleness threshold for the reap MUTEX dir itself. The mutex is held only for
+// a handful of syscalls (read stamp → rename → rm), so seconds-scale age means
+// its holder died mid-reap. Tunable via AMADEUS_REAP_MUTEX_STALE_MS.
+function reapMutexStaleMs(): number {
+  const raw = process.env.AMADEUS_REAP_MUTEX_STALE_MS;
+  if (raw) {
+    const n = Number(raw);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return 5000;
+}
+
+function reapMutexPath(lockDir: string): string {
+  return `${lockDir}.reap`;
+}
+
+// Take the reap mutex, or report it busy. A stale mutex (dead mid-reap holder)
+// is recovered with the same CAS-rename arbitration the lock steal uses: only
+// one process wins the rename of the stale mutex dir, so two recoverers can
+// never both mkdir a fresh mutex on top of each other's.
+function acquireReapMutex(lockDir: string): boolean {
+  const mutex = reapMutexPath(lockDir);
+  try {
+    mkdirSync(mutex);
+    return true;
+  } catch {
+    // held (EEXIST) or unreachable (ENOENT parent) — inspect before giving up
+  }
+  const mtime = lockDirMtimeMs(mutex);
+  if (mtime === null) {
+    // vanished between mkdir and stat — its holder finished; try once more
+    try {
+      mkdirSync(mutex);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  if (lockAcquireEpochMs() - mtime <= reapMutexStaleMs()) return false;
+  const husk = `${mutex}.dead.${reapSuffix()}`;
+  try {
+    renameSync(mutex, husk);
+  } catch {
+    return false; // another recoverer won the steal — let it proceed
+  }
+  try {
+    rmSync(husk, { recursive: true, force: true });
+  } catch {
+    // leftover husk is harmless (never collides with the live mutex name)
+  }
+  try {
+    mkdirSync(mutex);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function reapStaleLockUnderMutex(lockDir: string): boolean {
   const owner = readOwnerStamp(lockDir);
   if (owner === null) {
     // UNSTAMPED dir: a live holder mid-acquire (between mkdir and stamp) OR a
@@ -4899,7 +5112,7 @@ export function parseStageFrontmatter(
   // Discover every top-level key in the frontmatter block. Passing
   // unknown keys through (rather than silently dropping them) is what
   // lets stage-schema.ts's validator reject reserved names like
-  // `when:` / `on_failure:` with target-release messages. Scalar keys
+  // `on_failure:` with target-release messages. Scalar keys
   // parse via scalarField, list keys via listField, and `consumes:`
   // goes through objectListField.
   const topLevelKeys = new Set<string>();
@@ -4916,10 +5129,13 @@ export function parseStageFrontmatter(
     "scopes",
   ]);
   const CONSUMES_KEY = "consumes";
+  const OBJECT_KEYS = new Set(["when", "produces_kinds"]);
 
   for (const key of topLevelKeys) {
     if (key === CONSUMES_KEY) continue;
     if (ARRAY_KEYS.has(key)) continue;
+    if (key === "required_sections") continue;
+    if (OBJECT_KEYS.has(key)) continue;
     // Unlike required list fields, absence must stay distinguishable from an
     // explicitly empty optional list.
     if (key === "optional_produces") continue;
@@ -4945,6 +5161,17 @@ export function parseStageFrontmatter(
 
   if (topLevelKeys.has("optional_produces")) {
     obj.optional_produces = listField(fm, "optional_produces");
+  }
+  if (topLevelKeys.has("required_sections")) {
+    obj.required_sections = listField(fm, "required_sections");
+  }
+
+  if (topLevelKeys.has("when")) {
+    obj.when = parseStringMapField(fm, "when");
+  }
+
+  if (topLevelKeys.has("produces_kinds")) {
+    obj.produces_kinds = parseStringListMapField(fm, "produces_kinds");
   }
 
   // reviewer_max_iterations is the one numeric scalar field. The generic
@@ -4975,6 +5202,72 @@ export function parseStageFrontmatter(
   }
 
   return obj;
+}
+
+function inlineMapBody(fm: string, key: string): string | null {
+  const match = fm.match(new RegExp(`^${key}:\\s*(\\{.*\\})\\s*$`, "m"));
+  return match?.[1] ?? null;
+}
+
+function blockLinesForKey(fm: string, key: string): string[] | null {
+  const lines = fm.split(/\r?\n/);
+  const start = lines.findIndex((line) =>
+    new RegExp(`^${key}:\\s*$`).test(line),
+  );
+  if (start < 0) return null;
+  const out: string[] = [];
+  for (let index = start + 1; index < lines.length; index++) {
+    if (/^[a-z_][a-z0-9_]*\s*:/.test(lines[index])) break;
+    if (lines[index].trim() !== "") out.push(lines[index]);
+  }
+  return out;
+}
+
+function parseInlineMap(raw: string): Record<string, string> {
+  const body = raw.slice(1, -1).trim();
+  if (body === "") return {};
+  const out: Record<string, string> = {};
+  for (const pair of body.split(",")) {
+    const separator = pair.indexOf(":");
+    if (separator < 0) return { "": unquoteScalar(pair) };
+    const key = unquoteScalar(pair.slice(0, separator));
+    const value = unquoteScalar(pair.slice(separator + 1));
+    out[key] = value;
+  }
+  return out;
+}
+
+function parseStringMapField(
+  fm: string,
+  key: string,
+): unknown {
+  const inline = inlineMapBody(fm, key);
+  if (inline !== null) return parseInlineMap(inline);
+  const block = blockLinesForKey(fm, key);
+  if (block === null) return scalarField(fm, key);
+  const out: Record<string, string> = {};
+  for (const line of block) {
+    const match = line.match(/^\s+([^:]+):\s*(.*?)\s*$/);
+    if (!match) return scalarField(fm, key);
+    out[unquoteScalar(match[1])] = unquoteScalar(match[2]);
+  }
+  return out;
+}
+
+function parseStringListMapField(fm: string, key: string): unknown {
+  const block = blockLinesForKey(fm, key);
+  if (block === null) return scalarField(fm, key);
+  const out: Record<string, string[]> = {};
+  for (const line of block) {
+    const match = line.match(/^\s+([^:]+):\s*(.*?)\s*$/);
+    if (!match) return scalarField(fm, key);
+    const value = match[2].trim();
+    if (!value.startsWith("[") || !value.endsWith("]")) {
+      return scalarField(fm, key);
+    }
+    out[unquoteScalar(match[1])] = parseInlineDepsList(value);
+  }
+  return out;
 }
 
 // parseMemoryHeadings counts entries under each of the four canonical
@@ -5187,6 +5480,86 @@ function parseMemoryEntryLine(trimmed: string): {
 // object back into YAML bytes. Symmetric with parseStageFrontmatter:
 // parse → emit → parse yields the same object. Field order is pinned
 // to stage-definition.md:84-110's worked example so diffs stay stable.
+type ScalarEmitter = (value: string) => string;
+
+function emitWhenField(value: unknown, emitScalar: ScalarEmitter): string[] {
+  if (!isPlainObject(value)) return [];
+  const lines = ["when:"];
+  for (const [predicate, artifact] of Object.entries(value)) {
+    if (typeof artifact === "string") {
+      lines.push(`  ${predicate}: ${emitScalar(artifact)}`);
+    }
+  }
+  return lines;
+}
+
+function emitProducesKindsField(
+  value: unknown,
+  emitScalar: ScalarEmitter,
+): string[] {
+  if (!isPlainObject(value)) return [];
+  const lines = ["produces_kinds:"];
+  for (const [artifact, kinds] of Object.entries(value)) {
+    if (!Array.isArray(kinds)) continue;
+    const rendered = kinds
+      .map((kind) =>
+        typeof kind === "string" ? emitScalar(kind) : String(kind),
+      )
+      .join(", ");
+    lines.push(`  ${artifact}: [${rendered}]`);
+  }
+  return lines;
+}
+
+function emitConsumesField(
+  value: unknown,
+  emitScalar: ScalarEmitter,
+): string[] {
+  if (!Array.isArray(value)) return [];
+  if (value.length === 0) return ["consumes: []"];
+  const lines = ["consumes:"];
+  for (const entry of value) {
+    if (!isPlainObject(entry)) continue;
+    if (typeof entry.artifact === "string") {
+      lines.push(`  - artifact: ${emitScalar(entry.artifact)}`);
+    }
+    if (typeof entry.required === "boolean") {
+      lines.push(`    required: ${entry.required}`);
+    }
+    if (typeof entry.conditional_on === "string") {
+      lines.push(`    conditional_on: ${emitScalar(entry.conditional_on)}`);
+    }
+  }
+  return lines;
+}
+
+function emitStageFrontmatterField(
+  key: string,
+  value: unknown,
+  emitScalar: ScalarEmitter,
+): string[] {
+  if (key === "when") return emitWhenField(value, emitScalar);
+  if (key === "produces_kinds") {
+    return emitProducesKindsField(value, emitScalar);
+  }
+  if (key === "consumes") return emitConsumesField(value, emitScalar);
+  if (Array.isArray(value)) {
+    if (value.length === 0) return [`${key}: []`];
+    return [
+      `${key}:`,
+      ...value.map(
+        (item) =>
+          `  - ${typeof item === "string" ? emitScalar(item) : String(item)}`,
+      ),
+    ];
+  }
+  if (typeof value === "string") return [`${key}: ${emitScalar(value)}`];
+  if (typeof value === "number" || typeof value === "boolean") {
+    return [`${key}: ${value}`];
+  }
+  return [];
+}
+
 export function emitStageFrontmatter(obj: Record<string, unknown>): string {
   const needsQuote = (v: string): boolean => /[:#]|^\s|\s$/.test(v);
   const emitScalar = (v: string): string =>
@@ -5194,18 +5567,24 @@ export function emitStageFrontmatter(obj: Record<string, unknown>): string {
 
   const FIELD_ORDER = [
     "slug",
+    "number",
+    "name",
     "phase",
     "execution",
     "condition",
     "lead_agent",
     "support_agents",
     "mode",
+    "bundle",
+    "when",
+    "required_sections",
     "reviewer",
     "reviewer_max_iterations",
     "for_each",
     "workspace_requires",
     "produces",
     "optional_produces",
+    "produces_kinds",
     "consumes",
     "requires_stage",
     "sensors",
@@ -5219,52 +5598,7 @@ export function emitStageFrontmatter(obj: Record<string, unknown>): string {
   for (const key of FIELD_ORDER) {
     const v: unknown = obj[key];
     if (v === undefined) continue;
-
-    if (key === "consumes") {
-      if (!Array.isArray(v)) continue;
-      const consumes: unknown[] = v;
-      if (consumes.length === 0) {
-        lines.push("consumes: []");
-      } else {
-        lines.push("consumes:");
-        for (const entry of consumes) {
-          if (!isPlainObject(entry)) continue;
-          const e = entry;
-          if (typeof e.artifact === "string") {
-            lines.push(`  - artifact: ${emitScalar(e.artifact)}`);
-          }
-          if (typeof e.required === "boolean") {
-            lines.push(`    required: ${e.required}`);
-          }
-          if (typeof e.conditional_on === "string") {
-            lines.push(`    conditional_on: ${emitScalar(e.conditional_on)}`);
-          }
-        }
-      }
-    } else if (Array.isArray(v)) {
-      const arr: unknown[] = v;
-      if (arr.length === 0) {
-        lines.push(`${key}: []`);
-      } else {
-        lines.push(`${key}:`);
-        for (const item of arr) {
-          lines.push(`  - ${typeof item === "string" ? emitScalar(item) : String(item)}`);
-        }
-      }
-    } else if (typeof v === "string") {
-      lines.push(`${key}: ${emitScalar(v)}`);
-    } else if (typeof v === "number") {
-      // reviewer_max_iterations round-trips as an unquoted number, matching
-      // how stages author it on disk (`reviewer_max_iterations: 2`). Without
-      // this branch the numeric value the parser now returns (V1) would be
-      // dropped on emit, breaking the parse -> emit -> parse contract (t65).
-      lines.push(`${key}: ${v}`);
-    } else if (typeof v === "boolean") {
-      // workspace_requires round-trips as an unquoted boolean (the parser
-      // coerces the "true"/"false" token to a real boolean), so emit it
-      // unquoted to preserve the parse -> emit -> parse contract.
-      lines.push(`${key}: ${v}`);
-    }
+    lines.push(...emitStageFrontmatterField(key, v, emitScalar));
   }
 
   lines.push("---");
@@ -5764,6 +6098,7 @@ export function replaceSection(
 
 export interface UnitDependencyEdge {
   name: string;
+  kind?: UnitKind;
   depends_on: string[];
 }
 
@@ -5868,6 +6203,18 @@ function parseUnitsBlock(block: string): UnitDependencyEdge[] {
       continue;
     }
 
+    const kindMatch = line.match(/^\s*kind\s*:\s*(.*?)\s*$/);
+    if (kindMatch) {
+      if (!current) throw new Error("kind: before any - name: entry");
+      if (current.kind !== undefined) {
+        throw new Error(`duplicate kind for unit "${current.name}"`);
+      }
+      const normalized = normalizeUnitKind(unquoteScalar(kindMatch[1]));
+      if (!normalized.valid) throw new Error(normalized.errors.join("; "));
+      current.kind = normalized.data;
+      continue;
+    }
+
     // Block-form dependency item (a bare `- dep` under `depends_on:`).
     const itemMatch = line.match(/^\s*-\s+(.+?)\s*$/);
     if (itemMatch && current) {
@@ -5958,7 +6305,16 @@ export function parseBoltDag(body: string): BoltDagParse {
     names.add(u.name);
   }
   for (const u of edges) {
+    const dependencies = new Set<string>();
     for (const dep of u.depends_on) {
+      if (dependencies.has(dep)) {
+        return {
+          ok: false,
+          reason: "malformed",
+          detail: `unit "${u.name}" has duplicate dependency "${dep}"`,
+        };
+      }
+      dependencies.add(dep);
       if (dep === u.name) {
         return { ok: false, reason: "malformed", detail: `unit "${u.name}" depends on itself` };
       }
@@ -5977,6 +6333,169 @@ export function parseBoltDag(body: string): BoltDagParse {
     return { ok: false, reason: "cyclic", detail: "dependency cycle detected" };
   }
   return { ok: true, units: edges, batches };
+}
+
+export type BoltDagCanonicalSource =
+  | { readonly kind: "absent"; readonly path: string }
+  | { readonly kind: "content"; readonly path: string; readonly body: string }
+  | { readonly kind: "unreadable"; readonly path: string; readonly detail: string };
+
+export type BoltDagRecovery =
+  | { readonly kind: "none" }
+  | {
+      readonly kind: "malformed";
+      readonly reason: "unreadable" | "missing-block" | "malformed" | "cycle";
+      readonly detail: string;
+    }
+  | {
+      readonly kind: "ok";
+      readonly batches: readonly (readonly string[])[];
+      readonly healed: boolean;
+      readonly source: "cache" | "canonical";
+      readonly healingReason: "missing" | "empty" | "malformed" | "mismatch" | null;
+    };
+
+function cachedBoltDagBatches(cache: unknown): string[][] | null {
+  if (cache === null || typeof cache !== "object") return null;
+  const batches = (cache as { readonly batches?: unknown }).batches;
+  if (!Array.isArray(batches) || batches.length === 0) return null;
+  const seen = new Set<string>();
+  const valid: string[][] = [];
+  for (const batch of batches) {
+    if (!Array.isArray(batch) || batch.length === 0) return null;
+    const names: string[] = [];
+    for (const name of batch) {
+      if (typeof name !== "string" || name.trim() === "" || seen.has(name)) return null;
+      seen.add(name);
+      names.push(name);
+    }
+    valid.push(names);
+  }
+  return valid;
+}
+
+/** Reconcile the disposable runtime DAG cache with its canonical dependency artifact. */
+export function recoverBoltDag(cache: unknown, source: BoltDagCanonicalSource): BoltDagRecovery {
+  if (source.kind === "absent") return { kind: "none" };
+  if (source.kind === "unreadable") {
+    return { kind: "malformed", reason: "unreadable", detail: source.detail };
+  }
+
+  const parsed = parseBoltDag(source.body);
+  if (!parsed.ok) {
+    return {
+      kind: "malformed",
+      reason: parsed.reason === "absent" ? "missing-block" : parsed.reason === "cyclic" ? "cycle" : "malformed",
+      detail: parsed.detail,
+    };
+  }
+
+  const canonical = parsed.batches;
+  const cached = cachedBoltDagBatches(cache);
+  if (cached !== null && JSON.stringify(cached) === JSON.stringify(canonical)) {
+    return { kind: "ok", batches: cached, healed: false, source: "cache", healingReason: null };
+  }
+  const cacheBatches = cache !== null && typeof cache === "object"
+    ? (cache as { readonly batches?: unknown }).batches
+    : undefined;
+  const healingReason = cache === undefined
+    ? "missing"
+    : Array.isArray(cacheBatches) && cacheBatches.length === 0
+      ? "empty"
+      : cached === null
+        ? "malformed"
+        : "mismatch";
+  return { kind: "ok", batches: canonical, healed: true, source: "canonical", healingReason };
+}
+
+export type RevisionEvidenceEvent = {
+  readonly kind:
+    | "STAGE_STARTED"
+    | "STAGE_AWAITING_APPROVAL"
+    | "HUMAN_TURN"
+    | "ARTIFACT_CREATED"
+    | "ARTIFACT_UPDATED"
+    | "GATE_REJECTED";
+  readonly timestamp: string;
+  readonly bufferPosition: number;
+  readonly stage: string | null;
+  readonly file: string | null;
+  readonly recovered: boolean;
+};
+
+export type GateRevisionRecovery =
+  | { readonly kind: "not-needed"; readonly reason: string }
+  | { readonly kind: "recovered"; readonly nextRevisionCount: number; readonly transactionId: string };
+
+type GateRevisionOptions = {
+  readonly stage: string;
+  readonly produces: readonly string[];
+  readonly revisionCount: number;
+  readonly autonomous?: boolean;
+  readonly disabled?: boolean;
+};
+
+function isDeclaredRevisionWrite(event: RevisionEvidenceEvent, produces: readonly string[]): boolean {
+  if (event.kind !== "ARTIFACT_CREATED" && event.kind !== "ARTIFACT_UPDATED") return false;
+  if (event.file === null) return false;
+  const file = revisionArtifactComparisonKey(event.file);
+  return produces.some((path) => revisionArtifactComparisonKey(path) === file);
+}
+
+function revisionArtifactComparisonKey(path: string): string {
+  const normalized = path.replace(/\\/g, "/");
+  const marker = "amadeus/spaces/";
+  const markerIndex = normalized.indexOf(marker);
+  if (markerIndex === 0 || (markerIndex > 0 && normalized[markerIndex - 1] === "/")) {
+    return normalized.slice(markerIndex);
+  }
+  return normalized;
+}
+
+/** Derive a missing gate revision solely from durable audit evidence. */
+export function recoverGateRevision(
+  evidence: readonly RevisionEvidenceEvent[],
+  options: GateRevisionOptions,
+): GateRevisionRecovery {
+  if (options.autonomous) return { kind: "not-needed", reason: "autonomous" };
+  if (options.disabled) return { kind: "not-needed", reason: "disabled" };
+
+  const ordered = [...evidence].sort(
+    (left, right) => left.timestamp.localeCompare(right.timestamp) || left.bufferPosition - right.bufferPosition,
+  );
+  let anchorIndex = -1;
+  let anchorKind: "STAGE_STARTED" | "STAGE_AWAITING_APPROVAL" | null = null;
+  for (let index = 0; index < ordered.length; index += 1) {
+    const item = ordered[index]!;
+    if (item.stage !== options.stage || item.recovered) continue;
+    if (item.kind === "STAGE_STARTED" || item.kind === "STAGE_AWAITING_APPROVAL") {
+      anchorIndex = index;
+      anchorKind = item.kind;
+    }
+  }
+  if (anchorIndex < 0 || anchorKind === null) return { kind: "not-needed", reason: "anchor-missing" };
+
+  const afterAnchor = ordered.slice(anchorIndex + 1);
+  if (afterAnchor.some((item) => !item.recovered && item.stage === options.stage && item.kind === "GATE_REJECTED")) {
+    return { kind: "not-needed", reason: "rejected" };
+  }
+  const humanOffset = afterAnchor.findIndex((item) => item.kind === "HUMAN_TURN");
+  if (humanOffset < 0) return { kind: "not-needed", reason: "human-turn-missing" };
+  const humanIndex = anchorIndex + 1 + humanOffset;
+  const hasLaterWrite = ordered.slice(humanIndex + 1).some((item) => isDeclaredRevisionWrite(item, options.produces));
+  if (!hasLaterWrite) return { kind: "not-needed", reason: "revision-write-missing" };
+  if (
+    anchorKind === "STAGE_STARTED" &&
+    !ordered.slice(anchorIndex + 1, humanIndex).some((item) => isDeclaredRevisionWrite(item, options.produces))
+  ) {
+    return { kind: "not-needed", reason: "initial-write-missing" };
+  }
+
+  const transactionId = createHash("sha256")
+    .update(`${options.stage}\0${ordered[anchorIndex]!.timestamp}\0${ordered[humanIndex]!.timestamp}\0${options.revisionCount + 1}`)
+    .digest("hex")
+    .slice(0, 24);
+  return { kind: "recovered", nextRevisionCount: options.revisionCount + 1, transactionId };
 }
 
 // --- Stop-hook engine-engagement classifier ------------------------------------

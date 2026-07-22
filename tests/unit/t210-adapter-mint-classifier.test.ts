@@ -16,18 +16,16 @@
 //   - a machine-injected prompt (any MACHINE_INJECTED_TURN_MARKERS form) does
 //     NOT mint HUMAN_TURN on any of the three adapters.
 //   - a genuine human prompt mints exactly one HUMAN_TURN (non-regression).
-//   - FAIL-OPEN: empty stdin / prompt-absent still MINTS — the same fail-open
-//     the core hook uses (amadeus-mint-presence.ts:64). For kiro-ide this is the
-//     PRODUCTION path (its stdin is empty on the real IDE, race-to-2s → ""), so
-//     the classifier is inert there in production and the guard only bites when a
-//     payload with a prompt body is actually delivered (constraint per #811).
+//   - FAIL-OPEN: empty input / prompt-absent still MINTS — the same fail-open
+//     the core hook uses (amadeus-mint-presence.ts:64). Kiro IDE supplies the raw
+//     prompt through USER_PROMPT; its stdin is intentionally irrelevant.
 //   - CANONICAL: the classifier is the shared lib export isMachineInjectedTurnText
 //     — no marker catalog / logic is duplicated into any adapter (source sync
 //     test below fixes this by reading the real adapter sources).
 //
 // WHY SUBPROCESS. The adapters ARE subprocess shims — spawning the SHIPPED dist
-// adapter with a UserPromptSubmit payload on stdin and reading back the audit
-// shard is the exact path the harness drives (same idiom as t149 / t203).
+// adapter through each harness's measured input channel and reading back the
+// audit shard is the exact path the harness drives (same idiom as t149 / t203).
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -171,14 +169,26 @@ function eventCount(dir: string, event: string): number {
     .filter((l) => l === `**Event**: ${event}`).length;
 }
 
-// Fire the shipped adapter's mint target with the given stdin. `stdin` is the raw
-// JSON string, or null to feed an empty pipe (the fail-open path).
+// Fire the shipped adapter's mint target through its measured prompt channel.
+// Kiro IDE receives raw USER_PROMPT text and never reads stdin; the other adapters
+// receive their JSON payload on stdin. A prompt-absent Kiro IDE JSON context stays
+// opaque rather than being searched for a nested prompt field.
 function fireMint(dir: string, adapterRel: string, target: string, stdin: string | null): number {
+  const kiroIde = adapterRel.startsWith(".kiro") && target === "mint";
+  let userPrompt: string | undefined;
+  if (kiroIde && stdin !== null) {
+    const payload = JSON.parse(stdin) as { prompt?: unknown };
+    userPrompt = typeof payload.prompt === "string" ? payload.prompt : stdin;
+  }
   const r = spawnSync("bun", [join(dir, adapterRel), target], {
     cwd: dir,
-    input: stdin ?? "",
+    input: kiroIde ? "stdin-must-not-be-read" : (stdin ?? ""),
     encoding: "utf-8",
-    env: { ...process.env, CLAUDE_PROJECT_DIR: undefined } as NodeJS.ProcessEnv,
+    env: {
+      ...process.env,
+      CLAUDE_PROJECT_DIR: undefined,
+      USER_PROMPT: kiroIde ? userPrompt : undefined,
+    } as NodeJS.ProcessEnv,
     timeout: 30_000,
   });
   return r.status ?? -1;
@@ -240,9 +250,9 @@ describe("t210 non-claude adapters classify the UserPromptSubmit payload before 
         }
       });
 
-      // --- FAIL-OPEN: empty stdin / prompt-absent still mints -----------------
+      // --- FAIL-OPEN: empty input / prompt-absent still mints -----------------
       // Mirrors the core hook's fail-open (amadeus-mint-presence.ts:64). For
-      // kiro-ide this is the PRODUCTION path (real IDE stdin is empty).
+      // Kiro IDE drives these through missing/raw USER_PROMPT, never stdin.
       test("empty stdin FAILS OPEN — mints one HUMAN_TURN", () => {
         const dir = scratchProject(adapter.distTree, adapter.installDir);
         try {

@@ -35,6 +35,7 @@ import {
   parseBoltDag,
   parseCheckboxes,
   parseMemoryHeadings,
+  type UnitKind,
   parseStateStageSuffixes,
   readAllAuditShards,
   activeSpace,
@@ -110,7 +111,7 @@ interface RuntimeStage {
 // valid edge block exists on disk; absent/malformed/cyclic blocks omit the
 // node entirely (the gate-time required-sections sensor flags those upstream).
 interface BoltDag {
-  units: { name: string; depends_on: string[] }[];
+  units: { name: string; kind?: UnitKind; depends_on: string[] }[];
   batches: string[][];
 }
 

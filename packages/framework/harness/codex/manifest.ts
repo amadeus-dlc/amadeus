@@ -41,6 +41,7 @@ const manifest: HarnessManifest = {
   // canonical/active split or self-migration contract.
   harnessFiles: [
     { src: "hooks/amadeus-codex-adapter.ts", dst: "hooks/amadeus-codex-adapter.ts" },
+    { src: "hooks/amadeus-codex-hook-runtime.ts", dst: "hooks/amadeus-codex-hook-runtime.ts" },
     { src: "tools/amadeus-codex-hooks.ts", dst: "tools/amadeus-codex-hooks.ts" },
     {
       src: "tools/amadeus-codex-hooks-contract.ts",

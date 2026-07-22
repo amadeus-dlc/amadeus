@@ -305,7 +305,19 @@ describe("t48 audit event-emitter drift (migrated from t48-audit-event-emitters.
   function pairingMissing(handler: string, file: string, events: string[]): string[] {
     const body = functionBody(handler, file);
     if (body === null) return [`handler ${handler} not found (renamed/deleted?)`];
-    const live = decommented(body);
+    let live = decommented(body);
+    // handleApprove keeps its transaction boundary small by delegating through
+    // the lock-scoped transaction helper to the paired audit writer. Follow
+    // only those two explicit calls, so deleting any link or event still makes
+    // this detector fail closed.
+    if (handler === "handleApprove" && /\bapproveUnderLock\(/.test(live)) {
+      const transaction = functionBody("approveUnderLock", file);
+      if (transaction !== null) live += `\n${decommented(transaction)}`;
+    }
+    if (handler === "handleApprove" && /\bemitApprovalAudit\(/.test(live)) {
+      const auditWriter = functionBody("emitApprovalAudit", file);
+      if (auditWriter !== null) live += `\n${decommented(auditWriter)}`;
+    }
     const missing: string[] = [];
     for (const event of events) {
       // .sh allows the event literal anywhere inside the emission call (multi-
