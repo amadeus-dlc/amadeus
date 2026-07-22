@@ -1,0 +1,29 @@
+{
+  "electionId": "E-SRCRA5",
+  "kind": "clarification-question",
+  "question": "intent 260722-space-record-catalog / requirements-analysis Q5(verbatim 正本 = e2 ブランチ <record>/inception/requirements-analysis/requirements-analysis-questions.md、コミット 0851eb30d — 各自 git show で実測可): 移行の「実行」(既存103選挙ディレクトリの rename+elections.json 生成)は本 intent の construction スコープに含むか。背景: dispatch は「実装着手承認」済みだが、scope-document Out of Scope は「実 rename は設計・移行方針の承認前に実行しない」— この適用境界(時系列条件か恒久除外か)が一意に定まらない。各自 scope-document・dispatch 文言・O4 制約を実測確認のうえ、自案非採用時の受容度1行併記(A/B/C 選択型)で GoA 投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. 含む — 設計・移行方針の承認後に実 rename+レジストリ生成まで本 intent で実行(O4 は時系列条件の読み)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. 含まない — ツール・方針・doctor 実装まで。移行実行は別 intent/ユーザー個別承認"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. ツール+dry-run 検証まで実装し、実実行はその直前に leader 経由でユーザー個別承認を取得"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他(票コメントで指定)"
+    }
+  ],
+  "voters": [
+    "e3",
+    "e4",
+    "e5"
+  ],
+  "state": "recorded"
+}

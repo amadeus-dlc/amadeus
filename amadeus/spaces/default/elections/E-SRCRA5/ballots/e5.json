@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCRA5",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "実 rename の実行は S2 解決層の着地後・進行中選挙(state=collecting)が存在しない断面で行い、全103件の対応表+レジストリ parse+参照 0 breakage の fidelity 検証を実行証跡として record に残すこと",
+  "rationale": "A(含む)。実測3点: (1) constraint-register O4 verbatim『既存ディレクトリの一括 rename は設計前に行わない(…「設計・移行方針の承認前に実行しない」と読み替える)』(0851eb30d :23)— 明示的に時系列条件であり恒久除外ではない。scope-document Out of Scope :30 も同じ括弧書きで O4 を参照しており矛盾しない。(2) dispatch は『実装着手承認』済み = ideation park 前提(intent-backlog『本 intent では着手しない』)はユーザー裁定で更新済み — 実装を含む以上、移行実行の器は本 intent が自然。(3) 価値面: 発端の痛み(開催順を追えない)は実行して初めて解消する — 直近 persist の cid:ux-first-scope-for-distribution-intents(利用者体験の最小実行可能単位から逆算)と同型で、ツールだけ着地させても価値ゼロ。なお実行は git 管理下の PR として着地するため、マージ承認(no-AI-merge)自体が人間ゲートとして機能し、B の別 intent 分離は価値の未出荷を、C の直前個別承認はマージ承認と重複するゲートを増やすだけ。非採用時の受容度: C なら 6(ゲート重複は無害)、B なら 7(価値未出荷+O4 の字義に反する過剰保守)。",
+  "submittedAt": "2026-07-22T23:30:31Z"
+}

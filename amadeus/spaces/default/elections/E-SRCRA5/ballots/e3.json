@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCRA5",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 3,
+  "goa": 2,
+  "reservation": "実行直前のユーザー承認伺いには dry-run の実測出力(対象件数・rename 対 map・衝突0件の機械確認)を証拠として必ず添付すること — 出力なしの承認伺いは verify-before-notify に反する。",
+  "rationale": "C 採用。実測: Q5 正本(0851eb30d git show)・scope-document.md:29-30・constraint-register O4(:23)を直読。O4 は「設計・移行方針の承認前に実行しない」の時系列条件と読み替え済みで、恒久除外は :29 の intent 側 dir rename のみ — elections 103件の rename は本 intent の中核価値であり B の恒久除外は ux-first-scope-for-distribution-intents(実行なしのツール単独は利用者体験を変えない)に整合しない。一方 A の「設計承認後に自動実行」はステージゲートが auto delegate 化された現運用では実行の人間関与が PR マージ承認まで顕在化しない — 103件一括の構造移行は正準リスト(3)の外部境界に準じ、実行直前の明示的ユーザー個別承認(C)が P4 と時系列条件の両方を最も直裁に満たす。自案非採用時の受容度: A=6(マージ承認が実質ゲートとして残るため)/ B=7。",
+  "submittedAt": "2026-07-22T23:30:27Z"
+}
