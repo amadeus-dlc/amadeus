@@ -4328,20 +4328,94 @@ function stampMatches(dir: string, judged: LockOwner | null): boolean {
 // This preserves both invariants atomically — a live (fresh, under-threshold)
 // holder is never destroyed, and exactly one reaper ever frees a given stale dir.
 //
-// RESIDUAL (documented, not silently shipped): the only remaining mutual-
-// exclusion gap is the restore in step 3 — between renaming a wrongly-grabbed
-// fresh lock OUT of lockDir and renaming it BACK, a third process can mkdir
-// lockDir (seeing it momentarily empty); the restore then fails EEXIST and two
-// processes briefly believe they hold the lock. This requires THREE specific
-// interleavings in a sub-microsecond rename↔mkdir window (a competitor must
-// re-acquire before our first rename, AND a third process must mkdir between our
-// two renames) — orders of magnitude narrower than the pre-CAS decide→rename
-// window, and the lock protects an idempotent audit-first transaction (re-run
-// safe). A kernel-atomic compare-and-swap on a directory does not exist in
-// portable POSIX (rename + mkdir are separate syscalls), so closing it fully
-// needs a different primitive (e.g. O_EXCL lockfile with fcntl); tracked as a
-// known limitation, acceptable for this phase given the blast radius.
+// REAP MUTEX (#1344 — the formerly-documented residual, measured in the wild):
+// the restore in step 3 used to leave a vacancy window — between renaming a
+// wrongly-grabbed fresh lock OUT of lockDir and renaming it BACK, a third
+// process could mkdir lockDir; the restore then failed ENOTEMPTY and the
+// wrongly-grabbed holder's stamp was silently discarded (two concurrent
+// holders — deterministically reproduced 2026-07-22, issue #1344). The gap
+// existed because the staleness DECISION could be made on a stamp read long
+// before the steal rename. The fix serialises reapers on a sibling mkdir mutex
+// (`<lockDir>.reap`): the decision read now happens INSIDE the mutex,
+// immediately before the rename. A fresh holder can only appear at lockDir
+// after a vacancy (the old dir gone), and a vacancy makes our rename fail
+// ENOENT — so with the read and rename both under the mutex, the steal can
+// only ever move the exact incarnation that was just judged stale. The
+// stampMatches verify in step 2 is kept as defense-in-depth. A reaper killed
+// while holding the mutex is recovered by age (reapMutexStaleMs) via the same
+// CAS-rename idiom, and mutex loss is fail-safe: the waiter just retries.
 function reapStaleLock(lockDir: string): boolean {
+  if (!acquireReapMutex(lockDir)) return false; // another reaper is mid-steal — let it finish
+  try {
+    return reapStaleLockUnderMutex(lockDir);
+  } finally {
+    try {
+      rmSync(reapMutexPath(lockDir), { recursive: true, force: true });
+    } catch {
+      // leftover mutex is recovered by age on the next reap attempt
+    }
+  }
+}
+
+// Staleness threshold for the reap MUTEX dir itself. The mutex is held only for
+// a handful of syscalls (read stamp → rename → rm), so seconds-scale age means
+// its holder died mid-reap. Tunable via AMADEUS_REAP_MUTEX_STALE_MS.
+function reapMutexStaleMs(): number {
+  const raw = process.env.AMADEUS_REAP_MUTEX_STALE_MS;
+  if (raw) {
+    const n = Number(raw);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return 5000;
+}
+
+function reapMutexPath(lockDir: string): string {
+  return `${lockDir}.reap`;
+}
+
+// Take the reap mutex, or report it busy. A stale mutex (dead mid-reap holder)
+// is recovered with the same CAS-rename arbitration the lock steal uses: only
+// one process wins the rename of the stale mutex dir, so two recoverers can
+// never both mkdir a fresh mutex on top of each other's.
+function acquireReapMutex(lockDir: string): boolean {
+  const mutex = reapMutexPath(lockDir);
+  try {
+    mkdirSync(mutex);
+    return true;
+  } catch {
+    // held (EEXIST) or unreachable (ENOENT parent) — inspect before giving up
+  }
+  const mtime = lockDirMtimeMs(mutex);
+  if (mtime === null) {
+    // vanished between mkdir and stat — its holder finished; try once more
+    try {
+      mkdirSync(mutex);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  if (lockAcquireEpochMs() - mtime <= reapMutexStaleMs()) return false;
+  const husk = `${mutex}.dead.${reapSuffix()}`;
+  try {
+    renameSync(mutex, husk);
+  } catch {
+    return false; // another recoverer won the steal — let it proceed
+  }
+  try {
+    rmSync(husk, { recursive: true, force: true });
+  } catch {
+    // leftover husk is harmless (never collides with the live mutex name)
+  }
+  try {
+    mkdirSync(mutex);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function reapStaleLockUnderMutex(lockDir: string): boolean {
   const owner = readOwnerStamp(lockDir);
   if (owner === null) {
     // UNSTAMPED dir: a live holder mid-acquire (between mkdir and stamp) OR a
