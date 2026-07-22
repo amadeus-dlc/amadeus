@@ -63,7 +63,7 @@ jobs:
               *.ts|*.tsx|*.mts|*.cts|\
               bun.lock|package.json|*/package.json|tsconfig*.json|biome.json|biome.jsonc|\
               .github/workflows/ci.yml|\
-              scripts/*|tests/*|packages/framework/*|packages/setup/*|\
+              scripts/*|tests/*|packages/framework/*|packages/setup/*|book-pack/*|\
               dist/*|.agents/*|.claude/*|.codex/*|.kiro/*|.cursor/*|.opencode/*|\
               AGENTS.md|CLAUDE.md)
                 ci=true
