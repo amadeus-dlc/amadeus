@@ -23,7 +23,9 @@ import {
   frameworkMemorySeedDir,
   loadGraph,
   loadRules,
+  loadScopeGrid,
   memoryDirFor,
+  previewScopeCost,
   stageGraphDrift,
   validateGrid,
   validateScope,
@@ -3778,6 +3780,11 @@ ${stageProgress}
   // cursor + the record dir were set by birthIntent above; the state file lives
   // under the born intent's record (resolved by writeStateFile's default).
   const bornDir = activeIntent(projectDir) ?? "(legacy flat record)";
+  // FR-2 item 9: display the scope cost (stage + gate count) from the compiled
+  // grid via the single count owner (previewScopeCost), so intent birth reports
+  // the same numbers as validate-grid/scope confirmation. Additive: a new
+  // trailing line, so the existing birth-summary anchors stay byte-identical.
+  const scopeCost = previewScopeCost(scope, loadScopeGrid());
   process.stdout.write(
     `Intent born: ${bornDir} (space: ${activeSpace(projectDir)})
 State initialized: ${scope} scope, ${totalInScope} stages, ${effectiveDepth} depth
@@ -3786,6 +3793,7 @@ Languages: ${scan.languages}
 Frameworks: ${scan.frameworks}
 Build System: ${scan.buildSystem}
 First post-init stage: ${firstPostInit} (${firstPostInitPhase})
+Scope cost: ${scopeCost.stageCount} stages, ${scopeCost.gateCount} approval gates
 `
   );
 
