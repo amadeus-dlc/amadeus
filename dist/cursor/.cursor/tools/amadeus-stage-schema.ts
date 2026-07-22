@@ -6,12 +6,19 @@
 // validator: no I/O, no YAML parsing, no mutation — callers pass an
 // already-parsed object.
 
-import { isPlainObject } from "./amadeus-lib.ts";
+import {
+  type ContractResult,
+  isPlainObject,
+  normalizeUnitKind,
+  type UnitKind,
+} from "./amadeus-lib.ts";
 
 // --- Public types ---
 
 export interface StageFrontmatter {
   slug: string;
+  number?: string;
+  name?: string;
   phase: "initialization" | "ideation" | "inception" | "construction" | "operation";
   execution: "ALWAYS" | "CONDITIONAL";
   condition: string;
@@ -28,6 +35,7 @@ export interface StageFrontmatter {
   // Artifacts the stage may write per unit. They remain visible to the
   // conductor and sensors but do not participate in per-unit completion.
   optional_produces?: string[];
+  produces_kinds?: Record<string, UnitKind[]>;
   consumes: Array<{
     artifact: string;
     required: boolean;
@@ -48,13 +56,14 @@ export interface StageFrontmatter {
   // reviewer_max_iterations — review-cycle cap before escalating to the human.
   // Defaults to 2 when reviewer is present.
   reviewer_max_iterations?: number;
+  bundle?: string;
+  when?: { "producer-in-plan": string };
+  required_sections?: string[];
   inputs: string;
   outputs: string;
 }
 
-export type ValidationResult =
-  | { valid: true; data: StageFrontmatter }
-  | { valid: false; errors: string[] };
+export type ValidationResult = ContractResult<StageFrontmatter>;
 
 export interface ValidationContext {
   /**
@@ -93,7 +102,6 @@ export const RESERVED_AGENT_SLUG = "orchestrator";
 // error message. Each reserved key has a brief reason — the reason
 // describes the intended subsystem, not a target release.
 export const RESERVED_KEYS: Readonly<Record<string, string>> = {
-  when: "fitness compiler",
   on_failure: "loop driver",
   blocks_on: "construction worktrees",
   timeout: "sensor binding",
@@ -115,7 +123,21 @@ const REQUIRED_FIELDS = [
   "outputs",
 ] as const;
 
-const OPTIONAL_FIELDS = ["for_each", "workspace_requires", "optional_produces", "sensors", "scopes", "reviewer", "reviewer_max_iterations"] as const;
+const OPTIONAL_FIELDS = [
+  "number",
+  "name",
+  "for_each",
+  "workspace_requires",
+  "optional_produces",
+  "produces_kinds",
+  "sensors",
+  "scopes",
+  "reviewer",
+  "reviewer_max_iterations",
+  "bundle",
+  "when",
+  "required_sections",
+] as const;
 
 const KNOWN_FIELDS = new Set<string>([...REQUIRED_FIELDS, ...OPTIONAL_FIELDS]);
 
@@ -174,6 +196,10 @@ export function validateStageFrontmatter(
   // Rule 5-7: per-field type, enum, regex checks.
   checkString(o, "slug", errors);
   checkSlugPattern(o, "slug", SLUG_RE, "kebab-case", errors);
+
+  checkOptionalStringPattern(o, "number", /^\d+\.\d+$/, "<digits>.<digits>", errors);
+  checkOptionalNonEmptyString(o, "name", errors);
+  checkOptionalNonEmptyString(o, "bundle", errors);
 
   checkString(o, "phase", errors);
   checkEnum(o, "phase", VALID_PHASES, errors);
@@ -242,6 +268,9 @@ export function validateStageFrontmatter(
   checkStringArray(o, "produces", errors);
   checkDuplicateArtifacts(o.produces, "produces", errors);
   checkOptionalProduces(o, errors);
+  checkProducesKinds(o, errors);
+  checkWhen(o, errors);
+  checkRequiredSections(o, errors);
 
   // Rule 8: nested consumes[] — array of {artifact, required, conditional_on?}.
   if ("consumes" in o) {
@@ -444,6 +473,108 @@ function checkDuplicateArtifacts(
   }
 }
 
+function checkProducesKinds(
+  o: Record<string, unknown>,
+  errors: string[],
+): void {
+  if (!("produces_kinds" in o) || o.produces_kinds === undefined) return;
+  if (!isPlainObject(o.produces_kinds)) {
+    errors.push(
+      `produces_kinds must be object, got ${describe(o.produces_kinds)}`,
+    );
+    return;
+  }
+
+  const entries = Object.entries(o.produces_kinds);
+  if (entries.length === 0) {
+    errors.push("produces_kinds must contain at least one artifact");
+  }
+  const declared = new Set<string>();
+  for (const field of [o.produces, o.optional_produces]) {
+    if (!Array.isArray(field)) continue;
+    for (const name of field) {
+      if (typeof name === "string") declared.add(name);
+    }
+  }
+
+  for (const [artifact, rawKinds] of entries) {
+    if (!ARTIFACT_SLUG_RE.test(artifact)) {
+      errors.push(`produces_kinds key must be kebab-case, got "${artifact}"`);
+    }
+    if (!declared.has(artifact)) {
+      errors.push(
+        `produces_kinds.${artifact} must reference produces or optional_produces`,
+      );
+    }
+    if (!Array.isArray(rawKinds)) {
+      errors.push(
+        `produces_kinds.${artifact} must be array, got ${describe(rawKinds)}`,
+      );
+      continue;
+    }
+    if (rawKinds.length === 0) {
+      errors.push(`produces_kinds.${artifact} must be non-empty`);
+    }
+    const seen = new Set<string>();
+    rawKinds.forEach((rawKind: unknown, index: number) => {
+      const result = normalizeUnitKind(rawKind);
+      if (!result.valid) {
+        errors.push(
+          `produces_kinds.${artifact}[${index}] ${result.errors[0]}`,
+        );
+        return;
+      }
+      if (seen.has(result.data)) {
+        errors.push(
+          `produces_kinds.${artifact} contains duplicate unit kind "${result.data}"`,
+        );
+      }
+      seen.add(result.data);
+    });
+  }
+}
+
+function checkWhen(o: Record<string, unknown>, errors: string[]): void {
+  if (!("when" in o) || o.when === undefined) return;
+  if (!isPlainObject(o.when)) {
+    errors.push(`when must be object, got ${describe(o.when)}`);
+    return;
+  }
+  const keys = Object.keys(o.when);
+  if (keys.length !== 1) {
+    errors.push("when must contain exactly one predicate");
+    return;
+  }
+  const key = keys[0];
+  if (key !== "producer-in-plan") {
+    errors.push(`when has unknown predicate "${key}"`);
+    return;
+  }
+  const artifact = o.when[key];
+  if (typeof artifact !== "string") {
+    errors.push(`when.${key} must be string, got ${describe(artifact)}`);
+  } else if (!ARTIFACT_SLUG_RE.test(artifact)) {
+    errors.push(`when.${key} must be a non-empty artifact slug, got "${artifact}"`);
+  }
+}
+
+function checkRequiredSections(
+  o: Record<string, unknown>,
+  errors: string[],
+): void {
+  if (!("required_sections" in o) || o.required_sections === undefined) return;
+  checkStringArray(o, "required_sections", errors);
+  if (!Array.isArray(o.required_sections)) return;
+  if (o.required_sections.length === 0) {
+    errors.push("required_sections must be non-empty");
+  }
+  o.required_sections.forEach((section: unknown, index: number) => {
+    if (typeof section === "string" && section.trim() === "") {
+      errors.push(`required_sections[${index}] must be non-empty`);
+    }
+  });
+}
+
 // --- Helpers ---
 
 function describe(v: unknown): string {
@@ -456,6 +587,34 @@ function checkString(o: Record<string, unknown>, field: string, errors: string[]
   if (!(field in o)) return;
   if (typeof o[field] !== "string") {
     errors.push(`${field} must be string, got ${describe(o[field])}`);
+  }
+}
+
+function checkOptionalNonEmptyString(
+  o: Record<string, unknown>,
+  field: string,
+  errors: string[],
+): void {
+  if (!(field in o) || o[field] === undefined) return;
+  if (typeof o[field] !== "string") {
+    errors.push(`${field} must be string, got ${describe(o[field])}`);
+  } else if (o[field].trim() === "") {
+    errors.push(`${field} must be non-empty`);
+  }
+}
+
+function checkOptionalStringPattern(
+  o: Record<string, unknown>,
+  field: string,
+  pattern: RegExp,
+  expected: string,
+  errors: string[],
+): void {
+  if (!(field in o) || o[field] === undefined) return;
+  if (typeof o[field] !== "string") {
+    errors.push(`${field} must be string, got ${describe(o[field])}`);
+  } else if (!pattern.test(o[field])) {
+    errors.push(`${field} must match ${expected}, got "${o[field]}"`);
   }
 }
 

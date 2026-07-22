@@ -29,6 +29,9 @@ export interface StageEntry {
   produces?: string[];
   // Artifacts the stage may write per unit. See GraphStage for runtime use.
   optional_produces?: string[];
+  // Unit kinds for which a produced artifact applies. An absent map entry
+  // means the artifact applies to every kind.
+  produces_kinds?: Record<string, UnitKind[]>;
   consumes?: Array<{ artifact: string; required: boolean; conditional_on?: string }>;
   requires_stage?: string[];
   scopes?: string[];
@@ -41,6 +44,40 @@ export interface StageEntry {
   // approve/advance: a code-generation stage that wrote only its markdown
   // produces[] docs but no actual code must not pass (issue #366).
   workspace_requires?: boolean;
+  bundle?: string;
+  when?: { "producer-in-plan": string };
+  required_sections?: string[];
+}
+
+export const UNIT_KINDS = [
+  "service",
+  "spec",
+  "ui",
+  "packaging",
+  "library",
+] as const;
+
+export type UnitKind = (typeof UNIT_KINDS)[number];
+
+export type ContractResult<T> =
+  | { valid: true; data: T }
+  | { valid: false; errors: string[] };
+
+/** Validate an untrusted unit kind against the one closed vocabulary. */
+export function normalizeUnitKind(raw: unknown): ContractResult<UnitKind> {
+  if (
+    typeof raw === "string" &&
+    (UNIT_KINDS as readonly string[]).includes(raw)
+  ) {
+    return { valid: true, data: raw as UnitKind };
+  }
+  const actual = typeof raw === "string" ? `"${raw}"` : String(raw);
+  return {
+    valid: false,
+    errors: [
+      `unit kind must be one of ${UNIT_KINDS.join(" | ")}, got ${actual}`,
+    ],
+  };
 }
 
 export interface ScopeDefinition {
@@ -5001,7 +5038,7 @@ export function parseStageFrontmatter(
   // Discover every top-level key in the frontmatter block. Passing
   // unknown keys through (rather than silently dropping them) is what
   // lets stage-schema.ts's validator reject reserved names like
-  // `when:` / `on_failure:` with target-release messages. Scalar keys
+  // `on_failure:` with target-release messages. Scalar keys
   // parse via scalarField, list keys via listField, and `consumes:`
   // goes through objectListField.
   const topLevelKeys = new Set<string>();
@@ -5018,10 +5055,13 @@ export function parseStageFrontmatter(
     "scopes",
   ]);
   const CONSUMES_KEY = "consumes";
+  const OBJECT_KEYS = new Set(["when", "produces_kinds"]);
 
   for (const key of topLevelKeys) {
     if (key === CONSUMES_KEY) continue;
     if (ARRAY_KEYS.has(key)) continue;
+    if (key === "required_sections") continue;
+    if (OBJECT_KEYS.has(key)) continue;
     // Unlike required list fields, absence must stay distinguishable from an
     // explicitly empty optional list.
     if (key === "optional_produces") continue;
@@ -5047,6 +5087,17 @@ export function parseStageFrontmatter(
 
   if (topLevelKeys.has("optional_produces")) {
     obj.optional_produces = listField(fm, "optional_produces");
+  }
+  if (topLevelKeys.has("required_sections")) {
+    obj.required_sections = listField(fm, "required_sections");
+  }
+
+  if (topLevelKeys.has("when")) {
+    obj.when = parseStringMapField(fm, "when");
+  }
+
+  if (topLevelKeys.has("produces_kinds")) {
+    obj.produces_kinds = parseStringListMapField(fm, "produces_kinds");
   }
 
   // reviewer_max_iterations is the one numeric scalar field. The generic
@@ -5077,6 +5128,72 @@ export function parseStageFrontmatter(
   }
 
   return obj;
+}
+
+function inlineMapBody(fm: string, key: string): string | null {
+  const match = fm.match(new RegExp(`^${key}:\\s*(\\{.*\\})\\s*$`, "m"));
+  return match?.[1] ?? null;
+}
+
+function blockLinesForKey(fm: string, key: string): string[] | null {
+  const lines = fm.split(/\r?\n/);
+  const start = lines.findIndex((line) =>
+    new RegExp(`^${key}:\\s*$`).test(line),
+  );
+  if (start < 0) return null;
+  const out: string[] = [];
+  for (let index = start + 1; index < lines.length; index++) {
+    if (/^[a-z_][a-z0-9_]*\s*:/.test(lines[index])) break;
+    if (lines[index].trim() !== "") out.push(lines[index]);
+  }
+  return out;
+}
+
+function parseInlineMap(raw: string): Record<string, string> {
+  const body = raw.slice(1, -1).trim();
+  if (body === "") return {};
+  const out: Record<string, string> = {};
+  for (const pair of body.split(",")) {
+    const separator = pair.indexOf(":");
+    if (separator < 0) return { "": unquoteScalar(pair) };
+    const key = unquoteScalar(pair.slice(0, separator));
+    const value = unquoteScalar(pair.slice(separator + 1));
+    out[key] = value;
+  }
+  return out;
+}
+
+function parseStringMapField(
+  fm: string,
+  key: string,
+): unknown {
+  const inline = inlineMapBody(fm, key);
+  if (inline !== null) return parseInlineMap(inline);
+  const block = blockLinesForKey(fm, key);
+  if (block === null) return scalarField(fm, key);
+  const out: Record<string, string> = {};
+  for (const line of block) {
+    const match = line.match(/^\s+([^:]+):\s*(.*?)\s*$/);
+    if (!match) return scalarField(fm, key);
+    out[unquoteScalar(match[1])] = unquoteScalar(match[2]);
+  }
+  return out;
+}
+
+function parseStringListMapField(fm: string, key: string): unknown {
+  const block = blockLinesForKey(fm, key);
+  if (block === null) return scalarField(fm, key);
+  const out: Record<string, string[]> = {};
+  for (const line of block) {
+    const match = line.match(/^\s+([^:]+):\s*(.*?)\s*$/);
+    if (!match) return scalarField(fm, key);
+    const value = match[2].trim();
+    if (!value.startsWith("[") || !value.endsWith("]")) {
+      return scalarField(fm, key);
+    }
+    out[unquoteScalar(match[1])] = parseInlineDepsList(value);
+  }
+  return out;
 }
 
 // parseMemoryHeadings counts entries under each of the four canonical
@@ -5289,6 +5406,86 @@ function parseMemoryEntryLine(trimmed: string): {
 // object back into YAML bytes. Symmetric with parseStageFrontmatter:
 // parse → emit → parse yields the same object. Field order is pinned
 // to stage-definition.md:84-110's worked example so diffs stay stable.
+type ScalarEmitter = (value: string) => string;
+
+function emitWhenField(value: unknown, emitScalar: ScalarEmitter): string[] {
+  if (!isPlainObject(value)) return [];
+  const lines = ["when:"];
+  for (const [predicate, artifact] of Object.entries(value)) {
+    if (typeof artifact === "string") {
+      lines.push(`  ${predicate}: ${emitScalar(artifact)}`);
+    }
+  }
+  return lines;
+}
+
+function emitProducesKindsField(
+  value: unknown,
+  emitScalar: ScalarEmitter,
+): string[] {
+  if (!isPlainObject(value)) return [];
+  const lines = ["produces_kinds:"];
+  for (const [artifact, kinds] of Object.entries(value)) {
+    if (!Array.isArray(kinds)) continue;
+    const rendered = kinds
+      .map((kind) =>
+        typeof kind === "string" ? emitScalar(kind) : String(kind),
+      )
+      .join(", ");
+    lines.push(`  ${artifact}: [${rendered}]`);
+  }
+  return lines;
+}
+
+function emitConsumesField(
+  value: unknown,
+  emitScalar: ScalarEmitter,
+): string[] {
+  if (!Array.isArray(value)) return [];
+  if (value.length === 0) return ["consumes: []"];
+  const lines = ["consumes:"];
+  for (const entry of value) {
+    if (!isPlainObject(entry)) continue;
+    if (typeof entry.artifact === "string") {
+      lines.push(`  - artifact: ${emitScalar(entry.artifact)}`);
+    }
+    if (typeof entry.required === "boolean") {
+      lines.push(`    required: ${entry.required}`);
+    }
+    if (typeof entry.conditional_on === "string") {
+      lines.push(`    conditional_on: ${emitScalar(entry.conditional_on)}`);
+    }
+  }
+  return lines;
+}
+
+function emitStageFrontmatterField(
+  key: string,
+  value: unknown,
+  emitScalar: ScalarEmitter,
+): string[] {
+  if (key === "when") return emitWhenField(value, emitScalar);
+  if (key === "produces_kinds") {
+    return emitProducesKindsField(value, emitScalar);
+  }
+  if (key === "consumes") return emitConsumesField(value, emitScalar);
+  if (Array.isArray(value)) {
+    if (value.length === 0) return [`${key}: []`];
+    return [
+      `${key}:`,
+      ...value.map(
+        (item) =>
+          `  - ${typeof item === "string" ? emitScalar(item) : String(item)}`,
+      ),
+    ];
+  }
+  if (typeof value === "string") return [`${key}: ${emitScalar(value)}`];
+  if (typeof value === "number" || typeof value === "boolean") {
+    return [`${key}: ${value}`];
+  }
+  return [];
+}
+
 export function emitStageFrontmatter(obj: Record<string, unknown>): string {
   const needsQuote = (v: string): boolean => /[:#]|^\s|\s$/.test(v);
   const emitScalar = (v: string): string =>
@@ -5296,18 +5493,24 @@ export function emitStageFrontmatter(obj: Record<string, unknown>): string {
 
   const FIELD_ORDER = [
     "slug",
+    "number",
+    "name",
     "phase",
     "execution",
     "condition",
     "lead_agent",
     "support_agents",
     "mode",
+    "bundle",
+    "when",
+    "required_sections",
     "reviewer",
     "reviewer_max_iterations",
     "for_each",
     "workspace_requires",
     "produces",
     "optional_produces",
+    "produces_kinds",
     "consumes",
     "requires_stage",
     "sensors",
@@ -5321,52 +5524,7 @@ export function emitStageFrontmatter(obj: Record<string, unknown>): string {
   for (const key of FIELD_ORDER) {
     const v: unknown = obj[key];
     if (v === undefined) continue;
-
-    if (key === "consumes") {
-      if (!Array.isArray(v)) continue;
-      const consumes: unknown[] = v;
-      if (consumes.length === 0) {
-        lines.push("consumes: []");
-      } else {
-        lines.push("consumes:");
-        for (const entry of consumes) {
-          if (!isPlainObject(entry)) continue;
-          const e = entry;
-          if (typeof e.artifact === "string") {
-            lines.push(`  - artifact: ${emitScalar(e.artifact)}`);
-          }
-          if (typeof e.required === "boolean") {
-            lines.push(`    required: ${e.required}`);
-          }
-          if (typeof e.conditional_on === "string") {
-            lines.push(`    conditional_on: ${emitScalar(e.conditional_on)}`);
-          }
-        }
-      }
-    } else if (Array.isArray(v)) {
-      const arr: unknown[] = v;
-      if (arr.length === 0) {
-        lines.push(`${key}: []`);
-      } else {
-        lines.push(`${key}:`);
-        for (const item of arr) {
-          lines.push(`  - ${typeof item === "string" ? emitScalar(item) : String(item)}`);
-        }
-      }
-    } else if (typeof v === "string") {
-      lines.push(`${key}: ${emitScalar(v)}`);
-    } else if (typeof v === "number") {
-      // reviewer_max_iterations round-trips as an unquoted number, matching
-      // how stages author it on disk (`reviewer_max_iterations: 2`). Without
-      // this branch the numeric value the parser now returns (V1) would be
-      // dropped on emit, breaking the parse -> emit -> parse contract (t65).
-      lines.push(`${key}: ${v}`);
-    } else if (typeof v === "boolean") {
-      // workspace_requires round-trips as an unquoted boolean (the parser
-      // coerces the "true"/"false" token to a real boolean), so emit it
-      // unquoted to preserve the parse -> emit -> parse contract.
-      lines.push(`${key}: ${v}`);
-    }
+    lines.push(...emitStageFrontmatterField(key, v, emitScalar));
   }
 
   lines.push("---");
@@ -5866,6 +6024,7 @@ export function replaceSection(
 
 export interface UnitDependencyEdge {
   name: string;
+  kind?: UnitKind;
   depends_on: string[];
 }
 
@@ -5967,6 +6126,18 @@ function parseUnitsBlock(block: string): UnitDependencyEdge[] {
     if (depMatch) {
       if (!current) throw new Error("depends_on: before any - name: entry");
       current.depends_on = parseInlineDepsList(depMatch[1]);
+      continue;
+    }
+
+    const kindMatch = line.match(/^\s*kind\s*:\s*(.*?)\s*$/);
+    if (kindMatch) {
+      if (!current) throw new Error("kind: before any - name: entry");
+      if (current.kind !== undefined) {
+        throw new Error(`duplicate kind for unit "${current.name}"`);
+      }
+      const normalized = normalizeUnitKind(unquoteScalar(kindMatch[1]));
+      if (!normalized.valid) throw new Error(normalized.errors.join("; "));
+      current.kind = normalized.data;
       continue;
     }
 

@@ -36,6 +36,7 @@ import {
   isoTimestamp,
   loadScopeMapping,
   nextInScopeStage,
+  normalizeUnitKind,
   normalizeWorktreeSlug,
   PHASE_NUMBERS,
   PHASES,
@@ -53,6 +54,7 @@ import {
   recordDir,
   relativeMemoryPath,
   relativeRecordDir,
+  runtimeGraphPath,
   removeField,
   removeSlug,
   resolveProjectDir,
@@ -67,6 +69,7 @@ import {
   stagesInScope,
   updateIntentStatus,
   unitDependencyPath,
+  type UnitKind,
   validScopes,
   withAuditLock,
   worktreeDocsDir,
@@ -75,7 +78,10 @@ import {
   writeStateFile,
   writeFileAtomic,
 } from "./amadeus-lib.js";
-import { memoryDirFor } from "./amadeus-graph.ts";
+import {
+  memoryDirFor,
+  requiredArtifactsForUnit,
+} from "./amadeus-graph.ts";
 
 // All valid checkbox states (lib.ts adds [?] awaiting-approval and [R] revising)
 const VALID_CHECKBOX_STATES: CheckboxState[] = [
@@ -892,14 +898,115 @@ function producesDirsForStage(
   return [join(rec, stage.phase, stage.slug)];
 }
 
-// True when at least one declared produces[] artifact exists on disk under the
-// stage's resolved directory. A stage with empty produces[] vacuously passes.
+interface RuntimeUnitKinds {
+  units: string[];
+  kinds: ReadonlyMap<string, UnitKind>;
+}
+
+function runtimeStateObjectField(value: unknown, key: string): unknown {
+  if (value === null || typeof value !== "object") return undefined;
+  return (value as Record<string, unknown>)[key];
+}
+
+function loadRuntimeStateUnitRows(pd: string): unknown[] | null {
+  try {
+    const graph: unknown = JSON.parse(readFileSync(runtimeGraphPath(pd), "utf-8"));
+    const units = runtimeStateObjectField(
+      runtimeStateObjectField(graph, "bolt_dag"),
+      "units",
+    );
+    return Array.isArray(units) && units.length > 0 ? units : null;
+  } catch {
+    return null;
+  }
+}
+
+interface RuntimeStateUnitRow {
+  name: string;
+  kind?: UnitKind;
+}
+
+function parseRuntimeStateUnitRow(row: unknown): RuntimeStateUnitRow | null {
+  const name = runtimeStateObjectField(row, "name");
+  if (typeof name !== "string" || name.trim() === "") return null;
+  const rawKind = runtimeStateObjectField(row, "kind");
+  if (rawKind === undefined) return { name };
+  const normalized = normalizeUnitKind(rawKind);
+  if (!normalized.valid) return null;
+  return { name, kind: normalized.data };
+}
+
+// Invalid or absent runtime data returns null. Callers then retain the legacy
+// full artifact matrix, which is the fail-safe direction for completion.
+function readRuntimeUnitKinds(pd: string): RuntimeUnitKinds | null {
+  const rows = loadRuntimeStateUnitRows(pd);
+  if (rows === null) return null;
+  const units: string[] = [];
+  const kinds = new Map<string, UnitKind>();
+  const seen = new Set<string>();
+  for (const row of rows) {
+    const parsed = parseRuntimeStateUnitRow(row);
+    if (parsed === null || seen.has(parsed.name)) return null;
+    seen.add(parsed.name);
+    units.push(parsed.name);
+    if (parsed.kind !== undefined) kinds.set(parsed.name, parsed.kind);
+  }
+  return { units, kinds };
+}
+
+interface ProducedStage {
+  slug: string;
+  phase: string;
+  for_each?: string;
+  produces?: string[];
+  produces_kinds?: Record<string, UnitKind[]>;
+}
+
+function artifactsExistInDir(dir: string, artifacts: readonly string[]): boolean {
+  for (const name of artifacts) {
+    if (existsSync(join(dir, `${name}.md`))) return true;
+  }
+  return false;
+}
+
+function kindAwareArtifactsExist(
+  pd: string,
+  stage: ProducedStage,
+  produces: string[],
+): boolean | null {
+  if (stage.for_each !== "unit-of-work") return null;
+  if (stage.produces_kinds === undefined) return null;
+  const snapshot = readRuntimeUnitKinds(pd);
+  const rec = recordDir(pd);
+  if (snapshot === null || rec === null) return null;
+
+  let hasApplicableArtifact = false;
+  for (const unit of snapshot.units) {
+    const kind = snapshot.kinds.get(unit);
+    const applicable = kind === undefined
+      ? produces
+      : requiredArtifactsForUnit(
+          { produces, produces_kinds: stage.produces_kinds },
+          kind,
+        );
+    if (applicable.length === 0) continue;
+    hasApplicableArtifact = true;
+    const dir = join(rec, "construction", unit, stage.slug);
+    if (artifactsExistInDir(dir, applicable)) return true;
+  }
+  return !hasApplicableArtifact;
+}
+
+// True when at least one applicable declared produces[] artifact exists on disk
+// under the stage's resolved directory. A stage with empty produces[] passes.
 function producesArtifactsExist(
   pd: string,
-  stage: { slug: string; phase: string; for_each?: string; produces?: string[] }
+  stage: ProducedStage,
 ): boolean {
   const produces = stage.produces ?? [];
   if (produces.length === 0) return true; // nothing declared -> nothing to verify
+  const kindAware = kindAwareArtifactsExist(pd, stage, produces);
+  if (kindAware !== null) return kindAware;
   for (const dir of producesDirsForStage(pd, stage)) {
     for (const name of produces) {
       if (existsSync(join(dir, `${name}.md`))) return true;
@@ -1189,7 +1296,15 @@ function workspaceHasWork(pd: string): boolean {
 // untouched. `stage` is the StageEntry being completed. No-op when bypass active.
 function verifyStageArtifacts(
   pd: string,
-  stage: { slug: string; name: string; phase: string; for_each?: string; produces?: string[]; workspace_requires?: boolean }
+  stage: {
+    slug: string;
+    name: string;
+    phase: string;
+    for_each?: string;
+    produces?: string[];
+    produces_kinds?: Record<string, UnitKind[]>;
+    workspace_requires?: boolean;
+  }
 ): void {
   if (artifactGuardDisabled()) return;
 

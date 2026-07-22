@@ -95,6 +95,7 @@ import {
   intentRepos,
   listIntents,
   nextInScopeStage,
+  normalizeUnitKind,
   parseCheckboxes,
   PHASE_NUMBERS,
   PHASES,
@@ -106,6 +107,7 @@ import {
   resolveProjectDir,
   runtimeGraphPath,
   type StageEntry,
+  type UnitKind,
   stateFilePath,
   validScopes,
   harnessDir,
@@ -118,6 +120,7 @@ import {
   type GraphStage,
   loadGraph,
   producersOf,
+  requiredArtifactsForUnit,
   subgraphForScope,
 } from "./amadeus-graph.ts";
 // inferScopeFromText is a PURE function (keyword matching over the scope
@@ -781,6 +784,55 @@ function readBoltDagBatches(projectDir: string): string[][] | null {
   return recovery.batches.map((batch) => [...batch]);
 }
 
+// Read unit kinds from the validated runtime snapshot. Any malformed unit row
+// degrades the whole lookup to kindless units, preserving the legacy full
+// artifact matrix instead of risking an under-production prune.
+function runtimeObjectField(value: unknown, key: string): unknown {
+  if (value === null || typeof value !== "object") return undefined;
+  return (value as Record<string, unknown>)[key];
+}
+
+function loadRuntimeUnitRows(projectDir: string): unknown[] | null {
+  try {
+    const graph: unknown = JSON.parse(
+      readFileSync(runtimeGraphPath(projectDir), "utf-8"),
+    );
+    const units = runtimeObjectField(runtimeObjectField(graph, "bolt_dag"), "units");
+    return Array.isArray(units) ? units : null;
+  } catch {
+    return null;
+  }
+}
+
+interface RuntimeUnitKindRow {
+  name: string;
+  kind?: UnitKind;
+}
+
+function parseRuntimeUnitKindRow(row: unknown): RuntimeUnitKindRow | null {
+  const name = runtimeObjectField(row, "name");
+  if (typeof name !== "string" || name.trim() === "") return null;
+  const rawKind = runtimeObjectField(row, "kind");
+  if (rawKind === undefined) return { name };
+  const normalized = normalizeUnitKind(rawKind);
+  if (!normalized.valid) return null;
+  return { name, kind: normalized.data };
+}
+
+function readUnitKinds(projectDir: string): ReadonlyMap<string, UnitKind> {
+  const rows = loadRuntimeUnitRows(projectDir);
+  if (rows === null) return new Map();
+  const kinds = new Map<string, UnitKind>();
+  const names = new Set<string>();
+  for (const row of rows) {
+    const parsed = parseRuntimeUnitKindRow(row);
+    if (parsed === null || names.has(parsed.name)) return new Map();
+    names.add(parsed.name);
+    if (parsed.kind !== undefined) kinds.set(parsed.name, parsed.kind);
+  }
+  return kinds;
+}
+
 // True when `node` is the SKELETON-GATE stage for `scope` — the FIRST
 // Construction EXECUTE stage in scope (the start of Bolt 1). This is derived,
 // not hardcoded: firstInScopeStageOfPhase("construction", scope) walks the
@@ -1094,11 +1146,22 @@ function resolveProduces(
   unit: string,
   recordPrefix: string | null,
   codekbCtx?: CodekbCtx,
+  unitKind?: UnitKind,
 ): { candidates: string[]; optional: string[] } {
-  const required = (node.produces ?? []).map((name) =>
+  const requiredNames = unitKind === undefined
+    ? node.produces ?? []
+    : requiredArtifactsForUnit(node, unitKind);
+  const optionalStage: GraphStage = {
+    ...node,
+    produces: node.optional_produces ?? [],
+  };
+  const optionalNames = unitKind === undefined
+    ? node.optional_produces ?? []
+    : requiredArtifactsForUnit(optionalStage, unitKind);
+  const required = requiredNames.map((name) =>
     resolveArtifactPath(name, node, unit, recordPrefix, codekbCtx),
   );
-  const optional = (node.optional_produces ?? []).map((name) =>
+  const optional = optionalNames.map((name) =>
     resolveArtifactPath(name, node, unit, recordPrefix, codekbCtx),
   );
   return { candidates: [...required, ...optional], optional };
@@ -1170,12 +1233,19 @@ function buildRunStageDirective(
   stateContent: string | null = null,
   recordPrefix: string | null = null,
   codekbCtx?: CodekbCtx,
+  unitKind?: UnitKind,
 ): RunStageDirective {
   const resolvedConsumes = resolveConsumes(
     node.consumes ?? [], node, projectType, unit, recordPrefix, codekbCtx,
   );
   const { present, absent } = splitConsumesByPresence(resolvedConsumes, scope, codekbCtx);
-  const resolvedProduces = resolveProduces(node, unit, recordPrefix, codekbCtx);
+  const resolvedProduces = resolveProduces(
+    node,
+    unit,
+    recordPrefix,
+    codekbCtx,
+    unitKind,
+  );
   const directive: RunStageDirective = {
     kind: "run-stage",
     stage: node.slug,
@@ -1981,6 +2051,7 @@ function tryEmitSwarm(
   if (readAutonomyMode(stateContent) !== "autonomous") return false;
   const batches = readBoltDagBatches(projectDir);
   if (!batches || batches.length === 0) return false;
+  const unitKinds = readUnitKinds(projectDir);
   // Issue #841 (contract from #486): bolt_dag.batches is the STATIC topology —
   // completed batches must be excluded here, or every `next` re-offers batch 1
   // forever and the swarm never advances. Coverage uses the same ledger as the
@@ -1993,7 +2064,15 @@ function tryEmitSwarm(
   for (const batch of batches) {
     if (!Array.isArray(batch) || batch.length === 0) continue;
     const uncovered = batch.filter(
-      (u) => !unitCovered(projectDir, node, u, recordPrefix, codekbCtx),
+      (u) =>
+        !unitCovered(
+          projectDir,
+          node,
+          u,
+          recordPrefix,
+          codekbCtx,
+          unitKinds.get(u),
+        ),
     );
     if (uncovered.length > 0) {
       firstBatch = uncovered;
@@ -2093,9 +2172,14 @@ function unitCovered(
   unit: string,
   recordPrefix: string | null,
   codekbCtx: CodekbCtx,
+  unitKind?: UnitKind,
 ): boolean {
-  const names = node.produces ?? [];
-  if (names.length === 0) return false;
+  const declared = node.produces ?? [];
+  if (declared.length === 0) return false;
+  const names = unitKind === undefined
+    ? declared
+    : requiredArtifactsForUnit(node, unitKind);
+  if (names.length === 0) return true;
   for (const name of names) {
     const rel = resolveArtifactPath(name, node, unit, recordPrefix, codekbCtx);
     const abs = join(projectDir, ...rel.split("/"));
@@ -2118,9 +2202,18 @@ function nextUncoveredUnit(
   units: string[],
   recordPrefix: string | null,
   codekbCtx: CodekbCtx,
+  unitKinds: ReadonlyMap<string, UnitKind>,
 ): { unit: string; uncovered: string[] } | null {
   const uncovered = units.filter(
-    (u) => !unitCovered(projectDir, node, u, recordPrefix, codekbCtx),
+    (u) =>
+      !unitCovered(
+        projectDir,
+        node,
+        u,
+        recordPrefix,
+        codekbCtx,
+        unitKinds.get(u),
+      ),
   );
   if (uncovered.length === 0) return null;
   return { unit: uncovered[0], uncovered };
@@ -2163,7 +2256,15 @@ function emitPerUnitRunStage(
     return;
   }
 
-  const pick = nextUncoveredUnit(projectDir, node, units, recordPrefix, codekbCtx);
+  const unitKinds = readUnitKinds(projectDir);
+  const pick = nextUncoveredUnit(
+    projectDir,
+    node,
+    units,
+    recordPrefix,
+    codekbCtx,
+    unitKinds,
+  );
   if (pick === null) {
     // Every unit is already covered, but the checkbox is still in-flight: the
     // conductor wrote the LAST unit's artifacts and re-ran `next` to settle the
@@ -2177,6 +2278,7 @@ function emitPerUnitRunStage(
     const lastUnit = units[units.length - 1];
     const directive = buildRunStageDirective(
       node, projectType, lastUnit, scope, stateContent, recordPrefix, codekbCtx,
+      unitKinds.get(lastUnit),
     );
     directive.unit = lastUnit;
     emit(directive);
@@ -2185,6 +2287,7 @@ function emitPerUnitRunStage(
 
   const directive = buildRunStageDirective(
     node, projectType, pick.unit, scope, stateContent, recordPrefix, codekbCtx,
+    unitKinds.get(pick.unit),
   );
   // Suppress the gate on EVERY not-yet-covered unit. A per-unit directive with an
   // uncovered unit carries gate:false: the conductor completes the body, writes
@@ -3015,7 +3118,14 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
     const codekbCtx = codekbCtxFor(pd);
     const units = orderedUnits(pd);
     if (units.length > 0) {
-      const pick = nextUncoveredUnit(pd, node, units, recordPrefix, codekbCtx);
+      const pick = nextUncoveredUnit(
+        pd,
+        node,
+        units,
+        recordPrefix,
+        codekbCtx,
+        readUnitKinds(pd),
+      );
       if (pick !== null) {
         emit({
           kind: "error",

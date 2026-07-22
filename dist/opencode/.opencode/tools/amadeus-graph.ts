@@ -19,12 +19,10 @@
 //     (doctor consumes them) and for future scheduling; they do not
 //     gate runtime iteration today.
 //
-// Compile is the YAML -> JSON transform. It bootstraps number + name
-// from today's stage-graph.json so YAML stays the authored source of
-// truth for everything else while computed fields stay computed. number
-// and name are NOT authorable frontmatter keys (the stage schema rejects
-// them as unknown), they are derived, then pinned in the JSON so they
-// stay byte-stable across recompiles.
+// Compile is the YAML -> JSON transform. Core stages bootstrap number + name
+// from today's stage-graph.json so their historical bytes remain stable.
+// Plugin stages may author either field in frontmatter; authored values take
+// precedence and are projected without changing the core-stage fallback.
 //
 // A NEW stage slug (a .md on disk with no row in stage-graph.json yet) is
 // auto-seeded on compile rather than rejected: its number is the next free
@@ -64,6 +62,7 @@ import {
   type ScopeDefinition,
   type StageEntry,
   toPosix,
+  type UnitKind,
   validScopes,
   withAuditLock,
   writeFileAtomic,
@@ -123,6 +122,7 @@ export interface GraphStage extends StageEntry {
   // Optional artifacts are part of the stage's output vocabulary and routing,
   // but are deliberately excluded from per-unit completion coverage.
   optional_produces?: string[];
+  produces_kinds?: Record<string, UnitKind[]>;
   consumes: Consume[];
   requires_stage: string[];
   // sensors is the stage-side pull import — a list of sensor manifest
@@ -367,10 +367,14 @@ const FIELD_ORDER = [
   "lead_agent",
   "support_agents",
   "mode",
+  "bundle",
+  "when",
+  "required_sections",
   "for_each",
   "workspace_requires",
   "produces",
   "optional_produces",
+  "produces_kinds",
   "consumes",
   "requires_stage",
   "sensors",
@@ -754,6 +758,24 @@ export function producersOf(artifact: string): GraphStage[] {
       (s.produces ?? []).includes(artifact) ||
       (s.optional_produces ?? []).includes(artifact),
   );
+}
+
+/** Required artifacts that apply to a validated unit kind. */
+export function requiredArtifactsForUnit(
+  stage: {
+    readonly produces: readonly string[];
+    readonly produces_kinds?: Readonly<
+      Record<string, readonly UnitKind[]>
+    >;
+  },
+  kind: UnitKind,
+): readonly string[] {
+  const applicability = stage.produces_kinds;
+  if (applicability === undefined) return stage.produces;
+  return stage.produces.filter((artifact) => {
+    const kinds = applicability[artifact];
+    return kinds === undefined || kinds.includes(kind);
+  });
 }
 
 /** Stages that consume the given artifact. */
@@ -1407,8 +1429,8 @@ function titleCaseSlug(slug: string): string {
 }
 
 /** Regenerate stage-graph.json from the 31 YAML stage files.
- *  Bootstraps number + name from the existing JSON (the "computed
- *  not authored" contract — see stage-definition.md). Asserts the
+ *  Bootstraps absent number + name from the existing JSON while preserving
+ *  optional authored plugin metadata. Asserts the
  *  edge-local invariant: every requires_stage edge points from a
  *  higher-numbered stage to a lower-numbered one. Also transposes each
  *  stage's `scopes:` into the compiled scope-grid.json (gridJson) — both
@@ -1499,8 +1521,8 @@ export function compileStageGraph(): {
 
       // Existing slug -> keep its pinned number + name. New slug -> auto-seed
       // both: number = next free index in this phase, name = title-cased slug.
-      let number = numberBySlug.get(slug);
-      let name = nameBySlug.get(slug);
+      let number = validation.data.number ?? numberBySlug.get(slug);
+      let name = validation.data.name ?? nameBySlug.get(slug);
       if (!number || !name) {
         const prefix = PHASES.indexOf(phase as Phase);
         if (prefix < 0) {
@@ -1649,6 +1671,18 @@ function buildGraphStage(
   }
   if (parsed.optional_produces !== undefined) {
     stage.optional_produces = parsed.optional_produces;
+  }
+  if (parsed.produces_kinds !== undefined) {
+    stage.produces_kinds = parsed.produces_kinds;
+  }
+  if (parsed.bundle !== undefined) {
+    stage.bundle = parsed.bundle;
+  }
+  if (parsed.when !== undefined) {
+    stage.when = parsed.when;
+  }
+  if (parsed.required_sections !== undefined) {
+    stage.required_sections = parsed.required_sections;
   }
   if (parsed.sensors !== undefined) {
     stage.sensors = parsed.sensors;
