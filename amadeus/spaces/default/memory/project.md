@@ -161,6 +161,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 ## Testing
 - Standardの中核はunit/integrationとし、performance/securityは承認済みNFRと実在境界へtraceして選定する。戦略名だけで検査を機械追加しない。既決strategy再述に留めず、stage定義の曖昧さは別途追跡する。 (learned 2026-07-12) <!-- cid:build-and-test:c1 -->
 - 攻撃面・依存・承認NFRを成果物で実測明記した場合のみ検査を比例選定する。既存必須scanや要求済み検査の省略根拠にはしない。 (learned 2026-07-12) <!-- cid:build-and-test:c3 -->
+- property-based test(fast-check 等)のオラクルを被検実装から独立に再実装する場合、両者が同じ箇所で正しく振る舞うと欠陥が観測面に出ず相殺されうる(オラクル相殺)— PBT が緑でも被検実装の欠陥が生存する。オラクルは被検実装の後段で同種検査を独立再実行しない(検証したい不変量そのものを PBT オラクル側で再実装すると、その不変量に関する被検欠陥を構造的に見逃す)。同一 spec の網羅的検証が要る不変量は、単一の形式モデル(TLA+/TLC 等)の完全探索を併用する。実測根拠: 260720-formal-verif-experiment 適格性実験 — Arm S(ts/PBT)が D4 invalid-timestamp を arm-s-model-subject.ts:91-92 の独立 parseSubmittedAt 再検証で相殺し 7欠陥中4件(D3/D4/D6/D7)を見逃した一方、Arm T(TLA+/TLC)は同一 spec の単一モデル完全探索で 7/7 検出(experiment/eligibility-report.md、5 measured run 決定性確認)(learned 2026-07-22) <!-- cid:build-and-test:pbt-oracle-cancellation -->
 
 ## CI/CD
 - Snapshot jobはPR blocking集約外とするが、main上のjob失敗は赤く可視化する。適用時はjobの非blocking目的とloud-fail契約を成果物へ明記し、一般の必須CI gateを除外する根拠にはしない。 (learned 2026-07-12) <!-- cid:ci-pipeline:c3 -->
