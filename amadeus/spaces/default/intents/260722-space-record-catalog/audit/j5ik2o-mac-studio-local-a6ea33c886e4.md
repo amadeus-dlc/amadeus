@@ -1196,3 +1196,9 @@
 **Message**: チーム運用の進行管理中です。e1 の #1384 修正は要件裁定4件が成立して前進中、e2 の #1309 設計 intent は approval-handoff の delegate 発行があなたの入力待ちです。何か一言入力いただければ発行します。
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-22T22:53:44Z
+**Event**: HUMAN_TURN
+
+---
