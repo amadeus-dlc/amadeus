@@ -456,5 +456,12 @@
     "dirName": "260722-state-intent-selector",
     "scope": "chore",
     "status": "complete"
+  },
+  {
+    "uuid": "019f8a5b-eab2-74ef-b700-a8aebc250814",
+    "slug": "space-record-catalog",
+    "dirName": "260722-space-record-catalog",
+    "scope": "amadeus",
+    "status": "in-flight"
   }
 ]
