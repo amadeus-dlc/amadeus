@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCPD13",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。実測: e2 ブランチの s13-candidates.md(ffb651404、git show 直読)と PD diary memory.md(:5/:6/:13)を照合 — 3候補の surface が diary に verbatim 実在し、引用3 cid(practices-discovery:c1/c2、e-fvepd-marker-heading-floor)はいずれも project.md 既載の既決ルールで、3件とも機械的適用=執行クラス。新規 persist 不要に同意。",
+  "submittedAt": "2026-07-22T23:24:34Z"
+}

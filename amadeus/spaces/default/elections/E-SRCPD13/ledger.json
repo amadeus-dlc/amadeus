@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SRCPD13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e2 record リードオンリー実測: s13-candidates.md の3候補は diary memory.md と verbatim 一致(c1/c3 = Interpretations 23:22:25Z/23:22:44Z、c2 = Tradeoffs 23:22:25Z)。引用 cid の実在を project.md で確認 — practices-discovery:c1(同日 RE codekb 代用+ギャップのみ質問)、practices-discovery:c2(部分ドラフト+無変更 live 温存)、e-fvepd-marker-heading-floor(*-timestamp.md の H2 明示免除)。practices-discovery-timestamp.md の実体も単一行(Discovered: … at commit 69d2c0f30)で免除クラス該当を直読確認。3件とも既決 cid の機械的執行で新規性なし、PM 実例回付の扱いも妥当。",
+      "submittedAt": "2026-07-22T23:24:30Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCPD13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。実測: e2 ブランチの s13-candidates.md(ffb651404、git show 直読)と PD diary memory.md(:5/:6/:13)を照合 — 3候補の surface が diary に verbatim 実在し、引用3 cid(practices-discovery:c1/c2、e-fvepd-marker-heading-floor)はいずれも project.md 既載の既決ルールで、3件とも機械的適用=執行クラス。新規 persist 不要に同意。",
+      "submittedAt": "2026-07-22T23:24:34Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCPD13",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e2 ブランチの s13-candidates.md と diary memory.md をリードオンリー実測: 候補3件は diary(Interpretations 2件 23:22:25Z/23:22:44Z・Tradeoffs 1件)からの verbatim 転記で一致。c1 = cid:practices-discovery:c1(同日 RE codekb 代用+ギャップ質問のみ)の字義どおりの執行。c2 = cid:practices-discovery:c2(部分ドラフト+無変更 live 温存)の執行 — no-op promote 実測は PM 実例回付で十分。c3 = cid:practices-discovery:e-fvepd-marker-heading-floor が timestamp を明示免除する既決の適用そのもの。3件とも既決 cid の機械的適用で新規ノルム性なし、不採用に同意。",
+      "submittedAt": "2026-07-22T23:24:27Z"
+    }
+  ],
+  "late": []
+}
