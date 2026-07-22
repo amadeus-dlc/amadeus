@@ -7,7 +7,7 @@
 - **Start Date**: 2026-07-20T04:36:50Z
 - **State Version**: 7
 - **Active Agent**: amadeus-developer-agent
-- **Worktree Path**:
+- **Worktree Path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-eligibility-report
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**: 2026-07-20T07:30:34Z
 

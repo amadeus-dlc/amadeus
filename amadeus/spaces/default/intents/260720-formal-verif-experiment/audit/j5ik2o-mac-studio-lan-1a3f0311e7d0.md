@@ -3801,3 +3801,52 @@
 **Reentrant**: true
 
 ---
+
+## Swarm Started
+**Timestamp**: 2026-07-22T02:12:25Z
+**Event**: SWARM_STARTED
+**Batch number**: 6
+**Unit names**: eligibility-report
+**Concurrency cap**: 1
+
+---
+
+## Worktree Created
+**Timestamp**: 2026-07-22T02:12:25Z
+**Event**: WORKTREE_CREATED
+**Bolt slug**: eligibility-report
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-eligibility-report
+**Branch name**: bolt-eligibility-report
+**Base branch**: resume-formal-verif-e6-takeover
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-22T02:12:26Z
+**Event**: BOLT_STARTED
+**Bolt names**: eligibility-report
+**Batch number**: 6
+**Walking skeleton**: false
+**Bolt slug**: eligibility-report
+
+---
+
+## State Forked
+**Timestamp**: 2026-07-22T02:12:26Z
+**Event**: STATE_FORKED
+**Bolt slug**: eligibility-report
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-eligibility-report
+**Source state hash**: 75b097def0bdb805bf554b65e596ab8475c2f352153f9b4bf4857b43ec914133
+**Target state hash**: 75b097def0bdb805bf554b65e596ab8475c2f352153f9b4bf4857b43ec914133
+
+---
+
+## Audit Forked
+**Timestamp**: 2026-07-22T02:12:26Z
+**Event**: AUDIT_FORKED
+**Bolt slug**: eligibility-report
+**Source Audit Hash**: 9af6809f31e8bf5b877be67340e91b05f7ea0b39139fd5be0cab435b7c1a58bc
+**Fork Boundary**: 102854
+**Reentrant**: true
+
+---
