@@ -37,7 +37,7 @@
 - **BR-16 Exact keys:** expected keyごとにrunner/store両ledgerで検証済みのexactly one cellを要求し、missing、duplicate、unknown、handwritten cellをtyped incomplete findingにする。`HARNESS_ERROR` bundleは存在cellとして数える。
 - **BR-17 No drift:** cell間のarm SHA、baseline SHA、runNo、input set hash、runner class driftを1件でも許さない。
 - **BR-18 Warmup separation:** warmup 1件は保存・検証するが、5 measured suiteのmedianと比較sampleへ含めない。
-- **BR-19 Repeat agreement:** measured 5 runsの対応cell verdictが一致しないmatrixをcompleteとしない。奇数5件のduration中央値はsort後index 2とする。matrix validatorはcomplete proofまたはHARNESS_ERROR / timeout / missing / identity corruption / chain drift / store failureをdiscriminatorとcause付きで区別したincomplete resultを返し、後続のfail-closed分類を可能にする。
+- **BR-19 Repeat agreement(2026-07-22 最終FDゲート裁定(b)で改定):** measured 5 runsの対応cell verdictが一致しないmatrixをcompleteとしない。奇数5件のduration中央値はsort後index 2とする。matrix validatorはcomplete proofまたは、HARNESS_ERROR / missing / duplicate / metadata drift / verdict disagreement / not-store-verified をdiscriminatorとcause付きで区別したincomplete resultを返し、後続のfail-closed分類を可能にする。identity corruption / chain drift / store failure の6分類判別は store 読取層(readCellのtyped error union)へ帰属させ、validator層はstore検証済みブランドの有無までを判別する(改定前の旧文はvalidator層に6分類を要求していたが、cell型がstore読取失敗情報を運ばない設計と矛盾しており、第三レビュー(record: verification/final-fd-gate-dossier.md U3-F3)を経てユーザー裁定(b)で本文へ改定した。裁定記録: verification/final-fd-gate-ruling.md)。
 
 ## Boundary規則
 

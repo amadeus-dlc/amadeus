@@ -15,10 +15,10 @@ const handlerFor = (kind: CommandKind, calls: string[] = [], override?: Partial<
 const fullBindings = (calls: string[] = []): HandlerBinding[] => COMMAND_KINDS.map((command) => ({ command, handler: handlerFor(command, calls), adapterIdentity: `adapter:${command}` }));
 
 describe("wiring-only final CLI root", () => {
-  test("stays DESIGNED_BLOCKED on the final FD gate", () => {
-    expect(FINAL_COMPOSITION_STATUS).toBe("DESIGNED_BLOCKED_ON_FINAL_FD_GATE");
+  test("carries the ruled-ready status from the 2026-07-22 final FD gate", () => {
+    expect(FINAL_COMPOSITION_STATUS).toBe("FINAL_FD_GATE_RULED_READY");
     const composed = composeFinalCli(fullBindings());
-    expect(composed.ok && composed.value.status).toBe("DESIGNED_BLOCKED_ON_FINAL_FD_GATE");
+    expect(composed.ok && composed.value.status).toBe("FINAL_FD_GATE_RULED_READY");
   });
   test("injects exactly one handler per closed command", () => {
     const composed = composeFinalCli(fullBindings());
