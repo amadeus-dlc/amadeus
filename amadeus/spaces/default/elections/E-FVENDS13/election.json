@@ -1,0 +1,21 @@
+{
+  "electionId": "E-FVENDS13",
+  "kind": "s13-learning-candidates",
+  "question": "260720-formal-verif-experiment / nfr-design の§13 surfaceを裁定する。48成果物を同一snapshotで最終化し、artifact48、required-sections48 PASS、upstream-coverage48 PASS、answer-evidence8 PASS、diff-check PASS。最終architecture reviewはCritical0/新規Major0/新規Minor0だが、Unit review上限後の既知Major計7を保持するためaggregate NOT-READY。aggregate SHA256=2e8aa6c9b6c9c5d7c09246e60027b1a29490980463fdfa712423e144d7a58554。7件は当該設計成果物内の未解決実装契約でprocess norm候補ではないとして、新規persist候補0件が提案されている。成果物・review・sensor・既存memoryを独立実測し0件可否を裁定する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可（noteにcandidate id・scope・本文・追加事項を記載）"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e4"
+  ],
+  "state": "recorded"
+}

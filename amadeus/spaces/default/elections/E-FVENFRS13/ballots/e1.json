@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVENFRS13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可を支持する。独立集計で8 Unit×6成果物=48件、各出力の最新結果はrequired-sections 48/48 PASS、upstream-coverage 48/48 PASS、questionsのanswer-evidence 8/8 PASS、FAILED 0を確認し、git diff --checkもPASS。U7はE-FVEU7NFR1後の3是正（complete 120秒とtimeout後INCOMPLETE専用30秒の分離、U3 result manifest→U7 terminal→両store再読→next ordinal、resume時same-policy lease再取得とidentity不一致INCOMPLETE close）が成果物へ入り、例外独立review READY 0/0/0。U8もREADY 0/0/0。U1-U6の残存Major/Minorは監査上保持され、統合可へ読み替えず最終人間gateへ継承されている。今回の判断は実験固有のNFR閉包で、既存memoryの数値導出・source-first・cross-unit canonical規範を越える新規一般practiceはなく、未解決findingもpersist候補にできないため追加なしが妥当。",
+  "submittedAt": "2026-07-20T15:27:38Z"
+}

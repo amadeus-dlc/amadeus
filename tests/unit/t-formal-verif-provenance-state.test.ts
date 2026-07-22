@@ -1,0 +1,24 @@
+import { describe, expect, test } from "bun:test";
+import { foldLedger, promotionPermission } from "../../scripts/formal-verif/provenance.ts";
+import { event, happyEvents } from "../formal-verif/support/contract-provenance-harness.ts";
+
+describe("formal verification provenance state", () => {
+  test.each([[0, "READY_FOR_T_AUTHORING"], [1, "T_AUTHORING"], [2, "T_FROZEN"], [3, "SKELETON_REVEALED"], [4, "SKELETON_PASSED"], [5, "S_AUTHORING"], [6, "S_FROZEN"]] as const)("folds %i events to %s", (count, state) => { const result = foldLedger(happyEvents().slice(0, count)); expect(result.ok && result.value.state).toBe(state); });
+  test("derives promotion permission only after both freezes", () => { const result = foldLedger(happyEvents()); expect(result.ok && promotionPermission(result.value).ok).toBe(true); });
+  test("rejects S authoring first", () => expect(foldLedger([event("ARM_AUTHORING_STARTED", 0, "ts")]).ok).toBe(false));
+  test("rejects reveal before freeze", () => expect(foldLedger([event("FIXTURE_REVEALED", 0, "tla")]).ok).toBe(false));
+  test("makes skeleton failure terminal", () => { const events = happyEvents().slice(0, 3); events.push(event("SKELETON_FAILED", 3), event("ARM_AUTHORING_STARTED", 4, "ts")); expect(foldLedger(events).ok).toBe(false); });
+  test("rejects duplicate identity", () => { const first = event("ARM_AUTHORING_STARTED", 0, "tla"); expect(foldLedger([first, { ...first }]).ok).toBe(false); });
+  test("rejects decreasing UTC", () => { const events = happyEvents().slice(0, 2); events[1] = { ...events[1], at: "2026-07-19T00:00:00Z" }; expect(foldLedger(events).ok).toBe(false); });
+  test("rejects a future coordinator UTC", () => { const events = happyEvents().slice(0, 1); events[0] = { ...events[0], at: "2999-01-01T00:00:00Z" }; expect(foldLedger(events).ok).toBe(false); });
+  test("rejects non-real UTC and non-increasing sequence", () => { const invalidDate = happyEvents().slice(0, 1); invalidDate[0] = { ...invalidDate[0], at: "2026-02-31T00:00:00Z" }; expect(foldLedger(invalidDate).ok).toBe(false); const duplicateSequence = happyEvents().slice(0, 2); duplicateSequence[1] = { ...duplicateSequence[1], sequence: 0 }; expect(foldLedger(duplicateSequence).ok).toBe(false); });
+  test("rejects the seventh event", () => expect(foldLedger([...happyEvents(), event("SKELETON_PASSED", 6)]).ok).toBe(false));
+  test("rejects dirty start", () => { const clean = event("ARM_AUTHORING_STARTED", 0, "tla"); if (clean.kind !== "ARM_AUTHORING_STARTED") throw new Error("factory"); const dirty = { ...clean, proof: { ...clean.proof, clean: false } }; expect(foldLedger([dirty as never]).ok).toBe(false); });
+  test("rejects manifest mismatch", () => { const clean = event("ARM_AUTHORING_STARTED", 0, "tla"); if (clean.kind !== "ARM_AUTHORING_STARTED") throw new Error("factory"); const bad = { ...clean, proof: { ...clean.proof, actualInputManifestIdentity: "x" } }; expect(foldLedger([bad as never]).ok).toBe(false); });
+  test("rejects missing proof and surplus event fields", () => { const clean = event("ARM_AUTHORING_STARTED", 0, "tla"); const { proof: _, ...missing } = clean as Extract<typeof clean, { kind: "ARM_AUTHORING_STARTED" }>; expect(foldLedger([missing as never]).ok).toBe(false); expect(foldLedger([{ ...clean, surplus: true } as never]).ok).toBe(false); });
+  test.each(["actualInputManifestRef", "forbiddenScanReceiptIdentity"])("requires start proof reference %s", (key) => { const started = event("ARM_AUTHORING_STARTED", 0, "tla"); if (started.kind !== "ARM_AUTHORING_STARTED") throw new Error("factory"); const proof = { ...started.proof } as Record<string, unknown>; delete proof[key]; expect(foldLedger([{ ...started, proof } as never]).ok).toBe(false); });
+  test.each(["/private/manifest.json", "../manifest.json"])("rejects non-repository manifest reference %s", (actualInputManifestRef) => { const started = event("ARM_AUTHORING_STARTED", 0, "tla"); if (started.kind !== "ARM_AUTHORING_STARTED") throw new Error("factory"); expect(foldLedger([{ ...started, proof: { ...started.proof, actualInputManifestRef } }]).ok).toBe(false); });
+  test.each(["actorId", "sessionId", "worktree", "baseSha", "publicInputHash"])("rejects freeze continuity drift in %s", (key) => { const events = happyEvents().slice(0, 2); events[1] = { ...events[1], [key]: key === "publicInputHash" ? "f".repeat(64) : "drift" } as never; expect(foldLedger(events).ok).toBe(false); });
+  test("requires reveal to reference the prior T freeze", () => { const events = happyEvents().slice(0, 3); events[2] = { ...events[2], frozenEventId: "other" } as never; expect(foldLedger(events).ok).toBe(false); });
+  test.each([0, 1, 3, 6])("counts exactly %i fold transitions", (count) => { const counters = { transitions: 0 }; foldLedger(happyEvents().slice(0, count), counters); expect(counters.transitions).toBe(count); });
+});

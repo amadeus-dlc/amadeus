@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVEU3FD1",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Aを支持する。stage-protocol.md §12a:887-889 は reviewer_max_iterations 到達時に未解決所見を明示して approval gate へ進むと規定し、per-unit stage では最終Unitまで個別gateが抑止される。U3 iteration 2後の成果物を実読すると、writer raceはstore単一writer lock内のhead再確認+共通successor transaction directoryのexclusive atomic rename、envelope mutationはfinal envelope hashと両ledger coordinates/hash-chain再検証、finding unionはIDENTITY_CORRUPTION/CHAIN_DRIFT/STORE_FAILURE等のdiscriminator+causeへ是正済みで、最新sensorも全PASS。第三レビューを例外追加せず、NOT-READY履歴と未レビュー是正を温存して次Unitへ進み、最終FD gateで明示的に裁定するのが既定プロトコルと検証境界に整合する。",
+  "submittedAt": "2026-07-20T13:22:36Z"
+}

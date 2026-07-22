@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVEU4FD1",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Aを支持する。stage-protocol.md §12a:887-889 はreviewer_max_iterations到達時に未解決所見を明示してapproval gateへ進むと規定する。U4最新成果物を実読すると、iteration 2後の3点は、hold marker列+TallyReceipt closed unionとresolved集合上のGoA cardinality/RecordHold条件、UNKNOWN_CHOICE→INVALID_TIMESTAMP→UNKNOWN_REFの最初の1 error優先、invariant nameからmodule source span/formula identityへのfrozen mapとCompleteExplorationのqueue=0証拠へ最小是正済み。最新sensor全PASSで、U3未READY依存もDESIGNED_PENDING_U3_HUMAN_GATEとして保持しintegration完成を先取りしていない。例外的第三reviewを追加せず、NOT-READY履歴と未レビュー是正を温存して次Unitへ進み、最終FD gateでU3依存込みに明示裁定するのが既定プロトコルに整合する。",
+  "submittedAt": "2026-07-20T13:39:28Z"
+}

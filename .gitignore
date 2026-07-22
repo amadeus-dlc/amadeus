@@ -32,6 +32,9 @@ packages/setup/dist/
 tests/logs/
 coverage/
 
+# Local formal-verification toolchain cache (verified before every run).
+/.cache/formal-verif/
+
 # Claude worktrees
 .claude/worktrees
 

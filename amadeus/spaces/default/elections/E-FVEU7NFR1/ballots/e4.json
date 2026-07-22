@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVEU7NFR1",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "選択肢2を支持。独立実読で iteration 2 後も performance-requirements は complete suite の上流120秒境界を process execution 120秒 + cleanup/publish 30秒へ分割し、reliability-requirements は U3 suite-result manifest の先commit→identity参照terminal→両再読後のみ next ordinal というcross-store順序を明文化せず、crash resume のOS cpuset/memory lease再取得と ResourcePolicyIdentity完全一致・不一致時revision INCOMPLETE closeも未閉包と確認した。一方 stage-protocol §12a は reviewer_max_iterations到達時、未解決findingを明示して人間gateへ進む契約であり、ここで例外reviewを追加するより、max-exhausted履歴とMajor3を保持して残りUnitを作成し、NFR Requirements最終gateで人間裁定するのが既決手続きに整合する。次stage/NFR Designへは最終gate解決前に進めないことが前提。",
+  "submittedAt": "2026-07-20T15:17:34Z"
+}

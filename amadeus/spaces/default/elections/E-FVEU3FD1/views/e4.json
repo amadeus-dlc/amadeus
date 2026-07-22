@@ -1,0 +1,21 @@
+{
+  "electionId": "E-FVEU3FD1",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "A. max-exhausted履歴を保持して次Unitへ進み最終FD gateで裁定"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "X. その他（noteに検証境界と再開条件を記載）"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "B. exceptional独立検証を先に要求しU3で停止"
+    }
+  ]
+}

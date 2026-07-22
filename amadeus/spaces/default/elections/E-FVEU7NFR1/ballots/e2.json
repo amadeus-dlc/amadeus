@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVEU7NFR1",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "選択肢1を支持する。performance-requirements は process deadline 120秒に cleanup/publish 30秒を加えており、上流の complete suite=開始から最終cell publishまで120秒という契約を曖昧化している。reliability-requirements は terminal receipt後の次ordinalを規定するが、U3 suite-result manifestの先commitとidentity参照terminalのcross-store順序を閉じていない。またResourcePolicyIdentityは初回freezeと前後receiptを規定する一方、crash resume時のOS cpuset/memory lease再取得・完全一致・不一致時revision INCOMPLETE closeが欠落する。3点はいずれも測定の完全性とfail-closed性に関わるMajorであり、範囲限定是正後の独立reviewで閉包してから進むのが最小十分。非採用時は選択肢2をGoA 6で受容するが、最終NFR gateまで未解決を送る場合はREADY読み替え禁止と3件の明示的human裁定を必須とする。",
+  "submittedAt": "2026-07-20T15:17:09Z"
+}

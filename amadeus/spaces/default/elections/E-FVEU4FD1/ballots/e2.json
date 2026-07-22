@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVEU4FD1",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "U4 を READY と再ラベルせず、最終 Functional Design ゲートで iteration 2 の未解決3所見、対応した正確な file:line、最新 sensor PASS、第三者再レビュー未実施を列挙すること。U3 の未解決依存も維持し、U4 契約を消費する後続 Unit は U3/U4 の max-exhausted・未再レビュー状態を明記して integration readiness を主張しないこと。",
+  "rationale": "A は stage-protocol §12a の reviewer_max_iterations 到達時の処理と、非最終 Unit の per-unit forwarding に一致する。最終成果物では hold union、GoA cardinality、複数 invalid の優先順位、source span、queue=0 の是正と最新 sensor PASS を実測した。一方で是正後の独立レビューはなく意味閉包は最終人間ゲートへ残るため GoA 2 とする。B は既定 max を越える例外的第三レビューを新設する。非採用時受容度: B=7、X=6。",
+  "submittedAt": "2026-07-20T13:39:41Z"
+}
