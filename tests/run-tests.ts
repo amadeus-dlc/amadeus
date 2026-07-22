@@ -43,6 +43,14 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(SCRIPT_DIR, "..");
 const BUN = process.execPath;
 const DEFAULT_PARALLEL = Math.min(availableParallelism(), 4);
+// Per-test timeout passed to every `bun test` child. Bun's own 5000ms default
+// is load-sensitive under the parallel band (#1331/#1326): fsync-heavy and
+// spawn-heavy tests measured 0.7s solo routinely cross 5s when 4 files share
+// the host, producing a rotating cast of one-off timeout flakes (evidence-
+// completeness, setup-pack-contract). 30s keeps genuinely hung tests loud
+// while removing the load-noise band. Individual tests may still pass their
+// own longer budgets (e.g. MATRIX_TIMEOUT_MS) explicitly.
+const DEFAULT_TEST_TIMEOUT_MS = 30_000;
 
 function coverageSourcePathContext(): CoverageSourcePathContext {
   const tempRoots = new Set<string>();
@@ -752,6 +760,7 @@ async function runBunTestFile(
     [
       "test",
       file,
+      `--timeout=${DEFAULT_TEST_TIMEOUT_MS}`,
       "--reporter=junit",
       `--reporter-outfile=${junitXml}`,
       ...(args.coverage
