@@ -910,6 +910,7 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "integration/t247-runtime-recovery.test.ts",
     "integration/t248-stage-contract-routing.test.ts",
     "integration/t249-workspace-inspection.test.ts",
+    "integration/t250-unit-iteration-and-scope-preview.test.ts",
     "integration/t31-help.test.ts",
     "integration/t33-hook-concurrency.test.ts",
     "integration/t39.test.ts",

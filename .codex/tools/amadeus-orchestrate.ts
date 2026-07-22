@@ -120,7 +120,9 @@ import {
   type GraphStage,
   loadGraph,
   producersOf,
+  readConstructionIteration,
   requiredArtifactsForUnit,
+  selectNextUnitForStage,
   subgraphForScope,
 } from "./amadeus-graph.ts";
 // inferScopeFromText is a PURE function (keyword matching over the scope
@@ -2278,15 +2280,20 @@ function emitPerUnitRunStage(
   }
 
   const unitKinds = readUnitKinds(projectDir);
-  const pick = nextUncoveredUnit(
-    projectDir,
-    node,
+  // Delegate the next-unit selection to the canonical construction-iteration
+  // seam (selectNextUnitForStage → nextConstructionStep, FR-2 item 8). The
+  // coverage ledger is the per-unit artifacts on disk (unitCovered), passed as
+  // the predicate so the pure decision owns the pick. Over this SINGLE stage's
+  // matrix both axes resolve to the first uncovered unit, so the emitted
+  // directive is byte-identical on the default path (NFR-3 / BR-U05-02); the
+  // iteration axis is read so the canonical decision, not an ad-hoc loop, decides.
+  const pickUnit = selectNextUnitForStage(
+    node.slug,
     units,
-    recordPrefix,
-    codekbCtx,
-    unitKinds,
+    (u) => unitCovered(projectDir, node, u, recordPrefix, codekbCtx, unitKinds.get(u)),
+    readConstructionIteration(stateContent),
   );
-  if (pick === null) {
+  if (pickUnit === null) {
     // Every unit is already covered, but the checkbox is still in-flight: the
     // conductor wrote the LAST unit's artifacts and re-ran `next` to settle the
     // stage. There is nothing left to PRODUCE, so present the stage gate now (its
@@ -2307,24 +2314,24 @@ function emitPerUnitRunStage(
   }
 
   const directive = buildRunStageDirective(
-    node, projectType, pick.unit, scope, stateContent, recordPrefix, codekbCtx,
-    unitKinds.get(pick.unit),
+    node, projectType, pickUnit, scope, stateContent, recordPrefix, codekbCtx,
+    unitKinds.get(pickUnit),
   );
   // Suppress the gate on EVERY not-yet-covered unit. A per-unit directive with an
   // uncovered unit carries gate:false: the conductor completes the body, writes
   // the unit's artifacts, and re-runs `next` (NO report-approve), so the checkbox
   // stays in-flight and the engine emits the next uncovered unit. Once the LAST
-  // unit's artifacts land on disk, the next `next` takes the pick === null branch
-  // above and presents the stage's real gate, so the single human approval covers
-  // the whole stage only after all units are built. We override AFTER building so
-  // the rest of the directive (paths, reviewer, persona) is unchanged.
+  // unit's artifacts land on disk, the next `next` takes the pickUnit === null
+  // branch above and presents the stage's real gate, so the single human approval
+  // covers the whole stage only after all units are built. We override AFTER
+  // building so the rest of the directive (paths, reviewer, persona) is unchanged.
   directive.gate = false;
   // An uncovered per-unit iteration step is NOT an approval gate, so it carries no
   // next_stage (FR-2 item 10 projects it only on gate-carrying directives). Remove
   // the field buildRunStageDirective set while the gate was still true — a present
   // `next_stage: undefined` key would trip the emit-time directive validator.
   delete directive.next_stage;
-  directive.unit = pick.unit;
+  directive.unit = pickUnit;
   emit(directive);
 }
 

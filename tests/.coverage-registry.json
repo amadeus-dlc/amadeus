@@ -20,23 +20,23 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 488,
+    "total": 496,
     "enumeratedByClass": {
-      "function": 259,
+      "function": 266,
       "audit": 75,
       "scope": 10,
       "stage": 32,
       "hook": 11,
-      "subcommand": 94,
+      "subcommand": 95,
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 122,
+      "function": 129,
       "audit": 32,
       "scope": 10,
       "stage": 8,
       "hook": 11,
-      "subcommand": 77,
+      "subcommand": 78,
       "render-surface": 7
     }
   },
@@ -1354,6 +1354,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:coverageKey",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t250-unit-iteration-and-scope-preview.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:CURRENT_SESSION_FILE",
       "minMechanism": "none",
       "coveredBy": [],
@@ -2277,6 +2289,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:nextConstructionStep",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t250-unit-iteration-and-scope-preview.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:nextInScopeStage",
       "minMechanism": "none",
       "coveredBy": [],
@@ -2355,6 +2379,18 @@
       "coveredBy": [
         {
           "file": "tests/unit/t107.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:parseConstructionIteration",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t250-unit-iteration-and-scope-preview.test.ts",
           "mechanism": "none"
         }
       ],
@@ -2502,6 +2538,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:previewScopeCost",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t250-unit-iteration-and-scope-preview.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:producersOf",
       "minMechanism": "none",
       "coveredBy": [
@@ -2548,6 +2596,18 @@
         {
           "file": "tests/integration/t172-migration-audit-trail.test.ts",
           "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:readConstructionIteration",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t250-unit-iteration-and-scope-preview.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
@@ -2950,6 +3010,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:selectNextUnitForStage",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t250-unit-iteration-and-scope-preview.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:sensorsDir",
       "minMechanism": "none",
       "coveredBy": [],
@@ -3163,6 +3235,18 @@
         {
           "file": "tests/unit/t124-scope-transpose.test.ts",
           "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:summarizeExecuteStages",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t250-unit-iteration-and-scope-preview.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
@@ -4567,6 +4651,10 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
+          "file": "tests/integration/t250-unit-iteration-and-scope-preview.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t190-validate-grid.test.ts",
           "mechanism": "cli"
         }
@@ -5205,6 +5293,18 @@
         },
         {
           "file": "tests/unit/t17.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-state set-construction-iteration",
+      "minMechanism": "cli",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t250-unit-iteration-and-scope-preview.test.ts",
           "mechanism": "cli"
         }
       ],

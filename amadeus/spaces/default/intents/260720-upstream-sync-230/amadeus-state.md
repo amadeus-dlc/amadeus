@@ -8,7 +8,7 @@
 - **State Version**: 7
 - **Active Agent**: amadeus-developer-agent
 - **Worktree Path**:
-- **Bolt Refs**: [plugin-projection]
+- **Bolt Refs**: [plugin-projection, swarm-and-next-stage]
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration

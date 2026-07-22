@@ -1376,6 +1376,220 @@ export function numericStageOrder(a: string, b: string): number {
   return aI - bI;
 }
 
+// ---------------------------------------------------------------------------
+// U05 — unit-major iteration + scope cost preview (FR-2 items 8-9)
+// ---------------------------------------------------------------------------
+//
+// Two PURE decision seams, the whole public surface of the unit. They own no
+// I/O, no lock, no state write and no audit emit: a caller feeds them already-
+// loaded data and reads a value back. Mutation stays with the existing intent
+// lock/audit transaction (the design's C2 choke points), exactly as the
+// functional design fixes it — these functions only decide.
+
+/** Construction iteration axis. `stage-major` (the default, and the engine's
+ *  historical behaviour) completes a construction stage for every Unit of Work
+ *  before advancing to the next stage. `unit-major` is the opt-in axis: it walks
+ *  the Unit list on the OUTER loop and the compiled construction stages on the
+ *  INNER loop. Only these two values are legal; the state verb rejects anything
+ *  else BEFORE any mutation (FR-2 item 8 / BR-U05-01,05). */
+export type ConstructionIteration = "stage-major" | "unit-major";
+
+const CONSTRUCTION_ITERATIONS: readonly ConstructionIteration[] = [
+  "stage-major",
+  "unit-major",
+];
+
+/** Parse result for a raw iteration token. A discriminated union so the caller
+ *  (the state verb) can reject fail-closed on the error arm before writing. */
+export type IterationParse =
+  | { ok: true; value: ConstructionIteration }
+  | { ok: false; error: string };
+
+/** Strictly parse a construction-iteration token. Accepts EXACTLY the two legal
+ *  values; every other input (including the empty string and mixed case) is an
+ *  error, so the state verb can refuse before touching state/plan/graph/audit.
+ *  Pure — no I/O, no default substitution (absence is the caller's concern via
+ *  readConstructionIteration, not this validator's). */
+export function parseConstructionIteration(raw: string): IterationParse {
+  if (CONSTRUCTION_ITERATIONS.includes(raw as ConstructionIteration)) {
+    return { ok: true, value: raw as ConstructionIteration };
+  }
+  return {
+    ok: false,
+    error:
+      `Invalid construction iteration: "${raw}". ` +
+      `Valid values: ${CONSTRUCTION_ITERATIONS.join(", ")}.`,
+  };
+}
+
+/** Resolve the effective iteration from a state-file body. The field is
+ *  runtime-only and opt-in: when it is absent (the default, never serialised)
+ *  the effective axis is `stage-major`, so the default path stays byte-identical
+ *  (NFR-3 / BR-U05-02). A present-but-unparseable value fails safe to the
+ *  default axis rather than throwing — the field is only ever written by the
+ *  validated verb, so this is a defensive floor, not a live path. Pure over the
+ *  supplied text. */
+export function readConstructionIteration(
+  stateContent: string | null,
+): ConstructionIteration {
+  if (stateContent === null) return "stage-major";
+  const m = stateContent.match(/^-\s*\*\*Construction Iteration\*\*:\s*(.+)$/m);
+  if (m === null) return "stage-major";
+  const parsed = parseConstructionIteration(m[1].trim());
+  return parsed.ok ? parsed.value : "stage-major";
+}
+
+/** The next construction step decision. `run` names the concrete (unit, stage)
+ *  pair the engine should emit next; `done` means every (unit, stage) cell in
+ *  the matrix is already covered. */
+export type ConstructionStep =
+  | { kind: "run"; unit: string; stage: string }
+  | { kind: "done" };
+
+/** Minimal, pure inputs for `nextConstructionStep`. `covered` is the coverage
+ *  ledger as a membership set keyed by `coverageKey(unit, stage)` — the caller
+ *  derives it from artifacts-on-disk (the engine's per-unit coverage rule); the
+ *  seam itself never touches the filesystem. */
+export interface WorkflowState {
+  iteration: ConstructionIteration;
+  covered: ReadonlySet<string>;
+}
+
+/** Minimal, pure graph view for `nextConstructionStep`: the ordered Unit-of-Work
+ *  list (outer axis) and the ordered construction stage slugs (inner axis). */
+export interface StageGraph {
+  units: readonly string[];
+  stages: readonly string[];
+}
+
+/** Canonical membership key for the coverage ledger. Joined with "::": unit and
+ *  stage slugs are hyphenated `[a-z0-9-]` tokens that never contain a colon, so
+ *  the pair can never collide across the boundary. */
+export function coverageKey(unit: string, stage: string): string {
+  return `${unit}::${stage}`;
+}
+
+/** Decide the next construction (unit, stage) to run, or `done`. The iteration
+ *  axis chooses the loop nesting over the SAME matrix and the SAME coverage
+ *  ledger — it never redefines scope, stage eligibility, unit kind or coverage
+ *  (those are the caller's existing graph judgements). `stage-major` scans stage-
+ *  outer / unit-inner (the engine's historical order — first uncovered unit of
+ *  the first not-fully-covered stage); `unit-major` scans unit-outer / stage-
+ *  inner (first uncovered stage of the first not-fully-covered unit). Pure and
+ *  total: identical inputs give an identical step, and the function never mutates
+ *  its arguments. */
+export function nextConstructionStep(
+  state: WorkflowState,
+  graph: StageGraph,
+): ConstructionStep {
+  const isCovered = (unit: string, stage: string): boolean =>
+    state.covered.has(coverageKey(unit, stage));
+  if (state.iteration === "unit-major") {
+    for (const unit of graph.units) {
+      for (const stage of graph.stages) {
+        if (!isCovered(unit, stage)) return { kind: "run", unit, stage };
+      }
+    }
+    return { kind: "done" };
+  }
+  for (const stage of graph.stages) {
+    for (const unit of graph.units) {
+      if (!isCovered(unit, stage)) return { kind: "run", unit, stage };
+    }
+  }
+  return { kind: "done" };
+}
+
+/** Convenience over `nextConstructionStep` for the engine's per-stage per-unit
+ *  emission (the code-generation for_each loop): given the ordered units, a
+ *  coverage predicate for THIS stage, and the iteration axis, return the next
+ *  unit to run, or `null` when every unit is already covered for the stage. Pure
+ *  over its inputs — the caller supplies coverage as a predicate, so the engine's
+ *  FS-backed `unitCovered` stays outside the decision — hence unit-testable
+ *  in-process. Over the single-stage matrix both axes agree (first uncovered
+ *  unit), which is exactly why wiring this into the per-stage emission is
+ *  byte-identical on the default path. */
+export function selectNextUnitForStage(
+  stage: string,
+  units: readonly string[],
+  isCovered: (unit: string) => boolean,
+  iteration: ConstructionIteration,
+): string | null {
+  const covered = new Set<string>();
+  for (const u of units) {
+    if (isCovered(u)) covered.add(coverageKey(u, stage));
+  }
+  const step = nextConstructionStep({ iteration, covered }, { units, stages: [stage] });
+  return step.kind === "run" ? step.unit : null;
+}
+
+/** Scope cost summary (FR-2 item 9). `stageCount` is the number of EXECUTE
+ *  stages in scope; `gateCount` is how many of those present an approval gate.
+ *  Both derive from the SAME effective in-scope set so every consumer reports
+ *  the same numbers (BR-U05-07,09). */
+export interface ScopeSummary {
+  scope: string;
+  stageCount: number;
+  gateCount: number;
+}
+
+/** Pure count core: given an EXECUTE slug set and a per-slug gate predicate,
+ *  return the stage and gate totals. The single derivation shared by
+ *  `previewScopeCost` (named scope) and the arbitrary-grid consumer
+ *  (validate-grid), so consumer-independent counts cannot drift (BR-U05-08,09).
+ *  Order-independent; duplicate slugs are impossible (the caller passes a Set). */
+export function summarizeExecuteStages(
+  executeSlugs: Iterable<string>,
+  isGated: (slug: string) => boolean,
+): { stageCount: number; gateCount: number } {
+  let stageCount = 0;
+  let gateCount = 0;
+  for (const slug of executeSlugs) {
+    stageCount++;
+    if (isGated(slug)) gateCount++;
+  }
+  return { stageCount, gateCount };
+}
+
+/** Gate predicate over the compiled graph: an EXECUTE stage presents an approval
+ *  gate iff it is NOT an initialization-phase stage (bootstrap init stages
+ *  auto-proceed, gate:false — the same rule the orchestrator's computeGate
+ *  applies). Slugs absent from the graph are treated as non-gated (defensive;
+ *  an EXECUTE grid entry with no compiled stage is already a compile-drift bug
+ *  surfaced elsewhere). */
+function gatedStagePredicate(): (slug: string) => boolean {
+  const nonInit = new Set(
+    loadGraph()
+      .filter((s) => s.phase !== "initialization")
+      .map((s) => s.slug),
+  );
+  return (slug: string) => nonInit.has(slug);
+}
+
+/** Preview a named scope's cost from the compiled grid — the single count owner
+ *  for scope confirmation, intent birth, scope-change and validate-grid (FR-2
+ *  item 9). Counts the scope's EXECUTE stages and, of those, the gated ones,
+ *  both from the compiled grid's effective in-scope set + the compiled graph's
+ *  phase — never a stage-source re-parse or a hardcoded list (BR-U05-07).
+ *  Throws on an unknown scope (mirrors subgraphForScope). */
+export function previewScopeCost(scope: string, grid: ScopeGrid): ScopeSummary {
+  if (!validScopes().has(scope)) {
+    throw new Error(
+      `Unknown scope: "${scope}". Valid scopes: ${[...validScopes()].join(", ")}`
+    );
+  }
+  const executeSlugs = new Set(
+    Object.entries(grid[scope]?.stages ?? {})
+      .filter(([, action]) => action === "EXECUTE")
+      .map(([slug]) => slug)
+  );
+  const { stageCount, gateCount } = summarizeExecuteStages(
+    executeSlugs,
+    gatedStagePredicate(),
+  );
+  return { scope, stageCount, gateCount };
+}
+
 /** Two-direction drift between the on-disk stage `.md` files and the compiled
  *  stage-graph.json. Pure set-difference over slugs, no YAML parse, no graph
  *  rebuild, so it is cheap enough to run on the session-start hot path.
@@ -1888,7 +2102,11 @@ const COMMANDS: Record<string, Handler> = {
       for (const err of keywordCollisions(granted)) r.errors.push(err);
       r.valid = r.errors.length === 0;
     }
-    process.stdout.write(`${JSON.stringify(r, null, 2)}\n`);
+    const executeSlugs = Object.entries(grid) // FR-2 item 9: additive summary
+      .filter(([, action]) => action === "EXECUTE")
+      .map(([slug]) => slug);
+    const summary = summarizeExecuteStages(executeSlugs, gatedStagePredicate());
+    process.stdout.write(`${JSON.stringify({ ...r, summary }, null, 2)}\n`);
     if (!r.valid) process.exit(1);
   },
   compile: (args) => {

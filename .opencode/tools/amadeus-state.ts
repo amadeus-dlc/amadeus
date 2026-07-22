@@ -80,6 +80,7 @@ import {
 } from "./amadeus-lib.js";
 import {
   memoryDirFor,
+  parseConstructionIteration,
   requiredArtifactsForUnit,
 } from "./amadeus-graph.ts";
 
@@ -419,6 +420,9 @@ function main(): void {
         break;
       case "set-skeleton-stance":
         handleSetSkeletonStance(args.slice(1));
+        break;
+      case "set-construction-iteration":
+        handleSetConstructionIteration(args.slice(1));
         break;
       case "checkbox":
         handleCheckbox(args.slice(1));
@@ -4048,6 +4052,48 @@ function handleMerge(args: string[]): void {
       conflict_resolution: result.conflictResolutionField,
     })}\n`
   );
+}
+
+// set-construction-iteration <stage-major|unit-major> — record the opt-in
+// construction iteration axis (FR-2 item 8). `Construction Iteration` is a
+// runtime-only field (like Skeleton Stance): absent from the base template, so
+// an unset workflow stays byte-identical on the default stage-major path
+// (NFR-3 / BR-U05-02). The token is validated by parseConstructionIteration
+// (the graph.ts owner) BEFORE the lock is taken and BEFORE any read/write, so an
+// invalid value rejects with state/plan/graph/audit untouched (BR-U05-05): the
+// reject arm never reaches withAuditLock. No audit row — the axis is metadata
+// the next `amadeus-orchestrate next` reads, riding no state-machine event
+// (exactly like set-skeleton-stance). Placed at the tail of the handlers so its
+// lock callback does not shift the complexity baseline's anonymous-function
+// ordinals (tests/.complexity-baseline.json). Exported so the integration twin
+// can drive the production adapter IN-PROCESS (lcov-visible) alongside the
+// shipped-subprocess parity check.
+export function handleSetConstructionIteration(args: string[]): void {
+  if (args.length < 1) {
+    error(
+      "Usage: amadeus-state.ts set-construction-iteration <stage-major|unit-major>",
+    );
+  }
+  const parsed = parseConstructionIteration(args[0]);
+  if (!parsed.ok) {
+    // Mutation-before-reject: fail closed here (error() is `never`), before any
+    // lock/read/write, so state/plan/graph/audit stay byte-identical.
+    error(parsed.error);
+  }
+  const value = parsed.value;
+  const pd = resolveProjectDir(projectDir);
+  // C2b lost-update safety: read→write under one lock (mirrors set-skeleton-stance).
+  withAuditLock(pd, () => {
+    const content = readStateFile(pd);
+    const updated = setOrInsertField(
+      content,
+      "## Runtime State",
+      "Construction Iteration",
+      value,
+    );
+    writeStateFile(pd, updated);
+    console.log(JSON.stringify({ updated: true, construction_iteration: value }));
+  });
 }
 
 // --- Utility ---
