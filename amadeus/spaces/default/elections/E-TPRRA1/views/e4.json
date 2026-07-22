@@ -1,0 +1,26 @@
+{
+  "electionId": "E-TPRRA1",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "C. ハイブリッド: A を既定+--no-wait で従来挙動(spawn.sh と対称)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "B. supervisor 一般化: :340 の codex 限定 return を外し claude readiness 検証+再送へ拡張(非同期)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "A. インライン検証: 全 spawn 後に本体がポーリングし未 attach へ再送してから終了(spawn.sh 様式、起動完了=全員 armed 保証)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 4,
+      "label": "X. その他(票コメントで指定)"
+    }
+  ]
+}

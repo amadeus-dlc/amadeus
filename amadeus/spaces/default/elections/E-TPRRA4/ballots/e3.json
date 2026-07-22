@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TPRRA4",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "B 採用。cid:same-root-inventory は同根パターンの全数棚卸し+同一 PR 修正 or Issue 化を義務付ける — A は棚卸し自体を省き同ノルムに整合しない。C は bugfix スコープの外科的最小既定を超えるスコープ拡大でユーザー承認が必要(issue-selection-user-decides とも整合しない)。実測: team-up.sh:341 の codex 限定 return と safety-wait helper の別責務性を確認済み — codex 側の同型ギャップ(watcher arming 検証の不在)は実在しうるため実測のうえ Issue 起票が妥当。自案非採用時の受容度: A=7 / C=8(ユーザー承認なきスコープ拡大は P4/既定違反)。",
+  "submittedAt": "2026-07-22T22:30:15Z"
+}

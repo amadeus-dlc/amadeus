@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TPRRA4",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "B(claude 修正+codex 同型ギャップは実測のうえ Issue 起票のみ)。実測: codex_member_cmd(team-up.sh:910-913)も初期プロンプト一発勝負(prompt=$agmsg actas <role>)で同型形状が実在する — ただし codex は Monitor watcher を持たず(spawn.sh は codex で ready 待ちを skip)、被害面が claude と異なるため同一 PR での修正は外科的最小(bugfix スコープ既定)を超える。cid:same-root-inventory は『同根パターンの grep 全数棚卸し→同一 PR 修正 or Issue 化』の二択を定めており、B はその Issue 化側を正しく選ぶ。A は棚卸し義務を落とし、C はスコープ拡大でユーザー承認が必要(正準リスト(4))かつ実測被害(5/6)の閉包に不要。非採用時の受容度: A なら 6(棚卸しは別途自発起票で補える)、C なら 7(承認なしのスコープ拡大は既決ノルム抵触)。",
+  "submittedAt": "2026-07-22T22:30:26Z"
+}

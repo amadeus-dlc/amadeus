@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TPRRA1",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A 採用。実測: spawn.sh:576-588 のインラインポーリング(sentinel rm→poll→timeout exit 3)と actas-lock.sh:69-73 の ready センチネル契約を実読。B の supervisor(team-up-codex-safety-wait.ts)は Codex TUI 安全モーダルの fingerprint 照合+sendEnter 機構で、watcher arming とは別責務 — 一般化は意味論の過負荷であり同機構の流用に反対。A は spawn.sh 既習様式の再利用で「起動完了=全員 armed」を同期保証し bugfix 外科的最小に整合。C の --no-wait は本バグ修正に不要な追加面。自案非採用時の受容度: C=6 / B=7。",
+  "submittedAt": "2026-07-22T22:30:15Z"
+}

@@ -1,0 +1,74 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A. インライン検証: 全 spawn 後に本体がポーリングし未 attach へ再送してから終了(spawn.sh 様式、起動完了=全員 armed 保証)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A. インライン検証: 全 spawn 後に本体がポーリングし未 attach へ再送してから終了(spawn.sh 様式、起動完了=全員 armed 保証)",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "B. supervisor 一般化: :340 の codex 限定 return を外し claude readiness 検証+再送へ拡張(非同期)",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "C. ハイブリッド: A を既定+--no-wait で従来挙動(spawn.sh と対称)",
+        "count": 1
+      },
+      {
+        "internalNo": 4,
+        "label": "X. その他(票コメントで指定)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-22T22:31:01Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TPRRA1",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "起動レイテンシ(最遅メンバー分の同期待ち、上限はQ2タイムアウト)が将来問題化した場合のみ C(--no-wait)を再検討する。",
+      "rationale": "A採用。実測根拠: spawn.sh:576-588 のインラインポーリングは『起動完了=armed保証』の既習様式で、ready センチネル(lib/actas-lock.sh:69-73)を全 spawn 後に並行確認+未attachへ herdr 2段再送する形は最小差分。対照の supervisor 機構(team-up.sh:237-260 実測)は lock dir/owner pid/ambiguity 判定を伴う重量級で、常駐監視が必要な codex モーダル解除と違い arming は一回きりの検証で足りる — B は bugfix の外科的最小に反する。C の --no-wait は要求にないオプション追加(不要な表面積)。",
+      "submittedAt": "2026-07-22T22:29:30Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TPRRA1",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A 採用。実測: spawn.sh:576-588 のインラインポーリング(sentinel rm→poll→timeout exit 3)と actas-lock.sh:69-73 の ready センチネル契約を実読。B の supervisor(team-up-codex-safety-wait.ts)は Codex TUI 安全モーダルの fingerprint 照合+sendEnter 機構で、watcher arming とは別責務 — 一般化は意味論の過負荷であり同機構の流用に反対。A は spawn.sh 既習様式の再利用で「起動完了=全員 armed」を同期保証し bugfix 外科的最小に整合。C の --no-wait は本バグ修正に不要な追加面。自案非採用時の受容度: C=6 / B=7。",
+      "submittedAt": "2026-07-22T22:30:15Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TPRRA1",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 3,
+      "goa": 2,
+      "reservation": "poll と再送は全メンバー一括ループで総待ち時間を有界にし、--no-wait は spawn.sh 対称の最小追加(WAIT_READY 相当のフラグ1本)に留める",
+      "rationale": "C(ハイブリッド)。実測: spawn.sh:576-588 は WAIT_READY=1 既定+--no-wait 逃し弁のインラインポーリングで、READY_PATH センチネル監視→timeout exit 3 の確立済み契約(spawn.sh:44-47 の --no-wait/--ready-timeout ヘッダも確認)。team-up.sh は start_safety_wait_supervisors(:340 で RUNTIME=codex 以外即 return を実測)→ mux_attach(:1260)の順で、インライン検証は attach 前に自然に置ける。B(supervisor 一般化)は非同期ゆえ attach 後の失敗が run record 越しにしか見えず、Q3 の loud 契約と噛み合わせが悪い。A は spawn.sh の --no-wait 対称性を欠き、検証不能環境(ヘッドレス等)での逃し弁がない。C は A の保証+既存 idiom 対称の最小フラグで、bugfix 外科的最小と両立。非採用時の受容度: A なら 6(既定挙動は同一、フラグ欠如のみ)、B なら 7(失敗可視性の懸念)。",
+      "submittedAt": "2026-07-22T22:30:14Z"
+    }
+  ],
+  "resolutions": []
+}

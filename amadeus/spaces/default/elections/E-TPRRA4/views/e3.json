@@ -1,0 +1,26 @@
+{
+  "electionId": "E-TPRRA4",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "A. claude 経路のみ(実測被害範囲限定、codex 側は今回触らない)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "B. claude 経路修正+codex 側同型ギャップは実測のうえ Issue 起票のみ(cid:same-root-inventory)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 4,
+      "label": "X. その他"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 3,
+      "label": "C. 両 runtime の readiness 検証を今回統一(スコープ拡大 — 要ユーザー承認)"
+    }
+  ]
+}
