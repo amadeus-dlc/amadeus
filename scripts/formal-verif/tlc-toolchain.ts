@@ -136,10 +136,10 @@ export interface CounterexampleTlcExploration {
   sourceLocation: TlaInvariantSourceLocation;
   trace: TlcTraceState[];
   counterexampleIdentity: string;
-  generatedStates: number;
-  distinctStates: number;
-  statesLeftOnQueue: number;
-  searchDepth: number;
+  generatedStates: number | null;
+  distinctStates: number | null;
+  statesLeftOnQueue: number | null;
+  searchDepth: number | null;
 }
 export interface FailedTlcExploration {
   kind: "HARNESS_ERROR";
@@ -165,6 +165,7 @@ const ALLOWED_CODES = new Map<number, { severity: number; repeat: boolean }>([
   [2194, { severity: 0, repeat: false }],
   [2268, { severity: 0, repeat: false }],
   [2186, { severity: 0, repeat: false }],
+  [2107, { severity: 1, repeat: false }],
   [2110, { severity: 1, repeat: false }],
   [2121, { severity: 1, repeat: false }],
   [2217, { severity: 4, repeat: true }],
@@ -335,10 +336,36 @@ function validOutdegree(payload: string): boolean {
     && percentile <= maximum;
 }
 
-function validateLifecyclePayloads(envelopes: TlcEnvelope[]): string | null {
-  for (const code of [2262, 2187, 2220, 2219, 2185, 2189, 2190, 2199, 2194, 2186]) {
+function lifecyclePrefixCodes(initialViolation: boolean): number[] {
+  return initialViolation ? [2262, 2187, 2220, 2219, 2185, 2189] : [2262, 2187, 2220, 2219, 2185, 2189, 2190];
+}
+
+// After a MSG 2107 terminal only progress lines and the Finished marker may follow.
+function initialViolationOrderError(codes: number[], start: number): string | null {
+  let index = start;
+  while (codes[index] === 2200) index += 1;
+  if (codes[index] !== 2186 || index + 1 !== codes.length) return "Finished must be the final terminal marker";
+  return null;
+}
+
+// An initial-state violation (MSG 2107) aborts before 2190/2199/2194 are ever
+// printed — those three lifecycle codes are required only for the trace/success
+// shapes, and their PRESENCE alongside 2107 is itself a grammar contradiction.
+function lifecycleCodeCountsError(envelopes: TlcEnvelope[], initialViolation: boolean): string | null {
+  const required = initialViolation ? [2262, 2187, 2220, 2219, 2185, 2189, 2186] : [2262, 2187, 2220, 2219, 2185, 2189, 2190, 2199, 2194, 2186];
+  for (const code of required) {
     if (count(envelopes, code) !== 1) return `required lifecycle code ${code} must occur once`;
   }
+  if (initialViolation && (count(envelopes, 2190) !== 0 || count(envelopes, 2199) !== 0 || count(envelopes, 2194) !== 0)) {
+    return "initial-state violation must not carry post-init lifecycle codes";
+  }
+  return null;
+}
+
+function validateLifecyclePayloads(envelopes: TlcEnvelope[]): string | null {
+  const initialViolation = count(envelopes, 2107) === 1;
+  const countsError = lifecycleCodeCountsError(envelopes, initialViolation);
+  if (countsError !== null) return countsError;
   const payloadChecks: Array<[number, RegExp]> = [
     [2262, /^TLC2 Version 2\.19 of 08 August 2024 \(rev: 5a47802\)$/],
     [2187, /^Running breadth-first search Model-Checking .+ with 1 worker(?:\.| on .+)$/],
@@ -349,7 +376,11 @@ function validateLifecyclePayloads(envelopes: TlcEnvelope[]): string | null {
     [2190, /^Finished computing initial states: [0-9]+ distinct state(?:s)? generated at .+\.$/],
     [2186, /^Finished in .+ at \(.+\)$/],
   ];
-  for (const [code, pattern] of payloadChecks) if (!pattern.test(only(envelopes, code)!.payload)) return `invalid payload for code ${code}`;
+  for (const [code, pattern] of payloadChecks) {
+    const envelope = only(envelopes, code);
+    if (envelope === undefined && code === 2190 && initialViolation) continue;
+    if (envelope === undefined || !pattern.test(envelope.payload)) return `invalid payload for code ${code}`;
+  }
   if (envelopes.filter(({ code }) => code === 2200).some(({ payload }) => !validProgress(payload))) return "invalid payload for code 2200";
   const outdegree = only(envelopes, 2268);
   if (outdegree !== undefined && !validOutdegree(outdegree.payload)) return "invalid payload for code 2268";
@@ -358,10 +389,11 @@ function validateLifecyclePayloads(envelopes: TlcEnvelope[]): string | null {
 
 function validateLifecycleOrder(envelopes: TlcEnvelope[]): string | null {
   const codes = envelopes.map(({ code }) => code);
-  const prefix = [2262, 2187, 2220, 2219, 2185, 2189, 2190];
+  const prefix = lifecyclePrefixCodes(codes.includes(2107));
   if (prefix.some((code, index) => codes[index] !== code)) return "lifecycle prefix codes are out of order";
   let index = prefix.length;
   while (codes[index] === 2200) index += 1;
+  if (codes[index] === 2107) return initialViolationOrderError(codes, index + 1);
   if (codes[index] === 2193) {
     index += 1;
   } else {
@@ -385,6 +417,12 @@ function validateLifecycle(envelopes: TlcEnvelope[]): string | null {
 
 const TRACE_STATE_VARIABLES = ["initialBudget", "amendBudget", "accepted", "holdMarkers", "holdBudget", "tally", "reexamRequired"] as const;
 
+// Real TLC labels each non-initial trace step with the NAME of the next-state
+// action that fired (e.g. "<Tally line 133, col 3 ...>", "<SubmitOriginal ...>"),
+// not the literal token "Next" — measured 2026-07-22 against the first real
+// trace-form counterexample (D1 choice-winner fixture). The label grammar
+// accepts any identifier while keeping the span/module binding exact.
+
 function parseTrace(envelopes: TlcEnvelope[]): TlcTraceState[] | null {
   const trace: TlcTraceState[] = [];
   for (const envelope of envelopes.filter(({ code }) => code === 2217)) {
@@ -395,7 +433,7 @@ function parseTrace(envelopes: TlcEnvelope[]): TlcTraceState[] | null {
     const label = header[2]!;
     const validLabel = ordinal === 1
       ? label === "<Initial predicate>"
-      : /^<Next line [1-9][0-9]*, col [1-9][0-9]* to line [1-9][0-9]*, col [1-9][0-9]* of module FormalElection>$/.test(label);
+      : /^<[A-Za-z_][A-Za-z0-9_]* line [1-9][0-9]*, col [1-9][0-9]* to line [1-9][0-9]*, col [1-9][0-9]* of module FormalElection>$/.test(label);
     const variables = lines.slice(1).flatMap((line) => /^\/\\ ([A-Za-z_][A-Za-z0-9_]*) =/.exec(line)?.[1] ?? []);
     if (ordinal === null || ordinal !== trace.length + 1 || !validLabel
       || variables.length !== TRACE_STATE_VARIABLES.length
@@ -457,6 +495,41 @@ function hasFrozenModelOutputBinding(input: TlcOutputInput): boolean {
     && input.expectedStandardModuleDirectory.startsWith("/");
 }
 
+// TLC reports an invariant already violated while COMPUTING INITIAL STATES as a
+// single MSG 2107 envelope (message line + one full state dump) with exit 12 and
+// NO behavior trace (2121/2217) and NO statistics/depth markers (2199/2194) —
+// measured 2026-07-22 against the D4 invalid-timestamp fixture (issue #1359).
+// It is a valid one-state counterexample; statistics are null, never invented.
+function initialStateCounterexampleExploration(input: TlcOutputInput, parsed: TlcEnvelope[], model: FrozenTlaModelBundle): TlcExploration {
+  if (input.exitCode !== 12 || count(parsed, 2107) !== 1 || count(parsed, 2110) !== 0 || count(parsed, 2121) !== 0 || count(parsed, 2217) !== 0 || count(parsed, 2193) !== 0) {
+    return failed("OUTCOME_MISMATCH", "initial-state counterexample markers and exit code disagree");
+  }
+  const lines = only(parsed, 2107)!.payload.split("\n");
+  const headerMatch = /^Invariant ([A-Za-z_][A-Za-z0-9_]*) is violated by the initial state:$/.exec(lines[0] ?? "");
+  if (headerMatch === null) return failed("GRAMMAR", "invalid initial-state counterexample header");
+  const invariantName = headerMatch[1]!;
+  if (!TLA_NAMED_INVARIANTS.includes(invariantName as TlaNamedInvariant)) return failed("GRAMMAR", "counterexample invariant is outside the frozen set");
+  const sourceLocation = model.invariantSourceMap[invariantName as TlaNamedInvariant];
+  const body = lines.slice(1);
+  const variables = body.flatMap((line) => /^\/\\ ([A-Za-z_][A-Za-z0-9_]*) =/.exec(line)?.[1] ?? []);
+  if (sourceLocation === undefined || variables.length !== TRACE_STATE_VARIABLES.length
+    || variables.some((name, index) => name !== TRACE_STATE_VARIABLES[index])) {
+    return failed("GRAMMAR", "counterexample source map or initial state is invalid");
+  }
+  const trace: TlcTraceState[] = [{ ordinal: 1, label: lines[0]!, body }];
+  return {
+    kind: "COUNTEREXAMPLE",
+    invariant: invariantName,
+    sourceLocation,
+    trace,
+    counterexampleIdentity: canonicalIdentity({ invariantName, sourceLocation, trace }, "amadeus.formal-verif.tlc.counterexample.v1").sha256,
+    generatedStates: null,
+    distinctStates: null,
+    statesLeftOnQueue: null,
+    searchDepth: null,
+  };
+}
+
 export function parseTlcOutput174(input: TlcOutputInput): TlcExploration {
   if (input.timedOut) return failed("TIMEOUT", "TLC process exceeded its deadline");
   if (input.signal !== null) return failed("SIGNAL", `TLC process ended with signal ${input.signal}`);
@@ -472,6 +545,11 @@ export function parseTlcOutput174(input: TlcOutputInput): TlcExploration {
   if (!Array.isArray(parsed)) return parsed;
   const lifecycleError = validateLifecycle(parsed);
   if (lifecycleError !== null) return failed("GRAMMAR", lifecycleError);
+  if (count(parsed, 2107) === 1) return initialStateCounterexampleExploration(input, parsed, model.value);
+  return statisticsShapeExploration(input, parsed, model.value);
+}
+
+function statisticsShapeExploration(input: TlcOutputInput, parsed: TlcEnvelope[], model: FrozenTlaModelBundle): TlcExploration {
   const statistics = parseStatistics(only(parsed, 2199)!.payload);
   const depth = parseDepth(only(parsed, 2194)!.payload);
   if (statistics === null || depth === null) return failed("GRAMMAR", "invalid statistics or depth payload");
@@ -480,7 +558,7 @@ export function parseTlcOutput174(input: TlcOutputInput): TlcExploration {
   if (hasSuccess === hasViolation) return failed("GRAMMAR", "exactly one terminal semantic class is required");
   return hasSuccess
     ? completeExploration(input, parsed, statistics, depth)
-    : counterexampleExploration(input, parsed, statistics, depth, model.value);
+    : counterexampleExploration(input, parsed, statistics, depth, model);
 }
 
 export interface JdkDistributionEntry {

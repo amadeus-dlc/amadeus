@@ -379,6 +379,54 @@ function parseFlags(args: string[]): Record<string, string> {
   return flags;
 }
 
+// Extract the optional `--intent <record>` / `--space <name>` selector from an
+// otherwise POSITIONAL arg list (get/set/checkbox/count take positional field /
+// field=value / slug=state / state operands, unlike fork/merge which are
+// all-flags and use parseFlags). Returns the selector plus the positional
+// remainder. Whole-token match on `--intent`/`--space` only, so a field=value
+// operand whose value merely contains those substrings (e.g. `Foo=--intent`) is
+// never mis-consumed. A selector token with no following value is left in `rest`
+// (it then fails the operand parse loudly, never a silent drop). `--project-dir`
+// is already spliced out by main() before dispatch, so it never reaches here.
+export function extractIntentSelector(args: string[]): { intent?: string; space?: string; rest: string[] } {
+  const rest: string[] = [];
+  let intent: string | undefined;
+  let space: string | undefined;
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === "--intent" && i + 1 < args.length) {
+      intent = args[i + 1];
+      i++;
+      continue;
+    }
+    if (a === "--space" && i + 1 < args.length) {
+      space = args[i + 1];
+      i++;
+      continue;
+    }
+    rest.push(a);
+  }
+  return { intent, space, rest };
+}
+
+// Resolve the `--intent`/`--space` selector to the record the state/audit/lock
+// helpers target. Mirrors handleFork (:3768): an omitted selector keeps the
+// pre-existing default EXACTLY — returns undefined so readStateFile /
+// writeStateFile / withAuditLock resolve to the active cursor's state file AND
+// the workspace(sentinel) lock bucket (byte-identical AND lock-bucket-identical
+// to before, so no new cross-bucket race with the sentinel-locked workflow
+// verbs). A given selector pins the op to that record and its per-intent lock
+// bucket; a non-existent record stays undefined here and fails closed downstream
+// when readStateFile throws "State file not found".
+function resolveSelectedIntent(
+  pd: string,
+  intent: string | undefined,
+  space: string | undefined,
+): string | undefined {
+  if (intent === undefined && space === undefined) return undefined;
+  return activeIntent(pd, space, intent) ?? undefined;
+}
+
 // --- CLI entry point ---
 
 let projectDir: string | undefined;
@@ -515,11 +563,16 @@ if (import.meta.main) {
 
 // --- Subcommand handlers ---
 
-function handleGet(args: string[]): void {
-  if (args.length < 1) error("Usage: amadeus-state.ts get <field>");
-  const field = args.join(" ");
+export function handleGet(args: string[]): void {
+  const { intent, space, rest } = extractIntentSelector(args);
+  if (rest.length < 1) error("Usage: amadeus-state.ts get [--intent <record>] [--space <name>] <field>");
+  const field = rest.join(" ");
   const pd = resolveProjectDir(projectDir);
-  const content = readStateFile(pd);
+  // Omitted selector -> undefined -> the active cursor's state file (unchanged).
+  // A given selector reads that record; a non-existent one fails closed when
+  // readStateFile throws below.
+  const resolvedIntent = resolveSelectedIntent(pd, intent, space);
+  const content = readStateFile(pd, resolvedIntent, space);
   const value = getField(content, field);
   if (value === null) {
     error(`Field not found: ${field}`);
@@ -528,14 +581,27 @@ function handleGet(args: string[]): void {
 }
 
 export function handleSet(args: string[]): void {
-  if (args.length < 1) error("Usage: amadeus-state.ts set <field=value> ...");
+  const { intent, space, rest } = extractIntentSelector(args);
+  if (rest.length < 1) error("Usage: amadeus-state.ts set [--intent <record>] [--space <name>] <field=value> ...");
   const pd = resolveProjectDir(projectDir);
+  // Resolve the selector ONCE. Omitted -> undefined -> the active cursor + the
+  // sentinel lock bucket (byte-identical AND lock-bucket-identical to before);
+  // a given selector pins state+lock to that record (mirrors handleFork).
+  const resolvedIntent = resolveSelectedIntent(pd, intent, space);
+  // Publish the lock context so a mid-transaction error() routes ERROR_LOGGED to
+  // the SAME per-intent shard we lock (lock==write; sentinel when unselected).
+  // Cleared in the finally below so an in-process re-entry can't inherit it.
+  lockIntent = resolvedIntent;
+  lockSpace = space;
+  try {
   // C2b lost-update safety: hold the audit lock across read→decide→write so
   // two concurrent `set`s of different fields can't clobber each other (A reads
   // V1, B reads V1, A writes V2, B writes V1.5 → A's field lost). The +1/-1
-  // increment forms are especially exposed — they read-modify a counter.
+  // increment forms are especially exposed — they read-modify a counter. The
+  // lock bucket is the resolved intent (or the sentinel when unselected), so it
+  // matches the write target below (LOCK == WRITE).
   withAuditLock(pd, () => {
-  let content = readStateFile(pd);
+  let content = readStateFile(pd, resolvedIntent, space);
 
   // Parse every pair up front so field existence can be validated as one pass
   // before any write. `set` must fail closed (Issue #1027): if a target field
@@ -545,7 +611,7 @@ export function handleSet(args: string[]): void {
   // functions by ordinal, so adding closures here would shift every later
   // anonymous entry off its baseline row.
   const pairs: { field: string; value: string }[] = [];
-  for (const pair of args) {
+  for (const pair of rest) {
     const eqIdx = pair.indexOf("=");
     if (eqIdx <= 0) error(`Invalid field=value pair: ${pair}`);
     pairs.push({ field: pair.slice(0, eqIdx), value: pair.slice(eqIdx + 1) });
@@ -586,9 +652,13 @@ export function handleSet(args: string[]): void {
 
   // Reached only when every field existed: the write is real, so the success
   // report is now execution-derived (FR-2), not unconditional.
-  writeStateFile(pd, content);
-  console.log(JSON.stringify({ updated: true, fields: args.length }));
-  });
+  writeStateFile(pd, content, resolvedIntent, space);
+  console.log(JSON.stringify({ updated: true, fields: rest.length }));
+  }, resolvedIntent, space);
+  } finally {
+    lockIntent = undefined;
+    lockSpace = undefined;
+  }
 }
 
 // set-skeleton-stance <on|off|scope-dependent> — record the conductor's
@@ -764,14 +834,18 @@ export function handleDeclareDocsOnly(args: string[]): void {
   });
 }
 
-function handleCheckbox(args: string[]): void {
-  if (args.length < 1) error("Usage: amadeus-state.ts checkbox <slug=state> ...");
+export function handleCheckbox(args: string[]): void {
+  const { intent, space, rest } = extractIntentSelector(args);
+  if (rest.length < 1) error("Usage: amadeus-state.ts checkbox [--intent <record>] [--space <name>] <slug=state> ...");
   const pd = resolveProjectDir(projectDir);
+  // Resolve the selector ONCE (omitted -> undefined -> active cursor + sentinel
+  // lock bucket, unchanged; a given selector pins state+lock to that record).
+  const resolvedIntent = resolveSelectedIntent(pd, intent, space);
 
   // Parse + validate args BEFORE taking the lock — pure input checks that
   // touch no shared state, so they fail fast without holding the lock.
   const changes: Array<{ slug: string; state: CheckboxState }> = [];
-  for (const pair of args) {
+  for (const pair of rest) {
     const eqIdx = pair.indexOf("=");
     if (eqIdx <= 0) error(`Invalid slug=state pair: ${pair}`);
     const slug = pair.slice(0, eqIdx);
@@ -782,11 +856,17 @@ function handleCheckbox(args: string[]): void {
     changes.push({ slug, state: stateStr });
   }
 
+  // Publish the lock context so a mid-transaction error() routes ERROR_LOGGED to
+  // the SAME per-intent shard we lock (sentinel when unselected); cleared below.
+  lockIntent = resolvedIntent;
+  lockSpace = space;
+  try {
   // C2b lost-update safety: read→apply→count→write under one lock so the
   // Completed counter resync sees a consistent snapshot (a concurrent checkbox
-  // flip between our read and write would otherwise desync the count).
+  // flip between our read and write would otherwise desync the count). The lock
+  // bucket is the resolved intent so it matches the write target (LOCK == WRITE).
   withAuditLock(pd, () => {
-  let content = readStateFile(pd);
+  let content = readStateFile(pd, resolvedIntent, space);
 
   for (const { slug, state } of changes) {
     content = setCheckbox(content, slug, state);
@@ -796,19 +876,27 @@ function handleCheckbox(args: string[]): void {
   const completedCount = countCheckboxes(content, "completed");
   content = setField(content, "Completed", String(completedCount));
 
-  writeStateFile(pd, content);
+  writeStateFile(pd, content, resolvedIntent, space);
   console.log(JSON.stringify({ updated: true, checkboxes: changes.length, completed_count: completedCount }));
-  });
+  }, resolvedIntent, space);
+  } finally {
+    lockIntent = undefined;
+    lockSpace = undefined;
+  }
 }
 
-function handleCount(args: string[]): void {
-  if (args.length < 1) error("Usage: amadeus-state.ts count <state>");
-  const stateStr = args[0];
+export function handleCount(args: string[]): void {
+  const { intent, space, rest } = extractIntentSelector(args);
+  if (rest.length < 1) error("Usage: amadeus-state.ts count [--intent <record>] [--space <name>] <state>");
+  const stateStr = rest[0];
   if (!isCheckboxState(stateStr)) {
     error(`Invalid state: ${stateStr}. Valid: ${VALID_CHECKBOX_STATES.join(", ")}`);
   }
   const pd = resolveProjectDir(projectDir);
-  const content = readStateFile(pd);
+  // Omitted selector -> undefined -> the active cursor's state file (unchanged);
+  // a given selector reads that record, failing closed if it does not exist.
+  const resolvedIntent = resolveSelectedIntent(pd, intent, space);
+  const content = readStateFile(pd, resolvedIntent, space);
   console.log(countCheckboxes(content, stateStr));
 }
 

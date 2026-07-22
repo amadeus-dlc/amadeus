@@ -476,3 +476,96 @@ describe("TLC 1.7.4 -tool closed output grammar", () => {
     expect(result.kind).toBe("HARNESS_ERROR");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Initial-state invariant violation (MSG 2107, issue #1359). TLC aborts while
+// COMPUTING INITIAL STATES: no 2190/2199/2194, no behavior trace — a single
+// 2107 envelope carries the message line plus one full state dump. Measured
+// 2026-07-22 against the real D4 invalid-timestamp fixture (real TLC 1.7.4).
+// ---------------------------------------------------------------------------
+describe("initial-state invariant violation (MSG 2107, #1359)", () => {
+  const initialStateBody = [
+    "/\\ initialBudget = (V1 :> 1 @@ V2 :> 1 @@ V3 :> 1)",
+    "/\\ amendBudget = (V1 :> 1 @@ V2 :> 1 @@ V3 :> 1)",
+    "/\\ accepted = (V1 :> [choice |-> C1])",
+    "/\\ holdMarkers = <<>>",
+    "/\\ holdBudget = 1",
+    "/\\ tally = [kind |-> \"NONE\"]",
+    "/\\ reexamRequired = FALSE",
+  ].join("\n");
+  const prefixWithout2190 = lifecyclePrefix.replace(
+    envelope(2190, 0, "Finished computing initial states: 1 distinct state generated at 2026-07-21 09:26:25."),
+    "",
+  );
+  const initialViolationOutput = (invariant = "InvalidTimestampRejected"): string =>
+    [
+      prefixWithout2190,
+      envelope(2107, 1, `Invariant ${invariant} is violated by the initial state:\n${initialStateBody}`),
+      envelope(2186, 0, "Finished in 311ms at (2026-07-21 09:26:26)"),
+    ].join("");
+
+  test("a MSG 2107 violation is a DETECTED counterexample with a one-state trace and null statistics", () => {
+    const result = parse(initialViolationOutput(), { exitCode: 12 });
+    expect(result.kind).toBe("COUNTEREXAMPLE");
+    if (result.kind !== "COUNTEREXAMPLE") return;
+    expect(result.invariant).toBe("InvalidTimestampRejected");
+    expect(result.trace).toHaveLength(1);
+    expect(result.trace[0]!.label).toBe("Invariant InvalidTimestampRejected is violated by the initial state:");
+    expect(result.counterexampleIdentity).toMatch(/^[0-9a-f]{64}$/);
+    // TLC prints no statistics for this shape — null, never an invented count.
+    expect(result.generatedStates).toBeNull();
+    expect(result.distinctStates).toBeNull();
+    expect(result.statesLeftOnQueue).toBeNull();
+    expect(result.searchDepth).toBeNull();
+  });
+
+  test("real TLC labels non-initial steps with the firing action name (#D1 trace, 2026-07-22)", () => {
+    // counterexampleOutput's synthetic labels say "Next line ..."; real TLC
+    // writes the action name. Both must parse to the same COUNTEREXAMPLE kind.
+    const actionLabeled = counterexampleOutput().replaceAll(
+      "Next line 160, col 8 to line 161, col 66 of module FormalElection",
+      "SubmitOriginal line 160, col 8 to line 161, col 66 of module FormalElection",
+    ).replaceAll(
+      "Next line 170, col 8 to line 171, col 66 of module FormalElection",
+      "Tally line 170, col 8 to line 171, col 66 of module FormalElection",
+    );
+    const result = parse(actionLabeled, { exitCode: 12 });
+    expect(result.kind).toBe("COUNTEREXAMPLE");
+  });
+
+  test("a trace label without the span/module binding is still rejected", () => {
+    const bare = counterexampleOutput().replaceAll(
+      "Next line 160, col 8 to line 161, col 66 of module FormalElection",
+      "Tally",
+    );
+    expectHarnessError(bare, { exitCode: 12 });
+  });
+
+  test("the counterexample identity is deterministic across parses", () => {
+    const first = parse(initialViolationOutput(), { exitCode: 12 });
+    const second = parse(initialViolationOutput(), { exitCode: 12 });
+    expect(first.kind === "COUNTEREXAMPLE" && second.kind === "COUNTEREXAMPLE" && first.counterexampleIdentity === second.counterexampleIdentity).toBe(true);
+  });
+
+  test("an invariant outside the frozen set is rejected, not detected", () => {
+    expectHarnessError(initialViolationOutput("SmuggledInvariant"), { exitCode: 12 });
+  });
+
+  test("exit code other than 12 contradicts the 2107 marker", () => {
+    expectHarnessError(initialViolationOutput(), { exitCode: 0 });
+  });
+
+  test("a 2107 stream carrying post-init lifecycle codes is rejected", () => {
+    const withPostInit = initialViolationOutput().replace(
+      envelope(2186, 0, "Finished in 311ms at (2026-07-21 09:26:26)"),
+      envelope(2199, 0, "3 states generated, 2 distinct states found, 0 states left on queue.")
+        + envelope(2186, 0, "Finished in 311ms at (2026-07-21 09:26:26)"),
+    );
+    expectHarnessError(withPostInit, { exitCode: 12 });
+  });
+
+  test("a state dump with drifted variable order is rejected", () => {
+    const drifted = initialViolationOutput().replace("/\\ reexamRequired = FALSE", "/\\ zz = FALSE");
+    expectHarnessError(drifted, { exitCode: 12 });
+  });
+});

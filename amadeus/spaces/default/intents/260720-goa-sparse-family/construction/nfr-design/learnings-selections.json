@@ -1,0 +1,13 @@
+{
+  "stage_slug": "nfr-design",
+  "selections": [
+    {
+      "candidate_id": "c3",
+      "type": "learning",
+      "scope": "team",
+      "heading": "## Corrections",
+      "text": "共通segment文法を使うregexでも、非anchored scannerのvalid-prefix matchとanchored validatorのwhole-value拒否は別のaccepted languageとして所有面を明記し、両者を対照testする",
+      "source": "orchestrator"
+    }
+  ]
+}
