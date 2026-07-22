@@ -59,14 +59,15 @@ At every stage the leading agent produces reviewable artifacts under the `amadeu
 
 ## An independent line of development
 
-Amadeus-DLC implements the **AI-DLC methodology** — a structured, gated approach to AI-driven development defined by AWS (see [Provenance](#provenance-and-acknowledgements)). It began as a fork of the reference implementation and has since become its own line of development, engineered around one conviction: *a methodology is only as trustworthy as the machinery that enforces it.* Original to Amadeus are, among others:
+Amadeus-DLC implements the **AI-DLC methodology** — a structured, gated approach to AI-driven development defined by AWS (see [Provenance](#provenance-and-acknowledgements)). It began as a fork of the v2 reference implementation and inherited that line's core at the fork point: the deterministic engine, the 32-stage graph, the composer, the learning loop, the audit trail, and the multi-harness build all trace back to it. Since the fork the two lines have evolved independently, and Amadeus reconciles them deliberately rather than automatically — each upstream release is analyzed item by item into an evidence-backed ADOPT/ADAPT/SKIP plan before anything lands — most recently upstream v2.3.0, including its plugin system (see the [upstream migration guide](docs/guide/18-migrating-upstream-v2.md)).
 
-- the **deterministic engine** — compiled stage graph, scope grid, state machine, gate enforcement, append-only audit shards;
-- the **multi-harness packager** — one harness-neutral `packages/framework/core/`, six generated distributions, byte-parity drift guards in CI;
-- the **installer** — `@amadeus-dlc/setup` installs and upgrades any harness distribution into your project;
-- the **adaptive composer**, **sensors**, the **learning loop** with its admission gate, the **swarm referee** for parallel construction, and the read-only **session skills** (cost, replay, outcomes, grilling).
+On top of that inheritance, this line develops its own additions. Among them:
 
-Upstream releases are still tracked — deliberately, not automatically: each upstream version is analyzed item by item into an evidence-backed ADOPT/ADAPT/SKIP plan before anything lands (see the [upstream migration guide](docs/guide/18-migrating-upstream-v2.md)).
+- the **installer** — `@amadeus-dlc/setup` installs and upgrades any harness distribution with one command, where upstream installs by manual copy;
+- **two additional harness surfaces** — OpenCode and Cursor — extending the four shipped upstream to six;
+- a **workspace migration tool** (`/amadeus --migrate`) that converts an upstream v2 `aidlc/` workspace in place, previews included;
+- the **grilling** session skill for read-only design interrogation, and **fully bilingual documentation** — every guide ships in English and Japanese;
+- and the discipline behind all of the above: Amadeus is developed *with* Amadeus, in this repository, through its own stages, gates, and audit trail.
 
 ## Pick your harness
 
