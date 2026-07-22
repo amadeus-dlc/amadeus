@@ -493,3 +493,52 @@
 **Failed count**: 0
 
 ---
+
+## Swarm Started
+**Timestamp**: 2026-07-22T05:07:08Z
+**Event**: SWARM_STARTED
+**Batch number**: 5
+**Unit names**: verification-and-ledger-closure
+**Concurrency cap**: 1
+
+---
+
+## Worktree Created
+**Timestamp**: 2026-07-22T05:07:08Z
+**Event**: WORKTREE_CREATED
+**Bolt slug**: verification-and-ledger-closure
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-verification-and-ledger-closure
+**Branch name**: bolt-verification-and-ledger-closure
+**Base branch**: resume-usync-230-takeover
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-22T05:07:08Z
+**Event**: BOLT_STARTED
+**Bolt names**: verification-and-ledger-closure
+**Batch number**: 5
+**Walking skeleton**: false
+**Bolt slug**: verification-and-ledger-closure
+
+---
+
+## State Forked
+**Timestamp**: 2026-07-22T05:07:09Z
+**Event**: STATE_FORKED
+**Bolt slug**: verification-and-ledger-closure
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-verification-and-ledger-closure
+**Source state hash**: e2e2e838f6512956a08755cdf89395b56f3bae9bf1210e2777451522d0ffd5f1
+**Target state hash**: e2e2e838f6512956a08755cdf89395b56f3bae9bf1210e2777451522d0ffd5f1
+
+---
+
+## Audit Forked
+**Timestamp**: 2026-07-22T05:07:09Z
+**Event**: AUDIT_FORKED
+**Bolt slug**: verification-and-ledger-closure
+**Source Audit Hash**: 9d7735dd0c3459610bbc6b84bff165b16938ee78da5b12769172a7f24c3675b6
+**Fork Boundary**: 15244
+**Reentrant**: true
+
+---
