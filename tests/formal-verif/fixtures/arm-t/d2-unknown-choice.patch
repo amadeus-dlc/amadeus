@@ -1,0 +1,14 @@
+diff --git a/scripts/formal-verif/tla-arm.ts b/scripts/formal-verif/tla-arm.ts
+index 34162f1ce..977de5147 100644
+--- a/scripts/formal-verif/tla-arm.ts
++++ b/scripts/formal-verif/tla-arm.ts
+@@ -434,7 +434,8 @@ Route(v, ballot, g) ==
+ SubmitOriginal(v, c, s, g) ==
+   /\\ initialBudget[v] = 1
+   /\\ IF c = "UNKNOWN_CHOICE"
+-     THEN Reject
++     THEN /\\ initialBudget' = [initialBudget EXCEPT ![v] = 0]
++          /\\ UNCHANGED <<accepted, reexamRequired, amendBudget, holdBudget, holdMarkers, tally>>
+      ELSE IF s \\notin SubmittedAt
+      THEN Reject
+      ELSE /\\ initialBudget' = [initialBudget EXCEPT ![v] = 0]

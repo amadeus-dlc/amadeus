@@ -1,0 +1,13 @@
+diff --git a/scripts/formal-verif/tla-arm.ts b/scripts/formal-verif/tla-arm.ts
+index 34162f1ce..a3b31f99a 100644
+--- a/scripts/formal-verif/tla-arm.ts
++++ b/scripts/formal-verif/tla-arm.ts
+@@ -364,7 +364,7 @@ Later(a, b) ==
+   \\/ SubmittedRank(a.submittedAt) > SubmittedRank(b.submittedAt)
+   \\/ /\\ a.submittedAt = b.submittedAt
+      /\\ a.arrivalSeq > b.arrivalSeq
+-Resolve(prior, ballot) == IF prior = NoBallot \\/ Later(ballot, prior) THEN ballot ELSE prior
++Resolve(prior, ballot) == IF prior = NoBallot THEN ballot ELSE prior
+ ResolvedVoters(r) == {v \\in Voters : r[v] /= NoBallot}
+ ResolvedSet(r) == {r[v] : v \\in ResolvedVoters(r)}
+ EligibleSet(r) == {b \\in ResolvedSet(r) : b.goaClass /= "EXCLUDED"}

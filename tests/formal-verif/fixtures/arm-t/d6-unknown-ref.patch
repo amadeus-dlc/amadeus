@@ -1,0 +1,13 @@
+diff --git a/scripts/formal-verif/tla-arm.ts b/scripts/formal-verif/tla-arm.ts
+index 34162f1ce..be0fb089d 100644
+--- a/scripts/formal-verif/tla-arm.ts
++++ b/scripts/formal-verif/tla-arm.ts
+@@ -448,7 +448,7 @@ SubmitAmend(v, ref, c, s, g) ==
+      THEN Reject
+      ELSE IF s \\notin SubmittedAt
+      THEN Reject
+-     ELSE IF accepted[v] = NoBallot \\/ ref /= accepted[v].arrivalSeq
++     ELSE IF FALSE
+      THEN Reject
+      ELSE /\\ amendBudget' = [amendBudget EXCEPT ![v] = 0]
+           /\\ UNCHANGED <<initialBudget, holdBudget, holdMarkers, tally>>
