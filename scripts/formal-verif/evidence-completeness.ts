@@ -19,7 +19,11 @@ export interface SuiteEvidence {
   cells: VerifiedCellEvidence[];
 }
 
-export type CompletenessFindingKind = "MISSING" | "DUPLICATE" | "HANDWRITTEN" | "METADATA_DRIFT" | "HARNESS_ERROR_CELL" | "SUITE_TIMEOUT" | "VERDICT_DISAGREEMENT";
+// Final FD gate ruling 2026-07-22 (option b): six-way store-failure discrimination
+// belongs to the store read layer (readCell's typed error union); this validator
+// keeps complete / not-store-verified + cause. SUITE_TIMEOUT was a declared-only
+// member no code path produced and is removed rather than kept as dead surface.
+export type CompletenessFindingKind = "MISSING" | "DUPLICATE" | "HANDWRITTEN" | "METADATA_DRIFT" | "HARNESS_ERROR_CELL" | "VERDICT_DISAGREEMENT";
 export interface CompletenessFinding { kind: CompletenessFindingKind; identity: string; cause: string }
 
 export type SuiteProof =
@@ -35,8 +39,8 @@ export function verifySuite(expectedSubjects: readonly string[], suite: SuiteEvi
   const duplicates = keys.filter((key, index) => keys.indexOf(key) !== index);
   if (duplicates.length > 0) findings.push({ kind: "DUPLICATE", identity: duplicates[0]!, cause: "duplicate cell key" });
   for (const subject of expectedSubjects) if (!suite.cells.some((cell) => isVerifiedEvidenceProof(cell.proof) && cell.proof.cellKey.subject === subject)) findings.push({ kind: "MISSING", identity: subject, cause: "expected cell is missing" });
-  for (const cell of suite.cells) {
-    if (!isVerifiedEvidenceProof(cell.proof)) { findings.push({ kind: "HANDWRITTEN", identity: "unknown", cause: "store-verified proof is absent" }); continue; }
+  for (const [index, cell] of suite.cells.entries()) {
+    if (!isVerifiedEvidenceProof(cell.proof)) { findings.push({ kind: "HANDWRITTEN", identity: `cell[${index}]`, cause: `cell ${index} of ${sampleIdentity(suite.sample)} carries no store-verified proof brand` }); continue; }
     const { cellKey, inputSetHash, result } = cell.proof;
     if (!expectedSubjects.includes(cellKey.subject)) findings.push({ kind: "METADATA_DRIFT", identity: cellKey.subject, cause: "cell subject is outside the expected set" });
     if (cellKey.arm !== suite.arm || cellKey.subject !== result.fixtureId || sampleIdentity(cellKey.sample) !== sampleIdentity(suite.sample) || inputSetHash !== suite.inputSetHash || result.arm !== suite.arm || result.armSha !== suite.armSha || result.baselineSha !== suite.baselineSha) findings.push({ kind: "METADATA_DRIFT", identity: cellKey.subject, cause: "cell and suite metadata differ" });

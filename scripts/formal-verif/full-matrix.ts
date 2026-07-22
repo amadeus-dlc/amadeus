@@ -7,9 +7,10 @@ import type { MonotonicClock, SampleKey, SuiteRunResult } from "./execution-evid
 
 // U7 owns serial full-matrix measurement and raw cost derivation only. Manifest promotion,
 // arm oracle, eligibility, winner selection, and report rendering belong to other units.
-// U3/U4/U5 have not passed a third review, so U7 never claims integration/benchmark completion.
-export type MatrixIntegrationStatus = "DESIGNED_BLOCKED_ON_U3_U4_U5_GATE";
-export const MATRIX_INTEGRATION_STATUS: MatrixIntegrationStatus = "DESIGNED_BLOCKED_ON_U3_U4_U5_GATE";
+// The U3/U4/U5 third reviews ran 2026-07-22 (record: verification/final-fd-gate-dossier.md)
+// and the final FD gate human ruling lifted the DESIGNED_BLOCKED_ON_U3_U4_U5_GATE status.
+export type MatrixIntegrationStatus = "FINAL_FD_GATE_RULED_READY";
+export const MATRIX_INTEGRATION_STATUS: MatrixIntegrationStatus = "FINAL_FD_GATE_RULED_READY";
 
 export const SUITE_TIMEOUT_MS = 120_000;
 export const HEALTHY_BASELINE = "HEALTHY_BASELINE";
