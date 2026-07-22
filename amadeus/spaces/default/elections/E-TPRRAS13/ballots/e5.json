@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TPRRAS13",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "grep 対象は markdown 装飾で壊れない装飾フリーの核心部分文字列(または装飾除去後テキスト)を選ぶことを追補文に含める — 太字・強調の挿入で naive grep が偽陰性/偽陽性化する",
+  "rationale": "採用(cid:reservation-transcription-count-check への追補)。独立実測3点: (1) e1 audit シャード(24f8aaf85 の j5ik2o-mac-studio-local-add286b804a1.md)で iteration 1 の reviewer verdict 実文『Major #1 — FR-3 の留保転記が election record の内容と不一致(内容誤帰属)』を確認 — 一方 diary は『GoA2 7件(RA1:2、RA2:2、RA3:3、RA4:0)機械照合一致』と件数照合 green を記録しており、候補の主張『件数一致でも誤帰属・部分欠落は通過』は実測どおり。(2) iteration 2 の Major(FR-5 [e3] 前半節『A と C は非ゼロ exit の点で実質同型』欠落)も E-TPRRA3 record.md:8 との突き合わせで実在確認。(3) 追加の現存実例を自票で発見: FR-5 [e5] 留保は record.md:9 の『mux_attach より前』が requirements.md では『mux attach より**前**』と識別子破壊+装飾挿入されており、per-voter 逐語照合ならこれも検出できた(件数照合は通過済み)— 追補の検出価値が是正後の現物にも残存する生きた証拠。既存 cid は件数照合のみを規定し逐語照合は未規定のため、追補は非重複。",
+  "submittedAt": "2026-07-22T22:46:54Z"
+}
