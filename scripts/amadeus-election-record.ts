@@ -207,8 +207,8 @@ export function verifySelf(
     // legacy `at` axis. That fallback exists only for records already open at the
     // migration: no election is ever re-verified after the fix lands, so a new
     // election always has receivedAt on every timeline event.
-    const prev = timeline[i - 1].receivedAt ?? timeline[i - 1].at;
-    const cur = timeline[i].receivedAt ?? timeline[i].at;
+    const prev = timeline[i - 1].at;
+    const cur = timeline[i].at;
     if (cur < prev) findings.push({ kind: "timeline-order", expected: prev, actual: cur });
   }
   return findings.length === 0 ? ok(undefined) : err(findings);
