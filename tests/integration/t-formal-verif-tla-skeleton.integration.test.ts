@@ -33,7 +33,7 @@ const rawSha = (value: Uint8Array) => createHash("sha256").update(value).digest(
 const at = (second: number) => `2026-07-20T00:00:0${second}Z`;
 
 afterEach(() => {
-  disposers.splice(0).forEach((dispose) => dispose());
+  disposers.splice(0).forEach((dispose) => { dispose(); });
   roots.splice(0).forEach((root) => { rmSync(root, { recursive: true, force: true }); });
 });
 
