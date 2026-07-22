@@ -5396,6 +5396,10 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
+          "file": "tests/integration/t249-canonical-nested-advisory.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/integration/t249-workspace-inspection.test.ts",
           "mechanism": "cli"
         },

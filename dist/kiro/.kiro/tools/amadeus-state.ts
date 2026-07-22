@@ -1298,18 +1298,18 @@ function workspaceHasWork(pd: string): boolean {
 // The guard itself. Called from approve/advance/finalize/complete-workflow
 // BEFORE any state mutation, so a refusal (error() -> process.exit) leaves state
 // untouched. `stage` is the StageEntry being completed. No-op when bypass active.
-function verifyStageArtifacts(
-  pd: string,
-  stage: {
-    slug: string;
-    name: string;
-    phase: string;
-    for_each?: string;
-    produces?: string[];
-    produces_kinds?: Record<string, UnitKind[]>;
-    workspace_requires?: boolean;
-  }
-): void {
+// Declared at module scope so the type-only field lines carry no in-body
+// coverage records (they are erased at runtime).
+type VerifiableStage = {
+  slug: string;
+  name: string;
+  phase: string;
+  for_each?: string;
+  produces?: string[];
+  produces_kinds?: Record<string, UnitKind[]>;
+  workspace_requires?: boolean;
+};
+function verifyStageArtifacts(pd: string, stage: VerifiableStage): void {
   if (artifactGuardDisabled()) return;
 
   if (!producesArtifactsExist(pd, stage)) {

@@ -213,8 +213,52 @@ units:
   test.each([
     ["unknown kind", "  - name: bad\n    kind: worker\n    depends_on: []"],
     ["kind before name", "  kind: spec\n  - name: bad\n    depends_on: []"],
+    [
+      "duplicate kind",
+      "  - name: dup\n    kind: spec\n    kind: service\n    depends_on: []",
+    ],
   ])("rejects %s", (_name, edge) => {
     const parsed = parseBoltDag(`\`\`\`yaml\nunits:\n${edge}\n\`\`\``);
     expect(parsed).toMatchObject({ ok: false, reason: "malformed" });
+  });
+});
+
+describe("t248 stage frontmatter error branches", () => {
+  test("keeps a non-inline-list produces_kinds value as its scalar fallback", () => {
+    // A produces_kinds value that is not a `[...]` inline list falls back to
+    // the scalar reader rather than an artifact→kinds map (parser fallback).
+    const source = `---
+slug: plugin-stage
+phase: construction
+execution: CONDITIONAL
+condition: Runs when selected
+lead_agent: amadeus-developer-agent
+support_agents: []
+mode: inline
+produces:
+  - required-a
+produces_kinds:
+  required-a: service
+consumes: []
+requires_stage: []
+inputs: inputs
+outputs: outputs
+---
+`;
+    // The non-`[...]` value bails to the scalar reader, so produces_kinds is a
+    // raw string rather than an artifact→kinds map (validation rejects it later).
+    expect(typeof parseStageFrontmatter(source).produces_kinds).toBe("string");
+  });
+
+  test.each([
+    ["produces_kinds not object", { produces_kinds: "service" }],
+    ["produces_kinds empty object", { produces_kinds: {} }],
+    ["produces_kinds non-kebab key", { produces_kinds: { Bad_Key: ["service"] } }],
+    ["when value not a string", { when: { "producer-in-plan": 42 } }],
+    ["required_sections empty list", { required_sections: [] }],
+    ["slug wrong type", { slug: 42 }],
+    ["name wrong type", { name: 42 }],
+  ])("rejects %s", (_name, override) => {
+    expect(validateStageFrontmatter({ ...BASE, ...override }).valid).toBe(false);
   });
 });

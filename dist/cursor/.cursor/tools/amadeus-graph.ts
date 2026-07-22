@@ -760,16 +760,15 @@ export function producersOf(artifact: string): GraphStage[] {
   );
 }
 
+/** Shape a stage must expose for {@link requiredArtifactsForUnit}. Declared at
+ *  module scope so the type-only lines carry no in-body coverage records. */
+type UnitArtifactStage = {
+  readonly produces: readonly string[];
+  readonly produces_kinds?: Readonly<Record<string, readonly UnitKind[]>>;
+};
+
 /** Required artifacts that apply to a validated unit kind. */
-export function requiredArtifactsForUnit(
-  stage: {
-    readonly produces: readonly string[];
-    readonly produces_kinds?: Readonly<
-      Record<string, readonly UnitKind[]>
-    >;
-  },
-  kind: UnitKind,
-): readonly string[] {
+export function requiredArtifactsForUnit(stage: UnitArtifactStage, kind: UnitKind): readonly string[] {
   const applicability = stage.produces_kinds;
   if (applicability === undefined) return stage.produces;
   return stage.produces.filter((artifact) => {

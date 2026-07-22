@@ -4,6 +4,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
+  cpSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -17,6 +18,11 @@ import {
   compileStageGraph,
 } from "../../packages/framework/core/tools/amadeus-graph.ts";
 import { _resetStageGraphForTests } from "../../packages/framework/core/tools/amadeus-lib.ts";
+import {
+  handleNext,
+  handleReport,
+} from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
+import { handleAdvance } from "../../packages/framework/core/tools/amadeus-state.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -288,5 +294,235 @@ describe("t248 applicability projection and completion guard", () => {
     );
     expect(result.status).not.toBe(0);
     expect(`${result.stdout}\n${result.stderr}`).toContain("Refusing to complete");
+  }, 30_000);
+});
+
+// buildGraphStage carries the plugin-scope optional frontmatter fields
+// (bundle / when / required_sections) through to the compiled GraphStage. No
+// default stage declares them, so this compiles a copy of the real stages dir
+// with the three fields injected into one stage and asserts they survive.
+describe("t248 buildGraphStage optional field carry-through", () => {
+  const scratch: string[] = [];
+  const envKeys = [
+    "AMADEUS_STAGES_DIR",
+    "AMADEUS_STAGE_GRAPH",
+    "AMADEUS_SCOPE_GRID",
+    "AMADEUS_RULES_DIR",
+    "AMADEUS_SENSORS_DIR",
+  ] as const;
+  let savedGraphEnv: Record<string, string | undefined>;
+
+  afterEach(() => {
+    for (const k of envKeys) {
+      const v = savedGraphEnv?.[k];
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+    _resetStageGraphForTests();
+    __resetGraphCache();
+    while (scratch.length > 0) rmSync(scratch.pop()!, { recursive: true, force: true });
+  });
+
+  test("bundle, when and required_sections survive compilation", () => {
+    savedGraphEnv = Object.fromEntries(envKeys.map((k) => [k, process.env[k]]));
+    const dir = mkdtempSync(join(tmpdir(), "amadeus-t248-buildstage-"));
+    scratch.push(dir);
+    const stagesDir = join(dir, "stages");
+    cpSync(
+      join(REPO_ROOT, "packages/framework/core/amadeus-common/stages"),
+      stagesDir,
+      { recursive: true },
+    );
+    const target = join(stagesDir, "construction", "functional-design.md");
+    const body = readFileSync(target, "utf-8").replace(
+      /\nmode: .*\n/,
+      (m) =>
+        `${m}bundle: book\nwhen:\n  producer-in-plan: business-rules\nrequired_sections:\n  - Overview\n  - Details\n`,
+    );
+    writeFileSync(target, body, "utf-8");
+
+    process.env.AMADEUS_STAGES_DIR = stagesDir;
+    process.env.AMADEUS_STAGE_GRAPH = join(
+      REPO_ROOT,
+      "dist/claude/.claude/tools/data/stage-graph.json",
+    );
+    process.env.AMADEUS_SCOPE_GRID = SCOPE_GRID;
+    process.env.AMADEUS_RULES_DIR = join(REPO_ROOT, "amadeus/spaces/default/memory");
+    process.env.AMADEUS_SENSORS_DIR = join(REPO_ROOT, "packages/framework/core/sensors");
+    _resetStageGraphForTests();
+    __resetGraphCache();
+
+    const functional = compileStageGraph().stages.find(
+      (stage) => stage.slug === "functional-design",
+    );
+    expect(functional?.bundle).toBe("book");
+    expect(functional?.when).toEqual({ "producer-in-plan": "business-rules" });
+    expect(functional?.required_sections).toEqual(["Overview", "Details"]);
+  }, 30_000);
+});
+
+// In-process twins of the spawn cases above. The subprocess cases pin the
+// external CLI contract but the spawn boundary is a Bun-coverage blind spot, so
+// these drive the SAME production entries in-process (handleNext / handleAdvance)
+// against temp projects to measure the runtime unit-kind readers and the
+// kind-aware completion guard. Env is applied to process.env for the call and
+// restored, and the stage-graph caches are reset so each case reads its fixture.
+describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
+  function withStageEnv<T>(graphPath: string, extra: Record<string, string | undefined>, fn: () => T): T {
+    const keys = [
+      "AMADEUS_STAGE_GRAPH",
+      "AMADEUS_SCOPE_GRID",
+      "AMADEUS_SKIP_HUMAN_PRESENCE_GUARD",
+      "AMADEUS_SKIP_ARTIFACT_GUARD",
+      "AMADEUS_DEFAULT_SCOPE",
+      "CLAUDE_PROJECT_DIR",
+    ];
+    const saved = new Map(keys.map((k) => [k, process.env[k]]));
+    process.env.AMADEUS_STAGE_GRAPH = graphPath;
+    process.env.AMADEUS_SCOPE_GRID = SCOPE_GRID;
+    process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = "1";
+    delete process.env.AMADEUS_DEFAULT_SCOPE;
+    for (const [k, v] of Object.entries(extra)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+    _resetStageGraphForTests();
+    __resetGraphCache();
+    try {
+      return fn();
+    } finally {
+      for (const [k, v] of saved) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+      _resetStageGraphForTests();
+      __resetGraphCache();
+    }
+  }
+
+  function nextInProcess(project: string, graphPath: string): Record<string, unknown> {
+    const originalLog = console.log;
+    let stdout = "";
+    console.log = (...values: unknown[]) => {
+      stdout += `${values.map(String).join(" ")}\n`;
+    };
+    try {
+      withStageEnv(graphPath, { AMADEUS_SKIP_ARTIFACT_GUARD: "1" }, () => {
+        handleNext([], project);
+      });
+    } finally {
+      console.log = originalLog;
+    }
+    return JSON.parse(stdout.trim()) as Record<string, unknown>;
+  }
+
+  function advanceInProcess(project: string, graphPath: string): void {
+    const originalLog = console.log;
+    console.log = () => {};
+    try {
+      withStageEnv(
+        graphPath,
+        { CLAUDE_PROJECT_DIR: project, AMADEUS_SKIP_ARTIFACT_GUARD: undefined },
+        () => {
+          handleAdvance(["functional-design"]);
+        },
+      );
+    } finally {
+      console.log = originalLog;
+    }
+  }
+
+  test("next routes only spec artifacts for a tagged unit in-process", () => {
+    const project = seedProject([
+      { name: "package", kind: "packaging" },
+      { name: "schema", kind: "spec" },
+    ]);
+    const directive = nextInProcess(project, sourceGraph());
+    expect(directive.unit).toBe("schema");
+    expect(directive.produces).toHaveLength(2);
+  }, 30_000);
+
+  test("next keeps the full matrix for an untagged unit in-process", () => {
+    const project = seedProject([{ name: "legacy" }]);
+    const directive = nextInProcess(project, sourceGraph());
+    expect(directive.produces).toHaveLength(4);
+  }, 30_000);
+
+  test("next keeps the full matrix when the runtime kind is malformed in-process", () => {
+    const project = seedProject([{ name: "legacy" }]);
+    const runtimePath = join(seededRecordDir(project), "runtime-graph.json");
+    const graph = JSON.parse(readFileSync(runtimePath, "utf-8"));
+    graph.bolt_dag.units[0].kind = "worker";
+    writeFileSync(runtimePath, `${JSON.stringify(graph, null, 2)}\n`, "utf-8");
+    const directive = nextInProcess(project, sourceGraph());
+    expect(directive.produces).toHaveLength(4);
+  }, 30_000);
+
+  test("completion guard accepts an all-vacuous packaging stage in-process", () => {
+    const project = seedProject([{ name: "package", kind: "packaging" }]);
+    expect(() => advanceInProcess(project, sourceGraph())).not.toThrow();
+  }, 30_000);
+
+  test("completion guard treats spec artifacts on disk as covered in-process", () => {
+    const project = seedProject([
+      { name: "package", kind: "packaging" },
+      { name: "schema", kind: "spec" },
+    ]);
+    writeFunctionalArtifacts(project, "schema", ["business-rules", "domain-entities"]);
+    expect(() => advanceInProcess(project, sourceGraph())).not.toThrow();
+  }, 30_000);
+
+  test("next heals the unit topology from the dependency doc when runtime-graph is missing", () => {
+    // Deleting runtime-graph.json forces orderedUnits to heal from the canonical
+    // unit-of-work-dependency.md while readUnitKinds's own reader hits its
+    // missing-file catch — the runtime kind lookup degrades to kindless.
+    const project = seedProject([{ name: "legacy" }]);
+    rmSync(join(seededRecordDir(project), "runtime-graph.json"), { force: true });
+    const directive = nextInProcess(project, sourceGraph());
+    expect(directive.produces).toHaveLength(4);
+  }, 30_000);
+
+  test("completion guard falls back to on-disk artifacts when runtime-graph is missing", () => {
+    // Missing runtime-graph.json drives the kind-aware reader's missing-file
+    // catch (readRuntimeUnitKinds -> null), so the guard falls back to the
+    // per-unit construction directories, where the artifacts exist.
+    const project = seedProject([{ name: "schema", kind: "spec" }]);
+    writeFunctionalArtifacts(project, "schema", ["business-rules", "domain-entities"]);
+    rmSync(join(seededRecordDir(project), "runtime-graph.json"), { force: true });
+    expect(() => advanceInProcess(project, sourceGraph())).not.toThrow();
+  }, 30_000);
+
+  test("completion guard scans past a spec unit with no artifacts to one that has them", () => {
+    // Two spec units: the first has NO artifacts on disk (artifactsExistInDir
+    // returns false and the scan continues), the second has them (returns true),
+    // so the guard is satisfied without erroring.
+    const project = seedProject([
+      { name: "schema-a", kind: "spec" },
+      { name: "schema-b", kind: "spec" },
+    ]);
+    writeFunctionalArtifacts(project, "schema-b", ["business-rules", "domain-entities"]);
+    expect(() => advanceInProcess(project, sourceGraph())).not.toThrow();
+  }, 30_000);
+
+  test("report on a per-unit stage with uncovered units emits the coverage-gate error", () => {
+    // Drives handleReport's per-unit coverage gate (nextUncoveredUnit): a
+    // forward report on functional-design while its spec unit has no artifacts
+    // must refuse with the "units not yet complete" error.
+    const project = seedProject([{ name: "schema", kind: "spec" }]);
+    const originalLog = console.log;
+    let stdout = "";
+    console.log = (...values: unknown[]) => {
+      stdout += `${values.map(String).join(" ")}\n`;
+    };
+    try {
+      withStageEnv(sourceGraph(), { AMADEUS_SKIP_ARTIFACT_GUARD: "1" }, () => {
+        handleReport(["--result", "approved"], project);
+      });
+    } finally {
+      console.log = originalLog;
+    }
+    const directive = JSON.parse(stdout.trim()) as Record<string, unknown>;
+    expect(directive.kind).toBe("error");
+    expect(String(directive.message)).toContain("not yet complete");
   }, 30_000);
 });

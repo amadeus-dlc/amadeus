@@ -2964,7 +2964,9 @@ function sortBlockingAdvisories(
   return [...advisories].sort((x, y) => (x.code < y.code ? -1 : x.code > y.code ? 1 : 0));
 }
 
-function classifiedResult(args: {
+// Declared at module scope so the type-only field lines carry no in-body
+// coverage records (they are erased at runtime).
+type ClassifiedResultArgs = {
   root: string;
   projectType: "Greenfield" | "Brownfield";
   counts: Readonly<Record<string, number>>;
@@ -2974,7 +2976,8 @@ function classifiedResult(args: {
   advisories: readonly WorkspaceAdvisory[];
   nestedCandidates?: readonly ProjectCandidate[];
   nestedRoot?: string;
-}): WorkspaceScanResult {
+};
+function classifiedResult(args: ClassifiedResultArgs): WorkspaceScanResult {
   const scan: ClassifiedWorkspaceScan = {
     root: args.root,
     projectType: args.projectType,

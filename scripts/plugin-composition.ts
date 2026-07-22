@@ -936,11 +936,13 @@ function diagnoseOne(
 
 // A pure in-memory backend over path→bytes maps. The default lock is a no-op and
 // txn ids are a monotonic counter, so a unit test drives every commit/recovery
-// branch deterministically with no filesystem.
-export function createInMemoryBackend(seed?: {
+// branch deterministically with no filesystem. The seed type lives at module
+// scope so its type-only field lines carry no in-body coverage records.
+type InMemoryBackendSeed = {
   host?: Record<string, Buffer>;
   composition?: CompositionRecord;
-}): WorkspaceBackend {
+};
+export function createInMemoryBackend(seed?: InMemoryBackendSeed): WorkspaceBackend {
   const host = new Map<string, Buffer>(Object.entries(seed?.host ?? {}));
   let composition = cloneComposition(seed?.composition ?? emptyComposition());
   const audit: AuditEntry[] = [];
