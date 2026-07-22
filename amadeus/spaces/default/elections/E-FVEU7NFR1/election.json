@@ -1,0 +1,25 @@
+{
+  "electionId": "E-FVEU7NFR1",
+  "kind": "review-max-exhausted",
+  "question": "260720-formal-verif-experiment / U7 full-matrix-suite / nfr-requirements。reviewer iteration2 NOT READY（Major3）かつmax=2到達後の処置を裁定する。残件は、complete suite 120秒とtimeout後cleanup+INCOMPLETE専用30秒の分離、U3 suite-result manifest先commit→identity参照terminal→両再読後のみnext ordinalというcross-store順序、crash resume時のOS cpuset/memory lease再取得とResourcePolicyIdentity完全一致・不一致時revision INCOMPLETE close。最新sensor/diff PASS、Critical0。成果物・review・上流契約を独立実測して選択する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "上限後に3点を是正し、例外的な独立reviewを実施してから進む"
+    },
+    {
+      "internalNo": 2,
+      "label": "max-exhausted履歴と未解決Major3を保持して次Unitへ進み、最終NFR gateで人間裁定"
+    },
+    {
+      "internalNo": 3,
+      "label": "その他（noteに具体案を記載）"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e4"
+  ],
+  "state": "recorded"
+}

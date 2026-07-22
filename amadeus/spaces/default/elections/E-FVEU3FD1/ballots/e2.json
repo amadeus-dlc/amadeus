@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVEU3FD1",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "U3をREADYへ読み替えないこと。最終Functional Design gateではiteration 2の3 finding（writer race、envelope改変検出、finding union不足）、各最小是正へのfile:line写像、最新sensor PASS、第三review未実施を未解決findingとして明示し、人間がその状態を裁定できる形で提示すること。後続Unitの設計がU3契約へ依存する場合も、この未再review状態をconsumes側へ明記する。",
+  "rationale": "Aを支持。stage-protocol §12aはreviewer_max_iterations=2の消尽後、未解決findingを明記してapproval gateへ進むと明示しており、Functional Designはfor_each unit-of-workのため各Unit reviewer budgetが独立し、gate=falseのUnitは次Unitへ進み、全Unit完成後の単一gateで裁定する。Bの第三review必須化はこの上限とper-unit forwarding契約を例外的に上書きする。実測上、iteration 2後の最終成果物には単一writer lock中のrunner/store head再確認と共通successor atomic rename、ledger coordinatesとfinal envelope hash、IncompleteMatrix findingsのclosed discriminator/causeがbusiness-logic/domain/business-rulesへ反映され、13:20:20Z以降のrequired-sections/upstream-coverage全対象とanswer-evidenceがPASSしている。ただしsemantic closureは第三review未実施なので、Aで履歴を保持し最終FD gateの明示的判断へ委ねるのがprotocol準拠。非採用時受容度: B=7、X=6。",
+  "submittedAt": "2026-07-20T13:22:37Z"
+}

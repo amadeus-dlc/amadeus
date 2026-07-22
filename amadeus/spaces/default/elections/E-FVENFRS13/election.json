@@ -1,0 +1,21 @@
+{
+  "electionId": "E-FVENFRS13",
+  "kind": "s13-learning-candidates",
+  "question": "260720-formal-verif-experiment / nfr-requirements の§13 surfaceを裁定する。全8 Unit・成果物48件を最終化し、required-sections/upstream-coverage 48/48 PASS、answer-evidence 8/8 PASS、sensor failure0、diff-check PASS、memory候補0。U7はE-FVEU7NFR1後の例外独立review READY 0/0/0、U8 READY 0/0/0。U1-U6には報告済みMajor/Minorが残存し、READY/統合可/code-generation可へ読み替えず最終人間gateへ継承する。今回のsurfaceは新規persist候補0件が提案されている。成果物・review・sensor・既存memoryを独立実測し0件可否を裁定する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    {
+      "internalNo": 2,
+      "label": "0件は不可（noteにcandidate id・scope・本文・追加事項を記載）"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e4"
+  ],
+  "state": "recorded"
+}

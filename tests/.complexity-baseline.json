@@ -78,7 +78,7 @@
       "path": "packages/framework/core/tools/amadeus-orchestrate.ts",
       "name": "handleNext",
       "ordinal": 0,
-      "ccn": 39
+      "ccn": 28
     },
     {
       "path": "packages/framework/core/tools/amadeus-orchestrate.ts",
@@ -120,7 +120,7 @@
       "path": "packages/framework/core/tools/amadeus-sensor.ts",
       "name": "handleFire",
       "ordinal": 0,
-      "ccn": 25
+      "ccn": 23
     },
     {
       "path": "packages/framework/core/tools/amadeus-stage-schema.ts",
@@ -156,7 +156,7 @@
       "path": "packages/framework/core/tools/amadeus-state.ts",
       "name": "handlePracticesPromote",
       "ordinal": 0,
-      "ccn": 26
+      "ccn": 25
     },
     {
       "path": "packages/framework/core/tools/amadeus-state.ts",
@@ -198,7 +198,7 @@
       "path": "packages/framework/core/tools/amadeus-utility.ts",
       "name": "detectWorkspace",
       "ordinal": 0,
-      "ccn": 19
+      "ccn": 17
     },
     {
       "path": "packages/framework/core/tools/amadeus-utility.ts",
@@ -247,6 +247,138 @@
       "name": "renderError",
       "ordinal": 0,
       "ccn": 24
+    },
+    {
+      "path": "scripts/formal-verif/contract.ts",
+      "name": "parseArmSuiteResult",
+      "ordinal": 0,
+      "ccn": 20
+    },
+    {
+      "path": "scripts/formal-verif/contract.ts",
+      "name": "parseCellResult",
+      "ordinal": 0,
+      "ccn": 23
+    },
+    {
+      "path": "scripts/formal-verif/dispatcher.ts",
+      "name": "decodeCommand",
+      "ordinal": 0,
+      "ccn": 16
+    },
+    {
+      "path": "scripts/formal-verif/evidence-completeness.ts",
+      "name": "verifySuite",
+      "ordinal": 0,
+      "ccn": 19
+    },
+    {
+      "path": "scripts/formal-verif/execution-evidence.ts",
+      "name": "executeCell",
+      "ordinal": 0,
+      "ccn": 16
+    },
+    {
+      "path": "scripts/formal-verif/execution-policy.ts",
+      "name": "authorizeExecution",
+      "ordinal": 0,
+      "ccn": 21
+    },
+    {
+      "path": "scripts/formal-verif/fixture-proof.ts",
+      "name": "createIndependentFallingProof",
+      "ordinal": 0,
+      "ccn": 24
+    },
+    {
+      "path": "scripts/formal-verif/fixture-registry-domain.ts",
+      "name": "createDefectUniverse",
+      "ordinal": 0,
+      "ccn": 33
+    },
+    {
+      "path": "scripts/formal-verif/fixture-registry-domain.ts",
+      "name": "parseRow",
+      "ordinal": 0,
+      "ccn": 24
+    },
+    {
+      "path": "scripts/formal-verif/fixture-registry.ts",
+      "name": "validateManifestPromotionPermissionBinding",
+      "ordinal": 0,
+      "ccn": 16
+    },
+    {
+      "path": "scripts/formal-verif/fixture-scan.ts",
+      "name": "verify",
+      "ordinal": 0,
+      "ccn": 19
+    },
+    {
+      "path": "scripts/formal-verif/fixture-scan.ts",
+      "name": "verifyDataSafetyReceipt",
+      "ordinal": 0,
+      "ccn": 18
+    },
+    {
+      "path": "scripts/formal-verif/fixture-scan.ts",
+      "name": "verifyPayloadManifest",
+      "ordinal": 0,
+      "ccn": 16
+    },
+    {
+      "path": "scripts/formal-verif/fs-evidence-store.ts",
+      "name": "chain",
+      "ordinal": 0,
+      "ccn": 27
+    },
+    {
+      "path": "scripts/formal-verif/fs-fixture-registry.ts",
+      "name": "(anonymous)",
+      "ordinal": 20,
+      "ccn": 20
+    },
+    {
+      "path": "scripts/formal-verif/fs-fixture-registry.ts",
+      "name": "(anonymous)",
+      "ordinal": 22,
+      "ccn": 22
+    },
+    {
+      "path": "scripts/formal-verif/full-matrix.ts",
+      "name": "verifyFullMatrix",
+      "ordinal": 0,
+      "ccn": 18
+    },
+    {
+      "path": "scripts/formal-verif/proof-policy.ts",
+      "name": "validateCommandProof",
+      "ordinal": 0,
+      "ccn": 26
+    },
+    {
+      "path": "scripts/formal-verif/provenance.ts",
+      "name": "foldLedger",
+      "ordinal": 0,
+      "ccn": 21
+    },
+    {
+      "path": "scripts/formal-verif/provenance.ts",
+      "name": "nextState",
+      "ordinal": 0,
+      "ccn": 20
+    },
+    {
+      "path": "scripts/formal-verif/provenance.ts",
+      "name": "validateEvent",
+      "ordinal": 0,
+      "ccn": 43
+    },
+    {
+      "path": "scripts/formal-verif/tla-skeleton.ts",
+      "name": "verifyPreconditionProofs",
+      "ordinal": 0,
+      "ccn": 20
     },
     {
       "path": "scripts/package.ts",

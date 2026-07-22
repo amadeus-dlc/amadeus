@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FVENDS13",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可を支持する。NFR Design成果物は8 Unit×6=48件で、sorted shasum列の再hashは配布されたaggregate SHA256 2e8aa6c9b6c9c5d7c09246e60027b1a29490980463fdfa712423e144d7a58554と一致した。最終sensor列は84 fired/84 passed、git diff --checkも成功し、stage memoryは観測0のテンプレートのみ。最終architecture reviewは同一snapshotでCritical 0・新規Major 0・新規Minor 0を確認し、aggregate NOT-READYは各Unit review上限後の既知Major 7件を保持するためである。7件は当該設計成果物内の未解決実装契約で、今回新たに一般化すべきprocess norm surfaceではない。",
+  "submittedAt": "2026-07-20T16:04:25Z"
+}

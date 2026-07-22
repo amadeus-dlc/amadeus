@@ -1,0 +1,25 @@
+{
+  "electionId": "E-FVEU3FD1",
+  "kind": "reviewer-exhaustion-question",
+  "question": "260720-formal-verif-experiment / U3 execution-evidence / functional-design。reviewer iteration1 NOT READY 4件を是正後、iteration2もNOT READY 3件（writer race、envelope改変検出、finding union不足）でreviewer_max_iterations=2に到達。stage-protocol §12aはiterations exhaustedならunresolved findingsを明記してapproval gateへ進むと規定し、per-unit gateは最終Unit後まで抑止される。iteration2後に承認済みscope内で、single-writer lock中head再確認+共通successor atomic rename、ledger coordinates+final envelope hash、Incomplete findings discriminator/cause追加まで最小是正済み。最新sensor全PASS・diff-check PASSだが第三review未実施。次の扱いを裁定する。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. max-exhausted履歴を保持して次Unitへ進み最終FD gateで裁定"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. exceptional独立検証を先に要求しU3で停止"
+    },
+    {
+      "internalNo": 3,
+      "label": "X. その他（noteに検証境界と再開条件を記載）"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e4"
+  ],
+  "state": "recorded"
+}

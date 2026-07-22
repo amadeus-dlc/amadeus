@@ -39,11 +39,12 @@
 //     sequence, so WORKFLOW_COMPLETED stays at exactly 1 (and no second
 //     STAGE_COMPLETED lands). This is the realistic re-run scenario in the
 //     deterministic walk (the orchestrator replays an approve), so it is the
-//     behavioural contract pinned here. NOTE the failed approve is not a
-//     silent no-op: error() routes through emitError (:1709 -> lib :1473) and
-//     appends exactly ONE ERROR_LOGGED row, so the trail GROWS by one and its
-//     new dead-last event is ERROR_LOGGED, not a duplicate WORKFLOW_COMPLETED.
-//     The test asserts that real shape.
+//     behavioural contract pinned here. NOTE the failed approve still routes
+//     through error() -> emitError, but the post-complete audit stop (#1248,
+//     amadeus-audit.ts intentStatusForAudit gate) refuses the ERROR_LOGGED
+//     append once the intent is complete, so the sealed trail does NOT grow
+//     and WORKFLOW_COMPLETED stays dead-last. The test asserts that real
+//     shape, plus the suppression note on stderr.
 //   - SOURCE SURPRISE (not the asserted path, noted for the record): re-running
 //     `complete-workflow build-and-test` DIRECTLY is NOT idempotent — it has no
 //     already-Completed early return, and the alreadyMarkedCompleted guard
@@ -245,7 +246,7 @@ describe("complete-workflow idempotency: re-running the final approve emits no s
     projects.push(proj);
   }, DRIVE_TIMEOUT_MS);
 
-  test("approve PAST THE END fails (slug already [x]) and emits NO second WORKFLOW_COMPLETED / STAGE_COMPLETED — only an ERROR_LOGGED row", () => {
+  test("approve PAST THE END fails (slug already [x]) and appends NOTHING — the completed intent's audit ledger is sealed (#1248)", () => {
     // Precondition: the clean walk landed exactly one WORKFLOW_COMPLETED, with
     // it dead-last in the trail.
     const before = eventSequence(proj);
@@ -266,6 +267,9 @@ describe("complete-workflow idempotency: re-running the final approve emits no s
     // The error names the state-machine guard it tripped (asserts the cause,
     // not just "it failed somehow").
     expect(replay.stdout + replay.stderr).toContain("awaiting-approval");
+    // And the error's audit row was refused by the post-complete seal — the
+    // suppression note proves the sealed-ledger path ran, not a silent no-op.
+    expect(replay.stderr).toContain("suppressed ERROR_LOGGED append");
 
     // The IDEMPOTENCY contract on the audit FILE: still exactly one
     // WORKFLOW_COMPLETED (no duplicate terminal event) and no extra
@@ -275,16 +279,15 @@ describe("complete-workflow idempotency: re-running the final approve emits no s
     expect(countEvent(after, "STAGE_COMPLETED")).toBe(stageCompletedBefore);
 
     // REAL behaviour of the failed replay (asserted, not assumed): the error
-    // path routes through error() -> emitError (amadeus-state.ts:1709 ->
-    // amadeus-lib.ts:1473), which appends exactly ONE ERROR_LOGGED row. So the
-    // trail GREW by one event and the new dead-last event is ERROR_LOGGED, NOT
-    // a second WORKFLOW_COMPLETED. Pinning this guards a future regression
-    // where a failed past-the-end approve falls through to the terminal emits.
-    expect(after.length).toBe(before.length + 1);
-    expect(after[after.length - 1]).toBe("ERROR_LOGGED");
-    // And WORKFLOW_COMPLETED remains the last NON-error terminal event.
-    expect(after.lastIndexOf("WORKFLOW_COMPLETED")).toBe(
-      after.length - 2,
-    );
+    // path still routes through error() -> emitError, but the post-complete
+    // audit stop (#1248, amadeus-audit.ts intentStatusForAudit gate) refuses
+    // every append once the intent's registry row is "complete" — including
+    // the replay's ERROR_LOGGED row. So the sealed trail does NOT grow and
+    // WORKFLOW_COMPLETED stays dead-last. Pinning this guards two regressions
+    // at once: a failed past-the-end approve falling through to the terminal
+    // emits, and the ledger seal reopening after completion. The suppression
+    // mechanism itself is covered by t243-post-complete-audit-stop.
+    expect(after.length).toBe(before.length);
+    expect(after[after.length - 1]).toBe("WORKFLOW_COMPLETED");
   });
 });
