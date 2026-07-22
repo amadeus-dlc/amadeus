@@ -6,6 +6,8 @@ export * from "./evidence-completeness.ts";
 export * from "./execution-evidence.ts";
 export * from "./execution-policy.ts";
 export * from "./fs-evidence-store.ts";
+export * from "./full-matrix.ts";
+export * from "./full-matrix-cost.ts";
 export * from "./fixture-proof.ts";
 export * from "./fixture-registry-domain.ts";
 export { authorizeDisclosure, createSealedFixture, fixturePayloadIdentity, ledgerStateIdentity, verifyDisclosureAuthorization } from "./fixture-registry.ts";

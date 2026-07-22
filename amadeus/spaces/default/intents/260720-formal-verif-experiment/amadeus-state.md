@@ -7,7 +7,7 @@
 - **Start Date**: 2026-07-20T04:36:50Z
 - **State Version**: 7
 - **Active Agent**: amadeus-developer-agent
-- **Worktree Path**:
+- **Worktree Path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**: 2026-07-20T07:30:34Z
 
@@ -92,6 +92,7 @@ Per unit: [TBD]
 - **Current Stage**: code-generation
 - **Next Stage**: build-and-test
 - **Status**: Running
+- **Construction Autonomy Mode**: autonomous
 - **Last Updated**: 2026-07-22T00:55:36Z
 
 ## Session Resume Point
