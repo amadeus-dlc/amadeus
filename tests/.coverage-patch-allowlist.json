@@ -28,5 +28,167 @@
     "lines": "868",
     "reason": "Unknown-subcommand usage message string in main()'s default case — `resolve` was appended to the existing single-line valid-subcommand list (#1157). A spawn-only main() message-string row (spawn-blindspot-two-step (ii)); the surrounding default branch was already unmeasured before this change.",
     "expiry": "remove when main() gains an in-process argv driver"
+  },
+  {
+    "file": "tests/formal-verif/support/contract-provenance-harness.ts",
+    "lines": "30-105",
+    "reason": "Spawn-only import.meta.main scenario driver for tests/e2e/t-formal-verif-contract-provenance.test.ts; consumed only by the formal-verif e2e tests, which the CI coverage profile (smoke+unit+integration) does not execute; bun --coverage also cannot measure spawned children (bun-coverage-spawn-blindspot).",
+    "expiry": "remove when the formal-verif e2e suite joins the CI coverage profile"
+  },
+  {
+    "file": "tests/formal-verif/support/execution-evidence-harness.ts",
+    "lines": "32-36",
+    "reason": "Spawn-only import.meta.main driver for tests/e2e/t-formal-verif-execution-evidence.test.ts; consumed only by the formal-verif e2e tests, which the CI coverage profile (smoke+unit+integration) does not execute; bun --coverage also cannot measure spawned children (bun-coverage-spawn-blindspot).",
+    "expiry": "remove when the formal-verif e2e suite joins the CI coverage profile"
+  },
+  {
+    "file": "tests/formal-verif/support/sealed-fixture-registry-harness.ts",
+    "lines": "61-80",
+    "reason": "fiveSealedFixtureSet is consumed only by the formal-verif e2e tests, which the CI coverage profile (smoke+unit+integration) does not execute; bun --coverage also cannot measure spawned children (bun-coverage-spawn-blindspot).",
+    "expiry": "remove when the formal-verif e2e suite joins the CI coverage profile"
+  },
+  {
+    "file": "tests/formal-verif/support/tla-skeleton-preconditions.ts",
+    "lines": "71-73",
+    "reason": "Defensive catch-cleanup (rmSync then rethrow) in an e2e-only precondition builder; consumed only by the formal-verif e2e tests, which the CI coverage profile (smoke+unit+integration) does not execute; bun --coverage also cannot measure spawned children (bun-coverage-spawn-blindspot).",
+    "expiry": "remove when the formal-verif e2e suite joins the CI coverage profile"
+  },
+  {
+    "file": "scripts/formal-verif/fs-tlc-toolchain.ts",
+    "lines": "162-225",
+    "reason": "Live Node adapter ports (NodeArtifactNetworkPort HTTPS fetch, NodeFileDigestPort, NodePhysicalReservationPort disk reservation) exercised only by the real-toolchain probe (tests/formal-verif/support/tla-real-toolchain-probe.ts) outside CI; no network or disk-reservation substrate in the CI coverage job.",
+    "expiry": "remove when a hermetic real-toolchain probe runs in the CI coverage profile"
+  },
+  {
+    "file": "scripts/formal-verif/fs-tlc-toolchain.ts",
+    "lines": "322-353",
+    "reason": "Live Node adapter ports (NodeJavaVersionPort java -version, NodeTlcProcessPort process-group spawn) exercised only by the real-toolchain probe outside CI; requires a real JDK/TLC install.",
+    "expiry": "remove when a hermetic real-toolchain probe runs in the CI coverage profile"
+  },
+  {
+    "file": "scripts/formal-verif/fs-fixture-registry.ts",
+    "lines": "57-64",
+    "reason": "createPromotedFixtureManifest promotion path driven only by the e2e proof-to-promotion lifecycle test; consumed only by the formal-verif e2e tests, which the CI coverage profile (smoke+unit+integration) does not execute; bun --coverage also cannot measure spawned children (bun-coverage-spawn-blindspot).",
+    "expiry": "remove when the formal-verif e2e suite joins the CI coverage profile"
+  },
+  {
+    "file": "scripts/formal-verif/fs-fixture-registry.ts",
+    "lines": "341-368",
+    "reason": "verifyPromotionIndex durable-index verification driven only by the e2e proof-to-promotion lifecycle test; consumed only by the formal-verif e2e tests, which the CI coverage profile (smoke+unit+integration) does not execute; bun --coverage also cannot measure spawned children (bun-coverage-spawn-blindspot).",
+    "expiry": "remove when the formal-verif e2e suite joins the CI coverage profile"
+  },
+  {
+    "file": "scripts/formal-verif/fixture-proof.ts",
+    "lines": "57",
+    "reason": "Defensive catch in the realpath containment probe (returns false when realpathSync throws); no CI-driven input reaches the throw path.",
+    "expiry": "remove if a test injects a dangling path through the containment probe"
+  },
+  {
+    "file": "scripts/formal-verif/fixture-proof.ts",
+    "lines": "96-104",
+    "reason": "Multi-line function-signature type-annotation lines of createIndependentFallingProof; runtime-erased, bun lcov chunk-merge stamps them DA:0 (bun-multiline-arg-da0 class). The function body is e2e/live-only (independent falling proof over real worktrees).",
+    "expiry": "remove when the formal-verif e2e suite joins the CI coverage profile"
+  },
+  {
+    "file": "scripts/formal-verif/execution-evidence.ts",
+    "lines": "141-146",
+    "reason": "Multi-line function-signature type-annotation lines of runArmSuite; runtime-erased, DA:0 via bun lcov chunk merge (bun-multiline-arg-da0 class).",
+    "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
+  },
+  {
+    "file": "scripts/formal-verif/execution-evidence.ts",
+    "lines": "159-160",
+    "reason": "EVIDENCE_FAILURE incomplete-suite branch, reached only when a live executeCell fails mid-suite; the CI-run integration tests drive complete suites and per-cell failures separately.",
+    "expiry": "remove when an integration test drives a mid-suite cell failure through runArmSuite"
+  },
+  {
+    "file": "scripts/formal-verif/fixture-registry.ts",
+    "lines": "127-133",
+    "reason": "Multi-line function-signature type-annotation lines of authorizeDisclosure; runtime-erased, DA:0 via bun lcov chunk merge (bun-multiline-arg-da0 class). Disclosure authorization is driven by the e2e lifecycle test.",
+    "expiry": "remove when the formal-verif e2e suite joins the CI coverage profile"
+  },
+  {
+    "file": "scripts/formal-verif/tla-arm.ts",
+    "lines": "195",
+    "reason": "Defensive TypeError throw line in assertTlaElectionAction (non-plain-object action); CI-run tests submit well-formed actions.",
+    "expiry": "remove if a test injects a non-plain action object"
+  },
+  {
+    "file": "scripts/formal-verif/tla-arm.ts",
+    "lines": "260",
+    "reason": "HOLD/TIE branch of the tally fold; the CI-run model tests tally decisive electorates.",
+    "expiry": "remove when a tie electorate is added to the model tests"
+  },
+  {
+    "file": "scripts/formal-verif/tla-arm.ts",
+    "lines": "848",
+    "reason": "Defensive catch mapping a malformed public-contract identity to a reject receipt; upstream validation keeps CI inputs well-formed.",
+    "expiry": "remove if a test drives a malformed contract identity to validateFrozenTlaModelReceipt"
+  },
+  {
+    "file": "scripts/formal-verif/arm-s-universe.ts",
+    "lines": "134",
+    "reason": "Cardinality-mismatch guard (count/unique defect) unreachable from the fixed generator under test; falling-proof class negative guard.",
+    "expiry": "remove if a mutation probe drives the count guard"
+  },
+  {
+    "file": "scripts/formal-verif/arm-s-universe.ts",
+    "lines": "160",
+    "reason": "Axis-histogram mismatch guard unreachable from the fixed generator under test.",
+    "expiry": "remove if a mutation probe drives the axis guard"
+  },
+  {
+    "file": "scripts/formal-verif/arm-s-universe.ts",
+    "lines": "227",
+    "reason": "Validation-cardinality mismatch guard unreachable from the fixed generator under test.",
+    "expiry": "remove if a mutation probe drives the validation-count guard"
+  },
+  {
+    "file": "scripts/formal-verif/arm-s-runner.ts",
+    "lines": "284",
+    "reason": "Append-only violation flag line, reached only when a store defect mutates the ledger prefix; negative guard.",
+    "expiry": "remove if a fault-injection test mutates the ledger prefix"
+  },
+  {
+    "file": "scripts/formal-verif/arm-s-runner.ts",
+    "lines": "452",
+    "reason": "Harness-error proof branch (exhaustive exploration failed), live-run defect path.",
+    "expiry": "remove if a fault-injection test drives an exploration failure"
+  },
+  {
+    "file": "scripts/formal-verif/arm-s-runner.ts",
+    "lines": "458",
+    "reason": "Property-counterexample proof branch after clean exhaustive pass; unreachable when exhaustive search already covers the property domain.",
+    "expiry": "remove if a subject with a property-only defect is added"
+  },
+  {
+    "file": "scripts/formal-verif/tlc-toolchain.ts",
+    "lines": "541",
+    "reason": "JDK vendor/version mismatch guard against the fixed run profile; CI-run tests use the fixed profile.",
+    "expiry": "remove if a test drives a mismatched JDK profile"
+  },
+  {
+    "file": "scripts/formal-verif/tlc-toolchain.ts",
+    "lines": "544",
+    "reason": "JDK executable-identity invalid guard; CI-run tests use valid identities.",
+    "expiry": "remove if a test drives an invalid JDK identity"
+  },
+  {
+    "file": "scripts/formal-verif/fixture-scan.ts",
+    "lines": "151-152",
+    "reason": "Defensive catch in the payload streaming reader (close fd then fail); no CI-driven input throws mid-open.",
+    "expiry": "remove if a fault-injection test drives a payload read failure"
+  },
+  {
+    "file": "scripts/formal-verif/contract.ts",
+    "lines": "52",
+    "reason": "Type/interface declaration line (ParseCounters); runtime-erased, DA:0 via bun lcov chunk merge (bun-inbody/multiline DA:0 class).",
+    "expiry": "remove if bun lcov stops stamping erased lines"
+  },
+  {
+    "file": "scripts/formal-verif/contract.ts",
+    "lines": "120",
+    "reason": "Catch arm mapping malformed JSON bytes to a parse failure inside decodeJson; sibling tests drive it via the spawn-only e2e contract harness.",
+    "expiry": "remove when the formal-verif e2e suite joins the CI coverage profile"
   }
 ]
