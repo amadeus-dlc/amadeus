@@ -1,0 +1,14 @@
+diff --git a/scripts/formal-verif/tla-arm.ts b/scripts/formal-verif/tla-arm.ts
+index 34162f1ce..36589d963 100644
+--- a/scripts/formal-verif/tla-arm.ts
++++ b/scripts/formal-verif/tla-arm.ts
+@@ -436,7 +436,8 @@ SubmitOriginal(v, c, s, g) ==
+   /\\ IF c = "UNKNOWN_CHOICE"
+      THEN Reject
+      ELSE IF s \\notin SubmittedAt
+-     THEN Reject
++     THEN /\\ initialBudget' = [initialBudget EXCEPT ![v] = 0]
++          /\\ UNCHANGED <<accepted, reexamRequired, amendBudget, holdBudget, holdMarkers, tally>>
+      ELSE /\\ initialBudget' = [initialBudget EXCEPT ![v] = 0]
+           /\\ UNCHANGED <<amendBudget, holdBudget, holdMarkers, tally>>
+           /\\ LET ballot == [choice |-> c, submittedAt |-> s, goaClass |-> GoAClass(g), arrivalSeq |-> NextSeq]
