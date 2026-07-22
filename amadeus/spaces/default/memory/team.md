@@ -299,6 +299,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 <!-- amadeus:practices-promote:END -->
 
 - 複数の test path を列挙してテストを実行する場合は、実行前に全 path の実在を機械確認し、実行後に期待ファイル数と runner の `Ran ... across M files` を照合する — Bun は不存在 path を無音で除外したまま exit 0 になり得るため、green だけでは意図したテスト母集団の全数実行を保証しない(report-final-values-only / numbers-from-command-output-only のテスト入力集合面の追補)。票: E-HCRBT2 配信 2026-07-20T07:44:25Z → e4 採用 07:44:38Z(受理 07:44:51Z) → e3 採用 07:45:03Z(受理 07:45:37Z) → e1 採用 07:45:33Z(受理 07:46:38Z) → 開票 07:47:14Z。GoA[E-HCRBT2]: 1x3 2x0 3x0 4x0 5x0 6x0 7x0 8x0 (learned 2026-07-20) <!-- cid:build-and-test:test-path-set-completeness -->
+- 検証は二層で運用する(260720-formal-verif-experiment の FR-6 採否裁定、user decision 2026-07-22): 日常 CI は property-based/unit/integration(高速・既存 CI 同居)を回し、並行プロトコル(選挙・監査ロック・provenance など状態機械/相互排除の不変量)の spec 変更時のみ、単一形式モデルの完全探索(TLA+/TLC 等)を専用ジョブ(macOS + JDK + sandbox、workflow_dispatch)で追加する。前提として PBT 単独は本実験の欠陥集合で 7 中 4 件を恒久見逃す(オラクル相殺、cid:build-and-test:pbt-oracle-cancellation)ことを承知の上で配置し、形式検証をすべての変更へ一律義務化はしない — 発動条件は「並行プロトコルの spec 変更」に限定する。実測根拠: 適格性実験で TLA+ が 7/7 適格・PBT が 3/7 不適格(experiment/eligibility-report.md)(user decision 2026-07-22) <!-- cid:build-and-test:two-layer-verification-posture -->
 ## Deployment
 
 <!-- amadeus:practices-promote:BEGIN -->
