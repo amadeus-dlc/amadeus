@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TPRRAS13",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "採用(1)。実測: e1 RA record の requirements.md:60,64 と diary Deviations 22:43:19Z を直読 — iteration 2 の Major『FR-5 [e3] 留保前半節欠落』は私自身の票の留保であり、E-TPRRA3/record.md 原文と FR-5 現行文の grep 突き合わせで欠落→verbatim 復元を当事者として逐語確認した。diary Interpretations 22:32:58Z の件数照合(GoA2 7件・機械照合一致)が green のままこの部分欠落が通過した事実も確認 — 件数照合が誤帰属・部分欠落を構造的に検出できないという候補の主張は実測成立。既存 cid:reservation-transcription-count-check は件数照合のみを規定しており per-voter 逐語照合は含意されない — 追補統合は真のギャップ充填で妥当。",
+  "submittedAt": "2026-07-22T22:46:04Z"
+}

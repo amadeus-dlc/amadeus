@@ -458,6 +458,13 @@
     "status": "complete"
   },
   {
+    "uuid": "019f8a5b-eab2-74ef-b700-a8aebc250814",
+    "slug": "space-record-catalog",
+    "dirName": "260722-space-record-catalog",
+    "scope": "amadeus",
+    "status": "in-flight"
+  },
+  {
     "uuid": "019f8bee-9cff-7bf2-925a-3060d1aec008",
     "slug": "election-core-promotion",
     "dirName": "260722-election-core-promotion",

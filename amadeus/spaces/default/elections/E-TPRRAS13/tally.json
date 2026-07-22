@@ -1,0 +1,64 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "採用 — cid:reservation-transcription-count-check への追補として persist"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "採用 — cid:reservation-transcription-count-check への追補として persist",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "不採用 — 既存 cid の含意で足りる(diary 記録のみ)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-22T22:47:13Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TPRRAS13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "採用(1)。実測: e1 RA record の requirements.md:60,64 と diary Deviations 22:43:19Z を直読 — iteration 2 の Major『FR-5 [e3] 留保前半節欠落』は私自身の票の留保であり、E-TPRRA3/record.md 原文と FR-5 現行文の grep 突き合わせで欠落→verbatim 復元を当事者として逐語確認した。diary Interpretations 22:32:58Z の件数照合(GoA2 7件・機械照合一致)が green のままこの部分欠落が通過した事実も確認 — 件数照合が誤帰属・部分欠落を構造的に検出できないという候補の主張は実測成立。既存 cid:reservation-transcription-count-check は件数照合のみを規定しており per-voter 逐語照合は含意されない — 追補統合は真のギャップ充填で妥当。",
+      "submittedAt": "2026-07-22T22:46:04Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TPRRAS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "採用(1)。実測確認: (a) e1 RA diary Deviations 22:43:19Z に iteration 1(Major2+Minor1)/iteration 2(Major1+Minor1)の指摘・是正記録が実在 (b) requirements.md :64-65 に FR-5 [e3] 前半節欠落(Major)・FR-4 [e4] 出典簡略化(Minor)の grep 機械閉包(record.md/requirements.md 各1 hit)記録実在 — FR-4 [e4] は私自身の留保で、E-TPRRA2 record.md 原文と requirements.md :17 の逐語一致を自分でも確認した (c) 機序の妥当性: 件数照合(既存 cid)は GoA2/3/6 票数 vs 転記件数の照合であり、誤帰属(話者ラベル取り違え)と部分欠落(エントリ実在のまま節脱落)はいずれも件数不変で構造的に green 通過する — per-voter 逐語照合(record 原文の部分文字列 grep)がこの盲点を機械的に埋める。既存 cid への追補統合は二重規定回避の既習様式に沿う。",
+      "submittedAt": "2026-07-22T22:46:09Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TPRRAS13",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "grep 対象は markdown 装飾で壊れない装飾フリーの核心部分文字列(または装飾除去後テキスト)を選ぶことを追補文に含める — 太字・強調の挿入で naive grep が偽陰性/偽陽性化する",
+      "rationale": "採用(cid:reservation-transcription-count-check への追補)。独立実測3点: (1) e1 audit シャード(24f8aaf85 の j5ik2o-mac-studio-local-add286b804a1.md)で iteration 1 の reviewer verdict 実文『Major #1 — FR-3 の留保転記が election record の内容と不一致(内容誤帰属)』を確認 — 一方 diary は『GoA2 7件(RA1:2、RA2:2、RA3:3、RA4:0)機械照合一致』と件数照合 green を記録しており、候補の主張『件数一致でも誤帰属・部分欠落は通過』は実測どおり。(2) iteration 2 の Major(FR-5 [e3] 前半節『A と C は非ゼロ exit の点で実質同型』欠落)も E-TPRRA3 record.md:8 との突き合わせで実在確認。(3) 追加の現存実例を自票で発見: FR-5 [e5] 留保は record.md:9 の『mux_attach より前』が requirements.md では『mux attach より**前**』と識別子破壊+装飾挿入されており、per-voter 逐語照合ならこれも検出できた(件数照合は通過済み)— 追補の検出価値が是正後の現物にも残存する生きた証拠。既存 cid は件数照合のみを規定し逐語照合は未規定のため、追補は非重複。",
+      "submittedAt": "2026-07-22T22:46:54Z"
+    }
+  ],
+  "resolutions": []
+}
