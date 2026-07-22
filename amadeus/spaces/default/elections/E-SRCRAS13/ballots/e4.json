@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCRAS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "提案どおり(1)。実測: (a) 候補4件は s13-candidates.md と diary(Interpretations 23:37:07Z、Deviations 23:31:51Z/23:28:03Z、Tradeoffs 23:37:07Z)で verbatim 一致 (b) c2 の実測根拠 = requirements.md :11 の『承認系譜(スコープ境界の変遷 — 申告)』段落(dispatch 22:08:41Z agmsg 出典明示+delegate 99d78653a issuerHumanTs+E-SRCRA5 C 採用 2-1 の3点引用、evidence-split 準拠)と :90 の iteration 1 Critical 解消記録を直読確認 (c) 新規性判定: 既存 citation 系 cid は実在(mechanism-cite-verify)・完全性(enumeration-completeness)・留保保存(citation-reservation-preservation)を覆うが『park 予約の後続承認による境界変遷の系譜申告』は未規定 — reviewer には無申告逸脱と構造的に区別不能という機序も本 RA の Critical で実測されており直交面の新設は妥当 (d) c1/c3/c4 の不採用(PM 実例回付・ガード正常動作・既存 cid 機械適用)も diary 記録と整合。",
+  "submittedAt": "2026-07-22T23:38:43Z"
+}
