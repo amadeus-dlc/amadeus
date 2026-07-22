@@ -150,10 +150,15 @@ function cellKeyId(key: MatrixCellKey): string { return `${key.arm}\0${key.sampl
 // BR-01/BR-04 identity binding at the validator layer: a schedule compiled
 // from a different input set must never validate this matrix as complete,
 // even on call paths that skip buildMatrixEvidence.
-export function verifyFullMatrix(inputSet: CanonicalInputSet, schedule: MeasurementSchedule, run: FullMatrixRun): FullMatrixValidation {
+function inputBindingFindings(inputSet: CanonicalInputSet, schedule: MeasurementSchedule, run: FullMatrixRun): MatrixFinding[] {
   const findings: MatrixFinding[] = [];
   if (schedule.inputSetIdentity !== inputSet.inputSetIdentity) findings.push({ kind: "INPUT_DRIFT", cause: "schedule is not bound to this input set identity" });
   if (run.scheduleId !== schedule.scheduleId) findings.push({ kind: "INPUT_DRIFT", cause: "run is not bound to this schedule" });
+  return findings;
+}
+
+export function verifyFullMatrix(inputSet: CanonicalInputSet, schedule: MeasurementSchedule, run: FullMatrixRun): FullMatrixValidation {
+  const findings: MatrixFinding[] = [...inputBindingFindings(inputSet, schedule, run)];
   if (run.receipts.length !== schedule.entries.length) findings.push({ kind: "CHAIN_DRIFT", ordinal: -1, cause: "receipt count does not match schedule" });
   run.receipts.forEach((receipt, index) => {
     const entry = schedule.entries[index];
