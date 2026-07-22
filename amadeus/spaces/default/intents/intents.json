@@ -456,5 +456,12 @@
     "dirName": "260722-state-intent-selector",
     "scope": "chore",
     "status": "complete"
+  },
+  {
+    "uuid": "019f8bee-9cff-7bf2-925a-3060d1aec008",
+    "slug": "election-core-promotion",
+    "dirName": "260722-election-core-promotion",
+    "scope": "amadeus",
+    "status": "in-flight"
   }
 ]
