@@ -1,0 +1,21 @@
+{
+  "electionId": "E-TPRRE13",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260722-teamup-prompt-race / reverse-engineering の §13 学習選定: 採用0件の確認。conductor(e1)起案 verbatim — 候補0件。理由: 本ステージの発見は (1) バグ帰属(260721-teamup-safety-wait の Codex 専用実装の一般化漏れ)= Issue/requirements 側の材料 (2) 既決 cid の適用実績(rescan-base-ancestry / re-sensors-codekb-filter-mismatch / symmetric-pair-review)のみで、新規ノルム候補なし。各自 codekb 差分と re-scans/260722-teamup-prompt-race.md を実測確認のうえ GoA 付きで投票してください。軽量様式可。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 新規ノルム候補なしに同意"
+    },
+    {
+      "internalNo": 2,
+      "label": "異議 — 採用すべき候補がある(票コメントで特定)"
+    }
+  ],
+  "voters": [
+    "e3",
+    "e4",
+    "e5"
+  ],
+  "state": "recorded"
+}

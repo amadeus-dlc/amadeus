@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCAH13",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。実測: e2 record の memory.md:5(グラント解釈)と leader→e2 通知文 22:11:08Z の『フェーズ境界ゲートは対象外』明文を照合 — c1 は明示除外の機械的読解で新規性なし。memory.md:9 の E-OC1 先取り自己捕捉は既存 cid:no-election-judgment-gate の違反実例であり c2 のノルム新設不要・PM 回付が妥当。",
+  "submittedAt": "2026-07-22T22:21:23Z"
+}

@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TPRRE13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。実測: e1 codekb amadeus/re-scans/260722-teamup-prompt-race.md を直読 — base a326f47bc の祖先性・distance 101、原因所在=260721-teamup-safety-wait の Codex 専用 readiness 検証(team-up.sh:340 '[ \"$RUNTIME\" = \"codex\" ] || return 0' verbatim 確認)の一般化漏れ。発見はバグ帰属+既決 cid 適用のみで新規ノルム候補なしに同意。",
+      "submittedAt": "2026-07-22T22:21:23Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TPRRE13",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e1 worktree の re-scans/260722-teamup-prompt-race.md をリードオンリー直読で実測確認: (1) 主発見『260721-teamup-safety-wait の Codex 専用 safety-wait を claude 経路へ一般化しなかった設計漏れ』は bug-intent-linkage の原因所在記録と requirements 側材料であり、片側実装の非対称クラスは既決 symmetric-pair-review が既にカバー。(2) その他は rescan-base-ancestry(base a326f47 の --is-ancestor exit 0・distance 101 記載)/ re-sensors-codekb-filter-mismatch / measurement-ref-in-artifacts 等の既決 cid 適用実績のみ。(3) 未決点4件(修正方式・fingerprint 要否・実行時未確認・回帰テスト新設)はいずれも requirements/設計段の判断事項でノルム候補ではない。新規ノルム候補なしに同意。",
+      "submittedAt": "2026-07-22T22:19:29Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TPRRE13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。実測確認: e1 tree の codekb/amadeus/re-scans/260722-teamup-prompt-race.md と inception/reverse-engineering/memory.md を直読 — 内容は (1) バグ帰属(260721-teamup-safety-wait の :340 codex 専用ガードによる一般化漏れ、requirements 側材料) (2) 既決 cid の適用実績(rescan-base-ancestry の祖先判定 exit 0/1、re-sensors-codekb-filter-mismatch の手動代替、symmetric-pair-review)のみで新規ノルム候補なし。私自身 #1384 クロスレビューで team-up.sh:800/:830-832・spawn.sh:577-587 を独立実測しており記載と一致。",
+      "submittedAt": "2026-07-22T22:21:41Z"
+    }
+  ],
+  "late": []
+}

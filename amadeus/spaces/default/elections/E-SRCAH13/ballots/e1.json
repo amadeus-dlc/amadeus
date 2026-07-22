@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCAH13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。実測確認2点: (a) c1 — leader の grant 通知(22:11:08Z 受信文)に『フェーズ境界は対象外』が verbatim で明記されており、解釈は通知文の機械的読解で新規性なし。(b) c2 — e2 worktree の <record>/ideation/approval-handoff/memory.md:9 に『E-OC1 先取り記入を自己捕捉・即是正(コミット前に全空欄化+承認待ちヘッダへ修正)』の記録を直読確認。既存 cid:no-election-judgment-gate(3段順序)の違反実例であり、ノルム新設でなく PM 違反実例カウントへの回付が既決運用(cid:postmortem-two-tier)に整合する。よって両候補不採用・0件に同意。",
+  "submittedAt": "2026-07-22T22:20:49Z"
+}
