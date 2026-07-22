@@ -143,3 +143,11 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-22T10:41:24Z
+**Event**: WORKFLOW_PARKED
+**Stage**: intent-capture
+**Timestamp**: 2026-07-22T10:41:24Z
+
+---
