@@ -52,6 +52,7 @@
 - **[ルールと学習ループ](docs/guide/09-rules-and-the-learning-loop.ja.md)** — 人間の是正が層状のメソッドルールとして永続化。矛盾を拒否する admission check 付き
 - **[2層のナレッジ](docs/guide/08-knowledge.ja.md)** — メソドロジー知識はフレームワークに同梱、チーム・ドメイン知識はワークスペースに蓄積
 - **[決定的センサー](docs/harness-engineering/06-sensors.ja.md)** — リンター、型検査、構造検査がステージごとに自動発火
+- **[プラグイン](docs/guide/19-plugins.ja.md)** — フレームワーク本体を編集せずにステージ・シームエントリ・プロズフラグメントをワークスペースへ追加する小さな手書きバンドル。全ハーネスへ投影され、アトミックに合成され、痕跡なく除去できる
 - **[状態機械と監査証跡](docs/guide/10-state-and-audit.ja.md)** — 追記専用・クローンごとの監査シャード。すべてのゲート、回答、センサー判定が記録に残る
 - **[セッション管理](docs/guide/11-session-management.ja.md)** — チェックポイントからの再開、やり直し、任意のステージ・フェーズへのジャンプ、park / unpark
 - **[CLI ユーティリティ](docs/guide/12-cli-commands.ja.md)** と **[セッションスキル](docs/guide/17-skills.ja.md)** — status、doctor、コストレポート、リプレイ、アウトカムパック、grilling インタビュー

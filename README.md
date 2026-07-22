@@ -52,6 +52,7 @@ At every stage the leading agent produces reviewable artifacts under the `amadeu
 - **[Rules and a learning loop](docs/guide/09-rules-and-the-learning-loop.md)** — human corrections persist as layered method rules, guarded by an admission check that rejects contradictions
 - **[Two-tier knowledge](docs/guide/08-knowledge.md)** — methodology knowledge ships with the framework; team and domain knowledge accumulates in your workspace
 - **[Deterministic sensors](docs/harness-engineering/06-sensors.md)** — linters, type checks, structural artifact checks, firing automatically per stage
+- **[Plugins](docs/guide/19-plugins.md)** — small, hand-authored bundles that add stages, seam entries, and prose fragments to a workspace without editing the framework: projected to every harness, composed atomically, dropped without residue
 - **[State machine and audit trail](docs/guide/10-state-and-audit.md)** — append-only, per-clone audit shards; every gate, answer, and sensor verdict is on the record
 - **[Session management](docs/guide/11-session-management.md)** — resume from checkpoint, redo, jump to any stage or phase, park and unpark
 - **[CLI utilities](docs/guide/12-cli-commands.md)** and **[session skills](docs/guide/17-skills.md)** — status, doctor, cost report, replay narrative, outcomes pack, grilling interviews
