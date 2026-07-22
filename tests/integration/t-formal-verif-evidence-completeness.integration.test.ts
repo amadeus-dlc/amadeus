@@ -7,6 +7,9 @@ import type { CellEvidenceInput, SampleKey } from "../../scripts/formal-verif/ex
 import { FsEvidenceStoreAdapter, type VerifiedEvidenceProof } from "../../scripts/formal-verif/fs-evidence-store.ts";
 
 const roots: string[] = [];
+// The 6-suite matrix tests publish 12 fsync-heavy cells; under the CI runner's
+// parallel band the default 5000ms bun timeout is load-sensitive (#1331).
+const MATRIX_TIMEOUT_MS = 30_000;
 afterEach(() => roots.splice(0).forEach((root) => { rmSync(root, { recursive: true, force: true }); }));
 const result = (subject: string, verdict: "DETECTED" | "NOT_DETECTED" | "HARNESS_ERROR" = subject === "HEALTHY_BASELINE" ? "NOT_DETECTED" : "DETECTED") => ({ schemaVersion: 1 as const, arm: "tla" as const, fixtureId: subject, baselineSha: "b".repeat(64), armSha: "a".repeat(64), verdict, exitCode: 0, toolVersions: {}, seedOrBound: {}, startedAt: "2026-07-20T00:00:00Z", finishedAt: "2026-07-20T00:00:01Z", counterexampleId: verdict === "DETECTED" ? "c" : null, evidencePaths: [] });
 
@@ -34,8 +37,8 @@ describe("formal verification evidence completeness", () => {
   test("rejects subject order drift", async () => expect(verifySuite(["HEALTHY_BASELINE", "D1"], await suite(1, ["D1", "HEALTHY_BASELINE"])).kind).toBe("IncompleteSuiteProof"));
   test("rejects input set hash drift", async () => { const value = await suite(); expect(verifySuite(value.orderedSubjects, { ...value, inputSetHash: "f".repeat(64) }).kind).toBe("IncompleteSuiteProof"); });
   test("keeps HARNESS_ERROR as an incomplete finding", async () => { const value = await suite(); value.cells[1] = { proof: await proof("D1", value.sample, "HARNESS_ERROR") }; expect(verifySuite(value.orderedSubjects, value).findings.some((finding) => finding.kind === "HARNESS_ERROR_CELL")).toBe(true); });
-  test("accepts one warmup and five agreeing measured suites", async () => expect(verifyMatrix({ arms: ["tla"], canonicalSubjects: ["HEALTHY_BASELINE", "D1"], suites: await Promise.all([suite(0), suite(1), suite(2), suite(3), suite(4), suite(5)]) }).kind).toBe("CompleteMatrix"));
-  test("does not accept warmup as a measured run", async () => expect(verifyMatrix({ arms: ["tla"], canonicalSubjects: ["HEALTHY_BASELINE", "D1"], suites: await Promise.all([suite(0), suite(1), suite(2), suite(3), suite(4)]) }).kind).toBe("IncompleteMatrix"));
-  test("rejects disagreement across measured verdicts", async () => { const values = await Promise.all([suite(0), suite(1), suite(2), suite(3), suite(4), suite(5)]); values[5]!.cells[1] = { proof: await proof("D1", { kind: "MEASURED", runNo: 5 }, "NOT_DETECTED") }; expect(verifyMatrix({ arms: ["tla"], canonicalSubjects: ["HEALTHY_BASELINE", "D1"], suites: values }).kind).toBe("IncompleteMatrix"); });
+  test("accepts one warmup and five agreeing measured suites", async () => expect(verifyMatrix({ arms: ["tla"], canonicalSubjects: ["HEALTHY_BASELINE", "D1"], suites: await Promise.all([suite(0), suite(1), suite(2), suite(3), suite(4), suite(5)]) }).kind).toBe("CompleteMatrix"), MATRIX_TIMEOUT_MS);
+  test("does not accept warmup as a measured run", async () => expect(verifyMatrix({ arms: ["tla"], canonicalSubjects: ["HEALTHY_BASELINE", "D1"], suites: await Promise.all([suite(0), suite(1), suite(2), suite(3), suite(4)]) }).kind).toBe("IncompleteMatrix"), MATRIX_TIMEOUT_MS);
+  test("rejects disagreement across measured verdicts", async () => { const values = await Promise.all([suite(0), suite(1), suite(2), suite(3), suite(4), suite(5)]); values[5]!.cells[1] = { proof: await proof("D1", { kind: "MEASURED", runNo: 5 }, "NOT_DETECTED") }; expect(verifyMatrix({ arms: ["tla"], canonicalSubjects: ["HEALTHY_BASELINE", "D1"], suites: values }).kind).toBe("IncompleteMatrix"); }, MATRIX_TIMEOUT_MS);
   test("only counts store-read proofs", async () => expect(verifySuite(["HEALTHY_BASELINE", "D1"], await suite()).verifiedBundles).toHaveLength(2));
 });
