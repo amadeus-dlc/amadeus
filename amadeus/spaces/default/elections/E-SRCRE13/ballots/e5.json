@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCRE13",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e2 record をリードオンリー実測: c1 = re-scan ヘッダに --is-ancestor exit 0 / distance 110 / 非祖先 545e69c8 除外が明記され cid:rescan-base-ancestry の機械的執行そのもの(新規性なし)。c2 = diary Deviations に placeholder 2026-07-23T00:00:00Z→23:13:00Z 是正が記録され、re-scan 実ファイルに placeholder 残存 0 件(grep 実測)— 既存 verify-before-notify 系の違反実例で PM 回付が正位置。c3 = diary Tradeoffs に :434/:436/:482 脱落+:455/:456 off-by-one の検出と grep 確定が記録 — enumeration-completeness-review の追認実例で PM 回付が正位置。3件とも不採用理由に同意、新規ノルム候補なし。",
+  "submittedAt": "2026-07-22T23:20:13Z"
+}
