@@ -39,11 +39,12 @@
 //     sequence, so WORKFLOW_COMPLETED stays at exactly 1 (and no second
 //     STAGE_COMPLETED lands). This is the realistic re-run scenario in the
 //     deterministic walk (the orchestrator replays an approve), so it is the
-//     behavioural contract pinned here. NOTE the failed approve is not a
-//     silent no-op: error() routes through emitError (:1709 -> lib :1473) and
-//     appends exactly ONE ERROR_LOGGED row, so the trail GROWS by one and its
-//     new dead-last event is ERROR_LOGGED, not a duplicate WORKFLOW_COMPLETED.
-//     The test asserts that real shape.
+//     behavioural contract pinned here. NOTE the failed approve still routes
+//     through error() -> emitError, but the post-complete audit stop (#1248,
+//     amadeus-audit.ts intentStatusForAudit gate) refuses the ERROR_LOGGED
+//     append once the intent is complete, so the sealed trail does NOT grow
+//     and WORKFLOW_COMPLETED stays dead-last. The test asserts that real
+//     shape, plus the suppression note on stderr.
 //   - SOURCE SURPRISE (not the asserted path, noted for the record): re-running
 //     `complete-workflow build-and-test` DIRECTLY is NOT idempotent — it has no
 //     already-Completed early return, and the alreadyMarkedCompleted guard
