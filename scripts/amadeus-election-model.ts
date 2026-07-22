@@ -199,7 +199,7 @@ function parseKindRef(
   if (kind !== "amend") return null;
   const ref = parseBallotRef(refRaw);
   if (ref === null) return null;
-  return { kind: "amend", ref };
+  return null;
 }
 
 // Structural half of the validation: field presence and primitive types only.
