@@ -147,15 +147,6 @@ export const Store = {
     // the same voter (original or a prior amend) matching electionId/voter/
     // submittedAt. Checked here in the read phase — before any write — so an
     // unknown ref fails with no partial write (R-1 atomicity).
-    if (ballot.kind === "amend") {
-      const found = accepted.some(
-        (b) =>
-          b.voter === ballot.ref.voter &&
-          b.electionId === ballot.ref.electionId &&
-          b.submittedAt === ballot.ref.submittedAt,
-      );
-      if (!found) return err("unknown-ref");
-    }
     const loaded = Store.load(root, electionId);
     if (!loaded.ok) return loaded;
     const state = loaded.value.state;
