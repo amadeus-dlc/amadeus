@@ -2,6 +2,7 @@
 > This file is maintained by the orchestrator during stage execution. Add observations at the gate ritual, not by editing here directly.
 
 ## Interpretations
+2026-07-22T03:10:00Z — integration 22 fail / e2e 1 fail / 型 9 error は pre-B2 ベースライン 6b9470a47 の scratch worktree 対照実測で全件同一再現を確認し B1 在庫 red と帰属(assertion 実文確認済み、local-ci-red-assertion-verbatim 準拠)。B2〜B4 由来の新規失敗 0 件。
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations
