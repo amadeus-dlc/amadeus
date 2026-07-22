@@ -5044,6 +5044,10 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
+          "file": "tests/integration/t256-state-intent-selector.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t17.test.ts",
           "mechanism": "cli"
         }
@@ -5067,6 +5071,10 @@
       "unitId": "amadeus-state count",
       "minMechanism": "cli",
       "coveredBy": [
+        {
+          "file": "tests/integration/t256-state-intent-selector.test.ts",
+          "mechanism": "cli"
+        },
         {
           "file": "tests/unit/t17.test.ts",
           "mechanism": "cli"
@@ -5153,6 +5161,10 @@
       "unitId": "amadeus-state get",
       "minMechanism": "cli",
       "coveredBy": [
+        {
+          "file": "tests/integration/t256-state-intent-selector.test.ts",
+          "mechanism": "cli"
+        },
         {
           "file": "tests/unit/t17.test.ts",
           "mechanism": "cli"
@@ -5297,6 +5309,10 @@
       "coveredBy": [
         {
           "file": "tests/integration/t145-state-lock-concurrency.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t256-state-intent-selector.test.ts",
           "mechanism": "cli"
         },
         {
