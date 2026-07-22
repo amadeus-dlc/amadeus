@@ -85,3 +85,7 @@ E-USSU01FD3はAを3–0で採用し、GoA favor 3、留保なし。upstream `e89
 - mixed DAGでtagged Unitだけpruneし、untagged Unitはfull matrixを要求する。
 - compileを2回実行しruntime graph bytesが同一であることをassertする。
 - sourceと6 harness dist、4 self-install対象の差を既存generator/checkで検証し、`dist/`は手編集しない。
+
+## 実装裁定追補(2026-07-22)
+
+BR-U01-11 の正準 signature のうち `compileStageGraph` は申告済み逸脱として既存 disk 読み込み型 signature を維持し、`filterProducesByKind` は独立 helper として存在しない(インライン実装)。正準文は business-logic-model.md「実装裁定追補(2026-07-22)」を参照。

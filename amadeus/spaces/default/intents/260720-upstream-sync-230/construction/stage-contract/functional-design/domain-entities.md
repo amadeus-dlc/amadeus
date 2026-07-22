@@ -98,3 +98,7 @@ E-USSUFD1はlib所有を2–1で採用した。少数票のstage-schema凝集案
 - frontend component、database entity、network service、AWS resourceは本Unitに存在しない。
 - runtime graphはderived snapshotであり手編集の正本ではない。
 - `dist/`の型定義は生成物であり、domain ownerではない。
+
+## 実装裁定追補(2026-07-22)
+
+公開 seam 4関数のうち `compileStageGraph` の実装 signature は申告済み逸脱(既存 disk 読み込み型を再利用)、`filterProducesByKind` は独立 operation としては存在しない(`requiredArtifactsForUnit` 内インライン)。正準文は business-logic-model.md「実装裁定追補(2026-07-22)」を参照。

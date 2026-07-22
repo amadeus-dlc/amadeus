@@ -100,3 +100,10 @@ schema/parser/filterはpureに保ち、validation失敗時はgraph・state・aud
 - `required-sections`: **PASS** — 必須3成果物はいずれも複数のH2節を持つ。
 - `upstream-coverage`: **PASS** — `unit-of-work.md`、`unit-of-work-story-map.md`、`requirements.md`、`components.md`、`component-methods.md`、`services.md`の6入力を質問正本と3成果物が明示し、U01契約へ追跡している。
 - `answer-evidence`: **PASS** — Q1/Q2の既決裁定とQ3のE-USSU01FD3=Aが、公開seam、field shape、failure境界、fixtureへ反映されている。
+
+## 実装裁定追補(2026-07-22)
+
+code-generation レビューイテレーション1(Critical #1/#2)と、それを受けたユーザー裁定(2026-07-22、「実装を正とし記録を訂正」)による申告付き追補。本節が本成果物・business-rules.md・domain-entities.md の該当記述(正準4 signature のうち `compileStageGraph`、および内部 helper `filterProducesByKind`)に優先する。
+
+- **`compileStageGraph` の signature**: 実装は本文の純関数 signature(`(stages: readonly StageFrontmatter[]) => ContractResult<readonly GraphStage[]>`)ではなく、既存の disk 読み込み型コンパイラ `compileStageGraph(): { json: string; gridJson: string; stages: GraphStage[] }`(`packages/framework/core/tools/amadeus-graph.ts:1439`、検証失敗は throw)を再利用する。根拠: NFR-7(既存 choke point への最小変更)、既存テスト群(t88/t89/t110/t124/t184/t212/t66)が現行 signature を前提とすること。fail-closed 検証は `validateStageFrontmatter` 側で成立しており、契約の実質(未知 field/kind の compile 前拒否)は不変。
+- **`filterProducesByKind`**: 独立 helper としては切り出されていない(repo 全域 grep 0 件)。filter ロジックは `requiredArtifactsForUnit`(`amadeus-graph.ts:764`)本体にインライン実装され、`compileStageGraph` は kind フィルタリングに関与しない。directive/coverage(orchestrate)と artifact guard(state の `kindAwareArtifactsExist` :972)は同一の `requiredArtifactsForUnit` を消費することで「同一選択規則」の不変条件を満たす。
