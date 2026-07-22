@@ -1518,6 +1518,26 @@
     "optional_produces": [
       "frontend-components"
     ],
+    "produces_kinds": {
+      "business-logic-model": [
+        "service",
+        "ui",
+        "library"
+      ],
+      "business-rules": [
+        "service",
+        "spec",
+        "library"
+      ],
+      "domain-entities": [
+        "service",
+        "spec",
+        "library"
+      ],
+      "frontend-components": [
+        "ui"
+      ]
+    },
     "consumes": [
       {
         "artifact": "unit-of-work",
@@ -1633,6 +1653,18 @@
       "reliability-requirements",
       "tech-stack-decisions"
     ],
+    "produces_kinds": {
+      "performance-requirements": [
+        "service",
+        "ui"
+      ],
+      "scalability-requirements": [
+        "service"
+      ],
+      "reliability-requirements": [
+        "service"
+      ]
+    },
     "consumes": [
       {
         "artifact": "business-logic-model",
@@ -1741,6 +1773,23 @@
       "reliability-design",
       "logical-components"
     ],
+    "produces_kinds": {
+      "performance-design": [
+        "service",
+        "ui"
+      ],
+      "scalability-design": [
+        "service"
+      ],
+      "reliability-design": [
+        "service"
+      ],
+      "logical-components": [
+        "service",
+        "ui",
+        "library"
+      ]
+    },
     "consumes": [
       {
         "artifact": "performance-requirements",
@@ -1858,6 +1907,27 @@
     "optional_produces": [
       "shared-infrastructure"
     ],
+    "produces_kinds": {
+      "deployment-architecture": [
+        "service",
+        "ui",
+        "packaging"
+      ],
+      "infrastructure-services": [
+        "service",
+        "packaging"
+      ],
+      "monitoring-design": [
+        "service",
+        "packaging"
+      ],
+      "cicd-pipeline": [
+        "service",
+        "ui",
+        "packaging",
+        "library"
+      ]
+    },
     "consumes": [
       {
         "artifact": "performance-design",

@@ -1,14 +1,17 @@
 import { spawnSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { basename, join } from "node:path";
-import { appendAuditEntry, appendAuditEntryUnlocked } from "./amadeus-audit.ts";
+import { basename, dirname, join } from "node:path";
+import { appendAuditEntry, appendAuditEntryUnlocked, escapeAuditValue } from "./amadeus-audit.ts";
 import {
   activeIntent,
   clearActiveIntentCursor,
   activeSpace,
+  auditBlockField,
+  auditFilePath,
   auditShardDir,
   auditShardName,
+  auditShards,
   appendSlug,
   appendUnderHeading,
   type CheckboxState,
@@ -33,6 +36,7 @@ import {
   isoTimestamp,
   loadScopeMapping,
   nextInScopeStage,
+  normalizeUnitKind,
   normalizeWorktreeSlug,
   PHASE_NUMBERS,
   PHASES,
@@ -41,11 +45,16 @@ import {
   parseStateStageSuffixes,
   readAllAuditShards,
   readStateFile,
+  recoverBoltDag,
+  recoverGateRevision,
+  type GateRevisionRecovery,
+  type RevisionEvidenceEvent,
   checkQuestionsEvidence,
   QUESTIONS_EVIDENCE_CUTOFF_YYMMDD,
   recordDir,
   relativeMemoryPath,
   relativeRecordDir,
+  runtimeGraphPath,
   removeField,
   removeSlug,
   resolveProjectDir,
@@ -59,14 +68,21 @@ import {
   standingGrantSatisfiesGate,
   stagesInScope,
   updateIntentStatus,
+  unitDependencyPath,
+  type UnitKind,
   validScopes,
   withAuditLock,
   worktreeDocsDir,
   worktreePath,
   worktreeStateFilePath,
   writeStateFile,
+  writeFileAtomic,
 } from "./amadeus-lib.js";
-import { memoryDirFor } from "./amadeus-graph.ts";
+import {
+  memoryDirFor,
+  parseConstructionIteration,
+  requiredArtifactsForUnit,
+} from "./amadeus-graph.ts";
 
 // All valid checkbox states (lib.ts adds [?] awaiting-approval and [R] revising)
 const VALID_CHECKBOX_STATES: CheckboxState[] = [
@@ -243,6 +259,23 @@ const HARNESS_DOC_DIRS = new Set([
 // HARNESS_DOC_DIRS: the command dispatch runs at top level, so a const declared
 // lower in the file would be in its temporal dead zone when the guard runs.
 const KNOWN_CODEKB_STAGES: ReadonlySet<string> = new Set(["reverse-engineering"]);
+const REVISION_EVIDENCE_EVENTS = new Set<RevisionEvidenceEvent["kind"]>([
+  "STAGE_STARTED",
+  "STAGE_AWAITING_APPROVAL",
+  "HUMAN_TURN",
+  "ARTIFACT_CREATED",
+  "ARTIFACT_UPDATED",
+  "GATE_REJECTED",
+]);
+const RECOVERY_BATCH_EVENTS = [
+  "GATE_REJECTED",
+  "STAGE_REVISING",
+  "STAGE_AWAITING_APPROVAL",
+  "GATE_APPROVED",
+  "STAGE_COMPLETED",
+] as const;
+const RECOVERED_REVISION_FEEDBACK =
+  "Recovered from durable artifact evidence; original feedback was not recorded";
 
 // --- Audit emission helper ---
 // Uses the throw-on-error appendAuditEntry (not handleAppend which writes JSON to stdout).
@@ -387,6 +420,9 @@ function main(): void {
         break;
       case "set-skeleton-stance":
         handleSetSkeletonStance(args.slice(1));
+        break;
+      case "set-construction-iteration":
+        handleSetConstructionIteration(args.slice(1));
         break;
       case "checkbox":
         handleCheckbox(args.slice(1));
@@ -866,14 +902,115 @@ function producesDirsForStage(
   return [join(rec, stage.phase, stage.slug)];
 }
 
-// True when at least one declared produces[] artifact exists on disk under the
-// stage's resolved directory. A stage with empty produces[] vacuously passes.
+interface RuntimeUnitKinds {
+  units: string[];
+  kinds: ReadonlyMap<string, UnitKind>;
+}
+
+function runtimeStateObjectField(value: unknown, key: string): unknown {
+  if (value === null || typeof value !== "object") return undefined;
+  return (value as Record<string, unknown>)[key];
+}
+
+function loadRuntimeStateUnitRows(pd: string): unknown[] | null {
+  try {
+    const graph: unknown = JSON.parse(readFileSync(runtimeGraphPath(pd), "utf-8"));
+    const units = runtimeStateObjectField(
+      runtimeStateObjectField(graph, "bolt_dag"),
+      "units",
+    );
+    return Array.isArray(units) && units.length > 0 ? units : null;
+  } catch {
+    return null;
+  }
+}
+
+interface RuntimeStateUnitRow {
+  name: string;
+  kind?: UnitKind;
+}
+
+function parseRuntimeStateUnitRow(row: unknown): RuntimeStateUnitRow | null {
+  const name = runtimeStateObjectField(row, "name");
+  if (typeof name !== "string" || name.trim() === "") return null;
+  const rawKind = runtimeStateObjectField(row, "kind");
+  if (rawKind === undefined) return { name };
+  const normalized = normalizeUnitKind(rawKind);
+  if (!normalized.valid) return null;
+  return { name, kind: normalized.data };
+}
+
+// Invalid or absent runtime data returns null. Callers then retain the legacy
+// full artifact matrix, which is the fail-safe direction for completion.
+function readRuntimeUnitKinds(pd: string): RuntimeUnitKinds | null {
+  const rows = loadRuntimeStateUnitRows(pd);
+  if (rows === null) return null;
+  const units: string[] = [];
+  const kinds = new Map<string, UnitKind>();
+  const seen = new Set<string>();
+  for (const row of rows) {
+    const parsed = parseRuntimeStateUnitRow(row);
+    if (parsed === null || seen.has(parsed.name)) return null;
+    seen.add(parsed.name);
+    units.push(parsed.name);
+    if (parsed.kind !== undefined) kinds.set(parsed.name, parsed.kind);
+  }
+  return { units, kinds };
+}
+
+interface ProducedStage {
+  slug: string;
+  phase: string;
+  for_each?: string;
+  produces?: string[];
+  produces_kinds?: Record<string, UnitKind[]>;
+}
+
+function artifactsExistInDir(dir: string, artifacts: readonly string[]): boolean {
+  for (const name of artifacts) {
+    if (existsSync(join(dir, `${name}.md`))) return true;
+  }
+  return false;
+}
+
+function kindAwareArtifactsExist(
+  pd: string,
+  stage: ProducedStage,
+  produces: string[],
+): boolean | null {
+  if (stage.for_each !== "unit-of-work") return null;
+  if (stage.produces_kinds === undefined) return null;
+  const snapshot = readRuntimeUnitKinds(pd);
+  const rec = recordDir(pd);
+  if (snapshot === null || rec === null) return null;
+
+  let hasApplicableArtifact = false;
+  for (const unit of snapshot.units) {
+    const kind = snapshot.kinds.get(unit);
+    const applicable = kind === undefined
+      ? produces
+      : requiredArtifactsForUnit(
+          { produces, produces_kinds: stage.produces_kinds },
+          kind,
+        );
+    if (applicable.length === 0) continue;
+    hasApplicableArtifact = true;
+    const dir = join(rec, "construction", unit, stage.slug);
+    if (artifactsExistInDir(dir, applicable)) return true;
+  }
+  return !hasApplicableArtifact;
+}
+
+// True when at least one applicable declared produces[] artifact exists on disk
+// under the stage's resolved directory. A stage with empty produces[] passes.
 function producesArtifactsExist(
   pd: string,
-  stage: { slug: string; phase: string; for_each?: string; produces?: string[] }
+  stage: ProducedStage,
 ): boolean {
   const produces = stage.produces ?? [];
   if (produces.length === 0) return true; // nothing declared -> nothing to verify
+  const kindAware = kindAwareArtifactsExist(pd, stage, produces);
+  if (kindAware !== null) return kindAware;
   for (const dir of producesDirsForStage(pd, stage)) {
     for (const name of produces) {
       if (existsSync(join(dir, `${name}.md`))) return true;
@@ -1161,10 +1298,18 @@ function workspaceHasWork(pd: string): boolean {
 // The guard itself. Called from approve/advance/finalize/complete-workflow
 // BEFORE any state mutation, so a refusal (error() -> process.exit) leaves state
 // untouched. `stage` is the StageEntry being completed. No-op when bypass active.
-function verifyStageArtifacts(
-  pd: string,
-  stage: { slug: string; name: string; phase: string; for_each?: string; produces?: string[]; workspace_requires?: boolean }
-): void {
+// Declared at module scope so the type-only field lines carry no in-body
+// coverage records (they are erased at runtime).
+type VerifiableStage = {
+  slug: string;
+  name: string;
+  phase: string;
+  for_each?: string;
+  produces?: string[];
+  produces_kinds?: Record<string, UnitKind[]>;
+  workspace_requires?: boolean;
+};
+function verifyStageArtifacts(pd: string, stage: VerifiableStage): void {
   if (artifactGuardDisabled()) return;
 
   if (!producesArtifactsExist(pd, stage)) {
@@ -1845,6 +1990,465 @@ function assertHumanPresentForGateResolution(
   );
 }
 
+function revisionEvidenceFromAudit(raw: string): RevisionEvidenceEvent[] {
+  const evidence: RevisionEvidenceEvent[] = [];
+  const blocks = raw.split("\n---\n");
+  for (let bufferPosition = 0; bufferPosition < blocks.length; bufferPosition += 1) {
+    const block = blocks[bufferPosition]!;
+    const kind = auditBlockField(block, "Event");
+    if (kind === null || !REVISION_EVIDENCE_EVENTS.has(kind as RevisionEvidenceEvent["kind"])) continue;
+    evidence.push({
+      kind: kind as RevisionEvidenceEvent["kind"],
+      timestamp: auditBlockField(block, "Timestamp") ?? "",
+      bufferPosition,
+      stage: auditBlockField(block, "Stage"),
+      file: auditBlockField(block, "File"),
+      recovered: auditBlockField(block, "Recovered")?.toLowerCase() === "true",
+    });
+  }
+  return evidence;
+}
+
+function revisionEvidenceForRecovery(pd: string): RevisionEvidenceEvent[] {
+  const sharded: Array<{ readonly event: RevisionEvidenceEvent; readonly shard: number }> = [];
+  const paths = auditShards(pd);
+  for (let shard = 0; shard < paths.length; shard += 1) {
+    try {
+      for (const event of revisionEvidenceFromAudit(readFileSync(paths[shard]!, "utf-8"))) {
+        sharded.push({ event, shard });
+      }
+    } catch {
+      return [];
+    }
+  }
+  const shardsByTimestamp = new Map<string, Set<number>>();
+  for (const { event, shard } of sharded) {
+    const shards = shardsByTimestamp.get(event.timestamp) ?? new Set<number>();
+    shards.add(shard);
+    shardsByTimestamp.set(event.timestamp, shards);
+  }
+  if ([...shardsByTimestamp.values()].some((shards) => shards.size > 1)) return [];
+  return sharded.map(({ event }) => event);
+}
+
+function declaredProducePaths(
+  pd: string,
+  stage: { readonly slug: string; readonly phase: string; readonly for_each?: string; readonly produces?: readonly string[] },
+): string[] {
+  const names = stage.produces ?? [];
+  const absoluteRecord = recordDir(pd);
+  const relativeRecord = relativeRecordDir(pd);
+  if (absoluteRecord === null || relativeRecord === null) return [];
+  let ownerPaths = [[stage.phase, stage.slug]];
+  if (stage.for_each === "unit-of-work") {
+    const dependencyPath = unitDependencyPath(pd);
+    if (!existsSync(dependencyPath)) return [];
+    let source: ReturnType<typeof recoverBoltDag>;
+    try {
+      source = recoverBoltDag(undefined, {
+        kind: "content",
+        path: dependencyPath,
+        body: readFileSync(dependencyPath, "utf-8"),
+      });
+    } catch {
+      return [];
+    }
+    if (source.kind !== "ok") return [];
+    const units = source.batches.flat();
+    if (units.length === 0) return [];
+    ownerPaths = units.map((unit) => ["construction", unit, stage.slug]);
+  }
+  return ownerPaths.flatMap((ownerSegments) =>
+    names.flatMap((name) => {
+      const fileName = `${name}.md`;
+      return [join(absoluteRecord, ...ownerSegments, fileName), `${relativeRecord}/${ownerSegments.join("/")}/${fileName}`];
+    })
+  );
+}
+
+function completedRecoveryRevision(
+  raw: string,
+  slug: string,
+  stageName: string,
+  expectedTransactionId: string,
+  expectedRevision: number,
+): number | null {
+  const sourceBlocks = raw.split("\n---\n");
+  const byTransaction = new Map<string, PositionedAuditBlock[]>();
+  for (let position = 0; position < sourceBlocks.length; position += 1) {
+    const block = sourceBlocks[position]!;
+    if (auditBlockField(block, "Stage") !== slug) continue;
+    const transactionId = auditBlockField(block, "Transaction Id");
+    if (transactionId === null) continue;
+    const blocks = byTransaction.get(transactionId) ?? [];
+    blocks.push({ block, position });
+    byTransaction.set(transactionId, blocks);
+  }
+  const blocks = byTransaction.get(expectedTransactionId);
+  if (blocks === undefined) return null;
+  return completedTransactionRevision(
+    blocks,
+    sourceBlocks,
+    slug,
+    stageName,
+    expectedTransactionId,
+    expectedRevision,
+  );
+}
+
+type PositionedAuditBlock = { readonly block: string; readonly position: number };
+
+function completedTransactionRevision(
+  blocks: readonly PositionedAuditBlock[],
+  sourceBlocks: readonly string[],
+  slug: string,
+  stageName: string,
+  transactionId: string,
+  revisionCount: number,
+): number | null {
+  const candidates: CompletedTransactionWindow[] = [];
+  for (let start = 0; start <= blocks.length - RECOVERY_BATCH_EVENTS.length; start += 1) {
+    const candidate = validatedTransactionWindow(
+      blocks.slice(start, start + RECOVERY_BATCH_EVENTS.length),
+      slug,
+      stageName,
+      transactionId,
+      revisionCount,
+    );
+    if (candidate !== null) candidates.push(candidate);
+  }
+  if (candidates.length !== 1) return null;
+  const { timestamp, terminal } = candidates[0]!;
+  if (sourceBlocks.some((block, position) => isNewerOrganicAnchor(block, position, slug, timestamp, terminal.position))) return null;
+  return revisionCount;
+}
+
+type CompletedTransactionWindow = {
+  readonly timestamp: string;
+  readonly terminal: PositionedAuditBlock;
+};
+
+function validatedTransactionWindow(
+  blocks: readonly PositionedAuditBlock[],
+  slug: string,
+  stageName: string,
+  transactionId: string,
+  revisionCount: number,
+): CompletedTransactionWindow | null {
+  if (blocks.length !== RECOVERY_BATCH_EVENTS.length) return null;
+  if (!blocks.every(({ position }, index) => position === blocks[0]!.position + index)) return null;
+  const timestamp = auditBlockField(blocks[0]!.block, "Timestamp");
+  if (timestamp === null) return null;
+  try {
+    validateRecoveredApprovalBatch(blocks.map(({ block }) => block), {
+      slug,
+      stageName,
+      timestamp,
+      transactionId,
+      revisionCount,
+    });
+  } catch {
+    return null;
+  }
+  return { timestamp, terminal: blocks.at(-1)! };
+}
+
+function isNewerOrganicAnchor(
+  block: string,
+  position: number,
+  slug: string,
+  terminalTimestamp: string,
+  terminalPosition: number,
+): boolean {
+  if (auditBlockField(block, "Stage") !== slug) return false;
+  if (auditBlockField(block, "Recovered") === "true") return false;
+  const event = auditBlockField(block, "Event");
+  if (event !== "STAGE_STARTED" && event !== "STAGE_AWAITING_APPROVAL") return false;
+  const timestamp = auditBlockField(block, "Timestamp") ?? "";
+  return timestamp > terminalTimestamp || (timestamp === terminalTimestamp && position > terminalPosition);
+}
+
+type ApprovalAuditBlockInput = {
+  readonly heading: string;
+  readonly event: string;
+  readonly timestamp: string;
+  readonly fields: Readonly<Record<string, string>>;
+};
+
+function approvalAuditBlock(input: ApprovalAuditBlockInput): string {
+  let block = `\n## ${input.heading}\n**Timestamp**: ${input.timestamp}\n**Event**: ${input.event}\n`;
+  for (const [key, value] of Object.entries(input.fields)) {
+    block += `**${key}**: ${escapeAuditValue(value)}\n`;
+  }
+  return `${block}\n---\n`;
+}
+
+function validateRecoveredApprovalBatch(
+  blocks: readonly string[],
+  input: RecoveredApprovalBatchInput,
+): void {
+  const blockIssues = blocks.map((block, index) => recoveredApprovalBlockIssue(block, index, input));
+  const issue = blocks.length !== RECOVERY_BATCH_EVENTS.length
+    ? "block count"
+    : blockIssues.find((candidate) => candidate !== null) ?? recoveredApprovalSummaryIssue(blocks, input);
+  if (issue !== null) throw Object.assign(new Error(`Recovery batch validation failed: ${issue}`), { name: "RecoveryBatchValidationError" });
+}
+
+function recoveredApprovalBlockIssue(
+  block: string,
+  index: number,
+  input: RecoveredApprovalBatchInput,
+): string | null {
+  if (auditBlockField(block, "Event") !== RECOVERY_BATCH_EVENTS[index]) return `event ${index + 1}`;
+  if (auditBlockField(block, "Timestamp") !== input.timestamp) return `timestamp ${index + 1}`;
+  if (auditBlockField(block, "Stage") !== input.slug) return `stage ${index + 1}`;
+  if (auditBlockField(block, "Transaction Id") !== input.transactionId) return `transaction ${index + 1}`;
+  const recovered = auditBlockField(block, "Recovered");
+  if (index < 3 ? recovered !== "true" : recovered !== null) return `recovered ${index + 1}`;
+  if (index < 2 && auditBlockField(block, "Feedback") !== RECOVERED_REVISION_FEEDBACK) {
+    return `feedback ${index + 1}`;
+  }
+  return null;
+}
+
+function recoveredApprovalSummaryIssue(
+  blocks: readonly string[],
+  input: RecoveredApprovalBatchInput,
+): string | null {
+  if (auditBlockField(blocks[1]!, "Revision count") !== String(input.revisionCount)) return "revision count";
+  if (auditBlockField(blocks[4]!, "Details") !== `Stage ${input.stageName} approved by gate`) return "completion details";
+  return null;
+}
+
+type RecoveredApprovalBatchInput = {
+  readonly slug: string;
+  readonly stageName: string;
+  readonly timestamp: string;
+  readonly transactionId: string;
+  readonly revisionCount: number;
+  readonly userInput?: string;
+  readonly grantId?: string;
+};
+
+function buildRecoveredApprovalBatch(input: RecoveredApprovalBatchInput): string[] {
+  const common = { Stage: input.slug, "Transaction Id": input.transactionId };
+  return [
+    approvalAuditBlock({
+      heading: "Gate Rejected",
+      event: "GATE_REJECTED",
+      timestamp: input.timestamp,
+      fields: { ...common, Feedback: RECOVERED_REVISION_FEEDBACK, Recovered: "true" },
+    }),
+    approvalAuditBlock({
+      heading: "Stage Revising",
+      event: "STAGE_REVISING",
+      timestamp: input.timestamp,
+      fields: {
+        ...common,
+        "Revision count": String(input.revisionCount),
+        Feedback: RECOVERED_REVISION_FEEDBACK,
+        Recovered: "true",
+      },
+    }),
+    approvalAuditBlock({
+      heading: "Stage Awaiting Approval",
+      event: "STAGE_AWAITING_APPROVAL",
+      timestamp: input.timestamp,
+      fields: { ...common, Recovered: "true" },
+    }),
+    approvalAuditBlock({
+      heading: "Gate Approved",
+      event: "GATE_APPROVED",
+      timestamp: input.timestamp,
+      fields: {
+        ...common,
+        ...(input.userInput ? { "User Input": input.userInput } : {}),
+        ...(input.grantId ? { "Grant Id": input.grantId } : {}),
+      },
+    }),
+    approvalAuditBlock({
+      heading: "Stage Completion",
+      event: "STAGE_COMPLETED",
+      timestamp: input.timestamp,
+      fields: { ...common, Details: `Stage ${input.stageName} approved by gate` },
+    }),
+  ];
+}
+
+function commitRecoveredApprovalBatch(pd: string, input: RecoveredApprovalBatchInput): void {
+  const blocks = buildRecoveredApprovalBatch(input);
+
+  validateRecoveredApprovalBatch(blocks, input);
+
+  const path = auditFilePath(pd);
+  mkdirSync(dirname(path), { recursive: true });
+  const before = existsSync(path) ? readFileSync(path, "utf-8") : "# AI-DLC Audit Log\n";
+  writeFileAtomic(path, before + blocks.join(""));
+}
+
+type ApprovalAuthorization = {
+  readonly audit: string;
+  readonly committedRevision: number | null;
+  readonly grantId: string | null;
+  readonly recovery: GateRevisionRecovery | null;
+};
+
+function authorizeApproval(
+  pd: string,
+  content: string,
+  stage: { readonly name: string; readonly slug: string; readonly phase: string; readonly for_each?: string; readonly produces?: readonly string[] },
+): ApprovalAuthorization {
+  const audit = readAllAuditShards(pd);
+  const currentRevision = Number.parseInt(getField(content, "Revision Count") ?? "0", 10);
+  const recovery = recoverGateRevision(revisionEvidenceForRecovery(pd), {
+    stage: stage.slug,
+    produces: declaredProducePaths(pd, stage),
+    revisionCount: Number.isFinite(currentRevision) ? currentRevision : 0,
+    autonomous: isAutonomousMode(content),
+    disabled:
+      process.env.AMADEUS_SKIP_GATE_REVISION_RECOVERY === "1" ||
+      KNOWN_CODEKB_STAGES.has(stage.slug),
+  });
+  const committedRevision = recovery.kind === "recovered"
+    ? completedRecoveryRevision(audit, stage.slug, stage.name, recovery.transactionId, recovery.nextRevisionCount)
+    : null;
+  const grantId = committedRevision === null
+    ? assertHumanPresentForGateResolution(pd, content, stage.slug, "approve")
+    : null;
+  return { audit, committedRevision, grantId, recovery };
+}
+
+function resolveApprovalRecovery(
+  authorization: ApprovalAuthorization,
+): GateRevisionRecovery | null {
+  if (authorization.committedRevision !== null) return null;
+  return authorization.recovery;
+}
+
+type ApprovalAuditInput = {
+  readonly slug: string;
+  readonly stageName: string;
+  readonly timestamp: string;
+  readonly userInput?: string;
+  readonly authorization: ApprovalAuthorization;
+  readonly recovery: GateRevisionRecovery | null;
+};
+
+function emitApprovalAudit(pd: string, input: ApprovalAuditInput): void {
+  try {
+    if (input.recovery?.kind === "recovered") {
+      commitRecoveredApprovalBatch(pd, {
+        slug: input.slug,
+        stageName: input.stageName,
+        timestamp: input.timestamp,
+        transactionId: input.recovery.transactionId,
+        revisionCount: input.recovery.nextRevisionCount,
+        ...(input.userInput ? { userInput: input.userInput } : {}),
+        ...(input.authorization.grantId ? { grantId: input.authorization.grantId } : {}),
+      });
+      return;
+    }
+    if (input.authorization.committedRevision !== null) return;
+
+    const gateFields: Record<string, string> = { Stage: input.slug };
+    if (input.userInput) gateFields["User Input"] = input.userInput;
+    if (input.authorization.grantId) gateFields["Grant Id"] = input.authorization.grantId;
+    emitAudit(pd, "GATE_APPROVED", gateFields);
+    emitAudit(pd, "STAGE_COMPLETED", {
+      Stage: input.slug,
+      Details: `Stage ${input.stageName} approved by gate`,
+    });
+  } catch (e) {
+    if (input.recovery?.kind === "recovered") {
+      const detail = e instanceof Error && e.name === "RecoveryBatchValidationError"
+        ? errorMessage(e)
+        : `Audit emission failed: ${errorMessage(e)}`;
+      console.error(JSON.stringify({ error: detail }));
+      process.exit(1);
+    }
+    error(`Audit emission failed: ${errorMessage(e)}`);
+  }
+}
+
+function failApprovalCommitValidation(detail: string): never {
+  console.error(JSON.stringify({ error: `Approval commit validation failed: ${detail}` }));
+  process.exit(1);
+}
+
+function approvalScopeIssue(content: string): string | null {
+  const scope = getField(content, "Scope");
+  if (!scope) return "State file has no Scope field";
+  if (!validScopes().has(scope)) return `State file has invalid Scope "${scope}"`;
+  return null;
+}
+
+function approvalNextStateIssue(
+  content: string,
+  slug: string,
+  timestamp: string,
+  recoveredRevision: number | null,
+): string | null {
+  if (getSlugState(content, slug) !== "completed") return "stage checkbox";
+  if (getField(content, "Last Completed Stage") !== slug) return "last completed stage";
+  if (getField(content, "Last Updated") !== timestamp) return "last updated";
+  if (getField(content, "Completed") !== String(countCheckboxes(content, "completed"))) return "completed count";
+  if (recoveredRevision !== null && getField(content, "Revision Count") !== String(recoveredRevision)) return "revision count";
+  return approvalScopeIssue(content);
+}
+
+function approveUnderLock(pd: string, slug: string, userInput: string | undefined): void {
+  let content = readStateFile(pd);
+
+  const stage = findStageBySlug(slug);
+  if (!stage) error(`Unknown stage: ${slug}`);
+  validateSlugInState(content, slug, "awaiting-approval");
+
+  verifyStageArtifacts(pd, stage);
+  const initialScopeIssue = approvalScopeIssue(content);
+  if (initialScopeIssue !== null) failApprovalCommitValidation(initialScopeIssue);
+  const authorization = authorizeApproval(pd, content, stage);
+
+  const approveScope = getField(content, "Scope")!;
+  const nextForPhaseGate = nextInScopeStage(slug, approveScope, content);
+  if (!nextForPhaseGate || nextForPhaseGate.phase !== stage.phase) {
+    verifyPhaseCheckArtifact(pd, stage.phase);
+  }
+
+  const timestamp = isoTimestamp();
+  const recovery = resolveApprovalRecovery(authorization);
+  const recoveredRevision = authorization.committedRevision ??
+    (recovery?.kind === "recovered" ? recovery.nextRevisionCount : null);
+  if (recoveredRevision !== null) {
+    content = setField(content, "Revision Count", String(recoveredRevision));
+  }
+
+  content = setCheckbox(content, slug, "completed");
+  content = setField(content, "Last Updated", timestamp);
+  content = setField(content, "Completed", String(countCheckboxes(content, "completed")));
+  content = setField(content, "Last Completed Stage", slug);
+
+  const nextStateIssue = approvalNextStateIssue(content, slug, timestamp, recoveredRevision);
+  if (nextStateIssue !== null) failApprovalCommitValidation(nextStateIssue);
+
+  emitApprovalAudit(pd, {
+    slug,
+    stageName: stage.name,
+    timestamp,
+    ...(userInput ? { userInput } : {}),
+    authorization,
+    recovery,
+  });
+  writeStateFile(pd, content);
+  const scope = approveScope;
+
+  const next = nextInScopeStage(slug, scope, content);
+  if (next) {
+    handleAdvance([slug]);
+  } else {
+    handleCompleteWorkflow([slug]);
+  }
+}
+
 export function handleApprove(args: string[]): void {
   if (args.length < 1) error("Usage: amadeus-state.ts approve <slug> [--user-input <text>]");
   const slug = args[0];
@@ -1860,103 +2464,7 @@ export function handleApprove(args: string[]): void {
   // advance's re-read. The original ordering is preserved: approve writes its
   // own state (slug → [x]) BEFORE delegating, so the nested re-read sees it.
   withAuditLock(pd, () => {
-  let content = readStateFile(pd);
-
-  const stage = findStageBySlug(slug);
-  if (!stage) error(`Unknown stage: ${slug}`);
-  validateSlugInState(content, slug, "awaiting-approval");
-
-  // Artifact guard (issue #366): a stage cannot be approved without evidence of
-  // work on disk. Runs BEFORE any mutation so a refusal (error() -> exit) leaves
-  // state untouched. The nested handleAdvance / handleCompleteWorkflow below see
-  // the slug as already [x] and skip their own guard, so this is the single
-  // enforcement point on the approve path. Bypass via AMADEUS_SKIP_ARTIFACT_GUARD.
-  // Covers per-unit Construction stages (globs the record's
-  // construction/<unit>/<slug>/) and code-producing stages (workspace_requires).
-  verifyStageArtifacts(pd, stage);
-
-  // Human-presence guard (#675): shared with handleReject via
-  // assertHumanPresentForGateResolution. Runs BEFORE any mutation so a
-  // refusal (error() -> exit) leaves state untouched (same slot as the
-  // artifact guard above). Returns a standing-grant id (#1125) when a team-mode
-  // grant — not a fresh human turn — opened the gate, so GATE_APPROVED can record
-  // which grant authorised it; null on the ordinary human-present path.
-  const grantId = assertHumanPresentForGateResolution(pd, content, slug, "approve");
-
-  // Phase-check artifact gate (#886). approve marks the slug [x] and DELEGATES
-  // to handleAdvance / handleCompleteWorkflow, which see alreadyMarkedCompleted
-  // and skip their OWN phase-check gate — so without a check HERE the ordinary
-  // (approve) gate-completion path could cross a phase boundary with no
-  // phase-check artifact. Mirrors handleAdvance's crossesPhaseBoundary test: no
-  // next stage (the final stage) always counts, like complete-workflow's
-  // unconditional gate. Placed AFTER the human-presence guard (same ordering
-  // precedent) so an approve missing BOTH a human turn and the artifact reports
-  // human-absence first. Before any mutation → a refusal leaves state untouched.
-  const approveScope = getField(content, "Scope") ?? "";
-  const nextForPhaseGate = approveScope ? nextInScopeStage(slug, approveScope, content) : null;
-  if (!nextForPhaseGate || nextForPhaseGate.phase !== stage.phase) {
-    verifyPhaseCheckArtifact(pd, stage.phase);
-  }
-
-  const timestamp = isoTimestamp();
-
-  content = setCheckbox(content, slug, "completed");
-  content = setField(content, "Last Updated", timestamp);
-  const completedCount = countCheckboxes(content, "completed");
-  content = setField(content, "Completed", String(completedCount));
-  content = setField(content, "Last Completed Stage", slug);
-
-  // Atomic audit emissions (audit-first). GATE_APPROVED records the human
-  // decision; STAGE_COMPLETED records the state transition the approval
-  // implies. Both emit here so the audit trail is correct even if the
-  // downstream advance/complete-workflow fails.
-  try {
-    const gateFields: Record<string, string> = { Stage: slug };
-    if (userInput) gateFields["User Input"] = userInput;
-    if (grantId) gateFields["Grant Id"] = grantId;
-    emitAudit(pd, "GATE_APPROVED", gateFields);
-
-    emitAudit(pd, "STAGE_COMPLETED", {
-      Stage: slug,
-      Details: `Stage ${stage.name} approved by gate`,
-    });
-  } catch (e) {
-    error(`Audit emission failed: ${errorMessage(e)}`);
-  }
-
-  writeStateFile(pd, content);
-
-  // Auto-advance or complete-workflow. Scope is required for next-stage
-  // derivation; refuse silent fallback (matches handleAdvance/handleCompleteWorkflow).
-  const scope = getField(content, "Scope");
-  if (!scope) {
-    error(
-      `State file has no Scope field. Refusing to advance after approve — fix the state file first.`
-    );
-  }
-  if (!validScopes().has(scope)) {
-    error(
-      `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`
-    );
-  }
-
-  // No explicit consume step (ledger-event design): the GATE_APPROVED
-  // emitted by this commit IS the freshness boundary for the next gate. A second
-  // gate auto-cascaded in the same human turn finds the last gate resolution
-  // (this GATE_APPROVED) AFTER the only HUMAN_TURN, so humanActedSinceGate refuses
-  // it — one commit per human turn, from ledger order, with no marker to flip.
-  const next = nextInScopeStage(slug, scope, content);
-  if (next) {
-    // Delegate to handleAdvance. The slug is now [x], so handleAdvance takes
-    // the alreadyMarkedCompleted path and skips re-emitting STAGE_COMPLETED.
-    // Reentrant call — runs under the depth-2 lock without re-acquire.
-    handleAdvance([slug]);
-  } else {
-    // Final stage — complete the workflow. handleCompleteWorkflow re-sets
-    // the checkbox to [x] (idempotent) and emits PHASE_COMPLETED +
-    // PHASE_VERIFIED + WORKFLOW_COMPLETED. Reentrant call — see above.
-    handleCompleteWorkflow([slug]);
-  }
+    approveUnderLock(pd, slug, userInput);
   });
 }
 
@@ -3544,6 +4052,48 @@ function handleMerge(args: string[]): void {
       conflict_resolution: result.conflictResolutionField,
     })}\n`
   );
+}
+
+// set-construction-iteration <stage-major|unit-major> — record the opt-in
+// construction iteration axis (FR-2 item 8). `Construction Iteration` is a
+// runtime-only field (like Skeleton Stance): absent from the base template, so
+// an unset workflow stays byte-identical on the default stage-major path
+// (NFR-3 / BR-U05-02). The token is validated by parseConstructionIteration
+// (the graph.ts owner) BEFORE the lock is taken and BEFORE any read/write, so an
+// invalid value rejects with state/plan/graph/audit untouched (BR-U05-05): the
+// reject arm never reaches withAuditLock. No audit row — the axis is metadata
+// the next `amadeus-orchestrate next` reads, riding no state-machine event
+// (exactly like set-skeleton-stance). Placed at the tail of the handlers so its
+// lock callback does not shift the complexity baseline's anonymous-function
+// ordinals (tests/.complexity-baseline.json). Exported so the integration twin
+// can drive the production adapter IN-PROCESS (lcov-visible) alongside the
+// shipped-subprocess parity check.
+export function handleSetConstructionIteration(args: string[]): void {
+  if (args.length < 1) {
+    error(
+      "Usage: amadeus-state.ts set-construction-iteration <stage-major|unit-major>",
+    );
+  }
+  const parsed = parseConstructionIteration(args[0]);
+  if (!parsed.ok) {
+    // Mutation-before-reject: fail closed here (error() is `never`), before any
+    // lock/read/write, so state/plan/graph/audit stay byte-identical.
+    error(parsed.error);
+  }
+  const value = parsed.value;
+  const pd = resolveProjectDir(projectDir);
+  // C2b lost-update safety: read→write under one lock (mirrors set-skeleton-stance).
+  withAuditLock(pd, () => {
+    const content = readStateFile(pd);
+    const updated = setOrInsertField(
+      content,
+      "## Runtime State",
+      "Construction Iteration",
+      value,
+    );
+    writeStateFile(pd, updated);
+    console.log(JSON.stringify({ updated: true, construction_iteration: value }));
+  });
 }
 
 // --- Utility ---

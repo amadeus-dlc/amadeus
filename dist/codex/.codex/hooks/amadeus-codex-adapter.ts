@@ -57,6 +57,7 @@ import { dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
 import { hooksHealthDir, isMachineInjectedTurnText, stateFilePath } from "../tools/amadeus-lib.ts";
+import { spawnHookWithRuntime } from "./amadeus-codex-hook-runtime.ts";
 
 const HOOKS_DIR = dirname(fileURLToPath(import.meta.url));
 const target = process.argv[2] ?? "";
@@ -161,7 +162,7 @@ try {
 // --- Core-hook subprocess plumbing ------------------------------------------
 
 function runCore(hookFile: string, input: string): { stdout: string; code: number } {
-  const r = Bun.spawnSync(["bun", join(HOOKS_DIR, hookFile)], {
+  const r = spawnHookWithRuntime([join(HOOKS_DIR, hookFile)], {
     stdin: Buffer.from(input, "utf-8"),
     stdout: "pipe",
     stderr: "ignore",

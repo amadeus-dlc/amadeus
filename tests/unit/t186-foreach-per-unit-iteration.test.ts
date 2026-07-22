@@ -122,6 +122,11 @@ ${stanceLine}
 - **Depth**: Standard
 - **Test Strategy**: Standard
 
+## Execution Plan Summary
+- **Total Stages**: 6
+- **Completed**: 0
+- **In Progress**: ${current}
+
 ## Stage Progress
 
 ### CONSTRUCTION PHASE
@@ -139,11 +144,23 @@ ${stanceLine}
 - **Lifecycle Phase**: CONSTRUCTION
 - **Current Stage**: ${current}
 - **Status**: Running
+- **Last Updated**: 2026-07-20T00:00:00Z
+
+## Session Resume Point
+- **Last Completed Stage**: application-design
 `;
 }
 
 /** Write the bolt_dag runtime graph (one batch of `units`) into the record. */
 function seedBoltDag(proj: string, units: string[]): void {
+  const dependencyDir = join(seededRecordDir(proj), "inception", "units-generation");
+  mkdirSync(dependencyDir, { recursive: true });
+  writeFileSync(
+    join(dependencyDir, "unit-of-work-dependency.md"),
+    `# Unit dependencies\n\n\`\`\`yaml\nunits:\n${units
+      .map((name) => `  - name: ${name}\n    depends_on: []`)
+      .join("\n")}\n\`\`\`\n`,
+  );
   writeFileSync(
     join(seededRecordDir(proj), "runtime-graph.json"),
     JSON.stringify(
@@ -167,6 +184,19 @@ function seedBoltDag(proj: string, units: string[]): void {
  */
 function seedMultiBatchDag(proj: string, batches: string[][]): void {
   const names = batches.flat();
+  const dependencyDir = join(seededRecordDir(proj), "inception", "units-generation");
+  mkdirSync(dependencyDir, { recursive: true });
+  writeFileSync(
+    join(dependencyDir, "unit-of-work-dependency.md"),
+    `# Unit dependencies\n\n\`\`\`yaml\nunits:\n${batches
+      .flatMap((batch, index) =>
+        batch.map(
+          (name) =>
+            `  - name: ${name}\n    depends_on: [${index === 0 ? "" : batches[index - 1]!.join(", ")}]`,
+        ),
+      )
+      .join("\n")}\n\`\`\`\n`,
+  );
   writeFileSync(
     join(seededRecordDir(proj), "runtime-graph.json"),
     JSON.stringify(

@@ -16,6 +16,11 @@ produces:
   - scalability-design
   - reliability-design
   - logical-components
+produces_kinds:
+  performance-design: [service, ui]
+  scalability-design: [service]
+  reliability-design: [service]
+  logical-components: [service, ui, library]
 consumes:
   - artifact: performance-requirements
     required: true

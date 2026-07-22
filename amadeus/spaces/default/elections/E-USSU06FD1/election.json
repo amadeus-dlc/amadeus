@@ -1,0 +1,29 @@
+{
+  "electionId": "E-USSU06FD1",
+  "kind": "functional-design-question",
+  "question": "260720-upstream-sync-230 / U06 workspace-inspection / functional-design。root列挙不能、signal metadata読取不能、または.gitmodules存在かつparse可能entry 0件の不完全観測を、誤ったGreenfield birth/state mutationへ流さないfail-closed型・projector境界を裁定する。FR-3はpermission failureの決定的処理と誤Greenfield scaffold禁止、C3はread-only WorkspaceScan+advisoryを既決とする。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. scan結果をclassified/inconclusive判別union化し、birth/state mutation前にinconclusiveをreject、detect/doctorはadvisory表示"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. 二値projectTypeを維持し、blocking advisoryをbirth/state projector guardで必須検査してreject"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. 不完全観測を保守的Brownfieldに分類し、advisory付きReverse Engineeringを維持"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他（noteに型・mutation境界・観測表示を記載）"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3"
+  ],
+  "state": "recorded"
+}

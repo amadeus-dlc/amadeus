@@ -85,6 +85,7 @@ import {
   activeSpace,
   type CheckboxLine,
   codekbRepoName,
+  classifyHelpIntent,
   classifyMigrationRequest,
   type MigrationRequest,
   ensureStageDiaryForDirective,
@@ -94,6 +95,7 @@ import {
   intentRepos,
   listIntents,
   nextInScopeStage,
+  normalizeUnitKind,
   parseCheckboxes,
   PHASE_NUMBERS,
   PHASES,
@@ -101,12 +103,15 @@ import {
   relativeCodekbDir,
   relativeRecordDir,
   relativeSpaceRecordPrefix,
+  recoverBoltDag,
   resolveProjectDir,
   runtimeGraphPath,
   type StageEntry,
+  type UnitKind,
   stateFilePath,
   validScopes,
   harnessDir,
+  unitDependencyPath,
   WORKSPACE_VERBS,
   SKELETON_ON_SCOPES,
 } from "./amadeus-lib.ts";
@@ -115,6 +120,9 @@ import {
   type GraphStage,
   loadGraph,
   producersOf,
+  readConstructionIteration,
+  requiredArtifactsForUnit,
+  selectNextUnitForStage,
   subgraphForScope,
 } from "./amadeus-graph.ts";
 // inferScopeFromText is a PURE function (keyword matching over the scope
@@ -339,6 +347,10 @@ interface ParsedFlags {
   projectDir?: string;
 }
 
+function normalizeHelpArgs(args: string[]): string[] {
+  return classifyHelpIntent(args).kind === "help" ? ["--help"] : args;
+}
+
 // Extract the flags the `next` decision rule consumes. --project-dir is pulled
 // out by the caller before this runs; here we read scope/stage/phase/depth/
 // test-strategy, the boolean mode flags (--resume/--single), and detect a
@@ -347,6 +359,7 @@ interface ParsedFlags {
 // flag extraction — the value of a valued flag is the following argv token.
 function parseNextFlags(args: string[]): ParsedFlags {
   const flags: ParsedFlags = {};
+  args = normalizeHelpArgs(args);
   const intentWords: string[] = [];
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
@@ -734,20 +747,92 @@ function readAutonomyMode(stateContent: string | null): "autonomous" | null {
 // `batches` array (each inner array is one parallel batch = one topological
 // level) or null when there is no graph file or no bolt_dag node. A pure read:
 // an absent graph is a legitimate branch (the swarm simply does not trigger).
+const reportedBoltDagRecoveries = new Set<string>();
+
 function readBoltDagBatches(projectDir: string): string[][] | null {
-  const path = runtimeGraphPath(projectDir);
-  if (!existsSync(path)) return null;
+  const runtimePath = runtimeGraphPath(projectDir);
+  let cached: unknown;
   try {
-    const graph: unknown = JSON.parse(readFileSync(path, "utf-8"));
+    const graph: unknown = JSON.parse(readFileSync(runtimePath, "utf-8"));
     if (graph !== null && typeof graph === "object" && "bolt_dag" in graph) {
-      const boltDag = (graph as { bolt_dag?: { batches?: unknown } }).bolt_dag;
-      const batches = boltDag?.batches;
-      if (Array.isArray(batches)) return batches as string[][];
+      cached = (graph as { bolt_dag?: unknown }).bolt_dag;
     }
   } catch {
-    // Malformed runtime graph — fail safe to "no DAG"; the swarm does not fire.
+    cached = existsSync(runtimePath) ? null : undefined;
   }
-  return null;
+
+  const canonicalPath = unitDependencyPath(projectDir);
+  const source = (() => {
+    try {
+      return { kind: "content" as const, path: canonicalPath, body: readFileSync(canonicalPath, "utf-8") };
+    } catch (error) {
+      if (error !== null && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+        return { kind: "absent" as const, path: canonicalPath };
+      }
+      return { kind: "unreadable" as const, path: canonicalPath, detail: errorMessage(error) };
+    }
+  })();
+  const recovery = recoverBoltDag(cached, source);
+  if (recovery.kind === "none") return null;
+  if (recovery.kind === "malformed") {
+    throw new Error(`Bolt DAG recovery failed (${recovery.reason}): ${recovery.detail}`);
+  }
+  if (recovery.healed && !reportedBoltDagRecoveries.has(canonicalPath)) {
+    reportedBoltDagRecoveries.add(canonicalPath);
+    console.error(
+      `BOLT_DAG_RECOVERED reason=${recovery.healingReason} batches=${recovery.batches.length} source=${canonicalPath} repair="bun ${harnessDir()}/tools/amadeus-runtime.ts compile"`,
+    );
+  }
+  return recovery.batches.map((batch) => [...batch]);
+}
+
+// Read unit kinds from the validated runtime snapshot. Any malformed unit row
+// degrades the whole lookup to kindless units, preserving the legacy full
+// artifact matrix instead of risking an under-production prune.
+function runtimeObjectField(value: unknown, key: string): unknown {
+  if (value === null || typeof value !== "object") return undefined;
+  return (value as Record<string, unknown>)[key];
+}
+
+function loadRuntimeUnitRows(projectDir: string): unknown[] | null {
+  try {
+    const graph: unknown = JSON.parse(
+      readFileSync(runtimeGraphPath(projectDir), "utf-8"),
+    );
+    const units = runtimeObjectField(runtimeObjectField(graph, "bolt_dag"), "units");
+    return Array.isArray(units) ? units : null;
+  } catch {
+    return null;
+  }
+}
+
+interface RuntimeUnitKindRow {
+  name: string;
+  kind?: UnitKind;
+}
+
+function parseRuntimeUnitKindRow(row: unknown): RuntimeUnitKindRow | null {
+  const name = runtimeObjectField(row, "name");
+  if (typeof name !== "string" || name.trim() === "") return null;
+  const rawKind = runtimeObjectField(row, "kind");
+  if (rawKind === undefined) return { name };
+  const normalized = normalizeUnitKind(rawKind);
+  if (!normalized.valid) return null;
+  return { name, kind: normalized.data };
+}
+
+function readUnitKinds(projectDir: string): ReadonlyMap<string, UnitKind> {
+  const rows = loadRuntimeUnitRows(projectDir);
+  if (rows === null) return new Map();
+  const kinds = new Map<string, UnitKind>();
+  const names = new Set<string>();
+  for (const row of rows) {
+    const parsed = parseRuntimeUnitKindRow(row);
+    if (parsed === null || names.has(parsed.name)) return new Map();
+    names.add(parsed.name);
+    if (parsed.kind !== undefined) kinds.set(parsed.name, parsed.kind);
+  }
+  return kinds;
 }
 
 // True when `node` is the SKELETON-GATE stage for `scope` — the FIRST
@@ -1063,11 +1148,22 @@ function resolveProduces(
   unit: string,
   recordPrefix: string | null,
   codekbCtx?: CodekbCtx,
+  unitKind?: UnitKind,
 ): { candidates: string[]; optional: string[] } {
-  const required = (node.produces ?? []).map((name) =>
+  const requiredNames = unitKind === undefined
+    ? node.produces ?? []
+    : requiredArtifactsForUnit(node, unitKind);
+  const optionalStage: GraphStage = {
+    ...node,
+    produces: node.optional_produces ?? [],
+  };
+  const optionalNames = unitKind === undefined
+    ? node.optional_produces ?? []
+    : requiredArtifactsForUnit(optionalStage, unitKind);
+  const required = requiredNames.map((name) =>
     resolveArtifactPath(name, node, unit, recordPrefix, codekbCtx),
   );
-  const optional = (node.optional_produces ?? []).map((name) =>
+  const optional = optionalNames.map((name) =>
     resolveArtifactPath(name, node, unit, recordPrefix, codekbCtx),
   );
   return { candidates: [...required, ...optional], optional };
@@ -1131,6 +1227,26 @@ export function resolveSingleGate(gate: GateValue): GateValue {
 // without Bolt context omit it and the per-unit path keeps the {unit-name}
 // placeholder. `scope` + `stateContent` feed the gate computation (the skeleton
 // round-trip) and the first-run-stage persona delivery (decision D-E).
+// FR-2 item 10 (gate-next-stage-naming): project the ACTUAL next in-scope stage
+// onto a gate-carrying main-workflow directive, so the approval gate names it
+// ("Continue to <next_stage>") from the SAME resolver `next` advances with — the
+// gate display can never diverge from the post-approval directive. nextInScopeStage
+// excludes SKIP stages (returns only EXECUTE) and returns null at the terminal, so
+// next_stage is a real successor slug or the explicit terminal null. Applied only
+// when `directive.gate === true`: the pre-stance skeleton classify (GATE_UNRESOLVED)
+// is not an approval moment, gate:false covers per-unit iteration + initialization,
+// and stateContent === null is a --single run (isolated, does not advance). Kept a
+// separate helper so buildRunStageDirective's complexity stays under the gate.
+function projectNextStage(
+  directive: RunStageDirective,
+  node: GraphStage,
+  scope: string,
+  stateContent: string | null,
+): void {
+  if (stateContent === null || directive.gate !== true) return;
+  directive.next_stage = nextInScopeStage(node.slug, scope, stateContent)?.slug ?? null;
+}
+
 function buildRunStageDirective(
   node: GraphStage,
   projectType: "brownfield" | "greenfield" | null = null,
@@ -1139,12 +1255,19 @@ function buildRunStageDirective(
   stateContent: string | null = null,
   recordPrefix: string | null = null,
   codekbCtx?: CodekbCtx,
+  unitKind?: UnitKind,
 ): RunStageDirective {
   const resolvedConsumes = resolveConsumes(
     node.consumes ?? [], node, projectType, unit, recordPrefix, codekbCtx,
   );
   const { present, absent } = splitConsumesByPresence(resolvedConsumes, scope, codekbCtx);
-  const resolvedProduces = resolveProduces(node, unit, recordPrefix, codekbCtx);
+  const resolvedProduces = resolveProduces(
+    node,
+    unit,
+    recordPrefix,
+    codekbCtx,
+    unitKind,
+  );
   const directive: RunStageDirective = {
     kind: "run-stage",
     stage: node.slug,
@@ -1179,6 +1302,7 @@ function buildRunStageDirective(
   if (resolvedProduces.optional.length > 0) {
     directive.optional_produces = resolvedProduces.optional;
   }
+  projectNextStage(directive, node, scope, stateContent);
   // Reviewer — include if the stage declares one (§12a).
   if (node.reviewer) {
     directive.reviewer = node.reviewer;
@@ -1950,6 +2074,7 @@ function tryEmitSwarm(
   if (readAutonomyMode(stateContent) !== "autonomous") return false;
   const batches = readBoltDagBatches(projectDir);
   if (!batches || batches.length === 0) return false;
+  const unitKinds = readUnitKinds(projectDir);
   // Issue #841 (contract from #486): bolt_dag.batches is the STATIC topology —
   // completed batches must be excluded here, or every `next` re-offers batch 1
   // forever and the swarm never advances. Coverage uses the same ledger as the
@@ -1962,7 +2087,15 @@ function tryEmitSwarm(
   for (const batch of batches) {
     if (!Array.isArray(batch) || batch.length === 0) continue;
     const uncovered = batch.filter(
-      (u) => !unitCovered(projectDir, node, u, recordPrefix, codekbCtx),
+      (u) =>
+        !unitCovered(
+          projectDir,
+          node,
+          u,
+          recordPrefix,
+          codekbCtx,
+          unitKinds.get(u),
+        ),
     );
     if (uncovered.length > 0) {
       firstBatch = uncovered;
@@ -2062,9 +2195,14 @@ function unitCovered(
   unit: string,
   recordPrefix: string | null,
   codekbCtx: CodekbCtx,
+  unitKind?: UnitKind,
 ): boolean {
-  const names = node.produces ?? [];
-  if (names.length === 0) return false;
+  const declared = node.produces ?? [];
+  if (declared.length === 0) return false;
+  const names = unitKind === undefined
+    ? declared
+    : requiredArtifactsForUnit(node, unitKind);
+  if (names.length === 0) return true;
   for (const name of names) {
     const rel = resolveArtifactPath(name, node, unit, recordPrefix, codekbCtx);
     const abs = join(projectDir, ...rel.split("/"));
@@ -2087,9 +2225,18 @@ function nextUncoveredUnit(
   units: string[],
   recordPrefix: string | null,
   codekbCtx: CodekbCtx,
+  unitKinds: ReadonlyMap<string, UnitKind>,
 ): { unit: string; uncovered: string[] } | null {
   const uncovered = units.filter(
-    (u) => !unitCovered(projectDir, node, u, recordPrefix, codekbCtx),
+    (u) =>
+      !unitCovered(
+        projectDir,
+        node,
+        u,
+        recordPrefix,
+        codekbCtx,
+        unitKinds.get(u),
+      ),
   );
   if (uncovered.length === 0) return null;
   return { unit: uncovered[0], uncovered };
@@ -2132,8 +2279,21 @@ function emitPerUnitRunStage(
     return;
   }
 
-  const pick = nextUncoveredUnit(projectDir, node, units, recordPrefix, codekbCtx);
-  if (pick === null) {
+  const unitKinds = readUnitKinds(projectDir);
+  // Delegate the next-unit selection to the canonical construction-iteration
+  // seam (selectNextUnitForStage → nextConstructionStep, FR-2 item 8). The
+  // coverage ledger is the per-unit artifacts on disk (unitCovered), passed as
+  // the predicate so the pure decision owns the pick. Over this SINGLE stage's
+  // matrix both axes resolve to the first uncovered unit, so the emitted
+  // directive is byte-identical on the default path (NFR-3 / BR-U05-02); the
+  // iteration axis is read so the canonical decision, not an ad-hoc loop, decides.
+  const pickUnit = selectNextUnitForStage(
+    node.slug,
+    units,
+    (u) => unitCovered(projectDir, node, u, recordPrefix, codekbCtx, unitKinds.get(u)),
+    readConstructionIteration(stateContent),
+  );
+  if (pickUnit === null) {
     // Every unit is already covered, but the checkbox is still in-flight: the
     // conductor wrote the LAST unit's artifacts and re-ran `next` to settle the
     // stage. There is nothing left to PRODUCE, so present the stage gate now (its
@@ -2146,6 +2306,7 @@ function emitPerUnitRunStage(
     const lastUnit = units[units.length - 1];
     const directive = buildRunStageDirective(
       node, projectType, lastUnit, scope, stateContent, recordPrefix, codekbCtx,
+      unitKinds.get(lastUnit),
     );
     directive.unit = lastUnit;
     emit(directive);
@@ -2153,18 +2314,24 @@ function emitPerUnitRunStage(
   }
 
   const directive = buildRunStageDirective(
-    node, projectType, pick.unit, scope, stateContent, recordPrefix, codekbCtx,
+    node, projectType, pickUnit, scope, stateContent, recordPrefix, codekbCtx,
+    unitKinds.get(pickUnit),
   );
   // Suppress the gate on EVERY not-yet-covered unit. A per-unit directive with an
   // uncovered unit carries gate:false: the conductor completes the body, writes
   // the unit's artifacts, and re-runs `next` (NO report-approve), so the checkbox
   // stays in-flight and the engine emits the next uncovered unit. Once the LAST
-  // unit's artifacts land on disk, the next `next` takes the pick === null branch
-  // above and presents the stage's real gate, so the single human approval covers
-  // the whole stage only after all units are built. We override AFTER building so
-  // the rest of the directive (paths, reviewer, persona) is unchanged.
+  // unit's artifacts land on disk, the next `next` takes the pickUnit === null
+  // branch above and presents the stage's real gate, so the single human approval
+  // covers the whole stage only after all units are built. We override AFTER
+  // building so the rest of the directive (paths, reviewer, persona) is unchanged.
   directive.gate = false;
-  directive.unit = pick.unit;
+  // An uncovered per-unit iteration step is NOT an approval gate, so it carries no
+  // next_stage (FR-2 item 10 projects it only on gate-carrying directives). Remove
+  // the field buildRunStageDirective set while the gate was still true — a present
+  // `next_stage: undefined` key would trip the emit-time directive validator.
+  delete directive.next_stage;
+  directive.unit = pickUnit;
   emit(directive);
 }
 
@@ -2984,7 +3151,14 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
     const codekbCtx = codekbCtxFor(pd);
     const units = orderedUnits(pd);
     if (units.length > 0) {
-      const pick = nextUncoveredUnit(pd, node, units, recordPrefix, codekbCtx);
+      const pick = nextUncoveredUnit(
+        pd,
+        node,
+        units,
+        recordPrefix,
+        codekbCtx,
+        readUnitKinds(pd),
+      );
       if (pick !== null) {
         emit({
           kind: "error",

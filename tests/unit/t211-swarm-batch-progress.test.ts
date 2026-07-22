@@ -116,6 +116,17 @@ function autonomousCodegenState(current: "code-generation" | "infrastructure-des
 
 /** Write a MULTI-batch bolt_dag (each inner array is one topological batch). */
 function seedMultiBatchDag(proj: string, batches: string[][]): void {
+  const dependencyDir = join(seededRecordDir(proj), "inception", "units-generation");
+  mkdirSync(dependencyDir, { recursive: true });
+  const units = batches.flatMap((batch, index) =>
+    batch.map((name) => ({ name, depends_on: index === 0 ? [] : batches[index - 1]! })),
+  );
+  writeFileSync(
+    join(dependencyDir, "unit-of-work-dependency.md"),
+    `# Unit dependencies\n\n\`\`\`yaml\nunits:\n${units
+      .map((unit) => `  - name: ${unit.name}\n    depends_on: [${unit.depends_on.join(", ")}]`)
+      .join("\n")}\n\`\`\`\n`,
+  );
   writeFileSync(
     join(seededRecordDir(proj), "runtime-graph.json"),
     JSON.stringify(

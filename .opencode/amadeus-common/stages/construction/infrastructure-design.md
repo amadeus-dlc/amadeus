@@ -18,6 +18,11 @@ produces:
   - cicd-pipeline
 optional_produces:
   - shared-infrastructure
+produces_kinds:
+  deployment-architecture: [service, ui, packaging]
+  infrastructure-services: [service, packaging]
+  monitoring-design: [service, packaging]
+  cicd-pipeline: [service, ui, packaging, library]
 consumes:
   - artifact: performance-design
     required: true

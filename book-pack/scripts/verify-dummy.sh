@@ -8,6 +8,11 @@ SRC=${1:?usage: verify-dummy.sh <framework-repo-root containing .claude>}
 PACK_DIR=$(cd "$(dirname "$0")/.." && pwd)
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/book-pack-dummy.XXXXXX")
 echo "dummy workspace: $TMP"
+# The dummy is disposable: remove it on exit (pass or fail) unless the
+# caller sets KEEP_DUMMY=1 to inspect it.
+if [ "${KEEP_DUMMY:-0}" != "1" ]; then
+  trap 'rm -rf "$TMP"' EXIT
+fi
 
 cp -R "$SRC/.claude" "$TMP/.claude"
 # Strip machine-local runtime that may ride along from a live checkout.
@@ -116,4 +121,4 @@ console.log("F. skeleton stance OK (book not in SKELETON_ON_SCOPES; pilot uses e
 '
 
 echo ""
-echo "ALL CHECKS PASSED — dummy at $TMP (disposable)"
+echo "ALL CHECKS PASSED — dummy at $TMP (auto-removed on exit; KEEP_DUMMY=1 to keep)"

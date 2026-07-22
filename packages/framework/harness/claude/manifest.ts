@@ -17,6 +17,17 @@
 import type { HarnessManifest } from "../../../../scripts/manifest-types.ts";
 import onboardingFills from "./onboarding.fills.ts";
 
+interface HookSpec {
+  path: string;
+}
+
+export function renderClaudeHookCommand(
+  projectDirVariable: "$CLAUDE_PROJECT_DIR",
+  hook: HookSpec,
+): string {
+  return `bun "${projectDirVariable}/${hook.path}"`;
+}
+
 const manifest: HarnessManifest = {
   name: "claude",
   harnessDir: ".claude",

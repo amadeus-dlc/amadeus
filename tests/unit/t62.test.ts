@@ -244,13 +244,13 @@ describe("t62 stage-schema — validateStageFrontmatter (migrated from t62-stage
   });
 
   // ============================================================
-  // Reserved keys — each produces a reserved-key error (5 assertions)
+  // Reserved keys — each produces a reserved-key error (4 assertions)
   // Exact strings pin RESERVED_KEYS map (amadeus-stage-schema.ts:67-73).
   // ============================================================
 
-  test("reserved: when", () => {
+  test("active when rejects a scalar value", () => {
     expect(errs({ ...fixture(), when: "x" })).toContain(
-      "when is reserved (fitness compiler); not active yet",
+      "when must be object, got string",
     );
   });
 
