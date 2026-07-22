@@ -1,0 +1,13 @@
+diff --git a/scripts/formal-verif/tla-arm.ts b/scripts/formal-verif/tla-arm.ts
+index 34162f1ce..bd4bfe8b6 100644
+--- a/scripts/formal-verif/tla-arm.ts
++++ b/scripts/formal-verif/tla-arm.ts
+@@ -409,7 +409,7 @@ vars == <<accepted, reexamRequired, initialBudget, amendBudget,
+ InitialSpent == 3 - (initialBudget[V1] + initialBudget[V2] + initialBudget[V3])
+ AmendSpent == 3 - (amendBudget[V1] + amendBudget[V2] + amendBudget[V3])
+ SubmissionCount == InitialSpent + AmendSpent
+-AcceptedCount == IF tally.kind = "NONE" THEN SubmissionCount ELSE tally.cutoffSeq
++AcceptedCount == SubmissionCount
+ LateCount == SubmissionCount - AcceptedCount
+ NextSeq == SubmissionCount + 1
+ 

@@ -417,6 +417,12 @@ function validateLifecycle(envelopes: TlcEnvelope[]): string | null {
 
 const TRACE_STATE_VARIABLES = ["initialBudget", "amendBudget", "accepted", "holdMarkers", "holdBudget", "tally", "reexamRequired"] as const;
 
+// Real TLC labels each non-initial trace step with the NAME of the next-state
+// action that fired (e.g. "<Tally line 133, col 3 ...>", "<SubmitOriginal ...>"),
+// not the literal token "Next" — measured 2026-07-22 against the first real
+// trace-form counterexample (D1 choice-winner fixture). The label grammar
+// accepts any identifier while keeping the span/module binding exact.
+
 function parseTrace(envelopes: TlcEnvelope[]): TlcTraceState[] | null {
   const trace: TlcTraceState[] = [];
   for (const envelope of envelopes.filter(({ code }) => code === 2217)) {
@@ -427,7 +433,7 @@ function parseTrace(envelopes: TlcEnvelope[]): TlcTraceState[] | null {
     const label = header[2]!;
     const validLabel = ordinal === 1
       ? label === "<Initial predicate>"
-      : /^<Next line [1-9][0-9]*, col [1-9][0-9]* to line [1-9][0-9]*, col [1-9][0-9]* of module FormalElection>$/.test(label);
+      : /^<[A-Za-z_][A-Za-z0-9_]* line [1-9][0-9]*, col [1-9][0-9]* to line [1-9][0-9]*, col [1-9][0-9]* of module FormalElection>$/.test(label);
     const variables = lines.slice(1).flatMap((line) => /^\/\\ ([A-Za-z_][A-Za-z0-9_]*) =/.exec(line)?.[1] ?? []);
     if (ordinal === null || ordinal !== trace.length + 1 || !validLabel
       || variables.length !== TRACE_STATE_VARIABLES.length

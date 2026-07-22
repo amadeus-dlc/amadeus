@@ -1,0 +1,17 @@
+diff --git a/scripts/formal-verif/tla-arm.ts b/scripts/formal-verif/tla-arm.ts
+index 34162f1ce..87e9fa3de 100644
+--- a/scripts/formal-verif/tla-arm.ts
++++ b/scripts/formal-verif/tla-arm.ts
+@@ -395,8 +395,10 @@ EmptyReceipt == [
+   perVoterResolution |-> [v \\in Voters |-> 0], counts |-> EmptyCounts
+ ]
+ Receipt(r, received, cutoff) == [
+-  kind |-> TallyKind(r), reason |-> HoldReason(r), winner |-> ReceiptWinner(r),
+-  choiceWinner |-> ReceiptWinner(r), receivedAt |-> received, cutoffSeq |-> cutoff,
++  kind |-> TallyKind(r), reason |-> HoldReason(r),
++  winner |-> IF TallyKind(r) = "ESTABLISHED" THEN C1 ELSE "NONE",
++  choiceWinner |-> IF TallyKind(r) = "ESTABLISHED" THEN C1 ELSE "NONE",
++  receivedAt |-> received, cutoffSeq |-> cutoff,
+   ballotSnapshot |-> r, resolved |-> r, eligible |-> EligibleMap(r),
+   perVoterResolution |-> ResolutionSeqs(r), counts |-> Counts(r)
+ ]

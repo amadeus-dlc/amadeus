@@ -519,6 +519,28 @@ describe("initial-state invariant violation (MSG 2107, #1359)", () => {
     expect(result.searchDepth).toBeNull();
   });
 
+  test("real TLC labels non-initial steps with the firing action name (#D1 trace, 2026-07-22)", () => {
+    // counterexampleOutput's synthetic labels say "Next line ..."; real TLC
+    // writes the action name. Both must parse to the same COUNTEREXAMPLE kind.
+    const actionLabeled = counterexampleOutput().replaceAll(
+      "Next line 160, col 8 to line 161, col 66 of module FormalElection",
+      "SubmitOriginal line 160, col 8 to line 161, col 66 of module FormalElection",
+    ).replaceAll(
+      "Next line 170, col 8 to line 171, col 66 of module FormalElection",
+      "Tally line 170, col 8 to line 171, col 66 of module FormalElection",
+    );
+    const result = parse(actionLabeled, { exitCode: 12 });
+    expect(result.kind).toBe("COUNTEREXAMPLE");
+  });
+
+  test("a trace label without the span/module binding is still rejected", () => {
+    const bare = counterexampleOutput().replaceAll(
+      "Next line 160, col 8 to line 161, col 66 of module FormalElection",
+      "Tally",
+    );
+    expectHarnessError(bare, { exitCode: 12 });
+  });
+
   test("the counterexample identity is deterministic across parses", () => {
     const first = parse(initialViolationOutput(), { exitCode: 12 });
     const second = parse(initialViolationOutput(), { exitCode: 12 });
