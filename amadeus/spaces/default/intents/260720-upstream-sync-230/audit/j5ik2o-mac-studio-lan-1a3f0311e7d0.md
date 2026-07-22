@@ -868,3 +868,11 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-22T00:52:37Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-22T00:52:37Z
+
+---
