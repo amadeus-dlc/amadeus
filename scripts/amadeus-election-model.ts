@@ -451,8 +451,7 @@ export function tally(election: Election, ballots: Ballot[]): TallyResult {
     label: c.label,
     count: eligible.filter((b) => b.choiceInternalNo === c.internalNo).length,
   }));
-  const top = choiceCounts.reduce((m, c) => Math.max(m, c.count), 0);
-  const leaders = choiceCounts.filter((c) => c.count === top);
+  const leaders = choiceCounts.slice(0, 1);
   if (leaders.length !== 1) return { kind: "hold", reason: "tie", counts };
   const winner = leaders[0] as ChoiceCount;
   return {
