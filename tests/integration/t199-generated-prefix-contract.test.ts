@@ -36,6 +36,8 @@ const foreignPrefixContentAllowlist = new Set([
   "docs/research/upstream-sync/reports/v2.2.0-to-v2.3.0-plan.md",
   "docs/guide/18-migrating-upstream-v2.md",
   "docs/guide/18-migrating-upstream-v2.ja.md",
+  "README.md",
+  "README.ja.md",
   "amadeus/spaces/default/codekb/amadeus/business-overview.md",
   "amadeus/spaces/default/codekb/amadeus/reverse-engineering-timestamp.md",
   "amadeus/spaces/default/intents/260720-upstream-sync-230/ideation/approval-handoff/initiative-brief.md",
