@@ -50,6 +50,14 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import type { HarnessManifest } from "./manifest-types.ts";
 import { renderOnboarding } from "./onboarding.ts";
+import { substituteToken, transform } from "./harness-transform.ts";
+import type { PackageHarness } from "./plugin-projection.ts";
+import {
+  buildPluginBundle,
+  discoverPluginSources,
+  projectPluginArtifacts,
+  validatePluginSources,
+} from "./plugin-projection.ts";
 import { AMADEUS_VERSION } from "../packages/framework/core/tools/amadeus-version.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -58,7 +66,18 @@ const CORE_ROOT = join(FRAMEWORK_ROOT, "core");
 const HARNESS_ROOT = join(FRAMEWORK_ROOT, "harness");
 // The shared onboarding-doc skeleton, rendered per harness (scripts/onboarding.ts).
 const ONBOARDING_SKELETON = join(CORE_ROOT, "templates", "onboarding.md");
-const HARNESS_TOKEN = /\{\{HARNESS_DIR\}\}/g;
+// Authoring root for plugin sources projected into every harness (FR-6 item 19).
+// DISCOVERED, not hardcoded: absent/empty → zero added bytes (plugin 0-file
+// baseline stays byte-identical to a pre-plugin packager). Read at CALL time
+// (not module load) so an AMADEUS_PLUGINS_ROOT / AMADEUS_DIST_ROOT override lets
+// a test drive plugin projection against a temp workspace WITHOUT mutating the
+// real plugins/ or dist/ a concurrent packager spawn would observe.
+function pluginsRoot(): string {
+  return process.env.AMADEUS_PLUGINS_ROOT ?? join(REPO_ROOT, "plugins");
+}
+function distRoot(): string {
+  return process.env.AMADEUS_DIST_ROOT ?? join(REPO_ROOT, "dist");
+}
 
 // Harnesses the packager builds = every harness/<name>/ that carries a
 // manifest.ts. DISCOVERED, not hardcoded: adding harness #N is one harness/<n>/
@@ -72,42 +91,9 @@ function discoverHarnessNames(): string[] {
     .sort();
 }
 
-// ---------------------------------------------------------------------------
-// Transform: the ONE class. Token substitution on .md prose; .json + .ts copied
-// verbatim (compiled JSON is regenerated per-tree by graph compile, never
-// token-bearing in core; .ts uses the runtime harnessDir() seam).
-// ---------------------------------------------------------------------------
-function substituteToken(s: string, harnessDir: string): string {
-  return s.replace(HARNESS_TOKEN, harnessDir);
-}
-
-// Rewrite in-prose `<harnessDir>/rules/` → `<harnessDir>/<rulesRename>/` for a
-// harness that renames its rules dir (kiro: steering, codex: amadeus-rules).
-// Anchored on the post-substitution harness-dir form so it can't touch an
-// unrelated `rules/` mention — the proven STEERING_RENAME step from the spike
-// packagers. No-op when rulesRename is null (claude).
-function applyRulesRename(s: string, harnessDir: string, rulesRename: string | null): string {
-  if (!rulesRename) return s;
-  return s.replaceAll(`${harnessDir}/rules/`, `${harnessDir}/${rulesRename}/`);
-}
-
-function isMarkdownProsePath(path: string): boolean {
-  return path.endsWith(".md") || path.endsWith(".md.example");
-}
-
-function transform(
-  srcPath: string,
-  content: Buffer,
-  harnessDir: string,
-  rulesRename: string | null,
-): Buffer {
-  if (isMarkdownProsePath(srcPath)) {
-    let s = substituteToken(content.toString("utf-8"), harnessDir);
-    s = applyRulesRename(s, harnessDir, rulesRename);
-    return Buffer.from(s, "utf-8");
-  }
-  return content;
-}
+// Transform (token substitution on .md prose; .json + .ts copied verbatim) and
+// its helpers live in scripts/harness-transform.ts — shared with the plugin
+// projector so both surfaces apply the SAME prose rules from one owner.
 
 // Append manifest-declared frontmatter lines to a projected .md, just before
 // the closing `---` of its YAML block (manifest-types.ts frontmatterAdditions).
@@ -303,6 +289,35 @@ function seedCompiledData(treeRoot: string, seedFrom: string): void {
 // the unreferenced-source scan, #735).
 type BuildResult = { outsideHarness: string[]; readSources: Set<string> };
 
+// Discover + structurally validate the repo's plugin sources. Absent plugins/ →
+// [] (the plugin 0-file baseline: every plugin-aware step below becomes a no-op,
+// so a pre-plugin repo builds byte-identical output). A malformed/duplicate/
+// unsafe source throws loudly here, before any write. Re-read per call (not
+// cached) so it never goes stale within a long-lived process (tests, watch).
+function repoPlugins(): readonly import("./plugin-projection.ts").PluginSource[] {
+  return validatePluginSources(discoverPluginSources(pluginsRoot()));
+}
+
+// Project every discovered plugin into `treeRoot` at plugins/<name>/, recording
+// each read source path into `readSources`. The prose transform matches core's,
+// and the plugins/ namespace keeps the output under the in-harness walk so the
+// existing byte-diff/orphan scans cover it. No-op at zero plugins. Lifted out of
+// buildTree so its nested loops stay out of buildTree's complexity budget.
+function projectPluginsIntoHarnessTree(
+  m: HarnessManifest,
+  treeRoot: string,
+  readSources: Set<string>,
+): void {
+  for (const plugin of repoPlugins()) {
+    for (const a of projectPluginArtifacts(plugin, m.name as PackageHarness, m.harnessDir, m.rulesRename)) {
+      const outPath = join(treeRoot, ...a.relativePath.split("/"));
+      mkdirSync(dirname(outPath), { recursive: true });
+      writeFileSync(outPath, a.bytes);
+      readSources.add(a.sourcePath);
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Build one harness tree into `outRoot` (the dist/<name> dir). Returns the set
 // of paths the copy+generate steps produced (for the orphan scan) plus the set
@@ -477,6 +492,12 @@ function buildTree(m: HarnessManifest, outRoot: string, seedFrom: string): Build
       }).written,
     );
   }
+
+  // 6. Project discovered plugin sources into this harness tree at
+  //    <harnessDir>/plugins/<name>/ (FR-6 item 19). No-op at zero plugins, so
+  //    the tree stays byte-identical to a pre-plugin build. Extracted so its two
+  //    nested loops don't inflate buildTree's cyclomatic complexity.
+  projectPluginsIntoHarnessTree(m, treeRoot, readSources);
 
   // Harvest the require/import module graph the build loaded from this harness's
   // source dir (manifest.ts + its static imports: onboarding.fills.ts, and for
@@ -732,6 +753,53 @@ export function checkHarness(name: string): string[] {
 }
 
 // ---------------------------------------------------------------------------
+// Harness-neutral plugin bundle at dist/plugins/<name>/ — the source-of-record
+// U10 composes from. Written ONCE (not per harness): verbatim source bytes, no
+// {{HARNESS_DIR}} token. Fully generator-owned, so write clean-sweeps it and
+// check flags any drift. With zero plugins the bundle dir is never created, so
+// dist/ stays byte-identical to a pre-plugin build.
+// ---------------------------------------------------------------------------
+// Expected bundle as dist-root-relative POSIX path → bytes.
+function neutralBundleExpected(): Map<string, Buffer> {
+  const expected = new Map<string, Buffer>();
+  for (const plugin of repoPlugins())
+    for (const a of buildPluginBundle(plugin)) expected.set(a.relativePath, a.bytes);
+  return expected;
+}
+
+export function writeNeutralBundle(): void {
+  const expected = neutralBundleExpected();
+  const distPlugins = join(distRoot(), "plugins");
+  // Clean-sweep: the bundle is entirely generator-owned. Removing it first drops
+  // any stale plugin/artifact before rewriting the current set (and, at zero
+  // plugins, sweeps a leftover dir without recreating it).
+  if (existsSync(distPlugins)) rmSync(distPlugins, { recursive: true, force: true });
+  for (const [rel, bytes] of expected) {
+    const outPath = join(distRoot(), ...rel.split("/"));
+    mkdirSync(dirname(outPath), { recursive: true });
+    writeFileSync(outPath, bytes);
+  }
+}
+
+export function checkNeutralBundle(): string[] {
+  const expected = neutralBundleExpected();
+  const distPlugins = join(distRoot(), "plugins");
+  const problems: string[] = [];
+  for (const [rel, want] of expected) {
+    const abs = join(distRoot(), ...rel.split("/"));
+    if (!existsSync(abs)) problems.push(`MISSING in dist: ${rel}`);
+    else if (!readFileSync(abs).equals(want)) problems.push(`DIFFERS: ${rel}`);
+  }
+  if (existsSync(distPlugins)) {
+    for (const f of walk(distPlugins)) {
+      const rel = relative(distRoot(), f).split(sep).join("/");
+      if (!expected.has(rel)) problems.push(`ORPHAN in dist: ${rel}`);
+    }
+  }
+  return problems.sort();
+}
+
+// ---------------------------------------------------------------------------
 // CLI. Extracted as a function returning the process exit code so a unit test can
 // drive every dispatch branch IN-PROCESS — bun --coverage does not instrument
 // spawned subprocesses, so the spawn-based integration test cannot cover these
@@ -773,6 +841,9 @@ export function runCli(argv: string[]): number {
   if (check) {
     let problems: string[] = [];
     for (const n of present) problems = problems.concat(checkHarness(n));
+    // The harness-neutral bundle (dist/plugins/) is not harness-specific, so it
+    // is diffed once alongside the harness trees. No-op (empty) at zero plugins.
+    problems = problems.concat(checkNeutralBundle());
     if (problems.length > 0) {
       console.error(`\npackage --check FAILED (${problems.length} problem(s)):`);
       for (const p of problems.slice(0, 40)) console.error("  " + p);
@@ -782,6 +853,7 @@ export function runCli(argv: string[]): number {
     return 0;
   }
   for (const n of present) writeHarness(n);
+  writeNeutralBundle();
   return 0;
 }
 
