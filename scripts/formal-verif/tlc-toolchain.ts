@@ -336,11 +336,22 @@ function validOutdegree(payload: string): boolean {
     && percentile <= maximum;
 }
 
+function lifecyclePrefixCodes(initialViolation: boolean): number[] {
+  return initialViolation ? [2262, 2187, 2220, 2219, 2185, 2189] : [2262, 2187, 2220, 2219, 2185, 2189, 2190];
+}
+
+// After a MSG 2107 terminal only progress lines and the Finished marker may follow.
+function initialViolationOrderError(codes: number[], start: number): string | null {
+  let index = start;
+  while (codes[index] === 2200) index += 1;
+  if (codes[index] !== 2186 || index + 1 !== codes.length) return "Finished must be the final terminal marker";
+  return null;
+}
+
 // An initial-state violation (MSG 2107) aborts before 2190/2199/2194 are ever
 // printed — those three lifecycle codes are required only for the trace/success
 // shapes, and their PRESENCE alongside 2107 is itself a grammar contradiction.
-function validateLifecyclePayloads(envelopes: TlcEnvelope[]): string | null {
-  const initialViolation = count(envelopes, 2107) === 1;
+function lifecycleCodeCountsError(envelopes: TlcEnvelope[], initialViolation: boolean): string | null {
   const required = initialViolation ? [2262, 2187, 2220, 2219, 2185, 2189, 2186] : [2262, 2187, 2220, 2219, 2185, 2189, 2190, 2199, 2194, 2186];
   for (const code of required) {
     if (count(envelopes, code) !== 1) return `required lifecycle code ${code} must occur once`;
@@ -348,6 +359,13 @@ function validateLifecyclePayloads(envelopes: TlcEnvelope[]): string | null {
   if (initialViolation && (count(envelopes, 2190) !== 0 || count(envelopes, 2199) !== 0 || count(envelopes, 2194) !== 0)) {
     return "initial-state violation must not carry post-init lifecycle codes";
   }
+  return null;
+}
+
+function validateLifecyclePayloads(envelopes: TlcEnvelope[]): string | null {
+  const initialViolation = count(envelopes, 2107) === 1;
+  const countsError = lifecycleCodeCountsError(envelopes, initialViolation);
+  if (countsError !== null) return countsError;
   const payloadChecks: Array<[number, RegExp]> = [
     [2262, /^TLC2 Version 2\.19 of 08 August 2024 \(rev: 5a47802\)$/],
     [2187, /^Running breadth-first search Model-Checking .+ with 1 worker(?:\.| on .+)$/],
@@ -371,17 +389,11 @@ function validateLifecyclePayloads(envelopes: TlcEnvelope[]): string | null {
 
 function validateLifecycleOrder(envelopes: TlcEnvelope[]): string | null {
   const codes = envelopes.map(({ code }) => code);
-  const initialViolation = codes.includes(2107);
-  const prefix = initialViolation ? [2262, 2187, 2220, 2219, 2185, 2189] : [2262, 2187, 2220, 2219, 2185, 2189, 2190];
+  const prefix = lifecyclePrefixCodes(codes.includes(2107));
   if (prefix.some((code, index) => codes[index] !== code)) return "lifecycle prefix codes are out of order";
   let index = prefix.length;
   while (codes[index] === 2200) index += 1;
-  if (codes[index] === 2107) {
-    index += 1;
-    while (codes[index] === 2200) index += 1;
-    if (codes[index] !== 2186 || index + 1 !== codes.length) return "Finished must be the final terminal marker";
-    return null;
-  }
+  if (codes[index] === 2107) return initialViolationOrderError(codes, index + 1);
   if (codes[index] === 2193) {
     index += 1;
   } else {
@@ -528,6 +540,10 @@ export function parseTlcOutput174(input: TlcOutputInput): TlcExploration {
   const lifecycleError = validateLifecycle(parsed);
   if (lifecycleError !== null) return failed("GRAMMAR", lifecycleError);
   if (count(parsed, 2107) === 1) return initialStateCounterexampleExploration(input, parsed, model.value);
+  return statisticsShapeExploration(input, parsed, model.value);
+}
+
+function statisticsShapeExploration(input: TlcOutputInput, parsed: TlcEnvelope[], model: FrozenTlaModelBundle): TlcExploration {
   const statistics = parseStatistics(only(parsed, 2199)!.payload);
   const depth = parseDepth(only(parsed, 2194)!.payload);
   if (statistics === null || depth === null) return failed("GRAMMAR", "invalid statistics or depth payload");
@@ -536,7 +552,7 @@ export function parseTlcOutput174(input: TlcOutputInput): TlcExploration {
   if (hasSuccess === hasViolation) return failed("GRAMMAR", "exactly one terminal semantic class is required");
   return hasSuccess
     ? completeExploration(input, parsed, statistics, depth)
-    : counterexampleExploration(input, parsed, statistics, depth, model.value);
+    : counterexampleExploration(input, parsed, statistics, depth, model);
 }
 
 export interface JdkDistributionEntry {
