@@ -76,6 +76,8 @@ describe("reap mutex — reapers are serialised and never rob through a vacancy 
   test("a stale reap mutex (holder died mid-reap) is recovered and the steal proceeds", () => {
     seedStaleLock();
     mkdirSync(mutexDir);
+    // drive the env override seam too: 30s threshold, mutex backdated 60s
+    process.env.AMADEUS_REAP_MUTEX_STALE_MS = "30000";
     const past = (Date.now() - 60_000) / 1000; // utimes takes seconds
     utimesSync(mutexDir, past, past);
     expect(acquireAuditLock(proj, 0, 1, INTENT, SPACE)).toBe(true);
@@ -89,6 +91,19 @@ describe("reap mutex — reapers are serialised and never rob through a vacancy 
     expect(acquireAuditLock(proj, 0, 1, INTENT, SPACE)).toBe(true);
     expect(existsSync(mutexDir)).toBe(false);
     releaseAuditLock(proj, INTENT, SPACE);
+  });
+
+  test("an unreachable lock base dir fails safe through the mutex path", () => {
+    // ENOENT parent: the mutex mkdir fails, the stat sees nothing (mtime null),
+    // and the vanish-retry mkdir fails again — acquire reports false, no throw.
+    const saved = process.env.AMADEUS_LOCK_BASE_DIR;
+    process.env.AMADEUS_LOCK_BASE_DIR = join(proj, "does", "not", "exist");
+    try {
+      expect(acquireAuditLock(proj, 0, 1, INTENT, SPACE)).toBe(false);
+    } finally {
+      if (saved === undefined) delete process.env.AMADEUS_LOCK_BASE_DIR;
+      else process.env.AMADEUS_LOCK_BASE_DIR = saved;
+    }
   });
 
   test("the reap mutex is released after refusing a fresh live holder", () => {

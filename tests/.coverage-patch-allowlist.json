@@ -190,5 +190,17 @@
     "lines": "120",
     "reason": "Catch arm mapping malformed JSON bytes to a parse failure inside decodeJson; sibling tests drive it via the spawn-only e2e contract harness.",
     "expiry": "remove when the formal-verif e2e suite joins the CI coverage profile"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-lib.ts",
+    "lines": "4263",
+    "reason": "Race-loser arm of the reap-mutex CAS recovery: renameSync of a stale mutex fails only when a competing recoverer won the rename in the same sub-syscall window; unreachable deterministically without pausing mid-function. Fail-safe (returns false; the waiter retries). Same class as the fixture-proof.ts:57 defensive-catch precedent.",
+    "expiry": "remove if acquireReapMutex gains an injected fs port"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-lib.ts",
+    "lines": "4274-4275",
+    "reason": "Race-loser arm after a successful stale-mutex steal: the fresh mkdir fails only when a competitor re-created the mutex in the same sub-syscall window; unreachable deterministically without pausing mid-function. Fail-safe (returns false; the waiter retries).",
+    "expiry": "remove if acquireReapMutex gains an injected fs port"
   }
 ]

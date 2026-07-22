@@ -828,6 +828,10 @@
       "minMechanism": "none",
       "coveredBy": [
         {
+          "file": "tests/integration/t-reap-mutex.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/integration/t163-reaper-steal-race.test.ts",
           "mechanism": "cli"
         },
@@ -3194,6 +3198,10 @@
       "unitId": "function:withAuditLock",
       "minMechanism": "none",
       "coveredBy": [
+        {
+          "file": "tests/integration/t-reap-mutex.integration.test.ts",
+          "mechanism": "none"
+        },
         {
           "file": "tests/integration/t145-state-lock-concurrency.test.ts",
           "mechanism": "cli"
