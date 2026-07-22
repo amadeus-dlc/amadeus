@@ -8,7 +8,7 @@
 - **State Version**: 7
 - **Active Agent**: amadeus-developer-agent
 - **Worktree Path**:
-- **Bolt Refs**:
+- **Bolt Refs**: [empty list]
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration
@@ -32,6 +32,7 @@
 - **Revision Count**: 0
 
 - **Skeleton Stance**: on
+- **Construction Autonomy Mode**: autonomous
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
