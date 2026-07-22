@@ -1225,6 +1225,26 @@ export function resolveSingleGate(gate: GateValue): GateValue {
 // without Bolt context omit it and the per-unit path keeps the {unit-name}
 // placeholder. `scope` + `stateContent` feed the gate computation (the skeleton
 // round-trip) and the first-run-stage persona delivery (decision D-E).
+// FR-2 item 10 (gate-next-stage-naming): project the ACTUAL next in-scope stage
+// onto a gate-carrying main-workflow directive, so the approval gate names it
+// ("Continue to <next_stage>") from the SAME resolver `next` advances with — the
+// gate display can never diverge from the post-approval directive. nextInScopeStage
+// excludes SKIP stages (returns only EXECUTE) and returns null at the terminal, so
+// next_stage is a real successor slug or the explicit terminal null. Applied only
+// when `directive.gate === true`: the pre-stance skeleton classify (GATE_UNRESOLVED)
+// is not an approval moment, gate:false covers per-unit iteration + initialization,
+// and stateContent === null is a --single run (isolated, does not advance). Kept a
+// separate helper so buildRunStageDirective's complexity stays under the gate.
+function projectNextStage(
+  directive: RunStageDirective,
+  node: GraphStage,
+  scope: string,
+  stateContent: string | null,
+): void {
+  if (stateContent === null || directive.gate !== true) return;
+  directive.next_stage = nextInScopeStage(node.slug, scope, stateContent)?.slug ?? null;
+}
+
 function buildRunStageDirective(
   node: GraphStage,
   projectType: "brownfield" | "greenfield" | null = null,
@@ -1280,6 +1300,7 @@ function buildRunStageDirective(
   if (resolvedProduces.optional.length > 0) {
     directive.optional_produces = resolvedProduces.optional;
   }
+  projectNextStage(directive, node, scope, stateContent);
   // Reviewer — include if the stage declares one (§12a).
   if (node.reviewer) {
     directive.reviewer = node.reviewer;
@@ -2298,6 +2319,11 @@ function emitPerUnitRunStage(
   // the whole stage only after all units are built. We override AFTER building so
   // the rest of the directive (paths, reviewer, persona) is unchanged.
   directive.gate = false;
+  // An uncovered per-unit iteration step is NOT an approval gate, so it carries no
+  // next_stage (FR-2 item 10 projects it only on gate-carrying directives). Remove
+  // the field buildRunStageDirective set while the gate was still true — a present
+  // `next_stage: undefined` key would trip the emit-time directive validator.
+  delete directive.next_stage;
   directive.unit = pick.unit;
   emit(directive);
 }

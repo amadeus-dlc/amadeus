@@ -48,6 +48,13 @@ options:
     description: Provide revision feedback
 ```
 
+**`[next stage]`** is the run-stage directive's `next_stage` field — the ACTUAL
+next in-scope stage the engine will route to on approval (SKIP stages already
+excluded). Fill the placeholder from that value; never derive or guess the next
+stage yourself. When `next_stage` is `null` this is the final in-scope stage, so
+word the Approve option as completing the workflow (e.g. "Complete the workflow")
+rather than naming a next stage.
+
 ### For stages with conditional options:
 IDEATION and INCEPTION stages may include a 3rd option to add a previously skipped stage:
 
