@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCRAS13",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "提案どおり(1)。実測: s13-candidates.md(666253837 系譜、git show 直読)・RA diary memory.md:5・requirements.md:11(承認系譜段落の実在 — dispatch 22:08:41Z/delegate 99d78653a/E-SRCRA5 の3点引用を verbatim 確認)・:90(iteration 1 Critical の解消記録)。c2 は既存 citation 系 cid(実在=mechanism-cite-verify/完全性=enumeration-completeness/留保保存=citation-reservation-preservation)のいずれも覆わない「承認の系譜引用」面で新規性あり — 引用なしでは reviewer に無申告逸脱(implementation-deviation-election の差し戻し対象)と構造的に区別不能という機序も本 RA iteration 1 Critical で実測成立。c1/c3/c4 は既存 cid の運用範囲・機械的適用で PM 回付が妥当。",
+  "submittedAt": "2026-07-22T23:38:40Z"
+}
