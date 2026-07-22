@@ -449,5 +449,12 @@
     "dirName": "260721-teamup-safety-wait",
     "scope": "bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019f88dc-baad-7920-b357-68bbfdc41e13",
+    "slug": "state-intent-selector",
+    "dirName": "260722-state-intent-selector",
+    "scope": "chore",
+    "status": "complete"
   }
 ]
