@@ -125,6 +125,12 @@ function seedCodegenProject(autonomy: string): string {
     );
   }
   writeFileSync(statePath, state);
+  const dependencyDir = join(seededRecordDir(proj), "inception", "units-generation");
+  mkdirSync(dependencyDir, { recursive: true });
+  writeFileSync(
+    join(dependencyDir, "unit-of-work-dependency.md"),
+    "# Unit dependencies\n\n```yaml\nunits:\n  - name: a\n    depends_on: []\n  - name: b\n    depends_on: []\n```\n",
+  );
   writeFileSync(
     join(seededRecordDir(proj), "runtime-graph.json"),
     JSON.stringify(

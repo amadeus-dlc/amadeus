@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-USSU06FD1",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "Aを支持(GoA1)。e5成果物をread-only実測し、reviewer Iteration 1が、二値projectTypeとadvisory-only縮退ではroot列挙・signal metadata読取不能をGreenfieldとしてbirth/state projectorが消費できる穴を具体化していることを確認した。Aは観測失敗をclassified/inconclusiveの判別unionで保持し、mutation前の型境界で拒否するためParse Don't ValidateとFR-3の誤Greenfield scaffold禁止を構造的に満たす。detect/doctorへのadvisory投影もC3のread-only観測と両立する。非採用時受容度: B=6(projector全consumerのguard必須化でも充足可能だが呼出し忘れ余地が残る)、C=7(誤Greenfieldは避けるが実在signalなしをBrownfieldと偽分類し不要REを駆動する)、X=7(同等の型/mutation barrierが示されない限り)。",
+  "submittedAt": "2026-07-20T13:52:00Z"
+}

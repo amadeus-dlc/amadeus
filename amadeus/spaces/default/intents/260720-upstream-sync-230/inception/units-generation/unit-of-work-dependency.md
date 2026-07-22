@@ -9,28 +9,40 @@
 ```yaml
 units:
   - name: stage-contract
+    kind: spec
     depends_on: []
   - name: runtime-recovery
+    kind: library
     depends_on: []
   - name: swarm-and-next-stage
+    kind: library
     depends_on: [runtime-recovery]
   - name: routing-and-autonomy-guards
+    kind: library
     depends_on: []
   - name: unit-iteration-and-scope-preview
+    kind: library
     depends_on: [stage-contract]
   - name: workspace-inspection
+    kind: library
     depends_on: []
   - name: harness-hook-correctness
+    kind: library
     depends_on: []
   - name: reviewer-protocol
+    kind: library
     depends_on: []
   - name: plugin-projection
+    kind: packaging
     depends_on: [stage-contract]
   - name: plugin-composition
+    kind: library
     depends_on: [stage-contract, runtime-recovery, plugin-projection]
   - name: reference-plugin-and-guides
+    kind: packaging
     depends_on: [plugin-projection, plugin-composition]
   - name: verification-and-ledger-closure
+    kind: library
     depends_on: [stage-contract, runtime-recovery, swarm-and-next-stage, routing-and-autonomy-guards, unit-iteration-and-scope-preview, workspace-inspection, harness-hook-correctness, reviewer-protocol, plugin-projection, plugin-composition, reference-plugin-and-guides]
 ```
 

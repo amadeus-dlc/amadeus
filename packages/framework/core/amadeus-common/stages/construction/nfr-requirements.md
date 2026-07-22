@@ -18,6 +18,10 @@ produces:
   - scalability-requirements
   - reliability-requirements
   - tech-stack-decisions
+produces_kinds:
+  performance-requirements: [service, ui]
+  scalability-requirements: [service]
+  reliability-requirements: [service]
 consumes:
   - artifact: business-logic-model
     required: true

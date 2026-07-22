@@ -91,14 +91,25 @@
 // blocked. Any unexpected error also falls through to allow the stop — failing
 // open is the only safe failure mode for a hook that can otherwise trap a turn.
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import {
   auditFilePath,
+  COMPOSE_MARKER_RELATIVE_PATH,
+  COMPOSE_MARKER_TTL_MS,
   consumeMigrationStopLatch,
   errorMessage,
   getField,
   hooksHealthDir,
+  inspectComposeMarker,
   isEngineToolCall,
   isMachineInjectedTurnText,
   isoTimestamp,
@@ -109,6 +120,7 @@ import {
   stateFilePath,
   stopHookDir,
   harnessDir,
+  type MarkerObservation,
 } from "../tools/amadeus-lib.ts";
 
 const HOOK_NAME = "stop";
@@ -153,6 +165,48 @@ const INTERACTIVE_BLOCK_CAP = 2;
 const ENGINE_TIMEOUT_MS = 10_000;
 
 const projectDir = resolveProjectDirFromHook(import.meta.url);
+
+interface PendingComposeStopDeps {
+  projectDir: string;
+  nowMs: () => number;
+  stat: (path: string) => { mtimeMs: number } | undefined;
+  unlink: (path: string) => void;
+  diagnostic: (value: JanitorDiagnostic) => void;
+}
+
+type MarkerJanitorOutcome =
+  | { kind: "not-applicable" }
+  | { kind: "deleted"; path: string }
+  | { kind: "delete-failed"; path: string; reason: string };
+
+type JanitorDiagnostic = {
+  markerState: "stale";
+  cleanup: "deleted" | "delete-failed";
+  enforcement: "continued";
+};
+
+const realPendingComposeStopDeps: PendingComposeStopDeps = {
+  projectDir,
+  nowMs: Date.now,
+  stat(path) {
+    try {
+      return { mtimeMs: statSync(path).mtimeMs };
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+      throw e;
+    }
+  },
+  unlink(path) {
+    unlinkSync(path);
+  },
+  diagnostic(value) {
+    recordHookDrop(
+      projectDir,
+      HOOK_NAME,
+      `compose marker stale; cleanup=${value.cleanup}; enforcement=${value.enforcement}`,
+    );
+  },
+};
 
 // Allow the stop: emit nothing, exit 0. This is the precedent non-blocking
 // pattern shared by every other framework hook. The conductor's turn ends.
@@ -453,15 +507,40 @@ function isPendingQuestionStop(stateContent: string): boolean {
 // answer the gate; a stray marker must not strand it). Fail-open: any read
 // error falls through to the cap-bounded block. Front/report composes are
 // unaffected (cold start has no state file; the hook allows before this).
-function isPendingComposeStop(stateContent: string): boolean {
-  try {
-    if (getField(stateContent, "Construction Autonomy Mode")?.trim() === "autonomous") {
-      return false; // autonomy guard - keep the loop alive
-    }
-    return existsSync(join(projectDir, "amadeus", ".amadeus-compose-pending"));
-  } catch {
+/** @internal */
+export function isPendingComposeStop(
+  stateContent: string,
+  deps: PendingComposeStopDeps = realPendingComposeStopDeps,
+): boolean {
+  if (getField(stateContent, "Construction Autonomy Mode")?.trim() === "autonomous") {
     return false;
   }
+
+  const markerPath = join(deps.projectDir, COMPOSE_MARKER_RELATIVE_PATH);
+  let observation: MarkerObservation;
+  try {
+    const marker = deps.stat(markerPath);
+    observation = marker === undefined
+      ? { kind: "absent", path: markerPath }
+      : { kind: "present", path: markerPath, mtimeMs: marker.mtimeMs };
+  } catch (e) { observation = { kind: "unreadable", path: markerPath, reason: errorMessage(e) }; }
+
+  const freshness = inspectComposeMarker(observation, deps.nowMs(), COMPOSE_MARKER_TTL_MS);
+  let janitor: MarkerJanitorOutcome = { kind: "not-applicable" };
+  if (freshness.kind === "stale") {
+    try {
+      deps.unlink(markerPath);
+      janitor = { kind: "deleted", path: markerPath };
+    } catch (e) { janitor = { kind: "delete-failed", path: markerPath, reason: errorMessage(e) }; }
+  }
+  if (janitor.kind !== "not-applicable") {
+    deps.diagnostic({
+      markerState: "stale",
+      cleanup: janitor.kind,
+      enforcement: "continued",
+    });
+  }
+  return freshness.kind === "fresh";
 }
 
 // --- Tier-3: conversational-turn carve-out (issue #365 broader reading) -------
@@ -768,6 +847,8 @@ function continuationReason(kind: string, stage: string): string {
 // Mirror the SubagentStop hook's stdin idiom: a TTY means no Claude Code JSON
 // is coming (test/debug contexts) — allow the stop rather than block on a
 // terminal read.
+// biome-ignore format: preserve the established top-level hook body without a whole-file reindent
+if (import.meta.main) {
 if (process.stdin.isTTY) allowStop();
 
 const input = await Bun.stdin.text();
@@ -987,3 +1068,4 @@ if (!shouldBlock) {
 
 // Within budget — block the stop and re-feed the pending work.
 blockStop(continuationReason(kind, currentStageSlug(stateContent)));
+}

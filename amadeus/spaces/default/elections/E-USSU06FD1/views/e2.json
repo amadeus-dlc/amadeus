@@ -1,0 +1,26 @@
+{
+  "electionId": "E-USSU06FD1",
+  "voter": "e2",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "B. 二値projectTypeを維持し、blocking advisoryをbirth/state projector guardで必須検査してreject"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "C. 不完全観測を保守的Brownfieldに分類し、advisory付きReverse Engineeringを維持"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "A. scan結果をclassified/inconclusive判別union化し、birth/state mutation前にinconclusiveをreject、detect/doctorはadvisory表示"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 4,
+      "label": "X. その他（noteに型・mutation境界・観測表示を記載）"
+    }
+  ]
+}

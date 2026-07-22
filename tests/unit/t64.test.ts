@@ -803,13 +803,12 @@ describe("shape regressions via parse -> validate chain", () => {
 });
 
 // ============================================================
-// Reserved-key passthrough (.sh assertions 38-42)
+// Active/reserved-key passthrough (.sh assertions 38-42)
 // ============================================================
 describe("reserved-key passthrough (parser keeps key, validator rejects)", () => {
-  test("when", () => {
-    // .sh: "reserved: when"
+  test("active when rejects a scalar value", () => {
     expect(reservedPassthrough("when")).toContain(
-      "when is reserved (fitness compiler); not active yet"
+      "when must be object, got string"
     );
   });
 
