@@ -6,12 +6,12 @@ import { canonicalIdentity } from "../../../scripts/formal-verif/canonical.ts";
 import type { CellResult } from "../../../scripts/formal-verif/contract.ts";
 import { FsEvidenceStoreAdapter } from "../../../scripts/formal-verif/fs-evidence-store.ts";
 import { FsProvenanceStoreAdapter } from "../../../scripts/formal-verif/fs-provenance-store.ts";
-import { createTransaction, foldLedger, type FoldedLedger, type FreezeProof, type ProvenanceEvent } from "../../../scripts/formal-verif/provenance.ts";
+import { createTransaction, foldLedger, type FreezeProof, type ProvenanceEvent } from "../../../scripts/formal-verif/provenance.ts";
 import {
   SKELETON_ARCHIVE_PATHS,
-  SKELETON_REQUIRED_RESERVATION_BYTES,
   TlaSkeletonCoordinator,
   commitSkeletonOutcome,
+  skeletonCiBundleIdentity,
   type SkeletonAttemptObservation,
   type SkeletonAttemptPort,
   type SkeletonAttemptRequest,
@@ -19,9 +19,8 @@ import {
   type SkeletonCiObservation,
   type SkeletonCiPort,
   type SkeletonExecutionManifest,
-  type SkeletonPreconditionInput,
 } from "../../../scripts/formal-verif/tla-skeleton.ts";
-import { FIXED_JDK_RUN_PROFILE_IDENTITY, FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY, FIXED_TLC_PROFILE_IDENTITY } from "../../../scripts/formal-verif/tlc-toolchain.ts";
+import { createIssuedSkeletonPrecondition } from "./tla-skeleton-preconditions.ts";
 import { driveSyntheticTlcToolchain } from "./tla-toolchain-harness.ts";
 
 const sha = (value: unknown, label = "value") => canonicalIdentity(value, `test.formal-verif.tla-skeleton.${label}.v1`).sha256;
@@ -31,6 +30,8 @@ function eventBase(sequence: number) {
   return { eventId: sha(sequence, "event"), at: at(sequence), sequence, actorId: "e2e-actor", sessionId: "e2e-session", worktree: "dedicated-tla-skeleton", baseSha: sha("baseline"), publicInputHash: sha("public-input") };
 }
 
+// Independent SKELETON_REVEALED ledger used only for the terminal outcome commit; commitSkeletonOutcome binds to
+// context.ledger, not to the precondition's provenance graph, so this stays decoupled from the issued precondition.
 function seedTransaction() {
   const startProof = { publicInputHash: sha("public-input"), actualInputManifestIdentity: sha("public-input"), actualInputManifestRef: "inputs/public.json", forbiddenScanReceiptIdentity: sha("scan"), forbiddenMatchCount: 0 as const, clean: true as const };
   const freezeProof: FreezeProof = { ...startProof, testsGreen: true, freezeSha: sha("t-freeze"), ownedPathsHash: sha("owned"), testsReceiptIdentity: sha("tests"), freezeCommitVerified: true };
@@ -38,51 +39,6 @@ function seedTransaction() {
   const freeze: Omit<Extract<ProvenanceEvent, { kind: "ARM_FROZEN" }>, "transactionId"> = { ...eventBase(1), kind: "ARM_FROZEN", arm: "tla", proof: freezeProof };
   const reveal: Omit<Extract<ProvenanceEvent, { kind: "FIXTURE_REVEALED" }>, "transactionId"> = { ...eventBase(2), kind: "FIXTURE_REVEALED", arm: "tla", frozenEventId: freeze.eventId, disclosureHash: sha("materialized") };
   return createTransaction(null, [start, freeze, reveal]);
-}
-
-function preconditions(ledger: FoldedLedger, modelIdentity: string): SkeletonPreconditionInput {
-  return {
-    revisionIdentity: sha("revision"),
-    ledger,
-    fixtureAlias: "fx-1252",
-    tFrozenEventId: sha(1, "event"),
-    tFreezeSha: sha("t-freeze"),
-    publicInputHash: sha("public-input"),
-    injectionSha: sha("injection"),
-    sealIdentity: sha("seal"),
-    disclosureGrantIdentity: sha("grant"),
-    materializationReceiptIdentity: sha("materialization-receipt"),
-    materializedIdentity: sha("materialized"),
-    modelIdentity,
-    jarIdentity: FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY,
-    jdkIdentity: FIXED_JDK_RUN_PROFILE_IDENTITY,
-    profileIdentity: FIXED_TLC_PROFILE_IDENTITY,
-    evidenceRootIdentity: sha("evidence-root"),
-    reservationIdentity: sha("reservation"),
-    reservedBytes: SKELETON_REQUIRED_RESERVATION_BYTES,
-    composition: {
-      baseSha: sha("baseline"),
-      armFreezeSha: sha("t-freeze"),
-      armOwnedDiffIdentity: sha("arm-diff"),
-      injectionSha: sha("injection"),
-      injectionPatchIdentity: sha("patch"),
-      applicationOrder: "ARM_T_OWNED_DIFF_THEN_1252_PATCH",
-      armOverlayTree: sha("arm-tree"),
-      injectionOverlayTree: sha("injection-tree"),
-      resultingTreeHash: sha("resulting-tree"),
-      resultingCommitSha: sha("resulting-commit"),
-      parentCount: 1,
-      clean: true,
-      dedicated: true,
-    },
-    ciTrust: {
-      repository: "amadeus-dlc/amadeus",
-      workflowPath: ".github/workflows/formal-verification.yml",
-      workflowBlobSha: sha("workflow"),
-      workflowRef: sha("baseline"),
-      commandIdentity: sha("ci-command"),
-    },
-  };
 }
 
 function worktreeReceipt(request: SkeletonAttemptRequest) {
@@ -155,23 +111,34 @@ function attemptPort(store: FsEvidenceStoreAdapter, calls: string[][]): Skeleton
   };
 }
 
+// CI archive stdout/stderr bytes per run; their sha256 is what the CI row binds through the outcome verifier's
+// streamsMatch, so the row stream identities are derived from these exact bytes.
+function ciStreamBytes(runNo: 1 | 2, stream: "stdout" | "stderr") {
+  return new TextEncoder().encode(`ci-${stream}-run-${runNo}`);
+}
+
 function ciRow(manifest: SkeletonExecutionManifest, runNo: 1 | 2) {
   const local = manifest.localAttempts.find((attempt) => attempt.runNo === runNo)!;
-  const body = {
+  const bundleBody = {
     runNo,
     verdict: "DETECTED" as const,
     counterexampleIdentity: local.counterexampleIdentity,
     cellResultIdentity: local.cellResultIdentity,
-    bundleId: sha({ ci: "bundle", runNo }, "ci-bundle"),
-    stdoutIdentity: sha({ ci: "stdout", runNo }, "ci-stdout"),
-    stderrIdentity: sha({ ci: "stderr", runNo }, "ci-stderr"),
+    stdoutIdentity: createHash("sha256").update(ciStreamBytes(runNo, "stdout")).digest("hex"),
+    stderrIdentity: createHash("sha256").update(ciStreamBytes(runNo, "stderr")).digest("hex"),
     commandIdentity: local.commandIdentity,
     processReceiptIdentity: local.processReceiptIdentity,
+    durationMs: local.durationMs,
     modelIdentity: local.modelIdentity,
     subjectIdentity: local.subjectIdentity,
     toolIdentity: local.toolIdentity,
   };
-  return { ...body, rowIdentity: canonicalIdentity(body, "amadeus.formal-verif.skeleton-ci-row.v1").sha256 };
+  const rowBody = { ...bundleBody, bundleId: skeletonCiBundleIdentity(bundleBody) };
+  return { ...rowBody, rowIdentity: canonicalIdentity(rowBody, "amadeus.formal-verif.skeleton-ci-row.v1").sha256 };
+}
+
+function archiveEntry(path: string, bytes: Uint8Array) {
+  return { path, kind: "FILE" as const, compressedBytes: bytes.byteLength, uncompressedBytes: bytes.byteLength, contentSha256: createHash("sha256").update(bytes).digest("hex"), chunks: [bytes] };
 }
 
 function ciObservation(manifest: SkeletonExecutionManifest): SkeletonCiObservation {
@@ -184,13 +151,23 @@ function ciObservation(manifest: SkeletonExecutionManifest): SkeletonCiObservati
     attempts: [ciRow(manifest, 1), ciRow(manifest, 2)],
   };
   const artifact: SkeletonCiArtifact = { ...body, artifactIdentity: canonicalIdentity(body, "amadeus.formal-verif.skeleton-ci-artifact.v1").sha256 };
-  const entries = SKELETON_ARCHIVE_PATHS.map((path, index) => {
-    const bytes = path === "ci-manifest.json" ? canonicalIdentity(artifact, "amadeus.formal-verif.skeleton-ci-artifact-bytes.v1").bytes : new TextEncoder().encode(`${path}:${index}`);
-    return { path, kind: "FILE" as const, compressedBytes: bytes.byteLength, uncompressedBytes: bytes.byteLength, contentSha256: createHash("sha256").update(bytes).digest("hex"), chunks: [bytes] };
+  const entries = SKELETON_ARCHIVE_PATHS.map((path) => {
+    if (path === "ci-manifest.json") return archiveEntry(path, canonicalIdentity(artifact, "amadeus.formal-verif.skeleton-ci-artifact-bytes.v1").bytes);
+    const stream = /^attempts\/([12])\/(stdout|stderr)\.bin$/.exec(path);
+    if (stream) return archiveEntry(path, ciStreamBytes(Number(stream[1]) as 1 | 2, stream[2] as "stdout" | "stderr"));
+    const structured = /^attempts\/([12])\/(envelope|result|command|timing)\.json$/.exec(path);
+    const row = artifact.attempts.find((candidate) => candidate.runNo === Number(structured![1]))!;
+    const payload = structured![2] === "envelope"
+      ? { executionManifestIdentity: artifact.executionManifestIdentity, runNo: row.runNo, bundleId: row.bundleId, rowIdentity: row.rowIdentity }
+      : structured![2] === "result"
+        ? { verdict: row.verdict, counterexampleIdentity: row.counterexampleIdentity, cellResultIdentity: row.cellResultIdentity }
+        : structured![2] === "command"
+          ? { commandIdentity: row.commandIdentity, toolIdentity: row.toolIdentity, modelIdentity: row.modelIdentity }
+          : { processReceiptIdentity: row.processReceiptIdentity, durationMs: row.durationMs };
+    return archiveEntry(path, canonicalIdentity(payload, `amadeus.formal-verif.skeleton-ci-${structured![2]}-bytes.v1`).bytes);
   });
   const total = entries.reduce((sum, entry) => sum + entry.uncompressedBytes, 0);
   return {
-    providerReceiptIdentity: sha("github-actions", "provider-receipt"),
     metadata: {
       provider: "github-actions",
       repository: manifest.ciTrust.repository,
@@ -219,6 +196,7 @@ function ciObservation(manifest: SkeletonExecutionManifest): SkeletonCiObservati
 
 export async function driveTlaSkeletonHarness() {
   const root = mkdtempSync(join(tmpdir(), "fv-tla-skeleton-e2e-"));
+  const precondition = await createIssuedSkeletonPrecondition();
   try {
     const seed = seedTransaction();
     const provenance = new FsProvenanceStoreAdapter(join(root, "provenance"));
@@ -226,16 +204,13 @@ export async function driveTlaSkeletonHarness() {
     if (!seeded.ok) throw new Error(seeded.error.message);
     const ledger = foldLedger(seed.events);
     if (!ledger.ok) throw new Error(ledger.error.message);
-    const modelProbe = await driveSyntheticTlcToolchain("counterexample");
     const evidence = new FsEvidenceStoreAdapter(join(root, "evidence"), { nowMs: () => 0, utcNow: () => at(5) });
-    const revisionIdentity = sha("revision");
-    const reserved = evidence.reserveCapacity(revisionIdentity, 2 * 1024 * 1024);
+    const reserved = evidence.reserveCapacity(precondition.input.revisionIdentity, 2 * 1024 * 1024);
     if (!reserved.ok) throw new Error(reserved.error.message);
     const calls: string[][] = [];
     const ci: SkeletonCiPort = { collect: async (manifest) => ({ ok: true, value: ciObservation(manifest) }) };
-    const input = preconditions(ledger.value, modelProbe.model.modelIdentity);
-    const coordinator = new TlaSkeletonCoordinator(attemptPort(evidence, calls), ci, { read: async () => ({ ok: true, value: input }) });
-    const prepared = await coordinator.prepare(input.revisionIdentity);
+    const coordinator = new TlaSkeletonCoordinator(attemptPort(evidence, calls), ci, { read: async () => ({ ok: true, value: precondition.input }) });
+    const prepared = await coordinator.prepare(precondition.input.revisionIdentity);
     if (!prepared.ok) throw new Error(prepared.error.message);
     if (prepared.value.kind === "SkeletonFailureDraft") throw new Error(prepared.value.reason);
     const run = await coordinator.run(prepared.value);
@@ -264,6 +239,7 @@ export async function driveTlaSkeletonHarness() {
       recovered: committed.value.recovered,
     };
   } finally {
+    precondition.dispose();
     rmSync(root, { recursive: true, force: true });
   }
 }

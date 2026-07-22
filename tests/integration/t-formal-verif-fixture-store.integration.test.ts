@@ -60,7 +60,10 @@ describe("formal verification filesystem fixture registry", () => {
     expect("manifestPromotionPermissionIdentity" in directRegistry).toBe(false);
     expect("createPromotedFixtureManifestForIssuedPermission" in directRegistry).toBe(false);
     expect("createCoordinatorPromotionPermissionIssuer" in publicApi).toBe(false);
-    expect(Object.keys(directStore).sort()).toEqual(["FsFixtureRegistry", "createFsFixtureRegistryForTesting"]);
+    // MaterializationReceipt / isVerifiedMaterializationReceipt are the registry's issued "subject receipt"
+    // (domain-entities.md: Registry.materialize -> subject receipt) and its store-issuance guard, consumed by
+    // the TLA skeleton preflight for its fail-closed precondition check. They carry no promotion-permission minting.
+    expect(Object.keys(directStore).sort()).toEqual(["FsFixtureRegistry", "MaterializationReceipt", "createFsFixtureRegistryForTesting", "isVerifiedMaterializationReceipt"]);
     expect(Object.keys(publicApi).filter((name) => /Coordinator.*FixtureRegistry/.test(name))).toEqual([]);
     expect(Object.keys(registryHarness).filter((name) => /Coordinator.*FixtureRegistry/.test(name))).toEqual([]);
     expect(Object.getOwnPropertyNames(store)).not.toContain("issuedPromotionPermissions");

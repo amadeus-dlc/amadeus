@@ -6,19 +6,22 @@ import { canonicalIdentity } from "../../scripts/formal-verif/canonical.ts";
 import { FsProvenanceStoreAdapter } from "../../scripts/formal-verif/fs-provenance-store.ts";
 import { createTransaction, foldLedger, type FoldedLedger, type FreezeProof, type ProvenanceEvent, type ProvenanceStorePort } from "../../scripts/formal-verif/provenance.ts";
 import {
-  SKELETON_REQUIRED_RESERVATION_BYTES,
   TlaSkeletonCoordinator,
   commitSkeletonOutcome,
   verifySkeletonStop,
   type SkeletonFailureDraft,
-  type SkeletonPreconditionInput,
 } from "../../scripts/formal-verif/tla-skeleton.ts";
+import { createIssuedSkeletonPrecondition } from "../formal-verif/support/tla-skeleton-preconditions.ts";
 
 const roots: string[] = [];
+const disposers: Array<() => void> = [];
 const sha = (value: string) => canonicalIdentity(value, "test.formal-verif.skeleton-outcome.v1").sha256;
 const at = (second: number) => `2026-07-20T00:00:0${second}Z`;
 
-afterEach(() => roots.splice(0).forEach((root) => { rmSync(root, { recursive: true, force: true }); }));
+afterEach(() => {
+  disposers.splice(0).forEach((dispose) => dispose());
+  roots.splice(0).forEach((root) => { rmSync(root, { recursive: true, force: true }); });
+});
 
 function eventBase(sequence: number) {
   return { eventId: sha(`event-${sequence}`), at: at(sequence), sequence, actorId: "actor", sessionId: "session", worktree: "integration-worktree", baseSha: sha("base"), publicInputHash: sha("public") };
@@ -46,56 +49,15 @@ async function seededStore(): Promise<{ root: string; store: FsProvenanceStoreAd
   return { root, store, storeHead: committed.value.head, ledger: ledger.value };
 }
 
-function preconditions(ledger: FoldedLedger): SkeletonPreconditionInput {
-  return {
-    revisionIdentity: sha("revision"),
-    ledger,
-    fixtureAlias: "fx-other" as "fx-1252",
-    tFrozenEventId: sha("event-1"),
-    tFreezeSha: sha("freeze"),
-    publicInputHash: sha("public"),
-    injectionSha: sha("injection"),
-    sealIdentity: sha("seal"),
-    disclosureGrantIdentity: sha("grant"),
-    materializationReceiptIdentity: sha("materialization-receipt"),
-    materializedIdentity: sha("materialized"),
-    modelIdentity: sha("model"),
-    jarIdentity: sha("jar"),
-    jdkIdentity: sha("jdk"),
-    profileIdentity: sha("profile"),
-    evidenceRootIdentity: sha("evidence-root"),
-    reservationIdentity: sha("reservation"),
-    reservedBytes: SKELETON_REQUIRED_RESERVATION_BYTES,
-    composition: {
-      baseSha: sha("base"),
-      armFreezeSha: sha("freeze"),
-      armOwnedDiffIdentity: sha("arm-diff"),
-      injectionSha: sha("injection"),
-      injectionPatchIdentity: sha("patch"),
-      applicationOrder: "ARM_T_OWNED_DIFF_THEN_1252_PATCH",
-      armOverlayTree: sha("arm-tree"),
-      injectionOverlayTree: sha("injection-tree"),
-      resultingTreeHash: sha("resulting-tree"),
-      resultingCommitSha: sha("resulting-commit"),
-      parentCount: 1,
-      clean: true,
-      dedicated: true,
-    },
-    ciTrust: {
-      repository: "amadeus-dlc/amadeus",
-      workflowPath: ".github/workflows/formal-verification.yml",
-      workflowBlobSha: sha("workflow"),
-      workflowRef: sha("base"),
-      commandIdentity: sha("ci-command"),
-    },
-  };
-}
-
-async function failureDraft(ledger: FoldedLedger): Promise<SkeletonFailureDraft> {
+// A deterministic terminal failure draft: prepare() rejects a genuine store-issued precondition whose revision does
+// not match the requested one (PRECONDITION), yielding a module-issued SkeletonFailureDraft to commit. The draft is
+// independent of the commit context ledger, which commitSkeletonOutcome binds separately.
+async function failureDraft(): Promise<SkeletonFailureDraft> {
   const never = { execute: async () => { throw new Error("attempt port must not run"); } };
   const ci = { collect: async () => { throw new Error("CI port must not run"); } };
-  const input = preconditions(ledger);
-  const result = await new TlaSkeletonCoordinator(never, ci, { read: async () => ({ ok: true, value: input }) }).prepare(input.revisionIdentity);
+  const { input, dispose } = await createIssuedSkeletonPrecondition();
+  disposers.push(dispose);
+  const result = await new TlaSkeletonCoordinator(never, ci, { read: async () => ({ ok: true, value: input }) }).prepare(sha("mismatched-revision"));
   if (!result.ok || result.value.kind !== "SkeletonFailureDraft") throw new Error("expected deterministic failure draft");
   return result.value;
 }
@@ -107,7 +69,7 @@ function context(ledger: FoldedLedger, expectedStoreHead: string) {
 describe("TLA skeleton outcome transaction", () => {
   test("atomically commits a verified terminal failure", async () => {
     const seeded = await seededStore();
-    const result = await commitSkeletonOutcome(await failureDraft(seeded.ledger), context(seeded.ledger, seeded.storeHead), seeded.store);
+    const result = await commitSkeletonOutcome(await failureDraft(), context(seeded.ledger, seeded.storeHead), seeded.store);
     expect(result.ok && result.value.outcome).toBe("fail");
     const stored = result.ok ? JSON.parse(readFileSync(join(seeded.root, `transactions/${result.value.transactionId}.json`), "utf8")) : null;
     expect(stored.events[0].kind).toBe("SKELETON_FAILED");
@@ -126,7 +88,7 @@ describe("TLA skeleton outcome transaction", () => {
       },
       findTransaction: (transactionId) => seeded.store.findTransaction(transactionId),
     };
-    const result = await commitSkeletonOutcome(await failureDraft(seeded.ledger), context(seeded.ledger, seeded.storeHead), port);
+    const result = await commitSkeletonOutcome(await failureDraft(), context(seeded.ledger, seeded.storeHead), port);
     expect(result.ok && result.value.recovered).toBe(true);
   });
 
@@ -137,7 +99,7 @@ describe("TLA skeleton outcome transaction", () => {
       appendBatch: async () => ({ ok: false, error: { kind: "HeadConflictError", message: "stale head" } }),
       findTransaction: async () => { lookups++; return { ok: true, value: null }; },
     };
-    const result = await commitSkeletonOutcome(await failureDraft(seeded.ledger), context(seeded.ledger, seeded.storeHead), port);
+    const result = await commitSkeletonOutcome(await failureDraft(), context(seeded.ledger, seeded.storeHead), port);
     expect(!result.ok && result.error.operation).toBe("PROVENANCE_APPEND");
     expect(lookups).toBe(0);
   });
@@ -149,7 +111,7 @@ describe("TLA skeleton outcome transaction", () => {
       appendBatch: async () => { appends++; return { ok: false, error: { kind: "CommitUnknownError", message: "unexpected" } }; },
       findTransaction: (transactionId) => seeded.store.findTransaction(transactionId),
     };
-    const draft = { ...(await failureDraft(seeded.ledger)), evidenceBundleHash: sha("forged") };
+    const draft = { ...(await failureDraft()), evidenceBundleHash: sha("forged") };
     const result = await commitSkeletonOutcome(draft, context(seeded.ledger, seeded.storeHead), port);
     expect(result.ok).toBe(false);
     expect(appends).toBe(0);
@@ -157,7 +119,7 @@ describe("TLA skeleton outcome transaction", () => {
 
   test("proves an empty post-failure suffix and rejects fan-out", async () => {
     const seeded = await seededStore();
-    const committed = await commitSkeletonOutcome(await failureDraft(seeded.ledger), context(seeded.ledger, seeded.storeHead), seeded.store);
+    const committed = await commitSkeletonOutcome(await failureDraft(), context(seeded.ledger, seeded.storeHead), seeded.store);
     if (!committed.ok) throw new Error(committed.error.message);
     const source = (activities: readonly { kind: "ARM_S_STARTED"; afterEventId: string; activityIdentity: string }[]) => ({ readSuffix: async () => ({ ok: true as const, value: activities }) });
     expect((await verifySkeletonStop(committed.value, source([]))).ok).toBe(true);
@@ -171,7 +133,7 @@ describe("TLA skeleton outcome transaction", () => {
 
   test("keeps suffix source failures external and rejects malformed evidence", async () => {
     const seeded = await seededStore();
-    const committed = await commitSkeletonOutcome(await failureDraft(seeded.ledger), context(seeded.ledger, seeded.storeHead), seeded.store);
+    const committed = await commitSkeletonOutcome(await failureDraft(), context(seeded.ledger, seeded.storeHead), seeded.store);
     if (!committed.ok) throw new Error(committed.error.message);
     const unavailable = await verifySkeletonStop(committed.value, { readSuffix: async () => ({ ok: false, error: { kind: "LookupError", message: "suffix unavailable" } }) });
     expect(!unavailable.ok && unavailable.error).toMatchObject({ operation: "PROVENANCE_LOOKUP" });
