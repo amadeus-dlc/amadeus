@@ -2131,6 +2131,35 @@ export function handleDoctor(projectDir: string): void {
     });
   }
 
+  // Submodule health (FR-3 item 12). Only surfaces a row when .gitmodules is
+  // PRESENT \u2014 an ordinary workspace adds no row, keeping doctor byte-identical
+  // (NFR-3). An uninitialized submodule is advisory: pass:true so it never flips
+  // the doctor exit code (BR-U06-17). A present-but-unparseable .gitmodules is a
+  // real misconfiguration and fails loudly.
+  const submoduleInspection = inspectSubmodules(projectDir, nodeReadOnlyFs);
+  if (submoduleInspection.present) {
+    if (submoduleInspection.blocking) {
+      results.push({
+        pass: false,
+        label: `Submodules: .gitmodules present but unparseable (${submoduleInspection.blocking.message})`,
+        fix: "fix .gitmodules so every [submodule] section has a safe relative path",
+      });
+    } else {
+      const subs = submoduleInspection.submodules;
+      const uninitList = formatUninitializedSubmodules(subs);
+      if (uninitList === null) {
+        results.push({ pass: true, label: `Submodules: ${subs.length} present, all initialized` });
+      } else {
+        const uninitCount = subs.filter((s) => !s.initialized).length;
+        const advisory = `git submodule update --init --recursive \u2014 ${uninitList}`;
+        results.push({
+          pass: true,
+          label: `Submodules: ${subs.length} present, ${uninitCount} uninitialized (advisory: ${advisory})`,
+        });
+      }
+    }
+  }
+
   // Print report
   let output = "AI-DLC Health Check\n";
   output += `${"\u2500".repeat(37)}\n`;
@@ -2223,6 +2252,22 @@ const SCAN_EXCLUDE = new Set([
   "target",
   "vendor",
 ]);
+
+// Non-package.json manifests whose mere PRESENCE marks a brownfield project.
+// Extracted from detectWorkspace's inline list so the U06 signal evaluator and
+// the legacy classifier share ONE definition (avoids drift between the two).
+const OTHER_MANIFESTS = [
+  "requirements.txt",
+  "pyproject.toml",
+  "setup.py",
+  "Cargo.toml",
+  "go.mod",
+  "pom.xml",
+  "build.gradle",
+  "build.gradle.kts",
+  "composer.json",
+  "Gemfile",
+];
 
 function countFilesByLang(
   dir: string,
@@ -2393,91 +2438,775 @@ function hasNonDevDeps(projectDir: string): boolean {
   }
 }
 
-export function detectWorkspace(projectDir: string): ScanResult {
-  let topEntries: string[] = [];
+// ---------------------------------------------------------------------------
+// U06 workspace inspection — fail-closed scan (FR-3 items 11-12)
+//
+// The canonical scan seam. `inspectWorkspace` returns a discriminated union so
+// an incomplete observation (permission failure, unparseable .gitmodules) can
+// never be silently read as Greenfield: the birth boundary rejects it before
+// any state/plan/graph/audit/workspace mutation. Classification-critical reads
+// flow through the ReadOnlyFs port so failure branches are drivable in-process
+// (no env-gated test mode). The default classified path reuses the existing
+// detectFrameworks / detectBuildSystem / countLangsInTopDirs helpers verbatim,
+// so a workspace with no nested root, no submodule, and no read failure yields
+// byte-identical output (NFR-3).
+// ---------------------------------------------------------------------------
+
+// NOTE: the ok/err arms are named (not an inline `{...} | {...}` union on one
+// line) because the complexity gate's lizard TS tokenizer mis-tracks braces
+// across a single-line union-of-object-types with generics, which merges the
+// following functions into one measurement.
+type ResultOk<T> = { ok: true; value: T };
+type ResultErr<E> = { ok: false; error: E };
+type Result<T, E> = ResultOk<T> | ResultErr<E>;
+
+type FsObservationError = {
+  kind: "not-found" | "unreadable";
+  path: string;
+  code?: string;
+  message: string;
+};
+
+// Only these distinctions matter to the scan: symlinks are skipped, directories
+// are walked/candidate, everything else is treated as a file (a rare socket/FIFO
+// at a workspace root carries no source extension, so counting it as a file is
+// harmless — and it keeps every branch reachable in-process).
+type EntryKind = "file" | "directory" | "symlink";
+
+interface DirectoryEntry {
+  name: string;
+  kind: EntryKind;
+}
+
+// Read-only filesystem port. Production wraps Node/Bun fs; fixtures inject
+// errors. NO write / mkdir / spawn / Git method — the scan never mutates.
+interface ReadOnlyFs {
+  readDirectory(path: string): Result<readonly DirectoryEntry[], FsObservationError>;
+  readTextFile(path: string): Result<string, FsObservationError>;
+  inspectEntry(path: string): Result<EntryKind, FsObservationError>;
+}
+
+type RootSignals = {
+  sourceCounts: Readonly<Record<string, number>>;
+  frameworks: readonly string[];
+  buildSystem?: string;
+  manifests: readonly string[];
+  sourceDirectories: readonly string[];
+};
+
+type ProjectCandidate = { path: string; signals: RootSignals };
+
+type SubmoduleObservation = {
+  name: string;
+  path: string;
+  url?: string;
+  initialized: boolean;
+};
+
+type WorkspaceAdvisoryCode =
+  | "MULTIPLE_NESTED_PROJECTS"
+  | "UNREADABLE_ENTRY"
+  | "UNPARSEABLE_GITMODULES"
+  | "UNINITIALIZED_SUBMODULES"
+  | "INCREMENTAL_SCOPE_GREENFIELD";
+
+type BlockingWorkspaceAdvisoryCode =
+  | "ROOT_UNREADABLE"
+  | "SIGNAL_METADATA_UNREADABLE"
+  | "CANDIDATE_UNREADABLE"
+  | "UNPARSEABLE_GITMODULES";
+
+type WorkspaceAdvisory = {
+  code: WorkspaceAdvisoryCode;
+  paths: readonly string[];
+  message: string;
+  remedy?: string;
+};
+
+type BlockingWorkspaceAdvisory = {
+  code: BlockingWorkspaceAdvisoryCode;
+  paths: readonly string[];
+  message: string;
+  remedy?: string;
+};
+
+type ClassifiedWorkspaceScan = {
+  root: string;
+  projectType: "Greenfield" | "Brownfield";
+  languages: readonly string[];
+  frameworks: readonly string[];
+  buildSystem?: string;
+  nestedRoot?: string;
+  nestedCandidates: readonly ProjectCandidate[];
+  submodules: readonly SubmoduleObservation[];
+  advisories: readonly WorkspaceAdvisory[];
+};
+
+type PartialWorkspaceObservations = {
+  languages: readonly string[];
+  frameworks: readonly string[];
+  buildSystem?: string;
+  nestedCandidates: readonly ProjectCandidate[];
+  submodules: readonly SubmoduleObservation[];
+};
+
+type InconclusiveWorkspaceScan = {
+  root: string;
+  partial: PartialWorkspaceObservations;
+  advisories: readonly BlockingWorkspaceAdvisory[];
+};
+
+type WorkspaceScanResult =
+  | { kind: "classified"; scan: ClassifiedWorkspaceScan }
+  | { kind: "inconclusive"; scan: InconclusiveWorkspaceScan };
+
+// Directory names never treated as a nested project root (docs/examples/etc.).
+const NESTED_EXCLUDE_DIRS = new Set([
+  "docs",
+  "doc",
+  "examples",
+  "example",
+  "samples",
+  "sample",
+  "demos",
+  "demo",
+  "reference",
+  "references",
+  "testdata",
+  "fixtures",
+  "templates",
+  "template",
+  "scripts",
+  "script",
+]);
+
+function toFsObservationError(path: string, e: unknown): FsObservationError {
+  const code = (e as NodeJS.ErrnoException | undefined)?.code;
+  const base: FsObservationError = {
+    kind: code === "ENOENT" ? "not-found" : "unreadable",
+    path,
+    message: errorMessage(e),
+  };
+  return code ? { ...base, code } : base;
+}
+
+function statToEntryKind(st: Stats): EntryKind {
+  if (st.isSymbolicLink()) return "symlink";
+  if (st.isDirectory()) return "directory";
+  return "file";
+}
+
+// One try/catch for all three adapter methods so the error mapping is written
+// (and measured) once, not three times.
+function fsResult<T>(path: string, op: () => T): Result<T, FsObservationError> {
   try {
-    topEntries = readdirSync(projectDir);
-  } catch {
-    // projectDir doesn't exist yet (caller should scaffold first)
+    return { ok: true, value: op() };
+  } catch (e) {
+    return { ok: false, error: toFsObservationError(path, e) };
   }
-  const topSet = new Set(topEntries.filter((e) => !SCAN_EXCLUDE.has(e)));
+}
 
-  // Count source files by language across top-level files + known source dirs
-  const langCounts: Record<string, number> = {};
+function direntEntryKind(d: import("node:fs").Dirent): EntryKind {
+  if (d.isSymbolicLink()) return "symlink";
+  if (d.isDirectory()) return "directory";
+  return "file";
+}
 
-  // Top-level files only (no recursion at this depth)
-  for (const entry of topSet) {
-    const full = join(projectDir, entry);
-    let st: import("node:fs").Stats;
-    try {
-      st = lstatSync(full);
-    } catch {
+// Production adapter: thin, read-only mapping onto Node/Bun fs. readDirectory
+// uses withFileTypes so a symlink reports kind "symlink" WITHOUT following it.
+const nodeReadOnlyFs: ReadOnlyFs = {
+  readDirectory(path) {
+    return fsResult(path, () =>
+      readdirSync(path, { withFileTypes: true }).map(
+        (d): DirectoryEntry => ({ name: d.name, kind: direntEntryKind(d) }),
+      ),
+    );
+  },
+  readTextFile(path) {
+    return fsResult(path, () => readFileSync(path, "utf-8"));
+  },
+  inspectEntry(path) {
+    return fsResult(path, () => statToEntryKind(lstatSync(path)));
+  },
+};
+
+type ParsedSubmodule = { name: string; path: string; url?: string };
+
+// Pure line-oriented .gitmodules parser. Accepts `[submodule "name"]` sections
+// and their `path` / optional `url`; ignores comments, unknown keys, and
+// non-submodule sections; never throws on malformed content. An entry with no
+// `path` (or empty path) is dropped.
+export function parseGitmodules(content: string): readonly ParsedSubmodule[] {
+  const out: ParsedSubmodule[] = [];
+  let current: { name: string; path?: string; url?: string } | null = null;
+  const flush = (): void => {
+    if (current && current.path) {
+      const entry: ParsedSubmodule = { name: current.name, path: current.path };
+      if (current.url !== undefined) entry.url = current.url;
+      out.push(entry);
+    }
+    current = null;
+  };
+  for (const rawLine of content.split("\n")) {
+    const line = rawLine.trim();
+    if (line === "" || line.startsWith("#") || line.startsWith(";")) continue;
+    if (line.startsWith("[")) {
+      // A section header. A submodule header starts a new block; any other
+      // section ends the current one.
+      flush();
+      const name = parseSubmoduleSectionName(line);
+      if (name !== null) current = { name };
       continue;
     }
-    if (st.isSymbolicLink()) continue;
-    if (st.isFile()) {
-      const dot = entry.lastIndexOf(".");
-      if (dot > 0) {
-        const ext = entry.slice(dot).toLowerCase();
-        const lang = LANG_BY_EXT[ext];
-        if (lang) langCounts[lang] = (langCounts[lang] || 0) + 1;
-      }
+    if (!current) continue;
+    const eq = line.indexOf("=");
+    if (eq < 0) continue;
+    const key = line.slice(0, eq).trim().toLowerCase();
+    const val = line.slice(eq + 1).trim();
+    if (key === "path") current.path = val;
+    else if (key === "url") current.url = val;
+  }
+  flush();
+  return out;
+}
+
+// Extract the NAME from a `[submodule "name"]` section header, or null for any
+// other section. String-based (no regex) — keeps the .gitmodules parser simple
+// and deterministic.
+function parseSubmoduleSectionName(line: string): string | null {
+  if (!line.startsWith("[submodule") || !line.endsWith("]")) return null;
+  const firstQuote = line.indexOf('"');
+  const lastQuote = line.lastIndexOf('"');
+  if (firstQuote < 0 || lastQuote <= firstQuote) return null;
+  return line.slice(firstQuote + 1, lastQuote);
+}
+
+// A submodule path is safe to probe only if it is non-empty and strictly
+// contained in the workspace root: no POSIX/UNC absolute, no Windows drive
+// absolute, no `..` traversal segment.
+export function isSafeSubmodulePath(p: string): boolean {
+  if (p === "") return false;
+  if (p.startsWith("/") || p.startsWith("\\")) return false;
+  if (/^[A-Za-z]:/.test(p)) return false;
+  for (const seg of p.split(/[\\/]+/)) {
+    if (seg === "..") return false;
+  }
+  return true;
+}
+
+type SubmoduleInspection = {
+  present: boolean;
+  submodules: readonly SubmoduleObservation[];
+  blocking?: BlockingWorkspaceAdvisory;
+};
+
+// Reads ONLY the workspace root's .gitmodules. Absent => present:false. Present
+// but unreadable, containing an unsafe path, or yielding zero parseable-safe
+// entries => blocking UNPARSEABLE_GITMODULES (fail-closed; never degrades to
+// Greenfield). Otherwise returns safe submodule observations, `initialized`
+// determined solely by the existence of `root/path/.git` (never runs Git).
+export function inspectSubmodules(root: string, io: ReadOnlyFs): SubmoduleInspection {
+  const gitmodulesPath = join(root, ".gitmodules");
+  const read = io.readTextFile(gitmodulesPath);
+  if (!read.ok) {
+    if (read.error.kind === "not-found") {
+      return { present: false, submodules: [] };
+    }
+    return {
+      present: true,
+      submodules: [],
+      blocking: {
+        code: "UNPARSEABLE_GITMODULES",
+        paths: [gitmodulesPath],
+        message: `.gitmodules is present but could not be read (${read.error.message})`,
+      },
+    };
+  }
+  const parsed = parseGitmodules(read.value);
+  const safe: ParsedSubmodule[] = [];
+  let sawUnsafe = false;
+  for (const entry of parsed) {
+    if (isSafeSubmodulePath(entry.path)) safe.push(entry);
+    else sawUnsafe = true;
+  }
+  if (sawUnsafe || safe.length === 0) {
+    return {
+      present: true,
+      submodules: [],
+      blocking: {
+        code: "UNPARSEABLE_GITMODULES",
+        paths: [gitmodulesPath],
+        message: sawUnsafe
+          ? ".gitmodules contains an unsafe (absolute or traversing) submodule path"
+          : ".gitmodules is present but has no parseable, safe submodule entries",
+      },
+    };
+  }
+  const submodules = safe
+    .map((entry): SubmoduleObservation => {
+      const probe = io.inspectEntry(join(root, entry.path, ".git"));
+      const observation: SubmoduleObservation = {
+        name: entry.name,
+        path: entry.path,
+        initialized: probe.ok,
+      };
+      if (entry.url !== undefined) observation.url = entry.url;
+      return observation;
+    })
+    .sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  return { present: true, submodules };
+}
+
+// Aggregate language counts -> [primary, ...secondary] using the existing
+// primary = highest / secondary >= 20% of primary rule. Empty counts -> [].
+function projectLanguages(langCounts: Readonly<Record<string, number>>): string[] {
+  const sorted = Object.entries(langCounts).sort((a, b) => b[1] - a[1]);
+  if (sorted.length === 0) return [];
+  const primary = sorted[0][0];
+  const primaryCount = sorted[0][1];
+  const threshold = Math.max(1, Math.floor(primaryCount * 0.2));
+  const extras = sorted
+    .slice(1)
+    .filter(([, c]) => c >= threshold)
+    .map(([l]) => l);
+  return [primary, ...extras];
+}
+
+type SignalEvaluation = {
+  signals: RootSignals;
+  brownfield: boolean;
+  unreadable: readonly string[];
+};
+
+// Evaluate brownfield signals for one directory (root OR a depth-1 candidate),
+// reusing the exact language/framework/build helpers so the classified default
+// stays byte-identical. Classification-critical per-entry metadata reads flow
+// through io.inspectEntry; an unreadable entry surfaces in `unreadable` (the
+// caller turns it into a blocking advisory). Manifest CONTENT reads stay inside
+// detectFrameworks/detectBuildSystem (best-effort, error => signal absent):
+// classification depends on manifest PRESENCE, which is known from the listing.
+// Dirs whose deep-walked source never counts toward a directory's OWN brownfield
+// signal. For the root this is the set of depth-1 nested-project candidates: a
+// nested project's source belongs to that project, not to the root. Recursing
+// into it and letting it flip the root to Brownfield is the exact FR-3 item 11
+// defect (root signal must be first-class — root-level files/manifests or source
+// in non-candidate dirs — not a swallowed nested subtree). Empty for candidate
+// evaluations, so a candidate's own deep source still classifies it (BR-U06-06).
+const NO_EXCLUDED_SOURCE_DIRS: ReadonlySet<string> = new Set();
+
+// Deep-walk each top-level dir into `langCounts` (reporting — every dir enriches
+// the languages, #840) and report whether any NON-excluded dir carried source
+// (the "own signal" contribution). Excluded dirs are the depth-1 nested-project
+// candidates whose source belongs to that project, not the parent.
+function accumulateDeepLangs(
+  dirFull: string,
+  topSet: ReadonlySet<string>,
+  excludeSourceDirs: ReadonlySet<string>,
+  langCounts: Record<string, number>,
+): boolean {
+  let ownSource = false;
+  for (const entry of topSet) {
+    const perDir: Record<string, number> = {};
+    countLangsInTopDirs(dirFull, new Set([entry]), perDir);
+    const langs = Object.entries(perDir);
+    if (langs.length === 0) continue;
+    for (const [lang, c] of langs) langCounts[lang] = (langCounts[lang] || 0) + c;
+    if (!excludeSourceDirs.has(entry)) ownSource = true;
+  }
+  return ownSource;
+}
+
+// Scan the top-level entries: count root-level source files into `langCounts`
+// (always a first-class own signal), and surface genuinely unreadable entries
+// (a vanished TOCTOU entry is not a failure — fail-closed only on real errors).
+function scanTopLevelEntries(
+  dirFull: string,
+  filtered: readonly string[],
+  io: ReadOnlyFs,
+  langCounts: Record<string, number>,
+): { hasDirectSource: boolean; unreadable: string[] } {
+  const unreadable: string[] = [];
+  let hasDirectSource = false;
+  for (const entry of filtered) {
+    const full = join(dirFull, entry);
+    const probe = io.inspectEntry(full);
+    if (!probe.ok) {
+      if (probe.error.kind !== "not-found") unreadable.push(full);
+      continue;
+    }
+    if (probe.value !== "file") continue; // dirs counted below; symlinks skipped
+    const dot = entry.lastIndexOf(".");
+    if (dot <= 0) continue;
+    const lang = LANG_BY_EXT[entry.slice(dot).toLowerCase()];
+    if (!lang) continue;
+    langCounts[lang] = (langCounts[lang] || 0) + 1;
+    hasDirectSource = true;
+  }
+  return { hasDirectSource, unreadable };
+}
+
+function evaluateSignals(
+  dirFull: string,
+  names: readonly string[],
+  io: ReadOnlyFs,
+  excludeSourceDirs: ReadonlySet<string> = NO_EXCLUDED_SOURCE_DIRS,
+): SignalEvaluation {
+  const filtered = names.filter((n) => !SCAN_EXCLUDE.has(n));
+  const topSet = new Set(filtered);
+  const langCounts: Record<string, number> = {};
+
+  // Source that counts as THIS directory's own signal: root-level files always,
+  // plus deep source from any non-excluded top-level dir. Deep source inside an
+  // excluded (candidate) dir enriches the reported languages but is NOT an own
+  // signal (see NO_EXCLUDED_SOURCE_DIRS). Both walks fill `langCounts` (reporting).
+  const top = scanTopLevelEntries(dirFull, filtered, io, langCounts);
+  const deepOwnSource = accumulateDeepLangs(dirFull, topSet, excludeSourceDirs, langCounts);
+  const unreadable = top.unreadable;
+  const hasSourceFiles = top.hasDirectSource || deepOwnSource;
+
+  const frameworks = detectFrameworks(topSet, dirFull);
+  const buildSystemRaw = detectBuildSystem(topSet, dirFull);
+  const buildSystem = buildSystemRaw === "Unknown" ? undefined : buildSystemRaw;
+  const manifests = OTHER_MANIFESTS.filter((m) => topSet.has(m));
+  const sourceDirectories = SCAN_SOURCE_DIRS.filter((d) => topSet.has(d));
+
+  const hasFrameworkConfig = frameworks.length > 0;
+  const hasNonDev = topSet.has("package.json") && hasNonDevDeps(dirFull);
+  const hasOtherManifest = manifests.length > 0;
+  const hasAppSourceDir = sourceDirectories.length > 0;
+  const brownfield =
+    hasSourceFiles || hasFrameworkConfig || hasNonDev || hasOtherManifest || hasAppSourceDir;
+
+  const signals: RootSignals = {
+    sourceCounts: langCounts,
+    frameworks,
+    manifests,
+    sourceDirectories,
+  };
+  if (buildSystem !== undefined) signals.buildSystem = buildSystem;
+  return { signals, brownfield, unreadable };
+}
+
+// Depth-1 nested-root fallback: run ONLY when the root itself carries no signal
+// and no safe submodule. Canonical-sorted, excludes hidden/harness/build/known
+// source/docs-style dirs and symlinks, applies the SAME signal evaluator to
+// each candidate, and returns the hits. A candidate directory that cannot be
+// read yields a blocking CANDIDATE_UNREADABLE (never a silent Greenfield).
+// Depth-1 directories eligible to be a nested-project ROOT: real dirs, excluding
+// hidden, harness/build (SCAN_EXCLUDE), known source dirs (SCAN_SOURCE_DIRS —
+// part of the root project), and docs/utility dirs (NESTED_EXCLUDE_DIRS). ONE
+// definition shared by detectDepthOneProjects (which candidates to evaluate) and
+// inspectWorkspace (which dirs the root's own signal must NOT swallow), so the
+// two never drift. Canonical-sorted.
+function candidateEligibleDirNames(rootEntries: readonly DirectoryEntry[]): string[] {
+  return rootEntries
+    .filter((e) => e.kind === "directory")
+    .map((e) => e.name)
+    .filter((n) => !n.startsWith("."))
+    .filter((n) => !SCAN_EXCLUDE.has(n))
+    .filter((n) => !SCAN_SOURCE_DIRS.includes(n))
+    .filter((n) => !NESTED_EXCLUDE_DIRS.has(n))
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+}
+
+export function detectDepthOneProjects(
+  root: string,
+  rootEntries: readonly DirectoryEntry[],
+  io: ReadOnlyFs,
+): { candidates: readonly ProjectCandidate[]; blocking?: BlockingWorkspaceAdvisory } {
+  const names = candidateEligibleDirNames(rootEntries);
+
+  const candidates: ProjectCandidate[] = [];
+  const unreadable: string[] = [];
+  for (const name of names) {
+    const candFull = join(root, name);
+    const listing = io.readDirectory(candFull);
+    if (!listing.ok) {
+      if (listing.error.kind !== "not-found") unreadable.push(candFull);
+      continue;
+    }
+    const evald = evaluateSignals(
+      candFull,
+      listing.value.map((e) => e.name),
+      io,
+    );
+    if (evald.unreadable.length > 0) {
+      unreadable.push(...evald.unreadable);
+      continue;
+    }
+    if (evald.brownfield) {
+      candidates.push({ path: name, signals: evald.signals });
     }
   }
 
-  countLangsInTopDirs(projectDir, topSet, langCounts);
+  if (unreadable.length > 0) {
+    return {
+      candidates: [],
+      blocking: {
+        code: "CANDIDATE_UNREADABLE",
+        paths: [...unreadable].sort(),
+        message: `nested project candidate(s) could not be read: ${[...unreadable].sort().join(", ")}`,
+      },
+    };
+  }
+  return { candidates };
+}
 
-  // Language list: primary = highest count; secondary = >= 20% of primary count
-  const sortedLangs = Object.entries(langCounts).sort((a, b) => b[1] - a[1]);
-  let languages: string;
-  if (sortedLangs.length === 0) {
-    languages = "Unknown";
+function emptyPartial(): PartialWorkspaceObservations {
+  return { languages: [], frameworks: [], nestedCandidates: [], submodules: [] };
+}
+
+function sortBlockingAdvisories(
+  advisories: readonly BlockingWorkspaceAdvisory[],
+): BlockingWorkspaceAdvisory[] {
+  return [...advisories].sort((x, y) => (x.code < y.code ? -1 : x.code > y.code ? 1 : 0));
+}
+
+function classifiedResult(args: {
+  root: string;
+  projectType: "Greenfield" | "Brownfield";
+  counts: Readonly<Record<string, number>>;
+  frameworks: readonly string[];
+  buildSystem?: string;
+  submodules: readonly SubmoduleObservation[];
+  advisories: readonly WorkspaceAdvisory[];
+  nestedCandidates?: readonly ProjectCandidate[];
+  nestedRoot?: string;
+}): WorkspaceScanResult {
+  const scan: ClassifiedWorkspaceScan = {
+    root: args.root,
+    projectType: args.projectType,
+    languages: projectLanguages(args.counts),
+    frameworks: args.frameworks,
+    nestedCandidates: args.nestedCandidates ?? [],
+    submodules: args.submodules,
+    advisories: args.advisories,
+  };
+  if (args.buildSystem !== undefined) scan.buildSystem = args.buildSystem;
+  if (args.nestedRoot !== undefined) scan.nestedRoot = args.nestedRoot;
+  return { kind: "classified", scan };
+}
+
+// The canonical fail-closed workspace scan. See section header.
+export function inspectWorkspace(root: string, io: ReadOnlyFs): WorkspaceScanResult {
+  const rootListing = io.readDirectory(root);
+  let rootEntries: readonly DirectoryEntry[];
+  if (!rootListing.ok) {
+    if (rootListing.error.kind === "not-found") {
+      // Dir not yet scaffolded — the documented Greenfield "scaffold first"
+      // path (byte-identical to the old detectWorkspace's empty-listing branch).
+      rootEntries = [];
+    } else {
+      return {
+        kind: "inconclusive",
+        scan: {
+          root,
+          partial: emptyPartial(),
+          advisories: [
+            {
+              code: "ROOT_UNREADABLE",
+              paths: [root],
+              message: `workspace root could not be read (${rootListing.error.message})`,
+            },
+          ],
+        },
+      };
+    }
   } else {
-    const primary = sortedLangs[0][0];
-    const primaryCount = sortedLangs[0][1];
-    const threshold = Math.max(1, Math.floor(primaryCount * 0.2));
-    const extras = sortedLangs
-      .slice(1)
-      .filter(([, c]) => c >= threshold)
-      .map(([l]) => l);
-    languages = [primary, ...extras].join(", ");
+    rootEntries = rootListing.value;
   }
 
-  const frameworks = detectFrameworks(topSet, projectDir);
-  const frameworksStr = frameworks.length > 0 ? frameworks.join(", ") : "Unknown";
-  const buildSystem = detectBuildSystem(topSet, projectDir);
+  const names = rootEntries.map((e) => e.name);
+  const sub = inspectSubmodules(root, io);
+  // The root's OWN brownfield signal must not be manufactured by recursing into a
+  // depth-1 nested-project candidate: a single nested project with real source
+  // files must reach the depth-1 fallback and be attributed (FR-3 item 11), not
+  // flip the root to Brownfield via the deep walk. Excluding the candidate dirs
+  // from the root's own source signal leaves the reported languages unchanged
+  // (langCounts still walks them) and non-candidate dirs (scripts/, docs/, known
+  // source dirs) still count as the root's own signal (#840 preserved).
+  const rootExcluded = new Set(candidateEligibleDirNames(rootEntries));
+  const rootEval = evaluateSignals(root, names, io, rootExcluded);
 
-  // Classification (mirrors workspace-detection.md:66-78)
-  const hasSourceFiles = Object.keys(langCounts).length > 0;
-  const hasFrameworkConfig = frameworks.length > 0;
-  const hasNonDev = topSet.has("package.json") && hasNonDevDeps(projectDir);
-  const hasOtherManifest = [
-    "requirements.txt",
-    "pyproject.toml",
-    "setup.py",
-    "Cargo.toml",
-    "go.mod",
-    "pom.xml",
-    "build.gradle",
-    "build.gradle.kts",
-    "composer.json",
-    "Gemfile",
-  ].some((m) => topSet.has(m));
-  const hasAppSourceDir = SCAN_SOURCE_DIRS.some((d) => topSet.has(d));
+  // Fail-closed precedence: an unsafe/unparseable .gitmodules or an unreadable
+  // signal-metadata entry yields inconclusive BEFORE classification, regardless
+  // of root signals or safe submodules (safe+unsafe and root-signal+unsafe both
+  // resolve to inconclusive).
+  const blocking: BlockingWorkspaceAdvisory[] = [];
+  if (sub.blocking) blocking.push(sub.blocking);
+  if (rootEval.unreadable.length > 0) {
+    blocking.push({
+      code: "SIGNAL_METADATA_UNREADABLE",
+      paths: [...rootEval.unreadable].sort(),
+      message: `workspace signal metadata could not be read: ${[...rootEval.unreadable].sort().join(", ")}`,
+    });
+  }
+  if (blocking.length > 0) {
+    const partial: PartialWorkspaceObservations = {
+      languages: projectLanguages(rootEval.signals.sourceCounts),
+      frameworks: rootEval.signals.frameworks,
+      nestedCandidates: [],
+      submodules: sub.submodules,
+    };
+    if (rootEval.signals.buildSystem !== undefined) partial.buildSystem = rootEval.signals.buildSystem;
+    return {
+      kind: "inconclusive",
+      scan: { root, partial, advisories: sortBlockingAdvisories(blocking) },
+    };
+  }
 
-  const brownfield =
-    hasSourceFiles ||
-    hasFrameworkConfig ||
-    hasNonDev ||
-    hasOtherManifest ||
-    hasAppSourceDir;
+  const advisories: WorkspaceAdvisory[] = [];
+  const uninitialized = sub.submodules.filter((s) => !s.initialized).map((s) => s.path).sort();
+  if (uninitialized.length > 0) {
+    advisories.push({
+      code: "UNINITIALIZED_SUBMODULES",
+      paths: uninitialized,
+      message: `${uninitialized.length} submodule(s) not initialized`,
+      remedy: "git submodule update --init --recursive",
+    });
+  }
 
+  // Root signal OR safe submodule => Brownfield, no depth-1 fallback (BR-U06-02).
+  if (rootEval.brownfield || sub.submodules.length > 0) {
+    return classifiedResult({
+      root,
+      projectType: "Brownfield",
+      counts: rootEval.signals.sourceCounts,
+      frameworks: rootEval.signals.frameworks,
+      buildSystem: rootEval.signals.buildSystem,
+      submodules: sub.submodules,
+      advisories,
+    });
+  }
+
+  // No root signal, no submodule => depth-1 fallback.
+  const nested = detectDepthOneProjects(root, rootEntries, io);
+  if (nested.blocking) {
+    const partial: PartialWorkspaceObservations = {
+      languages: projectLanguages(rootEval.signals.sourceCounts),
+      frameworks: rootEval.signals.frameworks,
+      nestedCandidates: [],
+      submodules: sub.submodules,
+    };
+    if (rootEval.signals.buildSystem !== undefined) partial.buildSystem = rootEval.signals.buildSystem;
+    return { kind: "inconclusive", scan: { root, partial, advisories: [nested.blocking] } };
+  }
+
+  const hits = nested.candidates;
+  if (hits.length === 0) {
+    // Greenfield — existing output unchanged. Carry the root's own signals: a
+    // Greenfield project can still expose a Build System (e.g. a devDeps-only
+    // package.json), exactly as the legacy scanner reported it.
+    return classifiedResult({
+      root,
+      projectType: "Greenfield",
+      counts: rootEval.signals.sourceCounts,
+      frameworks: rootEval.signals.frameworks,
+      buildSystem: rootEval.signals.buildSystem,
+      submodules: sub.submodules,
+      advisories,
+    });
+  }
+
+  // Aggregate across hits in sorted-path order: sum language counts, first-seen
+  // framework dedup, first non-Unknown build system.
+  const aggCounts: Record<string, number> = {};
+  const aggFrameworks: string[] = [];
+  let aggBuild: string | undefined;
+  for (const h of hits) {
+    for (const [lang, c] of Object.entries(h.signals.sourceCounts)) {
+      aggCounts[lang] = (aggCounts[lang] || 0) + c;
+    }
+    for (const f of h.signals.frameworks) {
+      if (!aggFrameworks.includes(f)) aggFrameworks.push(f);
+    }
+    if (aggBuild === undefined && h.signals.buildSystem !== undefined) {
+      aggBuild = h.signals.buildSystem;
+    }
+  }
+  if (hits.length >= 2) {
+    advisories.push({
+      code: "MULTIPLE_NESTED_PROJECTS",
+      paths: hits.map((h) => h.path),
+      message: "multiple nested project roots detected; not auto-selecting",
+    });
+  }
+  return classifiedResult({
+    root,
+    projectType: "Brownfield",
+    counts: aggCounts,
+    frameworks: aggFrameworks,
+    buildSystem: aggBuild,
+    submodules: sub.submodules,
+    advisories,
+    nestedCandidates: hits,
+    nestedRoot: hits.length === 1 ? hits[0].path : undefined,
+  });
+}
+
+// Legacy string projection of a classified scan (Languages/Frameworks/Build
+// System collapse to "Unknown" when empty, exactly as before).
+function projectScanResult(scan: ClassifiedWorkspaceScan): ScanResult {
   return {
-    projectType: brownfield ? "Brownfield" : "Greenfield",
-    languages,
-    frameworks: frameworksStr,
-    buildSystem,
+    projectType: scan.projectType,
+    languages: scan.languages.length ? scan.languages.join(", ") : "Unknown",
+    frameworks: scan.frameworks.length ? scan.frameworks.join(", ") : "Unknown",
+    buildSystem: scan.buildSystem ?? "Unknown",
   };
+}
+
+// Back-compat string API over the fail-closed scan. Legacy callers (t20/t211)
+// pass readable dirs and only ever see the classified projection. The
+// fail-closed contract lives at the birth boundary (handleIntentBirth), which
+// calls inspectWorkspace directly and rejects `inconclusive` before mutating.
+export function detectWorkspace(projectDir: string): ScanResult {
+  const result = inspectWorkspace(projectDir, nodeReadOnlyFs);
+  if (result.kind === "classified") {
+    return projectScanResult(result.scan);
+  }
+  const p = result.scan.partial;
+  return {
+    projectType: "Greenfield",
+    languages: p.languages.length ? p.languages.join(", ") : "Unknown",
+    frameworks: p.frameworks.length ? p.frameworks.join(", ") : "Unknown",
+    buildSystem: p.buildSystem ?? "Unknown",
+  };
+}
+
+// Run the fail-closed workspace scan for intent birth: refuse loudly (no
+// mutation) on an inconclusive result, or return the classified snapshot. Kept
+// as its own function so the birth transaction's lock callback stays simple.
+function scanWorkspaceOrRefuse(projectDir: string): ClassifiedWorkspaceScan {
+  const result = inspectWorkspace(projectDir, nodeReadOnlyFs);
+  if (result.kind === "inconclusive") {
+    refuseWithoutAudit(formatInconclusiveRefusal(result.scan));
+  }
+  return result.scan;
+}
+
+// Human-readable refusal for an inconclusive birth (no mutation performed).
+function formatInconclusiveRefusal(scan: InconclusiveWorkspaceScan): string {
+  const lines = [
+    "Workspace inspection was inconclusive; refusing to birth an intent (no state, plan, graph, or audit was written).",
+  ];
+  for (const a of scan.advisories) {
+    lines.push(`  - [${a.code}] ${a.message}`);
+    if (a.remedy) lines.push(`    remedy: ${a.remedy}`);
+  }
+  lines.push("Resolve the read failure above and retry.");
+  return lines.join("\n");
+}
+
+// Bounded uninitialized-submodule display: sorted first 5 + `(+N more)`.
+function formatUninitializedSubmodules(submodules: readonly SubmoduleObservation[]): string | null {
+  const uninit = submodules
+    .filter((s) => !s.initialized)
+    .map((s) => s.path)
+    .sort();
+  if (uninit.length === 0) return null;
+  const shown = uninit.slice(0, 5);
+  const extra = uninit.length - shown.length;
+  return shown.join(", ") + (extra > 0 ? ` (+${extra} more)` : "");
 }
 
 // ---------------------------------------------------------------------------
@@ -2655,6 +3384,14 @@ export function handleIntentBirth(projectDir: string, flags: Record<string, stri
       return;
     }
 
+    // (1.5) FAIL-CLOSED WORKSPACE SCAN. Run the read-only inspection BEFORE any
+    // mutation (mint, audit, state). An `inconclusive` result (permission
+    // failure, unparseable .gitmodules) refuses loudly — no intent is minted,
+    // nothing is written (BR-U06-22). Only a `classified` scan proceeds into the
+    // birth pipeline, and its exact strings/observations are threaded to
+    // handleIntentBirthStateBuild so the scan is projected once.
+    const classifiedScan = scanWorkspaceOrRefuse(projectDir);
+
     // (2) MINT THE INTENT. SPIKE (date-prefix): the dir name is `<YYMMDD>-<label>`.
     // TWO seams, by the three-concerns split:
     //   • KNOWLEDGE→LLM: the conductor passes a short 2-3 word essence via --label
@@ -2743,7 +3480,7 @@ export function handleIntentBirth(projectDir: string, flags: Record<string, stri
       Details: "Per-intent artifact dirs + space-level knowledge/ ensured",
     });
 
-    handleIntentBirthStateBuild(projectDir, flags, scope, ts);
+    handleIntentBirthStateBuild(projectDir, flags, scope, ts, classifiedScan);
   });
 }
 
@@ -2781,23 +3518,37 @@ function handleIntentBirthStateBuild(
   flags: Record<string, string>,
   scope: string,
   ts: string,
+  classifiedScan: ClassifiedWorkspaceScan,
 ): void {
   const depthOverride = flags.depth;
   const testStrategyOverride = flags["test-strategy"];
   // ---- Workspace detection (stage 0.2) ----
+  // The scan already ran (fail-closed) at the birth boundary; project the SAME
+  // classified snapshot here so birth/detect/doctor/audit share one observation.
 
   appendAuditEvent(projectDir, "STAGE_STARTED", {
     Stage: "workspace-detection",
     Agent: "orchestrator",
   });
 
-  const scan = detectWorkspace(projectDir);
+  const scan = projectScanResult(classifiedScan);
+  const nestedCandidatePaths = classifiedScan.nestedCandidates.map((c) => c.path);
+  const submoduleCount = classifiedScan.submodules.length;
+  const uninitializedCount = classifiedScan.submodules.filter((s) => !s.initialized).length;
+  const submoduleAuditValue = `${submoduleCount} present, ${uninitializedCount} uninitialized`;
 
   appendAuditEvent(projectDir, "WORKSPACE_SCANNED", {
     "Project Type": scan.projectType,
     Languages: scan.languages,
     Frameworks: scan.frameworks,
     "Build System": scan.buildSystem,
+    // Additive: emitted ONLY when observed, so a workspace with no nested root
+    // and no submodule keeps byte-identical audit Details (NFR-3 / BR-U06-18).
+    ...(classifiedScan.nestedRoot ? { "Nested Root": classifiedScan.nestedRoot } : {}),
+    ...(nestedCandidatePaths.length > 1
+      ? { "Nested Candidates": nestedCandidatePaths.join(", ") }
+      : {}),
+    ...(submoduleCount > 0 ? { Submodules: submoduleAuditValue } : {}),
     Details: "Deterministic rule-based scan",
   });
   appendAuditEvent(projectDir, "STAGE_COMPLETED", {
@@ -3037,6 +3788,22 @@ Build System: ${scan.buildSystem}
 First post-init stage: ${firstPostInit} (${firstPostInitPhase})
 `
   );
+
+  // Additive advisories — printed ONLY when observed, so a plain workspace keeps
+  // byte-identical birth stdout (FR-3 items 11-12 birth advisory surface).
+  if (classifiedScan.nestedRoot) {
+    process.stdout.write(`Nested project root detected: ${classifiedScan.nestedRoot}\n`);
+  } else if (nestedCandidatePaths.length > 1) {
+    process.stdout.write(
+      `Multiple nested project roots detected (not auto-selected): ${nestedCandidatePaths.join(", ")}\n`,
+    );
+  }
+  const uninitList = formatUninitializedSubmodules(classifiedScan.submodules);
+  if (uninitList) {
+    process.stdout.write(
+      `Uninitialized submodule(s): ${uninitList}\n  remedy: git submodule update --init --recursive\n`,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -3247,30 +4014,82 @@ export function handleCodekbPath(projectDir: string, flags: Record<string, strin
 // prose agent cannot derive itself, so the composer agent is TOLD where the
 // runtime reads scope data (and therefore where an authored scope must land).
 // Writes nothing, no audit, no mkdir - mirrors codekb-path's read-only shape.
-function handleDetect(projectDir: string, flags: Record<string, string>): void {
-  const scan = detectWorkspace(projectDir);
+// Exported so the projection (classified additive keys + inconclusive display)
+// is drivable in-process — detect writes nothing and never exits, so the
+// coverage seam is the handler itself (no spawn blind spot).
+export function handleDetect(projectDir: string, flags: Record<string, string>): void {
+  const result = inspectWorkspace(projectDir, nodeReadOnlyFs);
+  const scopeFields = {
+    scopesDir: scopesDir(),
+    scopeGridPath: scopeGridPath(),
+    scopes: [...validScopes()],
+  };
+
+  // Inconclusive: read-only display of the fail-closed result. Occurs only on a
+  // genuine read failure — never on the default path — so classified detect
+  // output stays byte-identical (NFR-3).
+  if (result.kind === "inconclusive") {
+    const payload = {
+      classification: "inconclusive" as const,
+      advisories: result.scan.advisories,
+      partial: result.scan.partial,
+      ...scopeFields,
+    };
+    if (flags.json === "true") {
+      process.stdout.write(`${JSON.stringify(payload)}\n`);
+      return;
+    }
+    let out = "Project type: inconclusive (workspace inspection could not complete)\n";
+    for (const a of result.scan.advisories) {
+      out += `  [${a.code}] ${a.message}\n`;
+    }
+    out +=
+      `Scopes dir: ${scopeFields.scopesDir}\n` +
+      `Scope grid: ${scopeFields.scopeGridPath}\n` +
+      `Valid scopes: ${scopeFields.scopes.join(", ")}\n`;
+    process.stdout.write(out);
+    return;
+  }
+
+  const classified = result.scan;
+  const scan = projectScanResult(classified);
+  const nestedCandidatePaths = classified.nestedCandidates.map((c) => c.path);
   const payload = {
     projectType: scan.projectType,
     languages: scan.languages,
     frameworks: scan.frameworks,
     buildSystem: scan.buildSystem,
-    scopesDir: scopesDir(),
-    scopeGridPath: scopeGridPath(),
-    scopes: [...validScopes()],
+    // Additive keys — present ONLY when observed. Empty spreads keep default
+    // key order (and thus JSON bytes) identical (BR-U06-19 / NFR-3).
+    ...(classified.nestedRoot ? { nestedRoot: classified.nestedRoot } : {}),
+    ...(nestedCandidatePaths.length > 0 ? { nestedCandidates: nestedCandidatePaths } : {}),
+    ...(classified.submodules.length > 0 ? { submodules: classified.submodules } : {}),
+    ...(classified.advisories.length > 0 ? { advisories: classified.advisories } : {}),
+    ...scopeFields,
   };
   if (flags.json === "true") {
     process.stdout.write(`${JSON.stringify(payload)}\n`);
     return;
   }
-  process.stdout.write(
+  let out =
     `Project type: ${payload.projectType}\n` +
-      `Languages: ${payload.languages}\n` +
-      `Frameworks: ${payload.frameworks}\n` +
-      `Build system: ${payload.buildSystem}\n` +
-      `Scopes dir: ${payload.scopesDir}\n` +
-      `Scope grid: ${payload.scopeGridPath}\n` +
-      `Valid scopes: ${payload.scopes.join(", ")}\n`,
-  );
+    `Languages: ${payload.languages}\n` +
+    `Frameworks: ${payload.frameworks}\n` +
+    `Build system: ${payload.buildSystem}\n`;
+  if (classified.nestedRoot) {
+    out += `Nested root: ${classified.nestedRoot}\n`;
+  } else if (nestedCandidatePaths.length > 1) {
+    out += `Nested candidates (not auto-selected): ${nestedCandidatePaths.join(", ")}\n`;
+  }
+  const uninitList = formatUninitializedSubmodules(classified.submodules);
+  if (uninitList) {
+    out += `Uninitialized submodules: ${uninitList}\n`;
+  }
+  out +=
+    `Scopes dir: ${payload.scopesDir}\n` +
+    `Scope grid: ${payload.scopeGridPath}\n` +
+    `Valid scopes: ${payload.scopes.join(", ")}\n`;
+  process.stdout.write(out);
 }
 
 // `/amadeus space-create <name>` — seed a NEW space's memory. org.md is copied
