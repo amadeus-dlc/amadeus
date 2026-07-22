@@ -1,0 +1,17 @@
+{
+  "name": "test-pro",
+  "stages": [
+    { "slug": "test-pro-review", "path": "stages/test-pro-review.md" }
+  ],
+  "seams": [
+    { "stage": "code-generation", "seam": "sensors", "entries": ["test-pro-lint"] }
+  ],
+  "fragments": [
+    {
+      "file": "SKILL.md",
+      "anchor": "<!-- amadeus:plugin-anchor -->",
+      "id": "test-pro-guide",
+      "text": "See the Test Pro reference plugin for an authoring worked example."
+    }
+  ]
+}
