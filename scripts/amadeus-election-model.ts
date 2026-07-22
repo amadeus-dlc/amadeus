@@ -250,7 +250,6 @@ export const Ballot = {
     if (!election.choices.some((c) => c.internalNo === shape.choiceInternalNo)) {
       return err("unknown-choice");
     }
-    if (!isValidSubmittedAt(shape.submittedAt)) return err("invalid-timestamp");
     const goa = Goa.parse(shape.goa);
     if (!goa.ok) return err(goa.error);
     const needsReservation = goa.value === 2 || goa.value === 3 || goa.value === 6;
