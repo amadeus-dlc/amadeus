@@ -67,6 +67,7 @@ export type MatrixFinding =
   | { kind: "DUPLICATE"; key: MatrixCellKey }
   | { kind: "IDENTITY_CORRUPTION"; ordinal: number; cause: string }
   | { kind: "CHAIN_DRIFT"; ordinal: number; cause: string }
+  | { kind: "INPUT_DRIFT"; cause: string }
   | { kind: "NON_DETERMINISTIC"; arm: ArmId; subject: string };
 
 export type FullMatrixValidation =
@@ -146,8 +147,13 @@ export async function runFullMatrix(schedule: MeasurementSchedule, inputSet: Can
 
 function cellKeyId(key: MatrixCellKey): string { return `${key.arm}\0${key.sampleKind}\0${key.runNo}\0${key.subject}`; }
 
+// BR-01/BR-04 identity binding at the validator layer: a schedule compiled
+// from a different input set must never validate this matrix as complete,
+// even on call paths that skip buildMatrixEvidence.
 export function verifyFullMatrix(inputSet: CanonicalInputSet, schedule: MeasurementSchedule, run: FullMatrixRun): FullMatrixValidation {
   const findings: MatrixFinding[] = [];
+  if (schedule.inputSetIdentity !== inputSet.inputSetIdentity) findings.push({ kind: "INPUT_DRIFT", cause: "schedule is not bound to this input set identity" });
+  if (run.scheduleId !== schedule.scheduleId) findings.push({ kind: "INPUT_DRIFT", cause: "run is not bound to this schedule" });
   if (run.receipts.length !== schedule.entries.length) findings.push({ kind: "CHAIN_DRIFT", ordinal: -1, cause: "receipt count does not match schedule" });
   run.receipts.forEach((receipt, index) => {
     const entry = schedule.entries[index];
