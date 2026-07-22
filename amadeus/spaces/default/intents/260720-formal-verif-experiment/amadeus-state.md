@@ -8,7 +8,7 @@
 - **State Version**: 7
 - **Active Agent**: amadeus-developer-agent
 - **Worktree Path**:
-- **Bolt Refs**:
+- **Bolt Refs**: [empty list]
 - **Practices Affirmed Timestamp**: 2026-07-20T07:30:34Z
 
 ## Scope Configuration
