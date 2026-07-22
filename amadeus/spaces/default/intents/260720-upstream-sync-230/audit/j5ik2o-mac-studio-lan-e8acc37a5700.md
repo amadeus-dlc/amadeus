@@ -292,3 +292,12 @@
 **Failed count**: 0
 
 ---
+
+## Error Logged
+**Timestamp**: 2026-07-22T04:13:02Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: 
+**Error**: report requires --result <outcome>. Accepted: approved, completed, complete, done (the verdict for the stage just acted on).
+
+---
