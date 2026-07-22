@@ -187,13 +187,13 @@
   },
   {
     "file": "scripts/formal-verif/tlc-toolchain.ts",
-    "lines": "541",
+    "lines": "613",
     "reason": "JDK vendor/version mismatch guard against the fixed run profile; CI-run tests use the fixed profile.",
     "expiry": "remove if a test drives a mismatched JDK profile"
   },
   {
     "file": "scripts/formal-verif/tlc-toolchain.ts",
-    "lines": "544",
+    "lines": "616",
     "reason": "JDK executable-identity invalid guard; CI-run tests use valid identities.",
     "expiry": "remove if a test drives an invalid JDK identity"
   },
