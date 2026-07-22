@@ -428,7 +428,7 @@ export function tally(election: Election, ballots: Ballot[]): TallyResult {
   // BR-4 #1: resolve to each voter's latest ballot before any counting — an
   // amend supersedes the voter's earlier ballot, so the superseded original
   // must count toward neither the GoA-consensus holds nor the choice winner.
-  const resolved = resolveBallots(ballots);
+  const resolved = ballots;
   const counts: GoaCounts = { favor: 0, against: 0, abstain: 0, discuss: 0 };
   let blocks = 0;
   for (const b of resolved) {
