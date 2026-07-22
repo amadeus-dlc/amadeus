@@ -120,6 +120,17 @@ export interface RunStageDirective {
   // unresolved {unit-name} placeholder are never listed here (existence is
   // unknowable).
   consumes_absent?: Array<{ path: string; expected: boolean }>;
+  // next_stage — the slug of the ACTUAL next in-scope stage the engine will route
+  // to after this stage is approved, or null at the terminal (no in-scope stage
+  // remains). Present ONLY on a gate-carrying main-workflow directive (gate ===
+  // true) so the human-facing approval gate names the real next stage ("Continue
+  // to <next_stage>") from the SAME resolver (nextInScopeStage) `next` advances
+  // with — the gate display can never diverge from the post-approval directive.
+  // SKIP stages are excluded (the resolver returns only EXECUTE); a null value is
+  // the explicit terminal signal (never a SKIP slug or fabricated placeholder).
+  // Absent on gate:false directives (per-unit iteration steps, initialization) and
+  // on --single runs (an isolated run that does not advance). FR-2 item 10.
+  next_stage?: string | null;
 }
 
 // dispatch-subagent — same as run-stage, but the stage runs via a Task call to
@@ -279,6 +290,7 @@ const RUN_STAGE_FIELDS = [
   "conductor_persona",
   "unit",
   "consumes_absent",
+  "next_stage",
 ] as const;
 
 // dispatch-subagent = run-stage fields + `worker`.
@@ -434,6 +446,9 @@ function checkRunStageShared(
   // consumes_absent: optional (present only when a declared consume's file is
   // missing at emit time). Each entry must be {path: string, expected: boolean}.
   checkOptionalConsumesAbsent(o, "consumes_absent", kind, errors);
+  // next_stage: optional; if present must be a string (a stage slug) OR null (the
+  // explicit terminal signal). Absent on gate:false / --single directives.
+  checkOptionalNullableString(o, "next_stage", kind, errors);
 }
 
 // --- Helpers (mirror amadeus-stage-schema.ts: presence first, then type) ---
@@ -492,6 +507,21 @@ function checkOptionalString(
   if (!(field in o)) return;
   if (typeof o[field] !== "string") {
     errors.push(`${kind}: ${field} must be string, got ${describe(o[field])}`);
+  }
+}
+
+// checkOptionalNullableString — a field that may be absent, but if present must
+// be a string OR null (e.g. next_stage: a stage slug, or null at the terminal).
+function checkOptionalNullableString(
+  o: Record<string, unknown>,
+  field: string,
+  kind: DirectiveKind,
+  errors: string[],
+): void {
+  if (!(field in o)) return;
+  const v = o[field];
+  if (v !== null && typeof v !== "string") {
+    errors.push(`${kind}: ${field} must be string or null, got ${describe(v)}`);
   }
 }
 
