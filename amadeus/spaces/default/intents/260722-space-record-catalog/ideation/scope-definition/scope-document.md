@@ -29,6 +29,39 @@
 - 既存 intent 側ディレクトリの rename、全フォルダの日時命名統一(#1309 非目標を継承)
 - 本 intent 内での実装・既存ディレクトリの実 rename(設計・移行方針の承認前に実行しない — constraint O4)
 
+## ディレクトリ構造イメージ(現状 → 統一後)
+
+> dirName の具体形(日付接頭辞の粒度・E-code の位置)は実装 intent の設計(ADR)で確定する。以下は境界イメージであり確定仕様ではない。
+
+現状(実測 — 2026-07-22、ref 0940bdf84):
+
+```
+amadeus/spaces/default/
+├── intents/
+│   ├── intents.json                  ← レジストリあり(uuid / slug / dirName / scope / status)
+│   ├── 260706-amadeus-grilling/      ← 日付接頭辞 dirName → ファイルツリーが時系列に自然ソート
+│   ├── ...
+│   └── 260722-space-record-catalog/
+└── elections/                        ← レジストリなし
+    ├── E-AWATCH/                     ← electionId 直名 → 開催順が追えない(発端の痛み)
+    │   ├── election.json             ← 日時フィールドなし(実測)
+    │   ├── timeline.json / ballots/ / views/ / ...
+    └── E-GSFND13/
+```
+
+統一後のイメージ(S1〜S3 適用後):
+
+```
+amadeus/spaces/default/
+├── intents/                          ← 変更なし(参照モデル)
+└── elections/
+    ├── elections.json                ← 新設レジストリ(electionId / dirName / createdAt(UTC) / status)
+    ├── 260720-e-awatch/              ← 日付接頭辞 dirName(イメージ。E-code は dirName 内に保持)
+    └── 260720-e-gsfnd13/
+```
+
+不変条件: E-code(electionId)は安定 ID のまま。参照はレジストリ経由で electionId → dirName に解決し(S2)、パス直組みを廃止する。レジストリ vs 実ディレクトリの乖離は doctor が検出する(S4)。
+
 ## 依存順序(dependency-first)
 
 S1(規約)→ S2(解決層)→ S3(移行)→ S4(drift 検出)。S5 は S1 に付随。順序付け選好の裁定は不要(直列依存一択)。
