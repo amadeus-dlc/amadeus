@@ -92,7 +92,8 @@ Per unit: [TBD]
 - **Current Stage**: code-generation
 - **Next Stage**: build-and-test
 - **Status**: Running
-- **Last Updated**: 2026-07-22T00:55:36Z
+- **Construction Autonomy Mode**: autonomous
+- **Last Updated**: 2026-07-22T02:09:07Z
 
 ## Session Resume Point
 - **Last Completed Stage**: nfr-design

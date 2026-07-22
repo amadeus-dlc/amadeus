@@ -2428,3 +2428,1092 @@
 **Duration ms**: 517
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T01:50:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 77ee8dec
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/tests/integration/t249-workspace-inspection.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T01:50:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 77ee8dec
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/tests/integration/t249-workspace-inspection.test.ts
+**Duration ms**: 321
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T01:50:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9eca113c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/tests/integration/t249-workspace-inspection.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T01:50:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9eca113c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/tests/integration/t249-workspace-inspection.test.ts
+**Duration ms**: 516
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-22T01:51:05Z
+**Event**: HUMAN_TURN
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-22T01:51:12Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state set Construction Autonomy Mode autonomous
+**Error**: Invalid field=value pair: Construction Autonomy Mode
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T01:51:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: 278b2497
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/tests/integration/t249-workspace-inspection.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T01:51:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: 278b2497
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/tests/integration/t249-workspace-inspection.test.ts
+**Duration ms**: 316
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T01:51:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2898d102
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/tests/integration/t249-workspace-inspection.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T01:51:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2898d102
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/tests/integration/t249-workspace-inspection.test.ts
+**Duration ms**: 498
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-22T01:51:23Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state set
+**Error**: Usage: amadeus-state.ts set <field=value> ...
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-22T01:51:34Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state set Construction Autonomy Mode=autonomous
+**Error**: Field not found in state file: "Construction Autonomy Mode". Cannot update — refusing to silently no-op.
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-22T01:51:44Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-bolt
+**Command**: amadeus-bolt set-autonomy autonomous
+**Error**: Missing --mode <autonomous|gated>
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-22T01:51:50Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-bolt
+**Command**: amadeus-bolt set-autonomy --mode autonomous
+**Error**: State update failed: Field not found in state file: "Construction Autonomy Mode". Cannot update — refusing to silently no-op.
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T01:52:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: b16cd531
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/tests/integration/t249-workspace-inspection.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T01:52:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: b16cd531
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/tests/integration/t249-workspace-inspection.test.ts
+**Duration ms**: 319
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T01:52:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 65f803cb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/tests/integration/t249-workspace-inspection.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T01:52:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: 65f803cb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/tests/integration/t249-workspace-inspection.test.ts
+**Duration ms**: 504
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-22T01:53:02Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/.codex/worktrees/cbf5f266-5710-4a81-84e1-f48fa526cc07/amadeus/amadeus/spaces/default/intents/260720-formal-verif-experiment/amadeus-state.md
+**Context**: amadeus-state.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T01:53:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6f4ee74e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/tests/integration/t249-workspace-inspection.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T01:53:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6f4ee74e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/tests/integration/t249-workspace-inspection.test.ts
+**Duration ms**: 404
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T01:53:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1bfa744f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/tests/integration/t249-workspace-inspection.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T01:53:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1bfa744f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/tests/integration/t249-workspace-inspection.test.ts
+**Duration ms**: 627
+
+---
+
+## Autonomy Mode Set
+**Timestamp**: 2026-07-22T01:53:06Z
+**Event**: AUTONOMY_MODE_SET
+**Mode**: autonomous
+
+---
+
+## Swarm Started
+**Timestamp**: 2026-07-22T01:53:33Z
+**Event**: SWARM_STARTED
+**Batch number**: 5
+**Unit names**: full-matrix-suite
+**Concurrency cap**: 1
+
+---
+
+## Worktree Created
+**Timestamp**: 2026-07-22T01:53:33Z
+**Event**: WORKTREE_CREATED
+**Bolt slug**: full-matrix-suite
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite
+**Branch name**: bolt-full-matrix-suite
+**Base branch**: resume-formal-verif-e6-takeover
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-22T01:53:34Z
+**Event**: BOLT_STARTED
+**Bolt names**: full-matrix-suite
+**Batch number**: 5
+**Walking skeleton**: false
+**Bolt slug**: full-matrix-suite
+
+---
+
+## State Forked
+**Timestamp**: 2026-07-22T01:53:34Z
+**Event**: STATE_FORKED
+**Bolt slug**: full-matrix-suite
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite
+**Source state hash**: 8aef911f15831efdbea60396d659a7caa0103d5251b8c69839184146acf9dcd1
+**Target state hash**: 8aef911f15831efdbea60396d659a7caa0103d5251b8c69839184146acf9dcd1
+
+---
+
+## Audit Forked
+**Timestamp**: 2026-07-22T01:53:34Z
+**Event**: AUDIT_FORKED
+**Bolt slug**: full-matrix-suite
+**Source Audit Hash**: f2a002170db0a168427d934043fb9a63155a7651a8f6fa322612ca481a4b92fa
+**Fork Boundary**: 68702
+**Reentrant**: true
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T01:58:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: 84d5b3c7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T01:58:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 84d5b3c7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+**Duration ms**: 380
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T01:58:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 99f09549
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T01:58:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 99f09549
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+**Duration ms**: 732
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T01:58:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9bbc6fe8
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T01:58:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9bbc6fe8
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+**Duration ms**: 399
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T01:58:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1027ba1d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T01:58:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1027ba1d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+**Duration ms**: 922
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:00:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9333de06
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:00:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9333de06
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix.ts
+**Duration ms**: 341
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:00:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: afa34990
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:00:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: afa34990
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix.ts
+**Duration ms**: 1335
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:00:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2e858eef
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:00:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2e858eef
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+**Duration ms**: 375
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:00:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3348441c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:00:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3348441c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+**Duration ms**: 864
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:00:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: 816a0a60
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix-cost.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:00:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: 816a0a60
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix-cost.ts
+**Duration ms**: 346
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:00:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: c814c416
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix-cost.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:00:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: c814c416
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix-cost.ts
+**Duration ms**: 582
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:00:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 215e6524
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/index.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:00:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 215e6524
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/index.ts
+**Duration ms**: 396
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:00:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 25d5ec4b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/index.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-22T02:00:46Z
+**Event**: SENSOR_FAILED
+**Fire id**: 25d5ec4b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/index.ts
+**Detail path**: amadeus/spaces/default/intents/260720-formal-verif-experiment/.amadeus-sensors/code-generation/type-check-25d5ec4b.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:01:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0fd5a0ad
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:01:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0fd5a0ad
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix.ts
+**Duration ms**: 348
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:01:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 592a26d1
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-22T02:01:24Z
+**Event**: SENSOR_FAILED
+**Fire id**: 592a26d1
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix.ts
+**Detail path**: amadeus/spaces/default/intents/260720-formal-verif-experiment/.amadeus-sensors/code-generation/type-check-592a26d1.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:01:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4da27d91
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:01:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4da27d91
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix.ts
+**Duration ms**: 332
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:01:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: c197e474
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-22T02:01:29Z
+**Event**: SENSOR_FAILED
+**Fire id**: c197e474
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix.ts
+**Detail path**: amadeus/spaces/default/intents/260720-formal-verif-experiment/.amadeus-sensors/code-generation/type-check-c197e474.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:01:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1c630120
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:01:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1c630120
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix.ts
+**Duration ms**: 383
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:01:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1dd62ae3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:01:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1dd62ae3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix.ts
+**Duration ms**: 602
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:03:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 521b2b61
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:03:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: 521b2b61
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+**Duration ms**: 308
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:03:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 71b50669
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:03:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: 71b50669
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+**Duration ms**: 714
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:03:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: 582d0f0b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/tests/unit/t-formal-verif-full-matrix.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:03:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: 582d0f0b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/tests/unit/t-formal-verif-full-matrix.test.ts
+**Duration ms**: 324
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:03:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: 48625303
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/tests/unit/t-formal-verif-full-matrix.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:03:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: 48625303
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/tests/unit/t-formal-verif-full-matrix.test.ts
+**Duration ms**: 604
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:03:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0fe6205b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:03:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0fe6205b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+**Duration ms**: 307
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:03:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 887ec978
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-22T02:03:37Z
+**Event**: SENSOR_FAILED
+**Fire id**: 887ec978
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+**Detail path**: amadeus/spaces/default/intents/260720-formal-verif-experiment/.amadeus-sensors/code-generation/type-check-887ec978.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:03:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 213c8207
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:03:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 213c8207
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+**Duration ms**: 314
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:03:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 443ce556
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:03:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 443ce556
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+**Duration ms**: 659
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:03:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8ec8eccb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/tests/unit/t-formal-verif-full-matrix-cost.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:03:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8ec8eccb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/tests/unit/t-formal-verif-full-matrix-cost.test.ts
+**Duration ms**: 375
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:03:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 403ef727
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/tests/unit/t-formal-verif-full-matrix-cost.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:03:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: 403ef727
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/tests/unit/t-formal-verif-full-matrix-cost.test.ts
+**Duration ms**: 561
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:04:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: 27f4ce0b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/tests/unit/t-formal-verif-full-matrix-cost.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:04:27Z
+**Event**: SENSOR_PASSED
+**Fire id**: 27f4ce0b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/tests/unit/t-formal-verif-full-matrix-cost.test.ts
+**Duration ms**: 339
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:04:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4d1d21d2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/tests/unit/t-formal-verif-full-matrix-cost.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:04:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4d1d21d2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/tests/unit/t-formal-verif-full-matrix-cost.test.ts
+**Duration ms**: 543
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:06:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 90112db1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:06:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 90112db1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix.ts
+**Duration ms**: 340
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:06:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: bda8fb2c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:06:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: bda8fb2c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite/scripts/formal-verif/full-matrix.ts
+**Duration ms**: 698
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-22T02:08:33Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: afab26a76f9f312c9
+**Message**: Committed as `1fe477ddc`. The commit also swept in engine-generated `amadeus-state.md` and the audit shard (auto-written during the session; part of the version-controlled record — memory.md was not t
+
+---
+
+## Bolt Completed
+**Timestamp**: 2026-07-22T02:09:02Z
+**Event**: BOLT_COMPLETED
+**Bolt names**: full-matrix-suite
+**Batch number**: 5
+**Bolt slug**: full-matrix-suite
+
+---
+
+## State Merged
+**Timestamp**: 2026-07-22T02:09:02Z
+**Event**: STATE_MERGED
+**Bolt slug**: full-matrix-suite
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-full-matrix-suite
+**Source state hash**: df31e9b0f1af1de43a0739bbcd0d68d02f6887892cef8e1769e01927d4e3af66
+**Target state hash**: b8e423822e829c735bdce41bafc4df2ac3de92a0cb500a2ae8d709bf2760ce40
+**Conflict resolution**: clean
+
+---
+
+## Audit Merged
+**Timestamp**: 2026-07-22T02:09:02Z
+**Event**: AUDIT_MERGED
+**Bolt slug**: full-matrix-suite
+**Entries Merged**: 0
+**Source Audit Hash**: f2a002170db0a168427d934043fb9a63155a7651a8f6fa322612ca481a4b92fa
+**Fork Boundary**: 68702
+
+---
+
+## Swarm Unit Converged
+**Timestamp**: 2026-07-22T02:09:02Z
+**Event**: SWARM_UNIT_CONVERGED
+**Batch number**: 5
+**Unit name**: full-matrix-suite
+
+---
+
+## Swarm Completed
+**Timestamp**: 2026-07-22T02:09:02Z
+**Event**: SWARM_COMPLETED
+**Batch number**: 5
+**Converged count**: 1
+**Failed count**: 0
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-22T02:09:07Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-22T02:09:07Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-22T02:09:07Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: Stage Code Generation approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-22T02:09:07Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Agent**: amadeus-quality-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:11:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: f9a42dcf
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:11:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: f9a42dcf
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+**Duration ms**: 325
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-22T02:11:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 299e2aab
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-22T02:11:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 299e2aab
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/.codex/worktrees/7085314e-6a33-4dac-b766-bf7d2e281346/amadeus/packages/framework/core/tools/amadeus-utility.ts
+**Duration ms**: 677
+
+---
