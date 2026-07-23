@@ -14,6 +14,9 @@ architecture, implementation, and comprehensive verification spine while
 excluding product-market discovery, GUI design, infrastructure, deployment,
 and production-operations ceremony.
 
+This legacy compatibility name remains available for existing in-flight
+intents. New work should select the equivalent `amadeus-feature` scope.
+
 ## Why these stages execute
 
 Initialization always runs. Intent capture, feasibility, scope definition, and
