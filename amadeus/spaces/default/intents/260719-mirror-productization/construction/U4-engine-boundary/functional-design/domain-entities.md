@@ -17,10 +17,25 @@ type MirrorBoundaryDecision =
 - `includeCreate` = ミラー未作成(state に Mirror Issue フィールド不在)のとき true(S-05)
 - 決定入力: (a) U3 `resolve()` の MirrorConfig(autoMirror)(b) state の Mirror Issue フィールド有無(getField 読取)— いずれも決定的読取のみ
 
+### `MirrorBoundaryReceipts`(phase 境界処理のruntime Receipt)
+
+```
+type MirrorBoundaryPhase = "ideation" | "inception" | "construction";
+type MirrorBoundaryReceiptStatus = "pending" | "completed";
+type MirrorBoundaryReceipts =
+  Partial<Record<MirrorBoundaryPhase, MirrorBoundaryReceiptStatus>>;
+```
+
+- canonical phase順は `ideation → inception → construction` とし、phase-check対象の単一定義から導出する。
+- `pending`はauto-sync専用である。ask経路は回答と選択操作の成功確認後、`absent → completed`へ直接遷移し、`pending`を使用しない。
+- 複数の`pending`が存在する場合、1回の`next`はcanonical順で最古の1件だけを再発行する。成功した対象だけを`completed`へ遷移し、残件は次回以降へ残す。
+- field不在は空集合として扱う。未知phase、未知status、重複key、JSON構文破損はfail-safeに拒否し、`completed`を推測しない。
+- stateのruntime-only `Mirror Boundary Receipts`フィールドが単一正本であり、値はphaseごとの`pending | completed`だけとする。
+
 ### 既存語彙の再利用(新 kind なし — C-04)
 
-ask 分岐は既存 `ask` directive、auto-sync は既存 `print`(run-then-continue)を発行する。新しい directive kind・新しい状態機械状態を導入しない。境界検出は `PHASE_CHECK_REQUIRED_PHASES`(amadeus-state.ts:165-169)の canonical 参照。
+ask 分岐は既存 `ask` directive、auto-sync は既存 `print`(run-then-continue)を発行する。新しいdirective kindや既存workflow stageの状態値は追加しない。境界検出は `PHASE_CHECK_REQUIRED_PHASES` のcanonical参照とする。追加する状態は上記runtime-only Receiptの`pending | completed`に限定する。
 
 ## エンティティ間関係
 
-MirrorBoundaryDecision は next の phase boundary 経路で1回だけ導出される純関数の結果(resolve 結果+state 読取 → 決定)。close は本決定空間に**現れない**(ADR-3 — SKILL/手動が唯一の close 導線)。
+MirrorBoundaryDecision は next の phase boundary 経路で1回だけ導出される純関数の結果(resolve 結果+state 読取 → 決定)。MirrorBoundaryReceipts はその決定の実行済み/再試行状態をruntimeで保持し、外側guardとpending回復経路が参照する。close は本決定空間に**現れない**(ADR-3 — SKILL/手動が唯一の close 導線)。

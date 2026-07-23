@@ -2,6 +2,8 @@
 
 上流入力(consumes 全数): unit-of-work.md、unit-of-work-story-map.md、requirements.md、components.md、component-methods.md、services.md
 
+Integration spot-check owner: U1-CG-SPOT-001 — `packages/framework/core/tools/amadeus-mirror.ts`
+
 ## 処理フロー(status verb)
 
 ```

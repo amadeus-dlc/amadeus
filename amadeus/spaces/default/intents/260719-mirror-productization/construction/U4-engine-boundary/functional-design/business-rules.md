@@ -16,11 +16,11 @@ ideation/inception/construction の各完了時。境界集合は PHASE_CHECK_RE
 
 ## BR-U4-3: config invalid は loud(U3 の fail-closed を握りつぶさない)
 
-U3 resolve が invalid のとき、無音 skip・default 降格をせず、invalid 層と errors を stderr へ出しエラー終了(fail-open 禁止 — 検証劇場 Forbidden の予防)。
+U3 resolve が invalid のとき、無音 skip・default 降格をせず、invalid 層と errors を含む既存 `error` directive を stdout へ厳密な単一 JSON として返して停止する。stderr は空、または既存消費者が規範入力として扱わない非規範 advisory だけとする(fail-open 禁止 — 検証劇場 Forbidden の予防)。
 
 ## BR-U4-4: 出力契約の維持(C-08)
 
-ask/print の directive JSON は stdout。ミラー関連の注記は stderr(advisory)。実装前に next 出力の既存消費者(tests/ツール)を repo grep で棚卸し(stderr-addition-consumer-grep)。
+ask/print/error の directive JSON は stdout の厳密な単一 JSON とする。stderr は空、または非規範 advisory に限定する。実装前に next 出力の既存消費者(tests/ツール)を repo grep で棚卸し(stderr-addition-consumer-grep)。
 
 ## BR-U4-5: 冪等(同一境界での再 ask 抑止)
 

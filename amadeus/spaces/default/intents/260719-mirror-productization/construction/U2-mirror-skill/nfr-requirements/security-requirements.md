@@ -8,4 +8,4 @@ SKILL は既存ツール(amadeus-mirror.ts)の呼出案内のみ(BR-U2-1)— 新
 
 ## SR-U2-2: 指示注入面の最小化
 
-SKILL 本文は静的文書(ユーザー入力の埋め込み・動的生成なし)。診断出力の解釈は人間が行い、SKILL が出力テキストを機械実行しない(instruction-like-text-rejection と整合する設計)。
+SKILL 本文は静的文書(ユーザー入力の埋め込み・動的生成なし)。SKILL が分類してよいのは U1 契約で検証済みの finding kind と列挙型 detail のみとし、自由文は表示専用、人間は最終 verb 選択を担当する。SKILL は出力テキストを機械実行しない(instruction-like-text-rejection と整合する設計)。

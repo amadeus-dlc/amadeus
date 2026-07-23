@@ -2,11 +2,13 @@
 
 上流入力(consumes 全数): unit-of-work.md、unit-of-work-story-map.md、requirements.md、components.md、component-methods.md、services.md
 
+Integration spot-check owner: U3-CG-SPOT-001 — `packages/framework/core/tools/amadeus-mirror-config.ts`
+
 ## 処理フロー(resolve)
 
 ```
-resolve(projectDir, space?, intentDir?)
-  → 各層のパスを導出(global/space/intent — space・intent はカーソル解決 explicit arg > pointer の既存慣行に従う)
+resolve(projectDir, space, intentDir, reader?)
+  → 呼出し側でカーソル解決済みの必須 space・intentDir から各層のパスを導出(global/space/intent)。pointer 読取は本モジュールの責務外
   → 各面を parse(component-methods C3 契約名): 不在→absent / JSON.parse 失敗→invalid / 未知キー・型不整合→invalid(全列挙)/ 合法→parsed
   → invalid が1面でも → ResolveOutcome{invalid}(全 invalid 層の errors を層名付きで列挙)
   → parsed 面を global→space→intent の順で後勝ちマージ
