@@ -1,5 +1,71 @@
 [
   {
+    "file": "packages/framework/core/tools/amadeus-lib.ts",
+    "lines": "2243-2244",
+    "reason": "Generic callback parameter and conditional return type lines are runtime-erased; t257-t259 drive the locked registry callback in-process, but Bun stamps the multiline type declaration DA:0.",
+    "expiry": "remove if the signatures are collapsed or Bun LCOV stops stamping erased type lines"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-lib.ts",
+    "lines": "2756-2758",
+    "reason": "Generic callback parameter and conditional return type lines are runtime-erased; t258 drives the lifecycle preflight callback in-process, but Bun stamps the multiline type declaration DA:0.",
+    "expiry": "remove if the signatures are collapsed or Bun LCOV stops stamping erased type lines"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "lines": "271-284",
+    "reason": "The archived-next lifecycle audit adapter is exercised through the generated orchestrator CLI by t259; the spawned main path is not attributed to the parent Bun LCOV process.",
+    "expiry": "remove when the orchestrator CLI emitter and lifecycle audit adapter are injected in-process"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "lines": "311",
+    "reason": "The archived-next error emission is exercised through the generated orchestrator CLI by t259; the spawned main path is not attributed to the parent Bun LCOV process.",
+    "expiry": "remove when the orchestrator CLI emitter is injected in-process"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "594-599",
+    "reason": "The archive and unarchive dispatch cases are covered as shipped subprocess journeys by t258; spawned CLI dispatch lines are not parent-LCOV resident.",
+    "expiry": "remove when state dispatch and process-exit boundaries are injectable in-process"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "906-946",
+    "reason": "The guarded unpark adapter is covered as shipped subprocess journeys by t259, including success, rejection, mutation, and idempotence; spawned CLI lines are not parent-LCOV resident.",
+    "expiry": "remove when guarded unpark and process-exit boundaries are injectable in-process"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "lines": "2104-2185",
+    "reason": "The lifecycle CLI adapter is covered through t258 shipped-process cases for archive, unarchive, recovery, validation failures, lock timeout, audit emission, and output contracts; Bun does not attribute child-process execution to the parent LCOV report.",
+    "expiry": "remove when lifecycle CLI composition and exit handling can be driven with injected in-process ports"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "lines": "4308-4321",
+    "reason": "The utility lifecycle audit adapter is exercised through the shipped utility CLI by t257 and t259; spawned CLI lines are not attributed by Bun.",
+    "expiry": "remove when utility intent routing receives an injectable in-process audit port"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "lines": "4343-4365",
+    "reason": "Intent archive and unarchive delegation is exercised through the shipped utility CLI by t257 and t259, including child output and status propagation; spawned CLI lines are not attributed by Bun.",
+    "expiry": "remove when utility delegation receives an injectable in-process process port"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "lines": "4376-4383",
+    "reason": "Archived-selection rejection and successful cursor selection are exercised through the shipped utility CLI by t259; spawned CLI lines are not attributed by Bun.",
+    "expiry": "remove when utility selection routing is injectable in-process"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "lines": "4396-4406",
+    "reason": "Intent lifecycle command routing and fail-closed selector validation are exercised through the shipped utility CLI by t257 and t259; spawned CLI lines are not attributed by Bun.",
+    "expiry": "remove when utility intent routing and delegation receive injectable in-process process ports"
+  },
+  {
     "file": "scripts/amadeus-election-migrate.ts",
     "lines": "149-150",
     "reason": "Defensive directory-collision guard after mintElectionDirName. The same physicalNames set is passed as unavailable names, so the minting function suffixes away from every occupied target before this check; unit and integration tests cover the collision-avoidance behavior, but no valid input can reach this redundant fail-closed branch.",

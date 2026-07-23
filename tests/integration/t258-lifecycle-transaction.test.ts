@@ -99,6 +99,18 @@ function appendLifecycle(
 }
 
 describe("intent lifecycle transaction CLI", () => {
+  test("rejects a lifecycle audit shard outside the audit directory", () => {
+    const fixture = scaffold("in-flight");
+    expect(() => appendLifecycleAuditEntryUnlocked(
+      "INTENT_ARCHIVED",
+      {},
+      fixture.root,
+      fixture.intent,
+      "default",
+      "../escape.md",
+    )).toThrow("Invalid lifecycle audit shard");
+  });
+
   test.each(["in-flight", "parked", "complete"])("archives from %s and clears a matching cursor", (status) => {
     const fixture = scaffold(status);
     const result = run(fixture.root, "archive", fixture.intent);
