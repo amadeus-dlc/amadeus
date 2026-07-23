@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TPRBT13",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。実測: e1 の s13-candidates.md を git show 直読し、BT diary(:10/:11)と verbatim 照合。#1389 への再現追記コメント(00:41:11Z、fixture clone-id シャードの決定的再現)の実在を gh で確認。hostname 分裂は同一 clone-id add286b804a1 の host キー差で union 読みが吸収する既知構造、wall-clock drift は fanout-load-settle 系既知ノイズ — 3観測とも既存射程で新規ノルム候補なしに同意。",
+  "submittedAt": "2026-07-23T00:44:12Z"
+}

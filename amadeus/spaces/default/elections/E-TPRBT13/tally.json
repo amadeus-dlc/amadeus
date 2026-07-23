@@ -1,4 +1,30 @@
 {
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可 — 新規ノルム候補なしに同意"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可 — 新規ノルム候補なしに同意",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "異議 — 採用すべき候補がある(票コメントで特定)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T00:45:05Z",
   "ballots": [
     {
       "kind": "original",
@@ -34,5 +60,5 @@
       "submittedAt": "2026-07-23T00:44:28Z"
     }
   ],
-  "late": []
+  "resolutions": []
 }

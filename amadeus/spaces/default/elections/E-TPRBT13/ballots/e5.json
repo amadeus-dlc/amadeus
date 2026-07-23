@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TPRBT13",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e1 record 実測: s13-candidates.md の観測3件は diary(Deviations/Interpretations 00:42:18Z)と一致。(1) fixture audit 汚染は #1389 の最新コメントに決定的再現(2/2)の追記実在を gh で確認 — 既起票 Issue 側で扱うのが正位置。(2) hostname 変化のシャード分裂(同一 clone-id add286b804a1 の local→lan)は全シャード union 読み(manual-sensor-fire 追補3 の既知構造)が吸収し、センサー verdict は lan シャード 44 PASSED / 0 FAILED の実測記載あり。(3) wall-clock drift 1件は未変更ファイルの負荷起因 advisory で fanout-load-settle 系の既知ノイズ。いずれも既存の射程で新規ノルム候補なしに同意。",
+  "submittedAt": "2026-07-23T00:44:28Z"
+}
