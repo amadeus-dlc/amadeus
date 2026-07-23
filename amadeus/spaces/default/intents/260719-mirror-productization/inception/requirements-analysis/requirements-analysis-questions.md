@@ -5,7 +5,7 @@
 > **判定申告**: 2026-07-23T01:13Z 頃(agmsg e3→leader)
 > **裁定経路の確定**: 選挙方式(ユーザー裁定、leader 経由 agmsg 2026-07-23T01:13:32Z — P-02 は継続分に限り選挙へ改定、constraint-register 改定履歴に申告済み)
 
-## Q1. phase 境界ミラー ask の発火粒度(U-04a)は?
+## Q1. phase 境界ミラー ask の発火粒度(U-04a)は?【E-MPRRA1 裁定済み】
 
 - A. phase-check 対象3境界(ideation / inception / construction の各完了時)— PHASE_CHECK_REQUIRED_PHASES(amadeus-state.ts:165-169)と同集合で機械的に一致
 - B. 全 phase 境界(operation 完了 = workflow 完了時も含む4境界)
@@ -14,7 +14,7 @@
 
 判断点: intent-first-mirror-issue ノルムの節目定義は「park・phase 完了・complete」。A は既存機構(verifyPhaseCheckArtifact)との対称性が最大。B は complete 時の close 導線を ask に含められる(ただし close は常に ask — C-05)。C は発火回数最小。
 
-[Answer]:
+[Answer]: A — phase-check 対象3境界(ideation / inception / construction の各完了時)で ask 発火(E-MPRRA1 裁定 A、2-1。記入 2026-07-23T01:19:13Z、裁定受領後)
 
 ## Q2. auto-mirror 有効かつミラー未作成 intent の phase 境界挙動(U-04b)は?
 
@@ -25,7 +25,7 @@
 
 判断点: G-7 は「auto で無確認実行するのは sync のみ」— create を auto しないことは既決だが、未作成時に人間を呼ぶ(A)か静かに進む(B)かは未決。C は park/未作成の正常系(intent-first で ideation 中は未作成が普通)を誤ってエラー化するリスク。
 
-[Answer]:
+[Answer]: A — ask へ降格(create 選択肢込みの通常 ask。auto は sync のみの G-7 厳格読み)(E-MPRRA2 裁定 A、3-0。記入 2026-07-23T01:19:13Z、裁定受領後)
 
 ## Q3. status verb の exit code 契約は?
 
@@ -36,4 +36,4 @@
 
 判断点: 兄弟 CLI の既習様式は amadeus-mirror.ts 本体 = fail は一律 exit 1(fail :231-234)、usage=2。doctor は常に人間向け出力。ui-less-mockups-as-output-contract により本問の裁定が受け入れ基準とテスト文言の導出元になる。
 
-[Answer]:
+[Answer]: A — 0 = 乖離なし / 1 = 乖離あり / 2 = 前提エラーの3値契約(E-MPRRA3 裁定 A、3-0。記入 2026-07-23T01:19:13Z、裁定受領後)
