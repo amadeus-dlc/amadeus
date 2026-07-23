@@ -12,7 +12,10 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { handleDoctor } from "../../packages/framework/core/tools/amadeus-utility.ts";
+import {
+  handleDoctor,
+  resolveDoctorContext,
+} from "../../packages/framework/core/tools/amadeus-utility.ts";
 import { inspectCodexHooks } from "../../packages/framework/harness/codex/tools/amadeus-codex-hooks-contract.ts";
 import {
   activateCodexHooks,
@@ -161,14 +164,9 @@ function runHooksMain(argv: string[]) {
   }
 }
 
-class ExitSignal extends Error {}
-
 function runUtilityDoctorInProcess(projectDir: string): string {
-  const originalStdout = process.stdout.write;
-  const originalExit = process.exit;
   const originalHarnessDir = process.env.AMADEUS_HARNESS_DIR;
   const originalStageGraph = process.env.AMADEUS_STAGE_GRAPH;
-  let stdout = "";
   process.env.AMADEUS_HARNESS_DIR = ".codex";
   process.env.AMADEUS_STAGE_GRAPH = join(
     ROOT,
@@ -179,23 +177,9 @@ function runUtilityDoctorInProcess(projectDir: string): string {
     "data",
     "stage-graph.json",
   );
-  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-    stdout += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
-    return true;
-  }) as typeof process.stdout.write;
-  process.exit = (() => {
-    throw new ExitSignal();
-  }) as typeof process.exit;
   try {
-    try {
-      handleDoctor(projectDir);
-    } catch (error) {
-      if (!(error instanceof ExitSignal)) throw error;
-    }
-    return stdout;
+    return handleDoctor(resolveDoctorContext(projectDir)).output;
   } finally {
-    process.stdout.write = originalStdout;
-    process.exit = originalExit;
     if (originalHarnessDir === undefined) delete process.env.AMADEUS_HARNESS_DIR;
     else process.env.AMADEUS_HARNESS_DIR = originalHarnessDir;
     if (originalStageGraph === undefined) delete process.env.AMADEUS_STAGE_GRAPH;

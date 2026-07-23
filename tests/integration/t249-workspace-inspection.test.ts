@@ -26,6 +26,7 @@ import {
   handleDetect,
   handleDoctor,
   handleIntentBirth,
+  resolveDoctorContext,
 } from "../../dist/claude/.claude/tools/amadeus-utility.ts";
 
 const UTIL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-utility.ts");
@@ -86,25 +87,6 @@ function captureExit(fn: () => void): { code: number | undefined; threw: boolean
     process.exit = origExit;
   }
   return { code, threw };
-}
-
-/** Capture stdout AND stub process.exit together — needed for handlers (doctor)
- *  that write their report and then process.exit, so the buffer survives the
- *  thrown exit. */
-function captureStdoutAndExit(fn: () => void): { out: string; code: number | undefined } {
-  const orig = process.stdout.write.bind(process.stdout);
-  let out = "";
-  process.stdout.write = (chunk: string | Uint8Array): boolean => {
-    out += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8");
-    return true;
-  };
-  let code: number | undefined;
-  try {
-    ({ code } = captureExit(fn));
-  } finally {
-    process.stdout.write = orig;
-  }
-  return { out, code };
 }
 
 // A depth-1 nested project detectable by a NON-language signal (package.json
@@ -282,7 +264,7 @@ describe("handleDoctor (in-process, submodule row)", () => {
     const proj = createTestProject();
     try {
       seedUninitSubmodule(proj);
-      const { out } = captureStdoutAndExit(() => handleDoctor(proj));
+      const { output: out } = handleDoctor(resolveDoctorContext(proj));
       expect(out).toContain("Submodules: 1 present, 1 uninitialized");
       // The submodule row is advisory (✓), never a ✗.
       expect(out).not.toContain("✗  Submodules");
@@ -296,7 +278,7 @@ describe("handleDoctor (in-process, submodule row)", () => {
     try {
       write(proj, ".gitmodules", '[submodule "libs/dep"]\n\tpath = libs/dep\n');
       mkdirSync(join(proj, "libs", "dep", ".git"), { recursive: true });
-      const { out } = captureStdoutAndExit(() => handleDoctor(proj));
+      const { output: out } = handleDoctor(resolveDoctorContext(proj));
       expect(out).toContain("Submodules: 1 present, all initialized");
     } finally {
       cleanupTestProject(proj);
@@ -307,7 +289,7 @@ describe("handleDoctor (in-process, submodule row)", () => {
     const proj = createTestProject();
     try {
       mkdirSync(join(proj, ".gitmodules")); // unreadable
-      const { out } = captureStdoutAndExit(() => handleDoctor(proj));
+      const { output: out } = handleDoctor(resolveDoctorContext(proj));
       expect(out).toContain("Submodules: .gitmodules present but unparseable");
       expect(out).toContain("✗  Submodules");
     } finally {
@@ -318,7 +300,7 @@ describe("handleDoctor (in-process, submodule row)", () => {
   test("no .gitmodules => no submodule row (byte-identical)", () => {
     const proj = createTestProject();
     try {
-      const { out } = captureStdoutAndExit(() => handleDoctor(proj));
+      const { output: out } = handleDoctor(resolveDoctorContext(proj));
       expect(out).not.toContain("Submodules:");
     } finally {
       cleanupTestProject(proj);

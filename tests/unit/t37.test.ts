@@ -6,11 +6,10 @@
 // by SPAWNING the real CLI via node:child_process spawnSync (BUN + the tool
 // .ts path), asserting on res.status / the combined stdout+stderr exactly as
 // the .sh asserted on `$?` / the `2>&1 || true` capture. The contract under
-// test is the PROCESS boundary (doctor's stdout diagnostics + its
-// process.exit(failed>0?1:0) at amadeus-utility.ts:1385) — an in-process
-// handleDoctor() twin would lose the exit-code half case 17 relies on, and
-// handleDoctor() itself calls process.exit, so it cannot be invoked in-process
-// without killing the test runner. So all doctor cases (1-17) stay spawns.
+// test is the PROCESS boundary (doctor's stdout diagnostics + wrapper exit
+// status). The in-process handleDoctor(context) seam is covered separately;
+// case 17 specifically relies on the CLI wrapper's exit behavior, so all
+// doctor cases (1-17) stay spawns.
 //
 // The .sh injected broken graphs / scope-mappings via the AMADEUS_STAGE_GRAPH /
 // AMADEUS_SCOPE_MAPPING env seams (amadeus-lib.ts:702-708) that loadStageGraph /
