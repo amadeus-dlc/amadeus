@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FSPRAS13",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "提案どおり(c3 採用+c1/c2/c4 不採用)。独立実測: 自 tree で find tests -name 't211*' を実行し **5ファイル**(unit 4+integration 1)の共存を確認 — 『同一テスト番号の複数ファイル共存は実在する生態』は主張どおりで、swarm-test-number-reservation の t250 重複採番実測とも同族。新規性の核 = mechanism-cite-verify-at-draft は『引用の実在』を守るが、短形 tNNN は実在する別ファイルへ誤解決するため実在確認を素通りする — 『引用の一意性』は独立の検査面で、既存 cid 群(実在/列挙完全性/留保保存/意味論適合/不在反証)のいずれにも未収載。追補統合先も正位置。c1/c2 は既決 cid の執行、c4 は E-MPRRAS13 着地直後の初回運用実例で PM 回付が妥当。",
+  "submittedAt": "2026-07-23T03:08:48Z"
+}

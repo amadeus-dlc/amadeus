@@ -1,0 +1,25 @@
+{
+  "electionId": "E-SRCNRS13",
+  "kind": "s13-adoption",
+  "question": "intent 260722-space-record-catalog / nfr-requirements(全4 Unit)の §13 学習選定(全文 verbatim = e2 ブランチの <record>/construction/nfr-requirements/s13-candidates.md — git show で実測可)。conductor 提案: c1 採用+c2 不採用。採用候補 c1(verbatim): 『編纂型ステージ(NFR 系等)の成果物は、reviewer ディスパッチ前に「宣言 consumes × 全成果物」の総当たり実参照チェック(機械 grep)を通す — 名指し是正だけのパッチは同型欠落を残す(U1 NFR で3件残余の実測 → 総当たり導入後の U4/U2/U3 は装飾トークン指摘ゼロの対照実測)。既存 artifact-upstream-inputs-header(禁止)・body-derivation-before-header(順序)と直交する「機械セルフチェック1手」面。統合先案: requirements-analysis 系 Corrections』。c2(執行受理の運用記録)は PM 一括報告へ委譲で不採用。各自 e2 record を実測確認のうえ GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "提案どおり — c1 採用(総当たり実参照チェックの事前1手)+c2 不採用"
+    },
+    {
+      "internalNo": 2,
+      "label": "全件不採用 — 既存 cid の含意で足りる"
+    },
+    {
+      "internalNo": 3,
+      "label": "異議 — 別の組合せ(票コメントで特定)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e4",
+    "e6"
+  ],
+  "state": "recorded"
+}

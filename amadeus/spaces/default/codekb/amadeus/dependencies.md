@@ -1,6 +1,26 @@
 # 依存関係
 
-## upstream-sync-230 の依存境界（2026-07-20、現在）
+## 260723-t241-ci-residency の依存境界（履歴: 2026-07-23）
+
+差分リフレッシュ（base `a81c11dde` → observed `78bce876`、距離 35、bugfix / Minimal、[#1294](https://github.com/amadeus-dlc/amadeus/issues/1294)）。パッケージ依存に変化なし。内部依存の交差は t241 → `scripts/amadeus-election.ts`（spawnSync 子プロセス）、テスト tier 判定 → `tests/lib/test-size.ts`（`classifyTestSize`）、CI → `package.json` test scripts。t241 の e2e→integration 移設候補は `tests/integration/` の election spawn 兄弟 6 本（t235/t236/t240/t242/t244 + t-formal-verif-arm-s-blind）と同一依存様式（測定 ref: scan-notes @ observed HEAD `78bce876`）。
+
+## 260722-teamup-prompt-race の依存境界（2026-07-22、履歴）
+
+bugfix / Minimal（observed `a81c11dde`）。本バグの依存境界:
+
+```text
+scripts/team-up.sh (claude_member_cmd)
+  -> scripts/run-claude.sh (exec claude "$@")   # init_prompt を位置引数で委譲
+  -> Herdr pane run/send-text/send-keys          # pane 起動・再注入経路
+  -> agmsg spawn.sh handshake / ready センチネル   # 対照契約（repo 外、read-only）
+     agmsg_ready_path (lib/actas-lock.sh) <- watch.sh (touch)
+```
+
+最重要の依存事実は、claude の watcher 起動が「team-up.sh の init_prompt 一発 → claude 初回ターン → watch.sh 起動 → センチネル生成」という**一方向の連鎖**に依存し、初期プロンプト消失時に連鎖全体が不成立になる点（SessionStart hook 経由の `emit_monitor_directive` `delivery.sh:302-311` も初回ターン未到達で未実行）。修正は `scripts/` に閉じ、core/harness 正本・dist/self-install への従属依存は想定薄（実装時に実 diff で再評価、cid:code-generation:c6）。
+
+> 以下は過去 intent の履歴。
+
+## upstream-sync-230 の依存境界（2026-07-20、履歴）
 
 ```text
 stage-schema + unit-kind

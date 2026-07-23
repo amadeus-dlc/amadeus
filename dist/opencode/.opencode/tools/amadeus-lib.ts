@@ -2442,10 +2442,13 @@ function cloneIdPath(projectDir: string): string {
 // between two first-run processes converges on whichever write lands last; both
 // then read that single file on every subsequent call, so the clone settles on
 // ONE token (a transient duplicate shard on the very first concurrent mint is
-// harmless — readers glob `audit/*.md`). Memoized per process. Best-effort: an
-// unwritable workspace degrades to an in-memory token for this process (still
-// stable within the process, still distinct from other clones).
-let _cloneId: string | null = null;
+// harmless — readers glob `audit/*.md`). Memoized per process, KEYED BY
+// projectDir (Issue #1389): a single-value memo let a fixture project's minted
+// token leak into a later emit against a DIFFERENT (real) project in the same
+// process, so the shard name mixed a fixture clone id onto the real record.
+// Best-effort: an unwritable workspace degrades to an in-memory token for this
+// process (still stable within the process, still distinct from other clones).
+const _cloneIdByProject = new Map<string, string>();
 
 function linkedCloneId(projectDir: string, path: string): string | null {
   try {
@@ -2500,32 +2503,35 @@ function writeCloneIdNoFollow(path: string, value: string): boolean {
 }
 
 function cloneId(projectDir: string): string {
-  if (_cloneId !== null) return _cloneId;
+  const cached = _cloneIdByProject.get(projectDir);
+  if (cached !== undefined) return cached;
   const path = cloneIdPath(projectDir);
   const linked = linkedCloneId(projectDir, path);
   if (linked !== null) {
-    _cloneId = linked;
-    return _cloneId;
+    _cloneIdByProject.set(projectDir, linked);
+    return linked;
   }
   const existing = readCloneIdNoFollow(path);
   if (existing !== null) {
-    _cloneId = existing;
-    return _cloneId;
+    _cloneIdByProject.set(projectDir, existing);
+    return existing;
   }
   const minted = randomUUID().replace(/-/g, "").slice(0, 12);
+  let resolved = minted;
   try {
     mkdirSync(workspaceRoot(projectDir), { recursive: true });
     if (!writeCloneIdNoFollow(path, minted)) {
-      _cloneId = linkedCloneId(projectDir, path) ?? minted;
-      return _cloneId;
+      resolved = linkedCloneId(projectDir, path) ?? minted;
+    } else {
+      // Re-read so a concurrent first-run mint that landed first wins for ALL
+      // processes in this clone (converge on one on-disk token).
+      resolved = readCloneIdNoFollow(path) ?? minted;
     }
-    // Re-read so a concurrent first-run mint that landed first wins for ALL
-    // processes in this clone (converge on one on-disk token).
-    _cloneId = readCloneIdNoFollow(path) ?? minted;
   } catch {
-    _cloneId = minted; // unwritable workspace → in-memory token
+    resolved = minted; // unwritable workspace → in-memory token
   }
-  return _cloneId;
+  _cloneIdByProject.set(projectDir, resolved);
+  return resolved;
 }
 
 // --- Human presence at an approval/interview gate ---
@@ -3067,16 +3073,22 @@ export function auditBlockField(block: string, fieldName: string): string | null
 // distinct across clones (so concurrent clones never collide / git-conflict).
 // hostname() is a human-readable hint only; it can carry dots/uppercase, so
 // normalise it to the slug shape it never escapes the audit dir.
-let _auditShardName: string | null = null;
+// Memoized per process, KEYED BY projectDir (Issue #1389) in lockstep with
+// cloneId's per-project memo: the shard name is `<host>-<cloneId(projectDir)>.md`,
+// so a single-value memo would pin the first project's shard name onto every
+// later project in the process (the fixture→real mixing this fix closes).
+const _auditShardNameByProject = new Map<string, string>();
 export function auditShardName(projectDir: string): string {
-  if (_auditShardName !== null) return _auditShardName;
+  const cached = _auditShardNameByProject.get(projectDir);
+  if (cached !== undefined) return cached;
   const host = hostname()
     .toLowerCase()
     .replace(/[^a-z0-9-]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 48) || "host";
-  _auditShardName = `${host}-${cloneId(projectDir)}.md`;
-  return _auditShardName;
+  const name = `${host}-${cloneId(projectDir)}.md`;
+  _auditShardNameByProject.set(projectDir, name);
+  return name;
 }
 
 // `…/intents/<slug>-<id8>/audit/` — the shard directory, or null when no intent
@@ -3655,6 +3667,21 @@ export function errorStack(e: unknown): string | undefined {
     return typeof stack === "string" ? stack : undefined;
   }
   return undefined;
+}
+
+// True when an artifact name (== the output-filename stem, per the X→X.md
+// convention) is a marker artifact: a `*-questions.md` Q&A file or a
+// `*-timestamp.md` marker. Both are intentionally NOT ≥2-H2 prose docs, so the
+// required-sections sensor exempts them from the generic prose-heading floor
+// (E-FVEPD) and the graph's templateEligibleArtifacts filter excludes them from
+// template overrides. The single canonical definition so the two sites can
+// never drift into a two-definition set split.
+export function isMarkerArtifact(name: string): boolean {
+  return (
+    typeof name === "string" &&
+    name.length > 0 &&
+    (name.endsWith("-questions") || name.endsWith("-timestamp"))
+  );
 }
 
 // --- JSON.parse type guards ---
@@ -4965,14 +4992,15 @@ export function _resetStageGraphForTests(): void {
 
 // Reset the process-global clone-id / audit-shard-name memoization so an
 // in-process test that mints a random clone id (unseeded fixture project)
-// cannot leak that token into a later test's audit emit. Resets BOTH caches
-// together to preserve write/reset symmetry: cloneId() populates _cloneId and
-// auditShardName() populates _auditShardName, so a single reset must clear the
-// pair. State-init only (no behaviour branch), mirroring the precedent set by
-// _resetScopeMappingForTests / _resetStageGraphForTests.
+// cannot leak that token into a later test's audit emit. Clears BOTH per-project
+// caches together to preserve write/reset symmetry: cloneId() populates
+// _cloneIdByProject and auditShardName() populates _auditShardNameByProject, so a
+// single reset must clear the pair. State-init only (no behaviour branch),
+// mirroring the precedent set by _resetScopeMappingForTests /
+// _resetStageGraphForTests.
 export function _resetCloneIdForTests(): void {
-  _cloneId = null;
-  _auditShardName = null;
+  _cloneIdByProject.clear();
+  _auditShardNameByProject.clear();
 }
 
 // Canonical scope names derived from .claude/scopes/*.md presence (via

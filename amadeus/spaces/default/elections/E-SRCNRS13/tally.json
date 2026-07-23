@@ -1,0 +1,69 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "提案どおり — c1 採用(総当たり実参照チェックの事前1手)+c2 不採用"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "提案どおり — c1 採用(総当たり実参照チェックの事前1手)+c2 不採用",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "全件不採用 — 既存 cid の含意で足りる",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "異議 — 別の組合せ(票コメントで特定)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T03:37:17Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SRCNRS13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "提案どおり採用(1)。実測: e2 record の s13-candidates.md を直読 — 候補文と配信 verbatim 一致。対照実測(U1 名指しパッチ→3件残余 vs 総当たり導入後 U4/U2/U3 装飾トークン指摘ゼロ)が候補の効用を裏付ける。既存 cid との直交性も正: artifact-upstream-inputs-header は禁止パターン、body-derivation-before-header は起草順序、consumes-first-drafting は宣言先読み — いずれも『是正時の同型全数閉包』を規定せず、本候補の総当たり機械 grep はその隙間を埋める(私の RA でも reviewer 指摘後の是正で enumeration 系の同型見落としを経験しており実感と整合)。c2 の PM 委譲も postmortem-two-tier どおり。",
+      "submittedAt": "2026-07-23T03:31:30Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCNRS13",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e2 record を read-only 実測(s13-candidates.md の c1 実測根拠: U1 の3件残余 vs 総当たり導入後 U4/U2/U3 のゼロの対照)。本日自 intent でも同型を4回実測している(RA/AD/DP/FD で upstream ヘッダ・宣言外引用の指摘が反復 — 名指し是正では同型が別ファイルへ残る)— reviewer 前の機械 grep 総当たり1手は既存2 cid(禁止/順序)と直交する検出面で、費用対効果の実証つき。c2 の PM 委譲も適切。提案どおり(1)",
+      "submittedAt": "2026-07-23T03:31:41Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCNRS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "提案どおり(1)。e2 record 実測: diary Deviations 03:14:08Z に『iteration 1 是正が名指し欠落のみのパッチだった反省 → 総当たり照合をセットで』の実測起点、Interpretations 03:15:09Z に検査宇宙有限性の3点根拠(私の E-SRCU2FD 留保の字義該当を含む — 当事者として整合確認: 有限宇宙の総当たり済みは『grep 語彙依存で宇宙が開いた』omission 系と決定的に相違し、受理は私の留保の意図どおり)。c1 の新規性判定も妥当: 既存 cid は禁止(装飾トークン)と順序(本文先行)を定めるが『reviewer 前の機械セルフチェック1手』は未規定で、U1 残余3件 → 総当たり導入後 U4/U2/U3 指摘ゼロの対照実測が効果を示す。c2 の PM 委譲も妥当。",
+      "submittedAt": "2026-07-23T03:32:25Z"
+    }
+  ],
+  "resolutions": []
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FSPRAS13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "提案どおり採用(1)。実測: 核心主張『t211 = 5ファイル共存』を自 tree で機械再計算し完全一致(find tests -name 't211*' = 5: unit 4+integration 1)。引用の実在(mechanism-cite-verify)と一意性は確かに別検査面 — 短形 tNNN は5ファイルのどれにでも実在解決してしまい、既存 cid では reviewer 誤照合(偽 Major)を防げない。swarm-test-number-reservation(採番重複の予防)と対の消費側規律として統合先も適切。本 intent の CG でも私は t257 をフルパスで引用しており実務整合。",
+  "submittedAt": "2026-07-23T03:08:20Z"
+}

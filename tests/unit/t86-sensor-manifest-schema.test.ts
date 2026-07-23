@@ -261,6 +261,26 @@ describe("t86 sensor manifest schema (migrated from t86-sensor-manifest-schema.s
     );
   });
 
+  // Issue #1296 — marker_exempt output_schema wiring (FR-2 consumer). The
+  // required-sections sensor now emits `marker_exempt: true` when it exempts a
+  // questions/timestamp marker from the generic floor (E-FVEPD). That field must
+  // be documented in the manifest's output_schema so the exemption is observable
+  // and not a silent verdict change. parseSensorManifest drops unknown keys
+  // (output_schema is one), so — like frontmatterHasAppliesTo above — this is a
+  // raw-frontmatter-bytes assertion on the output_schema block.
+  test("required-sections output_schema documents marker_exempt [#1296 FR-2]", () => {
+    const raw = readFileSync(manifestPath("required-sections"), "utf-8");
+    const cleaned = raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw;
+    const fm = cleaned.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    expect(fm, "required-sections manifest has no frontmatter block").not.toBeNull();
+    const frontmatter = (fm as RegExpMatchArray)[1];
+    // The output_schema block declares marker_exempt (indented under it).
+    expect(
+      /^\s+marker_exempt:\s*boolean\s*$/m.test(frontmatter),
+      "output_schema is missing the `marker_exempt: boolean` field",
+    ).toBe(true);
+  });
+
   // .sh L36: plan 28. Re-count the assertion budget so a silently dropped
   // manifest or negative case is caught (5 existence + 4×5 frontmatter + 3
   // negatives = 28).

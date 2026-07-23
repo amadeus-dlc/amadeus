@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCFDS13",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "提案どおり(c5 採用+c1〜c4 不採用)。実測: (1) c5 の実在根拠 — e2 の U1 FD business-logic-model.md:50 に『F1(createdAtSource 未申告拡張)は4フィールド復元+ADR-2 転記是正の申告で解消』の Review 記録を直読確認。混入トークン createdAtSource はまさに E-SRCAD2 の非採用 B 案の固有フィールド名で、候補の因果(非採用案の語彙が転記へ漏れる)は実測どおり。(2) 新規性 — E-TPRRAS13 の per-voter 逐語照合は『採用文の存在』の正方向検査で、『非採用文の不在』は構造的に検出範囲外(absence 側の対 — absence-claim-grep-verify とも別対象)。非採用 choice の固有トークン grep 0 hit という機械検査は安価で false-positive 面も小さい。reservation-transcription-count-check ファミリへの追補統合が正位置。(3) c1〜c4 は裁定執行記録・既 persist 手続きの実例・既存 cid 適用で、いずれも PM 回付・record 正本が正しい置き場。",
+  "submittedAt": "2026-07-23T03:05:32Z"
+}

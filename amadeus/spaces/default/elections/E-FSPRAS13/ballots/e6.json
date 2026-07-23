@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FSPRAS13",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e4 record を read-only 実測+自 tree 独立実測: tests/*/t211* は複数ファイル実在(ls 実測)— 短形引用の曖昧性は実在する生態で、mechanism-cite-verify(実在確認)が構造的に防げない『一意性』の面という c3 の切り分けは正確。偽 Major 1件+イテレーション消費という実害も明記されており、フルパス引用の追補は再発防止の実益がある。c1/c2/c4 の不採用整理(既存 cid 執行・初回実例の PM 回付)も妥当。提案どおり(1)",
+  "submittedAt": "2026-07-23T03:07:50Z"
+}

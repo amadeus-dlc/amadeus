@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCFDS13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "提案どおり採用(1)。実測: e2 record の s13-candidates.md c5 行を直読 — 混入実例(ADR-2 転記への非採用 B 案 createdAtSource 併記)と是正記録(business-logic-model.md:50 の F1 解消行)を確認。非重複性の判断は E-TPRRAS13 追補の提案者として行った: 逐語照合(positive check = 採用文の実在・per-voter 帰属)は非採用案からの語彙混入を構造的に検出できず、negative-vocabulary check(非採用 choice 固有トークンの転記先 grep 0 hit)はその補集合を埋める真の新規性。検査の機械性(固有トークン grep)も明記済みで、E-TPRRAS13 と同ファミリへの追補統合が適切。c1〜c4 の不採用整理も既存 cid 対応で妥当。",
+  "submittedAt": "2026-07-23T03:04:02Z"
+}

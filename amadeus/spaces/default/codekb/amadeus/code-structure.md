@@ -1,6 +1,31 @@
 # コード構造
 
-## upstream-sync-230 の変更面（2026-07-20、現在）
+## t241 のテスト tier 配置構造（260723-t241-ci-residency、2026-07-23、履歴）
+
+差分リフレッシュ（base `a81c11dde` → observed `78bce876`、distance 35、bugfix / Minimal、[#1294](https://github.com/amadeus-dlc/amadeus/issues/1294)）。本バグ面（tests/e2e・run-tests.ts・workflows・package.json）は base..HEAD で無変更（numstat 0 行）、原因所在は 260718-election-ts-foundation（#1235）。以下は測定 ref: scan-notes @ observed HEAD `78bce876` の転記。
+
+- **テスト層とディレクトリの対応**（`tests/lib/test-size.ts` :161-166）: `smoke=null / unit=small / integration=medium / e2e=large`。`classifyTestSize` の signals（`t-test-size-drift.test.ts` :66-69）は `node:fs`→medium、`child_process`/`spawn`→medium、`fetch`/net→large。gate は scope MAX 超過で違反（:193）、grandfather は unit の ratchet allowlist のみ（:198-209）。integration は medium まで許容。
+- **profile → 層の写像**（`tests/run-tests.ts`）: `--ci`（:197-202）= smoke+unit+integration（runE2e 非設定）、`--release`/`--all`（:203-211）= +e2e。Usage banner :124-127/:148。`package.json` :14-16 の `test:ci`/`coverage:ci` は `--ci`、`test:all` は `--all`。
+- **対象ファイル**: `tests/e2e/t241-election-machine-executor.test.ts`（spawnSync + mkdtempSync/writeFileSync/rmSync で自前 projectDir 生成、テスト2件 E-EXEC1 :91-111 / E-EXEC2 :113-140、guard=30 ループ、外部 fixture 無し）。ヘッダ :1 が e2e 配置なのに「CI-resident」を自称。sibling `t237`（:1-5）は「Layer: e2e」と正直宣言。integration tier には election CLI spawn 兄弟が 6 本既存（t235/t236/t240/t242/t244 + t-formal-verif-arm-s-blind）。t241 は `gen-coverage-registry.ts` 未登録（0 ヒット）。
+- **改名/移設時の伝播候補（未決）**: ファイル名 suffix 慣習（`.integration.test.ts` を兄弟が採用）、`gen-coverage-registry.ts` の EXPECTED_NONE_TO_CLI、`docs/reference/09-testing.md` — 移設方式（改名 vs ディレクトリ移動）で影響範囲が変わる（scan-notes §4）。
+
+## team 起動 watcher-arming の構造面（履歴: 260722-teamup-prompt-race、2026-07-22）
+
+bugfix / Minimal。observed `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`（距離101）。本 intent の交差構造は `scripts/` の team 起動オーケストレーション（core 中立層・harness 表層とは別系統のリポジトリ開発支援スクリプト面）に限定。
+
+| 構造面 | 現行責務 | 本バグとの関係 |
+|---|---|---|
+| `scripts/team-up.sh`（+212 −8、260721 起点） | Herdr pane 上へ claude/codex メンバーを起動する team オーケストレータ | claude 起動経路 `:800`/`:830-832` が init_prompt 一発供給、`:338-395` の supervisor は codex 限定 |
+| `scripts/run-claude.sh` | 末尾 `exec claude --dangerously-skip-permissions "$@"` | init_prompt を位置引数として claude へ委譲 |
+| `scripts/team-up-codex-safety-wait.ts`（新規 +567、260721） | Codex pane readiness 検証（`resolve`/`readVisible` `:273-338`、`PRODUCTION_FINGERPRINTS` `:72,177`） | claude 非対応。claude 版 readiness の構造先例 |
+| agmsg skill（repo 外 `~/.agents/skills/agmsg/`、read-only 参照） | `spawn.sh` の ready handshake、`lib/actas-lock.sh` の path 算出、`watch.sh` のセンチネル生成 | team-up claude 経路に欠ける契約の対照。実装は本 repo 外で不変更 |
+| team-up テスト（`tests/integration/t-team-up-*`、`tests/unit/t-team-up-codex-safety-wait.test.ts`） | team 起動・msg backend・codex safety-wait の検査 | watcher arming（init_prompt/ready/watch）の被覆なし |
+
+修正は `scripts/` に閉じる想定で、`packages/framework/core` / `harness` の正本や dist/self-install には交差しない見込み（実装時に実 diff で再評価、cid:code-generation:c6）。
+
+> 以下は過去 intent の履歴。
+
+## upstream-sync-230 の変更面（2026-07-20、履歴）
 
 現行 observed `545e69c836d46f7bec2fa351c8e668026eb5fad5` の構成は、core tools 30、hooks 11、agents 14、stages 32、sensors 5、6ハーネス固有 69 files、TypeScript 621 files、tests 461 files（unit 216 / integration 159 / e2e 70 / smoke 14）である（測定 ref: Developer scan の `find`/test runner 分類、observed HEAD）。主要変更面は次の通り。
 
