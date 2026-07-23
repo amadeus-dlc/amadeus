@@ -91,6 +91,7 @@ describe("execute preconditions and approval binding", () => {
     userApproval: "granted",
     expectedPlanHash: sha256("plan"),
     actualPlanHash: sha256("plan"),
+    approvalProvenance: "agmsg:2026-07-23T05:00:00Z",
   };
 
   test("passes only when every precondition and plan hash match", () => {
@@ -104,6 +105,7 @@ describe("execute preconditions and approval binding", () => {
     ["removal issue", { removalIssueExists: false }],
     ["user approval", { userApproval: "pending" }],
     ["approved plan binding", { actualPlanHash: sha256("changed") }],
+    ["approval provenance", { approvalProvenance: null }],
   ] as const)("fails closed when %s is absent", (_name, patch) => {
     expect(checkExecutePreconditions({ ...good, ...patch } as ExecutePreconditionInput).ok).toBe(false);
   });

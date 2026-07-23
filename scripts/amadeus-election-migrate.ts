@@ -20,8 +20,10 @@ import {
   electionsRoot,
   mintElectionDirName,
   readElectionsRegistry,
+  resolveElectionDir,
   type ElectionRegistryEntry,
 } from "./amadeus-election-store";
+import { handleVerify } from "./amadeus-election";
 import type { ElectionState } from "./amadeus-election-model";
 
 export type CreatedAtSource = "timeline-oldest" | "git-first-commit" | "unknown";
@@ -59,6 +61,7 @@ export type ExecutePreconditionInput = {
   userApproval: "pending" | "granted";
   expectedPlanHash: string | null;
   actualPlanHash: string;
+  approvalProvenance: string | null;
 };
 
 export type ExecutePreconditionReport = {
@@ -70,6 +73,17 @@ export type ExecutePreconditionReport = {
   planHashMatches: boolean;
   ok: boolean;
   failures: string[];
+};
+
+export type FidelityResult = {
+  ok: boolean;
+  baselineVerified: string[];
+  verified: string[];
+  resolutionFailures: string[];
+  verificationFailures: string[];
+  registryRows: number;
+  directories: number;
+  directPathReferences: string[];
 };
 
 function validIso(value: string): boolean {
@@ -177,6 +191,14 @@ export function checkExecutePreconditions(
   if (!issueOk) failures.push("legacy fallback removal issue is missing or unverified");
   if (input.userApproval !== "granted") failures.push("user approval is not granted");
   if (!planHashMatches) failures.push("approved plan hash does not match");
+  if (
+    input.approvalProvenance === null ||
+    !/^agmsg:\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(
+      input.approvalProvenance,
+    )
+  ) {
+    failures.push("approval provenance is missing or invalid");
+  }
   return {
     fullClone: input.fullClone,
     s2Landed: input.s2Landed,
@@ -194,7 +216,11 @@ function git(projectDir: string, args: string[]): string | null {
   return result.status === 0 ? result.stdout.trim() : null;
 }
 
-function readCandidates(projectDir: string, root: string): MigrationCandidate[] {
+export function readCandidates(
+  projectDir: string,
+  root: string,
+  gitLog: (projectDir: string, args: string[]) => string | null = git,
+): MigrationCandidate[] {
   if (!existsSync(root)) return [];
   return readdirSync(root, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
@@ -224,14 +250,17 @@ function readCandidates(projectDir: string, root: string): MigrationCandidate[] 
         }
       }
       const path = relative(projectDir, join(dir, "election.json"));
-      const commits = git(projectDir, [
-        "log",
-        "--diff-filter=A",
-        "--format=%aI",
-        "--reverse",
-        "--",
-        path,
-      ]);
+      const commits =
+        timelineInstants.length === 0
+          ? gitLog(projectDir, [
+              "log",
+              "--diff-filter=A",
+              "--format=%aI",
+              "--reverse",
+              "--",
+              path,
+            ])
+          : null;
       return {
         dirName: entry.name,
         electionId: raw.electionId,
@@ -263,33 +292,52 @@ type CliOptions = {
   approvalPath: string | null;
   execute: boolean;
   removalIssueExists: boolean;
+  fidelityRecordPath: string;
 };
 
 function parseArgs(args: string[]): CliOptions {
-  let projectDir = process.cwd();
-  let space = "default";
-  let planPath = "";
-  let approvalPath: string | null = null;
-  let execute = false;
-  let removalIssueExists = false;
+  const options: CliOptions = {
+    projectDir: process.cwd(),
+    space: "default",
+    planPath: "",
+    approvalPath: null,
+    execute: false,
+    removalIssueExists: false,
+    fidelityRecordPath: "",
+  };
+  const valueFlags: Record<string, keyof CliOptions> = {
+    "--project-dir": "projectDir",
+    "--space": "space",
+    "--plan": "planPath",
+    "--approval": "approvalPath",
+    "--fidelity-record": "fidelityRecordPath",
+  };
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    if (arg === "--project-dir") projectDir = args[++i];
-    else if (arg === "--space") space = args[++i];
-    else if (arg === "--plan") planPath = args[++i];
-    else if (arg === "--approval") approvalPath = args[++i];
-    else if (arg === "--execute") execute = true;
-    else if (arg === "--removal-issue-exists") removalIssueExists = true;
-    else throw new Error(`unknown argument: ${arg}`);
+    if (arg === "--execute") {
+      options.execute = true;
+      continue;
+    }
+    if (arg === "--removal-issue-exists") {
+      options.removalIssueExists = true;
+      continue;
+    }
+    const key = valueFlags[arg];
+    if (key === undefined || args[i + 1] === undefined) throw new Error(`unknown argument: ${arg}`);
+    Object.assign(options, { [key]: args[++i] });
   }
-  if (planPath === "") planPath = join(projectDir, "approved-plan.json");
-  return { projectDir, space, planPath, approvalPath, execute, removalIssueExists };
+  if (options.planPath === "") options.planPath = join(options.projectDir, "approved-plan.json");
+  if (options.fidelityRecordPath === "") {
+    options.fidelityRecordPath = join(options.projectDir, "fidelity-record.md");
+  }
+  return options;
 }
 
 type ApprovalRecord = {
   userApproval: "pending" | "granted";
   approvedPlanSha256: string;
   removalIssueRef: string;
+  provenance: string;
 };
 
 function readApproval(path: string | null): ApprovalRecord | null {
@@ -298,12 +346,20 @@ function readApproval(path: string | null): ApprovalRecord | null {
   const hash = text.match(/^approved-plan-sha256:\s*([a-f0-9]{64})\s*$/im)?.[1];
   const issue = text.match(/^removal-issue:\s*(https:\/\/github\.com\/\S+\/issues\/\d+)\s*$/im)?.[1];
   const granted = /^user-approval:\s*granted\s*$/im.test(text);
-  return hash !== undefined && issue !== undefined
-    ? { userApproval: granted ? "granted" : "pending", approvedPlanSha256: hash, removalIssueRef: issue }
+  const provenance = text.match(
+    /^approval-provenance:\s*(agmsg:\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z)\s*$/im,
+  )?.[1];
+  return hash !== undefined && issue !== undefined && provenance !== undefined
+    ? {
+        userApproval: granted ? "granted" : "pending",
+        approvedPlanSha256: hash,
+        removalIssueRef: issue,
+        provenance,
+      }
     : null;
 }
 
-function applyPlan(root: string, plan: MigrationPlan): void {
+export function applyPlan(root: string, plan: MigrationPlan): void {
   for (const entry of plan.renames) {
     const from = join(root, entry.from);
     const to = join(root, entry.to);
@@ -321,24 +377,147 @@ function applyPlan(root: string, plan: MigrationPlan): void {
   }
 }
 
-export function main(args = process.argv.slice(2)): number {
-  const options = parseArgs(args);
-  const root = electionsRoot(options.projectDir, options.space);
-  if (!options.execute) {
-    const registry = readElectionsRegistry(root);
-    if (registry.kind === "corrupt") throw new Error(`elections registry corrupt: ${registry.detail}`);
-    const plan = planMigration(
-      readCandidates(options.projectDir, root),
-      registry.kind === "ok" ? registry.entries : [],
-      new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
-    );
-    const bytes = `${JSON.stringify(plan, null, 2)}\n`;
-    writeFileSync(options.planPath, bytes);
-    process.stdout.write(renderPlan(plan));
-    process.stdout.write(`approved-plan-sha256: ${sha256(bytes)}\n`);
-    return plan.conflicts.length === 0 ? 0 : 1;
+function walkFiles(root: string, relativeDir = ""): string[] {
+  const dir = join(root, relativeDir);
+  if (!existsSync(dir)) return [];
+  const files: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const child = join(relativeDir, entry.name);
+    if (entry.isDirectory()) files.push(...walkFiles(root, child));
+    else if (entry.isFile()) files.push(child);
   }
+  return files;
+}
 
+export function inventoryDirectPathReferences(
+  projectDir: string,
+  plan: MigrationPlan,
+): string[] {
+  const oldNames = new Set(plan.renames.map((entry) => entry.from));
+  const roots = ["docs", "amadeus"];
+  const references: string[] = [];
+  for (const rootName of roots) {
+    const root = join(projectDir, rootName);
+    for (const file of walkFiles(root)) {
+      if (!/\.(?:md|json|yaml|yml|txt)$/.test(file)) continue;
+      const path = join(root, file);
+      const text = readFileSync(path, "utf8");
+      for (const name of oldNames) {
+        if (text.includes(`elections/${name}`)) references.push(`${join(rootName, file)}: elections/${name}`);
+      }
+    }
+  }
+  return references.sort();
+}
+
+export function verifyFidelity(
+  projectDir: string,
+  root: string,
+  plan: MigrationPlan,
+  baselineVerified: string[],
+  verify: (root: string, electionId: string) => number = handleVerify,
+): FidelityResult {
+  const registry = readElectionsRegistry(root);
+  if (registry.kind !== "ok") {
+    return {
+      ok: false,
+      baselineVerified,
+      verified: [],
+      resolutionFailures: [`registry ${registry.kind}`],
+      verificationFailures: [],
+      registryRows: 0,
+      directories: 0,
+      directPathReferences: inventoryDirectPathReferences(projectDir, plan),
+    };
+  }
+  const directories = readdirSync(root, { withFileTypes: true }).filter((entry) =>
+    entry.isDirectory(),
+  ).length;
+  const resolutionFailures: string[] = [];
+  const verificationFailures: string[] = [];
+  const verified: string[] = [];
+  for (const row of registry.entries) {
+    try {
+      const resolved = resolveElectionDir(root, row.electionId);
+      if (resolved.kind !== "registry" || !existsSync(resolved.dir)) {
+        resolutionFailures.push(row.electionId);
+        continue;
+      }
+    } catch {
+      resolutionFailures.push(row.electionId);
+      continue;
+    }
+    if (verify(root, row.electionId) !== 0) verificationFailures.push(row.electionId);
+    else verified.push(row.electionId);
+  }
+  verified.sort();
+  const ok =
+    resolutionFailures.length === 0 &&
+    verificationFailures.length === 0 &&
+    registry.entries.length === directories &&
+    registry.entries.length === plan.registry.length &&
+    baselineVerified.length === verified.length &&
+    baselineVerified.every((electionId, index) => electionId === verified[index]);
+  return {
+    ok,
+    baselineVerified,
+    verified,
+    resolutionFailures,
+    verificationFailures,
+    registryRows: registry.entries.length,
+    directories,
+    directPathReferences: inventoryDirectPathReferences(projectDir, plan),
+  };
+}
+
+export function verifyBeforeMigration(
+  root: string,
+  plan: MigrationPlan,
+  verify: (root: string, electionId: string) => number = handleVerify,
+): string[] {
+  return plan.registry
+    .map((entry) => entry.electionId)
+    .sort()
+    .filter((electionId) => verify(root, electionId) === 0);
+}
+
+function renderFidelity(result: FidelityResult, planHash: string): string {
+  return [
+    "# Elections Migration Fidelity Record",
+    "",
+    `- Result: ${result.ok ? "PASS" : "FAIL"}`,
+    `- Approved plan SHA-256: \`${planHash}\``,
+    `- Registry rows: ${result.registryRows}`,
+    `- Physical directories: ${result.directories}`,
+    `- Independent verify baseline passed: ${result.baselineVerified.length}`,
+    `- Resolver + independent verify passed: ${result.verified.length}`,
+    `- Resolution failures: ${result.resolutionFailures.length}`,
+    `- Verification failures: ${result.verificationFailures.length}`,
+    `- Direct-path references requiring owner review: ${result.directPathReferences.length}`,
+    "",
+    "## Direct-path reference inventory",
+    "",
+    ...(result.directPathReferences.length > 0 ? result.directPathReferences.map((item) => `- ${item}`) : ["- None"]),
+    "",
+  ].join("\n");
+}
+
+function runDryRun(options: CliOptions, root: string): number {
+  const registry = readElectionsRegistry(root);
+  if (registry.kind === "corrupt") throw new Error(`elections registry corrupt: ${registry.detail}`);
+  const plan = planMigration(
+    readCandidates(options.projectDir, root),
+    registry.kind === "ok" ? registry.entries : [],
+    new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
+  );
+  const bytes = `${JSON.stringify(plan, null, 2)}\n`;
+  writeFileSync(options.planPath, bytes);
+  process.stdout.write(renderPlan(plan));
+  process.stdout.write(`approved-plan-sha256: ${sha256(bytes)}\n`);
+  return plan.conflicts.length === 0 ? 0 : 1;
+}
+
+function runExecute(options: CliOptions, root: string): number {
   const planBytes = readFileSync(options.planPath, "utf8");
   const plan = JSON.parse(planBytes) as MigrationPlan;
   const approval = readApproval(options.approvalPath);
@@ -358,13 +537,27 @@ export function main(args = process.argv.slice(2)): number {
     userApproval: approval?.userApproval ?? "pending",
     expectedPlanHash: approval?.approvedPlanSha256 ?? null,
     actualPlanHash: sha256(planBytes),
+    approvalProvenance: approval?.provenance ?? null,
   });
   if (plan.conflicts.length > 0) report.failures.push("approved plan contains conflicts");
   if (!report.ok || plan.conflicts.length > 0) {
     throw new Error(`--execute refused: ${report.failures.join("; ")}`);
   }
+  const baselineVerified = verifyBeforeMigration(root, plan);
+  if (baselineVerified.length !== plan.registry.length) {
+    throw new Error("pre-execute independent verification failed");
+  }
   applyPlan(root, plan);
+  const fidelity = verifyFidelity(options.projectDir, root, plan, baselineVerified);
+  writeFileSync(options.fidelityRecordPath, renderFidelity(fidelity, sha256(planBytes)));
+  if (!fidelity.ok) throw new Error("post-execute fidelity verification failed");
   return 0;
+}
+
+export function main(args = process.argv.slice(2)): number {
+  const options = parseArgs(args);
+  const root = electionsRoot(options.projectDir, options.space);
+  return options.execute ? runExecute(options, root) : runDryRun(options, root);
 }
 
 if (import.meta.main) {
