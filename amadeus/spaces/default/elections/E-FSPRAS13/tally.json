@@ -1,4 +1,35 @@
 {
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "提案どおり — c3 採用(mechanism-cite-verify-at-draft へ引用一意性の追補)+3件不採用"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "提案どおり — c3 採用(mechanism-cite-verify-at-draft へ引用一意性の追補)+3件不採用",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "全件不採用 — 既存 cid の含意で足りる",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "異議 — 別の組合せ(票コメントで特定)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T03:09:18Z",
   "ballots": [
     {
       "kind": "original",
@@ -34,5 +65,5 @@
       "submittedAt": "2026-07-23T03:08:48Z"
     }
   ],
-  "late": []
+  "resolutions": []
 }

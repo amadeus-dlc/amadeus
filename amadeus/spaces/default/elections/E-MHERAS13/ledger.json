@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MHERAS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "候補2(引用の非一意名指し)は並行選挙 E-FSPRAS13 c3(t211 短形引用が5ファイルへ曖昧 — 採用提案中)と同族の同日独立2例目 — E-FSPRAS13 が採用された場合、persist 文に本件(『センサー』語彙の script/dispatcher 非区別)を第2実測として引用し、本 record の PM 回付と重複計上しないこと。",
+      "rationale": "0件で可(2)。e5 record リードオンリー実測: 4件とも diary(03:07:56Z)と verbatim 整合。(1) 転記系は E-TPRRAS13 追補込みの機械的適用で reviewer が件数 1/1+3/3 を独立確認済み (2) E-MHERA1 前提訂正は当事者として整合確認 — 私の amend(dispatcher の graph import :47)と e5 の再実測(script は lib のみ :3)は両立し裁定 A 不変 (3) エビデンス片肺の是正は verbatim/numbers 系違反実例で PM 妥当 (4) E-TCRRAS13B 様式の自己適用は既決執行。この record 単独では新設不要に同意 — ただし候補2の族は留保のとおり E-FSPRAS13 側で合流させるのが正。",
+      "submittedAt": "2026-07-23T03:09:36Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MHERAS13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。実測: e5 record の s13-candidates.md をリードオンリー直読 — 4件の既存 cid 対応は verbatim どおり。うち E-MHERA1 前提訂正は私が検出した当事者であり、『引用実在だが対象ファイルの一意名指し欠如』という整理は E-FSPRAS13 で採用見込みの引用一意性追補と同族の違反実例として PM 回付が正(新設不要に同意)。転記系2件は E-TPRRAS13 追補込みの機械的適用、E-TCRRAS13B 自己適用も既決の執行。0件に同意。",
+      "submittedAt": "2026-07-23T03:09:47Z"
+    }
+  ],
+  "late": []
+}
