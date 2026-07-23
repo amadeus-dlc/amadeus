@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FSPBTS13",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "提案どおり(候補1採用+3件 PM 回付)。機構の独立裏取り: 本日 PR #1405 作業で tests/coverage-patch-gate.ts の findStaleAllowlistEntries(:157-171)を直読済み — stale 検査は『範囲内に測定可能(DA 記録)行が1つでもあるか』の存在検査であり、行シフトで別の測定可能行へ転位したピンは構造的に素通りする(候補の機序主張と実装が一致)。転位は『誤った行の免除』= fail-open 側の欠陥面で、stale の fail-closed 側だけを見る既存 cid:allowlist-line-pin-stale の未規定域 — 全エントリの reason vs 現行行内容の直読照合という追補は機械的・安価で正位置。実測(4402-4403 検出 vs 2916 無音転位の対照)も検出/非検出の両側が揃った良質な根拠。不採用3件は既知クラス・連鎖報告済み・執行実例で PM 回付妥当。",
+  "submittedAt": "2026-07-23T05:14:21Z"
+}
