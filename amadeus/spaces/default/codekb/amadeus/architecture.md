@@ -1,5 +1,7 @@
 # アーキテクチャ
 
+> **2026-07-22 更新（intent `260722-teamup-prompt-race`、現在）**: base `a326f47bc0146a3b4285552f42b92fd61fb343a7` → observed `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`（distance 101）の differential refresh（bugfix / Minimal）。本 intent の交差面は `scripts/team-up.sh`（+212 −8）の team 起動オーケストレーションに限定。以下「upstream v2.3.0 同期の現行アーキテクチャ」以降は履歴。
+
 ## 260722-election-core-promotion の構造照合（2026-07-23、現在）
 
 base `a326f47bc0146a3b4285552f42b92fd61fb343a7` → observed `fd5767257d82ff02d217aaee051478ec027d11e6`（祖先性 exit 0、距離115）の differential refresh。焦点はチーム機能(選挙エンジン + チーム協働基盤)の repo-only `scripts/` → 配布フレームワーク `packages/framework/` 昇格。件数・行数は observed 直読。
@@ -47,7 +49,29 @@ base `a326f47bc0146a3b4285552f42b92fd61fb343a7` → observed `fd5767257d82ff02d2
 
 > **2026-07-20 更新（intent `260720-upstream-sync-230`、履歴）**: base `a326f47bc0146a3b4285552f42b92fd61fb343a7` → observed `545e69c836d46f7bec2fa351c8e668026eb5fad5`（32コミット）の differential refresh。24 ADOPT/ADAPT の主戦場は「stage schema + Unit kind」から graph/parser/directive/sensor、plugin discovery/package、6 harness projection、compose/no-clobber/self-heal compile、dist、4 harness self-install、tests/docs へ流れる変更鏖である。件数は Developer scan 実測（core tools 30、hooks 11、agents 14、stages 32、sensors 5、harness 六面 69 files）に基づく。
 
-## upstream v2.3.0 同期の現行アーキテクチャ（260720-upstream-sync-230）
+## team 起動オーケストレーションの watcher-arming アーキテクチャ（260722-teamup-prompt-race）
+
+`scripts/team-up.sh` は Herdr（pane multiplexer）を介して各メンバーの AI CLI（claude / codex）を pane 上に起動する team 起動オーケストレータである。claude メンバーの watcher（agmsg monitor）起動は、次の**一方向・無検証**の経路で成立する（測定 ref: observed HEAD `a81c11dde` 実読）。
+
+```mermaid
+flowchart LR
+  TU["team-up.sh claude_member_cmd :800"] -->|init_prompt='/agmsg mode monitor'| CMD["起動組立 :830-832 (%q)"]
+  CMD --> RC["run-claude.sh: exec claude ... positional args"]
+  RC -->|位置引数を一度だけ| TUI["claude TUI"]
+  TU -.->|pane run 一度 exec :429/:447| Herdr["Herdr pane"]
+  Herdr --> TUI
+  TUI -->|初回ターンで watch.sh 起動| Sentinel["ready センチネル (agmsg)"]
+  SW["start_safety_wait_supervisors :340 codex限定 → claude no-op"] -.->|検証なし| TUI
+```
+<!-- Text fallback: team-up.sh が init_prompt を run-claude.sh の位置引数として一度だけ渡し、pane run も cmd を一度 exec するのみ。start_safety_wait_supervisors は codex 限定で claude では即 return するため、claude の watcher attach を検証する経路が構造的に存在しない。TUI 起動レースで初期プロンプトが消えると watcher は起動せず、再送も検証もない。 -->
+
+**構造的欠陥**: `start_safety_wait_supervisors()`（`:338-395`）が `:340` `[ "$RUNTIME" = "codex" ] || return 0` で claude では即 return するため、claude runtime には起動後の readiness 検証点が存在しない。対照として agmsg `spawn.sh`（repo 外 `~/.agents/skills/agmsg/`）は ready センチネル（`agmsg_ready_path` `lib/actas-lock.sh:69-73`、生成側 `watch.sh:294-310`）出現までブロックする handshake アーキテクチャを持つ（`spawn.sh:576-588`、default timeout 90s `:46-47`）。team-up.sh の claude 経路はこの handshake 相当を欠く。
+
+**設計先例（再利用面）**: 直近 intent `260721-teamup-safety-wait` は「起動後に Herdr 経由で pane readiness を検証する」supervisor を **Codex 専用**に新設した（`team-up.sh:212-395`,`:1259` の lock dir / role-ready / supervise / rollback 構造 + 新規 `team-up-codex-safety-wait.ts` の `resolve`/`readVisible` `:273-338`）。claude 版 readiness 検証はこの構造に倣えるが、`resolve` の `agent === "codex"` フィルタは拡張を要する。
+
+> **履歴（260720-upstream-sync-230）**: base `a326f47bc0146a3b4285552f42b92fd61fb343a7` → observed `545e69c836d46f7bec2fa351c8e668026eb5fad5`（32コミット）の differential refresh。24 ADOPT/ADAPT の主戦場は「stage schema + Unit kind」から graph/parser/directive/sensor、plugin discovery/package、6 harness projection、compose/no-clobber/self-heal compile、dist、4 harness self-install、tests/docs へ流れる変更鏖である。件数は Developer scan 実測（core tools 30、hooks 11、agents 14、stages 32、sensors 5、harness 六面 69 files）に基づく。
+
+## upstream v2.3.0 同期の現行アーキテクチャ（履歴: 260720-upstream-sync-230）
 
 Amadeus は one-core-many-harnesses を維持する。`packages/framework/core/` がエンジン・stage・protocol・knowledge の正本、`packages/framework/harness/{name}/` がホスト固有 adapter の正本、`scripts/package.ts` が六ハーネスの `dist/` を生成する。セルフインストールはうち4ハーネスの closed list であり、packager の6ハーネス open set と区別する（測定 ref: `scripts/package.ts:63-72,166-176,587-729`）。
 

@@ -1,5 +1,26 @@
 # コンポーネント棚卸し
 
+## team 起動 watcher-arming コンポーネント（260722-teamup-prompt-race、2026-07-22、現在）
+
+bugfix / Minimal。observed `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`。本 intent の交差コンポーネントは `scripts/team-up.sh` の claude 起動経路と、対照の agmsg readiness handshake（repo 外）。
+
+| コンポーネント | 責務 | 本バグとの関係 |
+|---|---|---|
+| `scripts/team-up.sh` `claude_member_cmd()` `:800` | init_prompt `/agmsg mode monitor` を固定し `:830-832` で `run-claude.sh` 位置引数へ組立 | 初期プロンプトを一発勝負で供給。再送・検証なし（欠陥の発生元） |
+| `scripts/team-up.sh` pane 起動 `:429`/`:447`、launch 列 `:1251-1257` | `herdr pane run` で cmd を一度 exec | claude 受理／watcher attach の検証なし |
+| `scripts/team-up.sh` `start_safety_wait_supervisors()` `:338-395` | 起動後 readiness 検証の supervisor | `:340` `[ "$RUNTIME" = "codex" ] \|\| return 0` で claude は no-op（readiness 検証の構造的不在） |
+| `scripts/run-claude.sh` | 末尾 `exec claude --dangerously-skip-permissions "$@"` | init_prompt を claude 初期プロンプト（位置引数）として一度だけ渡す |
+| `scripts/team-up-codex-safety-wait.ts`（260721 新設、+567） | Codex pane readiness の fingerprint 検証・解除 | claude 非対応（`resolve` の `agent === "codex"` フィルタ）。検証構造の再利用先例 |
+| agmsg `spawn.sh:576-588`（repo 外 read-only） | ready センチネル出現までブロック（`status=ready`、default timeout 90s `:46-47`） | team-up claude 経路に欠ける handshake の対照実装 |
+| agmsg `lib/actas-lock.sh:69-73` `agmsg_ready_path()` / `watch.sh:294-310` | センチネル path 算出（team+role キー）と生成（touch） | team-up は team+role を保持 → 機械判定の第一候補 |
+| team-up 回帰テスト（`t-team-up-msg-backend` 他） | 既存 team-up 動作の検査 | init_prompt/`agmsg mode monitor`/ready/watch を参照せず（`grep -c` = 0）→ watcher arming の回帰テスト不在 |
+
+原因の所在は**設計（一般化漏れ）**: 260721 が readiness 検証を Codex 専用に新設し claude 経路へ一般化しなかった。詳細は `re-scans/260722-teamup-prompt-race.md`。
+
+> 以下は過去 intent の履歴。
+
+## upstream-sync-230 コンポーネント（2026-07-20、履歴）
+
 ## election-core-promotion コンポーネント（2026-07-23、現在）
 
 observed `fd5767257` 直読。昇格対象のコンポーネントと依存を棚卸しする。

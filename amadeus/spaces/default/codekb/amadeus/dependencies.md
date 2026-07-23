@@ -1,5 +1,23 @@
 # 依存関係
 
+## 260722-teamup-prompt-race の依存境界（2026-07-22、現在）
+
+bugfix / Minimal（observed `a81c11dde`）。本バグの依存境界:
+
+```text
+scripts/team-up.sh (claude_member_cmd)
+  -> scripts/run-claude.sh (exec claude "$@")   # init_prompt を位置引数で委譲
+  -> Herdr pane run/send-text/send-keys          # pane 起動・再注入経路
+  -> agmsg spawn.sh handshake / ready センチネル   # 対照契約（repo 外、read-only）
+     agmsg_ready_path (lib/actas-lock.sh) <- watch.sh (touch)
+```
+
+最重要の依存事実は、claude の watcher 起動が「team-up.sh の init_prompt 一発 → claude 初回ターン → watch.sh 起動 → センチネル生成」という**一方向の連鎖**に依存し、初期プロンプト消失時に連鎖全体が不成立になる点（SessionStart hook 経由の `emit_monitor_directive` `delivery.sh:302-311` も初回ターン未到達で未実行）。修正は `scripts/` に閉じ、core/harness 正本・dist/self-install への従属依存は想定薄（実装時に実 diff で再評価、cid:code-generation:c6）。
+
+> 以下は過去 intent の履歴。
+
+## upstream-sync-230 の依存境界（2026-07-20、履歴）
+
 ## election-core-promotion の依存境界（2026-07-23、現在）
 
 observed `fd5767257` 直読。昇格対象の import/外部依存グラフを記録する。

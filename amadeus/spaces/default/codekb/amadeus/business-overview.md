@@ -1,5 +1,13 @@
 # ビジネス概要
 
+## 260722-teamup-prompt-race の業務境界（2026-07-22、現在）
+
+bugfix / Minimal（observed `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`、距離101）。利用者価値は team 起動（`scripts/team-up.sh`）の信頼性回復に限定する。[Issue #1384](https://github.com/amadeus-dlc/amadeus/issues/1384): claude メンバーの初期プロンプト `/agmsg mode monitor` が TUI 起動レースで消失し watcher（agmsg monitor）が起動しない不具合（再現率 5/6）を、起動後の readiness 検証・再送で修復する。フレームワーク中核（core/harness の投影・配布契約）には非交差で、業務ドメイン境界は変化しない。詳細は `re-scans/260722-teamup-prompt-race.md`。
+
+> 以下は過去 intent の履歴。
+
+## 260720-upstream-sync-230 の業務境界（2026-07-20、履歴）
+
 ## 260722-election-core-promotion の業務境界（2026-07-23、現在）
 
 本 intent は、チーム機能 — 選挙エンジン(合意形成 CLI)とチーム協働基盤(team-up / team-msg / leader-sync / codex-safety-wait) — を、現在の repo-only な `scripts/` から配布フレームワーク `packages/framework/`(→ dist / self-install)へ「コア昇格」する変更の下地を、observed `fd5767257d82ff02d217aaee051478ec027d11e6`(base `a326f47bc`、距離115)で再照合した差分リフレッシュである。

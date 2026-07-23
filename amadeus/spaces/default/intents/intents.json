@@ -11,7 +11,7 @@
     "slug": "installer-impl",
     "dirName": "260706-installer-impl",
     "scope": "feature",
-    "status": "in-flight"
+    "status": "complete"
   },
   {
     "uuid": "019f3b18-24ee-7e7f-93bd-647d343a4f16",
@@ -463,6 +463,13 @@
     "dirName": "260722-space-record-catalog",
     "scope": "amadeus",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019f8bd9-2dd4-7e33-ba12-175f4914b2a8",
+    "slug": "teamup-prompt-race",
+    "dirName": "260722-teamup-prompt-race",
+    "scope": "bugfix",
+    "status": "complete"
   },
   {
     "uuid": "019f8bee-9cff-7bf2-925a-3060d1aec008",

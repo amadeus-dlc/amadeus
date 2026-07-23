@@ -1,5 +1,7 @@
 # コード品質評価
 
+> **現在の品質観測は intent `260722-teamup-prompt-race`(2026-07-22、bugfix / Minimal、下記「team 起動 watcher-arming の品質観測」節)**。以下の過去 intent 節に残る「本 intent」「最新」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
+
 > **現在の品質観測は intent `260722-election-core-promotion`(2026-07-23、直下「election-core-promotion の品質・保守性」節)**。それより下の各節に残る「現在」「本 intent」「最新」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
 
 ## election-core-promotion の品質・保守性（260722-election-core-promotion）
@@ -30,7 +32,31 @@
 
 > 以下は過去 intent の履歴。今回 intent の current marker ではない。
 
-## upstream v2.3.0 同期の品質評価（260720-upstream-sync-230）
+## team 起動 watcher-arming の品質観測（260722-teamup-prompt-race）
+
+実測基準は base `a326f47bc0146a3b4285552f42b92fd61fb343a7`、observed `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`、祖先性 exit 0、距離101。差分 2593 files のうち本バグ交差面は `scripts/team-up.sh`（+212 −8）と付随テストのみ（測定 ref: `git diff --shortstat/--name-only a326f47..HEAD`）。
+
+### 欠陥形状（一発勝負 = 検証・リトライ欠如）
+
+- `scripts/team-up.sh:800` `claude_member_cmd()` が init_prompt `/agmsg mode monitor` を固定し、`:830-832` で `run-claude.sh` の位置引数へ組立（quoting は `%q` で正常）。`run-claude.sh` 末尾 `exec claude --dangerously-skip-permissions "$@"` → claude 初期プロンプトとして**一度だけ**渡り、TUI 起動レースで取りこぼされても再送・検証がない。
+- pane 起動 `:429`/`:447` は `herdr pane run` で cmd を一度 exec するのみ。
+- `start_safety_wait_supervisors()`（`:338-395`）は `:340` `[ "$RUNTIME" = "codex" ] || return 0`（verbatim）で claude では即 return → claude runtime に起動後 readiness 検証が構造的に不在。
+
+### 対照実装（欠けている契約）
+
+agmsg `spawn.sh:576-588`（repo 外 read-only）は ready センチネル出現までブロックし `status=ready` を出力（default `--ready-timeout` 90s `:46-47`）。センチネルは `agmsg_ready_path`（`lib/actas-lock.sh:69-73`）が team+role でキーし、`watch.sh:294-310` が DB 可読性検査後に touch する。team-up.sh の claude 経路はこの handshake 相当を欠く。
+
+### テスト・回帰ガード
+
+- **watcher arming の回帰テストはゼロ**。既存 team-up テスト（`tests/integration/t-team-up-msg-backend.test.ts` 他）は init_prompt / `agmsg mode monitor` / ready / watch を一切参照しない（`grep -c` = 0）。修正時に落ちる実証（初期プロンプト取りこぼし→watcher 未起動の検出）を新設する必要がある（fs/herdr 実使用は integration 層、fs-tests-integration-first 準拠）。
+
+### 原因の所在（cid:bug-intent-linkage）
+
+**設計（一般化漏れ）**: 直近 intent `260721-teamup-safety-wait` が起動後の pane readiness 検証を Codex 専用に新設（`team-up.sh:212-395`,`:1259` + `team-up-codex-safety-wait.ts` +567）したが、claude 経路へ一般化しなかった。既存の Codex 検証構造は claude 版検証の再利用先例（`resolve` の `agent === "codex"` フィルタは拡張要）。
+
+> 以下は過去 intent の履歴。
+
+## upstream v2.3.0 同期の品質評価（履歴: 260720-upstream-sync-230）
 
 実測基準は base `a326f47bc0146a3b4285552f42b92fd61fb343a7`、observed `545e69c836d46f7bec2fa351c8e668026eb5fad5`、祖先性 exit 0、距離32。差分は865 files、`+48,636/-241` だが、大半は選挙 record、生成投影、工程記録であり、24項目の実装済み根拠として数えていない。次点 observed `591b6a2a` は距離84、他の日付が新しい observed は非祖先（exit 1）のため base 候補から除外した。
 

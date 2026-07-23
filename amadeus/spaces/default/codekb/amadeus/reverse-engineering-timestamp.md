@@ -17,6 +17,23 @@
 - Delivery boundary: 実装コード、dist/self-install 再生成、commit、PR 操作は本 scan で未実施。
 - Base source of truth: 本 intent の per-intent record。共有 timestamp は freshness pointer であり、次回の differential base は `re-scans/` の到達可能 observed から決める。
 
+## 実行メタデータ(履歴: 260722-teamup-prompt-race)
+
+- Date: 2026-07-22T22:03:26Z
+- Observed at: `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`(現 HEAD `git rev-parse HEAD` 実測一致)
+- Intent: `260722-teamup-prompt-race`([Issue #1384](https://github.com/amadeus-dlc/amadeus/issues/1384) — `scripts/team-up.sh` の fresh セッションで初期プロンプト `/agmsg mode monitor` が Claude Code TUI 起動レースで消失し watcher が起動しない。再現率 5/6)
+- Scope: `bugfix`(Depth Minimal)
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering` (2.1)
+- Method: differential refresh。base `a326f47bc0146a3b4285552f42b92fd61fb343a7`、observed `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`、`git merge-base --is-ancestor` exit 0、distance `git rev-list --count base..HEAD`=101。日付がより新しい非祖先 observed(`545e69c8` 等)は exit 1 で除外(cid:reverse-engineering:rescan-base-ancestry)。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3)。
+- 測定 ref: 全 file:line は Observed=HEAD `a81c11dde` のワークツリー実ファイル直読、および repo 外 read-only の agmsg skill(`~/.agents/skills/agmsg/`)直読(cid:measurement-ref-in-artifacts)。区間件数(101)・diff 規模(2593 files, +349417/−5289)はコマンド出力からの転記(numbers-from-command-output-only)。
+- 現行結論: `scripts/team-up.sh` の claude member 起動経路は初期プロンプト `/agmsg mode monitor` を一発勝負で渡し(`:800` init_prompt 固定、`:830-832` 起動組立、`run-claude.sh` 末尾 `exec claude ... "$@"`)、TUI 起動レースで取りこぼされても再送・検証が一切ない。pane 起動(`:429`/`:447`)は cmd を一度 exec するのみ、`start_safety_wait_supervisors()`(`:338-395`)は `:340` `[ "$RUNTIME" = "codex" ] || return 0` で claude runtime には readiness 検証が構造的に不在。対照として agmsg `spawn.sh:576-588` は ready センチネル(`agmsg_ready_path` `lib/actas-lock.sh:69-73`、touch 側 `watch.sh:294-310`)出現までブロックする handshake を持つ(default `--ready-timeout` 90s `spawn.sh:46-47`)。原因の所在は**設計(一般化漏れ)**: 直近 intent `260721-teamup-safety-wait` が起動後の pane readiness 検証を Codex 専用に新設(`team-up.sh:212-395`,`:1259` + 新規 `team-up-codex-safety-wait.ts` +567)したが claude 経路へ一般化せず、watcher arming の回帰テストも現状ゼロ(既存 team-up テストは init_prompt/`agmsg mode monitor`/ready/watch を参照しない)。
+- Per-intent record: `re-scans/260722-teamup-prompt-race.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「現在: 260720-upstream-sync-230」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、codekb body 8成果物(先頭 current view に本 intent の外科的追加、旧「現在」節は履歴へ降格 — bugfix Minimal 相応で本文は温存)、`re-scans/260722-teamup-prompt-race.md`(新規)。
+- Delivery boundary: 実装・修正コード、dist/self-install 再生成、commit、PR 操作は本 scan で未実施。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
 ## 実行メタデータ(履歴: 260720-upstream-sync-230)
 
 - Date: 2026-07-20T06:43:32Z
