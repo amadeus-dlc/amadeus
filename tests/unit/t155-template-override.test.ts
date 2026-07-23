@@ -1,4 +1,4 @@
-// covers: subcommand:amadeus-sensor-required-sections, function:templateEligibleArtifacts, function:memoryTemplatesDir, function:frameworkTemplatesDir
+// covers: subcommand:amadeus-sensor-required-sections, function:templateEligibleArtifacts, function:isMarkerArtifact, function:memoryTemplatesDir, function:frameworkTemplatesDir
 //
 // t155 — TPL: the template-override layer (one file, two readers).
 //
@@ -51,6 +51,7 @@ import {
 	memoryTemplatesDir,
 	templateEligibleArtifacts,
 } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
+import { isMarkerArtifact } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { existsSync, readdirSync } from "node:fs";
 
 const BUN = process.execPath; // the bun running this test
@@ -96,6 +97,7 @@ interface SensorResult {
   template_missing?: string[];
   config_warning?: string;
   edge_block?: string;
+  marker_exempt?: boolean;
   raw: string;
   status: number | null;
 }
@@ -138,6 +140,13 @@ describe("t155 templateEligibleArtifacts (function unit, in-process)", () => {
       "requirements",
       "business-overview",
     ]);
+  });
+
+  test("isMarkerArtifact: canonical predicate matches marker suffixes only", () => {
+    expect(isMarkerArtifact("requirements-analysis-questions")).toBe(true);
+    expect(isMarkerArtifact("reverse-engineering-timestamp")).toBe(true);
+    expect(isMarkerArtifact("requirements")).toBe(false);
+    expect(isMarkerArtifact("")).toBe(false);
   });
 
   test("empty / nullish produces → empty eligible set", () => {
@@ -343,8 +352,10 @@ describe("t155 template-override sensor branch (cli, spawnSync)", () => {
     expect(r.pass).toBe(true);
   });
 
-  // 8 — eligibility gate still applies to a framework-default resolution.
-  test("framework default for an ineligible artifact is ignored + config_warning, floor kept", () => {
+  // 8 — eligibility gate still applies to a framework-default resolution: the
+  // template is IGNORED + config_warning surfaced (gate unchanged). Post-#1296,
+  // the marker is also floor-exempt (E-FVEPD) → pass:true + marker_exempt:true.
+  test("framework default for an ineligible marker is ignored + config_warning; marker floor-exempt", () => {
     const ws = makeWorkspace();
     writeFile(
       join(ws.frameworkDir, "intent-questions.md"),
@@ -358,15 +369,20 @@ describe("t155 template-override sensor branch (cli, spawnSync)", () => {
       frameworkTemplatesDir: ws.frameworkDir,
       eligible: [], // intent-questions NOT eligible
     });
+    // Eligibility gate unchanged: template ignored + config_warning emitted.
     expect(r.template).toBe("ineligible");
     expect(r.config_warning).toBeDefined();
-    // keeps the generic floor: 1 H2 → fails
-    expect(r.pass).toBe(false);
+    // #1296: the marker is exempt from the generic floor (was pass:false).
+    expect(r.marker_exempt).toBe(true);
+    expect(r.pass).toBe(true);
   });
 
   // 5 — eligibility gating (the MUST-FIX hazard). A team drops a template for
-  // a questions marker; it must be IGNORED + warned, NOT applied.
-  test("ineligible artifact: resolved template ignored + config_warning, floor kept", () => {
+  // a questions marker; it must be IGNORED + warned, NOT applied. Post-#1296 the
+  // marker is additionally floor-exempt (E-FVEPD): the ignored-template path is
+  // unchanged (template:ineligible + config_warning), but the verdict is now the
+  // exemption (pass:true + marker_exempt:true), not the pre-fix floor fail.
+  test("ineligible marker: resolved template ignored + config_warning; marker floor-exempt", () => {
     const ws = makeWorkspace();
     // Team authored a template for a questions marker (unsound stem key).
     writeFile(
@@ -383,16 +399,19 @@ describe("t155 template-override sensor branch (cli, spawnSync)", () => {
       // eligible set EXCLUDES the questions marker (dispatcher-filtered).
       eligible: ["requirements"],
     });
+    // Eligibility gate unchanged: template ignored, precise config_warning, no
+    // template_missing (the 3-heading template set was NOT applied).
     expect(r.template).toBe("ineligible");
     expect(typeof r.config_warning).toBe("string");
     expect(r.config_warning).toContain("requirements-analysis-questions.md");
     expect(r.template_missing).toBeUndefined();
-    // The template was IGNORED: the file kept the generic floor (1 H2 → pass,
-    // since the floor for a <2-H2 file would fail — prove it's the FLOOR, not
-    // the template's 3-heading set, that governs).
+    // #1296: h2_count is still reported (1), but the marker is exempt from the
+    // floor — pass:true + marker_exempt:true + zero findings, NOT the pre-fix
+    // pass:false / findings_count:1 floor fail.
     expect(r.h2_count).toBe(1);
-    expect(r.pass).toBe(false); // floor (<2 H2), NOT the template's 3 missing
-    expect(r.findings_count).toBe(1); // 2 - 1 floor finding, not 3 template misses
+    expect(r.marker_exempt).toBe(true);
+    expect(r.pass).toBe(true);
+    expect(r.findings_count).toBe(0);
     expect(r.status).toBe(0); // advisory
   });
 
@@ -448,5 +467,56 @@ describe("t155 template-override sensor branch (cli, spawnSync)", () => {
     expect(existsSync(dispatcherDefault)).toBe(true);
     // ...the templates/ floor SEED ships (the .gitkeep guarantees it exists).
     expect(readdirSync(dispatcherDefault)).toContain(".gitkeep");
+  });
+});
+
+// Issue #1296 — marker exemption (E-FVEPD). A `*-questions.md` / `*-timestamp.md`
+// marker intentionally omits the ≥2-H2 prose shape, so it must be EXEMPTED from
+// the generic floor (pass:true + marker_exempt:true), not failed by it. The
+// non-marker floor stays healthy (control), and the marker_exempt field is
+// absent for non-markers (no silent field on the prose path).
+describe("t155 marker floor exemption (cli, spawnSync) — Issue #1296 / E-FVEPD", () => {
+  // A single-line marker body: H2 == 0, which pre-fix failed the generic floor.
+  const MARKER_BODY =
+    "Discovered: 2026-07-20T06:43:20Z at commit d588c117a1e83ac6bac74bf586294d4db1a26add\n";
+
+  test("-timestamp marker: single-line body → pass:true + marker_exempt:true (floor exempted)", () => {
+    const ws = makeWorkspace();
+    const out = join(ws.outDir, "practices-discovery-timestamp.md");
+    writeFile(out, MARKER_BODY);
+    const r = runSensor({
+      stage: "practices-discovery",
+      outputPath: out,
+    });
+    expect(r.h2_count).toBe(0); // intentionally not ≥2-H2
+    expect(r.pass).toBe(true); // exempted, NOT failed by the floor
+    expect(r.marker_exempt).toBe(true);
+    expect(r.findings_count).toBe(0);
+    expect(r.status).toBe(0);
+  });
+
+  test("-questions marker: [Answer]-style body → pass:true + marker_exempt:true (floor exempted)", () => {
+    const ws = makeWorkspace();
+    const out = join(ws.outDir, "requirements-analysis-questions.md");
+    writeFile(out, "## Questions\n[Q]: ...\n[Answer]: ...\n"); // 1 H2 < floor
+    const r = runSensor({
+      stage: "requirements-analysis",
+      outputPath: out,
+    });
+    expect(r.pass).toBe(true); // exempted regardless of h2_count
+    expect(r.marker_exempt).toBe(true);
+    expect(r.findings_count).toBe(0);
+    expect(r.status).toBe(0);
+  });
+
+  test("non-marker prose (h2<2) still fails the floor, marker_exempt absent (control)", () => {
+    const ws = makeWorkspace();
+    const out = join(ws.outDir, "requirements.md");
+    writeFile(out, "# R\n\n## Only One\n"); // 1 H2 — below the floor
+    const r = runSensor({ stage: "requirements-analysis", outputPath: out });
+    expect(r.pass).toBe(false); // floor still governs non-markers (FR-3)
+    expect(r.findings_count).toBe(1);
+    expect(r.marker_exempt).toBeUndefined();
+    expect(r.raw.includes("marker_exempt")).toBe(false);
   });
 });
