@@ -14,7 +14,7 @@
 // .opencode/skills/, so the manifest sets skipRunnerGen and emit owns both.
 // The orchestrator ships ONLY as the command (Bolt 1); it is NOT re-composed
 // as a skill (E-OC16 ruling C — avoid dist duplication; core has no
-// orchestrator skill origin, only the four session skills).
+// orchestrator skill origin, only the session skills).
 //
 // The command body is AUTHORED prose (harness/opencode/commands/amadeus.md), read
 // through ctx.readHarnessSource so it counts as a referenced source in the
@@ -34,12 +34,12 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSy
 import { dirname, join, relative } from "node:path";
 import type { EmitContext, EmitResult } from "../../../../scripts/manifest-types.ts";
 
-// The four harness-neutral session skills (core/skills/<name>/). They carry
+// The harness-neutral session skills (core/skills/<name>/). They carry
 // {{HARNESS_DIR}} tokens and ship as SKILL.md only — no codex openai.yaml
 // implicit-invocation guard (that is an OpenAI/Codex agent-discovery artifact;
 // OpenCode has no equivalent, so the guard is dropped, matching how Claude ships
 // these same skills as bare SKILL.md trees).
-const SESSION_SKILLS = ["amadeus-session-cost", "amadeus-replay", "amadeus-outcomes-pack", "amadeus-grilling"];
+const SESSION_SKILLS = ["amadeus-session-cost", "amadeus-replay", "amadeus-outcomes-pack", "amadeus-grilling", "amadeus-mirror"];
 
 // The opencode.json config EXAMPLE. OpenCode defaults most permissions to
 // "allow" (permissive); this example shows the NARROWING direction only —
@@ -152,7 +152,7 @@ export default function emit(ctx: EmitContext): EmitResult {
     substituteToken(s).replaceAll(`${harnessDir}/rules/`, `${harnessDir}/amadeus-rules/`);
 
   // Emission table. The orchestrator-forwarding command (Bolt 1, verbatim) plus
-  // the Bolt 2 surfaces: AGENTS.md, opencode.json.example, and the four session
+  // the Bolt 2 surfaces: AGENTS.md, opencode.json.example, and the session
   // skills. Nothing here composes an orchestrator SKILL — it lives only as the
   // command (E-OC16 ruling C).
   const emissions: Array<{ path: string; content: () => string }> = [

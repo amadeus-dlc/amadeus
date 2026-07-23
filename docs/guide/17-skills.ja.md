@@ -34,14 +34,46 @@
 - **`/amadeus-init`** — 最初の intent を誕生させる(Initialization フェーズ全体を実行)
   ことを 1 ステップで行う。エンジンの auto-birth に対するオプトインのパッケージング。
 - **セッションスキル** — `/amadeus-session-cost`、`/amadeus-replay`、
-  `/amadeus-outcomes-pack`、`/amadeus-grilling`。任意の時点で使える読み取り専用スキル。
-  最初の 3 つは [セッション管理](11-session-management.ja.md) で扱うワークフロービューで、
-  `/amadeus-grilling` は独立した grilling インタビューです([インタラクションモード](07-interaction-modes.ja.md) を参照)。
+  `/amadeus-outcomes-pack`、`/amadeus-grilling`、`/amadeus-mirror`。最初の4つは
+  読み取り専用のビューまたはインタビューです。`/amadeus-mirror` は最初に診断し、
+  その後ユーザーが選択したミラー操作を実行できます。
 
 ランナーが行うことはすべてフラグ付きの `/amadeus` から到達可能です。ランナーは
 パッケージングです — `/amadeus-bugfix` とタイプして `/` メニューに現れるのは良い
 エルゴノミクスであり、それ以上ではありません。すべてのランナーを削除すればショート
 カットは消えますが、能力は残り、`/amadeus` のフラグを通じて到達可能です。
+
+---
+
+## ミラーワークフロー — 先に診断し、承認後だけ操作する
+
+intent をミラーする GitHub Issue の復旧・保守には `/amadeus-mirror` を実行します。
+入口は常に `status` であり、`create`、`sync`、`close` から開始することはありません。
+
+status の exit 契約は次のとおりです:
+
+- exit 0: ミラーは clean。乖離なしを報告して停止する。
+- exit 1: 乖離あり。ただし出力が検証済みの `mirror-missing`、
+  `stale-status-line`、`issue-drifted` finding 構造に一致する場合だけ。
+- exit 2: 前提条件の失敗。理由と復旧手順を表示して停止する。
+
+ツール不在、起動失敗、構造不正な exit 1 出力、未知 finding は、乖離ではなく
+loud stop です。分類するのは固定 finding kind だけです。診断 detail と stderr は
+表示専用テキストであり、解析・評価したりコマンド生成に利用したりしません。
+
+検証済み診断の後、skill は固定操作を提示します。`mirror-missing` は `create`、
+`issue-drifted` は `sync`、`stale-status-line` は `sync` と `close` の両方を
+提示します。`sync` は open mirror を更新します。`close` は tool の fail-closed な
+close-after-landing check を実行するため、未着地の intent は拒否される場合があります。
+人間が最終 verb を明示的に選択します。既定操作や自動実行はありません。
+
+任意の `--intent` 指定では、active space に実在する intent directory の正確な
+basename だけを受け入れ、単一引数として渡します。basename を shell command に
+補間したり、それから shell command string を組み立てたりしてはいけません。
+
+チーム合意により、`create` と `close` は conductor から実行します。これは運用上の
+慣例であり、機械的に強制される制約ではありません。規範となる合意は
+`amadeus/spaces/<space>/memory/team.md` にあります。
 
 ---
 

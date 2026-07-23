@@ -360,7 +360,7 @@ describe("cursor manifest — the distribution row", () => {
     expect(manifest.authoredExempt[0].test("hooks/amadeus-audit-logger.ts")).toBe(false);
   });
 
-  test("projects the same 8 core dirs as opencode, rules→amadeus-rules", () => {
+  test("projects the shared core dirs plus the mirror session skill", () => {
     expect(manifest.coreDirs.map((d) => `${d.src}->${d.dst}`)).toEqual([
       "tools->tools",
       "amadeus-common->amadeus-common",
@@ -370,6 +370,7 @@ describe("cursor manifest — the distribution row", () => {
       "scopes->scopes",
       "agents->agents",
       "hooks->hooks",
+      "skills/amadeus-mirror->skills/amadeus-mirror",
     ]);
   });
 

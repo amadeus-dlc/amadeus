@@ -13,7 +13,7 @@
 // built tmp tree against committed, never calling emit's own check branch).
 // Driving emit() DIRECTLY here with BOTH check:false (write) and check:true
 // (verify) exercises the whole write⇔check symmetric shape in-process — every
-// emission (the command, AGENTS.md, opencode.json.example, and the four session
+// emission (the command, AGENTS.md, opencode.json.example, and the session
 // skills) and every helper (emitAgentsMd, emitOpencodeJsonExample, walk,
 // rewriteProse). Importing manifest.ts executes its frozen distribution row.
 
@@ -28,7 +28,13 @@ import manifest from "../../packages/framework/harness/opencode/manifest.ts";
 // The real harness-neutral core — session skills are composed from here, so the
 // test drives emit() against the actual origin (no fabricated skills tree).
 const CORE_ROOT = join(import.meta.dir, "..", "..", "packages", "framework", "core");
-const SESSION_SKILLS = ["amadeus-session-cost", "amadeus-replay", "amadeus-outcomes-pack", "amadeus-grilling"];
+const SESSION_SKILLS = [
+  "amadeus-session-cost",
+  "amadeus-replay",
+  "amadeus-outcomes-pack",
+  "amadeus-grilling",
+  "amadeus-mirror",
+];
 
 const COMMAND_BODY = "AUTHORED opencode command body — probe\n";
 const COMMAND_REL = join(".opencode", "commands", "amadeus.md");
@@ -185,7 +191,7 @@ describe("opencode emit() — opencode.json.example", () => {
 });
 
 describe("opencode emit() — session skills", () => {
-  test("composes all four session skills from core with token substitution", () => {
+  test("composes all session skills from core with token substitution", () => {
     const dist = mkdtempSync(join(tmpdir(), "oc-emit-skills-"));
     try {
       emit(ctxFor(dist, false));

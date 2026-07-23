@@ -6,8 +6,9 @@
 // writes intents.json (the WORKSPACE-lock contract stays untouched) — its only
 // writes are gh calls and the `Mirror Issue` field in amadeus-state.md.
 //
-// Subcommands: create | sync | close (see USAGE). Exit codes: 0 ok, 1 fault
-// (gh missing/unauthenticated, missing field, landing check failed), 2 usage.
+// Subcommands: create | sync | close | status (see USAGE). Mutating verbs use
+// exit 0 for success, 1 for runtime faults, and 2 for usage. Status uses 0 for
+// clean, 1 for divergence, and 2 for precondition or usage errors.
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -20,13 +21,24 @@ import {
   readIntentRegistry,
   recordDirMatches,
   setOrInsertField,
-} from "../packages/framework/core/tools/amadeus-lib";
+} from "./amadeus-lib";
 
-const SCRIPTS_DIR = dirname(fileURLToPath(import.meta.url));
-const PROJECT_DIR = join(SCRIPTS_DIR, "..");
+const TOOLS_DIR = dirname(fileURLToPath(import.meta.url));
+
+export function projectDirFromToolsDir(
+  toolsDir: string,
+  joinPath: (...parts: string[]) => string = join,
+): string {
+  return joinPath(toolsDir, "..", "..", "..", "..");
+}
+
+const PROJECT_DIR = projectDirFromToolsDir(TOOLS_DIR);
 
 const USAGE =
-  "Usage: bun scripts/amadeus-mirror.ts <create|sync|close> [--intent <dirName>]";
+  [
+    "Usage: bun <harness-dir>/tools/amadeus-mirror.ts <create|sync|close|status> [--intent <dirName>]",
+    "Operational note: create/close are run by the conductor by team agreement; this is not mechanically enforced (see team.md).",
+  ].join("\n");
 
 // --- C1: args-parser -------------------------------------------------------
 
@@ -34,11 +46,12 @@ export type ArgsOutcome =
   | { kind: "create"; intentDir: string | null }
   | { kind: "sync"; intentDir: string | null }
   | { kind: "close"; intentDir: string | null }
+  | { kind: "status"; intentDir: string | null }
   | { kind: "usage"; message: string };
 
 export function parseArgs(argv: string[]): ArgsOutcome {
   const [sub, ...rest] = argv;
-  if (sub !== "create" && sub !== "sync" && sub !== "close") {
+  if (sub !== "create" && sub !== "sync" && sub !== "close" && sub !== "status") {
     return { kind: "usage", message: USAGE };
   }
   let intentDir: string | null = null;
@@ -192,6 +205,64 @@ export function renderBody(s: MirrorSnapshot): string {
   ].join("\n");
 }
 
+export type StatusFindingKind =
+  | "stale-status-line"
+  | "mirror-missing"
+  | "issue-drifted";
+
+export type StatusFinding = {
+  kind: StatusFindingKind;
+  detail: string;
+};
+
+export type StatusOutcome =
+  | { kind: "clean" }
+  | { kind: "diverged"; findings: [StatusFinding, ...StatusFinding[]] }
+  | { kind: "precondition"; reason: string };
+
+export function compareMirrorStatus(
+  snapshot: MirrorSnapshot,
+  issueBody: string | null,
+): StatusOutcome {
+  if (issueBody === null) {
+    return {
+      kind: "diverged",
+      findings: [{
+        kind: "mirror-missing",
+        detail: snapshot.mirrorIssue === null
+          ? `record ${snapshot.dirName} has no Mirror Issue field`
+          : `mirror issue #${snapshot.mirrorIssue} does not exist`,
+      }],
+    };
+  }
+
+  const findings: StatusFinding[] = [];
+  const expectedStatusLine = renderStatusLine(snapshot);
+  if (!issueBody.split(/\r?\n/).includes(expectedStatusLine)) {
+    findings.push({
+      kind: "stale-status-line",
+      detail: `record Status="${snapshot.workflowStatus}" is not reflected in the mirror issue`,
+    });
+  }
+  if (issueBody !== renderBody(snapshot)) {
+    findings.push({
+      kind: "issue-drifted",
+      detail: "mirror issue body differs from the body rendered from the current record",
+    });
+  }
+  if (findings.length === 0) return { kind: "clean" };
+  return {
+    kind: "diverged",
+    findings: findings as [StatusFinding, ...StatusFinding[]],
+  };
+}
+
+export function exitOfStatus(outcome: StatusOutcome): 0 | 1 | 2 {
+  if (outcome.kind === "clean") return 0;
+  if (outcome.kind === "diverged") return 1;
+  return 2;
+}
+
 // --- C4: gh-gateway --------------------------------------------------------
 
 export type GhResult =
@@ -224,6 +295,40 @@ export function spawnGh(args: string[]): GhResult {
 
 export function ensureGhReady(run: GhRunner): GhResult {
   return run(["auth", "status"]);
+}
+
+function isMissingIssueError(result: Extract<GhResult, { kind: "error" }>): boolean {
+  return /\b404\b|not found|could not resolve to an issue/i.test(result.stderr);
+}
+
+function outcomeFromIssueView(snapshot: MirrorSnapshot, viewed: GhResult): StatusOutcome {
+  if (viewed.kind === "error") {
+    if (isMissingIssueError(viewed)) return compareMirrorStatus(snapshot, null);
+    return {
+      kind: "precondition",
+      reason: `gh issue view failed: ${viewed.stderr.trim()}`,
+    };
+  }
+  try {
+    const parsed: unknown = JSON.parse(viewed.stdout);
+    if (
+      typeof parsed !== "object"
+      || parsed === null
+      || !("body" in parsed)
+      || typeof parsed.body !== "string"
+    ) {
+      return {
+        kind: "precondition",
+        reason: "gh issue view returned JSON without a string body",
+      };
+    }
+    return compareMirrorStatus(snapshot, parsed.body);
+  } catch {
+    return {
+      kind: "precondition",
+      reason: "gh issue view returned invalid JSON",
+    };
+  }
 }
 
 // --- C5: commands ----------------------------------------------------------
@@ -351,6 +456,52 @@ export function handleClose(
   return 0;
 }
 
+export function handleStatus(
+  projectDir: string,
+  intentDir: string | null,
+  run: GhRunner,
+): number {
+  const ready = ensureGhReady(run);
+  if (ready.kind === "error") {
+    const outcome: StatusOutcome = {
+      kind: "precondition",
+      reason: `gh not ready: ${ready.stderr.trim()}`,
+    };
+    console.error(`amadeus-mirror: ${outcome.reason}`);
+    return exitOfStatus(outcome);
+  }
+
+  const snapshotOutcome = buildSnapshot(projectDir, intentDir);
+  if (snapshotOutcome.kind === "error") {
+    const outcome: StatusOutcome = {
+      kind: "precondition",
+      reason: snapshotOutcome.message,
+    };
+    console.error(`amadeus-mirror: ${outcome.reason}`);
+    return exitOfStatus(outcome);
+  }
+  const snapshot = snapshotOutcome.snapshot;
+
+  let outcome: StatusOutcome;
+  if (snapshot.mirrorIssue === null) {
+    outcome = compareMirrorStatus(snapshot, null);
+  } else {
+    const viewed = run(["issue", "view", String(snapshot.mirrorIssue), "--json", "body"]);
+    outcome = outcomeFromIssueView(snapshot, viewed);
+  }
+
+  if (outcome.kind === "precondition") {
+    console.error(`amadeus-mirror: ${outcome.reason}`);
+  } else if (outcome.kind === "clean") {
+    console.log(`mirror issue is in sync for ${snapshot.dirName}`);
+  } else {
+    for (const finding of outcome.findings) {
+      console.log(`${finding.kind}: ${finding.detail}`);
+    }
+  }
+  return exitOfStatus(outcome);
+}
+
 // --- C6: entry -------------------------------------------------------------
 
 // projectDir/run are injectable (ADR-4 test seam via default parameters); the
@@ -367,7 +518,8 @@ export function main(
   }
   if (args.kind === "create") return handleCreate(projectDir, args.intentDir, run);
   if (args.kind === "sync") return handleSync(projectDir, args.intentDir, run);
-  return handleClose(projectDir, args.intentDir, run);
+  if (args.kind === "close") return handleClose(projectDir, args.intentDir, run);
+  return handleStatus(projectDir, args.intentDir, run);
 }
 
 if (import.meta.main) process.exit(main(process.argv.slice(2)));

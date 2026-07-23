@@ -162,11 +162,97 @@ export function markPhaseVerified(content: string, phase: string): string {
 // inception's delivery-planning, construction's ci-pipeline). Initialization and
 // Operation have no stage that ever writes one, so gating them would refuse
 // every ordinary workflow's first/terminal boundary with no way to satisfy it.
-const PHASE_CHECK_REQUIRED_PHASES: ReadonlySet<string> = new Set([
+export const MIRROR_BOUNDARY_PHASES = [
   "ideation",
   "inception",
   "construction",
-]);
+] as const;
+export const PHASE_CHECK_REQUIRED_PHASES: ReadonlySet<string> = new Set(
+  MIRROR_BOUNDARY_PHASES,
+);
+export type MirrorBoundaryPhase = (typeof MIRROR_BOUNDARY_PHASES)[number];
+export type MirrorBoundaryReceiptStatus = "pending" | "completed";
+export type MirrorBoundaryReceipts = Partial<
+  Record<MirrorBoundaryPhase, MirrorBoundaryReceiptStatus>
+>;
+
+export function parseMirrorBoundaryReceipts(
+  raw: string | null,
+): MirrorBoundaryReceipts {
+  if (raw === null || raw.trim() === "") return {};
+  for (const phase of MIRROR_BOUNDARY_PHASES) {
+    const escaped = phase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const matches = raw.match(new RegExp(`"${escaped}"\\s*:`, "g"));
+    if (matches !== null && matches.length > 1) {
+      throw new Error(
+        `Mirror Boundary Receipts has duplicate phase "${phase}"`,
+      );
+    }
+  }
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch (cause) {
+    throw new Error(
+      `Mirror Boundary Receipts is invalid JSON: ${errorMessage(cause)}`,
+    );
+  }
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Mirror Boundary Receipts must be a JSON object");
+  }
+  const receipts: MirrorBoundaryReceipts = {};
+  for (const [phase, status] of Object.entries(value)) {
+    if (!(MIRROR_BOUNDARY_PHASES as readonly string[]).includes(phase)) {
+      throw new Error(`Mirror Boundary Receipts has unknown phase "${phase}"`);
+    }
+    if (status !== "pending" && status !== "completed") {
+      throw new Error(
+        `Mirror Boundary Receipts has invalid status for "${phase}"`,
+      );
+    }
+    receipts[phase as MirrorBoundaryPhase] = status;
+  }
+  return receipts;
+}
+
+export function serializeMirrorBoundaryReceipts(
+  receipts: MirrorBoundaryReceipts,
+): string {
+  const ordered: MirrorBoundaryReceipts = {};
+  for (const phase of MIRROR_BOUNDARY_PHASES) {
+    const status = receipts[phase];
+    if (status !== undefined) ordered[phase] = status;
+  }
+  return JSON.stringify(ordered);
+}
+
+export function transitionMirrorBoundaryReceipt(
+  content: string,
+  phase: MirrorBoundaryPhase,
+  expected: "absent" | MirrorBoundaryReceiptStatus,
+  next: MirrorBoundaryReceiptStatus,
+): string {
+  const receipts = parseMirrorBoundaryReceipts(
+    getField(content, "Mirror Boundary Receipts"),
+  );
+  const current = receipts[phase];
+  if (current === next) return content;
+  if (
+    (expected === "absent" && current !== undefined) ||
+    (expected !== "absent" && current !== expected)
+  ) {
+    throw new Error(
+      `Mirror boundary "${phase}" expected ${expected}, found ${current ?? "absent"}`,
+    );
+  }
+  receipts[phase] = next;
+  return setOrInsertField(
+    content,
+    "## Runtime State",
+    "Mirror Boundary Receipts",
+    serializeMirrorBoundaryReceipts(receipts),
+  );
+}
 
 // Refuse a phase-boundary completion when `phase` requires a phase-check
 // artifact and it is missing. No-op for phases outside
@@ -469,6 +555,9 @@ function main(): void {
       case "set-skeleton-stance":
         handleSetSkeletonStance(args.slice(1));
         break;
+      case "mirror-boundary":
+        handleMirrorBoundary(args.slice(1));
+        break;
       case "set-construction-iteration":
         handleSetConstructionIteration(args.slice(1));
         break;
@@ -549,7 +638,7 @@ function main(): void {
         break;
       default:
         error(
-          `Unknown subcommand: ${subcommand}. Valid: get, set, set-skeleton-stance, checkbox, count, advance, finalize, complete-workflow, gate-start, approve, delegate-approval, delegate-rejection, grant-standing-delegation, revoke-standing-delegation, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark, declare-docs-only`
+          `Unknown subcommand: ${subcommand}. Valid: get, set, set-skeleton-stance, mirror-boundary, checkbox, count, advance, finalize, complete-workflow, gate-start, approve, delegate-approval, delegate-rejection, grant-standing-delegation, revoke-standing-delegation, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark, declare-docs-only`
         );
     }
   } catch (e) {
@@ -659,6 +748,45 @@ export function handleSet(args: string[]): void {
     lockIntent = undefined;
     lockSpace = undefined;
   }
+}
+
+export function handleMirrorBoundary(args: string[]): void {
+  const phase = args[0] as MirrorBoundaryPhase | undefined;
+  const next = args[1] as MirrorBoundaryReceiptStatus | undefined;
+  const fromIndex = args.indexOf("--from");
+  const expected = fromIndex >= 0 ? args[fromIndex + 1] : undefined;
+  if (
+    phase === undefined ||
+    !(MIRROR_BOUNDARY_PHASES as readonly string[]).includes(phase) ||
+    (next !== "pending" && next !== "completed") ||
+    (expected !== "absent" &&
+      expected !== "pending" &&
+      expected !== "completed")
+  ) {
+    error(
+      "Usage: amadeus-state.ts mirror-boundary <ideation|inception|construction> " +
+        "<pending|completed> --from <absent|pending|completed>",
+    );
+  }
+  const pd = resolveProjectDir(projectDir);
+  withAuditLock(pd, () => {
+    const content = readStateFile(pd);
+    let updated: string;
+    try {
+      updated = transitionMirrorBoundaryReceipt(
+        content,
+        phase,
+        expected,
+        next,
+      );
+    } catch (cause) {
+      error(errorMessage(cause));
+    }
+    if (updated !== content) writeStateFile(pd, updated);
+    console.log(
+      JSON.stringify({ updated: updated !== content, phase, status: next }),
+    );
+  });
 }
 
 // set-skeleton-stance <on|off|scope-dependent> — record the conductor's

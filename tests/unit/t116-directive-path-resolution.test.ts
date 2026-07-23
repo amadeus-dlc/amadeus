@@ -168,6 +168,13 @@ function emitFor(
     new RegExp(`^- \\[.\\] ${slug} — EXECUTE`, "m"),
     `- [-] ${slug} — EXECUTE`,
   );
+  // This suite exercises path projection after routing. Mark prior mirror
+  // boundaries handled so the U4 boundary prompt does not preempt Branch 10.
+  sedReplaceInFile(
+    state,
+    /^## Runtime State$/m,
+    '## Runtime State\n- **Mirror Boundary Receipts**: {"ideation":"completed","inception":"completed","construction":"completed"}',
+  );
   const res = spawnSync(BUN, [ORCH, "next", "--project-dir", proj], {
     encoding: "utf-8",
     env: (() => {

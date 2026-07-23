@@ -83,6 +83,7 @@ import {
 } from "./amadeus-directive.ts";
 import {
   activeSpace,
+  activeIntent,
   type CheckboxLine,
   codekbRepoName,
   classifyHelpIntent,
@@ -125,6 +126,13 @@ import {
   selectNextUnitForStage,
   subgraphForScope,
 } from "./amadeus-graph.ts";
+import { resolve as resolveMirrorConfig } from "./amadeus-mirror-config.ts";
+import {
+  MIRROR_BOUNDARY_PHASES,
+  type MirrorBoundaryPhase,
+  type MirrorBoundaryReceipts,
+  parseMirrorBoundaryReceipts,
+} from "./amadeus-state.ts";
 // inferScopeFromText is a PURE function (keyword matching over the scope
 // registry) - importing it keeps `next` read-only. The audit-emitting
 // detect-scope verb remains the conductor's separate recording move; the
@@ -139,6 +147,118 @@ function loadStateFileIfPresent(projectDir: string): string | null {
   const path = stateFilePath(projectDir);
   if (!existsSync(path)) return null;
   return readFileSync(path, "utf-8");
+}
+
+export type MirrorBoundaryDecision =
+  | { kind: "ask"; includeCreate: boolean }
+  | { kind: "auto-sync" };
+
+export function decideMirrorBoundary(
+  autoMirror: boolean,
+  hasMirrorIssue: boolean,
+): MirrorBoundaryDecision {
+  if (autoMirror && hasMirrorIssue) return { kind: "auto-sync" };
+  return { kind: "ask", includeCreate: !hasMirrorIssue };
+}
+
+const PREVIOUS_BOUNDARY_BY_PHASE: Readonly<Record<string, MirrorBoundaryPhase>> =
+  {
+    inception: "ideation",
+    construction: "inception",
+    operation: "construction",
+  };
+
+function currentMirrorBoundaryPhase(
+  stateContent: string,
+): MirrorBoundaryPhase | null {
+  if (
+    getField(stateContent, "Status")?.trim() === "Completed" &&
+    getField(stateContent, "Construction")?.trim() === "Verified"
+  ) {
+    return "construction";
+  }
+  const lifecycle = (getField(stateContent, "Lifecycle Phase") ?? "")
+    .trim()
+    .toLowerCase();
+  const phase = PREVIOUS_BOUNDARY_BY_PHASE[lifecycle];
+  if (phase === undefined) return null;
+  const scope = getField(stateContent, "Scope") ?? DEFAULT_SCOPE;
+  const first = firstInScopeStageOfPhase(lifecycle, scope);
+  const current = getField(stateContent, "Current Stage");
+  if (first === null || current !== first.slug) return null;
+  const label = phase[0].toUpperCase() + phase.slice(1);
+  return getField(stateContent, label)?.trim() === "Verified" ? phase : null;
+}
+
+function mirrorSyncPrint(phase: MirrorBoundaryPhase, isPending: boolean): PrintDirective {
+  const stateTool = `bun ${harnessDir()}/tools/amadeus-state.ts mirror-boundary`;
+  const syncTool = `bun ${harnessDir()}/tools/amadeus-mirror.ts sync`;
+  const prepare = isPending
+    ? ""
+    : `First run \`${stateTool} ${phase} pending --from absent\`. `;
+  return printDirective(
+    `${prepare}Run \`${syncTool}\`. Only after sync succeeds, run ` +
+      `\`${stateTool} ${phase} completed --from pending\`, then re-run \`next\`. ` +
+      `If sync or the receipt update fails, stop; the pending receipt makes a later next retry safely.`,
+  );
+}
+
+function emitMirrorBoundaryIfNeeded(
+  projectDir: string,
+  stateContent: string,
+): boolean {
+  let receipts: MirrorBoundaryReceipts;
+  try {
+    receipts = parseMirrorBoundaryReceipts(
+      getField(stateContent, "Mirror Boundary Receipts"),
+    );
+  } catch (cause) {
+    emit(errorDirective(errorMessage(cause)));
+    return true;
+  }
+  for (const phase of MIRROR_BOUNDARY_PHASES) {
+    if (receipts[phase] === "pending") {
+      emit(mirrorSyncPrint(phase, true));
+      return true;
+    }
+  }
+  const phase = currentMirrorBoundaryPhase(stateContent);
+  if (phase === null || receipts[phase] === "completed") return false;
+  const space = activeSpace(projectDir);
+  const intent = activeIntent(projectDir, space);
+  if (intent === null) {
+    emit(errorDirective("Mirror boundary cannot resolve the active intent."));
+    return true;
+  }
+  const resolved = resolveMirrorConfig(projectDir, space, intent);
+  if (resolved.kind === "invalid") {
+    const details = resolved.errors
+      .map((item) => `${item.layer}: ${item.errors.join("; ")}`)
+      .join(" | ");
+    emit(errorDirective(`Invalid mirror configuration: ${details}`));
+    return true;
+  }
+  const hasMirrorIssue =
+    (getField(stateContent, "Mirror Issue") ?? "").trim().length > 0;
+  const decision = decideMirrorBoundary(
+    resolved.config.autoMirror,
+    hasMirrorIssue,
+  );
+  if (decision.kind === "auto-sync") {
+    emit(mirrorSyncPrint(phase, false));
+    return true;
+  }
+  const choices = decision.includeCreate
+    ? "Choose create, sync, or skip. Run the selected fixed mirror command first; create is available because no Mirror Issue is recorded."
+    : "Choose sync or skip. Run sync first if selected.";
+  emit(
+    askDirective(
+      `The ${phase} phase boundary is verified. Synchronize the GitHub mirror? ${choices} ` +
+        `After the selected operation succeeds (or for skip), report with ` +
+        `\`amadeus-orchestrate.ts report --mirror-boundary ${phase} --result completed --user-input <create|sync|skip>\`.`,
+    ),
+  );
+  return true;
 }
 
 // The default scope when neither the state file, a --scope flag, nor the
@@ -1797,6 +1917,17 @@ export function handleNext(args: string[], projectDir: string | undefined): void
     return;
   }
 
+  // A plain advancing next is the only surface that evaluates mirror phase
+  // boundaries. Read-only utilities, jumps, resume and configuration changes
+  // retain their existing precedence and never incur mirror-config I/O.
+  if (
+    stateContent &&
+    isBareAdvancingNext(flags, migration) &&
+    emitMirrorBoundaryIfNeeded(pd, stateContent)
+  ) {
+    return;
+  }
+
   // Branch 5 — natural-language scope/depth/test-strategy change against an
   // existing workflow (SKILL.md:141/:144/:147 + step 7/8). Changing scope or
   // config is a MUTATION, so `next` names the move (print) and the conductor
@@ -2718,6 +2849,7 @@ interface ReportFlags {
   skeletonStance?: string; // the classify round-trip's classified stance
   single?: boolean; // --single: commit a synthetic-id STAGE_STARTED/COMPLETED pair, never the main pointer
   stage?: string; // --stage <slug>: the acted stage (required under --single; preferred for main workflow reports)
+  mirrorBoundary?: string;
 }
 
 // Extract report's flags. --result is the verdict; --user-input rides through
@@ -2743,6 +2875,9 @@ function parseReportFlags(args: string[]): ReportFlags {
       i++;
     } else if (a === "--stage" && i + 1 < args.length) {
       flags.stage = args[i + 1];
+      i++;
+    } else if (a === "--mirror-boundary" && i + 1 < args.length) {
+      flags.mirrorBoundary = args[i + 1];
       i++;
     } else if (a === "--single") {
       flags.single = true;
@@ -3013,6 +3148,71 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
   // here, not the ambient CLAUDE_PROJECT_DIR, under in-process drivers (#1389).
   _handlerProjectDir = projectDir;
   const flags = parseReportFlags(args);
+
+  if (flags.mirrorBoundary !== undefined) {
+    const phase = flags.mirrorBoundary;
+    const answer = flags.userInput?.trim().toLowerCase();
+    if (
+      !(MIRROR_BOUNDARY_PHASES as readonly string[]).includes(phase) ||
+      flags.result !== "completed" ||
+      (answer !== "create" && answer !== "sync" && answer !== "skip")
+    ) {
+      emit(
+        errorDirective(
+          "Mirror boundary report requires a canonical phase, --result completed, " +
+            "and --user-input create, sync, or skip.",
+        ),
+      );
+      return;
+    }
+    const pd = resolveProjectDir(projectDir);
+    const stateContent = loadStateFileIfPresent(pd);
+    if (stateContent === null) {
+      emit(errorDirective("Mirror boundary report requires an active workflow."));
+      return;
+    }
+    const expectedPhase = currentMirrorBoundaryPhase(stateContent);
+    const hasMirrorIssue =
+      (getField(stateContent, "Mirror Issue") ?? "").trim().length > 0;
+    let receipts: MirrorBoundaryReceipts;
+    try {
+      receipts = parseMirrorBoundaryReceipts(
+        getField(stateContent, "Mirror Boundary Receipts"),
+      );
+    } catch (cause) {
+      emit(errorDirective(errorMessage(cause)));
+      return;
+    }
+    if (
+      expectedPhase !== phase ||
+      receipts[phase as MirrorBoundaryPhase] !== undefined ||
+      (answer === "create" && hasMirrorIssue)
+    ) {
+      emit(
+        errorDirective(
+          `Mirror boundary report does not match the pending ${expectedPhase ?? "none"} boundary or its offered choices.`,
+        ),
+      );
+      return;
+    }
+    const result = spawnState(pd, [
+      "mirror-boundary",
+      phase,
+      "completed",
+      "--from",
+      "absent",
+    ]);
+    if (result.exitCode !== 0) {
+      emit(errorDirective(result.stderr.trim() || result.stdout.trim()));
+      return;
+    }
+    emit(
+      printDirective(
+        `Mirror boundary "${phase}" recorded as completed after "${answer}". Re-run \`next\` to continue.`,
+      ),
+    );
+    return;
+  }
 
   // Branch -1 — the --single stage-runner commit. A stage-runner reports
   // its lone stage via `report --single --stage <slug> --result <outcome>`; the

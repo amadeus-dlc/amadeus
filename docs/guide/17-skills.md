@@ -21,9 +21,46 @@ Every command this implementation ships is a skill under `.claude/skills/`. They
 - **Scope-runners** — `/amadeus-bugfix`, `/amadeus-feature`, `/amadeus-mvp`, `/amadeus-security-patch`. Same full workflow, with a scope fixed and scope detection skipped.
 - **Stage-runners** — `/amadeus-application-design`, `/amadeus-code-generation`, and 27 more. Run one stage in isolation, never touching your main workflow.
 - **`/amadeus-init`** — birth the first intent (run the whole Initialization phase) in one step; opt-in packaging over the engine's auto-birth.
-- **Session skills** — `/amadeus-session-cost`, `/amadeus-replay`, `/amadeus-outcomes-pack`, `/amadeus-grilling`. Read-only skills usable at any point; the first three are workflow views covered in [Session Management](11-session-management.md), and `/amadeus-grilling` is a standalone grilling interview (see [Interaction Modes](07-interaction-modes.md)).
+- **Session skills** — `/amadeus-session-cost`, `/amadeus-replay`, `/amadeus-outcomes-pack`, `/amadeus-grilling`, `/amadeus-mirror`. The first four are read-only views or interviews. `/amadeus-mirror` diagnoses first, then can run a user-selected mirror action.
 
 Everything a runner does is reachable from `/amadeus` with a flag. The runners are packaging — typing `/amadeus-bugfix` and seeing it in your `/` menu is good ergonomics, nothing more. Delete every runner and the shortcuts go; the capability stays, reachable through `/amadeus` flags.
+
+---
+
+## Mirror workflow — diagnose first, act only after approval
+
+Run `/amadeus-mirror` to recover or maintain the GitHub Issue that mirrors an
+intent. It always starts with `status`; it never starts with `create`, `sync`,
+or `close`.
+
+The status exit contract is:
+
+- exit 0: the mirror is clean; report that no divergence exists and stop;
+- exit 1: divergence, but only when the output matches the validated
+  `mirror-missing`, `stale-status-line`, or `issue-drifted` finding structure;
+- exit 2: a precondition failed; show the reason and recovery guidance, then
+  stop.
+
+A missing tool, launch failure, malformed exit-1 output, or unknown finding is
+a loud stop, not divergence. Only the fixed finding kind is classified.
+Diagnostic detail and stderr are display-only text. They are never parsed,
+evaluated, or used to produce a command.
+
+After a validated diagnosis, the skill offers a fixed action:
+`mirror-missing` offers `create`; `issue-drifted` offers `sync`;
+`stale-status-line` offers both `sync` and `close`. `sync` refreshes the open
+mirror. `close` retains the tool's fail-closed close-after-landing check and
+may reject an intent that has not landed. The human chooses the final verb
+explicitly. There is no default action and no automatic execution.
+
+For optional `--intent` targeting, accept only the exact basename of an
+existing intent directory in the active space and pass it as one argument.
+Never interpolate the basename into a shell command or construct a shell
+command string from it.
+
+By team agreement, `create` and `close` are run by the conductor. This is an
+operating convention, not a mechanically enforced restriction; the normative
+agreement remains in `amadeus/spaces/<space>/memory/team.md`.
 
 ---
 

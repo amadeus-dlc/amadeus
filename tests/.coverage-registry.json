@@ -20,14 +20,14 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 497,
+    "total": 498,
     "enumeratedByClass": {
       "function": 267,
       "audit": 75,
       "scope": 10,
       "stage": 32,
       "hook": 11,
-      "subcommand": 95,
+      "subcommand": 96,
       "render-surface": 7
     },
     "coveredByClass": {
@@ -5218,6 +5218,13 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-state mirror-boundary",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",
