@@ -12,3 +12,5 @@
 
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
+
+- 2026-07-23T03:22:05Z — [Interpretations] U2 FD iter1 Major1(上流 Review 履歴が NOT-READY 終端)は記帳ギャップと確定: RA/AD の残余は機械クラス閉包+ユーザーゲート承認済み(各 diary 固定)だが、成果物側の Review 節に閉包が現れていなかった。conductor 記帳として「Post-review closure」節を requirements.md / components.md へ追記(reviewer verdict の捏造はせず、conductor 記帳と明示)。
