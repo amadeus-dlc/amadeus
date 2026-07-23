@@ -7615,3 +7615,236 @@
 **Agent**: amadeus-developer-agent
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:46:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: aa571d9c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/lib/boundary-guard.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:46:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: aa571d9c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/lib/boundary-guard.ts
+**Duration ms**: 1309
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:46:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: 79ce8616
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/lib/boundary-guard.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:46:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 79ce8616
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/lib/boundary-guard.ts
+**Duration ms**: 2279
+**Note**: script-error: exit-1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:46:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2161acc4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/t258-boundary-guard.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:46:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2161acc4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/t258-boundary-guard.test.ts
+**Duration ms**: 1278
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:46:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: e1939e58
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/t258-boundary-guard.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:46:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: e1939e58
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/t258-boundary-guard.test.ts
+**Duration ms**: 1519
+**Note**: script-error: exit-1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:47:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: c735c502
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/fixtures/boundary-guard/duplicate-scenario/scripts/amadeus-shared-asset.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:47:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: c735c502
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/fixtures/boundary-guard/duplicate-scenario/scripts/amadeus-shared-asset.ts
+**Duration ms**: 1270
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:47:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 664d7bcd
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/fixtures/boundary-guard/duplicate-scenario/scripts/amadeus-shared-asset.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:47:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 664d7bcd
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/fixtures/boundary-guard/duplicate-scenario/scripts/amadeus-shared-asset.ts
+**Duration ms**: 1492
+**Note**: script-error: exit-1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:47:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 49ae7c1d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/fixtures/boundary-guard/duplicate-scenario/canonical/amadeus-shared-asset.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:47:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: 49ae7c1d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/fixtures/boundary-guard/duplicate-scenario/canonical/amadeus-shared-asset.ts
+**Duration ms**: 1285
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:47:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: e62ae37a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/fixtures/boundary-guard/duplicate-scenario/canonical/amadeus-shared-asset.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:47:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: e62ae37a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/fixtures/boundary-guard/duplicate-scenario/canonical/amadeus-shared-asset.ts
+**Duration ms**: 1489
+**Note**: script-error: exit-1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:47:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 40cba25a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t258-boundary-guard.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:48:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 40cba25a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t258-boundary-guard.integration.test.ts
+**Duration ms**: 1298
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:48:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2d8c5aa0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t258-boundary-guard.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:48:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2d8c5aa0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t258-boundary-guard.integration.test.ts
+**Duration ms**: 1470
+**Note**: script-error: exit-1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-23T04:50:43Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260722-233519-0637/engineer-6/amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/code-generation/code-summary.md
+**Context**: construction > boundary-guard > code-generation > code-summary.md
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T04:51:05Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: a018bc61f936050ac
+**Message**: 実装完了。code-summary の要旨と検証結果を報告します。\n\n## 実装結果 — Unit boundary-guard(intent 260722-election-core-promotion)\n\n**成果物**(すべて `tests/` 側、本番コード変更ゼロ):\n- `/Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/ru
+
+---
