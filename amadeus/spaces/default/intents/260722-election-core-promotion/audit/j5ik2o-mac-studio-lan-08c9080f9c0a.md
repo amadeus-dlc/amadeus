@@ -7848,3 +7848,11 @@
 **Message**: 実装完了。code-summary の要旨と検証結果を報告します。\n\n## 実装結果 — Unit boundary-guard(intent 260722-election-core-promotion)\n\n**成果物**(すべて `tests/` 側、本番コード変更ゼロ):\n- `/Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/ru
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-23T04:52:32Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-23T04:52:32Z
+
+---
