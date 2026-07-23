@@ -20,23 +20,23 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 498,
+    "total": 519,
     "enumeratedByClass": {
-      "function": 267,
-      "audit": 75,
+      "function": 284,
+      "audit": 77,
       "scope": 10,
       "stage": 32,
       "hook": 11,
-      "subcommand": 96,
+      "subcommand": 98,
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 130,
+      "function": 141,
       "audit": 32,
       "scope": 10,
       "stage": 8,
       "hook": 11,
-      "subcommand": 78,
+      "subcommand": 80,
       "render-surface": 7
     }
   },
@@ -250,6 +250,20 @@
     {
       "unitClass": "audit",
       "unitId": "HUMAN_TURN",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "INTENT_ARCHIVED",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "INTENT_UNARCHIVED",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -1690,6 +1704,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:guardIntentOperation",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t259-archived-intent-guard.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:harnessDir",
       "minMechanism": "none",
       "coveredBy": [
@@ -1816,7 +1842,47 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:INTENT_STATUSES",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:intentDirNameBase",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:IntentLifecycleJournalError",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:intentLifecycleJournalPath",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:intentNotFoundRejection",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t259-archived-intent-guard.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:IntentRegistryStatusError",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -1858,6 +1924,13 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:IntentStatusParseError",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "function",
@@ -2247,6 +2320,30 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:migrateClosedSwarmDriverIntent",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t257-status-registry.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:migrateClosedSwarmDriverRegistryLocked",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t257-status-registry-migration.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:MIGRATED_MARKER",
       "minMechanism": "none",
       "coveredBy": [],
@@ -2422,6 +2519,30 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:parseIntentStatus",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t257-status-registry.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:parseIntentStatusTransactionJournal",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t258-lifecycle-transaction.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -2643,6 +2764,18 @@
       "unitClass": "function",
       "unitId": "function:readIntentRegistry",
       "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t257-status-registry.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:readIntentStatusTransactionJournal",
+      "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
     },
@@ -2824,6 +2957,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:renderIntentOperationRejection",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t259-archived-intent-guard.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:replaceSection",
       "minMechanism": "none",
       "coveredBy": [
@@ -2885,6 +3030,18 @@
         {
           "file": "tests/integration/t166-multi-repo-construction.test.ts",
           "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:resolveIntentOperationTargetLocked",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t259-archived-intent-guard.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
@@ -2994,6 +3151,13 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:runIntentLifecycleTransactionLocked",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "function",
@@ -3304,6 +3468,22 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:transitionIntentStatusLocked",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t165-intent-birth-p4.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t257-status-registry.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:transposeScopeGrid",
       "minMechanism": "none",
       "coveredBy": [
@@ -3327,18 +3507,6 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
-    },
-    {
-      "unitClass": "function",
-      "unitId": "function:updateIntentStatus",
-      "minMechanism": "none",
-      "coveredBy": [
-        {
-          "file": "tests/integration/t165-intent-birth-p4.test.ts",
-          "mechanism": "cli"
-        }
-      ],
-      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -3440,6 +3608,25 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:withIntentLifecyclePreflight",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t258-lifecycle-transaction.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:withLockedIntentRegistry",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:WORKSPACE_LOCK_SENTINEL",
       "minMechanism": "none",
       "coveredBy": [],
@@ -3531,8 +3718,13 @@
       "unitClass": "function",
       "unitId": "function:writeFileAtomic",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/integration/t257-status-registry-migration.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -5056,6 +5248,18 @@
     },
     {
       "unitClass": "subcommand",
+      "unitId": "amadeus-state archive",
+      "minMechanism": "cli",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t258-lifecycle-transaction.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
       "unitId": "amadeus-state checkbox",
       "minMechanism": "cli",
       "coveredBy": [
@@ -5387,9 +5591,25 @@
     },
     {
       "unitClass": "subcommand",
+      "unitId": "amadeus-state unarchive",
+      "minMechanism": "cli",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t258-lifecycle-transaction.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
       "unitId": "amadeus-state unpark",
       "minMechanism": "cli",
       "coveredBy": [
+        {
+          "file": "tests/integration/t259-guard-integration.test.ts",
+          "mechanism": "cli"
+        },
         {
           "file": "tests/unit/t17.test.ts",
           "mechanism": "cli"
@@ -5632,6 +5852,10 @@
         },
         {
           "file": "tests/integration/t165-intent-birth-p4.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t259-guard-integration.test.ts",
           "mechanism": "cli"
         }
       ],

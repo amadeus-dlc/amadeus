@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
 import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
-import { dirname } from "node:path";
+import { basename, dirname, join } from "node:path";
 import {
   acquireAuditLock,
   activeIntent,
   auditBlockField,
   auditFilePath,
+  auditShardDir,
   errorMessage,
   intentStatusForAudit,
   isoTimestamp,
@@ -14,6 +15,7 @@ import {
   releaseAuditLock,
   resolveProjectDir,
   validateBoltSlug,
+  writeFileAtomic,
   worktreeAuditFilePath,
   worktreePath,
 } from "./amadeus-lib.ts";
@@ -49,6 +51,8 @@ const VALID_EVENT_TYPES = new Set([
   "WORKFLOW_COMPLETED",
   "WORKFLOW_PARKED",
   "WORKFLOW_UNPARKED",
+  "INTENT_ARCHIVED",
+  "INTENT_UNARCHIVED",
   // Session events (hook-owned)
   "SESSION_STARTED",
   "SESSION_RESUMED",
@@ -180,6 +184,8 @@ const EVENT_HEADINGS: Record<string, string> = {
   WORKFLOW_COMPLETED: "Workflow Completion",
   WORKFLOW_PARKED: "Workflow Parked",
   WORKFLOW_UNPARKED: "Workflow Unparked",
+  INTENT_ARCHIVED: "Intent Archived",
+  INTENT_UNARCHIVED: "Intent Unarchived",
   SESSION_STARTED: "Session Start",
   SESSION_RESUMED: "Session Resume",
   SESSION_COMPACTED: "Session Compacted",
@@ -363,6 +369,38 @@ export function appendAuditEntryUnlocked(
 
   appendFileSync(path, block, "utf-8");
 
+  return { appended: true, event: eventType, timestamp: ts };
+}
+
+// Trusted lifecycle-only writer. Lifecycle transitions may start from a
+// completed intent, so this deliberately bypasses the general post-complete
+// append seal while retaining the closed event vocabulary. The caller owns the
+// workspace lock and has already reserved a HUMAN_TURN in `shardName`.
+export function appendLifecycleAuditEntryUnlocked(
+  eventType: "INTENT_ARCHIVED" | "INTENT_UNARCHIVED",
+  fields: Record<string, string>,
+  projectDir: string,
+  intent: string,
+  space: string,
+  shardName: string,
+): AppendAuditResult {
+  if (basename(shardName) !== shardName || !shardName.endsWith(".md")) {
+    throw new Error(`Invalid lifecycle audit shard: ${shardName}`);
+  }
+  const shardDir = auditShardDir(projectDir, intent, space);
+  if (shardDir === null) throw new Error(`Cannot resolve audit directory for intent ${intent}`);
+  mkdirSync(shardDir, { recursive: true });
+  const path = join(shardDir, shardName);
+  const previous = existsSync(path) ? readFileSync(path, "utf-8") : "# AI-DLC Audit Log\n";
+  const ts = isoTimestamp();
+  let block = `\n## ${EVENT_HEADINGS[eventType]}\n`;
+  block += `**Timestamp**: ${ts}\n`;
+  block += `**Event**: ${eventType}\n`;
+  for (const [key, value] of Object.entries(fields)) {
+    block += `**${key}**: ${escapeAuditValue(value)}\n`;
+  }
+  block += "\n---\n";
+  writeFileAtomic(path, previous + block);
   return { appended: true, event: eventType, timestamp: ts };
 }
 
@@ -809,6 +847,8 @@ const PRESENCE_PROTECTED_EVENTS = new Set([
   // revoke-standing-delegation, backed by a real HUMAN_TURN, may write them).
   "GRANT_ISSUED",
   "GRANT_REVOKED",
+  "INTENT_ARCHIVED",
+  "INTENT_UNARCHIVED",
 ]);
 
 // The EVENT_HEADINGS values for the protected events — the `## <heading>` a forger

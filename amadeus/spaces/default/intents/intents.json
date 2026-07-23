@@ -172,7 +172,7 @@
     "slug": "swarm-driver-migration",
     "dirName": "260713-swarm-driver-migration",
     "scope": "amadeus",
-    "status": "closed"
+    "status": "archived"
   },
   {
     "uuid": "019f6683-1975-7b70-8cef-f7150c0854b0",
@@ -503,6 +503,13 @@
     "uuid": "019f8bee-9cff-7bf2-925a-3060d1aec008",
     "slug": "election-core-promotion",
     "dirName": "260722-election-core-promotion",
+    "scope": "amadeus",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f8d0c-62e4-7495-93a2-37cf947d5c9d",
+    "slug": "archived-status-guard",
+    "dirName": "260723-archived-status-guard",
     "scope": "amadeus",
     "status": "complete"
   }

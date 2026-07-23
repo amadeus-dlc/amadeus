@@ -224,7 +224,7 @@ export function createUpstreamV2Fixture(
       uuid: additionalDefaultUuid,
       slug: additionalDefaultSlug,
       dirName: additionalDefaultRecord,
-      status: "planned",
+      status: "in-flight",
       scope: "feature",
     });
   }

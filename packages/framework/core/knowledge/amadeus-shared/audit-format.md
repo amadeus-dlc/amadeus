@@ -8,9 +8,9 @@
 
 All event names follow `SUBJECT_PAST_VERB` — every event answers "what happened?"
 
-## Event Registry (75 events, 19 categories)
+## Event Registry (77 events, 19 categories)
 
-### Workflow Lifecycle (4 events)
+### Workflow Lifecycle (6 events)
 
 | Event | When | Required Fields | Emitter |
 |-------|------|-----------------|---------|
@@ -18,6 +18,8 @@ All event names follow `SUBJECT_PAST_VERB` — every event answers "what happene
 | ✓ `WORKFLOW_COMPLETED` | All in-scope stages done | Timestamp, Scope, Details | `tools/amadeus-state.ts complete-workflow` |
 | ✓ `WORKFLOW_PARKED` | Workflow parked mid-flow for a later session (no stage advanced) | Stage, Timestamp | `tools/amadeus-state.ts park` |
 | ✓ `WORKFLOW_UNPARKED` | Park marker cleared on explicit `--resume` re-entry | Timestamp | `tools/amadeus-state.ts unpark` |
+| `INTENT_ARCHIVED` | Human-authorized intent archive transaction commits | Intent, From Status, To Status, Operation Id, User Input, Human Turn Timestamp | `tools/amadeus-state.ts archive` |
+| `INTENT_UNARCHIVED` | Human-authorized intent unarchive transaction commits | Intent, From Status, To Status, Operation Id, User Input, Human Turn Timestamp | `tools/amadeus-state.ts unarchive` |
 
 ### Phase Lifecycle (4 events)
 

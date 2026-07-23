@@ -38,7 +38,8 @@ import {
   activeIntent,
   clearActiveIntentCursor,
   intentStatusForAudit,
-  updateIntentStatus,
+  transitionIntentStatusLocked,
+  withLockedIntentRegistry,
   worktreePath,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
@@ -159,7 +160,13 @@ describe("t243 post-complete audit stop (#1248)", () => {
     // The complete-workflow path: registry flip → cursor release (the composition
     // handleCompleteWorkflow runs; the handler itself process.exit()s on error, so
     // the two deterministic steps are driven directly here).
-    updateIntentStatus(proj, dir, "complete");
+    withLockedIntentRegistry(proj, (context) =>
+      transitionIntentStatusLocked(
+        context,
+        dir,
+        "complete",
+      ),
+    );
     clearActiveIntentCursor(proj, dir);
 
     expect(existsSync(cursorPath(proj))).toBe(false);

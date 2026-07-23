@@ -2,7 +2,12 @@ import { spawnSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
-import { appendAuditEntry, appendAuditEntryUnlocked, escapeAuditValue } from "./amadeus-audit.ts";
+import {
+  appendAuditEntry,
+  appendAuditEntryUnlocked,
+  appendLifecycleAuditEntryUnlocked,
+  escapeAuditValue,
+} from "./amadeus-audit.ts";
 import {
   activeIntent,
   clearActiveIntentCursor,
@@ -35,12 +40,17 @@ import {
   isAutonomousMode,
   isoTimestamp,
   loadScopeMapping,
+  listIntents,
+  guardIntentOperation,
+  renderIntentOperationRejection,
+  resolveIntentOperationTargetLocked,
   nextInScopeStage,
   normalizeUnitKind,
   normalizeWorktreeSlug,
   PHASE_NUMBERS,
   PHASES,
   parseCheckboxes,
+  parseIntentStatus,
   parseRefsList,
   parseStateStageSuffixes,
   readAllAuditShards,
@@ -67,7 +77,12 @@ import {
   stageIndex,
   standingGrantSatisfiesGate,
   stagesInScope,
-  updateIntentStatus,
+  transitionIntentStatusLocked,
+  withLockedIntentRegistry,
+  type IntentLifecycleAuditEvent,
+  type IntentLifecycleVerb,
+  runIntentLifecycleTransactionLocked,
+  withIntentLifecyclePreflight,
   unitDependencyPath,
   type UnitKind,
   validScopes,
@@ -576,6 +591,12 @@ function main(): void {
       case "complete-workflow":
         handleCompleteWorkflow(args.slice(1));
         break;
+      case "archive":
+        handleArchive(args.slice(1));
+        break;
+      case "unarchive":
+        handleUnarchive(args.slice(1));
+        break;
       case "gate-start":
         handleGateStart(args.slice(1));
         break;
@@ -882,22 +903,48 @@ function handlePark(_args: string[]): void {
 // unpark - clear the `Parked` / `Parked At Stage` fields on explicit re-entry
 // (the resume flow calls this), so subsequent plain `next` calls no longer
 // emit `parked`. Idempotent: clearing absent fields is a no-op.
+function unparkLocked(
+  context: import("./amadeus-lib.ts").LockedIntentRegistryContext,
+): void {
+  const { projectDir: pd, space } = context;
+  const intentDir = activeIntent(pd, space);
+  const intent = intentDir
+    ? listIntents(pd, space).find((candidate) => candidate.dirName === intentDir)
+    : undefined;
+  if (intent?.dirName) {
+    const guard = guardIntentOperation(
+      resolveIntentOperationTargetLocked(context, intent),
+      "unpark",
+    );
+    if (guard.kind === "rejected") {
+      process.stderr.write(`${JSON.stringify({
+        error: renderIntentOperationRejection(guard.error),
+      })}\n`);
+      process.exit(1);
+    }
+  }
+  let content = readStateFile(pd);
+  const wasParked = (getField(content, "Parked") ?? "").trim().length > 0;
+  content = removeField(content, "Parked");
+  content = removeField(content, "Parked At Stage");
+  if (wasParked) {
+    const ts = isoTimestamp();
+    emitAudit(pd, "WORKFLOW_UNPARKED", { Timestamp: ts });
+    content = setField(content, "Last Updated", ts);
+  }
+  writeStateFile(pd, content);
+  console.log(JSON.stringify({ unparked: true, was_parked: wasParked }));
+}
+
 function handleUnpark(_args: string[]): void {
   const pd = resolveProjectDir(projectDir);
-  withAuditLock(pd, () => {
-    let content = readStateFile(pd);
-    const wasParked = (getField(content, "Parked") ?? "").trim().length > 0;
-    // Remove both runtime markers (no-op if absent - unpark is idempotent).
-    content = removeField(content, "Parked");
-    content = removeField(content, "Parked At Stage");
-    if (wasParked) {
-      const ts = isoTimestamp();
-      emitAudit(pd, "WORKFLOW_UNPARKED", { Timestamp: ts });
-      content = setField(content, "Last Updated", ts);
-    }
-    writeStateFile(pd, content);
-    console.log(JSON.stringify({ unparked: true, was_parked: wasParked }));
-  });
+  const space = activeSpace(pd);
+  withIntentLifecyclePreflight(
+    pd,
+    space,
+    appendLifecycleEvent,
+    (context) => unparkLocked(context),
+  );
 }
 
 // declare-docs-only evidence check (Issue #499/#848): verified BEFORE any
@@ -2029,7 +2076,14 @@ export function handleCompleteWorkflow(args: string[]): void {
   // sentinel bucket). No-op for the legacy flat record (no registry row).
   const completedIntentDir = activeIntent(pd);
   if (completedIntentDir) {
-    updateIntentStatus(pd, completedIntentDir, "complete");
+    withLockedIntentRegistry(
+      pd,
+      (context) => transitionIntentStatusLocked(
+        context,
+        completedIntentDir,
+        "complete",
+      ),
+    );
     // Release the active-intent cursor once the row is "complete" (#1248) so the
     // finished intent stops being the audit-append target and a fresh /amadeus
     // resolves a new intent rather than re-attaching to the completed record.
@@ -2045,6 +2099,91 @@ export function handleCompleteWorkflow(args: string[]): void {
     })
   );
   });
+}
+
+function appendLifecycleEvent(
+  event: IntentLifecycleAuditEvent,
+  shard: string,
+  pd: string,
+  intentDir: string,
+  space: string,
+): void {
+  const fields = {
+    Intent: event.intentDir,
+    "From Status": event.fromStatus,
+    "To Status": event.toStatus,
+    "Operation Id": event.operationId,
+    "User Input": event.userInput,
+    "Human Turn Timestamp": event.humanTurnTimestamp,
+  };
+  if (event.eventType === "INTENT_ARCHIVED") {
+    appendLifecycleAuditEntryUnlocked(
+      "INTENT_ARCHIVED", fields, pd, intentDir, space, shard,
+    );
+  } else {
+    appendLifecycleAuditEntryUnlocked(
+      "INTENT_UNARCHIVED", fields, pd, intentDir, space, shard,
+    );
+  }
+}
+
+function handleIntentLifecycle(args: string[], verb: IntentLifecycleVerb): void {
+  const inputIndex = args.indexOf("--user-input");
+  const intentDir = args.find((arg, index) =>
+    !arg.startsWith("--") && index !== inputIndex + 1
+  );
+  if (!intentDir || inputIndex === -1 || inputIndex + 1 >= args.length) {
+    error(`Usage: amadeus-state.ts ${verb} <intent-dir> --user-input <text>`);
+  }
+  const userInput = args[inputIndex + 1];
+  const pd = resolveProjectDir(projectDir);
+  const space = activeSpace(pd);
+  try {
+    const result = withIntentLifecyclePreflight(
+      pd,
+      space,
+      appendLifecycleEvent,
+      (context, recovery) => {
+        if (recovery.kind !== "none") {
+          return { operationId: recovery.operationId, recovered: true };
+        }
+        return {
+          operationId: runIntentLifecycleTransactionLocked(
+            context,
+            intentDir,
+            verb,
+            userInput,
+            appendLifecycleEvent,
+          ),
+          recovered: false,
+        };
+      },
+    );
+    console.log(JSON.stringify({
+      intent: intentDir,
+      status: verb === "archive" ? "archived" : "in-flight",
+      operation_id: result.operationId,
+      recovered: result.recovered,
+    }));
+  } catch (cause) {
+    const message = errorMessage(cause);
+    // A workspace-lock timeout cannot be audited without waiting on the same
+    // unavailable lock for another full retry budget. Report it directly: no
+    // transaction exists yet, and the lock holder remains the audit authority.
+    if (message.startsWith("Failed to acquire audit lock")) {
+      process.stderr.write(`${JSON.stringify({ error: `${verb}: ${message}` })}\n`);
+      process.exit(1);
+    }
+    error(`${verb}: ${message}`);
+  }
+}
+
+export function handleArchive(args: string[]): void {
+  handleIntentLifecycle(args, "archive");
+}
+
+export function handleUnarchive(args: string[]): void {
+  handleIntentLifecycle(args, "unarchive");
 }
 
 // --- New gate/approve/reject/skip/revise/resume/reuse-artifact commands (state-machine refactor #50) ---

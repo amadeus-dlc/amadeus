@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "note": "Ratchet allowlist of KNOWN unit test files whose derived size is not Small (measured by classifyTestSize in tests/lib/test-size.ts). The size-purity guard in tests/unit/t-test-size-drift.test.ts requires this list to EXACTLY equal the live unit-non-Small set: a violation not listed here fails (no un-grandfathered non-Small unit test), and a listed entry that is no longer a violation also fails (the list only shrinks — ratchet). Regenerate ONLY to SHRINK it as tests/unit files are made Small or moved to integration (intent 260711-test-pyramid, FR-2 size-remediation). Do not hand-add entries.",
   "unitNonSmall": [
+    "tests/unit/t257-status-registry.test.ts",
     "tests/unit/complexity-gate.test.ts",
     "tests/unit/coverage-project-gate.test.ts",
     "tests/unit/gen-coverage-registry.test.ts",

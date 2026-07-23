@@ -100,7 +100,10 @@ function scaffoldShared(questionsBody: string | null, dirName = "260716-demo-1a2
     const intentDir = join(dir, "amadeus", "spaces", "default", "intents", dirName);
     mkdirSync(join(intentDir, "inception", "requirements-analysis"), { recursive: true });
     mkdirSync(join(intentDir, "audit"), { recursive: true });
-    writeFileSync(join(dir, "amadeus", "spaces", "default", "intents", "intents.json"), JSON.stringify({ version: 1, intents: [{ id: "1a2b3c4d", slug: "demo", dirName, status: "active" }] }));
+    writeFileSync(
+      join(dir, "amadeus", "spaces", "default", "intents", "intents.json"),
+      JSON.stringify([{ id: "1a2b3c4d", slug: "demo", dirName, status: "in-flight" }]),
+    );
     mkdirSync(join(dir, "amadeus", "spaces", "default", "memory"), { recursive: true });
     writeFileSync(join(dir, "amadeus", "active-space"), "default");
     writeFileSync(join(dir, "amadeus", "spaces", "default", "intents", "active-intent"), dirName);

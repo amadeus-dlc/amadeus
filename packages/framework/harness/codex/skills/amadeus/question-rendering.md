@@ -71,5 +71,7 @@ Reply with a number (or just tell me).
   then re-ask for a final pick).
 - Preserve the exact option label or free text in audit and `--user-input`;
   never summarize User Input.
-- Gate semantics live in the ENGINE — rendering never decides; the user's
-  answer rides back on `report --user-input "<exact label>"`.
+- Gate semantics live in the ENGINE — rendering never decides. For an `ask`
+  directive, the user's answer rides back with exactly
+  `bun .codex/tools/amadeus-orchestrate.ts report --user-input "<exact label>"`;
+  do not add `--result` or `--stage`.

@@ -58,7 +58,7 @@ export const DEFAULT_SPACE = "default";
 // the uuid keeps the row and the dir consistent BY CONSTRUCTION, so the seeded
 // fixture models a layout the runtime can actually produce (a hand-kept suffix had
 // drifted: uuid …8000-000000000001 → idSuffix `8000000000000001`, not the literal
-// `0000000000000001` the dir used, so listIntents()/updateIntentStatus() never
+// `0000000000000001` the dir used, so listIntents()/status transitions never
 // matched the row to its dir).
 export const DEFAULT_INTENT_UUID = "00000000-0000-7000-8000-000000000001";
 const DEFAULT_RECORD_ID8 = DEFAULT_INTENT_UUID.replace(/-/g, "").slice(-16);

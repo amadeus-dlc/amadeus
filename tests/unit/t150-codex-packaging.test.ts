@@ -280,6 +280,18 @@ describe("t150 dist/codex packaging parity + drift guard", () => {
       expect(prose).not.toContain("request_user_input when available");
       expect(prose).not.toContain("when the tool is available");
     }
+    for (const prose of [sourceSkill, shippedSkill]) {
+      expect(prose).toContain(
+        'run exactly `bun .codex/tools/amadeus-orchestrate.ts report --user-input "<answer>"`',
+      );
+      expect(prose).toContain("do **not** pass `--result` or `--stage`");
+    }
+    for (const prose of [sourceAnnex, shippedAnnex]) {
+      expect(prose).toContain(
+        '`bun .codex/tools/amadeus-orchestrate.ts report --user-input "<exact label>"`',
+      );
+      expect(prose).toContain("do not add `--result` or `--stage`");
+    }
     expect(config).not.toContain("experimental_request_user_input");
     expect(config).not.toContain("default_mode_request_user_input");
   });
