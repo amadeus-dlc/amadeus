@@ -1,4 +1,38 @@
 {
-  "ballots": [],
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MPRAD2",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "自 tree 実測: amadeus-settings.ts の fail-closed JSON parse 様式(:10-13 ヘッダ・:142 JSON.parse、全問題一括報告)を確認 — A はこの既習の直接踏襲で新規発明ゼロ。B は YAML パーサの新規依存が Bun-only Forbidden(配布フレームワークへの runtime dependency 文書化なし追加禁止)と正面衝突。C は設定ファイルとして非標準で消費側の再発明を誘発。自案非採用時の受容度: B=7(Forbidden 抵触の文書化が必要)/ C=6(既習 getField 再利用ではあるため)",
+      "submittedAt": "2026-07-23T01:49:38Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPRAD2",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A を支持。実測: amadeus-settings.ts の fail-closed parse 様式(SETTINGS_KNOWN_KEYS の unknown-key 拒否、DEFAULT_SETTINGS の canonical 単一定義)を直読 — JSON+fail-closed は既習の第一級様式で、3面(workspace/space/record)への拡張は同型踏襲のみ。B は YAML パーサの新規依存が Bun-only Forbidden(配布フレームワークへの runtime dependency 追加禁止)と正面衝突し、手書きパーサは過剰実装。C は設定を md フィールドに載せる非標準形で tooling(エディタ補完・schema 検証)を失う。受容度: C=6(getField 様式は実在するため動きはする)、B=7(Forbidden 緊張)。",
+      "submittedAt": "2026-07-23T01:50:11Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPRAD2",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A採用(GoA 1)。実測: amadeus-settings.ts の canonical known-keys+fail-closed parse 様式(SETTINGS_KNOWN_KEYS・unknown-key 拒否)を直読確認 — JSON 3面はこの既習様式の踏襲で新規依存ゼロ。B の YAML は Bun ランタイムにパーサがなく新規依存 or 手書きパーサが必要(『配布フレームワークへ runtime dependency を追加しない』Forbidden と衝突)。C の Markdown フィールドは設定ファイルとして非標準で機械消費・検証(parse-don't-validate)に不向き。自案非採用時受容度: C=6(getField 再利用は実装可能だが標準性を失う)/ B=7(Forbidden 抵触)。",
+      "submittedAt": "2026-07-23T02:47:18Z"
+    }
+  ],
   "late": []
 }
