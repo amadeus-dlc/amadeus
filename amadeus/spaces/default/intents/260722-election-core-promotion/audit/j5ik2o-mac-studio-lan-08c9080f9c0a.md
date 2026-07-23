@@ -4765,3 +4765,147 @@
 **Message**: VERDICT: READY\ninvocationId: f8b4bc50-0e08-44fe-87e8-b4ffc7e2cdbf iteration: 2\n\n## 是正の閉包確認\n\n**Major1(上流 Review 履歴の NOT-READY 終端 — 記帳ギャップ)**: CLOSED\n- requirements.md 末尾・components.md 末尾それぞれに「Post-revi
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:25:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5548ba3c
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:25:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5548ba3c
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/functional-design/business-logic-model.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:25:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: 00d0a510
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:25:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: 00d0a510
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/functional-design/business-logic-model.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:25:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: 87bf3b0b
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:25:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: 87bf3b0b
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/functional-design/business-rules.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:25:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: f395b0e4
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:25:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: f395b0e4
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/functional-design/business-rules.md
+**Duration ms**: 44
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:25:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: dbf4f10c
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:25:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: dbf4f10c
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/functional-design/domain-entities.md
+**Duration ms**: 44
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:25:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: 44e8c61f
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:25:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: 44e8c61f
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/functional-design/domain-entities.md
+**Duration ms**: 42
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T03:29:13Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a875df2f61c37802a
+**Message**: VERDICT: NOT-READY\ninvocationId: fb28e573-4b9a-4a76-a28e-e72341220f7c iteration: 1\n\n## Critical\nなし\n\n## Major\n\n- **Major-1(未検証の consumes 宣言外引用 — ADR-4)**: `business-logic-model.md:17`「実バイナリでの完走はドッグフード環
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T03:31:13Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a0de3850a55c65eb3
+**Message**: Confirmed: `decisions.md`(ADR-4)は functional-design の consumes 宣言(unit-of-work / unit-of-work-story-map / requirements / components / component-methods / services)に含まれない。是正文の「consumes 宣言外」申告は正しい。\n\nVER
+
+---
