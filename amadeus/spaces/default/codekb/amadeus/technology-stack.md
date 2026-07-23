@@ -1,6 +1,12 @@
 # 技術スタック
 
-## upstream-sync-230 の現行技術スタック（2026-07-20、現在）
+## 260722-teamup-prompt-race 交差スタック（2026-07-22、現在）
+
+bugfix / Minimal（observed `a81c11dde`）。本バグ交差面は既存スタックのシェル層に限定し、新規 runtime dependency は導入しない。関与技術: Bash（`scripts/team-up.sh` / `scripts/run-claude.sh`）、Herdr（pane multiplexer、`herdr pane run`/`send-text`/`send-keys`/`capture`）、外部 agmsg skill（`~/.agents/skills/agmsg/` の Bash + SQLite JSON1、read-only 参照）、既存 TypeScript の supervisor（`scripts/team-up-codex-safety-wait.ts`、Bun 実行）。以下の現行スタック表（Bun 1.3.13 / TypeScript ^6 / Biome / fast-check 等）は本 intent で不変。
+
+> 以下は過去 intent の履歴。
+
+## upstream-sync-230 の現行技術スタック（2026-07-20、履歴）
 
 | 層 | 技術／バージョン | 用途 |
 |---|---|---|
