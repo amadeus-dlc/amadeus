@@ -1,0 +1,21 @@
+{
+  "electionId": "E-MPRDPS13",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260719-mirror-productization / delivery-planning の §13 学習選定: 採用0件の確認。conductor(e3)起案(verbatim 正本 = e3 ブランチ df81ee670 の <record>/inception/delivery-planning/s13-candidates.md — git show で実測可): 候補0件。観測2件 — Bolt 0 の Bolt 列明示(UG 委譲の機械的履行)/ 0問様式+E-OC1 判定(既決 cid の機械的適用)。各自 e3 record を実測確認のうえ GoA 付きで投票。軽量様式可。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 2件とも既存射程に同意"
+    },
+    {
+      "internalNo": 2,
+      "label": "異議 — 採用すべき候補がある(票コメントで特定)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e4",
+    "e6"
+  ],
+  "state": "recorded"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRDPS13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。実測: e3 ブランチ df81ee670 の s13-candidates.md を git show で直読 — 観測2件(Bolt 0 の Bolt 列明示 = UG 委譲の履行、0問様式+E-OC1 判定 = 既決 cid の適用)はいずれも既存射程で新規ノルム性なし。0件に同意。",
+  "submittedAt": "2026-07-23T03:22:38Z"
+}
