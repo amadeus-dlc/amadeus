@@ -1,6 +1,46 @@
 # 依存関係
 
-## upstream-sync-230 の依存境界（2026-07-20、現在）
+## election-core-promotion の依存境界（2026-07-23、現在）
+
+observed `fd5767257` 直読。昇格対象の import/外部依存グラフを記録する。
+
+### 選挙エンジン内部依存
+
+```
+amadeus-election-model.ts   ← (依存ゼロ / 純粋)
+amadeus-election-record.ts  ← model
+amadeus-election-store.ts   ← model, node:fs, node:path
+amadeus-election-transport.ts ← model, node:fs, [agmsg send.sh spawn]
+amadeus-election.ts         ← model, record, transport, store,
+                              node:fs/os/path,
+                              ../packages/framework/core/tools/amadeus-norm-metrics (:46, parseGoaLine)
+```
+
+- 唯一の core 横断依存: election.ts:46。移設先 `packages/framework/core/tools/` では `./amadeus-norm-metrics`(982行、dist 投影済み)へ収束。
+- 外部プロセス依存: transport の agmsg `send.sh` spawn(provenance `spawn-exit` :32)のみ。
+
+### チーム系の外部依存
+
+| 資産 | 外部依存(file:line) |
+|---|---|
+| team-up.sh | herdr(:56 HERDR env, :426 create, :444 split, :453 attach/Ghostty open -na, :152 pane id parse, :155-161 ready 待ち)、agmsg(:45 AGMSG_ROOT, :56 role→herdr 逆写像)、mise(:831/:937/:976 `mise trust -q`) |
+| team-msg.sh | agmsg backend 委譲(:95-113 send/history、:212-216 backend 選択) |
+| team-up-codex-safety-wait.ts | herdr(SafetyWaitAdapter port :30-33)、純ロジック poll :387 |
+| amadeus-leader-sync.ts | なし(node: のみ :7-21)、SYNC_ELECTION_THRESHOLD=10 :30-32 |
+
+### 昇格適合の判定
+
+- 選挙エンジン: 内部依存が閉じ、唯一の横断が同一 core/tools 内へ収束 → core 昇格に高適合。
+- チーム系: herdr/Ghostty/mise というホスト環境依存 → core 中立層より harness 表層/scripts 寄り。昇格単位を選挙エンジンと分離すべき。
+
+### 配布依存
+
+- SKILL(`contrib/skills/amadeus-election/SKILL.md`) → `scripts/amadeus-election.ts`(:11/:21/:31)= 配布物 → repo-only の層またぎ依存。昇格で解消対象。
+- plugin 機構(#1338): `plugin-projection.ts` 新規、`plugins/` 不在(0-file baseline)。
+
+> 以下は過去 intent の履歴であり、今回の current marker ではない。
+
+## upstream-sync-230 の依存境界（2026-07-20、履歴）
 
 ```text
 stage-schema + unit-kind

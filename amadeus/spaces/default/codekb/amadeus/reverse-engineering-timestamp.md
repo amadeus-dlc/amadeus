@@ -1,6 +1,23 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(現在: 260720-upstream-sync-230)
+## 実行メタデータ(現在: 260722-election-core-promotion)
+
+- Date: 2026-07-23
+- Observed at: `fd5767257d82ff02d217aaee051478ec027d11e6`
+- Intent: `260722-election-core-promotion`（チーム機能(選挙エンジン5本+チーム系4本)を repo-only な `scripts/` から配布フレームワーク `packages/framework/` → dist/self-install へ「コア昇格」する intent の下地観測）
+- Scope: `amadeus`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering` (2.1)
+- Method: differential refresh。base `a326f47bc0146a3b4285552f42b92fd61fb343a7`、observed `fd5767257d82ff02d217aaee051478ec027d11e6`、`git merge-base --is-ancestor` exit 0、distance 115(`git rev-list --count a326f47bc..fd5767257`)。base は直近 `re-scans/` の到達可能 observed(260720/260721 が採用した同一 base)を継承。日付の新しい非祖先 observed は `--is-ancestor` exit 1 で除外。区間 HEAD `bc7e42741...` は observed より後の断面で、本 scan は observed を真実源とする。
+- Focus: 配布境界の非対称(選挙5本+チーム4本は `scripts/` repo-only、SKILL は contrib 経由配布 → SKILL:11/:21/:31 の scripts 層またぎ)、選挙エンジンの import 実測(model 依存ゼロ、election.ts:46 のみ core/tools/amadeus-norm-metrics へ横断 → 移設で `./amadeus-norm-metrics` に収束)、plugin 機構新設(#1338、稼働 plugin 0)、promote-self 5面 vs dist 6面(kiro/kiro-ide は self-install 対象外)、区間内 contract 進化(#1268/#1273/#1277/#1301/#1316)、外部依存面(herdr/agmsg/Ghostty/mise)とテスト資産(fake-herdr、t234-t245、t-team-*)。
+- Measurement ref: Developer scan の observed `fd5767257` 直読 + 合成側の再実測(`git diff --shortstat a326f47bc fd5767257` = 2653 files `+355,785/-5,290`、election.ts 607行 / model 464 / store 261 / record 222 / transport 207、team-up.sh 1271 / team-msg.sh 221 / codex-safety-wait 567 / leader-sync 795、core/tools 33エントリ、dist 6面 / promote-self 5面)。詳細 file:line は `architecture.md` / `code-structure.md` / `dependencies.md`、検査・保守性は `code-quality-assessment.md` の current view に記録。
+- Current conclusion: 昇格第一次候補は選挙エンジン5本(import 境界がほぼ閉じ、唯一の横断 :46 が core/tools 内へ収束)。配布経路は core/tools 直投影 or plugin 機構(#1338、稼働0)の2択。チーム系4本は herdr/Ghostty/mise 依存が濃く昇格単位の分離が要る。SKILL→scripts 層またぎの解消を着地単位へ含める。
+- Updated artifacts: body 8成果物、本 freshness pointer、`re-scans/260722-election-core-promotion.md`。既存本文は履歴として温存し、先頭の current view のみ追加／更新。
+- Delivery boundary: 実装コード、dist/self-install 再生成、commit、PR 操作は本 scan で未実施。
+- Base source of truth: 本 intent の per-intent record。共有 timestamp は freshness pointer であり、次回の differential base は `re-scans/` の到達可能 observed から決める。
+
+## 実行メタデータ(履歴: 260720-upstream-sync-230)
 
 - Date: 2026-07-20T06:43:32Z
 - Observed at: `545e69c836d46f7bec2fa351c8e668026eb5fad5`

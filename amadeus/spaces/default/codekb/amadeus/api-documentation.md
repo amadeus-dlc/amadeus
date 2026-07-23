@@ -1,6 +1,36 @@
 # API ドキュメント
 
-## upstream-sync-230 の公開契約（2026-07-20、現在）
+## election-core-promotion の公開契約（2026-07-23、現在）
+
+observed `fd5767257` 直読。昇格対象の CLI/関数契約を記録する。
+
+### amadeus-election CLI（`scripts/amadeus-election.ts`）
+
+- Usage(:50 近傍): `bun scripts/amadeus-election.ts <open|notify|vote|status|tally|render|verify|next|report> --election <id> [--file <path>] [--result <r>] [--resolution <r>] [--transport agmsg|subagent] [--team <t>] [--from <name>] [--send-script <path>] [--project <dir>]`。
+- verb: `open`(選挙作成) / `notify`(voter へ配信) / `vote`(投票受理) / `status` / `tally`(集計) / `render`(persist draft) / `verify`(留保・timeline 検証) / `next`(typed directive loop の次手) / `report`(directive 結果報告)。
+- export 関数: `parseChoiceResolution`(:76) / `handleNext`(:116) / `handleReport`(:165) / `handleOpen`(:246) / `handleNotify`(:303) / `handleVote`(:337) / `handleStatus`(:363) / `handleTally`(:370) / `handleRender`(:385) / `handleVerify`(:467) / `parseArgs`(:541) / `main`(:588)。
+- transport 契約(`amadeus-election-transport.ts`): agmsg 経路は `send.sh` を voter 毎に spawn し exit 0 で `DeliveryRecord`(provenance `spawn-exit` :32)を mint、subagent 経路は spawn せず record 非生成(:50、検証劇場回避)。
+
+### 契約進化（区間内、移設で保全）
+
+- #1268(`ea6acac53`): tally winner を `choiceInternalNo` で決定。
+- #1273(`a6f4a4522`): fail-closed ballot 受理 — invalid-timestamp validation / amend 提出経路 / per-voter resolution。
+- #1277(`e1fd1826b`): ballot receipt time を stamp し receipt 軸で timeline verify。
+- #1301(`f3d91998a`): tie hold を choice で解決。
+- #1316(`b76739467`): sparse GoA record 受理(norm-metrics 側)。
+
+### SKILL 配布契約（`contrib/skills/amadeus-election/SKILL.md`）
+
+`compatibility`(:11): "Requires bun and this repository checkout (scripts/amadeus-election.ts)" — 配布物でありながら repo-only な `scripts/` を前提とする層またぎ契約。昇格後は参照先を配布境界内へ更新する必要がある。
+
+### チーム CLI 契約
+
+- `team-msg.sh`: send/history を agmsg backend へ委譲(:95-113、env override 可)、`TEAM_MSG` backend 選択(:212-216)、未知 backend で loud error。
+- `amadeus-leader-sync.ts`: `SYNC_ELECTION_THRESHOLD=10`(:31)超過で `thresholdExceeded`(:337)。外部依存ゼロ(node: のみ)。
+
+> 以下は過去 intent の履歴であり、今回の current marker ではない。
+
+## upstream-sync-230 の公開契約（2026-07-20、履歴）
 
 Amadeus に HTTP service API はない。公開面は CLI、directive JSON、hook payload、stage/plugin manifest、生成ファイル契約である（測定 ref: core CLI 30、switch arms 134、core exports 501、setup exports 101、hooks 11）。
 

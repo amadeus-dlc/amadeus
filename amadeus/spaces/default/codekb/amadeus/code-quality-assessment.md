@@ -1,6 +1,34 @@
 # コード品質評価
 
-> **現在の品質観測は intent `260720-upstream-sync-230`(2026-07-20、下記「upstream v2.3.0 同期の品質評価」節)**。以下の過去 intent 節に残る「本 intent」「最新」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
+> **現在の品質観測は intent `260722-election-core-promotion`(2026-07-23、直下「election-core-promotion の品質・保守性」節)**。それより下の各節に残る「現在」「本 intent」「最新」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
+
+## election-core-promotion の品質・保守性（260722-election-core-promotion）
+
+実測基準は base `a326f47bc0146a3b4285552f42b92fd61fb343a7`、observed `fd5767257d82ff02d217aaee051478ec027d11e6`、祖先性 exit 0、距離115(`git rev-list --count a326f47bc..fd5767257`)。差分 2653 files、`+355,785/-5,290` だが大半は選挙 record・監査シャード・生成投影・工程記録で、昇格対象の実装差分ではない。日付の新しい非祖先 observed は `--is-ancestor` exit 1 のため base 候補から除外。
+
+### 昇格適合の品質観測
+
+- 選挙エンジンの import 衛生: model が import ゼロ(純粋)、他も node: + model + 唯一の core 横断(election.ts:46)。この横断は core/tools 移設で `./amadeus-norm-metrics` へ収束するため、昇格による循環依存・層違反は生じない見込み。
+- 配布境界の非対称(品質債務): 配布 SKILL(SKILL.md:11)が repo-only な `scripts/` を参照する層またぎ。現状は「配布されるが動かない可能性のある SKILL」を許す構造で、コア昇格が解消対象の品質債務。
+- 外部依存の局在: チーム系の herdr/Ghostty/mise 依存は team-up.sh に局在(:56/:426/:444/:453/:831/:937/:976)。core 中立層へ持ち込むと Bun-only 前提を破るため、昇格単位の分離が保守性の分岐点。
+- plugin 機構(#1338): 新設だが稼働 plugin 0(`plugins/` 不在、0-file baseline)。未検証の配布経路であり、選挙昇格に採用する場合は non-active byte-identical / no-clobber / 6面 projection の検証が必要。
+
+### contract 進化の回帰リスク
+
+移設対象の選挙 contract は区間内で #1268/#1273/#1277/#1301/#1316 と進化済み。バイト等価移設を回帰テスト(t234-t245、t-team-*)で固定しないと、fail-closed ballot・tie hold・receipt time・sparse GoA の各不変量が退行しうる。
+
+### テスト・ドリフトガード（RE 断面、未実施項目は明記）
+
+- 選挙テスト: unit t234/t238/t239/t244-choice、integration t235/t236/t240/t242/t244-tie、e2e t237/t241、隣接 t243。t244 は unit/integration で二重採番。
+- チームテスト: t-team-msg / t-team-up-codex-resume.serial / t-team-up-msg-backend / t-team-up-watcher-arming(integration)、t-team-up-codex-safety-wait(unit)、t245-amadeus-leader-sync(unit+integration)。
+- fake-herdr shim(t-team-msg.test.ts:23-52、unknown verb exit 2)で外部依存を in-process 再現可能 — 昇格後もシーム経由テストが成立。
+- `bun scripts/package.ts --check` / `bun scripts/promote-self.ts --check --no-build` / lint / typecheck / full tests は本 RE では未実施(Construction の完了判定に流用しない)。
+
+### 保守性リスク（据え置き）
+
+巨大ファイル・複雑度の一般傾向は下記履歴節が有効。本 intent 固有では team-up.sh 1271行が bash 単一ファイルとして最大の昇格対象で、herdr/Ghostty/mise 依存が散在するため、core 昇格ではなくシーム抽出(SafetyWaitAdapter 型)を保守性の第一手とする。
+
+> 以下は過去 intent の履歴。今回 intent の current marker ではない。
 
 ## upstream v2.3.0 同期の品質評価（260720-upstream-sync-230）
 

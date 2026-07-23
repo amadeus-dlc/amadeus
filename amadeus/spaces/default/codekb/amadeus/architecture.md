@@ -1,6 +1,51 @@
 # アーキテクチャ
 
-> **2026-07-20 更新（intent `260720-upstream-sync-230`、現在）**: base `a326f47bc0146a3b4285552f42b92fd61fb343a7` → observed `545e69c836d46f7bec2fa351c8e668026eb5fad5`（32コミット）の differential refresh。24 ADOPT/ADAPT の主戦場は「stage schema + Unit kind」から graph/parser/directive/sensor、plugin discovery/package、6 harness projection、compose/no-clobber/self-heal compile、dist、4 harness self-install、tests/docs へ流れる変更鏖である。件数は Developer scan 実測（core tools 30、hooks 11、agents 14、stages 32、sensors 5、harness 六面 69 files）に基づく。
+## 260722-election-core-promotion の構造照合（2026-07-23、現在）
+
+base `a326f47bc0146a3b4285552f42b92fd61fb343a7` → observed `fd5767257d82ff02d217aaee051478ec027d11e6`（祖先性 exit 0、距離115）の differential refresh。焦点はチーム機能(選挙エンジン + チーム協働基盤)の repo-only `scripts/` → 配布フレームワーク `packages/framework/` 昇格。件数・行数は observed 直読。
+
+### 配布境界の非対称（昇格の核心）
+
+- 選挙エンジン5本(すべて `scripts/` repo-only): `amadeus-election.ts` 607行 / `amadeus-election-model.ts` 464 / `amadeus-election-store.ts` 261 / `amadeus-election-record.ts` 222 / `amadeus-election-transport.ts` 207。
+- チーム系4本(すべて `scripts/` repo-only): `team-up.sh` 1271 / `team-msg.sh` 221 / `team-up-codex-safety-wait.ts` 567 / `amadeus-leader-sync.ts` 795。
+- 配布物への実体投影は0件: `find dist .claude .codex .cursor .opencode -name '*election*'` は `.claude/skills/amadeus-election`(= contrib 投影の SKILL ディレクトリ)のみで、`scripts/` の CLI 実体は含まない。
+- 一方 SKILL は配布される: `promote-self.ts:45` の `CONTRIBUTOR_SKILLS_ROOT=contrib/skills` → `.claude/skills`+`.agents/skills`(:46)。`contrib/skills/amadeus-election/SKILL.md:11` は "Requires bun and this repository checkout (scripts/amadeus-election.ts)"、:21/:31 で `bun scripts/amadeus-election.ts` を直接呼ぶ。
+- **帰結**: 配布された SKILL が repo-only な `scripts/` を参照する層またぎが構造的に存在。コア昇格は SKILL 参照先を配布境界内へ移す(scripts→core/tools 昇格 + SKILL 参照更新)ことでこれを閉じる。
+
+### 選挙エンジンの import 境界（移設 blast radius）
+
+- `amadeus-election-model.ts`: import ゼロ(`grep '^import'` 0件)= 純粋ドメインモデル。
+- `amadeus-election-store.ts`: node:fs/path + model。
+- `amadeus-election-record.ts`: model のみ。
+- `amadeus-election-transport.ts`: model + node:fs。外部プロセスは agmsg `send.sh` spawn(header :8-14、provenance `spawn-exit` :32、subagent 経路は spawn せず record 非生成 :50)。
+- `amadeus-election.ts`: node:fs/os/path(:20-22) + 相互4本 + **唯一の横断 import `../packages/framework/core/tools/amadeus-norm-metrics`(:46、`parseGoaLine`)**。`amadeus-norm-metrics.ts` は `packages/framework/core/tools/` に実在(982行)し dist 投影済み。
+- **帰結**: 選挙エンジンを `packages/framework/core/tools/` へ移設すれば :46 の相対 import は同一 core/tools 内の `./amadeus-norm-metrics` へ収束し、唯一の層またぎが解消する。model の依存ゼロにより昇格の blast radius は小さい。
+
+### plugin 機構の新設（#1338、配布経路の新選択肢）
+
+`scripts/package.ts` に plugin 投影が新設: `pluginsRoot()`(:75-76 = `AMADEUS_PLUGINS_ROOT ?? join(REPO_ROOT, "plugins")`、不在時 0-file baseline :70-71)、`repoPlugins()`(:297-298)、harness 投影(:311-312, :496-498)、中立 bundle `dist/plugins/<name>/`(:756-766)。`plugin-projection.ts` 新規(+425)。`plugins/` ディレクトリは現状不在(稼働 plugin 0)。昇格の配布経路として core/tools 直投影の代替候補になるが、現時点は 0-file baseline。
+
+### 投影規則と対象面
+
+- `promote-self.ts` managedDirs(:37-43)= 5エントリ(`dist/claude/.claude` / `dist/codex/.codex` / `dist/codex/.agents` / `dist/cursor/.cursor` / `dist/opencode/.opencode`)。dist は6面(`ls dist/` = claude/codex/cursor/kiro/kiro-ide/opencode)。**kiro/kiro-ide は dist 生成対象だが self-install 対象外** — 昇格資産の配布時にこの5面/6面差を保つ。
+- coreDirs 投影規則: `dist/claude/manifest.ts:42-54`(tools→tools 筆頭)。core/tools 現況 33エントリ(`amadeus-*.ts` 32 + data)。
+
+### 選挙 contract の区間内進化（移設で固定すべき面）
+
+`ea6acac53`(#1268 tally を choiceInternalNo で決定) / `a6f4a4522`(#1273 fail-closed ballot: invalid-timestamp validation・amend 経路・per-voter resolution) / `e1fd1826b`(#1277 ballot receipt time + receipt 軸 timeline verify) / `f3d91998a`(#1301 tie hold を choice で解決) / `b76739467`(#1316 sparse GoA 受理)。diff: election-model +165 / -record +60 / -store +41 / election.ts +74(transport 無変更)。
+
+### 外部依存面
+
+- herdr: `team-up.sh:56`(HERDR env) / `:426`(workspace create) / `:444`(pane split) / `:453`(attach、Ghostty `open -na`) / `:155-161`(ready 待ち) / `:152`(pane id パーサ)。
+- agmsg: `team-up.sh:45`(AGMSG_ROOT) / `team-msg.sh:95-113`(send/history 委譲、env override 可) / `:212-216`(TEAM_MSG backend 選択) / `:56`(role→herdr 名逆写像)。
+- mise trust: `team-up.sh:831/:937/:976`(printf 起動文字列に `mise trust -q`)。
+- leader-sync: 外部依存ゼロ(node: のみ :7-21)、`SYNC_ELECTION_THRESHOLD=10`(:31、`thresholdExceeded` :337)。
+- codex-safety-wait: `SafetyWaitAdapter` port(:30-33)で herdr 抽象化、純ロジック poll(:387)。
+- **帰結**: 選挙エンジンは core 中立層へ昇格適合。チーム系(team-up.sh 等)は herdr/Ghostty/mise 依存が濃く、core 中立層より harness 表層/scripts 寄りの性質 — 昇格単位の分離を要する。
+
+> 以下は過去 intent の履歴であり、今回の current marker ではない。
+
+> **2026-07-20 更新（intent `260720-upstream-sync-230`、履歴）**: base `a326f47bc0146a3b4285552f42b92fd61fb343a7` → observed `545e69c836d46f7bec2fa351c8e668026eb5fad5`（32コミット）の differential refresh。24 ADOPT/ADAPT の主戦場は「stage schema + Unit kind」から graph/parser/directive/sensor、plugin discovery/package、6 harness projection、compose/no-clobber/self-heal compile、dist、4 harness self-install、tests/docs へ流れる変更鏖である。件数は Developer scan 実測（core tools 30、hooks 11、agents 14、stages 32、sensors 5、harness 六面 69 files）に基づく。
 
 ## upstream v2.3.0 同期の現行アーキテクチャ（260720-upstream-sync-230）
 

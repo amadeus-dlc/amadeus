@@ -1,6 +1,28 @@
 # 技術スタック
 
-## upstream-sync-230 の現行技術スタック（2026-07-20、現在）
+## election-core-promotion の技術面（2026-07-23、現在）
+
+observed `fd5767257` 直読。昇格に関わる技術・配布面のみ差分記録する(全般スタックは下記履歴節が有効)。
+
+### 昇格対象の実行時前提
+
+- 選挙エンジン・チーム系ともに Bun / TypeScript(+ team-up/team-msg は bash)。選挙エンジンの外部依存は node: 標準 + agmsg `send.sh` spawn のみ(transport) — Bun-only 配布前提と両立。
+- チーム系の外部依存は濃い: herdr(terminal multiplexer)、Ghostty(`open -na` によるターミナル起動、team-up.sh:453)、mise(`mise trust -q` 焼き込み、team-up.sh:831/:937/:976)、agmsg(メッセージング backend)。これらはホスト環境ツールで、配布フレームワークの Bun-only 前提の外にある — 昇格時に core 中立層へは持ち込めず、harness 表層/scripts に留めるか adapter シームで抽象化する。
+
+### 配布・投影機構
+
+- dist 6面: claude / codex / cursor / kiro / kiro-ide / opencode(`ls dist/`)。
+- self-install(promote-self managedDirs :37-43): 5エントリ(claude/.claude、codex/.codex、codex/.agents、cursor/.cursor、opencode/.opencode)。**kiro/kiro-ide は self-install 対象外**。
+- plugin 機構(#1338 新設): `AMADEUS_PLUGINS_ROOT ?? repo/plugins`(package.ts:75-76)、不在時 0-file baseline(:70-71)、中立 bundle `dist/plugins/<name>/`(:756-766)。`plugin-projection.ts` +425。稼働 plugin 0。
+- 配布経路の選択肢: (a) core/tools 直投影(既存 coreDirs 規則、manifest.ts:42-54) (b) plugin 機構(新設・稼働0)。
+
+### 移設で収束する依存
+
+election.ts:46 の唯一の core 横断 import `../packages/framework/core/tools/amadeus-norm-metrics`(`parseGoaLine`)は、選挙エンジンを core/tools へ移設すると `./amadeus-norm-metrics`(同ディレクトリ 982行、dist 投影済み)へ収束する。
+
+> 以下は過去 intent の履歴であり、今回の current marker ではない。
+
+## upstream-sync-230 の現行技術スタック（2026-07-20、履歴）
 
 | 層 | 技術／バージョン | 用途 |
 |---|---|---|

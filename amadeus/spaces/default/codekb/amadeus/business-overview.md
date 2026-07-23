@@ -1,6 +1,24 @@
 # ビジネス概要
 
-## 260720-upstream-sync-230 の業務境界（2026-07-20、現在）
+## 260722-election-core-promotion の業務境界（2026-07-23、現在）
+
+本 intent は、チーム機能 — 選挙エンジン(合意形成 CLI)とチーム協働基盤(team-up / team-msg / leader-sync / codex-safety-wait) — を、現在の repo-only な `scripts/` から配布フレームワーク `packages/framework/`(→ dist / self-install)へ「コア昇格」する変更の下地を、observed `fd5767257d82ff02d217aaee051478ec027d11e6`(base `a326f47bc`、距離115)で再照合した差分リフレッシュである。
+
+利用者価値は、チームモード(独立セッション・選挙・agmsg・worktree 隔離)を**フレームワーク配布物の一級機能として全ハーネスへ届ける**ことにある。現状は SKILL(`contrib/skills/amadeus-election/`)だけが配布され、それが参照する CLI 実体(`scripts/amadeus-election.ts` 等)は repo チェックアウトにしか存在しないため、配布された SKILL が repo-only なスクリプトを指す**層またぎの非対称**を抱える(SKILL.md:11 が "Requires ... this repository checkout" と明記)。コア昇格はこの非対称を解消し、選挙・チーム機能を配布境界の内側へ移す。
+
+| 業務面 | 現在の意味 |
+|---|---|
+| B1 配布の一級化 | 選挙エンジン5本 + チーム系4本を配布物へ昇格し、SKILL→scripts 層またぎを解消する |
+| B2 合意形成の contract 保全 | 区間内で進化した選挙 contract(#1268/#1273/#1277/#1301/#1316)をバイト等価に移設し回帰で固定する |
+| B3 配布経路の選択 | core/tools 直投影(既存 coreDirs 規則)か plugin 機構(#1338、稼働0の新設)かを選ぶ |
+| B4 対象面の整合 | dist 6面 / self-install 5面の対象差(kiro/kiro-ide は self-install 対象外)を保つ |
+| B5 依存の切り分け | 選挙エンジン(依存ほぼゼロ)とチーム系(herdr/Ghostty/mise 依存が濃い)の昇格単位を分離判断する |
+
+成功条件は、(1) 昇格対象資産の配布境界・import 境界・外部依存面を実測で確定する、(2) `packages/framework/core/` / `packages/framework/harness/{name}/` を正本として6ハーネス生成物を同期する、(3) `bun scripts/package.ts --check` と `bun scripts/promote-self.ts --check --no-build` を維持する、(4) 移設 contract の回帰テスト(t234-t245 / t-team-*)を同一着地単位へ含める、である。
+
+> 以下は過去 intent の業務境界であり、今回の current marker ではない。
+
+## 260720-upstream-sync-230 の業務境界（2026-07-20、履歴）
 
 Amadeus は、単一の AI-DLC core を6ハーネス（Claude Code、Codex、Cursor、Kiro CLI、Kiro IDE、OpenCode）へ決定的に投影する brownfield フレームワークである。本 intent は、承認済みの upstream `awslabs/aidlc-workflows` v2.2.0→v2.3.0 同期計画を実装可能な要件・設計へ落とすため、24件の ADOPT/ADAPT 項目を現行コード `545e69c836d46f7bec2fa351c8e668026eb5fad5` で再照合した差分リフレッシュである。
 

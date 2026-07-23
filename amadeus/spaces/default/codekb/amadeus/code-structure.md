@@ -1,6 +1,51 @@
 # コード構造
 
-## upstream-sync-230 の変更面（2026-07-20、現在）
+## election-core-promotion の昇格対象構造（2026-07-23、現在）
+
+observed `fd5767257`(base `a326f47bc`、距離115)直読。チーム機能の昇格対象を配布境界・所属レイヤーで整理する。
+
+### 昇格対象資産と現在の所属
+
+| 資産 | パス | 行数 | 現在の所属 | 昇格適合 |
+|---|---|---:|---|---|
+| 選挙 CLI | `scripts/amadeus-election.ts` | 607 | repo-only | :46 のみ core 横断(下記) |
+| 選挙モデル | `scripts/amadeus-election-model.ts` | 464 | repo-only | import ゼロ = 純粋 |
+| 選挙ストア | `scripts/amadeus-election-store.ts` | 261 | repo-only | node:fs/path + model |
+| 選挙レコード | `scripts/amadeus-election-record.ts` | 222 | repo-only | model のみ |
+| 選挙トランスポート | `scripts/amadeus-election-transport.ts` | 207 | repo-only | model + node:fs + agmsg spawn |
+| team-up | `scripts/team-up.sh` | 1271 | repo-only | herdr/Ghostty/mise 依存 |
+| team-msg | `scripts/team-msg.sh` | 221 | repo-only | agmsg backend 委譲 |
+| codex-safety-wait | `scripts/team-up-codex-safety-wait.ts` | 567 | repo-only | SafetyWaitAdapter port |
+| leader-sync | `scripts/amadeus-leader-sync.ts` | 795 | repo-only | 外部依存ゼロ(node: のみ) |
+
+### import グラフ（選挙エンジン）
+
+- model → (なし)
+- record → model
+- store → model + node:fs/path
+- transport → model + node:fs（+ agmsg `send.sh` spawn、header :8-14）
+- election.ts → model / record / transport / store（相互4本） + **`../packages/framework/core/tools/amadeus-norm-metrics`(:46、`parseGoaLine`)= 唯一の core 横断**
+- 移設先 `packages/framework/core/tools/` では :46 が `./amadeus-norm-metrics`(982行、同ディレクトリ実在)へ収束。
+
+### election.ts の export 面（CLI 表層）
+
+CLI verb: `open/notify/vote/status/tally/render/verify/next/report`(:50)。export: `parseChoiceResolution`(:76) / `handleNext`(:116) / `handleReport`(:165) / `handleOpen`(:246) / `handleNotify`(:303) / `handleVote`(:337) / `handleStatus`(:363) / `handleTally`(:370) / `handleRender`(:385) / `handleVerify`(:467) / `parseArgs`(:541) / `main`(:588)。
+
+### 配布・投影の構造
+
+- `promote-self.ts`: managedDirs 5面(:37-43)、`CONTRIBUTOR_SKILLS_ROOT`(:45) → `.claude/skills`+`.agents/skills`(:46)、投影ループ :229-239(evals/ 除外 :233)。
+- `package.ts`: `pluginsRoot()`(:75-76) / `repoPlugins()`(:297-298) / harness plugin 投影(:311-312, :496-498) / 中立 bundle dist/plugins(:756-766)。`plugin-projection.ts` 新規(+425)。
+- coreDirs 投影規則: `dist/claude/manifest.ts:42-54`(tools→tools 筆頭)。core/tools 現況 33エントリ。
+
+### テスト資産の配置
+
+- 選挙 unit: `t234-election-model` / `t238-election-record` / `t239-election-transport` / `t244-election-choice-resolution`。integration: `t235-election-store` / `t236-election-loop` / `t240-election-transport` / `t242-election-skill-vocabulary` / `t244-election-tie-choice`。e2e: `t237-election-walking-skeleton` / `t241-election-machine-executor`。隣接 `t243-post-complete-audit-stop`。t244 は unit/integration で二重採番。
+- チーム: integration `t-team-msg` / `t-team-up-codex-resume.serial` / `t-team-up-msg-backend` / `t-team-up-watcher-arming`。unit `t-team-up-codex-safety-wait`(+fixtures)。leader-sync `t245-amadeus-leader-sync`(unit + integration)。
+- fake-herdr shim: `t-team-msg.test.ts:23-52`(shim を chmod 0755、verb env 分岐、unknown verb `exit 2` :47)、`t-team-up-msg-backend.test.ts:68`(未知 backend で loud error assert)。
+
+> 以下は過去 intent の履歴であり、今回の current marker ではない。
+
+## upstream-sync-230 の変更面（2026-07-20、履歴）
 
 現行 observed `545e69c836d46f7bec2fa351c8e668026eb5fad5` の構成は、core tools 30、hooks 11、agents 14、stages 32、sensors 5、6ハーネス固有 69 files、TypeScript 621 files、tests 461 files（unit 216 / integration 159 / e2e 70 / smoke 14）である（測定 ref: Developer scan の `find`/test runner 分類、observed HEAD）。主要変更面は次の通り。
 

@@ -1,6 +1,48 @@
 # コンポーネント棚卸し
 
-## upstream-sync-230 コンポーネント（2026-07-20、現在）
+## election-core-promotion コンポーネント（2026-07-23、現在）
+
+observed `fd5767257` 直読。昇格対象のコンポーネントと依存を棚卸しする。
+
+### 選挙エンジン（昇格第一次候補）
+
+| コンポーネント | パス | 行数 | 依存 |
+|---|---|---:|---|
+| CLI 表層 | `scripts/amadeus-election.ts` | 607 | model/record/transport/store + core:norm-metrics(:46) |
+| ドメインモデル | `scripts/amadeus-election-model.ts` | 464 | なし(純粋) |
+| ストア | `scripts/amadeus-election-store.ts` | 261 | node:fs/path + model |
+| レコード | `scripts/amadeus-election-record.ts` | 222 | model |
+| トランスポート | `scripts/amadeus-election-transport.ts` | 207 | model + node:fs + agmsg spawn |
+
+唯一の core 横断は election.ts:46(`parseGoaLine` from `amadeus-norm-metrics`)。移設先 `packages/framework/core/tools/amadeus-norm-metrics.ts`(982行)は実在・dist 投影済み。
+
+### チーム協働基盤（昇格単位を分離判断）
+
+| コンポーネント | パス | 行数 | 外部依存 |
+|---|---|---:|---|
+| team-up | `scripts/team-up.sh` | 1271 | herdr(:56,:426,:444,:453,:152,:155-161) / agmsg(:45) / Ghostty(:453) / mise(:831,:937,:976) |
+| team-msg | `scripts/team-msg.sh` | 221 | agmsg backend(:95-113,:212-216) |
+| codex-safety-wait | `scripts/team-up-codex-safety-wait.ts` | 567 | herdr(SafetyWaitAdapter port :30-33) |
+| leader-sync | `scripts/amadeus-leader-sync.ts` | 795 | なし(node: のみ、SYNC_ELECTION_THRESHOLD=10 :31) |
+
+### 配布コンポーネント
+
+| コンポーネント | パス | 状態 |
+|---|---|---|
+| SKILL(配布) | `contrib/skills/amadeus-election/SKILL.md` | 配布されるが scripts/ を参照(層またぎ) |
+| plugin 投影(新設) | `scripts/plugin-projection.ts`(+425) / `package.ts` pluginsRoot(:75-76) | 稼働 plugin 0、`plugins/` 不在(0-file baseline) |
+| promote-self managedDirs | `scripts/promote-self.ts:37-43` | 5面(dist は6面、kiro/kiro-ide は self-install 対象外) |
+| core/tools | `packages/framework/core/tools/` | 33エントリ(`amadeus-*.ts` 32 + data) |
+
+### テスト資産
+
+- 選挙: t234/t238/t239/t244-choice(unit)、t235/t236/t240/t242/t244-tie(integration)、t237/t241(e2e)、t243(隣接)。
+- チーム: t-team-msg / t-team-up-codex-resume.serial / t-team-up-msg-backend / t-team-up-watcher-arming(integration)、t-team-up-codex-safety-wait(unit+fixtures)、t245-amadeus-leader-sync(unit+integration)。
+- fake-herdr shim: t-team-msg.test.ts:23-52(unknown verb exit 2 :47)、t-team-up-msg-backend.test.ts:68(未知 backend loud error)。
+
+> 以下は過去 intent の履歴であり、今回の current marker ではない。
+
+## upstream-sync-230 コンポーネント（2026-07-20、履歴）
 
 | コンポーネント | 責務 | upstream-sync での役割 |
 |---|---|---|
