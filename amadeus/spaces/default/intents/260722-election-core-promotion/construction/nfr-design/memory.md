@@ -12,3 +12,5 @@
 
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
+
+- 2026-07-23T04:30:24Z — [Deviations] U4 ND iter2 の残余(logical-components の fake shim 行 beforeAll 残存)は予算消費後の機械検証可能クラスとして conductor 閉包: 是正一意(1行)+same-root sweep(ND 5ファイルの beforeAll grep — 撤回申告文中の言及以外 0 件)で機械確認(delegated-review 追補 (b))。iter1 是正時の same-root 走査漏れとして PM 報告対象。
