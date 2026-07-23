@@ -4909,3 +4909,147 @@
 **Message**: Confirmed: `decisions.md`(ADR-4)は functional-design の consumes 宣言(unit-of-work / unit-of-work-story-map / requirements / components / component-methods / services)に含まれない。是正文の「consumes 宣言外」申告は正しい。\n\nVER
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:32:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: 770c2efe
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:32:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: 770c2efe
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/functional-design/business-logic-model.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:32:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: ede083ea
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:32:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: ede083ea
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/functional-design/business-logic-model.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:32:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2764f9ce
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:32:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2764f9ce
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/functional-design/business-rules.md
+**Duration ms**: 44
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:32:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: c6b6e42a
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:32:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: c6b6e42a
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/functional-design/business-rules.md
+**Duration ms**: 44
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:32:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: b513a045
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:32:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: b513a045
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/functional-design/domain-entities.md
+**Duration ms**: 44
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:32:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2038dd71
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:32:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2038dd71
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/functional-design/domain-entities.md
+**Duration ms**: 43
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T03:36:33Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a3de01fa04c45ec21
+**Message**: VERDICT: NOT-READY\ninvocationId: 2c82e930-9d21-4e7c-9c7c-4a4e31772652 iteration: 1\n\n**プロセス上の申告(先頭に明記)**: レビュー中に `docs/guage/team-messaging.md` の内容確認と `docs/guide/` の `ls` を行いました。これは本レビューに渡されたスコープ(cons
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T03:38:43Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: ab7561bfe776ec58e
+**Message**: All three closures verified as internally consistent with no residual citation error.\n\nVERDICT: READY\ninvocationId: 74e4fcbc-ed19-4126-afb4-d42535075a40 iteration: 2\n\n閉包確認:\n\n1. **Major1(FR-7d エントリ不在)→
+
+---
