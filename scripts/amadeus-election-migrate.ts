@@ -491,7 +491,7 @@ export function verifyBeforeMigration(
     .filter((electionId) => verify(root, electionId) === 0);
 }
 
-function renderFidelity(result: FidelityResult, planHash: string): string {
+export function renderFidelity(result: FidelityResult, planHash: string): string {
   return [
     "# Elections Migration Fidelity Record",
     "",

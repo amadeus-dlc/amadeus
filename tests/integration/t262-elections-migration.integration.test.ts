@@ -15,7 +15,9 @@ import {
   inventoryDirectPathReferences,
   main,
   readCandidates,
+  renderFidelity,
   sha256,
+  verifyBeforeMigration,
   verifyFidelity,
   type MigrationPlan,
 } from "../../scripts/amadeus-election-migrate";
@@ -108,6 +110,18 @@ describe("migration CLI", () => {
     expect(calls[0].at(-1)).toEndWith("E-B/election.json");
   });
 
+  test("candidate reading rejects invalid identity and ignores malformed timeline rows", () => {
+    writeFileSync(join(root, "E-A", "election.json"), JSON.stringify({ state: "recorded" }));
+    expect(() => readCandidates(projectDir, root)).toThrow(/invalid election.json/);
+
+    writeFileSync(
+      join(root, "E-A", "election.json"),
+      JSON.stringify({ electionId: "E-A", state: "recorded" }),
+    );
+    writeFileSync(join(root, "E-A", "timeline.json"), JSON.stringify([null, {}, { at: 7 }]));
+    expect(readCandidates(projectDir, root, () => null)[0]?.timelineInstants).toEqual([]);
+  });
+
   test("apply changes only directory names and elections.json, preserving election contents", () => {
     const before = new Map(
       readdirSync(join(root, "E-A")).map((file) => [
@@ -139,6 +153,36 @@ describe("migration CLI", () => {
     for (const [file, digest] of before) {
       expect(sha256(readFileSync(join(root, "260720-e-a", file)))).toBe(digest);
     }
+  });
+
+  test("apply fails closed for a missing target or corrupt registry", () => {
+    const missingPlan: MigrationPlan = {
+      renames: [{
+        from: "missing",
+        to: "also-missing",
+        electionId: "E-A",
+        createdAt: "2026-07-20T12:34:56Z",
+        createdAtSource: "timeline-oldest",
+      }],
+      registry: [{
+        electionId: "E-A",
+        dirName: "also-missing",
+        createdAt: "2026-07-20T12:34:56Z",
+        status: "recorded",
+      }],
+      conflicts: [],
+      degraded: [],
+      skipped: [],
+    };
+    expect(() => applyPlan(root, missingPlan)).toThrow(/planned directory is missing/);
+
+    writeFileSync(join(root, "elections.json"), "{ corrupt");
+    const sameDirectoryPlan = {
+      ...missingPlan,
+      renames: [{ ...missingPlan.renames[0], from: "E-A", to: "E-A" }],
+      registry: [{ ...missingPlan.registry[0], dirName: "E-A" }],
+    };
+    expect(() => applyPlan(root, sameDirectoryPlan)).toThrow(/registry append failed/);
   });
 
   test("fidelity independently verifies resolver, counts, and direct-path inventory", () => {
@@ -177,6 +221,78 @@ describe("migration CLI", () => {
       directPathReferences: ["docs/reference.md: elections/E-A"],
     });
     expect(verifyFidelity(projectDir, root, plan, ["E-X"], () => 0).ok).toBe(false);
+    expect(verifyFidelity(projectDir, root, plan, ["E-A"], () => 1)).toMatchObject({
+      ok: false,
+      verificationFailures: ["E-A"],
+    });
+  });
+
+  test("fidelity fails closed for an absent registry and unresolved rows", () => {
+    const emptyPlan: MigrationPlan = {
+      renames: [],
+      registry: [],
+      conflicts: [],
+      degraded: [],
+      skipped: [],
+    };
+    expect(verifyFidelity(projectDir, root, emptyPlan, [], () => 0)).toMatchObject({
+      ok: false,
+      resolutionFailures: ["registry absent"],
+    });
+
+    writeFileSync(
+      join(root, "elections.json"),
+      JSON.stringify([{
+        electionId: "E-MISSING",
+        dirName: "missing",
+        createdAt: "2026-07-20T12:34:56Z",
+        status: "recorded",
+      }]),
+    );
+    expect(verifyFidelity(projectDir, root, emptyPlan, [], () => 0)).toMatchObject({
+      ok: false,
+      resolutionFailures: ["E-MISSING"],
+    });
+  });
+
+  test("pre-migration verification and fidelity rendering expose their full result", () => {
+    const plan: MigrationPlan = {
+      renames: [],
+      registry: [
+        {
+          electionId: "E-B",
+          dirName: "E-B",
+          createdAt: "2026-07-20T12:34:56Z",
+          status: "recorded",
+        },
+        {
+          electionId: "E-A",
+          dirName: "E-A",
+          createdAt: "2026-07-20T12:34:56Z",
+          status: "recorded",
+        },
+      ],
+      conflicts: [],
+      degraded: [],
+      skipped: [],
+    };
+    expect(verifyBeforeMigration(root, plan, (_root, electionId) => electionId === "E-A" ? 0 : 1))
+      .toEqual(["E-A"]);
+    expect(
+      renderFidelity(
+        {
+          ok: false,
+          baselineVerified: ["E-A"],
+          verified: [],
+          resolutionFailures: ["E-B"],
+          verificationFailures: ["E-A"],
+          registryRows: 2,
+          directories: 1,
+          directPathReferences: ["docs/reference.md: elections/E-A"],
+        },
+        "abc",
+      ),
+    ).toContain("- Result: FAIL");
   });
 
   test("migration module cannot create its own execution approval record", () => {
