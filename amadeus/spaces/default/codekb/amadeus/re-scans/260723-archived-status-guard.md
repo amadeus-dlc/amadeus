@@ -32,7 +32,7 @@
 
 ## テスト番号の訂正
 
-- 最大テスト番号は `tests/{integration,unit,e2e,smoke}` の実測で **t257**。scan-notes §8 は「新規空き = t258 以降」と記載したが、**t258 は PR #1407 が本日確保済み**のため、本 intent の新規テストは **t259 以降**を用いる（並行 swarm 採番時はユニット別事前予約、cid:swarm-test-number-reservation）。
+- 最大テスト番号は `tests/{integration,unit,e2e,smoke}` の実測で **t257**。scan-notes §8 は「新規空き = t258 以降」と記載したが、**t258 は PR #1407 が本日確保済み**のため、本 intent の新規テストは **t261 以降**を用いる（並行 swarm 採番時はユニット別事前予約、cid:swarm-test-number-reservation）。
 
 ## 設計裁定 目録（7 件 — requirements / design で確定要）
 
@@ -76,7 +76,7 @@
 | 14 | audit-format.md | `packages/framework/core/knowledge/amadeus-shared/audit-format.md:11` | 件数ヘッダ + 新カテゴリ/行（手動同期） |
 | 15 | 移行データ | `intents.json` 260713 行 | "closed" → "archived" |
 | 16 | dist×6 + self-install | `scripts/package.ts` / `promote:self` | 上記正本すべての再生成 + dist:check/promote:self:check |
-| 17 | test fixtures | t243/t165/t160/`tests/harness/fixtures.ts:195` 等 | 新 verb・seal・ガードの回帰 + tNNN=**t259〜** |
+| 17 | test fixtures | t243/t165/t160/`tests/harness/fixtures.ts:195` 等 | 新 verb・seal・ガードの回帰 + tNNN=**t261〜** |
 
 ## 回帰観点（落ちる実証・テスト母体）
 
