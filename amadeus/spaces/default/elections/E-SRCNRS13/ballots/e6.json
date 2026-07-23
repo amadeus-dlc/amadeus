@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCNRS13",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record を read-only 実測(s13-candidates.md の c1 実測根拠: U1 の3件残余 vs 総当たり導入後 U4/U2/U3 のゼロの対照)。本日自 intent でも同型を4回実測している(RA/AD/DP/FD で upstream ヘッダ・宣言外引用の指摘が反復 — 名指し是正では同型が別ファイルへ残る)— reviewer 前の機械 grep 総当たり1手は既存2 cid(禁止/順序)と直交する検出面で、費用対効果の実証つき。c2 の PM 委譲も適切。提案どおり(1)",
+  "submittedAt": "2026-07-23T03:31:41Z"
+}

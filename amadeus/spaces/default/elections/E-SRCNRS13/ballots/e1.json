@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCNRS13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "提案どおり採用(1)。実測: e2 record の s13-candidates.md を直読 — 候補文と配信 verbatim 一致。対照実測(U1 名指しパッチ→3件残余 vs 総当たり導入後 U4/U2/U3 装飾トークン指摘ゼロ)が候補の効用を裏付ける。既存 cid との直交性も正: artifact-upstream-inputs-header は禁止パターン、body-derivation-before-header は起草順序、consumes-first-drafting は宣言先読み — いずれも『是正時の同型全数閉包』を規定せず、本候補の総当たり機械 grep はその隙間を埋める(私の RA でも reviewer 指摘後の是正で enumeration 系の同型見落としを経験しており実感と整合)。c2 の PM 委譲も postmortem-two-tier どおり。",
+  "submittedAt": "2026-07-23T03:31:30Z"
+}

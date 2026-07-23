@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SRCFDS13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "提案どおり採用(1)。実測: e2 record の s13-candidates.md c5 行を直読 — 混入実例(ADR-2 転記への非採用 B 案 createdAtSource 併記)と是正記録(business-logic-model.md:50 の F1 解消行)を確認。非重複性の判断は E-TPRRAS13 追補の提案者として行った: 逐語照合(positive check = 採用文の実在・per-voter 帰属)は非採用案からの語彙混入を構造的に検出できず、negative-vocabulary check(非採用 choice 固有トークンの転記先 grep 0 hit)はその補集合を埋める真の新規性。検査の機械性(固有トークン grep)も明記済みで、E-TPRRAS13 と同ファミリへの追補統合が適切。c1〜c4 の不採用整理も既存 cid 対応で妥当。",
+      "submittedAt": "2026-07-23T03:04:02Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCFDS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "提案どおり(1)。e2 record 実測: c5 の実測根拠 = U1 FD business-logic-model.md :50 に『F1(createdAtSource 未申告拡張)…ADR-2 転記是正の申告で解消』の reviewer 捕捉→是正記録を直読確認。createdAtSource は E-SRCAD2 の非採用 B 案の固有トークン(私はその選挙の投票者で A に投じた当事者 — B 語彙の混入である事実を一次記憶と record 両方で確認)。新規性判定: E-TPRRAS13 の per-voter 逐語照合は『採用文の実在』の正方向検査で、『非採用案語彙の混入』は正方向検査では構造的に検出不能 — negative-vocabulary 0-hit grep は逐語照合ファミリの対称補完(positive/negative の両側検査 = corpus-sweep-for-new-guards の両側実測と同型の思想)で機械的・低コスト。c1〜c4 の不採用(裁定執行記録・手続き実例2件・既存 cid 適用)も diary と整合。",
+      "submittedAt": "2026-07-23T03:04:47Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCFDS13",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "提案どおり(c5 採用+c1〜c4 不採用)。実測: (1) c5 の実在根拠 — e2 の U1 FD business-logic-model.md:50 に『F1(createdAtSource 未申告拡張)は4フィールド復元+ADR-2 転記是正の申告で解消』の Review 記録を直読確認。混入トークン createdAtSource はまさに E-SRCAD2 の非採用 B 案の固有フィールド名で、候補の因果(非採用案の語彙が転記へ漏れる)は実測どおり。(2) 新規性 — E-TPRRAS13 の per-voter 逐語照合は『採用文の存在』の正方向検査で、『非採用文の不在』は構造的に検出範囲外(absence 側の対 — absence-claim-grep-verify とも別対象)。非採用 choice の固有トークン grep 0 hit という機械検査は安価で false-positive 面も小さい。reservation-transcription-count-check ファミリへの追補統合が正位置。(3) c1〜c4 は裁定執行記録・既 persist 手続きの実例・既存 cid 適用で、いずれも PM 回付・record 正本が正しい置き場。",
+      "submittedAt": "2026-07-23T03:05:32Z"
+    }
+  ],
+  "late": []
+}
