@@ -229,13 +229,13 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-graph.ts",
-    "lines": "1049",
+    "lines": "1046",
     "reason": "Optional graph snapshot property in validateGrid's multi-line opts type; runtime-erased, bun lcov stamps the type-only line DA:0 even though the injected snapshot path is exercised in-process by t257 (bun-multiline-arg-da0 class).",
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
   },
   {
     "file": "packages/framework/core/tools/amadeus-graph.ts",
-    "lines": "1615-1617",
+    "lines": "1612-1614",
     "reason": "Multi-line optional snapshot parameter type for stageGraphDrift; runtime-erased, bun lcov stamps these type-only lines DA:0 even though t257 drives both injected values in-process (bun-multiline-arg-da0 class).",
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
   },
