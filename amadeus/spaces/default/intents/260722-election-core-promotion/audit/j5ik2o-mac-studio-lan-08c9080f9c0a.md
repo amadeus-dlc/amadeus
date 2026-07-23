@@ -4621,3 +4621,147 @@
 **Message**: VERDICT: READY\ninvocationId: dc7bb360-7fc9-4db2-8879-55cca42c3963 iteration: 1\n\nFR-3a〜3e / FR-4a〜4b / FR-8a〜8c を独立再列挙して照合した結果、FR-8c を除き全数がFD 3成果物(business-logic-model.md / business-rules.md / domain-e
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:16:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 068d5cda
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/election-promotion/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:16:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 068d5cda
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/election-promotion/functional-design/business-logic-model.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:16:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 45ad6f9d
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/election-promotion/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:16:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 45ad6f9d
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/election-promotion/functional-design/business-logic-model.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:16:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: c391cf85
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/election-promotion/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:16:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: c391cf85
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/election-promotion/functional-design/business-rules.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:16:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4863078e
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/election-promotion/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:16:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4863078e
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/election-promotion/functional-design/business-rules.md
+**Duration ms**: 52
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:16:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8608763c
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/election-promotion/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:16:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8608763c
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/election-promotion/functional-design/domain-entities.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:16:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 23f886f9
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/election-promotion/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:16:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 23f886f9
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/election-promotion/functional-design/domain-entities.md
+**Duration ms**: 39
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T03:21:22Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: af0e5861b61ffa1f2
+**Message**: VERDICT: NOT-READY\ninvocationId: 039f92b7-27fb-408d-b6b1-25cb86c77465 iteration: 1\n\n## Major\n\n1. **上流成果物(requirements.md / components.md)のレビュー履歴が NOT-READY で終端している** — `requirements.md:143-155`(Iterat
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T03:24:14Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a8a5f28f30c98dab7
+**Message**: VERDICT: READY\ninvocationId: f8b4bc50-0e08-44fe-87e8-b4ffc7e2cdbf iteration: 2\n\n## 是正の閉包確認\n\n**Major1(上流 Review 履歴の NOT-READY 終端 — 記帳ギャップ)**: CLOSED\n- requirements.md 末尾・components.md 末尾それぞれに「Post-revi
+
+---
