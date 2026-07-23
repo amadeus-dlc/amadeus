@@ -6,7 +6,7 @@
 - **Scope**: amadeus
 - **Start Date**: 2026-07-19T07:29:38Z
 - **State Version**: 7
-- **Active Agent**: amadeus-architect-agent
+- **Active Agent**: amadeus-delivery-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**:
@@ -26,8 +26,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 18
-- **Completed**: 11
-- **In Progress**: units-generation
+- **Completed**: 12
+- **In Progress**: delivery-planning
 
 ## Runtime State
 - **Revision Count**: 0
@@ -65,8 +65,8 @@
 - [ ] user-stories — SKIP
 - [ ] refined-mockups — SKIP
 - [x] application-design — EXECUTE
-- [-] units-generation — EXECUTE
-- [ ] delivery-planning — EXECUTE
+- [x] units-generation — EXECUTE
+- [-] delivery-planning — EXECUTE
 
 ### CONSTRUCTION PHASE
 Per unit: [TBD]
@@ -89,12 +89,12 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: INCEPTION
-- **Current Stage**: units-generation
-- **Next Stage**: delivery-planning
+- **Current Stage**: delivery-planning
+- **Next Stage**: functional-design
 - **Status**: Running
-- **Last Updated**: 2026-07-23T03:04:32Z
+- **Last Updated**: 2026-07-23T03:17:26Z
 
 ## Session Resume Point
-- **Last Completed Stage**: application-design
-- **Next Action**: Execute Units Generation
+- **Last Completed Stage**: units-generation
+- **Next Action**: Execute Delivery Planning
 - **Pending Artifacts**: none
