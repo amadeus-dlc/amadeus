@@ -1,0 +1,74 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 2,
+      "label": "B. 運用注記(create/close は conductor から — 機械強制なし)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A. 制約なし(書込面は verb 自体の fail-closed 検証で防御)",
+        "count": 0
+      },
+      {
+        "internalNo": 2,
+        "label": "B. 運用注記(create/close は conductor から — 機械強制なし)",
+        "count": 3
+      },
+      {
+        "internalNo": 3,
+        "label": "C. 機械強制(team モードで conductor 以外の create/close を exit 1 拒否 — 新規 identity 判定機構が必要)",
+        "count": 0
+      },
+      {
+        "internalNo": 4,
+        "label": "X. その他",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T02:48:17Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MPRAD1",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "運用注記の置き場は docs の mirror 節+SKILL 本文の2箇所に限定し、機械強制を装う文言(『拒否される』等)を使わないこと — 検証劇場の予防",
+      "rationale": "自 tree 実測: scripts/amadeus-mirror.ts に実行主体検査は grep 0件(質問の RE 実測と一致)。C の機械強制は conductor identity の決定的判定源が現存せず、新規 identity 機構の先行着地は inception 規範(adapter 先行着地禁止)と衝突。A(無制約)と B の差分は docs 注記のみでコストゼロ、かつ leader-dispatch/no-session-lifecycle 系の既存チームノルムと整合する注記は誤用予防の実益がある。自案非採用時の受容度: A=6(ノルム側で既に統制されているため)/ C=7(判定源なき機械強制は偽の安全)",
+      "submittedAt": "2026-07-23T01:49:38Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPRAD1",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "注記の置き場は productized 配布面(SKILL/usage 出力)とし、team.md ノルムの複製でなく参照にする — 二重規定回避",
+      "rationale": "B を支持。実測: scripts/amadeus-mirror.ts に主体検査なし(AMADEUS_OPERATING_MODE/identity 0 hit)、エラー経路は fail()/exit 1・2 の loud 契約(:10/:231 以降)— 書込面の fail-closed は A の言うとおり既に実在する。しかし create/close は GitHub への外部不可逆操作であり、productization 後は team ノルムを知らない利用者も触る — 運用期待(conductor/所有者からの実行)を配布面ドキュメントに1行可視化する B は実装ゼロで false confidence も作らない。C は決定的 identity 判定源が現存しないまま機械強制を作ると guard-activator 不在・検証劇場隣接の偽保証になり、bugfix 外の規模増。受容度: A=6(ノルムが引き続き統治するため許容)、C=7(判定源なき機械化に反対)。",
+      "submittedAt": "2026-07-23T01:50:11Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPRAD1",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "運用注記には『機械強制なし』を明記し、注記を強制と誤読させないこと(検証劇場の逆面 — 強制のふりをしない)。",
+      "rationale": "B採用(GoA 2)。実測: mirror.ts に主体検査なし(grep 0件、自 tree)を確認。create/close は外部境界操作でチームノルム(close-after-landing・conductor 責務)が既に運用面を規定 — B はこれを design 文書へ写す実装ゼロの注記で surgical。C は conductor の決定的判定源が現存しないまま identity 判定機構を新設する規模増+実装配線なしの契約先行(inception ガードレールの先行着地禁止に緊張)。A は書込面 fail-closed で防御されるが規定意図が文書から消える。自案非採用時受容度: A=6(ノルム側の規定は残るため許容)/ C=7(dormant 機構の新設)。",
+      "submittedAt": "2026-07-23T02:47:18Z"
+    }
+  ],
+  "resolutions": []
+}

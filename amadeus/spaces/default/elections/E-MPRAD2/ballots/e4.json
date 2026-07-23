@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRAD2",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A採用(GoA 1)。実測: amadeus-settings.ts の canonical known-keys+fail-closed parse 様式(SETTINGS_KNOWN_KEYS・unknown-key 拒否)を直読確認 — JSON 3面はこの既習様式の踏襲で新規依存ゼロ。B の YAML は Bun ランタイムにパーサがなく新規依存 or 手書きパーサが必要(『配布フレームワークへ runtime dependency を追加しない』Forbidden と衝突)。C の Markdown フィールドは設定ファイルとして非標準で機械消費・検証(parse-don't-validate)に不向き。自案非採用時受容度: C=6(getField 再利用は実装可能だが標準性を失う)/ B=7(Forbidden 抵触)。",
+  "submittedAt": "2026-07-23T02:47:18Z"
+}

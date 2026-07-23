@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRAD3",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A採用(GoA 1)。session skills の既習様式(正本1定義+{{HARNESS_DIR}} 置換+coreDirs 投影)は canonical 1定義原則の直接適用で、6ハーネス dist への構造的同期も既存 drift guard がそのまま守る。B の runner-gen はステージグラフ由来の機構でステージ外 SKILL への流用は意味論不適合(citation-semantics-check の機構版)。C の6面手書きは canonical 原則違反で count-comment/fixture 伝播系の drift 温床。自案非採用時受容度: B=6(機構流用が正しく拡張されるなら可)/ C=7(手書き複製の恒久 drift 面)。",
+  "submittedAt": "2026-07-23T02:47:18Z"
+}

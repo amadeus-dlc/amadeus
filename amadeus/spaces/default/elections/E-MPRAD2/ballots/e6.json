@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRAD2",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "自 tree 実測: amadeus-settings.ts の fail-closed JSON parse 様式(:10-13 ヘッダ・:142 JSON.parse、全問題一括報告)を確認 — A はこの既習の直接踏襲で新規発明ゼロ。B は YAML パーサの新規依存が Bun-only Forbidden(配布フレームワークへの runtime dependency 文書化なし追加禁止)と正面衝突。C は設定ファイルとして非標準で消費側の再発明を誘発。自案非採用時の受容度: B=7(Forbidden 抵触の文書化が必要)/ C=6(既習 getField 再利用ではあるため)",
+  "submittedAt": "2026-07-23T01:49:38Z"
+}
