@@ -1,6 +1,15 @@
 # コード構造
 
-## team 起動 watcher-arming の構造面（260722-teamup-prompt-race、2026-07-22、現在）
+## t241 のテスト tier 配置構造（260723-t241-ci-residency、2026-07-23、現在）
+
+差分リフレッシュ（base `a81c11dde` → observed `78bce876`、distance 35、bugfix / Minimal、[#1294](https://github.com/amadeus-dlc/amadeus/issues/1294)）。本バグ面（tests/e2e・run-tests.ts・workflows・package.json）は base..HEAD で無変更（numstat 0 行）、原因所在は 260718-election-ts-foundation（#1235）。以下は測定 ref: scan-notes @ observed HEAD `78bce876` の転記。
+
+- **テスト層とディレクトリの対応**（`tests/lib/test-size.ts` :161-166）: `smoke=null / unit=small / integration=medium / e2e=large`。`classifyTestSize` の signals（`t-test-size-drift.test.ts` :66-69）は `node:fs`→medium、`child_process`/`spawn`→medium、`fetch`/net→large。gate は scope MAX 超過で違反（:193）、grandfather は unit の ratchet allowlist のみ（:198-209）。integration は medium まで許容。
+- **profile → 層の写像**（`tests/run-tests.ts`）: `--ci`（:197-202）= smoke+unit+integration（runE2e 非設定）、`--release`/`--all`（:203-211）= +e2e。Usage banner :124-127/:148。`package.json` :14-16 の `test:ci`/`coverage:ci` は `--ci`、`test:all` は `--all`。
+- **対象ファイル**: `tests/e2e/t241-election-machine-executor.test.ts`（spawnSync + mkdtempSync/writeFileSync/rmSync で自前 projectDir 生成、テスト2件 E-EXEC1 :91-111 / E-EXEC2 :113-140、guard=30 ループ、外部 fixture 無し）。ヘッダ :1 が e2e 配置なのに「CI-resident」を自称。sibling `t237`（:1-5）は「Layer: e2e」と正直宣言。integration tier には election CLI spawn 兄弟が 6 本既存（t235/t236/t240/t242/t244 + t-formal-verif-arm-s-blind）。t241 は `gen-coverage-registry.ts` 未登録（0 ヒット）。
+- **改名/移設時の伝播候補（未決）**: ファイル名 suffix 慣習（`.integration.test.ts` を兄弟が採用）、`gen-coverage-registry.ts` の EXPECTED_NONE_TO_CLI、`docs/reference/09-testing.md` — 移設方式（改名 vs ディレクトリ移動）で影響範囲が変わる（scan-notes §4）。
+
+## team 起動 watcher-arming の構造面（履歴: 260722-teamup-prompt-race、2026-07-22）
 
 bugfix / Minimal。observed `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`（距離101）。本 intent の交差構造は `scripts/` の team 起動オーケストレーション（core 中立層・harness 表層とは別系統のリポジトリ開発支援スクリプト面）に限定。
 
