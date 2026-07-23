@@ -22,7 +22,7 @@
 - **Reuse**: 既存 drift guard 群(dist:check 系)の走査様式、t174 系 docs 参照ガードの述語構造を踏襲。新規ランナー・新規 CI ジョブは作らない(既存 `tests/run-tests.sh --ci` の unit 層へ追加)
 - 落ちる実証: 移設前の contrib スキル SKILL.md(scripts/ 参照現存)を fixture 化して赤を実測 → C3 で green(FR-5b)
 - corpus sweep: 導入時に配布ツリー全域へ適用し、正当既存データでの偽赤 0 を確認(FR-5c)
-- **移動元残置検査(P5 対称)**: 同テストに「移設8資産(選挙5+チーム3)が `scripts/` に残存しないこと」の assert を含める — 移動(FR-1a/2a/3a)の削除側をコピー残置事故から機械的に守る(symmetric-pair-review: 移動先追加⇔移動元削除の対検査)
+- **移動元残置検査(P5 対称)— 重複不変量方式**: 同テストに「`scripts/` 直下の資産と配布正本(`packages/framework/core/tools/` / `core/skills/`)に**同名資産が同時に実在しない**こと」の generic assert を含める — 固定リスト・マニフェスト不要で、移動(FR-1a/2a/3a)のコピー残置事故を機械検出する(移動前=scripts のみ実在で green、移動後=正本のみ実在で green、コピー残置=両実在で赤)。順序制約を生まず U2/U3 の並行性とも両立(symmetric-pair-review。※当初のマニフェスト拡張方式は UG §12a iter1 Critical1/Major2 起点で本方式へ是正 2026-07-23 — 共有台帳衝突と AD C-graph 外の依存辺を構造的に除去)
 
 ## C2: 選挙エンジン移設
 
