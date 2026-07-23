@@ -1980,3 +1980,222 @@
 **Duration ms**: 42
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:39:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6e968642
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U2-mirror-skill/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:39:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6e968642
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U2-mirror-skill/functional-design/domain-entities.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:39:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 05250aa1
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U2-mirror-skill/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:39:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 05250aa1
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U2-mirror-skill/functional-design/domain-entities.md
+**Duration ms**: 51
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:39:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 80cf72a3
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U2-mirror-skill/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:39:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 80cf72a3
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U2-mirror-skill/functional-design/business-rules.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:39:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: d72c4907
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U2-mirror-skill/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:39:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: d72c4907
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U2-mirror-skill/functional-design/business-rules.md
+**Duration ms**: 47
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:39:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 69a5a0e3
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U2-mirror-skill/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:39:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 69a5a0e3
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U2-mirror-skill/functional-design/business-logic-model.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:39:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: aabfe8fe
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U2-mirror-skill/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:39:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: aabfe8fe
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U2-mirror-skill/functional-design/business-logic-model.md
+**Duration ms**: 42
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T03:42:59Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: fd-u2-review
+**Agent ID**: afd-u2-review-16c10b2e38e2d469
+**Message**: U2-mirror-skill の functional-design レビュー(iteration 1/2)を完了し、team-lead へ結果を送付しました。\n\n**verdict: NOT-READY**（Major指摘2件）\n\n1. **ADR-5「統合解釈」の3配置のうち "docs mirror 節" が担当不在**: ADR-5は運用注記を「SKILL本文+docs mirror節+
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:43:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3697bac7
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U2-mirror-skill/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:43:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3697bac7
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U2-mirror-skill/functional-design/business-rules.md
+**Duration ms**: 44
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:43:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 10be2905
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U2-mirror-skill/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:43:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 10be2905
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U2-mirror-skill/functional-design/business-rules.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:43:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 87ecbacc
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U2-mirror-skill/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:43:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 87ecbacc
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U2-mirror-skill/functional-design/business-logic-model.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:43:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: acef5ddb
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U2-mirror-skill/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:43:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: acef5ddb
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U2-mirror-skill/functional-design/business-logic-model.md
+**Duration ms**: 42
+
+---
