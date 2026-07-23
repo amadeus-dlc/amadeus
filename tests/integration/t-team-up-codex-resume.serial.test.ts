@@ -118,10 +118,24 @@ function createCliFixture() {
   const bin = join(root, "bin");
   const joinLog = join(root, "join.log");
   const herdrState = join(root, "herdr-state");
+  // agmsg readiness stub for the Issue #1384 watcher verification that runs on
+  // the claude + agmsg launch path: a self-contained agmsg_ready_path and a run
+  // dir the fake herdr `pane run` touches to simulate each watcher arming.
+  const agmsgRoot = join(root, "agmsg");
+  const readyDir = join(agmsgRoot, "run");
+  const actasLib = join(root, "actas-lock.sh");
   mkdirSync(repo, { recursive: true });
   mkdirSync(bin, { recursive: true });
   mkdirSync(herdrState, { recursive: true });
+  mkdirSync(readyDir, { recursive: true });
   mkdirSync(join(repo, "scripts"), { recursive: true });
+  // Role-only stub (drops the team key) so a member's sentinel is independent of
+  // the instance-derived team name; the fake herdr arms it knowing only the
+  // role. Sentinel-name fidelity is covered by t-team-up-watcher-arming.test.ts.
+  writeFileSync(
+    actasLib,
+    `agmsg_ready_path() { printf '%s/run/ready.%s' "\${SKILL_DIR:?}" "$2"; }\n`,
+  );
 
   git(repo, "init", "-q", "-b", "main");
   git(repo, "config", "user.email", "team-up@example.com");
@@ -175,7 +189,18 @@ case "$verb" in
   "workspace list") test -n "$session" && test -f "$state/sessions/$session" ;;
   "workspace create") printf '{"pane_id":"%%1"}\\n' ;;
   "pane split") printf '{"pane_id":"%%1"}\\n' ;;
-  "pane run") ;;
+  "pane run")
+    # Simulate the launched Claude member's watcher arming by touching its ready
+    # sentinel, derived from the member worktree basename in the run command
+    # (Issue #1384). Codex launches skip verification, so this is inert there.
+    if [ -n "\${FAKE_READY_DIR:-}" ]; then
+      _m=$(printf '%s' "\${4:-}" | grep -oE '(leader|engineer-[0-9]+)' | head -1 || true)
+      case "$_m" in
+        leader) : >"$FAKE_READY_DIR/ready.leader" ;;
+        engineer-*) : >"$FAKE_READY_DIR/ready.e\${_m#engineer-}" ;;
+      esac
+    fi
+    ;;
   "pane rename") ;;
   "agent rename") ;;
   "session stop") rm -f "$state/sessions/$target" ;;
@@ -247,6 +272,12 @@ printf '%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "\${AGMSG_RESOLVE_PROJECT:-}" 
     DELIVERY: join(root, "missing-delivery.sh"),
     CODEX_MONITOR: codexMonitor,
     ROLE_RESUME: roleResume,
+    // Issue #1384 watcher verification: derive sentinels from the stub lib +
+    // run dir, and keep the per-wait short so a missing sentinel fails fast.
+    AGMSG_ROOT: agmsgRoot,
+    AGMSG_ACTAS_LOCK_LIB: actasLib,
+    FAKE_READY_DIR: readyDir,
+    WATCHER_READY_TIMEOUT: "5",
     PATH: `${bin}:${process.env.PATH}`,
   };
 
