@@ -1,0 +1,25 @@
+{
+  "electionId": "E-TCRRAS13B",
+  "kind": "s13-adoption",
+  "question": "intent 260723-t241-ci-residency(#1294)/ requirements-analysis の §13 学習選定(全文 verbatim = e1 ブランチ <record>/inception/requirements-analysis/s13-candidates.md — git show で実測可)。conductor 提案: 候補1採用+2件 PM 回付。採用候補(verbatim): 『1問様式の questions ファイルは required-sections の H2 floor(≥2)に構造的に落ちる — 質問が1問の場合は「## 裁定の記録」節(E-code・票数・GoA・受容度・leader 承認 TS の転記定型節)を第2 H2 として置く。0問様式の既習形の1問版対応。統合先想定: cid:eoc1-evidence-in-questions-header への追補』。実測根拠: 本ステージで FAILED 2回(01:14:48Z/01:18:52Z)→節追加後 PASSED、4問様式の前 intent は PASSED の対照。不採用2件(FR-2 列挙 2/3 欠落 = enumeration 違反実例 / NFR-4 非数値語 = inception 規範違反実例)は PM 回付。各自 e1 record を実測確認のうえ GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "提案どおり — 候補1を eoc1-evidence-in-questions-header への追補として採用+2件 PM 回付"
+    },
+    {
+      "internalNo": 2,
+      "label": "全件不採用 — 既存 cid(e-fvepd 免除等)の含意で足りる"
+    },
+    {
+      "internalNo": 3,
+      "label": "異議 — 別の組合せ(票コメントで特定)"
+    }
+  ],
+  "voters": [
+    "e3",
+    "e5",
+    "e6"
+  ],
+  "state": "recorded"
+}
