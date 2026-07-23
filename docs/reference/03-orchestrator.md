@@ -72,6 +72,20 @@ The compose surfaces (a leading `compose` verb, `--new-scope`, or `--report <pat
 1. **Front / report (no workflow yet):** the conductor dispatches `amadeus-composer-agent`, which runs the read-only `detect --json` scan, reads the stock scopes, and returns a structured proposal (`mode matched|custom`, the grid, per-SKIP rationale) validated by `amadeus-graph.ts validate-grid`. The conductor renders the approve/edit/reject gate; on approve a stock match births directly, a custom grid is authored as scope data (`scopes/amadeus-<name>.md` + a `scope-grid.json` entry, `keywords: []` by default) and the birth continues in the same turn.
 2. **In-flight (workflow running):** the composer proposes SKIP/un-SKIP flips for PENDING, ahead-of-cursor stages. The conductor writes the pending-proposal marker (`amadeus/.amadeus-compose-pending`) before the gate (the Stop hook honours it as a turn-stop signal); on approve it runs `amadeus-utility.ts recompose --skip <slugs> --add <slugs>`, which flips the plan suffixes under the audit lock, strict-validates against new starvation, rebuilds the derived fields, and emits `RECOMPOSED`. Detection is chat-first: the conductor's pre-forward judgment step (the same one that spots new-work) classifies a plain-chat reshape request ("can we skip market research?") and routes it as `next compose "<their words>"` rather than forwarding it verbatim (a verbatim forward would fall through to Branch 10 and run the current stage). When the request names specific stages imperatively, the conductor may skip the composer dispatch and present the gate itself, running `recompose` directly on approve - sound because the verb rejects starved/frozen/behind-cursor/skeleton-gate flips no matter who calls it; the human gate and the marker discipline are identical on both paths.
 
+### Workspace verbs -- List, create, and switch
+
+The leading `space`, `space-create`, and `intent` verbs are terminal workspace utilities. They do not run or advance a workflow stage.
+
+| Command | Behaviour |
+|---|---|
+| `/amadeus space` | Lists spaces. Add `--json` for structured output. |
+| `/amadeus space <name>` | Switches the active space. The space must already exist. |
+| `/amadeus space-create <name>` | Creates a space seeded from the framework baseline. It creates fresh team/project memory, phase and template directories, and empty `intents/`, `codekb/`, and `knowledge/` directories. It does not switch to the new space; use `/amadeus space <name>` afterward. |
+| `/amadeus intent` | Lists intents in the active space. Add `--json` for structured output. |
+| `/amadeus intent <slug>` | Switches the active intent within the active space. |
+
+Space names are normalized to slugs. Creating an existing space, or switching to a space or intent that does not exist, fails without changing the active cursor.
+
 ### `/amadeus --status` -- Progress Check
 
 Read-only command that inspects the current workflow without advancing it:

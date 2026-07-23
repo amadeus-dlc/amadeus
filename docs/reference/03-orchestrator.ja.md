@@ -72,6 +72,20 @@ compose サーフェス(先頭の `compose` 動詞、`--new-scope`、または `
 1. **フロント / レポート(まだワークフローなし):** コンダクターは `amadeus-composer-agent` をディスパッチする。これは読み取り専用の `detect --json` スキャンを実行し、ストックスコープを読み、`amadeus-graph.ts validate-grid` で検証された構造化提案(`mode matched|custom`、グリッド、SKIP ごとの根拠)を返す。コンダクターは approve/edit/reject ゲートをレンダリングする。approve 時、ストックマッチは直接誕生し、カスタムグリッドはスコープデータ(`scopes/amadeus-<name>.md` + `scope-grid.json` エントリ、デフォルトで `keywords: []`)として作成され、同じターンで誕生が続く。
 2. **飛行中(ワークフロー実行中):** コンポーザーは PENDING でカーソルより先のステージに対して SKIP/un-SKIP のフリップを提案する。コンダクターはゲート前に pending-proposal マーカー(`amadeus/.amadeus-compose-pending`)を書き込む(Stop フックがそれをターン停止シグナルとして尊重する)。approve 時、`amadeus-utility.ts recompose --skip <slugs> --add <slugs>` を実行する。これは監査ロックの下でプランサフィックスをフリップし、新たな枯渇に対して strict-validate し、派生フィールドを再構築し、`RECOMPOSED` を発行する。検出はチャットファースト: コンダクターの forward 前判断ステップ(新規作業を見つける同じもの)が、素のチャットの再形成リクエスト(「market research をスキップできる?」)を分類し、逐語 forward の代わりに `next compose "<their words>"` としてルーティングする(逐語 forward は Branch 10 に落ちて現在のステージを実行してしまう)。リクエストが特定のステージを命令的に名指しする場合、コンダクターはコンポーザーディスパッチをスキップしてゲート自体を提示し、approve 時に `recompose` を直接実行してよい - これは健全である。なぜなら、その動詞は誰が呼んでも枯渇/凍結/カーソル後方/スケルトンゲートのフリップを拒否するからだ。人間ゲートとマーカーの規律は両パスで同一である。
 
+### ワークスペース動詞 -- 一覧、作成、切り替え
+
+先頭の `space`、`space-create`、`intent` 動詞は、終端のワークスペースユーティリティです。ワークフローステージの実行や進行は行いません。
+
+| コマンド | 振る舞い |
+|---|---|
+| `/amadeus space` | space を一覧表示する。構造化出力には `--json` を追加する。 |
+| `/amadeus space <name>` | アクティブな space を切り替える。space は既に存在している必要がある。 |
+| `/amadeus space-create <name>` | フレームワークのベースラインをシードして space を作成する。新しい team/project memory、phase、template の各ディレクトリと、空の `intents/`、`codekb/`、`knowledge/` ディレクトリを作成する。新しい space には切り替えないため、続けて `/amadeus space <name>` を使用する。 |
+| `/amadeus intent` | アクティブな space の intent を一覧表示する。構造化出力には `--json` を追加する。 |
+| `/amadeus intent <slug>` | アクティブな space 内でアクティブな intent を切り替える。 |
+
+space 名は slug に正規化されます。既存 space の作成や、存在しない space または intent への切り替えは、アクティブカーソルを変更せずに失敗します。
+
 ### `/amadeus --status` -- 進捗チェック
 
 ワークフローを進めずに検査する読み取り専用コマンド:
