@@ -28,9 +28,9 @@ let root = "";
 beforeEach(() => {
   projectDir = mkdtempSync(join(tmpdir(), "elections-migration-"));
   root = join(projectDir, "amadeus", "spaces", "default", "elections");
-  mkdirSync(join(projectDir, "scripts"), { recursive: true });
+  mkdirSync(join(projectDir, "packages", "framework", "core", "tools"), { recursive: true });
   writeFileSync(
-    join(projectDir, "scripts", "amadeus-election-store.ts"),
+    join(projectDir, "packages", "framework", "core", "tools", "amadeus-election-store.ts"),
     "export function resolveElectionDir() {}\n",
   );
   mkdirSync(join(root, "E-A"), { recursive: true });

@@ -63,7 +63,7 @@
    存在しないときだけ canonical の内容をコピーします。既存の active file は
    一切上書きせず、Amadeus の canonical hook 契約を満たしていなければ
    処理を止めます。Amadeus の self repository では、`./scripts/run-codex.sh` と
-   `scripts/team-up.sh` が Codex の起動または agmsg writer の適用より先に、
+   `.codex/tools/team-up.sh` が Codex の起動または agmsg writer の適用より先に、
    同じ活性化処理を実行します。
 
 3. プロジェクトを trust します。Codex の trust は **2 層** あり、どちらも
@@ -77,7 +77,7 @@
      untrusted なフックを決して実行しません(`--dangerously-bypass-hook-trust`
      フラグでも実行しません)。
 
-   `scripts/team-up.sh` は各 Codex メンバーについて両層を自動でシードします。
+   `.codex/tools/team-up.sh` は各 Codex メンバーについて両層を自動でシードします。
    手動でシードする場合は、対話的な TUI セッションを 1 回実行して hooks
    ダイアログで「Trust all and continue」を選ぶか、決定論的に事前シードします:
 

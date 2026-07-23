@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dir, "../..");
-const TEAM_UP = join(ROOT, "scripts/team-up.sh");
+const TEAM_UP = join(ROOT, "packages/framework/core/tools/team-up.sh");
 const tempDirs: string[] = [];
 
 afterEach(() => {
@@ -238,12 +238,12 @@ describe("team-up messaging backend launch", () => {
     expect(readFileSync(join(fixture.state, "current-run"), "utf8").trim()).toBe("run-001");
   });
 
-  test("a herdr fresh run launches even when the agmsg join script is absent", () => {
+  test("a herdr fresh run fails before side effects when the agmsg join script is absent", () => {
     const fixture = createCliFixture();
     const result = Bun.spawnSync({
       cmd: ["bash", TEAM_UP, "--msg", "herdr"],
-      // Point AGMSG_ROOT and the join script at a non-existent tree: herdr mode
-      // must never require an agmsg installation.
+      // The prerequisite contract is a fixed closed set independent of the
+      // selected messaging backend.
       env: {
         ...fixture.env,
         AGMSG_ROOT: join(fixture.base, "no-such-agmsg"),
@@ -253,8 +253,10 @@ describe("team-up messaging backend launch", () => {
       stdout: "pipe",
     });
 
-    expect(result.exitCode, result.stderr.toString()).toBe(0);
-    expect(readFileSync(join(fixture.state, "runs", "run-001", "msg"), "utf8").trim()).toBe("herdr");
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr.toString()).toContain("agmsg is required");
+    expect(existsSync(join(fixture.state, "runs", "run-001"))).toBe(false);
+    expect(existsSync(join(fixture.state, "current-run"))).toBe(false);
   });
 
   test("a resumed run inherits the saved herdr backend and never re-registers", () => {

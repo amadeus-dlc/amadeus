@@ -90,42 +90,12 @@ function buildAllowlist(): AllowRule[] {
   });
 }
 
-// A finding is "known contrib" iff it sits in a shipped amadeus-election SKILL —
-// the repo-local election reference U2 (same Bolt) rewrites once election is
-// promoted into the framework core.
-//
-// EXPECTED-RED (temporary isolation set): predicate 1's live scan is RED at this
-// Unit's point in time because the contrib election SKILLs still say
-// `bun scripts/amadeus-election.ts`. We isolate those known findings and assert
-// everything ELSE is 0 (corpus-sweep false-red = 0). The red count/locations are
-// recorded below and in code-summary.md as the falling-proof measurement.
-//
-// TODO(U2, same Bolt): once U2 rewrites the election SKILL(s) to invoke the
-// promoted core entrypoint (no `scripts/` reference), isKnownContribSkill will
-// match nothing, the residual assertion still holds at 0, and the guard reaches
-// full green with NO test change required here. The Bolt PR (U1+U2) lands only
-// the green state on CI.
-function isKnownContribSkill(file: string): boolean {
-  return file.endsWith("skills/amadeus-election/SKILL.md");
-}
-
 describe("t258 live predicate 1 — corpus sweep over tracked distribution trees (FR-5a/5c, BR-6)", () => {
-  test("only the known contrib election SKILLs remain; every other scripts/ reference is allowlisted (false-red = 0)", () => {
+  test("every scripts/ reference is allowlisted (live finding = 0)", () => {
     const files = candidateFiles().map((path) => ({ path, content: readFileSync(join(REPO_ROOT, path), "utf8") }));
     const findings = scanDistributionTreeForScriptsRefs(files, buildAllowlist());
 
-    const residual = findings.filter((f: Finding) => !isKnownContribSkill(f.file));
-    const contrib = findings.filter((f: Finding) => isKnownContribSkill(f.file));
-
-    // Falling-proof measurement (BR-4): record the live RED before U2 resolves it.
-    // eslint-disable-next-line no-console
-    console.log(
-      `[t258 live-red] contrib election findings: ${contrib.length}\n` +
-        contrib.map((f) => `  ${f.file}:${f.line}  ${f.excerpt}`).join("\n"),
-    );
-
-    // BR-6: everything outside the isolated contrib set must be clean.
-    expect(residual).toEqual([]);
+    expect(findings).toEqual([]);
   });
 });
 

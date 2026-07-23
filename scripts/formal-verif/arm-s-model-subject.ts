@@ -11,8 +11,8 @@ import {
   type Election,
   resolveBallots,
   tally,
-} from "../amadeus-election-model.ts";
-import { classifyLate as modelClassifyLate } from "../amadeus-election-model.ts";
+} from "../../packages/framework/core/tools/amadeus-election-model.ts";
+import { classifyLate as modelClassifyLate } from "../../packages/framework/core/tools/amadeus-election-model.ts";
 import { err, ok, type Result } from "./arm-s-result.ts";
 import {
   type ArmBallot,

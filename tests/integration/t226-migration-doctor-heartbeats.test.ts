@@ -187,7 +187,7 @@ describe("t226 codex project-trust doctor check", () => {
     expect(result.pass).toBe(false);
     expect(result.label).toContain('project trust: [projects."/abs/project"]');
     expect(result.label).toContain("Codex skips all .codex hooks silently without it");
-    expect(result.fix).toContain("scripts/team-up.sh");
+    expect(result.fix).toContain("<harness-dir>/tools/team-up.sh");
   });
 
   test("normal run passes when the project has a [projects] entry", () => {

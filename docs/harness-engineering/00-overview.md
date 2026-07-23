@@ -131,6 +131,30 @@ keep straight throughout this guide. For the full build contract see
 [Porting to a New Harness](09-porting-to-a-new-harness.md) and the Developer
 Reference's [Architecture § Source vs distribution](../reference/01-architecture.md#source-vs-distribution-one-core-many-harnesses).
 
+### Where framework code belongs
+
+Use three repository layers when adding or promoting executable framework
+code:
+
+- `packages/framework/` is the canonical source for functionality users receive.
+  Package and self-install projections are generated from this layer.
+- `scripts/` is repository-development tooling. It may build, verify, migrate,
+  or release the framework, but shipped functionality must not depend on it.
+- `contrib/` is dogfood-only material. It can prove an idea inside this
+  repository, but it is not projected into distributions.
+
+Classify by consumer, not by file extension: a shell tool used by installed
+users belongs in `packages/framework/`, while a TypeScript release helper can
+remain in `scripts/`.
+
+Promotion is a move, not a second copy. Move the canonical file with `git mv`,
+make its internal paths relative to the new canonical location, add the
+appropriate manifest, package, and self-install projections, regenerate derived
+trees, then remove every reference to the old location. Commit the canonical
+change and generated projections together. Finish by running the distribution,
+self-install, and boundary drift checks; generated `dist/` trees are never
+edited by hand.
+
 ---
 
 ## When you cross into the Developer Reference

@@ -10,7 +10,7 @@ import {
   resolveBallots,
   shuffleView,
   tally,
-} from "../../scripts/amadeus-election-model";
+} from "../../packages/framework/core/tools/amadeus-election-model";
 
 const DEF = {
   electionId: "E-TEST-1",

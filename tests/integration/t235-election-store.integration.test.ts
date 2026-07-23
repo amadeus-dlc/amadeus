@@ -4,12 +4,12 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Election, Goa } from "../../scripts/amadeus-election-model";
+import { Election, Goa } from "../../packages/framework/core/tools/amadeus-election-model";
 import {
   resolveElectionDir,
   Store,
   writeStoreFile,
-} from "../../scripts/amadeus-election-store";
+} from "../../packages/framework/core/tools/amadeus-election-store";
 
 const DEF = {
   electionId: "E-STORE-1",

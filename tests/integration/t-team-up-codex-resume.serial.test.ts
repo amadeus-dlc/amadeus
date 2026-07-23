@@ -12,11 +12,14 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { main as safetyWaitMain } from "../../scripts/team-up-codex-safety-wait.ts";
+import { main as safetyWaitMain } from "../../packages/framework/core/tools/team-up-codex-safety-wait.ts";
 
 const ROOT = resolve(import.meta.dir, "../..");
-const TEAM_UP = join(ROOT, "scripts/team-up.sh");
-const SAFETY_WAIT = join(ROOT, "scripts/team-up-codex-safety-wait.ts");
+const TEAM_UP = join(ROOT, "packages/framework/core/tools/team-up.sh");
+const SAFETY_WAIT = join(
+  ROOT,
+  "packages/framework/core/tools/team-up-codex-safety-wait.ts",
+);
 const CODEX_HOOKS_TOOLS = join(
   ROOT,
   "packages/framework/harness/codex/tools",
@@ -128,7 +131,7 @@ function createCliFixture() {
   mkdirSync(bin, { recursive: true });
   mkdirSync(herdrState, { recursive: true });
   mkdirSync(readyDir, { recursive: true });
-  mkdirSync(join(repo, "scripts"), { recursive: true });
+  mkdirSync(join(repo, "tools"), { recursive: true });
   // Role-only stub (drops the team key) so a member's sentinel is independent of
   // the instance-derived team name; the fake herdr arms it knowing only the
   // role. Sentinel-name fidelity is covered by t-team-up-watcher-arming.test.ts.
@@ -142,7 +145,7 @@ function createCliFixture() {
   git(repo, "config", "user.name", "Team Up Test");
   writeFileSync(join(repo, "README.md"), "fixture\n");
   writeFileSync(
-    join(repo, "scripts", "team-up-codex-safety-wait.ts"),
+    join(repo, "tools", "team-up-codex-safety-wait.ts"),
     `const args = process.argv.slice(2);
 if (args[0] === "production-enabled") process.exit(0);
 const roleIndex = args.indexOf("--role");
@@ -156,7 +159,7 @@ process.on("SIGTERM", () => process.exit(0));
 setInterval(() => {}, 1_000);
 `,
   );
-  git(repo, "add", "README.md", "scripts/team-up-codex-safety-wait.ts");
+  git(repo, "add", "README.md", "tools/team-up-codex-safety-wait.ts");
   git(repo, "commit", "-qm", "fixture");
 
   // Fake herdr binary. team-up.sh drives herdr through `--session <name>
@@ -257,6 +260,7 @@ printf '%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$4" "\${AGMSG_RESOLVE_PROJECT:-}" 
   const env = {
     ...process.env,
     TEAM_REPO: repo,
+    SAFETY_WAIT_HELPER: join(repo, "tools", "team-up-codex-safety-wait.ts"),
     TEAM_BASE: base,
     TEAM_STATE_DIR: state,
     TEAM_RUN_ID: "run-001",
@@ -594,7 +598,7 @@ printf '{"result":{"agents":[]}}\\n'
     const foreign = Bun.spawn({
       cmd: [
         "bun",
-        join(fixture.repo, "scripts", "team-up-codex-safety-wait.ts"),
+        join(fixture.repo, "tools", "team-up-codex-safety-wait.ts"),
         "supervise",
         "--session",
         "foreign-session",
@@ -649,7 +653,7 @@ printf '{"result":{"agents":[]}}\\n'
     expect(fresh.exitCode, fresh.stderr.toString()).toBe(0);
     const ownedPid = Number(readFileSync(join(memberRecord, "safety-wait.pid"), "utf8"));
     const foreign = Bun.spawn({
-      cmd: ["bun", join(fixture.repo, "scripts", "team-up-codex-safety-wait.ts"), "supervise", "--role", "leader"],
+      cmd: ["bun", join(fixture.repo, "tools", "team-up-codex-safety-wait.ts"), "supervise", "--role", "leader"],
       env: fixture.env,
       stderr: "ignore",
       stdout: "ignore",

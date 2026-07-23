@@ -32,7 +32,7 @@
 //
 // Subject under test (the shipped skill set + each SKILL.md's frontmatter):
 //   dist/claude/.claude/skills/<skill>/SKILL.md — for the DERIVED expected set:
-//     - 6 base skills (orchestrator + 5 session skills)
+//     - 7 base skills (orchestrator + 5 session skills + election)
 //     - the generator's FIRST_BATCH scope-runners (amadeus-runner-gen.ts:307,
 //       imported here, not hardcoded)
 //     - one amadeus-<slug> per RUNNABLE compiled stage (every stage whose
@@ -85,9 +85,10 @@ import { FIRST_BATCH } from "../../dist/claude/.claude/tools/amadeus-runner-gen.
 const SKILLS_DIR = join(AMADEUS_SRC, "skills");
 const STAGE_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 
-// --- The six base skills (orchestrator + five session skills).
+// --- The seven shipped non-generated base skills.
 const BASE_SKILLS = [
   "amadeus",
+  "amadeus-election",
   "amadeus-grilling",
   "amadeus-mirror",
   "amadeus-outcomes-pack",

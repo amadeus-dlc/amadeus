@@ -8,7 +8,7 @@ description: >-
   human. Do not use for ad-hoc polls outside the elections store, and do not
   answer election-procedure questions from this skill — the CLI's directives
   are the only procedure.
-compatibility: Requires bun and this repository checkout (scripts/amadeus-election.ts).
+compatibility: Requires bun; the CLI is bundled at {{HARNESS_DIR}}/tools/amadeus-election.ts.
 ---
 
 # amadeus-election — 指令転送ループ
@@ -18,7 +18,7 @@ compatibility: Requires bun and this repository checkout (scripts/amadeus-electi
 選挙定義 JSON(electionId・kind・question・choices・voters)を受け取り、次を実行する:
 
 ```
-bun scripts/amadeus-election.ts open --file <definition.json>
+bun {{HARNESS_DIR}}/tools/amadeus-election.ts open --file <definition.json>
 ```
 
 exit 0 以外なら出力の error をそのまま人間へ提示して停止する。
@@ -28,7 +28,7 @@ exit 0 以外なら出力の error をそのまま人間へ提示して停止す
 以下のループを繰り返す。**このスキルは次の一手を自分で決めない** — `next` の指令が名指しした verb と report を字義どおり実行するだけである:
 
 ```
-bun scripts/amadeus-election.ts next --election <id>
+bun {{HARNESS_DIR}}/tools/amadeus-election.ts next --election <id>
 ```
 
 1. 出力(stdout の JSON 1行)を読む。

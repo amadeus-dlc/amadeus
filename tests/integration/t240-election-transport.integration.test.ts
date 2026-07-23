@@ -11,7 +11,7 @@ import {
   createSubagentTransport,
   distribute,
   reportDelivery,
-} from "../../scripts/amadeus-election-transport";
+} from "../../packages/framework/core/tools/amadeus-election-transport";
 
 let dir = "";
 let viewPath = "";

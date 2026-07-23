@@ -19,7 +19,7 @@ import {
 import { hostname, tmpdir } from "node:os";
 import { basename, dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { electionsRoot } from "./amadeus-election-store";
+import { electionsRoot } from "../packages/framework/core/tools/amadeus-election-store";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const PROJECT_DIR = join(SCRIPT_DIR, "..");

@@ -1,5 +1,5 @@
 // size: large
-// Regression for Issue #1384: scripts/team-up.sh fresh Claude members race the
+// Regression for Issue #1384: team-up.sh fresh Claude members race the
 // Claude Code TUI cold-start and drop the initial `/agmsg mode monitor` prompt,
 // leaving the agmsg watcher unarmed with no check or retry. These tests drive
 // the bash verification seam directly (sourced in TEAM_UP_LIB_ONLY mode) against
@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dir, "../..");
-const TEAM_UP = join(ROOT, "scripts/team-up.sh");
+const TEAM_UP = join(ROOT, "packages/framework/core/tools/team-up.sh");
 const tempDirs: string[] = [];
 
 afterEach(() => {

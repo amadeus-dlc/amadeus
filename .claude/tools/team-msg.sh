@@ -31,6 +31,7 @@ set -euo pipefail
 
 AGMSG_TEAM="${AGMSG_TEAM:-amadeus}"
 HERDR="${HERDR:-herdr}"
+AGMSG_SCRIPT_DIR="${AGMSG_ROOT:-$HOME/.agents/skills/agmsg}/scripts"
 # The message sender. Callers export their own role; agmsg needs a non-empty
 # from and the herdr log records it, so fall back to a loud placeholder rather
 # than an empty string.
@@ -44,7 +45,7 @@ WAIT_IDLE_TIMEOUT_MS=60000
 
 usage() {
   cat <<'EOF'
-Usage: scripts/team-msg.sh <verb> [args]
+Usage: bash <harness-dir>/tools/team-msg.sh <verb> [args]
 
   send <role> <text>   Deliver <text> to <role> (leader, e1, e2, …)
   read <role>          Show <role>'s recent messages
@@ -94,7 +95,7 @@ msg_log_append() {
 
 agmsg_send() {
   local role="$1" text="$2" send
-  send="${AGMSG_SEND:-$HOME/.agents/skills/agmsg/scripts/send.sh}"
+  send="${AGMSG_SEND:-$AGMSG_SCRIPT_DIR/send.sh}"
   [ -f "$send" ] || {
     echo "ERROR: missing agmsg send script: $send" >&2
     return 1
@@ -104,7 +105,7 @@ agmsg_send() {
 
 agmsg_read() {
   local role="$1" history
-  history="${AGMSG_HISTORY:-$HOME/.agents/skills/agmsg/scripts/history.sh}"
+  history="${AGMSG_HISTORY:-$AGMSG_SCRIPT_DIR/history.sh}"
   [ -f "$history" ] || {
     echo "ERROR: missing agmsg history script: $history" >&2
     return 1

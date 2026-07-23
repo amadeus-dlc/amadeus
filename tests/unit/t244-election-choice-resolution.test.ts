@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseChoiceResolution } from "../../scripts/amadeus-election";
+import { parseChoiceResolution } from "../../packages/framework/core/tools/amadeus-election";
 
 describe("tie choice resolution parser", () => {
   test("parses canonical non-negative internal choice numbers", () => {

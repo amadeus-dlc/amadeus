@@ -22,9 +22,9 @@ import {
   readElectionsRegistry,
   resolveElectionDir,
   type ElectionRegistryEntry,
-} from "./amadeus-election-store";
-import { handleVerify } from "./amadeus-election";
-import type { ElectionState } from "./amadeus-election-model";
+} from "../packages/framework/core/tools/amadeus-election-store";
+import { handleVerify } from "../packages/framework/core/tools/amadeus-election";
+import type { ElectionState } from "../packages/framework/core/tools/amadeus-election-model";
 
 export type CreatedAtSource = "timeline-oldest" | "git-first-commit" | "unknown";
 
@@ -533,7 +533,7 @@ function runExecute(options: CliOptions, root: string): number {
   const approval = readApproval(options.approvalPath);
   const shallow = git(options.projectDir, ["rev-parse", "--is-shallow-repository"]);
   const storeSource = readFileSync(
-    join(options.projectDir, "scripts", "amadeus-election-store.ts"),
+    join(options.projectDir, "packages", "framework", "core", "tools", "amadeus-election-store.ts"),
     "utf8",
   );
   const report = checkExecutePreconditions({

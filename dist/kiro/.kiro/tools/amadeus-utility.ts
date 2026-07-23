@@ -1,4 +1,5 @@
 import {
+  accessSync,
   closeSync,
   constants as fsConstants,
   cpSync,
@@ -432,6 +433,48 @@ export interface DoctorCheck {
   fix?: string;
 }
 
+export type PrereqTool = "herdr" | "agmsg";
+
+export type PrereqStatus =
+  | { readonly tool: PrereqTool; readonly found: true; readonly path: string }
+  | { readonly tool: PrereqTool; readonly found: false; readonly guidance: string };
+
+export type PathProbe = (command: string) => string | null;
+
+export const TEAM_PREREQUISITE_GUIDANCE: Readonly<Record<PrereqTool, string>> = {
+  herdr: "install from https://herdr.dev and see docs/guide/20-team-mode.md",
+  agmsg:
+    "install from https://github.com/j5ik2o/agmsg and see docs/guide/20-team-mode.md",
+};
+
+export function detectTeamPrerequisites(
+  env: Readonly<Record<string, string | undefined>>,
+  pathProbe: PathProbe,
+): PrereqStatus[] {
+  const homeDir = env.HOME ?? "";
+  const agmsgRoot = env.AGMSG_ROOT ?? join(homeDir, ".agents", "skills", "agmsg");
+  const commands: ReadonlyArray<readonly [PrereqTool, string]> = [
+    ["herdr", env.HERDR ?? "herdr"],
+    ["agmsg", env.AGMSG_SEND ?? join(agmsgRoot, "scripts", "send.sh")],
+  ];
+  return commands.map(([tool, command]) => {
+    const path = pathProbe(command);
+    return path === null
+      ? { tool, found: false, guidance: TEAM_PREREQUISITE_GUIDANCE[tool] }
+      : { tool, found: true, path };
+  });
+}
+
+function probeExecutable(command: string): string | null {
+  if (!command.includes("/") && !command.includes("\\")) return Bun.which(command);
+  try {
+    accessSync(command, fsConstants.X_OK);
+    return command;
+  } catch {
+    return null;
+  }
+}
+
 export type DeepReadonly<T> =
   T extends (...args: never[]) => unknown ? T
     : T extends Map<infer K, infer V> ? ReadonlyMap<DeepReadonly<K>, DeepReadonly<V>>
@@ -458,6 +501,7 @@ export interface DoctorContext {
   readonly agents: DeepReadonly<AgentMetadata[]>;
   readonly scopeMapping: DeepReadonly<Record<string, ScopeDefinition>>;
   readonly artifactNames: readonly string[];
+  readonly teamPrerequisites: readonly PrereqStatus[];
 }
 
 export interface DoctorRunResult {
@@ -547,6 +591,9 @@ export function resolveDoctorContext(projectDir: string): DoctorContext {
   const agents = deepFreezeDoctorSnapshot(structuredClone(loadAgents()));
   const scopeMapping = deepFreezeDoctorSnapshot(structuredClone(loadScopeMapping()));
   const artifactNames = deepFreezeDoctorSnapshot(doctorArtifactNames(graph));
+  const teamPrerequisites = deepFreezeDoctorSnapshot(
+    detectTeamPrerequisites(process.env, probeExecutable),
+  );
   return Object.freeze({
     projectDir,
     harnessDir: resolvedHarnessDir,
@@ -565,6 +612,7 @@ export function resolveDoctorContext(projectDir: string): DoctorContext {
     agents,
     scopeMapping,
     artifactNames,
+    teamPrerequisites,
   });
 }
 
@@ -756,7 +804,7 @@ export function codexProjectTrustDoctorCheck(
   return {
     pass: projectTrusted,
     label: `project trust: ${projectTrustKey} present in ${codexConfig} (layer 1 — Codex skips all .codex hooks silently without it)`,
-    fix: 're-run `scripts/team-up.sh` (seeds both trust layers) or append the entry manually with `trust_level = "trusted"`',
+    fix: 're-run `bash <harness-dir>/tools/team-up.sh` (seeds both trust layers) or append the entry manually with `trust_level = "trusted"`',
   };
 }
 
@@ -1152,6 +1200,7 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
     agents,
     scopeMapping,
     artifactNames,
+    teamPrerequisites,
   } = context;
   const results: DoctorCheckResult[] = [];
   const isWindows = platform === "win32";
@@ -2503,6 +2552,12 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
   // Print report
   let output = "AI-DLC Health Check\n";
   output += `${"\u2500".repeat(37)}\n`;
+  output += "Team Mode prerequisites:\n";
+  for (const prerequisite of teamPrerequisites) {
+    output += prerequisite.found
+      ? `  ${prerequisite.tool}: ${prerequisite.path}\n`
+      : `  ${prerequisite.tool}: not found (${prerequisite.guidance})\n`;
+  }
   let passed = 0;
   let failed = 0;
   for (const r of results) {

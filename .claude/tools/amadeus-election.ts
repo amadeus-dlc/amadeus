@@ -43,7 +43,7 @@ import {
   distribute,
   normalizeAt,
 } from "./amadeus-election-transport";
-import { parseGoaLine } from "../packages/framework/core/tools/amadeus-norm-metrics";
+import { parseGoaLine } from "./amadeus-norm-metrics";
 import {
   electionsRoot,
   resolveElectionDir,
@@ -53,7 +53,7 @@ import {
 } from "./amadeus-election-store";
 
 const USAGE =
-  "Usage: bun scripts/amadeus-election.ts <open|notify|vote|status|tally|render|verify|next|report> --election <id> [--file <path>] [--result <r>] [--resolution <r>] [--transport agmsg|subagent] [--team <t>] [--from <name>] [--send-script <path>] [--project <dir>]";
+  "Usage: bun <harness-dir>/tools/amadeus-election.ts <open|notify|vote|status|tally|render|verify|next|report> --election <id> [--file <path>] [--result <r>] [--resolution <r>] [--transport agmsg|subagent] [--team <t>] [--from <name>] [--send-script <path>] [--project <dir>]";
 
 // Every actionable directive names the verb to execute and the report result
 // that commits the transition (FR-0: the caller forwards, never maps). verb

@@ -12,13 +12,13 @@ set -euo pipefail
 # member worktree, runs `mise trust`, and launches the selected agent runtime.
 #
 # Usage:
-#   scripts/team-up.sh          # create a run + launch leader + 6 Claude members
-#   scripts/team-up.sh -4       # create a run with 4 engineers (2-1-2)
-#   scripts/team-up.sh --codex  # create a run + launch Codex members
-#   scripts/team-up.sh -c       # resume each member's last conversation
-#   scripts/team-up.sh --kill   # tear down the team session
-#   scripts/team-up.sh -i alpha # named instance (parallel teams on one machine)
-#   scripts/team-up.sh --list-instances
+#   bash <harness-dir>/tools/team-up.sh          # create a run + launch leader + 6 Claude members
+#   bash <harness-dir>/tools/team-up.sh -4       # create a run with 4 engineers (2-1-2)
+#   bash <harness-dir>/tools/team-up.sh --codex  # create a run + launch Codex members
+#   bash <harness-dir>/tools/team-up.sh -c       # resume each member's last conversation
+#   bash <harness-dir>/tools/team-up.sh --kill   # tear down the team session
+#   bash <harness-dir>/tools/team-up.sh -i alpha # named instance (parallel teams on one machine)
+#   bash <harness-dir>/tools/team-up.sh --list-instances
 #
 # Env:
 #   AGMSG_TEAM        team each member joins before launch (default: amadeus,
@@ -40,21 +40,49 @@ set -euo pipefail
 # In Codex mode, -c resumes the last conversation in each member worktree.
 
 REPO="${TEAM_REPO:-$(cd "$(dirname "$0")/.." && pwd)}"
+TOOL_DIR="$(cd "$(dirname "$0")" && pwd)"
 BASE="${TEAM_BASE:-$HOME/worktrees/github.com/amadeus-dlc/amadeus}"
 STATE_DIR="${TEAM_STATE_DIR:-$BASE/.team-up}"
 AGMSG_ROOT="${AGMSG_ROOT:-$HOME/.agents/skills/agmsg}"
-AGMSG_JOIN="${AGMSG_JOIN:-$AGMSG_ROOT/scripts/join.sh}"
-AGMSG_RESET="${AGMSG_RESET:-$AGMSG_ROOT/scripts/reset.sh}"
-DELIVERY="${DELIVERY:-$AGMSG_ROOT/scripts/delivery.sh}"
-CODEX_MONITOR="${CODEX_MONITOR:-$AGMSG_ROOT/scripts/drivers/types/codex/codex-monitor.sh}"
-ROLE_RESUME="${ROLE_RESUME:-$AGMSG_ROOT/scripts/role-resume.sh}"
+AGMSG_SCRIPT_DIR="$AGMSG_ROOT/scripts"
+AGMSG_JOIN="${AGMSG_JOIN:-$AGMSG_SCRIPT_DIR/join.sh}"
+AGMSG_RESET="${AGMSG_RESET:-$AGMSG_SCRIPT_DIR/reset.sh}"
+DELIVERY="${DELIVERY:-$AGMSG_SCRIPT_DIR/delivery.sh}"
+CODEX_MONITOR="${CODEX_MONITOR:-$AGMSG_SCRIPT_DIR/drivers/types/codex/codex-monitor.sh}"
+ROLE_RESUME="${ROLE_RESUME:-$AGMSG_SCRIPT_DIR/role-resume.sh}"
 AGENT_IDENTITY="${AGENT_IDENTITY:-corporate-1}"
 CLAUDE_IDENTITY="$AGENT_IDENTITY"
 CODEX_IDENTITY="$AGENT_IDENTITY"
 RUNTIME="${TEAM_RUNTIME:-claude}"
 RUNTIME_EXPLICIT=0
 HERDR="${HERDR:-herdr}"
-SAFETY_WAIT_HELPER="$REPO/scripts/team-up-codex-safety-wait.ts"
+SAFETY_WAIT_HELPER="${SAFETY_WAIT_HELPER:-$TOOL_DIR/team-up-codex-safety-wait.ts}"
+TEAM_PREREQUISITE_TOOLS="herdr agmsg"
+HERDR_INSTALL_URL="https://herdr.dev"
+AGMSG_INSTALL_URL="https://github.com/j5ik2o/agmsg"
+TEAM_MODE_DOC="docs/guide/20-team-mode.md"
+
+require_prerequisites() {
+  local os_name
+  os_name="$(uname -s)"
+  case "$os_name" in
+  Darwin | Linux) ;;
+  *)
+    echo "ERROR: Team Mode is unsupported on $os_name; only macOS and Linux are supported. See $TEAM_MODE_DOC." >&2
+    return 1
+    ;;
+  esac
+
+  if ! command -v "$HERDR" >/dev/null 2>&1; then
+    echo "ERROR: herdr is required but was not found. Install it from $HERDR_INSTALL_URL and see $TEAM_MODE_DOC." >&2
+    return 1
+  fi
+
+  if [ ! -x "$AGMSG_JOIN" ]; then
+    echo "ERROR: agmsg is required but was not found at $AGMSG_JOIN. Install it from $AGMSG_INSTALL_URL and see $TEAM_MODE_DOC." >&2
+    return 1
+  fi
+}
 
 # --- agmsg watcher readiness verification (Issue #1384) ------------------
 # Fresh Claude members race the Claude Code TUI cold-start and can drop the
@@ -77,7 +105,7 @@ WATCHER_RESEND_MAX="${WATCHER_RESEND_MAX:-2}"
 # agmsg's actas-lock.sh owns the canonical ready-sentinel path + name encoding.
 # We source it and call agmsg_ready_path rather than duplicating the path string
 # here (NFR-4). Overridable so tests can point at a self-contained stub.
-AGMSG_ACTAS_LOCK_LIB="${AGMSG_ACTAS_LOCK_LIB:-$AGMSG_ROOT/scripts/lib/actas-lock.sh}"
+AGMSG_ACTAS_LOCK_LIB="${AGMSG_ACTAS_LOCK_LIB:-$AGMSG_SCRIPT_DIR/lib/actas-lock.sh}"
 # Number of engineer members (leader is always added on top). Selectable per
 # fresh run with -2/-4/-6; defaults to 6. A resumed run reads its saved size.
 TEAM_SIZE="${TEAM_ENGINEERS:-6}"
@@ -193,7 +221,7 @@ reject_legacy_run() {
   local run_id="$1" marker="$2"
   {
     echo "ERROR: run $run_id predates the herdr-only launcher (mux marker: ${marker:-<none>}); it cannot be resumed or killed here."
-    echo "Its worktrees and branches are intact — create a fresh run to continue that work: scripts/team-up.sh"
+    echo "Its worktrees and branches are intact — create a fresh run with: bash <harness-dir>/tools/team-up.sh"
     echo "If the old session is still attached, tear it down manually, e.g.: tmux kill-session -t $S"
   } >&2
   exit 1
@@ -483,7 +511,7 @@ RUN_NAME=""
 
 usage() {
   cat <<'EOF'
-Usage: scripts/team-up.sh [OPTIONS]
+Usage: bash <harness-dir>/tools/team-up.sh [OPTIONS]
 
 Without -c, creates a new run (leader + N engineers) from the repository HEAD.
 
@@ -668,9 +696,9 @@ list_instances() {
 
 kill_hint() {
   if [ "$INSTANCE" = "default" ]; then
-    printf 'scripts/team-up.sh --kill'
+    printf 'bash %q --kill' "$0"
   else
-    printf 'scripts/team-up.sh --instance %s --kill' "$INSTANCE"
+    printf 'bash %q --instance %s --kill' "$0" "$INSTANCE"
   fi
 }
 
@@ -851,8 +879,8 @@ claude_member_cmd() {
     log_env="TEAM_MSG_LOG_DIR=$(printf '%q' "$RUN_RECORD") "
   fi
   # keep the pane open after claude exits so crashes stay inspectable
-  printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team %sTEAM_MSG=%q CLAUDE_IDENTITY=%q %q %s %s %q; exec $SHELL -l' \
-    "$wt" "$log_env" "$MSG_BACKEND" "$CLAUDE_IDENTITY" "$REPO/scripts/run-claude.sh" "$args" "$interaction_args" "$init_prompt"
+  printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team %sTEAM_MSG=%q CLAUDE_IDENTITY=%q CLAUDE_CONFIG_DIR=%q claude --dangerously-skip-permissions %s %s %q; exec $SHELL -l' \
+    "$wt" "$log_env" "$MSG_BACKEND" "$CLAUDE_IDENTITY" "$HOME/.claude-$CLAUDE_IDENTITY" "$args" "$interaction_args" "$init_prompt"
 }
 
 member_role() {
@@ -957,8 +985,8 @@ codex_member_cmd() {
     if [ -n "${RUN_RECORD:-}" ]; then
       log_env="TEAM_MSG_LOG_DIR=$(printf '%q' "$RUN_RECORD") "
     fi
-    printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team %sTEAM_MSG=%q CODEX_IDENTITY=%q %q %s; exec $SHELL -l' \
-      "$wt" "$log_env" "$MSG_BACKEND" "$CODEX_IDENTITY" "$REPO/scripts/run-codex.sh" "$interaction_args"
+    printf 'cd %q && mise trust -q 2>/dev/null; AMADEUS_OPERATING_MODE=team %sTEAM_MSG=%q CODEX_IDENTITY=%q CODEX_HOME=%q PATH=%q codex --dangerously-bypass-approvals-and-sandbox %s; exec $SHELL -l' \
+      "$wt" "$log_env" "$MSG_BACKEND" "$CODEX_IDENTITY" "$codex_home" "$HOME/.agents/bin:$PATH" "$interaction_args"
     return 0
   fi
 
@@ -1338,6 +1366,8 @@ if [ "$CONTINUE" = "1" ]; then
     adopt_legacy_run
   fi
 fi
+
+require_prerequisites || exit 1
 
 if mux_has_session "$S"; then
   if [ "$CONTINUE" = "1" ]; then
