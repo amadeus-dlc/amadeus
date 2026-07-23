@@ -183,7 +183,7 @@ function emit(directive: Directive, recordError = true): void {
   // workspace migration is outside the Intent lifecycle and must not annotate
   // an unrelated active record.
   if (directive.kind === "error" && recordError) {
-    recordEngineError(directive.message);
+    recordEngineError(directive.message, _handlerProjectDir);
   }
   console.log(JSON.stringify(result.data));
 }
@@ -197,6 +197,22 @@ import type { appendAuditEntry as AppendAuditEntry } from "./amadeus-audit.ts";
 // itself fails and somehow routes back through here, we must not recurse.
 let _engineErrorInProgress = false;
 
+// The project dir the current top-level handler is operating on (Issue #1389).
+// emit()'s best-effort ERROR_LOGGED must record against THIS project — the one
+// the handler received — not the ambient CLAUDE_PROJECT_DIR. recordEngineError
+// used to re-derive the project from process.argv, but an in-process driver (a
+// test or a seam that calls handleNext/handleReport directly) has no
+// `--project-dir` in argv, so the emit fell through to the ambient real
+// workspace and polluted its audit shard. Threading the handler's projectDir to
+// the single emit() aggregation point restores the sibling emitError's
+// projectDir-first contract (amadeus-lib.ts:5879). Set at each in-process entry
+// point (main / handleNext / handleReport) and read by emit(); the argv fallback
+// in recordEngineError remains for the runEngineMain top-level catch, which can
+// fire BEFORE main() sets this. A module-scoped current-dir (not a parameter on
+// every emit call site) mirrors _engineErrorInProgress's re-entry guard and
+// keeps the CLI's synchronous one-shot invocation unambiguous.
+let _handlerProjectDir: string | undefined;
+
 // Best-effort ERROR_LOGGED append for the engine (Issue #839). Mirrors
 // amadeus-lib's emitError contract WITHOUT the exit — this helper is void and
 // returns to its caller, because the error-directive path prints a directive
@@ -205,21 +221,28 @@ let _engineErrorInProgress = false;
 // (pre-init errors have no record to write to), and ANY recording failure is
 // swallowed: we are already on an error path and must neither hide nor amplify
 // the engine's own failure. Exported for in-process seam testing.
-export function recordEngineError(message: string): void {
+//
+// projectDir is the project the caller is operating on, threaded from the
+// error-emitting handler via emit() (Issue #1389). When it is absent — the
+// runEngineMain top-level catch can fire BEFORE/OUTSIDE main's flag parse — we
+// fall back to re-extracting --project-dir from argv the way main() does.
+export function recordEngineError(message: string, projectDir?: string): void {
   if (_engineErrorInProgress) return;
   _engineErrorInProgress = true;
   try {
-    // Extract --project-dir straight from argv the way main() does, so this
-    // helper works even when it fires BEFORE/OUTSIDE main's flag parse (e.g.
-    // from the top-level catch on a malformed-state throw).
     const rawArgs = process.argv.slice(2);
-    let projectDirFlag: string | undefined;
-    for (let i = 0; i < rawArgs.length; i++) {
-      if (rawArgs[i] === "--project-dir" && i + 1 < rawArgs.length) {
-        projectDirFlag = rawArgs[i + 1];
+    let pd: string;
+    if (projectDir !== undefined) {
+      pd = resolveProjectDir(projectDir);
+    } else {
+      let projectDirFlag: string | undefined;
+      for (let i = 0; i < rawArgs.length; i++) {
+        if (rawArgs[i] === "--project-dir" && i + 1 < rawArgs.length) {
+          projectDirFlag = rawArgs[i + 1];
+        }
       }
+      pd = resolveProjectDir(projectDirFlag);
     }
-    const pd = resolveProjectDir(projectDirFlag);
     if (!existsSync(stateFilePath(pd))) return;
     // Lazy require breaks the load-time cycle exactly like lib's emitError
     // (amadeus-audit.ts imports from this module's dependency graph).
@@ -1445,6 +1468,9 @@ function isBareAdvancingNext(
 
 // The `next` handler — pure read, emits exactly one directive.
 export function handleNext(args: string[], projectDir: string | undefined): void {
+  // Record the project this handler operates on so emit()'s ERROR_LOGGED lands
+  // here, not the ambient CLAUDE_PROJECT_DIR, under in-process drivers (#1389).
+  _handlerProjectDir = projectDir;
   const flags = parseNextFlags(args);
   const migration = classifyMigrationRequest(args);
 
@@ -2983,6 +3009,9 @@ function approveArgs(slug: string, flags: ReportFlags): string[] {
 // `error` directive on a rejected transition. Mutation happens entirely inside
 // the spawned subcommand(s) — the engine itself writes nothing.
 export function handleReport(args: string[], projectDir: string | undefined): void {
+  // Record the project this handler operates on so emit()'s ERROR_LOGGED lands
+  // here, not the ambient CLAUDE_PROJECT_DIR, under in-process drivers (#1389).
+  _handlerProjectDir = projectDir;
   const flags = parseReportFlags(args);
 
   // Branch -1 — the --single stage-runner commit. A stage-runner reports
@@ -3342,6 +3371,11 @@ function main(): void {
   const subcommand = filteredArgs[0];
   const subArgs = filteredArgs.slice(1);
 
+  // Record the operating project for emit()/the top-level catch (#1389). The
+  // handlers set this too (for in-process drivers that bypass main); setting it
+  // here covers the unknown-subcommand path and the runEngineMain catch.
+  _handlerProjectDir = projectDir;
+
   switch (subcommand) {
     case "next":
       handleNext(subArgs, projectDir);
@@ -3358,7 +3392,7 @@ function main(): void {
       // ERROR_LOGGED row before exiting so a bad subcommand leaves audit
       // evidence, not just a stderr line (Issue #878). No-op pre-init.
       const usage = `Unknown subcommand: ${subcommand ?? "(none)"}. Valid: next, report, park`;
-      recordEngineError(usage);
+      recordEngineError(usage, projectDir);
       console.error(usage);
       process.exit(1);
     }
