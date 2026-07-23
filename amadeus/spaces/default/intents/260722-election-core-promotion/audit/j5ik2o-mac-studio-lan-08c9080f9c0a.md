@@ -4329,3 +4329,295 @@
 **Agent**: amadeus-architect-agent
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:06:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: bef91b09
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:06:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: bef91b09
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/functional-design/business-logic-model.md
+**Duration ms**: 44
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:06:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6e734497
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:06:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6e734497
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/functional-design/business-logic-model.md
+**Duration ms**: 44
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:06:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: fb6523b9
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/functional-design/business-rules.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-23T03:06:48Z
+**Event**: SENSOR_FAILED
+**Fire id**: fb6523b9
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/functional-design/business-rules.md
+**Detail path**: amadeus/spaces/default/intents/260722-election-core-promotion/.amadeus-sensors/functional-design/required-sections-fb6523b9.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:06:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4c3ac30e
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:06:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4c3ac30e
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/functional-design/business-rules.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:06:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 889c83bf
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:06:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 889c83bf
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/functional-design/domain-entities.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:06:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 911abed4
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:06:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 911abed4
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/functional-design/domain-entities.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:07:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: df22be84
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:07:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: df22be84
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/functional-design/business-rules.md
+**Duration ms**: 47
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T03:10:50Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a70598ab8d7fc81e4
+**Message**: VERDICT: READY\ninvocationId: 38fbef27-799a-418f-8176-43f65f6b2c61 iteration: 1\n\nFindings\n\nMinor1 (トレーサビリティ): business-logic-model.md の述語1シグネチャ `scanDistributionTreeForScriptsRefs(files: {path, content
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:12:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: b6069fdb
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-launcher-promotion/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:12:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: b6069fdb
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-launcher-promotion/functional-design/business-logic-model.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:12:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: 92e812a7
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-launcher-promotion/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:12:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: 92e812a7
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-launcher-promotion/functional-design/business-logic-model.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:12:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6074e42b
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-launcher-promotion/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:12:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6074e42b
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-launcher-promotion/functional-design/business-rules.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:12:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: 87d84644
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-launcher-promotion/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:12:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: 87d84644
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-launcher-promotion/functional-design/business-rules.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:12:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: 95f80beb
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-launcher-promotion/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:12:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: 95f80beb
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-launcher-promotion/functional-design/domain-entities.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:12:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2b06d14f
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-launcher-promotion/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:12:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2b06d14f
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-launcher-promotion/functional-design/domain-entities.md
+**Duration ms**: 40
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T03:15:40Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: ad9bc084ec6596bc5
+**Message**: VERDICT: READY\ninvocationId: dc7bb360-7fc9-4db2-8879-55cca42c3963 iteration: 1\n\nFR-3a〜3e / FR-4a〜4b / FR-8a〜8c を独立再列挙して照合した結果、FR-8c を除き全数がFD 3成果物(business-logic-model.md / business-rules.md / domain-e
+
+---
