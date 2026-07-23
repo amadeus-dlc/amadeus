@@ -30,5 +30,12 @@
     "receivedAt": "2026-07-23T04:16:27Z",
     "detail": "ballot accepted: e4",
     "voter": "e4"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-07-23T04:16:34Z",
+    "receivedAt": "2026-07-23T04:16:58Z",
+    "detail": "ballot accepted: e6",
+    "voter": "e6"
   }
 ]

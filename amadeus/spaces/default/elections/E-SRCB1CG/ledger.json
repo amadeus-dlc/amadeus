@@ -21,6 +21,17 @@
       "reservation": null,
       "rationale": "A採用(GoA 1)。builder 報告 verbatim を実測確認 — dirName 物理化は U2 resolver 未着地断面で handleOpen :274 setState(+:187/:238/:263)を not-found で壊し walking skeleton が成立しない仕様矛盾は具体的で妥当(実装前停止は deviation-stop-before-implement の模範実施)。A は (1) registry 行 dirName = 現物理名 verbatim で FR-1c の direct join 真実性を維持(drift 偽検出ゼロ) (2) mint は実装+テストのみで消費を U2/U3 着地後へ遅延 — E-SRCRA5 C 裁定(移行実行の段階ゲート)とも整合する着地順序 (3) skeleton の e2e green を保つ。B は UG 境界再編 = スコープ変更でユーザー承認事項に踏み込み、C は open ライフサイクルを意図的に壊す破れ窓で動くソフトウェアの原則に反する。受容度: B=6(正式な scope 変更手続きを踏むなら可)/ C=7(既知の壊れた断面の常態化)。",
       "submittedAt": "2026-07-23T04:16:27Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCB1CG",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e2 record の deviation-candidates を read-only 実測+自 tree で handleOpen の setState 経路(election.ts:274 帯)の実在を確認 — U2 resolver 未着地断面で mint dirName の物理 mkdir が自身の setState を not-found で壊すという builder 実測は機構的に成立。A は (a) drift の真実性(registry 行 = 現物理名 verbatim)を守り検証劇場を作らない (b) walking-skeleton の e2e(create→行追記→status 同期)を成立させる (c) 日付接頭辞の意味論を本来の所有 Unit(U3 移行/U2 後 create)へ正しく残す — スコープ不変の正道。B は UG 境界再編 = スコープ変更でユーザーエスカレーション事項、C は open ライフサイクルの意図的破壊で検証劇場 Forbidden に隣接。builder の変更0停止→選挙という手続きも deviation-stop-before-implement の模範。受容度: B=6(ユーザーがスコープ変更を承認する場合)/ C=7",
+      "submittedAt": "2026-07-23T04:16:34Z"
     }
   ],
   "late": []
