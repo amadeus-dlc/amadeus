@@ -1,0 +1,16 @@
+{
+  "kind": "amend",
+  "ref": {
+    "electionId": "E-FSPBTS13",
+    "voter": "e6",
+    "submittedAt": "2026-07-23T05:14:03Z"
+  },
+  "electionId": "E-FSPBTS13",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "amend(原票 = 上記 ref、choice 1 は不変 — rationale の誤記述を訂正: 原票は『0件整理』と書いたが本選挙は候補1採用提案)。正しい判断根拠: e4 record を read-only 実測 — 候補1(allowlist 行ピンの無音転位: stale 検査に映らないまま別の測定可能行へずれる — 検出済み 4402-4403 に加え未検出の 2916 転位を PR #1407 で実測)は、既存 allowlist-line-pin-stale(行シフトで stale 化)が守らない『stale に見えない転位』の面を埋める実測付き追補で採用妥当。PM 回付3件も適切。提案どおり(1)",
+  "submittedAt": "2026-07-23T05:14:20Z"
+}
