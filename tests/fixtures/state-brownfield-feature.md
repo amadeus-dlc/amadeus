@@ -30,6 +30,7 @@
 
 ## Runtime State
 - **Revision Count**: 0
+- **Mirror Boundary Receipts**: {"ideation":"completed"}
 
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->

@@ -30,3 +30,7 @@
 | U-02 | mirror verb の実行主体制約の有無 | design |
 | U-03 | 設定ファイル形式(yml/json/md)と SKILL の6ハーネス生成様式 | design |
 | U-04 | phase 境界 ask の発火粒度(全 phase 境界か、特定境界のみか)+ミラー未作成 intent での create 選択肢の出し方 | requirements |
+
+## 改定履歴(申告)
+
+- 2026-07-23T01:13:55Z — P-02 改定(ユーザー裁定、leader 経由 agmsg 2026-07-23T01:13:32Z): 本 intent の**継続分(inception 以降)に限り**質問の裁定方式を「ユーザー直接対話」から「選挙」へ変更(可否同数のみユーザーエスカレーション)。改定自体がユーザー裁定であり P-02 との矛盾はない(cid:approval-lineage-citation の追加裁定として requirements 冒頭系譜にも反映)。ideation 当時の P-02 記録は履歴として不変。

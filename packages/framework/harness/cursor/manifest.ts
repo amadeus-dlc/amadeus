@@ -39,6 +39,7 @@ const manifest: HarnessManifest = {
     { src: "scopes", dst: "scopes" },
     { src: "agents", dst: "agents" },
     { src: "hooks", dst: "hooks" },
+    { src: "skills/amadeus-mirror", dst: "skills/amadeus-mirror" },
   ],
 
   // Three authored surfaces:

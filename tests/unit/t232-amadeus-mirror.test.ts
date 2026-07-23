@@ -10,14 +10,18 @@
 // tests/integration/t232-amadeus-mirror.integration.test.ts.
 
 import { describe, expect, test } from "bun:test";
+import { posix, win32 } from "node:path";
 import {
+  compareMirrorStatus,
   countStageProgress,
+  exitOfStatus,
   type MirrorSnapshot,
   parseArgs,
+  projectDirFromToolsDir,
   renderBody,
   renderStatusLine,
   renderTitle,
-} from "../../scripts/amadeus-mirror";
+} from "../../packages/framework/core/tools/amadeus-mirror";
 
 function snapshot(over: Partial<MirrorSnapshot> = {}): MirrorSnapshot {
   return {
@@ -40,10 +44,11 @@ function snapshot(over: Partial<MirrorSnapshot> = {}): MirrorSnapshot {
 }
 
 describe("t232 parseArgs (C1, S-3 boundary)", () => {
-  test("accepts the three subcommands without flags", () => {
+  test("accepts the four subcommands without flags", () => {
     expect(parseArgs(["create"])).toEqual({ kind: "create", intentDir: null });
     expect(parseArgs(["sync"])).toEqual({ kind: "sync", intentDir: null });
     expect(parseArgs(["close"])).toEqual({ kind: "close", intentDir: null });
+    expect(parseArgs(["status"])).toEqual({ kind: "status", intentDir: null });
   });
 
   test("accepts --intent <dirName>", () => {
@@ -59,6 +64,92 @@ describe("t232 parseArgs (C1, S-3 boundary)", () => {
     expect(parseArgs(["create", "--force"]).kind).toBe("usage");
     expect(parseArgs(["create", "--intent"]).kind).toBe("usage");
     expect(parseArgs(["create", "--intent", "--intent"]).kind).toBe("usage");
+  });
+});
+
+describe("t232 core tools project-root resolution (FR-1 platform parity)", () => {
+  test("derives the same repository depth under POSIX and Windows path semantics", () => {
+    expect(
+      projectDirFromToolsDir("/repo/packages/framework/core/tools", posix.join),
+    ).toBe("/repo");
+    expect(
+      projectDirFromToolsDir("C:\\repo\\packages\\framework\\core\\tools", win32.join),
+    ).toBe("C:\\repo");
+  });
+});
+
+describe("t232 status comparison (U1 FR-2)", () => {
+  test("returns clean and exit 0 for the canonical body", () => {
+    const result = compareMirrorStatus(snapshot({ mirrorIssue: 1161 }), renderBody(
+      snapshot({ mirrorIssue: 1161 }),
+    ));
+    expect(result).toEqual({ kind: "clean" });
+    expect(exitOfStatus(result)).toBe(0);
+  });
+
+  test("reports only mirror-missing when no issue can be compared", () => {
+    const result = compareMirrorStatus(snapshot(), null);
+    expect(result).toEqual({
+      kind: "diverged",
+      findings: [{
+        kind: "mirror-missing",
+        detail: expect.stringContaining("no Mirror Issue field"),
+      }],
+    });
+    expect(exitOfStatus(result)).toBe(1);
+  });
+
+  test("reports an absent numbered issue as mirror-missing", () => {
+    const result = compareMirrorStatus(snapshot({ mirrorIssue: 1161 }), null);
+    expect(result).toEqual({
+      kind: "diverged",
+      findings: [{
+        kind: "mirror-missing",
+        detail: expect.stringContaining("#1161"),
+      }],
+    });
+  });
+
+  test("reports stale status with the record-side status in detail", () => {
+    const current = snapshot({ mirrorIssue: 1161, workflowStatus: "Running" });
+    const stale = renderBody({ ...current, workflowStatus: "Completed" });
+    const result = compareMirrorStatus(current, stale);
+    expect(result.kind).toBe("diverged");
+    if (result.kind === "diverged") {
+      expect(result.findings.map((finding) => finding.kind)).toContain(
+        "stale-status-line",
+      );
+      expect(result.findings[0]?.detail).toContain('Status="Running"');
+    }
+  });
+
+  test("reports body drift while preserving the canonical status line", () => {
+    const current = snapshot({ mirrorIssue: 1161 });
+    const drifted = renderBody(current).replace("## 概要", "## changed");
+    const result = compareMirrorStatus(current, drifted);
+    expect(result).toEqual({
+      kind: "diverged",
+      findings: [{
+        kind: "issue-drifted",
+        detail: expect.any(String),
+      }],
+    });
+  });
+
+  test("lists stale-status-line and issue-drifted together in deterministic order", () => {
+    const current = snapshot({ mirrorIssue: 1161 });
+    const result = compareMirrorStatus(current, "manually replaced body");
+    expect(result.kind).toBe("diverged");
+    if (result.kind === "diverged") {
+      expect(result.findings.map((finding) => finding.kind)).toEqual([
+        "stale-status-line",
+        "issue-drifted",
+      ]);
+    }
+  });
+
+  test("maps a precondition outcome to exit 2", () => {
+    expect(exitOfStatus({ kind: "precondition", reason: "gh not ready" })).toBe(2);
   });
 });
 

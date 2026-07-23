@@ -1,0 +1,49 @@
+# Business Logic Model — U2-mirror-skill(260719-mirror-productization)
+
+上流入力(consumes 全数): unit-of-work.md、unit-of-work-story-map.md、requirements.md、components.md、component-methods.md、services.md
+
+Integration spot-check owner: U2-CG-SPOT-001 — `packages/framework/core/skills/amadeus-mirror/SKILL.md`
+Integration spot-check owner: U2-CG-SPOT-002 — `packages/framework/core/skills/amadeus-mirror/SKILL.md`
+
+## SKILL 手順フロー(実装 = SKILL.md の Step 構成)
+
+```
+任意intent指定: active space内に実在するintent directoryの正確なbasenameかを検証し、shell文字列を組み立てず`--intent`に続く単一引数として渡す
+Step 1: bun {{HARNESS_DIR}}/tools/amadeus-mirror.ts status
+  → exit 0: 「乖離なし」を報告して終了
+  → exit 2: precondition 理由(gh 不在/未認証/record 不在)と復旧手順を提示して終了
+  → exit 1かつ U1 の構造化 StatusOutcome として検証済み: Step 2 へ
+  → exit 1だが構造検証不能、または未知 exit: 起動/実行失敗として loud に停止
+Step 2: findings 種別ごとの案内(人間の選択を待つ — StatusFinding 3種と1:1)
+  → mirror-missing: create を提案(実行例コマンド提示)
+  → stale-status-line: detailを解析せずsyncとcloseを両方提示。syncはopen mirror更新、closeはfail-closedなclose-after-landing検査により未着地時に拒否され得ると説明
+  → issue-drifted: sync を提案
+  → finding の自由文 detail は表示専用で、分類・コマンド生成には使わない
+Step 3: 選択された verb を実行し、結果(exit code+stdout)を報告
+```
+
+## 実装順序(story-map U2 順序の詳細化)
+
+1. SKILL 骨格(frontmatter+Step 1 の status 入口)— U1 の StatusOutcome/exit 契約が確定済みであることが前提(DAG: U2 depends_on U1)
+2. Step 2 分岐文言+運用注記(BR-U2-4 の3条件)
+3. manifest の skills 投影リストへ追加(coreDirs 明示投影 — claude manifest :51-54 同型を6ハーネス分)
+4. docs mirror 節の新設(BR-U2-6 — 対訳同期込み)
+
+## テスト設計
+
+- SKILL は文書のため、検証は (a) FR-3 受け入れ基準の grep(実行コマンドが {{HARNESS_DIR}} 経由のみ・gh 直呼び 0)(b) dist:check/promote:self:check(6面投影)(c) 既存 SKILL 系テスト(runner/skills ドリフトガード) (d) ツール不在/起動失敗の exit 1 で Step 2 に進まない契約検査 (e) 英日 docs の mirror 節が共に存在し、status/create/sync/close、exit 0/1/2、human gate の語彙集合が一致する grep 検査、が green
+
+## Review — Iteration 2
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-07-23T03:46:58Z
+- **Iteration:** 2
+- **Scope decision:** none
+
+i1 Major2件(docs mirror 節の担当不在/complete-close 状態機械未確定)是正 → i2 READY(StatusFinding 3種1:1・close 判定一意化・3配置全充足)
+
+### Findings
+
+- BR-U2-6 新設(docs mirror 節 = U2 担当、是正済み)
+- BR-U2-5 書換(close = stale finding 内部分岐、是正済み)

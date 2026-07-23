@@ -52,6 +52,7 @@ const manifest: HarnessManifest = {
     { src: "skills/amadeus-replay", dst: "skills/amadeus-replay" },
     { src: "skills/amadeus-outcomes-pack", dst: "skills/amadeus-outcomes-pack" },
     { src: "skills/amadeus-grilling", dst: "skills/amadeus-grilling" },
+    { src: "skills/amadeus-mirror", dst: "skills/amadeus-mirror" },
   ],
 
   // Authored harness surfaces copied verbatim (with token substitution on .md)

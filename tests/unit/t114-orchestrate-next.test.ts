@@ -71,7 +71,7 @@
 
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   AMADEUS_SRC,
@@ -79,6 +79,7 @@ import {
   createTestProject,
   FIXTURES_DIR,
   resetAidlcEnv,
+  seededStateFile,
   seedStateFile,
 } from "../harness/fixtures.ts";
 
@@ -154,6 +155,14 @@ describe("t114 happy path: in-flight current stage -> run-stage", () => {
   test("4: brownfield bugfix active stage -> run-stage reverse-engineering", () => {
     proj = createTestProject();
     seedStateFile(proj, BROWNFIELD_INIT_DONE);
+    const statePath = seededStateFile(proj);
+    writeFileSync(
+      statePath,
+      readFileSync(statePath, "utf-8").replace(
+        "## Runtime State",
+        '## Runtime State\n- **Mirror Boundary Receipts**: {"ideation":"completed"}',
+      ),
+    );
     expect(runNext(proj, []).out).toContain('"stage":"reverse-engineering"');
   });
 });
