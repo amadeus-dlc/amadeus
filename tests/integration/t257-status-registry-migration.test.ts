@@ -8,6 +8,7 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
+  statSync,
   symlinkSync,
   unlinkSync,
   writeFileSync,
@@ -192,7 +193,9 @@ function nearestRankP95(values: number[]): number {
 function currentGitSha(): string {
   const repositoryRoot = join(import.meta.dir, "..", "..");
   const dotGit = join(repositoryRoot, ".git");
-  const dotGitText = readFileSync(dotGit, "utf-8").trim();
+  const dotGitText = statSync(dotGit).isDirectory()
+    ? ""
+    : readFileSync(dotGit, "utf-8").trim();
   const gitDir = dotGitText.startsWith("gitdir:")
     ? resolve(repositoryRoot, dotGitText.slice("gitdir:".length).trim())
     : dotGit;

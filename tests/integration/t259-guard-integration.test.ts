@@ -1,7 +1,7 @@
 // covers: subcommand:amadeus-utility:intent function:archivedNextGuard subcommand:amadeus-state:unpark
 // @test-size medium
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { cpus, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -76,7 +76,9 @@ function unchanged(paths: string[]): string[] {
 
 function currentGitSha(repositoryRoot: string): string {
   const dotGit = join(repositoryRoot, ".git");
-  const dotGitText = readFileSync(dotGit, "utf-8");
+  const dotGitText = statSync(dotGit).isDirectory()
+    ? ""
+    : readFileSync(dotGit, "utf-8");
   const gitDir = dotGitText.startsWith("gitdir:")
     ? resolve(repositoryRoot, dotGitText.slice("gitdir:".length).trim())
     : dotGit;

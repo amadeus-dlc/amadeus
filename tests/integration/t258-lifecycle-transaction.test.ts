@@ -1,7 +1,7 @@
 // covers: subcommand:amadeus-state:archive subcommand:amadeus-state:unarchive
 // @test-size medium
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { cpus, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -422,7 +422,9 @@ function p95(values: number[]): number {
 function currentGitSha(): string {
   const repositoryRoot = join(import.meta.dir, "..", "..");
   const dotGit = join(repositoryRoot, ".git");
-  const dotGitText = readFileSync(dotGit, "utf-8").trim();
+  const dotGitText = statSync(dotGit).isDirectory()
+    ? ""
+    : readFileSync(dotGit, "utf-8").trim();
   const gitDir = dotGitText.startsWith("gitdir:")
     ? resolve(repositoryRoot, dotGitText.slice("gitdir:".length).trim())
     : dotGit;

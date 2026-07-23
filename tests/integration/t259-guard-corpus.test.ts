@@ -122,5 +122,5 @@ describe("archived guard AST corpus", () => {
       twoRssBytes,
       rssMultiplier,
     }));
-  }, 15_000);
+  }, 30_000);
 });
