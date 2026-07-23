@@ -157,6 +157,10 @@ describe("t258 fileMatchesGlob", () => {
     expect(fileMatchesGlob("a/b.ts", "a/*")).toBe(true);
     expect(fileMatchesGlob("a/b/c.ts", "a/*")).toBe(false);
   });
+  test("regex metacharacters in a glob are matched literally", () => {
+    expect(fileMatchesGlob("docs/a+b[1].md", "docs/a+b[1].md")).toBe(true);
+    expect(fileMatchesGlob("docs/ab1.md", "docs/a+b[1].md")).toBe(false);
+  });
 });
 
 describe("t258 SCAN_ROOTS canonical catalog (BR-7)", () => {

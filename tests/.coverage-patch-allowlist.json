@@ -30,10 +30,22 @@
     "expiry": "remove if the CLI wrapper gains an in-process exit/error seam"
   },
   {
-    "file": "scripts/amadeus-election-store.ts",
+    "file": "packages/framework/core/tools/amadeus-election-store.ts",
     "lines": "342-343",
     "reason": "Defensive readdirSync catch after mkdirSync(root, {recursive:true}) already succeeded. Normal I/O creation failures are covered; reaching this second guard requires a permission or filesystem race between mkdir and readdir.",
     "expiry": "remove when Store.create gains an injectable filesystem seam for post-mkdir readdir failure"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-store.ts",
+    "lines": "357",
+    "reason": "Defensive election-directory mkdirSync catch after the registry append has committed and after the same root was created and read successfully. Normal root creation, registry-write, and store-write I/O failures are covered; reaching this row requires a permission or filesystem race between the registry append and the directory mkdir.",
+    "expiry": "remove when Store.create gains an injectable filesystem seam for post-registry directory creation failure"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election.ts",
+    "lines": "272",
+    "reason": "Defensive views-directory mkdirSync catch immediately after Store.create minted and created a fresh election directory. Normal create and view-write failures are covered; reaching this row requires a permission or filesystem race between Store.create and the views mkdir, and the CLI has no injectable filesystem seam.",
+    "expiry": "remove when handleOpen gains an injectable filesystem seam for post-create views-directory failure"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
@@ -181,7 +193,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "3987-3988",
+    "lines": "4202-4203",
     "reason": "Birth advisory message-string rows for the >1-nested-candidate case in handleIntentBirthStateBuild. Reaching this advisory requires driving a full intent birth, which needs a completely seeded workspace (memory/rules) — canonical in-process birth is impractical (no-canonical-direct-execution), and error()/die paths in birth are process.exit. The IDENTICAL not-auto-selected condition on the sibling detect surface (handleDetect) IS covered in-process by tests/integration/t249-canonical-nested-advisory; this is the same additive stdout advisory row. Message-string rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii).",
     "expiry": "remove when a canonical in-process intent-birth harness (seeded workspace) drives the multiple-nested advisory"
   },
@@ -391,13 +403,13 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "658-660",
+    "lines": "706-708",
     "reason": "Multi-line Pick type for the inspectHookHeartbeats snapshot options; runtime-erased, bun lcov stamps these type-only lines DA:0 even though t226 and t257 drive platform and both swap targets in-process (bun-multiline-arg-da0 class).",
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
-    "lines": "700-702",
+    "lines": "748-750",
     "reason": "Multi-line Pick type for hookHeartbeatDoctorCheck's context snapshot; runtime-erased, bun lcov stamps these type-only lines DA:0 even though t226 and t257 drive migration, platform, and swap-target values in-process (bun-multiline-arg-da0 class).",
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
   }
