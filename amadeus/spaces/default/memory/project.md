@@ -21,6 +21,7 @@
 - filesystem/process を使う medium test は unit allowlist を増やさず integration suite に置く。test-size classification ratchet を設計上の配置根拠とする (learned 2026-07-23) <!-- cid:code-generation:c2-doctor-seam -->
 - 並列負荷下の child watcher は固定回数 polling や本番 injection ではなく READY/START handshake と期限付き kill/reap を使う。起動遅延と孤児 process の両方を制御できる (learned 2026-07-23) <!-- cid:code-generation:c3-doctor-seam -->
 - 対象変更の security regression と repository 全体の dependency audit を別判定にする。対象 tests が green でも既存 High advisory は隠さず conditional readiness とし、範囲外の依存更新は別作業へ送る (learned 2026-07-23) <!-- cid:build-and-test:c1-doctor-seam -->
+- 既存 workflow へ新しいトリガーを追加する設計では、event 固有値の欠落を実行環境で再現し、既存ジョブのハード失敗と依存ジョブへの伝播を確認してから最小分岐を設計する (learned 2026-07-23) <!-- cid:functional-design:c1 -->
 ## Deployment
 
 デプロイ基盤は持たず、リリースは npm パッケージ配布と GitHub 上のタグ/PR 履歴で管理する。GitHub Actions は push と pull_request で typecheck、lint、dist/self-install drift guard、smoke+unit+integration tests を実行する。
@@ -171,6 +172,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - 実験・PoC 構成を常設化する intent の feasibility では、実験時の環境制約(ランナーOS・隔離機構等)を「実験の都合」か「本質的要件」かに分類してから引き継ぐ — 惰性引き継ぎは要件の過大評価を生む。260722-tla-plugin で sandbox-exec(ローカル隔離手段)を CI 要件と誤提示し、ユーザー却下(GitHub ランナー自体が隔離環境、CI は Linux + Docker digest固定)で是正した実測より (learned 2026-07-22) (learned 2026-07-22) <!-- cid:feasibility:c5-experiment-constraint-classify -->
 - practices-discovery で「変更なし」の場合、discovered-rules.md の ## Mandated / ## Forbidden は完全な空セクションにする — 注記行(「追加なし」等)は practices-promote の書式契約(ALWAYS/NEVER 前置必須)に fail-closed 拒否される。注記は別セクションへ置く(260722-tla-plugin で拒否→是正の実測) (learned 2026-07-22) (learned 2026-07-22) <!-- cid:practices-discovery:c3-empty-rules-format -->
 - plugin ステージが frontmatter で sensors: を宣言する場合、その sensor manifest の実在は graph compile の build-order 依存になる — compile は未知 sensor id を loud reject するため、Unit/Bolt 編成では sensor 実装 Unit を plugin ステージ Unit の前提依存に含める(260722-tla-plugin units-generation で reviewer が C8→C6 参照の宣言的見かけに隠れた真の依存を捕捉、エッジ追加是正の実測) (learned 2026-07-22) (learned 2026-07-22) <!-- cid:units-generation:plugin-sensor-decl-compile-dependency -->
+- process-global な環境検証を抽象化するときは、prepare 時の snapshot と実行直前の再検証を分離し、TOCTOU 防止の呼出し位置を維持する (learned 2026-07-23) <!-- cid:functional-design:c2 -->
 ## Testing
 - Standardの中核はunit/integrationとし、performance/securityは承認済みNFRと実在境界へtraceして選定する。戦略名だけで検査を機械追加しない。既決strategy再述に留めず、stage定義の曖昧さは別途追跡する。 (learned 2026-07-12) <!-- cid:build-and-test:c1 -->
 - 攻撃面・依存・承認NFRを成果物で実測明記した場合のみ検査を比例選定する。既存必須scanや要求済み検査の省略根拠にはしない。 (learned 2026-07-12) <!-- cid:build-and-test:c3 -->
