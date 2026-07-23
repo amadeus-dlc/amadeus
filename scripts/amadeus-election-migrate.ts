@@ -340,23 +340,33 @@ type ApprovalRecord = {
   provenance: string;
 };
 
+function captureApprovalField(text: string, pattern: RegExp): string | null {
+  return text.match(pattern)?.[1] ?? null;
+}
+
 function readApproval(path: string | null): ApprovalRecord | null {
   if (path === null || !existsSync(path)) return null;
   const text = readFileSync(path, "utf8");
-  const hash = text.match(/^approved-plan-sha256:\s*([a-f0-9]{64})\s*$/im)?.[1];
-  const issue = text.match(/^removal-issue:\s*(https:\/\/github\.com\/\S+\/issues\/\d+)\s*$/im)?.[1];
+  const hash = captureApprovalField(
+    text,
+    /^approved-plan-sha256:\s*([a-f0-9]{64})\s*$/im,
+  );
+  const issue = captureApprovalField(
+    text,
+    /^removal-issue:\s*(https:\/\/github\.com\/\S+\/issues\/\d+)\s*$/im,
+  );
   const granted = /^user-approval:\s*granted\s*$/im.test(text);
-  const provenance = text.match(
+  const provenance = captureApprovalField(
+    text,
     /^approval-provenance:\s*(agmsg:\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z)\s*$/im,
-  )?.[1];
-  return hash !== undefined && issue !== undefined && provenance !== undefined
-    ? {
-        userApproval: granted ? "granted" : "pending",
-        approvedPlanSha256: hash,
-        removalIssueRef: issue,
-        provenance,
-      }
-    : null;
+  );
+  if (hash === null || issue === null || provenance === null) return null;
+  return {
+    userApproval: granted ? "granted" : "pending",
+    approvedPlanSha256: hash,
+    removalIssueRef: issue,
+    provenance,
+  };
 }
 
 export function applyPlan(root: string, plan: MigrationPlan): void {
