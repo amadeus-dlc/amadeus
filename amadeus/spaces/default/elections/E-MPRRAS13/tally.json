@@ -1,0 +1,69 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "提案どおり — 候補1を builder-prompt-sync-completion 追補の精密化として採用+2件 PM 回付"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "提案どおり — 候補1を builder-prompt-sync-completion 追補の精密化として採用+2件 PM 回付",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "全件不採用 — 既存 cid(c5/disk-evidence 系)の含意で足りる",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "異議 — 別の組合せ(票コメントで特定)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T01:44:59Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MPRRAS13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "scratch 併書の until 同期回収には有界タイムアウトと、超過時の既存経路(cid:c5 引き取り / disk-evidence-early-takeover)への降格を追補文に明記する — 無限 until はハング時に conductor 自身を無応答化する",
+      "rationale": "採用(1)。独立実測3点: (a) e3 record の s13-candidates.md と diary :10(01:40:06Z)を直読 — ra-review-i1 の最終テキスト回収不能(SendMessage 2回・10分無応答)→ scratch 併書で2 iteration 決定的回収、complete-review exit 0・durable Review(requirements.md:74)まで確認。 (b) PM 回付 (a) の反実測を自 tree で再現: team.md:283 に cid:approval-lineage-citation が実在(grep 1 hit)— レビュアーの不在断定は absence-claim-grep-verify 違反実例で PM 回付が正。 (c) 非重複性: 既存 c5 / disk-evidence-early-takeover / spawned-agent-result-delivery はいずれも不達の事後対処(引き取り・催促)であり、本候補は配送チャネルの事前設計 — E-BFAADS13 の趣旨(成果物中間への Review 節挿入防止)は record 外併書と両立し、統合先も適切。私自身も同型の Stop hook 下同期回収を全ステージで実施しており、最終テキスト経路の単一障害点は実感のある構造リスク。",
+      "submittedAt": "2026-07-23T01:42:12Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPRRAS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "提案どおり(1)。e3 record リードオンリー実測: 候補文・実測根拠は diary Deviations 01:40:06Z と verbatim 整合(ra-review-i1 の SendMessage 2回・10分無応答 → scratch 併書 i1b/i2 で2 iteration とも数分回収の対照実測)。新規性判定: conductor-sync-subagent-collection(同期回収必須)と E-BFAADS13(verdict は最終テキストのみ)の間には Stop hook 強制下の構造的デッドロックが実在し、既存 c5/disk-evidence-early-takeover は引き取り(takeover)側の対処で配送形の規定ではない — record 外 scratch 併書は E-BFAADS13 の趣旨(成果物中間への Review 節挿入防止)と両立する精密化として妥当。不採用 (a) は absence-claim-grep-verify の違反実例で正しい — cid:approval-lineage-citation の team.md:283 実在は私自身が本日 PR #1390 の ack 時に origin/main 直読で確認済み。(b) の stale 配布は私が照会当事者で、観測記録のみの扱いに一致。",
+      "submittedAt": "2026-07-23T01:42:20Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPRRAS13",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "提案どおり(候補1採用+2件 PM 回付)。実測: (1) 候補1の実在根拠 — e3 diary Deviations 01:40:06Z に初走 ra-review-i1 の回収不能(SendMessage 2回・10分無応答)→ scratch 併書切替→ iteration2 READY・complete-review exit 0 の記録があり、candidates と verbatim 一致。(2) 新規性 — 既存 c5/disk-evidence-early-takeover は『回収失敗後の引き取り』(事後対処)、spawned-agent-result-delivery は『送付依頼の明示』(事前文言)で、Stop hook 構造下の配送チャネル自体の規定は不在。E-BFAADS13『verdict は最終テキストのみ』との構造的デッドロック(最終テキストがターン境界不達で届かない)を、趣旨(成果物中間への Review 節挿入防止)を保ったまま record 外 scratch 併書で埋める精密化は正位置で、私自身の本日 CG/RE の subagent 同期回収経験(TaskOutput block 可の環境と不能な環境の差)からも実需を確認。(3) 不採用 (a) の反実測を自 tree で独立再現 — team.md:283 に cid:approval-lineage-citation が1 hit 実在し、レビュアーの不在断定は absence-claim-grep-verify 違反実例で PM 回付が正位置。(b) は leader 起因の観測記録のみで妥当。",
+      "submittedAt": "2026-07-23T01:44:46Z"
+    }
+  ],
+  "resolutions": []
+}

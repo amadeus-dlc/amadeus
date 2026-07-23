@@ -1,0 +1,25 @@
+{
+  "electionId": "E-MPRRAS13",
+  "kind": "s13-adoption",
+  "question": "intent 260719-mirror-productization / requirements-analysis の §13 学習選定(全文 verbatim = e3 ブランチ <record>/inception/requirements-analysis/s13-candidates.md — git show で実測可)。conductor 提案: 候補1採用+2件 PM 回付。採用候補(verbatim 要旨): 『Stop hook 強制下で最終テキスト経路の回収が構造的に不能な場合、reviewer subagent の verdict を record 外 scratch ファイルへ併書させる配送形を許可(成果物への書込禁止は不変・最終テキスト返送も併用、conductor は until ループで同期回収)。統合先想定: builder-prompt-sync-completion の E-BFAADS13 追補の精密化 — 同追補の趣旨(成果物中間への Review 節挿入防止)と record 外併書は両立』。実測根拠: ra-review-i1 が最終テキスト経路で回収不能(SendMessage 2回・10分無応答)→ scratch 併書形で2 iteration とも数分で決定的回収。不採用2件(reviewer の不在断定 = absence-claim-grep-verify 違反実例 / E-TCRRA1 stale 配布の観測記録)は PM 回付。各自 e3 record を実測確認のうえ GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "提案どおり — 候補1を builder-prompt-sync-completion 追補の精密化として採用+2件 PM 回付"
+    },
+    {
+      "internalNo": 2,
+      "label": "全件不採用 — 既存 cid(c5/disk-evidence 系)の含意で足りる"
+    },
+    {
+      "internalNo": 3,
+      "label": "異議 — 別の組合せ(票コメントで特定)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e4",
+    "e5"
+  ],
+  "state": "recorded"
+}
