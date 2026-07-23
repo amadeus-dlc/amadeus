@@ -278,8 +278,7 @@ describe("migration CLI", () => {
     };
     expect(verifyBeforeMigration(root, plan, (_root, electionId) => electionId === "E-A" ? 0 : 1))
       .toEqual(["E-A"]);
-    expect(
-      renderFidelity(
+    const rendered = renderFidelity(
         {
           ok: false,
           baselineVerified: ["E-A"],
@@ -291,8 +290,9 @@ describe("migration CLI", () => {
           directPathReferences: ["docs/reference.md: elections/E-A"],
         },
         "abc",
-      ),
-    ).toContain("- Result: FAIL");
+      );
+    expect(rendered).toContain("- Result: FAIL");
+    expect(rendered).toContain("- docs/reference.md: elections/E-A");
   });
 
   test("migration module cannot create its own execution approval record", () => {
