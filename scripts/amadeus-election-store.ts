@@ -16,7 +16,14 @@
 // prevented by tmp+rename (writeStoreFile). Parse failures of existing files
 // reject with "corrupt" (fail-closed load; never silently re-initialize).
 
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import {
   type Ballot,
@@ -83,21 +90,15 @@ function withLateLane(ledger: Partial<LedgerFile>): LedgerFile {
   return { ballots: ledger.ballots ?? [], late: ledger.late ?? [] };
 }
 
-function dirOf(root: string, electionId: string): string {
-  return join(root, electionId);
-}
-
 // ---------------------------------------------------------------------------
 // Elections registry (U1 space-record-catalog, Bolt B1)
 //
 // A single elections.json at the elections root mirrors every election created
 // after U1 adoption: one row per election recording its canonical id, the
-// CURRENT physical directory name, the creation instant, and the last-synced
-// state. In THIS bolt the physical directories stay electionId-named at create
-// (ruling E-SRCB1CG: no resolver/pathing change — that is U2), so a row's
-// dirName equals its electionId verbatim. The registry is the future resolver's
-// index; the date-prefixed dirName convention lands at U3 migration / the
-// post-U2 create switch (see mintElectionDirName).
+// current physical directory name, the creation instant, and the last-synced
+// state. U2 resolves readers through this index and creates new elections in a
+// date-prefixed physical directory. Pre-U2 direct-name directories remain
+// reachable only through the loud migration-window branch below.
 // ---------------------------------------------------------------------------
 
 export type ElectionRegistryEntry = {
@@ -176,6 +177,34 @@ export function readElectionsRegistry(root: string): RegistryRead {
     });
   }
   return { kind: "ok", entries };
+}
+
+export type ResolvedElectionDir =
+  | { kind: "registry"; dir: string }
+  | { kind: "legacy-unmigrated"; dir: string };
+
+const LEGACY_PATH_NOTICE = "unmigrated election";
+
+// Resolve every election read through the registry. The only fallback is the
+// declared migration window: an exact legacy electionId directory that still
+// exists. It is deliberately loud and typed so migration completion can remove
+// this branch mechanically.
+export function resolveElectionDir(root: string, electionId: string): ResolvedElectionDir {
+  const registry = readElectionsRegistry(root);
+  if (registry.kind === "corrupt") {
+    throw new Error(`elections registry corrupt: ${registry.detail}`);
+  }
+  if (registry.kind === "ok") {
+    const byId = new Map(registry.entries.map((entry) => [entry.electionId, entry]));
+    const entry = byId.get(electionId);
+    if (entry !== undefined) return { kind: "registry", dir: join(root, entry.dirName) };
+  }
+  const legacyDir = join(root, electionId);
+  if (existsSync(legacyDir)) {
+    console.error(`${LEGACY_PATH_NOTICE} ${electionId} — legacy path(移行前)`);
+    return { kind: "legacy-unmigrated", dir: legacyDir };
+  }
+  throw new Error(`election not in registry: ${electionId}`);
 }
 
 // Append a new row. absent -> start a fresh []; corrupt -> loud error (never
@@ -293,21 +322,33 @@ export function mintElectionDirName(
 
 export const Store = {
   create(root: string, election: Election): Result<void, StoreError> {
-    const dir = dirOf(root, election.electionId);
-    if (existsSync(join(dir, "election.json"))) return err("exists");
     // Order contract (ruling E-SRCB1CG): the registry row is appended BEFORE the
     // election directory is created. The root must exist first so elections.json
-    // can land; the electionId dir is created only after the row commits, so a
+    // can land; the physical dir is created only after the row commits, so a
     // registry failure (duplicate/corrupt) aborts create with no dir side-effect.
     try {
       mkdirSync(root, { recursive: true });
     } catch {
       return err("io-error");
     }
+    const createdAt = nowUtcSecondsIso();
+    let existingDirNames: Set<string>;
+    try {
+      existingDirNames = new Set(
+        readdirSync(root, { withFileTypes: true })
+          .filter((entry) => entry.isDirectory())
+          .map((entry) => entry.name),
+      );
+    } catch {
+      return err("io-error");
+    }
+    const dirName = mintElectionDirName(election.electionId, createdAt, existingDirNames);
+    const dir = join(root, dirName);
+    if (existsSync(join(dir, "election.json"))) return err("exists");
     const appended = appendElectionToRegistry(root, {
       electionId: election.electionId,
-      dirName: election.electionId, // CURRENT physical name (= electionId this bolt)
-      createdAt: nowUtcSecondsIso(),
+      dirName,
+      createdAt,
       status: "draft",
     });
     if (!appended.ok) return appended;
@@ -326,31 +367,33 @@ export const Store = {
   },
 
   load(root: string, electionId: string): Result<{ election: Election; state: ElectionState }, StoreError> {
-    const read = readJson<ElectionFile>(join(dirOf(root, electionId), "election.json"));
+    const read = readJson<ElectionFile>(
+      join(resolveElectionDir(root, electionId).dir, "election.json"),
+    );
     if (!read.ok) return read;
     const { state, ...election } = read.value;
     return ok({ election, state });
   },
 
   setState(root: string, electionId: string, state: ElectionState): Result<void, StoreError> {
-    const path = join(dirOf(root, electionId), "election.json");
+    const resolved = resolveElectionDir(root, electionId);
+    const path = join(resolved.dir, "election.json");
     const read = readJson<ElectionFile>(path);
     if (!read.ok) return read;
     const w = writeStoreFile(path, JSON.stringify({ ...read.value, state }, null, 2));
     if (!w.ok) return w;
     // Loud registry sync (ruling E-SRCB1CG): once election.json is written,
-    // mirror the status to the registry row. Absent registry -> no-op ok
-    // (pre-U1-adoption / pre-migration store state is normal). Registry present
-    // but this election has no row, or a corrupt registry -> loud error: a
-    // created-after-U1 election MUST have a row that stays in sync.
-    const reg = readElectionsRegistry(root);
-    if (reg.kind === "absent") return ok(undefined);
-    if (reg.kind === "corrupt") return err("corrupt");
+    // mirror the status to the registry row. A typed legacy resolution skips
+    // registry sync during the declared migration window; registry-backed
+    // elections must always keep their row in sync.
+    if (resolved.kind === "legacy-unmigrated") return ok(undefined);
     return updateElectionStatus(root, electionId, state);
   },
 
   ledger(root: string, electionId: string): Result<LedgerFile, StoreError> {
-    const read = readJson<Partial<LedgerFile>>(join(dirOf(root, electionId), "ledger.json"));
+    const read = readJson<Partial<LedgerFile>>(
+      join(resolveElectionDir(root, electionId).dir, "ledger.json"),
+    );
     if (!read.ok) return read;
     return ok(withLateLane(read.value));
   },
@@ -365,7 +408,7 @@ export const Store = {
     ballot: Ballot,
     receivedAt: string,
   ): Result<void, StoreError> {
-    const dir = dirOf(root, electionId);
+    const dir = resolveElectionDir(root, electionId).dir;
     const ledgerPath = join(dir, "ledger.json");
     const read = readJson<Partial<LedgerFile>>(ledgerPath);
     if (!read.ok) return read;
@@ -433,7 +476,7 @@ export const Store = {
   // Only called from an executed operation's result (design invariant — the
   // CLI never books an event that did not happen).
   appendTimeline(root: string, electionId: string, event: TimelineEvent): Result<void, StoreError> {
-    const path = join(dirOf(root, electionId), "timeline.json");
+    const path = join(resolveElectionDir(root, electionId).dir, "timeline.json");
     const read = readJson<TimelineEvent[]>(path);
     if (!read.ok) return read;
     return writeStoreFile(path, JSON.stringify([...read.value, event], null, 2));
@@ -460,7 +503,7 @@ export const Store = {
     result: TallyResult,
     talliedAt: string,
   ): Result<void, StoreError> {
-    const dir = dirOf(root, electionId);
+    const dir = resolveElectionDir(root, electionId).dir;
     const ledger = Store.ledger(root, electionId);
     if (!ledger.ok) return ledger;
     try {

@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-ASGRES13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e1 record の s13 ファイル実在+4件整理を確認 — base 祖先性選定・裁定目録の予防適用・センサー手動代替はいずれも既決 cid の執行。t258→t259 番号連鎖は私が当事者(PR #1407 の t258 確保側)で、swarm-test-number-reservation の intent 間実例として PM 連鎖報告の扱いに同意 — 既存 cid の射程内で新設不要。",
+      "submittedAt": "2026-07-23T04:41:10Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-ASGRES13",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e1 record 実測: 4観測とも既存 cid の機械的適用・射程内実例。base 選定は rescan-base-ancestry の字義、t258→t259 は swarm-test-number-reservation の intent 間連鎖実例(起票→指摘→是正→繰上げの健全な運用で PM 報告が正位置 — 同 cid は事前予約を既に規定済みで射程内)、設計裁定7件の先送り目録化は ruling-dependent-placeholder 系の予防適用、センサー手動代替は既知クラス。新規ノルム候補なしに同意。",
+      "submittedAt": "2026-07-23T04:41:10Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-ASGRES13",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e1 record を read-only 実測: RE の s13-candidates.md の0件整理を確認(既存 cid 執行のみ)。0件で可(1)",
+      "submittedAt": "2026-07-23T04:47:46Z"
+    }
+  ],
+  "late": []
+}

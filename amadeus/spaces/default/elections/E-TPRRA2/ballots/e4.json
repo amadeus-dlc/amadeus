@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TPRRA2",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "本番実測(#1384 回避策)では再送1回で全員復旧しており上限2回は保守側だが、ack ノルムの既存上限と整合し害はない。",
+  "rationale": "A採用。cid:constants-from-code の要求どおり実在 named constant から導出: spawn.sh:132 READY_TIMEOUT=90(自分で grep 実測済み、:147-148 に --no-wait/--ready-timeout)+ack ノルム(cid:dispatch-ack-required)の再送最大2回。C の design 委任は、既に権威ある対照定数が実在する本件では先送りの価値がない。",
+  "submittedAt": "2026-07-22T22:29:30Z"
+}

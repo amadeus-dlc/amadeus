@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MHERAS13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。実測: e5 record の s13-candidates.md をリードオンリー直読 — 4件の既存 cid 対応は verbatim どおり。うち E-MHERA1 前提訂正は私が検出した当事者であり、『引用実在だが対象ファイルの一意名指し欠如』という整理は E-FSPRAS13 で採用見込みの引用一意性追補と同族の違反実例として PM 回付が正(新設不要に同意)。転記系2件は E-TPRRAS13 追補込みの機械的適用、E-TCRRAS13B 自己適用も既決の執行。0件に同意。",
+  "submittedAt": "2026-07-23T03:09:47Z"
+}

@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TCRRAQ1",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A採用(GoA 1)。実測: t241 は tests/e2e/ に実在しヘッダ1行目が『CI-resident』を表明(verbatim 確認)、--ci プロファイルは runSmoke/runUnit/runIntegration のみで e2e 非含有(run-tests.ts:197-202、本セッションで直読済み)、integration 層には選挙系テスト5本(spawn 使用の t236/t240 含む)の precedent 実在。A は文書化済み設計(ADR-6 decisions.md:44『integration テストで固定する』)への回復 = バグ修正の定義そのもの(仕様変更に非ず)で、bugfix の外科的最小と size purity(spawn 型→integration)の両方に適合。B は 75 ファイルの e2e を PR CI へ載せる過大コストで欠陥の形(1テストの層違い)に対して不釣合い。C は FR-0 常時証明の仕様後退でエスカレーション事項。自案非採用時受容度: B=6(FR-0 証明は保たれるがコスト過大)/ C=7(検証の仕様後退を修正と呼ぶことに重大な不同意)。",
+      "submittedAt": "2026-07-23T01:17:03Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TCRRAQ1",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A(tests/integration/ へ移設)。独立実測3点: (1) ADR-6 verbatim を直読 — decisions.md:44『これが選挙1件を完走できることを integration テストで固定する』と明記されており、A は文書化済み設計への回復 = バグ修正の定義そのもの(エスカレーション不要、B/C は逸脱の追認または仕様後退)。(2) integration 層の precedent 実在 — t235/t236/t240/t242/t244 の選挙系 integration テスト5本を ls で確認、spawn 使用テストの integration 配置は既習様式(fs-tests-integration-first の2軸整理どおり in-process/spawn とテスト層は独立)。(3) t241 自体の spawn 使用2箇所を grep 確認 — size purity の spawn→medium 判定は integration 層で適合。B は e2e 全75ファイル級を PR CI へ載せる過大コストで、必要なのは t241 1本の常設化のみ — 手段が目的を超える。C は FR-0 常時証明の放棄 = ユーザー可視契約の後退でエスカレーション前提。移設時の随伴整合(ヘッダ layer 表記・coverage registry・実行対象)が選択肢文言に含まれている点も same-root/fixture-propagation 系ノルムと整合。非採用時の受容度: B なら 6(常時証明は保たれるがコスト過大)、C なら 8(文書化済み設計の無承認後退 — 反証根拠: decisions.md:44 の verbatim 明文)。",
+      "submittedAt": "2026-07-23T01:17:02Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TCRRAQ1",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "自 tree 実測: run-tests.ts の --ci は smoke+unit+integration のみ(:197-202 verbatim、e2e フラグ不設定)+ t241 は tests/e2e/ に現存 — 表明と実行実態の乖離を独立確認。A は文書化済み設計(ADR-6 integration 指定)への回復であり bug 修正の定義に合致、選挙系 integration テスト6本(t235/t236/t240/t242/t244)の precedent とも整合。B は e2e 75ファイル級を PR CI へ載せる恒常コストで過剰、C は仕様後退でユーザーエスカレーション前提。自案非採用時の受容度: B=6(コスト受容の判断があれば)/ C=7(FR-0 常時証明の弱体化)",
+      "submittedAt": "2026-07-23T01:17:22Z"
+    }
+  ],
+  "late": []
+}

@@ -1,0 +1,29 @@
+{
+  "electionId": "E-SRCU3FD",
+  "kind": "clarification-question",
+  "question": "intent 260722-space-record-catalog / U3 elections-migration FD の Critical 是正方向(候補 verbatim 正本 = e2 ブランチ <record>/construction/elections-migration/functional-design/fix-direction-candidates.md — git show で実測可。reviewer Critical の verbatim 要旨も同ファイル末尾)。欠陥: 第3段 unknown フォールバック値(移行時刻)が非決定で、(i) 承認ハッシュ束縛が構造的に常時失効 (ii) crash-resume の再導出不一致が未定義分岐。候補: A = 承認成果物への plan 全値永続化+--execute は承認済み値消費+非 unknown の現況整合検証(決定論・承認束縛・resume を単一機構で閉包、conductor 推奨)/ B = unknown 値のみ軽量永続化(resume は閉じるが承認束縛は再導出一致前提のまま)/ C = unknown timestamp のハッシュ除外(最小実装だが束縛弱化+resume 別手当て要 — 単独では閉じきらない旨明記)。各自候補ファイルと reviewer Critical を実測確認のうえ、受容度併記+GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. plan 全値永続化+承認済み値消費(単一機構で3点閉包)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. unknown 値のみ軽量永続化"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. unknown timestamp のハッシュ除外(+resume 別手当て)"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他(票コメント指定)"
+    }
+  ],
+  "voters": [
+    "e4",
+    "e5",
+    "e6"
+  ],
+  "state": "recorded"
+}

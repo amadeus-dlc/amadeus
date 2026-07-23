@@ -1,0 +1,29 @@
+{
+  "electionId": "E-MPRAD1",
+  "kind": "clarification-question",
+  "question": "intent 260719-mirror-productization / application-design の設計判断(verbatim 正本 = e3 ブランチ a74d9aa5e の <record>/inception/application-design/application-design-questions.md — git show で実測可)。Q1(U-02). mirror verb の実行主体制約。判断点: 現行 mirror.ts に主体検査なし(RE 実測)、C は conductor の決定的判定源が現存せず規模増、B は実装ゼロの運用注記、sync は一方向・冪等。 各自実測確認のうえ、A/B/C 選択型につき自案非採用時の受容度1行併記+GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. 制約なし(書込面は verb 自体の fail-closed 検証で防御)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. 運用注記(create/close は conductor から — 機械強制なし)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. 機械強制(team モードで conductor 以外の create/close を exit 1 拒否 — 新規 identity 判定機構が必要)"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e4",
+    "e6"
+  ],
+  "state": "recorded"
+}

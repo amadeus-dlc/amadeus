@@ -190,13 +190,15 @@ describe("Store.setState registry wiring (absent vs row-missing)", () => {
     expect(ej.state).toBe("open");
   });
 
-  test("registry present + row missing -> setState is a loud error", () => {
-    // E-A goes through Store.create (registry gets a row); E-B is seeded raw (no row).
+  test("registry present + legacy row missing -> setState uses the loud migration path", () => {
+    // E-A goes through Store.create (registry gets a row); E-B is a pre-migration
+    // direct-name directory and therefore intentionally has no row.
     expect(Store.create(root, election("E-A")).ok).toBe(true);
     seedElectionFileWithoutRow("E-B");
     const res = Store.setState(root, "E-B", "open");
-    expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.error).toBe("not-found");
+    expect(res.ok).toBe(true);
+    const ej = JSON.parse(readFileSync(join(root, "E-B", "election.json"), "utf8"));
+    expect(ej.state).toBe("open");
   });
 
   test("registry present + row present -> setState syncs the row status", () => {
@@ -210,7 +212,7 @@ describe("Store.setState registry wiring (absent vs row-missing)", () => {
 });
 
 describe("create e2e via the open verb", () => {
-  test("open -> row exists (dirName === electionId dir), status open, election.json state === row status", () => {
+  test("open -> row resolves the date-prefixed physical dir and status mirrors election.json", () => {
     const electionId = "E-SRCB1CG";
     const defPath = join(root, "def.json");
     writeFileSync(
@@ -226,21 +228,18 @@ describe("create e2e via the open verb", () => {
     const code = handleOpen(root, defPath);
     expect(code).toBe(0);
 
-    // the physical directory stays electionId-named in this bolt
-    expect(existsSync(join(root, electionId, "election.json"))).toBe(true);
-
     const read = readElectionsRegistry(root);
     expect(read.kind).toBe("ok");
     if (read.kind !== "ok") throw new Error("registry must be ok");
     const row = read.entries.find((e) => e.electionId === electionId);
     expect(row).toBeDefined();
     if (!row) throw new Error("row must exist");
-    expect(row.dirName).toBe(electionId); // dirName === the physical dir name
+    expect(row.dirName).toMatch(/^\d{6}-e-srcb1cg$/);
     expect(existsSync(join(root, row.dirName, "election.json"))).toBe(true);
     expect(row.status).toBe("open"); // draft -> open transition synced
 
     // election.json is the source of truth; the row status mirrors it
-    const ej = JSON.parse(readFileSync(join(root, electionId, "election.json"), "utf8"));
+    const ej = JSON.parse(readFileSync(join(root, row.dirName, "election.json"), "utf8"));
     expect(ej.state).toBe("open");
     expect(row.status).toBe(ej.state);
   });
@@ -261,15 +260,15 @@ describe("create order contract (row append BEFORE dir creation)", () => {
     expect(existsSync(join(root, electionId))).toBe(false); // observable order: no dir
   });
 
-  test("create success writes the row with status draft and dirName === electionId", () => {
+  test("create success writes the row with status draft and a date-prefixed dirName", () => {
     expect(Store.create(root, election("E-FRESH")).ok).toBe(true);
     const read = readElectionsRegistry(root);
     if (read.kind === "ok") {
       const row = read.entries.find((e) => e.electionId === "E-FRESH");
       expect(row?.status).toBe("draft");
-      expect(row?.dirName).toBe("E-FRESH");
+      expect(row?.dirName).toMatch(/^\d{6}-e-fresh$/);
       expect(row?.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
+      expect(existsSync(join(root, row?.dirName ?? "", "election.json"))).toBe(true);
     }
-    expect(existsSync(join(root, "E-FRESH", "election.json"))).toBe(true);
   });
 });

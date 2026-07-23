@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCPD13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e2 record リードオンリー実測: s13-candidates.md の3候補は diary memory.md と verbatim 一致(c1/c3 = Interpretations 23:22:25Z/23:22:44Z、c2 = Tradeoffs 23:22:25Z)。引用 cid の実在を project.md で確認 — practices-discovery:c1(同日 RE codekb 代用+ギャップのみ質問)、practices-discovery:c2(部分ドラフト+無変更 live 温存)、e-fvepd-marker-heading-floor(*-timestamp.md の H2 明示免除)。practices-discovery-timestamp.md の実体も単一行(Discovered: … at commit 69d2c0f30)で免除クラス該当を直読確認。3件とも既決 cid の機械的執行で新規性なし、PM 実例回付の扱いも妥当。",
+  "submittedAt": "2026-07-22T23:24:30Z"
+}

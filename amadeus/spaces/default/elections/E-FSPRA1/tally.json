@@ -1,0 +1,74 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A. 両方(recordEngineError 引数化+_cloneId の projectDir キー化)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A. 両方(recordEngineError 引数化+_cloneId の projectDir キー化)",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "B. 根のみ(引数化。_cloneId は Issue 別送)",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "C. 増幅のみ+テスト隔離(コア変更回避 — Issue 当初期待)",
+        "count": 0
+      },
+      {
+        "internalNo": 4,
+        "label": "X. その他",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T02:57:24Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-FSPRA1",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A(根+増幅の両方)。根拠は私自身の #1389 クロスレビュー実測(2026-07-23、コメント 5053176961): 汚染は2段複合 — recordEngineError の argv 迂回(:200-232)だけを直しても、_cloneId のプロセス内メモ化(amadeus-lib.ts:2449、projectDir 非依存)が残る限り『fixture→real の混成シャード名』という別クラスの再発面が残ると当時から指摘済み。両者は同一機序の連鎖(片側修正は symmetric-pair-review の非対称クラスを新たに作る)で、e4 候補文の『emitError :5879 との symmetric-pair 回復』は根側の対称性も正しく捉えている。C(コア回避)はエンジン欠陥を温存し、将来の in-process エラー経路すべてが同じ罠を踏む。受容度: B なら 6(犯人は閉包、増幅は Issue 追跡可能)、C なら 7(根本原因の温存)。",
+      "submittedAt": "2026-07-23T02:51:09Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FSPRA1",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "_cloneId の projectDir キー化は既存単一 project プロセスの挙動不変を落ちる実証の両側(汚染ケースが赤くなる+正当ケースが赤くならない)で固定してから完了扱いにすること",
+      "rationale": "A を支持。実測: recordEngineError(message) は :208 で projectDir 引数を持たず(e4 主張の引数欠落を自 tree 直読で確認)、これは emitError との symmetric-pair 逸脱(cid:symmetric-pair-review の既知クラス)。#1389 は私の起票で、汚染はフルスイート実行ごとに決定的再現(2/2 実測)— 根(引数化)だけでは _cloneId のプロセスメモ化が別経路の書込で同型汚染を再生しうるため、増幅面(projectDir キー化)まで塞ぐ A が S3(監査整合性)の重大度に見合う。B は犯人 t248 の閉包としては成立するが、same-root を Issue 送りにすると私の起票時と同じ『除去→再発』ループの残余リスクが残る。受容度: B=6(根の修正+Issue 起票は same-root-inventory 準拠で許容)、C=7(根を放置する対症は否)。",
+      "submittedAt": "2026-07-23T02:53:45Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FSPRA1",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "_cloneId の projectDir キー化は既存単一 projectDir 経路での挙動不変をテストで固定すること(NFR 面の回帰防止)",
+      "rationale": "根(recordEngineError 引数化)と増幅(_cloneId のグローバル単一キャッシュ)は独立の実欠陥で、根のみ修正では増幅機構が次の同型汚染経路を温存する — same-root-inventory(同根パターンは同一 PR で修正するか Issue 化)の『同一 PR』側を、両者が小規模で凝集する本件では選ぶのが正。RE Architect 所見とも一致。受容度: B=6(_cloneId を Issue 別送する外科的最小も規範適合)/ C=7(根本原因を残す)",
+      "submittedAt": "2026-07-23T02:56:52Z"
+    }
+  ],
+  "resolutions": []
+}

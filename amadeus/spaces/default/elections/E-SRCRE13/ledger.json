@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SRCRE13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e2 record リードオンリー実測: c1 = re-scan record『Base 選定根拠』節+diary Interpretations 23:14:20Z に is-ancestor exit 0/1・dist 110 の機械適用記録実在 — cid:rescan-base-ancestry の執行であり新規性なし。c2 = diary Deviations 23:14:47Z に placeholder 日時(2026-07-23T00:00:00Z 未来時刻)2箇所の捕捉・実時刻 23:13:00Z 是正記録実在 — verify-before-notify 系の違反実例で PM 回付が正経路。c3 = diary Tradeoffs 23:14:20Z に Developer 8サイト vs Architect 再列挙で record.md :434/:436/:482 の3脱落+:455 off-by-one 検出記録実在、re-scan record の直 join 列挙にも同サイト反映済み — cid:enumeration-completeness-review の追認実例で新設不要。",
+      "submittedAt": "2026-07-22T23:20:05Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCRE13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。実測: e2 RE diary(memory.md:5/:9/:13)と re-scans/260722-space-record-catalog.md(:14/:27)をリードオンリー直読。c1=rescan-base-ancestry の機械的適用(base a326f47bc・dist 110・非祖先 545e69c8 除外)で新規性なし。c2=placeholder 日時是正は verify-before-notify 系の違反実例で PM 回付が妥当。c3=直 join 3サイト(:434/:436/:482)を自 tree の sed 直読で存在スポット確認 — enumeration-completeness-review の追認実例で PM 回付が妥当。3件とも不採用理由成立。",
+      "submittedAt": "2026-07-22T23:20:08Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCRE13",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e2 record をリードオンリー実測: c1 = re-scan ヘッダに --is-ancestor exit 0 / distance 110 / 非祖先 545e69c8 除外が明記され cid:rescan-base-ancestry の機械的執行そのもの(新規性なし)。c2 = diary Deviations に placeholder 2026-07-23T00:00:00Z→23:13:00Z 是正が記録され、re-scan 実ファイルに placeholder 残存 0 件(grep 実測)— 既存 verify-before-notify 系の違反実例で PM 回付が正位置。c3 = diary Tradeoffs に :434/:436/:482 脱落+:455/:456 off-by-one の検出と grep 確定が記録 — enumeration-completeness-review の追認実例で PM 回付が正位置。3件とも不採用理由に同意、新規ノルム候補なし。",
+      "submittedAt": "2026-07-22T23:20:13Z"
+    }
+  ],
+  "late": []
+}

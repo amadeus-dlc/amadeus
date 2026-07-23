@@ -1,0 +1,25 @@
+{
+  "electionId": "E-FSPCG1",
+  "kind": "clarification-question",
+  "question": "intent 260723-fixture-shard-pollution(#1389)/ code-generation の申告付き逸脱裁定(候補 verbatim 正本 = e4 ブランチの <record>/construction/fix-1389-shard-pollution/code-generation/deviation-candidates.md — git show で実測可。builder 申告 verbatim は code-summary.md 申告節)。注意: 起草 conductor の推奨は blind 原則により本配信では伏せる — 各自一次資料から独立判断を。逸脱1: projectDir 配送方式 — plan の emit() 引数貫通に対し、builder は到達困難な内部エラー経路56箇所超の patch 未被覆(lcov 実測)が NFR-4 と非両立と申告し、module-scoped _handlerProjectDir 方式(既存再入ガード idiom)で実装。FR-1 字義は充足済み・ERROR_LOGGED 契約は維持。 各自 lcov 実測・diff・申告 verbatim を確認のうえ、受容度併記+GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. 承認(現実装維持)— plan.md へ追記整合のみ"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. emit() 引数貫通へやり直し — 未到達56行超の allowlist/waiver が必要(NFR-4 と衝突)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. その他(票コメント指定)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e5",
+    "e6"
+  ],
+  "state": "recorded"
+}

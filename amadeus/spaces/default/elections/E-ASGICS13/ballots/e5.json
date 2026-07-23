@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-ASGICS13",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e1 record 実測: 候補3件は diary(03:38:58Z ×2)と整合し、いずれも既存 cid の機械的適用。(1) 既決照合の質問絞り込みは no-election-for-decided-norms の字義。registry 分布(complete 65 / in-flight 3 / closed 1)は私の E-ASGIC2 投票時の独立実測(9ソース union)とも一致し数値の質を裏書きできる。(2) parked 非出現の実測と語彙/書込の分離切り出しは external-seam-vocab-measurement の内部語彙版としての適用で、分離自体は E-ASGIC2 で裁定済みの設計事実 — ノルム化対象ではない。(3) 1問様式 H2 floor の予防は E-TCRRAS13B 追補の適用確認のみ(なお本クラスは私の #1296 修正が機械化予定)。新規ノルム候補なしに同意。",
+  "submittedAt": "2026-07-23T03:47:28Z"
+}

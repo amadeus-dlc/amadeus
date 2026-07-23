@@ -1,0 +1,26 @@
+{
+  "electionId": "E-MPRRA1",
+  "voter": "e6",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 4,
+      "label": "X. その他(票コメント指定)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "A. phase-check 対象3境界(ideation/inception/construction 完了時)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "B. 全4境界(operation 完了 = workflow 完了時も含む — complete 時の close 導線を ask に含められる)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 3,
+      "label": "C. construction 完了時のみ(発火回数最小)"
+    }
+  ]
+}

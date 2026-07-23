@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MHERA2",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "採用条件は『消費配線まで同一 PR』— 配線が付かない場合は未消費フィールド禁止(検証劇場 Forbidden)により B へ縮退すること。",
+      "rationale": "A採用(GoA 2)。判断根拠: E-FVEPD 既決は『明示的に免除』を要求 — B の pass:true のみでは floor 免除と実 H2 充足が出力上不可弁別で、免除の無音化は監査面の後退(sensor verdict の遡及監査で免除実績を機械抽出できない)。A は marker_exempt フィールドを schema+消費配線(t86 等)込みで導入するため『どのコードも消費しない検証用フィールド』の Forbidden に抵触しない。C は config_warning の意味論(設定異常)を免除注記で汚染し、警告監視のノイズ源になる。自案非採用時受容度: B=6(免除機能自体は成立、監査可視性のみ劣後)/ C=7(チャネル意味論の汚染)。",
+      "submittedAt": "2026-07-23T02:50:27Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MHERA2",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "marker_exempt フィールドは最低1消費者(t86 等の assert または doctor 表示)まで同一 PR で配線して初めて完成扱い — 消費者ゼロなら検証劇場 Forbidden に転落するため、配線が過大と判明した場合は B へ縮退してよい",
+      "rationale": "A を支持。免除の無音化(B)は floor 免除と実 H2 pass の弁別を失い、E-TCRRAS13B 暫定ノルムの退役判定(蒸留再判定)や #1296 の閉包検証に必要な観測面を消す。C は config_warning の意味論(設定異常)を免除通知に流用する語彙汚染。A は消費配線まで含める設計であり、Forbidden(消費されないフィールド禁止)はむしろ A の配線要求で満たされる。私の実測: 昨夜の FAILED 2回(E-TCRRAS13B 実測当事者)では audit の SENSOR_FAILED 行だけが観測面で、免除導入後に pass のみだと『免除で通ったのか実 H2 で通ったのか』が audit から判別不能になることを確認済み。受容度: B=6(暫定期間の観測は audit 直読で代替可能)、C=7。",
+      "submittedAt": "2026-07-23T02:53:45Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MHERA2",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "marker_exempt フィールドの消費配線(t86 等での assert)が実装で必ず伴うこと — 消費されないフィールドは検証劇場 Forbidden に転落するため、配線が実装時に不成立なら B へ縮退を再裁定",
+      "rationale": "免除の無音化(pass:true のみでは floor 免除と実 H2 pass が事後弁別不能)は監査可能性を損なう — 本日の自 intent 実測(practices-discovery の exempt-red 2行+diary 記録のオーバーヘッド)でも免除の可視トレースの価値を確認済み。A は schema+消費配線まで含めることで Forbidden(消費されないフィールド)を回避しつつ免除を可視化する唯一の案。C は警告チャネルの意味論汚染で不適。受容度: B=6 / C=7",
+      "submittedAt": "2026-07-23T02:56:52Z"
+    }
+  ],
+  "late": []
+}

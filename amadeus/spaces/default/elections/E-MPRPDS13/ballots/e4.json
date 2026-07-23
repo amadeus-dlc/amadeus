@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRPDS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e3 record リードオンリー実測: s13-candidates.md の3観測は diary(Interpretations/Tradeoffs 01:08:15Z)と verbatim 整合。(1) codekb 代用+ギャップ0問 = practices-discovery:c1 の執行(E-SRCPD13 で同型を検証済み) (2) timestamp 免除+prose 3成果物のセンサー6発火全 PASSED = e-fvepd-marker-heading-floor/manual-sensor-fire の執行(FAILED 0 の audit 実測記載あり) (3) 部分ドラフト+no-op promote = practices-discovery:c2 の執行で、gh optional 改定を promote で先取りせず requirements/design 裁定へ委ねる判断は P3(承認済み意図からの逸脱防止)の正しい適用。3件とも機械的執行で新規性なし。",
+  "submittedAt": "2026-07-23T01:09:31Z"
+}

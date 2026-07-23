@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRAD2",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A を支持。実測: amadeus-settings.ts の fail-closed parse 様式(SETTINGS_KNOWN_KEYS の unknown-key 拒否、DEFAULT_SETTINGS の canonical 単一定義)を直読 — JSON+fail-closed は既習の第一級様式で、3面(workspace/space/record)への拡張は同型踏襲のみ。B は YAML パーサの新規依存が Bun-only Forbidden(配布フレームワークへの runtime dependency 追加禁止)と正面衝突し、手書きパーサは過剰実装。C は設定を md フィールドに載せる非標準形で tooling(エディタ補完・schema 検証)を失う。受容度: C=6(getField 様式は実在するため動きはする)、B=7(Forbidden 緊張)。",
+  "submittedAt": "2026-07-23T01:50:11Z"
+}

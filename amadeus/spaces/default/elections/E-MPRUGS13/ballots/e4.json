@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRUGS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e3 record 実測: 3件とも diary(03:06:20Z/03:12:59Z)と verbatim 整合。(1) upstream-coverage 2件の自己捕捉是正は consumes-first-drafting/body-derivation-before-header の違反実例で PM 妥当 — 私も本日 RA questions で同族(実参照行の後追い追記)を経験しており違反類型として実在 (2) T-norm の DAG 外化は edge block 意味論(bolt_dag 計算入力にコード依存でない順序制約を載せない = 検証劇場回避)の機械的適用で新規性なし (3) story-map 起草漏れは同一 intent 2度目の同型 — 新規ノルムでなく傾向報告として PM 回付が正しい(再発カウントは PM の役割)。",
+  "submittedAt": "2026-07-23T03:14:23Z"
+}

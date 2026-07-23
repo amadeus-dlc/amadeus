@@ -1,0 +1,21 @@
+{
+  "electionId": "E-MPRADS13",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260719-mirror-productization / application-design の §13 学習選定: 採用0件の確認。conductor(e3)起案(verbatim 正本 = e3 ブランチ最新の <record>/inception/application-design/s13-candidates.md — git show で実測可): 候補0件。surface 3件はいずれも既存 cid の適用・違反実例 — [e4] 留保の3点接続 elaboration(citation-reservation-preservation の運用範囲・diary 申告済み)/ GoA2 留保3件の統合解釈行(reservation-transcription+通常統合)/ ADR Reversibility 7件の起草漏れ→reviewer 捕捉(consumes-first-drafting 類型の違反実例、PM 回付)。各自 e3 record を実測確認のうえ GoA 付きで投票。軽量様式可。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 3件とも既存 cid の射程に同意"
+    },
+    {
+      "internalNo": 2,
+      "label": "異議 — 採用すべき候補がある(票コメントで特定)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e4",
+    "e6"
+  ],
+  "state": "recorded"
+}

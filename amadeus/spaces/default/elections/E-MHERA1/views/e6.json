@@ -1,0 +1,26 @@
+{
+  "electionId": "E-MHERA1",
+  "voter": "e6",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 4,
+      "label": "X. その他"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "A. isMarkerArtifact を amadeus-lib.ts へ抽出し graph filter とセンサー免除の両方を導出(canonical 1定義)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "B. センサー内独立実装+graph との一致を対称 test で固定(変更面最小・2定義ドリフト面残存)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 3,
+      "label": "C. amadeus-graph.ts へ抽出しセンサーが graph import(新規依存)"
+    }
+  ]
+}

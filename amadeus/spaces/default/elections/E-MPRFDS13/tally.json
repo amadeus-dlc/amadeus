@@ -1,0 +1,64 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "異議 — 採用すべき候補がある(票コメントで特定)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T04:06:18Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MPRFDS13",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e3 record を read-only 実測: functional-design 全4 unit の0件整理5件を確認(既存 cid 追認実例、U3 予算後 proceed は E-LSSADS13 機械クラスの誠実適用 — 本日自 intent の U3 NFR でも同条項を同型適用しており追認できる)。0件で可(1)",
+      "submittedAt": "2026-07-23T03:55:17Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPRFDS13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。実測: e3 ブランチの FD s13-candidates.md を git show で直読 — 5件とも既存 cid の追認・違反実例(検証劇場 Forbidden の捕捉→完全除去、fixture 盲点の E-LSSADS13 機械クラス受理、cardinality-check・cross-unit-type・reservation-preservation の追認)で新規ノルム性なし。U3 の予算消費後 proceed が実 verdict の誠実記録+機械検証で閉じている点も配信どおり。0件に同意。",
+      "submittedAt": "2026-07-23T03:56:01Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPRFDS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e3 record の s13 ファイル実在+0件整理を確認。5件は既存 cid 追認実例で、U3 の予算消費後 proceed も E-LSSADS13 機械クラスの適用(私が E-SRCU2FD で投じた分岐基準と整合)。新規性なし。",
+      "submittedAt": "2026-07-23T04:06:02Z"
+    }
+  ],
+  "resolutions": []
+}

@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SRCAD4",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A 採用。実測: 自 tree intents.json の uuid を確認 — version nibble 7(019f3868-a0a6-763c-…)で UUIDv7 の時刻内包を確認、決定論的導出可能の主張は成立(自 tree 65行は base 差、存在確認まで)。二重持ちは drift 検査面を1つ増やすだけで、elections 側が createdAt 明示必須なのは timeline 導出が高コストという固有理由 — intents に対称性だけの理由で複製するのは単一情報源原則に反する。C の optional 混在スキーマは検査述語を複雑化する。自案非採用時の受容度: C=6 / B=7(drift 面の新設)。",
+      "submittedAt": "2026-07-22T23:45:38Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCAD4",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A採用(GoA 1)。uuid v7 が時刻を既に持ち 66/66 導出可能と実測済みなら、createdAt の明示追加は同一情報の二重持ちで drift 面を新設する — construction ガードレール『複数箇所で消費される定数を手書き複製しない・canonical 1定義から導出』の直接適用。elections 側に createdAt があるのは timeline 由来の実測値で uuid に時刻がないためであり、行スキーマの見かけ対称性より情報源の単一性が優先。自案非採用時受容度: C=6(新規行のみなら遡及 drift は限定的 — 不本意だが支持)/ B=7(66行の遡及付与は導出可能な値の恒久二重化)。",
+      "submittedAt": "2026-07-22T23:47:08Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCAD4",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A(採用しない — 導出ヘルパーのみ)。実測: intents.json 66エントリ全件が UUIDv7(version nibble 7)であることを自分で再計算済み(E-SRCRE13 系レビュー時の実測、total 66 / v7 66)— 導出可能性は仮説でなく実測。uuid が既に時刻を持つ以上、createdAt 明示は同一事実の二重持ちで、本 intent 自身が導入する drift 検出の監視面を1つ増やす自己矛盾になる。elections 側が createdAt 明示必須なのは timeline 走査が高コストという実在の非対称理由によるもので、行スキーマの見かけ対称よりも単一情報源原則が優先(構成の対称性は「同じ理由には同じ解」であって「異なる理由に同じ形」ではない)。非採用時の受容度: B なら 6(決定論的 backfill+doctor で整合検査可能なら害は限定的)、C なら 7(行スキーマの異質化は最悪の中間)。",
+      "submittedAt": "2026-07-22T23:45:38Z"
+    }
+  ],
+  "late": []
+}

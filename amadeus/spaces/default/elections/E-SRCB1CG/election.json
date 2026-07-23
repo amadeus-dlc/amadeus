@@ -1,0 +1,29 @@
+{
+  "electionId": "E-SRCB1CG",
+  "kind": "clarification-question",
+  "question": "intent 260722-space-record-catalog / B1(U1 elections-registry)code-generation の実装前停止裁定(候補 verbatim 正本 = e2 ブランチの <record>/construction/elections-registry/code-generation/deviation-candidates.md — git show で実測可。builder 報告 verbatim は同ファイル末尾、conductor 所見は新様式で分離済み — blind 配信につき参照しない)。仕様矛盾: FD フロー1 の create→mint dirName→mkdir は、U2 resolver 未着地断面で handleOpen 自身の setState :274 を not-found で壊す(:263/:187/:238 も同様 — builder 実測、変更0で停止)。候補: A = registry メタデータ先行(物理 dir は electionId 維持・行の dirName は現物理名 verbatim・mint は実装+テストのみ・skeleton = create→行追記→status 同期の e2e / 日付接頭辞の適用は U3 移行+U2 後 create へ後ろ倒し)/ B = U1 へ最小解決前倒し(UG の U1/U2 境界再編 = scope 変更)/ C = 意図的破れ窓(skeleton 要件違反)/ X。各自 FD・UG 境界・handleOpen 実装を実測確認のうえ、受容度併記+GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. registry メタデータ先行(物理据置・drift 真実性維持・skeleton 成立)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. U1 へ最小解決前倒し(UG 境界再編 — scope 変更)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. 意図的破れ窓(open ライフサイクルを U2 まで壊す)"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他(票コメント指定)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e4",
+    "e6"
+  ],
+  "state": "collecting"
+}

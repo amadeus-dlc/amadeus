@@ -1,0 +1,21 @@
+{
+  "electionId": "E-FSPCG1",
+  "voter": "e1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "B. emit() 引数貫通へやり直し — 未到達56行超の allowlist/waiver が必要(NFR-4 と衝突)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "A. 承認(現実装維持)— plan.md へ追記整合のみ"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "C. その他(票コメント指定)"
+    }
+  ]
+}

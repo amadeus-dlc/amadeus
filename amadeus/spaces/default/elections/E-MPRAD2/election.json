@@ -1,0 +1,29 @@
+{
+  "electionId": "E-MPRAD2",
+  "kind": "clarification-question",
+  "question": "intent 260719-mirror-productization / application-design の設計判断(verbatim 正本 = e3 ブランチ a74d9aa5e の <record>/inception/application-design/application-design-questions.md — git show で実測可)。Q2(U-03a). 3層 config の形式・置き場。判断点: 既習 = settings.json の fail-closed parse(amadeus-settings.ts:25-51)。B は Bun-only Forbidden と緊張。settings は space 単層のため3層には新ファイル必要。 各自実測確認のうえ、A/B/C 選択型につき自案非採用時の受容度1行併記+GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. JSON 3面(amadeus/config.json / spaces/<space>/config.json / <record>/config.json、fail-closed 様式踏襲)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. YAML 3面(新規依存 or 手書きパーサ必要)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. Markdown フィールド形式(getField 様式再利用、設定ファイルとして非標準)"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e4",
+    "e6"
+  ],
+  "state": "recorded"
+}

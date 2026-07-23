@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TPRRA4",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "B採用。cid:same-root-inventory(同根パターンの全数棚卸し→同一PRで修正 or Issue化)にそのまま従う形。実測被害は claude 経路のみ(#1384、私のクロスレビューで transcript 実測済み)で bugfix の外科的最小は claude 限定修正、codex 側の同型ギャップ(monitor なし・arming 経路が異なる team-up.sh:946-948 実測)は実測のうえ実在すれば Issue 起票が正しい経路。C はスコープ拡大でユーザー承認事項(正準リスト(4)類縁)。",
+      "submittedAt": "2026-07-22T22:29:30Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TPRRA4",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "B 採用。cid:same-root-inventory は同根パターンの全数棚卸し+同一 PR 修正 or Issue 化を義務付ける — A は棚卸し自体を省き同ノルムに整合しない。C は bugfix スコープの外科的最小既定を超えるスコープ拡大でユーザー承認が必要(issue-selection-user-decides とも整合しない)。実測: team-up.sh:341 の codex 限定 return と safety-wait helper の別責務性を確認済み — codex 側の同型ギャップ(watcher arming 検証の不在)は実在しうるため実測のうえ Issue 起票が妥当。自案非採用時の受容度: A=7 / C=8(ユーザー承認なきスコープ拡大は P4/既定違反)。",
+      "submittedAt": "2026-07-22T22:30:15Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TPRRA4",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "B(claude 修正+codex 同型ギャップは実測のうえ Issue 起票のみ)。実測: codex_member_cmd(team-up.sh:910-913)も初期プロンプト一発勝負(prompt=$agmsg actas <role>)で同型形状が実在する — ただし codex は Monitor watcher を持たず(spawn.sh は codex で ready 待ちを skip)、被害面が claude と異なるため同一 PR での修正は外科的最小(bugfix スコープ既定)を超える。cid:same-root-inventory は『同根パターンの grep 全数棚卸し→同一 PR 修正 or Issue 化』の二択を定めており、B はその Issue 化側を正しく選ぶ。A は棚卸し義務を落とし、C はスコープ拡大でユーザー承認が必要(正準リスト(4))かつ実測被害(5/6)の閉包に不要。非採用時の受容度: A なら 6(棚卸しは別途自発起票で補える)、C なら 7(承認なしのスコープ拡大は既決ノルム抵触)。",
+      "submittedAt": "2026-07-22T22:30:26Z"
+    }
+  ],
+  "late": []
+}

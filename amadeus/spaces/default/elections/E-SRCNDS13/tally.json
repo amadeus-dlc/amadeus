@@ -1,0 +1,64 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "異議 — 採用すべき候補がある(票コメントで特定)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T04:06:18Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SRCNDS13",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e2 record 実測: 候補2件は diary(04:02:30Z ×2)と verbatim 一致。c1(幻 ID 2回)は mechanism-cite-verify-at-draft / ledger-count 系の違反実例で、self-check への実在 ID 照合追加による運用閉包まで完了 — 起案の指摘どおり E-SRCFDS13 の negative-vocabulary(非採用語彙の混入)と『転記時の非実在語彙』ファミリを成すため、独立 persist より PM での族整理が正位置。c2 は E-SRCNRS13 persist 済み追補の実効追認(7件事前捕捉の数値も diary 転記と一致)で、追認実例は PM 回付が既習。新規ノルム候補なしに同意。",
+      "submittedAt": "2026-07-23T04:03:45Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCNDS13",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e2 record を read-only 実測: nfr-design 全4 unit の0件整理を確認。総当たり self-check の reviewer 前9件捕捉は E-SRCNRS13(本日採用)の実効2例目で、採用済みノルムの効果実証 — 新規性なし。0件で可(1)",
+      "submittedAt": "2026-07-23T04:04:53Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCNDS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e2 record の s13 ファイル(採用0件・不採用2件)実在を確認。self-check の reviewer 前9件捕捉は E-SRCNRS13 で採用した総当たり事前チェックの実効2例目 = 採用済みノルムの執行であり新規性なし。",
+      "submittedAt": "2026-07-23T04:06:02Z"
+    }
+  ],
+  "resolutions": []
+}

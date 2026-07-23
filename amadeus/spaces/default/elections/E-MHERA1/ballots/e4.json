@@ -1,0 +1,16 @@
+{
+  "kind": "amend",
+  "ref": {
+    "electionId": "E-MHERA1",
+    "voter": "e4",
+    "submittedAt": "2026-07-23T02:50:27Z"
+  },
+  "electionId": "E-MHERA1",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "amend(原票 2026-07-23T02:50:27Z を exact ref、choice 1 維持)。訂正前提: 配布判断点『C のみ新規依存』は誤り — amadeus-sensor.ts:47 で dispatcher が既に amadeus-graph.ts を import していることを自 tree grep で再実測確認(e1/leader の再実測と一致)。ユーザー裁定(2026-07-23T02:55:39Z 頃)により choice A へ一意化。私の原票も A(canonical 1定義の lib 抽出)であり結論不変 — 原票 rationale の『C は新規依存』根拠のみ本 amend で訂正し、A の主根拠(canonical 1定義+集合分裂の構造的防止)は sensor 側 import 実態に依存せず成立。",
+  "submittedAt": "2026-07-23T02:56:12Z"
+}

@@ -1,0 +1,21 @@
+{
+  "electionId": "E-FSPCG2",
+  "voter": "e1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "C. その他"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "A. 承認 — 旧 assert は欠陥挙動の pin、更新はバグ修正の定義そのもの"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "B. 旧 assert 併存の互換テスト追加(org.md Forbidden 抵触見込み)"
+    }
+  ]
+}

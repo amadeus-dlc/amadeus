@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TPRRA4",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "B採用。cid:same-root-inventory(同根パターンの全数棚卸し→同一PRで修正 or Issue化)にそのまま従う形。実測被害は claude 経路のみ(#1384、私のクロスレビューで transcript 実測済み)で bugfix の外科的最小は claude 限定修正、codex 側の同型ギャップ(monitor なし・arming 経路が異なる team-up.sh:946-948 実測)は実測のうえ実在すれば Issue 起票が正しい経路。C はスコープ拡大でユーザー承認事項(正準リスト(4)類縁)。",
+  "submittedAt": "2026-07-22T22:29:30Z"
+}

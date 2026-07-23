@@ -1,0 +1,26 @@
+{
+  "electionId": "E-MHERA2",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "A. marker_exempt: true フィールド+schema+消費配線(t86 等)まで含める"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "C. config_warning 流用で免除注記"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 4,
+      "label": "X. その他"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 2,
+      "label": "B. pass: true のみ(フィールド追加なし)"
+    }
+  ]
+}

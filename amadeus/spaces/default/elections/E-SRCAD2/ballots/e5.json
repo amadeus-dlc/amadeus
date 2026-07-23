@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCAD2",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A(git 初回コミット日時)。根拠: P2(記録は実測事実のみ)に最も適合 — git log --diff-filter=A の最古は当該選挙が実在し始めた一次証拠であり、決定論的・再実行同値。開催時系列の復元という発端の痛みに対し、B(移行時刻)は2件だけ『2026-07-22 開催』相当の位置に並ぶ時系列歪みを恒久化する(createdAtSource 併記で誠実ではあるが並び順は歪んだまま)。C は統一の例外を恒久化し、日付接頭辞なし dirName が自然ソートの先頭/末尾に固まる — intent 目的に正面から反する。shallow clone 劣化は本 repo の運用(full clone 前提のチーム開発)では非該当で、かつ初回移行値を registry が固定すれば以後 git 履歴に依存しない。非採用時の受容度: B なら 6(source 併記があれば誠実)、C なら 7(統一目的の放棄)。",
+  "submittedAt": "2026-07-22T23:45:38Z"
+}

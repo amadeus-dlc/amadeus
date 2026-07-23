@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRRA3",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A(0=乖離なし / 1=乖離あり / 2=前提エラー)。実測: 兄弟様式 amadeus-mirror.ts の fail は一律 exit 1(:231-234 の fail() が 1 を返すことを直読確認)、usage=2 — A の 1/2 割当はこの既習様式と衝突せず、diff/grep 系 CLI の古典的3値契約(0=差なし/1=差あり/2=障害)とも一致して学習コストが低い。乖離クラスの詳細は出力(テキスト)が運ぶべき情報で、C のクラス別 exit code は消費側に脆い分岐を強いる(クラス追加のたびに exit 契約が破壊的変更になる)。B は乖離の機械検出を不能にし、status を CI・スクリプトから使えなくする — drift を loud にする本 intent の目的と逆行。ui-less-mockups-as-output-contract により本裁定がテスト文言の導出元になる点でも、A の3値が最も単純にテスト可能。非採用時の受容度: C なら 6(過剰だが機械消費は保たれる)、B なら 7(機械消費の喪失)。",
+  "submittedAt": "2026-07-23T01:15:47Z"
+}

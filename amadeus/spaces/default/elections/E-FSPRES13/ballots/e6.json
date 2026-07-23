@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FSPRES13",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e4 record を read-only 実測: s13-candidates.md の4 surface と0件整理を確認。c1 の base 選定(着地済み record-sync 取込で dist 101→13 短縮)は rescan-prompt-record-sync の設計どおりの効用実証、c3 の union 解消は自 intent でも本日同型実施(space-record-catalog エントリとの和集合)しており追認可能。いずれも既存 cid の機械的執行で新規ノルム性なし。0件で可(1)",
+  "submittedAt": "2026-07-23T01:46:50Z"
+}

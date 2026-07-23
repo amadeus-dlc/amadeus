@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCU2FD",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "追加イテレーションのスコープは『同型伝播先の独立再列挙+閉包確認』に限定し、全面再レビューへ肥大させない(E-LSSADS13 の閉包確認限定の趣旨)",
+  "rationale": "e2 record を read-only 実測: U2 FD の Review Iteration 2 NOT-READY 耐久化と FR-3h の UG 反映(grep 1 hit)を確認 — 既知インスタンスの是正自体は grep 閉包済みで争いなし。判断点は残余(2)のクラス帰属: 『未伝播』は列挙 omission 系であり、omission の本質リスクは既知インスタンスでなく未発見の同型伝播先(起草者の grep は見逃した検索語を再利用するため自己検証構造不能 — enumeration-completeness-review の機序)。指摘が伝播先を明示済みなのは既知分の話で、クラス判定を機械側へ倒す根拠にならない。迷えば保守側の追加イテレーション(a)。自案非採用時の受容度: (b)受理=6(conductor 閉包の grep 実測が誠実であることは確認済みのため)",
+  "submittedAt": "2026-07-23T01:35:48Z"
+}

@@ -1,0 +1,29 @@
+{
+  "electionId": "E-MPRRA2",
+  "kind": "clarification-question",
+  "question": "intent 260719-mirror-productization / requirements-analysis の未決(verbatim 正本 = e3 ブランチ b40c48bbd の <record>/inception/requirements-analysis/requirements-analysis-questions.md — git show で実測可。裁定経路 = 選挙、ユーザー裁定 2026-07-23)。Q2(U-04b). auto-mirror 有効×ミラー未作成 intent の phase 境界挙動。判断点: G-7 既決 =「auto で無確認実行は sync のみ」。未作成は intent-first の ideation 中の正常系でありうる。 各自コード・record を実測確認のうえ、A/B/C 選択型につき自案非採用時の受容度1行併記+GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. ask へ降格(create 選択肢込み — 未作成時に無音で進まない)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. advisory print(stderr 注記)で続行 — ask なし"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. loud エラーで停止(設定矛盾扱い — 正常系の誤エラー化リスクあり)"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他"
+    }
+  ],
+  "voters": [
+    "e4",
+    "e5",
+    "e6"
+  ],
+  "state": "recorded"
+}

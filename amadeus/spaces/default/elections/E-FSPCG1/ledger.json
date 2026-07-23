@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-FSPCG1",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e4 record の deviation-candidates と builder 申告 verbatim を read-only 実測。逸脱の手続きは正 — builder は実装前に停止せず?否、FR-1 字義充足済みの上で lcov 実測(56箇所超の到達困難経路)という新事実に基づく方式選択で、観測可能契約(ERROR_LOGGED の projectDir 記録)と plan の pd フローは維持。B の emit 貫通は NFR-4(patch 未カバー0)と実測衝突し allowlist 56行超の管理債務(allowlist-line-pin-stale)を生む — 要件間衝突の解消として A が唯一の実測済み両立形。既存 _engineErrorInProgress idiom との整合も適切(spawn-blindspot-two-step の (i) リファクタ優先と同族の判断)。受容度: B=7(NFR-4 衝突の再導入)",
+      "submittedAt": "2026-07-23T04:10:12Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FSPCG1",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "プロセス面の記録: 本逸脱は実装後の申告→選挙であり、cid:deviation-stop-before-implement(実装前停止→選挙が正、実装+申告は前例化しない)の違反実例として PM 回付すること。技術裁定 A の承認はこのプロセス実例の免罪ではない",
+      "rationale": "A を支持(技術面)。独立実測: (a) e4 ブランチ diff 直読 — _handlerProjectDir は _engineErrorInProgress(:198)と同じ module-scoped 再入ガード idiom で、:212-214 のコメントが対称性を明文化。recordEngineError(message, projectDir?) の観測可能契約(ERROR_LOGGED が呼出元 projectDir へ)は保たれている。 (b) 申告の機序(到達困難な内部不変量エラー経路の patch 未被覆)は cid:spawn-blindspot-two-step / mega-pr-codecov 系で実証済みの実在クラスで、56行超の allowlist 登録(B 案)は cid:allowlist-line-pin-stale の管理負債を恒常化する — NFR-4 との要件間衝突の解消として A が実測合理。 (c) FR-1 字義(引数化+フォールバック降格)は充足。受容度: B=7(NFR-4 衝突+stale 負債)、C=4。",
+      "submittedAt": "2026-07-23T04:10:40Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FSPCG1",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A(承認 — 現実装維持)。独立実測: 私は #1389 の起票時クロスレビュー実施者として本欠陥の機序(recordEngineError の argv 迂回)を file:line で特定済みで、修正の観測可能な契約は『ERROR_LOGGED が呼び出し元 projectDir へ記録されること』— builder の module-scoped 方式はこの契約と plan の pd フロー(ハンドラ→emit→recordEngineError)を保っており、FR-1 字義(引数化+argv フォールバック降格)も充足。逸脱の実体は『どの管を通すか』の実装詳細で、56箇所超の到達困難行の patch 未被覆という NFR-4 との要件間衝突を lcov 実測で示したうえでの停止→申告→選挙は deviation-stop-before-implement 系規律の正しい運用。B は spawn-blindspot-two-step の第一手(リファクタで患部を母集団から除去)に逆行して allowlist 56行超を新設する管理劣後案。既存 idiom(_engineErrorInProgress)との整合も確認。非採用時の受容度: B なら 7(NFR-4 衝突+allowlist-line-pin-stale の管理面増)。",
+      "submittedAt": "2026-07-23T04:12:37Z"
+    }
+  ],
+  "late": []
+}

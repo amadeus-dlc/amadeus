@@ -1,0 +1,26 @@
+{
+  "electionId": "E-SRCAD3",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 4,
+      "label": "X. その他"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "B. hard-fail(exit 1)即ブロッカー化"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "C. 閾値付き hard(乖離1件以上=fail)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 1,
+      "label": "A. advisory 開始(pass:true+label 畳み込み、既存 doctor 慣行整合。hard 化は将来判断)"
+    }
+  ]
+}

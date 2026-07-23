@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRAD3",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A を支持。実測: {{HARNESS_DIR}} 置換の既習様式が packages/framework/core/ に実在(conductor.md ほか grep 確認)し、session skills(amadeus-session-cost 等)は全て正本1定義+coreDirs 投影の A 型。B の runner-gen はコンパイル済みステージグラフから runner を導出する機構で、ステージ外の SKILL への流用は導出元の意味論が合わない(cid:citation-semantics-check の機構版 — 引用機構の意味論適合)。C の6面手書きは construction ガードレール『複数箇所で消費される定義は canonical 1定義から導出』に反する。受容度: B=7(意味論不適合)、C=8(canonical 原則違反はドリフトガード面の恒常負債 — ブロック級)。",
+  "submittedAt": "2026-07-23T01:50:11Z"
+}

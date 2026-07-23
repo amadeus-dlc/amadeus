@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TCRRES13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e1 record リードオンリー実測: s13-candidates.md と diary(Interpretations/Deviations 01:10:53Z)の整合を確認。私自身も run-tests.sh の --ci プロファイルに e2e が含まれないこと(run-tests.ts:197-202 の引用)を自 tree の grep で照合し、表明 vs 実行実態の乖離が #1294 バグ本体 = requirements 材料である整理に同意。原因所在(ADR-6 decisions.md:44 の integration 明記からの実装逸脱、#1235 由来・base..HEAD ドリフト 0)は implementation-deviation-election / bug-intent-linkage の適用実績で新規性なし。base 祖先性選定・センサー手動代替も既決 cid の執行のみ。",
+      "submittedAt": "2026-07-23T01:12:13Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TCRRES13",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e1 record 実測+機構の独立裏取り: (1) 乖離の実在を自 tree で直読 — tests/run-tests.ts:197-202 の --ci ケースは runSmoke/runUnit/runIntegration のみで e2e 非含有、t241 は tests/e2e/ に実在しヘッダ1行目が『CI-resident』を自称 — #1294 バグ本体の主張どおりで、これは requirements 側材料でありノルム候補ではない。(2) 原因所在(ADR-6 の integration 指定からの実装逸脱)は implementation-deviation-election / bug-intent-linkage の適用実績で、diary に decisions.md:44 verbatim 裏取りの記載あり。(3) 差分ベース採用(祖先 exit 0・distance 35)・c3-relabel・センサー手動代替はいずれも既決 cid の機械的適用。新規ノルム候補なしに同意。",
+      "submittedAt": "2026-07-23T01:12:17Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TCRRES13",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e1 record を read-only 実測: s13-candidates.md の0件整理を確認。#1294 の表明 vs 実行実態の乖離は requirements 材料でありノルム候補でないという整理、原因所在の implementation-deviation 適用、diff-refresh/c3-relabel/センサー代替の既決 cid 適用 — いずれも新規ノルム性なしに同意。0件で可(1)",
+      "submittedAt": "2026-07-23T01:12:41Z"
+    }
+  ],
+  "late": []
+}

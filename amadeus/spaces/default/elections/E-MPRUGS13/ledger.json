@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MPRUGS13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。実測: e3 record の s13-candidates.md をリードオンリー直読(verbatim 一致)、unit-of-work-dependency.md の edge block(depends_on 4件)実在を grep 確認 — T-norm の DAG 外制約化は bolt_dag 計算入力の意味論(cid:per-unit-loop-activation)の機械的適用で妥当。upstream-coverage 自己捕捉と story-map 起草漏れは既存 cid の違反実例で、同一 intent 内2度目の同型を傾向報告として PM へ上げる整理も postmortem-two-tier の設計どおり。0件に同意。",
+      "submittedAt": "2026-07-23T03:14:18Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPRUGS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e3 record 実測: 3件とも diary(03:06:20Z/03:12:59Z)と verbatim 整合。(1) upstream-coverage 2件の自己捕捉是正は consumes-first-drafting/body-derivation-before-header の違反実例で PM 妥当 — 私も本日 RA questions で同族(実参照行の後追い追記)を経験しており違反類型として実在 (2) T-norm の DAG 外化は edge block 意味論(bolt_dag 計算入力にコード依存でない順序制約を載せない = 検証劇場回避)の機械的適用で新規性なし (3) story-map 起草漏れは同一 intent 2度目の同型 — 新規ノルムでなく傾向報告として PM 回付が正しい(再発カウントは PM の役割)。",
+      "submittedAt": "2026-07-23T03:14:23Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPRUGS13",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e3 record を read-only 実測: s13-candidates.md の0件整理3件を確認。upstream-coverage 自己捕捉と story-map 起草漏れは consumes-first-drafting 系の違反実例(2度目の同型は PM 傾向報告が正位置)、T-norm の DAG 外順序制約化は edge block 意味論の機械適用 — 本日自 intent UG でも同型判断(U1 live enforcement を DAG 辺でなく Bolt 拘束とした)を独立に行っており追認できる。0件で可(1)",
+      "submittedAt": "2026-07-23T03:15:11Z"
+    }
+  ],
+  "late": []
+}

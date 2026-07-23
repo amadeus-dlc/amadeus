@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MPRRA2",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A採用(GoA 1)。G-7 既決『auto で無確認実行は sync のみ』に対し、未作成ミラーの create は sync でない新規外部操作 — 無確認実行は G-7 逸脱、無音 skip(B)は節目更新の欠落を不可視化する(検証劇場 Forbidden の予防面)。未作成は intent-first の ideation 中の正常系でありうるため loud エラー(C)は誤エラー化。A(ask へ降格+create 選択肢)は「無音で進まない・無確認で作らない・正常系を壊さない」の3条件を唯一同時充足。自案非採用時受容度: B=6(stderr 注記は無音ではないが、確認なしで節目を通過する点が惜しい)/ C=7(正常系の構造的誤エラー化)。",
+      "submittedAt": "2026-07-23T01:15:49Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPRRA2",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A(ask へ降格、create 選択肢込み)。根拠: G-7 既決『auto で無確認実行は sync のみ』の厳格読みでは、未作成時に auto が取れる無確認アクションは存在しない — 残る選択は人間を呼ぶ(A)か無音スキップ(B)で、B は intent が一生ミラー未作成のまま進む無音 drift を許す(no-silent 系の趣旨に反し、auto-mirror を有効化したユーザーの意図 = ミラーを維持したい、とも矛盾)。intent-first フローではミラーは park(通常 ideation 末)で作られるため、inception/construction 境界での未作成はむしろ異常兆候であり、surface する価値が高い。C は ideation 中の正常系(未作成が普通)を設定エラーへ誤格上げする — 質問の判断点どおり。非採用時の受容度: B なら 6(advisory が stderr に残るなら完全無音ではない)、C なら 7(正常系の誤エラー化)。",
+      "submittedAt": "2026-07-23T01:15:47Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPRRA2",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "G-7 既決(auto の無確認実行は sync のみ = 作成は確認必須)と整合するのは A のみ: ask へ降格し create 選択肢を出せば、未作成という正常系(intent-first の ideation 中)を誤エラー化せず(C の欠陥)、かつ節目更新を無音スキップもしない(B の欠陥 — advisory print は Stop hook 越しに人間へ届く保証がなくミラー永久未作成のドリフトを許す)。自案非採用時の受容度: B=6(ドリフト許容を条件に)/ C=7(正常系の誤エラー化)",
+      "submittedAt": "2026-07-23T01:15:52Z"
+    }
+  ],
+  "late": []
+}

@@ -1,0 +1,26 @@
+{
+  "electionId": "E-FSPRA1",
+  "voter": "e1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "B. 根のみ(引数化。_cloneId は Issue 別送)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 4,
+      "label": "X. その他"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "C. 増幅のみ+テスト隔離(コア変更回避 — Issue 当初期待)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 1,
+      "label": "A. 両方(recordEngineError 引数化+_cloneId の projectDir キー化)"
+    }
+  ]
+}

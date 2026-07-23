@@ -1,0 +1,26 @@
+{
+  "electionId": "E-TPRRA2",
+  "voter": "e5",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "C. design 段へ明示委任(requirements は有限タイムアウト+再送上限の存在のみ固定)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "A. 90秒×再送最大2回 — 既存定数の再利用のみ"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 4,
+      "label": "X. その他"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 2,
+      "label": "B. 90秒×再送1回のみ(TUI レースは起動直後限定とみなす)"
+    }
+  ]
+}

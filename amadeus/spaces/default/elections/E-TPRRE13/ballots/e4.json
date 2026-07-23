@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TPRRE13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。実測確認: e1 tree の codekb/amadeus/re-scans/260722-teamup-prompt-race.md と inception/reverse-engineering/memory.md を直読 — 内容は (1) バグ帰属(260721-teamup-safety-wait の :340 codex 専用ガードによる一般化漏れ、requirements 側材料) (2) 既決 cid の適用実績(rescan-base-ancestry の祖先判定 exit 0/1、re-sensors-codekb-filter-mismatch の手動代替、symmetric-pair-review)のみで新規ノルム候補なし。私自身 #1384 クロスレビューで team-up.sh:800/:830-832・spawn.sh:577-587 を独立実測しており記載と一致。",
+  "submittedAt": "2026-07-22T22:21:41Z"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCU3FD",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A(plan 全値永続化+承認済み値消費)。実測: 候補ファイルと reviewer Critical verbatim を直読 — 欠陥は『第3段 unknown の出力値が実行毎に異なる』ことに起因する (i) 承認ハッシュの構造的常時失効 (ii) crash-resume の未定義第3ケースの2面。A はこの両面を『承認対象 = 永続化された plan ファイルの値そのもの』へ一本化して同時に閉じる唯一の候補で、値の固定と検証の分離は既決の provenance パターン(delegate/選挙 ballot SHA 固定)と同型 — 実行時再導出を検証専用へ降格する設計は E-SRCAD2 裁定(git 初回コミット日時 = 決定論)とも整合し、『初回移行値を registry が固定すれば再実行同値』の含意を plan ファイルで前倒し実装する形。B は承認束縛が再導出一致前提のままで (i) の根本(導出揺れ全般)を残す。C は候補文自身が『単独では Critical を閉じきらない』と明記しており、(ii) の別手当てが増えると総変更面は A と大差なくなる。永続化面1点の増分は record 配下(バージョン管理内)で承認証跡と同居し管理コスト最小。非採用時の受容度: B なら 6(resume は閉じる)、C なら 7(Critical 未閉包のまま着地するリスク)。",
+  "submittedAt": "2026-07-23T02:49:22Z"
+}

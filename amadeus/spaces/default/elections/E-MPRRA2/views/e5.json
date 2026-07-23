@@ -1,0 +1,26 @@
+{
+  "electionId": "E-MPRRA2",
+  "voter": "e5",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 4,
+      "label": "X. その他"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "A. ask へ降格(create 選択肢込み — 未作成時に無音で進まない)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "B. advisory print(stderr 注記)で続行 — ask なし"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 3,
+      "label": "C. loud エラーで停止(設定矛盾扱い — 正常系の誤エラー化リスクあり)"
+    }
+  ]
+}

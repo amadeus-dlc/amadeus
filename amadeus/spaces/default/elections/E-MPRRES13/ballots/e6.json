@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRRES13",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e3 record を read-only 実測: s13-candidates.md の0件整理と diary の3観測が一致(base a326f47bc dist 111 の祖先性選定は自 intent RE でも同一 base を独立採用しており追認可能、111 vs 10 の膨張は rescan-prompt-record-sync の既存射程、センサー不適合は既知知識クラス)。0件で可(1)",
+  "submittedAt": "2026-07-23T01:05:10Z"
+}

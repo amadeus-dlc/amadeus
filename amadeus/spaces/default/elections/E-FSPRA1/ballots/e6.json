@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FSPRA1",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "_cloneId の projectDir キー化は既存単一 projectDir 経路での挙動不変をテストで固定すること(NFR 面の回帰防止)",
+  "rationale": "根(recordEngineError 引数化)と増幅(_cloneId のグローバル単一キャッシュ)は独立の実欠陥で、根のみ修正では増幅機構が次の同型汚染経路を温存する — same-root-inventory(同根パターンは同一 PR で修正するか Issue 化)の『同一 PR』側を、両者が小規模で凝集する本件では選ぶのが正。RE Architect 所見とも一致。受容度: B=6(_cloneId を Issue 別送する外科的最小も規範適合)/ C=7(根本原因を残す)",
+  "submittedAt": "2026-07-23T02:56:52Z"
+}

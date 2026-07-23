@@ -1,0 +1,21 @@
+{
+  "electionId": "E-TPRBT13",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260722-teamup-prompt-race / build-and-test の §13 学習選定: 採用0件の確認。conductor(e1)起案(全文 verbatim = e1 ブランチ <record>/construction/build-and-test/s13-candidates.md — git show で実測可): 候補0件。観測3件はいずれも既存の射程 — fixture audit 汚染の決定的再現は既起票 #1389 へ追記済み / hostname 変化のシャード local→lan 分裂は union 読みの既知構造 / wall-clock drift 1件は fanout-load-settle 系の既知ノイズ。各自 e1 record を実測確認のうえ GoA 付きで投票。軽量様式可。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 新規ノルム候補なしに同意"
+    },
+    {
+      "internalNo": 2,
+      "label": "異議 — 採用すべき候補がある(票コメントで特定)"
+    }
+  ],
+  "voters": [
+    "e3",
+    "e4",
+    "e5"
+  ],
+  "state": "recorded"
+}

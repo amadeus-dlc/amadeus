@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TCRCGS13B",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e1 record を read-only 実測: s13-candidates.md の0件整理3件を確認 — FR-2b 引用誤りは E-FSPRAS13(本日採用)の消費側実例で PM 回付が正位置、t257 は落ちる実証+corpus sweep+vacuity guard の既決執行、fixture 汚染3回目は e4 intent で修正進行中(重複起票回避も適切)。0件で可(1)",
+  "submittedAt": "2026-07-23T03:11:39Z"
+}

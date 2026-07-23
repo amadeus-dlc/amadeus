@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-ASGIC2",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A は語彙契約(enum 4値)と書込追跡の分離により既存挙動不変で #1309 ライフサイクル契約と整合 — 外科的最小(P5)。B は park/unpark 全経路改修のスコープ拡大で本 intent(bugfix 級ガード)に不釣り合い、C は #1309 側との語彙分裂を作る。本日の自 intent でも intents.json の in-flight/complete/closed 実分布を実測しており、parked の registry 非出現(park は record 側)という前提も追認できる。受容度: B=6 / C=7",
+  "submittedAt": "2026-07-23T03:40:43Z"
+}

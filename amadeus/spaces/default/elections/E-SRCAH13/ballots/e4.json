@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCAH13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。実測確認: (a) c1 — leader 監査シャード(260722-space-record-catalog/audit/j5ik2o-mac-studio-local-a6ea33c886e4.md:1125-1133)の GRANT_ISSUED 88796e08 に『Includes Phase Boundary: false』が機械可読フィールドとして実在 — 通知の機械的読解であり新規性なしの不採用理由は成立。(b) c2 — e2 record の approval-handoff diary Deviations 22:12:02Z に自己捕捉・即是正の記録実在。既存 cid:no-election-judgment-gate の違反実例でありノルム新設不要、PM 違反実例カウント回付が正しい経路。",
+  "submittedAt": "2026-07-22T22:21:41Z"
+}

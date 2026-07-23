@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCNDS13",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record を read-only 実測: nfr-design 全4 unit の0件整理を確認。総当たり self-check の reviewer 前9件捕捉は E-SRCNRS13(本日採用)の実効2例目で、採用済みノルムの効果実証 — 新規性なし。0件で可(1)",
+  "submittedAt": "2026-07-23T04:04:53Z"
+}

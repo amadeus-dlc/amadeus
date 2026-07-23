@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRAD1",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "注記の置き場は productized 配布面(SKILL/usage 出力)とし、team.md ノルムの複製でなく参照にする — 二重規定回避",
+  "rationale": "B を支持。実測: scripts/amadeus-mirror.ts に主体検査なし(AMADEUS_OPERATING_MODE/identity 0 hit)、エラー経路は fail()/exit 1・2 の loud 契約(:10/:231 以降)— 書込面の fail-closed は A の言うとおり既に実在する。しかし create/close は GitHub への外部不可逆操作であり、productization 後は team ノルムを知らない利用者も触る — 運用期待(conductor/所有者からの実行)を配布面ドキュメントに1行可視化する B は実装ゼロで false confidence も作らない。C は決定的 identity 判定源が現存しないまま機械強制を作ると guard-activator 不在・検証劇場隣接の偽保証になり、bugfix 外の規模増。受容度: A=6(ノルムが引き続き統治するため許容)、C=7(判定源なき機械化に反対)。",
+  "submittedAt": "2026-07-23T01:50:11Z"
+}

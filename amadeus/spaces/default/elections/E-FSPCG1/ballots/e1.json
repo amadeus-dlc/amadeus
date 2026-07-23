@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FSPCG1",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "プロセス面の記録: 本逸脱は実装後の申告→選挙であり、cid:deviation-stop-before-implement(実装前停止→選挙が正、実装+申告は前例化しない)の違反実例として PM 回付すること。技術裁定 A の承認はこのプロセス実例の免罪ではない",
+  "rationale": "A を支持(技術面)。独立実測: (a) e4 ブランチ diff 直読 — _handlerProjectDir は _engineErrorInProgress(:198)と同じ module-scoped 再入ガード idiom で、:212-214 のコメントが対称性を明文化。recordEngineError(message, projectDir?) の観測可能契約(ERROR_LOGGED が呼出元 projectDir へ)は保たれている。 (b) 申告の機序(到達困難な内部不変量エラー経路の patch 未被覆)は cid:spawn-blindspot-two-step / mega-pr-codecov 系で実証済みの実在クラスで、56行超の allowlist 登録(B 案)は cid:allowlist-line-pin-stale の管理負債を恒常化する — NFR-4 との要件間衝突の解消として A が実測合理。 (c) FR-1 字義(引数化+フォールバック降格)は充足。受容度: B=7(NFR-4 衝突+stale 負債)、C=4。",
+  "submittedAt": "2026-07-23T04:10:40Z"
+}

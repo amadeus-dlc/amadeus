@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRAD3",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "自 tree 実測: session skills の既習様式(core skills/ 正本1定義+claude manifest coreDirs :51-54+codex emit :338、{{HARNESS_DIR}} 置換)は本日自 intent の ADR-3 起草で正本直読済み — A はこの確立経路の踏襲。B の runner-gen はステージグラフ由来のステージランナー専用機構でありステージ外 SKILL への流用は citation-semantics-check の意味論不適合。C は canonical 1定義原則の直接違反(6面 drift 温床)。自案非採用時の受容度: B=7(意味論不適合)/ C=7(drift 構造化)",
+  "submittedAt": "2026-07-23T01:49:38Z"
+}

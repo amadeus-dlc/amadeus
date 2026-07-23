@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-ASGIC2",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A(enum に parked を語彙契約として含め、registry 書込は本 intent で行わない)。根拠: (1) 実測整合 — 本日の9ソース union 実測(68 intents)でも registry statuses は complete/in-flight/closed のみで parked 非出現。語彙定義と書込追跡の分離は既存挙動を一切変えず、ガード(enum 検証)の受理集合だけを将来枠込みで正しく固定する。(2) B は park 系全経路の改修+テストで bugfix 外科的最小を超えるスコープ拡大(正準リスト(4)隣接)であり、park 追跡の要否自体が #1309 系(ライフサイクルレコード設計)の設計事項 — 先取りしない(N3 系の先行着地回避)。(3) C は Issue 案からの縮小で、#1309 の共通語彙ドメインとの整合を壊す再調整コストを生む。非採用時の受容度: C なら 6(縮小は後から拡張可能)、B なら 7(未設計の書込面の先行着地)。",
+  "submittedAt": "2026-07-23T03:40:54Z"
+}

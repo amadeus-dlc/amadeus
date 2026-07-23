@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SRCAH13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。実測確認2点: (a) c1 — leader の grant 通知(22:11:08Z 受信文)に『フェーズ境界は対象外』が verbatim で明記されており、解釈は通知文の機械的読解で新規性なし。(b) c2 — e2 worktree の <record>/ideation/approval-handoff/memory.md:9 に『E-OC1 先取り記入を自己捕捉・即是正(コミット前に全空欄化+承認待ちヘッダへ修正)』の記録を直読確認。既存 cid:no-election-judgment-gate(3段順序)の違反実例であり、ノルム新設でなく PM 違反実例カウントへの回付が既決運用(cid:postmortem-two-tier)に整合する。よって両候補不採用・0件に同意。",
+      "submittedAt": "2026-07-22T22:20:49Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCAH13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。実測: e2 record の memory.md:5(グラント解釈)と leader→e2 通知文 22:11:08Z の『フェーズ境界ゲートは対象外』明文を照合 — c1 は明示除外の機械的読解で新規性なし。memory.md:9 の E-OC1 先取り自己捕捉は既存 cid:no-election-judgment-gate の違反実例であり c2 のノルム新設不要・PM 回付が妥当。",
+      "submittedAt": "2026-07-22T22:21:23Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCAH13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。実測確認: (a) c1 — leader 監査シャード(260722-space-record-catalog/audit/j5ik2o-mac-studio-local-a6ea33c886e4.md:1125-1133)の GRANT_ISSUED 88796e08 に『Includes Phase Boundary: false』が機械可読フィールドとして実在 — 通知の機械的読解であり新規性なしの不採用理由は成立。(b) c2 — e2 record の approval-handoff diary Deviations 22:12:02Z に自己捕捉・即是正の記録実在。既存 cid:no-election-judgment-gate の違反実例でありノルム新設不要、PM 違反実例カウント回付が正しい経路。",
+      "submittedAt": "2026-07-22T22:21:41Z"
+    }
+  ],
+  "late": []
+}

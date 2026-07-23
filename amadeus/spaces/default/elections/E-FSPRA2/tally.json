@@ -1,0 +1,74 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A. 犯人 t248 のみ(t118 ほかは実測のうえ Issue 起票 — same-root-inventory 準拠)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A. 犯人 t248 のみ(t118 ほかは実測のうえ Issue 起票 — same-root-inventory 準拠)",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "B. 犯人+同型潜在 t118 を同一 PR(要確認3本は Issue)",
+        "count": 1
+      },
+      {
+        "internalNo": 3,
+        "label": "C. 非隔離5本すべて同一 PR(スコープ拡大)",
+        "count": 0
+      },
+      {
+        "internalNo": 4,
+        "label": "X. その他",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T02:57:24Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-FSPRA2",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A(犯人 t248 のみ+他は実測のうえ Issue 起票)。根拠: (1) t118:378 は e4 RE diary 自身が『実汚染は未実測(同型シェイプのみ確定)』と明記 — 未実測サイトの同一 PR 同乗は実測起票規律(bughunt-file-only / same-root-inventory の Issue 化側)と bugfix 外科的最小の両方に反する。(2) Q1 で A(根+増幅)を採ればエンジン側で全経路が構造的に封じられ、テスト側隔離は defense-in-depth の第2層 — 犯人1本の隔離+残余の実測 Issue 化で十分。(3) same-root-inventory は『同一 PR 修正 or Issue 化』の二択を定めており A はその Issue 化側の正しい適用。受容度: B なら 6(t118 の実測を PR 内で行うなら害はない)、C なら 7(未実測5本の一括改変はスコープ拡大かつ検証コスト過大)。",
+      "submittedAt": "2026-07-23T02:51:09Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FSPRA2",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A を支持。Q1 で根(+増幅)を塞げばテスト側の隔離は防御 depth の追加層であり、bugfix の外科的最小(project.md 既定)に照らして犯人 t248 のみが均衡点。同型潜在 t118:378・要確認3本は実測のうえ Issue 起票が cid:same-root-inventory の明文どおり(修正するか Issue 化するかの選択肢のうち後者)。私の #1389 起票時の期待(テスト隔離の構造化)は Q1 の根本修正で上位互換的に満たされる。受容度: B=6(t118 同乗は小コストで許容)、C=7(5本一括はスコープ拡大)。",
+      "submittedAt": "2026-07-23T02:53:45Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FSPRA2",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "t118 の同型性は着手前に実測で再確認し、非同型と判明したら A(t248 のみ+Issue)へ縮退する",
+      "rationale": "same-root-inventory は『同根を同一 PR で修正するか Issue 化』— 実測済みの同型潜在(t118)は修正コストが小さく同一 PR で閉じるのが再発防止上優位、未確認3本は Issue 化が正位置(推測修正の禁止)。C の非隔離5本一括は bugfix 外科的最小に反するスコープ拡大。受容度: A=6(Issue 化も規範適合のため)/ C=7",
+      "submittedAt": "2026-07-23T02:56:52Z"
+    }
+  ],
+  "resolutions": []
+}

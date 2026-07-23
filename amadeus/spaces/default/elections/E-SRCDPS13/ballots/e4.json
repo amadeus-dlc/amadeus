@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCDPS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e2 record リードオンリー実測: 2候補とも diary(Interpretations/Deviations 00:56:29Z)と verbatim 一致。c1 = 責務ベース staffing(固定名・時刻確約なし)は cid:role-model と approval-handoff:c3(未確定 named mob を捏造しない)の機械的執行で新規性なし。c2 = human-presence ガードの正常動作の反復観測 — RA Q5 の同型(E-SRCRAS13 c3 で不採用済みのクラス)であり、偽装せず実 HUMAN_TURN 後に再発行する対応も P2/P4 運用の範囲内。PM 実例回付が正しい経路。",
+  "submittedAt": "2026-07-23T01:01:19Z"
+}

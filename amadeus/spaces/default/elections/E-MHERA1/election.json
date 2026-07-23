@@ -1,0 +1,29 @@
+{
+  "electionId": "E-MHERA1",
+  "kind": "clarification-question",
+  "question": "intent 260723-marker-heading-exemption(#1296)/ requirements-analysis の明確化質問(verbatim 正本 = e5 worktree <record>/inception/requirements-analysis/requirements-analysis-questions.md — リードオンリー実測可)。Q1. 免除述語の canonical 化(FR-1 実装形態)。判断点: 変更面最小(B)vs 集合分裂の構造的防止(A)。センサーの import 実測 = amadeus-lib.ts のみ — A は既存 import 面で成立、C のみ新規依存(センサーの graph 非依存を破る)。 各自実測確認のうえ、受容度1行併記+GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. isMarkerArtifact を amadeus-lib.ts へ抽出し graph filter とセンサー免除の両方を導出(canonical 1定義)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. センサー内独立実装+graph との一致を対称 test で固定(変更面最小・2定義ドリフト面残存)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. amadeus-graph.ts へ抽出しセンサーが graph import(新規依存)"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e4",
+    "e6"
+  ],
+  "state": "recorded"
+}

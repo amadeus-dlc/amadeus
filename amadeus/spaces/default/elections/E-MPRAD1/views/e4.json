@@ -1,0 +1,26 @@
+{
+  "electionId": "E-MPRAD1",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 4,
+      "label": "X. その他"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "A. 制約なし(書込面は verb 自体の fail-closed 検証で防御)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "B. 運用注記(create/close は conductor から — 機械強制なし)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 3,
+      "label": "C. 機械強制(team モードで conductor 以外の create/close を exit 1 拒否 — 新規 identity 判定機構が必要)"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-ASGAHS13",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e1 record を read-only 実測: approval-handoff の s13-candidates.md の0件整理を確認(consumes-first-drafting 2度目の違反実例は傾向 PM 回付が正位置 — 総当たり self-check(E-SRCNRS13 採用済み)が既に構造対策)。0件で可(1)",
+  "submittedAt": "2026-07-23T04:16:34Z"
+}

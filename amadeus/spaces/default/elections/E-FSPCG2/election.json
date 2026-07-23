@@ -1,0 +1,25 @@
+{
+  "electionId": "E-FSPCG2",
+  "kind": "clarification-question",
+  "question": "intent 260723-fixture-shard-pollution(#1389)/ code-generation の申告付き逸脱裁定(候補 verbatim 正本 = e4 ブランチの <record>/construction/fix-1389-shard-pollution/code-generation/deviation-candidates.md — git show で実測可。builder 申告 verbatim は code-summary.md 申告節)。注意: 起草 conductor の推奨は blind 原則により本配信では伏せる — 各自一次資料から独立判断を。逸脱2: t-learnings-persist-seam の assert 更新 — 旧バグ挙動(_cloneId 単一値前提)を pin していた assert を FR-1b(Map 化)の修正後挙動へ更新(申告済み)。 各自 lcov 実測・diff・申告 verbatim を確認のうえ、受容度併記+GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. 承認 — 旧 assert は欠陥挙動の pin、更新はバグ修正の定義そのもの"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. 旧 assert 併存の互換テスト追加(org.md Forbidden 抵触見込み)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. その他"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e5",
+    "e6"
+  ],
+  "state": "recorded"
+}

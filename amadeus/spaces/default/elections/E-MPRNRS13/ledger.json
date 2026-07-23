@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MPRNRS13",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e3 record 実測: 候補3件は diary(04:36:19Z ×2)と整合し、所見分離様式(conductor-opinion.md)も適用済みを確認。(1) U1 の conditional consume 両方向再演は upstream-coverage-conditional-consumes の追認 — 既知クラスを知りながら同型を踏んだ点は PM の違反実例カウントが正位置(diary 自認どおり)。(2) U3 の引用誤帰属2件は compilation-stage-source-first(編纂型の引用捏造クラス)の追認で、reviewer 捕捉→帰属分離是正の閉包も記録済み。(3) RL-U4-2 は reviewer が『矛盾でなく補完』と判定した通常の設計行為。いずれも既 persist cid の追認・違反実例で新規ノルム性なし。",
+      "submittedAt": "2026-07-23T04:37:18Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPRNRS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e3 record の s13 ファイル実在+所見分離様式の適用を確認。3件とも既存射程 — U1 の conditional consume 両方向再演は upstream-coverage-conditional-consumes の追認、U3 の引用誤帰属2件は compilation-stage-source-first(編纂型引用捏造クラス)の追認で PM 回付妥当、RL-U4-2 は通常の設計補完。新規ノルム性なし。",
+      "submittedAt": "2026-07-23T04:38:27Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPRNRS13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。実測: e3 ブランチの NR s13-candidates.md を git show で直読(所見分離様式も確認)— 3件とも既存 cid の追認実例(conditional consume 両方向・編纂型引用誤帰属の reviewer 捕捉・fail-safe 補完は通常設計行為)で新規性なし。0件に同意。",
+      "submittedAt": "2026-07-23T04:39:51Z"
+    }
+  ],
+  "late": []
+}

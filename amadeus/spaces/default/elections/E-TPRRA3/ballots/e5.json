@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TPRRA3",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 3,
+  "goa": 2,
+  "reservation": "exit code 分岐は mux_attach より前に検証を完了させる実装順序が前提(attach 後の exit code は対話 detach に飲まれて意味を失う)",
+  "rationale": "C(警告+exit code 分岐)。実測: team-up.sh は検証想定位置(:1259-1260 supervisor 起動→mux_attach)の後に run record status 書込みがあり、機械消費者(run record・呼出しスクリプト)には exit code が唯一の armed 状態信号。C は 0=全員 armed / 非ゼロ=未armed の両側を定義し、検証劇場 Forbidden の『結果を実行から導出』を exit code 面で満たす。A(loud 失敗)との実質差は「未armed でも attach して手動復旧(Issue #1384 の回避策 = herdr ブロードキャスト)に進めるか」で、5/6 再現率の現状では未armed=セッション全体無価値ではなく、attach したうえで非ゼロ+列挙+復旧手順が運用上最善。B(exit 0 固定)は偽グリーンで不可。非採用時の受容度: A なら 6(loud 側に倒れる分は許容)、B なら 8(fail-open は検証劇場 Forbidden に抵触 — 反証根拠: exit 0 では呼出し側が未armed を機械検出できない)。",
+  "submittedAt": "2026-07-22T22:30:14Z"
+}

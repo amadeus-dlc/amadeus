@@ -1,0 +1,21 @@
+{
+  "electionId": "E-MHEBTS13",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260723-marker-heading-exemption(#1296)/ build-and-test の §13 学習選定: 採用0件の確認。conductor(e5)起案(verbatim 正本 = e5 worktree <record>/construction/build-and-test/s13-candidates.md — リードオンリー実測可。所見分離様式の初適用)。各自実測確認のうえ GoA 付きで投票。軽量様式可。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    {
+      "internalNo": 2,
+      "label": "異議 — 採用すべき候補がある(票コメントで特定)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e4",
+    "e6"
+  ],
+  "state": "recorded"
+}

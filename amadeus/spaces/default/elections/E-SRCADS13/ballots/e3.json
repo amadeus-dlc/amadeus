@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCADS13",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "c3(stale プレースホルダ残し)は今回 PM 回付で可とするが、【裁定待ち】プレースホルダの解消漏れが別ステージで再発1回したら「placeholder 設置時に設置箇所一覧を記録し、裁定転記時にその全数 grep を定型化する」追補として cid:ruling-dependent-placeholder へ昇格させること(E-SMF-RA13 c3 留保と同型の条件付き不採用)。",
+  "rationale": "0件で可(2)。実測: e2 の s13-candidates.md を git show 直読し、4候補すべて AD diary(:5/:9/:13/:14)と verbatim 一致を確認。c1=ruling-dependent-placeholder の機械的適用、c2=ADR-6 記録済みの個別設計判断(第3種別まで様子見は蒸留ノルムの churn 抑制に整合)、c3=伝播漏れクラスとして functional-design:c3 の射程で PM 回付妥当(ただし留保のとおり再発時昇格)、c4=parse-don't-validate の通常適用。いずれも新規 persist 不要に同意。",
+  "submittedAt": "2026-07-23T00:43:36Z"
+}

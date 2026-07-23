@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TPRRE13",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e1 worktree の re-scans/260722-teamup-prompt-race.md をリードオンリー直読で実測確認: (1) 主発見『260721-teamup-safety-wait の Codex 専用 safety-wait を claude 経路へ一般化しなかった設計漏れ』は bug-intent-linkage の原因所在記録と requirements 側材料であり、片側実装の非対称クラスは既決 symmetric-pair-review が既にカバー。(2) その他は rescan-base-ancestry(base a326f47 の --is-ancestor exit 0・distance 101 記載)/ re-sensors-codekb-filter-mismatch / measurement-ref-in-artifacts 等の既決 cid 適用実績のみ。(3) 未決点4件(修正方式・fingerprint 要否・実行時未確認・回帰テスト新設)はいずれも requirements/設計段の判断事項でノルム候補ではない。新規ノルム候補なしに同意。",
+  "submittedAt": "2026-07-22T22:19:29Z"
+}

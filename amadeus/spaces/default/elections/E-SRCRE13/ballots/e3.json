@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCRE13",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。実測: e2 RE diary(memory.md:5/:9/:13)と re-scans/260722-space-record-catalog.md(:14/:27)をリードオンリー直読。c1=rescan-base-ancestry の機械的適用(base a326f47bc・dist 110・非祖先 545e69c8 除外)で新規性なし。c2=placeholder 日時是正は verify-before-notify 系の違反実例で PM 回付が妥当。c3=直 join 3サイト(:434/:436/:482)を自 tree の sed 直読で存在スポット確認 — enumeration-completeness-review の追認実例で PM 回付が妥当。3件とも不採用理由成立。",
+  "submittedAt": "2026-07-22T23:20:08Z"
+}

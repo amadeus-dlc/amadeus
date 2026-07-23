@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TPRRA3",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "A と C は非ゼロ exit の点で実質同型 — design 段で exit code の値と stderr 様式(未 armed メンバー列挙+復旧手順)を spawn.sh:581-583(status=timeout+exit 3)の既習様式に揃えること。",
+  "rationale": "A 採用。実測: spawn.sh:576-588 の timeout 経路は message+exit 3 の loud fail — 既習様式は A。B(exit 0)は機械消費者(スクリプト・CI)から失敗が不可視になる soft fail で検証劇場 Forbidden の予防趣旨に反する。自案非採用時の受容度: C=6(実質同型)/ B=7。",
+  "submittedAt": "2026-07-22T22:30:15Z"
+}

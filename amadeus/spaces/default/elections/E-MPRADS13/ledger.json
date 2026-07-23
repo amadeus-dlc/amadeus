@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MPRADS13",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e3 record を read-only 実測: s13-candidates.md の3 surface と0件整理を確認。留保 elaboration と統合解釈行は citation-reservation-preservation / reservation-transcription 系の運用適用、ADR Reversibility 起草漏れ→reviewer 捕捉は既存起草規範の違反実例で PM 回付が正位置(本日自 intent AD でも同型の reviewer 捕捉→是正サイクルを2イテレーション実施しており、既存 cid 射程との整理は追認できる)。0件で可(1)",
+      "submittedAt": "2026-07-23T03:00:20Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPRADS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c1 の diary 記述『留保原文は verb と検証のみ言及 — sweep 運用の追加は解釈的 elaboration』は誤読 — 原文(E-MPRRA1 record.md の e4 留保)は『既存 complete-workflow 経路+intent-completion-issue-sweep で拾われることが前提』と sweep を明記しており、sweep は原文の忠実反映。ADR-3 の実質は原文と整合するため採否に影響しないが、diary 当該行の訂正を推奨(当事者照合)。",
+      "rationale": "0件で可(2)。e3 record 実測: 3件とも diary(02:55:49Z)と verbatim 整合。c2 = GoA2 留保3件の統合解釈行は reservation-transcription-count-check+per-voter 逐語(3件 verbatim 転記済み)の通常統合で新規機構なし。c3 = ADR Reversibility 7件の起草漏れは stage 定義必須項目の読み落とし = consumes-first-drafting 類型の違反実例で PM 回付妥当。c1 は留保当事者(私)として原文照合を実施 — 実質設計(3点接続)は私の留保意図と一致し citation-reservation-preservation の範囲内、ただし diary の原文特徴づけに誤りあり(留保欄に記載)。3件とも新規ノルム性なし。",
+      "submittedAt": "2026-07-23T03:01:11Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPRADS13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。実測: e3 worktree の AD s13-candidates.md をリードオンリー直読 — 3件の既存 cid 対応は verbatim どおり。decisions.md の Reversibility は grep 7 hits で是正の実在を確認(起草漏れ→reviewer 捕捉→是正済みの違反実例として PM 回付が正)。留保統合行は E-MPRAD1〜3 の私の投票留保の扱いとも整合(私の E-MPRAD1 留保 = 前提訂正記録は別途 leader が record/PM へ転記確約済み)。3件とも新規ノルム性なし — 0件に同意。",
+      "submittedAt": "2026-07-23T03:03:15Z"
+    }
+  ],
+  "late": []
+}

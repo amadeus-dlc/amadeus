@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCAD2",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "移行は full clone 環境で1回実行して registry へ値を固定し、shallow clone 劣化は移行手順の実行環境制約として明記する前提。",
+  "rationale": "A採用(GoA 2)。git 初回コミット日時は『そのディレクトリが実際に出現した時刻』という実測事実で P2(実測事実のみを根拠)に最も忠実。B の移行時刻は作為時刻で実履歴と乖離し、C の null 恒久化は統一という intent 目的の例外を恒久化する。B の利点(再実行同値)は A でも registry 固定で同様に得られる。自案非採用時受容度: B=6(createdAtSource 併記で provenance が明示されるため許容)/ C=7(例外恒久化は目的と矛盾)。",
+  "submittedAt": "2026-07-22T23:47:08Z"
+}

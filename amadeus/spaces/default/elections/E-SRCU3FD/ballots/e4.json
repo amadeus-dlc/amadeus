@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCU3FD",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A採用(GoA 1)。e2 record の fix-direction-candidates.md と reviewer Critical verbatim を直読。Critical の欠陥は『unknown フォールバック値の非決定』が (i) 承認ハッシュ束縛の構造的常時失効 (ii) resume 未定義分岐、の2面へ増幅する形で、A のみが「値を1回確定して永続化し、承認はその値へ束縛、実行は承認済み値を消費、再導出は現況整合検証に降格」により両面を単一機構で閉じる — 検証を実行から導く P2 と、承認対象の値固定(delegate-provenance 系の既習パターン)にも整合。B は承認束縛が再導出一致前提のままで (i) の部分再発面が残り、C は候補文自身が『単独では閉じきらない』と明記する不完全修正(same-root の再指摘クラス)。管理面の増分は record 配下 plan ファイル1点で bugfix 均衡内。自案非採用時受容度: B=6(resume は閉じるため実害は限定)/ C=7(Critical を閉じない是正の採用に重大な不同意)。",
+  "submittedAt": "2026-07-23T02:49:32Z"
+}

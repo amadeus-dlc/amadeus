@@ -1,0 +1,26 @@
+{
+  "electionId": "E-ASGIC1",
+  "voter": "e6",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 4,
+      "label": "X. その他"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "C. 手編集+doctor 整合検査(verb なし — 監査イベントが残らない)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "B. unarchive verb+human-presence のみ新設(archive 側は enum 検証強化どまり — 最小面)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 1,
+      "label": "A. archive/unarchive 対の専用 verb+human-presence 必須+両方向監査(symmetric-pair)"
+    }
+  ]
+}

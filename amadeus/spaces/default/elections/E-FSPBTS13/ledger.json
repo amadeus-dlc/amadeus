@@ -1,0 +1,54 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-FSPBTS13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "提案どおり採用(1)。実測: 私自身が PR #1407 増分2の独立レビューで再ピン3本の実体(:2958-2959 catch / reap-mutex 両 arm)を head lib 直読照合しており、2916 の『stale 検査に映らない別測定可能行への無音転位』は私のレビューコメントでも §13 材料に推奨した新変種そのもの。既存 cid:allowlist-line-pin-stale は『上方挿入で stale 化する』面のみを規定し、無音転位(stale 検出をすり抜けて誤対象を指し続ける)は未規定 — 全エントリの reason×現行行内容の直読照合という検査手順の追補は真のギャップ充填。PM 回付3件(既知クラス・番号連鎖・環境赤帰属)も妥当。",
+      "submittedAt": "2026-07-23T05:14:20Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FSPBTS13",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e4 record を read-only 実測: build-and-test の s13-candidates.md の0件整理を確認(既存 cid 執行のみ)。0件で可(1)",
+      "submittedAt": "2026-07-23T05:14:03Z"
+    },
+    {
+      "kind": "amend",
+      "ref": {
+        "electionId": "E-FSPBTS13",
+        "voter": "e6",
+        "submittedAt": "2026-07-23T05:14:03Z"
+      },
+      "electionId": "E-FSPBTS13",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "amend(原票 = 上記 ref、choice 1 は不変 — rationale の誤記述を訂正: 原票は『0件整理』と書いたが本選挙は候補1採用提案)。正しい判断根拠: e4 record を read-only 実測 — 候補1(allowlist 行ピンの無音転位: stale 検査に映らないまま別の測定可能行へずれる — 検出済み 4402-4403 に加え未検出の 2916 転位を PR #1407 で実測)は、既存 allowlist-line-pin-stale(行シフトで stale 化)が守らない『stale に見えない転位』の面を埋める実測付き追補で採用妥当。PM 回付3件も適切。提案どおり(1)",
+      "submittedAt": "2026-07-23T05:14:20Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FSPBTS13",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "提案どおり(候補1採用+3件 PM 回付)。機構の独立裏取り: 本日 PR #1405 作業で tests/coverage-patch-gate.ts の findStaleAllowlistEntries(:157-171)を直読済み — stale 検査は『範囲内に測定可能(DA 記録)行が1つでもあるか』の存在検査であり、行シフトで別の測定可能行へ転位したピンは構造的に素通りする(候補の機序主張と実装が一致)。転位は『誤った行の免除』= fail-open 側の欠陥面で、stale の fail-closed 側だけを見る既存 cid:allowlist-line-pin-stale の未規定域 — 全エントリの reason vs 現行行内容の直読照合という追補は機械的・安価で正位置。実測(4402-4403 検出 vs 2916 無音転位の対照)も検出/非検出の両側が揃った良質な根拠。不採用3件は既知クラス・連鎖報告済み・執行実例で PM 回付妥当。",
+      "submittedAt": "2026-07-23T05:14:21Z"
+    }
+  ],
+  "late": []
+}

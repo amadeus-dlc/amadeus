@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRPDS13",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e3 record 実測: 観測3件は diary(01:08:15Z ×3)と s13-candidates の verbatim 一致を確認。c1 = practices-discovery:c1(同日 RE codekb 代用+乖離0でギャップ質問0問)の字義どおりの適用 — 同型の 0件裁定を E-SRCPD13 でも本日確認済みで一貫。timestamp 免除+prose 3成果物のセンサー6発火全 PASSED(FAILED 0)は e-fvepd-marker-heading-floor / manual-sensor-fire の機械的適用で、diary に audit 実測の記載あり。c2+P3 = 部分ドラフト+no-op promote は practices-discovery:c2 の適用、gh optional 改定を requirements/design 裁定へ委ねて現行 practices を先取り変更しない判断は P3(承認済み意図からの逸脱防止)の正しい執行で、むしろ模範例。新規ノルム候補なしに同意。",
+  "submittedAt": "2026-07-23T01:09:31Z"
+}

@@ -44,7 +44,13 @@ import {
   normalizeAt,
 } from "./amadeus-election-transport";
 import { parseGoaLine } from "../packages/framework/core/tools/amadeus-norm-metrics";
-import { electionsRoot, Store, type StoreError, writeStoreFile } from "./amadeus-election-store";
+import {
+  electionsRoot,
+  resolveElectionDir,
+  Store,
+  type StoreError,
+  writeStoreFile,
+} from "./amadeus-election-store";
 
 const USAGE =
   "Usage: bun scripts/amadeus-election.ts <open|notify|vote|status|tally|render|verify|next|report> --election <id> [--file <path>] [--result <r>] [--resolution <r>] [--transport agmsg|subagent] [--team <t>] [--from <name>] [--send-script <path>] [--project <dir>]";
@@ -102,7 +108,7 @@ function readTally(
   root: string,
   electionId: string,
 ): { result: TallyResult; ballots: unknown[]; talliedAt?: string; resolutions?: HoldResolution[] } | null {
-  const path = join(root, electionId, "tally.json");
+  const path = join(resolveElectionDir(root, electionId).dir, "tally.json");
   if (!existsSync(path)) return null;
   try {
     return JSON.parse(readFileSync(path, "utf8"));
@@ -231,7 +237,7 @@ function handleHoldResolved(root: string, electionId: string, resolution: string
     at: normalizeAt(new Date().toISOString()),
   };
   const persisted = writeStoreFile(
-    join(root, electionId, "tally.json"),
+    join(resolveElectionDir(root, electionId).dir, "tally.json"),
     JSON.stringify({ ...t, resolutions: [...(t.resolutions ?? []), entry] }, null, 2),
   );
   if (!persisted.ok) return storeFail("tally-resolution", persisted.error);
@@ -260,7 +266,7 @@ export function handleOpen(root: string, filePath: string): number {
   if (!created.ok) return storeFail("create", created.error);
   // Blind per-voter views (FR-1b/1c): deterministic shuffle, written up front
   // so notify only ever references them by path.
-  const dir = join(root, parsed.value.electionId, "views");
+  const dir = join(resolveElectionDir(root, parsed.value.electionId).dir, "views");
   try {
     mkdirSync(dir, { recursive: true });
   } catch {
@@ -311,8 +317,9 @@ export function handleNotify(
   const voters = loaded.value.election.voters;
   const transport = buildTransport(transportKind, new Set(voters), agmsg);
   if (typeof transport === "string") return fail(transport);
+  const electionDir = resolveElectionDir(root, electionId).dir;
   const deliveries = distribute(transport, electionId, voters, (voter) =>
-    join(root, electionId, "views", `${voter}.json`),
+    join(electionDir, "views", `${voter}.json`),
   );
   for (const d of deliveries) {
     if (d.result.ok && d.result.value.kind === "delivered") {
@@ -431,9 +438,10 @@ export function handleRender(root: string, electionId: string): number {
   ];
   // No timeline entry here: the ledger's four event kinds (distributed/ballot/
   // tallied/late) do not include rendering (functional-design invariant).
-  const w = writeStoreFile(join(root, electionId, "record.md"), lines.join("\n"));
+  const recordPath = join(resolveElectionDir(root, electionId).dir, "record.md");
+  const w = writeStoreFile(recordPath, lines.join("\n"));
   if (!w.ok) return storeFail("render", w.error);
-  out({ rendered: join(root, electionId, "record.md") });
+  out({ rendered: recordPath });
   return 0;
 }
 
@@ -452,7 +460,7 @@ function checkGoaLine(document: string, freq: GoaFreq): string | null {
 }
 
 function readTimeline(root: string, electionId: string) {
-  const path = join(root, electionId, "timeline.json");
+  const path = join(resolveElectionDir(root, electionId).dir, "timeline.json");
   if (!existsSync(path)) return null;
   try {
     return JSON.parse(readFileSync(path, "utf8"));
@@ -479,7 +487,7 @@ export function handleVerify(root: string, electionId: string): number {
   if (JSON.stringify(recomputed) !== JSON.stringify(t.result)) {
     return fail("verify: recomputed tally does not match stored result");
   }
-  const recordPath = join(root, electionId, "record.md");
+  const recordPath = join(resolveElectionDir(root, electionId).dir, "record.md");
   if (!existsSync(recordPath)) return fail("verify: record.md missing");
   const document = readFileSync(recordPath, "utf8");
   const freq = GoaFreq.fromVotes(resolved.map((b) => b.goa));

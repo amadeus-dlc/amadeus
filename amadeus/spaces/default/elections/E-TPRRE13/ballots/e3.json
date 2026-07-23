@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TPRRE13",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。実測: e1 codekb amadeus/re-scans/260722-teamup-prompt-race.md を直読 — base a326f47bc の祖先性・distance 101、原因所在=260721-teamup-safety-wait の Codex 専用 readiness 検証(team-up.sh:340 '[ \"$RUNTIME\" = \"codex\" ] || return 0' verbatim 確認)の一般化漏れ。発見はバグ帰属+既決 cid 適用のみで新規ノルム候補なしに同意。",
+  "submittedAt": "2026-07-22T22:21:23Z"
+}

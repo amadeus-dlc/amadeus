@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRRA2",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A採用(GoA 1)。G-7 既決『auto で無確認実行は sync のみ』に対し、未作成ミラーの create は sync でない新規外部操作 — 無確認実行は G-7 逸脱、無音 skip(B)は節目更新の欠落を不可視化する(検証劇場 Forbidden の予防面)。未作成は intent-first の ideation 中の正常系でありうるため loud エラー(C)は誤エラー化。A(ask へ降格+create 選択肢)は「無音で進まない・無確認で作らない・正常系を壊さない」の3条件を唯一同時充足。自案非採用時受容度: B=6(stderr 注記は無音ではないが、確認なしで節目を通過する点が惜しい)/ C=7(正常系の構造的誤エラー化)。",
+  "submittedAt": "2026-07-23T01:15:49Z"
+}

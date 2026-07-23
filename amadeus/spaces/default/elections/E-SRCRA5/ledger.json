@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SRCRA5",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 3,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "C採用(GoA 1)。実測: Q5 正本(git show 0851eb30d、:52-59)と scope-document Out of Scope :29-30 を直読 — :29 は intent 側 rename を #1309 非目標継承で明示除外、:30 の『実 rename(設計・移行方針の承認前に実行しない — O4)』は Won't 見出しの下にあり、時系列条件と恒久除外の両読みが成立する真の未決を確認。C を採る理由: (1) 103 ディレクトリ一括 rename+レジストリ生成は並行稼働中の選挙 store(本選挙群も同 store)へ作用する外部境界操作で、P4 により実行直前の人間承認が正 (2) dispatch の実装着手承認(ツール・doctor・dry-run 実装)と Won't 記載(無承認の実行禁止)を矛盾なく両立する唯一の読み (3) B の別 intent 化はツールが本 intent で着地する以上セレモニー追加のみで利得なし。自案非採用時の受容度: B=6(不本意だが支持 — 実行が個別承認下に残るため安全側)/ A=7(重大な不同意 — Won't 明記の実行をスコープ解釈選挙で内含化するのは正準リスト(4) のユーザーエスカレーション事項に踏み込む)。",
+      "submittedAt": "2026-07-22T23:30:17Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCRA5",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 3,
+      "goa": 2,
+      "reservation": "実行直前のユーザー承認伺いには dry-run の実測出力(対象件数・rename 対 map・衝突0件の機械確認)を証拠として必ず添付すること — 出力なしの承認伺いは verify-before-notify に反する。",
+      "rationale": "C 採用。実測: Q5 正本(0851eb30d git show)・scope-document.md:29-30・constraint-register O4(:23)を直読。O4 は「設計・移行方針の承認前に実行しない」の時系列条件と読み替え済みで、恒久除外は :29 の intent 側 dir rename のみ — elections 103件の rename は本 intent の中核価値であり B の恒久除外は ux-first-scope-for-distribution-intents(実行なしのツール単独は利用者体験を変えない)に整合しない。一方 A の「設計承認後に自動実行」はステージゲートが auto delegate 化された現運用では実行の人間関与が PR マージ承認まで顕在化しない — 103件一括の構造移行は正準リスト(3)の外部境界に準じ、実行直前の明示的ユーザー個別承認(C)が P4 と時系列条件の両方を最も直裁に満たす。自案非採用時の受容度: A=6(マージ承認が実質ゲートとして残るため)/ B=7。",
+      "submittedAt": "2026-07-22T23:30:27Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCRA5",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "実 rename の実行は S2 解決層の着地後・進行中選挙(state=collecting)が存在しない断面で行い、全103件の対応表+レジストリ parse+参照 0 breakage の fidelity 検証を実行証跡として record に残すこと",
+      "rationale": "A(含む)。実測3点: (1) constraint-register O4 verbatim『既存ディレクトリの一括 rename は設計前に行わない(…「設計・移行方針の承認前に実行しない」と読み替える)』(0851eb30d :23)— 明示的に時系列条件であり恒久除外ではない。scope-document Out of Scope :30 も同じ括弧書きで O4 を参照しており矛盾しない。(2) dispatch は『実装着手承認』済み = ideation park 前提(intent-backlog『本 intent では着手しない』)はユーザー裁定で更新済み — 実装を含む以上、移行実行の器は本 intent が自然。(3) 価値面: 発端の痛み(開催順を追えない)は実行して初めて解消する — 直近 persist の cid:ux-first-scope-for-distribution-intents(利用者体験の最小実行可能単位から逆算)と同型で、ツールだけ着地させても価値ゼロ。なお実行は git 管理下の PR として着地するため、マージ承認(no-AI-merge)自体が人間ゲートとして機能し、B の別 intent 分離は価値の未出荷を、C の直前個別承認はマージ承認と重複するゲートを増やすだけ。非採用時の受容度: C なら 6(ゲート重複は無害)、B なら 7(価値未出荷+O4 の字義に反する過剰保守)。",
+      "submittedAt": "2026-07-22T23:30:31Z"
+    }
+  ],
+  "late": []
+}

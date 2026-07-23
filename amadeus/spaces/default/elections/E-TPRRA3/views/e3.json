@@ -1,0 +1,26 @@
+{
+  "electionId": "E-TPRRA3",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "B. loud 警告のみ: 未 armed 列挙+手動復旧手順を stderr、exit 0"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 4,
+      "label": "X. その他"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "A. loud 失敗: 未 armed 列挙を stderr+非ゼロ exit"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 3,
+      "label": "C. 警告+exit code 分岐(0=全員 armed / 非ゼロ=1名以上未 armed)"
+    }
+  ]
+}

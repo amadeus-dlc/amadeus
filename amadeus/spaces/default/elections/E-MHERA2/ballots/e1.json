@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MHERA2",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "marker_exempt フィールドは最低1消費者(t86 等の assert または doctor 表示)まで同一 PR で配線して初めて完成扱い — 消費者ゼロなら検証劇場 Forbidden に転落するため、配線が過大と判明した場合は B へ縮退してよい",
+  "rationale": "A を支持。免除の無音化(B)は floor 免除と実 H2 pass の弁別を失い、E-TCRRAS13B 暫定ノルムの退役判定(蒸留再判定)や #1296 の閉包検証に必要な観測面を消す。C は config_warning の意味論(設定異常)を免除通知に流用する語彙汚染。A は消費配線まで含める設計であり、Forbidden(消費されないフィールド禁止)はむしろ A の配線要求で満たされる。私の実測: 昨夜の FAILED 2回(E-TCRRAS13B 実測当事者)では audit の SENSOR_FAILED 行だけが観測面で、免除導入後に pass のみだと『免除で通ったのか実 H2 で通ったのか』が audit から判別不能になることを確認済み。受容度: B=6(暫定期間の観測は audit 直読で代替可能)、C=7。",
+  "submittedAt": "2026-07-23T02:53:45Z"
+}

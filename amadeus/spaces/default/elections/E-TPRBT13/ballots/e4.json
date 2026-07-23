@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TPRBT13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e1 record リードオンリー実測: s13-candidates.md の観測3件は BT diary(Deviations/Interpretations 00:42:18Z)と整合。(1) fixture audit 汚染は #1389(OPEN、コメント1件 = 再現追記実在を gh で確認)へ回付済みで Issue 側扱いが正 (2) シャード local→lan 分裂は union 読み既知構造(manual-sensor-fire 追補3 の全シャード union と同族) (3) wall-clock drift は fanout-load-settle 系既知ノイズ。build-test-results.md の 94 pass / RESULT: PASS / 落ちる実証 green も直読 — 私の PR #1391 レビュー時の独立実測(77/77+新規テスト内訳)と整合し、新規ノルム性のある観測は残っていない。",
+  "submittedAt": "2026-07-23T00:44:22Z"
+}

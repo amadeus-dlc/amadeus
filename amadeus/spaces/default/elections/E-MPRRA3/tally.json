@@ -1,0 +1,74 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A. 0=乖離なし / 1=乖離あり / 2=前提エラー(機械消費可能な3値)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A. 0=乖離なし / 1=乖離あり / 2=前提エラー(機械消費可能な3値)",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "B. 常に exit 0(前提エラーのみ非ゼロ — 人間向け診断に徹する)",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "C. 乖離クラス別 exit code(1/2/3+前提エラー4)",
+        "count": 0
+      },
+      {
+        "internalNo": 4,
+        "label": "X. その他",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T01:17:25Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MPRRA3",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A採用(GoA 1)。実測: 兄弟実装 amadeus-mirror.ts の fail() は一律 return 1 を確認 — A(0=乖離なし/1=乖離あり/2=前提エラー)は diff/grep 系の既習3値契約で機械消費可能、かつ ui-less-mockups-as-output-contract(exit code+文言が受け入れ基準の導出元)に最適。B は乖離が exit 0 に畳まれ機械呼出側から fail-open(ドリフト不可視)。C のクラス別 4値は消費側が現存しない過剰設計(検証フィールドの二の舞)。自案非採用時受容度: C=6(情報量は増えるが YAGNI)/ B=7(機械消費の fail-open 化)。",
+      "submittedAt": "2026-07-23T01:15:49Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPRRA3",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A(0=乖離なし / 1=乖離あり / 2=前提エラー)。実測: 兄弟様式 amadeus-mirror.ts の fail は一律 exit 1(:231-234 の fail() が 1 を返すことを直読確認)、usage=2 — A の 1/2 割当はこの既習様式と衝突せず、diff/grep 系 CLI の古典的3値契約(0=差なし/1=差あり/2=障害)とも一致して学習コストが低い。乖離クラスの詳細は出力(テキスト)が運ぶべき情報で、C のクラス別 exit code は消費側に脆い分岐を強いる(クラス追加のたびに exit 契約が破壊的変更になる)。B は乖離の機械検出を不能にし、status を CI・スクリプトから使えなくする — drift を loud にする本 intent の目的と逆行。ui-less-mockups-as-output-contract により本裁定がテスト文言の導出元になる点でも、A の3値が最も単純にテスト可能。非採用時の受容度: C なら 6(過剰だが機械消費は保たれる)、B なら 7(機械消費の喪失)。",
+      "submittedAt": "2026-07-23T01:15:47Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPRRA3",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "status は乖離検査 verb であり、Unix の diff/grep 慣用(0=一致/1=差分/2=trouble)に一致する A の3値が機械消費(CI ゲート・スクリプト分岐)を可能にする。兄弟様式(amadeus-mirror.ts fail 一律 exit 1 :231-234 実測)は mutating verb 群のエラー契約であり、検査 verb の意味論値とは役割が異なる — A の 2=前提エラーは usage=2 系とも衝突しない。C は乖離クラス別 code の消費者が現存せず YAGNI。自案非採用時の受容度: B=6(機械消費を諦める場合)/ C=7(過剰設計)",
+      "submittedAt": "2026-07-23T01:16:52Z"
+    }
+  ],
+  "resolutions": []
+}

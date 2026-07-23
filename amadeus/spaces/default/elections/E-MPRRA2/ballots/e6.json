@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRRA2",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "G-7 既決(auto の無確認実行は sync のみ = 作成は確認必須)と整合するのは A のみ: ask へ降格し create 選択肢を出せば、未作成という正常系(intent-first の ideation 中)を誤エラー化せず(C の欠陥)、かつ節目更新を無音スキップもしない(B の欠陥 — advisory print は Stop hook 越しに人間へ届く保証がなくミラー永久未作成のドリフトを許す)。自案非採用時の受容度: B=6(ドリフト許容を条件に)/ C=7(正常系の誤エラー化)",
+  "submittedAt": "2026-07-23T01:15:52Z"
+}

@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-FSPCGS13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。実測: e4 ブランチの CG s13-candidates.md を git show で直読 — 3件とも既存 cid の適用・違反実例で新規性なし。私の E-FSPCG1 留保(deviation-stop-before-implement 違反実例の PM 回付)が記帳済みであること、候補ファイルの所見分離が leader 運用改善として着地済みであることも確認(私の指摘の閉包)。0件に同意。",
+      "submittedAt": "2026-07-23T04:18:15Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FSPCGS13",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e4 record を read-only 実測: CG の s13-candidates.md の0件整理を確認(逸脱2件は E-FSPCG1/2 で裁定済み・その他は既存 cid 執行)。0件で可(1)",
+      "submittedAt": "2026-07-23T04:18:22Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FSPCGS13",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e4 record 実測: 3観測とも既存 cid の適用・執行実例。(1) {unit-name} 解決は E-TPRCGS13 追補の実効追加例 — 私の自 intent CG(f25f4eeb scope 一発通過)でも同追補が実効しており、実効2例の収斂として PM 材料価値のみ。(2) 逸脱裁定→§12a の順序は E-FSPCG1/2(私も A 票)で正しく執行され、留保の PM 記帳も済み。(3) 所見分離は leader 様式決定として着地済みで、ノルム化の帰属判断(leader 側)も適切。新規ノルム候補なしに同意。",
+      "submittedAt": "2026-07-23T04:18:40Z"
+    }
+  ],
+  "late": []
+}

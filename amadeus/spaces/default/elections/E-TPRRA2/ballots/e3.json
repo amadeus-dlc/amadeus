@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TPRRA2",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "90秒の意味論(全体予算か試行ごとか)は design 段で spawn.sh:132 の per-wait 意味に揃えて明文化すること。",
+  "rationale": "A 採用。実測: spawn.sh:132 READY_TIMEOUT=90(:47 コメント default 90/timeout 時 exit 3)実在確認。cid:constants-from-code の第一選択(実在 named constant の file:line 引用)を満たし、再送上限2回も dispatch-ack-required の既存定数に整合。requirements-analysis:c3(ユーザー可視契約のテスト可能な固定)からも C の全面委任より具体値固定が優位。自案非採用時の受容度: C=6 / B=7(1回限定の根拠となる実測がない)。",
+  "submittedAt": "2026-07-22T22:30:15Z"
+}

@@ -1,0 +1,21 @@
+{
+  "electionId": "E-MPRRES13",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260719-mirror-productization / reverse-engineering の §13 学習選定: 採用0件の確認。conductor(e3)起案(全文 verbatim = e3 ブランチ <record>/inception/reverse-engineering/s13-candidates.md — git show で実測可): 候補0件。観測3件はいずれも既存の射程 — diff base 祖先性選定+record-sync 未着地の再走査膨張(111 vs 10 コミット、rescan-base-ancestry+rescan-prompt-record-sync の追認・PM 回付)/ RE センサー filter 不適合の手動代替(既知知識クラス)/ PR レビュー並行の運用ノート(ノルム性なし)。各自 e3 record を実測確認のうえ GoA 付きで投票。軽量様式可。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 新規ノルム候補なしに同意"
+    },
+    {
+      "internalNo": 2,
+      "label": "異議 — 採用すべき候補がある(票コメントで特定)"
+    }
+  ],
+  "voters": [
+    "e4",
+    "e5",
+    "e6"
+  ],
+  "state": "recorded"
+}

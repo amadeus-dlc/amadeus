@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRAD1",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "運用注記には『機械強制なし』を明記し、注記を強制と誤読させないこと(検証劇場の逆面 — 強制のふりをしない)。",
+  "rationale": "B採用(GoA 2)。実測: mirror.ts に主体検査なし(grep 0件、自 tree)を確認。create/close は外部境界操作でチームノルム(close-after-landing・conductor 責務)が既に運用面を規定 — B はこれを design 文書へ写す実装ゼロの注記で surgical。C は conductor の決定的判定源が現存しないまま identity 判定機構を新設する規模増+実装配線なしの契約先行(inception ガードレールの先行着地禁止に緊張)。A は書込面 fail-closed で防御されるが規定意図が文書から消える。自案非採用時受容度: A=6(ノルム側の規定は残るため許容)/ C=7(dormant 機構の新設)。",
+  "submittedAt": "2026-07-23T02:47:18Z"
+}

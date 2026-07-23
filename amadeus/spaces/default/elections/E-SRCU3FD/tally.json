@@ -1,0 +1,74 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A. plan 全値永続化+承認済み値消費(単一機構で3点閉包)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A. plan 全値永続化+承認済み値消費(単一機構で3点閉包)",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "B. unknown 値のみ軽量永続化",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "C. unknown timestamp のハッシュ除外(+resume 別手当て)",
+        "count": 0
+      },
+      {
+        "internalNo": 4,
+        "label": "X. その他(票コメント指定)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T02:57:22Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SRCU3FD",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A採用(GoA 1)。e2 record の fix-direction-candidates.md と reviewer Critical verbatim を直読。Critical の欠陥は『unknown フォールバック値の非決定』が (i) 承認ハッシュ束縛の構造的常時失効 (ii) resume 未定義分岐、の2面へ増幅する形で、A のみが「値を1回確定して永続化し、承認はその値へ束縛、実行は承認済み値を消費、再導出は現況整合検証に降格」により両面を単一機構で閉じる — 検証を実行から導く P2 と、承認対象の値固定(delegate-provenance 系の既習パターン)にも整合。B は承認束縛が再導出一致前提のままで (i) の部分再発面が残り、C は候補文自身が『単独では閉じきらない』と明記する不完全修正(same-root の再指摘クラス)。管理面の増分は record 配下 plan ファイル1点で bugfix 均衡内。自案非採用時受容度: B=6(resume は閉じるため実害は限定)/ C=7(Critical を閉じない是正の採用に重大な不同意)。",
+      "submittedAt": "2026-07-23T02:49:32Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCU3FD",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A(plan 全値永続化+承認済み値消費)。実測: 候補ファイルと reviewer Critical verbatim を直読 — 欠陥は『第3段 unknown の出力値が実行毎に異なる』ことに起因する (i) 承認ハッシュの構造的常時失効 (ii) crash-resume の未定義第3ケースの2面。A はこの両面を『承認対象 = 永続化された plan ファイルの値そのもの』へ一本化して同時に閉じる唯一の候補で、値の固定と検証の分離は既決の provenance パターン(delegate/選挙 ballot SHA 固定)と同型 — 実行時再導出を検証専用へ降格する設計は E-SRCAD2 裁定(git 初回コミット日時 = 決定論)とも整合し、『初回移行値を registry が固定すれば再実行同値』の含意を plan ファイルで前倒し実装する形。B は承認束縛が再導出一致前提のままで (i) の根本(導出揺れ全般)を残す。C は候補文自身が『単独では Critical を閉じきらない』と明記しており、(ii) の別手当てが増えると総変更面は A と大差なくなる。永続化面1点の増分は record 配下(バージョン管理内)で承認証跡と同居し管理コスト最小。非採用時の受容度: B なら 6(resume は閉じる)、C なら 7(Critical 未閉包のまま着地するリスク)。",
+      "submittedAt": "2026-07-23T02:49:22Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCU3FD",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e2 の fix-direction-candidates.md を read-only 直読。A は決定論・承認束縛・crash-resume の3欠陥面を単一機構(承認成果物への plan 全値永続化+実行時は承認済み値消費+非 unknown の現況整合検証)で閉じ、cid:functional-design:audit-batch-before-state-atomicity(事前全値生成→検証→commit)および bulk-edit-verify 追補(生成側で値を直接 mint)の既決系譜と一致。B は承認束縛が再導出一致前提のまま(Critical の (i) が半開)、C は単独で Critical を閉じきらないと候補文自身が認めている。受容度: B=6 / C=7",
+      "submittedAt": "2026-07-23T02:56:52Z"
+    }
+  ],
+  "resolutions": []
+}

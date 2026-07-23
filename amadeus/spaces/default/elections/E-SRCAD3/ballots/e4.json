@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCAD3",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A採用(GoA 1)。E-SRCRA5 裁定 C(実 rename はユーザー個別承認まで実行しない)により移行完了時期は未確定 — B/C の hard-fail は承認までの全期間、無関係な doctor 実行を赤にする導入順序カップリングで、私が E-SRCRA5 で C に投じた前提(導入と実行の分離)とも整合するのは A のみ。advisory 開始は既存 doctor 慣行(ci-pipeline:c3 の loud 可視+非 blocking の層別)にも整合。hard 化は移行完了後の将来判断として残る。自案非採用時受容度: C=6(閾値付きでも移行前 103 件が全て乖離扱いになる点は同罪だが復旧可能)/ B=7(全 doctor 赤の即ブロッカー化は移行承認待ちを人質にする)。",
+  "submittedAt": "2026-07-22T23:47:08Z"
+}

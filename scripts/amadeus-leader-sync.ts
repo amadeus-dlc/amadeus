@@ -19,10 +19,13 @@ import {
 import { hostname, tmpdir } from "node:os";
 import { basename, dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { electionsRoot } from "./amadeus-election-store";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const PROJECT_DIR = join(SCRIPT_DIR, "..");
-const ELECTIONS_ROOT = "amadeus/spaces/default/elections";
+// Repo-relative form is intentionally separate: startsWith filtering and git
+// pathspecs consume repository paths, not absolute filesystem paths.
+const ELECTIONS_ROOT_RELATIVE = "amadeus/spaces/default/elections";
 const INTENTS_ROOT = "amadeus/spaces/default/intents";
 const MEMORY_ROOT = "amadeus/spaces/default/memory";
 const CLONE_ID_PATH = "amadeus/.amadeus-clone-id";
@@ -160,7 +163,7 @@ function walkFiles(root: string): string[] {
 
 export function resolveOwnedSet(projectDir: string, cloneShardName: string): OwnedSet {
   const allPaths = [
-    ...walkFiles(join(projectDir, ELECTIONS_ROOT)),
+    ...walkFiles(electionsRoot(projectDir)),
     ...walkFiles(join(projectDir, INTENTS_ROOT)),
   ].map((path) => toRepoPath(projectDir, path));
   return resolveOwnedCandidates(allPaths, cloneShardName);
@@ -171,7 +174,7 @@ export function resolveOwnedCandidates(
   cloneShardName: string,
 ): OwnedSet {
   const electionPaths = allPaths
-    .filter((path) => path.startsWith(`${ELECTIONS_ROOT}/`))
+    .filter((path) => path.startsWith(`${ELECTIONS_ROOT_RELATIVE}/`))
     .sort();
   const shardPaths = allPaths
     .filter((path) => basename(path) === cloneShardName && basename(dirname(path)) === "audit")
@@ -428,7 +431,7 @@ function incrementBranchSequence(branch: string): string {
 }
 
 function electionDirNames(projectDir: string): string[] {
-  const root = join(projectDir, ELECTIONS_ROOT);
+  const root = electionsRoot(projectDir);
   if (!existsSync(root)) return [];
   return readdirSync(root, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
@@ -438,7 +441,10 @@ function electionDirNames(projectDir: string): string[] {
 
 function baseElectionDirNames(git: GitRunner, projectDir: string): string[] {
   const output = requireOk(
-    git(["ls-tree", "-d", "--name-only", `origin/main:${ELECTIONS_ROOT}`], projectDir),
+    git(
+      ["ls-tree", "-d", "--name-only", `origin/main:${ELECTIONS_ROOT_RELATIVE}`],
+      projectDir,
+    ),
     "git ls-tree elections",
   );
   return output.split("\n")

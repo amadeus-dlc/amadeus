@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SRCAD1",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A 採用。実測: slugify(amadeus-lib.ts:1596-1607)を直読 — SLUG_RE は先頭小文字を強制し、B の大文字保持は共有述語(recordDirMatches/SLUG_RE)と構造的に非互換。A は intents 既決規約(YYMMDD+slugify)との完全対称で述語・自然ソート再利用が最大、scope-document のイメージとも一致。C の4桁年は intents 側 YYMMDD との非対称を新設する投機的一般化。自案非採用時の受容度: C=6 / B=7(機械述語の破壊)。",
+      "submittedAt": "2026-07-22T23:45:38Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCAD1",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A採用(GoA 1)。実測: slugify は amadeus-lib.ts :1596-1607 に実在(lowercase・kebab・冪等、SLUG_RE 保証)を直読確認、intents dirName は <YYMMDD>-<slug> 様式。本 intent の目的自体が intents 構造モデルへの対称化(scope-document)であり、A は recordDirMatches 対称述語・自然ソート・既存 slugify の再利用が最大で canonical 1定義原則にも合致。自案非採用時受容度: B=6(日付対称は保つが大文字が SLUG_RE 規約から逸脱 — 不本意だが支持)/ C=7(4桁年は対称化という intent 目的自体と矛盾)。",
+      "submittedAt": "2026-07-22T23:47:08Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCAD1",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A(YYMMDD-slugify)。実測: 自 tree で slugify(amadeus-lib.ts:1596-1607 直読)を実 E-code へ適用 — E-AWATCH→e-awatch / E-GSFND13→e-gsfnd13 / E-USSU02FDS14→e-ussu02fds14 と全て SLUG_RE 適合の安定形になることを bun 実行で確認。intents 完全対称は recordDirMatches 系述語・既存 slugify・自然ソートの再利用が最大で、統一という intent 目的そのもの。B は大文字 dir が SLUG_RE 前提の既存述語群と衝突し逸脱コストが高い。C は世紀跨ぎ(2100年)まで76年ある一方で intents との非対称を今日から恒久化する — 費用対効果が逆。非採用時の受容度: C なら 6、B なら 7(slug 規約逸脱は述語再利用を壊す)。",
+      "submittedAt": "2026-07-22T23:45:38Z"
+    }
+  ],
+  "late": []
+}

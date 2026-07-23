@@ -1,0 +1,64 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可 — 4候補とも不採用に同意"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可 — 4候補とも不採用に同意",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "異議 — 採用すべき候補がある(票コメントで特定)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T00:44:42Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SRCADS13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c3(stale プレースホルダ残し)は今回 PM 回付で可とするが、【裁定待ち】プレースホルダの解消漏れが別ステージで再発1回したら「placeholder 設置時に設置箇所一覧を記録し、裁定転記時にその全数 grep を定型化する」追補として cid:ruling-dependent-placeholder へ昇格させること(E-SMF-RA13 c3 留保と同型の条件付き不採用)。",
+      "rationale": "0件で可(2)。実測: e2 の s13-candidates.md を git show 直読し、4候補すべて AD diary(:5/:9/:13/:14)と verbatim 一致を確認。c1=ruling-dependent-placeholder の機械的適用、c2=ADR-6 記録済みの個別設計判断(第3種別まで様子見は蒸留ノルムの churn 抑制に整合)、c3=伝播漏れクラスとして functional-design:c3 の射程で PM 回付妥当(ただし留保のとおり再発時昇格)、c4=parse-don't-validate の通常適用。いずれも新規 persist 不要に同意。",
+      "submittedAt": "2026-07-23T00:43:36Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCADS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c3(stale プレースホルダ残し)が別 intent で再発した場合は、PM 実例に留めず cid:ruling-dependent-placeholder への追補(解消時は設置ファイル全数 grep)へ昇格させること。",
+      "rationale": "0件で可(2)。e2 record リードオンリー実測: s13-candidates.md の4候補は diary(Interpretations 23:46:07Z、Deviations 00:42:01Z、Tradeoffs 00:42:01Z/23:46:07Z)と verbatim 一致。c1 = ruling-dependent-placeholder の機械的適用で新規性なし。c2 = ADR-6 記録済みの個別設計判断 — 第3種別実在までノルム化不要の判断は既習運用と整合。c3 = reviewer iteration 1 Major で捕捉・是正済みの違反実例 — 伝播 grep 機構は functional-design:c3 の射程内とする整理は成立(留保は再発時の昇格条件)。c4 = parse-don't-validate(construction ガードレール既載)+cross-artifact 整合の通常適用で新規性なし。",
+      "submittedAt": "2026-07-23T00:43:51Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCADS13",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "c3 の不採用は条件付き同意 — stale プレースホルダ残しが別ステージ/別 intent で再発1回したら、cid:ruling-dependent-placeholder への追補(裁定転記は placeholder 設置箇所の全数 grep とセット)へ昇格させる(E-SMF-RA13 c3 の再発昇格方式と同型)",
+      "rationale": "0件で可(1)。e2 record 実測: 候補4件は diary(Interpretations 23:46:07Z / Deviations 00:42:01Z / Tradeoffs 2件)と verbatim 一致。c1 = ruling-dependent-placeholder の字義どおりの適用。c2 = ADR-6 に記録済みの個別設計判断で、第3種別が実在しない段階での一般化は投機的(N3 系の先行着地回避と整合)。c4 = parse-don't-validate(construction phase 常時原則)の通常適用。c3 = 伝播漏れクラスとして functional-design:c3 ファミリの違反実例と読めるが、厳密には『改名・所有移管』でなく『プレースホルダ解消』面で既存 cid の射程に半歩の隙間がある — 今回は reviewer 捕捉→是正済みで PM 実例回付を支持しつつ、留保のとおり再発時昇格の条件を付す。",
+      "submittedAt": "2026-07-23T00:44:03Z"
+    }
+  ],
+  "resolutions": []
+}

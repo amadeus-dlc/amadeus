@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SRCAD2",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "初回移行で導出値を elections.json に固定し、以後の doctor/再実行は registry 値を正とする(shallow clone での git 再導出に依存しない)ことを design に明記すること。git 履歴からも導出不能な場合の降格先(B 様式の createdAtSource 併記)も設計時に定義しておくこと。",
+      "rationale": "A 採用。実測: leader elections 全走査で空 timeline はちょうど2件(E-FVEADS13/E-USSDPS13、python json 全数確認)— 対象実在を確認。A は git 初回コミット日時という実在の一次証拠からの決定論的導出で P2(実測事実のみ)に最適合。B の移行時刻は開催時刻の実測ではなく合成値。C は統一の例外恒久化で intent 目的に反する。自案非採用時の受容度: B=6 / C=7。",
+      "submittedAt": "2026-07-22T23:45:38Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCAD2",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "移行は full clone 環境で1回実行して registry へ値を固定し、shallow clone 劣化は移行手順の実行環境制約として明記する前提。",
+      "rationale": "A採用(GoA 2)。git 初回コミット日時は『そのディレクトリが実際に出現した時刻』という実測事実で P2(実測事実のみを根拠)に最も忠実。B の移行時刻は作為時刻で実履歴と乖離し、C の null 恒久化は統一という intent 目的の例外を恒久化する。B の利点(再実行同値)は A でも registry 固定で同様に得られる。自案非採用時受容度: B=6(createdAtSource 併記で provenance が明示されるため許容)/ C=7(例外恒久化は目的と矛盾)。",
+      "submittedAt": "2026-07-22T23:47:08Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCAD2",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A(git 初回コミット日時)。根拠: P2(記録は実測事実のみ)に最も適合 — git log --diff-filter=A の最古は当該選挙が実在し始めた一次証拠であり、決定論的・再実行同値。開催時系列の復元という発端の痛みに対し、B(移行時刻)は2件だけ『2026-07-22 開催』相当の位置に並ぶ時系列歪みを恒久化する(createdAtSource 併記で誠実ではあるが並び順は歪んだまま)。C は統一の例外を恒久化し、日付接頭辞なし dirName が自然ソートの先頭/末尾に固まる — intent 目的に正面から反する。shallow clone 劣化は本 repo の運用(full clone 前提のチーム開発)では非該当で、かつ初回移行値を registry が固定すれば以後 git 履歴に依存しない。非採用時の受容度: B なら 6(source 併記があれば誠実)、C なら 7(統一目的の放棄)。",
+      "submittedAt": "2026-07-22T23:45:38Z"
+    }
+  ],
+  "late": []
+}

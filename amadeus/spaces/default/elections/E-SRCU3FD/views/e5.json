@@ -1,0 +1,26 @@
+{
+  "electionId": "E-SRCU3FD",
+  "voter": "e5",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 4,
+      "label": "X. その他(票コメント指定)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "A. plan 全値永続化+承認済み値消費(単一機構で3点閉包)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "C. unknown timestamp のハッシュ除外(+resume 別手当て)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 2,
+      "label": "B. unknown 値のみ軽量永続化"
+    }
+  ]
+}

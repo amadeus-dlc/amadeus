@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-ASGSDS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e1 record の s13 ファイル実在+3件の整理を確認 — consumes ヘッダ誤記のセンサー捕捉→是正は consumes-first-drafting の違反実例(PM 回付妥当)、H2 floor は既知クラス、0問様式・依存順序は既決適用。新規ノルム性なし。",
+      "submittedAt": "2026-07-23T04:10:30Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-ASGSDS13",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e1 record を read-only 実測: scope-definition の s13-candidates.md の0件整理を確認(既存 cid 執行のみ)。0件で可(1)",
+      "submittedAt": "2026-07-23T04:10:21Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-ASGSDS13",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e1 record 実測: 3観測とも既存 cid の違反実例・既知クラス・適用で新規性なし。consumes ヘッダ誤記はセンサーが設計どおり捕捉した consumes-first-drafting 違反実例(PM 回付妥当)。H2 floor 節追加は prose クラスで、私の E-ASGFSS13 留保(#1405 は marker 限定・prose は floor 対象のまま)が起案に正しく反映されていることを確認 — 帰属の一貫性も良好。新規ノルム候補なしに同意。",
+      "submittedAt": "2026-07-23T04:12:37Z"
+    }
+  ],
+  "late": []
+}

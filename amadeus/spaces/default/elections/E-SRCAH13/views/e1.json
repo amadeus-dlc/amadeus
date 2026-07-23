@@ -1,0 +1,16 @@
+{
+  "electionId": "E-SRCAH13",
+  "voter": "e1",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "異議 — 採用すべき候補がある(票コメントで特定)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件で可 — 両候補とも不採用に同意"
+    }
+  ]
+}

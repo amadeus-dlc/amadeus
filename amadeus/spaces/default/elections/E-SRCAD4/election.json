@@ -1,0 +1,29 @@
+{
+  "electionId": "E-SRCAD4",
+  "kind": "clarification-question",
+  "question": "intent 260722-space-record-catalog / application-design の設計判断(verbatim 正本 = e2 ブランチ <record>/inception/application-design/application-design-questions.md、コミット bb07b2751 — git show で実測可)。Q4. S5(intents.json への createdAt 明示)の採否。判断点: elections との行スキーマ対称性 vs 単一情報源原則(uuid が時刻を既に持つ、実測66/66導出可)。 各自実測確認のうえ、A/B/C 選択型につき自案非採用時の受容度1行併記+GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. 採用しない — 導出ヘルパー提供のみ(二重持ちの drift 面を作らない)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. 採用する — 行スキーマ対称化+66行遡及付与"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. optional フィールド(新規行のみ付与)"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他"
+    }
+  ],
+  "voters": [
+    "e3",
+    "e4",
+    "e5"
+  ],
+  "state": "recorded"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRAD1",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "運用注記の置き場は docs の mirror 節+SKILL 本文の2箇所に限定し、機械強制を装う文言(『拒否される』等)を使わないこと — 検証劇場の予防",
+  "rationale": "自 tree 実測: scripts/amadeus-mirror.ts に実行主体検査は grep 0件(質問の RE 実測と一致)。C の機械強制は conductor identity の決定的判定源が現存せず、新規 identity 機構の先行着地は inception 規範(adapter 先行着地禁止)と衝突。A(無制約)と B の差分は docs 注記のみでコストゼロ、かつ leader-dispatch/no-session-lifecycle 系の既存チームノルムと整合する注記は誤用予防の実益がある。自案非採用時の受容度: A=6(ノルム側で既に統制されているため)/ C=7(判定源なき機械強制は偽の安全)",
+  "submittedAt": "2026-07-23T01:49:38Z"
+}

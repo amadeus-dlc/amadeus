@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-ASGPDS13",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e1 record を read-only 実測: practices-discovery の s13-candidates.md の0件整理を確認(既存 cid 執行のみ)。0件で可(1)",
+  "submittedAt": "2026-07-23T04:51:57Z"
+}

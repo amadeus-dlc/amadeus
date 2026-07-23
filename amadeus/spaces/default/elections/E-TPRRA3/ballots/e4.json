@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TPRRA3",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 3,
+  "goa": 2,
+  "reservation": "A と C の差は exit 0 側の契約明文化のみ — A でも非ゼロ exit は満たされるが、C の両側契約の方が落ちる実証・回帰テストの assert が書きやすい。",
+  "rationale": "C採用。検証劇場 Forbidden の予防として exit code を両側契約(0=全員armed / 非ゼロ=1名以上未armed)で機械検証可能にするのが最も testable。B(exit 0 固定)は呼び出し側・CI から失敗が不可視になる fail-open で不可。pane は起動済みのため teardown は不要で、未armed列挙+手動復旧手順(herdr ブロードキャスト、#1384 回避策で実証済み)の stderr 出力を伴う。",
+  "submittedAt": "2026-07-22T22:29:30Z"
+}

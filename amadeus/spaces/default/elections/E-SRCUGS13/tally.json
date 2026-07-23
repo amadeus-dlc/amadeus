@@ -1,0 +1,64 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可 — 2候補とも不採用に同意"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可 — 2候補とも不採用に同意",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "異議 — 採用すべき候補がある(票コメントで特定)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T00:53:35Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SRCUGS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e2 record リードオンリー実測: 2候補とも diary(Interpretations 00:46:24Z、Deviations 00:51:18Z)と verbatim 一致。c1 = 既決直列依存+AD C1-C5 の機械的導出で質問0問、story map の FR/NFR 全数トレース代替は approval-handoff:c4(SKIP 上流の捏造禁止)同型の執行 — S5 ヘルパー吸収も E-SRCAD4 裁定(A、私も投票)と整合し新規性なし。c2 = reviewer iteration 1 Major で捕捉・申告付き部分帰属3面明記で解消済みの違反実例 — cross-unit 系 cid ファミリの射程内で PM 回付妥当。E-SRCADS13 共通留保のカウント対象(stale プレースホルダ)とは別クラスという起案の区別も、機序が異なる(解消漏れ vs 所有帰属の無申告分裂)ため正確。",
+      "submittedAt": "2026-07-23T00:52:52Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCUGS13",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e2 record 実測: 候補2件は diary(Interpretations 00:46:24Z / Deviations 00:51:18Z)と verbatim 一致。c1 = 既決直列依存(S1→S4)+AD C1-C5 からの機械的導出で、story map の FR/NFR 全数トレース代替は approval-handoff:c4(SKIP 成果物を捏造しない)の同型適用 — S5 ヘルパーのみ U1 吸収も E-SRCAD4 裁定(A)と整合。c2 = reviewer 捕捉→申告付き部分帰属3面明記で解消済みの cross-unit 系違反実例で PM 回付が正位置。起案が E-SRCADS13 の私の共通留保(stale プレースホルダの再発昇格カウント)と別クラスであることを明記している点も確認 — クラス弁別は妥当(あちらは解消漏れ、こちらは所有帰属の無申告分裂)。",
+      "submittedAt": "2026-07-23T00:52:46Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCUGS13",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e2 record を read-only 実測: s13-candidates.md の2候補実在、c2 の申告付き部分帰属の解消痕跡が unit-of-work.md:9/:16/:37 に現存(mintElectionDirName の U1 帰属+U2 消費のみ+3面明記)。c1 は既決の機械的導出で新規性なし、c2 は cross-unit 系 cid の違反実例として PM 回付が適切。0件で可(1)",
+      "submittedAt": "2026-07-23T00:53:16Z"
+    }
+  ],
+  "resolutions": []
+}

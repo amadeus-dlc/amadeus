@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCDPS13",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record を read-only 実測: s13-candidates.md の2候補実在、team-allocation.md が責務ベース(conductor/swarm builder/reviewer)で固定メンバー名なしを確認(role-model+approval-handoff:c3 の機械的適用)。c2 は human-presence ガード正常動作の反復観測で PM 実例回付が適切。0件で可(1)",
+  "submittedAt": "2026-07-23T00:58:37Z"
+}

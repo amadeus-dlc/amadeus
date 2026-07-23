@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TCRRES13",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e1 record を read-only 実測: s13-candidates.md の0件整理を確認。#1294 の表明 vs 実行実態の乖離は requirements 材料でありノルム候補でないという整理、原因所在の implementation-deviation 適用、diff-refresh/c3-relabel/センサー代替の既決 cid 適用 — いずれも新規ノルム性なしに同意。0件で可(1)",
+  "submittedAt": "2026-07-23T01:12:41Z"
+}

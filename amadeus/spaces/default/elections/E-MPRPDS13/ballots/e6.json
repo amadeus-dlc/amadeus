@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRPDS13",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e3 record を read-only 実測: s13-candidates.md の0件整理と成果物実在(team-practices/discovered-rules/evidence/timestamp+questions)を確認。3観測とも既存 cid の機械的適用という整理は自 intent の同ステージ(同日、c1 代用+e-fvepd 免除を同型適用し §13 0件)でも独立に同結論であり追認できる。0件で可(1)",
+  "submittedAt": "2026-07-23T01:09:47Z"
+}

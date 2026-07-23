@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TPRRA1",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "起動レイテンシ(最遅メンバー分の同期待ち、上限はQ2タイムアウト)が将来問題化した場合のみ C(--no-wait)を再検討する。",
+  "rationale": "A採用。実測根拠: spawn.sh:576-588 のインラインポーリングは『起動完了=armed保証』の既習様式で、ready センチネル(lib/actas-lock.sh:69-73)を全 spawn 後に並行確認+未attachへ herdr 2段再送する形は最小差分。対照の supervisor 機構(team-up.sh:237-260 実測)は lock dir/owner pid/ambiguity 判定を伴う重量級で、常駐監視が必要な codex モーダル解除と違い arming は一回きりの検証で足りる — B は bugfix の外科的最小に反する。C の --no-wait は要求にないオプション追加(不要な表面積)。",
+  "submittedAt": "2026-07-22T22:29:30Z"
+}

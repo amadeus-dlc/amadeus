@@ -1,0 +1,26 @@
+{
+  "electionId": "E-SRCB1CG",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "A. registry メタデータ先行(物理据置・drift 真実性維持・skeleton 成立)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "B. U1 へ最小解決前倒し(UG 境界再編 — scope 変更)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "C. 意図的破れ窓(open ライフサイクルを U2 まで壊す)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 4,
+      "label": "X. その他(票コメント指定)"
+    }
+  ]
+}

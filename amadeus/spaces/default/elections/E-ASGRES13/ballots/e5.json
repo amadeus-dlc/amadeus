@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-ASGRES13",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e1 record 実測: 4観測とも既存 cid の機械的適用・射程内実例。base 選定は rescan-base-ancestry の字義、t258→t259 は swarm-test-number-reservation の intent 間連鎖実例(起票→指摘→是正→繰上げの健全な運用で PM 報告が正位置 — 同 cid は事前予約を既に規定済みで射程内)、設計裁定7件の先送り目録化は ruling-dependent-placeholder 系の予防適用、センサー手動代替は既知クラス。新規ノルム候補なしに同意。",
+  "submittedAt": "2026-07-23T04:41:10Z"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-ASGSDS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e1 record の s13 ファイル実在+3件の整理を確認 — consumes ヘッダ誤記のセンサー捕捉→是正は consumes-first-drafting の違反実例(PM 回付妥当)、H2 floor は既知クラス、0問様式・依存順序は既決適用。新規ノルム性なし。",
+  "submittedAt": "2026-07-23T04:10:30Z"
+}

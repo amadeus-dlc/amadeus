@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCAD4",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A 採用。実測: 自 tree intents.json の uuid を確認 — version nibble 7(019f3868-a0a6-763c-…)で UUIDv7 の時刻内包を確認、決定論的導出可能の主張は成立(自 tree 65行は base 差、存在確認まで)。二重持ちは drift 検査面を1つ増やすだけで、elections 側が createdAt 明示必須なのは timeline 導出が高コストという固有理由 — intents に対称性だけの理由で複製するのは単一情報源原則に反する。C の optional 混在スキーマは検査述語を複雑化する。自案非採用時の受容度: C=6 / B=7(drift 面の新設)。",
+  "submittedAt": "2026-07-22T23:45:38Z"
+}

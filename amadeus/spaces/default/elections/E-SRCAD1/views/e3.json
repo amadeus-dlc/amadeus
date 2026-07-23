@@ -1,0 +1,26 @@
+{
+  "electionId": "E-SRCAD1",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "B. <YYMMDD>-<electionId 原形> — E-code 大文字保持(例 260720-E-AWATCH、slug 規約から逸脱)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "A. <YYMMDD>-<slugify(electionId)> — intents 完全対称(例 260720-e-awatch)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "C. <YYYYMMDD>-<slugify(electionId)> — 4桁年(intents と非対称)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 4,
+      "label": "X. その他(票コメント指定)"
+    }
+  ]
+}

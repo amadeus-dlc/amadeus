@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TPRRA2",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "本番実測(#1384 回避策)では再送1回で全員復旧しており上限2回は保守側だが、ack ノルムの既存上限と整合し害はない。",
+      "rationale": "A採用。cid:constants-from-code の要求どおり実在 named constant から導出: spawn.sh:132 READY_TIMEOUT=90(自分で grep 実測済み、:147-148 に --no-wait/--ready-timeout)+ack ノルム(cid:dispatch-ack-required)の再送最大2回。C の design 委任は、既に権威ある対照定数が実在する本件では先送りの価値がない。",
+      "submittedAt": "2026-07-22T22:29:30Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TPRRA2",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "90秒の意味論(全体予算か試行ごとか)は design 段で spawn.sh:132 の per-wait 意味に揃えて明文化すること。",
+      "rationale": "A 採用。実測: spawn.sh:132 READY_TIMEOUT=90(:47 コメント default 90/timeout 時 exit 3)実在確認。cid:constants-from-code の第一選択(実在 named constant の file:line 引用)を満たし、再送上限2回も dispatch-ack-required の既存定数に整合。requirements-analysis:c3(ユーザー可視契約のテスト可能な固定)からも C の全面委任より具体値固定が優位。自案非採用時の受容度: C=6 / B=7(1回限定の根拠となる実測がない)。",
+      "submittedAt": "2026-07-22T22:30:15Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TPRRA2",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A(90秒×再送最大2回)。実測: spawn.sh の READY_TIMEOUT=90 が named constant として実在(:132 実測、ヘッダ :46-47 に default 90 / timeout exit 3 明記)、再送上限2回は cid:dispatch-ack-required の既決ノルム定数。cid:constants-from-code の要求(実在する対照実装の named constant を引く)を両方満たし、新しいマジックナンバーを作らない。TUI レースは起動直後の一過性(Issue #1384 実測: 消失5/6でも 06:46-06:47 の後続入力は全員成功)なので再送1回で足りる可能性は高いが、2回上限は有界かつ既存ノルムとの整合が高い。C(design 委任)は requirements-analysis:c3(ユーザー可視契約の先送り禁止)に照らし不利。非採用時の受容度: B なら 6、C なら 6(design 段で同じ定数に収束する見込みが高いため)。",
+      "submittedAt": "2026-07-22T22:30:14Z"
+    }
+  ],
+  "late": []
+}

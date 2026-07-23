@@ -1,0 +1,64 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "異議 — 採用すべき候補がある(票コメントで特定)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T03:33:34Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TCRBTS13",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e1 record を read-only 実測: build-and-test の s13-candidates.md の0件整理を確認(既存 cid 執行のみ)。0件で可(1)",
+      "submittedAt": "2026-07-23T03:24:46Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TCRBTS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e1 record 実測: 観測3件はいずれも既知クラス — H2 floor の N/A 様式面は E-TCRRAS13B 追補の類推適用(恒久解は #1296 intent が実装中)、NFR-4 は申告閾値の機械的執行、旧 FAILED 群は既決追補(E-TCRRAS13B / manual-sensor-fire 追補4)の記録のみ。新規ノルム性なし。",
+      "submittedAt": "2026-07-23T03:32:25Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TCRBTS13",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "s13-candidates の観測3件が stage diary(memory.md)に未記載のまま候補ファイルへ直書きされている — 裏取りは audit で可能だったため今回は非ブロックだが、候補の source は diary surface とする既習様式への整合を次ステージから戻すこと",
+      "rationale": "0件で可(1)。e1 record 実測: (1) security-test-instructions の FAILED(audit :1097)→節追加→PASSED(:1245/:1308)の列と現 H2=2 を実測確認。重要な弁別: 同ファイルは *-questions/*-timestamp marker ではないため、私の #1296 修正(suffix 免除の機械化)の対象外 — prose 成果物の N/A 様式には節追加が正解であり、E-TCRRAS13B 追補の類推適用という帰属は正確(私の修正が着地しても本クラスは残る点まで含めて整合)。(2) NFR-4 の +12s < +60s は要件申告閾値の機械的執行。(3) 旧 FAILED 群は既知2クラスの記録のみ。新規ノルム候補なしに同意。留保は diary 経由の候補 surface 様式の維持のみ(non-blocking)。",
+      "submittedAt": "2026-07-23T03:33:05Z"
+    }
+  ],
+  "resolutions": []
+}

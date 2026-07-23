@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TPRRA1",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 3,
+  "goa": 2,
+  "reservation": "poll と再送は全メンバー一括ループで総待ち時間を有界にし、--no-wait は spawn.sh 対称の最小追加(WAIT_READY 相当のフラグ1本)に留める",
+  "rationale": "C(ハイブリッド)。実測: spawn.sh:576-588 は WAIT_READY=1 既定+--no-wait 逃し弁のインラインポーリングで、READY_PATH センチネル監視→timeout exit 3 の確立済み契約(spawn.sh:44-47 の --no-wait/--ready-timeout ヘッダも確認)。team-up.sh は start_safety_wait_supervisors(:340 で RUNTIME=codex 以外即 return を実測)→ mux_attach(:1260)の順で、インライン検証は attach 前に自然に置ける。B(supervisor 一般化)は非同期ゆえ attach 後の失敗が run record 越しにしか見えず、Q3 の loud 契約と噛み合わせが悪い。A は spawn.sh の --no-wait 対称性を欠き、検証不能環境(ヘッドレス等)での逃し弁がない。C は A の保証+既存 idiom 対称の最小フラグで、bugfix 外科的最小と両立。非採用時の受容度: A なら 6(既定挙動は同一、フラグ欠如のみ)、B なら 7(失敗可視性の懸念)。",
+  "submittedAt": "2026-07-22T22:30:14Z"
+}

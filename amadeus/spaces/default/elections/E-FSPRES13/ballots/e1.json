@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FSPRES13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。実測: e4 ブランチ d03db2602 の s13-candidates.md と re-scans/260723-fixture-shard-pollution.md を git show で直読。(a) c1 = base a81c11dde は私自身の前 intent の observed であり祖先性・距離の主張は自 tree でも整合(rescan-base-ancestry の機械的執行)。(b) c3 = 同 commit の intents.json を parse し entries 68 を再計算一致(union-resolution の執行)。(c) c2/c4 は既知知識クラス(re-sensors-codekb-filter-mismatch / RE:c3+surgical)の適用のみ。4件とも既存 cid の執行であり新規ノルム性なし — 0件に同意。なお #1389 は私の起票で、区間の team-up 変更(#1391)と本バグ面が無交差という切り分けも起票時の実測と整合する。",
+  "submittedAt": "2026-07-23T01:47:25Z"
+}

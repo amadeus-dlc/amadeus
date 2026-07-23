@@ -39,5 +39,23 @@
     "kind": "tallied",
     "at": "2026-07-19T22:44:53Z",
     "detail": "tally: established"
+  },
+  {
+    "kind": "distributed",
+    "at": "2026-07-23T01:15:58Z",
+    "detail": "delivered via agmsg: e2",
+    "voter": "e2"
+  },
+  {
+    "kind": "distributed",
+    "at": "2026-07-23T01:15:58Z",
+    "detail": "delivered via agmsg: e3",
+    "voter": "e3"
+  },
+  {
+    "kind": "distributed",
+    "at": "2026-07-23T01:15:58Z",
+    "detail": "delivered via agmsg: e4",
+    "voter": "e4"
   }
 ]

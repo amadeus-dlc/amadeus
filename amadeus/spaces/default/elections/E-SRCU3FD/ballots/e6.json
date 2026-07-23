@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCU3FD",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 の fix-direction-candidates.md を read-only 直読。A は決定論・承認束縛・crash-resume の3欠陥面を単一機構(承認成果物への plan 全値永続化+実行時は承認済み値消費+非 unknown の現況整合検証)で閉じ、cid:functional-design:audit-batch-before-state-atomicity(事前全値生成→検証→commit)および bulk-edit-verify 追補(生成側で値を直接 mint)の既決系譜と一致。B は承認束縛が再導出一致前提のまま(Critical の (i) が半開)、C は単独で Critical を閉じきらないと候補文自身が認めている。受容度: B=6 / C=7",
+  "submittedAt": "2026-07-23T02:56:52Z"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MHERA2",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "marker_exempt フィールドの消費配線(t86 等での assert)が実装で必ず伴うこと — 消費されないフィールドは検証劇場 Forbidden に転落するため、配線が実装時に不成立なら B へ縮退を再裁定",
+  "rationale": "免除の無音化(pass:true のみでは floor 免除と実 H2 pass が事後弁別不能)は監査可能性を損なう — 本日の自 intent 実測(practices-discovery の exempt-red 2行+diary 記録のオーバーヘッド)でも免除の可視トレースの価値を確認済み。A は schema+消費配線まで含めることで Forbidden(消費されないフィールド)を回避しつつ免除を可視化する唯一の案。C は警告チャネルの意味論汚染で不適。受容度: B=6 / C=7",
+  "submittedAt": "2026-07-23T02:56:52Z"
+}

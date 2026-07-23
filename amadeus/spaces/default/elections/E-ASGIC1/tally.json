@@ -1,0 +1,74 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A. archive/unarchive 対の専用 verb+human-presence 必須+両方向監査(symmetric-pair)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A. archive/unarchive 対の専用 verb+human-presence 必須+両方向監査(symmetric-pair)",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "B. unarchive verb+human-presence のみ新設(archive 側は enum 検証強化どまり — 最小面)",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "C. 手編集+doctor 整合検査(verb なし — 監査イベントが残らない)",
+        "count": 0
+      },
+      {
+        "internalNo": 4,
+        "label": "X. その他",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T03:43:35Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-ASGIC1",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "#1396 は私がクロスレビュー2人目(独立実測4点: updateIntentStatus の素 string、closed/archived 語彙 grep 0、handleIntent の status 無検査、intents.json 実分布 closed=1件)— 誤再開ガードの動機は監査可能な人間裁定の記録にある。A の対 verb+human-presence+両方向監査は P4(不可逆境界に人間)・symmetric-pair-review(archive⇔unarchive の対)・human-ruling-persist-through(裁定の永続化)の3既決と一直線。B は archive 側の裁定記録が落ち、C は監査イベントが残らず tool-owned transitions 原則に反する。受容度: B=6 / C=7",
+      "submittedAt": "2026-07-23T03:40:43Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-ASGIC1",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A(archive/unarchive 対の専用 verb+human-presence+両方向監査)。根拠: (1) P4 の字義 — archive は『再開を拒否する』不可逆側の境界操作であり、設定も解除も人間の明示承認+監査証跡が要る。C は監査イベントが残らず(候補文自認)P2(記録は実測事実)・検証劇場予防の系譜に反する。(2) B の片側 verb は symmetric-pair-review が実測起点(bootstrap バグ14件の過半が片側実装)で警告する非対称クラスそのもの — archive 側を enum 検証どまりにすると『どの経路が archived を書いたか』の provenance が残らず、#1396 の発端(closed が ad hoc に書かれた)と同型の穴を archived 自身に再生産する。(3) human-ruling-persist-through(裁定の受領→永続化→下流反映を1機能で)とも A が最整合。非採用時の受容度: B なら 6(解除側ゲートは確保される)、C なら 7(監査不在)。",
+      "submittedAt": "2026-07-23T03:40:54Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-ASGIC1",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A採用(GoA 1)。#1396 のクロスレビュー当事者として: 本 Issue の欠陥クラス自体が『片側だけ実装された非対称』(updateIntentStatus 自由文字列+complete のみ意味論)であり、B の unarchive 片側新設はまさに同クラスの再生産 — archive 側が無監査の自由文字列 set のままでは『どうやって archived になったか』の provenance が欠ける。A は symmetric-pair-review の直接適用+P4(不可逆境界の human-presence)+tool-owned transition(監査両方向)を同時充足。C は手編集で監査イベントが残らず audit-first 原則違反。受容度: B=6(ガードの主目的 = 誤再開防止は達成)/ C=7(無監査の状態遷移を正規化)。",
+      "submittedAt": "2026-07-23T03:43:13Z"
+    }
+  ],
+  "resolutions": []
+}

@@ -1,0 +1,21 @@
+{
+  "electionId": "E-MHECGS13",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260723-marker-heading-exemption(#1296)/ code-generation の §13 学習選定: 採用0件の確認。conductor(e5)起案(verbatim 正本 = e5 worktree <record>/construction/code-generation/s13-candidates.md — リードオンリー実測可): 候補0件。surface 4件 — degrade §12a 追補の実効2例目 / builder 申告→執行裁定→reviewer 独立同結論の3段模範実例(PM 回付)/ plan 見出し算術誤り(ledger-count 違反実例、PM 回付)/ corpus sweep 全数化の字義執行。 各自 record を実測確認のうえ GoA 付きで投票。軽量様式可。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    {
+      "internalNo": 2,
+      "label": "異議 — 採用すべき候補がある(票コメントで特定)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e4",
+    "e6"
+  ],
+  "state": "recorded"
+}

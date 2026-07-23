@@ -1,0 +1,26 @@
+{
+  "electionId": "E-MPRRA3",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "C. 乖離クラス別 exit code(1/2/3+前提エラー4)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 4,
+      "label": "X. その他"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "A. 0=乖離なし / 1=乖離あり / 2=前提エラー(機械消費可能な3値)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 2,
+      "label": "B. 常に exit 0(前提エラーのみ非ゼロ — 人間向け診断に徹する)"
+    }
+  ]
+}

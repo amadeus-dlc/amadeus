@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FSPBTS13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "提案どおり採用(1)。実測: 私自身が PR #1407 増分2の独立レビューで再ピン3本の実体(:2958-2959 catch / reap-mutex 両 arm)を head lib 直読照合しており、2916 の『stale 検査に映らない別測定可能行への無音転位』は私のレビューコメントでも §13 材料に推奨した新変種そのもの。既存 cid:allowlist-line-pin-stale は『上方挿入で stale 化する』面のみを規定し、無音転位(stale 検出をすり抜けて誤対象を指し続ける)は未規定 — 全エントリの reason×現行行内容の直読照合という検査手順の追補は真のギャップ充填。PM 回付3件(既知クラス・番号連鎖・環境赤帰属)も妥当。",
+  "submittedAt": "2026-07-23T05:14:20Z"
+}

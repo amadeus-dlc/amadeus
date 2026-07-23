@@ -1,0 +1,90 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A. isMarkerArtifact を amadeus-lib.ts へ抽出し graph filter とセンサー免除の両方を導出(canonical 1定義)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A. isMarkerArtifact を amadeus-lib.ts へ抽出し graph filter とセンサー免除の両方を導出(canonical 1定義)",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "B. センサー内独立実装+graph との一致を対称 test で固定(変更面最小・2定義ドリフト面残存)",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "C. amadeus-graph.ts へ抽出しセンサーが graph import(新規依存)",
+        "count": 0
+      },
+      {
+        "internalNo": 4,
+        "label": "X. その他",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T02:57:23Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MHERA1",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A採用(GoA 1)。実測: amadeus-sensor-required-sections.ts:3 は既に amadeus-lib.ts から import(errorMessage/parseBoltDag)しており、A は既存 import 面のみで成立(新規依存ゼロ)。construction ガードレール『複数箇所で消費される定数・述語は canonical 1定義から導出』の直接適用で、B の2定義+対称テストは cross-unit-note-canonical-reference 系が繰り返し実測してきた集合分裂の温床(テストは分裂を検出するが防止しない)。C はセンサーの graph 非依存(control-plane/data-plane 分離)を破る新規依存。自案非採用時受容度: B=6(対称テストが固定するなら機能は成立)/ C=7(依存方向の破壊)。",
+      "submittedAt": "2026-07-23T02:50:27Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MHERA1",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "配布された判断点『センサーの import 実測 = amadeus-lib.ts のみ / C のみ新規依存』は私の tree の実測と不一致 — amadeus-sensor.ts:39-47 は既に amadeus-graph.ts から loadGraph/loadSensors 等を import している。開票時にこの前提訂正を record へ記録すること(A の妥当性自体は独立に成立)",
+      "rationale": "A を支持。canonical 1定義からの導出は construction ガードレールの明文であり、免除述語(marker artifact 判定)は graph filter とセンサーの両消費者を持つ以上、lib への抽出が集合分裂を構造的に防ぐ(B は対称 test で拘束しても2定義ドリフト面が残る — cross-unit-note-canonical-reference と同族)。ただし配布判断点の『C のみ新規依存』は実測不一致(amadeus-sensor.ts:39-47 に graph import 実在)— C の減点根拠は『新規依存』でなく『免除述語は graph 専有でない汎用判定であり、より低層の lib が正しい置き場(layering)』に修正して評価した。それでも A が最適。受容度: B=6、C=6(graph import 既存のため動くが layering が劣る)。",
+      "submittedAt": "2026-07-23T02:53:45Z"
+    },
+    {
+      "kind": "amend",
+      "ref": {
+        "electionId": "E-MHERA1",
+        "voter": "e4",
+        "submittedAt": "2026-07-23T02:50:27Z"
+      },
+      "electionId": "E-MHERA1",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "amend(原票 2026-07-23T02:50:27Z を exact ref、choice 1 維持)。訂正前提: 配布判断点『C のみ新規依存』は誤り — amadeus-sensor.ts:47 で dispatcher が既に amadeus-graph.ts を import していることを自 tree grep で再実測確認(e1/leader の再実測と一致)。ユーザー裁定(2026-07-23T02:55:39Z 頃)により choice A へ一意化。私の原票も A(canonical 1定義の lib 抽出)であり結論不変 — 原票 rationale の『C は新規依存』根拠のみ本 amend で訂正し、A の主根拠(canonical 1定義+集合分裂の構造的防止)は sensor 側 import 実態に依存せず成立。",
+      "submittedAt": "2026-07-23T02:56:12Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MHERA1",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": "訂正前提の明記: 当初判断点の『C のみ新規依存(センサーの graph 非依存)』は leader 訂正(sensor は既に graph import 済み)により失効 — 本票はこの訂正前提とユーザー裁定による A 一意化を前提とした original ballot である",
+      "rationale": "canonical 1定義原則(複数箇所で消費される述語は1定義から導出 — construction 原則)により、isMarkerArtifact を amadeus-lib.ts へ抽出し graph filter とセンサー免除の両方が同一実装を消費する A が集合分裂を構造的に防ぐ。B の対称テスト方式は2定義ドリフト面が残存(cross-unit 系 cid の教訓)。受容度: B=6 / C=6(訂正後は C も技術的に成立するが lib 抽出の方が消費面が対称)",
+      "submittedAt": "2026-07-23T02:56:52Z"
+    }
+  ],
+  "resolutions": []
+}

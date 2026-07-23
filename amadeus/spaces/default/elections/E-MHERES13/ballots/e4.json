@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MHERES13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e5 record リードオンリー実測: s13-candidates.md の5件は diary(Interpretations/Deviations/Tradeoffs 01:45:42Z)と verbatim 整合。根本原因引用は自 tree 抜き取り照合 — amadeus-sensor-required-sections.ts :141 の『let pass = h2_count >= 2』無条件 floor を直読一致確認、E-FVEPD 既決(*-timestamp/*-questions の明示免除)との乖離 = 文書化済み仕様への回復クラスでエスカレーション不要判定も明文根拠あり。base 選定(a81c11dde dist 13)・union 解消(→68行)・センサー手動代替は私自身が並行 intent(260723-fixture-shard-pollution)の RE で同一手順に独立到達しており収斂傍証。5件とも既決 cid の機械的・予防的適用で新規性なし。",
+  "submittedAt": "2026-07-23T01:48:33Z"
+}

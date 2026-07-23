@@ -1,0 +1,29 @@
+{
+  "electionId": "E-MPRRA1",
+  "kind": "clarification-question",
+  "question": "intent 260719-mirror-productization / requirements-analysis の未決(verbatim 正本 = e3 ブランチ b40c48bbd の <record>/inception/requirements-analysis/requirements-analysis-questions.md — git show で実測可。裁定経路 = 選挙、ユーザー裁定 2026-07-23)。Q1(U-04a). phase 境界ミラー ask の発火粒度。判断点: ノルムの節目定義は park・phase 完了・complete。A は PHASE_CHECK_REQUIRED_PHASES(amadeus-state.ts:165-169)と同集合で既存機構との対称性最大。 各自コード・record を実測確認のうえ、A/B/C 選択型につき自案非採用時の受容度1行併記+GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. phase-check 対象3境界(ideation/inception/construction 完了時)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. 全4境界(operation 完了 = workflow 完了時も含む — complete 時の close 導線を ask に含められる)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. construction 完了時のみ(発火回数最小)"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他(票コメント指定)"
+    }
+  ],
+  "voters": [
+    "e4",
+    "e5",
+    "e6"
+  ],
+  "state": "recorded"
+}

@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-ASGIC2",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A は語彙契約(enum 4値)と書込追跡の分離により既存挙動不変で #1309 ライフサイクル契約と整合 — 外科的最小(P5)。B は park/unpark 全経路改修のスコープ拡大で本 intent(bugfix 級ガード)に不釣り合い、C は #1309 側との語彙分裂を作る。本日の自 intent でも intents.json の in-flight/complete/closed 実分布を実測しており、parked の registry 非出現(park は record 側)という前提も追認できる。受容度: B=6 / C=7",
+      "submittedAt": "2026-07-23T03:40:43Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-ASGIC2",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A(enum に parked を語彙契約として含め、registry 書込は本 intent で行わない)。根拠: (1) 実測整合 — 本日の9ソース union 実測(68 intents)でも registry statuses は complete/in-flight/closed のみで parked 非出現。語彙定義と書込追跡の分離は既存挙動を一切変えず、ガード(enum 検証)の受理集合だけを将来枠込みで正しく固定する。(2) B は park 系全経路の改修+テストで bugfix 外科的最小を超えるスコープ拡大(正準リスト(4)隣接)であり、park 追跡の要否自体が #1309 系(ライフサイクルレコード設計)の設計事項 — 先取りしない(N3 系の先行着地回避)。(3) C は Issue 案からの縮小で、#1309 の共通語彙ドメインとの整合を壊す再調整コストを生む。非採用時の受容度: C なら 6(縮小は後から拡張可能)、B なら 7(未設計の書込面の先行着地)。",
+      "submittedAt": "2026-07-23T03:40:54Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-ASGIC2",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A採用(GoA 1)。実測済み前提(parked は registry 非出現 — park は record 側機構)と一致: enum への parked 編入は『語彙契約』であり書込追跡と分離可能 — A は既存挙動を変えず #1396 の目的(archived の enum 化+ガード)に必要な最小集合で、#1309 ライフサイクル契約とも整合。B の park/unpark 全経路改修は本 intent(enhancement/P2)のスコープ拡大で bugfix 級の外科的最小に反する。C は実在状態(parked)を語彙から落とし #1309 側の再整合が必要。受容度: B=6(完全追跡は将来の正 — 別 intent が筋)/ C=7(実在状態の語彙欠落)。",
+      "submittedAt": "2026-07-23T03:43:13Z"
+    }
+  ],
+  "late": []
+}

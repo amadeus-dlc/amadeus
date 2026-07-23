@@ -1,0 +1,64 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "異議 — 採用すべき候補がある(票コメントで特定)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T03:55:03Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-ASGICS13",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e1 record を read-only 実測: intent-capture の s13-candidates.md の0件整理を確認(既存 cid 執行のみ)。0件で可(1)",
+      "submittedAt": "2026-07-23T03:46:51Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-ASGICS13",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e1 record 実測: 候補3件は diary(03:38:58Z ×2)と整合し、いずれも既存 cid の機械的適用。(1) 既決照合の質問絞り込みは no-election-for-decided-norms の字義。registry 分布(complete 65 / in-flight 3 / closed 1)は私の E-ASGIC2 投票時の独立実測(9ソース union)とも一致し数値の質を裏書きできる。(2) parked 非出現の実測と語彙/書込の分離切り出しは external-seam-vocab-measurement の内部語彙版としての適用で、分離自体は E-ASGIC2 で裁定済みの設計事実 — ノルム化対象ではない。(3) 1問様式 H2 floor の予防は E-TCRRAS13B 追補の適用確認のみ(なお本クラスは私の #1296 修正が機械化予定)。新規ノルム候補なしに同意。",
+      "submittedAt": "2026-07-23T03:47:28Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-ASGICS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e1 record 実測: 3件とも既決 cid の機械的適用 — 質問絞り込み(no-election-for-decided-norms+intent-capture:c1、#1396 のユーザー着手承認は私もクロスレビュー当事者として既決確認)、registry 実測(numbers 系 — Q1/Q2 で私が投票した裁定の設計事実)、H2 floor 予防(E-TCRRAS13B 適用確認)。軽微な typo(『적용확인』の韓字混入)は verbatim 正本の表記ゆれで内容に影響なし。新規ノルム性なし。",
+      "submittedAt": "2026-07-23T03:54:30Z"
+    }
+  ],
+  "resolutions": []
+}

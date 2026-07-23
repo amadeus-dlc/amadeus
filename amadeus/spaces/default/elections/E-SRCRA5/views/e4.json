@@ -1,0 +1,26 @@
+{
+  "electionId": "E-SRCRA5",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "C. ツール+dry-run 検証まで実装し、実実行はその直前に leader 経由でユーザー個別承認を取得"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "B. 含まない — ツール・方針・doctor 実装まで。移行実行は別 intent/ユーザー個別承認"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 4,
+      "label": "X. その他(票コメントで指定)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 1,
+      "label": "A. 含む — 設計・移行方針の承認後に実 rename+レジストリ生成まで本 intent で実行(O4 は時系列条件の読み)"
+    }
+  ]
+}

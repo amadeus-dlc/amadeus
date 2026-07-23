@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-ASGPDS13",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "候補3の状態表現を精密化して記録すること — #1405 は『READY 済み』でなく main マージ着地済み(2026-07-23T04:02Z、#1296 クローズ済み)。よって本クラスは『着地まで』でなく『本 intent ツリーへの main 取込まで』の残存であり、取込後は運用免除でなくセンサー免除(pass:true+marker_exempt:true)へ機械的に転じる — 取込後の再発火で marker_exempt を確認し、以後の運用免除記録は不要になる",
+  "rationale": "0件で可(1)。e1 record 実測: 3観測とも既存 cid の適用・違反実例。c1/c2 温存は practices-discovery:c1/c2 の字義。consumes 3度目の同型は傾向 PM 記帳の継続カウントで扱いが正確(E-ASGAHS13 の私の留保『3度目で機械ガード昇格検討』の発動条件に到達した点も PM で扱われる見込み — カウント継続が記録されているため二重規定は不要)。timestamp の H2 floor FAILED は e1 ツリーが #1405 マージ前断面のため正当な観測で、E-FVEPD 運用免除の適用も正しい — ただし留保のとおり状態表現の精密化を求める(私は #1405 の実装者として着地事実とセンサー免除への転回を一次知識で確認済み)。",
+  "submittedAt": "2026-07-23T04:51:48Z"
+}

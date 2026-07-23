@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCUGS13",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e2 record を read-only 実測: s13-candidates.md の2候補実在、c2 の申告付き部分帰属の解消痕跡が unit-of-work.md:9/:16/:37 に現存(mintElectionDirName の U1 帰属+U2 消費のみ+3面明記)。c1 は既決の機械的導出で新規性なし、c2 は cross-unit 系 cid の違反実例として PM 回付が適切。0件で可(1)",
+  "submittedAt": "2026-07-23T00:53:16Z"
+}

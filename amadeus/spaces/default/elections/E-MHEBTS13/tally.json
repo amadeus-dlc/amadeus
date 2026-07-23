@@ -1,0 +1,64 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "異議 — 採用すべき候補がある(票コメントで特定)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T04:24:54Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MHEBTS13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。実測: e5 worktree の BT s13-candidates.md をリードオンリー直読(所見分離様式の初適用も確認)— 4件とも既存 cid の適用・既知クラス記録(prose H2 floor の弁別は E-ASGFSS13 の e5 自身の留保の追認、codekb 衝突定型解消は私も本日同型を実施、wall-clock drift は私の BT でも同一ファイル同一観測)。新規性なし、0件に同意。",
+      "submittedAt": "2026-07-23T04:19:09Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MHEBTS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e5 record の s13 ファイル実在+4件整理を確認(所見分離様式の初適用も確認 — 本文に推奨なし)。(1) 非 marker prose への floor 適用は本 intent の設計どおり免除対象外の追認 (2) codekb 衝突の定型解消は re-timestamp-merge-resolution+union の執行(私も本日同型を実施) (3) wall-clock drift は既知 advisory(e1 BT と同一観測の再現) (4) 全 green は要件執行。いずれも新規ノルム性なし。",
+      "submittedAt": "2026-07-23T04:19:15Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MHEBTS13",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e5 record を read-only 実測: build-and-test の s13-candidates.md の0件整理を確認(既存 cid 執行のみ)。0件で可(1)",
+      "submittedAt": "2026-07-23T04:19:51Z"
+    }
+  ],
+  "resolutions": []
+}

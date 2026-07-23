@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRNRS13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。実測: e3 ブランチの NR s13-candidates.md を git show で直読(所見分離様式も確認)— 3件とも既存 cid の追認実例(conditional consume 両方向・編纂型引用誤帰属の reviewer 捕捉・fail-safe 補完は通常設計行為)で新規性なし。0件に同意。",
+  "submittedAt": "2026-07-23T04:39:51Z"
+}

@@ -1,5 +1,41 @@
 [
   {
+    "file": "scripts/amadeus-election-migrate.ts",
+    "lines": "149-150",
+    "reason": "Defensive directory-collision guard after mintElectionDirName. The same physicalNames set is passed as unavailable names, so the minting function suffixes away from every occupied target before this check; unit and integration tests cover the collision-avoidance behavior, but no valid input can reach this redundant fail-closed branch.",
+    "expiry": "remove if mintElectionDirName can return an unavailable name or the guard is removed as proven redundant"
+  },
+  {
+    "file": "scripts/amadeus-election-migrate.ts",
+    "lines": "230-232",
+    "reason": "Multi-line Record<string, unknown> type assertion in readCandidates; the type-only lines are runtime-erased and Bun's full-suite LCOV merge stamps them DA:0. Tests drive both valid and invalid election.json parsing through the surrounding statement.",
+    "expiry": "remove if the assertion is collapsed or Bun LCOV stops stamping erased type lines"
+  },
+  {
+    "file": "scripts/amadeus-election-migrate.ts",
+    "lines": "456-457",
+    "reason": "Defensive resolver catch for an I/O race after a registry was read successfully. Normal missing-directory and invalid-registry outcomes are covered in-process; reaching this catch requires the filesystem or registry to become unreadable between those two operations.",
+    "expiry": "remove when verifyFidelity gains an injectable resolver seam for I/O race fault injection"
+  },
+  {
+    "file": "scripts/amadeus-election-migrate.ts",
+    "lines": "556-563",
+    "reason": "Production --execute orchestration requires a separately authored human approval record and intentionally is not exercised end-to-end in CI. Its constituent precondition checks, plan application, pre/post verification, fidelity evaluation, and fidelity rendering are all covered in-process; only the live mutation composition remains unmeasured.",
+    "expiry": "remove when runExecute gains injected migration ports that permit a non-production end-to-end execution fixture"
+  },
+  {
+    "file": "scripts/amadeus-election-migrate.ts",
+    "lines": "574-578",
+    "reason": "Spawn-only import.meta.main CLI exit wrapper. CI tests call the exported main function in-process so Bun coverage cannot attribute the spawned entrypoint wrapper; success and rejection behavior are covered through main.",
+    "expiry": "remove if the CLI wrapper gains an in-process exit/error seam"
+  },
+  {
+    "file": "scripts/amadeus-election-store.ts",
+    "lines": "342-343",
+    "reason": "Defensive readdirSync catch after mkdirSync(root, {recursive:true}) already succeeded. Normal I/O creation failures are covered; reaching this second guard requires a permission or filesystem race between mkdir and readdir.",
+    "expiry": "remove when Store.create gains an injectable filesystem seam for post-mkdir readdir failure"
+  },
+  {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "lines": "472-474",
     "reason": "main() dispatch case for the set-construction-iteration verb (U05, FR-2 item 8). main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handler it dispatches (handleSetConstructionIteration) is driven in-process by tests/integration/t250 (valid path). Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",

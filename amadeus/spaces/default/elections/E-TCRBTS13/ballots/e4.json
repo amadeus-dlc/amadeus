@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TCRBTS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e1 record 実測: 観測3件はいずれも既知クラス — H2 floor の N/A 様式面は E-TCRRAS13B 追補の類推適用(恒久解は #1296 intent が実装中)、NFR-4 は申告閾値の機械的執行、旧 FAILED 群は既決追補(E-TCRRAS13B / manual-sensor-fire 追補4)の記録のみ。新規ノルム性なし。",
+  "submittedAt": "2026-07-23T03:32:25Z"
+}

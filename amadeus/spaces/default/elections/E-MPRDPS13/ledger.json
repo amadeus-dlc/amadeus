@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MPRDPS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e3 ブランチ df81ee670 の s13-candidates.md を git show で実測 — 2件とも既決の機械的履行: (1) Bolt 0 の Bolt 列明示は UG 裁定(T-norm を DP の順序制約へ委譲 — E-MPRUGS13 で私も0件確認済み)の履行そのもの (2) 0問様式+E-OC1 は no-election-judgment-gate と eoc1-evidence-in-questions-header(E-TCRRAS13B 追補の0問側既習形)の適用。新規ノルム性なし。",
+      "submittedAt": "2026-07-23T03:21:35Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPRDPS13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。実測: e3 ブランチ df81ee670 の s13-candidates.md を git show で直読 — 観測2件(Bolt 0 の Bolt 列明示 = UG 委譲の履行、0問様式+E-OC1 判定 = 既決 cid の適用)はいずれも既存射程で新規ノルム性なし。0件に同意。",
+      "submittedAt": "2026-07-23T03:22:38Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPRDPS13",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e3 record を read-only 実測: s13-candidates.md の0件整理2件(UG 委譲の機械的履行/0問様式+E-OC1 既決適用)を確認。新規ノルム性なし。0件で可(1)",
+      "submittedAt": "2026-07-23T03:24:46Z"
+    }
+  ],
+  "late": []
+}

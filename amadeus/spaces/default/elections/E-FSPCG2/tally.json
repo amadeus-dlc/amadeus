@@ -1,0 +1,69 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A. 承認 — 旧 assert は欠陥挙動の pin、更新はバグ修正の定義そのもの"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A. 承認 — 旧 assert は欠陥挙動の pin、更新はバグ修正の定義そのもの",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "B. 旧 assert 併存の互換テスト追加(org.md Forbidden 抵触見込み)",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "C. その他",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T04:12:59Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-FSPCG2",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "旧 assert は _cloneId 単一値という欠陥挙動の pin であり、FR-1b(Map 化)の修正後挙動への assert 更新はバグ修正の定義そのもの(文書化済み仕様への回復)。B の互換テスト併存は org.md Forbidden(要求されない互換レイヤー)へ正面抵触。受容度: B=8(Forbidden 抵触のため反対を明記 — 根拠 = org.md Forbidden 第1項の実文)",
+      "submittedAt": "2026-07-23T04:10:12Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FSPCG2",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A を支持。実測: diff 直読で _cloneId→_cloneIdByProject の Map 化(FR-1b)を確認 — 旧 assert は単一値メモ化という欠陥挙動の pin であり、修正後挙動への assert 更新はバグ修正の必須帰結(cid:fix-review-replays-origin-repro の対で、旧挙動の再現はもはや欠陥再現)。B 案の旧 assert 併存は org.md Forbidden(要求されない互換の二重実装)に正面抵触。受容度: B=8(Forbidden 抵触)、C=4。",
+      "submittedAt": "2026-07-23T04:10:40Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FSPCG2",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A(承認)。本日の自 intent CG で同一クラスを裁定済み(t155 の stale ineligible assert 反転 — E-MHECGS13 系列で reviewer/conductor とも『承認済み要件の機械的帰結、逸脱ではない』と確定): 旧バグ挙動(_cloneId 単一値前提)を pin する assert は FR-1b(Map 化)の着地と論理的に両立不能で、更新はバグ修正の定義そのもの。申告済みである点も同型。B(旧 assert 併存の互換テスト)は org.md Forbidden『要求されていない後方互換レイヤー・二重実装を追加しない』の明文に抵触する。非採用時の受容度: B なら 8(Forbidden 明文が反証根拠 — 旧挙動の pin 温存は修正の否定)。",
+      "submittedAt": "2026-07-23T04:12:37Z"
+    }
+  ],
+  "resolutions": []
+}

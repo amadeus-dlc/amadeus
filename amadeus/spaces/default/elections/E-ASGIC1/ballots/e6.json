@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-ASGIC1",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "#1396 は私がクロスレビュー2人目(独立実測4点: updateIntentStatus の素 string、closed/archived 語彙 grep 0、handleIntent の status 無検査、intents.json 実分布 closed=1件)— 誤再開ガードの動機は監査可能な人間裁定の記録にある。A の対 verb+human-presence+両方向監査は P4(不可逆境界に人間)・symmetric-pair-review(archive⇔unarchive の対)・human-ruling-persist-through(裁定の永続化)の3既決と一直線。B は archive 側の裁定記録が落ち、C は監査イベントが残らず tool-owned transitions 原則に反する。受容度: B=6 / C=7",
+  "submittedAt": "2026-07-23T03:40:43Z"
+}

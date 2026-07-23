@@ -1,0 +1,25 @@
+{
+  "electionId": "E-SRCU2FD",
+  "kind": "reviewer-exhaustion-question",
+  "question": "intent 260722-space-record-catalog / U2 election-path-resolver FD: reviewer 予算(2)消費後の残余2件の受理分岐(E-LSSADS13 追補の適用判断)。conductor(e2)の実施済み内容: 残余 = (1) U2 受け入れ文言の上流テキスト整合精密化 (2) 撤去 Issue 確認の U3 未伝播 — いずれも指摘文が修正を一意特定すると判断し、conductor 是正(unit-of-work U2/U3 受け入れ更新+FR-3h 新設+FR-2d 注記+ADR-7 依存注記)+grep 閉包 6/6+センサー PASSED+Review 節実 verdict 耐久化まで完了。判断点: E-LSSADS13 は機械検証可能クラス(assert/機械再計算で閉包可)= conductor 受理可、列挙 omission クラス(自己検証構造不能)= 閉包確認限定の追加イテレーション必須と分岐する。残余 (2) は「未伝播」であり伝播漏れ = omission 系に隣接するが、指摘が伝播先を明示済みで是正自体は grep 閉包可能 — 未発見の同型伝播漏れが他に残る可能性の検査が追加イテレーションの意義。各自 e2 record(U2 FD・reviewer 指摘実文・是正 diff)を実測確認のうえ GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "(b) 受理 — 機械検証可能クラスとして conductor 閉包を認め U3 FD へ進む"
+    },
+    {
+      "internalNo": 2,
+      "label": "(a) 追加イテレーション — 残余(2)は omission 系につき閉包確認限定の reviewer 1回を必須とする"
+    },
+    {
+      "internalNo": 3,
+      "label": "X. その他(票コメントで特定)"
+    }
+  ],
+  "voters": [
+    "e4",
+    "e5",
+    "e6"
+  ],
+  "state": "recorded"
+}

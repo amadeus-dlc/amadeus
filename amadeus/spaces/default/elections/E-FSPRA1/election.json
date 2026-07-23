@@ -1,0 +1,29 @@
+{
+  "electionId": "E-FSPRA1",
+  "kind": "clarification-question",
+  "question": "intent 260723-fixture-shard-pollution(#1389)/ requirements-analysis の明確化質問(verbatim 正本 = e4 ブランチの <record>/inception/requirements-analysis/requirements-analysis-questions.md — git show で実測可)。Q1. 修正対象集合 — 根と増幅のどこまでを本 intent で直すか。判断点: RE Architect 所見は A 寄りだが「根のみで犯人 t248 は閉包」も事実。エンジン正本を触る範囲の価値判断。 各自 RE 隔離表・候補文を実測確認のうえ、受容度1行併記+GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. 両方(recordEngineError 引数化+_cloneId の projectDir キー化)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. 根のみ(引数化。_cloneId は Issue 別送)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. 増幅のみ+テスト隔離(コア変更回避 — Issue 当初期待)"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e5",
+    "e6"
+  ],
+  "state": "recorded"
+}

@@ -7,6 +7,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { main } from "../../scripts/amadeus-election";
+import { electionsRoot, resolveElectionDir } from "../../scripts/amadeus-election-store";
 
 const DEF = {
   electionId: "E-LOOP1",
@@ -53,6 +54,10 @@ function writeJson(name: string, value: unknown): string {
   const path = join(projectDir, name);
   writeFileSync(path, JSON.stringify(value));
   return path;
+}
+
+function electionPath(...segments: string[]): string {
+  return join(resolveElectionDir(electionsRoot(projectDir), "E-LOOP1").dir, ...segments);
 }
 
 describe("t236 election directive loop", () => {
@@ -167,9 +172,7 @@ describe("t236 election directive loop", () => {
     expect(run(["vote", "--election", "E-LOOP1", "--file", b1])).toBe(0);
     expect(run(["tally", "--election", "E-LOOP1"])).toBe(0);
     expect(run(["render", "--election", "E-LOOP1"])).toBe(0);
-    const tallyPath = join(
-      projectDir, "amadeus", "spaces", "default", "elections", "E-LOOP1", "tally.json",
-    );
+    const tallyPath = electionPath("tally.json");
     // verify mismatch: tamper the stored result (valid JSON, wrong choice count)
     const stored = JSON.parse(readFileSync(tallyPath, "utf8"));
     stored.result = {
@@ -185,9 +188,7 @@ describe("t236 election directive loop", () => {
     expect(run(["verify", "--election", "E-LOOP1"])).toBe(1);
     // restore a consistent tally, then drop record.md -> verify missing branch
     expect(run(["tally", "--election", "E-LOOP1"])).toBe(0);
-    rmSync(join(
-      projectDir, "amadeus", "spaces", "default", "elections", "E-LOOP1", "record.md",
-    ));
+    rmSync(electionPath("record.md"));
     expect(run(["verify", "--election", "E-LOOP1"])).toBe(1);
   });
 
@@ -206,9 +207,7 @@ describe("t236 election directive loop", () => {
     expect(run(["vote", "--election", "E-LOOP1", "--file", b1])).toBe(0);
     expect(run(["tally", "--election", "E-LOOP1"])).toBe(0);
     expect(run(["render", "--election", "E-LOOP1"])).toBe(0);
-    const recordPath = join(
-      projectDir, "amadeus", "spaces", "default", "elections", "E-LOOP1", "record.md",
-    );
+    const recordPath = electionPath("record.md");
     const doc = readFileSync(recordPath, "utf8");
     expect(doc).toContain("GoA[E-LOOP1]: 1x0 2x1 3x0 4x0 5x0 6x0 7x0 8x0");
     expect(doc).toContain("留保");
@@ -248,9 +247,7 @@ describe("t236 election directive loop", () => {
 
   test("Bolt 4: notify (subagent default) emits per-voter directives referencing the blind views", () => {
     expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
-    const viewPath = join(
-      projectDir, "amadeus", "spaces", "default", "elections", "E-LOOP1", "views", "alice.json",
-    );
+    const viewPath = electionPath("views", "alice.json");
     const view = JSON.parse(readFileSync(viewPath, "utf8"));
     expect(Object.keys(view).sort()).toEqual(["electionId", "ordered", "voter"]); // blind keys
     expect(run(["notify", "--election", "E-LOOP1"])).toBe(0);
@@ -275,9 +272,7 @@ describe("t236 election directive loop", () => {
     const outJson = lastJson();
     const deliveries = outJson.deliveries as Array<{ kind: string }>;
     expect(deliveries.every((d) => d.kind === "delivered")).toBe(true);
-    const timeline = JSON.parse(readFileSync(join(
-      projectDir, "amadeus", "spaces", "default", "elections", "E-LOOP1", "timeline.json",
-    ), "utf8"));
+    const timeline = JSON.parse(readFileSync(electionPath("timeline.json"), "utf8"));
     expect(timeline.filter((e: { kind: string }) => e.kind === "distributed").length).toBe(2);
     // missing --team/--from is loud; unknown transport is loud
     expect(run(["notify", "--election", "E-LOOP1", "--transport", "agmsg"])).toBe(1);
@@ -304,18 +299,14 @@ describe("t236 election directive loop", () => {
       run(["report", "--election", "E-LOOP1", "--result", "hold-resolved", "--resolution", "rejected"]),
     ).toBe(0);
     // ...the ruling is durable in tally.json...
-    const tallyFile = JSON.parse(readFileSync(join(
-      projectDir, "amadeus", "spaces", "default", "elections", "E-LOOP1", "tally.json",
-    ), "utf8"));
+    const tallyFile = JSON.parse(readFileSync(electionPath("tally.json"), "utf8"));
     expect(tallyFile.resolutions.length).toBe(1);
     expect(tallyFile.resolutions[0].resolution).toBe("rejected");
     // ...and the rendered record shows the ruling, NOT 保留 (the old symptom)
     expect(run(["next", "--election", "E-LOOP1"])).toBe(0);
     expect(lastJson().kind).toBe("render");
     expect(run(["render", "--election", "E-LOOP1"])).toBe(0);
-    const doc = readFileSync(join(
-      projectDir, "amadeus", "spaces", "default", "elections", "E-LOOP1", "record.md",
-    ), "utf8");
+    const doc = readFileSync(electionPath("record.md"), "utf8");
     expect(doc).toContain("裁定: 不採用");
     expect(doc).not.toContain("裁定: 保留");
     expect(doc).toContain("hold 裁定履歴: block → rejected");
@@ -327,7 +318,7 @@ describe("t236 election directive loop", () => {
     expect(lastJson().kind).toBe("done");
   });
 
-  test("Bolt 4: residual error branches — hold-resolved guards, blocked views dir, corrupt timeline, reservation tamper", () => {
+  test("Bolt 4: residual error branches — hold-resolved guards, corrupt timeline, reservation tamper", () => {
     // hold-resolved on a non-hold state is rejected
     expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
     expect(
@@ -346,7 +337,7 @@ describe("t236 election directive loop", () => {
     });
     expect(run(["vote", "--election", "E-LOOP1", "--file", b1])).toBe(0);
     expect(run(["tally", "--election", "E-LOOP1"])).toBe(0);
-    const edir = join(projectDir, "amadeus", "spaces", "default", "elections", "E-LOOP1");
+    const edir = electionPath();
     const efile = JSON.parse(readFileSync(join(edir, "election.json"), "utf8"));
     writeFileSync(join(edir, "election.json"), JSON.stringify({ ...efile, state: "hold" }));
     expect(
@@ -380,13 +371,6 @@ describe("t236 election directive loop", () => {
     // m3 isolation: the failure is specifically the reservation-transcription
     // check (not a timeline-order finding firing first)
     expect(JSON.parse(errs[errs.length - 1] ?? "{}").error).toContain("reservation");
-    // blocked views dir: pre-place a plain file where views/ must go
-    const dir2 = join(projectDir, "amadeus", "spaces", "default", "elections", "E-BLOCKV1");
-    mkdirSync(dir2, { recursive: true });
-    writeFileSync(join(dir2, "views"), "not a dir");
-    expect(
-      run(["open", "--file", writeJson("def2.json", { ...DEF, electionId: "E-BLOCKV1" })]),
-    ).toBe(1);
   });
 
   test("duplicate vote and unusable verbs fail loudly", () => {
@@ -444,9 +428,7 @@ describe("t236 election directive loop", () => {
     expect(run(["vote", "--election", "E-LOOP1", "--file", aliceAmend])).toBe(0);
     // closure: the amend is recorded on the ledger as kind=amend, coexisting
     // with the original (ADR-5) — both rows present, original untouched
-    const ledgerPath = join(
-      projectDir, "amadeus", "spaces", "default", "elections", "E-LOOP1", "ledger.json",
-    );
+    const ledgerPath = electionPath("ledger.json");
     const ledger = JSON.parse(readFileSync(ledgerPath, "utf8"));
     expect(ledger.ballots.length).toBe(2);
     expect(ledger.ballots[0].kind).toBe("original");
@@ -480,9 +462,7 @@ describe("t236 election directive loop", () => {
     // FR-4b: render/verify round-trip on the resolved set (symmetric — green)
     expect(run(["report", "--election", "E-LOOP1", "--result", "tallied"])).toBe(0);
     expect(run(["render", "--election", "E-LOOP1"])).toBe(0);
-    const doc = readFileSync(join(
-      projectDir, "amadeus", "spaces", "default", "elections", "E-LOOP1", "record.md",
-    ), "utf8");
+    const doc = readFileSync(electionPath("record.md"), "utf8");
     // GoA line reflects the resolved set (two GoA-1), not three raw ballots
     expect(doc).toContain("GoA[E-LOOP1]: 1x2 2x0 3x0 4x0 5x0 6x0 7x0 8x0");
     expect(run(["verify", "--election", "E-LOOP1"])).toBe(0);

@@ -1,0 +1,64 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可 — 3件とも既存射程に同意"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可 — 3件とも既存射程に同意",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "異議 — 採用すべき候補がある(票コメントで特定)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T03:16:47Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TCRCGS13B",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e1 record 実測: (1) FR-2b 引用誤りの正体を自 tree で裏取り — EXPECTED_NONE_TO_CLI は tests/unit/gen-coverage-registry.test.ts:855 に実在(grep 実測、requirements の tests/gen-coverage-registry.ts 表記は誤記)。mechanism-cite 違反実例+E-FSPRAS13 採用済み追補(引用一意性 — 本日3例目の同族)の消費側実例で PM 回付妥当 (2) t257 ガード一式は Mandated 落ちる実証+corpus-sweep+vacuity-guard の機械的執行 (3) fixture 汚染3回目は #1389 コメント追記済みで、修正は私の intent(260723-fixture-shard-pollution、RA READY・phase 境界 delegate 待ち)で進行中 — 二重対応なしの正しい回付。新規ノルム性なし。",
+      "submittedAt": "2026-07-23T03:11:46Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TCRCGS13B",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e1 record を read-only 実測: s13-candidates.md の0件整理3件を確認 — FR-2b 引用誤りは E-FSPRAS13(本日採用)の消費側実例で PM 回付が正位置、t257 は落ちる実証+corpus sweep+vacuity guard の既決執行、fixture 汚染3回目は e4 intent で修正進行中(重複起票回避も適切)。0件で可(1)",
+      "submittedAt": "2026-07-23T03:11:39Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TCRCGS13B",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e1 record 実測+PR #1401 独立レビュー(私)との突合: (1) FR-2b 引用誤り(tests/gen-coverage-registry.ts と誤記、実体は tests/unit/gen-coverage-registry.test.ts:855)は diary Interpretations 03:07:39Z に正誤固定済み — mechanism-cite-verify 違反実例+E-FSPRAS13 引用一意性追補の消費側実例で PM 回付が正位置。私の PR レビューでも registry pin :855-857 の実体を直読しており誤引用の非伝播(実装は正)を裏書きできる。(2) t257 一式は Mandated 落ちる実証+corpus-sweep+vacuity-guard(runtime 合成 MARKER)の機械的執行 — 私自身が注入→1 fail→byte-exact 復元→0 fail を独立再現済みで、執行の質も確認。(3) fixture 汚染3回目は既起票 #1389 のコメント追記で扱われ、修正は e4 intent(E-FSPRA1/2 裁定済み)進行中 — 二重対応なし。新規ノルム候補なしに同意。",
+      "submittedAt": "2026-07-23T03:15:32Z"
+    }
+  ],
+  "resolutions": []
+}

@@ -1,0 +1,29 @@
+{
+  "electionId": "E-MHERA2",
+  "kind": "clarification-question",
+  "question": "intent 260723-marker-heading-exemption(#1296)/ requirements-analysis の明確化質問(verbatim 正本 = e5 worktree <record>/inception/requirements-analysis/requirements-analysis-questions.md — リードオンリー実測可)。Q2. 免除時の出力契約(FR-2)。判断点: 検証劇場 Forbidden(消費されないフィールド禁止)と免除の無音化懸念の両立。A は schema 変更+消費配線(t86 影響)、B は floor 免除と実 H2 pass の弁別が推論依存、C は警告チャネルの意味論汚染。 各自実測確認のうえ、受容度1行併記+GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. marker_exempt: true フィールド+schema+消費配線(t86 等)まで含める"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. pass: true のみ(フィールド追加なし)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. config_warning 流用で免除注記"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e4",
+    "e6"
+  ],
+  "state": "recorded"
+}
