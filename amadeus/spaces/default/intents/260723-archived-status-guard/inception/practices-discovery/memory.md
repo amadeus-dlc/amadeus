@@ -5,6 +5,7 @@
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations
+- 2026-07-23T04:57:57Z — E-ASGPDS13 の e5 留保転記(表現精密化): #1405 は「READY 済み」でなく**マージ着地済み**(gh 実測 MERGED)— timestamp の H2 floor 免除は次回センサー発火から機械化(marker_exempt)へ転回する。consumes slip 3度目 = 機械ガード昇格の検討条件到達も PM 記帳済み
 - 2026-07-23T04:50:39Z — practices-discovery-timestamp.md の required-sections FAILED 1件は cid:practices-discovery:e-fvepd-marker-heading-floor の明示免除対象(H2 を意図的に欠く *-timestamp.md の marker 単一行様式が canonical)— #1405 のセンサー側機械化着地までの手動免除として記録。他の FAILED 4件(upstream-coverage)は consumes 実参照化で是正済み・全 PASSED
 - 2026-07-23T04:50:39Z — consumes ヘッダの記憶記載 slip 本 intent 3度目(SD/AH/PD)— 傾向継続として §13 で PM 記帳
 <!-- example: 2026-05-29T10:14:32Z — skipped the optional caching layer the stage prose suggested; the dataset is small enough that it adds risk -->

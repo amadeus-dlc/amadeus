@@ -1659,3 +1659,50 @@
 **Findings count**: 2
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-23T04:50:41Z
+**Event**: WORKFLOW_PARKED
+**Stage**: practices-discovery
+**Timestamp**: 2026-07-23T04:50:41Z
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-23T04:57:57Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-23T04:57:57Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-23T04:57:57Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: practices-discovery
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-23T04:57:57Z
+**Event**: GATE_APPROVED
+**Stage**: practices-discovery
+**Grant Id**: e8c96011
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-23T04:57:57Z
+**Event**: STAGE_COMPLETED
+**Stage**: practices-discovery
+**Details**: Stage Practices Discovery approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-23T04:57:57Z
+**Event**: STAGE_STARTED
+**Stage**: requirements-analysis
+**Agent**: amadeus-product-agent
+
+---
