@@ -5888,3 +5888,222 @@
 **Message**: Business-rules.md 側の割付(BR-1/3/4=機械、BR-2/5=既存テスト+CI、BR-6=レビュー観点)と reliability-requirements.md の区分表記が一致している。両 Major の是正は本文照合で閉包を確認した。\n\nVERDICT: READY\ninvocationId: ea7b7c08-2d77-47fe-9f2c-d8aaa9e80bff i
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:59:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 45b3fe4e
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/nfr-requirements/performance-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:59:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 45b3fe4e
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/nfr-requirements/performance-requirements.md
+**Duration ms**: 45
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:59:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: ec3980bd
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/nfr-requirements/performance-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:59:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: ec3980bd
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/nfr-requirements/performance-requirements.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:59:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 62626b54
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/nfr-requirements/security-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:59:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 62626b54
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/nfr-requirements/security-requirements.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:59:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: f845b218
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/nfr-requirements/security-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:59:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: f845b218
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/nfr-requirements/security-requirements.md
+**Duration ms**: 49
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:59:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6b909929
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/nfr-requirements/scalability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:59:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6b909929
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/nfr-requirements/scalability-requirements.md
+**Duration ms**: 45
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:59:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 09160bce
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/nfr-requirements/scalability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:59:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 09160bce
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/nfr-requirements/scalability-requirements.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:59:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0314e652
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/nfr-requirements/reliability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:59:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0314e652
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/nfr-requirements/reliability-requirements.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:59:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 758f7e57
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/nfr-requirements/reliability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:59:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 758f7e57
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/nfr-requirements/reliability-requirements.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:59:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 00b96cfc
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/nfr-requirements/tech-stack-decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:59:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 00b96cfc
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/nfr-requirements/tech-stack-decisions.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:59:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 27cbafdc
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/nfr-requirements/tech-stack-decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:59:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 27cbafdc
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/clean-env-e2e/nfr-requirements/tech-stack-decisions.md
+**Duration ms**: 46
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T04:01:22Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: afea3be653b2855bf
+**Message**: VERDICT: READY\ninvocationId: 86629607-73f0-430f-9c14-cc2d7ddc8ea2 iteration: 1\n\n上流入力(business-logic-model、business-rules、requirements、technology-stack)への引用を全数 file:line 照合した。\n\n- FR-6a/6b/6c、NFR-1(requ
+
+---
