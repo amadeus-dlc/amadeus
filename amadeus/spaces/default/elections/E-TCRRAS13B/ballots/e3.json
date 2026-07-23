@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TCRRAS13B",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "追補文に cid:practices-discovery:e-fvepd-marker-heading-floor(*-questions.md の heading-floor 免除)との適用関係を1行明示すること — 免除は PD 文脈の conductor 照合ノルムでありセンサー実装には未反映(本件 FAILED が実証)、RA では本追補の様式追加が正、という整理で混乱を防ぐ。",
+  "rationale": "提案どおり(2)。実測: e1 の s13-candidates.md を git show 直読、audit で required-sections FAILED 3行(対象 = 1問 questions ファイル)を確認、現行ファイルは 2 H2(Q1+裁定の記録)で PASSED — 質問数依存の構造差は成立。「裁定の記録」節は留保・票数転記の定型置き場としても有用で eoc1-evidence-in-questions-header への統合先も妥当。不採用2件は既存 cid/規範の違反実例で PM 回付妥当。",
+  "submittedAt": "2026-07-23T01:29:29Z"
+}

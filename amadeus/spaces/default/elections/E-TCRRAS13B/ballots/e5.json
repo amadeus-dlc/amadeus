@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TCRRAS13B",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "本追補は #1296 修正 intent(260723-marker-heading-exemption、本日 birth 済み — センサー側の *-questions.md/*-timestamp.md filename 免除の機械化)の着地までの暫定と persist 文に明記する。着地後は floor 回避としての存在理由が消えるため、次回蒸留ラウンドで『裁定転記節としての文書価値のみで維持するか退役するか』を再判定にかける",
+  "rationale": "提案どおり(候補1採用+2件 PM 回付)— ただし暫定明記の留保付き。独立実測: (1) 実在 — e1 の questions ファイルは現に1問+『## 裁定の記録』の2 H2 構成、audit に 01:14:48Z の SENSOR_FAILED と節追加後の PASSED 列を確認。候補文は s13-candidates.md と verbatim 一致。(2) 整合 — 0問様式の既習形(## 質問 + ## 0 件の根拠)の1問版対応として一貫し、裁定転記節自体は E-code・GoA・受容度の転記先として文書価値がある。(3) 留保の根拠 — 本候補の動機は required-sections H2 floor の構造的偽赤であり、それはまさに #1296(bug/P2/S3、私のトリアージで現存確認済み・ユーザー着手決定済み)がセンサー側で機械的に解消する対象。運用側追補を無期限ノルムとして焼くと、修正着地後に motivation を失った規則が残る(蒸留対象の予約を今しておくのが正しい)。不採用2件は diary との一致を確認、既存規範の違反実例で PM 回付が正位置。",
+  "submittedAt": "2026-07-23T01:28:21Z"
+}

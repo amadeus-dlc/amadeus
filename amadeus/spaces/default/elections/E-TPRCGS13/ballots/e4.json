@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TPRCGS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "提案どおり(1)。実測: e1 record の s13-candidates.md を直読 — 候補1は scope exit 1 の実エラー文(required review artifact is missing: …/{unit-name}/…)→ fix-1384-watcher-arming 解決後の正常発行(invocationId f6328be4-…、paths 4件)→ §12a 2 iterations 成立の具体列で根拠十分。新規性判定: 既存 checkread-degrade-scope-unavailable は spot-check(check-read)の構造的不能を覆うが、scope 開始前の {unit-name} テンプレート解決義務は別面 — degrade-scope-unit-dir-layout への追補統合は同族 cid への集約として既習様式どおり。不採用2件(test-path-set-completeness 違反実例 / §12a スコープ契約違反実例)の PM 回付も妥当。なお私は本日 PR #1391 レビューで当該 CG の検証結果(94 pass 表記)を独立再実測しており (a) の閉包と整合。",
+  "submittedAt": "2026-07-22T23:47:08Z"
+}

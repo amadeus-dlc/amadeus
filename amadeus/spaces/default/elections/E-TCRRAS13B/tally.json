@@ -1,0 +1,69 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "提案どおり — 候補1を eoc1-evidence-in-questions-header への追補として採用+2件 PM 回付"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "提案どおり — 候補1を eoc1-evidence-in-questions-header への追補として採用+2件 PM 回付",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "全件不採用 — 既存 cid(e-fvepd 免除等)の含意で足りる",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "異議 — 別の組合せ(票コメントで特定)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T01:29:45Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TCRRAS13B",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "本追補は #1296 修正 intent(260723-marker-heading-exemption、本日 birth 済み — センサー側の *-questions.md/*-timestamp.md filename 免除の機械化)の着地までの暫定と persist 文に明記する。着地後は floor 回避としての存在理由が消えるため、次回蒸留ラウンドで『裁定転記節としての文書価値のみで維持するか退役するか』を再判定にかける",
+      "rationale": "提案どおり(候補1採用+2件 PM 回付)— ただし暫定明記の留保付き。独立実測: (1) 実在 — e1 の questions ファイルは現に1問+『## 裁定の記録』の2 H2 構成、audit に 01:14:48Z の SENSOR_FAILED と節追加後の PASSED 列を確認。候補文は s13-candidates.md と verbatim 一致。(2) 整合 — 0問様式の既習形(## 質問 + ## 0 件の根拠)の1問版対応として一貫し、裁定転記節自体は E-code・GoA・受容度の転記先として文書価値がある。(3) 留保の根拠 — 本候補の動機は required-sections H2 floor の構造的偽赤であり、それはまさに #1296(bug/P2/S3、私のトリアージで現存確認済み・ユーザー着手決定済み)がセンサー側で機械的に解消する対象。運用側追補を無期限ノルムとして焼くと、修正着地後に motivation を失った規則が残る(蒸留対象の予約を今しておくのが正しい)。不採用2件は diary との一致を確認、既存規範の違反実例で PM 回付が正位置。",
+      "submittedAt": "2026-07-23T01:28:21Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TCRRAS13B",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "e-fvepd-marker-heading-floor(*-questions.md の免除)との関係を追補文に1行明記すべき — 免除は依然有効な安全網であり、本追補は『構造 green を既定、免除は裁定節が成立しない形(0問様式等)の残余』という優先順位で両立させる",
+      "rationale": "本日の自 intent で両パターンを実測済み: scope-definition では H2 追加で PASSED(摩擦ゼロ)、practices-discovery では e-fvepd 免除で処理したが FAILED 監査行2件+diary 免除記録のオーバーヘッドが残った。構造的 green(裁定の記録節)は exempt-red より監査ノイズが少なく、E-code/GoA 転記の定型置き場としても二重の価値がある。e1 の対照実測(FAILED 2回→節追加 PASSED)とも整合。",
+      "submittedAt": "2026-07-23T01:28:43Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TCRRAS13B",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "追補文に cid:practices-discovery:e-fvepd-marker-heading-floor(*-questions.md の heading-floor 免除)との適用関係を1行明示すること — 免除は PD 文脈の conductor 照合ノルムでありセンサー実装には未反映(本件 FAILED が実証)、RA では本追補の様式追加が正、という整理で混乱を防ぐ。",
+      "rationale": "提案どおり(2)。実測: e1 の s13-candidates.md を git show 直読、audit で required-sections FAILED 3行(対象 = 1問 questions ファイル)を確認、現行ファイルは 2 H2(Q1+裁定の記録)で PASSED — 質問数依存の構造差は成立。「裁定の記録」節は留保・票数転記の定型置き場としても有用で eoc1-evidence-in-questions-header への統合先も妥当。不採用2件は既存 cid/規範の違反実例で PM 回付妥当。",
+      "submittedAt": "2026-07-23T01:29:29Z"
+    }
+  ],
+  "resolutions": []
+}

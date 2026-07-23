@@ -1,0 +1,21 @@
+{
+  "electionId": "E-TPRCGS13",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "全件不採用 — 既存 cid の含意で足りる"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "異議 — 別の組合せ(票コメントで特定)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "提案どおり — 候補1を degrade-scope-unit-dir-layout への追補として採用+2件不採用"
+    }
+  ]
+}
