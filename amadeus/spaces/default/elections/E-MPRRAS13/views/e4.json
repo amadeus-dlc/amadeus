@@ -1,0 +1,21 @@
+{
+  "electionId": "E-MPRRAS13",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "異議 — 別の組合せ(票コメントで特定)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "全件不採用 — 既存 cid(c5/disk-evidence 系)の含意で足りる"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "提案どおり — 候補1を builder-prompt-sync-completion 追補の精密化として採用+2件 PM 回付"
+    }
+  ]
+}
