@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-ASGIC2",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A採用(GoA 1)。実測済み前提(parked は registry 非出現 — park は record 側機構)と一致: enum への parked 編入は『語彙契約』であり書込追跡と分離可能 — A は既存挙動を変えず #1396 の目的(archived の enum 化+ガード)に必要な最小集合で、#1309 ライフサイクル契約とも整合。B の park/unpark 全経路改修は本 intent(enhancement/P2)のスコープ拡大で bugfix 級の外科的最小に反する。C は実在状態(parked)を語彙から落とし #1309 側の再整合が必要。受容度: B=6(完全追跡は将来の正 — 別 intent が筋)/ C=7(実在状態の語彙欠落)。",
+  "submittedAt": "2026-07-23T03:43:13Z"
+}

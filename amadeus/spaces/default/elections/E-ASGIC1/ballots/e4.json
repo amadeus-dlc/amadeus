@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-ASGIC1",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A採用(GoA 1)。#1396 のクロスレビュー当事者として: 本 Issue の欠陥クラス自体が『片側だけ実装された非対称』(updateIntentStatus 自由文字列+complete のみ意味論)であり、B の unarchive 片側新設はまさに同クラスの再生産 — archive 側が無監査の自由文字列 set のままでは『どうやって archived になったか』の provenance が欠ける。A は symmetric-pair-review の直接適用+P4(不可逆境界の human-presence)+tool-owned transition(監査両方向)を同時充足。C は手編集で監査イベントが残らず audit-first 原則違反。受容度: B=6(ガードの主目的 = 誤再開防止は達成)/ C=7(無監査の状態遷移を正規化)。",
+  "submittedAt": "2026-07-23T03:43:13Z"
+}

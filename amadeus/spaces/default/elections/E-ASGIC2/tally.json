@@ -1,4 +1,40 @@
 {
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A. enum に parked を含める(語彙契約)が registry 書込は本 intent で行わない — 既存挙動不変、#1309 と整合"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A. enum に parked を含める(語彙契約)が registry 書込は本 intent で行わない — 既存挙動不変、#1309 と整合",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "B. park/unpark 時に registry も更新する完全追跡(全経路改修+テスト)",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "C. enum を3値に縮小(parked を外す — #1309 側と要整合)",
+        "count": 0
+      },
+      {
+        "internalNo": 4,
+        "label": "X. その他",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T03:43:35Z",
   "ballots": [
     {
       "kind": "original",
@@ -34,5 +70,5 @@
       "submittedAt": "2026-07-23T03:43:13Z"
     }
   ],
-  "late": []
+  "resolutions": []
 }

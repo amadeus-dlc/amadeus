@@ -1536,3 +1536,21 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T03:40:17Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: af1775669cb42ea3d
+**Message**: 1404マージ済
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T03:40:32Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aef378cf3aa2e532c
+**Message**: 1404マージ済
+
+---
