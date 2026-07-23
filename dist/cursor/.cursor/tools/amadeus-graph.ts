@@ -1035,17 +1035,19 @@ export function validateScope(
  *
  *  opts.projectType filters conditional_on consumes exactly as
  *  validateScope does. opts.label names the grid in messages (defaults to
- *  "proposed grid"). */
+ *  "proposed grid"). opts.graph supplies an immutable compiled-graph snapshot
+ *  for callers that must not re-read the process-global graph loader. */
 export function validateGrid(
-  grid: Record<string, string>,
+  grid: Readonly<Record<string, string>>,
   opts?: {
     projectType?: "brownfield" | "greenfield";
     strict?: boolean;
     label?: string;
+    graph?: readonly GraphStage[];
   }
 ): ScopeValidation {
   const label = opts?.label ?? "proposed grid";
-  const graph = loadGraph();
+  const graph = opts?.graph ?? loadGraph();
   const knownSlugs = new Set(graph.map((s) => s.slug));
   const errors: string[] = [];
   const advisories: string[] = [];
@@ -1604,15 +1606,19 @@ export function previewScopeCost(scope: string, grid: ScopeGrid): ScopeSummary {
  *    loadStageGraph() call.
  *
  *  Honours the AMADEUS_STAGES_DIR (stagesDir) and AMADEUS_STAGE_GRAPH
- *  (loadStageGraph) seams so a test can point both sources at a temp tree. */
-export function stageGraphDrift(): {
+ *  (loadStageGraph) seams so a test can point both sources at a temp tree.
+ *  Snapshot-aware callers may instead pass both values explicitly. */
+export function stageGraphDrift(opts?: {
+  graph?: readonly StageEntry[];
+  stagesRoot?: string;
+}): {
   missingFiles: string[];
   uncompiledStages: string[];
   graphCount: number;
 } {
-  const graphSlugs = new Set(loadStageGraph().map((s) => s.slug));
+  const graphSlugs = new Set((opts?.graph ?? loadStageGraph()).map((s) => s.slug));
   const diskSlugs = new Set<string>();
-  const root = stagesDir();
+  const root = opts?.stagesRoot ?? stagesDir();
   for (const phase of PHASES) {
     const dir = join(root, phase);
     if (!existsSync(dir)) continue;

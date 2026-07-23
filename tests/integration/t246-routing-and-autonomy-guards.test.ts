@@ -9,7 +9,11 @@ import { join } from "node:path";
 import { isPendingComposeStop } from "../../packages/framework/core/hooks/amadeus-stop.ts";
 import { hooksHealthDir } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
-import { handleDoctor, runUtilityMain } from "../../packages/framework/core/tools/amadeus-utility.ts";
+import {
+  handleDoctor,
+  resolveDoctorContext,
+  runUtilityMain,
+} from "../../packages/framework/core/tools/amadeus-utility.ts";
 
 const BUN = process.execPath;
 const ROOT = join(import.meta.dir, "..", "..");
@@ -254,44 +258,32 @@ describe("t246 production marker carrier", () => {
   });
 
   test("doctor projects fresh and stale marker state without mutating the marker", () => {
-    const originalExit = process.exit;
-    const originalWrite = process.stdout.write;
     const originalGraph = process.env.AMADEUS_STAGE_GRAPH;
     const root = project();
     const marker = join(root, "amadeus", ".amadeus-compose-pending");
     writeFileSync(marker, "pending\n", "utf-8");
     process.env.AMADEUS_STAGE_GRAPH = join(ROOT, "dist/claude/.claude/tools/data/stage-graph.json");
-    let output = "";
-    process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-      output += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8");
-      return true;
-    }) as typeof process.stdout.write;
-    process.exit = ((code?: number): never => { throw new ExitSignal(code ?? 0); }) as typeof process.exit;
     try {
-      expect(() => handleDoctor(root)).toThrow(ExitSignal);
+      const context = resolveDoctorContext(root);
+      let output = handleDoctor(context).output;
       expect(output).toContain("Compose approval marker: fresh");
       const before = readFileSync(marker, "utf-8");
       utimesSync(marker, new Date(0), new Date(0));
-      output = "";
-      expect(() => handleDoctor(root)).toThrow(ExitSignal);
+      output = handleDoctor(context).output;
       expect(output).toContain("Compose approval marker: stale");
       expect(readFileSync(marker, "utf-8")).toBe(before);
 
       utimesSync(marker, new Date(-1), new Date(-1));
-      output = "";
-      expect(() => handleDoctor(root)).toThrow(ExitSignal);
+      output = handleDoctor(context).output;
       expect(output).toContain("Compose approval marker: unreadable");
       expect(readFileSync(marker, "utf-8")).toBe(before);
 
       const unreadableRoot = mkdtempSync(join(tmpdir(), "amadeus-t246-unreadable-"));
       roots.push(unreadableRoot);
       writeFileSync(join(unreadableRoot, "amadeus"), "not-a-directory\n", "utf-8");
-      output = "";
-      expect(() => handleDoctor(unreadableRoot)).toThrow(ExitSignal);
+      output = handleDoctor(resolveDoctorContext(unreadableRoot)).output;
       expect(output).toContain("Compose approval marker: unreadable");
     } finally {
-      process.exit = originalExit;
-      process.stdout.write = originalWrite;
       if (originalGraph === undefined) delete process.env.AMADEUS_STAGE_GRAPH;
       else process.env.AMADEUS_STAGE_GRAPH = originalGraph;
     }

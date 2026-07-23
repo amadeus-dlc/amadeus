@@ -18,7 +18,6 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { appendAuditEntry, appendAuditEntryUnlocked } from "./amadeus-audit.ts";
 import {
-  artifactsRegistry,
   findCycles,
   frameworkMemorySeedDir,
   loadGraph,
@@ -28,8 +27,8 @@ import {
   previewScopeCost,
   stageGraphDrift,
   validateGrid,
-  validateScope,
 } from "./amadeus-graph.ts";
+import type { GraphStage, RuleFile } from "./amadeus-graph.ts";
 import { repointHarnessIncludes } from "./amadeus-includes.ts";
 import {
   activeIntent,
@@ -66,6 +65,7 @@ import {
   listSpaces,
   loadAgents,
   loadScopeMapping,
+  type AgentMetadata,
   type MarkerObservation,
   CHECKBOX_MAP,
   STAGE_PROGRESS_HEADER_COMMENT,
@@ -103,12 +103,12 @@ import {
   validScopes,
   worktreeAuditFilePath,
   worktreeBaseDir,
-  worktreePath,
   worktreeStateFilePath,
   writeSessionIntentUuid,
   writeStateFile,
   harnessDir,
   rulesSubdir,
+  type ScopeDefinition,
 } from "./amadeus-lib.ts";
 import { settingsDoctorCheck } from "./amadeus-settings.ts";
 import { validateStageFrontmatter } from "./amadeus-stage-schema.ts";
@@ -432,6 +432,142 @@ export interface DoctorCheck {
   fix?: string;
 }
 
+export type DeepReadonly<T> =
+  T extends (...args: never[]) => unknown ? T
+    : T extends Map<infer K, infer V> ? ReadonlyMap<DeepReadonly<K>, DeepReadonly<V>>
+    : T extends Set<infer U> ? ReadonlySet<DeepReadonly<U>>
+    : T extends readonly (infer U)[] ? readonly DeepReadonly<U>[]
+    : T extends object ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
+    : T;
+
+export interface DoctorContext {
+  readonly projectDir: string;
+  readonly harnessDir: string;
+  readonly rulesSubdir: string;
+  readonly worktreeBaseDir: string;
+  readonly platform: NodeJS.Platform;
+  readonly homeDir: string | undefined;
+  readonly codexHomeDir: string;
+  readonly defaultScope: string;
+  readonly migrationDoctor: boolean;
+  readonly heartbeatSwapTarget: string | undefined;
+  readonly healthDirSwapTarget: string | undefined;
+  readonly nowMs: number;
+  readonly graph: DeepReadonly<GraphStage[]>;
+  readonly rules: DeepReadonly<RuleFile[]>;
+  readonly agents: DeepReadonly<AgentMetadata[]>;
+  readonly scopeMapping: DeepReadonly<Record<string, ScopeDefinition>>;
+  readonly artifactNames: readonly string[];
+}
+
+export interface DoctorRunResult {
+  readonly exitCode: 0 | 1;
+  readonly output: string;
+}
+
+type DoctorCheckResult = DoctorCheck;
+
+class DoctorPostOutputError extends Error {
+  constructor(
+    readonly output: string,
+    readonly originalCause: unknown,
+  ) {
+    super("Doctor failed after completing its output");
+    this.name = "DoctorPostOutputError";
+  }
+}
+
+function freezeDoctorCollectionMethods(value: Map<unknown, unknown> | Set<unknown>): void {
+  const rejectMutation = (): never => {
+    throw new TypeError("Doctor context snapshots are immutable");
+  };
+  const descriptors: PropertyDescriptorMap = value instanceof Map
+    ? {
+        set: { value: rejectMutation },
+        delete: { value: rejectMutation },
+        clear: { value: rejectMutation },
+      }
+    : {
+        add: { value: rejectMutation },
+        delete: { value: rejectMutation },
+        clear: { value: rejectMutation },
+      };
+  Object.defineProperties(value, descriptors);
+}
+
+export function deepFreezeDoctorSnapshot<T>(value: T): DeepReadonly<T> {
+  if (value === null || typeof value !== "object" || Object.isFrozen(value)) {
+    return value as DeepReadonly<T>;
+  }
+  if (value instanceof Map) {
+    for (const [key, entry] of value) {
+      deepFreezeDoctorSnapshot(key);
+      deepFreezeDoctorSnapshot(entry);
+    }
+    freezeDoctorCollectionMethods(value);
+  } else if (value instanceof Set) {
+    for (const entry of value) deepFreezeDoctorSnapshot(entry);
+    freezeDoctorCollectionMethods(value);
+  } else {
+    for (const key of Reflect.ownKeys(value)) {
+      deepFreezeDoctorSnapshot((value as Record<PropertyKey, unknown>)[key]);
+    }
+  }
+  return Object.freeze(value) as DeepReadonly<T>;
+}
+
+function doctorArtifactNames(graph: readonly DeepReadonly<GraphStage>[]): string[] {
+  const names = new Set<string>();
+  for (const stage of graph) {
+    for (const name of stage.produces ?? []) names.add(name);
+    for (const name of stage.optional_produces ?? []) names.add(name);
+  }
+  return [...names].sort();
+}
+
+export function resolveDoctorContext(projectDir: string): DoctorContext {
+  const resolvedHarnessDir = harnessDir();
+  const resolvedRulesSubdir = rulesSubdir();
+  const resolvedWorktreeBaseDir = worktreeBaseDir(projectDir);
+  const platform = process.platform;
+  const homeDir = process.env.HOME;
+  const codexHomeDir = process.env.CODEX_HOME ?? join(homeDir ?? "", ".codex");
+  const defaultScope = (process.env.AMADEUS_DEFAULT_SCOPE ?? "").trim();
+  const migrationDoctor = process.env.AMADEUS_MIGRATION_DOCTOR === "1";
+  const testMode = process.env.NODE_ENV === "test";
+  const heartbeatSwapTarget = testMode
+    ? process.env.AMADEUS_DOCTOR_TEST_SWAP_HEARTBEAT_TARGET
+    : undefined;
+  const healthDirSwapTarget = testMode
+    ? process.env.AMADEUS_DOCTOR_TEST_SWAP_HEALTH_DIR_TARGET
+    : undefined;
+  const nowMs = Date.now();
+  const graph = deepFreezeDoctorSnapshot(structuredClone(loadGraph()));
+  const rules = deepFreezeDoctorSnapshot(structuredClone(loadRules()));
+  const agents = deepFreezeDoctorSnapshot(structuredClone(loadAgents()));
+  const scopeMapping = deepFreezeDoctorSnapshot(structuredClone(loadScopeMapping()));
+  const artifactNames = deepFreezeDoctorSnapshot(doctorArtifactNames(graph));
+  return Object.freeze({
+    projectDir,
+    harnessDir: resolvedHarnessDir,
+    rulesSubdir: resolvedRulesSubdir,
+    worktreeBaseDir: resolvedWorktreeBaseDir,
+    platform,
+    homeDir,
+    codexHomeDir,
+    defaultScope,
+    migrationDoctor,
+    heartbeatSwapTarget,
+    healthDirSwapTarget,
+    nowMs,
+    graph,
+    rules,
+    agents,
+    scopeMapping,
+    artifactNames,
+  });
+}
+
 interface HookHeartbeatInspection {
   directoryExists: boolean;
   entries: string[];
@@ -456,18 +592,20 @@ function closeHeartbeat(fd: number): void {
   try { closeSync(fd); } catch { /* Best-effort cleanup after a rejected read. */ }
 }
 
-function injectHeartbeatSwapForTest(path: string): void {
-  const target = process.env.AMADEUS_DOCTOR_TEST_SWAP_HEARTBEAT_TARGET;
-  if (process.env.NODE_ENV !== "test" || !target) return;
+function injectHeartbeatSwapForTest(path: string, target: string | undefined): void {
+  if (!target) return;
   rmSync(path, { force: true });
   symlinkSync(target, path);
 }
 
-function injectHeartbeatDirectorySwapForTest(path: string): void {
-  const target = process.env.AMADEUS_DOCTOR_TEST_SWAP_HEALTH_DIR_TARGET;
-  if (process.env.NODE_ENV !== "test" || !target) return;
+function injectHeartbeatDirectorySwapForTest(
+  path: string,
+  target: string | undefined,
+  platform: NodeJS.Platform,
+): void {
+  if (!target) return;
   rmSync(path, { recursive: true, force: true });
-  symlinkSync(target, path, process.platform === "win32" ? "junction" : "dir");
+  symlinkSync(target, path, platform === "win32" ? "junction" : "dir");
 }
 
 function matchesRealDirectory(path: string, expected: Stats): boolean {
@@ -478,12 +616,12 @@ function matchesRealDirectory(path: string, expected: Stats): boolean {
     sameFileIdentity(current, expected);
 }
 
-function openHeartbeatNoFollow(path: string): number | null {
+function openHeartbeatNoFollow(path: string, swapTarget: string | undefined): number | null {
   let fd: number | null = null;
   try {
     const before = lstatSync(path);
     if (before.isSymbolicLink() || !before.isFile()) return null;
-    injectHeartbeatSwapForTest(path);
+    injectHeartbeatSwapForTest(path, swapTarget);
     const noFollow = typeof fsConstants.O_NOFOLLOW === "number"
       ? fsConstants.O_NOFOLLOW
       : 0;
@@ -504,8 +642,8 @@ function openHeartbeatNoFollow(path: string): number | null {
   }
 }
 
-function readHeartbeatTimestamp(path: string): string | null {
-  const fd = openHeartbeatNoFollow(path);
+function readHeartbeatTimestamp(path: string, swapTarget: string | undefined): string | null {
+  const fd = openHeartbeatNoFollow(path, swapTarget);
   if (fd === null) return null;
   try {
     return readFileSync(fd, "utf-8").trim();
@@ -514,13 +652,23 @@ function readHeartbeatTimestamp(path: string): string | null {
   }
 }
 
-function inspectHookHeartbeats(healthDir: string): HookHeartbeatInspection {
+function inspectHookHeartbeats(
+  healthDir: string,
+  options: Pick<
+    DoctorContext,
+    "platform" | "heartbeatSwapTarget" | "healthDirSwapTarget"
+  >,
+): HookHeartbeatInspection {
   const directoryStat = lstatOrNull(healthDir);
   if (directoryStat === null) return { directoryExists: false, entries: [] };
   if (directoryStat.isSymbolicLink() || !directoryStat.isDirectory()) {
     return { directoryExists: true, entries: [] };
   }
-  injectHeartbeatDirectorySwapForTest(healthDir);
+  injectHeartbeatDirectorySwapForTest(
+    healthDir,
+    options.healthDirSwapTarget,
+    options.platform,
+  );
   if (!matchesRealDirectory(healthDir, directoryStat)) {
     return { directoryExists: true, entries: [] };
   }
@@ -534,7 +682,7 @@ function inspectHookHeartbeats(healthDir: string): HookHeartbeatInspection {
     for (const file of files) {
       if (!matchesRealDirectory(healthDir, directoryStat)) return { directoryExists: true, entries: [] };
       const path = join(healthDir, file);
-      const timestamp = readHeartbeatTimestamp(path);
+      const timestamp = readHeartbeatTimestamp(path, options.heartbeatSwapTarget);
       if (!matchesRealDirectory(healthDir, directoryStat)) return { directoryExists: true, entries: [] };
       if (timestamp !== null) {
         entries.push(`${file.slice(0, -".last".length)} ${timestamp}`);
@@ -546,15 +694,21 @@ function inspectHookHeartbeats(healthDir: string): HookHeartbeatInspection {
   return { directoryExists: true, entries };
 }
 
-export function hookHeartbeatDoctorCheck(projectDir: string): DoctorCheck {
-  if (process.env.AMADEUS_MIGRATION_DOCTOR === "1") {
+export function hookHeartbeatDoctorCheck(
+  projectDir: string,
+  options: Pick<
+    DoctorContext,
+    "migrationDoctor" | "platform" | "heartbeatSwapTarget" | "healthDirSwapTarget"
+  >,
+): DoctorCheck {
+  if (options.migrationDoctor) {
     return {
       pass: true,
       label:
         "Hook heartbeats: not inspected during migration (runtime scratch is intentionally discarded)",
     };
   }
-  const heartbeat = inspectHookHeartbeats(hooksHealthDir(projectDir));
+  const heartbeat = inspectHookHeartbeats(hooksHealthDir(projectDir), options);
   if (heartbeat.entries.length > 0) {
     return {
       pass: true,
@@ -578,25 +732,25 @@ export function hookHeartbeatDoctorCheck(projectDir: string): DoctorCheck {
 // pre-seeded in $CODEX_HOME/config.toml; layer 1 is the gate — without a
 // [projects."<dir>"] entry Codex skips this project's whole .codex hook layer
 // with NO warning, so layer 2 (hook trust) never even runs. This function holds
-// every branch (migration carve-out + present/absent) so the unit test drives
-// it in-process — handleDoctor itself is spawn-only (t83 header) and bun
-// --coverage does not measure a spawned subprocess. The single
-// `results.push(codexProjectTrustDoctorCheck(projectDir))` wiring line inside
-// handleDoctor is the only spawn-only line this check adds.
-export function codexProjectTrustDoctorCheck(projectDir: string): DoctorCheck {
+// every branch (migration carve-out + present/absent) so both this helper and
+// handleDoctor's check wiring are covered in-process. Separate CLI tests retain
+// the process-boundary stdout/exit contract.
+export function codexProjectTrustDoctorCheck(
+  projectDir: string,
+  options: Pick<DoctorContext, "migrationDoctor" | "codexHomeDir">,
+): DoctorCheck {
   const projectTrustKey = `[projects."${projectDir}"]`;
   // Project trust is seeded at team-up runtime (or manually), not by migration
   // — same class as the hook-heartbeat scratch. A fresh migration has none yet,
   // so the check is not inspected under AMADEUS_MIGRATION_DOCTOR (mirrors
   // hookHeartbeatDoctorCheck) to keep the post-migration doctor gate green.
-  if (process.env.AMADEUS_MIGRATION_DOCTOR === "1") {
+  if (options.migrationDoctor) {
     return {
       pass: true,
       label: "project trust: not inspected during migration (seeded at team-up runtime)",
     };
   }
-  const codexHome = process.env.CODEX_HOME ?? join(process.env.HOME ?? "", ".codex");
-  const codexConfig = join(codexHome, "config.toml");
+  const codexConfig = join(options.codexHomeDir, "config.toml");
   const projectTrusted =
     existsSync(codexConfig) && readFileSync(codexConfig, "utf-8").includes(projectTrustKey);
   return {
@@ -619,8 +773,8 @@ export function codexProjectTrustDoctorCheck(projectDir: string): DoctorCheck {
 //       the user to copy from the retired dist/ tree.
 //   (c) both present -> ready. PASS with the canonical label (unchanged).
 // Pure over booleans (existence probed by the caller) + the harness dir name,
-// so it is driven in-process by the unit test — handleDoctor itself is
-// spawn-only (t83 header).
+// so the helper and handleDoctor wiring are driven in-process; t83 separately
+// protects the CLI process boundary.
 export function classifyWorkspaceShellState(
   harnessExists: boolean,
   memoryExists: boolean,
@@ -650,12 +804,10 @@ export function classifyWorkspaceShellState(
 // phases. The three functions below split the check into pure judgment seams
 // (phaseProgressResidual, classifyPhaseProgressConsistency) plus the I/O
 // collector (checkPhaseProgressConsistency), so every branch is driven
-// in-process by the unit test — handleDoctor itself is spawn-only (t83 header),
-// and bun --coverage does not measure a spawned subprocess. Advisory PASS by
-// design: the historical pre-#880 records all carry this residue, so a FAIL
-// would make doctor exit 1 on every existing workspace. The single
-// `results.push(checkPhaseProgressConsistency(projectDir))` wiring line inside
-// handleDoctor is the only spawn-only line this check adds.
+// in-process by unit/integration tests. CLI spawn tests independently protect
+// the stdout/exit boundary. Advisory PASS by design: the historical pre-#880
+// records all carry this residue, so a FAIL would make doctor exit 1 on every
+// existing workspace.
 
 // Residual phases for ONE intent. Empty ⇒ consistent. A non-Completed status is
 // never a residue (a Running intent's Active phase is normal), so the gate
@@ -981,12 +1133,31 @@ function codexHooksProjectDoctorCheck(projectDir: string): DoctorCheck {
   };
 }
 
-export function handleDoctor(projectDir: string): void {
-  const results: Array<{ pass: boolean; label: string; fix?: string }> = [];
-  const isWindows = process.platform === "win32";
+export function handleDoctor(context: DoctorContext): DoctorRunResult {
+  const {
+    projectDir,
+    harnessDir: harness,
+    rulesSubdir: resolvedRulesSubdir,
+    worktreeBaseDir: resolvedWorktreeBaseDir,
+    platform,
+    homeDir,
+    codexHomeDir,
+    defaultScope,
+    migrationDoctor,
+    heartbeatSwapTarget,
+    healthDirSwapTarget,
+    nowMs,
+    graph,
+    rules,
+    agents,
+    scopeMapping,
+    artifactNames,
+  } = context;
+  const results: DoctorCheckResult[] = [];
+  const isWindows = platform === "win32";
 
   // 1. bun installed — check PATH (Bun.which handles Windows .exe suffix automatically)
-  const bunHome = process.env.HOME ? join(process.env.HOME, ".bun", "bin", "bun") : "";
+  const bunHome = homeDir ? join(homeDir, ".bun", "bin", "bun") : "";
   const bunFound = Bun.which("bun") !== null || (bunHome !== "" && existsSync(bunHome));
   results.push({
     pass: bunFound,
@@ -1014,7 +1185,7 @@ export function handleDoctor(projectDir: string): void {
   }
   const composeMarker = inspectComposeMarker(
     composeMarkerObservation,
-    Date.now(),
+    nowMs,
     COMPOSE_MARKER_TTL_MS,
   );
   if (composeMarker.kind === "fresh") {
@@ -1040,7 +1211,6 @@ export function handleDoctor(projectDir: string): void {
   // executable bit needed). The core hook bodies ship in EVERY harness tree; the
   // Kiro and Codex trees additionally carry an authored stdin adapter that wires
   // them up.
-  const harness = harnessDir();
   if (harness === ".claude") {
     // Claude Code: the EXPECTED roster is the set of amadeus-*.ts hooks that
     // settings.json actually wires (its `hooks` event blocks + the `statusLine`
@@ -1187,11 +1357,12 @@ export function handleDoctor(projectDir: string): void {
       });
     }
     // Codex trust is two layers, both pre-seeded in $CODEX_HOME/config.toml.
-    // Layer 1 (project trust) is the gate; codexProjectTrustDoctorCheck holds
-    // all its judgment (migration carve-out + present/absent) so the unit test
-    // drives every branch in-process. This wiring line is the only spawn-only
-    // line the check adds — handleDoctor itself is never called in-process.
-    results.push(codexProjectTrustDoctorCheck(projectDir));
+    // Layer 1 (project trust) is the gate; the helper and this wiring are
+    // exercised in-process, while separate CLI tests retain stdout/exit parity.
+    results.push(codexProjectTrustDoctorCheck(projectDir, {
+      migrationDoctor,
+      codexHomeDir,
+    }));
     // Hook trust pre-seed reminder (advisory pass-with-label): even with project
     // trust, untrusted hooks never fire (the bypass flag does not run them).
     results.push({
@@ -1229,13 +1400,13 @@ export function handleDoctor(projectDir: string): void {
   // Only observable inside a Claude Code session (where settings.json env is exposed
   // to Bash invocations). When doctor is invoked directly via bun, the env is unset
   // and we report "unset — no project default" as a pass.
-  const envScope = (process.env.AMADEUS_DEFAULT_SCOPE || "").trim();
+  const envScope = defaultScope;
   if (envScope === "") {
     results.push({
       pass: true,
       label: "AMADEUS_DEFAULT_SCOPE (unset — no project default)",
     });
-  } else if (validScopes().has(envScope)) {
+  } else if (Object.hasOwn(scopeMapping, envScope)) {
     results.push({
       pass: true,
       label: `AMADEUS_DEFAULT_SCOPE=${envScope} (valid)`,
@@ -1244,19 +1415,18 @@ export function handleDoctor(projectDir: string): void {
     results.push({
       pass: false,
       label: `AMADEUS_DEFAULT_SCOPE=${envScope} (invalid)`,
-      fix: `valid values: ${[...validScopes()].join(", ")}`,
+      fix: `valid values: ${Object.keys(scopeMapping).sort().join(", ")}`,
     });
   }
 
-  // 4b. Canonical settings.json (U3) — spawn-only wiring, precedent Check 8's
-  // checkPhaseProgressConsistency line: the judgment lives in the in-process-
-  // tested settingsDoctorCheck seam.
+  // 4b. Canonical settings.json (U3) — the judgment lives in the in-process-
+  // tested settingsDoctorCheck seam and handleDoctor wiring is covered by t257.
   results.push(settingsDoctorCheck(projectDir));
 
   // 4c. Standing delegation grant (#1125) — informational: is a team-mode
   // standing grant currently opening stage gates, or is per-gate approval in
   // force? Judgment lives in the in-process-tested standingGrantDoctorCheck seam.
-  results.push(standingGrantDoctorCheck(projectDir, Date.now()));
+  results.push(standingGrantDoctorCheck(projectDir, nowMs));
 
   // 4d. Elections registry ⇄ directory drift (advisory) — does the default
   // space's elections.json agree with the on-disk election dirs? Always
@@ -1275,9 +1445,9 @@ export function handleDoctor(projectDir: string): void {
   // always-shipped baseline rather than a (possibly absent) switched-to space.
   // The harness includes are committed (generated-on-demand only for their
   // pointer), so their presence is not part of shell-readiness.
-  const harnessEngineDir = join(projectDir, harnessDir());
+  const harnessEngineDir = join(projectDir, harness);
   const defaultMemoryDir = memoryDirFor(projectDir, DEFAULT_SPACE);
-  results.push(classifyWorkspaceShellState(existsSync(harnessEngineDir), existsSync(defaultMemoryDir), harnessDir()));
+  results.push(classifyWorkspaceShellState(existsSync(harnessEngineDir), existsSync(defaultMemoryDir), harness));
 
   // 6. Hook heartbeats
   // Three states:
@@ -1286,7 +1456,12 @@ export function handleDoctor(projectDir: string): void {
   //   (b) Directory exists but no .last files → hooks registered but have
   //       never fired. Genuine drift; fail.
   //   (c) Directory has .last files → hooks are working; pass with timestamps.
-  results.push(hookHeartbeatDoctorCheck(projectDir));
+  results.push(hookHeartbeatDoctorCheck(projectDir, {
+    migrationDoctor,
+    platform,
+    heartbeatSwapTarget,
+    healthDirSwapTarget,
+  }));
 
   // State / audit drift check — if latest audit event implies the state file
   // should be in a certain shape (e.g., Status=Completed after WORKFLOW_COMPLETED),
@@ -1439,7 +1614,7 @@ export function handleDoctor(projectDir: string): void {
   // or absent — the issue 75 line 215 "fail-clean on no-worktrees" guarantee.
   // ---------------------------------------------------------------------------
   try {
-    const worktreesDir = join(worktreeBaseDir(projectDir), ".amadeus", "worktrees");
+    const worktreesDir = join(resolvedWorktreeBaseDir, ".amadeus", "worktrees");
     let observed = 0;
     let activeForks = 0;
     let preservedByAbort = 0;
@@ -1568,7 +1743,7 @@ export function handleDoctor(projectDir: string): void {
 
       const stale: string[] = [];
       for (const slug of branchSlugs) {
-        const wtDir = worktreePath(projectDir, slug);
+        const wtDir = join(resolvedWorktreeBaseDir, ".amadeus", "worktrees", `bolt-${slug}`);
         if (existsSync(wtDir)) continue; // worktree intact — branch is live
         // Worktree gone — needs a terminal audit row to be legitimate.
         if (slugTerminated(slug)) continue;
@@ -1606,7 +1781,7 @@ export function handleDoctor(projectDir: string): void {
   // STATE_MERGED never landed.
   // ---------------------------------------------------------------------------
   try {
-    const worktreesDir = join(worktreeBaseDir(projectDir), ".amadeus", "worktrees");
+    const worktreesDir = join(resolvedWorktreeBaseDir, ".amadeus", "worktrees");
     const orphan: string[] = [];
     let observed = 0;
 
@@ -1682,7 +1857,8 @@ export function handleDoctor(projectDir: string): void {
       // Sub-case (a): no terminal pairing — is the worktree audit on disk?
       // If yes, we're mid-fork (orphan-delta — sub-case b). If no, the fork
       // emitted but disk copy never landed.
-      const wtAudit = worktreeAuditFilePath(worktreePath(projectDir, slug));
+      const wtPath = join(resolvedWorktreeBaseDir, ".amadeus", "worktrees", `bolt-${slug}`);
+      const wtAudit = worktreeAuditFilePath(wtPath);
       if (!existsSync(wtAudit)) {
         forkedDriftDisk.push(slug);
         continue;
@@ -1784,7 +1960,7 @@ export function handleDoctor(projectDir: string): void {
             fix: `Practices Affirmed Timestamp value "${value}" is not a valid ISO 8601 datetime. Re-run practices-discovery (stage 2.2) to re-affirm.`,
           });
         } else {
-          const ageDays = Math.floor((Date.now() - affirmed) / (1000 * 60 * 60 * 24));
+          const ageDays = Math.floor((nowMs - affirmed) / (1000 * 60 * 60 * 24));
           if (ageDays < 0) {
             // Future-dated timestamp — clock skew or hand-edit. Advisory pass
             // so doctor doesn't fail loud, but surfaces the anomaly.
@@ -1825,7 +2001,7 @@ export function handleDoctor(projectDir: string): void {
   try {
     const invokedRows = findAllEvents(auditMd, "MERGE_DISPATCH_INVOKED");
     let orphans = 0;
-    const now = Date.now();
+    const now = nowMs;
     // Pair-match per slug: each terminal row (RETURNED or FALLBACK) consumed
     // by at most one preceding INVOKED. Without consumption tracking, two
     // consecutive INVOKED + 1 RETURNED for the same slug would report 0
@@ -1886,7 +2062,7 @@ export function handleDoctor(projectDir: string): void {
 
   // Cycle detection — findCycles returns [] on a healthy DAG
   try {
-    const cycles = findCycles(loadGraph());
+    const cycles = findCycles(graph as GraphStage[]);
     results.push({
       pass: cycles.length === 0,
       label: cycles.length === 0
@@ -1904,7 +2080,7 @@ export function handleDoctor(projectDir: string): void {
     });
   }
 
-  // Stage-graph <-> disk drift, both directions (stageGraphDrift()):
+  // Stage-graph <-> disk drift, both directions:
   //   - graph->disk (missingFiles): a slug in stage-graph.json with no
   //     <phase>/<slug>.md on disk. Real runtime breakage (conductor handed a
   //     path to a missing file) -> hard FAIL.
@@ -1915,7 +2091,10 @@ export function handleDoctor(projectDir: string): void {
   //     act -> ADVISORY (pass:true; does not fail the doctor exit code, mirroring
   //     the rule-drift / MERGE_DISPATCH advisory rows).
   try {
-    const { missingFiles, uncompiledStages, graphCount } = stageGraphDrift();
+    const { missingFiles, uncompiledStages, graphCount } = stageGraphDrift({
+      graph: graph as readonly GraphStage[],
+      stagesRoot: join(TOOLS_DIR, "..", "amadeus-common", "stages"),
+    });
     results.push({
       pass: missingFiles.length === 0,
       label: missingFiles.length === 0
@@ -1932,7 +2111,7 @@ export function handleDoctor(projectDir: string): void {
       pass: true,
       label: uncompiledStages.length === 0
         ? "Uncompiled stage files: 0 stage files missing from the compiled graph"
-        : `Uncompiled stage files: ${uncompiledStages.length} stage file(s) not in the compiled graph (advisory, will not execute until recompiled): ${uncompiledStages.join(", ")} - run \`bun ${harnessDir()}/tools/amadeus-graph.ts compile\` to include them`,
+        : `Uncompiled stage files: ${uncompiledStages.length} stage file(s) not in the compiled graph (advisory, will not execute until recompiled): ${uncompiledStages.join(", ")} - run \`bun ${harness}/tools/amadeus-graph.ts compile\` to include them`,
     });
   } catch (e) {
     results.push({
@@ -1942,15 +2121,18 @@ export function handleDoctor(projectDir: string): void {
     });
   }
 
-  // Scope validation — run validateScope over all 9 scopes, tally errors
+  // Scope validation — validate every resolved scope, tally errors
   // and advisories. Repo-level setup check, not workflow-state.
   try {
-    const scopes = [...validScopes()];
+    const scopes = Object.keys(scopeMapping).sort();
     let totalErrors = 0;
     let totalAdvisories = 0;
     const failingScopes: { scope: string; errors: string[] }[] = [];
     for (const scope of scopes) {
-      const r = validateScope(scope);
+      const r = validateGrid(scopeMapping[scope].stages, {
+        label: scope,
+        graph: graph as readonly GraphStage[],
+      });
       totalAdvisories += r.advisories.length;
       if (r.errors.length > 0) {
         totalErrors += r.errors.length;
@@ -1980,8 +2162,7 @@ export function handleDoctor(projectDir: string): void {
   // "N/N valid" when files are missing (that's the orphan-files check's job).
   try {
     const stagesDir = join(TOOLS_DIR, "..", "amadeus-common", "stages");
-    const graph = loadStageGraph();
-    const agentSlugs = loadAgents().map((a) => a.slug);
+    const agentSlugs = agents.map((agent) => agent.slug);
     const schemaFails: { slug: string; errors: string[] }[] = [];
     let attempted = 0;
     for (const stage of graph) {
@@ -2027,9 +2208,8 @@ export function handleDoctor(projectDir: string): void {
   // must resolve to something real. Catches typos that pure schema-lint
   // and scope-walk both miss.
   try {
-    const graph = loadStageGraph();
     const allSlugs = new Set(graph.map((s) => s.slug));
-    const allArtifacts = artifactsRegistry();
+    const allArtifacts = new Set(artifactNames);
     const refFails: string[] = [];
     for (const stage of graph) {
       for (const c of stage.consumes ?? []) {
@@ -2064,8 +2244,7 @@ export function handleDoctor(projectDir: string): void {
   // the other direction; this check inverts it to scan for collisions.
   try {
     const keywordToScopes = new Map<string, string[]>();
-    const mapping = loadScopeMapping();
-    for (const [scope, def] of Object.entries(mapping)) {
+    for (const [scope, def] of Object.entries(scopeMapping)) {
       for (const kw of def.keywords ?? []) {
         const list = keywordToScopes.get(kw) ?? [];
         list.push(scope);
@@ -2110,7 +2289,6 @@ export function handleDoctor(projectDir: string): void {
   // the same `raw` loadRules reads under rulesDir(), honouring
   // AMADEUS_RULES_DIR), never a second read from the relative .path.
   try {
-    const rules = loadRules();
     const org = rules.find(
       (r) => r.scope === "org" && r.path.endsWith("org.md")
     );
@@ -2184,13 +2362,13 @@ export function handleDoctor(projectDir: string): void {
   // it must create nothing. On a project with a born intent the emit fires
   // exactly as before (BARE appendAuditEvent — the only throw is a real write
   // failure, which the rest of the codebase lets propagate).
-  const pairedRules = loadRules();
+  const pairedRules = rules;
   // sensors_applicable is REQUIRED on a compiled graph node, but a
   // hand-rolled or pre-milestone-9 graph JSON can omit it; `?? []` keeps this
   // advisory row from crashing doctor on a malformed/legacy graph (the
   // same defensive posture the cycle/orphan/scope checks take above).
   const sensorIds = new Set(
-    loadGraph().flatMap((n) => (n.sensors_applicable ?? []).map((s) => s.id))
+    graph.flatMap((node) => (node.sensors_applicable ?? []).map((sensor) => sensor.id)),
   );
   let pairM = 0;
   let pairX = 0;
@@ -2288,7 +2466,7 @@ export function handleDoctor(projectDir: string): void {
   if (auditExists) {
     appendAuditEvent(projectDir, "GUARDRAIL_LOADED", {
       Scope: "all",
-      Path: `${harnessDir()}/${rulesSubdir()}/`,
+      Path: `${harness}/${resolvedRulesSubdir}/`,
       "Rule count": String(pairedRules.length),
     });
   }
@@ -2341,23 +2519,24 @@ export function handleDoctor(projectDir: string): void {
   output += `${"\u2500".repeat(37)}\n`;
   output += `${passed} passed, ${failed} failed\n`;
 
-  process.stdout.write(output);
-
   // Audit only if audit.md already existed when doctor started (cold-safe —
   // see auditExists above). A pristine project gets the stdout report and no
   // file side effects; an initialized project records HEALTH_CHECKED as before.
   if (auditExists) {
-    appendAuditEvent(projectDir, "HEALTH_CHECKED", {
-      Request: `/amadeus --doctor`,
-      Details: `${passed} passed, ${failed} failed`,
-    });
+    try {
+      appendAuditEvent(projectDir, "HEALTH_CHECKED", {
+        Request: `/amadeus --doctor`,
+        Details: `${passed} passed, ${failed} failed`,
+      });
+    } catch (error) {
+      throw new DoctorPostOutputError(output, error);
+    }
   }
 
-  // Exit non-zero on any check failure so CI and scripts get a clear
-  // signal. Doctor's stdout carries the diagnostic regardless of exit
-  // code — the orchestrator's tool-failure handler was updated in this
-  // same change to print stdout (not stderr) for doctor.
-  process.exit(failed > 0 ? 1 : 0);
+  return Object.freeze({
+    exitCode: failed > 0 ? 1 : 0,
+    output,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -5290,9 +5469,20 @@ export function runUtilityMain(): void {
     case "status":
       handleStatus(projectDir, flags);
       break;
-    case "doctor":
-      handleDoctor(projectDir);
+    case "doctor": {
+      try {
+        const result = handleDoctor(resolveDoctorContext(projectDir));
+        process.stdout.write(result.output);
+        process.exit(result.exitCode);
+      } catch (error) {
+        if (error instanceof DoctorPostOutputError) {
+          process.stdout.write(error.output);
+          throw error.originalCause;
+        }
+        throw error;
+      }
       break;
+    }
     case "migrate":
       handleMigrate(projectDir, positional, flags);
       break;

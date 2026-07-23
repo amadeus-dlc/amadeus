@@ -1,0 +1,13 @@
+{
+  "stage_slug": "reverse-engineering",
+  "selections": [
+    {
+      "candidate_id": "c1-857",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "Issue の起票時前提を現行仕様とはみなさず再実測する。`handleDoctor` は既に export され複数テストが直接呼び出しているため「本体全行が常に LCOV 非計測」は失効したが、正式な戻り値 seam と cwd/env/cache の明示依存化は未実装と解釈した",
+      "source": "orchestrator"
+    }
+  ]
+}

@@ -785,3 +785,13 @@ EQUIVALENT 候補は、`amadeus-orchestrate.ts:1961-1972` の全 batch 走査と
 
 - **検証機構の正しさ系(#705・#708)**: どちらも「偽の信頼を生む機構」= team.md/project.md の「検証劇場 Forbidden」の趣旨に直結。修正時は「落ちる実証」(失敗ケース注入で赤くなること)が team.md Mandated で要求される。
 - **共有ストア/参照の一貫性系(#706・#707)**: #693(origin 由来 repo 名)後の単一 codekb ストアという新しい共有面で、並行書き込み(#707)と tree 外参照(#706)が顕在化。
+
+## Issue #857 差分スキャン（2026-07-23）
+
+旧「`handleDoctor` は全行0 coverage」という評価は失効した。export 済みハンドラに対する monkeypatch 型 in-process テストは6ファイル104ケースが成功し、LCOV 437/771行 hit である。一方、t37/t83/t210 の spawn 契約41ケースは成功しても LCOV 1/771行 hit であり、別プロセス由来の観測盲点は存続する。
+
+主な技術的負債は、約1,371行の `handleDoctor` に検査編成・出力・終了・環境依存が集中していること、正式な戻り値 seam がないため `process.exit`・stdout・env の monkeypatch が重複すること、cwd と env/cache の暗黙依存である。
+
+## 品質改善の限定範囲
+
+推奨改善は `runUtilityMain → 薄い CLI wrapper → doctor core → checks/dependencies` の最小分割である。全 check の純関数化や5,205行の utility 全体の再編は行わない。成功判定は既存104ケースとspawn 41ケースの維持に加え、stdout 診断・集計、exit 0/1、audit、stale lock cleanup、CLI/cwd 契約が回帰しないこととする。

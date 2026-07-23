@@ -12,13 +12,11 @@
 // row, quoting the org sentence inline. The contradiction VERDICT is the
 // orchestrator-LLM's at observation time — doctor never blocks on it.
 //
-// SPAWN (not in-process): the handler is `handleDoctor(projectDir)` which
-// terminates with `process.exit(failed > 0 ? 1 : 0)` (amadeus-utility.ts:1385)
-// and writes its report via `process.stdout.write` (:1373). The rule-drift row
-// is only observable on that stdout, and the AMADEUS_RULES_DIR / AMADEUS_STAGE_GRAPH
-// fixture-isolation seams (amadeus-graph.ts:160-162) are evaluated inside the
-// subprocess. An in-process twin would lose the env-seam isolation and the
-// process.exit shell the .sh's `|| true` is written around. spawnCount = all.
+// SPAWN (not in-process): this suite preserves the CLI wrapper contract that
+// writes handleDoctor(context).output once and exits with its result code. The
+// AMADEUS_RULES_DIR / AMADEUS_STAGE_GRAPH fixture-isolation seams
+// (amadeus-graph.ts:160-162) are evaluated inside the subprocess, matching the
+// original shell suite's environment and `|| true` boundary. spawnCount = all.
 //
 // EXIT-CODE NOTE: the .sh runs `bun "$UTIL" doctor ... 2>&1 || true` — it
 // SWALLOWS the exit code, because a bare temp project fails the hook/settings

@@ -704,3 +704,15 @@ packaging 入力集合と source-unreferenced ギャップに焦点を絞った 
 - `code-quality-assessment.md` — #685・#670 のリスク評価節を追記、#675 を解消済みとして更新。
 - `business-overview.md` — 当該 intent の業務境界(2バグ)を追記。
 - `technology-stack.md`・`dependencies.md` — 変更なし(該当領域に新規依存・技術変更なし)、確認済みの旨のみ追記。
+
+## Issue #857 差分スキャン（2026-07-23）
+
+- Issue: [#857](https://github.com/amadeus-dlc/amadeus/issues/857)
+- Base: `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`
+- Observed: `abb5576d2fc162d69dd8ac8b87402e927609f279`
+- Date: `2026-07-23`
+- Focus: `handleDoctor` in-process seam and patch coverage
+
+## 差分スキャン結果
+
+`handleDoctor` は export 済みで、monkeypatch 型 in-process テスト6ファイル104ケースが成功し、LCOV 437/771行 hit を確認済みという入力事実を反映した。spawn 契約 t37/t83/t210 は41ケース成功、LCOV 1/771行 hit であり、spawn 盲点は継続する。本更新は既存 CodeKB を保持した差分追記で、対象9ファイルと `re-scans/260723-doctor-inprocess-seam.md` に限定した。
