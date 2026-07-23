@@ -1,4 +1,4 @@
-// covers: subcommand:amadeus-sensor-required-sections, function:templateEligibleArtifacts, function:memoryTemplatesDir, function:frameworkTemplatesDir
+// covers: subcommand:amadeus-sensor-required-sections, function:templateEligibleArtifacts, function:isMarkerArtifact, function:memoryTemplatesDir, function:frameworkTemplatesDir
 //
 // t155 — TPL: the template-override layer (one file, two readers).
 //
@@ -51,6 +51,7 @@ import {
 	memoryTemplatesDir,
 	templateEligibleArtifacts,
 } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
+import { isMarkerArtifact } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { existsSync, readdirSync } from "node:fs";
 
 const BUN = process.execPath; // the bun running this test
@@ -139,6 +140,13 @@ describe("t155 templateEligibleArtifacts (function unit, in-process)", () => {
       "requirements",
       "business-overview",
     ]);
+  });
+
+  test("isMarkerArtifact: canonical predicate matches marker suffixes only", () => {
+    expect(isMarkerArtifact("requirements-analysis-questions")).toBe(true);
+    expect(isMarkerArtifact("reverse-engineering-timestamp")).toBe(true);
+    expect(isMarkerArtifact("requirements")).toBe(false);
+    expect(isMarkerArtifact("")).toBe(false);
   });
 
   test("empty / nullish produces → empty eligible set", () => {
