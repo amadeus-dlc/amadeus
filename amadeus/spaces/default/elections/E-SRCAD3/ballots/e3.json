@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCAD3",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A 採用。実測: doctor の advisory 慣行(amadeus-utility.ts:1770-1776 の rule-drift advisory rows — pass:true+label 畳み込み)を直読し引用実在を確認。移行前の既存103件が「レジストリ不在」state になる以上、B/C は移行完了まで全 doctor 赤の導入順序カップリングを作る — E-SRCRA5 裁定 C(実実行は直前ユーザー承認)とも整合せず、導入と移行を分離できる A が唯一整合。hard 化は移行完了後の将来判断で足りる。自案非採用時の受容度: C=7 / B=7(いずれも導入順序カップリング)。",
+  "submittedAt": "2026-07-22T23:45:38Z"
+}

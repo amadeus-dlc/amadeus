@@ -1,0 +1,29 @@
+{
+  "electionId": "E-SRCAD1",
+  "kind": "clarification-question",
+  "question": "intent 260722-space-record-catalog / application-design の設計判断(verbatim 正本 = e2 ブランチ <record>/inception/application-design/application-design-questions.md、コミット bb07b2751 — git show で実測可)。Q1. elections の dirName 具体形。判断点: intents との規約対称性 vs E-code 視認性 vs 日付粒度。A は recordDirMatches 対称述語・自然ソート・既存 slugify(amadeus-lib.ts:1596-1607)再利用が最大。 各自実測確認のうえ、A/B/C 選択型につき自案非採用時の受容度1行併記+GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. <YYMMDD>-<slugify(electionId)> — intents 完全対称(例 260720-e-awatch)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. <YYMMDD>-<electionId 原形> — E-code 大文字保持(例 260720-E-AWATCH、slug 規約から逸脱)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. <YYYYMMDD>-<slugify(electionId)> — 4桁年(intents と非対称)"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他(票コメント指定)"
+    }
+  ],
+  "voters": [
+    "e3",
+    "e4",
+    "e5"
+  ],
+  "state": "recorded"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCAD2",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "初回移行で導出値を elections.json に固定し、以後の doctor/再実行は registry 値を正とする(shallow clone での git 再導出に依存しない)ことを design に明記すること。git 履歴からも導出不能な場合の降格先(B 様式の createdAtSource 併記)も設計時に定義しておくこと。",
+  "rationale": "A 採用。実測: leader elections 全走査で空 timeline はちょうど2件(E-FVEADS13/E-USSDPS13、python json 全数確認)— 対象実在を確認。A は git 初回コミット日時という実在の一次証拠からの決定論的導出で P2(実測事実のみ)に最適合。B の移行時刻は開催時刻の実測ではなく合成値。C は統一の例外恒久化で intent 目的に反する。自案非採用時の受容度: B=6 / C=7。",
+  "submittedAt": "2026-07-22T23:45:38Z"
+}

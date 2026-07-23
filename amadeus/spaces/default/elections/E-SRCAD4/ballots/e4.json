@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCAD4",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A採用(GoA 1)。uuid v7 が時刻を既に持ち 66/66 導出可能と実測済みなら、createdAt の明示追加は同一情報の二重持ちで drift 面を新設する — construction ガードレール『複数箇所で消費される定数を手書き複製しない・canonical 1定義から導出』の直接適用。elections 側に createdAt があるのは timeline 由来の実測値で uuid に時刻がないためであり、行スキーマの見かけ対称性より情報源の単一性が優先。自案非採用時受容度: C=6(新規行のみなら遡及 drift は限定的 — 不本意だが支持)/ B=7(66行の遡及付与は導出可能な値の恒久二重化)。",
+  "submittedAt": "2026-07-22T23:47:08Z"
+}

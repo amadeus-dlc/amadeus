@@ -1,0 +1,29 @@
+{
+  "electionId": "E-SRCAD3",
+  "kind": "clarification-question",
+  "question": "intent 260722-space-record-catalog / application-design の設計判断(verbatim 正本 = e2 ブランチ <record>/inception/application-design/application-design-questions.md、コミット bb07b2751 — git show で実測可)。Q3. drift 検出の fail 挙動。判断点: 移行前の既存103件は「レジストリ不在」state であり B/C は移行完了まで全 doctor 実行が赤(導入順序カップリング)。A は導入と移行を分離。 各自実測確認のうえ、A/B/C 選択型につき自案非採用時の受容度1行併記+GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. advisory 開始(pass:true+label 畳み込み、既存 doctor 慣行整合。hard 化は将来判断)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. hard-fail(exit 1)即ブロッカー化"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. 閾値付き hard(乖離1件以上=fail)"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他"
+    }
+  ],
+  "voters": [
+    "e3",
+    "e4",
+    "e5"
+  ],
+  "state": "recorded"
+}

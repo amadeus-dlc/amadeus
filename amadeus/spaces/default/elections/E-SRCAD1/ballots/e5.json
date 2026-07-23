@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCAD1",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A(YYMMDD-slugify)。実測: 自 tree で slugify(amadeus-lib.ts:1596-1607 直読)を実 E-code へ適用 — E-AWATCH→e-awatch / E-GSFND13→e-gsfnd13 / E-USSU02FDS14→e-ussu02fds14 と全て SLUG_RE 適合の安定形になることを bun 実行で確認。intents 完全対称は recordDirMatches 系述語・既存 slugify・自然ソートの再利用が最大で、統一という intent 目的そのもの。B は大文字 dir が SLUG_RE 前提の既存述語群と衝突し逸脱コストが高い。C は世紀跨ぎ(2100年)まで76年ある一方で intents との非対称を今日から恒久化する — 費用対効果が逆。非採用時の受容度: C なら 6、B なら 7(slug 規約逸脱は述語再利用を壊す)。",
+  "submittedAt": "2026-07-22T23:45:38Z"
+}

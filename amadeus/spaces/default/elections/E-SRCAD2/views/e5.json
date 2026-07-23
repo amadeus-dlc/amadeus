@@ -1,0 +1,26 @@
+{
+  "electionId": "E-SRCAD2",
+  "voter": "e5",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "A. git 初回コミット日時(--diff-filter=A 最古)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 4,
+      "label": "X. その他"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "C. createdAt null 登録+dirName 現名維持"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 2,
+      "label": "B. 移行実行時刻+createdAtSource: migration-fallback 併記"
+    }
+  ]
+}

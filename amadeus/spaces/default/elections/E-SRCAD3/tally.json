@@ -1,0 +1,74 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A. advisory 開始(pass:true+label 畳み込み、既存 doctor 慣行整合。hard 化は将来判断)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A. advisory 開始(pass:true+label 畳み込み、既存 doctor 慣行整合。hard 化は将来判断)",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "B. hard-fail(exit 1)即ブロッカー化",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "C. 閾値付き hard(乖離1件以上=fail)",
+        "count": 0
+      },
+      {
+        "internalNo": 4,
+        "label": "X. その他",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T00:30:24Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SRCAD3",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A 採用。実測: doctor の advisory 慣行(amadeus-utility.ts:1770-1776 の rule-drift advisory rows — pass:true+label 畳み込み)を直読し引用実在を確認。移行前の既存103件が「レジストリ不在」state になる以上、B/C は移行完了まで全 doctor 赤の導入順序カップリングを作る — E-SRCRA5 裁定 C(実実行は直前ユーザー承認)とも整合せず、導入と移行を分離できる A が唯一整合。hard 化は移行完了後の将来判断で足りる。自案非採用時の受容度: C=7 / B=7(いずれも導入順序カップリング)。",
+      "submittedAt": "2026-07-22T23:45:38Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCAD3",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A採用(GoA 1)。E-SRCRA5 裁定 C(実 rename はユーザー個別承認まで実行しない)により移行完了時期は未確定 — B/C の hard-fail は承認までの全期間、無関係な doctor 実行を赤にする導入順序カップリングで、私が E-SRCRA5 で C に投じた前提(導入と実行の分離)とも整合するのは A のみ。advisory 開始は既存 doctor 慣行(ci-pipeline:c3 の loud 可視+非 blocking の層別)にも整合。hard 化は移行完了後の将来判断として残る。自案非採用時受容度: C=6(閾値付きでも移行前 103 件が全て乖離扱いになる点は同罪だが復旧可能)/ B=7(全 doctor 赤の即ブロッカー化は移行承認待ちを人質にする)。",
+      "submittedAt": "2026-07-22T23:47:08Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCAD3",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A(advisory 開始)。実測: 自 tree の amadeus-utility.ts:1770-1786 直読で『advisory rows that carry their detail inline』コメント+pass:true+label 畳み込みの既存 doctor 慣行を確認 — A の様式は実在の既習様式で citation-semantics-check も満たす。決定的根拠は導入順序: E-SRCRA5 裁定 C により移行実行は直前ユーザー承認待ちで、B/C は移行完了までの全 doctor 実行を構造的に赤にする(103件全部が『レジストリ不在』乖離)— 偽ブロッカーの量産は loud の価値を毀損する。advisory でも乖離件数・対象は label で可視であり検証劇場にはならない(検出結果は実行から導出)。移行完了後の hard 化は将来判断として残る。非採用時の受容度: C なら 6(移行完了後なら妥当)、B なら 7(導入順序カップリングで doctor 全赤)。",
+      "submittedAt": "2026-07-22T23:45:38Z"
+    }
+  ],
+  "resolutions": []
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCAD1",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A 採用。実測: slugify(amadeus-lib.ts:1596-1607)を直読 — SLUG_RE は先頭小文字を強制し、B の大文字保持は共有述語(recordDirMatches/SLUG_RE)と構造的に非互換。A は intents 既決規約(YYMMDD+slugify)との完全対称で述語・自然ソート再利用が最大、scope-document のイメージとも一致。C の4桁年は intents 側 YYMMDD との非対称を新設する投機的一般化。自案非採用時の受容度: C=6 / B=7(機械述語の破壊)。",
+  "submittedAt": "2026-07-22T23:45:38Z"
+}

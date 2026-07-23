@@ -1,0 +1,29 @@
+{
+  "electionId": "E-SRCAD2",
+  "kind": "clarification-question",
+  "question": "intent 260722-space-record-catalog / application-design の設計判断(verbatim 正本 = e2 ブランチ <record>/inception/application-design/application-design-questions.md、コミット bb07b2751 — git show で実測可)。Q2. 空 timeline 2件の createdAt フォールバック。判断点: A=git 初回コミット日時(決定論的、shallow clone で劣化)/ B=移行時刻+createdAtSource 併記(初回移行値を registry 固定すれば再実行同値)/ C=null 登録+現名維持(例外恒久化)。 各自実測確認のうえ、A/B/C 選択型につき自案非採用時の受容度1行併記+GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. git 初回コミット日時(--diff-filter=A 最古)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. 移行実行時刻+createdAtSource: migration-fallback 併記"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. createdAt null 登録+dirName 現名維持"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他"
+    }
+  ],
+  "voters": [
+    "e3",
+    "e4",
+    "e5"
+  ],
+  "state": "recorded"
+}

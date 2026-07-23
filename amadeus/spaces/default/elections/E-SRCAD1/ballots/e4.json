@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCAD1",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A採用(GoA 1)。実測: slugify は amadeus-lib.ts :1596-1607 に実在(lowercase・kebab・冪等、SLUG_RE 保証)を直読確認、intents dirName は <YYMMDD>-<slug> 様式。本 intent の目的自体が intents 構造モデルへの対称化(scope-document)であり、A は recordDirMatches 対称述語・自然ソート・既存 slugify の再利用が最大で canonical 1定義原則にも合致。自案非採用時受容度: B=6(日付対称は保つが大文字が SLUG_RE 規約から逸脱 — 不本意だが支持)/ C=7(4桁年は対称化という intent 目的自体と矛盾)。",
+  "submittedAt": "2026-07-22T23:47:08Z"
+}
