@@ -1,6 +1,6 @@
 # API ドキュメント
 
-## 260722-teamup-prompt-race の関連契約（2026-07-22、現在）
+## 260722-teamup-prompt-race の関連契約（2026-07-22、履歴）
 
 bugfix / Minimal（observed `a81c11dde`）。本 intent は HTTP/CLI/directive 公開契約を変更しない。関わるのは内部起動契約と外部 agmsg CLI 契約の消費のみ: (1) `scripts/team-up.sh` → `scripts/run-claude.sh` の位置引数（init_prompt `/agmsg mode monitor`）、(2) 対照の agmsg `spawn.sh` handshake（`status=ready`、`--ready-timeout` default 90s `:46-47`）と ready センチネル path（`agmsg_ready_path` `lib/actas-lock.sh:69-73`）、(3) 再注入に使う `herdr pane send-text` + `send-keys enter`（send/submit 2段、cid:code-generation:herdr-send-submit-two-step）。いずれも既存契約の消費であり公開 API 面の追加・変更はない。
 

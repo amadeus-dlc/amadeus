@@ -1,6 +1,6 @@
 # アーキテクチャ
 
-> **2026-07-22 更新（intent `260722-teamup-prompt-race`、現在）**: base `a326f47bc0146a3b4285552f42b92fd61fb343a7` → observed `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`（distance 101）の differential refresh（bugfix / Minimal）。本 intent の交差面は `scripts/team-up.sh`（+212 −8）の team 起動オーケストレーションに限定。以下「upstream v2.3.0 同期の現行アーキテクチャ」以降は履歴。
+> **2026-07-22 更新（intent `260722-teamup-prompt-race`、履歴）**: base `a326f47bc0146a3b4285552f42b92fd61fb343a7` → observed `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`（distance 101）の differential refresh（bugfix / Minimal）。本 intent の交差面は `scripts/team-up.sh`（+212 −8）の team 起動オーケストレーションに限定。以下「upstream v2.3.0 同期の現行アーキテクチャ」以降は履歴。
 
 ## 260722-election-core-promotion の構造照合（2026-07-23、現在）
 
