@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MPRRA1",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "complete 時のミラークローズ導線(ノルムの close-after-landing)は既存 complete-workflow 経路+intent-completion-issue-sweep で拾われることが前提 — design 段でその接続を明文化すること。",
+      "rationale": "A採用(GoA 2)。実測: PHASE_CHECK_REQUIRED_PHASES(amadeus-state.ts:165-169)は {ideation, inception, construction} の3集合で、直上コメントが operation/initialization を除外する設計理由(phase-check 成果物を書くステージが存在しない)まで明記 — A は既存機構と境界集合が完全対称で、発火面の実装も同じ判定点に相乗りできる。B の complete 込みは close 導線を ask に載せられる利点があるが、intent 完了時の Issue クローズは既に intent-completion-issue-sweep(棚卸し)+close-after-landing-verification が規定しており、ask 機構の第4境界新設は二重化。自案非採用時受容度: B=6(close 導線の明示化としては許容)/ C=7(ideation/inception の節目を落とすのはミラーノルムの節目定義(park・phase 完了・complete)と矛盾)。",
+      "submittedAt": "2026-07-23T01:15:49Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPRRA1",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A(phase-check 対象3境界)。実測: PHASE_CHECK_REQUIRED_PHASES(amadeus-state.ts:165-169 直読)は {ideation, inception, construction} の3集合で、A は既存 phase 境界機構(verifyPhaseCheckArtifact)と機械的に同集合 — 発火点の実装が既存ガードへの相乗りで済み、新規節目定義を作らない。complete 時の close 導線は C-05(close は常に ask)が既に別途カバーしており、B の4境界化は同じ導線の二重規定になる。C は intent-first ノルムの節目定義『park・phase 完了・complete』のうち phase 完了面を construction だけに縮めており、ideation/inception の状態行更新が漏れる。非採用時の受容度: B なら 6(上位集合で害は重複のみ)、C なら 7(ノルムの節目定義と不整合)。",
+      "submittedAt": "2026-07-23T01:15:47Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MPRRA1",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "close は C-05 既決(常に ask)なので B でも自動 close リスクはない — B の追加 ask は workflow あたり1回で軽量",
+      "rationale": "ノルム(intent-first-mirror-issue)の節目定義は park・phase 完了・complete の3種で、complete 時の状態行更新+着地クローズはノルム本文の明示要求。A の根拠(PHASE_CHECK_REQUIRED_PHASES と同集合)は実測したが(amadeus-state.ts:165-169)、その3集合は phase-check 成果物を産む phase という別理由の集合であり、ミラー ask の発火粒度をそこへ縛る必然はない。ノルムの節目と1:1対応する B を採る。自案非採用時の受容度: A=6(close 導線は intent-completion-issue-sweep で代替可)/ C=7(park・phase 節目の更新が漏れる)",
+      "submittedAt": "2026-07-23T01:16:52Z"
+    }
+  ],
+  "late": []
+}

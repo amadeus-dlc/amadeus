@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRRA1",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A(phase-check 対象3境界)。実測: PHASE_CHECK_REQUIRED_PHASES(amadeus-state.ts:165-169 直読)は {ideation, inception, construction} の3集合で、A は既存 phase 境界機構(verifyPhaseCheckArtifact)と機械的に同集合 — 発火点の実装が既存ガードへの相乗りで済み、新規節目定義を作らない。complete 時の close 導線は C-05(close は常に ask)が既に別途カバーしており、B の4境界化は同じ導線の二重規定になる。C は intent-first ノルムの節目定義『park・phase 完了・complete』のうち phase 完了面を construction だけに縮めており、ideation/inception の状態行更新が漏れる。非採用時の受容度: B なら 6(上位集合で害は重複のみ)、C なら 7(ノルムの節目定義と不整合)。",
+  "submittedAt": "2026-07-23T01:15:47Z"
+}

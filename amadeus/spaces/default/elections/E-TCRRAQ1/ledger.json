@@ -1,0 +1,16 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TCRRAQ1",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A採用(GoA 1)。実測: t241 は tests/e2e/ に実在しヘッダ1行目が『CI-resident』を表明(verbatim 確認)、--ci プロファイルは runSmoke/runUnit/runIntegration のみで e2e 非含有(run-tests.ts:197-202、本セッションで直読済み)、integration 層には選挙系テスト5本(spawn 使用の t236/t240 含む)の precedent 実在。A は文書化済み設計(ADR-6 decisions.md:44『integration テストで固定する』)への回復 = バグ修正の定義そのもの(仕様変更に非ず)で、bugfix の外科的最小と size purity(spawn 型→integration)の両方に適合。B は 75 ファイルの e2e を PR CI へ載せる過大コストで欠陥の形(1テストの層違い)に対して不釣合い。C は FR-0 常時証明の仕様後退でエスカレーション事項。自案非採用時受容度: B=6(FR-0 証明は保たれるがコスト過大)/ C=7(検証の仕様後退を修正と呼ぶことに重大な不同意)。",
+      "submittedAt": "2026-07-23T01:17:03Z"
+    }
+  ],
+  "late": []
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRRA3",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A採用(GoA 1)。実測: 兄弟実装 amadeus-mirror.ts の fail() は一律 return 1 を確認 — A(0=乖離なし/1=乖離あり/2=前提エラー)は diff/grep 系の既習3値契約で機械消費可能、かつ ui-less-mockups-as-output-contract(exit code+文言が受け入れ基準の導出元)に最適。B は乖離が exit 0 に畳まれ機械呼出側から fail-open(ドリフト不可視)。C のクラス別 4値は消費側が現存しない過剰設計(検証フィールドの二の舞)。自案非採用時受容度: C=6(情報量は増えるが YAGNI)/ B=7(機械消費の fail-open 化)。",
+  "submittedAt": "2026-07-23T01:15:49Z"
+}

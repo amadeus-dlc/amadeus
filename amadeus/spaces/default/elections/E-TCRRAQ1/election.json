@@ -1,0 +1,29 @@
+{
+  "electionId": "E-TCRRAQ1",
+  "kind": "clarification-question",
+  "question": "intent 260723-t241-ci-residency(#1294)/ requirements-analysis Q1: 修正方式(verbatim 正本 = e1 ブランチ <record>/inception/requirements-analysis/requirements-analysis-questions.md — git show で実測可)。既決照合済み: 欠陥事実(t241 CI-resident 表明 vs --ci の e2e 非実行、run-tests.ts:197-202)・原因所在(ADR-6 decisions.md:44『integration テストで固定する』からの実装逸脱)・回帰テスト必須・t237 対象外。トリアージ材料: A は文書化済み設計への回復(integration 層に election spawn テスト6本の precedent、spawn 型→medium 判定は integration の size purity に適合)/ B は e2e 75ファイルを PR CI へ載せるコスト増 / C は FR-0 常時証明を弱める仕様後退(採るならユーザーエスカレーション)。各自実測確認のうえ、自案非採用時の受容度1行併記+GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. t241 を tests/integration/ へ移設(ADR-6 への回復。layer 表記・registry・実行対象を随伴整合)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. ci.yml に e2e ジョブ追加(t241 は e2e のまま、PR CI コスト増)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. ヘッダ表明を実態へ後退(仕様変更 — ユーザーエスカレーション前提)"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他(票コメント指定)"
+    }
+  ],
+  "voters": [
+    "e4",
+    "e5",
+    "e6"
+  ],
+  "state": "collecting"
+}

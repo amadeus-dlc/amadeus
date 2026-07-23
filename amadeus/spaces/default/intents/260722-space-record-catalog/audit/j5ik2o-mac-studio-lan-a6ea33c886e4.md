@@ -1071,3 +1071,30 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T01:13:49Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a7ea645629b7d9d95
+**Message**: 進捗どう？
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T01:15:00Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: acd5888922fb2607a
+**Message**: 進捗どう？
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T01:15:06Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a7495549baf71021b
+**Message**: 進捗どう？
+
+---
