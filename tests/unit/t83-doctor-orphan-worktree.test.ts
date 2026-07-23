@@ -4,7 +4,8 @@
 // mechanism = cli. The .sh has no colon-form `# covers:` header; its prose
 // header declares it covers v0.4.0 milestone 15 doctor reconciliation Checks 1, 3, 4,
 // 6 — the orphan-reconciliation family. All of that surface is the
-// `handleDoctor(projectDir)` subcommand of amadeus-utility.ts, so the covers id
+// `handleDoctor(resolveDoctorContext(projectDir))` core behind the
+// amadeus-utility.ts doctor subcommand, so the covers id
 // is `subcommand:amadeus-utility:doctor` (the SAME id t104's doctor twin uses;
 // the registry joins on it).
 //
@@ -14,13 +15,11 @@
 // node:child_process spawnSync (BUN + the tool .ts path), asserting on
 // stdout+stderr — the PROCESS boundary the .sh tested. mechanism = cli.
 //
-// WHY SPAWN (not in-process): handleDoctor terminates with
-// `process.exit(failed > 0 ? 1 : 0)` (amadeus-utility.ts:1385 region) and writes
-// its report via `process.stdout.write`. A bare temp project fails the
-// hook/settings checks, so doctor exits 1 — the .sh swallows that with
-// `|| true` and asserts on stdout content, where the reconciliation rows
-// render regardless of exit code. We mirror exactly: capture status for parity
-// but assert on the rendered report lines.
+// WHY SPAWN (not in-process): this suite preserves the CLI wrapper boundary
+// from the original shell test. A bare temp project fails the hook/settings
+// checks, so the wrapper exits 1 after writing the complete report — the .sh
+// swallows that with `|| true` and asserts on stdout content. We mirror exactly:
+// capture status for parity but assert on the rendered report lines.
 //
 // Source under test (dist/claude/.claude/tools/amadeus-utility.ts, handleDoctor):
 //   Check 1 — Orphan worktrees (:563-670)

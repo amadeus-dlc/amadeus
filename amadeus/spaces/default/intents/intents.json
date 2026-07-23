@@ -491,5 +491,12 @@
     "dirName": "260723-fixture-shard-pollution",
     "scope": "bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019f8cdc-25b5-7145-a0f8-a692ddc5c172",
+    "slug": "doctor-inprocess-seam",
+    "dirName": "260723-doctor-inprocess-seam",
+    "scope": "refactor",
+    "status": "complete"
   }
 ]
