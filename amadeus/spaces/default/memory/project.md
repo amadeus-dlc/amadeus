@@ -18,6 +18,9 @@
 
 既存テストが赤い場合は変更前のベースラインを確認する。自分の変更による失敗は必ず直し、既存の無関係な失敗は安全かつ低コストなら修正し、それ以外は Issue に記録してスコープを不必要に膨張させない。
 
+- filesystem/process を使う medium test は unit allowlist を増やさず integration suite に置く。test-size classification ratchet を設計上の配置根拠とする (learned 2026-07-23) <!-- cid:code-generation:c2-doctor-seam -->
+- 並列負荷下の child watcher は固定回数 polling や本番 injection ではなく READY/START handshake と期限付き kill/reap を使う。起動遅延と孤児 process の両方を制御できる (learned 2026-07-23) <!-- cid:code-generation:c3-doctor-seam -->
+- 対象変更の security regression と repository 全体の dependency audit を別判定にする。対象 tests が green でも既存 High advisory は隠さず conditional readiness とし、範囲外の依存更新は別作業へ送る (learned 2026-07-23) <!-- cid:build-and-test:c1-doctor-seam -->
 ## Deployment
 
 デプロイ基盤は持たず、リリースは npm パッケージ配布と GitHub 上のタグ/PR 履歴で管理する。GitHub Actions は push と pull_request で typecheck、lint、dist/self-install drift guard、smoke+unit+integration tests を実行する。
@@ -161,6 +164,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - §12a reviewer の spot-check(check-read)は「integration ID を含む passed consume を owner evidence とする」契約のため、consumes が全欠する degrade スコープ(chore/bugfix 等の units-generation SKIP 構成)では構造的に承認不能 — バイパスせず却下し、当該検証は conductor が対象シンボルの直接実測(grep/直読)で代替して stage diary に記録する (learned 2026-07-22, 260722-state-intent-selector code-generation 実測) (learned 2026-07-22) <!-- cid:code-generation:code-generation:checkread-degrade-scope-unavailable -->
 - 配布・公式化系 intent のスコープ判断は、配布パイプラインへの乗せやすさ(作り手都合の段階昇格)ではなく、利用者体験の最小実行可能単位から逆算する — 単体では利用者が実行可能な体験を持たないコンポーネント(例: 投票者不在の選挙 CLI)だけを先行配布しても公式化の価値はゼロ。実測: 260722-election-core-promotion intent-capture Q3 でユーザー逆質問「A,Bだけ提供して何になるのか」が conductor の段階昇格案(選挙エンジン単独)を覆し、チーム機能一式(起動/メッセージング/選挙/docs)へスコープ確定(2026-07-23 ユーザー直接裁定) (learned 2026-07-22) <!-- cid:intent-capture:ux-first-scope-for-distribution-intents -->
 - Issue の起票時前提を現行仕様とはみなさず再実測する。`handleDoctor` は既に export され複数テストが直接呼び出しているため「本体全行が常に LCOV 非計測」は失効したが、正式な戻り値 seam と cwd/env/cache の明示依存化は未実装と解釈した (learned 2026-07-23) <!-- cid:reverse-engineering:c1-857 -->
+- process-global 依存の除去は公開関数だけでなく配下 helper の call tree 全体を対象にする。resolver 後に env・platform・時刻を変えても同じ context の結果が不変であることを検証する (learned 2026-07-23) <!-- cid:code-generation:c1-doctor-seam -->
 ## Testing
 - Standardの中核はunit/integrationとし、performance/securityは承認済みNFRと実在境界へtraceして選定する。戦略名だけで検査を機械追加しない。既決strategy再述に留めず、stage定義の曖昧さは別途追跡する。 (learned 2026-07-12) <!-- cid:build-and-test:c1 -->
 - 攻撃面・依存・承認NFRを成果物で実測明記した場合のみ検査を比例選定する。既存必須scanや要求済み検査の省略根拠にはしない。 (learned 2026-07-12) <!-- cid:build-and-test:c3 -->
