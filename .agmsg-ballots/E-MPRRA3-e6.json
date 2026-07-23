@@ -1,0 +1,11 @@
+{
+ "kind": "original",
+ "electionId": "E-MPRRA3",
+ "voter": "e6",
+ "voterKind": "member",
+ "choiceInternalNo": 1,
+ "goa": 1,
+ "reservation": null,
+ "rationale": "status は乖離検査 verb であり、Unix の diff/grep 慣用(0=一致/1=差分/2=trouble)に一致する A の3値が機械消費(CI ゲート・スクリプト分岐)を可能にする。兄弟様式(amadeus-mirror.ts fail 一律 exit 1 :231-234 実測)は mutating verb 群のエラー契約であり、検査 verb の意味論値とは役割が異なる — A の 2=前提エラーは usage=2 系とも衝突しない。C は乖離クラス別 code の消費者が現存せず YAGNI。自案非採用時の受容度: B=6(機械消費を諦める場合)/ C=7(過剰設計)",
+ "submittedAt": "2026-07-23T01:16:52Z"
+}
