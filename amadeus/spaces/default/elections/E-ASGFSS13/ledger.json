@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-ASGFSS13",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "第2観測の帰属訂正を record に残すこと — constraint-register は *-questions/*-timestamp の marker ではない prose 成果物のため、PR #1405(suffix 免除)の着地後も H2 floor の対象のままであり『着地後はこのクラス自体が消滅見込み』は不正確。#1405 が消すのは marker 偽赤クラスのみで、prose 成果物の <2 H2 は設計どおり floor に落ち、節追加(E-TCRRAS13B 様式)が引き続き正しい対処",
+      "rationale": "0件で可(1)— ただし帰属訂正の留保付き。e1 record 実測: (1) FAILED(:464)→是正→PASSED(:549/:633)の列と constraint-register の現 H2=2 を確認 — 是正自体は正しい。(2) ただし私は #1405 の実装者として免除述語の適用範囲を一次知識で確認済み: 免除は stem の -questions/-timestamp 終端のみ(corpus sweep で非 marker 3,056 件が floor 側に落ちることを両側実測済み)であり、constraint-register への floor 適用は修正後も仕様どおり継続する。観測の不採用という結論には影響しないが、『#1296 クラス』への包摂は record 上の誤帰属として訂正が要る。(3) 他2件(実測確定・symmetric-pair 予防申し送り)は既存 cid の適用で妥当。",
+      "submittedAt": "2026-07-23T04:00:14Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-ASGFSS13",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e1 record を read-only 実測: feasibility の s13-candidates.md の0件整理を確認(既存 cid 執行のみ)。0件で可(1)",
+      "submittedAt": "2026-07-23T04:00:27Z"
+    }
+  ],
+  "late": []
+}
