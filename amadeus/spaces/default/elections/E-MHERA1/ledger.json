@@ -1,0 +1,16 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MHERA1",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A採用(GoA 1)。実測: amadeus-sensor-required-sections.ts:3 は既に amadeus-lib.ts から import(errorMessage/parseBoltDag)しており、A は既存 import 面のみで成立(新規依存ゼロ)。construction ガードレール『複数箇所で消費される定数・述語は canonical 1定義から導出』の直接適用で、B の2定義+対称テストは cross-unit-note-canonical-reference 系が繰り返し実測してきた集合分裂の温床(テストは分裂を検出するが防止しない)。C はセンサーの graph 非依存(control-plane/data-plane 分離)を破る新規依存。自案非採用時受容度: B=6(対称テストが固定するなら機能は成立)/ C=7(依存方向の破壊)。",
+      "submittedAt": "2026-07-23T02:50:27Z"
+    }
+  ],
+  "late": []
+}

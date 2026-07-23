@@ -1,0 +1,29 @@
+{
+  "electionId": "E-FSPRA2",
+  "kind": "clarification-question",
+  "question": "intent 260723-fixture-shard-pollution(#1389)/ requirements-analysis の明確化質問(verbatim 正本 = e4 ブランチの <record>/inception/requirements-analysis/requirements-analysis-questions.md — git show で実測可)。Q2. テスト側の是正範囲 — 同型サイト15本の隔離表のうち本 PR でどこまで。判断点: Q1 と独立の防御 depth 判断。bugfix 外科的最小との均衡。 各自 RE 隔離表・候補文を実測確認のうえ、受容度1行併記+GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. 犯人 t248 のみ(t118 ほかは実測のうえ Issue 起票 — same-root-inventory 準拠)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. 犯人+同型潜在 t118 を同一 PR(要確認3本は Issue)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. 非隔離5本すべて同一 PR(スコープ拡大)"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e5",
+    "e6"
+  ],
+  "state": "collecting"
+}

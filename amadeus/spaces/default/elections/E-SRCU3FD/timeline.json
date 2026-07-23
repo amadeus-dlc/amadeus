@@ -16,5 +16,19 @@
     "at": "2026-07-23T02:48:39Z",
     "detail": "delivered via agmsg: e6",
     "voter": "e6"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-07-23T02:49:32Z",
+    "receivedAt": "2026-07-23T02:49:32Z",
+    "detail": "ballot accepted: e4",
+    "voter": "e4"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-07-23T02:49:22Z",
+    "receivedAt": "2026-07-23T02:49:44Z",
+    "detail": "ballot accepted: e5",
+    "voter": "e5"
   }
 ]
