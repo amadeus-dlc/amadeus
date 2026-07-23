@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRRES13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e3 record リードオンリー実測: s13-candidates.md の観測3件は diary(Interpretations/Deviations 01:03:39Z)と整合。(1) base 選定は rescan-base-ancestry の機械的適用(祖先 exit 0/dist 111、非祖先5件の exit 1 除外を機械確認)+111 vs 10 の再走査膨張は rescan-prompt-record-sync が既に規定する帰結の追認実例 — PM 回付妥当 (2) センサー不適合の手動代替は既知知識クラス(re-sensors-codekb-filter-mismatch)の執行で、代替内容(9/9 ls・placeholder grep 0・SHA rev-parse 一致)も具体的 (3) PR #1398 並行レビューは単独 writer 交差なしの運用ノートでノルム性なし。3件とも既存の射程内で新規性なし。",
+  "submittedAt": "2026-07-23T01:05:14Z"
+}

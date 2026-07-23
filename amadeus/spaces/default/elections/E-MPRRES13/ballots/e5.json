@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRRES13",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e3 record 実測: 観測3件は diary(01:03:39Z ×3)と s13-candidates の verbatim 一致を確認。(1) base 選定は rescan-base-ancestry の字義どおり(非祖先5件の exit 1 機械確認+距離最小 a326f47bc 採用)で、111 vs 10 の再走査膨張は rescan-prompt-record-sync が既に規定する『反映漏れ→再走査膨張』の追認実例そのもの(#1398 未着地が原因面)— PM 回付が正位置。(2) センサー filter 不適合の手動代替は re-sensors-codekb-filter-mismatch 既知クラスの適用で、代替内容(9/9 実在・placeholder grep 0・SHA rev-parse 一致)も diary に実測記録あり。(3) PR レビュー並行は単独 writer 非交差の運用ノートでノルム性なし。新規候補なしに同意。",
+  "submittedAt": "2026-07-23T01:05:13Z"
+}
