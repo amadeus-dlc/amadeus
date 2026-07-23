@@ -12,7 +12,7 @@
 
 判断点: 現行 mirror.ts に実行主体検査は存在しない(RE scan-notes (1) — 状態源は決定的ソースのみ)。C は新規の identity 判定機構(誰が conductor かの決定的判定源が現存しない)を要し規模増。B は運用注記のみで実装ゼロ。sync は一方向・冪等で主体制約の必要が薄い。
 
-[Answer]:
+[Answer]: B — 運用注記(create/close は conductor から実行。機械強制なし)(E-MPRAD1 裁定 B、3-0 全票 GoA2。記入 2026-07-23T02:49:38Z、裁定受領後)
 
 ## Q2. 3層 config のファイル形式・置き場(U-03a)は?
 
@@ -23,7 +23,7 @@
 
 判断点: 既習は settings.json(JSON、SETTINGS_KNOWN_KEYS+fail-closed parse — amadeus-settings.ts:25-51)。G-6 は Global の置き場(amadeus/ 直下 git 共有)のみ既決で形式は design 委任。B は依存追加が Bun-only Forbidden と緊張。settings.json への相乗り(キー追加)は「既存設定の移行はしない」(W-01)とは別問題だが、settings は space 単層で Global/Intent 面を持たないため3層には新ファイルが必要。
 
-[Answer]:
+[Answer]: A — JSON 3面(amadeus/config.json / spaces/<space>/config.json / <record>/config.json)、fail-closed 様式踏襲(E-MPRAD2 裁定 A、3-0。記入 2026-07-23T02:49:38Z、裁定受領後)
 
 ## Q3. SKILL の6ハーネス生成様式(U-03b)は?
 
@@ -34,4 +34,4 @@
 
 判断点: RE scan-notes (3) — 既習の薄い runner は全て A 型(session skills、coreDirs 明示投影)。B の runner-gen は「コンパイル済みステージグラフから生成」する機構でありステージ外 SKILL への流用は意味論不適合(citation-semantics-check)。C は canonical 原則違反で保守面が6倍。
 
-[Answer]:
+[Answer]: A — session skills 既習様式(正本1定義+{{HARNESS_DIR}} トークン置換、coreDirs 投影)(E-MPRAD3 裁定 A、3-0。記入 2026-07-23T02:49:38Z、裁定受領後)

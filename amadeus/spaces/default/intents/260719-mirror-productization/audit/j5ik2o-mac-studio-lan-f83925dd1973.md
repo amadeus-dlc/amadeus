@@ -420,3 +420,347 @@
 **Message**: requirements-analysis の iteration 2 レビューは完了し、判定は READY です。\n\niteration 1 の Major 1(FR-3 受け入れ基準欠落)・Major 2(FR-7 受け入れ基準欠落)は是正済みでテスト可能な基準になっていることを確認しました。Major 3(cid:approval-lineage-citation の不実在指摘)は、team
 
 ---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-23T01:46:40Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: requirements-analysis
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-23T01:46:40Z
+**Event**: GATE_APPROVED
+**Stage**: requirements-analysis
+**Grant Id**: e8c96011
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-23T01:46:40Z
+**Event**: STAGE_COMPLETED
+**Stage**: requirements-analysis
+**Details**: Stage Requirements Analysis approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-23T01:46:40Z
+**Event**: STAGE_STARTED
+**Stage**: application-design
+**Agent**: amadeus-architect-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T02:50:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: fe3400af
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T02:50:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: fe3400af
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/components.md
+**Duration ms**: 49
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T02:50:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: 09c080b4
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T02:50:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: 09c080b4
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/components.md
+**Duration ms**: 50
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T02:50:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2940d6fb
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/component-methods.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T02:50:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2940d6fb
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/component-methods.md
+**Duration ms**: 54
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T02:50:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: 386141ac
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/component-methods.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T02:50:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: 386141ac
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/component-methods.md
+**Duration ms**: 48
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T02:50:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: 932c5e57
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/services.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T02:50:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: 932c5e57
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/services.md
+**Duration ms**: 50
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T02:50:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: beec65de
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/services.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T02:50:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: beec65de
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/services.md
+**Duration ms**: 46
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T02:50:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: a8f59742
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/component-dependency.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T02:50:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: a8f59742
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/component-dependency.md
+**Duration ms**: 51
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T02:50:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: a64de4e0
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/component-dependency.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T02:50:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: a64de4e0
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/component-dependency.md
+**Duration ms**: 51
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T02:50:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: 72a15506
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T02:50:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: 72a15506
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/decisions.md
+**Duration ms**: 51
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T02:50:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: 759fb952
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T02:50:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: 759fb952
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/decisions.md
+**Duration ms**: 48
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T02:50:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: aa7b50c6
+**Sensor ID**: answer-evidence
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/application-design-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T02:50:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: aa7b50c6
+**Sensor ID**: answer-evidence
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/application-design-questions.md
+**Duration ms**: 47
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T02:50:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: b738ee83
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/application-design-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T02:50:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: b738ee83
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/application-design-questions.md
+**Duration ms**: 50
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T02:55:04Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: ad-review-i1
+**Agent ID**: aad-review-i1-e9be971b46a089e2
+**Message**: application-design(intent 260719-mirror-productization)のアーキテクチャレビューを完了し、verdict は **NOT-READY**(iteration 1/2)として team-lead に報告しました。\n\n主な指摘は Major 2件です。\n\n1. `decisions.md` の ADR 7件すべてに、ステージ定義が明記する必須項目「
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T02:55:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: ec1e3d33
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T02:55:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: ec1e3d33
+**Sensor ID**: required-sections
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/decisions.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T02:55:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0da97ae2
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T02:55:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0da97ae2
+**Sensor ID**: upstream-coverage
+**Stage slug**: application-design
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/application-design/decisions.md
+**Duration ms**: 44
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T02:58:36Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: ad-review-i2
+**Agent ID**: aad-review-i2-1cebce291d06cfbf
+**Message**: application-design ステージ(intent 260719-mirror-productization)の iteration 2 レビューを完了しました。verdict は READY です。\n\n主な検分結果:\n\n- **Reversibility 行(7 ADR 全件)**: iteration 1 の Major 1 是正を確認。各行が Decision/Consequenc
+
+---

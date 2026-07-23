@@ -7,8 +7,8 @@
 | ID | コンポーネント | 所在 | 新規/変更 | 見積り規模 | 根拠 FR |
 |---|---|---|---|---|---|
 | C1 | amadeus-mirror ツール | `packages/framework/core/tools/amadeus-mirror.ts` | 移設+status verb 追加 | 移設 373行(挙動不変)+status 約80-120行 | FR-1/FR-2 |
-| C2 | /amadeus-mirror SKILL | core skills 配下(正本1定義 — 生成様式は ADR-6【裁定待ち Q3】) | 新規 | 約40-60行(薄い runner) | FR-3 |
-| C3 | 3層 config リゾルバ | 新規 core tools モジュール(名称・形式は ADR-4【裁定待ち Q2】) | 新規 | 約120-180行(パーサ+3層解決+テストシーム) | FR-4 |
+| C2 | /amadeus-mirror SKILL | `packages/framework/core/skills/amadeus-mirror/SKILL.md`(正本1定義+{{HARNESS_DIR}} 置換 — ADR-6 裁定 A) | 新規 | 約40-60行(薄い runner) | FR-3 |
+| C3 | 3層 config リゾルバ | `packages/framework/core/tools/amadeus-mirror-config.ts`(JSON 3面 — ADR-4 裁定 A) | 新規 | 約120-180行(パーサ+3層解決+テストシーム) | FR-4 |
 | C4 | phase 境界ミラー分岐 | `packages/framework/core/tools/amadeus-orchestrate.ts`(next の phase boundary 経路) | 変更 | 約60-100行(ask/print 分岐+C3 呼出) | FR-5/FR-6 |
 | C5 | ノルム改定 | `amadeus/spaces/default/memory/project.md`(gh-scripts-boundary cid) | 変更(norm PR) | 文言改定のみ(コードなし) | FR-7 |
 
@@ -40,7 +40,7 @@
 
 - Global(amadeus/ 直下)→ Space → Intent の3層を下位優先(Intent 最優先 — C-06)で解決する汎用機構。初キー `auto-mirror`(boolean、default off)
 - fail-closed パース: 未知キー・型不整合は invalid 収集し loud 拒否(FR-4 受け入れ基準)
-- 形式・ファイル名は ADR-4【裁定待ち Q2】
+- 形式・置き場は JSON 3面(`amadeus/config.json` / `spaces/<space>/config.json` / `<record>/config.json` — ADR-4 裁定 A)
 
 ### C4: phase 境界ミラー分岐
 
@@ -54,3 +54,19 @@
 ### C5: ノルム改定(gh optional)
 
 - gh-scripts-boundary cid の改定文言を norm PR で main へ(FR-7 受け入れ基準 (a)(b)(c) — Bolt 1 マージ前提の順序制約)
+
+## Review — Iteration 2
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-07-23T02:58:20Z
+- **Iteration:** 2
+- **Scope decision:** none
+
+iteration1 Major2件(ADR 可逆性7件欠落/architecture.md 対立候補への ADR-1 無応答)+Minor2件を是正、iteration2 実質検分で READY
+
+### Findings
+
+- 全7 ADR へ Reversibility 追加(是正済み)
+- ADR-1 へ contrib overlay/scripts 据え置きの却下理由+G-2 前提更新の明文照合(是正済み)
+- ラベル統一・diary 記入(是正済み)
