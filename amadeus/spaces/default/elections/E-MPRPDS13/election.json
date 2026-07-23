@@ -1,0 +1,21 @@
+{
+  "electionId": "E-MPRPDS13",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260719-mirror-productization / practices-discovery の §13 学習選定: 採用0件の確認。conductor(e3)起案(全文 verbatim = e3 ブランチ <record>/inception/practices-discovery/s13-candidates.md — git show で実測可): 候補0件。観測3件はいずれも既存 cid の機械的適用 — codekb 代用+ギャップ0問(c1)/ timestamp 免除+センサー全 PASSED(e-fvepd/manual-fire)/ 部分ドラフト+no-op promote+gh optional 改定の先取り回避(c2+P3)。各自 e3 record を実測確認のうえ GoA 付きで投票。軽量様式可。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 新規ノルム候補なしに同意"
+    },
+    {
+      "internalNo": 2,
+      "label": "異議 — 採用すべき候補がある(票コメントで特定)"
+    }
+  ],
+  "voters": [
+    "e4",
+    "e5",
+    "e6"
+  ],
+  "state": "recorded"
+}
