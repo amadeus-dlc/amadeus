@@ -1,6 +1,6 @@
 # 依存関係
 
-## 260722-teamup-prompt-race の依存境界（2026-07-22、現在）
+## 260722-teamup-prompt-race の依存境界（2026-07-22、履歴）
 
 bugfix / Minimal（observed `a81c11dde`）。本バグの依存境界:
 

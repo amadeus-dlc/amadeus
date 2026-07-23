@@ -1,6 +1,6 @@
 # コード構造
 
-## team 起動 watcher-arming の構造面（260722-teamup-prompt-race、2026-07-22、現在）
+## team 起動 watcher-arming の構造面（260722-teamup-prompt-race、2026-07-22、履歴）
 
 bugfix / Minimal。observed `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`（距離101）。本 intent の交差構造は `scripts/` の team 起動オーケストレーション（core 中立層・harness 表層とは別系統のリポジトリ開発支援スクリプト面）に限定。
 

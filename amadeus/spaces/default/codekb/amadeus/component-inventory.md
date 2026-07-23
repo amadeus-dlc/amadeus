@@ -1,6 +1,6 @@
 # コンポーネント棚卸し
 
-## team 起動 watcher-arming コンポーネント（260722-teamup-prompt-race、2026-07-22、現在）
+## team 起動 watcher-arming コンポーネント（260722-teamup-prompt-race、2026-07-22、履歴）
 
 bugfix / Minimal。observed `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`。本 intent の交差コンポーネントは `scripts/team-up.sh` の claude 起動経路と、対照の agmsg readiness handshake（repo 外）。
 
