@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRRAS13",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "提案どおり(候補1採用+2件 PM 回付)。実測: (1) 候補1の実在根拠 — e3 diary Deviations 01:40:06Z に初走 ra-review-i1 の回収不能(SendMessage 2回・10分無応答)→ scratch 併書切替→ iteration2 READY・complete-review exit 0 の記録があり、candidates と verbatim 一致。(2) 新規性 — 既存 c5/disk-evidence-early-takeover は『回収失敗後の引き取り』(事後対処)、spawned-agent-result-delivery は『送付依頼の明示』(事前文言)で、Stop hook 構造下の配送チャネル自体の規定は不在。E-BFAADS13『verdict は最終テキストのみ』との構造的デッドロック(最終テキストがターン境界不達で届かない)を、趣旨(成果物中間への Review 節挿入防止)を保ったまま record 外 scratch 併書で埋める精密化は正位置で、私自身の本日 CG/RE の subagent 同期回収経験(TaskOutput block 可の環境と不能な環境の差)からも実需を確認。(3) 不採用 (a) の反実測を自 tree で独立再現 — team.md:283 に cid:approval-lineage-citation が1 hit 実在し、レビュアーの不在断定は absence-claim-grep-verify 違反実例で PM 回付が正位置。(b) は leader 起因の観測記録のみで妥当。",
+  "submittedAt": "2026-07-23T01:44:46Z"
+}

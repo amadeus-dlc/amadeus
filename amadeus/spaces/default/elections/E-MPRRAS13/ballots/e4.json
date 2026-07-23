@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRRAS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "提案どおり(1)。e3 record リードオンリー実測: 候補文・実測根拠は diary Deviations 01:40:06Z と verbatim 整合(ra-review-i1 の SendMessage 2回・10分無応答 → scratch 併書 i1b/i2 で2 iteration とも数分回収の対照実測)。新規性判定: conductor-sync-subagent-collection(同期回収必須)と E-BFAADS13(verdict は最終テキストのみ)の間には Stop hook 強制下の構造的デッドロックが実在し、既存 c5/disk-evidence-early-takeover は引き取り(takeover)側の対処で配送形の規定ではない — record 外 scratch 併書は E-BFAADS13 の趣旨(成果物中間への Review 節挿入防止)と両立する精密化として妥当。不採用 (a) は absence-claim-grep-verify の違反実例で正しい — cid:approval-lineage-citation の team.md:283 実在は私自身が本日 PR #1390 の ack 時に origin/main 直読で確認済み。(b) の stale 配布は私が照会当事者で、観測記録のみの扱いに一致。",
+  "submittedAt": "2026-07-23T01:42:20Z"
+}
