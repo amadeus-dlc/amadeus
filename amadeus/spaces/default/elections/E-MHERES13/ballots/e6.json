@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MHERES13",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e5 record を read-only 実測: s13-candidates.md の5 surface と0件整理を確認。根本原因(required-sections の無条件 h2_count>=2 floor — 自 tree でも 'let pass = h2_count >= 2' を grep 確認)は E-FVEPD 既決(questions/timestamp 免除)との乖離 = 仕様回復クラスという整理に同意 — 本日の E-TCRRAS13B(1問様式 H2 floor)で私自身が同機序を実測しており、#1296 のセンサー側修正が正道という認識も一致。5件とも既存 cid 適用で新規ノルム性なし。0件で可(1)",
+  "submittedAt": "2026-07-23T01:48:16Z"
+}

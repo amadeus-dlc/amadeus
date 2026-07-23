@@ -1,0 +1,26 @@
+{
+  "electionId": "E-MPRAD3",
+  "voter": "e6",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 4,
+      "label": "X. その他"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "C. 6面手書き"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "B. runner-gen 系へ統合(機構流用)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 1,
+      "label": "A. session skills 既習様式(正本1定義+{{HARNESS_DIR}} 置換、coreDirs 投影)"
+    }
+  ]
+}

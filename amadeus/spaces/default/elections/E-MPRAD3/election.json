@@ -1,0 +1,29 @@
+{
+  "electionId": "E-MPRAD3",
+  "kind": "clarification-question",
+  "question": "intent 260719-mirror-productization / application-design の設計判断(verbatim 正本 = e3 ブランチ a74d9aa5e の <record>/inception/application-design/application-design-questions.md — git show で実測可)。Q3(U-03b). SKILL の6ハーネス生成様式。判断点: 既習の薄い runner は全て A 型。B の runner-gen はステージグラフ由来でステージ外流用は意味論不適合(citation-semantics-check)。C は canonical 原則違反。 各自実測確認のうえ、A/B/C 選択型につき自案非採用時の受容度1行併記+GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. session skills 既習様式(正本1定義+{{HARNESS_DIR}} 置換、coreDirs 投影)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. runner-gen 系へ統合(機構流用)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. 6面手書き"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e4",
+    "e6"
+  ],
+  "state": "collecting"
+}

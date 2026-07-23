@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MHERES13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。実測: (a) e5 worktree の s13-candidates.md をリードオンリー直読 — 5件の既存 cid 対応付けは verbatim どおり。 (b) H2 floor の意味論を自 tree で照合: .claude/sensors/amadeus-required-sections.md:27 に『at least 2 H2 headings(generic)』が無条件で規定され filename 免除が不在 — E-FVEPD 既決(*-questions.md/*-timestamp.md の免除)との乖離 = 仕様回復クラスの認定は明文根拠があり判断余地なし(エスカレーション不要判定も妥当)。 (c) intents.json union の前進方向(installer-impl)は、私が 260722 の PR #1385 レビューで実測した registry-only 4件(260706-installer-impl 含む)と整合。 (d) 私自身が本 floor の FAILED を昨夜2回実測(E-TCRRAS13B の実測当事者)であり、c2/c5 の適用判断は自験と一致。5件とも既存 cid の適用で新規性なし — 0件に同意。",
+  "submittedAt": "2026-07-23T01:48:51Z"
+}
