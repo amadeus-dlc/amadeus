@@ -17,4 +17,4 @@
 
 ## 検証の割付
 
-BR-3/BR-5(判定ロジック)は unit 層(純関数/uname 注入)、BR-1/BR-2/BR-4/BR-6 は integration 層(fake binary+temp PATH)、BR-7 はレビュー+docs ガード。E2E 面の総合検証は U4 が担う。
+BR-3/BR-5(判定ロジック)は unit 層(純関数/uname 注入)、BR-1/BR-2/BR-4/BR-6 は integration 層(fake binary+temp PATH)、**BR-7 は機械整合テスト(集合一致 assert)+docs ガード**(※iter1 レビュー Minor2 の是正で BR-7 セルを整合テスト化した際、本割付節への伝播が漏れていた「レビュー+docs ガード」旧文言を 2026-07-23 に同期是正 — review-fix-propagation 類型の申告)。E2E 面の総合検証は U4 が担う。
