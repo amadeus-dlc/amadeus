@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MHERAS13",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e5 record を read-only 実測: s13-candidates.md の0件整理4件(転記系 cid 機械適用2+違反実例 PM 回付2)を確認。いずれも既存射程で新規ノルム性なし。0件で可(1)",
+  "submittedAt": "2026-07-23T03:11:39Z"
+}
