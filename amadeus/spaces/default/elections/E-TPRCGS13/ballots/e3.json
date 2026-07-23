@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TPRCGS13",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "提案どおり(1)。実測: e1 の s13-candidates.md を git show 直読し、機構主張をコードで構造検証 — amadeus-reviewer.ts:74 が『required review artifact is missing: ${artifact.path}』を throw する produces 実在検査の実在を verbatim 確認し、reviewer/scope 経路に {unit-name} テンプレート解決が存在しないこと(unit-name/template の grep 0 hit)も確認 — 未解決 directive が候補文どおりの exit 1 になる機序は構造的に成立。CG diary :6(degrade 配置)・:11(候補(b) の §12a スコープ外実測の記録 verbatim)も照合済み。invocationId f6328be4 は committed record 外(gitignored runtime state)のため直接照合不能だが、機構検証+diary 照合で候補の実測根拠は自立成立。追補先 degrade-scope-unit-dir-layout は checkread-degrade-scope-unavailable と同族の degrade §12a ファミリで統合先も妥当。不採用2件は既存 cid/契約の違反実例で PM 回付妥当。",
+  "submittedAt": "2026-07-22T23:44:20Z"
+}
