@@ -1,6 +1,22 @@
 # コンポーネント棚卸し
 
-## team 起動 watcher-arming コンポーネント（260722-teamup-prompt-race、2026-07-22、現在）
+## t241 CI-residency 関連コンポーネント（260723-t241-ci-residency、2026-07-23、現在）
+
+差分リフレッシュ（base `a81c11dde` → observed `78bce876`、距離 35、bugfix / Minimal、[#1294](https://github.com/amadeus-dlc/amadeus/issues/1294)）。本バグ面は base..HEAD 無変更（numstat 0 行）、欠陥は 260718-election-ts-foundation（#1235）由来。測定 ref: scan-notes @ observed HEAD `78bce876`。
+
+| コンポーネント | 場所 | 役割 / 本 intent での関与 |
+| --- | --- | --- |
+| t241 機械実行器 | `tests/e2e/t241-election-machine-executor.test.ts`（:1 ヘッダ、:91-140 テスト2件） | FR-0 layer (i) の LLM 無知識 directive ループ。「CI-resident/standing proof」自称（:1,:4-5）だが e2e 配置で自動 CI 非実行 = 欠陥コンポーネント |
+| テスト profile 判定 | `tests/run-tests.ts:197-202`（--ci）/:203-211（--release） | `--ci`=smoke+unit+integration（runE2e 非設定）、`--release`=+e2e。banner :124-127/:148 |
+| test scripts | `package.json:14-16` | `test:ci`/`coverage:ci`=--ci、`test:all`=--all（e2e はローカル手動のみ） |
+| CI ワークフロー | `.github/workflows/ci.yml`（:114/:152/:227） | `test:ci`/`coverage:ci` 実行。`--e2e`/`--release`/`test:all` 0 ヒット。`release.yml`（test 無し）・`formal-verification.yml`（:12 workflow_dispatch）も e2e 非実行 |
+| size 分類器 | `tests/lib/test-size.ts:161-166`、`classifyTestSize`（signals `t-test-size-drift.test.ts:66-69`） | spawn/fs→medium。integration MAX=medium で t241 移設 clean |
+| ADR-6（設計権威） | `application-design/decisions.md:41-48` | layer (i) を「integration テストで固定する」と明記 = t241 e2e 配置は実装逸脱の対照点 |
+| integration precedent | `tests/integration/{t235,t236,t240,t242,t244,t-formal-verif-arm-s-blind}` | election CLI spawn 兄弟 6 本（`grep -rln amadeus-election` = 6）、`--ci` で CI 実行済み |
+| coverage registry | `tests/gen-coverage-registry.ts` | t241 未登録（0 ヒット）。wiring coverage は in-process t236 が所有 |
+| sibling 健全例 | `tests/e2e/t237-election-walking-skeleton.test.ts:1-5` | 「Layer: e2e」正直宣言・CI-resident 非自称（対照） |
+
+## team 起動 watcher-arming コンポーネント（履歴: 260722-teamup-prompt-race、2026-07-22）
 
 bugfix / Minimal。observed `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`。本 intent の交差コンポーネントは `scripts/team-up.sh` の claude 起動経路と、対照の agmsg readiness handshake（repo 外）。
 

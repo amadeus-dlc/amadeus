@@ -470,5 +470,12 @@
     "dirName": "260722-teamup-prompt-race",
     "scope": "bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019f8c79-9080-7d78-915a-f0129006edb4",
+    "slug": "t241-ci-residency",
+    "dirName": "260723-t241-ci-residency",
+    "scope": "bugfix",
+    "status": "complete"
   }
 ]

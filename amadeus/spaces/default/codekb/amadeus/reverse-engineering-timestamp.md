@@ -1,6 +1,24 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(現在: 260722-teamup-prompt-race)
+## 実行メタデータ(現在: 260723-t241-ci-residency)
+
+- Date: 2026-07-23T00:57:42Z(scan-notes 実行時刻の転記)
+- Observed at: `78bce87615b985d0151f604c915c6aab1d6ba9f1`(現 HEAD `git rev-parse HEAD` 実測一致)
+- Intent: `260723-t241-ci-residency`([Issue #1294](https://github.com/amadeus-dlc/amadeus/issues/1294) — `tests/e2e/t241-election-machine-executor.test.ts` のヘッダが「CI-resident」(FR-0 機械実行器の常設証明、ADR-6 layer (i))を自称するが、PR CI(`--ci`)は e2e 層を実行しない)
+- Scope: `bugfix`(Depth Minimal)
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering` (2.1)
+- Method: differential refresh(cid:reverse-engineering:c1、E-L63 の base 選定則)。base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`(前回 scan `260722-teamup-prompt-race` の observed)、observed `78bce87615b985d0151f604c915c6aab1d6ba9f1`、`git merge-base --is-ancestor` exit 0、distance `git rev-list --count base..HEAD`=35。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3)。
+- 測定 ref: 全 file:line は Observed=HEAD `78bce876` のワークツリー実ファイル直読(Developer scan、cid:measurement-ref-in-artifacts)。区間件数(35)・diff 規模(224 files, +10774/−16)はコマンド出力からの転記(numbers-from-command-output-only)。
+- ★本バグ面は base..HEAD で無変更: `git diff --numstat <base>..HEAD -- tests/e2e tests/run-tests.ts tests/run-tests.sh tests/gen-coverage-registry.ts .github/workflows package.json` = **0 行(出力空)**。欠陥コード(t241 の e2e 配置・CI tier 定義・ワークフロー)は base より前(intent `260718-election-ts-foundation`、導入 PR #1235)に導入済みで、差分リフレッシュ区間 35 コミットとは無交差。差分リフレッシュとしては「バグ面ドリフトなし」を確定。
+- 現行結論: `tests/e2e/t241-election-machine-executor.test.ts` はヘッダ(:1 verbatim `// t241 — FR-0 machine executor (ADR-6 layer (i), CI-resident, Bolt 4).`)で「CI-resident」、本文(:4-5)で「strongest standing proof of FR-0」を自称するが、`tests/e2e/` 配置ゆえ自動 CI で非実行。`--ci`(`run-tests.ts:197-202`)は smoke+unit+integration のみ(runE2e 非設定)、e2e は `--release`/`--all`(:203-211)= ローカル手動用の `test:all`(package.json:14-16)のみ。`ci.yml`(:114/:152/:227 が `test:ci`/`coverage:ci`)・`release.yml`(test ステップ無し)・`formal-verification.yml`(:12 workflow_dispatch)いずれも `--e2e`/`--release`/`test:all` 0 ヒットで e2e 非実行。**決定的原因所在は実装逸脱**: ADR-6(`application-design/decisions.md:41-48`)Decision が layer (i) 機械実行器を「integration テストで固定する」と明記しているのに、実装(#1235)が `tests/e2e/` に配置し CI 実行範囲との整合検証を欠いた(cid:bug-intent-linkage、原因所在=設計は正・実装が逸脱)。回復先の実在: integration に election CLI spawn 兄弟 6 本既存(t235/t236/t240/t242/t244 + t-formal-verif-arm-s-blind、`--ci` で CI 実行済み)、t241 は spawnSync+fs→`classifyTestSize`=medium で integration MAX=medium に適合(clean)、`gen-coverage-registry.ts` 未登録。sibling t237(:1-5「Layer: e2e」)は CI-resident 非自称の健全対照。
+- Per-intent record: `re-scans/260723-t241-ci-residency.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「現在: 260722-teamup-prompt-race」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、codekb body 8成果物(先頭 current view に本 intent の外科的追加、旧「現在」節は履歴へ降格 — bugfix Minimal 相応で本文温存)、`re-scans/260723-t241-ci-residency.md`(新規)。
+- Delivery boundary: 実装・修正コード、dist/self-install 再生成、commit、PR 操作は本 scan で未実施。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260722-teamup-prompt-race)
 
 - Date: 2026-07-22T22:03:26Z
 - Observed at: `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`(現 HEAD `git rev-parse HEAD` 実測一致)
