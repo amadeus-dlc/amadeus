@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MHEBTS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e5 record の s13 ファイル実在+4件整理を確認(所見分離様式の初適用も確認 — 本文に推奨なし)。(1) 非 marker prose への floor 適用は本 intent の設計どおり免除対象外の追認 (2) codekb 衝突の定型解消は re-timestamp-merge-resolution+union の執行(私も本日同型を実施) (3) wall-clock drift は既知 advisory(e1 BT と同一観測の再現) (4) 全 green は要件執行。いずれも新規ノルム性なし。",
+  "submittedAt": "2026-07-23T04:19:15Z"
+}
