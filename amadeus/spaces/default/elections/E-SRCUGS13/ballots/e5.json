@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCUGS13",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e2 record 実測: 候補2件は diary(Interpretations 00:46:24Z / Deviations 00:51:18Z)と verbatim 一致。c1 = 既決直列依存(S1→S4)+AD C1-C5 からの機械的導出で、story map の FR/NFR 全数トレース代替は approval-handoff:c4(SKIP 成果物を捏造しない)の同型適用 — S5 ヘルパーのみ U1 吸収も E-SRCAD4 裁定(A)と整合。c2 = reviewer 捕捉→申告付き部分帰属3面明記で解消済みの cross-unit 系違反実例で PM 回付が正位置。起案が E-SRCADS13 の私の共通留保(stale プレースホルダの再発昇格カウント)と別クラスであることを明記している点も確認 — クラス弁別は妥当(あちらは解消漏れ、こちらは所有帰属の無申告分裂)。",
+  "submittedAt": "2026-07-23T00:52:46Z"
+}

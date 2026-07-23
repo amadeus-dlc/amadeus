@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCUGS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e2 record リードオンリー実測: 2候補とも diary(Interpretations 00:46:24Z、Deviations 00:51:18Z)と verbatim 一致。c1 = 既決直列依存+AD C1-C5 の機械的導出で質問0問、story map の FR/NFR 全数トレース代替は approval-handoff:c4(SKIP 上流の捏造禁止)同型の執行 — S5 ヘルパー吸収も E-SRCAD4 裁定(A、私も投票)と整合し新規性なし。c2 = reviewer iteration 1 Major で捕捉・申告付き部分帰属3面明記で解消済みの違反実例 — cross-unit 系 cid ファミリの射程内で PM 回付妥当。E-SRCADS13 共通留保のカウント対象(stale プレースホルダ)とは別クラスという起案の区別も、機序が異なる(解消漏れ vs 所有帰属の無申告分裂)ため正確。",
+  "submittedAt": "2026-07-23T00:52:52Z"
+}

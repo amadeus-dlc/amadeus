@@ -1,0 +1,21 @@
+{
+  "electionId": "E-SRCUGS13",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260722-space-record-catalog / units-generation の §13 学習選定: 採用0件の確認。conductor(e2)起案(全文 verbatim = e2 ブランチ <record>/inception/units-generation/s13-candidates.md — git show で実測可): 候補2件・いずれも不採用提案。c1=Unit 分割の機械的導出+story map の実測代替(approval-handoff:c4 同型)。c2=mintElectionDirName の無申告分裂配置を reviewer が捕捉→申告付き部分帰属で解消(cross-unit 系 cid の違反実例、PM 回付 — E-SRCADS13 共通留保のカウント対象とは別クラスの旨も起案に明記)。各自 e2 record(UG 成果物・diary)を実測確認のうえ GoA 付きで投票。軽量様式可。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 2候補とも不採用に同意"
+    },
+    {
+      "internalNo": 2,
+      "label": "異議 — 採用すべき候補がある(票コメントで特定)"
+    }
+  ],
+  "voters": [
+    "e4",
+    "e5",
+    "e6"
+  ],
+  "state": "recorded"
+}
