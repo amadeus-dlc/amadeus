@@ -1333,3 +1333,50 @@
 **Message**: すべて完了しました。差分リフレッシュの合成を codekb へ反映し、鮮度ポインタ更新と re-scan 新規作成まで同期しました。検証: t241 全節が「履歴」へ降格、新 intent の current marker が 8 body + timestamp に一意、mermaid フェンス balance 16/16、確約級引用は observed HEAD `4310f686f` で再実
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-23T04:40:50Z
+**Event**: WORKFLOW_PARKED
+**Stage**: reverse-engineering
+**Timestamp**: 2026-07-23T04:40:50Z
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-23T04:48:38Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-23T04:48:38Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-23T04:48:38Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: reverse-engineering
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-23T04:48:38Z
+**Event**: GATE_APPROVED
+**Stage**: reverse-engineering
+**Grant Id**: e8c96011
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-23T04:48:38Z
+**Event**: STAGE_COMPLETED
+**Stage**: reverse-engineering
+**Details**: Stage Reverse Engineering approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-23T04:48:38Z
+**Event**: STAGE_STARTED
+**Stage**: practices-discovery
+**Agent**: amadeus-pipeline-deploy-agent
+
+---
