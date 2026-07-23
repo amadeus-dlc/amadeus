@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRADS13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。実測: e3 worktree の AD s13-candidates.md をリードオンリー直読 — 3件の既存 cid 対応は verbatim どおり。decisions.md の Reversibility は grep 7 hits で是正の実在を確認(起草漏れ→reviewer 捕捉→是正済みの違反実例として PM 回付が正)。留保統合行は E-MPRAD1〜3 の私の投票留保の扱いとも整合(私の E-MPRAD1 留保 = 前提訂正記録は別途 leader が record/PM へ転記確約済み)。3件とも新規ノルム性なし — 0件に同意。",
+  "submittedAt": "2026-07-23T03:03:15Z"
+}

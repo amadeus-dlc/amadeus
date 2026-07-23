@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRADS13",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e3 record を read-only 実測: s13-candidates.md の3 surface と0件整理を確認。留保 elaboration と統合解釈行は citation-reservation-preservation / reservation-transcription 系の運用適用、ADR Reversibility 起草漏れ→reviewer 捕捉は既存起草規範の違反実例で PM 回付が正位置(本日自 intent AD でも同型の reviewer 捕捉→是正サイクルを2イテレーション実施しており、既存 cid 射程との整理は追認できる)。0件で可(1)",
+  "submittedAt": "2026-07-23T03:00:20Z"
+}
