@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FSPCGS13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。実測: e4 ブランチの CG s13-candidates.md を git show で直読 — 3件とも既存 cid の適用・違反実例で新規性なし。私の E-FSPCG1 留保(deviation-stop-before-implement 違反実例の PM 回付)が記帳済みであること、候補ファイルの所見分離が leader 運用改善として着地済みであることも確認(私の指摘の閉包)。0件に同意。",
+  "submittedAt": "2026-07-23T04:18:15Z"
+}
