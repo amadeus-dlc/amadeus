@@ -49,5 +49,12 @@
     "kind": "tallied",
     "at": "2026-07-23T02:57:23Z",
     "detail": "tally: established"
+  },
+  {
+    "kind": "late",
+    "at": "2026-07-23T03:02:51Z",
+    "receivedAt": "2026-07-23T03:02:51Z",
+    "detail": "late ballot recorded: e1",
+    "voter": "e1"
   }
 ]

@@ -50,5 +50,26 @@
       "submittedAt": "2026-07-23T02:56:52Z"
     }
   ],
-  "late": []
+  "late": [
+    {
+      "ballot": {
+        "kind": "amend",
+        "ref": {
+          "electionId": "E-MHERA1",
+          "voter": "e1",
+          "submittedAt": "2026-07-23T02:53:45Z"
+        },
+        "electionId": "E-MHERA1",
+        "voter": "e1",
+        "voterKind": "member",
+        "choiceInternalNo": 1,
+        "goa": 1,
+        "reservation": null,
+        "rationale": "裁定による一意化確認(原票 2026-07-23T02:53:45Z の A 評価を維持)。原票 GoA2 の留保(前提訂正の記録)はユーザー裁定+leader の record/PM 転記確約で解消済みのため GoA1 へ更新",
+        "submittedAt": "2026-07-23T03:02:51Z"
+      },
+      "late": true,
+      "reexamRequired": false
+    }
+  ]
 }
