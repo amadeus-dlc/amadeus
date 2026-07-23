@@ -12,9 +12,9 @@
 // composed scopes. Neither file ever exists in dist/ (graph compile
 // regenerates only stock scopes), so the plain byte-parity promote misread
 // them as drift: the .md as an ORPHAN that --apply then DELETED, and the
-// grid as DIFFERS — discovered when the first dogfooded workflow (intent
-// 260706-amadeus-grilling, composed scope grilling-integration) had its
-// scope silently destroyed by the code-generation stage's promote:self run.
+// grid as DIFFERS — discovered when an early dogfooded workflow had its
+// composed scope silently destroyed by the code-generation stage's
+// promote:self run.
 //
 // WHAT IS UNDER TEST:
 //   1. COMPOSED_SCOPE_RE matches exactly the runtime composed-scope shape
@@ -40,12 +40,12 @@ const grid = (obj: Record<string, unknown>): Buffer =>
 const STOCK = { bugfix: { stages: { "intent-capture": "SKIP" } } };
 const WITH_COMPOSED = {
   ...STOCK,
-  "grilling-integration": { stages: { "intent-capture": "EXECUTE" } },
+  "team-custom": { stages: { "intent-capture": "EXECUTE" } },
 };
 
 describe("t200 promote-self composed-scope preservation", () => {
   test("COMPOSED_SCOPE_RE matches runtime composed-scope files in any engine dir", () => {
-    expect(COMPOSED_SCOPE_RE.test(".claude/scopes/amadeus-grilling-integration.md")).toBe(true);
+    expect(COMPOSED_SCOPE_RE.test(".claude/scopes/amadeus-team-custom.md")).toBe(true);
     expect(COMPOSED_SCOPE_RE.test(".codex/scopes/amadeus-my-scope.md")).toBe(true);
   });
 
@@ -91,7 +91,7 @@ describe("t200 promote-self composed-scope preservation", () => {
   test("mergeScopeGrid carries composed entries over and round-trips the check", () => {
     const merged = mergeScopeGrid(grid(WITH_COMPOSED), grid(STOCK));
     const parsed = JSON.parse(merged.toString("utf-8")) as Record<string, unknown>;
-    expect(Object.keys(parsed)).toEqual(["bugfix", "grilling-integration"]);
+    expect(Object.keys(parsed)).toEqual(["bugfix", "team-custom"]);
     expect(scopeGridInSync(merged, grid(STOCK))).toBe(true);
   });
 
