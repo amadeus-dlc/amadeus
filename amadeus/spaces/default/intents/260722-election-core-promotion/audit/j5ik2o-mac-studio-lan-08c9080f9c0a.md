@@ -5099,3 +5099,336 @@
 **Agent**: amadeus-architect-agent
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:42:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 750f43e4
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/performance-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:42:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: 750f43e4
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/performance-requirements.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:42:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: cc75cb63
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/performance-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:42:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: cc75cb63
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/performance-requirements.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:42:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 21d480f1
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/security-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:42:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: 21d480f1
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/security-requirements.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:42:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2000f8bd
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/security-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:42:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2000f8bd
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/security-requirements.md
+**Duration ms**: 47
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:42:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: e9115ae1
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/scalability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:42:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: e9115ae1
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/scalability-requirements.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:42:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: bf13600b
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/scalability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:42:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: bf13600b
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/scalability-requirements.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:42:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: b1177ed8
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/reliability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:42:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: b1177ed8
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/reliability-requirements.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:42:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: c671c85f
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/reliability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:42:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: c671c85f
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/reliability-requirements.md
+**Duration ms**: 44
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:42:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: d621f221
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/tech-stack-decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:42:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: d621f221
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/tech-stack-decisions.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:42:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9ffde5a8
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/tech-stack-decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:42:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9ffde5a8
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/tech-stack-decisions.md
+**Duration ms**: 42
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T03:45:45Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a4c7157da2c69ce9c
+**Message**: VERDICT: NOT-READY\ninvocationId: b8188d5d-74aa-47dc-96d7-bd08bb8a0123 iteration: 1\n\n## Critical\n\n1. **scalability-requirements.md:3 — 上流入力ヘッダーが虚偽の装飾トークン化**\n   ヘッダーは「上流入力(consumes 全数): business-logic-m
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T03:47:51Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: aace95f69181ed1a6
+**Message**: VERDICT: READY\ninvocationId: bbd9a68d-ef40-4bb7-8b3c-f99a37e4f487 iteration: 2\n\n閉包確認:\n- Critical1/2(scalability/reliability装飾トークン化): scalability.md本文にbusiness-rules BR-7(roots定数1箇所)・business-logic-mod
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:48:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 959ae14a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/performance-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:48:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 959ae14a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/performance-requirements.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:48:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 28aaa63b
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/security-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:48:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 28aaa63b
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/security-requirements.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:48:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 10ef7356
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/scalability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:48:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 10ef7356
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/scalability-requirements.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:48:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3dae41a0
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/reliability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:48:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3dae41a0
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/reliability-requirements.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:48:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1e79573b
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/tech-stack-decisions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:48:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1e79573b
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/boundary-guard/nfr-requirements/tech-stack-decisions.md
+**Duration ms**: 42
+
+---
