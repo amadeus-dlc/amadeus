@@ -747,6 +747,160 @@ export function standingGrantDoctorCheck(projectDir: string, now: number): Docto
   };
 }
 
+// ---------------------------------------------------------------------------
+// Elections registry ⇄ directory drift (advisory) — U4 doctor-drift-check.
+//
+// The check compares the default space's elections.json registry against the
+// on-disk election directories and reports any bidirectional drift for a human
+// to investigate. It is ALWAYS advisory (pass:true; ruling E-SRCAD3): it never
+// flips doctor to exit 1, so an in-migration or drifted workspace still passes.
+//
+// ADR-6: this check is SELF-CONTAINED — the shipped framework MUST NOT import
+// from scripts/ (the election store). The 4-field row validator and the
+// exact-match dirName predicate are therefore duplicated here; the parity test
+// t261 pins the local predicate against scripts' electionDirMatches so the
+// duplication cannot silently drift.
+// ---------------------------------------------------------------------------
+
+// The seven known election states — duplicated from amadeus-election-store's
+// VALID_STATES per ADR-6 (self-contained, no scripts/ import).
+const ELECTION_REGISTRY_STATES: ReadonlySet<string> = new Set([
+  "draft",
+  "open",
+  "collecting",
+  "tallied",
+  "rendered",
+  "recorded",
+  "hold",
+]);
+
+interface ElectionsRegistryRow {
+  electionId: string;
+  dirName: string;
+  createdAt: string;
+  status: string;
+}
+
+// Pure 4-field row check (duplicated from isElectionRegistryEntry per ADR-6):
+// all four required fields are non-empty strings AND status is a known state.
+// Unknown extra fields are ignored (forward-compat); any missing/mistyped
+// required field or unknown status fails the row.
+export function isElectionsRegistryRow(v: unknown): v is ElectionsRegistryRow {
+  if (typeof v !== "object" || v === null) return false;
+  const r = v as Record<string, unknown>;
+  return (
+    typeof r.electionId === "string" && r.electionId.length > 0 &&
+    typeof r.dirName === "string" && r.dirName.length > 0 &&
+    typeof r.createdAt === "string" && r.createdAt.length > 0 &&
+    typeof r.status === "string" && ELECTION_REGISTRY_STATES.has(r.status)
+  );
+}
+
+// Exact-equality bind: does this row's dirName match the physical directory
+// name? Duplicated from scripts' electionDirMatches per ADR-6; t261 pins parity.
+export function electionRowMatchesDir(row: ElectionsRegistryRow, dirName: string): boolean {
+  return row.dirName === dirName;
+}
+
+export type ElectionsDriftFinding =
+  | { kind: "absent" }
+  | { kind: "corrupt" }
+  | { kind: "readdir-fail" }
+  | {
+      kind: "ok";
+      rows: number;
+      dirs: number;
+      rowsWithoutDir: string[];
+      dirsWithoutRow: string[];
+    };
+
+// Pure label composer (exported for t261). Enumerates ALL drifted names with no
+// silent cap so a large drift is never truncated in the doctor report.
+export function composeElectionsDriftLabel(finding: ElectionsDriftFinding): string {
+  switch (finding.kind) {
+    case "absent":
+      return "elections registry: elections.json 不在(移行前)";
+    case "corrupt":
+      return "elections registry: elections.json corrupt — 要調査";
+    case "readdir-fail":
+      return "elections registry: elections/ readdir 失敗 — 要調査";
+    case "ok": {
+      const { rows, dirs, rowsWithoutDir, dirsWithoutRow } = finding;
+      if (rowsWithoutDir.length === 0 && dirsWithoutRow.length === 0) {
+        return `elections registry: no drift (rows ${rows} / dirs ${dirs})`;
+      }
+      return (
+        `elections registry: rows ${rows} / dirs ${dirs} / ` +
+        `row→dir欠 ${rowsWithoutDir.length} [${rowsWithoutDir.join(",")}] / ` +
+        `dir→row欠 ${dirsWithoutRow.length} [${dirsWithoutRow.join(",")}]`
+      );
+    }
+  }
+}
+
+// FS collector: read the default space's elections registry, compare it against
+// the on-disk election directories, and return the drift finding. Kept as a
+// thin seam over the pure composer so the label logic is in-process testable
+// (handleDoctor itself is spawn-only — t83 header). Order of verdicts mirrors
+// the spec: absent (file or dir missing) → corrupt (unreadable/parse/bad-row) →
+// readdir-fail (permission etc.) → ok (bidirectional drift by exact dirName).
+function inspectElectionsDrift(projectDir: string): ElectionsDriftFinding {
+  const root = join(projectDir, "amadeus", "spaces", "default", "elections");
+  const registryPath = join(root, "elections.json");
+  if (!existsSync(registryPath) || !existsSync(root)) return { kind: "absent" };
+  let text: string;
+  try {
+    text = readFileSync(registryPath, "utf8");
+  } catch {
+    return { kind: "corrupt" };
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { kind: "corrupt" };
+  }
+  if (!Array.isArray(parsed)) return { kind: "corrupt" };
+  const rows: ElectionsRegistryRow[] = [];
+  for (const row of parsed) {
+    if (!isElectionsRegistryRow(row)) return { kind: "corrupt" };
+    rows.push(row);
+  }
+  let dirNames: string[];
+  try {
+    dirNames = readdirSync(root, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name);
+  } catch {
+    return { kind: "readdir-fail" };
+  }
+  const dirSet = new Set(dirNames);
+  // row→dir欠: a row whose dirName resolves to no on-disk directory (identified
+  // by its electionId). dir→row欠: a directory matching no row's dirName by
+  // exact equality (non-directories like elections.json are already excluded by
+  // the isDirectory filter above).
+  const rowsWithoutDir = rows
+    .filter((r) => !dirSet.has(r.dirName))
+    .map((r) => r.electionId);
+  const dirsWithoutRow = dirNames.filter(
+    (d) => !rows.some((r) => electionRowMatchesDir(r, d)),
+  );
+  return {
+    kind: "ok",
+    rows: rows.length,
+    dirs: dirNames.length,
+    rowsWithoutDir,
+    dirsWithoutRow,
+  };
+}
+
+export function electionsRegistryDriftDoctorCheck(projectDir: string): DoctorCheck {
+  return {
+    pass: true,
+    label: composeElectionsDriftLabel(inspectElectionsDrift(projectDir)),
+  };
+}
+
 const CODEX_HOOKS_DOCTOR_REASONS = new Set([
   "OK",
   "CANONICAL_MISSING",
@@ -1103,6 +1257,12 @@ export function handleDoctor(projectDir: string): void {
   // standing grant currently opening stage gates, or is per-gate approval in
   // force? Judgment lives in the in-process-tested standingGrantDoctorCheck seam.
   results.push(standingGrantDoctorCheck(projectDir, Date.now()));
+
+  // 4d. Elections registry ⇄ directory drift (advisory) — does the default
+  // space's elections.json agree with the on-disk election dirs? Always
+  // pass:true (ruling E-SRCAD3); judgment lives in the in-process-tested
+  // electionsRegistryDriftDoctorCheck / composeElectionsDriftLabel seam.
+  results.push(electionsRegistryDriftDoctorCheck(projectDir));
 
   // 5. Workspace shell ready (P4: no --init artifact to check). Readiness is the
   // SHIPPED SHELL: the harness engine dir (.claude/.kiro/.codex) present AND the
