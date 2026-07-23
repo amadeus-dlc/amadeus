@@ -1,0 +1,29 @@
+{
+  "electionId": "E-SRCB2CG",
+  "kind": "clarification-question",
+  "question": "intent 260722-space-record-catalog / B2(U2 election-path-resolver)CG の実装前停止裁定(候補 verbatim 正本 = e2 ブランチの <record>/construction/election-path-resolver/code-generation/deviation-candidates.md — git show で実測可。所見分離済み)。builder 第3再列挙の検出: leader-sync の ELECTIONS_ROOT 消費は実測4箇所(事前列挙3は過少)、うち :174 startsWith / :441 git pathspec の2箇所は相対パス要で絶対 electionsRoot() では置換不能 — FD C5(共有寄せ)と列挙挙動 as-is の両立形の裁定。候補: A = 部分統一・相対温存(絶対2箇所のみ置換、相対は用途限定 const・挙動完全不変)/ B = relative() 導出で完全統一(プラットフォーム前提が pathspec 契約へ混入)/ C = store に ELECTIONS_ROOT_RELATIVE を新設 export(単一正本・スコープ増分小)/ X。各自 leader-sync の4箇所を実測確認のうえ、受容度併記+GoA 付きで投票(短い協調作業)。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. 部分統一・相対温存(挙動完全不変・最小変更)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. relative() 導出で完全統一"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. store へ相対 export 新設(単一正本化)"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他(票コメント指定)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e4",
+    "e5"
+  ],
+  "state": "collecting"
+}
