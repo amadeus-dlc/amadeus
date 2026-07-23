@@ -1752,3 +1752,12 @@
 **Message**: OK
 
 ---
+
+## Error Logged
+**Timestamp**: 2026-07-23T04:19:59Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state delegate-approval approval-handoff --to-intent 260723-archived-status-guard --user-input ユーザー実 HUMAN_TURN(04:16Z 頃「OK」)に基づく発行。AH = ideation 最終の phase 境界、phase-check-ideation.md 実在報告済み、§13 E-ASGAHS13 成立(3-0)
+**Error**: delegate-approval: target intent record not found: 260723-archived-status-guard
+
+---
