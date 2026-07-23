@@ -5,7 +5,11 @@ import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Election, Goa } from "../../scripts/amadeus-election-model";
-import { Store, writeStoreFile } from "../../scripts/amadeus-election-store";
+import {
+  resolveElectionDir,
+  Store,
+  writeStoreFile,
+} from "../../scripts/amadeus-election-store";
 
 const DEF = {
   electionId: "E-STORE-1",
@@ -54,6 +58,10 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
+function electionDir(electionId = "E-STORE-1"): string {
+  return resolveElectionDir(root, electionId).dir;
+}
+
 describe("t235 election-store", () => {
   test("create/load round-trip persists the definition with an explicit draft state", () => {
     expect(Store.create(root, election()).ok).toBe(true);
@@ -65,7 +73,7 @@ describe("t235 election-store", () => {
     }
     const dup = Store.create(root, election());
     expect(dup.ok).toBe(false);
-    if (!dup.ok) expect(dup.error).toBe("exists");
+    if (!dup.ok) expect(dup.error).toBe("duplicate");
   });
 
   test("appendBallot rejects a second non-amend ballot from the same voter", () => {
@@ -84,16 +92,14 @@ describe("t235 election-store", () => {
 
   test("fail-closed load: a corrupt election.json rejects with corrupt, never re-initializes", () => {
     expect(Store.create(root, election()).ok).toBe(true);
-    const path = join(root, "E-STORE-1", "election.json");
+    const path = join(electionDir(), "election.json");
     writeFileSync(path, '{"electionId": "E-STORE-1", "state": ');
     const loaded = Store.load(root, "E-STORE-1");
     expect(loaded.ok).toBe(false);
     if (!loaded.ok) expect(loaded.error).toBe("corrupt");
     // The broken bytes stay untouched on disk (no silent recovery).
     expect(readFileSync(path, "utf8")).toBe('{"electionId": "E-STORE-1", "state": ');
-    const missing = Store.load(root, "E-NOPE");
-    expect(missing.ok).toBe(false);
-    if (!missing.ok) expect(missing.error).toBe("not-found");
+    expect(() => Store.load(root, "E-NOPE")).toThrow("election not in registry: E-NOPE");
   });
 
   test("writeStoreFile atomic pair: original bytes stay intact before rename, full new bytes after", () => {
@@ -109,22 +115,17 @@ describe("t235 election-store", () => {
     expect(readFileSync(path, "utf8")).toBe("NEW-CONTENT");
   });
 
-  test("io-error branches: unreadable file, dir-blocked create, dir-blocked materialize", () => {
+  test("io-error branches: unreadable file and dir-blocked materialize", () => {
     // (1) readJson catch: file exists but is unreadable (permission 000)
     expect(Store.create(root, election()).ok).toBe(true);
-    const path = join(root, "E-STORE-1", "election.json");
+    const path = join(electionDir(), "election.json");
     chmodSync(path, 0o000);
     const unreadable = Store.load(root, "E-STORE-1");
     chmodSync(path, 0o644);
     expect(unreadable.ok).toBe(false);
     if (!unreadable.ok) expect(unreadable.error).toBe("io-error");
-    // (2) create catch: the election dir path is blocked by a plain file
-    writeFileSync(join(root, "E-BLOCKED"), "not a dir");
-    const blocked = Store.create(root, { ...election(), electionId: "E-BLOCKED" });
-    expect(blocked.ok).toBe(false);
-    if (!blocked.ok) expect(blocked.error).toBe("io-error");
-    // (3) materialize catch: ballots/ path is blocked by a plain file
-    writeFileSync(join(root, "E-STORE-1", "ballots"), "not a dir");
+    // (2) materialize catch: ballots/ path is blocked by a plain file
+    writeFileSync(join(electionDir(), "ballots"), "not a dir");
     const mat = Store.materialize(
       root,
       "E-STORE-1",
@@ -133,8 +134,8 @@ describe("t235 election-store", () => {
     );
     expect(mat.ok).toBe(false);
     if (!mat.ok) expect(mat.error).toBe("io-error");
-    rmSync(join(root, "E-STORE-1", "ballots"));
-    // (4) writeStoreFile catch: tmp write into a missing parent dir throws
+    rmSync(join(electionDir(), "ballots"));
+    // (3) writeStoreFile catch: tmp write into a missing parent dir throws
     const w = writeStoreFile(join(root, "no-such-dir", "x.json"), "DATA");
     expect(w.ok).toBe(false);
     if (!w.ok) expect(w.error).toBe("io-error");
@@ -213,7 +214,7 @@ describe("t235 election-store", () => {
     const l2 = Store.ledger(root, "E-LATE-8");
     if (l2.ok) expect(l2.value.late[0]?.reexamRequired).toBe(true);
     const timeline = JSON.parse(
-      readFileSync(join(root, "E-LATE-8", "timeline.json"), "utf8"),
+      readFileSync(join(electionDir("E-LATE-8"), "timeline.json"), "utf8"),
     );
     expect(timeline.some((e: { kind: string }) => e.kind === "late")).toBe(true);
   });
@@ -228,14 +229,14 @@ describe("t235 election-store", () => {
       goa: { favor: 1, against: 0, abstain: 0, discuss: 0 },
     };
     expect(Store.materialize(root, "E-STORE-1", result, "2026-07-19T01:00:00Z").ok).toBe(true);
-    const tallyFile = JSON.parse(readFileSync(join(root, "E-STORE-1", "tally.json"), "utf8"));
+    const tallyFile = JSON.parse(readFileSync(join(electionDir(), "tally.json"), "utf8"));
     expect(tallyFile.result.kind).toBe("established");
     expect(tallyFile.ballots.length).toBe(1);
     const materialized = JSON.parse(
-      readFileSync(join(root, "E-STORE-1", "ballots", "alice.json"), "utf8"),
+      readFileSync(join(electionDir(), "ballots", "alice.json"), "utf8"),
     );
     expect(materialized.voter).toBe("alice");
-    const timeline = JSON.parse(readFileSync(join(root, "E-STORE-1", "timeline.json"), "utf8"));
+    const timeline = JSON.parse(readFileSync(join(electionDir(), "timeline.json"), "utf8"));
     expect(timeline.some((e: { kind: string }) => e.kind === "tallied")).toBe(true);
   });
 
@@ -263,7 +264,7 @@ describe("t235 election-store", () => {
       expect(ledger.value.ballots.length).toBe(1);
       expect(ledger.value.ballots[0]).toEqual(original);
     }
-    const timeline = JSON.parse(readFileSync(join(root, "E-STORE-1", "timeline.json"), "utf8"));
+    const timeline = JSON.parse(readFileSync(join(electionDir(), "timeline.json"), "utf8"));
     const amendmentRows = timeline.filter(
       (e: { detail?: string }) => e.detail === "ballot amendment: alice",
     );
@@ -290,7 +291,7 @@ describe("t235 election-store", () => {
       expect(ledger.value.ballots[1]?.kind).toBe("amend");
     }
     // timeline books "ballot amendment: <voter>" (BR-3)
-    const timeline = JSON.parse(readFileSync(join(root, "E-STORE-1", "timeline.json"), "utf8"));
+    const timeline = JSON.parse(readFileSync(join(electionDir(), "timeline.json"), "utf8"));
     expect(
       timeline.some((e: { detail?: string }) => e.detail === "ballot amendment: alice"),
     ).toBe(true);

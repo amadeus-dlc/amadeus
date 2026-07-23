@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { main } from "../../scripts/amadeus-election";
+import { electionsRoot, resolveElectionDir } from "../../scripts/amadeus-election-store";
 
 const DEFINITION = {
   electionId: "E-TIE1",
@@ -34,7 +35,7 @@ function writeJson(name: string, value: unknown): string {
 }
 
 function electionPath(name: string): string {
-  return join(projectDir, "amadeus", "spaces", "default", "elections", "E-TIE1", name);
+  return join(resolveElectionDir(electionsRoot(projectDir), "E-TIE1").dir, name);
 }
 
 function openTieElection(): void {

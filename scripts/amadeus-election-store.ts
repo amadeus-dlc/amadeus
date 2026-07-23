@@ -3,18 +3,27 @@
 // Bolt 3 io-record-transport: late-ballot lane via classifyLate, amend
 // coexistence, reexamRequired persistence). Layout (functional-design):
 //
-//   amadeus/spaces/<space>/elections/<electionId>/
-//     election.json   definition + explicit state field (source of truth)
-//     ledger.json     accepted-ballot append list
-//     ballots/        materialized at tally time (blind lift)
-//     tally.json      tally result + fixed ballot set
-//     timeline.json   event append list (each entry only from an executed op)
+//   amadeus/spaces/<space>/elections/
+//     elections.json  U1 registry: one row per created-after-U1 election
+//     <electionId>/
+//       election.json   definition + explicit state field (source of truth)
+//       ledger.json     accepted-ballot append list
+//       ballots/        materialized at tally time (blind lift)
+//       tally.json      tally result + fixed ballot set
+//       timeline.json   event append list (each entry only from an executed op)
 //
 // Single writer (conductor) by decision D-09 — no locking; torn writes are
 // prevented by tmp+rename (writeStoreFile). Parse failures of existing files
 // reject with "corrupt" (fail-closed load; never silently re-initialize).
 
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import {
   type Ballot,
@@ -81,14 +90,268 @@ function withLateLane(ledger: Partial<LedgerFile>): LedgerFile {
   return { ballots: ledger.ballots ?? [], late: ledger.late ?? [] };
 }
 
-function dirOf(root: string, electionId: string): string {
-  return join(root, electionId);
+// ---------------------------------------------------------------------------
+// Elections registry (U1 space-record-catalog, Bolt B1)
+//
+// A single elections.json at the elections root mirrors every election created
+// after U1 adoption: one row per election recording its canonical id, the
+// current physical directory name, the creation instant, and the last-synced
+// state. U2 resolves readers through this index and creates new elections in a
+// date-prefixed physical directory. Pre-U2 direct-name directories remain
+// reachable only through the loud migration-window branch below.
+// ---------------------------------------------------------------------------
+
+export type ElectionRegistryEntry = {
+  electionId: string;
+  dirName: string;
+  createdAt: string;
+  status: ElectionState;
+};
+
+export function electionsRegistryPath(root: string): string {
+  return join(root, "elections.json");
+}
+
+export type RegistryRead =
+  | { kind: "ok"; entries: ElectionRegistryEntry[] }
+  | { kind: "absent" }
+  | { kind: "corrupt"; detail: string };
+
+const VALID_STATES: ReadonlySet<string> = new Set<ElectionState>([
+  "draft",
+  "open",
+  "collecting",
+  "tallied",
+  "rendered",
+  "recorded",
+  "hold",
+]);
+
+// A row passes iff all four required fields are present with the right primitive
+// types AND status is a known ElectionState. Unknown EXTRA fields are ignored
+// (forward-compat); a missing/mistyped required field or unknown status is a
+// row-level failure that makes the whole read corrupt (fail-closed). Exported
+// as the pure (no-fs) row validator so U2's resolver can bind rows with the same
+// check readElectionsRegistry applies.
+export function isElectionRegistryEntry(v: unknown): v is ElectionRegistryEntry {
+  if (typeof v !== "object" || v === null) return false;
+  const r = v as Record<string, unknown>;
+  if (typeof r.electionId !== "string" || r.electionId.length === 0) return false;
+  if (typeof r.dirName !== "string" || r.dirName.length === 0) return false;
+  if (typeof r.createdAt !== "string" || r.createdAt.length === 0) return false;
+  if (typeof r.status !== "string" || !VALID_STATES.has(r.status)) return false;
+  return true;
+}
+
+// Read the registry, never silently reinitializing: a missing file is `absent`
+// (a legitimate pre-adoption / pre-migration state), any parse failure or a row
+// failing the 4-field check is `corrupt` (the caller decides loudness).
+export function readElectionsRegistry(root: string): RegistryRead {
+  const path = electionsRegistryPath(root);
+  if (!existsSync(path)) return { kind: "absent" };
+  let text: string;
+  try {
+    text = readFileSync(path, "utf8");
+  } catch {
+    return { kind: "corrupt", detail: "elections.json is unreadable" };
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { kind: "corrupt", detail: "elections.json is not valid JSON" };
+  }
+  if (!Array.isArray(parsed)) {
+    return { kind: "corrupt", detail: "elections.json root is not an array" };
+  }
+  const entries: ElectionRegistryEntry[] = [];
+  for (const row of parsed) {
+    if (!isElectionRegistryEntry(row)) {
+      return { kind: "corrupt", detail: "a registry row failed the 4-field check" };
+    }
+    entries.push({
+      electionId: row.electionId,
+      dirName: row.dirName,
+      createdAt: row.createdAt,
+      status: row.status,
+    });
+  }
+  return { kind: "ok", entries };
+}
+
+export type ResolvedElectionDir =
+  | { kind: "registry"; dir: string }
+  | { kind: "legacy-unmigrated"; dir: string };
+
+const LEGACY_PATH_NOTICE = "unmigrated election";
+
+// Resolve every election read through the registry. The only fallback is the
+// declared migration window: an exact legacy electionId directory that still
+// exists. It is deliberately loud and typed so migration completion can remove
+// this branch mechanically.
+export function resolveElectionDir(root: string, electionId: string): ResolvedElectionDir {
+  const registry = readElectionsRegistry(root);
+  if (registry.kind === "corrupt") {
+    throw new Error(`elections registry corrupt: ${registry.detail}`);
+  }
+  if (registry.kind === "ok") {
+    const byId = new Map(registry.entries.map((entry) => [entry.electionId, entry]));
+    const entry = byId.get(electionId);
+    if (entry !== undefined) return { kind: "registry", dir: join(root, entry.dirName) };
+  }
+  const legacyDir = join(root, electionId);
+  if (existsSync(legacyDir)) {
+    console.error(`${LEGACY_PATH_NOTICE} ${electionId} — legacy path(移行前)`);
+    return { kind: "legacy-unmigrated", dir: legacyDir };
+  }
+  throw new Error(`election not in registry: ${electionId}`);
+}
+
+// Append a new row. absent -> start a fresh []; corrupt -> loud error (never
+// silently reinitialize); duplicate electionId -> loud error. On success the
+// whole array is rewritten atomically via writeStoreFile.
+export function appendElectionToRegistry(
+  root: string,
+  entry: ElectionRegistryEntry,
+): Result<void, StoreError> {
+  const read = readElectionsRegistry(root);
+  if (read.kind === "corrupt") return err("corrupt");
+  const entries = read.kind === "ok" ? read.entries : [];
+  if (entries.some((e) => e.electionId === entry.electionId)) return err("duplicate");
+  return writeStoreFile(electionsRegistryPath(root), JSON.stringify([...entries, entry], null, 2));
+}
+
+// Sync a row's status. row missing -> loud error (a created-after-U1 election
+// MUST carry a row); corrupt -> loud error; absent file -> loud not-found (the
+// absent-is-a-no-op policy is the CALLER's concern — see Store.setState — so
+// this function is only reached once a registry exists).
+export function updateElectionStatus(
+  root: string,
+  electionId: string,
+  status: ElectionState,
+): Result<void, StoreError> {
+  const read = readElectionsRegistry(root);
+  if (read.kind === "corrupt") return err("corrupt");
+  if (read.kind === "absent") return err("not-found");
+  const idx = read.entries.findIndex((e) => e.electionId === electionId);
+  if (idx < 0) return err("not-found");
+  const next = read.entries.map((e, i) => (i === idx ? { ...e, status } : e));
+  return writeStoreFile(electionsRegistryPath(root), JSON.stringify(next, null, 2));
+}
+
+// Exact-equality bind: does this registry entry's dirName match the given
+// physical directory name? (U2 resolver uses this to bind a row to its dir.)
+export function electionDirMatches(entry: ElectionRegistryEntry, dirName: string): boolean {
+  return entry.dirName === dirName;
+}
+
+// Second-precision UTC ISO for the registry createdAt (`YYYY-MM-DDThh:mm:ssZ`) —
+// minted locally so the store stays self-contained (matches the transport's
+// normalizeAt shape without coupling to that module).
+function nowUtcSecondsIso(): string {
+  return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
+// Compact UTC date stamp YYMMDD from an ISO instant. Ported pure from
+// packages/framework/core/tools/amadeus-lib.ts:dateStamp (kept local — the store
+// must NOT import the framework). UTC so the stamp is timezone-independent.
+function dateStamp(iso: string): string {
+  const d = new Date(iso);
+  const yy = String(d.getUTCFullYear()).slice(-2);
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  return `${yy}${mm}${dd}`;
+}
+
+// Deterministic free-text -> kebab slug (lowercase; non-alphanumerics -> hyphens;
+// collapse + trim; cap length; ensure a leading letter). Ported verbatim from
+// packages/framework/core/tools/amadeus-lib.ts:slugify (kept local, framework
+// not imported). Idempotent: slugify(slugify(x)) === slugify(x).
+function slugify(text: string, maxLength: number): string {
+  let s = text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, maxLength)
+    .replace(/-+$/g, "");
+  if (!/^[a-z]/.test(s)) s = `e-${s}`.replace(/-+$/g, "");
+  if (s.length === 0) s = "election";
+  return s;
+}
+
+// UUIDv7 -> seconds-precision UTC ISO. A version-7 UUID carries a 48-bit
+// big-endian Unix-ms timestamp in its 12 leading hex digits; this decodes it.
+// Returns null for any input that is not a well-formed version-7 variant-10xx
+// UUID, or whose decoded instant is not a real date.
+const UUID_V7_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function uuidv7ToUtcIso(uuid: string): string | null {
+  if (typeof uuid !== "string" || !UUID_V7_RE.test(uuid)) return null;
+  const hex = uuid.replace(/-/g, "").slice(0, 12);
+  const ms = Number.parseInt(hex, 16);
+  if (!Number.isFinite(ms)) return null;
+  const d = new Date(ms);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
+// Build the date-prefixed physical directory name `<YYMMDD>-<slug>` for an
+// election, disambiguating collisions with a `-2`, `-3`, … counter over the
+// caller-supplied set of existing names. LOUD throw after 1000 exhausted names
+// (a runaway collision is a defect, never silently masked).
+//
+// NOT CONSUMED BY create IN THIS BOLT (ruling E-SRCB1CG): create still names
+// directories by electionId. Consumers are U3 (migration: rename legacy
+// electionId dirs to this form) and the post-U2 create switch. Implemented and
+// fully tested here so U2/U3 inherit a proven minting function.
+export function mintElectionDirName(
+  electionId: string,
+  createdAtIso: string,
+  existingDirNames: Set<string>,
+): string {
+  const base = `${dateStamp(createdAtIso)}-${slugify(electionId, 24)}`;
+  if (!existingDirNames.has(base)) return base;
+  for (let n = 2; n <= 1000; n++) {
+    const candidate = `${base}-${n}`;
+    if (!existingDirNames.has(candidate)) return candidate;
+  }
+  throw new Error(
+    `mintElectionDirName: no free directory name for "${electionId}" after 1000 attempts`,
+  );
 }
 
 export const Store = {
   create(root: string, election: Election): Result<void, StoreError> {
-    const dir = dirOf(root, election.electionId);
+    // Order contract (ruling E-SRCB1CG): the registry row is appended BEFORE the
+    // election directory is created. The root must exist first so elections.json
+    // can land; the physical dir is created only after the row commits, so a
+    // registry failure (duplicate/corrupt) aborts create with no dir side-effect.
+    try {
+      mkdirSync(root, { recursive: true });
+    } catch {
+      return err("io-error");
+    }
+    const createdAt = nowUtcSecondsIso();
+    let existingDirNames: Set<string>;
+    try {
+      existingDirNames = new Set(
+        readdirSync(root, { withFileTypes: true })
+          .filter((entry) => entry.isDirectory())
+          .map((entry) => entry.name),
+      );
+    } catch {
+      return err("io-error");
+    }
+    const dirName = mintElectionDirName(election.electionId, createdAt, existingDirNames);
+    const dir = join(root, dirName);
     if (existsSync(join(dir, "election.json"))) return err("exists");
+    const appended = appendElectionToRegistry(root, {
+      electionId: election.electionId,
+      dirName,
+      createdAt,
+      status: "draft",
+    });
+    if (!appended.ok) return appended;
     try {
       mkdirSync(dir, { recursive: true });
     } catch {
@@ -104,21 +367,33 @@ export const Store = {
   },
 
   load(root: string, electionId: string): Result<{ election: Election; state: ElectionState }, StoreError> {
-    const read = readJson<ElectionFile>(join(dirOf(root, electionId), "election.json"));
+    const read = readJson<ElectionFile>(
+      join(resolveElectionDir(root, electionId).dir, "election.json"),
+    );
     if (!read.ok) return read;
     const { state, ...election } = read.value;
     return ok({ election, state });
   },
 
   setState(root: string, electionId: string, state: ElectionState): Result<void, StoreError> {
-    const path = join(dirOf(root, electionId), "election.json");
+    const resolved = resolveElectionDir(root, electionId);
+    const path = join(resolved.dir, "election.json");
     const read = readJson<ElectionFile>(path);
     if (!read.ok) return read;
-    return writeStoreFile(path, JSON.stringify({ ...read.value, state }, null, 2));
+    const w = writeStoreFile(path, JSON.stringify({ ...read.value, state }, null, 2));
+    if (!w.ok) return w;
+    // Loud registry sync (ruling E-SRCB1CG): once election.json is written,
+    // mirror the status to the registry row. A typed legacy resolution skips
+    // registry sync during the declared migration window; registry-backed
+    // elections must always keep their row in sync.
+    if (resolved.kind === "legacy-unmigrated") return ok(undefined);
+    return updateElectionStatus(root, electionId, state);
   },
 
   ledger(root: string, electionId: string): Result<LedgerFile, StoreError> {
-    const read = readJson<Partial<LedgerFile>>(join(dirOf(root, electionId), "ledger.json"));
+    const read = readJson<Partial<LedgerFile>>(
+      join(resolveElectionDir(root, electionId).dir, "ledger.json"),
+    );
     if (!read.ok) return read;
     return ok(withLateLane(read.value));
   },
@@ -133,7 +408,7 @@ export const Store = {
     ballot: Ballot,
     receivedAt: string,
   ): Result<void, StoreError> {
-    const dir = dirOf(root, electionId);
+    const dir = resolveElectionDir(root, electionId).dir;
     const ledgerPath = join(dir, "ledger.json");
     const read = readJson<Partial<LedgerFile>>(ledgerPath);
     if (!read.ok) return read;
@@ -201,7 +476,7 @@ export const Store = {
   // Only called from an executed operation's result (design invariant — the
   // CLI never books an event that did not happen).
   appendTimeline(root: string, electionId: string, event: TimelineEvent): Result<void, StoreError> {
-    const path = join(dirOf(root, electionId), "timeline.json");
+    const path = join(resolveElectionDir(root, electionId).dir, "timeline.json");
     const read = readJson<TimelineEvent[]>(path);
     if (!read.ok) return read;
     return writeStoreFile(path, JSON.stringify([...read.value, event], null, 2));
@@ -228,7 +503,7 @@ export const Store = {
     result: TallyResult,
     talliedAt: string,
   ): Result<void, StoreError> {
-    const dir = dirOf(root, electionId);
+    const dir = resolveElectionDir(root, electionId).dir;
     const ledger = Store.ledger(root, electionId);
     if (!ledger.ok) return ledger;
     try {
