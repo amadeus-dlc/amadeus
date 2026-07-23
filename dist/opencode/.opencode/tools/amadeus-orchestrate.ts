@@ -81,6 +81,7 @@ import {
   type RunStageDirective,
   validateDirective,
 } from "./amadeus-directive.ts";
+import { appendLifecycleAuditEntryUnlocked } from "./amadeus-audit.ts";
 import {
   activeSpace,
   activeIntent,
@@ -98,6 +99,7 @@ import {
   nextInScopeStage,
   normalizeUnitKind,
   parseCheckboxes,
+  parseIntentStatus,
   PHASE_NUMBERS,
   PHASES,
   READ_ONLY_FLAGS,
@@ -115,6 +117,11 @@ import {
   unitDependencyPath,
   WORKSPACE_VERBS,
   SKELETON_ON_SCOPES,
+  guardIntentOperation,
+  renderIntentOperationRejection,
+  resolveIntentOperationTargetLocked,
+  type IntentLifecycleAuditEvent,
+  withIntentLifecyclePreflight,
 } from "./amadeus-lib.ts";
 import {
   type Consume,
@@ -258,6 +265,50 @@ function emitMirrorBoundaryIfNeeded(
         `\`amadeus-orchestrate.ts report --mirror-boundary ${phase} --result completed --user-input <create|sync|skip>\`.`,
     ),
   );
+  return true;
+}
+
+function appendOrchestrateLifecycleEvent(
+  event: IntentLifecycleAuditEvent,
+  shard: string,
+  pd: string,
+  intentDir: string,
+  space: string,
+): void {
+  appendLifecycleAuditEntryUnlocked(event.eventType, {
+    Intent: event.intentDir,
+    "From Status": event.fromStatus,
+    "To Status": event.toStatus,
+    "Operation Id": event.operationId,
+    "User Input": event.userInput,
+    "Human Turn Timestamp": event.humanTurnTimestamp,
+  }, pd, intentDir, space, shard);
+}
+
+export function archivedNextGuard(projectDir: string): ErrorDirective | undefined {
+  const space = activeSpace(projectDir);
+  return withIntentLifecyclePreflight(
+    projectDir,
+    space,
+    appendOrchestrateLifecycleEvent,
+    (context) => {
+      const active = listIntents(projectDir, space).find((intent) => intent.active);
+      if (!active?.dirName) return undefined;
+      const result = guardIntentOperation(
+        resolveIntentOperationTargetLocked(context, active),
+        "next",
+      );
+      return result.kind === "rejected"
+        ? errorDirective(renderIntentOperationRejection(result.error))
+        : undefined;
+    },
+  );
+}
+
+function emitArchivedNextError(projectDir: string): boolean {
+  const archived = archivedNextGuard(projectDir);
+  if (!archived) return false;
+  emit(archived, false);
   return true;
 }
 
@@ -1707,6 +1758,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
   }
 
   const pd = resolveProjectDir(projectDir);
+  if (emitArchivedNextError(pd)) return;
   const stateContent = loadStateFileIfPresent(pd);
   // The active intent's RELATIVE record-dir prefix (amadeus/spaces/<sp>/intents/
   // <slug>-<id8>), threaded into every run-stage directive so the conductor's

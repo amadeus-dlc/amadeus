@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { accessSync, appendFileSync, closeSync, constants as fsConstants, cpSync, existsSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { accessSync, appendFileSync, closeSync, constants as fsConstants, cpSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
 import { basename, dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -1754,7 +1754,7 @@ export interface IntentRegistryEntry {
   dirName?: string;
   scope?: string;
   repos?: string[];
-  status: string;
+  status: IntentStatus;
   // Issue #499/#848: a docs-only declaration exempts a workspace_requires stage's
   // completion guard (verifyStageArtifacts in amadeus-state.ts) from requiring
   // source work outside amadeus/ — for Intents whose produces are entirely
@@ -1764,8 +1764,89 @@ export interface IntentRegistryEntry {
   docsOnly?: { evidence: string };
 }
 
+export const INTENT_STATUSES = [
+  "in-flight",
+  "parked",
+  "complete",
+  "archived",
+] as const;
+
+export type IntentStatus = (typeof INTENT_STATUSES)[number];
+
+function intentStatusPreview(value: unknown): string {
+  if (typeof value === "string") return JSON.stringify(value.slice(0, 80));
+  if (value === null) return "null";
+  if (typeof value === "object") return Object.prototype.toString.call(value);
+  return String(value).slice(0, 80);
+}
+
+export class IntentStatusParseError extends Error {
+  readonly kind = "invalid-intent-status";
+  readonly receivedType: string;
+  readonly receivedPreview: string;
+  readonly allowed = INTENT_STATUSES;
+
+  constructor(value: unknown) {
+    const receivedType = value === null ? "null" : typeof value;
+    const receivedPreview = intentStatusPreview(value);
+    super(
+      `Invalid intent status ${receivedPreview} (${receivedType}); allowed: ${INTENT_STATUSES.join(", ")}`,
+    );
+    this.name = "IntentStatusParseError";
+    this.receivedType = receivedType;
+    this.receivedPreview = receivedPreview;
+  }
+}
+
+export class IntentRegistryStatusError extends IntentStatusParseError {
+  readonly rowIndex: number;
+  readonly intentDir?: string;
+
+  constructor(value: unknown, rowIndex: number, intentDir?: string) {
+    super(value);
+    this.name = "IntentRegistryStatusError";
+    this.rowIndex = rowIndex;
+    this.intentDir = intentDir;
+    this.message = `${this.message}; registry row ${rowIndex}${intentDir ? ` (${intentDir})` : ""}`;
+  }
+}
+
+export function parseIntentStatus(value: unknown): IntentStatus {
+  if (
+    typeof value === "string" &&
+    (INTENT_STATUSES as readonly string[]).includes(value)
+  ) {
+    return value as IntentStatus;
+  }
+  throw new IntentStatusParseError(value);
+}
+
+function parseIntentRegistry(value: unknown): IntentRegistryEntry[] {
+  if (!Array.isArray(value)) {
+    throw new Error("Intent registry must be a JSON array");
+  }
+  return value.map((row, rowIndex) => {
+    if (typeof row !== "object" || row === null || Array.isArray(row)) {
+      throw new Error(`Intent registry row ${rowIndex} must be an object`);
+    }
+    const candidate = row as Record<string, unknown>;
+    try {
+      return { ...candidate, status: parseIntentStatus(candidate.status) } as IntentRegistryEntry;
+    } catch (error) {
+      if (error instanceof IntentStatusParseError) {
+        throw new IntentRegistryStatusError(
+          candidate.status,
+          rowIndex,
+          typeof candidate.dirName === "string" ? candidate.dirName : undefined,
+        );
+      }
+      throw error;
+    }
+  });
+}
+
 // Does record dir `dirName` belong to registry row `entry`? The single shared
-// join rule for every row→dir matcher (listIntents/updateIntentStatus/intentRepos).
+// join rule for every row→dir matcher (listIntents/status transition/intentRepos).
 // SPIKE (date-prefix): prefer the stored `entry.dirName` (exact match); fall back
 // to the legacy `<slug>-<id8>` shape (slug prefix + trailing hex that is a prefix
 // of the uuid's id-suffix) so pre-spike rows and fixtures still resolve.
@@ -1786,14 +1867,10 @@ export function appendIntentToRegistry(
   space?: string,
 ): void {
   const path = intentsRegistryPath(projectDir, space);
-  let list: IntentRegistryEntry[] = [];
-  try {
-    const parsed: unknown = JSON.parse(readFileSync(path, "utf-8"));
-    if (Array.isArray(parsed)) list = parsed as IntentRegistryEntry[];
-  } catch {
-    // absent / malformed → start a fresh list
-  }
-  list.push(entry);
+  const list = existsSync(path)
+    ? parseIntentRegistry(JSON.parse(readFileSync(path, "utf-8")))
+    : [];
+  list.push({ ...entry, status: parseIntentStatus(entry.status) });
   mkdirSync(dirname(path), { recursive: true });
   writeFileAtomic(path, `${JSON.stringify(list, null, 2)}\n`);
 }
@@ -1805,7 +1882,7 @@ export function spacesRoot(projectDir: string): string {
 }
 
 // Read a space's intents.json registry as a typed list. Returns [] when the
-// file is absent or malformed (same tolerance as appendIntentToRegistry). The
+// file is absent. Malformed content and invalid statuses fail closed. The
 // canonical "what intents exist" record for humans/ordering/status — the cheap
 // on-disk listIntentDirs() scan is the path-resolver's record-presence signal,
 // but the registry carries the uuid/status/scope/repos a human or the --json
@@ -1815,14 +1892,8 @@ export function readIntentRegistry(projectDir: string, space?: string): IntentRe
   const dir = realIntentsDir(projectDir, sp);
   if (dir === null) return [];
   const path = join(dir, "intents.json");
-  try {
-    if (!isRealRegularFile(path)) return [];
-    const parsed: unknown = JSON.parse(readFileSync(path, "utf-8"));
-    if (Array.isArray(parsed)) return parsed as IntentRegistryEntry[];
-  } catch {
-    // absent / malformed → empty
-  }
-  return [];
+  if (!isRealRegularFile(path)) return [];
+  return parseIntentRegistry(JSON.parse(readFileSync(path, "utf-8")));
 }
 
 // The registry status of the intent an audit append would target (#1248). The
@@ -2155,35 +2226,924 @@ export function birthIntent(
   return { uuid, slug, dirName, recordDir: recordPath, space };
 }
 
-// Flip an intent's registry row to a terminal/other status (e.g. "complete").
-// Matches the row by record DIR NAME (the stable identity the cursor/state use),
-// rewriting intents.json in place. MUST be called under the WORKSPACE lock
-// (invariant 2). Returns true iff a row matched and was updated. No-op (false)
-// when the intent is the legacy flat record (dirName null) or no row matches.
-export function updateIntentStatus(
+declare const INTENT_REGISTRY_LOCK: unique symbol;
+export type LockedIntentRegistryContext = {
+  readonly projectDir: string;
+  readonly space: string;
+  readonly [INTENT_REGISTRY_LOCK]: true;
+};
+
+export type IntentStatusTransition = "complete" | "archive" | "unarchive";
+
+const ACTIVE_INTENT_REGISTRY_CONTEXTS = new WeakSet<LockedIntentRegistryContext>();
+
+export function withLockedIntentRegistry<T>(
   projectDir: string,
-  dirName: string,
-  status: string,
+  fn: (
+    context: LockedIntentRegistryContext,
+  ) => T extends Promise<unknown> ? never : T,
   space?: string,
-): boolean {
+): T extends Promise<unknown> ? never : T {
   const sp = space ?? activeSpace(projectDir);
+  return withAuditLock(projectDir, () => {
+    const context = { projectDir, space: sp } as LockedIntentRegistryContext;
+    ACTIVE_INTENT_REGISTRY_CONTEXTS.add(context);
+    try {
+      return fn(context);
+    } finally {
+      ACTIVE_INTENT_REGISTRY_CONTEXTS.delete(context);
+    }
+  });
+}
+
+function transitionedIntentStatus(
+  current: IntentStatus,
+  transition: IntentStatusTransition,
+): IntentStatus | null {
+  if (transition === "complete") {
+    if (current === "complete") return null;
+    if (current === "in-flight" || current === "parked") return "complete";
+  } else if (transition === "archive") {
+    if (current !== "archived") return "archived";
+  } else if (current === "archived") {
+    return "in-flight";
+  }
+  throw new Error(`Cannot ${transition} intent with status ${current}`);
+}
+
+export function transitionIntentStatusLocked(
+  context: LockedIntentRegistryContext,
+  dirName: string,
+  transition: IntentStatusTransition,
+): boolean {
+  if (
+    !ACTIVE_INTENT_REGISTRY_CONTEXTS.has(context) ||
+    !holdsAuditLock(context.projectDir)
+  ) {
+    throw new Error("Intent status transition requires an active callback-scoped workspace lock");
+  }
+  const sp = context.space;
+  const projectDir = context.projectDir;
   const path = intentsRegistryPath(projectDir, sp);
   const list = readIntentRegistry(projectDir, sp);
-  let changed = false;
   for (const entry of list) {
-    // Match the active dirName via the shared join rule listIntents() uses.
     if (!recordDirMatches(entry, dirName)) continue;
-    if (entry.status !== status) {
-      entry.status = status;
-      changed = true;
-    }
-    break;
-  }
-  if (changed) {
+    const next = transitionedIntentStatus(entry.status, transition);
+    if (next === null) return false;
+    entry.status = parseIntentStatus(next);
     mkdirSync(dirname(path), { recursive: true });
     writeFileAtomic(path, `${JSON.stringify(list, null, 2)}\n`);
+    return true;
   }
-  return changed;
+  return false;
+}
+
+export type IntentLifecycleVerb = "archive" | "unarchive";
+
+export type IntentStatusTransactionJournal = {
+  readonly schemaVersion: 1;
+  readonly operationId: string;
+  readonly verb: IntentLifecycleVerb;
+  readonly intentDir: string;
+  readonly fromStatus: IntentStatus;
+  readonly toStatus: IntentStatus;
+  readonly humanTurn: {
+    readonly shard: string;
+    readonly timestamp: string;
+  };
+  readonly userInput: string;
+  readonly auditCommitted: boolean;
+  readonly registryCommitted: boolean;
+  readonly cursorCommitted: boolean;
+};
+
+export type IntentLifecycleAuditEvent = {
+  readonly eventType: "INTENT_ARCHIVED" | "INTENT_UNARCHIVED";
+  readonly intentDir: string;
+  readonly fromStatus: IntentStatus;
+  readonly toStatus: IntentStatus;
+  readonly operationId: string;
+  readonly userInput: string;
+  readonly humanTurnTimestamp: string;
+};
+
+export type LifecycleRecoveryResult =
+  | { readonly kind: "none" }
+  | { readonly kind: "recovered"; readonly operationId: string }
+  | { readonly kind: "completed"; readonly operationId: string };
+
+export type LifecycleAuditAppender = (
+  event: IntentLifecycleAuditEvent,
+  shard: string,
+  projectDir: string,
+  intentDir: string,
+  space: string,
+) => void;
+
+export type LifecycleTransactionHooks = {
+  beforeValidation?: () => void;
+  beforeJournalWrite?: () => void;
+  beforeAuditCommit?: () => void;
+  afterAuditCommit?: () => void;
+  beforeRegistryCommit?: () => void;
+  afterRegistryCommit?: () => void;
+  beforeCursorCommit?: () => void;
+  afterCursorCommit?: () => void;
+  beforeJournalDelete?: () => void;
+};
+
+export class IntentLifecycleJournalError extends Error {
+  constructor(message: string) {
+    super(`Intent lifecycle journal is corrupt: ${message}; manual investigation required`);
+    this.name = "IntentLifecycleJournalError";
+  }
+}
+
+const INTENT_LIFECYCLE_JOURNAL = ".amadeus-intent-status-transaction.json";
+const LIFECYCLE_RESOLUTION_EVENTS = new Set([
+  "QUESTION_ANSWERED",
+  "GATE_APPROVED",
+  "GATE_REJECTED",
+  "DELEGATED_APPROVAL",
+  "DELEGATED_REJECTION",
+  "GRANT_ISSUED",
+  "GRANT_REVOKED",
+  "INTENT_ARCHIVED",
+  "INTENT_UNARCHIVED",
+]);
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function intentLifecycleJournalPath(projectDir: string, space?: string): string {
+  return join(intentsDir(projectDir, space), INTENT_LIFECYCLE_JOURNAL);
+}
+
+function journalFailure(message: string): never {
+  throw new IntentLifecycleJournalError(message);
+}
+
+function parseJournalStatuses(
+  value: Record<string, unknown>,
+  verb: IntentLifecycleVerb,
+): { fromStatus: IntentStatus; toStatus: IntentStatus } {
+  let fromStatus: IntentStatus;
+  let toStatus: IntentStatus;
+  try {
+    fromStatus = parseIntentStatus(value.fromStatus);
+    toStatus = parseIntentStatus(value.toStatus);
+  } catch {
+    return journalFailure("fromStatus and toStatus must use the closed status vocabulary");
+  }
+  const archiveSource = fromStatus === "in-flight" ||
+    fromStatus === "parked" ||
+    fromStatus === "complete";
+  const valid = verb === "archive"
+    ? archiveSource && toStatus === "archived"
+    : fromStatus === "archived" && toStatus === "in-flight";
+  if (!valid) return journalFailure("verb/fromStatus/toStatus combination is invalid");
+  return { fromStatus, toStatus };
+}
+
+function parseJournalHumanTurn(raw: unknown): { shard: string; timestamp: string } {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+    return journalFailure("humanTurn must be an object");
+  }
+  const value = raw as Record<string, unknown>;
+  if (
+    typeof value.shard !== "string" ||
+    basename(value.shard) !== value.shard ||
+    !value.shard.endsWith(".md")
+  ) {
+    return journalFailure("humanTurn shard/timestamp is invalid");
+  }
+  if (typeof value.timestamp !== "string" || Number.isNaN(Date.parse(value.timestamp))) {
+    return journalFailure("humanTurn shard/timestamp is invalid");
+  }
+  return { shard: value.shard, timestamp: value.timestamp };
+}
+
+function parseJournalFlags(
+  value: Record<string, unknown>,
+): { auditCommitted: boolean; registryCommitted: boolean; cursorCommitted: boolean } {
+  const flags = [value.auditCommitted, value.registryCommitted, value.cursorCommitted];
+  if (flags.some((flag) => typeof flag !== "boolean")) {
+    return journalFailure("commit flags must be booleans");
+  }
+  const topology = flags.map((flag) => flag ? "T" : "F").join("");
+  if (!["FFF", "TFF", "TTF", "TTT"].includes(topology)) {
+    return journalFailure(`commit flag topology ${topology} is invalid`);
+  }
+  return {
+    auditCommitted: value.auditCommitted as boolean,
+    registryCommitted: value.registryCommitted as boolean,
+    cursorCommitted: value.cursorCommitted as boolean,
+  };
+}
+
+export function parseIntentStatusTransactionJournal(
+  raw: unknown,
+): IntentStatusTransactionJournal {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+    return journalFailure("root must be an object");
+  }
+  const value = raw as Record<string, unknown>;
+  const human = value.humanTurn;
+  if (value.schemaVersion !== 1) return journalFailure("schemaVersion must be 1");
+  if (typeof value.operationId !== "string" || !UUID_RE.test(value.operationId)) {
+    return journalFailure("operationId must be a UUID");
+  }
+  if (value.verb !== "archive" && value.verb !== "unarchive") {
+    return journalFailure("verb must be archive or unarchive");
+  }
+  if (typeof value.intentDir !== "string" || !isSafeWorkspaceEntryName(value.intentDir)) {
+    return journalFailure("intentDir must be a safe workspace entry");
+  }
+  const { fromStatus, toStatus } = parseJournalStatuses(value, value.verb);
+  const humanTurn = parseJournalHumanTurn(human);
+  if (typeof value.userInput !== "string") return journalFailure("userInput must be a string");
+  const flags = parseJournalFlags(value);
+  return {
+    schemaVersion: 1,
+    operationId: value.operationId,
+    verb: value.verb,
+    intentDir: value.intentDir,
+    fromStatus,
+    toStatus,
+    humanTurn,
+    userInput: value.userInput,
+    ...flags,
+  };
+}
+
+export function readIntentStatusTransactionJournal(
+  projectDir: string,
+  space?: string,
+): IntentStatusTransactionJournal | null {
+  const path = intentLifecycleJournalPath(projectDir, space);
+  if (!existsSync(path)) return null;
+  try {
+    return parseIntentStatusTransactionJournal(JSON.parse(readFileSync(path, "utf-8")));
+  } catch (error) {
+    if (error instanceof IntentLifecycleJournalError) throw error;
+    return journalFailure(`${INTENT_LIFECYCLE_JOURNAL} is not valid JSON`);
+  }
+}
+
+function writeIntentStatusTransactionJournal(
+  projectDir: string,
+  space: string,
+  journal: IntentStatusTransactionJournal,
+): void {
+  const path = intentLifecycleJournalPath(projectDir, space);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileAtomic(path, `${JSON.stringify(journal, null, 2)}\n`);
+}
+
+function deleteIntentStatusTransactionJournal(projectDir: string, space: string): void {
+  const path = intentLifecycleJournalPath(projectDir, space);
+  rmSync(path);
+  const fd = openSync(dirname(path), "r");
+  try {
+    fsyncSync(fd);
+  } finally {
+    closeSync(fd);
+  }
+}
+
+type LifecycleAuditMatch = {
+  readonly shard: string;
+  readonly timestamp: string;
+  readonly block: string;
+};
+
+function lifecycleAuditMatches(
+  projectDir: string,
+  intentDir: string,
+  space: string,
+  eventType?: string,
+): LifecycleAuditMatch[] {
+  const matches: LifecycleAuditMatch[] = [];
+  for (const path of auditShards(projectDir, intentDir, space)) {
+    let content: string;
+    try {
+      content = readFileSync(path, "utf-8");
+    } catch (error) {
+      throw new Error(`Cannot read lifecycle audit shard ${basename(path)}: ${errorMessage(error)}`);
+    }
+    const blocks = content.replace(/\r\n/g, "\n").split(/\n---\n/);
+    for (const block of blocks) {
+      const event = auditBlockField(block, "Event");
+      const timestamp = auditBlockField(block, "Timestamp");
+      if (!event || !timestamp || (eventType && event !== eventType)) continue;
+      matches.push({ shard: basename(path), timestamp, block });
+    }
+  }
+  return matches;
+}
+
+function lifecycleEventFor(journal: IntentStatusTransactionJournal): IntentLifecycleAuditEvent {
+  return {
+    eventType: journal.verb === "archive" ? "INTENT_ARCHIVED" : "INTENT_UNARCHIVED",
+    intentDir: journal.intentDir,
+    fromStatus: journal.fromStatus,
+    toStatus: journal.toStatus,
+    operationId: journal.operationId,
+    userInput: journal.userInput,
+    humanTurnTimestamp: journal.humanTurn.timestamp,
+  };
+}
+
+function assertLifecycleEventMatch(
+  match: LifecycleAuditMatch,
+  journal: IntentStatusTransactionJournal,
+): void {
+  const expected = lifecycleEventFor(journal);
+  const fields: Array<[string, string]> = [
+    ["Event", expected.eventType],
+    ["Intent", expected.intentDir],
+    ["From Status", expected.fromStatus],
+    ["To Status", expected.toStatus],
+    ["Operation Id", expected.operationId],
+    ["User Input", expected.userInput.replace(/\r?\n/g, "\\n")],
+    ["Human Turn Timestamp", expected.humanTurnTimestamp],
+  ];
+  if (match.shard !== journal.humanTurn.shard) {
+    journalFailure(`operation ${journal.operationId} event is stored in unexpected shard ${match.shard}`);
+  }
+  for (const [name, value] of fields) {
+    if (auditBlockField(match.block, name) !== value) {
+      journalFailure(`operation ${journal.operationId} event field ${name} does not match`);
+    }
+  }
+}
+
+function lifecycleOperationMatches(
+  projectDir: string,
+  space: string,
+  journal: IntentStatusTransactionJournal,
+): LifecycleAuditMatch[] {
+  const event = lifecycleEventFor(journal);
+  return lifecycleAuditMatches(projectDir, journal.intentDir, space, event.eventType)
+    .filter((match) => auditBlockField(match.block, "Operation Id") === journal.operationId);
+}
+
+function commitLifecycleAudit(
+  projectDir: string,
+  space: string,
+  journal: IntentStatusTransactionJournal,
+  appendAudit: LifecycleAuditAppender,
+): void {
+  const matches = lifecycleOperationMatches(projectDir, space, journal);
+  if (matches.length > 1) {
+    journalFailure(`operation ${journal.operationId} has ${matches.length} lifecycle events`);
+  }
+  if (matches.length === 1) {
+    assertLifecycleEventMatch(matches[0], journal);
+    return;
+  }
+  appendAudit(
+    lifecycleEventFor(journal),
+    journal.humanTurn.shard,
+    projectDir,
+    journal.intentDir,
+    space,
+  );
+  const committed = lifecycleOperationMatches(projectDir, space, journal);
+  if (committed.length !== 1) {
+    journalFailure(`operation ${journal.operationId} did not commit exactly one lifecycle event`);
+  }
+  assertLifecycleEventMatch(committed[0], journal);
+}
+
+function statusForLifecycleIntent(
+  projectDir: string,
+  space: string,
+  intentDir: string,
+): IntentStatus {
+  const matches = readIntentRegistry(projectDir, space)
+    .filter((entry) => recordDirMatches(entry, intentDir));
+  if (matches.length !== 1) {
+    throw new Error(`Expected exactly one registry row for intent ${intentDir}; found ${matches.length}`);
+  }
+  return matches[0].status;
+}
+
+function clearLifecycleCursor(projectDir: string, space: string, intentDir: string): void {
+  const path = join(intentsDir(projectDir, space), ACTIVE_INTENT_POINTER);
+  if (!existsSync(path)) return;
+  const selected = readFileSync(path, "utf-8").trim();
+  if (selected !== intentDir) return;
+  rmSync(path);
+  const fd = openSync(dirname(path), "r");
+  try {
+    fsyncSync(fd);
+  } finally {
+    closeSync(fd);
+  }
+}
+
+function verifyLifecycleFinalState(
+  projectDir: string,
+  space: string,
+  journal: IntentStatusTransactionJournal,
+): void {
+  const observed = statusForLifecycleIntent(projectDir, space, journal.intentDir);
+  if (observed !== journal.toStatus) {
+    journalFailure(`operation ${journal.operationId} expected status ${journal.toStatus}, observed ${observed}`);
+  }
+  const matches = lifecycleOperationMatches(projectDir, space, journal);
+  if (matches.length !== 1) {
+    journalFailure(`operation ${journal.operationId} expected one lifecycle event, observed ${matches.length}`);
+  }
+  assertLifecycleEventMatch(matches[0], journal);
+  if (journal.verb === "archive") {
+    const cursorPath = join(intentsDir(projectDir, space), ACTIVE_INTENT_POINTER);
+    if (existsSync(cursorPath) && readFileSync(cursorPath, "utf-8").trim() === journal.intentDir) {
+      journalFailure(`operation ${journal.operationId} left the archived intent selected`);
+    }
+  }
+}
+
+function recoverLifecycleAuditStep(
+  context: LockedIntentRegistryContext,
+  journal: IntentStatusTransactionJournal,
+  appendAudit: LifecycleAuditAppender,
+  hooks: LifecycleTransactionHooks,
+): IntentStatusTransactionJournal {
+  if (journal.auditCommitted) {
+    const matches = lifecycleOperationMatches(context.projectDir, context.space, journal);
+    if (matches.length !== 1) {
+      journalFailure(`operation ${journal.operationId} audit marker disagrees with event count ${matches.length}`);
+    }
+    assertLifecycleEventMatch(matches[0], journal);
+    return journal;
+  }
+  hooks.beforeAuditCommit?.();
+  commitLifecycleAudit(context.projectDir, context.space, journal, appendAudit);
+  hooks.afterAuditCommit?.();
+  const updated = { ...journal, auditCommitted: true };
+  writeIntentStatusTransactionJournal(context.projectDir, context.space, updated);
+  return updated;
+}
+
+function recoverLifecycleRegistryStep(
+  context: LockedIntentRegistryContext,
+  journal: IntentStatusTransactionJournal,
+  hooks: LifecycleTransactionHooks,
+): IntentStatusTransactionJournal {
+  if (journal.registryCommitted) return journal;
+  hooks.beforeRegistryCommit?.();
+  if (statusForLifecycleIntent(context.projectDir, context.space, journal.intentDir) === journal.fromStatus) {
+    transitionIntentStatusLocked(context, journal.intentDir, journal.verb);
+  }
+  if (statusForLifecycleIntent(context.projectDir, context.space, journal.intentDir) !== journal.toStatus) {
+    journalFailure(`operation ${journal.operationId} registry transition did not converge`);
+  }
+  hooks.afterRegistryCommit?.();
+  const updated = { ...journal, registryCommitted: true };
+  writeIntentStatusTransactionJournal(context.projectDir, context.space, updated);
+  return updated;
+}
+
+function recoverLifecycleCursorStep(
+  context: LockedIntentRegistryContext,
+  journal: IntentStatusTransactionJournal,
+  hooks: LifecycleTransactionHooks,
+): IntentStatusTransactionJournal {
+  if (journal.cursorCommitted) return journal;
+  hooks.beforeCursorCommit?.();
+  if (journal.verb === "archive") {
+    clearLifecycleCursor(context.projectDir, context.space, journal.intentDir);
+  }
+  hooks.afterCursorCommit?.();
+  const updated = { ...journal, cursorCommitted: true };
+  writeIntentStatusTransactionJournal(context.projectDir, context.space, updated);
+  return updated;
+}
+
+function recoverIntentLifecycleLocked(
+  context: LockedIntentRegistryContext,
+  appendAudit: LifecycleAuditAppender,
+  hooks: LifecycleTransactionHooks = {},
+): LifecycleRecoveryResult {
+  let journal = readIntentStatusTransactionJournal(context.projectDir, context.space);
+  if (journal === null) return { kind: "none" };
+  const initiallyComplete = journal.auditCommitted &&
+    journal.registryCommitted &&
+    journal.cursorCommitted;
+  const current = statusForLifecycleIntent(context.projectDir, context.space, journal.intentDir);
+  if (current !== journal.fromStatus && current !== journal.toStatus) {
+    journalFailure(
+      `operation ${journal.operationId} expected registry status ${journal.fromStatus} or ${journal.toStatus}, observed ${current}`,
+    );
+  }
+  journal = recoverLifecycleAuditStep(context, journal, appendAudit, hooks);
+  journal = recoverLifecycleRegistryStep(context, journal, hooks);
+  journal = recoverLifecycleCursorStep(context, journal, hooks);
+  verifyLifecycleFinalState(context.projectDir, context.space, journal);
+  hooks.beforeJournalDelete?.();
+  deleteIntentStatusTransactionJournal(context.projectDir, context.space);
+  return {
+    kind: initiallyComplete ? "completed" : "recovered",
+    operationId: journal.operationId,
+  };
+}
+
+export function withIntentLifecyclePreflight<T>(
+  projectDir: string,
+  space: string | undefined,
+  appendAudit: LifecycleAuditAppender,
+  callback: (
+    context: LockedIntentRegistryContext,
+    recovery: LifecycleRecoveryResult,
+  ) => T extends Promise<unknown> ? never : T,
+  hooks: LifecycleTransactionHooks = {},
+): T extends Promise<unknown> ? never : T {
+  return withLockedIntentRegistry(
+    projectDir,
+    (context) => callback(
+      context,
+      recoverIntentLifecycleLocked(context, appendAudit, hooks),
+    ),
+    space,
+  );
+}
+
+type LifecycleTurnScan = {
+  consumed: Set<string>;
+  latestResolution: Map<string, string>;
+  turns: Map<string, LifecycleAuditMatch[]>;
+};
+
+function collectLifecycleResolution(
+  scan: LifecycleTurnScan,
+  item: LifecycleAuditMatch,
+  event: string | null,
+): void {
+  if (!event || !LIFECYCLE_RESOLUTION_EVENTS.has(event)) return;
+  const previous = scan.latestResolution.get(item.shard);
+  if (!previous || item.timestamp > previous) {
+    scan.latestResolution.set(item.shard, item.timestamp);
+  }
+}
+
+function collectLifecycleTurn(
+  scan: LifecycleTurnScan,
+  item: LifecycleAuditMatch,
+  event: string | null,
+): void {
+  if (event !== "HUMAN_TURN") return;
+  const key = `${item.shard}\u0000${item.timestamp}`;
+  const same = scan.turns.get(key) ?? [];
+  same.push(item);
+  scan.turns.set(key, same);
+}
+
+function collectLifecycleConsumption(
+  scan: LifecycleTurnScan,
+  item: LifecycleAuditMatch,
+  event: string | null,
+): void {
+  if (event !== "INTENT_ARCHIVED" && event !== "INTENT_UNARCHIVED") return;
+  const timestamp = auditBlockField(item.block, "Human Turn Timestamp");
+  if (timestamp) scan.consumed.add(`${item.shard}\u0000${timestamp}`);
+}
+
+function collectLifecycleTurnScan(all: LifecycleAuditMatch[]): LifecycleTurnScan {
+  const scan: LifecycleTurnScan = {
+    consumed: new Set(),
+    latestResolution: new Map(),
+    turns: new Map(),
+  };
+  for (const item of all) {
+    const event = auditBlockField(item.block, "Event");
+    collectLifecycleResolution(scan, item, event);
+    collectLifecycleTurn(scan, item, event);
+    collectLifecycleConsumption(scan, item, event);
+  }
+  return scan;
+}
+
+function availableLifecycleTurns(scan: LifecycleTurnScan): LifecycleAuditMatch[] {
+  const candidates: LifecycleAuditMatch[] = [];
+  for (const [key, same] of scan.turns) {
+    if (same.length > 1) {
+      throw new Error(`Ambiguous HUMAN_TURN timestamp ${same[0].timestamp} in shard ${same[0].shard}`);
+    }
+    const item = same[0];
+    const resolution = scan.latestResolution.get(item.shard);
+    if (!scan.consumed.has(key) && (!resolution || item.timestamp > resolution)) {
+      candidates.push(item);
+    }
+  }
+  return candidates;
+}
+
+function selectLifecycleHumanTurn(
+  projectDir: string,
+  intentDir: string,
+  space: string,
+): { shard: string; timestamp: string } {
+  const candidates = availableLifecycleTurns(
+    collectLifecycleTurnScan(lifecycleAuditMatches(projectDir, intentDir, space)),
+  );
+  candidates.sort((left, right) => left.timestamp.localeCompare(right.timestamp));
+  const selected = candidates.at(-1);
+  if (!selected) throw new Error("archive/unarchive requires an unconsumed HUMAN_TURN");
+  return { shard: selected.shard, timestamp: selected.timestamp };
+}
+
+export function runIntentLifecycleTransactionLocked(
+  context: LockedIntentRegistryContext,
+  intentDir: string,
+  verb: IntentLifecycleVerb,
+  userInput: string,
+  appendAudit: LifecycleAuditAppender,
+  hooks: LifecycleTransactionHooks = {},
+): string {
+  if (!ACTIVE_INTENT_REGISTRY_CONTEXTS.has(context) || !holdsAuditLock(context.projectDir)) {
+    throw new Error("Intent lifecycle transaction requires an active callback-scoped workspace lock");
+  }
+  hooks.beforeValidation?.();
+  if (readIntentStatusTransactionJournal(context.projectDir, context.space) !== null) {
+    throw new Error("Cannot start a lifecycle transaction while a recovery journal exists");
+  }
+  const fromStatus = statusForLifecycleIntent(context.projectDir, context.space, intentDir);
+  const toStatus: IntentStatus = verb === "archive" ? "archived" : "in-flight";
+  if (
+    (verb === "archive" && fromStatus === "archived") ||
+    (verb === "unarchive" && fromStatus !== "archived")
+  ) {
+    throw new Error(`Cannot ${verb} intent with status ${fromStatus}`);
+  }
+  const humanTurn = selectLifecycleHumanTurn(
+    context.projectDir,
+    intentDir,
+    context.space,
+  );
+  const journal: IntentStatusTransactionJournal = {
+    schemaVersion: 1,
+    operationId: randomUUID(),
+    verb,
+    intentDir,
+    fromStatus,
+    toStatus,
+    humanTurn,
+    userInput,
+    auditCommitted: false,
+    registryCommitted: false,
+    cursorCommitted: false,
+  };
+  hooks.beforeJournalWrite?.();
+  writeIntentStatusTransactionJournal(context.projectDir, context.space, journal);
+  recoverIntentLifecycleLocked(context, appendAudit, hooks);
+  return journal.operationId;
+}
+
+export type IntentOperation = "select" | "next" | "unpark";
+export type IntentOperationRejection =
+  | {
+      readonly kind: "intent-not-found";
+      readonly selector: string;
+      readonly operation: IntentOperation;
+      readonly reason: string;
+      readonly recovery: readonly string[];
+    }
+  | {
+      readonly kind: "intent-archived";
+      readonly intentDir: string;
+      readonly status: "archived";
+      readonly operation: IntentOperation;
+      readonly recovery: string;
+    };
+
+export type IntentOperationGuardResult =
+  | { readonly kind: "allowed" }
+  | { readonly kind: "rejected"; readonly error: IntentOperationRejection };
+
+const VALIDATED_INTENT_OPERATION_TARGET = Symbol("ValidatedIntentOperationTarget");
+export type ValidatedIntentOperationTarget = {
+  readonly identity: { readonly dirName: string };
+  readonly status: IntentStatus;
+  readonly [VALIDATED_INTENT_OPERATION_TARGET]: true;
+};
+
+export function resolveIntentOperationTargetLocked(
+  context: LockedIntentRegistryContext,
+  entry: { readonly dirName: string | null; readonly status: string },
+): ValidatedIntentOperationTarget {
+  if (
+    !ACTIVE_INTENT_REGISTRY_CONTEXTS.has(context)
+    || !holdsAuditLock(context.projectDir)
+  ) {
+    throw new Error("Intent operation target resolution requires an active callback-scoped workspace lock");
+  }
+  if (!entry.dirName || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(entry.dirName)) {
+    throw new Error(`Unsafe intent record directory: ${JSON.stringify(entry.dirName)}`);
+  }
+  const matches = readIntentRegistry(context.projectDir, context.space)
+    .filter((candidate) => recordDirMatches(candidate, entry.dirName!));
+  if (matches.length !== 1) {
+    throw new Error(`Expected exactly one registry row for intent ${entry.dirName}; found ${matches.length}`);
+  }
+  const status = parseIntentStatus(entry.status);
+  if (!recordDirMatches(matches[0], entry.dirName) || matches[0].status !== status) {
+    throw new Error(`Intent registry snapshot changed for ${entry.dirName}`);
+  }
+  return Object.freeze({
+    identity: Object.freeze({ dirName: entry.dirName }),
+    status,
+    [VALIDATED_INTENT_OPERATION_TARGET]: true as const,
+  });
+}
+
+export function guardIntentOperation(
+  target: ValidatedIntentOperationTarget,
+  operation: IntentOperation,
+): IntentOperationGuardResult {
+  if (target?.[VALIDATED_INTENT_OPERATION_TARGET] !== true) {
+    throw new Error("guardIntentOperation requires a validated intent operation target");
+  }
+  const { identity, status } = target;
+  if (status !== "archived") return { kind: "allowed" };
+  const intentDir = identity.dirName;
+  return {
+    kind: "rejected",
+    error: {
+      kind: "intent-archived",
+      intentDir,
+      status: "archived",
+      operation,
+      recovery: `bun ${harnessDir()}/tools/amadeus-utility.ts intent unarchive '${intentDir}'`,
+    },
+  };
+}
+
+export function intentNotFoundRejection(
+  selector: string,
+  operation: IntentOperation,
+  reason: string,
+): IntentOperationRejection {
+  return {
+    kind: "intent-not-found",
+    selector,
+    operation,
+    reason,
+    recovery: ["Run /amadeus intent to list existing intents."],
+  };
+}
+
+export function renderIntentOperationRejection(error: IntentOperationRejection): string {
+  if (error.kind === "intent-not-found") {
+    return `Intent "${error.selector}" was not found for ${error.operation}: ${error.reason} ${error.recovery.join(" ")}`;
+  }
+  return `Intent "${error.intentDir}" has status archived; refusing ${error.operation}. Recover with: ${error.recovery}`;
+}
+
+const SWARM_DRIVER_MIGRATION_DIR = "260713-swarm-driver-migration";
+
+type LegacyIntentRegistryEntry =
+  Omit<IntentRegistryEntry, "status"> & { status: unknown };
+
+export function migrateClosedSwarmDriverIntent(
+  raw: readonly LegacyIntentRegistryEntry[],
+): IntentRegistryEntry[] {
+  const targetIndexes: number[] = [];
+  for (let index = 0; index < raw.length; index++) {
+    if (raw[index]?.dirName === SWARM_DRIVER_MIGRATION_DIR) targetIndexes.push(index);
+  }
+  if (targetIndexes.length !== 1) {
+    throw new Error(
+      `Expected exactly one ${SWARM_DRIVER_MIGRATION_DIR} registry row; found ${targetIndexes.length}`,
+    );
+  }
+  const targetIndex = targetIndexes[0];
+  const targetStatus = raw[targetIndex]?.status;
+  if (targetStatus !== "closed" && targetStatus !== "archived") {
+    throw new Error(
+      `Unexpected migration target status ${intentStatusPreview(targetStatus)}; expected "closed" or "archived"`,
+    );
+  }
+  return raw.map((entry, rowIndex) => {
+    const status = rowIndex === targetIndex && entry.status === "closed"
+      ? "archived"
+      : entry.status;
+    try {
+      return { ...entry, status: parseIntentStatus(status) };
+    } catch (error) {
+      if (error instanceof IntentStatusParseError) {
+        throw new IntentRegistryStatusError(status, rowIndex, entry.dirName);
+      }
+      throw error;
+    }
+  });
+}
+
+type JsonObjectSpan = { start: number; end: number };
+
+type JsonScanState = {
+  arrayDepth: number;
+  objectDepth: number;
+  inString: boolean;
+  escaped: boolean;
+};
+
+function scanJsonString(state: JsonScanState, char: string): boolean {
+  if (!state.inString) return false;
+  if (state.escaped) state.escaped = false;
+  else if (char === "\\") state.escaped = true;
+  else if (char === '"') state.inString = false;
+  return true;
+}
+
+function scanJsonStructure(
+  state: JsonScanState,
+  char: string,
+): "object-start" | "object-end" | null {
+  if (scanJsonString(state, char)) return null;
+  if (char === '"') state.inString = true;
+  else if (char === "[") state.arrayDepth++;
+  else if (char === "]") state.arrayDepth--;
+  else if (char === "{" && state.arrayDepth === 1) {
+    state.objectDepth++;
+    if (state.objectDepth === 1) return "object-start";
+  } else if (char === "}" && state.arrayDepth === 1 && state.objectDepth > 0) {
+    state.objectDepth--;
+    if (state.objectDepth === 0) return "object-end";
+  }
+  return null;
+}
+
+function topLevelJsonObjectSpans(raw: string): JsonObjectSpan[] {
+  const spans: JsonObjectSpan[] = [];
+  const state: JsonScanState = {
+    arrayDepth: 0,
+    objectDepth: 0,
+    inString: false,
+    escaped: false,
+  };
+  let objectStart = -1;
+  for (let index = 0; index < raw.length; index++) {
+    const event = scanJsonStructure(state, raw[index]);
+    if (event === "object-start") objectStart = index;
+    else if (event === "object-end") {
+      spans.push({ start: objectStart, end: index + 1 });
+      objectStart = -1;
+    }
+  }
+  return spans;
+}
+
+function patchMigrationTargetStatus(raw: string, targetIndex: number): string {
+  const span = topLevelJsonObjectSpans(raw)[targetIndex];
+  if (!span) throw new Error(`Cannot locate migration target object at row ${targetIndex}`);
+  const objectText = raw.slice(span.start, span.end);
+  const statusMatch = /"status"\s*:\s*("(?:\\.|[^"\\])*")/.exec(objectText);
+  if (!statusMatch || JSON.parse(statusMatch[1]) !== "closed") {
+    throw new Error("Cannot locate the migration target closed status token");
+  }
+  const tokenStart = span.start + statusMatch.index + statusMatch[0].lastIndexOf(statusMatch[1]);
+  return `${raw.slice(0, tokenStart)}"archived"${raw.slice(tokenStart + statusMatch[1].length)}`;
+}
+
+export function migrateClosedSwarmDriverRegistryLocked(
+  context: LockedIntentRegistryContext,
+): IntentRegistryEntry[] {
+  if (
+    !ACTIVE_INTENT_REGISTRY_CONTEXTS.has(context) ||
+    !holdsAuditLock(context.projectDir)
+  ) {
+    throw new Error("Intent registry migration requires an active callback-scoped workspace lock");
+  }
+  const path = intentsRegistryPath(context.projectDir, context.space);
+  const assertContained = (): void => {
+    const root = realIntentsDir(context.projectDir, context.space);
+    if (
+      root === null ||
+      realpathSync(dirname(path)) !== realpathSync(root) ||
+      basename(path) !== "intents.json" ||
+      !isRealRegularFile(path)
+    ) {
+      throw new Error("Intent registry migration path escaped the canonical intents directory");
+    }
+  };
+  assertContained();
+  const original = readFileSync(path, "utf-8");
+  const decoded: unknown = JSON.parse(original);
+  if (!Array.isArray(decoded)) throw new Error("Intent registry must be a JSON array");
+  const raw = decoded as LegacyIntentRegistryEntry[];
+  const targetIndexes = raw
+    .map((entry, index) => entry?.dirName === SWARM_DRIVER_MIGRATION_DIR ? index : -1)
+    .filter((index) => index >= 0);
+  const migrated = migrateClosedSwarmDriverIntent(raw);
+  const targetIndex = targetIndexes[0];
+  if (raw[targetIndex]?.status === "archived") return migrated;
+  const intended = patchMigrationTargetStatus(original, targetIndex);
+  parseIntentRegistry(JSON.parse(intended));
+  writeFileAtomic(path, intended, { beforeRename: assertContained });
+  if (readFileSync(path, "utf-8") !== intended) {
+    throw new Error("Intent registry migration read-back did not match intended bytes");
+  }
+  return migrated;
 }
 
 // Write a docs-only declaration to an intent's registry row (Issue #499/#848):
@@ -4571,11 +5531,36 @@ const AUDIT_LOCK_DEPTH = new Map<string, number>();
 // Sibling temp keeps the rename on the same filesystem so it's a true
 // atomic rename (cross-fs renames degrade to copy-then-unlink). Cleans
 // up the temp file on write failure.
-export function writeFileAtomic(path: string, data: string): void {
-  const tmp = `${path}.tmp`;
+export type AtomicWriteHooks = {
+  beforeTempFsync?: () => void;
+  beforeRename?: () => void;
+  beforeDirectoryFsync?: () => void;
+};
+
+export function writeFileAtomic(
+  path: string,
+  data: string,
+  hooks: AtomicWriteHooks = {},
+): void {
+  const tmp = `${path}.tmp-${process.pid}-${randomUUID()}`;
   try {
-    writeFileSync(tmp, data, "utf-8");
+    const fd = openSync(tmp, "w");
+    try {
+      writeFileSync(fd, data, "utf-8");
+      hooks.beforeTempFsync?.();
+      fsyncSync(fd);
+    } finally {
+      closeSync(fd);
+    }
+    hooks.beforeRename?.();
     renameSync(tmp, path);
+    hooks.beforeDirectoryFsync?.();
+    const directoryFd = openSync(dirname(path), "r");
+    try {
+      fsyncSync(directoryFd);
+    } finally {
+      closeSync(directoryFd);
+    }
   } catch (err) {
     try { unlinkSync(tmp); } catch { /* tmp may already be gone */ }
     throw err;

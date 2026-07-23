@@ -251,7 +251,7 @@ describe("t221 checkPhaseProgressConsistency — workspace collector (#882)", ()
       writeFileSync(
         join(proj, "amadeus", "spaces", "default", "intents", "intents.json"),
         JSON.stringify([
-          { uuid: "77777777-7777-7777-7777-777777777777", slug: "ghost", status: "Completed" },
+          { uuid: "77777777-7777-7777-7777-777777777777", slug: "ghost", status: "complete" },
         ]),
         "utf-8",
       );

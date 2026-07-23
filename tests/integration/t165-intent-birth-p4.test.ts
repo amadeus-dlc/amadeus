@@ -1,4 +1,4 @@
-// covers: subcommand:amadeus-utility:intent-birth, subcommand:amadeus-utility:intent, subcommand:amadeus-utility:space, subcommand:amadeus-utility:space-create, function:birthIntent, function:listSpaces, function:listIntents, function:slugify, function:updateIntentStatus, function:migrateFlatLayout, function:resolveBirthRepoSet, function:discoverSiblingRepos
+// covers: subcommand:amadeus-utility:intent-birth, subcommand:amadeus-utility:intent, subcommand:amadeus-utility:space, subcommand:amadeus-utility:space-create, function:birthIntent, function:listSpaces, function:listIntents, function:slugify, function:transitionIntentStatusLocked, function:migrateFlatLayout, function:resolveBirthRepoSet, function:discoverSiblingRepos
 //
 // Mechanism: cli (spawned dist tools) + in-process pure-function asserts.
 // P4 — retire the user-facing --init; the engine auto-births the first intent
@@ -11,7 +11,7 @@
 // WORKSPACE audit lock; spawning the dist tool exercises the real handler +
 // the real lock + the real per-intent state/audit resolution end-to-end, the
 // way the conductor runs it. The query layer (listSpaces/listIntents/slugify/
-// updateIntentStatus) is asserted in-process against the dist lib (pure reads/
+// transitionIntentStatusLocked) is asserted in-process against the dist lib (pure reads/
 // transforms), then cross-checked against the spawned `intent`/`space --json`.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
@@ -30,7 +30,8 @@ import {
   listSpaces,
   readIntentRegistry,
   slugify,
-  updateIntentStatus,
+  transitionIntentStatusLocked,
+  withLockedIntentRegistry,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath;
@@ -294,7 +295,7 @@ describe("t164 slugify", () => {
 // Intent status lifecycle (birth in-flight; complete; abandoned stays in-flight)
 // ============================================================
 describe("t164 intent status lifecycle", () => {
-  test("birth writes in-flight; updateIntentStatus flips to complete; an abandoned intent stays in-flight", () => {
+  test("birth writes in-flight; locked transition flips to complete; an abandoned intent stays in-flight", () => {
     expect(util(["intent-birth", "--scope", "poc"]).status).toBe(0);
     const dir = activeIntent(proj);
     expect(dir).not.toBeNull();
@@ -302,9 +303,13 @@ describe("t164 intent status lifecycle", () => {
 
     // The completion flip (the same call complete-workflow makes under the
     // workspace lock). Note: in-process here we are NOT under a held lock, but
-    // updateIntentStatus only does a read-modify-write of intents.json — the
-    // lock requirement is for concurrency, not correctness of a single write.
-    const changed = updateIntentStatus(proj, dir as string, "complete");
+    const changed = withLockedIntentRegistry(proj, (context) =>
+      transitionIntentStatusLocked(
+        context,
+        dir as string,
+        "complete",
+      ),
+    );
     expect(changed).toBe(true);
     expect(readIntentRegistry(proj)[0].status).toBe("complete");
 

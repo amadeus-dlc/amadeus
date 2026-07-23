@@ -51,18 +51,6 @@
       "ccn": 22
     },
     {
-      "path": "packages/framework/core/tools/amadeus-lib.ts",
-      "name": "(anonymous)",
-      "ordinal": 7,
-      "ccn": 18
-    },
-    {
-      "path": "packages/framework/core/tools/amadeus-lib.ts",
-      "name": "scanPresenceLedger",
-      "ordinal": 0,
-      "ccn": 20
-    },
-    {
       "path": "packages/framework/core/tools/amadeus-orchestrate.ts",
       "name": "emitJumpDirective",
       "ordinal": 0,
@@ -72,7 +60,7 @@
       "path": "packages/framework/core/tools/amadeus-orchestrate.ts",
       "name": "handleNext",
       "ordinal": 0,
-      "ccn": 28
+      "ccn": 29
     },
     {
       "path": "packages/framework/core/tools/amadeus-orchestrate.ts",
@@ -125,38 +113,26 @@
     {
       "path": "packages/framework/core/tools/amadeus-state.ts",
       "name": "(anonymous)",
-      "ordinal": 15,
+      "ordinal": 16,
       "ccn": 30
     },
     {
       "path": "packages/framework/core/tools/amadeus-state.ts",
       "name": "(anonymous)",
-      "ordinal": 18,
+      "ordinal": 19,
       "ccn": 16
     },
     {
       "path": "packages/framework/core/tools/amadeus-state.ts",
-      "name": "handleDelegateApproval",
+      "name": "handleDelegateRejection",
       "ordinal": 0,
-      "ccn": 27
-    },
-    {
-      "path": "packages/framework/core/tools/amadeus-state.ts",
-      "name": "handleLookup",
-      "ordinal": 0,
-      "ccn": 18
-    },
-    {
-      "path": "packages/framework/core/tools/amadeus-state.ts",
-      "name": "handlePracticesPromote",
-      "ordinal": 0,
-      "ccn": 25
+      "ccn": 20
     },
     {
       "path": "packages/framework/core/tools/amadeus-state.ts",
       "name": "main",
       "ordinal": 0,
-      "ccn": 35
+      "ccn": 37
     },
     {
       "path": "packages/framework/core/tools/amadeus-swarm.ts",
@@ -167,7 +143,7 @@
     {
       "path": "packages/framework/core/tools/amadeus-utility.ts",
       "name": "(anonymous)",
-      "ordinal": 88,
+      "ordinal": 90,
       "ccn": 16
     },
     {

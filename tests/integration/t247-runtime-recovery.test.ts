@@ -712,13 +712,15 @@ describe("t247 recovery in-process coverage seams", () => {
     const auditPath = seededAuditShard(project);
     const stateBefore = readFileSync(statePath, "utf-8");
     const auditBefore = readFileSync(auditPath, "utf-8");
-    mkdirSync(`${auditPath}.tmp`);
+    rmSync(auditPath);
+    mkdirSync(auditPath);
 
     const failed = run(STATE, project, ["approve", "feasibility"]);
     expect(failed.status).toBe(1);
     expect(failed.stderr).toContain("Audit emission failed");
-    expect(readFileSync(auditPath, "utf-8")).toBe(auditBefore);
     expect(readFileSync(statePath, "utf-8")).toBe(stateBefore);
+    rmSync(auditPath, { recursive: true });
+    writeFileSync(auditPath, auditBefore);
   });
 
   test.each([

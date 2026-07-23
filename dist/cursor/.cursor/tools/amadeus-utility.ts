@@ -17,7 +17,11 @@ import {
 import type { Stats } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { appendAuditEntry, appendAuditEntryUnlocked } from "./amadeus-audit.ts";
+import {
+  appendAuditEntry,
+  appendAuditEntryUnlocked,
+  appendLifecycleAuditEntryUnlocked,
+} from "./amadeus-audit.ts";
 import {
   findCycles,
   frameworkMemorySeedDir,
@@ -76,6 +80,7 @@ import {
   nextInScopeStage,
   PHASES,
   parseArgs,
+  parseIntentStatus,
   parseCheckboxes,
   parseRefsList,
   parseStageFrontmatter,
@@ -108,6 +113,12 @@ import {
   writeSessionIntentUuid,
   writeStateFile,
   harnessDir,
+  guardIntentOperation,
+  intentNotFoundRejection,
+  renderIntentOperationRejection,
+  resolveIntentOperationTargetLocked,
+  type IntentLifecycleAuditEvent,
+  withIntentLifecyclePreflight,
   rulesSubdir,
   type ScopeDefinition,
 } from "./amadeus-lib.ts";
@@ -4294,6 +4305,85 @@ function printSpaceListing(projectDir: string, asJson: boolean): void {
 // include — only a space does). The <name> matches a record dir name exactly,
 // or a slug (when unambiguous within the space). --json on the bare list emits
 // the structured query shape.
+function appendUtilityLifecycleEvent(
+  event: IntentLifecycleAuditEvent,
+  shard: string,
+  pd: string,
+  intentDir: string,
+  space: string,
+): void {
+  appendLifecycleAuditEntryUnlocked(event.eventType, {
+    Intent: event.intentDir,
+    "From Status": event.fromStatus,
+    "To Status": event.toStatus,
+    "Operation Id": event.operationId,
+    "User Input": event.userInput,
+    "Human Turn Timestamp": event.humanTurnTimestamp,
+  }, pd, intentDir, space, shard);
+}
+
+function resolveIntentSelector(projectDir: string, space: string, target: string) {
+  const intents = listIntents(projectDir, space);
+  const exact = intents.find((intent) => intent.dirName === target);
+  if (exact) return exact;
+  const bySlug = intents.filter((intent) => intent.slug === target && intent.dirName !== null);
+  if (bySlug.length === 1) return bySlug[0];
+  if (bySlug.length > 1) {
+    refuseWithoutAudit(
+      `Ambiguous intent "${target}" in space "${space}" (${bySlug.length} match). Use the full record-dir name: ${bySlug.map((intent) => intent.dirName).join(", ")}.`,
+    );
+  }
+  refuseWithoutAudit(renderIntentOperationRejection(intentNotFoundRejection(
+    target,
+    "select",
+    `No registry-backed record matched in space "${space}".`,
+  )));
+}
+
+function delegateIntentLifecycle(
+  projectDir: string,
+  verb: "archive" | "unarchive",
+  intentDir: string,
+): void {
+  const run = Bun.spawnSync({
+    cmd: [
+      "bun",
+      join(TOOLS_DIR, "amadeus-state.ts"),
+      verb,
+      intentDir,
+      "--user-input",
+      `intent ${verb} ${intentDir}`,
+      "--project-dir",
+      projectDir,
+    ],
+    cwd: projectDir,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  process.stdout.write(new TextDecoder().decode(run.stdout));
+  process.stderr.write(new TextDecoder().decode(run.stderr));
+  if (run.signalCode) process.kill(process.pid, run.signalCode as NodeJS.Signals);
+  if (run.exitCode !== 0) process.exit(run.exitCode);
+}
+
+function selectIntentLocked(
+  context: import("./amadeus-lib.ts").LockedIntentRegistryContext,
+  target: string,
+) {
+  const { projectDir, space } = context;
+  const selected = resolveIntentSelector(projectDir, space, target);
+  if (!selected.dirName) refuseWithoutAudit(`Intent "${target}" has no record directory.`);
+  const guard = guardIntentOperation(
+    resolveIntentOperationTargetLocked(context, selected),
+    "select",
+  );
+  if (guard.kind === "rejected") {
+    refuseWithoutAudit(renderIntentOperationRejection(guard.error));
+  }
+  setActiveIntentCursor(projectDir, selected.dirName, space);
+  return selected;
+}
+
 function handleIntent(projectDir: string, positional: string[], flags: Record<string, string>): void {
   const asJson = flags.json === "true";
   const target = positional[1];
@@ -4302,24 +4392,25 @@ function handleIntent(projectDir: string, positional: string[], flags: Record<st
     return;
   }
   const space = activeSpace(projectDir);
-  const intents = listIntents(projectDir, space);
-  // Exact record-dir match first; then a unique slug match.
-  let match = intents.find((i) => i.dirName === target);
-  if (!match) {
-    const bySlug = intents.filter((i) => i.slug === target && i.dirName !== null);
-    if (bySlug.length === 1) match = bySlug[0];
-    else if (bySlug.length > 1) {
-      refuseWithoutAudit(
-        `Ambiguous intent "${target}" in space "${space}" (${bySlug.length} match). Use the full record-dir name: ${bySlug.map((i) => i.dirName).join(", ")}.`
-      );
-    }
-  }
-  if (!match || match.dirName === null) {
-    refuseWithoutAudit(
-      `Unknown intent "${target}" in space "${space}". Run /amadeus intent to list existing intents.`
+  if (target === "archive" || target === "unarchive") {
+    const selector = positional[2];
+    if (!selector) refuseWithoutAudit(`Usage: amadeus-utility.ts intent ${target} <intent>`);
+    const resolved = withIntentLifecyclePreflight(
+      projectDir,
+      space,
+      appendUtilityLifecycleEvent,
+      () => resolveIntentSelector(projectDir, space, selector).dirName,
     );
+    if (!resolved) refuseWithoutAudit(`Intent "${selector}" has no record directory.`);
+    delegateIntentLifecycle(projectDir, target, resolved);
+    return;
   }
-  setActiveIntentCursor(projectDir, match.dirName, space);
+  const match = withIntentLifecyclePreflight(
+    projectDir,
+    space,
+    appendUtilityLifecycleEvent,
+    (context) => selectIntentLocked(context, target),
+  );
   // Re-stamp the LIVE conversation's session→intent record to the switched-to
   // intent. WHY: the resume-rebind stamp (session-start hook) is keyed by
   // session_id, which this tool never sees; only the hook does. Without this, a
