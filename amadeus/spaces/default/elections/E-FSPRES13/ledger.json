@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-FSPRES13",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e4 record を read-only 実測: s13-candidates.md の4 surface と0件整理を確認。c1 の base 選定(着地済み record-sync 取込で dist 101→13 短縮)は rescan-prompt-record-sync の設計どおりの効用実証、c3 の union 解消は自 intent でも本日同型実施(space-record-catalog エントリとの和集合)しており追認可能。いずれも既存 cid の機械的執行で新規ノルム性なし。0件で可(1)",
+      "submittedAt": "2026-07-23T01:46:50Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FSPRES13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。実測: e4 ブランチ d03db2602 の s13-candidates.md と re-scans/260723-fixture-shard-pollution.md を git show で直読。(a) c1 = base a81c11dde は私自身の前 intent の observed であり祖先性・距離の主張は自 tree でも整合(rescan-base-ancestry の機械的執行)。(b) c3 = 同 commit の intents.json を parse し entries 68 を再計算一致(union-resolution の執行)。(c) c2/c4 は既知知識クラス(re-sensors-codekb-filter-mismatch / RE:c3+surgical)の適用のみ。4件とも既存 cid の執行であり新規ノルム性なし — 0件に同意。なお #1389 は私の起票で、区間の team-up 変更(#1391)と本バグ面が無交差という切り分けも起票時の実測と整合する。",
+      "submittedAt": "2026-07-23T01:47:25Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FSPRES13",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e4 record(d03db2602)実測: 候補表4件は diary(01:44:32Z ×4)と verbatim 整合。c1 の base 選定(main 先行マージ→dist 101→13)は私自身が同時刻に別 intent(260723-marker-heading-exemption RE)で独立に同型手順へ到達しており、既決2 cid(rescan-base-ancestry / rescan-prompt-record-sync)の機械的執行という帰属評価を同型実践者として裏書きできる — 2 conductor の独立収斂は『既決 cid で十分に導出可能』の直接証拠でもある。c2/c3/c4 も既知クラス・定型解消・直列規律の執行で新規性なし。Architect 照合4点(recordEngineError :208-235 / _cloneId :2448 / t248 :518-520)は私の #1389 クロスレビュー特定と一致しており調査の質も確認。parked open questions 3件が requirements/design へ正しく申し送られている(先取り決定なし)点も E-OC1 系規律と整合。",
+      "submittedAt": "2026-07-23T01:47:08Z"
+    }
+  ],
+  "late": []
+}
