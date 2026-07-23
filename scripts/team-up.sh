@@ -55,6 +55,29 @@ RUNTIME="${TEAM_RUNTIME:-claude}"
 RUNTIME_EXPLICIT=0
 HERDR="${HERDR:-herdr}"
 SAFETY_WAIT_HELPER="$REPO/scripts/team-up-codex-safety-wait.ts"
+
+# --- agmsg watcher readiness verification (Issue #1384) ------------------
+# Fresh Claude members race the Claude Code TUI cold-start and can drop the
+# initial `/agmsg mode monitor` prompt, leaving the agmsg watcher unarmed (a
+# one-shot supply with no check or retry). After launch we poll each fresh
+# Claude member's agmsg ready sentinel and re-send the monitor prompt to any
+# that time out. Constants mirror agmsg's own spawn.sh so no new magic numbers
+# are minted.
+#
+# Single source for the bootstrap prompt: consumed at launch (claude_member_cmd)
+# and on re-send (resend_monitor_prompt).
+CLAUDE_MONITOR_PROMPT="/agmsg mode monitor"
+# Per-wait readiness timeout: seconds waited per polling round before a re-send
+# / giving up. Mirrors agmsg spawn.sh:132 `READY_TIMEOUT=90` (per-wait, not a
+# whole-run budget).
+WATCHER_READY_TIMEOUT="${WATCHER_READY_TIMEOUT:-90}"
+# Max monitor-prompt re-sends, mirroring the agmsg ack retry ceiling
+# (dispatch-ack-required: at most 2 resends before escalating).
+WATCHER_RESEND_MAX="${WATCHER_RESEND_MAX:-2}"
+# agmsg's actas-lock.sh owns the canonical ready-sentinel path + name encoding.
+# We source it and call agmsg_ready_path rather than duplicating the path string
+# here (NFR-4). Overridable so tests can point at a self-contained stub.
+AGMSG_ACTAS_LOCK_LIB="${AGMSG_ACTAS_LOCK_LIB:-$AGMSG_ROOT/scripts/lib/actas-lock.sh}"
 # Number of engineer members (leader is always added on top). Selectable per
 # fresh run with -2/-4/-6; defaults to 6. A resumed run reads its saved size.
 TEAM_SIZE="${TEAM_ENGINEERS:-6}"
@@ -797,7 +820,7 @@ has_history() {
 }
 
 claude_member_cmd() {
-  local m="$1" wt="${2:-$BASE/$1}" args="" init_prompt="/agmsg mode monitor" interaction_args=""
+  local m="$1" wt="${2:-$BASE/$1}" args="" init_prompt="$CLAUDE_MONITOR_PROMPT" interaction_args=""
   case "$m" in
   engineer-*) interaction_args="--disallowedTools AskUserQuestion" ;;
   esac
@@ -1005,6 +1028,125 @@ stack_column() {
     prev="$(mux_split "$S" "$prev" v "$pct" "$(member_worktree "$mem")" "$(member_cmd "$mem" "$(member_worktree "$mem")")" "$mem")"
     j=$(( j + 1 ))
   done
+}
+
+# --- agmsg watcher arming verification (Issue #1384) ---------------------
+
+# True when the launched runtime/backend uses an agmsg watcher that must be
+# armed by the `/agmsg mode monitor` bootstrap prompt: the claude runtime on the
+# agmsg backend. Codex is out of scope (FR-6) and the herdr backend has no
+# monitor to arm (claude_member_cmd leaves the initial prompt empty there).
+watcher_verification_applies() {
+  [ "$RUNTIME" = "claude" ] && [ "$MSG_BACKEND" = "agmsg" ]
+}
+
+# Canonical agmsg ready-sentinel path for (team, role). Sourced from agmsg's own
+# actas-lock.sh so the run-dir layout + name encoding stay owned by agmsg
+# (NFR-4: never duplicate the sentinel path string here). Runs in a subshell
+# with SKILL_DIR=AGMSG_ROOT so the sourced lib's helpers never leak into this
+# script's namespace. Empty stdout (non-zero) when the lib is unavailable — the
+# caller then treats the member as unarmed, which surfaces a broken agmsg
+# install loudly rather than passing silently.
+ready_sentinel_path() {
+  local team="$1" role="$2"
+  SKILL_DIR="$AGMSG_ROOT" bash -c '
+    set -euo pipefail
+    . "$1"
+    agmsg_ready_path "$2" "$3"
+  ' _ "$AGMSG_ACTAS_LOCK_LIB" "$team" "$role"
+}
+
+# Resolve the herdr pane id for a member by its agent label (= member name, set
+# by mux_pane_label's `agent rename`). Same data source as the Codex
+# safety-wait resolver: `herdr agent list` returns
+# {"result":{"agents":[{"agent":..,"name":<label>,"pane_id":<id>},...]}}.
+# Flatten each agent object onto its own line so name and pane_id are matched
+# together regardless of key order, and print the first match's pane_id.
+resolve_member_pane() {
+  local session="$1" label="$2"
+  "$HERDR" --session "$session" agent list 2>/dev/null \
+    | tr '{}' '\n' \
+    | awk -v want="\"name\":\"$label\"" '
+        index($0, want) {
+          if (match($0, /"pane_id":"[^"]*"/)) {
+            print substr($0, RSTART + 11, RLENGTH - 12)
+            exit 0
+          }
+        }
+      '
+}
+
+# Re-send the monitor bootstrap prompt into a pane as the two-step herdr
+# send/submit pair: send-text places the text, send-keys <pane> enter submits it
+# (cid:herdr-send-submit-two-step — send and enter are required together).
+resend_monitor_prompt() {
+  local session="$1" pane="$2" prompt="$3"
+  "$HERDR" --session "$session" pane send-text "$pane" "$prompt" >/dev/null 2>&1 || return 1
+  "$HERDR" --session "$session" pane send-keys "$pane" enter >/dev/null 2>&1 || return 1
+  return 0
+}
+
+# Remove any stale ready sentinels for this run's members BEFORE the panes
+# launch, so verification only observes THIS launch's watchers attaching
+# (mirrors agmsg spawn.sh:572, which clears the sentinel before place_and_launch).
+# Must run before the first pane starts — clearing after launch would delete a
+# real, freshly created sentinel.
+clear_stale_watcher_sentinels() {
+  local m role sentinel
+  for m in $(members_for "$TEAM_SIZE"); do
+    role="$(member_role "$m")"
+    sentinel="$(ready_sentinel_path "$TEAM_NAME" "$role")"
+    [ -n "$sentinel" ] && rm -f "$sentinel" 2>/dev/null || true
+  done
+}
+
+# Poll every fresh member's ready sentinel together, re-sending the monitor
+# prompt to any that miss the per-wait deadline, up to WATCHER_RESEND_MAX times.
+# A single shared bounded poll per round (all members at once, not per-member
+# serial) keeps the total wait at ~WATCHER_READY_TIMEOUT * (WATCHER_RESEND_MAX+1)
+# instead of the sum of per-member waits (FR-3). Members already armed (sentinel
+# present — e.g. a --continue member that reconnected fast) are skipped, so the
+# re-send is idempotent (FR-7). Returns 0 iff every member is armed; non-zero
+# with a warning + recovery guidance otherwise (FR-5, no silent success).
+verify_watchers_armed() {
+  local m role sentinel pane
+  local max_attempts=$(( WATCHER_RESEND_MAX + 1 ))
+  local attempt=0 remaining unarmed waited
+  remaining="$(members_for "$TEAM_SIZE")"
+  while :; do
+    waited=0
+    while :; do
+      unarmed=""
+      for m in $remaining; do
+        role="$(member_role "$m")"
+        sentinel="$(ready_sentinel_path "$TEAM_NAME" "$role")"
+        if [ -z "$sentinel" ] || [ ! -e "$sentinel" ]; then
+          unarmed="${unarmed:+$unarmed }$m"
+        fi
+      done
+      [ -z "$unarmed" ] && break
+      [ "$waited" -ge "$WATCHER_READY_TIMEOUT" ] && break
+      sleep 1
+      waited=$(( waited + 1 ))
+    done
+    remaining="$unarmed"
+    [ -z "$remaining" ] && return 0
+    attempt=$(( attempt + 1 ))
+    [ "$attempt" -ge "$max_attempts" ] && break
+    for m in $remaining; do
+      pane="$(resolve_member_pane "$S" "$m")"
+      if [ -n "$pane" ]; then
+        resend_monitor_prompt "$S" "$pane" "$CLAUDE_MONITOR_PROMPT" ||
+          echo "WARN: monitor prompt re-send failed for $m (pane $pane)" >&2
+      else
+        echo "WARN: could not resolve herdr pane for $m to re-send the monitor prompt" >&2
+      fi
+    done
+  done
+  echo "ERROR: agmsg watcher never armed for: $remaining (after ${WATCHER_RESEND_MAX} re-send(s))" >&2
+  echo "  The initial '/agmsg mode monitor' prompt was dropped in the Claude Code startup race (Issue #1384)." >&2
+  echo "  Recover manually: focus each listed pane and run '$CLAUDE_MONITOR_PROMPT'." >&2
+  return 1
 }
 
 register_team_members() {
@@ -1248,6 +1390,12 @@ left=(); right=()
 for i in $(seq 1 "$TEAM_SIZE"); do
   if [ "$i" -le "$left_count" ]; then left+=("engineer-$i"); else right+=("engineer-$i"); fi
 done
+# Clear stale ready sentinels before the panes start, so watcher verification
+# only observes this launch's watchers attaching (Issue #1384). Must precede the
+# first pane run — a post-launch clear would delete a real fresh sentinel.
+if watcher_verification_applies; then
+  clear_stale_watcher_sentinels
+fi
 P_TOP_LEFT="$(mux_new_session "$S" "$(member_worktree "${left[0]}")" "$(member_cmd "${left[0]}" "$(member_worktree "${left[0]}")")" "${left[0]}")"
 AGENTS_STARTED=1
 P_LEADER="$(mux_split "$S" "$P_TOP_LEFT" h 66 "$(member_worktree leader)" "$(member_cmd leader "$(member_worktree leader)")" leader)"
@@ -1255,6 +1403,16 @@ P_TOP_RIGHT="$(mux_split "$S" "$P_LEADER" h 50 "$(member_worktree "${right[0]}")
 
 stack_column "$P_TOP_LEFT" "${left[@]:1}"
 stack_column "$P_TOP_RIGHT" "${right[@]:1}"
+
+# Verify each fresh Claude member's agmsg watcher armed, re-sending the monitor
+# prompt to any that raced the TUI cold-start (Issue #1384). Completed BEFORE
+# mux_attach so the exit code is meaningful (an interactive attach would swallow
+# it). The run itself is fully launched and recorded regardless; watcher_status
+# only reports arming (0 = all armed, non-zero = one or more unarmed).
+watcher_status=0
+if watcher_verification_applies; then
+  verify_watchers_armed || watcher_status=$?
+fi
 
 start_safety_wait_supervisors || exit 1
 mux_attach "$S"
@@ -1269,3 +1427,6 @@ if [ -n "$RUN_ID" ]; then
 fi
 RUN_PREPARING=0
 echo "session '$S' launched (instance=$INSTANCE): ${left[*]} | leader | ${right[*]} ($TEAM_SIZE engineers, runtime=$RUNTIME, identity=$AGENT_IDENTITY, agmsg=$TEAM_NAME)"
+# Non-zero when one or more Claude watchers never armed (Issue #1384). The
+# launch is complete either way; this only signals arming to the caller.
+exit "$watcher_status"
