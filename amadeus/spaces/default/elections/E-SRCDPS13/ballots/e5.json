@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCDPS13",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e2 record 実測: 候補2件は diary(Interpretations/Deviations とも 00:56:29Z)と verbatim 一致。c1 = 固定メンバー名・時刻確約を置かない責務ベース staffing は cid:role-model(役割は責務で割当)+approval-handoff:c3(未確定 staffing を捏造しない)の字義どおりの適用で新規性なし。c2 = human-presence ガード拒否への非偽装対応は RA Q5(E-SRCRAS13 c3 で不採用済み)と同型の正常系反復 — 同一クラスの2回目観測であり PM 実例回付が正位置(ガード自体が設計どおり働いた記録で、ノルム新設の対象ではない)。",
+  "submittedAt": "2026-07-23T00:59:33Z"
+}

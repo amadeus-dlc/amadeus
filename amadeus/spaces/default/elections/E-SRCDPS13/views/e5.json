@@ -1,0 +1,16 @@
+{
+  "electionId": "E-SRCDPS13",
+  "voter": "e5",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可 — 2候補とも不採用に同意"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "異議 — 採用すべき候補がある(票コメントで特定)"
+    }
+  ]
+}
