@@ -30,5 +30,17 @@
     "receivedAt": "2026-07-23T03:12:01Z",
     "detail": "ballot accepted: e6",
     "voter": "e6"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-07-23T03:15:32Z",
+    "receivedAt": "2026-07-23T03:16:47Z",
+    "detail": "ballot accepted: e5",
+    "voter": "e5"
+  },
+  {
+    "kind": "tallied",
+    "at": "2026-07-23T03:16:47Z",
+    "detail": "tally: established"
   }
 ]

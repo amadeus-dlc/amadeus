@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TCRCGS13B",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e1 record 実測: (1) FR-2b 引用誤りの正体を自 tree で裏取り — EXPECTED_NONE_TO_CLI は tests/unit/gen-coverage-registry.test.ts:855 に実在(grep 実測、requirements の tests/gen-coverage-registry.ts 表記は誤記)。mechanism-cite 違反実例+E-FSPRAS13 採用済み追補(引用一意性 — 本日3例目の同族)の消費側実例で PM 回付妥当 (2) t257 ガード一式は Mandated 落ちる実証+corpus-sweep+vacuity-guard の機械的執行 (3) fixture 汚染3回目は #1389 コメント追記済みで、修正は私の intent(260723-fixture-shard-pollution、RA READY・phase 境界 delegate 待ち)で進行中 — 二重対応なしの正しい回付。新規ノルム性なし。",
+  "submittedAt": "2026-07-23T03:11:46Z"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRUGS13",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e3 record を read-only 実測: s13-candidates.md の0件整理3件を確認。upstream-coverage 自己捕捉と story-map 起草漏れは consumes-first-drafting 系の違反実例(2度目の同型は PM 傾向報告が正位置)、T-norm の DAG 外順序制約化は edge block 意味論の機械適用 — 本日自 intent UG でも同型判断(U1 live enforcement を DAG 辺でなく Bolt 拘束とした)を独立に行っており追認できる。0件で可(1)",
+  "submittedAt": "2026-07-23T03:15:11Z"
+}
