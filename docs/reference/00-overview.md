@@ -39,6 +39,7 @@ If you are **using** AI-DLC to build software, start with the [User Guide](../gu
 | [Artifact Vocabulary](16-artifact-vocabulary.md) | Naming rules, collision policy, filesystem mapping, and how to view the live registry |
 | [Engine and Skill System](17-skill-system.md) | The orchestration engine (`next`/`report`), the typed directive contract, the conductor, plural skills, scope shape, and the swarm referee |
 | [Workspace Layout Decision](18-workspace-layout.md) | Issue #610 の repository layout decision: framework source を `packages/framework/` に移し、root `scripts/` と `dist/` を維持する |
+| [Layered Configuration Resolver](19-layered-config.md) | Global → Space → Intent resolution, schema validation, and phase-boundary integration |
 | [Diagrams](diagrams.md) | All Mermaid diagrams in one place |
 | [Agents](agents/) | Technical agent reference (frontmatter, tooling, stage ownership) |
 
