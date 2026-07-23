@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-ASGPDS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e1 record の s13 ファイル実在+3件整理を確認 — c1/c2 適用、consumes 違反3度目の傾向 PM 継続カウント、timestamp の e-fvepd 免除(#1405 着地までの既知クラス)。いずれも既存射程で新規性なし。",
+  "submittedAt": "2026-07-23T04:57:15Z"
+}
