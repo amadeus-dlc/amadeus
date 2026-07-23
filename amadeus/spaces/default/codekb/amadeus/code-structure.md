@@ -1,6 +1,22 @@
 # コード構造
 
-## upstream-sync-230 の変更面（2026-07-20、現在）
+## team 起動 watcher-arming の構造面（260722-teamup-prompt-race、2026-07-22、現在）
+
+bugfix / Minimal。observed `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`（距離101）。本 intent の交差構造は `scripts/` の team 起動オーケストレーション（core 中立層・harness 表層とは別系統のリポジトリ開発支援スクリプト面）に限定。
+
+| 構造面 | 現行責務 | 本バグとの関係 |
+|---|---|---|
+| `scripts/team-up.sh`（+212 −8、260721 起点） | Herdr pane 上へ claude/codex メンバーを起動する team オーケストレータ | claude 起動経路 `:800`/`:830-832` が init_prompt 一発供給、`:338-395` の supervisor は codex 限定 |
+| `scripts/run-claude.sh` | 末尾 `exec claude --dangerously-skip-permissions "$@"` | init_prompt を位置引数として claude へ委譲 |
+| `scripts/team-up-codex-safety-wait.ts`（新規 +567、260721） | Codex pane readiness 検証（`resolve`/`readVisible` `:273-338`、`PRODUCTION_FINGERPRINTS` `:72,177`） | claude 非対応。claude 版 readiness の構造先例 |
+| agmsg skill（repo 外 `~/.agents/skills/agmsg/`、read-only 参照） | `spawn.sh` の ready handshake、`lib/actas-lock.sh` の path 算出、`watch.sh` のセンチネル生成 | team-up claude 経路に欠ける契約の対照。実装は本 repo 外で不変更 |
+| team-up テスト（`tests/integration/t-team-up-*`、`tests/unit/t-team-up-codex-safety-wait.test.ts`） | team 起動・msg backend・codex safety-wait の検査 | watcher arming（init_prompt/ready/watch）の被覆なし |
+
+修正は `scripts/` に閉じる想定で、`packages/framework/core` / `harness` の正本や dist/self-install には交差しない見込み（実装時に実 diff で再評価、cid:code-generation:c6）。
+
+> 以下は過去 intent の履歴。
+
+## upstream-sync-230 の変更面（2026-07-20、履歴）
 
 現行 observed `545e69c836d46f7bec2fa351c8e668026eb5fad5` の構成は、core tools 30、hooks 11、agents 14、stages 32、sensors 5、6ハーネス固有 69 files、TypeScript 621 files、tests 461 files（unit 216 / integration 159 / e2e 70 / smoke 14）である（測定 ref: Developer scan の `find`/test runner 分類、observed HEAD）。主要変更面は次の通り。
 
