@@ -91,7 +91,7 @@ function driveReportError(target: string): void {
   }
 }
 
-describe("t257 in-process engine error does not pollute the ambient record (#1389)", () => {
+describe("t258 in-process engine error does not pollute the ambient record (#1389)", () => {
   test("records against the handler's project, leaving CLAUDE_PROJECT_DIR untouched", () => {
     const ambient = newSeededProject(); // stands in for the real worktree
     const target = newSeededProject(); // the project the handler is called with
@@ -119,7 +119,7 @@ describe("t257 in-process engine error does not pollute the ambient record (#138
   });
 });
 
-describe("t257 clone id / audit shard name are not mixed across projects (#1389)", () => {
+describe("t258 clone id / audit shard name are not mixed across projects (#1389)", () => {
   test("a second project with a distinct clone id resolves its own shard name", () => {
     const first = createTestProject(); // clone id = fixturecloneid01 (fixture)
     projects.push(first);

@@ -1059,7 +1059,7 @@
           "mechanism": "cli"
         },
         {
-          "file": "tests/integration/t257-engine-error-ambient-shard-pollution.test.ts",
+          "file": "tests/integration/t258-engine-error-ambient-shard-pollution.test.ts",
           "mechanism": "none"
         }
       ],
