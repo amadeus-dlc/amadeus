@@ -3,7 +3,7 @@
 
 ## Interpretations
 - 2026-07-23T02:55:49Z — E-MPRAD1 の GoA2 留保3件(e6/e1/e4)は置き場指定が相互に異なるため、ADR-5 に「統合解釈」行(SKILL 本文=共通面+docs mirror 節+usage 出力、機械強制なし明記・強制装い文言禁止・ノルム参照)を置いて3件を同時充足させた
-- 2026-07-23T02:55:49Z — ADR-3 で E-MPRRA1 [e4] 留保の「既存経路」を close verb+close-after-landing 検証+intent-completion-issue-sweep 運用の3点接続として解釈・明文化(留保原文は verb と検証のみ言及 — sweep 運用の追加は解釈的 elaboration)
+- 2026-07-23T02:55:49Z — ADR-3 で E-MPRRA1 [e4] 留保の「既存経路」接続を明文化。【訂正 2026-07-23T03:04:23Z(E-MPRADS13 e4 留保による)】当初この行は「sweep 運用の追加は解釈的 elaboration」と記載したが誤読 — e4 原文留保(E-MPRRA1 record.md 直読で再実測)は『既存 complete-workflow 経路+intent-completion-issue-sweep で拾われることが前提 — design 段でその接続を明文化』と sweep を明記しており、ADR-3 は原文どおりの履行(elaboration ではない)。誤読の原因 = leader 配信要約からの起草で record.md 原文を未読(citation-reservation-preservation の違反実例として PM 回付対象)
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations

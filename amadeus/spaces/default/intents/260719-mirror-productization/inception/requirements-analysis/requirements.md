@@ -40,7 +40,7 @@ grilling 裁定 G-1〜G-7(2026-07-19 ユーザー確定)、feasibility 制約 C-
 ### FR-5: phase 境界ミラー ask(S-05、D-04/C-04)
 
 - engine が phase boundary で「ミラー同期しますか?」の ask directive を発行(既存 directive 語彙のみ — 新 kind なし)。ミラー未作成時は create 選択肢を含める(S-05)。
-- 発火粒度: **phase-check 対象3境界(ideation / inception / construction の各完了時)** — PHASE_CHECK_REQUIRED_PHASES(amadeus-state.ts:165-169)と同集合(E-MPRRA1 裁定 A、2-1)。留保転記: [e4] complete 時の close 導線は本 ask 経路に含めず、既存経路(close verb+close-after-landing 検証)への接続を design で明文化すること。[e6 B票・非採用側視点の保存] close は C-05 既決(常に ask)のため B(4境界)でも自動 close リスクはなく、B の追加 ask は workflow あたり1回で軽量 — 将来 complete 境界の導線を検討する際の材料として保存。
+- 発火粒度: **phase-check 対象3境界(ideation / inception / construction の各完了時)** — PHASE_CHECK_REQUIRED_PHASES(amadeus-state.ts:165-169)と同集合(E-MPRRA1 裁定 A、2-1)。留保転記: [e4] complete 時のミラークローズ導線(ノルムの close-after-landing)は既存 complete-workflow 経路+intent-completion-issue-sweep で拾われることが前提 — design 段でその接続を明文化すること。[e6 B票・非採用側視点の保存] close は C-05 既決(常に ask)のため B(4境界)でも自動 close リスクはなく、B の追加 ask は workflow あたり1回で軽量 — 将来 complete 境界の導線を検討する際の材料として保存。
 - auto-mirror 有効かつミラー未作成時の挙動: **ask へ降格(create 選択肢込みの通常 ask)** — auto は sync のみ(G-7)の厳格読みで、未作成時に無音で進まない(E-MPRRA2 裁定 A、3-0)。
 - 受け入れ基準: 発火境界の全数を integration テストで固定(裁定確定後に導出)。next 出力の既存消費者へ影響しないこと(C-08 — stdout-directive-stderr-advisory 準拠で stderr 追記時は消費者 grep 棚卸し)。
 

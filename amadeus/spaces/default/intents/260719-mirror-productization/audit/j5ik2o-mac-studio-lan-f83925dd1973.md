@@ -764,3 +764,45 @@
 **Message**: application-design ステージ(intent 260719-mirror-productization)の iteration 2 レビューを完了しました。verdict は READY です。\n\n主な検分結果:\n\n- **Reversibility 行(7 ADR 全件)**: iteration 1 の Major 1 是正を確認。各行が Decision/Consequenc
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:04:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 21469ef1
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/requirements-analysis/requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:04:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 21469ef1
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/requirements-analysis/requirements.md
+**Duration ms**: 50
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T03:04:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8ef7d2a1
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/requirements-analysis/requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T03:04:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8ef7d2a1
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/inception/requirements-analysis/requirements.md
+**Duration ms**: 44
+
+---
