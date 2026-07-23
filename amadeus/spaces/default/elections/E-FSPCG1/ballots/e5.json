@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FSPCG1",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A(承認 — 現実装維持)。独立実測: 私は #1389 の起票時クロスレビュー実施者として本欠陥の機序(recordEngineError の argv 迂回)を file:line で特定済みで、修正の観測可能な契約は『ERROR_LOGGED が呼び出し元 projectDir へ記録されること』— builder の module-scoped 方式はこの契約と plan の pd フロー(ハンドラ→emit→recordEngineError)を保っており、FR-1 字義(引数化+argv フォールバック降格)も充足。逸脱の実体は『どの管を通すか』の実装詳細で、56箇所超の到達困難行の patch 未被覆という NFR-4 との要件間衝突を lcov 実測で示したうえでの停止→申告→選挙は deviation-stop-before-implement 系規律の正しい運用。B は spawn-blindspot-two-step の第一手(リファクタで患部を母集団から除去)に逆行して allowlist 56行超を新設する管理劣後案。既存 idiom(_engineErrorInProgress)との整合も確認。非採用時の受容度: B なら 7(NFR-4 衝突+allowlist-line-pin-stale の管理面増)。",
+  "submittedAt": "2026-07-23T04:12:37Z"
+}

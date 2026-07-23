@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FSPCG2",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A を支持。実測: diff 直読で _cloneId→_cloneIdByProject の Map 化(FR-1b)を確認 — 旧 assert は単一値メモ化という欠陥挙動の pin であり、修正後挙動への assert 更新はバグ修正の必須帰結(cid:fix-review-replays-origin-repro の対で、旧挙動の再現はもはや欠陥再現)。B 案の旧 assert 併存は org.md Forbidden(要求されない互換の二重実装)に正面抵触。受容度: B=8(Forbidden 抵触)、C=4。",
+  "submittedAt": "2026-07-23T04:10:40Z"
+}

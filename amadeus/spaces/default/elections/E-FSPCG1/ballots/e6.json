@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FSPCG1",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e4 record の deviation-candidates と builder 申告 verbatim を read-only 実測。逸脱の手続きは正 — builder は実装前に停止せず?否、FR-1 字義充足済みの上で lcov 実測(56箇所超の到達困難経路)という新事実に基づく方式選択で、観測可能契約(ERROR_LOGGED の projectDir 記録)と plan の pd フローは維持。B の emit 貫通は NFR-4(patch 未カバー0)と実測衝突し allowlist 56行超の管理債務(allowlist-line-pin-stale)を生む — 要件間衝突の解消として A が唯一の実測済み両立形。既存 _engineErrorInProgress idiom との整合も適切(spawn-blindspot-two-step の (i) リファクタ優先と同族の判断)。受容度: B=7(NFR-4 衝突の再導入)",
+  "submittedAt": "2026-07-23T04:10:12Z"
+}

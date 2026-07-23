@@ -1,35 +1,35 @@
 [
   {
     "kind": "distributed",
-    "at": "2026-07-23T04:09:14Z",
-    "detail": "delivered via agmsg: e1",
-    "voter": "e1"
+    "at": "2026-07-23T04:10:07Z",
+    "detail": "delivered via agmsg: e4",
+    "voter": "e4"
   },
   {
     "kind": "distributed",
-    "at": "2026-07-23T04:09:14Z",
+    "at": "2026-07-23T04:10:07Z",
     "detail": "delivered via agmsg: e5",
     "voter": "e5"
   },
   {
     "kind": "distributed",
-    "at": "2026-07-23T04:09:14Z",
+    "at": "2026-07-23T04:10:07Z",
     "detail": "delivered via agmsg: e6",
     "voter": "e6"
   },
   {
     "kind": "ballot",
-    "at": "2026-07-23T04:10:12Z",
-    "receivedAt": "2026-07-23T04:10:32Z",
-    "detail": "ballot accepted: e6",
-    "voter": "e6"
+    "at": "2026-07-23T04:10:30Z",
+    "receivedAt": "2026-07-23T04:10:30Z",
+    "detail": "ballot accepted: e4",
+    "voter": "e4"
   },
   {
     "kind": "ballot",
-    "at": "2026-07-23T04:10:40Z",
-    "receivedAt": "2026-07-23T04:10:40Z",
-    "detail": "ballot accepted: e1",
-    "voter": "e1"
+    "at": "2026-07-23T04:10:21Z",
+    "receivedAt": "2026-07-23T04:10:42Z",
+    "detail": "ballot accepted: e6",
+    "voter": "e6"
   },
   {
     "kind": "ballot",

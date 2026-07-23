@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FSPCG2",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "旧 assert は _cloneId 単一値という欠陥挙動の pin であり、FR-1b(Map 化)の修正後挙動への assert 更新はバグ修正の定義そのもの(文書化済み仕様への回復)。B の互換テスト併存は org.md Forbidden(要求されない互換レイヤー)へ正面抵触。受容度: B=8(Forbidden 抵触のため反対を明記 — 根拠 = org.md Forbidden 第1項の実文)",
+  "submittedAt": "2026-07-23T04:10:12Z"
+}

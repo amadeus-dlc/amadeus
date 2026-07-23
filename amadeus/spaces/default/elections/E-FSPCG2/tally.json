@@ -1,4 +1,35 @@
 {
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A. 承認 — 旧 assert は欠陥挙動の pin、更新はバグ修正の定義そのもの"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A. 承認 — 旧 assert は欠陥挙動の pin、更新はバグ修正の定義そのもの",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "B. 旧 assert 併存の互換テスト追加(org.md Forbidden 抵触見込み)",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "C. その他",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T04:12:59Z",
   "ballots": [
     {
       "kind": "original",
@@ -34,5 +65,5 @@
       "submittedAt": "2026-07-23T04:12:37Z"
     }
   ],
-  "late": []
+  "resolutions": []
 }
