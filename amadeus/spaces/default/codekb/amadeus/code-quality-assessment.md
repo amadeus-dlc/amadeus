@@ -1,8 +1,42 @@
 # コード品質評価
 
-> **現在の品質観測は intent `260722-teamup-prompt-race`(2026-07-22、bugfix / Minimal、下記「team 起動 watcher-arming の品質観測」節)**。以下の過去 intent 節に残る「本 intent」「最新」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
+> **現在の品質観測は intent `260723-marker-heading-exemption`(2026-07-23、bugfix / Minimal、下記「marker 成果物への required-sections floor 誤適用」節)**。以下の過去 intent 節に残る「本 intent」「最新」「現在」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
 
-## team 起動 watcher-arming の品質観測（260722-teamup-prompt-race）
+## marker 成果物への required-sections floor 誤適用（260723-marker-heading-exemption、現在、Issue #1296）
+
+実測基準は base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`(直近 freshness pointer の observed)、observed HEAD `ffc79aad9a53c600ea9b464f1f04c6fa627ae59e`、祖先性 exit 0、距離13。差分 96 files のうち本バグ交差面は**ゼロ** — 非 record 差分(`scripts/team-up.sh` +163 ほか、51 files)は required-sections センサー正本・`amadeus-graph.ts` の弁別関数・sensors manifest・stage marker 宣言のいずれとも無交差(測定 ref: `git diff --shortstat/--stat a81c11dde..HEAD`)。よって欠陥は base より前から現存し observed に不変で貫通。
+
+### 確定欠陥 — 汎用 ≥2-H2 floor の marker への無条件適用（S3 相当、#1296）
+
+- `packages/framework/core/tools/amadeus-sensor-required-sections.ts:141` `let pass = h2_count >= 2;`(`:147` `findings_count = Math.max(0, 2 - h2_count)`)が**全成果物へ無条件適用**される。単一行 timestamp / [Answer] 様式 questions のような「意図的に H2 を欠く」marker を floor から免除する分岐が**不在**。
+- **偽 FAIL の機序**: marker は H2=0 → `pass:false`, `findings_count:2`。read-only 再現で timestamp marker `{"pass":false,"h2_count":0,"headings":[],"findings_count":2}`、questions marker も同一 floor FAIL を確認(exit code は常に 0、verdict は JSON フィールド)。
+- **ELIGIBILITY GATE は不十分**: `:167-186`(stem 判別 `:173` `basename(outputPath).replace(/\.md$/, "")`)は marker に heading-set template を当てないだけで floor は維持する(`:184-185` verbatim `keeping the generic >=2-H2 floor.`)。GA では template は普通 miss するため marker は常に floor で FAIL。
+- **manifest 記述も現行仕様を明記**: `packages/framework/core/sensors/amadeus-required-sections.md:52-53` verbatim `a template resolving for a questions/timestamp marker is ignored with a config warning, and the marker keeps the generic floor.` — 免除実装時は同一 PR で更新対象。
+
+### 再利用候補（欠けている免除述語の既存実装）
+
+- `packages/framework/core/tools/amadeus-graph.ts:801-808` `templateEligibleArtifacts` が既に artifact 名 suffix で marker を弁別(`!a.endsWith("-questions")` / `!a.endsWith("-timestamp")`)。artifact 名 X ↔ 出力 stem X 規約により、センサー側 `stem.endsWith("-timestamp"||"-questions")` はこの関数の否定と一致 = floor 免除へそのまま再利用可能。現状 suffix チェックは graph 側にインライン1箇所のみ(canonical `isMarkerArtifact` 抽出で2定義ドリフト回避が設計選択肢)。
+
+### 既決ノルムとの乖離（原因の所在 = 実装、cid:bug-intent-linkage）
+
+- team 規範 `cid:practices-discovery:e-fvepd-marker-heading-floor`(learned 2026-07-20)は「approval 前に H2 を意図的に欠く `*-timestamp.md` / `*-questions.md` を prose-heading floor から明示的に免除する」と**既に規定**している。#1296 は規範が要求する免除がセンサー実装に未反映という乖離であり、修正は文書化済み仕様への回復(バグ修正)であって仕様変更ではない。
+
+### テスト・回帰ガード
+
+- 既存 `tests/unit/t155-template-override.test.ts` は `:130` で marker 弁別、`:251`/`:267` で floor pass:false を prose 入力(`requirements`)で固定。免除の落ちる実証は「marker stem → pass:true」の新テストを integration 層(実 FS、cid:fs-tests-integration-first)へ足し、既存 floor テストの prose 入力を保つ。corpus sweep 対象は `intents/` 配下 `*-questions.md` 391件 / `*-timestamp.md` 22件(免除後に floor 免除で pass:true になる想定、cid:corpus-sweep-for-new-guards / injection-surface-verify)。`codekb/` 配下 timestamp 1件は manifest filter(`:8` `**/{amadeus-docs,intents}/**`)非適合で元々非発火のため免除の対象外(免除は filter を変えない)。
+
+> 以下は過去 intent の履歴。
+
+## t241 の CI-resident 表明と実行実態の乖離（260723-t241-ci-residency）
+
+差分リフレッシュ（base `a81c11dde` → observed `78bce876`、距離 35、bugfix / Minimal）。**本バグ面は base..HEAD で無変更**（`git diff --numstat <base>..HEAD -- tests/e2e tests/run-tests.ts .github/workflows package.json` = 0 行）で、欠陥は intent `260718-election-ts-foundation`（PR #1235）由来、本区間 35 コミットとは無交差（測定 ref: scan-notes @ observed HEAD `78bce876`）。
+
+- **品質欠陥クラス = 検証劇場に隣接する「表明と実行実態の乖離」**: `tests/e2e/t241-election-machine-executor.test.ts` はヘッダ（:1）で「CI-resident」、本文（:4-5）で「strongest standing proof of FR-0」を主張するが、`tests/e2e/` 配置ゆえ自動 CI（`--ci` = smoke+unit+integration、`run-tests.ts:197-202`）では一度も実行されない。FR-0 の「常設保証」が実行実態で担保されていない偽の安心を生む（team.md の検証劇場 Forbidden と同族の弱い形）。
+- **原因所在 = 実装逸脱**（cid:bug-intent-linkage）: ADR-6（`application-design/decisions.md:41-48`）は layer (i) 機械実行器を「integration テストで固定する」と明記。設計は正しく integration を指定していたが、実装（#1235）が `tests/e2e/` に配置し、CI 実行範囲との整合検証（--ci に e2e 非含有）を欠いた。
+- **対照の健全例**: sibling `t237`（:1-5）は「Layer: e2e」と正直宣言し CI-resident を自称しない（e2e walking-skeleton の正配置）。t241 単独の主張過剰。
+- **回復可能性が高い**: integration に election CLI spawn 兄弟が 6 本既存（t235/t236/t240/t242/t244 + t-formal-verif-arm-s-blind、`grep -rln` = 6）で `--ci` により CI 実行済み。t241 は spawnSync+fs → `classifyTestSize`=medium で integration MAX=medium に適合（size purity clean）、`gen-coverage-registry.ts` 未登録のため registry 影響も小。移設は ADR-6 本来配置への回復で新規機構不要。
+
+## team 起動 watcher-arming の品質観測（履歴: 260722-teamup-prompt-race）
 
 実測基準は base `a326f47bc0146a3b4285552f42b92fd61fb343a7`、observed `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`、祖先性 exit 0、距離101。差分 2593 files のうち本バグ交差面は `scripts/team-up.sh`（+212 −8）と付随テストのみ（測定 ref: `git diff --shortstat/--name-only a326f47..HEAD`）。
 

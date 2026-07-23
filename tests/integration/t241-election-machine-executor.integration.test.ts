@@ -1,4 +1,8 @@
 // t241 — FR-0 machine executor (ADR-6 layer (i), CI-resident, Bolt 4).
+// Layer: integration (spawns `bun scripts/amadeus-election.ts` over a tmp
+// project dir — classifyTestSize = medium, the integration ceiling). Living in
+// tests/integration means it runs under --ci on every PR, which is what makes
+// the CI-resident claim below true (ADR-6 fixes layer (i) in integration).
 // An LLM-free TS loop that reads each `next` directive and executes EXACTLY the
 // verb/report it names — zero election knowledge lives in this file. If the
 // loop completes, the directive stream alone carried the election, which is the

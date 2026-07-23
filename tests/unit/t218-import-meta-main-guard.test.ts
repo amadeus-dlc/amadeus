@@ -115,6 +115,17 @@ describe("#846 — exported main() drives in-process", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  // #1296: marker artifacts (*-questions / *-timestamp) are floor-exempt —
+  // drive the exemption branch in-process so its lines are lcov-measured
+  // (the spawn-driven t155 cases cannot stamp DA rows).
+  test("required-sections main exempts marker outputs from the H2 floor", () => {
+    for (const name of ["x-questions.md", "x-timestamp.md"]) {
+      const p = tmpArtifact(name, "single line, no headings\n");
+      expect(drive(() => requiredSectionsMain(["--output-path", p]))).toBe(0);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   test("upstream-coverage main([--output-path]) exits 0 when no upstream", () => {
     const p = tmpArtifact("uc.md", "# Title\n\n## Alpha\n");
     expect(drive(() => upstreamCoverageMain(["--output-path", p]))).toBe(0);

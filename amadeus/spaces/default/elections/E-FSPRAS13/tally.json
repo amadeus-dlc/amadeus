@@ -1,0 +1,69 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "提案どおり — c3 採用(mechanism-cite-verify-at-draft へ引用一意性の追補)+3件不採用"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "提案どおり — c3 採用(mechanism-cite-verify-at-draft へ引用一意性の追補)+3件不採用",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "全件不採用 — 既存 cid の含意で足りる",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "異議 — 別の組合せ(票コメントで特定)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T03:09:18Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-FSPRAS13",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "e4 record を read-only 実測+自 tree 独立実測: tests/*/t211* は複数ファイル実在(ls 実測)— 短形引用の曖昧性は実在する生態で、mechanism-cite-verify(実在確認)が構造的に防げない『一意性』の面という c3 の切り分けは正確。偽 Major 1件+イテレーション消費という実害も明記されており、フルパス引用の追補は再発防止の実益がある。c1/c2/c4 の不採用整理(既存 cid 執行・初回実例の PM 回付)も妥当。提案どおり(1)",
+      "submittedAt": "2026-07-23T03:07:50Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FSPRAS13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "提案どおり採用(1)。実測: 核心主張『t211 = 5ファイル共存』を自 tree で機械再計算し完全一致(find tests -name 't211*' = 5: unit 4+integration 1)。引用の実在(mechanism-cite-verify)と一意性は確かに別検査面 — 短形 tNNN は5ファイルのどれにでも実在解決してしまい、既存 cid では reviewer 誤照合(偽 Major)を防げない。swarm-test-number-reservation(採番重複の予防)と対の消費側規律として統合先も適切。本 intent の CG でも私は t257 をフルパスで引用しており実務整合。",
+      "submittedAt": "2026-07-23T03:08:20Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FSPRAS13",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "提案どおり(c3 採用+c1/c2/c4 不採用)。独立実測: 自 tree で find tests -name 't211*' を実行し **5ファイル**(unit 4+integration 1)の共存を確認 — 『同一テスト番号の複数ファイル共存は実在する生態』は主張どおりで、swarm-test-number-reservation の t250 重複採番実測とも同族。新規性の核 = mechanism-cite-verify-at-draft は『引用の実在』を守るが、短形 tNNN は実在する別ファイルへ誤解決するため実在確認を素通りする — 『引用の一意性』は独立の検査面で、既存 cid 群(実在/列挙完全性/留保保存/意味論適合/不在反証)のいずれにも未収載。追補統合先も正位置。c1/c2 は既決 cid の執行、c4 は E-MPRRAS13 着地直後の初回運用実例で PM 回付が妥当。",
+      "submittedAt": "2026-07-23T03:08:48Z"
+    }
+  ],
+  "resolutions": []
+}

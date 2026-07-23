@@ -1,0 +1,21 @@
+{
+  "electionId": "E-FSPRAS13",
+  "voter": "e6",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "異議 — 別の組合せ(票コメントで特定)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "提案どおり — c3 採用(mechanism-cite-verify-at-draft へ引用一意性の追補)+3件不採用"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "全件不採用 — 既存 cid の含意で足りる"
+    }
+  ]
+}

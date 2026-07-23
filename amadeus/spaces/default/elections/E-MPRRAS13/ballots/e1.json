@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRRAS13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "scratch 併書の until 同期回収には有界タイムアウトと、超過時の既存経路(cid:c5 引き取り / disk-evidence-early-takeover)への降格を追補文に明記する — 無限 until はハング時に conductor 自身を無応答化する",
+  "rationale": "採用(1)。独立実測3点: (a) e3 record の s13-candidates.md と diary :10(01:40:06Z)を直読 — ra-review-i1 の最終テキスト回収不能(SendMessage 2回・10分無応答)→ scratch 併書で2 iteration 決定的回収、complete-review exit 0・durable Review(requirements.md:74)まで確認。 (b) PM 回付 (a) の反実測を自 tree で再現: team.md:283 に cid:approval-lineage-citation が実在(grep 1 hit)— レビュアーの不在断定は absence-claim-grep-verify 違反実例で PM 回付が正。 (c) 非重複性: 既存 c5 / disk-evidence-early-takeover / spawned-agent-result-delivery はいずれも不達の事後対処(引き取り・催促)であり、本候補は配送チャネルの事前設計 — E-BFAADS13 の趣旨(成果物中間への Review 節挿入防止)は record 外併書と両立し、統合先も適切。私自身も同型の Stop hook 下同期回収を全ステージで実施しており、最終テキスト経路の単一障害点は実感のある構造リスク。",
+  "submittedAt": "2026-07-23T01:42:12Z"
+}

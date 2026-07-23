@@ -1,8 +1,30 @@
 # アーキテクチャ
 
-> **2026-07-22 更新（intent `260722-teamup-prompt-race`、現在）**: base `a326f47bc0146a3b4285552f42b92fd61fb343a7` → observed `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`（distance 101）の differential refresh（bugfix / Minimal）。本 intent の交差面は `scripts/team-up.sh`（+212 −8）の team 起動オーケストレーションに限定。以下「upstream v2.3.0 同期の現行アーキテクチャ」以降は履歴。
+> **2026-07-23 更新（intent `260723-t241-ci-residency`、履歴）**: base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb` → observed `78bce87615b985d0151f604c915c6aab1d6ba9f1`（distance 35）の differential refresh（bugfix / Minimal、[Issue #1294](https://github.com/amadeus-dlc/amadeus/issues/1294)）。本 intent の交差面は CI テスト tier アーキテクチャ（`tests/run-tests.ts` の profile flag × `.github/workflows/` × テスト層配置）に限定。**本バグ面の欠陥コードは base..HEAD で無変更**（`git diff --numstat <base>..HEAD -- tests/e2e tests/run-tests.ts .github/workflows package.json` = 0 行）で、原因所在は intent `260718-election-ts-foundation`（導入 PR #1235）にあり本区間 35 コミットとは無交差（測定 ref: scan-notes @ observed HEAD `78bce876`）。以下「FR-0 機械実行器…（260723）」節も履歴（単一 current view は 260723-marker-heading-exemption — code-quality-assessment と鮮度ポインタを参照）。
 
-## team 起動オーケストレーションの watcher-arming アーキテクチャ（260722-teamup-prompt-race）
+## FR-0 機械実行器の CI-resident 表明とテスト tier 配置の乖離（260723-t241-ci-residency）
+
+`tests/e2e/t241-election-machine-executor.test.ts` は選挙 CLI（`scripts/amadeus-election.ts`）を `spawnSync`（bun）で子プロセス起動し、`next` 指令 JSON を字義実行する LLM 無知識の機械実行器で、**FR-0（directive-driven プロトコルの常設保証）の layer (i)** を担う。ヘッダ（:1、verbatim: `// t241 — FR-0 machine executor (ADR-6 layer (i), CI-resident, Bolt 4).`）が「**CI-resident**」を、本文（:4-5）が「strongest **standing** proof of FR-0」を自称する。しかしファイルは `tests/e2e/` に配置されており、自動 CI の実行範囲と乖離する（測定 ref: scan-notes @ observed HEAD `78bce876`）。
+
+```mermaid
+flowchart LR
+  CI["ci.yml :114/:152/:227"] -->|test:ci / coverage:ci| PCI["--ci profile"]
+  PCI -->|run-tests.ts:197-202| T["smoke + unit + integration"]
+  T -.->|runE2e 非設定| E2E["e2e 層 (t241/t237 ほか 75本)"]
+  REL["test:all = --release :203-211"] -->|runE2e=true| E2E
+  REL -.->|ローカル手動のみ| Manual["非 CI"]
+```
+<!-- Text fallback: ci.yml は test:ci/coverage:ci=--ci profile を使い、run-tests.ts の --ci 実装(:197-202)は smoke/unit/integration のみ true とし runE2e を立てない。e2e 層(t241 含む 75本)を走らせるのは --release(=test:all)のみで、これはローカル手動起動。release.yml は test 実行ステップなし、formal-verification.yml は workflow_dispatch のみ。よって e2e 層はいずれの自動 CI でも実行されない。 -->
+
+- **--ci tier = e2e 非実行**: `run-tests.ts:197-202` の `--ci` 実装は `runSmoke/runUnit/runIntegration=true` で **runE2e を立てない**（Usage banner :124-127 も `--ci` = smoke+unit+integration と明記）。`test:ci`/`coverage:ci` は共に `--ci`（package.json:14-16）。e2e を走らせるのは `test:all`（=`--release`、:203-211 で runE2e=true）のみで、Usage banner :148 が「All levels (hours)」と重量を明記するローカル手動用。
+- **自動 CI 3 ワークフローで e2e 0 ヒット**: `ci.yml`（:114/:152/:227 が `test:ci`/`coverage:ci`、`--e2e`/`--release`/`test:all` 0 ヒット、トリガー :8 push:main + :13 pull_request）、`release.yml`（test 実行ステップなし、publish のみ）、`formal-verification.yml`（:12 `workflow_dispatch` のみ、e2e ランナー無関係）。よって t241 の e2e 層は PR/main push/release のいずれでも実行されない。
+- **ADR-6 からの実装逸脱（決定的原因所在）**: ADR-6（`application-design/decisions.md:41-48`）Decision は layer (i) 機械実行器を「**integration テストで固定する**」と明記。t241 ヘッダ自身も「ADR-6 layer (i), CI-resident」を引く（:1）。にもかかわらず実装（#1235）は `tests/e2e/` に配置した。原因所在は **設計（ADR-6）は integration を正しく指定していたが実装が e2e に置いた実装逸脱**（cid:bug-intent-linkage）で、CI 実行範囲（--ci に e2e 非含有）との整合検証が欠落した。
+- **正直宣言との対照（t237）**: 同一 e2e tier の `tests/e2e/t237-election-walking-skeleton.test.ts` はヘッダ（:1-5）で「**Layer: e2e**」と正直に宣言し **CI-resident を自称しない**（walking-skeleton 実演は本来 e2e が正配置）。矛盾は t241 単独（e2e 配置 × CI-resident 主張）。
+- **integration precedent（回復先の実在）**: `tests/integration/` に `amadeus-election.ts` を spawn する兄弟テストが 6 ファイル既存（t235/t236/t240/t242/t244 + t-formal-verif-arm-s-blind、`grep -rln amadeus-election tests/integration` = 6）。同型の「CLI spawn 選挙テスト」が既に integration tier で `--ci` により CI 実行されている。size purity 上も t241（spawnSync+fs → `classifyTestSize`=medium）は integration MAX=medium（`test-size.ts` :164）に適合（clean）。よって integration 移設は ADR-6 本来の配置への回復であり新規機構を要さない（t241 は `gen-coverage-registry.ts` 未登録、wiring coverage は in-process の t236 が所有）。
+
+> **履歴（260722-teamup-prompt-race）**: base `a326f47bc0146a3b4285552f42b92fd61fb343a7` → observed `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`（distance 101）の differential refresh（bugfix / Minimal）。本 intent の交差面は `scripts/team-up.sh`（+212 −8）の team 起動オーケストレーションに限定。以下「upstream v2.3.0 同期の現行アーキテクチャ」以降はさらに履歴。
+
+## team 起動オーケストレーションの watcher-arming アーキテクチャ（履歴: 260722-teamup-prompt-race）
 
 `scripts/team-up.sh` は Herdr（pane multiplexer）を介して各メンバーの AI CLI（claude / codex）を pane 上に起動する team 起動オーケストレータである。claude メンバーの watcher（agmsg monitor）起動は、次の**一方向・無検証**の経路で成立する（測定 ref: observed HEAD `a81c11dde` 実読）。
 

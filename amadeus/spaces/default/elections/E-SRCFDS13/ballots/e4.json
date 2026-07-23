@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCFDS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "提案どおり(1)。e2 record 実測: c5 の実測根拠 = U1 FD business-logic-model.md :50 に『F1(createdAtSource 未申告拡張)…ADR-2 転記是正の申告で解消』の reviewer 捕捉→是正記録を直読確認。createdAtSource は E-SRCAD2 の非採用 B 案の固有トークン(私はその選挙の投票者で A に投じた当事者 — B 語彙の混入である事実を一次記憶と record 両方で確認)。新規性判定: E-TPRRAS13 の per-voter 逐語照合は『採用文の実在』の正方向検査で、『非採用案語彙の混入』は正方向検査では構造的に検出不能 — negative-vocabulary 0-hit grep は逐語照合ファミリの対称補完(positive/negative の両側検査 = corpus-sweep-for-new-guards の両側実測と同型の思想)で機械的・低コスト。c1〜c4 の不採用(裁定執行記録・手続き実例2件・既存 cid 適用)も diary と整合。",
+  "submittedAt": "2026-07-23T03:04:47Z"
+}

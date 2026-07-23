@@ -1,6 +1,10 @@
 # API ドキュメント
 
-## 260722-teamup-prompt-race の関連契約（2026-07-22、現在）
+## 260723-t241-ci-residency の関連契約（履歴: 2026-07-23）
+
+差分リフレッシュ（base `a81c11dde` → observed `78bce876`、距離 35、bugfix / Minimal、[#1294](https://github.com/amadeus-dlc/amadeus/issues/1294)）。ユーザー可視 API/CLI 契約に変化なし。関連する内部契約は `tests/run-tests.ts` の profile flag（`--ci`=smoke+unit+integration:197-202 / `--release`=+e2e:203-211、banner :124-127）と `package.json` test scripts（:14-16）、および ADR-6 の layer (i)=integration 契約（`application-design/decisions.md:41-48`）。t241 の e2e 配置がこの設計契約からの実装逸脱（測定 ref: scan-notes @ observed HEAD `78bce876`）。
+
+## 260722-teamup-prompt-race の関連契約（2026-07-22、履歴）
 
 bugfix / Minimal（observed `a81c11dde`）。本 intent は HTTP/CLI/directive 公開契約を変更しない。関わるのは内部起動契約と外部 agmsg CLI 契約の消費のみ: (1) `scripts/team-up.sh` → `scripts/run-claude.sh` の位置引数（init_prompt `/agmsg mode monitor`）、(2) 対照の agmsg `spawn.sh` handshake（`status=ready`、`--ready-timeout` default 90s `:46-47`）と ready センチネル path（`agmsg_ready_path` `lib/actas-lock.sh:69-73`）、(3) 再注入に使う `herdr pane send-text` + `send-keys enter`（send/submit 2段、cid:code-generation:herdr-send-submit-two-step）。いずれも既存契約の消費であり公開 API 面の追加・変更はない。
 
