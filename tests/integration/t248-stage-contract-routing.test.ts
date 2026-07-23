@@ -515,9 +515,13 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
       stdout += `${values.map(String).join(" ")}\n`;
     };
     try {
-      withStageEnv(sourceGraph(), { AMADEUS_SKIP_ARTIFACT_GUARD: "1" }, () => {
-        handleReport(["--result", "approved"], project);
-      });
+      withStageEnv(
+        sourceGraph(),
+        { CLAUDE_PROJECT_DIR: project, AMADEUS_SKIP_ARTIFACT_GUARD: "1" },
+        () => {
+          handleReport(["--result", "approved"], project);
+        },
+      );
     } finally {
       console.log = originalLog;
     }

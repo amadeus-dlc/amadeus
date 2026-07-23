@@ -1,6 +1,16 @@
 # ビジネス概要
 
-## 260720-upstream-sync-230 の業務境界（2026-07-20、現在）
+## 260723-t241-ci-residency の業務境界（履歴: 2026-07-23）
+
+差分リフレッシュ（base `a81c11dde` → observed `78bce876`、距離 35、bugfix / Minimal、[#1294](https://github.com/amadeus-dlc/amadeus/issues/1294)）。業務ドメイン（AI-DLC 自己ホスト開発）に構造変化なし。本 intent は自動 CI のテスト tier 契約に閉じたテスト配置の欠陥修正で、`tests/e2e/t241` の「CI-resident」表明を実行実態（`--ci` は e2e 非実行）へ整合させる範囲（測定 ref: scan-notes @ observed HEAD `78bce876`）。
+
+## 260722-teamup-prompt-race の業務境界（2026-07-22、履歴）
+
+bugfix / Minimal（observed `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`、距離101）。利用者価値は team 起動（`scripts/team-up.sh`）の信頼性回復に限定する。[Issue #1384](https://github.com/amadeus-dlc/amadeus/issues/1384): claude メンバーの初期プロンプト `/agmsg mode monitor` が TUI 起動レースで消失し watcher（agmsg monitor）が起動しない不具合（再現率 5/6）を、起動後の readiness 検証・再送で修復する。フレームワーク中核（core/harness の投影・配布契約）には非交差で、業務ドメイン境界は変化しない。詳細は `re-scans/260722-teamup-prompt-race.md`。
+
+> 以下は過去 intent の履歴。
+
+## 260720-upstream-sync-230 の業務境界（2026-07-20、履歴）
 
 Amadeus は、単一の AI-DLC core を6ハーネス（Claude Code、Codex、Cursor、Kiro CLI、Kiro IDE、OpenCode）へ決定的に投影する brownfield フレームワークである。本 intent は、承認済みの upstream `awslabs/aidlc-workflows` v2.2.0→v2.3.0 同期計画を実装可能な要件・設計へ落とすため、24件の ADOPT/ADAPT 項目を現行コード `545e69c836d46f7bec2fa351c8e668026eb5fad5` で再照合した差分リフレッシュである。
 

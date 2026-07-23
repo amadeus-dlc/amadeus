@@ -1,6 +1,16 @@
 # 技術スタック
 
-## upstream-sync-230 の現行技術スタック（2026-07-20、現在）
+## 260723-t241-ci-residency 交差スタック（履歴: 2026-07-23）
+
+差分リフレッシュ（base `a81c11dde` → observed `78bce876`、距離 35、bugfix / Minimal、[#1294](https://github.com/amadeus-dlc/amadeus/issues/1294)）。スタック構成に変化なし。交差要素は Bun 自作テストランナー（`tests/run-tests.ts` の smoke/unit/integration/e2e 4層）、GitHub Actions（`ci.yml`/`release.yml`/`formal-verification.yml`）、`bun` `spawnSync`（t241 の CLI 子プロセス起動）。e2e 層は `--ci` 非対象のため自動 CI で走らない（測定 ref: scan-notes @ observed HEAD `78bce876`）。
+
+## 260722-teamup-prompt-race 交差スタック（2026-07-22、履歴）
+
+bugfix / Minimal（observed `a81c11dde`）。本バグ交差面は既存スタックのシェル層に限定し、新規 runtime dependency は導入しない。関与技術: Bash（`scripts/team-up.sh` / `scripts/run-claude.sh`）、Herdr（pane multiplexer、`herdr pane run`/`send-text`/`send-keys`/`capture`）、外部 agmsg skill（`~/.agents/skills/agmsg/` の Bash + SQLite JSON1、read-only 参照）、既存 TypeScript の supervisor（`scripts/team-up-codex-safety-wait.ts`、Bun 実行）。以下の現行スタック表（Bun 1.3.13 / TypeScript ^6 / Biome / fast-check 等）は本 intent で不変。
+
+> 以下は過去 intent の履歴。
+
+## upstream-sync-230 の現行技術スタック（2026-07-20、履歴）
 
 | 層 | 技術／バージョン | 用途 |
 |---|---|---|

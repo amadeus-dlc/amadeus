@@ -463,5 +463,33 @@
     "dirName": "260722-space-record-catalog",
     "scope": "amadeus",
     "status": "complete"
+  },
+  {
+    "uuid": "019f8bd9-2dd4-7e33-ba12-175f4914b2a8",
+    "slug": "teamup-prompt-race",
+    "dirName": "260722-teamup-prompt-race",
+    "scope": "bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f8c79-9080-7d78-915a-f0129006edb4",
+    "slug": "t241-ci-residency",
+    "dirName": "260723-t241-ci-residency",
+    "scope": "bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f8c95-8dd9-751a-9aca-8b01f6dc2ecc",
+    "slug": "marker-heading-exemption",
+    "dirName": "260723-marker-heading-exemption",
+    "scope": "bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f8c95-8d9e-776e-9a55-5bb3d3a75225",
+    "slug": "fixture-shard-pollution",
+    "dirName": "260723-fixture-shard-pollution",
+    "scope": "bugfix",
+    "status": "complete"
   }
 ]

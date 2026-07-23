@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 496,
+    "total": 497,
     "enumeratedByClass": {
-      "function": 266,
+      "function": 267,
       "audit": 75,
       "scope": 10,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 129,
+      "function": 130,
       "audit": 32,
       "scope": 10,
       "stage": 8,
@@ -1057,6 +1057,10 @@
         {
           "file": "tests/integration/t172-migration-audit-trail.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t258-engine-error-ambient-shard-pollution.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
@@ -1912,6 +1916,18 @@
       "coveredBy": [
         {
           "file": "tests/unit/t203-mint-presence-classify.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:isMarkerArtifact",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t155-template-override.test.ts",
           "mechanism": "cli"
         }
       ],

@@ -1,6 +1,58 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(現在: 260720-upstream-sync-230)
+## 実行メタデータ(現在: 260723-marker-heading-exemption)
+
+- Date: 2026-07-23T01:37:10Z
+- Observed at: `ffc79aad9a53c600ea9b464f1f04c6fa627ae59e`(現 HEAD `git rev-parse HEAD` 実測一致)
+- Intent: `260723-marker-heading-exemption`([Issue #1296](https://github.com/amadeus-dlc/amadeus/issues/1296) — required-sections センサーの汎用 ≥2-H2 floor が単一行 timestamp / [Answer] 様式 questions の marker 成果物へ無条件適用され、意図的に H2 を欠く marker が常に `pass:false` になる。既決ノルム E-FVEPD が要求する marker 免除がセンサー実装に未反映)
+- Scope: `bugfix`(Depth Minimal)
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering` (2.1)
+- Method: differential refresh。base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`(直近 freshness pointer `re-scans/260722-teamup-prompt-race.md` の observed)、observed `ffc79aad9a53c600ea9b464f1f04c6fa627ae59e`、`git merge-base --is-ancestor a81c11dde HEAD` exit 0、distance `git rev-list --count a81c11dde..HEAD`=13。base は祖先かつ距離最小(cid:reverse-engineering:rescan-base-ancestry)。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3)。
+- 測定 ref: 全 file:line は Observed=HEAD `ffc79aad9` のワークツリー実ファイル直読(cid:measurement-ref-in-artifacts)。diff 規模(96 files, +7226/−17。非 record 51 files, +1660/−16)・stage marker 20件・intents corpus 391 questions+22 timestamp・配布 11コピー×2 はコマンド出力からの転記(numbers-from-command-output-only)。
+- 現行結論: #1296 の根本原因は `amadeus-sensor-required-sections.ts:141` の `pass = h2_count >= 2` が全成果物へ**無条件適用**され、marker(単一行 timestamp / [Answer] questions)を免除する分岐が不在なこと。ELIGIBILITY GATE(`:167-186`、stem 判別 `:173`)は template 面のみ免除し floor は維持(`:184-185` verbatim `keeping the generic >=2-H2 floor.`)。再利用候補は `amadeus-graph.ts:801-808` `templateEligibleArtifacts` の suffix 弁別(`!a.endsWith("-questions")` / `!a.endsWith("-timestamp")`)で、これは既決規範 E-FVEPD(cid:practices-discovery:e-fvepd-marker-heading-floor)が要求する挙動そのもの — 規範は免除を要求するがセンサーが未実装という乖離。修正は「文書化済み仕様への回復」であり仕様変更ではない。再現(read-only 診断): timestamp marker で `{"pass":false,"h2_count":0,"findings_count":2}`、questions marker でも同様に floor FAIL。原因の所在=**実装**(規範 E-FVEPD が定めた免除挙動をセンサースクリプトが実装していない)。区間 a81c11dde..HEAD の非 record 差分(`scripts/team-up.sh` ほか)はバグ面と無交差でセンサー正本・graph・manifest・stage marker 宣言は不変。
+- Per-intent record: `re-scans/260723-marker-heading-exemption.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「現在: 260722-teamup-prompt-race」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、`code-quality-assessment.md`(#1296 の欠陥クラス「marker 成果物への required-sections floor 誤適用」節を先頭 current view に新設、旧「現在」= 260722-teamup-prompt-race を履歴へ降格)、`re-scans/260723-marker-heading-exemption.md`(新規)。他 body 7成果物(architecture / code-structure / component-inventory / technology-stack / api-documentation / business-overview / dependencies)は**本文温存**で、先頭の 260722 current marker「(…、現在)」→「(…、履歴)」の label のみ降格(c3-relabel — 単一 current view を code-quality + 本鮮度ポインタに一意化。#1296 のセンサー面はこれら7成果物のドメイン外で新規節なし)。実質の新規知識は「required-sections floor が marker を無条件 FAIL させる+graph suffix 弁別が再利用可+E-FVEPD 規範との乖離」の1クラスタのみで code-quality-assessment + per-intent record に集約(区間非交差でセンサー正本・graph・manifest・stage marker は不変。cid:reverse-engineering:c1)。
+- Delivery boundary: 実装・修正コード、dist/self-install 再生成、commit、PR 操作は本 scan で未実施。区間フォーカス正本変更0件のため dist 11コピーは base と同一。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260723-t241-ci-residency)
+
+- Date: 2026-07-23T00:57:42Z(scan-notes 実行時刻の転記)
+- Observed at: `78bce87615b985d0151f604c915c6aab1d6ba9f1`(現 HEAD `git rev-parse HEAD` 実測一致)
+- Intent: `260723-t241-ci-residency`([Issue #1294](https://github.com/amadeus-dlc/amadeus/issues/1294) — `tests/e2e/t241-election-machine-executor.test.ts` のヘッダが「CI-resident」(FR-0 機械実行器の常設証明、ADR-6 layer (i))を自称するが、PR CI(`--ci`)は e2e 層を実行しない)
+- Scope: `bugfix`(Depth Minimal)
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering` (2.1)
+- Method: differential refresh(cid:reverse-engineering:c1、E-L63 の base 選定則)。base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`(前回 scan `260722-teamup-prompt-race` の observed)、observed `78bce87615b985d0151f604c915c6aab1d6ba9f1`、`git merge-base --is-ancestor` exit 0、distance `git rev-list --count base..HEAD`=35。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3)。
+- 測定 ref: 全 file:line は Observed=HEAD `78bce876` のワークツリー実ファイル直読(Developer scan、cid:measurement-ref-in-artifacts)。区間件数(35)・diff 規模(224 files, +10774/−16)はコマンド出力からの転記(numbers-from-command-output-only)。
+- ★本バグ面は base..HEAD で無変更: `git diff --numstat <base>..HEAD -- tests/e2e tests/run-tests.ts tests/run-tests.sh tests/gen-coverage-registry.ts .github/workflows package.json` = **0 行(出力空)**。欠陥コード(t241 の e2e 配置・CI tier 定義・ワークフロー)は base より前(intent `260718-election-ts-foundation`、導入 PR #1235)に導入済みで、差分リフレッシュ区間 35 コミットとは無交差。差分リフレッシュとしては「バグ面ドリフトなし」を確定。
+- 現行結論: `tests/e2e/t241-election-machine-executor.test.ts` はヘッダ(:1 verbatim `// t241 — FR-0 machine executor (ADR-6 layer (i), CI-resident, Bolt 4).`)で「CI-resident」、本文(:4-5)で「strongest standing proof of FR-0」を自称するが、`tests/e2e/` 配置ゆえ自動 CI で非実行。`--ci`(`run-tests.ts:197-202`)は smoke+unit+integration のみ(runE2e 非設定)、e2e は `--release`/`--all`(:203-211)= ローカル手動用の `test:all`(package.json:14-16)のみ。`ci.yml`(:114/:152/:227 が `test:ci`/`coverage:ci`)・`release.yml`(test ステップ無し)・`formal-verification.yml`(:12 workflow_dispatch)いずれも `--e2e`/`--release`/`test:all` 0 ヒットで e2e 非実行。**決定的原因所在は実装逸脱**: ADR-6(`application-design/decisions.md:41-48`)Decision が layer (i) 機械実行器を「integration テストで固定する」と明記しているのに、実装(#1235)が `tests/e2e/` に配置し CI 実行範囲との整合検証を欠いた(cid:bug-intent-linkage、原因所在=設計は正・実装が逸脱)。回復先の実在: integration に election CLI spawn 兄弟 6 本既存(t235/t236/t240/t242/t244 + t-formal-verif-arm-s-blind、`--ci` で CI 実行済み)、t241 は spawnSync+fs→`classifyTestSize`=medium で integration MAX=medium に適合(clean)、`gen-coverage-registry.ts` 未登録。sibling t237(:1-5「Layer: e2e」)は CI-resident 非自称の健全対照。
+- Per-intent record: `re-scans/260723-t241-ci-residency.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「現在: 260722-teamup-prompt-race」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、codekb body 8成果物(先頭 current view に本 intent の外科的追加、旧「現在」節は履歴へ降格 — bugfix Minimal 相応で本文温存)、`re-scans/260723-t241-ci-residency.md`(新規)。
+- Delivery boundary: 実装・修正コード、dist/self-install 再生成、commit、PR 操作は本 scan で未実施。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260722-teamup-prompt-race)
+
+- Date: 2026-07-22T22:03:26Z
+- Observed at: `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`(現 HEAD `git rev-parse HEAD` 実測一致)
+- Intent: `260722-teamup-prompt-race`([Issue #1384](https://github.com/amadeus-dlc/amadeus/issues/1384) — `scripts/team-up.sh` の fresh セッションで初期プロンプト `/agmsg mode monitor` が Claude Code TUI 起動レースで消失し watcher が起動しない。再現率 5/6)
+- Scope: `bugfix`(Depth Minimal)
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering` (2.1)
+- Method: differential refresh。base `a326f47bc0146a3b4285552f42b92fd61fb343a7`、observed `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`、`git merge-base --is-ancestor` exit 0、distance `git rev-list --count base..HEAD`=101。日付がより新しい非祖先 observed(`545e69c8` 等)は exit 1 で除外(cid:reverse-engineering:rescan-base-ancestry)。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3)。
+- 測定 ref: 全 file:line は Observed=HEAD `a81c11dde` のワークツリー実ファイル直読、および repo 外 read-only の agmsg skill(`~/.agents/skills/agmsg/`)直読(cid:measurement-ref-in-artifacts)。区間件数(101)・diff 規模(2593 files, +349417/−5289)はコマンド出力からの転記(numbers-from-command-output-only)。
+- 現行結論: `scripts/team-up.sh` の claude member 起動経路は初期プロンプト `/agmsg mode monitor` を一発勝負で渡し(`:800` init_prompt 固定、`:830-832` 起動組立、`run-claude.sh` 末尾 `exec claude ... "$@"`)、TUI 起動レースで取りこぼされても再送・検証が一切ない。pane 起動(`:429`/`:447`)は cmd を一度 exec するのみ、`start_safety_wait_supervisors()`(`:338-395`)は `:340` `[ "$RUNTIME" = "codex" ] || return 0` で claude runtime には readiness 検証が構造的に不在。対照として agmsg `spawn.sh:576-588` は ready センチネル(`agmsg_ready_path` `lib/actas-lock.sh:69-73`、touch 側 `watch.sh:294-310`)出現までブロックする handshake を持つ(default `--ready-timeout` 90s `spawn.sh:46-47`)。原因の所在は**設計(一般化漏れ)**: 直近 intent `260721-teamup-safety-wait` が起動後の pane readiness 検証を Codex 専用に新設(`team-up.sh:212-395`,`:1259` + 新規 `team-up-codex-safety-wait.ts` +567)したが claude 経路へ一般化せず、watcher arming の回帰テストも現状ゼロ(既存 team-up テストは init_prompt/`agmsg mode monitor`/ready/watch を参照しない)。
+- Per-intent record: `re-scans/260722-teamup-prompt-race.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「現在: 260720-upstream-sync-230」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、codekb body 8成果物(先頭 current view に本 intent の外科的追加、旧「現在」節は履歴へ降格 — bugfix Minimal 相応で本文は温存)、`re-scans/260722-teamup-prompt-race.md`(新規)。
+- Delivery boundary: 実装・修正コード、dist/self-install 再生成、commit、PR 操作は本 scan で未実施。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260720-upstream-sync-230)
 
 - Date: 2026-07-20T06:43:32Z
 - Observed at: `545e69c836d46f7bec2fa351c8e668026eb5fad5`

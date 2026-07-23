@@ -1,6 +1,41 @@
 # コンポーネント棚卸し
 
-## upstream-sync-230 コンポーネント（2026-07-20、現在）
+## t241 CI-residency 関連コンポーネント（260723-t241-ci-residency、2026-07-23、履歴）
+
+差分リフレッシュ（base `a81c11dde` → observed `78bce876`、距離 35、bugfix / Minimal、[#1294](https://github.com/amadeus-dlc/amadeus/issues/1294)）。本バグ面は base..HEAD 無変更（numstat 0 行）、欠陥は 260718-election-ts-foundation（#1235）由来。測定 ref: scan-notes @ observed HEAD `78bce876`。
+
+| コンポーネント | 場所 | 役割 / 本 intent での関与 |
+| --- | --- | --- |
+| t241 機械実行器 | `tests/e2e/t241-election-machine-executor.test.ts`（:1 ヘッダ、:91-140 テスト2件） | FR-0 layer (i) の LLM 無知識 directive ループ。「CI-resident/standing proof」自称（:1,:4-5）だが e2e 配置で自動 CI 非実行 = 欠陥コンポーネント |
+| テスト profile 判定 | `tests/run-tests.ts:197-202`（--ci）/:203-211（--release） | `--ci`=smoke+unit+integration（runE2e 非設定）、`--release`=+e2e。banner :124-127/:148 |
+| test scripts | `package.json:14-16` | `test:ci`/`coverage:ci`=--ci、`test:all`=--all（e2e はローカル手動のみ） |
+| CI ワークフロー | `.github/workflows/ci.yml`（:114/:152/:227） | `test:ci`/`coverage:ci` 実行。`--e2e`/`--release`/`test:all` 0 ヒット。`release.yml`（test 無し）・`formal-verification.yml`（:12 workflow_dispatch）も e2e 非実行 |
+| size 分類器 | `tests/lib/test-size.ts:161-166`、`classifyTestSize`（signals `t-test-size-drift.test.ts:66-69`） | spawn/fs→medium。integration MAX=medium で t241 移設 clean |
+| ADR-6（設計権威） | `application-design/decisions.md:41-48` | layer (i) を「integration テストで固定する」と明記 = t241 e2e 配置は実装逸脱の対照点 |
+| integration precedent | `tests/integration/{t235,t236,t240,t242,t244,t-formal-verif-arm-s-blind}` | election CLI spawn 兄弟 6 本（`grep -rln amadeus-election` = 6）、`--ci` で CI 実行済み |
+| coverage registry | `tests/gen-coverage-registry.ts` | t241 未登録（0 ヒット）。wiring coverage は in-process t236 が所有 |
+| sibling 健全例 | `tests/e2e/t237-election-walking-skeleton.test.ts:1-5` | 「Layer: e2e」正直宣言・CI-resident 非自称（対照） |
+
+## team 起動 watcher-arming コンポーネント（履歴: 260722-teamup-prompt-race、2026-07-22）
+
+bugfix / Minimal。observed `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`。本 intent の交差コンポーネントは `scripts/team-up.sh` の claude 起動経路と、対照の agmsg readiness handshake（repo 外）。
+
+| コンポーネント | 責務 | 本バグとの関係 |
+|---|---|---|
+| `scripts/team-up.sh` `claude_member_cmd()` `:800` | init_prompt `/agmsg mode monitor` を固定し `:830-832` で `run-claude.sh` 位置引数へ組立 | 初期プロンプトを一発勝負で供給。再送・検証なし（欠陥の発生元） |
+| `scripts/team-up.sh` pane 起動 `:429`/`:447`、launch 列 `:1251-1257` | `herdr pane run` で cmd を一度 exec | claude 受理／watcher attach の検証なし |
+| `scripts/team-up.sh` `start_safety_wait_supervisors()` `:338-395` | 起動後 readiness 検証の supervisor | `:340` `[ "$RUNTIME" = "codex" ] \|\| return 0` で claude は no-op（readiness 検証の構造的不在） |
+| `scripts/run-claude.sh` | 末尾 `exec claude --dangerously-skip-permissions "$@"` | init_prompt を claude 初期プロンプト（位置引数）として一度だけ渡す |
+| `scripts/team-up-codex-safety-wait.ts`（260721 新設、+567） | Codex pane readiness の fingerprint 検証・解除 | claude 非対応（`resolve` の `agent === "codex"` フィルタ）。検証構造の再利用先例 |
+| agmsg `spawn.sh:576-588`（repo 外 read-only） | ready センチネル出現までブロック（`status=ready`、default timeout 90s `:46-47`） | team-up claude 経路に欠ける handshake の対照実装 |
+| agmsg `lib/actas-lock.sh:69-73` `agmsg_ready_path()` / `watch.sh:294-310` | センチネル path 算出（team+role キー）と生成（touch） | team-up は team+role を保持 → 機械判定の第一候補 |
+| team-up 回帰テスト（`t-team-up-msg-backend` 他） | 既存 team-up 動作の検査 | init_prompt/`agmsg mode monitor`/ready/watch を参照せず（`grep -c` = 0）→ watcher arming の回帰テスト不在 |
+
+原因の所在は**設計（一般化漏れ）**: 260721 が readiness 検証を Codex 専用に新設し claude 経路へ一般化しなかった。詳細は `re-scans/260722-teamup-prompt-race.md`。
+
+> 以下は過去 intent の履歴。
+
+## upstream-sync-230 コンポーネント（2026-07-20、履歴）
 
 | コンポーネント | 責務 | upstream-sync での役割 |
 |---|---|---|
