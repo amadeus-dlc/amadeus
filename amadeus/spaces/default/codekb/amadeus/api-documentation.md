@@ -188,3 +188,13 @@ bun scripts/package.ts [<harness>] [--check]
 - **同期フック**: `packages/setup/.release-it.json` の `hooks.after:bump` = `bun ../../scripts/release-version-sync.ts ${version} && git add -A :/`。`git.tagName` = `v${version}`、`requireBranch: main`、`requireCleanWorkingDir: true`、`github.release: false` / `npm.publish: false`(publish は release.yml 側)。
 - **`release-version-sync.ts <semver>` の契約**: 引数 semver(prerelease サフィックス受理、`:22`)で version 面3点 — `packages/framework/core/tools/amadeus-version.ts` の `AMADEUS_VERSION`、`README.md` のバージョンバッジ、`packages/setup/package.json` — を同期する。いずれかの patchFile で期待パターンが見つからなければ `process.exit(1)`(`:37-40`)。
 - **#702 の欠陥**: version 受理は prerelease を許すのに、README バッジの patch 正規表現(`:53-54`)は `X.Y.Z-blue` 固定で prerelease を許さない非対称。prerelease 版へ bump すると次回実行でバッジ patch が exit 1 に張り付き、かつ version.ts を先に書いた後の half-applied 状態を残す。release.yml の1ボタン運用が prerelease 到達時点で前進不能になる。
+
+## Issue #857 差分スキャン（2026-07-23）
+
+現行 `doctor` CLI の外部契約は、各診断行と集計を stdout に出力し、失敗なしで0、失敗ありで1を返すことである。加えて audit 追記、stale lock cleanup、および t37/t83/t210 が固定する spawn CLI/cwd 契約を維持する。これら41ケースは成功しているが、別プロセス実行のため LCOV は1/771行 hit であり、spawn テストだけでは内部分岐のカバレッジを表現できない。
+
+`handleDoctor` は export 済みだが、正式な戻り値 API はなく、in-process テストは `process.exit`・stdout・env の monkeypatch に依存する。6ファイル104ケースは成功し、LCOV 437/771行 hit である。
+
+## Functional Design で確定する契約
+
+候補Aは `runDoctor(): number` とし、出力と診断結果は既存副作用に残す。候補Bは `{ results, output, exitCode }` を返し、薄い CLI wrapper が stdout と `process.exit` に変換する。どちらでも既存 CLI の表示、集計、exit 0/1、audit、cleanup、cwd 契約は不変条件とする。

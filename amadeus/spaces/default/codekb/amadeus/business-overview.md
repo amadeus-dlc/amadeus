@@ -87,3 +87,13 @@ Amadeus は AI-DLC ワークフローを複数の AI harness(Claude、Codex、Ki
 - 6件のバグそれぞれの再現条件・原因コード位置を、テスト可能な形で後続 stage へ引き継いでいる。
 - 各バグの修理が波及する箇所(audit shard 読み手、CLI 契約、テスト)を棚卸ししている。
 - `bugfix` スコープの test posture(既存スイートのグリーン維持 + 各バグへのリグレッションテスト追加)に沿った修理範囲の見積りができる状態にする。
+
+## Issue #857 差分スキャン（2026-07-23）
+
+[Issue #857](https://github.com/amadeus-dlc/amadeus/issues/857) の業務上の焦点は、`doctor` の診断契約を維持したまま、巨大な CLI ハンドラを in-process で検証できる境界を明示することである。`handleDoctor` は既に export され、monkeypatch 型の in-process テスト6ファイル104ケースが成功しており、LCOV は437/771行 hit である。したがって旧来の「全行0」という評価は失効した。
+
+維持すべき利用者向け契約は、stdout への診断行と集計、成功時0／失敗時1の終了コード、audit 追記、stale lock cleanup、および spawn CLI/cwd 契約である。未解消なのは正式な戻り値 seam がないこと、`process.exit`・stdout・env の monkeypatch が重複すること、`worktreeBaseDir` から `resolveMainCheckout` へ至る解決が session cwd に依存すること、stage graph/harness が env と cache に結合することである。
+
+## 後続設計への業務判断
+
+推奨する最小境界は `runUtilityMain → 薄い CLI wrapper → doctor core → checks/dependencies` であり、全 check の純関数化は本 Issue のスコープ外とする。Functional Design では、戻り値を終了コードだけに絞る `runDoctor(): number` と、観測結果を明示する `{ results, output, exitCode }` のどちらを正式契約にするか決定する。

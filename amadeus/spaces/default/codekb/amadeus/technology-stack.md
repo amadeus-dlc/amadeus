@@ -87,3 +87,11 @@ Bun(script runner/テスト実行)、TypeScript `^6.0.3`、Biome 2.4系、GitHub
 ## バージョンと依存関係の注記
 
 `AMADEUS_VERSION` と `@amadeus-dlc/setup` パッケージバージョンの独立ライフサイクルは変更なし。バージョンバンプは `release.yml` の `workflow_dispatch` 一本に統一されている(project.md DECIDED 参照)。一連の bugfix intent(バッチ D 含む)はこの仕組みに変更を加えない。
+
+## Issue #857 差分スキャン（2026-07-23）
+
+検証時の基盤は Bun 1.3.13、TypeScript 6.0.3、Biome、lizard、dist/self-install 検査、test、project coverage と patch coverage である。フレームワーク版は0.1.4。Issue #857 の最小境界導入に新規ランタイム依存は不要であり、既存の TypeScript/Bun とテスト基盤で実装可能である。
+
+## カバレッジ上の位置づけ
+
+export 済み `handleDoctor` の monkeypatch 型 in-process テストは6ファイル104ケース成功、LCOV 437/771行 hit である。spawn 契約 t37/t83/t210 は41ケース成功だが LCOV 1/771行 hit である。従って spawn テストは CLI/cwd 互換性、in-process テストは内部分岐という相補的な役割を持つ。
