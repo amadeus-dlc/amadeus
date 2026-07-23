@@ -854,7 +854,7 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
   // a new spawning test still cannot land without a human edit here.
   const EXPECTED_NONE_TO_CLI = [
     "e2e/t237-election-walking-skeleton.test.ts",
-    "e2e/t241-election-machine-executor.test.ts",
+    "integration/t241-election-machine-executor.integration.test.ts",
     "integration/t-codex-hooks-migration.test.ts",
     "integration/t-codex-hooks-ownership.test.ts",
     "integration/t-codex-hooks-packaged-consumer.test.ts",
