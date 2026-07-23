@@ -7359,3 +7359,222 @@
 **Message**: VERDICT: NOT-READY\ninvocationId: 5a52b42c-f011-4c75-921a-007645a55322 iteration: 2\n\n前回 Major(CleanEnv ライフサイクル矛盾)は performance/security/scalability/reliability-design.md の4文書間では解消済み — 全文書が「beforeEach で
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:31:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: 171d3977
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:31:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: 171d3977
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/nfr-design/performance-design.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:31:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: aa0930a3
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:31:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: aa0930a3
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/nfr-design/performance-design.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:31:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: 54f87dab
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:31:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: 54f87dab
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/nfr-design/security-design.md
+**Duration ms**: 44
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:31:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3ddd9b4a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:31:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3ddd9b4a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/nfr-design/security-design.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:31:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: de136ffe
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:31:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: de136ffe
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/nfr-design/scalability-design.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:31:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: f75238ff
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:31:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: f75238ff
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/nfr-design/scalability-design.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:31:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8abc67ce
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:31:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8abc67ce
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/nfr-design/reliability-design.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:31:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 43f0c287
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:31:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 43f0c287
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/nfr-design/reliability-design.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:31:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 729cd735
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:31:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 729cd735
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/nfr-design/logical-components.md
+**Duration ms**: 44
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:31:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 11608674
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:31:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 11608674
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260722-election-core-promotion/construction/team-mode-docs/nfr-design/logical-components.md
+**Duration ms**: 43
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T04:33:25Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a9a162bf1bfbe7882
+**Message**: VERDICT: READY\ninvocationId: a50fa463-f66c-4b08-a20e-e74828110ac5 iteration: 1\n\n査読対象: performance/security/scalability/reliability-design.md, logical-components.md(5点)、上流(nfr-requirements 5点+business-
+
+---
