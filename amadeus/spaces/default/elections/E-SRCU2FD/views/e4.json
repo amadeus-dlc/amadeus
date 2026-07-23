@@ -1,0 +1,21 @@
+{
+  "electionId": "E-SRCU2FD",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "(b) 受理 — 機械検証可能クラスとして conductor 閉包を認め U3 FD へ進む"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "(a) 追加イテレーション — 残余(2)は omission 系につき閉包確認限定の reviewer 1回を必須とする"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "X. その他(票コメントで特定)"
+    }
+  ]
+}

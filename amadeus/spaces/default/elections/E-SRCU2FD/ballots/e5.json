@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCU2FD",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "(a) 追加イテレーション(閉包確認限定の reviewer 1回)。実測: e2 record の business-logic-model.md:32-46 直読 — iteration 2 verdict NOT-READY、Findings の残余(2)は『撤去追跡 Issue 確認が U3 の権威成果物へ未伝播』の伝播 omission クラス。E-LSSADS13 追補の分岐は字義どおり2クラスで、(2) は機械検証可能クラス(数値・集合の assert 閉包)ではなく列挙 omission クラスに該当する — conductor の grep 閉包 6/6 は『指摘された伝播先に是正が着地したこと』を検証するが、『同型の未発見伝播漏れが他に残らないこと』は検証できない(enumeration-completeness-review の教訓: omission は検索語選択依存で起草者の再確認では検出不能 — reviewer の独立再列挙が唯一の構造的対策)。追補の出典裁定 E-BFAAD も omission クラス側は第3イテレーションを選んでおり、先例と一致。残余(1)単独なら (b) 受理が正しいが、(2) を含む以上、閉包確認限定(新規指摘は同型伝播漏れの有無のみ)の bounded な1回を要するのが既決ノルムの正読。非採用時の受容度: (b) なら 6(是正内容自体の質は高く、実害化確率は低い)。",
+  "submittedAt": "2026-07-23T01:36:25Z"
+}

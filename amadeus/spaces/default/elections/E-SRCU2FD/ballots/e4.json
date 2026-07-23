@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCU2FD",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "追加イテレーションは閉包確認限定(残余(2)の同型伝播漏れの独立再列挙のみ)とし、新規観点の全面再レビューへ拡大しないこと — 残余(1)の conductor 受理(機械クラス)はそのまま有効。",
+  "rationale": "(a) 追加イテレーション採用(GoA 2)。実測: U2 FD business-logic-model.md :32-46 の iteration 2 NOT-READY と Major 2件(受け入れ文言矛盾/撤去 Issue 確認の U3 未伝播)、conductor 是正適用済みの記録を直読。判断根拠: E-LSSADS13 の分岐は『是正の閉包が機械検証可能か』ではなく『欠陥クラスが自己検証構造を持つか』で切る — 残余(2)の名指しされた1件は grep 閉包可能だが、伝播漏れ = omission 系の本質は「未発見の同型サイトが他に残る可能性」であり、これは是正者自身の grep 語彙に依存して検出不能(enumeration-completeness-review の機序そのもの)。閉包確認限定の独立再列挙1回が追補の定めた正経路。残余(1)は機械クラスとして conductor 受理で可。自案非採用時受容度: (b)=6(名指し分の grep 閉包 6/6 は実在し、リスクは未発見同型に限定されるため不本意だが支持)。",
+  "submittedAt": "2026-07-23T01:39:18Z"
+}
