@@ -1,0 +1,16 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-ASGAHS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e1 record の s13 ファイル実在確認 — consumes-first-drafting の同一 intent 2度目は傾向 PM 回付(E-MPRUGS13 の e3 前例と同運用で私も同意済み)。他は既決適用。新規性なし。",
+      "submittedAt": "2026-07-23T04:16:27Z"
+    }
+  ],
+  "late": []
+}

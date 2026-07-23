@@ -1,4 +1,27 @@
 {
-  "ballots": [],
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SRCB1CG",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A を支持。独立実測: 自 tree の scripts/amadeus-election.ts で Store.setState(root, electionId, …) が :274(handleOpen)/:187/:238 に実在し、store パスを electionId 直組みで解決することを確認 — U2 resolver 未着地断面で create が日付接頭辞 dirName を mint+mkdir すると handleOpen 自身の setState が not-found で壊れるという builder 実測は自 tree でも成立。A は (i) 物理レイアウト据置で全 setState 経路が無傷 (ii) registry 行の dirName = 現物理名 verbatim で drift 検出の真実性を汚さない (iii) mint は実装+テストで前進を保存 (iv) walking-skeleton(create→行追記→status 同期 e2e)が成立 — の4点で唯一の無害前進形。B は UG 境界再編 = scope 変更でこの断面の裁定としては過大、C は skeleton 要件(org.md)violation。プロセス面: builder が変更0で停止→申告→選挙の cid:deviation-stop-before-implement 模範実例であり、conductor 所見の分離(blind 様式)も先般の指摘どおり改善済みであることを付記。受容度: B=6、C=8(Mandated 抵触につきブロック級)。",
+      "submittedAt": "2026-07-23T04:15:57Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCB1CG",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "A採用(GoA 1)。builder 報告 verbatim を実測確認 — dirName 物理化は U2 resolver 未着地断面で handleOpen :274 setState(+:187/:238/:263)を not-found で壊し walking skeleton が成立しない仕様矛盾は具体的で妥当(実装前停止は deviation-stop-before-implement の模範実施)。A は (1) registry 行 dirName = 現物理名 verbatim で FR-1c の direct join 真実性を維持(drift 偽検出ゼロ) (2) mint は実装+テストのみで消費を U2/U3 着地後へ遅延 — E-SRCRA5 C 裁定(移行実行の段階ゲート)とも整合する着地順序 (3) skeleton の e2e green を保つ。B は UG 境界再編 = スコープ変更でユーザー承認事項に踏み込み、C は open ライフサイクルを意図的に壊す破れ窓で動くソフトウェアの原則に反する。受容度: B=6(正式な scope 変更手続きを踏むなら可)/ C=7(既知の壊れた断面の常態化)。",
+      "submittedAt": "2026-07-23T04:16:27Z"
+    }
+  ],
   "late": []
 }

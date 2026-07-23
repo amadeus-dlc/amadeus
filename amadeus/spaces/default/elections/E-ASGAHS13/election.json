@@ -1,0 +1,21 @@
+{
+  "electionId": "E-ASGAHS13",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260723-archived-status-guard(#1396)/ approval-handoff の §13 学習選定: 採用0件の確認。conductor(e1)起案(verbatim 正本 = e1 ブランチの <record>/ideation/approval-handoff/s13-candidates.md — git show で実測可。consumes-first-drafting 同一 intent 2度目の違反実例の傾向 PM 回付込み)。各自実測確認のうえ GoA 付きで投票。軽量様式可。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    {
+      "internalNo": 2,
+      "label": "異議 — 採用すべき候補がある(票コメントで特定)"
+    }
+  ],
+  "voters": [
+    "e4",
+    "e5",
+    "e6"
+  ],
+  "state": "collecting"
+}
