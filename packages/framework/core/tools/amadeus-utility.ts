@@ -829,9 +829,11 @@ export function composeElectionsDriftLabel(finding: ElectionsDriftFinding): stri
       if (rowsWithoutDir.length === 0 && dirsWithoutRow.length === 0) {
         return `elections registry: no drift (rows ${rows} / dirs ${dirs})`;
       }
-      const rowDrift = `row→dir欠 ${rowsWithoutDir.length} [${rowsWithoutDir.join(",")}]`;
-      const dirDrift = `dir→row欠 ${dirsWithoutRow.length} [${dirsWithoutRow.join(",")}]`;
-      return `elections registry: rows ${rows} / dirs ${dirs} / ${rowDrift} / ${dirDrift}`;
+      return (
+        `elections registry: rows ${rows} / dirs ${dirs} / ` +
+        `row→dir欠 ${rowsWithoutDir.length} [${rowsWithoutDir.join(",")}] / ` +
+        `dir→row欠 ${dirsWithoutRow.length} [${dirsWithoutRow.join(",")}]`
+      );
     }
   }
 }
