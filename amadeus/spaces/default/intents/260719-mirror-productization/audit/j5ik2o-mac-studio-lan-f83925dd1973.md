@@ -2771,3 +2771,129 @@
 **Findings count**: 1
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:22:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 543489f4
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U1-mirror-tool/nfr-requirements/performance-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:22:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 543489f4
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U1-mirror-tool/nfr-requirements/performance-requirements.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:22:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: ab4cd76c
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U1-mirror-tool/nfr-requirements/performance-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:22:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: ab4cd76c
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U1-mirror-tool/nfr-requirements/performance-requirements.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:22:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: ebfae743
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U1-mirror-tool/nfr-requirements/scalability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:22:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: ebfae743
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U1-mirror-tool/nfr-requirements/scalability-requirements.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:22:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: f7aee9ee
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U1-mirror-tool/nfr-requirements/scalability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:22:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: f7aee9ee
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U1-mirror-tool/nfr-requirements/scalability-requirements.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:22:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3f6c80ed
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U1-mirror-tool/nfr-requirements/reliability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:22:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3f6c80ed
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U1-mirror-tool/nfr-requirements/reliability-requirements.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-23T04:22:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0b3b9573
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U1-mirror-tool/nfr-requirements/reliability-requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-23T04:22:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0b3b9573
+**Sensor ID**: required-sections
+**Stage slug**: nfr-requirements
+**Output path**: amadeus/spaces/default/intents/260719-mirror-productization/construction/U1-mirror-tool/nfr-requirements/reliability-requirements.md
+**Duration ms**: 43
+
+---
