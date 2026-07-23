@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TCRRES13",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e1 record 実測+機構の独立裏取り: (1) 乖離の実在を自 tree で直読 — tests/run-tests.ts:197-202 の --ci ケースは runSmoke/runUnit/runIntegration のみで e2e 非含有、t241 は tests/e2e/ に実在しヘッダ1行目が『CI-resident』を自称 — #1294 バグ本体の主張どおりで、これは requirements 側材料でありノルム候補ではない。(2) 原因所在(ADR-6 の integration 指定からの実装逸脱)は implementation-deviation-election / bug-intent-linkage の適用実績で、diary に decisions.md:44 verbatim 裏取りの記載あり。(3) 差分ベース採用(祖先 exit 0・distance 35)・c3-relabel・センサー手動代替はいずれも既決 cid の機械的適用。新規ノルム候補なしに同意。",
+  "submittedAt": "2026-07-23T01:12:17Z"
+}

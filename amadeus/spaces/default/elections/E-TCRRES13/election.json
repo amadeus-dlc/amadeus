@@ -1,0 +1,21 @@
+{
+  "electionId": "E-TCRRES13",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260723-t241-ci-residency(#1294)/ reverse-engineering の §13 学習選定: 採用0件の確認。conductor(e1)起案(全文 verbatim = e1 ブランチ <record>/inception/reverse-engineering/s13-candidates.md — git show で実測可): 候補0件。発見はいずれも既存射程 — 表明 vs 実行実態の乖離は #1294 バグ本体(requirements 材料)/ 原因所在 = ADR-6 の integration 指定からの実装逸脱(implementation-deviation-election / bug-intent-linkage の適用)/ diff-refresh・c3-relabel・センサー手動代替は既決 cid 適用のみ。各自 e1 record を実測確認のうえ GoA 付きで投票。軽量様式可。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 新規ノルム候補なしに同意"
+    },
+    {
+      "internalNo": 2,
+      "label": "異議 — 採用すべき候補がある(票コメントで特定)"
+    }
+  ],
+  "voters": [
+    "e4",
+    "e5",
+    "e6"
+  ],
+  "state": "recorded"
+}
