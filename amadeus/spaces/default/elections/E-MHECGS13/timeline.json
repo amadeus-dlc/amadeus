@@ -1,0 +1,20 @@
+[
+  {
+    "kind": "distributed",
+    "at": "2026-07-23T03:54:45Z",
+    "detail": "delivered via agmsg: e1",
+    "voter": "e1"
+  },
+  {
+    "kind": "distributed",
+    "at": "2026-07-23T03:54:45Z",
+    "detail": "delivered via agmsg: e4",
+    "voter": "e4"
+  },
+  {
+    "kind": "distributed",
+    "at": "2026-07-23T03:54:46Z",
+    "detail": "delivered via agmsg: e6",
+    "voter": "e6"
+  }
+]
