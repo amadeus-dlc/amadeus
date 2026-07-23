@@ -1,0 +1,38 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-SRCRAS13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "提案どおり(1)。実測: s13-candidates.md(666253837 系譜、git show 直読)・RA diary memory.md:5・requirements.md:11(承認系譜段落の実在 — dispatch 22:08:41Z/delegate 99d78653a/E-SRCRA5 の3点引用を verbatim 確認)・:90(iteration 1 Critical の解消記録)。c2 は既存 citation 系 cid(実在=mechanism-cite-verify/完全性=enumeration-completeness/留保保存=citation-reservation-preservation)のいずれも覆わない「承認の系譜引用」面で新規性あり — 引用なしでは reviewer に無申告逸脱(implementation-deviation-election の差し戻し対象)と構造的に区別不能という機序も本 RA iteration 1 Critical で実測成立。c1/c3/c4 は既存 cid の運用範囲・機械的適用で PM 回付が妥当。",
+      "submittedAt": "2026-07-22T23:38:40Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCRAS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "提案どおり(1)。実測: (a) 候補4件は s13-candidates.md と diary(Interpretations 23:37:07Z、Deviations 23:31:51Z/23:28:03Z、Tradeoffs 23:37:07Z)で verbatim 一致 (b) c2 の実測根拠 = requirements.md :11 の『承認系譜(スコープ境界の変遷 — 申告)』段落(dispatch 22:08:41Z agmsg 出典明示+delegate 99d78653a issuerHumanTs+E-SRCRA5 C 採用 2-1 の3点引用、evidence-split 準拠)と :90 の iteration 1 Critical 解消記録を直読確認 (c) 新規性判定: 既存 citation 系 cid は実在(mechanism-cite-verify)・完全性(enumeration-completeness)・留保保存(citation-reservation-preservation)を覆うが『park 予約の後続承認による境界変遷の系譜申告』は未規定 — reviewer には無申告逸脱と構造的に区別不能という機序も本 RA の Critical で実測されており直交面の新設は妥当 (d) c1/c3/c4 の不採用(PM 実例回付・ガード正常動作・既存 cid 機械適用)も diary 記録と整合。",
+      "submittedAt": "2026-07-22T23:38:43Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-SRCRAS13",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "提案どおり(c2 採用+c1/c3/c4 不採用)。e2 record 実測: (1) c2 の実在根拠 = requirements.md:11 に『承認系譜(スコープ境界の変遷 — 申告)』段落が実在し、dispatch(22:08:41Z agmsg 一次記録)/delegate 99d78653a(issuerHumanTs 22:53:44Z)/E-SRCRA5(C 採用 2-1)の3点引用を確認。reviewer iteration 1 の Critical(FR-3e 無申告逸脱懸念)が iteration 2 で『承認系譜段落で解消・Findings None』と閉包しており、候補の因果(引用がないと無申告逸脱と区別不能)は実測どおり。(2) 新規性 = 既存 citation 系 cid(実在/完全性/留保保存)は引用の質を縛るが『承認の系譜』という申告対象自体は未規定、implementation-deviation-election は逸脱時の停止を縛るが本件は逸脱でなく予約済み承認の執行 — 直交が成立。(3) c1/c3/c4 = diary(23:28:03Z/23:31:51Z/23:37:07Z)と候補表の verbatim 一致を確認、いずれも既存 cid・ガード正常動作の範囲で PM 回付が正位置。c3 の human-presence 拒否への非迂回対応は模範例として PM 実例価値あり。",
+      "submittedAt": "2026-07-22T23:38:45Z"
+    }
+  ],
+  "late": []
+}
