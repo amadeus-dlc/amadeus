@@ -3992,3 +3992,11 @@
 **Message**: U1-mirror-tool の nfr-design レビュー(iteration 2、増分検分)を完了し、verdict は READY として team-lead へ報告しました。\n\n要点は以下のとおりです。\n\niteration 1 の指摘3件(Critical: RD-U1-1 と FD フローの矛盾/Major: RL-U1-4 未対応/Minor: SC-U1-3 未引用)はすべて実
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-23T04:50:23Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-design
+**Timestamp**: 2026-07-23T04:50:23Z
+
+---
