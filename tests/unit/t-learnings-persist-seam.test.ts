@@ -174,26 +174,34 @@ describe("t-learnings-persist-seam (#754/#745 in-process)", () => {
   });
 });
 
-// #877 direct-call coverage for the reset seam itself: after auditShardName()
-// memoizes one project's token, a second project with a different seeded
-// clone-id keeps resolving the STALE cached token until _resetCloneIdForTests()
-// clears the pair — then it re-reads the new token. Drives both reset-body
-// assignments (_cloneId / _auditShardName) in-process so they register in lcov.
+// #877 direct-call coverage for the reset seam itself, updated for the #1389
+// fix: the clone-id/shard memo is now KEYED BY projectDir, so a second project
+// with a different seeded clone-id resolves its OWN token immediately (no
+// cross-project mixing). Within ONE project the memo still survives an on-disk
+// clone-id change until _resetCloneIdForTests() clears the pair — that drives
+// both reset-body assignments (_cloneIdByProject / _auditShardNameByProject) in
+// process so they register in lcov.
 describe("t-learnings-persist-seam — _resetCloneIdForTests clears the clone-id/shard cache (#877)", () => {
-  test("stale cached shard token survives until reset, then re-reads the new project", () => {
+  test("memo is per-project and, within one project, survives until reset", () => {
     _resetCloneIdForTests();
     const a = createTestProject();
     writeFileSync(join(a, "amadeus", ".amadeus-clone-id"), "aaaaaaaaaaaa\n", "utf-8");
     const shardA = auditShardName(a);
     expect(shardA).toContain("aaaaaaaaaaaa");
 
+    // #1389: a DIFFERENT project resolves its OWN token, not A's memoized one —
+    // the per-projectDir keying that stops the fixture→real shard-name mixing.
     const b = createTestProject();
     writeFileSync(join(b, "amadeus", ".amadeus-clone-id"), "bbbbbbbbbbbb\n", "utf-8");
-    // No reset yet: the memoized token from A wins even though B seeds its own.
-    expect(auditShardName(b)).toBe(shardA);
+    expect(auditShardName(b)).toContain("bbbbbbbbbbbb");
+
+    // The SAME project's token stays memoized when its on-disk clone-id changes,
+    // until the reset clears the pair — then it re-reads the new token.
+    writeFileSync(join(a, "amadeus", ".amadeus-clone-id"), "cccccccccccc\n", "utf-8");
+    expect(auditShardName(a)).toBe(shardA);
 
     _resetCloneIdForTests();
-    expect(auditShardName(b)).toContain("bbbbbbbbbbbb");
+    expect(auditShardName(a)).toContain("cccccccccccc");
   });
 });
 

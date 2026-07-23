@@ -1057,6 +1057,10 @@
         {
           "file": "tests/integration/t172-migration-audit-trail.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t257-engine-error-ambient-shard-pollution.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
