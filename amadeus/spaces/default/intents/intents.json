@@ -505,5 +505,12 @@
     "dirName": "260722-election-core-promotion",
     "scope": "amadeus",
     "status": "complete"
+  },
+  {
+    "uuid": "019f8d0c-62e4-7495-93a2-37cf947d5c9d",
+    "slug": "archived-status-guard",
+    "dirName": "260723-archived-status-guard",
+    "scope": "amadeus",
+    "status": "in-flight"
   }
 ]
