@@ -1,4 +1,40 @@
 {
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A. 両方(recordEngineError 引数化+_cloneId の projectDir キー化)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A. 両方(recordEngineError 引数化+_cloneId の projectDir キー化)",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "B. 根のみ(引数化。_cloneId は Issue 別送)",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "C. 増幅のみ+テスト隔離(コア変更回避 — Issue 当初期待)",
+        "count": 0
+      },
+      {
+        "internalNo": 4,
+        "label": "X. その他",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T02:57:24Z",
   "ballots": [
     {
       "kind": "original",
@@ -34,5 +70,5 @@
       "submittedAt": "2026-07-23T02:56:52Z"
     }
   ],
-  "late": []
+  "resolutions": []
 }

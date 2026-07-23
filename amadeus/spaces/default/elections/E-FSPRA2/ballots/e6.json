@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FSPRA2",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "t118 の同型性は着手前に実測で再確認し、非同型と判明したら A(t248 のみ+Issue)へ縮退する",
+  "rationale": "same-root-inventory は『同根を同一 PR で修正するか Issue 化』— 実測済みの同型潜在(t118)は修正コストが小さく同一 PR で閉じるのが再発防止上優位、未確認3本は Issue 化が正位置(推測修正の禁止)。C の非隔離5本一括は bugfix 外科的最小に反するスコープ拡大。受容度: A=6(Issue 化も規範適合のため)/ C=7",
+  "submittedAt": "2026-07-23T02:56:52Z"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FSPRA2",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A を支持。Q1 で根(+増幅)を塞げばテスト側の隔離は防御 depth の追加層であり、bugfix の外科的最小(project.md 既定)に照らして犯人 t248 のみが均衡点。同型潜在 t118:378・要確認3本は実測のうえ Issue 起票が cid:same-root-inventory の明文どおり(修正するか Issue 化するかの選択肢のうち後者)。私の #1389 起票時の期待(テスト隔離の構造化)は Q1 の根本修正で上位互換的に満たされる。受容度: B=6(t118 同乗は小コストで許容)、C=7(5本一括はスコープ拡大)。",
+  "submittedAt": "2026-07-23T02:53:45Z"
+}

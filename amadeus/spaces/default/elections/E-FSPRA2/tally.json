@@ -1,4 +1,40 @@
 {
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A. 犯人 t248 のみ(t118 ほかは実測のうえ Issue 起票 — same-root-inventory 準拠)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A. 犯人 t248 のみ(t118 ほかは実測のうえ Issue 起票 — same-root-inventory 準拠)",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "B. 犯人+同型潜在 t118 を同一 PR(要確認3本は Issue)",
+        "count": 1
+      },
+      {
+        "internalNo": 3,
+        "label": "C. 非隔離5本すべて同一 PR(スコープ拡大)",
+        "count": 0
+      },
+      {
+        "internalNo": 4,
+        "label": "X. その他",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T02:57:24Z",
   "ballots": [
     {
       "kind": "original",
@@ -34,5 +70,5 @@
       "submittedAt": "2026-07-23T02:56:52Z"
     }
   ],
-  "late": []
+  "resolutions": []
 }

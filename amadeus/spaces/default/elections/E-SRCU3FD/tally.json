@@ -1,4 +1,40 @@
 {
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A. plan 全値永続化+承認済み値消費(単一機構で3点閉包)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A. plan 全値永続化+承認済み値消費(単一機構で3点閉包)",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "B. unknown 値のみ軽量永続化",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "C. unknown timestamp のハッシュ除外(+resume 別手当て)",
+        "count": 0
+      },
+      {
+        "internalNo": 4,
+        "label": "X. その他(票コメント指定)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T02:57:22Z",
   "ballots": [
     {
       "kind": "original",
@@ -34,5 +70,5 @@
       "submittedAt": "2026-07-23T02:56:52Z"
     }
   ],
-  "late": []
+  "resolutions": []
 }

@@ -1,4 +1,40 @@
 {
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A. marker_exempt: true フィールド+schema+消費配線(t86 等)まで含める"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A. marker_exempt: true フィールド+schema+消費配線(t86 等)まで含める",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "B. pass: true のみ(フィールド追加なし)",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "C. config_warning 流用で免除注記",
+        "count": 0
+      },
+      {
+        "internalNo": 4,
+        "label": "X. その他",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T02:57:23Z",
   "ballots": [
     {
       "kind": "original",
@@ -34,5 +70,5 @@
       "submittedAt": "2026-07-23T02:56:52Z"
     }
   ],
-  "late": []
+  "resolutions": []
 }

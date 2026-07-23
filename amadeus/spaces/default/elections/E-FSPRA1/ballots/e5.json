@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-FSPRA1",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "A(根+増幅の両方)。根拠は私自身の #1389 クロスレビュー実測(2026-07-23、コメント 5053176961): 汚染は2段複合 — recordEngineError の argv 迂回(:200-232)だけを直しても、_cloneId のプロセス内メモ化(amadeus-lib.ts:2449、projectDir 非依存)が残る限り『fixture→real の混成シャード名』という別クラスの再発面が残ると当時から指摘済み。両者は同一機序の連鎖(片側修正は symmetric-pair-review の非対称クラスを新たに作る)で、e4 候補文の『emitError :5879 との symmetric-pair 回復』は根側の対称性も正しく捉えている。C(コア回避)はエンジン欠陥を温存し、将来の in-process エラー経路すべてが同じ罠を踏む。受容度: B なら 6(犯人は閉包、増幅は Issue 追跡可能)、C なら 7(根本原因の温存)。",
+  "submittedAt": "2026-07-23T02:51:09Z"
+}

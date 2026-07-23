@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MHERA1",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "配布された判断点『センサーの import 実測 = amadeus-lib.ts のみ / C のみ新規依存』は私の tree の実測と不一致 — amadeus-sensor.ts:39-47 は既に amadeus-graph.ts から loadGraph/loadSensors 等を import している。開票時にこの前提訂正を record へ記録すること(A の妥当性自体は独立に成立)",
+  "rationale": "A を支持。canonical 1定義からの導出は construction ガードレールの明文であり、免除述語(marker artifact 判定)は graph filter とセンサーの両消費者を持つ以上、lib への抽出が集合分裂を構造的に防ぐ(B は対称 test で拘束しても2定義ドリフト面が残る — cross-unit-note-canonical-reference と同族)。ただし配布判断点の『C のみ新規依存』は実測不一致(amadeus-sensor.ts:39-47 に graph import 実在)— C の減点根拠は『新規依存』でなく『免除述語は graph 専有でない汎用判定であり、より低層の lib が正しい置き場(layering)』に修正して評価した。それでも A が最適。受容度: B=6、C=6(graph import 既存のため動くが layering が劣る)。",
+  "submittedAt": "2026-07-23T02:53:45Z"
+}
