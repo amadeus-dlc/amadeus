@@ -363,8 +363,8 @@ export function runProperties(subject: SubjectPort, seed = ARM_S_SEED, numRuns =
 export const INPUT_ALLOWLIST: readonly string[] = [
   "scripts/formal-verif/contract.ts",
   "scripts/formal-verif/canonical.ts",
-  "scripts/amadeus-election-model.ts",
-  "scripts/amadeus-election-store.ts",
+  "packages/framework/core/tools/amadeus-election-model.ts",
+  "packages/framework/core/tools/amadeus-election-store.ts",
 ];
 
 export const ARM_S_SOURCE_FILES: readonly string[] = [

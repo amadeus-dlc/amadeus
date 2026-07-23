@@ -33,14 +33,17 @@ describe("arm-s blind boundary", () => {
   test("the model subject only reaches the healthy election model", () => {
     const source = readFileSync(join(SRC_DIR, "arm-s-model-subject.ts"), "utf8");
     const external = importSpecifiers(source).filter((s) => !s.startsWith("./"));
-    expect(external).toEqual(["../amadeus-election-model.ts", "../amadeus-election-model.ts"]);
+    expect(external).toEqual([
+      "../../packages/framework/core/tools/amadeus-election-model.ts",
+      "../../packages/framework/core/tools/amadeus-election-model.ts",
+    ]);
   });
 
   test("input allowlist is exactly the four permitted public inputs", () => {
     expect([...INPUT_ALLOWLIST].sort()).toEqual(
       [
-        "scripts/amadeus-election-model.ts",
-        "scripts/amadeus-election-store.ts",
+        "packages/framework/core/tools/amadeus-election-model.ts",
+        "packages/framework/core/tools/amadeus-election-store.ts",
         "scripts/formal-verif/canonical.ts",
         "scripts/formal-verif/contract.ts",
       ].sort(),

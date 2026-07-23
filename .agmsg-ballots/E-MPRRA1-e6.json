@@ -1,0 +1,11 @@
+{
+ "kind": "original",
+ "electionId": "E-MPRRA1",
+ "voter": "e6",
+ "voterKind": "member",
+ "choiceInternalNo": 2,
+ "goa": 2,
+ "reservation": "close は C-05 既決(常に ask)なので B でも自動 close リスクはない — B の追加 ask は workflow あたり1回で軽量",
+ "rationale": "ノルム(intent-first-mirror-issue)の節目定義は park・phase 完了・complete の3種で、complete 時の状態行更新+着地クローズはノルム本文の明示要求。A の根拠(PHASE_CHECK_REQUIRED_PHASES と同集合)は実測したが(amadeus-state.ts:165-169)、その3集合は phase-check 成果物を産む phase という別理由の集合であり、ミラー ask の発火粒度をそこへ縛る必然はない。ノルムの節目と1:1対応する B を採る。自案非採用時の受容度: A=6(close 導線は intent-completion-issue-sweep で代替可)/ C=7(park・phase 節目の更新が漏れる)",
+ "submittedAt": "2026-07-23T01:16:52Z"
+}

@@ -15,8 +15,8 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Election } from "../../scripts/amadeus-election-model";
-import { handleOpen } from "../../scripts/amadeus-election";
+import { Election } from "../../packages/framework/core/tools/amadeus-election-model";
+import { handleOpen } from "../../packages/framework/core/tools/amadeus-election";
 import {
   type ElectionRegistryEntry,
   appendElectionToRegistry,
@@ -24,7 +24,7 @@ import {
   readElectionsRegistry,
   Store,
   updateElectionStatus,
-} from "../../scripts/amadeus-election-store";
+} from "../../packages/framework/core/tools/amadeus-election-store";
 
 let root = "";
 

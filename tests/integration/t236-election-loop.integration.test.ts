@@ -6,8 +6,8 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { main } from "../../scripts/amadeus-election";
-import { electionsRoot, resolveElectionDir } from "../../scripts/amadeus-election-store";
+import { main } from "../../packages/framework/core/tools/amadeus-election";
+import { electionsRoot, resolveElectionDir } from "../../packages/framework/core/tools/amadeus-election-store";
 
 const DEF = {
   electionId: "E-LOOP1",
@@ -22,6 +22,7 @@ let logs: string[] = [];
 let errs: string[] = [];
 const origLog = console.log;
 const origErr = console.error;
+const origHome = process.env.HOME;
 
 function run(argv: string[]): number {
   logs = [];
@@ -47,6 +48,8 @@ beforeEach(() => {
 afterEach(() => {
   console.log = origLog;
   console.error = origErr;
+  if (origHome === undefined) delete process.env.HOME;
+  else process.env.HOME = origHome;
   rmSync(projectDir, { recursive: true, force: true });
 });
 
@@ -277,6 +280,32 @@ describe("t236 election directive loop", () => {
     // missing --team/--from is loud; unknown transport is loud
     expect(run(["notify", "--election", "E-LOOP1", "--transport", "agmsg"])).toBe(1);
     expect(run(["notify", "--election", "E-LOOP1", "--transport", "carrier-pigeon"])).toBe(1);
+  });
+
+  test("FR-8a: notify --transport agmsg resolves the default send.sh below HOME", () => {
+    const home = join(projectDir, "home");
+    const send = join(home, ".agents", "skills", "agmsg", "scripts", "send.sh");
+    const sendLog = join(projectDir, "default-send.log");
+    mkdirSync(join(send, ".."), { recursive: true });
+    writeFileSync(send, `#!/bin/sh\nprintf '%s|%s|%s\\n' "$1" "$2" "$3" >>"${sendLog}"\n`);
+    chmodSync(send, 0o755);
+    expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
+    const notified = Bun.spawnSync({
+      cmd: [
+        "bun", join(import.meta.dir, "../../packages/framework/core/tools/amadeus-election.ts"),
+        "notify", "--election", "E-LOOP1",
+        "--transport", "agmsg", "--team", "amadeus", "--from", "leader",
+        "--project", projectDir,
+      ],
+      env: { ...process.env, HOME: home },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    expect(notified.exitCode, notified.stderr.toString()).toBe(0);
+    expect(readFileSync(sendLog, "utf8").trim().split("\n")).toEqual([
+      "amadeus|leader|alice",
+      "amadeus|leader|bob",
+    ]);
   });
 
   test("M1 closure (#1235): a human hold ruling persists — record.md renders the ruling, never a stale 保留", () => {

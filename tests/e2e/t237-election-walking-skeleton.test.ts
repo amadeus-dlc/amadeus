@@ -1,5 +1,5 @@
 // t237 — FR-0 walking-skeleton demonstration over the real CLI (Bolt 1).
-// Layer: e2e — spawns `bun scripts/amadeus-election.ts` exactly as an AI (or
+// Layer: e2e — spawns the packaged election CLI exactly as an AI (or
 // the Bolt 4 machine executor) would, proving the directive loop alone carries
 // a zero-confirm election from open to recorded. Coverage of the wiring lines
 // is owned by the in-process t236 (spawn is a bun --coverage blind spot).
@@ -9,7 +9,16 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const SCRIPT = join(import.meta.dir, "..", "..", "scripts", "amadeus-election.ts");
+const SCRIPT = join(
+  import.meta.dir,
+  "..",
+  "..",
+  "packages",
+  "framework",
+  "core",
+  "tools",
+  "amadeus-election.ts",
+);
 
 function cli(projectDir: string, args: string[]): { code: number; stdout: string } {
   const proc = spawnSync(["bun", SCRIPT, ...args, "--project", projectDir], {

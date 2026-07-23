@@ -17,7 +17,7 @@ import {
 import {
   type ElectionRegistryEntry,
   electionDirMatches,
-} from "../../scripts/amadeus-election-store.ts";
+} from "../../packages/framework/core/tools/amadeus-election-store.ts";
 
 describe("t261 composeElectionsDriftLabel — the five finding variants", () => {
   test("absent -> 移行前 label", () => {

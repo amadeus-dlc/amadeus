@@ -4,12 +4,21 @@
 // and explicit human delegation with no auto-resolution language.
 // Layer: integration (reads the tracked SKILL.md — a fixed repo file).
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const SKILL_PATH = join(
-  import.meta.dir, "..", "..", "contrib", "skills", "amadeus-election", "SKILL.md",
+  import.meta.dir,
+  "..",
+  "..",
+  "packages",
+  "framework",
+  "core",
+  "skills",
+  "amadeus-election",
+  "SKILL.md",
 );
+const ROOT = join(import.meta.dir, "..", "..");
 
 // Canonical forbidden-vocabulary set (BR-K1, single definition — the four
 // rule categories of FR-8a: GoA tally rules, thresholds/sides, shuffle
@@ -87,6 +96,44 @@ describe("t242 election skill guards (FR-8a)", () => {
     expect(skill).toContain("このスキルは次の一手を自分で決めない");
     for (const auto of ["自動で解決", "自動解決", "スキルが判断", "自分で裁定"]) {
       expect(skill.includes(auto)).toBe(false);
+    }
+  });
+
+  test("FR-2b: the canonical skill uses only the harness-relative election CLI token", () => {
+    const skill = readFileSync(SKILL_PATH, "utf8");
+    expect(skill).toContain("{{HARNESS_DIR}}/tools/amadeus-election.ts");
+    expect(skill).not.toContain("scripts/amadeus-election.ts");
+  });
+
+  test("FR-2d: compatibility requires bun and no repository checkout", () => {
+    const skill = readFileSync(SKILL_PATH, "utf8");
+    expect(skill).toContain("compatibility: Requires bun;");
+    expect(skill).not.toContain("repository checkout");
+  });
+
+  test("FR-2a: the contrib source is gone after promotion", () => {
+    expect(existsSync(join(ROOT, "contrib", "skills", "amadeus-election"))).toBe(false);
+  });
+
+  test("FR-2c: generated Claude and Codex skills resolve their own harness paths", () => {
+    const claude = readFileSync(join(ROOT, ".claude", "skills", "amadeus-election", "SKILL.md"), "utf8");
+    const codex = readFileSync(join(ROOT, ".agents", "skills", "amadeus-election", "SKILL.md"), "utf8");
+    expect(claude).toContain(".claude/tools/amadeus-election.ts");
+    expect(codex).toContain(".codex/tools/amadeus-election.ts");
+    expect(claude).not.toContain("{{HARNESS_DIR}}");
+    expect(codex).not.toContain("{{HARNESS_DIR}}");
+  });
+
+  test("FR-2c: non-target harness distributions do not receive the election skill", () => {
+    for (const [harness, dir] of [
+      ["cursor", ".cursor"],
+      ["kiro", ".kiro"],
+      ["kiro-ide", ".kiro"],
+      ["opencode", ".opencode"],
+    ] as const) {
+      expect(
+        existsSync(join(ROOT, "dist", harness, dir, "skills", "amadeus-election")),
+      ).toBe(false);
     }
   });
 });

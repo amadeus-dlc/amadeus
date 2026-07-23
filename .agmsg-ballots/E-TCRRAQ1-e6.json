@@ -1,0 +1,11 @@
+{
+ "kind": "original",
+ "electionId": "E-TCRRAQ1",
+ "voter": "e6",
+ "voterKind": "member",
+ "choiceInternalNo": 1,
+ "goa": 1,
+ "reservation": null,
+ "rationale": "自 tree 実測: run-tests.ts の --ci は smoke+unit+integration のみ(:197-202 verbatim、e2e フラグ不設定)+ t241 は tests/e2e/ に現存 — 表明と実行実態の乖離を独立確認。A は文書化済み設計(ADR-6 integration 指定)への回復であり bug 修正の定義に合致、選挙系 integration テスト6本(t235/t236/t240/t242/t244)の precedent とも整合。B は e2e 75ファイル級を PR CI へ載せる恒常コストで過剰、C は仕様後退でユーザーエスカレーション前提。自案非採用時の受容度: B=6(コスト受容の判断があれば)/ C=7(FR-0 常時証明の弱体化)",
+ "submittedAt": "2026-07-23T01:17:22Z"
+}

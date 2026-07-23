@@ -13,7 +13,7 @@ import {
   type VoterId,
   type VoterTransport,
   normalizeAt,
-} from "../../scripts/amadeus-election-transport";
+} from "../../packages/framework/core/tools/amadeus-election-transport";
 
 describe("BR-T1 — ShortNotification is structurally blind", () => {
   test("built payload carries only electionId + viewPath (key-set assert)", () => {

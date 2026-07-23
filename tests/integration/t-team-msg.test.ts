@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dir, "../..");
-const TEAM_MSG = join(ROOT, "scripts/team-msg.sh");
+const TEAM_MSG = join(ROOT, "packages/framework/core/tools/team-msg.sh");
 const tempDirs: string[] = [];
 
 afterEach(() => {

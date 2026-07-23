@@ -8,7 +8,7 @@ import {
   electionsRegistryPath,
   resolveElectionDir,
   type ElectionRegistryEntry,
-} from "../../scripts/amadeus-election-store";
+} from "../../packages/framework/core/tools/amadeus-election-store";
 
 let root = "";
 

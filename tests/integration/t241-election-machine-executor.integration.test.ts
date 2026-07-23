@@ -1,5 +1,5 @@
 // t241 — FR-0 machine executor (ADR-6 layer (i), CI-resident, Bolt 4).
-// Layer: integration (spawns `bun scripts/amadeus-election.ts` over a tmp
+// Layer: integration (spawns the packaged election CLI over a tmp
 // project dir — classifyTestSize = medium, the integration ceiling). Living in
 // tests/integration means it runs under --ci on every PR, which is what makes
 // the CI-resident claim below true (ADR-6 fixes layer (i) in integration).
@@ -15,7 +15,16 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const SCRIPT = join(import.meta.dir, "..", "..", "scripts", "amadeus-election.ts");
+const SCRIPT = join(
+  import.meta.dir,
+  "..",
+  "..",
+  "packages",
+  "framework",
+  "core",
+  "tools",
+  "amadeus-election.ts",
+);
 
 type Cli = { code: number; stdout: string };
 

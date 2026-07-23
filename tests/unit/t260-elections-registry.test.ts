@@ -9,7 +9,7 @@ import {
   isElectionRegistryEntry,
   mintElectionDirName,
   uuidv7ToUtcIso,
-} from "../../scripts/amadeus-election-store";
+} from "../../packages/framework/core/tools/amadeus-election-store";
 
 describe("mintElectionDirName", () => {
   test("base form is <YYMMDD>-<kebab slug> (UTC date, lowercase, 24-cap slug)", () => {

@@ -1,0 +1,222 @@
+// U3 election-record (Bolt 3) — pure render/verify functions for the election
+// tool. Turns an accepted ballot set into the persist-draft surfaces (GoA line,
+// timeline line, ruling text) and machine-checks those surfaces against the
+// ballots (reservation-count / ballot-count / freq / timeline-order). No fs, no
+// clock — every function is total or returns a discriminated-union Result
+// (functional-domain-modeling-ts). The CLI wiring (U5 render/verify verbs) is
+// out of scope here (functional-design frontend-components N/A).
+//
+// The GoA line is byte-compatible with the real parseGoaLine
+// (packages/framework/core/tools/amadeus-norm-metrics.ts): renderGoaLine
+// carries the whole mapping burden so parseGoaLine's canonical schema never
+// changes. Codes are constrained to parseGoaLine's own multi-segment accept
+// domain at construction, fail-closed.
+
+import {
+  type Ballot,
+  type Election,
+  err,
+  type Goa,
+  ok,
+  type Result,
+  type TallyResult,
+  type TimelineEvent,
+} from "./amadeus-election-model";
+
+// --- GoaLineCode -----------------------------------------------------------
+
+// Natural multi-segment codes are accepted; compressed single-segment legacy
+// values remain accepted for stored-record compatibility.
+export type GoaLineCode = string & { readonly __brand: "GoaLineCode" };
+
+const GOA_LINE_CODE_RE = /^E-[A-Z0-9]+(?:-[A-Z0-9]+)*$/;
+
+export const GoaLineCode = {
+  parse(raw: unknown): Result<GoaLineCode, "goa-code-invalid"> {
+    if (typeof raw !== "string" || !GOA_LINE_CODE_RE.test(raw)) return err("goa-code-invalid");
+    return ok(raw as GoaLineCode);
+  },
+};
+
+// --- GoaFreq ---------------------------------------------------------------
+
+// The 8-bin (GoA 1..8) frequency distribution, recomputed from the accepted
+// vote set. Fixed length 8; never persisted (domain-entities invariant — no
+// document-shaped field). Index i holds the count of GoA (i+1).
+export type GoaFreq = readonly [number, number, number, number, number, number, number, number];
+
+export const GoaFreq = {
+  fromVotes(votes: Goa[]): GoaFreq {
+    const bins: [number, number, number, number, number, number, number, number] = [0, 0, 0, 0, 0, 0, 0, 0];
+    for (const g of votes) bins[g - 1]++;
+    return bins;
+  },
+};
+
+// --- timeline & verify types (domain-entities declared columns) -------------
+
+// Canonical TimelineEvent now lives in the U1 model (Bolt 3 declared
+// reconciliation — U2 persists, U3 renders, both depend only on U1).
+export type { TimelineEvent } from "./amadeus-election-model";
+
+export type VerifyFinding = {
+  kind: "reservation-count" | "ballot-count" | "freq-mismatch" | "timeline-order";
+  expected: string | number;
+  actual: string | number;
+};
+
+// All findings are enumerated — verifySelf never stops at the first (FR-6b).
+export type VerifyResult = Result<void, VerifyFinding[]>;
+
+// --- render ----------------------------------------------------------------
+
+// `GoA[<code>]: 1x<n> 2x<n> ... 8x<n>` — all 8 bins always emitted (0 included,
+// never elided) so parseGoaLine round-trips byte-for-byte (BR-R1).
+export function renderGoaLine(code: GoaLineCode, freq: GoaFreq): string {
+  const bins = freq.map((n, i) => `${i + 1}x${n}`).join(" ");
+  return `GoA[${code}]: ${bins}`;
+}
+
+// `配信 <t> → <voter> <t> → … → 開票 <t> → 後着 <voter> <t>` — one line, in the
+// given event order (persist-vote-timeline-field shape).
+export function renderTimeline(events: TimelineEvent[]): string {
+  return events.map(timelineSegment).join(" → ");
+}
+
+function timelineSegment(e: TimelineEvent): string {
+  switch (e.kind) {
+    case "distributed":
+      return `配信 ${e.at}`;
+    case "ballot": {
+      // Co-display the receipt time only when it diverges from the claimed time
+      // (delay visualization, Issue #1262) — a same-instant receipt adds no
+      // signal. Scoped to the ballot row per the E-BRARA1 e3 reservation (no
+      // blanket receivedAt expansion across the other event renderers).
+      const base = `${e.voter ?? "?"} ${e.at}`;
+      return e.receivedAt !== undefined && e.receivedAt !== e.at
+        ? `${base}(受理 ${e.receivedAt})`
+        : base;
+    }
+    case "tallied":
+      return `開票 ${e.at}`;
+    case "late":
+      return `後着 ${e.voter ?? "?"} ${e.at}`;
+  }
+}
+
+// GoA values that require a reservation sentence (gradients-of-agreement 2/3/6).
+const RESERVATION_GOA = new Set<number>([2, 3, 6]);
+// Machine marker for a transcribed reservation line, both emitted by
+// renderPersistDraft and counted by verifyReservations (one contract, two ends).
+const RESERVATION_LINE_RE = /^- 留保\(/;
+
+// The ruling line for an automatically-tallied result: an established result
+// names the winning choice and its vote count, followed by the per-choice
+// breakdown line (Issue #1261 — the ruling must reflect choiceInternalNo, not a
+// choice-blind adopted/rejected). A hold names its typed reason. A human ruling
+// over a hold is rendered separately (see renderPersistDraft's rulingOverride).
+function rulingText(result: TallyResult): string {
+  if (result.kind === "established") {
+    const winnerCount =
+      result.choiceCounts.find((c) => c.internalNo === result.winner.internalNo)?.count ?? 0;
+    const breakdown = result.choiceCounts
+      .map((c) => `choice${c.internalNo}=${c.count}票`)
+      .join(" ");
+    return `裁定: ${result.winner.label}(choice ${result.winner.internalNo}: ${winnerCount}票)\n内訳: ${breakdown}`;
+  }
+  return `裁定: 保留(${result.reason})`;
+}
+
+function reservationLines(ballots: Ballot[]): string[] {
+  const lines: string[] = [];
+  for (const b of ballots) {
+    if (RESERVATION_GOA.has(b.goa)) {
+      lines.push(`- 留保(${b.voter}, GoA${b.goa}): ${b.reservation ?? ""}`);
+    }
+  }
+  return lines;
+}
+
+// Persist-draft skeleton: ruling + full reservation transcription (BR-R6, one
+// line per GoA 2/3/6 ballot — citation-reservation-preservation) + timeline
+// line + GoA line. Total over validated inputs; deterministic (BR-R5).
+// `rulingOverride`, when supplied, replaces the derived ruling line verbatim.
+// It carries a human hold-resolution ruling (裁定: 採用 / 裁定: 不採用), which is
+// choice-blind and therefore not expressible as a tally winner — the caller
+// computes it from the resolution and passes it in (Issue #1261 ruling A).
+export function renderPersistDraft(
+  code: GoaLineCode,
+  _election: Election,
+  result: TallyResult,
+  ballots: Ballot[],
+  timeline: TimelineEvent[],
+  rulingOverride?: string,
+): string {
+  const freq = GoaFreq.fromVotes(ballots.map((b) => b.goa));
+  return [
+    rulingOverride ?? rulingText(result),
+    ...reservationLines(ballots),
+    `票タイムライン: ${renderTimeline(timeline)}`,
+    renderGoaLine(code, freq),
+  ].join("\n");
+}
+
+// --- verify ----------------------------------------------------------------
+
+// Reservation transcription count check (BR-R3, FR-6a): the number of ballots
+// that require a reservation (GoA 2/3/6) must equal the number of transcribed
+// reservation lines in `document`. Mismatch is a fail-closed reject.
+export function verifyReservations(ballots: Ballot[], document: string): Result<void, VerifyFinding> {
+  const required = ballots.filter((b) => RESERVATION_GOA.has(b.goa)).length;
+  let transcribed = 0;
+  for (const line of document.split("\n")) {
+    if (RESERVATION_LINE_RE.test(line.trim())) transcribed++;
+  }
+  if (required !== transcribed) {
+    return err({ kind: "reservation-count", expected: required, actual: transcribed });
+  }
+  return ok(undefined);
+}
+
+// Self-check of a generated record against its own ballots (BR-R4, FR-6b) —
+// three classes, all findings enumerated: ballot count (ledger vs materialized),
+// GoA frequency (stored vs recomputed), timeline monotonicity (ISO strings sort
+// chronologically). The check recomputes from the ballots rather than comparing
+// the record to itself (no verification-theatre self-reference).
+export function verifySelf(
+  ledgerCount: number,
+  ballots: Ballot[],
+  storedFreq: GoaFreq,
+  timeline: TimelineEvent[],
+): VerifyResult {
+  const findings: VerifyFinding[] = [];
+  if (ledgerCount !== ballots.length) {
+    findings.push({ kind: "ballot-count", expected: ledgerCount, actual: ballots.length });
+  }
+  const recomputed = GoaFreq.fromVotes(ballots.map((b) => b.goa));
+  if (!freqEqual(recomputed, storedFreq)) {
+    findings.push({ kind: "freq-mismatch", expected: storedFreq.join(","), actual: recomputed.join(",") });
+  }
+  for (let i = 1; i < timeline.length; i++) {
+    // Monotonicity is checked on the RECEIPT axis (Issue #1262): an agmsg-relayed
+    // ballot can be accepted out of submittedAt order (relay delay), so the
+    // claimed `at` is legitimately non-monotonic while the receipt order (the
+    // append order) is monotonic. `receivedAt ?? at` is the single read fork —
+    // every ballot/late event minted after the fix carries receivedAt; a pre-fix
+    // in-flight record (opened before the fix) has none and is checked on the
+    // legacy `at` axis. That fallback exists only for records already open at the
+    // migration: no election is ever re-verified after the fix lands, so a new
+    // election always has receivedAt on every timeline event.
+    const prev = timeline[i - 1].receivedAt ?? timeline[i - 1].at;
+    const cur = timeline[i].receivedAt ?? timeline[i].at;
+    if (cur < prev) findings.push({ kind: "timeline-order", expected: prev, actual: cur });
+  }
+  return findings.length === 0 ? ok(undefined) : err(findings);
+}
+
+function freqEqual(a: GoaFreq, b: GoaFreq): boolean {
+  for (let i = 0; i < 8; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}

@@ -1,6 +1,7 @@
 # Team Messaging Backend
 
-> Audience: maintainers running an agent team with `scripts/team-up.sh`.
+> Audience: maintainers running an agent team with
+> `{{HARNESS_DIR}}/tools/team-up.sh`.
 
 In team mode the leader and engineers exchange messages through a **messaging
 backend**. Two backends are available; the transport differs but the team
@@ -14,24 +15,25 @@ environment variable (the flag wins). It defaults to `agmsg` and is saved to the
 run record, so a resumed run (`-c`) inherits it — `--msg` is rejected on resume.
 
 ```bash
-scripts/team-up.sh --msg agmsg    # default: agmsg store + monitor delivery
-scripts/team-up.sh --msg herdr    # herdr agent multiplexer, no separate poller
-TEAM_MSG=herdr scripts/team-up.sh # same, via the environment
+{{HARNESS_DIR}}/tools/team-up.sh --msg agmsg    # default: agmsg store + monitor delivery
+{{HARNESS_DIR}}/tools/team-up.sh --msg herdr    # herdr agent multiplexer, no separate poller
+TEAM_MSG=herdr {{HARNESS_DIR}}/tools/team-up.sh # same, via the environment
 ```
 
 An unknown value is rejected fail-closed:
 `ERROR: unknown msg backend: <value> (agmsg|herdr)`.
 
-Members are launched with `TEAM_MSG` exported, so their `scripts/team-msg.sh`
-calls use the same backend the run was created with.
+Members are launched with `TEAM_MSG` exported, so their
+`{{HARNESS_DIR}}/tools/team-msg.sh` calls use the same backend the run was
+created with.
 
 ## Sending and reading
 
-`scripts/team-msg.sh` is the backend-neutral transport:
+`{{HARNESS_DIR}}/tools/team-msg.sh` is the backend-neutral transport:
 
 ```bash
-scripts/team-msg.sh send <role> <text>   # role: leader, e1, e2, …
-scripts/team-msg.sh read <role>
+{{HARNESS_DIR}}/tools/team-msg.sh send <role> <text>   # role: leader, e1, e2, …
+{{HARNESS_DIR}}/tools/team-msg.sh read <role>
 ```
 
 - **agmsg** delegates to the agmsg skill (`send.sh` / `history.sh`); the store
@@ -53,14 +55,15 @@ a stable machine header as the body's **first line**, then the original body:
 Only `from:<role>` varies. The agmsg backend does **not** add this header — its
 metadata already names the sender.
 
-## Runtime prerequisites under the herdr backend
+## Runtime prerequisites
 
-- **claude** members launch without any agmsg installation (`AGMSG_ROOT` may be
-  absent entirely).
-- **codex** members launch the `codex` command resolved from `PATH`. An optional
-  agmsg shim can still take precedence through `~/.agents/bin`, but the launcher
-  does not require mise or an agmsg installation. The user's environment owns
-  Codex installation and version selection.
+The launcher checks the operating system, herdr, and agmsg before it creates
+team state, regardless of the selected messaging backend. The herdr backend
+still uses agmsg integration during team setup, so agmsg is not optional.
+Codex members launch the `codex` command resolved from `PATH`; the user's
+environment owns its installation and version selection. See
+[Team Mode](20-team-mode.md#prerequisites) for installation sources, verified
+versions, and path overrides.
 
 ## Send audit log
 

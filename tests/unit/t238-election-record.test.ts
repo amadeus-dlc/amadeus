@@ -9,7 +9,7 @@ import {
   Election,
   Goa,
   type TallyResult,
-} from "../../scripts/amadeus-election-model";
+} from "../../packages/framework/core/tools/amadeus-election-model";
 import {
   GoaFreq,
   GoaLineCode,
@@ -19,7 +19,7 @@ import {
   renderTimeline,
   verifyReservations,
   verifySelf,
-} from "../../scripts/amadeus-election-record";
+} from "../../packages/framework/core/tools/amadeus-election-record";
 
 const DEF = {
   electionId: "E-TEST-1",

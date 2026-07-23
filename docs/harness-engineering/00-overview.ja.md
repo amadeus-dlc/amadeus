@@ -82,6 +82,28 @@ bun scripts/package.ts --check
 
 `core/` の編集と再生成された `dist/` を一緒にコミットします。以下の各章のレシピで `bun .claude/tools/amadeus-graph.ts compile`(または別のツール)を実行するように書かれている場合、そのコマンドは*インストール済み*のツリー — あなたのプロジェクトの `.claude/`(または `.kiro/` / `.codex/`)— に対して実行され、実行時にグラフを再コンパイルします。そこは作成する場所ではありません。**あなたは `core/` で作成し、ツールはハーネスディレクトリで実行します。** その分割 — 作成されるソース対生成される実行時 — が、本ガイドを通じて区別し続けるべきものです。ビルド契約の全容は[新しいハーネスへの移植](09-porting-to-a-new-harness.ja.md)と開発者リファレンスの[アーキテクチャ § ソース対配布](../reference/01-architecture.ja.md#source-vs-distribution-one-core-many-harnesses)を参照してください。
 
+### フレームワークコードの配置先
+
+実行可能なフレームワークコードを追加・昇格するときは、リポジトリの3層を
+使い分けます。
+
+- `packages/framework/` は利用者へ届ける機能の正本です。package と self-install
+  の投影はこの層から生成します。
+- `scripts/` はリポジトリ開発専用のツールです。フレームワークの build、検証、
+  migration、release には使えますが、配布機能から依存してはいけません。
+- `contrib/` はドッグフード専用です。このリポジトリ内でアイデアを実証できますが、
+  配布物には投影しません。
+
+拡張子ではなく利用者で分類します。インストール後の利用者が使う shell tool は
+`packages/framework/` に属し、TypeScript で書かれた release helper は
+`scripts/` に残せます。
+
+昇格は複製ではなく移動です。正本を `git mv` し、内部 path を新しい正本位置からの
+相対参照へ変更して、必要な manifest、package、self-install の投影を追加します。
+派生 tree を再生成した後、旧位置への参照をすべて除去します。正本の変更と生成された
+投影は同じ commit に含めます。最後に distribution、self-install、境界 drift の
+各検査を実行してください。生成された `dist/` tree を手編集してはいけません。
+
 ---
 
 ## 開発者リファレンスに踏み込むとき

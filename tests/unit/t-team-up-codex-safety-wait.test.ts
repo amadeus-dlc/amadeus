@@ -10,7 +10,7 @@ import {
   safetyWaitRunIsActive,
   SafetyWaitSupervisor,
   type SafetyWaitFingerprint,
-} from "../../scripts/team-up-codex-safety-wait.ts";
+} from "../../packages/framework/core/tools/team-up-codex-safety-wait.ts";
 
 function readFingerprint(): SafetyWaitFingerprint {
   const parsed = parseSafetyWaitFingerprint(testOnlyPositive);
