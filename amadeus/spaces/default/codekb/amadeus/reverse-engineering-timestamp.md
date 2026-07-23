@@ -1,6 +1,23 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(現在: 260723-t241-ci-residency)
+## 実行メタデータ(現在: 260723-marker-heading-exemption)
+
+- Date: 2026-07-23T01:37:10Z
+- Observed at: `ffc79aad9a53c600ea9b464f1f04c6fa627ae59e`(現 HEAD `git rev-parse HEAD` 実測一致)
+- Intent: `260723-marker-heading-exemption`([Issue #1296](https://github.com/amadeus-dlc/amadeus/issues/1296) — required-sections センサーの汎用 ≥2-H2 floor が単一行 timestamp / [Answer] 様式 questions の marker 成果物へ無条件適用され、意図的に H2 を欠く marker が常に `pass:false` になる。既決ノルム E-FVEPD が要求する marker 免除がセンサー実装に未反映)
+- Scope: `bugfix`(Depth Minimal)
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering` (2.1)
+- Method: differential refresh。base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`(直近 freshness pointer `re-scans/260722-teamup-prompt-race.md` の observed)、observed `ffc79aad9a53c600ea9b464f1f04c6fa627ae59e`、`git merge-base --is-ancestor a81c11dde HEAD` exit 0、distance `git rev-list --count a81c11dde..HEAD`=13。base は祖先かつ距離最小(cid:reverse-engineering:rescan-base-ancestry)。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3)。
+- 測定 ref: 全 file:line は Observed=HEAD `ffc79aad9` のワークツリー実ファイル直読(cid:measurement-ref-in-artifacts)。diff 規模(96 files, +7226/−17。非 record 51 files, +1660/−16)・stage marker 20件・intents corpus 391 questions+22 timestamp・配布 11コピー×2 はコマンド出力からの転記(numbers-from-command-output-only)。
+- 現行結論: #1296 の根本原因は `amadeus-sensor-required-sections.ts:141` の `pass = h2_count >= 2` が全成果物へ**無条件適用**され、marker(単一行 timestamp / [Answer] questions)を免除する分岐が不在なこと。ELIGIBILITY GATE(`:167-186`、stem 判別 `:173`)は template 面のみ免除し floor は維持(`:184-185` verbatim `keeping the generic >=2-H2 floor.`)。再利用候補は `amadeus-graph.ts:801-808` `templateEligibleArtifacts` の suffix 弁別(`!a.endsWith("-questions")` / `!a.endsWith("-timestamp")`)で、これは既決規範 E-FVEPD(cid:practices-discovery:e-fvepd-marker-heading-floor)が要求する挙動そのもの — 規範は免除を要求するがセンサーが未実装という乖離。修正は「文書化済み仕様への回復」であり仕様変更ではない。再現(read-only 診断): timestamp marker で `{"pass":false,"h2_count":0,"findings_count":2}`、questions marker でも同様に floor FAIL。原因の所在=**実装**(規範 E-FVEPD が定めた免除挙動をセンサースクリプトが実装していない)。区間 a81c11dde..HEAD の非 record 差分(`scripts/team-up.sh` ほか)はバグ面と無交差でセンサー正本・graph・manifest・stage marker 宣言は不変。
+- Per-intent record: `re-scans/260723-marker-heading-exemption.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「現在: 260722-teamup-prompt-race」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、`code-quality-assessment.md`(#1296 の欠陥クラス「marker 成果物への required-sections floor 誤適用」節を先頭 current view に新設、旧「現在」= 260722-teamup-prompt-race を履歴へ降格)、`re-scans/260723-marker-heading-exemption.md`(新規)。他 body 7成果物(architecture / code-structure / component-inventory / technology-stack / api-documentation / business-overview / dependencies)は**本文温存**で、先頭の 260722 current marker「(…、現在)」→「(…、履歴)」の label のみ降格(c3-relabel — 単一 current view を code-quality + 本鮮度ポインタに一意化。#1296 のセンサー面はこれら7成果物のドメイン外で新規節なし)。実質の新規知識は「required-sections floor が marker を無条件 FAIL させる+graph suffix 弁別が再利用可+E-FVEPD 規範との乖離」の1クラスタのみで code-quality-assessment + per-intent record に集約(区間非交差でセンサー正本・graph・manifest・stage marker は不変。cid:reverse-engineering:c1)。
+- Delivery boundary: 実装・修正コード、dist/self-install 再生成、commit、PR 操作は本 scan で未実施。区間フォーカス正本変更0件のため dist 11コピーは base と同一。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260723-t241-ci-residency)
 
 - Date: 2026-07-23T00:57:42Z(scan-notes 実行時刻の転記)
 - Observed at: `78bce87615b985d0151f604c915c6aab1d6ba9f1`(現 HEAD `git rev-parse HEAD` 実測一致)
