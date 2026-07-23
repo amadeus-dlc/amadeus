@@ -9,7 +9,7 @@ main("status", intentArg)
   → ensureGhReady()                    …失敗 → StatusOutcome{precondition}(exit 2)
   → buildSnapshot(intentArg)           …record 不在 → precondition(exit 2)
   → readMirrorIssue(snapshot, gh)      …フィールド不在/view 失敗 → findings に mirror-missing
-  → compareStatusLine(snapshot, issue) …不一致 → findings に stale-status-line
+  → compareStatusLine(snapshot, issue) …不一致 → findings に stale-status-line(**detail に record 側状態(state の Status)を含める** — U2 SKILL の close 案内分岐(BR-U2-5)が消費する契約。U2 レビュー裁定からの申告付き追補、StatusFinding 型は不変)
   → renderExpectedBody(snapshot) と issue.body の比較 …不一致 → findings に issue-drifted
   → findings.length === 0 ? clean(0) : diverged(1)
 ```
