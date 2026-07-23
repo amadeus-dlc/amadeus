@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-TPRBT13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。実測: e1 の s13-candidates.md を git show 直読し、BT diary(:10/:11)と verbatim 照合。#1389 への再現追記コメント(00:41:11Z、fixture clone-id シャードの決定的再現)の実在を gh で確認。hostname 分裂は同一 clone-id add286b804a1 の host キー差で union 読みが吸収する既知構造、wall-clock drift は fanout-load-settle 系既知ノイズ — 3観測とも既存射程で新規ノルム候補なしに同意。",
+      "submittedAt": "2026-07-23T00:44:12Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-TPRBT13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e1 record リードオンリー実測: s13-candidates.md の観測3件は BT diary(Deviations/Interpretations 00:42:18Z)と整合。(1) fixture audit 汚染は #1389(OPEN、コメント1件 = 再現追記実在を gh で確認)へ回付済みで Issue 側扱いが正 (2) シャード local→lan 分裂は union 読み既知構造(manual-sensor-fire 追補3 の全シャード union と同族) (3) wall-clock drift は fanout-load-settle 系既知ノイズ。build-test-results.md の 94 pass / RESULT: PASS / 落ちる実証 green も直読 — 私の PR #1391 レビュー時の独立実測(77/77+新規テスト内訳)と整合し、新規ノルム性のある観測は残っていない。",
+      "submittedAt": "2026-07-23T00:44:22Z"
+    }
+  ],
+  "late": []
+}

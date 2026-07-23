@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCADS13",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "c3 の不採用は条件付き同意 — stale プレースホルダ残しが別ステージ/別 intent で再発1回したら、cid:ruling-dependent-placeholder への追補(裁定転記は placeholder 設置箇所の全数 grep とセット)へ昇格させる(E-SMF-RA13 c3 の再発昇格方式と同型)",
+  "rationale": "0件で可(1)。e2 record 実測: 候補4件は diary(Interpretations 23:46:07Z / Deviations 00:42:01Z / Tradeoffs 2件)と verbatim 一致。c1 = ruling-dependent-placeholder の字義どおりの適用。c2 = ADR-6 に記録済みの個別設計判断で、第3種別が実在しない段階での一般化は投機的(N3 系の先行着地回避と整合)。c4 = parse-don't-validate(construction phase 常時原則)の通常適用。c3 = 伝播漏れクラスとして functional-design:c3 ファミリの違反実例と読めるが、厳密には『改名・所有移管』でなく『プレースホルダ解消』面で既存 cid の射程に半歩の隙間がある — 今回は reviewer 捕捉→是正済みで PM 実例回付を支持しつつ、留保のとおり再発時昇格の条件を付す。",
+  "submittedAt": "2026-07-23T00:44:03Z"
+}
