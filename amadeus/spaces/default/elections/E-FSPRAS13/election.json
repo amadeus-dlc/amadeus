@@ -1,0 +1,25 @@
+{
+  "electionId": "E-FSPRAS13",
+  "kind": "s13-adoption",
+  "question": "intent 260723-fixture-shard-pollution(#1389)/ requirements-analysis の §13 学習選定(全文 verbatim = e4 ブランチの <record>/inception/requirements-analysis/s13-candidates.md — git show で実測可)。conductor 提案: c3 のみ採用+c1/c2/c4 不採用。採用候補 c3(verbatim 要旨): 『テスト引用は tNNN 短形でなくフルパス(+可能ならシンボル)で書く — 同一テスト番号の複数ファイル共存は実在する生態(t211 = 5ファイル実測、swarm-test-number-reservation の t250 重複採番と同族)で、短形引用は実在する別ファイルへ誤解決されるため mechanism-cite-verify(実在確認)では防げない — 引用の実在と一意性は別の検査面。統合先案: mechanism-cite-verify-at-draft への追補』。実測根拠: 本 RA で t211 短形引用が reviewer の誤照合を誘発 → 偽 Major 1件+イテレーション1回消費 → フルパス是正で解消。不採用3件は既存 cid 執行・着地直後ノルムの初回実例(PM 回付)。各自 e4 record を実測確認のうえ GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "提案どおり — c3 採用(mechanism-cite-verify-at-draft へ引用一意性の追補)+3件不採用"
+    },
+    {
+      "internalNo": 2,
+      "label": "全件不採用 — 既存 cid の含意で足りる"
+    },
+    {
+      "internalNo": 3,
+      "label": "異議 — 別の組合せ(票コメントで特定)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e5",
+    "e6"
+  ],
+  "state": "collecting"
+}
