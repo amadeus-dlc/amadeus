@@ -1,4 +1,40 @@
 {
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "A. t241 を tests/integration/ へ移設(ADR-6 への回復。layer 表記・registry・実行対象を随伴整合)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A. t241 を tests/integration/ へ移設(ADR-6 への回復。layer 表記・registry・実行対象を随伴整合)",
+        "count": 3
+      },
+      {
+        "internalNo": 2,
+        "label": "B. ci.yml に e2e ジョブ追加(t241 は e2e のまま、PR CI コスト増)",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "C. ヘッダ表明を実態へ後退(仕様変更 — ユーザーエスカレーション前提)",
+        "count": 0
+      },
+      {
+        "internalNo": 4,
+        "label": "X. その他(票コメント指定)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 3,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-23T01:17:47Z",
   "ballots": [
     {
       "kind": "original",
@@ -34,5 +70,5 @@
       "submittedAt": "2026-07-23T01:17:22Z"
     }
   ],
-  "late": []
+  "resolutions": []
 }
