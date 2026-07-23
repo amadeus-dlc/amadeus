@@ -1,0 +1,16 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-ASGRES13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(1)。e1 record の s13 ファイル実在+4件整理を確認 — base 祖先性選定・裁定目録の予防適用・センサー手動代替はいずれも既決 cid の執行。t258→t259 番号連鎖は私が当事者(PR #1407 の t258 確保側)で、swarm-test-number-reservation の intent 間実例として PM 連鎖報告の扱いに同意 — 既存 cid の射程内で新設不要。",
+      "submittedAt": "2026-07-23T04:41:10Z"
+    }
+  ],
+  "late": []
+}

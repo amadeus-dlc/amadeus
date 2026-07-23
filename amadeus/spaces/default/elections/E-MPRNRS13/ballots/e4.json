@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRNRS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e3 record の s13 ファイル実在+所見分離様式の適用を確認。3件とも既存射程 — U1 の conditional consume 両方向再演は upstream-coverage-conditional-consumes の追認、U3 の引用誤帰属2件は compilation-stage-source-first(編纂型引用捏造クラス)の追認で PM 回付妥当、RL-U4-2 は通常の設計補完。新規ノルム性なし。",
+  "submittedAt": "2026-07-23T04:38:27Z"
+}
