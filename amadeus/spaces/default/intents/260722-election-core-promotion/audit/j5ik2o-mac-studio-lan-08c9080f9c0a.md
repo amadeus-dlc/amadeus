@@ -2076,3 +2076,73 @@
 **Agent**: amadeus-developer-agent
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T00:41:30Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: ad533172c458d8776
+**Message**: I have complete evidence. Producing the structured scan note.\n\n---\n\n## 区間サマリ(数値)\n\n- **base**: `a326f47bc` / **observed(HEAD)**: `fd5767257` — 祖先性は task で検証済み(距離115)。\n- **コミット数**: `git rev-list --count
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T00:50:37Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architect-agent
+**Agent ID**: ac32bf9eecc5c7301
+**Message**: All updates verified. The differential refresh is complete: previous current markers relabeled to 履歴, new current views prepended, history preserved, no全面書き直し. All file:line/counts are from the observ
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-23T00:52:03Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: reverse-engineering
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-23T00:53:41Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-23T00:54:08Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a3b1c5ab0f6c6bfef
+**Message**: Approve
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-23T00:54:34Z
+**Event**: HUMAN_TURN
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-23T00:54:40Z
+**Event**: GATE_APPROVED
+**Stage**: reverse-engineering
+**User Input**: Approve
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-23T00:54:40Z
+**Event**: STAGE_COMPLETED
+**Stage**: reverse-engineering
+**Details**: Stage Reverse Engineering approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-23T00:54:40Z
+**Event**: STAGE_STARTED
+**Stage**: practices-discovery
+**Agent**: amadeus-pipeline-deploy-agent
+
+---
