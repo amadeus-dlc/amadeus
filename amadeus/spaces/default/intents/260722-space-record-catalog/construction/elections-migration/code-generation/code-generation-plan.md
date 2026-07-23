@@ -24,3 +24,38 @@
 ## 実行境界
 
 本番 `--execute`、既存選挙の rename、本番 `elections.json` 生成は leader 経由のユーザー個別承認後のみ実施する。本 Bolt では実行しない。
+
+## Review — Iteration 1
+
+- **Verdict:** NOT-READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-07-23T07:00:31Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+計画形式、fidelity、承認境界、検証証跡が不足している。
+
+### Findings
+
+- 連番 Step とチェックボックス、要件トレース、テスト手順が不足。
+- FidelityRecord と独立 verify の証拠が不足。
+- 承認 record の自己生成禁止と必須フィールド検証が不足。
+- 検証コマンド、件数、結果が不足。
+- timeline fallback 条件と非改変証拠が不足。
+
+## Review — Iteration 2
+
+- **Verdict:** NOT-READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-07-23T07:00:31Z
+- **Iteration:** 2
+- **Scope decision:** none
+
+主要実装契約は是正されたが、棚卸し・正式センサー・CI基準線の証跡が不足している。
+
+### Findings
+
+- FR-3d の実データ direct-path 棚卸し件数と出力先が未記録。
+- linter、type-check、answer-evidence の正式センサー監査が未記録。
+- 全 CI の wall-clock drift が回帰でないことの基準線が未記録。
+- 既存 test config が未変更であることが不明瞭。
