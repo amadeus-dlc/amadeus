@@ -1,6 +1,6 @@
 # コード構造
 
-## t241 のテスト tier 配置構造（260723-t241-ci-residency、2026-07-23、現在）
+## t241 のテスト tier 配置構造（260723-t241-ci-residency、2026-07-23、履歴）
 
 差分リフレッシュ（base `a81c11dde` → observed `78bce876`、distance 35、bugfix / Minimal、[#1294](https://github.com/amadeus-dlc/amadeus/issues/1294)）。本バグ面（tests/e2e・run-tests.ts・workflows・package.json）は base..HEAD で無変更（numstat 0 行）、原因所在は 260718-election-ts-foundation（#1235）。以下は測定 ref: scan-notes @ observed HEAD `78bce876` の転記。
 

@@ -1,6 +1,6 @@
 # コンポーネント棚卸し
 
-## t241 CI-residency 関連コンポーネント（260723-t241-ci-residency、2026-07-23、現在）
+## t241 CI-residency 関連コンポーネント（260723-t241-ci-residency、2026-07-23、履歴）
 
 差分リフレッシュ（base `a81c11dde` → observed `78bce876`、距離 35、bugfix / Minimal、[#1294](https://github.com/amadeus-dlc/amadeus/issues/1294)）。本バグ面は base..HEAD 無変更（numstat 0 行）、欠陥は 260718-election-ts-foundation（#1235）由来。測定 ref: scan-notes @ observed HEAD `78bce876`。
 
