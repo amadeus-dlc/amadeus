@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-ASGICS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e1 record 実測: 3件とも既決 cid の機械的適用 — 質問絞り込み(no-election-for-decided-norms+intent-capture:c1、#1396 のユーザー着手承認は私もクロスレビュー当事者として既決確認)、registry 実測(numbers 系 — Q1/Q2 で私が投票した裁定の設計事実)、H2 floor 予防(E-TCRRAS13B 適用確認)。軽微な typo(『적용확인』の韓字混入)は verbatim 正本の表記ゆれで内容に影響なし。新規ノルム性なし。",
+  "submittedAt": "2026-07-23T03:54:30Z"
+}
