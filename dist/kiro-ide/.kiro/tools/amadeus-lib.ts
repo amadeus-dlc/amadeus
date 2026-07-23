@@ -3657,6 +3657,21 @@ export function errorStack(e: unknown): string | undefined {
   return undefined;
 }
 
+// True when an artifact name (== the output-filename stem, per the X→X.md
+// convention) is a marker artifact: a `*-questions.md` Q&A file or a
+// `*-timestamp.md` marker. Both are intentionally NOT ≥2-H2 prose docs, so the
+// required-sections sensor exempts them from the generic prose-heading floor
+// (E-FVEPD) and the graph's templateEligibleArtifacts filter excludes them from
+// template overrides. The single canonical definition so the two sites can
+// never drift into a two-definition set split.
+export function isMarkerArtifact(name: string): boolean {
+  return (
+    typeof name === "string" &&
+    name.length > 0 &&
+    (name.endsWith("-questions") || name.endsWith("-timestamp"))
+  );
+}
+
 // --- JSON.parse type guards ---
 //
 // JSON.parse returns `any` (TypeScript design choice). These guards narrow

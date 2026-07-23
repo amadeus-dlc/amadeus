@@ -47,6 +47,7 @@ import {
   activeSpace,
   type AgentMetadata,
   errorMessage,
+  isMarkerArtifact,
   loadAgents,
   loadScopeMapping,
   harnessDir,
@@ -800,11 +801,7 @@ export function consumersOf(artifact: string): GraphStage[] {
  *  run on import). */
 export function templateEligibleArtifacts(produces: string[]): string[] {
   return (produces ?? []).filter(
-    (a) =>
-      typeof a === "string" &&
-      a.length > 0 &&
-      !a.endsWith("-questions") &&
-      !a.endsWith("-timestamp")
+    (a) => typeof a === "string" && a.length > 0 && !isMarkerArtifact(a)
   );
 }
 

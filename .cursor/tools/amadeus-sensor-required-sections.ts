@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { errorMessage, parseBoltDag } from "./amadeus-lib.ts";
+import { errorMessage, isMarkerArtifact, parseBoltDag } from "./amadeus-lib.ts";
 
 interface Result {
 	pass: boolean;
@@ -30,6 +30,12 @@ interface Result {
 	// stage does not declare template-eligible (the stem==artifact key is
 	// unsound for questions/timestamp markers). Surfaced, not fatal.
 	config_warning?: string;
+	// Populated only when the output is a questions/timestamp marker: the generic
+	// ≥2-H2 prose floor is exempted (E-FVEPD) because such markers intentionally
+	// omit ≥2-H2 shape. `pass` is forced true with zero findings; this field
+	// makes the exemption observable rather than silent (consumed by the manifest
+	// output_schema + t155/t86 asserts).
+	marker_exempt?: true;
 }
 
 interface Flags {
@@ -171,6 +177,24 @@ export function main(argv: string[] = process.argv.slice(2)): void {
 	// template applies ONLY when the stem ∈ that set; otherwise it is ignored
 	// and an advisory config warning is emitted (the output keeps its floor).
 	const stem = basename(flags.outputPath).replace(/\.md$/, "");
+
+	// MARKER EXEMPTION (E-FVEPD, cid:practices-discovery:e-fvepd-marker-heading-floor).
+	// A `*-questions.md` Q&A file or a `*-timestamp.md` marker intentionally omits
+	// the ≥2-H2 prose shape, so the generic floor would fail it spuriously. Exempt
+	// markers from the floor: pass with zero findings, keyed off the SAME
+	// isMarkerArtifact predicate the graph's templateEligibleArtifacts filter uses
+	// (one canonical definition, no drift). This governs the FLOOR only and is
+	// orthogonal to the branches below: a marker is never in the template-eligible
+	// set, so a template resolving for one still takes the ineligible/config_warning
+	// path unchanged (FR-3), and no marker is unit-of-work-dependency.md, so the
+	// edge-block branch never applies. Non-markers skip this branch entirely, so
+	// their floor/findings/template/edge-block behaviour is unchanged.
+	if (isMarkerArtifact(stem)) {
+		result.marker_exempt = true;
+		pass = true;
+		findings_count = 0;
+	}
+
 	const templatePath = resolveTemplatePath(stem, flags);
 	if (templatePath) {
 		const eligible = (flags.templateEligible ?? []).includes(stem);

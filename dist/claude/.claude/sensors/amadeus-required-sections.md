@@ -19,6 +19,7 @@ output_schema:
   template_expected: string[]
   template_missing: string[]
   config_warning: string
+  marker_exempt: boolean
 timeout_seconds: 5
 ---
 
@@ -26,6 +27,13 @@ timeout_seconds: 5
 
 Default mode: checks the output contains at least 2 H2 headings (generic
 content-shape sanity check).
+
+**Marker exemption (E-FVEPD).** A `*-questions.md` Q&A file or a `*-timestamp.md`
+marker intentionally omits the ≥2-H2 prose shape, so it is exempted from the
+generic floor: the sensor passes with zero findings and reports
+`marker_exempt: true`. The exemption is keyed off the output-filename stem
+suffix, the same predicate the dispatcher uses to build the template-eligible
+set, so a marker is never checked against a heading-set template either.
 
 For `unit-of-work-dependency.md` (units-generation 2.7), additionally
 requires the fenced `yaml` `units:` edge block to be present, well-formed,
@@ -50,7 +58,7 @@ The default heading set can be overridden two ways. **Precedence: a resolving
    shape and the checked shape cannot drift. A template applies only to a
    template-eligible artifact (the stage's prose `produces` entries, threaded by
    the dispatcher); a template resolving for a questions/timestamp marker is
-   ignored with a config warning, and the marker keeps the generic floor.
+   ignored with a config warning.
 
 2. **`## Sensors`-prose override (in-stage, legacy anticipation).** A stage's
    `## Sensors` body may document a heading-set override (post-milestone-12
@@ -59,7 +67,8 @@ The default heading set can be overridden two ways. **Precedence: a resolving
 The framework ships no per-stage `## Sensors` overrides by default — teams
 introduce specific heading shapes either by authoring a template (path 1) or via
 the §13 learning loop when there's a real reason. When neither override is
-present, the output keeps the generic ≥2-H2 floor.
+present, a non-marker output keeps the generic ≥2-H2 floor (markers are exempt,
+per the marker exemption above).
 
 ## Failure mode
 
