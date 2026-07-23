@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-SRCNDS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。e2 record の s13 ファイル(採用0件・不採用2件)実在を確認。self-check の reviewer 前9件捕捉は E-SRCNRS13 で採用した総当たり事前チェックの実効2例目 = 採用済みノルムの執行であり新規性なし。",
+  "submittedAt": "2026-07-23T04:06:02Z"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRFDS13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(1)。実測: e3 ブランチの FD s13-candidates.md を git show で直読 — 5件とも既存 cid の追認・違反実例(検証劇場 Forbidden の捕捉→完全除去、fixture 盲点の E-LSSADS13 機械クラス受理、cardinality-check・cross-unit-type・reservation-preservation の追認)で新規ノルム性なし。U3 の予算消費後 proceed が実 verdict の誠実記録+機械検証で閉じている点も配信どおり。0件に同意。",
+  "submittedAt": "2026-07-23T03:56:01Z"
+}

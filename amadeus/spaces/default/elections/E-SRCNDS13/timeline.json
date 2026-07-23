@@ -16,5 +16,31 @@
     "at": "2026-07-23T04:03:12Z",
     "detail": "delivered via agmsg: e6",
     "voter": "e6"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-07-23T04:03:45Z",
+    "receivedAt": "2026-07-23T04:03:55Z",
+    "detail": "ballot accepted: e5",
+    "voter": "e5"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-07-23T04:04:53Z",
+    "receivedAt": "2026-07-23T04:05:07Z",
+    "detail": "ballot accepted: e6",
+    "voter": "e6"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-07-23T04:06:02Z",
+    "receivedAt": "2026-07-23T04:06:02Z",
+    "detail": "ballot accepted: e4",
+    "voter": "e4"
+  },
+  {
+    "kind": "tallied",
+    "at": "2026-07-23T04:06:18Z",
+    "detail": "tally: established"
   }
 ]

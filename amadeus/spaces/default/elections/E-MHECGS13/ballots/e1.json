@@ -1,0 +1,16 @@
+{
+  "kind": "amend",
+  "ref": {
+    "electionId": "E-MHECGS13",
+    "voter": "e1",
+    "submittedAt": "2026-07-23T03:55:49Z"
+  },
+  "electionId": "E-MHECGS13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "採用候補の文言案: 『gitignore の dir パターン(末尾スラッシュ)は同名 symlink を除外しない — worktree 内に symlink を作る作業(typecheck 用 node_modules 等)では、作成を repo 外 scratch に置くか、commit 前に git status --short で symlink(mode 120000)の index 混入を機械検分する』。統合先案: cid:scratch-script-discipline への追補(worktree 内 symlink 面)",
+  "rationale": "遅着観測の機序を自分の scratch で決定的再現した(git init → .gitignore に node_modules/ → 同名 symlink 作成 → add -A → git status: A node_modules / check-ignore: 不一致)ため、判断を 0件→異議(候補あり)へ amend する。この罠は『gitignore が守っている』という誤信を突く tooling 意味論クラス(bun-readfilesync-dir-platform-divergence と同族)で、scratch-script-discipline の違反実例扱いだけでは『gitignore dir パターンの symlink 非除外』という一般化可能な機序知識が失われる — 実害も実測済み(PR #1405 混入→レビュー捕捉→除去 0c4fee004)。既存4件の 0件整理には引き続き同意(異議は本1件の追加採用のみ)。",
+  "submittedAt": "2026-07-23T03:56:46Z"
+}

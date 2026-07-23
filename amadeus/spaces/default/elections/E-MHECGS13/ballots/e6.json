@@ -1,0 +1,16 @@
+{
+  "kind": "amend",
+  "ref": {
+    "electionId": "E-MHECGS13",
+    "voter": "e6",
+    "submittedAt": "2026-07-23T03:55:17Z"
+  },
+  "electionId": "E-MHECGS13",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "採用候補の特定: 『.gitignore の dir 限定パターン(末尾スラッシュ)は同名 symlink を除外しない — worktree で scratch symlink を作る場合は commit 前に git status 検分を挟む』を scratch-script-discipline への知識クラス追補として。原 s13 の4件の0件整理自体には引き続き同意(異議は遅着観測分のみ)",
+  "rationale": "amend(原票 = 上記 ref の choice 1)。遅着観測の機序(gitignore dir パターンの symlink 非マッチ)は git の非自明な意味論で、bun-readfilesync-dir-platform-divergence 系と同族の『ツール意味論の無音罠』知識クラス — 単なる手順違反実例(scratch-script-discipline は repo 外実行を求めるがワークツリー内 typecheck symlink という新パターンは未カバー)ではなく、再発時に grep でも review でも検出しにくい構造(PR #1405 で実測・e1 捕捉 0c4fee004)。採用の実益が PM 回付を上回ると判断を変更する。",
+  "submittedAt": "2026-07-23T03:57:31Z"
+}

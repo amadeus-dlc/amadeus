@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MPRFDS13",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "e3 record を read-only 実測: functional-design 全4 unit の0件整理5件を確認(既存 cid 追認実例、U3 予算後 proceed は E-LSSADS13 機械クラスの誠実適用 — 本日自 intent の U3 NFR でも同条項を同型適用しており追認できる)。0件で可(1)",
+  "submittedAt": "2026-07-23T03:55:17Z"
+}

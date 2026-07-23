@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MHECGS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "採用範囲は追補1行に限定し、scratch-script-discipline への統合(独立 cid 新設せず)を推奨。",
+  "rationale": "異議(2)— 配布追補の遅着観測を採用候補として特定する: 『.gitignore の dir 限定パターン(末尾スラッシュ)は symlink に不一致 — worktree に typecheck 用等の symlink を作る場合は commit 前に git status 検分を1手挟む』を cid:requirements-analysis:scratch-script-discipline への追補として採用提案。根拠: gitignore の dir/ 意味論が symlink を除外しないのは非自明な機構事実(bun platform divergence 系と同じ知識クラス)で、PM 実例回付では次の遭遇者が同じ盲点を踏む — PR #1405 の実混入→e1 レビュー捕捉→0c4fee004 除去の実測系譜あり。s13 ファイル本体の surface 4件の 0件整理(degrade §12a 実効2例目・3段模範実例・算術誤り・sweep 字義執行)には同意。",
+  "submittedAt": "2026-07-23T04:06:02Z"
+}
