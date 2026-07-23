@@ -2,6 +2,7 @@
 > This file is maintained by the orchestrator during stage execution. Add observations at the gate ritual, not by editing here directly.
 
 ## Interpretations
+- 2026-07-23T03:53:26Z — 全4 unit の per-unit ループ完了(U1 READY i1 / U3 予算消費 proceed / U2 READY i2 / U4 READY i2)。reviewer 捕捉の主要クラス: U3 provenance = 消費者なきフィールド(検証劇場)/ U4 skip = 到達不能 variant(個数照合)/ U2 = 留保配置の担当不在+状態機械未確定 — いずれも既存 cid の追認実例
 - 2026-07-23T03:47:16Z — U2 i2 裁定により U1 business-logic-model へ「stale-status-line の detail に record 状態を含める」契約を申告付きで伝播(cross-unit の消費契約 — StatusFinding 型は不変、review-fix-propagation の提供側同時棚卸し)
 - 2026-07-23T03:39:03Z — U1 FD: reviewer i1 READY(Minor の Finding/StatusFinding 命名相違は正本名 StatusFinding の申告行で即時解消)。walking-skeleton stance は project.md 最具体節(greenfield 要素を含む intent)+scope-document の walking-skeleton 扱い明記から on と classify
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
