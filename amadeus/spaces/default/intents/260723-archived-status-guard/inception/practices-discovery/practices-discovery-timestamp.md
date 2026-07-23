@@ -1,0 +1,1 @@
+practices-discovery: 2026-07-23T04:50Z(intent 260723-archived-status-guard)— c1 代用(同日 RE codekb: business-overview / architecture / code-structure / technology-stack / dependencies / code-quality-assessment)、差分ギャップ 0、promote なし(c2 live 温存)
