@@ -484,5 +484,12 @@
     "dirName": "260723-marker-heading-exemption",
     "scope": "bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019f8c95-8d9e-776e-9a55-5bb3d3a75225",
+    "slug": "fixture-shard-pollution",
+    "dirName": "260723-fixture-shard-pollution",
+    "scope": "bugfix",
+    "status": "complete"
   }
 ]
