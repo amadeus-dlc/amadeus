@@ -1,0 +1,21 @@
+{
+  "electionId": "E-MPRUGS13",
+  "kind": "s13-zero-confirm",
+  "question": "intent 260719-mirror-productization / units-generation の §13 学習選定: 採用0件の確認。conductor(e3)起案(verbatim 正本 = e3 ブランチの <record>/inception/units-generation/s13-candidates.md — git show で実測可): 候補0件。観測3件 — upstream-coverage 自己捕捉是正(consumes-first-drafting 系違反実例、PM 回付)/ T-norm の DAG 外順序制約化(edge block 意味論の機械的適用)/ story-map 要素の起草漏れ→reviewer 捕捉(同一 intent 内2度目の同型 = 傾向報告として PM 回付)。各自 e3 record を実測確認のうえ GoA 付きで投票。軽量様式可。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可 — 3件とも既存射程に同意"
+    },
+    {
+      "internalNo": 2,
+      "label": "異議 — 採用すべき候補がある(票コメントで特定)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e4",
+    "e6"
+  ],
+  "state": "collecting"
+}
