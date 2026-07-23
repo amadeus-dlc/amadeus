@@ -1,0 +1,29 @@
+{
+  "electionId": "E-ASGIC2",
+  "kind": "clarification-question",
+  "question": "intent 260723-archived-status-guard(#1396)/ intent-capture の明確化質問(verbatim 正本 = e1 ブランチの <record>/ideation/intent-capture/intent-capture-questions.md — git show で実測可)。Q2. enum への parked 編入と registry 追跡。実測: parked は現状 registry 非出現(park は record 側)。語彙定義と書込追跡は分離可能。 各自実測確認のうえ、受容度1行併記+GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. enum に parked を含める(語彙契約)が registry 書込は本 intent で行わない — 既存挙動不変、#1309 と整合"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. park/unpark 時に registry も更新する完全追跡(全経路改修+テスト)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. enum を3値に縮小(parked を外す — #1309 側と要整合)"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他"
+    }
+  ],
+  "voters": [
+    "e4",
+    "e5",
+    "e6"
+  ],
+  "state": "collecting"
+}

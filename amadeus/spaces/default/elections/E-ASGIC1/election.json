@@ -1,0 +1,29 @@
+{
+  "electionId": "E-ASGIC1",
+  "kind": "clarification-question",
+  "question": "intent 260723-archived-status-guard(#1396)/ intent-capture の明確化質問(verbatim 正本 = e1 ブランチの <record>/ideation/intent-capture/intent-capture-questions.md — git show で実測可)。Q1. archived の解除(override)形態。判断点: P4(不可逆境界に人間)と運用柔軟性・実装面のバランス。 各自実測確認のうえ、受容度1行併記+GoA 付きで投票。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A. archive/unarchive 対の専用 verb+human-presence 必須+両方向監査(symmetric-pair)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B. unarchive verb+human-presence のみ新設(archive 側は enum 検証強化どまり — 最小面)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C. 手編集+doctor 整合検査(verb なし — 監査イベントが残らない)"
+    },
+    {
+      "internalNo": 4,
+      "label": "X. その他"
+    }
+  ],
+  "voters": [
+    "e4",
+    "e5",
+    "e6"
+  ],
+  "state": "collecting"
+}
