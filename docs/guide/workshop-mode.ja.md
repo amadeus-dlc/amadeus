@@ -406,7 +406,7 @@ AUQ** をレンダリングします — 失敗した Bolt を一度に 1 つず
 延期)を提供します。保留マーカーはセッション kill を生き延びます — 下の resume ルールを
 参照。
 
-> **2 つの異なるクリーンアップ動詞。** `amadeus-bolt abort --name "<name>" --slug <slug> --reason "<text>"` は正典的な Bolt レベルの abort です — `BOLT_FAILED` を `Reason: aborted` で発行し、(US-1 AC4 に従って)デフォルトで worktree ディレクトリを保持します。`--discard` を追加すると worktree も撤去します。`amadeus-worktree discard --slug <slug>` は、レース敗北の回復に使われる低レベルの worktree のみのクリーンアップです(参加者が claim レースに負け、別の Bolt を選ぶ前にローカル worktree を処分したいだけのとき)。これらは互換ではありません — 失敗とマークすべき Bolt があるときは `amadeus-bolt abort` を、ないときは `amadeus-worktree discard` を使ってください。
+> **2 つの異なるクリーンアップコマンド。** `amadeus-bolt abort --name "<name>" --slug <slug> --reason "<text>"` は正典的な Bolt レベルの abort です — `BOLT_FAILED` を `Reason: aborted` で発行し、(US-1 AC4 に従って)デフォルトで worktree ディレクトリを保持します。`--discard` を追加すると worktree も撤去します。`amadeus-worktree discard --slug <slug>` は、レース敗北の回復に使われる低レベルの worktree のみのクリーンアップです(参加者が claim レースに負け、別の Bolt を選ぶ前にローカル worktree を処分したいだけのとき)。これらは互換ではありません — 失敗とマークすべき Bolt があるときは `amadeus-bolt abort` を、ないときは `amadeus-worktree discard` を使ってください。
 
 保留された Bolt で `amadeus-bolt complete --merge --slug <slug>` を実行したときに
 参加者が見るエラーメッセージは逐語的に次のとおりです:
