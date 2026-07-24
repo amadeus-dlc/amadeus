@@ -70,6 +70,12 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - NEVER `packages/framework/core/` / `packages/framework/harness/` の維持または移動を、ADR/設計記録なしに暗黙決定しない。 (affirmed 2026-07-07)
 - NEVER `dist/` relocation を internal refactor として扱わない。README、docs、tests、self-promotion、CI への user-facing impact を棚卸しする。 (affirmed 2026-07-07)
 - NEVER `packages/setup` の不在をローカル filesystem evidence として捏造しない。 (affirmed 2026-07-07)
+- NEVER accept legacy boolean values for `auto-mirror`. (affirmed 2026-07-24)
+- NEVER extend `auto-mirror: auto` consent to Pull Request merge, release, publish, deployment, or unrelated external actions. (affirmed 2026-07-24)
+- NEVER automatically edit or close an Issue whose Amadeus ownership provenance is absent or inconsistent. (affirmed 2026-07-24)
+- NEVER treat a GitHub mirror failure as permission to silently lose synchronization state or permanently stop the AI-DLC workflow. (affirmed 2026-07-24)
+- NEVER add a backward-compatibility shim, generic tracker transport, scheduler, daemon, or unrelated large-module refactor for this Intent. (affirmed 2026-07-24)
+- NEVER edit `dist/` or self-install copies as independent sources of truth. (affirmed 2026-07-24)
 ## Mandated
 
 - ALWAYS リリース(バージョンバンプ・タグ発行・GitHub Release ノート・npm publish)は release.yml の workflow_dispatch 一本で行う。PR ではバージョン・バッジ・リリースノートに一切触れない(`tests/unit/t68-version-changelog-sync.test.ts` が version.ts↔CLI↔README バッジの同期を強制) (user decision 2026-07-09)
@@ -84,6 +90,13 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - ALWAYS markdown artifact は日本語で書く。ただし path、CLI、コード識別子、tool が要求する heading は正確性を優先して保持する。 (affirmed 2026-07-07)
 - ALWAYS 新設パッケージ(`packages/*`)は lint(Biome)と型検査(`tsc --noEmit`)の配線をパッケージ追加と同一 PR で加え、既存の狭い CI lint スコープ(`tests/` のみ)を継承しない (affirmed 2026-07-08)
 - ALWAYS harness 専用ツールを `packages/framework/core/tools/` に置かない — 全6ハーネス manifest の coreDirs が tools を投影するため構造的に全ハーネス dist へ漏出する。harness 専用は `packages/framework/harness/<name>/tools/`+harnessFiles 投影に置く(core 中立層/harness 表層境界の具体化。E-770-CGBT 2026-07-18 採用 3/3 — e4 提案+e1 GoA1+e3 GoA2 留保=小型1行統合。票: 初回配信 11:42Z 頃 → e3 11:43:21Z(0件)→ e4 11:44:07Z(本候補提案)→ e1 11:44:22Z(GoA3 留保)→ 追加ラウンド配信 11:44Z 台 → e1 11:44:55Z(採用 GoA1)→ e3 11:45:06Z(採用 GoA2)→ 開票 11:45Z 台。実測根拠: E-770-CG2 裁定(reviewer が core/tools 配置の漏出を捕捉、manifest 6面 :26-:39 実測)+#1212 実装(harnessFiles 化で漏出0)) (learned 2026-07-18) <!-- cid:code-generation:harness-tools-placement -->
+- ALWAYS treat an explicit `auto-mirror: auto` value as standing consent only for the active Intent's bounded mirror create, sync, and provenance-verified close operations. (affirmed 2026-07-24)
+- ALWAYS keep the Intent record as the source of truth and synchronize the GitHub mirror in one direction from record to Issue. (affirmed 2026-07-24)
+- ALWAYS make mirror retries idempotent across partial GitHub success and local-state write failure. (affirmed 2026-07-24)
+- ALWAYS verify Amadeus ownership provenance and workflow landing before automatically closing a mirror Issue. (affirmed 2026-07-24)
+- ALWAYS continue the workflow after GitHub availability, authentication, permission, rate-limit, or command failures while recording a visible unsynchronized warning and retry state. (affirmed 2026-07-24)
+- ALWAYS update the framework source, all six harness distributions, self-install surfaces, tests, and paired English/Japanese documentation in the same change. (affirmed 2026-07-24)
+- ALWAYS validate TypeScript with strict typecheck, Biome lint, relevant tests, coverage gates, complexity checks, and distribution drift checks required by the changed paths. (affirmed 2026-07-24)
 ## Corrections
 
 <!-- 人間のフィードバックによるプロジェクト固有の是正。 -->
