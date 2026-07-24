@@ -524,3 +524,36 @@
 **Timestamp**: 2026-07-24T10:08:56Z
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T10:12:07Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: af7677c7f6873a721
+**Message**: team-up.sh起動が最大4.5分ブロックされる問題(Issue #1449)をbugfixスコープで修正中。実測・起票・RE完了後、修正方針の選挙開催をleaderに依頼し、裁定待ちでworkflowをparkして待機しています。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T10:19:18Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a461f612706b3818d
+**Message**: team-up.sh起動遅延Issue #1449のbugfix intentを進行中。RE承認まで完了し、修正方針の選挙開催をleaderに依頼、常任グラント受領済みで選挙成立とapprove通知を待っています。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:07:29Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aaea4a6490c8cfffb
+**Message**: team-up.sh起動遅延バグ(Issue #1449)の修正intentを進行中。requirements-analysis段階で修正方針の選挙裁定成立をleaderから待っています。
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-24T12:23:48Z
+**Event**: HUMAN_TURN
+
+---
