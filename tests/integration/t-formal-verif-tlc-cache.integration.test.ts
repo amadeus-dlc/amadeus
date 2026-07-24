@@ -479,25 +479,48 @@ describe("formal verification TLC artifact cache", () => {
     expect(readdirSync("/dev/fd").length - before).toBeLessThan(4);
   });
 
-  test("rejects a single transport chunk larger than the one MiB buffer", async () => {
+  test("splits a transport chunk larger than the one MiB write buffer", async () => {
     const root = mkdtempSync(join(tmpdir(), "fv-tlc-cache-chunk-cap-"));
     roots.push(root);
-    const oversizedChunk = new Uint8Array(1024 * 1024 + 1);
+    const largeChunk = new Uint8Array(1024 * 1024 + 1);
     const network: ArtifactNetworkPort = {
       async request(input) {
         return {
           status: 200,
-          headers: { "content-length": String(oversizedChunk.byteLength) },
+          headers: { "content-length": String(largeChunk.byteLength) },
           connectedAtMs: input.startedAtMs + 1,
           headersAtMs: input.startedAtMs + 2,
-          body: (async function* () { yield oversizedChunk; })(),
+          body: (async function* () { yield largeChunk; })(),
+        };
+      },
+    };
+    let streamedBytes = 0;
+    const digest: FileDigestPort = {
+      createStreamingDigest() {
+        return {
+          update(bytes) { streamedBytes += bytes.byteLength; },
+          digest() {
+            return streamedBytes === largeChunk.byteLength
+              ? FIXED_TLC_ARTIFACT_DESCRIPTOR.sha256
+              : "0".repeat(64);
+          },
+        };
+      },
+      digest(path, maxBytes) {
+        const bytes = readFileSync(path);
+        if (bytes.byteLength > maxBytes) throw new Error("digest cap exceeded");
+        return {
+          sha256: bytes.byteLength === largeChunk.byteLength
+            ? FIXED_TLC_ARTIFACT_DESCRIPTOR.sha256
+            : "0".repeat(64),
+          byteLength: bytes.byteLength,
         };
       },
     };
     const reservation = new FakeReservation();
     const cache = new FsTlcToolchain(root, {
       network,
-      digest: new FixtureDigest(),
+      digest,
       reservation,
       clock: { nowMs: () => 0, utcNow: () => "2026-07-21T00:00:00Z" },
       owner: { host: "test-host", pid: 42, processStartedAt: "test-process-start" },
@@ -508,8 +531,8 @@ describe("formal verification TLC artifact cache", () => {
 
     const result = await cache.acquire();
 
-    expect(result.ok).toBe(false);
-    expect(!result.ok && result.error.code).toBe("BODY_LENGTH");
+    expect(result.ok).toBe(true);
+    expect(streamedBytes).toBe(largeChunk.byteLength);
     expect(reservation.active.size).toBe(0);
   });
 

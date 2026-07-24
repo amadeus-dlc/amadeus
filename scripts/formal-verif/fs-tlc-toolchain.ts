@@ -1001,7 +1001,6 @@ class FsTlcArtifactCache {
         if (next.done) break;
         const chunk = next.value;
         if (!(chunk instanceof Uint8Array)) abort("AcquisitionError", "NETWORK", "artifact transport yielded a non-byte chunk");
-        if (chunk.byteLength > BUFFER_BYTES) abort("AcquisitionError", "BODY_LENGTH", "artifact transport chunk exceeds the one MiB buffer cap");
         if (total + chunk.byteLength > FIXED_TLC_ARTIFACT_DESCRIPTOR.maxBytes) abort("AcquisitionError", "BODY_LENGTH", "artifact body exceeds the fixed hard cap");
         for (let offset = 0; offset < chunk.byteLength; offset += BUFFER_BYTES) {
           const length = Math.min(BUFFER_BYTES, chunk.byteLength - offset);
