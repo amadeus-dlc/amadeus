@@ -2024,3 +2024,21 @@
 **Message**: 残りのメンバーの報告を待って
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T16:32:48Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ae250b75fbf925bfe
+**Message**: e3,e5の報告まだ？
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T16:33:00Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a42a150865d40de9d
+**Message**: e3,e5の報告待ち
+
+---
