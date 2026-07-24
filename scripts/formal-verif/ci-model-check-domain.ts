@@ -94,7 +94,7 @@ function validateDockerReceipt(run: CiModelCheckRunEvidence): Result<void, strin
   }
   const mounts = run.docker.argv.filter((argument) => argument.startsWith("type=bind,"));
   if (
-    !mounts.includes("type=bind,src=$WORKSPACE,dst=$WORKSPACE,readonly")
+    !mounts.includes("type=bind,src=$WORKSPACE/specs/tla,dst=$WORKSPACE/specs/tla,readonly")
     || !mounts.includes("type=bind,src=$JAR,dst=$JAR,readonly")
     || !mounts.includes("type=bind,src=$SCRATCH,dst=$SCRATCH")
   ) {

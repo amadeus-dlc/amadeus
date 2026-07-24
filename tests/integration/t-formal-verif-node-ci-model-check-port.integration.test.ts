@@ -54,7 +54,7 @@ function dependencies(
         const runId = "00000000-0000-4000-8000-000000000001";
         const dockerArgs = [
           "run", "--rm", "--network=none", "--name", `amadeus-tlc-${runId}`,
-          "--mount", `type=bind,src=${workspace},dst=${workspace},readonly`,
+          "--mount", `type=bind,src=${join(workspace, "specs/tla")},dst=${join(workspace, "specs/tla")},readonly`,
           "--mount", "type=bind,src=/cache/tla2tools.jar,dst=/cache/tla2tools.jar,readonly",
           "--mount", "type=bind,src=/scratch/.scratch,dst=/scratch/.scratch",
           FIXED_DOCKER_IMAGE,

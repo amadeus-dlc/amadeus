@@ -90,7 +90,7 @@ function createRun(root: string, kind: "warm-up" | "measured", index: number): C
       imageRef: FIXED_DOCKER_IMAGE,
       argv: [
         "run", "--rm", "--network=none", "--name", `amadeus-tlc-${runId}`,
-        "--mount", "type=bind,src=$WORKSPACE,dst=$WORKSPACE,readonly",
+        "--mount", "type=bind,src=$WORKSPACE/specs/tla,dst=$WORKSPACE/specs/tla,readonly",
         "--mount", "type=bind,src=$JAR,dst=$JAR,readonly",
         "--mount", "type=bind,src=$SCRATCH,dst=$SCRATCH",
         FIXED_DOCKER_IMAGE,
