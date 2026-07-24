@@ -266,3 +266,11 @@
 **Duration ms**: 40
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-24T09:55:40Z
+**Event**: WORKFLOW_PARKED
+**Stage**: reverse-engineering
+**Timestamp**: 2026-07-24T09:55:40Z
+
+---
