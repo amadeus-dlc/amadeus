@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "environment": {
+    "os": "Darwin 25.5.0",
+    "architecture": "arm64",
+    "bunVersion": "1.3.13"
+  },
+  "inputs": {
+    "baselineSha": "de6c3ad3fbdea3fed8766742ccda6c278e0d3435",
+    "implementationTreeIdentity": "8219516c05a433fa5a0df178fad6d5aa8b336a5a3a1efa6f3bbe82720aa82c07",
+    "implementationDiffSha256": "d0494197b7e46ea76232731fb4a63ad725378a0c5cb2c0f9adfc558822c04cc1",
+    "manifest": "performance-input-manifest.txt",
+    "moduleBytes": 12662,
+    "cfgBytes": 294
+  },
+  "protocol": {
+    "benchmarkCommand": "bun test tests/unit/t-formal-verif-tla-model.test.ts",
+    "loadCommand": "loadVerifiedTlaSource()",
+    "warmupRuns": 2,
+    "measuredRuns": 10,
+    "worktrees": "baseline and implementation were separate detached worktrees at baselineSha; implementationDiffSha256 was applied only to the implementation worktree"
+  },
+  "samplesMs": {
+    "baseline": [
+      69.65520800000002,
+      64.427333,
+      68.58358299999998,
+      67.82899999999995,
+      62.888666,
+      70.03129099999995,
+      69.04054200000007,
+      75.055792,
+      66.4257080000001,
+      72.80483300000003
+    ],
+    "implementation": [
+      68.85791700000001,
+      67.41749999999999,
+      66.109666,
+      74.66175000000004,
+      77.02966700000002,
+      76.73766699999999,
+      79.314166,
+      80.02991699999995,
+      72.49649999999997,
+      74.924125
+    ],
+    "load": [
+      0.29762500000000003,
+      0.3019159999999985,
+      0.32070799999999977,
+      0.31995799999999974,
+      0.28595799999999905,
+      0.2850830000000002,
+      0.27008299999999963,
+      0.28029100000000007,
+      0.279833,
+      0.2851670000000013
+    ]
+  },
+  "summary": {
+    "baselineMedianMs": 68.81206250000002,
+    "baselineMaxMs": 75.055792,
+    "implementationMedianMs": 74.79293750000002,
+    "implementationMaxMs": 80.02991699999995,
+    "medianPercentOfBaseline": 108.69160839351383,
+    "maxPercentOfBaseline": 106.62723670946002,
+    "loadMedianMs": 0.28556250000000016,
+    "loadMaxMs": 0.32070799999999977,
+    "accepted": true
+  }
+}

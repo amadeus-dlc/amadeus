@@ -62,7 +62,8 @@
 
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   AMADEUS_SRC,
@@ -76,11 +77,14 @@ import {
 const BUN = process.execPath; // the bun running this test
 const TOOL = join(AMADEUS_SRC, "tools", "amadeus-orchestrate.ts");
 const STATE_TOOL = join(AMADEUS_SRC, "tools", "amadeus-state.ts");
+const SEED_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 const STATE_FIXTURE = "state-mid-ideation.md";
 
 const projects: string[] = [];
+const tempDirs: string[] = [];
 
 afterEach(() => {
+  for (const d of tempDirs.splice(0)) rmSync(d, { recursive: true, force: true });
   for (const p of projects.splice(0)) cleanupTestProject(p);
 });
 
@@ -302,6 +306,51 @@ describe("t127 --single pointer invariant (migrated from t127-single-stage-invar
     // JSON stdout the quotes are backslash-escaped, so match the quote-free
     // substring (same as the .sh).
     expect(r.out).toContain("is skipped for scope");
+  });
+
+  // The other side of the skip-for-scope guard (intent 260722-tla-plugin FR-1.4,
+  // ruling E-TLAU2 option A): a stage that belongs to NO scope (scopes: []) is an
+  // opt-in / plugin stage — --single is its ONLY entry point, so it is NOT
+  // rejected. The distinction from test 15 is exactly `node.scopes.length`:
+  // user-stories (test 15) has non-empty scopes and IS rejected for a scope that
+  // SKIPs it; an empty-scopes stage is exempt. Both sides are pinned here so the
+  // exemption can never widen to swallow a legitimately-skipped stock stage.
+  test("15b: next --single RUNS an opt-in (scopes: []) stage — the plugin-stage exemption [E-TLAU2 A]", () => {
+    const proj = freshProject();
+    // Synthesise an opt-in construction stage on top of the committed graph
+    // (clone a real node so buildRunStageDirective sees every field it reads),
+    // then point orchestrate at it via AMADEUS_STAGE_GRAPH.
+    const graph = JSON.parse(readFileSync(SEED_GRAPH, "utf8")) as Array<Record<string, unknown>>;
+    const template = graph.find((s) => s.slug === "code-generation")!;
+    graph.push({
+      ...template,
+      slug: "zz-optin-probe",
+      number: "3.99",
+      name: "ZZ Optin Probe",
+      scopes: [], // opt-in: belongs to no scope
+      requires_stage: [],
+      produces: [],
+      consumes: [],
+      sensors: [],
+      sensors_applicable: [],
+    });
+    const graphDir = mkdtempSync(join(tmpdir(), "t127-optin-"));
+    tempDirs.push(graphDir);
+    const graphFile = join(graphDir, "stage-graph.json");
+    writeFileSync(graphFile, `${JSON.stringify(graph, null, 2)}\n`);
+
+    const res = spawnSync(
+      BUN,
+      [TOOL, "next", "--stage", "zz-optin-probe", "--single", "--project-dir", proj],
+      { encoding: "utf-8", env: { ...process.env, AMADEUS_STAGE_GRAPH: graphFile } },
+    );
+    const out = `${res.stdout ?? ""}${res.stderr ?? ""}`;
+    // NOT rejected as skip-for-scope...
+    expect(out, out).not.toContain("is skipped for scope");
+    // ...and a real run-stage directive is emitted for it.
+    const directive = JSON.parse((res.stdout ?? "").trim().split("\n").filter(Boolean).at(-1) ?? "null");
+    expect(directive?.kind, out).toBe("run-stage");
+    expect(directive?.stage).toBe("zz-optin-probe");
   });
 
   // =========================================================================

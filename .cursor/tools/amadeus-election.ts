@@ -43,6 +43,7 @@ import {
   distribute,
   normalizeAt,
 } from "./amadeus-election-transport";
+import { resolveProjectDir } from "./amadeus-lib";
 import { parseGoaLine } from "./amadeus-norm-metrics";
 import {
   electionsRoot,
@@ -593,7 +594,7 @@ const VERBS: Record<string, (root: string, args: ParsedArgs) => number> = {
   verify: (root, a) => (a.electionId === null ? usageFail() : handleVerify(root, a.electionId)),
 };
 
-export function main(argv: string[], projectDir: string = join(import.meta.dir, "..")): number {
+export function main(argv: string[], projectDir?: string): number {
   const args = parseArgs(argv);
   if ("usage" in args) {
     console.error(args.usage);
@@ -601,7 +602,11 @@ export function main(argv: string[], projectDir: string = join(import.meta.dir, 
   }
   // --project is the repo-external override (scratch-script-discipline): tests
   // and experiments point the store at a scratch tree instead of the real one.
-  const root = electionsRoot(args.project ?? projectDir);
+  // Absent both, resolveProjectDir derives the repo root the same way every
+  // other amadeus CLI tool does (Issue #1450: the prior default,
+  // `join(import.meta.dir, "..")`, resolved to <harness-dir> instead of the
+  // repo root because import.meta.dir is this script's OWN directory).
+  const root = electionsRoot(resolveProjectDir(args.project ?? projectDir));
   const handler = VERBS[args.verb];
   if (handler === undefined) return usageFail();
   return handler(root, args);

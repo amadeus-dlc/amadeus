@@ -39,8 +39,20 @@
 //
 // See docs/reference/16-artifact-vocabulary.md for artifact naming.
 
-import { existsSync, lstatSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join } from "node:path";
+import {
+  closeSync,
+  constants as fsConstants,
+  existsSync,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  readSync,
+  realpathSync,
+  statSync,
+} from "node:fs";
+import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   _resetScopeMappingForTests,
@@ -1644,6 +1656,226 @@ function titleCaseSlug(slug: string): string {
     .join(" ");
 }
 
+// ---------------------------------------------------------------------------
+// Plugin stage discovery (U2 plugin-skeleton)
+//
+// A composed plugin lands its stage file at `<hostRoot>/plugins/<name>/stages/
+// <slug>.md` (plugin-composition.ts writes StageCopy.path verbatim into the
+// host tree). The core walk above only reads stagesDir() (amadeus-common/
+// stages), so composed plugin stages are invisible to the graph until this
+// discovery joins them. The extension is generic — no formal-model-check
+// hardcoding (BR-U2-1) — and the only core file it touches is this one
+// (BR-U2-7: plugin-composition.ts / plugin-projection.ts stay untouched).
+// ---------------------------------------------------------------------------
+
+/** One discovered plugin stage file. `path` is the POSIX host-relative landing
+ *  path (`plugins/<name>/stages/<slug>.md`); `slug` is read from its validated
+ *  frontmatter. The approved AD signature — no `pluginName` field (Major 3
+ *  withdrawal); the plugin name is derivable from `path` when needed. */
+export type PluginStageFile = { readonly path: string; readonly slug: string };
+
+/** Internal richer read: the discovered file plus its raw bytes and validated
+ *  frontmatter, so compileStageGraph builds the GraphStage without a second
+ *  (unsafe) read of the same path. */
+type PluginStageRead = {
+  readonly file: PluginStageFile;
+  readonly raw: string;
+  readonly data: StageFrontmatter;
+};
+
+// stderr contract (reliability-design): every plugin-stage failure is a single
+// line of JSON under this schema, all codes mapped to exit 1. Paths are POSIX
+// host-relative, never absolute and never file content; newlines are escaped by
+// JSON.stringify itself.
+const PLUGIN_STAGE_ERROR_SCHEMA = "amadeus.plugin-stage-error.v1";
+type PluginStageErrorCode =
+  | "SLUG_COLLISION"
+  | "READ_FAILED"
+  | "SCHEMA_INVALID"
+  | "UNKNOWN_SENSOR";
+
+// Total bytes admitted across all plugin stage files in one compile
+// (security-design: regular Markdown files, 64MiB aggregate cap).
+const PLUGIN_STAGE_TOTAL_BYTE_CAP = 64 * 1024 * 1024;
+
+/** A typed plugin-stage compile failure. Carries the discriminated payload so
+ *  the CLI boundary (main) can emit the single-line JSON verbatim instead of
+ *  the generic `amadeus-graph <cmd>: <message>` wrapper. */
+export class PluginStageError extends Error {
+  readonly payload: Record<string, string>;
+  constructor(payload: { code: PluginStageErrorCode; plugin: string; slug: string } & Record<string, string>) {
+    super(`${payload.code}: plugin ${payload.plugin} stage ${payload.slug}`);
+    this.name = "PluginStageError";
+    this.payload = { schema: PLUGIN_STAGE_ERROR_SCHEMA, ...payload };
+  }
+  /** The single stderr line (reliability-design). */
+  jsonLine(): string {
+    return JSON.stringify(this.payload);
+  }
+}
+
+/** POSIX host-relative form of `abs` (security-design: never absolute, never
+ *  content). Falls back to a POSIX-ised absolute only if `abs` is not under
+ *  hostRoot, which the containment check already rejects. */
+function hostRel(hostRoot: string, abs: string): string {
+  return toPosix(relative(hostRoot, abs));
+}
+
+/** Reject if any path segment from hostRoot down to `abs` (inclusive of `abs`'s
+ *  ancestors, exclusive of `abs` itself) is a symlink — a symlinked ancestor
+ *  could redirect the walk outside the host tree (security-design). hostRoot is
+ *  a realpath, so its own segments are already canonical. */
+function assertNoSymlinkAncestor(hostRoot: string, abs: string): void {
+  const rel = relative(hostRoot, abs);
+  const parts = rel.split(sep).slice(0, -1); // ancestors of abs, below hostRoot
+  let cur = hostRoot;
+  for (const part of parts) {
+    cur = join(cur, part);
+    if (lstatSync(cur).isSymbolicLink()) {
+      throw new Error(`symlinked path segment: ${hostRel(hostRoot, cur)}`);
+    }
+  }
+}
+
+/** Safe read of one plugin stage file (security-design): O_NOFOLLOW open (fail
+ *  closed where the flag is unavailable), fstat the fd to confirm a regular
+ *  file whose dev/inode match the enumeration-time lstat (no TOCTOU swap), and
+ *  read from that same fd under the running aggregate byte cap. Returns the
+ *  file's UTF-8 text. Any failure throws (caller maps to READ_FAILED). */
+function safeReadPluginStage(
+  abs: string,
+  enumStat: { dev: number; ino: number },
+  budget: { used: number },
+): string {
+  const noFollow = fsConstants.O_NOFOLLOW as number | undefined;
+  if (typeof noFollow !== "number") {
+    throw new Error("platform does not support O_NOFOLLOW (fail-closed)");
+  }
+  const fd = openSync(abs, fsConstants.O_RDONLY | noFollow);
+  try {
+    const st = fstatSync(fd);
+    if (!st.isFile()) throw new Error("not a regular file");
+    if (st.dev !== enumStat.dev || st.ino !== enumStat.ino) {
+      throw new Error("file changed between enumeration and open (dev/inode mismatch)");
+    }
+    if (budget.used + st.size > PLUGIN_STAGE_TOTAL_BYTE_CAP) {
+      throw new Error(`aggregate plugin stage bytes exceed ${PLUGIN_STAGE_TOTAL_BYTE_CAP}`);
+    }
+    const buf = Buffer.allocUnsafe(st.size);
+    let read = 0;
+    while (read < st.size) {
+      const n = readSync(fd, buf, read, st.size - read, read);
+      if (n === 0) break;
+      read += n;
+    }
+    budget.used += read;
+    return buf.subarray(0, read).toString("utf-8");
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/** Enumerate + safely read every plugin stage under
+ *  `<hostRoot>/plugins/<name>/stages/<file>.md`, validating each against the
+ *  stage schema. Deterministic: results are sorted by POSIX host-relative path
+ *  so the merge order is byte-reproducible (domain-entities invariant). Absent
+ *  plugins dir (or a plugin with no stages dir) contributes nothing — the
+ *  0-plugin baseline. */
+function readPluginStageFiles(hostRoot: string): PluginStageRead[] {
+  if (!existsSync(join(hostRoot, "plugins"))) return [];
+  // Canonicalize the host root up front so every descendant path is under the
+  // real root (on macOS a temp `/var/...` resolves to `/private/var/...`);
+  // otherwise the O_NOFOLLOW fstat dev/inode compare and the relative-path
+  // rebase below would mismatch the enumeration path against the opened inode.
+  const hostReal = realpathSync(hostRoot);
+  const pluginsRoot = join(hostReal, "plugins");
+  const budget = { used: 0 };
+  const reads: PluginStageRead[] = [];
+  const pluginNames = readdirSync(pluginsRoot)
+    .filter((n) => statSync(join(pluginsRoot, n)).isDirectory())
+    .sort();
+  for (const name of pluginNames) {
+    const stagesRoot = join(pluginsRoot, name, "stages");
+    if (!existsSync(stagesRoot) || !statSync(stagesRoot).isDirectory()) continue;
+    const files = readdirSync(stagesRoot)
+      .filter((f) => f.endsWith(".md"))
+      .sort();
+    for (const f of files) {
+      const abs = join(stagesRoot, f);
+      const rel = hostRel(hostReal, abs);
+      const fallbackSlug = f.replace(/\.md$/, "");
+      let raw: string;
+      try {
+        // lstat at enumeration time (no symlink follow), reject symlinked file
+        // or ancestor, then O_NOFOLLOW-read the exact same inode.
+        const ls = lstatSync(abs);
+        if (ls.isSymbolicLink()) throw new Error("stage file is a symlink");
+        assertNoSymlinkAncestor(hostReal, abs);
+        raw = safeReadPluginStage(abs, { dev: ls.dev, ino: ls.ino }, budget);
+      } catch (err) {
+        throw new PluginStageError({
+          code: "READ_FAILED",
+          plugin: name,
+          slug: fallbackSlug,
+          pluginPath: rel,
+          reason: errorMessage(err),
+        });
+      }
+      let parsed: Record<string, unknown>;
+      try {
+        parsed = parseStageFrontmatter(raw) as Record<string, unknown>;
+      } catch (err) {
+        throw new PluginStageError({
+          code: "SCHEMA_INVALID",
+          plugin: name,
+          slug: fallbackSlug,
+          pluginPath: rel,
+          field: "frontmatter",
+          reason: errorMessage(err),
+        });
+      }
+      const validation = validateStageFrontmatter(parsed, { agents: loadAgents().map((a) => a.slug) });
+      if (!validation.valid) {
+        throw new PluginStageError({
+          code: "SCHEMA_INVALID",
+          plugin: name,
+          slug: typeof parsed.slug === "string" ? parsed.slug : fallbackSlug,
+          pluginPath: rel,
+          field: firstErrorField(validation.errors),
+          reason: validation.errors.join("; "),
+        });
+      }
+      reads.push({ file: { path: rel, slug: validation.data.slug }, raw, data: validation.data });
+    }
+  }
+  return reads.sort((a, b) => (a.file.path < b.file.path ? -1 : a.file.path > b.file.path ? 1 : 0));
+}
+
+/** Best-effort field name from a schema error list ("slug: ..." -> "slug"),
+ *  for the SCHEMA_INVALID error's `field`. */
+function firstErrorField(errors: readonly string[]): string {
+  const first = errors[0] ?? "";
+  const m = /^([A-Za-z0-9_.\[\]]+)\b/.exec(first);
+  return m ? m[1] : "frontmatter";
+}
+
+/** Public discovery seam (approved AD signature): every plugin stage file under
+ *  `<hostRoot>/plugins/<name>/stages/<file>.md`, validated and sorted by path.
+ *  Throws a PluginStageError on any read/schema failure. */
+export function discoverPluginStageFiles(hostRoot: string): PluginStageFile[] {
+  return readPluginStageFiles(hostRoot).map((r) => r.file);
+}
+
+/** The plugins host root for a compile: the harness root that also holds
+ *  amadeus-common/stages, i.e. two levels up from stagesDir(). Mirrors where
+ *  plugin-composition lands StageCopy.path, so discovery and compose agree.
+ *  AMADEUS_PLUGINS_HOST_ROOT is a test seam (mirrors AMADEUS_STAGES_DIR /
+ *  AMADEUS_SENSORS_DIR), evaluated at call time so a test can point plugin
+ *  discovery at a temp tree while the core walk still reads the real stages. */
+function pluginsHostRoot(): string {
+  return process.env.AMADEUS_PLUGINS_HOST_ROOT ?? dirname(dirname(stagesDir()));
+}
+
 /** Regenerate stage-graph.json from the 31 YAML stage files.
  *  Bootstraps absent number + name from the existing JSON while preserving
  *  optional authored plugin metadata. Asserts the
@@ -1682,6 +1914,10 @@ export function compileStageGraph(): {
   const stages: GraphStage[] = [];
   // Track slug-to-first-file so duplicate-slug errors name both files.
   const slugToFile = new Map<string, string>();
+  // Plugin-contributed slug -> its POSIX host-relative path, so an unknown
+  // sensor on a plugin stage maps to the plugin-stage error schema (below),
+  // not the generic core "unknown sensor id" throw.
+  const pluginSlugToPath = new Map<string, string>();
 
   // Known agent slugs (the `name:` field of each .claude/agents/*.md), passed
   // to validateStageFrontmatter so a stage referencing a lead_agent or
@@ -1760,6 +1996,55 @@ export function compileStageGraph(): {
     }
   }
 
+  // Join composed plugin stages (U2 plugin-skeleton). Discovered after the core
+  // walk and merged with the SAME duplicate-slug guard, auto-seed, and
+  // buildGraphStage path, so a plugin stage is indistinguishable from a core
+  // stage once on the graph (BR-U2-1 generic). Zero plugins -> zero iterations
+  // -> the emitted JSON is byte-identical to the pre-extension baseline
+  // (BR-U2-3). Iteration order is the path-sorted discovery order (deterministic).
+  const pluginHost = pluginsHostRoot();
+  for (const { file, data } of readPluginStageFiles(pluginHost)) {
+    const slug = data.slug;
+    // Collision against a core stage OR an earlier plugin stage -> loud reject
+    // with both paths (BR-U2-2). Emitted as the plugin-stage error schema.
+    const previousFile = slugToFile.get(slug);
+    if (previousFile) {
+      throw new PluginStageError({
+        code: "SLUG_COLLISION",
+        plugin: file.path.split("/")[1] ?? file.path,
+        slug,
+        existingPath: hostRel(pluginHost, previousFile),
+        pluginPath: file.path,
+      });
+    }
+    slugToFile.set(slug, join(pluginHost, file.path));
+    pluginSlugToPath.set(slug, file.path);
+
+    // Plugin stages declare `phase:` in frontmatter; the numeric spine seeds
+    // from that phase exactly like a new core stage.
+    const phase = data.phase;
+    let number = data.number ?? numberBySlug.get(slug);
+    let name = data.name ?? nameBySlug.get(slug);
+    if (!number || !name) {
+      const prefix = PHASES.indexOf(phase as Phase);
+      if (prefix < 0) {
+        throw new PluginStageError({
+          code: "SCHEMA_INVALID",
+          plugin: file.path.split("/")[1] ?? file.path,
+          slug,
+          pluginPath: file.path,
+          field: "phase",
+          reason: `unknown phase "${phase}" — must be one of: ${PHASES.join(", ")}`,
+        });
+      }
+      const nextIndex = (maxIndexByPhasePrefix.get(prefix) ?? 0) + 1;
+      maxIndexByPhasePrefix.set(prefix, nextIndex);
+      number = number ?? `${prefix}.${nextIndex}`;
+      name = name ?? titleCaseSlug(slug);
+    }
+    stages.push(buildGraphStage(data, phase, number, name));
+  }
+
   // Sort by numeric order (phase-prefix.index).
   stages.sort((a, b) => numericStageOrder(a.number, b.number));
 
@@ -1781,6 +2066,25 @@ export function compileStageGraph(): {
   // is copied verbatim into the resolved entry. Unknown ids throw —
   // authoring errors fail loud at compile, not at fire time.
   const sensorsById = loadSensors();
+  // Plugin stages that reference an unknown sensor id map to the plugin-stage
+  // error schema (UNKNOWN_SENSOR) rather than the generic core throw below.
+  // Checked here, before the generic resolution, so a plugin authoring error
+  // fails loud with the plugin path + sensor id (BR-U2-6 / reliability-design).
+  for (const stage of stages) {
+    const pluginPath = pluginSlugToPath.get(stage.slug);
+    if (pluginPath === undefined) continue;
+    for (const sensorId of stage.sensors ?? []) {
+      if (!sensorsById.has(sensorId)) {
+        throw new PluginStageError({
+          code: "UNKNOWN_SENSOR",
+          plugin: pluginPath.split("/")[1] ?? pluginPath,
+          slug: stage.slug,
+          pluginPath,
+          sensorId,
+        });
+      }
+    }
+  }
   for (const stage of stages) {
     stage.sensors_applicable = resolveSensorsForStage(stage, sensorsById);
   }
@@ -2249,7 +2553,15 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
   try {
     await handler(args);
   } catch (err) {
-    console.error(`amadeus-graph ${cmd}: ${errorMessage(err)}`);
+    // Plugin-stage failures carry the discriminated payload; emit the single
+    // line of `amadeus.plugin-stage-error.v1` JSON verbatim (reliability-design)
+    // instead of the generic prefixed message, then exit 1 like every other
+    // compile error.
+    if (err instanceof PluginStageError) {
+      console.error(err.jsonLine());
+    } else {
+      console.error(`amadeus-graph ${cmd}: ${errorMessage(err)}`);
+    }
     process.exit(1);
   }
 }

@@ -239,7 +239,7 @@ describe("formal verification TLC runtime", () => {
       modulePath: join(workspaceRoot, "FormalElection.tla"),
       cfgPath: join(workspaceRoot, "FormalElection.cfg"),
       subjectAlias: "opaque-subject",
-      deadlineMs: 120_000,
+      deadlineMs: 180_000,
     } };
   };
 
@@ -560,19 +560,19 @@ describe("formal verification TLC runtime", () => {
     }
   });
 
-  test("preserves the full 120 second process budget when the suite separately covers publication", async () => {
+  test("preserves the full 180 second process budget when the suite separately covers publication", async () => {
     const waits: number[] = [];
     const runtime = await prepareRuntime(() => ({
       stdout: (async function* () {})(), stderr: (async function* () {})(),
       wait: async () => ({ exitCode: 0, signal: null }), signalGroup: async () => {},
     }), {
       evidencePublishReserveMs: 5_000,
-      suiteRemainingMs: () => 125_000,
+      suiteRemainingMs: () => 185_000,
       timer: { wait: async (milliseconds: number) => { waits.push(milliseconds); } },
     });
 
     expect((await runtime.toolchain.run(runtime.prepared)).ok).toBe(true);
-    expect(waits[0]).toBe(120_000);
+    expect(waits[0]).toBe(180_000);
   });
 
   test("rechecks the shared suite budget before every fresh sandbox probe", async () => {

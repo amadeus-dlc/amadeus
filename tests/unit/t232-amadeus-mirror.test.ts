@@ -76,6 +76,13 @@ describe("t232 core tools project-root resolution (FR-1 platform parity)", () =>
       projectDirFromToolsDir("C:\\repo\\packages\\framework\\core\\tools", win32.join),
     ).toBe("C:\\repo");
   });
+
+  test("derives the repository root from an emitted harness tools directory", () => {
+    expect(projectDirFromToolsDir("/repo/.codex/tools", posix.join)).toBe("/repo");
+    expect(
+      projectDirFromToolsDir("C:\\repo\\.codex\\tools", win32.join),
+    ).toBe("C:\\repo");
+  });
 });
 
 describe("t232 status comparison (U1 FR-2)", () => {

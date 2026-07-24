@@ -29,7 +29,10 @@ export function projectDirFromToolsDir(
   toolsDir: string,
   joinPath: (...parts: string[]) => string = join,
 ): string {
-  return joinPath(toolsDir, "..", "..", "..", "..");
+  const normalized = toolsDir.replaceAll("\\", "/").replace(/\/+$/, "");
+  return normalized.endsWith("/packages/framework/core/tools")
+    ? joinPath(toolsDir, "..", "..", "..", "..")
+    : joinPath(toolsDir, "..", "..");
 }
 
 const PROJECT_DIR = projectDirFromToolsDir(TOOLS_DIR);

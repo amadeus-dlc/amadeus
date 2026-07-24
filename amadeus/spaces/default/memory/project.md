@@ -23,6 +23,7 @@
 - 対象変更の security regression と repository 全体の dependency audit を別判定にする。対象 tests が green でも既存 High advisory は隠さず conditional readiness とし、範囲外の依存更新は別作業へ送る (learned 2026-07-23) <!-- cid:build-and-test:c1-doctor-seam -->
 - Minimal戦略でも、対象がシェル関数・tmux・実FS境界である場合は、孤立mockの新規unit testより承認済みNFR経路を直接観測できる既存integration seamを要件駆動の最小検証集合として実行する。 (learned 2026-07-24) <!-- cid:build-and-test:wtfbt-c1 -->
 - 長い本番タイムアウトの性能要件は、同じ制御経路を通る短縮可能なタイミングシームとラウンド数検証で構成要素を決定的に確認できる場合、実時間待機よりその検証を優先する。 (learned 2026-07-24) <!-- cid:build-and-test:wtfbt-c3 -->
+- 既存 workflow へ新しいトリガーを追加する設計では、event 固有値の欠落を実行環境で再現し、既存ジョブのハード失敗と依存ジョブへの伝播を確認してから最小分岐を設計する (learned 2026-07-23) <!-- cid:functional-design:c1 -->
 ## Deployment
 
 デプロイ基盤は持たず、リリースは npm パッケージ配布と GitHub 上のタグ/PR 履歴で管理する。GitHub Actions は push と pull_request で typecheck、lint、dist/self-install drift guard、smoke+unit+integration tests を実行する。
@@ -171,6 +172,11 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - process-global 依存の除去は公開関数だけでなく配下 helper の call tree 全体を対象にする。resolver 後に env・platform・時刻を変えても同じ context の結果が不変であることを検証する (learned 2026-07-23) <!-- cid:code-generation:c1-doctor-seam -->
 - requirements 未解決事項(WATCHER_RESEND_MAX を 2→1 にするか vs ループ構造撤去)は「既定値のみ 2→1、ループ構造は保持」を選択する。NFR-2(90秒接地)と NFR-1b(再送1回での回復力)を満たしつつ env タイミングシームを保つため。 (learned 2026-07-24) <!-- cid:code-generation:wtfcg-c1 -->
 - 純単発(1ラウンド=90秒)でなく1回再送(2ラウンド=180秒)を採用する。worst-case 短縮と #1384 回復力保持のトレードオフで、選挙 E-WTFRA1=C の複数留保(e3/e5/e2)が支持した中庸。 (learned 2026-07-24) <!-- cid:code-generation:wtfcg-c5 -->
+- 専門技法(TLA+等の形式手法)を題材にする intent の質問対話では、判断質問より先に「技法と題材の関係」の背景説明で共有理解を作ってから決定を諮る — 260722-tla-plugin intent-capture Q5 で明確化対話2回(運用モード非依存性・選挙=実験題材)を要した実測より (learned 2026-07-22) (learned 2026-07-22) <!-- cid:intent-capture:c3 -->
+- 実験・PoC 構成を常設化する intent の feasibility では、実験時の環境制約(ランナーOS・隔離機構等)を「実験の都合」か「本質的要件」かに分類してから引き継ぐ — 惰性引き継ぎは要件の過大評価を生む。260722-tla-plugin で sandbox-exec(ローカル隔離手段)を CI 要件と誤提示し、ユーザー却下(GitHub ランナー自体が隔離環境、CI は Linux + Docker digest固定)で是正した実測より (learned 2026-07-22) (learned 2026-07-22) <!-- cid:feasibility:c5-experiment-constraint-classify -->
+- practices-discovery で「変更なし」の場合、discovered-rules.md の ## Mandated / ## Forbidden は完全な空セクションにする — 注記行(「追加なし」等)は practices-promote の書式契約(ALWAYS/NEVER 前置必須)に fail-closed 拒否される。注記は別セクションへ置く(260722-tla-plugin で拒否→是正の実測) (learned 2026-07-22) (learned 2026-07-22) <!-- cid:practices-discovery:c3-empty-rules-format -->
+- plugin ステージが frontmatter で sensors: を宣言する場合、その sensor manifest の実在は graph compile の build-order 依存になる — compile は未知 sensor id を loud reject するため、Unit/Bolt 編成では sensor 実装 Unit を plugin ステージ Unit の前提依存に含める(260722-tla-plugin units-generation で reviewer が C8→C6 参照の宣言的見かけに隠れた真の依存を捕捉、エッジ追加是正の実測) (learned 2026-07-22) (learned 2026-07-22) <!-- cid:units-generation:plugin-sensor-decl-compile-dependency -->
+- process-global な環境検証を抽象化するときは、prepare 時の snapshot と実行直前の再検証を分離し、TOCTOU 防止の呼出し位置を維持する (learned 2026-07-23) <!-- cid:functional-design:c2 -->
 ## Testing
 - Standardの中核はunit/integrationとし、performance/securityは承認済みNFRと実在境界へtraceして選定する。戦略名だけで検査を機械追加しない。既決strategy再述に留めず、stage定義の曖昧さは別途追跡する。 (learned 2026-07-12) <!-- cid:build-and-test:c1 -->
 - 攻撃面・依存・承認NFRを成果物で実測明記した場合のみ検査を比例選定する。既存必須scanや要求済み検査の省略根拠にはしない。 (learned 2026-07-12) <!-- cid:build-and-test:c3 -->
@@ -195,3 +201,9 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - blind比較実験は、sealed fixture → 第1 arm の仕様freeze → 第1 armへの限定開示 → walking skeleton成功確認 → 第2 armのblind仕様freeze → 両arm freeze後のmanifest公開、を単一のfail-closed state machineとして管理する。前段が未成立のまま後段へ進めず、後続armへ先行armの証拠を漏らさない。票: E-FVEADS13R 配信 2026-07-20T08:26:03Z(view生成時刻) → e1 採用 08:26:39Z(受理 08:26:56Z) → e2 採用 08:26:49Z(受理 08:27:13Z) → e3 採用 08:27:21Z(受理 08:27:54Z) → 開票 08:28:32Z。GoA[E-FVEADS13R]: 1x3 2x0 3x0 4x0 5x0 6x0 7x0 8x0 (learned 2026-07-20) <!-- cid:application-design:blind-experiment-freeze-reveal-state-machine -->
 - TLC等の有限探索でNOT_DETECTEDを主張できるのは、宣言済み有限domainの固定点まで完走したcompletion markerとstate統計が揃う場合だけとする。部分探索・timeout・統計欠損は検出成功/不検出へ丸めずHARNESS_ERRORとしてfail-closedに扱う。票: E-FVEADS13R 配信 2026-07-20T08:26:03Z(view生成時刻) → e1 採用 08:26:39Z(受理 08:26:56Z) → e2 採用 08:26:49Z(受理 08:27:13Z) → e3 採用 08:27:21Z(受理 08:27:54Z) → 開票 08:28:32Z。GoA[E-FVEADS13R]: 1x3 2x0 3x0 4x0 5x0 6x0 7x0 8x0 (learned 2026-07-20) <!-- cid:application-design:finite-exploration-not-detected-proof -->
 - blind比較実験の役割分離は名称だけで成立扱いにせず、各armのauthor identity・session・worktree・base SHA・Coordinatorが固定した公開input allowlist/hash・clean receipt・freeze SHAを記録する。後続armのprompt/context/pathの禁止入力0件は自己申告でなくsession/worktreeの実入力manifestと禁止path scan receiptを一次証拠とし、先行arm evidence・他arm path・sealed fixtureが0件であることを機械確認する。integrationは全arm freeze後だけ開始する。本則はarm間の情報隔離自体が実験妥当性の成立条件となるblind比較実験に限定し、通常の並行Unit作業へ一律適用しない。票: E-FVEDPS13 e1 2026-07-20T09:29:36Z(受理09:29:51Z) → e2 09:30:12Z(受理09:30:27Z) → e3 09:30:21Z(受理09:30:34Z) → 開票09:31:53Z。GoA[E-FVEDPS13]: 1x2 2x1 3x0 4x0 5x0 6x0 7x0 8x0。 (learned 2026-07-20) <!-- cid:delivery-planning:e-fvedps13-c4 -->
+
+## Architecture
+- CLIやlibraryのNFR設計では、常駐service向けのcache、horizontal scaling、circuit breakerを機械的に適用せず、決定的なfile境界とfail-closed契約へ置き換える (learned 2026-07-23) <!-- cid:nfr-design:c1 -->
+
+## Reliability
+- Git管理資産では埋め込みfallbackを二重保持せず、Git履歴からの復元、単一ソース、drift検出を優先する (learned 2026-07-23) <!-- cid:nfr-design:c3 -->

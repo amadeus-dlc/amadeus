@@ -25,6 +25,44 @@ export * from "./provenance.ts";
 export * from "./receipt.ts";
 export * from "./repository-path-policy.ts";
 export {
+  buildEnvReceipt,
+  buildNotRunEnvReceipt,
+  failedInspection,
+  modelCheckExitCode,
+  notApplicableInspection,
+  parseRunModelCheckArgs,
+  passedInspection,
+  toModelCheckOutcome,
+} from "./run-model-check-domain.ts";
+export type {
+  CliError,
+  DockerPlannerConfig,
+  EnvInspection,
+  EnvInspectionId,
+  EnvInspectionPlan,
+  EnvReceipt,
+  EnvSnapshot,
+  EnvVerifyContext,
+  ModelCheckOutcome,
+  ModelCheckProvider,
+  RunModelCheckInput,
+  TlcSpawnPlanner,
+} from "./run-model-check-domain.ts";
+export { runModelCheck } from "./run-model-check.ts";
+export type {
+  PlannedModelCheckToolchain,
+  RunModelCheckDependencies,
+  RunModelCheckResult,
+} from "./run-model-check.ts";
+export {
+  DARWIN_INSPECTION_PLAN,
+  DOCKER_INSPECTION_PLAN,
+  FIXED_DOCKER_IMAGE,
+  createDockerPlannerConfig,
+  createNotRunPlannerReceipt,
+  selectTlcSpawnPlanner,
+} from "./tlc-spawn-planner.ts";
+export {
   createFrozenTlaModelReceipt,
   generateFrozenTlaModel,
 } from "./tla-arm.ts";
