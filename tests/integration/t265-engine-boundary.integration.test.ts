@@ -119,9 +119,12 @@ function seedBoundary(
   }
   writeFileSync(seededStateFile(project), state);
   if (options.auto !== undefined) {
+    // auto-mirror is now a three-mode string (off|prompt|auto), not a boolean.
+    // The engine bridge maps only "auto" to the auto-sync path; every other
+    // mode falls through to "ask" (same as the legacy boolean-false path).
     writeFileSync(
       join(project, "amadeus", "config.json"),
-      JSON.stringify({ "auto-mirror": options.auto }),
+      JSON.stringify({ "auto-mirror": options.auto ? "auto" : "prompt" }),
     );
   }
 }
