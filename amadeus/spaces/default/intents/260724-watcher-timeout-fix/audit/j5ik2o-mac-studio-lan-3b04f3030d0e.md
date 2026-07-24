@@ -333,3 +333,21 @@
 **Message**: 進捗まとめて
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:11:56Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a8aa930a6e28943ae
+**Message**: このまま進めて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:12:51Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a995128f956483827
+**Message**: 進捗が入り次第承認して
+
+---
