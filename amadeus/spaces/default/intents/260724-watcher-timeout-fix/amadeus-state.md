@@ -31,6 +31,8 @@
 ## Runtime State
 - **Revision Count**: 1
 
+- **Mirror Boundary Receipts**: {"inception":"completed"}
+- **Skeleton Stance**: scope-dependent
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 

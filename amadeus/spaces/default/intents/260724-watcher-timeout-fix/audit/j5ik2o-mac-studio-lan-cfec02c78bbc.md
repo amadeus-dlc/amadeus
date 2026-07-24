@@ -1654,3 +1654,20 @@
 **Agent**: amadeus-developer-agent
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T14:08:22Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a3ea78a6111b47ed6
+**Message**: Issue #1449(team-up.sh起動遅延)の修正を進行中。RA承認済みでcode-generation段階に入りました。stateのProjectフィールドには既に#1449参照が含まれており、workspace_requires guard経路(c)は充足済みです。\n\n次は fix-1449-watcher-timeout ユニットで実装(RESEND_MAX 2→1は適用済み、残り
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T14:28:20Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a601201c16801a460
+
+---
