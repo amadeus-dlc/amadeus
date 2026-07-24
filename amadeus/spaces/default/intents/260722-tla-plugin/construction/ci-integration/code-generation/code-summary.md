@@ -4,7 +4,7 @@
 
 U4 のローカル実装と検証を完了した。通常の push / pull request 経路を変更せず、手動 dispatch 専用の独立した `formal-model-check` job を既存 CI に統合した。旧 `.github/workflows/formal-verification.yml` は削除し、formal verification の実行入口を `.github/workflows/ci.yml` に一本化した。
 
-実 GitHub Actions の dispatch は外部状態を変更するため実行していない。計画 Step 15 は未完了のまま維持している。
+実 GitHub Actions の dispatch と失敗回復を実施した。診断実行 `30071213275` では固定digest Dockerによる完全探索が168,319.3693 msで完走し、5,203,730 generated states、529,692 distinct states、探索深度9、queue 0、`NOT_DETECTED`、container残留0を記録した。一方、BR-U4-7のspawn 120秒未満は未達であるため、計画 Step 15 は未完了のまま維持している。
 
 ## 主な変更
 
@@ -34,16 +34,24 @@ U4 のローカル実装と検証を完了した。通常の push / pull request
 - `git diff --check`: PASS。
 - workflow YAML parse と全 `run:` block の Bash 構文: PASS。
 
-ローカル検証では Docker daemon を起動せず、実 container も実行していない。Docker 境界は注入可能な command port と fake executable による deterministic test で検証し、実 Docker の一次証拠は Step 15 の GitHub Actions dispatch で取得する。
+ローカル検証では Docker daemon を起動していない。Docker 境界は注入可能な command port と fake executable による deterministic test で検証し、実 Docker の一次証拠は GitHub Actions artifact として回収した。
+
+## 実環境診断
+
+- Run: `https://github.com/amadeus-dlc/amadeus/actions/runs/30071213275`
+- Commit: `d60c99ac325cdc65dbda9ad7c5dda109e50fe12a`
+- Profile: `non-acceptance-diagnostic`、1回、300,000 ms上限、固定image/JAR/JVM/TLC argv、1 worker。
+- 結果: `NOT_DETECTED`、Docker/TLC 168,319.3693 ms、TLC内部159,592 ms、5,203,730 generated states、529,692 distinct states、探索深度9、queue 0。
+- Cleanup: exact container名を検査し、残留0、forced cleanupなし。
+- 判定: CLI 180秒未満の成立可能性は確認したが、spawn 120秒未満は未達。診断は1+5回受入の代替ではなく、U4は未完了。
 
 ## 未完了事項と設計上の注意
 
-1. 計画 Step 15 の実 `workflow_dispatch`、artifact 回収、実 container の 1 warm-up + 5 measured 受入は未実行である。
+1. 計画 Step 15 の1 warm-up + 5 measured受入は完走していない。実 `workflow_dispatch` とartifact回収は実施済みだが、spawn 120秒未満を満たさない。
 2. Iteration 1で指摘された空stderr契約の衝突は解消済みである。ファイル実在、manifestのbytes / SHA-256一致、16 MiB上限を維持したまま、`tlc-stderr.bin`だけ0 byteを許容する。
-3. commit、push、rebase、GitHub workflow dispatch は行っていない。
+3. 診断commit `d60c99ac3` はpush済みで、GitHub workflow dispatch `30071213275` のartifactを回収済みである。
 
 ## 次の選択肢
 
-1. **推奨: ユーザー承認後に Step 15 を実行する。** 対象 ref を確定し、1 回だけ dispatch して artifact と実 Docker の一次証拠を検証する。
-2. Step 15 を保留し、U4 を「ローカル実装完了・実環境受入待ち」として引き渡す。
-3. Step 15を保留したまま、修正済みU4を再レビューする。
+1. **推奨: BR-U4-7のspawn閾値を実測に基づいて再裁定する。** 180秒へ改訂するか、120秒を維持してモデルを最適化するかを決定する。
+2. Step 15 を保留し、U4 を「実環境性能要件未達」として引き渡す。

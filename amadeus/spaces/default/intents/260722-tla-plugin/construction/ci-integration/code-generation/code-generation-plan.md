@@ -111,6 +111,7 @@
     - GitHub上で`changes`がdispatch用skipへ正常収束し、既存bandが赤にならず、formal jobだけが実行され、workflow全体がsuccessであることを確認する。
     - artifactを取得して、warm-up 1回+計測5回、全回exit 0/NOT_DETECTED、spawn/CLI閾値、manifest/EnvReceipt/digest、network/mount、container cleanup、run ID/attemptをローカルの独立verifierでも再照合する。
     - 実container証跡が全条件を満たした場合だけU3 Step 11とU4を完了候補とする。deterministic planner/falling proof、job起動のみ、artifact欠落runを完了根拠にしない。
+    - 診断実行 `30071213275`（commit `d60c99ac325cdc65dbda9ad7c5dda109e50fe12a`）では、受入とは分離した300秒上限の1回測定が `NOT_DETECTED` で完走した。Docker/TLC実行は168,319.3693 ms、TLC内部報告は159,592 ms、5,203,730 generated states、529,692 distinct states、探索深度9、queue 0、container残留0だった。したがってCLI 180秒未満は実現可能だが、spawn 120秒未満は現モデル・1 workerの完全探索では未達であり、BR-U4-7は未充足のままとする。
     - トレーサビリティ: FR-5.1〜FR-5.4、BR-U4-7、U3 Step 11、Performance Design、Reliability Design。
 
 ## 完了判定
