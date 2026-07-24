@@ -53,8 +53,10 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 
 <!-- このプロジェクト用のカスタムスコープルール。 -->
 
-- DECIDED: この repo の amadeus ワークフローで intent を開始・再開するときの利用スコープは `amadeus`(Self-hosted Amadeus framework development without infrastructure operations)を既定とする。別スコープ(bugfix 等)を使う場合はユーザーの明示指示による (user decision 2026-07-16、intent 260709-canonical-settings の feature→amadeus 切替指示より) <!-- cid:scope-definition:default-scope-amadeus -->
-- DECIDED: bug ラベルの Issue を修正する intent は `bugfix` スコープを既定とする(default-scope-amadeus の明文化された例外 — ユーザーの standing 指示)。クロスレビュー2名成立が起動の前提(issue-cross-review)。bugfix 以外(例: 修正が新機能設計を要する場合の amadeus)へ切り替える場合はユーザーの明示指示による (user decision 2026-07-16、260715-parser-checkbox-fixes の bugfix 明示承認→standing 化) <!-- cid:scope-definition:bugfix-scope-for-bug-intents -->
+- DECIDED: この repo で Amadeus 自体の新機能や仕様変更を扱う intent には、`amadeus-feature` スコープを明示して開始する。既存 intent の再開では、state に記録されたスコープを引き続き使用する (user decision 2026-07-24。2026-07-16 の `amadeus` 既定を変更種別別スコープへ更新) <!-- cid:scope-definition:default-scope-amadeus -->
+- DECIDED: bug ラベルの Issue を修正する intent は、`amadeus-bugfix` スコープを既定とする。クロスレビュー2名成立を起動の前提とする(issue-cross-review)。修正に新機能や仕様の設計が必要な場合は、ユーザーの明示指示を得て `amadeus-feature` へ切り替える (user decision 2026-07-24。2026-07-16 の汎用 `bugfix` 既定を更新) <!-- cid:scope-definition:bugfix-scope-for-bug-intents -->
+- DECIDED: 外部から観測できる振る舞いを変えず、Amadeus の内部構造を改善する intent には、`amadeus-refactor` スコープを明示して開始する。仕様変更を伴う場合は `amadeus-feature`、不具合の修正が主目的なら `amadeus-bugfix` を使用する (user decision 2026-07-24) <!-- cid:scope-definition:refactor-scope-for-refactor-intents -->
+- DECIDED: 互換スコープ `amadeus` は、そのスコープが state に記録されている既存 intent の再開に限って使用する。新規 intent には使用しない (user decision 2026-07-24) <!-- cid:scope-definition:legacy-amadeus-resume-only -->
 
 ## Forbidden
 

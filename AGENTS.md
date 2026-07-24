@@ -14,6 +14,10 @@ Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-s
 - Write code comments in English.
 - Write commit messages in English.
 - If you find violations of these language rules while working, fix them as part of the same change.
+- For Amadeus self-development, explicitly select `amadeus-feature`,
+  `amadeus-bugfix`, or `amadeus-refactor` based on the change type. Use the
+  legacy `amadeus` scope only when resuming an existing intent. The canonical
+  policy is `amadeus/spaces/default/memory/project.md` § Scope Overrides.
 
 ## 1. Think Before Coding
 
