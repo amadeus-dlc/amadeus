@@ -369,3 +369,21 @@
 **Message**: このまま自動承認続けて
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:16:01Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a5e91518d571a0fbe
+**Message**: approval-handoffのgate openしたら教えて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:17:21Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a84cbab811962bd4b
+**Message**: 進捗を待つ
+
+---
