@@ -283,3 +283,59 @@
 **Message**: team-up.sh起動遅延バグ(Issue #1449)の調査後、RE段階完了で修正着手中。§13学習裁定の成立をleaderから待っており、承認が来たらrequirements-analysisへ進みます。
 
 ---
+
+## Error Logged
+**Timestamp**: 2026-07-24T10:06:19Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: --resume
+**Error**: Unknown subcommand: --resume. Valid: next, report, park
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-24T10:06:22Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-24T10:06:22Z
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-24T10:06:33Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --stage reverse-engineering --result ready
+**Error**: Unknown --result "ready". report commits forward transitions only; accepted outcomes: approved, completed, complete, done.
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-24T10:06:36Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: reverse-engineering
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-24T10:06:36Z
+**Event**: GATE_APPROVED
+**Stage**: reverse-engineering
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-24T10:06:36Z
+**Event**: STAGE_COMPLETED
+**Stage**: reverse-engineering
+**Details**: Stage Reverse Engineering approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-24T10:06:36Z
+**Event**: STAGE_STARTED
+**Stage**: requirements-analysis
+**Agent**: amadeus-product-agent
+
+---
