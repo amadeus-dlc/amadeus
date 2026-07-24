@@ -11,5 +11,6 @@
 <!-- example: 2026-05-29T10:14:32Z — picked TDD over BDD this run; the team is unit-first and the domain is well-understood -->
 
 ## Open questions
+- 2026-07-24T12:14:41Z — 選挙E-HPFR3(choice B、3-2、留保5件全てGoA2)によりFR-3のscope境界疑義を解消。留保(e4/e1/e3)を反映しFR-3文言を「非決定的な補助シグナル」へ是正、AC-3d(design申し送り)を追加。Q2にも是正注記を追加しrequirements.mdとの不整合を解消。reviewer再起動はreviewer_max_iterations(2)到達のため行わず、選挙裁定を人間判断としてゲートへ進める
 - 2026-07-24T12:00:03Z — reviewer 2 iteration とも NOT-READY。残存2件のMajor(Q2との不整合、FR-3のscope境界疑義)は iterations exhausted のため未解決のままゲートへ提示し、leader/ユーザーの裁定を仰ぐ
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
