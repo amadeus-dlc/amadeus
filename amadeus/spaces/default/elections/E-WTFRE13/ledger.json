@@ -1,0 +1,49 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-WTFRE13",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可(提案通り)。s13-candidates.mdの2候補を実測確認。symmetric-pair-review/implementation-deviation-election/always-electの3 cidはteam.mdに実在し記述内容も候補の説明と整合。新規cid化するほどの未カバー領域なし。留保なし。",
+      "submittedAt": "2026-07-24T10:08:02Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-WTFRE13",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "s13-candidates.md の2案を実測確認。symmetric-pair-review(対称性の設計・レビュー観点)、implementation-deviation-election/always-elect(逸脱時の選挙裁定手続き)いずれもteam.mdに実在し記載内容と一致。今回の2案は既存cidの適用範囲内であり、新規cid化の根拠(実例1件のみ)も薄いため0件提案に賛成。",
+      "submittedAt": "2026-07-24T10:08:13Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-WTFRE13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "s13-candidates.md 記載の不採用理由を実測確認。symmetric-pair-review・implementation-deviation-election・always-elect の各cidがteam.mdに実在し、記述内容も候補パターンをカバーしていることを直接照合した。0件提案は妥当と判断。",
+      "submittedAt": "2026-07-24T10:10:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-WTFRE13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "対称実装パターン(agmsg spawn.sh単発待ち vs team-up.shの再送x3ループ)をsymmetric-pair-reviewで既カバーとする点はやや拡大解釈だが、対操作の非対称レビューという趣旨には沿うと判断し0件に同意する。",
+      "rationale": null,
+      "submittedAt": "2026-07-24T10:08:59Z"
+    }
+  ],
+  "late": []
+}

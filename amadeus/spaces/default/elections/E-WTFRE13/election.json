@@ -1,0 +1,23 @@
+{
+  "electionId": "E-WTFRE13",
+  "kind": "s13-zero-confirm",
+  "question": "260724-watcher-timeout-fix / reverse-engineering §13: 提案は0件。候補ファイル(amadeus/spaces/default/intents/260724-watcher-timeout-fix/inception/reverse-engineering/s13-candidates.md)にある検討済み2案(対称実装パターン、設計時リスク先送りの良実践)はいずれも既存cid(symmetric-pair-review、implementation-deviation-election、always-elect)で既にカバー済みとの理由で不採用提案。各自 s13-candidates.md と関連cidを実測確認のうえ投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可(提案通り)"
+    },
+    {
+      "internalNo": 2,
+      "label": "追加候補の検討が必要(noteに理由を明記)"
+    }
+  ],
+  "voters": [
+    "e2",
+    "e3",
+    "e4",
+    "e5",
+    "e6"
+  ],
+  "state": "collecting"
+}
