@@ -810,3 +810,117 @@
 **Message**: 全メンバーの進捗を待機
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:35:33Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ad783f654b19c384a
+**Message**: 全員の進捗まとめて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:35:56Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aa7da622be7217c3f
+**Message**: 進捗まとめて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:37:18Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: af0f5a35460973058
+**Message**: 進捗を教えて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:41:24Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a42e7a7d15c9e4864
+**Message**: 開票して裁定を返して
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:41:48Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ab196b0c589e2aab3
+**Message**: No suggestion.
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:43:09Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aa210ac40390a63ab
+**Message**: Stay silent — the elections are in progress and the next step (waiting for votes) is already underway automatically; there's no obvious action for the user to type.
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:43:13Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a4bfb4fded1973dcd
+**Message**: E-MAMB1の票が揃ったら開票して
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:43:54Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a523144dd715e674c
+**Message**: 過半数に達したら早期開票して
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:46:19Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: abf75068ce116b63e
+**Message**: 進めて。承認する。
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-24T12:47:08Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:47:10Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a799aaafb609e4fe3
+**Message**: §13選挙開いてconstruction進入も承認
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:47:28Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a1fa6efb5421b9eef
+**Message**: §13選挙を開いて、e1のconstruction進入を承認
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:48:28Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a6a0a0bc33dfc7b80
+**Message**: §13選挙を開いてconstruction進入を承認する
+
+---
