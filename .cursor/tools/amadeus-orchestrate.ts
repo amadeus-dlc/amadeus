@@ -133,7 +133,7 @@ import {
   selectNextUnitForStage,
   subgraphForScope,
 } from "./amadeus-graph.ts";
-import { resolve as resolveMirrorConfig } from "./amadeus-mirror-config.ts";
+import { resolveMirrorConfig } from "./amadeus-mirror-config.ts";
 import {
   MIRROR_BOUNDARY_PHASES,
   type MirrorBoundaryPhase,
@@ -237,10 +237,21 @@ function emitMirrorBoundaryIfNeeded(
     emit(errorDirective("Mirror boundary cannot resolve the active intent."));
     return true;
   }
-  const resolved = resolveMirrorConfig(projectDir, space, intent);
+  // Minimal typecheck bridge to the new three-mode C1 contract (Issue #1454).
+  // The new resolveMirrorConfig owns space/intent selection internally, so the
+  // already-resolved intent is passed as the explicit intent dir. Only
+  // `auto` maps to the legacy boolean auto-sync path here; `off`/`prompt`
+  // both fall through to `ask`. Real off-suppression and prompt confirmation
+  // are the mirror-operation-lifecycle unit's responsibility, which replaces
+  // this bridge and decideMirrorBoundary with the three-mode policy.
+  const resolved = resolveMirrorConfig(projectDir, intent);
   if (resolved.kind === "invalid") {
-    const details = resolved.errors
-      .map((item) => `${item.layer}: ${item.errors.join("; ")}`)
+    const details = resolved.issues
+      .map((issue) =>
+        issue.kind === "read-failure"
+          ? `${issue.layer} (${issue.path}): ${issue.summary}`
+          : `${issue.layer} (${issue.path}): expected ${issue.expected}, got ${issue.actualType}`,
+      )
       .join(" | ");
     emit(errorDirective(`Invalid mirror configuration: ${details}`));
     return true;
@@ -248,7 +259,7 @@ function emitMirrorBoundaryIfNeeded(
   const hasMirrorIssue =
     (getField(stateContent, "Mirror Issue") ?? "").trim().length > 0;
   const decision = decideMirrorBoundary(
-    resolved.config.autoMirror,
+    resolved.config.autoMirror === "auto",
     hasMirrorIssue,
   );
   if (decision.kind === "auto-sync") {

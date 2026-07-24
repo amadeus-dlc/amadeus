@@ -1,24 +1,21 @@
-// t257 — real-filesystem mirror configuration resolution.
+// t257 — real-filesystem three-mode mirror configuration resolution.
+// covers: packages/framework/core/tools/amadeus-mirror-config.ts (readMirrorConfigLayers, resolveMirrorConfig)
 // size: medium
 
 import { afterEach, describe, expect, test } from "bun:test";
 import {
   mkdirSync,
   mkdtempSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import {
-  mirrorConfigPaths,
-  resolve,
-} from "../../packages/framework/core/tools/amadeus-mirror-config.ts";
+import { resolveMirrorConfig } from "../../packages/framework/core/tools/amadeus-mirror-config.ts";
 
-const SPACE = "default";
 const INTENT = "260719-mirror-productization";
 const roots: string[] = [];
 
@@ -32,9 +29,24 @@ function project(): string {
   return root;
 }
 
+function paths(root: string, space: string, intent: string) {
+  const base = join(root, "amadeus");
+  return {
+    global: join(base, "config.json"),
+    space: join(base, "spaces", space, "config.json"),
+    intent: join(base, "spaces", space, "intents", intent, "config.json"),
+  };
+}
+
 function writeConfig(path: string, value: unknown): void {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `${JSON.stringify(value)}\n`, "utf-8");
+}
+
+function setActiveSpace(root: string, space: string): void {
+  const base = join(root, "amadeus");
+  mkdirSync(base, { recursive: true });
+  writeFileSync(join(base, "active-space"), space, "utf-8");
 }
 
 function snapshot(root: string): string[] {
@@ -54,95 +66,106 @@ function snapshot(root: string): string[] {
 }
 
 describe("t257 resolve against real files", () => {
-  test("all three absent resolves to the deterministic off default", () => {
-    expect(resolve(project(), SPACE, INTENT)).toEqual({
+  test("all three absent resolves to the default prompt mode", () => {
+    expect(resolveMirrorConfig(project(), INTENT)).toEqual({
       kind: "resolved",
-      config: { autoMirror: false },
+      config: { autoMirror: "prompt" },
+      sources: [],
     });
   });
 
   test("intent wins over space and global", () => {
     const root = project();
-    const paths = mirrorConfigPaths(root, SPACE, INTENT);
-    writeConfig(paths.global, { "auto-mirror": false });
-    writeConfig(paths.space, { "auto-mirror": false });
-    writeConfig(paths.intent, { "auto-mirror": true });
-    expect(resolve(root, SPACE, INTENT)).toEqual({
-      kind: "resolved",
-      config: { autoMirror: true },
-    });
+    const p = paths(root, "default", INTENT);
+    writeConfig(p.global, { "auto-mirror": "off" });
+    writeConfig(p.space, { "auto-mirror": "off" });
+    writeConfig(p.intent, { "auto-mirror": "auto" });
+    const outcome = resolveMirrorConfig(root, INTENT);
+    expect(outcome.kind).toBe("resolved");
+    if (outcome.kind === "resolved") expect(outcome.config.autoMirror).toBe("auto");
   });
 
   test("space wins over global when intent is absent", () => {
     const root = project();
-    const paths = mirrorConfigPaths(root, SPACE, INTENT);
-    writeConfig(paths.global, { "auto-mirror": false });
-    writeConfig(paths.space, { "auto-mirror": true });
-    expect(resolve(root, SPACE, INTENT)).toEqual({
-      kind: "resolved",
-      config: { autoMirror: true },
-    });
+    const p = paths(root, "default", INTENT);
+    writeConfig(p.global, { "auto-mirror": "off" });
+    writeConfig(p.space, { "auto-mirror": "auto" });
+    const outcome = resolveMirrorConfig(root, INTENT);
+    expect(outcome.kind).toBe("resolved");
+    if (outcome.kind === "resolved") expect(outcome.config.autoMirror).toBe("auto");
   });
 
-  test.each(["global", "space", "intent"] as const)(
-    "an invalid %s layer fails the whole resolution",
-    (invalidLayer) => {
-      const root = project();
-      const paths = mirrorConfigPaths(root, SPACE, INTENT);
-      writeConfig(paths.global, { "auto-mirror": true });
-      writeConfig(paths.space, { "auto-mirror": true });
-      writeConfig(paths.intent, { "auto-mirror": true });
-      writeConfig(paths[invalidLayer], { unknown: true, "auto-mirror": "yes" });
-      const result = resolve(root, SPACE, INTENT);
-      expect(result.kind).toBe("invalid");
-      if (result.kind === "invalid") {
-        expect(result.errors).toHaveLength(1);
-        expect(result.errors[0]?.layer).toBe(invalidLayer);
-        expect(result.errors[0]?.errors).toHaveLength(2);
-      }
-    },
-  );
-
-  test("a dangling symlink is absent", () => {
+  test("an explicit intent directory is read", () => {
     const root = project();
-    const paths = mirrorConfigPaths(root, SPACE, INTENT);
-    mkdirSync(dirname(paths.global), { recursive: true });
-    symlinkSync(join(root, "does-not-exist.json"), paths.global);
-    expect(resolve(root, SPACE, INTENT)).toEqual({
-      kind: "resolved",
-      config: { autoMirror: false },
-    });
-  });
-
-  test("a directory at a config path is invalid rather than absent", () => {
-    const root = project();
-    const paths = mirrorConfigPaths(root, SPACE, INTENT);
-    mkdirSync(paths.space, { recursive: true });
-    const result = resolve(root, SPACE, INTENT);
-    expect(result.kind).toBe("invalid");
-    if (result.kind === "invalid") expect(result.errors[0]?.layer).toBe("space");
-  });
-
-  test("a regular file in a parent path produces a loud ENOTDIR-style invalid", () => {
-    const root = project();
-    const spaces = join(root, "amadeus", "spaces");
-    mkdirSync(dirname(spaces), { recursive: true });
-    writeFileSync(spaces, "not a directory", "utf-8");
-    const result = resolve(root, SPACE, INTENT);
-    expect(result.kind).toBe("invalid");
-    if (result.kind === "invalid") {
-      expect(result.errors.map((error) => error.layer)).toEqual(["space", "intent"]);
+    writeConfig(paths(root, "default", INTENT).intent, { "auto-mirror": "auto" });
+    const outcome = resolveMirrorConfig(root, INTENT);
+    expect(outcome.kind).toBe("resolved");
+    if (outcome.kind === "resolved") {
+      expect(outcome.config.autoMirror).toBe("auto");
+      expect(outcome.sources).toEqual([
+        join("amadeus", "spaces", "default", "intents", INTENT, "config.json"),
+      ]);
     }
   });
 
-  test("resolution is read-only", () => {
+  test("resolves within a non-default active space", () => {
     const root = project();
-    const paths = mirrorConfigPaths(root, SPACE, INTENT);
-    writeConfig(paths.global, { "auto-mirror": false });
-    writeConfig(paths.space, {});
-    writeConfig(paths.intent, { "auto-mirror": true });
+    setActiveSpace(root, "team");
+    writeConfig(paths(root, "team", INTENT).intent, { "auto-mirror": "auto" });
+    const outcome = resolveMirrorConfig(root, INTENT);
+    expect(outcome.kind).toBe("resolved");
+    if (outcome.kind === "resolved") expect(outcome.config.autoMirror).toBe("auto");
+  });
+
+  test("a single invalid layer fails the whole resolution", () => {
+    const root = project();
+    const p = paths(root, "default", INTENT);
+    writeConfig(p.global, { "auto-mirror": "auto" });
+    writeConfig(p.space, { "auto-mirror": "auto" });
+    writeConfig(p.intent, { "auto-mirror": true });
+    const outcome = resolveMirrorConfig(root, INTENT);
+    expect(outcome.kind).toBe("invalid");
+    if (outcome.kind === "invalid") {
+      expect(outcome.issues).toHaveLength(1);
+      const issue = outcome.issues[0];
+      expect(issue?.layer).toBe("intent");
+      expect(issue?.kind).toBe("invalid-value");
+      if (issue?.kind === "invalid-value") expect(issue.actualType).toBe("boolean");
+    }
+  });
+
+  test("a dangling symlink is treated as absent", () => {
+    const root = project();
+    const p = paths(root, "default", INTENT);
+    mkdirSync(dirname(p.global), { recursive: true });
+    symlinkSync(join(root, "amadeus", "does-not-exist.json"), p.global);
+    expect(resolveMirrorConfig(root, INTENT)).toEqual({
+      kind: "resolved",
+      config: { autoMirror: "prompt" },
+      sources: [],
+    });
+  });
+
+  test("a directory at a config path is a loud read failure, not absent", () => {
+    const root = project();
+    const p = paths(root, "default", INTENT);
+    mkdirSync(p.space, { recursive: true });
+    const outcome = resolveMirrorConfig(root, INTENT);
+    expect(outcome.kind).toBe("invalid");
+    if (outcome.kind === "invalid") {
+      expect(outcome.issues[0]?.layer).toBe("space");
+      expect(outcome.issues[0]?.kind).toBe("read-failure");
+    }
+  });
+
+  test("resolution never writes to the workspace", () => {
+    const root = project();
+    const p = paths(root, "default", INTENT);
+    writeConfig(p.global, { "auto-mirror": "off" });
+    writeConfig(p.space, {});
+    writeConfig(p.intent, { "auto-mirror": "auto" });
     const before = snapshot(root);
-    expect(resolve(root, SPACE, INTENT).kind).toBe("resolved");
+    expect(resolveMirrorConfig(root, INTENT).kind).toBe("resolved");
     expect(snapshot(root)).toEqual(before);
   });
 });
