@@ -152,3 +152,15 @@
 **User Input**: 常任グラント504d1102(scope=stage-gates)適用によるdelegate発行。refined-mockups 5成果物+reviewer READY iteration2+センサー全PASS確認済み(e5報告)。
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-24T12:49:25Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: application-design
+**Issuer Space**: default
+**Issuer Intent**: 260724-watcher-timeout-fix
+**Issuer Shard**: j5ik2o-mac-studio-lan-3b04f3030d0e.md
+**Issuer Human Ts**: 2026-07-24T12:47:08Z
+**User Input**: 常任グラント504d1102(scope=stage-gates)適用によるdelegate発行。application-design 5成果物+architecture-reviewer READY iteration2(2 Major是正)+センサー全PASS確認済み(e5報告)。
+
+---
