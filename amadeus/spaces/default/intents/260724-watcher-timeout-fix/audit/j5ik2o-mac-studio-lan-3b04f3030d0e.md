@@ -125,3 +125,54 @@
 **User Input**: ユーザー指示(常任グラントON)により発行
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T10:16:09Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a235337c68896326a
+**Message**: e2の投票状況を確認して
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T10:16:24Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a465223091b0c3e80
+**Message**: e2の投票を催促せず待つ
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T10:24:36Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a202f4a04f0e09fa4
+**Message**: e4のレビュー終わったか聞いて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T10:28:01Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a6dfd03da29037dc2
+**Message**: CI green確認できたらマージして
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T10:31:05Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a3e0bf51078b1fc3c
+**Message**: マージして
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-24T10:32:34Z
+**Event**: HUMAN_TURN
+
+---
