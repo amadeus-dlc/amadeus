@@ -4,8 +4,8 @@
 
 ## Budget
 
-- planner検証後のTLC spawn deadlineを180秒、CLI全体を180秒、CI jobを30分でfail-closedにする。証跡公開用の予約時間はspawn予算から控除する。
-- warm cache、固定FormalElection、2 vCPU/7GiB相当でwarm-up 1回後5回実行し、各回のspawn<180秒かつCLI<180秒を要求する。
+- planner検証後のTLC spawn deadlineを120秒、CLI全体を180秒、CI jobを30分でfail-closedにする。
+- warm cache、固定FormalElection、2 vCPU/7GiB相当でwarm-up 1回後5回実行し、各回のspawn<120秒かつCLI<180秒を要求する。
 
 ## Resource
 

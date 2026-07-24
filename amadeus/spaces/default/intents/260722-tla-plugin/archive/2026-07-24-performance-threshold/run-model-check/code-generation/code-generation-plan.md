@@ -44,7 +44,7 @@ U3 `run-model-check` を、単一モデルの TLC 完全探索を 1 コマンド
 4. [x] **`FsTlcToolchain` の spawn 境界を planner 委譲へ最小リファクタする**
    - `prepare` で選択済み planner の `snapshotEnvironment` を保存し、`run` の process spawn 直前に `verifyEnvironment` を呼び、検証済み manifest argv を `buildArgv` に渡す。
    - current artifact/source/std-module/capability 検証、SOURCE_DRIFT、TLC output parser、complete marker と state statistics の判定は共通経路に残す。provider 別 normalize や outcome 判定を追加しない。
-   - process 実行は argv 配列のみとし shell を使わない。spawn deadline は 180 秒、stdout/stderr は各 16 MiB 上限、timeout・overflow・signal・非期待 exit・reap 失敗を固定 `errorCode` の HARNESS_ERROR にする。
+   - process 実行は argv 配列のみとし shell を使わない。spawn deadline は 120 秒、stdout/stderr は各 16 MiB 上限、timeout・overflow・signal・非期待 exit・reap 失敗を固定 `errorCode` の HARNESS_ERROR にする。
    - 既存 caller には Darwin planner を既定注入して互換性を保ち、`run-skeleton-ci.ts` を変更せず既存 unit/integration/E2E test が通ることを先に確認する。
    - fake planner / fake process port による unit test で呼出し順序、prepare 後 drift、spawn 非実行、timeout kill/reap、stream overflow を検証する。
    - トレーサビリティ: FR-3.4、FR-3.5、FR-6.3、NFR-2、NFR-3、BR-U3-1〜BR-U3-6。
@@ -69,7 +69,7 @@ U3 `run-model-check` を、単一モデルの TLC 完全探索を 1 コマンド
 7. [x] **`run-model-check.ts` を薄い composition root として実装する**
    - CLI は parse → planner select/snapshot → U1 source load → toolchain acquire/verifyOffline/prepare/run/normalize → outcome adapt → publish → terminal stderr/exit の順を明示し、business rule を CLI ファイルへ重複実装しない。
    - `runModelCheck(input, dependencies)` の in-process seam と、`process.argv` / `process.exitCode` を扱う最小 adapter を分離する。production entrypoint では正規依存だけを組み立てる。
-   - CLI 全体に 180 秒の deadline を設け、toolchain の 180 秒 spawn deadline から証跡公開予約を控除し、超過時は child を kill/reap 後に HARNESS_ERROR を公開する。
+   - CLI 全体に 180 秒の deadline を設け、toolchain の 120 秒 spawn deadline と競合しないよう、超過時は child を kill/reap 後に HARNESS_ERROR を公開する。
    - `scripts/formal-verif/index.ts` は利用者に必要な canonical type/function のみ export する。package script や test config は既存の glob で発見できるため、必要性を実測し、不要なら変更しない。
    - トレーサビリティ: ストーリー3、FR-3.3〜FR-3.6、FR-6.3、NFR-2。
 
@@ -95,7 +95,7 @@ U3 `run-model-check` を、単一モデルの TLC 完全探索を 1 コマンド
     - トレーサビリティ: ストーリー3、FR-3.3〜FR-3.6、FR-6.4、NFR-1、NFR-3。
 
 11. [ ] **性能・セキュリティ受入を実測する（条件付き未完了: Docker実containerはU4必須ゲートへ引継ぎ）**
-    - warm cache の FormalElection を、ubuntu 相当 2 vCPU / 7 GiB、warm-up 1 回 + 計測 5 回で実行し、process spawn 180 秒未満、CLI 180 秒未満を全試行で確認する。CI 全体 30 分上限は U4 の責務として、U3 は単発 run の測定値を渡す。
+    - warm cache の FormalElection を、ubuntu 相当 2 vCPU / 7 GiB、warm-up 1 回 + 計測 5 回で実行し、process spawn 120 秒未満、CLI 180 秒未満を全試行で確認する。CI 全体 30 分上限は U4 の責務として、U3 は単発 run の測定値を渡す。
     - 各 run で stdout/stderr が 16 MiB を超えないこと、超過注入時に HARNESS_ERROR となること、child/container が timeout 後に残存しないことを確認する。
     - Darwin は sandbox profile と network-deny、Docker は固定 image digest・jar checksum・`--network=none`・mount の read-only/containment を receipt と実コマンドの双方で照合する。
     - logs、stderr、manifest、failure directory に secret/環境変数全量/不要な host 絶対 path が含まれないことを security test で確認する。
@@ -120,7 +120,7 @@ U3 `run-model-check` を、単一モデルの TLC 完全探索を 1 コマンド
 | FR-3.5 | Darwin sandbox-exec と Linux Docker が planner にのみ分岐し、normalize/outcome は共通 |
 | FR-3.6 | exit `0 = NOT_DETECTED`、`1 = DETECTED`、`2 = HARNESS_ERROR` が unit/integration/E2E で一致する |
 | NFR-1 / Security | image digest、jar SHA、environment inspection、artifact digest が receipt/manifest で再検証可能 |
-| NFR-2 / Performance | spawn 180 秒、CLI 180 秒、各 stream 16 MiB の上限が実装・試験・計測で一致する |
+| NFR-2 / Performance | spawn 120 秒、CLI 180 秒、各 stream 16 MiB の上限が実装・試験・計測で一致する |
 | NFR-3 | 両 planner の falling proof、部分探索、drift、artifact 改竄が成功扱いにならない |
 | FR-6 | Comprehensive test、追加行 coverage 100%、全 project quality gate green |
 

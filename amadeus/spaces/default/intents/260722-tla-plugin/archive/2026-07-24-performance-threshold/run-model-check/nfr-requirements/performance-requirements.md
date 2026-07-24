@@ -4,9 +4,9 @@
 
 ## 時間予算
 
-- 単発TLC spawnのdeadlineは180秒とし、timeoutは HARNESS_ERROR へ写像する。
+- 単発TLC spawnのdeadlineは120秒とし、timeoutは HARNESS_ERROR へ写像する。
 - CLI全体は環境取得、checksum、TLC、normalizeを含めCIの30分job timeout内で完了する。
-- GitHub `ubuntu-latest` 2 vCPU/7GiB相当、Docker amd64、固定image/jar、cold pullを除外したwarm cacheでwarm-up 1回後に FormalElection を5回計測し、各回 exit 0かつ最大TLC spawn時間180秒未満を受入基準とする。全CLI時間も各回180秒未満とする。
+- GitHub `ubuntu-latest` 2 vCPU/7GiB相当、Docker amd64、固定image/jar、cold pullを除外したwarm cacheでwarm-up 1回後に FormalElection を5回計測し、各回 exit 0かつ最大TLC spawn時間120秒未満を受入基準とする。全CLI時間も各回180秒未満とする。
 
 ## 資源制約
 
@@ -27,7 +27,7 @@
 
 - Critical: Docker/TLC供給物の固定値と受渡しが未定義。
 - Major: out directoryのatomic publishと再実行契約が未定義。
-- Major: 並行実行隔離と180秒計測条件が不足。
+- Major: 並行実行隔離と120秒計測条件が不足。
 - Major: exit/output schemaが揺れている。
 
 ## Review — Iteration 2

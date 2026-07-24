@@ -4,7 +4,7 @@
 
 U4 のローカル実装と検証を完了した。通常の push / pull request 経路を変更せず、手動 dispatch 専用の独立した `formal-model-check` job を既存 CI に統合した。旧 `.github/workflows/formal-verification.yml` は削除し、formal verification の実行入口を `.github/workflows/ci.yml` に一本化した。
 
-実 GitHub Actions の dispatch と失敗回復を実施した。診断実行 `30071213275` では固定digest Dockerによる完全探索が168,319.3693 msで完走し、5,203,730 generated states、529,692 distinct states、探索深度9、queue 0、`NOT_DETECTED`、container残留0を記録した。この一次証拠とユーザー判断に基づき、BR-U4-7のspawn上限を180秒へ改訂した。計画 Step 15 は正式な1+5回受入が完走するまで未完了のまま維持する。
+実 GitHub Actions の dispatch と失敗回復を実施した。診断実行 `30071213275` では固定digest Dockerによる完全探索が168,319.3693 msで完走し、5,203,730 generated states、529,692 distinct states、探索深度9、queue 0、`NOT_DETECTED`、container残留0を記録した。一方、BR-U4-7のspawn 120秒未満は未達であるため、計画 Step 15 は未完了のまま維持している。
 
 ## 主な変更
 
@@ -15,7 +15,7 @@ U4 のローカル実装と検証を完了した。通常の push / pull request
   - `oven-sh/setup-bun` v2: `0c5077e51419868618aeaa5fe8019c62421857d6`
   - `actions/upload-artifact` v4: `ea165f8d65b6e75b540449e92b4886f43607fa02`
 - U3 の canonical Docker image と TLA+ jar descriptor を import し、U4 内で固定値を再定義しない受入 runner を追加した。
-- warm-up 1 回と計測 5 回を逐次実行し、CLI 180 秒未満、Docker spawn 180 秒未満、全回 exit 0 / `NOT_DETECTED` を要求する証跡モデルを追加した。
+- warm-up 1 回と計測 5 回を逐次実行し、CLI 180 秒未満、Docker spawn 120 秒未満、全回 exit 0 / `NOT_DETECTED` を要求する証跡モデルを追加した。
 - Docker の digest、`--network=none`、read-only mount、scratch write mount、非 privileged、runId 由来 container 名、cleanup を検証する trace 境界を追加した。
 - U3 manifest、全 artifact の bytes / SHA-256、completion marker、EnvReceipt の exact matrix を独立再検証する verifier を追加した。U3の正常契約に合わせ、manifestへ正しく束縛された0 byteの`tlc-stderr.bin`を許容し、stdoutとstderrの16 MiB上限は引き続き強制する。
 - bootstrap、model check、artifact verify、upload、`DETECTED` の複合失敗を、設計済み優先順位で最終 exit に戻す terminal step を追加した。
@@ -43,16 +43,15 @@ U4 のローカル実装と検証を完了した。通常の push / pull request
 - Profile: `non-acceptance-diagnostic`、1回、300,000 ms上限、固定image/JAR/JVM/TLC argv、1 worker。
 - 結果: `NOT_DETECTED`、Docker/TLC 168,319.3693 ms、TLC内部159,592 ms、5,203,730 generated states、529,692 distinct states、探索深度9、queue 0。
 - Cleanup: exact container名を検査し、残留0、forced cleanupなし。
-- 判定: CLI 180秒未満とspawn 180秒未満の成立可能性を確認した。診断は1+5回受入の代替ではないため、U4は正式受入完了まで未完了。
+- 判定: CLI 180秒未満の成立可能性は確認したが、spawn 120秒未満は未達。診断は1+5回受入の代替ではなく、U4は未完了。
 
 ## 未完了事項と設計上の注意
 
-1. 計画 Step 15 の1 warm-up + 5 measured受入はまだ完走していない。180秒契約を反映したcommitで実 `workflow_dispatch` を再実行し、artifactを回収する必要がある。
+1. 計画 Step 15 の1 warm-up + 5 measured受入は完走していない。実 `workflow_dispatch` とartifact回収は実施済みだが、spawn 120秒未満を満たさない。
 2. Iteration 1で指摘された空stderr契約の衝突は解消済みである。ファイル実在、manifestのbytes / SHA-256一致、16 MiB上限を維持したまま、`tlc-stderr.bin`だけ0 byteを許容する。
 3. 診断commit `d60c99ac3` はpush済みで、GitHub workflow dispatch `30071213275` のartifactを回収済みである。
 
-## 決定
+## 次の選択肢
 
-- 診断実測に基づき、BR-U4-7のspawn閾値を180秒未満へ改訂する。
-- 診断スクリプトは手動調査用として残すが、正式CI経路からは外す。
-- 180秒契約でStep 15の正式受入を再実行し、一次証拠で完了可否を判定する。
+1. **推奨: BR-U4-7のspawn閾値を実測に基づいて再裁定する。** 180秒へ改訂するか、120秒を維持してモデルを最適化するかを決定する。
+2. Step 15 を保留し、U4 を「実環境性能要件未達」として引き渡す。

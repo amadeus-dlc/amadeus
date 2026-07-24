@@ -62,7 +62,7 @@
 8. [x] **U3 CLIを実Docker containerでwarm-up 1回・計測5回実行する**
    - production entrypoint `bun scripts/formal-verif/run-model-check.ts --model specs/tla/FormalElection.tla --cfg specs/tla/FormalElection.cfg --out <run固有dir> --provider docker`を、test modeなしで計6回subprocess実行する。
    - 各runのCLI wall timeを単調時計で測る。Docker executableの透過wrapperは`docker run`だけの開始・終了・argv・exitを記録して実`/usr/bin/docker`へshellなしで委譲し、spawn時間を実container境界から測る。inspect/pullとrunを混同しない。
-   - warm-up成功後に5計測を行い、全6回`NOT_DETECTED`かつexit 0、計測5回すべてspawn 180,000ms未満、CLI 180,000ms未満を必須とする。1回でも非0、閾値以上、計測欠落ならjobを赤にする。
+   - warm-up成功後に5計測を行い、全6回`NOT_DETECTED`かつexit 0、計測5回すべてspawn 120,000ms未満、CLI 180,000ms未満を必須とする。1回でも非0、閾値以上、計測欠落ならjobを赤にする。
    - 各run後にrunId由来container名の不存在を`docker ps -a`で確認し、timeout/失敗時は限定された当該containerだけを停止・削除する。広いname filterや全container cleanupを行わない。
    - トレーサビリティ: BR-U4-7、Performance Design、Reliability Design、U3 Step 11、NFR-1、NFR-2。
 
@@ -111,7 +111,7 @@
     - GitHub上で`changes`がdispatch用skipへ正常収束し、既存bandが赤にならず、formal jobだけが実行され、workflow全体がsuccessであることを確認する。
     - artifactを取得して、warm-up 1回+計測5回、全回exit 0/NOT_DETECTED、spawn/CLI閾値、manifest/EnvReceipt/digest、network/mount、container cleanup、run ID/attemptをローカルの独立verifierでも再照合する。
     - 実container証跡が全条件を満たした場合だけU3 Step 11とU4を完了候補とする。deterministic planner/falling proof、job起動のみ、artifact欠落runを完了根拠にしない。
-    - 診断実行 `30071213275`（commit `d60c99ac325cdc65dbda9ad7c5dda109e50fe12a`）では、受入とは分離した300秒上限の1回測定が `NOT_DETECTED` で完走した。Docker/TLC実行は168,319.3693 ms、TLC内部報告は159,592 ms、5,203,730 generated states、529,692 distinct states、探索深度9、queue 0、container残留0だった。この一次証拠とユーザー判断に基づいてBR-U4-7のspawn上限を180秒へ改訂し、診断はworkflowから外して正式受入だけを再実行する。
+    - 診断実行 `30071213275`（commit `d60c99ac325cdc65dbda9ad7c5dda109e50fe12a`）では、受入とは分離した300秒上限の1回測定が `NOT_DETECTED` で完走した。Docker/TLC実行は168,319.3693 ms、TLC内部報告は159,592 ms、5,203,730 generated states、529,692 distinct states、探索深度9、queue 0、container残留0だった。したがってCLI 180秒未満は実現可能だが、spawn 120秒未満は現モデル・1 workerの完全探索では未達であり、BR-U4-7は未充足のままとする。
     - トレーサビリティ: FR-5.1〜FR-5.4、BR-U4-7、U3 Step 11、Performance Design、Reliability Design。
 
 ## 完了判定

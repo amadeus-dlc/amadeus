@@ -6,7 +6,7 @@
 
 - formal jobを`timeout-minutes: 30`、U3 CLIを180秒で制限し、dispatch時だけ実行する。
 - image pull、jar取得、TLC、artifact verify/uploadの時間をstep summaryへ記録する。
-- U3から引き継ぐDocker実container受入は、ubuntu amd64 2 vCPU/7GiB相当、固定image/jar、cold pull除外のwarm cacheでwarm-up 1回+計測5回をmandatoryとする。5計測すべてでspawn 180秒未満、CLI 180秒未満、exit 0を要求し、raw sampleをartifactへ保存する。local deterministic planner testは代替にしない。
+- U3から引き継ぐDocker実container受入は、ubuntu amd64 2 vCPU/7GiB相当、固定image/jar、cold pull除外のwarm cacheでwarm-up 1回+計測5回をmandatoryとする。5計測すべてでspawn 120秒未満、CLI 180秒未満、exit 0を要求し、raw sampleをartifactへ保存する。local deterministic planner testは代替にしない。
 
 ## Existing bands
 

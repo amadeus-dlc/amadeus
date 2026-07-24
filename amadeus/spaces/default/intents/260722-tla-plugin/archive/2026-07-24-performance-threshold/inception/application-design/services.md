@@ -21,4 +21,4 @@
 ## ライフサイクル/スケーリング特性
 
 - スケーリング要件なし(workflow_dispatch の単発実行)。並行実行は想定せず、同時 dispatch 時も各ジョブは独立ワークスペースで干渉しない
-- タイムアウト: CI ジョブ 30分(NFR-2)。run-model-check は**単一モデルの単発 run**であり(「suite」概念は実験ハーネス専用語彙のため使わない — iteration 1 Minor 4 是正)、TLC spawn の deadline は単発 run 予算として nfr-design で数値確定する(診断実測に基づく 180秒/spawn 上限との整合検算を含む)
+- タイムアウト: CI ジョブ 30分(NFR-2)。run-model-check は**単一モデルの単発 run**であり(「suite」概念は実験ハーネス専用語彙のため使わない — iteration 1 Minor 4 是正)、TLC spawn の deadline は単発 run 予算として nfr-design で数値確定する(既存の 120秒/spawn 上限との整合検算を含む)

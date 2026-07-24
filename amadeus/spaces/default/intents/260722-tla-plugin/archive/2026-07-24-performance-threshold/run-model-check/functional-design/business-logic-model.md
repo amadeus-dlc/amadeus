@@ -12,7 +12,7 @@
 
 ## 実行予算(services 是正の数値確定は nfr-design へ)
 
-単発 run。spawn deadline は診断実測に基づく規律(上限 180秒/spawn)を単発 run 予算として nfr-design で検算・確定。
+単発 run。spawn deadline は既存規律(上限 120秒/spawn)を単発 run 予算として nfr-design で検算・確定。
 
 ## エラー経路
 

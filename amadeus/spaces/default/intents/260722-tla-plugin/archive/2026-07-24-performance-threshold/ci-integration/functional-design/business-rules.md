@@ -10,7 +10,7 @@
 - BR-U4-4(単一ファイル退役): formal-verification.yml は削除し、置換・改名・条件付き保持をしない(FR-5.3)
 - BR-U4-5(エビデンス): formal ジョブは成功・失敗を問わず out/ を artifact upload(if-no-files-found: error — 空成功の防止)
 - BR-U4-6(timeout): ジョブ timeout-minutes 30(NFR-2、既存 formal-verification.yml と同値)
-- BR-U4-7(U3 Docker受入の必須引継ぎ): workflow_dispatchのformal jobは固定digest Dockerによる実container完全探索を必ず実行する。warm cacheでwarm-up 1回後に5回計測し、全回exit 0、spawn 180秒未満、CLI 180秒未満、terminal manifest/EnvReceipt/digest整合を満たすまでU3 Step 11およびU4を完了扱いにしない。deterministic planner/falling proofはこの実測を代替しない。spawn上限は診断実行 `30071213275` の168,319.3693 msを一次証拠として改訂した。
+- BR-U4-7(U3 Docker受入の必須引継ぎ): workflow_dispatchのformal jobは固定digest Dockerによる実container完全探索を必ず実行する。warm cacheでwarm-up 1回後に5回計測し、全回exit 0、spawn 120秒未満、CLI 180秒未満、terminal manifest/EnvReceipt/digest整合を満たすまでU3 Step 11およびU4を完了扱いにしない。deterministic planner/falling proofはこの実測を代替しない。
 
 ## テスト観点(Comprehensive)
 
