@@ -1,6 +1,20 @@
 # アーキテクチャ
 
-> **2026-07-24 更新（intent `260724-harness-provenance`、現在）**: base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb` → observed HEAD `2d0da11d022565bf4a613da9fbcccf078716f8f4`（`git merge-base --is-ancestor a81c11dde HEAD` exit 0、`git rev-list --count a81c11dde..HEAD`=186）の differential refresh（`amadeus-feature` / [Issue #1452](https://github.com/amadeus-dlc/amadeus/issues/1452) — AI ハーネス種別を `amadeus-state.md` / stage `memory.md` に記録する）。前回 scan の observed `ffc79aad9`（260723-marker-heading-exemption）は現 HEAD の**非祖先**（別 run の engineer-5 ブランチ、squash マージ済み — `git merge-base --is-ancestor ffc79aad9 HEAD` exit 1）のため base に採らず、記録済み observed のうち祖先かつ距離最小の `a81c11dde` を base とした（cid:reverse-engineering:rescan-base-ancestry）。本 intent の新規知識クラスタは下記「ハーネス provenance の書込経路とハーネス検出アーキテクチャ」節に集約。**単一 current view を本節に一意化**し、旧「現在」= 260723-marker-heading-exemption（`code-quality-assessment.md`）は履歴へ降格（cid:reverse-engineering:c3-relabel）。全 file:line は Observed=HEAD `2d0da11d` のワークツリー実ファイル直読（Developer scan + Architect 再検証、cid:measurement-ref-in-artifacts）。区間 186 コミットは大きく `amadeus-lib.ts`（+1082/−69）・`amadeus-utility.ts`（+608/−112）を含むため「バグ面不変」の主張はせず、参照はすべて observed 時点の実測。
+## Team Mode ランチャーの watcher arming 検証と mux_attach ブロッキング（260724-watcher-timeout-fix、履歴、Issue #1449）
+
+`packages/framework/core/tools/team-up.sh`(HEAD 1462 行)の fresh 起動シーケンス末尾(:1415-1462)は次の順序で並ぶ(測定 ref: observed HEAD `6d4df9056` 実ファイル直読):
+
+1. pane レイアウト構築(:1429-1435、`mux_new_session`/`mux_split`/`stack_column`)で全メンバーを spawn。
+2. `if watcher_verification_applies; then verify_watchers_armed || watcher_status=$?; fi`(:1442-1445)。
+3. `start_safety_wait_supervisors || exit 1`(:1447)。
+4. **`mux_attach "$S"`(:1448)** — ユーザーが team ペインへ interactive アタッチする点。
+5. run record 更新(:1449-1457)→ `exit "$watcher_status"`(:1462)。
+
+**アーキテクチャ上の要点**: watcher arming 検証(手順 2)は interactive attach(手順 4)の**前**に同期実行される。これはコメント(:1437-1441)が明記するとおり「exit code を意味あるものに保つため(attach は exit code を飲む)」の意図的設計であり、`260722-teamup-prompt-race` の requirements FR-5 [e5](attach 前完了を前提)に接地する。副作用として、`verify_watchers_armed`(:1139-1178)が unarmed メンバーに対し最大 `WATCHER_READY_TIMEOUT`(90)× `(WATCHER_RESEND_MAX+1)`(3)= 270 秒待つ間、手順 4 の attach が構造的にブロックされる(Issue #1449)。
+
+**agmsg spawn.sh との関係**: 本検証は agmsg の readiness handshake 様式(`~/.agents/skills/agmsg/scripts/spawn.sh` の `READY_TIMEOUT=90` :132 / sentinel clear :572 / `WAIT_READY` ブロッキング :576-588)を team ランチャーへ移植したもの。ただし spawn.sh は**単発待ち**(タイムアウトで `exit 3`)なのに対し、team-up.sh は**再送ループ ×3** を追加した非対称構造。sentinel path は `ready_sentinel_path`(:1078-1085)が agmsg `actas-lock.sh` の `agmsg_ready_path` を subshell source して取得し、path 文字列の二重定義を避ける(NFR-4)。導入は #1391(検証本体)→ #1421(`scripts/` から `packages/framework/core/tools/` へ昇格 + 配布 11 コピー、ロジック不変)。
+
+> **2026-07-24 更新（intent `260724-harness-provenance`、現在）**: 上記「Team Mode ランチャーの watcher arming 検証と mux_attach ブロッキング（260724-watcher-timeout-fix）」節は同日並行 intent の RE 追記で、本 diff-refresh 実施時点では未認知だったため、本節をもって単一 current view とし当該節を履歴へ降格する（cid:reverse-engineering:c3-relabel）。 base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb` → observed HEAD `2d0da11d022565bf4a613da9fbcccf078716f8f4`（`git merge-base --is-ancestor a81c11dde HEAD` exit 0、`git rev-list --count a81c11dde..HEAD`=186）の differential refresh（`amadeus-feature` / [Issue #1452](https://github.com/amadeus-dlc/amadeus/issues/1452) — AI ハーネス種別を `amadeus-state.md` / stage `memory.md` に記録する）。前回 scan の observed `ffc79aad9`（260723-marker-heading-exemption）は現 HEAD の**非祖先**（別 run の engineer-5 ブランチ、squash マージ済み — `git merge-base --is-ancestor ffc79aad9 HEAD` exit 1）のため base に採らず、記録済み observed のうち祖先かつ距離最小の `a81c11dde` を base とした（cid:reverse-engineering:rescan-base-ancestry）。本 intent の新規知識クラスタは下記「ハーネス provenance の書込経路とハーネス検出アーキテクチャ」節に集約。**単一 current view を本節に一意化**し、旧「現在」= 260723-marker-heading-exemption（`code-quality-assessment.md`）は履歴へ降格（cid:reverse-engineering:c3-relabel）。全 file:line は Observed=HEAD `2d0da11d` のワークツリー実ファイル直読（Developer scan + Architect 再検証、cid:measurement-ref-in-artifacts）。区間 186 コミットは大きく `amadeus-lib.ts`（+1082/−69）・`amadeus-utility.ts`（+608/−112）を含むため「バグ面不変」の主張はせず、参照はすべて observed 時点の実測。
 
 ## ハーネス provenance の書込経路とハーネス検出アーキテクチャ（260724-harness-provenance、現在、Issue #1452）
 

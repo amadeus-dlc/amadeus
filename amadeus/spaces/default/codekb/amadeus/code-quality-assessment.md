@@ -1,6 +1,19 @@
 # コード品質評価
 
-> **履歴（260723-marker-heading-exemption、2026-07-23、bugfix / Minimal、下記「marker 成果物への required-sections floor 誤適用」節)**: 単一 current view は intent `260724-harness-provenance`(2026-07-24)へ移り、`architecture.md` 冒頭「ハーネス provenance の書込経路とハーネス検出アーキテクチャ」節 + 鮮度ポインタが保持する(cid:reverse-engineering:c3-relabel)。本ファイルの以下の節および過去 intent 節に残る「本 intent」「最新」「現在」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
+> **履歴（260724-watcher-timeout-fix、2026-07-24、amadeus-bugfix / Minimal、下記「watcher arming 検証が mux_attach を最大 270 秒ブロック」節）/ 履歴（260723-marker-heading-exemption、2026-07-23、bugfix / Minimal、下記「marker 成果物への required-sections floor 誤適用」節）**: 単一 current view は intent `260724-harness-provenance`(2026-07-24、同日並行 intent)へ移り、`architecture.md` 冒頭「ハーネス provenance の書込経路とハーネス検出アーキテクチャ」節 + 鮮度ポインタが保持する(cid:reverse-engineering:c3-relabel)。本ファイルの以下の節および過去 intent 節に残る「本 intent」「最新」「現在」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
+
+## watcher arming 検証が mux_attach を最大 270 秒ブロック（260724-watcher-timeout-fix、履歴、Issue #1449）
+
+実測基準は base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb` → observed HEAD `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、祖先性 exit 0、距離 155。差分 1762 files のうち本問題の交差面は `packages/framework/core/tools/team-up.sh`(1462 行新規パス)と `tests/integration/t-team-up-watcher-arming.test.ts`(197 行新規)のみ(測定 ref: `git diff --numstat a81c11dde..HEAD -- <両パス>`)。導入は区間内 2 コミット: `42c9341d8`(#1391、`verify_watchers_armed` 検証ロジック本体 = #1384 修正)+ `0d24c6f93`(#1421、`scripts/team-up.sh` → `packages/framework/core/tools/` 昇格 + 配布 11 コピー、ロジック不変)。
+
+**性能欠陥(S3-MAJOR / 回避策あり — 正常系は無影響)**: `verify_watchers_armed`(`team-up.sh:1139-1178`)は外側 = 再送試行(`max_attempts = WATCHER_RESEND_MAX + 1` = 3、:1141)、内側 = 1 秒刻みで unarmed メンバーをポーリングし `[ "$waited" -ge "$WATCHER_READY_TIMEOUT" ] && break`(:1156)で 1 ラウンド最大 `WATCHER_READY_TIMEOUT`(既定 90、:101)秒待つ二重ループ。呼び出し元(:1442-1445)が直後の `mux_attach "$S"`(:1448)の**前**でこれを無条件実行するため、**1 メンバーでも armed しないと 90×3=最大 270 秒(4.5 分)ユーザーの team ペインアタッチをブロック**する。全員即 armed の正常系は内側即 break(:1155)で無待機(Issue 報告の実測 59.1ms)。
+
+**リスク評価**:
+- **重大度**: S3-MAJOR。データ・監査整合性の破壊やワークフロー停止ではなく、起動レイテンシの UX 劣化。回避策(手動 Ctrl-C 後アタッチ、env `WATCHER_READY_TIMEOUT`/`WATCHER_RESEND_MAX` 上書き)が存在。限定条件(1 メンバー以上が watcher unarmed)でのみ発現。
+- **原因の所在(cid:bug-intent-linkage)**: **設計(受容されたリスクの先送り)**。`260722-teamup-prompt-race`(#1384/#1391)の `requirements.md` FR-4(:17)で 90 値を `~/.agents/skills/agmsg/scripts/spawn.sh:132 READY_TIMEOUT=90` verbatim に接地(**根拠あり・マジックナンバーではない**)、FR-3 [e4] 留保(:16)で「起動レイテンシが将来問題化した場合のみ `--no-wait` を再検討」と本問題を予見・先送り、FR-5 [e5] 留保(:18)で「exit code 分岐は mux_attach より前に検証完了が前提」と attach 前ブロックを契約化。実装は設計どおりで**逸脱なし**。
+- **接地の非対称**: agmsg spawn.sh(:576-588)は `WAIT_READY=1` で**単発 90 秒待ち**、タイムアウトで `exit 3`(再送ループ無し = `grep RESEND/resend/retry` 0 hit)。値 90 は一致するが、team-up.sh の `verify_watchers_armed` は spawn.sh に無い再送ループ ×3 を独自追加し worst-case を 3 倍(270 秒)に増幅している。
+- **テスト盲点**: `t-team-up-watcher-arming.test.ts` の fixture は `WATCHER_READY_TIMEOUT: "0"`(:79)を設定するため、90/270 秒の実待機はテストで一切踏まれず**タイミング挙動は構造的に無被覆**。落ちる実証・回帰テストには timeout の実待機を注入する seam が要る。
+- **修正の設計判断ポイント**: (1) `--no-wait`/`WAIT_READY` フラグ(FR-3 [e4] 予約済み緩和策) (2) `mux_attach` 後への非同期化(FR-5 exit code 契約と衝突) (3) タイムアウト予算縮小(90 接地 or 再送ループのいずれかを崩す) (4) タイミング seam 追加。いずれも exit code 分岐・no-silent-success(検証劇場 Forbidden)を壊さないことが制約。
 
 ## marker 成果物への required-sections floor 誤適用（260723-marker-heading-exemption、履歴、Issue #1296）
 
