@@ -227,25 +227,31 @@ export type MirrorMutationPermit = Readonly<{
   issueNumber: number | null;
 }>;
 
+// The Gateway methods are asynchronous: a mutation deadline drives a multi-step
+// SIGTERM -> grace -> SIGKILL -> process-group-death termination that cannot
+// settle behind a synchronous return. Every consumer (the C6 executor reached
+// through MirrorExecutionContext.gateway) awaits these.
 export interface MirrorGitHubGateway {
-  readiness(repository: RepositoryIdentity): GatewayOutcome<void>;
+  readiness(repository: RepositoryIdentity): Promise<GatewayOutcome<void>>;
   createIssue(
     permit: MirrorMutationPermit,
     input: CreateMirrorIssueInput,
-  ): GatewayOutcome<RemoteMirrorIssue>;
+  ): Promise<GatewayOutcome<RemoteMirrorIssue>>;
   findIssuesByMarker(
     repository: RepositoryIdentity,
     marker: string,
-  ): GatewayOutcome<readonly RemoteMirrorIssue[]>;
+  ): Promise<GatewayOutcome<readonly RemoteMirrorIssue[]>>;
   viewIssue(
     repository: RepositoryIdentity,
     issueNumber: number,
-  ): GatewayOutcome<RemoteMirrorIssue>;
+  ): Promise<GatewayOutcome<RemoteMirrorIssue>>;
   editIssue(
     permit: MirrorMutationPermit,
     body: string,
-  ): GatewayOutcome<RemoteMirrorIssue>;
-  closeIssue(permit: MirrorMutationPermit): GatewayOutcome<RemoteMirrorIssue>;
+  ): Promise<GatewayOutcome<RemoteMirrorIssue>>;
+  closeIssue(
+    permit: MirrorMutationPermit,
+  ): Promise<GatewayOutcome<RemoteMirrorIssue>>;
 }
 
 export type MirrorExecutionContext = Readonly<{
