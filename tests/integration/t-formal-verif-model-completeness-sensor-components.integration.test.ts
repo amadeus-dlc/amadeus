@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import {
-  copyFileSync,
   mkdtempSync,
   mkdirSync,
   readFileSync,
@@ -77,16 +76,6 @@ const canonical = async () => ({
   diffModelMap,
   canonicalIdentity,
 });
-
-function installCanonicalModule(root: string): void {
-  mkdirSync(join(root, "scripts", "formal-verif"), { recursive: true });
-  for (const file of ["tla-model-map.ts", "canonical.ts", "contract.ts"]) {
-    copyFileSync(
-      join(import.meta.dir, "..", "..", "scripts", "formal-verif", file),
-      join(root, "scripts", "formal-verif", file),
-    );
-  }
-}
 
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
@@ -454,7 +443,6 @@ describe("model-completeness sensor component integration", () => {
 
   test("mainをin-processでcheck/update両経路実行する", async () => {
     const f = fixture();
-    installCanonicalModule(f.root);
     const chunks: string[] = [];
     const originalWrite = process.stdout.write.bind(process.stdout);
     process.stdout.write = ((chunk: string | Uint8Array) => {

@@ -63,6 +63,14 @@ describe("TLA model map parser", () => {
     }
   });
 
+  test("requires model and cfg identities to have exactly path and identity", () => {
+    const missingIdentity = { ...canonicalMap(), model: { path: "specs/tla/FormalElection.tla" } };
+    const extraField = { ...canonicalMap(), cfg: { ...canonicalMap().cfg, bytes: 1 } };
+    for (const candidate of [missingIdentity, extraField]) {
+      expect(parseTlaModelMap(bytes(candidate))).toMatchObject({ ok: false, error: { code: "MODEL_MAP_INVALID" } });
+    }
+  });
+
   test("requires lowercase SHA-256 identities", () => {
     const candidates = [
       { ...canonicalMap(), model: { path: "specs/tla/FormalElection.tla", identity: "A".repeat(64) } },

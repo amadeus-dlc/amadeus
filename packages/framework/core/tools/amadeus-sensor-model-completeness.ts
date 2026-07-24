@@ -15,19 +15,18 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
-import { pathToFileURL } from "node:url";
-import type {
-  ModelMap,
-  ModelMapEntry,
-  ModelMapDrift,
+import {
+  canonicalIdentity,
+  diffModelMap,
   parseTlaModelMap,
-} from "../../../../scripts/formal-verif/tla-model-map.ts";
-import type { canonicalIdentity } from "../../../../scripts/formal-verif/canonical.ts";
+  type ModelMap,
+  type ModelMapEntry,
+  type ModelMapDrift,
+} from "./amadeus-formal-verif-model-map.ts";
 
 const MODEL_MAP_RELATIVE_PATH = "specs/tla/model-map.json";
 const MODEL_RELATIVE_PATH = "specs/tla/FormalElection.tla";
 const CFG_RELATIVE_PATH = "specs/tla/FormalElection.cfg";
-const CANONICAL_MODULE_RELATIVE_PATH = "scripts/formal-verif/tla-model-map.ts";
 const MAX_FILE_BYTES = 16 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 64 * 1024 * 1024;
 const DEFAULT_DEADLINE_MS = 9_000;
@@ -270,17 +269,13 @@ function safeReadFile(
   }
 }
 
-async function loadCanonicalFromProject(projectRoot: string): Promise<CanonicalModelMapModule> {
-  const modelMapPath = join(projectRoot, CANONICAL_MODULE_RELATIVE_PATH);
-  const identityPath = join(projectRoot, "scripts/formal-verif/canonical.ts");
-  const [modelMapModule, identityModule] = await Promise.all([
-    import(pathToFileURL(modelMapPath).href),
-    import(pathToFileURL(identityPath).href),
-  ]);
+async function loadCanonicalFromProject(
+  _projectRoot: string,
+): Promise<CanonicalModelMapModule> {
   return {
-    parseTlaModelMap: modelMapModule.parseTlaModelMap,
-    diffModelMap: modelMapModule.diffModelMap,
-    canonicalIdentity: identityModule.canonicalIdentity,
+    parseTlaModelMap,
+    diffModelMap,
+    canonicalIdentity,
   };
 }
 

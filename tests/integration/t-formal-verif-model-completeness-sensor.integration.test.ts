@@ -21,18 +21,10 @@ const roots: string[] = [];
 function makeProject(entryCount = 1, bytesPerEntry = 32): string {
   const root = mkdtempSync(join(tmpdir(), "amadeus-u5-integration-"));
   roots.push(root);
-  mkdirSync(join(root, "scripts", "formal-verif"), { recursive: true });
   mkdirSync(join(root, "specs", "tla"), { recursive: true });
   mkdirSync(join(root, "packages", "framework", "core", "tools"), {
     recursive: true,
   });
-  const sourceRoot = join(import.meta.dir, "..", "..");
-  for (const file of ["tla-model-map.ts", "canonical.ts", "contract.ts"]) {
-    writeFileSync(
-      join(root, "scripts", "formal-verif", file),
-      readFileSync(join(sourceRoot, "scripts", "formal-verif", file)),
-    );
-  }
   const model = "---- MODULE FormalElection ----\n====\n";
   const cfg = "SPECIFICATION Spec\n";
   writeFileSync(join(root, "specs", "tla", "FormalElection.tla"), model);

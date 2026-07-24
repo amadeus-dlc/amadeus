@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
-  copyFileSync,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -64,18 +63,11 @@ function project(): {
 } {
   const root = createTestProject();
   roots.push(root);
-  mkdirSync(join(root, "scripts", "formal-verif"), { recursive: true });
   mkdirSync(join(root, "specs", "tla"), { recursive: true });
   mkdirSync(join(root, "packages", "framework", "core", "tools"), {
     recursive: true,
   });
   mkdirSync(join(root, ".claude", "tools"), { recursive: true });
-  for (const file of ["tla-model-map.ts", "canonical.ts", "contract.ts"]) {
-    copyFileSync(
-      join(REPO_ROOT, "scripts", "formal-verif", file),
-      join(root, "scripts", "formal-verif", file),
-    );
-  }
   const model = "---- MODULE FormalElection ----\n====\n";
   const cfg = "SPECIFICATION Spec\n";
   const implRelative =
