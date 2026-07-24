@@ -5311,3 +5311,20 @@
 **Duration ms**: 36
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-24T12:14:48Z
+**Event**: WORKFLOW_PARKED
+**Stage**: requirements-analysis
+**Timestamp**: 2026-07-24T12:14:48Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:14:53Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a7b91bd18d81a2cc8
+**Message**: delegate-approval発行を待ちます
+
+---
