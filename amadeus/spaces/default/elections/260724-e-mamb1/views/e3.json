@@ -1,0 +1,26 @@
+{
+  "electionId": "E-MAMB1",
+  "voter": "e3",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "本unitスコープ厳守しC7適合を後続unitへ委任、Bolt1を4unit stack/一括PRで最終緑化(contract-policy単独ではtypecheck赤、Bolt単位PR運用・swarm per-unit checkとの整合を要検討)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "旧boolean API併存の互換seamを追加(注: Forbiddenの後方互換シムに該当する疑いあり)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 4,
+      "label": "X: その他(noteに明記)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 1,
+      "label": "本unit PRにorchestrate.ts 4箇所の最小typecheckブリッジを申告付きで含める(import名・シグネチャ・issues整形・autoMirror==='auto'でboolマップ、off=旧false同様'ask'の暫定意味ギャップをPR申告し真のoff抑止は後続operation-lifecycleが実装)。トランク緑・skeletonゲート通過可、shim不要、後続所有面への最小越境"
+    }
+  ]
+}

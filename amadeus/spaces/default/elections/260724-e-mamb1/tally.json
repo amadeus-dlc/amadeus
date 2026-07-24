@@ -1,0 +1,96 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "本unit PRにorchestrate.ts 4箇所の最小typecheckブリッジを申告付きで含める(import名・シグネチャ・issues整形・autoMirror==='auto'でboolマップ、off=旧false同様'ask'の暫定意味ギャップをPR申告し真のoff抑止は後続operation-lifecycleが実装)。トランク緑・skeletonゲート通過可、shim不要、後続所有面への最小越境"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "本unit PRにorchestrate.ts 4箇所の最小typecheckブリッジを申告付きで含める(import名・シグネチャ・issues整形・autoMirror==='auto'でboolマップ、off=旧false同様'ask'の暫定意味ギャップをPR申告し真のoff抑止は後続operation-lifecycleが実装)。トランク緑・skeletonゲート通過可、shim不要、後続所有面への最小越境",
+        "count": 4
+      },
+      {
+        "internalNo": 2,
+        "label": "旧boolean API併存の互換seamを追加(注: Forbiddenの後方互換シムに該当する疑いあり)",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "本unitスコープ厳守しC7適合を後続unitへ委任、Bolt1を4unit stack/一括PRで最終緑化(contract-policy単独ではtypecheck赤、Bolt単位PR運用・swarm per-unit checkとの整合を要検討)",
+        "count": 1
+      },
+      {
+        "internalNo": 4,
+        "label": "X: その他(noteに明記)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 5,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-24T12:46:33Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-MAMB1",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "off==='ask'暫定意味ギャップ(真のoff抑止は後続operation-lifecycleが所有)をPR本文で明示申告し、ギャップが恒久化しないようトレーサビリティ・後続タスク/テストで封じることを必須とする。",
+      "rationale": "実測全件一致: orchestrate.ts:136/:240/:242/:251、mirror-config.ts:20でautoMirror:boolean。choice1のブリッジは旧false挙動を残す互換シムではなくC7呼出側を新MirrorMode契約へ前進移行するforward migration(古い挙動を置換=org.md Forbiddenに整合)であり、constraint#4のboolean互換shim禁止(旧新併存)には該当しない。トランクtypecheck緑・skeletonゲート通過・shim不要を満たし越境はC7の4箇所のみで最小・surgical(P5)。choice2は旧新併存の後方互換シムでForbidden直撃却下。choice3はcontract-policy単独PRがtypecheck赤かBolt単位PR/swarm per-unit check放棄を強いる。",
+      "submittedAt": "2026-07-24T12:42:29Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MAMB1",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "選択肢1採用時の必須条件を申告として付す: (1)orchestrate.ts 4箇所の変更は『最小ブリッジ』であって旧boolean API併存の互換シム(Forbidden該当)ではないことをPRに明記し、レビュアーはこの区別(旧API温存でなく新型への一方向配線であること)を実測確認する。(2)off→'ask'の暫定意味ギャップはユーザー可視モード(off)の一時的挙動差であるため、skeletonゲートで人間がこのギャップを認識したうえで承認できるようPR本文へ明示し、後続unit mirror-operation-lifecycleが真のoff抑止を実装するタスクが確実にスケジュールされていることを確認する(暫定が黙って恒久化しない担保)。(3)後続所有面(C7=orchestrate.ts)への越境は本PR限りとし、mirror-operation-lifecycle unit着地時にこのブリッジが正しい実装へ置換されることをその後続PRのレビュー観点に含める。",
+      "rationale": "矛盾を独立実測で裏取り済み(現行コード C1変更前): :240 resolveMirrorConfig(projectDir,space,intent)は旧3引数、:242 resolved.errors(新はissues)、:163-166 decideMirrorBoundary(autoMirror:boolean)、:20/:251 config.autoMirror:booleanをdecideMirrorBoundaryへ渡す — 4箇所すべて旧boolean APIで、新3モードMirrorMode型がtypecheckを破壊する主張は正しい。選択肢2は自己申告どおりForbiddenの後方互換シム該当で除外。選択肢3はcontract-policy単独でtypecheck赤=swarm per-unit finalize check(amadeus-swarm.ts の --check-cmd)が当該unitで失敗し、かつ4unit一括PRはorg.md『複数ユニット・工程記録の一括反映を単一PRに束ねない(walking-skeletonゲートと人間レビューの実効性が失われる)』に抵触。選択肢1は新型MirrorModeとその消費配線(orchestrate.ts)を同一PRで着地させ、inception.md N3『adapter・外部契約の先行着地禁止=実装+配線が同一intentに揃う場合のみ導入』に最も整合(型だけ先行定義する案はN3違反のdormant contract)。3制約のうち緩和は(a)C7非改変のみで最小・申告付き・トランク緑維持。",
+      "submittedAt": "2026-07-24T12:45:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MAMB1",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "choice 1(本unit PRにorchestrate.ts 4箇所の最小typecheckブリッジを申告付きで含める)を支持。ベースライン実測でorchestrate.ts:136 import resolveMirrorConfig、:164 autoMirror:boolean、:240 resolveMirrorConfig(projectDir,space,intent) 3引数、:251 config.autoMirror渡しを確認し、新3モード型がこのboolean前提を破壊するという争点を裏取りした。choice 2は選択肢自身がForbidden(org.md「NEVER 後方互換レイヤーを追加しない」)該当を自己申告しており却下。choice 3はBolt1を4unit一括PRにする案でteam.md「複数ユニットを単一PRに束ねない(walking-skeletonゲートと人間レビューの実効性が失われる)」に抵触する疑いがあり、unitごとPR原則を崩す。choice 1はunitごとPRを保ちつつトランクtypecheck緑(org.mdトランクベース)を維持し、shim不要でForbiddenを回避、越境は最小・申告付きでimplementation-deviation-electionの精神に合致する。留保: choice 1はC7(後続mirror-operation-lifecycle unit所有面)への越境とoff='ask'の暫定意味ギャップ(auto-mirror off指定が実際にはaskとして振る舞う不整合)をトランクへ持ち込む。これを支持する条件として、(1)PRでこの越境とギャップを明示申告する、(2)真のoff抑止を後続operation-lifecycle unitが実装するまでの暫定であることをタスク化して追跡する、(3)暫定期間を最短にする、を必須とする。off='ask'がwalking-skeletonの段階的完成として許容できるのは、skeletonが完全機能でなくe2eスライスであるため。",
+      "rationale": "typecheck緑のincremental維持(トランクベース)とForbidden回避を両立する唯一の現実解。越境は最小・申告付きで後続unitが引き取る。",
+      "submittedAt": "2026-07-24T12:43:14Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MAMB1",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "留保(GoA2): (1) off=旧false同様'ask'の暫定意味ギャップは必ずPR本文で明示申告し、真のoff抑止を後続 mirror-operation-lifecycle unit が実装することをトレース可能にすること(申告があれば implementation-deviation-election の禁じる無申告逸脱に当たらない)。(2) ブリッジは orchestrate.ts の4箇所(:136 import名・:240 resolveMirrorConfigシグネチャ・:242 errors→issues整形・:251 autoMirror型)の最小適合に限定し、decideMirrorBoundary本体(:163-169)のシグネチャ変更は後続unitの所有面として残すこと。",
+      "rationale": "orchestrate.ts:163 decideMirrorBoundary(autoMirror:boolean)・:240 resolveMirrorConfig 3引数・:242 resolved.errors・:251 config.autoMirror を直読で確認し、新C1契約(3モードMirrorMode型)が4箇所のtypecheckを破壊する矛盾の実在を裏取りした。選択肢2(旧boolean併存shim)は org.md Forbidden『要求されていない後方互換シムを追加しない』および intent constraint#4 に該当し除外。選択肢3(4unit stack一括PR)は team.md『複数ユニットを単一PRに束ねない — 束ねると walking-skeletonゲートと人間レビューの実効性が失われる』と衝突し、walking-skeleton Bolt1 の単独ゲート原則に反する。選択肢1は最小typecheckブリッジを申告付きで含め、shim不要・トランクtypecheck緑維持・skeletonゲート通過可であり、3制約のうち実装逸脱として最小の越境で解消する。ユーザー可視の3モード契約自体は不変のため仕様変更ではなく実装逸脱の範疇。",
+      "submittedAt": "2026-07-24T12:45:56Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-MAMB1",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 3,
+      "goa": 2,
+      "reservation": "org.mdの『BoltごとにPR/スカッシュ』+『Bolt1は単独・ゲート付き』により、walking-skeleton Bolt1(4unit)は1PRで着地する=トランクはBoltPR(green)しか受け取らないため、選択肢3でもトランクtypecheck緑は担保される。境界越境(選択肢1のC7編集)・後方互換シム(選択肢2=Forbidden)・off≡askの一時意味ギャップ(選択肢1)をいずれも避けられ、unit所有境界とP5(surgical・不要な互換層なし)に最も適合。boolean→MirrorModeの型定義とその全消費側更新は本来コヒーレントな1変更(symmetric-pair-review)であり、C1定義とC7消費をunit分割したことが不可能三角形の源。留保: 選択肢3が挙げる『swarm per-unit checkとの整合』は実運用の未決点で、Bolt1の相互依存unitは per-unit typecheck を advisory とし Bolt-level green を authoritative とする(または4unitをまとめてfinalizeする)ことを実装時に明示合意する必要がある。skeletonゲート通過の前提はBolt1 PR全体のtypecheck緑。",
+      "rationale": null,
+      "submittedAt": "2026-07-24T12:45:45Z"
+    }
+  ],
+  "resolutions": []
+}

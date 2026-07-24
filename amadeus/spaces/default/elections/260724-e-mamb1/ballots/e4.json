@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MAMB1",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "選択肢1採用時の必須条件を申告として付す: (1)orchestrate.ts 4箇所の変更は『最小ブリッジ』であって旧boolean API併存の互換シム(Forbidden該当)ではないことをPRに明記し、レビュアーはこの区別(旧API温存でなく新型への一方向配線であること)を実測確認する。(2)off→'ask'の暫定意味ギャップはユーザー可視モード(off)の一時的挙動差であるため、skeletonゲートで人間がこのギャップを認識したうえで承認できるようPR本文へ明示し、後続unit mirror-operation-lifecycleが真のoff抑止を実装するタスクが確実にスケジュールされていることを確認する(暫定が黙って恒久化しない担保)。(3)後続所有面(C7=orchestrate.ts)への越境は本PR限りとし、mirror-operation-lifecycle unit着地時にこのブリッジが正しい実装へ置換されることをその後続PRのレビュー観点に含める。",
+  "rationale": "矛盾を独立実測で裏取り済み(現行コード C1変更前): :240 resolveMirrorConfig(projectDir,space,intent)は旧3引数、:242 resolved.errors(新はissues)、:163-166 decideMirrorBoundary(autoMirror:boolean)、:20/:251 config.autoMirror:booleanをdecideMirrorBoundaryへ渡す — 4箇所すべて旧boolean APIで、新3モードMirrorMode型がtypecheckを破壊する主張は正しい。選択肢2は自己申告どおりForbiddenの後方互換シム該当で除外。選択肢3はcontract-policy単独でtypecheck赤=swarm per-unit finalize check(amadeus-swarm.ts の --check-cmd)が当該unitで失敗し、かつ4unit一括PRはorg.md『複数ユニット・工程記録の一括反映を単一PRに束ねない(walking-skeletonゲートと人間レビューの実効性が失われる)』に抵触。選択肢1は新型MirrorModeとその消費配線(orchestrate.ts)を同一PRで着地させ、inception.md N3『adapter・外部契約の先行着地禁止=実装+配線が同一intentに揃う場合のみ導入』に最も整合(型だけ先行定義する案はN3違反のdormant contract)。3制約のうち緩和は(a)C7非改変のみで最小・申告付き・トランク緑維持。",
+  "submittedAt": "2026-07-24T12:45:00Z"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MAMB1",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "留保(GoA2): (1) off=旧false同様'ask'の暫定意味ギャップは必ずPR本文で明示申告し、真のoff抑止を後続 mirror-operation-lifecycle unit が実装することをトレース可能にすること(申告があれば implementation-deviation-election の禁じる無申告逸脱に当たらない)。(2) ブリッジは orchestrate.ts の4箇所(:136 import名・:240 resolveMirrorConfigシグネチャ・:242 errors→issues整形・:251 autoMirror型)の最小適合に限定し、decideMirrorBoundary本体(:163-169)のシグネチャ変更は後続unitの所有面として残すこと。",
+  "rationale": "orchestrate.ts:163 decideMirrorBoundary(autoMirror:boolean)・:240 resolveMirrorConfig 3引数・:242 resolved.errors・:251 config.autoMirror を直読で確認し、新C1契約(3モードMirrorMode型)が4箇所のtypecheckを破壊する矛盾の実在を裏取りした。選択肢2(旧boolean併存shim)は org.md Forbidden『要求されていない後方互換シムを追加しない』および intent constraint#4 に該当し除外。選択肢3(4unit stack一括PR)は team.md『複数ユニットを単一PRに束ねない — 束ねると walking-skeletonゲートと人間レビューの実効性が失われる』と衝突し、walking-skeleton Bolt1 の単独ゲート原則に反する。選択肢1は最小typecheckブリッジを申告付きで含め、shim不要・トランクtypecheck緑維持・skeletonゲート通過可であり、3制約のうち実装逸脱として最小の越境で解消する。ユーザー可視の3モード契約自体は不変のため仕様変更ではなく実装逸脱の範疇。",
+  "submittedAt": "2026-07-24T12:45:56Z"
+}

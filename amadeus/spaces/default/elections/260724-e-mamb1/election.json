@@ -1,0 +1,31 @@
+{
+  "electionId": "E-MAMB1",
+  "kind": "implementation-deviation-election",
+  "question": "260724-mirror-auto-modes / code-generation Bolt1(walking-skeleton)の mirror-contract-policy unit 実装前に builder が逸脱検出→実装前停止(deviation-stop準拠、コード未変更)、conductor e2 が独立実測で裏取り済み。矛盾(実在確認済み): 新C1契約(3モードMirrorMode型)が後続unit mirror-operation-lifecycle所有面のC7(amadeus-orchestrate.ts)のtypecheckを4箇所で破壊する。file:line実測 = orchestrate.ts:136(import resolve)/:240(旧3引数 resolveMirrorConfig(projectDir,space,intent))/:242(resolved.errors→新はissues)/:251(config.autoMirror:MirrorModeを decideMirrorBoundary(autoMirror:boolean):163-169へ渡す型不一致)、t265-engine-boundary.test.ts:24もboolean前提。ベースラインtypecheck=exit0緑。次の3制約が同時成立不能: (a)C7非改変・seamはC1内のみ (b)boolean互換shim禁止(Forbidden/intent constraint#4) (c)トランクtypecheck緑維持。性質は実装逸脱(typecheck緑をincremental unit着地でどう保つか)でありauto-mirror 3モードのユーザー可視契約自体は不変=仕様変更ではない。各自 orchestrate.ts該当行・requirements/design・intent constraint#4・Bolt単位PR運用(org.md)を実測確認のうえ投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "本unit PRにorchestrate.ts 4箇所の最小typecheckブリッジを申告付きで含める(import名・シグネチャ・issues整形・autoMirror==='auto'でboolマップ、off=旧false同様'ask'の暫定意味ギャップをPR申告し真のoff抑止は後続operation-lifecycleが実装)。トランク緑・skeletonゲート通過可、shim不要、後続所有面への最小越境"
+    },
+    {
+      "internalNo": 2,
+      "label": "旧boolean API併存の互換seamを追加(注: Forbiddenの後方互換シムに該当する疑いあり)"
+    },
+    {
+      "internalNo": 3,
+      "label": "本unitスコープ厳守しC7適合を後続unitへ委任、Bolt1を4unit stack/一括PRで最終緑化(contract-policy単独ではtypecheck赤、Bolt単位PR運用・swarm per-unit checkとの整合を要検討)"
+    },
+    {
+      "internalNo": 4,
+      "label": "X: その他(noteに明記)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e3",
+    "e4",
+    "e5",
+    "e6"
+  ],
+  "state": "recorded"
+}

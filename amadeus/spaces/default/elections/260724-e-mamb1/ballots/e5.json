@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MAMB1",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "choice 1(本unit PRにorchestrate.ts 4箇所の最小typecheckブリッジを申告付きで含める)を支持。ベースライン実測でorchestrate.ts:136 import resolveMirrorConfig、:164 autoMirror:boolean、:240 resolveMirrorConfig(projectDir,space,intent) 3引数、:251 config.autoMirror渡しを確認し、新3モード型がこのboolean前提を破壊するという争点を裏取りした。choice 2は選択肢自身がForbidden(org.md「NEVER 後方互換レイヤーを追加しない」)該当を自己申告しており却下。choice 3はBolt1を4unit一括PRにする案でteam.md「複数ユニットを単一PRに束ねない(walking-skeletonゲートと人間レビューの実効性が失われる)」に抵触する疑いがあり、unitごとPR原則を崩す。choice 1はunitごとPRを保ちつつトランクtypecheck緑(org.mdトランクベース)を維持し、shim不要でForbiddenを回避、越境は最小・申告付きでimplementation-deviation-electionの精神に合致する。留保: choice 1はC7(後続mirror-operation-lifecycle unit所有面)への越境とoff='ask'の暫定意味ギャップ(auto-mirror off指定が実際にはaskとして振る舞う不整合)をトランクへ持ち込む。これを支持する条件として、(1)PRでこの越境とギャップを明示申告する、(2)真のoff抑止を後続operation-lifecycle unitが実装するまでの暫定であることをタスク化して追跡する、(3)暫定期間を最短にする、を必須とする。off='ask'がwalking-skeletonの段階的完成として許容できるのは、skeletonが完全機能でなくe2eスライスであるため。",
+  "rationale": "typecheck緑のincremental維持(トランクベース)とForbidden回避を両立する唯一の現実解。越境は最小・申告付きで後続unitが引き取る。",
+  "submittedAt": "2026-07-24T12:43:14Z"
+}

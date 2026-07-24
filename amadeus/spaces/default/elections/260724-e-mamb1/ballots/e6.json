@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MAMB1",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "off==='ask'暫定意味ギャップ(真のoff抑止は後続operation-lifecycleが所有)をPR本文で明示申告し、ギャップが恒久化しないようトレーサビリティ・後続タスク/テストで封じることを必須とする。",
+  "rationale": "実測全件一致: orchestrate.ts:136/:240/:242/:251、mirror-config.ts:20でautoMirror:boolean。choice1のブリッジは旧false挙動を残す互換シムではなくC7呼出側を新MirrorMode契約へ前進移行するforward migration(古い挙動を置換=org.md Forbiddenに整合)であり、constraint#4のboolean互換shim禁止(旧新併存)には該当しない。トランクtypecheck緑・skeletonゲート通過・shim不要を満たし越境はC7の4箇所のみで最小・surgical(P5)。choice2は旧新併存の後方互換シムでForbidden直撃却下。choice3はcontract-policy単独PRがtypecheck赤かBolt単位PR/swarm per-unit check放棄を強いる。",
+  "submittedAt": "2026-07-24T12:42:29Z"
+}

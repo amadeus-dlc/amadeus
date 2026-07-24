@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-MAMB1",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 3,
+  "goa": 2,
+  "reservation": "org.mdの『BoltごとにPR/スカッシュ』+『Bolt1は単独・ゲート付き』により、walking-skeleton Bolt1(4unit)は1PRで着地する=トランクはBoltPR(green)しか受け取らないため、選択肢3でもトランクtypecheck緑は担保される。境界越境(選択肢1のC7編集)・後方互換シム(選択肢2=Forbidden)・off≡askの一時意味ギャップ(選択肢1)をいずれも避けられ、unit所有境界とP5(surgical・不要な互換層なし)に最も適合。boolean→MirrorModeの型定義とその全消費側更新は本来コヒーレントな1変更(symmetric-pair-review)であり、C1定義とC7消費をunit分割したことが不可能三角形の源。留保: 選択肢3が挙げる『swarm per-unit checkとの整合』は実運用の未決点で、Bolt1の相互依存unitは per-unit typecheck を advisory とし Bolt-level green を authoritative とする(または4unitをまとめてfinalizeする)ことを実装時に明示合意する必要がある。skeletonゲート通過の前提はBolt1 PR全体のtypecheck緑。",
+  "rationale": null,
+  "submittedAt": "2026-07-24T12:45:45Z"
+}
