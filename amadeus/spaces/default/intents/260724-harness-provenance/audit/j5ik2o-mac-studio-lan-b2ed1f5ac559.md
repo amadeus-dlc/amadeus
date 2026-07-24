@@ -7316,3 +7316,41 @@
 **Timestamp**: 2026-07-24T12:34:44Z
 
 ---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-24T12:35:56Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-24T12:35:56Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-24T12:35:56Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: refined-mockups
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-24T12:35:56Z
+**Event**: GATE_APPROVED
+**Stage**: refined-mockups
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-24T12:35:56Z
+**Event**: STAGE_COMPLETED
+**Stage**: refined-mockups
+**Details**: Stage Refined Mockups approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-24T12:35:56Z
+**Event**: STAGE_STARTED
+**Stage**: application-design
+**Agent**: amadeus-architect-agent
+
+---
