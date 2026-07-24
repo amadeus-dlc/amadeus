@@ -17,3 +17,11 @@
 **Context**: construction > plugin-skeleton > code-generation > code-summary.md
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-24T16:00:31Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-24T16:00:31Z
+
+---
