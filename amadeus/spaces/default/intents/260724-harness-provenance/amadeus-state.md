@@ -6,7 +6,7 @@
 - **Scope**: feature
 - **Start Date**: 2026-07-24T10:56:32Z
 - **State Version**: 7
-- **Active Agent**: amadeus-design-agent
+- **Active Agent**: amadeus-architect-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**:
@@ -25,14 +25,12 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 32
-- **Completed**: 14
-- **In Progress**: refined-mockups
+- **Completed**: 15
+- **In Progress**: application-design
 
 ## Runtime State
 - **Revision Count**: 0
 
-- **Parked**: 2026-07-24T12:34:44Z
-- **Parked At Stage**: refined-mockups
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -64,8 +62,8 @@
 - [x] practices-discovery — EXECUTE
 - [x] requirements-analysis — EXECUTE
 - [x] user-stories — EXECUTE
-- [-] refined-mockups — EXECUTE
-- [ ] application-design — EXECUTE
+- [x] refined-mockups — EXECUTE
+- [-] application-design — EXECUTE
 - [ ] units-generation — EXECUTE
 - [ ] delivery-planning — EXECUTE
 
@@ -90,12 +88,12 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: INCEPTION
-- **Current Stage**: refined-mockups
-- **Next Stage**: application-design
+- **Current Stage**: application-design
+- **Next Stage**: units-generation
 - **Status**: Running
-- **Last Updated**: 2026-07-24T12:34:44Z
+- **Last Updated**: 2026-07-24T12:35:56Z
 
 ## Session Resume Point
-- **Last Completed Stage**: user-stories
-- **Next Action**: Execute Refined Mockups
+- **Last Completed Stage**: refined-mockups
+- **Next Action**: Execute Application Design
 - **Pending Artifacts**: none
