@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-WTFRA1",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 3,
+  "goa": 2,
+  "reservation": "C実装時もorg.md Mandatedの『落ちる実証』(既存seamで270→縮小後の赤→緑を実測)を必須とする — D案の妥当部分をC実装へ畳み込む。",
+  "rationale": "verify_watchers_armed(team-up.sh:1139-1178)のmax_attempts=WATCHER_RESEND_MAX+1=3が270秒worst-caseの直接原因。agmsg spawn.sh:576-588は単発90秒待ち・再送ループなしでverbatim接地の正当な参照実装。C案は参照実装への対称化(symmetric-pair-review)で最小・surgical(P5)、3制約を保つ。A案はopt-out追加でデフォルト経路を直さず、B案はFR-5契約再設計で過大、D案のseam先行はt-team-up-watcher-arming.test.ts:79でWATCHER_READY_TIMEOUT=0駆動が実在するため冗長。",
+  "submittedAt": "2026-07-24T12:25:42Z"
+}

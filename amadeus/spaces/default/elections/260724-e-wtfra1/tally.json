@@ -1,0 +1,101 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 3,
+      "label": "C: 再送ループ撤去しspawn.sh対称の単発+1回再送程度へ縮小(worst-case 270→90〜180秒、90秒接地は維持)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "A: --no-wait/WAIT_READYフラグ追加で待機をオプトアウト可能に(既定ブロッキング維持、FR-3 [e4]予約の緩和策)",
+        "count": 0
+      },
+      {
+        "internalNo": 2,
+        "label": "B: mux_attach後/並行へ検証移動し体感待機を実質ゼロに(FR-5契約とexit code意味論の再設計を伴う)",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "C: 再送ループ撤去しspawn.sh対称の単発+1回再送程度へ縮小(worst-case 270→90〜180秒、90秒接地は維持)",
+        "count": 4
+      },
+      {
+        "internalNo": 4,
+        "label": "D: A〜Cいずれか+タイミングseam先行追加の二段構え(落ちる実証で270秒ブロック再現後に修正)",
+        "count": 1
+      },
+      {
+        "internalNo": 5,
+        "label": "X: その他(noteに明記)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 5,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-24T12:29:01Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-WTFRA1",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 3,
+      "goa": 2,
+      "reservation": "Cが根本原因への外科的修正である: Issue #1449が特定した増幅因子は team-up.sh:verify_watchers_armed が spawn.sh(:576-588 単発90秒待ち・再送ループなし)に対して非対称に追加した再送x3ループそのものであり、これを spawn.sh 対称形へ縮小することが symmetric-pair-review と P5(surgical/最小変更)に最も適う。壊してはならない3制約(exit code分岐・mux_attach前検証完了・no-silent-success)を全て保つ。ただし #1384 のドロップ回復には最低1回の再送が必要(spawn.sh は起動方式が異なり再送不要)なため、純単発でなく1回再送(2ラウンド=worst 180秒)を保つ設計が妥当と考える。留保: A(--no-watフラグ)は排他でなくCの補完として安価なエスケープハッチになりうるが一次修正はC、Bはbugfixスコープに対しFR-5 [e5]契約とexit code意味論の再設計を要し過大。D の seam先行追加は既存 t-team-up-watcher-arming.test.ts の env override(WATCHER_READY_TIMEOUT/WATCHER_RESEND_MAX)で既に接地済み+落ちる実証は既決Mandatedのため、Cを選んでもその規律は当然適用され D を選ぶ必要はない。",
+      "rationale": null,
+      "submittedAt": "2026-07-24T12:26:04Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-WTFRA1",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 3,
+      "goa": 2,
+      "reservation": "C(再送ループ撤去しspawn.sh対称の単発+1回再送へ縮小)を支持。実測(team-up.sh:1141 max_attempts=WATCHER_RESEND_MAX+1、:1156 内側90秒break、:1443-1448 mux_attach前無条件実行)とspawn.sh:576-588の単発待ち(再送なし)の非対称を確認。Cは壊してはならない全制約(exit code分岐:1462、mux_attach前完了=FR-5、90秒接地=spawn.sh:132 verbatim、no-silent-success)を維持しつつworst-caseを270→90〜180秒へ確実に削減し、cid:symmetric-pair-review(非対称がbootstrapバグ主因)の観点でも対称性を回復する点で最良。留保: Cはworst-case 180秒(単発+1再送)を残し体感ゼロにはしない。体感ゼロを求めるならB(mux_attach後移動)だがFR-5契約とexit code意味論の再設計を伴い承認済み設計からの逸脱(正準リスト(4))となるため、requirements段階での単独選択には重く、選ぶ場合は別途ユーザー裁定が必要と判断してC支持とした。",
+      "rationale": "unarmedは正常系59.1msに対し稀。稀ケースで180秒はFR-4の90秒接地を尊重した根拠ある数値で許容範囲。",
+      "submittedAt": "2026-07-24T12:26:10Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-WTFRA1",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 3,
+      "goa": 2,
+      "reservation": "C実装時もorg.md Mandatedの『落ちる実証』(既存seamで270→縮小後の赤→緑を実測)を必須とする — D案の妥当部分をC実装へ畳み込む。",
+      "rationale": "verify_watchers_armed(team-up.sh:1139-1178)のmax_attempts=WATCHER_RESEND_MAX+1=3が270秒worst-caseの直接原因。agmsg spawn.sh:576-588は単発90秒待ち・再送ループなしでverbatim接地の正当な参照実装。C案は参照実装への対称化(symmetric-pair-review)で最小・surgical(P5)、3制約を保つ。A案はopt-out追加でデフォルト経路を直さず、B案はFR-5契約再設計で過大、D案のseam先行はt-team-up-watcher-arming.test.ts:79でWATCHER_READY_TIMEOUT=0駆動が実在するため冗長。",
+      "submittedAt": "2026-07-24T12:25:42Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-WTFRA1",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 3,
+      "goa": 2,
+      "reservation": "Cを採用する場合、(1)実装時にD相当の落ちる実証(短縮値シームで270秒相当ブロックを再現→C適用後に90〜180秒へ縮小を実測)を必ず挟むこと — シームは既存(t-team-up-watcher-arming.test.tsのWATCHER_READY_TIMEOUT/WATCHER_RESEND_MAX env override)なのでD案の『seam先行追加』は不要だが落ちる実証の規律だけは適用する。(2)再送回数を2→1へ減らすとIssue #1384(TUI cold-startでの/agmsg mode monitorプロンプト脱落)からの回復力が僅かに低下するため、単発+1回再送で#1384の回復シナリオが依然カバーされることを設計段で確認すること。A(--no-wait opt-out)は安価な追加補完になりうるが、既定UXを改善しない(270秒worst-caseが既定のまま)ためC単独より劣り、必須ではない。",
+      "rationale": "実測: agmsg spawn.sh:576-588は単発90秒待ち・再送ループなし、team-up.sh verify_watchers_armed:1139-1178はspawn.shに無い3ラウンド再送ループ(max_attempts=WATCHER_RESEND_MAX+1=3、:1141)を独自追加し270秒(90×3)へ増幅している。Cはこの非対称な余分再送ループ(cid:symmetric-pair-reviewが警告する片側実装クラスタ)を撤去してspawn.shと対称化する最も外科的な修正(cid:P5 surgical)。90秒接地(spawn.sh:132 verbatim接地)を維持し、exit code分岐・mux_attach前検証完了(FR-5 [e5])・no-silent-successの3制約をいずれも壊さない。既定UXを改善する点でA(opt-outのみ)より優れ、FR-5契約とexit code意味論の再設計を要するB(高リスク・大変更)より低リスク。",
+      "submittedAt": "2026-07-24T12:30:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-WTFRA1",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 4,
+      "goa": 2,
+      "reservation": "B案は明示のmust-not-break制約(FR-5 [e5] mux_attach前検証完了・exit code意味論、team-up.sh:1439-1442の実装順序コメント)を破るため除外。D採用時の具体fixはC(spawn.sh対称の単発90s+1回再送、worst-case 270→180s、#1384回復1回分維持)を推し、Aの--no-waitオプトアウトは補完併用可。",
+      "rationale": "team-up.sh:1139-1178/:101/:1439-1462、spawn.sh:132/:576-588、questions.md Q1を実測。根本原因はFR-3 [e4]留保が予約した設計トレードオフ(再送×3=270s)の顕在化(Issue #1449)であり実装逸脱ではない。project.mdの欠陥対応ノルム(regression-first/落ちる実証必須)により、270sブロックの落ちる実証(タイミングseam)を先行させる二段構えが必須。D案はこれを明示ゲート化しA〜Cの具体fix選択を残す。spawn.shは既に単発90s待ち+再送なし+--no-waitを持ち、REが対称参照として特定済み。",
+      "submittedAt": "2026-07-24T12:27:45Z"
+    }
+  ],
+  "resolutions": []
+}

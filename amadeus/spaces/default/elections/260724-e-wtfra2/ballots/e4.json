@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-WTFRA2",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "実測: t-team-up-watcher-arming.test.tsは既にWATCHER_READY_TIMEOUT/WATCHER_RESEND_MAX env override(:79-80)のシームを持ち、私のIssue #1449再現もこのシームで線形性を実証済み(理論値比 +6.4%/+7.8%の2条件)。ロジックはsleep 1のN回ループで完全に線形なので、短縮値(2〜3秒)テストと実90秒テストは同一コードパスを通り、B(実90秒テスト)が追加するのは『定数の既定値が90であること』の確認のみ — これはgrep/定数アサートで足り、90秒超のCI wall-clockペナルティに見合わない。既存の高速決定的テスト姿勢(fs-tests-integration-first / fanout-load-settle系のCI予算配慮)にも整合する。よってA(既存シームで短縮値の実測タイミング検証)が適切。",
+  "submittedAt": "2026-07-24T12:30:30Z"
+}

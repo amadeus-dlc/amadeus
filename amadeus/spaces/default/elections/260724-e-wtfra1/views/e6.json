@@ -1,0 +1,31 @@
+{
+  "electionId": "E-WTFRA1",
+  "voter": "e6",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "C: 再送ループ撤去しspawn.sh対称の単発+1回再送程度へ縮小(worst-case 270→90〜180秒、90秒接地は維持)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 4,
+      "label": "D: A〜Cいずれか+タイミングseam先行追加の二段構え(落ちる実証で270秒ブロック再現後に修正)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 5,
+      "label": "X: その他(noteに明記)"
+    },
+    {
+      "displayNo": 4,
+      "internalNo": 1,
+      "label": "A: --no-wait/WAIT_READYフラグ追加で待機をオプトアウト可能に(既定ブロッキング維持、FR-3 [e4]予約の緩和策)"
+    },
+    {
+      "displayNo": 5,
+      "internalNo": 2,
+      "label": "B: mux_attach後/並行へ検証移動し体感待機を実質ゼロに(FR-5契約とexit code意味論の再設計を伴う)"
+    }
+  ]
+}

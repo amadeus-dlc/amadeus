@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-WTFRA1",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 3,
+  "goa": 2,
+  "reservation": "Cを採用する場合、(1)実装時にD相当の落ちる実証(短縮値シームで270秒相当ブロックを再現→C適用後に90〜180秒へ縮小を実測)を必ず挟むこと — シームは既存(t-team-up-watcher-arming.test.tsのWATCHER_READY_TIMEOUT/WATCHER_RESEND_MAX env override)なのでD案の『seam先行追加』は不要だが落ちる実証の規律だけは適用する。(2)再送回数を2→1へ減らすとIssue #1384(TUI cold-startでの/agmsg mode monitorプロンプト脱落)からの回復力が僅かに低下するため、単発+1回再送で#1384の回復シナリオが依然カバーされることを設計段で確認すること。A(--no-wait opt-out)は安価な追加補完になりうるが、既定UXを改善しない(270秒worst-caseが既定のまま)ためC単独より劣り、必須ではない。",
+  "rationale": "実測: agmsg spawn.sh:576-588は単発90秒待ち・再送ループなし、team-up.sh verify_watchers_armed:1139-1178はspawn.shに無い3ラウンド再送ループ(max_attempts=WATCHER_RESEND_MAX+1=3、:1141)を独自追加し270秒(90×3)へ増幅している。Cはこの非対称な余分再送ループ(cid:symmetric-pair-reviewが警告する片側実装クラスタ)を撤去してspawn.shと対称化する最も外科的な修正(cid:P5 surgical)。90秒接地(spawn.sh:132 verbatim接地)を維持し、exit code分岐・mux_attach前検証完了(FR-5 [e5])・no-silent-successの3制約をいずれも壊さない。既定UXを改善する点でA(opt-outのみ)より優れ、FR-5契約とexit code意味論の再設計を要するB(高リスク・大変更)より低リスク。",
+  "submittedAt": "2026-07-24T12:30:00Z"
+}

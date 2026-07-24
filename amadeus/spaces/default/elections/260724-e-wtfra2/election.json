@@ -1,0 +1,27 @@
+{
+  "electionId": "E-WTFRA2",
+  "kind": "requirements-clarification",
+  "question": "260724-watcher-timeout-fix / requirements-analysis Q2: 修正の検証方法。既存 tests/integration/t-team-up-watcher-arming.test.ts のシーム(WATCHER_READY_TIMEOUT/WATCHER_RESEND_MAX env override)を使った短縮値検証に留めるか、実90秒デフォルトのタイミング統合テストも追加するか。各自 questions.md Q2・当該テストファイルを実測確認のうえ投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A: 既存シームで短縮値(例2〜3秒)の実測タイミング検証に留める、実チーム起動の重い統合テストは追加しない"
+    },
+    {
+      "internalNo": 2,
+      "label": "B: 実WATCHER_READY_TIMEOUT=90デフォルトでのタイミング統合テストも追加(実時間90秒超を許容)"
+    },
+    {
+      "internalNo": 3,
+      "label": "X: その他(noteに明記)"
+    }
+  ],
+  "voters": [
+    "e2",
+    "e3",
+    "e4",
+    "e5",
+    "e6"
+  ],
+  "state": "recorded"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-WTFRA1",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 3,
+  "goa": 2,
+  "reservation": "C(再送ループ撤去しspawn.sh対称の単発+1回再送へ縮小)を支持。実測(team-up.sh:1141 max_attempts=WATCHER_RESEND_MAX+1、:1156 内側90秒break、:1443-1448 mux_attach前無条件実行)とspawn.sh:576-588の単発待ち(再送なし)の非対称を確認。Cは壊してはならない全制約(exit code分岐:1462、mux_attach前完了=FR-5、90秒接地=spawn.sh:132 verbatim、no-silent-success)を維持しつつworst-caseを270→90〜180秒へ確実に削減し、cid:symmetric-pair-review(非対称がbootstrapバグ主因)の観点でも対称性を回復する点で最良。留保: Cはworst-case 180秒(単発+1再送)を残し体感ゼロにはしない。体感ゼロを求めるならB(mux_attach後移動)だがFR-5契約とexit code意味論の再設計を伴い承認済み設計からの逸脱(正準リスト(4))となるため、requirements段階での単独選択には重く、選ぶ場合は別途ユーザー裁定が必要と判断してC支持とした。",
+  "rationale": "unarmedは正常系59.1msに対し稀。稀ケースで180秒はFR-4の90秒接地を尊重した根拠ある数値で許容範囲。",
+  "submittedAt": "2026-07-24T12:26:10Z"
+}

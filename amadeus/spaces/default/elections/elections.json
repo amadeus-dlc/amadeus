@@ -4,5 +4,17 @@
     "dirName": "260724-e-hpfr3",
     "createdAt": "2026-07-24T12:00:39Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-WTFRA1",
+    "dirName": "260724-e-wtfra1",
+    "createdAt": "2026-07-24T12:24:09Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-WTFRA2",
+    "dirName": "260724-e-wtfra2",
+    "createdAt": "2026-07-24T12:24:09Z",
+    "status": "recorded"
   }
 ]

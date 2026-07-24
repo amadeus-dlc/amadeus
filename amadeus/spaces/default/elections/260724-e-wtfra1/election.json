@@ -1,0 +1,35 @@
+{
+  "electionId": "E-WTFRA1",
+  "kind": "requirements-clarification",
+  "question": "260724-watcher-timeout-fix / requirements-analysis Q1: team-up.sh の watcher readiness 検証(verify_watchers_armed, team-up.sh:1139-1178)が1メンバーでもunarmedだと最大270秒(WATCHER_READY_TIMEOUT=90×再送3)mux_attachをブロックする性能問題(Issue #1449)の修正方針。壊してはならない制約: exit code分岐(0=全員armed/非ゼロ=未armed)、mux_attach前に検証完了(FR-5 [e5]留保)、no-silent-success(検証劇場Forbidden)。正常系オーバーヘッドは実測59.1ms。各自 requirements-analysis-questions.md Q1・team-up.sh:1139-1178/:101・agmsg spawn.sh:576-588/:132 を実測確認のうえ投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A: --no-wait/WAIT_READYフラグ追加で待機をオプトアウト可能に(既定ブロッキング維持、FR-3 [e4]予約の緩和策)"
+    },
+    {
+      "internalNo": 2,
+      "label": "B: mux_attach後/並行へ検証移動し体感待機を実質ゼロに(FR-5契約とexit code意味論の再設計を伴う)"
+    },
+    {
+      "internalNo": 3,
+      "label": "C: 再送ループ撤去しspawn.sh対称の単発+1回再送程度へ縮小(worst-case 270→90〜180秒、90秒接地は維持)"
+    },
+    {
+      "internalNo": 4,
+      "label": "D: A〜Cいずれか+タイミングseam先行追加の二段構え(落ちる実証で270秒ブロック再現後に修正)"
+    },
+    {
+      "internalNo": 5,
+      "label": "X: その他(noteに明記)"
+    }
+  ],
+  "voters": [
+    "e2",
+    "e3",
+    "e4",
+    "e5",
+    "e6"
+  ],
+  "state": "recorded"
+}

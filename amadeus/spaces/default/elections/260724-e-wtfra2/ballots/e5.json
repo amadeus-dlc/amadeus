@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-WTFRA2",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "A(既存シームで短縮値のタイミング検証に留める)を支持。既存 tests/integration/t-team-up-watcher-arming.test.ts は WATCHER_READY_TIMEOUT/WATCHER_RESEND_MAX の env override シームを既に持ち、短縮値(2〜3秒)で内側ループのbreak条件・再送カウント・worst-case計算を決定的に検証できる。実90秒デフォルトのタイミング統合テスト(B)は実時間90秒超を要しCI予算を浪費、fanout負荷下でflaky化しやすく(cid:fanout-load-settle-before-integration)、得られる情報は定数値の確認に過ぎない。留保: デフォルト値が90であること自体はBの重い実待機テストではなく、WATCHER_READY_TIMEOUTのデフォルト解決を確認する軽量な定数assert(env未設定時に90になること)で別途担保することを推奨する。",
+  "rationale": "短縮値検証でタイミングロジックの正しさは十分立証でき、実90秒待機はコスト対効果が悪い。",
+  "submittedAt": "2026-07-24T12:26:10Z"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-WTFRA2",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "t-team-up-watcher-arming.test.ts:70-83が既にWATCHER_READY_TIMEOUT/WATCHER_RESEND_MAXのenv override seamを実装、:79でtimeout=0、:152/:167でFAKE_RESEND_ARMS+RESEND_MAX短縮値で再送ロジック等価性を駆動済み。短縮値で分岐・タイミングを決定的検証でき、実90秒統合テスト(B案)はCI予算を食うだけで追加カバレッジを生まない。",
+  "submittedAt": "2026-07-24T12:25:51Z"
+}

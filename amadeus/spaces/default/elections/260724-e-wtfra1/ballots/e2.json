@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-WTFRA1",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 4,
+  "goa": 2,
+  "reservation": "B案は明示のmust-not-break制約(FR-5 [e5] mux_attach前検証完了・exit code意味論、team-up.sh:1439-1442の実装順序コメント)を破るため除外。D採用時の具体fixはC(spawn.sh対称の単発90s+1回再送、worst-case 270→180s、#1384回復1回分維持)を推し、Aの--no-waitオプトアウトは補完併用可。",
+  "rationale": "team-up.sh:1139-1178/:101/:1439-1462、spawn.sh:132/:576-588、questions.md Q1を実測。根本原因はFR-3 [e4]留保が予約した設計トレードオフ(再送×3=270s)の顕在化(Issue #1449)であり実装逸脱ではない。project.mdの欠陥対応ノルム(regression-first/落ちる実証必須)により、270sブロックの落ちる実証(タイミングseam)を先行させる二段構えが必須。D案はこれを明示ゲート化しA〜Cの具体fix選択を残す。spawn.shは既に単発90s待ち+再送なし+--no-waitを持ち、REが対称参照として特定済み。",
+  "submittedAt": "2026-07-24T12:27:45Z"
+}

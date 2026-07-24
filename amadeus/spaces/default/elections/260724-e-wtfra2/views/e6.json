@@ -1,0 +1,21 @@
+{
+  "electionId": "E-WTFRA2",
+  "voter": "e6",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "A: 既存シームで短縮値(例2〜3秒)の実測タイミング検証に留める、実チーム起動の重い統合テストは追加しない"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 3,
+      "label": "X: その他(noteに明記)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "B: 実WATCHER_READY_TIMEOUT=90デフォルトでのタイミング統合テストも追加(実時間90秒超を許容)"
+    }
+  ]
+}

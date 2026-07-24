@@ -1,0 +1,60 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-WTFRA2",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": null,
+      "submittedAt": "2026-07-24T12:26:25Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-WTFRA2",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "A(既存シームで短縮値のタイミング検証に留める)を支持。既存 tests/integration/t-team-up-watcher-arming.test.ts は WATCHER_READY_TIMEOUT/WATCHER_RESEND_MAX の env override シームを既に持ち、短縮値(2〜3秒)で内側ループのbreak条件・再送カウント・worst-case計算を決定的に検証できる。実90秒デフォルトのタイミング統合テスト(B)は実時間90秒超を要しCI予算を浪費、fanout負荷下でflaky化しやすく(cid:fanout-load-settle-before-integration)、得られる情報は定数値の確認に過ぎない。留保: デフォルト値が90であること自体はBの重い実待機テストではなく、WATCHER_READY_TIMEOUTのデフォルト解決を確認する軽量な定数assert(env未設定時に90になること)で別途担保することを推奨する。",
+      "rationale": "短縮値検証でタイミングロジックの正しさは十分立証でき、実90秒待機はコスト対効果が悪い。",
+      "submittedAt": "2026-07-24T12:26:10Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-WTFRA2",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "t-team-up-watcher-arming.test.ts:70-83が既にWATCHER_READY_TIMEOUT/WATCHER_RESEND_MAXのenv override seamを実装、:79でtimeout=0、:152/:167でFAKE_RESEND_ARMS+RESEND_MAX短縮値で再送ロジック等価性を駆動済み。短縮値で分岐・タイミングを決定的検証でき、実90秒統合テスト(B案)はCI予算を食うだけで追加カバレッジを生まない。",
+      "submittedAt": "2026-07-24T12:25:51Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-WTFRA2",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "実測: t-team-up-watcher-arming.test.tsは既にWATCHER_READY_TIMEOUT/WATCHER_RESEND_MAX env override(:79-80)のシームを持ち、私のIssue #1449再現もこのシームで線形性を実証済み(理論値比 +6.4%/+7.8%の2条件)。ロジックはsleep 1のN回ループで完全に線形なので、短縮値(2〜3秒)テストと実90秒テストは同一コードパスを通り、B(実90秒テスト)が追加するのは『定数の既定値が90であること』の確認のみ — これはgrep/定数アサートで足り、90秒超のCI wall-clockペナルティに見合わない。既存の高速決定的テスト姿勢(fs-tests-integration-first / fanout-load-settle系のCI予算配慮)にも整合する。よってA(既存シームで短縮値の実測タイミング検証)が適切。",
+      "submittedAt": "2026-07-24T12:30:30Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-WTFRA2",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "tests/integration/t-team-up-watcher-arming.test.ts:79-80を実測。既存テストは既にWATCHER_READY_TIMEOUT=0/WATCHER_RESEND_MAX seamで短縮値検証済み(verify_watchers_armedを直接駆動、7テスト)。A案は確立済みパターンの継続で決定的・高速。worst-case = TIMEOUT×(RESEND_MAX+1)の乗算構造は短縮値(例TIMEOUT=1,RESEND_MAX=2→3s)で比例再現可能でありQ1=Dの落ちる実証と両立。B案の実90秒テストはproject.mdのfast-CI posture(日常CIは高速unit/integration)に反し、fanout-load-settle由来の負荷flaky riskを持ち込む一方、seam比例検証を超える確証を与えない。",
+      "submittedAt": "2026-07-24T12:27:45Z"
+    }
+  ],
+  "late": []
+}

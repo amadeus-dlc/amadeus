@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-WTFRA2",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "tests/integration/t-team-up-watcher-arming.test.ts:79-80を実測。既存テストは既にWATCHER_READY_TIMEOUT=0/WATCHER_RESEND_MAX seamで短縮値検証済み(verify_watchers_armedを直接駆動、7テスト)。A案は確立済みパターンの継続で決定的・高速。worst-case = TIMEOUT×(RESEND_MAX+1)の乗算構造は短縮値(例TIMEOUT=1,RESEND_MAX=2→3s)で比例再現可能でありQ1=Dの落ちる実証と両立。B案の実90秒テストはproject.mdのfast-CI posture(日常CIは高速unit/integration)に反し、fanout-load-settle由来の負荷flaky riskを持ち込む一方、seam比例検証を超える確証を与えない。",
+  "submittedAt": "2026-07-24T12:27:45Z"
+}
