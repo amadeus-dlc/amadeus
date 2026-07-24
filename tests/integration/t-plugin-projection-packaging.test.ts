@@ -15,12 +15,14 @@
 // afterAll.
 //
 // The fixture drives:
-//   - the buildTree host-projection loop, surfaced by checkHarness("claude")
-//     reporting the built-but-uncommitted plugin surface as MISSING (checkHarness
-//     builds into its own temp dir and diffs the real committed dist/claude, which
-//     has no plugin surface — no mutation);
+//   - the buildTree plugin path, surfaced by checkHarness("claude") reporting NO
+//     plugin surface in the built harness tree: A実装 (intent 260722-tla-plugin,
+//     ruling E-TLAU2 option A) ships plugins only as the neutral bundle and no
+//     longer projects them into <harnessDir>/plugins/, so the compile-visible
+//     harness tree stays plugin-free (0-plugin stage-graph baseline preserved);
 //   - buildPluginProjection loading the real claude/kiro manifest and transforming
-//     {{HARNESS_DIR}} / rules paths;
+//     {{HARNESS_DIR}} / rules paths (the projector FUNCTION is unchanged — only
+//     the packager's decision to write it into a harness tree was withdrawn);
 //   - checkHarnessTree drift over the (absent) committed host surface;
 //   - writeNeutralBundle / checkNeutralBundle over <AMADEUS_DIST_ROOT>/plugins/.
 //
@@ -98,13 +100,18 @@ describe("t-plugin-projection-packaging — U09 FR-6 item 19", () => {
   });
 
   test(
-    "buildTree projects the host surface (checkHarness reports it MISSING vs committed)",
+    "buildTree does NOT project plugins into the harness tree (neutral-bundle-only shipping)",
     () => {
+      // A実装 (intent 260722-tla-plugin, ruling E-TLAU2 option A): plugins ship
+      // ONLY as the harness-neutral bundle (dist/plugins/<name>/); buildTree no
+      // longer projects them into the compile-visible <harnessDir>/plugins/ tree.
+      // A projected plugin STAGE there would be discovered by the stage-graph
+      // compile, making the shipped graph non-0-plugin and breaking the
+      // recompile-idempotence invariant (t110/t88, FR-2.3). So checkHarness must
+      // report NO plugin surface in the built harness tree.
       const problems = checkHarness("claude");
       const pluginProblems = problems.filter((p) => p.includes(`plugins/${FIXTURE}/`));
-      expect(pluginProblems.length).toBeGreaterThan(0);
-      expect(pluginProblems.some((p) => p.startsWith("MISSING in dist:"))).toBe(true);
-      expect(pluginProblems.some((p) => p.includes(`plugins/${FIXTURE}/skills/s.md`))).toBe(true);
+      expect(pluginProblems).toEqual([]);
     },
     TIMEOUT_MS,
   );

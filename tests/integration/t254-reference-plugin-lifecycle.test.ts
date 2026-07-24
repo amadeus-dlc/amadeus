@@ -356,10 +356,15 @@ describe("t254 reference-plugin-and-guides — U11 FR-6 items 21–22", () => {
   // Part D — no residue in the tracked tree (0-plugin baseline preserved)
   // -----------------------------------------------------------------------
 
-  test("the shipped 0-plugin baseline is untouched: repo-root plugins/ and dist/plugins absent", () => {
-    // The canonical source lives under tests/fixtures/, never repo-root plugins/,
-    // so the real packager discovers nothing and dist/ stays byte-identical.
-    expect(existsSync(join(REPO_ROOT, "plugins"))).toBe(false);
-    expect(existsSync(join(REPO_ROOT, "dist", "plugins"))).toBe(false);
+  test("the test-pro reference fixture leaves no residue in the tracked tree", () => {
+    // The canonical reference source lives under tests/fixtures/, never repo-root
+    // plugins/, and every mutation of Parts A–C targets temp dirs (AMADEUS_*_ROOT
+    // redirected). So test-pro never appears in the real repo-root plugins/ or the
+    // shipped neutral bundle. (repo-root plugins/ and dist/plugins/ are no longer
+    // globally absent: intent 260722-tla-plugin ships the formal-model-check
+    // plugin as a neutral bundle there — but that is a DIFFERENT plugin; this
+    // guard is scoped to test-pro's non-pollution.)
+    expect(existsSync(join(REPO_ROOT, "plugins", PLUGIN))).toBe(false);
+    expect(existsSync(join(REPO_ROOT, "dist", "plugins", PLUGIN))).toBe(false);
   });
 });
