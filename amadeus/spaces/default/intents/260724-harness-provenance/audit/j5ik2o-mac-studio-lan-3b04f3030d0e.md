@@ -92,3 +92,15 @@
 **User Input**: ユーザー実HUMAN_TURN(11:2x台の「OK」)に基づく発行。approval-handoff = ideation phase 最終段、phase-check-ideation.md報告済み、成果物3点+センサー全PASS確認済み(e5報告)。
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-24T11:47:02Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: reverse-engineering
+**Issuer Space**: default
+**Issuer Intent**: 260724-watcher-timeout-fix
+**Issuer Shard**: j5ik2o-mac-studio-lan-3b04f3030d0e.md
+**Issuer Human Ts**: 2026-07-24T11:34:14Z
+**User Input**: 常任グラント504d1102(scope=stage-gates)適用によるdelegate発行。RE(Developer→Architect直列)完了、codekb 9成果物実在確認、base祖先性再選定+並行intent間のcurrent marker衝突をleaderが解決済み(e5報告)。
+
+---
