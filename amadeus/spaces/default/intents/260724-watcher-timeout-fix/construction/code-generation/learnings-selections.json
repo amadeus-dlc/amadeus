@@ -1,0 +1,21 @@
+{
+  "stage_slug": "code-generation",
+  "selections": [
+    {
+      "candidate_id": "wtfcg-c1",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "requirements 未解決事項(WATCHER_RESEND_MAX を 2→1 にするか vs ループ構造撤去)は「既定値のみ 2→1、ループ構造は保持」を選択する。NFR-2(90秒接地)と NFR-1b(再送1回での回復力)を満たしつつ env タイミングシームを保つため。",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "wtfcg-c5",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "純単発(1ラウンド=90秒)でなく1回再送(2ラウンド=180秒)を採用する。worst-case 短縮と #1384 回復力保持のトレードオフで、選挙 E-WTFRA1=C の複数留保(e3/e5/e2)が支持した中庸。",
+      "source": "orchestrator"
+    }
+  ]
+}
