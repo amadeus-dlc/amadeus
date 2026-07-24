@@ -516,3 +516,11 @@
 **Findings count**: 3
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-24T10:08:56Z
+**Event**: WORKFLOW_PARKED
+**Stage**: requirements-analysis
+**Timestamp**: 2026-07-24T10:08:56Z
+
+---
