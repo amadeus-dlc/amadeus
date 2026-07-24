@@ -557,3 +557,12 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:28:10Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: abf404af92455d3c0
+**Message**: team-up.sh起動遅延(Issue #1449)をamadeus-bugfixで修正中。今はwatcher-timeout-fix intentがrequirements-analysisでpark、leaderが開いた修正方針選挙(E-WTFRA1/E-WTFRA2)の裁定待ち。次は裁定通知を受けてrequirements確定→approveへ進む。
+
+---
