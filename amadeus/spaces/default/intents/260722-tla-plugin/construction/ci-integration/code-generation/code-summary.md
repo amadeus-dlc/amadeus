@@ -4,7 +4,7 @@
 
 U4 のローカル実装と検証を完了した。通常の push / pull request 経路を変更せず、手動 dispatch 専用の独立した `formal-model-check` job を既存 CI に統合した。旧 `.github/workflows/formal-verification.yml` は削除し、formal verification の実行入口を `.github/workflows/ci.yml` に一本化した。
 
-実 GitHub Actions の dispatch と失敗回復を実施した。診断実行 `30071213275` では固定digest Dockerによる完全探索が168,319.3693 msで完走し、5,203,730 generated states、529,692 distinct states、探索深度9、queue 0、`NOT_DETECTED`、container残留0を記録した。この一次証拠とユーザー判断に基づき、BR-U4-7のspawn上限を180秒へ改訂した。計画 Step 15 は正式な1+5回受入が完走するまで未完了のまま維持する。
+実 GitHub Actions の dispatch と失敗回復を完了した。最終受入 `30078685585` はworkflow全体がsuccessとなり、固定digest Dockerによるwarm-up 1回+計測5回が全回`NOT_DETECTED`、exit 0、最大spawn 161,861.957 ms、最大CLI 161,986.744 ms、container残留0で完走した。回収artifactはローカル独立verifierでも`CI_ARTIFACTS_VERIFIED`となり、BR-U4-7、U3 Step 11、U4 Step 15を充足した。
 
 ## 主な変更
 
@@ -55,10 +55,12 @@ U4 のローカル実装と検証を完了した。通常の push / pull request
 - 再受入Run: `https://github.com/amadeus-dlc/amadeus/actions/runs/30074653100`
 - 再受入結果: warm-up 1回+計測5回がすべて`NOT_DETECTED`、exit 0、container残留0で完走した。最大spawnは162,288.205 ms、最大CLIは164,197.099 msで180秒未満だった。
 - 再受入の最終失敗原因: verifierが`$WORKSPACE`全体のread-only mountを要求したが、runnerはモデルとcfgだけを含む`$WORKSPACE/specs/tla`へ権限を狭めていた。verifierとfixtureを最小権限側へ整合し、回収済みartifactの独立再検証で`CI_ARTIFACTS_VERIFIED`を確認した。
+- 最終受入Run: `https://github.com/amadeus-dlc/amadeus/actions/runs/30078685585`
+- 最終受入結果: workflow全体success。warm-up 1回+計測5回は全回`NOT_DETECTED`、exit 0、最大spawn 161,861.957 ms、最大CLI 161,986.744 ms、container残留0。artifactはローカル独立verifierでも`CI_ARTIFACTS_VERIFIED`。
 
 ## 未完了事項と設計上の注意
 
-1. 計画 Step 15 の1 warm-up + 5 measured証跡は全条件を満たしたが、GitHub Actions workflow全体は旧mount検証契約により赤である。最小権限mountへ整合したcommitで再dispatchし、workflow全体のsuccessを確認する必要がある。
+1. 計画 Step 15 の1 warm-up + 5 measured受入とworkflow全体のsuccessを確認済みであり、実環境受入の未完了事項はない。
 2. Iteration 1で指摘された空stderr契約の衝突は解消済みである。ファイル実在、manifestのbytes / SHA-256一致、16 MiB上限を維持したまま、`tlc-stderr.bin`だけ0 byteを許容する。
 3. 診断commit `d60c99ac3` はpush済みで、GitHub workflow dispatch `30071213275` のartifactを回収済みである。
 

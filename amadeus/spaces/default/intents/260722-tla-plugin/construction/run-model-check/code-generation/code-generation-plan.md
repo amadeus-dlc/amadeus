@@ -94,12 +94,12 @@ U3 `run-model-check` を、単一モデルの TLC 完全探索を 1 コマンド
     - `run-skeleton-ci.ts` の既存 E2E を併走し、U3 導入前後で回帰がないことを確認する。
     - トレーサビリティ: ストーリー3、FR-3.3〜FR-3.6、FR-6.4、NFR-1、NFR-3。
 
-11. [ ] **性能・セキュリティ受入を実測する（条件付き未完了: Docker実containerはU4必須ゲートへ引継ぎ）**
+11. [x] **性能・セキュリティ受入を実測する**
     - warm cache の FormalElection を、ubuntu 相当 2 vCPU / 7 GiB、warm-up 1 回 + 計測 5 回で実行し、process spawn 180 秒未満、CLI 180 秒未満を全試行で確認する。CI 全体 30 分上限は U4 の責務として、U3 は単発 run の測定値を渡す。
     - 各 run で stdout/stderr が 16 MiB を超えないこと、超過注入時に HARNESS_ERROR となること、child/container が timeout 後に残存しないことを確認する。
     - Darwin は sandbox profile と network-deny、Docker は固定 image digest・jar checksum・`--network=none`・mount の read-only/containment を receipt と実コマンドの双方で照合する。
     - logs、stderr、manifest、failure directory に secret/環境変数全量/不要な host 絶対 path が含まれないことを security test で確認する。
-    - Darwinはwarm-up 1回+計測5回を完了済み。Docker amd64のwarm cache、warm-up 1回+計測5回による実container受入はlocal daemon不在のため未完了であり、U4 `ci-integration` のworkflow_dispatch実行におけるmandatory gateとして引き継ぐ。deterministic planner/falling proofのgreenを実container完了の代替とは扱わない。
+    - Darwinはwarm-up 1回+計測5回を完了した。Docker amd64もGitHub Actions run `30078685585`でwarm-up 1回+計測5回を完了し、全回`NOT_DETECTED`、最大spawn 161,861.957 ms、最大CLI 161,986.744 ms、container残留0、独立verifier `CI_ARTIFACTS_VERIFIED`を確認した。
     - トレーサビリティ: NFR-1〜NFR-3、FR-3.5、FR-6.3、BR-U3-4〜BR-U3-7。
 
 12. [x] **品質ゲートと変更範囲を最終確認する**
