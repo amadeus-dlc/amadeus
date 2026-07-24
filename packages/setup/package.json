@@ -1,6 +1,6 @@
 {
   "name": "@amadeus-dlc/setup",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Installer CLI for Amadeus-DLC — fetches a tagged Amadeus distribution from GitHub and installs it into your project.",
   "type": "module",
   "bin": {

@@ -4,7 +4,7 @@
 
 **Amadeus-DLC is a self-hosted AI development lifecycle: a deterministic workflow engine plus a gated, 32-stage methodology, authored once and running natively inside six coding-agent harnesses.** You describe what to build; eleven domain-expert agents carry it through ideation, inception, construction, and operation — and a state machine that is code, not prompts, holds every approval gate until *you* pass it.
 
-![version](https://img.shields.io/badge/version-0.1.4-blue)
+![version](https://img.shields.io/badge/version-0.1.5-blue)
 ![license](https://img.shields.io/badge/license-(MIT%20OR%20Apache--2.0)-green)
 ![Kiro IDE](https://img.shields.io/badge/harness-Kiro%20IDE-orange)
 ![Kiro CLI](https://img.shields.io/badge/harness-Kiro%20CLI-orange)
