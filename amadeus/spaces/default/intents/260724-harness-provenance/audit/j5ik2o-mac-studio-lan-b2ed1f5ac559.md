@@ -3085,3 +3085,20 @@
 **Duration ms**: 37
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-24T11:15:32Z
+**Event**: WORKFLOW_PARKED
+**Stage**: team-formation
+**Timestamp**: 2026-07-24T11:15:32Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:15:38Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a8d5673090bd4b7fa
+**Message**: delegate承認が届いたら取り込んで進めて
+
+---
