@@ -13027,3 +13027,922 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-24T05:35:50Z
+**Event**: HUMAN_TURN
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:36:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6235d2f0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/fs-tlc-toolchain.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:36:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6235d2f0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/fs-tlc-toolchain.ts
+**Duration ms**: 1359
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:36:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1d78f569
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/fs-tlc-toolchain.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:36:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1d78f569
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/fs-tlc-toolchain.ts
+**Duration ms**: 706
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:36:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 58cdff15
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-tlc-cache.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:36:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 58cdff15
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-tlc-cache.integration.test.ts
+**Duration ms**: 1311
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:36:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: b768891f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-tlc-cache.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:36:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: b768891f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-tlc-cache.integration.test.ts
+**Duration ms**: 554
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-24T05:42:01Z
+**Event**: HUMAN_TURN
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:43:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: e298029e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/ci-docker-trace.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:43:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: e298029e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/ci-docker-trace.ts
+**Duration ms**: 1753
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:43:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: c815c403
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/ci-docker-trace.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:43:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: c815c403
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/ci-docker-trace.ts
+**Duration ms**: 600
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:43:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: b2712c2d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/node-ci-model-check-port.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:43:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: b2712c2d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/node-ci-model-check-port.ts
+**Duration ms**: 1351
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:43:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: f109f690
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/node-ci-model-check-port.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:43:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: f109f690
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/node-ci-model-check-port.ts
+**Duration ms**: 562
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:43:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 34d2b407
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-ci-docker-trace.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:43:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 34d2b407
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-ci-docker-trace.integration.test.ts
+**Duration ms**: 1372
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:43:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8dbe5aab
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-ci-docker-trace.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:43:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8dbe5aab
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-ci-docker-trace.integration.test.ts
+**Duration ms**: 581
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:43:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: f03a456f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-node-ci-model-check-port.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:43:18Z
+**Event**: SENSOR_PASSED
+**Fire id**: f03a456f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-node-ci-model-check-port.integration.test.ts
+**Duration ms**: 1324
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:43:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: a9cfa230
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-node-ci-model-check-port.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:43:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: a9cfa230
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-node-ci-model-check-port.integration.test.ts
+**Duration ms**: 558
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:43:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 640eed48
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-ci-docker-trace.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:43:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: 640eed48
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-ci-docker-trace.integration.test.ts
+**Duration ms**: 1337
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:43:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: f0986f8c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-ci-docker-trace.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:43:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: f0986f8c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-ci-docker-trace.integration.test.ts
+**Duration ms**: 555
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:43:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: a9f71354
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-node-ci-model-check-port.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:43:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: a9f71354
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-node-ci-model-check-port.integration.test.ts
+**Duration ms**: 1335
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:43:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 12cca7fe
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-node-ci-model-check-port.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:43:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: 12cca7fe
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-node-ci-model-check-port.integration.test.ts
+**Duration ms**: 594
+
+---
+
+## Session Compacted
+**Timestamp**: 2026-07-24T05:48:23Z
+**Event**: SESSION_COMPACTED
+**Current Stage**: code-generation
+**State Validity**: valid
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-24T05:50:15Z
+**Event**: HUMAN_TURN
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:55:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: bd05c442
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-24T05:55:40Z
+**Event**: SENSOR_FAILED
+**Fire id**: bd05c442
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+**Detail path**: amadeus/spaces/default/intents/260722-tla-plugin/.amadeus-sensors/code-generation/linter-bd05c442.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:55:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: 74689210
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:55:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: 74689210
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+**Duration ms**: 579
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:56:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8855853f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-24T05:56:59Z
+**Event**: SENSOR_FAILED
+**Fire id**: 8855853f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+**Detail path**: amadeus/spaces/default/intents/260722-tla-plugin/.amadeus-sensors/code-generation/linter-8855853f.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:56:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: b59acbbb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:57:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: b59acbbb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+**Duration ms**: 654
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:57:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6f3c82cc
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-24T05:57:21Z
+**Event**: SENSOR_FAILED
+**Fire id**: 6f3c82cc
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+**Detail path**: amadeus/spaces/default/intents/260722-tla-plugin/.amadeus-sensors/code-generation/linter-6f3c82cc.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:57:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: 81c13a35
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:57:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 81c13a35
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+**Duration ms**: 606
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:57:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: bc3ddc2d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-24T05:57:23Z
+**Event**: SENSOR_FAILED
+**Fire id**: bc3ddc2d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+**Detail path**: amadeus/spaces/default/intents/260722-tla-plugin/.amadeus-sensors/code-generation/linter-bc3ddc2d.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:57:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 919b8560
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:57:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 919b8560
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+**Duration ms**: 573
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:58:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1ede71d9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-24T05:58:01Z
+**Event**: SENSOR_FAILED
+**Fire id**: 1ede71d9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+**Detail path**: amadeus/spaces/default/intents/260722-tla-plugin/.amadeus-sensors/code-generation/linter-1ede71d9.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:58:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 266f6488
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:58:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: 266f6488
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+**Duration ms**: 566
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:58:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 168095ed
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-24T05:58:16Z
+**Event**: SENSOR_FAILED
+**Fire id**: 168095ed
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+**Detail path**: amadeus/spaces/default/intents/260722-tla-plugin/.amadeus-sensors/code-generation/linter-168095ed.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:58:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4ee63f36
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:58:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4ee63f36
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+**Duration ms**: 609
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:59:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: d5112137
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-24T05:59:29Z
+**Event**: SENSOR_FAILED
+**Fire id**: d5112137
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+**Detail path**: amadeus/spaces/default/intents/260722-tla-plugin/.amadeus-sensors/code-generation/linter-d5112137.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:59:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8b7a259b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:59:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8b7a259b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+**Duration ms**: 612
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:59:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: 414efa7e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-24T05:59:43Z
+**Event**: SENSOR_FAILED
+**Fire id**: 414efa7e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+**Detail path**: amadeus/spaces/default/intents/260722-tla-plugin/.amadeus-sensors/code-generation/linter-414efa7e.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T05:59:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: cfd560ce
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T05:59:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: cfd560ce
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+**Duration ms**: 554
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T06:01:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 17ee2cf5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-24T06:01:03Z
+**Event**: SENSOR_FAILED
+**Fire id**: 17ee2cf5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+**Detail path**: amadeus/spaces/default/intents/260722-tla-plugin/.amadeus-sensors/code-generation/linter-17ee2cf5.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T06:01:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: eedbf36f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T06:01:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: eedbf36f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+**Duration ms**: 628
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T06:01:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: b2f2ad02
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-24T06:01:33Z
+**Event**: SENSOR_FAILED
+**Fire id**: b2f2ad02
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+**Detail path**: amadeus/spaces/default/intents/260722-tla-plugin/.amadeus-sensors/code-generation/linter-b2f2ad02.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T06:01:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: 52664abe
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T06:01:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: 52664abe
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+**Duration ms**: 561
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T06:02:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: d7f3ab37
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-24T06:02:05Z
+**Event**: SENSOR_FAILED
+**Fire id**: d7f3ab37
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+**Detail path**: amadeus/spaces/default/intents/260722-tla-plugin/.amadeus-sensors/code-generation/linter-d7f3ab37.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T06:02:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: 560b2407
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T06:02:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 560b2407
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/run-model-check-diagnostic.ts
+**Duration ms**: 637
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T06:02:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6ae26638
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T06:03:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6ae26638
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+**Duration ms**: 1400
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T06:03:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6be35c4a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T06:03:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6be35c4a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+**Duration ms**: 566
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T06:03:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3c328b5b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T06:03:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3c328b5b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+**Duration ms**: 1448
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T06:03:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: a395e176
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T06:03:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: a395e176
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-run-model-check-diagnostic.integration.test.ts
+**Duration ms**: 611
+
+---
