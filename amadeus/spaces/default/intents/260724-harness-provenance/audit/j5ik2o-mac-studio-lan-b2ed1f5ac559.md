@@ -5328,3 +5328,41 @@
 **Message**: delegate-approval発行を待ちます
 
 ---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-24T12:15:53Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-24T12:15:53Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-24T12:15:53Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: requirements-analysis
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-24T12:15:53Z
+**Event**: GATE_APPROVED
+**Stage**: requirements-analysis
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-24T12:15:53Z
+**Event**: STAGE_COMPLETED
+**Stage**: requirements-analysis
+**Details**: Stage Requirements Analysis approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-24T12:15:53Z
+**Event**: STAGE_STARTED
+**Stage**: user-stories
+**Agent**: amadeus-product-agent
+
+---
