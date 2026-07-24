@@ -3564,3 +3564,20 @@
 **Message**: Reviewer: amadeus-product-lead-agent\n\ninvocationId: 8b793ab8-9ac2-47c1-be57-73b040cdd6f9\nVerdict: READY\nIteration: 1\nSummary: rough-mockups.md が要求する非UI成果物(system context diagram + key interaction flow
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-24T11:20:10Z
+**Event**: WORKFLOW_PARKED
+**Stage**: rough-mockups
+**Timestamp**: 2026-07-24T11:20:10Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:20:16Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: af522f7086c398cae
+**Message**: delegate来たら取り込んで
+
+---

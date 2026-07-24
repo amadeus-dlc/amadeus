@@ -31,6 +31,8 @@
 ## Runtime State
 - **Revision Count**: 0
 
+- **Parked**: 2026-07-24T11:20:10Z
+- **Parked At Stage**: rough-mockups
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -91,7 +93,7 @@ Per unit: [TBD]
 - **Current Stage**: rough-mockups
 - **Next Stage**: approval-handoff
 - **Status**: Running
-- **Last Updated**: 2026-07-24T11:16:12Z
+- **Last Updated**: 2026-07-24T11:20:10Z
 
 ## Session Resume Point
 - **Last Completed Stage**: team-formation
