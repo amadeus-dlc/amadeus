@@ -91,7 +91,7 @@ Per unit: [TBD]
 - **Current Stage**: units-generation
 - **Next Stage**: delivery-planning
 - **Status**: Running
-- **Last Updated**: 2026-07-24T12:50:11Z
+- **Last Updated**: 2026-07-24T12:57:44Z
 
 ## Session Resume Point
 - **Last Completed Stage**: application-design
