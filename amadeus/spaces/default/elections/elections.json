@@ -46,5 +46,11 @@
     "dirName": "260724-e-tlacg13",
     "createdAt": "2026-07-24T16:01:57Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-WTFCG13",
+    "dirName": "260724-e-wtfcg13",
+    "createdAt": "2026-07-24T16:22:56Z",
+    "status": "collecting"
   }
 ]

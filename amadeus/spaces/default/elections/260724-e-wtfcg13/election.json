@@ -1,0 +1,23 @@
+{
+  "electionId": "E-WTFCG13",
+  "kind": "learnings-election",
+  "question": "260724-watcher-timeout-fix / code-generation の §13 学習選定。conductor e1 の提案は【0件】。#1449(team-up.sh watcher readiness ブロック)の bugfix 実装(WATCHER_RESEND_MAX 2→1、worst 270→180s、E-WTFRA1=C案/E-WTFRA2=A案裁定準拠)。\n\n不採用候補5件と理由:\n・c1(2→1 vs ループ撤去の選択)= intent固有の一回性判断、ノルム化不要\n・c2(unit-dir解決)= 既存 cid:code-generation:degrade-scope-unit-dir-layout でカバー\n・c3(subagent→inline実行)= 既存 cid:subagent-utilization でカバー、intent固有適用\n・c4(wip先行適用の事実)= intent固有、ノルムでない\n・c5(1回再送の中庸)= intent固有トレードオフ(E-WTFRA1=C準拠)\n\n各自 team.md/project.md で引用cid(degrade-scope-unit-dir-layout / subagent-utilization)の実在を確認し、5候補がいずれも intent固有 or 既存cidカバー=新規persist不要であることを実測のうえ、0件提案の妥当性を投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可(提案通り) — 5候補はいずれも intent固有 or 既存cidカバー済み、新規ノルム化に当たらない"
+    },
+    {
+      "internalNo": 2,
+      "label": "追加すべき学習候補あり(noteに具体候補と根拠を明記) — 0件提案に異議"
+    }
+  ],
+  "voters": [
+    "e2",
+    "e3",
+    "e4",
+    "e5",
+    "e6"
+  ],
+  "state": "collecting"
+}

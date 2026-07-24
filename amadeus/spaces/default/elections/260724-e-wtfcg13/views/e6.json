@@ -1,0 +1,16 @@
+{
+  "electionId": "E-WTFCG13",
+  "voter": "e6",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可(提案通り) — 5候補はいずれも intent固有 or 既存cidカバー済み、新規ノルム化に当たらない"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "追加すべき学習候補あり(noteに具体候補と根拠を明記) — 0件提案に異議"
+    }
+  ]
+}

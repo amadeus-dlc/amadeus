@@ -1,0 +1,27 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-WTFCG13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "私はこのintent(#1449)の起票者かつE-WTFRA1(C案=再送ループ縮小)/E-WTFRA2(A案=短縮値検証)の投票者で文脈を把握。5候補の不採用理由を実測確認: c1(2→1 vs ループ撤去)/c4(wip先行適用の事実)/c5(1回再送の中庸)はいずれもintent固有の一回性判断・事実・トレードオフでノルム化に当たらず、c2(unit-dir解決)はcid:code-generation:degrade-scope-unit-dir-layout(project.md実在)、c3(subagent→inline)はcid:requirements-analysis:subagent-utilization(team.md実在)でカバー済み。実装(WATCHER_RESEND_MAX 2→1、worst 270→180s)はE-WTFRA1=C裁定に準拠。RE段で既に検討した対称性(spawn.sh単発 vs team-up.sh再送ループ)はsymmetric-pair-reviewカバーとしてE-WTFRAS13で0件裁定済み。CG段に新規persistすべき学びはなく、0件提案は妥当。",
+      "submittedAt": "2026-07-24T16:25:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-WTFCG13",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "引用cid 2件の実在をgrep確認: degrade-scope-unit-dir-layout(project.md)・subagent-utilization(team.md)。5候補の帰属妥当: c2=degrade-scope-unit-dir-layout、c3=subagent-utilizationでカバー済み、c1(2→1 vs撤去)/c4(wip先行)/c5(1回再送中庸)はintent固有の一回性トレードオフ(E-WTFRA1=C/E-WTFRA2=A裁定準拠)でノルム化不要。0件提案妥当。",
+      "submittedAt": "2026-07-24T16:24:24Z"
+    }
+  ],
+  "late": []
+}
