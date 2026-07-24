@@ -24,7 +24,7 @@ reverse-engineering 段階(Developer/Architect subagent)の実測により、以
 - D. 上記A〜Cのいずれを選んでも、まずタイミングseam(WATCHER_READY_TIMEOUT/WATCHER_RESEND_MAXをテストで実測駆動できる構造)を追加し、「落ちる実証」で270秒ブロックを再現してから修正する二段構え。
 - X. Other (please specify)
 
-[Answer]: 【裁定待ち】
+[Answer]: C(E-WTFRA1 選挙裁定、choice3=4票/D案choice4=1票、GoA全票2)。再送ループを縮小し agmsg spawn.sh 対称の「単発 WATCHER_READY_TIMEOUT 秒待ち→1回だけ再送→再度待ち」(合計2ラウンド)へ縮小する。worst-case を 270秒(3ラウンド)から 180秒(2ラウンド)へ確定(純単発にしない理由=#1384回復に最低1回の再送が必要)。90秒接地は維持。exit code分岐/mux_attach前検証(FR-5)/no-silent-success の3制約は保持。留保(GoA2 全5票、record verbatim): (1) C実装時も org.md Mandated の『落ちる実証』(既存seamで270→縮小後の赤→緑を実測)を必須とする=NFR-1a (2) #1384のprompt脱落回復力が再送2→1で保たれるか設計/実装段で確認=NFR-1b (3) 純単発でなく1回再送=2ラウンド=180秒とする=FR-1。record(leader worktree相対、本worktreeには未同期): amadeus/spaces/default/elections/260724-e-wtfra1/record.md(leader worktreeで直読照合済み)
 
 ---
 
@@ -36,4 +36,4 @@ reverse-engineering 段階(Developer/Architect subagent)の実測により、以
 - B. 実際に `WATCHER_READY_TIMEOUT=90` のデフォルト値のままでもタイミング検証する統合テストを追加し、実時間で90秒超のテストを許容する。
 - X. Other (please specify)
 
-[Answer]: 【裁定待ち】
+[Answer]: A(E-WTFRA2 選挙裁定、choice1=5票、GoA 1x4 2x1)。既存シーム(`tests/integration/t-team-up-watcher-arming.test.ts` の `WATCHER_READY_TIMEOUT`/`WATCHER_RESEND_MAX` env override)を使い、短縮値での実測タイミング検証に留める。実90秒統合テストは追加しない。留保(e5, GoA2): 90デフォルト値自体は重い実待機テストでなく軽量な定数assert(env未設定時90確認)で別途担保=NFR-1c。record(leader worktree相対、本worktreeには未同期): amadeus/spaces/default/elections/260724-e-wtfra2/record.md(leader worktreeで直読照合済み)
