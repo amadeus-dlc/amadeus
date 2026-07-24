@@ -3085,3 +3085,482 @@
 **Duration ms**: 37
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-24T11:15:32Z
+**Event**: WORKFLOW_PARKED
+**Stage**: team-formation
+**Timestamp**: 2026-07-24T11:15:32Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:15:38Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a8d5673090bd4b7fa
+**Message**: delegate承認が届いたら取り込んで進めて
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-24T11:16:12Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-24T11:16:12Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-24T11:16:12Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: team-formation
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-24T11:16:12Z
+**Event**: GATE_APPROVED
+**Stage**: team-formation
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-24T11:16:12Z
+**Event**: STAGE_COMPLETED
+**Stage**: team-formation
+**Details**: Stage Team Formation approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-24T11:16:12Z
+**Event**: STAGE_STARTED
+**Stage**: rough-mockups
+**Agent**: amadeus-design-agent
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-24T11:16:58Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260724-181510-1d8e/engineer-5/amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/rough-mockups-questions.md
+**Context**: ideation > rough-mockups > rough-mockups-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T11:16:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 960caa50
+**Sensor ID**: required-sections
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/rough-mockups-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T11:16:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: 960caa50
+**Sensor ID**: required-sections
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/rough-mockups-questions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T11:16:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5178b67e
+**Sensor ID**: upstream-coverage
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/rough-mockups-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T11:16:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5178b67e
+**Sensor ID**: upstream-coverage
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/rough-mockups-questions.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T11:16:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 42cbb7e6
+**Sensor ID**: answer-evidence
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/rough-mockups-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-24T11:16:58Z
+**Event**: SENSOR_FAILED
+**Fire id**: 42cbb7e6
+**Sensor ID**: answer-evidence
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/rough-mockups-questions.md
+**Detail path**: amadeus/spaces/default/intents/260724-harness-provenance/.amadeus-sensors/rough-mockups/answer-evidence-42cbb7e6.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-24T11:17:16Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260724-181510-1d8e/engineer-5/amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/wireframes.md
+**Context**: ideation > rough-mockups > wireframes.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T11:17:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 504d33dd
+**Sensor ID**: required-sections
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/wireframes.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T11:17:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 504d33dd
+**Sensor ID**: required-sections
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/wireframes.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T11:17:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3afc8209
+**Sensor ID**: upstream-coverage
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/wireframes.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T11:17:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3afc8209
+**Sensor ID**: upstream-coverage
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/wireframes.md
+**Duration ms**: 36
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-24T11:17:25Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260724-181510-1d8e/engineer-5/amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/user-flow.md
+**Context**: ideation > rough-mockups > user-flow.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T11:17:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 24b50954
+**Sensor ID**: required-sections
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/user-flow.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T11:17:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 24b50954
+**Sensor ID**: required-sections
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/user-flow.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T11:17:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 50a40ec4
+**Sensor ID**: upstream-coverage
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/user-flow.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T11:17:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 50a40ec4
+**Sensor ID**: upstream-coverage
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/user-flow.md
+**Duration ms**: 41
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-24T11:17:30Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260724-181510-1d8e/engineer-5/amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/rough-mockups-questions.md
+**Context**: ideation > rough-mockups > rough-mockups-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T11:17:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: efdd4096
+**Sensor ID**: required-sections
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/rough-mockups-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T11:17:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: efdd4096
+**Sensor ID**: required-sections
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/rough-mockups-questions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T11:17:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3200c085
+**Sensor ID**: upstream-coverage
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/rough-mockups-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T11:17:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3200c085
+**Sensor ID**: upstream-coverage
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/rough-mockups-questions.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T11:17:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: d327c2cd
+**Sensor ID**: answer-evidence
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/rough-mockups-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T11:17:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: d327c2cd
+**Sensor ID**: answer-evidence
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/rough-mockups-questions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T11:17:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9d6f191a
+**Sensor ID**: required-sections
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/wireframes.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T11:17:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9d6f191a
+**Sensor ID**: required-sections
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/wireframes.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T11:17:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2bb17fe4
+**Sensor ID**: upstream-coverage
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/wireframes.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T11:17:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2bb17fe4
+**Sensor ID**: upstream-coverage
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/wireframes.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T11:17:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5a7a3fad
+**Sensor ID**: required-sections
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/user-flow.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T11:17:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5a7a3fad
+**Sensor ID**: required-sections
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/user-flow.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T11:17:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5397cbc0
+**Sensor ID**: upstream-coverage
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/user-flow.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T11:17:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5397cbc0
+**Sensor ID**: upstream-coverage
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/user-flow.md
+**Duration ms**: 44
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T11:17:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5617c897
+**Sensor ID**: required-sections
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/rough-mockups-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T11:17:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5617c897
+**Sensor ID**: required-sections
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/rough-mockups-questions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T11:17:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0e8721fd
+**Sensor ID**: upstream-coverage
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/rough-mockups-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T11:17:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0e8721fd
+**Sensor ID**: upstream-coverage
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/rough-mockups-questions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T11:17:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3d95e79e
+**Sensor ID**: answer-evidence
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/rough-mockups-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T11:17:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3d95e79e
+**Sensor ID**: answer-evidence
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/rough-mockups-questions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T11:17:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6aa90f32
+**Sensor ID**: answer-evidence
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/rough-mockups-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T11:17:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6aa90f32
+**Sensor ID**: answer-evidence
+**Stage slug**: rough-mockups
+**Output path**: amadeus/spaces/default/intents/260724-harness-provenance/ideation/rough-mockups/rough-mockups-questions.md
+**Duration ms**: 38
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:19:19Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-product-lead-agent
+**Agent ID**: a1aaeeb1a727cbfe7
+**Message**: Reviewer: amadeus-product-lead-agent\n\ninvocationId: 8b793ab8-9ac2-47c1-be57-73b040cdd6f9\nVerdict: READY\nIteration: 1\nSummary: rough-mockups.md が要求する非UI成果物(system context diagram + key interaction flow
+
+---
