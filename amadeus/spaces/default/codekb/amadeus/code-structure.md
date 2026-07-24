@@ -1,5 +1,21 @@
 # コード構造
 
+## Team Mode ランチャーの packages 昇格と watcher 検証関数群（260724-watcher-timeout-fix、2026-07-24、現在）
+
+差分リフレッシュ（base `a81c11dde` → observed HEAD `6d4df9056`、distance 155、amadeus-bugfix / Minimal、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)）。測定 ref: observed HEAD 実ファイル直読 + `git log/diff a81c11dde..HEAD`。
+
+- **正本パスの移動**: base では `scripts/team-up.sh`。区間内 #1421（`0d24c6f93`）が `packages/framework/core/tools/team-up.sh`（core ハーネス中立層）へ移動し、`.claude`/`.codex`/`.cursor`/`.opencode` の self-install 4 面 + `dist/*` の計 **11 コピー**（`git ls-files '*team-up.sh' | wc -l` = 11）を生成。base scripts 版（1271 行）→ packages 版（1462 行）の diff 235 行はパス参照解決（`TOOL_DIR`/`AGMSG_SCRIPT_DIR`/`SAFETY_WAIT_HELPER`）・`require_prerequisites`（herdr/agmsg/OS 検査 + install URL）・docs 追加で、`verify_watchers_armed` 検証ロジック本体は不変。
+- **watcher arming 検証関数群**（`packages/framework/core/tools/team-up.sh`、セクション `# --- agmsg watcher arming verification (Issue #1384) ---` :1061 以降）:
+  - `watcher_verification_applies`（:1067-1069）= claude + agmsg のみ真。
+  - `ready_sentinel_path`（:1078-1085）= agmsg `actas-lock.sh` を subshell source して `agmsg_ready_path` を呼ぶ（path 二重定義回避、NFR-4）。
+  - `resolve_member_pane`（:1093-1105）= `herdr agent list` から member ラベルで pane id 抽出。
+  - `resend_monitor_prompt`（:1110-1115）= herdr send-text → send-keys enter の 2 段（cid:herdr-send-submit-two-step）。
+  - `clear_stale_watcher_sentinels`（:1122-1129）= pane 起動前に旧 sentinel 除去（spawn.sh:572 対称）。
+  - `verify_watchers_armed`（:1139-1178）= 外側再送ループ（`max_attempts = WATCHER_RESEND_MAX + 1` = 3、:1141）× 内側 1 秒刻みポーリング（最大 `WATCHER_READY_TIMEOUT`=90 秒、:1156）の二重ループ。全員 armed で return 0（:1161）、未 armed 残存で ERROR + 復旧案内 + return 1（:1174-1177）。
+- **定数**: `WATCHER_READY_TIMEOUT`（:101、既定 90、per-wait）/ `WATCHER_RESEND_MAX`（:104、既定 2）。env 上書き可。
+- **呼び出し順序**（:1415-1462）: layout 構築（:1429-1435）→ `verify_watchers_armed`（:1442-1445）→ `start_safety_wait_supervisors`（:1447）→ **`mux_attach`（:1448）** → `exit "$watcher_status"`（:1462）。検証は attach の前に置かれる。
+- **テスト**: `tests/integration/t-team-up-watcher-arming.test.ts`（197 行新規）は `TEAM_UP_LIB_ONLY` で関数を source して駆動。fixture env `WATCHER_READY_TIMEOUT: "0"`（:79）でタイミングを無効化するため 90/270 秒の実待機は無被覆。
+
 ## t241 のテスト tier 配置構造（260723-t241-ci-residency、2026-07-23、履歴）
 
 差分リフレッシュ（base `a81c11dde` → observed `78bce876`、distance 35、bugfix / Minimal、[#1294](https://github.com/amadeus-dlc/amadeus/issues/1294)）。本バグ面（tests/e2e・run-tests.ts・workflows・package.json）は base..HEAD で無変更（numstat 0 行）、原因所在は 260718-election-ts-foundation（#1235）。以下は測定 ref: scan-notes @ observed HEAD `78bce876` の転記。
