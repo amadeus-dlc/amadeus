@@ -1671,3 +1671,12 @@
 **Agent ID**: a601201c16801a460
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T15:28:31Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: af38c8b5973436668
+**Message**: Issue #1449(team-up.sh 起動遅延)を修正中。実装とテストは git に保全済みだが、セッションのツール結果が不安定でテストの緑を確認できず、workflow を code-generation で park しました。次はセッション再起動後に検証から再開します。
+
+---
