@@ -1,0 +1,91 @@
+{
+  "schema": "amadeus.plugin-discovery-benchmark.v1",
+  "capturedAt": "2026-07-25T02:26:34+09:00",
+  "environment": {
+    "os": "darwin 25.5.0",
+    "cpu": "Apple M4 Max",
+    "bun": "1.3.13"
+  },
+  "regression": {
+    "fixture": "100 plugins x 1 stage x 4 KiB",
+    "fixtureBytes": 409600,
+    "fixtureHash": "sha256:86f7479cf79b921f335778bcae7edb67378458294a6a7a323aa2d6e4265b0ce5",
+    "warmUpRuns": 2,
+    "measuredRuns": 10,
+    "order": "baseline,treatment",
+    "baselineMs": [
+      3.265208000000001,
+      3.601832999999999,
+      3.736083000000008,
+      4.071124999999995,
+      3.057457999999997,
+      3.41466699999998,
+      3.209583000000009,
+      3.2250419999999735,
+      4.04962500000002,
+      3.6493750000000205
+    ],
+    "treatmentMs": [
+      3.9887080000000026,
+      4.243167,
+      3.7052910000000168,
+      3.9312500000000057,
+      3.332499999999982,
+      3.24837500000001,
+      3.0698340000000144,
+      4.079124999999976,
+      3.6867090000000076,
+      3.3031669999999735
+    ],
+    "baselineMedianMs": 3.5082499999999897,
+    "treatmentMedianMs": 3.696000000000012,
+    "additionalRatio": 0.053516710610709915,
+    "limitRatio": 0.2,
+    "discoveredStages": 100,
+    "outputHash": "sha256:5a6490aeb2ab2f68ccc745cf2f8bc1ac1627954a648ac720ef932c47943627b6",
+    "verdict": "PASS"
+  },
+  "capacity": {
+    "fixture": "100 plugins x 10 stages x 4 KiB",
+    "fixtureBytes": 4096000,
+    "fixtureHash": "sha256:f5391eed7d6520e79b6d5a2c7d242f22c50236384960830fab2396400f3fc6b8",
+    "warmUpRuns": 2,
+    "measuredRuns": 10,
+    "compileMs": [
+      6.439292000000023,
+      6.700707999999963,
+      6.470082999999988,
+      7.379542000000015,
+      5.998166999999967,
+      6.4232920000000036,
+      6.940082999999959,
+      6.563709000000017,
+      6.302332999999976,
+      6.310167000000035
+    ],
+    "limitMs": 10000,
+    "limitBytes": 67108864,
+    "discoveredStages": 1000,
+    "outputHash": "sha256:616937dc6388c9cbd994ae41fde4eba729431a4b64a43c3383e7b890262092d6",
+    "verdict": "PASS"
+  },
+  "stability": {
+    "independentProcesses": 10,
+    "additionalRatios": [
+      0.016484,
+      0.124011,
+      0.068685,
+      0.181337,
+      0.041237,
+      0.056666,
+      0.028523,
+      0.061556,
+      0.107115,
+      0.096295
+    ],
+    "worstAdditionalRatio": 0.1813365671776854,
+    "limitRatio": 0.2,
+    "passedProcesses": 10,
+    "verdict": "PASS"
+  }
+}

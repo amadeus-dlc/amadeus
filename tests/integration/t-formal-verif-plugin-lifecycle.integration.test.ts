@@ -11,13 +11,27 @@
 // and the plugin-inclusive graph are temp dirs removed in afterEach).
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  truncateSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   compileStageGraph,
   __resetGraphCache,
 } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
+import {
+  _trustedPluginStageFileForTests,
+} from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import {
   applyPluginDrop,
   applyPluginPlan,
@@ -89,6 +103,17 @@ function makeTx(root: string, backend: WorkspaceBackend): WorkspaceTransaction {
   };
 }
 
+function composeFormalModelCheck(host: string): WorkspaceBackend {
+  const backend = createNodeBackend(host);
+  const descriptor = discoverPlugins(BUNDLE_ROOT).find((plugin) => plugin.name === PLUGIN);
+  expect(descriptor, "formal-model-check must be discoverable in dist/plugins").toBeDefined();
+  const inspected = inspectPlugin(descriptor!, hostSnapshot(host, backend));
+  expect(inspected.kind, JSON.stringify(inspected)).toBe("ready");
+  if (inspected.kind !== "ready") throw new Error("formal-model-check plugin is not ready");
+  expect(applyPluginPlan(inspected.plan, makeTx(host, backend)).kind).toBe("committed");
+  return backend;
+}
+
 // Compile the real graph with plugin discovery pointed at `host`.
 function compileWithPluginHost(host: string): ReturnType<typeof compileStageGraph> {
   setEnv("AMADEUS_PLUGINS_HOST_ROOT", host);
@@ -99,16 +124,12 @@ function compileWithPluginHost(host: string): ReturnType<typeof compileStageGrap
 describe("formal-model-check plugin lifecycle (U2 FR-1.4 / FR-2.1, real engines)", () => {
   test("discover -> compose -> doctor -> compile -> --single -> drop -> baseline", () => {
     const host = freshDir("fmc-host-");
-    const backend = createNodeBackend(host);
+    const backend = composeFormalModelCheck(host);
 
     // 1. Discover the SHIPPED neutral bundle and compose it into the temp host.
     const descriptor = discoverPlugins(BUNDLE_ROOT).find((p) => p.name === PLUGIN);
     expect(descriptor, "formal-model-check must be discoverable in dist/plugins").toBeDefined();
-    const inspected = inspectPlugin(descriptor!, hostSnapshot(host, backend));
-    expect(inspected.kind, JSON.stringify(inspected)).toBe("ready");
-    if (inspected.kind !== "ready") return;
-    const composed = applyPluginPlan(inspected.plan, makeTx(host, backend));
-    expect(composed.kind).toBe("committed");
+    expect(descriptor?.manifest?.stages.map((stage) => stage.path)).toEqual([STAGE_LANDING]);
 
     // The stage lands exactly where the compile's plugin walk looks.
     expect(existsSync(join(host, STAGE_LANDING))).toBe(true);
@@ -127,6 +148,9 @@ describe("formal-model-check plugin lifecycle (U2 FR-1.4 / FR-2.1, real engines)
     expect(node!.lead_agent).toBe("amadeus-quality-agent");
     expect(node!.execution).toBe("CONDITIONAL");
     expect(node!.mode).toBe("inline");
+
+    expect(_trustedPluginStageFileForTests(PLUGIN)).toBe(join(realpathSync(host), STAGE_LANDING));
+    expect(_trustedPluginStageFileForTests("missing-plugin-stage")).toBeNull();
 
     // 4. `next --stage formal-model-check --single` emits a run-stage directive
     //    for the composed opt-in stage (FR-1.4, real orchestrate — no verify stub,
@@ -147,6 +171,23 @@ describe("formal-model-check plugin lifecycle (U2 FR-1.4 / FR-2.1, real engines)
     expect(directive, out).not.toBeNull();
     expect(directive.kind).toBe("run-stage");
     expect(directive.stage).toBe(PLUGIN);
+    expect(directive.stage_file).toBe(join(realpathSync(host), STAGE_LANDING));
+    expect(readFileSync(directive.stage_file, "utf-8")).toContain("slug: formal-model-check");
+
+    // Runtime trust is checked at directive emission, not on every graph
+    // compile. Drift the selected body after compile: orchestrate must refuse
+    // it before a conductor can read/execute stage_file.
+    const trustedStageBytes = readFileSync(join(host, STAGE_LANDING));
+    writeFileSync(join(host, STAGE_LANDING), Buffer.concat([trustedStageBytes, Buffer.from("\n<!-- drift -->\n")]));
+    expect(() => _trustedPluginStageFileForTests(PLUGIN)).toThrow("content digest drifted");
+    const driftedRun = spawnSync(
+      BUN,
+      [ORCHESTRATE, "next", "--stage", PLUGIN, "--single", "--project-dir", freshDir("fmc-drift-proj-")],
+      { encoding: "utf-8", env: { ...process.env, AMADEUS_STAGE_GRAPH: graphFile } },
+    );
+    expect(driftedRun.status).not.toBe(0);
+    expect(`${driftedRun.stdout ?? ""}${driftedRun.stderr ?? ""}`).toContain("content digest drifted");
+    writeFileSync(join(host, STAGE_LANDING), trustedStageBytes);
 
     // 5. Drop removes the composed stage.
     const record = backend.readComposition().plugins.get(PLUGIN)!;
@@ -158,5 +199,57 @@ describe("formal-model-check plugin lifecycle (U2 FR-1.4 / FR-2.1, real engines)
     // 6. Recompile returns to the 0-plugin baseline, byte-identical.
     const afterDrop = compileWithPluginHost(host);
     expect(afterDrop.json).toBe(readFileSync(COMMITTED_GRAPH, "utf-8"));
+  });
+
+  test("in-process runtime trust rejects invalid index metadata", () => {
+    const host = freshDir("fmc-invalid-index-");
+    composeFormalModelCheck(host);
+    setEnv("AMADEUS_PLUGINS_HOST_ROOT", host);
+    const recordPath = join(host, ".amadeus-plugin-composition.json");
+    const composition = JSON.parse(readFileSync(recordPath, "utf-8")) as {
+      plugins: Array<[string, {
+        stageIndex: Array<{ path: string }>;
+        stageIndexDigest: string;
+        trustGrant: { plugin: string };
+      }]>;
+    };
+    composition.plugins[0][1].trustGrant.plugin = "wrong-plugin";
+    writeFileSync(recordPath, JSON.stringify(composition));
+    expect(() => _trustedPluginStageFileForTests(PLUGIN)).toThrow("trust index is invalid");
+
+    composition.plugins[0][1].trustGrant.plugin = PLUGIN;
+    composition.plugins[0][1].stageIndex[0].path =
+      "plugins/formal-model-check/stages/../formal-model-check.md";
+    composition.plugins[0][1].stageIndexDigest =
+      `sha256:${createHash("sha256").update(JSON.stringify(composition.plugins[0][1].stageIndex)).digest("hex")}`;
+    writeFileSync(recordPath, JSON.stringify(composition));
+    expect(() => _trustedPluginStageFileForTests(PLUGIN)).toThrow("trust index is invalid");
+  });
+
+  test("in-process runtime trust rejects symlinks and oversized stages", () => {
+    const symlinkedFileHost = freshDir("fmc-symlink-file-");
+    composeFormalModelCheck(symlinkedFileHost);
+    setEnv("AMADEUS_PLUGINS_HOST_ROOT", symlinkedFileHost);
+    const stagePath = join(symlinkedFileHost, STAGE_LANDING);
+    const externalStage = join(freshDir("fmc-external-stage-"), "formal-model-check.md");
+    writeFileSync(externalStage, readFileSync(stagePath));
+    rmSync(stagePath);
+    symlinkSync(externalStage, stagePath);
+    expect(() => _trustedPluginStageFileForTests(PLUGIN)).toThrow("is a symlink");
+
+    const symlinkedAncestorHost = freshDir("fmc-symlink-ancestor-");
+    composeFormalModelCheck(symlinkedAncestorHost);
+    setEnv("AMADEUS_PLUGINS_HOST_ROOT", symlinkedAncestorHost);
+    const pluginDir = join(symlinkedAncestorHost, "plugins", PLUGIN);
+    const realPluginDir = join(symlinkedAncestorHost, "formal-model-check-real");
+    renameSync(pluginDir, realPluginDir);
+    symlinkSync(realPluginDir, pluginDir);
+    expect(() => _trustedPluginStageFileForTests(PLUGIN)).toThrow("symlinked ancestor");
+
+    const oversizedHost = freshDir("fmc-oversized-");
+    composeFormalModelCheck(oversizedHost);
+    setEnv("AMADEUS_PLUGINS_HOST_ROOT", oversizedHost);
+    truncateSync(join(oversizedHost, STAGE_LANDING), 64 * 1024 * 1024 + 1);
+    expect(() => _trustedPluginStageFileForTests(PLUGIN)).toThrow("exceeds the 64 MiB trust boundary");
   });
 });

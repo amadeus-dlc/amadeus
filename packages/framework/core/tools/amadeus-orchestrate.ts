@@ -67,8 +67,19 @@
 // per the tool/agent/human split (routing string-building to an LLM would
 // invert the whole thesis).
 
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { createHash } from "node:crypto";
+import {
+  closeSync,
+  constants as fsConstants,
+  existsSync,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+  readSync,
+  realpathSync,
+} from "node:fs";
+import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   type AskDirective,
@@ -807,7 +818,91 @@ function memoryPathFor(phase: string, slug: string, recordPrefix: string | null)
 // amadeus-common/ spine, a peer of skills/). Matches the engine design's example
 // directive's stage_file field.
 function stageFileFor(phase: string, slug: string): string {
+  const pluginStage = trustedPluginStageFile(slug);
+  if (pluginStage !== null) return pluginStage;
   return `${harnessDir()}/amadeus-common/stages/${phase}/${slug}.md`;
+}
+
+type TrustedPluginRuntimeStage = {
+  path?: string;
+  slug?: string;
+  contentDigest?: string;
+  frontmatter?: unknown;
+};
+type TrustedPluginRuntimeRecord = {
+  stageIndex?: TrustedPluginRuntimeStage[];
+  stageIndexDigest?: string;
+  trustGrant?: { plugin?: string; contentDigest?: string; grantTimestamp?: string } | null;
+};
+type TrustedPluginRuntimeComposition = { plugins?: [string, TrustedPluginRuntimeRecord][] };
+
+function trustedPluginStageFile(slug: string): string | null {
+  const configuredHostRoot = process.env.AMADEUS_PLUGINS_HOST_ROOT;
+  const hostRoot = realpathSync(configuredHostRoot ?? dirname(TOOLS_DIR));
+  const recordPath = join(hostRoot, ".amadeus-plugin-composition.json");
+  if (!existsSync(recordPath)) return null;
+  const composition = JSON.parse(readFileSync(recordPath, "utf-8")) as TrustedPluginRuntimeComposition;
+  for (const [plugin, record] of composition.plugins ?? []) {
+    const entry = record.stageIndex?.find((candidate) => candidate.slug === slug);
+    if (entry === undefined) continue;
+    const index = record.stageIndex ?? [];
+    const indexDigest = `sha256:${createHash("sha256").update(JSON.stringify(index)).digest("hex")}`;
+    const grant = record.trustGrant;
+    const path = entry.path ?? "";
+    if (
+      grant?.plugin !== plugin
+      || record.stageIndexDigest !== indexDigest
+      || !path.startsWith(`plugins/${plugin}/stages/`)
+      || path.split("/").some((segment) => segment === ".." || segment === "." || segment === "")
+      || !/^sha256:[0-9a-f]{64}$/.test(entry.contentDigest ?? "")
+    ) {
+      throw new Error(`Plugin stage ${slug} trust index is invalid`);
+    }
+    const abs = join(hostRoot, path);
+    const contained = relative(hostRoot, abs);
+    if (contained.startsWith("..") || contained === ".." || contained.startsWith(sep)) {
+      throw new Error(`Plugin stage ${slug} escapes its trusted host`);
+    }
+    let ancestor = hostRoot;
+    for (const segment of path.split("/").slice(0, -1)) {
+      ancestor = join(ancestor, segment);
+      if (lstatSync(ancestor).isSymbolicLink()) {
+        throw new Error(`Plugin stage ${slug} has a symlinked ancestor`);
+      }
+    }
+    const before = lstatSync(abs);
+    if (before.isSymbolicLink()) throw new Error(`Plugin stage ${slug} is a symlink`);
+    const noFollow = fsConstants.O_NOFOLLOW as number | undefined;
+    if (typeof noFollow !== "number") throw new Error(`Plugin stage ${slug} cannot be verified without O_NOFOLLOW`);
+    const fd = openSync(abs, fsConstants.O_RDONLY | noFollow);
+    try {
+      const opened = fstatSync(fd);
+      if (!opened.isFile() || opened.dev !== before.dev || opened.ino !== before.ino) {
+        throw new Error(`Plugin stage ${slug} changed before trusted execution`);
+      }
+      if (opened.size > 64 * 1024 * 1024) {
+        throw new Error(`Plugin stage ${slug} exceeds the 64 MiB trust boundary`);
+      }
+      const bytes = Buffer.allocUnsafe(opened.size);
+      let offset = 0;
+      while (offset < opened.size) {
+        const count = readSync(fd, bytes, offset, opened.size - offset, offset);
+        if (count === 0) break;
+        offset += count;
+      }
+      if (offset !== opened.size) throw new Error(`Plugin stage ${slug} could not be read completely`);
+      const digest = `sha256:${createHash("sha256").update(bytes.subarray(0, offset)).digest("hex")}`;
+      if (digest !== entry.contentDigest) throw new Error(`Plugin stage ${slug} content digest drifted`);
+    } finally {
+      closeSync(fd);
+    }
+    return configuredHostRoot === undefined ? `${harnessDir()}/${path}` : abs;
+  }
+  return null;
+}
+
+export function _trustedPluginStageFileForTests(slug: string): string | null {
+  return trustedPluginStageFile(slug);
 }
 
 // --- The conductor persona (decision D-E, SPIKE 6) ---

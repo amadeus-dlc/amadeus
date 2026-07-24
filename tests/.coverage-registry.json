@@ -1309,6 +1309,10 @@
           "mechanism": "none"
         },
         {
+          "file": "tests/integration/t-plugin-stage-discovery-performance.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/integration/t110.test.ts",
           "mechanism": "none"
         },
@@ -1443,6 +1447,10 @@
       "coveredBy": [
         {
           "file": "tests/integration/t-formal-verif-plugin-stage-discovery.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/integration/t-plugin-stage-discovery-performance.integration.test.ts",
           "mechanism": "none"
         }
       ],

@@ -39,6 +39,7 @@
 //
 // See docs/reference/16-artifact-vocabulary.md for artifact naming.
 
+import { createHash } from "node:crypto";
 import {
   closeSync,
   constants as fsConstants,
@@ -1278,9 +1279,12 @@ interface ArtifactProducerDeclaration {
 function assertUniqueArtifactProducers(stages: GraphStage[]): void {
   const declaredBy = new Map<string, ArtifactProducerDeclaration>();
   for (const stage of stages) {
+    const produces = stage.produces ?? [];
+    const optionalProduces = stage.optional_produces ?? [];
+    if (produces.length === 0 && optionalProduces.length === 0) continue;
     const declarations = [
-      ["produces", stage.produces ?? []],
-      ["optional_produces", stage.optional_produces ?? []],
+      ["produces", produces],
+      ["optional_produces", optionalProduces],
     ] as const;
     for (const [field, names] of declarations) {
       for (const name of names) {
@@ -1683,6 +1687,31 @@ type PluginStageRead = {
   readonly data: StageFrontmatter;
 };
 
+type PluginStageIndexCacheEntry = {
+  dev: number;
+  ino: number;
+  size: number;
+  mtimeMs: number;
+  ctimeMs: number;
+  reads: PluginStageRead[];
+};
+
+type TrustedPluginStageIndex = {
+  pluginStageIndexDigest?: string;
+  plugins?: Array<[string, {
+    stageIndex?: Array<{
+      path?: string;
+      slug?: string;
+      contentDigest?: string;
+      frontmatter?: Record<string, unknown>;
+    }>;
+    stageIndexDigest?: string;
+    trustGrant?: { plugin?: string; contentDigest?: string; grantTimestamp?: string } | null;
+  }]>;
+};
+
+const pluginStageIndexCache = new Map<string, PluginStageIndexCacheEntry>();
+
 // stderr contract (reliability-design): every plugin-stage failure is a single
 // line of JSON under this schema, all codes mapped to exit 1. Paths are POSIX
 // host-relative, never absolute and never file content; newlines are escaped by
@@ -1851,6 +1880,111 @@ function readPluginStageFiles(hostRoot: string): PluginStageRead[] {
   return reads.sort((a, b) => (a.file.path < b.file.path ? -1 : a.file.path > b.file.path ? 1 : 0));
 }
 
+function readTrustedPluginStageIndex(hostRoot: string): PluginStageRead[] {
+  if (!existsSync(join(hostRoot, "plugins"))) return [];
+  const recordPath = join(hostRoot, ".amadeus-plugin-composition.json");
+  if (!existsSync(recordPath)) {
+    throw pluginIndexError("unknown", "plugin stage index has no composition record");
+  }
+  const recordStat = lstatSync(recordPath);
+  if (recordStat.isSymbolicLink()) {
+    throw pluginIndexError("unknown", "plugin stage index record is a symlink");
+  }
+  const cached = pluginStageIndexCache.get(recordPath);
+  if (
+    cached !== undefined
+    && cached.dev === recordStat.dev
+    && cached.ino === recordStat.ino
+    && cached.size === recordStat.size
+    && cached.mtimeMs === recordStat.mtimeMs
+    && cached.ctimeMs === recordStat.ctimeMs
+  ) {
+    return cached.reads;
+  }
+  let parsed: TrustedPluginStageIndex;
+  try {
+    const raw = safeReadPluginStage(
+      recordPath,
+      { dev: recordStat.dev, ino: recordStat.ino },
+      { used: 0 },
+    );
+    parsed = JSON.parse(raw) as typeof parsed;
+  } catch (err) {
+    throw pluginIndexError("unknown", `plugin stage index is unreadable: ${errorMessage(err)}`);
+  }
+  const reads: PluginStageRead[] = [];
+  const aggregateIndex = (parsed.plugins ?? []).map(([plugin, record]) => [plugin, record.stageIndex ?? []]);
+  const aggregateDigest = `sha256:${createHash("sha256").update(JSON.stringify(aggregateIndex)).digest("hex")}`;
+  if (parsed.pluginStageIndexDigest !== aggregateDigest) {
+    throw pluginIndexError("unknown", "aggregate plugin stage index digest is invalid");
+  }
+  const indexedPaths = new Set<string>();
+  const indexedSlugs = new Set<string>();
+  for (const [plugin, record] of parsed.plugins ?? []) {
+    const index = record.stageIndex ?? [];
+    const grant = record.trustGrant;
+    if (
+      grant?.plugin !== plugin
+      || !/^sha256:[0-9a-f]{64}$/.test(grant.contentDigest ?? "")
+      || Number.isNaN(Date.parse(grant.grantTimestamp ?? ""))
+    ) {
+      throw pluginIndexError(plugin, "plugin stage index trust grant or digest is invalid");
+    }
+    for (const entry of index) {
+      const path = entry.path ?? "";
+      const slug = entry.slug ?? "";
+      if (
+        !path.startsWith(`plugins/${plugin}/stages/`)
+        || !/^sha256:[0-9a-f]{64}$/.test(entry.contentDigest ?? "")
+        || entry.frontmatter === undefined
+        || indexedPaths.has(path)
+        || indexedSlugs.has(slug)
+      ) {
+        throw pluginIndexError(plugin, "plugin stage index entry is invalid", path, slug);
+      }
+      indexedPaths.add(path);
+      indexedSlugs.add(slug);
+      if (entry.frontmatter.slug !== slug) {
+        throw pluginIndexError(plugin, "plugin stage index slug does not match frontmatter", path, slug);
+      }
+      reads.push({
+        file: { path, slug },
+        raw: "",
+        data: entry.frontmatter as unknown as StageFrontmatter,
+      });
+    }
+  }
+  reads.sort((a, b) => (a.file.path < b.file.path ? -1 : a.file.path > b.file.path ? 1 : 0));
+  pluginStageIndexCache.set(recordPath, {
+    dev: recordStat.dev,
+    ino: recordStat.ino,
+    size: recordStat.size,
+    mtimeMs: recordStat.mtimeMs,
+    ctimeMs: recordStat.ctimeMs,
+    reads,
+  });
+  if (pluginStageIndexCache.size > 16) {
+    const oldest = pluginStageIndexCache.keys().next().value;
+    if (oldest !== undefined) pluginStageIndexCache.delete(oldest);
+  }
+  return reads;
+}
+
+function pluginIndexError(
+  plugin: string,
+  reason: string,
+  pluginPath = "plugins",
+  slug = "unknown",
+): PluginStageError {
+  return new PluginStageError({
+    code: "READ_FAILED",
+    plugin,
+    slug,
+    pluginPath,
+    reason,
+  });
+}
+
 /** Best-effort field name from a schema error list ("slug: ..." -> "slug"),
  *  for the SCHEMA_INVALID error's `field`. */
 function firstErrorField(errors: readonly string[]): string {
@@ -1914,11 +2048,6 @@ export function compileStageGraph(): {
   const stages: GraphStage[] = [];
   // Track slug-to-first-file so duplicate-slug errors name both files.
   const slugToFile = new Map<string, string>();
-  // Plugin-contributed slug -> its POSIX host-relative path, so an unknown
-  // sensor on a plugin stage maps to the plugin-stage error schema (below),
-  // not the generic core "unknown sensor id" throw.
-  const pluginSlugToPath = new Map<string, string>();
-
   // Known agent slugs (the `name:` field of each .claude/agents/*.md), passed
   // to validateStageFrontmatter so a stage referencing a lead_agent or
   // support_agent with no matching agent file fails the compile loudly rather
@@ -2003,7 +2132,11 @@ export function compileStageGraph(): {
   // -> the emitted JSON is byte-identical to the pre-extension baseline
   // (BR-U2-3). Iteration order is the path-sorted discovery order (deterministic).
   const pluginHost = pluginsHostRoot();
-  for (const { file, data } of readPluginStageFiles(pluginHost)) {
+  // Load once before the plugin join so plugin sensor imports can be rejected
+  // in the same loop. The trusted index already guarantees unique plugin
+  // slugs, avoiding a second all-stage walk and plugin-path lookup map.
+  const sensorsById = loadSensors();
+  for (const { file, data } of readTrustedPluginStageIndex(pluginHost)) {
     const slug = data.slug;
     // Collision against a core stage OR an earlier plugin stage -> loud reject
     // with both paths (BR-U2-2). Emitted as the plugin-stage error schema.
@@ -2017,8 +2150,17 @@ export function compileStageGraph(): {
         pluginPath: file.path,
       });
     }
-    slugToFile.set(slug, join(pluginHost, file.path));
-    pluginSlugToPath.set(slug, file.path);
+    for (const sensorId of data.sensors ?? []) {
+      if (!sensorsById.has(sensorId)) {
+        throw new PluginStageError({
+          code: "UNKNOWN_SENSOR",
+          plugin: file.path.split("/")[1] ?? file.path,
+          slug,
+          pluginPath: file.path,
+          sensorId,
+        });
+      }
+    }
 
     // Plugin stages declare `phase:` in frontmatter; the numeric spine seeds
     // from that phase exactly like a new core stage.
@@ -2046,7 +2188,17 @@ export function compileStageGraph(): {
   }
 
   // Sort by numeric order (phase-prefix.index).
-  stages.sort((a, b) => numericStageOrder(a.number, b.number));
+  const numericOrderByNumber = new Map(
+    stages.map((stage) => {
+      const [phaseNumber, stageNumber] = stage.number.split(".").map((part) => parseInt(part, 10));
+      return [stage.number, [phaseNumber, stageNumber] as const] as const;
+    }),
+  );
+  stages.sort((a, b) => {
+    const [aPhase, aStage] = numericOrderByNumber.get(a.number) ?? [0, 0];
+    const [bPhase, bStage] = numericOrderByNumber.get(b.number) ?? [0, 0];
+    return aPhase === bPhase ? aStage - bStage : aPhase - bPhase;
+  });
 
   assertUniqueArtifactProducers(stages); // Required and optional outputs share one namespace.
 
@@ -2057,36 +2209,25 @@ export function compileStageGraph(): {
   // doctor) read pre-resolved arrays off graph nodes — no runtime walks
   // of .claude/rules/.
   const rules = loadRules();
+  const rulesByPhase = new Map<string, RuleResolution[]>();
   for (const stage of stages) {
-    stage.rules_in_context = resolveRulesForStage(stage, rules);
+    let resolved = rulesByPhase.get(stage.phase);
+    if (resolved === undefined) {
+      resolved = resolveRulesForStage(stage, rules);
+      rulesByPhase.set(stage.phase, resolved);
+    }
+    stage.rules_in_context = resolved;
   }
 
   // Resolve per-stage sensor imports. Pull authoring: each stage's
   // sensors[] list is looked up against the manifest registry; matches
   // is copied verbatim into the resolved entry. Unknown ids throw —
   // authoring errors fail loud at compile, not at fire time.
-  const sensorsById = loadSensors();
-  // Plugin stages that reference an unknown sensor id map to the plugin-stage
-  // error schema (UNKNOWN_SENSOR) rather than the generic core throw below.
-  // Checked here, before the generic resolution, so a plugin authoring error
-  // fails loud with the plugin path + sensor id (BR-U2-6 / reliability-design).
+  const noSensors: SensorResolution[] = [];
   for (const stage of stages) {
-    const pluginPath = pluginSlugToPath.get(stage.slug);
-    if (pluginPath === undefined) continue;
-    for (const sensorId of stage.sensors ?? []) {
-      if (!sensorsById.has(sensorId)) {
-        throw new PluginStageError({
-          code: "UNKNOWN_SENSOR",
-          plugin: pluginPath.split("/")[1] ?? pluginPath,
-          slug: stage.slug,
-          pluginPath,
-          sensorId,
-        });
-      }
-    }
-  }
-  for (const stage of stages) {
-    stage.sensors_applicable = resolveSensorsForStage(stage, sensorsById);
+    stage.sensors_applicable = (stage.sensors?.length ?? 0) === 0
+      ? noSensors
+      : resolveSensorsForStage(stage, sensorsById);
   }
 
   // Edge-local invariant: for every edge A in B.requires_stage,
@@ -2128,7 +2269,15 @@ export function compileStageGraph(): {
   return {
     json: canonicalStageGraphJson(stages),
     gridJson: canonicalScopeGridJson(
-      mergeComposedScopes(transposeScopeGrid(stages), onDiskGrid),
+      mergeComposedScopes(
+        // `scopes: []` is the explicit opt-in contract used by plugin
+        // stages reached through `--single`. It has no stock workflow
+        // membership, so do not materialise redundant SKIP cells for it in
+        // every stock scope. The public transpose helper keeps its generic
+        // all-stage contract; this filtering belongs to compile integration.
+        transposeScopeGrid(stages.filter((stage) => (stage.scopes?.length ?? 0) > 0)),
+        onDiskGrid,
+      ),
     ),
     stages,
   };

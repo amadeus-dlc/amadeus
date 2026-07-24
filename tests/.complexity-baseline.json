@@ -69,6 +69,12 @@
       "ccn": 29
     },
     {
+      "path": "packages/framework/core/tools/amadeus-orchestrate.ts",
+      "name": "trustedPluginStageFile",
+      "ordinal": 0,
+      "ccn": 35
+    },
+    {
       "path": "packages/framework/core/tools/amadeus-runtime.ts",
       "name": "compile",
       "ordinal": 0,

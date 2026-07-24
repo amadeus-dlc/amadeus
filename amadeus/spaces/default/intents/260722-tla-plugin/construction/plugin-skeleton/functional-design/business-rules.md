@@ -10,9 +10,11 @@
 - BR-U2-4(実機 E2E): 受け入れは実 compile+実 orchestrate の E2E(FR-1.4)。verify スタブ・モック代替を禁止
 - BR-U2-5(opt-in 文書): README に JDK/Docker 依存の適用面別明文化(Bun-only Forbidden の文書化要件 — FR-2.3)と self-hosted 前提(ADR-7)を記載
 - BR-U2-6(sensors 参照): frontmatter `sensors: [model-completeness]` はコア sensor(U5)への id 参照。U5 未着地の状態で compile しない(Bolt 順序 = U5 が Bolt 2、U2 が Bolt 3 — DAG 保証)
-- BR-U2-7(コア無改変境界): plugin-composition.ts / plugin-projection.ts は無改変。変更はコア框架では amadeus-graph.ts(walk 拡張)のみで、dist 6面再生成+dist:check/promote:self:check green を伴う(FR-6.1)
+- BR-U2-7(変更境界、2026-07-25 Option 1で置換): forward-fixのauthoritative変更面は`amadeus-graph.ts`(trusted index合流/hot path)、`plugin-composition.ts`(source/host path分離、trust grant/index、drop/recovery)、`amadeus-orchestrate.ts`(実行直前body検証)、packaging、日英docs、tests、intent recordとする。旧`amadeus-graph.ts`限定・`plugin-composition.ts`無改変の境界は適用しない。`plugin-projection.ts`等の列挙外コア面は変更せず、dist 6面再生成、self-install同期、full quality gateを必須とする(FR-6.1)
+- BR-U2-8(path二面契約): plugin authoring / neutral bundle manifestはplugin-root相対`stages/<slug>.md`を宣言し、compose後host targetだけが`plugins/<name>/stages/<slug>.md`となる。`plugins/<name>/plugins/<name>/stages`は常に禁止
+- BR-U2-9(trust分離): compose時にfrontmatter/content digest/grantを同一transactionで検証・保存し、compileはmetadata indexを検証して利用する。実行時は選択bodyを同一fd digestで再検証し、性能最適化によってbody trustを省略しない
 
 ## テスト観点(Comprehensive)
 
 - unit: discoverPluginStageFiles(空/1plugin/複数/読取不能 throw)、slug 衝突 reject
-- integration(実FS): compose→**doctor(composed 確認)**→compile→--single 実行→drop→**doctor(除去確認)**→baseline 一致の E2E 1本(fixture plugin ではなく実 formal-model-check plugin で — FR-2.1 の compose/doctor/drop 全ライフサイクルをこの1本で通す)、0-plugin baseline byte-identical、ダミー plugin 注入の両側実測。manifest path 規約(`plugins/<name>/stages/<slug>.md`)の着地先=走査対象一致もこの E2E が実証する
+- integration(実FS): compose→**doctor(composed確認)**→compile→--single実行→drop→**doctor(除去確認)**→baseline一致のE2E。manifest source `stages/<slug>.md`からhost target `plugins/<name>/stages/<slug>.md`への一度だけのprefix付与、index改竄・未compose・body drift拒否、二重layout 0件も実証する

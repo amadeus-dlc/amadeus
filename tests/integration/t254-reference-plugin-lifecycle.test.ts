@@ -76,6 +76,7 @@ const DECLARED_PATHS = [
 // SKILL.md carrying the plugin's fragment anchor. Mirrors the t253 shape but is
 // driven by the canonical test-pro manifest rather than a synthetic plugin.
 const HOST_STAGE_PATH = "stages/code-generation.md";
+const OWNED_STAGE_PATH = `plugins/${PLUGIN}/stages/test-pro-review.md`;
 const BASE_SEAMS: StageSeams = {
   produces: ["code-summary"],
   consumes: [],
@@ -151,7 +152,7 @@ function hostSnapshot(root: string, backend: WorkspaceBackend): HostSnapshot {
   const cg = { slug: "code-generation", path: HOST_STAGE_PATH, seams: BASE_SEAMS };
   const paths = new Set<string>();
   const files = new Map<string, Buffer>();
-  for (const p of [HOST_STAGE_PATH, "SKILL.md", "stages/test-pro-review.md"]) {
+  for (const p of [HOST_STAGE_PATH, "SKILL.md", OWNED_STAGE_PATH]) {
     if (existsSync(join(root, p))) {
       paths.add(p);
       files.set(p, readFileSync(join(root, p)));
@@ -265,7 +266,7 @@ describe("t254 reference-plugin-and-guides — U11 FR-6 items 21–22", () => {
       expect(composed.kind).toBe("committed");
 
       // Declared stage file materialised — carrying the CLAUDE-transformed bytes.
-      const ownedPath = join(hostRoot, "stages/test-pro-review.md");
+      const ownedPath = join(hostRoot, OWNED_STAGE_PATH);
       expect(existsSync(ownedPath)).toBe(true);
       const owned = readFileSync(ownedPath, "utf-8");
       expect(owned).toContain(".claude");
@@ -306,8 +307,8 @@ describe("t254 reference-plugin-and-guides — U11 FR-6 items 21–22", () => {
       writeProjectedBundle(bundleRoot, buildPluginProjection(plugin, "claude").artifacts);
       seedHost(hostRoot);
       // Pre-place the plugin's owned path so the copy would clobber a user file.
-      mkdirSync(join(hostRoot, "stages"), { recursive: true });
-      writeFileSync(join(hostRoot, "stages/test-pro-review.md"), "USER FILE");
+      mkdirSync(dirname(join(hostRoot, OWNED_STAGE_PATH)), { recursive: true });
+      writeFileSync(join(hostRoot, OWNED_STAGE_PATH), "USER FILE");
       const backend = createNodeBackend(hostRoot);
 
       const descriptor = discoverPlugins(bundleRoot).find((d) => d.name === PLUGIN)!;
@@ -317,7 +318,7 @@ describe("t254 reference-plugin-and-guides — U11 FR-6 items 21–22", () => {
         expect(result.errors.some((e) => e.kind === "clobber")).toBe(true);
       }
       // Three surfaces invariant: host bytes, record, audit all untouched.
-      expect(readFileSync(join(hostRoot, "stages/test-pro-review.md"), "utf-8")).toBe("USER FILE");
+      expect(readFileSync(join(hostRoot, OWNED_STAGE_PATH), "utf-8")).toBe("USER FILE");
       expect(readFileSync(join(hostRoot, HOST_STAGE_PATH)).equals(CG_BASE)).toBe(true);
       expect(readFileSync(join(hostRoot, "SKILL.md")).equals(SKILL_BASE)).toBe(true);
       expect(backend.readComposition().plugins.size).toBe(0);
@@ -341,7 +342,7 @@ describe("t254 reference-plugin-and-guides — U11 FR-6 items 21–22", () => {
 
       const result = applyPluginPlan(plan, makeTx(hostRoot, backend, false));
       expect(result.kind).toBe("failed");
-      expect(existsSync(join(hostRoot, "stages/test-pro-review.md"))).toBe(false);
+      expect(existsSync(join(hostRoot, OWNED_STAGE_PATH))).toBe(false);
       expect(readFileSync(join(hostRoot, HOST_STAGE_PATH)).equals(CG_BASE)).toBe(true);
       expect(readFileSync(join(hostRoot, "SKILL.md")).equals(SKILL_BASE)).toBe(true);
       expect(backend.auditCount()).toBe(0);

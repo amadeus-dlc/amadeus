@@ -31,11 +31,23 @@ namespace, `plugins/<name>/`, inside each harness tree, so a plugin's output is
 structurally disjoint from the core framework's output and from every other
 plugin. Cross-plugin collisions are impossible by construction.
 
+Keep the authoring tree natural and relative to the plugin root:
+
+```text
+plugins/example/
+  plugin.json
+  stages/review.md
+```
+
+Do not repeat the namespace as `plugins/example/plugins/example/stages/`.
+
 The `plugin.json` manifest declares three kinds of contribution:
 
 - **`stages`** — new stage files the plugin copies into the host. Each entry has
   a `slug` (unique, must not already exist in the host) and a `path` (the
-  host-tree-relative destination, which must not already exist).
+  plugin-root-relative source, for example `stages/review.md`). Composition
+  resolves those bytes from the bundle, then independently writes them to the
+  host at `plugins/<name>/<path>`; that target must not already exist.
 - **`seams`** — additive entries appended to an existing host stage's seam array.
   The four seams are `produces`, `consumes`, `sensors`, and `required_sections`;
   any other name is rejected as an unknown seam. Entries are appended in
@@ -64,7 +76,8 @@ in-prose `rules/` paths rewritten. JSON and TypeScript are copied verbatim.
    no plan is built.
 4. **Compose** — a clean plugin is applied as a single three-surface atomic
    transaction: host bytes, the composition record, and the audit entry are
-   written together, or not at all.
+   written together, or not at all. The composition record persists the explicit
+   trust grant (plugin, content digest, timestamp) and each owned stage digest.
 5. **Doctor** — a read-only diagnostic projects each active plugin's status
    (`composed`, `drift`, or `recovery-pending`) from the current host state.
 6. **Drop** — a record-owned removal deletes the plugin's owned files and rebuilds

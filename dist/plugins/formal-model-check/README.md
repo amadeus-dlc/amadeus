@@ -11,16 +11,17 @@ is never selected by a stock scope — it runs only on an explicit
 ```
 formal-model-check/
   plugin.json
-  plugins/formal-model-check/stages/formal-model-check.md
+  stages/formal-model-check.md
   README.md
 ```
 
-`plugin.json`'s `stages[].path` is declared **host-tree-relative**
-(`plugins/formal-model-check/stages/formal-model-check.md`): the compose engine
-writes a stage copy to that path verbatim under the host root, so the composed
-stage lands exactly where the stage-graph compile discovers plugin stages
-(`<hostRoot>/plugins/<name>/stages/`). The bundle therefore nests the stage file
-under a matching `plugins/formal-model-check/` prefix inside the plugin dir.
+`plugin.json`'s `stages[].path` is declared relative to the plugin root
+(`stages/formal-model-check.md`). The compose engine resolves the bytes from
+that bundle path and independently namespaces the host target as
+`plugins/<plugin-name>/<stage-path>`. The composed stage therefore lands at
+`<hostRoot>/plugins/formal-model-check/stages/formal-model-check.md`, exactly
+where stage-graph compilation discovers plugin stages, without duplicating the
+plugin namespace inside the source bundle.
 
 ## Opt-in runtime dependency (documented per FR-2.3)
 
