@@ -1,0 +1,86 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可(提案通り)"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可(提案通り)",
+        "count": 5
+      },
+      {
+        "internalNo": 2,
+        "label": "追加候補の検討が必要(noteに理由を明記)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 5,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-07-24T12:55:30Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-WTFRAS13",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "s13-candidates.mdの3候補を実測確認。mechanism-cite-verify-at-draft(team.md)・agmsg-git-evidence-split(project.md)・reservation-transcription-count-check(team.md)・GoAスケール運用(team.md gradients-of-agreement-scale)はいずれもmemory層に実在し記述内容も整合。3案とも既存cidの適用漏れをレビューが正しく捕捉した好例で新規ノルム化に当たらず新規性は低い。",
+      "submittedAt": "2026-07-24T12:53:03Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-WTFRAS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "s13-candidates.md(requirements-analysis)の3候補の不採用理由を実測確認。引用3cidの実在と意味論を team.md/project.md で直接照合: (1)mechanism-cite-verify-at-draft(team.md実在、『機構の実在と意味論を起草時に実測確認』)+agmsg-git-evidence-split(project.md実在)は record path 断定転記の欠陥をカバー、(2)reservation-transcription-count-check(team.md実在、件数+per-voter逐語照合)は票数・留保転記漏れをカバー、(3)敗案妥当部分の勝案畳み込みはGoAスケール運用(留保転記)でカバー。3案いずれも既存cidの射程内で新規性なし。0件提案は妥当。",
+      "submittedAt": "2026-07-24T12:55:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-WTFRAS13",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "s13-candidates.md(engineer-1 worktree, watcher-timeout-fix RA)を実測。検討済み3案の被覆先cidの実在を全てgrep確認: mechanism-cite-verify-at-draft(team.md)・agmsg-git-evidence-split(project.md)・reservation-transcription-count-check(team.md)・gradients-of-agreement-scale(team.md)。案1(record path断定転記の是正)=mechanism-cite-verify+agmsg-git-evidence-split、案2(票数GoA照合・留保転記漏れ是正)=reservation-transcription-count-check、案3(敗案妥当部の勝案畳み込み)=GoAスケール運用、いずれも既存cidでカバー済み。新規ノルム不要の0件提案は妥当。",
+      "submittedAt": "2026-07-24T12:53:23Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-WTFRAS13",
+      "voter": "e5",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "s13-candidates.md の3案を実測確認。引用される3 cid(mechanism-cite-verify-at-draft=引用の実在確認、agmsg-git-evidence-split=git/agmsg出典分離、reservation-transcription-count-check=件数+per-voter逐語照合)がいずれもteam.md/project.mdに実在し、各案の欠陥形状(record path断定転記、票数GoA照合・留保転記漏れ、敗案妥当部分の畳み込み)を正しくカバーしていることを確認した。3案とも既存ノルムの適用漏れ(実行時ミス)をレビューが捕捉した好例であり新規ノルムには当たらない。0件提案に賛成。",
+      "submittedAt": "2026-07-24T12:53:50Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-WTFRAS13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": null,
+      "submittedAt": "2026-07-24T12:55:03Z"
+    }
+  ],
+  "resolutions": []
+}

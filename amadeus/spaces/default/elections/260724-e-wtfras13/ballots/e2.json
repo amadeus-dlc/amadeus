@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-WTFRAS13",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "s13-candidates.md(engineer-1 worktree, watcher-timeout-fix RA)を実測。検討済み3案の被覆先cidの実在を全てgrep確認: mechanism-cite-verify-at-draft(team.md)・agmsg-git-evidence-split(project.md)・reservation-transcription-count-check(team.md)・gradients-of-agreement-scale(team.md)。案1(record path断定転記の是正)=mechanism-cite-verify+agmsg-git-evidence-split、案2(票数GoA照合・留保転記漏れ是正)=reservation-transcription-count-check、案3(敗案妥当部の勝案畳み込み)=GoAスケール運用、いずれも既存cidでカバー済み。新規ノルム不要の0件提案は妥当。",
+  "submittedAt": "2026-07-24T12:53:23Z"
+}

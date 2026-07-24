@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-WTFRAS13",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "s13-candidates.md の3案を実測確認。引用される3 cid(mechanism-cite-verify-at-draft=引用の実在確認、agmsg-git-evidence-split=git/agmsg出典分離、reservation-transcription-count-check=件数+per-voter逐語照合)がいずれもteam.md/project.mdに実在し、各案の欠陥形状(record path断定転記、票数GoA照合・留保転記漏れ、敗案妥当部分の畳み込み)を正しくカバーしていることを確認した。3案とも既存ノルムの適用漏れ(実行時ミス)をレビューが捕捉した好例であり新規ノルムには当たらない。0件提案に賛成。",
+  "submittedAt": "2026-07-24T12:53:50Z"
+}

@@ -1,0 +1,16 @@
+{
+  "electionId": "E-WTFRAS13",
+  "voter": "e4",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "0件で可(提案通り)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "追加候補の検討が必要(noteに理由を明記)"
+    }
+  ]
+}

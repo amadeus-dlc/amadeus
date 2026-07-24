@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-WTFRAS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "s13-candidates.md(requirements-analysis)の3候補の不採用理由を実測確認。引用3cidの実在と意味論を team.md/project.md で直接照合: (1)mechanism-cite-verify-at-draft(team.md実在、『機構の実在と意味論を起草時に実測確認』)+agmsg-git-evidence-split(project.md実在)は record path 断定転記の欠陥をカバー、(2)reservation-transcription-count-check(team.md実在、件数+per-voter逐語照合)は票数・留保転記漏れをカバー、(3)敗案妥当部分の勝案畳み込みはGoAスケール運用(留保転記)でカバー。3案いずれも既存cidの射程内で新規性なし。0件提案は妥当。",
+  "submittedAt": "2026-07-24T12:55:00Z"
+}
