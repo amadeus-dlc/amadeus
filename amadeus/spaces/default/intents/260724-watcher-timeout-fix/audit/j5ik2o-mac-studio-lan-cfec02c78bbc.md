@@ -1680,3 +1680,169 @@
 **Message**: Issue #1449(team-up.sh 起動遅延)を修正中。実装とテストは git に保全済みだが、セッションのツール結果が不安定でテストの緑を確認できず、workflow を code-generation で park しました。次はセッション再起動後に検証から再開します。
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T15:37:18Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: af410be9ee899da95
+**Message**: Issue #1449(team-up.sh の watcher タイムアウト短縮)の bugfix を進行中で、code-generation まで実装とテストを保全済みです。ただしセッションのツール出力が不安定になったため作業を止め、leader へスタンドダウンと再起動判断を仰いでいます。次は leader の指示待ちです。
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-24T15:49:22Z
+**Event**: HUMAN_TURN
+
+---
+
+## Session End
+**Timestamp**: 2026-07-24T15:51:09Z
+**Event**: SESSION_ENDED
+**Reason**: prompt_input_exit
+
+---
+
+## Session Start
+**Timestamp**: 2026-07-24T15:51:45Z
+**Event**: SESSION_STARTED
+**Source**: startup
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-24T15:51:52Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T15:53:40Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a72aca7523aab2b32
+**Message**: 1で進めて
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T16:00:42Z
+**Event**: SENSOR_FIRED
+**Fire id**: d084221e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-team-up-watcher-arming.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T16:00:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: d084221e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-team-up-watcher-arming.test.ts
+**Duration ms**: 1444
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T16:00:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8aee25e3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-team-up-watcher-arming.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T16:00:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8aee25e3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-team-up-watcher-arming.test.ts
+**Duration ms**: 1601
+**Note**: script-error: exit-1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T16:01:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: 414f3ced
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-team-up-watcher-arming.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T16:01:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: 414f3ced
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-team-up-watcher-arming.test.ts
+**Duration ms**: 1414
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T16:01:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6262b4d6
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-team-up-watcher-arming.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T16:01:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6262b4d6
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-team-up-watcher-arming.test.ts
+**Duration ms**: 1563
+**Note**: script-error: exit-1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-24T16:05:20Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260724-181510-1d8e/engineer-1/amadeus/spaces/default/intents/260724-watcher-timeout-fix/construction/fix-1449-watcher-timeout/code-generation/code-generation-plan.md
+**Context**: construction > fix-1449-watcher-timeout > code-generation > code-generation-plan.md
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-24T16:05:58Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260724-181510-1d8e/engineer-1/amadeus/spaces/default/intents/260724-watcher-timeout-fix/construction/fix-1449-watcher-timeout/code-generation/code-summary.md
+**Context**: construction > fix-1449-watcher-timeout > code-generation > code-summary.md
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-24T16:06:34Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260724-181510-1d8e/engineer-1/amadeus/spaces/default/intents/260724-watcher-timeout-fix/construction/code-generation/memory.md
+**Context**: construction > code-generation > memory.md
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T16:19:18Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a3a78b08fce99e5f8
+**Message**: Reviewer: amadeus-architecture-reviewer-agent\n\n## 検証内容(実測)\n\n**要件突合**\n- `packages/framework/core/tools/team-up.sh:114` `WATCHER_RESEND_MAX="${WATCHER_RESEND_MAX:-1}"` を実測確認。`max_attempts = WATCHER_RESE
+
+---
