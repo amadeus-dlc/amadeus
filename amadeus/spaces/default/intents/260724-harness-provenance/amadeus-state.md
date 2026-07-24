@@ -31,8 +31,6 @@
 ## Runtime State
 - **Revision Count**: 0
 
-- **Parked**: 2026-07-24T10:59:53Z
-- **Parked At Stage**: intent-capture
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -93,7 +91,7 @@ Per unit: [TBD]
 - **Current Stage**: intent-capture
 - **Next Stage**: market-research
 - **Status**: Running
-- **Last Updated**: 2026-07-24T10:59:53Z
+- **Last Updated**: 2026-07-24T11:02:47Z
 
 ## Session Resume Point
 - **Last Completed Stage**: state-init
