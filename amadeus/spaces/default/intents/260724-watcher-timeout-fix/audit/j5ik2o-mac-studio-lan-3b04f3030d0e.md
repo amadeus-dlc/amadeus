@@ -315,3 +315,108 @@
 **Duration ms**: 37
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:07:53Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a7ae0840ecc8af7d0
+**Message**: e2の投票まだ？
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:10:21Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a9d5a4da82c50cdf9
+**Message**: 進捗まとめて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:11:56Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a8aa930a6e28943ae
+**Message**: このまま進めて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:12:51Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a995128f956483827
+**Message**: 進捗が入り次第承認して
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:13:53Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ab584e09125db2283
+**Message**: approval-handoffはユーザー承認して進めて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:14:44Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a438adf6f4ccd970b
+**Message**: このまま自動承認続けて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:16:01Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a5e91518d571a0fbe
+**Message**: approval-handoffのgate openしたら教えて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:17:21Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a84cbab811962bd4b
+**Message**: 進捗を待つ
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:20:43Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a32135110875fdf04
+**Message**: approval-handoffのgate open報告が来たら承認する
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:22:35Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a53362a97bf053426
+**Message**: 進めて
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-24T11:25:02Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:25:43Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a94cea4a862a0a1cd
+**Message**: 進捗教えて
+
+---
