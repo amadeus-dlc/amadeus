@@ -1748,3 +1748,1646 @@
 **Timestamp**: 2026-07-24T14:57:29Z
 
 ---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-24T14:59:00Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-24T14:59:00Z
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-24T14:59:39Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-24T14:59:39Z
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-24T15:08:21Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260724-181510-1d8e/engineer-2/amadeus/spaces/default/intents/260724-mirror-auto-modes/construction/mirror-state-provenance/code-generation/code-generation-plan.md
+**Context**: construction > mirror-state-provenance > code-generation > code-generation-plan.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:09:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 987a12e5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-types.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:09:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: 987a12e5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-types.ts
+**Duration ms**: 1319
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:09:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: 787a89d7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-types.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:09:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: 787a89d7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-types.ts
+**Duration ms**: 696
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:13:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: f73df55c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:13:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: f73df55c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 1409
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:13:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: fef193c3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-24T15:13:20Z
+**Event**: SENSOR_FAILED
+**Fire id**: fef193c3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Detail path**: amadeus/spaces/default/intents/260724-mirror-auto-modes/.amadeus-sensors/code-generation/type-check-fef193c3.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:13:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7875875f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:14:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7875875f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 1416
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:14:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 49007027
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:14:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: 49007027
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 656
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:15:26Z
+**Event**: SENSOR_FIRED
+**Fire id**: db5728ee
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-repair.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:15:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: db5728ee
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-repair.ts
+**Duration ms**: 1459
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:15:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: a2dba926
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-repair.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:15:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: a2dba926
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-repair.ts
+**Duration ms**: 652
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:15:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 15e579a6
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-repair.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:15:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: 15e579a6
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-repair.ts
+**Duration ms**: 1452
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:15:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9ee33912
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-repair.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:15:38Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9ee33912
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-repair.ts
+**Duration ms**: 653
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:17:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: a84909ab
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-provenance.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:17:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: a84909ab
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-provenance.ts
+**Duration ms**: 1390
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:17:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9a1fa681
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-provenance.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:17:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9a1fa681
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-provenance.ts
+**Duration ms**: 656
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:19:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: e2810461
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:19:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: e2810461
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+**Duration ms**: 1407
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:19:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 96303b7b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:19:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: 96303b7b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+**Duration ms**: 655
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:20:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: d36e2172
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:20:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: d36e2172
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+**Duration ms**: 1537
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:20:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7654c53b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:20:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7654c53b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+**Duration ms**: 642
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:20:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: 85bdfea2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:20:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 85bdfea2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+**Duration ms**: 1391
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:20:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0f6f4022
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-24T15:20:16Z
+**Event**: SENSOR_FAILED
+**Fire id**: 0f6f4022
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+**Detail path**: amadeus/spaces/default/intents/260724-mirror-auto-modes/.amadeus-sensors/code-generation/type-check-0f6f4022.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:20:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: c81b6fa8
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:20:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: c81b6fa8
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+**Duration ms**: 1425
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:20:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: f9101be0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:20:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: f9101be0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+**Duration ms**: 649
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:22:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7cff5252
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-store.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:22:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7cff5252
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-store.ts
+**Duration ms**: 1629
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:22:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: ee2089c6
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-store.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:23:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: ee2089c6
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-store.ts
+**Duration ms**: 634
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:25:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3d32c6f3
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-repair.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:25:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3d32c6f3
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-repair.ts
+**Duration ms**: 1456
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:25:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 923f18ac
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-repair.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:25:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 923f18ac
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-repair.ts
+**Duration ms**: 658
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:25:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: a7c1d78a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:25:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: a7c1d78a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 1404
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:25:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: 936c680d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-24T15:25:34Z
+**Event**: SENSOR_FAILED
+**Fire id**: 936c680d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Detail path**: amadeus/spaces/default/intents/260724-mirror-auto-modes/.amadeus-sensors/code-generation/type-check-936c680d.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:25:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: b8c626d7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:25:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: b8c626d7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 1407
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:25:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: c3fe097f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:25:42Z
+**Event**: SENSOR_PASSED
+**Fire id**: c3fe097f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 704
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:25:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: ba846ddd
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:25:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: ba846ddd
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 1380
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:25:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1000eeae
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:25:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1000eeae
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 678
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:26:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: aac09b22
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:26:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: aac09b22
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 1377
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:26:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8d653451
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:26:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8d653451
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 690
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:26:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: e2ebc16f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:26:46Z
+**Event**: SENSOR_PASSED
+**Fire id**: e2ebc16f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 1426
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:26:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: b8f6e2cb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:26:46Z
+**Event**: SENSOR_PASSED
+**Fire id**: b8f6e2cb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 694
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:27:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1419d074
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:27:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1419d074
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 1449
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:27:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 66f23175
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:27:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: 66f23175
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 681
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:27:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 63f8620f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:27:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: 63f8620f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 1386
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:27:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: 23bdecc0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:27:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: 23bdecc0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 675
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:27:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: 116245b3
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:27:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 116245b3
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 1386
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:27:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2106c4a9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:27:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2106c4a9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 664
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:28:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: b33a2af7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:28:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: b33a2af7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 1631
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:28:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: 75a70b25
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:28:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 75a70b25
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 686
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:28:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 47fae16c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:28:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 47fae16c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 1374
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:28:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 807290ff
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:28:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 807290ff
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 680
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:29:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: bec3778d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:29:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: bec3778d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+**Duration ms**: 1610
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:29:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: d80eb71b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:29:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: d80eb71b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+**Duration ms**: 655
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:30:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: ffc69f6b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-store.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:30:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: ffc69f6b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-store.ts
+**Duration ms**: 1424
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:30:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 770e752d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-store.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:30:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: 770e752d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-store.ts
+**Duration ms**: 640
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:31:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: eb45a9de
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:31:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: eb45a9de
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 1412
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:31:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6f096b2d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-24T15:31:04Z
+**Event**: SENSOR_FAILED
+**Fire id**: 6f096b2d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Detail path**: amadeus/spaces/default/intents/260724-mirror-auto-modes/.amadeus-sensors/code-generation/type-check-6f096b2d.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:31:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: eb110bfb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:31:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: eb110bfb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 1389
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:31:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4d138c00
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:31:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4d138c00
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 685
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:31:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1018a04a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:31:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1018a04a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 1431
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:31:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: a1d3d6fb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:31:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: a1d3d6fb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-codec.ts
+**Duration ms**: 694
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:31:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0d801e38
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:31:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0d801e38
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+**Duration ms**: 1371
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:31:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8e072da2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:31:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8e072da2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+**Duration ms**: 652
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:32:38Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6e60a6ca
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:32:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6e60a6ca
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+**Duration ms**: 1406
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:32:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: f55768c8
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-24T15:32:41Z
+**Event**: SENSOR_FAILED
+**Fire id**: f55768c8
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+**Detail path**: amadeus/spaces/default/intents/260724-mirror-auto-modes/.amadeus-sensors/code-generation/type-check-f55768c8.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:32:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: 208eb44c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:32:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 208eb44c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+**Duration ms**: 1378
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:32:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 47114cd8
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:32:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 47114cd8
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-reducer.ts
+**Duration ms**: 655
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:33:38Z
+**Event**: SENSOR_FIRED
+**Fire id**: c4e6a19c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/t274-amadeus-mirror-state-codec.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:33:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: c4e6a19c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/t274-amadeus-mirror-state-codec.test.ts
+**Duration ms**: 1424
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:33:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: aa03f951
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/t274-amadeus-mirror-state-codec.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:33:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: aa03f951
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/t274-amadeus-mirror-state-codec.test.ts
+**Duration ms**: 590
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:34:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: 366bd6b9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/t275-amadeus-mirror-state-reducer.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:34:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: 366bd6b9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/t275-amadeus-mirror-state-reducer.test.ts
+**Duration ms**: 1607
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:34:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: f64fdaec
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/t275-amadeus-mirror-state-reducer.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:34:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: f64fdaec
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/t275-amadeus-mirror-state-reducer.test.ts
+**Duration ms**: 609
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:35:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5a9827be
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/t276-amadeus-mirror-repair.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:35:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5a9827be
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/t276-amadeus-mirror-repair.test.ts
+**Duration ms**: 1461
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:35:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 339bb0f0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/t276-amadeus-mirror-repair.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:35:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 339bb0f0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/t276-amadeus-mirror-repair.test.ts
+**Duration ms**: 624
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:35:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: d76430de
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/t277-amadeus-mirror-provenance.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:35:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: d76430de
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/t277-amadeus-mirror-provenance.test.ts
+**Duration ms**: 1397
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:35:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: 813b778b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/t277-amadeus-mirror-provenance.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:35:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 813b778b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/t277-amadeus-mirror-provenance.test.ts
+**Duration ms**: 589
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:36:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 58f029e0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/t277-amadeus-mirror-provenance.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:36:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: 58f029e0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/t277-amadeus-mirror-provenance.test.ts
+**Duration ms**: 1405
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:36:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7cf77a53
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/t277-amadeus-mirror-provenance.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:36:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7cf77a53
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/t277-amadeus-mirror-provenance.test.ts
+**Duration ms**: 600
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:38:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2ad94dde
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-store.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:38:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2ad94dde
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-store.ts
+**Duration ms**: 1945
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:38:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 28cc7b9c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-store.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:38:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: 28cc7b9c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-state-store.ts
+**Duration ms**: 767
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:38:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5ede4664
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t278-amadeus-mirror-state-store.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:38:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5ede4664
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t278-amadeus-mirror-state-store.integration.test.ts
+**Duration ms**: 1402
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T15:38:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: c62c1ba8
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t278-amadeus-mirror-state-store.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T15:38:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: c62c1ba8
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t278-amadeus-mirror-state-store.integration.test.ts
+**Duration ms**: 614
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-24T15:47:58Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260724-181510-1d8e/engineer-2/amadeus/spaces/default/intents/260724-mirror-auto-modes/construction/mirror-state-provenance/code-generation/code-summary.md
+**Context**: construction > mirror-state-provenance > code-generation > code-summary.md
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T15:48:42Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: a413b32b6101a255c
+**Message**: Implementation complete. All artifacts written, all gates green, baseline separation confirmed by assertion.\n\n## 完了報告 — mirror-state-provenance ユニット（S0-S7 全実装、Opt1 執行）\n\n### 成果物\n- **起草 plan**: `amadeus
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-24T15:49:02Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-24T15:49:02Z
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-24T15:52:35Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-24T15:52:35Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T15:56:03Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a1b39eae08370264b
+**Message**: I'll pause here and resume once the Monitor notifies me that the `--ci` run has finished.
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T15:57:12Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a1b39eae08370264b
+**Message**: Reviewer: amadeus-architecture-reviewer-agent\n\n**Verdict: READY**\n\n## Re-run verification (foreground, synchronous — exit codes)\n\n| # | Command | Exit | Note |\n|---|---|---|---|\n| 1 | `bun run typeche
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-24T15:58:08Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260724-181510-1d8e/engineer-2/amadeus/spaces/default/intents/260724-mirror-auto-modes/construction/mirror-state-provenance/code-generation/code-summary.md
+**Context**: construction > mirror-state-provenance > code-generation > code-summary.md
+
+---

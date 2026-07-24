@@ -139,6 +139,25 @@ export type MirrorRepairProof = Readonly<{
   checkedAt: string;
 }>;
 
+// The single transactional audit outbox persisted inside the Mirror state
+// block (business-logic-model.md step 7). A committed state transition stores
+// the FULL ARTIFACT_UPDATED projection (`fields`) plus its transaction identity
+// and digest here in the SAME atomic rename as the business state, then the
+// next call drains it (idempotent audit append) and clears it. `fields` is the
+// audit event's field record exactly as appendAuditEntry consumes it, so no
+// audit content is reconstructed from memory during recovery.
+//
+// Provenance note: this type is the C0 completion the contract-policy unit
+// omitted — logical-components.md:9 assigns "outbox unions" to S0(C0) and
+// business-logic-model.md:27's wire block carries `auditOutbox`. Added as a
+// within-Bolt completion under leader ruling #3 (Opt1) by the
+// mirror-state-provenance unit.
+export type MirrorAuditOutbox = Readonly<{
+  transactionId: string;
+  digest: string;
+  fields: Readonly<Record<string, string>>;
+}>;
+
 export type MirrorStateSnapshot = Readonly<{
   revision: number;
   issueNumber: number | null;
@@ -147,6 +166,10 @@ export type MirrorStateSnapshot = Readonly<{
   warnings: readonly MirrorWarning[];
   repairChallenges: Readonly<Record<string, MirrorRepairChallenge>>;
   expectedPrompt?: MirrorExpectedPrompt;
+  // Optional-with-null: the wire block always serialises `auditOutbox` (null in
+  // steady state); a snapshot with the key absent is treated as no outbox, the
+  // same convention as `expectedPrompt?`. The codec normalises undefined->null.
+  auditOutbox?: MirrorAuditOutbox | null;
 }>;
 
 export type WriteOutcome<T = MirrorStateSnapshot> =
