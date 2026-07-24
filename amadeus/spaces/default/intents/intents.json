@@ -533,5 +533,12 @@
     "dirName": "260724-harness-provenance",
     "scope": "feature",
     "status": "complete"
+  },
+  {
+    "uuid": "019f91d4-246a-728c-b078-ccdae13385ee",
+    "slug": "mirror-auto-modes",
+    "dirName": "260724-mirror-auto-modes",
+    "scope": "amadeus-feature",
+    "status": "in-flight"
   }
 ]
