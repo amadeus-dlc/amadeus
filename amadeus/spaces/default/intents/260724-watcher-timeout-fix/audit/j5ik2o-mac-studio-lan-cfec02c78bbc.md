@@ -1846,3 +1846,11 @@
 **Message**: Reviewer: amadeus-architecture-reviewer-agent\n\n## 検証内容(実測)\n\n**要件突合**\n- `packages/framework/core/tools/team-up.sh:114` `WATCHER_RESEND_MAX="${WATCHER_RESEND_MAX:-1}"` を実測確認。`max_attempts = WATCHER_RESE
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-24T16:24:38Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-24T16:24:38Z
+
+---
