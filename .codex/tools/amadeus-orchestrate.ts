@@ -2607,8 +2607,19 @@ function emitSingleRunStage(
     emit(errorDirective(SINGLE_INIT_ERROR));
     return;
   }
+  // An opt-in plugin stage belongs to NO scope (scopes: []), so it is EXECUTE in
+  // no scope grid and `--single` is the ONLY way to run it. The skip-for-scope
+  // guard below exists to stop you from `--single`-ing a stage that a scope
+  // deliberately SKIPs (it belongs to OTHER scopes); it does not apply to a
+  // stage that belongs to no scope at all. So exempt empty-scopes stages from the
+  // guard while still rejecting a stock stage skipped for THIS scope (its scopes
+  // are non-empty). No core stage ships with empty scopes, so this uniquely
+  // targets opt-in / plugin stages (intent 260722-tla-plugin FR-1.4, ruling
+  // E-TLAU2 option A — this orchestrate change crosses the U2 core-change
+  // boundary, declared in the PR).
+  const isOptInStage = (node.scopes ?? []).length === 0;
   const inScopeSlugs = new Set(subgraphForScope(scope).map((s) => s.slug));
-  if (!inScopeSlugs.has(node.slug)) {
+  if (!isOptInStage && !inScopeSlugs.has(node.slug)) {
     emit(errorDirective(
       `Stage "${node.slug}" is skipped for scope "${scope}". ` +
         "Choose a different stage or change scope.",

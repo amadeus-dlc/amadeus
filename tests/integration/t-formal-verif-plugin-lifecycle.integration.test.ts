@@ -10,7 +10,8 @@
 // test; nothing touches the repo's own dist/ (reservation 3 — the compose host
 // and the plugin-inclusive graph are temp dirs removed in afterEach).
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -35,6 +36,8 @@ const REPO_ROOT = join(import.meta.dir, "..", "..");
 const BUNDLE_ROOT = join(REPO_ROOT, "dist", "plugins"); // the shipped neutral bundle registry
 const DIST_TOOLS = join(REPO_ROOT, "dist", "claude", ".claude", "tools");
 const COMMITTED_GRAPH = join(DIST_TOOLS, "data", "stage-graph.json");
+const ORCHESTRATE = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-orchestrate.ts");
+const BUN = process.execPath;
 const PLUGIN = "formal-model-check";
 const STAGE_LANDING = "plugins/formal-model-check/stages/formal-model-check.md";
 
@@ -121,22 +124,29 @@ describe("formal-model-check plugin lifecycle (U2 FR-1.4 / FR-2.1, real engines)
     expect(node!.phase).toBe("construction");
     expect(node!.scopes ?? []).toEqual([]); // opt-in — no stock scope
 
-    // 4. The composed stage is a well-formed, routable run-stage node: it carries
-    //    everything emitSingleRunStage / buildRunStageDirective read to emit a
-    //    run-stage directive (lead_agent, execution, mode). So once the engine's
-    //    --single scope gate admits opt-in (scopes: []) plugin stages, the same
-    //    node drives `next --stage formal-model-check --single` unchanged.
-    //    NOTE: the literal `next --stage formal-model-check --single` CLI is NOT
-    //    asserted here yet — the engine's --single path rejects any stage that is
-    //    SKIP for the resolved scope (amadeus-orchestrate.ts:2610-2617), and an
-    //    opt-in plugin stage is EXECUTE in NO stock scope. Reconciling FR-1.4's
-    //    "--single runnable" with FR-2.2's "scopes: [] opt-in" is escalated
-    //    (a pre-existing engine scope-enforcement gap, not a U2 walk-extension
-    //    defect); this E2E asserts routability, and the run-stage assertion lands
-    //    once that ruling is in.
     expect(node!.lead_agent).toBe("amadeus-quality-agent");
     expect(node!.execution).toBe("CONDITIONAL");
     expect(node!.mode).toBe("inline");
+
+    // 4. `next --stage formal-model-check --single` emits a run-stage directive
+    //    for the composed opt-in stage (FR-1.4, real orchestrate — no verify stub,
+    //    BR-U2-4). orchestrate reads the plugin-inclusive graph via
+    //    AMADEUS_STAGE_GRAPH; the --single scope-skip exemption for empty-scopes
+    //    stages (ruling E-TLAU2 A) is what lets an opt-in plugin stage run.
+    const graphFile = join(freshDir("fmc-graph-"), "stage-graph.json");
+    writeFileSync(graphFile, composedGraph.json);
+    const proj = freshDir("fmc-proj-");
+    const run = spawnSync(
+      BUN,
+      [ORCHESTRATE, "next", "--stage", PLUGIN, "--single", "--project-dir", proj],
+      { encoding: "utf-8", env: { ...process.env, AMADEUS_STAGE_GRAPH: graphFile } },
+    );
+    const out = `${run.stdout ?? ""}${run.stderr ?? ""}`;
+    expect(out, out).not.toContain("is skipped for scope");
+    const directive = JSON.parse((run.stdout ?? "").trim().split("\n").filter(Boolean).at(-1) ?? "null");
+    expect(directive, out).not.toBeNull();
+    expect(directive.kind).toBe("run-stage");
+    expect(directive.stage).toBe(PLUGIN);
 
     // 5. Drop removes the composed stage.
     const record = backend.readComposition().plugins.get(PLUGIN)!;

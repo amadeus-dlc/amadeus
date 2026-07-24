@@ -1302,7 +1302,7 @@
       "coveredBy": [
         {
           "file": "tests/integration/t-formal-verif-plugin-lifecycle.integration.test.ts",
-          "mechanism": "none"
+          "mechanism": "cli"
         },
         {
           "file": "tests/integration/t-formal-verif-plugin-stage-discovery.integration.test.ts",
