@@ -1237,3 +1237,20 @@
 **Duration ms**: 37
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-24T11:06:54Z
+**Event**: WORKFLOW_PARKED
+**Stage**: market-research
+**Timestamp**: 2026-07-24T11:06:54Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:06:59Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a0073a5c78fb14df9
+**Message**: delegateの承認が来たら取り込んで進めて
+
+---
