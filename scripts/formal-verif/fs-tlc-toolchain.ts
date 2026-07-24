@@ -1683,7 +1683,7 @@ class FsPlannedTlcRuntime {
       timedOut: raw.timedOut,
       expectedModuleName: basename(prepared.modulePath, ".tla"),
       expectedModulePath: prepared.modulePath,
-      expectedStandardModuleDirectory: prepared.standardModuleDirectory,
+      expectedStandardModuleDirectory: prepared.scratchRoot,
       verifiedArtifactDescriptorIdentity: prepared.artifact.descriptorIdentity,
       modelReceipt: prepared.modelReceipt,
     });

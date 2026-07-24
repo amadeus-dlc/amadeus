@@ -5,6 +5,7 @@ import {
   mkdtempSync,
   mkdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -26,6 +27,40 @@ import {
 
 const artifactBytes = new TextEncoder().encode("planned-runtime-artifact");
 const sha256 = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
+const envelope = (code: number, payload: string) =>
+  `@!@!@STARTMSG ${code}:0 @!@!@\n${payload}\n@!@!@ENDMSG ${code} @!@!@\n`;
+
+function completeOutput(modelPath: string, scratchRoot: string): Uint8Array {
+  return new TextEncoder().encode([
+    envelope(2262, "TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)"),
+    envelope(2187, "Running breadth-first search Model-Checking with fp 33 and seed 1 with 1 worker."),
+    envelope(2220, "Starting SANY..."),
+    [
+      `Parsing file ${modelPath}`,
+      ...["Naturals", "Sequences", "FiniteSets", "TLC"].map(
+        (module) => `Parsing file ${join(scratchRoot, `${module}.tla`)}`,
+      ),
+      ...["Naturals", "Sequences", "FiniteSets", "TLC", "FormalElection"].map(
+        (module) => `Semantic processing of module ${module}`,
+      ),
+      "",
+    ].join("\n"),
+    envelope(2219, "SANY finished."),
+    envelope(2185, "Starting... (2026-07-24 07:03:45)"),
+    envelope(2189, "Computing initial states..."),
+    envelope(2190, "Finished computing initial states: 1 distinct state generated at 2026-07-24 07:03:45."),
+    envelope(2193, [
+      "Model checking completed. No error has been found.",
+      "  Estimates of the probability that TLC did not check all reachable states",
+      "  because two distinct states had the same fingerprint:",
+      "  calculated (optimistic):  val = 1.3E-7",
+      "  based on the actual fingerprints:  val = 1.2E-8",
+    ].join("\n")),
+    envelope(2199, "5203730 states generated, 529692 distinct states found, 0 states left on queue."),
+    envelope(2194, "The depth of the complete state graph search is 9."),
+    envelope(2186, "Finished in 161085ms at (2026-07-24 07:06:25)"),
+  ].join(""));
+}
 
 describe("planned TLC filesystem runtime", () => {
   const roots: string[] = [];
@@ -47,7 +82,7 @@ describe("planned TLC filesystem runtime", () => {
     const source = loadRunModelCheckSource(modelPath, cfgPath);
     if (!source.ok) throw new Error(JSON.stringify(source.error));
 
-    let mode: "drift" | "overflow" | "timeout" = "drift";
+    let mode: "drift" | "overflow" | "timeout" | "complete" = "drift";
     let spawns = 0;
     const signals: string[] = [];
     const reservations = new Set<string>();
@@ -94,15 +129,21 @@ describe("planned TLC filesystem runtime", () => {
         spawn: () => {
           spawns += 1;
           let resolveStatus!: (status: { exitCode: number | null; signal: string | null }) => void;
-          const status = new Promise<{ exitCode: number | null; signal: string | null }>(
-            (resolve) => { resolveStatus = resolve; },
-          );
+          const status = mode === "complete"
+            ? Promise.resolve({ exitCode: 0, signal: null })
+            : new Promise<{ exitCode: number | null; signal: string | null }>(
+                (resolve) => { resolveStatus = resolve; },
+              );
           return {
             stdout: mode === "overflow"
               ? (async function* () {
                   yield new Uint8Array(MAX_TLC_STREAM_BYTES + 1);
                 })()
-              : (async function* () {})(),
+              : mode === "complete"
+                ? (async function* () {
+                    yield completeOutput(realpathSync(modelPath), realpathSync(scratch));
+                  })()
+                : (async function* () {})(),
             stderr: (async function* () {})(),
             wait: () => status,
             signalGroup: async (signal) => {
@@ -190,5 +231,15 @@ describe("planned TLC filesystem runtime", () => {
       reason: "TIMEOUT",
     });
     expect(signals).toEqual(["SIGTERM", "SIGKILL"]);
+
+    mode = "complete";
+    const complete = await toolchain.runPlanned(prepared.value);
+    expect(complete.ok && complete.value.exploration).toMatchObject({
+      kind: "COMPLETE",
+      generatedStates: 5_203_730,
+      distinctStates: 529_692,
+      statesLeftOnQueue: 0,
+      searchDepth: 9,
+    });
   });
 });
