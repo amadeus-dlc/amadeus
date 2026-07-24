@@ -866,6 +866,7 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "integration/t-codex-hooks-ownership.test.ts",
     "integration/t-codex-hooks-packaged-consumer.test.ts",
     "integration/t-eoc1-gate-evidence.test.ts",
+    "integration/t-formal-verif-plugin-lifecycle.integration.test.ts",
     "integration/t-norm-metrics.test.ts",
     "integration/t224-state-set-failclosed.test.ts",
     "integration/t233-set-status-retreat-guard.integration.test.ts",

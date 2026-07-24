@@ -1,4 +1,4 @@
-// covers: function:discoverPluginStageFiles, function:compileStageGraph
+// covers: function:discoverPluginStageFiles, function:compileStageGraph, function:PluginStageError
 //
 // U2 plugin-skeleton (intent 260722-tla-plugin): the compile joins composed
 // plugin stages at <hostRoot>/plugins/<name>/stages/<slug>.md into the graph.

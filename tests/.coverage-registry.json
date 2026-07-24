@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 142,
+      "function": 143,
       "audit": 32,
       "scope": 10,
       "stage": 8,
@@ -2701,8 +2701,13 @@
       "unitClass": "function",
       "unitId": "function:PluginStageError",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-formal-verif-plugin-stage-discovery.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
