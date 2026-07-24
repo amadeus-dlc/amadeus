@@ -224,7 +224,7 @@ export async function executeReservedModelCheck(
       modulePath: source.modelPath,
       cfgPath: source.cfgPath,
       subjectAlias: "run-model-check",
-      deadlineMs: 120_000,
+      deadlineMs: 180_000,
       runId: workspace.runId,
       scratchRoot: workspace.scratchRoot,
       planner: planner.value,

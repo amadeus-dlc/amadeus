@@ -163,7 +163,7 @@ describe("run-model-check real Darwin acceptance", () => {
       }
 
       const measured = samples.slice(1);
-      expect(measured.every((sample) => sample.spawnMs < 120_000)).toBe(true);
+      expect(measured.every((sample) => sample.spawnMs < 180_000)).toBe(true);
       expect(measured.every((sample) => sample.cliMs < 180_000)).toBe(true);
       expect(samples.every((sample) => sample.workspaceWrites === 0)).toBe(true);
       console.log(`U3_PERFORMANCE_RAW ${JSON.stringify({

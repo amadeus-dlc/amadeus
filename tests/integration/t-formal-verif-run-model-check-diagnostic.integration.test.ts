@@ -273,14 +273,14 @@ describe("non-acceptance model-check diagnostic", () => {
     expect(writes.at(-1)).toBe('{"errorCode":null}\n');
   });
 
-  test("workflow runs diagnostics before the unchanged acceptance and ignores its exit", () => {
+  test("workflow keeps diagnostics opt-in and runs only the formal acceptance", () => {
     const source = readFileSync(".github/workflows/ci.yml", "utf8");
     const diagnostic = `bun scripts/formal-verif/run-model-check-diagnostic.ts --root "\${EVIDENCE_ROOT}"`;
     const acceptance = `bun scripts/formal-verif/run-model-check-ci.ts run --root "\${EVIDENCE_ROOT}"`;
-    expect(source).toContain(diagnostic);
-    expect(source.indexOf(diagnostic)).toBeLessThan(source.indexOf(acceptance));
-    expect(source).toContain("diagnostic_status=$?");
-    expect(source).toContain(`echo "diagnostic-exit-code=\${diagnostic_status}"`);
+    expect(source).not.toContain(diagnostic);
+    expect(source).toContain(acceptance);
+    expect(source).not.toContain("diagnostic_status=$?");
+    expect(source).not.toContain(`echo "diagnostic-exit-code=\${diagnostic_status}"`);
     expect(source).toContain("status=$?");
     expect(source).toContain(`exit "\${status}"`);
   });

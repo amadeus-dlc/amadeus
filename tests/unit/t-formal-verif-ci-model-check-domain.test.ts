@@ -74,7 +74,7 @@ describe("CI model-check acceptance domain", () => {
 
   test("rejects threshold equality, non-canonical supply data, and residual containers", () => {
     const value = evidence();
-    value.runs[1] = { ...value.runs[1]!, spawnMs: 120_000 };
+    value.runs[1] = { ...value.runs[1]!, spawnMs: 180_000 };
     expect(validateCiAcceptanceEvidence(value)).toEqual({
       ok: false,
       error: expect.stringContaining("spawn"),

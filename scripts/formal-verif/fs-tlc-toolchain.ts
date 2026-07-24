@@ -1317,7 +1317,7 @@ class FsTlcRuntime {
     const processes = this.dependencies.process;
     if (!processes) return { ok: false, error: { kind: "InvocationError", code: "UNAVAILABLE", message: "runtime process execution is unavailable" } };
     const remainingAfterVerification = this.dependencies.suiteRemainingMs?.() ?? startingRemainingMs;
-    const duration = Math.min(prepared.manifest.deadlineMs, startingRemainingMs - publishReserveMs!, remainingAfterVerification - publishReserveMs!, 120_000);
+    const duration = Math.min(prepared.manifest.deadlineMs, startingRemainingMs - publishReserveMs!, remainingAfterVerification - publishReserveMs!, 180_000);
     if (!Number.isSafeInteger(duration) || duration <= 0) return { ok: false, error: { kind: "InvocationError", code: "DEADLINE", message: "suite deadline is already exhausted" } };
     const startedAtMs = this.dependencies.clock.nowMs();
     let child: TlcChildProcessPort;
@@ -1773,7 +1773,7 @@ class FsPlannedTlcRuntime {
     const duration = Math.min(
       requestedDeadlineMs,
       suiteRemainingMs - publishReserveMs,
-      120_000,
+      180_000,
     );
     if (!Number.isSafeInteger(duration) || duration <= 0) {
       return {

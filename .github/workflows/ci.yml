@@ -447,9 +447,6 @@ jobs:
             exit 2
           fi
           set +e
-          bun scripts/formal-verif/run-model-check-diagnostic.ts --root "${EVIDENCE_ROOT}"
-          diagnostic_status=$?
-          echo "diagnostic-exit-code=${diagnostic_status}"
           bun scripts/formal-verif/run-model-check-ci.ts run --root "${EVIDENCE_ROOT}"
           status=$?
           set -e

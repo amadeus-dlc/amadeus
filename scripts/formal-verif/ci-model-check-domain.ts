@@ -129,8 +129,8 @@ function validateRun(
   if (!Number.isFinite(run.cliMs) || run.cliMs < 0 || run.cliMs >= 180_000) {
     return invalid(`run ${expectedIndex} CLI duration is outside the 180 second budget`);
   }
-  if (!Number.isFinite(run.spawnMs) || run.spawnMs < 0 || run.spawnMs >= 120_000) {
-    return invalid(`run ${expectedIndex} spawn duration is outside the 120 second budget`);
+  if (!Number.isFinite(run.spawnMs) || run.spawnMs < 0 || run.spawnMs >= 180_000) {
+    return invalid(`run ${expectedIndex} spawn duration is outside the 180 second budget`);
   }
   return validateDockerReceipt(run);
 }

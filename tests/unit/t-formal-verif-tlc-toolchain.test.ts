@@ -201,7 +201,7 @@ describe("formal verification TLC toolchain domain", () => {
         "FormalElection.tla",
       ],
       cwd: "/cache/run",
-      deadlineMs: 120_000,
+      deadlineMs: 180_000,
     };
     const first = createTlcRunManifest(input);
     const replay = createTlcRunManifest({ ...input, argv: [...input.argv] });
@@ -212,7 +212,7 @@ describe("formal verification TLC toolchain domain", () => {
     expect(first.ok && first.value.cfgIdentity).toBe(modelReceipt.cfgBytesIdentity);
     expect("modelIdentity" in input || "moduleIdentity" in input || "cfgIdentity" in input).toBe(false);
     expect(first.ok && first.value.runIdentity).toMatch(/^[0-9a-f]{64}$/);
-    const shorter = createTlcRunManifest({ ...input, deadlineMs: 119_999 });
+    const shorter = createTlcRunManifest({ ...input, deadlineMs: 179_999 });
     expect(first.ok && shorter.ok && first.value.runIdentity).not.toBe(shorter.ok && shorter.value.runIdentity);
     expect(createTlcRunManifest({ ...input, artifact: { ...input.artifact, actualSha256: hash("0") } }).ok).toBe(false);
     expect(createTlcRunManifest({
