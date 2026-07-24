@@ -1,5 +1,7 @@
 # 技術スタック
 
+> **2026-07-24（intent `260724-watcher-timeout-fix`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み。** 交差要素は bash（`team-up.sh` 制御フロー）+ herdr（pane/agent 操作）+ agmsg（ready sentinel handshake、`spawn.sh`）で、いずれも既存スタック。新規ランタイム依存なし（base `a81c11dde` → observed `6d4df9056`）。
+
 ## 260723-t241-ci-residency 交差スタック（履歴: 2026-07-23）
 
 差分リフレッシュ（base `a81c11dde` → observed `78bce876`、距離 35、bugfix / Minimal、[#1294](https://github.com/amadeus-dlc/amadeus/issues/1294)）。スタック構成に変化なし。交差要素は Bun 自作テストランナー（`tests/run-tests.ts` の smoke/unit/integration/e2e 4層）、GitHub Actions（`ci.yml`/`release.yml`/`formal-verification.yml`）、`bun` `spawnSync`（t241 の CLI 子プロセス起動）。e2e 層は `--ci` 非対象のため自動 CI で走らない（測定 ref: scan-notes @ observed HEAD `78bce876`）。

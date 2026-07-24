@@ -1,6 +1,23 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(現在: 260723-marker-heading-exemption)
+## 実行メタデータ(現在: 260724-watcher-timeout-fix)
+
+- Date: 2026-07-24
+- Observed at: `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`(現 HEAD `git rev-parse HEAD` 実測一致)
+- Intent: `260724-watcher-timeout-fix`([Issue #1449](https://github.com/amadeus-dlc/amadeus/issues/1449) — `packages/framework/core/tools/team-up.sh` の `verify_watchers_armed`(:1139-1178)が 1 メンバー unarmed で既定 `WATCHER_READY_TIMEOUT=90` 秒 ×(`WATCHER_RESEND_MAX=2`+1)= 最大 270 秒(4.5 分)`mux_attach` を構造上ブロックする性能問題。正常系はオーバーヘッドほぼゼロ = 実測 59.1ms)
+- Scope: `amadeus-bugfix`(Depth Minimal)
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering` (2.1)
+- Method: differential refresh。base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`、observed `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、`git merge-base --is-ancestor a81c11dde HEAD` exit 0、distance `git rev-list --count a81c11dde..HEAD`=155。base は祖先(cid:reverse-engineering:rescan-base-ancestry)。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3)。
+- 測定 ref: 全 file:line は Observed=HEAD `6d4df9056` のワークツリー実ファイル直読、および repo 外 read-only の agmsg skill(`~/.agents/skills/agmsg/scripts/spawn.sh`)直読(cid:measurement-ref-in-artifacts)。diff 規模(1762 files, +217563/−3536。team-up.sh は 1462 行の新規パス、テスト 197 行)・配布 11 コピー・タイムアウト値(90×(2+1)=270)はコマンド出力からの転記(numbers-from-command-output-only)。
+- 現行結論: 性能問題の核心は `packages/framework/core/tools/team-up.sh:1139-1178` `verify_watchers_armed` の二重ループ(外側 = 再送 `max_attempts = WATCHER_RESEND_MAX + 1` = 3 :1141、内側 = 1 秒刻みポーリング最大 `WATCHER_READY_TIMEOUT`=90 秒 :1156)が **:1442-1445 で :1448 `mux_attach` の直前に無条件実行**されること。1 メンバーでも armed しないと最大 90×3=270 秒 attach をブロックする。導入は区間内 2 コミット — `42c9341d8`(#1391、`verify_watchers_armed` 検証ロジック本体、#1384 修正)+ `0d24c6f93`(#1421、`scripts/team-up.sh` → `packages/framework/core/tools/` へ移動 + 配布 11 コピー生成、ロジック不変)。原因の所在=**設計(受容されたリスクの先送り)**: `260722-teamup-prompt-race/inception/requirements-analysis/requirements.md` FR-4(:17)で 90 値を `spawn.sh:132 READY_TIMEOUT=90` verbatim に接地(根拠あり)、FR-3 [e4] 留保(:16)で「起動レイテンシが将来問題化した場合のみ `--no-wait` を再検討」と本問題を予見・先送り、FR-5 [e5] 留保(:18)で「exit code 分岐は mux_attach より前に検証完了が前提」と attach 前ブロックを契約化。実装は設計どおりで逸脱なし。agmsg spawn.sh(:576-588)は**単発 90 秒待ちで再送ループ無し**(値は一致・構造は非対称、team-up.sh が独自に ×3 増幅)。テストは `WATCHER_READY_TIMEOUT: "0"`(test:79)でタイミングを無被覆。区間 a81c11dde..HEAD のバグ面はこの 2 コミットに限局し、他 codekb body 成果物(architecture 除く新規知識は本欠陥クラスタのみ)のドメインは不変。
+- Per-intent record: `re-scans/260724-watcher-timeout-fix.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「現在: 260723-marker-heading-exemption」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、`code-quality-assessment.md`(#1449 の性能欠陥「watcher arming 検証が mux_attach を最大 270 秒ブロック」節を先頭 current view に新設)、`architecture.md`(agmsg watcher arming 検証の launch シーケンス上の位置と mux_attach ブロッキング機序を新設)、`code-structure.md`(team-up.sh の packages 昇格 + watcher 検証関数群の配置)、`component-inventory.md`(`verify_watchers_armed` ほか watcher 検証コンポーネント群の登録)、`re-scans/260724-watcher-timeout-fix.md`(新規)。他 body 4成果物(business-overview / api-documentation / technology-stack / dependencies)は本文温存で「変更なし、確認済み」一行のみ追記(#1449 は既存 bash ツールの制御フロー性能問題でドメイン外。cid:reverse-engineering:c1)。
+- Delivery boundary: 実装・修正コード、dist/self-install 再生成、commit、PR 操作は本 scan で未実施。区間フォーカス正本変更は #1391/#1421 の既着地分のみで、本 intent の修正は未着手。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260723-marker-heading-exemption)
 
 - Date: 2026-07-23T01:37:10Z
 - Observed at: `ffc79aad9a53c600ea9b464f1f04c6fa627ae59e`(現 HEAD `git rev-parse HEAD` 実測一致)
