@@ -2338,3 +2338,41 @@
 **Message**: 進捗をまとめて教えて
 
 ---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-24T11:13:55Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-24T11:13:55Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-24T11:13:55Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: scope-definition
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-24T11:13:55Z
+**Event**: GATE_APPROVED
+**Stage**: scope-definition
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-24T11:13:55Z
+**Event**: STAGE_COMPLETED
+**Stage**: scope-definition
+**Details**: Stage Scope Definition approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-24T11:13:55Z
+**Event**: STAGE_STARTED
+**Stage**: team-formation
+**Agent**: amadeus-delivery-agent
+
+---
