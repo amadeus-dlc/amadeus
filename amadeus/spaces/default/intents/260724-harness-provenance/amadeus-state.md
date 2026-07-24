@@ -6,7 +6,7 @@
 - **Scope**: feature
 - **Start Date**: 2026-07-24T10:56:32Z
 - **State Version**: 7
-- **Active Agent**: amadeus-product-agent
+- **Active Agent**: amadeus-design-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**:
@@ -25,14 +25,12 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 32
-- **Completed**: 13
-- **In Progress**: user-stories
+- **Completed**: 14
+- **In Progress**: refined-mockups
 
 ## Runtime State
 - **Revision Count**: 0
 
-- **Parked**: 2026-07-24T12:20:31Z
-- **Parked At Stage**: user-stories
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -63,8 +61,8 @@
 - [x] reverse-engineering — EXECUTE
 - [x] practices-discovery — EXECUTE
 - [x] requirements-analysis — EXECUTE
-- [-] user-stories — EXECUTE
-- [ ] refined-mockups — EXECUTE
+- [x] user-stories — EXECUTE
+- [-] refined-mockups — EXECUTE
 - [ ] application-design — EXECUTE
 - [ ] units-generation — EXECUTE
 - [ ] delivery-planning — EXECUTE
@@ -90,12 +88,12 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: INCEPTION
-- **Current Stage**: user-stories
-- **Next Stage**: refined-mockups
+- **Current Stage**: refined-mockups
+- **Next Stage**: application-design
 - **Status**: Running
-- **Last Updated**: 2026-07-24T12:20:31Z
+- **Last Updated**: 2026-07-24T12:21:44Z
 
 ## Session Resume Point
-- **Last Completed Stage**: requirements-analysis
-- **Next Action**: Execute User Stories
+- **Last Completed Stage**: user-stories
+- **Next Action**: Execute Refined Mockups
 - **Pending Artifacts**: none

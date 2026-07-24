@@ -6057,3 +6057,41 @@
 **Message**: 進捗教えて
 
 ---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-24T12:21:44Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-24T12:21:44Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-24T12:21:44Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: user-stories
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-24T12:21:44Z
+**Event**: GATE_APPROVED
+**Stage**: user-stories
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-24T12:21:44Z
+**Event**: STAGE_COMPLETED
+**Stage**: user-stories
+**Details**: Stage User Stories approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-24T12:21:44Z
+**Event**: STAGE_STARTED
+**Stage**: refined-mockups
+**Agent**: amadeus-design-agent
+
+---
