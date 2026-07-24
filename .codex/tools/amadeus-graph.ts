@@ -1782,9 +1782,13 @@ function safeReadPluginStage(
  *  plugins dir (or a plugin with no stages dir) contributes nothing — the
  *  0-plugin baseline. */
 function readPluginStageFiles(hostRoot: string): PluginStageRead[] {
-  const pluginsRoot = join(hostRoot, "plugins");
-  if (!existsSync(pluginsRoot)) return [];
+  if (!existsSync(join(hostRoot, "plugins"))) return [];
+  // Canonicalize the host root up front so every descendant path is under the
+  // real root (on macOS a temp `/var/...` resolves to `/private/var/...`);
+  // otherwise the O_NOFOLLOW fstat dev/inode compare and the relative-path
+  // rebase below would mismatch the enumeration path against the opened inode.
   const hostReal = realpathSync(hostRoot);
+  const pluginsRoot = join(hostReal, "plugins");
   const budget = { used: 0 };
   const reads: PluginStageRead[] = [];
   const pluginNames = readdirSync(pluginsRoot)
@@ -1864,9 +1868,12 @@ export function discoverPluginStageFiles(hostRoot: string): PluginStageFile[] {
 
 /** The plugins host root for a compile: the harness root that also holds
  *  amadeus-common/stages, i.e. two levels up from stagesDir(). Mirrors where
- *  plugin-composition lands StageCopy.path, so discovery and compose agree. */
+ *  plugin-composition lands StageCopy.path, so discovery and compose agree.
+ *  AMADEUS_PLUGINS_HOST_ROOT is a test seam (mirrors AMADEUS_STAGES_DIR /
+ *  AMADEUS_SENSORS_DIR), evaluated at call time so a test can point plugin
+ *  discovery at a temp tree while the core walk still reads the real stages. */
 function pluginsHostRoot(): string {
-  return dirname(dirname(stagesDir()));
+  return process.env.AMADEUS_PLUGINS_HOST_ROOT ?? dirname(dirname(stagesDir()));
 }
 
 /** Regenerate stage-graph.json from the 31 YAML stage files.
