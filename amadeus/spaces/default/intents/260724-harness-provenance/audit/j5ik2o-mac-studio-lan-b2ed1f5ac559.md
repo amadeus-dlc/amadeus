@@ -1872,3 +1872,20 @@
 **Duration ms**: 37
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-24T11:11:28Z
+**Event**: WORKFLOW_PARKED
+**Stage**: feasibility
+**Timestamp**: 2026-07-24T11:11:28Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:11:37Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a05167a814bdfe6b5
+**Message**: leaderからの応答を待つ
+
+---
