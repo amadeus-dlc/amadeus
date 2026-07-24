@@ -387,3 +387,27 @@
 **Message**: 進捗を待つ
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:20:43Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a32135110875fdf04
+**Message**: approval-handoffのgate open報告が来たら承認する
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:22:35Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a53362a97bf053426
+**Message**: 進めて
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-24T11:25:02Z
+**Event**: HUMAN_TURN
+
+---
