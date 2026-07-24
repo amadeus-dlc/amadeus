@@ -672,3 +672,26 @@
 **Error**: Transition rejected by amadeus-state.ts approve for "intent-capture": {"error":"Refusing to approve \"intent-capture\": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then approve. (autonomous Construction is exempt)"}
 
 ---
+
+## Gate Approved
+**Timestamp**: 2026-07-24T11:04:07Z
+**Event**: GATE_APPROVED
+**Stage**: intent-capture
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-24T11:04:07Z
+**Event**: STAGE_COMPLETED
+**Stage**: intent-capture
+**Details**: Stage Intent Capture approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-24T11:04:07Z
+**Event**: STAGE_STARTED
+**Stage**: market-research
+**Agent**: amadeus-product-agent
+
+---
