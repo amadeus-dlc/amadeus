@@ -1,0 +1,21 @@
+{
+  "stage_slug": "nfr-design",
+  "selections": [
+    {
+      "candidate_id": "c1",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Architecture",
+      "text": "CLIやlibraryのNFR設計では、常駐service向けのcache、horizontal scaling、circuit breakerを機械的に適用せず、決定的なfile境界とfail-closed契約へ置き換える",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "c3",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Reliability",
+      "text": "Git管理資産では埋め込みfallbackを二重保持せず、Git履歴からの復元、単一ソース、drift検出を優先する",
+      "source": "orchestrator"
+    }
+  ]
+}

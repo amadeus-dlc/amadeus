@@ -6,7 +6,7 @@
 - **Scope**: amadeus
 - **Start Date**: 2026-07-22T10:40:38Z
 - **State Version**: 7
-- **Active Agent**: amadeus-architect-agent
+- **Active Agent**: amadeus-developer-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**: 2026-07-22T12:08:37Z
@@ -26,11 +26,11 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 18
-- **Completed**: 14
-- **In Progress**: nfr-requirements
+- **Completed**: 16
+- **In Progress**: code-generation
 
 ## Runtime State
-- **Revision Count**: 1
+- **Revision Count**: 2
 
 - **Skeleton Stance**: on
 - **Mirror Boundary Receipts**: {"inception":"completed"}
@@ -73,10 +73,10 @@
 ### CONSTRUCTION PHASE
 Per unit: [TBD]
 - [x] functional-design — EXECUTE
-- [?] nfr-requirements — EXECUTE
-- [ ] nfr-design — EXECUTE
+- [x] nfr-requirements — EXECUTE
+- [x] nfr-design — EXECUTE
 - [ ] infrastructure-design — SKIP
-- [ ] code-generation — EXECUTE
+- [-] code-generation — EXECUTE
 - [ ] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
 
@@ -91,12 +91,12 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: nfr-requirements
-- **Next Stage**: nfr-design
+- **Current Stage**: code-generation
+- **Next Stage**: build-and-test
 - **Status**: Running
-- **Last Updated**: 2026-07-23T15:24:01Z
+- **Last Updated**: 2026-07-23T23:06:47Z
 
 ## Session Resume Point
-- **Last Completed Stage**: functional-design
-- **Next Action**: Execute Nfr Requirements
+- **Last Completed Stage**: nfr-design
+- **Next Action**: Execute Code Generation
 - **Pending Artifacts**: none

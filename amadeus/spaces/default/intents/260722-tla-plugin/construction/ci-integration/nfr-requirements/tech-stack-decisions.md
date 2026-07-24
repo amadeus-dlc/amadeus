@@ -11,7 +11,7 @@
 | Isolation | Docker `--network=none` | runner内で再現可能 |
 | JDK | eclipse-temurin digest固定 | 権威あるJDK供給元 |
 | TLC | tla2tools.jar版/checksum固定 | 公式releaseを検証可能 |
-| Bun | `oven-sh/setup-bun@v2` + `bun-version: 1.3.13` | 独立jobでruntimeを固定し、`bun --version`をartifactへ記録 |
+| Bun | `oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2` + `bun-version: 1.3.13` | 公式v2 tagのcommitを2026-07-24に`git ls-remote`で検証し、独立jobでruntimeを固定 |
 
 ## 退役と互換性
 

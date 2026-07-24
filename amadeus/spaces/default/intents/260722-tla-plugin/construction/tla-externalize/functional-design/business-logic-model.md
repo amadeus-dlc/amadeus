@@ -5,9 +5,9 @@
 ## 中核フロー: モデル外部化と読込
 
 1. **転記**: tla-arm.ts の `MODEL_SOURCE`(:329)/`CFG_SOURCE`(:641)のテンプレートリテラル本文を `specs/tla/FormalElection.tla` / `specs/tla/FormalElection.cfg` へバイト同値で書き出す(エスケープ解決後の実バイト — テンプレートリテラル内の `\\``` 等の逆エスケープに注意)
-2. **読込置換**: `loadTlaModelSource(modelPath, cfgPath)` が readFileSync で bytes を取得し、既存の identity 生成(TextEncoder 経由と同一の Uint8Array → canonicalIdentity、tag `amadeus.formal-verif.tla.module.v1` / `.cfg.v1`)へ流す。埋め込み定数は削除(二重保持しない — org Forbidden)
+2. **読込置換**: production export の引数なし `loadVerifiedTlaSource()` が `import.meta.url` から固定 repository root と asset path を解決して bytes を取得し、既存の identity 生成(TextEncoder 経由と同一の Uint8Array → canonicalIdentity、tag `amadeus.formal-verif.tla.module.v1` / `.cfg.v1`)へ流す。module URL・filesystem 注入 seam は internal/test-only module に隔離する。埋め込み定数は削除(二重保持しない — org Forbidden)
 3. **同値固定**: 移行時に「外部ファイル bytes == 旧埋め込み bytes」を identity 同値テストで1回固定し、以後は SOURCE_DRIFT 検証(既存)が外部ファイルの改竄・不整合を検出する
-4. **登録簿初期化**: `specs/tla/model-map.json` を作成し、モデルが形式化する実装ファイル(選挙プロトコル: scripts/amadeus-election*.ts の実在ファイル群 — 実装時に glob 実測で確定)の sha256 を記録(U5 sensor の入力)
+4. **登録簿初期化**: `specs/tla/model-map.json` を作成し、モデルが形式化する実装ファイル(選挙プロトコルの正本: `packages/framework/core/tools/amadeus-election*.ts` の実在ファイル群 — 実装時に glob 実測で確定)の sha256 を記録(U5 sensor の入力)
 
 ## エラー経路
 

@@ -4,17 +4,20 @@
 
 ## エンティティ(functional-domain-modeling-ts 様式)
 
-- `TlaModelSource` — `{ readonly moduleBytes: Uint8Array; readonly cfgBytes: Uint8Array; readonly modulePath: string; readonly cfgPath: string }`。スマートコンストラクタ `TlaModelSource.load(modelPath, cfgPath): Result<TlaModelSource, ModelLoadError>` のみが生成経路(parse-don't-validate — 不在・空はここで拒否され、以降の型は有効性を運ぶ)
-- `ModelLoadError` — 判別ユニオン `{ kind: "NOT_FOUND" | "EMPTY" | "IO"; path: string; detail: string }`
+- `VerifiedTlaSource` — `{ readonly moduleBytes: Uint8Array; readonly cfgBytes: Uint8Array; readonly moduleSource: string; readonly cfgSource: string; readonly moduleIdentity: string; readonly cfgIdentity: string; readonly modelMap: ModelMap }`。production の生成経路は引数なしの `loadVerifiedTlaSource(): Result<VerifiedTlaSource, TlaModelPipelineError>` のみとし、不在・空・identity/hash drift はここで拒否する(parse-don't-validate)
+- `ModelLoadError` — `{ readonly kind: "MODEL_LOAD"; readonly code: ModelLoadErrorCode; readonly relativePath: string; readonly detail: string; readonly cause?: unknown }`。model/cfg/map の不在・空・非regular・symlink・読取不能を固定codeで区別する
 - `ModelIdentityBundle` — 既存(tla-arm.ts の identity tag 群)。本 Unit では形状不変で入力源のみ変更
-- `ModelMapEntry` — `{ readonly implPath: string; readonly sha256: string }`。`ModelMap = { readonly entries: readonly ModelMapEntry[]; readonly modelPath: string; readonly updatedAt: string }`(first-class collection — 照合演算 `diff(current: ModelMapEntry[]): Drift[]` を持ち、U5 sensor がコンパニオンを共有消費)
-- `Drift` — `{ readonly implPath: string; readonly recorded: string; readonly current: string | null }`(current null = 対象ファイル不在)。**diff() の戻り値型として本 Unit(U1)が canonical 定義を所有**し、U5 は import で消費する(U5 FD レビュー iteration 1 Major 2 の逆伝播是正 2026-07-22)
+- `ModelMapAssetIdentity` — `{ readonly path: string; readonly identity: string }`。model/cfg の固定 repository 相対 path と canonical identity を結合する
+- `ModelMapEntry` — `{ readonly implPath: string; readonly sha256: string }`
+- `ModelMap` — `{ readonly schemaVersion: 1; readonly model: ModelMapAssetIdentity; readonly cfg: ModelMapAssetIdentity; readonly entries: readonly ModelMapEntry[] }`。時刻フィールドを持たない決定的な first-class collection とし、照合演算 `diffModelMap(modelMap, currentEntries): readonly ModelMapDrift[]` を持つ
+- `ModelMapDrift` — `{ readonly implPath: string; readonly recorded: string; readonly current: string | null }`(current null = 対象ファイル不在)。**diffModelMap() の戻り値型として本 Unit(U1)が canonical 定義を所有**し、U5 は import で消費する(U5 FD レビュー iteration 1 Major 2 の逆伝播是正 2026-07-22)
 
 ## 不変条件
 
 - TlaModelSource は空 bytes を表現不能(コンストラクタで拒否)
 - ModelMap.entries の implPath は重複なし・repo 相対 POSIX パスのみ
 - ModelMap は specs/tla/model-map.json として単一ファイル所有(書込者は updateModelMap のみ)
+- U5 sensor は独自 schema/type を再定義せず、U1 所有の `tla-model-map.ts` から `ModelMap`、`ModelMapEntry`、`ModelMapDrift`、`parseTlaModelMap`、`diffModelMap` を import して共有する
 
 ## frontend-components.md について
 
