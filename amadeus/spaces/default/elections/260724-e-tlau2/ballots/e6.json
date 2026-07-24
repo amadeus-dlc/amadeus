@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TLAU2",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "(1)A案のpackage.ts投影調整がBR-U2-7『コア変更はamadeus-graph.tsのみ』に抵触するか要申告 — package.tsはpackaging層でありコアではないと解するが逸脱申告とレビューを必須とする (2)pluginがshipped harness treeへ漏れたら赤くなるガードテストで0-plugin byte-identity不変条件を固定すること",
+  "rationale": "実測一致: package.ts step3 compile(:445)がstep6 projectPluginsIntoHarnessTree(:500,:306,:494-497)より前に走り、ビルドは0-plugin緑だが投影後treeの再compile(t110/t88)がplugins/を拾いbyte-identity破壊。FR-2.3/1.3の0-plugin byte-identical・FR-2.1/1.4のcompose-on-demandが設計の本質。B案はshipped-active化+文面改定でユーザー可視契約放棄=仕様変更(escalation)。A案は設計へ実装を整合させる正当な是正。",
+  "submittedAt": "2026-07-24T13:28:57Z"
+}

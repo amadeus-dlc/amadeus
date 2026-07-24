@@ -1,0 +1,21 @@
+{
+  "electionId": "E-TLAU2",
+  "voter": "e6",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "X: その他(noteに明記)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "B: formal-model-check を shipped-active と認め、FR-2.3の『0-plugin byte-identical』と t110/t88 を plugin込みへ改定する(注: FR-2.3 文面と矛盾=仕様変更の疑い。採択時はユーザーエスカレーション事項)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 1,
+      "label": "A(e3推奨): formal-model-check を neutral bundle(dist/plugins/<name>/)のみ供給し、compile可視の dist/<harness>/plugins/ へは投影しない。package.ts の投影を調整(BR-U2-7『コア変更はamadeus-graph.tsのみ』境界に抵触の可能性あり=申告要)。0-plugin recompile byte-identical 維持+真の compose-on-demand。E2Eは実composeで temp host へ着地させ dist 非汚染で実装"
+    }
+  ]
+}

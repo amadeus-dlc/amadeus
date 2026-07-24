@@ -1,0 +1,23 @@
+{
+  "electionId": "E-HPUGS13",
+  "kind": "learnings-election",
+  "question": "260724-harness-provenance / units-generation の §13 学習選定。conductor e5 の提案は【0件】(採用候補なし)。\n\n不採用候補と理由(s13-candidates.md、e5 worktree を election-protocol のread-onlyで実測照合可):\n・候補1: unit-of-work-dependency.md の edge block キー名(units/depends_on)に関する運用詳細 → 既存 cid:units-generation:per-unit-loop-activation の運用詳細でカバー済み、新規性なし。\n・候補2: services.md 上流入力ヘッダーの装飾トークン混入回避 → 既存 cid:code-generation:artifact-upstream-inputs-header でカバー済み、新規性なし。\n\ngate 状態(参考): 2ユニット分割 U1(Harness Detector)/U2(Harness Recorder)、edge block+bolt_dag 非null 確認、architecture-reviewer iteration2 で READY、センサー全PASS、チェックポイント a57e800f2。\n\n各自 s13-candidates.md と引用2 cid(per-unit-loop-activation / artifact-upstream-inputs-header)の memory 層実在を実測確認のうえ、0件提案の妥当性を投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可(提案通り) — 2候補はいずれも既存cidでカバー済み、新規ノルム化に当たらない"
+    },
+    {
+      "internalNo": 2,
+      "label": "追加すべき学習候補あり(noteに具体候補と根拠を明記) — 0件提案に異議"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3",
+    "e4",
+    "e6"
+  ],
+  "state": "recorded"
+}
