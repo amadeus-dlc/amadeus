@@ -823,18 +823,25 @@ function stageFileFor(phase: string, slug: string): string {
   return `${harnessDir()}/amadeus-common/stages/${phase}/${slug}.md`;
 }
 
+type TrustedPluginRuntimeStage = {
+  path?: string;
+  slug?: string;
+  contentDigest?: string;
+  frontmatter?: unknown;
+};
+type TrustedPluginRuntimeRecord = {
+  stageIndex?: TrustedPluginRuntimeStage[];
+  stageIndexDigest?: string;
+  trustGrant?: { plugin?: string; contentDigest?: string; grantTimestamp?: string } | null;
+};
+type TrustedPluginRuntimeComposition = { plugins?: [string, TrustedPluginRuntimeRecord][] };
+
 function trustedPluginStageFile(slug: string): string | null {
   const configuredHostRoot = process.env.AMADEUS_PLUGINS_HOST_ROOT;
   const hostRoot = realpathSync(configuredHostRoot ?? dirname(TOOLS_DIR));
   const recordPath = join(hostRoot, ".amadeus-plugin-composition.json");
   if (!existsSync(recordPath)) return null;
-  const composition = JSON.parse(readFileSync(recordPath, "utf-8")) as {
-    plugins?: Array<[string, {
-      stageIndex?: Array<{ path?: string; slug?: string; contentDigest?: string; frontmatter?: unknown }>;
-      stageIndexDigest?: string;
-      trustGrant?: { plugin?: string; contentDigest?: string; grantTimestamp?: string } | null;
-    }]>;
-  };
+  const composition = JSON.parse(readFileSync(recordPath, "utf-8")) as TrustedPluginRuntimeComposition;
   for (const [plugin, record] of composition.plugins ?? []) {
     const entry = record.stageIndex?.find((candidate) => candidate.slug === slug);
     if (entry === undefined) continue;
@@ -892,6 +899,10 @@ function trustedPluginStageFile(slug: string): string | null {
     return configuredHostRoot === undefined ? `${harnessDir()}/${path}` : abs;
   }
   return null;
+}
+
+export function _trustedPluginStageFileForTests(slug: string): string | null {
+  return trustedPluginStageFile(slug);
 }
 
 // --- The conductor persona (decision D-E, SPIKE 6) ---

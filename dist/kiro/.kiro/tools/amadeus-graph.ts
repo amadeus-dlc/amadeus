@@ -1696,6 +1696,20 @@ type PluginStageIndexCacheEntry = {
   reads: PluginStageRead[];
 };
 
+type TrustedPluginStageIndex = {
+  pluginStageIndexDigest?: string;
+  plugins?: Array<[string, {
+    stageIndex?: Array<{
+      path?: string;
+      slug?: string;
+      contentDigest?: string;
+      frontmatter?: Record<string, unknown>;
+    }>;
+    stageIndexDigest?: string;
+    trustGrant?: { plugin?: string; contentDigest?: string; grantTimestamp?: string } | null;
+  }]>;
+};
+
 const pluginStageIndexCache = new Map<string, PluginStageIndexCacheEntry>();
 
 // stderr contract (reliability-design): every plugin-stage failure is a single
@@ -1796,8 +1810,7 @@ function safeReadPluginStage(
  *  so the merge order is byte-reproducible (domain-entities invariant). Absent
  *  plugins dir (or a plugin with no stages dir) contributes nothing — the
  *  0-plugin baseline. */
-function readPluginStageFiles(hostRoot: string, requireTrust = false): PluginStageRead[] {
-  if (requireTrust) return readTrustedPluginStageIndex(hostRoot);
+function readPluginStageFiles(hostRoot: string): PluginStageRead[] {
   if (!existsSync(join(hostRoot, "plugins"))) return [];
   // Canonicalize the host root up front so every descendant path is under the
   // real root (on macOS a temp `/var/...` resolves to `/private/var/...`);
@@ -1828,7 +1841,6 @@ function readPluginStageFiles(hostRoot: string, requireTrust = false): PluginSta
         if (ls.isSymbolicLink()) throw new Error("stage file is a symlink");
         assertNoSymlinkAncestor(hostReal, abs);
         raw = safeReadPluginStage(abs, { dev: ls.dev, ino: ls.ino }, budget);
-        if (requireTrust) assertTrustedPluginStage(hostReal, name, rel, raw);
       } catch (err) {
         throw new PluginStageError({
           code: "READ_FAILED",
@@ -1889,19 +1901,7 @@ function readTrustedPluginStageIndex(hostRoot: string): PluginStageRead[] {
   ) {
     return cached.reads;
   }
-  let parsed: {
-    pluginStageIndexDigest?: string;
-    plugins?: Array<[string, {
-      stageIndex?: Array<{
-        path?: string;
-        slug?: string;
-        contentDigest?: string;
-        frontmatter?: Record<string, unknown>;
-      }>;
-      stageIndexDigest?: string;
-      trustGrant?: { plugin?: string; contentDigest?: string; grantTimestamp?: string } | null;
-    }]>;
-  };
+  let parsed: TrustedPluginStageIndex;
   try {
     const raw = safeReadPluginStage(
       recordPath,
@@ -1983,37 +1983,6 @@ function pluginIndexError(
     pluginPath,
     reason,
   });
-}
-
-function assertTrustedPluginStage(
-  hostRoot: string,
-  plugin: string,
-  pluginPath: string,
-  raw: string,
-): void {
-  const recordPath = join(hostRoot, ".amadeus-plugin-composition.json");
-  if (!existsSync(recordPath)) throw new Error("plugin has no composition trust record");
-  const parsed = JSON.parse(readFileSync(recordPath, "utf-8")) as {
-    plugins?: Array<[string, {
-      ownedPaths?: string[];
-      ownedContentDigests?: Array<[string, string]>;
-      trustGrant?: { plugin?: string; contentDigest?: string; grantTimestamp?: string } | null;
-    }]>;
-  };
-  const record = parsed.plugins?.find(([name]) => name === plugin)?.[1];
-  const grant = record?.trustGrant;
-  if (
-    record === undefined
-    || !record.ownedPaths?.includes(pluginPath)
-    || grant?.plugin !== plugin
-    || !/^sha256:[0-9a-f]{64}$/.test(grant.contentDigest ?? "")
-    || Number.isNaN(Date.parse(grant.grantTimestamp ?? ""))
-  ) {
-    throw new Error("plugin composition trust grant is missing or invalid");
-  }
-  const expected = new Map(record.ownedContentDigests ?? []).get(pluginPath);
-  const actual = `sha256:${createHash("sha256").update(raw).digest("hex")}`;
-  if (expected !== actual) throw new Error("plugin stage content digest drifted from trust grant");
 }
 
 /** Best-effort field name from a schema error list ("slug: ..." -> "slug"),
@@ -2167,7 +2136,7 @@ export function compileStageGraph(): {
   // in the same loop. The trusted index already guarantees unique plugin
   // slugs, avoiding a second all-stage walk and plugin-path lookup map.
   const sensorsById = loadSensors();
-  for (const { file, data } of readPluginStageFiles(pluginHost, true)) {
+  for (const { file, data } of readTrustedPluginStageIndex(pluginHost)) {
     const slug = data.slug;
     // Collision against a core stage OR an earlier plugin stage -> loud reject
     // with both paths (BR-U2-2). Emitted as the plugin-stage error schema.
