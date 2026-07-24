@@ -474,3 +474,174 @@
 **Message**: e5からの続報を待つ
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:50:36Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a1f822ad396ba6c0d
+**Message**: 進捗教えて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:52:00Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aba003d39f4cbb228
+**Message**: OK、それで進めて
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-24T11:52:04Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-24T11:52:58Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:52:59Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a7292aaea566701f3
+**Message**: e5のrequirements-analysis、state.md優先方針でOK出して
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:53:10Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a759559024dc3dd25
+**Message**: e2の投票まだ?
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:53:54Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ae393e8e7a2238a73
+**Message**: 進捗教えて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:00:54Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: afc6da756ef4cc93b
+**Message**: 票が揃うまで待って
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:01:09Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a869740a8f2d8e8b8
+**Message**: 票が揃うまで待って
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:02:21Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a51dc7dc6695009f1
+**Message**: 票が揃うまで待って
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:03:11Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ac1d0eb8af981b3d2
+**Message**: 票が揃うまで待って
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:03:20Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a9e6060bcd36d2e0d
+**Message**: e1とe2の投票状況確認して
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:04:30Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a7ce4e3471ff10b9b
+**Message**: e2の票まだ?
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-24T12:06:28Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-24T12:07:18Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:07:21Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a02e58215eaa78e68
+**Message**: e2に直接聞いて
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-24T12:07:49Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:07:49Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: af0f4e1bf8456cdd8
+**Message**: e2の様子見て
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:08:06Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a5001f70d12d2762a
+**Message**: e2の様子見て
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-24T12:11:17Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:11:46Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a68c9b855a8057814
+**Message**: e2の状況も確認して
+
+---

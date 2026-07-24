@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HPFR3",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "FR-3の requirements.md 見出し(『補助手段、Codex/Cursor/OpenCode/Kiro 向け一次手段』)がOut of Scope#3(恒久的自動検出手段の確立)との境界を曖昧にしている表現である点は要是正。ただし機構自体はamadeus-lib.ts:168-183のderiveHarnessDir()・:158のKNOWN_HARNESS_DIRSという既存実装の再利用であり、新規メカニズムの新設ではないためBを支持する。",
+  "rationale": "amadeus-lib.ts:168-183 のderiveHarnessDir()、:158のKNOWN_HARNESS_DIRSは本intent以前からharnessDir()解決に使われている既存機構であることを直読確認した。FR-3はこの既存機構の出力(dot-dir名)をharness type(codex/cursor/opencode/kiro)へマッピングするだけで、新たな検出手段(env var相当の恒久機構)を新設していない。scope-document.md Out of Scope#3の文言『Cursor / OpenCode / Kiro の恒久的な自動検出手段の確立』は、新規メカニズムの新設を禁じていると解釈するのが自然であり、既存機構の単純な再利用までは禁じていないと判断する。",
+  "submittedAt": "2026-07-24T12:04:13Z"
+}

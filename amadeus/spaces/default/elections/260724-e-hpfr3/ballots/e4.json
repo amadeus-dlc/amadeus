@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HPFR3",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "constraint-register.md TC-3(feasibility)を実測確認したところ、Out of Scope #3の根拠は『Cursor/OpenCode/Kiroの自動検出用env varがリポジトリ内に実装例がない』という点に限定されており(TC-1〜TC-3はいずれもenv var検出手段の話)、対してFR-3のdot-dir検出はamadeus-lib.tsのderiveHarnessDir()/KNOWN_HARNESS_DIRSという既存の確立済み機構の再利用であり、TC-3が言う『未確立の自動検出手段の研究』とは別物と判断した。ただしFR-3の『一次手段』という表現は、scope-document.mdのScope Boundary Rationaleが述べる in-scope の上限(『フォールバック設計まで』)より踏み込んで見える書きぶりであり、AC-3c(unknown fallback)・FR-1 AC-1d(manual上書き)の存在を明記のうえ『非決定的な補助シグナル、常時manual上書き可能』という程度の慎重な表現へ調整することを推奨する。",
+  "rationale": "constraint-register.md TC-1/TC-2/TC-3を実測: いずれもenv var検出手段(CLAUDECODE/CODEX_THREAD_ID等)についての制約であり、dot-dir検出(deriveHarnessDir、amadeus-lib.ts:168-183)には言及がない。scope-document.md Out of Scope #3の文言も『自動検出手段の確立』かつ『env var 実装例を確立できなかった場合』という限定であり、既存機構の再利用であるdot-dir検出はこの禁止範囲に該当しないと判断しB案を支持する。",
+  "submittedAt": "2026-07-24T12:10:00Z"
+}

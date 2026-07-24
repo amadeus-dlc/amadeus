@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HPFR3",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "既存機構の再利用という論点(B案)にも一定の理があり機械的に無効ではないが、reviewer 2 iteration連続Major指摘とscope文言を総合すると縮小側が妥当と判断。",
+  "rationale": "scope-document.md Out of Scope#3は『Cursor/OpenCode/Kiroの恒久的な自動検出手段の確立』を除外項目として明記(手段一般)。feasibility-assessment.mdもこれら3ハーネスの自動検出を主リスクとして『未確立』と明記し、緩和策はunknown/manual許容のみ。deriveHarnessDir()/KNOWN_HARNESS_DIRS(amadeus-lib.ts:158,168-183)は既存関数だが、harness種別の一次手段として『昇格』させる用途は本intent内で新規。",
+  "submittedAt": "2026-07-24T12:01:56Z"
+}

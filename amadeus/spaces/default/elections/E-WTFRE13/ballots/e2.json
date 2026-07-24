@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-WTFRE13",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "s13-candidates.md(260724-watcher-timeout-fix/inception/reverse-engineering)を実測。検討済み2候補はいずれも既存cid(requirements-analysis:symmetric-pair-review、requirements-analysis:implementation-deviation-election、requirements-analysis:always-elect)で既にカバー済みと確認(team.md記載を照合)。0件提案は妥当。",
+  "submittedAt": "2026-07-24T12:11:01Z"
+}

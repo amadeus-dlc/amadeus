@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-WTFRE13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "s13-candidates.md 記載の不採用理由を実測確認。symmetric-pair-review・implementation-deviation-election・always-elect の各cidがteam.mdに実在し、記述内容も候補パターンをカバーしていることを直接照合した。0件提案は妥当と判断。",
+  "submittedAt": "2026-07-24T10:10:00Z"
+}

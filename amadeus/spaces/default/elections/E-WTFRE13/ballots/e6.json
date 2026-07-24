@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-WTFRE13",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可(提案通り)。s13-candidates.mdの2候補を実測確認。symmetric-pair-review/implementation-deviation-election/always-electの3 cidはteam.mdに実在し記述内容も候補の説明と整合。新規cid化するほどの未カバー領域なし。留保なし。",
+  "submittedAt": "2026-07-24T10:08:02Z"
+}

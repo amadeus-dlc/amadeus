@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-WTFRE13",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "対称実装パターン(agmsg spawn.sh単発待ち vs team-up.shの再送x3ループ)をsymmetric-pair-reviewで既カバーとする点はやや拡大解釈だが、対操作の非対称レビューという趣旨には沿うと判断し0件に同意する。",
+  "rationale": null,
+  "submittedAt": "2026-07-24T10:08:59Z"
+}

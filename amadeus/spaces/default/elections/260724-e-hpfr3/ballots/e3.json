@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HPFR3",
+  "voter": "e3",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "constraint-register.md TC-3・scope-document.md Out of Scope#3の文言はいずれも「env var検出手段の確立」に限定されており、bootstrap時点(2026-07-06)から既存のderiveHarnessDir()/harnessDir()(dot-dir probe)の再利用はこれに該当しないと判断する。ただしderiveHarnessDir()のCWDプローブ段(script-path解決が効かない場合のフォールバック)は複数harness dirが同居するdev repoでは誤検出しうるため、design段階でこの経路が実運用上使われないこと(script-path解決が常に先に成立すること)を確認するのが望ましい。",
+  "rationale": null,
+  "submittedAt": "2026-07-24T12:02:32Z"
+}

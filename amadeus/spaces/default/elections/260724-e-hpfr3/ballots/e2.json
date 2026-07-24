@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HPFR3",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "B案(既存機構の再利用)にも一定の理はあり機械的に無効ではないが、scope-document.mdの文言とreviewer 2iteration連続Major指摘を総合すると縮小側が妥当。",
+  "rationale": "requirements.md FR-3(inception/requirements-analysis, engineer-5 worktree)・scope-document.md Out of Scope#3・amadeus-lib.ts:158-183のderiveHarnessDir実測。Out of Scope#3は『Cursor/OpenCode/Kiroの恒久的な自動検出手段の確立』を、env var実装例を確立できなかった場合に別Issueへ切り出す条件付き除外として明記(constraint-register.md TC-3参照)。TC-3はこれら3ハーネス向けenv var実装例が本リポジトリに不在と確認済み。deriveHarnessDir()自体は既存関数だが、FR-3はその出力をharness種別の一次手段として新規に『昇格』させる用途であり、この昇格はOut of Scope#3が明示的に先送りした対象そのものと判断する。",
+  "submittedAt": "2026-07-24T12:11:01Z"
+}

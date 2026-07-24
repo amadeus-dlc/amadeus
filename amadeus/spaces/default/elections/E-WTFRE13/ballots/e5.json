@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-WTFRE13",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "s13-candidates.md の2案を実測確認。symmetric-pair-review(対称性の設計・レビュー観点)、implementation-deviation-election/always-elect(逸脱時の選挙裁定手続き)いずれもteam.mdに実在し記載内容と一致。今回の2案は既存cidの適用範囲内であり、新規cid化の根拠(実例1件のみ)も薄いため0件提案に賛成。",
+  "submittedAt": "2026-07-24T10:08:13Z"
+}

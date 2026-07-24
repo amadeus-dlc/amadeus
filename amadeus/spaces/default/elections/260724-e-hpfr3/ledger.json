@@ -1,0 +1,60 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-HPFR3",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "既存機構の再利用という論点(B案)にも一定の理があり機械的に無効ではないが、reviewer 2 iteration連続Major指摘とscope文言を総合すると縮小側が妥当と判断。",
+      "rationale": "scope-document.md Out of Scope#3は『Cursor/OpenCode/Kiroの恒久的な自動検出手段の確立』を除外項目として明記(手段一般)。feasibility-assessment.mdもこれら3ハーネスの自動検出を主リスクとして『未確立』と明記し、緩和策はunknown/manual許容のみ。deriveHarnessDir()/KNOWN_HARNESS_DIRS(amadeus-lib.ts:158,168-183)は既存関数だが、harness種別の一次手段として『昇格』させる用途は本intent内で新規。",
+      "submittedAt": "2026-07-24T12:01:56Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HPFR3",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "constraint-register.md TC-3・scope-document.md Out of Scope#3の文言はいずれも「env var検出手段の確立」に限定されており、bootstrap時点(2026-07-06)から既存のderiveHarnessDir()/harnessDir()(dot-dir probe)の再利用はこれに該当しないと判断する。ただしderiveHarnessDir()のCWDプローブ段(script-path解決が効かない場合のフォールバック)は複数harness dirが同居するdev repoでは誤検出しうるため、design段階でこの経路が実運用上使われないこと(script-path解決が常に先に成立すること)を確認するのが望ましい。",
+      "rationale": null,
+      "submittedAt": "2026-07-24T12:02:32Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HPFR3",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "constraint-register.md TC-3(feasibility)を実測確認したところ、Out of Scope #3の根拠は『Cursor/OpenCode/Kiroの自動検出用env varがリポジトリ内に実装例がない』という点に限定されており(TC-1〜TC-3はいずれもenv var検出手段の話)、対してFR-3のdot-dir検出はamadeus-lib.tsのderiveHarnessDir()/KNOWN_HARNESS_DIRSという既存の確立済み機構の再利用であり、TC-3が言う『未確立の自動検出手段の研究』とは別物と判断した。ただしFR-3の『一次手段』という表現は、scope-document.mdのScope Boundary Rationaleが述べる in-scope の上限(『フォールバック設計まで』)より踏み込んで見える書きぶりであり、AC-3c(unknown fallback)・FR-1 AC-1d(manual上書き)の存在を明記のうえ『非決定的な補助シグナル、常時manual上書き可能』という程度の慎重な表現へ調整することを推奨する。",
+      "rationale": "constraint-register.md TC-1/TC-2/TC-3を実測: いずれもenv var検出手段(CLAUDECODE/CODEX_THREAD_ID等)についての制約であり、dot-dir検出(deriveHarnessDir、amadeus-lib.ts:168-183)には言及がない。scope-document.md Out of Scope #3の文言も『自動検出手段の確立』かつ『env var 実装例を確立できなかった場合』という限定であり、既存機構の再利用であるdot-dir検出はこの禁止範囲に該当しないと判断しB案を支持する。",
+      "submittedAt": "2026-07-24T12:10:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HPFR3",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "FR-3の requirements.md 見出し(『補助手段、Codex/Cursor/OpenCode/Kiro 向け一次手段』)がOut of Scope#3(恒久的自動検出手段の確立)との境界を曖昧にしている表現である点は要是正。ただし機構自体はamadeus-lib.ts:168-183のderiveHarnessDir()・:158のKNOWN_HARNESS_DIRSという既存実装の再利用であり、新規メカニズムの新設ではないためBを支持する。",
+      "rationale": "amadeus-lib.ts:168-183 のderiveHarnessDir()、:158のKNOWN_HARNESS_DIRSは本intent以前からharnessDir()解決に使われている既存機構であることを直読確認した。FR-3はこの既存機構の出力(dot-dir名)をharness type(codex/cursor/opencode/kiro)へマッピングするだけで、新たな検出手段(env var相当の恒久機構)を新設していない。scope-document.md Out of Scope#3の文言『Cursor / OpenCode / Kiro の恒久的な自動検出手段の確立』は、新規メカニズムの新設を禁じていると解釈するのが自然であり、既存機構の単純な再利用までは禁じていないと判断する。",
+      "submittedAt": "2026-07-24T12:04:13Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HPFR3",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "B案(既存機構の再利用)にも一定の理はあり機械的に無効ではないが、scope-document.mdの文言とreviewer 2iteration連続Major指摘を総合すると縮小側が妥当。",
+      "rationale": "requirements.md FR-3(inception/requirements-analysis, engineer-5 worktree)・scope-document.md Out of Scope#3・amadeus-lib.ts:158-183のderiveHarnessDir実測。Out of Scope#3は『Cursor/OpenCode/Kiroの恒久的な自動検出手段の確立』を、env var実装例を確立できなかった場合に別Issueへ切り出す条件付き除外として明記(constraint-register.md TC-3参照)。TC-3はこれら3ハーネス向けenv var実装例が本リポジトリに不在と確認済み。deriveHarnessDir()自体は既存関数だが、FR-3はその出力をharness種別の一次手段として新規に『昇格』させる用途であり、この昇格はOut of Scope#3が明示的に先送りした対象そのものと判断する。",
+      "submittedAt": "2026-07-24T12:11:01Z"
+    }
+  ],
+  "late": []
+}

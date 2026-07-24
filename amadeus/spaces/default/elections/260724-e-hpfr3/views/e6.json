@@ -1,0 +1,16 @@
+{
+  "electionId": "E-HPFR3",
+  "voter": "e6",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "A: FR-3をmanual-fallback-onlyへ縮小、dot-dir実装は見送る"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "B: dot-dir検出は既存機構の再利用でOut of Scope#3に抵触しない、FR-3を維持する"
+    }
+  ]
+}

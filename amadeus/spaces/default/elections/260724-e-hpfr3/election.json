@@ -1,0 +1,23 @@
+{
+  "electionId": "E-HPFR3",
+  "kind": "implementation-deviation-election",
+  "question": "260724-harness-provenance / requirements-analysis: FR-3 の Cursor/OpenCode/Kiro 向け dot-dir 検出の位置づけを巡る scope 境界解釈。reviewer(2 iteration NOT-READY、iterations exhausted)が残した Major 指摘: FR-3 は dot-dir 検出を『一次手段』と位置づけているが、scope-document.md の Out of Scope #3(これら3ハーネスの恒久的自動検出手段の確立)と抵触する疑いがある。選択肢A: FR-3 を scope-document.md 通り manual-fallback-only へ縮小し、dot-dir 実装は見送る。選択肢B: dot-dir 検出は『確立』ではなく既存機構(harnessDir/deriveHarnessDir の KNOWN_HARNESS_DIRS プローブ)の単純再利用であり Out of Scope #3 に抵触しないと判断し、FR-3 を維持する。各自 requirements.md・scope-document.md Out of Scope #3・amadeus-lib.ts の harnessDir 実装を実測確認のうえ投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A: FR-3をmanual-fallback-onlyへ縮小、dot-dir実装は見送る"
+    },
+    {
+      "internalNo": 2,
+      "label": "B: dot-dir検出は既存機構の再利用でOut of Scope#3に抵触しない、FR-3を維持する"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e3",
+    "e4",
+    "e6"
+  ],
+  "state": "recorded"
+}
