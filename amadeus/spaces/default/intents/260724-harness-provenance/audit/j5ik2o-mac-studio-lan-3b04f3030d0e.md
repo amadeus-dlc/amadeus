@@ -104,3 +104,15 @@
 **User Input**: 常任グラント504d1102(scope=stage-gates)適用によるdelegate発行。RE(Developer→Architect直列)完了、codekb 9成果物実在確認、base祖先性再選定+並行intent間のcurrent marker衝突をleaderが解決済み(e5報告)。
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-24T11:50:23Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: practices-discovery
+**Issuer Space**: default
+**Issuer Intent**: 260724-watcher-timeout-fix
+**Issuer Shard**: j5ik2o-mac-studio-lan-3b04f3030d0e.md
+**Issuer Human Ts**: 2026-07-24T11:48:37Z
+**User Input**: 常任グラント504d1102(scope=stage-gates)適用によるdelegate発行。practices-discovery cid:c1適用・新規ギャップなし・センサー全PASS確認済み(e5報告)。
+
+---
