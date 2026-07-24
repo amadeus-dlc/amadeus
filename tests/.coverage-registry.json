@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 519,
+    "total": 521,
     "enumeratedByClass": {
-      "function": 284,
+      "function": 286,
       "audit": 77,
       "scope": 10,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 141,
+      "function": 143,
       "audit": 32,
       "scope": 10,
       "stage": 8,
@@ -1301,6 +1301,14 @@
       "minMechanism": "none",
       "coveredBy": [
         {
+          "file": "tests/integration/t-formal-verif-plugin-lifecycle.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t-formal-verif-plugin-stage-discovery.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/integration/t110.test.ts",
           "mechanism": "none"
         },
@@ -1427,6 +1435,18 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:discoverPluginStageFiles",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-formal-verif-plugin-stage-discovery.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -2676,6 +2696,18 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:PluginStageError",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-formal-verif-plugin-stage-discovery.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",

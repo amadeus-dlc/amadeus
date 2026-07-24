@@ -1,0 +1,21 @@
+{
+  "stage_slug": "functional-design",
+  "selections": [
+    {
+      "candidate_id": "c1",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Testing Posture",
+      "text": "既存 workflow へ新しいトリガーを追加する設計では、event 固有値の欠落を実行環境で再現し、既存ジョブのハード失敗と依存ジョブへの伝播を確認してから最小分岐を設計する",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "c2",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "process-global な環境検証を抽象化するときは、prepare 時の snapshot と実行直前の再検証を分離し、TOCTOU 防止の呼出し位置を維持する",
+      "source": "orchestrator"
+    }
+  ]
+}

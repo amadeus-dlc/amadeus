@@ -778,7 +778,7 @@ export function createTlcRunManifest(
   if (!hasBoundManifestSandbox(input)) return fail("sandbox structure is not identity-bound");
   if (!validatedModel.ok) return fail(`model receipt is invalid: ${validatedModel.error.message}`);
   if (![input.modulePath, input.cfgPath, input.subjectAlias, input.cwd].every((value) => value.length > 0 && !value.includes("\0"))) return fail("run paths and subject alias must be non-empty");
-  if (!Number.isSafeInteger(input.deadlineMs) || input.deadlineMs <= 0 || input.deadlineMs > 120_000) return fail("run deadline must be within the fixed 120 second budget");
+  if (!Number.isSafeInteger(input.deadlineMs) || input.deadlineMs <= 0 || input.deadlineMs > 180_000) return fail("run deadline must be within the fixed 180 second budget");
   const javaPath = `${input.jdk.snapshotRoot.replace(/\/+$/, "")}/${input.jdk.javaExecutablePath}`;
   const standardModuleDirectory = `${input.cwd.replace(/\/+$/, "")}/.tlc-stdlib`;
   const expectedArgv = [javaPath, ...FIXED_JDK_RUN_PROFILE.jvmArgs, `-Djava.io.tmpdir=${standardModuleDirectory}`, "-cp", input.artifact.cachePath, "tlc2.TLC", "-workers", "1", "-tool", "-config", input.cfgPath, input.modulePath];

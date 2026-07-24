@@ -51,11 +51,9 @@ import { spawnSync } from "node:child_process";
 import type { HarnessManifest } from "./manifest-types.ts";
 import { renderOnboarding } from "./onboarding.ts";
 import { substituteToken, transform } from "./harness-transform.ts";
-import type { PackageHarness } from "./plugin-projection.ts";
 import {
   buildPluginBundle,
   discoverPluginSources,
-  projectPluginArtifacts,
   validatePluginSources,
 } from "./plugin-projection.ts";
 import { AMADEUS_VERSION } from "../packages/framework/core/tools/amadeus-version.ts";
@@ -298,23 +296,30 @@ function repoPlugins(): readonly import("./plugin-projection.ts").PluginSource[]
   return validatePluginSources(discoverPluginSources(pluginsRoot()));
 }
 
-// Project every discovered plugin into `treeRoot` at plugins/<name>/, recording
-// each read source path into `readSources`. The prose transform matches core's,
-// and the plugins/ namespace keeps the output under the in-harness walk so the
-// existing byte-diff/orphan scans cover it. No-op at zero plugins. Lifted out of
-// buildTree so its nested loops stay out of buildTree's complexity budget.
+// Record every discovered plugin's source paths as referenced, WITHOUT writing
+// them into the compile-visible <harnessDir>/plugins/ tree.
+//
+// Plugins ship ONLY as the harness-neutral bundle (dist/plugins/<name>/, see
+// writeNeutralBundle). They are deliberately NOT projected into the in-harness
+// <harnessDir>/plugins/ tree: a plugin STAGE file landed there would be
+// discovered by compileStageGraph's plugin-stage walk (amadeus-graph.ts
+// discoverPluginStageFiles), making the SHIPPED stage-graph.json non-0-plugin
+// and breaking the recompile-idempotence invariant (t110/t88; FR-2.3 "dist all
+// harnesses 0-plugin byte-identical"). A team opts a plugin in by composing it
+// from the neutral bundle into its own host tree; the compile discovers the
+// COMPOSED copy there, never a shipped one. (Intent 260722-tla-plugin U2, ruling
+// E-TLAU2 option A. This touches the packager, which the U2 core-change boundary
+// otherwise limits to amadeus-graph.ts — declared crossing.)
+//
+// The read-source accounting is preserved so the unreferenced-source scan (#735)
+// still counts the plugin's authored files as referenced. No-op at zero plugins.
 function projectPluginsIntoHarnessTree(
-  m: HarnessManifest,
-  treeRoot: string,
+  _m: HarnessManifest,
+  _treeRoot: string,
   readSources: Set<string>,
 ): void {
   for (const plugin of repoPlugins()) {
-    for (const a of projectPluginArtifacts(plugin, m.name as PackageHarness, m.harnessDir, m.rulesRename)) {
-      const outPath = join(treeRoot, ...a.relativePath.split("/"));
-      mkdirSync(dirname(outPath), { recursive: true });
-      writeFileSync(outPath, a.bytes);
-      readSources.add(a.sourcePath);
-    }
+    for (const a of plugin.artifacts) readSources.add(a.sourcePath);
   }
 }
 
