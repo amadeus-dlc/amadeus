@@ -8,7 +8,7 @@
 // to the committed graph, and injecting a dummy plugin makes the output differ
 // (the falling proof that discovery is live, not a no-op).
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -237,5 +237,36 @@ describe("PluginStageError schema (reliability-design)", () => {
     expect(parsed.slug).toBe("code-generation");
     expect(parsed.existingPath).toBe("amadeus-common/stages/construction/code-generation.md");
     expect(parsed.pluginPath).toBe("plugins/clash/stages/code-generation.md");
+  });
+});
+
+// Reservation 2 (ruling E-TLAU2 option A): the 0-plugin stage-graph baseline is
+// protected STRUCTURALLY, not by luck. The `compileStageGraph plugin merge`
+// suite above is the falling proof that discovery is LIVE — a plugin stage under
+// a compile-visible plugins/ WOULD rejoin the graph and change the output. This
+// suite is the other half: the formal-model-check plugin ships ONLY as a neutral
+// bundle, and NO shipped harness tree carries it under its compile-visible
+// plugins/ dir, so recompiling any shipped tree stays 0-plugin (t110/t88 / FR-2.3).
+describe("formal-model-check shipping guard (FR-2.3 / reservation 2)", () => {
+  const REPO_ROOT = join(import.meta.dir, "..", "..");
+  // Every shipped harness tree keyed by its compile-visible harness dir.
+  const HARNESS_TREES: ReadonlyArray<readonly [string, string]> = [
+    ["claude", ".claude"],
+    ["codex", ".codex"],
+    ["cursor", ".cursor"],
+    ["kiro", ".kiro"],
+    ["kiro-ide", ".kiro"],
+    ["opencode", ".opencode"],
+  ];
+
+  test("the plugin ships as a neutral bundle (opt-in supply, FR-2.1)", () => {
+    expect(existsSync(join(REPO_ROOT, "dist", "plugins", "formal-model-check", "plugin.json"))).toBe(true);
+  });
+
+  test("no shipped harness tree carries the plugin under a compile-visible plugins/ dir", () => {
+    for (const [tree, harnessDir] of HARNESS_TREES) {
+      const shippedPluginDir = join(REPO_ROOT, "dist", tree, harnessDir, "plugins", "formal-model-check");
+      expect(existsSync(shippedPluginDir), `${tree} must not ship formal-model-check in ${harnessDir}/plugins/`).toBe(false);
+    }
   });
 });
