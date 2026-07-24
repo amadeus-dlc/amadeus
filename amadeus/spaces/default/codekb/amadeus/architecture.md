@@ -1,6 +1,43 @@
 # アーキテクチャ
 
-> **2026-07-23 更新（intent `260723-t241-ci-residency`、履歴）**: base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb` → observed `78bce87615b985d0151f604c915c6aab1d6ba9f1`（distance 35）の differential refresh（bugfix / Minimal、[Issue #1294](https://github.com/amadeus-dlc/amadeus/issues/1294)）。本 intent の交差面は CI テスト tier アーキテクチャ（`tests/run-tests.ts` の profile flag × `.github/workflows/` × テスト層配置）に限定。**本バグ面の欠陥コードは base..HEAD で無変更**（`git diff --numstat <base>..HEAD -- tests/e2e tests/run-tests.ts .github/workflows package.json` = 0 行）で、原因所在は intent `260718-election-ts-foundation`（導入 PR #1235）にあり本区間 35 コミットとは無交差（測定 ref: scan-notes @ observed HEAD `78bce876`）。以下「FR-0 機械実行器…（260723）」節も履歴（単一 current view は 260723-marker-heading-exemption — code-quality-assessment と鮮度ポインタを参照）。
+> **2026-07-24 更新（intent `260724-harness-provenance`、現在）**: base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb` → observed HEAD `2d0da11d022565bf4a613da9fbcccf078716f8f4`（`git merge-base --is-ancestor a81c11dde HEAD` exit 0、`git rev-list --count a81c11dde..HEAD`=186）の differential refresh（`amadeus-feature` / [Issue #1452](https://github.com/amadeus-dlc/amadeus/issues/1452) — AI ハーネス種別を `amadeus-state.md` / stage `memory.md` に記録する）。前回 scan の observed `ffc79aad9`（260723-marker-heading-exemption）は現 HEAD の**非祖先**（別 run の engineer-5 ブランチ、squash マージ済み — `git merge-base --is-ancestor ffc79aad9 HEAD` exit 1）のため base に採らず、記録済み observed のうち祖先かつ距離最小の `a81c11dde` を base とした（cid:reverse-engineering:rescan-base-ancestry）。本 intent の新規知識クラスタは下記「ハーネス provenance の書込経路とハーネス検出アーキテクチャ」節に集約。**単一 current view を本節に一意化**し、旧「現在」= 260723-marker-heading-exemption（`code-quality-assessment.md`）は履歴へ降格（cid:reverse-engineering:c3-relabel）。全 file:line は Observed=HEAD `2d0da11d` のワークツリー実ファイル直読（Developer scan + Architect 再検証、cid:measurement-ref-in-artifacts）。区間 186 コミットは大きく `amadeus-lib.ts`（+1082/−69）・`amadeus-utility.ts`（+608/−112）を含むため「バグ面不変」の主張はせず、参照はすべて observed 時点の実測。
+
+## ハーネス provenance の書込経路とハーネス検出アーキテクチャ（260724-harness-provenance、現在、Issue #1452）
+
+Issue #1452 は「どの AI ハーネス（Claude Code / Kiro / Codex / opencode / Cursor）が intent を実行したか」を `amadeus-state.md` と stage `memory.md` に記録する機能。差分リフレッシュで確定した**書込経路・検出機構・再利用 seam・センサーリスク**の4面を以下に合成する（測定 ref: Observed=HEAD `2d0da11d` 実読、`packages/framework/core/` 正本）。
+
+### 1. `amadeus-state.md` の書込経路 — birth-time 単一書込
+
+- **テンプレート実体**: `amadeus-utility.ts:4092` の `stateContent` テンプレートリテラル。`## Project Information` ブロック（`:4094-4103`、フィールド: Project / Project Type / Scope / Start Date / State Version / Active Agent / Worktree Path / Bolt Refs / Practices Affirmed Timestamp）。
+- **書込点は intent birth の1箇所のみ**: `handleIntentBirthStateBuild()`（`:3926`）が `stateContent` を組み立て、`writeStateFile(projectDir, stateContent)`（`:4146`）で書き出す。ステージ完了時の state 再生成経路はなく、`## Project Information` へのフィールド追加は **birth-time にしか自動反映されない**。
+- **設計含意**: 新規 `Harness` フィールドを birth 時に埋めるだけなら `:4094-4103` テンプレートへの1行追加で足りる。ただし**既存 intent（birth 済み）への後付け**は birth 経路を通らないため、後述の `setOrInsertField`（実行時追加フィールド向け）で別途注入する必要がある。
+- **検証機構**: `validateStateFields()`（`amadeus-migrate.ts:934-942`）は `STATE_V7_FIELDS`（`:86-`)の各フィールドが `stateFieldCount !== 1`（**exactly-once**）かを検査する。`Harness` は V7 集合外のため**未検査（追加を拒否しない）**。exactly-once 強制を望むなら `STATE_V7_FIELDS` へ追加するが、その場合は既存 state（欠落）が exactly-once で FAIL するため migration による欠落補填と State Version 整合が別途必要（=birth-only 追加なら V7 集合に触れない選択が低リスク）。
+
+### 2. stage `memory.md` の書込経路 — テンプレートのバイトコピー
+
+- **生成機構**: `ensureStageDiary()`（`amadeus-lib.ts:1252-1266`）が `writeFileSync(abs, readFileSync(template))`（`:1264`）でテンプレートを**バイトコピー**するのみ。YAML フロントマターはなく、Markdown H2 見出しは4つ（`## Interpretations` / `## Deviations` / `## Tradeoffs` / `## Open questions`、テンプレート実体 `packages/framework/core/knowledge/amadeus-shared/memory-template.md` で確認）。
+- **テンプレート参照元がハーネス検出そのもの**: `:1258` は `join(projectDir, harnessDir(), "knowledge", "amadeus-shared", "memory-template.md")` — つまり memory-diary 書込経路は既に `harnessDir()`（§3 の検出機構）を通っており、provenance ソースが**この経路に内在**する。配布コピーは10件（dist + self-install、`find -name memory-template.md -not -path './packages/*'` 実測）。
+- **高リスク面（t100 破壊）**: `tests/unit/t100-memory-template-lifecycle.test.ts` はテンプレートが「exactly four headings」「fresh template で `total===0`（`MEMORY_EMPTY` 不変条件、`:55`）」を固定する。テンプレートへの新規 H2 追加や YAML フロントマター化は t100 を破壊する（テンプレート先頭コメント verbatim: `Do NOT un-comment or split across lines. t100 guards this.`）。provenance を memory.md へ載せる場合は、テンプレート改変ではなく**コピー後のフィールド注入**（H2 見出し数・total を変えない形）が構造的に堅牢。
+
+### 3. ハーネス検出機構 — 天然の provenance ソース(5 ハーネス種別に 1:1)
+
+- `harnessDir()`（`amadeus-lib.ts:187-193`）→ `deriveHarnessDir()`（`:168-183`）が既存の検出機構。解決順序: (1) `AMADEUS_HARNESS_DIR` env（`:190`）→ (2) スクリプトパス祖父ディレクトリ名 → (3) CWD 上の `KNOWN_HARNESS_DIRS = [".claude", ".kiro", ".codex", ".opencode", ".cursor"]`（`:158`)プローブ（`:179`)→ (4) `.claude` フォールバック。
+- `KNOWN_HARNESS_DIRS` の5要素は Issue #1452 が対象とする**5ハーネス種別と 1:1 対応**する天然の provenance ソース。ただし `:153-157` のコメント verbatim は「`KNOWN_HARNESS_DIRS` is NOT the source of truth for which harnesses exist」と注意しており、provenance の正準判定に使う場合はこの但し書きと整合させる設計判断が要る。
+- 命名規約: `AMADEUS_*` プレフィクスが確立済み（`AMADEUS_HARNESS_DIR` 等）。provenance の env オーバーライドを設ける場合はこの規約に従う。
+
+### 4. 再利用可能ヘルパーと先例パターン
+
+- フィールド操作: `getField` / `setField`（`:4842`)/ `setFieldStrict`（`:4876`)/ `fieldExists`（`:4868`)（`amadeus-lib.ts:4808-4884`）。
+- **後付け向けの最適 seam**: `setOrInsertField(content, heading, field, value)`（`:4891-4905`）は「現行 state-template に無いが実行時に追加されるフィールド」向け設計で、既存 intent への provenance 後付けに最適。
+- **先例パターン**: `AUTONOMY_MODE_FIELD = "Construction Autonomy Mode"` 定数（`:4828`）+ `isAutonomousMode()` 述語（`:4830-4832`）— 「定数 + 述語 + 実行時挿入」の既習様式。provenance も `HARNESS_FIELD` 定数 + 検出述語 + `setOrInsertField` 挿入で同型に組める（cid:code-generation:c1 の2定義ドリフト回避のため定数は canonical 1定義から導出）。
+
+### 5. センサーリスク — bun 書込は非発火（state 追加はノーリスク、memory 構造変更は高リスク）
+
+- `amadeus-sensor-fire.ts`（正本 `packages/framework/core/hooks/amadeus-sensor-fire.ts`）は PostToolUse の `tool_input.file_path`（`:76`)= **Claude の Edit/Write tool 経由の書込のみ**を対象とする（`:72-75` コメント verbatim「PostToolUse for Write/Edit always carries `tool_input.file_path`」）。bun ツール（`writeStateFile` / `writeFileSync`）経由の書込には**発火しない**。
+- `amadeus-answer-evidence.md` は state.md / memory.md を対象外。`amadeus-required-sections.md` / `amadeus-upstream-coverage.md` の matches glob には両ファイルが理論上含まれるが、上記の通り bun 書込では発火しない。
+- 帰結: **state.md へのフィールド追加（H2 見出し数不変)はセンサーノーリスク**。**memory.md への構造変更(新規 H2 / YAML 化)は t100 を破壊する高リスク**(§2)。既存 corpus 規模: `amadeus-state.md` 64件 / stage `memory.md` 584件（`find` 実測）— 後付け migration を設計する場合の corpus sweep 対象（cid:corpus-sweep-for-new-guards）。
+
+> **2026-07-23 更新（intent `260723-t241-ci-residency`、履歴）**: base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb` → observed `78bce87615b985d0151f604c915c6aab1d6ba9f1`（distance 35）の differential refresh（bugfix / Minimal、[Issue #1294](https://github.com/amadeus-dlc/amadeus/issues/1294)）。本 intent の交差面は CI テスト tier アーキテクチャ（`tests/run-tests.ts` の profile flag × `.github/workflows/` × テスト層配置）に限定。**本バグ面の欠陥コードは base..HEAD で無変更**（`git diff --numstat <base>..HEAD -- tests/e2e tests/run-tests.ts .github/workflows package.json` = 0 行）で、原因所在は intent `260718-election-ts-foundation`（導入 PR #1235）にあり本区間 35 コミットとは無交差（測定 ref: scan-notes @ observed HEAD `78bce876`）。以下「FR-0 機械実行器…（260723）」節も履歴（単一 current view は本ファイル冒頭「ハーネス provenance…（260724-harness-provenance）」節 — 鮮度ポインタ参照）。
 
 ## FR-0 機械実行器の CI-resident 表明とテスト tier 配置の乖離（260723-t241-ci-residency）
 

@@ -1,8 +1,8 @@
 # コード品質評価
 
-> **現在の品質観測は intent `260723-marker-heading-exemption`(2026-07-23、bugfix / Minimal、下記「marker 成果物への required-sections floor 誤適用」節)**。以下の過去 intent 節に残る「本 intent」「最新」「現在」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
+> **履歴（260723-marker-heading-exemption、2026-07-23、bugfix / Minimal、下記「marker 成果物への required-sections floor 誤適用」節)**: 単一 current view は intent `260724-harness-provenance`(2026-07-24)へ移り、`architecture.md` 冒頭「ハーネス provenance の書込経路とハーネス検出アーキテクチャ」節 + 鮮度ポインタが保持する(cid:reverse-engineering:c3-relabel)。本ファイルの以下の節および過去 intent 節に残る「本 intent」「最新」「現在」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
 
-## marker 成果物への required-sections floor 誤適用（260723-marker-heading-exemption、現在、Issue #1296）
+## marker 成果物への required-sections floor 誤適用（260723-marker-heading-exemption、履歴、Issue #1296）
 
 実測基準は base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`(直近 freshness pointer の observed)、observed HEAD `ffc79aad9a53c600ea9b464f1f04c6fa627ae59e`、祖先性 exit 0、距離13。差分 96 files のうち本バグ交差面は**ゼロ** — 非 record 差分(`scripts/team-up.sh` +163 ほか、51 files)は required-sections センサー正本・`amadeus-graph.ts` の弁別関数・sensors manifest・stage marker 宣言のいずれとも無交差(測定 ref: `git diff --shortstat/--stat a81c11dde..HEAD`)。よって欠陥は base より前から現存し observed に不変で貫通。
 

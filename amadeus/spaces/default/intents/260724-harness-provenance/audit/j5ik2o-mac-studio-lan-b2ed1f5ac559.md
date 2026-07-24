@@ -4088,3 +4088,39 @@
 **Agent**: amadeus-developer-agent
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:29:07Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ae95ad21371b91de0
+**Message**: Developerスキャン終わったら教えて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:31:16Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: a0259e4624d16145b
+**Message**: I have complete evidence for all five tasks. Here is my measured scan report.\n\n---\n\n# Reverse-Engineering Scan Report — intent 260724-harness-provenance\n\nCanonical source scanned: `packages/framework/
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:33:58Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ad3e221c1a089c27e
+**Message**: 進捗まとめて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:39:36Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architect-agent
+**Agent ID**: a766f0cdb2fa0df59
+**Message**: All checks pass — single current view is uniquely held by architecture.md's new section + the freshness pointer; the 260723-marker-heading-exemption marker is fully demoted to 履歴 (the `component-inven
+
+---
