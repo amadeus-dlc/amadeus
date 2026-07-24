@@ -638,3 +638,12 @@
 **Message**: leaderからの承認を待つ
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:00:41Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a791a08896cffb74f
+**Message**: delegate発行を待つ
+
+---
