@@ -7308,3 +7308,11 @@
 **Duration ms**: 44
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-24T12:34:44Z
+**Event**: WORKFLOW_PARKED
+**Stage**: refined-mockups
+**Timestamp**: 2026-07-24T12:34:44Z
+
+---
