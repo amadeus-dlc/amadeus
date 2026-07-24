@@ -3991,3 +3991,20 @@
 **Duration ms**: 39
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-24T11:22:31Z
+**Event**: WORKFLOW_PARKED
+**Stage**: approval-handoff
+**Timestamp**: 2026-07-24T11:22:31Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:22:47Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a1bcf8c67b449aa02
+**Message**: leaderの承認が届いたら教えて
+
+---
