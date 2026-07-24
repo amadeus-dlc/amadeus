@@ -4124,3 +4124,20 @@
 **Message**: All checks pass — single current view is uniquely held by architecture.md's new section + the freshness pointer; the 260723-marker-heading-exemption marker is fully demoted to 履歴 (the `component-inven
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-24T11:40:15Z
+**Event**: WORKFLOW_PARKED
+**Stage**: reverse-engineering
+**Timestamp**: 2026-07-24T11:40:15Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:40:20Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aba0154c7f71369f0
+**Message**: 進捗まとめて
+
+---
