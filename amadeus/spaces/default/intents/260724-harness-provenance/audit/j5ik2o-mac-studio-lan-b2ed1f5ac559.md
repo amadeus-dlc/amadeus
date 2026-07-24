@@ -4518,3 +4518,20 @@
 **Duration ms**: 36
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-24T11:49:30Z
+**Event**: WORKFLOW_PARKED
+**Stage**: practices-discovery
+**Timestamp**: 2026-07-24T11:49:30Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:49:35Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a7a1b4e18f9ae2a8f
+**Message**: 状況を教えて
+
+---
