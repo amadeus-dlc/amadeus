@@ -44,6 +44,10 @@ let bundleRoot: string;
 const CG_SEAMS: StageSeams = { produces: ["code-summary"], consumes: [], sensors: ["linter"], required_sections: [] };
 const CG_BYTES = serializeStageSeams("code-generation", CG_SEAMS);
 const SKILL_BYTES = Buffer.from("# SKILL\n<!-- ANCHOR -->\nfooter\n", "utf-8");
+const OWNED_STAGE = "plugins/pro/pro-review.md";
+const PLUGIN_STAGE_BYTES = Buffer.from(
+  "---\nslug: pro-review\nphase: construction\nexecution: CONDITIONAL\ncondition: Test plugin stage.\nlead_agent: amadeus-developer-agent\nsupport_agents: []\nmode: inline\nproduces: []\nconsumes: []\nrequires_stage: []\ninputs: none\noutputs: none\nscopes: []\n---\n\n# Pro Review Stage\n",
+);
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "amadeus-plugin-host-"));
@@ -63,7 +67,7 @@ function hostSnapshot(backend: WorkspaceBackend): HostSnapshot {
   const cg = { slug: "code-generation", path: "cg.md", seams: CG_SEAMS };
   const paths = new Set<string>();
   const files = new Map<string, Buffer>();
-  for (const p of ["cg.md", "SKILL.md", "pro-review.md"]) {
+  for (const p of ["cg.md", "SKILL.md", OWNED_STAGE]) {
     if (existsSync(join(root, p))) {
       paths.add(p);
       files.set(p, readFileSync(join(root, p)));
@@ -98,7 +102,7 @@ function discoverFixturePlugin(name = "pro") {
       fragments: [{ file: "SKILL.md", anchor: "<!-- ANCHOR -->", id: "pro-block", text: "PRO BLOCK" }],
     }),
   );
-  writeFileSync(join(dir, "pro-review.md"), "# Pro Review Stage\n");
+  writeFileSync(join(dir, "pro-review.md"), PLUGIN_STAGE_BYTES);
   return discoverPlugins(bundleRoot)[0];
 }
 
@@ -113,7 +117,7 @@ describe("plugin-composition on a real filesystem", () => {
     const composed = applyPluginPlan(inspected.plan, makeTx(backend));
     expect(composed.kind).toBe("committed");
     // Owned stage file materialised; shared files merged/spliced on disk.
-    expect(readFileSync(join(root, "pro-review.md"), "utf-8")).toBe("# Pro Review Stage\n");
+    expect(readFileSync(join(root, OWNED_STAGE)).equals(PLUGIN_STAGE_BYTES)).toBe(true);
     expect(readFileSync(join(root, "cg.md"), "utf-8")).toContain("pro-lint");
     expect(readFileSync(join(root, "SKILL.md"), "utf-8")).toContain("PRO BLOCK");
 
@@ -126,7 +130,7 @@ describe("plugin-composition on a real filesystem", () => {
     const record = backend.readComposition().plugins.get("pro")!;
     const dropped = applyPluginDrop(planPluginDrop(record, hostSnapshot(backend)), makeTx(backend));
     expect(dropped.kind).toBe("committed");
-    expect(existsSync(join(root, "pro-review.md"))).toBe(false);
+    expect(existsSync(join(root, OWNED_STAGE))).toBe(false);
     expect(readFileSync(join(root, "cg.md")).equals(CG_BYTES)).toBe(true);
     expect(readFileSync(join(root, "SKILL.md")).equals(SKILL_BYTES)).toBe(true);
     expect(backend.readComposition().plugins.size).toBe(0);
@@ -135,13 +139,14 @@ describe("plugin-composition on a real filesystem", () => {
   test("inspect reject (clobber) writes nothing", () => {
     const backend = createNodeBackend(root);
     // Pre-place the owned path so the copy would clobber.
-    writeFileSync(join(root, "pro-review.md"), "USER FILE");
+    mkdirSync(join(root, "plugins", "pro"), { recursive: true });
+    writeFileSync(join(root, OWNED_STAGE), "USER FILE");
     const plugin = discoverFixturePlugin();
     const result = inspectPlugin(plugin, hostSnapshot(backend));
     expect(result.kind).toBe("rejected");
     if (result.kind === "rejected") expect(result.errors.some((e) => e.kind === "clobber")).toBe(true);
     // Host bytes untouched; no composition record, no audit.
-    expect(readFileSync(join(root, "pro-review.md"), "utf-8")).toBe("USER FILE");
+    expect(readFileSync(join(root, OWNED_STAGE), "utf-8")).toBe("USER FILE");
     expect(readFileSync(join(root, "cg.md")).equals(CG_BYTES)).toBe(true);
     expect(backend.readComposition().plugins.size).toBe(0);
     expect(backend.auditCount()).toBe(0);
@@ -153,7 +158,7 @@ describe("plugin-composition on a real filesystem", () => {
     const plan = planPluginComposition(plugin as ValidPlugin, hostSnapshot(backend));
     const result = applyPluginPlan(plan, makeTx(backend, false));
     expect(result.kind).toBe("failed");
-    expect(existsSync(join(root, "pro-review.md"))).toBe(false);
+    expect(existsSync(join(root, OWNED_STAGE))).toBe(false);
     expect(readFileSync(join(root, "cg.md")).equals(CG_BYTES)).toBe(true);
     expect(readFileSync(join(root, "SKILL.md")).equals(SKILL_BYTES)).toBe(true);
     expect(backend.auditCount()).toBe(0);
@@ -169,13 +174,13 @@ describe("plugin-composition on a real filesystem", () => {
     };
     expect(() => applyPluginPlan(plan, makeTx(backend, true, crash))).toThrow(CrashSignal);
     // Crash left the host partially written and a PREPARED journal on disk.
-    expect(existsSync(join(root, "pro-review.md"))).toBe(true);
+    expect(existsSync(join(root, OWNED_STAGE))).toBe(true);
     expect(backend.readJournal()?.phase).toBe("PREPARED");
 
     // The next operation acquires the lock and recovers pending journals first,
     // restoring pre-state (the crashed partial write is undone on disk).
     expect(runRecovery(backend).kind).toBe("recovered");
-    expect(existsSync(join(root, "pro-review.md"))).toBe(false);
+    expect(existsSync(join(root, OWNED_STAGE))).toBe(false);
     expect(readFileSync(join(root, "cg.md")).equals(CG_BYTES)).toBe(true);
     expect(backend.readJournal()).toBeUndefined();
 

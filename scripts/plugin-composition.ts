@@ -33,8 +33,11 @@
 // instrument spawned children). A node-backed backend proves the same mechanism
 // against a real temp filesystem in the integration layer.
 
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, posix } from "node:path";
+import { parseStageFrontmatter } from "../packages/framework/core/tools/amadeus-lib.ts";
+import { validateStageFrontmatter } from "../packages/framework/core/tools/amadeus-stage-schema.ts";
 import { type ReadOnlyFs, nodeReadOnlyFs } from "./plugin-projection.ts";
 
 // The four host-stage seams a plugin may merge into. The canonical vocabulary is
@@ -60,8 +63,9 @@ function cmpStr(a: string, b: string): number {
 // Plugin descriptor + manifest (the discovered contribution)
 // ---------------------------------------------------------------------------
 
-// A new stage file the plugin copies into the host (no-clobber). `path` is the
-// host-tree-relative POSIX destination; `bytes` are the source bundle bytes.
+// A new stage file the plugin copies into the host (no-clobber). The manifest
+// declares a plugin-root-relative source path; parsing namespaces `path` under
+// plugins/<name>/ so source lookup and host placement cannot be conflated.
 export type StageCopy = { slug: string; path: string; bytes: Buffer };
 
 // An additive contribution of `entries` into an existing host stage's named seam
@@ -119,12 +123,29 @@ export type LedgerEntry =
 
 export type SharedFileLedger = ReadonlyMap<string, LedgerEntry>;
 
+export type TrustGrant = {
+  plugin: string;
+  contentDigest: string;
+  grantTimestamp: string;
+};
+
+export type PluginStageIndexEntry = {
+  path: string;
+  slug: string;
+  contentDigest: string;
+  frontmatter: Record<string, unknown>;
+};
+
 // The persisted composition record surface: the shared-file ledger plus each
 // active plugin's ownership. Written and read as one unit so the three-surface
 // commit treats it as a single surface.
 export type PluginRecord = {
   plugin: string;
   ownedPaths: readonly string[];
+  ownedContentDigests: ReadonlyMap<string, string>;
+  stageIndex: readonly PluginStageIndexEntry[];
+  stageIndexDigest: string;
+  trustGrant: TrustGrant | null;
   sharedFiles: readonly { path: string; expectedPostState: Buffer }[];
 };
 
@@ -167,6 +188,7 @@ export type PluginPlanResult =
 // the plugin's ownership to persist. Pure data — applyPluginPlan performs I/O.
 export type PluginCompositionPlan = {
   plugin: string;
+  contentDigest: string;
   stageCopies: readonly StageCopy[];
   sharedWrites: readonly { path: string; bytes: Buffer }[];
   ledger: SharedFileLedger;
@@ -261,7 +283,7 @@ export function parsePluginManifest(
   if (!isRecord(raw)) return { manifest: null, errors: ["manifest must be a JSON object"] };
   const errors: string[] = [];
   if (raw.name !== name) errors.push(`name "${describe(raw.name)}" must equal directory "${name}"`);
-  const stages = parseStages(raw.stages, readStage, errors);
+  const stages = parseStages(name, raw.stages, readStage, errors);
   const seams = parseSeams(raw.seams, errors);
   const fragments = parseFragments(raw.fragments, errors);
   if (errors.length > 0) return { manifest: null, errors: errors.sort() };
@@ -269,6 +291,7 @@ export function parsePluginManifest(
 }
 
 function parseStages(
+  pluginName: string,
   value: unknown,
   readStage: (rel: string) => Buffer | null,
   errors: string[],
@@ -288,7 +311,7 @@ function parseStages(
       errors.push(`stages[${i}].path "${path}" not found in bundle`);
       return;
     }
-    out.push({ slug, path, bytes });
+    out.push({ slug, path: posix.join("plugins", pluginName, path), bytes });
   });
   return out;
 }
@@ -488,14 +511,65 @@ export function planPluginComposition(plugin: ValidPlugin, host: HostSnapshot): 
     sharedFiles.push({ path, expectedPostState: bytes });
   }
   const ownedPaths = m.stages.map((s) => s.path).sort();
-  const record: PluginRecord = { plugin: plugin.name, ownedPaths, sharedFiles };
+  const ownedContentDigests = new Map(m.stages.map((stage) => [stage.path, digestBytes(stage.bytes)]));
+  const stageIndex = buildStageIndex(m.stages);
+  const record: PluginRecord = {
+    plugin: plugin.name,
+    ownedPaths,
+    ownedContentDigests,
+    stageIndex,
+    stageIndexDigest: digestStageIndex(stageIndex),
+    trustGrant: null,
+    sharedFiles,
+  };
   return {
     plugin: plugin.name,
+    contentDigest: pluginContentDigest(plugin),
     stageCopies: [...m.stages].sort((a, b) => cmpStr(a.path, b.path)),
     sharedWrites: sharedWrites.sort((a, b) => cmpStr(a.path, b.path)),
     ledger,
     record,
   };
+}
+
+function buildStageIndex(stages: readonly StageCopy[]): readonly PluginStageIndexEntry[] {
+  return [...stages]
+    .sort((a, b) => cmpStr(a.path, b.path))
+    .map((stage) => {
+      const parsed = parseStageFrontmatter(stage.bytes.toString("utf-8"));
+      const validation = validateStageFrontmatter(parsed);
+      if (!validation.valid || validation.data.slug !== stage.slug) {
+        const reason = validation.valid ? "slug does not match manifest" : validation.errors.join("; ");
+        throw new Error(`plugin stage ${stage.path} cannot enter trusted index: ${reason}`);
+      }
+      return {
+        path: stage.path,
+        slug: stage.slug,
+        contentDigest: digestBytes(stage.bytes),
+        frontmatter: validation.data as unknown as Record<string, unknown>,
+      };
+    });
+}
+
+function digestStageIndex(index: readonly PluginStageIndexEntry[]): string {
+  return digestBytes(Buffer.from(JSON.stringify(index), "utf-8"));
+}
+
+function pluginContentDigest(plugin: ValidPlugin): string {
+  const hash = createHash("sha256");
+  hash.update("amadeus.plugin-content.v1\0");
+  hash.update(plugin.manifestBytes);
+  for (const stage of [...plugin.manifest.stages].sort((a, b) => cmpStr(a.path, b.path))) {
+    hash.update("\0");
+    hash.update(stage.path);
+    hash.update("\0");
+    hash.update(stage.bytes);
+  }
+  return `sha256:${hash.digest("hex")}`;
+}
+
+function digestBytes(bytes: Buffer): string {
+  return `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
 }
 
 function applySeamContributions(
@@ -581,6 +655,12 @@ export function planPluginDrop(record: PluginRecord, host: HostSnapshot): Plugin
       rejections.push({ kind: "clobber", message: `owned path "${path}" already absent`, locus: path });
       continue;
     }
+    const current = host.files.get(path);
+    const expectedDigest = record.ownedContentDigests.get(path);
+    if (current === undefined || expectedDigest === undefined || digestBytes(current) !== expectedDigest) {
+      rejections.push({ kind: "clobber", message: `owned path "${path}" drifted from trust grant`, locus: path });
+      continue;
+    }
     removals.push(path);
   }
   const ledger = new Map<string, LedgerEntry>();
@@ -640,6 +720,7 @@ export type Journal = {
   txnId: string;
   phase: "PREPARED" | "COMMITTED";
   kind: "compose" | "drop";
+  trustGrant: TrustGrant | null;
   writeSet: WriteSet;
   preimages: Preimages;
 };
@@ -680,6 +761,7 @@ export type WorkspaceTransaction = {
   verify: (temp: ReadonlyMap<string, Buffer | null>, kind: "compose" | "drop") => VerifyOutcome;
   lock: WorkspaceLock;
   newTxnId: () => string;
+  now?: () => string;
   inject?: FailureInjector;
 };
 
@@ -732,7 +814,17 @@ function validJournal(j: Journal): boolean {
   if (j.phase !== "PREPARED" && j.phase !== "COMMITTED") return false;
   if (j.kind !== "compose" && j.kind !== "drop") return false;
   if (typeof j.txnId !== "string" || j.txnId.length === 0) return false;
-  return j.writeSet !== undefined && j.preimages !== undefined;
+  if (j.writeSet === undefined || j.preimages === undefined) return false;
+  if (j.kind === "compose" && !validTrustGrant(j.trustGrant, j.writeSet.audit.plugin)) return false;
+  if (j.kind === "drop" && j.trustGrant !== null) return false;
+  return true;
+}
+
+function validTrustGrant(grant: TrustGrant | null, plugin: string): grant is TrustGrant {
+  return grant !== null
+    && grant.plugin === plugin
+    && /^sha256:[0-9a-f]{64}$/.test(grant.contentDigest)
+    && !Number.isNaN(Date.parse(grant.grantTimestamp));
 }
 
 // Drift = a host path whose current bytes match NEITHER the recorded preimage nor
@@ -787,13 +879,18 @@ type CommitOutcome =
 // first canonical write, applies host→record→audit, marks COMMITTED, then clears
 // the journal. A handled failure restores every preimage before return; a crash
 // propagates with the journal left for next-operation recovery.
-function commitTransaction(tx: WorkspaceTransaction, writeSet: WriteSet, kind: "compose" | "drop"): CommitOutcome {
+function commitTransaction(
+  tx: WorkspaceTransaction,
+  writeSet: WriteSet,
+  kind: "compose" | "drop",
+  trustGrant: TrustGrant | null,
+): CommitOutcome {
   tx.lock.acquire();
   try {
     const recovery = runRecovery(tx.backend);
     if (recovery.kind === "stopped") return { kind: "stopped", reason: recovery.reason };
     const preimages = capturePreimages(tx.backend, writeSet);
-    const journal: Journal = { txnId: tx.newTxnId(), phase: "PREPARED", kind, writeSet, preimages };
+    const journal: Journal = { txnId: tx.newTxnId(), phase: "PREPARED", kind, trustGrant, writeSet, preimages };
     tx.backend.writeJournal(journal);
     fire(tx.inject, "after-prepared");
     applyWriteSet(tx.backend, writeSet, tx.inject);
@@ -826,8 +923,13 @@ export function applyPluginPlan(plan: PluginCompositionPlan, tx: WorkspaceTransa
   if (!verdict.ok) {
     return { kind: "failed", errors: [{ kind: "clobber", message: `temp verify failed: ${verdict.reason}`, locus: plan.plugin }] };
   }
-  const writeSet = composeWriteSet(tx.backend, plan);
-  return liftCommit(commitTransaction(tx, writeSet, "compose"), plan.plugin);
+  const trustGrant: TrustGrant = {
+    plugin: plan.plugin,
+    contentDigest: plan.contentDigest,
+    grantTimestamp: tx.now?.() ?? new Date().toISOString(),
+  };
+  const writeSet = composeWriteSet(tx.backend, plan, trustGrant);
+  return liftCommit(commitTransaction(tx, writeSet, "compose", trustGrant), plan.plugin);
 }
 
 // Stage the drop into a temp image and commit. Precondition rejections (drift /
@@ -841,7 +943,7 @@ export function applyPluginDrop(plan: PluginDropPlan, tx: WorkspaceTransaction):
     return { kind: "failed", errors: [{ kind: "clobber", message: `temp verify failed: ${verdict.reason}`, locus: plan.plugin }] };
   }
   const writeSet = dropWriteSet(tx.backend, plan);
-  return liftCommit(commitTransaction(tx, writeSet, "drop"), plan.plugin);
+  return liftCommit(commitTransaction(tx, writeSet, "drop", null), plan.plugin);
 }
 
 function liftCommit(outcome: CommitOutcome, plugin: string): ApplyResult {
@@ -863,13 +965,17 @@ function buildTempImage(
   return temp;
 }
 
-function composeWriteSet(backend: WorkspaceBackend, plan: PluginCompositionPlan): WriteSet {
+function composeWriteSet(
+  backend: WorkspaceBackend,
+  plan: PluginCompositionPlan,
+  trustGrant: TrustGrant,
+): WriteSet {
   const hostWrites = new Map<string, Buffer>();
   for (const s of plan.stageCopies) hostWrites.set(s.path, s.bytes);
   for (const w of plan.sharedWrites) hostWrites.set(w.path, w.bytes);
   const prior = backend.readComposition();
   const plugins = new Map(prior.plugins);
-  plugins.set(plan.plugin, plan.record);
+  plugins.set(plan.plugin, { ...plan.record, trustGrant });
   return {
     hostWrites,
     hostRemovals: [],
@@ -1076,6 +1182,10 @@ function recordToJson(r: PluginRecord): Json {
   return {
     plugin: r.plugin,
     ownedPaths: r.ownedPaths,
+    ownedContentDigests: [...r.ownedContentDigests.entries()],
+    stageIndex: r.stageIndex,
+    stageIndexDigest: r.stageIndexDigest,
+    trustGrant: r.trustGrant,
     sharedFiles: r.sharedFiles.map((s) => ({ path: s.path, expectedPostState: bufToJson(s.expectedPostState) })),
   };
 }
@@ -1086,13 +1196,24 @@ function recordFromJson(v: Json): PluginRecord {
     path: s.path as string,
     expectedPostState: bufFromJson(s.expectedPostState),
   }));
-  return { plugin: o.plugin as string, ownedPaths: o.ownedPaths as string[], sharedFiles: shared };
+  return {
+    plugin: o.plugin as string,
+    ownedPaths: o.ownedPaths as string[],
+    ownedContentDigests: new Map((o.ownedContentDigests ?? []) as [string, string][]),
+    stageIndex: (o.stageIndex ?? []) as PluginStageIndexEntry[],
+    stageIndexDigest: o.stageIndexDigest as string,
+    trustGrant: (o.trustGrant ?? null) as TrustGrant | null,
+    sharedFiles: shared,
+  };
 }
 
 export function compositionToJson(c: CompositionRecord): string {
+  const plugins = [...c.plugins.entries()].map(([k, r]) => [k, recordToJson(r)] as const);
+  const stageIndexes = [...c.plugins.entries()].map(([name, record]) => [name, record.stageIndex]);
   return JSON.stringify({
     ledger: [...c.ledger.entries()].map(([k, e]) => [k, ledgerEntryToJson(e)]),
-    plugins: [...c.plugins.entries()].map(([k, r]) => [k, recordToJson(r)]),
+    plugins,
+    pluginStageIndexDigest: digestBytes(Buffer.from(JSON.stringify(stageIndexes))),
   });
 }
 
@@ -1146,6 +1267,7 @@ export function journalToJson(j: Journal): string {
     txnId: j.txnId,
     phase: j.phase,
     kind: j.kind,
+    trustGrant: j.trustGrant,
     writeSet: writeSetToJson(j.writeSet),
     preimages: preimagesToJson(j.preimages),
   });
@@ -1157,6 +1279,7 @@ export function journalFromJson(text: string): Journal {
     txnId: o.txnId as string,
     phase: o.phase as Journal["phase"],
     kind: o.kind as Journal["kind"],
+    trustGrant: (o.trustGrant ?? null) as TrustGrant | null,
     writeSet: writeSetFromJson(o.writeSet),
     preimages: preimagesFromJson(o.preimages),
   };

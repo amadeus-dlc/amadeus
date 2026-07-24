@@ -8,6 +8,7 @@
 // to the committed graph, and injecting a dummy plugin makes the output differ
 // (the falling proof that discovery is live, not a no-op).
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -18,6 +19,7 @@ import {
   PluginStageError,
   __resetGraphCache,
 } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
+import { parseStageFrontmatter } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // The canonical core tree ships no compiled stage-graph.json (dev source carries
 // no compiled data); the shipped surface does, so the compile tests import the
@@ -65,6 +67,51 @@ function writePluginStage(host: string, plugin: string, file: string, content: s
   mkdirSync(dir, { recursive: true });
   const path = join(dir, file);
   writeFileSync(path, content);
+  const pluginPath = `plugins/${plugin}/stages/${file}`;
+  const recordPath = join(host, ".amadeus-plugin-composition.json");
+  const persisted = existsSync(recordPath)
+    ? JSON.parse(readFileSync(recordPath, "utf-8")) as { ledger: []; plugins: Array<[string, Record<string, unknown>]> }
+    : { ledger: [], plugins: [] };
+  const digest = `sha256:${createHash("sha256").update(content).digest("hex")}`;
+  const existing = persisted.plugins.find(([name]) => name === plugin)?.[1] as {
+    ownedPaths?: string[];
+    ownedContentDigests?: Array<[string, string]>;
+    stageIndex?: Array<{
+      path: string;
+      slug: string;
+      contentDigest: string;
+      frontmatter: Record<string, unknown>;
+    }>;
+  } | undefined;
+  const ownedPaths = [...(existing?.ownedPaths ?? []), pluginPath];
+  const ownedContentDigests = [...(existing?.ownedContentDigests ?? []), [pluginPath, digest] as [string, string]];
+  const stageIndex = [...(existing?.stageIndex ?? []), {
+    path: pluginPath,
+    slug: file.replace(/\.md$/, ""),
+    contentDigest: digest,
+    frontmatter: parseStageFrontmatter(content),
+  }];
+  const record = {
+    plugin,
+    ownedPaths,
+    ownedContentDigests,
+    stageIndex,
+    stageIndexDigest: `sha256:${createHash("sha256").update(JSON.stringify(stageIndex)).digest("hex")}`,
+    trustGrant: {
+      plugin,
+      contentDigest: `sha256:${"0".repeat(64)}`,
+      grantTimestamp: "2026-07-25T00:00:00.000Z",
+    },
+    sharedFiles: [],
+  };
+  persisted.plugins = [...persisted.plugins.filter(([name]) => name !== plugin), [plugin, record]];
+  const aggregateIndex = persisted.plugins.map(([name, pluginRecord]) => [
+    name,
+    (pluginRecord as { stageIndex?: unknown[] }).stageIndex ?? [],
+  ]);
+  (persisted as typeof persisted & { pluginStageIndexDigest: string }).pluginStageIndexDigest =
+    `sha256:${createHash("sha256").update(JSON.stringify(aggregateIndex)).digest("hex")}`;
+  writeFileSync(recordPath, JSON.stringify(persisted));
   return path;
 }
 
@@ -218,6 +265,46 @@ describe("compileStageGraph plugin merge (U2)", () => {
       expect(p.pluginPath).toBe("plugins/sensorless/stages/needs-sensor.md");
     }
   });
+
+  test("compile rejects an uncomposed stage and stage-index tampering", () => {
+    const uncomposed = freshHost();
+    const uncomposedDir = join(uncomposed, "plugins", "untrusted", "stages");
+    mkdirSync(uncomposedDir, { recursive: true });
+    writeFileSync(join(uncomposedDir, "untrusted.md"), stageMd("untrusted"));
+    expect(() => compileWithPluginHost(uncomposed)).toThrow(PluginStageError);
+
+    const drifted = freshHost();
+    writePluginStage(drifted, "trusted", "trusted.md", stageMd("trusted"));
+    expect(compileWithPluginHost(drifted).stages.some((stage) => stage.slug === "trusted")).toBe(true);
+    const recordPath = join(drifted, ".amadeus-plugin-composition.json");
+    const record = JSON.parse(readFileSync(recordPath, "utf-8")) as {
+      plugins: Array<[string, { stageIndex: Array<{ slug: string }> }]>;
+    };
+    record.plugins[0][1].stageIndex[0].slug = "tampered";
+    writeFileSync(recordPath, JSON.stringify(record));
+    try {
+      compileWithPluginHost(drifted);
+      throw new Error("expected PluginStageError");
+    } catch (err) {
+      expect(err).toBeInstanceOf(PluginStageError);
+      expect((err as PluginStageError).payload.code).toBe("READ_FAILED");
+      expect((err as PluginStageError).payload.reason).toContain("aggregate plugin stage index digest is invalid");
+    }
+  });
+
+  test("compile rejects duplicate plugin index slugs even with a valid aggregate digest", () => {
+    const host = freshHost();
+    writePluginStage(host, "alpha", "duplicate.md", stageMd("duplicate"));
+    writePluginStage(host, "beta", "duplicate.md", stageMd("duplicate"));
+    try {
+      compileWithPluginHost(host);
+      throw new Error("expected PluginStageError");
+    } catch (err) {
+      expect(err).toBeInstanceOf(PluginStageError);
+      expect((err as PluginStageError).payload.code).toBe("READ_FAILED");
+      expect((err as PluginStageError).payload.reason).toContain("index entry is invalid");
+    }
+  });
 });
 
 describe("PluginStageError schema (reliability-design)", () => {
@@ -261,7 +348,24 @@ describe("formal-model-check shipping guard (FR-2.3 / reservation 2)", () => {
   ];
 
   test("the plugin ships as a neutral bundle (opt-in supply, FR-2.1)", () => {
-    expect(existsSync(join(REPO_ROOT, "dist", "plugins", "formal-model-check", "plugin.json"))).toBe(true);
+    const bundleRoot = join(REPO_ROOT, "dist", "plugins", "formal-model-check");
+    const manifest = JSON.parse(readFileSync(join(bundleRoot, "plugin.json"), "utf-8")) as {
+      stages: Array<{ slug: string; path: string }>;
+    };
+    const declaredPath = "stages/formal-model-check.md";
+    const hostPath = "plugins/formal-model-check/stages/formal-model-check.md";
+
+    // The manifest path resolves inside the neutral bundle. Composition owns
+    // the distinct host namespace and prefixes plugins/<name>/ before writing.
+    expect(manifest.stages).toEqual([{ slug: "formal-model-check", path: declaredPath }]);
+    expect(existsSync(join(bundleRoot, declaredPath))).toBe(true);
+    expect(existsSync(join(bundleRoot, hostPath))).toBe(false);
+    expect([
+      ...new Bun.Glob("plugins/*/plugins/*/stages/*.md").scanSync({
+        cwd: REPO_ROOT,
+        onlyFiles: true,
+      }),
+    ]).toEqual([]);
   });
 
   test("no shipped harness tree carries the plugin under a compile-visible plugins/ dir", () => {

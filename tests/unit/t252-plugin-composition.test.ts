@@ -74,12 +74,18 @@ function descriptor(name: string, manifest: PluginDescriptor["manifest"], parseE
   return { name, manifestBytes: Buffer.from(JSON.stringify(manifest ?? {})), manifest, parseErrors };
 }
 
+function pluginStageBytes(slug: string): Buffer {
+  return Buffer.from(
+    `---\nslug: ${slug}\nphase: construction\nexecution: CONDITIONAL\ncondition: Test plugin stage.\nlead_agent: amadeus-developer-agent\nsupport_agents: []\nmode: inline\nproduces: []\nconsumes: []\nrequires_stage: []\ninputs: none\noutputs: none\nscopes: []\n---\n\nTest stage.\n`,
+  );
+}
+
 // A well-formed plugin: adds a new stage, merges one sensor into code-generation,
 // splices one fragment into SKILL.md.
 function cleanPlugin(name = "pro"): PluginDescriptor {
   return descriptor(name, {
     name,
-    stages: [{ slug: "pro-review", path: "pro-review.md", bytes: Buffer.from("pro") }],
+    stages: [{ slug: "pro-review", path: "pro-review.md", bytes: pluginStageBytes("pro-review") }],
     seams: [{ stage: "code-generation", seam: "sensors", entries: ["pro-lint"] }],
     fragments: [{ file: "SKILL.md", anchor: "<!-- ANCHOR -->", id: "pro-block", text: "PRO" }],
   });
@@ -91,7 +97,14 @@ function okVerify(): { ok: true } {
 
 function makeTx(backend: WorkspaceBackend, verify: WorkspaceTransaction["verify"] = okVerify, inject?: FailureInjector): WorkspaceTransaction {
   let n = 0;
-  return { backend, verify, lock: noopLock, newTxnId: () => `txn-${++n}`, inject };
+  return {
+    backend,
+    verify,
+    lock: noopLock,
+    newTxnId: () => `txn-${++n}`,
+    now: () => "2026-07-25T00:00:00.000Z",
+    inject,
+  };
 }
 
 function asValid(plugin: PluginDescriptor): ValidPlugin {
@@ -134,6 +147,7 @@ describe("discoverPlugins", () => {
     const found = discoverPlugins("/b", io);
     expect(found.map((d) => d.name)).toEqual(["alpha", "beta"]);
     expect(found[1].manifest?.stages[0].bytes.toString()).toBe("stage bytes");
+    expect(found[1].manifest?.stages[0].path).toBe("plugins/beta/s.md");
   });
 
   test("missing plugin.json becomes a malformed descriptor", () => {
@@ -280,9 +294,15 @@ describe("applyPluginPlan", () => {
     const plan = planPluginComposition(asValid(cleanPlugin()), makeHost());
     const result = applyPluginPlan(plan, makeTx(backend));
     expect(result.kind).toBe("committed");
-    expect(backend.readHost("pro-review.md")?.toString()).toBe("pro");
+    expect(backend.readHost("pro-review.md")?.toString()).toContain("slug: pro-review");
     expect(backend.readHost("cg.md")?.toString()).toContain("pro-lint");
-    expect(backend.readComposition().plugins.has("pro")).toBe(true);
+    const record = backend.readComposition().plugins.get("pro");
+    expect(record?.trustGrant).toEqual({
+      plugin: "pro",
+      contentDigest: plan.contentDigest,
+      grantTimestamp: "2026-07-25T00:00:00.000Z",
+    });
+    expect(record?.ownedContentDigests.get("pro-review.md")).toMatch(/^sha256:[0-9a-f]{64}$/);
     expect(backend.auditCount()).toBe(1);
     expect(backend.readJournal()).toBeUndefined(); // cleared after COMMITTED
   });
@@ -311,8 +331,13 @@ describe("applyPluginPlan", () => {
     };
     expect(() => applyPluginPlan(plan, makeTx(backend, okVerify, crash))).toThrow(CrashSignal);
     // Partially written host, PREPARED journal still present.
-    expect(backend.readHost("pro-review.md")?.toString()).toBe("pro");
+    expect(backend.readHost("pro-review.md")?.toString()).toContain("slug: pro-review");
     expect(backend.readJournal()?.phase).toBe("PREPARED");
+    expect(backend.readJournal()?.trustGrant).toEqual({
+      plugin: "pro",
+      contentDigest: plan.contentDigest,
+      grantTimestamp: "2026-07-25T00:00:00.000Z",
+    });
     // Next-op recovery restores pre-state and clears the journal.
     const recovery = runRecovery(backend);
     expect(recovery.kind).toBe("recovered");
@@ -331,7 +356,7 @@ describe("applyPluginPlan", () => {
     expect(backend.readJournal()?.phase).toBe("COMMITTED");
     const recovery = runRecovery(backend);
     expect(recovery.kind).toBe("settled");
-    expect(backend.readHost("pro-review.md")?.toString()).toBe("pro"); // kept
+    expect(backend.readHost("pro-review.md")?.toString()).toContain("slug: pro-review"); // kept
     expect(backend.readJournal()).toBeUndefined();
   });
 
@@ -354,7 +379,14 @@ describe("applyPluginPlan", () => {
     const backend = createInMemoryBackend();
     const ws: WriteSet = { hostWrites: new Map(), hostRemovals: [], composition: emptyComposition(), audit: { event: "x", plugin: "p", detail: "" } };
     const pre: Preimages = { host: new Map(), composition: emptyComposition(), auditCount: 0 };
-    backend.writeJournal({ txnId: "t", phase: "BROKEN" as never, kind: "compose", writeSet: ws, preimages: pre });
+    backend.writeJournal({
+      txnId: "t",
+      phase: "BROKEN" as never,
+      kind: "compose",
+      trustGrant: null,
+      writeSet: ws,
+      preimages: pre,
+    });
     const recovery = runRecovery(backend);
     expect(recovery.kind).toBe("stopped");
     if (recovery.kind === "stopped") expect(recovery.reason).toContain("corruption");
@@ -436,7 +468,7 @@ describe("drop", () => {
     const seamOnly = (name: string, sensor: string): PluginDescriptor =>
       descriptor(name, {
         name,
-        stages: [{ slug: `${name}-stage`, path: `${name}.md`, bytes: Buffer.from(name) }],
+        stages: [{ slug: `${name}-stage`, path: `${name}.md`, bytes: pluginStageBytes(`${name}-stage`) }],
         seams: [{ stage: "code-generation", seam: "sensors", entries: [sensor] }],
         fragments: [],
       });
@@ -445,7 +477,12 @@ describe("drop", () => {
     const baseHost = (): HostSnapshot => ({
       stages: new Map([[cg.slug, cg]]),
       paths: new Set([...["cg.md", "pro.md", "max.md"].filter((p) => backend.readHost(p) !== undefined)]),
-      files: new Map([["cg.md", backend.readHost("cg.md") ?? serializeStageSeams(cg.slug, cg.seams)]]),
+      files: new Map(
+        ["cg.md", "pro.md", "max.md"]
+          .map((path) => [path, backend.readHost(path)] as const)
+          .filter((entry): entry is readonly [string, Buffer] => entry[1] !== undefined)
+          .concat([["cg.md", backend.readHost("cg.md") ?? serializeStageSeams(cg.slug, cg.seams)]]),
+      ),
       composition: backend.readComposition(),
     });
     applyPluginPlan(planPluginComposition(asValid(seamOnly("pro", "pro-lint")), baseHost()), makeTx(backend));

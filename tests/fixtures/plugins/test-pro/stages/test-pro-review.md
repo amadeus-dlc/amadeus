@@ -1,3 +1,19 @@
+---
+slug: test-pro-review
+phase: construction
+execution: CONDITIONAL
+condition: Opt-in reference plugin stage.
+lead_agent: amadeus-developer-agent
+support_agents: []
+mode: inline
+produces: []
+consumes: []
+requires_stage: []
+inputs: none
+outputs: none
+scopes: []
+---
+
 # Test Pro Review
 
 The `test-pro` reference plugin's one added stage. It exists to prove the plugin

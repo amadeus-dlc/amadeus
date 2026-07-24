@@ -11,7 +11,7 @@
 // and the plugin-inclusive graph are temp dirs removed in afterEach).
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -104,6 +104,7 @@ describe("formal-model-check plugin lifecycle (U2 FR-1.4 / FR-2.1, real engines)
     // 1. Discover the SHIPPED neutral bundle and compose it into the temp host.
     const descriptor = discoverPlugins(BUNDLE_ROOT).find((p) => p.name === PLUGIN);
     expect(descriptor, "formal-model-check must be discoverable in dist/plugins").toBeDefined();
+    expect(descriptor?.manifest?.stages.map((stage) => stage.path)).toEqual([STAGE_LANDING]);
     const inspected = inspectPlugin(descriptor!, hostSnapshot(host, backend));
     expect(inspected.kind, JSON.stringify(inspected)).toBe("ready");
     if (inspected.kind !== "ready") return;
@@ -147,6 +148,22 @@ describe("formal-model-check plugin lifecycle (U2 FR-1.4 / FR-2.1, real engines)
     expect(directive, out).not.toBeNull();
     expect(directive.kind).toBe("run-stage");
     expect(directive.stage).toBe(PLUGIN);
+    expect(directive.stage_file).toBe(join(realpathSync(host), STAGE_LANDING));
+    expect(readFileSync(directive.stage_file, "utf-8")).toContain("slug: formal-model-check");
+
+    // Runtime trust is checked at directive emission, not on every graph
+    // compile. Drift the selected body after compile: orchestrate must refuse
+    // it before a conductor can read/execute stage_file.
+    const trustedStageBytes = readFileSync(join(host, STAGE_LANDING));
+    writeFileSync(join(host, STAGE_LANDING), Buffer.concat([trustedStageBytes, Buffer.from("\n<!-- drift -->\n")]));
+    const driftedRun = spawnSync(
+      BUN,
+      [ORCHESTRATE, "next", "--stage", PLUGIN, "--single", "--project-dir", freshDir("fmc-drift-proj-")],
+      { encoding: "utf-8", env: { ...process.env, AMADEUS_STAGE_GRAPH: graphFile } },
+    );
+    expect(driftedRun.status).not.toBe(0);
+    expect(`${driftedRun.stdout ?? ""}${driftedRun.stderr ?? ""}`).toContain("content digest drifted");
+    writeFileSync(join(host, STAGE_LANDING), trustedStageBytes);
 
     // 5. Drop removes the composed stage.
     const record = backend.readComposition().plugins.get(PLUGIN)!;
