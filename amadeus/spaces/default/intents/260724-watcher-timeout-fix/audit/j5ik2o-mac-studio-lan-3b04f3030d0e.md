@@ -351,3 +351,21 @@
 **Message**: 進捗が入り次第承認して
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:13:53Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ab584e09125db2283
+**Message**: approval-handoffはユーザー承認して進めて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:14:44Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a438adf6f4ccd970b
+**Message**: このまま自動承認続けて
+
+---
