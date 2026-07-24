@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TLAU2",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "package.ts step6 projectPluginsIntoHarnessTree(scripts/package.ts:494-497)が plugin を compile可視の <harnessDir>/plugins/ へ投影する機構を実測確認(コメント『Project discovered plugin sources into this harness tree』)。A は FR-2.3『0-plugin byte-identical』契約と t110/t88 recompile-idempotence を維持する外科的修正で投影を neutral bundle 限定へ調整(BR-U2-7 境界抵触は申告要)。B は FR-2.3 文面改定=仕様変更でユーザーエスカレーション事項(正準リスト4)。承認済み契約を保つ A が正。X 不要。留保なし。",
+  "submittedAt": "2026-07-24T16:13:39Z"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HPUGS13",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "s13-candidates.md(units-generation, harness-provenance)実測+引用2cidの実在確認(per-unit-loop-activation・artifact-upstream-inputs-header、両方project.md)。候補1(edge block キー名 - name:)=per-unit-loop-activation運用詳細+コードが唯一真実源ゆえprose化はdriftリスク、候補2(services.md装飾トークン)=artifact-upstream-inputs-header+body-derivation-before-headerでカバー済み。0件提案妥当。",
+  "submittedAt": "2026-07-24T13:24:52Z"
+}

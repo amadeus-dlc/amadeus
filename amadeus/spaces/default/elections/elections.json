@@ -28,5 +28,23 @@
     "dirName": "260724-e-wtfras13",
     "createdAt": "2026-07-24T12:52:41Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-TLAU2",
+    "dirName": "260724-e-tlau2",
+    "createdAt": "2026-07-24T13:21:51Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-HPUGS13",
+    "dirName": "260724-e-hpugs13",
+    "createdAt": "2026-07-24T13:22:48Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-TLACG13",
+    "dirName": "260724-e-tlacg13",
+    "createdAt": "2026-07-24T16:01:57Z",
+    "status": "recorded"
   }
 ]

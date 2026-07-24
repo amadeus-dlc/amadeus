@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HPUGS13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "0件で可。引用2 cid の memory 実在を実測: cid:units-generation:per-unit-loop-activation と cid:code-generation:artifact-upstream-inputs-header はいずれも project.md に実在(grep -l 確認)。候補1(edge block キー units/depends_on 運用)は per-unit-loop-activation でカバー、候補2(上流ヘッダ装飾トークン回避)は artifact-upstream-inputs-header でカバー。新規ノルム化 novelty なし。留保なし。",
+  "submittedAt": "2026-07-24T16:13:39Z"
+}

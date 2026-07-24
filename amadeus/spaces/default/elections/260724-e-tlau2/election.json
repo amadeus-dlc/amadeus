@@ -1,0 +1,27 @@
+{
+  "electionId": "E-TLAU2",
+  "kind": "implementation-deviation-election",
+  "question": "260722-tla-plugin / code-generation U2(plugin-skeleton)実装中、Flow B(formal-model-check plugin authoring)着手前に conductor e3 が設計と実コードの矛盾を実測発見→実装前停止(deviation-stop準拠)。Flow A(discoverPluginStageFiles+compile merge)は完了・テスト済み・push済み(commit 7c9843964/82640903e)。\n\n■矛盾(実測確認済み): FR-2.1『plugins/<name>/にプラグインとして供給』に従い repo-root plugins/formal-model-check/ を authoring すると、package.ts の step6 projectPluginsIntoHarnessTree(scripts/package.ts:494-497)が plugin ファイルを compile可視の dist/<harness>/<harnessDir>/plugins/ に投影する。その結果 dist tree の再compile が plugin stage を拾い、FR-2.3/FR-1.3『dist 0-plugin byte-identical』および t110/t88 の recompile-idempotence 不変条件を破る。\n\n■実測: dist/claude/.claude/plugins/formal-model-check/stages/formal-model-check.md を手動配置して t110 実行→『recompiles BYTE-FOR-BYTE identical to shipped stage-graph.json』が FAIL(除去後 green 復帰を確認)。\n\n■機序: package.ts buildTree は step3(stage-graph compile=0-plugin、pluginsHostRoot に plugins/ 未存在)→step6(plugin投影)の順。よって package.ts ビルド自体と dist:check は 0-plugin graph で緑だが、ビルド済み tree の再compile(t110/t88/ユーザーランタイム)が plugins/ を拾い 0-plugin でなくなる。\n\n■本質: FD Flow B は『compose→doctor→drop』の compose-on-demand を要求(FR-1.4/FR-2.1)。だが projection 機構は plugin を全ハーネス tree へ pre-compose して shipped-active 化する。この2モデルが両立不能。\n\n各自 scripts/package.ts:494-497、t110/t88、requirements FR-2.1/2.3/1.3/1.4、design(Flow B/BR-U2-7『コア変更はamadeus-graph.tsのみ』)、e3 の t110 FAIL 再現を実測確認のうえ投票してください。B案は FR-2.3 文面改定=仕様変更の疑いを含みます。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "A(e3推奨): formal-model-check を neutral bundle(dist/plugins/<name>/)のみ供給し、compile可視の dist/<harness>/plugins/ へは投影しない。package.ts の投影を調整(BR-U2-7『コア変更はamadeus-graph.tsのみ』境界に抵触の可能性あり=申告要)。0-plugin recompile byte-identical 維持+真の compose-on-demand。E2Eは実composeで temp host へ着地させ dist 非汚染で実装"
+    },
+    {
+      "internalNo": 2,
+      "label": "B: formal-model-check を shipped-active と認め、FR-2.3の『0-plugin byte-identical』と t110/t88 を plugin込みへ改定する(注: FR-2.3 文面と矛盾=仕様変更の疑い。採択時はユーザーエスカレーション事項)"
+    },
+    {
+      "internalNo": 3,
+      "label": "X: その他(noteに明記)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e4",
+    "e5",
+    "e6"
+  ],
+  "state": "recorded"
+}

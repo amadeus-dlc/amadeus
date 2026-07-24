@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TLACG13",
+  "voter": "e1",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "候補3の drift-guard 再pin 知見は完全破棄せず two-layer-verification-posture または allowlist-line-pin-stale への1行 note 統合を残す選択肢を可とする。",
+  "rationale": "候補1・2の novelty を memory grep で確認(covering cid 不在): 候補1(stage寄与plugin の neutral-bundle-only 出荷=recompile-idempotence 保護)は harness-tools-placement(tool配置)と別機構で novel、候補2(--single の scopes:[] 免除機構)も既存cid不在で novel → 両者採用。候補3は headline 自体が『two-layer-verification-posture の適用』でその核(isolated TLC再実行不要)は team.md:303 の既存cidでカバー済み。残る drift-guard 再pin も cid:code-generation:allowlist-line-pin-stale(ピンの stale化→再確認更新)と同クラスで単独cidの novelty bar 未達 → 候補3不採用(note統合は可)。GoA2留保は上記。",
+  "submittedAt": "2026-07-24T16:13:39Z"
+}
