@@ -315,3 +315,21 @@
 **Duration ms**: 37
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:07:53Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a7ae0840ecc8af7d0
+**Message**: e2の投票まだ？
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:10:21Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a9d5a4da82c50cdf9
+**Message**: 進捗まとめて
+
+---
