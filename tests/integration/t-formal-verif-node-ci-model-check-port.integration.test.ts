@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import {
   mkdtempSync,
   mkdirSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -44,7 +45,12 @@ function dependencies(
     command: (executable, argv, options) => {
       if (executable === process.execPath) {
         const outDir = argv[argv.indexOf("--out") + 1]!;
-        const trace = options.env.AMADEUS_DOCKER_TRACE!;
+        const trace = readFileSync(
+          join(workspace, ".amadeus-ci-docker-wrapper", "trace-prefix"),
+          "utf8",
+        ).trim();
+        expect(options.env.AMADEUS_REAL_DOCKER).toBeUndefined();
+        expect(options.env.AMADEUS_DOCKER_TRACE).toBeUndefined();
         const runId = "00000000-0000-4000-8000-000000000001";
         const dockerArgs = [
           "run", "--rm", "--network=none", "--name", `amadeus-tlc-${runId}`,

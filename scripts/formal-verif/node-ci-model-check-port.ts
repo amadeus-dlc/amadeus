@@ -15,6 +15,7 @@ import type {
 } from "./ci-model-check-runner.ts";
 import type { CiModelCheckRunEvidence } from "./ci-model-check-domain.ts";
 import {
+  configureDockerTraceWrapper,
   installDockerTraceWrapper,
   parseDockerTrace,
 } from "./ci-docker-trace.ts";
@@ -139,6 +140,7 @@ export class NodeCiModelCheckPort implements CiAcceptancePort {
       this.#docker = this.dependencies.resolveDocker();
       mkdirSync(join(evidenceRoot, "bootstrap"), { recursive: true, mode: 0o700 });
       installDockerTraceWrapper(this.workspaceRoot);
+      configureDockerTraceWrapper(this.workspaceRoot, this.#docker);
       const env = baseEnvironment();
       for (const argv of [["info"], ["pull", FIXED_DOCKER_IMAGE]] as const) {
         const result = this.dependencies.command(this.#docker, argv, {
@@ -188,6 +190,7 @@ export class NodeCiModelCheckPort implements CiAcceptancePort {
     const docker = this.#docker;
     if (!docker) return failure("DOCKER_BOOTSTRAP", "Docker was not bootstrapped");
     const tracePrefix = join(request.evidenceRoot, `docker-${request.kind}-${request.index}`);
+    configureDockerTraceWrapper(this.workspaceRoot, docker, tracePrefix);
     const startedAt = this.dependencies.nowMs();
     const result = this.dependencies.command(
       process.execPath,
@@ -207,8 +210,6 @@ export class NodeCiModelCheckPort implements CiAcceptancePort {
         env: {
           ...baseEnvironment(),
           PATH: `${this.#wrapperDirectory}:${baseEnvironment().PATH}`,
-          AMADEUS_REAL_DOCKER: docker,
-          AMADEUS_DOCKER_TRACE: tracePrefix,
         },
         timeoutMs: 190_000,
       },

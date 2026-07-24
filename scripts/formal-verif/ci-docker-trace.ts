@@ -4,7 +4,7 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import type { Result } from "./contract.ts";
 import type { CiAcceptanceFailure } from "./ci-model-check-runner.ts";
 
@@ -22,17 +22,20 @@ function failure(code: string, detail: string): Result<never, CiAcceptanceFailur
 function wrapperSource(): string {
   return `#!/usr/bin/env bash
 set -uo pipefail
+wrapper_dir="$(cd -- "$(dirname -- "$0")" && pwd -P)"
+IFS= read -r real_docker < "\${wrapper_dir}/real-docker"
 if [[ "\${1:-}" != "run" ]]; then
-  exec "\${AMADEUS_REAL_DOCKER}" "$@"
+  exec "\${real_docker}" "$@"
 fi
+IFS= read -r trace_prefix < "\${wrapper_dir}/trace-prefix"
 started="$(date +%s%N)"
-printf '%s\\0' "$@" > "\${AMADEUS_DOCKER_TRACE}.argv"
+printf '%s\\0' "$@" > "\${trace_prefix}.argv"
 set +e
-"\${AMADEUS_REAL_DOCKER}" "$@"
+"\${real_docker}" "$@"
 status=$?
 set -e
 finished="$(date +%s%N)"
-printf '%s\\n%s\\n%s\\n' "$started" "$finished" "$status" > "\${AMADEUS_DOCKER_TRACE}.timing"
+printf '%s\\n%s\\n%s\\n' "$started" "$finished" "$status" > "\${trace_prefix}.timing"
 exit "$status"
 `;
 }
@@ -44,6 +47,26 @@ export function installDockerTraceWrapper(workspaceRoot: string): string {
   writeFileSync(path, wrapperSource(), { mode: 0o700 });
   chmodSync(path, 0o700);
   return directory;
+}
+
+function writeConfiguration(path: string, value: string): void {
+  if (!isAbsolute(value) || value.includes("\n") || value.includes("\0")) {
+    throw new TypeError("Docker trace configuration must be one absolute path");
+  }
+  writeFileSync(path, `${value}\n`, { mode: 0o600 });
+  chmodSync(path, 0o600);
+}
+
+export function configureDockerTraceWrapper(
+  workspaceRoot: string,
+  realDocker: string,
+  tracePrefix?: string,
+): void {
+  const directory = join(workspaceRoot, ".amadeus-ci-docker-wrapper");
+  writeConfiguration(join(directory, "real-docker"), realDocker);
+  if (tracePrefix !== undefined) {
+    writeConfiguration(join(directory, "trace-prefix"), tracePrefix);
+  }
 }
 
 function normalizeArgument(
