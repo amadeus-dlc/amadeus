@@ -756,3 +756,137 @@
 **Message**: Reviewer: amadeus-architecture-reviewer-agent\n\n**verdict: READY**\n\n## 検証コマンド実測(iteration 2 再実行)\n\n| コマンド | exit code |\n|---|---|\n| `bun run typecheck` | **0** |\n| `bun run lint` | **0**(baseline warnin
 
 ---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-24T13:35:52Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-24T13:35:52Z
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-24T13:35:52Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --stage code-generation --result completed
+**Error**: Stage "code-generation" is per-unit (for_each: unit-of-work) and 4 of 5 units are not yet complete (mirror-github-gateway, mirror-state-provenance, mirror-operation-lifecycle, mirror-distribution-docs). Run `next` to continue the remaining units before approving.
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-24T13:40:57Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-24T13:40:57Z
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-24T13:46:19Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260724-181510-1d8e/engineer-2/amadeus/spaces/default/intents/260724-mirror-auto-modes/construction/mirror-github-gateway/code-generation/code-generation-plan.md
+**Context**: construction > mirror-github-gateway > code-generation > code-generation-plan.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T13:47:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 215abf78
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-capability.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T13:47:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 215abf78
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-capability.ts
+**Duration ms**: 1368
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T13:47:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: d3a5ae9b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-capability.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T13:47:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: d3a5ae9b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-capability.ts
+**Duration ms**: 591
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T13:48:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 035adff6
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-runner.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T13:48:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 035adff6
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-runner.ts
+**Duration ms**: 1537
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T13:48:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 15dfc97e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-runner.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T13:48:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 15dfc97e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-mirror-runner.ts
+**Duration ms**: 630
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T13:54:42Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: a1dcb9be84b7a66de
+**Message**: I've reached a **stop-and-report point** before implementing the gateway (G8). A frozen-contract vs. design conflict makes the designed termination behavior unimplementable, and per the deviation norm
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-24T13:56:48Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-24T13:56:48Z
+
+---
