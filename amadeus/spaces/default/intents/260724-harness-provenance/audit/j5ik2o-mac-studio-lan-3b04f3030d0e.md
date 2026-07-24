@@ -140,3 +140,15 @@
 **User Input**: 常任グラント504d1102(scope=stage-gates)適用によるdelegate発行。user-stories N/A判定3点+reviewer READY iteration2+センサー全PASS確認済み(e5報告)。
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-24T12:35:15Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: refined-mockups
+**Issuer Space**: default
+**Issuer Intent**: 260724-watcher-timeout-fix
+**Issuer Shard**: j5ik2o-mac-studio-lan-3b04f3030d0e.md
+**Issuer Human Ts**: 2026-07-24T12:26:23Z
+**User Input**: 常任グラント504d1102(scope=stage-gates)適用によるdelegate発行。refined-mockups 5成果物+reviewer READY iteration2+センサー全PASS確認済み(e5報告)。
+
+---
