@@ -3581,3 +3581,41 @@
 **Message**: delegate来たら取り込んで
 
 ---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-24T11:20:55Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-24T11:20:55Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-24T11:20:55Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: rough-mockups
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-24T11:20:55Z
+**Event**: GATE_APPROVED
+**Stage**: rough-mockups
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-24T11:20:55Z
+**Event**: STAGE_COMPLETED
+**Stage**: rough-mockups
+**Details**: Stage Rough Mockups approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-24T11:20:55Z
+**Event**: STAGE_STARTED
+**Stage**: approval-handoff
+**Agent**: amadeus-delivery-agent
+
+---
