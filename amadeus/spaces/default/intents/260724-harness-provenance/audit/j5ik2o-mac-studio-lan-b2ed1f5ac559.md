@@ -1254,3 +1254,41 @@
 **Message**: delegateの承認が来たら取り込んで進めて
 
 ---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-24T11:08:10Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-24T11:08:10Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-24T11:08:10Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: market-research
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-24T11:08:10Z
+**Event**: GATE_APPROVED
+**Stage**: market-research
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-24T11:08:10Z
+**Event**: STAGE_COMPLETED
+**Stage**: market-research
+**Details**: Stage Market Research approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-24T11:08:10Z
+**Event**: STAGE_STARTED
+**Stage**: feasibility
+**Agent**: amadeus-architect-agent
+
+---
