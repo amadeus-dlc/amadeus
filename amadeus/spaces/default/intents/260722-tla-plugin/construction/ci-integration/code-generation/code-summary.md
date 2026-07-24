@@ -52,10 +52,13 @@ U4 のローカル実装と検証を完了した。通常の push / pull request
 - warm-up結果: TLC内部161,085 ms、Docker spawn約161.67秒、5,203,730 generated states、529,692 distinct states、探索深度9、queue 0で完全探索を終了した。
 - 失敗原因: TLCは標準モジュールをrealpath済みscratch root直下から読み込んだと報告したが、planned runtimeは`<scratch>/.tlc-stdlib`だけを許可していたため、正常終了ログを`GRAMMAR`へ誤分類した。
 - 修正: 実行argv、Docker隔離、JVM一時ディレクトリは変更せず、出力正規化の標準モジュール期待パスだけをprepared scratch rootへ束縛した。実runと同じパス形状・状態数・深度を使うintegration testで`COMPLETE`を固定した。
+- 再受入Run: `https://github.com/amadeus-dlc/amadeus/actions/runs/30074653100`
+- 再受入結果: warm-up 1回+計測5回がすべて`NOT_DETECTED`、exit 0、container残留0で完走した。最大spawnは162,288.205 ms、最大CLIは164,197.099 msで180秒未満だった。
+- 再受入の最終失敗原因: verifierが`$WORKSPACE`全体のread-only mountを要求したが、runnerはモデルとcfgだけを含む`$WORKSPACE/specs/tla`へ権限を狭めていた。verifierとfixtureを最小権限側へ整合し、回収済みartifactの独立再検証で`CI_ARTIFACTS_VERIFIED`を確認した。
 
 ## 未完了事項と設計上の注意
 
-1. 計画 Step 15 の1 warm-up + 5 measured受入はまだ完走していない。標準モジュールパス束縛の修正commitで実 `workflow_dispatch` を再実行し、artifactを回収する必要がある。
+1. 計画 Step 15 の1 warm-up + 5 measured証跡は全条件を満たしたが、GitHub Actions workflow全体は旧mount検証契約により赤である。最小権限mountへ整合したcommitで再dispatchし、workflow全体のsuccessを確認する必要がある。
 2. Iteration 1で指摘された空stderr契約の衝突は解消済みである。ファイル実在、manifestのbytes / SHA-256一致、16 MiB上限を維持したまま、`tlc-stderr.bin`だけ0 byteを許容する。
 3. 診断commit `d60c99ac3` はpush済みで、GitHub workflow dispatch `30071213275` のartifactを回収済みである。
 

@@ -14717,3 +14717,263 @@
 **Context**: construction > code-generation > memory.md
 
 ---
+
+## Decision Recorded
+**Timestamp**: 2026-07-24T07:29:49Z
+**Event**: DECISION_RECORDED
+**Stage**: code-generation
+**Decision**: 正式受入で判明したDocker mount証跡契約の修正方針
+**Options**: 1:verifierを最小read-only mountのWORKSPACE/specs/tlaへ整合して再受入,2:plannerをWORKSPACE全体mountへ拡大して既存verifierへ合わせる,3:U4未完了として停止
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-24T08:20:03Z
+**Event**: HUMAN_TURN
+
+---
+
+## Question Answered
+**Timestamp**: 2026-07-24T08:20:19Z
+**Event**: QUESTION_ANSWERED
+**Stage**: code-generation
+**Details**: １
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T08:20:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: cb7908c7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/ci-model-check-domain.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T08:20:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: cb7908c7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/ci-model-check-domain.ts
+**Duration ms**: 1376
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T08:20:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: f6a6d9c0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/ci-model-check-domain.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T08:20:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: f6a6d9c0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/ci-model-check-domain.ts
+**Duration ms**: 669
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T08:20:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4da0bd5d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/t-formal-verif-ci-model-check-domain.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T08:20:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4da0bd5d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/t-formal-verif-ci-model-check-domain.test.ts
+**Duration ms**: 1342
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T08:20:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1bfce82b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/t-formal-verif-ci-model-check-domain.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T08:20:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1bfce82b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/t-formal-verif-ci-model-check-domain.test.ts
+**Duration ms**: 558
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T08:20:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: f816244c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-ci-model-check-runner.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T08:20:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: f816244c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-ci-model-check-runner.integration.test.ts
+**Duration ms**: 1298
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T08:20:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6e9c7e53
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-ci-model-check-runner.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T08:20:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6e9c7e53
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-ci-model-check-runner.integration.test.ts
+**Duration ms**: 560
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T08:20:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1edb2fd4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-ci-model-check-artifacts.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T08:20:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1edb2fd4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-ci-model-check-artifacts.integration.test.ts
+**Duration ms**: 1329
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T08:20:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0a475e4b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-ci-model-check-artifacts.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T08:20:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0a475e4b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-ci-model-check-artifacts.integration.test.ts
+**Duration ms**: 591
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T08:20:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: bde82afd
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-node-ci-model-check-port.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T08:20:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: bde82afd
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-node-ci-model-check-port.integration.test.ts
+**Duration ms**: 1311
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T08:20:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 66d90c4f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-node-ci-model-check-port.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T08:20:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: 66d90c4f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-node-ci-model-check-port.integration.test.ts
+**Duration ms**: 562
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-24T08:21:44Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/.codex/worktrees/8fc8/amadeus/amadeus/spaces/default/intents/260722-tla-plugin/construction/ci-integration/code-generation/code-generation-plan.md
+**Context**: construction > ci-integration > code-generation > code-generation-plan.md
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-24T08:21:44Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/.codex/worktrees/8fc8/amadeus/amadeus/spaces/default/intents/260722-tla-plugin/construction/ci-integration/code-generation/code-summary.md
+**Context**: construction > ci-integration > code-generation > code-summary.md
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-24T08:21:44Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/.codex/worktrees/8fc8/amadeus/amadeus/spaces/default/intents/260722-tla-plugin/construction/code-generation/memory.md
+**Context**: construction > code-generation > memory.md
+
+---
