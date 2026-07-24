@@ -373,7 +373,7 @@
   },
   {
     "file": "scripts/formal-verif/tla-arm.ts",
-    "lines": "848",
+    "lines": "561",
     "reason": "Defensive catch mapping a malformed public-contract identity to a reject receipt; upstream validation keeps CI inputs well-formed.",
     "expiry": "remove if a test drives a malformed contract identity to validateFrozenTlaModelReceipt"
   },
