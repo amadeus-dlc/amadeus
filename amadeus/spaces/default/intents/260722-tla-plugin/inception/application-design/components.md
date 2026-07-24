@@ -7,7 +7,7 @@
 | # | コンポーネント | 種別 | 責務 | 推定規模 |
 |---|---|---|---|---|
 | C-1 | PluginStageDiscovery(amadeus-graph.ts 内の walk 拡張) | 変更 | compileStageGraph の走査対象に `plugins/*/stages/*.md` を追加。slug 衝突の loud reject。plugin 0件時の compile 出力 byte-identical 維持 | +約80行 |
-| C-2 | run-model-check CLI(scripts/formal-verif/run-model-check.ts) | 新設 | .tla/.cfg を入力に TLC 完全探索を1回実行し、fail-closed verdict(exit 0/1/2+)を返す汎用エントリポイント | 約250行 |
+| C-2 | run-model-check CLI(scripts/formal-verif/run-model-check.ts) | 新設 | .tla/.cfg を入力に TLC 完全探索を1回実行し、fail-closed verdict(exit 0/1/2+)を返す汎用エントリポイント。composition rootはparse→load→path validate→reserve→execute→reportだけを所有し、path/cache、receipt、reporter、予約後publish境界は責務別moduleへ委譲する | root約190行+責務別module |
 | C-3 | TlcSpawnPlanner 抽象+Darwin/Docker 2実装 | 新設 | TLC 起動 argv のラップと環境検証戦略の選択(Darwin = sandbox-exec+既存drift検証 / Docker = temurin@digest+jarチェックサム検証、sandbox receipt 系は宣言的非適用 — ADR-6) | 約180行 |
 | C-3b | fs-tlc-toolchain.ts の prepare()/run() 委譲リファクタ | 変更 | run() 内ハードコードの sandbox-exec argv 構築(:1289-1296)と環境検証(:1263-1278)を planner へ委譲。既存 Darwin 経路の挙動は byte-equivalent | 約120行変更 |
 | C-4 | TlaModelLoader(tla-arm.ts の読込経路変更) | 変更 | MODEL_SOURCE/CFG_SOURCE 埋め込みを specs/tla/ 外部ファイル読込に置換。identity 生成(TextEncoder→canonicalIdentity)は不変 | 約60行差替 |

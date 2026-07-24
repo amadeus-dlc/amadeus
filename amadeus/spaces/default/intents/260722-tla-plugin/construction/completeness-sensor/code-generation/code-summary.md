@@ -2,13 +2,14 @@
 
 ## 実装結果
 
-U5 の model completeness sensor、明示更新経路、全 harness 配布、Comprehensive test を実装した。checker は read-only で、U1 の canonical `ModelMap` parser / identity 計算を runtime importして同じ契約を消費する。同期状態は `SENSOR_PASSED`、実装・model・cfg drift、map 不在・破損、読取境界違反、内部 timeout は有効な fail verdictを返して `SENSOR_FAILED` へ到達する。map 書換えは明示的な `updateModelMap` subcommand に限定した。
+U5 の model completeness sensor、明示更新経路、全 harness 配布、Comprehensive test を実装した。checker は read-only で、framework core に同梱した U1/U5 共通の canonical `ModelMap` parser / identity 計算を静的importして同じ契約を消費する。同期状態は `SENSOR_PASSED`、実装・model・cfg drift、map 不在・破損、読取境界違反、内部 timeout は有効な fail verdictを返して `SENSOR_FAILED` へ到達する。map 書換えは明示的な `updateModelMap` subcommand に限定した。
 
 Architecture Review Iteration 1の全5 findingを修正した。production updateは固定map pathだけを扱い、map read前にlockを取得する。map/model/cfg/実装entryは共通SafeFileReaderを通り、update失敗はrepository相対pathと固定reason codeだけを返す。canonical実装globはDomain EntitiesからPostToolUse fixtureまで一貫させた。
 
 ## 変更ファイル
 
 - `packages/framework/core/tools/amadeus-sensor-model-completeness.ts` — read-only checker、全入力共通SafeFileReader、決定的 evaluator、9秒内部deadline、固定map pathの明示更新、read前lock、atomic publish、redacted error、内部test seamを追加した。
+- `packages/framework/core/tools/amadeus-formal-verif-model-map.ts` — canonical identity、ModelMap型、parser、diffをframework配布物として自己完結させた。hostの `scripts/formal-verif/canonical.ts` / `tla-model-map.ts` はこの定義を再exportする。
 - `packages/framework/core/sensors/amadeus-model-completeness.md` — deterministic/advisory manifest、実在するspec・canonical実装glob、10秒dispatcher上限、入出力契約を追加した。
 - `tests/unit/t-formal-verif-model-completeness-sensor.test.ts` — error写像、identity変化、root包含、map fail verdictのpure unitを5ケース追加した。
 - `tests/integration/t-formal-verif-model-completeness-sensor-components.integration.test.ts` — fake portと一時filesystemで正常、drift、malformed、deadline、size/path/read error、map/model/cfg TOCTOU、redaction、lock前read、root外拒否、`--map`拒否、更新拒否・失敗、canonical parser共有を20ケース追加した。
@@ -22,7 +23,7 @@ Architecture Review Iteration 1の全5 findingを修正した。production updat
 
 ## 主要な決定
 
-- U5独自のmap schemaを作らず、host project rootの `scripts/formal-verif/tla-model-map.ts` と `canonical.ts` を動的に解決する。source coreと生成mirrorの双方がU1の同じcanonical定義を読む。
+- U5独自のmap schemaを作らず、framework coreの `amadeus-formal-verif-model-map.ts` をcanonical定義とする。source coreと生成mirrorはhost projectの `scripts/` に依存せず自己完結し、host側U1 adapterも同じ定義を再exportする。
 - Functional Designの旧 `scripts/amadeus-election*.ts` globは、U1 mapの実境界である `packages/framework/core/tools/amadeus-election*.ts` へ申告どおり整合した。互換用の二重globは追加していない。
 - sensor所有のdeadlineは9秒、既存dispatcherの停止用hard capは10秒とした。前者は有効な `{ pass: false, reason: "timeout" }`、後者は既存の `SENSOR_BUDGET_OVERRIDE` として区別する。
 - checkerはcanonical entry順に全findingを収集し、出力を相対path・固定reason code・件数へ限定する。absolute path、hash、入力内容は出力しない。
@@ -45,8 +46,8 @@ Architecture Review Iteration 1の全5 findingを修正した。production updat
   - exit 0。repository既存のcomplexity warning 255件・info 19件は残るが、U5対象ファイルのwarning/errorは0。
 - `bun scripts/package.ts --check` / `bun run promote:self:check`
   - 全6 harness treeと4 project-local self installが同期済み、exit 0。
-- `bun tests/run-tests.ts --ci --verbose`（`tests/run-tests.sh` と同一runner）
-  - Iteration 1最終treeで495 test files、7,112 assertions、失敗0、`RESULT: PASS`。
+- `bash tests/run-tests.sh --ci --parallel 1`
+  - U1/U3/U5配布境界修正後のtreeで503 test files、7,149 assertions、失敗0、`RESULT: PASS`。
   - AWS credentials不在によるlive substrate testのskipあり。wall-clock drift 1件はadvisoryで、失敗判定には影響しない。
 
 ## 性能・容量結果

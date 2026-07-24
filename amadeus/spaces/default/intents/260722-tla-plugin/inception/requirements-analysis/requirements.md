@@ -44,8 +44,8 @@
 
 ## FR-5: CI 統合と旧 workflow 退役【requirements Q4裁定】
 
-- FR-5.1: ci.yml に `workflow_dispatch` トリガーを追加し、formal-model-check ジョブは `if: github.event_name == 'workflow_dispatch'` 条件でのみ実行する。push / pull_request イベントでは formal ジョブが絶対に走らないこと(二層検証態勢の既決)
-- FR-5.2: formal ジョブは ubuntu ランナー + Docker コンテナで run-model-check.ts を実行する。コンテナは **公式 eclipse-temurin イメージ(digest 固定)+ 公式 tla2tools.jar(GitHub Releases、版+チェックサム固定)**〔更新 2026-07-22T12:32:22Z: 設計段実測で権威ある既成 TLC イメージの不在を確定し、ユーザー再裁定 — feasibility Q5 の具体化。application-design decisions.md ADR 参照〕
+- FR-5.1: `.github/workflows/ci.yml` に `workflow_dispatch` トリガーを追加し、formal-model-check ジョブは `if: github.event_name == 'workflow_dispatch'` 条件でのみ実行する。push / pull_request イベントでは formal ジョブが絶対に走らないこと(二層検証態勢の既決)
+- FR-5.2: formal ジョブは ubuntu ランナー + Docker コンテナで `scripts/formal-verif/run-model-check-ci.ts` を実行する。コンテナは **公式 eclipse-temurin イメージ(digest 固定)+ 公式 tla2tools.jar(GitHub Releases、版+チェックサム固定)**〔更新 2026-07-22T12:32:22Z: 設計段実測で権威ある既成 TLC イメージの不在を確定し、ユーザー再裁定 — feasibility Q5 の具体化。application-design decisions.md ADR 参照〕
 - FR-5.3: `formal-verification.yml` を削除する(履歴は git に残る)。復活はさせない
 - FR-5.4: 既存 CI バンドの **push / pull_request 経路の挙動・所要時間は本変更で不変**。workflow_dispatch 対応のため `changes` ジョブに「BASE_SHA 空(dispatch)検知 → ci=false(既存バンド skip)」の最小分岐のみを申告付きで追加してよい〔改訂 2026-07-22: U4 FD レビューが dispatch 時の changes ハード失敗(BASE_SHA 空 → git diff exit 128)→ ci-success 連鎖失敗 → 実行全体赤表示を bash 再現で確定し、ユーザー裁定 A(最小分岐追加)で解消。他の既存ジョブ・push/PR 経路は diff ゼロのまま〕
 

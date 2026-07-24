@@ -32,7 +32,7 @@ flowchart LR
 ## データフロー
 
 1. モデル更新フロー: 開発者が specs/tla/*.tla 編集 → updateModelMap で model-map.json 再記録 → sensor green
-2. 検証フロー: run-model-check が .tla/.cfg bytes → identity 生成 → prepare(drift 検証)→ provider spawn → parseTlcOutput174 → normalize → exit code
+2. 検証フロー: run-model-check composition root が .tla/.cfg bytes → identity生成 → path/cache boundary → artifact予約 → reserved execution(prepare/drift検証→provider spawn→parseTlcOutput174→normalize→manifest-last publish)→ terminal reporter → exit code。receipt builder/matrixはdomain/plannerが所有し、rootへ逆依存しない。
 3. 供給フロー: plugins/formal-model-check オーサリング → packager 投影 → compose → C-1 が compile で発見 → `--stage formal-model-check --single` 実行可能
 
 ## 共有資源

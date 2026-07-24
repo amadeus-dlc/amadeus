@@ -18,6 +18,8 @@
 
 - 全異常(モデル不在・planner 検証失敗・部分探索・timeout・統計欠損・drift)は HARNESS_ERROR 系へ分類し loud fail。無言 fail・graceful degrade なし
 - Docker 経路の環境検証: イメージ digest 一致+jar sha256 検証を適用、sandbox receipt / ホスト JDK snapshot は宣言的非適用(EnvReceipt に非適用根拠を記録 — ADR-6)
+- 環境inspectionは全5 IDを固定順で記録する。前段failureで未実行の適用検査は`not-run`、実行済み失敗だけ`failed`、planner/platform非該当だけ`not-applicable`とし、composition rootはprovider別receiptを合成しない。
+- artifact予約前のpath canonicalization失敗はterminal HARNESS_ERROR/exit 2とする。予約後はcache作成からpublisherまで単一failure/publish境界で実行し、例外時も可能な限りfailure directoryとterminal manifestを最後に発行する。
 
 ## Review — Iteration 2
 
