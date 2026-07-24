@@ -31,6 +31,8 @@
 ## Runtime State
 - **Revision Count**: 0
 
+- **Parked**: 2026-07-24T13:01:04Z
+- **Parked At Stage**: units-generation
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -91,7 +93,7 @@ Per unit: [TBD]
 - **Current Stage**: units-generation
 - **Next Stage**: delivery-planning
 - **Status**: Running
-- **Last Updated**: 2026-07-24T12:57:44Z
+- **Last Updated**: 2026-07-24T13:01:04Z
 
 ## Session Resume Point
 - **Last Completed Stage**: application-design

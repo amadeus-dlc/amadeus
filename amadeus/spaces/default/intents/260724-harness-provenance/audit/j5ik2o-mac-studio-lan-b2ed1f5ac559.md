@@ -9820,3 +9820,38 @@
 **Findings count**: 6
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-24T13:01:04Z
+**Event**: WORKFLOW_PARKED
+**Stage**: units-generation
+**Timestamp**: 2026-07-24T13:01:04Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T13:04:20Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a8fbcb4871aa8e12b
+**Message**: Issue #1452(AIハーネス種別をamadeus-state.mdに記録)をamadeus-featureワークフローで実装中。inceptionのunits-generationまで承認済みで、現在leaderの§13ゼロ確認選挙とdelegate-approvalを待機中。届き次第、取り込んでapprove→delivery-planningへ進みます。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T13:20:38Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: af8bfc3f40d5e2c37
+**Message**: Issue #1452(実行ハーネス種別をamadeus-state.mdへ記録する機能)をAI-DLCワークフローで実装中。inceptionフェーズのunits-generationまで承認済みで、次はleaderの§13ゼロ確認選挙とdelegate承認を待って delivery-planning へ進みます。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T13:26:42Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a902e1c9ed70daea3
+**Message**: Issue #1452(ハーネス種別をamadeus-state.mdに記録)をamadeus-featureワークフローで実装中。intent 260724-harness-provenanceはunits-generationまで完了し、現在leaderから§13ゼロ確認選挙とdelegate-approval、およびブランチpush方針の指示待ちです。
+
+---
