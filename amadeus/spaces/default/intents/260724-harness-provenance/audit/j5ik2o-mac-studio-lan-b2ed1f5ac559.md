@@ -1889,3 +1889,41 @@
 **Message**: leaderからの応答を待つ
 
 ---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-24T11:12:04Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-24T11:12:04Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-24T11:12:04Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: feasibility
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-24T11:12:04Z
+**Event**: GATE_APPROVED
+**Stage**: feasibility
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-24T11:12:04Z
+**Event**: STAGE_COMPLETED
+**Stage**: feasibility
+**Details**: Stage Feasibility & Constraints approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-24T11:12:04Z
+**Event**: STAGE_STARTED
+**Stage**: scope-definition
+**Agent**: amadeus-product-agent
+
+---
