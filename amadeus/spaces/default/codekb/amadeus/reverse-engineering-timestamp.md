@@ -1,6 +1,23 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(現在: 260724-watcher-timeout-fix)
+## 実行メタデータ(現在: 260724-harness-provenance)
+
+- Date: 2026-07-24T11:34:46Z(`date -u` 実測)
+- Observed at: `2d0da11d022565bf4a613da9fbcccf078716f8f4`(現 HEAD `git rev-parse HEAD` 実測一致)
+- Intent: `260724-harness-provenance`([Issue #1452](https://github.com/amadeus-dlc/amadeus/issues/1452) — AI ハーネス種別(Claude Code / Kiro / Codex / opencode / Cursor)が intent を実行したかを `amadeus-state.md` / stage `memory.md` に記録する機能)
+- Scope: `amadeus-feature`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering` (2.1)
+- Method: differential refresh(cid:reverse-engineering:c1)。前回 scan の observed `ffc79aad9`(260723-marker-heading-exemption)は現 HEAD の**非祖先**(`git merge-base --is-ancestor ffc79aad9 HEAD` exit 1 — 別 run の engineer-5 ブランチが squash マージ済み)のため base に採らず、記録済み observed のうち祖先かつ距離最小の base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`(`git merge-base --is-ancestor a81c11dde HEAD` exit 0、`git rev-list --count a81c11dde..HEAD`=186)を採用(cid:reverse-engineering:rescan-base-ancestry)。observed `2d0da11d022565bf4a613da9fbcccf078716f8f4`。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3)。
+- 測定 ref: 全 file:line は Observed=HEAD `2d0da11d` のワークツリー実ファイル直読(Developer scan + Architect 再検証、cid:measurement-ref-in-artifacts)。diff 規模(1798 files, +223029/−3536。非 record 1202 files, +109631/−3508)・state.md corpus 64・stage memory.md corpus 584・memory-template 配布10コピー・`KNOWN_HARNESS_DIRS` 5要素はコマンド出力からの転記(cid:numbers-from-command-output-only)。区間 186 コミットは大きく `amadeus-lib.ts`(+1082/−69)・`amadeus-utility.ts`(+608/−112)を含むため「バグ面不変」は主張せず、参照はすべて observed 時点の実測。
+- 現行結論: Issue #1452 の provenance 機能の実装 seam を4面で確定 — (1) `amadeus-state.md` の `## Project Information`(`amadeus-utility.ts:4094-4103` テンプレート)は **birth-time 単一書込**(`handleIntentBirthStateBuild` `:3926` → `writeStateFile` `:4146`)でステージ再生成なし。既存 intent への後付けは `setOrInsertField`(`amadeus-lib.ts:4891-4905`)で別途注入。(2) stage `memory.md` は `ensureStageDiary`(`amadeus-lib.ts:1252-1266`)がテンプレート(`memory-template.md`、H2 4見出し)を**バイトコピー**(`:1264`)、参照元 `:1258` が `harnessDir()` 経由 = 検出機構が書込経路に内在。t100(`tests/unit/t100-memory-template-lifecycle.test.ts`)が「四見出し」「total===0」を固定するため構造変更は高リスク。(3) `deriveHarnessDir`(`amadeus-lib.ts:168-183`)/ `KNOWN_HARNESS_DIRS`(`:158`、5要素)が5ハーネス種別と 1:1 の天然 provenance ソース。(4) センサー(`amadeus-sensor-fire.ts:76`)は Claude Edit/Write の `file_path` のみ対象で bun 書込に非発火 → state.md フィールド追加はノーリスク、memory.md 構造変更のみ高リスク。原因の所在=**新機能**(既存欠陥の修正ではなく feature intent の seam 合成)。
+- Per-intent record: `re-scans/260724-harness-provenance.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「現在: 260723-marker-heading-exemption」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、`architecture.md`(新規知識クラスタ「ハーネス provenance の書込経路とハーネス検出アーキテクチャ」節を先頭 current view に新設)、`code-quality-assessment.md`(旧「現在」= 260723-marker-heading-exemption を履歴へ降格、本文温存 — 単一 current view を architecture + 本鮮度ポインタに一意化)、`re-scans/260724-harness-provenance.md`(新規)。他 body 6成果物(code-structure / component-inventory / technology-stack / api-documentation / business-overview / dependencies)は前 scan で既に履歴ラベル化済みのため無変更。実質の新規知識は「provenance 書込経路(birth-time state / template-copy memory)+ ハーネス検出機構の再利用 + 後付けヘルパー seam + センサー非発火」の1クラスタのみで architecture + per-intent record に集約(cid:reverse-engineering:c1)。
+- Delivery boundary: 実装・修正コード、dist/self-install 再生成、commit、PR 操作は本 scan で未実施。区間フォーカス正本変更0件のため dist・self-install 配布物は base と同一。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260724-watcher-timeout-fix)
 
 - Date: 2026-07-24
 - Observed at: `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`(現 HEAD `git rev-parse HEAD` 実測一致)

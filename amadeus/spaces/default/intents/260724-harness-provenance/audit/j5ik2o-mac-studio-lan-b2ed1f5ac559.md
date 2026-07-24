@@ -4008,3 +4008,119 @@
 **Message**: leaderの承認が届いたら教えて
 
 ---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-24T11:25:51Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-24T11:25:51Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-24T11:25:51Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: approval-handoff
+**Recovered**: true
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-24T11:25:51Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state approve approval-handoff --project-dir /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/runs/20260724-181510-1d8e/engineer-5
+**Error**: Refusing to approve "approval-handoff": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then approve. (autonomous Construction is exempt)
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-24T11:25:51Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --stage approval-handoff --result approved
+**Error**: Transition rejected by amadeus-state.ts approve for "approval-handoff": {"error":"Refusing to approve \"approval-handoff\": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then approve. (autonomous Construction is exempt)"}
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-24T11:26:21Z
+**Event**: GATE_APPROVED
+**Stage**: approval-handoff
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-24T11:26:21Z
+**Event**: STAGE_COMPLETED
+**Stage**: approval-handoff
+**Details**: Stage Approval Handoff approved by gate
+
+---
+
+## Phase Completion
+**Timestamp**: 2026-07-24T11:26:21Z
+**Event**: PHASE_COMPLETED
+**From phase**: ideation
+**To phase**: inception
+**Stages completed**: 10
+
+---
+
+## Phase Verification
+**Timestamp**: 2026-07-24T11:26:21Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: ideation → inception
+
+---
+
+## Phase Start
+**Timestamp**: 2026-07-24T11:26:21Z
+**Event**: PHASE_STARTED
+**Phase**: inception
+**Scope**: feature
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-24T11:26:21Z
+**Event**: STAGE_STARTED
+**Stage**: reverse-engineering
+**Agent**: amadeus-developer-agent
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:29:07Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ae95ad21371b91de0
+**Message**: Developerスキャン終わったら教えて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:31:16Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: a0259e4624d16145b
+**Message**: I have complete evidence for all five tasks. Here is my measured scan report.\n\n---\n\n# Reverse-Engineering Scan Report — intent 260724-harness-provenance\n\nCanonical source scanned: `packages/framework/
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:33:58Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ad3e221c1a089c27e
+**Message**: 進捗まとめて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T11:39:36Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architect-agent
+**Agent ID**: a766f0cdb2fa0df59
+**Message**: All checks pass — single current view is uniquely held by architecture.md's new section + the freshness pointer; the 260723-marker-heading-exemption marker is fully demoted to 履歴 (the `component-inven
+
+---

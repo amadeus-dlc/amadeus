@@ -1,8 +1,8 @@
 # コード品質評価
 
-> **現在の品質観測は intent `260724-watcher-timeout-fix`(2026-07-24、amadeus-bugfix / Minimal、下記「watcher arming 検証が mux_attach を最大 270 秒ブロック」節)**。以下の過去 intent 節に残る「本 intent」「最新」「現在」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
+> **履歴（260724-watcher-timeout-fix、2026-07-24、amadeus-bugfix / Minimal、下記「watcher arming 検証が mux_attach を最大 270 秒ブロック」節）/ 履歴（260723-marker-heading-exemption、2026-07-23、bugfix / Minimal、下記「marker 成果物への required-sections floor 誤適用」節）**: 単一 current view は intent `260724-harness-provenance`(2026-07-24、同日並行 intent)へ移り、`architecture.md` 冒頭「ハーネス provenance の書込経路とハーネス検出アーキテクチャ」節 + 鮮度ポインタが保持する(cid:reverse-engineering:c3-relabel)。本ファイルの以下の節および過去 intent 節に残る「本 intent」「最新」「現在」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
 
-## watcher arming 検証が mux_attach を最大 270 秒ブロック（260724-watcher-timeout-fix、現在、Issue #1449）
+## watcher arming 検証が mux_attach を最大 270 秒ブロック（260724-watcher-timeout-fix、履歴、Issue #1449）
 
 実測基準は base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb` → observed HEAD `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、祖先性 exit 0、距離 155。差分 1762 files のうち本問題の交差面は `packages/framework/core/tools/team-up.sh`(1462 行新規パス)と `tests/integration/t-team-up-watcher-arming.test.ts`(197 行新規)のみ(測定 ref: `git diff --numstat a81c11dde..HEAD -- <両パス>`)。導入は区間内 2 コミット: `42c9341d8`(#1391、`verify_watchers_armed` 検証ロジック本体 = #1384 修正)+ `0d24c6f93`(#1421、`scripts/team-up.sh` → `packages/framework/core/tools/` 昇格 + 配布 11 コピー、ロジック不変)。
 
