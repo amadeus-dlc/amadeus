@@ -1301,6 +1301,10 @@
       "minMechanism": "none",
       "coveredBy": [
         {
+          "file": "tests/integration/t-formal-verif-plugin-lifecycle.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/integration/t-formal-verif-plugin-stage-discovery.integration.test.ts",
           "mechanism": "none"
         },
