@@ -28,6 +28,11 @@ import {
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { canonicalIdentity } from "./canonical.ts";
 import { isUtcInstant, parseCellResult, type CellResult, type Result } from "./contract.ts";
+import type {
+  EnvReceipt,
+  EnvSnapshot,
+  TlcSpawnPlanner,
+} from "./run-model-check-domain.ts";
 import { validateFrozenTlaModelReceipt } from "./tla-arm.ts";
 import {
   createJdkDistributionManifest,
@@ -278,6 +283,37 @@ export interface FsTlcToolchainDependencies {
   suiteRemainingMs?(): number;
   evidencePublishReserveMs?: number;
   fault?(point: TlcCacheFaultPoint): void;
+}
+
+export interface PlannedTlcPrepareInput extends TlcPrepareInput {
+  readonly runId: string;
+  readonly scratchRoot: string;
+  readonly planner: TlcSpawnPlanner;
+}
+
+export interface PreparedPlannedTlcRun {
+  readonly artifact: VerifiedTlcArtifact;
+  readonly modelReceipt: TlcPrepareInput["modelReceipt"];
+  readonly modulePath: string;
+  readonly cfgPath: string;
+  readonly cwd: string;
+  readonly standardModuleDirectory: string;
+  readonly scratchRoot: string;
+  readonly deadlineMs: number;
+  readonly manifestArgv: readonly string[];
+  readonly planner: TlcSpawnPlanner;
+  readonly environmentSnapshot: EnvSnapshot;
+  readonly environment: TlcClosedEnvironment | Readonly<{
+    LANG: string;
+    LC_ALL: string;
+    TZ: string;
+  }>;
+}
+
+export interface PlannedTlcOutcome {
+  readonly raw: RawTlcOutcome;
+  readonly exploration: TlcExploration;
+  readonly environmentReceipt: EnvReceipt;
 }
 
 export interface SandboxProbeProvider {
@@ -1439,13 +1475,426 @@ class FsTlcRuntime {
   }
 }
 
+class FsPlannedTlcRuntime {
+  readonly #issued = new WeakSet<PreparedPlannedTlcRun>();
+
+  constructor(
+    private readonly artifacts: FsTlcArtifactCache,
+    private readonly dependencies: FsTlcToolchainDependencies,
+  ) {}
+
+  #canonicalWorkspace(): string {
+    const workspace = this.dependencies.workspaceRoot;
+    if (!workspace) {
+      toolchainAbort("PreparationError", "WORKSPACE_CONFIGURATION", "closed runtime workspace root is required");
+    }
+    const cwd = realpathSync(workspace);
+    if (!lstatSync(cwd).isDirectory()) {
+      toolchainAbort("PreparationError", "WORKSPACE_PATH", "workspace must be a directory");
+    }
+    return cwd;
+  }
+
+  #canonicalWorkspaceFile(cwd: string, requestedPath: string): string {
+    const canonicalPath = realpathSync(requestedPath);
+    if (!pathInside(cwd, canonicalPath) || !lstatSync(canonicalPath).isFile()) {
+      toolchainAbort(
+        "PreparationError",
+        "WORKSPACE_PATH",
+        "model and cfg must be regular files inside the closed workspace",
+      );
+    }
+    return canonicalPath;
+  }
+
+  #canonicalInputs(input: PlannedTlcPrepareInput): { cwd: string; modulePath: string; cfgPath: string } {
+    const cwd = this.#canonicalWorkspace();
+    const modulePath = this.#canonicalWorkspaceFile(cwd, input.modulePath);
+    const cfgPath = this.#canonicalWorkspaceFile(cwd, input.cfgPath);
+    return { cwd, modulePath, cfgPath };
+  }
+  #verifyFrozenBytes(
+    input: PlannedTlcPrepareInput,
+    modulePath: string,
+    cfgPath: string,
+  ): void {
+    const model = validateFrozenTlaModelReceipt(input.modelReceipt);
+    if (!model.ok) {
+      toolchainAbort("PreparationError", "MODEL_RECEIPT", model.error.message);
+    }
+    const sameBytes = (actual: Uint8Array, expected: Uint8Array) =>
+      actual.byteLength === expected.byteLength
+      && actual.every((byte, index) => byte === expected[index]);
+    if (
+      !sameBytes(new Uint8Array(readFileSync(modulePath)), model.value.moduleBytes)
+      || !sameBytes(new Uint8Array(readFileSync(cfgPath)), model.value.cfgBytes)
+    ) {
+      toolchainAbort(
+        "PreparationError",
+        "SOURCE_IDENTITY",
+        "model or cfg bytes differ from the frozen receipt",
+      );
+    }
+  }
+
+  #prepareScratch(scratchPath: string): { scratchRoot: string; standardModuleDirectory: string } {
+    const scratchRoot = realpathSync(scratchPath);
+    if (!lstatSync(scratchRoot).isDirectory()) {
+      toolchainAbort("PreparationError", "SCRATCH_PATH", "scratch root must be a directory");
+    }
+    const standardModuleDirectory = join(scratchRoot, ".tlc-stdlib");
+    if (!existsSync(standardModuleDirectory)) {
+      mkdirSync(standardModuleDirectory, { mode: 0o700 });
+    }
+    if (
+      realpathSync(standardModuleDirectory) !== standardModuleDirectory
+      || !lstatSync(standardModuleDirectory).isDirectory()
+      || readdirSync(standardModuleDirectory).length !== 0
+    ) {
+      toolchainAbort(
+        "PreparationError",
+        "STDLIB_ORIGIN",
+        "planned standard-module directory is unsafe or not empty",
+      );
+    }
+    return { scratchRoot, standardModuleDirectory };
+  }
+
+  async prepare(
+    input: PlannedTlcPrepareInput,
+  ): Promise<Result<PreparedPlannedTlcRun, TlcToolchainError>> {
+    try {
+      this.artifacts.verifyIssuedArtifact(input.artifact);
+      const { cwd, modulePath, cfgPath } = this.#canonicalInputs(input);
+      this.#verifyFrozenBytes(input, modulePath, cfgPath);
+      const { scratchRoot, standardModuleDirectory } = this.#prepareScratch(
+        input.scratchRoot,
+      );
+      const environmentSnapshot = await input.planner.snapshotEnvironment({
+        runId: input.runId,
+        workspaceRoot: cwd,
+        scratchRoot,
+        jarPath: input.artifact.cachePath,
+        jarSha256: input.artifact.actualSha256,
+        deadlineMs: input.deadlineMs,
+      });
+      if (!environmentSnapshot.ok) return environmentSnapshot;
+      const javaExecutable = environmentSnapshot.value.kind === "DARWIN"
+        ? realpathSync(join(process.env.JAVA_HOME ?? "", "bin", "java"))
+        : "/usr/bin/java";
+      const manifestArgv = Object.freeze([
+        javaExecutable,
+        ...FIXED_JDK_RUN_PROFILE.jvmArgs,
+        `-Djava.io.tmpdir=${standardModuleDirectory}`,
+        "-cp",
+        input.artifact.cachePath,
+        "tlc2.TLC",
+        "-workers",
+        "1",
+        "-tool",
+        "-metadir",
+        join(scratchRoot, "states"),
+        "-config",
+        cfgPath,
+        modulePath,
+      ]);
+      const environment = environmentSnapshot.value.kind === "DARWIN"
+        ? Object.freeze({
+            JAVA_HOME: realpathSync(process.env.JAVA_HOME ?? ""),
+            LANG: "en_US.UTF-8" as const,
+            LC_ALL: "en_US.UTF-8" as const,
+            TZ: "UTC" as const,
+          })
+        : Object.freeze({
+            LANG: "en_US.UTF-8",
+            LC_ALL: "en_US.UTF-8",
+            TZ: "UTC",
+          });
+      const prepared: PreparedPlannedTlcRun = Object.freeze({
+        artifact: input.artifact,
+        modelReceipt: input.modelReceipt,
+        modulePath,
+        cfgPath,
+        cwd,
+        standardModuleDirectory,
+        scratchRoot,
+        deadlineMs: input.deadlineMs,
+        manifestArgv,
+        planner: input.planner,
+        environmentSnapshot: environmentSnapshot.value,
+        environment,
+      });
+      this.#issued.add(prepared);
+      return { ok: true, value: prepared };
+    } catch (cause) {
+      return {
+        ok: false,
+        error: cause instanceof ToolchainFailure
+          ? cause.value
+          : {
+              kind: "PreparationError",
+              code: "FILESYSTEM",
+              message: "planned TLC runtime preparation failed",
+              cause: String(cause),
+            },
+      };
+    }
+  }
+
+  #verifySourceIdentities(
+    prepared: PreparedPlannedTlcRun,
+    kind: "InvocationError" | "NormalizationError",
+  ): void {
+    for (const [path, identity, domain] of [
+      [prepared.modulePath, prepared.modelReceipt.moduleBytesIdentity, "amadeus.formal-verif.tla.module.v1"],
+      [prepared.cfgPath, prepared.modelReceipt.cfgBytesIdentity, "amadeus.formal-verif.tla.cfg.v1"],
+    ] as const) {
+      if (
+        realpathSync(path) !== path
+        || !pathInside(prepared.cwd, path)
+        || sourceIdentity(path, domain, kind) !== identity
+      ) {
+        toolchainAbort(kind, "SOURCE_DRIFT", "model or cfg changed across the process seam");
+      }
+    }
+  }
+
+  #parseExploration(
+    prepared: PreparedPlannedTlcRun,
+    raw: RawTlcOutcome,
+  ): TlcExploration {
+    if (raw.outputLimitExceeded) {
+      return {
+        kind: "HARNESS_ERROR",
+        reason: "OUTPUT_CAPACITY",
+        detail: "TLC stdout or stderr exceeded 16 MiB",
+      };
+    }
+    if (raw.stderrChunks.some((chunk) => chunk.byteLength > 0)) {
+      return {
+        kind: "HARNESS_ERROR",
+        reason: "GRAMMAR",
+        detail: "TLC stderr was not empty",
+      };
+    }
+    return parseTlcOutput174({
+      chunks: [...raw.stdoutChunks],
+      exitCode: raw.exitCode,
+      signal: raw.signal,
+      timedOut: raw.timedOut,
+      expectedModuleName: basename(prepared.modulePath, ".tla"),
+      expectedModulePath: prepared.modulePath,
+      expectedStandardModuleDirectory: prepared.standardModuleDirectory,
+      verifiedArtifactDescriptorIdentity: prepared.artifact.descriptorIdentity,
+      modelReceipt: prepared.modelReceipt,
+    });
+  }
+
+  async run(
+    prepared: PreparedPlannedTlcRun,
+  ): Promise<Result<PlannedTlcOutcome, TlcToolchainError>> {
+    if (!this.#issued.has(prepared)) {
+      return {
+        ok: false,
+        error: {
+          kind: "InvocationError",
+          code: "CAPABILITY",
+          message: "planned run was not issued by this toolchain instance",
+        },
+      };
+    }
+    try {
+      this.artifacts.verifyIssuedArtifact(prepared.artifact, "InvocationError");
+      this.#verifySourceIdentities(prepared, "InvocationError");
+      const receipt = await prepared.planner.verifyEnvironment(
+        prepared.environmentSnapshot,
+      );
+      if (!receipt.ok) return receipt;
+      const processes = this.dependencies.process;
+      if (!processes) {
+        return {
+          ok: false,
+          error: {
+            kind: "InvocationError",
+            code: "UNAVAILABLE",
+            message: "runtime process execution is unavailable",
+          },
+        };
+      }
+      const argv = prepared.planner.buildArgv(prepared.manifestArgv);
+      if (argv.length === 0 || !isAbsolute(argv[0]!)) {
+        toolchainAbort(
+          "InvocationError",
+          "ARGV",
+          "planner must return an absolute shell-free executable",
+        );
+      }
+      const raw = await this.#execute(
+        processes,
+        argv,
+        prepared.scratchRoot,
+        prepared.environment,
+        prepared.deadlineMs,
+      );
+      if (!raw.ok) return raw;
+      this.#verifySourceIdentities(prepared, "NormalizationError");
+      const exploration = this.#parseExploration(prepared, raw.value);
+      return {
+        ok: true,
+        value: {
+          raw: raw.value,
+          exploration,
+          environmentReceipt: receipt.value,
+        },
+      };
+    } catch (cause) {
+      return {
+        ok: false,
+        error: cause instanceof ToolchainFailure
+          ? cause.value
+          : {
+              kind: "InvocationError",
+              code: "PROCESS",
+              message: "planned TLC process failed",
+              cause: String(cause),
+            },
+      };
+    }
+  }
+
+  async #execute(
+    processes: TlcProcessPort,
+    argv: readonly string[],
+    cwd: string,
+    environment: TlcProcessRequest["environment"],
+    requestedDeadlineMs: number,
+  ): Promise<Result<RawTlcOutcome, TlcToolchainError>> {
+    const publishReserveMs = this.dependencies.evidencePublishReserveMs ?? 5_000;
+    const suiteRemainingMs = this.dependencies.suiteRemainingMs?.() ?? requestedDeadlineMs + publishReserveMs;
+    const duration = Math.min(
+      requestedDeadlineMs,
+      suiteRemainingMs - publishReserveMs,
+      120_000,
+    );
+    if (!Number.isSafeInteger(duration) || duration <= 0) {
+      return {
+        ok: false,
+        error: {
+          kind: "InvocationError",
+          code: "DEADLINE",
+          message: "suite deadline cannot preserve the evidence publish reserve",
+        },
+      };
+    }
+    let child: TlcChildProcessPort;
+    try {
+      child = processes.spawn({
+        argv,
+        cwd,
+        environment,
+        shell: false,
+        processGroup: true,
+      });
+    } catch (cause) {
+      return {
+        ok: false,
+        error: {
+          kind: "InvocationError",
+          code: "SPAWN",
+          message: "planned TLC process did not spawn",
+          cause: String(cause),
+        },
+      };
+    }
+    const startedAtMs = this.dependencies.clock.nowMs();
+    let outputLimitExceeded = false;
+    let signalLimit!: () => void;
+    const limit = new Promise<void>((resolveLimit) => {
+      signalLimit = resolveLimit;
+    });
+    const collect = async (stream: AsyncIterable<Uint8Array>) => {
+      const chunks: Uint8Array[] = [];
+      let total = 0;
+      for await (const source of stream) {
+        if (!(source instanceof Uint8Array)) {
+          throw new Error("child process yielded a non-byte stream chunk");
+        }
+        const remaining = MAX_TLC_STREAM_BYTES - total;
+        if (source.byteLength > remaining) {
+          if (remaining > 0) chunks.push(new Uint8Array(source.subarray(0, remaining)));
+          outputLimitExceeded = true;
+          signalLimit();
+          break;
+        }
+        chunks.push(new Uint8Array(source));
+        total += source.byteLength;
+      }
+      return chunks;
+    };
+    const streams = Promise.all([collect(child.stdout), collect(child.stderr)]);
+    const status = child.wait();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const deadline = this.dependencies.timer
+      ? this.dependencies.timer.wait(duration)
+      : new Promise<void>((resolveDeadline) => {
+          timer = setTimeout(resolveDeadline, duration);
+        });
+    try {
+      const first = await Promise.race([
+        status.then((value) => ({ kind: "EXIT" as const, value })),
+        deadline.then(() => ({ kind: "TIMEOUT" as const })),
+        limit.then(() => ({ kind: "OUTPUT" as const })),
+      ]);
+      let finalStatus: TlcProcessStatus;
+      if (first.kind === "EXIT") {
+        finalStatus = first.value;
+      } else {
+        try {
+          await child.signalGroup("SIGTERM");
+        } catch {
+          // SIGKILL below remains mandatory.
+        }
+        await child.signalGroup("SIGKILL");
+        finalStatus = await status;
+      }
+      const [stdoutChunks, stderrChunks] = await streams;
+      const raw: RawTlcOutcome = Object.freeze({
+        ...finalStatus,
+        stdoutChunks: Object.freeze(stdoutChunks),
+        stderrChunks: Object.freeze(stderrChunks),
+        stdoutIdentity: hashChunks(stdoutChunks),
+        stderrIdentity: hashChunks(stderrChunks),
+        startedAtMs,
+        finishedAtMs: this.dependencies.clock.nowMs(),
+        timedOut: first.kind === "TIMEOUT",
+        outputLimitExceeded,
+      });
+      return { ok: true, value: raw };
+    } catch (cause) {
+      return {
+        ok: false,
+        error: {
+          kind: "InvocationError",
+          code: "PROCESS_CLEANUP",
+          message: "planned TLC process could not be reaped",
+          cause: String(cause),
+        },
+      };
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
+    }
+  }
+}
+
 export class FsTlcToolchain implements TlcToolchainFacade {
   readonly #artifacts: FsTlcArtifactCache;
   readonly #runtime: FsTlcRuntime;
+  readonly #plannedRuntime: FsPlannedTlcRuntime;
 
   constructor(readonly root: string, dependencies: FsTlcToolchainDependencies) {
     this.#artifacts = new FsTlcArtifactCache(root, dependencies);
     this.#runtime = new FsTlcRuntime(this.#artifacts, dependencies);
+    this.#plannedRuntime = new FsPlannedTlcRuntime(this.#artifacts, dependencies);
   }
 
   acquire() { return this.#artifacts.acquire(); }
@@ -1453,4 +1902,6 @@ export class FsTlcToolchain implements TlcToolchainFacade {
   prepare(input: TlcPrepareInput) { return this.#runtime.prepare(input); }
   run(prepared: PreparedTlcRun) { return this.#runtime.run(prepared); }
   normalize(input: TlcNormalizationInput) { return this.#runtime.normalize(input); }
+  preparePlanned(input: PlannedTlcPrepareInput) { return this.#plannedRuntime.prepare(input); }
+  runPlanned(prepared: PreparedPlannedTlcRun) { return this.#plannedRuntime.run(prepared); }
 }
