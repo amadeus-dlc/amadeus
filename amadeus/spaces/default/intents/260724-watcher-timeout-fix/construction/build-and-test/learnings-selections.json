@@ -1,0 +1,21 @@
+{
+  "stage_slug": "build-and-test",
+  "selections": [
+    {
+      "candidate_id": "wtfbt-c1",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Testing Posture",
+      "text": "Minimal戦略でも、対象がシェル関数・tmux・実FS境界である場合は、孤立mockの新規unit testより承認済みNFR経路を直接観測できる既存integration seamを要件駆動の最小検証集合として実行する。",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "wtfbt-c3",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Testing Posture",
+      "text": "長い本番タイムアウトの性能要件は、同じ制御経路を通る短縮可能なタイミングシームとラウンド数検証で構成要素を決定的に確認できる場合、実時間待機よりその検証を優先する。",
+      "source": "orchestrator"
+    }
+  ]
+}

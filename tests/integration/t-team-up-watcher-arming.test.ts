@@ -91,6 +91,18 @@ function armAll(readyDir: string) {
   for (const role of ROLES) writeFileSync(sentinel(readyDir, role), "");
 }
 
+// Drop the WATCHER_* budget overrides from a fixture env so the canonical
+// defaults resolve at source time (WATCHER_READY_TIMEOUT=90, WATCHER_RESEND_MAX=1).
+// Used by the Issue #1449 budget tests that assert the shipped defaults rather
+// than a test-pinned value.
+function envSansBudget(env: Record<string, string>): Record<string, string> {
+  const { WATCHER_READY_TIMEOUT: _t, WATCHER_RESEND_MAX: _r, ...rest } = env;
+  return rest;
+}
+function countOccurrences(haystack: string, needle: string): number {
+  return haystack.split(needle).length - 1;
+}
+
 // Source team-up.sh in library mode (TEAM_UP_LIB_ONLY=1) and run a snippet with
 // the verification globals pinned to the fixture. `set --` clears the args so
 // team-up.sh does not parse the bash -c positionals as its own flags.
@@ -192,6 +204,65 @@ describe("team-up watcher arming — verify_watchers_armed", () => {
         `RUNTIME=${runtime}; MSG_BACKEND=${backend}; if watcher_verification_applies; then echo yes; else echo no; fi`,
       );
       expect(result.stdout.toString().trim(), `${runtime}/${backend}`).toBe(expected ? "yes" : "no");
+    }
+  });
+});
+
+// Issue #1449: the worst-case attach block was 3 poll rounds (270s at the 90s
+// per-wait default). Election E-WTFRA1 = C cut the re-send budget from 2 to 1,
+// making the loop symmetric with agmsg spawn.sh's single-wait design: one wait,
+// one re-send, one more wait — 2 rounds, 180s worst-case — while still recovering
+// the #1384 TUI cold-start prompt drop.
+describe("team-up watcher arming — Issue #1449 re-send budget", () => {
+  // NFR-1c: the per-wait timeout default stays grounded on agmsg spawn.sh:132
+  // (READY_TIMEOUT=90). Asserted as a lightweight default-resolution check, not a
+  // real 90s wait — the value is read straight off the sourced constant.
+  test("WATCHER_READY_TIMEOUT defaults to 90 (spawn.sh:132 grounding, NFR-1c)", () => {
+    const fx = createFixture();
+    const result = runLib(envSansBudget(fx.env), `printf '%s' "$WATCHER_READY_TIMEOUT"`);
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+    expect(result.stdout.toString().trim()).toBe("90");
+  });
+
+  // NFR-1a (falling proof surface): the shipped re-send default is 1, so
+  // max_attempts = WATCHER_RESEND_MAX + 1 = 2 rounds. Pre-fix this constant was 2
+  // (3 rounds / 270s); reverting team-up.sh's default turns this assertion red.
+  test("WATCHER_RESEND_MAX defaults to 1 — 2 rounds / 180s worst-case (NFR-1a)", () => {
+    const fx = createFixture();
+    const result = runLib(envSansBudget(fx.env), `printf '%s' "$WATCHER_RESEND_MAX"`);
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+    expect(result.stdout.toString().trim()).toBe("1");
+  });
+
+  // NFR-1a (behavioural corroboration): at the default budget, members that never
+  // arm are re-sent exactly ONCE (a single re-send round), so the send log holds
+  // exactly one send-text per member. Pre-fix (default 2) this would be two.
+  test("never-arm re-sends exactly once at the default budget (NFR-1a round count)", () => {
+    const fx = createFixture();
+    // Keep the per-wait at 0 so the poll rounds do not sleep, but let the re-send
+    // budget resolve to the shipped default (1) rather than the fixture's pin.
+    const env = { ...envSansBudget(fx.env), WATCHER_READY_TIMEOUT: "0", FAKE_RESEND_ARMS: "0" };
+    const result = runLib(env, `verify_watchers_armed`);
+    expect(result.exitCode).not.toBe(0);
+    const log = existsSync(fx.sendLog) ? readFileSync(fx.sendLog, "utf8") : "";
+    // One re-send round: exactly one send-text per member (3 members), never two.
+    for (const role of ROLES) {
+      expect(countOccurrences(log, `send-text ${role}`), `send-text ${role}`).toBe(1);
+    }
+    expect(countOccurrences(log, "send-text ")).toBe(ROLES.length);
+  });
+
+  // NFR-1b: cutting the budget to a single re-send must not regress the #1384
+  // recovery path — a member that arms only after ONE re-send still passes.
+  test("a member armed after a single re-send still recovers (NFR-1b, resend=1)", () => {
+    const fx = createFixture();
+    const env = { ...fx.env, WATCHER_RESEND_MAX: "1", FAKE_RESEND_ARMS: "1" };
+    const result = runLib(env, `verify_watchers_armed`);
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+    const log = readFileSync(fx.sendLog, "utf8");
+    for (const role of ROLES) {
+      expect(log).toContain(`send-text ${role}`);
+      expect(log).toContain(`send-keys ${role} enter`);
     }
   });
 });

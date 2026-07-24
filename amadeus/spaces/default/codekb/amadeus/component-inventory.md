@@ -1,5 +1,22 @@
 # コンポーネント棚卸し
 
+## Team Mode watcher arming 検証コンポーネント（260724-watcher-timeout-fix、2026-07-24、現在）
+
+差分リフレッシュ（base `a81c11dde` → observed HEAD `6d4df9056`、距離 155、amadeus-bugfix / Minimal、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)）。測定 ref: observed HEAD `6d4df9056` 実ファイル直読。すべて `packages/framework/core/tools/team-up.sh` 内（区間内 #1391 で導入、#1421 で packages 昇格 + 配布 11 コピー）。
+
+| コンポーネント | 場所（file:line） | 役割 / #1449 での関与 |
+| --- | --- | --- |
+| `WATCHER_READY_TIMEOUT` | team-up.sh:101 | per-wait タイムアウト定数（既定 90 秒、env 上書き可）。`spawn.sh:132 READY_TIMEOUT=90` 接地。#1449 のブロッキング時間の第 1 因子 |
+| `WATCHER_RESEND_MAX` | team-up.sh:104 | monitor prompt 再送上限（既定 2、dispatch-ack-required 接地）。worst-case を ×(2+1) に増幅する第 2 因子 |
+| `watcher_verification_applies` | team-up.sh:1067-1069 | claude + agmsg のみ検証発火のガード |
+| `ready_sentinel_path` | team-up.sh:1078-1085 | agmsg `agmsg_ready_path` を subshell source で解決（NFR-4、path 二重定義回避） |
+| `resolve_member_pane` | team-up.sh:1093-1105 | `herdr agent list` から member ラベルで pane id 抽出 |
+| `resend_monitor_prompt` | team-up.sh:1110-1115 | herdr send-text → send-keys enter の 2 段送信 |
+| `clear_stale_watcher_sentinels` | team-up.sh:1122-1129 | pane 起動前の旧 sentinel 除去（spawn.sh:572 対称） |
+| `verify_watchers_armed` | team-up.sh:1139-1178 | **#1449 の核心**。再送 ×3 × 90 秒ポーリングの二重ループ。全員 armed で 0、未 armed で非ゼロ + 復旧案内 |
+| 呼び出し元（launch シーケンス） | team-up.sh:1442-1445 | `mux_attach`（:1448）の**前**で `verify_watchers_armed` を無条件同期実行 → attach ブロック |
+| `t-team-up-watcher-arming.test.ts` | tests/integration/（197 行、新規） | seam 3 + `verify_watchers_armed` 4 テスト。`TEAM_UP_LIB_ONLY=1` source 駆動、`WATCHER_READY_TIMEOUT: "0"`（:79）でタイミング無被覆 |
+
 ## t241 CI-residency 関連コンポーネント（260723-t241-ci-residency、2026-07-23、履歴）
 
 差分リフレッシュ（base `a81c11dde` → observed `78bce876`、距離 35、bugfix / Minimal、[#1294](https://github.com/amadeus-dlc/amadeus/issues/1294)）。本バグ面は base..HEAD 無変更（numstat 0 行）、欠陥は 260718-election-ts-foundation（#1235）由来。測定 ref: scan-notes @ observed HEAD `78bce876`。

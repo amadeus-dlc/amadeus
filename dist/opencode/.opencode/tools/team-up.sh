@@ -92,6 +92,13 @@ require_prerequisites() {
 # that time out. Constants mirror agmsg's own spawn.sh so no new magic numbers
 # are minted.
 #
+# Worst-case budget (Issue #1449): this verification runs synchronously before
+# mux_attach, so an unarmed member blocks the user's attach for the whole poll
+# budget. To stay close to agmsg spawn.sh (:576-588, a single bounded wait with
+# no re-send loop) while still recovering the #1384 prompt drop, we keep exactly
+# ONE re-send: a single wait, one re-send, one more wait — 2 rounds, worst-case
+# 2 * WATCHER_READY_TIMEOUT = 180s (down from the earlier 3-round / 270s).
+#
 # Single source for the bootstrap prompt: consumed at launch (claude_member_cmd)
 # and on re-send (resend_monitor_prompt).
 CLAUDE_MONITOR_PROMPT="/agmsg mode monitor"
@@ -99,9 +106,12 @@ CLAUDE_MONITOR_PROMPT="/agmsg mode monitor"
 # / giving up. Mirrors agmsg spawn.sh:132 `READY_TIMEOUT=90` (per-wait, not a
 # whole-run budget).
 WATCHER_READY_TIMEOUT="${WATCHER_READY_TIMEOUT:-90}"
-# Max monitor-prompt re-sends, mirroring the agmsg ack retry ceiling
-# (dispatch-ack-required: at most 2 resends before escalating).
-WATCHER_RESEND_MAX="${WATCHER_RESEND_MAX:-2}"
+# Max monitor-prompt re-sends. One re-send (2 poll rounds total) is the minimum
+# that still recovers the #1384 TUI cold-start prompt drop while staying
+# symmetric with agmsg spawn.sh's single-wait design — a second re-send only
+# stretched the worst-case attach block to 270s without covering a new failure
+# mode (Issue #1449, election E-WTFRA1 = C).
+WATCHER_RESEND_MAX="${WATCHER_RESEND_MAX:-1}"
 # agmsg's actas-lock.sh owns the canonical ready-sentinel path + name encoding.
 # We source it and call agmsg_ready_path rather than duplicating the path string
 # here (NFR-4). Overridable so tests can point at a self-contained stub.
@@ -1132,10 +1142,12 @@ clear_stale_watcher_sentinels() {
 # prompt to any that miss the per-wait deadline, up to WATCHER_RESEND_MAX times.
 # A single shared bounded poll per round (all members at once, not per-member
 # serial) keeps the total wait at ~WATCHER_READY_TIMEOUT * (WATCHER_RESEND_MAX+1)
-# instead of the sum of per-member waits (FR-3). Members already armed (sentinel
-# present — e.g. a --continue member that reconnected fast) are skipped, so the
-# re-send is idempotent (FR-7). Returns 0 iff every member is armed; non-zero
-# with a warning + recovery guidance otherwise (FR-5, no silent success).
+# — with the defaults (90s, 1 re-send) that is 2 rounds / 180s worst-case
+# (Issue #1449) — instead of the sum of per-member waits (FR-3). Members already
+# armed (sentinel present — e.g. a --continue member that reconnected fast) are
+# skipped, so the re-send is idempotent (FR-7). Returns 0 iff every member is
+# armed; non-zero with a warning + recovery guidance otherwise (FR-5, no silent
+# success).
 verify_watchers_armed() {
   local m role sentinel pane
   local max_attempts=$(( WATCHER_RESEND_MAX + 1 ))

@@ -21,6 +21,8 @@
 - filesystem/process を使う medium test は unit allowlist を増やさず integration suite に置く。test-size classification ratchet を設計上の配置根拠とする (learned 2026-07-23) <!-- cid:code-generation:c2-doctor-seam -->
 - 並列負荷下の child watcher は固定回数 polling や本番 injection ではなく READY/START handshake と期限付き kill/reap を使う。起動遅延と孤児 process の両方を制御できる (learned 2026-07-23) <!-- cid:code-generation:c3-doctor-seam -->
 - 対象変更の security regression と repository 全体の dependency audit を別判定にする。対象 tests が green でも既存 High advisory は隠さず conditional readiness とし、範囲外の依存更新は別作業へ送る (learned 2026-07-23) <!-- cid:build-and-test:c1-doctor-seam -->
+- Minimal戦略でも、対象がシェル関数・tmux・実FS境界である場合は、孤立mockの新規unit testより承認済みNFR経路を直接観測できる既存integration seamを要件駆動の最小検証集合として実行する。 (learned 2026-07-24) <!-- cid:build-and-test:wtfbt-c1 -->
+- 長い本番タイムアウトの性能要件は、同じ制御経路を通る短縮可能なタイミングシームとラウンド数検証で構成要素を決定的に確認できる場合、実時間待機よりその検証を優先する。 (learned 2026-07-24) <!-- cid:build-and-test:wtfbt-c3 -->
 - 既存 workflow へ新しいトリガーを追加する設計では、event 固有値の欠落を実行環境で再現し、既存ジョブのハード失敗と依存ジョブへの伝播を確認してから最小分岐を設計する (learned 2026-07-23) <!-- cid:functional-design:c1 -->
 ## Deployment
 
@@ -168,6 +170,8 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - 配布・公式化系 intent のスコープ判断は、配布パイプラインへの乗せやすさ(作り手都合の段階昇格)ではなく、利用者体験の最小実行可能単位から逆算する — 単体では利用者が実行可能な体験を持たないコンポーネント(例: 投票者不在の選挙 CLI)だけを先行配布しても公式化の価値はゼロ。実測: 260722-election-core-promotion intent-capture Q3 でユーザー逆質問「A,Bだけ提供して何になるのか」が conductor の段階昇格案(選挙エンジン単独)を覆し、チーム機能一式(起動/メッセージング/選挙/docs)へスコープ確定(2026-07-23 ユーザー直接裁定) (learned 2026-07-22) <!-- cid:intent-capture:ux-first-scope-for-distribution-intents -->
 - Issue の起票時前提を現行仕様とはみなさず再実測する。`handleDoctor` は既に export され複数テストが直接呼び出しているため「本体全行が常に LCOV 非計測」は失効したが、正式な戻り値 seam と cwd/env/cache の明示依存化は未実装と解釈した (learned 2026-07-23) <!-- cid:reverse-engineering:c1-857 -->
 - process-global 依存の除去は公開関数だけでなく配下 helper の call tree 全体を対象にする。resolver 後に env・platform・時刻を変えても同じ context の結果が不変であることを検証する (learned 2026-07-23) <!-- cid:code-generation:c1-doctor-seam -->
+- requirements 未解決事項(WATCHER_RESEND_MAX を 2→1 にするか vs ループ構造撤去)は「既定値のみ 2→1、ループ構造は保持」を選択する。NFR-2(90秒接地)と NFR-1b(再送1回での回復力)を満たしつつ env タイミングシームを保つため。 (learned 2026-07-24) <!-- cid:code-generation:wtfcg-c1 -->
+- 純単発(1ラウンド=90秒)でなく1回再送(2ラウンド=180秒)を採用する。worst-case 短縮と #1384 回復力保持のトレードオフで、選挙 E-WTFRA1=C の複数留保(e3/e5/e2)が支持した中庸。 (learned 2026-07-24) <!-- cid:code-generation:wtfcg-c5 -->
 - 専門技法(TLA+等の形式手法)を題材にする intent の質問対話では、判断質問より先に「技法と題材の関係」の背景説明で共有理解を作ってから決定を諮る — 260722-tla-plugin intent-capture Q5 で明確化対話2回(運用モード非依存性・選挙=実験題材)を要した実測より (learned 2026-07-22) (learned 2026-07-22) <!-- cid:intent-capture:c3 -->
 - 実験・PoC 構成を常設化する intent の feasibility では、実験時の環境制約(ランナーOS・隔離機構等)を「実験の都合」か「本質的要件」かに分類してから引き継ぐ — 惰性引き継ぎは要件の過大評価を生む。260722-tla-plugin で sandbox-exec(ローカル隔離手段)を CI 要件と誤提示し、ユーザー却下(GitHub ランナー自体が隔離環境、CI は Linux + Docker digest固定)で是正した実測より (learned 2026-07-22) (learned 2026-07-22) <!-- cid:feasibility:c5-experiment-constraint-classify -->
 - practices-discovery で「変更なし」の場合、discovered-rules.md の ## Mandated / ## Forbidden は完全な空セクションにする — 注記行(「追加なし」等)は practices-promote の書式契約(ALWAYS/NEVER 前置必須)に fail-closed 拒否される。注記は別セクションへ置く(260722-tla-plugin で拒否→是正の実測) (learned 2026-07-22) (learned 2026-07-22) <!-- cid:practices-discovery:c3-empty-rules-format -->

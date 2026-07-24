@@ -1,5 +1,7 @@
 # ビジネス概要
 
+> **2026-07-24（intent `260724-watcher-timeout-fix`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み。** Team Mode ランチャー `team-up.sh` の watcher arming 検証が mux_attach を最大 270 秒ブロックする性能問題で、業務ドメイン（AI-DLC 自己ホスト開発）に構造変化なし（base `a81c11dde` → observed `6d4df9056`）。
+
 ## 260723-t241-ci-residency の業務境界（履歴: 2026-07-23）
 
 差分リフレッシュ（base `a81c11dde` → observed `78bce876`、距離 35、bugfix / Minimal、[#1294](https://github.com/amadeus-dlc/amadeus/issues/1294)）。業務ドメイン（AI-DLC 自己ホスト開発）に構造変化なし。本 intent は自動 CI のテスト tier 契約に閉じたテスト配置の欠陥修正で、`tests/e2e/t241` の「CI-resident」表明を実行実態（`--ci` は e2e 非実行）へ整合させる範囲（測定 ref: scan-notes @ observed HEAD `78bce876`）。
