@@ -8684,3 +8684,11 @@
 **Message**: The Minor note addressing the ADR alternatives-count concern is present and reasonable. The design does not contradict the caching semantics — `harnessDir()` reads `AMADEUS_HARNESS_DIR` fresh on every
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-24T12:48:56Z
+**Event**: WORKFLOW_PARKED
+**Stage**: application-design
+**Timestamp**: 2026-07-24T12:48:56Z
+
+---
