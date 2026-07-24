@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TLACG13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "候補3を完全不採用(0件扱い)にはしない — novel増分(orthogonality実diff検証後の再pin手順)は保存価値がある。ただし独立cidでなくtwo-layer-verification-postureへの1行追補として persist することを推奨(norm-consistency-review=重複cid回避)。候補1が harness-tools-placement の同形拡張に見える点も留保として記録するが、不変条件(0-plugin recompile-idempotence)とドメイン(plugin stage投影)が distinct なため独立cid採用を支持する。",
+  "rationale": "#1456を私がレビューした実測文脈で3候補の novelty を memory層grepで確認。採否: 候補1=採用(cid:code-generation:harness-tools-placement が『compile可視ツリー投影の構造的漏出』の同形を扱うが、候補1の不変条件=0-plugin byte-identical/recompile-idempotence(t110/t88)とドメイン=plugin stage投影は distinct な新機構でnovel)。候補2=採用(該当既存cidなし。gate-false-not-presence-exempt等はいずれも別事象。転用可能な核『集合の空性を鍵にした免除は正当メンバーが空でないことをassertしないと無音拡大する』=symmetric-pair-review系のレビュー原則としてnovel)。候補3=採用するが独立cidでなく追補として(cid:build-and-test:two-layer-verification-posture『TLCは並行プロトコルのspec変更時のみ』+cid:requirements-analysis:external-status-triage『因果を実測確定してから是正』の応用/系。novel増分は『sha256 drift-guardが無関係変更で発火→orthogonalityを実diff検証(状態機械/ballot/tally/GoA非接触)→再pin、isolated TLC再実行不要』の手順のみで、two-layer-verification-postureへの1行追補が適切)。よって『3候補とも独立novel cidとして採用』(選択肢1)ではなく選択肢2。",
+  "submittedAt": "2026-07-24T16:10:00Z"
+}

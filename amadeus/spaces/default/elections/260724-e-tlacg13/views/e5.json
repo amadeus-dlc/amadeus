@@ -1,0 +1,21 @@
+{
+  "electionId": "E-TLACG13",
+  "voter": "e5",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "一部のみ採用(note に候補ごとの採否と根拠=既存cidカバー等を明記)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "3候補とも採用(提案通り、いずれも novel な学習として memory 層へ persist)"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 3,
+      "label": "0件(3候補とも既存cidでカバー済み、新規persist不要)"
+    }
+  ]
+}

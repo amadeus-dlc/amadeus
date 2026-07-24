@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TLACG13",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "採用に同意するが persist 時に2点: (a)cand3(drift-guard re-pin)は関連する two-layer-verification-posture(team.md:303)へ明示相互参照する — 当該cidは『いつTLC実行するか』を定めdrift-guard誤検知処理は未収載なので novel だが近接。(b)cand2(--single scopes空免除)は emitSingleRunStage 等の機構をfile:line引用で書き、コード真実源とのdrift耐性を持たせる。",
+  "rationale": "memory層(team.md/project.md)をgrepし3候補の同等cid不在=noveltyを確認: cand1(plugin neutral-bundle/0-plugin recompile-idempotence)=0 hit、cand2(--single scopes免除/emitSingleRunStage)=0 hit、cand3(drift-guard SOURCE_DRIFT re-pin)=two-layer-verification-posture(team.md:303)が近接するが『TLC発動条件』のみでdrift-guard誤検知処理は非収載。3候補とも実装/運用の novel な学習で、既存cidの機械的重複でない。E-TLAU2 A裁定(intent固有)の一般原則化(cand1)も妥当。",
+  "submittedAt": "2026-07-24T16:03:59Z"
+}

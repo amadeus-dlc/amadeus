@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HPUGS13",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "s13-candidates.md(units-generation)の2候補の不採用理由を実測裏取り。候補1(edge block キー名 `- name:`): parseUnitsBlock(amadeus-lib.ts)が /^\\s*-\\s+name\\s*:/ 正規表現で `- name:` を定義しており、キー名の正解はコードが唯一の真実源。prose化はdriftリスクでconstruction.md『canonical 1定義から導出』原則に沿って不採用が正しく、cid:units-generation:per-unit-loop-activation(project.md実在、units/depends_on fenced yaml必須をカバー)の運用詳細の範囲。required-sensorが正しく捕捉した好例。候補2(services.md装飾トークン): cid:code-generation:artifact-upstream-inputs-header(project.md実在、参照実体のない装飾トークン禁止)+body-derivation-before-headerでカバー済み。両候補とも既存cidの射程内で新規性なし。0件提案は妥当。",
+  "submittedAt": "2026-07-24T13:30:00Z"
+}

@@ -164,3 +164,15 @@
 **User Input**: 常任グラント504d1102(scope=stage-gates)適用によるdelegate発行。application-design 5成果物+architecture-reviewer READY iteration2(2 Major是正)+センサー全PASS確認済み(e5報告)。
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-24T16:15:02Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: units-generation
+**Issuer Space**: default
+**Issuer Intent**: 260724-watcher-timeout-fix
+**Issuer Shard**: j5ik2o-mac-studio-lan-3b04f3030d0e.md
+**Issuer Human Ts**: 2026-07-24T16:13:25Z
+**User Input**: units-generation approve: §13 E-HPUGS13=0件(5-0)成立、architecture-reviewer iter2 READY、edge block+bolt_dag非null、センサー全PASS。leader実HUMAN_TURN由来。
+
+---

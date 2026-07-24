@@ -1,0 +1,60 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-HPUGS13",
+      "voter": "e3",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": null,
+      "submittedAt": "2026-07-24T13:23:35Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HPUGS13",
+      "voter": "e2",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "s13-candidates.md(units-generation, harness-provenance)実測+引用2cidの実在確認(per-unit-loop-activation・artifact-upstream-inputs-header、両方project.md)。候補1(edge block キー名 - name:)=per-unit-loop-activation運用詳細+コードが唯一真実源ゆえprose化はdriftリスク、候補2(services.md装飾トークン)=artifact-upstream-inputs-header+body-derivation-before-headerでカバー済み。0件提案妥当。",
+      "submittedAt": "2026-07-24T13:24:52Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HPUGS13",
+      "voter": "e4",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "s13-candidates.md(units-generation)の2候補の不採用理由を実測裏取り。候補1(edge block キー名 `- name:`): parseUnitsBlock(amadeus-lib.ts)が /^\\s*-\\s+name\\s*:/ 正規表現で `- name:` を定義しており、キー名の正解はコードが唯一の真実源。prose化はdriftリスクでconstruction.md『canonical 1定義から導出』原則に沿って不採用が正しく、cid:units-generation:per-unit-loop-activation(project.md実在、units/depends_on fenced yaml必須をカバー)の運用詳細の範囲。required-sensorが正しく捕捉した好例。候補2(services.md装飾トークン): cid:code-generation:artifact-upstream-inputs-header(project.md実在、参照実体のない装飾トークン禁止)+body-derivation-before-headerでカバー済み。両候補とも既存cidの射程内で新規性なし。0件提案は妥当。",
+      "submittedAt": "2026-07-24T13:30:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HPUGS13",
+      "voter": "e6",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "実測確認: 不採用2候補の参照cidはmemory層に実在 — per-unit-loop-activation(project.md:118)・artifact-upstream-inputs-header(project.md:130)。両候補とも記述が既存cidと整合し新規性なし。",
+      "submittedAt": "2026-07-24T13:28:57Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-HPUGS13",
+      "voter": "e1",
+      "voterKind": "member",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "0件で可。引用2 cid の memory 実在を実測: cid:units-generation:per-unit-loop-activation と cid:code-generation:artifact-upstream-inputs-header はいずれも project.md に実在(grep -l 確認)。候補1(edge block キー units/depends_on 運用)は per-unit-loop-activation でカバー、候補2(上流ヘッダ装飾トークン回避)は artifact-upstream-inputs-header でカバー。新規ノルム化 novelty なし。留保なし。",
+      "submittedAt": "2026-07-24T16:13:39Z"
+    }
+  ],
+  "late": []
+}
