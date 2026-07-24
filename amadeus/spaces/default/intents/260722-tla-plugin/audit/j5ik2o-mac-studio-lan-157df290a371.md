@@ -14541,3 +14541,179 @@
 **Context**: construction > ci-integration > code-generation > code-generation-plan.md
 
 ---
+
+## Decision Recorded
+**Timestamp**: 2026-07-24T07:08:30Z
+**Event**: DECISION_RECORDED
+**Stage**: code-generation
+**Decision**: 正式受入で判明したTLC標準モジュールパス束縛の修正方針
+**Options**: 1:パーサーを実測済みscratch rootへ束縛して再受入,2:Docker workdirを.tlc-stdlibへ変更して既存パーサーへ合わせる,3:U4未完了として停止
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-24T07:08:52Z
+**Event**: HUMAN_TURN
+
+---
+
+## Question Answered
+**Timestamp**: 2026-07-24T07:09:11Z
+**Event**: QUESTION_ANSWERED
+**Stage**: code-generation
+**Details**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T07:09:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0329e4ab
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/fs-tlc-toolchain.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T07:09:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0329e4ab
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/fs-tlc-toolchain.ts
+**Duration ms**: 1458
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T07:09:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2a43055a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/fs-tlc-toolchain.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T07:09:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2a43055a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/formal-verif/fs-tlc-toolchain.ts
+**Duration ms**: 763
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T07:09:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 76a3d976
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-planned-tlc-runtime.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T07:09:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 76a3d976
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-planned-tlc-runtime.integration.test.ts
+**Duration ms**: 1366
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T07:09:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: a4a7fc4a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-planned-tlc-runtime.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T07:09:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: a4a7fc4a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-planned-tlc-runtime.integration.test.ts
+**Duration ms**: 575
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T07:10:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: fcfa1dce
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-planned-tlc-runtime.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T07:10:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: fcfa1dce
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-planned-tlc-runtime.integration.test.ts
+**Duration ms**: 1356
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-24T07:10:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: f891c73f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-planned-tlc-runtime.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-24T07:10:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: f891c73f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t-formal-verif-planned-tlc-runtime.integration.test.ts
+**Duration ms**: 555
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-24T07:10:55Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/.codex/worktrees/8fc8/amadeus/amadeus/spaces/default/intents/260722-tla-plugin/construction/ci-integration/code-generation/code-generation-plan.md
+**Context**: construction > ci-integration > code-generation > code-generation-plan.md
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-24T07:10:55Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/.codex/worktrees/8fc8/amadeus/amadeus/spaces/default/intents/260722-tla-plugin/construction/ci-integration/code-generation/code-summary.md
+**Context**: construction > ci-integration > code-generation > code-summary.md
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-24T07:10:55Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/.codex/worktrees/8fc8/amadeus/amadeus/spaces/default/intents/260722-tla-plugin/construction/code-generation/memory.md
+**Context**: construction > code-generation > memory.md
+
+---

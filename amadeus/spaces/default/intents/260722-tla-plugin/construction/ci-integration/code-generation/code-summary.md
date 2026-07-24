@@ -45,9 +45,17 @@ U4 のローカル実装と検証を完了した。通常の push / pull request
 - Cleanup: exact container名を検査し、残留0、forced cleanupなし。
 - 判定: CLI 180秒未満とspawn 180秒未満の成立可能性を確認した。診断は1+5回受入の代替ではないため、U4は正式受入完了まで未完了。
 
+## 正式受入の失敗回復
+
+- Run: `https://github.com/amadeus-dlc/amadeus/actions/runs/30074187032`
+- Commit: `e6e96f4ad5f17f90afdefe4225e33ec6b6df56ca`
+- warm-up結果: TLC内部161,085 ms、Docker spawn約161.67秒、5,203,730 generated states、529,692 distinct states、探索深度9、queue 0で完全探索を終了した。
+- 失敗原因: TLCは標準モジュールをrealpath済みscratch root直下から読み込んだと報告したが、planned runtimeは`<scratch>/.tlc-stdlib`だけを許可していたため、正常終了ログを`GRAMMAR`へ誤分類した。
+- 修正: 実行argv、Docker隔離、JVM一時ディレクトリは変更せず、出力正規化の標準モジュール期待パスだけをprepared scratch rootへ束縛した。実runと同じパス形状・状態数・深度を使うintegration testで`COMPLETE`を固定した。
+
 ## 未完了事項と設計上の注意
 
-1. 計画 Step 15 の1 warm-up + 5 measured受入はまだ完走していない。180秒契約を反映したcommitで実 `workflow_dispatch` を再実行し、artifactを回収する必要がある。
+1. 計画 Step 15 の1 warm-up + 5 measured受入はまだ完走していない。標準モジュールパス束縛の修正commitで実 `workflow_dispatch` を再実行し、artifactを回収する必要がある。
 2. Iteration 1で指摘された空stderr契約の衝突は解消済みである。ファイル実在、manifestのbytes / SHA-256一致、16 MiB上限を維持したまま、`tlc-stderr.bin`だけ0 byteを許容する。
 3. 診断commit `d60c99ac3` はpush済みで、GitHub workflow dispatch `30071213275` のartifactを回収済みである。
 
