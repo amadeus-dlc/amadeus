@@ -645,3 +645,42 @@
 **Message**: e2の状況も確認して
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:13:01Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aab8c07dd8f692237
+**Message**: e2の様子見て
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-24T12:13:04Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:13:17Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a4cbd5cb3cfb628de
+**Message**: e2の投票遅延の原因も調べて
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-24T12:14:00Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-24T12:14:07Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a5b85112e5383a1fa
+**Message**: e2の状況確認して
+
+---
