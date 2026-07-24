@@ -41,6 +41,15 @@ const validArgs = [
 ];
 
 describe("Docker trace boundary", () => {
+  test("configureDockerTraceWrapper rejects a non-absolute real-docker path (fail-closed)", () => {
+    const workspace = root();
+    // writeConfiguration's absolute-path guard: a relative real-docker value is a
+    // TypeError, never written.
+    expect(() => configureDockerTraceWrapper(workspace, "relative/docker")).toThrow(
+      "Docker trace configuration must be one absolute path",
+    );
+  });
+
   test("runs from permission-bounded files without ambient trace variables", () => {
     const workspace = root();
     const directory = installDockerTraceWrapper(workspace);

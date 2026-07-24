@@ -163,31 +163,31 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "2931-2933",
+    "lines": "2942-2944",
     "reason": "The --mirror-boundary report parser arm is exercised by generated CLI report journeys in t265 integration; main argv parsing in a spawned process is not LCOV-visible.",
     "expiry": "remove when report argv parsing is exported and driven in-process"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "3153-3163",
+    "lines": "3164-3174",
     "reason": "Invalid mirror report phase/result/answer combinations are exercised through the generated CLI by t265 integration. The error-emitting child process is outside parent LCOV.",
     "expiry": "remove when handleReport receives an injected directive sink"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "3166-3184",
+    "lines": "3177-3195",
     "reason": "Mirror report early returns, active-state resolution, and malformed Receipt handling are covered by generated-CLI report tests in t265 integration; spawned execution is not merged into LCOV.",
     "expiry": "remove when handleReport dependencies and directive sink are injectable"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "3186-3196",
+    "lines": "3197-3207",
     "reason": "Phase mismatch, already-processed/double answer, and unoffered create rejection are covered by generated-CLI t265 integration tests. These child-process branches are not parent-LCOV visible.",
     "expiry": "remove when handleReport dependencies and directive sink are injectable"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "3198-3214",
+    "lines": "3209-3225",
     "reason": "The absent-to-completed state subcommand, its failure handling, and successful run-then-continue directive are exercised by t265 integration and generated-CLI E2E journeys. Spawned subcommands are not LCOV-visible.",
     "expiry": "remove when spawnState and directive emission are injected in-process"
   },
@@ -313,7 +313,7 @@
   },
   {
     "file": "scripts/formal-verif/fs-tlc-toolchain.ts",
-    "lines": "322-353",
+    "lines": "358-393",
     "reason": "Live Node adapter ports (NodeJavaVersionPort java -version, NodeTlcProcessPort process-group spawn) exercised only by the real-toolchain probe outside CI; requires a real JDK/TLC install.",
     "expiry": "remove when a hermetic real-toolchain probe runs in the CI coverage profile"
   },
@@ -457,13 +457,13 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-graph.ts",
-    "lines": "1046",
+    "lines": "1058",
     "reason": "Optional graph snapshot property in validateGrid's multi-line opts type; runtime-erased, bun lcov stamps the type-only line DA:0 even though the injected snapshot path is exercised in-process by t257 (bun-multiline-arg-da0 class).",
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
   },
   {
     "file": "packages/framework/core/tools/amadeus-graph.ts",
-    "lines": "1612-1614",
+    "lines": "1624-1626",
     "reason": "Multi-line optional snapshot parameter type for stageGraphDrift; runtime-erased, bun lcov stamps these type-only lines DA:0 even though t257 drives both injected values in-process (bun-multiline-arg-da0 class).",
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
   },
@@ -478,5 +478,30 @@
     "lines": "748-750",
     "reason": "Multi-line Pick type for hookHeartbeatDoctorCheck's context snapshot; runtime-erased, bun lcov stamps these type-only lines DA:0 even though t226 and t257 drive migration, platform, and swap-target values in-process (bun-multiline-arg-da0 class).",
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
+  },
+  {
+    "file": "scripts/formal-verif/run-model-check.ts",
+    "lines": "70-91",
+    "reason": "createDefaultModelCheckToolchain wires the live Node adapters (NodeTlcProcessPort/NodeArtifactNetworkPort/NodeFileDigestPort/NodePhysicalReservationPort, real OpenJDK) — exercised only by the real-toolchain probe outside CI; requires a real JDK/TLC install."
+  },
+  {
+    "file": "scripts/formal-verif/tlc-spawn-planner.ts",
+    "lines": "128-179",
+    "reason": "NodePlannerEnvironmentPort.inspectDarwin runs the live sandbox-exec / JAVA_HOME / java probe on real Darwin — requires a real JDK, exercised only by the real-toolchain probe outside CI."
+  },
+  {
+    "file": "scripts/formal-verif/node-ci-model-check-port.ts",
+    "lines": "69-70",
+    "reason": "Multi-line fetcher parameter type of a function signature; runtime-erased, bun lcov stamps the type-only continuation lines DA:0 (bun-multiline-arg-da0 class)."
+  },
+  {
+    "file": "scripts/formal-verif/tla-arm.ts",
+    "lines": "442",
+    "reason": "Exhaustive-switch defensive default arm (returns unreachablePipelineError) — structurally unreachable once every named pipeline error code is handled above."
+  },
+  {
+    "file": "scripts/formal-verif/fs-tlc-toolchain.ts",
+    "lines": "1838",
+    "reason": "Real setTimeout deadline branch taken only when no injected timer is present — the live-execution path exercised by the real-toolchain probe outside CI."
   }
 ]

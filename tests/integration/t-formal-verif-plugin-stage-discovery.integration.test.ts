@@ -14,6 +14,7 @@ import { join } from "node:path";
 import {
   compileStageGraph,
   discoverPluginStageFiles,
+  main,
   PluginStageError,
   __resetGraphCache,
 } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
@@ -268,5 +269,58 @@ describe("formal-model-check shipping guard (FR-2.3 / reservation 2)", () => {
       const shippedPluginDir = join(REPO_ROOT, "dist", tree, harnessDir, "plugins", "formal-model-check");
       expect(existsSync(shippedPluginDir), `${tree} must not ship formal-model-check in ${harnessDir}/plugins/`).toBe(false);
     }
+  });
+});
+
+// The amadeus-graph CLI's main() catch emits a PluginStageError as the single
+// line amadeus.plugin-stage-error.v1 JSON, and any other error with the generic
+// `amadeus-graph <cmd>: ...` prefix, both exit 1. bun --coverage does NOT
+// instrument spawned children (bun-coverage-spawn-blindspot), so drive the
+// exported main() IN-PROCESS with console.error + process.exit captured
+// (spawn-blindspot-two-step step i — cover own code, never waiver it).
+describe("amadeus-graph main() error emission (in-process, exit captured)", () => {
+  async function runMain(argv: string[]): Promise<{ errs: string[]; exits: number[] }> {
+    const errs: string[] = [];
+    const exits: number[] = [];
+    const origErr = console.error;
+    const origExit = process.exit;
+    console.error = (...a: unknown[]) => void errs.push(a.map(String).join(" "));
+    // biome-ignore lint/suspicious/noExplicitAny: test stub for process.exit
+    (process as any).exit = (code?: number) => void exits.push(code ?? 0);
+    try {
+      await main(argv);
+    } finally {
+      console.error = origErr;
+      process.exit = origExit;
+    }
+    return { errs, exits };
+  }
+
+  test("a plugin slug colliding with a core stage emits the plugin-stage-error JSON, exit 1", async () => {
+    const host = freshHost();
+    writePluginStage(host, "clash", "code-generation.md", stageMd("code-generation"));
+    setEnv("AMADEUS_PLUGINS_HOST_ROOT", host);
+    __resetGraphCache();
+    const { errs, exits } = await runMain(["compile"]);
+    expect(exits).toContain(1);
+    const parsed = JSON.parse(errs.at(-1) ?? "null");
+    expect(parsed.schema).toBe("amadeus.plugin-stage-error.v1");
+    expect(parsed.code).toBe("SLUG_COLLISION");
+    expect(parsed.slug).toBe("code-generation");
+  });
+
+  test("a non-plugin compile error emits the generic prefixed message, exit 1", async () => {
+    // A malformed stage in the walked tree makes compileStageGraph throw a plain
+    // Error (schema validation), reported via the generic `amadeus-graph
+    // compile: ...` arm. Uses AMADEUS_STAGES_DIR so the throw happens in the walk
+    // (independent of the loadStageGraph seed cache warmed by earlier tests).
+    const stagesDir = freshHost();
+    mkdirSync(join(stagesDir, "construction"), { recursive: true });
+    writeFileSync(join(stagesDir, "construction", "badstage.md"), "---\nslug: badstage\n---\nbody\n");
+    setEnv("AMADEUS_STAGES_DIR", stagesDir);
+    __resetGraphCache();
+    const { errs, exits } = await runMain(["compile"]);
+    expect(exits).toContain(1);
+    expect(errs.some((e) => e.includes("amadeus-graph compile:"))).toBe(true);
   });
 });
