@@ -26,6 +26,8 @@
 - A. 既存の `deriveHarnessDir()`(`amadeus-lib.ts:168-183`)が解決する実行ハーネスの dot-dir(`.claude`/`.codex`/`.cursor`/`.opencode`/`.kiro`)を harness type へマッピングする。`AMADEUS_HARNESS_DIR` env override は既存機構をそのまま尊重する。マッピング不能(未知の dot-dir、フォールバック `.claude` 使用時の不確実性)の場合は `unknown` を記録する
 - X. Other
 
+**是正注記(reviewer iteration 2 Major 指摘・選挙 E-HPFR3 を受けて、requirements.md が最終契約)**: 本回答(dot-dir 検出のみ)は requirements-analysis 初期時点の暫定回答であり、reviewer レビューで「Claude Code は scope-document.md In Scope #3 が明記する環境変数検出(`CLAUDECODE` 等)を一次手段とすべき」との指摘を受けて requirements.md FR-2/FR-3 で具体化した: Claude Code は `CLAUDECODE` env var を一次手段、dot-dir 検出は Codex/Cursor/OpenCode/Kiro 向けの非決定的な補助シグナル(E-HPFR3 裁定、常時 manual 上書き可能)とする。本 Q&A の回答は前提知識としては有効(dot-dir 機構の存在自体は正しい)だが、優先順位の確定は requirements.md を正とする。
+
 ## Q3. stage memory.md への記録は?
 
 [Answer]: A

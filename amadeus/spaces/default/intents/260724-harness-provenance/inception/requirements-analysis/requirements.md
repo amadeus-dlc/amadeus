@@ -7,6 +7,8 @@
 1. requirements-analysis-questions.md の「承認系譜」節を参照。state.md 優先・memory.md 非構造的追記の方針はユーザー承認済み(2026-07-24T11:53:04Z)。
 2. **是正(reviewer iteration 1 NOT-READY を受けて)**: FR-2/FR-3 の検出方式について、scope-document.md In Scope #3 は「Claude Code の環境変数からの自動検出」(feasibility-assessment.md TC-1 で実測確認済み — `CLAUDECODE=1`、`CLAUDE_CODE_SESSION_ID` 等)を前提としていたが、初版 requirements ではこれを無申告で `deriveHarnessDir()` の dot-dir 検出へ置き換えていた。是正版では **env var を Claude Code 検出の一次手段として維持**し、dot-dir 検出(既存 `deriveHarnessDir()`)を Codex/Cursor/OpenCode/Kiro 向けの補助手段として追加する構成に修正した(scope からの逸脱ではなく、両手段の併用)。
 3. **是正**: scope-document.md In Scope #5 / intent-statement.md Success Metrics が明記する `manual`(手動記入)フォールバックが初版 FR-1 の型定義から欠落していた。是正版で型定義へ復元した。
+4. **選挙裁定(E-HPFR3、2026-07-24T12:12:27Z 開票、choice B 3-2 で成立)**: reviewer iteration 2 の Major 指摘「FR-3 の dot-dir 検出が scope-document.md Out of Scope #3(Cursor/OpenCode/Kiro の恒久的自動検出手段の確立)と抵触する疑い」を選挙にかけた。裁定は B(dot-dir 検出は `deriveHarnessDir()`/`KNOWN_HARNESS_DIRS` という既存機構の単純再利用であり、Out of Scope #3 が指す「未確立の自動検出手段の確立」には該当しない)を採用し、FR-3 を維持する。全5票が留保付き賛成(GoA2)であり、うち e4/e1/e3 の留保は「FR-3 の『一次手段』という文言は scope-document.md の Scope Boundary Rationale(フォールバック設計までが in-scope の上限)より踏み込んで見えるため、AC-3c(unknown フォールバック)・FR-1 AC-1d(manual 上書き)の存在を明記し『非決定的な補助シグナル、常時 manual 上書き可能』程度の慎重な表現へ調整することを推奨する」というものであり、この推奨を反映して FR-3 の文言を是正した(下記)。record: `amadeus/spaces/default/elections/260724-e-hpfr3/record.md`(leader ブランチ、開票時点で確認 — 本 intent 側は該当コミット取込前のため git 検証可能な形での引用は取込後に行う。agmsg-git-evidence-split に従い、本節は agmsg/leader 報告に基づく引用である旨を明記する)。
+5. **是正(reviewer iteration 2 Major 指摘(1))**: requirements-analysis-questions.md Q2 が「dot-dir 検出のみ」の記述のまま据え置かれ、是正後の FR-2/FR-3(env var 一次+dot-dir 補助)と不整合を起こしていた。Q2 回答へ注記を追加し、FR-2/FR-3 が優先する(Q&A は初期方針、requirements.md が最終契約)ことを明記した。
 
 ## Functional Requirements
 
@@ -26,13 +28,14 @@ feasibility-assessment.md TC-1 の実測(`CLAUDECODE=1`、`CLAUDE_CODE_SESSION_I
 **AC-2a**: `CLAUDECODE=1` が設定された環境で intent を birth したとき、`Harness` フィールドが `claude-code` になること。
 **AC-2b**: `CLAUDECODE` 未設定の場合は FR-3(dot-dir 検出)へフォールバックすること。
 
-### FR-3: dot-dir 検出(補助手段、Codex/Cursor/OpenCode/Kiro 向け一次手段)
+### FR-3: dot-dir 検出(Codex/Cursor/OpenCode/Kiro 向けの非決定的な補助シグナル)
 
-`deriveHarnessDir()`(`amadeus-lib.ts:168-183`)が解決する dot-dir(`KNOWN_HARNESS_DIRS = [".claude", ".kiro", ".codex", ".opencode", ".cursor"]`、`amadeus-lib.ts:158`)を対応する harness type へマッピングする。feasibility-assessment.md TC-2/TC-3 のとおり、Codex/Cursor/OpenCode/Kiro には Claude Code の `CLAUDECODE` に相当する確実な env var 検出手段が未確立のため、これらのハーネスでは dot-dir 検出を一次手段とする。
+`deriveHarnessDir()`(`amadeus-lib.ts:168-183`)が解決する dot-dir(`KNOWN_HARNESS_DIRS = [".claude", ".kiro", ".codex", ".opencode", ".cursor"]`、`amadeus-lib.ts:158`)を対応する harness type へマッピングする。E-HPFR3 裁定(選挙、choice B、留保反映)のとおり、これは新規の自動検出手段の確立ではなく既存機構の再利用であるため scope-document.md Out of Scope #3 に抵触しない。ただし feasibility-assessment.md TC-2/TC-3 のとおり Codex/Cursor/OpenCode/Kiro には確実性の裏付けがなく、**非決定的な補助シグナル**として位置づけ、常に `manual` での上書きが可能な設計とする(「一次手段」と断定しない)。
 
-**AC-3a**: `CLAUDECODE` 未設定かつ `.codex`/`.cursor`/`.opencode`/`.kiro` の各 dot-dir が解決されたとき、対応する harness type(`codex`/`cursor`/`opencode`/`kiro`)が記録されること。
+**AC-3a**: `CLAUDECODE` 未設定かつ `.codex`/`.cursor`/`.opencode`/`.kiro` の各 dot-dir が解決されたとき、対応する harness type(`codex`/`cursor`/`opencode`/`kiro`)が **補助シグナルとして** 記録されること(確定値としての保証はしない)。
 **AC-3b**: `AMADEUS_HARNESS_DIR` env override が設定されている場合、それを優先して解決すること(既存 `deriveHarnessDir()` の解決順序をそのまま踏襲)。
-**AC-3c**: フォールバック(`.claude` デフォルト、`isHarnessDirName()` 不一致)の場合は `unknown` を記録すること。ユーザーが `unknown` を `manual` へ上書きする経路は FR-1 AC-1d を参照。
+**AC-3c**: フォールバック(`.claude` デフォルト、`isHarnessDirName()` 不一致)の場合は `unknown` を記録すること。ユーザーが `unknown`(または AC-3a の補助シグナル結果)を `manual` へ常時上書きできる経路は FR-1 AC-1d を参照。
+**AC-3d(design 段階への申し送り、e3 留保)**: `deriveHarnessDir()` の CWD プローブ段(script-path 解決が効かない場合のフォールバック)は複数 harness dir が同居する dev repo で誤検出しうる。design 段階で、本機能の呼び出し文脈では script-path 解決が常に先に成立し CWD プローブへ到達しないことを確認すること。
 
 ### FR-4: memory.md への非構造的記録
 
