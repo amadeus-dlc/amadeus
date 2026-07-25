@@ -213,3 +213,46 @@ packages/framework/core/tools/team-up.sh:1417:CREATED_MEMBERS=""
 | resume（`-c`）でのロック残存 | **未実測**。build-and-test で扱う |
 | R-3（actas の受信範囲制限が配送を壊さないか） | **未実測**。7人起動の成功は傍証だが、実際のメッセージ配送は試していない |
 | Linux CI 上の並列度特性（RAID R-6） | **未実測**。上限設計で吸収する方針 |
+
+## 事後修正: 並列 `git worktree add` の競合（2026-07-26）
+
+PR #1485 の CI（Linux）で本ユニットの実装が落ちた。**フレークではなく実装欠陥である。**
+
+```
+fatal: failed to read .git/worktrees/engineer-4/commondir: Success
+ERROR: worktree add failed for engineer-5
+```
+
+### 機序
+
+`git worktree add` は既存の `.git/worktrees/` を走査するため、同時実行が相手の書きかけエントリを読む。git は worktree add を並行安全とは規定していない。ロック対象も内部に無い。
+
+### なぜ実測が見逃したか
+
+macOS では再現しない（クローンに対し35回試行して0件）。実 launch も7人×複数回すべて成功していた。**Linux CI で初めて顕在化した** — これは code-generation 時点で「Linux CI 上の並列度特性は未実測」として RAID に挙げていた項目（R-6）そのものである。未実測と記録しておきながら、その未実測領域で実際に落ちた。
+
+### 修正
+
+コストは登録側に無い（登録は約0.02秒/メンバー）。**登録は `--no-checkout` で直列、checkout のみ並列**へ分割した。
+
+| 方式 | 7人構成（n=3、同一クローン） | 安全性 |
+|---|---|---|
+| 直列 add | 13.28 / 10.46 / 10.73秒 | 安全 |
+| 並列 add（当初の実装） | 4.20 / 4.89 / 4.83秒 | **競合する** |
+| **直列 `--no-checkout` + 並列 checkout** | **5.39 / 5.41秒** | 安全 |
+
+### 分割が開けた新しい穴
+
+add と checkout を分けると「登録済みだが中身が空」という状態が作れる。旧来の完了照合（git 登録のみ）はこれを成功と判定するため、**記録ファイルの実在を条件に追加**した。記録は checkout を終えたサブシェルが書くので、その存在が完了の証拠になる。
+
+これは是正 diff 自体の点検で発見した（`cid:requirements-analysis:fix-diff-independent-reverify`）。
+
+### テスト
+
+`t295` は 9件 → 12件。追加した観点:
+
+- **登録の並列度がちょうど 1**（この回帰そのものの固定）
+- `--no-checkout` が渡ること（将来の編集で登録が再び高コスト化しないように）
+- 登録済みだが記録欠落のケースが成功と判定されないこと
+
+12 pass / 0 fail。CI で落ちた `t-team-up-codex-resume.serial.test.ts` も 54 pass / 0 fail。検証4種すべて exit 0。
