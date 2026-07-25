@@ -21,10 +21,12 @@
 //     emit() produces is generated, scanned by emit's own check.
 
 import type { HarnessManifest } from "../../../../scripts/manifest-types.ts";
+import { mirrorCoreSkillDirectory } from "../projections.ts";
 import emit from "./emit.ts";
 
 const manifest: HarnessManifest = {
   name: "cursor",
+  mirrorSurface: "cursor",
   harnessDir: ".cursor",
 
   // Core projection: identical 8 dirs to codex/opencode — rules→amadeus-rules,
@@ -39,7 +41,7 @@ const manifest: HarnessManifest = {
     { src: "scopes", dst: "scopes" },
     { src: "agents", dst: "agents" },
     { src: "hooks", dst: "hooks" },
-    { src: "skills/amadeus-mirror", dst: "skills/amadeus-mirror" },
+    mirrorCoreSkillDirectory("cursor"),
   ],
 
   // Three authored surfaces:

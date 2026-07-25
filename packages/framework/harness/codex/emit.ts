@@ -21,6 +21,7 @@ import { dirname, join, relative } from "node:path";
 import type { EmitContext, EmitResult } from "../../../../scripts/manifest-types.ts";
 import { renderOnboarding } from "../../../../scripts/onboarding.ts";
 import onboardingFills from "./onboarding.fills.ts";
+import { mirrorSessionSkillName } from "../projections.ts";
 
 // ---------------------------------------------------------------------------
 // Hook wiring (kiro-normative shape: register ONLY events with a real core-hook
@@ -340,7 +341,7 @@ export default function emit(ctx: EmitContext): EmitResult {
     "amadeus-replay",
     "amadeus-outcomes-pack",
     "amadeus-grilling",
-    "amadeus-mirror",
+    mirrorSessionSkillName("codex"),
     "amadeus-election",
   ]) {
     const srcDir = join(coreRoot, "skills", skill);

@@ -11,6 +11,7 @@
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
@@ -19,6 +20,8 @@ import {
 } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { mirrorProjectionRegistryDigest } from "../packages/framework/harness/projections.ts";
+import { DistributionTransactionCoordinator } from "./distribution-transaction.ts";
 
 type Mode = "check" | "apply";
 
@@ -306,18 +309,24 @@ function check(expected: Map<string, Buffer>, repoRoot: string): string[] {
 }
 
 function apply(expected: Map<string, Buffer>, repoRoot: string): void {
+  const updates: Array<{ path: string; bytes: Buffer | null }> = [];
   for (const rel of orphanedFiles(expected, repoRoot)) {
-    rmSync(join(repoRoot, rel), { force: true });
+    const path = join(repoRoot, rel);
+    if (lstatSync(path).isSymbolicLink()) rmSync(path);
+    else updates.push({ path: rel, bytes: null });
   }
   for (const [rel, bytes] of expected) {
     const abs = join(repoRoot, rel);
-    mkdirSync(dirname(abs), { recursive: true });
     const out =
       SCOPE_GRID_RE.test(rel) && existsSync(abs)
         ? mergeScopeGrid(readFileSync(abs), bytes)
         : bytes;
-    writeFileSync(abs, out);
+    updates.push({ path: rel, bytes: out });
   }
+  new DistributionTransactionCoordinator(repoRoot).apply(
+    updates,
+    mirrorProjectionRegistryDigest(),
+  );
   ensureActiveSpaceCursor(repoRoot);
 }
 
@@ -345,10 +354,19 @@ export function promoteSelfMain(
     freshness(mode);
   }
 
+  const coordinator = new DistributionTransactionCoordinator(repoRoot);
+  if (mode === "check" && coordinator.pendingJournalCount() > 0) {
+    console.error("promote-self --check FAILED: distribution recovery required");
+    return 1;
+  }
+  const session = mode === "check"
+    ? coordinator.openReadSession("promote-self-check")
+    : null;
   let expected: Map<string, Buffer>;
   try {
     expected = buildExpected(repoRoot);
   } catch (err) {
+    session?.close();
     console.error(err instanceof Error ? err.message : String(err));
     return 1;
   }
@@ -360,6 +378,7 @@ export function promoteSelfMain(
   }
 
   const problems = check(expected, repoRoot);
+  session?.close();
   if (problems.length > 0) {
     console.error(`promote-self --check FAILED (${problems.length} problem(s)):`);
     for (const p of problems.slice(0, 80)) console.error(`  ${p}`);

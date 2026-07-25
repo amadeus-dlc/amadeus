@@ -1,6 +1,24 @@
 # コンポーネント棚卸し
 
-## Team Mode watcher arming 検証コンポーネント（260724-watcher-timeout-fix、2026-07-24、現在）
+## Mirror レビュー修正コンポーネント（260725-mirror-review-fixes、現在）
+
+観測 HEAD は `70336937529f5be31c011de5d368c0f03e534506`、差分 base は `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`。
+
+| コンポーネント | 責務 | 依存先 | 欠陥との関係 |
+|---|---|---|---|
+| Lifecycle adapter | CLI parse、Intent/repo 解決、coordinator 呼出、exit 表現 | config、state store、gateway、coordinator | inner 未完了 outcome を exit 0 に丸め、answer surface がない |
+| Mirror coordinator | mode/policy、prompt、reconciliation、operation chain | policy、executor、state reducer | 回答処理は存在するが CLI 未配線かつ回答型に bindingId がなく、skip は event/operation 照合も迂回 |
+| Mirror executor | permit、receipt、remote effect、recovery、completion guard | gateway、state store、provenance | legacy CLI から迂回される正準 mutation owner |
+| Legacy mirror CLI | 旧 create/sync/close/status | `gh`、`amadeus-lib` | mutation が permit/receipt/provenance を迂回 |
+| Config resolver | 3層 config の bounded read と precedence | Node fs/path、workspace selector | realpath 検査と open が別操作で TOCTOU |
+| State codec | strict JSON と Mirror state schema | Buffer、Mirror types | CR/LF 以外の未エスケープ C0 を受理 |
+| Coverage source normalizer | LCOV source の core 正本化 | Node path、test runner | Cursor/OpenCode の投影を列挙していない |
+| Packaging / distribution checks | core を6 harnessへ投影し byte drift 検査 | manifests、`scripts/package.ts` | 正本修正後の全配布面同期を保証 |
+| CI | typecheck、lint、distribution、tests、coverage | Bun、Biome、TypeScript、Codecov | coverage source 漏れの利用者であり回帰検査先 |
+
+所有境界は `lifecycle/coordinator/executor` が mutation、legacy CLI は互換入口または read-only 診断、config/codec は fail-closed input boundary、coverage normalizer は生成物→正本の計測 mapping とする。
+
+## Team Mode watcher arming 検証コンポーネント（260724-watcher-timeout-fix、2026-07-24、履歴）
 
 差分リフレッシュ（base `a81c11dde` → observed HEAD `6d4df9056`、距離 155、amadeus-bugfix / Minimal、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)）。測定 ref: observed HEAD `6d4df9056` 実ファイル直読。すべて `packages/framework/core/tools/team-up.sh` 内（区間内 #1391 で導入、#1421 で packages 昇格 + 配布 11 コピー）。
 

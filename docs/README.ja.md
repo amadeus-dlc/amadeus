@@ -30,3 +30,5 @@ Harness Engineer Guide と Developer Reference の境界は **データ対コー
 
 - [本家AI-DLC v2.2.0とAmadeus `main`のワークスペース差分](research/upstream-ai-dlc-v2.2.0-amadeus-main-workspace-differences.ja.md)
 - [本家 AI-DLC v2 ワークスペースを Amadeus へ移行](guide/18-migrating-upstream-v2.ja.md)
+- [Intent Mirrorを運用する](guide/22-intent-mirror.ja.md)
+- [Intent Mirror runtime contract](reference/20-intent-mirror.ja.md)

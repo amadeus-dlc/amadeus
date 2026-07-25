@@ -44,17 +44,31 @@ function snapshot(over: Partial<MirrorSnapshot> = {}): MirrorSnapshot {
 }
 
 describe("t232 parseArgs (C1, S-3 boundary)", () => {
-  test("accepts the four subcommands without flags", () => {
-    expect(parseArgs(["create"])).toEqual({ kind: "create", intentDir: null });
-    expect(parseArgs(["sync"])).toEqual({ kind: "sync", intentDir: null });
-    expect(parseArgs(["close"])).toEqual({ kind: "close", intentDir: null });
+  test("requires --instance for mutations and keeps status unchanged", () => {
+    expect(parseArgs(["create"]).kind).toBe("usage");
+    expect(parseArgs(["sync"]).kind).toBe("usage");
+    expect(parseArgs(["close"]).kind).toBe("usage");
     expect(parseArgs(["status"])).toEqual({ kind: "status", intentDir: null });
+    expect(parseArgs(["create", "--instance", "create-1"])).toEqual({
+      kind: "create",
+      intentDir: null,
+      instance: "create-1",
+    });
   });
 
   test("accepts --intent <dirName>", () => {
-    expect(parseArgs(["sync", "--intent", "260717-mirror-issue-tool"])).toEqual({
+    expect(
+      parseArgs([
+        "sync",
+        "--instance",
+        "sync-1",
+        "--intent",
+        "260717-mirror-issue-tool",
+      ]),
+    ).toEqual({
       kind: "sync",
       intentDir: "260717-mirror-issue-tool",
+      instance: "sync-1",
     });
   });
 

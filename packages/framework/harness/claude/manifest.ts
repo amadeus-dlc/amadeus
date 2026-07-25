@@ -15,6 +15,7 @@
 // tree it replaces (the MR-1 keystone gate).
 
 import type { HarnessManifest } from "../../../../scripts/manifest-types.ts";
+import { mirrorCoreSkillDirectory } from "../projections.ts";
 import onboardingFills from "./onboarding.fills.ts";
 
 interface HookSpec {
@@ -30,6 +31,7 @@ export function renderClaudeHookCommand(
 
 const manifest: HarnessManifest = {
   name: "claude",
+  mirrorSurface: "claude",
   harnessDir: ".claude",
 
   // core/<src> → <harnessDir>/<dst>. Claude keeps every core dir name as-is.
@@ -52,7 +54,7 @@ const manifest: HarnessManifest = {
     { src: "skills/amadeus-replay", dst: "skills/amadeus-replay" },
     { src: "skills/amadeus-outcomes-pack", dst: "skills/amadeus-outcomes-pack" },
     { src: "skills/amadeus-grilling", dst: "skills/amadeus-grilling" },
-    { src: "skills/amadeus-mirror", dst: "skills/amadeus-mirror" },
+    mirrorCoreSkillDirectory("claude"),
     { src: "skills/amadeus-election", dst: "skills/amadeus-election" },
   ],
 

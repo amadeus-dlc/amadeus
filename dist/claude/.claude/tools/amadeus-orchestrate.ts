@@ -144,7 +144,8 @@ import {
   selectNextUnitForStage,
   subgraphForScope,
 } from "./amadeus-graph.ts";
-import { resolve as resolveMirrorConfig } from "./amadeus-mirror-config.ts";
+import { resolveMirrorConfig } from "./amadeus-mirror-config.ts";
+import type { MirrorMode } from "./amadeus-mirror-types.ts";
 import {
   MIRROR_BOUNDARY_PHASES,
   type MirrorBoundaryPhase,
@@ -168,14 +169,16 @@ function loadStateFileIfPresent(projectDir: string): string | null {
 }
 
 export type MirrorBoundaryDecision =
+  | { kind: "suppress" }
   | { kind: "ask"; includeCreate: boolean }
   | { kind: "auto-sync" };
 
 export function decideMirrorBoundary(
-  autoMirror: boolean,
+  mode: MirrorMode,
   hasMirrorIssue: boolean,
 ): MirrorBoundaryDecision {
-  if (autoMirror && hasMirrorIssue) return { kind: "auto-sync" };
+  if (mode === "off") return { kind: "suppress" };
+  if (mode === "auto" && hasMirrorIssue) return { kind: "auto-sync" };
   return { kind: "ask", includeCreate: !hasMirrorIssue };
 }
 
@@ -208,9 +211,18 @@ function currentMirrorBoundaryPhase(
   return getField(stateContent, label)?.trim() === "Verified" ? phase : null;
 }
 
-function mirrorSyncPrint(phase: MirrorBoundaryPhase, isPending: boolean): PrintDirective {
+function mirrorSyncPrint(
+  phase: MirrorBoundaryPhase,
+  isPending: boolean,
+  instance: string,
+  workflowCompleted: boolean,
+): PrintDirective {
   const stateTool = `bun ${harnessDir()}/tools/amadeus-state.ts mirror-boundary`;
-  const syncTool = `bun ${harnessDir()}/tools/amadeus-mirror.ts sync`;
+  const boundaryArgs = workflowCompleted
+    ? `completion --instance ${JSON.stringify(instance)}`
+    : `phase --phase ${phase} --instance ${JSON.stringify(instance)}`;
+  const syncTool =
+    `bun ${harnessDir()}/tools/amadeus-mirror-lifecycle.ts boundary ${boundaryArgs}`;
   const prepare = isPending
     ? ""
     : `First run \`${stateTool} ${phase} pending --from absent\`. `;
@@ -234,36 +246,64 @@ function emitMirrorBoundaryIfNeeded(
     emit(errorDirective(errorMessage(cause)));
     return true;
   }
-  for (const phase of MIRROR_BOUNDARY_PHASES) {
-    if (receipts[phase] === "pending") {
-      emit(mirrorSyncPrint(phase, true));
-      return true;
-    }
-  }
+  const pendingPhase = MIRROR_BOUNDARY_PHASES.find(
+    (candidate) => receipts[candidate] === "pending",
+  );
   const phase = currentMirrorBoundaryPhase(stateContent);
-  if (phase === null || receipts[phase] === "completed") return false;
+  const boundaryInstance =
+    (getField(stateContent, "Last Updated") ?? "").trim() ||
+    `${phase ?? pendingPhase ?? "mirror"}:persisted`;
+  const workflowCompleted =
+    getField(stateContent, "Status")?.trim() === "Completed";
+  if (
+    pendingPhase === undefined &&
+    (phase === null || receipts[phase] === "completed")
+  )
+    return false;
   const space = activeSpace(projectDir);
   const intent = activeIntent(projectDir, space);
   if (intent === null) {
     emit(errorDirective("Mirror boundary cannot resolve the active intent."));
     return true;
   }
-  const resolved = resolveMirrorConfig(projectDir, space, intent);
+  const resolved = resolveMirrorConfig(projectDir, intent);
   if (resolved.kind === "invalid") {
-    const details = resolved.errors
-      .map((item) => `${item.layer}: ${item.errors.join("; ")}`)
+    const details = resolved.issues
+      .map((issue) =>
+        issue.kind === "read-failure"
+          ? `${issue.layer} (${issue.path}): ${issue.summary}`
+          : `${issue.layer} (${issue.path}): expected ${issue.expected}, got ${issue.actualType}`,
+      )
       .join(" | ");
     emit(errorDirective(`Invalid mirror configuration: ${details}`));
     return true;
   }
+  if (resolved.config.autoMirror === "off") return false;
+  if (pendingPhase !== undefined) {
+    emit(
+      mirrorSyncPrint(
+        pendingPhase,
+        true,
+        boundaryInstance,
+        workflowCompleted && pendingPhase === "construction",
+      ),
+    );
+    return true;
+  }
+  if (phase === null) return false;
   const hasMirrorIssue =
     (getField(stateContent, "Mirror Issue") ?? "").trim().length > 0;
-  const decision = decideMirrorBoundary(
-    resolved.config.autoMirror,
-    hasMirrorIssue,
-  );
+  const decision = decideMirrorBoundary(resolved.config.autoMirror, hasMirrorIssue);
+  if (decision.kind === "suppress") return false;
   if (decision.kind === "auto-sync") {
-    emit(mirrorSyncPrint(phase, false));
+    emit(
+      mirrorSyncPrint(
+        phase,
+        false,
+        boundaryInstance,
+        workflowCompleted && phase === "construction",
+      ),
+    );
     return true;
   }
   const choices = decision.includeCreate
@@ -3675,11 +3715,25 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
   // The transition committed. Emit a terminal `done` directive naming the move
   // — the loop driver reads this to know the report landed and the next `next`
   // will see fresh state.
+  const intentCaptureMirror =
+    slug === "intent-capture"
+      ? (() => {
+          const updated = loadStateFileIfPresent(pd);
+          const instance = updated
+            ? (getField(updated, "Last Updated") ?? slug).trim()
+            : slug;
+          return (
+            ` Run \`bun ${harnessDir()}/tools/amadeus-mirror-lifecycle.ts ` +
+            `boundary intent-capture --instance ${JSON.stringify(instance)} ` +
+            `--project-dir ${JSON.stringify(pd)}\` before continuing.`
+          );
+        })()
+      : "";
   emit({
     kind: "done",
     reason:
       `Committed ${committed.join(" + ")} for "${slug}" (scope: ${scope}). ` +
-      "State advanced; run next to continue.",
+      `State advanced.${intentCaptureMirror} Run next to continue.`,
   });
 }
 
@@ -3703,8 +3757,15 @@ function handlePark(_args: string[], projectDir: string | undefined): void {
   const parkedAt = stateContent
     ? (getField(stateContent, "Parked At Stage") ?? "").trim()
     : "";
+  const instance = stateContent
+    ? (getField(stateContent, "Last Updated") ?? parkedAt).trim()
+    : parkedAt;
+  const mirrorCommand =
+    `bun ${harnessDir()}/tools/amadeus-mirror-lifecycle.ts boundary park ` +
+    `--stage ${JSON.stringify(parkedAt)} --instance ${JSON.stringify(instance)} ` +
+    `--project-dir ${JSON.stringify(pd)}`;
   emit(parkedDirective(
-    `Workflow parked at "${parkedAt}". Resume with /amadeus --resume.`,
+    `Workflow parked at "${parkedAt}". Run \`${mirrorCommand}\`, then resume with /amadeus --resume.`,
     parkedAt,
   ));
 }

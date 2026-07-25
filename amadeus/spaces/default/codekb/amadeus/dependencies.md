@@ -1,5 +1,31 @@
 # 依存関係
 
+## Mirror レビュー修正の依存グラフ（260725-mirror-review-fixes、現在）
+
+観測 HEAD は `70336937529f5be31c011de5d368c0f03e534506`、差分 base は `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`。
+
+```text
+amadeus-orchestrate.ts / amadeus-mirror-lifecycle.ts
+  -> amadeus-mirror-coordinator.ts
+     -> amadeus-mirror-policy.ts
+     -> amadeus-mirror-executor.ts
+        -> amadeus-mirror-gateway.ts -> gh / GitHub API
+        -> amadeus-mirror-state-store.ts
+           -> state-codec.ts -> state-reducer.ts -> provenance.ts
+
+amadeus-mirror.ts legacy mutation
+  -> gh direct + amadeus-state.md direct write  [正準鎖を迂回]
+
+tests/run-tests.ts
+  -> coverage-normalize.ts
+     -> coverage-source-path.ts
+        -> packages/framework/core/* canonical source
+```
+
+修正の依存方向は、legacy mutation を正準 lifecycle 鎖へ向け、coordinator から CLI 表現への逆依存を作らない。prompt binding の domain 判定は coordinator/policy に維持し、CLI は保存済み `bindingId` を含む回答の parse と exit/result 表現だけを所有する。現行の回答型には `bindingId` がなく、skip は policy 照合を迂回するため、表現層の追加だけでなく domain 境界の対称な照合が必要である。config reader と state codec は GitHub や workflow state に依存しない入力境界であり、独立 unit/integration test が可能である。
+
+配布依存は `packages/framework/core/` 正本→root harness (`.claude/.codex/.cursor/.opencode`)→`dist/{claude,codex,kiro,kiro-ide,cursor,opencode}` の一方向。coverage 正規化はこの6 harness mapping と同じ集合を共有すべきで、現行の Claude/Codex/Kiro だけの手書き部分集合が drift 原因である。
+
 > **2026-07-24（intent `260724-watcher-timeout-fix`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み。** 内部依存の交差は `team-up.sh` → agmsg `actas-lock.sh`（`agmsg_ready_path` を subshell source）と herdr CLI で、いずれも既存の外部スキル依存。パッケージ依存に変化なし（base `a81c11dde` → observed `6d4df9056`）。
 
 ## 260723-t241-ci-residency の依存境界（履歴: 2026-07-23）

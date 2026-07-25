@@ -10,6 +10,8 @@ const PACKAGE_HARNESS_DIRS = {
   codex: ".codex",
   kiro: ".kiro",
   "kiro-ide": ".kiro",
+  cursor: ".cursor",
+  opencode: ".opencode",
 } as const;
 
 function portablePath(path: string): string {
@@ -41,7 +43,7 @@ export function normalizeCoverageSourcePath(
       const relativeToTemp = pathUnderRoot(normalizedPath, tempRoot, context.repoRoot);
       if (relativeToTemp === null) continue;
       const packagedHarness = relativeToTemp.match(
-        /^amadeus-pkg-(kiro-ide|claude|codex|kiro)-[A-Za-z0-9]+\/(\.claude|\.codex|\.kiro)\/(.+)$/,
+        /^amadeus-pkg-(kiro-ide|claude|codex|kiro|cursor|opencode)-[A-Za-z0-9]+\/(\.claude|\.codex|\.kiro|\.cursor|\.opencode)\/(.+)$/,
       );
       if (!packagedHarness) continue;
       const [, harness, harnessDir, source] = packagedHarness;
@@ -54,8 +56,12 @@ export function normalizeCoverageSourcePath(
     ["dist/codex/.codex/", "packages/framework/core/"],
     ["dist/kiro/.kiro/", "packages/framework/core/"],
     ["dist/kiro-ide/.kiro/", "packages/framework/core/"],
+    ["dist/cursor/.cursor/", "packages/framework/core/"],
+    ["dist/opencode/.opencode/", "packages/framework/core/"],
     [".claude/", "packages/framework/core/"],
     [".codex/", "packages/framework/core/"],
+    [".cursor/", "packages/framework/core/"],
+    [".opencode/", "packages/framework/core/"],
   ] as const;
   for (const [from, to] of generatedHarnessPrefixes) {
     if (normalizedPath.startsWith(from)) {

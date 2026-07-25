@@ -16,12 +16,14 @@ const STATE = `# State
 
 describe("t265 mirror boundary decision", () => {
   test.each([
-    [false, false, { kind: "ask", includeCreate: true }],
-    [false, true, { kind: "ask", includeCreate: false }],
-    [true, false, { kind: "ask", includeCreate: true }],
-    [true, true, { kind: "auto-sync" }],
-  ] as const)("maps auto=%s mirror=%s", (auto, mirror, expected) => {
-    expect(decideMirrorBoundary(auto, mirror)).toEqual(expected);
+    ["off", false, { kind: "suppress" }],
+    ["off", true, { kind: "suppress" }],
+    ["prompt", false, { kind: "ask", includeCreate: true }],
+    ["prompt", true, { kind: "ask", includeCreate: false }],
+    ["auto", false, { kind: "ask", includeCreate: true }],
+    ["auto", true, { kind: "auto-sync" }],
+  ] as const)("maps mode=%s mirror=%s", (mode, mirror, expected) => {
+    expect(decideMirrorBoundary(mode, mirror)).toEqual(expected);
   });
 });
 
