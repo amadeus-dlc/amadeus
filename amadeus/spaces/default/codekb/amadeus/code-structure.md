@@ -1,6 +1,62 @@
 # コード構造
 
-## Team Mode 起動レイテンシ面のコード配置（260725-teamup-attach-latency、現在、Issue #1449）
+## Team Mode 起動経路のコード配置（260725-teamup-launch-hardening、現在、Issue #1476 / #1478）
+
+差分リフレッシュ（base `ec624022f` → observed HEAD `4a0f91ad07dbe17c6477b7fe9b52a0e9ab4532ba`、距離 **9**、amadeus-feature / Standard）。区間規模は `git diff --stat` で **65 files changed, 6516 insertions(+), 54 deletions(-)**。うち実装面は `team-up.sh` **11 面 × +31/-8** と tests 2件のみで、残り約 6,400 行は record / audit。測定 ref: observed HEAD 実ファイル直読。
+
+### 区間で変化したファイル（実装面のみ）
+
+| ファイル | 変化 | 内容 |
+| --- | --- | --- |
+| `packages/framework/core/tools/team-up.sh` | +31/-8（1474 → **1497 行**、`wc -l` 実測） | 適用可否ガードの新設（PR #1477 / `294df1281`） |
+| `.claude` / `.codex` / `.cursor` / `.opencode` の `tools/team-up.sh`（self-install 4面） | 同一 +31/-8 | 正本からの伝播 |
+| `dist/{claude,codex,cursor,kiro,kiro-ide,opencode}/**/tools/team-up.sh`（dist 6面） | 同一 +31/-8 | 正本からの伝播 |
+| `tests/integration/t294-team-up-watcher-applicability.test.ts` | 新規 **113 行** | #1449 のリグレッション（7 test） |
+| `tests/integration/t-team-up-watcher-arming.test.ts` | +5/-2 | 既存 `watcher_verification_applies` テストの prompt 軸を actas 形にピン |
+
+配布同期は完了（`git ls-files '*tools/team-up.sh'` = **11 面**、全面で `WATCHER_SKIP_ANNOUNCED` が **3 出現**、`grep -c` 実測）。
+
+### PR #1477 で追加された記号
+
+| 記号 | 所在（正本） | 種別 | 役割 |
+| --- | --- | --- | --- |
+| `WATCHER_SKIP_ANNOUNCED` | `team-up.sh:1091` | shell 変数（初期値 `0`） | スキップ告知の one-shot ラッチ。launch 経路が `watcher_verification_applies` を2回呼ぶ（:1461 / :1478）ため advisory を run あたり1行に抑える |
+| `watcher_verification_applies` の prompt 軸 | `team-up.sh:1094-1096` | `case` 分岐 | `CLAUDE_MONITOR_PROMPT` が `*" actas "*` に一致するときのみ `return 0` |
+| スキップ告知 | `team-up.sh:1097-1101` | stderr 出力 | `#1449` / `#1476` を名指しする1行。stdout は非汚染 |
+
+既存記号の**削除・改名はゼロ**。`verify_watchers_armed`（:1174）、`ready_sentinel_path`（:1111）、`resend_monitor_prompt`（:1143）、`clear_stale_watcher_sentinels`（:1155）、`WATCHER_READY_TIMEOUT`（:108）、`WATCHER_RESEND_MAX`（:114）はすべて保持されており、t294 の FR-5 テスト（`:104`）がその実在をピンしている。
+
+### 本 intent が触る2面の行番号（HEAD 現行値）
+
+**U1（#1476）— actas 移行面**
+
+| 対象 | 行 | verbatim / 内容 |
+| --- | --- | --- |
+| `CLAUDE_MONITOR_PROMPT` 定義 | `:104` | `CLAUDE_MONITOR_PROMPT="/agmsg mode monitor"` |
+| 参照1: `claude_member_cmd` の `init_prompt` | `:861` | `  local m="$1" wt="${2:-$BASE/$1}" args="" init_prompt="$CLAUDE_MONITOR_PROMPT" interaction_args=""` |
+| 参照2: 適用可否ガードの case | `:1094` | `  case "$CLAUDE_MONITOR_PROMPT" in` |
+| 参照3: 再送の実引数 | `:1202` | `        resend_monitor_prompt "$S" "$pane" "$CLAUDE_MONITOR_PROMPT" \|\|` |
+| 参照4: 復旧ガイダンス文言 | `:1211` | `  echo "  Recover manually: focus each listed pane and run '$CLAUDE_MONITOR_PROMPT'." >&2` |
+| delivery mode 設定（前提充足） | `:876-878` | `      bash "$DELIVERY" set monitor claude-code "$wt" >/dev/null 2>&1 \|\|` |
+| 検証の同期実行位置 | `:1478-1480` | `mux_attach`（`:1483`）より**前** |
+
+**U2（#1478）— worktree 並列化面**
+
+| 対象 | 行 | 内容 |
+| --- | --- | --- |
+| `create_run()` 定義 | `:1267` | 唯一の呼出は `:1427` |
+| worktree 作成ループ | `:1302-1310` | 逐次 |
+| `git worktree add` | `:1305` | verbatim: `    git -C "$REPO" worktree add -q -b "$branch" "$wt" "$base_commit"` |
+| `CREATED_MEMBERS` 追記 | `:1306` | ロールバック対象の集約点 |
+| `CREATED_MEMBERS` 初期化 | `:1392` | |
+| ロールバック読み手 | `:1244` | `  for m in $CREATED_MEMBERS; do`（`rollback_prepared_run` `:1241-1251` 内。`handle_exit` `:1253` が `:1259` で呼ぶ） |
+| ロールバック除去側 | `:1247` | verbatim: `    git -C "$REPO" worktree remove --force "$wt" >/dev/null 2>&1 \|\| true` |
+
+**U1 と U2 の触るファイルは同一（`team-up.sh`）だが、行域が重ならない**（U1: 104 / 861 / 1094 / 1202 / 1211 / 1478-1480、U2: 1244 / 1302-1310 / 1392）。関数単位でも非交差（U1: `claude_member_cmd` `:860-894` + `watcher_verification_applies` `:1092-1102` + `verify_watchers_armed` `:1174-1213` / U2: `rollback_prepared_run` `:1241-1251` + `create_run` `:1267-1311`。関数境界は `grep -n` + 終端 `}` 走査で機械確認、測定 ref: `4a0f91ad0`）。cid:code-generation:c6 の非交差判定により、worktree 隔離の並行実装が可能。
+
+> **注意（行番号の陳腐化）**: 本 intent の ideation 成果物は `git worktree add` を `team-up.sh:1282` と引用しているが、これは **PR #1477 前（`ec624022f`）の行番号**である。observed HEAD `4a0f91ad0` では **`:1305`**（+23 行シフト）。同 PR は :1071 以降に 23 行を挿入したため、**1071 より下の全参照が +23 シフトしている**。
+
+## Team Mode 起動レイテンシ面のコード配置（260725-teamup-attach-latency、履歴、Issue #1449）
 
 測定 ref: observed HEAD `ec624022ff65cc8b3912001f768bd66ec41a0e39` の実ファイル直読。base `6d4df9056`..observed の区間規模は `git diff --stat` で **1018 files changed, 274683 insertions(+), 4573 deletions(-)**（大宗は Mirror lifecycle と elections record で、本 intent の欠陥面とは非交差）。
 

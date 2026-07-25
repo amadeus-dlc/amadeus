@@ -1,5 +1,7 @@
 # 技術スタック
 
+> **2026-07-25（intent `260725-teamup-launch-hardening`、[#1476](https://github.com/amadeus-dlc/amadeus/issues/1476) / [#1478](https://github.com/amadeus-dlc/amadeus/issues/1478)、amadeus-feature / Standard）: 変更なし、確認済み（測定 ref: observed `4a0f91ad0`、base `ec624022f`、距離 9）。** 交差要素は bash（`team-up.sh` 制御フロー）+ git（`worktree add`）+ herdr（pane/agent 操作）+ 外部 agmsg スキル（watch / delivery / spawn / actas-lock / claude-code ドライバ）+ Bun test（integration 層）で、いずれも既存スタック。新規ランタイム依存なし。**U2 の並列化は bash のジョブ制御（`&` / `wait`）で賄える範囲**であり、外部の並列化ユーティリティ導入は要さない。
+
 > **2026-07-25（intent `260725-teamup-attach-latency`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み（測定 ref: observed `ec624022f`、base `6d4df9056`、距離 125）。** 交差要素は bash（`team-up.sh` 制御フロー）+ herdr（pane/agent 操作）+ 外部 agmsg スキル（watch / delivery / spawn / actas-lock）で、いずれも既存スタック。新規ランタイム依存なし。
 
 ## Mirror レビュー修正の交差スタック（260725-mirror-review-fixes、履歴）

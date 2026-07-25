@@ -1,6 +1,63 @@
 # コード品質評価
 
-## 常に失敗する検証ゲートとテストスタブによる検出不能性（260725-teamup-attach-latency、現在、Issue #1449）
+## 起動経路に残る欠陥と技術的負債（260725-teamup-launch-hardening、現在、Issue #1476 / #1478）
+
+測定 ref: observed HEAD `4a0f91ad07dbe17c6477b7fe9b52a0e9ab4532ba` の実ファイル直読。外部スキル `~/.agents/skills/agmsg/` は読取 2026-07-25。
+
+### D-1: Issue #1384 の保護が現在まったく機能していない（負債、S2 相当）
+
+PR #1477 は「常に失敗する検証」を**ガードで迂回**して解消した。副作用として、Issue #1384 が導入した本来の保護 — TUI コールドスタートで初期プロンプトが取りこぼされた場合の検出と再送 — が**現在1度も発火しない**。
+
+- 出荷既定 `CLAUDE_MONITOR_PROMPT="/agmsg mode monitor"`（team-up.sh:104）は `watcher_verification_applies` の `*" actas "*` case（:1094-1096）に一致しない。
+- 結果、:1461 の stale sentinel 除去も :1479 の `verify_watchers_armed` も**両方スキップ**される。実 launch では stderr に1行の advisory が出るだけになる（:1099）。
+- したがって「メンバーの watcher が実は起動していない」状態は、**現行構成では検出手段がゼロ**。#1384 の症状（メッセージが誰にも届かないまま作業が進む）は再発しうるが無音である。
+
+これは PR #1477 の欠陥ではなく**意図された暫定状態**である（:1099 の告知文が `#1476` を名指しし、テスト t294 の FR-5 が「検証機構は #1476 がプロンプト変更だけで再有効化できるよう保持する」ことをピンしている）。ただし**負債であることの認識が必要**: #1476 が着地しない限り保護は不在のままで、その期間に制限はない。
+
+### D-2: テストが sentinel を自前で書くため、外部 seam の欠陥を構造的に検出できない
+
+`tests/integration/t-team-up-watcher-arming.test.ts` は agmsg を fixture でスタブし、**テスト自身が sentinel を作る**（測定 ref: `4a0f91ad0`）。
+
+- `:36-44` — `agmsg_ready_path` の自前スタブを書き出す（コメント verbatim: `  // Self-contained stub of agmsg's agmsg_ready_path — same contract team-up.sh`）。
+- `:87-92` — `sentinel()` / `armAll()` ヘルパーが `writeFileSync(sentinel(readyDir, role), "")` で全ロール分を直接生成する。
+- `:60` — fake herdr が `FAKE_RESEND_ARMS=1` のとき再送に応じて sentinel を touch する。
+
+すなわちテスト世界では **sentinel は常に「書かれうる」**。実世界で唯一の書き手である `watch.sh:307` が actas ガード（`:300`）配下にあり monitor モードでは発火しない、という**本番の非対称は fixture に写されていない**。前 intent（#1449）で 200.85 秒の実障害が出るまでこのスイートが green だったのはこの構造による。
+
+新設の `tests/integration/t294-team-up-watcher-applicability.test.ts` はこの盲点を**部分的に**埋める: `:44` が「出荷既定のプロンプトでは適用されない」、`:52` が「出荷定数が monitor 形であること」を、テスト側でピンせず実定数から読んで固定する。ただし依然として**外部 agmsg 側の契約（第4引数 → sentinel 書込）自体は検証していない**。この境界は repo 外・非バージョン管理であり、repo 内のテスト・センサーからは到達不能である（`dependencies.md` の同 intent 節を参照）。
+
+**#1476 の実装で追加すべき検証面**: プロンプトを actas 形へ変えたとき、検証が再び適用されること（ガードの正方向）と、その状態で `mux_attach` が不当にブロックされないこと（レイテンシ面）。前者は t294 の `:60` が既に forward path として持つ（テスト名 verbatim: `an actas bootstrap prompt applies (FR-1, #1476 forward path)`）。後者は未カバー。
+
+### D-3: `CLAUDE_MONITOR_PROMPT` が単一定数のまま4箇所に散在（#1476 の変更コスト）
+
+`:104` の定数は引数を持たず、4箇所が値そのものに依存する（`grep -n`、測定 ref: `4a0f91ad0`）。
+
+| 参照 | 用途 | actas 化で必要な変更 |
+| --- | --- | --- |
+| `:861` | `claude_member_cmd` の `init_prompt` 既定値 | **per-member 化**（ロール名 `$m` を埋める） |
+| `:1094` | 適用可否ガードの `case` | member 文脈を持たない。**「actas 形を使う構成か」の判定へ書き換え**が必要 |
+| `:1202` | `resend_monitor_prompt` への実引数 | per-member 化（対象ロールのプロンプトを再送する必要） |
+| `:1211` | 失敗時の手動復旧ガイダンス文言 | per-role 化しないと**誤った復旧手順を案内**する |
+
+「消費されるリスト・定数を canonical な1定義から導出する」（construction phase guardrail）を守るなら、`monitor_prompt_for <role>` のような1関数へ寄せるのが自然。単純な文字列置換で4箇所を個別に書き換えると、`:1211` のガイダンス退行を見落としやすい。
+
+### D-4: `git worktree add` の直列作成（#1478）
+
+`create_run()`（:1267）のループ（:1302-1310）が worktree を逐次作る。実測（feasibility、測定 ref: `c4c9531ee`）で7メンバー **7.39 秒**、並列度4なら **3.32 秒**（55% 短縮）。
+
+負債としての性質:
+
+- **失敗ゼロだが最適でもない**: 全並列度で成功 7/7・stderr 0 bytes。git が `.git` の設定ロックを内部で直列化するため、並列化はクラッシュリスクではなく**スループット最適化**の問題。
+- **無制限並列は退行**: 並列度7で 7.55 秒と直列（7.39 秒）より遅い。「素朴に全部同時に投げる」実装は改善にならない。**並列度の上限が実装要件**。
+- **ロールバック集約が未対応**: `CREATED_MEMBERS`（:1306）への逐次追記が `rollback_prepared_run`（:1241、読み手 :1244、`handle_exit` :1253 が :1259 で呼ぶ）のロールバック対象を決める。並列化すると成功集合の集約が必要で、**部分失敗時の挙動が現行と等価であることの検証が要る**。feasibility 実験では失敗が発生しなかったため、**失敗注入による検証が未実施**。
+- **エラー可視性**: 並列実行では stderr が交錯する。どのメンバーが失敗したかを特定する手段が現行にはない。
+- **測定環境の偏り**: 実測は macOS（APFS）のみ。Linux CI 上の並列度特性は未測定。
+
+### 直下の履歴節との関係
+
+前 intent（#1449）が記録した「常に失敗する検証ゲート = 検証劇場クラス」は、PR #1477 により**発火しない状態**へ移った。欠陥そのもの（sentinel を書かせる側を移植していない）は未解消で、#1476 の actas 移行がそれを埋める。本節の D-1 はその移行が完了するまでの中間状態を記録したものである。
+
+## 常に失敗する検証ゲートとテストスタブによる検出不能性（260725-teamup-attach-latency、履歴、Issue #1449）
 
 測定 ref: observed HEAD `ec624022ff65cc8b3912001f768bd66ec41a0e39` の実ファイル直読。
 

@@ -554,5 +554,12 @@
     "dirName": "260725-teamup-attach-latency",
     "scope": "amadeus-bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019f98dc-bfde-7c93-8d2a-57f7f5d57f58",
+    "slug": "teamup-launch-hardening",
+    "dirName": "260725-teamup-launch-hardening",
+    "scope": "amadeus-feature",
+    "status": "complete"
   }
 ]

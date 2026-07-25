@@ -1,6 +1,121 @@
 # アーキテクチャ
 
-## Team Mode ランチャーの watcher 検証と actas/monitor モード不一致（260725-teamup-attach-latency、現在、Issue #1449）
+## Team Mode 起動経路の現況と actas 移行後の構造（260725-teamup-launch-hardening、現在、Issue #1476 / #1478）
+
+測定 ref: observed HEAD `4a0f91ad07dbe17c6477b7fe9b52a0e9ab4532ba` の実ファイル直読（`packages/framework/core/tools/team-up.sh` は **1497 行**、`wc -l` 実測。前 intent 観測時 `ec624022f` の 1474 行から +23）。外部スキル `~/.agents/skills/agmsg/` は repo 外・非バージョン管理（読取 2026-07-25）。
+
+### PR #1477 で入った適用可否ガードの現況
+
+[PR #1477](https://github.com/amadeus-dlc/amadeus/pull/1477)（実装コミット `294df1281`）は、直下の履歴節が記述した「構造的に成功しえない検証」を**除去せず、発火しないよう門を立てる**形で解消した。`watcher_verification_applies` は runtime/backend の2条件に加えて**初期プロンプトの形**を見る（team-up.sh:1092-1102、verbatim: `  case "$CLAUDE_MONITOR_PROMPT" in` / `  *" actas "*) return 0 ;;`）。
+
+```text
+watcher_verification_applies()                       team-up.sh:1092
+  ├─ [ "$RUNTIME" = claude ] && [ "$MSG_BACKEND" = agmsg ] || return 1    :1093
+  ├─ case "$CLAUDE_MONITOR_PROMPT" in *" actas "*) return 0 ;; esac       :1094-1096
+  └─ WATCHER_SKIP_ANNOUNCED ガード付きで stderr へ1行 → return 1          :1097-1101
+```
+
+- 新設された可変 `WATCHER_SKIP_ANNOUNCED=0`（:1091）は、launch 経路が本関数を **2回** 呼ぶ（:1461 stale sentinel 除去前、:1478 検証前）ため advisory を run あたり1行に抑える one-shot ラッチ。stdout は一切触らない。
+- 出荷既定の `CLAUDE_MONITOR_PROMPT="/agmsg mode monitor"`（:104）は `*" actas "*` に一致しないため、**現在この検証は常にスキップされる**。すなわち Issue #1384 が導入した「プロンプト取りこぼしの検出と再送」の保護は、現時点で**機能していない**（詳細は `code-quality-assessment.md` の同 intent 節）。
+- スキップ告知の文言は `#1449` と `#1476` の両方を含み、#1476 の着地が再有効化の条件であることをコード上で宣言している（:1099、verbatim: `    echo "team-up: monitor-mode watcher writes no readiness sentinel — skipping arming verification (#1449/#1476)" >&2`）。
+
+配布同期は完了している: `git ls-files '*tools/team-up.sh'` = **11 面**（正本1 + self-install 4 + dist 6）、全面で `WATCHER_SKIP_ANNOUNCED` が **3 出現**（`grep -c`、測定 ref: `4a0f91ad0`）。
+
+### actas 移行（#1476）後に検証が実際に走る経路
+
+`/agmsg actas <role>` 化は `*" actas "*` case に一致するため、**ガードは自動的に再び真になり、PR #1477 以前の同期ブロッキング構造がそのまま復活する**。検証が「実際に走る」ためには、外部スキル側の前提が2段で満たされる必要がある（本 scan で独立に再実測）。
+
+1. **delivery mode が `monitor` または `both` であること** — claude-code ドライバ `~/.agents/skills/agmsg/scripts/drivers/types/claude-code/template.md:143` step 5d（verbatim: `   d. **Only if the project's delivery mode is \`monitor\` or \`both\`** (check via \`~/.agents/skills/__SKILL_NAME__/scripts/delivery.sh status claude-code "$(pwd)"\`), invoke a fresh Monitor, regardless of whether step b or c applied:`）。`turn` / `off` のときは watcher を起動しない（:147、verbatim: `      Otherwise (mode \`turn\` or \`off\`), leave it stopped — \`actas\` must not start automatic delivery a project wasn't configured for.`）。この前提は **`team-up.sh` 側で既に満たされている**: `claude_member_cmd` が pane 起動前に `bash "$DELIVERY" set monitor claude-code "$wt"` を実行する（:876-878、verbatim: `      bash "$DELIVERY" set monitor claude-code "$wt" >/dev/null 2>&1 ||`）。
+2. **actas 起動の watcher が第4引数 `<name>` を伴うこと** — 同 template.md:144（verbatim: `      - command: \`~/.agents/skills/__SKILL_NAME__/scripts/watch.sh $CLAUDE_CODE_SESSION_ID "$(pwd)" claude-code <name>\``）、:148（verbatim: `   The 4th argument to \`watch.sh\` restricts the subscription to messages addressed to \`<name>\` only — other roles' inbound messages stop reaching this session until another \`actas\` or session end.`）。この第4引数が `watch.sh:43` の `ACTIVE_NAME="${4:-}"` を非空にし、`watch.sh:300` の `if [ -n "$ACTIVE_NAME" ]; then` を通して `:307`（verbatim: `    printf '%s\n' "$SESSION_ID" > "$_rp" 2>/dev/null || true`）が sentinel を書く。
+
+**二層構造に注意**: インストール済み `~/.agents/skills/agmsg/SKILL.md:110-115` の actas 節は **codex 向け**の記述で（`identities.sh "$(pwd)" codex` をハードコードし `:114` で FROM 設定に留まる）、watcher 起動を規定しない。claude-code の actas 挙動の正準はドライバテンプレート側である。SKILL.md だけを読むと「actas は watcher を起動しない」と誤読する。
+
+**actas 排他ロックの claim⇔release 対称性**（`cid:requirements-analysis:symmetric-pair-review`、本 scan で追加検証）: actas 化は watcher 起動だけでなく**ロール排他ロックの取得**を伴う。claim 側は template.md:135 step 4（`actas-claim.sh`、`status=held` なら中止）、release 側は `lib/actas-lock.sh:186 actas_lock_release` / `:198 actas_lock_release_all` で、呼び手は `actas-claim.sh` / `reset.sh`（drop 経路 = template.md:154、第4引数がロックを解放）/ `despawn.sh` / `session-end.sh` の4本（`grep -rln actas_lock_release ~/.agents/skills/agmsg/scripts`、読取 2026-07-25）。**対は揃っている。**
+
+`team-up.sh` の teardown（`--kill`）はロックを明示解放しないが、これは欠陥ではない: `_actas_lock_try_claim`（`lib/actas-lock.sh:106-133`）が既存ロックの所有 sid の生存を `actas_lock_sid_alive`（:99）で確認し、死んでいれば `stale` として再取得を許す。したがって pane 強制終了で残ったロックが次回 launch を恒久ブロックすることはない。sentinel 側の生成⇔削除も同様に閉じている（生成 `watch.sh:307`、正常終了時の cleanup が `READY_FILES`（:135 初期化 / :308 追記）を :144-154 で削除、死んだ session の残骸は `session-start.sh:194` が GC）。
+
+実測（feasibility、測定 ref: `c4c9531ee`、隔離環境）: delivery mode = monitor を先に設定したうえで `/agmsg actas leader` を投入すると sentinel は **T+32.2 秒**に出現。mode 未設定（`off`）では 180 秒ポーリングしても未出現。
+
+### `mux_attach` との順序関係 — 移行の主要リスク
+
+launch 末尾の順序は PR #1477 でも**変わっていない**（測定 ref: `4a0f91ad0`）。
+
+```text
+:1472-1476  コメント「Completed BEFORE mux_attach so the exit code is meaningful
+             (an interactive attach would swallow it)」
+:1477       watcher_status=0
+:1478       if watcher_verification_applies; then
+:1479         verify_watchers_armed || watcher_status=$?     ← 同期・ブロッキング
+:1480       fi
+:1482       start_safety_wait_supervisors || exit 1
+:1483       mux_attach "$S"                                  ← ユーザーが触れる点
+```
+
+したがって #1476 の actas 移行を**プロンプト変更だけで**行うと、`verify_watchers_armed` が `WATCHER_READY_TIMEOUT=90`（:108）× `(WATCHER_RESEND_MAX=1)+1 = 2` ラウンド = 最悪 **180 秒**、`mux_attach` の前でブロックする構造が復活する。これは直前の intent `260725-teamup-attach-latency` が 200.85 秒 → 5.87 秒として解消した当の問題である。sentinel 出現の実測が1メンバー 32.2 秒であるため、7メンバー構成では最も遅い1名が全体の attach を律速する。
+
+**構造上の選択肢**（決定は requirements で行う。事実の提示に留める）:
+
+| 案 | 変更点 | 影響 |
+| --- | --- | --- |
+| A: 検証を `mux_attach` の後ろへ移す | :1478-1480 のブロックを :1483 の後へ | attach を妨げない。**exit code の意味は失われない**（直下「exit code の意味づけ」参照） |
+| B: 検証をバックグラウンド化 | 別 supervisor 化（:1482 の `start_safety_wait_supervisors` に既存の同型パターンあり） | 結果通知経路の新設が必要 |
+| C: タイムアウトを実測ベースへ縮める | `WATCHER_READY_TIMEOUT` の既定値 | 順序は不変。32.2 秒実測に対し 90 秒は過大だが、コールドスタートのばらつき耐性を失う |
+
+### exit code の意味づけ — 「attach が exit code を飲み込む」前提の実測（本 scan で追加）
+
+feasibility Q1 の確定裁定は **A（検証を `mux_attach` の後ろへ移す）**である。既存コメント（:1474-1476、verbatim: `# mux_attach so the exit code is meaningful (an interactive attach would swallow`）はこの移動を阻む設計意図に読めるが、**現行実装ではこの前提が成立しない**。
+
+- `mux_attach`（:513-515）の実体は1行で、verbatim: `  open -na Ghostty --args -e "$HERDR" session attach "$1"`。`open -na` は新しい Ghostty ウィンドウを起動して**即座に戻る**非ブロッキング呼出であり、attach セッションを team-up.sh の前景に取り込まない。
+- 実際、スクリプトは `mux_attach`（:1483）の**後**に run 記録の書き出し（:1484-1492）と launch 告知（:1495）を続け、最終行 :1497（verbatim: `exit "$watcher_status"`）で終了する。すなわち呼出元シェルへの exit code 経路は attach の後ろにも残っている。
+- したがって案 A は :1474-1476 のコメント**文言**の更新を要するが、exit code の意味づけを壊さない。争点は「exit code が失われるか」ではなく「`watcher_status` の確定を待って `exit` するために、attach 後に最悪 180 秒スクリプトが生き残ってよいか」（＝呼出元シェルのプロンプトが返る時刻）に移る。
+
+なお `CLAUDE_MONITOR_PROMPT`（:104、verbatim: `CLAUDE_MONITOR_PROMPT="/agmsg mode monitor"`）は `WATCHER_READY_TIMEOUT`（:108）/ `WATCHER_RESEND_MAX`（:114）と異なり `${VAR:-default}` 形を取らない**環境変数から上書き不能なハード定数**である（テストは lib を source して再代入することで上書きしている）。:102-103 のコメントが宣言する「bootstrap プロンプトの単一ソース（launch と再送で共用）」という不変条件は、actas 化でプロンプトが**ロール名を含む**ようになると「単一の定数」では保てず、「単一の導出関数（role → prompt）」へ形を変える必要がある。
+
+`CLAUDE_MONITOR_PROMPT` は**引数を持たない定数**で、参照は **4 箇所**（`grep -n`、測定 ref: `4a0f91ad0`）— `:861`（`claude_member_cmd` の `init_prompt` 初期値）、`:1094`（本 intent で新設された適用可否ガードの case）、`:1202`（`resend_monitor_prompt` への実引数）、`:1211`（失敗時の手動復旧ガイダンス文言）。actas 化はロール名を要するため per-member 化が必須であり、**member 文脈を持たない `:1094` はプロンプト値そのものではなく「actas 形を使う構成か」を判定する形へ書き換えを要する**。`:1211` のガイダンス文言も per-role 化しないと誤った復旧手順を案内する。
+
+### `git worktree add` の直列作成（#1478）
+
+worktree は `create_run()`（:1267）内の単一ループで**逐次**作られる（:1302-1310）。
+
+```text
+  for m in $(members_for "$TEAM_SIZE"); do
+    wt="$RUN_ROOT/$m"
+    branch="team/$RUN_ID/$m"
+    git -C "$REPO" worktree add -q -b "$branch" "$wt" "$base_commit"     ← :1305
+    CREATED_MEMBERS="$CREATED_MEMBERS $m"                                ← :1306
+    mkdir -p "$RUN_RECORD/members/$m"
+    ...
+  done
+```
+
+verbatim（:1305）: `    git -C "$REPO" worktree add -q -b "$branch" "$wt" "$base_commit"`
+
+この位置は launch シーケンス上、pane 起動（:1464-1470）より前の準備段で、watcher 検証面（:1478）とは**非交差**である。構造的裏付け（測定 ref: `4a0f91ad0`、`grep -n` による関数境界の実測）:
+
+| Unit | 触る関数（行域） | 触る行 |
+| --- | --- | --- |
+| U1（#1476） | `claude_member_cmd`（:860-894）、`watcher_verification_applies`（:1092-1102）、`verify_watchers_armed`（:1174-1213）、launch 末尾（:1471-1483） | :104 / :861 / :1094 / :1202 / :1211 |
+| U2（#1478） | `rollback_prepared_run`（:1241-1251）、`create_run`（:1267-1311） | :1244 / :1302-1310（うち :1305 / :1306）/ :1392 |
+
+行域は一切重ならず、共有する可変も存在しない（U1 = `CLAUDE_MONITOR_PROMPT` / `WATCHER_*`、U2 = `CREATED_MEMBERS` / `RUN_*`）。したがって #1476 と #1478 は worktree 隔離で並行実装でき、独立に出荷可能。**唯一の交差点は同一ファイルであることに起因する配布同期**（11 面の再生成）であり、後着 PR 側で `bun scripts/package.ts` / `bun run promote:self` の再実行が要る。
+
+並列化の制約は `CREATED_MEMBERS` の逐次追記（:1306）にある。この変数を読むのは `rollback_prepared_run`（:1241、読み手は :1244 の `for m in $CREATED_MEMBERS; do`）で、`handle_exit`（:1253）が :1259 でこれを呼ぶ。初期化は :1392（`CREATED_MEMBERS=""`）。部分失敗のロールバック対象がこの集合で決まるため、並列化すると**成功集合の集約**（サブシェルからの伝播）が必要になる。
+
+**作成⇔ロールバックの対称性**（`cid:requirements-analysis:symmetric-pair-review`）: 生成側は :1305 の `worktree add`、直後 :1306 で台帳へ登録、除去側は :1247（verbatim: `    git -C "$REPO" worktree remove --force "$wt" >/dev/null 2>&1 || true`）。対は揃っているが、**現行の直列実装では「add 成功 ⇒ 台帳登録」が同一シェルの連続2行で保証されている**のに対し、並列化では add がサブシェルで走るため、この含意関係を維持する機構（成功集合の親への回収、または worktree の実在走査によるロールバック対象の再導出）が新たな設計要求になる。ここが U2 の主要な正しさリスクであり、feasibility では**失敗注入が未実施**である。
+
+並列度別の実測（feasibility、測定 ref: `c4c9531ee`、同一リポ tracked 11,051 ファイル / `.git` 166M、7 worktree、macOS APFS）:
+
+| 並列度 | 所要 | 成功 | stderr |
+| --- | --- | --- | --- |
+| 1（現行・直列） | 7.39 秒 | 7/7 | 0 bytes |
+| 2 | 4.88 秒 | 7/7 | 0 bytes |
+| 3 | 4.03 秒 | 7/7 | 0 bytes |
+| **4** | **3.32 秒** | 7/7 | 0 bytes |
+| 7（無制限） | 7.55 秒 | 7/7 | 0 bytes |
+
+`.git` 設定ロック競合による**失敗は全並列度でゼロ**（git が内部で直列化する）。一方 **無制限並列（7）は直列より遅く**、「全部同時に投げる」実装は退行になる。構造上、**並列度に上限（実測最適 4）を持つワーカープール**が要求される。
+
+## Team Mode ランチャーの watcher 検証と actas/monitor モード不一致（260725-teamup-attach-latency、履歴、Issue #1449）
 
 測定 ref: observed HEAD `ec624022ff65cc8b3912001f768bd66ec41a0e39` の実ファイル直読（`packages/framework/core/tools/team-up.sh` は **1474 行**、`wc -l` 実測）、および repo 外の外部スキル `~/.agents/skills/agmsg/`（読取 2026-07-25）。
 

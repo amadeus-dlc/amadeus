@@ -1,6 +1,60 @@
 # コンポーネント棚卸し
 
-## Team Mode 起動レイテンシ関連コンポーネント（260725-teamup-attach-latency、現在、Issue #1449）
+## Team Mode 起動経路コンポーネント（260725-teamup-launch-hardening、現在、Issue #1476 / #1478）
+
+差分リフレッシュ（base `ec624022f` → observed HEAD `4a0f91ad07dbe17c6477b7fe9b52a0e9ab4532ba`、距離 9、amadeus-feature / Standard）。測定 ref: observed HEAD 実ファイル直読。**行番号は 260725-teamup-attach-latency 節から +23 シフトしている**（PR #1477 が :1071 以降に 23 行を挿入）ため、以下が現行値。
+
+### 正本コンポーネント: `packages/framework/core/tools/team-up.sh`（**1497 行**）
+
+| コンポーネント | 行 | 種別 | 本 intent での役割 |
+| --- | --- | --- | --- |
+| `CLAUDE_MONITOR_PROMPT` | `:104` | 定数 | **U1 の変更中心**。actas 化で per-member 化が必要 |
+| `WATCHER_READY_TIMEOUT` | `:108` | 定数（既定 90、env override 可） | 検証再有効化時の待ち予算（1ラウンド） |
+| `WATCHER_RESEND_MAX` | `:114` | 定数（既定 1、env override 可） | ラウンド数 = `+1` = 2。最悪 180 秒 |
+| `AGMSG_ACTAS_LOCK_LIB` | `:118` | 定数（env override 可） | agmsg `lib/actas-lock.sh` の source 元。テストが stub を差せる seam |
+| `start_safety_wait_supervisors` | `:399` | 関数 | 検証のバックグラウンド化を検討する際の同型パターン参照先 |
+| `mux_attach` | `:513-515` | 関数 | **ユーザーが interactive に触れる点**。検証はこの前（`:1483` に対し `:1479`）。実体は `open -na Ghostty --args -e ...` の**非ブロッキング1行** |
+| `claude_member_cmd` | `:860` | 関数 | 初期プロンプト組立（`:861`）と `delivery.sh set monitor` 実行（`:876-878`）。**U1 の主変更点** |
+| **`WATCHER_SKIP_ANNOUNCED`** | `:1091` | **新設**（PR #1477） | スキップ告知の one-shot ラッチ |
+| `watcher_verification_applies` | `:1092` | 関数（**PR #1477 で拡張**） | runtime/backend 2条件 + prompt 形（`:1094-1096`）。既定では false |
+| `ready_sentinel_path` | `:1111` | 関数 | agmsg lib を source して path を導出（文字列非複製） |
+| `resend_monitor_prompt` | `:1143` | 関数 | 再送。`:1202` で `CLAUDE_MONITOR_PROMPT` を受ける |
+| `clear_stale_watcher_sentinels` | `:1155` | 関数 | `:1461-1463` で呼出（ガード配下） |
+| `verify_watchers_armed` | `:1174` | 関数 | `:1479` で同期実行（ガード配下）。現在は未発火 |
+| `rollback_prepared_run` の worktree ロールバック | `:1241`（読み手 `:1244`、除去 `:1247`） | 関数（`handle_exit` `:1253` が `:1259` で呼ぶ） | `CREATED_MEMBERS` を読む。**U2 の並列化制約** |
+| `create_run` | `:1267` | 関数（呼出は `:1427` 単一） | **U2 の変更中心**。worktree 逐次作成ループ `:1302-1310` |
+| `CREATED_MEMBERS` | `:1306` 追記 / `:1392` 初期化 | shell 変数 | 成功集合。並列化時は集約が必要 |
+
+### 配布コンポーネント（伝播先、全11面が同期済み）
+
+| 層 | 面数 | パス |
+| --- | --- | --- |
+| 正本 | 1 | `packages/framework/core/tools/team-up.sh` |
+| self-install | 4 | `.claude` / `.codex` / `.cursor` / `.opencode` の `tools/team-up.sh` |
+| dist | 6 | `dist/{claude,codex,cursor,kiro,kiro-ide,opencode}/**/tools/team-up.sh` |
+
+（`git ls-files '*tools/team-up.sh' | wc -l` = 11、全面で `grep -c WATCHER_SKIP_ANNOUNCED` = 3。self-install に `.kiro` 系がないのは既存の構成であり本 intent の変化ではない。）
+
+### テストコンポーネント
+
+| ファイル | 行数 | test 数 | 本 intent との関係 |
+| --- | --- | --- | --- |
+| `tests/integration/t-team-up-watcher-arming.test.ts` | — | — | 既存。fixture が sentinel を自前生成するため外部 seam の欠陥に非到達（`code-quality-assessment.md` D-2）。`:196` の適用可否テストは PR #1477 で prompt 軸を actas 形にピン |
+| `tests/integration/t294-team-up-watcher-applicability.test.ts` | **113** | **7** | 新規（PR #1477）。`:44` 既定スキップ / `:52` 出荷定数の形 / `:60` actas forward path / `:68` runtime・backend 非回帰 / `:83` 告知1回・stdout 非汚染 / `:96` 適用時は無告知 / `:104` 機構保持（FR-5） |
+
+### 外部コンポーネント（repo 外・非バージョン管理、`~/.agents/skills/agmsg/`、読取 2026-07-25）
+
+| コンポーネント | 所在 | 役割 |
+| --- | --- | --- |
+| `watch.sh` の `ACTIVE_NAME` | `:43`（`ACTIVE_NAME="${4:-}"`） | 第4位置引数。非空のときだけ actas モード |
+| sentinel 書込ガード | `watch.sh:300`（`if [ -n "$ACTIVE_NAME" ]; then`） | **唯一の書き手**の入口 |
+| sentinel 書込 | `watch.sh:307`（`    printf '%s\n' "$SESSION_ID" > "$_rp" 2>/dev/null \|\| true`） | 実書込行 |
+| actas 排他ロック | `watch.sh:162` ガード / `lib/actas-lock.sh:140 actas_lock_claim` / `:230 actas_lock_state` | **U1 の未検証リスク**: resume（`-c`）経路で前セッションのロックが残ると `held` で abort しうる |
+| monitor 起動経路 | `delivery.sh:301` | 引数 3 個のみ → `ACTIVE_NAME` 空 |
+| actas ドライバ規定（**claude-code の正準**） | `drivers/types/claude-code/template.md:143-148` | step 5d: mode が `monitor`/`both` のときだけ watcher 起動、第4引数 `<name>` 付き |
+| `SKILL.md` の actas 節 | `:110-115` | **codex 向け**。watcher 起動を規定しない。誤読源 |
+
+## Team Mode 起動レイテンシ関連コンポーネント（260725-teamup-attach-latency、履歴、Issue #1449）
 
 差分リフレッシュ（base `6d4df9056` → observed HEAD `ec624022ff65cc8b3912001f768bd66ec41a0e39`、距離 125、amadeus-bugfix / Minimal）。測定 ref: observed HEAD 実ファイル直読。行番号は 260724 節から移動しているため、以下が現行値。
 
