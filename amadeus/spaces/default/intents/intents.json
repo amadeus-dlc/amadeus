@@ -589,5 +589,12 @@
     "dirName": "260726-metrics-visualization",
     "scope": "amadeus-feature",
     "status": "complete"
+  },
+  {
+    "uuid": "019f97bf-a393-759e-8194-7029d5864fe8",
+    "slug": "kimi-harness",
+    "dirName": "260725-kimi-harness",
+    "scope": "amadeus-feature",
+    "status": "in-flight"
   }
 ]
