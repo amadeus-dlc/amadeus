@@ -17,6 +17,7 @@ import {
 } from "../../packages/framework/core/tools/amadeus-mirror-coordinator.ts";
 import {
   runMirrorLifecycleBoundary,
+  runMirrorLifecycleMain,
 } from "../../packages/framework/core/tools/amadeus-mirror-lifecycle.ts";
 import {
   EMPTY_MIRROR_STATE,
@@ -100,6 +101,21 @@ class LifecycleGateway implements MirrorGitHubGateway {
       state: "CLOSED",
     };
     return ok(this.issues[0] as RemoteMirrorIssue);
+  }
+}
+
+class PendingLifecycleGateway extends LifecycleGateway {
+  override async createIssue(): Promise<
+    GatewayOutcome<RemoteMirrorIssue>
+  > {
+    this.history.push("create");
+    return {
+      kind: "failure",
+      classification: "network",
+      summary: "injected network failure",
+      retryable: true,
+      effect: "outcome-unknown",
+    };
   }
 }
 
@@ -357,6 +373,300 @@ describe("t282 boundary isolation and completion chain", () => {
 });
 
 describe("t282 awaitable production lifecycle adapter", () => {
+  test("CLI returns non-zero while a prompt answer is still required", async () => {
+    const fx = adapterFixture();
+    writeFileSync(
+      join(fx.root, "amadeus", "config.json"),
+      JSON.stringify({ "auto-mirror": "prompt" }),
+    );
+    const exitCode = await runMirrorLifecycleMain(
+      [
+        "boundary",
+        "intent-capture",
+        "--instance",
+        "capture-prompt-cli-1",
+        "--project-dir",
+        fx.root,
+        "--space",
+        fx.space,
+        "--intent",
+        fx.intentDir,
+      ],
+      {
+        gateway: new LifecycleGateway(),
+        ports: fx.ports,
+        now: () => NOW,
+        newOperationId: () => "binding-cli-1",
+      },
+    );
+
+    expect(exitCode).toBe(1);
+  });
+
+  test("CLI returns zero only for completed operation outcomes", async () => {
+    const completed = adapterFixture();
+    const completedExit = await runMirrorLifecycleMain(
+      [
+        "boundary",
+        "intent-capture",
+        "--instance",
+        "capture-completed-cli-1",
+        "--project-dir",
+        completed.root,
+        "--space",
+        completed.space,
+        "--intent",
+        completed.intentDir,
+      ],
+      {
+        gateway: new LifecycleGateway(),
+        ports: completed.ports,
+        now: () => NOW,
+        newOperationId: () => "operation-completed-cli-1",
+      },
+    );
+    expect(completedExit).toBe(0);
+
+    const suppressed = adapterFixture();
+    writeFileSync(
+      join(suppressed.root, "amadeus", "config.json"),
+      JSON.stringify({ "auto-mirror": "off" }),
+    );
+    const suppressedExit = await runMirrorLifecycleMain(
+      [
+        "boundary",
+        "intent-capture",
+        "--instance",
+        "capture-suppressed-cli-1",
+        "--project-dir",
+        suppressed.root,
+        "--space",
+        suppressed.space,
+        "--intent",
+        suppressed.intentDir,
+      ],
+      { gateway: new LifecycleGateway(), ports: suppressed.ports, now: () => NOW },
+    );
+    expect(suppressedExit).toBe(1);
+
+    const pending = adapterFixture();
+    const pendingExit = await runMirrorLifecycleMain(
+      [
+        "manual",
+        "create",
+        "--instance",
+        "manual-pending-cli-1",
+        "--project-dir",
+        pending.root,
+        "--space",
+        pending.space,
+        "--intent",
+        pending.intentDir,
+      ],
+      {
+        gateway: new PendingLifecycleGateway(),
+        ports: pending.ports,
+        now: () => NOW,
+        newOperationId: () => "operation-pending-cli-1",
+      },
+    );
+    expect(pendingExit).toBe(1);
+
+    const blocked = adapterFixture();
+    const blockedExit = await runMirrorLifecycleMain(
+      [
+        "manual",
+        "create",
+        "--instance",
+        "manual-blocked-cli-1",
+        "--project-dir",
+        blocked.root,
+        "--space",
+        blocked.space,
+        "--intent",
+        blocked.intentDir,
+      ],
+      {
+        gateway: new LifecycleGateway(),
+        ports: {
+          ...blocked.ports,
+          readDocument() {
+            throw new Error("injected state read failure");
+          },
+        },
+        now: () => NOW,
+        newOperationId: () => "operation-blocked-cli-1",
+      },
+    );
+    expect(blockedExit).toBe(1);
+  });
+
+  test("answer approve binds to the persisted prompt and derives its operation", async () => {
+    const fx = adapterFixture();
+    writeFileSync(
+      join(fx.root, "amadeus", "config.json"),
+      JSON.stringify({ "auto-mirror": "prompt" }),
+    );
+    const gateway = new LifecycleGateway();
+    const runtime = {
+      gateway,
+      ports: fx.ports,
+      now: () => NOW,
+      newOperationId: () => "binding-approve-cli-1",
+      newAnswerId: () => "answer-approve-cli-1",
+    };
+    const asked = await runMirrorLifecycleBoundary(
+      {
+        projectDir: fx.root,
+        space: fx.space,
+        intentDir: fx.intentDir,
+        boundary: {
+          kind: "intent-capture-approved",
+          instance: "capture-approve-cli-1",
+        },
+      },
+      runtime,
+    );
+    expect(asked.kind).toBe("ok");
+    if (asked.kind !== "ok" || asked.outcome.kind !== "ask") {
+      throw new Error("expected a persisted Mirror prompt");
+    }
+    const persisted = parseMirrorStateDocument(
+      readFileSync(fx.statePath, "utf-8"),
+    );
+    expect(persisted.kind).toBe("ok");
+    if (persisted.kind !== "ok" || !persisted.snapshot.expectedPrompt) {
+      throw new Error("expected a persisted binding");
+    }
+    expect(
+      (asked.outcome as typeof asked.outcome & { bindingId?: string }).bindingId,
+    ).toBe(persisted.snapshot.expectedPrompt.bindingId);
+
+    const exitCode = await runMirrorLifecycleMain(
+      [
+        "answer",
+        "approve",
+        "--binding-id",
+        persisted.snapshot.expectedPrompt.bindingId,
+        "--project-dir",
+        fx.root,
+        "--space",
+        fx.space,
+        "--intent",
+        fx.intentDir,
+      ],
+      runtime,
+    );
+
+    expect(exitCode).toBe(0);
+    expect(gateway.history.filter((entry) => entry === "create")).toHaveLength(1);
+  });
+
+  test("answer skip and invalid bindings fail closed without remote mutation", async () => {
+    const fx = adapterFixture();
+    writeFileSync(
+      join(fx.root, "amadeus", "config.json"),
+      JSON.stringify({ "auto-mirror": "prompt" }),
+    );
+    const gateway = new LifecycleGateway();
+    const runtime = {
+      gateway,
+      ports: fx.ports,
+      now: () => NOW,
+      newOperationId: () => "binding-skip-cli-1",
+      newAnswerId: () => "answer-skip-cli-1",
+    };
+    const asked = await runMirrorLifecycleBoundary(
+      {
+        projectDir: fx.root,
+        space: fx.space,
+        intentDir: fx.intentDir,
+        boundary: {
+          kind: "intent-capture-approved",
+          instance: "capture-skip-cli-1",
+        },
+      },
+      runtime,
+    );
+    if (asked.kind !== "ok" || asked.outcome.kind !== "ask") {
+      throw new Error("expected a persisted Mirror prompt");
+    }
+    const answerArgs = [
+      "--project-dir",
+      fx.root,
+      "--space",
+      fx.space,
+      "--intent",
+      fx.intentDir,
+    ];
+    const beforeRejected = readFileSync(fx.statePath, "utf-8");
+    expect(
+      await runMirrorLifecycleMain(
+        ["answer", "approve", "--binding-id", "wrong-binding", ...answerArgs],
+        runtime,
+      ),
+    ).toBe(1);
+    expect(readFileSync(fx.statePath, "utf-8")).toBe(beforeRejected);
+    expect(
+      await runMirrorLifecycleMain(
+        ["answer", "approve", ...answerArgs],
+        runtime,
+      ),
+    ).toBe(2);
+    expect(
+      await runMirrorLifecycleMain(
+        [
+          "answer",
+          "approve",
+          "--binding-id",
+          asked.outcome.bindingId,
+          "--operation",
+          "sync",
+          ...answerArgs,
+        ],
+        runtime,
+      ),
+    ).toBe(2);
+
+    expect(
+      await runMirrorLifecycleMain(
+        [
+          "answer",
+          "skip",
+          "--binding-id",
+          asked.outcome.bindingId,
+          ...answerArgs,
+        ],
+        runtime,
+      ),
+    ).toBe(1);
+    const afterSkip = readFileSync(fx.statePath, "utf-8");
+    const skipped = parseMirrorStateDocument(afterSkip);
+    expect(skipped.kind).toBe("ok");
+    if (skipped.kind === "ok") {
+      expect(skipped.snapshot.expectedPrompt).toBeUndefined();
+      expect(Object.values(skipped.snapshot.receipts)[0]?.status).toBe(
+        "skipped-for-event",
+      );
+    }
+    expect(gateway.history).toEqual([]);
+
+    expect(
+      await runMirrorLifecycleMain(
+        [
+          "answer",
+          "skip",
+          "--binding-id",
+          asked.outcome.bindingId,
+          ...answerArgs,
+        ],
+        runtime,
+      ),
+    ).toBe(1);
+    expect(readFileSync(fx.statePath, "utf-8")).toBe(afterSkip);
+    expect(gateway.history).toEqual([]);
+  });
+
   test("prompt approval consumes its durable binding atomically and cannot be replayed", async () => {
     const fx = adapterFixture();
     writeFileSync(
@@ -386,6 +696,7 @@ describe("t282 awaitable production lifecycle adapter", () => {
     }
     const answer = {
       choice: "approve" as const,
+      bindingId: asked.outcome.bindingId,
       answerId: "answer-capture-1",
       event: asked.outcome.event,
       operation: asked.outcome.operation,

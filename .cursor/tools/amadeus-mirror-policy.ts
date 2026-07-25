@@ -165,7 +165,11 @@ function withRetry(
 export function approveMirrorPrompt(
   input: Readonly<{
     expected: MirrorExpectedPrompt;
-    answer: Readonly<{ event: MirrorEventIdentity; operation: MirrorOperation }>;
+    answer: Readonly<{
+      bindingId: string;
+      event: MirrorEventIdentity;
+      operation: MirrorOperation;
+    }>;
     state: MirrorStateSnapshot;
   }>,
 ):
@@ -173,10 +177,12 @@ export function approveMirrorPrompt(
   | Extract<MirrorDecision, { kind: "suppress" }> {
   const { expected, answer, state } = input;
   const answerMatches =
+    expected.bindingId === answer.bindingId &&
     eventsMatch(expected.event, answer.event) &&
     expected.operation === answer.operation;
   const stateBinds =
     state.expectedPrompt !== undefined &&
+    state.expectedPrompt.bindingId === expected.bindingId &&
     eventsMatch(state.expectedPrompt.event, expected.event) &&
     state.expectedPrompt.operation === expected.operation;
   if (!answerMatches || !stateBinds) {

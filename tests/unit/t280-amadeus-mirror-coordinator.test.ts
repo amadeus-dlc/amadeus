@@ -233,6 +233,7 @@ describe("t280 prompt answers and completion", () => {
       ...base,
       answer: {
         choice: "skip",
+        bindingId: asked.bindingId,
         answerId: "answer-skip-1",
         event: asked.event,
         operation: asked.operation,
@@ -255,6 +256,7 @@ describe("t280 prompt answers and completion", () => {
       ...base,
       answer: {
         choice: "approve",
+        bindingId: asked.bindingId,
         answerId: "answer-approve-1",
         event: asked.event,
         operation: asked.operation,

@@ -243,18 +243,90 @@ describe("t232 snapshot error paths (C2 fail-closed)", () => {
 });
 
 describe("t232 main dispatch through the injected seam (C6)", () => {
-  test("usage path returns 2 without touching gh", () => {
+  test("mutations delegate one-to-one to lifecycle manual without direct gh calls", async () => {
+    const root = makeWorkspace({});
     const gh = fakeGh({});
-    expect(main(["bogus"], "/nonexistent", gh.run)).toBe(2);
+    const lifecycleCalls: Array<{
+      manualOperation?: string;
+      invocationId?: string;
+      intentDir?: string;
+    }> = [];
+    const lifecycle = async (request: {
+      manualOperation?: "create" | "sync" | "close";
+      invocationId?: string;
+      intentDir?: string;
+    }) => {
+      lifecycleCalls.push(request);
+      return {
+        kind: "ok" as const,
+        outcome: {
+          kind: "continued" as const,
+          outcomes: [
+            {
+              kind: "completed" as const,
+              operation: request.manualOperation!,
+              issueNumber: 1161,
+            },
+          ],
+          workflowMayAdvance: true as const,
+        },
+      };
+    };
+    const delegatedMain = main as unknown as (
+      argv: string[],
+      projectDir: string,
+      run: GhRunner,
+      runLifecycle: typeof lifecycle,
+    ) => Promise<number>;
+
+    for (const operation of ["create", "sync", "close"] as const) {
+      expect(
+        await delegatedMain(
+          [operation, "--instance", `${operation}-1`, "--intent", DIR],
+          root,
+          gh.run,
+          lifecycle,
+        ),
+      ).toBe(0);
+    }
+
+    expect(
+      lifecycleCalls.map((request) => ({
+        operation: request.manualOperation,
+        instance: request.invocationId,
+        intentDir: request.intentDir,
+      })),
+    ).toEqual(
+      (["create", "sync", "close"] as const).map((operation) => ({
+        operation,
+        instance: `${operation}-1`,
+        intentDir: DIR,
+      })),
+    );
+    expect(gh.calls).toEqual([]);
+  });
+
+  test("usage path returns 2 without touching gh", async () => {
+    const gh = fakeGh({});
+    expect(await main(["bogus"], "/nonexistent", gh.run)).toBe(2);
     expect(gh.calls.length).toBe(0);
   });
 
-  test("create/sync/close dispatch to the handlers with the injected deps", () => {
+  test("mutation without --instance is usage and has no side effects", async () => {
     const root = makeWorkspace({});
-    const gh = fakeGh({ "issue create": CREATED });
-    expect(main(["create", "--intent", DIR], root, gh.run)).toBe(0);
-    expect(main(["sync", "--intent", DIR], root, gh.run)).toBe(0);
-    expect(main(["close", "--intent", DIR], root, gh.run)).toBe(1);
+    const gh = fakeGh({});
+    const before = readFileSync(
+      join(root, "amadeus", "spaces", "default", "intents", DIR, "amadeus-state.md"),
+      "utf-8",
+    );
+    expect(await main(["create", "--intent", DIR], root, gh.run)).toBe(2);
+    expect(gh.calls).toEqual([]);
+    expect(
+      readFileSync(
+        join(root, "amadeus", "spaces", "default", "intents", DIR, "amadeus-state.md"),
+        "utf-8",
+      ),
+    ).toBe(before);
   });
 });
 
@@ -344,12 +416,12 @@ describe("t232 status (U1 FR-2 read-only diagnosis)", () => {
     expect(handleStatus(root, DIR, bodyless.run)).toBe(2);
   });
 
-  test("main dispatches status with --intent and preserves usage exit 2", () => {
+  test("main dispatches status with --intent and preserves usage exit 2", async () => {
     const root = makeWorkspace({ mirrorIssue: "#1161" });
     const body = canonicalBody(root);
     const gh = fakeGh({ "issue view": { kind: "ok", stdout: JSON.stringify({ body }) } });
-    expect(main(["status", "--intent", DIR], root, gh.run)).toBe(0);
-    expect(main(["status", "--unknown"], root, gh.run)).toBe(2);
+    expect(await main(["status", "--intent", DIR], root, gh.run)).toBe(0);
+    expect(await main(["status", "--unknown"], root, gh.run)).toBe(2);
   });
 });
 

@@ -77,6 +77,20 @@ export const MIRROR_USER_CONTRACT = {
       positionalArguments: "forbidden",
     },
   ],
+  answerCommands: [
+    {
+      path: ["answer", "approve"],
+      requiredOptions: ["--binding-id"],
+      optionalOptions: ["--repo", "--space", "--intent", "--project-dir"],
+      positionalArguments: "forbidden",
+    },
+    {
+      path: ["answer", "skip"],
+      requiredOptions: ["--binding-id"],
+      optionalOptions: ["--repo", "--space", "--intent", "--project-dir"],
+      positionalArguments: "forbidden",
+    },
+  ],
   repairCommands: [
     {
       path: ["repair", "status"],
@@ -116,6 +130,7 @@ export const MIRROR_USER_CONTRACT = {
 type ContractCommand =
   | (typeof MIRROR_USER_CONTRACT.boundaryCommands)[number]
   | (typeof MIRROR_USER_CONTRACT.manualCommands)[number]
+  | (typeof MIRROR_USER_CONTRACT.answerCommands)[number]
   | (typeof MIRROR_USER_CONTRACT.repairCommands)[number];
 
 export function mirrorContractCommandUsage(command: ContractCommand): string {
@@ -130,6 +145,7 @@ export function renderMirrorLifecycleHelp(): string {
   const commands: readonly ContractCommand[] = [
     ...MIRROR_USER_CONTRACT.boundaryCommands,
     ...MIRROR_USER_CONTRACT.manualCommands,
+    ...MIRROR_USER_CONTRACT.answerCommands,
     ...MIRROR_USER_CONTRACT.repairCommands,
   ];
   return [
@@ -142,10 +158,8 @@ export function renderMirrorLifecycleHelp(): string {
 
 export function renderMirrorLegacyHelp(): string {
   return [
-    `Usage: bun <harness-dir>/tools/amadeus-mirror.ts <${[
-      ...MIRROR_USER_CONTRACT.operations,
-      "status",
-    ].join("|")}> [--intent <dirName>]`,
+    "Usage: bun <harness-dir>/tools/amadeus-mirror.ts <create|sync|close> --instance <id> [--intent <dirName>]",
+    "       bun <harness-dir>/tools/amadeus-mirror.ts status [--intent <dirName>]",
     `Lifecycle default mode: ${MIRROR_USER_CONTRACT.defaultMode}.`,
     "Operational note: create/close are run by the conductor by team agreement; this is not mechanically enforced (see team.md).",
   ].join("\n");

@@ -83,6 +83,7 @@ import {
   type CoverageSourcePathContext,
   normalizeCoverageSourcePath,
 } from "../lib/coverage-source-path.ts";
+import { normalizeCoverageReport } from "../lib/coverage-normalize.ts";
 
 // The runner lives at <repo>/tests/run-tests.sh. We invoke it with `bash` to
 // match how the suite (and the .sh) ran it — the runner is not chmod-dependent
@@ -192,6 +193,61 @@ describe("coverage source path normalization", () => {
     expect(
       normalizeCoverageSourcePath("dist/codex/.codex/tools/amadeus-lib.ts", coveragePathContext),
     ).toBe(CANONICAL_LIB);
+  });
+
+  test("folds every Cursor and OpenCode source family to the core source", () => {
+    const cases = [
+      ".cursor/tools/amadeus-lib.ts",
+      ".opencode/tools/amadeus-lib.ts",
+      "dist/cursor/.cursor/tools/amadeus-lib.ts",
+      "dist/opencode/.opencode/tools/amadeus-lib.ts",
+      join(
+        tmpdir(),
+        "amadeus-pkg-cursor-AbC123",
+        ".cursor",
+        "tools",
+        "amadeus-lib.ts",
+      ),
+      join(
+        realpathSync(tmpdir()),
+        "amadeus-pkg-opencode-XyZ789",
+        ".opencode",
+        "tools",
+        "amadeus-lib.ts",
+      ),
+    ];
+    for (const source of cases) {
+      expect(normalizeCoverageSourcePath(source, coveragePathContext)).toBe(
+        CANONICAL_LIB,
+      );
+    }
+  });
+
+  test("merges core, Cursor, and OpenCode LCOV into one source entry", () => {
+    const report = normalizeCoverageReport(
+      [
+        "TN:",
+        `SF:${CANONICAL_LIB}`,
+        "DA:1,0",
+        "end_of_record",
+        "TN:",
+        "SF:.cursor/tools/amadeus-lib.ts",
+        "DA:1,0",
+        "end_of_record",
+        "TN:",
+        "SF:dist/opencode/.opencode/tools/amadeus-lib.ts",
+        "DA:1,1",
+        "end_of_record",
+      ].join("\n"),
+      coveragePathContext,
+      REPO_ROOT,
+      { readSource: () => "export const covered = true;\n" },
+    );
+
+    expect(report.match(/^SF:/gm)).toHaveLength(1);
+    expect(report).toContain(`SF:${CANONICAL_LIB}`);
+    expect(report).toContain("LF:1");
+    expect(report).toContain("LH:1");
   });
 
   test("folds Windows-separated packaged sources under an injected temp root", () => {

@@ -94,10 +94,12 @@ describe("t281 status and prompt", () => {
     for (const command of [
       ...MIRROR_USER_CONTRACT.boundaryCommands,
       ...MIRROR_USER_CONTRACT.manualCommands,
+      ...MIRROR_USER_CONTRACT.answerCommands,
       ...MIRROR_USER_CONTRACT.repairCommands,
     ]) expect(lifecycle).toContain(mirrorContractCommandUsage(command));
     const legacy = renderMirrorLegacyHelp();
-    expect(legacy).toContain("<create|sync|close|status>");
+    expect(legacy).toContain("<create|sync|close> --instance <id>");
+    expect(legacy).toContain("status [--intent <dirName>]");
     expect(legacy).toContain("Lifecycle default mode: prompt");
   });
 

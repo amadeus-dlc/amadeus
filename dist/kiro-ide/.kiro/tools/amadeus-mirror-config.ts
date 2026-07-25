@@ -18,6 +18,7 @@
 
 import {
   closeSync,
+  constants as fsConstants,
   fstatSync,
   lstatSync,
   openSync,
@@ -109,45 +110,89 @@ type ConfigBytes =
 
 const NOT_READABLE = "configuration path is not readable";
 
-// Read an already-contained regular file behind an open descriptor: reject a
-// non-regular file, a file over the size limit, and any size/mtime/inode change
-// between the opening and closing fstat (a symlink swap or growth during read).
-function readBoundedRegularFile(realPath: string): ConfigBytes {
-  let fd: number;
+export type MirrorConfigReadHooks = Readonly<{
+  beforeOpen?: (path: string) => void;
+}>;
+
+type OpenConfigFile =
+  | { kind: "open"; fd: number }
+  | Exclude<ConfigBytes, { kind: "text" }>;
+
+function openConfigFile(path: string): OpenConfigFile {
+  const noFollow = fsConstants.O_NOFOLLOW as number | undefined;
+  if (typeof noFollow !== "number") {
+    return {
+      kind: "read-failure",
+      summary: "configuration cannot be verified without O_NOFOLLOW",
+    };
+  }
   try {
-    fd = openSync(realPath, "r");
+    return {
+      kind: "open",
+      fd: openSync(path, fsConstants.O_RDONLY | noFollow),
+    };
   } catch (error) {
     if (isEnoent(error)) return { kind: "absent" };
     return { kind: "read-failure", summary: NOT_READABLE };
   }
+}
+
+function readConfigDescriptor(
+  fd: number,
+  expectedIdentity: Readonly<{ dev: number; ino: number }>,
+): ConfigBytes {
+  const start = fstatSync(fd);
+  if (
+    start.dev !== expectedIdentity.dev ||
+    start.ino !== expectedIdentity.ino
+  ) {
+    return {
+      kind: "read-failure",
+      summary: "configuration changed before open",
+    };
+  }
+  if (!start.isFile()) {
+    return { kind: "read-failure", summary: "configuration path is not a regular file" };
+  }
+  if (start.size > MAX_CONFIG_BYTES) {
+    return { kind: "read-failure", summary: "configuration exceeds the size limit" };
+  }
+  const buffer = Buffer.alloc(MAX_CONFIG_BYTES + 1);
+  let total = 0;
+  for (let read = 1; read !== 0 && total <= MAX_CONFIG_BYTES; total += read) {
+    read = readSync(fd, buffer, total, buffer.length - total, total);
+  }
+  if (total > MAX_CONFIG_BYTES) {
+    return { kind: "read-failure", summary: "configuration exceeds the size limit" };
+  }
+  const end = fstatSync(fd);
+  const stable =
+    end.size === start.size &&
+    end.mtimeMs === start.mtimeMs &&
+    end.dev === start.dev &&
+    end.ino === start.ino;
+  if (!stable) {
+    return { kind: "read-failure", summary: "configuration changed during read" };
+  }
+  return { kind: "text", text: buffer.subarray(0, total).toString("utf-8") };
+}
+
+// Read an already-contained regular file behind an open descriptor: reject a
+// non-regular file, a file over the size limit, and any size/mtime/inode change
+// between the opening and closing fstat (a symlink swap or growth during read).
+function readBoundedRegularFile(
+  path: string,
+  expectedIdentity: Readonly<{ dev: number; ino: number }>,
+): ConfigBytes {
+  const opened = openConfigFile(path);
+  if (opened.kind !== "open") return opened;
   try {
-    const start = fstatSync(fd);
-    if (!start.isFile()) {
-      return { kind: "read-failure", summary: "configuration path is not a regular file" };
-    }
-    if (start.size > MAX_CONFIG_BYTES) {
-      return { kind: "read-failure", summary: "configuration exceeds the size limit" };
-    }
-    const buffer = Buffer.alloc(MAX_CONFIG_BYTES + 1);
-    let total = 0;
-    for (let read = 1; read !== 0 && total <= MAX_CONFIG_BYTES; total += read) {
-      read = readSync(fd, buffer, total, buffer.length - total, total);
-    }
-    if (total > MAX_CONFIG_BYTES) {
-      return { kind: "read-failure", summary: "configuration exceeds the size limit" };
-    }
-    const end = fstatSync(fd);
-    const stable =
-      end.size === start.size && end.mtimeMs === start.mtimeMs && end.ino === start.ino;
-    if (!stable) {
-      return { kind: "read-failure", summary: "configuration changed during read" };
-    }
-    return { kind: "text", text: buffer.subarray(0, total).toString("utf-8") };
+    return readConfigDescriptor(opened.fd, expectedIdentity);
   } catch {
     return { kind: "read-failure", summary: NOT_READABLE };
   } finally {
     try {
-      closeSync(fd);
+      closeSync(opened.fd);
     } catch {
       // The descriptor may already be gone; nothing more to release.
     }
@@ -158,9 +203,21 @@ function readBoundedRegularFile(realPath: string): ConfigBytes {
 // Anything that is not a plain, contained, stable, size-bounded regular file
 // is a loud read-failure carrying only a redacted summary — never raw bytes,
 // an absolute home path, or a credential.
-function readConfigBytes(rootReal: string, absPath: string): ConfigBytes {
+function readConfigBytes(
+  rootReal: string,
+  absPath: string,
+  hooks: MirrorConfigReadHooks,
+): ConfigBytes {
+  let expectedIdentity: Readonly<{ dev: number; ino: number }>;
   try {
-    lstatSync(absPath);
+    const candidate = lstatSync(absPath);
+    if (candidate.isSymbolicLink()) {
+      return {
+        kind: "read-failure",
+        summary: "configuration path must not be a symlink",
+      };
+    }
+    expectedIdentity = { dev: candidate.dev, ino: candidate.ino };
   } catch (error) {
     if (isEnoent(error)) return { kind: "absent" };
     return { kind: "read-failure", summary: NOT_READABLE };
@@ -181,7 +238,8 @@ function readConfigBytes(rootReal: string, absPath: string): ConfigBytes {
       summary: "configuration path escapes the workspace root",
     };
   }
-  return readBoundedRegularFile(realPath);
+  hooks.beforeOpen?.(absPath);
+  return readBoundedRegularFile(absPath, expectedIdentity);
 }
 
 function readFailure(
@@ -206,6 +264,7 @@ export function readMirrorConfigLayers(
   projectDir: string,
   explicitIntentDir?: string,
   explicitSpace?: string,
+  hooks: MirrorConfigReadHooks = {},
 ): MirrorConfigReadOutcome {
   const root = workspaceRoot(projectDir);
   let rootReal: string | null;
@@ -236,7 +295,7 @@ export function readMirrorConfigLayers(
     const bytes =
       rootReal === null
         ? ({ kind: "absent" } as const)
-        : readConfigBytes(rootReal, candidate.abs);
+        : readConfigBytes(rootReal, candidate.abs, hooks);
     if (bytes.kind === "absent") {
       layers.push({ layer: candidate.layer, path, present: false, rawValue: undefined });
       continue;
@@ -339,8 +398,14 @@ export function resolveMirrorConfig(
   projectDir: string,
   explicitIntentDir?: string,
   explicitSpace?: string,
+  hooks: MirrorConfigReadHooks = {},
 ): MirrorConfigOutcome {
-  const read = readMirrorConfigLayers(projectDir, explicitIntentDir, explicitSpace);
+  const read = readMirrorConfigLayers(
+    projectDir,
+    explicitIntentDir,
+    explicitSpace,
+    hooks,
+  );
   if (read.kind === "failure") return { kind: "invalid", issues: read.issues };
   return parseMirrorConfigLayers(read.layers);
 }

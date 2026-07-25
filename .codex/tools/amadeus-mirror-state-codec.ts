@@ -191,7 +191,7 @@ function parseJsonStrict(text: string): JsonValue {
         }
         continue;
       }
-      if (c === "\n" || c === "\r")
+      if (c.charCodeAt(0) <= 0x1f)
         throw new JsonParseError(path, "unescaped control character");
       out += c;
       i++;

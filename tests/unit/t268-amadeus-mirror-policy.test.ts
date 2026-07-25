@@ -183,26 +183,46 @@ describe("t268 approveMirrorPrompt", () => {
 
   test("approves an exact matching answer", () => {
     expect(
-      approveMirrorPrompt({ expected, answer: { event, operation: "create" }, state: bound }),
+      approveMirrorPrompt({
+        expected,
+        answer: { bindingId: "binding-1", event, operation: "create" },
+        state: bound,
+      }),
     ).toEqual({ kind: "execute", operation: "create", event });
   });
 
   test("rejects a different operation", () => {
     expect(
-      approveMirrorPrompt({ expected, answer: { event, operation: "sync" }, state: bound }),
+      approveMirrorPrompt({
+        expected,
+        answer: { bindingId: "binding-1", event, operation: "sync" },
+        state: bound,
+      }),
     ).toEqual({ kind: "suppress", reason: "not-applicable" });
   });
 
   test("rejects a different event instance", () => {
     const other = ev(wc("wc-2"), "create");
     expect(
-      approveMirrorPrompt({ expected, answer: { event: other, operation: "create" }, state: bound }),
+      approveMirrorPrompt({
+        expected,
+        answer: {
+          bindingId: "binding-1",
+          event: other,
+          operation: "create",
+        },
+        state: bound,
+      }),
     ).toEqual({ kind: "suppress", reason: "not-applicable" });
   });
 
   test("rejects when the state no longer holds that expected prompt", () => {
     expect(
-      approveMirrorPrompt({ expected, answer: { event, operation: "create" }, state: snapshot() }),
+      approveMirrorPrompt({
+        expected,
+        answer: { bindingId: "binding-1", event, operation: "create" },
+        state: snapshot(),
+      }),
     ).toEqual({ kind: "suppress", reason: "not-applicable" });
   });
 });

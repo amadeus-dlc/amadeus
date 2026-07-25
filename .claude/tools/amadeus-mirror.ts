@@ -22,6 +22,11 @@ import {
   recordDirMatches,
   setOrInsertField,
 } from "./amadeus-lib";
+import {
+  runMirrorLifecycleBoundary,
+  type MirrorLifecycleAdapterOutcome,
+  type MirrorLifecycleRequest,
+} from "./amadeus-mirror-lifecycle.ts";
 import { renderMirrorLegacyHelp } from "./amadeus-mirror-presentation.ts";
 
 const TOOLS_DIR = dirname(fileURLToPath(import.meta.url));
@@ -43,9 +48,9 @@ const USAGE = renderMirrorLegacyHelp();
 // --- C1: args-parser -------------------------------------------------------
 
 export type ArgsOutcome =
-  | { kind: "create"; intentDir: string | null }
-  | { kind: "sync"; intentDir: string | null }
-  | { kind: "close"; intentDir: string | null }
+  | { kind: "create"; intentDir: string | null; instance: string }
+  | { kind: "sync"; intentDir: string | null; instance: string }
+  | { kind: "close"; intentDir: string | null; instance: string }
   | { kind: "status"; intentDir: string | null }
   | { kind: "usage"; message: string };
 
@@ -55,6 +60,7 @@ export function parseArgs(argv: string[]): ArgsOutcome {
     return { kind: "usage", message: USAGE };
   }
   let intentDir: string | null = null;
+  let instance: string | null = null;
   for (let i = 0; i < rest.length; i++) {
     if (rest[i] === "--intent") {
       const value = rest[i + 1];
@@ -65,9 +71,25 @@ export function parseArgs(argv: string[]): ArgsOutcome {
       i++;
       continue;
     }
+    if (rest[i] === "--instance") {
+      const value = rest[i + 1];
+      if (value === undefined || value.startsWith("--")) {
+        return { kind: "usage", message: USAGE };
+      }
+      instance = value;
+      i++;
+      continue;
+    }
     return { kind: "usage", message: USAGE };
   }
-  return { kind: sub, intentDir };
+  if (sub === "status") {
+    return instance === null
+      ? { kind: "status", intentDir }
+      : { kind: "usage", message: USAGE };
+  }
+  return instance === null
+    ? { kind: "usage", message: USAGE }
+    : { kind: sub, intentDir, instance };
 }
 
 // --- C2: state-snapshot ----------------------------------------------------
@@ -504,22 +526,62 @@ export function handleStatus(
 
 // --- C6: entry -------------------------------------------------------------
 
-// projectDir/run are injectable (ADR-4 test seam via default parameters); the
-// CLI entry always runs with the real repo root and the real gh spawn.
-export function main(
+type LegacyLifecycleRunner = (
+  request: MirrorLifecycleRequest,
+) => Promise<MirrorLifecycleAdapterOutcome>;
+
+async function runLegacyMutation(
+  args: Extract<ArgsOutcome, { kind: "create" | "sync" | "close" }>,
+  projectDir: string,
+  runLifecycle: LegacyLifecycleRunner,
+): Promise<number> {
+  const result = await runLifecycle({
+    projectDir,
+    ...(args.intentDir ? { intentDir: args.intentDir } : {}),
+    boundary: { kind: "manual", instance: args.instance },
+    manualOperation: args.kind,
+    invocationId: args.instance,
+  });
+  if (result.kind === "error") {
+    return fail(result.message);
+  }
+  if (
+    result.outcome.kind !== "continued" ||
+    result.outcome.outcomes.length === 0 ||
+    !result.outcome.outcomes.every((outcome) => outcome.kind === "completed")
+  ) {
+    return fail(`lifecycle outcome is not completed: ${JSON.stringify(result.outcome)}`);
+  }
+  const outcome = result.outcome.outcomes.at(-1);
+  if (!outcome || outcome.kind !== "completed") {
+    return fail("lifecycle completed without an operation outcome");
+  }
+  const target = buildSnapshot(projectDir, args.intentDir);
+  const intentDir = target.kind === "ok" ? target.snapshot.dirName : args.intentDir;
+  console.log(
+    `${args.kind === "create" ? "created" : args.kind === "sync" ? "synced" : "closed"} mirror issue #${outcome.issueNumber} for ${intentDir ?? "active intent"}`,
+  );
+  return 0;
+}
+
+// Dependencies are injectable at the CLI boundaries. Mutation verbs use only
+// the lifecycle runner; the legacy gh runner remains confined to read-only
+// status.
+export async function main(
   argv: string[],
   projectDir: string = PROJECT_DIR,
   run: GhRunner = spawnGh,
-): number {
+  runLifecycle: LegacyLifecycleRunner = runMirrorLifecycleBoundary,
+): Promise<number> {
   const args = parseArgs(argv);
   if (args.kind === "usage") {
     console.error(args.message);
     return 2;
   }
-  if (args.kind === "create") return handleCreate(projectDir, args.intentDir, run);
-  if (args.kind === "sync") return handleSync(projectDir, args.intentDir, run);
-  if (args.kind === "close") return handleClose(projectDir, args.intentDir, run);
+  if (args.kind !== "status") {
+    return runLegacyMutation(args, projectDir, runLifecycle);
+  }
   return handleStatus(projectDir, args.intentDir, run);
 }
 
-if (import.meta.main) process.exit(main(process.argv.slice(2)));
+if (import.meta.main) process.exit(await main(process.argv.slice(2)));

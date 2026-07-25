@@ -99,7 +99,7 @@ describe("t268 filesystem security", () => {
     if (outcome.kind === "invalid") {
       expect(outcome.issues[0]?.kind).toBe("read-failure");
       const issue = outcome.issues[0];
-      if (issue?.kind === "read-failure") expect(issue.summary).toContain("escapes");
+      if (issue?.kind === "read-failure") expect(issue.summary).toContain("symlink");
     }
   });
 

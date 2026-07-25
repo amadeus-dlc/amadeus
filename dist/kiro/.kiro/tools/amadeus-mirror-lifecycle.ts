@@ -69,6 +69,7 @@ export type MirrorLifecycleRuntime = Readonly<{
   ports?: MirrorStateStorePorts;
   now?: () => string;
   newOperationId?: () => string;
+  newAnswerId?: () => string;
   newChallengeId?: () => string;
   confirmRepair?: (
     expectedPhrase: string,
@@ -79,6 +80,15 @@ export type MirrorLifecycleRuntime = Readonly<{
 export type MirrorLifecycleAdapterOutcome =
   | { kind: "ok"; outcome: MirrorBoundaryOutcome }
   | { kind: "error"; message: string };
+
+type MirrorLifecycleAnswerRequest = Readonly<{
+  choice: "approve" | "skip";
+  bindingId: string;
+  projectDir: string;
+  space?: string;
+  intentDir?: string;
+  repository?: RepositoryIdentity;
+}>;
 
 function repositoryFromOrigin(projectDir: string): RepositoryIdentity | null {
   const result = spawnSync("git", ["remote", "get-url", "origin"], {
@@ -284,6 +294,10 @@ type CliArgs =
       request: MirrorLifecycleRequest;
     }
   | {
+      kind: "answer";
+      request: MirrorLifecycleAnswerRequest;
+    }
+  | {
       kind: "repair";
       request: MirrorRepairRequest;
     }
@@ -480,11 +494,46 @@ function matchesContractCommand(
     command.requiredOptions.every((option) => values.has(option));
 }
 
+function parseAnswerArgs(args: readonly string[]): CliArgs {
+  if (!matchesContractCommand(args, MIRROR_USER_CONTRACT.answerCommands))
+    return { kind: "usage", message: USAGE };
+  const values = parseOptionPairs(
+    args,
+    2,
+    new Set(["--binding-id", "--repo", "--space", "--intent", "--project-dir"]),
+  );
+  if (!values) return { kind: "usage", message: USAGE };
+  const bindingId = values.get("--binding-id");
+  const repository = parseRepositoryOption(values.get("--repo"));
+  const choice = args[1];
+  if (
+    !bindingId ||
+    repository === "invalid" ||
+    (choice !== "approve" && choice !== "skip")
+  ) {
+    return { kind: "usage", message: USAGE };
+  }
+  return {
+    kind: "answer",
+    request: {
+      choice,
+      bindingId,
+      projectDir: values.get("--project-dir") ?? process.cwd(),
+      space: values.get("--space"),
+      intentDir: values.get("--intent"),
+      ...(repository ? { repository } : {}),
+    },
+  };
+}
+
 export function parseMirrorLifecycleArgs(args: string[]): CliArgs {
   if (args[0] === "repair") {
     if (!matchesContractCommand(args, MIRROR_USER_CONTRACT.repairCommands))
       return { kind: "usage", message: USAGE };
     return parseRepairArgs(args);
+  }
+  if (args[0] === "answer") {
+    return parseAnswerArgs(args);
   }
   const commands = args[0] === "manual"
     ? MIRROR_USER_CONTRACT.manualCommands
@@ -877,6 +926,65 @@ export async function runMirrorRepairCommand(
   return runRepairAbandon(target, request.command.operationId, runtime);
 }
 
+export async function runMirrorLifecycleAnswer(
+  request: MirrorLifecycleAnswerRequest,
+  runtime: MirrorLifecycleRuntime = {},
+): Promise<MirrorLifecycleAdapterOutcome> {
+  const identity = resolveMirrorRecordIdentity(
+    request.projectDir,
+    request.space,
+    request.intentDir,
+  );
+  if (!identity) {
+    return {
+      kind: "error",
+      message: "Mirror answer could not resolve an Intent.",
+    };
+  }
+  const ports =
+    runtime.ports ??
+    createMirrorStateStorePorts({
+      projectDir: request.projectDir,
+      statePath: join(identity.recordDir, "amadeus-state.md"),
+      intent: identity.intentDir,
+      space: identity.space,
+    });
+  const current = readMirrorState(ports);
+  if (current.kind !== "ok") {
+    return {
+      kind: "error",
+      message:
+        current.kind === "invalid"
+          ? `Mirror answer state is invalid: ${current.issues.join("; ")}`
+          : current.summary,
+    };
+  }
+  const expected = current.snapshot.expectedPrompt;
+  if (!expected || expected.bindingId !== request.bindingId) {
+    return {
+      kind: "error",
+      message: "Mirror answer binding does not match the current expected prompt.",
+    };
+  }
+  return runMirrorLifecycleBoundary(
+    {
+      projectDir: request.projectDir,
+      space: identity.space,
+      intentDir: identity.intentDir,
+      ...(request.repository ? { repository: request.repository } : {}),
+      boundary: expected.event.boundary,
+      answer: {
+        choice: request.choice,
+        bindingId: request.bindingId,
+        answerId: (runtime.newAnswerId ?? randomUUID)(),
+        event: expected.event,
+        operation: expected.operation,
+      },
+    },
+    { ...runtime, ports },
+  );
+}
+
 export async function runMirrorLifecycleMain(
   args: string[],
   runtime: MirrorLifecycleRuntime = {},
@@ -895,13 +1003,23 @@ export async function runMirrorLifecycleMain(
     console.log(JSON.stringify(result));
     return 0;
   }
-  const result = await runMirrorLifecycleBoundary(parsed.request, runtime);
+  const result =
+    parsed.kind === "answer"
+      ? await runMirrorLifecycleAnswer(parsed.request, runtime)
+      : await runMirrorLifecycleBoundary(parsed.request, runtime);
   if (result.kind === "error") {
     console.error(`amadeus-mirror-lifecycle: ${result.message}`);
     return 1;
   }
   console.log(JSON.stringify(result.outcome));
-  return 0;
+  if (
+    result.outcome.kind === "continued" &&
+    result.outcome.outcomes.length > 0 &&
+    result.outcome.outcomes.every((outcome) => outcome.kind === "completed")
+  ) {
+    return 0;
+  }
+  return 1;
 }
 
 if (import.meta.main) {

@@ -8,6 +8,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -134,16 +135,16 @@ describe("t257 resolve against real files", () => {
     }
   });
 
-  test("a dangling symlink is treated as absent", () => {
+  test("a dangling final-component symlink is rejected", () => {
     const root = project();
     const p = paths(root, "default", INTENT);
     mkdirSync(dirname(p.global), { recursive: true });
     symlinkSync(join(root, "amadeus", "does-not-exist.json"), p.global);
-    expect(resolveMirrorConfig(root, INTENT)).toEqual({
-      kind: "resolved",
-      config: { autoMirror: "prompt" },
-      sources: [],
-    });
+    const outcome = resolveMirrorConfig(root, INTENT);
+    expect(outcome.kind).toBe("invalid");
+    if (outcome.kind === "invalid") {
+      expect(outcome.issues[0]?.kind).toBe("read-failure");
+    }
   });
 
   test("a directory at a config path is a loud read failure, not absent", () => {
@@ -155,6 +156,76 @@ describe("t257 resolve against real files", () => {
     if (outcome.kind === "invalid") {
       expect(outcome.issues[0]?.layer).toBe("space");
       expect(outcome.issues[0]?.kind).toBe("read-failure");
+    }
+  });
+
+  test("rejects a config path swapped to an outside symlink before open", () => {
+    const root = project();
+    const p = paths(root, "default", INTENT);
+    writeConfig(p.global, { "auto-mirror": "auto" });
+    const outside = join(project(), "outside.json");
+    writeConfig(outside, { "auto-mirror": "off" });
+    const resolveWithHook = resolveMirrorConfig as unknown as (
+      projectDir: string,
+      explicitIntentDir: string,
+      explicitSpace: string | undefined,
+      hooks: { beforeOpen(path: string): void },
+    ) => ReturnType<typeof resolveMirrorConfig>;
+    let swapped = false;
+
+    const outcome = resolveWithHook(root, INTENT, undefined, {
+      beforeOpen(path) {
+        if (path !== p.global || swapped) return;
+        swapped = true;
+        renameSync(p.global, `${p.global}.original`);
+        symlinkSync(outside, p.global);
+      },
+    });
+
+    expect(swapped).toBe(true);
+    expect(outcome.kind).toBe("invalid");
+    if (outcome.kind === "invalid") {
+      expect(outcome.issues[0]?.kind).toBe("read-failure");
+    }
+  });
+
+  test("rejects a final-component symlink even when its target is contained", () => {
+    const root = project();
+    const p = paths(root, "default", INTENT);
+    const target = join(root, "amadeus", "inside.json");
+    writeConfig(target, { "auto-mirror": "auto" });
+    symlinkSync(target, p.global);
+
+    const outcome = resolveMirrorConfig(root, INTENT);
+
+    expect(outcome.kind).toBe("invalid");
+    if (outcome.kind === "invalid") {
+      expect(outcome.issues[0]?.kind).toBe("read-failure");
+    }
+  });
+
+  test("rejects a regular file whose device/inode changes before open", () => {
+    const root = project();
+    const p = paths(root, "default", INTENT);
+    writeConfig(p.global, { "auto-mirror": "auto" });
+    const replacement = join(root, "amadeus", "replacement.json");
+    writeConfig(replacement, { "auto-mirror": "off" });
+
+    const outcome = resolveMirrorConfig(root, INTENT, undefined, {
+      beforeOpen(path) {
+        if (path !== p.global) return;
+        renameSync(p.global, `${p.global}.original`);
+        renameSync(replacement, p.global);
+      },
+    });
+
+    expect(outcome.kind).toBe("invalid");
+    if (outcome.kind === "invalid") {
+      const issue = outcome.issues[0];
+      expect(issue?.kind).toBe("read-failure");
+      if (issue?.kind === "read-failure") {
+        expect(issue.summary).toContain("changed before open");
+      }
     }
   });
 

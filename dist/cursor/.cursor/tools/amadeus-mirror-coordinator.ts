@@ -63,6 +63,7 @@ export type MirrorBoundaryOutcome =
   | {
       kind: "ask";
       question: string;
+      bindingId: string;
       event: MirrorEventIdentity;
       operation: MirrorOperation;
       workflowMayAdvance: true;
@@ -75,6 +76,7 @@ export type MirrorBoundaryOutcome =
 
 export type MirrorPromptAnswer = Readonly<{
   choice: "approve" | "skip";
+  bindingId: string;
   answerId: string;
   event: MirrorEventIdentity;
   operation: MirrorOperation;
@@ -295,7 +297,7 @@ function executionAuthorization(
     return {
       ...base,
       kind: "prompt-approved",
-      expectedBindingId: expected.bindingId,
+      expectedBindingId: promptAnswer.bindingId,
       answerId: promptAnswer.answerId,
     };
   }
@@ -378,7 +380,7 @@ function skippedOutcome(
       preparedAt: input.now(),
       completedAt: input.now(),
       consumeExpectedPrompt: true,
-      expectedBindingId: state.expectedPrompt?.bindingId,
+      expectedBindingId: answer.bindingId,
       answerId: answer.answerId,
     },
     expectedRevision: state.revision,
@@ -519,9 +521,6 @@ async function handlePromptAnswer(
       },
     ]);
   }
-  if (answer.choice === "skip") {
-    return continued([skippedOutcome(input, state, answer)]);
-  }
   const approved = approveMirrorPrompt({ expected, answer, state });
   if (approved.kind !== "execute") {
     return continued([
@@ -530,6 +529,15 @@ async function handlePromptAnswer(
         operation: answer.operation,
         reason: "not-applicable",
       },
+    ]);
+  }
+  if (answer.choice === "skip") {
+    return continued([
+      skippedOutcome(input, state, {
+        ...answer,
+        event: approved.event,
+        operation: approved.operation,
+      }),
     ]);
   }
   const triggerEvent = mirrorEventIdentity(
@@ -662,6 +670,7 @@ async function driveBoundaryDecisions(
           repository: input.context.repository.canonical,
           issueNumber: state.issueNumber,
         }),
+        bindingId: prompt.bindingId,
         event: decision.event,
         operation: decision.operation,
         workflowMayAdvance: true,

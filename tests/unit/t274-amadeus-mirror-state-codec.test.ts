@@ -111,6 +111,50 @@ describe("codec rejection", () => {
     const json = `{"schema":1,"revision":0,"issueNumber":7,"provenance":null,"receipts":{},"warnings":[],"repairChallenges":{},"expectedPrompt":null,"auditOutbox":null}`;
     expect(parseMirrorStateDocument(wrap(json)).kind).toBe("invalid");
   });
+
+  test("rejects every unescaped C0 control character inside a JSON string", () => {
+    const event = ev("create");
+    const snapshot: MirrorStateSnapshot = {
+      ...EMPTY_MIRROR_STATE,
+      receipts: {
+        [mirrorEventKey(event)]: receipt(event, "prepared"),
+      },
+    };
+    const canonical = renderMirrorStateJson(snapshot);
+    for (let codePoint = 0; codePoint <= 0x1f; codePoint++) {
+      const malformed = canonical.replace(
+        '"operationId":"op-1"',
+        `"operationId":"op${String.fromCharCode(codePoint)}1"`,
+      );
+      expect(
+        parseMirrorStateDocument(wrap(malformed)).kind,
+        `U+${codePoint.toString(16).padStart(4, "0")}`,
+      ).toBe("invalid");
+    }
+  });
+
+  test("accepts valid escaped C0 control characters", () => {
+    const event = ev("create");
+    for (const escapedValue of ["op\t1", "op\n1", "op\u00001"]) {
+      const snapshot: MirrorStateSnapshot = {
+        ...EMPTY_MIRROR_STATE,
+        receipts: {
+          [mirrorEventKey(event)]: receipt(event, "prepared", {
+            operationId: escapedValue,
+          }),
+        },
+      };
+      const parsed = parseMirrorStateDocument(
+        wrap(renderMirrorStateJson(snapshot)),
+      );
+      expect(parsed.kind).toBe("ok");
+      if (parsed.kind === "ok") {
+        expect(Object.values(parsed.snapshot.receipts)[0]?.operationId).toBe(
+          escapedValue,
+        );
+      }
+    }
+  });
 });
 
 describe("byte preservation", () => {
