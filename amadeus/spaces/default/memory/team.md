@@ -286,6 +286,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 - 落ちたセッションから intent を引き継ぐときは plan のチェックボックスを信用せず、Step ごとに実装・テストの実在を file:line で監査してから続行する — チェックボックスは前任が更新する前に落ちうるため、実装状態と双方向にずれる(実測: 260725-solo-standing-grants U2 で Step 3-8 は実装済みなのに [ ] のまま、逆に Step 9 は [x] 相当の扱いだったが未実装だった) (learned 2026-07-25) <!-- cid:code-generation:cg-handover-plan-audit -->
 - 台帳ファイルのマージ衝突は、マーカー行の貼り合わせでなく3ステージ blob 全文(git show :1/:2/:3)から再構成する — base→ours と base→theirs の差分性質(純挿入か、降格を含むか)を実測してから和集合を組み立てる(実測: 260725-solo-standing-grants の codekb 9ファイルで、theirs が base の上位集合かつ降格済みと確定できたため ours の新規節のみを履歴として挿入すればよいと判明) (learned 2026-07-25) <!-- cid:code-generation:cg-ledger-blob-reconstruction -->
 - 検証コマンドをシェル変数経由のループで実行しない — zsh は展開した変数を単語分割しないため、コマンド全体が1語として解決され exit 127(command not found)の偽の失敗になる。検証は1コマンドずつ直書きで実行し exit code を個別に読む(実測: 本セッションで全ゲートが 127 と誤表示され、直接実行では全て 0 だった) (learned 2026-07-25) <!-- cid:code-generation:cg-no-shell-var-command-loop -->
+- test path 集合の実在確認は配列で展開する — zsh は未クォートのパラメータを単語分割しないため、複数 path を1変数に入れて存在確認すると全体が1語として解決され EXISTING=0 の誤検知になる。cid:build-and-test:test-path-set-completeness の zsh 面追補(実測: 260725-solo-standing-grants build-and-test で発生・自己捕捉し、配列展開へ是正して DECLARED=11/EXISTING=11 を確定) (learned 2026-07-25) <!-- cid:build-and-test:bt-path-existence-array-expansion -->
 ## Walking Skeleton
 
 <!-- amadeus:practices-promote:BEGIN -->
