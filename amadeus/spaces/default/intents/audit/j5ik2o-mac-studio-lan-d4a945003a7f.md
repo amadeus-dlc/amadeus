@@ -17,3 +17,57 @@
 **Message**: Unit `harness-contract-and-regression` の実装・検証・成果物を完了しました。\n\n## (a) 実装した Step と file:line\n\n| Step | 実装 | file:line |\n|---|---|---|\n| 1 conductor semantics (FR-25) | `Part 0b: Solo standing grant` 節を追加(c
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-25T10:28:01Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a12013fd2996ebf85
+**Message**: #1476も直して
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-25T10:31:02Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: aae8156f9cc7fe9b5
+**Message**: team-up.sh の起動が毎回200秒かかる問題を調査し、修正をマージ完了しました（5.87秒に短縮）。作業はすべて終わっています。次は後続 Issue #1476（根治）か #1478（worktree並列化）に着手するかのご判断待ちです。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-25T10:33:48Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a9809d618398cc22e
+**Message**: #1476 も直して
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-25T10:34:48Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: afb0fe9cc031e221f
+**Message**: #1476 やろう
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-25T10:37:49Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a070eef594ccb2755
+**Message**: team-up.sh の起動が毎回200秒かかる問題を調査・修正し、PR #1477 と #1479 がマージ済み、Issue #1449 もクローズ済みで完了しました。次に着手するとすれば根治策の #1476 ですが、開始はあなたの判断待ちです。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-25T10:38:46Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: aa1583440199e546c
+**Message**: 是正完了。報告します。\n\n## (a) 差し戻した baseline\n\n- ファイル: `/Users/j5ik2o/.codex/worktrees/c179/amadeus/tests/.complexity-baseline.json`\n- 復元方法: `git checkout HEAD -- tests/.complexity-baseline.json`(git 履歴から復元、手書きな
+
+---
