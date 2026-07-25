@@ -173,9 +173,7 @@ export function padAuditFixture(
     `# AI-DLC Audit Log\n${fillerEvents(SPACE_EVENT_BUDGET - OWNER_EVENT_BUDGET)}`,
   );
   const registryPath = join(intentsDir, "intents.json");
-  const registry = JSON.parse(readFileSync(registryPath, "utf-8")) as Array<
-    Record<string, unknown>
-  >;
+  const registry: Array<Record<string, unknown>> = JSON.parse(readFileSync(registryPath, "utf-8"));
   writeFileSync(
     registryPath,
     `${JSON.stringify(
@@ -244,9 +242,7 @@ export function setup(expiresAt: string, routeNow: number): {
     "intents",
     "intents.json",
   );
-  const registry = JSON.parse(readFileSync(registryPath, "utf-8")) as Array<
-    Record<string, unknown>
-  >;
+  const registry: Array<Record<string, unknown>> = JSON.parse(readFileSync(registryPath, "utf-8"));
   registry[0].dirName = seededRecordDir(root).split("/").at(-1)!;
   writeFileSync(registryPath, `${JSON.stringify(registry, null, 2)}\n`);
   const phaseCheck = join(seededRecordDir(root), "verification");
@@ -268,15 +264,11 @@ export function setup(expiresAt: string, routeNow: number): {
     GRAPH,
     routeNow,
   );
-  if (validation.kind !== "valid") {
-    throw new Error(`fixture grant is invalid: ${validation.reason}`);
-  }
+  if (validation.kind !== "valid") throw new Error(`fixture grant is invalid: ${validation.reason}`);
   const example = directiveSelfCheckExamples.find(
     (candidate) => candidate.kind === "run-stage" && candidate.gate === true,
   );
-  if (example === undefined || example.kind !== "run-stage") {
-    throw new Error("run-stage fixture is unavailable");
-  }
+  if (example === undefined || example.kind !== "run-stage") throw new Error("run-stage fixture is unavailable");
   const routedInput: RunStageDirective = {
     ...example,
     stage: STAGE,
