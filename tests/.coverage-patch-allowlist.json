@@ -1649,5 +1649,17 @@
     "lines": "634",
     "reason": "Defensive create-attempt claim failure projection. t279 covers lock and write failures before remote mutation; Bun leaves this multiline forwarding row DA:0.",
     "expiry": "remove when Bun LCOV attributes the forwarding return or the claim helper is flattened"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-grant-authorization.ts",
+    "lines": "195-197",
+    "reason": "Shard read failure AFTER realpathSync already resolved the same path (TOCTOU window). Measured on this branch: chmod 000 makes realpathSync itself fail with EACCES on macOS, and readFileSync of a directory is EISDIR on macOS but returns \"\" on Linux (cid:code-generation:bun-readfilesync-dir-platform-divergence), so no portable injection reaches this catch. The resolve-failure sibling is covered in-process by the dangling-symlink case in tests/integration/t-solo-standing-grant-domain.test.ts.",
+    "expiry": "remove when the standing grant scan receives an injectable filesystem port for the realpath-to-read race"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "lines": "3581-3582",
+    "reason": "Unreachable defense-in-depth: an await-approval wire result can only be produced by amadeus-state.ts printAwaitApproval, which runs solely on the grant-backed arm and always prints the slug it was called with, so neither disjunct (non-grant authority, stage mismatch) can hold for a real state process. Every other arm of this dispatch (fatal-error, protocol-error, arm failures, done) is driven in-process by tests/integration/t-solo-gate-transaction.test.ts.",
+    "expiry": "remove when the approval process runner becomes an injectable port that can return a mismatched await-approval result"
   }
 ]

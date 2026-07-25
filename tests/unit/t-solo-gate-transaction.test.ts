@@ -174,6 +174,9 @@ describe("strict grant approval process wire", () => {
     { exitCode: 0, stdout: "", stderr: "" },
     { exitCode: 0, stdout: '{"kind":"approved"}\n{"kind":"approved"}\n', stderr: "" },
     { exitCode: 0, stdout: "not-json\n", stderr: "" },
+    { exitCode: 0, stdout: "[]\n", stderr: "" },
+    { exitCode: 0, stdout: '"approved"\n', stderr: "" },
+    { exitCode: 0, stdout: '{"kind":1}\n', stderr: "" },
     { exitCode: 0, stdout: '{"kind":"approved","extra":true}\n', stderr: "" },
     { exitCode: 0, stdout: '{"kind":"approved"}\n', stderr: "warning" },
     { exitCode: 0, stdout: '{"kind":"await-approval","stage":"application-design","reason":"other","target_intent_id":"00000000-0000-7000-8000-000000000001"}\n', stderr: "" },
@@ -189,5 +192,44 @@ describe("strict grant approval process wire", () => {
         stderr: "failed",
       }),
     ).toEqual({ kind: "fatal-error", detail: "failed" });
+  });
+});
+
+// The carrier pair is the only way an unattended process can claim authority, so
+// a syntactically wrong carrier must be rejected before any state is read.
+describe("approval authority carrier syntax", () => {
+  const ROUTE_ID = "12345678-1234-4abc-8def-1234567890ab";
+  const TARGET_ID = "00000000-0000-7000-8000-000000000001";
+  const RESERVATION_ID = "87654321-4321-4abc-8def-1234567890ab";
+
+  test.each([
+    ["a non-hex Grant Id", { standingGrantId: "ZZZZZZZZ", standingGrantRouteId: ROUTE_ID }],
+    ["a short Grant Id", { standingGrantId: "abcdef1", standingGrantRouteId: ROUTE_ID }],
+    ["a non-v4 Route Id", { standingGrantId: "abcdef12", standingGrantRouteId: TARGET_ID }],
+  ] as const)("rejects %s", (_label, carrier) => {
+    expect(classifyApprovalAuthority({ operatingMode: "solo", ...carrier })).toEqual({
+      kind: "invalid",
+      reason: "malformed grant authority",
+    });
+  });
+
+  test.each([
+    [
+      "a non-v7 target intent id",
+      { targetIntentId: ROUTE_ID, presenceReservationId: RESERVATION_ID, userInput: "go" },
+    ],
+    [
+      "a non-v4 Reservation Id",
+      { targetIntentId: TARGET_ID, presenceReservationId: TARGET_ID, userInput: "go" },
+    ],
+    [
+      "a missing user input",
+      { targetIntentId: TARGET_ID, presenceReservationId: RESERVATION_ID },
+    ],
+  ] as const)("rejects targeted human authority with %s", (_label, carrier) => {
+    expect(classifyApprovalAuthority({ operatingMode: "solo", ...carrier })).toEqual({
+      kind: "invalid",
+      reason: "malformed targeted human authority",
+    });
   });
 });

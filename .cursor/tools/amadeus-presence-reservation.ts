@@ -30,6 +30,42 @@ export type PresenceReservation = {
   readonly humanTurnShard: string | null;
 };
 
+// Signature input/output shapes are declared here rather than inline in the
+// parameter lists: TypeScript erases inline annotations at runtime, but Bun's
+// LCOV still stamps their lines DA:0, which puts unmeasurable rows into the
+// patch-coverage population. Module-scope type declarations carry no DA record.
+export type ArmReservationInput = {
+  readonly projectDir: string;
+  readonly sessionId: string;
+  readonly space: string;
+  readonly targetIntentId: string;
+  readonly stage: string;
+  readonly routeId: string;
+  readonly reservationIdFactory?: () => string;
+};
+
+export type MintReservationInput = {
+  readonly projectDir: string;
+  readonly sessionId: string;
+};
+
+export type MintReservationResult =
+  | { readonly kind: "none" }
+  | { readonly kind: "minted"; readonly reservation: PresenceReservation }
+  | { readonly kind: "already-minted"; readonly reservation: PresenceReservation };
+
+export type ConsumeReservationInput = {
+  readonly projectDir: string;
+  readonly sessionId: string;
+  readonly reservationId: string;
+  readonly targetIntentId: string;
+  readonly stage: string;
+};
+
+export type VerifyReservationInput = ConsumeReservationInput & {
+  readonly allowConsumed?: boolean;
+};
+
 const UUID_V4_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const UUID_V7_RE =
@@ -190,15 +226,7 @@ export function readPresenceReservation(
   return parseReservation(readFileSync(path, "utf-8"));
 }
 
-export function armPresenceReservation(input: {
-  readonly projectDir: string;
-  readonly sessionId: string;
-  readonly space: string;
-  readonly targetIntentId: string;
-  readonly stage: string;
-  readonly routeId: string;
-  readonly reservationIdFactory?: () => string;
-}): PresenceReservation {
+export function armPresenceReservation(input: ArmReservationInput): PresenceReservation {
   const sessionDigest = digestSessionId(input.sessionId);
   const active = listReservations(input.projectDir).filter(
     (marker) =>
@@ -255,13 +283,9 @@ function reservationHumanTurns(
   return matches;
 }
 
-export function mintArmedPresenceReservation(input: {
-  readonly projectDir: string;
-  readonly sessionId: string;
-}):
-  | { readonly kind: "none" }
-  | { readonly kind: "minted"; readonly reservation: PresenceReservation }
-  | { readonly kind: "already-minted"; readonly reservation: PresenceReservation } {
+export function mintArmedPresenceReservation(
+  input: MintReservationInput,
+): MintReservationResult {
   const sessionDigest = digestSessionId(input.sessionId);
   const active = listReservations(input.projectDir).filter(
     (marker) =>
@@ -315,13 +339,9 @@ export function mintArmedPresenceReservation(input: {
   return { kind: "minted", reservation: minted };
 }
 
-export function consumePresenceReservation(input: {
-  readonly projectDir: string;
-  readonly sessionId: string;
-  readonly reservationId: string;
-  readonly targetIntentId: string;
-  readonly stage: string;
-}): PresenceReservation {
+export function consumePresenceReservation(
+  input: ConsumeReservationInput,
+): PresenceReservation {
   const marker = readPresenceReservation(input.projectDir, input.reservationId);
   if (marker === null) throw new Error("Presence reservation was not found");
   if (marker.sessionDigest !== digestSessionId(input.sessionId)) {
@@ -342,14 +362,9 @@ export function consumePresenceReservation(input: {
   return consumed;
 }
 
-export function verifyMintedPresenceReservation(input: {
-  readonly projectDir: string;
-  readonly sessionId: string;
-  readonly reservationId: string;
-  readonly targetIntentId: string;
-  readonly stage: string;
-  readonly allowConsumed?: boolean;
-}): PresenceReservation {
+export function verifyMintedPresenceReservation(
+  input: VerifyReservationInput,
+): PresenceReservation {
   const marker = readPresenceReservation(input.projectDir, input.reservationId);
   if (marker === null) throw new Error("Presence reservation was not found");
   if (marker.sessionDigest !== digestSessionId(input.sessionId)) {
@@ -414,14 +429,16 @@ export function hostSessionCapability(
   return { kind: "available", sessionId };
 }
 
+export type MintHumanPresenceInput = {
+  readonly projectDir: string;
+  readonly capability: HostSessionCapability;
+};
+
 // The canonical presence mint. `available` sessions first try their own armed
 // reservation (the targeted continuation of a solo grant fallback, minted
 // exactly once per Reservation Id); every other case appends the ordinary
 // untargeted HUMAN_TURN the human-presence gate has always required.
-export function mintHumanPresence(input: {
-  readonly projectDir: string;
-  readonly capability: HostSessionCapability;
-}): void {
+export function mintHumanPresence(input: MintHumanPresenceInput): void {
   if (input.capability.kind === "available") {
     const reservation = mintArmedPresenceReservation({
       projectDir: input.projectDir,

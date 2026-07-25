@@ -58,13 +58,18 @@ const NOOP_OBSERVER: StandingGrantScanObserver = {
   memoryItemAdded(): void {},
 };
 
-function emptyCounts(): {
+// Mutable counter shape (the public StandingGrantScanCounts is readonly).
+// Declared at module scope so the annotation carries no runtime-erased,
+// DA:0-stamped rows inside the function signature.
+type MutableScanCounts = {
   shardOpened: number;
   eventVisited: number;
   candidateCompared: number;
   memoryItemAdded: number;
   canonicalShards: string[];
-} {
+};
+
+function emptyCounts(): MutableScanCounts {
   return {
     shardOpened: 0,
     eventVisited: 0,
@@ -76,8 +81,8 @@ function emptyCounts(): {
 
 /** Test-only observer. Production callers use the allocation-free no-op default. */
 export function createStandingGrantTestObserver(): StandingGrantTestObserver {
-  const byPass = new Map<StandingGrantScanPass, ReturnType<typeof emptyCounts>>();
-  function counts(pass: StandingGrantScanPass): ReturnType<typeof emptyCounts> {
+  const byPass = new Map<StandingGrantScanPass, MutableScanCounts>();
+  function counts(pass: StandingGrantScanPass): MutableScanCounts {
     const existing = byPass.get(pass);
     if (existing) return existing;
     const created = emptyCounts();

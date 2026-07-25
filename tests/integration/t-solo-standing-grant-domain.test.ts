@@ -9,7 +9,13 @@
 // covers: function:resolveOperatingMode, function:findSoloStandingGrant, function:validateSoloStandingGrantById
 
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -437,4 +443,123 @@ describe("authorization selection receipt lookup", () => {
     expect(counts.eventVisited).toBe(100_000);
     expect(elapsedMs).toBeLessThanOrEqual(5_000);
   }, 15_000);
+});
+
+// ---------------------------------------------------------------------------
+// Scan integrity. The grant scan walks whatever the intent registry names, so a
+// corrupt registry row or an unreadable shard must stop the scan loudly instead
+// of silently narrowing the ledger it derives authority from.
+// ---------------------------------------------------------------------------
+describe("standing grant scan integrity", () => {
+  const routeId = "12345678-1234-4abc-8def-1234567890ab";
+
+  function receiptAudit(): string {
+    return auditBlock("GATE_AUTHORIZATION_SELECTED", "2026-07-25T05:00:00.000Z", {
+      "Route Id": routeId,
+      Stage: ORDINARY_STAGE,
+      "Grant Id": "abcdef12",
+    });
+  }
+
+  function rewriteRegistry(root: string, rows: Array<Record<string, unknown>>): void {
+    writeFileSync(
+      join(root, "amadeus", "spaces", "default", "intents", "intents.json"),
+      `${JSON.stringify(rows, null, 2)}\n`,
+      "utf-8",
+    );
+  }
+
+  test.each([
+    ["a path segment", ".."],
+    ["a path separator", "escape/../../etc"],
+  ] as const)("refuses a registered intent directory containing %s", (_label, dirName) => {
+    const { root } = fixture(receiptAudit());
+    rewriteRegistry(root, [
+      { uuid: "11111111-1111-4111-8111-111111111111", slug: "solo-intent", dirName, status: "in-flight" },
+    ]);
+    expect(() => findStandingGrantRouteReceiptById(root, routeId)).toThrow(
+      /Invalid registered intent directory/,
+    );
+  });
+
+  test("refuses a registry that names the same directory twice", () => {
+    const { root, intent } = fixture(receiptAudit());
+    rewriteRegistry(root, [
+      { uuid: "11111111-1111-4111-8111-111111111111", slug: "solo-intent", dirName: intent, status: "in-flight" },
+      { uuid: "33333333-3333-4333-8333-333333333333", slug: "clone", dirName: intent, status: "in-flight" },
+    ]);
+    expect(() => findStandingGrantRouteReceiptById(root, routeId)).toThrow(
+      /Duplicate registered intent directory/,
+    );
+  });
+
+  test("refuses to scan a shard whose path cannot be resolved", () => {
+    const { root, intent } = fixture(receiptAudit());
+    symlinkSync(
+      join(root, "amadeus", "spaces", "default", "intents", intent, "audit", "gone.md"),
+      join(root, "amadeus", "spaces", "default", "intents", intent, "audit", "dangling.md"),
+    );
+    expect(() => findStandingGrantRouteReceiptById(root, routeId)).toThrow(
+      /Cannot resolve standing grant audit shard/,
+    );
+  });
+
+  test("refuses two registered directories that resolve to the same shard file", () => {
+    const { root, intent } = fixture(receiptAudit());
+    const intents = join(root, "amadeus", "spaces", "default", "intents");
+    const alias = "alias-intent-11111111";
+    mkdirSync(join(intents, alias), { recursive: true });
+    symlinkSync(join(intents, intent, "audit"), join(intents, alias, "audit"));
+    rewriteRegistry(root, [
+      { uuid: "11111111-1111-4111-8111-111111111111", slug: "solo-intent", dirName: intent, status: "in-flight" },
+      { uuid: "33333333-3333-4333-8333-333333333333", slug: "alias", dirName: alias, status: "in-flight" },
+    ]);
+    expect(() => findStandingGrantRouteReceiptById(root, routeId)).toThrow(
+      /duplicate canonical shard open/,
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Exact-id validation rejections that the selection scan cannot reach: a grant
+// whose provenance is not in the ledger, and a grant that is live but does not
+// cover the requested gate.
+// ---------------------------------------------------------------------------
+describe("exact grant validation rejections", () => {
+  test("rejects a grant whose Issuer Human Ts is not in the ledger", () => {
+    const { root, intent } = fixture(
+      grantBlock(
+        "solo-intent-abcd1234",
+        "abcdef12",
+        "2026-07-25T01:00:00.000Z",
+        "2026-07-26T01:00:00.000Z",
+        { "Issuer Human Ts": "2026-07-25T23:59:59.000Z" },
+      ),
+    );
+    expect(
+      validateSoloStandingGrantById(
+        root, intent, "abcdef12", ORDINARY_STAGE, STATE, GRAPH,
+        Date.parse("2026-07-25T02:00:00.000Z"),
+      ),
+    ).toEqual({ kind: "invalid", reason: "invalid-provenance" });
+  });
+
+  test("rejects a live grant that does not cover the requested gate", () => {
+    const { root, intent } = fixture(
+      grantBlock(
+        "solo-intent-abcd1234",
+        "abcdef12",
+        "2026-07-25T01:00:00.000Z",
+        "2026-07-26T01:00:00.000Z",
+      ),
+    );
+    // "Includes Phase Boundary": "false" — nfr-requirements is the last
+    // in-scope stage, so its gate crosses a phase boundary the grant excludes.
+    expect(
+      validateSoloStandingGrantById(
+        root, intent, "abcdef12", "nfr-requirements", STATE, GRAPH,
+        Date.parse("2026-07-25T02:00:00.000Z"),
+      ),
+    ).toEqual({ kind: "invalid", reason: "gate-out-of-scope" });
+  });
 });

@@ -23,7 +23,10 @@ import {
   hostSessionCapability,
   mintArmedPresenceReservation,
   mintHumanPresence,
+  type PresenceReservation,
   readPresenceReservation,
+  verifyMintedPresenceReservation,
+  type VerifyReservationInput,
 } from "../../packages/framework/core/tools/amadeus-presence-reservation.ts";
 
 const GRANT_ID = "abcdef12";
@@ -401,3 +404,408 @@ function existingReceipt(): string {
 `;
 }
 
+
+// ---------------------------------------------------------------------------
+// Reservation parse and provenance rejections.
+//
+// The reservation marker is the only thing standing between a stale or tampered
+// session file and an approval that claims a human was present. Every rejection
+// below is therefore asserted on its own: a marker that fails to parse, resolve
+// or match its recorded HUMAN_TURN must never be usable as presence.
+// ---------------------------------------------------------------------------
+describe("presence reservation rejections", () => {
+  const SESSION = "trusted-session-1";
+  const STAGE = "application-design";
+
+  function reservationFile(root: string, id: string, body: unknown): void {
+    const dir = join(root, "amadeus", ".amadeus-sessions", "presence-reservations");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, `${id}.json`), `${JSON.stringify(body, null, 2)}\n`);
+  }
+
+  function armed(root: string): PresenceReservation {
+    return armPresenceReservation({
+      projectDir: root,
+      sessionId: SESSION,
+      space: "default",
+      targetIntentId: TARGET_INTENT_ID,
+      stage: STAGE,
+      routeId: ROUTE_ID,
+      reservationIdFactory: () => RESERVATION_ID,
+    });
+  }
+
+  function mintedMarker(root: string): PresenceReservation {
+    armed(root);
+    const result = mintArmedPresenceReservation({ projectDir: root, sessionId: SESSION });
+    if (result.kind !== "minted") throw new Error(`fixture did not mint: ${result.kind}`);
+    return result.reservation;
+  }
+
+  test("refuses a Reservation Id that is not a UUID v4", () => {
+    const root = routeFixture();
+    expect(() => readPresenceReservation(root, "not-a-uuid")).toThrow(/UUID v4/);
+    // A v7 id is a valid UUID but the wrong version for a reservation.
+    expect(() => readPresenceReservation(root, TARGET_INTENT_ID)).toThrow(/UUID v4/);
+  });
+
+  test("refuses a target intent id that is not a UUID v7", () => {
+    const root = routeFixture();
+    expect(() =>
+      armPresenceReservation({
+        projectDir: root,
+        sessionId: SESSION,
+        space: "default",
+        targetIntentId: ROUTE_ID,
+        stage: STAGE,
+        routeId: ROUTE_ID,
+      }),
+    ).toThrow(/UUID v7/);
+  });
+
+  test("refuses a target intent that is not exactly one in-flight registry row", () => {
+    const root = routeFixture();
+    const registry = join(root, "amadeus", "spaces", "default", "intents", "intents.json");
+    writeFileSync(
+      registry,
+      `${JSON.stringify([
+        { uuid: TARGET_INTENT_ID, slug: "solo-intent", dirName: "solo-intent-abcd1234", status: "complete" },
+      ])}\n`,
+    );
+    expect(() =>
+      armPresenceReservation({
+        projectDir: root,
+        sessionId: SESSION,
+        space: "default",
+        targetIntentId: TARGET_INTENT_ID,
+        stage: STAGE,
+        routeId: ROUTE_ID,
+      }),
+    ).toThrow(/exactly one in-flight registry row/);
+  });
+
+  test.each([
+    ["a JSON array", [], /must be an object/],
+    ["an unknown field", { extra: 1 }, /unknown or missing field/],
+  ] as const)("refuses a marker that is %s", (_label, body, expected) => {
+    const root = routeFixture();
+    reservationFile(root, RESERVATION_ID, body);
+    expect(() => readPresenceReservation(root, RESERVATION_ID)).toThrow(expected);
+  });
+
+  test("refuses a marker whose field values are malformed", () => {
+    const root = routeFixture();
+    reservationFile(root, RESERVATION_ID, { ...armed(root), stage: "Not A Slug" });
+    expect(() => readPresenceReservation(root, RESERVATION_ID)).toThrow(/field is malformed/);
+  });
+
+  test("refuses an armed marker that already carries HUMAN_TURN provenance", () => {
+    const root = routeFixture();
+    reservationFile(root, RESERVATION_ID, {
+      ...armed(root),
+      humanTurnTimestamp: "2026-07-25T00:00:00.000Z",
+      humanTurnShard: "fixture-clone.md",
+    });
+    expect(() => readPresenceReservation(root, RESERVATION_ID)).toThrow(
+      /does not match its provenance/,
+    );
+  });
+
+  test("refuses a second reservation while one is still active", () => {
+    const root = routeFixture();
+    armed(root);
+    expect(() =>
+      armPresenceReservation({
+        projectDir: root,
+        sessionId: SESSION,
+        space: "default",
+        targetIntentId: TARGET_INTENT_ID,
+        stage: STAGE,
+        routeId: ROUTE_ID,
+        reservationIdFactory: () => "11111111-2222-4333-8444-555555555555",
+      }),
+    ).toThrow(/already has an active presence reservation/);
+  });
+
+  test("refuses a minted Reservation Id that collides with an existing marker", () => {
+    const root = routeFixture();
+    // Consume the first reservation so the "already active" guard is not the
+    // one that fires — the collision guard must stand on its own.
+    armed(root);
+    mintArmedPresenceReservation({ projectDir: root, sessionId: SESSION });
+    consumePresenceReservation({
+      projectDir: root,
+      sessionId: SESSION,
+      reservationId: RESERVATION_ID,
+      targetIntentId: TARGET_INTENT_ID,
+      stage: STAGE,
+    });
+    expect(() =>
+      armPresenceReservation({
+        projectDir: root,
+        sessionId: SESSION,
+        space: "default",
+        targetIntentId: TARGET_INTENT_ID,
+        stage: STAGE,
+        routeId: ROUTE_ID,
+        reservationIdFactory: () => RESERVATION_ID,
+      }),
+    ).toThrow(/collision/);
+  });
+
+  test("refuses to mint when the session holds ambiguous reservations", () => {
+    const root = routeFixture();
+    const first = armed(root);
+    reservationFile(root, "11111111-2222-4333-8444-555555555555", {
+      ...first,
+      reservationId: "11111111-2222-4333-8444-555555555555",
+    });
+    expect(() => mintArmedPresenceReservation({ projectDir: root, sessionId: SESSION })).toThrow(
+      /ambiguous presence reservations/,
+    );
+  });
+
+  test("refuses to mint a second HUMAN_TURN for the same Reservation Id", () => {
+    const root = routeFixture();
+    const marker = mintedMarker(root);
+    // Re-arm the same marker on disk while its two owner HUMAN_TURN events stay
+    // in the ledger: minting again must refuse rather than pick one.
+    const shard = join(
+      root, "amadeus", "spaces", "default", "intents", "solo-intent-abcd1234", "audit", "fixture-clone.md",
+    );
+    writeFileSync(
+      shard,
+      `${readFileSync(shard, "utf-8")}
+## Human Turn
+**Timestamp**: 2026-07-25T03:00:00.000Z
+**Event**: HUMAN_TURN
+**Presence Reservation Id**: ${marker.reservationId}
+
+---
+`,
+    );
+    reservationFile(root, RESERVATION_ID, {
+      ...marker,
+      state: "armed",
+      humanTurnTimestamp: null,
+      humanTurnShard: null,
+    });
+    expect(() => mintArmedPresenceReservation({ projectDir: root, sessionId: SESSION })).toThrow(
+      /multiple HUMAN_TURN events/,
+    );
+  });
+
+  test.each([
+    ["target intent", { targetIntentId: "00000000-0000-7000-8000-000000000009" }, /target does not match/],
+    ["stage", { stage: "requirements-analysis" }, /target does not match/],
+  ] as const)("refuses to consume when the %s does not match", (_label, override, expected) => {
+    const root = routeFixture();
+    mintedMarker(root);
+    expect(() =>
+      consumePresenceReservation({
+        projectDir: root,
+        sessionId: SESSION,
+        reservationId: RESERVATION_ID,
+        targetIntentId: TARGET_INTENT_ID,
+        stage: STAGE,
+        ...override,
+      }),
+    ).toThrow(expected);
+  });
+
+  test("refuses to consume a reservation that was never minted", () => {
+    const root = routeFixture();
+    armed(root);
+    expect(() =>
+      consumePresenceReservation({
+        projectDir: root,
+        sessionId: SESSION,
+        reservationId: RESERVATION_ID,
+        targetIntentId: TARGET_INTENT_ID,
+        stage: STAGE,
+      }),
+    ).toThrow(/has not been minted/);
+  });
+
+  test("consuming twice is idempotent", () => {
+    const root = routeFixture();
+    mintedMarker(root);
+    const input = {
+      projectDir: root,
+      sessionId: SESSION,
+      reservationId: RESERVATION_ID,
+      targetIntentId: TARGET_INTENT_ID,
+      stage: STAGE,
+    };
+    expect(consumePresenceReservation(input).state).toBe("consumed");
+    expect(consumePresenceReservation(input).state).toBe("consumed");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// verifyMintedPresenceReservation — the read-side gate the approval commit runs
+// before it trusts a reservation. Each rejection is a distinct way a marker can
+// stop standing for a real, still-valid human turn.
+// ---------------------------------------------------------------------------
+describe("minted reservation verification", () => {
+  const SESSION = "trusted-session-1";
+  const STAGE = "application-design";
+
+  function verifyInput(root: string): VerifyReservationInput {
+    return {
+      projectDir: root,
+      sessionId: SESSION,
+      reservationId: RESERVATION_ID,
+      targetIntentId: TARGET_INTENT_ID,
+      stage: STAGE,
+    };
+  }
+
+  function mintFixture(): { root: string; marker: PresenceReservation } {
+    const root = routeFixture();
+    armPresenceReservation({
+      projectDir: root,
+      sessionId: SESSION,
+      space: "default",
+      targetIntentId: TARGET_INTENT_ID,
+      stage: STAGE,
+      routeId: ROUTE_ID,
+      reservationIdFactory: () => RESERVATION_ID,
+    });
+    const result = mintArmedPresenceReservation({ projectDir: root, sessionId: SESSION });
+    if (result.kind !== "minted") throw new Error(`fixture did not mint: ${result.kind}`);
+    return { root, marker: result.reservation };
+  }
+
+  function writeMarker(root: string, marker: PresenceReservation): void {
+    const dir = join(root, "amadeus", ".amadeus-sessions", "presence-reservations");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, `${marker.reservationId}.json`), `${JSON.stringify(marker, null, 2)}\n`);
+  }
+
+  test("accepts the marker it minted", () => {
+    const { root, marker } = mintFixture();
+    expect(verifyMintedPresenceReservation(verifyInput(root))).toEqual(marker);
+  });
+
+  test("rejects a missing marker", () => {
+    const root = routeFixture();
+    expect(() => verifyMintedPresenceReservation(verifyInput(root))).toThrow(/was not found/);
+  });
+
+  test("rejects a marker held by another session", () => {
+    const { root } = mintFixture();
+    expect(() =>
+      verifyMintedPresenceReservation({ ...verifyInput(root), sessionId: "other-session" }),
+    ).toThrow(/session does not match/);
+  });
+
+  test("rejects a marker whose target no longer matches the call", () => {
+    const { root } = mintFixture();
+    expect(() =>
+      verifyMintedPresenceReservation({ ...verifyInput(root), stage: "requirements-analysis" }),
+    ).toThrow(/target does not match/);
+  });
+
+  test("rejects a consumed marker unless the caller opts in", () => {
+    const { root } = mintFixture();
+    consumePresenceReservation({
+      projectDir: root,
+      sessionId: SESSION,
+      reservationId: RESERVATION_ID,
+      targetIntentId: TARGET_INTENT_ID,
+      stage: STAGE,
+    });
+    expect(() => verifyMintedPresenceReservation(verifyInput(root))).toThrow(/is not minted/);
+    expect(
+      verifyMintedPresenceReservation({ ...verifyInput(root), allowConsumed: true }).state,
+    ).toBe("consumed");
+  });
+
+  test("rejects a marker whose owner directory drifted from the registry", () => {
+    const { root, marker } = mintFixture();
+    const intents = join(root, "amadeus", "spaces", "default", "intents");
+    const moved = "solo-intent-99999999";
+    mkdirSync(join(intents, moved, "audit"), { recursive: true });
+    writeFileSync(
+      join(intents, "intents.json"),
+      `${JSON.stringify([
+        { uuid: TARGET_INTENT_ID, slug: "solo-intent", dirName: moved, status: "in-flight" },
+      ])}\n`,
+    );
+    expect(marker.targetIntentDir).not.toBe(moved);
+    expect(() => verifyMintedPresenceReservation(verifyInput(root))).toThrow(
+      /owner no longer matches the registry/,
+    );
+  });
+
+  test("rejects a marker whose recorded HUMAN_TURN provenance is not the one in the ledger", () => {
+    const { root, marker } = mintFixture();
+    writeMarker(root, { ...marker, humanTurnTimestamp: "2026-07-25T09:09:09.000Z" });
+    expect(() => verifyMintedPresenceReservation(verifyInput(root))).toThrow(
+      /HUMAN_TURN provenance does not match/,
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A sealed ledger (#1248: the registry row is "complete") must stop both writers
+// loudly. Neither the route receipt nor the reservation's HUMAN_TURN may be
+// silently dropped, because both are provenance a later approval relies on.
+// ---------------------------------------------------------------------------
+describe("writes into a sealed audit ledger", () => {
+  function rewriteRegistry(root: string, rows: Array<Record<string, unknown>>): void {
+    writeFileSync(
+      join(root, "amadeus", "spaces", "default", "intents", "intents.json"),
+      `${JSON.stringify(rows, null, 2)}\n`,
+    );
+  }
+
+  test("refuses to append a route receipt to a completed intent", () => {
+    const root = routeFixture();
+    rewriteRegistry(root, [
+      { uuid: TARGET_INTENT_ID, slug: "solo-intent", dirName: "solo-intent-abcd1234", status: "complete" },
+    ]);
+    const stateContent = readFileSync(
+      join(root, "amadeus", "spaces", "default", "intents", "solo-intent-abcd1234", "amadeus-state.md"),
+      "utf-8",
+    );
+
+    expect(() =>
+      routeSoloStandingGrantDirective({
+        directive: { ...runStage(), stage: "application-design", gate: true },
+        projectDir: root,
+        stateContent,
+        graph: ROUTE_GRAPH,
+        nowMs: Date.parse("2026-07-25T12:00:00.000Z"),
+        operatingMode: "solo",
+        routeIdFactory: () => ROUTE_ID,
+      }),
+    ).toThrow(/intent is complete/);
+    expect(findStandingGrantRouteReceiptById(root, ROUTE_ID)).toBeNull();
+  });
+
+  test("refuses to mint a reservation HUMAN_TURN into a completed intent", () => {
+    const root = routeFixture();
+    armPresenceReservation({
+      projectDir: root,
+      sessionId: "trusted-session-1",
+      space: "default",
+      targetIntentId: TARGET_INTENT_ID,
+      stage: "application-design",
+      routeId: ROUTE_ID,
+      reservationIdFactory: () => RESERVATION_ID,
+    });
+    // A stale "complete" row shadowing the same directory seals its ledger even
+    // though the reservation's own target row is still in-flight.
+    rewriteRegistry(root, [
+      { uuid: "99999999-9999-7999-8999-999999999999", slug: "sealed", dirName: "solo-intent-abcd1234", status: "complete" },
+      { uuid: TARGET_INTENT_ID, slug: "solo-intent", dirName: "solo-intent-abcd1234", status: "in-flight" },
+    ]);
+
+    expect(() =>
+      mintArmedPresenceReservation({ projectDir: root, sessionId: "trusted-session-1" }),
+    ).toThrow(/completed target intent/);
+    expect(readPresenceReservation(root, RESERVATION_ID)?.state).toBe("armed");
+  });
+});

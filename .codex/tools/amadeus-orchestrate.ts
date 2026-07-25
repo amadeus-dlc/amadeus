@@ -3531,13 +3531,18 @@ function approveArgs(slug: string, flags: ReportFlags): string[] {
   return args;
 }
 
+// The two carrier-bearing arms of the approval authority union. Declared at
+// module scope: an inline Exclude<> annotation is runtime-erased yet still
+// stamped DA:0 by Bun's LCOV.
+type CarrierApprovalAuthority = Exclude<
+  ReturnType<typeof classifyApprovalAuthority>,
+  { readonly kind: "normal" } | { readonly kind: "invalid" }
+>;
+
 function handleAuthorizedApprovalReport(
   pd: string,
   slug: string,
-  authority: Exclude<
-    ReturnType<typeof classifyApprovalAuthority>,
-    { readonly kind: "normal" } | { readonly kind: "invalid" }
-  >,
+  authority: CarrierApprovalAuthority,
 ): void {
   const approve = ["approve", slug];
   if (authority.kind === "grant-backed") {

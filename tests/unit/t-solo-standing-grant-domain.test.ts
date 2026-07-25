@@ -16,6 +16,7 @@ import {
 import {
   createStandingGrantTestObserver,
   dispatchStandingGrantQuery,
+  StandingGrantRouteReceipt,
 } from "../../packages/framework/core/tools/amadeus-grant-authorization.ts";
 
 const GRAPH: StageEntry[] = [
@@ -188,5 +189,52 @@ describe("standing grant gate eligibility", () => {
       walkingSkeletonStance: stance,
     });
     expect(result.kind).toBe(expected);
+  });
+});
+
+// The receipt parser is the ledger's read side: anything that is not a
+// GATE_AUTHORIZATION_SELECTED block, or that carries a malformed field, must
+// parse to null rather than to a half-trusted receipt.
+describe("standing grant route receipt parsing", () => {
+  const ROUTE_ID = "12345678-1234-4abc-8def-1234567890ab";
+
+  function block(event: string, fields: Record<string, string> = {}): string {
+    let text = `## ${event}\n**Timestamp**: 2026-07-25T05:00:00.000Z\n**Event**: ${event}\n`;
+    for (const [name, value] of Object.entries(fields)) text += `**${name}**: ${value}\n`;
+    return text;
+  }
+
+  const receiptFields = { "Route Id": ROUTE_ID, Stage: "application-design", "Grant Id": "abcdef12" };
+
+  test("parses a well-formed receipt", () => {
+    expect(StandingGrantRouteReceipt.parse(block("GATE_AUTHORIZATION_SELECTED", receiptFields)))
+      .toEqual({
+        routeId: ROUTE_ID,
+        stage: "application-design",
+        grantId: "abcdef12",
+        timestamp: "2026-07-25T05:00:00.000Z",
+      });
+  });
+
+  test.each([
+    ["another event type", block("GATE_APPROVED", receiptFields)],
+    ["no fields at all", block("GATE_AUTHORIZATION_SELECTED")],
+    [
+      "a non-v4 Route Id",
+      block("GATE_AUTHORIZATION_SELECTED", { ...receiptFields, "Route Id": "not-a-uuid" }),
+    ],
+    [
+      "an uppercase Grant Id",
+      block("GATE_AUTHORIZATION_SELECTED", { ...receiptFields, "Grant Id": "ABCDEF12" }),
+    ],
+    [
+      "an unparseable timestamp",
+      block("GATE_AUTHORIZATION_SELECTED", receiptFields).replace(
+        "2026-07-25T05:00:00.000Z",
+        "not-a-time",
+      ),
+    ],
+  ] as const)("returns null for a block with %s", (_label, text) => {
+    expect(StandingGrantRouteReceipt.parse(text)).toBeNull();
   });
 });
