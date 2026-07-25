@@ -64,7 +64,6 @@
     "tests/unit/t134-mechanism-honesty.test.ts",
     "tests/unit/t14.test.ts",
     "tests/unit/t140-sdk-drive-model-resolution.test.ts",
-    "tests/unit/t144-harness-seam.test.ts",
     "tests/unit/t146-core-hygiene.test.ts",
     "tests/unit/t147-kiro-hook-adapter.test.ts",
     "tests/unit/t149-codex-hook-adapter.test.ts",

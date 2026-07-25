@@ -1,6 +1,8 @@
 # API ドキュメント
 
-## Issue #1466 solo standing grant（現在、2026-07-25）
+> **2026-07-25（intent `260725-teamup-attach-latency`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み（測定 ref: observed `ec624022f`、base `6d4df9056`、距離 125）。** ユーザー可視の API/CLI 公開契約に変化なし。関与するのは `team-up.sh` の内部起動フロー（watcher 検証 → `mux_attach` の順序、exit code 分岐）と、repo 外の外部 agmsg CLI 契約（`watch.sh` の位置引数、ready sentinel path）の**消費**のみ。
+
+## Issue #1466 solo standing grant（260725-solo-standing-grants、2026-07-25、履歴）
 
 base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb404524ef30a7d8a0a3f68f73`。[Issue #1466](https://github.com/amadeus-dlc/amadeus/issues/1466)。[PR #1468](https://github.com/amadeus-dlc/amadeus/pull/1468) は凍結試作で参考のみ、実装前提にしない。
 
@@ -9,6 +11,35 @@ base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb4045
 ## 後続 API 裁定
 
 候補は exact `grant_id` carrier、opaque authorization claim、commit-only selection。commit 時不適格は「state 未変更、`GATE_APPROVED` / `STAGE_COMPLETED` / `ERROR_LOGGED` なし、人間ゲート再提示」を表す typed non-error 契約が必要である。具体 field / outcome は未決定。standing grant の audit-derived 性質と protected event mint 禁止は維持する。
+
+## Mirror 公開契約と欠落面（260725-mirror-review-fixes、履歴）
+
+観測 HEAD は `70336937529f5be31c011de5d368c0f03e534506`、差分 base は `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`。
+
+### 正準 lifecycle CLI
+
+- `boundary intent-capture|phase|park|completion --instance <id> [--phase|--stage ...] [--repo owner/name] [--space <space>] [--intent <dir>] [--project-dir <dir>]`
+- `manual create|sync|close --instance <id> [共通オプション]`
+- `repair status|relink|abandon ...`
+
+現行 parser は上記3群だけを受理する。既定 `prompt` で返る `MirrorBoundaryOutcome { kind: "ask", event, operation, question, workflowMayAdvance }` に回答する公開コマンドがなく、outcome と `MirrorPromptAnswer` のどちらにも `bindingId` がない。後続契約では approve/skip と保存済み `bindingId`、event/operation、`answerId` を受ける surface、または orchestrator の既存 ask/report 往復への接続が必要である。
+
+### CLI 終了契約
+
+- usage は exit 2、top-level error は exit 1。
+- 現行 boundary/manual は `runMirrorLifecycleBoundary` が top-level `ok` なら inner outcome に関係なく exit 0。
+- 修正後の契約は、要求した mutation が `completed` のときだけ exit 0 とし、`pending`、`safety-blocked`、不一致による `suppressed` は非0または専用 machine-readable result にする必要がある。`ask` は回答待ちとして workflow receipt と区別する。
+
+### Legacy CLI
+
+`amadeus-mirror.ts <create|sync|close|status> [--intent <dir>]` は現行公開 help に残る。`create|sync|close` は直接 `gh issue` を呼ぶため lifecycle 安全契約を迂回する。修正時は mutation verb を `manual` へ委譲するか usage error として拒否し、`status` の read-only 診断契約（clean=0、diverged=1、precondition/usage=2）は維持対象である。
+
+### 内部関数契約
+
+- `driveMirrorBoundary(input)` は `answer?: MirrorPromptAnswer` を既に受ける。
+- `handlePromptAnswer` は保存済み `expectedPrompt` を参照するが、approve の `approveMirrorPrompt` は event/operation だけを照合し、回答が保存済み `bindingId` を提示する契約はない。skip は `approveMirrorPrompt` を通らず event-scoped skip を書くため、approve/skip の双方で外部回答と durable binding の一致を検証する必要がある。
+- `resolveMirrorConfig` は `off | prompt | auto` のみ受理し、Global < Space < Intent の precedence、全層 fail-closed を維持する。
+- `parseMirrorState` は duplicate key、unknown field、depth/size、invariant に加え、JSON 文字列中の未エスケープ U+0000–U+001F をすべて拒否する契約へ揃える必要がある。
 
 > **2026-07-24（intent `260724-watcher-timeout-fix`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み。** `team-up.sh` の内部制御フロー（watcher 検証 → mux_attach 順序、exit code 分岐 0=全 armed / 非ゼロ=未 armed）は既存契約のまま。ユーザー可視 API/CLI 契約に変化なし（base `a81c11dde` → observed `6d4df9056`）。
 

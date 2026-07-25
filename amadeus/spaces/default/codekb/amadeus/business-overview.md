@@ -1,6 +1,8 @@
 # ビジネス概要
 
-## Issue #1466 solo standing grant（現在、2026-07-25）
+> **2026-07-25（intent `260725-teamup-attach-latency`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み（測定 ref: observed `ec624022f`、base `6d4df9056`、距離 125）。** 業務ドメイン（AI-DLC 自己ホスト開発）に構造変化なし。既存 bash ツール `team-up.sh` の起動レイテンシ（実測 200.85 秒）の解消に閉じ、利用者価値は Team Mode 起動の待ち時間短縮のみ。詳細は `architecture.md` / `code-quality-assessment.md` の同 intent 節。
+
+## Issue #1466 solo standing grant（260725-solo-standing-grants、2026-07-25、履歴）
 
 base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb404524ef30a7d8a0a3f68f73`。[Issue #1466](https://github.com/amadeus-dlc/amadeus/issues/1466) は、solo 運用でも期限付き standing grant を承認源として使い、route 後・commit 前に失効／取消された場合はエラーを残さず通常の人間承認へ戻す利用者体験を検討する。standing grant は設定値ではなく、引き続き `GRANT_ISSUED` / `GRANT_REVOKED` 監査イベントから導出する。[PR #1468](https://github.com/amadeus-dlc/amadeus/pull/1468) は凍結試作で参考のみ、実装前提にしない。
 
@@ -9,6 +11,19 @@ base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb4045
 ## Issue #1466 の成功境界
 
 commit 時不適格では `ERROR_LOGGED`、`GATE_APPROVED`、`STAGE_COMPLETED`、state advance を発生させない。phase boundary、walking skeleton、per-unit 最終 gate、issuer provenance、protected audit mint の既存不変条件と team delegation path は維持する。
+
+## PR #1469 レビュー修正の業務境界（260725-mirror-review-fixes、履歴）
+
+観測 HEAD は `70336937529f5be31c011de5d368c0f03e534506`、差分 base は `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`。
+
+Amadeus は Git 管理された Intent record を正本とし、その進行状況を GitHub Issue へ一方向に反映する Mirror 機能を持つ。[PR #1469](https://github.com/amadeus-dlc/amadeus/pull/1469) は `off | prompt | auto` の自動モード、永続 receipt、provenance、repair、完了時 close を追加したが、レビューで安全保証を迂回または完了扱いを誤る6面が確認された。
+
+- lifecycle の boundary/manual コマンドは、副作用が `pending`、`safety-blocked`、`suppressed` のままでも exit 0 を返す。呼出側が phase receipt を `completed` に進めるため、GitHub へ未反映の状態を完了済みにできる。
+- 既定 `prompt` モードは durable `expectedPrompt` を保存して `ask` を返す一方、公開 CLI に approve/skip 回答経路がない。さらに回答型と `ask` outcome は保存済み `bindingId` を運ばず、approve は event/operation だけを照合し、skip はその照合も迂回するため、保存済み prompt binding と回答の一致を外部契約として証明できない。
+- legacy `amadeus-mirror.ts create|sync|close` は lifecycle の permit、receipt、provenance、repair/close guard を通らず GitHub を直接変更する。
+- config、state codec、coverage source 正規化には、それぞれ TOCTOU、未エスケープ制御文字、Cursor/OpenCode 投影の正準化漏れがある。
+
+本 intent の成功条件は、上記6面を失敗する再現テストで固定し、外部契約を「未完了は非成功」「prompt 回答は保存済み binding と一致」「mutation は lifecycle 一経路」「読み取り・codec・coverage は fail-closed」に回復することである。巨大ファイル分割と gateway lexer 共通化は別の `amadeus-refactor` intent で扱う。
 
 > **2026-07-24（intent `260724-watcher-timeout-fix`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み。** Team Mode ランチャー `team-up.sh` の watcher arming 検証が mux_attach を最大 270 秒ブロックする性能問題で、業務ドメイン（AI-DLC 自己ホスト開発）に構造変化なし（base `a81c11dde` → observed `6d4df9056`）。
 

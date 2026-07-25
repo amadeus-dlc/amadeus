@@ -269,6 +269,10 @@ describe("t07 audit-logger PostToolUse hook (mechanism cli — spawned hook + st
       join(proj, ".claude", "tools", "amadeus-lib.ts"),
     );
     copyFileSync(
+      join(AMADEUS_SRC, "tools", "amadeus-harness.ts"),
+      join(proj, ".claude", "tools", "amadeus-harness.ts"),
+    );
+    copyFileSync(
       join(AMADEUS_SRC, "tools", "amadeus-audit.ts"),
       join(proj, ".claude", "tools", "amadeus-audit.ts"),
     );

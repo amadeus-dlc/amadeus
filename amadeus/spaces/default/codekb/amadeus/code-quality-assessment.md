@@ -1,6 +1,40 @@
 # コード品質評価
 
-## Issue #1466 solo standing grant（現在、2026-07-25）
+## 常に失敗する検証ゲートとテストスタブによる検出不能性（260725-teamup-attach-latency、現在、Issue #1449）
+
+測定 ref: observed HEAD `ec624022ff65cc8b3912001f768bd66ec41a0e39` の実ファイル直読。
+
+### 欠陥クラス: 「常に失敗する検証ゲート」（検証劇場クラス）
+
+`verify_watchers_armed`（`packages/framework/core/tools/team-up.sh:1151-1190`）は、成功しうる条件を持たない検証である。待機対象の ready sentinel は actas モードの watcher しか書かないが（`~/.agents/skills/agmsg/scripts/watch.sh:300` の `if [ -n "$ACTIVE_NAME" ]` ガード）、`team-up.sh` が投入するのは monitor モードのプロンプト（:104 `CLAUDE_MONITOR_PROMPT="/agmsg mode monitor"`）で、その経路（`delivery.sh:259 emit_monitor_directive()` → `:301`）は `ACTIVE_NAME` を渡さない。詳細な機序は `architecture.md` の同 intent 節を参照。
+
+この形は org.md Forbidden の「検証劇場」と鏡像の関係にある。検証劇場が「**常に通る**ため偽の信頼を生む」のに対し、本欠陥は「**常に落ちる**ため実行時コストだけを課し、シグナルとしては無価値」である。実害は3つ:
+
+1. **性能**: 起動のたびに `WATCHER_READY_TIMEOUT`(90) × `(WATCHER_RESEND_MAX+1)`(2) = 180 秒、`mux_attach` が構造的にブロックされる。実 launch 実測（2026-07-25、3人構成）では `T+200.85s` で rc=1 終了、armed 0/3。
+2. **偽陽性アラート**: `:1186` のエラー文（verbatim: `  echo "ERROR: agmsg watcher never armed for: $remaining (after ${WATCHER_RESEND_MAX} re-send(s))" >&2`）と `:1187` の続く案内が原因を Issue #1384（TUI cold-start のプロンプト消失）と断定するが、実際には watcher は正常起動している（`herdr agent list` 上 `agent_status: idle`）。診断が構造的に誤誘導する。
+3. **非ゼロ exit の常態化**: `exit "$watcher_status"` により毎回 rc=1 が返り、exit code がシグナルとして機能しなくなる。
+
+### 検出不能性: テストが自分で sentinel を書いている
+
+`tests/integration/t-team-up-watcher-arming.test.ts`（**268 行**、`wc -l` 実測）は本欠陥を構造的に検出できない。
+
+| 箇所 | 内容 | 影響 |
+| --- | --- | --- |
+| :36-43 | agmsg の `agmsg_ready_path` を自前スタブに差し替え（verbatim :42 `agmsg_ready_path() { printf '%s/run/ready.%s__%s' "\${SKILL_DIR:?}" "$1" "$2"; }`） | 実 agmsg の path 解決は登場するが、**書き手**は登場しない |
+| :87-91 | `armAll()` がテスト自身で全 role の sentinel ファイルを直接生成 | 「armed になる」経路がテスト側の書込で代替される |
+| :60 | fake herdr が `FAKE_RESEND_ARMS=1` のとき send-text 時に sentinel を touch | 再送で arming する挙動もテスト側の擬似実装 |
+
+すなわちテストは「sentinel があれば 0 を返す / なければ再送してから非ゼロ」という **team-up.sh 内部の分岐だけ**を検証しており、「実運用で sentinel を書くのは誰か」という統合面をスタブで消している。本欠陥は導入（#1391、2026-07-23）以来 CI 上で常時グリーンだった。
+
+**教訓（テスト設計）**: 外部 seam の readiness 信号を待つコードのテストでは、信号の**書き手をスタブで代替した時点で、その検証は seam 契約の妥当性を一切保証しない**。少なくとも「実 agmsg 経路で sentinel が生成されること」を1本の統合テストで固定するか、書き手側のモード条件を明示的にアサートする必要がある。
+
+### 原因の所在
+
+設計段階の誤り（実装逸脱ではない）。`cid:application-design:external-seam-vocab-measurement`。根治は [Issue #1476](https://github.com/amadeus-dlc/amadeus/issues/1476)（actas 移行）で扱い、本 intent（#1449）は起動レイテンシの解消に限定する。
+
+> **訂正（260724-watcher-timeout-fix 節に対して）**: 下記「watcher arming 検証が mux_attach を最大 270 秒ブロック（260724…）」節は当該 intent の observed `6d4df9056` 時点の記述。`9b851c5ae` により worst-case は 180 秒へ短縮済みで、かつ本 scan により**タイムアウト長は症状であり原因ではない**ことが確定した（原因はモード不一致で、待ち時間をいくら延ばしても検証は成功しない）。
+
+## Issue #1466 solo standing grant（260725-solo-standing-grants、2026-07-25、履歴）
 
 base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb404524ef30a7d8a0a3f68f73`。[Issue #1466](https://github.com/amadeus-dlc/amadeus/issues/1466)。[PR #1468](https://github.com/amadeus-dlc/amadeus/pull/1468) は凍結試作で参考のみ、実装前提にしない。
 
@@ -10,9 +44,45 @@ base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb4045
 
 認可拒否は現行 `error()` に直行し、state child と orchestrator の双方が `ERROR_LOGGED` を残し得るため、commit 時失効には使えない。fallback は `emitApprovalAudit` / state mutation 前で typed non-error とし、完了監査を残さない。関連178テスト、dist 6 harness check、promote 4面 check は成功。`bun run check` は `tsc: command not found`（exit 127）で未判定。巨大ファイル `amadeus-lib.ts` 約7,602行、`amadeus-state.ts` 約4,467行、`amadeus-orchestrate.ts` 約3,781行が変更 hotspot。base..HEAD の grant core は無変更だが、orchestrate plugin 系 `+109/-3` が同時編集面である。実装方式は後続設計で比較する。
 
-> **現在の品質観測は intent `260724-watcher-timeout-fix`(2026-07-24、amadeus-bugfix / Minimal、下記「watcher arming 検証が mux_attach を最大 270 秒ブロック」節)**。以下の過去 intent 節に残る「本 intent」「最新」「現在」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
+## PR #1469 レビュー findings（260725-mirror-review-fixes、履歴）
 
-## watcher arming 検証が mux_attach を最大 270 秒ブロック（260724-watcher-timeout-fix、現在、Issue #1449）
+### 基準実測
+
+- PR: [#1469](https://github.com/amadeus-dlc/amadeus/pull/1469)、review head/observed `70336937529f5be31c011de5d368c0f03e534506`、base point `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、49コミット。
+- focused baseline: `bun test` で config、codec、coordinator、lifecycle、legacy CLI、coverage normalizer の7ファイルを実行し、**127 pass / 0 fail / 274 expect()**（16.68秒）。
+- baseline が green でも、以下6欠陥条件のテストが不在のため品質保証にはならない。各修正は最初に red reproduction を追加する必要がある。
+
+### P1 — 未完了 lifecycle outcome が exit 0
+
+`runMirrorLifecycleMain` は top-level error だけを検査し、`pending`、`safety-blocked`、`suppressed` を JSON 出力して0を返す。orchestrator 側は子コマンド成功後に receipt を completed とするため、remote effect 不成立を完了扱いにできる。boundary/manual の要求 operation が `completed` でないケースを非0に固定する CLI-level regression が必要。
+
+### P1 — prompt 回答 surface と binding 照合の欠落
+
+coordinator unit と lifecycle integration は event/operation を再送した `answer` が state 内の `expectedPrompt` を消費することを検証するが、`MirrorPromptAnswer` と `ask` outcome は `bindingId` を持たず、保存済み binding と外部回答の一致を検証していない。approve は event/operation のみを照合し、skip はその照合も迂回する。実 CLI parser/entry からの回答経路に加え、default prompt で ask→正しい binding の approve/skip、binding/event/operation mismatch の拒否、同一回答 replay 拒否、次 boundary prompt 成功までの process/CLI integration が必要。
+
+### P1 — legacy mutation による安全境界迂回
+
+legacy t232 は create/sync/close の直接 GitHub mutation を成功契約として固定している。新しい lifecycle の permit、receipt、ownership marker、repair と矛盾する回帰テストである。mutation verb の委譲または拒否へ期待値を更新し、read-only status の互換性だけを維持する必要がある。
+
+### Security — config safe read の TOCTOU
+
+fd 内の start/end fstat は読取中の同一 inode 変化を検知するが、`realpathSync` containment 判定から `openSync(realPath)` までに path を置換する競合は検知しない。既存テストは absent、precedence、dangling symlink、directory、non-write を扱うが、symlink/path swap を再現しない。open descriptor を信頼起点にした fail-closed テストが必要。
+
+### Security — state codec の C0 制御文字
+
+custom strict parser は未エスケープ `\n` / `\r` のみ拒否し、NUL、TAB、BS、FF 等の U+0000–U+001F を受理する。標準 JSON 文法との差で、state の canonical render/parse と downstream Markdown/audit 処理に非正準 bytes を持ち込める。全C0 code point の table-driven rejection と escaped form の許可を対にする。
+
+### Coverage — Cursor/OpenCode source 正規化漏れ
+
+package temp regex と generated prefix table の双方に Cursor/OpenCode がない。`.cursor/tools/*`、`.opencode/tools/*`、`dist/cursor/.cursor/*`、`dist/opencode/.opencode/*` と temp package path が core source へ畳まれず、同じ正本が複数 SF として計測される。全6 harness、Windows separator、temp root containment、harness-dir mismatch の対称テストが必要。
+
+### 保守性所見
+
+Mirror の大型ファイル（lifecycle 909行、coordinator 708行、state codec 1,526行等）と gateway lexer 共通化は実在する技術的負債だが、本 bugfix と変更理由が異なるため別 `amadeus-refactor` intent に隔離する。今回の変更は6欠陥とその回帰テストに外科的に限定する。
+
+> **以下は intent `260724-watcher-timeout-fix`（2026-07-24、amadeus-bugfix / Minimal）の履歴観測**。以下の過去 intent 節に残る「本 intent」「最新」「現在」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
+
+## watcher arming 検証が mux_attach を最大 270 秒ブロック（260724-watcher-timeout-fix、履歴、Issue #1449）
 
 実測基準は base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb` → observed HEAD `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、祖先性 exit 0、距離 155。差分 1762 files のうち本問題の交差面は `packages/framework/core/tools/team-up.sh`(1462 行新規パス)と `tests/integration/t-team-up-watcher-arming.test.ts`(197 行新規)のみ(測定 ref: `git diff --numstat a81c11dde..HEAD -- <両パス>`)。導入は区間内 2 コミット: `42c9341d8`(#1391、`verify_watchers_armed` 検証ロジック本体 = #1384 修正)+ `0d24c6f93`(#1421、`scripts/team-up.sh` → `packages/framework/core/tools/` 昇格 + 配布 11 コピー、ロジック不変)。
 
@@ -203,7 +273,7 @@ EQUIVALENT 候補は、`amadeus-orchestrate.ts:1961-1972` の全 batch 走査と
 > 「docs-batch10(2026-07-12)の観測面」節は履歴 intent `260711-docs-batch10`(#765 #764 #763 #728、documentation)の候補記録。続く p3-cleanup-batch8 節(#843 #846 #850 #851 #876 #877 #878、intent `260711-p3-cleanup-batch8`)・p2-repair-batch7 節(#834 #839 #844 #845 #849、intent `260711-p2-repair-batch7`)・p3-cleanup-batch5 節(#811 #822 #830 #730 #819 #831、intent `260710-p3-cleanup-batch5`)・p3-cleanup-batch4 節(#757 #758 #753 #739 #740 #784 — 全6件 2026-07-10 修正着地済み、PR #823/#821/#817/#818/#814/#815)・core-repair-batch3 節(#746 ほか9件、2026-07-11)・複雑度ゲート導入節(intent 260710-complexity-gate)・ tools-dispatch-batch 節(#774 / #785 / #787 / #788 / #789)・ bughunt-fix-batch 節(#771/#773/#775/#776/#779)・swarm-worktree-batch 節(#738/#748/#746/#760)・learnings-audit-batch 節(#754 / #745 / #761)・mint-presence-vectors 節(#755)・packaging source-unreferenced 節(intent 260710、#735)・delegate-answer-consume 節(intent 260710、#736)・kiro-stale-hooks 節(#719 / P3 source hygiene)・dynamic-test-size 節(#699 / #684 Phase D)・t92-worktree-hermeticity 節(#709)・packaging-repair-batch 節(#701/#702 = PR #711/#712 解決済み)は過去 intent の記録で、参照用に温存する。以降の「アーキテクチャ横断パターン」以下は `260709-bug-zero-batch`(#674〜#678/#668)の記録。
 > 「docs-repair-batch9(2026-07-11)の観測面」節は履歴 intent `260711-docs-repair-batch9`(#812 #824 #680 #885 #886)の記録。続く p3-cleanup-batch5 節(#811 #822 #830 #730 #819 #831 — 候補記録)・p3-cleanup-batch4 節(#757 #758 #753 #739 #740 #784 — 全6件 2026-07-10 修正着地済み、PR #823/#821/#817/#818/#814/#815)・core-repair-batch3 節(#746 ほか9件、2026-07-11)・複雑度ゲート導入節(intent 260710-complexity-gate)・ tools-dispatch-batch 節(#774 / #785 / #787 / #788 / #789)・ bughunt-fix-batch 節(#771/#773/#775/#776/#779)・swarm-worktree-batch 節(#738/#748/#746/#760)・learnings-audit-batch 節(#754 / #745 / #761)・mint-presence-vectors 節(#755)・packaging source-unreferenced 節(intent 260710、#735)・delegate-answer-consume 節(intent 260710、#736)・kiro-stale-hooks 節(#719 / P3 source hygiene)・dynamic-test-size 節(#699 / #684 Phase D)・t92-worktree-hermeticity 節(#709)・packaging-repair-batch 節(#701/#702 = PR #711/#712 解決済み)は前 intent の記録で、参照用に温存する。以降の「アーキテクチャ横断パターン」以下は `260709-bug-zero-batch`(#674〜#678/#668)の記録。
 >
-> **履歴ラベルの読み方**: 本ページ以下および `architecture.md` / `business-overview.md` / `api-documentation.md` の「本 intent」は、各節見出しで明示した過去 intent 内の自己参照である。各ファイルの current view は先頭の `260720-upstream-sync-230` 節だけであり、それより下は履歴として読む。
+> **履歴ラベルの読み方**: 本ページ以下および `architecture.md` / `business-overview.md` / `api-documentation.md` の「本 intent」は、各節見出しで明示した過去 intent 内の自己参照である。現行 view は各ファイル先頭の `260725-mirror-review-fixes` 節であり、ここから下は履歴として読む。
 
 ## docs-batch10(2026-07-12)の観測面 — documentation 4欠陥の現物照合(#765 #764 #763 #728)
 

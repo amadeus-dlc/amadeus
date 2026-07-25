@@ -1,6 +1,97 @@
 # アーキテクチャ
 
-## Issue #1466 solo standing grant（現在、2026-07-25）
+## Team Mode ランチャーの watcher 検証と actas/monitor モード不一致（260725-teamup-attach-latency、現在、Issue #1449）
+
+測定 ref: observed HEAD `ec624022ff65cc8b3912001f768bd66ec41a0e39` の実ファイル直読（`packages/framework/core/tools/team-up.sh` は **1474 行**、`wc -l` 実測）、および repo 外の外部スキル `~/.agents/skills/agmsg/`（読取 2026-07-25）。
+
+### launch シーケンス上の位置
+
+1. `if watcher_verification_applies; then clear_stale_watcher_sentinels; fi`（team-up.sh:1438-1440）— pane 起動前に旧 sentinel を除去。
+2. pane レイアウト構築（:1441-1447、`mux_new_session` / `mux_split` / `stack_column`）で全メンバーを spawn。
+3. **`verify_watchers_armed`**（:1455-1457、verbatim: `  verify_watchers_armed || watcher_status=$?`）— 同期実行。
+4. `start_safety_wait_supervisors || exit 1`（:1459）。
+5. **`mux_attach "$S"`（:1460）** — ユーザーが interactive アタッチ可能になる点。
+
+手順 3 が手順 5 の**前**に置かれるのは意図的設計で、コメント（:1449-1454）が「Completed BEFORE mux_attach so the exit code is meaningful (an interactive attach would swallow it)」と明記する。結果として、検証がタイムアウトする限り attach は待ち budget 全量ぶん構造的にブロックされる。
+
+### 構造的失敗の機序（actas/monitor モード不一致）
+
+```text
+team-up.sh                     agmsg (外部スキル、repo 外)
+  member launch
+    init_prompt = "/agmsg mode monitor"   (team-up.sh:104 CLAUDE_MONITOR_PROMPT)
+        |
+        v
+   delivery.sh emit_monitor_directive() :259
+     watch_command = printf '%q %q %q %q' watch session_id project type   (:301)
+        -> watch.sh へ渡る引数は 3 個 (session_id / project / type)
+        -> watch.sh:43  ACTIVE_NAME="${4:-}"   => 空
+        |
+        v
+   watch.sh:300  if [ -n "$ACTIVE_NAME" ]; then
+   watch.sh:307    printf '%s\n' "$SESSION_ID" > "$_rp"   <- sentinel を書く唯一の行
+        => ACTIVE_NAME が空なので ready sentinel を一切書かない
+        |
+        x  (sentinel は永遠に現れない)
+        |
+team-up.sh verify_watchers_armed :1151-1190
+   ready_sentinel_path (:1088) が指す path を最大 2 ラウンド × 90 秒ポーリング
+   => 常に全員 unarmed => 180 秒待って :1186 の ERROR、return 1
+```
+
+要点:
+
+- sentinel を書く条件は `watch.sh:300` の `if [ -n "$ACTIVE_NAME" ]`、実際の書込は `watch.sh:307`（verbatim: `    printf '%s\n' "$SESSION_ID" > "$_rp" 2>/dev/null || true`）。`ACTIVE_NAME` は `watch.sh:43` の第4位置引数（verbatim: `ACTIVE_NAME="${4:-}"`）。
+- **書き手の全数（独立再列挙、`cid:requirements-analysis:enumeration-completeness-review`）**: `~/.agents/skills/agmsg/` 全域で `agmsg_ready_path` を参照するのは **3 箇所のみ**（`grep -rn "agmsg_ready_path" ~/.agents/skills/agmsg/`、読取 2026-07-25）— `lib/actas-lock.sh:69`（path 構築関数の定義）、`spawn.sh:564`（**読み手**: :572 で削除、:578 で待機）、`watch.sh:303`（**唯一の書き手**、書込は :307）。path 文字列リテラル `ready.` の出現も 2 箇所のみ（`grep -rnI "ready\." ~/.agents/skills/agmsg/` を `run/` 除外で実行）— `lib/actas-lock.sh:72`（path 組立）と `session-start.sh:194`（**削除側**: 死んだ session の sentinel を `rm -f`）。すなわち書き手は `watch.sh` の actas ガード内の1経路に限られ、「monitor モードでは sentinel が生成されない」という主張に**反証は存在しない**。
+- `~/.agents/skills/agmsg/scripts/lib/actas-lock.sh:63` のコメントが所有関係を明示する（verbatim: `# Readiness sentinel path for (team, agent). watch.sh creates this when an`／続く行 `# exclusive (actas) watcher attaches and removes it on exit, ...`）。すなわち sentinel は **exclusive(actas) watcher 専用**の信号である。
+- monitor モードの起動経路 `delivery.sh:259 emit_monitor_directive()` は `:301` で 4 個の `%q`（実行ファイル自身 + 3 引数）しか組み立てず、第4引数 `ACTIVE_NAME` を渡さない（verbatim: `  watch_command="$(printf '%q %q %q %q' "$watch" "$session_id" "$project" "$type")"`）。
+- 対照として `spawn.sh --wait-ready` が同じ sentinel で機能するのは、`spawn.sh:358` が actas モードで起動するため（verbatim: `ACTAS_PROMPT="${CMD_PREFIX}${CMD_NAME} actas ${NAME}"`）。
+- 実測裏付け: agmsg の run ディレクトリ `~/.agents/skills/agmsg/run/` は **251 エントリ**（`ls -1 | wc -l`、読取 2026-07-25）だが `ready.*` は **0 件**（`ls -1 | grep -c '^ready\.'` = 0）。2026-07-09 以降の運用履歴を通じて sentinel が一度も生成されていない。
+
+つまり `team-up.sh` は agmsg spawn.sh から「**待つ側**」だけを移植し、「**書かせる側**（actas 起動）」を移植しなかった。検証は成功しうる条件を持たない。
+
+### 構造的欠陥クラス: 外部 seam の契約を片側だけ移植した（対称性レビュー）
+
+`team-up.sh` の watcher 検証は agmsg `spawn.sh` の readiness ハンドシェイクを写したものだが、写されたのは**消費側の3要素だけ**で、生産側と適用可否ガードが落ちている。`cid:requirements-analysis:symmetric-pair-review` の観点で対を並べると以下になる（測定 ref: HEAD `ec624022f` / agmsg 読取 2026-07-25）。
+
+| ハンドシェイクの構成要素 | agmsg `spawn.sh`（正本） | `team-up.sh`（移植先） | 対称性 |
+| --- | --- | --- | --- |
+| path 解決 | `:564 READY_PATH="$(agmsg_ready_path ...)"` | `:1088 ready_sentinel_path()`（agmsg の lib を subshell で source し文字列を複製しない） | ✅ 対称 |
+| 事前クリア | `:572`（`place_and_launch` 前に `rm -f`） | `:1132 clear_stale_watcher_sentinels`（pane 起動前、:1438-1440 で呼出） | ✅ 対称 |
+| 待機ループ | `:578-586`（bounded poll、timeout で exit 3） | `:1151-1190 verify_watchers_armed`（bounded poll + 再送、timeout で return 1） | ✅ 対称 |
+| **信号の生産（actas 起動）** | `:358 ACTAS_PROMPT="${CMD_PREFIX}${CMD_NAME} actas ${NAME}"` | **不在** — `:104 CLAUDE_MONITOR_PROMPT="/agmsg mode monitor"` は monitor モードを起動する | ❌ **片側のみ** |
+| **適用可否ガード（信号を出さない起動形態の除外）** | `:565-568`（`agmsg_type_get <type> monitor` が `no` の型は `WAIT_READY=0` にして待機自体を skip、理由を stderr に出す） | `:1077 watcher_verification_applies()`（verbatim: `  [ "$RUNTIME" = "claude" ] && [ "$MSG_BACKEND" = "agmsg" ]`）— runtime と backend しか見ず、**その起動経路が実際に sentinel を出すか**を判定しない | ❌ **片側のみ** |
+
+上2行が本欠陥の全体である。とくに5行目は独立に重要で、`spawn.sh` 側には「readiness ハンドシェイクを持たない起動形態では待たない」という fail-open ガードが最初から存在する（`:566-568` が該当型で `--no-wait` 相当へ降格し理由を通知する）のに対し、`team-up.sh` の適用ガードは起動経路のモードを一切参照しない。仮に生産側（actas 起動）を移植せずタイムアウトだけ縮めても、この非対称は残る。
+
+他の対の実装は本ファイル内で確認した範囲では対称である — Codex 用の safety-wait supervisor は起動（`:399 start_safety_wait_supervisors`、`:1394` / `:1459` で呼出）に対して停止・ロック解放（`:304 safety_wait_stop_state`、`:326` / `:395` の `rm -rf -- .../safety-wait.lock`）が存在し、`trap handle_exit EXIT`（`:1373`）と `trap - EXIT`（`:1232`）も対になっている。片側実装は watcher 検証まわりに固有である。
+
+### 修正のアーキテクチャ影響境界
+
+本 intent（#1449、起動レイテンシの解消）でブロッキング呼び出しを除去した場合の影響面:
+
+- **影響する**: launch シーケンス（`:1455-1460`）の1点のみ — 手順3が `mux_attach` の前から外れる。`watcher_status` を exit code に流す経路（`exit "$watcher_status"`）と、`:1186-1188` の診断文言の意味づけがこれに連動する。
+- **影響しない**: agmsg 側（repo 外の外部スキル）は無変更。`ready_sentinel_path`（`:1088`）の agmsg lib 委譲、`clear_stale_watcher_sentinels`、pane レイアウト構築、`register_team_members`、Codex safety-wait 経路、`create_run` の worktree 生成はいずれも本修正の対象外で、契約は不変。
+- **本修正では解けない**: 上表4行目・5行目の非対称そのもの（= 検証が成功しうる条件を持たないこと）。これは actas 移行 [Issue #1476](https://github.com/amadeus-dlc/amadeus/issues/1476) の領分であり、本 intent は「常に落ちる検証にユーザーの attach を待たせない」ところまでを扱う。したがって修正後も検証の verdict 自体は無意味なままである点を、要件側で明示的に扱う必要がある。
+
+### 混入時点と伝播
+
+- 混入: `42c9341d8`（2026-07-23、PR #1391、`fix(team-up): verify claude watcher arming with resend before mux attach`）。当時のパスは `scripts/team-up.sh`。
+- 親 `70cc7c526` には `mux_attach` 前のブロッキング待機が存在しない（`git show 70cc7c526:scripts/team-up.sh | grep -n "verify_watchers_armed\|mux_attach"` → `verify_watchers_armed` 0 hit、`mux_attach` は :452 定義 / :1211・:1260 呼び出しのみ）。
+- `0d24c6f93`（2026-07-23、PR #1421）で `packages/framework/core/tools/` へ昇格（ロジック不変）。
+- `9b851c5ae`（2026-07-24）で `WATCHER_RESEND_MAX` を 2 → 1 に短縮（worst-case 270 秒 → 180 秒）。**モード不一致は未修正**のため、待ち時間が短くなっただけで検証は依然として常時失敗する。
+
+### 副次的コスト（ブロッキング除去後の支配項）
+
+`create_run` の worktree 作成は直列（team-up.sh:1279-1283、verbatim: `    git -C "$REPO" worktree add -q -b "$branch" "$wt" "$base_commit"`）。conductor 実測（2026-07-25、測定 ref: HEAD `ec624022f`）で 1.153 / 1.068 / 1.013 秒/回。リポジトリ規模は tracked **11,051 ファイル**（`git ls-files | wc -l`）、`.git` **166M**（`du -sh .git`）— 本 scan で再実測。7人構成で約 7.4 秒となり、200 秒に対しては誤差だが、ブロッキング検証を除去すると起動時間の支配項になる。
+
+### 原因の所在
+
+**設計段階の誤り**（実装逸脱ではない）。`cid:application-design:external-seam-vocab-measurement` に該当 — 外部 seam（agmsg ready sentinel）の「存在の実測」は行われたが、「**誰がどのモードで書くか**」の実測を欠いたまま確約された。根治（actas 移行）は [Issue #1476](https://github.com/amadeus-dlc/amadeus/issues/1476) として別途起票済みで、本 intent のスコープ外。
+
+> **訂正（260724-watcher-timeout-fix 節に対して）**: 下記「Team Mode ランチャーの watcher arming 検証と mux_attach ブロッキング（260724…）」節は observed `6d4df9056` 時点の記述であり、(a) 行番号（:1442-1445 / :1448 など）は HEAD `ec624022f` では :1455-1457 / :1460 へ移動、(b) 「再送ループ ×3 / 最大 270 秒」は `9b851c5ae` により ×2 / 180 秒へ短縮済み、(c) 同節は遅延を「タイムアウト長の問題」と捉えているが、本 scan の実測により**タイムアウトは症状であって原因ではなく、モード不一致により検証は原理的に成功しえない**ことが確定した。
+
+## Issue #1466 solo standing grant（260725-solo-standing-grants、2026-07-25、履歴）
 
 base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb404524ef30a7d8a0a3f68f73`。[Issue #1466](https://github.com/amadeus-dlc/amadeus/issues/1466)。[PR #1468](https://github.com/amadeus-dlc/amadeus/pull/1468) は凍結試作で参考のみ、実装前提にしない。
 
@@ -35,9 +126,55 @@ sequenceDiagram
 
 protected audit event の一般 CLI mint 禁止、issuer `HUMAN_TURN` 実在、Grant Id 相関、phase-check、walking skeleton exclusion、per-unit 全成果物着地後の最終 gate を維持する。候補は (A) directive→report→approve へ exact Grant Id を運ぶ、(B) opaque authorization claim を運ぶ、(C) commit-only 再探索を維持する、の3案。fallback は `emitApprovalAudit` より前の typed non-error outcome とする必要があるが、配置と型は後続設計で裁定する。
 
-> **2026-07-24 更新（intent `260724-watcher-timeout-fix`、現在）**: base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb` → observed HEAD `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`（distance 155）の differential refresh（amadeus-bugfix / Minimal、[Issue #1449](https://github.com/amadeus-dlc/amadeus/issues/1449)）。交差面は Team Mode ランチャー(`packages/framework/core/tools/team-up.sh`)の起動シーケンス上の agmsg watcher arming 検証の位置。下記「Team Mode ランチャーの watcher arming 検証と mux_attach ブロッキング」節が current view。以下の 260723 系・260722 系節はいずれも履歴。
+## Mirror lifecycle とレビュー修正境界（260725-mirror-review-fixes、履歴）
 
-## Team Mode ランチャーの watcher arming 検証と mux_attach ブロッキング（260724-watcher-timeout-fix、現在、Issue #1449）
+Mirror の正準経路は `amadeus-orchestrate.ts` または lifecycle CLI から境界イベントを作り、coordinator が policy と durable state を照合し、executor が mutation permit・receipt・provenance を維持しながら gateway 経由で GitHub Issue を変更する構造である。PR #1469 の変更は base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba` から observed `70336937529f5be31c011de5d368c0f03e534506` まで49コミット、フォーカス23ファイルで `+10,319/-161`。Mirror の正本は `packages/framework/core/tools/`、`.claude/.codex/.cursor/.opencode` と `dist/*` は生成投影である。
+
+次の相互作用図は回復すべき正準契約を示す。現行実装との差は直後の「確認された破断点」に列挙する。
+
+```mermaid
+sequenceDiagram
+    participant O as Orchestrator or lifecycle CLI
+    participant C as Mirror Coordinator
+    participant S as Durable Mirror State
+    participant E as Executor
+    participant G as GitHub Gateway
+    O->>C: boundary, manual, or prompt answer
+    C->>S: read mode, receipt, expectedPrompt
+    alt prompt
+        C->>S: persist bindingId and event
+        C-->>O: ask
+        O->>C: approve or skip with binding
+    else auto or manual
+        C->>E: authorized operation
+        E->>S: prepare receipt
+        E->>G: create, sync, or close
+        E->>S: complete or persist pending
+    end
+    C-->>O: completed or non-completed outcome
+```
+
+テキスト代替: 呼出元→coordinator→state の順に mode と binding を確定し、許可された場合だけ executor→GitHub を実行する。最終 outcome が `completed` でない限り、呼出元は境界を完了済みにしてはならない。
+
+### 確認された破断点
+
+1. `runMirrorLifecycleMain` は `runMirrorLifecycleBoundary` が `kind: "ok"` なら outcome 内の `pending` / `safety-blocked` / `suppressed` を判定せず exit 0 にする（`amadeus-mirror-lifecycle.ts:898-904`）。`amadeus-orchestrate.ts` の mirror boundary report は子コマンド成功を前提に phase receipt を `completed` へ進めるため、未完了副作用と workflow 前進が分離する。
+2. coordinator は prompt を state に保存する（`amadeus-mirror-coordinator.ts:625-668`）が、`MirrorPromptAnswer` と `ask` outcome は `bindingId` を持たない（`:55-82`）。approve の照合は event/operation のみ（`amadeus-mirror-policy.ts:165-192`）、skip はその照合を通らず state 内の binding を transition へ転記する（`amadeus-mirror-coordinator.ts:367-389,507-525`）。加えて `parseMirrorLifecycleArgs` の公開コマンドは boundary/manual/repair のみ（`amadeus-mirror-lifecycle.ts:483-503`）であり、CLI 配線と保存済み binding への回答照合がともに欠ける。
+3. legacy CLI は `gh issue create/edit/close` と state field write を直接実行する（`amadeus-mirror.ts:357-456`）。これは lifecycle の execution authorization、atomic state reducer、ownership marker、reconciliation を横断せず、安全境界が二重化している。
+4. config reader は `realpathSync(absPath)` の containment 判定後に、解決済み文字列を `openSync(realPath, "r")` する（`amadeus-mirror-config.ts:161-184`）。判定と open が同一 fd に結合されず、置換競合窓が残る。
+5. strict JSON parser は未エスケープ CR/LF のみ拒否し（`amadeus-mirror-state-codec.ts:194-195`）、JSON が禁止する他の U+0000–U+001F を文字列へ通す。
+6. coverage source 正規化は package harness と root/dist prefix の双方で Claude/Codex/Kiro のみ列挙し、Cursor/OpenCode を欠く（`tests/lib/coverage-source-path.ts:8-13,43-59`）。生成コピーの hit が正本へ畳まれず、project/patch coverage が低く見える。
+
+### 設計上の修正方向
+
+- lifecycle の CLI 成功判定を requested operation の `completed` に限定し、prompt のみは機械判定可能な ask 往復として扱う。
+- prompt 回答 surface は `expectedPrompt.bindingId`、event、operation、answerId を一組で受け、coordinator の `approveMirrorPrompt` を binding まで照合する対称な approve/skip 判定へ拡張して接続する。
+- legacy mutation verb は lifecycle `manual` へ委譲するか明示拒否し、直接 GitHub mutation を廃止する。read-only `status` は診断面として分離可能。
+- config は open descriptor を信頼の起点とし、no-follow、fd identity、workspace containment を同じ検査鎖で確定する。codec は未エスケープ code point `< U+0020` を一律拒否する。coverage は全6 harness の正準→生成投影表を一か所で管理する。
+
+> **2026-07-24 更新（intent `260724-watcher-timeout-fix`、履歴）**: base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb` → observed HEAD `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`（distance 155）の differential refresh（amadeus-bugfix / Minimal、[Issue #1449](https://github.com/amadeus-dlc/amadeus/issues/1449)）。交差面は Team Mode ランチャー(`packages/framework/core/tools/team-up.sh`)の起動シーケンス上の agmsg watcher arming 検証の位置。下記「Team Mode ランチャーの watcher arming 検証と mux_attach ブロッキング」節は同 intent の履歴。以下の 260723 系・260722 系節も履歴。
+
+## Team Mode ランチャーの watcher arming 検証と mux_attach ブロッキング（260724-watcher-timeout-fix、履歴、Issue #1449）
 
 `packages/framework/core/tools/team-up.sh`(HEAD 1462 行)の fresh 起動シーケンス末尾(:1415-1462)は次の順序で並ぶ(測定 ref: observed HEAD `6d4df9056` 実ファイル直読):
 
@@ -50,6 +187,41 @@ protected audit event の一般 CLI mint 禁止、issuer `HUMAN_TURN` 実在、G
 **アーキテクチャ上の要点**: watcher arming 検証(手順 2)は interactive attach(手順 4)の**前**に同期実行される。これはコメント(:1437-1441)が明記するとおり「exit code を意味あるものに保つため(attach は exit code を飲む)」の意図的設計であり、`260722-teamup-prompt-race` の requirements FR-5 [e5](attach 前完了を前提)に接地する。副作用として、`verify_watchers_armed`(:1139-1178)が unarmed メンバーに対し最大 `WATCHER_READY_TIMEOUT`(90)× `(WATCHER_RESEND_MAX+1)`(3)= 270 秒待つ間、手順 4 の attach が構造的にブロックされる(Issue #1449)。
 
 **agmsg spawn.sh との関係**: 本検証は agmsg の readiness handshake 様式(`~/.agents/skills/agmsg/scripts/spawn.sh` の `READY_TIMEOUT=90` :132 / sentinel clear :572 / `WAIT_READY` ブロッキング :576-588)を team ランチャーへ移植したもの。ただし spawn.sh は**単発待ち**(タイムアウトで `exit 3`)なのに対し、team-up.sh は**再送ループ ×3** を追加した非対称構造。sentinel path は `ready_sentinel_path`(:1078-1085)が agmsg `actas-lock.sh` の `agmsg_ready_path` を subshell source して取得し、path 文字列の二重定義を避ける(NFR-4)。導入は #1391(検証本体)→ #1421(`scripts/` から `packages/framework/core/tools/` へ昇格 + 配布 11 コピー、ロジック不変)。
+
+> **履歴（intent `260724-harness-provenance`、Issue #1452）**: observed HEAD `2d0da11d022565bf4a613da9fbcccf078716f8f4` の differential refresh で得た知識。現在の鮮度ポインタは冒頭の `260724-watcher-timeout-fix` であり、本節の file:line は当時の observed 時点を指す。
+
+## ハーネス provenance の書込経路とハーネス検出アーキテクチャ（260724-harness-provenance、履歴、Issue #1452）
+
+Issue #1452 は「どの AI ハーネス（Claude Code / Kiro / Codex / opencode / Cursor）が intent を実行したか」を `amadeus-state.md` と stage `memory.md` に記録する機能。差分リフレッシュで確定した**書込経路・検出機構・再利用 seam・センサーリスク**の4面を以下に合成する（測定 ref: Observed=HEAD `2d0da11d` 実読、`packages/framework/core/` 正本）。
+
+### 1. `amadeus-state.md` の書込経路 — birth-time 単一書込
+
+- **テンプレート実体**: `amadeus-utility.ts:4092` の `stateContent` テンプレートリテラル。`## Project Information` ブロック（`:4094-4103`、フィールド: Project / Project Type / Scope / Start Date / State Version / Active Agent / Worktree Path / Bolt Refs / Practices Affirmed Timestamp）。
+- **書込点は intent birth の1箇所のみ**: `handleIntentBirthStateBuild()`（`:3926`）が `stateContent` を組み立て、`writeStateFile(projectDir, stateContent)`（`:4146`）で書き出す。ステージ完了時の state 再生成経路はなく、`## Project Information` へのフィールド追加は **birth-time にしか自動反映されない**。
+- **設計含意**: 新規 `Harness` フィールドを birth 時に埋めるだけならテンプレートへの1行追加で足りる。ただし既存 intent（birth 済み）への後付けは birth 経路を通らない。
+- **検証機構**: `validateStateFields()` は `STATE_V7_FIELDS` の各フィールドを exactly once 検査する。`Harness` を V7 集合へ加えると既存 state の欠落が失敗するため、birth-only の optional 追加では V7 集合に触れない選択が低リスク。
+
+### 2. stage `memory.md` の書込経路 — テンプレートのバイトコピー
+
+- `ensureStageDiary()` が `memory-template.md` をバイトコピーする。YAML フロントマターはなく、H2 は `Interpretations` / `Deviations` / `Tradeoffs` / `Open questions` の4見出し。
+- テンプレート参照元は `harnessDir()` 経由で、provenance ソースが経路に内在する。
+- `tests/unit/t100-memory-template-lifecycle.test.ts` は exactly four headings と fresh template の `total===0` を固定するため、テンプレートへの新規 H2 や YAML 追加は高リスク。
+
+### 3. ハーネス検出機構 — provenance ソース
+
+- `harnessDir()` → `deriveHarnessDir()` の既存解決順序は、`AMADEUS_HARNESS_DIR` env → script path → CWD 上の `KNOWN_HARNESS_DIRS` → `.claude` fallback。
+- `KNOWN_HARNESS_DIRS` の5要素は対象5ハーネスと対応するが、既存コメントどおり harness 一覧の source of truth ではないため、provenance 用 canonical mapping は別に定義する必要がある。
+- env override は既存の `AMADEUS_*` 命名規約に従う。
+
+### 4. 再利用可能ヘルパーと先例
+
+- フィールド操作には `getField` / `setField` / `setFieldStrict` / `fieldExists` / `setOrInsertField` がある。
+- `AUTONOMY_MODE_FIELD` 定数 + `isAutonomousMode()` 述語は、定数・判定・実行時挿入を組み合わせる先例である。
+
+### 5. センサーリスク
+
+- PostToolUse sensor は Edit/Write の `tool_input.file_path` を対象とし、bun の `writeStateFile` / `writeFileSync` では発火しない。
+- state.md へのフィールド追加は H2 数を変えないため低リスクだが、memory.md の構造変更は t100 を破壊する高リスクである。
 
 ## FR-0 機械実行器の CI-resident 表明とテスト tier 配置の乖離（260723-t241-ci-residency、履歴） `a81c11dde83e0059c48ecc912d2d22dd6bca60eb` → observed `78bce87615b985d0151f604c915c6aab1d6ba9f1`（distance 35）の differential refresh（bugfix / Minimal、[Issue #1294](https://github.com/amadeus-dlc/amadeus/issues/1294)）。本 intent の交差面は CI テスト tier アーキテクチャ（`tests/run-tests.ts` の profile flag × `.github/workflows/` × テスト層配置）に限定。**本バグ面の欠陥コードは base..HEAD で無変更**（`git diff --numstat <base>..HEAD -- tests/e2e tests/run-tests.ts .github/workflows package.json` = 0 行）で、原因所在は intent `260718-election-ts-foundation`（導入 PR #1235）にあり本区間 35 コミットとは無交差（測定 ref: scan-notes @ observed HEAD `78bce876`）。以下「FR-0 機械実行器…（260723）」節も履歴（単一 current view は 260723-marker-heading-exemption — code-quality-assessment と鮮度ポインタを参照）。
 
@@ -302,7 +474,7 @@ flowchart LR
 >
 > **履歴**: 前々 intent 対象の2バグは出荷済み — **#685 delegate-rejection は #729(`14d1146e0`)で解消**(`DELEGATED_REJECTION` イベント + `delegate-rejection` subcommand を追加、verb-scoped presence に分離)、**#670 sibling-worktree guard は #727(`20c2e9674`)で解消**(write パスをメインチェックアウトへアンカーする方式に変更)。以下の「#685」「#670」の相互作用図は**歴史的記録**であり現状コードとは一致しない。
 
-> **2026-07-10 更新(intent 260710-source-unreferenced-check、履歴)**: 前回 intent 対象の2バグは出荷済み — **#685 delegate-rejection は #729(`14d1146e0`)で解消**(`DELEGATED_REJECTION` イベント + `delegate-rejection` subcommand を追加、verb-scoped presence に分離)、**#670 sibling-worktree guard は #727(`20c2e9674`)で解消**(write パスをメインチェックアウトへアンカーする方式に変更)。以下の「#685」「#670」の相互作用図は**歴史的記録**であり現状コードとは一致しない。この直下の packaging source 側 unreferenced 検査(#735)節も修正前の記録であり、current view は本ページ先頭の `260713-swarm-driver-migration` 節を参照する。
+> **2026-07-10 更新(intent 260710-source-unreferenced-check、履歴)**: 前回 intent 対象の2バグは出荷済み — **#685 delegate-rejection は #729(`14d1146e0`)で解消**(`DELEGATED_REJECTION` イベント + `delegate-rejection` subcommand を追加、verb-scoped presence に分離)、**#670 sibling-worktree guard は #727(`20c2e9674`)で解消**(write パスをメインチェックアウトへアンカーする方式に変更)。以下の「#685」「#670」の相互作用図は**歴史的記録**であり現状コードとは一致しない。この直下の packaging source 側 unreferenced 検査(#735)節も修正前の記録である。
 
 ## orchestrate エラー監査経路の部分配線(#879/#878、intent 260711-p3-cleanup-batch8、2026-07-11)
 

@@ -4,6 +4,18 @@ import { accessSync, appendFileSync, closeSync, constants as fsConstants, cpSync
 import { hostname, tmpdir } from "node:os";
 import { basename, dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  detectHarnessType as detectHarnessTypeFromHarness,
+  HARNESS_DIR_TO_TYPE as CANONICAL_HARNESS_DIR_TO_TYPE,
+  harnessDir as harnessDirFromHarness,
+  isHarnessDirName,
+  KNOWN_HARNESS_DIRS,
+  rulesSubdir as rulesSubdirFromHarness,
+} from "./amadeus-harness.ts";
+export type {
+  HarnessType,
+  SupportedHarnessDir,
+} from "./amadeus-harness.ts";
 // Type-only import for the lazy-loaded amadeus-graph.ts dependency. The
 // runtime require() below avoids the circular import (amadeus-graph.ts
 // imports loadScopeMapping/loadStageGraph from this file). Type-only
@@ -152,110 +164,20 @@ export const PHASE_NUMBERS: Record<string, Phase> = {
   "4": "operation",
 };
 
-// --- Harness dir resolution (.claude vs .kiro vs .codex) ---
-
-// The deterministic core ships in multiple harness trees: Claude Code reads
-// it from <project>/.claude/, Kiro CLI from <project>/.kiro/, Codex CLI from
-// <project>/.codex/, and ANY future harness from <project>/<its-dir>/. Every
-// runtime path that names the harness directory flows through harnessDir() so
-// the SAME tool sources work in every tree. Resolution order mirrors
-// resolveProjectDir: env seam (tests/fixtures) → script-path derivation (this
-// module ships at <project>/<harness>/tools/amadeus-lib.ts, so the harness dir is
-// simply the directory two levels up — derived OPEN-SET, not matched against a
-// fixed list, so harness #N needs no edit here) → CWD probe → ".claude"
-// fallback.
-//
-// KNOWN_HARNESS_DIRS is NOT the source of truth for which harnesses exist — the
-// script-path derivation handles any dir. It is only a probe-ORDER hint for the
-// dev-repo CWD rung, where more than one harness dir can coexist and the Claude
-// tree is canonical (".claude" must win). A real single-harness install never
-// reaches the probe; it resolves by script path.
-const KNOWN_HARNESS_DIRS = [".claude", ".kiro", ".codex", ".opencode", ".cursor"] as const;
-
-// True for a plausible harness dir name: a dot-prefixed segment, e.g. ".claude"
-// / ".kiro" / ".gemini". Guards the script-path derivation so an unexpected
-// layout (lib copied loose in a test, a non-dotted parent) falls through to the
-// CWD probe instead of returning a bogus harness dir.
-function isHarnessDirName(name: string): boolean {
-  return /^\.[a-z0-9][a-z0-9._-]*$/i.test(name);
-}
-
-function deriveHarnessDir(): string {
-  // Script-path derivation (open-set): the module ships at
-  // <project>/<harness>/tools/amadeus-lib.ts, so the harness dir is the basename
-  // of the grandparent of this file — whatever it is named.
-  const scriptDir = dirname(fileURLToPath(import.meta.url));
-  if (basename(scriptDir) === "tools") {
-    const candidate = basename(dirname(scriptDir));
-    if (isHarnessDirName(candidate)) return candidate;
-  }
-  // CWD probe (dev repo, multiple trees coexist): known dirs in canonical order.
-  const cwd = process.cwd();
-  for (const h of KNOWN_HARNESS_DIRS) {
-    if (existsSync(join(cwd, h))) return h;
-  }
-  return ".claude";
-}
-
-let _harnessDir: string | null = null;
+// Compatibility facade: callers keep importing these established symbols from
+// amadeus-lib while their implementation remains isolated in amadeus-harness.
+export const HARNESS_DIR_TO_TYPE = CANONICAL_HARNESS_DIR_TO_TYPE;
 
 export function harnessDir(): string {
-  // Env read at call time (not cached) so tests can flip it between bun
-  // invocations — same pattern as stageGraphPath() below.
-  if (process.env.AMADEUS_HARNESS_DIR) return process.env.AMADEUS_HARNESS_DIR;
-  if (_harnessDir === null) _harnessDir = deriveHarnessDir();
-  return _harnessDir;
-}
-
-// The AIDLC markdown rule layers (amadeus-org/team/project/phase .md) live under
-// a per-harness subdirectory of the harness dir: `.claude/rules/`,
-// `.kiro/steering/` (Kiro reads steering files as its native rule surface),
-// `.codex/amadeus-rules/` (Codex's native `.codex/rules/` is Starlark permission
-// rules — D-10). The packager renames the SHIPPED directory and the prose/JSON
-// that names it (transform()/applyRulesRename + renameRulesInCompiledData), but
-// the .ts tools are byte-copied across all trees, so any runtime path a tool
-// builds to a rule file MUST go through rulesSubdir() — a hardcoded "rules"
-// segment targets a directory that does not exist on a rename-rules harness.
-//
-// The rename is a fact only the harness MANIFEST knows, so the packager emits
-// it per-tree into tools/data/harness.json ({"rulesSubdir": "..."}) — the
-// open-set source of truth: a new harness ships its own harness.json and needs
-// no edit here. Resolution: AMADEUS_RULES_SUBDIR env seam (fixtures) →
-// AMADEUS_HARNESS_DIR test-seam map (so "pretend to be .kiro" yields "steering"
-// without a .kiro tree on disk) → the shipped harness.json (the real-install
-// rung) → KNOWN_RULES_SUBDIR dev-fallback map → "rules". Returns the LAST path
-// segment only (e.g. "steering"); callers join it under harnessDir().
-const KNOWN_RULES_SUBDIR: Record<string, string> = {
-  ".claude": "rules",
-  ".kiro": "steering",
-  ".codex": "amadeus-rules",
-};
-
-function shippedRulesSubdir(): string | null {
-  // tools/data/harness.json sits beside the compiled stage-graph.json in the
-  // shipped tree (DATA_DIR). Absent in a dev checkout's core/ (authored source
-  // carries no compiled data) → null, and the caller falls through.
-  try {
-    const raw = readFileSync(join(DATA_DIR, "harness.json"), "utf-8");
-    const parsed = JSON.parse(raw) as { rulesSubdir?: unknown };
-    if (typeof parsed.rulesSubdir === "string" && parsed.rulesSubdir.length > 0) {
-      return parsed.rulesSubdir;
-    }
-  } catch {
-    // no harness.json (dev core/, or a tree built before this landed) → fall through
-  }
-  return null;
+  return harnessDirFromHarness();
 }
 
 export function rulesSubdir(): string {
-  if (process.env.AMADEUS_RULES_SUBDIR) return process.env.AMADEUS_RULES_SUBDIR;
-  // Test seam: AMADEUS_HARNESS_DIR pins the harness without a tree on disk, so it
-  // must out-rank the physically-shipped harness.json (which reflects THIS lib
-  // copy's tree). Real installs don't set it and fall to the shipped value.
-  if (process.env.AMADEUS_HARNESS_DIR) {
-    return KNOWN_RULES_SUBDIR[process.env.AMADEUS_HARNESS_DIR] ?? "rules";
-  }
-  return shippedRulesSubdir() ?? KNOWN_RULES_SUBDIR[harnessDir()] ?? "rules";
+  return rulesSubdirFromHarness();
+}
+
+export function detectHarnessType(): import("./amadeus-harness.ts").HarnessType {
+  return detectHarnessTypeFromHarness();
 }
 
 // --- Project dir resolution ---

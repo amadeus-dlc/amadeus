@@ -114,7 +114,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 <!-- amadeus:practices-promote:BEGIN -->
 
-私たちは `main` を中心に、短命ブランチと Pull Request を使う GitHub Flow / トランクベース寄りの運用を行う。Amadeus 自体の変更では intent 成果物を先に承認し、Construction の実装は Bolt 単位で分離して canonical source へ着地する。
+`main` を中心に短命ブランチと Pull Request で変更を取り込み、正本・6ハーネスの生成物・self-install 面を同じ変更で同期する。Intent record を仕様の正本、GitHub Issue を一方向の共有ビューとし、`auto-mirror: auto` の明示設定は、その Intent に属する mirror の create・sync・安全な close に限る継続同意として扱う。
 
 <!-- amadeus:practices-promote:END -->
 
@@ -287,7 +287,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 <!-- amadeus:practices-promote:BEGIN -->
 
-私たちは `amadeus-feature` を含む greenfield-shaped scope の最初の Construction Bolt を walking skeleton として扱い、必ず人間の gate で確認する。既存コードへの変更であっても scope が `amadeus-feature` ならこの規則を維持し、standing grant の自動認可対象にはしない。
+本 Intent では、`auto` 設定から Intent Capture 承認後の create、provenance 保存、部分失敗後の重複なし再試行までを最初の end-to-end walking skeleton とする。parser 単体ではなく、最大リスクである外部操作と回復性を先に実証してから sync・close へ広げる。
 
 <!-- amadeus:practices-promote:END -->
 
@@ -295,7 +295,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 <!-- amadeus:practices-promote:BEGIN -->
 
-私たちは TypeScript のテストを `tests/` 配下へ置き、Bun runner で unit / integration / e2e / smoke を検証する。変更と並行して回帰テストを追加し、typecheck、Biome、complexity、coverage、dist / self-install drift、smoke / unit / integration の blocking CI を green に保つ。
+TypeScript のテストは Bun で unit・integration・smoke を日常 CI に載せ、e2e と形式検証は対象リスクに応じて追加する。厳格な全変更 TDD は要求しないが、欠陥と新規ゲートは regression-first／落ちる実証を必須とし、相対 coverage ratchet、patch coverage、complexity、dist・self-install drift を blocking gate として維持する。
 
 <!-- amadeus:practices-promote:END -->
 
@@ -305,7 +305,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 <!-- amadeus:practices-promote:BEGIN -->
 
-私たちはアプリケーションのデプロイ基盤を持たず、release は `.github/workflows/release.yml` の手動 `workflow_dispatch` から release-it、GitHub Release、npm publish を一続きで実行する。Pull Request や Amadeus workflow から version を上げず、publish は人間の承認下で行う。
+アプリケーション配備基盤は持たず、リリースは `.github/workflows/release.yml` の手動 `workflow_dispatch` から release-it、GitHub Release、npm publish を一続きで実行する。version bump・tag・publish は PR や Amadeus workflow から自動実行せず、人間の承認境界を維持する。
 
 <!-- amadeus:practices-promote:END -->
 
@@ -313,5 +313,5 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 <!-- amadeus:practices-promote:BEGIN -->
 
-私たちは TypeScript / ESM と Bun 直接実行、camelCase の内部名、snake_case の directive field、kebab-case の CLI flag、UPPER_SNAKE_CASE の audit event に従う。`packages/framework/core/` の harness-neutral source と `packages/framework/harness/<name>/` の projection を分離し、期待される非成功結果は判別 union、予期しない失敗は例外または fatal CLI error として扱う。
+TypeScript／ESM、Bun 直接実行、strict `tsc --noEmit`、Biome lint に従い、formatter と import organizer は無効のまま近傍スタイルを保つ。core の純粋な判定・判別 union と I/O handler の境界、harness 中立な正本と harness overlay の分離を維持し、生成物を直接編集しない。
 <!-- amadeus:practices-promote:END -->

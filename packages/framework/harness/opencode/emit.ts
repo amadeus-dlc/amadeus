@@ -33,13 +33,20 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import type { EmitContext, EmitResult } from "../../../../scripts/manifest-types.ts";
+import { mirrorSessionSkillName } from "../projections.ts";
 
 // The harness-neutral session skills (core/skills/<name>/). They carry
 // {{HARNESS_DIR}} tokens and ship as SKILL.md only — no codex openai.yaml
 // implicit-invocation guard (that is an OpenAI/Codex agent-discovery artifact;
 // OpenCode has no equivalent, so the guard is dropped, matching how Claude ships
 // these same skills as bare SKILL.md trees).
-const SESSION_SKILLS = ["amadeus-session-cost", "amadeus-replay", "amadeus-outcomes-pack", "amadeus-grilling", "amadeus-mirror"];
+const SESSION_SKILLS = [
+  "amadeus-session-cost",
+  "amadeus-replay",
+  "amadeus-outcomes-pack",
+  "amadeus-grilling",
+  mirrorSessionSkillName("opencode"),
+];
 
 // The opencode.json config EXAMPLE. OpenCode defaults most permissions to
 // "allow" (permissive); this example shows the NARROWING direction only —

@@ -1,6 +1,35 @@
 # コード構造
 
-## Issue #1466 solo standing grant（現在、2026-07-25）
+## Team Mode 起動レイテンシ面のコード配置（260725-teamup-attach-latency、現在、Issue #1449）
+
+測定 ref: observed HEAD `ec624022ff65cc8b3912001f768bd66ec41a0e39` の実ファイル直読。base `6d4df9056`..observed の区間規模は `git diff --stat` で **1018 files changed, 274683 insertions(+), 4573 deletions(-)**（大宗は Mirror lifecycle と elections record で、本 intent の欠陥面とは非交差）。
+
+### 正本（repo 内）
+
+| パス | 行数 | 本 intent での役割 |
+| --- | --- | --- |
+| `packages/framework/core/tools/team-up.sh` | 1474（`wc -l`） | 欠陥の所在。watcher 検証関数群 :1077-1190、launch シーケンス :1438-1474、worktree 直列作成 :1279-1283 |
+| `tests/integration/t-team-up-watcher-arming.test.ts` | 268（`wc -l`） | 検証のテスト。agmsg 側をスタブ化しており本欠陥を検出しない |
+
+配布投影（生成物、直接編集禁止）: `.claude/tools/team-up.sh`、`.codex/tools/team-up.sh`、`.cursor/tools/team-up.sh`、`.opencode/tools/team-up.sh` ほか（`git diff --name-only <base>..<observed> | grep team-up.sh` で区間内に投影面の変更を確認）。
+
+### 外部依存（repo 外・非バージョン管理）
+
+`~/.agents/skills/agmsg/`（読取 2026-07-25）。本欠陥の理解に必要な面:
+
+| パス:line | 内容 |
+| --- | --- |
+| `scripts/watch.sh:43` | `ACTIVE_NAME="${4:-}"` — sentinel 書込を制御する第4位置引数 |
+| `scripts/watch.sh:300-310` | `if [ -n "$ACTIVE_NAME" ]` ガード内でのみ ready sentinel を生成 |
+| `scripts/lib/actas-lock.sh:63-66` | sentinel の所有関係コメント（actas watcher 専用）と `agmsg_ready_path` |
+| `scripts/delivery.sh:259` | `emit_monitor_directive()` — monitor モードの起動経路 |
+| `scripts/delivery.sh:301` | 3 引数のみで `watch_command` を構築（`ACTIVE_NAME` 不在） |
+| `scripts/spawn.sh:358` | `ACTAS_PROMPT` — actas モード起動（sentinel が書かれる対照経路） |
+| `run/` | 251 エントリ中 `ready.*` **0 件**（sentinel が一度も生成されていない実測） |
+
+**構造上の注意**: 欠陥の片側（sentinel の書き手）が repo 外の外部スキルに存在するため、repo 内のテスト・センサー・lint のいずれも到達できない。この境界が検出不能性の構造的原因である。
+
+## Issue #1466 solo standing grant（260725-solo-standing-grants、2026-07-25、履歴）
 
 base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb404524ef30a7d8a0a3f68f73`。[Issue #1466](https://github.com/amadeus-dlc/amadeus/issues/1466)。[PR #1468](https://github.com/amadeus-dlc/amadeus/pull/1468) は凍結試作で参考のみ、実装前提にしない。
 
@@ -10,7 +39,25 @@ base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb4045
 
 `functional-design`、`nfr-requirements`、`nfr-design`、`infrastructure-design`、`code-generation` は per-unit。未完 unit は `gate:false`、全 unit artifact 着地後だけ最終 gate を一度開き、early report を拒否する（`amadeus-orchestrate.ts:2456-2639,3503-3560`）。grant はこの最終 gate の認可源にだけなり、body / reviewer を再実行しない。exact ID、opaque claim、commit-only の構造案は未決定。team delegation path は変更しない。
 
-## Team Mode ランチャーの packages 昇格と watcher 検証関数群（260724-watcher-timeout-fix、2026-07-24、現在）
+## PR #1469 レビュー修正面のコード配置（260725-mirror-review-fixes、履歴）
+
+観測 HEAD は `70336937529f5be31c011de5d368c0f03e534506`、差分 base は `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`。
+
+| 分類 | 正本ファイル | 責務 | 主な検証先 |
+|---|---|---|---|
+| CLI / adapter | `amadeus-mirror-lifecycle.ts` | boundary、manual、repair の parse、target 解決、exit 契約 | `t282-amadeus-mirror-lifecycle.integration.test.ts` |
+| Coordinator / service | `amadeus-mirror-coordinator.ts` | mode、prompt binding、reconciliation、operation 選択 | `t280-amadeus-mirror-coordinator.test.ts` |
+| Legacy CLI | `amadeus-mirror.ts` | 旧 create/sync/close/status。mutation handler が GitHub を直接呼ぶ | `t232-amadeus-mirror.integration.test.ts` |
+| Config / security utility | `amadeus-mirror-config.ts` | 3層 config の安全な読取、schema、precedence | `t257-*mirror-config*.test.ts` |
+| State codec / model | `amadeus-mirror-state-codec.ts` | bounded strict JSON、schema/invariant、Markdown splice | `t274-amadeus-mirror-state-codec.test.ts` |
+| Test utility | `tests/lib/coverage-source-path.ts` | 生成 harness の LCOV source を core 正本へ正規化 | `t05-run-tests-parallel.test.ts` |
+| Workflow adapter | `amadeus-orchestrate.ts` | stage commit 後の Mirror boundary 起動案内、phase receipt | orchestration integration tests |
+
+Mirror 実装は `amadeus-mirror-{types,capability,config,policy,coordinator,executor,gateway,runner,state-codec,state-reducer,state-store,provenance,repair,presentation,lifecycle}.ts` に分かれる。正本を `scripts/package.ts` が `.claude/.codex/.cursor/.opencode` と6種の `dist/*` へ投影するため、修正は `packages/framework/core/` と tests に限定し、生成コピーは packaging で同期する構造である。
+
+フォーカスのテスト空白は、CLI exit と回答 parse、保存済み `bindingId` と異なる approve/skip、legacy mutation 拒否/委譲、realpath→open 間の置換、CR/LF 以外の C0 制御文字、Cursor/OpenCode の root/dist/temp package source である。既存7ファイル127ケースは green だが、これらの欠陥条件を主張するケースがないため回帰を検出しない。
+
+## Team Mode ランチャーの packages 昇格と watcher 検証関数群（260724-watcher-timeout-fix、2026-07-24、履歴）
 
 差分リフレッシュ（base `a81c11dde` → observed HEAD `6d4df9056`、distance 155、amadeus-bugfix / Minimal、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)）。測定 ref: observed HEAD 実ファイル直読 + `git log/diff a81c11dde..HEAD`。
 

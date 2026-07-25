@@ -1,6 +1,22 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260725-solo-standing-grants）
+## 実行メタデータ（現在: 260725-teamup-attach-latency）
+
+- Date: `2026-07-25`
+- Base commit: `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`（`re-scans/` の到達可能な observed のうち HEAD の祖先で距離最小。cid:reverse-engineering:rescan-base-ancestry）
+- Observed commit: `ec624022ff65cc8b3912001f768bd66ec41a0e39`（= 現 HEAD、`git rev-parse HEAD` 実測）
+- Base ancestry / distance: `git merge-base --is-ancestor <base> HEAD` exit 0、`git rev-list --count <base>..HEAD` = **125**
+- 区間規模: `git diff --stat <base>..<observed>` = **1018 files changed, 274683 insertions(+), 4573 deletions(-)**（測定 ref: observed `ec624022f`）
+- Scope: `amadeus-bugfix`、Depth Minimal、Test Strategy Minimal、Brownfield、単一 repo `amadeus`
+- Focus: [Issue #1449](https://github.com/amadeus-dlc/amadeus/issues/1449) — `team-up.sh` 起動が約200秒かかる問題。**起動レイテンシの解消のみ**がスコープ。
+- 症状（実 launch 実測、2026-07-25、3人構成 leader+engineer×2、隔離インスタンス `bench`）: `T+200.85s team-up.sh EXIT (rc=1)`、armed になったメンバー **0 / 3**、`ERROR: agmsg watcher never armed for: leader engineer-1 engineer-2 (after 1 re-send(s))`。Claude Code は3プロセスとも正常起動し `herdr agent list` 上 `agent_status: idle`。
+- 根本原因（本 scan で独立に裏取り）: `verify_watchers_armed` が待つ ready sentinel は **actas モードの watcher しか書かない**が、`team-up.sh` が投入する初期プロンプトは `/agmsg mode monitor`（monitor モード）である。モード不一致により sentinel は**構造的に一度も生成されない** → 検証は常に全員 unarmed でタイムアウトし、`mux_attach` を待ち budget 全量ぶんブロックする。
+- 測定 ref: 本ファイル記載の file:line・件数はすべて observed `ec624022f` の実ファイル直読、および外部 agmsg スキル `~/.agents/skills/agmsg/`（repo 外・非バージョン管理、読取時刻 2026-07-25）による。
+- 更新した成果物: 本ファイル（鮮度ポインタ + 旧「現在: 260725-mirror-review-fixes」→履歴ラベル化、cid:reverse-engineering:c3-relabel）、`architecture.md`（actas/monitor モード不一致の機序を新設、260724 節の失効数値を訂正）、`code-quality-assessment.md`（「常に失敗する検証ゲート」= 検証劇場クラス + テストスタブによる検出不能性）、`code-structure.md`・`component-inventory.md`（HEAD 行番号への更新と欠陥所在の登録）、`re-scans/260725-teamup-attach-latency.md`（新規）。`business-overview.md` / `api-documentation.md` / `technology-stack.md` / `dependencies.md` は本 intent 由来の構造変化なしのため「変更なし、確認済み」一行のみ追記（cid:reverse-engineering:c1）。
+- Sensors: RE ステージの宣言センサー3種（required-sections / upstream-coverage / answer-evidence）は codekb 出力パスが sensor filter に構造的に不適合で発火不能（cid:reverse-engineering:re-sensors-codekb-filter-mismatch、cid:reverse-engineering:c3-codekb-sensor）。**センサー成功として扱わず**、H2 構成（各成果物の `## ` 見出し ≥2、直読確認）と上流入力参照（Issue #1449 / 実 launch 実測ログ / 実コード file:line）を直接検証した。
+- Delivery boundary: codekb 9成果物 + 本 intent の re-scan 記録のみ更新。実装・テスト・state・audit・生成配布物・commit・PR 操作は未実施。
+
+## 実行メタデータ（履歴: 260725-solo-standing-grants）
 
 - Date: `2026-07-25`
 - Base: `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`
@@ -12,7 +28,21 @@
 - Diff / verification: 373 files、`+71,339/-811`。grant core は base..observed で無変更、orchestrate plugin 系は `+109/-3` の同時編集面。関連178テスト、dist 6 harness check、promote 4面 check は成功。`bun run check` は `tsc: command not found`（exit 127）で未判定。
 - Delivery boundary: 実装コード、intent state、memory、`intents.json`、generated dist は変更していない。
 
-## 実行メタデータ(履歴: 260724-watcher-timeout-fix)
+## 実行メタデータ（履歴: 260725-mirror-review-fixes）
+
+- Date: `2026-07-25T01:35:20Z`
+- Base commit: `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`（この intent に先行記録がないため、到達可能な `re-scans/` の observed commit のうち HEAD に最も近い `260724-watcher-timeout-fix` を採用）
+- Observed commit: `70336937529f5be31c011de5d368c0f03e534506`（[PR #1469](https://github.com/amadeus-dlc/amadeus/pull/1469) head、`git rev-parse HEAD` 実測）
+- Base ancestry / distance: `git merge-base --is-ancestor <base> HEAD` exit 0、`git rev-list --count <base>..HEAD` = 49
+- Scope: `amadeus-bugfix`、Depth Minimal、Test Strategy Comprehensive、Brownfield、単一 repo `amadeus`
+- Focus: PR #1469 の検証済みレビュー修正面。Mirror lifecycle の未完了 outcome exit、prompt 回答 CLI 欠落と binding 不一致、legacy mutation verb、config safe read TOCTOU、state codec の未エスケープ C0 制御文字、Cursor/OpenCode coverage source 正規化、関連 tests/CI。
+- Diff focus: `packages/framework/core/tools`、coverage helper/smoke test、`ci.yml` の23ファイル、`+10,319/-161`。正本コードの大宗は Mirror lifecycle 一式。
+- Findings: [review thread 1](https://github.com/amadeus-dlc/amadeus/pull/1469#discussion_r3648935678)、[review thread 2](https://github.com/amadeus-dlc/amadeus/pull/1469#discussion_r3648935682)、[review thread 3](https://github.com/amadeus-dlc/amadeus/pull/1469#discussion_r3648935684) のP1 3件に、config/codec/coverage の実測3件を加えた6クラスタ。詳細は `architecture.md` と `code-quality-assessment.md`。
+- Baseline: focused 7 test filesを `bun test` で実行し、127 pass / 0 fail / 274 expect()（16.68秒）。現行テストは green だが6欠陥条件を直接検証していない。
+- Per-intent record: `re-scans/260725-mirror-review-fixes.md`
+- Delivery boundary: codekb 9成果物とこの intent の re-scan 記録のみ更新。実装、tests、state、audit、生成配布物、commit、PR mutation は未実施。
+
+## 実行メタデータ（履歴: 260724-watcher-timeout-fix）
 
 - Date: 2026-07-24
 - Observed at: `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`(現 HEAD `git rev-parse HEAD` 実測一致)
@@ -28,6 +58,21 @@
 - 更新した成果物: 本ファイル(鮮度ポインタ + 旧「現在: 260723-marker-heading-exemption」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、`code-quality-assessment.md`(#1449 の性能欠陥「watcher arming 検証が mux_attach を最大 270 秒ブロック」節を先頭 current view に新設)、`architecture.md`(agmsg watcher arming 検証の launch シーケンス上の位置と mux_attach ブロッキング機序を新設)、`code-structure.md`(team-up.sh の packages 昇格 + watcher 検証関数群の配置)、`component-inventory.md`(`verify_watchers_armed` ほか watcher 検証コンポーネント群の登録)、`re-scans/260724-watcher-timeout-fix.md`(新規)。他 body 4成果物(business-overview / api-documentation / technology-stack / dependencies)は本文温存で「変更なし、確認済み」一行のみ追記(#1449 は既存 bash ツールの制御フロー性能問題でドメイン外。cid:reverse-engineering:c1)。
 - Delivery boundary: 実装・修正コード、dist/self-install 再生成、commit、PR 操作は本 scan で未実施。区間フォーカス正本変更は #1391/#1421 の既着地分のみで、本 intent の修正は未着手。
 - Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260724-harness-provenance)
+
+- Date: 2026-07-24T11:34:46Z
+- Observed at: `2d0da11d022565bf4a613da9fbcccf078716f8f4`
+- Intent: `260724-harness-provenance`([Issue #1452](https://github.com/amadeus-dlc/amadeus/issues/1452) — AI ハーネス種別を `amadeus-state.md` / stage `memory.md` に記録する機能)
+- Scope: `amadeus-feature`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering` (2.1)
+- Method: differential refresh。base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`、observed `2d0da11d022565bf4a613da9fbcccf078716f8f4`、distance 186。Developer スキャン→Architect 合成の直列。
+- 現行結論（当時）: provenance 機能の seam は、birth-time の state template、4見出しを保つ memory diary、既存 harness-dir resolver、bun 書込に非発火の sensor 境界に限定される。
+- Per-intent record: `re-scans/260724-harness-provenance.md`
+- Delivery boundary: 実装・修正コード、dist/self-install 再生成、commit、PR 操作は本 scan で未実施。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。
 
 ## 実行メタデータ(履歴: 260723-marker-heading-exemption)
 

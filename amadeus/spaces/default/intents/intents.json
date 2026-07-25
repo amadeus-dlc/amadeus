@@ -533,5 +533,33 @@
     "dirName": "260725-solo-standing-grants",
     "scope": "amadeus-feature",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019f93c5-0c24-7967-86a6-b46427e118a0",
+    "slug": "harness-provenance",
+    "dirName": "260724-harness-provenance",
+    "scope": "feature",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f91d4-246a-728c-b078-ccdae13385ee",
+    "slug": "mirror-auto-modes",
+    "dirName": "260724-mirror-auto-modes",
+    "scope": "amadeus-feature",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f96e1-9991-7459-9ff8-5986a8da2a11",
+    "slug": "mirror-review-fixes",
+    "dirName": "260725-mirror-review-fixes",
+    "scope": "amadeus-bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f9856-8a40-7666-927b-adb40ac7646f",
+    "slug": "teamup-attach-latency",
+    "dirName": "260725-teamup-attach-latency",
+    "scope": "amadeus-bugfix",
+    "status": "complete"
   }
 ]

@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TLAU2",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "A(neutral bundleのみ供給、compile可視のdist/<harness>/plugins/へ投影しない)を支持。実測確認: package.ts:306-318 projectPluginsIntoHarnessTreeがrepoPlugins()を全ハーネスtreeの<harnessDir>/plugins/へ投影し、コメント:496-497が0-plugin byte-identical維持を明記。争点の機序(step3=0-plugin graph compile→step6=plugin投影の順序でビルド自体・dist:checkは緑だがビルド済みtreeの再compile=t110/t88/ランタイムがplugins/を拾い0-pluginでなくなる)が実在する。B案はFR-2.3『0-plugin byte-identical』文面を改定する=承認済みユーザー可視契約の変更=仕様変更(正準リスト(4)ユーザーエスカレーション事項)であり、選挙で決めるべきでなく、かつrecompile-idempotence(t110/t88)という健全性保証を弱める。A案は設計中核契約(0-plugin byte-identical + FR-1.4/2.1 compose-on-demand)を維持しつつprojection機構を調整して両立不能を解消する正しい方向。留保1: A案のpackage.ts投影調整はBR-U2-7『コア変更はamadeus-graph.tsのみ』の設計境界を超える可能性があり、この逸脱はPRで明示申告しBR-U2-7の範囲拡大(package.tsをU2変更範囲に含めるか)を裁定に含めるべき。留保2: A案の『E2Eは実composeでtemp hostへ着地させdist非汚染』は、テストが実際に読む面(temp host)へcomposeすることをinjection-surface-verifyの観点で保証すべき。",
+  "rationale": "設計契約の維持がFR-2.3改定(仕様変更・健全性保証弱化)より優先。projection調整はコア境界越境の申告付きで扱える。",
+  "submittedAt": "2026-07-24T13:22:57Z"
+}

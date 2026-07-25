@@ -1,6 +1,8 @@
 # 依存関係
 
-## Issue #1466 solo standing grant（現在、2026-07-25）
+> **2026-07-25（intent `260725-teamup-attach-latency`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み（測定 ref: observed `ec624022f`、base `6d4df9056`、距離 125）。** 依存グラフに新規エッジなし。ただし本 intent の欠陥は既存エッジ `team-up.sh → agmsg ready sentinel` の**片側（書き手 = actas モードの watch.sh）が repo 外**にあることに起因する。この境界は repo 内のテスト・センサーから到達不能である。
+
+## Issue #1466 solo standing grant（260725-solo-standing-grants、2026-07-25、履歴）
 
 base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb404524ef30a7d8a0a3f68f73`。[Issue #1466](https://github.com/amadeus-dlc/amadeus/issues/1466)。[PR #1468](https://github.com/amadeus-dlc/amadeus/pull/1468) は凍結試作で参考のみ、実装前提にしない。
 
@@ -9,6 +11,32 @@ base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb4045
 ## 欠落依存と候補
 
 route の `RunStageDirective` と commit の `report → approve` の間に Grant Id の依存辺がない。候補は exact ID transport、opaque claim resolver、commit-only 再探索。gate existence は graph / scope / skeleton / per-unit artifacts、authorization は presence / provenance / expiry / revoke に依存し、混同しない。fallback は audit / state / advance より前で、既存 `error() → ERROR_LOGGED` に依存しない。
+
+## Mirror レビュー修正の依存グラフ（260725-mirror-review-fixes、履歴）
+
+観測 HEAD は `70336937529f5be31c011de5d368c0f03e534506`、差分 base は `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`。
+
+```text
+amadeus-orchestrate.ts / amadeus-mirror-lifecycle.ts
+  -> amadeus-mirror-coordinator.ts
+     -> amadeus-mirror-policy.ts
+     -> amadeus-mirror-executor.ts
+        -> amadeus-mirror-gateway.ts -> gh / GitHub API
+        -> amadeus-mirror-state-store.ts
+           -> state-codec.ts -> state-reducer.ts -> provenance.ts
+
+amadeus-mirror.ts legacy mutation
+  -> gh direct + amadeus-state.md direct write  [正準鎖を迂回]
+
+tests/run-tests.ts
+  -> coverage-normalize.ts
+     -> coverage-source-path.ts
+        -> packages/framework/core/* canonical source
+```
+
+修正の依存方向は、legacy mutation を正準 lifecycle 鎖へ向け、coordinator から CLI 表現への逆依存を作らない。prompt binding の domain 判定は coordinator/policy に維持し、CLI は保存済み `bindingId` を含む回答の parse と exit/result 表現だけを所有する。現行の回答型には `bindingId` がなく、skip は policy 照合を迂回するため、表現層の追加だけでなく domain 境界の対称な照合が必要である。config reader と state codec は GitHub や workflow state に依存しない入力境界であり、独立 unit/integration test が可能である。
+
+配布依存は `packages/framework/core/` 正本→root harness (`.claude/.codex/.cursor/.opencode`)→`dist/{claude,codex,kiro,kiro-ide,cursor,opencode}` の一方向。coverage 正規化はこの6 harness mapping と同じ集合を共有すべきで、現行の Claude/Codex/Kiro だけの手書き部分集合が drift 原因である。
 
 > **2026-07-24（intent `260724-watcher-timeout-fix`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み。** 内部依存の交差は `team-up.sh` → agmsg `actas-lock.sh`（`agmsg_ready_path` を subshell source）と herdr CLI で、いずれも既存の外部スキル依存。パッケージ依存に変化なし（base `a81c11dde` → observed `6d4df9056`）。
 
