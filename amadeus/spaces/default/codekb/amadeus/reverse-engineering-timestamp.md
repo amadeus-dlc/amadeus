@@ -1,6 +1,21 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260725-teamup-launch-hardening）
+## 実行メタデータ（現在: 260725-worktree-ref-fixes）
+
+- Date: `2026-07-26`
+- Base commit: `ec624022ff65cc8b3912001f768bd66ec41a0e39`（前 intent `260725-teamup-attach-latency` の observed。`git merge-base --is-ancestor ec624022f 11f1ad61f` exit 0 = 祖先、`git rev-list --count ec624022f..11f1ad61f` = **10**。cid:reverse-engineering:rescan-base-ancestry）
+- Observed commit: `11f1ad61f5ea4942332da5bd6e3e433c44aa4cab`（= 現 HEAD、`git rev-parse HEAD` 実測。worktree ブランチ `worktree-bugfix-1482-1481-1455`）
+- 区間規模: `git diff --shortstat ec624022f 11f1ad61f` = **143 files changed, 22167 insertions(+), 725 deletions(-)**（測定 ref: observed `11f1ad61f`）。実装面は `team-up.sh` 系1系統のみ（正本+harness 表層4+dist 6、tests 3件）で、残りは record/audit。
+- 区間の内訳（`git log --reverse ec624022f..11f1ad61f` 全10件）: `dcadcce17`（前 intent inception checkpoint）/ `294df1281`（watcher 検証の適用可否ガード）/ `22829d0b8` / `a0febedd2` / `872919958`（Merge [PR #1477](https://github.com/amadeus-dlc/amadeus/pull/1477)）/ `c4c9531ee` / `6248fdac4`（[PR #1484](https://github.com/amadeus-dlc/amadeus/pull/1484) actas 移行）/ `f54ce2b5e`（[PR #1486](https://github.com/amadeus-dlc/amadeus/pull/1486) record 同期）/ `8eeab33e5`（[PR #1488](https://github.com/amadeus-dlc/amadeus/pull/1488)）/ `11f1ad61f`（[PR #1487](https://github.com/amadeus-dlc/amadeus/pull/1487) worktree checkout 並列化）
+- Scope: `amadeus-bugfix`、Depth Minimal、Brownfield、単一 repo `amadeus`
+- Focus: [Issue #1482](https://github.com/amadeus-dlc/amadeus/issues/1482)（EnterWorktree セッションの Stop hook が本線 state を読む）+ [Issue #1481](https://github.com/amadeus-dlc/amadeus/issues/1481)（worktree で t257/t258/t259 が ref 解決失敗で常赤）+ [Issue #1455](https://github.com/amadeus-dlc/amadeus/issues/1455)（t257 `currentGitSha` の common-dir loose ref 未解決 — #1481 と同根）
+- 差分リフレッシュ（cid:reverse-engineering:c1）: フルスキャン不実施。区間10コミットの実装面を直読したうえで、**患部（`amadeus-lib.ts` / `amadeus-stop.ts` / t257 / t258 / t259）は区間内で無変更**であることを `git diff --name-only ec624022f 11f1ad61f -- <5パス>` の**空出力**で機械確認した。すなわち本 intent の3 Issue はいずれも区間の退行ではなく、区間より前から存在する欠陥である。
+- 測定 ref: 本節および本 scan で更新した全成果物の file:line・件数は observed `11f1ad61f` の実ファイル直読と、worktree `.claude/worktrees/bugfix-1482-1481-1455` 上での git plumbing 実測（`git rev-parse --git-dir` / `--git-common-dir`、`ls`、`grep -c`）による。件数はすべて grep/wc 出力からの転記（cid:requirements-analysis:numbers-from-command-output-only）。
+- 更新した成果物（9件）: `reverse-engineering-timestamp.md`（本ファイル）/ `architecture.md` / `code-quality-assessment.md` / `code-structure.md` / `component-inventory.md` / `business-overview.md` / `api-documentation.md` / `technology-stack.md` / `dependencies.md`。加えて per-intent 記録 `re-scans/260725-worktree-ref-fixes.md` を新規作成。
+- Sensors: RE ステージが宣言する3センサー（required-sections / upstream-coverage / answer-evidence）は、codekb 出力パス `amadeus/spaces/default/codekb/amadeus/**` が各 manifest の filter（`**/{amadeus-docs,intents}/**` および `**/*-questions.md`）に**構造的に不適合**のため発火不能（cid:reverse-engineering:re-sensors-codekb-filter-mismatch）。**センサー成功として扱わず**、代替として (a) 更新9成果物すべてに `grep -c '^## '` を実行し H2 ≥ 2 を機械確認 (b) 上流入力（Developer スキャン結果）の参照を各成果物本文で直接検証 の2点を実施した。詳細は `re-scans/260725-worktree-ref-fixes.md` の「センサー不適用と代替検証」節。
+- Delivery boundary: 本 scan は codekb の差分更新のみを成果物とし、患部コードへの修正は行わない。3 Issue の修正方針（rung 順序の裁定、helper の git plumbing 化と共有化）は後続の requirements-analysis 以降で確定する。
+
+## 実行メタデータ（履歴: 260725-teamup-launch-hardening）
 
 - Date: `2026-07-25`
 - Base commit: `ec624022ff65cc8b3912001f768bd66ec41a0e39`（前 intent `260725-teamup-attach-latency` の observed。`git merge-base --is-ancestor` exit 0、`git rev-list --count` = **9**。cid:reverse-engineering:rescan-base-ancestry）

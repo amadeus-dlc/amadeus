@@ -1,6 +1,66 @@
 # コンポーネント棚卸し
 
-## Team Mode 起動経路コンポーネント（260725-teamup-launch-hardening、現在、Issue #1476 / #1478）
+## worktree パス／ref 解決コンポーネント（260725-worktree-ref-fixes、現在、Issue #1482 / #1481 / #1455）
+
+測定 ref: observed `11f1ad61f`。所在はすべて同 commit の実ファイル直読による。
+
+### C-1. hook project-dir リゾルバ（`resolveProjectDirFromHook`）
+
+| 項目 | 内容 |
+| --- | --- |
+| 所在 | `packages/framework/core/tools/amadeus-lib.ts:247`（export） |
+| 責務 | hook プロセスが「どの project root に対して動いているか」を解決する |
+| 内部依存 | `hasWorkspaceMarker`（`:227`、非 export）、`findWorkspaceMarkerAncestor`（`:235`、非 export）、`stripHarnessLeaf`、`KNOWN_HARNESS_DIRS` |
+| 入力 | `importMetaUrl`（呼び出し元のスクリプトパス）、`process.env.CLAUDE_PROJECT_DIR`、`process.cwd()` |
+| 解決順序 | rung1 env `:249` → rung2 marker `:258-259` → rung3 スクリプトパス `:263-265` → rung4 cwd harness dir `:268-273` → cwd `:275` |
+| 消費者 | 実呼び出し12箇所（core hooks 11 + kiro-ide adapter 1。列挙は `code-structure.md` 同 intent 節） |
+| 配布コピー数 | 11（正本 + harness 表層4 + dist 6） |
+| 欠陥 | rung1 が env を無条件採用するため、cwd だけが worktree へ切り替わる EnterWorktree セッションで本線を返す（#1482） |
+| 対照 | 姉妹 `resolveProjectDir`（`:170`）は `:172` で明示引数を第1順位に置き engine 経路を救済 |
+| テスト | `tests/unit/t202-hook-project-dir-worktree-marker.test.ts`（正典。`:105` の test 2 が現行 rung 順序を固定） |
+
+### C-2. Stop hook（`amadeus-stop.ts`）
+
+| 項目 | 内容 |
+| --- | --- |
+| 所在 | `packages/framework/core/hooks/amadeus-stop.ts`（正本）。`:118` で C-1 を import、`:167` で解決 |
+| 起動 | `.claude/settings.json:154` — `bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-stop.ts` |
+| `projectDir` の消費 | 24箇所（state path `:880`、engine 呼び出し `:793` / `:802`、audit `:266`、stage dir `:455` ほか） |
+| 配布コピー数 | 11 |
+| 位置づけ | #1482 の**症状が最も可視な**消費者であり、欠陥の所在ではない。欠陥は C-1 側にあり hook 一族12箇所が同じ誤解決を共有する |
+
+### C-3. main checkout リゾルバ（`resolveMainCheckout`）— 参照実装
+
+| 項目 | 内容 |
+| --- | --- |
+| 所在 | `packages/framework/core/tools/amadeus-lib.ts:4131`（export、戻り値 `MainCheckout \| null`） |
+| 実装方式 | git plumbing サブプロセス — `:4132` `rev-parse --show-toplevel`、`:4135` `rev-parse --git-common-dir` |
+| 位置づけ | **worktree 安全な既習様式**。#1481 の修正方針が倣うべき前例。同型前例に `codex/tools/amadeus-codex-hooks-migration.ts:590` |
+| 自己参照 | `:4165` / `:4166` で cwd 版と projectDir 版の両方を解決 |
+
+### C-4. テスト内 SHA リゾルバ（`currentGitSha`）— 三重複製
+
+| 複製 | 所在 | シグネチャ | throw 行 |
+| --- | --- | --- | --- |
+| 1 | `tests/integration/t257-status-registry-migration.test.ts:193` | `currentGitSha(): string` | `:214`（`cannot resolve Git ref`） |
+| 2 | `tests/integration/t258-lifecycle-transaction.test.ts:434` | `currentGitSha(): string` | `:455`（`Cannot resolve Git ref`） |
+| 3 | `tests/integration/t259-guard-integration.test.ts:77` | `currentGitSha(repositoryRoot: string): string` | `:96`（`Unable to resolve Git ref`） |
+
+| 項目 | 内容 |
+| --- | --- |
+| 責務 | provenance 記録テストが現 HEAD の SHA を得る |
+| 実装方式 | **FS 直読**（`.git` の dir/file 判別 → `gitdir:` 追従 → `HEAD` 読取 → loose ref → `commondir` → `packed-refs`） |
+| 共有状態 | **共有されていない**。3複製がエラー文言と引数形で食い違う（canonical 1定義から導出されていない） |
+| 欠陥 | loose ref を worktree gitDir 配下でしか探さず、common dir へは `packed-refs` としてしか降りないため worktree で必ず throw（#1481 / #1455） |
+| 導入 | 3件とも `2e157d7fe`（2026-07-23、#1424）。helper 全24行が単一コミット帰属、後続修正なし |
+| 現症状 | worktree で t257 exit 1（10 pass / 1 fail）、t258 exit 1（25 / 1）、t259 exit 1（9 / 1）。各スイートで赤いのは helper を通る1テストのみ |
+| 同根棚卸し | git 内部レイアウトを FS 直読するのは**この3ファイルのみ**。他はすべて git サブプロセス経由で worktree 安全 |
+
+### C-5. worktree fixture 参照点（修正時の影響確認先）
+
+`tests/harness/fixtures.ts:543` / `tests/unit/t49-*:22` / `tests/e2e/t06-*:17` — worktree レイアウトを前提に持つ既存 fixture。ref 解決方式を変更する際の回帰確認先。
+
+## Team Mode 起動経路コンポーネント（260725-teamup-launch-hardening、履歴、Issue #1476 / #1478）
 
 差分リフレッシュ（base `ec624022f` → observed HEAD `4a0f91ad07dbe17c6477b7fe9b52a0e9ab4532ba`、距離 9、amadeus-feature / Standard）。測定 ref: observed HEAD 実ファイル直読。**行番号は 260725-teamup-attach-latency 節から +23 シフトしている**（PR #1477 が :1071 以降に 23 行を挿入）ため、以下が現行値。
 
