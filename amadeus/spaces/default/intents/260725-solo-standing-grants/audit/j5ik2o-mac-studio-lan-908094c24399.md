@@ -25574,3 +25574,110 @@
 **Reason**: prompt_input_exit
 
 ---
+
+## Rule Learned
+**Timestamp**: 2026-07-25T11:48:12Z
+**Event**: RULE_LEARNED
+**Stage**: code-generation
+**Candidate-ID**: cg-handover-plan-audit
+**Destination**: /Users/j5ik2o/.codex/worktrees/c179/amadeus/amadeus/spaces/default/memory/team.md
+**Heading**: ## Corrections
+**Source**: user_addition
+
+---
+
+## Rule Learned
+**Timestamp**: 2026-07-25T11:48:12Z
+**Event**: RULE_LEARNED
+**Stage**: code-generation
+**Candidate-ID**: cg-early-return-scope
+**Destination**: /Users/j5ik2o/.codex/worktrees/c179/amadeus/amadeus/spaces/default/memory/project.md
+**Heading**: ## Corrections
+**Source**: user_addition
+
+---
+
+## Rule Learned
+**Timestamp**: 2026-07-25T11:48:12Z
+**Event**: RULE_LEARNED
+**Stage**: code-generation
+**Candidate-ID**: cg-ledger-blob-reconstruction
+**Destination**: /Users/j5ik2o/.codex/worktrees/c179/amadeus/amadeus/spaces/default/memory/team.md
+**Heading**: ## Corrections
+**Source**: user_addition
+
+---
+
+## Rule Learned
+**Timestamp**: 2026-07-25T11:48:12Z
+**Event**: RULE_LEARNED
+**Stage**: code-generation
+**Candidate-ID**: cg-no-shell-var-command-loop
+**Destination**: /Users/j5ik2o/.codex/worktrees/c179/amadeus/amadeus/spaces/default/memory/team.md
+**Heading**: ## Corrections
+**Source**: user_addition
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-25T11:48:16Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Recovered**: true
+
+---
+
+## Gate Rejected
+**Timestamp**: 2026-07-25T11:48:16Z
+**Event**: GATE_REJECTED
+**Stage**: code-generation
+**Transaction Id**: 8d566592349f67a588f5e57b
+**Feedback**: Recovered from durable artifact evidence; original feedback was not recorded
+**Recovered**: true
+
+---
+
+## Stage Revising
+**Timestamp**: 2026-07-25T11:48:16Z
+**Event**: STAGE_REVISING
+**Stage**: code-generation
+**Transaction Id**: 8d566592349f67a588f5e57b
+**Revision count**: 4
+**Feedback**: Recovered from durable artifact evidence; original feedback was not recorded
+**Recovered**: true
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-25T11:48:16Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Transaction Id**: 8d566592349f67a588f5e57b
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-25T11:48:16Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+**Transaction Id**: 8d566592349f67a588f5e57b
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-25T11:48:16Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Transaction Id**: 8d566592349f67a588f5e57b
+**Details**: Stage Code Generation approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-25T11:48:16Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Agent**: amadeus-quality-agent
+
+---

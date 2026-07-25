@@ -45,3 +45,19 @@
 - 未実測の外部host APIに依存する新規harness plugin実装
 - session identity欠落時の共有key/PID/active cursorへのfallback
 - frozen PR #1468への依存
+
+## Review — Iteration 2
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-07-25T11:43:31Z
+- **Iteration:** 2
+- **Scope decision:** none
+
+Critical 1 and both Majors verified closed by independent re-measurement; three documentation-precision Minors remain.
+
+### Findings
+
+- Minor: functional-design/business-logic-model.md:56 still reads HUMAN_TURN delta 0 for a replayed prompt while the implementation appends an untargeted turn; the deviation is declared in code-summary.md but the FD table itself is not updated.
+- Minor: two citations remain off by a few lines in code-summary.md (kiro-ide adapter :109 vs measured :111; presence-reservation :430 comment line vs decision line :436).
+- Minor: the carve-out Issue for the OpenCode plugin and Kiro IDE identity adapter is still unfiled, so code-summary.md records no tracking number.

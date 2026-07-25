@@ -19,7 +19,7 @@ U3として、U1/U2のcanonical contractを6 harnessへ投影し、presence mint
 - `packages/framework/core/tools/amadeus-presence-reservation.ts:401` に `HostSessionCapability` union、`:407` に `hostSessionCapability()` 正規化、`:421` に `mintHumanPresence()` を追加した。availableならreservation mint、それ以外(またはreservation不在)は従来どおり untargeted `HUMAN_TURN` を append する。
 - core hook `packages/framework/core/hooks/amadeus-mint-presence.ts:98` はこのseam経由へ置換した。
 - Codex `packages/framework/harness/codex/hooks/amadeus-codex-adapter.ts:371`、Kiro CLI `packages/framework/harness/kiro/hooks/amadeus-kiro-adapter.ts:272` はinline `appendAuditEntry("HUMAN_TURN")` をseamへ差し替え、それぞれ native `session_id` をunionへ変換する。
-- Kiro IDE `packages/framework/harness/kiro-ide/hooks/amadeus-kiro-adapter.ts:109` は `hostSessionCapability(undefined, ...)` = `unavailable`。promptSubmitがstable session identityを持たないため targeted continuationは発火せず、共有key/PID/active cursorへ縮退しない(HR-04e、security-design § Harness Capability)。
+- Kiro IDE `packages/framework/harness/kiro-ide/hooks/amadeus-kiro-adapter.ts:111` は `hostSessionCapability(undefined, ...)` = `unavailable`。promptSubmitがstable session identityを持たないため targeted continuationは発火せず、共有key/PID/active cursorへ縮退しない(HR-04e、security-design § Harness Capability)。
 - Cursor `packages/framework/harness/cursor/hooks/amadeus-cursor-lib.ts:111-122` はcore mint hookへ `session_id` をforwardするようにした(従来はpromptのみ)。
 - OpenCodeはprompt hook自体を持たないためmint siteがなく、投影されたcore hookがseamを保持する。
 
@@ -166,7 +166,7 @@ HR-15(全 FR/NFR に最低1つの test trace)の証跡。行番号は本 worktre
 - **裁定日**: 2026-07-25
 - **裁定内容**: 上記「レビュー判断が必要な事項」1 について、ユーザーは **「fail-closed のまま本 intent を完了し、両ハーネス分は別 Issue へ切り出す」** を選択した。したがって OpenCode native prompt plugin と Kiro IDE stable identity adapter は本 intent では実装せず、現行の `unavailable`(targeted continuation 不発火・縮退なし)を最終形として出荷する。
 - **受け入れ境界**: **両 harness の targeted continuation は本 intent の acceptance に含めない。** `logical-components.md` が owner path として挙げた `packages/framework/harness/opencode/amadeus-opencode-plugin.ts`(新規)と Kiro IDE capability 更新は、本 intent の完了条件から外れる。
-- **切り出し先**: 別 Issue へ切り出し予定。**Issue 番号は未採番(conductor が起票予定)。**
+- **切り出し先**: 別 Issue へ切り出し予定。**Issue 番号は[#1480](https://github.com/amadeus-dlc/amadeus/issues/1480)(2026-07-25 起票)。**
 
 ### `performance-design.md` Review Iteration 2 との関係
 
@@ -174,7 +174,7 @@ HR-15(全 FR/NFR に最低1つの test trace)の証跡。行番号は本 worktre
 
 ### 現行の出荷状態(実測)
 
-- Kiro IDE: `packages/framework/harness/kiro-ide/hooks/amadeus-kiro-adapter.ts:109` が `hostSessionCapability(undefined, …)` = `unavailable`。
+- Kiro IDE: `packages/framework/harness/kiro-ide/hooks/amadeus-kiro-adapter.ts:111` が `hostSessionCapability(undefined, …)` = `unavailable`。
 - OpenCode: prompt hook 自体が存在せず mint site がない(投影された core hook が seam を保持)。
 - 両者の fail-closed は `tests/integration/t-solo-standing-grant-harness.test.ts:145`(kiro-ide unavailable)と `:155`(opencode mint site 不在)で固定済み。
 
@@ -285,7 +285,7 @@ architecture-reviewer の iteration 1 verdict は NOT-READY。指摘4件を以�
 - **再現(scratch、repo 外)**: reservation を arm し、同一 host session で `mintHumanPresence` を 4 回呼ぶ。実測 `HUMAN_TURN` 総数はプロンプト1回目で baseline 1 → 2 に増えたのち、2〜4 回目はすべて **2 のまま**(delta 0)。すなわち 1 回目以外の人間ターンはどの intent にも `HUMAN_TURN` を1件も残さない。reservation は時間で expire せず、consume は targeted approval 成功時のみのため、その host session は以後どの human-presence gate も満たせなくなる。
 - **機序(実測 file:line)**: `packages/framework/core/tools/amadeus-presence-reservation.ts:421` `mintHumanPresence` が capability `available` のとき `mintArmedPresenceReservation` を呼び、戻り値が `"none"` 以外なら return していた。`already-minted` の早期 return は `:274-276` で、`resolveTargetIntent`(`:278`)より手前にあるため target が complete/不正化しても解除されない。
 - **設計との照合**: `functional-design/business-logic-model.md:56` の `| minted | duplicate/replayed prompt hook | minted | HUMAN_TURN delta 0 |` は、同表 `:54`(armed 行)が `HUMAN_TURN` を「owner audit へ Presence Reservation Id 付き exactly 1」と限定していることから、**owner-targeted な `HUMAN_TURN` の delta を指す**と読む。`business-rules.md:57` の HR-24 も「Presence Reservation Id 当たり owner `HUMAN_TURN` exactly 1」と owner 事象を数えており、Reservation Id を持たない untargeted append は数えない。よって「`already-minted` を通常 mint へ fall through させる」修正は HR-24 と HR-08(`HUMAN_TURN` requirement を弱めない)のいずれにも反しないと判断し、実装した(この抑止を意図仕様と読む根拠は設計側に見つからなかった。`:61` の「時間だけで expire させず」「session restart は同じ host session ID なら reservation を維持」はむしろ恒久抑止が意図されていないことを支持する)。
-- **修正**: `packages/framework/core/tools/amadeus-presence-reservation.ts:430`(判定行)。早期 return を `reservation.kind === "minted"`(このターンで targeted mint した場合)だけに絞った。`:424-429` に根拠コメントを置いた。
+- **修正**: `packages/framework/core/tools/amadeus-presence-reservation.ts:437`(判定行)。早期 return を `reservation.kind === "minted"`(このターンで targeted mint した場合)だけに絞った。`:430-436` に根拠コメントを置いた。
 - **回帰テスト**: `tests/integration/t-solo-gate-transaction-seam.test.ts:243` "keeps minting ordinary presence while a reservation is held" — 4 回の human prompt で `HUMAN_TURN` delta が 4 であること、かつ Reservation Id を持つ owner 事象は **1 件のまま**(HR-24)であることを同時に assert する。
 - **落ちる実証**: 修正のみを `git stash push -m solo-grants-fix-proof` で退避して同 suite を実行 → `1 fail / 8 pass`、失敗は当該テストの `Expected: 4 / Received: 1`(exit 1)。`git stash pop` で復元後は `9 pass / 0 fail`(exit 0)。
 

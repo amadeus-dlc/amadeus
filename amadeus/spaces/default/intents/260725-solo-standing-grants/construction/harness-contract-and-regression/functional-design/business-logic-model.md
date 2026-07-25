@@ -53,7 +53,7 @@ Codexだけはnumbered prose、他harnessはnative question mechanismを使い�
 | none | reportがexpected fallbackを受け、target/host sessionを検証 | armed | version、Reservation Id、session digest、space、target UUID、stage、Route Id、created timestampをatomic write |
 | armed | 同一sessionのtrusted prompt adapterが実human promptを受信 | minted | owner auditへ`HUMAN_TURN` exactly 1（Presence Reservation Id付き）、監査座標をatomic record |
 | armed | machine injection、別session、invalid target | armed | audit/runtime delta 0 |
-| minted | duplicate/replayed prompt hook | minted | `HUMAN_TURN` delta 0 |
+| minted | duplicate/replayed prompt hook | minted | owner-targeted `HUMAN_TURN` delta 0 |
 | minted | 明示Reservation Id/target/stage/provenance一致のhuman approval成功 | consumed | owner approval後にconsumedをatomic記録 |
 | minted | report crash/fatal validation | minted | approval mutation 0、同じhuman reportをretry可能 |
 | any | targetが非in-flight/registry不正 | invalid | mint/approval 0、markerを隔離してfail-closed |
