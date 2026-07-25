@@ -8,6 +8,7 @@
 
 ## Deviations
 <!-- example: 2026-05-29T10:14:32Z — skipped the optional caching layer the stage prose suggested; the dataset is small enough that it adds risk -->
+- 2026-07-25T23:30:38Z — 本セッションは CLAUDE_PROJECT_DIR 空により全 hook が無音不発(HUMAN_TURN/SESSION_STARTED/ARTIFACT_UPDATED 全所在ゼロを実測)。ユーザー裁定(AskUserQuestion)により、実タイプ2件(「バグ？？？」「最新のorigin/mainから…」)に1:1対応する mint-presence 手動代行+solo standing grant f9ef0312(#1483、expires 2026-07-26T03:30Z)で以後の stage-gate を接地。#1482 と同族の環境事象として RA の一次材料に含める
 - 2026-07-25T23:05:21Z — RE 宣言センサー3種は codekb 出力パスが sensor filter に構造不適合で発火不能(cid:reverse-engineering:re-sensors-codekb-filter-mismatch)。センサー成功として扱わず H2≥2 grep 機械確認+上流参照直接検証で代替
 
 ## Tradeoffs
