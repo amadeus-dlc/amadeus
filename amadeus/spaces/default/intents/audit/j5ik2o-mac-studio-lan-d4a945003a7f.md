@@ -71,3 +71,21 @@
 **Message**: 是正完了。報告します。\n\n## (a) 差し戻した baseline\n\n- ファイル: `/Users/j5ik2o/.codex/worktrees/c179/amadeus/tests/.complexity-baseline.json`\n- 復元方法: `git checkout HEAD -- tests/.complexity-baseline.json`(git 履歴から復元、手書きな
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-25T20:59:03Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ab50ffcc3ac4841ae
+**Message**: team-up.sh の起動改善は #1484（actas 移行）と #1486（記録）がマージ済みです。残る worktree 並列化は #1487 として出し直し、ベンチマークのノイズによる失敗を確認するため CI を再実行中です。完走したら結果を確認してマージします。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-25T21:24:03Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: ac648e7bd62ddca63
+**Message**: Issue #1466 の solo standing grant を PR #1483 として仕上げ、レビュー指摘4件の修正も commit・push 済みで CI は全緑、衝突もありません。次はレビュアーの指名です。
+
+---
