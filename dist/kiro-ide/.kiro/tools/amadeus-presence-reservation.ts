@@ -427,7 +427,14 @@ export function mintHumanPresence(input: {
       projectDir: input.projectDir,
       sessionId: input.capability.sessionId,
     });
-    if (reservation.kind !== "none") return;
+    // Only the turn that actually mints the owner-targeted HUMAN_TURN skips the
+    // ordinary append. `already-minted` falls through: the reservation holds its
+    // one owner event (HR-24 counts owner HUMAN_TURN per Reservation Id, and an
+    // untargeted append carries no Reservation Id), while the host session keeps
+    // recording ordinary presence. Returning here instead would suppress every
+    // later human turn in the session for as long as the reservation is unconsumed
+    // — and reservations never expire on time alone.
+    if (reservation.kind === "minted") return;
   }
   appendAuditEntry("HUMAN_TURN", {}, input.projectDir);
 }

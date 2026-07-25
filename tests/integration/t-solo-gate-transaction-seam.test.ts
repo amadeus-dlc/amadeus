@@ -1,4 +1,4 @@
-// covers: function:routeSoloStandingGrantDirective, function:armPresenceReservation, function:mintArmedPresenceReservation, function:consumePresenceReservation
+// covers: function:routeSoloStandingGrantDirective, function:armPresenceReservation, function:mintArmedPresenceReservation, function:consumePresenceReservation, function:mintHumanPresence
 //
 // Filesystem-backed (Medium) half of the U2 solo-gate-transaction suite: the
 // route transaction's audit-first receipt, the ritual-preservation counters and
@@ -7,7 +7,7 @@
 // classifier assertions stay in tests/unit/t-solo-gate-transaction.test.ts.
 
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -20,7 +20,9 @@ import { findStandingGrantRouteReceiptById } from "../../packages/framework/core
 import {
   armPresenceReservation,
   consumePresenceReservation,
+  hostSessionCapability,
   mintArmedPresenceReservation,
+  mintHumanPresence,
   readPresenceReservation,
 } from "../../packages/framework/core/tools/amadeus-presence-reservation.ts";
 
@@ -233,6 +235,37 @@ describe("presence reservation state machine", () => {
     ).toBe("consumed");
   });
 
+  // Regression: an unconsumed `minted` reservation must not strand the host
+  // session. Before the fix, mintHumanPresence returned on `already-minted`, so
+  // every human prompt after the first left no HUMAN_TURN anywhere — and since
+  // reservations never expire on time alone, the session could never satisfy a
+  // human-presence gate again, not even after a restart.
+  test("keeps minting ordinary presence while a reservation is held", () => {
+    const root = routeFixture();
+    const capability = hostSessionCapability("trusted-session-1");
+    armPresenceReservation({
+      projectDir: root,
+      sessionId: "trusted-session-1",
+      space: "default",
+      targetIntentId: TARGET_INTENT_ID,
+      stage: "application-design",
+      routeId: ROUTE_ID,
+      reservationIdFactory: () => RESERVATION_ID,
+    });
+
+    const baseline = humanTurnCount(root);
+    for (let turn = 0; turn < 4; turn += 1) {
+      mintHumanPresence({ projectDir: root, capability });
+    }
+
+    // One event per human prompt: the first is the owner-targeted mint, the
+    // remaining three are ordinary untargeted appends.
+    expect(humanTurnCount(root) - baseline).toBe(4);
+    // HR-24 still holds: exactly one owner event carries the Reservation Id.
+    expect(reservationHumanTurnCount(root)).toBe(1);
+    expect(readPresenceReservation(root, RESERVATION_ID)?.state).toBe("minted");
+  });
+
   test("does not mint or consume from another session", () => {
     const root = routeFixture();
     armPresenceReservation({
@@ -277,6 +310,29 @@ const ROUTE_GRAPH: StageEntry[] = [
     scopes: ["amadeus-feature"],
   },
 ];
+
+// Read every audit shard of the fixture's record and count HUMAN_TURN events,
+// optionally narrowing to the ones tagged with the reservation's id.
+function auditText(root: string): string {
+  const dir = join(root, "amadeus", "spaces", "default", "intents", "solo-intent-abcd1234", "audit");
+  return readdirSync(dir)
+    .map((shard) => readFileSync(join(dir, shard), "utf-8"))
+    .join("\n");
+}
+
+function humanTurnCount(root: string): number {
+  return (auditText(root).match(/\*\*Event\*\*: HUMAN_TURN/g) ?? []).length;
+}
+
+function reservationHumanTurnCount(root: string): number {
+  return auditText(root)
+    .split(/^---$/m)
+    .filter(
+      (block) =>
+        block.includes("**Event**: HUMAN_TURN") &&
+        block.includes(`**Presence Reservation Id**: ${RESERVATION_ID}`),
+    ).length;
+}
 
 function routeFixture(extraAudit = ""): string {
   const root = mkdtempSync(join(tmpdir(), "amadeus-solo-route-"));

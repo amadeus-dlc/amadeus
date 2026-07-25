@@ -242,7 +242,7 @@ describe("t81 amadeus-state practices-event — bolt-plan-marker-conflict overri
     // amadeus-audit.ts — which is stronger (it asserts the real count, not a
     // sibling test's transcription of it). bolt-plan-marker-conflict reuses
     // PRACTICES_OVERRIDE (discriminator-field disambiguation) and registers no
-    // new event. The framework total is 70: the v0.6.0 Wave 4 milestone 16
+    // new event. The framework total is 78: the v0.6.0 Wave 4 milestone 16
     // baseline of 67 (SWARM_DEGRADED was the last event born then), plus
     // WORKFLOW_PARKED + WORKFLOW_UNPARKED (the park/unpark lifecycle, +2),
     // less TEST_RUN_MODE_ENABLED (removed, -1), plus HUMAN_TURN (+1), plus
@@ -251,7 +251,8 @@ describe("t81 amadeus-state practices-event — bolt-plan-marker-conflict overri
     // DELEGATED_REJECTION (#685 delegated-rejection provenance, +1) = 72, plus
     // GUARD_EXEMPTED (#499/#848 docs-only workspace_requires exemption, +1) = 73,
     // plus GRANT_ISSUED + GRANT_REVOKED (#1125 standing delegation grants, +2) = 75,
-    // plus GATE_AUTHORIZATION_SELECTED (#1466 solo standing-grant route receipt, +1).
+    // plus INTENT_ARCHIVED + INTENT_UNARCHIVED (#1424 archived intent status, +2) = 77,
+    // plus GATE_AUTHORIZATION_SELECTED (#1466 solo standing-grant route receipt, +1) = 78.
     const auditSrc = readFileSync(
       join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-audit.ts"),
       "utf-8",
