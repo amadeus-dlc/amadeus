@@ -1,0 +1,13 @@
+{
+  "stage_slug": "units-generation",
+  "selections": [
+    {
+      "candidate_id": "c1",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "ALWAYS Delivery Planning 前に、各 Unit が単独で deployable な Bolt となり、walking skeleton と 1 Unit/Bolt/PR の境界を同時に満たすことを検証する。検出と記録のように片側だけでは利用者価値を出荷できない境界は、単一 deployable Unit へ統合する",
+      "source": "orchestrator"
+    }
+  ]
+}

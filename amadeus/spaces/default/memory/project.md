@@ -182,6 +182,8 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - plugin-skeletonはcompile性能のためfrontmatter/bodyの毎回parseをcompose時validated metadata indexへ移した。ただしtrustをmetadataだけへ弱めず、run-stage directive発行直前に選択bodyをO_NOFOLLOW・同一fd digestで再検証する。性能と実行時完全性をcompose/compile/runの三層へ分離した。 (learned 2026-07-24) <!-- cid:code-generation:c8-tla-plugin-trust-layers -->
 - `scopes: []`のopt-in plugin stageはstock workflowへ所属しないため、compile統合時だけscope-gridの冗長SKIPセルを生成しない。公開`transposeScopeGrid`の全stage転置契約は維持する。 (learned 2026-07-24) <!-- cid:code-generation:c9-tla-plugin-optin-grid -->
 - engine directiveのproducesにある`build-test-results.md`を正本名として採用した。stage本文のStep 10に残る`test-results.md`表記より、engineが検査する解決済み出力契約を優先した。 (learned 2026-07-24) <!-- cid:build-and-test:c1-engine-directive-results-name -->
+- ALWAYS Delivery Planning 前に、各 Unit が単独で deployable な Bolt となり、walking skeleton と 1 Unit/Bolt/PR の境界を同時に満たすことを検証する。検出と記録のように片側だけでは利用者価値を出荷できない境界は、単一 deployable Unit へ統合する (learned 2026-07-24) <!-- cid:units-generation:c1 -->
+- ALWAYS 既存APIの戻り値が実検出値とfallback値を同じ表現へ潰す場合、公開互換性を保ちながら内部resolutionに検出元provenanceを保持し、実検出とfallbackを区別してから後続の判定へ渡す (learned 2026-07-24) <!-- cid:application-design:c1 -->
 ## Testing
 - Standardの中核はunit/integrationとし、performance/securityは承認済みNFRと実在境界へtraceして選定する。戦略名だけで検査を機械追加しない。既決strategy再述に留めず、stage定義の曖昧さは別途追跡する。 (learned 2026-07-12) <!-- cid:build-and-test:c1 -->
 - 攻撃面・依存・承認NFRを成果物で実測明記した場合のみ検査を比例選定する。既存必須scanや要求済み検査の省略根拠にはしない。 (learned 2026-07-12) <!-- cid:build-and-test:c3 -->

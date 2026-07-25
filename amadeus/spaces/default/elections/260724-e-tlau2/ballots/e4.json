@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TLAU2",
+  "voter": "e4",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "選択肢A採用時の必須条件: (1)package.ts投影の調整がBR-U2-7『コア変更はamadeus-graph.tsのみ』境界に抵触するか(package.tsがBR-U2-7の言う『コア』に含まれるか)をPRで明示的に判定・申告する。抵触する場合はこの逸脱裁定(本選挙)がその申告の場であることを記録し、抵触しない(package.tsはビルドスクリプトでコア外)と判断する場合もその根拠を残す。(2)投影先変更(dist/<harness>/plugins/ → dist/plugins/ neutral bundleのみ)は最小に留め、plugin存在下でもt110(byte-identical recompile)/t88が緑を維持することを落ちる実証込みで実測確認する — 0-plugin byte-identical保証を退行させない担保。(3)E2Eの実compose→temp host着地がdistを汚染しないこと(dist/<harness>/plugins/にpluginが投影されないこと)を検証コマンドで実測する。",
+  "rationale": "矛盾を独立実測で裏取り: package.ts:500 projectPluginsIntoHarnessTreeがtreeRoot=join(outRoot,harnessDir)=compile可視のdist/<harness>/<harnessDir>/plugins/へ投影(:306-318定義)、t110.test.ts:95が compileStageGraph()のshipped stage-graph.json byte-for-byte一致を検査(:104-105)。投影されたplugin stageを再compile(Flow A discoverPluginStageFiles)が拾えば0-pluginでなくなりt110破綻、というe3のt110 FAIL再現機序は正確。選択肢Bはユーザー可視契約FR-2.3『0-plugin byte-identical』の文面改定=仕様変更で、エスカレーション正準リスト(4)によりユーザーエスカレーション事項=選挙で決定不可、かつintent設計(Flow B compose→doctor→drop)自体と矛盾。選択肢Aはユーザー可視契約を保持しcompose-on-demandモデルを維持、緩和はpackage.ts投影調整(申告付き実装逸脱)のみ。Aが唯一、仕様不変で機序矛盾を解消する。",
+  "submittedAt": "2026-07-24T13:28:00Z"
+}

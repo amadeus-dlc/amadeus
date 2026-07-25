@@ -27,6 +27,7 @@ import {
 } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isHarnessType } from "./amadeus-harness.ts";
 
 const UPSTREAM_NAMESPACE = "aidlc";
 const DESTINATION_NAMESPACE = "amadeus";
@@ -937,6 +938,15 @@ function validateStateFields(state: string): string[] {
     if (stateFieldCount(state, field) !== 1) {
       errors.push("field " + field + " must appear exactly once");
     }
+  }
+  const harnessCount = stateFieldCount(state, "Harness");
+  if (harnessCount > 1) {
+    errors.push("field Harness must appear at most once");
+  } else if (
+    harnessCount === 1 &&
+    !isHarnessType(getStateField(state, "Harness"))
+  ) {
+    errors.push("field Harness has an invalid value");
   }
   return errors;
 }

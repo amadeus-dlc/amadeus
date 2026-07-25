@@ -17,6 +17,21 @@
 - Delivery boundary: 実装・修正コード、dist/self-install 再生成、commit、PR 操作は本 scan で未実施。区間フォーカス正本変更は #1391/#1421 の既着地分のみで、本 intent の修正は未着手。
 - Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
 
+## 実行メタデータ(履歴: 260724-harness-provenance)
+
+- Date: 2026-07-24T11:34:46Z
+- Observed at: `2d0da11d022565bf4a613da9fbcccf078716f8f4`
+- Intent: `260724-harness-provenance`([Issue #1452](https://github.com/amadeus-dlc/amadeus/issues/1452) — AI ハーネス種別を `amadeus-state.md` / stage `memory.md` に記録する機能)
+- Scope: `amadeus-feature`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering` (2.1)
+- Method: differential refresh。base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`、observed `2d0da11d022565bf4a613da9fbcccf078716f8f4`、distance 186。Developer スキャン→Architect 合成の直列。
+- 現行結論（当時）: provenance 機能の seam は、birth-time の state template、4見出しを保つ memory diary、既存 harness-dir resolver、bun 書込に非発火の sensor 境界に限定される。
+- Per-intent record: `re-scans/260724-harness-provenance.md`
+- Delivery boundary: 実装・修正コード、dist/self-install 再生成、commit、PR 操作は本 scan で未実施。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。
+
 ## 実行メタデータ(履歴: 260723-marker-heading-exemption)
 
 - Date: 2026-07-23T01:37:10Z
