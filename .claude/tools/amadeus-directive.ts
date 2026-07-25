@@ -17,7 +17,7 @@
 // unknown-key rejection per kind. The shape guard reuses isPlainObject from
 // amadeus-lib.ts.
 
-import { isPlainObject } from "./amadeus-lib.ts";
+import { GRANT_ID_RE, isPlainObject, UUID_V4_RE, UUID_V7_RE } from "./amadeus-lib.ts";
 
 // --- Public types ---
 
@@ -47,7 +47,8 @@ export type DirectiveKind =
   | "print"
   | "error"
   | "done"
-  | "parked";
+  | "parked"
+  | "await-approval";
 
 // run-stage — load lead + support agents, load `consumes` artifacts, run the
 // stage body, write required `produces` plus condition-matched optional outputs,
@@ -131,6 +132,10 @@ export interface RunStageDirective {
   // Absent on gate:false directives (per-unit iteration steps, initialization) and
   // on --single runs (an isolated run that does not advance). FR-2 item 10.
   next_stage?: string | null;
+  // Optional solo standing-grant carrier. The runtime validator enforces that
+  // both fields are present together and exactly match their canonical formats.
+  standing_grant_id?: string;
+  standing_grant_route_id?: string;
 }
 
 // dispatch-subagent — same as run-stage, but the stage runs via a Task call to
@@ -229,6 +234,14 @@ export interface ParkedDirective {
   stage: string;
 }
 
+export interface AwaitApprovalDirective {
+  kind: "await-approval";
+  stage: string;
+  reason: "standing-grant-no-longer-authorizes";
+  target_intent_id: string;
+  presence_reservation_id: string;
+}
+
 // The Directive union — the engine emits exactly one of these per `next`.
 export type Directive =
   | RunStageDirective
@@ -239,7 +252,8 @@ export type Directive =
   | PrintDirective
   | ErrorDirective
   | DoneDirective
-  | ParkedDirective;
+  | ParkedDirective
+  | AwaitApprovalDirective;
 
 export type ValidationResult =
   | { valid: true; data: Directive }
@@ -259,6 +273,7 @@ export const VALID_KINDS = [
   "error",
   "done",
   "parked",
+  "await-approval",
 ] as const;
 
 // The mode enum carried by run-stage / dispatch-subagent. Mirrors
@@ -291,10 +306,18 @@ const RUN_STAGE_FIELDS = [
   "unit",
   "consumes_absent",
   "next_stage",
+  "standing_grant_id",
+  "standing_grant_route_id",
 ] as const;
 
 // dispatch-subagent = run-stage fields + `worker`.
-const DISPATCH_SUBAGENT_FIELDS = [...RUN_STAGE_FIELDS, "worker"] as const;
+const DISPATCH_SUBAGENT_FIELDS = [
+  ...RUN_STAGE_FIELDS.filter(
+    (field) =>
+      field !== "standing_grant_id" && field !== "standing_grant_route_id",
+  ),
+  "worker",
+] as const;
 
 const INVOKE_SWARM_FIELDS = ["kind", "units", "repo"] as const;
 const PRESENT_GATE_FIELDS = ["kind", "stage", "phase", "memory_path"] as const;
@@ -303,6 +326,13 @@ const PRINT_FIELDS = ["kind", "message"] as const;
 const ERROR_FIELDS = ["kind", "message"] as const;
 const DONE_FIELDS = ["kind", "reason"] as const;
 const PARKED_FIELDS = ["kind", "reason", "stage"] as const;
+const AWAIT_APPROVAL_FIELDS = [
+  "kind",
+  "stage",
+  "reason",
+  "target_intent_id",
+  "presence_reservation_id",
+] as const;
 
 const KNOWN_FIELDS_BY_KIND: Readonly<Record<DirectiveKind, readonly string[]>> = {
   "run-stage": RUN_STAGE_FIELDS,
@@ -314,6 +344,41 @@ const KNOWN_FIELDS_BY_KIND: Readonly<Record<DirectiveKind, readonly string[]>> =
   error: ERROR_FIELDS,
   done: DONE_FIELDS,
   parked: PARKED_FIELDS,
+  "await-approval": AWAIT_APPROVAL_FIELDS,
+};
+
+// Per-kind required-field presence + type checks (validator rules 4-6), keyed by
+// the discriminator so the validator stays a table lookup rather than a switch.
+// Adding a DirectiveKind without a row here is a compile error (Record is total).
+type DirectiveFieldCheck = (
+  o: Record<string, unknown>,
+  errors: string[],
+) => void;
+
+const FIELD_CHECKS_BY_KIND: Readonly<Record<DirectiveKind, DirectiveFieldCheck>> = {
+  "run-stage": (o, errors) => checkRunStageShared(o, "run-stage", errors),
+  "dispatch-subagent": (o, errors) => {
+    checkRunStageShared(o, "dispatch-subagent", errors);
+    checkString(o, "worker", "dispatch-subagent", errors);
+  },
+  "invoke-swarm": (o, errors) => {
+    checkStringArray(o, "units", "invoke-swarm", errors);
+    checkOptionalString(o, "repo", "invoke-swarm", errors);
+  },
+  "present-gate": (o, errors) => {
+    checkString(o, "stage", "present-gate", errors);
+    checkString(o, "phase", "present-gate", errors);
+    checkString(o, "memory_path", "present-gate", errors);
+  },
+  ask: (o, errors) => checkString(o, "question", "ask", errors),
+  print: (o, errors) => checkString(o, "message", "print", errors),
+  error: (o, errors) => checkString(o, "message", "error", errors),
+  done: (o, errors) => checkString(o, "reason", "done", errors),
+  parked: (o, errors) => {
+    checkString(o, "reason", "parked", errors);
+    checkString(o, "stage", "parked", errors);
+  },
+  "await-approval": (o, errors) => checkAwaitApproval(o, errors),
 };
 
 // --- Validator ---
@@ -358,43 +423,9 @@ export function validateDirective(obj: unknown): ValidationResult {
   }
 
   // Rule 4-6: per-kind required-field presence + type checks, with specific,
-  // kind-aware messages.
-  switch (kind) {
-    case "run-stage":
-      checkRunStageShared(o, kind, errors);
-      break;
-    case "dispatch-subagent":
-      checkRunStageShared(o, kind, errors);
-      checkString(o, "worker", kind, errors);
-      break;
-    case "invoke-swarm":
-      checkStringArray(o, "units", kind, errors);
-      checkOptionalString(o, "repo", kind, errors);
-      break;
-    case "present-gate":
-      checkString(o, "stage", kind, errors);
-      checkString(o, "phase", kind, errors);
-      checkString(o, "memory_path", kind, errors);
-      break;
-    case "ask":
-      checkString(o, "question", kind, errors);
-      break;
-    case "print":
-      checkString(o, "message", kind, errors);
-      break;
-    case "error":
-      checkString(o, "message", kind, errors);
-      break;
-    case "done":
-      checkString(o, "reason", kind, errors);
-      break;
-    case "parked":
-      checkString(o, "reason", kind, errors);
-      checkString(o, "stage", kind, errors);
-      break;
-    // No default: the union is exhaustive — every member of DirectiveKind has a
-    // case above. TS flags a missing case at compile time if a kind is added.
-  }
+  // kind-aware messages. The table is total over DirectiveKind, so a new kind
+  // without a row is a compile error rather than a silently unchecked directive.
+  FIELD_CHECKS_BY_KIND[kind](o, errors);
 
   if (errors.length > 0) {
     return { valid: false, errors };
@@ -449,6 +480,54 @@ function checkRunStageShared(
   // next_stage: optional; if present must be a string (a stage slug) OR null (the
   // explicit terminal signal). Absent on gate:false / --single directives.
   checkOptionalNullableString(o, "next_stage", kind, errors);
+  if (kind === "run-stage") checkStandingGrantCarrier(o, errors);
+}
+
+
+function checkStandingGrantCarrier(
+  o: Record<string, unknown>,
+  errors: string[],
+): void {
+  const hasGrantId = "standing_grant_id" in o;
+  const hasRouteId = "standing_grant_route_id" in o;
+  if (hasGrantId !== hasRouteId) {
+    errors.push("run-stage: standing grant carrier fields must be present together");
+    return;
+  }
+  if (!hasGrantId) return;
+  if (typeof o.standing_grant_id !== "string" || !GRANT_ID_RE.test(o.standing_grant_id)) {
+    errors.push("run-stage: standing_grant_id must be 8 lowercase hex");
+  }
+  if (
+    typeof o.standing_grant_route_id !== "string" ||
+    !UUID_V4_RE.test(o.standing_grant_route_id)
+  ) {
+    errors.push("run-stage: standing_grant_route_id must be UUID v4");
+  }
+}
+
+function checkAwaitApproval(
+  o: Record<string, unknown>,
+  errors: string[],
+): void {
+  checkString(o, "stage", "await-approval", errors);
+  checkString(o, "reason", "await-approval", errors);
+  checkString(o, "target_intent_id", "await-approval", errors);
+  checkString(o, "presence_reservation_id", "await-approval", errors);
+  if (o.reason !== "standing-grant-no-longer-authorizes") {
+    errors.push(
+      'await-approval: reason must be "standing-grant-no-longer-authorizes"',
+    );
+  }
+  if (typeof o.target_intent_id === "string" && !UUID_V7_RE.test(o.target_intent_id)) {
+    errors.push("await-approval: target_intent_id must be UUID v7");
+  }
+  if (
+    typeof o.presence_reservation_id === "string" &&
+    !UUID_V4_RE.test(o.presence_reservation_id)
+  ) {
+    errors.push("await-approval: presence_reservation_id must be UUID v4");
+  }
 }
 
 // --- Helpers (mirror amadeus-stage-schema.ts: presence first, then type) ---
@@ -761,6 +840,13 @@ export const directiveSelfCheckExamples: Directive[] = [
     { kind: "error", message: 'Unknown scope: "frobnicate"' },
     { kind: "done", reason: "Workflow complete — all in-scope stages approved." },
     { kind: "parked", reason: 'Workflow parked at "feasibility". Resume with /amadeus --resume.', stage: "feasibility" },
+    {
+      kind: "await-approval",
+      stage: "code-generation",
+      reason: "standing-grant-no-longer-authorizes",
+      target_intent_id: "00000000-0000-7000-8000-000000000001",
+      presence_reservation_id: "12345678-1234-4abc-8def-1234567890ab",
+    },
     // The classify-round-trip skeleton case: gate is the unresolved sentinel,
     // and the first run-stage of a workflow also carries the conductor persona.
     {

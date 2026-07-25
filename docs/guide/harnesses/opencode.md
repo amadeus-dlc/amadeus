@@ -55,16 +55,17 @@ the session-resume onboarding a returning session reads.
 | Onboarding | `AGENTS.md` (session-resume path) |
 | Config example | `.opencode/opencode.json.example` — `$schema` + permission narrowing (`edit`/`bash`/`webfetch` = `ask`) |
 | Session skills | 4 (`session-cost`, `replay`, `outcomes-pack`, `grilling`) — the 32 per-stage runners are out of initial scope |
-| Hooks | **Not wired (0 of 8)** — the step-0 mapping ([#1049](https://github.com/amadeus-dlc/amadeus/issues/1049)) measured every Cursor-parity core-hook target against OpenCode's JS plugin API: **0 wired · 5 conditional · 3 unsupported**. See [Hook mapping](#hook-mapping-1049) below |
+| Hooks | **1 of 8 wired** — presence minting ships as the `.opencode/plugin/amadeus-opencode-plugin.ts` JS plugin. The step-0 mapping ([#1049](https://github.com/amadeus-dlc/amadeus/issues/1049)) measured the other seven Cursor-parity core-hook targets against OpenCode's plugin API: **5 conditional · 2 unsupported**. See [Hook mapping](#hook-mapping-1049) below |
 | `promote:self` | `bun run promote:self` promotes `dist/opencode/.opencode/` → root `.opencode/` (dogfood) |
 
 ## Harness differences vs Claude Code
 
-- **No hooks wired**: OpenCode has no shell-command hook mechanism — its
-  extension surface is JS plugins. Audit emission, sensor firing, and presence
-  minting that ride hooks on other harnesses are **not active** here. The step-0
-  mapping ([#1049](https://github.com/amadeus-dlc/amadeus/issues/1049)) measured
-  the plugin API and wired none of the eight targets; see [Hook mapping](#hook-mapping-1049).
+- **Only presence minting is wired**: OpenCode has no shell-command hook
+  mechanism — its extension surface is JS plugins. Presence minting rides the
+  `chat.message` plugin hook (which carries a stable `sessionID`), so a solo
+  standing-grant continuation works here as on every other harness. Audit
+  emission and sensor firing, which ride hooks elsewhere, are still **not
+  active**; see [Hook mapping](#hook-mapping-1049).
 - **`$amadeus --version`** reports `amadeus 0.1.2` (exit 0).
 - **`$amadeus --doctor`** degrades to advisory only — it misfires the `.claude`
   prerequisite block and does not enumerate other worktrees, neither of which
@@ -86,7 +87,7 @@ definitions verbatim. **Measured 2026-07-17 against `@opencode-ai/plugin@1.18.3`
 | session-start | ⚠ conditional | `event` (`session.created`) carries no `source` field and OpenCode has no `additionalContext` injection seam; side-effect-only wiring was declined (no false parity) |
 | session-end | ⚠ conditional | `event` (`session.deleted`) / `dispose` carry no `reason` and differ in meaning from a session ending; side-effect-only wiring declined |
 | validate-state | ⚠ conditional | `event` (`session.compacted`) fires **after** compaction; the core hook is a **pre**-compact validator — timing is inverted |
-| mint (HUMAN_TURN) | ❌ unsupported | Held **fail-closed** to block a phantom HUMAN_TURN: `UserMessage` has no machine-injection marker field, and whether an AskUserQuestion answer flows through `chat.message` is unverified. Human-presence keeps the current delegate flow |
+| mint (HUMAN_TURN) | ✅ wired | `.opencode/plugin/amadeus-opencode-plugin.ts`. Re-measured 2026-07-26 on opencode 1.18.3: the runtime triggers `chat.message` with `{sessionID, …}`, so the plugin forwards that stable identity through the canonical `hostSessionCapability` seam. Machine turns stay fail-closed — the runtime's own `synthetic` text parts are dropped and the surviving text runs through the shared machine-injected marker catalog |
 | log-subagent | ❌ unsupported | No event carries a subagent-stop signal with `agent_type` / `agent_id` |
 | stop | ❌ unsupported | No turn-end gate event (`session.idle` is idle-transition, not a turn boundary) |
 

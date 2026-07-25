@@ -337,8 +337,13 @@ describe("t210 non-claude adapters classify the UserPromptSubmit payload before 
       test(`${adapter.name} guards its HUMAN_TURN mint with the classifier`, () => {
         const src = readFileSync(adapter.source, "utf-8");
         // Each source that mints a HUMAN_TURN must also reference the classifier —
-        // the guard and the mint co-occur in the same adapter file.
-        expect(src).toContain('appendAuditEntry("HUMAN_TURN"');
+        // the guard and the mint co-occur in the same adapter file. Since #1466
+        // the mint itself is the canonical presence seam (mintHumanPresence in
+        // tools/amadeus-presence-reservation.ts); an adapter-local
+        // appendAuditEntry would bypass the solo-fallback presence reservation,
+        // so it must NOT reappear beside the guard.
+        expect(src).toContain("mintHumanPresence");
+        expect(src).not.toContain('appendAuditEntry("HUMAN_TURN"');
         expect(src).toContain("isMachineInjectedTurnText");
       });
     }

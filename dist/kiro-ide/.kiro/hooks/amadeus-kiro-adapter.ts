@@ -51,7 +51,7 @@ import {
   resolveProjectDirFromHook,
   stateFilePath,
 } from "../tools/amadeus-lib.ts";
-import { appendAuditEntry } from "../tools/amadeus-audit.ts";
+import { hostSessionCapability, mintHumanPresence } from "../tools/amadeus-presence-reservation.ts";
 import { isSubagentTool, parseKiroIdeHookContext } from "./amadeus-kiro-vocab.ts";
 import { spawnHookWithRuntime } from "./amadeus-kiro-hook-runtime.ts";
 
@@ -101,7 +101,20 @@ if (target === "mint") {
       typeof rawUserPrompt === "string" &&
       isMachineInjectedTurnText(rawUserPrompt);
     if (existsSync(stateFilePath(projectDir)) && !machineInjected) {
-      appendAuditEntry("HUMAN_TURN", {}, projectDir);
+      // Kiro IDE's promptSubmit hook carries only USER_PROMPT — no stable host
+      // session identity. Re-measured 2026-07-26 on Kiro 0.12.333 / kiroAgent
+      // 0.3.721: `handleHookExecute` HAS a `sessionId` (it keys the hook
+      // operation registry) but spawns the runCommand hook with
+      // `env: { USER_PROMPT: userPrompt }` only, the contextual-hook executor
+      // does the same, and the documented hook schema exposes no session field
+      // or command template variable. So the capability is `unavailable` and the canonical
+      // seam mints the ordinary untargeted HUMAN_TURN. A solo standing-grant
+      // targeted continuation therefore does not fire here (fail-closed); it is
+      // NEVER degraded onto a shared workspace key, the PID, or the cursor.
+      mintHumanPresence({
+        projectDir,
+        capability: hostSessionCapability(undefined, "kiro-ide promptSubmit carries no session id"),
+      });
     }
   } catch {
     /* advisory - mint never blocks the turn */

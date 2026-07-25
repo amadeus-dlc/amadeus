@@ -20,10 +20,10 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 523,
+    "total": 529,
     "enumeratedByClass": {
-      "function": 288,
-      "audit": 77,
+      "function": 293,
+      "audit": 78,
       "scope": 10,
       "stage": 32,
       "hook": 11,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 144,
+      "function": 146,
       "audit": 32,
       "scope": 10,
       "stage": 8,
@@ -185,6 +185,13 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "GATE_AUTHORIZATION_SELECTED",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "audit",
@@ -1615,6 +1622,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:evaluateStandingGrantGateEligibility",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t-solo-standing-grant-domain.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:exportBundle",
       "minMechanism": "none",
       "coveredBy": [],
@@ -1746,6 +1765,13 @@
     {
       "unitClass": "function",
       "unitId": "function:getField",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:GRANT_ID_RE",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -3126,6 +3152,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:resolveOperatingMode",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t-solo-standing-grant-domain.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:resolveOwnHandler",
       "minMechanism": "none",
       "coveredBy": [],
@@ -3575,6 +3613,20 @@
     {
       "unitClass": "function",
       "unitId": "function:unitDependencyPath",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:UUID_V4_RE",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:UUID_V7_RE",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"

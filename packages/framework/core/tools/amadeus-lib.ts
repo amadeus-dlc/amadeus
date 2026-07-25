@@ -75,6 +75,21 @@ export type ContractResult<T> =
   | { valid: true; data: T }
   | { valid: false; errors: string[] };
 
+export type OperatingMode = "solo" | "team";
+
+export type OperatingModeResult =
+  | { readonly kind: "valid"; readonly mode: OperatingMode }
+  | { readonly kind: "invalid"; readonly raw: string };
+
+/** Resolve the process boundary value without silently widening unknown modes. */
+export function resolveOperatingMode(raw: string | undefined): OperatingModeResult {
+  if (raw === undefined || raw === "" || raw === "solo") {
+    return { kind: "valid", mode: "solo" };
+  }
+  if (raw === "team") return { kind: "valid", mode: "team" };
+  return { kind: "invalid", raw };
+}
+
 /** Validate an untrusted unit kind against the one closed vocabulary. */
 export function normalizeUnitKind(raw: unknown): ContractResult<UnitKind> {
   if (
@@ -3694,6 +3709,7 @@ export const DEFAULT_STANDING_GRANT_TTL_MS = 4 * 60 * 60 * 1000;
 export type StandingGrant = {
   readonly grantId: string;
   readonly scope: "stage-gates";
+  readonly issuedAtMs: number;
   readonly expiresAtMs: number;
   readonly includesPhaseBoundary: boolean;
   readonly issuerIntent: string;
@@ -3707,6 +3723,7 @@ export type StandingGrant = {
 // annotation reads back as permanent DA:0 under bun --coverage).
 type StandingGrantFields = {
   grantId: string;
+  issuedAtMs: number;
   expiresAtMs: number;
   includesPhaseBoundary: boolean;
   issuerIntent: string;
@@ -3720,6 +3737,7 @@ function makeStandingGrant(f: StandingGrantFields): StandingGrant {
   return Object.freeze({
     grantId: f.grantId,
     scope: "stage-gates" as const,
+    issuedAtMs: f.issuedAtMs,
     expiresAtMs: f.expiresAtMs,
     includesPhaseBoundary: f.includesPhaseBoundary,
     issuerIntent: f.issuerIntent,
@@ -3739,28 +3757,41 @@ export const StandingGrant = {
   // parseable date. Every unparseable block collapses to null so a malformed row
   // can never masquerade as a valid grant.
   parse(auditBlock: string): StandingGrant | null {
+    const event = auditBlockField(auditBlock, "Event");
+    const issuedAt = auditBlockField(auditBlock, "Timestamp");
     const grantId = auditBlockField(auditBlock, "Grant Id");
     const scope = auditBlockField(auditBlock, "Scope");
     const expiresAt = auditBlockField(auditBlock, "Expires At");
     const includes = auditBlockField(auditBlock, "Includes Phase Boundary");
+    const issuerSpace = auditBlockField(auditBlock, "Issuer Space");
     const issuerIntent = auditBlockField(auditBlock, "Issuer Intent");
     const issuerShard = auditBlockField(auditBlock, "Issuer Shard");
     const issuerHumanTs = auditBlockField(auditBlock, "Issuer Human Ts");
     if (
+      event !== "GRANT_ISSUED" ||
+      !issuedAt ||
       !grantId ||
+      !/^[0-9a-f]{8}$/.test(grantId) ||
       scope !== "stage-gates" ||
       !expiresAt ||
-      includes === null ||
+      (includes !== "true" && includes !== "false") ||
+      !issuerSpace ||
+      !/^[A-Za-z0-9._-]+$/.test(issuerSpace) ||
       !issuerIntent ||
       !issuerShard ||
-      !issuerHumanTs
+      !issuerHumanTs ||
+      Number.isNaN(Date.parse(issuerHumanTs)) ||
+      !/^[A-Za-z0-9._-]+$/.test(issuerIntent) ||
+      !/^[A-Za-z0-9._-]+\.md$/.test(issuerShard)
     ) {
       return null;
     }
+    const issuedAtMs = Date.parse(issuedAt);
     const expiresAtMs = Date.parse(expiresAt);
-    if (Number.isNaN(expiresAtMs)) return null;
+    if (Number.isNaN(issuedAtMs) || Number.isNaN(expiresAtMs)) return null;
     return makeStandingGrant({
       grantId,
+      issuedAtMs,
       expiresAtMs,
       includesPhaseBoundary: includes === "true",
       issuerIntent,
@@ -3851,10 +3882,76 @@ export const SKELETON_ON_SCOPES: ReadonlySet<string> = new Set([
   "enterprise",
   "mvp",
   "feature",
+  "amadeus-feature",
   "poc",
   "workshop",
   "infra",
 ]);
+
+const SKELETON_OFF_SCOPES: ReadonlySet<string> = new Set([
+  "bugfix",
+  "refactor",
+  "security-patch",
+  "chore",
+  "amadeus-bugfix",
+  "amadeus-refactor",
+  "amadeus-security-patch",
+  "amadeus-chore",
+]);
+
+export type WalkingSkeletonStance = "on" | "off" | "scope-dependent";
+
+export type StandingGrantGateContext = {
+  readonly gateRequired: boolean;
+  readonly isPhaseBoundary: boolean;
+  readonly isFirstConstructionGate: boolean;
+  readonly isPerUnitStage: boolean;
+  readonly isPerUnitFinalGate: boolean;
+  readonly scope: string;
+  readonly walkingSkeletonStance: WalkingSkeletonStance | undefined;
+};
+
+export type StandingGrantGateEligibility =
+  | { readonly kind: "eligible" }
+  | {
+      readonly kind: "ineligible";
+      readonly reason:
+        | "no-gate"
+        | "phase-boundary"
+        | "walking-skeleton"
+        | "per-unit-incomplete";
+    };
+
+function effectiveWalkingSkeleton(
+  stance: WalkingSkeletonStance | undefined,
+  scope: string,
+): boolean | null {
+  if (stance === "on") return true;
+  if (stance === "off") return false;
+  if (SKELETON_ON_SCOPES.has(scope)) return true;
+  if (SKELETON_OFF_SCOPES.has(scope)) return false;
+  return null;
+}
+
+export function evaluateStandingGrantGateEligibility(
+  grant: StandingGrant,
+  context: StandingGrantGateContext,
+): StandingGrantGateEligibility {
+  if (!context.gateRequired) return { kind: "ineligible", reason: "no-gate" };
+  if (context.isPhaseBoundary && !grant.includesPhaseBoundary) {
+    return { kind: "ineligible", reason: "phase-boundary" };
+  }
+  if (context.isPerUnitStage && !context.isPerUnitFinalGate) {
+    return { kind: "ineligible", reason: "per-unit-incomplete" };
+  }
+  if (
+    context.isFirstConstructionGate &&
+    effectiveWalkingSkeleton(context.walkingSkeletonStance, context.scope) !== false
+  ) {
+    return { kind: "ineligible", reason: "walking-skeleton" };
+  }
+  return { kind: "eligible" };
+}
 
 // Decide whether a valid standing grant covers THIS gate. Single classifying
 // function:
@@ -3877,27 +3974,31 @@ export function standingGrantSatisfiesGate(
   graph: StageEntry[],
 ): boolean {
   const scope = getField(stateContent, "Scope") ?? "";
-  const current = graph.find((s) => s.slug === slug);
-  const next = scope ? nextInScopeStage(slug, scope, stateContent) : null;
+  const currentIndex = graph.findIndex((stage) => stage.slug === slug);
+  const current = currentIndex < 0 ? null : graph[currentIndex];
+  const inScope = (stage: StageEntry): boolean =>
+    stage.scopes === undefined || stage.scopes.includes(scope);
+  const next = currentIndex < 0
+    ? null
+    : graph.slice(currentIndex + 1).find(inScope) ?? null;
   const crossesPhaseBoundary = !next || (current != null && next.phase !== current.phase);
-  if (crossesPhaseBoundary) {
-    return grant.includesPhaseBoundary;
-  }
-  // Walking-skeleton gate: the first in-scope construction stage stays
-  // human-gated while the skeleton is effectively on. The stance field is
-  // persisted un-normalized ("on" | "off" | "scope-dependent" | absent), so a
-  // raw "scope-dependent" (or missing) value defers to the scope default —
-  // literal "on"-only matching would silently skip the exclusion for a
-  // greenfield scope that never completed the classify round-trip.
-  if (scope) {
-    const stance = getField(stateContent, "Skeleton Stance") ?? "";
-    const skeletonOn = stance === "on" || (stance !== "off" && SKELETON_ON_SCOPES.has(scope));
-    if (skeletonOn) {
-      const firstConstruction = firstInScopeStageOfPhase("construction", scope);
-      if (firstConstruction && firstConstruction.slug === slug) return false;
-    }
-  }
-  return true;
+  const firstConstruction = graph.find(
+    (stage) => stage.phase === "construction" && inScope(stage),
+  );
+  const rawStance = getField(stateContent, "Skeleton Stance");
+  const walkingSkeletonStance =
+    rawStance === "on" || rawStance === "off" || rawStance === "scope-dependent"
+      ? rawStance
+      : undefined;
+  return evaluateStandingGrantGateEligibility(grant, {
+    gateRequired: true,
+    isPhaseBoundary: crossesPhaseBoundary,
+    isFirstConstructionGate: firstConstruction?.slug === slug,
+    isPerUnitStage: false,
+    isPerUnitFinalGate: false,
+    scope,
+    walkingSkeletonStance,
+  }).kind === "eligible";
 }
 
 // True when any stage sits at [?] (awaiting-approval) in the state file: the
@@ -4200,6 +4301,19 @@ export function worktreePath(projectDir: string, boltSlug: string): string {
 //
 // repoDir resolves the on-disk dir for a repo name; it does NOT validate that the
 // dir exists or is a git repo (the caller does, where the git op runs).
+
+// Canonical UUID shapes. Reservation ids and standing-grant Route Ids are v4;
+// intent ids are v7. Every module that validates one of these — the grant
+// authorization domain, the presence reservation store, the state CLI, the
+// orchestrator's wire parser — tests against these two definitions, so a shape
+// can never drift between the minting side and the checking side.
+export const UUID_V4_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+export const UUID_V7_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+// Standing-grant Grant Ids are the first eight hex digits of the issuing
+// audit row's hash — one shape shared by the wire parser and the domain.
+export const GRANT_ID_RE = /^[0-9a-f]{8}$/;
 
 // A repo name is a single path segment (no separators, no `..`) so it can only
 // resolve to an immediate child of the workspace — never escape it.

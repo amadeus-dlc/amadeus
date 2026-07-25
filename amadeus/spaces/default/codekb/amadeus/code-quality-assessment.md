@@ -91,6 +91,16 @@ PR #1477 は「常に失敗する検証」を**ガードで迂回**して解消�
 
 > **訂正（260724-watcher-timeout-fix 節に対して）**: 下記「watcher arming 検証が mux_attach を最大 270 秒ブロック（260724…）」節は当該 intent の observed `6d4df9056` 時点の記述。`9b851c5ae` により worst-case は 180 秒へ短縮済みで、かつ本 scan により**タイムアウト長は症状であり原因ではない**ことが確定した（原因はモード不一致で、待ち時間をいくら延ばしても検証は成功しない）。
 
+## Issue #1466 solo standing grant（260725-solo-standing-grants、2026-07-25、履歴）
+
+base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb404524ef30a7d8a0a3f68f73`。[Issue #1466](https://github.com/amadeus-dlc/amadeus/issues/1466)。[PR #1468](https://github.com/amadeus-dlc/amadeus/pull/1468) は凍結試作で参考のみ、実装前提にしない。
+
+強みは human grounding、4時間既定 TTL、phase-boundary opt-in、walking-skeleton exclusion、issuer provenance、protected audit mint。負債は route / commit identity と carrier の欠如、`findActiveStandingGrant` の最大 expiry 選択・同値 tie-break 不在・broad catch、Grant Id parse shape 検証欠如、raw filesystem audit fabrication、二重 error aggregation である。
+
+## fallback・テスト・保守性
+
+認可拒否は現行 `error()` に直行し、state child と orchestrator の双方が `ERROR_LOGGED` を残し得るため、commit 時失効には使えない。fallback は `emitApprovalAudit` / state mutation 前で typed non-error とし、完了監査を残さない。関連178テスト、dist 6 harness check、promote 4面 check は成功。`bun run check` は `tsc: command not found`（exit 127）で未判定。巨大ファイル `amadeus-lib.ts` 約7,602行、`amadeus-state.ts` 約4,467行、`amadeus-orchestrate.ts` 約3,781行が変更 hotspot。base..HEAD の grant core は無変更だが、orchestrate plugin 系 `+109/-3` が同時編集面である。実装方式は後続設計で比較する。
+
 ## PR #1469 レビュー findings（260725-mirror-review-fixes、履歴）
 
 ### 基準実測

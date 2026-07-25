@@ -236,7 +236,14 @@ describe("opencode manifest — the distribution row", () => {
     ]);
   });
 
-  test("routes dot-gitignore to the project-root .gitignore", () => {
-    expect(manifest.harnessFiles).toEqual([{ src: "dot-gitignore", dst: ".gitignore", projectRoot: true }]);
+  test("routes dot-gitignore to the project-root .gitignore and ships the plugin mint site", () => {
+    expect(manifest.harnessFiles).toEqual([
+      { src: "dot-gitignore", dst: ".gitignore", projectRoot: true },
+      // OpenCode's extension surface is JS plugins loaded from
+      // `.opencode/plugin/` — the presence mint site and its measured payload
+      // vocabulary land there, inside the harness dir (no projectRoot).
+      { src: "plugin/amadeus-opencode-plugin.ts", dst: "plugin/amadeus-opencode-plugin.ts" },
+      { src: "plugin/amadeus-opencode-vocab.ts", dst: "plugin/amadeus-opencode-vocab.ts" },
+    ]);
   });
 });
