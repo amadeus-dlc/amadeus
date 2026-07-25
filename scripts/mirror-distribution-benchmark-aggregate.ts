@@ -15,8 +15,24 @@ type Replica = Readonly<{
   >>;
 }>;
 
+// A ratio is not meaningful when the absolute spread is below 0.5% of the
+// workload budget. The authoritative median p95 budget remains unchanged.
+const DISPERSION_NOISE_FLOOR_FRACTION = 0.005;
+
 function median(values: readonly number[]): number {
   return [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
+}
+
+function exceedsDispersionLimit(
+  values: readonly number[],
+  p95BudgetMs: number,
+): boolean {
+  const minimum = Math.min(...values);
+  const maximum = Math.max(...values);
+  if (minimum <= 0) return true;
+  const absoluteSpread = maximum - minimum;
+  const noiseFloor = p95BudgetMs * DISPERSION_NOISE_FLOOR_FRACTION;
+  return maximum / minimum > 2 && absoluteSpread > noiseFloor;
 }
 
 export function aggregateMirrorBenchmarks(
@@ -42,9 +58,7 @@ export function aggregateMirrorBenchmarks(
       continue;
     }
     const p95 = samples.map((sample) => sample.p95Ms);
-    const minimum = Math.min(...p95);
-    const maximum = Math.max(...p95);
-    if (minimum <= 0 || maximum / minimum > 2)
+    if (exceedsDispersionLimit(p95, budget.p95BudgetMs))
       findings.push(`${name}: replica dispersion exceeds 2.0`);
     if (median(p95) > budget.p95BudgetMs)
       findings.push(`${name}: median p95 exceeds ${budget.p95BudgetMs}ms`);

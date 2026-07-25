@@ -1460,25 +1460,25 @@
   },
   {
     "file": "scripts/mirror-distribution-benchmark-aggregate.ts",
-    "lines": "41-42",
+    "lines": "69-70",
+    "reason": "t292 exercises complete, missing, mismatched, dispersion, p95, and RSS aggregate outcomes in-process; Bun stamps the exported function closing row and separator DA:0 even though every semantic return path is covered.",
+    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "scripts/mirror-distribution-benchmark-aggregate.ts",
+    "lines": "72-74",
     "reason": "t292 exercises complete, missing, mismatched, dispersion, p95, and RSS aggregate outcomes in-process; the residual rows are spawned file-input and process-exit wrapper paths not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "scripts/mirror-distribution-benchmark-aggregate.ts",
-    "lines": "58-60",
+    "lines": "76-79",
     "reason": "t292 exercises complete, missing, mismatched, dispersion, p95, and RSS aggregate outcomes in-process; the residual rows are spawned file-input and process-exit wrapper paths not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "scripts/mirror-distribution-benchmark-aggregate.ts",
-    "lines": "63-65",
-    "reason": "t292 exercises complete, missing, mismatched, dispersion, p95, and RSS aggregate outcomes in-process; the residual rows are spawned file-input and process-exit wrapper paths not attributed to parent Bun LCOV.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "scripts/mirror-distribution-benchmark-aggregate.ts",
-    "lines": "67-70",
+    "lines": "81-84",
     "reason": "t292 exercises complete, missing, mismatched, dispersion, p95, and RSS aggregate outcomes in-process; the residual rows are spawned file-input and process-exit wrapper paths not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -1625,5 +1625,35 @@
     "lines": "86-91",
     "reason": "projection scan integration tests exercise clean, missing, and forbidden public projection outcomes through the shipped CLI; these residual scanner/main rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
+    "lines": "124",
+    "reason": "Fail-closed platform guard for a runtime without O_NOFOLLOW. Supported CI and production platforms expose the constant, while t268 covers normal, symlink, containment, size, and I/O outcomes.",
+    "expiry": "remove when the supported platform matrix includes a runtime without O_NOFOLLOW or the filesystem constants port becomes injectable"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
+    "lines": "229",
+    "reason": "Catch entry for a realpath failure after lstat succeeded. Normal missing and symlink outcomes are covered; reaching this row requires a filesystem replacement in the narrow lstat-to-realpath window.",
+    "expiry": "remove when config loading receives an injectable filesystem port for the lstat-to-realpath race"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
+    "lines": "232",
+    "reason": "Dangling-after-lstat ENOENT recovery inside the lstat-to-realpath race window; ordinary absent and symlinked files are covered in-process.",
+    "expiry": "remove when config loading receives an injectable filesystem port for the lstat-to-realpath race"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
+    "lines": "85-86",
+    "reason": "Exclusive compare-and-set conflict guard. Operation identity and concurrent state conflicts are covered, but this exact branch requires a competing writer between the exclusive transition read and commit.",
+    "expiry": "remove when executor transition scheduling exposes a deterministic competing-writer seam"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
+    "lines": "634",
+    "reason": "Defensive create-attempt claim failure projection. t279 covers lock and write failures before remote mutation; Bun leaves this multiline forwarding row DA:0.",
+    "expiry": "remove when Bun LCOV attributes the forwarding return or the claim helper is flattened"
   }
 ]

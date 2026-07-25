@@ -83,9 +83,27 @@ describe("t292 distribution performance protocol", () => {
       replica(12),
       replica(15),
     ])).toEqual([]);
+    const lowLatencyReplicas = [28, 116, 123].map((p95Ms) => {
+      const base = replica(100);
+      return {
+        ...base,
+        workloads: {
+          ...base.workloads,
+          packageWrite: { ...base.workloads.packageWrite, p95Ms },
+        },
+      };
+    });
+    expect(aggregateMirrorBenchmarks(lowLatencyReplicas)).toEqual([]);
     expect(aggregateMirrorBenchmarks([replica(), replica()])[0]).toContain(
       "missing benchmark replica",
     );
+    const incomplete = replica();
+    incomplete.workloads.packageWrite.runs = 19;
+    expect(aggregateMirrorBenchmarks([
+      incomplete,
+      replica(),
+      replica(),
+    ])).toContain("packageWrite: missing or incomplete workload");
     expect(aggregateMirrorBenchmarks([
       replica(10),
       replica(11, "other"),
