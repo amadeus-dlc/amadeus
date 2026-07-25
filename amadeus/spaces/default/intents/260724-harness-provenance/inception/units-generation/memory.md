@@ -2,6 +2,7 @@
 > This file is maintained by the orchestrator during stage execution. Add observations at the gate ritual, not by editing here directly.
 
 ## Interpretations
+- 2026-07-24T17:08:17Z — U1(Harness Detector)とU2(Harness Recorder)を単一 deployable Unit へ統合; Delivery Planning で、旧分割では feature scope の end-to-end walking skeleton と team.md の1 Unit/Bolt/PR境界を同時に満たせないことが判明し、ユーザーが後方ジャンプと統合を確認した
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations

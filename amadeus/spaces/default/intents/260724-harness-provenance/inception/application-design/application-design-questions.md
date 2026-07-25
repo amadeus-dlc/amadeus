@@ -6,7 +6,7 @@
 
 ## Q1. ハーネス検出関数の配置は?
 
-[Answer]: A
+[Answer]: A — `detectHarnessType(): HarnessType`を新設し、`HarnessType`はmanualを含む7値とする。自動検出は6値、override経由でmanualを含む7値目が入る
 
 - A. `packages/framework/core/tools/amadeus-lib.ts` へ新設(既存 `deriveHarnessDir()` `:168-183`・`KNOWN_HARNESS_DIRS` `:158` と同じファイル、core 中立層)。team-practices.md の cid:code-generation:harness-tools-placement は harness 専用ツールを対象とするが、本検出関数は全ハーネス共通の汎用機能であり `deriveHarnessDir()` と同じ層に置くのが正しい(harness 専用ではない)
 - X. Other
@@ -15,7 +15,7 @@
 
 [Answer]: A
 
-- A. `detectHarnessType(): HarnessType` を新設。`HarnessType = "claude-code" | "codex" | "cursor" | "opencode" | "kiro" | "unknown"`(manual は自動検出の戻り値ではなくユーザー指定値のため別扱い)。team-practices.md の Decided(functional-domain-modeling-ts、scalar は判別ユニオン)に従い、判別可能な文字列ユニオンとする
+- A. `detectHarnessType(): HarnessType` を新設。`HarnessType = "claude-code" | "codex" | "cursor" | "opencode" | "kiro" | "unknown" | "manual"`。自動検出のみではmanual以外の6値、`AMADEUS_HARNESS_TYPE` override経由ではmanualを含む7値を返しうる。team-practices.md のDecided(functional-domain-modeling-ts、scalarは判別ユニオン)に従う
 - X. Other
 
 ## Q3. state.md へのフィールド書込の呼出箇所は?
@@ -30,4 +30,13 @@
 [Answer]: A
 
 - A. `AMADEUS_HARNESS_TYPE` env override を新設し、設定時は自動検出より優先する(既存の `AMADEUS_HARNESS_DIR` と同じ env override パターン)。これにより `unknown`/補助シグナルを `manual`(または明示的なハーネス種別)へ上書きできる。CLI フラグ追加は影響範囲が広いため env override を第一手とし、CLI フラグは将来 enhancement とする
+- X. Other
+
+## Q5. `harnessDir()`が実検出`.claude`とfallback `.claude`を区別できない問題は?
+
+[Answer]: A — 既存`harnessDir(): string`の互換性を保ち、内部resolverが`env / script-path / cwd-probe / fallback`を保持する。`detectHarnessType()`はsource=fallbackだけを`unknown`にする（ユーザー承認: 2026-07-24T17:28:19Z）
+
+- A. Application Designへ戻り、内部provenance-aware resolverを設計する。公開`harnessDir(): string`は互換維持する
+- B. AC-3cを変更し、fallbackも`claude-code`として扱う
+- C. `CLAUDECODE=1`がない`.claude`を常に`unknown`とする
 - X. Other

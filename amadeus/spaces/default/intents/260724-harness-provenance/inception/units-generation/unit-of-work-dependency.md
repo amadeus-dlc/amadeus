@@ -4,7 +4,7 @@
 
 ## 依存トポロジー(what can depend on what)
 
-U2(Harness Recorder)は U1(Harness Detector)が公開する `detectHarnessType(): HarnessType` に依存する。U1 は他ユニットに依存しない(既存 `amadeus-lib.ts` シンボルのみ)。したがって依存 DAG は `U1 → U2` の単純な直列。この直列依存は services.md が示す唯一の内部呼出関係(`handleIntentBirthStateBuild → detectHarnessType`、同一プロセス内同期呼出、独立サービスは N/A)をユニット依存へ写したものである。
+canonical unit name `harness-provenance`（表示名: Harness Provenance、ID: U1）だけで構成し、他ユニットへの依存はない。components.md と component-methods.md が定義する Harness Recorder と Harness Detector は、同一 deployable Unit 内で `handleIntentBirthStateBuild() → detectHarnessType(): HarnessType → resolveHarnessDir()` の呼出方向を持つ内部契約として連携する。services.md が示す同一プロセス内同期呼出(独立サービスは N/A)もユニット間 edge ではなく内部契約として保持する。
 
 本ステージは実装順序・critical path を決めない(それは delivery-planning = stage 2.8 の責務)。以下は「何が何に依存しうるか」の記述に留める。
 
@@ -12,24 +12,25 @@ U2(Harness Recorder)は U1(Harness Detector)が公開する `detectHarnessType()
 
 ```yaml
 units:
-  - name: harness-detector
+  - name: harness-provenance
     depends_on: []
-  - name: harness-recorder
-    depends_on: [harness-detector]
 ```
 
 ## 依存図
 
 ```
-U1: harness-detector   [amadeus-lib.ts: detectHarnessType/HarnessType/HARNESS_DIR_TO_TYPE]
-        |
-        | (detectHarnessType() を公開 API 契約として提供)
-        v
-U2: harness-recorder   [amadeus-utility.ts: handleIntentBirthStateBuild が呼出 + docs + dist]
+harness-provenance (U1 / Harness Provenance)
+├── amadeus-lib.ts: HarnessDirResolution / resolver / HarnessType / canonical map / detector
+├── amadeus-utility.ts: handleIntentBirthStateBuild() から呼出
+├── tests: resolver unit + 6 distribution-path integration + memory-template regression
+├── docs/reference/: AMADEUS_HARNESS_TYPE
+└── dist/self-install: package + promote
 ```
 
-## ファイル交差判定(cid:code-generation:c6)
+## 単一ユニット化の根拠
 
-- U1 の編集正本: `packages/framework/core/tools/amadeus-lib.ts`、`tests/unit/`
-- U2 の編集正本: `packages/framework/core/tools/amadeus-utility.ts`、`docs/reference/`、`tests/integration/`、dist/self-install 再生成面
-- **交差なし**(正本ファイルが異なる)。ただし U1→U2 の型契約依存があるため、U2 は U1 の `detectHarnessType()` が着地してから実装するのが自然(直列)。dist 再生成は U2 が両ユニット分をまとめて行う(U1 単独では dist を再生成せず、U2 で `amadeus-lib.ts` + `amadeus-utility.ts` の両変更を1回の `bun scripts/package.ts` で反映)
+- requirements.md の FR-1〜FR-4 と stories.md の利用シナリオは、検出から state 記録までを一つの利用者価値としている
+- unit 内の正本ファイルは複数だが、いずれか片方だけでは deployable な利用シナリオを満たさない
+- decisions.md の単一パス設計と component-dependency.md の同期呼出契約を維持しつつ、1 Unit = 1 Bolt = 1 PR の境界を成立させる
+- decisions.md ADR-5のprovenance resolverとAC-3dの配布時呼出経路は、DetectorとRecorderを跨ぐ同一受入境界であり、別Unitへ分けない
+- dist 再生成は正本変更をまとめて1回実行し、全ハーネス配布面のドリフトを同じ Bolt で検査する

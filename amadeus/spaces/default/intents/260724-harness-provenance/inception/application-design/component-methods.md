@@ -24,27 +24,62 @@ state フィールド `Harness` が取りうる値の全体集合(7値)。requir
 ### `HARNESS_DIR_TO_TYPE`(定数)
 
 ```typescript
-const HARNESS_DIR_TO_TYPE: Record<string, HarnessType> = {
+export const HARNESS_DIR_TO_TYPE = {
   ".claude": "claude-code",
   ".codex": "codex",
   ".cursor": "cursor",
   ".opencode": "opencode",
   ".kiro": "kiro",
-};
+} as const satisfies Record<
+  string,
+  Exclude<HarnessType, "unknown" | "manual">
+>;
+
+type SupportedHarnessDir = keyof typeof HARNESS_DIR_TO_TYPE;
 ```
 
-`KNOWN_HARNESS_DIRS`(`amadeus-lib.ts:158`)と 1:1 対応。canonical な1定義から導出(construction phase guardrail: 手書き重複を避ける)。
+Issue #1452 が記録対象とする5種のdot-dirとハーネス種別については、このmapping自体を閉じたcanonical定義とする。`SupportedHarnessDir`はmappingのkeyから導出し、同じ5要素の配列・unionを別途手書きしない。既存`KNOWN_HARNESS_DIRS`(`amadeus-lib.ts:158`)はCWD probeの候補順を表す既存実装であり、存在するハーネス種別のsource of truthとは扱わない(architecture.mdの実測注意に整合)。将来`KNOWN_HARNESS_DIRS`へ未知dot-dirが追加されても、mappingへ明示追加されるまでは`unknown`となる。constructionではmappingのkey/value全件と本要件の5対象を直接テストし、意図しない欠落・追加を検出する。
+
+### `HarnessDirResolution` と `resolveHarnessDir()`
+
+```typescript
+type HarnessDirSource = "env" | "script-path" | "cwd-probe" | "fallback";
+
+type HarnessDirResolution = Readonly<{
+  dir: string;
+  source: HarnessDirSource;
+}>;
+```
+
+- **目的**: 既存`harnessDir(): string`が失う検出元を内部で保持し、実検出された`.claude`と最終fallback `.claude`を区別する
+- **配置**: `amadeus-lib.ts`内のprivate seam。新規公開APIは増やさない
+- **解決順序**:
+  1. `AMADEUS_HARNESS_DIR`がtruthyなら `{ dir: value, source: "env" }`
+  2. module pathのgrandparentがdot-dirなら `{ dir: candidate, source: "script-path" }`
+  3. CWDに`KNOWN_HARNESS_DIRS`の候補があれば `{ dir: candidate, source: "cwd-probe" }`
+  4. いずれもなければ `{ dir: ".claude", source: "fallback" }`
+- **互換性**: 既存`harnessDir()`は`resolveHarnessDir().dir`だけを返すため、公開署名と文字列結果は不変。envはキャッシュより前に毎回評価し、非envのresolutionだけをprocess内cacheする
 
 ### `detectHarnessType(): HarnessType`
 
 - **目的**: FR-2/FR-3/FR-1 AC-1d の検出優先順位を実装
 - **署名**: `export function detectHarnessType(): HarnessType`
 - **ロジック(高レベル、詳細は functional-design)**:
-  1. `AMADEUS_HARNESS_TYPE` env override があれば、それを `HarnessType` として検証(parse-dont-validate: 既知7値のいずれかか)してから返す(FR-1 AC-1d の manual 上書き経路。override が `manual` を含む任意の既知値を取りうる。未知値の扱い — 拒否して `unknown` へ落とすか throw か — は functional-design で確定)
+  1. `AMADEUS_HARNESS_TYPE` env override が存在すれば、それを既知7値として厳密にparseする。既知値なら返し、不正値・空文字は`unknown`を返して自動検出へフォールスルーしない(FR-1 AC-1d、functional-designでユーザー確認済み)
   2. `process.env.CLAUDECODE === "1"` → `"claude-code"`(FR-2 一次手段)
-  3. `harnessDir()`(`:187-193`)の解決結果(dot-dir 文字列)を `HARNESS_DIR_TO_TYPE` で引く。ヒットすれば対応 type(FR-3 補助シグナル)。**`harnessDir()` を呼ぶ**のは、これが `AMADEUS_HARNESS_DIR` env override(FR-3 AC-3b)を最優先で尊重する export ラッパー(`:189-193`、`process.env.AMADEUS_HARNESS_DIR` を先頭で読む)であり、内部関数 `deriveHarnessDir()`(`:168-183`)は env override を読まないためである(reviewer iteration 1 の是正 — AC-3b を満たすには `harnessDir()` 経由が必須)
-  4. いずれも該当しなければ `"unknown"`(FR-3 AC-3c フォールバック)
-- **AC-3d 申し送り**: `harnessDir()` が内部で委譲する `deriveHarnessDir()`(`:168-183`)の CWD プローブ段が dev repo で誤検出しうる点は functional-design で呼び出し文脈を確認
+  3. `resolveHarnessDir()`を呼ぶ。`source === "fallback"`なら`unknown`を返す(FR-3 AC-3c)
+  4. `source !== "fallback"`なら`dir`を`HARNESS_DIR_TO_TYPE`で引く。既知dot-dirなら対応type、open-setの未知dot-dirなら`unknown`を返す(FR-3補助シグナル)
+- **AC-3b**: `resolveHarnessDir()`自身が`AMADEUS_HARNESS_DIR`をcall-timeで最優先するため維持
+- **AC-3d**: 下記「intent birth呼出文脈の証明」のとおり、通常のbirth経路は明示env overrideまたはscript-pathで必ず解決し、CWD probeへ到達しない。CWD probeはcore sourceを配布ツリー外から直接実行する開発時経路にのみ残る補助シグナルであり、`source: "cwd-probe"`として識別可能かつmanual overrideで常時上書き可能
+
+### intent birth呼出文脈の証明(AC-3d)
+
+1. `birthPrintDirective()`は`packages/framework/core/tools/amadeus-orchestrate.ts:660`で、既存`harnessDir()`が解決したdot-dir配下の`tools/amadeus-utility.ts`を起動コマンドに埋め込む。
+2. Claude/Codex/Cursor/OpenCode/Kiro/Kiro IDEの全6 manifestは、共通`core/tools`を各ハーネスdot-dirの`tools`へ投影する(`packages/framework/harness/*/manifest.ts`の`coreDirs: { src: "tools", dst: "tools" }`)。Kiro CLIとKiro IDEは同じ`.kiro`/`kiro`記録値を共有する。
+3. 投影された`amadeus-utility.ts`は同じ`tools`ディレクトリの`./amadeus-lib.ts`をimportする。そのためintent birth中の`amadeus-lib.ts`のscript pathは常に`<project>/<dot-dir>/tools/amadeus-lib.ts`となり、grandparentは対象dot-dirである。
+4. よって、`AMADEUS_HARNESS_DIR`が明示設定されていれば`env`で先に確定し、未設定なら`script-path`で確定する。どちらもCWD probeより前であり、通常のintent birthではCWD probeへ到達しない。
+
+constructionの必須テストでは、6配布形態の投影済み`tools/amadeus-utility.ts`経由で、明示envなしのresolution sourceが`script-path`となることを検証する。別途、配布ツリー外のcore source直接実行でのみ`cwd-probe`/`fallback`分岐を単体テストし、通常birth経路との境界を固定する。
 
 ## Harness Recorder(`amadeus-utility.ts`)
 

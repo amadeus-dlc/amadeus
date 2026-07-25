@@ -7,7 +7,7 @@
 ## ADR-1: 検出関数を core 中立層(`amadeus-lib.ts`)へ配置する
 
 - **Context**: ハーネス検出は全ハーネス(claude-code/codex/cursor/opencode/kiro)で共通して必要。team-practices.md の cid:code-generation:harness-tools-placement は「harness 専用ツールを `packages/framework/core/tools/` に置かない(全ハーネス dist へ漏出するため)」と定めるが、本検出関数は harness 専用ではなく全ハーネス共通の汎用機能である。
-- **Decision**: `detectHarnessType()` と `HARNESS_DIR_TO_TYPE` を `amadeus-lib.ts`(既存 `deriveHarnessDir()` `:168-183`・`KNOWN_HARNESS_DIRS` `:158` と同じファイル・同じ core 中立層)へ配置する。
+- **Decision**: `detectHarnessType()` と `HARNESS_DIR_TO_TYPE` を `amadeus-lib.ts`(既存 `deriveHarnessDir()` `:168-183`・`KNOWN_HARNESS_DIRS` `:158` と同じファイル・同じ core 中立層)へ配置する。`HARNESS_DIR_TO_TYPE`自体をIssue #1452の記録対象に関するcanonicalな閉集合とし、そのkeyから`SupportedHarnessDir`を導出する。`KNOWN_HARNESS_DIRS`はCWD probe候補順としてのみ再利用し、存在ハーネスのsource of truthとは扱わない。
 - **Consequences**: `bun scripts/package.ts` で全 dist ツリーへ投影される(既存 `deriveHarnessDir()` と同じ扱い)。core 中立層の汎用関数として一貫。セキュリティ/コンプライアンス影響: なし(env 読取と文字列マッピングのみ、外部 I/O なし)。
 - **Alternatives Rejected**:
   - harness 別表層(`packages/framework/harness/<name>/tools/`)へ各ハーネス専用の検出関数を置く案 → 5ハーネス分の重複コードとなり、canonical な1定義原則(construction guardrail)に反する。却下。
@@ -35,3 +35,12 @@
 - **Consequences**: 変更面が最小(surgical、team.md P5)。既存の dist/self-install ドリフトガードで整合が担保される。新規パッケージの lint/typecheck 配線(Mandated)は不要。
 - **Alternatives Rejected**:
   - 独立した `amadeus-harness.ts` モジュールを新設する案 → 数十行のために新規ファイル+全 dist ツリーへの投影+import 配線を増やすのは過剰。既存ファイルへの凝集追加が適切。却下。
+
+## ADR-5: dot-dir解決結果に内部provenanceを保持する
+
+- **Context**: 実コード照合で、既存`deriveHarnessDir()`は検出不能時にも`.claude`を返し、公開`harnessDir(): string`は「実際に検出した`.claude`」と「最終fallback `.claude`」を区別できないことが判明した。文字列だけを`HARNESS_DIR_TO_TYPE`へ渡す旧設計では、requirements.md AC-3cが要求するfallback=`unknown`を満たせない。
+- **Decision**: `amadeus-lib.ts`内部に`HarnessDirResolution { dir, source }`と`resolveHarnessDir()`を導入し、sourceを`env | script-path | cwd-probe | fallback`で保持する。既存`harnessDir(): string`は`resolveHarnessDir().dir`を返して互換維持する。`detectHarnessType()`はsource=`fallback`だけを`unknown`とし、それ以外をdot-dir mapへ渡す。
+- **Consequences**: AC-3bのenv override、AC-3cのunknown、AC-3dのCWD補助シグナルを同じresolverから矛盾なく導出できる。全6 harness manifestが`core/tools`を`<dot-dir>/tools`へ投影し、birthはその`amadeus-utility.ts`から同階層の`amadeus-lib.ts`をimportするため、通常birthは明示envまたはscript-pathで必ず確定しCWD probeへ到達しない。既存の公開API・文字列結果・call-time env優先・process cacheは維持する。内部型と分岐テストは増えるが、新規モジュール・外部依存は不要。
+- **Alternatives Rejected**:
+  - fallback `.claude`も`claude-code`とみなす案 → AC-3cを破り、検出不能をClaude Codeとして誤記録するため却下。
+  - `CLAUDECODE=1`がない`.claude`を常に`unknown`とする案 → env markerのない正当なClaudeインストールや`AMADEUS_HARNESS_DIR=.claude`まで誤判定するため却下。

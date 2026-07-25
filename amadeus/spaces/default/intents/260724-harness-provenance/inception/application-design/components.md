@@ -10,10 +10,15 @@ requirements.md の FR-1〜FR-3(選挙 E-HPFR3 裁定反映)を、architecture.m
 
 - **配置**: `packages/framework/core/tools/amadeus-lib.ts`(既存 `harnessDir()` `:187-193`・内部 `deriveHarnessDir()` `:168-183`・`KNOWN_HARNESS_DIRS` `:158` と同じ core 中立層)
 - **責務**: 実行中の AI ハーネス種別を検出し、判別ユニオン `HarnessType`(7値、`manual` を含む)を返す
+- **内部設計**:
+  - `HarnessDirResolution = { dir: string; source: "env" | "script-path" | "cwd-probe" | "fallback" }`: dot-dirだけでなく検出元を保持する
+  - `resolveHarnessDir(): HarnessDirResolution`: `AMADEUS_HARNESS_DIR`をcall-timeで優先し、既存`deriveHarnessDir()`のscript-path/CWD/fallback ladderをprovenance付きで返す。`source=fallback`と実検出された`.claude`を区別する
 - **公開 API**:
-  - `HARNESS_DIR_TO_TYPE`(定数): dot-dir → harness type のマッピング(`.claude`→`claude-code`、`.codex`→`codex`、`.cursor`→`cursor`、`.opencode`→`opencode`、`.kiro`→`kiro`)
-  - `detectHarnessType(): HarnessType`(関数): `AMADEUS_HARNESS_TYPE` env override があれば最優先(FR-1 AC-1d、`manual` 含む)。次に FR-2(`process.env.CLAUDECODE === "1"` → `claude-code`)、次に FR-3(`harnessDir()` `:187-193` が返す dot-dir → `HARNESS_DIR_TO_TYPE`。`harnessDir()` を呼ぶのは `AMADEUS_HARNESS_DIR` override を尊重する export ラッパーだから — AC-3b)、最後に `unknown` フォールバック
+  - `HARNESS_DIR_TO_TYPE`(定数): Issue #1452の記録対象を定めるcanonicalなdot-dir → harness typeマッピング(`.claude`→`claude-code`、`.codex`→`codex`、`.cursor`→`cursor`、`.opencode`→`opencode`、`.kiro`→`kiro`)。`KNOWN_HARNESS_DIRS`はCWD probe候補順であり、この型集合のsource of truthにはしない
+  - `harnessDir(): string`(既存): 戻り値・env優先・キャッシュ挙動を維持し、内部で`resolveHarnessDir().dir`を返す
+  - `detectHarnessType(): HarnessType`(新設): `AMADEUS_HARNESS_TYPE` env override があれば最優先(FR-1 AC-1d、`manual` 含む。不正値は`unknown`)。次に FR-2(`process.env.CLAUDECODE === "1"` → `claude-code`)、次に `resolveHarnessDir()` の `source` を確認し、`fallback`なら`unknown`、それ以外はdot-dirを`HARNESS_DIR_TO_TYPE`へ写像する
 - **境界**: 検出のみ。state.md への書込は行わない(Harness Recorder が担う)。stories.md の利用シナリオ「実行中のハーネス種別が自動記録されてほしい」の「検出」部分を担当
+- **AC-3d不変条件**: 通常のintent birthは全6 harness manifestが投影する`<dot-dir>/tools/amadeus-utility.ts`から同階層の`amadeus-lib.ts`を読むため、明示env overrideがなければscript-pathで必ず解決する。したがって通常birthはCWD probeへ到達しない(Kiro CLI/Kiro IDEは同じ`.kiro`を共有)
 
 ## Component 2: Harness Recorder(`amadeus-utility.ts` への追加)
 
@@ -28,7 +33,7 @@ requirements.md の FR-1〜FR-3(選挙 E-HPFR3 裁定反映)を、architecture.m
 - **責務**: `Harness` フィールドの読み書き(FR-1 AC-1c)。新規実装は不要 — 既存の scalar フィールドヘルパーをそのまま再利用(team-practices.md の Decided: scalar は `getField`/`setOrInsertField` で十分、新規 Result パーサ不要)
 - **境界**: 既存 API の再利用のみ
 
-## Review — Iteration 1
+## Historical Review — Iteration 1 (provenance是正前)
 
 - **Verdict:** NOT-READY
 - **Reviewer:** amadeus-architecture-reviewer-agent
@@ -45,7 +50,7 @@ requirements.md の FR-1〜FR-3(選挙 E-HPFR3 裁定反映)を、architecture.m
 - [Minor] 各ADRのAlternatives Rejectedが1件のみ(stage fileの「唯一実行可能案なら省略可」に照らし実質逸脱ではないが、一言明示推奨)。
 - [参考] 循環依存の主張・新設vs再利用判定・その他file:line引用は実在・意味論一致で正しい。
 
-## Review — Iteration 2
+## Historical Review — Iteration 2 (provenance是正前)
 
 - **Verdict:** READY
 - **Reviewer:** amadeus-architecture-reviewer-agent
@@ -60,3 +65,32 @@ requirements.md の FR-1〜FR-3(選挙 E-HPFR3 裁定反映)を、architecture.m
 - [解消確認] harnessDir()(:187-193 exportラッパー、env override優先)/deriveHarnessDir()(:168-183 内部)の使い分けを全設計ファイルで統一。
 - [解消確認] HarnessType型を7値(manual含む)へ拡張、FR-1と1:1一致、detectHarnessTypeの6値/7値非対称を明記。
 - [参考] キャッシュ_harnessDirはenvをキャッシュ判定より先に読むためbirth時1回呼出で問題なし。
+
+## Review — Iteration 1
+
+- **Verdict:** NOT-READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-07-24T17:35:14Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+resolver抽出はharnessDir互換性と非循環依存を保ち、AC-3b/3cを実装可能にするが、AC-3dの必須確認を別の緩和策へ無申告で置換している。
+
+### Findings
+
+- [Major] requirements.md:38 のAC-3dは、intent birthの呼出文脈でscript-path解決が常に成立しCWD probeへ到達しないことをdesign段階で確認するよう要求するが、component-methods.md:68はCWD由来を観測可能にしてmanual override可能とするだけで、到達不能性を確認していない。要件どおり呼出文脈を立証するか、CWD probe到達を許容する要件変更を承認系譜付きで明記する必要がある。
+- [Minor] component-methods.md:27-36はHARNESS_DIR_TO_TYPEを手書きしているのに「KNOWN_HARNESS_DIRSからcanonicalな1定義として導出」と記述し、architecture.md:39の「KNOWN_HARNESS_DIRSは存在ハーネスのsource of truthではない」という実測注意も未解決である。型で全要素対応を強制する導出方法または別の正準定義を明記しないと、将来の追加時にharnessDirとtype検出がドリフトする。
+
+## Review — Iteration 2
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-07-24T17:40:26Z
+- **Iteration:** 2
+- **Scope decision:** none
+
+Iteration 1の2件は解消され、通常intent birthでCWD probeへ到達しない根拠と検証境界が明示され、canonical mappingもKNOWN_HARNESS_DIRSから責務分離されており、harnessDir互換性・上流要件・非循環依存・成果物間整合を満たす。
+
+### Findings
+
+- None
