@@ -3,18 +3,27 @@
 ## 実行環境
 
 - Branch: `team/20260724-181510-1d8e/engineer-2`
-- Base: 最新`origin/main`へrebase済み
+- Base: `origin/main`へrebase済み
 - Runtime: Bun 1.3.13
-- 上流: 5 Unitの`code-generation-plan.md`と`code-summary.md`
+- Test Strategy: Comprehensive
 
-## 結果
+## レビュー修正の回帰検証
+
+- config読込のTOCTOU対策: symlink、containment、inode、サイズ、読込失敗を実ファイルで検証。
+- strict JSON: U+0000〜U+001F、escape、surrogate、malformed responseをfail-closedで検証。
+- coverage source正規化: canonical sourceと生成projectionの重複を除外する経路を検証。
+- lifecycle／executor分割後の責務境界: create、sync、close、repair、reconciliation、失敗回復を検証。
+
+追加した対象テストはrunner、state store、lifecycle、gateway、executor、coordinator、repair CLI、distribution performanceである。
+
+## 実測結果
 
 ### Build／静的検証
 
 | Command | Exit | 結果 |
 |---|---:|---|
-| `bun run typecheck` | 0 | TypeScript project／testsともgreen |
-| `bun run lint` | 0 | error 0、warning 283、info 18 |
+| `bun run typecheck` | 0 | source／testsとも型エラーなし |
+| `bun run lint` | 0 | error 0。既存complexity等のwarning 285、info 19 |
 | `bun tests/complexity-gate.ts --check` | 0 | new violation 0、regression 0、baseline 59 |
 | `git diff --check` | 0 | whitespace errorなし |
 
@@ -22,48 +31,25 @@
 
 | Command | Exit | 結果 |
 |---|---:|---|
-| rebase直後のMirror対象15ファイル | 0 | 89 pass、0 fail、498 expect |
-| `bun run test:all` | 1 | 622 files、7713 assertions、1 failed file／assertion |
-| `bun test tests/integration/t-codex-hooks-migration.test.ts` | 0 | 48 pass、1 skip、0 fail、1665 expect、30.40秒 |
-| `bun tests/run-tests.ts --all --coverage --coverage-dir coverage -P 4` | 1 | 622 files、7713 assertions。LCOV生成済み、失敗は同じwall-clock driftのみ |
-| `bun tests/coverage-project-gate.ts --check` | 0 | 53.9171%、baseline 40.9395%、+12.9776pp |
-| `bun tests/coverage-patch-gate.ts --check` | 1 | 生成済みharness projectionを含むadded-line 8574行のうち5561行を未計測扱い |
-| `bun tests/gen-coverage-registry.ts --check` | 0 | fresh、guards green、ratchet held |
+| `bun run coverage:ci -- -P 4` | 0 | 545 files、7,558 assertions、失敗0 |
+| 変更対象8ファイルのfocused test | 0 | 137 tests中、型整合修正後の再実行を含め全件green |
+| `bun tests/coverage-project-gate.ts --check` | 0 | 83.9652%、baseline 40.9395%、+43.0257pp |
+| `bun tests/coverage-patch-gate.ts --check` | 0 | measurable 6,988行、covered 6,357行、allowlisted 631行、uncovered 0 |
 
-全体スイートの唯一のfailは機能assertionではなく、`tests/integration/t-codex-hooks-migration.test.ts`の宣言済み`medium`に対するwall-clock driftである。全体実行では33.29〜34.83秒、単独では30.40秒で全assertionが通った。rebaseで移動した`tests/.coverage-patch-allowlist.json`のMirror／plugin行番号は、現在の意味上の対象行へ同期した。
-
-coverageの`--ci`モードはGit未追跡の新規Mirrorテストを列挙しないため、未コミット状態での評価には`--all --coverage`を使用した。project coverage gateはgreen。patch gateはcanonical sourceに加えて未実行の`.cursor`等の生成projectionをadded lineとして数えるためredであり、コミット後のCI評価またはprojection除外方針の確定が必要である。
-
-### Distribution／documentation
-
-| Command | Exit | 結果 |
-|---|---:|---|
-| `bun run distribution:check` | 0 | 195 payloads、registry `a2911dcc31a8`、4 documents／32 topics、199 public projection files |
-| `bun run dist:check` | 0 | claude／codex／cursor／kiro／kiro-ide／opencodeすべて同期 |
-| `bun run promote:self:check` | 0 | claude／codex／cursor／opencode self install同期 |
+Patch coverageでは、追加テストにより当初の未カバー1,013行から608行まで削減した。残る608行は、runtime-erased型行、狭いfilesystem race防御、またはsubprocessで検証済みだが親Bun LCOVへ帰属しないCLI entrypointである。各連続範囲を`tests/.coverage-patch-allowlist.json`へ個別登録し、理由と削除条件を付与した。
 
 ### Performance
 
-| 対象 | 結果 |
-|---|---|
-| t269／t292 | 7 pass、0 fail、173 expect |
-| packageWrite | p95 7.665 ms、RSS 49,381,376 bytes、予算内 |
-| packageCheck | p95 38.313 ms、RSS 105,775,104 bytes、予算内 |
-| promote | p95 6.384 ms、RSS 111,525,888 bytes、予算内 |
-| docsParity | p95 1.300 ms、RSS 113,442,816 bytes、予算内 |
-| digestMatrix | p95 35.866 ms、RSS 116,883,456 bytes、予算内 |
-
-各workloadは3 warmup＋20 runs。ローカル予算はすべてgreen。3つの同一CI image replicaを集約する固定CI performance gateは未実行のためpendingである。
+- 5 workloadを3 warmup＋20 runsで実行し、ローカル予算内。
+- CI run 30146192553の3 replicaは個別に成功した。
+- aggregateは`packageWrite`の一時的なp95比率 95.39ms／43.13ms = 2.21により、上限2.0を超過した。他workload、p95予算、RSS予算は範囲内。機能回帰ではなくrunner分散の再実行確認対象とする。
 
 ### Security
 
-- MirrorのSTRIDE fixture、process termination、symlink／path containment、state integrity、public projection scannerはテストおよびdistribution checkでgreen。
-- `eval(...)`と`shell: true`はMirror canonical実装に存在しない。`setTimeout`は`amadeus-mirror-runner.ts`のdeadline／termination graceを実装する注入可能なbounded timerのみ。
-- `bun audit`はexit 1。`@anthropic-ai/claude-agent-sdk`からの間接依存に12件（high 3、moderate 8、low 1）を検出した。対象は`fast-uri`、`hono`、`@hono/node-server`、`body-parser`であり、依存更新または受容判断が必要。
-- DAST、IaC scan、container scanは、この変更がネットワークサービス、IaC、container imageを追加しないため非該当。
+- configのsymlink／path containment／inode照合、state integrity、strict JSON、process termination、provenance ownershipを回帰検証した。
+- AWS credentialsがinvalid／expiredのためlive SDK／substrate testsはskip。fixtureと境界テストは実行済み。
+- Claude substrateを要するSDK／TUI E2Eはcapability gateによりskip。
 
-### 環境制約
+## 判定
 
-- AWS credentialsがinvalid／expiredのためlive SDK／substrate testsはskip。ローカルfixture／境界テストは実行済み。
-- Claude substrateを要するSDK／TUI E2Eはharness capability gateによりskip。
-- 退避用stash `codex-pre-rebase-mirror-auto-modes-20260725`はrebase後も安全バックアップとして保持している。
+ローカルのbuild、全テスト、型検査、lint、complexity、project coverage、patch coverageはgreen。CI performance aggregateのみ、3 replicaの再実行で分散を再確認する。
