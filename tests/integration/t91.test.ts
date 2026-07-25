@@ -119,6 +119,10 @@ function makeProject(): string {
     join(proj, ".claude", "tools", "amadeus-lib.ts"),
   );
   copyFileSync(
+    join(SRC_TOOLS, "amadeus-harness.ts"),
+    join(proj, ".claude", "tools", "amadeus-harness.ts"),
+  );
+  copyFileSync(
     join(SRC_TOOLS, "amadeus-audit.ts"),
     join(proj, ".claude", "tools", "amadeus-audit.ts"),
   );

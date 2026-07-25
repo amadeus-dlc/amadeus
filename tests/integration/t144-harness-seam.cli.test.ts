@@ -194,4 +194,8 @@ describe("t144 codex harness seam — harnessDir + resolveProjectDir ladder ×3 
       }),
     ).toBe("custom-rules");
   });
+
+  test("9: fixture surfaces subprocess failures instead of returning empty output", () => {
+    expect(() => evalLib(CLAUDE_LIB, "missingHarnessFixtureSymbol()")).toThrow();
+  });
 });

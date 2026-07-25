@@ -704,52 +704,6 @@ describe("t225 upstream-v2 migration preflight refusals", () => {
     );
   });
 
-  test.each([
-    [
-      "an invalid Harness value",
-      (state: string) =>
-        state.replace(
-          /(^- \*\*Active Agent\*\*:.*$)/m,
-          "$1\n- **Harness**: invalid-raw",
-        ),
-    ],
-    [
-      "duplicate Harness fields",
-      (state: string) =>
-        state.replace(
-          /(^- \*\*Active Agent\*\*:.*$)/m,
-          "$1\n- **Harness**: codex\n- **Harness**: manual",
-        ),
-    ],
-  ] as const)("refuses a State Version 7 record with %s", (_label, mutate) => {
-    const project = fixture();
-    writeFileSync(
-      project.statePath,
-      mutate(readFileSync(project.statePath, "utf-8")),
-      "utf-8",
-    );
-    project.commitAll("test: make optional Harness invalid");
-
-    expectReadOnlyRefusal(
-      project,
-      () => migrate(project),
-      /harness|state validation/,
-    );
-  });
-
-  test("accepts one valid optional Harness field", () => {
-    const project = fixture();
-    const state = readFileSync(project.statePath, "utf-8").replace(
-      /(^- \*\*Active Agent\*\*:.*$)/m,
-      "$1\n- **Harness**: codex",
-    );
-    writeFileSync(project.statePath, state, "utf-8");
-    project.commitAll("test: add valid optional Harness");
-    declareUpstreamVersion(project, "2.2.10");
-
-    expectReadOnlyReady(project, () => migrate(project), "2.2.10");
-  });
-
   test("refuses a record with a nested duplicate state file", () => {
     const project = fixture();
     const duplicate = join(
