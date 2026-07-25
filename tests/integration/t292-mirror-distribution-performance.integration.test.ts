@@ -59,7 +59,9 @@ describe("t292 distribution performance protocol", () => {
       expect(validateMirrorDocs(process.cwd())).toEqual([]);
       expect(scanPublicProjections(process.cwd())).toEqual([]);
     }
-    expect(performance.now() - started).toBeLessThan(4_000);
+    // The three-replica benchmark is authoritative; this only catches a
+    // catastrophic local regression without failing on a loaded shared runner.
+    expect(performance.now() - started).toBeLessThan(10_000);
   });
 
   test("requires three same-image complete replicas and enforces dispersion and budgets", () => {
