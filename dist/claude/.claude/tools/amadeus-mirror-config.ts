@@ -205,6 +205,7 @@ function readFailure(
 export function readMirrorConfigLayers(
   projectDir: string,
   explicitIntentDir?: string,
+  explicitSpace?: string,
 ): MirrorConfigReadOutcome {
   const root = workspaceRoot(projectDir);
   let rootReal: string | null;
@@ -213,7 +214,7 @@ export function readMirrorConfigLayers(
   } catch {
     rootReal = null;
   }
-  const space = activeSpace(projectDir);
+  const space = explicitSpace ?? activeSpace(projectDir);
   const intent = activeIntent(projectDir, space, explicitIntentDir);
 
   const candidates: { layer: ConfigLayer; abs: string }[] = [
@@ -337,8 +338,9 @@ export function parseMirrorConfigLayers(
 export function resolveMirrorConfig(
   projectDir: string,
   explicitIntentDir?: string,
+  explicitSpace?: string,
 ): MirrorConfigOutcome {
-  const read = readMirrorConfigLayers(projectDir, explicitIntentDir);
+  const read = readMirrorConfigLayers(projectDir, explicitIntentDir, explicitSpace);
   if (read.kind === "failure") return { kind: "invalid", issues: read.issues };
   return parseMirrorConfigLayers(read.layers);
 }

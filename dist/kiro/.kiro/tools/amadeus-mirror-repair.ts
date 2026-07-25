@@ -8,6 +8,7 @@
 
 import { createHash } from "node:crypto";
 import type {
+  MirrorProvenanceV2,
   MirrorRepairChallenge,
   MirrorRepairProof,
   MirrorStateSnapshot,
@@ -50,6 +51,26 @@ export function encodeProvenanceV1(input: ProvenanceV1Input): string {
 
 export function provenanceDigest(input: ProvenanceV1Input): string {
   return sha256Hex(encodeProvenanceV1(input));
+}
+
+// Canonical MirrorProvenanceV2 bytes. V2 is intentionally separate from V1:
+// existing V1 bytes remain stable/readable, while every new repair relink binds
+// the inspection-clock createdAt in addition to the marker create identity.
+export function encodeProvenanceV2(provenance: MirrorProvenanceV2): string {
+  return JSON.stringify({
+    schema: 2,
+    intentUuid: provenance.createIdentity.intentUuid,
+    intentDir: provenance.createIdentity.intentDir,
+    repository: provenance.createIdentity.repository.canonical,
+    issueNumber: provenance.issueNumber,
+    operationId: provenance.createIdentity.operationId,
+    preparedAt: provenance.createIdentity.preparedAt,
+    createdAt: provenance.createdAt,
+  });
+}
+
+export function provenanceDigestV2(provenance: MirrorProvenanceV2): string {
+  return sha256Hex(encodeProvenanceV2(provenance));
 }
 
 // Repair plan wire (security-design.md): closed union, all root keys required,

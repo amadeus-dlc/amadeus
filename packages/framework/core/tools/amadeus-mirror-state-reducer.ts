@@ -11,6 +11,7 @@ import type {
   MirrorCreateIdentity,
   MirrorEventIdentity,
   MirrorExpectedPrompt,
+  MirrorExecutionAuthorization,
   MirrorFailureClass,
   MirrorMutationEffect,
   MirrorOperationReceipt,
@@ -25,6 +26,8 @@ import {
   type ChallengeConsumeInput,
   consumeRepairChallenge,
   issueRepairChallenge,
+  provenanceDigestV2,
+  repairPlanDigest,
 } from "./amadeus-mirror-repair.ts";
 
 export const MAX_RECEIPTS = 1000;
@@ -38,6 +41,7 @@ export type MirrorTransition =
       operationId: string;
       preparedAt: string;
       create?: { intentDir: string; repository: RepositoryIdentity };
+      authorization?: MirrorExecutionAuthorization;
     }
   | { kind: "mark-attempted"; event: MirrorEventIdentity; attemptedAt: string }
   | { kind: "claim-create-attempt"; event: MirrorEventIdentity; attemptedAt: string }
@@ -56,6 +60,9 @@ export type MirrorTransition =
       operationId: string;
       preparedAt: string;
       completedAt: string;
+      consumeExpectedPrompt?: boolean;
+      expectedBindingId?: string;
+      answerId?: string;
     }
   | { kind: "set-warning"; event: MirrorEventIdentity; warning: MirrorWarning }
   | { kind: "set-global-warning"; warning: MirrorWarning }
@@ -218,6 +225,30 @@ function makeCreateIdentity(
   };
 }
 
+function promptApprovalMatches(
+  snapshot: MirrorStateSnapshot,
+  event: MirrorEventIdentity,
+  authorization: MirrorExecutionAuthorization | undefined,
+): boolean {
+  if (authorization?.kind !== "prompt-approved") return true;
+  const expected = snapshot.expectedPrompt;
+  return Boolean(
+    expected &&
+      eventEquals(expected.event, event) &&
+      expected.operation === event.operation &&
+      expected.bindingId === authorization.expectedBindingId &&
+      authorization.answerId.length > 0,
+  );
+}
+
+function consumeExpectedPrompt(
+  snapshot: MirrorStateSnapshot,
+): MirrorStateSnapshot {
+  const consumed = { ...snapshot };
+  delete (consumed as { expectedPrompt?: MirrorExpectedPrompt }).expectedPrompt;
+  return consumed;
+}
+
 function reducePrepare(
   snapshot: MirrorStateSnapshot,
   t: Extract<MirrorTransition, { kind: "prepare" }>,
@@ -234,7 +265,11 @@ function reducePrepare(
         "prepare: existing receipt has a different operation/event identity for this key",
       );
     }
-    return { kind: "unchanged" };
+    if (t.authorization?.kind !== "prompt-approved") return { kind: "unchanged" };
+    if (!promptApprovalMatches(snapshot, t.event, t.authorization)) {
+      return invalid("prepare: expected prompt does not match approval");
+    }
+    return changed(consumeExpectedPrompt(snapshot));
   }
   const base: {
     key: string;
@@ -243,6 +278,7 @@ function reducePrepare(
     status: "prepared";
     preparedAt: string;
     createIdentity?: MirrorCreateIdentity;
+    authorization?: MirrorExecutionAuthorization;
   } = {
     key,
     event: t.event,
@@ -255,7 +291,15 @@ function reducePrepare(
       return invalid("prepare: create receipt requires intentDir + repository");
     base.createIdentity = makeCreateIdentity(t.event, t.operationId, t.preparedAt, t.create);
   }
-  return changed(withReceipt(snapshot, key, base));
+  if (t.authorization) base.authorization = t.authorization;
+  let target = snapshot;
+  if (t.authorization?.kind === "prompt-approved") {
+    if (!promptApprovalMatches(snapshot, t.event, t.authorization)) {
+      return invalid("prepare: expected prompt does not match approval");
+    }
+    target = consumeExpectedPrompt(snapshot);
+  }
+  return changed(withReceipt(target, key, base));
 }
 
 function attempt(
@@ -365,7 +409,22 @@ function reduceSkip(
     preparedAt: t.preparedAt,
     completedAt: t.completedAt,
   };
-  return changed(withReceipt(snapshot, key, receipt));
+  let target = snapshot;
+  if (t.consumeExpectedPrompt) {
+    const expected = snapshot.expectedPrompt;
+    if (
+      !expected ||
+      !eventEquals(expected.event, t.event) ||
+      expected.operation !== t.event.operation ||
+      expected.bindingId !== t.expectedBindingId ||
+      !t.answerId
+    ) {
+      return invalid("skip: expected prompt does not match answer");
+    }
+    target = { ...snapshot };
+    delete (target as { expectedPrompt?: MirrorExpectedPrompt }).expectedPrompt;
+  }
+  return changed(withReceipt(target, key, receipt));
 }
 
 function reduceSetWarning(
@@ -508,6 +567,22 @@ function reduceRepairLink(
   t: Extract<MirrorTransition, { kind: "repair-link" }>,
   now: string,
 ): ReducerResult {
+  if (t.provenance.schema !== 2)
+    return invalid("repair-link: new relink requires provenance schema 2");
+  if (t.issueNumber !== t.provenance.issueNumber)
+    return invalid("repair-link: issue number does not match provenance");
+  const expectedPlan = repairPlanDigest({
+    kind: "relink",
+    intentUuid: t.provenance.createIdentity.intentUuid,
+    repository: t.provenance.createIdentity.repository.canonical,
+    operationId: t.provenance.createIdentity.operationId,
+    issueNumber: t.provenance.issueNumber,
+    provenanceDigest: provenanceDigestV2(t.provenance),
+  });
+  if (expectedPlan.kind === "invalid")
+    return { kind: "invalid", issues: expectedPlan.issues };
+  if (expectedPlan.digest !== t.consume.planDigest)
+    return invalid("repair-link: applied provenance does not match repair plan");
   const consumed = consumeRepairChallenge(snapshot, t.consume, now);
   if (consumed.kind === "invalid") return { kind: "invalid", issues: consumed.issues };
   return changed(
@@ -569,6 +644,18 @@ function reduceAbandon(
     return invalid("abandon-attempt: cannot abandon a succeeded receipt");
   if (TERMINAL_STATUSES.has(r.status))
     return invalid(`abandon-attempt: receipt already terminal '${r.status}'`);
+  if (r.operationId !== transition.consume.operationId)
+    return invalid("abandon-attempt: operation ID does not match receipt");
+  const expectedPlan = repairPlanDigest({
+    kind: "abandon",
+    intentUuid: transition.event.intentUuid,
+    repository: transition.consume.repository.canonical,
+    operationId: r.operationId,
+  });
+  if (expectedPlan.kind === "invalid")
+    return { kind: "invalid", issues: expectedPlan.issues };
+  if (expectedPlan.digest !== transition.consume.planDigest)
+    return invalid("abandon-attempt: receipt does not match repair plan");
   const consumed = consumeRepairChallenge(snapshot, transition.consume, now);
   return abandonWithConsume(key, r, transition, consumed);
 }

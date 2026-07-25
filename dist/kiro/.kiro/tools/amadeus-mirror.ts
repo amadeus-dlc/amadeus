@@ -22,6 +22,7 @@ import {
   recordDirMatches,
   setOrInsertField,
 } from "./amadeus-lib";
+import { renderMirrorLegacyHelp } from "./amadeus-mirror-presentation.ts";
 
 const TOOLS_DIR = dirname(fileURLToPath(import.meta.url));
 
@@ -37,11 +38,7 @@ export function projectDirFromToolsDir(
 
 const PROJECT_DIR = projectDirFromToolsDir(TOOLS_DIR);
 
-const USAGE =
-  [
-    "Usage: bun <harness-dir>/tools/amadeus-mirror.ts <create|sync|close|status> [--intent <dirName>]",
-    "Operational note: create/close are run by the conductor by team agreement; this is not mechanically enforced (see team.md).",
-  ].join("\n");
+const USAGE = renderMirrorLegacyHelp();
 
 // --- C1: args-parser -------------------------------------------------------
 

@@ -7,6 +7,7 @@
 // skills tree) — structural divergence that no declarative row can express.
 
 import type { OnboardingFills } from "./onboarding.ts";
+import type { MirrorSurfaceId } from "../packages/framework/harness/projections.ts";
 
 /** A single core dir projected from core/<src> into <harnessDir>/<dst>. */
 export type DirMap = { src: string; dst: string };
@@ -79,6 +80,8 @@ export type OnboardingSpec = {
 export type HarnessManifest = {
   /** Harness name; matches the dist/<name>/ and harness/<name>/ dir. */
   name: string;
+  /** Closed Intent Mirror distribution registry entry owned by this manifest. */
+  mirrorSurface: MirrorSurfaceId;
   /** The harness directory the token substitutes to (".claude" | ".kiro" | ".codex"). */
   harnessDir: string;
   /** core/<src> → <harnessDir>/<dst> projections. */

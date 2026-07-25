@@ -83,14 +83,26 @@ export type MirrorOperationReceipt = Readonly<{
   failureClass?: MirrorFailureClass;
   lastEffect?: MirrorMutationEffect;
   createIdentity?: MirrorCreateIdentity;
+  authorization?: MirrorExecutionAuthorization;
 }>;
 
-export type MirrorProvenance = Readonly<{
+export type MirrorProvenanceV1 = Readonly<{
   schema: 1;
   createIdentity: MirrorCreateIdentity;
   issueNumber: number;
   createdAt: string;
 }>;
+
+// V2 is emitted by guarded repair relink only. The state codec keeps V1
+// readable, while the repair plan digest binds V2's inspection-clock createdAt.
+export type MirrorProvenanceV2 = Readonly<{
+  schema: 2;
+  createIdentity: MirrorCreateIdentity;
+  issueNumber: number;
+  createdAt: string;
+}>;
+
+export type MirrorProvenance = MirrorProvenanceV1 | MirrorProvenanceV2;
 
 export type MirrorWarning = Readonly<{
   operationId: string | null;
@@ -104,6 +116,7 @@ export type MirrorWarning = Readonly<{
 }>;
 
 export type MirrorExpectedPrompt = Readonly<{
+  bindingId: string;
   event: MirrorEventIdentity;
   operation: MirrorOperation;
   issuedAt: string;
@@ -290,6 +303,7 @@ export type MirrorExecutionContext = Readonly<{
   now: () => string;
   newOperationId: () => string;
   gateway: MirrorGitHubGateway;
+  authorization: MirrorExecutionAuthorization;
 }>;
 
 export type MirrorSnapshot = Readonly<{
@@ -299,8 +313,41 @@ export type MirrorSnapshot = Readonly<{
   lifecyclePhase: string;
   currentStage: string;
   status: string;
+  registryStatus: string;
   updatedAt: string;
 }>;
+
+export type MirrorLandingEvidence = Readonly<{
+  registryStatus: "complete";
+  workflowStatus: "Completed";
+}>;
+
+type MirrorAuthorizationBase = Readonly<{
+  event: MirrorEventIdentity;
+  operation: MirrorOperation;
+  boundaryInstance: string;
+  receiptRevision: number;
+  landing?: MirrorLandingEvidence;
+  finalSyncReceiptKey?: string;
+}>;
+
+export type MirrorExecutionAuthorization =
+  | (MirrorAuthorizationBase &
+      Readonly<{
+        kind: "auto";
+        resolvedMode: "auto";
+      }>)
+  | (MirrorAuthorizationBase &
+      Readonly<{
+        kind: "prompt-approved";
+        expectedBindingId: string;
+        answerId: string;
+      }>)
+  | (MirrorAuthorizationBase &
+      Readonly<{
+        kind: "manual";
+        invocationId: string;
+      }>);
 
 export type MirrorStatusContext = Readonly<{
   mode: MirrorMode;

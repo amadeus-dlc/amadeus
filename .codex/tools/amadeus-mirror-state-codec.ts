@@ -20,6 +20,7 @@ import type {
   MirrorCreateIdentity,
   MirrorEventIdentity,
   MirrorExpectedPrompt,
+  MirrorExecutionAuthorization,
   MirrorFailureClass,
   MirrorMutationEffect,
   MirrorOperation,
@@ -41,7 +42,8 @@ export const MIRROR_STATE_SENTINEL_END = "<!-- amadeus:mirror-state:v1:end -->";
 export const MIRROR_CODEC_LIMITS = {
   maxDepth: 16,
   maxStringBytes: 256 * 1024,
-  maxKeyBytes: 128,
+  // Event keys encode a full Intent UUID plus a durable lifecycle boundary.
+  maxKeyBytes: 512,
   maxAggregateBytes: 2 * 1024 * 1024,
 } as const;
 
@@ -320,7 +322,9 @@ function parseJsonStrict(text: string): JsonValue {
 // Semantic validation: JsonValue -> MirrorStateSnapshot, collecting ALL issues.
 // ---------------------------------------------------------------------------
 
-function isObject(v: JsonValue): v is { [k: string]: JsonValue } {
+type JsonObject = { [k: string]: JsonValue };
+
+function isObject(v: unknown): v is JsonObject {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
@@ -461,6 +465,7 @@ const RECEIPT_KEYS: ReadonlySet<string> = new Set([
   "failureClass",
   "lastEffect",
   "createIdentity",
+  "authorization",
 ]);
 const WARNING_KEYS: ReadonlySet<string> = new Set([
   "operationId",
@@ -494,10 +499,28 @@ const AUDIT_OUTBOX_KEYS: ReadonlySet<string> = new Set([
   "fields",
 ]);
 const EXPECTED_PROMPT_KEYS: ReadonlySet<string> = new Set([
+  "bindingId",
   "event",
   "operation",
   "issuedAt",
   "retryOf",
+]);
+const AUTHORIZATION_KEYS: ReadonlySet<string> = new Set([
+  "kind",
+  "event",
+  "operation",
+  "boundaryInstance",
+  "receiptRevision",
+  "landing",
+  "resolvedMode",
+  "expectedBindingId",
+  "answerId",
+  "invocationId",
+  "finalSyncReceiptKey",
+]);
+const LANDING_KEYS: ReadonlySet<string> = new Set([
+  "registryStatus",
+  "workflowStatus",
 ]);
 
 function checkUnknownKeys(
@@ -600,6 +623,104 @@ function validateEvent(
     return { intentUuid, boundary, operation: operation as MirrorOperation };
   }
   return null;
+}
+
+function validateAuthorization(
+  v: JsonValue,
+  path: string,
+  issues: string[],
+): MirrorExecutionAuthorization | null {
+  if (!isObject(v)) {
+    issues.push(`${path}: authorization must be an object`);
+    return null;
+  }
+  checkUnknownKeys(v, AUTHORIZATION_KEYS, path, issues);
+  const kind = v.kind;
+  const event = validateEvent(v.event, `${path}.event`, issues);
+  const operation = reqEnum(v, "operation", OPERATIONS, "operation", path, issues);
+  const boundaryInstance = reqNonEmptyString(v, "boundaryInstance", path, issues);
+  const receiptRevision = v.receiptRevision;
+  if (!isPositiveInt(receiptRevision)) {
+    issues.push(`${path}.receiptRevision: required positive safe integer`);
+  }
+  const landing = validateLanding(v.landing, "landing" in v, path, issues);
+  if (
+    event === null ||
+    operation === undefined ||
+    boundaryInstance === undefined ||
+    !isPositiveInt(receiptRevision)
+  ) {
+    return null;
+  }
+  const base = {
+    event,
+    operation,
+    boundaryInstance,
+    receiptRevision,
+    ...(landing ? { landing } : {}),
+    ...(isNonEmptyString(v.finalSyncReceiptKey)
+      ? { finalSyncReceiptKey: v.finalSyncReceiptKey }
+      : {}),
+  };
+  if (
+    "finalSyncReceiptKey" in v &&
+    !isNonEmptyString(v.finalSyncReceiptKey)
+  ) {
+    issues.push(`${path}.finalSyncReceiptKey: must be a non-empty string`);
+    return null;
+  }
+  if (kind === "auto") {
+    if (v.resolvedMode !== "auto") {
+      issues.push(`${path}.resolvedMode: auto authorization requires 'auto'`);
+      return null;
+    }
+    return { ...base, kind, resolvedMode: "auto" };
+  }
+  if (kind === "prompt-approved") {
+    if (!isNonEmptyString(v.expectedBindingId) || !isNonEmptyString(v.answerId)) {
+      issues.push(
+        `${path}: prompt-approved requires expectedBindingId and answerId`,
+      );
+      return null;
+    }
+    return {
+      ...base,
+      kind,
+      expectedBindingId: v.expectedBindingId,
+      answerId: v.answerId,
+    };
+  }
+  if (kind === "manual") {
+    if (!isNonEmptyString(v.invocationId)) {
+      issues.push(`${path}.invocationId: manual authorization requires a value`);
+      return null;
+    }
+    return { ...base, kind, invocationId: v.invocationId };
+  }
+  issues.push(`${path}.kind: unknown authorization kind`);
+  return null;
+}
+
+function validateLanding(
+  value: JsonValue | undefined,
+  present: boolean,
+  path: string,
+  issues: string[],
+): MirrorExecutionAuthorization["landing"] {
+  if (!present) return undefined;
+  if (!isObject(value)) {
+    issues.push(`${path}.landing: must be an object`);
+    return undefined;
+  }
+  checkUnknownKeys(value, LANDING_KEYS, `${path}.landing`, issues);
+  if (
+    value.registryStatus !== "complete" ||
+    value.workflowStatus !== "Completed"
+  ) {
+    issues.push(`${path}.landing: requires complete/Completed`);
+    return undefined;
+  }
+  return { registryStatus: "complete", workflowStatus: "Completed" };
 }
 
 function validateCreateIdentity(
@@ -714,6 +835,10 @@ function validateReceipt(
     "createIdentity" in v
       ? validateCreateIdentity(v.createIdentity, `${path}.createIdentity`, issues)
       : undefined;
+  const authorization =
+    "authorization" in v
+      ? validateAuthorization(v.authorization, `${path}.authorization`, issues)
+      : undefined;
   if (status !== undefined) checkReceiptStatusInvariants(status, o, path, issues);
 
   if (
@@ -722,27 +847,54 @@ function validateReceipt(
     status === undefined ||
     preparedAt === undefined ||
     event === null ||
-    createIdentity === null
+    createIdentity === null ||
+    authorization === null
   ) {
     return null;
   }
-  const receipt: {
+  return buildReceipt({
+    key,
+    event,
+    operationId,
+    status,
+    preparedAt,
+    optionals: o,
+    createIdentity,
+    authorization,
+  });
+}
+
+function buildReceipt(input: {
     key: string;
     event: MirrorEventIdentity;
     operationId: string;
     status: MirrorReceiptStatus;
     preparedAt: string;
-    attemptedAt?: string;
-    completedAt?: string;
-    failureClass?: MirrorFailureClass;
-    lastEffect?: MirrorMutationEffect;
+    optionals: ReceiptOptionals;
     createIdentity?: MirrorCreateIdentity;
-  } = { key, event, operationId, status, preparedAt };
-  if (o.attemptedAt !== undefined) receipt.attemptedAt = o.attemptedAt;
-  if (o.completedAt !== undefined) receipt.completedAt = o.completedAt;
-  if (o.failureClass !== undefined) receipt.failureClass = o.failureClass;
-  if (o.lastEffect !== undefined) receipt.lastEffect = o.lastEffect;
-  if (createIdentity) receipt.createIdentity = createIdentity;
+    authorization?: MirrorExecutionAuthorization;
+  }): MirrorOperationReceipt {
+  const receipt: MirrorOperationReceipt = {
+    key: input.key,
+    event: input.event,
+    operationId: input.operationId,
+    status: input.status,
+    preparedAt: input.preparedAt,
+    ...(input.optionals.attemptedAt === undefined
+      ? {}
+      : { attemptedAt: input.optionals.attemptedAt }),
+    ...(input.optionals.completedAt === undefined
+      ? {}
+      : { completedAt: input.optionals.completedAt }),
+    ...(input.optionals.failureClass === undefined
+      ? {}
+      : { failureClass: input.optionals.failureClass }),
+    ...(input.optionals.lastEffect === undefined
+      ? {}
+      : { lastEffect: input.optionals.lastEffect }),
+    ...(input.createIdentity ? { createIdentity: input.createIdentity } : {}),
+    ...(input.authorization ? { authorization: input.authorization } : {}),
+  };
   return receipt;
 }
 
@@ -823,7 +975,8 @@ function validateProvenance(
     return null;
   }
   checkUnknownKeys(v, PROVENANCE_KEYS, path, issues);
-  if (v.schema !== 1) issues.push(`${path}.schema: must be 1`);
+  if (v.schema !== 1 && v.schema !== 2)
+    issues.push(`${path}.schema: must be 1 or 2`);
   const issueNumber = v.issueNumber;
   const createdAt = v.createdAt;
   if (!isPositiveInt(issueNumber))
@@ -835,8 +988,18 @@ function validateProvenance(
     `${path}.createIdentity`,
     issues,
   );
-  if (v.schema === 1 && isPositiveInt(issueNumber) && isTimestamp(createdAt) && createIdentity) {
-    return { schema: 1, createIdentity, issueNumber, createdAt };
+  if (
+    (v.schema === 1 || v.schema === 2) &&
+    isPositiveInt(issueNumber) &&
+    isTimestamp(createdAt) &&
+    createIdentity
+  ) {
+    return {
+      schema: v.schema,
+      createIdentity,
+      issueNumber,
+      createdAt,
+    };
   }
   return null;
 }
@@ -933,16 +1096,24 @@ function validateExpectedPrompt(
   }
   checkUnknownKeys(v, EXPECTED_PROMPT_KEYS, path, issues);
   const operation = reqEnum(v, "operation", OPERATIONS, "operation", path, issues);
+  const bindingId = reqNonEmptyString(v, "bindingId", path, issues);
   const issuedAt = reqTimestamp(v, "issuedAt", path, issues);
   const event = validateEvent(v.event, `${path}.event`, issues);
   const retryOf = validateRetryOf(v, path, issues);
-  if (event === null || operation === undefined || issuedAt === undefined) return null;
+  if (
+    event === null ||
+    operation === undefined ||
+    issuedAt === undefined ||
+    bindingId === undefined
+  )
+    return null;
   const prompt: {
     event: MirrorEventIdentity;
     operation: MirrorOperation;
     issuedAt: string;
+    bindingId: string;
     retryOf?: MirrorExpectedPrompt["retryOf"];
-  } = { event, operation, issuedAt };
+  } = { bindingId, event, operation, issuedAt };
   if (retryOf) prompt.retryOf = retryOf;
   return prompt;
 }
@@ -1225,7 +1396,31 @@ function renderReceipt(r: MirrorOperationReceipt): unknown {
   if (r.lastEffect !== undefined) out.lastEffect = r.lastEffect;
   if (r.createIdentity !== undefined)
     out.createIdentity = renderCreateIdentity(r.createIdentity);
+  if (r.authorization !== undefined)
+    out.authorization = renderAuthorization(r.authorization);
   return out;
+}
+
+function renderAuthorization(a: MirrorExecutionAuthorization): unknown {
+  return {
+    kind: a.kind,
+    event: renderEvent(a.event),
+    operation: a.operation,
+    boundaryInstance: a.boundaryInstance,
+    receiptRevision: a.receiptRevision,
+    ...(a.landing ? { landing: a.landing } : {}),
+    ...(a.finalSyncReceiptKey
+      ? { finalSyncReceiptKey: a.finalSyncReceiptKey }
+      : {}),
+    ...(a.kind === "auto" ? { resolvedMode: a.resolvedMode } : {}),
+    ...(a.kind === "prompt-approved"
+      ? {
+          expectedBindingId: a.expectedBindingId,
+          answerId: a.answerId,
+        }
+      : {}),
+    ...(a.kind === "manual" ? { invocationId: a.invocationId } : {}),
+  };
 }
 
 function renderWarning(w: MirrorWarning): unknown {
@@ -1266,6 +1461,7 @@ function renderChallenge(c: MirrorRepairChallenge): unknown {
 
 function renderExpectedPrompt(p: MirrorExpectedPrompt): unknown {
   const out: Record<string, unknown> = {
+    bindingId: p.bindingId,
     event: renderEvent(p.event),
     operation: p.operation,
     issuedAt: p.issuedAt,

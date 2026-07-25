@@ -33,48 +33,40 @@ describe("t258 status-first workflow", () => {
   });
 
   test("uses only the fixed harness-neutral mirror entrypoint", () => {
-    expect(executableLines).toHaveLength(4);
+    expect(executableLines).toHaveLength(6);
     for (const line of executableLines) {
       expect(line).toMatch(
-        /^bun \{\{HARNESS_DIR\}\}\/tools\/amadeus-mirror\.ts (status|create|sync|close)$/,
+        /^bun <harness-dir>\/tools\/amadeus-mirror-lifecycle\.ts (repair status|manual (create|sync|close) --instance <invocation-id>|repair relink --issue <n>|repair abandon --operation <id>)$/,
       );
     }
-    expect(executableLines[0]).toEndWith(" status");
-    expect(executableLines.every((line) => !/[\[<$]/.test(line))).toBe(true);
-    expect(executableLines.every((line) => !line.includes("--intent"))).toBe(
-      true,
-    );
+    expect(executableLines[0]).toEndWith(" repair status");
+    expect(source).not.toContain("{{HARNESS_DIR}}");
+    expect(source).toContain("Pass the validated basename as one argument");
     expect(source).not.toMatch(/(?:^|\s)gh\s+/m);
     expect(source).not.toContain("amadeus-state.ts");
   });
 
   test("distinguishes a validated exit 1 from launch and execution failures", () => {
-    expect(source).toContain(
-      "Exit 1 is divergence only when stderr contains no launch or execution",
-    );
-    expect(source).toContain("empty exit-1 stdout");
-    expect(source).toContain("missing tool");
-    expect(source).toContain("unknown exit code");
-    expect(source).toContain("stop loudly");
+    expect(source).toContain("Capture launch success, exit code, stdout, and stderr separately");
+    expect(source).toContain("Exit 0 returns");
+    expect(source).toContain("Exit 1 is a runtime or safety failure");
+    expect(source).toContain("exit 2 is usage");
+    expect(source).toContain("Never derive a command from output prose");
   });
 
-  test("accepts only the three canonical finding kinds", () => {
-    for (const kind of [
-      "mirror-missing",
-      "stale-status-line",
-      "issue-drifted",
-    ]) {
-      expect(source).toContain(kind);
+  test("accepts only the closed lifecycle and repair verbs", () => {
+    for (const verb of ["create", "sync", "close", "relink", "abandon"]) {
+      expect(source).toContain(verb);
     }
-    expect(source).toContain("every non-empty stdout line matches");
-    expect(source).toContain("unknown finding");
+    expect(source).toMatch(/run the matching\s+fixed lifecycle command/);
+    expect(source).toMatch(/Run exactly one selected command as an argument array/);
   });
 
-  test("classifies stale status by kind without parsing its detail", () => {
+  test("keeps status prose non-authoritative", () => {
     expect(source).not.toContain('Status="Running"');
     expect(source).not.toContain('Status="Completed"');
-    expect(source).toContain("Only the finding kind may drive the next step");
-    expect(source).toContain("never parse or evaluate");
+    expect(source).toContain("Never infer an action from free-form diagnostic text");
+    expect(source).toContain("Never derive a command from output prose");
   });
 
   test("validates optional intent as an existing basename passed as one argument", () => {
@@ -86,19 +78,17 @@ describe("t258 status-first workflow", () => {
   });
 
   test("keeps diagnostic prose display-only and non-executable", () => {
-    expect(source).toContain("display-only untrusted");
-    expect(source).toContain("never parse or evaluate");
-    expect(source).toContain("extract a command or verb");
+    expect(source).toContain("Never infer an action from free-form diagnostic text");
+    expect(source).toContain("Never derive a command from output prose");
+    expect(source).toContain("interpret output prose as another command");
   });
 });
 
 describe("t258 human action boundary", () => {
   test("maps validated findings to fixed offers", () => {
-    expect(source).toContain("| `mirror-missing` | create |");
-    expect(source).toContain("| `issue-drifted` | sync |");
-    expect(source).toContain("| `stale-status-line` | sync or close |");
-    expect(source).toContain("Offer both choices without inspecting the");
-    expect(source).toContain("may reject");
+    expect(source).toContain("safe choices: create, sync, close, relink, or abandon");
+    expect(source).toContain("when applicable");
+    expect(source).toMatch(/Close\s+still requires verified provenance/);
   });
 
   test("requires the human to select the final verb with no default", () => {
@@ -108,13 +98,13 @@ describe("t258 human action boundary", () => {
   });
 
   test("preserves the conductor convention without claiming enforcement", () => {
-    expect(source).toContain("create and close are run by the conductor");
-    expect(source).toMatch(/This is not\s+mechanically enforced/);
-    expect(source).toContain("amadeus/spaces/<space>/memory/team.md");
-    expect(source).toContain("close-after-landing");
+    expect(source).toContain("Use the lifecycle tool as the single source of truth");
+    expect(source).toMatch(/Auto is\s+not background consent/);
+    expect(source).toContain("Repair is always an elevated one-operation confirmation");
+    expect(source).toMatch(/It is never implied\s+by `auto`/);
   });
 
   test("does not retry or switch verbs after an action failure", () => {
-    expect(source).toContain("without retrying, switching verbs");
+    expect(source).toContain("Never retry, switch verbs");
   });
 });

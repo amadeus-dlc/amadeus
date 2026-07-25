@@ -174,6 +174,7 @@ describe("t268 decideMirrorAction manual", () => {
 describe("t268 approveMirrorPrompt", () => {
   const event = ev(wc("wc-1"), "create");
   const expected: MirrorExpectedPrompt = {
+    bindingId: "binding-1",
     event,
     operation: "create",
     issuedAt: "2026-01-01T00:00:00Z",

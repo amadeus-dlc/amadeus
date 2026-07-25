@@ -18,10 +18,12 @@
 //   - AGENTS.md lands at the PROJECT ROOT (dist/kiro/AGENTS.md), outside .kiro/.
 
 import type { HarnessManifest } from "../../../../scripts/manifest-types.ts";
+import { mirrorCoreSkillDirectory } from "../projections.ts";
 import onboardingFills from "./onboarding.fills.ts";
 
 const manifest: HarnessManifest = {
   name: "kiro",
+  mirrorSurface: "kiro",
   harnessDir: ".kiro",
 
   // Same core projection as claude, EXCEPT: rules→steering, and the
@@ -38,7 +40,7 @@ const manifest: HarnessManifest = {
     { src: "skills/amadeus-replay", dst: "skills/amadeus-replay" },
     { src: "skills/amadeus-outcomes-pack", dst: "skills/amadeus-outcomes-pack" },
     { src: "skills/amadeus-grilling", dst: "skills/amadeus-grilling" },
-    { src: "skills/amadeus-mirror", dst: "skills/amadeus-mirror" },
+    mirrorCoreSkillDirectory("kiro"),
   ],
 
   // Authored Kiro shell surfaces. These carry literal `.kiro` (harness-specific
