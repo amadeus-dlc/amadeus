@@ -120,6 +120,13 @@ WATCHER_RESEND_MAX="${WATCHER_RESEND_MAX:-1}"
 # We source it and call agmsg_ready_path rather than duplicating the path string
 # here (NFR-4). Overridable so tests can point at a self-contained stub.
 AGMSG_ACTAS_LOCK_LIB="${AGMSG_ACTAS_LOCK_LIB:-$AGMSG_SCRIPT_DIR/lib/actas-lock.sh}"
+# Cap on concurrent `git worktree add` jobs in create_run. Having a cap at all
+# is the point: an unbounded fan-out is a regression, not a speed-up.
+# Measured on this repo (11,051 tracked files, .git 166M), 7 worktrees:
+# serial 7.39s / 2 -> 4.88s / 3 -> 4.03s / 4 -> 3.32s / 7 -> 7.55s.
+# Concurrency 7 is slower than serial: git serialises on the object store,
+# so an unbounded fan-out thrashes. 4 is the measured optimum.
+WORKTREE_PARALLELISM=4
 # Number of engineer members (leader is always added on top). Selectable per
 # fresh run with -2/-4/-6; defaults to 6. A resumed run reads its saved size.
 TEAM_SIZE="${TEAM_ENGINEERS:-6}"
@@ -1264,14 +1271,31 @@ rollback_registered_members() {
 }
 
 rollback_prepared_run() {
-  local m wt branch
+  local m wt branch members
   rollback_registered_members
-  for m in $CREATED_MEMBERS; do
-    wt="$RUN_ROOT/$m"
-    branch="team/$RUN_ID/$m"
-    git -C "$REPO" worktree remove --force "$wt" >/dev/null 2>&1 || true
-    git -C "$REPO" branch -D "$branch" >/dev/null 2>&1 || true
-  done
+  # The removal set is re-derived from what is on disk rather than from a shell
+  # ledger: create_run builds the worktrees in subshells, which cannot append to
+  # a parent variable. Scoping is three layers deep, because getting this set
+  # wrong deletes someone else's work:
+  #   1. origin  — the walk starts at RUN_ROOT, this run's private directory
+  #   2. name    — only entries whose name is in the members_for set
+  #   3. depth   — RUN_ROOT's immediate children only; never recursive
+  if [ -n "$RUN_ROOT" ] && [ -d "$RUN_ROOT" ]; then
+    members=" $(members_for "$TEAM_SIZE") "
+    for wt in "$RUN_ROOT"/*; do
+      [ -d "$wt" ] || continue
+      m="${wt##*/}"
+      case "$members" in
+        *" $m "*) ;;
+        *) continue ;;
+      esac
+      branch="team/$RUN_ID/$m"
+      git -C "$REPO" worktree remove --force "$wt" >/dev/null 2>&1 || true
+      git -C "$REPO" branch -D "$branch" >/dev/null 2>&1 || true
+    done
+  fi
+  # Unconditional: this also clears husks left by a worktree add that died after
+  # creating the directory, which `git worktree remove` will not touch.
   rm -rf -- "$RUN_ROOT" "$RUN_RECORD"
 }
 
@@ -1290,7 +1314,7 @@ handle_exit() {
 }
 
 create_run() {
-  local base_commit base_ref m wt branch
+  local base_commit base_ref m wt branch pending registered missing resolved
   base_ref="${BASE_REF:-HEAD}"
   if [ -z "$BASE_REF" ] && [ -n "$(git -C "$REPO" status --porcelain)" ]; then
     echo "ERROR: repository is dirty: $REPO" >&2
@@ -1324,15 +1348,51 @@ create_run() {
   printf '%s\n' "$MSG_BACKEND" >"$RUN_RECORD/msg"
   printf 'preparing\n' >"$RUN_RECORD/status"
 
+  # Worktree creation dominates launch time (7.39s of it for a 7-member run), so
+  # it runs in batches of WORKTREE_PARALLELISM. Each member is handled in a
+  # subshell: the git call and the record writes both land under paths unique to
+  # that member, so nothing is shared and no locking is needed.
+  pending=0
   for m in $(members_for "$TEAM_SIZE"); do
     wt="$RUN_ROOT/$m"
     branch="team/$RUN_ID/$m"
-    git -C "$REPO" worktree add -q -b "$branch" "$wt" "$base_commit"
-    CREATED_MEMBERS="$CREATED_MEMBERS $m"
-    mkdir -p "$RUN_RECORD/members/$m"
-    printf '%s\n' "$wt" >"$RUN_RECORD/members/$m/path"
-    printf '%s\n' "$branch" >"$RUN_RECORD/members/$m/branch"
+    (
+      if ! git -C "$REPO" worktree add -q -b "$branch" "$wt" "$base_commit"; then
+        # One line, self-contained: several subshells write to the same stderr
+        # and their output interleaves, so a message split across lines could
+        # not be attributed back to a member.
+        echo "ERROR: worktree add failed for $m: $wt" >&2
+        exit 1
+      fi
+      mkdir -p "$RUN_RECORD/members/$m"
+      printf '%s\n' "$wt" >"$RUN_RECORD/members/$m/path"
+      printf '%s\n' "$branch" >"$RUN_RECORD/members/$m/branch"
+    ) &
+    pending=$((pending + 1))
+    if [ "$pending" -ge "$WORKTREE_PARALLELISM" ]; then
+      wait
+      pending=0
+    fi
   done
+  wait
+
+  # Completion is decided by asking git what it registered, not by collecting
+  # subshell exit codes and not by testing for directories. `git worktree add`
+  # can fail during checkout *after* creating the target directory, leaving an
+  # unregistered husk that an -d test would score as a success. Consulting the
+  # registry is also the same "observe the real thing" rule rollback follows.
+  registered="$(git -C "$REPO" worktree list --porcelain | sed -n 's/^worktree //p')"
+  missing=""
+  for m in $(members_for "$TEAM_SIZE"); do
+    resolved="$(cd "$RUN_ROOT/$m" 2>/dev/null && pwd -P)" || resolved=""
+    if [ -z "$resolved" ] || ! printf '%s\n' "$registered" | grep -qxF -- "$resolved"; then
+      missing="$missing $m"
+    fi
+  done
+  if [ -n "$missing" ]; then
+    echo "ERROR: worktree creation incomplete, not registered with git:$missing" >&2
+    return 1
+  fi
 }
 
 load_run() {
@@ -1414,7 +1474,6 @@ fi
 RUN_ID=""
 RUN_RECORD=""
 RUN_ROOT=""
-CREATED_MEMBERS=""
 REGISTERED_MEMBERS=""
 RUN_PREPARING=0
 AGENTS_STARTED=0
