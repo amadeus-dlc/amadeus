@@ -74,6 +74,7 @@ import {
   type AskDirective,
   type Directive,
   type ErrorDirective,
+  GATE_GRANTED,
   GATE_UNRESOLVED,
   type GateValue,
   type ParkedDirective,
@@ -92,6 +93,7 @@ import {
   type MigrationRequest,
   ensureStageDiaryForDirective,
   errorMessage,
+  findActiveStandingGrant,
   firstInScopeStageOfPhase,
   getField,
   intentRepos,
@@ -117,6 +119,7 @@ import {
   unitDependencyPath,
   WORKSPACE_VERBS,
   SKELETON_ON_SCOPES,
+  standingGrantSatisfiesGate,
   guardIntentOperation,
   renderIntentOperationRejection,
   resolveIntentOperationTargetLocked,
@@ -1364,7 +1367,7 @@ function resolveProduces(
 }
 
 // Compute the `gate` value for a run-stage directive — the human-judgement
-// boundary axis. Three outcomes:
+// boundary axis. Four outcomes:
 //   - initialization stage → false (bootstrap auto-proceed, no governance gate).
 //   - the skeleton-gate stage (first Construction EXECUTE stage of the scope =
 //     Bolt 1) with NO stance recorded yet → GATE_UNRESOLVED, the classify
@@ -1372,6 +1375,8 @@ function resolveProduces(
 //     and reports the stance; the next `next` re-emits with the determined gate.
 //   - everything else (incl. the skeleton stage AFTER the stance is recorded) →
 //     the determined boolean (true for every EXECUTE stage outside init).
+//   - in solo mode, a valid standing grant covering a true ordinary gate →
+//     GATE_GRANTED (the conductor commits it without a separate leader turn).
 //
 // gate is ORTHOGONAL to the conditional-inclusion axis (`execution`
 // ALWAYS|CONDITIONAL answers "is this stage included", not "does it gate"). The
@@ -1384,6 +1389,7 @@ function computeGate(
   node: GraphStage,
   scope: string,
   stateContent: string | null,
+  projectDir?: string,
 ): GateValue {
   if (node.phase === "initialization") return false;
   if (isSkeletonGateStage(node, scope)) {
@@ -1391,7 +1397,25 @@ function computeGate(
     // No stance yet → defer (the classify round-trip). The conductor will
     // report a stance and the next `next` lands in the resolved branch below.
     if (stance === null) return GATE_UNRESOLVED;
-    return resolveSkeletonGate(stance, scope);
+    const skeletonGate = resolveSkeletonGate(stance, scope);
+    if (skeletonGate !== true) return skeletonGate;
+  }
+  // Team mode keeps its existing leader/delegation path. Solo mode has no
+  // leader, so the engine exposes a covered ordinary gate as a typed automatic
+  // approval route. The state tool independently revalidates the grant when
+  // approval commits.
+  if (
+    stateContent !== null &&
+    projectDir !== undefined &&
+    process.env.AMADEUS_OPERATING_MODE !== "team"
+  ) {
+    const grant = findActiveStandingGrant(projectDir, Date.now());
+    if (
+      grant &&
+      standingGrantSatisfiesGate(grant, node.slug, stateContent, loadGraph())
+    ) {
+      return GATE_GRANTED;
+    }
   }
   // Every other EXECUTE stage gates deterministically.
   return true;
@@ -1427,9 +1451,10 @@ export function resolveSingleGate(gate: GateValue): GateValue {
 // gate display can never diverge from the post-approval directive. nextInScopeStage
 // excludes SKIP stages (returns only EXECUTE) and returns null at the terminal, so
 // next_stage is a real successor slug or the explicit terminal null. Applied only
-// when `directive.gate === true`: the pre-stance skeleton classify (GATE_UNRESOLVED)
-// is not an approval moment, gate:false covers per-unit iteration + initialization,
-// and stateContent === null is a --single run (isolated, does not advance). Kept a
+// when `directive.gate` is true or GATE_GRANTED: the pre-stance skeleton classify
+// (GATE_UNRESOLVED) is not an approval moment, gate:false covers per-unit
+// iteration + initialization, and stateContent === null is a --single run
+// (isolated, does not advance). Kept a
 // separate helper so buildRunStageDirective's complexity stays under the gate.
 function projectNextStage(
   directive: RunStageDirective,
@@ -1437,7 +1462,10 @@ function projectNextStage(
   scope: string,
   stateContent: string | null,
 ): void {
-  if (stateContent === null || directive.gate !== true) return;
+  if (
+    stateContent === null ||
+    (directive.gate !== true && directive.gate !== GATE_GRANTED)
+  ) return;
   directive.next_stage = nextInScopeStage(node.slug, scope, stateContent)?.slug ?? null;
 }
 
@@ -1473,7 +1501,7 @@ function buildRunStageDirective(
     // of the first two, so it satisfies the contract; the validator is the
     // backstop if a future graph adds agent-team.
     mode: node.mode as RunStageDirective["mode"],
-    gate: computeGate(node, scope, stateContent),
+    gate: computeGate(node, scope, stateContent, codekbCtx?.projectDir),
     memory_path: memoryPathFor(node.phase, node.slug, recordPrefix),
     consumes: present,
     produces: resolvedProduces.candidates,
@@ -2887,12 +2915,19 @@ const canonicalisePhase = (input: string): string | null => ownPhase(input);
 // The outcomes `report --result` accepts. A forward commit reports that the
 // stage the conductor just worked on succeeded; `approved` and `completed` are
 // accepted synonyms for that verdict (the conductor naturally says "approved"
-// at a gate and "completed" for a non-gated stage). The engine — not the
-// caller — picks the committing subcommand from gate status + finality, so the
-// two synonyms are interchangeable; what matters is that a verdict was given.
+// at a gate and "completed" for a non-gated stage). `grant-approved` is the
+// explicit solo standing-grant route, allowing a commit-time refusal to fall
+// back to `present-gate`. The engine — not the caller — picks the committing
+// subcommand from gate status + finality.
 // Reject/revise are NOT report outcomes: report commits FORWARD transitions
 // only (the reject path stays in the prose orchestrator's gate handling).
-const FORWARD_RESULTS = new Set(["approved", "completed", "complete", "done"]);
+const FORWARD_RESULTS = new Set([
+  "approved",
+  "grant-approved",
+  "completed",
+  "complete",
+  "done",
+]);
 
 interface ReportFlags {
   result?: string;
@@ -3548,6 +3583,19 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
       // amadeus-state.ts rejected the transition (error() exits non-zero). Surface
       // its message verbatim so the rejection is a clear signal, not a silent miss.
       const detail = (res.stderr || res.stdout).trim();
+      if (
+        flags.result === "grant-approved" &&
+        subArgs[0] === "approve" &&
+        detail.includes("a real human has not acted at this gate")
+      ) {
+        emit({
+          kind: "present-gate",
+          stage: slug,
+          phase: node.phase,
+          memory_path: memoryPathFor(node.phase, slug, relativeRecordDir(pd)),
+        });
+        return;
+      }
       emit({
         kind: "error",
         message:

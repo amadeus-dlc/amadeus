@@ -276,7 +276,7 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
 
   test("run-stage gate 'yes' -> boolean type error", () => {
     expect(errs({ ...runStage(), gate: "yes" })).toContain(
-      'run-stage: gate must be boolean or "unresolved", got string',
+      'run-stage: gate must be boolean, "unresolved", or "granted", got string',
     );
   });
 
@@ -314,6 +314,13 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
     );
   });
 
+  test('run-stage gate:"granted" sentinel -> VALID (solo standing grant)', () => {
+    expect(errs({ ...runStage(), gate: "granted" })).toBe("VALID");
+    expect(validateDirective({ ...runStage(), gate: "granted" }).valid).toBe(
+      true,
+    );
+  });
+
   test('run-stage gate:"maybe" (non-sentinel string) -> rejected', () => {
     // .sh line 164-166: any OTHER gate-string is rejected with the same
     // boolean-or-sentinel type error a non-string would produce — a typo'd
@@ -321,7 +328,7 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
     const r = validateDirective({ ...runStage(), gate: "maybe" });
     expect(r.valid).toBe(false);
     expect(errs({ ...runStage(), gate: "maybe" })).toContain(
-      'run-stage: gate must be boolean or "unresolved", got string',
+      'run-stage: gate must be boolean, "unresolved", or "granted", got string',
     );
   });
 

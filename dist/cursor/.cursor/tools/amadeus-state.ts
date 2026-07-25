@@ -2306,9 +2306,9 @@ export function handleGateStart(args: string[]): void {
 // consumed by any resolution; see humanActedSinceGate for the full semantics).
 // Returns the standing-grant id that opened the gate (a `Grant Id` to stamp on
 // GATE_APPROVED), or null when a live human turn / carve-out opened it. A refusal
-// exits via error(). Standing grants (#1125) are evaluated ONLY on the approve
-// verb and ONLY in team mode: a reject is never grant-covered ( user ruling X),
-// so handleReject's call can never reach the grant branch.
+// exits via error(). Standing grants (#1125, #1466) are evaluated ONLY on the
+// approve verb in both operating modes: a reject is never grant-covered, so
+// handleReject's call can never reach the grant branch.
 function assertHumanPresentForGateResolution(
   pd: string,
   content: string,
@@ -2331,10 +2331,10 @@ function assertHumanPresentForGateResolution(
     // + freshness fall out of order; no marker file / turn counter.
     return null;
   }
-  // No fresh human turn at this gate. A team-mode standing grant (#1125) may open
-  // an APPROVE gate it covers without a per-gate human turn — evaluated here so a
-  // grant absence leaves the original refusal behaviour byte-for-byte unchanged.
-  if (verb === "approve" && process.env.AMADEUS_OPERATING_MODE === "team") {
+  // No fresh human turn at this gate. A standing grant may open an APPROVE gate
+  // it covers without a per-gate human turn in team or solo mode. This is also
+  // the commit-time revalidation for an engine-routed solo grant.
+  if (verb === "approve") {
     const grant = findActiveStandingGrant(pd, Date.now());
     if (grant && standingGrantSatisfiesGate(grant, slug, content, loadStageGraph())) {
       return grant.grantId;
@@ -3097,11 +3097,11 @@ function collectIssuerProvenance(
 
 // grant-standing-delegation [--scope stage-gates] [--ttl-ms <n>] [--include-phase-boundary] [--user-input <text>]
 //
-// Standing delegation grants (Issue #1125): a leader session, driven by a real
-// human turn on its own ledger, issues a TIME-BOXED standing grant that opens
-// stage-gate approvals across the team for the grant's TTL without a per-gate
-// human turn. Team-mode only (env is the sole arbiter — org.md operating-mode
-// rule). Phase-boundary gates are EXCLUDED by default and require the explicit
+// Standing delegation grants (Issues #1125, #1466): a session driven by a real
+// human turn on its own ledger issues a TIME-BOXED standing grant that opens
+// stage-gate approvals for the grant's TTL without a per-gate human turn. Team
+// mode retains leader delegation; solo mode routes covered gates directly.
+// Phase-boundary gates are EXCLUDED by default and require the explicit
 // --include-phase-boundary opt-in. GRANT_ISSUED carries the same issuer
 // provenance coordinates a delegation does, so the gate's verifier proves the
 // grounding rather than trusting it. Minting is refused at the general audit CLI
@@ -3118,15 +3118,7 @@ export function handleGrantStandingDelegation(args: string[]): void {
     );
   }
 
-  // (2) Team-mode only — env is the SOLE arbiter (solo mode approves each gate
-  // directly, so a standing grant has no meaning there).
-  if (process.env.AMADEUS_OPERATING_MODE !== "team") {
-    error(
-      "Refusing to grant standing delegation: standing grants are a team-mode mechanism (AMADEUS_OPERATING_MODE=team). Solo mode approves each gate directly."
-    );
-  }
-
-  // (3) Scope — defaults to "stage-gates"; that is the only supported value.
+  // (2) Scope — defaults to "stage-gates"; that is the only supported value.
   const scope = getFlagValue(args, "--scope") ?? "stage-gates";
   if (scope !== "stage-gates") {
     error(
@@ -3134,7 +3126,7 @@ export function handleGrantStandingDelegation(args: string[]): void {
     );
   }
 
-  // (4) TTL — defaults to DEFAULT_STANDING_GRANT_TTL_MS; an explicit value is
+  // (3) TTL — defaults to DEFAULT_STANDING_GRANT_TTL_MS; an explicit value is
   // parsed to a number and must be finite and positive (parse-don't-validate at
   // the boundary — a type-invalid string is a loud refusal, never a fail-open).
   let ttlMs = DEFAULT_STANDING_GRANT_TTL_MS;
@@ -3149,11 +3141,11 @@ export function handleGrantStandingDelegation(args: string[]): void {
     ttlMs = parsed;
   }
 
-  // (5) Phase-boundary opt-in (boolean flag).
+  // (4) Phase-boundary opt-in (boolean flag).
   const includePhaseBoundary = args.includes("--include-phase-boundary");
   const userInput = getFlagValue(args, "--user-input");
 
-  // (6) Issuer provenance + emit GRANT_ISSUED into this session's active intent
+  // (5) Issuer provenance + emit GRANT_ISSUED into this session's active intent
   // shard (default resolution — the same shard the grounding HUMAN_TURN lives in).
   const { issuerSpace, issuerIntent, issuerShard, issuerHumanTs } =
     collectIssuerProvenance(pd, "grant-standing-delegation");
@@ -3173,7 +3165,7 @@ export function handleGrantStandingDelegation(args: string[]): void {
   if (userInput) fields["User Input"] = userInput;
   emitAudit(pd, "GRANT_ISSUED", fields);
 
-  // (7) Human-readable summary to stderr; machine-readable JSON to stdout.
+  // (6) Human-readable summary to stderr; machine-readable JSON to stdout.
   const humanLine = includePhaseBoundary
     ? "phase-boundary gates: INCLUDED (--include-phase-boundary)"
     : "phase-boundary gates: EXCLUDED (default; pass --include-phase-boundary to opt in)";
@@ -3190,8 +3182,9 @@ export function handleGrantStandingDelegation(args: string[]): void {
 
 // revoke-standing-delegation --grant-id <8-hex id>
 //
-// Cancel an outstanding standing grant (#1125) by id. Same grounding + team-mode
-// gates as issuance. Emits GRANT_REVOKED (Grant Id reference + issuer coordinates)
+// Cancel an outstanding standing grant (#1125, #1466) by id. The same grounding
+// gate as issuance applies in either operating mode. Emits GRANT_REVOKED
+// (Grant Id reference + issuer coordinates)
 // into this session's active intent shard; findActiveStandingGrant treats any
 // grant whose id appears in a GRANT_REVOKED block as invalid, even before expiry.
 export function handleRevokeStandingDelegation(args: string[]): void {
@@ -3202,12 +3195,6 @@ export function handleRevokeStandingDelegation(args: string[]): void {
       "Refusing to revoke standing delegation: no real human turn on this session since the last gate resolution. Acknowledge the revocation as a human, then revoke."
     );
   }
-  if (process.env.AMADEUS_OPERATING_MODE !== "team") {
-    error(
-      "Refusing to revoke standing delegation: standing grants are a team-mode mechanism (AMADEUS_OPERATING_MODE=team)."
-    );
-  }
-
   const grantId = getFlagValue(args, "--grant-id");
   if (!grantId) error("revoke-standing-delegation requires --grant-id <8-hex id>");
   if (!/^[0-9a-f]{8}$/.test(grantId)) {

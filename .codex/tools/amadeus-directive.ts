@@ -32,10 +32,14 @@ import { isPlainObject } from "./amadeus-lib.ts";
 // the prose and feeds the stance back via `amadeus-orchestrate report
 // --skeleton-stance`, and the NEXT `next` emits the now-determined boolean gate.
 // The engine still owns the transition — only a typed stance ever crosses back
-// in. Every OTHER run-stage carries a boolean gate; the sentinel is exclusively
-// the skeleton case.
+// in. A covered solo standing grant uses the separate `"granted"` sentinel;
+// every other run-stage carries a boolean gate.
 export const GATE_UNRESOLVED = "unresolved" as const;
-export type GateValue = boolean | typeof GATE_UNRESOLVED;
+export const GATE_GRANTED = "granted" as const;
+export type GateValue =
+  | boolean
+  | typeof GATE_UNRESOLVED
+  | typeof GATE_GRANTED;
 
 // The 9 kinds, keyed on the `kind` discriminator.
 export type DirectiveKind =
@@ -63,10 +67,9 @@ export interface RunStageDirective {
   lead_agent: string;
   support_agents: string[];
   mode: "inline" | "subagent" | "agent-team";
-  // gate is a boolean for every deterministic case; the string sentinel
-  // GATE_UNRESOLVED ("unresolved") appears ONLY for the first Construction Bolt's
-  // walking-skeleton gate, which the conductor resolves via report (the
-  // classify round-trip — see GATE_UNRESOLVED above).
+  // gate is normally boolean. GATE_UNRESOLVED marks the walking-skeleton
+  // classify round-trip; GATE_GRANTED marks an ordinary gate covered by a
+  // solo-mode standing grant.
   gate: GateValue;
   memory_path: string;
   // consumes carries only the declared inputs that EXIST on disk at emit time;
@@ -474,8 +477,8 @@ function checkString(
   }
 }
 
-// checkGate — the gate field accepts a boolean (every deterministic case) OR
-// the string sentinel GATE_UNRESOLVED (the classify round-trip's skeleton case).
+// checkGate — the gate field accepts a boolean, GATE_UNRESOLVED (the classify
+// round-trip's skeleton case), or GATE_GRANTED (a solo standing grant).
 // Any other value — including a different string — is rejected, so a typo'd
 // sentinel surfaces loudly rather than being acted on as a deferred gate.
 function checkGate(
@@ -489,9 +492,13 @@ function checkGate(
     return;
   }
   const v = o[field];
-  if (typeof v !== "boolean" && v !== GATE_UNRESOLVED) {
+  if (
+    typeof v !== "boolean" &&
+    v !== GATE_UNRESOLVED &&
+    v !== GATE_GRANTED
+  ) {
     errors.push(
-      `${kind}: ${field} must be boolean or "${GATE_UNRESOLVED}", got ${describe(v)}`,
+      `${kind}: ${field} must be boolean, "${GATE_UNRESOLVED}", or "${GATE_GRANTED}", got ${describe(v)}`,
     );
   }
 }
