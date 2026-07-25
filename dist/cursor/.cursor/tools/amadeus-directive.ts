@@ -17,7 +17,7 @@
 // unknown-key rejection per kind. The shape guard reuses isPlainObject from
 // amadeus-lib.ts.
 
-import { isPlainObject } from "./amadeus-lib.ts";
+import { GRANT_ID_RE, isPlainObject, UUID_V4_RE, UUID_V7_RE } from "./amadeus-lib.ts";
 
 // --- Public types ---
 
@@ -483,11 +483,6 @@ function checkRunStageShared(
   if (kind === "run-stage") checkStandingGrantCarrier(o, errors);
 }
 
-const GRANT_ID_RE = /^[0-9a-f]{8}$/;
-const UUID_V4_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-const UUID_V7_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 function checkStandingGrantCarrier(
   o: Record<string, unknown>,

@@ -14,6 +14,7 @@ import {
   resolveOperatingMode,
   StandingGrant,
   standingGrantSatisfiesGate,
+  GRANT_ID_RE,
   UUID_V4_RE,
   UUID_V7_RE,
   withAuditLock,
@@ -646,7 +647,6 @@ function standingGrantRouteReceiptMatches(
 // it) classify against one definition instead of two.
 // ---------------------------------------------------------------------------
 
-const GRANT_ID_RE = /^[0-9a-f]{8}$/;
 
 export type ApprovalAuthorityInput = {
   readonly operatingMode: string;

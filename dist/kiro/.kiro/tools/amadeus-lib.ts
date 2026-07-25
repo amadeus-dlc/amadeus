@@ -4311,6 +4311,9 @@ export const UUID_V4_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 export const UUID_V7_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+// Standing-grant Grant Ids are the first eight hex digits of the issuing
+// audit row's hash — one shape shared by the wire parser and the domain.
+export const GRANT_ID_RE = /^[0-9a-f]{8}$/;
 
 // A repo name is a single path segment (no separators, no `..`) so it can only
 // resolve to an immediate child of the workspace — never escape it.

@@ -37,7 +37,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "716-721",
+    "lines": "714-719",
     "reason": "The archive and unarchive dispatch cases are covered as shipped subprocess journeys by t258; spawned CLI dispatch lines are not parent-LCOV resident.",
     "expiry": "remove when state dispatch and process-exit boundaries are injectable in-process"
   },
@@ -211,7 +211,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "695-697",
+    "lines": "693-695",
     "reason": "main() dispatch for mirror-boundary is exercised by generated CLI integration/E2E tests; the handler behavior is verified through state bytes and JSON output, while the switch arm is spawn-only.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
@@ -241,8 +241,8 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "698-700",
-    "reason": "main() dispatch case for the set-construction-iteration verb (U05, FR-2 item 8). main() is the CLI entry \u2014 never driven in-process \u2014 so bun --coverage cannot measure its switch arms; the handler it dispatches (handleSetConstructionIteration) is driven in-process by tests/integration/t250 (valid path). Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
+    "lines": "696-698",
+    "reason": "main() dispatch case for the set-construction-iteration verb (U05, FR-2 item 8). main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handler it dispatches (handleSetConstructionIteration) is driven in-process by tests/integration/t250 (valid path). Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {
@@ -259,20 +259,20 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
-    "lines": "734-739",
-    "reason": "main() dispatch cases for the grant-standing-delegation / revoke-standing-delegation verbs (#1125). main() is the CLI entry \u2014 never driven in-process \u2014 so bun --coverage cannot measure its switch arms; the handlers they dispatch (handleGrantStandingDelegation / handleRevokeStandingDelegation) are fully covered in-process by t-standing-grant. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
+    "lines": "732-737",
+    "reason": "main() dispatch cases for the grant-standing-delegation / revoke-standing-delegation verbs (#1125). main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handlers they dispatch (handleGrantStandingDelegation / handleRevokeStandingDelegation) are fully covered in-process by t-standing-grant. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "lines": "782",
-    "reason": "Unknown-subcommand usage message string in main()'s default case \u2014 the two new verbs were added to the existing single-line list. A spawn-only main() message-string row (spawn-blindspot-two-step (ii)); the surrounding default branch was already unmeasured before this change.",
+    "reason": "Unknown-subcommand usage message string in main()'s default case — the two new verbs were added to the existing single-line list. A spawn-only main() message-string row (spawn-blindspot-two-step (ii)); the surrounding default branch was already unmeasured before this change.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
     "lines": "4216-4217",
-    "reason": "Birth advisory message-string rows for the >1-nested-candidate case in handleIntentBirthStateBuild. Reaching this advisory requires driving a full intent birth, which needs a completely seeded workspace (memory/rules) \u2014 canonical in-process birth is impractical (no-canonical-direct-execution), and error()/die paths in birth are process.exit. The IDENTICAL not-auto-selected condition on the sibling detect surface (handleDetect) IS covered in-process by tests/integration/t249-canonical-nested-advisory; this is the same additive stdout advisory row. Message-string rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii).",
+    "reason": "Birth advisory message-string rows for the >1-nested-candidate case in handleIntentBirthStateBuild. Reaching this advisory requires driving a full intent birth, which needs a completely seeded workspace (memory/rules) — canonical in-process birth is impractical (no-canonical-direct-execution), and error()/die paths in birth are process.exit. The IDENTICAL not-auto-selected condition on the sibling detect surface (handleDetect) IS covered in-process by tests/integration/t249-canonical-nested-advisory; this is the same additive stdout advisory row. Message-string rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii).",
     "expiry": "remove when a canonical in-process intent-birth harness (seeded workspace) drives the multiple-nested advisory"
   },
   {
@@ -284,13 +284,13 @@
   {
     "file": "packages/framework/core/tools/amadeus-swarm.ts",
     "lines": "863-865",
-    "reason": "main() dispatch case for the `resolve` subcommand (#1157 driver-contract-core). main() is the CLI entry \u2014 never driven in-process \u2014 so bun --coverage cannot measure its switch arms; the handler it dispatches (handleResolve) is fully covered in-process by t233-driver-resolution. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); the pre-existing prepare/check/finalize cases are unmeasured the same way.",
+    "reason": "main() dispatch case for the `resolve` subcommand (#1157 driver-contract-core). main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handler it dispatches (handleResolve) is fully covered in-process by t233-driver-resolution. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); the pre-existing prepare/check/finalize cases are unmeasured the same way.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-swarm.ts",
     "lines": "869",
-    "reason": "Unknown-subcommand usage message string in main()'s default case \u2014 `resolve` was appended to the existing single-line valid-subcommand list (#1157). A spawn-only main() message-string row (spawn-blindspot-two-step (ii)); the surrounding default branch was already unmeasured before this change.",
+    "reason": "Unknown-subcommand usage message string in main()'s default case — `resolve` was appended to the existing single-line valid-subcommand list (#1157). A spawn-only main() message-string row (spawn-blindspot-two-step (ii)); the surrounding default branch was already unmeasured before this change.",
     "expiry": "remove when main() gains an in-process argv driver"
   },
   {
@@ -488,12 +488,12 @@
   {
     "file": "scripts/formal-verif/run-model-check.ts",
     "lines": "70-91",
-    "reason": "createDefaultModelCheckToolchain wires the live Node adapters (NodeTlcProcessPort/NodeArtifactNetworkPort/NodeFileDigestPort/NodePhysicalReservationPort, real OpenJDK) \u2014 exercised only by the real-toolchain probe outside CI; requires a real JDK/TLC install."
+    "reason": "createDefaultModelCheckToolchain wires the live Node adapters (NodeTlcProcessPort/NodeArtifactNetworkPort/NodeFileDigestPort/NodePhysicalReservationPort, real OpenJDK) — exercised only by the real-toolchain probe outside CI; requires a real JDK/TLC install."
   },
   {
     "file": "scripts/formal-verif/tlc-spawn-planner.ts",
     "lines": "128-179",
-    "reason": "NodePlannerEnvironmentPort.inspectDarwin runs the live sandbox-exec / JAVA_HOME / java probe on real Darwin \u2014 requires a real JDK, exercised only by the real-toolchain probe outside CI."
+    "reason": "NodePlannerEnvironmentPort.inspectDarwin runs the live sandbox-exec / JAVA_HOME / java probe on real Darwin — requires a real JDK, exercised only by the real-toolchain probe outside CI."
   },
   {
     "file": "scripts/formal-verif/node-ci-model-check-port.ts",
@@ -503,12 +503,12 @@
   {
     "file": "scripts/formal-verif/tla-arm.ts",
     "lines": "442",
-    "reason": "Exhaustive-switch defensive default arm (returns unreachablePipelineError) \u2014 structurally unreachable once every named pipeline error code is handled above."
+    "reason": "Exhaustive-switch defensive default arm (returns unreachablePipelineError) — structurally unreachable once every named pipeline error code is handled above."
   },
   {
     "file": "scripts/formal-verif/fs-tlc-toolchain.ts",
     "lines": "1838",
-    "reason": "Real setTimeout deadline branch taken only when no injected timer is present \u2014 the live-execution path exercised by the real-toolchain probe outside CI."
+    "reason": "Real setTimeout deadline branch taken only when no injected timer is present — the live-execution path exercised by the real-toolchain probe outside CI."
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-config.ts",
@@ -1652,7 +1652,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-grant-authorization.ts",
-    "lines": "203-205",
+    "lines": "204-206",
     "reason": "Shard read failure AFTER realpathSync already resolved the same path (TOCTOU window). Measured on this branch: chmod 000 makes realpathSync itself fail with EACCES on macOS, and readFileSync of a directory is EISDIR on macOS but returns \"\" on Linux (cid:code-generation:bun-readfilesync-dir-platform-divergence), so no portable injection reaches this catch. The resolve-failure sibling is covered in-process by the dangling-symlink case in tests/integration/t-solo-standing-grant-domain.test.ts.",
     "expiry": "remove when the standing grant scan receives an injectable filesystem port for the realpath-to-read race"
   },
