@@ -1,6 +1,20 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(現在: 260724-watcher-timeout-fix)
+## 実行メタデータ（現在: 260725-mirror-review-fixes）
+
+- Date: `2026-07-25T01:35:20Z`
+- Base commit: `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`（この intent に先行記録がないため、到達可能な `re-scans/` の observed commit のうち HEAD に最も近い `260724-watcher-timeout-fix` を採用）
+- Observed commit: `70336937529f5be31c011de5d368c0f03e534506`（[PR #1469](https://github.com/amadeus-dlc/amadeus/pull/1469) head、`git rev-parse HEAD` 実測）
+- Base ancestry / distance: `git merge-base --is-ancestor <base> HEAD` exit 0、`git rev-list --count <base>..HEAD` = 49
+- Scope: `amadeus-bugfix`、Depth Minimal、Test Strategy Comprehensive、Brownfield、単一 repo `amadeus`
+- Focus: PR #1469 の検証済みレビュー修正面。Mirror lifecycle の未完了 outcome exit、prompt 回答 CLI 欠落と binding 不一致、legacy mutation verb、config safe read TOCTOU、state codec の未エスケープ C0 制御文字、Cursor/OpenCode coverage source 正規化、関連 tests/CI。
+- Diff focus: `packages/framework/core/tools`、coverage helper/smoke test、`ci.yml` の23ファイル、`+10,319/-161`。正本コードの大宗は Mirror lifecycle 一式。
+- Findings: [review thread 1](https://github.com/amadeus-dlc/amadeus/pull/1469#discussion_r3648935678)、[review thread 2](https://github.com/amadeus-dlc/amadeus/pull/1469#discussion_r3648935682)、[review thread 3](https://github.com/amadeus-dlc/amadeus/pull/1469#discussion_r3648935684) のP1 3件に、config/codec/coverage の実測3件を加えた6クラスタ。詳細は `architecture.md` と `code-quality-assessment.md`。
+- Baseline: focused 7 test filesを `bun test` で実行し、127 pass / 0 fail / 274 expect()（16.68秒）。現行テストは green だが6欠陥条件を直接検証していない。
+- Per-intent record: `re-scans/260725-mirror-review-fixes.md`
+- Delivery boundary: codekb 9成果物とこの intent の re-scan 記録のみ更新。実装、tests、state、audit、生成配布物、commit、PR mutation は未実施。
+
+## 実行メタデータ（履歴: 260724-watcher-timeout-fix）
 
 - Date: 2026-07-24
 - Observed at: `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`(現 HEAD `git rev-parse HEAD` 実測一致)

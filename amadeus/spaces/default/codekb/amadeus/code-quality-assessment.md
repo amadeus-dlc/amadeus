@@ -1,8 +1,44 @@
 # コード品質評価
 
-> **現在の品質観測は intent `260724-watcher-timeout-fix`(2026-07-24、amadeus-bugfix / Minimal、下記「watcher arming 検証が mux_attach を最大 270 秒ブロック」節)**。以下の過去 intent 節に残る「本 intent」「最新」「現在」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
+## PR #1469 レビュー findings（260725-mirror-review-fixes、現在）
 
-## watcher arming 検証が mux_attach を最大 270 秒ブロック（260724-watcher-timeout-fix、現在、Issue #1449）
+### 基準実測
+
+- PR: [#1469](https://github.com/amadeus-dlc/amadeus/pull/1469)、review head/observed `70336937529f5be31c011de5d368c0f03e534506`、base point `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、49コミット。
+- focused baseline: `bun test` で config、codec、coordinator、lifecycle、legacy CLI、coverage normalizer の7ファイルを実行し、**127 pass / 0 fail / 274 expect()**（16.68秒）。
+- baseline が green でも、以下6欠陥条件のテストが不在のため品質保証にはならない。各修正は最初に red reproduction を追加する必要がある。
+
+### P1 — 未完了 lifecycle outcome が exit 0
+
+`runMirrorLifecycleMain` は top-level error だけを検査し、`pending`、`safety-blocked`、`suppressed` を JSON 出力して0を返す。orchestrator 側は子コマンド成功後に receipt を completed とするため、remote effect 不成立を完了扱いにできる。boundary/manual の要求 operation が `completed` でないケースを非0に固定する CLI-level regression が必要。
+
+### P1 — prompt 回答 surface と binding 照合の欠落
+
+coordinator unit と lifecycle integration は event/operation を再送した `answer` が state 内の `expectedPrompt` を消費することを検証するが、`MirrorPromptAnswer` と `ask` outcome は `bindingId` を持たず、保存済み binding と外部回答の一致を検証していない。approve は event/operation のみを照合し、skip はその照合も迂回する。実 CLI parser/entry からの回答経路に加え、default prompt で ask→正しい binding の approve/skip、binding/event/operation mismatch の拒否、同一回答 replay 拒否、次 boundary prompt 成功までの process/CLI integration が必要。
+
+### P1 — legacy mutation による安全境界迂回
+
+legacy t232 は create/sync/close の直接 GitHub mutation を成功契約として固定している。新しい lifecycle の permit、receipt、ownership marker、repair と矛盾する回帰テストである。mutation verb の委譲または拒否へ期待値を更新し、read-only status の互換性だけを維持する必要がある。
+
+### Security — config safe read の TOCTOU
+
+fd 内の start/end fstat は読取中の同一 inode 変化を検知するが、`realpathSync` containment 判定から `openSync(realPath)` までに path を置換する競合は検知しない。既存テストは absent、precedence、dangling symlink、directory、non-write を扱うが、symlink/path swap を再現しない。open descriptor を信頼起点にした fail-closed テストが必要。
+
+### Security — state codec の C0 制御文字
+
+custom strict parser は未エスケープ `\n` / `\r` のみ拒否し、NUL、TAB、BS、FF 等の U+0000–U+001F を受理する。標準 JSON 文法との差で、state の canonical render/parse と downstream Markdown/audit 処理に非正準 bytes を持ち込める。全C0 code point の table-driven rejection と escaped form の許可を対にする。
+
+### Coverage — Cursor/OpenCode source 正規化漏れ
+
+package temp regex と generated prefix table の双方に Cursor/OpenCode がない。`.cursor/tools/*`、`.opencode/tools/*`、`dist/cursor/.cursor/*`、`dist/opencode/.opencode/*` と temp package path が core source へ畳まれず、同じ正本が複数 SF として計測される。全6 harness、Windows separator、temp root containment、harness-dir mismatch の対称テストが必要。
+
+### 保守性所見
+
+Mirror の大型ファイル（lifecycle 909行、coordinator 708行、state codec 1,526行等）と gateway lexer 共通化は実在する技術的負債だが、本 bugfix と変更理由が異なるため別 `amadeus-refactor` intent に隔離する。今回の変更は6欠陥とその回帰テストに外科的に限定する。
+
+> **以下は intent `260724-watcher-timeout-fix`（2026-07-24、amadeus-bugfix / Minimal）の履歴観測**。以下の過去 intent 節に残る「本 intent」「最新」「現在」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
+
+## watcher arming 検証が mux_attach を最大 270 秒ブロック（260724-watcher-timeout-fix、履歴、Issue #1449）
 
 実測基準は base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb` → observed HEAD `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、祖先性 exit 0、距離 155。差分 1762 files のうち本問題の交差面は `packages/framework/core/tools/team-up.sh`(1462 行新規パス)と `tests/integration/t-team-up-watcher-arming.test.ts`(197 行新規)のみ(測定 ref: `git diff --numstat a81c11dde..HEAD -- <両パス>`)。導入は区間内 2 コミット: `42c9341d8`(#1391、`verify_watchers_armed` 検証ロジック本体 = #1384 修正)+ `0d24c6f93`(#1421、`scripts/team-up.sh` → `packages/framework/core/tools/` 昇格 + 配布 11 コピー、ロジック不変)。
 
@@ -193,7 +229,7 @@ EQUIVALENT 候補は、`amadeus-orchestrate.ts:1961-1972` の全 batch 走査と
 > 「docs-batch10(2026-07-12)の観測面」節は履歴 intent `260711-docs-batch10`(#765 #764 #763 #728、documentation)の候補記録。続く p3-cleanup-batch8 節(#843 #846 #850 #851 #876 #877 #878、intent `260711-p3-cleanup-batch8`)・p2-repair-batch7 節(#834 #839 #844 #845 #849、intent `260711-p2-repair-batch7`)・p3-cleanup-batch5 節(#811 #822 #830 #730 #819 #831、intent `260710-p3-cleanup-batch5`)・p3-cleanup-batch4 節(#757 #758 #753 #739 #740 #784 — 全6件 2026-07-10 修正着地済み、PR #823/#821/#817/#818/#814/#815)・core-repair-batch3 節(#746 ほか9件、2026-07-11)・複雑度ゲート導入節(intent 260710-complexity-gate)・ tools-dispatch-batch 節(#774 / #785 / #787 / #788 / #789)・ bughunt-fix-batch 節(#771/#773/#775/#776/#779)・swarm-worktree-batch 節(#738/#748/#746/#760)・learnings-audit-batch 節(#754 / #745 / #761)・mint-presence-vectors 節(#755)・packaging source-unreferenced 節(intent 260710、#735)・delegate-answer-consume 節(intent 260710、#736)・kiro-stale-hooks 節(#719 / P3 source hygiene)・dynamic-test-size 節(#699 / #684 Phase D)・t92-worktree-hermeticity 節(#709)・packaging-repair-batch 節(#701/#702 = PR #711/#712 解決済み)は過去 intent の記録で、参照用に温存する。以降の「アーキテクチャ横断パターン」以下は `260709-bug-zero-batch`(#674〜#678/#668)の記録。
 > 「docs-repair-batch9(2026-07-11)の観測面」節は履歴 intent `260711-docs-repair-batch9`(#812 #824 #680 #885 #886)の記録。続く p3-cleanup-batch5 節(#811 #822 #830 #730 #819 #831 — 候補記録)・p3-cleanup-batch4 節(#757 #758 #753 #739 #740 #784 — 全6件 2026-07-10 修正着地済み、PR #823/#821/#817/#818/#814/#815)・core-repair-batch3 節(#746 ほか9件、2026-07-11)・複雑度ゲート導入節(intent 260710-complexity-gate)・ tools-dispatch-batch 節(#774 / #785 / #787 / #788 / #789)・ bughunt-fix-batch 節(#771/#773/#775/#776/#779)・swarm-worktree-batch 節(#738/#748/#746/#760)・learnings-audit-batch 節(#754 / #745 / #761)・mint-presence-vectors 節(#755)・packaging source-unreferenced 節(intent 260710、#735)・delegate-answer-consume 節(intent 260710、#736)・kiro-stale-hooks 節(#719 / P3 source hygiene)・dynamic-test-size 節(#699 / #684 Phase D)・t92-worktree-hermeticity 節(#709)・packaging-repair-batch 節(#701/#702 = PR #711/#712 解決済み)は前 intent の記録で、参照用に温存する。以降の「アーキテクチャ横断パターン」以下は `260709-bug-zero-batch`(#674〜#678/#668)の記録。
 >
-> **履歴ラベルの読み方**: 本ページ以下および `architecture.md` / `business-overview.md` / `api-documentation.md` の「本 intent」は、各節見出しで明示した過去 intent 内の自己参照である。各ファイルの current view は先頭の `260720-upstream-sync-230` 節だけであり、それより下は履歴として読む。
+> **履歴ラベルの読み方**: 本ページ以下および `architecture.md` / `business-overview.md` / `api-documentation.md` の「本 intent」は、各節見出しで明示した過去 intent 内の自己参照である。現行 view は各ファイル先頭の `260725-mirror-review-fixes` 節であり、ここから下は履歴として読む。
 
 ## docs-batch10(2026-07-12)の観測面 — documentation 4欠陥の現物照合(#765 #764 #763 #728)
 
