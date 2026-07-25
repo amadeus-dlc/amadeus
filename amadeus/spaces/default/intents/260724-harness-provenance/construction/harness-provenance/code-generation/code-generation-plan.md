@@ -10,11 +10,13 @@ FR-5（監査シャードへのハーネス付記）は対象外とする。新�
 
 ## 変更対象と所有境界
 
-- 正本ロジック: `packages/framework/core/tools/amadeus-lib.ts`
+- 正本ロジック: `packages/framework/core/tools/amadeus-harness.ts`
+- 互換re-exportとstate validator: `packages/framework/core/tools/amadeus-lib.ts`, `packages/framework/core/tools/amadeus-migrate.ts`
 - intent birth 連携: `packages/framework/core/tools/amadeus-utility.ts`
 - 単体テスト: `tests/unit/t269-harness-provenance.test.ts`
 - 統合テスト: `tests/integration/t270-harness-provenance-birth.test.ts`
-- 既存回帰テスト: `tests/unit/t144-harness-seam.test.ts`, `tests/unit/t100-memory-template-lifecycle.test.ts`
+- 既存回帰テスト: `tests/unit/t144-harness-seam.cli.test.ts`, `tests/unit/t100-memory-template-lifecycle.test.ts`
+- 共通fixture: `tests/helpers/harness-lib-fixture.ts`
 - 利用者向け契約: `docs/guide/12-cli-commands.md`, `docs/guide/12-cli-commands.ja.md`
 - 生成物: `dist/**` および self-install 面（既存 package/promote コマンドだけで同期し、手編集しない）
 
@@ -32,26 +34,26 @@ FR-5（監査シャードへのハーネス付記）は対象外とする。新�
   - [x] `amadeus-utility.ts` から `detectHarnessType()` を import する。
   - [x] `handleIntentBirthStateBuild()` で detector をちょうど1回呼び、ローカル変数へ保持する。
   - [x] `stateContent` の `Active Agent` 直後へ `- **Harness**: ${harnessType}` を1行だけ追加する。
-  - [x] `STATE_V7_FIELDS` は変更せず、`Harness` を optional V7 拡張として扱う。
+  - [x] `Harness` をoptional V7拡張として扱い、存在時は1件かつ7値のいずれかであることをmigration validatorで検証する。
 
 - [x] **Step 3 — resolver/detector の単体テストを追加する（FR-2, FR-3, NFR-1）**
   - [x] 7つの明示値を全件検証し、空文字・不正値が `unknown` で検出を遮断することを検証する。
   - [x] `CLAUDECODE=1`、canonical mapping 5件、未知 dot-dir、fallback provenance を検証する。
   - [x] env/script-path/CWD probe/fallback の各 source と、複数 dot-dir 時の既存固定順を fresh subprocess で分離する。
   - [x] `harnessDir()` の call-time env と非 env cache が従来どおりであることを固定する。
-  - [x] 既存 `t144` は互換性回帰として green を維持し、重複する fixture 改変は最小限にする。
+  - [x] 既存 `t144` と新規`t269`のsubprocess・tools投影fixtureを共通helperへ集約する。
 
 - [x] **Step 4 — intent birth と6配布形態の統合テストを追加する（FR-1, AC-3d, NFR-1, NFR-2）**
   - [x] 実 FS 上の新規 birth で `Harness` が Project Information に exactly once 存在し、既存 field helper で読めることを検証する。
-  - [x] `Harness` のない既存 V7 state と `Harness` を持つ新規 V7 state の双方が既存 validator/reader で受理されることを検証する。
+  - [x] 公開migration CLIで、`Harness`なしと有効値1件を受理し、不正値と重複値を拒否することを検証する。
   - [x] Claude Code / Codex / Cursor / OpenCode / Kiro CLI / Kiro IDE の6配布形態を fresh subprocess で起動し、3つの override env を明示的に unset したうえで、競合する CWD dot-dir より script-path が優先されることを検証する。
   - [x] 不正な `AMADEUS_HARNESS_TYPE` の生値が state、audit、stdout、stderr へ残らず、state には `unknown` だけが記録されることを検証する。
-  - [x] detector の追加がネットワーク・subprocess・追加ファイル I/O を発生させず、固定5候補の同期判定だけであることを source contract と実行結果で確認する。
+  - [x] detectorの優先順位と全分岐をfresh subprocessの実行結果で確認し、実装文字列へ依存するsource contract testは置かない。
 
 - [x] **Step 5 — FR-4 の運用契約を受け入れる（FR-4 / BR-17〜BR-19）**
   - [x] `ensureStageDiary()` と `memory-template.md` を変更しない。
   - [x] `tests/unit/t100-memory-template-lifecycle.test.ts` で4見出しと `total=0` の不変を再検証する。
-  - [x] conductor が本ステージの実在する通常 diary エントリ本文へ、生成済み state の値を使った `Harness=<type>` を記録する。受入のためだけの synthetic entry は作らない。
+  - [x] 実birthが受入専用のsynthetic diaryを生成しないことを製品経路で検証する。通常diaryへの`Harness=<type>`併記はconductor運用とし、テスト専用writerで模倣しない。
 
 - [x] **Step 6 — 利用者向け override 契約を文書化する（FR-1 AC-1d）**
   - [x] 英語版・日本語版 CLI guide の環境変数節へ `AMADEUS_HARNESS_TYPE` を追加する。
@@ -59,7 +61,7 @@ FR-5（監査シャードへのハーネス付記）は対象外とする。新�
 
 - [x] **Step 7 — package/promote と検証を完了する**
   - [x] 既存テスト設定を変更せず、新規 `t269`/`t270` が現行 runner に検出されることを確認する。
-  - [x] `bun test tests/unit/t269-harness-provenance.test.ts tests/unit/t144-harness-seam.test.ts tests/unit/t100-memory-template-lifecycle.test.ts tests/integration/t270-harness-provenance-birth.test.ts`
+  - [x] `bun test tests/unit/t269-harness-provenance.test.ts tests/unit/t144-harness-seam.cli.test.ts tests/unit/t100-memory-template-lifecycle.test.ts tests/integration/t270-harness-provenance-birth.test.ts`
   - [x] `bun run typecheck`
   - [x] `bun run lint`
   - [x] `bun scripts/package.ts`
@@ -109,7 +111,7 @@ FR-5（監査シャードへのハーネス付記）は対象外とする。新�
 
 ## Iteration 1 限定是正
 
-- [x] t270 のinvalid override同一caseで、canonical memory templateを使うtemp fixtureへconductorの通常Interpretations観測を記録し、state・memory・audit・stdout・stderrのraw marker不存在と`Harness=unknown`、4見出し不変を検証する。
+- [x] 当初はtemp fixtureへconductor観測を模擬したが、後続PR品質レビューで製品経路を通らないことが判明したため削除した。現在は実birthでstate・audit・stdout・stderrへのraw marker不存在とsynthetic diary非生成を検証する。
 - [x] runtime utilityの正準referenceである`docs/reference/06-hooks-and-tools.md`と日本語版へ`AMADEUS_HARNESS_TYPE`契約を追加する。`docs/reference/09-testing.*`の環境変数一覧はテストランナー専用のため変更しない。
 - [x] referenceを契約の正本、`docs/guide/12-cli-commands.*`を利用者向け導線として相互参照し、Unit指定成果物とのownershipを明記する。
 - [x] focused/full tests、typecheck、lint、package/promote、dist/promote drift、registry/complexity、stage sensorsを再実行し、実測結果をsummaryへ記録する。
@@ -122,7 +124,7 @@ FR-5（監査シャードへのハーネス付記）は対象外とする。新�
 - **Iteration:** 2
 - **Scope decision:** none
 
-Iteration 1の2件のMajorは解消済みです。t270の同一invalid override caseはcanonical template由来の実在diaryで5面のraw marker不存在、Harness=unknown、4 H2不変、専用Harness見出しなしを検証し、referenceは06-hooks-and-tools英日版をruntime契約正本、CLI guideを利用者導線として同期し、09-testingをテストランナー専用として非該当化しています。是正後はfocused 6 pass、全focused regression 38 pass・167 expect、typecheck・lint・6配布・4 self-install・drift・registry・complexity・全stage sensorがgreenです。
+Iteration 1の2件のMajorは当時の判定では解消済みです。ただし、memory検証は後続PR品質レビューで製品経路を通らないテスト専用writerと判明したため削除し、実birthのsynthetic diary非生成検証へ置換しました。referenceは06-hooks-and-tools英日版をruntime契約正本、CLI guideを利用者導線として同期し、09-testingをテストランナー専用として非該当化しています。
 
 ### Findings
 

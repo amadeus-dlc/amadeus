@@ -23,11 +23,14 @@
 // really invoked. (Same idiom as kiro's t141.)
 
 import { describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  evalHarnessLib,
+  materializeHarnessLib,
+} from "../helpers/harness-lib-fixture.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const CLAUDE_TOOLS = join(REPO_ROOT, "dist", "claude", ".claude", "tools");
@@ -42,19 +45,13 @@ const CLAUDE_LIB = join(CLAUDE_TOOLS, "amadeus-lib.ts");
 // runtime needs zero edits to support a new harness.
 function libInHarnessTree(root: string, harness: string, rulesSubdir?: string): string {
   const toolsDir = join(root, harness, "tools");
-  mkdirSync(join(toolsDir, "data"), { recursive: true });
-  for (const sibling of ["amadeus-lib.ts", "amadeus-graph.ts", "amadeus-stage-schema.ts", "amadeus-version.ts"]) {
-    cpSync(join(CLAUDE_TOOLS, sibling), join(toolsDir, sibling));
-  }
-  // Seed the compiled-data files (stage-graph/scope-grid) from claude — they are
-  // harness-independent for the lib's purposes — then overwrite harness.json
-  // with this harness's real descriptor.
-  cpSync(join(CLAUDE_TOOLS, "data"), join(toolsDir, "data"), { recursive: true });
-  writeFileSync(
-    join(toolsDir, "data", "harness.json"),
-    `${JSON.stringify({ harnessDir: harness, rulesSubdir: rulesSubdir ?? "rules" }, null, 2)}\n`,
-  );
-  return join(toolsDir, "amadeus-lib.ts");
+  return materializeHarnessLib(CLAUDE_TOOLS, toolsDir, {
+    copyData: true,
+    descriptor: {
+      harnessDir: harness,
+      rulesSubdir: rulesSubdir ?? "rules",
+    },
+  });
 }
 
 function evalLib(
@@ -62,22 +59,10 @@ function evalLib(
   expr: string,
   opts: { cwd?: string; env?: Record<string, string | undefined> } = {},
 ): string {
-  const r = spawnSync(
-    "bun",
-    ["-e", `import { harnessDir, resolveProjectDir, rulesSubdir } from ${JSON.stringify(libPath)}; console.log(${expr});`],
-    {
-      encoding: "utf-8",
-      cwd: opts.cwd ?? REPO_ROOT,
-      env: {
-        ...process.env,
-        AMADEUS_HARNESS_DIR: undefined,
-        CLAUDE_PROJECT_DIR: undefined,
-        ...opts.env,
-      } as NodeJS.ProcessEnv,
-    },
-  );
-  expect(r.status).toBe(0);
-  return (r.stdout ?? "").trim();
+  return evalHarnessLib(libPath, expr, {
+    cwd: opts.cwd ?? REPO_ROOT,
+    env: opts.env,
+  });
 }
 
 describe("t144 codex harness seam — harnessDir + resolveProjectDir ladder ×3 dirs", () => {
@@ -104,11 +89,9 @@ describe("t144 codex harness seam — harnessDir + resolveProjectDir ladder ×3 
     const tmp = realpathSync(mkdtempSync(join(tmpdir(), "t144-")));
     try {
       // Lib copied OUTSIDE any harness tree → derivation misses → CWD probe.
-      const libCopy = join(tmp, "amadeus-lib.ts");
-      for (const sibling of ["amadeus-lib.ts", "amadeus-graph.ts", "amadeus-stage-schema.ts", "amadeus-version.ts"]) {
-        cpSync(join(CLAUDE_TOOLS, sibling), join(tmp, sibling));
-      }
-      cpSync(join(CLAUDE_TOOLS, "data"), join(tmp, "data"), { recursive: true });
+      const libCopy = materializeHarnessLib(CLAUDE_TOOLS, tmp, {
+        copyData: true,
+      });
       mkdirSync(join(tmp, ".codex"));
       expect(evalLib(libCopy, "harnessDir()", { cwd: tmp })).toBe(".codex");
       // Precedence: .claude beats .codex when both are present.
@@ -136,11 +119,9 @@ describe("t144 codex harness seam — harnessDir + resolveProjectDir ladder ×3 
     const tmp = realpathSync(mkdtempSync(join(tmpdir(), "t144-")));
     try {
       // Lib outside any harness tree → suffix strip misses → CWD marker rung.
-      const libCopy = join(tmp, "amadeus-lib.ts");
-      for (const sibling of ["amadeus-lib.ts", "amadeus-graph.ts", "amadeus-stage-schema.ts", "amadeus-version.ts"]) {
-        cpSync(join(CLAUDE_TOOLS, sibling), join(tmp, sibling));
-      }
-      cpSync(join(CLAUDE_TOOLS, "data"), join(tmp, "data"), { recursive: true });
+      const libCopy = materializeHarnessLib(CLAUDE_TOOLS, tmp, {
+        copyData: true,
+      });
       const project = join(tmp, "proj");
       mkdirSync(join(project, ".codex"), { recursive: true });
       expect(evalLib(libCopy, "resolveProjectDir()", { cwd: project })).toBe(project);

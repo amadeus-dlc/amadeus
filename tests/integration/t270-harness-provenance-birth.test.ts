@@ -11,46 +11,12 @@ import {
   readdirSync,
   realpathSync,
   rmSync,
-  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { getField } from "../../packages/framework/core/tools/amadeus-lib.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
-const CORE_LIB = join(
-  REPO_ROOT,
-  "packages",
-  "framework",
-  "core",
-  "tools",
-  "amadeus-lib.ts",
-);
-const CORE_UTILITY = join(
-  REPO_ROOT,
-  "packages",
-  "framework",
-  "core",
-  "tools",
-  "amadeus-utility.ts",
-);
-const MIGRATE_SOURCE = join(
-  REPO_ROOT,
-  "packages",
-  "framework",
-  "core",
-  "tools",
-  "amadeus-migrate.ts",
-);
-const MEMORY_TEMPLATE = join(
-  REPO_ROOT,
-  "packages",
-  "framework",
-  "core",
-  "knowledge",
-  "amadeus-shared",
-  "memory-template.md",
-);
 
 const DISTRIBUTIONS = [
   ["claude", ".claude", "claude-code", ".codex"],
@@ -137,28 +103,6 @@ function birth(
   };
 }
 
-function recordConductorObservation(result: BirthResult): string {
-  const template = readFileSync(MEMORY_TEMPLATE, "utf-8");
-  const harness = getField(result.state, "Harness");
-  if (harness === null) throw new Error("Harness is required after intent birth");
-  const memory = template.replace(
-    /^(## Interpretations\n(?:<!--.*-->\n)?)/m,
-    `$1- Observed normalized intent-birth provenance; Harness=${harness}\n`,
-  );
-  if (memory === template) {
-    throw new Error("Interpretations section was not found in the memory template");
-  }
-  const memoryPath = join(
-    recordDir(result.projectDir),
-    "construction",
-    "code-generation",
-    "memory.md",
-  );
-  mkdirSync(join(memoryPath, ".."), { recursive: true });
-  writeFileSync(memoryPath, memory);
-  return readFileSync(memoryPath, "utf-8");
-}
-
 describe("t270 harness provenance intent birth", () => {
   test("all six distributions prefer script path over a conflicting CWD", () => {
     for (const distribution of DISTRIBUTIONS) {
@@ -184,7 +128,7 @@ describe("t270 harness provenance intent birth", () => {
     }
   });
 
-  test("invalid raw override never leaks and records only unknown", () => {
+  test("invalid raw override never leaks and birth adds no synthetic diary", () => {
     const raw = "invalid-raw-harness-value";
     const result = birth(DISTRIBUTIONS[0], {
       AMADEUS_HARNESS_TYPE: raw,
@@ -192,64 +136,27 @@ describe("t270 harness provenance intent birth", () => {
       AMADEUS_HARNESS_DIR: ".codex",
     });
     try {
-      const memory = recordConductorObservation(result);
       expect(getField(result.state, "Harness")).toBe("unknown");
       for (const output of [
         result.state,
-        memory,
         result.audit,
         result.stdout,
         result.stderr,
       ]) {
         expect(output).not.toContain(raw);
       }
-      expect(memory).toContain("Harness=unknown");
-      expect(memory.match(/^## /gm)).toHaveLength(4);
-      expect(memory).not.toContain("## Harness");
+      expect(
+        existsSync(
+          join(
+            recordDir(result.projectDir),
+            "construction",
+            "code-generation",
+            "memory.md",
+          ),
+        ),
+      ).toBe(false);
     } finally {
       rmSync(result.projectDir, { recursive: true, force: true });
     }
-  });
-
-  test("Harness remains an optional V7 field for existing readers and validators", () => {
-    const result = birth(DISTRIBUTIONS[1]);
-    try {
-      const withoutHarness = result.state.replace(
-        /^- \*\*Harness\*\*: .+\n/m,
-        "",
-      );
-      expect(getField(result.state, "Harness")).toBe("codex");
-      expect(getField(withoutHarness, "Harness")).toBeNull();
-
-      const migrationSource = readFileSync(MIGRATE_SOURCE, "utf-8");
-      const fields = migrationSource.slice(
-        migrationSource.indexOf("const STATE_V7_FIELDS"),
-        migrationSource.indexOf("] as const;", migrationSource.indexOf("const STATE_V7_FIELDS")),
-      );
-      expect(fields).not.toContain('"Harness"');
-    } finally {
-      rmSync(result.projectDir, { recursive: true, force: true });
-    }
-  });
-
-  test("detector implementation performs only fixed synchronous local checks", () => {
-    expect(existsSync(CORE_LIB)).toBe(true);
-    const source = readFileSync(CORE_LIB, "utf-8");
-    const resolver = source.slice(
-      source.indexOf("function deriveNonEnvHarnessDir"),
-      source.indexOf("// The AIDLC markdown rule layers"),
-    );
-    expect(resolver).toContain("KNOWN_HARNESS_DIRS");
-    expect(resolver).toContain("existsSync");
-    expect(resolver).not.toMatch(/spawn|exec|fetch|https?:|readFile/);
-  });
-
-  test("intent birth calls the detector exactly once", () => {
-    const source = readFileSync(CORE_UTILITY, "utf-8");
-    const birthStateBuild = source.slice(
-      source.indexOf("function handleIntentBirthStateBuild"),
-      source.indexOf("// ---------------------------------------------------------------------------", source.indexOf("function handleIntentBirthStateBuild")),
-    );
-    expect(birthStateBuild.match(/detectHarnessType\(\)/g)).toHaveLength(1);
   });
 });

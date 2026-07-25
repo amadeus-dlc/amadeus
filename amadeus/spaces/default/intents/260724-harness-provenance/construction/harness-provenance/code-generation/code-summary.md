@@ -27,7 +27,7 @@ FR-5 の監査シャード付記、新規 API、DB、外部サービス、設定
 - `tests/integration/t270-harness-provenance-birth.test.ts`
   - 実 FS birth、Harness exactly once、既存 field helper、optional V7、invalid raw leak防止、同期ローカル判定、detector exactly once を検証した。
   - Claude Code / Codex / Cursor / OpenCode / Kiro CLI / Kiro IDE の6配布形態を fresh subprocess で起動し、3 override envを unsetして、競合 CWD dot-dir より script-pathが優先されることを検証した。
-- `tests/unit/t144-harness-seam.test.ts` と `tests/unit/t100-memory-template-lifecycle.test.ts` は変更せず回帰確認した。
+- `tests/unit/t144-harness-seam.cli.test.ts` は共通fixtureを利用するよう更新し、`tests/unit/t100-memory-template-lifecycle.test.ts` は変更せず回帰確認した。
 - `tests/.coverage-registry.json` と `tests/.coverage-ratchet.json` は既存 generator で更新した。
 
 ### ドキュメントと配布
@@ -51,7 +51,7 @@ FR-5 の監査シャード付記、新規 API、DB、外部サービス、設定
 
 | コマンド | Exit code | 結果 |
 |---|---:|---|
-| `bun test tests/unit/t269-harness-provenance.test.ts tests/unit/t144-harness-seam.test.ts tests/unit/t100-memory-template-lifecycle.test.ts tests/integration/t270-harness-provenance-birth.test.ts` | 0 | 38 pass / 0 fail / 163 expect |
+| `bun test tests/unit/t269-harness-provenance.test.ts tests/unit/t144-harness-seam.cli.test.ts tests/unit/t100-memory-template-lifecycle.test.ts tests/integration/t270-harness-provenance-birth.test.ts` | 0 | 38 pass / 0 fail / 163 expect |
 | `bun run typecheck` | 0 | source/test TypeScriptとも成功 |
 | `bun run lint` | 0 | 既存warningのみ、errorなし |
 | `bun scripts/package.ts` | 0 | 6配布形態を再生成 |
@@ -77,14 +77,13 @@ answer-evidence は先に `functional-design-questions.md` を検査した際、
 
 ## 残課題
 
-- Architecture Review Iteration 1 の限定是正を反映済みで、Iteration 2 reviewが未実施である。
-- 上記 answer-evidence advisory finding は監査に保持されている。実装・配布・テストの blocker ではない。
+- answer-evidence advisory findingは監査に保持されている。実装・配布・テストのblockerではない。
 
 ## Architecture Review Iteration 1 対応
 
 ### Security Design raw leak 契約
 
-`tests/integration/t270-harness-provenance-birth.test.ts` のinvalid override caseを拡張した。temp intent内でcanonical `memory-template.md`から4見出しのdiaryを作り、正規化済みstate値を使った通常のInterpretations観測`Harness=unknown`をconductor運用として記録する。同一caseで固有raw markerがstate、実在memory entry、audit、stdout、stderrの全5面に存在しないこと、memoryが`Harness=unknown`を持つこと、H2が4件のままで専用Harness見出しを持たないことをassertする。production diaryへ受入専用entryは追加していない。
+当初はtemp intent内でcanonical templateからdiaryを作るテスト専用writerを追加したが、後続PR品質レビューで製品経路を検証していないことが判明したため削除した。現在は実birthで固有raw markerがstate、audit、stdout、stderrへ存在しないことと、受入専用synthetic diaryが生成されないことをassertする。通常diaryへの`Harness=<type>`併記はconductor運用であり、製品コードに存在しないwriterをテストで模擬しない。
 
 ### Reference / Guide ownership
 
@@ -95,7 +94,7 @@ answer-evidence は先に `functional-design-questions.md` を検査した際、
 | コマンド | Exit code | Iteration 1是正後の結果 |
 |---|---:|---|
 | `bun test tests/integration/t270-harness-provenance-birth.test.ts` | 0 | focused: 6 pass / 0 fail / 40 expect |
-| `bun test tests/unit/t269-harness-provenance.test.ts tests/unit/t144-harness-seam.test.ts tests/unit/t100-memory-template-lifecycle.test.ts tests/integration/t270-harness-provenance-birth.test.ts` | 0 | full focused regression: 38 pass / 0 fail / 167 expect |
+| `bun test tests/unit/t269-harness-provenance.test.ts tests/unit/t144-harness-seam.cli.test.ts tests/unit/t100-memory-template-lifecycle.test.ts tests/integration/t270-harness-provenance-birth.test.ts` | 0 | full focused regression: 38 pass / 0 fail / 167 expect |
 | `bun run typecheck` | 0 | source/test TypeScriptとも成功 |
 | `bun run lint` | 0 | 既存warningのみ、errorなし |
 | `bun scripts/package.ts` | 0 | 6配布形態を再生成 |
@@ -108,3 +107,21 @@ answer-evidence は先に `functional-design-questions.md` を検査した際、
 Iteration 1是正後のstage sensorは、linter PASS（fire id `366be9f5`）、type-check PASS（fire id `8d636b76`）、answer-evidence PASS（fire id `129e13c9`）で、各fireコマンドはexit 0だった。
 
 Iteration 1の2件のMajorは、security-designの5面raw leak検証と、Unit指定の`docs/reference/`正本更新により解消した。Iteration 2 reviewへ投入可能である。
+
+## PR品質レビュー是正（2026-07-25）
+
+- ハーネス型、canonical mapping、検出、resolver、rules subdirを`amadeus-harness.ts`へ分離し、`amadeus-lib.ts`は既存symbolを互換facadeから委譲する。`amadeus-lib.ts`は是正前7,671行から7,524行となった。
+- `HARNESS_DIR_TO_TYPE`のvalue制約を`Exclude<HarnessType, "unknown" | "manual">`へ狭め、runtimeの有効値集合はmappingから導出した。手書きの`HARNESS_TYPES`配列と型assertionを削除した。
+- migration validatorは`Harness`欠落を後方互換として許容しつつ、存在時の重複と7値外を拒否する。公開CLIの実fixtureで有効値受理、不正値拒否、重複拒否を確認した。
+- t270のテスト専用memory writerとソース文字列検査を削除した。実birthがraw overrideを外部面へ漏らさず、受入専用synthetic diaryも生成しないことを製品経路で検証する。
+- t144/t269のtools投影とsubprocess実行を`tests/helpers/harness-lib-fixture.ts`へ共通化した。t269とt270の統合テストは合計429行から312行へ縮小した。
+
+### PR品質レビュー是正後の再検証
+
+| コマンド | Exit code | 結果 |
+|---|---:|---|
+| `bun test tests/unit/t144-harness-seam.cli.test.ts tests/unit/t269-harness-provenance.test.ts tests/unit/t100-memory-template-lifecycle.test.ts tests/integration/t225-upstream-v2-migration-preflight.test.ts tests/integration/t269-harness-provenance.cli.test.ts tests/integration/t270-harness-provenance-birth.test.ts` | 0 | 84 pass / 0 fail / 550 expect |
+| `bun run typecheck` | 0 | source/test TypeScriptとも成功 |
+| `bun run lint` | 0 | 既存warningのみ、errorなし |
+| `bun run dist:check` | 0 | 6配布形態すべてOK |
+| `bun run promote:self:check` | 0 | 4 self-install面すべてOK |

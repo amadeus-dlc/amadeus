@@ -4,7 +4,7 @@
 
 ## 対象
 
-Standard 戦略の unit 層として、`tests/unit/t269-harness-provenance.test.ts` の純粋mapping契約を中核に、既存 seam の `t144-harness-seam.test.ts` と diary template の `t100-memory-template-lifecycle.test.ts` を回帰確認する。process/CWD/filesystem境界を使う detector 分岐は、test-size purityに従い integration 層へ配置する。
+Standard 戦略の unit 層として、`tests/unit/t269-harness-provenance.test.ts` の純粋mapping契約を中核に、既存 seam の `t144-harness-seam.cli.test.ts` と diary template の `t100-memory-template-lifecycle.test.ts` を回帰確認する。process/CWD/filesystem境界を使う detector 分岐は、test-size purityに従い integration 層へ配置する。
 
 対象コンポーネント:
 
@@ -17,7 +17,7 @@ Standard 戦略の unit 層として、`tests/unit/t269-harness-provenance.test.
 ```bash
 bun test \
   tests/unit/t269-harness-provenance.test.ts \
-  tests/unit/t144-harness-seam.test.ts \
+  tests/unit/t144-harness-seam.cli.test.ts \
   tests/unit/t100-memory-template-lifecycle.test.ts
 ```
 

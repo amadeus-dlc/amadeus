@@ -2,7 +2,7 @@
 
 上流入力(consumes 全数): requirements.md, stories.md, architecture.md, component-inventory.md, team-practices.md
 
-## Harness Detector(`amadeus-lib.ts`)
+## Harness Detector(`amadeus-harness.ts`)
 
 ### `HarnessType`(型)
 
@@ -38,7 +38,7 @@ export const HARNESS_DIR_TO_TYPE = {
 type SupportedHarnessDir = keyof typeof HARNESS_DIR_TO_TYPE;
 ```
 
-Issue #1452 が記録対象とする5種のdot-dirとハーネス種別については、このmapping自体を閉じたcanonical定義とする。`SupportedHarnessDir`はmappingのkeyから導出し、同じ5要素の配列・unionを別途手書きしない。既存`KNOWN_HARNESS_DIRS`(`amadeus-lib.ts:158`)はCWD probeの候補順を表す既存実装であり、存在するハーネス種別のsource of truthとは扱わない(architecture.mdの実測注意に整合)。将来`KNOWN_HARNESS_DIRS`へ未知dot-dirが追加されても、mappingへ明示追加されるまでは`unknown`となる。constructionではmappingのkey/value全件と本要件の5対象を直接テストし、意図しない欠落・追加を検出する。
+Issue #1452 が記録対象とする5種のdot-dirとハーネス種別については、このmapping自体を閉じたcanonical定義とする。`SupportedHarnessDir`はmappingのkeyから導出し、同じ5要素の配列・unionを別途手書きしない。`KNOWN_HARNESS_DIRS`はCWD probeの候補順だけを表し、存在するハーネス種別のsource of truthとは扱わない。将来`KNOWN_HARNESS_DIRS`へ未知dot-dirが追加されても、mappingへ明示追加されるまでは`unknown`となる。constructionではmappingのkey/value全件と本要件の5対象を直接テストし、意図しない欠落・追加を検出する。
 
 ### `HarnessDirResolution` と `resolveHarnessDir()`
 
@@ -52,7 +52,7 @@ type HarnessDirResolution = Readonly<{
 ```
 
 - **目的**: 既存`harnessDir(): string`が失う検出元を内部で保持し、実検出された`.claude`と最終fallback `.claude`を区別する
-- **配置**: `amadeus-lib.ts`内のprivate seam。新規公開APIは増やさない
+- **配置**: `amadeus-harness.ts`内のprivate seam。既存利用者には`amadeus-lib.ts`から再exportし、公開APIは増やさない
 - **解決順序**:
   1. `AMADEUS_HARNESS_DIR`がtruthyなら `{ dir: value, source: "env" }`
   2. module pathのgrandparentがdot-dirなら `{ dir: candidate, source: "script-path" }`
@@ -76,7 +76,7 @@ type HarnessDirResolution = Readonly<{
 
 1. `birthPrintDirective()`は`packages/framework/core/tools/amadeus-orchestrate.ts:660`で、既存`harnessDir()`が解決したdot-dir配下の`tools/amadeus-utility.ts`を起動コマンドに埋め込む。
 2. Claude/Codex/Cursor/OpenCode/Kiro/Kiro IDEの全6 manifestは、共通`core/tools`を各ハーネスdot-dirの`tools`へ投影する(`packages/framework/harness/*/manifest.ts`の`coreDirs: { src: "tools", dst: "tools" }`)。Kiro CLIとKiro IDEは同じ`.kiro`/`kiro`記録値を共有する。
-3. 投影された`amadeus-utility.ts`は同じ`tools`ディレクトリの`./amadeus-lib.ts`をimportする。そのためintent birth中の`amadeus-lib.ts`のscript pathは常に`<project>/<dot-dir>/tools/amadeus-lib.ts`となり、grandparentは対象dot-dirである。
+3. 投影された`amadeus-utility.ts`は`amadeus-lib.ts`から再exportされた検出関数を使い、実装モジュール`amadeus-harness.ts`も同じ`tools`ディレクトリへ投影される。そのためintent birth中の検出モジュールのscript pathは常に`<project>/<dot-dir>/tools/amadeus-harness.ts`となり、grandparentは対象dot-dirである。
 4. よって、`AMADEUS_HARNESS_DIR`が明示設定されていれば`env`で先に確定し、未設定なら`script-path`で確定する。どちらもCWD probeより前であり、通常のintent birthではCWD probeへ到達しない。
 
 constructionの必須テストでは、6配布形態の投影済み`tools/amadeus-utility.ts`経由で、明示envなしのresolution sourceが`script-path`となることを検証する。別途、配布ツリー外のcore source直接実行でのみ`cwd-probe`/`fallback`分岐を単体テストし、通常birth経路との境界を固定する。

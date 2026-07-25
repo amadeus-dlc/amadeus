@@ -19,7 +19,7 @@
 
 ```bash
 bun test tests/unit/t269-harness-provenance.test.ts
-bun test tests/integration/t269-harness-provenance.test.ts
+bun test tests/integration/t269-harness-provenance.cli.test.ts
 bun test tests/integration/t270-harness-provenance-birth.test.ts
 bun tests/complexity-gate.ts --check
 ```

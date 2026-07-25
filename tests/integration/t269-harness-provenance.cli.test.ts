@@ -2,9 +2,7 @@
 // covers: function:detectHarnessType, function:harnessDir, constant:HARNESS_DIR_TO_TYPE
 
 import { describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import {
-  cpSync,
   mkdirSync,
   mkdtempSync,
   realpathSync,
@@ -16,22 +14,16 @@ import {
   HARNESS_DIR_TO_TYPE,
   type HarnessType,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
+import {
+  evalHarnessLib,
+  materializeHarnessLib,
+} from "../helpers/harness-lib-fixture.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const CORE_TOOLS = join(REPO_ROOT, "packages", "framework", "core", "tools");
-const LIB_SIBLINGS = [
-  "amadeus-lib.ts",
-  "amadeus-graph.ts",
-  "amadeus-stage-schema.ts",
-  "amadeus-version.ts",
-] as const;
 
 function copyLib(targetDir: string): string {
-  mkdirSync(targetDir, { recursive: true });
-  for (const sibling of LIB_SIBLINGS) {
-    cpSync(join(CORE_TOOLS, sibling), join(targetDir, sibling));
-  }
-  return join(targetDir, "amadeus-lib.ts");
+  return materializeHarnessLib(CORE_TOOLS, targetDir);
 }
 
 function evalLib(
@@ -42,26 +34,10 @@ function evalLib(
     env?: Record<string, string | undefined>;
   } = {},
 ): string {
-  const result = spawnSync(
-    process.execPath,
-    [
-      "-e",
-      `import { detectHarnessType, harnessDir } from ${JSON.stringify(libPath)}; console.log(${expression});`,
-    ],
-    {
-      cwd: options.cwd ?? REPO_ROOT,
-      encoding: "utf-8",
-      env: {
-        ...process.env,
-        AMADEUS_HARNESS_TYPE: undefined,
-        CLAUDECODE: undefined,
-        AMADEUS_HARNESS_DIR: undefined,
-        ...options.env,
-      } as NodeJS.ProcessEnv,
-    },
-  );
-  expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
-  return (result.stdout ?? "").trim();
+  return evalHarnessLib(libPath, expression, {
+    cwd: options.cwd ?? REPO_ROOT,
+    env: options.env,
+  });
 }
 
 describe("t269 harness provenance detector", () => {

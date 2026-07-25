@@ -1439,7 +1439,7 @@
       "minMechanism": "none",
       "coveredBy": [
         {
-          "file": "tests/integration/t269-harness-provenance.test.ts",
+          "file": "tests/integration/t269-harness-provenance.cli.test.ts",
           "mechanism": "cli"
         },
         {
@@ -1775,11 +1775,11 @@
       "minMechanism": "none",
       "coveredBy": [
         {
-          "file": "tests/integration/t269-harness-provenance.test.ts",
+          "file": "tests/integration/t269-harness-provenance.cli.test.ts",
           "mechanism": "cli"
         },
         {
-          "file": "tests/unit/t144-harness-seam.test.ts",
+          "file": "tests/unit/t144-harness-seam.cli.test.ts",
           "mechanism": "cli"
         },
         {
@@ -3144,7 +3144,7 @@
       "minMechanism": "none",
       "coveredBy": [
         {
-          "file": "tests/unit/t144-harness-seam.test.ts",
+          "file": "tests/unit/t144-harness-seam.cli.test.ts",
           "mechanism": "cli"
         }
       ],
@@ -3217,7 +3217,7 @@
       "minMechanism": "none",
       "coveredBy": [
         {
-          "file": "tests/unit/t144-harness-seam.test.ts",
+          "file": "tests/unit/t144-harness-seam.cli.test.ts",
           "mechanism": "cli"
         }
       ],

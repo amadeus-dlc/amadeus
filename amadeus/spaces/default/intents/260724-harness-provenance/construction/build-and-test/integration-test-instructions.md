@@ -4,7 +4,7 @@
 
 ## 対象境界
 
-`tests/integration/t269-harness-provenance.test.ts` と `tests/integration/t270-harness-provenance-birth.test.ts` で、detector → intent birth → V7 state → diary observation → 配布形態の境界を検証する。
+`tests/integration/t269-harness-provenance.cli.test.ts` と `tests/integration/t270-harness-provenance-birth.test.ts` で、detector → intent birth → V7 state → diary observation → 配布形態の境界を検証する。
 
 - 7値override、空・不正値の後段遮断
 - env / script-path / CWD probe / fallback と non-env cache
@@ -19,7 +19,7 @@
 
 ```bash
 bun test \
-  tests/integration/t269-harness-provenance.test.ts \
+  tests/integration/t269-harness-provenance.cli.test.ts \
   tests/integration/t270-harness-provenance-birth.test.ts
 ```
 

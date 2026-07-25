@@ -39,7 +39,7 @@ printf '%s\0' \
   packages/framework/core/tools/amadeus-lib.ts \
   packages/framework/core/tools/amadeus-utility.ts \
   tests/unit/t269-harness-provenance.test.ts \
-  tests/integration/t269-harness-provenance.test.ts \
+  tests/integration/t269-harness-provenance.cli.test.ts \
   tests/integration/t270-harness-provenance-birth.test.ts \
   | bash scripts/detect-ci-changes.sh
 ```
