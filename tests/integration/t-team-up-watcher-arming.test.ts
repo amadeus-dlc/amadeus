@@ -1,6 +1,6 @@
 // size: large
 // Regression for Issue #1384: team-up.sh fresh Claude members race the
-// Claude Code TUI cold-start and drop the initial `/agmsg mode monitor` prompt,
+// Claude Code TUI cold-start and drop the initial `/agmsg actas <role>` prompt,
 // leaving the agmsg watcher unarmed with no check or retry. These tests drive
 // the bash verification seam directly (sourced in TEAM_UP_LIB_ONLY mode) against
 // a self-contained fake agmsg readiness lib + fake herdr, so no real agmsg /
@@ -92,7 +92,7 @@ function armAll(readyDir: string) {
 }
 
 // Drop the WATCHER_* budget overrides from a fixture env so the canonical
-// defaults resolve at source time (WATCHER_READY_TIMEOUT=90, WATCHER_RESEND_MAX=1).
+// defaults resolve at source time (WATCHER_READY_TIMEOUT=60, WATCHER_RESEND_MAX=1).
 // Used by the Issue #1449 budget tests that assert the shipped defaults rather
 // than a test-pinned value.
 function envSansBudget(env: Record<string, string>): Record<string, string> {
@@ -168,8 +168,12 @@ describe("team-up watcher arming — verify_watchers_armed", () => {
     expect(err).toContain("leader");
     expect(err).toContain("engineer-1");
     expect(err).toContain("engineer-2");
-    // Recovery guidance is emitted (no silent failure).
-    expect(err).toContain("/agmsg mode monitor");
+    // Recovery guidance is emitted (no silent failure), one line per member with
+    // that member's own role-specific prompt (#1476: a single string cannot
+    // describe the recovery for every role).
+    expect(err).toContain("leader: /agmsg actas leader");
+    expect(err).toContain("engineer-1: /agmsg actas e1");
+    expect(err).toContain("engineer-2: /agmsg actas e2");
   });
 
   test("a member armed only after the re-send passes via the two-step send/submit", () => {
@@ -190,9 +194,9 @@ describe("team-up watcher arming — verify_watchers_armed", () => {
     }
   });
 
-  // The runtime/backend axis of the guard. The prompt axis is pinned to an actas
-  // bootstrap prompt here because monitor-mode launches no longer apply at all
-  // (Issue #1449) — that axis is covered by t294.
+  // The runtime/backend axis of the guard, driven through the shipped bootstrap
+  // prompt derivation (#1476) rather than an env-pinned constant. The prompt-shape
+  // axis is covered by t294.
   test("watcher_verification_applies only for the claude + agmsg combination", () => {
     const fx = createFixture();
     const combos: Array<[string, string, boolean]> = [
@@ -204,33 +208,35 @@ describe("team-up watcher arming — verify_watchers_armed", () => {
     for (const [runtime, backend, expected] of combos) {
       const result = runLib(
         fx.env,
-        `CLAUDE_MONITOR_PROMPT='/agmsg actas leader'; RUNTIME=${runtime}; MSG_BACKEND=${backend}; if watcher_verification_applies; then echo yes; else echo no; fi`,
+        `RUNTIME=${runtime}; MSG_BACKEND=${backend}; if watcher_verification_applies; then echo yes; else echo no; fi`,
       );
       expect(result.stdout.toString().trim(), `${runtime}/${backend}`).toBe(expected ? "yes" : "no");
     }
   });
 });
 
-// Issue #1449: the worst-case attach block was 3 poll rounds (270s at the 90s
+// Issue #1449: the worst-case verification budget was 3 poll rounds (270s at the 90s
 // per-wait default). Election E-WTFRA1 = C cut the re-send budget from 2 to 1,
 // making the loop symmetric with agmsg spawn.sh's single-wait design: one wait,
-// one re-send, one more wait — 2 rounds, 180s worst-case — while still recovering
+// one re-send, one more wait — 2 rounds, 120s worst-case at the #1476 timeout —
+// while still recovering
 // the #1384 TUI cold-start prompt drop.
 describe("team-up watcher arming — Issue #1449 re-send budget", () => {
-  // NFR-1c: the per-wait timeout default stays grounded on agmsg spawn.sh:132
-  // (READY_TIMEOUT=90). Asserted as a lightweight default-resolution check, not a
-  // real 90s wait — the value is read straight off the sourced constant.
-  test("WATCHER_READY_TIMEOUT defaults to 90 (spawn.sh:132 grounding, NFR-1c)", () => {
+  // NFR-1c: the per-wait timeout default is grounded on the measured 32.2s for a
+  // member to arm (Issue #1476), not on agmsg spawn.sh's unmeasured 90. Asserted
+  // as a lightweight default-resolution check, not a real 60s wait — the value is
+  // read straight off the sourced constant.
+  test("WATCHER_READY_TIMEOUT defaults to 60 (32.2s measurement grounding, NFR-1c)", () => {
     const fx = createFixture();
     const result = runLib(envSansBudget(fx.env), `printf '%s' "$WATCHER_READY_TIMEOUT"`);
     expect(result.exitCode, result.stderr.toString()).toBe(0);
-    expect(result.stdout.toString().trim()).toBe("90");
+    expect(result.stdout.toString().trim()).toBe("60");
   });
 
   // NFR-1a (falling proof surface): the shipped re-send default is 1, so
   // max_attempts = WATCHER_RESEND_MAX + 1 = 2 rounds. Pre-fix this constant was 2
   // (3 rounds / 270s); reverting team-up.sh's default turns this assertion red.
-  test("WATCHER_RESEND_MAX defaults to 1 — 2 rounds / 180s worst-case (NFR-1a)", () => {
+  test("WATCHER_RESEND_MAX defaults to 1 — 2 rounds / 120s worst-case (NFR-1a)", () => {
     const fx = createFixture();
     const result = runLib(envSansBudget(fx.env), `printf '%s' "$WATCHER_RESEND_MAX"`);
     expect(result.exitCode, result.stderr.toString()).toBe(0);
