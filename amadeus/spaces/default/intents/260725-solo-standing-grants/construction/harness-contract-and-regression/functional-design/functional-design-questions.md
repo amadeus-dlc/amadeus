@@ -58,4 +58,3 @@
 - doctorは新event/fieldの存在を常に列挙するtoolではないため、既存doctor responsibilityに該当する場合だけ更新する。
 - generated artifactsは検証対象であり編集ownerではない。
 - U2に残るroute-intent binding判断はU3で迂回実装せず、Functional Design gateで解決する。
-

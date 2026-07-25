@@ -1,8 +1,11 @@
 # Feasibility Questions
 
-**Mode:** chat  
-**Started:** 2026-07-25T03:03:26Z  
-**ユーザー承認:** 2026-07-25T03:06:39Z  
+**Mode:** chat
+
+**Started:** 2026-07-25T03:03:26Z
+
+**ユーザー承認:** 2026-07-25T03:06:39Z
+
 **Primary evidence:** 現行mainのコード、Issue #1466、承認済みIntent Capture成果物
 
 ## Q1. どの既存system・契約と統合する必要があるか

@@ -28,4 +28,3 @@
 ## Verdict
 
 PASS — Delivery Planningの正式承認後、Constructionへ進行可能。
-

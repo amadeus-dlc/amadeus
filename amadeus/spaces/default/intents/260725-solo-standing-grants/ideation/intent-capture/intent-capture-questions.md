@@ -1,9 +1,13 @@
 # Intent Capture Questions
 
-**Mode:** chat  
-**Captured:** 2026-07-25T00:42:58Z  
-**Confirmed:** 2026-07-25T00:51:32Z  
-**ユーザー承認:** 2026-07-25T00:51:32Z  
+**Mode:** chat
+
+**Captured:** 2026-07-25T00:42:58Z
+
+**Confirmed:** 2026-07-25T00:51:32Z
+
+**ユーザー承認:** 2026-07-25T00:51:32Z
+
 **Primary source:** Issue #1466 とユーザー提示の前提・受け入れ条件
 
 ## Q1. 解決する問題は何か

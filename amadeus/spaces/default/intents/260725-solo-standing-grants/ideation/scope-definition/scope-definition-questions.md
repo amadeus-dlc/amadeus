@@ -1,8 +1,11 @@
 # Scope Definition Questions
 
-**Mode:** chat  
-**Captured:** 2026-07-25T04:02:00Z  
-**ユーザー承認:** 2026-07-25T04:03:44Z  
+**Mode:** chat
+
+**Captured:** 2026-07-25T04:02:00Z
+
+**ユーザー承認:** 2026-07-25T04:03:44Z
+
 **Primary evidence:** 承認済みIntent Capture、Feasibility Assessment、Constraint Register
 
 ## Q1. 利用価値を成立させる最小scopeは何か

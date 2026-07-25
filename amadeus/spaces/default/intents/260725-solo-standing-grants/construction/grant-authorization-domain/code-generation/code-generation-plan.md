@@ -6,40 +6,58 @@
 
 ## Plan
 
-- [x] **Step 1: canonical operating mode resolverを追加する**  
-  `packages/framework/core/tools/amadeus-lib.ts`へunset/empty=`solo`、`solo`、`team`、unknown fail-closedのresolverを追加し、grant lifecycleとqueryが同じ判定を使えるようにする。  
+- [x] **Step 1: canonical operating mode resolverを追加する**
+
+  `packages/framework/core/tools/amadeus-lib.ts`へunset/empty=`solo`、`solo`、`team`、unknown fail-closedのresolverを追加し、grant lifecycleとqueryが同じ判定を使えるようにする。
+
   Trace: FR-01–04、FR-19、BR-01–03。
 
-- [x] **Step 2: audit-derived solo grant projectionと完全順序を実装する**  
-  active intent binding、valid provenance、未取消、expiry、同一Grant Id issue cardinality exactly-oneを判定し、expiry desc → issued timestamp desc → Grant Id ascでsolo candidateを決めるpure seamを追加する。既存team finderの観測結果は変更しない。  
+- [x] **Step 2: audit-derived solo grant projectionと完全順序を実装する**
+
+  active intent binding、valid provenance、未取消、expiry、同一Grant Id issue cardinality exactly-oneを判定し、expiry desc → issued timestamp desc → Grant Id ascでsolo candidateを決めるpure seamを追加する。既存team finderの観測結果は変更しない。
+
   Trace: FR-02、FR-05、FR-07、BR-09–14a。
 
-- [x] **Step 3: gate eligibility classifierを確定する**  
-  gateなし、phase-boundary opt-in、walking-skeleton on/off/scope-dependent/unknown、`amadeus-feature` effective-on、per-unit final gateをtyped eligible/ineligibleとして評価する。擬似gate値を追加しない。  
+- [x] **Step 3: gate eligibility classifierを確定する**
+
+  gateなし、phase-boundary opt-in、walking-skeleton on/off/scope-dependent/unknown、`amadeus-feature` effective-on、per-unit final gateをtyped eligible/ineligibleとして評価する。擬似gate値を追加しない。
+
   Trace: FR-06、FR-20–22、BR-15–21。
 
-- [x] **Step 4: authorization selection receipt domainとprotected audit schemaを追加する**  
-  `GATE_AUTHORIZATION_SELECTED`をprotected eventへ登録し、UUID v4 Route Id、Stage、Grant Idのexact parse/cardinality/field-matchをpure queryとして実装する。append transaction自体はU2が所有する。  
+- [x] **Step 4: authorization selection receipt domainとprotected audit schemaを追加する**
+
+  `GATE_AUTHORIZATION_SELECTED`をprotected eventへ登録し、UUID v4 Route Id、Stage、Grant Idのexact parse/cardinality/field-matchをpure queryとして実装する。append transaction自体はU2が所有する。
+
   Trace: FR-08、FR-12、NFR-01–03、BR-22–24。
 
-- [x] **Step 5: standing grant issue/revokeをsoloでも利用可能にする**  
-  `packages/framework/core/tools/amadeus-state.ts`のissue/revokeでcanonical resolverを使い、fresh `HUMAN_TURN`、4時間TTL、scope、permissive revoke appendを維持したままsoloを許可する。teamのissuer provenance、stdout/stderr、event fieldは変えない。  
+- [x] **Step 5: standing grant issue/revokeをsoloでも利用可能にする**
+
+  `packages/framework/core/tools/amadeus-state.ts`のissue/revokeでcanonical resolverを使い、fresh `HUMAN_TURN`、4時間TTL、scope、permissive revoke appendを維持したままsoloを許可する。teamのissuer provenance、stdout/stderr、event fieldは変えない。
+
   Trace: FR-01、FR-03–04、FR-19、BR-04–08。
 
-- [x] **Step 6: domain unit/property testsを追加する**  
-  新規 `tests/unit/t-solo-standing-grant-domain.test.ts` でmode全値、TTL/expiry境界、malformed audit、intent mismatch、issue cardinality 0/1/複数、全tie-break、gate policy全行、receipt 0/1/複数とfield mismatchを検証する。  
+- [x] **Step 6: domain unit/property testsを追加する**
+
+  新規 `tests/unit/t-solo-standing-grant-domain.test.ts` でmode全値、TTL/expiry境界、malformed audit、intent mismatch、issue cardinality 0/1/複数、全tie-break、gate policy全行、receipt 0/1/複数とfield mismatchを検証する。
+
   Trace: U1 delivery scenarios 1、3、4、NFR-02–04。
 
-- [x] **Step 7: lifecycle・protected-event integration testsを拡張する**  
-  `tests/integration/t-standing-grant.test.ts`でsolo issue/revoke、team golden、fresh-human guard、protected receipt mint拒否、exact audit fieldsを検証し、audit taxonomy同期testを更新する。  
+- [x] **Step 7: lifecycle・protected-event integration testsを拡張する**
+
+  `tests/integration/t-standing-grant.test.ts`でsolo issue/revoke、team golden、fresh-human guard、protected receipt mint拒否、exact audit fieldsを検証し、audit taxonomy同期testを更新する。
+
   Trace: U1 delivery scenario 2、FR-01–05、FR-19、NFR-01、NFR-05。
 
-- [x] **Step 8: focused verificationを実行する**  
-  U1 unit/integration tests、audit event sync、typecheck、linter、`git diff --check`を実行する。既存test configurationを利用し、新しいrunner/config/dependencyは追加しない。  
+- [x] **Step 8: focused verificationを実行する**
+
+  U1 unit/integration tests、audit event sync、typecheck、linter、`git diff --check`を実行する。既存test configurationを利用し、新しいrunner/config/dependencyは追加しない。
+
   Trace: NFR-05–08、受け入れ条件5–7、9。
 
-- [x] **Step 9: code summaryを作成する**  
-  変更ファイル、実装判断、test結果、計画との差分を`code-summary.md`へ記録する。  
+- [x] **Step 9: code summaryを作成する**
+
+  変更ファイル、実装判断、test結果、計画との差分を`code-summary.md`へ記録する。
+
   Trace: Code Generation stage contract。
 
 ## Explicit Non-goals

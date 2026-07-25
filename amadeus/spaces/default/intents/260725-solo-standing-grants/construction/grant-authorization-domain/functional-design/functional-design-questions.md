@@ -70,4 +70,3 @@
 - team modeのfinderとdelegationは変更せず、solo用queryだけに完全順序を適用する。
 - policyはgateの存在を変更せず、存在するgateをgrantが認可できるかだけを返す。
 - receipt重複、欠落、field不一致はexpected expiry/revokeではなくprotocol corruptionとしてfail-closedにする。
-

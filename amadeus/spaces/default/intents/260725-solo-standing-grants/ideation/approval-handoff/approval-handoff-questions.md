@@ -1,8 +1,11 @@
 # Approval & Handoff Questions
 
-**Mode:** chat  
-**Captured:** 2026-07-25T04:12:44Z  
-**ユーザー承認:** 2026-07-25T04:13:53Z  
+**Mode:** chat
+
+**Captured:** 2026-07-25T04:12:44Z
+
+**ユーザー承認:** 2026-07-25T04:13:53Z
+
 **Primary evidence:** 承認済みIdeation成果物と各stageの`GATE_APPROVED`
 
 ## Q1. intentとscopeについてstakeholder合意があるか
