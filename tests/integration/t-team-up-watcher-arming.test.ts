@@ -190,6 +190,9 @@ describe("team-up watcher arming — verify_watchers_armed", () => {
     }
   });
 
+  // The runtime/backend axis of the guard. The prompt axis is pinned to an actas
+  // bootstrap prompt here because monitor-mode launches no longer apply at all
+  // (Issue #1449) — that axis is covered by t294.
   test("watcher_verification_applies only for the claude + agmsg combination", () => {
     const fx = createFixture();
     const combos: Array<[string, string, boolean]> = [
@@ -201,7 +204,7 @@ describe("team-up watcher arming — verify_watchers_armed", () => {
     for (const [runtime, backend, expected] of combos) {
       const result = runLib(
         fx.env,
-        `RUNTIME=${runtime}; MSG_BACKEND=${backend}; if watcher_verification_applies; then echo yes; else echo no; fi`,
+        `CLAUDE_MONITOR_PROMPT='/agmsg actas leader'; RUNTIME=${runtime}; MSG_BACKEND=${backend}; if watcher_verification_applies; then echo yes; else echo no; fi`,
       );
       expect(result.stdout.toString().trim(), `${runtime}/${backend}`).toBe(expected ? "yes" : "no");
     }

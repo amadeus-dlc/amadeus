@@ -1,6 +1,35 @@
 # コード構造
 
-## PR #1469 レビュー修正面のコード配置（260725-mirror-review-fixes、現在）
+## Team Mode 起動レイテンシ面のコード配置（260725-teamup-attach-latency、現在、Issue #1449）
+
+測定 ref: observed HEAD `ec624022ff65cc8b3912001f768bd66ec41a0e39` の実ファイル直読。base `6d4df9056`..observed の区間規模は `git diff --stat` で **1018 files changed, 274683 insertions(+), 4573 deletions(-)**（大宗は Mirror lifecycle と elections record で、本 intent の欠陥面とは非交差）。
+
+### 正本（repo 内）
+
+| パス | 行数 | 本 intent での役割 |
+| --- | --- | --- |
+| `packages/framework/core/tools/team-up.sh` | 1474（`wc -l`） | 欠陥の所在。watcher 検証関数群 :1077-1190、launch シーケンス :1438-1474、worktree 直列作成 :1279-1283 |
+| `tests/integration/t-team-up-watcher-arming.test.ts` | 268（`wc -l`） | 検証のテスト。agmsg 側をスタブ化しており本欠陥を検出しない |
+
+配布投影（生成物、直接編集禁止）: `.claude/tools/team-up.sh`、`.codex/tools/team-up.sh`、`.cursor/tools/team-up.sh`、`.opencode/tools/team-up.sh` ほか（`git diff --name-only <base>..<observed> | grep team-up.sh` で区間内に投影面の変更を確認）。
+
+### 外部依存（repo 外・非バージョン管理）
+
+`~/.agents/skills/agmsg/`（読取 2026-07-25）。本欠陥の理解に必要な面:
+
+| パス:line | 内容 |
+| --- | --- |
+| `scripts/watch.sh:43` | `ACTIVE_NAME="${4:-}"` — sentinel 書込を制御する第4位置引数 |
+| `scripts/watch.sh:300-310` | `if [ -n "$ACTIVE_NAME" ]` ガード内でのみ ready sentinel を生成 |
+| `scripts/lib/actas-lock.sh:63-66` | sentinel の所有関係コメント（actas watcher 専用）と `agmsg_ready_path` |
+| `scripts/delivery.sh:259` | `emit_monitor_directive()` — monitor モードの起動経路 |
+| `scripts/delivery.sh:301` | 3 引数のみで `watch_command` を構築（`ACTIVE_NAME` 不在） |
+| `scripts/spawn.sh:358` | `ACTAS_PROMPT` — actas モード起動（sentinel が書かれる対照経路） |
+| `run/` | 251 エントリ中 `ready.*` **0 件**（sentinel が一度も生成されていない実測） |
+
+**構造上の注意**: 欠陥の片側（sentinel の書き手）が repo 外の外部スキルに存在するため、repo 内のテスト・センサー・lint のいずれも到達できない。この境界が検出不能性の構造的原因である。
+
+## PR #1469 レビュー修正面のコード配置（260725-mirror-review-fixes、履歴）
 
 観測 HEAD は `70336937529f5be31c011de5d368c0f03e534506`、差分 base は `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`。
 

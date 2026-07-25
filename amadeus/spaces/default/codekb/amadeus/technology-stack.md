@@ -1,6 +1,8 @@
 # 技術スタック
 
-## Mirror レビュー修正の交差スタック（260725-mirror-review-fixes、現在）
+> **2026-07-25（intent `260725-teamup-attach-latency`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み（測定 ref: observed `ec624022f`、base `6d4df9056`、距離 125）。** 交差要素は bash（`team-up.sh` 制御フロー）+ herdr（pane/agent 操作）+ 外部 agmsg スキル（watch / delivery / spawn / actas-lock）で、いずれも既存スタック。新規ランタイム依存なし。
+
+## Mirror レビュー修正の交差スタック（260725-mirror-review-fixes、履歴）
 
 観測 HEAD は `70336937529f5be31c011de5d368c0f03e534506`、差分 base は `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`。
 

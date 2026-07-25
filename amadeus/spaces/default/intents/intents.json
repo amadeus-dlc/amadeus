@@ -547,5 +547,12 @@
     "dirName": "260725-mirror-review-fixes",
     "scope": "amadeus-bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019f9856-8a40-7666-927b-adb40ac7646f",
+    "slug": "teamup-attach-latency",
+    "dirName": "260725-teamup-attach-latency",
+    "scope": "amadeus-bugfix",
+    "status": "complete"
   }
 ]
