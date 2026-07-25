@@ -87,6 +87,36 @@ function challenged(provenance = V2): {
 }
 
 describe("t283 repair parser", () => {
+  test("accepts lifecycle boundary, manual, and answer command shapes", () => {
+    for (const args of [
+      ["boundary", "intent-capture", "--instance", "capture-1"],
+      [
+        "boundary",
+        "phase",
+        "--instance",
+        "phase-1",
+        "--phase",
+        "ideation",
+      ],
+      [
+        "boundary",
+        "park",
+        "--instance",
+        "park-1",
+        "--stage",
+        "build-and-test",
+      ],
+      ["boundary", "completion", "--instance", "complete-1"],
+      ["manual", "create", "--instance", "manual-create-1"],
+      ["manual", "sync", "--instance", "manual-sync-1"],
+      ["manual", "close", "--instance", "manual-close-1"],
+      ["answer", "approve", "--binding-id", "binding-1"],
+      ["answer", "skip", "--binding-id", "binding-2"],
+    ]) {
+      expect(parseMirrorLifecycleArgs(args).kind).not.toBe("usage");
+    }
+  });
+
   test("accepts the three repair commands and explicit non-default selectors", () => {
     expect(
       parseMirrorLifecycleArgs([
@@ -139,6 +169,10 @@ describe("t283 repair parser", () => {
       ["manual", "close"],
       ["boundary", "phase", "--instance", "id"],
       ["boundary", "park", "--instance", "id", "--stage", "x", "--issue", "1"],
+      ["answer", "approve", "--binding-id", "id", "--repo", "bad/repo/extra"],
+      ["answer", "other", "--binding-id", "id"],
+      ["repair", "status", "--repo", "bad"],
+      ["boundary", "unknown", "--instance", "id"],
     ]) {
       expect(parseMirrorLifecycleArgs(args).kind).toBe("usage");
     }

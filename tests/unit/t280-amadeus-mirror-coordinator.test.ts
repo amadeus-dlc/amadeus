@@ -205,6 +205,33 @@ describe("t280 mode routing", () => {
     expect(store.state().warnings[0]?.classification).toBe("configuration");
   });
 
+  test("configuration read failures preserve their diagnostic summary", async () => {
+    const store = memoryStore();
+    const base = input(store, "auto");
+    const outcome = await driveMirrorBoundary({
+      ...base,
+      dependencies: {
+        resolveConfig: () => ({
+          kind: "invalid",
+          issues: [
+            {
+              kind: "read-failure",
+              layer: "global",
+              path: "/project/amadeus/config.json",
+              key: "auto-mirror",
+              summary: "permission denied",
+              expected: "readable configuration",
+            },
+          ],
+        }),
+      },
+    });
+    expect(outcome.kind).toBe("continued");
+    expect(store.state().warnings[0]?.summary).toContain(
+      "global: permission denied",
+    );
+  });
+
   test("invalid state returns a non-blocking safety outcome", async () => {
     const store = memoryStore();
     const base = input(store, "auto");
@@ -219,6 +246,49 @@ describe("t280 mode routing", () => {
     expect(outcome.workflowMayAdvance).toBe(true);
     if (outcome.kind === "continued") {
       expect(outcome.outcomes[0]?.kind).toBe("safety-blocked");
+    }
+  });
+
+  test("state read failure returns a non-blocking safety outcome", async () => {
+    const store = memoryStore();
+    const base = input(store, "auto");
+    const outcome = await driveMirrorBoundary({
+      ...base,
+      dependencies: {
+        ...base.dependencies,
+        readState: () => ({ kind: "io-failure", summary: "read failed" }),
+      },
+    });
+    expect(outcome.kind).toBe("continued");
+    if (outcome.kind === "continued") {
+      expect(outcome.outcomes[0]).toMatchObject({
+        kind: "safety-blocked",
+        warning: { classification: "state-parse", summary: "read failed" },
+      });
+    }
+  });
+
+  test("prompt persistence failure returns a state-write safety block", async () => {
+    const store = memoryStore();
+    const base = input(store, "prompt");
+    const outcome = await driveMirrorBoundary({
+      ...base,
+      ports: { ...store.ports, acquireLock: () => false },
+      dependencies: {
+        ...base.dependencies,
+        readState: () => ({
+          kind: "ok",
+          snapshot: store.state(),
+          document: "# state",
+        }),
+      },
+    });
+    expect(outcome.kind).toBe("continued");
+    if (outcome.kind === "continued") {
+      expect(outcome.outcomes[0]).toMatchObject({
+        kind: "safety-blocked",
+        warning: { classification: "state-write" },
+      });
     }
   });
 });
@@ -275,6 +345,101 @@ describe("t280 prompt answers and completion", () => {
     });
     expect(approved.kind).toBe("continued");
     expect(operations).toEqual(["create"]);
+  });
+
+  test("an answer without a persisted prompt is suppressed", async () => {
+    const store = memoryStore();
+    const base = input(store, "prompt");
+    const event = mirrorEventIdentity(
+      "intent-1",
+      boundary("phase"),
+      "create",
+    );
+    const outcome = await driveMirrorBoundary({
+      ...base,
+      answer: {
+        choice: "approve",
+        bindingId: "missing",
+        answerId: "answer-missing",
+        event,
+        operation: "create",
+      },
+    });
+    expect(outcome).toMatchObject({
+      kind: "continued",
+      outcomes: [{ kind: "suppressed", reason: "not-applicable" }],
+    });
+  });
+
+  test("a mismatched persisted prompt answer is suppressed", async () => {
+    const store = memoryStore();
+    const asked = await driveMirrorBoundary(input(store, "prompt"));
+    if (asked.kind !== "ask") throw new Error("expected ask");
+    const base = input(store, "prompt");
+    const outcome = await driveMirrorBoundary({
+      ...base,
+      answer: {
+        choice: "approve",
+        bindingId: "wrong-binding",
+        answerId: "answer-wrong",
+        event: asked.event,
+        operation: asked.operation,
+      },
+    });
+    expect(outcome).toMatchObject({
+      kind: "continued",
+      outcomes: [{ kind: "suppressed", reason: "not-applicable" }],
+    });
+  });
+
+  test("skip persistence failure returns a state-write safety block", async () => {
+    const store = memoryStore();
+    const asked = await driveMirrorBoundary(input(store, "prompt"));
+    if (asked.kind !== "ask") throw new Error("expected ask");
+    const base = input(store, "prompt");
+    const outcome = await driveMirrorBoundary({
+      ...base,
+      ports: { ...store.ports, acquireLock: () => false },
+      dependencies: {
+        ...base.dependencies,
+        readState: () => ({
+          kind: "ok",
+          snapshot: store.state(),
+          document: "# state",
+        }),
+      },
+      answer: {
+        choice: "skip",
+        bindingId: asked.bindingId,
+        answerId: "answer-skip-failed",
+        event: asked.event,
+        operation: asked.operation,
+      },
+    });
+    expect(outcome).toMatchObject({
+      kind: "continued",
+      outcomes: [
+        {
+          kind: "safety-blocked",
+          warning: { classification: "state-write" },
+        },
+      ],
+    });
+  });
+
+  test("manual execution requires a durable invocation id", async () => {
+    const store = memoryStore();
+    const base = input(store, "auto");
+    await expect(
+      driveMirrorBoundary({
+        ...base,
+        context: {
+          ...base.context,
+          boundary: { kind: "manual", instance: "manual-1" },
+        },
+        manualOperation: "create",
+      }),
+    ).rejects.toThrow("manual execution requires an invocationId");
   });
 
   test("completion driver selects create, sync, close, then terminal", () => {
@@ -347,5 +512,18 @@ describe("t280 prompt answers and completion", () => {
     });
     expect(selected?.operationId).toBe("op-sync");
     expect(selected?.expectedRevision).toBe(9);
+  });
+
+  test("reconciliation returns null for terminal-only receipts", () => {
+    const succeeded = receipt("create", "succeeded", boundary("phase"));
+    expect(
+      selectMirrorReconciliation({
+        snapshot: {
+          ...EMPTY_MIRROR_STATE,
+          receipts: { [succeeded.key]: succeeded },
+        },
+        snapshotRevision: 1,
+      }),
+    ).toBeNull();
   });
 });

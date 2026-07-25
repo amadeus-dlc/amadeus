@@ -7,7 +7,7 @@
 // size: medium
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { chmodSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type {
@@ -91,6 +91,20 @@ describe("real atomic write", () => {
     expect(res.kind).toBe("io-failure");
     expect(readFileSync(path, "utf-8")).toBe(original); // byte-for-byte unchanged
   });
+
+  test("rejects a non-regular target and a missing parent", () => {
+    const dir = tempDir();
+    const targetDir = join(dir, "target");
+    mkdirSync(targetDir);
+    expect(atomicWrite(targetDir, "bytes")).toEqual({
+      kind: "io-failure",
+      summary: "target is not a regular file",
+    });
+    expect(atomicWrite(join(dir, "missing", "state.md"), "bytes")).toEqual({
+      kind: "io-failure",
+      summary: "temp file creation failed",
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -137,6 +151,37 @@ function seededDoc(snapshot: MirrorStateSnapshot): string {
 }
 
 describe("commit-state-machine mapping", () => {
+  test("lock, read, parse, and reducer failures release without writing", () => {
+    const base = new FakeStore(seededDoc(EMPTY_MIRROR_STATE));
+    expect(
+      mutateMirrorStateAtomic(
+        { ...base.ports, acquireLock: () => false },
+        { transition: prepare, expectedRevision: 0, auditContext: CTX, now: NOW, intentUuid: "u" },
+      ),
+    ).toEqual({ kind: "io-failure", summary: "state lock unavailable" });
+    expect(
+      mutateMirrorStateAtomic(
+        { ...base.ports, readDocument: () => { throw new Error("read"); } },
+        { transition: prepare, expectedRevision: 0, auditContext: CTX, now: NOW, intentUuid: "u" },
+      ).kind,
+    ).toBe("io-failure");
+    expect(
+      mutateMirrorStateAtomic(
+        { ...base.ports, readDocument: () => "# state\n<!-- amadeus:mirror-state:v1:start -->\n{" },
+        { transition: prepare, expectedRevision: 0, auditContext: CTX, now: NOW, intentUuid: "u" },
+      ).kind,
+    ).toBe("invalid");
+    expect(
+      mutateMirrorStateAtomic(base.ports, {
+        transition: { kind: "mark-attempted", event: prepare.event, attemptedAt: NOW },
+        expectedRevision: 0,
+        auditContext: CTX,
+        now: NOW,
+        intentUuid: "u",
+      }).kind,
+    ).toBe("invalid");
+  });
+
   test("happy path: written, revision +1, outbox cleared, audit recorded", () => {
     const store = new FakeStore(seededDoc(EMPTY_MIRROR_STATE));
     const r = mutateMirrorStateAtomic(store.ports, {
@@ -187,6 +232,20 @@ describe("commit-state-machine mapping", () => {
     if (r.kind === "io-failure") expect(r.summary).toContain("durability-unknown");
   });
 
+  test("io-failure at the commit write is returned without audit", () => {
+    const store = new FakeStore(seededDoc(EMPTY_MIRROR_STATE));
+    store.failWrite = "io-failure";
+    const result = mutateMirrorStateAtomic(store.ports, {
+      transition: prepare,
+      expectedRevision: 0,
+      auditContext: CTX,
+      now: NOW,
+      intentUuid: "u",
+    });
+    expect(result.kind).toBe("io-failure");
+    expect(store.audits).toEqual([]);
+  });
+
   test("audit failure after commit -> written with the outbox retained; next call drains -> conflict (recovered)", () => {
     const store = new FakeStore(seededDoc(EMPTY_MIRROR_STATE));
     store.failAudit = true;
@@ -204,6 +263,60 @@ describe("commit-state-machine mapping", () => {
     expect(store.audits.length).toBe(1); // the drained transaction was appended
     const after = parseMirrorStateDocument(store.doc);
     expect(after.kind === "ok" && (after.snapshot.auditOutbox ?? null)).toBeNull(); // outbox cleared
+  });
+
+  test("drain retains a committed outbox when audit or clear fails", () => {
+    const outbox: MirrorAuditOutbox = {
+      transactionId: "tx-pending",
+      digest: "digest",
+      fields: { Artifact: "state" },
+    };
+    const initial = {
+      ...EMPTY_MIRROR_STATE,
+      revision: 1,
+      auditOutbox: outbox,
+    };
+    const store = new FakeStore(seededDoc(initial));
+    expect(
+      mutateMirrorStateAtomic(
+        {
+          ...store.ports,
+          appendArtifactUpdated: () => ({ kind: "conflict", summary: "busy" }),
+        },
+        { transition: prepare, expectedRevision: 1, auditContext: CTX, now: NOW, intentUuid: "u" },
+      ).kind,
+    ).toBe("written");
+    expect(
+      mutateMirrorStateAtomic(
+        {
+          ...store.ports,
+          appendArtifactUpdated: () => ({ kind: "already-present" }),
+          writeDocumentAtomic: () => ({ kind: "io-failure", summary: "disk" }),
+        },
+        { transition: prepare, expectedRevision: 1, auditContext: CTX, now: NOW, intentUuid: "u" },
+      ).kind,
+    ).toBe("written");
+  });
+
+  test("final outbox clear failure returns the committed snapshot", () => {
+    const store = new FakeStore(seededDoc(EMPTY_MIRROR_STATE));
+    let writes = 0;
+    const result = mutateMirrorStateAtomic(
+      {
+        ...store.ports,
+        writeDocumentAtomic: (text) => {
+          writes += 1;
+          store.doc = text;
+          return writes === 1
+            ? { kind: "ok" as const }
+            : { kind: "io-failure" as const, summary: "clear failed" };
+        },
+      },
+      { transition: prepare, expectedRevision: 0, auditContext: CTX, now: NOW, intentUuid: "u" },
+    );
+    expect(result.kind).toBe("written");
+    if (result.kind !== "written") throw new Error("expected written");
+    expect(result.value.auditOutbox).not.toBeNull();
   });
 
   test("idempotent audit: draining the same transaction twice appends once", () => {

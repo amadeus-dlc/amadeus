@@ -16,6 +16,7 @@ import {
   driveMirrorBoundary,
 } from "../../packages/framework/core/tools/amadeus-mirror-coordinator.ts";
 import {
+  resolveMirrorRecordIdentity,
   runMirrorLifecycleBoundary,
   runMirrorLifecycleMain,
 } from "../../packages/framework/core/tools/amadeus-mirror-lifecycle.ts";
@@ -373,6 +374,80 @@ describe("t282 boundary isolation and completion chain", () => {
 });
 
 describe("t282 awaitable production lifecycle adapter", () => {
+  test("fails closed when lifecycle target metadata is incomplete", async () => {
+    const unresolvedRoot = mkdtempSync(join(tmpdir(), "mirror-unresolved-"));
+    roots.push(unresolvedRoot);
+    expect(resolveMirrorRecordIdentity(unresolvedRoot)).toBeNull();
+    expect(
+      await runMirrorLifecycleBoundary({
+        projectDir: unresolvedRoot,
+        repository: REPO,
+        boundary: { kind: "intent-capture-approved", instance: "missing-intent" },
+      }),
+    ).toEqual({
+      kind: "error",
+      message: "Mirror lifecycle could not resolve an Intent.",
+    });
+
+    const noRepo = adapterFixture();
+    writeFileSync(
+      join(noRepo.root, "amadeus", "spaces", noRepo.space, "intents", "intents.json"),
+      JSON.stringify([
+        {
+          uuid: "intent-adapter-1",
+          slug: "demo",
+          dirName: noRepo.intentDir,
+          scope: "feature",
+          repos: [],
+          status: "in-flight",
+        },
+      ]),
+    );
+    expect(
+      await runMirrorLifecycleBoundary({
+        projectDir: noRepo.root,
+        space: noRepo.space,
+        intentDir: noRepo.intentDir,
+        boundary: { kind: "intent-capture-approved", instance: "missing-repo" },
+      }),
+    ).toEqual({
+      kind: "error",
+      message:
+        "Mirror lifecycle could not resolve one canonical GitHub repository; pass --repo owner/name.",
+    });
+
+    const unreadable = adapterFixture();
+    rmSync(unreadable.statePath);
+    expect(
+      await runMirrorLifecycleBoundary({
+        projectDir: unreadable.root,
+        space: unreadable.space,
+        intentDir: unreadable.intentDir,
+        repository: REPO,
+        boundary: { kind: "intent-capture-approved", instance: "missing-state" },
+      }),
+    ).toEqual({
+      kind: "error",
+      message: `Mirror lifecycle state is unreadable for Intent "${unreadable.intentDir}".`,
+    });
+  });
+
+  test("rejects incomplete manual lifecycle requests before target resolution", async () => {
+    const root = mkdtempSync(join(tmpdir(), "mirror-manual-invalid-"));
+    roots.push(root);
+    expect(
+      await runMirrorLifecycleBoundary({
+        projectDir: root,
+        repository: REPO,
+        boundary: { kind: "manual", instance: "manual-invalid" },
+        manualOperation: "create",
+      }),
+    ).toEqual({
+      kind: "error",
+      message: "Manual Mirror lifecycle requires an operation and invocation ID.",
+    });
+  });
+
   test("CLI returns non-zero while a prompt answer is still required", async () => {
     const fx = adapterFixture();
     writeFileSync(

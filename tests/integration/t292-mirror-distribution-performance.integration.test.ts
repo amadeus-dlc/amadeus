@@ -5,6 +5,7 @@
 import { describe, expect, test } from "bun:test";
 import { performance } from "node:perf_hooks";
 import {
+  benchmarkWorkloads,
   MIRROR_BENCHMARK_PROTOCOL,
   type MirrorBenchmarkWorkload,
 } from "../../scripts/mirror-distribution-benchmark.ts";
@@ -62,6 +63,18 @@ describe("t292 distribution performance protocol", () => {
     // The three-replica benchmark is authoritative; this only catches a
     // catastrophic local regression without failing on a loaded shared runner.
     expect(performance.now() - started).toBeLessThan(10_000);
+  });
+
+  test("drives every benchmark workload in-process for coverage attribution", () => {
+    const results = benchmarkWorkloads(process.cwd());
+    expect(Object.keys(results)).toEqual(
+      Object.keys(MIRROR_BENCHMARK_PROTOCOL.workloads),
+    );
+    for (const result of Object.values(results)) {
+      expect(result.runs).toBe(MIRROR_BENCHMARK_PROTOCOL.runs);
+      expect(result.p95Ms).toBeGreaterThanOrEqual(0);
+      expect(result.rssBytes).toBeGreaterThan(0);
+    }
   });
 
   test("requires three same-image complete replicas and enforces dispersion and budgets", () => {

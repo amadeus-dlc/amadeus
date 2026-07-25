@@ -5,7 +5,10 @@
 
 import { describe, expect, test } from "bun:test";
 import { createMirrorMutationPermit } from "../../packages/framework/core/tools/amadeus-mirror-capability.ts";
-import { createMirrorGitHubGateway } from "../../packages/framework/core/tools/amadeus-mirror-gateway.ts";
+import {
+  createMirrorGitHubGateway,
+  scanBodies,
+} from "../../packages/framework/core/tools/amadeus-mirror-gateway.ts";
 import type {
   MirrorEventIdentity,
   MirrorMutationPermit,
@@ -93,6 +96,25 @@ function permit(
     issueNumber,
   });
 }
+
+describe("body scanner", () => {
+  test("accepts every valid escape width including a surrogate pair", () => {
+    expect(
+      scanBodies(
+        String.raw`{"body":"\"\\\/\b\f\n\r\t\u007f\u07ff\u0800\uD83D\uDE00"}`,
+      ),
+    ).toBe("ok");
+  });
+
+  test.each([
+    `{"body":"${"\\"}`,
+    String.raw`{"body":"\x"}`,
+    String.raw`{"body":"\u12xz"}`,
+    String.raw`{"body":"unterminated}`,
+  ])("rejects malformed JSON string scanning: %s", (text) => {
+    expect(scanBodies(text)).toBe("malformed");
+  });
+});
 
 // --- readiness ---------------------------------------------------------------
 
@@ -496,5 +518,72 @@ describe("editIssue / closeIssue", () => {
       createMirrorGitHubGateway(runner).editIssue(wrong, "x"),
     ).rejects.toThrow(/permit/);
     expect(requests).toHaveLength(0);
+  });
+});
+
+describe("malformed response fail-closed matrix", () => {
+  test("rejects a non-array paginated envelope", async () => {
+    const { runner } = fakeRunner([
+      exited(0, Buffer.from(`${block(200)}{}\n`)),
+    ]);
+    const outcome = await createMirrorGitHubGateway(runner).findIssuesByMarker(
+      REPO,
+      "marker",
+    );
+    expect(outcome).toMatchObject({
+      kind: "failure",
+      classification: "invalid-response",
+    });
+  });
+
+  test("rejects an exit-zero malformed envelope", async () => {
+    const { runner } = fakeRunner([exited(0, Buffer.from("not-http"))]);
+    const outcome = await createMirrorGitHubGateway(runner).createIssue(
+      permit("create", null),
+      { title: "t", body: "b", labels: [] },
+    );
+    expect(outcome).toMatchObject({
+      kind: "failure",
+      classification: "invalid-response",
+    });
+  });
+
+  test("rejects an HTTP-success envelope paired with a non-zero exit", async () => {
+    const { runner } = fakeRunner([
+      exited(1, singleEnvelope(200, issue(1))),
+    ]);
+    const outcome = await createMirrorGitHubGateway(runner).createIssue(
+      permit("create", null),
+      { title: "t", body: "b", labels: [] },
+    );
+    expect(outcome).toMatchObject({
+      kind: "failure",
+      classification: "invalid-response",
+    });
+  });
+
+  test("rejects malformed JSON after a valid single envelope", async () => {
+    const { runner } = fakeRunner([
+      exited(0, Buffer.from(`${block(200)}{"number":\n`)),
+    ]);
+    const outcome = await createMirrorGitHubGateway(runner).viewIssue(REPO, 1);
+    expect(outcome).toMatchObject({
+      kind: "failure",
+      classification: "invalid-response",
+    });
+  });
+
+  test("rejects malformed JSON after a valid paginated envelope", async () => {
+    const { runner } = fakeRunner([
+      exited(0, Buffer.from(`${block(200)}[broken\n`)),
+    ]);
+    const outcome = await createMirrorGitHubGateway(runner).findIssuesByMarker(
+      REPO,
+      "marker",
+    );
+    expect(outcome).toMatchObject({
+      kind: "failure",
+      classification: "invalid-response",
+    });
   });
 });

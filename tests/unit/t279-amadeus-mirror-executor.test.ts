@@ -38,6 +38,18 @@ function ok<T>(value: T): GatewayOutcome<T> {
   return { kind: "ok", value };
 }
 
+function failure(
+  effect: "not-started" | "no-effect-confirmed" | "outcome-unknown",
+): Extract<GatewayOutcome<never>, { kind: "failure" }> {
+  return {
+    kind: "failure",
+    classification: "network",
+    summary: `injected ${effect}`,
+    retryable: true,
+    effect,
+  };
+}
+
 function memoryStore(initial: MirrorStateSnapshot = EMPTY_MIRROR_STATE): {
   ports: MirrorStateStorePorts;
   state: () => MirrorStateSnapshot;
@@ -80,6 +92,11 @@ class FakeGateway implements MirrorGitHubGateway {
   candidates: RemoteMirrorIssue[] = [];
   viewed: RemoteMirrorIssue | null = null;
   readinessResult: GatewayOutcome<void> = ok(undefined);
+  createResult: GatewayOutcome<RemoteMirrorIssue> | null = null;
+  findResult: GatewayOutcome<readonly RemoteMirrorIssue[]> | null = null;
+  viewResult: GatewayOutcome<RemoteMirrorIssue> | null = null;
+  editResult: GatewayOutcome<RemoteMirrorIssue> | null = null;
+  closeResult: GatewayOutcome<RemoteMirrorIssue> | null = null;
 
   async readiness(): Promise<GatewayOutcome<void>> {
     this.history.push("readiness");
@@ -90,6 +107,7 @@ class FakeGateway implements MirrorGitHubGateway {
     input: Parameters<MirrorGitHubGateway["createIssue"]>[1],
   ): Promise<GatewayOutcome<RemoteMirrorIssue>> {
     this.history.push("create");
+    if (this.createResult) return this.createResult;
     return ok({
       repository: REPO,
       number: 7,
@@ -100,10 +118,12 @@ class FakeGateway implements MirrorGitHubGateway {
   }
   async findIssuesByMarker(): Promise<GatewayOutcome<readonly RemoteMirrorIssue[]>> {
     this.history.push("find");
+    if (this.findResult) return this.findResult;
     return ok(this.candidates);
   }
   async viewIssue(): Promise<GatewayOutcome<RemoteMirrorIssue>> {
     this.history.push("view");
+    if (this.viewResult) return this.viewResult;
     if (!this.viewed) throw new Error("view fixture is absent");
     return ok(this.viewed);
   }
@@ -112,12 +132,14 @@ class FakeGateway implements MirrorGitHubGateway {
     body: string,
   ): Promise<GatewayOutcome<RemoteMirrorIssue>> {
     this.history.push("edit");
+    if (this.editResult) return this.editResult;
     if (!this.viewed) throw new Error("view fixture is absent");
     this.viewed = { ...this.viewed, body };
     return ok(this.viewed);
   }
   async closeIssue(): Promise<GatewayOutcome<RemoteMirrorIssue>> {
     this.history.push("close");
+    if (this.closeResult) return this.closeResult;
     if (!this.viewed) throw new Error("view fixture is absent");
     this.viewed = { ...this.viewed, state: "CLOSED" };
     return ok(this.viewed);
@@ -381,9 +403,205 @@ describe("t279 create", () => {
     expect(outcome.kind).toBe("pending");
     expect(gateway.history).toEqual(["readiness"]);
   });
+
+  test("marker search failure is persisted without creating", async () => {
+    const store = memoryStore();
+    const gateway = new FakeGateway();
+    gateway.findResult = failure("no-effect-confirmed");
+    const outcome = await executeMirrorOperation({
+      context: context("create", gateway),
+      ports: store.ports,
+      localState: EMPTY_MIRROR_STATE,
+    });
+    expect(outcome.kind).toBe("pending");
+    expect(gateway.history).toEqual(["readiness", "find"]);
+  });
+
+  test.each([
+    ["not-started", "safety-blocked"],
+    ["no-effect-confirmed", "pending"],
+    ["outcome-unknown", "pending"],
+  ] as const)(
+    "create gateway failure %s is persisted as %s",
+    async (effect, expectedKind) => {
+      const store = memoryStore();
+      const gateway = new FakeGateway();
+      gateway.createResult = failure(effect);
+      const outcome = await executeMirrorOperation({
+        context: context("create", gateway),
+        ports: store.ports,
+        localState: EMPTY_MIRROR_STATE,
+      });
+      expect(outcome.kind).toBe(expectedKind);
+      expect(gateway.history).toEqual(["readiness", "find", "create"]);
+    },
+  );
+
+  test("a mismatching remote candidate blocks create", async () => {
+    const store = memoryStore();
+    const gateway = new FakeGateway();
+    gateway.candidates = [
+      { ...issue(), repository: { ...REPO, canonical: "other/app" } },
+    ];
+    const outcome = await executeMirrorOperation({
+      context: context("create", gateway),
+      ports: store.ports,
+      localState: EMPTY_MIRROR_STATE,
+    });
+    expect(outcome.kind).toBe("safety-blocked");
+    expect(gateway.history).toEqual(["readiness", "find"]);
+  });
+
+  test("an unowned create response blocks completion", async () => {
+    const store = memoryStore();
+    const gateway = new FakeGateway();
+    gateway.createResult = ok({
+      ...issue(),
+      body: "missing ownership marker",
+    });
+    const outcome = await executeMirrorOperation({
+      context: context("create", gateway),
+      ports: store.ports,
+      localState: EMPTY_MIRROR_STATE,
+    });
+    expect(outcome.kind).toBe("safety-blocked");
+    expect(gateway.history).toEqual(["readiness", "find", "create"]);
+  });
+
+  test("state lock failure blocks before gateway readiness", async () => {
+    const store = memoryStore();
+    const gateway = new FakeGateway();
+    const outcome = await executeMirrorOperation({
+      context: context("create", gateway),
+      ports: { ...store.ports, acquireLock: () => false },
+      localState: EMPTY_MIRROR_STATE,
+    });
+    expect(outcome.kind).toBe("safety-blocked");
+    expect(gateway.history).toEqual([]);
+  });
+
+  test("state write failure blocks before remote create", async () => {
+    const store = memoryStore();
+    const gateway = new FakeGateway();
+    const outcome = await executeMirrorOperation({
+      context: context("create", gateway),
+      ports: {
+        ...store.ports,
+        writeDocumentAtomic: () => ({
+          kind: "io-failure",
+          summary: "disk full",
+        }),
+      },
+      localState: EMPTY_MIRROR_STATE,
+    });
+    expect(outcome.kind).toBe("safety-blocked");
+    expect(gateway.history).toEqual([]);
+  });
 });
 
 describe("t279 sync and close convergence", () => {
+  test("operation and event mismatch is rejected before I/O", async () => {
+    const gateway = new FakeGateway();
+    const ctx = context("sync", gateway);
+    const outcome = await executeMirrorOperation({
+      context: { ...ctx, operation: "close" },
+      ports: memoryStore(linkedState()).ports,
+      localState: linkedState(),
+    });
+    expect(outcome.kind).toBe("safety-blocked");
+    expect(gateway.history).toEqual([]);
+  });
+
+  test("linked mutation requires local provenance and issue number", async () => {
+    const gateway = new FakeGateway();
+    const outcome = await executeMirrorOperation({
+      context: context("sync", gateway),
+      ports: memoryStore().ports,
+      localState: EMPTY_MIRROR_STATE,
+    });
+    expect(outcome.kind).toBe("safety-blocked");
+    expect(gateway.history).toEqual([]);
+  });
+
+  test("linked provenance mismatch blocks before viewing", async () => {
+    const gateway = new FakeGateway();
+    const initial = {
+      ...linkedState(),
+      provenance: {
+        ...(linkedState().provenance as MirrorProvenance),
+        createIdentity: { ...identity(), intentDir: "other" },
+      },
+    };
+    const outcome = await executeMirrorOperation({
+      context: context("sync", gateway),
+      ports: memoryStore(initial).ports,
+      localState: initial,
+    });
+    expect(outcome.kind).toBe("safety-blocked");
+    expect(gateway.history).toEqual([]);
+  });
+
+  test("view failure is persisted before mutation", async () => {
+    const gateway = new FakeGateway();
+    gateway.viewResult = failure("no-effect-confirmed");
+    const initial = linkedState();
+    const outcome = await executeMirrorOperation({
+      context: context("sync", gateway),
+      ports: memoryStore(initial).ports,
+      localState: initial,
+    });
+    expect(outcome.kind).toBe("pending");
+    expect(gateway.history).toEqual(["view"]);
+  });
+
+  test("remote ownership mismatch blocks linked mutation", async () => {
+    const gateway = new FakeGateway();
+    gateway.viewed = { ...issue(), body: "missing marker" };
+    const initial = linkedState();
+    const outcome = await executeMirrorOperation({
+      context: context("sync", gateway),
+      ports: memoryStore(initial).ports,
+      localState: initial,
+    });
+    expect(outcome.kind).toBe("safety-blocked");
+    expect(gateway.history).toEqual(["view"]);
+  });
+
+  test.each([
+    ["not-started", "safety-blocked"],
+    ["no-effect-confirmed", "pending"],
+    ["outcome-unknown", "pending"],
+  ] as const)(
+    "sync gateway failure %s is persisted as %s",
+    async (effect, expectedKind) => {
+      const gateway = new FakeGateway();
+      gateway.viewed = issue();
+      gateway.editResult = failure(effect);
+      const initial = linkedState();
+      const outcome = await executeMirrorOperation({
+        context: context("sync", gateway, "updated body"),
+        ports: memoryStore(initial).ports,
+        localState: initial,
+      });
+      expect(outcome.kind).toBe(expectedKind);
+      expect(gateway.history).toEqual(["view", "readiness", "edit"]);
+    },
+  );
+
+  test("an unowned edit response blocks completion", async () => {
+    const gateway = new FakeGateway();
+    gateway.viewed = issue();
+    gateway.editResult = ok({ ...issue(), body: "missing marker" });
+    const initial = linkedState();
+    const outcome = await executeMirrorOperation({
+      context: context("sync", gateway, "updated body"),
+      ports: memoryStore(initial).ports,
+      localState: initial,
+    });
+    expect(outcome.kind).toBe("safety-blocked");
+    expect(gateway.history).toEqual(["view", "readiness", "edit"]);
+  });
+
   test("sync body already matches after attempted re-entry and performs no edit", async () => {
     const gateway = new FakeGateway();
     const desired = `current\n${renderMirrorMarker(identity())}`;
