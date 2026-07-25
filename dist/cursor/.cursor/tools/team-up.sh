@@ -1071,11 +1071,34 @@ stack_column() {
 # --- agmsg watcher arming verification (Issue #1384) ---------------------
 
 # True when the launched runtime/backend uses an agmsg watcher that must be
-# armed by the `/agmsg mode monitor` bootstrap prompt: the claude runtime on the
-# agmsg backend. Codex is out of scope (FR-6) and the herdr backend has no
-# monitor to arm (claude_member_cmd leaves the initial prompt empty there).
+# armed by the bootstrap prompt (the claude runtime on the agmsg backend) AND
+# that prompt actually arms an *actas* watcher. Codex is out of scope (FR-6) and
+# the herdr backend has no monitor to arm (claude_member_cmd leaves the initial
+# prompt empty there).
+#
+# Applicability guard (Issue #1449): the ready sentinel this verification polls
+# is written only by an actas watcher — agmsg watch.sh:307, guarded at :300 by
+# `if [ -n "$ACTIVE_NAME" ]`, where ACTIVE_NAME is watch.sh's 4th positional
+# (watch.sh:43). A monitor-mode watcher is started by delivery.sh:301 with only
+# three positionals, so ACTIVE_NAME is empty and no sentinel is ever written.
+# Waiting on it can therefore never succeed and burns the whole poll budget.
+# Same shape as agmsg spawn.sh:565-568, which drops the readiness wait for agent
+# types that have no spawn readiness handshake.
+#
+# The skip notice is announced once per run (the launch path asks twice: before
+# clearing stale sentinels and before verifying), so the advisory stays a single
+# stderr line and stdout is never touched.
+WATCHER_SKIP_ANNOUNCED=0
 watcher_verification_applies() {
-  [ "$RUNTIME" = "claude" ] && [ "$MSG_BACKEND" = "agmsg" ]
+  [ "$RUNTIME" = "claude" ] && [ "$MSG_BACKEND" = "agmsg" ] || return 1
+  case "$CLAUDE_MONITOR_PROMPT" in
+  *" actas "*) return 0 ;;
+  esac
+  if [ "$WATCHER_SKIP_ANNOUNCED" = "0" ]; then
+    WATCHER_SKIP_ANNOUNCED=1
+    echo "team-up: monitor-mode watcher writes no readiness sentinel — skipping arming verification (#1449/#1476)" >&2
+  fi
+  return 1
 }
 
 # Canonical agmsg ready-sentinel path for (team, role). Sourced from agmsg's own
