@@ -94,16 +94,19 @@ import {
   worktreeStateFilePath,
   writeStateFile,
   writeFileAtomic,
+  UUID_V7_RE,
 } from "./amadeus-lib.js";
 import {
-  countStandingGrantRouteReceiptsById,
-  findStandingGrantRouteReceiptById,
-  validateSoloStandingGrantById,
+  classifyApprovalAuthority,
+  resolveStandingGrantRouteReceipt,
+  type StandingGrantScanObserver,
+  validateStandingGrantWithinLedger,
 } from "./amadeus-grant-authorization.ts";
 import {
   consumePresenceReservation,
   readPresenceReservation,
   type PresenceReservation,
+  targetedApprovalEvidence,
   verifyMintedPresenceReservation,
 } from "./amadeus-presence-reservation.ts";
 import {
@@ -121,11 +124,6 @@ const VALID_CHECKBOX_STATES: CheckboxState[] = [
   "completed",
   "skipped",
 ];
-const APPROVAL_GRANT_ID_RE = /^[0-9a-f]{8}$/;
-const APPROVAL_UUID_V4_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-const APPROVAL_UUID_V7_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 const PRACTICES_MANAGED_BEGIN = "<!-- amadeus:practices-promote:BEGIN -->";
 const PRACTICES_MANAGED_END = "<!-- amadeus:practices-promote:END -->";
@@ -2966,7 +2964,7 @@ function approveUnderLock(
   }
 }
 
-export function handleApprove(args: string[]): void {
+export function handleApprove(args: string[], observer?: StandingGrantScanObserver): void {
   if (args.length < 1) error("Usage: amadeus-state.ts approve <slug> [--user-input <text>]");
   const slug = args[0];
   const flags = parseApproveFlags(args.slice(1));
@@ -2986,20 +2984,17 @@ export function handleApprove(args: string[]): void {
     withAuditLock(
       pd,
       () => {
-        const receiptCount = countStandingGrantRouteReceiptsById(pd, authority.routeId);
-        const match = receiptCount === 1
-          ? findStandingGrantRouteReceiptById(pd, authority.routeId)
-          : null;
-        if (match === null) {
+        const resolution = resolveStandingGrantRouteReceipt(pd, authority.routeId, observer);
+        if (resolution.kind !== "resolved") {
           console.error(
             JSON.stringify({
               error:
-                `Standing grant route receipt cardinality must be exactly one; got ${receiptCount}`,
+                `Standing grant route receipt cardinality must be exactly one; got ${resolution.count}`,
             }),
           );
           process.exit(1);
         }
-        const targetIntentId = intentUuidForRecord(pd, match.intent, space);
+        const targetIntentId = intentUuidForRecord(pd, resolution.intent, space);
         if (targetIntentId === null) {
           console.error(
             JSON.stringify({
@@ -3008,24 +3003,26 @@ export function handleApprove(args: string[]): void {
           );
           process.exit(1);
         }
-        withStateOperationTarget({ intent: match.intent, space }, () => {
+        withStateOperationTarget({ intent: resolution.intent, space }, () => {
           operationWithLock(pd, () => {
             const freshState = operationReadState(pd);
             if (
-              match.receipt.stage !== slug ||
-              match.receipt.grantId !== authority.grantId
+              resolution.receipt.stage !== slug ||
+              resolution.receipt.grantId !== authority.grantId
             ) {
               printAwaitApproval(slug, targetIntentId);
               return;
             }
-            const validation = validateSoloStandingGrantById(
+            const validation = validateStandingGrantWithinLedger(
               pd,
-              match.intent,
+              resolution.intent,
               authority.grantId,
               slug,
               freshState,
               loadStageGraph(),
               Date.now(),
+              resolution.ledger,
+              observer,
             );
             if (validation.kind !== "valid") {
               printAwaitApproval(slug, targetIntentId);
@@ -3084,10 +3081,10 @@ export function handleApprove(args: string[]): void {
               `Invalid targeted human presence: ${errorMessage(cause)}`,
             );
           }
-          if (!targetedHumanTurnIsFresh(pd, marker)) {
+          const prefix = targetedApprovalEvidence(operationReadAudit(pd), marker);
+          if (!prefix.humanTurnIsFresh) {
             rejectApprovalProtocol("Targeted HUMAN_TURN is not fresh for the open gate");
           }
-          const prefix = targetedApprovalPrefix(pd, marker);
           if (
             prefix.gateApproved > 1 ||
             prefix.stageCompleted > 1 ||
@@ -3166,74 +3163,6 @@ function getFlagValue(args: string[], flag: string): string | undefined {
   return val;
 }
 
-export type ApprovalAuthorityInput = {
-  readonly operatingMode: string;
-  readonly userInput?: string;
-  readonly standingGrantId?: string;
-  readonly standingGrantRouteId?: string;
-  readonly targetIntentId?: string;
-  readonly presenceReservationId?: string;
-};
-
-export type ApprovalAuthority =
-  | { readonly kind: "normal"; readonly userInput?: string }
-  | { readonly kind: "grant-backed"; readonly grantId: string; readonly routeId: string }
-  | {
-      readonly kind: "targeted-human";
-      readonly userInput: string;
-      readonly targetIntentId: string;
-      readonly reservationId: string;
-    }
-  | { readonly kind: "invalid"; readonly reason: string };
-
-export function classifyApprovalAuthority(
-  input: ApprovalAuthorityInput,
-): ApprovalAuthority {
-  const hasGrantId = input.standingGrantId !== undefined;
-  const hasRouteId = input.standingGrantRouteId !== undefined;
-  const hasTarget = input.targetIntentId !== undefined;
-  const hasReservation = input.presenceReservationId !== undefined;
-  const hasUser = input.userInput !== undefined;
-  if (hasGrantId !== hasRouteId || hasTarget !== hasReservation) {
-    return { kind: "invalid", reason: "partial authorization carrier" };
-  }
-  if (hasGrantId) {
-    if (hasUser || hasTarget || input.operatingMode !== "solo") {
-      return { kind: "invalid", reason: "mixed or non-solo grant authority" };
-    }
-    if (
-      !APPROVAL_GRANT_ID_RE.test(input.standingGrantId!) ||
-      !APPROVAL_UUID_V4_RE.test(input.standingGrantRouteId!)
-    ) {
-      return { kind: "invalid", reason: "malformed grant authority" };
-    }
-    return {
-      kind: "grant-backed",
-      grantId: input.standingGrantId!,
-      routeId: input.standingGrantRouteId!,
-    };
-  }
-  if (hasTarget) {
-    if (
-      !hasUser ||
-      input.operatingMode !== "solo" ||
-      !APPROVAL_UUID_V7_RE.test(input.targetIntentId!) ||
-      !APPROVAL_UUID_V4_RE.test(input.presenceReservationId!)
-    ) {
-      return { kind: "invalid", reason: "malformed targeted human authority" };
-    }
-    return {
-      kind: "targeted-human",
-      userInput: input.userInput!,
-      targetIntentId: input.targetIntentId!,
-      reservationId: input.presenceReservationId!,
-    };
-  }
-  return input.userInput === undefined
-    ? { kind: "normal" }
-    : { kind: "normal", userInput: input.userInput };
-}
-
 type ApproveFlags = {
   readonly userInput?: string;
   readonly standingGrantId?: string;
@@ -3261,7 +3190,7 @@ function intentUuidForRecord(
     (entry) =>
       entry.dirName === intent &&
       entry.status === "in-flight" &&
-      APPROVAL_UUID_V7_RE.test(entry.uuid),
+      UUID_V7_RE.test(entry.uuid),
   );
   return matches.length === 1 ? matches[0].uuid : null;
 }
@@ -3290,54 +3219,6 @@ function runWithoutTransitionOutput(fn: () => void): void {
 function rejectApprovalProtocol(detail: string): never {
   console.error(JSON.stringify({ error: detail }));
   process.exit(1);
-}
-
-type TargetedApprovalPrefix = {
-  readonly gateApproved: number;
-  readonly stageCompleted: number;
-};
-
-function targetedApprovalPrefix(
-  pd: string,
-  marker: PresenceReservation,
-): TargetedApprovalPrefix {
-  let gateApproved = 0;
-  let stageCompleted = 0;
-  const humanAt = Date.parse(marker.humanTurnTimestamp!);
-  for (const block of operationReadAudit(pd).replace(/\r\n/g, "\n").split(/\n---\n/)) {
-    if (auditBlockField(block, "Stage") !== marker.stage) continue;
-    const timestamp = auditBlockField(block, "Timestamp");
-    if (timestamp === null || Date.parse(timestamp) < humanAt) continue;
-    const event = auditBlockField(block, "Event");
-    if (
-      event === "GATE_APPROVED" &&
-      auditBlockField(block, "Grant Id") === null
-    ) {
-      gateApproved++;
-    } else if (event === "STAGE_COMPLETED") {
-      stageCompleted++;
-    }
-  }
-  return { gateApproved, stageCompleted };
-}
-
-function targetedHumanTurnIsFresh(
-  pd: string,
-  marker: PresenceReservation,
-): boolean {
-  const humanAt = Date.parse(marker.humanTurnTimestamp!);
-  let latestGateAt = Number.NEGATIVE_INFINITY;
-  for (const block of operationReadAudit(pd).replace(/\r\n/g, "\n").split(/\n---\n/)) {
-    if (
-      auditBlockField(block, "Event") !== "STAGE_AWAITING_APPROVAL" ||
-      auditBlockField(block, "Stage") !== marker.stage
-    ) {
-      continue;
-    }
-    const timestamp = auditBlockField(block, "Timestamp");
-    if (timestamp !== null) latestGateAt = Math.max(latestGateAt, Date.parse(timestamp));
-  }
-  return Number.isFinite(latestGateAt) && humanAt >= latestGateAt;
 }
 
 function recoverCompletedTargetedApproval(

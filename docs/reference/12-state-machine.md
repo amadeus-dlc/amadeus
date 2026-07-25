@@ -236,7 +236,7 @@ Session hooks check for the active intent's `amadeus-state.md` (under `amadeus/s
 | `DELEGATED_REJECTION` | `tools/amadeus-state.ts` | `delegate-rejection` records a leader session's human-grounded rejection into a remote conductor intent's audit dir; verb-scoped mirror of `DELEGATED_APPROVAL` — opens only a reject gate (#685) |
 | `GRANT_ISSUED` | `tools/amadeus-state.ts` | `grant-standing-delegation` records a leader session's time-boxed standing grant that opens team-mode stage gates for its TTL without a per-gate human turn; carries `Grant Id`, `Scope`, `Expires At`, `Includes Phase Boundary`, and the issuer `(space, intent, shard, HUMAN_TURN timestamp)` (#1125) |
 | `GRANT_REVOKED` | `tools/amadeus-state.ts` | `revoke-standing-delegation` cancels an outstanding standing grant by `Grant Id`, grounded in a real human turn on the leader's own ledger (#1125) |
-| `GATE_AUTHORIZATION_SELECTED` | `tools/amadeus-orchestrate.ts` | the solo-mode router records the exact standing grant it selected for one stage-route attempt — `Route Id`, `Stage`, `Grant Id` — before the carrier reaches the conductor, so the later approve can re-verify the same grant against the receipt owner (#1466) |
+| `GATE_AUTHORIZATION_SELECTED` | `tools/amadeus-grant-authorization.ts` | the solo-mode router records the exact standing grant it selected for one stage-route attempt — `Route Id`, `Stage`, `Grant Id` — before the carrier reaches the conductor, so the later approve can re-verify the same grant against the receipt owner (#1466) |
 
 ### User interaction
 

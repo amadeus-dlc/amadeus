@@ -11,6 +11,8 @@ import {
   withAuditLock,
   workspaceRoot,
   writeFileAtomic,
+  UUID_V4_RE,
+  UUID_V7_RE,
 } from "./amadeus-lib.ts";
 
 export type PresenceReservationState = "armed" | "minted" | "consumed";
@@ -66,10 +68,6 @@ export type VerifyReservationInput = ConsumeReservationInput & {
   readonly allowConsumed?: boolean;
 };
 
-const UUID_V4_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-const UUID_V7_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const SAFE_NAME_RE = /^[A-Za-z0-9._-]+$/;
 const SHA256_HEX_RE = /^[0-9a-f]{64}$/;
 const STAGE_SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
@@ -226,40 +224,52 @@ export function readPresenceReservation(
   return parseReservation(readFileSync(path, "utf-8"));
 }
 
+// The "at most one active reservation per trusted session" invariant is the
+// whole point of the marker: two markers for one session would let one human
+// turn authorize two gates. The active-marker scan and the marker write are
+// therefore one critical section under the WORKSPACE audit-lock bucket (the
+// reservation dir is workspace-scoped, and the workspace bucket is the OUTER
+// level of the workspace -> owner-intent hierarchy, so arming can never invert
+// the order against mint's owner-intent lock). Losers of the race re-run the
+// scan inside the lock and terminate on the ordinary "already active"
+// rejection; the lock acquire itself is bounded (50 x 100ms, then throws), so
+// every caller ends in success or a definite refusal rather than blocking.
 export function armPresenceReservation(input: ArmReservationInput): PresenceReservation {
   const sessionDigest = digestSessionId(input.sessionId);
-  const active = listReservations(input.projectDir).filter(
-    (marker) =>
-      marker.sessionDigest === sessionDigest && marker.state !== "consumed",
-  );
-  if (active.length !== 0) {
-    throw new Error("Trusted session already has an active presence reservation");
-  }
-  const targetIntentDir = resolveTargetIntent(
-    input.projectDir,
-    input.space,
-    input.targetIntentId,
-  );
-  const reservationId = (input.reservationIdFactory ?? randomUUID)();
-  if (readPresenceReservation(input.projectDir, reservationId) !== null) {
-    throw new Error(`Presence Reservation Id collision: ${reservationId}`);
-  }
-  const marker: PresenceReservation = {
-    version: 1,
-    reservationId,
-    sessionDigest,
-    space: input.space,
-    targetIntentId: input.targetIntentId,
-    targetIntentDir,
-    stage: input.stage,
-    routeId: input.routeId,
-    state: "armed",
-    armedAt: new Date().toISOString(),
-    humanTurnTimestamp: null,
-    humanTurnShard: null,
-  };
-  writeReservation(input.projectDir, marker);
-  return marker;
+  return withAuditLock(input.projectDir, () => {
+    const active = listReservations(input.projectDir).filter(
+      (marker) =>
+        marker.sessionDigest === sessionDigest && marker.state !== "consumed",
+    );
+    if (active.length !== 0) {
+      throw new Error("Trusted session already has an active presence reservation");
+    }
+    const targetIntentDir = resolveTargetIntent(
+      input.projectDir,
+      input.space,
+      input.targetIntentId,
+    );
+    const reservationId = (input.reservationIdFactory ?? randomUUID)();
+    if (readPresenceReservation(input.projectDir, reservationId) !== null) {
+      throw new Error(`Presence Reservation Id collision: ${reservationId}`);
+    }
+    const marker: PresenceReservation = {
+      version: 1,
+      reservationId,
+      sessionDigest,
+      space: input.space,
+      targetIntentId: input.targetIntentId,
+      targetIntentDir,
+      stage: input.stage,
+      routeId: input.routeId,
+      state: "armed",
+      armedAt: new Date().toISOString(),
+      humanTurnTimestamp: null,
+      humanTurnShard: null,
+    };
+    writeReservation(input.projectDir, marker);
+    return marker;
+  });
 }
 
 function reservationHumanTurns(
@@ -454,4 +464,49 @@ export function mintHumanPresence(input: MintHumanPresenceInput): void {
     if (reservation.kind === "minted") return;
   }
   appendAuditEntry("HUMAN_TURN", {}, input.projectDir);
+}
+
+export type TargetedApprovalEvidence = {
+  readonly gateApproved: number;
+  readonly stageCompleted: number;
+  readonly humanTurnIsFresh: boolean;
+};
+
+// Owner-side audit evidence for a targeted human approval, derived in ONE pass.
+// Freshness (is the marker's HUMAN_TURN at or after the latest gate open?) and
+// the replay prefix census (how much of GATE_APPROVED / STAGE_COMPLETED already
+// landed for this turn?) both key off the same marker and the same block stream,
+// so they are read together rather than by two independent scans of the same
+// audit text. `auditText` is the owner intent's audit as read by the caller
+// under the transaction lock — this function never touches the filesystem.
+export function targetedApprovalEvidence(
+  auditText: string,
+  marker: PresenceReservation,
+): TargetedApprovalEvidence {
+  const humanAt = Date.parse(marker.humanTurnTimestamp!);
+  let gateApproved = 0;
+  let stageCompleted = 0;
+  let latestGateAt = Number.NEGATIVE_INFINITY;
+  for (const block of auditText.replace(/\r\n/g, "\n").split(/\n---\n/)) {
+    if (auditBlockField(block, "Stage") !== marker.stage) continue;
+    const timestamp = auditBlockField(block, "Timestamp");
+    const event = auditBlockField(block, "Event");
+    if (event === "STAGE_AWAITING_APPROVAL") {
+      if (timestamp !== null) {
+        latestGateAt = Math.max(latestGateAt, Date.parse(timestamp));
+      }
+      continue;
+    }
+    if (timestamp === null || Date.parse(timestamp) < humanAt) continue;
+    if (event === "GATE_APPROVED" && auditBlockField(block, "Grant Id") === null) {
+      gateApproved++;
+    } else if (event === "STAGE_COMPLETED") {
+      stageCompleted++;
+    }
+  }
+  return {
+    gateApproved,
+    stageCompleted,
+    humanTurnIsFresh: Number.isFinite(latestGateAt) && humanAt >= latestGateAt,
+  };
 }

@@ -143,8 +143,10 @@ import {
   withAuditLock,
 } from "./amadeus-lib.ts";
 import {
-  countStandingGrantRouteReceiptsById,
-  findSoloStandingGrant,
+  classifyApprovalAuthority,
+  type GrantApprovalProcessResult,
+  parseGrantApprovalProcessResult,
+  routeSoloStandingGrantDirective,
 } from "./amadeus-grant-authorization.ts";
 import {
   armPresenceReservation,
@@ -164,7 +166,6 @@ import { resolveMirrorConfig } from "./amadeus-mirror-config.ts";
 import type { MirrorMode } from "./amadeus-mirror-types.ts";
 import {
   MIRROR_BOUNDARY_PHASES,
-  classifyApprovalAuthority,
   type MirrorBoundaryPhase,
   type MirrorBoundaryReceipts,
   parseMirrorBoundaryReceipts,
@@ -1591,83 +1592,6 @@ function projectNextStage(
 ): void {
   if (stateContent === null || directive.gate !== true) return;
   directive.next_stage = nextInScopeStage(node.slug, scope, stateContent)?.slug ?? null;
-}
-
-export type SoloGrantRouteOptions = {
-  readonly directive: RunStageDirective;
-  readonly projectDir: string;
-  readonly stateContent: string;
-  readonly graph: StageEntry[];
-  readonly nowMs?: number;
-  readonly operatingMode?: OperatingMode;
-  readonly routeIdFactory?: () => string;
-};
-
-export function routeSoloStandingGrantDirective(
-  options: SoloGrantRouteOptions,
-): RunStageDirective {
-  if (options.directive.gate !== true) return options.directive;
-  const modeResult =
-    options.operatingMode === undefined
-      ? resolveOperatingMode(process.env.AMADEUS_OPERATING_MODE)
-      : { kind: "valid" as const, mode: options.operatingMode };
-  if (modeResult.kind !== "valid" || modeResult.mode !== "solo") {
-    return options.directive;
-  }
-  const space = activeSpace(options.projectDir);
-  const intent = activeIntent(options.projectDir, space);
-  if (intent === null) return options.directive;
-  const grant = findSoloStandingGrant(
-    options.projectDir,
-    intent,
-    options.directive.stage,
-    options.stateContent,
-    options.graph,
-    options.nowMs ?? Date.now(),
-  );
-  if (grant === null) return options.directive;
-  const mintRouteId = options.routeIdFactory ?? randomUUID;
-  const routeId = mintRouteId();
-  return withAuditLock(
-    options.projectDir,
-    () => {
-      if (
-        countStandingGrantRouteReceiptsById(options.projectDir, routeId) !== 0
-      ) {
-        throw new Error(`Standing grant Route Id collision: ${routeId}`);
-      }
-      withAuditLock(
-        options.projectDir,
-        () => {
-          const appended = appendAuditEntryUnlocked(
-            "GATE_AUTHORIZATION_SELECTED",
-            {
-              "Route Id": routeId,
-              Stage: options.directive.stage,
-              "Grant Id": grant.grantId,
-            },
-            options.projectDir,
-            intent,
-            space,
-          );
-          if (!appended.appended) {
-            throw new Error(
-              `Cannot append standing grant route receipt to ${intent}: intent is complete`,
-            );
-          }
-        },
-        intent,
-        space,
-      );
-      return {
-        ...options.directive,
-        standing_grant_id: grant.grantId,
-        standing_grant_route_id: routeId,
-      };
-    },
-    undefined,
-    space,
-  );
 }
 
 function routeMainWorkflowDirective(
@@ -3238,67 +3162,6 @@ function spawnState(
     stdout: new TextDecoder().decode(result.stdout),
     stderr: new TextDecoder().decode(result.stderr),
   };
-}
-
-export type GrantApprovalProcessResult =
-  | { readonly kind: "approved" }
-  | {
-      readonly kind: "await-approval";
-      readonly stage: string;
-      readonly targetIntentId: string;
-    }
-  | { readonly kind: "protocol-error"; readonly detail: string }
-  | { readonly kind: "fatal-error"; readonly detail: string };
-
-const GRANT_WIRE_UUID_V7_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-
-export function parseGrantApprovalProcessResult(
-  result: { readonly exitCode: number; readonly stdout: string; readonly stderr: string },
-): GrantApprovalProcessResult {
-  if (result.exitCode !== 0) {
-    return {
-      kind: "fatal-error",
-      detail: (result.stderr || result.stdout).trim(),
-    };
-  }
-  if (result.stderr.length !== 0) {
-    return { kind: "protocol-error", detail: "grant approval process wrote stderr" };
-  }
-  if (!/^[^\r\n]+\n?$/.test(result.stdout)) {
-    return { kind: "protocol-error", detail: "grant approval stdout must be one JSON line" };
-  }
-  let value: unknown;
-  try {
-    value = JSON.parse(result.stdout.trimEnd());
-  } catch {
-    return { kind: "protocol-error", detail: "grant approval stdout is not JSON" };
-  }
-  if (!isPlainObject(value) || typeof value.kind !== "string") {
-    return { kind: "protocol-error", detail: "grant approval JSON must be an object" };
-  }
-  const keys = Object.keys(value).sort();
-  if (value.kind === "approved" && keys.length === 1 && keys[0] === "kind") {
-    return { kind: "approved" };
-  }
-  const awaitKeys = ["kind", "reason", "stage", "target_intent_id"];
-  if (
-    value.kind === "await-approval" &&
-    keys.length === awaitKeys.length &&
-    keys.every((key, index) => key === awaitKeys[index]) &&
-    value.reason === "standing-grant-no-longer-authorizes" &&
-    typeof value.stage === "string" &&
-    /^[a-z0-9][a-z0-9-]*$/.test(value.stage) &&
-    typeof value.target_intent_id === "string" &&
-    GRANT_WIRE_UUID_V7_RE.test(value.target_intent_id)
-  ) {
-    return {
-      kind: "await-approval",
-      stage: value.stage,
-      targetIntentId: value.target_intent_id,
-    };
-  }
-  return { kind: "protocol-error", detail: "unknown grant approval JSON shape" };
 }
 
 // Shell out to `amadeus-audit.ts append <event> [--field k=v ...]` — the audit

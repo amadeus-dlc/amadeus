@@ -4302,6 +4302,16 @@ export function worktreePath(projectDir: string, boltSlug: string): string {
 // repoDir resolves the on-disk dir for a repo name; it does NOT validate that the
 // dir exists or is a git repo (the caller does, where the git op runs).
 
+// Canonical UUID shapes. Reservation ids and standing-grant Route Ids are v4;
+// intent ids are v7. Every module that validates one of these — the grant
+// authorization domain, the presence reservation store, the state CLI, the
+// orchestrator's wire parser — tests against these two definitions, so a shape
+// can never drift between the minting side and the checking side.
+export const UUID_V4_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+export const UUID_V7_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
 // A repo name is a single path segment (no separators, no `..`) so it can only
 // resolve to an immediate child of the workspace — never escape it.
 export const REPO_NAME_REGEX = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;

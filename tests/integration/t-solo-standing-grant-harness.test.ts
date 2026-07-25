@@ -60,8 +60,12 @@ const CONTRACT_TOOLS = [
 // transform stops the byte-identity above.
 const CONTRACT_MARKERS: Array<[string, readonly string[]]> = [
   ["amadeus-directive.ts", ["standing_grant_id", "standing_grant_route_id", "target_intent_id", "presence_reservation_id"]],
-  ["amadeus-orchestrate.ts", ["GATE_AUTHORIZATION_SELECTED", "--standing-grant-id", "--standing-grant-route-id", "--target-intent-id", "--presence-reservation-id"]],
+  ["amadeus-orchestrate.ts", ["--standing-grant-id", "--standing-grant-route-id", "--target-intent-id", "--presence-reservation-id"]],
   ["amadeus-state.ts", ["classifyApprovalAuthority", "GRANT_ISSUED", "GRANT_REVOKED"]],
+  // The authorization domain module owns route-receipt minting and the approval
+  // authority classification; the orchestrator and state CLI above carry only
+  // the flags and the call sites.
+  ["amadeus-grant-authorization.ts", ["GATE_AUTHORIZATION_SELECTED", "classifyApprovalAuthority", "routeSoloStandingGrantDirective", "parseGrantApprovalProcessResult"]],
   ["amadeus-presence-reservation.ts", ["HostSessionCapability", "mintHumanPresence", "armPresenceReservation", "mintArmedPresenceReservation"]],
 ];
 

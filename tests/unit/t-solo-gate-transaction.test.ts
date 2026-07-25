@@ -12,8 +12,10 @@ import {
   type RunStageDirective,
   validateDirective,
 } from "../../packages/framework/core/tools/amadeus-directive.ts";
-import { parseGrantApprovalProcessResult } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
-import { classifyApprovalAuthority } from "../../packages/framework/core/tools/amadeus-state.ts";
+import {
+  classifyApprovalAuthority,
+  parseGrantApprovalProcessResult,
+} from "../../packages/framework/core/tools/amadeus-grant-authorization.ts";
 
 const GRANT_ID = "abcdef12";
 const ROUTE_ID = "12345678-1234-4abc-8def-1234567890ab";

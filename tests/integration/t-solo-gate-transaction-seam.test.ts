@@ -14,9 +14,11 @@ import {
   directiveSelfCheckExamples,
   type RunStageDirective,
 } from "../../packages/framework/core/tools/amadeus-directive.ts";
-import { routeSoloStandingGrantDirective } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import type { StageEntry } from "../../packages/framework/core/tools/amadeus-lib.ts";
-import { findStandingGrantRouteReceiptById } from "../../packages/framework/core/tools/amadeus-grant-authorization.ts";
+import {
+  findStandingGrantRouteReceiptById,
+  routeSoloStandingGrantDirective,
+} from "../../packages/framework/core/tools/amadeus-grant-authorization.ts";
 import {
   armPresenceReservation,
   consumePresenceReservation,
@@ -808,4 +810,79 @@ describe("writes into a sealed audit ledger", () => {
     ).toThrow(/completed target intent/);
     expect(readPresenceReservation(root, RESERVATION_ID)?.state).toBe("armed");
   });
+});
+
+// ---------------------------------------------------------------------------
+// Concurrent arming.
+//
+// The "at most one active reservation per session" invariant is what keeps a
+// single human turn from being claimable by several open gates at once. It only
+// holds if the active-marker scan and the marker write happen as one atomic
+// step, so it is asserted against real racing processes released from a start
+// barrier — a sequential loop passes even on a check-then-write implementation.
+// ---------------------------------------------------------------------------
+describe("presence reservation concurrency", () => {
+  const SESSION = "trusted-session-1";
+  const RACERS = 16;
+
+  function reservationMarkers(root: string): PresenceReservation[] {
+    const dir = join(root, "amadeus", ".amadeus-sessions", "presence-reservations");
+    return readdirSync(dir)
+      .filter((name) => name.endsWith(".json"))
+      .map((name) => JSON.parse(readFileSync(join(dir, name), "utf-8")) as PresenceReservation);
+  }
+
+  test("arms at most one reservation when a session races itself", async () => {
+    const root = routeFixture();
+    const child = join(root, "arm-child.ts");
+    const barrier = join(root, "barrier");
+    mkdirSync(barrier, { recursive: true });
+    writeFileSync(
+      child,
+      [
+        `import { existsSync, writeFileSync } from "node:fs";`,
+        `import { armPresenceReservation } from ${JSON.stringify(
+          join(import.meta.dir, "../../packages/framework/core/tools/amadeus-presence-reservation.ts"),
+        )};`,
+        `const [root, barrier, tag] = process.argv.slice(2);`,
+        `writeFileSync(\`\${barrier}/ready-\${tag}\`, "");`,
+        `while (!existsSync(\`\${barrier}/go\`)) Bun.sleepSync(5);`,
+        `try {`,
+        `  armPresenceReservation({`,
+        `    projectDir: root,`,
+        `    sessionId: ${JSON.stringify(SESSION)},`,
+        `    space: "default",`,
+        `    targetIntentId: ${JSON.stringify(TARGET_INTENT_ID)},`,
+        `    stage: "application-design",`,
+        `    routeId: ${JSON.stringify(ROUTE_ID)},`,
+        `  });`,
+        `  console.log("armed");`,
+        `} catch (cause) {`,
+        `  console.log(\`refused: \${cause instanceof Error ? cause.message : String(cause)}\`);`,
+        `}`,
+      ].join("\n"),
+    );
+
+    const racers = Array.from({ length: RACERS }, (_, index) =>
+      Bun.spawn(["bun", child, root, barrier, String(index)], { stdout: "pipe", stderr: "pipe" }),
+    );
+    while (readdirSync(barrier).filter((name) => name.startsWith("ready-")).length < RACERS) {
+      await Bun.sleep(10);
+    }
+    writeFileSync(join(barrier, "go"), "");
+    const outcomes = await Promise.all(
+      racers.map(async (proc) => {
+        const stdout = (await new Response(proc.stdout).text()).trim();
+        await proc.exited;
+        return stdout;
+      }),
+    );
+
+    // Every racer terminates with a definite outcome: no hang, no ambiguity.
+    expect(outcomes.filter((line) => line === "armed")).toHaveLength(1);
+    expect(outcomes.filter((line) => line.startsWith("refused: "))).toHaveLength(RACERS - 1);
+    const markers = reservationMarkers(root);
+    expect(markers).toHaveLength(1);
+    expect(markers[0].state).toBe("armed");
+  }, 60_000);
 });
