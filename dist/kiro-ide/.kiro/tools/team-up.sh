@@ -86,31 +86,35 @@ require_prerequisites() {
 
 # --- agmsg watcher readiness verification (Issue #1384) ------------------
 # Fresh Claude members race the Claude Code TUI cold-start and can drop the
-# initial `/agmsg mode monitor` prompt, leaving the agmsg watcher unarmed (a
-# one-shot supply with no check or retry). After launch we poll each fresh
-# Claude member's agmsg ready sentinel and re-send the monitor prompt to any
-# that time out. Constants mirror agmsg's own spawn.sh so no new magic numbers
-# are minted.
+# initial `/agmsg actas <role>` bootstrap prompt, leaving the agmsg watcher
+# unarmed (a one-shot supply with no check or retry). After launch we poll each
+# fresh Claude member's agmsg ready sentinel and re-send the bootstrap prompt to
+# any that time out. Constants mirror agmsg's own spawn.sh so no new magic
+# numbers are minted.
 #
-# Worst-case budget (Issue #1449): this verification runs synchronously before
-# mux_attach, so an unarmed member blocks the user's attach for the whole poll
-# budget. To stay close to agmsg spawn.sh (:576-588, a single bounded wait with
-# no re-send loop) while still recovering the #1384 prompt drop, we keep exactly
-# ONE re-send: a single wait, one re-send, one more wait — 2 rounds, worst-case
-# 2 * WATCHER_READY_TIMEOUT = 180s (down from the earlier 3-round / 270s).
+# Worst-case budget (Issue #1449 / #1476): this verification runs AFTER
+# mux_attach, so the poll budget never delays the user's attach — the launch is
+# already complete and recorded when it starts, and its only effect is the exit
+# code plus diagnostics. To stay close to agmsg spawn.sh (:576-588, a single
+# bounded wait with no re-send loop) while still recovering the #1384 prompt
+# drop, we keep exactly ONE re-send: a single wait, one re-send, one more wait —
+# 2 rounds, worst-case 2 * WATCHER_READY_TIMEOUT = 120s.
 #
-# Single source for the bootstrap prompt: consumed at launch (claude_member_cmd)
-# and on re-send (resend_monitor_prompt).
-CLAUDE_MONITOR_PROMPT="/agmsg mode monitor"
+# The bootstrap prompt itself has a single source: member_bootstrap_prompt,
+# consumed at launch (claude_member_cmd), by the applicability guard, on re-send
+# (resend_monitor_prompt) and by the recovery guidance.
+#
 # Per-wait readiness timeout: seconds waited per polling round before a re-send
-# / giving up. Mirrors agmsg spawn.sh:132 `READY_TIMEOUT=90` (per-wait, not a
-# whole-run budget).
-WATCHER_READY_TIMEOUT="${WATCHER_READY_TIMEOUT:-90}"
-# Max monitor-prompt re-sends. One re-send (2 poll rounds total) is the minimum
+# / giving up. Grounded on a measured 32.2s for one member to arm (Claude Code
+# cold start included, Issue #1476 feasibility). 60s is ~1.86x that measurement:
+# margin for the heavier cold start of a 7-member simultaneous launch and for
+# disk/CPU variance, while still cutting the previous unmeasured 90s default.
+WATCHER_READY_TIMEOUT="${WATCHER_READY_TIMEOUT:-60}"
+# Max bootstrap-prompt re-sends. One re-send (2 poll rounds total) is the minimum
 # that still recovers the #1384 TUI cold-start prompt drop while staying
 # symmetric with agmsg spawn.sh's single-wait design — a second re-send only
-# stretched the worst-case attach block to 270s without covering a new failure
-# mode (Issue #1449, election E-WTFRA1 = C).
+# stretched the worst-case verification budget by another round without covering
+# a new failure mode (Issue #1449, election E-WTFRA1 = C).
 WATCHER_RESEND_MAX="${WATCHER_RESEND_MAX:-1}"
 # agmsg's actas-lock.sh owns the canonical ready-sentinel path + name encoding.
 # We source it and call agmsg_ready_path rather than duplicating the path string
@@ -858,7 +862,8 @@ has_history() {
 }
 
 claude_member_cmd() {
-  local m="$1" wt="${2:-$BASE/$1}" args="" init_prompt="$CLAUDE_MONITOR_PROMPT" interaction_args=""
+  local m="$1" wt="${2:-$BASE/$1}" args="" init_prompt="" interaction_args=""
+  init_prompt="$(member_bootstrap_prompt "$m")"
   case "$m" in
   engineer-*) interaction_args="--disallowedTools AskUserQuestion" ;;
   esac
@@ -869,16 +874,13 @@ claude_member_cmd() {
     echo "WARN: no $CLAUDE_IDENTITY history for $m — starting fresh (dropping --continue)" >&2
     args=""
   fi
-  # The agmsg monitor delivery and its bootstrap prompt only apply to the agmsg
-  # backend. Under herdr messaging there is no monitor to arm and no monitor
-  # prompt to send, so the initial prompt is empty.
-  if [ "$MSG_BACKEND" = "agmsg" ]; then
-    if [ -f "$DELIVERY" ]; then
-      bash "$DELIVERY" set monitor claude-code "$wt" >/dev/null 2>&1 ||
-        echo "WARN: delivery.sh set monitor failed for $m (continuing)" >&2
-    fi
-  else
-    init_prompt=""
+  # The agmsg monitor delivery only applies to the agmsg backend, and it is a
+  # precondition of the actas bootstrap prompt: actas starts the watcher that
+  # consumes this delivery mode. Under herdr there is nothing to set and
+  # member_bootstrap_prompt already resolves to an empty initial prompt.
+  if [ "$MSG_BACKEND" = "agmsg" ] && [ -f "$DELIVERY" ]; then
+    bash "$DELIVERY" set monitor claude-code "$wt" >/dev/null 2>&1 ||
+      echo "WARN: delivery.sh set monitor failed for $m (continuing)" >&2
   fi
   # TEAM_MSG is propagated so the member's team-msg.sh uses the same backend.
   # Under herdr the run record is also wired in as the send audit-log home, so
@@ -898,6 +900,22 @@ member_role() {
   leader) printf 'leader' ;;
   engineer-*) printf 'e%s' "${1#engineer-}" ;;
   esac
+}
+
+# Single source for a member's bootstrap prompt (Issue #1476). Under the agmsg
+# backend each member starts its own actas watcher, which is the only watcher
+# that writes the readiness sentinel verify_watchers_armed polls (agmsg
+# watch.sh:307). Under herdr there is no watcher to arm, so the prompt is empty.
+#
+# Pure: stdout only, no state touched. The role is passed through printf's %s
+# rather than concatenated or eval'd, so a role value can never be read as a
+# format string. Invariant relied on by watcher_verification_applies: whether the
+# output contains " actas " does not depend on the role (ADR-2, pinned by tests).
+member_bootstrap_prompt() {
+  local m="$1" role
+  [ "$MSG_BACKEND" = "agmsg" ] || { printf ''; return 0; }
+  role="$(member_role "$m")"
+  printf '/agmsg actas %s' "$role"
 }
 
 agmsg_type() {
@@ -1091,7 +1109,9 @@ stack_column() {
 WATCHER_SKIP_ANNOUNCED=0
 watcher_verification_applies() {
   [ "$RUNTIME" = "claude" ] && [ "$MSG_BACKEND" = "agmsg" ] || return 1
-  case "$CLAUDE_MONITOR_PROMPT" in
+  # Derived once for a representative role: whether the prompt is an actas form
+  # does not depend on the role (ADR-2), so the cost never scales with team size.
+  case "$(member_bootstrap_prompt leader)" in
   *" actas "*) return 0 ;;
   esac
   if [ "$WATCHER_SKIP_ANNOUNCED" = "0" ]; then
@@ -1199,16 +1219,21 @@ verify_watchers_armed() {
     for m in $remaining; do
       pane="$(resolve_member_pane "$S" "$m")"
       if [ -n "$pane" ]; then
-        resend_monitor_prompt "$S" "$pane" "$CLAUDE_MONITOR_PROMPT" ||
-          echo "WARN: monitor prompt re-send failed for $m (pane $pane)" >&2
+        resend_monitor_prompt "$S" "$pane" "$(member_bootstrap_prompt "$m")" ||
+          echo "WARN: bootstrap prompt re-send failed for $m (pane $pane)" >&2
       else
-        echo "WARN: could not resolve herdr pane for $m to re-send the monitor prompt" >&2
+        echo "WARN: could not resolve herdr pane for $m to re-send the bootstrap prompt" >&2
       fi
     done
   done
   echo "ERROR: agmsg watcher never armed for: $remaining (after ${WATCHER_RESEND_MAX} re-send(s))" >&2
-  echo "  The initial '/agmsg mode monitor' prompt was dropped in the Claude Code startup race (Issue #1384)." >&2
-  echo "  Recover manually: focus each listed pane and run '$CLAUDE_MONITOR_PROMPT'." >&2
+  echo "  The initial '/agmsg actas <role>' bootstrap prompt was dropped in the Claude Code startup race (Issue #1384)." >&2
+  # One line per member: the prompt is role-specific, so a single string cannot
+  # describe the recovery for all of them.
+  echo "  Recover manually: focus each listed pane and run the prompt for that member:" >&2
+  for m in $remaining; do
+    echo "    $m: $(member_bootstrap_prompt "$m")" >&2
+  done
   return 1
 }
 
@@ -1469,16 +1494,6 @@ P_TOP_RIGHT="$(mux_split "$S" "$P_LEADER" h 50 "$(member_worktree "${right[0]}")
 stack_column "$P_TOP_LEFT" "${left[@]:1}"
 stack_column "$P_TOP_RIGHT" "${right[@]:1}"
 
-# Verify each fresh Claude member's agmsg watcher armed, re-sending the monitor
-# prompt to any that raced the TUI cold-start (Issue #1384). Completed BEFORE
-# mux_attach so the exit code is meaningful (an interactive attach would swallow
-# it). The run itself is fully launched and recorded regardless; watcher_status
-# only reports arming (0 = all armed, non-zero = one or more unarmed).
-watcher_status=0
-if watcher_verification_applies; then
-  verify_watchers_armed || watcher_status=$?
-fi
-
 start_safety_wait_supervisors || exit 1
 mux_attach "$S"
 if [ -n "$RUN_ID" ]; then
@@ -1490,6 +1505,19 @@ if [ -n "$RUN_ID" ]; then
   printf '%s\n' "$TEAM_NAME" >"$INSTANCE_DIR/agmsg-team"
   printf '%s\n' "$INSTANCE" >"$INSTANCE_DIR/instance"
 fi
+
+# Verify each fresh Claude member's agmsg watcher armed, re-sending the bootstrap
+# prompt to any that raced the TUI cold-start (Issue #1384). Runs AFTER
+# mux_attach and after the run record is finalised (Issue #1476): mux_attach is
+# non-blocking (`open -na Ghostty`), so the exit code below still reaches the
+# caller, while the poll budget no longer sits between launch and the user's
+# attach. The run is fully launched and recorded either way; watcher_status only
+# reports arming (0 = all armed, non-zero = one or more unarmed).
+watcher_status=0
+if watcher_verification_applies; then
+  verify_watchers_armed || watcher_status=$?
+fi
+
 RUN_PREPARING=0
 echo "session '$S' launched (instance=$INSTANCE): ${left[*]} | leader | ${right[*]} ($TEAM_SIZE engineers, runtime=$RUNTIME, identity=$AGENT_IDENTITY, agmsg=$TEAM_NAME)"
 # Non-zero when one or more Claude watchers never armed (Issue #1384). The

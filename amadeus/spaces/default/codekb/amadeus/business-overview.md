@@ -1,5 +1,7 @@
 # ビジネス概要
 
+> **2026-07-25（intent `260725-teamup-launch-hardening`、[#1476](https://github.com/amadeus-dlc/amadeus/issues/1476) / [#1478](https://github.com/amadeus-dlc/amadeus/issues/1478)、amadeus-feature / Standard）: 変更なし、確認済み（測定 ref: observed `4a0f91ad0`、base `ec624022f`、距離 9）。** 業務ドメイン（AI-DLC 自己ホスト開発）に構造変化なし。区間の実装面は既存 bash ツール `team-up.sh` の watcher 検証ガード（PR #1477）のみで、利用者価値は Team Mode 起動の信頼性と待ち時間に閉じる。本 intent も同ツール内の2改善（初期プロンプトの actas 移行 / worktree 並列作成）に閉じる。詳細は `architecture.md` / `code-quality-assessment.md` の同 intent 節。
+
 > **2026-07-25（intent `260725-teamup-attach-latency`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み（測定 ref: observed `ec624022f`、base `6d4df9056`、距離 125）。** 業務ドメイン（AI-DLC 自己ホスト開発）に構造変化なし。既存 bash ツール `team-up.sh` の起動レイテンシ（実測 200.85 秒）の解消に閉じ、利用者価値は Team Mode 起動の待ち時間短縮のみ。詳細は `architecture.md` / `code-quality-assessment.md` の同 intent 節。
 
 ## Issue #1466 solo standing grant（260725-solo-standing-grants、2026-07-25、履歴）

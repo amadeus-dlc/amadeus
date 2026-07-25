@@ -1,6 +1,21 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260725-teamup-attach-latency）
+## 実行メタデータ（現在: 260725-teamup-launch-hardening）
+
+- Date: `2026-07-25`
+- Base commit: `ec624022ff65cc8b3912001f768bd66ec41a0e39`（前 intent `260725-teamup-attach-latency` の observed。`git merge-base --is-ancestor` exit 0、`git rev-list --count` = **9**。cid:reverse-engineering:rescan-base-ancestry）
+- Observed commit: `4a0f91ad07dbe17c6477b7fe9b52a0e9ab4532ba`（= 現 HEAD、`git rev-parse HEAD` 実測。ブランチ `feat/teamup-actas-migration-and-worktree-parallel`）
+- 区間規模: `git diff --stat ec624022f..4a0f91ad0` = **65 files changed, 6516 insertions(+), 54 deletions(-)**（測定 ref: observed `4a0f91ad0`）。実装面は `team-up.sh` 11 面 × `+31/-8` と tests 2 件のみで、残りは record/audit。
+- 区間の内訳: [PR #1477](https://github.com/amadeus-dlc/amadeus/pull/1477)（merge `872919958`、実装 `294df1281` = watcher 検証の適用可否ガード、Issue #1449）+ 本 intent の ideation 記録（`5219bbd54` / `a3ab8dff4` / `4a0f91ad0`）+ 前 intent の record checkpoint。
+- Scope: `amadeus-feature`、Depth Standard、Test Strategy Minimal、Brownfield、単一 repo `amadeus`
+- Focus: [Issue #1476](https://github.com/amadeus-dlc/amadeus/issues/1476)（bug / P1 / S2-CRITICAL — 初期プロンプトの actas 移行）+ [Issue #1478](https://github.com/amadeus-dlc/amadeus/issues/1478)（enhancement / P2 — `git worktree add` の並列化）の2ユニット同時対応。
+- 差分リフレッシュ（cid:reverse-engineering:c1）: フルスキャン不実施。区間9コミットの実装面（`team-up.sh` の diff 全文、tests 2件）を直読し、外部 agmsg スキル側の主張は前 intent の記録を**再実測して追認**した。
+- 測定 ref: 本ファイル記載の file:line・件数はすべて observed `4a0f91ad0` の実ファイル直読、および repo 外・非バージョン管理の外部スキル `~/.agents/skills/agmsg/`（読取 2026-07-25）による。`git worktree add` の並列度別実測値は本 intent の `ideation/feasibility/feasibility-assessment.md`（測定 ref: `c4c9531ee`、隔離環境、実施後完全撤去）からの引用であり、本 scan では再実行していない。
+- 更新した成果物: 本ファイル（鮮度ポインタ + 旧「現在: 260725-teamup-attach-latency」→履歴ラベル化、cid:reverse-engineering:c3-relabel）、`architecture.md`（PR #1477 の適用可否ガード現況、actas 移行後に検証が再発火する経路、`mux_attach` との順序関係、worktree 直列作成の位置づけ）、`code-quality-assessment.md`（#1384 の保護が現在不在、テストが sentinel を自前で書く構造、worktree 直列作成）、`code-structure.md` / `component-inventory.md`（`WATCHER_SKIP_ANNOUNCED` 等の追加と行番号の更新）、`re-scans/260725-teamup-launch-hardening.md`（新規）。`business-overview.md` / `api-documentation.md` / `technology-stack.md` / `dependencies.md` は本 intent 由来の構造変化なしのため「変更なし、確認済み」一行のみ追記。
+- Sensors: RE ステージの宣言センサー3種（required-sections / upstream-coverage / answer-evidence）は codekb 出力パスが sensor filter（`**/{amadeus-docs,intents}/**` と `**/*-questions.md`）に構造的に不適合で発火不能（cid:reverse-engineering:re-sensors-codekb-filter-mismatch、cid:reverse-engineering:c3-codekb-sensor）。**センサー成功として扱わない**。代替として (1) 更新した全成果物の `## ` 見出しが 2 以上あることを `grep -c '^## '` で機械確認、(2) 上流入力（`ideation/feasibility/feasibility-assessment.md`、Issue #1476 / #1478、実コード file:line）の本文実参照を直接検証した。
+- Delivery boundary: codekb 9成果物 + 本 intent の re-scan 記録のみ更新。実装・テスト・state・audit・生成配布物・commit・PR 操作は未実施。
+
+## 実行メタデータ（履歴: 260725-teamup-attach-latency）
 
 - Date: `2026-07-25`
 - Base commit: `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`（`re-scans/` の到達可能な observed のうち HEAD の祖先で距離最小。cid:reverse-engineering:rescan-base-ancestry）
