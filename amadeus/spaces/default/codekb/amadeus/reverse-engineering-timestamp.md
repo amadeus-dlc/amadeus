@@ -1,6 +1,22 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260725-mirror-review-fixes）
+## 実行メタデータ（現在: 260725-teamup-attach-latency）
+
+- Date: `2026-07-25`
+- Base commit: `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`（`re-scans/` の到達可能な observed のうち HEAD の祖先で距離最小。cid:reverse-engineering:rescan-base-ancestry）
+- Observed commit: `ec624022ff65cc8b3912001f768bd66ec41a0e39`（= 現 HEAD、`git rev-parse HEAD` 実測）
+- Base ancestry / distance: `git merge-base --is-ancestor <base> HEAD` exit 0、`git rev-list --count <base>..HEAD` = **125**
+- 区間規模: `git diff --stat <base>..<observed>` = **1018 files changed, 274683 insertions(+), 4573 deletions(-)**（測定 ref: observed `ec624022f`）
+- Scope: `amadeus-bugfix`、Depth Minimal、Test Strategy Minimal、Brownfield、単一 repo `amadeus`
+- Focus: [Issue #1449](https://github.com/amadeus-dlc/amadeus/issues/1449) — `team-up.sh` 起動が約200秒かかる問題。**起動レイテンシの解消のみ**がスコープ。
+- 症状（実 launch 実測、2026-07-25、3人構成 leader+engineer×2、隔離インスタンス `bench`）: `T+200.85s team-up.sh EXIT (rc=1)`、armed になったメンバー **0 / 3**、`ERROR: agmsg watcher never armed for: leader engineer-1 engineer-2 (after 1 re-send(s))`。Claude Code は3プロセスとも正常起動し `herdr agent list` 上 `agent_status: idle`。
+- 根本原因（本 scan で独立に裏取り）: `verify_watchers_armed` が待つ ready sentinel は **actas モードの watcher しか書かない**が、`team-up.sh` が投入する初期プロンプトは `/agmsg mode monitor`（monitor モード）である。モード不一致により sentinel は**構造的に一度も生成されない** → 検証は常に全員 unarmed でタイムアウトし、`mux_attach` を待ち budget 全量ぶんブロックする。
+- 測定 ref: 本ファイル記載の file:line・件数はすべて observed `ec624022f` の実ファイル直読、および外部 agmsg スキル `~/.agents/skills/agmsg/`（repo 外・非バージョン管理、読取時刻 2026-07-25）による。
+- 更新した成果物: 本ファイル（鮮度ポインタ + 旧「現在: 260725-mirror-review-fixes」→履歴ラベル化、cid:reverse-engineering:c3-relabel）、`architecture.md`（actas/monitor モード不一致の機序を新設、260724 節の失効数値を訂正）、`code-quality-assessment.md`（「常に失敗する検証ゲート」= 検証劇場クラス + テストスタブによる検出不能性）、`code-structure.md`・`component-inventory.md`（HEAD 行番号への更新と欠陥所在の登録）、`re-scans/260725-teamup-attach-latency.md`（新規）。`business-overview.md` / `api-documentation.md` / `technology-stack.md` / `dependencies.md` は本 intent 由来の構造変化なしのため「変更なし、確認済み」一行のみ追記（cid:reverse-engineering:c1）。
+- Sensors: RE ステージの宣言センサー3種（required-sections / upstream-coverage / answer-evidence）は codekb 出力パスが sensor filter に構造的に不適合で発火不能（cid:reverse-engineering:re-sensors-codekb-filter-mismatch、cid:reverse-engineering:c3-codekb-sensor）。**センサー成功として扱わず**、H2 構成（各成果物の `## ` 見出し ≥2、直読確認）と上流入力参照（Issue #1449 / 実 launch 実測ログ / 実コード file:line）を直接検証した。
+- Delivery boundary: codekb 9成果物 + 本 intent の re-scan 記録のみ更新。実装・テスト・state・audit・生成配布物・commit・PR 操作は未実施。
+
+## 実行メタデータ（履歴: 260725-mirror-review-fixes）
 
 - Date: `2026-07-25T01:35:20Z`
 - Base commit: `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`（この intent に先行記録がないため、到達可能な `re-scans/` の observed commit のうち HEAD に最も近い `260724-watcher-timeout-fix` を採用）

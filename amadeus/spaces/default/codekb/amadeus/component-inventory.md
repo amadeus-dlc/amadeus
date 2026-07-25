@@ -1,6 +1,33 @@
 # コンポーネント棚卸し
 
-## Mirror レビュー修正コンポーネント（260725-mirror-review-fixes、現在）
+## Team Mode 起動レイテンシ関連コンポーネント（260725-teamup-attach-latency、現在、Issue #1449）
+
+差分リフレッシュ（base `6d4df9056` → observed HEAD `ec624022ff65cc8b3912001f768bd66ec41a0e39`、距離 125、amadeus-bugfix / Minimal）。測定 ref: observed HEAD 実ファイル直読。行番号は 260724 節から移動しているため、以下が現行値。
+
+| コンポーネント | 場所（file:line） | 役割 / #1449 での関与 |
+| --- | --- | --- |
+| `CLAUDE_MONITOR_PROMPT` | team-up.sh:104 | 初期プロンプト `/agmsg mode monitor`。**monitor モード**を選ぶ点が欠陥の起点 |
+| `WATCHER_READY_TIMEOUT` | team-up.sh:108 | per-wait タイムアウト（既定 90 秒）。ブロッキング時間の第1因子 |
+| `WATCHER_RESEND_MAX` | team-up.sh:114（verbatim: `WATCHER_RESEND_MAX="${WATCHER_RESEND_MAX:-1}"`） | 再送上限。`9b851c5ae` で 2 → **1** へ短縮（worst-case 270 → 180 秒） |
+| `watcher_verification_applies` | team-up.sh:1077-1079 | claude + agmsg のときだけ検証発火するガード |
+| `ready_sentinel_path` | team-up.sh:1088-… | agmsg `agmsg_ready_path` を subshell source で解決（path 二重定義回避） |
+| `clear_stale_watcher_sentinels` | team-up.sh:1132-1141 | pane 起動前の旧 sentinel 除去 |
+| `verify_watchers_armed` | team-up.sh:1151-1190（verbatim :1153 `  local max_attempts=$(( WATCHER_RESEND_MAX + 1 ))`） | **#1449 の核心**。sentinel を 2 ラウンド × 90 秒ポーリング。sentinel は monitor モードでは生成されないため常に失敗 |
+| 呼び出し元（launch） | team-up.sh:1455-1457 | `mux_attach`（:1460）の**前**で同期実行 → attach を 180 秒ブロック |
+| `git worktree add`（直列） | team-up.sh:1282 | 副次コスト。1.0〜1.2 秒/回（3回実測）、7人で約 7.4 秒 |
+| `t-team-up-watcher-arming.test.ts` | tests/integration/（268 行） | agmsg 側をスタブ化（:42 path 関数、:60 fake arming、:87-91 `armAll`）し本欠陥を検出しない |
+
+### 外部コンポーネント（repo 外、`~/.agents/skills/agmsg/`）
+
+| コンポーネント | 場所（file:line） | 関与 |
+| --- | --- | --- |
+| `watch.sh` sentinel 書込ブロック | watch.sh:300-310 | `ACTIVE_NAME` 非空のときだけ sentinel を書く（= actas 専用） |
+| `watch.sh` 引数束縛 | watch.sh:43 | `ACTIVE_NAME="${4:-}"` |
+| `emit_monitor_directive()` | delivery.sh:259 / :301 | monitor 経路。watch.sh へ 3 引数のみ渡す |
+| `agmsg_ready_path` / 所有コメント | lib/actas-lock.sh:63-73 | sentinel path の正本と「actas watcher が書く」旨の明記 |
+| `ACTAS_PROMPT` | spawn.sh:358 | 対照経路（actas 起動で sentinel が書かれる） |
+
+## Mirror レビュー修正コンポーネント（260725-mirror-review-fixes、履歴）
 
 観測 HEAD は `70336937529f5be31c011de5d368c0f03e534506`、差分 base は `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`。
 
