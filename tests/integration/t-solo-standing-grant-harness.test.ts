@@ -23,10 +23,15 @@
 //      would silently bypass the presence reservation and strand a solo
 //      fallback.
 //   4. Kiro IDE is fail-closed by construction: its promptSubmit hook carries no
-//      stable session identity, so it declares the capability `unavailable` and
-//      never substitutes a shared key, the PID, or the active-intent cursor
-//      (HR-04e). OpenCode ships no prompt hook at all, so it has no mint site to
-//      degrade.
+//      stable session identity (measured 2026-07-26 on Kiro 0.12.333 /
+//      kiroAgent 0.3.721: `handleHookExecute` spawns runCommand hooks with
+//      `env: { USER_PROMPT: userPrompt }` only, and the hook schema exposes no
+//      session field), so it declares the capability `unavailable` and never
+//      substitutes a shared key, the PID, or the active-intent cursor (HR-04e).
+//   5. OpenCode DOES carry a stable identity: measured 2026-07-26 on opencode
+//      1.18.3, the runtime triggers `chat.message` with `{sessionID, …}`. Its
+//      plugin mint site therefore forwards that identity through the canonical
+//      seam, so a targeted human continuation fires there too.
 
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
@@ -83,13 +88,15 @@ const PROTOCOL_MARKERS = [
 ];
 
 // The file that owns the prompt-submit mint on each harness. OpenCode has no
-// prompt hook (no stdin hook shell at all) and is therefore absent here.
+// stdin hook shell — its mint site is the JS plugin loaded from
+// `.opencode/plugin/`.
 const MINT_OWNERS: Array<[string, string]> = [
   ["claude", join("hooks", "amadeus-mint-presence.ts")],
   ["codex", join("hooks", "amadeus-codex-adapter.ts")],
   ["cursor", join("hooks", "amadeus-mint-presence.ts")],
   ["kiro", join("hooks", "amadeus-kiro-adapter.ts")],
   ["kiro-ide", join("hooks", "amadeus-kiro-adapter.ts")],
+  ["opencode", join("plugin", "amadeus-opencode-plugin.ts")],
 ];
 
 function harnessDir(name: string): string {
@@ -156,13 +163,16 @@ describe("solo standing grant — six-harness contract projection", () => {
     expect(text).not.toContain("process.pid");
   });
 
-  test("opencode ships no prompt-hook mint site to degrade", () => {
+  test("opencode forwards its native chat.message sessionID to the canonical seam", () => {
     const dir = harnessDir("opencode");
-    expect(existsSync(join(dir, "hooks", "amadeus-codex-adapter.ts"))).toBe(false);
-    expect(existsSync(join(dir, "hooks", "amadeus-kiro-adapter.ts"))).toBe(false);
-    // The neutral core hook still projects, so a future OpenCode prompt adapter
-    // has the canonical seam waiting rather than a harness-local mint.
-    const core = readFileSync(join(dir, "hooks", "amadeus-mint-presence.ts"), "utf8");
-    expect(core).toContain("mintHumanPresence");
+    const text = readFileSync(join(dir, "plugin", "amadeus-opencode-plugin.ts"), "utf8");
+    // The measured OpenCode prompt seam and the identity it carries.
+    expect(text).toContain('"chat.message"');
+    expect(text).toContain("hostSessionCapability(message?.sessionID)");
+    // The forbidden degradations (HR-04e).
+    expect(text).not.toContain("process.pid");
+    expect(text).not.toContain("activeIntent");
+    // The plugin lands on OpenCode's own discovery path, next to its vocabulary.
+    expect(existsSync(join(dir, "plugin", "amadeus-opencode-vocab.ts"))).toBe(true);
   });
 });

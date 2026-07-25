@@ -102,7 +102,12 @@ if (target === "mint") {
       isMachineInjectedTurnText(rawUserPrompt);
     if (existsSync(stateFilePath(projectDir)) && !machineInjected) {
       // Kiro IDE's promptSubmit hook carries only USER_PROMPT — no stable host
-      // session identity — so the capability is `unavailable` and the canonical
+      // session identity. Re-measured 2026-07-26 on Kiro 0.12.333 / kiroAgent
+      // 0.3.721: `handleHookExecute` HAS a `sessionId` (it keys the hook
+      // operation registry) but spawns the runCommand hook with
+      // `env: { USER_PROMPT: userPrompt }` only, the contextual-hook executor
+      // does the same, and the documented hook schema exposes no session field
+      // or command template variable. So the capability is `unavailable` and the canonical
       // seam mints the ordinary untargeted HUMAN_TURN. A solo standing-grant
       // targeted continuation therefore does not fire here (fail-closed); it is
       // NEVER degraded onto a shared workspace key, the PID, or the cursor.
