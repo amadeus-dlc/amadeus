@@ -49,6 +49,11 @@ import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import type { HarnessManifest } from "./manifest-types.ts";
+import {
+  mirrorProjection,
+  mirrorProjectionRegistryDigest,
+} from "../packages/framework/harness/projections.ts";
+import { DistributionTransactionCoordinator } from "./distribution-transaction.ts";
 import { renderOnboarding } from "./onboarding.ts";
 import { substituteToken, transform } from "./harness-transform.ts";
 import {
@@ -572,7 +577,13 @@ function renameRulesInCompiledData(treeRoot: string, harnessDir: string, rulesRe
 
 function loadManifest(name: string): HarnessManifest {
   const mod = require(join(HARNESS_ROOT, name, "manifest.ts")) as { default: HarnessManifest };
-  return mod.default;
+  const manifest = mod.default;
+  const projection = mirrorProjection(manifest.mirrorSurface);
+  if (manifest.name !== name || projection.surface !== name)
+    throw new Error(`manifest ${name}: Mirror registry surface mismatch`);
+  if (projection.harnessDir !== manifest.harnessDir)
+    throw new Error(`manifest ${name}: Mirror registry harnessDir mismatch`);
+  return manifest;
 }
 
 // ---------------------------------------------------------------------------
@@ -617,6 +628,7 @@ export function writeHarness(name: string): void {
   // Stash the committed compiled-data seed before the clean sweep so compile
   // can bootstrap its number/name mappings (the seed survives the regenerate).
   const seedStash = mkdtempSync(join(tmpdir(), `amadeus-seed-${name}-`));
+  const candidate = mkdtempSync(join(tmpdir(), `amadeus-candidate-${name}-`));
   try {
     for (const rel of COMPILED_DATA) {
       const src = join(treeRoot, rel);
@@ -626,25 +638,28 @@ export function writeHarness(name: string): void {
         cpSync(src, dst);
       }
     }
-    // Clean sweep the harness dir so removed core files don't linger.
-    if (existsSync(treeRoot)) rmSync(treeRoot, { recursive: true, force: true });
-    // Also sweep the workspace-root method tree (dist/<name>/amadeus/) so a
-    // removed/renamed memory file (e.g. a dropped phase rule) doesn't linger
-    // beside the freshly emitted one — the harness-dir sweep above misses it.
-    const memoryRoot = join(distDir, "amadeus");
-    if (existsSync(memoryRoot)) rmSync(memoryRoot, { recursive: true, force: true });
-    const { outsideHarness } = buildTree(m, distDir, seedStash);
-    const expected = expectedOutsideHarness(m, outsideHarness, distDir); // #771 post-sweep set
-    const harnessSubtreePrefix = m.harnessDir + sep;
-    for (const f of walk(distDir)) {
-      const rel = relative(distDir, f);
-      if (rel.startsWith(harnessSubtreePrefix)) continue;
-      if (expected.has(rel)) continue;
-      rmSync(f);
+    buildTree(m, candidate, seedStash);
+    const candidateFiles = new Map<string, Buffer>();
+    for (const file of walk(candidate))
+      candidateFiles.set(relative(candidate, file), readFileSync(file));
+    const updates: Array<{ path: string; bytes: Buffer | null }> = [];
+    for (const [rel, bytes] of candidateFiles)
+      updates.push({ path: relative(REPO_ROOT, join(distDir, rel)), bytes });
+    if (existsSync(distDir)) {
+      for (const file of walk(distDir)) {
+        const rel = relative(distDir, file);
+        if (!candidateFiles.has(rel))
+          updates.push({ path: relative(REPO_ROOT, file), bytes: null });
+      }
     }
+    new DistributionTransactionCoordinator(REPO_ROOT).apply(
+      updates,
+      mirrorProjectionRegistryDigest(),
+    );
     console.log(`[${name}] regenerated dist/${name}/${m.harnessDir}`);
   } finally {
     rmSync(seedStash, { recursive: true, force: true });
+    rmSync(candidate, { recursive: true, force: true });
   }
 }
 
@@ -844,11 +859,20 @@ export function runCli(argv: string[]): number {
   if (absent.length > 0) console.log(`(skipping harness(es) without a manifest: ${absent.join(", ")})`);
 
   if (check) {
+    const coordinator = new DistributionTransactionCoordinator(REPO_ROOT);
+    if (coordinator.pendingJournalCount() > 0) {
+      console.error("package --check FAILED: distribution recovery required");
+      return 1;
+    }
+    const session = coordinator.openReadSession("package-check");
     let problems: string[] = [];
-    for (const n of present) problems = problems.concat(checkHarness(n));
-    // The harness-neutral bundle (dist/plugins/) is not harness-specific, so it
-    // is diffed once alongside the harness trees. No-op (empty) at zero plugins.
-    problems = problems.concat(checkNeutralBundle());
+    try {
+      for (const n of present) problems = problems.concat(checkHarness(n));
+      // The harness-neutral bundle is diffed once alongside the harness trees.
+      problems = problems.concat(checkNeutralBundle());
+    } finally {
+      session.close();
+    }
     if (problems.length > 0) {
       console.error(`\npackage --check FAILED (${problems.length} problem(s)):`);
       for (const p of problems.slice(0, 40)) console.error("  " + p);

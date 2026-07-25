@@ -24,6 +24,8 @@
 - Minimal戦略でも、対象がシェル関数・tmux・実FS境界である場合は、孤立mockの新規unit testより承認済みNFR経路を直接観測できる既存integration seamを要件駆動の最小検証集合として実行する。 (learned 2026-07-24) <!-- cid:build-and-test:wtfbt-c1 -->
 - 長い本番タイムアウトの性能要件は、同じ制御経路を通る短縮可能なタイミングシームとラウンド数検証で構成要素を決定的に確認できる場合、実時間待機よりその検証を優先する。 (learned 2026-07-24) <!-- cid:build-and-test:wtfbt-c3 -->
 - 既存 workflow へ新しいトリガーを追加する設計では、event 固有値の欠落を実行環境で再現し、既存ジョブのハード失敗と依存ジョブへの伝播を確認してから最小分岐を設計する (learned 2026-07-23) <!-- cid:functional-design:c1 -->
+- 6件を一括実装せず、各findingごとにRed確認後に最小実装してGreenへ戻し、最後に横断suiteとdistribution同期を行う。 (learned 2026-07-25) <!-- cid:code-generation:c2-2 -->
+- full CI再実行に加えて対象ファイルを再検証し、統合全体の信頼性とFR別の診断可能性を両立する。 (learned 2026-07-25) <!-- cid:build-and-test:c3-mirror-review-fixes -->
 ## Deployment
 
 デプロイ基盤は持たず、リリースは npm パッケージ配布と GitHub 上のタグ/PR 履歴で管理する。GitHub Actions は push と pull_request で typecheck、lint、dist/self-install drift guard、smoke+unit+integration tests を実行する。
@@ -73,6 +75,12 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - NEVER `packages/framework/core/` / `packages/framework/harness/` の維持または移動を、ADR/設計記録なしに暗黙決定しない。 (affirmed 2026-07-07)
 - NEVER `dist/` relocation を internal refactor として扱わない。README、docs、tests、self-promotion、CI への user-facing impact を棚卸しする。 (affirmed 2026-07-07)
 - NEVER `packages/setup` の不在をローカル filesystem evidence として捏造しない。 (affirmed 2026-07-07)
+- NEVER accept legacy boolean values for `auto-mirror`. (affirmed 2026-07-24)
+- NEVER extend `auto-mirror: auto` consent to Pull Request merge, release, publish, deployment, or unrelated external actions. (affirmed 2026-07-24)
+- NEVER automatically edit or close an Issue whose Amadeus ownership provenance is absent or inconsistent. (affirmed 2026-07-24)
+- NEVER treat a GitHub mirror failure as permission to silently lose synchronization state or permanently stop the AI-DLC workflow. (affirmed 2026-07-24)
+- NEVER add a backward-compatibility shim, generic tracker transport, scheduler, daemon, or unrelated large-module refactor for this Intent. (affirmed 2026-07-24)
+- NEVER edit `dist/` or self-install copies as independent sources of truth. (affirmed 2026-07-24)
 ## Mandated
 
 - ALWAYS リリース(バージョンバンプ・タグ発行・GitHub Release ノート・npm publish)は release.yml の workflow_dispatch 一本で行う。PR ではバージョン・バッジ・リリースノートに一切触れない(`tests/unit/t68-version-changelog-sync.test.ts` が version.ts↔CLI↔README バッジの同期を強制) (user decision 2026-07-09)
@@ -87,6 +95,13 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - ALWAYS markdown artifact は日本語で書く。ただし path、CLI、コード識別子、tool が要求する heading は正確性を優先して保持する。 (affirmed 2026-07-07)
 - ALWAYS 新設パッケージ(`packages/*`)は lint(Biome)と型検査(`tsc --noEmit`)の配線をパッケージ追加と同一 PR で加え、既存の狭い CI lint スコープ(`tests/` のみ)を継承しない (affirmed 2026-07-08)
 - ALWAYS harness 専用ツールを `packages/framework/core/tools/` に置かない — 全6ハーネス manifest の coreDirs が tools を投影するため構造的に全ハーネス dist へ漏出する。harness 専用は `packages/framework/harness/<name>/tools/`+harnessFiles 投影に置く(core 中立層/harness 表層境界の具体化。E-770-CGBT 2026-07-18 採用 3/3 — e4 提案+e1 GoA1+e3 GoA2 留保=小型1行統合。票: 初回配信 11:42Z 頃 → e3 11:43:21Z(0件)→ e4 11:44:07Z(本候補提案)→ e1 11:44:22Z(GoA3 留保)→ 追加ラウンド配信 11:44Z 台 → e1 11:44:55Z(採用 GoA1)→ e3 11:45:06Z(採用 GoA2)→ 開票 11:45Z 台。実測根拠: E-770-CG2 裁定(reviewer が core/tools 配置の漏出を捕捉、manifest 6面 :26-:39 実測)+#1212 実装(harnessFiles 化で漏出0)) (learned 2026-07-18) <!-- cid:code-generation:harness-tools-placement -->
+- ALWAYS treat an explicit `auto-mirror: auto` value as standing consent only for the active Intent's bounded mirror create, sync, and provenance-verified close operations. (affirmed 2026-07-24)
+- ALWAYS keep the Intent record as the source of truth and synchronize the GitHub mirror in one direction from record to Issue. (affirmed 2026-07-24)
+- ALWAYS make mirror retries idempotent across partial GitHub success and local-state write failure. (affirmed 2026-07-24)
+- ALWAYS verify Amadeus ownership provenance and workflow landing before automatically closing a mirror Issue. (affirmed 2026-07-24)
+- ALWAYS continue the workflow after GitHub availability, authentication, permission, rate-limit, or command failures while recording a visible unsynchronized warning and retry state. (affirmed 2026-07-24)
+- ALWAYS update the framework source, all six harness distributions, self-install surfaces, tests, and paired English/Japanese documentation in the same change. (affirmed 2026-07-24)
+- ALWAYS validate TypeScript with strict typecheck, Biome lint, relevant tests, coverage gates, complexity checks, and distribution drift checks required by the changed paths. (affirmed 2026-07-24)
 ## Corrections
 
 <!-- 人間のフィードバックによるプロジェクト固有の是正。 -->
@@ -182,6 +197,9 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - plugin-skeletonはcompile性能のためfrontmatter/bodyの毎回parseをcompose時validated metadata indexへ移した。ただしtrustをmetadataだけへ弱めず、run-stage directive発行直前に選択bodyをO_NOFOLLOW・同一fd digestで再検証する。性能と実行時完全性をcompose/compile/runの三層へ分離した。 (learned 2026-07-24) <!-- cid:code-generation:c8-tla-plugin-trust-layers -->
 - `scopes: []`のopt-in plugin stageはstock workflowへ所属しないため、compile統合時だけscope-gridの冗長SKIPセルを生成しない。公開`transposeScopeGrid`の全stage転置契約は維持する。 (learned 2026-07-24) <!-- cid:code-generation:c9-tla-plugin-optin-grid -->
 - engine directiveのproducesにある`build-test-results.md`を正本名として採用した。stage本文のStep 10に残る`test-results.md`表記より、engineが検査する解決済み出力契約を優先した。 (learned 2026-07-24) <!-- cid:build-and-test:c1-engine-directive-results-name -->
+- ALWAYS Delivery Planning 前に、各 Unit が単独で deployable な Bolt となり、walking skeleton と 1 Unit/Bolt/PR の境界を同時に満たすことを検証する。検出と記録のように片側だけでは利用者価値を出荷できない境界は、単一 deployable Unit へ統合する (learned 2026-07-24) <!-- cid:units-generation:c1 -->
+- ALWAYS 既存APIの戻り値が実検出値とfallback値を同じ表現へ潰す場合、公開互換性を保ちながら内部resolutionに検出元provenanceを保持し、実検出とfallbackを区別してから後続の判定へ渡す (learned 2026-07-24) <!-- cid:application-design:c1 -->
+- stage本文の`test-results.md`ではなくengine directiveの`build-test-results.md`を正本にする。 (learned 2026-07-25) <!-- cid:build-and-test:c2-mirror-review-fixes -->
 ## Testing
 - Standardの中核はunit/integrationとし、performance/securityは承認済みNFRと実在境界へtraceして選定する。戦略名だけで検査を機械追加しない。既決strategy再述に留めず、stage定義の曖昧さは別途追跡する。 (learned 2026-07-12) <!-- cid:build-and-test:c1 -->
 - 攻撃面・依存・承認NFRを成果物で実測明記した場合のみ検査を比例選定する。既存必須scanや要求済み検査の省略根拠にはしない。 (learned 2026-07-12) <!-- cid:build-and-test:c3 -->
@@ -207,6 +225,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - TLC等の有限探索でNOT_DETECTEDを主張できるのは、宣言済み有限domainの固定点まで完走したcompletion markerとstate統計が揃う場合だけとする。部分探索・timeout・統計欠損は検出成功/不検出へ丸めずHARNESS_ERRORとしてfail-closedに扱う。票: E-FVEADS13R 配信 2026-07-20T08:26:03Z(view生成時刻) → e1 採用 08:26:39Z(受理 08:26:56Z) → e2 採用 08:26:49Z(受理 08:27:13Z) → e3 採用 08:27:21Z(受理 08:27:54Z) → 開票 08:28:32Z。GoA[E-FVEADS13R]: 1x3 2x0 3x0 4x0 5x0 6x0 7x0 8x0 (learned 2026-07-20) <!-- cid:application-design:finite-exploration-not-detected-proof -->
 - blind比較実験の役割分離は名称だけで成立扱いにせず、各armのauthor identity・session・worktree・base SHA・Coordinatorが固定した公開input allowlist/hash・clean receipt・freeze SHAを記録する。後続armのprompt/context/pathの禁止入力0件は自己申告でなくsession/worktreeの実入力manifestと禁止path scan receiptを一次証拠とし、先行arm evidence・他arm path・sealed fixtureが0件であることを機械確認する。integrationは全arm freeze後だけ開始する。本則はarm間の情報隔離自体が実験妥当性の成立条件となるblind比較実験に限定し、通常の並行Unit作業へ一律適用しない。票: E-FVEDPS13 e1 2026-07-20T09:29:36Z(受理09:29:51Z) → e2 09:30:12Z(受理09:30:27Z) → e3 09:30:21Z(受理09:30:34Z) → 開票09:31:53Z。GoA[E-FVEDPS13]: 1x2 2x1 3x0 4x0 5x0 6x0 7x0 8x0。 (learned 2026-07-20) <!-- cid:delivery-planning:e-fvedps13-c4 -->
 
+- Reverse Engineering の codekb 出力が宣言済み sensor manifest の matches 対象外で発火不能な場合、sensor 成功として扱わず、成果物の H2、上流入力参照、質問証跡を直接検証して stage diary に不適用理由と代替証拠を記録する。 (learned 2026-07-25) <!-- cid:reverse-engineering:c3-codekb-sensor -->
 ## Architecture
 - CLIやlibraryのNFR設計では、常駐service向けのcache、horizontal scaling、circuit breakerを機械的に適用せず、決定的なfile境界とfail-closed契約へ置き換える (learned 2026-07-23) <!-- cid:nfr-design:c1 -->
 

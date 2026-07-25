@@ -1,6 +1,20 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(現在: 260724-watcher-timeout-fix)
+## 実行メタデータ（現在: 260725-mirror-review-fixes）
+
+- Date: `2026-07-25T01:35:20Z`
+- Base commit: `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`（この intent に先行記録がないため、到達可能な `re-scans/` の observed commit のうち HEAD に最も近い `260724-watcher-timeout-fix` を採用）
+- Observed commit: `70336937529f5be31c011de5d368c0f03e534506`（[PR #1469](https://github.com/amadeus-dlc/amadeus/pull/1469) head、`git rev-parse HEAD` 実測）
+- Base ancestry / distance: `git merge-base --is-ancestor <base> HEAD` exit 0、`git rev-list --count <base>..HEAD` = 49
+- Scope: `amadeus-bugfix`、Depth Minimal、Test Strategy Comprehensive、Brownfield、単一 repo `amadeus`
+- Focus: PR #1469 の検証済みレビュー修正面。Mirror lifecycle の未完了 outcome exit、prompt 回答 CLI 欠落と binding 不一致、legacy mutation verb、config safe read TOCTOU、state codec の未エスケープ C0 制御文字、Cursor/OpenCode coverage source 正規化、関連 tests/CI。
+- Diff focus: `packages/framework/core/tools`、coverage helper/smoke test、`ci.yml` の23ファイル、`+10,319/-161`。正本コードの大宗は Mirror lifecycle 一式。
+- Findings: [review thread 1](https://github.com/amadeus-dlc/amadeus/pull/1469#discussion_r3648935678)、[review thread 2](https://github.com/amadeus-dlc/amadeus/pull/1469#discussion_r3648935682)、[review thread 3](https://github.com/amadeus-dlc/amadeus/pull/1469#discussion_r3648935684) のP1 3件に、config/codec/coverage の実測3件を加えた6クラスタ。詳細は `architecture.md` と `code-quality-assessment.md`。
+- Baseline: focused 7 test filesを `bun test` で実行し、127 pass / 0 fail / 274 expect()（16.68秒）。現行テストは green だが6欠陥条件を直接検証していない。
+- Per-intent record: `re-scans/260725-mirror-review-fixes.md`
+- Delivery boundary: codekb 9成果物とこの intent の re-scan 記録のみ更新。実装、tests、state、audit、生成配布物、commit、PR mutation は未実施。
+
+## 実行メタデータ（履歴: 260724-watcher-timeout-fix）
 
 - Date: 2026-07-24
 - Observed at: `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`(現 HEAD `git rev-parse HEAD` 実測一致)
@@ -16,6 +30,21 @@
 - 更新した成果物: 本ファイル(鮮度ポインタ + 旧「現在: 260723-marker-heading-exemption」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、`code-quality-assessment.md`(#1449 の性能欠陥「watcher arming 検証が mux_attach を最大 270 秒ブロック」節を先頭 current view に新設)、`architecture.md`(agmsg watcher arming 検証の launch シーケンス上の位置と mux_attach ブロッキング機序を新設)、`code-structure.md`(team-up.sh の packages 昇格 + watcher 検証関数群の配置)、`component-inventory.md`(`verify_watchers_armed` ほか watcher 検証コンポーネント群の登録)、`re-scans/260724-watcher-timeout-fix.md`(新規)。他 body 4成果物(business-overview / api-documentation / technology-stack / dependencies)は本文温存で「変更なし、確認済み」一行のみ追記(#1449 は既存 bash ツールの制御フロー性能問題でドメイン外。cid:reverse-engineering:c1)。
 - Delivery boundary: 実装・修正コード、dist/self-install 再生成、commit、PR 操作は本 scan で未実施。区間フォーカス正本変更は #1391/#1421 の既着地分のみで、本 intent の修正は未着手。
 - Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
+## 実行メタデータ(履歴: 260724-harness-provenance)
+
+- Date: 2026-07-24T11:34:46Z
+- Observed at: `2d0da11d022565bf4a613da9fbcccf078716f8f4`
+- Intent: `260724-harness-provenance`([Issue #1452](https://github.com/amadeus-dlc/amadeus/issues/1452) — AI ハーネス種別を `amadeus-state.md` / stage `memory.md` に記録する機能)
+- Scope: `amadeus-feature`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering` (2.1)
+- Method: differential refresh。base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb`、observed `2d0da11d022565bf4a613da9fbcccf078716f8f4`、distance 186。Developer スキャン→Architect 合成の直列。
+- 現行結論（当時）: provenance 機能の seam は、birth-time の state template、4見出しを保つ memory diary、既存 harness-dir resolver、bun 書込に非発火の sensor 境界に限定される。
+- Per-intent record: `re-scans/260724-harness-provenance.md`
+- Delivery boundary: 実装・修正コード、dist/self-install 再生成、commit、PR 操作は本 scan で未実施。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。
 
 ## 実行メタデータ(履歴: 260723-marker-heading-exemption)
 

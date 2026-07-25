@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-HPUGS13",
+  "voter": "e6",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "実測確認: 不採用2候補の参照cidはmemory層に実在 — per-unit-loop-activation(project.md:118)・artifact-upstream-inputs-header(project.md:130)。両候補とも記述が既存cidと整合し新規性なし。",
+  "submittedAt": "2026-07-24T13:28:57Z"
+}

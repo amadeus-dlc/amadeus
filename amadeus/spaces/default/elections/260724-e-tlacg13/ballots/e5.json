@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TLACG13",
+  "voter": "e5",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "3候補とも persist(採用)を支持。実測novelty確認: 候補1機構 projectPluginsIntoHarnessTree は私のツリーに実在(E-TLAU2でも確認)、grep で plugin-projection/recompile-idempotence/0-plugin/neutral-bundle 系の既存cid 0件 → novel(E-TLAU2 A裁定=intent固有の一般原則化として妥当)。候補2機構 emitSingleRunStage は 47d5e3f9c(#1456 MERGED)の amadeus-orchestrate.ts に実在、single/scope-empty 系の既存cid 0件 → novel。候補3は team.md:303 の cid:build-and-test:two-layer-verification-posture が実在し候補自身が『その適用』と明言 → drift-guard 誤発火時の再pin判定(orthogonality実diff検証で spec非接触を確認できれば再TLC不要)という運用補完は novel だが独立新規cidより同cidへの追補が体系的。留保: 候補3は独立cidを立てるのでなく two-layer-verification-posture への追補形で persist することを推奨する(発動条件『並行プロトコルのspec変更時のみTLC』の裏側=無関係変更での誤SOURCE_DRIFT時はspec非変更と実diff判定して再TLC不要、という運用面の補完)。候補1・2は既存cid 0件・機構実在で独立cid採用が妥当。なお #1456(47d5e3f9c)は私のharness-provenanceブランチの祖先ではない(merge-base --is-ancestor=NO)ため候補2/3機構は着地コミットの git show/git grep 経由で確認した。",
+  "rationale": "3候補とも実測で novelty を確認(候補1/2は既存cid 0件+機構実在、候補3は既存cidの novel な運用補完)。全て persist 価値あり。",
+  "submittedAt": "2026-07-24T16:04:32Z"
+}

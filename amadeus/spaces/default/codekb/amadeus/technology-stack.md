@@ -1,5 +1,19 @@
 # 技術スタック
 
+## Mirror レビュー修正の交差スタック（260725-mirror-review-fixes、現在）
+
+観測 HEAD は `70336937529f5be31c011de5d368c0f03e534506`、差分 base は `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`。
+
+- Runtime / test runner: Bun `1.3.13`（実測 focused test 出力）。
+- Language / type system: TypeScript `^6.0.3`、Node 標準 `fs` / `path` / `readline` API。
+- Formatter / linter: Biome（`bun run lint` / `lint:check`）。
+- Testing: `bun test`、fast-check `^4.9.0`、smoke/unit/integration/e2e の repository-native tier。
+- GitHub integration: 外部 `gh` CLI を argument-array process runner と HTTP envelope gateway で利用。
+- Coverage: Bun LCOV、`tests/lib/coverage-normalize.ts`、`coverage-source-path.ts`、Codecov。
+- Distribution: `scripts/package.ts` と harness manifests により Claude、Codex、Kiro CLI、Kiro IDE、Cursor、OpenCode の6面へ投影。
+
+この intent に新規 production dependency は不要である。安全な config read は Node/Bun が提供する fd/open flags/fstat、codec は既存 custom parser、coverage は既存 mapping table の拡張で実装可能である。
+
 > **2026-07-24（intent `260724-watcher-timeout-fix`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み。** 交差要素は bash（`team-up.sh` 制御フロー）+ herdr（pane/agent 操作）+ agmsg（ready sentinel handshake、`spawn.sh`）で、いずれも既存スタック。新規ランタイム依存なし（base `a81c11dde` → observed `6d4df9056`）。
 
 ## 260723-t241-ci-residency 交差スタック（履歴: 2026-07-23）

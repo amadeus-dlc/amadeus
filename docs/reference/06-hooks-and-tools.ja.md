@@ -435,6 +435,14 @@ bun .claude/tools/amadeus-utility.ts <subcommand>
 | `recompose` | フライト中のプラン再形成: `--skip <slug,...>` / `--add <slug,...>` が、カーソル前方のPENDINGステージのプランサフィックスをライブの状態ファイル上で、監査ロック下で反転する。厳密に検証し(飢餓した必須入力、フリーズ済み/カーソル後方のステージ、walking-skeleton アンカーの移動、または非RunningのワークフローはすべてREJECT)、導出された状態フィールドを再構築する。 | `RECOMPOSED` |
 | `resolve-env-scope` | `AMADEUS_DEFAULT_SCOPE` 環境変数を検証し、その値をstdoutに発行する | — |
 
+### Runtime 環境変数
+
+この表は、決定論的 utility runtime が消費するハーネス provenance 環境変数overrideの正準契約である。CLI guide は利用者向けの設定導線を提供する。
+
+| 変数 | デフォルト | 契約 |
+|------|-----------|------|
+| `AMADEUS_HARNESS_TYPE` | 未設定 | intent birth の任意 provenance override。有効な値は厳密に `claude-code`、`codex`、`cursor`、`opencode`、`kiro`、`unknown`、`manual`。環境変数として存在すると `CLAUDECODE` およびハーネス dot-directory 検出より優先される。空文字または不正値はフォールスルーせず `unknown` に正規化し、正規化済み値だけを新規 state の optional V7 `Harness` フィールドへ1回記録する。 |
+
 ### 設計根拠
 
 決定論的ハンドラは、純粋な計算であるオペレーション(テキストの表示、ファイルの読み取り/整形、前提条件のチェック、ディレクトリの作成)についてLLMのオーバーヘッドを回避します。1秒未満で実行され、タスク追跡を必要とせず、`lib.ts` の共有ヘルパー経由で自身の監査ログを処理します。

@@ -82,7 +82,7 @@ describe("t265 mirror boundary distribution", () => {
       CORE_ENGINE.match(
         /function mirrorSyncPrint\([\s\S]*?\n}\n\nfunction emitMirrorBoundaryIfNeeded/,
       )?.[0] ?? "";
-    expect(functionBody).toContain("amadeus-mirror.ts sync");
+    expect(functionBody).toContain("amadeus-mirror-lifecycle.ts boundary");
     expect(functionBody).not.toContain("amadeus-mirror.ts create");
     expect(functionBody).not.toContain("amadeus-mirror.ts close");
     expect(functionBody).not.toContain("eval(");
@@ -128,12 +128,12 @@ describe("t265 mirror boundary distribution", () => {
     writeFileSync(seededStateFile(project), state);
     writeFileSync(
       join(project, "amadeus", "config.json"),
-      '{"auto-mirror":true}',
+      '{"auto-mirror":"auto"}',
     );
 
     const initial = run(CLAUDE_ENGINE, ["next"]);
     expect(initial.kind).toBe("print");
-    expect(initial.message).toContain("amadeus-mirror.ts sync");
+    expect(initial.message).toContain("amadeus-mirror-lifecycle.ts boundary");
 
     run(CLAUDE_STATE, [
       "mirror-boundary",

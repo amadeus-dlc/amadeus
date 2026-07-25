@@ -1,196 +1,235 @@
-// t257 — pure mirror configuration parsing and layer merging.
+// t257 — pure three-mode mirror configuration parsing and precedence.
+// covers: packages/framework/core/tools/amadeus-mirror-config.ts (parseMirrorConfigLayers)
 // size: small
 
 import { describe, expect, test } from "bun:test";
 import {
-  DEFAULT_MIRROR_CONFIG,
   type ConfigLayer,
-  type ConfigParseResult,
-  mergeLayers,
-  MIRROR_CONFIG_KNOWN_KEYS,
-  mirrorConfigPaths,
-  parse,
-  readLayer,
-  resolve,
+  type MirrorConfigLayerInput,
+  parseMirrorConfigLayers,
 } from "../../packages/framework/core/tools/amadeus-mirror-config.ts";
 
-describe("t257 mirror config schema and paths", () => {
-  test("keeps one canonical key and a normal off default", () => {
-    expect(MIRROR_CONFIG_KNOWN_KEYS).toEqual(["auto-mirror"]);
-    expect(DEFAULT_MIRROR_CONFIG).toEqual({ autoMirror: false });
-  });
-
-  test("maps global, space, and intent to the three git-shared files", () => {
-    expect(mirrorConfigPaths("/repo", "team", "260719-example")).toEqual({
-      global: "/repo/amadeus/config.json",
-      space: "/repo/amadeus/spaces/team/config.json",
-      intent: "/repo/amadeus/spaces/team/intents/260719-example/config.json",
-    });
-  });
-});
-
-describe("t257 mirror config parse", () => {
-  test("accepts an empty object and explicit true or false", () => {
-    expect(parse("{}", "global")).toEqual({
-      kind: "parsed",
-      source: "global",
-      partial: {},
-    });
-    expect(parse('{"auto-mirror":true}', "space")).toEqual({
-      kind: "parsed",
-      source: "space",
-      partial: { autoMirror: true },
-    });
-    expect(parse('{"auto-mirror":false}', "intent")).toEqual({
-      kind: "parsed",
-      source: "intent",
-      partial: { autoMirror: false },
-    });
-  });
-
-  test("rejects malformed JSON without throwing", () => {
-    const result = parse("{broken", "global");
-    expect(result.kind).toBe("invalid");
-    if (result.kind === "invalid") expect(result.errors[0]).toContain("invalid JSON");
-  });
-
-  test.each([
-    ["empty array", "[]", "array"],
-    ["non-empty array", "[1]", "array"],
-    ["null", "null", "null"],
-    ["string", '"value"', "string"],
-    ["number", "1", "number"],
-    ["boolean", "true", "boolean"],
-  ])("rejects a %s root", (_name, text, kind) => {
-    const result = parse(text, "global");
-    expect(result).toEqual({
-      kind: "invalid",
-      source: "global",
-      errors: [`mirror config root must be an object, got ${kind}`],
-    });
-  });
-
-  test.each([
-    ["string", '"yes"', "string"],
-    ["number", "1", "number"],
-    ["null", "null", "null"],
-  ])("rejects a %s auto-mirror value", (_name, value, kind) => {
-    const result = parse(`{"auto-mirror":${value}}`, "space");
-    expect(result).toEqual({
-      kind: "invalid",
-      source: "space",
-      errors: [`type mismatch: auto-mirror expects boolean, got ${kind}`],
-    });
-  });
-
-  test("collects every unknown key and the type mismatch", () => {
-    const result = parse(
-      '{"unknown-a":1,"auto-mirror":"yes","unknown-b":2}',
-      "intent",
-    );
-    expect(result).toEqual({
-      kind: "invalid",
-      source: "intent",
-      errors: [
-        "unknown key: unknown-a (valid keys: auto-mirror)",
-        "unknown key: unknown-b (valid keys: auto-mirror)",
-        "type mismatch: auto-mirror expects boolean, got string",
-      ],
-    });
-  });
-});
-
-function layer(
-  source: ConfigLayer,
-  present: boolean,
-  value: boolean,
-): ConfigParseResult {
-  return present
-    ? { kind: "parsed", source, partial: { autoMirror: value } }
-    : { kind: "absent", source };
+function present(layer: ConfigLayer, rawValue: unknown): MirrorConfigLayerInput {
+  return { layer, path: `amadeus/${layer}.json`, present: true, rawValue };
 }
 
-describe("t257 mirror config merge", () => {
-  const combinations = [
-    [false, false, false],
-    [true, false, false],
-    [false, true, false],
-    [false, false, true],
-    [true, true, false],
-    [true, false, true],
-    [false, true, true],
-    [true, true, true],
-  ] as const;
+function absent(layer: ConfigLayer): MirrorConfigLayerInput {
+  return { layer, path: `amadeus/${layer}.json`, present: false, rawValue: undefined };
+}
 
-  test.each(combinations)(
-    "resolves presence combination global=%s space=%s intent=%s",
-    (hasGlobal, hasSpace, hasIntent) => {
-      // The highest-priority present layer is true; every competing layer is
-      // false, preventing the default or a lower layer from masking bad order.
-      const highest = hasIntent ? "intent" : hasSpace ? "space" : hasGlobal ? "global" : null;
-      const result = mergeLayers([
-        layer("global", hasGlobal, highest === "global"),
-        layer("space", hasSpace, highest === "space"),
-        layer("intent", hasIntent, highest === "intent"),
-      ]);
-      expect(result).toEqual({
+function mode(rawValue: string): MirrorConfigLayerInput {
+  return present("global", { "auto-mirror": rawValue });
+}
+
+describe("t257 pure config resolution", () => {
+  test("defaults to prompt when no layer is present", () => {
+    expect(
+      parseMirrorConfigLayers([absent("global"), absent("space"), absent("intent")]),
+    ).toEqual({ kind: "resolved", config: { autoMirror: "prompt" }, sources: [] });
+  });
+
+  test.each(["off", "prompt", "auto"] as const)(
+    "accepts the exact mode string %s",
+    (value) => {
+      expect(parseMirrorConfigLayers([mode(value)])).toEqual({
         kind: "resolved",
-        config: { autoMirror: highest !== null },
+        config: { autoMirror: value },
+        sources: ["amadeus/global.json"],
       });
     },
   );
 
-  test("collects every invalid layer and never returns a partial config", () => {
+  test("a present but empty object contributes no mode", () => {
     expect(
-      mergeLayers([
-        { kind: "invalid", source: "global", errors: ["g1", "g2"] },
-        { kind: "parsed", source: "space", partial: { autoMirror: true } },
-        { kind: "invalid", source: "intent", errors: ["i1"] },
+      parseMirrorConfigLayers([
+        present("global", {}),
+        present("space", {}),
+        present("intent", {}),
+      ]),
+    ).toEqual({ kind: "resolved", config: { autoMirror: "prompt" }, sources: [] });
+  });
+
+  // Each present layer carries a distinct mode (global=off, space=prompt,
+  // intent=auto) so precedence — not the default or a lower layer — decides
+  // the outcome. Expected mode and sources are precomputed per row.
+  function layerFor(
+    layer: ConfigLayer,
+    has: boolean,
+    value: string,
+  ): MirrorConfigLayerInput {
+    return has ? present(layer, { "auto-mirror": value }) : absent(layer);
+  }
+
+  const combinations = [
+    [false, false, false, "prompt", []],
+    [true, false, false, "off", ["amadeus/global.json"]],
+    [false, true, false, "prompt", ["amadeus/space.json"]],
+    [false, false, true, "auto", ["amadeus/intent.json"]],
+    [true, true, false, "prompt", ["amadeus/global.json", "amadeus/space.json"]],
+    [true, false, true, "auto", ["amadeus/global.json", "amadeus/intent.json"]],
+    [false, true, true, "auto", ["amadeus/space.json", "amadeus/intent.json"]],
+    [
+      true,
+      true,
+      true,
+      "auto",
+      ["amadeus/global.json", "amadeus/space.json", "amadeus/intent.json"],
+    ],
+  ] as const;
+
+  test.each(combinations)(
+    "highest present layer wins for global=%s space=%s intent=%s",
+    (hasGlobal, hasSpace, hasIntent, expectedMode, expectedSources) => {
+      const layers: MirrorConfigLayerInput[] = [
+        layerFor("global", hasGlobal, "off"),
+        layerFor("space", hasSpace, "prompt"),
+        layerFor("intent", hasIntent, "auto"),
+      ];
+      expect(parseMirrorConfigLayers(layers)).toEqual({
+        kind: "resolved",
+        config: { autoMirror: expectedMode },
+        sources: expectedSources,
+      });
+    },
+  );
+
+  test("intent overrides space and global (Global < Space < Intent)", () => {
+    expect(
+      parseMirrorConfigLayers([
+        present("global", { "auto-mirror": "auto" }),
+        present("space", { "auto-mirror": "off" }),
+        present("intent", { "auto-mirror": "prompt" }),
       ]),
     ).toEqual({
-      kind: "invalid",
-      errors: [
-        { layer: "global", errors: ["g1", "g2"] },
-        { layer: "intent", errors: ["i1"] },
-      ],
+      kind: "resolved",
+      config: { autoMirror: "prompt" },
+      sources: ["amadeus/global.json", "amadeus/space.json", "amadeus/intent.json"],
+    });
+  });
+
+  test("resolution is independent of input layer order", () => {
+    expect(
+      parseMirrorConfigLayers([
+        present("intent", { "auto-mirror": "auto" }),
+        present("global", { "auto-mirror": "off" }),
+        present("space", { "auto-mirror": "off" }),
+      ]),
+    ).toEqual({
+      kind: "resolved",
+      config: { autoMirror: "auto" },
+      sources: ["amadeus/global.json", "amadeus/space.json", "amadeus/intent.json"],
+    });
+  });
+
+  test("ignores layers marked not present", () => {
+    expect(
+      parseMirrorConfigLayers([
+        absent("global"),
+        present("space", { "auto-mirror": "auto" }),
+        absent("intent"),
+      ]),
+    ).toEqual({
+      kind: "resolved",
+      config: { autoMirror: "auto" },
+      sources: ["amadeus/space.json"],
     });
   });
 });
 
-describe("t257 mirror config reader seam", () => {
-  test("classifies ENOENT as absent and other I/O errors as invalid", () => {
-    const enoent = Object.assign(new Error("missing"), { code: "ENOENT" });
-    expect(readLayer("/missing", "global", () => { throw enoent; })).toEqual({
-      kind: "absent",
-      source: "global",
-    });
-    const eacces = Object.assign(new Error("denied"), { code: "EACCES" });
-    const denied = readLayer("/denied", "space", () => { throw eacces; });
-    expect(denied.kind).toBe("invalid");
-    if (denied.kind === "invalid") {
-      expect(denied.errors[0]).toContain("failed to read space mirror config");
-      expect(denied.errors[0]).toContain("/denied");
+describe("t257 pure config rejection", () => {
+  test("rejects both boolean values without coercion", () => {
+    for (const value of [true, false]) {
+      expect(parseMirrorConfigLayers([present("space", { "auto-mirror": value })])).toEqual(
+        {
+          kind: "invalid",
+          issues: [
+            {
+              kind: "invalid-value",
+              layer: "space",
+              path: "amadeus/space.json",
+              key: "auto-mirror",
+              actualType: "boolean",
+              expected: "off | prompt | auto",
+            },
+          ],
+        },
+      );
     }
   });
 
-  test("resolve reads each layer exactly once on every call and does not cache", () => {
-    const calls: string[] = [];
-    const reader = (path: string): string => {
-      calls.push(path);
-      return "{}";
-    };
-    expect(resolve("/repo", "team", "intent-a", reader)).toEqual({
-      kind: "resolved",
-      config: { autoMirror: false },
+  test.each([
+    ["yes", "string"],
+    [1, "number"],
+    [null, "null"],
+    [["auto"], "array"],
+    [{ nested: true }, "object"],
+  ])("rejects a %p auto-mirror value as %s", (value, actualType) => {
+    expect(parseMirrorConfigLayers([present("intent", { "auto-mirror": value })])).toEqual({
+      kind: "invalid",
+      issues: [
+        {
+          kind: "invalid-value",
+          layer: "intent",
+          path: "amadeus/intent.json",
+          key: "auto-mirror",
+          actualType,
+          expected: "off | prompt | auto",
+        },
+      ],
     });
-    expect(resolve("/repo", "team", "intent-a", reader).kind).toBe("resolved");
-    expect(calls).toEqual([
-      "/repo/amadeus/config.json",
-      "/repo/amadeus/spaces/team/config.json",
-      "/repo/amadeus/spaces/team/intents/intent-a/config.json",
-      "/repo/amadeus/config.json",
-      "/repo/amadeus/spaces/team/config.json",
-      "/repo/amadeus/spaces/team/intents/intent-a/config.json",
+  });
+
+  test.each([
+    ["array root", ["auto"], "array"],
+    ["string root", "auto", "string"],
+    ["number root", 1, "number"],
+    ["null root", null, "null"],
+    ["boolean root", true, "boolean"],
+  ])("rejects a malformed %s", (_name, rawValue, actualType) => {
+    expect(parseMirrorConfigLayers([present("global", rawValue)])).toEqual({
+      kind: "invalid",
+      issues: [
+        {
+          kind: "invalid-value",
+          layer: "global",
+          path: "amadeus/global.json",
+          key: "auto-mirror",
+          actualType,
+          expected: "off | prompt | auto",
+        },
+      ],
+    });
+  });
+
+  test("rejects an object carrying an unknown property", () => {
+    expect(
+      parseMirrorConfigLayers([
+        present("global", { "auto-mirror": "auto", extra: 1, other: 2 }),
+      ]),
+    ).toEqual({
+      kind: "invalid",
+      issues: [
+        {
+          kind: "invalid-value",
+          layer: "global",
+          path: "amadeus/global.json",
+          key: "auto-mirror",
+          actualType: "object with unknown key(s): extra, other",
+          expected: "off | prompt | auto",
+        },
+      ],
+    });
+  });
+
+  test("aggregates every invalid layer in precedence order and returns no config", () => {
+    const outcome = parseMirrorConfigLayers([
+      present("intent", { "auto-mirror": "nope" }),
+      present("global", { "auto-mirror": true }),
+      present("space", { "auto-mirror": "auto" }),
     ]);
+    expect(outcome.kind).toBe("invalid");
+    if (outcome.kind === "invalid") {
+      expect(outcome.issues.map((issue) => issue.layer)).toEqual(["global", "intent"]);
+    }
   });
 });

@@ -48,6 +48,7 @@ import {
   COMPOSE_MARKER_TTL_MS,
   type ConstructionAutonomy,
   DEFAULT_SPACE,
+  detectHarnessType,
   detectLeakedLocks,
   docsDir,
   knowledgeDir,
@@ -4063,6 +4064,7 @@ function handleIntentBirthStateBuild(
   const nextStageName = nextAfterFirst ? nextAfterFirst.slug : "none";
 
   const projectDesc = flags.arguments || "[Project description]";
+  const harnessType = detectHarnessType();
 
   // Phase Progress — per-phase status. Init pre-crosses the initialization →
   // first-post-init boundary (the PHASE_VERIFIED/PHASE_STARTED hand-off below),
@@ -4098,6 +4100,7 @@ function handleIntentBirthStateBuild(
 - **Start Date**: ${ts}
 - **State Version**: 7
 - **Active Agent**: ${firstPostInitAgent}
+- **Harness**: ${harnessType}
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**:

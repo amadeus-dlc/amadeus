@@ -30,6 +30,7 @@ import emit from "./emit.ts";
 
 const manifest: HarnessManifest = {
   name: "opencode",
+  mirrorSurface: "opencode",
   harnessDir: ".opencode",
 
   // Core projection: identical to codex — rules→amadeus-rules, NO skills dir

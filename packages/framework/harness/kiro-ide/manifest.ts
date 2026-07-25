@@ -15,10 +15,12 @@
 // the IDE recognises). Both share the same core, adapter, and TS hook bodies.
 
 import type { HarnessManifest } from "../../../../scripts/manifest-types.ts";
+import { mirrorCoreSkillDirectory } from "../projections.ts";
 import onboardingFills from "./onboarding.fills.ts";
 
 const manifest: HarnessManifest = {
   name: "kiro-ide",
+  mirrorSurface: "kiro-ide",
   harnessDir: ".kiro",
 
   // Same core projection as kiro CLI.
@@ -34,7 +36,7 @@ const manifest: HarnessManifest = {
     { src: "skills/amadeus-replay", dst: "skills/amadeus-replay" },
     { src: "skills/amadeus-outcomes-pack", dst: "skills/amadeus-outcomes-pack" },
     { src: "skills/amadeus-grilling", dst: "skills/amadeus-grilling" },
-    { src: "skills/amadeus-mirror", dst: "skills/amadeus-mirror" },
+    mirrorCoreSkillDirectory("kiro-ide"),
   ],
 
   // Authored surfaces: same as CLI but adds .kiro.hook files and omits the

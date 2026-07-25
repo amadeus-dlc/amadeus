@@ -1,37 +1,43 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import {
+  MIRROR_USER_CONTRACT,
+  renderMirrorLifecycleHelp,
+} from "../../packages/framework/core/tools/amadeus-mirror-presentation.ts";
 
 const ROOT = join(import.meta.dir, "..", "..");
 const read = (path: string): string => readFileSync(join(ROOT, path), "utf-8");
 const skill = read("packages/framework/core/skills/amadeus-mirror/SKILL.md");
-const tool = read("packages/framework/core/tools/amadeus-mirror.ts");
+const lifecycle = read(
+  "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
+);
+const presentation = read(
+  "packages/framework/core/tools/amadeus-mirror-presentation.ts",
+);
 const english = read("docs/guide/17-skills.md");
 const japanese = read("docs/guide/17-skills.ja.md");
 
-describe("t258 skill and U1 contract integration", () => {
-  test("skill finding vocabulary equals the U1 public union", () => {
-    const union = tool
-      .match(
-        /export type StatusFindingKind =([\s\S]*?);\n\nexport type StatusFinding/,
-      )?.[1]
-      .match(/"([^"]+)"/g)
-      ?.map((value) => value.slice(1, -1))
-      .sort();
-    const documented = [
-      "issue-drifted",
-      "mirror-missing",
-      "stale-status-line",
-    ];
-    expect(union).toEqual(documented);
-    for (const kind of documented) expect(skill).toContain(kind);
+describe("t258 skill and lifecycle contract integration", () => {
+  test("skill verb vocabulary equals the runtime lifecycle surface", () => {
+    const help = renderMirrorLifecycleHelp();
+    for (const verb of ["manual create", "manual sync", "manual close"]) {
+      expect(skill).toContain(verb);
+    }
+    for (const verb of ["repair status", "repair relink", "repair abandon"]) {
+      expect(skill).toContain(verb);
+      expect(help).toContain(verb);
+    }
+    expect(lifecycle).toContain("renderMirrorLifecycleHelp");
+    expect(presentation).toContain("MIRROR_USER_CONTRACT");
   });
 
-  test("skill ignores U1 finding detail while U1 retains its own state logic", () => {
+  test("skill treats diagnostics as prose while runtime retains state logic", () => {
     expect(skill).not.toContain('Status="Running"');
     expect(skill).not.toContain('Status="Completed"');
-    expect(skill).toContain("Only the finding kind may drive the next step");
-    expect(tool).toContain('workflowStatus === "Completed"');
+    expect(skill).toContain("Never derive a command from output prose");
+    expect(presentation).toContain('completionOrder: ["create", "sync", "close"]');
+    expect(presentation).toContain('"workflow-completed"');
   });
 });
 
@@ -44,21 +50,31 @@ describe("t258 six-harness projection wiring", () => {
   ];
 
   test.each(direct)("%s directly projects the mirror skill", (path) => {
-    expect(read(path)).toContain(
-      '{ src: "skills/amadeus-mirror", dst: "skills/amadeus-mirror" }',
-    );
+    expect(read(path)).toContain("mirrorCoreSkillDirectory");
   });
 
   test("Codex emits the mirror skill through its guarded session-skill path", () => {
     const emit = read("packages/framework/harness/codex/emit.ts");
-    expect(emit).toContain('"amadeus-mirror"');
+    expect(emit).toContain('mirrorSessionSkillName("codex")');
     expect(emit).toContain('"agents", "openai.yaml"');
   });
 
   test("OpenCode emits the mirror skill through its session-skill path", () => {
     const emit = read("packages/framework/harness/opencode/emit.ts");
-    expect(emit).toContain('"amadeus-mirror"');
+    expect(emit).toContain('mirrorSessionSkillName("opencode")');
     expect(emit).toContain("for (const skill of SESSION_SKILLS)");
+  });
+
+  test("runtime modules do not duplicate canonical contract arrays", () => {
+    for (const source of [lifecycle, read(
+      "packages/framework/core/tools/amadeus-mirror.ts",
+    )].map((value) => value.replaceAll(/\s/gu, ""))) {
+      expect(source).not.toContain(JSON.stringify(MIRROR_USER_CONTRACT.modes));
+      expect(source).not.toContain(
+        JSON.stringify(MIRROR_USER_CONTRACT.operations),
+      );
+      expect(source).not.toContain(JSON.stringify(MIRROR_USER_CONTRACT.boundaries));
+    }
   });
 });
 

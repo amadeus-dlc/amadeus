@@ -1,0 +1,13 @@
+{
+  "stage_slug": "application-design",
+  "selections": [
+    {
+      "candidate_id": "c1",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "ALWAYS 既存APIの戻り値が実検出値とfallback値を同じ表現へ潰す場合、公開互換性を保ちながら内部resolutionに検出元provenanceを保持し、実検出とfallbackを区別してから後続の判定へ渡す",
+      "source": "orchestrator"
+    }
+  ]
+}

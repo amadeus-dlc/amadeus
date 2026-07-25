@@ -20,6 +20,7 @@ import emit from "./emit.ts";
 
 const manifest: HarnessManifest = {
   name: "codex",
+  mirrorSurface: "codex",
   harnessDir: ".codex",
 
   // Core projection: rules→amadeus-rules, NO session skills (emitted to

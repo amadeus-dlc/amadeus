@@ -435,6 +435,14 @@ bun .claude/tools/amadeus-utility.ts <subcommand>
 | `recompose` | In-flight plan re-shape: `--skip <slug,...>` / `--add <slug,...>` flips PENDING ahead-of-cursor stages' plan suffixes on the live state file, under the audit lock. Validates strictly (a starved required input, a frozen/behind-cursor stage, a walking-skeleton anchor move, or a non-Running workflow all reject) and rebuilds the derived state fields. | `RECOMPOSED` |
 | `resolve-env-scope` | Validate `AMADEUS_DEFAULT_SCOPE` env var and emit its value to stdout | — |
 
+### Runtime environment variables
+
+This table is the canonical contract for the harness-provenance environment override consumed by the deterministic utility runtime. The CLI guide provides the user-facing setup path.
+
+| Variable | Default | Contract |
+|----------|---------|----------|
+| `AMADEUS_HARNESS_TYPE` | Unset | Optional intent-birth provenance override. Exact valid values are `claude-code`, `codex`, `cursor`, `opencode`, `kiro`, `unknown`, and `manual`. Presence takes priority over `CLAUDECODE` and harness dot-directory detection. An empty or invalid value is normalized to `unknown` without falling through, and only the normalized value is written once to the new state as the optional V7 `Harness` field. |
+
 ### Design Rationale
 
 Deterministic handlers avoid LLM overhead for operations that are pure computation: printing text, reading/formatting files, checking prerequisites, creating directories. They run in under a second, require no task tracking, and handle their own audit logging via shared helpers from `lib.ts`.

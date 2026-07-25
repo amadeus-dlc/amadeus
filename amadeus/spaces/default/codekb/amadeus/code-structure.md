@@ -1,6 +1,24 @@
 # コード構造
 
-## Team Mode ランチャーの packages 昇格と watcher 検証関数群（260724-watcher-timeout-fix、2026-07-24、現在）
+## PR #1469 レビュー修正面のコード配置（260725-mirror-review-fixes、現在）
+
+観測 HEAD は `70336937529f5be31c011de5d368c0f03e534506`、差分 base は `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`。
+
+| 分類 | 正本ファイル | 責務 | 主な検証先 |
+|---|---|---|---|
+| CLI / adapter | `amadeus-mirror-lifecycle.ts` | boundary、manual、repair の parse、target 解決、exit 契約 | `t282-amadeus-mirror-lifecycle.integration.test.ts` |
+| Coordinator / service | `amadeus-mirror-coordinator.ts` | mode、prompt binding、reconciliation、operation 選択 | `t280-amadeus-mirror-coordinator.test.ts` |
+| Legacy CLI | `amadeus-mirror.ts` | 旧 create/sync/close/status。mutation handler が GitHub を直接呼ぶ | `t232-amadeus-mirror.integration.test.ts` |
+| Config / security utility | `amadeus-mirror-config.ts` | 3層 config の安全な読取、schema、precedence | `t257-*mirror-config*.test.ts` |
+| State codec / model | `amadeus-mirror-state-codec.ts` | bounded strict JSON、schema/invariant、Markdown splice | `t274-amadeus-mirror-state-codec.test.ts` |
+| Test utility | `tests/lib/coverage-source-path.ts` | 生成 harness の LCOV source を core 正本へ正規化 | `t05-run-tests-parallel.test.ts` |
+| Workflow adapter | `amadeus-orchestrate.ts` | stage commit 後の Mirror boundary 起動案内、phase receipt | orchestration integration tests |
+
+Mirror 実装は `amadeus-mirror-{types,capability,config,policy,coordinator,executor,gateway,runner,state-codec,state-reducer,state-store,provenance,repair,presentation,lifecycle}.ts` に分かれる。正本を `scripts/package.ts` が `.claude/.codex/.cursor/.opencode` と6種の `dist/*` へ投影するため、修正は `packages/framework/core/` と tests に限定し、生成コピーは packaging で同期する構造である。
+
+フォーカスのテスト空白は、CLI exit と回答 parse、保存済み `bindingId` と異なる approve/skip、legacy mutation 拒否/委譲、realpath→open 間の置換、CR/LF 以外の C0 制御文字、Cursor/OpenCode の root/dist/temp package source である。既存7ファイル127ケースは green だが、これらの欠陥条件を主張するケースがないため回帰を検出しない。
+
+## Team Mode ランチャーの packages 昇格と watcher 検証関数群（260724-watcher-timeout-fix、2026-07-24、履歴）
 
 差分リフレッシュ（base `a81c11dde` → observed HEAD `6d4df9056`、distance 155、amadeus-bugfix / Minimal、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)）。測定 ref: observed HEAD 実ファイル直読 + `git log/diff a81c11dde..HEAD`。
 

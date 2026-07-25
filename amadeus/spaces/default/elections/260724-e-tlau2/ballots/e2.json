@@ -1,0 +1,11 @@
+{
+  "kind": "original",
+  "electionId": "E-TLAU2",
+  "voter": "e2",
+  "voterKind": "member",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "A採用条件: (1)package.ts投影調整がBR-U2-7(plugin-projection.ts無改変・コア框架変更はamadeus-graph.tsのみ)に抵触するかを申告し、build script(scripts/package.ts=コア框架外)扱いで済むか、境界緩和ならユーザーエスカレーションかを裁定時に明確化 (2)neutral-bundle経路でFR-2.1のcompose/doctor/drop全ライフサイクル+FR-1.4のE2E(temp host着地)が成立することを実証。",
+  "rationale": "package.ts:306-345/425/500・t110を実測。projectPluginsIntoHarnessTreeはtreeRoot=dist/<harness>/<harnessDir>へ投影、build順はstep3 compile(0-plugin)→step6 projection。よってbuilt treeの再compileがplugins/を拾い、shipped-active化してFR-1.3/2.3(0-plugin byte-identical)とt110/t88不変条件、及びFR-1.4/2.1のcompose-on-demand設計を破る=e3のt110 FAIL再現は正確。A案(neutral bundle=dist/plugins/<name>/供給、compile可視dist/<harness>/plugins/へ非投影)は投影バグを是正し全FR(1.3/1.4/2.1/2.3)を要件どおり保存する。B案はFR-2.3『plugin 0件時byte-identical』文面の改定=仕様変更(正準リスト(4)でユーザーエスカレーション事項、選挙決定不可)かつcompose-on-demand設計の否定。X該当なし。",
+  "submittedAt": "2026-07-24T13:27:04Z"
+}

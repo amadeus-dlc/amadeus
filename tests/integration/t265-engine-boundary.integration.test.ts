@@ -58,7 +58,12 @@ function parseDirective(result: ReturnType<typeof run>, expectedCode = 0): {
 
 function seedBoundary(
   phase: "ideation" | "inception" | "construction",
-  options: { auto?: boolean; mirror?: boolean; receipts?: string } = {},
+  options: {
+    auto?: boolean;
+    mode?: "off" | "prompt" | "auto";
+    mirror?: boolean;
+    receipts?: string;
+  } = {},
 ): void {
   project = createTestProject();
   const knowledgeDir = join(
@@ -118,10 +123,13 @@ function seedBoundary(
     );
   }
   writeFileSync(seededStateFile(project), state);
-  if (options.auto !== undefined) {
+  if (options.auto !== undefined || options.mode !== undefined) {
     writeFileSync(
       join(project, "amadeus", "config.json"),
-      JSON.stringify({ "auto-mirror": options.auto }),
+      JSON.stringify({
+        "auto-mirror":
+          options.mode ?? (options.auto ? "auto" : "prompt"),
+      }),
     );
   }
 }
@@ -153,7 +161,7 @@ describe("t265 engine boundary four quadrants", () => {
     const shouldSync = auto && mirror;
     expect(directive.kind).toBe(shouldSync ? "print" : "ask");
     const prose = directive.message ?? directive.question ?? "";
-    expect(prose.includes("amadeus-mirror.ts sync")).toBe(shouldSync);
+    expect(prose.includes("amadeus-mirror-lifecycle.ts boundary")).toBe(shouldSync);
     expect(prose.includes("Choose create")).toBe(!mirror);
     expect(readFileSync(seededStateFile(project), "utf-8")).toBe(before);
     },
@@ -161,6 +169,19 @@ describe("t265 engine boundary four quadrants", () => {
 });
 
 describe("t265 receipt recovery and reports", () => {
+  test("off suppresses a pending boundary and falls through without mutation", () => {
+    seedBoundary("inception", {
+      mode: "off",
+      mirror: true,
+      receipts: '{"inception":"pending"}',
+    });
+    const before = readFileSync(seededStateFile(project), "utf-8");
+    const directive = parseDirective(run(ENGINE, ["next"]));
+    expect(directive.kind).toBe("run-stage");
+    expect(directive.message ?? "").not.toContain("amadeus-mirror.ts");
+    expect(readFileSync(seededStateFile(project), "utf-8")).toBe(before);
+  });
+
   test("processes the oldest pending receipt only", () => {
     seedBoundary("construction", {
       auto: true,
@@ -186,7 +207,7 @@ describe("t265 receipt recovery and reports", () => {
     ).toBe(0);
     const pending = readFileSync(seededStateFile(project), "utf-8");
     const first = parseDirective(run(ENGINE, ["next"]));
-    expect(first.message).toContain("amadeus-mirror.ts sync");
+    expect(first.message).toContain("amadeus-mirror-lifecycle.ts boundary");
     expect(readFileSync(seededStateFile(project), "utf-8")).toBe(pending);
     const resumed = parseDirective(run(ENGINE, ["next"]));
     expect(resumed).toEqual(first);
@@ -210,7 +231,7 @@ describe("t265 receipt recovery and reports", () => {
     expect(failed.code).not.toBe(0);
     expect(readFileSync(seededStateFile(project), "utf-8")).toBe(before);
     expect(parseDirective(run(ENGINE, ["next"])).message).toContain(
-      "amadeus-mirror.ts sync",
+      "amadeus-mirror-lifecycle.ts boundary",
     );
   });
 

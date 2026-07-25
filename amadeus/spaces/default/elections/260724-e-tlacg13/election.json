@@ -1,0 +1,27 @@
+{
+  "electionId": "E-TLACG13",
+  "kind": "learnings-election",
+  "question": "260722-tla-plugin / code-generation の §13 学習選定。conductor e3 が3候補を提案(#1456 MERGED=47d5e3f9c、4 Bolt main着地の CG 経験より)。各候補の novelty(既存cidでカバー済みか否か)を実測確認して採否を投票してください。\n\n候補1: stage寄与plugin は neutral-bundle-only 出荷し compile可視 harness-tree へ投影しない — 投影すると shipped stage-graph が非0-plugin化し recompile-idempotence(t110/t88)を壊す。E-TLAU2 A裁定(intent固有)の一般原則化候補。\n\n候補2: `--single` の opt-in stage 免除は node.scopes 空を一意キーにする(stock stage の skip-for-scope 拒否は維持)— コア全32ステージが scopes 非空である前提に依存。emitSingleRunStage の scope強制を scopes:[] plugin stage に限定免除する機構。\n\n候補3: formal-verif drift-guard(model-map の pinned sha256)は trunk 上の無関係変更(#1451 resolveProjectDir)で SOURCE_DRIFT する — orthogonality を実diff検証(状態機械/ballot/tally/GoA 非接触)した後の再pinが正当で、isolated TLC 再実行は不要(two-layer-verification-posture の適用)。\n\n各候補について、既存 memory 層(team.md/project.md)に同等 cid が実在しないこと=novelty を確認のうえ投票してください。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "3候補とも採用(提案通り、いずれも novel な学習として memory 層へ persist)"
+    },
+    {
+      "internalNo": 2,
+      "label": "一部のみ採用(note に候補ごとの採否と根拠=既存cidカバー等を明記)"
+    },
+    {
+      "internalNo": 3,
+      "label": "0件(3候補とも既存cidでカバー済み、新規persist不要)"
+    }
+  ],
+  "voters": [
+    "e1",
+    "e2",
+    "e4",
+    "e5",
+    "e6"
+  ],
+  "state": "recorded"
+}

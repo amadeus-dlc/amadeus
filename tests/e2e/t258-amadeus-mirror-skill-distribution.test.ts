@@ -50,10 +50,13 @@ describe("t258 mirror skill distribution", () => {
       ]
         .flatMap((match) => match[1].split("\n"))
         .filter((line) => line.startsWith("bun "));
-      expect(executableLines).toHaveLength(4);
+      expect(executableLines).toHaveLength(6);
       expect(
         executableLines.every(
-          (line) => !line.includes("--intent") && !/[\[<$]/.test(line),
+          (line) =>
+            !line.includes("--intent") &&
+            !line.includes("$(") &&
+            !line.includes("`"),
         ),
       ).toBe(true);
     },

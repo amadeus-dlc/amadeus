@@ -526,5 +526,26 @@
     "dirName": "260722-tla-plugin",
     "scope": "amadeus",
     "status": "complete"
+  },
+  {
+    "uuid": "019f93c5-0c24-7967-86a6-b46427e118a0",
+    "slug": "harness-provenance",
+    "dirName": "260724-harness-provenance",
+    "scope": "feature",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f91d4-246a-728c-b078-ccdae13385ee",
+    "slug": "mirror-auto-modes",
+    "dirName": "260724-mirror-auto-modes",
+    "scope": "amadeus-feature",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f96e1-9991-7459-9ff8-5986a8da2a11",
+    "slug": "mirror-review-fixes",
+    "dirName": "260725-mirror-review-fixes",
+    "scope": "amadeus-bugfix",
+    "status": "complete"
   }
 ]
