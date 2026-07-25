@@ -44,34 +44,61 @@ import {
   resolveProjectDirFromHook,
   stateFilePath,
 } from "../tools/amadeus-lib.ts";
-import { appendAuditEntry } from "../tools/amadeus-audit.ts";
+import {
+  hostSessionCapability,
+  mintHumanPresence,
+} from "../tools/amadeus-presence-reservation.ts";
 
 // Read + classify the UserPromptSubmit stdin. Returns true only when we can
 // POSITIVELY identify a machine-injected turn (fail-open everywhere else). The
 // recognised markers live in the shared MACHINE_INJECTED_TURN_MARKERS catalog
 // (leading-256-byte detection) so this classifier and the Stop hook's tier-3
 // carve-out can never diverge (#755).
-async function isMachineInjectedTurn(): Promise<boolean> {
+type PromptContext = {
+  readonly machineInjected: boolean;
+  readonly sessionId: string | null;
+};
+
+async function readPromptContext(): Promise<PromptContext> {
   // A TTY means the hook was invoked interactively (no JSON coming) — never
   // block on a terminal read; treat as unclassifiable (fail-open -> mint).
-  if (process.stdin.isTTY) return false;
+  if (process.stdin.isTTY) {
+    return { machineInjected: false, sessionId: null };
+  }
   try {
     const input = await Bun.stdin.text();
-    if (input.length === 0) return false; // empty pipe -> fail-open
+    if (input.length === 0) {
+      return { machineInjected: false, sessionId: null };
+    }
     const raw: unknown = JSON.parse(input);
-    if (!isClaudeCodeHookInput(raw)) return false;
+    if (!isClaudeCodeHookInput(raw)) {
+      return { machineInjected: false, sessionId: null };
+    }
     const prompt = raw.prompt;
-    if (typeof prompt !== "string") return false; // prompt absent -> fail-open
-    return isMachineInjectedTurnText(prompt);
+    const sessionId =
+      typeof raw.session_id === "string" && raw.session_id.length > 0
+        ? raw.session_id
+        : null;
+    if (typeof prompt !== "string") {
+      return { machineInjected: false, sessionId };
+    }
+    return {
+      machineInjected: isMachineInjectedTurnText(prompt),
+      sessionId,
+    };
   } catch {
-    return false; // non-JSON / read failure -> fail-open
+    return { machineInjected: false, sessionId: null };
   }
 }
 
 try {
   const projectDir = resolveProjectDirFromHook(import.meta.url);
-  if (existsSync(stateFilePath(projectDir)) && !(await isMachineInjectedTurn())) {
-    appendAuditEntry("HUMAN_TURN", {}, projectDir);
+  const context = await readPromptContext();
+  if (existsSync(stateFilePath(projectDir)) && !context.machineInjected) {
+    mintHumanPresence({
+      projectDir,
+      capability: hostSessionCapability(context.sessionId),
+    });
   }
 } catch {
   // Non-fatal — a mint failure must never block the human's turn.

@@ -54,6 +54,7 @@ import {
   parseRefsList,
   parseStateStageSuffixes,
   readAllAuditShards,
+  readIntentRegistry,
   readStateFile,
   recoverBoltDag,
   recoverGateRevision,
@@ -67,6 +68,7 @@ import {
   runtimeGraphPath,
   removeField,
   removeSlug,
+  resolveOperatingMode,
   resolveProjectDir,
   resolveStage,
   setCheckbox,
@@ -94,6 +96,17 @@ import {
   writeFileAtomic,
 } from "./amadeus-lib.js";
 import {
+  countStandingGrantRouteReceiptsById,
+  findStandingGrantRouteReceiptById,
+  validateSoloStandingGrantById,
+} from "./amadeus-grant-authorization.ts";
+import {
+  consumePresenceReservation,
+  readPresenceReservation,
+  type PresenceReservation,
+  verifyMintedPresenceReservation,
+} from "./amadeus-presence-reservation.ts";
+import {
   memoryDirFor,
   parseConstructionIteration,
   requiredArtifactsForUnit,
@@ -108,6 +121,11 @@ const VALID_CHECKBOX_STATES: CheckboxState[] = [
   "completed",
   "skipped",
 ];
+const APPROVAL_GRANT_ID_RE = /^[0-9a-f]{8}$/;
+const APPROVAL_UUID_V4_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const APPROVAL_UUID_V7_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 const PRACTICES_MANAGED_BEGIN = "<!-- amadeus:practices-promote:BEGIN -->";
 const PRACTICES_MANAGED_END = "<!-- amadeus:practices-promote:END -->";
@@ -280,7 +298,7 @@ export function transitionMirrorBoundaryReceipt(
 export function verifyPhaseCheckArtifact(pd: string, phase: string): void {
   if (artifactGuardDisabled()) return;
   if (!PHASE_CHECK_REQUIRED_PHASES.has(phase)) return;
-  const rec = recordDir(pd);
+  const rec = operationRecordDir(pd);
   if (rec === null) {
     let msg = `Refusing to verify the "${phase}" phase boundary: no active intent record resolves, `;
     msg += `so there is nowhere to check for verification/phase-check-${phase}.md.`;
@@ -397,10 +415,28 @@ function emitAudit(
   eventType: string,
   fields: Record<string, string>
 ): void {
-  if (holdsAuditLock(projectDir)) {
-    appendAuditEntryUnlocked(eventType, fields, projectDir);
+  if (
+    holdsAuditLock(
+      projectDir,
+      stateOperationTarget?.intent,
+      stateOperationTarget?.space,
+    )
+  ) {
+    appendAuditEntryUnlocked(
+      eventType,
+      fields,
+      projectDir,
+      stateOperationTarget?.intent,
+      stateOperationTarget?.space,
+    );
   } else {
-    appendAuditEntry(eventType, fields, projectDir);
+    appendAuditEntry(
+      eventType,
+      fields,
+      projectDir,
+      stateOperationTarget?.intent,
+      stateOperationTarget?.space,
+    );
   }
 }
 
@@ -420,7 +456,7 @@ function hasStageAuditEvent(
   // Read across every per-clone audit shard (one in the common single-clone /
   // flat-legacy case; the glob-merge matters only when concurrent clones append
   // to the same intent). readAllAuditShards returns "" when no shard exists.
-  const audit = readAllAuditShards(projectDir);
+  const audit = operationReadAudit(projectDir);
   if (audit.length === 0) return false;
   const workflowStarts = findAllEvents(audit, "WORKFLOW_STARTED");
   const since = workflowStarts.length > 0
@@ -546,6 +582,92 @@ let projectDir: string | undefined;
 // (undefined), so error() keys the sentinel for them — correct.
 let lockIntent: string | undefined;
 let lockSpace: string | undefined;
+
+type StateOperationTarget = {
+  readonly intent: string;
+  readonly space: string;
+};
+
+let stateOperationTarget: StateOperationTarget | null = null;
+
+function operationReadState(pd: string): string {
+  return readStateFile(
+    pd,
+    stateOperationTarget?.intent,
+    stateOperationTarget?.space,
+  );
+}
+
+function operationWriteState(pd: string, content: string): void {
+  writeStateFile(
+    pd,
+    content,
+    stateOperationTarget?.intent,
+    stateOperationTarget?.space,
+  );
+}
+
+function operationRecordDir(pd: string): string | null {
+  return recordDir(
+    pd,
+    stateOperationTarget?.intent,
+    stateOperationTarget?.space,
+  );
+}
+
+function operationRelativeRecordDir(pd: string): string | null {
+  return relativeRecordDir(
+    pd,
+    stateOperationTarget?.intent,
+    stateOperationTarget?.space,
+  );
+}
+
+function operationAuditShards(pd: string): string[] {
+  return auditShards(
+    pd,
+    stateOperationTarget?.intent,
+    stateOperationTarget?.space,
+  );
+}
+
+function operationReadAudit(pd: string): string {
+  return readAllAuditShards(
+    pd,
+    stateOperationTarget?.intent,
+    stateOperationTarget?.space,
+  );
+}
+
+// Callback shapes for the two state-operation wrappers, named so the parameter
+// lists carry an alias rather than an inline function type.
+type SyncOperation<T> = () => T extends Promise<unknown> ? never : T;
+type TargetedOperation<T> = () => T;
+
+function operationWithLock<T>(
+  pd: string,
+  fn: SyncOperation<T>,
+): T extends Promise<unknown> ? never : T {
+  return withAuditLock(
+    pd,
+    fn,
+    stateOperationTarget?.intent,
+    stateOperationTarget?.space,
+  );
+}
+
+function withStateOperationTarget<T>(
+  target: StateOperationTarget,
+  fn: TargetedOperation<T>,
+): T {
+  const previous = stateOperationTarget;
+  stateOperationTarget = target;
+  try {
+    return fn();
+  } finally {
+    stateOperationTarget = previous;
+  }
+}
 
 function main(): void {
   const args = process.argv.slice(2);
@@ -932,7 +1054,7 @@ function unparkLocked(
     emitAudit(pd, "WORKFLOW_UNPARKED", { Timestamp: ts });
     content = setField(content, "Last Updated", ts);
   }
-  writeStateFile(pd, content);
+  operationWriteState(pd, content);
   console.log(JSON.stringify({ unparked: true, was_parked: wasParked }));
 }
 
@@ -1149,7 +1271,7 @@ function producesDirsForStage(
     }
     return dirs;
   }
-  const rec = recordDir(pd);
+  const rec = operationRecordDir(pd);
   if (rec === null) return [];
   const perUnit = stage.for_each === "unit-of-work";
   if (perUnit) {
@@ -1244,7 +1366,7 @@ function kindAwareArtifactsExist(
   if (stage.for_each !== "unit-of-work") return null;
   if (stage.produces_kinds === undefined) return null;
   const snapshot = readRuntimeUnitKinds(pd);
-  const rec = recordDir(pd);
+  const rec = operationRecordDir(pd);
   if (snapshot === null || rec === null) return null;
 
   let hasApplicableArtifact = false;
@@ -1364,7 +1486,7 @@ function isGitRepo(pd: string): boolean {
 // birth. `git log --diff-filter=A` is newest-first, so the LAST line is the
 // earliest Add. null when there is no active record or the file was never added.
 function intentBirthCommit(pd: string): string | null {
-  const rel = relativeRecordDir(pd);
+  const rel = operationRelativeRecordDir(pd);
   if (rel === null) return null;
   const log = git(pd, ["log", "--diff-filter=A", "--format=%H", "--", `${rel}/amadeus-state.md`]);
   const lines = log?.split("\n").filter((l) => l.trim().length > 0) ?? [];
@@ -1391,7 +1513,7 @@ function recordBranchSourceWork(pd: string, birth: string): boolean {
 // This intent's bolt slugs, read from the first-class `Bolt Refs` state field.
 // [] on any read/parse problem (fail-safe: the caller then finds no bolt work).
 function intentBoltSlugs(pd: string): string[] {
-  const rec = recordDir(pd);
+  const rec = operationRecordDir(pd);
   if (rec === null) return [];
   const statePath = join(rec, "amadeus-state.md");
   if (!existsSync(statePath)) return [];
@@ -1434,7 +1556,7 @@ function boltRefHasSourceWork(pd: string, ref: string): boolean {
 // (every `#<digits>`, e.g. "GitHub issue #697 (= #684 Phase B, #688)"). [] on any
 // read/parse problem (fail-safe: the merged-PR probe then finds nothing).
 function intentIssueRefs(pd: string): string[] {
-  const rec = recordDir(pd);
+  const rec = operationRecordDir(pd);
   if (rec === null) return [];
   const statePath = join(rec, "amadeus-state.md");
   if (!existsSync(statePath)) return [];
@@ -1592,7 +1714,7 @@ function verifyStageArtifacts(pd: string, stage: VerifiableStage): void {
     // the exemption is auditable, then let completion proceed. No declaration
     // (or an invalid one) falls through to the original refusal, preserving
     // #366's gap detection.
-    const dirName = activeIntent(pd);
+    const dirName = stateOperationTarget?.intent ?? activeIntent(pd);
     const declaration = dirName ? docsOnlyDeclaration(pd, dirName) : null;
     if (declaration) {
       emitAudit(pd, "GUARD_EXEMPTED", {
@@ -1629,8 +1751,8 @@ export function handleAdvance(args: string[]): void {
   // append variant, so audit + state land together (audit-first). The replay
   // guard's early `return` exits the arrow cleanly; the lock releases in
   // withAuditLock's finally.
-  withAuditLock(pd, () => {
-  let content = readStateFile(pd);
+  operationWithLock(pd, () => {
+  let content = operationReadState(pd);
 
   // Look up stage data
   const completedStage = findStageBySlug(completedSlug);
@@ -1833,7 +1955,7 @@ export function handleAdvance(args: string[]): void {
     error(`Audit emission failed: ${errorMessage(e)}`);
   }
 
-  writeStateFile(pd, content);
+  operationWriteState(pd, content);
 
   console.log(
     JSON.stringify({
@@ -1844,7 +1966,11 @@ export function handleAdvance(args: string[]): void {
       completed_count: completedCount,
       next_after: nextAfterNext ? nextAfterNext.slug : null,
       already_completed: alreadyMarkedCompleted,
-      memory_path: relativeMemoryPath(nextStage.phase, nextStage.slug, relativeRecordDir(pd)),
+      memory_path: relativeMemoryPath(
+        nextStage.phase,
+        nextStage.slug,
+        operationRelativeRecordDir(pd),
+      ),
       timestamp,
     })
   );
@@ -1943,7 +2069,7 @@ export function handleFinalize(args: string[]): void {
   content = setField(content, "Last Updated", timestamp);
   content = setField(content, "Next Action", nextStage ? `Resume from ${nextStage.name}` : "Workflow complete");
 
-  writeStateFile(pd, content);
+  operationWriteState(pd, content);
   console.log(
     JSON.stringify({
       completed: completedSlug,
@@ -1979,8 +2105,8 @@ export function handleCompleteWorkflow(args: string[]): void {
   // lock so the 4 audit rows and the completion state commit atomically against
   // a single snapshot (audit-first / decide-inside-lock). emitAudit uses the
   // unlocked variant because the lock is held.
-  withAuditLock(pd, () => {
-  let content = readStateFile(pd);
+  operationWithLock(pd, () => {
+  let content = operationReadState(pd);
 
   const completedStage = findStageBySlug(completedSlug);
   if (!completedStage) error(`Unknown stage: ${completedSlug}`);
@@ -2067,28 +2193,14 @@ export function handleCompleteWorkflow(args: string[]): void {
     error(`Audit emission failed: ${errorMessage(e)}`);
   }
 
-  writeStateFile(pd, content);
+  operationWriteState(pd, content);
   // Intent status lifecycle: terminal completion flips the active intent's
   // registry row to "complete". This is the determinism (field write) gated by
   // the human-confirmed completion that drove complete-workflow here — never an
   // automatic inference from state, so a crashed run never self-completes. Runs
   // under the workspace lock already held (every intents.json mutation takes the
   // sentinel bucket). No-op for the legacy flat record (no registry row).
-  const completedIntentDir = activeIntent(pd);
-  if (completedIntentDir) {
-    withLockedIntentRegistry(
-      pd,
-      (context) => transitionIntentStatusLocked(
-        context,
-        completedIntentDir,
-        "complete",
-      ),
-    );
-    // Release the active-intent cursor once the row is "complete" (#1248) so the
-    // finished intent stops being the audit-append target and a fresh /amadeus
-    // resolves a new intent rather than re-attaching to the completed record.
-    clearActiveIntentCursor(pd, completedIntentDir);
-  }
+  completeIntentRegistryRow(pd);
   console.log(
     JSON.stringify({
       completed: completedSlug,
@@ -2099,6 +2211,27 @@ export function handleCompleteWorkflow(args: string[]): void {
     })
   );
   });
+}
+
+// Terminal completion flips the target intent's registry row to "complete", then
+// releases the active-intent cursor (#1248) so the finished intent stops being
+// the audit-append target and a fresh /amadeus resolves a new intent rather than
+// re-attaching to the completed record. The cursor is only released for the
+// ambient (untargeted) operation — a targeted repair leaves the caller's cursor
+// alone. No-op for the legacy flat record (no registry row). Must run under the
+// workspace lock the caller already holds.
+function completeIntentRegistryRow(pd: string): void {
+  const completedIntentDir = stateOperationTarget?.intent ?? activeIntent(pd);
+  if (!completedIntentDir) return;
+  withLockedIntentRegistry(
+    pd,
+    (context) =>
+      transitionIntentStatusLocked(context, completedIntentDir, "complete"),
+    stateOperationTarget?.space,
+  );
+  if (stateOperationTarget === null) {
+    clearActiveIntentCursor(pd, completedIntentDir);
+  }
 }
 
 function appendLifecycleEvent(
@@ -2276,7 +2409,7 @@ export function handleGateStart(args: string[]): void {
     error(`Audit emission failed: ${errorMessage(e)}`);
   }
 
-  writeStateFile(pd, content);
+  operationWriteState(pd, content);
   console.log(JSON.stringify({ slug, new_state: "awaiting-approval", timestamp }));
   });
 }
@@ -2366,7 +2499,7 @@ function revisionEvidenceFromAudit(raw: string): RevisionEvidenceEvent[] {
 
 function revisionEvidenceForRecovery(pd: string): RevisionEvidenceEvent[] {
   const sharded: Array<{ readonly event: RevisionEvidenceEvent; readonly shard: number }> = [];
-  const paths = auditShards(pd);
+  const paths = operationAuditShards(pd);
   for (let shard = 0; shard < paths.length; shard += 1) {
     try {
       for (const event of revisionEvidenceFromAudit(readFileSync(paths[shard]!, "utf-8"))) {
@@ -2391,8 +2524,8 @@ function declaredProducePaths(
   stage: { readonly slug: string; readonly phase: string; readonly for_each?: string; readonly produces?: readonly string[] },
 ): string[] {
   const names = stage.produces ?? [];
-  const absoluteRecord = recordDir(pd);
-  const relativeRecord = relativeRecordDir(pd);
+  const absoluteRecord = operationRecordDir(pd);
+  const relativeRecord = operationRelativeRecordDir(pd);
   if (absoluteRecord === null || relativeRecord === null) return [];
   let ownerPaths = [[stage.phase, stage.slug]];
   if (stage.for_each === "unit-of-work") {
@@ -2635,7 +2768,11 @@ function commitRecoveredApprovalBatch(pd: string, input: RecoveredApprovalBatchI
 
   validateRecoveredApprovalBatch(blocks, input);
 
-  const path = auditFilePath(pd);
+  const path = auditFilePath(
+    pd,
+    stateOperationTarget?.intent,
+    stateOperationTarget?.space,
+  );
   mkdirSync(dirname(path), { recursive: true });
   const before = existsSync(path) ? readFileSync(path, "utf-8") : "# AI-DLC Audit Log\n";
   writeFileAtomic(path, before + blocks.join(""));
@@ -2646,14 +2783,21 @@ type ApprovalAuthorization = {
   readonly committedRevision: number | null;
   readonly grantId: string | null;
   readonly recovery: GateRevisionRecovery | null;
+  readonly override?: ApprovalAuthorizationOverride;
+};
+
+type ApprovalAuthorizationOverride = {
+  readonly grantId: string | null;
+  readonly auditPrefix?: "none" | "gate-approved" | "completed";
 };
 
 function authorizeApproval(
   pd: string,
   content: string,
   stage: { readonly name: string; readonly slug: string; readonly phase: string; readonly for_each?: string; readonly produces?: readonly string[] },
+  override?: ApprovalAuthorizationOverride,
 ): ApprovalAuthorization {
-  const audit = readAllAuditShards(pd);
+  const audit = operationReadAudit(pd);
   const currentRevision = Number.parseInt(getField(content, "Revision Count") ?? "0", 10);
   const recovery = recoverGateRevision(revisionEvidenceForRecovery(pd), {
     stage: stage.slug,
@@ -2668,9 +2812,17 @@ function authorizeApproval(
     ? completedRecoveryRevision(audit, stage.slug, stage.name, recovery.transactionId, recovery.nextRevisionCount)
     : null;
   const grantId = committedRevision === null
-    ? assertHumanPresentForGateResolution(pd, content, stage.slug, "approve")
+    ? override === undefined
+      ? assertHumanPresentForGateResolution(pd, content, stage.slug, "approve")
+      : override.grantId
     : null;
-  return { audit, committedRevision, grantId, recovery };
+  return {
+    audit,
+    committedRevision,
+    grantId,
+    recovery,
+    ...(override === undefined ? {} : { override }),
+  };
 }
 
 function resolveApprovalRecovery(
@@ -2708,11 +2860,16 @@ function emitApprovalAudit(pd: string, input: ApprovalAuditInput): void {
     const gateFields: Record<string, string> = { Stage: input.slug };
     if (input.userInput) gateFields["User Input"] = input.userInput;
     if (input.authorization.grantId) gateFields["Grant Id"] = input.authorization.grantId;
-    emitAudit(pd, "GATE_APPROVED", gateFields);
-    emitAudit(pd, "STAGE_COMPLETED", {
-      Stage: input.slug,
-      Details: `Stage ${input.stageName} approved by gate`,
-    });
+    const auditPrefix = input.authorization.override?.auditPrefix ?? "none";
+    if (auditPrefix === "none") {
+      emitAudit(pd, "GATE_APPROVED", gateFields);
+    }
+    if (auditPrefix !== "completed") {
+      emitAudit(pd, "STAGE_COMPLETED", {
+        Stage: input.slug,
+        Details: `Stage ${input.stageName} approved by gate`,
+      });
+    }
   } catch (e) {
     if (input.recovery?.kind === "recovered") {
       const detail = e instanceof Error && e.name === "RecoveryBatchValidationError"
@@ -2751,8 +2908,13 @@ function approvalNextStateIssue(
   return approvalScopeIssue(content);
 }
 
-function approveUnderLock(pd: string, slug: string, userInput: string | undefined): void {
-  let content = readStateFile(pd);
+function approveUnderLock(
+  pd: string,
+  slug: string,
+  userInput: string | undefined,
+  override?: ApprovalAuthorizationOverride,
+): void {
+  let content = operationReadState(pd);
 
   const stage = findStageBySlug(slug);
   if (!stage) error(`Unknown stage: ${slug}`);
@@ -2761,7 +2923,7 @@ function approveUnderLock(pd: string, slug: string, userInput: string | undefine
   verifyStageArtifacts(pd, stage);
   const initialScopeIssue = approvalScopeIssue(content);
   if (initialScopeIssue !== null) failApprovalCommitValidation(initialScopeIssue);
-  const authorization = authorizeApproval(pd, content, stage);
+  const authorization = authorizeApproval(pd, content, stage, override);
 
   const approveScope = getField(content, "Scope")!;
   const nextForPhaseGate = nextInScopeStage(slug, approveScope, content);
@@ -2793,7 +2955,7 @@ function approveUnderLock(pd: string, slug: string, userInput: string | undefine
     authorization,
     recovery,
   });
-  writeStateFile(pd, content);
+  operationWriteState(pd, content);
   const scope = approveScope;
 
   const next = nextInScopeStage(slug, scope, content);
@@ -2807,9 +2969,172 @@ function approveUnderLock(pd: string, slug: string, userInput: string | undefine
 export function handleApprove(args: string[]): void {
   if (args.length < 1) error("Usage: amadeus-state.ts approve <slug> [--user-input <text>]");
   const slug = args[0];
-  const { userInput } = parseApproveFlags(args.slice(1));
-
+  const flags = parseApproveFlags(args.slice(1));
   const pd = resolveProjectDir(projectDir);
+  const modeResult = resolveOperatingMode(process.env.AMADEUS_OPERATING_MODE);
+  const authority = classifyApprovalAuthority({
+    operatingMode: modeResult.kind === "valid" ? modeResult.mode : modeResult.raw,
+    ...flags,
+  });
+  if (authority.kind === "invalid") {
+    console.error(JSON.stringify({ error: `Invalid approval authority: ${authority.reason}` }));
+    process.exit(1);
+  }
+
+  if (authority.kind === "grant-backed") {
+    const space = activeSpace(pd);
+    withAuditLock(
+      pd,
+      () => {
+        const receiptCount = countStandingGrantRouteReceiptsById(pd, authority.routeId);
+        const match = receiptCount === 1
+          ? findStandingGrantRouteReceiptById(pd, authority.routeId)
+          : null;
+        if (match === null) {
+          console.error(
+            JSON.stringify({
+              error:
+                `Standing grant route receipt cardinality must be exactly one; got ${receiptCount}`,
+            }),
+          );
+          process.exit(1);
+        }
+        const targetIntentId = intentUuidForRecord(pd, match.intent, space);
+        if (targetIntentId === null) {
+          console.error(
+            JSON.stringify({
+              error: "Standing grant route receipt owner is not exactly one in-flight intent",
+            }),
+          );
+          process.exit(1);
+        }
+        withStateOperationTarget({ intent: match.intent, space }, () => {
+          operationWithLock(pd, () => {
+            const freshState = operationReadState(pd);
+            if (
+              match.receipt.stage !== slug ||
+              match.receipt.grantId !== authority.grantId
+            ) {
+              printAwaitApproval(slug, targetIntentId);
+              return;
+            }
+            const validation = validateSoloStandingGrantById(
+              pd,
+              match.intent,
+              authority.grantId,
+              slug,
+              freshState,
+              loadStageGraph(),
+              Date.now(),
+            );
+            if (validation.kind !== "valid") {
+              printAwaitApproval(slug, targetIntentId);
+              return;
+            }
+            runWithoutTransitionOutput(() => {
+              approveUnderLock(pd, slug, undefined, {
+                grantId: authority.grantId,
+              });
+            });
+            console.log(JSON.stringify({ kind: "approved" }));
+          });
+        });
+      },
+      undefined,
+      space,
+    );
+    return;
+  }
+
+  if (authority.kind === "targeted-human") {
+    const sessionId = process.env.AMADEUS_TRUSTED_SESSION_ID;
+    if (!sessionId) {
+      rejectApprovalProtocol("Trusted session identity is unavailable");
+    }
+    let selected: PresenceReservation | null;
+    try {
+      selected = readPresenceReservation(pd, authority.reservationId);
+    } catch (cause) {
+      rejectApprovalProtocol(`Invalid presence reservation: ${errorMessage(cause)}`);
+    }
+    if (
+      selected === null ||
+      selected.targetIntentId !== authority.targetIntentId ||
+      selected.stage !== slug ||
+      selected.space !== activeSpace(pd)
+    ) {
+      rejectApprovalProtocol("Presence reservation does not match the targeted approval");
+    }
+    withStateOperationTarget(
+      { intent: selected.targetIntentDir, space: selected.space },
+      () => {
+        operationWithLock(pd, () => {
+          let marker: PresenceReservation;
+          try {
+            marker = verifyMintedPresenceReservation({
+              projectDir: pd,
+              sessionId,
+              reservationId: authority.reservationId,
+              targetIntentId: authority.targetIntentId,
+              stage: slug,
+              allowConsumed: true,
+            });
+          } catch (cause) {
+            rejectApprovalProtocol(
+              `Invalid targeted human presence: ${errorMessage(cause)}`,
+            );
+          }
+          if (!targetedHumanTurnIsFresh(pd, marker)) {
+            rejectApprovalProtocol("Targeted HUMAN_TURN is not fresh for the open gate");
+          }
+          const prefix = targetedApprovalPrefix(pd, marker);
+          if (
+            prefix.gateApproved > 1 ||
+            prefix.stageCompleted > 1 ||
+            prefix.stageCompleted > prefix.gateApproved
+          ) {
+            rejectApprovalProtocol("Targeted approval audit prefix is ambiguous");
+          }
+          const ownerState = operationReadState(pd);
+          const stageState = getSlugState(ownerState, slug);
+          if (stageState === "awaiting-approval") {
+            if (marker.state !== "minted") {
+              rejectApprovalProtocol("Consumed reservation cannot authorize an open gate");
+            }
+            const auditPrefix =
+              prefix.gateApproved === 0
+                ? "none"
+                : prefix.stageCompleted === 0
+                  ? "gate-approved"
+                  : "completed";
+            runWithoutTransitionOutput(() => {
+              approveUnderLock(pd, slug, authority.userInput, {
+                grantId: null,
+                auditPrefix,
+              });
+            });
+          } else if (stageState === "completed") {
+            if (prefix.gateApproved !== 1 || prefix.stageCompleted !== 1) {
+              rejectApprovalProtocol("Completed targeted approval has no unique audit prefix");
+            }
+            recoverCompletedTargetedApproval(pd, slug, ownerState);
+          } else {
+            rejectApprovalProtocol("Targeted approval owner gate is not open or completed");
+          }
+          consumePresenceReservation({
+            projectDir: pd,
+            sessionId,
+            reservationId: authority.reservationId,
+            targetIntentId: authority.targetIntentId,
+            stage: slug,
+          });
+          console.log(JSON.stringify({ kind: "approved" }));
+        });
+      },
+    );
+    return;
+  }
+
   // C2b lost-update safety: the ENTIRE approve transaction — including the
   // nested handleAdvance / handleCompleteWorkflow calls below — runs under one
   // outer lock. withAuditLock is REENTRANT (per-pd depth counter): the nested
@@ -2819,7 +3144,7 @@ export function handleApprove(args: string[]): void {
   // advance's re-read. The original ordering is preserved: approve writes its
   // own state (slug → [x]) BEFORE delegating, so the nested re-read sees it.
   withAuditLock(pd, () => {
-    approveUnderLock(pd, slug, userInput);
+    approveUnderLock(pd, slug, authority.userInput);
   });
 }
 
@@ -2841,11 +3166,197 @@ function getFlagValue(args: string[], flag: string): string | undefined {
   return val;
 }
 
-// Flag parser for approve — handles --user-input (value).
-function parseApproveFlags(args: string[]): { userInput?: string } {
+export type ApprovalAuthorityInput = {
+  readonly operatingMode: string;
+  readonly userInput?: string;
+  readonly standingGrantId?: string;
+  readonly standingGrantRouteId?: string;
+  readonly targetIntentId?: string;
+  readonly presenceReservationId?: string;
+};
+
+export type ApprovalAuthority =
+  | { readonly kind: "normal"; readonly userInput?: string }
+  | { readonly kind: "grant-backed"; readonly grantId: string; readonly routeId: string }
+  | {
+      readonly kind: "targeted-human";
+      readonly userInput: string;
+      readonly targetIntentId: string;
+      readonly reservationId: string;
+    }
+  | { readonly kind: "invalid"; readonly reason: string };
+
+export function classifyApprovalAuthority(
+  input: ApprovalAuthorityInput,
+): ApprovalAuthority {
+  const hasGrantId = input.standingGrantId !== undefined;
+  const hasRouteId = input.standingGrantRouteId !== undefined;
+  const hasTarget = input.targetIntentId !== undefined;
+  const hasReservation = input.presenceReservationId !== undefined;
+  const hasUser = input.userInput !== undefined;
+  if (hasGrantId !== hasRouteId || hasTarget !== hasReservation) {
+    return { kind: "invalid", reason: "partial authorization carrier" };
+  }
+  if (hasGrantId) {
+    if (hasUser || hasTarget || input.operatingMode !== "solo") {
+      return { kind: "invalid", reason: "mixed or non-solo grant authority" };
+    }
+    if (
+      !APPROVAL_GRANT_ID_RE.test(input.standingGrantId!) ||
+      !APPROVAL_UUID_V4_RE.test(input.standingGrantRouteId!)
+    ) {
+      return { kind: "invalid", reason: "malformed grant authority" };
+    }
+    return {
+      kind: "grant-backed",
+      grantId: input.standingGrantId!,
+      routeId: input.standingGrantRouteId!,
+    };
+  }
+  if (hasTarget) {
+    if (
+      !hasUser ||
+      input.operatingMode !== "solo" ||
+      !APPROVAL_UUID_V7_RE.test(input.targetIntentId!) ||
+      !APPROVAL_UUID_V4_RE.test(input.presenceReservationId!)
+    ) {
+      return { kind: "invalid", reason: "malformed targeted human authority" };
+    }
+    return {
+      kind: "targeted-human",
+      userInput: input.userInput!,
+      targetIntentId: input.targetIntentId!,
+      reservationId: input.presenceReservationId!,
+    };
+  }
+  return input.userInput === undefined
+    ? { kind: "normal" }
+    : { kind: "normal", userInput: input.userInput };
+}
+
+type ApproveFlags = {
+  readonly userInput?: string;
+  readonly standingGrantId?: string;
+  readonly standingGrantRouteId?: string;
+  readonly targetIntentId?: string;
+  readonly presenceReservationId?: string;
+};
+
+function parseApproveFlags(args: string[]): ApproveFlags {
   return {
     userInput: getFlagValue(args, "--user-input"),
+    standingGrantId: getFlagValue(args, "--standing-grant-id"),
+    standingGrantRouteId: getFlagValue(args, "--standing-grant-route-id"),
+    targetIntentId: getFlagValue(args, "--target-intent-id"),
+    presenceReservationId: getFlagValue(args, "--presence-reservation-id"),
   };
+}
+
+function intentUuidForRecord(
+  pd: string,
+  intent: string,
+  space: string,
+): string | null {
+  const matches = readIntentRegistry(pd, space).filter(
+    (entry) =>
+      entry.dirName === intent &&
+      entry.status === "in-flight" &&
+      APPROVAL_UUID_V7_RE.test(entry.uuid),
+  );
+  return matches.length === 1 ? matches[0].uuid : null;
+}
+
+function printAwaitApproval(stage: string, targetIntentId: string): void {
+  console.log(
+    JSON.stringify({
+      kind: "await-approval",
+      stage,
+      reason: "standing-grant-no-longer-authorizes",
+      target_intent_id: targetIntentId,
+    }),
+  );
+}
+
+function runWithoutTransitionOutput(fn: () => void): void {
+  const original = console.log;
+  console.log = () => {};
+  try {
+    fn();
+  } finally {
+    console.log = original;
+  }
+}
+
+function rejectApprovalProtocol(detail: string): never {
+  console.error(JSON.stringify({ error: detail }));
+  process.exit(1);
+}
+
+type TargetedApprovalPrefix = {
+  readonly gateApproved: number;
+  readonly stageCompleted: number;
+};
+
+function targetedApprovalPrefix(
+  pd: string,
+  marker: PresenceReservation,
+): TargetedApprovalPrefix {
+  let gateApproved = 0;
+  let stageCompleted = 0;
+  const humanAt = Date.parse(marker.humanTurnTimestamp!);
+  for (const block of operationReadAudit(pd).replace(/\r\n/g, "\n").split(/\n---\n/)) {
+    if (auditBlockField(block, "Stage") !== marker.stage) continue;
+    const timestamp = auditBlockField(block, "Timestamp");
+    if (timestamp === null || Date.parse(timestamp) < humanAt) continue;
+    const event = auditBlockField(block, "Event");
+    if (
+      event === "GATE_APPROVED" &&
+      auditBlockField(block, "Grant Id") === null
+    ) {
+      gateApproved++;
+    } else if (event === "STAGE_COMPLETED") {
+      stageCompleted++;
+    }
+  }
+  return { gateApproved, stageCompleted };
+}
+
+function targetedHumanTurnIsFresh(
+  pd: string,
+  marker: PresenceReservation,
+): boolean {
+  const humanAt = Date.parse(marker.humanTurnTimestamp!);
+  let latestGateAt = Number.NEGATIVE_INFINITY;
+  for (const block of operationReadAudit(pd).replace(/\r\n/g, "\n").split(/\n---\n/)) {
+    if (
+      auditBlockField(block, "Event") !== "STAGE_AWAITING_APPROVAL" ||
+      auditBlockField(block, "Stage") !== marker.stage
+    ) {
+      continue;
+    }
+    const timestamp = auditBlockField(block, "Timestamp");
+    if (timestamp !== null) latestGateAt = Math.max(latestGateAt, Date.parse(timestamp));
+  }
+  return Number.isFinite(latestGateAt) && humanAt >= latestGateAt;
+}
+
+function recoverCompletedTargetedApproval(
+  pd: string,
+  slug: string,
+  content: string,
+): void {
+  if (getField(content, "Current Stage") !== slug) return;
+  const scope = getField(content, "Scope");
+  if (scope === null || !validScopes().has(scope)) {
+    rejectApprovalProtocol("Targeted approval owner has an invalid Scope");
+  }
+  runWithoutTransitionOutput(() => {
+    if (nextInScopeStage(slug, scope, content) === null) {
+      handleCompleteWorkflow([slug]);
+    } else {
+      handleAdvance([slug]);
+    }
+  });
 }
 
 // delegate-approval <slug> --to-intent <record-dir> [--to-space <space>] [--user-input <text>]
@@ -3110,19 +3621,21 @@ function collectIssuerProvenance(
 export function handleGrantStandingDelegation(args: string[]): void {
   const pd = resolveProjectDir(projectDir);
 
-  // (1) Grounding gate — a real human must have acted on THIS session since the
+  // (1) Mode validation is shared by issue, revoke, route, and commit. Both
+  // canonical modes may issue a grant; an unknown value is refused before any
+  // audit mutation.
+  const operatingMode = resolveOperatingMode(process.env.AMADEUS_OPERATING_MODE);
+  if (operatingMode.kind === "invalid") {
+    error(
+      `Refusing to grant standing delegation: invalid AMADEUS_OPERATING_MODE "${operatingMode.raw}" (expected "solo" or "team").`
+    );
+  }
+
+  // (2) Grounding gate — a real human must have acted on THIS session since the
   // last gate resolution (same predicate + off-switch as delegate-approval).
   if (!humanPresenceGuardDisabled() && !humanActedSinceGate(pd)) {
     error(
       "Refusing to grant standing delegation: no real human turn on this session since the last gate resolution. Acknowledge the grant as a human, then grant."
-    );
-  }
-
-  // (2) Team-mode only — env is the SOLE arbiter (solo mode approves each gate
-  // directly, so a standing grant has no meaning there).
-  if (process.env.AMADEUS_OPERATING_MODE !== "team") {
-    error(
-      "Refusing to grant standing delegation: standing grants are a team-mode mechanism (AMADEUS_OPERATING_MODE=team). Solo mode approves each gate directly."
     );
   }
 
@@ -3197,17 +3710,17 @@ export function handleGrantStandingDelegation(args: string[]): void {
 export function handleRevokeStandingDelegation(args: string[]): void {
   const pd = resolveProjectDir(projectDir);
 
+  const operatingMode = resolveOperatingMode(process.env.AMADEUS_OPERATING_MODE);
+  if (operatingMode.kind === "invalid") {
+    error(
+      `Refusing to revoke standing delegation: invalid AMADEUS_OPERATING_MODE "${operatingMode.raw}" (expected "solo" or "team").`
+    );
+  }
   if (!humanPresenceGuardDisabled() && !humanActedSinceGate(pd)) {
     error(
       "Refusing to revoke standing delegation: no real human turn on this session since the last gate resolution. Acknowledge the revocation as a human, then revoke."
     );
   }
-  if (process.env.AMADEUS_OPERATING_MODE !== "team") {
-    error(
-      "Refusing to revoke standing delegation: standing grants are a team-mode mechanism (AMADEUS_OPERATING_MODE=team)."
-    );
-  }
-
   const grantId = getFlagValue(args, "--grant-id");
   if (!grantId) error("revoke-standing-delegation requires --grant-id <8-hex id>");
   if (!/^[0-9a-f]{8}$/.test(grantId)) {

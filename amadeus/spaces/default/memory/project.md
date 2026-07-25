@@ -73,6 +73,8 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - NEVER `packages/framework/core/` / `packages/framework/harness/` の維持または移動を、ADR/設計記録なしに暗黙決定しない。 (affirmed 2026-07-07)
 - NEVER `dist/` relocation を internal refactor として扱わない。README、docs、tests、self-promotion、CI への user-facing impact を棚卸しする。 (affirmed 2026-07-07)
 - NEVER `packages/setup` の不在をローカル filesystem evidence として捏造しない。 (affirmed 2026-07-07)
+- NEVER walking-skeleton stance が有効なとき、standing grant に walking-skeleton gate を認可させない。 (affirmed 2026-07-25)
+- NEVER 想定内の grant 失効・取消・scope 不一致 fallback を、`ERROR_LOGGED` を発生させる fatal error 経路へ流さない。 (affirmed 2026-07-25)
 ## Mandated
 
 - ALWAYS リリース(バージョンバンプ・タグ発行・GitHub Release ノート・npm publish)は release.yml の workflow_dispatch 一本で行う。PR ではバージョン・バッジ・リリースノートに一切触れない(`tests/unit/t68-version-changelog-sync.test.ts` が version.ts↔CLI↔README バッジの同期を強制) (user decision 2026-07-09)
@@ -87,6 +89,8 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - ALWAYS markdown artifact は日本語で書く。ただし path、CLI、コード識別子、tool が要求する heading は正確性を優先して保持する。 (affirmed 2026-07-07)
 - ALWAYS 新設パッケージ(`packages/*`)は lint(Biome)と型検査(`tsc --noEmit`)の配線をパッケージ追加と同一 PR で加え、既存の狭い CI lint スコープ(`tests/` のみ)を継承しない (affirmed 2026-07-08)
 - ALWAYS harness 専用ツールを `packages/framework/core/tools/` に置かない — 全6ハーネス manifest の coreDirs が tools を投影するため構造的に全ハーネス dist へ漏出する。harness 専用は `packages/framework/harness/<name>/tools/`+harnessFiles 投影に置く(core 中立層/harness 表層境界の具体化。E-770-CGBT 2026-07-18 採用 3/3 — e4 提案+e1 GoA1+e3 GoA2 留保=小型1行統合。票: 初回配信 11:42Z 頃 → e3 11:43:21Z(0件)→ e4 11:44:07Z(本候補提案)→ e1 11:44:22Z(GoA3 留保)→ 追加ラウンド配信 11:44Z 台 → e1 11:44:55Z(採用 GoA1)→ e3 11:45:06Z(採用 GoA2)→ 開票 11:45Z 台。実測根拠: E-770-CG2 裁定(reviewer が core/tools 配置の漏出を捕捉、manifest 6面 :26-:39 実測)+#1212 実装(harnessFiles 化で漏出0)) (learned 2026-07-18) <!-- cid:code-generation:harness-tools-placement -->
+- ALWAYS active scope が `amadeus-feature` なら、既存コードを変更する場合も最初の Construction Bolt に walking-skeleton gate を維持する。 (affirmed 2026-07-25)
+- ALWAYS 認可に関わる変更を directive contract、state transition、audit invariant、race、team-mode regression、harness drift のテストで検証する。 (affirmed 2026-07-25)
 ## Corrections
 
 <!-- 人間のフィードバックによるプロジェクト固有の是正。 -->

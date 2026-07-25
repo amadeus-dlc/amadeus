@@ -1,5 +1,15 @@
 # コード構造
 
+## Issue #1466 solo standing grant（現在、2026-07-25）
+
+base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb404524ef30a7d8a0a3f68f73`。[Issue #1466](https://github.com/amadeus-dlc/amadeus/issues/1466)。[PR #1468](https://github.com/amadeus-dlc/amadeus/pull/1468) は凍結試作で参考のみ、実装前提にしない。
+
+主要 seam は grant 発行・取消（`amadeus-state.ts:3110-3226`）、audit-derived parse / 探索 / gate 判定（`amadeus-lib.ts:3772-3978`）、directive schema（`amadeus-directive.ts:59-90`）、route selection carrier / report transport（`amadeus-orchestrate.ts:1539-1578,3003-3045,3293-3297`）、lock 内 exact-ID lookup / 認可 / commit（`amadeus-state.ts:2644-2804`）である。現行探索は exact ID lookup でなく最大 expiry 候補を返すため、route / commit identity がなく、typed non-error fallback の戻り契約もない。
+
+## gate と per-unit の構造
+
+`functional-design`、`nfr-requirements`、`nfr-design`、`infrastructure-design`、`code-generation` は per-unit。未完 unit は `gate:false`、全 unit artifact 着地後だけ最終 gate を一度開き、early report を拒否する（`amadeus-orchestrate.ts:2456-2639,3503-3560`）。grant はこの最終 gate の認可源にだけなり、body / reviewer を再実行しない。exact ID、opaque claim、commit-only の構造案は未決定。team delegation path は変更しない。
+
 ## Team Mode ランチャーの packages 昇格と watcher 検証関数群（260724-watcher-timeout-fix、2026-07-24、現在）
 
 差分リフレッシュ（base `a81c11dde` → observed HEAD `6d4df9056`、distance 155、amadeus-bugfix / Minimal、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)）。測定 ref: observed HEAD 実ファイル直読 + `git log/diff a81c11dde..HEAD`。

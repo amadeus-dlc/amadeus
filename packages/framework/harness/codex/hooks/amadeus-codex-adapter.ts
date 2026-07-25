@@ -55,8 +55,8 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { appendAuditEntry } from "../tools/amadeus-audit.ts";
 import { hooksHealthDir, isMachineInjectedTurnText, stateFilePath } from "../tools/amadeus-lib.ts";
+import { hostSessionCapability, mintHumanPresence } from "../tools/amadeus-presence-reservation.ts";
 import { spawnHookWithRuntime } from "./amadeus-codex-hook-runtime.ts";
 
 const HOOKS_DIR = dirname(fileURLToPath(import.meta.url));
@@ -359,11 +359,19 @@ switch (target) {
     // HUMAN_TURN (#755/#811). Fail-open: a prompt-absent payload still mints — the
     // core hook's exact contract (amadeus-mint-presence.ts) — and a mint failure
     // must never block the turn. Advisory, no stdout.
+    //
+    // The mint itself goes through the CANONICAL seam (mintHumanPresence): this
+    // adapter only normalizes Codex's session_id into the HostSessionCapability
+    // union, so a solo standing-grant fallback armed in THIS session mints its
+    // targeted owner HUMAN_TURN with the same semantics as every other harness.
     try {
       const machineInjected =
         typeof codex.prompt === "string" && isMachineInjectedTurnText(codex.prompt);
       if (existsSync(stateFilePath(projectDir)) && !machineInjected) {
-        appendAuditEntry("HUMAN_TURN", {}, projectDir);
+        mintHumanPresence({
+          projectDir,
+          capability: hostSessionCapability(codex.session_id),
+        });
       }
     } catch {
       // best-effort presence record — advisory

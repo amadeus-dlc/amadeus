@@ -250,7 +250,8 @@ describe("t81 amadeus-state practices-event — bolt-plan-marker-conflict overri
     // DELEGATED_APPROVAL (#671 delegated-approval provenance, +1) = 71, plus
     // DELEGATED_REJECTION (#685 delegated-rejection provenance, +1) = 72, plus
     // GUARD_EXEMPTED (#499/#848 docs-only workspace_requires exemption, +1) = 73,
-    // plus GRANT_ISSUED + GRANT_REVOKED (#1125 standing delegation grants, +2) = 75.
+    // plus GRANT_ISSUED + GRANT_REVOKED (#1125 standing delegation grants, +2) = 75,
+    // plus GATE_AUTHORIZATION_SELECTED (#1466 solo standing-grant route receipt, +1).
     const auditSrc = readFileSync(
       join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-audit.ts"),
       "utf-8",
@@ -258,7 +259,7 @@ describe("t81 amadeus-state practices-event — bolt-plan-marker-conflict overri
     const block = auditSrc.match(/const VALID_EVENT_TYPES = new Set\(\[([\s\S]*?)\]\)/);
     expect(block).not.toBeNull();
     const count = (block ? block[1].match(/"[A-Z0-9_]+"/g) : null)?.length ?? -1;
-    expect(count).toBe(77);
+    expect(count).toBe(78);
   });
 
   // --- Test 4: milestone 8 write-failure path coexists (different Reason value) ---

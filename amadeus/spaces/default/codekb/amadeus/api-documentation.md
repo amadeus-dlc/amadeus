@@ -1,5 +1,15 @@
 # API ドキュメント
 
+## Issue #1466 solo standing grant（現在、2026-07-25）
+
+base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb404524ef30a7d8a0a3f68f73`。[Issue #1466](https://github.com/amadeus-dlc/amadeus/issues/1466)。[PR #1468](https://github.com/amadeus-dlc/amadeus/pull/1468) は凍結試作で参考のみ、実装前提にしない。
+
+現行 CLI は `grant-standing-delegation` / `revoke-standing-delegation` を team-only とし、grant を設定ではなく監査イベントとして発行・取消する。`delegate-approval` は remote target 用の team 契約である。`next` の `RunStageDirective` は `gate` を持つが grant identity を持たず、`report` flags も Grant Id を `approve` へ運ばないため、commit は route で選んだ ID の同一性を再検証できない。
+
+## 後続 API 裁定
+
+候補は exact `grant_id` carrier、opaque authorization claim、commit-only selection。commit 時不適格は「state 未変更、`GATE_APPROVED` / `STAGE_COMPLETED` / `ERROR_LOGGED` なし、人間ゲート再提示」を表す typed non-error 契約が必要である。具体 field / outcome は未決定。standing grant の audit-derived 性質と protected event mint 禁止は維持する。
+
 > **2026-07-24（intent `260724-watcher-timeout-fix`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み。** `team-up.sh` の内部制御フロー（watcher 検証 → mux_attach 順序、exit code 分岐 0=全 armed / 非ゼロ=未 armed）は既存契約のまま。ユーザー可視 API/CLI 契約に変化なし（base `a81c11dde` → observed `6d4df9056`）。
 
 ## 260723-t241-ci-residency の関連契約（履歴: 2026-07-23）

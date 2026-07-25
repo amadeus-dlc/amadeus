@@ -67,7 +67,7 @@
 // per the tool/agent/human split (routing string-building to an LLM would
 // invert the whole thesis).
 
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   closeSync,
   constants as fsConstants,
@@ -83,6 +83,7 @@ import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   type AskDirective,
+  type AwaitApprovalDirective,
   type Directive,
   type ErrorDirective,
   GATE_UNRESOLVED,
@@ -92,7 +93,10 @@ import {
   type RunStageDirective,
   validateDirective,
 } from "./amadeus-directive.ts";
-import { appendLifecycleAuditEntryUnlocked } from "./amadeus-audit.ts";
+import {
+  appendAuditEntryUnlocked,
+  appendLifecycleAuditEntryUnlocked,
+} from "./amadeus-audit.ts";
 import {
   activeSpace,
   activeIntent,
@@ -106,6 +110,7 @@ import {
   firstInScopeStageOfPhase,
   getField,
   intentRepos,
+  isPlainObject,
   listIntents,
   nextInScopeStage,
   normalizeUnitKind,
@@ -131,9 +136,20 @@ import {
   guardIntentOperation,
   renderIntentOperationRejection,
   resolveIntentOperationTargetLocked,
+  resolveOperatingMode,
   type IntentLifecycleAuditEvent,
+  type OperatingMode,
   withIntentLifecyclePreflight,
+  withAuditLock,
 } from "./amadeus-lib.ts";
+import {
+  countStandingGrantRouteReceiptsById,
+  findSoloStandingGrant,
+} from "./amadeus-grant-authorization.ts";
+import {
+  armPresenceReservation,
+  type PresenceReservation,
+} from "./amadeus-presence-reservation.ts";
 import {
   type Consume,
   type GraphStage,
@@ -147,6 +163,7 @@ import {
 import { resolve as resolveMirrorConfig } from "./amadeus-mirror-config.ts";
 import {
   MIRROR_BOUNDARY_PHASES,
+  classifyApprovalAuthority,
   type MirrorBoundaryPhase,
   type MirrorBoundaryReceipts,
   parseMirrorBoundaryReceipts,
@@ -1536,6 +1553,97 @@ function projectNextStage(
   directive.next_stage = nextInScopeStage(node.slug, scope, stateContent)?.slug ?? null;
 }
 
+export type SoloGrantRouteOptions = {
+  readonly directive: RunStageDirective;
+  readonly projectDir: string;
+  readonly stateContent: string;
+  readonly graph: StageEntry[];
+  readonly nowMs?: number;
+  readonly operatingMode?: OperatingMode;
+  readonly routeIdFactory?: () => string;
+};
+
+export function routeSoloStandingGrantDirective(
+  options: SoloGrantRouteOptions,
+): RunStageDirective {
+  if (options.directive.gate !== true) return options.directive;
+  const modeResult =
+    options.operatingMode === undefined
+      ? resolveOperatingMode(process.env.AMADEUS_OPERATING_MODE)
+      : { kind: "valid" as const, mode: options.operatingMode };
+  if (modeResult.kind !== "valid" || modeResult.mode !== "solo") {
+    return options.directive;
+  }
+  const space = activeSpace(options.projectDir);
+  const intent = activeIntent(options.projectDir, space);
+  if (intent === null) return options.directive;
+  const grant = findSoloStandingGrant(
+    options.projectDir,
+    intent,
+    options.directive.stage,
+    options.stateContent,
+    options.graph,
+    options.nowMs ?? Date.now(),
+  );
+  if (grant === null) return options.directive;
+  const mintRouteId = options.routeIdFactory ?? randomUUID;
+  const routeId = mintRouteId();
+  return withAuditLock(
+    options.projectDir,
+    () => {
+      if (
+        countStandingGrantRouteReceiptsById(options.projectDir, routeId) !== 0
+      ) {
+        throw new Error(`Standing grant Route Id collision: ${routeId}`);
+      }
+      withAuditLock(
+        options.projectDir,
+        () => {
+          const appended = appendAuditEntryUnlocked(
+            "GATE_AUTHORIZATION_SELECTED",
+            {
+              "Route Id": routeId,
+              Stage: options.directive.stage,
+              "Grant Id": grant.grantId,
+            },
+            options.projectDir,
+            intent,
+            space,
+          );
+          if (!appended.appended) {
+            throw new Error(
+              `Cannot append standing grant route receipt to ${intent}: intent is complete`,
+            );
+          }
+        },
+        intent,
+        space,
+      );
+      return {
+        ...options.directive,
+        standing_grant_id: grant.grantId,
+        standing_grant_route_id: routeId,
+      };
+    },
+    undefined,
+    space,
+  );
+}
+
+function routeMainWorkflowDirective(
+  directive: RunStageDirective,
+  stateContent: string | null,
+  codekbCtx: CodekbCtx | undefined,
+): RunStageDirective {
+  if (stateContent === null || codekbCtx === undefined) return directive;
+  return routeSoloStandingGrantDirective({
+    directive,
+    projectDir: codekbCtx.projectDir,
+    stateContent,
+    graph: loadGraph(),
+  });
+}
+
 function buildRunStageDirective(
   node: GraphStage,
   projectType: "brownfield" | "greenfield" | null = null,
@@ -2450,7 +2558,16 @@ function emitRunStageForSlug(
     });
     return;
   }
-  emit(buildRunStageDirective(node, projectType, UNIT_NAME_PLACEHOLDER, scope, stateContent, recordPrefix, codekbCtx));
+  const directive = buildRunStageDirective(
+    node,
+    projectType,
+    UNIT_NAME_PLACEHOLDER,
+    scope,
+    stateContent,
+    recordPrefix,
+    codekbCtx,
+  );
+  emit(routeMainWorkflowDirective(directive, stateContent, codekbCtx));
 }
 
 // --- Per-unit iteration (issue #368): the engine drives the for_each loop ---
@@ -2613,7 +2730,7 @@ function emitPerUnitRunStage(
       unitKinds.get(lastUnit),
     );
     directive.unit = lastUnit;
-    emit(directive);
+    emit(routeMainWorkflowDirective(directive, stateContent, codekbCtx));
     return;
   }
 
@@ -3003,6 +3120,10 @@ const FORWARD_RESULTS = new Set(["approved", "completed", "complete", "done"]);
 interface ReportFlags {
   result?: string;
   userInput?: string;
+  standingGrantId?: string;
+  standingGrantRouteId?: string;
+  targetIntentId?: string;
+  presenceReservationId?: string;
   reason?: string;
   skeletonStance?: string; // the classify round-trip's classified stance
   single?: boolean; // --single: commit a synthetic-id STAGE_STARTED/COMPLETED pair, never the main pointer
@@ -3028,6 +3149,18 @@ function parseReportFlags(args: string[]): ReportFlags {
     } else if (a === "--reason" && i + 1 < args.length) {
       flags.reason = args[i + 1];
       i++;
+    } else if (a === "--standing-grant-id") {
+      flags.standingGrantId = args[i + 1] ?? "";
+      if (i + 1 < args.length) i++;
+    } else if (a === "--standing-grant-route-id") {
+      flags.standingGrantRouteId = args[i + 1] ?? "";
+      if (i + 1 < args.length) i++;
+    } else if (a === "--target-intent-id") {
+      flags.targetIntentId = args[i + 1] ?? "";
+      if (i + 1 < args.length) i++;
+    } else if (a === "--presence-reservation-id") {
+      flags.presenceReservationId = args[i + 1] ?? "";
+      if (i + 1 < args.length) i++;
     } else if (a === "--skeleton-stance" && i + 1 < args.length) {
       flags.skeletonStance = args[i + 1];
       i++;
@@ -3056,6 +3189,7 @@ function spawnState(
   const toolPath = fileURLToPath(new URL("./amadeus-state.ts", import.meta.url));
   const result = Bun.spawnSync({
     cmd: ["bun", "run", toolPath, ...subArgs, "--project-dir", projectDir],
+    env: process.env,
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -3064,6 +3198,67 @@ function spawnState(
     stdout: new TextDecoder().decode(result.stdout),
     stderr: new TextDecoder().decode(result.stderr),
   };
+}
+
+export type GrantApprovalProcessResult =
+  | { readonly kind: "approved" }
+  | {
+      readonly kind: "await-approval";
+      readonly stage: string;
+      readonly targetIntentId: string;
+    }
+  | { readonly kind: "protocol-error"; readonly detail: string }
+  | { readonly kind: "fatal-error"; readonly detail: string };
+
+const GRANT_WIRE_UUID_V7_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+export function parseGrantApprovalProcessResult(
+  result: { readonly exitCode: number; readonly stdout: string; readonly stderr: string },
+): GrantApprovalProcessResult {
+  if (result.exitCode !== 0) {
+    return {
+      kind: "fatal-error",
+      detail: (result.stderr || result.stdout).trim(),
+    };
+  }
+  if (result.stderr.length !== 0) {
+    return { kind: "protocol-error", detail: "grant approval process wrote stderr" };
+  }
+  if (!/^[^\r\n]+\n?$/.test(result.stdout)) {
+    return { kind: "protocol-error", detail: "grant approval stdout must be one JSON line" };
+  }
+  let value: unknown;
+  try {
+    value = JSON.parse(result.stdout.trimEnd());
+  } catch {
+    return { kind: "protocol-error", detail: "grant approval stdout is not JSON" };
+  }
+  if (!isPlainObject(value) || typeof value.kind !== "string") {
+    return { kind: "protocol-error", detail: "grant approval JSON must be an object" };
+  }
+  const keys = Object.keys(value).sort();
+  if (value.kind === "approved" && keys.length === 1 && keys[0] === "kind") {
+    return { kind: "approved" };
+  }
+  const awaitKeys = ["kind", "reason", "stage", "target_intent_id"];
+  if (
+    value.kind === "await-approval" &&
+    keys.length === awaitKeys.length &&
+    keys.every((key, index) => key === awaitKeys[index]) &&
+    value.reason === "standing-grant-no-longer-authorizes" &&
+    typeof value.stage === "string" &&
+    /^[a-z0-9][a-z0-9-]*$/.test(value.stage) &&
+    typeof value.target_intent_id === "string" &&
+    GRANT_WIRE_UUID_V7_RE.test(value.target_intent_id)
+  ) {
+    return {
+      kind: "await-approval",
+      stage: value.stage,
+      targetIntentId: value.target_intent_id,
+    };
+  }
+  return { kind: "protocol-error", detail: "unknown grant approval JSON shape" };
 }
 
 // Shell out to `amadeus-audit.ts append <event> [--field k=v ...]` — the audit
@@ -3296,6 +3491,92 @@ function approveArgs(slug: string, flags: ReportFlags): string[] {
   return args;
 }
 
+function handleAuthorizedApprovalReport(
+  pd: string,
+  slug: string,
+  authority: Exclude<
+    ReturnType<typeof classifyApprovalAuthority>,
+    { readonly kind: "normal" } | { readonly kind: "invalid" }
+  >,
+): void {
+  const approve = ["approve", slug];
+  if (authority.kind === "grant-backed") {
+    approve.push(
+      "--standing-grant-id",
+      authority.grantId,
+      "--standing-grant-route-id",
+      authority.routeId,
+    );
+  } else {
+    approve.push(
+      "--user-input",
+      authority.userInput,
+      "--target-intent-id",
+      authority.targetIntentId,
+      "--presence-reservation-id",
+      authority.reservationId,
+    );
+  }
+  const processResult = parseGrantApprovalProcessResult(spawnState(pd, approve));
+  if (processResult.kind === "fatal-error") {
+    emit(errorDirective(
+      `Transition rejected by amadeus-state.ts approve for "${slug}"` +
+        (processResult.detail ? `: ${processResult.detail}` : "."),
+    ));
+    return;
+  }
+  if (processResult.kind === "protocol-error") {
+    emit(errorDirective(
+      `Approval process protocol error for "${slug}": ${processResult.detail}`,
+    ));
+    return;
+  }
+  if (processResult.kind === "await-approval") {
+    if (authority.kind !== "grant-backed" || processResult.stage !== slug) {
+      emit(errorDirective(`Unexpected await-approval outcome for "${slug}".`));
+      return;
+    }
+    const sessionId = process.env.AMADEUS_TRUSTED_SESSION_ID;
+    if (!sessionId) {
+      emit(errorDirective(
+        "Cannot arm human continuation without trusted host session identity.",
+      ));
+      return;
+    }
+    let reservation: PresenceReservation;
+    try {
+      reservation = armPresenceReservation({
+        projectDir: pd,
+        sessionId,
+        space: activeSpace(pd),
+        targetIntentId: processResult.targetIntentId,
+        stage: slug,
+        routeId: authority.routeId,
+      });
+    } catch (cause) {
+      emit(errorDirective(
+        `Cannot arm human continuation for "${slug}": ${errorMessage(cause)}`,
+      ));
+      return;
+    }
+    const directive: AwaitApprovalDirective = {
+      kind: "await-approval",
+      stage: slug,
+      reason: "standing-grant-no-longer-authorizes",
+      target_intent_id: processResult.targetIntentId,
+      presence_reservation_id: reservation.reservationId,
+    };
+    emit(directive);
+    return;
+  }
+  emit({
+    kind: "done",
+    reason:
+      `Committed approve for "${slug}" with ${authority.kind} authorization. ` +
+      "State advanced; run next to continue.",
+  });
+}
+
 // The `report` handler. Reads the acted stage + scope from state, decides the
 // committing subcommand(s) (gate status, then finality), shells out to the
 // atomic state tool, and emits a terminal `done` directive on success or an
@@ -3306,6 +3587,30 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
   // here, not the ambient CLAUDE_PROJECT_DIR, under in-process drivers (#1389).
   _handlerProjectDir = projectDir;
   const flags = parseReportFlags(args);
+  const modeResult = resolveOperatingMode(process.env.AMADEUS_OPERATING_MODE);
+  const authority = classifyApprovalAuthority({
+    operatingMode: modeResult.kind === "valid" ? modeResult.mode : modeResult.raw,
+    userInput: flags.userInput,
+    standingGrantId: flags.standingGrantId,
+    standingGrantRouteId: flags.standingGrantRouteId,
+    targetIntentId: flags.targetIntentId,
+    presenceReservationId: flags.presenceReservationId,
+  });
+  if (authority.kind === "invalid") {
+    emit(errorDirective(`Invalid approval authority: ${authority.reason}`));
+    return;
+  }
+  if (
+    authority.kind !== "normal" &&
+    (flags.single === true ||
+      flags.skeletonStance !== undefined ||
+      flags.mirrorBoundary !== undefined)
+  ) {
+    emit(errorDirective(
+      "Approval authorization carriers are valid only for a main-workflow stage report.",
+    ));
+    return;
+  }
 
   if (flags.mirrorBoundary !== undefined) {
     const phase = flags.mirrorBoundary;
@@ -3444,6 +3749,17 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
   }
 
   const pd = resolveProjectDir(projectDir);
+  if (authority.kind !== "normal") {
+    const slug = flags.stage?.trim();
+    if (!slug) {
+      emit(errorDirective(
+        "Approval authorization carriers require an explicit --stage.",
+      ));
+      return;
+    }
+    handleAuthorizedApprovalReport(pd, slug, authority);
+    return;
+  }
   const stateContent = loadStateFileIfPresent(pd);
   if (!stateContent) {
     emit({

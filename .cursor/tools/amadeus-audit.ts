@@ -28,7 +28,7 @@ export type AppendAuditResult =
   | { appended: true; event: string; timestamp: string }
   | { appended: false; reason: "intent-complete"; event: string; timestamp: string };
 
-// --- Canonical event types (73) ---
+// --- Canonical event types (78) ---
 // See docs/reference/12-state-machine.md for the state transitions that emit each event.
 
 const VALID_EVENT_TYPES = new Set([
@@ -98,6 +98,10 @@ const VALID_EVENT_TYPES = new Set([
   // general audit CLI, exactly like the presence/provenance events.
   "GRANT_ISSUED",
   "GRANT_REVOKED",
+  // Solo standing-grant route receipt (#1466). This protected immutable fact
+  // binds the route carrier to the exact stage and Grant Id selected by the
+  // trusted router; the general audit CLI must not be able to fabricate it.
+  "GATE_AUTHORIZATION_SELECTED",
   // Artifact events (hook-emitted)
   "ARTIFACT_CREATED",
   "ARTIFACT_UPDATED",
@@ -202,6 +206,7 @@ const EVENT_HEADINGS: Record<string, string> = {
   DELEGATED_REJECTION: "Delegated Rejection",
   GRANT_ISSUED: "Standing Grant Issued",
   GRANT_REVOKED: "Standing Grant Revoked",
+  GATE_AUTHORIZATION_SELECTED: "Gate Authorization Selected",
   ARTIFACT_CREATED: "Artifact Created",
   ARTIFACT_UPDATED: "Artifact Updated",
   ARTIFACT_REUSED: "Artifact Reused",
@@ -847,6 +852,7 @@ const PRESENCE_PROTECTED_EVENTS = new Set([
   // revoke-standing-delegation, backed by a real HUMAN_TURN, may write them).
   "GRANT_ISSUED",
   "GRANT_REVOKED",
+  "GATE_AUTHORIZATION_SELECTED",
   "INTENT_ARCHIVED",
   "INTENT_UNARCHIVED",
 ]);

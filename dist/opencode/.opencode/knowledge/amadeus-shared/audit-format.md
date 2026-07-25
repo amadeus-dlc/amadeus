@@ -8,7 +8,7 @@
 
 All event names follow `SUBJECT_PAST_VERB` — every event answers "what happened?"
 
-## Event Registry (77 events, 19 categories)
+## Event Registry (78 events, 19 categories)
 
 ### Workflow Lifecycle (6 events)
 
@@ -50,7 +50,7 @@ All event names follow `SUBJECT_PAST_VERB` — every event answers "what happene
 | `SESSION_RESUMED` | Existing Claude Code session resumed (source=resume) | Timestamp, Source | `hooks/amadeus-session-start.ts` |
 | `SESSION_COMPACTED` | Context compaction occurred | Timestamp, Current Stage, State Validity | `hooks/amadeus-validate-state.ts` (PreCompact) |
 | `SESSION_ENDED` | Claude Code session terminates | Timestamp, Reason | `hooks/amadeus-session-end.ts` |
-| `HUMAN_TURN` | A real human acted this turn: submitted a prompt, or answered a question widget only on a harness with a trusted question-answer hook (the approval/interview gate requires one since the last gate resolution). Codex uses numbered prose so every answer returns through prompt submission. | Timestamp | `hooks/amadeus-mint-presence.ts` (UserPromptSubmit + PostToolUse AskUserQuestion where that hook is trusted) + the per-harness prompt-submit adapters |
+| `HUMAN_TURN` | A real human acted this turn: submitted a prompt, or answered a question widget only on a harness with a trusted question-answer hook (the approval/interview gate requires one since the last gate resolution). Codex uses numbered prose so every answer returns through prompt submission. | Timestamp | `tools/amadeus-presence-reservation.ts` — the canonical presence seam appended to by `hooks/amadeus-mint-presence.ts` (UserPromptSubmit + PostToolUse AskUserQuestion where that hook is trusted) and by the per-harness prompt-submit adapters, which never append on their own |
 
 ### Initialization Events (3 events — fire IN ADDITION TO `STAGE_COMPLETED`)
 
@@ -81,14 +81,15 @@ All event names follow `SUBJECT_PAST_VERB` — every event answers "what happene
 | `DELEGATED_APPROVAL` | Leader session records a human-grounded approval into a remote conductor intent's audit dir (agent-team topology, #671) | Timestamp, Stage, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts, User Input | `tools/amadeus-state.ts delegate-approval` |
 | `DELEGATED_REJECTION` | Leader session records a human-grounded rejection into a remote conductor intent's audit dir; verb-scoped mirror of `DELEGATED_APPROVAL` (agent-team topology, #685) | Timestamp, Stage, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts, Feedback | `tools/amadeus-state.ts delegate-rejection` |
 
-### Standing Delegation Grants (2 events)
+### Standing Delegation Grants (3 events)
 
-Team-mode only, human-grounded like the delegations. A leader session, driven by a real human turn on its own ledger, issues a time-boxed standing grant that opens stage-gate approvals for the grant's TTL (default 4 hours) without a per-gate human turn. Phase-boundary gates are EXCLUDED by default and require the `--include-phase-boundary` opt-in. Both events carry the same issuer provenance coordinates as the delegations and are minted only by their trusted in-process writers (refused at the general audit CLI).
+Human-grounded in both solo and team modes. A session driven by a real human turn on its own ledger issues a time-boxed standing grant that may authorize covered stage gates for the grant's TTL (default 4 hours) without a per-gate human turn. Team mode retains its existing leader/delegation authorization path; solo mode uses the route receipt and commit-time revalidation path. Phase-boundary gates are EXCLUDED by default and require the `--include-phase-boundary` opt-in. Lifecycle events carry issuer provenance coordinates and all three events are minted only by trusted in-process writers (refused at the general audit CLI).
 
 | Event | When | Required Fields | Emitter |
 |-------|------|-----------------|---------|
-| `GRANT_ISSUED` | Leader issues a time-boxed standing stage-gate grant, grounded in a real human turn on its own ledger (Issue #1125) | Timestamp, Grant Id, Scope, Expires At, Includes Phase Boundary, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts, optional User Input | `tools/amadeus-state.ts grant-standing-delegation` |
-| `GRANT_REVOKED` | Leader revokes an outstanding standing grant by id, grounded in a real human turn (Issue #1125) | Timestamp, Grant Id, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | `tools/amadeus-state.ts revoke-standing-delegation` |
+| `GRANT_ISSUED` | Human-grounded session issues a time-boxed standing stage-gate grant (Issue #1125, solo support #1466) | Timestamp, Grant Id, Scope, Expires At, Includes Phase Boundary, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts, optional User Input | `tools/amadeus-state.ts grant-standing-delegation` |
+| `GRANT_REVOKED` | Human-grounded session revokes a standing grant id (Issue #1125, solo support #1466) | Timestamp, Grant Id, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | `tools/amadeus-state.ts revoke-standing-delegation` |
+| `GATE_AUTHORIZATION_SELECTED` | Solo-mode router records the exact standing grant selected for one stage-route attempt before emitting its carrier (Issue #1466) | Timestamp, Route Id, Stage, Grant Id | trusted in-process route writer |
 
 ### Artifact Events (3 events — hook-emitted)
 

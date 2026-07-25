@@ -48,7 +48,7 @@ import {
   peekMigrationPendingDecision,
   stateFilePath,
 } from "../tools/amadeus-lib.ts";
-import { appendAuditEntry } from "../tools/amadeus-audit.ts";
+import { hostSessionCapability, mintHumanPresence } from "../tools/amadeus-presence-reservation.ts";
 import { spawnHookWithRuntime } from "./amadeus-kiro-hook-runtime.ts";
 
 const HOOKS_DIR = dirname(fileURLToPath(import.meta.url));
@@ -260,13 +260,19 @@ if (target === "verb-intercept") {
   // core mint hook uses) BEFORE minting: a machine-injected turn (agmsg
   // teammate-message / task-notification) must NOT scaffold a phantom HUMAN_TURN
   // (#755/#811). Fail-open: a prompt-absent payload still mints (the core hook's
-  // contract).
+  // contract). The mint runs through the CANONICAL seam (mintHumanPresence) —
+  // this adapter only normalizes Kiro's session_id into HostSessionCapability so
+  // a solo standing-grant fallback armed in THIS session mints its targeted
+  // owner HUMAN_TURN exactly as on the other harnesses.
   try {
     const cwd = kiro.cwd ?? process.cwd();
     const machineInjected =
       typeof kiro.prompt === "string" && isMachineInjectedTurnText(kiro.prompt);
     if (existsSync(stateFilePath(cwd)) && !machineInjected) {
-      appendAuditEntry("HUMAN_TURN", {}, cwd);
+      mintHumanPresence({
+        projectDir: cwd,
+        capability: hostSessionCapability(kiro.session_id),
+      });
     }
   } catch { /* presence best-effort - mint never blocks the turn */ }
   if (cmd === null) process.exit(0); // not a terminal command — conductor handles it

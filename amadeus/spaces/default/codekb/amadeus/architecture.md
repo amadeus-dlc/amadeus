@@ -1,5 +1,40 @@
 # アーキテクチャ
 
+## Issue #1466 solo standing grant（現在、2026-07-25）
+
+base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb404524ef30a7d8a0a3f68f73`。[Issue #1466](https://github.com/amadeus-dlc/amadeus/issues/1466)。[PR #1468](https://github.com/amadeus-dlc/amadeus/pull/1468) は凍結試作で参考のみ、実装前提にしない。
+
+現行 team flow は `handleGrantStandingDelegation` による human-grounded grant 発行（`amadeus-state.ts:3110-3188`）、全 intent / shard からの active grant 探索（`amadeus-lib.ts:3851-3920`）、phase boundary / walking skeleton / ordinary gate 分類（同`:3937-3978`）、必要時の `DELEGATED_APPROVAL`、`approveUnderLock` 内 commit（`amadeus-state.ts:2754-2823`）である。solo は delegation を介さない。
+
+現行 `RunStageDirective` と `ReportFlags` / `approveArgs` に authorization / Grant Id carrier がなく（`amadeus-directive.ts:59-90`、`amadeus-orchestrate.ts:3003-3045,3293-3297`）、route と commit の間で expiry / revoke / 別 grant 選択が変化し得る。gate existence は workflow 境界、authorization source は fresh human turn / delegation / grant のどれで満たすかであり、別概念として維持する。
+
+## Interaction Diagrams
+
+```mermaid
+sequenceDiagram
+    participant N as next route
+    participant S as stage
+    participant R as report
+    participant L as approval lock
+    participant H as human gate
+    N->>S: GateRequirement と認可候補を渡す
+    S->>R: body と reviewer 完了後に報告
+    R->>L: 選択した Grant Id を運ぶ候補
+    alt exact Grant Id が有効
+        L-->>R: GATE_APPROVED と STAGE_COMPLETED
+        R-->>N: state advance
+    else 失効、取消、または不適格
+        L-->>H: typed non-error fallback
+        H-->>N: 通常の人間承認を再提示
+    end
+```
+
+テキスト fallback: `next` はゲートの有無と認可候補を分けて扱い、stage 実行後の commit lock 内で同じ Grant Id を再検証する候補である。有効なら `GATE_APPROVED` / `STAGE_COMPLETED` と state advance を確定し、不適格なら `ERROR_LOGGED` を含む監査や state mutation を一切行わず通常の人間承認へ戻す。carrier の具体形はまだ確定しない。
+
+## 不変条件と候補 seam
+
+protected audit event の一般 CLI mint 禁止、issuer `HUMAN_TURN` 実在、Grant Id 相関、phase-check、walking skeleton exclusion、per-unit 全成果物着地後の最終 gate を維持する。候補は (A) directive→report→approve へ exact Grant Id を運ぶ、(B) opaque authorization claim を運ぶ、(C) commit-only 再探索を維持する、の3案。fallback は `emitApprovalAudit` より前の typed non-error outcome とする必要があるが、配置と型は後続設計で裁定する。
+
 > **2026-07-24 更新（intent `260724-watcher-timeout-fix`、現在）**: base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb` → observed HEAD `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`（distance 155）の differential refresh（amadeus-bugfix / Minimal、[Issue #1449](https://github.com/amadeus-dlc/amadeus/issues/1449)）。交差面は Team Mode ランチャー(`packages/framework/core/tools/team-up.sh`)の起動シーケンス上の agmsg watcher arming 検証の位置。下記「Team Mode ランチャーの watcher arming 検証と mux_attach ブロッキング」節が current view。以下の 260723 系・260722 系節はいずれも履歴。
 
 ## Team Mode ランチャーの watcher arming 検証と mux_attach ブロッキング（260724-watcher-timeout-fix、現在、Issue #1449）

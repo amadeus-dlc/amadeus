@@ -108,14 +108,23 @@ export function reconstruct(target: string, env: CursorEnvelope): Reconstruction
     }
 
     case "mint": {
-      // → amadeus-mint-presence.ts {hook_event_name, prompt}. The core hook
-      // classifies machine-injected turns itself from the prompt text (#755), so
-      // the shim forwards the prompt and does no classification. Advisory.
+      // → amadeus-mint-presence.ts {hook_event_name, prompt, session_id?}. The
+      // core hook classifies machine-injected turns itself from the prompt text
+      // (#755), so the shim forwards the prompt and does no classification.
+      // session_id is forwarded when present so the core hook's canonical mint
+      // seam can resolve a solo standing-grant presence reservation armed in
+      // THIS session; absent, the core hook mints the ordinary HUMAN_TURN.
+      // Advisory.
+      const mintPayload: Record<string, unknown> = {
+        hook_event_name: "UserPromptSubmit",
+        prompt: env.prompt ?? "",
+      };
+      if (env.session_id) mintPayload.session_id = env.session_id;
       return {
         calls: [
           {
             hookFile: "amadeus-mint-presence.ts",
-            input: JSON.stringify({ hook_event_name: "UserPromptSubmit", prompt: env.prompt ?? "" }),
+            input: JSON.stringify(mintPayload),
           },
         ],
         forwardStdout: false,

@@ -114,7 +114,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 <!-- amadeus:practices-promote:BEGIN -->
 
-私たちは `main` を中心に、短命branchからPull Request経由で変更を取り込み、Boltはsquashして線形履歴を保つ。AIはmain mergeや不可逆な外部操作を行わず、人間の明示承認へhandoffする。
+私たちは `main` を中心に、短命ブランチと Pull Request を使う GitHub Flow / トランクベース寄りの運用を行う。Amadeus 自体の変更では intent 成果物を先に承認し、Construction の実装は Bolt 単位で分離して canonical source へ着地する。
 
 <!-- amadeus:practices-promote:END -->
 
@@ -287,7 +287,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 <!-- amadeus:practices-promote:BEGIN -->
 
-私たちはgreenfieldの最初のConstruction Boltを小さなend-to-end sliceとして確認し、既存コードへのbugfixではbootstrap対象がないためceremonyをskipする。本intentは既存Markdownのbranch hygieneであり、追加のskeletonは設けない。
+私たちは `amadeus-feature` を含む greenfield-shaped scope の最初の Construction Bolt を walking skeleton として扱い、必ず人間の gate で確認する。既存コードへの変更であっても scope が `amadeus-feature` ならこの規則を維持し、standing grant の自動認可対象にはしない。
 
 <!-- amadeus:practices-promote:END -->
 
@@ -295,7 +295,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 <!-- amadeus:practices-promote:BEGIN -->
 
-私たちはTypeScriptのテストを `tests/` 配下へ置き、Bun runnerでunit / integration / e2e / smokeを検証する。bugfixでは対象regressionを第一級成果物とし、typecheck、Biome lint、complexity、dist / self-install drift、test、coverageの既存CI gateをgreenに保つ。
+私たちは TypeScript のテストを `tests/` 配下へ置き、Bun runner で unit / integration / e2e / smoke を検証する。変更と並行して回帰テストを追加し、typecheck、Biome、complexity、coverage、dist / self-install drift、smoke / unit / integration の blocking CI を green に保つ。
 
 <!-- amadeus:practices-promote:END -->
 
@@ -305,7 +305,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 <!-- amadeus:practices-promote:BEGIN -->
 
-私たちはapplication deploy基盤を持たず、releaseは `.github/workflows/release.yml` の手動 `workflow_dispatch` からrelease-it、GitHub Release、npm publishを一続きで行う。PRやAmadeus workflowからversionを上げず、production相当のpublishは人間の承認下で実行する。
+私たちはアプリケーションのデプロイ基盤を持たず、release は `.github/workflows/release.yml` の手動 `workflow_dispatch` から release-it、GitHub Release、npm publish を一続きで実行する。Pull Request や Amadeus workflow から version を上げず、publish は人間の承認下で行う。
 
 <!-- amadeus:practices-promote:END -->
 
@@ -313,5 +313,5 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 <!-- amadeus:practices-promote:BEGIN -->
 
-私たちはTypeScript / ESMとBun直接実行を採用し、Biome lint、無効化したformatter、strictな `tsc --noEmit` に従う。`packages/framework/core/` のharness中立層と `packages/framework/harness/<name>/` のharness別表層を分離し、setup domainでは判別unionの `Result` を既決styleとして使う。
+私たちは TypeScript / ESM と Bun 直接実行、camelCase の内部名、snake_case の directive field、kebab-case の CLI flag、UPPER_SNAKE_CASE の audit event に従う。`packages/framework/core/` の harness-neutral source と `packages/framework/harness/<name>/` の projection を分離し、期待される非成功結果は判別 union、予期しない失敗は例外または fatal CLI error として扱う。
 <!-- amadeus:practices-promote:END -->

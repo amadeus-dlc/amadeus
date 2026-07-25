@@ -1,5 +1,15 @@
 # ビジネス概要
 
+## Issue #1466 solo standing grant（現在、2026-07-25）
+
+base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb404524ef30a7d8a0a3f68f73`。[Issue #1466](https://github.com/amadeus-dlc/amadeus/issues/1466) は、solo 運用でも期限付き standing grant を承認源として使い、route 後・commit 前に失効／取消された場合はエラーを残さず通常の人間承認へ戻す利用者体験を検討する。standing grant は設定値ではなく、引き続き `GRANT_ISSUED` / `GRANT_REVOKED` 監査イベントから導出する。[PR #1468](https://github.com/amadeus-dlc/amadeus/pull/1468) は凍結試作で参考のみ、実装前提にしない。
+
+現行 team flow は fresh `HUMAN_TURN` に基づく発行と `GRANT_ISSUED`、全 intent audit の失効・取消・provenance 探索、gate 適格性判定、必要時の `DELEGATED_APPROVAL`、lock 内認可、`GATE_APPROVED` / `STAGE_COMPLETED`、state advance から成る。solo は remote delegation を必要としないため、gate existence と authorization source を分離したまま route / commit 間の認可相関を追加することが課題である。exact Grant Id、opaque claim、commit-only 再探索、typed non-error fallback の選択は後続設計で裁定する。
+
+## Issue #1466 の成功境界
+
+commit 時不適格では `ERROR_LOGGED`、`GATE_APPROVED`、`STAGE_COMPLETED`、state advance を発生させない。phase boundary、walking skeleton、per-unit 最終 gate、issuer provenance、protected audit mint の既存不変条件と team delegation path は維持する。
+
 > **2026-07-24（intent `260724-watcher-timeout-fix`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み。** Team Mode ランチャー `team-up.sh` の watcher arming 検証が mux_attach を最大 270 秒ブロックする性能問題で、業務ドメイン（AI-DLC 自己ホスト開発）に構造変化なし（base `a81c11dde` → observed `6d4df9056`）。
 
 ## 260723-t241-ci-residency の業務境界（履歴: 2026-07-23）

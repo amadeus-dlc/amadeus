@@ -1,5 +1,22 @@
 # コンポーネント棚卸し
 
+## Issue #1466 solo standing grant（現在、2026-07-25）
+
+base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb404524ef30a7d8a0a3f68f73`。[Issue #1466](https://github.com/amadeus-dlc/amadeus/issues/1466)。[PR #1468](https://github.com/amadeus-dlc/amadeus/pull/1468) は凍結試作で参考のみ、実装前提にしない。
+
+| コンポーネント | 健全性 | 観測 |
+|---|---|---|
+| grant issuer / revoker | 注意 | human grounding は健全だが現行 team-only |
+| grant ledger resolver | リスク | exact ID lookup と同値 expiry tie-break がなく broad catch は `null` |
+| gate classifier | 健全 | phase boundary / skeleton / ordinary を分離 |
+| directive / report transport | ギャップ | authorization / Grant Id carrier がない |
+| approval transaction | 注意 | lock 内再検証位置はあるが exact-ID lookup がなく、拒否が error 経路 |
+| audit protection / presence mint | 健全 | protected mint と provenance を維持すべき |
+
+## 所有境界と候補
+
+team `DELEGATED_APPROVAL` は remote topology 固有、solo は local route / commit 相関であり統合しない。per-unit controller は `GateRequirement` を所有し、grant resolver は `GateAuthorizationSource` を所有する。grant は全 unit 完了後の最終 gate の認可源だけを担い、body / reviewer を再実行しない。exact ID、opaque claim、commit-only の比較は後続設計へ送る。
+
 ## Team Mode watcher arming 検証コンポーネント（260724-watcher-timeout-fix、2026-07-24、現在）
 
 差分リフレッシュ（base `a81c11dde` → observed HEAD `6d4df9056`、距離 155、amadeus-bugfix / Minimal、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)）。測定 ref: observed HEAD `6d4df9056` 実ファイル直読。すべて `packages/framework/core/tools/team-up.sh` 内（区間内 #1391 で導入、#1421 で packages 昇格 + 配布 11 コピー）。

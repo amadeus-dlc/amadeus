@@ -1,6 +1,18 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(現在: 260724-watcher-timeout-fix)
+## 実行メタデータ（現在: 260725-solo-standing-grants）
+
+- Date: `2026-07-25`
+- Base: `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`
+- Observed: `4491310cc0b432eb404524ef30a7d8a0a3f68f73`
+- Focus: [Issue #1466](https://github.com/amadeus-dlc/amadeus/issues/1466)
+- Reference only: [PR #1468](https://github.com/amadeus-dlc/amadeus/pull/1468) は凍結試作で参考のみ、実装前提にしない。
+- Method: Developer scan の結論を Architect が canonical code と既存テストで照合し、shared CodeKB の先頭 current view と per-intent re-scan に合成。実装方式は確定していない。
+- Conclusion: standing grant は監査イベントのまま維持する。solo route / report に grant identity がなく route / commit race がある。commit 時不適格には mutation 前の typed non-error human-approval fallback が必要。具体方式は未決定。
+- Diff / verification: 373 files、`+71,339/-811`。grant core は base..observed で無変更、orchestrate plugin 系は `+109/-3` の同時編集面。関連178テスト、dist 6 harness check、promote 4面 check は成功。`bun run check` は `tsc: command not found`（exit 127）で未判定。
+- Delivery boundary: 実装コード、intent state、memory、`intents.json`、generated dist は変更していない。
+
+## 実行メタデータ(履歴: 260724-watcher-timeout-fix)
 
 - Date: 2026-07-24
 - Observed at: `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`(現 HEAD `git rev-parse HEAD` 実測一致)

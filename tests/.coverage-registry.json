@@ -20,10 +20,10 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 521,
+    "total": 524,
     "enumeratedByClass": {
-      "function": 286,
-      "audit": 77,
+      "function": 288,
+      "audit": 78,
       "scope": 10,
       "stage": 32,
       "hook": 11,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 143,
+      "function": 145,
       "audit": 32,
       "scope": 10,
       "stage": 8,
@@ -185,6 +185,13 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "GATE_AUTHORIZATION_SELECTED",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "audit",
@@ -1588,6 +1595,18 @@
       "coveredBy": [
         {
           "file": "tests/unit/t109.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:evaluateStandingGrantGateEligibility",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t-solo-standing-grant-domain.test.ts",
           "mechanism": "none"
         }
       ],
@@ -3092,6 +3111,18 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:resolveOperatingMode",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t-solo-standing-grant-domain.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",

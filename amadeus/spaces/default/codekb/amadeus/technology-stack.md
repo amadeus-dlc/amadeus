@@ -1,5 +1,15 @@
 # 技術スタック
 
+## Issue #1466 solo standing grant（現在、2026-07-25）
+
+base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb404524ef30a7d8a0a3f68f73`。[Issue #1466](https://github.com/amadeus-dlc/amadeus/issues/1466)。[PR #1468](https://github.com/amadeus-dlc/amadeus/pull/1468) は凍結試作で参考のみ、実装前提にしない。
+
+現行は Bun / strict TypeScript ESM / Biome、CLI / JSON directive / Markdown state + append-only audit / filesystem lock が境界で、HTTP・DB はない。canonical core と6 harness overlay を `scripts/package.ts` が open-set discovery し、`--check` が `MISSING` / `DIFFERS` / `ORPHAN` を byte 比較する。standing grant は audit-derived のままとし、新規 storage / service / dependency は不要である。
+
+## 品質・配布への含意
+
+route / commit race は file-backed TOCTOU として lock 内再検証と決定的 ID 相関で扱う。規模は core 53 TypeScript / 48,990 LOC、tests 655 TypeScript。後続実装は canonical のみを編集して6 harness と self-install を再生成する。関連178テスト、dist 6 harness check、promote 4面 check は成功し、`bun run check` は `tsc: command not found`（exit 127）で未判定。API carrier の形は後続設計で裁定する。
+
 > **2026-07-24（intent `260724-watcher-timeout-fix`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み。** 交差要素は bash（`team-up.sh` 制御フロー）+ herdr（pane/agent 操作）+ agmsg（ready sentinel handshake、`spawn.sh`）で、いずれも既存スタック。新規ランタイム依存なし（base `a81c11dde` → observed `6d4df9056`）。
 
 ## 260723-t241-ci-residency 交差スタック（履歴: 2026-07-23）
