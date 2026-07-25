@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 521,
+    "total": 523,
     "enumeratedByClass": {
-      "function": 286,
+      "function": 288,
       "audit": 77,
       "scope": 10,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 143,
+      "function": 144,
       "audit": 32,
       "scope": 10,
       "stage": 8,
@@ -1435,6 +1435,22 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:detectHarnessType",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t269-harness-provenance.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t270-harness-provenance-birth.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:detectLeakedLocks",
       "minMechanism": "none",
       "coveredBy": [],
@@ -1744,9 +1760,20 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:HARNESS_DIR_TO_TYPE",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:harnessDir",
       "minMechanism": "none",
       "coveredBy": [
+        {
+          "file": "tests/integration/t269-harness-provenance.test.ts",
+          "mechanism": "cli"
+        },
         {
           "file": "tests/unit/t144-harness-seam.test.ts",
           "mechanism": "cli"

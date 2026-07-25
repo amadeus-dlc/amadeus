@@ -543,6 +543,18 @@ bun .claude/tools/amadeus-runtime.ts read requirements-analysis
 
 **効果の範囲:** ワークフロー初期化時のみ適用されます。intent の `amadeus-state.md` が存在すると、状態ファイルが正となります。完全なウォークスルーは [Customization § プロジェクトごとのデフォルトスコープ](13-customization.ja.md#per-project-default-scope) を参照してください。
 
+### `AMADEUS_HARNESS_TYPE`
+
+intent birth 時に記録するハーネス provenance を上書きします。自動検出が `unknown` になる場合に利用でき、`manual` は人が明示指定したことを表します。
+
+**有効な値:** `claude-code`、`codex`、`cursor`、`opencode`、`kiro`、`unknown`、`manual`。
+
+**優先順位:** `AMADEUS_HARNESS_TYPE` が環境変数として存在すると、`CLAUDECODE` シグナルおよびハーネス dot-directory 検出より優先されます。空文字または不正な値は `unknown` に正規化され、自動検出へフォールスルーしません。
+
+**効果の範囲:** 正規化した値を新規 intent の `amadeus-state.md` へ `- **Harness**: <value>` として1回だけ書き込みます。この optional フィールドを持たない既存 state も引き続き有効です。
+
+正準の runtime 契約は [Hooks and Tools リファレンス](../reference/06-hooks-and-tools.ja.md#runtime-環境変数)であり、このガイドは利用者向けの設定導線です。
+
 ---
 
 ## 次のステップ

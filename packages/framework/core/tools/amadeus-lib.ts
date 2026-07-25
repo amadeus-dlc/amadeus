@@ -157,6 +157,40 @@ export const PHASE_NUMBERS: Record<string, Phase> = {
 // reaches the probe; it resolves by script path.
 const KNOWN_HARNESS_DIRS = [".claude", ".kiro", ".codex", ".opencode", ".cursor"] as const;
 
+export type HarnessType =
+  | "claude-code"
+  | "codex"
+  | "cursor"
+  | "opencode"
+  | "kiro"
+  | "unknown"
+  | "manual";
+
+export const HARNESS_DIR_TO_TYPE = {
+  ".claude": "claude-code",
+  ".codex": "codex",
+  ".cursor": "cursor",
+  ".opencode": "opencode",
+  ".kiro": "kiro",
+} as const satisfies Readonly<Record<string, HarnessType>>;
+
+const HARNESS_TYPES = [
+  "claude-code",
+  "codex",
+  "cursor",
+  "opencode",
+  "kiro",
+  "unknown",
+  "manual",
+] as const satisfies readonly HarnessType[];
+
+type HarnessDirSource = "env" | "script-path" | "cwd-probe" | "fallback";
+
+interface HarnessDirResolution {
+  readonly dir: string;
+  readonly source: HarnessDirSource;
+}
+
 // True for a plausible harness dir name: a dot-prefixed segment, e.g. ".claude"
 // / ".kiro" / ".gemini". Guards the script-path derivation so an unexpected
 // layout (lib copied loose in a test, a non-dotted parent) falls through to the
@@ -165,31 +199,66 @@ function isHarnessDirName(name: string): boolean {
   return /^\.[a-z0-9][a-z0-9._-]*$/i.test(name);
 }
 
-function deriveHarnessDir(): string {
+function harnessDirResolution(
+  dir: string,
+  source: HarnessDirSource,
+): HarnessDirResolution {
+  return Object.freeze({ dir, source });
+}
+
+function deriveNonEnvHarnessDir(): HarnessDirResolution {
   // Script-path derivation (open-set): the module ships at
   // <project>/<harness>/tools/amadeus-lib.ts, so the harness dir is the basename
   // of the grandparent of this file — whatever it is named.
   const scriptDir = dirname(fileURLToPath(import.meta.url));
   if (basename(scriptDir) === "tools") {
     const candidate = basename(dirname(scriptDir));
-    if (isHarnessDirName(candidate)) return candidate;
+    if (isHarnessDirName(candidate)) {
+      return harnessDirResolution(candidate, "script-path");
+    }
   }
   // CWD probe (dev repo, multiple trees coexist): known dirs in canonical order.
   const cwd = process.cwd();
   for (const h of KNOWN_HARNESS_DIRS) {
-    if (existsSync(join(cwd, h))) return h;
+    if (existsSync(join(cwd, h))) {
+      return harnessDirResolution(h, "cwd-probe");
+    }
   }
-  return ".claude";
+  return harnessDirResolution(".claude", "fallback");
 }
 
-let _harnessDir: string | null = null;
+let cachedNonEnvHarnessDir: HarnessDirResolution | null = null;
 
-export function harnessDir(): string {
+function resolveHarnessDir(): HarnessDirResolution {
   // Env read at call time (not cached) so tests can flip it between bun
   // invocations — same pattern as stageGraphPath() below.
-  if (process.env.AMADEUS_HARNESS_DIR) return process.env.AMADEUS_HARNESS_DIR;
-  if (_harnessDir === null) _harnessDir = deriveHarnessDir();
-  return _harnessDir;
+  const envHarnessDir = process.env.AMADEUS_HARNESS_DIR;
+  if (envHarnessDir) return harnessDirResolution(envHarnessDir, "env");
+  if (cachedNonEnvHarnessDir === null) {
+    cachedNonEnvHarnessDir = deriveNonEnvHarnessDir();
+  }
+  return cachedNonEnvHarnessDir;
+}
+
+export function harnessDir(): string {
+  return resolveHarnessDir().dir;
+}
+
+function parseHarnessType(value: string): HarnessType {
+  return HARNESS_TYPES.includes(value as HarnessType)
+    ? (value as HarnessType)
+    : "unknown";
+}
+
+export function detectHarnessType(): HarnessType {
+  const explicitType = process.env.AMADEUS_HARNESS_TYPE;
+  if (explicitType !== undefined) return parseHarnessType(explicitType);
+  if (process.env.CLAUDECODE === "1") return "claude-code";
+
+  const resolution = resolveHarnessDir();
+  if (resolution.source === "fallback") return "unknown";
+  if (!Object.hasOwn(HARNESS_DIR_TO_TYPE, resolution.dir)) return "unknown";
+  return HARNESS_DIR_TO_TYPE[resolution.dir as keyof typeof HARNESS_DIR_TO_TYPE];
 }
 
 // The AIDLC markdown rule layers (amadeus-org/team/project/phase .md) live under

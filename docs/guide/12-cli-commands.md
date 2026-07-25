@@ -549,6 +549,18 @@ Pre-set the default scope for a project. Read from `.claude/settings.json` `env`
 
 **Scope of effect:** applies at workflow initialization only. Once the intent's `amadeus-state.md` exists, the state file is authoritative. See [Customization § Per-Project Default Scope](13-customization.md#per-project-default-scope) for the full walkthrough.
 
+### `AMADEUS_HARNESS_TYPE`
+
+Override the harness provenance recorded when an intent is born. This is useful when automatic detection returns `unknown`; use `manual` to state explicitly that the harness was supplied by a person.
+
+**Valid values:** `claude-code`, `codex`, `cursor`, `opencode`, `kiro`, `unknown`, `manual`.
+
+**Precedence:** the presence of `AMADEUS_HARNESS_TYPE` takes priority over the `CLAUDECODE` signal and harness dot-directory detection. An empty or invalid value is normalized to `unknown` and does not fall through to automatic detection.
+
+**Scope of effect:** the normalized value is written once to the new intent's `amadeus-state.md` as `- **Harness**: <value>`. Existing state files without this optional field remain valid.
+
+The canonical runtime contract is the [Hooks and Tools reference](../reference/06-hooks-and-tools.md#runtime-environment-variables); this guide is the user-facing setup path.
+
 ---
 
 ## Next Steps
