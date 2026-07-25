@@ -3614,12 +3614,8 @@ function handleAuthorizedApprovalReport(
     emit(directive);
     return;
   }
-  emit({
-    kind: "done",
-    reason:
-      `Committed approve for "${slug}" with ${authority.kind} authorization. ` +
-      "State advanced; run next to continue.",
-  });
+  const approvedReason = `Committed approve for "${slug}" with ${authority.kind} authorization. State advanced; run next to continue.`;
+  emit({ kind: "done", reason: approvedReason });
 }
 
 // The `report` handler. Reads the acted stage + scope from state, decides the
