@@ -120,12 +120,11 @@ WATCHER_RESEND_MAX="${WATCHER_RESEND_MAX:-1}"
 # We source it and call agmsg_ready_path rather than duplicating the path string
 # here (NFR-4). Overridable so tests can point at a self-contained stub.
 AGMSG_ACTAS_LOCK_LIB="${AGMSG_ACTAS_LOCK_LIB:-$AGMSG_SCRIPT_DIR/lib/actas-lock.sh}"
-# Cap on concurrent `git worktree add` jobs in create_run. Having a cap at all
-# is the point: an unbounded fan-out is a regression, not a speed-up.
-# Measured on this repo (11,051 tracked files, .git 166M), 7 worktrees:
+# Cap on concurrent worktree checkouts in create_run. Having a cap at all is the
+# point: an unbounded fan-out is a regression, not a speed-up. Concurrency 7 is
+# slower than serial because git serialises on the object store, so an unbounded
+# fan-out just thrashes. Measured on this repo, 7 worktrees:
 # serial 7.39s / 2 -> 4.88s / 3 -> 4.03s / 4 -> 3.32s / 7 -> 7.55s.
-# Concurrency 7 is slower than serial: git serialises on the object store,
-# so an unbounded fan-out thrashes. 4 is the measured optimum.
 WORKTREE_PARALLELISM=4
 # Number of engineer members (leader is always added on top). Selectable per
 # fresh run with -2/-4/-6; defaults to 6. A resumed run reads its saved size.
@@ -1348,20 +1347,44 @@ create_run() {
   printf '%s\n' "$MSG_BACKEND" >"$RUN_RECORD/msg"
   printf 'preparing\n' >"$RUN_RECORD/status"
 
-  # Worktree creation dominates launch time (7.39s of it for a 7-member run), so
-  # it runs in batches of WORKTREE_PARALLELISM. Each member is handled in a
-  # subshell: the git call and the record writes both land under paths unique to
-  # that member, so nothing is shared and no locking is needed.
+  # Worktree creation dominates launch time, and the cost is almost entirely the
+  # checkout -- registering a worktree is ~0.02s per member, populating it is the
+  # rest. So registration runs serially and only the checkouts run in parallel.
+  #
+  # This split is not a style choice. `git worktree add` scans .git/worktrees/
+  # for existing entries, so two of them running at once can read a half-written
+  # entry: "fatal: failed to read .git/worktrees/<other>/commondir". It does not
+  # reproduce on macOS but does on Linux CI. git does not document worktree add
+  # as concurrency-safe, and there is nothing to lock against inside it.
+  #
+  # Measured, 7 members, same clone, n=3:
+  #   serial add            13.28 / 10.46 / 10.73s
+  #   parallel add          4.20 / 4.89 / 4.83s   <- races
+  #   serial --no-checkout
+  #     + parallel checkout 5.39 / 5.41s          <- this
+  for m in $(members_for "$TEAM_SIZE"); do
+    wt="$RUN_ROOT/$m"
+    branch="team/$RUN_ID/$m"
+    if ! git -C "$REPO" worktree add -q --no-checkout -b "$branch" "$wt" "$base_commit"; then
+      echo "ERROR: worktree registration failed for $m: $wt" >&2
+      return 1
+    fi
+  done
+
+  # Each checkout writes only inside its own worktree, so these do not contend
+  # for .git/worktrees/ the way add does. The record files are written by the
+  # subshell that checked the member out, so their presence means that member's
+  # checkout finished -- which the completion check below relies on.
   pending=0
   for m in $(members_for "$TEAM_SIZE"); do
     wt="$RUN_ROOT/$m"
     branch="team/$RUN_ID/$m"
     (
-      if ! git -C "$REPO" worktree add -q -b "$branch" "$wt" "$base_commit"; then
+      if ! git -C "$wt" checkout -q; then
         # One line, self-contained: several subshells write to the same stderr
         # and their output interleaves, so a message split across lines could
         # not be attributed back to a member.
-        echo "ERROR: worktree add failed for $m: $wt" >&2
+        echo "ERROR: worktree checkout failed for $m: $wt" >&2
         exit 1
       fi
       mkdir -p "$RUN_RECORD/members/$m"
@@ -1376,21 +1399,29 @@ create_run() {
   done
   wait
 
-  # Completion is decided by asking git what it registered, not by collecting
-  # subshell exit codes and not by testing for directories. `git worktree add`
-  # can fail during checkout *after* creating the target directory, leaving an
-  # unregistered husk that an -d test would score as a success. Consulting the
-  # registry is also the same "observe the real thing" rule rollback follows.
+  # Completion is decided by observing two things, not by collecting subshell
+  # exit codes and not by testing for directories:
+  #
+  #   git registration  -- the worktree is real, not a husk. A directory can
+  #                        exist without git knowing about it.
+  #   the record files  -- the checkout finished. Registration alone no longer
+  #                        implies a populated worktree now that --no-checkout
+  #                        splits the two, so checking only the registry would
+  #                        score an empty worktree as a success.
   registered="$(git -C "$REPO" worktree list --porcelain | sed -n 's/^worktree //p')"
   missing=""
   for m in $(members_for "$TEAM_SIZE"); do
     resolved="$(cd "$RUN_ROOT/$m" 2>/dev/null && pwd -P)" || resolved=""
     if [ -z "$resolved" ] || ! printf '%s\n' "$registered" | grep -qxF -- "$resolved"; then
       missing="$missing $m"
+      continue
+    fi
+    if [ ! -f "$RUN_RECORD/members/$m/path" ] || [ ! -f "$RUN_RECORD/members/$m/branch" ]; then
+      missing="$missing $m"
     fi
   done
   if [ -n "$missing" ]; then
-    echo "ERROR: worktree creation incomplete, not registered with git:$missing" >&2
+    echo "ERROR: worktree creation incomplete:$missing" >&2
     return 1
   fi
 }

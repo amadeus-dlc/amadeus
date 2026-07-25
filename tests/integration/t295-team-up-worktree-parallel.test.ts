@@ -3,13 +3,24 @@
 // 7-member launch — and tracked what it had built in a CREATED_MEMBERS shell
 // variable that rollback_prepared_run read back.
 //
-// Creating them in parallel breaks that variable: the work now happens in
-// subshells, which cannot write back to their parent. So the ledger is gone and
-// both the success check and the rollback set are re-derived by observing what
-// is actually there. These tests pin the three things that decision rests on:
-//   - concurrency stays at or below WORKTREE_PARALLELISM (an unbounded fan-out
-//     measured *slower* than serial, so the cap is the feature)
-//   - completion is judged by git's registry, not by directory existence
+// Parallelising it breaks that variable: the work now happens in subshells,
+// which cannot write back to their parent. So the ledger is gone and both the
+// success check and the rollback set are re-derived by observing what is
+// actually there.
+//
+// The parallel part is the *checkout*, not the add. `git worktree add` scans
+// .git/worktrees/ and two of them at once can read a half-written entry
+// ("fatal: failed to read .git/worktrees/<other>/commondir") — it does not
+// reproduce on macOS but did on Linux CI. Registration is serial and cheap
+// (~0.02s/member); the checkout is the cost and is safe to fan out.
+//
+// These tests pin the things that decision rests on:
+//   - registration is serial, so the race cannot come back
+//   - checkout concurrency stays at or below WORKTREE_PARALLELISM (an unbounded
+//     fan-out measured *slower* than serial, so the cap is the feature)
+//   - completion is judged by git's registry *and* the record files, not by
+//     directory existence — registration alone no longer implies a populated
+//     worktree now that --no-checkout splits the two
 //   - a partial failure still rolls the whole run back, and the walk that does
 //     it never leaves RUN_ROOT or touches a non-member name
 //
@@ -50,9 +61,9 @@ function git(args: string[], cwd: string) {
  * failure injection.
  *
  * The argv team-up.sh builds is:
- *   -C <repo> worktree add -q -b <branch> <worktree> <commit>
- *    $1  $2      $3     $4  $5 $6   $7       $8         $9
- * so the worktree path is $8. ($7 is the branch, whose basename is also the
+ *   -C <repo> worktree add -q --no-checkout -b <branch> <worktree> <commit>
+ *    $1  $2      $3     $4  $5      $6      $7   $8        $9        $10
+ * so the worktree path is $9. ($8 is the branch, whose basename is also the
  * member name — close enough to look right while pointing somewhere else.)
  */
 function installGitShim(body: string) {
@@ -60,7 +71,31 @@ function installGitShim(body: string) {
     join(shimDir, "git"),
     `#!/usr/bin/env bash
 if [ "\${3:-}" = "worktree" ] && [ "\${4:-}" = "add" ]; then
-  WT="\${8:-}"
+  WT="\${9:-}"
+  MEMBER="\${WT##*/}"
+  ${body}
+fi
+exec ${REAL_GIT} "$@"
+`,
+    { mode: 0o755 },
+  );
+}
+
+/**
+ * Same idea as installGitShim, for the parallel pass. `body` runs for
+ * `git -C <worktree> checkout` invocations only, with $WT bound to the worktree
+ * and $MEMBER to its basename.
+ *
+ * The argv team-up.sh builds is:
+ *   -C <worktree> checkout -q
+ *    $1    $2        $3    $4
+ */
+function installCheckoutShim(body: string) {
+  writeFileSync(
+    join(shimDir, "git"),
+    `#!/usr/bin/env bash
+if [ "\${3:-}" = "checkout" ]; then
+  WT="\${2:-}"
   MEMBER="\${WT##*/}"
   ${body}
 fi
@@ -139,6 +174,9 @@ describe("team-up worktree creation is parallel and bounded (Issue #1478)", () =
 
     const source = readFileSync(TEAM_UP, "utf8");
     expect(source).toContain("serial 7.39s / 2 -> 4.88s / 3 -> 4.03s / 4 -> 3.32s / 7 -> 7.55s.");
+    // The split that removed the race carries its own measurement.
+    expect(source).toContain("serial add            13.28 / 10.46 / 10.73s");
+    expect(source).toContain("+ parallel checkout 5.39 / 5.41s");
   });
 
   // BR-P3 / BR-P4: every member ends up with a worktree and with its record
@@ -158,12 +196,13 @@ describe("team-up worktree creation is parallel and bounded (Issue #1478)", () =
     }
   });
 
-  // BR-P1 / D-P3: the cap is the requirement. The shim brackets each real add
-  // with a start/end marker and holds the window open long enough for the
-  // batches to overlap; replaying the markers gives the peak concurrency.
-  test("concurrency never exceeds WORKTREE_PARALLELISM (BR-P1)", () => {
+  // BR-P1 / D-P3: the cap is the requirement, and it applies to the *checkout*.
+  // The shim brackets each real checkout with a start/end marker and holds the
+  // window open long enough for the batches to overlap; replaying the markers
+  // gives the peak concurrency.
+  test("checkout concurrency never exceeds WORKTREE_PARALLELISM (BR-P1)", () => {
     const log = join(work, "conc.log");
-    installGitShim(`printf 'S\\n' >>"${log}"
+    installCheckoutShim(`printf 'S\\n' >>"${log}"
   ${REAL_GIT} "$@"; rc=$?
   sleep 0.3
   printf 'E\\n' >>"${log}"
@@ -184,21 +223,95 @@ describe("team-up worktree creation is parallel and bounded (Issue #1478)", () =
     // on a loop that stayed serial.
     expect(peak).toBeGreaterThan(1);
   });
+
+  // The regression this fix exists for. Two `git worktree add` runs at once can
+  // read each other's half-written .git/worktrees/ entry, so registration must
+  // stay serial. Same marker replay as above, pointed at add instead: the peak
+  // must be exactly 1.
+  test("worktree registration never runs concurrently (Linux CI race)", () => {
+    const log = join(work, "add.log");
+    installGitShim(`printf 'S\\n' >>"${log}"
+  ${REAL_GIT} "$@"; rc=$?
+  sleep 0.1
+  printf 'E\\n' >>"${log}"
+  exit $rc`);
+
+    const result = runLib(`TEAM_SIZE=6; create_run`);
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+
+    let live = 0;
+    let peak = 0;
+    for (const line of readFileSync(log, "utf8").trim().split("\n")) {
+      live += line === "S" ? 1 : -1;
+      if (live > peak) peak = live;
+    }
+    expect(peak).toBe(1);
+  });
+
+  // --no-checkout is not incidental: it is what makes the serial pass cheap
+  // enough to be serial. Pin it so a future edit cannot quietly drop it and
+  // reintroduce the race by making registration expensive again.
+  test("registration passes --no-checkout (D-P3)", () => {
+    const log = join(work, "argv.log");
+    installGitShim(`printf '%s\\n' "$*" >>"${log}"`);
+
+    const result = runLib(`TEAM_SIZE=6; create_run`);
+    expect(result.exitCode, result.stderr.toString()).toBe(0);
+    for (const line of readFileSync(log, "utf8").trim().split("\n")) {
+      expect(line).toContain("--no-checkout");
+    }
+  });
 });
 
 describe("team-up completion is judged by git registration (Issue #1478)", () => {
   // BR-P13 / BR-P14: a failed member makes create_run return non-zero, and the
   // stderr line names both the member and its path on one line — several
   // subshells share stderr, so an attribution split over lines would be lost.
-  test("a failed add fails create_run and names the member (BR-P13, BR-P14)", () => {
-    installGitShim(`if [ "$MEMBER" = "engineer-2" ]; then exit 1; fi`);
+  test("a failed checkout fails create_run and names the member (BR-P13, BR-P14)", () => {
+    installCheckoutShim(`if [ "$MEMBER" = "engineer-2" ]; then exit 1; fi`);
 
     const result = runLib(`TEAM_SIZE=6; create_run`);
     expect(result.exitCode).not.toBe(0);
     const stderr = result.stderr.toString();
-    expect(stderr).toContain(`ERROR: worktree add failed for engineer-2: ${memberPath("engineer-2")}`);
+    expect(stderr).toContain(`ERROR: worktree checkout failed for engineer-2: ${memberPath("engineer-2")}`);
     expect(stderr).toContain("worktree creation incomplete");
     expect(stderr).toContain("engineer-2");
+  });
+
+  // Registration is serial, so its failure stops the loop rather than being
+  // collected afterwards — a different path from the checkout failure above.
+  test("a failed registration fails create_run immediately", () => {
+    installGitShim(`if [ "$MEMBER" = "engineer-2" ]; then exit 1; fi`);
+
+    const result = runLib(`TEAM_SIZE=6; create_run`);
+    expect(result.exitCode).not.toBe(0);
+    expect(result.stderr.toString()).toContain(
+      `ERROR: worktree registration failed for engineer-2: ${memberPath("engineer-2")}`,
+    );
+  });
+
+  // Splitting add from checkout opened a way to be registered without being
+  // finished, so the completion check reads the record files too — git's
+  // registry alone no longer proves a member is done.
+  //
+  // Injected by putting a *file* where engineer-3's record directory belongs:
+  // the mkdir -p fails, so the record writes fail, while the worktree itself is
+  // registered and populated exactly like every other member.
+  test("registration alone is not success without the record files (D-R4)", () => {
+    const members = join(state, "instances/default/runs/testrun/members");
+    installCheckoutShim(`if [ "$MEMBER" = "engineer-3" ]; then
+    mkdir -p "${members}"
+    : >"${members}/engineer-3"
+  fi`);
+
+    const result = runLib(`TEAM_SIZE=6; create_run`);
+    expect(result.exitCode).not.toBe(0);
+    const stderr = result.stderr.toString();
+    expect(stderr).toContain("worktree creation incomplete");
+    expect(stderr).toContain("engineer-3");
+    // The worktree really was created and registered — the failure is the
+    // missing completion evidence, not a missing worktree.
+    expect(git(["worktree", "list", "--porcelain"], repo)).toContain("engineer-3\n");
   });
 
   // D-R4, the reason this check reads the registry instead of the filesystem.
