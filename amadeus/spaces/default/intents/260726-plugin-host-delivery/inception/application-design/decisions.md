@@ -46,7 +46,7 @@
 
 **Context**: FR-1 マトリクスが確定条件だが、設計は方式クラスを先に枠組み化できる(上流の Claude=marketplace / Codex=tag+hash pin / Kiro=folder-drop の 3 型 — commit 29a31f78 の Plugin Mechanism doc)。上流に前例のない cursor / opencode / kimi は folder-drop+hook または manual クラスに入る見込み(codekb component-inventory.md のフック面実測より)。
 
-**Decision**: 全ハーネスを 3 クラスへ分類する枠組みを採用 — **(i) native-manifest**(ホスト標準のプラグイン導入 UI/コマンドあり)、**(ii) folder-drop+auto-compose**(標準機構なし・セッションフックあり)、**(iii) manual-only**(フック起動も不可 — 文書化された 1 コマンド手動 compose)。どのクラスでも trust grant・no-clobber・atomic は engine 側で同一(上流 Kiro の「信頼ゲートなし」より強い契約を維持)。各ハーネスのクラス割当は C9 マトリクスの実測で確定し、割当と degrade 契約を doctor で観測可能にする。
+**Decision**: 全ハーネスを 3 クラスへ分類する枠組みを採用 — **(i) native-manifest**(ホスト標準のプラグイン導入 UI/コマンドあり)、**(ii) folder-drop-auto**(標準機構なし・セッションフックあり — folder-drop+auto-compose)、**(iii) manual-only**(フック起動も不可 — 文書化された 1 コマンド手動 compose)。機械 literal の正準は `"native-manifest" | "folder-drop-auto" | "manual-only"` の 3 値(本 ADR が canonical 定義 — 下流成果物はこの literal を逐語使用する。U1 FD レビュー是正 2026-07-27 で統一)。どのクラスでも trust grant・no-clobber・atomic は engine 側で同一(上流 Kiro の「信頼ゲートなし」より強い契約を維持)。各ハーネスのクラス割当は C9 マトリクスの実測で確定し、割当と degrade 契約を doctor で観測可能にする。
 
 **Alternatives Rejected**:
 - **全面 native 前提**: 存在しない機構の仮定(FR-1 で禁止)。却下

@@ -27,7 +27,7 @@
 - `checkPluginProjections(): DriftReport` — `--check` 編入用。stale / orphan を列挙
 - 生成物(ハーネス別、C9 マトリクスで確定するクラスに応じ選択):
   - claude: `.claude-plugin/plugin.json`+marketplace metadata+hooks snippet+`plugins/<name>/` 内容
-  - folder-drop クラス: `<harness-root>/plugins/<name>/` レイアウト+フック snippet+INSTALL 手順書
+  - folder-drop-auto クラス: `<harness-root>/plugins/<name>/` レイアウト+フック snippet+INSTALL 手順書
   - manual-only クラス: 同上(フック snippet なし・手動 compose 手順書)
 
 ## C4 フック契約(各ハーネス共通形)
