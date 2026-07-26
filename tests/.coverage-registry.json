@@ -20,13 +20,13 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 534,
+    "total": 535,
     "enumeratedByClass": {
       "function": 298,
       "audit": 78,
       "scope": 10,
       "stage": 32,
-      "hook": 11,
+      "hook": 12,
       "subcommand": 98,
       "render-surface": 7
     },
@@ -3991,6 +3991,13 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "hook",
+      "unitId": "amadeus-plugin-compose",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "hook",

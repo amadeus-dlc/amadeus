@@ -1,9 +1,10 @@
 // packages/framework/core/tools/amadeus-plugin-compose.ts — C4 Plugin Composition
-// (U10, FR-6 item 20). Relocated from scripts/plugin-composition.ts into the
-// harness-neutral core so the amadeus-plugin.ts CLI can import the engine and
-// ship to every harness via coreDirs projection (U2 C2, harness-tools-placement).
-// Signatures are unchanged from the pre-move engine (BR-U2-1 single implementation,
-// BR-U2-7 no compatibility re-export at the old path).
+// (U10, FR-6 item 20). Relocated from the old build-time plugin-composition
+// module into the harness-neutral core so the amadeus-plugin.ts CLI can import
+// the engine and ship to every harness via coreDirs projection (U2 C2,
+// harness-tools-placement). Signatures are unchanged from the pre-move engine
+// (BR-U2-1 single implementation, BR-U2-7 no compatibility re-export at the old
+// path).
 //
 // The host-side composition ENGINE (mechanism only): inspect a discovered plugin
 // against a host snapshot, plan a no-clobber composition, apply it as a single
@@ -13,7 +14,7 @@
 // SCOPE (U10). The six public seams below plus the internal discoverPlugins
 // helper. The reference plugin `test-pro` and its authoring guide are U11; the
 // ledger/evidence closure is U12; the byte projection into dist/ is U09
-// (scripts/plugin-projection.ts). `when` evaluation, agents/scopes/memory/
+// (the plugin-projection module). `when` evaluation, agents/scopes/memory/
 // knowledge composition, marketplace, lockfiles and managed settings are OUT OF
 // SCOPE — this file never touches them.
 //
@@ -47,9 +48,9 @@ import { validateStageFrontmatter } from "./amadeus-stage-schema.ts";
 // Read-only filesystem seam so discovery is drivable by a fake in tests. Method
 // names deliberately avoid the node:fs API names (existsSync/readFileSync/…) so
 // a pure consumer or fake stays free of filesystem *signals* — the node backend
-// below is the only place those names appear. Co-located here (was
-// scripts/plugin-projection.ts) so the moved engine carries no scripts/ import
-// and stays dist-shippable; plugin-projection.ts now imports it from here
+// below is the only place those names appear. Co-located here (was formerly in
+// the plugin-projection module) so the moved engine carries no build-time
+// import and stays dist-shippable; plugin-projection.ts now imports it from here
 // (single definition — C2 "二重定義しない").
 export type ReadOnlyFs = {
   exists(p: string): boolean;

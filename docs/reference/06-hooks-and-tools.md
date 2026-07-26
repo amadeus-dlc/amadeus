@@ -2,7 +2,7 @@
 
 > Languages: **English** | [日本語](06-hooks-and-tools.ja.md)
 
-This chapter documents the hook system architecture, all eleven hook scripts, the audit event taxonomy, CLI tool configuration, and the deterministic utility tool.
+This chapter documents the hook system architecture, all twelve hook scripts, the audit event taxonomy, CLI tool configuration, and the deterministic utility tool.
 
 > **Path convention.** State, audit, and artifacts live under the active intent's **record dir** — `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`, written `<record>/` below (a compact UTC date prefix plus a short kebab-case label so record dirs sort chronologically; the canonical id is the UUIDv7 in the `intents.json` registry row). The audit trail is a directory of per-clone shards under `<record>/audit/`, not a single file.
 
@@ -10,9 +10,9 @@ This chapter documents the hook system architecture, all eleven hook scripts, th
 
 ## Hook System Architecture
 
-This implementation uses eleven hook scripts in `.claude/hooks/`. All eleven are TypeScript (run via `bun`). All eleven are **project-wide** — registered in `settings.json` (the statusline via the top-level `statusLine` key, the other ten via the `hooks` block), they fire regardless of which skill is active. They were previously split (six declared in `amadeus/SKILL.md` frontmatter as skill-scoped, the rest project-wide); v0.6.0 moved the skill-scoped six into `settings.json` so every entry point — the orchestrator, each packaged scope/stage runner, and any hand-written customer runner — inherits the deterministic spine with no per-runner `hooks:` block. This is safe because every hook **self-gates**: it early-exits when there is no active workflow (`amadeus-state.md` / the active intent's `audit/` shard absent), so always-on is a no-op outside AI-DLC.
+This implementation uses twelve hook scripts in `.claude/hooks/`. All twelve are TypeScript (run via `bun`). All twelve are **project-wide** — registered in `settings.json` (the statusline via the top-level `statusLine` key, the other eleven via the `hooks` block), they fire regardless of which skill is active. They were previously split (six declared in `amadeus/SKILL.md` frontmatter as skill-scoped, the rest project-wide); v0.6.0 moved the skill-scoped six into `settings.json` so every entry point — the orchestrator, each packaged scope/stage runner, and any hand-written customer runner — inherits the deterministic spine with no per-runner `hooks:` block. This is safe because every hook **self-gates**: it early-exits when there is no active workflow (`amadeus-state.md` / the active intent's `audit/` shard absent), so always-on is a no-op outside AI-DLC.
 
-Ten of the eleven are **non-blocking** — they observe and exit 0, never altering control flow. One, the `Stop` hook (`amadeus-stop.ts`), is **flow-altering**: it may return `{"decision":"block"}` to keep the interactive forwarding loop running. That is a sanctioned, deliberate contract for loop enforcement and is distinct from the advisory `never-block` contract every other hook honours (see "The flow-altering `Stop` hook" below).
+Eleven of the twelve are **non-blocking** — they observe and exit 0, never altering control flow. One, the `Stop` hook (`amadeus-stop.ts`), is **flow-altering**: it may return `{"decision":"block"}` to keep the interactive forwarding loop running. That is a sanctioned, deliberate contract for loop enforcement and is distinct from the advisory `never-block` contract every other hook honours (see "The flow-altering `Stop` hook" below).
 
 ```
 .claude/hooks/
@@ -25,6 +25,7 @@ Ten of the eleven are **non-blocking** — they observe and exit 0, never alteri
 +-- log-subagent.ts      # SubagentStop (project-wide, settings.json, TypeScript)
 +-- amadeus-stop.ts        # Stop (project-wide, settings.json, TypeScript, flow-altering)
 +-- session-start.ts     # SessionStart (project-wide, settings.json, TypeScript)
++-- plugin-compose.ts    # SessionStart (project-wide, settings.json, TypeScript)
 +-- session-end.ts       # SessionEnd (project-wide, settings.json, TypeScript)
 +-- amadeus-statusline.ts  # statusLine (project-wide, settings.json, TypeScript)
 ```
@@ -42,12 +43,13 @@ Ten of the eleven are **non-blocking** — they observe and exit 0, never alteri
 | `log-subagent.ts` | SubagentStop | Project-wide (settings.json) | (empty) | Log subagent completion events |
 | `amadeus-stop.ts` | Stop | Project-wide (settings.json) | (empty) | **Flow-altering.** Enforce the forwarding loop on turn-end: run `amadeus-orchestrate next`; on `done` or `parked` allow the stop, on a pending directive block the stop and inject the next move back via `reason`. Allows the stop (human-wait carve-out) when the current stage is awaiting approval (`[?]`), being revised (`[R]`), `[-]` in-progress with an unanswered question in its `<slug>-questions.md`, or the ending turn was conversational (the human's last prompt was answered with no workflow-engine call, read from the harness transcript) - the last two suppressed under autonomous Construction. Recursion-bounded (no-progress counter + `stop_hook_active` under `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`; default 2 in an interactive run and 8 under autonomous Construction). No-op outside an AIDLC workflow |
 | `session-start.ts` | SessionStart | Project-wide (settings.json) | (empty) | Inject workflow context on session resume |
+| `plugin-compose.ts` | SessionStart | Project-wide (settings.json) | (empty) | Auto-compose opted-in plugins into the host (`amadeus-plugin.ts compose --if-stale`); non-blocking, no-op when the composition record is current |
 | `session-end.ts` | SessionEnd | Project-wide (settings.json) | (empty) | Emit `SESSION_ENDED` audit event on graceful exit |
 | `amadeus-statusline.ts` | statusLine | Project-wide (settings.json) | -- | Show real-time progress in terminal |
 
 ### Shared Characteristics
 
-All eleven TypeScript hooks:
+All twelve TypeScript hooks:
 
 - Written in TypeScript, run via `bun`
 - Do not need executable permissions — work identically on macOS, Linux, and native Windows PowerShell
