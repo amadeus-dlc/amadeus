@@ -14,3 +14,4 @@
 
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
+- 2026-07-26T15:30:00Z — ideation phase boundary の mirror sync は skip で記録した; mirror-lifecycle の prompt 往復不全([#1548](https://github.com/amadeus-dlc/amadeus/issues/1548) P1/S2 — answer verb 不成立+stale expectedPrompt が sync を state-write block)により guarded 経路が塞がっているため。Mirror #1545 の本文は create 時点の内容のまま。#1548 修正着地後、次の節目で sync を再開する
