@@ -50,7 +50,6 @@ import {
   normalizeWorktreeSlug,
   ownPhase,
   PHASE_NUMBERS,
-  PHASES,
   parseCheckboxes,
   parseIntentStatus,
   parseRefsList,
