@@ -6,7 +6,7 @@
 - **Scope**: amadeus-feature
 - **Start Date**: 2026-07-26T13:47:19Z
 - **State Version**: 7
-- **Active Agent**: amadeus-pipeline-deploy-agent
+- **Active Agent**: amadeus-product-agent
 - **Harness**: claude-code
 - **Worktree Path**:
 - **Bolt Refs**:
@@ -26,8 +26,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 18
-- **Completed**: 8
-- **In Progress**: practices-discovery
+- **Completed**: 9
+- **In Progress**: requirements-analysis
 
 ## Runtime State
 - **Revision Count**: 1
@@ -61,8 +61,8 @@
 
 ### INCEPTION PHASE
 - [x] reverse-engineering — EXECUTE
-- [-] practices-discovery — EXECUTE
-- [ ] requirements-analysis — EXECUTE
+- [x] practices-discovery — EXECUTE
+- [-] requirements-analysis — EXECUTE
 - [ ] user-stories — SKIP
 - [ ] refined-mockups — SKIP
 - [ ] application-design — EXECUTE
@@ -90,14 +90,14 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: INCEPTION
-- **Current Stage**: practices-discovery
-- **Next Stage**: requirements-analysis
+- **Current Stage**: requirements-analysis
+- **Next Stage**: application-design
 - **Status**: Running
-- **Last Updated**: 2026-07-26T14:40:26Z
+- **Last Updated**: 2026-07-26T14:44:10Z
 
 ## Session Resume Point
-- **Last Completed Stage**: reverse-engineering
-- **Next Action**: Execute Practices Discovery
+- **Last Completed Stage**: practices-discovery
+- **Next Action**: Execute Requirements Analysis
 - **Pending Artifacts**: none
 
 <!-- amadeus:mirror-state:v1:start -->
