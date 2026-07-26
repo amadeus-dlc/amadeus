@@ -2392,3 +2392,636 @@
 **Agent**: amadeus-delivery-agent
 
 ---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T14:23:57Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/approval-handoff-questions.md
+**Context**: ideation > approval-handoff > approval-handoff-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:23:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3ca22fd4
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/approval-handoff-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T14:23:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3ca22fd4
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/approval-handoff-questions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:23:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5bec5644
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/approval-handoff-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T14:23:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5bec5644
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/approval-handoff-questions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:23:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 02c58744
+**Sensor ID**: answer-evidence
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/approval-handoff-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T14:23:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: 02c58744
+**Sensor ID**: answer-evidence
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/approval-handoff-questions.md
+**Duration ms**: 37
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T14:24:24Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/initiative-brief.md
+**Context**: ideation > approval-handoff > initiative-brief.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:24:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9322b524
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/initiative-brief.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T14:24:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9322b524
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/initiative-brief.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:24:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: abfd4ecd
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/initiative-brief.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T14:24:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: abfd4ecd
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/initiative-brief.md
+**Duration ms**: 38
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T14:24:40Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/decision-log.md
+**Context**: ideation > approval-handoff > decision-log.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:24:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4a144e44
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/decision-log.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T14:24:40Z
+**Event**: SENSOR_FAILED
+**Fire id**: 4a144e44
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/decision-log.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/approval-handoff/required-sections-4a144e44.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:24:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: d82ef82f
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/decision-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T14:24:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: d82ef82f
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/decision-log.md
+**Duration ms**: 37
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T14:24:58Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/verification/phase-check-ideation.md
+**Context**: verification > phase-check-ideation.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:24:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: a19d1364
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/verification/phase-check-ideation.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T14:24:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: a19d1364
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/verification/phase-check-ideation.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:24:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3ade6fdb
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/verification/phase-check-ideation.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T14:24:58Z
+**Event**: SENSOR_FAILED
+**Fire id**: 3ade6fdb
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/verification/phase-check-ideation.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/approval-handoff/upstream-coverage-3ade6fdb.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:25:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8a8128ca
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/initiative-brief.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T14:25:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8a8128ca
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/initiative-brief.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:25:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5f3c03c4
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/decision-log.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T14:25:04Z
+**Event**: SENSOR_FAILED
+**Fire id**: 5f3c03c4
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/decision-log.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/approval-handoff/required-sections-5f3c03c4.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:25:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1c5fee16
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/approval-handoff-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T14:25:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1c5fee16
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/approval-handoff-questions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:25:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3aed327a
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/initiative-brief.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T14:25:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3aed327a
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/initiative-brief.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:25:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2cdce6d7
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/decision-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T14:25:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2cdce6d7
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/decision-log.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:25:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6b338419
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/approval-handoff-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T14:25:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6b338419
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/approval-handoff-questions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:25:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: a208ed96
+**Sensor ID**: answer-evidence
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/approval-handoff-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T14:25:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: a208ed96
+**Sensor ID**: answer-evidence
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/approval-handoff-questions.md
+**Duration ms**: 38
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T14:25:30Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/decision-log.md
+**Context**: ideation > approval-handoff > decision-log.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:25:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: 89c32cd6
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/decision-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T14:25:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: 89c32cd6
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/decision-log.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:25:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4d1c74b7
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/decision-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T14:25:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4d1c74b7
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/decision-log.md
+**Duration ms**: 38
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T14:25:33Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/verification/phase-check-ideation.md
+**Context**: verification > phase-check-ideation.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:25:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 662c3170
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/verification/phase-check-ideation.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T14:25:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: 662c3170
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/verification/phase-check-ideation.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:25:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: d45ac8fa
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/verification/phase-check-ideation.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T14:25:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: d45ac8fa
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/verification/phase-check-ideation.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:25:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2d22ded4
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/decision-log.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T14:25:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2d22ded4
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/decision-log.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:25:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: 15eadadc
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/verification/phase-check-ideation.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T14:25:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: 15eadadc
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/verification/phase-check-ideation.md
+**Duration ms**: 65
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T14:25:50Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/memory.md
+**Context**: ideation > approval-handoff > memory.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:25:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3f4e21bd
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/memory.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T14:25:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3f4e21bd
+**Sensor ID**: required-sections
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/memory.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T14:25:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7f998621
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/memory.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T14:25:50Z
+**Event**: SENSOR_FAILED
+**Fire id**: 7f998621
+**Sensor ID**: upstream-coverage
+**Stage slug**: approval-handoff
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/ideation/approval-handoff/memory.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/approval-handoff/upstream-coverage-7f998621.md
+**Findings count**: 5
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-26T14:26:49Z
+**Event**: HUMAN_TURN
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-26T14:26:56Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: approval-handoff
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-26T14:26:56Z
+**Event**: GATE_APPROVED
+**Stage**: approval-handoff
+**User Input**: Approve(Go 承認、§13 0件)
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-26T14:26:56Z
+**Event**: STAGE_COMPLETED
+**Stage**: approval-handoff
+**Details**: Stage Approval Handoff approved by gate
+
+---
+
+## Phase Completion
+**Timestamp**: 2026-07-26T14:26:56Z
+**Event**: PHASE_COMPLETED
+**From phase**: ideation
+**To phase**: inception
+**Stages completed**: 7
+
+---
+
+## Phase Verification
+**Timestamp**: 2026-07-26T14:26:56Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: ideation → inception
+
+---
+
+## Phase Start
+**Timestamp**: 2026-07-26T14:26:56Z
+**Event**: PHASE_STARTED
+**Phase**: inception
+**Scope**: amadeus-feature
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-26T14:26:56Z
+**Event**: STAGE_STARTED
+**Stage**: reverse-engineering
+**Agent**: amadeus-developer-agent
+
+---
