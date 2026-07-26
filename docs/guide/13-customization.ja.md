@@ -135,7 +135,7 @@ cp .claude/settings.local.json.example .claude/settings.local.json
 ```json
 "statusLine": {
   "type": "command",
-  "command": "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-statusline.ts"
+  "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-statusline.ts\""
 }
 ```
 

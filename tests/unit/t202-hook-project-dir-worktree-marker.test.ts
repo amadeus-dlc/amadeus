@@ -22,6 +22,15 @@
 // worktree cwd — which carries its own amadeus/ + .claude/tools/ trees even
 // though the hook script's OWN path resolves to <main> — wins correctly.
 //
+// FIX 2 (issue #1482, user ruling Q1=A). The marker rung above reads
+// process.cwd(), which is the HOOK PROCESS's cwd — not necessarily the
+// session's. Claude Code pins CLAUDE_PROJECT_DIR to the launch dir and it does
+// not follow a session into a worktree, so env (rung 1) still won and every
+// hook read the main checkout's state. The hook stdin payload's own `cwd`
+// field (measured live on Claude Code 2.1.220) is therefore promoted above
+// env, gated on the same workspace-marker check so an arbitrary session cwd
+// cannot hijack resolution.
+//
 // WHY A SUBPROCESS. Mirrors t144's rationale: resolveProjectDirFromHook reads
 // import.meta.url of the CALLER and process.cwd() at call time; running
 // in-process against the suite's own fixed cwd/import.meta.url would not let
@@ -68,13 +77,14 @@ function makeWorktreeFixture(root: string): { mainDir: string; worktreeDir: stri
 function evalResolve(
   libPath: string,
   hookPath: string,
-  opts: { cwd: string; env?: Record<string, string | undefined> },
+  opts: { cwd: string; env?: Record<string, string | undefined>; payloadCwd?: string },
 ): string {
+  const payloadArg = opts.payloadCwd === undefined ? "" : `, ${JSON.stringify(opts.payloadCwd)}`;
   const r = spawnSync(
     "bun",
     [
       "-e",
-      `import { resolveProjectDirFromHook } from ${JSON.stringify(libPath)}; console.log(resolveProjectDirFromHook(${JSON.stringify(`file://${hookPath}`)}));`,
+      `import { resolveProjectDirFromHook } from ${JSON.stringify(libPath)}; console.log(resolveProjectDirFromHook(${JSON.stringify(`file://${hookPath}`)}${payloadArg}));`,
     ],
     {
       encoding: "utf-8",
@@ -102,13 +112,54 @@ describe("t202 resolveProjectDirFromHook — worktree marker rung (issue #641)",
     }
   });
 
-  test("2: CLAUDE_PROJECT_DIR env still outranks the marker rung", () => {
+  // Revised for #1482 (user ruling Q1=A): env no longer outranks EVERYTHING —
+  // a marker-carrying hook payload cwd now sits above it. With NO payload cwd
+  // (this case) the ladder is unchanged and env still outranks the marker rung.
+  test("2: with no payload cwd, CLAUDE_PROJECT_DIR env still outranks the marker rung", () => {
     const tmp = realpathSync(mkdtempSync(join(tmpdir(), "t202-")));
     try {
       const { worktreeDir, hookPath } = makeWorktreeFixture(tmp);
       const resolved = evalResolve(CLAUDE_LIB, hookPath, {
         cwd: worktreeDir,
         env: { CLAUDE_PROJECT_DIR: "/from/env" },
+      });
+      expect(resolved).toBe("/from/env");
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  // --- #1482: the payload-cwd rung ---
+
+  test("7: a payload cwd carrying the workspace marker outranks CLAUDE_PROJECT_DIR", () => {
+    const tmp = realpathSync(mkdtempSync(join(tmpdir(), "t202-")));
+    try {
+      const { worktreeDir, hookPath } = makeWorktreeFixture(tmp);
+      // The real #1482 shape: the session runs in the worktree (payload cwd),
+      // while CLAUDE_PROJECT_DIR is still pinned to the launch dir.
+      const resolved = evalResolve(CLAUDE_LIB, hookPath, {
+        cwd: tmp,
+        env: { CLAUDE_PROJECT_DIR: "/from/env" },
+        payloadCwd: worktreeDir,
+      });
+      expect(resolved).toBe(worktreeDir);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  test("8: a payload cwd WITHOUT the workspace marker is rejected and env wins", () => {
+    const tmp = realpathSync(mkdtempSync(join(tmpdir(), "t202-")));
+    try {
+      const { hookPath } = makeWorktreeFixture(tmp);
+      // An arbitrary session cwd (no amadeus/ + <harness>/tools/) must not
+      // hijack resolution — the ladder continues at the env rung.
+      const unmarked = join(tmp, "unmarked");
+      mkdirSync(unmarked, { recursive: true });
+      const resolved = evalResolve(CLAUDE_LIB, hookPath, {
+        cwd: tmp,
+        env: { CLAUDE_PROJECT_DIR: "/from/env" },
+        payloadCwd: unmarked,
       });
       expect(resolved).toBe("/from/env");
     } finally {

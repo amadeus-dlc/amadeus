@@ -45,7 +45,7 @@ worktree セッション(git worktree 上での amadeus 実行)で発生する 2
 - FR-3a: hook 起動行を `bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-*.ts` から `bun "${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-*.ts"` 形(シェル既定値展開)へ変更する。env 不在時は hook 実行 cwd 相対で解決され、スクリプト内の解決 ladder(FR-2 改訂後)が pd を確定する。
 - FR-3b: 変更面の全数棚卸し — 起動行を持つ正本(settings.json / settings.json.example とその生成元)を grep(`\$CLAUDE_PROJECT_DIR` の変数名キーと `/.claude/hooks/` のリテラルキーの 2 キー、`cid:application-design:dual-key-consumer-inventory`)で全数列挙し、全ハーネス配布面(dist 6 面+self-install)を同一変更で同期する(`bun scripts/package.ts` + `bun run promote:self`、`dist:check` / `promote:self:check` green)。
 - FR-3c: 受け入れ基準 — `CLAUDE_PROJECT_DIR` を **unset** した環境で、プロジェクトルートを cwd として mint-presence hook を起動行と同型のコマンドで実行し、exit 0 かつ HUMAN_TURN が当該 intent シャードへ追記されること(本セッションの実被害経路そのものでの確認)。env 設定済み環境での従来挙動は不変。
-- FR-3d: 落ちる実証 — 修正前の起動行形で env unset 実行が失敗すること(bun の module not found)を記録してから修正する(自然な赤が本セッションで既に実測済み — その記録を流用してよい)。
+- FR-3d(実装時実測によりユーザー裁定で改訂 2026-07-26): 落ちる実証 — 修正前の**無引用**起動行形が「空白を含むプロジェクトパス」で word split して exit 1 になり、出荷形(引用+既定値展開)は同条件で exit 0 になることを実測で固定する(t296)。当初前提「env unset → `bun /.claude/hooks/...` の module not found」は bun 1.3.13 の未文書 cwd-fallback により cwd=プロジェクトルートでは再現しないことが制御実測で判明(`:-.` は未文書 fallback への依存を除去する硬化として正当)。この乖離により本セッションの「全 hook 無音不発」の機序は部分未解明 — #1492 は本修正でクローズせず Refs に留め、実測結果を Issue へ追記して継続調査する。
 
 ### FR-4: リグレッションテスト(bugfix スコープの Testing Posture)
 

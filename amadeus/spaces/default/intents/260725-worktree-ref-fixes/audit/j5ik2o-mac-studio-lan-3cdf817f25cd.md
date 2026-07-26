@@ -418,3 +418,117 @@
 **Agent**: amadeus-developer-agent
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-26T00:07:46Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-26T00:07:53Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-26T00:08:03Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-26T00:08:03Z
+**Event**: HUMAN_TURN
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T00:47:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: a7f7486b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-lib.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T00:47:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: a7f7486b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-lib.ts
+**Duration ms**: 1629
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T00:47:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0f84bea6
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/hooks/amadeus-stop.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T00:47:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0f84bea6
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/hooks/amadeus-stop.ts
+**Duration ms**: 801
+
+---
+
+## Rule Learned
+**Timestamp**: 2026-07-26T01:28:40Z
+**Event**: RULE_LEARNED
+**Stage**: code-generation
+**Candidate-ID**: c2-bun-rootpath-fallback
+**Destination**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/bugfix-1482-1481-1455/amadeus/spaces/default/memory/project.md
+**Heading**: ## Testing Posture
+**Source**: orchestrator
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-26T01:30:16Z
+**Event**: HUMAN_TURN
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-26T01:30:16Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-26T01:30:16Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-26T01:30:16Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: Stage Code Generation approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-26T01:30:16Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Agent**: amadeus-quality-agent
+
+---

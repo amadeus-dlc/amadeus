@@ -1,10 +1,11 @@
 // covers: subcommand:amadeus-state:archive subcommand:amadeus-state:unarchive
 // @test-size medium
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { cpus, tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { currentGitSha } from "../harness/git-sha.ts";
 import { appendLifecycleAuditEntryUnlocked } from "../../packages/framework/core/tools/amadeus-audit.ts";
 import {
   auditLockDir,
@@ -429,31 +430,6 @@ function benchmarkChild(mode: LifecycleBenchmarkSample["mode"]): LifecycleBenchm
 function p95(values: number[]): number {
   const sorted = [...values].sort((left, right) => left - right);
   return sorted[Math.ceil(sorted.length * 0.95) - 1];
-}
-
-function currentGitSha(): string {
-  const repositoryRoot = join(import.meta.dir, "..", "..");
-  const dotGit = join(repositoryRoot, ".git");
-  const dotGitText = statSync(dotGit).isDirectory()
-    ? ""
-    : readFileSync(dotGit, "utf-8").trim();
-  const gitDir = dotGitText.startsWith("gitdir:")
-    ? resolve(repositoryRoot, dotGitText.slice("gitdir:".length).trim())
-    : dotGit;
-  const head = readFileSync(join(gitDir, "HEAD"), "utf-8").trim();
-  if (!head.startsWith("ref:")) return head;
-  const ref = head.slice("ref:".length).trim();
-  const looseRef = join(gitDir, ref);
-  if (existsSync(looseRef)) return readFileSync(looseRef, "utf-8").trim();
-  const commonDirPath = join(gitDir, "commondir");
-  const commonDir = existsSync(commonDirPath)
-    ? join(gitDir, readFileSync(commonDirPath, "utf-8").trim())
-    : gitDir;
-  const packed = readFileSync(join(commonDir, "packed-refs"), "utf-8")
-    .split("\n")
-    .find((line) => line.endsWith(` ${ref}`));
-  if (!packed) throw new Error(`Cannot resolve Git ref ${ref}`);
-  return packed.split(" ", 1)[0];
 }
 
 describe("intent lifecycle transaction performance contract", () => {

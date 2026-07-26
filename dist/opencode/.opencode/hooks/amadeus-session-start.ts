@@ -34,6 +34,7 @@ import {
   hooksHealthDir,
   isClaudeCodeHookInput,
   isoTimestamp,
+  readHookStdin,
   readSessionIntentUuid,
   recordHookDrop,
   recoveryFilePath,
@@ -43,7 +44,10 @@ import {
   writeSessionIntentUuid,
 } from "../tools/amadeus-lib.ts";
 
-const projectDir = resolveProjectDirFromHook(import.meta.url);
+// Drain stdin first: the payload's `cwd` is the top rung of project-dir
+// resolution (#1482), and the stream can only be read once.
+const hookStdin = await readHookStdin();
+const projectDir = resolveProjectDirFromHook(import.meta.url, hookStdin.cwd);
 
 // Idempotent ensure-step (P0.1 robustness): align the harness-native includes
 // with the active space at session start, BEFORE the no-workflow early-exit, so
@@ -83,24 +87,17 @@ let source = "startup";
 // per-session→intent record (resume rebind below); "" when absent (a TTY/empty
 // invocation) — the rebind logic no-ops without it.
 let sessionId = "";
-if (!process.stdin.isTTY) {
+if (hookStdin.text.length > 0) {
   try {
-    const input = await Bun.stdin.text();
-    if (input.length > 0) {
-      try {
-        const raw: unknown = JSON.parse(input);
-        if (isClaudeCodeHookInput(raw)) {
-          source = raw.source ? String(raw.source) : "unknown";
-          if (typeof raw.session_id === "string") sessionId = raw.session_id;
-        } else {
-          source = "unknown";
-        }
-      } catch {
-        source = "malformed";
-      }
+    const raw: unknown = JSON.parse(hookStdin.text);
+    if (isClaudeCodeHookInput(raw)) {
+      source = raw.source ? String(raw.source) : "unknown";
+      if (typeof raw.session_id === "string") sessionId = raw.session_id;
+    } else {
+      source = "unknown";
     }
   } catch {
-    // stdin read itself failed — treat as startup (no payload available)
+    source = "malformed";
   }
 }
 

@@ -1,10 +1,11 @@
 // covers: subcommand:amadeus-utility:intent function:archivedNextGuard subcommand:amadeus-state:unpark
 // @test-size medium
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { cpus, tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { currentGitSha } from "../harness/git-sha.ts";
 
 const ROOT = join(import.meta.dir, "../..");
 const UTILITY = join(ROOT, "packages/framework/core/tools/amadeus-utility.ts");
@@ -72,29 +73,6 @@ function run(tool: string, root: string, args: string[]) {
 
 function unchanged(paths: string[]): string[] {
   return paths.map((path) => readFileSync(path, "utf-8"));
-}
-
-function currentGitSha(repositoryRoot: string): string {
-  const dotGit = join(repositoryRoot, ".git");
-  const dotGitText = statSync(dotGit).isDirectory()
-    ? ""
-    : readFileSync(dotGit, "utf-8");
-  const gitDir = dotGitText.startsWith("gitdir:")
-    ? resolve(repositoryRoot, dotGitText.slice("gitdir:".length).trim())
-    : dotGit;
-  const head = readFileSync(join(gitDir, "HEAD"), "utf-8").trim();
-  if (!head.startsWith("ref:")) return head;
-  const ref = head.slice("ref:".length).trim();
-  const looseRef = join(gitDir, ref);
-  if (existsSync(looseRef)) return readFileSync(looseRef, "utf-8").trim();
-  const commonDirPath = join(gitDir, "commondir");
-  const commonDir = existsSync(commonDirPath)
-    ? join(gitDir, readFileSync(commonDirPath, "utf-8").trim())
-    : gitDir;
-  const packed = readFileSync(join(commonDir, "packed-refs"), "utf-8");
-  const line = packed.split("\n").find((entry) => entry.endsWith(` ${ref}`));
-  if (!line) throw new Error(`Unable to resolve Git ref ${ref}`);
-  return line.split(" ")[0];
 }
 
 type BenchmarkSample = {

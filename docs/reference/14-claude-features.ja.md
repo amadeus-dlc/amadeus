@@ -213,7 +213,7 @@ Gitignore:
 ```json
 "statusLine": {
   "type": "command",
-  "command": "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-statusline.ts"
+  "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-statusline.ts\""
 }
 ```
 
@@ -227,14 +227,14 @@ Gitignore:
     "matcher": "",
     "hooks": [{
       "type": "command",
-      "command": "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-session-start.ts"
+      "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-session-start.ts\""
     }]
   }],
   "SessionEnd": [{
     "matcher": "",
     "hooks": [{
       "type": "command",
-      "command": "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-session-end.ts"
+      "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-session-end.ts\""
     }]
   }]
 }

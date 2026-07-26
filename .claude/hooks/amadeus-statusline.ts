@@ -1,6 +1,6 @@
 // Status line: Display amadeus workflow position in the terminal status area
 // Registered via statusLine setting in settings.json
-// Invoked via: bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-statusline.ts
+// Invoked via: bun "${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-statusline.ts"
 import { existsSync, readFileSync } from "node:fs";
 import {
   activeIntent,
@@ -14,6 +14,7 @@ import {
 } from "../tools/amadeus-lib.ts";
 
 type Input = {
+  cwd?: string;
   workspace?: { project_dir?: string };
   model?: { id?: string };
   context_window?: { used_percentage?: number };
@@ -24,12 +25,13 @@ async function resolveProjectDir(input: Input): Promise<string> {
   const fromStdin = input.workspace?.project_dir;
   if (fromStdin) return fromStdin;
 
-  // Methods 2-4: the shared hook seam — CLAUDE_PROJECT_DIR, then script-path
-  // derivation and CWD probe across ALL harness dirs (.claude/.kiro/.codex).
-  // Using the seam (rather than a private .claude-hardcoded copy) keeps this
-  // hook harness-neutral like the other 9 core hooks: a future kiro/codex
-  // statusline resolves its own project root instead of only ever .claude.
-  return resolveProjectDirFromHook(import.meta.url);
+  // Methods 2-5: the shared hook seam — the payload's own `cwd` (#1482), then
+  // CLAUDE_PROJECT_DIR, script-path derivation and the CWD probe across ALL
+  // harness dirs (.claude/.kiro/.codex). Using the seam (rather than a private
+  // .claude-hardcoded copy) keeps this hook harness-neutral like the other 10
+  // core hooks: a future kiro/codex statusline resolves its own project root
+  // instead of only ever .claude.
+  return resolveProjectDirFromHook(import.meta.url, input.cwd ?? null);
 }
 
 function abbreviateModel(modelId: string): string {

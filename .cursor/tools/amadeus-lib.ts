@@ -259,13 +259,28 @@ function findWorkspaceMarkerAncestor(startDir: string): string | null {
 
 // --- Hook project dir resolution ---
 
-export function resolveProjectDirFromHook(importMetaUrl: string): string {
-  // 1. CLAUDE_PROJECT_DIR env var
+// `payloadCwd` is the `cwd` field of the harness hook's stdin payload — the
+// directory the SESSION is actually running in. Measured live on Claude Code
+// 2.1.220: SessionStart / UserPromptSubmit / Stop payloads all carry it.
+// It outranks CLAUDE_PROJECT_DIR because that env var is pinned to the launch
+// directory (the main checkout) and does NOT follow a session into a git
+// worktree — so with env alone every hook read and wrote the main checkout's
+// state while the engine worked in the worktree (issue #1482).
+export function resolveProjectDirFromHook(
+  importMetaUrl: string,
+  payloadCwd?: string | null,
+): string {
+  // 1. Hook payload cwd, but only when it carries its own workspace marker —
+  //    an arbitrary session cwd (a subdirectory, an unrelated repo) must not
+  //    hijack resolution. Marker-less payload cwd falls through to the ladder.
+  if (payloadCwd && hasWorkspaceMarker(payloadCwd)) return payloadCwd;
+
+  // 2. CLAUDE_PROJECT_DIR env var
   if (process.env.CLAUDE_PROJECT_DIR) return process.env.CLAUDE_PROJECT_DIR;
 
-  // 2. CWD (or an ancestor) carries its own amadeus workspace marker
+  // 3. CWD (or an ancestor) carries its own amadeus workspace marker
   //    (issue #641). In a worktree session the hook SCRIPTS live in the
-  //    launch dir (the main checkout), so rung 3 below would converge on
+  //    launch dir (the main checkout), so rung 4 below would converge on
   //    main even though the engine's cwd — and the record it writes — is
   //    the worktree. Search upward from cwd for a dir that itself has an
   //    "amadeus/" tree and a "<harness>/tools/" tree, and prefer it over the
@@ -273,13 +288,13 @@ export function resolveProjectDirFromHook(importMetaUrl: string): string {
   const markerDir = findWorkspaceMarkerAncestor(process.cwd());
   if (markerDir) return markerDir;
 
-  // 3. Script path derivation (open-set): hooks ship at
+  // 4. Script path derivation (open-set): hooks ship at
   //    <project>/<harness>/hooks/, so strip "<harness>/hooks" for ANY harness.
   const scriptDir = dirname(fileURLToPath(importMetaUrl));
   const fromScript = stripHarnessLeaf(scriptDir, "hooks");
   if (fromScript) return fromScript;
 
-  // 4. CWD has a known harness directory (dev repo).
+  // 5. CWD has a known harness directory (dev repo).
   const cwd = process.cwd();
   for (const h of KNOWN_HARNESS_DIRS) {
     if (existsSync(join(cwd, h))) {
@@ -4730,6 +4745,8 @@ export function isPackageJson(x: unknown): x is PackageJson {
 export interface ClaudeCodeHookInput {
   hook_event_name?: string;
   session_id?: string;
+  /** The directory the SESSION runs in — follows a session into a git worktree. */
+  cwd?: string;
   tool_name?: string;
   tool_input?: {
     file_path?: string;
@@ -4750,6 +4767,48 @@ export interface ClaudeCodeHookInput {
 /** Type guard for Claude Code hook input JSON. */
 export function isClaudeCodeHookInput(x: unknown): x is ClaudeCodeHookInput {
   return isPlainObject(x);
+}
+
+/** A hook's stdin, read once: the raw text plus its parsed `cwd` (null when absent). */
+export interface HookStdin {
+  text: string;
+  cwd: string | null;
+}
+
+/** Extract a usable `cwd` from an already-parsed hook payload. */
+export function hookPayloadCwd(payload: unknown): string | null {
+  if (!isPlainObject(payload)) return null;
+  const cwd = (payload as { cwd?: unknown }).cwd;
+  return typeof cwd === "string" && cwd.length > 0 ? cwd : null;
+}
+
+// Read the hook's stdin and hand back both the raw text and the payload's `cwd`.
+// Hooks must resolve their project dir from that cwd (issue #1482) before doing
+// anything else, but a stream can only be drained once — so every hook calls
+// this exactly once, at the top, and takes its payload text from the result
+// instead of calling Bun.stdin.text() itself. Deliberately NOT memoized: a
+// process-lifetime cache would hand a second hook driven in the same process
+// (the in-process hook tests do exactly this) the FIRST hook's payload.
+// Fail-open by contract: a TTY, an empty pipe, or malformed JSON yields
+// { text, cwd: null } and the caller falls back to the existing ladder.
+export async function readHookStdin(): Promise<HookStdin> {
+  let text = "";
+  if (!process.stdin.isTTY) {
+    try {
+      text = await Bun.stdin.text();
+    } catch {
+      text = "";
+    }
+  }
+  let cwd: string | null = null;
+  if (text.trim().length > 0) {
+    try {
+      cwd = hookPayloadCwd(JSON.parse(text));
+    } catch {
+      cwd = null;
+    }
+  }
+  return { text, cwd };
 }
 
 // --- Map / collection access helpers ---

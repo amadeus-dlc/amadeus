@@ -15,13 +15,17 @@ import {
   hasActiveWorkflowAudit,
   hooksHealthDir,
   isoTimestamp,
+  readHookStdin,
   recordHookDrop,
   recoveryFilePath,
   resolveProjectDirFromHook,
   stateFilePath,
 } from "../tools/amadeus-lib.ts";
 
-const projectDir = resolveProjectDirFromHook(import.meta.url);
+// Drain stdin first: this hook has no other use for the payload, but its `cwd`
+// is the top rung of project-dir resolution (#1482).
+const hookStdin = await readHookStdin();
+const projectDir = resolveProjectDirFromHook(import.meta.url, hookStdin.cwd);
 const stateFile = stateFilePath(projectDir);
 
 // Write health heartbeat
