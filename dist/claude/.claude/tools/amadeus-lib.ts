@@ -192,6 +192,27 @@ export function detectHarnessType(): import("./amadeus-harness.ts").HarnessType 
 
 // --- Project dir resolution ---
 
+// Strip every `--project-dir <path>` pair from an argv slice, returning the
+// last value seen and the remaining args. Shared CLI contract for sibling tools
+// that amadeus-bolt.ts's spawnSibling invokes as
+//   bun run <tool> --project-dir <pd> <subcommand> ...
+export function stripProjectDir(argv: string[]): {
+  projectDirArg?: string;
+  rest: string[];
+} {
+  let projectDirArg: string | undefined;
+  const rest: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === "--project-dir" && i + 1 < argv.length) {
+      projectDirArg = argv[i + 1];
+      i++;
+    } else {
+      rest.push(argv[i]);
+    }
+  }
+  return { projectDirArg, rest };
+}
+
 export function resolveProjectDir(explicitDir?: string): string {
   // 1. Explicit --project-dir argument
   if (explicitDir) return explicitDir;

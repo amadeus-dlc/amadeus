@@ -49,6 +49,7 @@ import {
   readStateFile,
   resolveProjectDir,
   runtimeGraphPath,
+  stripProjectDir,
   withAuditLock,
   writeFileAtomic,
   harnessDir,
@@ -854,17 +855,6 @@ function parseFlags(args: string[]): Record<string, string> {
     }
   }
   return flags;
-}
-
-function stripProjectDir(args: string[]): { projectDirArg: string | undefined; rest: string[] } {
-  const out = [...args];
-  const pdIdx = out.indexOf("--project-dir");
-  if (pdIdx !== -1 && pdIdx + 1 < out.length) {
-    const projectDirArg = out[pdIdx + 1];
-    out.splice(pdIdx, 2);
-    return { projectDirArg, rest: out };
-  }
-  return { projectDirArg: undefined, rest: out };
 }
 
 function printHelp(): void {

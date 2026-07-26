@@ -44,6 +44,7 @@ import {
   relativeRecordDir,
   resolveProjectDir,
   runtimeGraphPath,
+  stripProjectDir,
   stateFilePath,
   unitDependencyPath,
   validateBoltSlug,
@@ -1429,24 +1430,6 @@ const SUBCOMMANDS: Record<string, SubcommandHandler> = {
   "fragment-fork": tryRun("fragment-fork", handleFragmentFork),
   "fragment-merge": tryRun("fragment-merge", handleFragmentMerge),
 };
-
-// Pre-strip --project-dir <path> from argv. Mirrors
-// amadeus-state.ts:101-106 / amadeus-audit.ts:616-624. Required because
-// amadeus-bolt.ts's spawnSibling invokes us as
-//   bun run <tool> --project-dir <pd> <subcommand> ...
-// — without this pre-strip, `cmd === "--project-dir"` and dispatch fails.
-// Existing flag-less callers (the post-Bash compile hook, direct user
-// invocations) still work via resolveProjectDir's cwd-based fallback.
-function stripProjectDir(args: string[]): { projectDirArg: string | undefined; rest: string[] } {
-  const out = [...args];
-  const pdIdx = out.indexOf("--project-dir");
-  if (pdIdx !== -1 && pdIdx + 1 < out.length) {
-    const projectDirArg = out[pdIdx + 1];
-    out.splice(pdIdx, 2);
-    return { projectDirArg, rest: out };
-  }
-  return { projectDirArg: undefined, rest: out };
-}
 
 export function main(argv: string[] = process.argv.slice(2)): void {
   const { projectDirArg, rest: argsAfterStrip } = stripProjectDir(argv);
