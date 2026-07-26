@@ -196,10 +196,7 @@ export function detectHarnessType(): import("./amadeus-harness.ts").HarnessType 
 // last value seen and the remaining args. Shared CLI contract for sibling tools
 // that amadeus-bolt.ts's spawnSibling invokes as
 //   bun run <tool> --project-dir <pd> <subcommand> ...
-export function stripProjectDir(argv: string[]): {
-  projectDirArg?: string;
-  rest: string[];
-} {
+export function stripProjectDir(argv: string[]): { projectDirArg?: string; rest: string[] } {
   let projectDirArg: string | undefined;
   const rest: string[] = [];
   for (let i = 0; i < argv.length; i++) {
