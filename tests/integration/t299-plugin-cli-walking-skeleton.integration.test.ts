@@ -1,4 +1,4 @@
-// covers: file:packages/framework/core/tools/amadeus-plugin.ts
+// covers: file:packages/framework/core/tools/amadeus-plugin.ts, hook:amadeus-plugin-compose
 // size: medium
 //
 // U2 walking-skeleton-claude — the CLI's end-to-end vertical slice driven
@@ -15,7 +15,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,12 +24,16 @@ import { discoverPluginStageFiles } from "../../packages/framework/core/tools/am
 import {
   applyPluginDrop,
   applyPluginPlan,
+  clearPluginDrops,
   createNodeBackend,
   createNodeLock,
   diagnosePlugins,
   discoverPlugins,
+  dropsRecordPath,
   inspectPlugin,
   planPluginDrop,
+  readDropsRecord,
+  recordPluginDrops,
   type WorkspaceBackend,
   type WorkspaceTransaction,
 } from "../../packages/framework/core/tools/amadeus-plugin-compose.ts";
@@ -72,6 +76,8 @@ function deps(verifyOk = true): PluginCliDeps {
       recompileCount += 1;
       return true;
     },
+    recordDrops: recordPluginDrops,
+    clearDrops: clearPluginDrops,
     out: (l) => out.push(l),
     err: (l) => err.push(l),
   };
@@ -209,5 +215,81 @@ describe("t299 plugin CLI walking skeleton (U2)", () => {
     expect(existsSync(join(host, OWNED_STAGE))).toBe(true);
     // It was a real process (spawn produced a real exit status), not a stubbed call.
     expect(res.status === null ? -1 : res.status).toBeGreaterThanOrEqual(0);
+  });
+
+  // BR-U2-11: the compose apply path writes a DropsRecord skeleton (empty for the
+  // claude face — the engine has no drop-with-log path yet), plugin-separated.
+  test("compose writes an empty DropsRecord entry per plugin, plugin-separated (BR-U2-11)", () => {
+    // Pre-seed another plugin's drops to prove separation (compose must not erase it).
+    recordPluginDrops(host, "other-plugin", [{ surface: "SKILL.md", severity: "advisory", reason: "seed" }]);
+    handlePluginCli(["compose", "--project-root", host], deps());
+    const drops = readDropsRecord(host);
+    // This plugin's entry exists and is empty (skeleton).
+    expect(drops.plugins.has(PLUGIN)).toBe(true);
+    expect(drops.plugins.get(PLUGIN)).toEqual([]);
+    // The other plugin's seeded drops are untouched (plugin-separated).
+    expect(drops.plugins.get("other-plugin")).toEqual([{ surface: "SKILL.md", severity: "advisory", reason: "seed" }]);
+  });
+
+  test("DropsRecord is byte-identical across an idempotent re-compose (BR-U2-11)", () => {
+    handlePluginCli(["compose", "--project-root", host], deps());
+    const first = readFileSync(dropsRecordPath(host));
+    handlePluginCli(["compose", "--project-root", host], deps());
+    expect(readFileSync(dropsRecordPath(host)).equals(first)).toBe(true);
+  });
+
+  test("drop removes the plugin's DropsRecord entry (symmetric with compose)", () => {
+    handlePluginCli(["compose", "--project-root", host], deps());
+    expect(readDropsRecord(host).plugins.has(PLUGIN)).toBe(true);
+    handlePluginCli(["drop", PLUGIN, "--project-root", host], deps());
+    expect(readDropsRecord(host).plugins.has(PLUGIN)).toBe(false);
+  });
+
+  // BR-U2-6: the SessionStart HOOK FILE itself (not just the CLI) really starts.
+  // Spawns packages/framework/core/hooks/amadeus-plugin-compose.ts as a subprocess
+  // and drives its project dir via CLAUDE_PROJECT_DIR (resolveProjectDirFromHook
+  // rung 2). Two branches: clean success (no-op) and failure/continue.
+  const HOOK = join(REPO_ROOT, "packages", "framework", "core", "hooks", "amadeus-plugin-compose.ts");
+
+  test("hook success path: runs compose --if-stale and exits 0 with no warning (BR-U2-6a)", () => {
+    const clean = mkdtempSync(join(tmpdir(), "amadeus-t299-hook-ok-"));
+    try {
+      const res = spawnSync("bun", [HOOK], {
+        encoding: "utf-8",
+        input: "{}",
+        timeout: 60_000,
+        env: { ...process.env, CLAUDE_PROJECT_DIR: clean },
+      });
+      // No plugins staged → compose --if-stale is a no-op → the hook exits 0.
+      expect(res.status).toBe(0);
+      expect(res.stderr ?? "").not.toContain("auto-compose");
+    } finally {
+      rmSync(clean, { recursive: true, force: true });
+    }
+  });
+
+  test("hook failure path: compose fails → one stderr warning + exit 0 (BR-U2-6b, fail-loud/continue)", () => {
+    // A plugin whose seam targets a stage absent from the host: inspect rejects
+    // it (unknown-seam), so compose fails deterministically (before any recompile).
+    const bad = mkdtempSync(join(tmpdir(), "amadeus-t299-hook-fail-"));
+    try {
+      const dir = join(bad, ".amadeus-plugin-src", "bad-seam");
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(
+        join(dir, "plugin.json"),
+        JSON.stringify({ name: "bad-seam", stages: [], seams: [{ stage: "no-such-stage", seam: "produces", entries: ["x"] }], fragments: [] }),
+      );
+      const res = spawnSync("bun", [HOOK], {
+        encoding: "utf-8",
+        input: "{}",
+        timeout: 60_000,
+        env: { ...process.env, CLAUDE_PROJECT_DIR: bad },
+      });
+      // The session is NOT blocked (exit 0) and the failure is loud on stderr.
+      expect(res.status).toBe(0);
+      expect(res.stderr ?? "").toContain("auto-compose");
+    } finally {
+      rmSync(bad, { recursive: true, force: true });
+    }
   });
 });

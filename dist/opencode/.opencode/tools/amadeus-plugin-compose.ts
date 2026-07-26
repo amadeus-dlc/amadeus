@@ -184,6 +184,24 @@ export function emptyComposition(): CompositionRecord {
   return { ledger: new Map(), plugins: new Map() };
 }
 
+// ---------------------------------------------------------------------------
+// DropsRecord (U5 domain-entities is the canonical shape) — the
+// composition-record-adjacent log of surfaces a plugin's compose could not fully
+// apply (an unresolved fragment anchor / an unsupported surface), the receptacle
+// for FR-4(d) "dropped-with-log". Written by the compose apply path; plugin-
+// separated so one plugin's drops never erase another's (t188 #24). U4 adds real
+// degrade entries and U5 (doctor) reads it. U2 writes the SKELETON only: the
+// current engine rejects a missing anchor (unknown-seam) rather than dropping it,
+// so no drop-with-log path exists yet — every entry list is empty for the claude
+// face. `severity` is the sole source of the DoctorLine degraded/advisory state.
+export type DropSeverity = "degraded" | "advisory";
+export type DropEntry = { surface: string; severity: DropSeverity; reason: string };
+export type DropsRecord = { plugins: ReadonlyMap<string, readonly DropEntry[]> };
+
+export function emptyDropsRecord(): DropsRecord {
+  return { plugins: new Map() };
+}
+
 // The read model inspect/plan/diagnose consume. `files` are current on-disk
 // bytes (fragment bases + serialized stage-seam docs); `composition` is the
 // persisted record surface.
@@ -1164,6 +1182,57 @@ export const noopLock: WorkspaceLock = { acquire: () => {}, release: () => {} };
 function readAudit(path: string): AuditEntry[] {
   if (!existsSync(path)) return [];
   return JSON.parse(readFileSync(path, "utf-8")) as AuditEntry[];
+}
+
+// ---------------------------------------------------------------------------
+// DropsRecord persistence (composition-record-adjacent dot-file). Deterministic
+// JSON (plugin keys sorted) so a re-compose of the same set is byte-identical.
+// ---------------------------------------------------------------------------
+const PLUGIN_DROPS_FILE = ".amadeus-plugin-drops.json";
+
+export function dropsRecordPath(root: string): string {
+  return join(root, PLUGIN_DROPS_FILE);
+}
+
+export function dropsToJson(d: DropsRecord): string {
+  const obj: Record<string, readonly DropEntry[]> = {};
+  for (const name of [...d.plugins.keys()].sort()) obj[name] = d.plugins.get(name) ?? [];
+  return JSON.stringify({ plugins: obj }, null, 2);
+}
+
+export function dropsFromJson(text: string): DropsRecord {
+  const raw = JSON.parse(text) as { plugins?: Record<string, DropEntry[]> };
+  const plugins = new Map<string, readonly DropEntry[]>();
+  for (const [name, entries] of Object.entries(raw.plugins ?? {})) plugins.set(name, entries);
+  return { plugins };
+}
+
+export function readDropsRecord(root: string): DropsRecord {
+  const p = dropsRecordPath(root);
+  return existsSync(p) ? dropsFromJson(readFileSync(p, "utf-8")) : emptyDropsRecord();
+}
+
+export function writeDropsRecord(root: string, d: DropsRecord): void {
+  writeFileSync(dropsRecordPath(root), dropsToJson(d));
+}
+
+// Record one plugin's drops (plugin-separated: only this plugin's key is set, so
+// other plugins' drops are preserved). Written on the compose apply path — the
+// U2 skeleton passes an empty list (no drop-with-log path in the engine yet).
+export function recordPluginDrops(root: string, plugin: string, entries: readonly DropEntry[]): void {
+  const next = new Map(readDropsRecord(root).plugins);
+  next.set(plugin, entries);
+  writeDropsRecord(root, { plugins: next });
+}
+
+// Remove one plugin's drops on drop — the symmetric partner of the compose-time
+// write (symmetric-pair-review), so a dropped plugin leaves no stale drops entry.
+export function clearPluginDrops(root: string, plugin: string): void {
+  const cur = readDropsRecord(root);
+  if (!cur.plugins.has(plugin)) return;
+  const next = new Map(cur.plugins);
+  next.delete(plugin);
+  writeDropsRecord(root, { plugins: next });
 }
 
 // ---------------------------------------------------------------------------

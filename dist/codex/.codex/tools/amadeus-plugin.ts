@@ -30,11 +30,14 @@ import { fileURLToPath } from "node:url";
 import {
   applyPluginDrop,
   applyPluginPlan,
+  clearPluginDrops,
   createNodeBackend,
   createNodeLock,
   type CompositionRecord,
   diagnosePlugins,
   discoverPlugins,
+  type DropEntry,
+  recordPluginDrops,
   type HostSnapshot,
   type HostStage,
   inspectPlugin,
@@ -159,6 +162,8 @@ export type PluginCliDeps = {
   makeBackend: (hostRoot: string) => WorkspaceBackend;
   makeTx: (hostRoot: string, backend: WorkspaceBackend) => WorkspaceTransaction;
   recompile: (projectRoot: string) => boolean;
+  recordDrops: (hostRoot: string, plugin: string, entries: readonly DropEntry[]) => void;
+  clearDrops: (hostRoot: string, plugin: string) => void;
   out: (line: string) => void;
   err: (line: string) => void;
 };
@@ -251,6 +256,8 @@ export function defaultPluginCliDeps(): PluginCliDeps {
     makeBackend: (hostRoot) => createNodeBackend(hostRoot),
     makeTx: nodeTx,
     recompile: spawnRecompile,
+    recordDrops: recordPluginDrops,
+    clearDrops: clearPluginDrops,
     out: (l) => console.log(l),
     err: (l) => console.error(l),
   };
@@ -327,6 +334,9 @@ function handleCompose(cmd: Extract<PluginCliCommand, { kind: "compose" }>, deps
     if (result.kind !== "committed") {
       return { kind: "failure", stage: "apply", message: `plugin "${plugin.name}" apply ${result.kind}` };
     }
+    // Write the plugin's DropsRecord entry (U2 skeleton: empty — the engine has
+    // no drop-with-log path yet, BR-U2-11). Plugin-separated.
+    deps.recordDrops(hostRoot, plugin.name, []);
     applied += 1;
   }
   if (!deps.recompile(hostRoot)) {
@@ -351,6 +361,8 @@ function handleDrop(cmd: Extract<PluginCliCommand, { kind: "drop" }>, deps: Plug
   if (result.kind !== "committed") {
     return { kind: "failure", stage: "apply", message: `drop ${result.kind}` };
   }
+  // Remove the plugin's DropsRecord entry (symmetric with the compose-time write).
+  deps.clearDrops(hostRoot, cmd.name);
   if (!deps.recompile(hostRoot)) {
     return { kind: "failure", stage: "apply", message: "recompile failed after drop" };
   }

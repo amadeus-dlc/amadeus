@@ -35,7 +35,7 @@
       "audit": 32,
       "scope": 10,
       "stage": 8,
-      "hook": 11,
+      "hook": 12,
       "subcommand": 80,
       "render-surface": 7
     }
@@ -3996,8 +3996,13 @@
       "unitClass": "hook",
       "unitId": "amadeus-plugin-compose",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/integration/t299-plugin-cli-walking-skeleton.integration.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "hook",
