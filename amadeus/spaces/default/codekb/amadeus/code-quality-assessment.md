@@ -1,6 +1,38 @@
 # コード品質評価
 
-## クロスレビュー済みバグ7件の品質評価（260726-crossreviewed-bug-batch、現在、7 Issue）
+## mirror-gateway envelope 欠陥の品質評価（260726-mirror-envelope-lf、現在、Issue #1498）
+
+測定 ref: observed `e39402224`（base `1673c4332`、距離 27）。file:line は同 commit の実ファイル直読。上流入力は Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`（Architect 段で独立再検証、訂正 0 件）。
+
+### 現存判定
+
+| Issue | P/S | 現存判定 | 主患部 |
+| --- | --- | --- | --- |
+| [#1498](https://github.com/amadeus-dlc/amadeus/issues/1498) | P1/S2 | **現存**（区間内で無変更） | `amadeus-mirror-gateway.ts:196`（CRLF 前提の終端探索）→ `:198-199` malformed。影響は 5 verb 全部 |
+
+### 品質欠陥のクラス
+
+**(1) 外部 seam の未実測仮定（主欠陥）** — `:179-215` のパーサは `gh --include` のステータス行終端を CRLF と仮定するが、実出力は LF 単独。設計宣言（`security-design.md:37`）・パーサ・fixture の 3 面に同一の未実測仮定が一貫して焼き込まれているため、内部整合は取れているのに実 seam と全面不一致になる。cid:application-design:external-seam-vocab-measurement（seam 語彙の実測）が守ろうとした失敗モードそのもの。
+
+**(2) 検証劇場クラスの偽 green（org.md Forbidden 該当）** — `tests/unit/t272-amadeus-mirror-gateway.test.ts:61` verbatim:
+
+```ts
+  return `HTTP/2 ${status} OK\r\ncontent-type: application/json\r\n\r\n`;
+```
+
+`grep -n 'HTTP/' tests/unit/t272-amadeus-mirror-gateway.test.ts` → **1 hit（`:61` のみ）**。`singleEnvelope`（`:63-65`）/ `paginatedEnvelope`（`:67-72`）はこの `block()` を連結して合成するため、paginated fixture も「P 個のブロック連続 + 単一 JSON 配列」= **設計宣言そのものを再現**する。fixture が被検実装と同じ誤仮定を共有しているため、実環境で全 verb が落ちていても CI は緑のまま。cid:build-and-test:pbt-oracle-cancellation の同族（オラクル側が被検側と同じ誤りを持つと欠陥が観測面に出ない）。
+
+**(3) 症状の可観測性は良好、帰属は誤誘導** — 失敗は `:525-534` で `invalid-response` / retryable=false として loud に分類され `GitHub unavailable (invalid-response; no-effect-confirmed; exit=0; http=none)` を出す。サイレント失敗ではない点は良い。一方 Issue 本文の機序記述（主因 = `--slurp` 先頭の `[`、影響 = create/sync）は**本 scan で否定済み** — 先頭 `[` を除去しても malformed のままで、`--slurp` を使わない view/edit/close も落ちる。誤った機序記述に従うと修正が的を外す。
+
+**(4) 副次的な不変条件の脆さ** — `:669` の `outer.length !== interp.pageCount` は「HTTP ブロック数 = ページ配列要素数」を前提とするが、実 `--slurp` 出力は interleave のため `statuses.length` が常に 1 になり、この不変条件は LF 対応後も find を落とす。すなわち **find の修正は単一系より 1 段深い**（パーサ文法の変更か `--slurp` 撤去）。
+
+### 修正時の品質リスク
+
+- **allowlist 行ピンの stale 化**: `:179-235` へ行を挿入すると gateway の 5 ピン（`447-448` / `602` / `615-620` / `702` / `716`）が全件下方シフトし patch gate が赤になる（cid:code-generation:allowlist-line-pin-stale）。同一 PR で更新する。
+- **落ちる実証の設計**: 実 `gh` 形式 fixture の追加それ自体が修正前コードで赤になる（cid:code-generation:injection-surface-verify — 注入面 = テストが読む面 = `t272:61`）。既存 CRLF ケースを残して両形式を持つことで、将来の seam 変化にも耐える。
+- **配布同期**: 10 コピーへの伝播が必須（`dist:check` / `promote:self:check`）。
+
+## クロスレビュー済みバグ7件の品質評価（260726-crossreviewed-bug-batch、履歴、7 Issue）
 
 測定 ref: observed `1673c4332`（base `e12259ba7`、距離 2）。file:line は同 commit の実ファイル直読。上流入力は Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`（Architect 段で独立再検証済み）。
 

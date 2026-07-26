@@ -1,6 +1,71 @@
 # アーキテクチャ
 
-## クロスレビュー済みバグ7件の患部アーキテクチャ（260726-crossreviewed-bug-batch、現在、7 Issue）
+## mirror-gateway の HTTP envelope パース機序（260726-mirror-envelope-lf、現在、Issue #1498）
+
+測定 ref: observed `e3940222480b15d9cf10dd0a97df6a35a7ffb7d5`（= 現 HEAD、`git rev-parse HEAD` 実測）。base `1673c4332`（前 intent `260726-crossreviewed-bug-batch` の observed、`git merge-base --is-ancestor` exit 0 / 距離 27）。以下の file:line はすべて同 commit の実ファイル直読であり、上流の Developer スキャン結果（`inception/reverse-engineering/scan-notes.md`）を Architect 段で独立に再検証したうえで転記している（訂正 0 件）。
+
+### 区間で変化したアーキテクチャ面と、患部の不変性
+
+区間 27 コミットの実装面は主に (a) 前 intent のクロスレビュー済みバグ 6 修正の着地（election verify / `Election.parse` / plugin discovery / `reportDelivery` 配線 / audit fail-closed / benchmark gate）、(b) CI 検証ジョブの分割（[PR #1528](https://github.com/amadeus-dlc/amadeus/pull/1528)）、(c) metrics ダッシュボードである。**mirror-gateway 系はこの区間で一切変更されていない** — `git log --oneline 1673c4332..HEAD -- '*amadeus-mirror-gateway*'` の出力は 0 行であり、`tests/unit/t272-amadeus-mirror-gateway.test.ts` / `tests/unit/t270-amadeus-mirror-repository.test.ts` / `packages/framework/core/tools/amadeus-mirror-lifecycle.ts` も同様に 0 行。したがって以下の構造欠陥は区間の退行ではなく、base 以前から継続して存在する。
+
+### アーキテクチャ上の主欠陥: envelope パーサの終端仮定が実 seam と不一致
+
+`packages/framework/core/tools/amadeus-mirror-gateway.ts`（`wc -l` = **724** 行）の `parseHttpEnvelope` は、外部 seam（`gh` CLI の `--include` 出力）の**ステータス行終端を CRLF と仮定**している。
+
+| 位置 | verbatim | 役割 |
+| --- | --- | --- |
+| `:179` | `const STATUS_LINE_RE = /^HTTP\/[0-9.]+ (\d{3})(?: .*)?$/;` | ステータス行の照合（非 multiline） |
+| `:195` | `while (bin.startsWith("HTTP/", pos)) {` | ブロック走査の入口 |
+| `:196` | `const eol = bin.indexOf("\r\n", pos);` | **CRLF 前提の終端探索（患部）** |
+| `:198` | `const match = STATUS_LINE_RE.exec(bin.slice(pos, eol));` | 切り出し照合 |
+| `:199` | `if (match === null) return { kind: "malformed" };` | 不一致 → malformed |
+| `:215` | `if (statuses.length === 0) return { kind: "malformed" };` | while に一度も入らなかった場合の落ち方 |
+| `:220` | `if (bodyBin.endsWith("\n")) bodyBin = bodyBin.slice(0, -1);` | 末尾 LF は任意（不在を許容） |
+
+実 seam は `gh 2.96.0` で**ステータス行だけ LF 終端、ヘッダ行は CRLF**（`head -c 18 | od -c` で `... O   K  \n` を実測、同一キャプチャの直読で `LF-terminated status lines: 1` / `CRLF-terminated status lines: 0` / `header CRLF count: 27`）。よって `:196` が掴むのは**最初のヘッダ行末の CRLF**であり、`:198` に渡る文字列は `"HTTP/2.0 200 OK\nAccess-Control-Allow-Origin: *"` となって `:199` で malformed に落ちる。
+
+**決定的な対照実測**（observed の実 `parseHttpEnvelope` を repo 外 scratch から直接 import し実バイトへ適用、scan-notes §2a）: 実バイト → `{"kind":"malformed"}` / **ステータス行のみ LF→CRLF に置換 → `{"kind":"ok","statuses":[200],…}`**。`--slurp` 実バイトの先頭 `[` を 1 バイト除去しても malformed のままであり、**Issue 本文が主因とした先頭 `[` 説は否定される**（クロスレビュー 2/2 の訂正の独立再現）。
+
+### 分類経路と、影響が 5 verb 全部に及ぶ理由
+
+malformed は `:495` `const env = parseHttpEnvelope(result.stdout, mode);` → `:509` `if (env.kind === "malformed") {` → `:510` の `result.exitCode !== 0` が偽（`gh` は exit 0）→ `:525-534` の `failure("invalid-response", false, effectForOp(op, true), result.exitCode, null)`（retryable=false）へ落ちる。症状文字列 `GitHub unavailable (invalid-response; no-effect-confirmed; exit=0; http=none)` の出所はここである。
+
+5 verb はいずれも `interpretApiResult` → `parseHttpEnvelope` を通る単一の合流点を持つため、`--slurp` の有無に関わらず全滅する。
+
+| verb | 呼び出し | mode | argv 定義 | `--slurp` |
+| --- | --- | --- | --- | --- |
+| create | `:649` `runApi(createArgv(repository, input), "single")` | `:650` `"single"` | `createArgv` `:97-116` | なし |
+| find | `:656` `runApi(findArgv(repository), "paginated")` | `:657` `"array"` | `findArgv` `:118-132` | **あり（`:124-125`）** |
+| view | `:690` `runApi(viewArgv(repository, number), "single")` | `:691` `"single"` | `viewArgv` `:134-139` | なし |
+| edit | `:704` `runApi(editArgv(repository, number, body), "single")` | `:705` `"single"` | `editArgv` `:141-155` | なし |
+| close | `:718` `runApi(closeArgv(repository, number), "single")` | `:719` `"single"` | `closeArgv` `:157-170` | なし |
+
+`viewArgv` の実体（`:138` verbatim）: `return ["api", "--include", "--method", "GET", \`${issuesPath(repo)}/${issueNumber}\`];` — `--slurp` を含まないこの経路も対照実測で malformed。⇒ **auto-mirror は全面不成立**であり、P1/S2 への引き上げと整合する。
+
+### find の `--slurp` は interleave 文法 — 設計宣言と構造的に別物
+
+実測（`labels`, `per_page=20` で P=2、read-only）: 先頭 20 バイト `b'[HTTP/2.0 200 OK\nAcc'`、ブロック offset `[1, 6438]`、offset 6438 の直前は `b'…"}]\n,'`、EOF last 8 は `b'd on"}]]'`。実文法は
+
+```
+'[' <HTTPブロック> <ページ配列> ( '\n' ',' <HTTPブロック> <ページ配列> )* ']'
+```
+
+これに対し過去 record の設計宣言（`amadeus/spaces/default/intents/260724-mirror-auto-modes/construction/mirror-github-gateway/nfr-design/security-design.md:37`、verbatim 抜粋）は次を要求していた。
+
+> findの`--include --paginate --slurp` stdout grammarは、先頭からpage数P個のHTTP block `HTTP/<version> <3-digit-status> <reason> CRLF *(header CRLF) CRLF`が連続し、その後に単一slurped JSON outer array（要素数P）、末尾LF、EOFだけを許す。
+
+宣言と実出力の相違は 3 点（すべて実測）: (1) ステータス行終端が CRLF ではなく **LF** (2) P 個のブロックが連続するのではなく**ページ配列と interleave**、かつ先頭に `[` (3) 「末尾 LF、EOF」ではなく**末尾 LF なし**（ただしパーサ `:220` が LF 不在を許容するため単独では欠陥にならない）。
+
+さらに find は仮にステータス行を LF/CRLF 両対応にしても `:669` `if (!Array.isArray(outer) || outer.length !== interp.pageCount) {` → `:670` `invalidResponse("read-only")` の不変条件で落ちる（`pageCount` は `:549` の `env.statuses.length`。interleave では while が 1 ブロックで抜けて `statuses.length=1` になり、一方 body には残りブロックの生ヘッダが混ざるため `:665` の `JSON.parse` が先に失敗する）。
+
+**アーキテクチャ上の含意**: これは「実装後に外部 seam がドリフトした」のではなく、**実装時点から実 `gh` 出力を一度も測っていない仮定文法**を設計宣言・パーサ・fixture の 3 面に一貫して焼き込んだ構造（cid:application-design:external-seam-vocab-measurement / cid:reverse-engineering:seam-writer-mode-precondition の同族）。本環境に `gh 2.96.0` しか無いためドリフト説は帰属未検証だが、「単一系も壊れている・fixture が自作 CRLF・record に `gh` 実出力の実測が 0 件」という証拠群は未実測仮定説と整合する（scan-notes §2d の仮説区分に同意）。
+
+### 修正方向の候補（設計は後続ステージで裁定）
+
+- 単一系 4 verb: パーサのステータス行終端を LF/CRLF 両対応にすれば足りる（対照実測で実証済み）。
+- find: (A) 先頭 `[` + interleave 文法を正面から扱うブロックパーサ、(B) `--slurp` を外し 1 ページずつ `--include` で取得して統合（`:669` の `outer.length === pageCount` 不変条件が素直に生きる）。クロスレビュー 2/2 は (B) を推す。
+
+## クロスレビュー済みバグ7件の患部アーキテクチャ（260726-crossreviewed-bug-batch、履歴、7 Issue）
 
 測定 ref: observed `1673c433209c74820881c75a0816bbce3fb2d512`（= 現 HEAD、`git rev-parse HEAD` 実測）。base `e12259ba7`（前 intent `260726-grant-scope-gate` の observed、`git merge-base --is-ancestor` exit 0 / 距離 2）。以下の file:line はすべて同 commit の実ファイル直読であり、上流の Developer スキャン結果（`inception/reverse-engineering/scan-notes.md`）を Architect 段で独立に再検証したうえで転記している。
 
