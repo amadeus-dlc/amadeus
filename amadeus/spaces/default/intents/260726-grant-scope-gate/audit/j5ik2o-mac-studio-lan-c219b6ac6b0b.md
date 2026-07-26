@@ -614,3 +614,373 @@
 **Error**: Transition rejected by amadeus-state.ts approve for "code-generation": {"error":"Refusing to complete \"code-generation\": it is a code-producing stage (workspace_requires) but no source work is evident outside the amadeus/ workspace tree. In a git workspace this means no uncommitted change and no code in the last commit; otherwise no source file exists. Planning docs alone do not satisfy Code Generation - write the code to the workspace. If this Intent's produces are genuinely record-internal documents only, declare it first: amadeus-state.ts declare-docs-only --evidence \"<approval reference>\"."}
 
 ---
+
+## Gate Approved
+**Timestamp**: 2026-07-26T06:28:31Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-26T06:28:31Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: Stage Code Generation approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-26T06:28:31Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Agent**: amadeus-quality-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:35:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: e6dac537
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/build-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:35:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: e6dac537
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/build-instructions.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:35:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: ab94868a
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/build-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:35:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: ab94868a
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/build-instructions.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:35:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: dd745026
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/unit-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:35:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: dd745026
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/unit-test-instructions.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:35:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: d9e3879d
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/unit-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:35:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: d9e3879d
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/unit-test-instructions.md
+**Duration ms**: 125
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:35:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: a342829c
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/integration-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:35:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: a342829c
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/integration-test-instructions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:35:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 06b031ac
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/integration-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:35:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 06b031ac
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/integration-test-instructions.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:35:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7ef618a6
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/performance-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:35:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7ef618a6
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/performance-test-instructions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:35:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 704ae97e
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/performance-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:35:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 704ae97e
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/performance-test-instructions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:35:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0ad3d502
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/security-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:35:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0ad3d502
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/security-test-instructions.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:35:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: b680d8c2
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/security-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:35:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: b680d8c2
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/security-test-instructions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:35:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2d229607
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/build-and-test-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:35:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2d229607
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/build-and-test-summary.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:35:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: b8132f26
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/build-and-test-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:35:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: b8132f26
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/build-and-test-summary.md
+**Duration ms**: 116
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:35:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4439ee85
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/build-test-results.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:35:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4439ee85
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/build-test-results.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:35:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 77a766dd
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/build-test-results.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:35:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 77a766dd
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260726-grant-scope-gate/construction/build-and-test/build-test-results.md
+**Duration ms**: 40
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-26T06:36:17Z
+**Event**: HUMAN_TURN
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-26T06:36:24Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-26T06:36:24Z
+**Event**: GATE_APPROVED
+**Stage**: build-and-test
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-26T06:36:24Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Details**: Stage Build And Test approved by gate
+
+---
+
+## Phase Completion
+**Timestamp**: 2026-07-26T06:36:24Z
+**Event**: PHASE_COMPLETED
+**From phase**: construction
+**To phase**: (end)
+**Stages completed**: 7
+
+---
+
+## Phase Verification
+**Timestamp**: 2026-07-26T06:36:24Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: construction → end
+
+---
+
+## Workflow Completion
+**Timestamp**: 2026-07-26T06:36:24Z
+**Event**: WORKFLOW_COMPLETED
+**Scope**: amadeus-bugfix
+**Details**: Scope: amadeus-bugfix, 7 stages completed
+
+---
