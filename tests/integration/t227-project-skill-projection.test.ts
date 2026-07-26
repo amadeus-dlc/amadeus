@@ -24,6 +24,8 @@ import { join } from "node:path";
 import { promoteSelfMain } from "../../scripts/promote-self.ts";
 
 let root: string;
+let kimiHome: string;
+const savedKimiHome = process.env.KIMI_CODE_HOME;
 
 const write = (rel: string, content: string): void => {
   const abs = join(root, rel);
@@ -31,14 +33,29 @@ const write = (rel: string, content: string): void => {
   writeFileSync(abs, content);
 };
 
+// Minimal snippet master so the FR-1 kimi hooks merge (fired by --apply
+// whenever dist/kimi/.kimi-code exists) can render the managed block; the
+// merge targets a temp KIMI_CODE_HOME, never the real user-level config.
+const SNIPPET = [
+  "# >>> amadeus-kimi-hooks >>>",
+  "[[hooks]]",
+  'event = "Stop"',
+  'command = "bun .kimi-code/hooks/amadeus-kimi-adapter.ts stop"',
+  "# <<< amadeus-kimi-hooks <<<",
+  "",
+].join("\n");
+
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "t227-project-skill-"));
+  kimiHome = mkdtempSync(join(tmpdir(), "t227-kimi-home-"));
+  process.env.KIMI_CODE_HOME = kimiHome;
   write("dist/claude/.claude/tools/a.txt", "alpha\n");
   write("dist/codex/.codex/b.txt", "beta\n");
   write("dist/codex/.agents/c.txt", "gamma\n");
   write("dist/cursor/.cursor/d.txt", "delta\n");
   write("dist/opencode/.opencode/e.txt", "epsilon\n");
   write("dist/kimi/.kimi-code/f.txt", "zeta\n");
+  write("packages/framework/harness/kimi/hooks/amadeus-hooks.snippet.toml", SNIPPET);
   write("dist/codex/AGENTS.md", "# AI-DLC on Codex CLI\n\ngenerated\n");
   write(".claude/CLAUDE.md", "# Claude onboarding\n");
   write("AGENTS.md", "# Project rules\n");
@@ -54,14 +71,17 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  if (savedKimiHome === undefined) delete process.env.KIMI_CODE_HOME;
+  else process.env.KIMI_CODE_HOME = savedKimiHome;
   rmSync(root, { recursive: true, force: true });
+  rmSync(kimiHome, { recursive: true, force: true });
 });
 
 describe("t227 contributor skill projection", () => {
-  test("--apply projects runtime files but keeps evals canonical", () => {
+  test("--apply projects runtime files but keeps evals canonical", async () => {
     write(".claude/skills/amadeus-upstream-sync/evals/evals.json", "stale\n");
     write(".agents/skills/amadeus-upstream-sync/evals/evals.json", "stale\n");
-    expect(promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
+    expect(await promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
 
     const source = readFileSync(
       join(root, "contrib/skills/amadeus-upstream-sync/SKILL.md"),
@@ -81,25 +101,25 @@ describe("t227 contributor skill projection", () => {
       .toBe(false);
     expect(existsSync(join(root, "dist/codex/.agents/skills/amadeus-upstream-sync")))
       .toBe(false);
-    expect(promoteSelfMain(["--no-build"], root)).toBe(0);
+    expect(await promoteSelfMain(["--no-build"], root)).toBe(0);
   });
 
-  test("--check detects projection drift and --apply repairs both copies", () => {
-    expect(promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
+  test("--check detects projection drift and --apply repairs both copies", async () => {
+    expect(await promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
     write(".claude/skills/amadeus-upstream-sync/SKILL.md", "drift\n");
-    expect(promoteSelfMain(["--no-build"], root)).toBe(1);
-    expect(promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
-    expect(promoteSelfMain(["--no-build"], root)).toBe(0);
+    expect(await promoteSelfMain(["--no-build"], root)).toBe(1);
+    expect(await promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
+    expect(await promoteSelfMain(["--no-build"], root)).toBe(0);
   });
 
-  test("removing canonical source removes both projected orphans", () => {
-    expect(promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
+  test("removing canonical source removes both projected orphans", async () => {
+    expect(await promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
     rmSync(join(root, "contrib/skills/amadeus-upstream-sync"), {
       recursive: true,
       force: true,
     });
-    expect(promoteSelfMain(["--no-build"], root)).toBe(1);
-    expect(promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
+    expect(await promoteSelfMain(["--no-build"], root)).toBe(1);
+    expect(await promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
     expect(existsSync(join(root, ".claude/skills/amadeus-upstream-sync/SKILL.md"))).toBe(false);
     expect(existsSync(join(root, ".agents/skills/amadeus-upstream-sync/SKILL.md"))).toBe(false);
   });

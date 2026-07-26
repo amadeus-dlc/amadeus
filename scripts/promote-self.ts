@@ -21,6 +21,13 @@ import {
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { mirrorProjectionRegistryDigest } from "../packages/framework/harness/projections.ts";
+import {
+  renderHooksError,
+  resolveKimiHome,
+  runHooksMerge,
+} from "../packages/setup/src/modules/kimi-hooks.ts";
+import { createApplyWrite } from "../packages/setup/src/ports/apply-write.ts";
+import { createFsRead, createFsWrite } from "../packages/setup/src/ports/fsops.ts";
 import { DistributionTransactionCoordinator } from "./distribution-transaction.ts";
 
 type Mode = "check" | "apply";
@@ -331,15 +338,73 @@ function apply(expected: Map<string, Buffer>, repoRoot: string): void {
   ensureActiveSpaceCursor(repoRoot);
 }
 
+// The Kimi managed-block merge runs only after the dist sync landed, and only
+// when the kimi dist tree exists (a fixture/partial tree without dist/kimi
+// skips the step entirely). Kimi Code has no project-level wiring config, so
+// in the self-development repo dogfood promotion takes the installer's role:
+// the SAME setup module merges the managed block into the user-level
+// config.toml ($KIMI_CODE_HOME ?? ~/.kimi-code, resolveKimiHome's rule), read
+// from the canonical snippet master. Approval is implicit — running --apply
+// IS the operator's consent — but the OC-1 contract still routes it through
+// an interactive confirm, so the tty port auto-confirms. A merge failure is
+// loud: the rendered error is printed and the run exits non-zero.
+const KIMI_DIST_TREE_REL = join("dist", "kimi", ".kimi-code");
+const KIMI_SNIPPET_MASTER_REL = join(
+  "packages",
+  "framework",
+  "harness",
+  "kimi",
+  "hooks",
+  "amadeus-hooks.snippet.toml",
+);
+
+// Exported so tests can drive the dist/kimi-absent guard directly — through
+// promoteSelfMain that branch is unreachable, since buildExpected already
+// fails closed on a missing managed source dir.
+export async function mergeKimiHooks(repoRoot: string): Promise<number> {
+  if (!existsSync(join(repoRoot, KIMI_DIST_TREE_REL))) return 0;
+  const snippetPath = join(repoRoot, KIMI_SNIPPET_MASTER_REL);
+  if (!existsSync(snippetPath)) {
+    console.error(`missing source file: ${KIMI_SNIPPET_MASTER_REL}`);
+    return 1;
+  }
+  const merged = await runHooksMerge(
+    {
+      snippet: readFileSync(snippetPath, "utf-8"),
+      snippetSource: ".kimi-code/hooks/amadeus-hooks.snippet.toml",
+      interactive: true,
+      kimiHome: resolveKimiHome(),
+    },
+    {
+      tty: {
+        isTTY: false,
+        select: async () => "",
+        input: async () => "",
+        confirm: async () => true,
+      },
+      fsRead: createFsRead(),
+      fsWrite: createFsWrite(),
+      applyWrite: createApplyWrite(),
+      out: (message) => console.log(message),
+    },
+  );
+  if (merged.type === "err") {
+    console.error(renderHooksError(merged.error));
+    return 1;
+  }
+  return 0;
+}
+
 // Argv-parameterized handler exported as an in-process test seam. Returns the
 // process exit code instead of exiting so tests can drive check/apply against
 // a fixture repoRoot without spawning (spawned subprocesses are invisible to
-// bun --coverage).
-export function promoteSelfMain(
+// bun --coverage). Async because the --apply path's kimi hooks merge awaits
+// the setup module's ports; the check path never awaits anything meaningful.
+export async function promoteSelfMain(
   argv: string[],
   repoRoot: string = REPO_ROOT,
   freshness: (mode: Mode) => void = runPackageFreshness,
-): number {
+): Promise<number> {
   if (argv.includes("--help") || argv.includes("-h")) {
     printUsage();
     return 2;
@@ -374,6 +439,8 @@ export function promoteSelfMain(
 
   if (mode === "apply") {
     apply(expected, repoRoot);
+    const merged = await mergeKimiHooks(repoRoot);
+    if (merged !== 0) return merged;
     console.log("promote-self: project-local self install updated");
     return 0;
   }
@@ -392,4 +459,4 @@ export function promoteSelfMain(
 
 // Main flow is guarded so the exported helpers can be imported by tests
 // without triggering a build or a check run.
-if (import.meta.main) process.exit(promoteSelfMain(process.argv.slice(2)));
+if (import.meta.main) process.exit(await promoteSelfMain(process.argv.slice(2)));
