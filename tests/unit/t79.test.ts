@@ -87,9 +87,10 @@
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
-import { cleanupTestProject, setupIntegrationProject } from "../harness/fixtures.ts";
+import { cleanupTestProject, seededStateFile, setupIntegrationProject } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
@@ -101,17 +102,22 @@ afterAll(() => {
   for (const d of tempDirs) cleanupTestProject(d);
 });
 
-/** Fresh integration project with the greenfield stub (mirrors the .sh PROJ). */
+/**
+ * Fresh integration project with the greenfield stub (mirrors the .sh PROJ).
+ * The seeded record dir carries the header-only amadeus-state.md stub production
+ * birthIntent() writes — a dir counts as a record, so an audit shard resolves at
+ * all (#1377), only once it holds one.
+ */
 function proj(): string {
   const p = setupIntegrationProject({ withGreenfieldStub: true });
+  writeFileSync(seededStateFile(p), "# AI-DLC State Tracking\n", "utf-8");
   tempDirs.push(p);
   return p;
 }
 
-// P9: bolt dispatch-event's appendAuditEvent CREATES the bare SPACE record
-// root's per-clone shard on first emit (the integration project seeds no state,
-// so no intent resolves → bare root); the SPAWNED tool mints its own clone-id,
-// so reads glob every shard via readAllAuditShards.
+// P9: bolt dispatch-event's appendAuditEvent CREATES the record's per-clone
+// shard on first emit; the SPAWNED tool mints its own clone-id, so reads glob
+// every shard via readAllAuditShards.
 const readAudit = (p: string): string => readAllAuditShards(p);
 
 interface CliResult {

@@ -51,6 +51,12 @@ afterEach(() => {
   }
 });
 
+// These cases assert the shard NAME (the clone-id token), not where it lands.
+// An explicit intent selector short-circuits activeIntent()'s on-disk lookup, so
+// the builder resolves with no record seeded — it refuses an unresolved intent
+// rather than falling back to the bare intents root (#1377).
+const SHARD_PROBE_INTENT = "nofollow-probe-deadbeef";
+
 describe("upstream-v2 no-follow seams", () => {
   test("clone-id symlinks derive a stable shard token without reading the target", () => {
     const projectDir = tempDir("linked-clone");
@@ -69,7 +75,7 @@ describe("upstream-v2 no-follow seams", () => {
       .digest("hex")
       .slice(0, 12);
 
-    expect(basename(auditFilePath(projectDir))).toEndWith(`-${expected}.md`);
+    expect(basename(auditFilePath(projectDir, SHARD_PROBE_INTENT))).toEndWith(`-${expected}.md`);
     expect(readFileSync(target, "utf-8")).toBe("do-not-read\n");
   });
 
@@ -79,7 +85,7 @@ describe("upstream-v2 no-follow seams", () => {
     mkdirSync(cloneId, { recursive: true });
 
     _resetCloneIdForTests();
-    expect(basename(auditFilePath(projectDir))).toMatch(/-[a-f0-9]{12}\.md$/);
+    expect(basename(auditFilePath(projectDir, SHARD_PROBE_INTENT))).toMatch(/-[a-f0-9]{12}\.md$/);
     expect(lstatSync(cloneId).isDirectory()).toBe(true);
   });
 

@@ -73,10 +73,10 @@
 
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
-import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
+import { cleanupTestProject, createTestProject, seededStateFile } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
@@ -88,16 +88,21 @@ afterAll(() => {
   for (const d of tempDirs) cleanupTestProject(d);
 });
 
-/** Fresh temp project (createTestProject — amadeus-docs/ scaffolded, Windows-portable). */
+/**
+ * Fresh temp project (createTestProject — record scaffolded, Windows-portable).
+ * The record carries the header-only amadeus-state.md stub production
+ * birthIntent() writes: a dir counts as a record — so an audit shard resolves at
+ * all (#1377) — only once it holds one.
+ */
 function proj(): string {
   const p = createTestProject();
+  writeFileSync(seededStateFile(p), "# AI-DLC State Tracking\n", "utf-8");
   tempDirs.push(p);
   return p;
 }
 
-// P9: practices-event's appendAuditEvent CREATES the bare SPACE record root's
-// per-clone shard on first emit (no state seeded → no intent resolves → bare
-// root); the SPAWNED tool mints its own clone-id, so reads glob every shard.
+// P9: practices-event's appendAuditEvent CREATES the record's per-clone shard on
+// first emit; the SPAWNED tool mints its own clone-id, so reads glob every shard.
 const readAudit = (p: string): string => readAllAuditShards(p);
 
 interface CliResult {

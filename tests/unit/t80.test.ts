@@ -53,6 +53,7 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -151,6 +152,12 @@ describe("t80 practices-event --type empty (spawnSync CLI-boundary, parity-only)
     const proj = mkdtempSync(join(tmpdir(), "t80-proj-"));
     scratch.push(proj);
     mkdirSyncRecursive(join(proj, "amadeus-docs"));
+    // The record the spawned tool's audit emit resolves. A dir counts as one —
+    // so a shard resolves at all (#1377) — once it holds amadeus-state.md, the
+    // header-only stub production birthIntent() writes.
+    const record = join(proj, "amadeus", "spaces", "default", "intents", "t80-fixture-deadbeef");
+    mkdirSyncRecursive(record);
+    writeFileSync(join(record, "amadeus-state.md"), "# AI-DLC State Tracking\n", "utf-8");
     cpSync(AMADEUS_SRC, join(proj, ".claude"), { recursive: true });
     const claudeMdExample = join(proj, ".claude", "CLAUDE.md.example");
     const claudeMd = join(proj, ".claude", "CLAUDE.md");

@@ -3357,16 +3357,34 @@ export function stateFilePath(projectDir: string, intent?: string, space?: strin
   return join(dir, "amadeus-state.md");
 }
 
+// The remedy half of auditFilePath()'s no-intent refusal below. Module scope
+// keeps it one executed line instead of continuation lines a coverage merge can
+// leave unstamped.
+const NO_INTENT_AUDIT_REMEDY =
+  'Audit events must land in an intent\'s record. Start a workflow (/amadeus "build the auth service"), select one (/amadeus intent <name>) when several exist, or pass --intent explicitly.';
+
 // Per-clone audit SHARD path: `…/intents/<slug>-<id8>/audit/<host>-<clone>.md`.
 // The audit trail is committed (vision §5.1) but each clone writes its OWN
 // shard so git never merge-conflicts concurrent appends (merge=union was proven
 // to corrupt the multi-line blocks). Readers glob `audit/*.md` and merge-sort by
-// timestamp — see auditShards()/readAllAuditShards(). With no intent resolved the
-// shard lands under the bare space record root (no flat audit.md any more).
+// timestamp — see auditShards()/readAllAuditShards().
+//
+// FAIL-CLOSED when no intent resolves (#1377). The former fallback returned the
+// bare space record root's `audit/`, and the writer (amadeus-audit.ts
+// ensureAuditFile) mkdir -p'd it unconditionally — so an emitter that threads no
+// --intent on a cursor-less clone (a fresh worktree; a >1-intent workspace)
+// silently dropped a shard DIRECTLY into `intents/audit/`, breaking the "no
+// amadeus-state.md / no audit/ ever lives directly in the bare intents root"
+// invariant and orphaning the events from the intent they belong to. Symmetric
+// with auditShardDir(), which already refuses (returns null) in the same case;
+// here the return type is a plain path, so the refusal is a throw — loud, before
+// any disk side-effect. Callers on a resolved workflow are unaffected; callers
+// that probe opportunistically (e.g. the Stop hook's progress signature) already
+// guard with try/catch.
 export function auditFilePath(projectDir: string, intent?: string, space?: string): string {
-  const dir = recordDir(projectDir, intent, space);
-  if (dir === null) return join(spaceRecordRoot(projectDir, space), "audit", auditShardName(projectDir));
-  return join(dir, "audit", auditShardName(projectDir));
+  const dir = auditShardDir(projectDir, intent, space);
+  if (dir === null) throw new Error(`No intent resolved — refusing to write an audit shard into the bare intents root (${spaceRecordRoot(projectDir, space)}). ${NO_INTENT_AUDIT_REMEDY}`);
+  return join(dir, auditShardName(projectDir));
 }
 
 // The clone-id token file: `amadeus/.amadeus-clone-id`. Workspace-level,

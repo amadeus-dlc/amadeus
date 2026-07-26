@@ -70,16 +70,18 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { toPortablePath } from "../harness/fixtures.ts";
+import { DEFAULT_RECORD_DIR, toPortablePath } from "../harness/fixtures.ts";
 import { auditFilePath } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
-// P9: with no intent cursor seeded, compile resolves the BARE space record root
-// (docsRoot -> spaceRecordRoot) at amadeus/spaces/default/intents/. State,
-// runtime-graph, and the per-clone audit SHARD live under it (the flat
-// amadeus-docs/ root is retired — there is no fallback). The detail_path strings
-// asserted below are read VERBATIM from the read-only audit fixtures, so they
-// keep their recorded amadeus-docs/ values (compile echoes the recorded row).
-const RECORD_REL = join("amadeus", "spaces", "default", "intents");
+// P9: compile resolves the per-intent RECORD dir. State, runtime-graph, and the
+// per-clone audit SHARD live under it (the flat amadeus-docs/ root is retired —
+// there is no fallback). The record is a dir UNDER intents/, never the bare
+// intents root: auditFilePath() refuses to resolve a shard when no intent
+// resolves (#1377), and a lone record needs no active-intent cursor. The
+// detail_path strings asserted below are read VERBATIM from the read-only audit
+// fixtures, so they keep their recorded amadeus-docs/ values (compile echoes the
+// recorded row).
+const RECORD_REL = join("amadeus", "spaces", "default", "intents", DEFAULT_RECORD_DIR);
 function recordRoot(proj: string): string {
   return join(proj, RECORD_REL);
 }

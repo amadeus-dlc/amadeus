@@ -17,7 +17,7 @@
 // intent). Import surface mirrors t111.test.ts (dist/claude copy, not core).
 
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -27,11 +27,17 @@ import {
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const tmpRoots: string[] = [];
-// A bare dir is a valid project: ensureAuditFile lazily creates the per-intent
-// shard on first write (mirrors t111's freshProject).
+// A project holding ONE intent record: ensureAuditFile lazily creates that
+// record's shard on first write (mirrors t111's freshProject). The record must
+// exist — an audit shard only resolves inside one (#1377) — and a dir counts as
+// a record once it holds amadeus-state.md, the same header-only stub production
+// birthIntent() writes at mint time.
 function freshProject(): string {
   const root = mkdtempSync(join(tmpdir(), "amadeus-t205-"));
   tmpRoots.push(root);
+  const record = join(root, "amadeus", "spaces", "default", "intents", "t205-fixture-deadbeef");
+  mkdirSync(record, { recursive: true });
+  writeFileSync(join(record, "amadeus-state.md"), "# AI-DLC State Tracking\n", "utf-8");
   return root;
 }
 
