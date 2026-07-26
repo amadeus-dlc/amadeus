@@ -15,4 +15,5 @@
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
 - 2026-07-26T13:56:00Z — Intent Mirror create が invalid-response で pending(operationId 15fe16c5)。intent-statement 生成後に再試行し、成立後に旧 #1543 のクローズをユーザーへ確認する(自動クローズはしない — provenance なし Issue の auto-close 禁止 Forbidden)
-- 2026-07-26T14:00:00Z — 再試行も同一失敗。根因を実測特定: gh 2.96 の `--paginate --slurp` は `[` を HTTP ヘッダより前に出すが parseHttpEnvelope(amadeus-mirror-gateway.ts:187)は `HTTP/` 先頭前提 → malformed → invalid-response。Issue #1544 起票(bug/P1/S2、導入 2bad4a14f = mirror-productization Bolt1)。Mirror は #1544 修正着地まで pending 維持、workflow は fail-loud 契約どおり継続。旧 #1543 はミラー成立まで温存が安全(クローズ判断はユーザーへ)
+- 2026-07-26T14:00:00Z — 再試行も同一失敗。根因を実測特定: gh 2.96 の envelope を parseHttpEnvelope が malformed 扱い。Issue #1544 起票 → **ユーザー指摘で #1498 の重複と判明**(修正 PR #1537 は main 着地済み・本ブランチ未取込)。#1544 は重複クローズ、origin/main を --no-ff マージで取込(intents.json 衝突は dirName 和集合で解消、マーカー0・parse ok・parent2 実測)
+- 2026-07-26T14:10:00Z — 取込後の create は成功(Mirror Issue #1545、v1 ブロックに provenance 永続化)。ただし status が mirror-missing 偽陰性 → 深掘りで write⇔read 表現分裂を確定(lifecycle は v1 ブロックのみ書く/status・重複ガードは legacy「Mirror Issue」フィールド(amadeus-mirror.ts:169)を読む)。Issue #1547 起票(bug/P2/S3、#1534 の対面)。ミラー自体は健全にリンク済み — 孤児ではない。旧 #1543 のクローズ可否はゲートでユーザーへ確認
