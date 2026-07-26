@@ -495,7 +495,7 @@ Re-running `compile` against the same audit produces a byte-equivalent graph. It
 
 ## Prerequisites
 
-1. **bun** -- Required for all 11 hooks and every CLI tool (`amadeus-utility.ts`, `amadeus-state.ts`, `amadeus-jump.ts`, `amadeus-orchestrate.ts`, `amadeus-audit.ts`, `amadeus-validate.ts`, `amadeus-graph.ts`, `amadeus-sensor.ts`, `amadeus-learnings.ts`, `amadeus-runtime.ts`). Install via `curl -fsSL https://bun.sh/install | bash`. On Windows: `npm install -g bun` or `powershell -c "irm bun.sh/install.ps1 | iex"`. Must be on PATH for non-interactive shells.
+1. **bun** -- Required for all framework hooks and every CLI tool (`amadeus-utility.ts`, `amadeus-state.ts`, `amadeus-jump.ts`, `amadeus-orchestrate.ts`, `amadeus-audit.ts`, `amadeus-validate.ts`, `amadeus-graph.ts`, `amadeus-sensor.ts`, `amadeus-learnings.ts`, `amadeus-runtime.ts`). Install via `curl -fsSL https://bun.sh/install | bash`. On Windows: `npm install -g bun` or `powershell -c "irm bun.sh/install.ps1 | iex"`. Must be on PATH for non-interactive shells.
 2. **$CLAUDE_PROJECT_DIR** -- Set by Claude Code to the project root. All hooks use it to locate the `amadeus/` workspace (and the active intent's record dir within it).
 
 No other prerequisites: every hook and tool is TypeScript run via bun, so no `jq`, `sed`, `awk`, Git Bash, or WSL is required on any platform.
