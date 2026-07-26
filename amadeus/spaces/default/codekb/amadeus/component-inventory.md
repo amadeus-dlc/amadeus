@@ -1,6 +1,35 @@
 # コンポーネント棚卸し
 
-## クロスレビュー済みバグ7件の患部コンポーネント（260726-crossreviewed-bug-batch、現在、7 Issue）
+## mirror-gateway 患部コンポーネント（260726-mirror-envelope-lf、現在、Issue #1498）
+
+測定 ref: observed `e39402224`（base `1673c4332`、距離 27）。所在・コピー数は同 commit の `git ls-files` / `grep -n` / `wc -l` 出力からの転記。上流入力は Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`。
+
+### 患部コンポーネント一覧
+
+| コンポーネント | 所在 | 役割 | コピー数 | 本 intent での位置づけ |
+| --- | --- | --- | --- | --- |
+| `parseHttpEnvelope` | `amadeus-mirror-gateway.ts:179-235` | `gh --include` stdout を statuses + JSON body へ分解 | 正本 1 + 配布 10 | **主患部**（`:196` の CRLF 前提終端探索） |
+| `interpretApiResult` | 同 `:483-553` | envelope の分類（`:495` パーサ呼び出し、`:509` malformed 分岐、`:525-534` `invalid-response`） | 同上 | 症状文字列の出所 |
+| `createArgv` / `findArgv` / `viewArgv` / `editArgv` / `closeArgv` | 同 `:97-116` / `:118-132` / `:134-139` / `:141-155` / `:157-170` | 5 verb の argv 構築。`findArgv` のみ `--paginate --slurp`（`:124-125`） | 同上 | 影響範囲の確定に使用 |
+| `findIssuesByMarker` | 同 `:655-685` | ページ統合。`:665` `JSON.parse` / `:669` `outer.length !== interp.pageCount` | 同上 | LF 対応後も残る二次患部 |
+| mirror lifecycle | `amadeus-mirror-lifecycle.ts:29` が gateway を import | gateway の唯一の内部消費側 | 正本 1 + 配布 10 | 返り値型不変なら無改修見込み（仮説） |
+| 投影宣言 | `packages/framework/harness/projections.ts:26` | `"amadeus-mirror-gateway.ts"` を harness 投影対象として宣言 | 1 | 配布同期の根拠 |
+| gateway テスト | `tests/unit/t272-amadeus-mirror-gateway.test.ts`（`:11` import、`:61` `block()`） | envelope の golden fixture を自作 | 1 | **偽 green の発生源**（`grep -c 'HTTP/'` = 1） |
+| repository テスト | `tests/unit/t270-amadeus-mirror-repository.test.ts:10` | gateway を import する第 2 のテスト | 1 | 修正時の影響確認対象 |
+| coverage allowlist | `tests/.coverage-patch-allowlist.json` | gateway の行ピン 5 件（`447-448` / `602` / `615-620` / `702` / `716`） | 1 | 行挿入で全件 stale 化 |
+| 過去 record の設計宣言 | `260724-mirror-auto-modes/…/nfr-design/security-design.md:37` | `--slurp` 文法の宣言（実出力と不一致） | 1 | 誤宣言の扱いは requirements で裁定 |
+
+### 配布増幅
+
+`git ls-files "*amadeus-mirror-gateway*"` = **12 パス**（正本 1 / self-install 4 = `.claude` `.codex` `.cursor` `.opencode` / dist 6 = `claude` `codex` `cursor` `kiro` `kiro-ide` `opencode` / テスト 1）。`cmp -s` で配布 10 コピーすべて正本とバイト一致を実測。self-install 側に `.kiro/tools` は存在しない。
+
+**HEAD 前進後の更新（HEAD = `ccdabd323`、Kimi Code CLI ハーネス追加 [PR #1522](https://github.com/amadeus-dlc/amadeus/pull/1522)）**: 同 `git ls-files` は **14 パス**（self-install **5** / dist **7**）。追加は `.kimi-code/tools/` と `dist/kimi/.kimi-code/tools/` の 2 パスで、`cmp -s` により配布 12 コピーすべて正本とバイト一致。**上表のコンポーネント構成・file:line は無変更**（正本ソースは `git log e39402224..HEAD -- '*amadeus-mirror-gateway*'` のヒットが新規コピー 2 パスのみで、`wc -l` = 724 も不変）。
+
+### 区間での変化
+
+区間 27 コミットで**上記コンポーネントはいずれも無変更**（`git log --oneline 1673c4332..HEAD -- '*amadeus-mirror-gateway*'` 出力 0 行）。区間で変化したのは election / audit / graph / benchmark / metrics / CI 面であり、mirror 面とは非交差。
+
+## クロスレビュー済みバグ7件の患部コンポーネント（260726-crossreviewed-bug-batch、履歴、7 Issue）
 
 測定 ref: observed `1673c4332`（base `e12259ba7`、距離 2）。所在・コピー数は同 commit の `git ls-files` / `grep -n` 出力からの転記。上流入力は Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`。
 

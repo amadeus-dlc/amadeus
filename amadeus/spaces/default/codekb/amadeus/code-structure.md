@@ -1,6 +1,59 @@
 # コード構造
 
-## クロスレビュー済みバグ7件の患部コード配置（260726-crossreviewed-bug-batch、現在、7 Issue）
+## mirror-gateway 患部の配置と増幅面（260726-mirror-envelope-lf、現在、Issue #1498）
+
+測定 ref: observed `e39402224`（base `1673c4332`、距離 27）。file:line は同 commit の実ファイル直読、件数は `git ls-files … | wc -l` / `grep -n` / `grep -c` / `wc -l` 出力からの転記。上流入力は Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`（Architect 段で全数再照合、訂正 0 件）。
+
+### 区間の配置変化
+
+区間全体は `git diff --shortstat 1673c4332 HEAD` = **322 files changed, +20142 / -2027**。面別は record 137 / 実装 58 / dist + self-install 114。**患部ファイル群は 0 変更**（`git log --oneline 1673c4332..HEAD -- '*amadeus-mirror-gateway*'` 出力 0 行）。区間で患部の所在・行番号は動いていない。
+
+### 患部の所在
+
+| 対象 | パス | 位置 |
+| --- | --- | --- |
+| 正本（唯一の編集元） | `packages/framework/core/tools/amadeus-mirror-gateway.ts` | 724 行。パーサ `:179-235`、`findArgv` `:118-132`、`findIssuesByMarker` `:655-685` |
+| 消費側 | `packages/framework/core/tools/amadeus-mirror-lifecycle.ts` | `:29` `} from "./amadeus-mirror-gateway.ts";` |
+| 投影宣言 | `packages/framework/harness/projections.ts` | `:26` `"amadeus-mirror-gateway.ts",` |
+| テスト（患部の fixture） | `tests/unit/t272-amadeus-mirror-gateway.test.ts` | `:11` import、`:61` `block()` |
+| テスト（同 import） | `tests/unit/t270-amadeus-mirror-repository.test.ts` | `:10` import |
+| 台帳 | `tests/.coverage-patch-allowlist.json` | gateway の行ピン **5 件**（`447-448` / `602` / `615-620` / `702` / `716`） |
+
+### 増幅面（コピー数の実測）
+
+`git ls-files "*amadeus-mirror-gateway*"` = **12 パス**（正本 1 + self-install 4 + dist 6 + テスト 1）。
+
+```
+packages/framework/core/tools/amadeus-mirror-gateway.ts        ← 正本
+.claude/tools/  .codex/tools/  .cursor/tools/  .opencode/tools/  (self-install 4)
+dist/claude/.claude/  dist/codex/.codex/  dist/cursor/.cursor/
+dist/kiro-ide/.kiro/  dist/kiro/.kiro/  dist/opencode/.opencode/ (dist 6)
+tests/unit/t272-amadeus-mirror-gateway.test.ts
+```
+
+`cmp -s` 実測で self-install 4 + dist 6 = **10 コピーすべて正本とバイト一致**。self-install に `.kiro/tools` は存在せず（`ls -d .kiro/tools` → No such file）、kiro / kiro-ide は dist 側のみ。⇒ 修正時は `bun run promote:self` と `bun scripts/package.ts` の両再生成、および `dist:check` / `promote:self:check` が必須。
+
+**HEAD 前進後の更新（合成直後に `origin/main` を取込、HEAD = `ccdabd323`）**: Kimi Code CLI ハーネス追加（[PR #1522](https://github.com/amadeus-dlc/amadeus/pull/1522)）により配布面が 2 パス増え、`git ls-files "*amadeus-mirror-gateway*"` は **14**（正本 1 + self-install **5** + dist **7** + テスト 1）。追加分は `.kimi-code/tools/amadeus-mirror-gateway.ts` と `dist/kimi/.kimi-code/tools/amadeus-mirror-gateway.ts`（`projections.ts:9` `"kimi",` / `:94-95` `kimi: { harnessDir: ".kimi-code",`）。`cmp -s` で配布 **12 コピーすべて正本とバイト一致**を再実測。**正本ソースは無変更**（`wc -l` = 724、`:196` 不変）なので上表の file:line は測定 ref `e39402224` のまま有効だが、**修正時に触る生成物は 10 → 12 に増える**（下表 #2-5 / #6-11 に kimi 分を加算）。
+
+### 修正時に触る想定ファイル目録（15 エントリ）
+
+| # | パス | 種別 | 備考 |
+| --- | --- | --- | --- |
+| 1 | `packages/framework/core/tools/amadeus-mirror-gateway.ts` | 正本 | パーサ `:179-235`、必要なら `findArgv` / `findIssuesByMarker` |
+| 2-5 | `.claude` / `.codex` / `.cursor` / `.opencode` の `tools/amadeus-mirror-gateway.ts` | 生成物 | `bun run promote:self` |
+| 6-11 | `dist/{claude,codex,cursor,kiro,kiro-ide,opencode}/…/amadeus-mirror-gateway.ts` | 生成物 | `bun scripts/package.ts` |
+| 12 | `tests/unit/t272-amadeus-mirror-gateway.test.ts` | テスト | `block()` `:61` を実 `gh` 形式へ。既存 CRLF ケースは残し**両形式**を持つ |
+| 13 | `tests/.coverage-patch-allowlist.json` | 台帳 | 行ピン 5 件は `:179-235` への行挿入で**全件が下方シフトして stale 化**（cid:code-generation:allowlist-line-pin-stale）。同一 PR で更新 |
+| 14 | `amadeus/…/260724-mirror-auto-modes/…/nfr-design/security-design.md:37` | 過去 record | 誤文法の宣言。訂正するか本 intent 側に反証を残すかは requirements で裁定 |
+| 15 | `packages/framework/core/tools/amadeus-mirror-lifecycle.ts` | 消費側 | パーサの返り値型を変えない限り無改修見込み（仮説） |
+
+検証コマンド: `bun run typecheck` / `bun run lint` / `bun run dist:check` / `bun run promote:self:check` / `bash tests/run-tests.sh --ci`。
+
+### 落ちる実証の注入面
+
+注入面 = **テストが読む面** = `t272` の `block()` 合成（`:61`）（cid:code-generation:injection-surface-verify）。現行 fixture は自作 CRLF なので、**実 `gh` 形式 fixture を足した時点で修正前コードが赤になる** — 落ちる実証がそのまま回帰テストになる。素材は scan-notes §5a（単一 op）/ §5b（P=2 interleave）に実バイト verbatim で保存されている。手法メモ: LF と CRLF は端末表示・`head` では区別できないため `head -c N | od -c` かバイト直読で確認し、判定は captured bytes に実 `parseHttpEnvelope` を適用して `kind` を得る（cid:requirements-analysis:review-method-memo）。
+
+## クロスレビュー済みバグ7件の患部コード配置（260726-crossreviewed-bug-batch、履歴、7 Issue）
 
 測定 ref: observed `1673c4332`（base `e12259ba7`、距離 2）。file:line は同 commit の実ファイル直読、件数は `git ls-files … | wc -l` / `grep -n` 出力からの転記。上流入力は Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`。
 
