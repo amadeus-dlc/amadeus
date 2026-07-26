@@ -4,7 +4,9 @@
 // t209 — dangling-symlink resilience in scripts/promote-self.ts (issue #739).
 // Mechanism: in-process drive of the exported promoteSelfMain(argv, repoRoot)
 // seam against a temp fixture root — zero spawn (spawned subprocesses are
-// invisible to bun --coverage), zero LLM, zero tokens.
+// invisible to bun --coverage), zero LLM, zero tokens. --apply calls pass a
+// null postApply step: the FR-1 kimi hooks wiring is covered by t299, and this
+// test exercises only the distribution mechanics.
 //
 // WHY THIS EXISTS: walk() used to stat() every entry (following symlinks), so
 // a single dangling symlink inside a PRESERVED subtree (.claude/worktrees/ is
@@ -54,7 +56,7 @@ const write = (rel: string, content: string): void => {
   writeFileSync(abs, content);
 };
 
-beforeEach(() => {
+beforeEach(async () => {
   root = mkdtempSync(join(tmpdir(), "t209-promote-self-"));
   // Minimal dist fixture covering all managed dirs (claude/codex/agents/cursor/opencode/kimi).
   write("dist/claude/.claude/tools/a.txt", "alpha\n");
@@ -67,8 +69,8 @@ beforeEach(() => {
   write(".claude/CLAUDE.md", "@.claude/rules/amadeus.md\n\n# Claude onboarding\n");
   write("AGENTS.md", "@.agents/rules/amadeus.md\n\n# Project rules\n");
   // Materialize an in-sync self install (also creates CLAUDE.md + cursor).
-  expect(promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
-  expect(promoteSelfMain(["--no-build"], root)).toBe(0);
+  expect(await promoteSelfMain(["--apply", "--no-build"], root, undefined, null)).toBe(0);
+  expect(await promoteSelfMain(["--no-build"], root)).toBe(0);
 });
 
 afterEach(() => {
@@ -105,45 +107,45 @@ describe("t209 promote-self dangling-symlink resilience", () => {
     expect(got).not.toContain("@AGENTS.md");
   });
 
-  test("fails when the preserved Claude onboarding file is missing", () => {
+  test("fails when the preserved Claude onboarding file is missing", async () => {
     rmSync(join(root, ".claude", "CLAUDE.md"));
-    expect(promoteSelfMain(["--no-build"], root)).toBe(1);
+    expect(await promoteSelfMain(["--no-build"], root)).toBe(1);
   });
 
-  test("--check passes with a dangling symlink under a preserved dir", () => {
+  test("--check passes with a dangling symlink under a preserved dir", async () => {
     plantPreservedDangling();
-    expect(promoteSelfMain(["--no-build"], root)).toBe(0);
+    expect(await promoteSelfMain(["--no-build"], root)).toBe(0);
   });
 
-  test("--apply succeeds and leaves the preserved dangling symlink alone", () => {
+  test("--apply succeeds and leaves the preserved dangling symlink alone", async () => {
     const link = plantPreservedDangling();
-    expect(promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
+    expect(await promoteSelfMain(["--apply", "--no-build"], root, undefined, null)).toBe(0);
     expect(lstatSync(link).isSymbolicLink()).toBe(true);
   });
 
-  test("orphan detection still fires for a stray file (non-regression)", () => {
+  test("orphan detection still fires for a stray file (non-regression)", async () => {
     plantPreservedDangling();
     const stray = join(root, ".claude", "stray-t209.txt");
     writeFileSync(stray, "orphan\n");
-    expect(promoteSelfMain(["--no-build"], root)).toBe(1);
-    expect(promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
+    expect(await promoteSelfMain(["--no-build"], root)).toBe(1);
+    expect(await promoteSelfMain(["--apply", "--no-build"], root, undefined, null)).toBe(0);
     expect(existsSync(stray)).toBe(false);
-    expect(promoteSelfMain(["--no-build"], root)).toBe(0);
+    expect(await promoteSelfMain(["--no-build"], root)).toBe(0);
   });
 
-  test("usage paths return exit code 2 without touching the tree", () => {
-    expect(promoteSelfMain(["--help"], root)).toBe(2);
-    expect(promoteSelfMain(["-h"], root)).toBe(2);
-    expect(promoteSelfMain(["--check", "--apply"], root)).toBe(2);
+  test("usage paths return exit code 2 without touching the tree", async () => {
+    expect(await promoteSelfMain(["--help"], root)).toBe(2);
+    expect(await promoteSelfMain(["-h"], root)).toBe(2);
+    expect(await promoteSelfMain(["--check", "--apply"], root)).toBe(2);
   });
 
-  test("a dangling symlink outside preserved is an ORPHAN, not a crash", () => {
+  test("a dangling symlink outside preserved is an ORPHAN, not a crash", async () => {
     const link = join(root, ".codex", "dangling-t209");
     symlinkSync("/nonexistent-target-t209", link);
-    expect(promoteSelfMain(["--no-build"], root)).toBe(1);
-    expect(promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
+    expect(await promoteSelfMain(["--no-build"], root)).toBe(1);
+    expect(await promoteSelfMain(["--apply", "--no-build"], root, undefined, null)).toBe(0);
     expect(lstatSync(link, { throwIfNoEntry: false })).toBeUndefined();
-    expect(promoteSelfMain(["--no-build"], root)).toBe(0);
+    expect(await promoteSelfMain(["--no-build"], root)).toBe(0);
   });
 
   test("PACKAGE_HARNESSES includes Cursor, OpenCode, and Kimi alongside Claude and Codex", () => {
@@ -167,14 +169,14 @@ describe("t209 promote-self dangling-symlink resilience", () => {
     ]);
   });
 
-  test("--apply installs OpenCode and preserves its activated config", () => {
+  test("--apply installs OpenCode and preserves its activated config", async () => {
     const config = "{\n  \"permission\": \"ask\"\n}\n";
     write(".opencode/opencode.json", config);
 
-    expect(promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
+    expect(await promoteSelfMain(["--apply", "--no-build"], root, undefined, null)).toBe(0);
     expect(readFileSync(join(root, ".opencode", "e.txt"), "utf-8")).toBe("epsilon\n");
     expect(readFileSync(join(root, ".opencode", "opencode.json"), "utf-8")).toBe(config);
-    expect(promoteSelfMain(["--no-build"], root)).toBe(0);
+    expect(await promoteSelfMain(["--no-build"], root)).toBe(0);
   });
 
   test("runPackageFreshness drives the runner for each harness argv", () => {
@@ -185,18 +187,18 @@ describe("t209 promote-self dangling-symlink resilience", () => {
     expect(calls).toEqual(packageFreshnessArgs("apply"));
   });
 
-  test("promoteSelfMain without --no-build invokes the freshness seam", () => {
+  test("promoteSelfMain without --no-build invokes the freshness seam", async () => {
     const seen: string[] = [];
     expect(
-      promoteSelfMain(["--apply"], root, (mode) => {
+      await promoteSelfMain(["--apply"], root, (mode) => {
         seen.push(mode);
-      }),
+      }, null),
     ).toBe(0);
     expect(seen).toEqual(["apply"]);
 
     seen.length = 0;
     expect(
-      promoteSelfMain([], root, (mode) => {
+      await promoteSelfMain([], root, (mode) => {
         seen.push(mode);
       }),
     ).toBe(0);
