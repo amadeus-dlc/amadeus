@@ -35,6 +35,8 @@ concurrency:
     pr_url=$(gh pr create
     --base main
     --head "$branch"
+    --title "Record metrics snapshot"
+    --body "Automatically records code metrics for main commit \${GITHUB_SHA:0:12}."
     gh pr merge --auto --squash --delete-branch "$pr_url"
       - name: Generate snapshot
         run: bun scripts/metrics-snapshot.ts --write
@@ -72,6 +74,8 @@ describe("t222 CI snapshot wiring", () => {
     expect(job).toContain("pr_url=$(gh pr create");
     expect(job).toContain("--base main");
     expect(job).toContain('--head "$branch"');
+    expect(job).toContain('--title "Record metrics snapshot"');
+    expect(job).toContain('--body "Automatically records code metrics for main commit ${GITHUB_SHA:0:12}."');
     expect(job).toContain('gh pr merge --auto --squash --delete-branch "$pr_url"');
     expect(job).not.toContain("HEAD:main");
   });

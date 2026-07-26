@@ -528,8 +528,8 @@ jobs:
           pr_url=$(gh pr create \
             --base main \
             --head "$branch" \
-            --title "メトリクススナップショットを記録する" \
-            --body "main の ${GITHUB_SHA:0:12} に対応するコードメトリクスを自動記録します。")
+            --title "Record metrics snapshot" \
+            --body "Automatically records code metrics for main commit ${GITHUB_SHA:0:12}.")
           gh pr merge --auto --squash --delete-branch "$pr_url"
           {
             echo "## Metrics snapshot pull request"
