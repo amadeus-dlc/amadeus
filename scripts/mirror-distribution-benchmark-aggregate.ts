@@ -15,9 +15,9 @@ type Replica = Readonly<{
   >>;
 }>;
 
-// A ratio is not meaningful when the absolute spread is below 0.5% of the
+// A ratio is not meaningful when the absolute spread is below 5% of the
 // workload budget. The authoritative median p95 budget remains unchanged.
-const DISPERSION_NOISE_FLOOR_FRACTION = 0.005;
+const DISPERSION_NOISE_FLOOR_FRACTION = 0.05;
 
 function median(values: readonly number[]): number {
   return [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];

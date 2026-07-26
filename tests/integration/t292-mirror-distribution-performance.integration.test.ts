@@ -94,6 +94,23 @@ describe("t292 distribution performance protocol", () => {
       };
     });
     expect(aggregateMirrorBenchmarks(lowLatencyReplicas)).toEqual([]);
+    const hostedRunnerNoiseReplicas = [
+      [27, 36, 3],
+      [115, 39, 4],
+      [292, 720, 44],
+    ].map(([packageWrite, packageCheck, docsParity]) => {
+      const base = replica(100);
+      return {
+        ...base,
+        workloads: {
+          ...base.workloads,
+          packageWrite: { ...base.workloads.packageWrite, p95Ms: packageWrite },
+          packageCheck: { ...base.workloads.packageCheck, p95Ms: packageCheck },
+          docsParity: { ...base.workloads.docsParity, p95Ms: docsParity },
+        },
+      };
+    });
+    expect(aggregateMirrorBenchmarks(hostedRunnerNoiseReplicas)).toEqual([]);
     expect(aggregateMirrorBenchmarks([replica(), replica()])[0]).toContain(
       "missing benchmark replica",
     );
@@ -107,7 +124,7 @@ describe("t292 distribution performance protocol", () => {
     expect(aggregateMirrorBenchmarks([
       replica(10),
       replica(11, "other"),
-      replica(30),
+      replica(300),
     ])).toEqual(expect.arrayContaining([
       "benchmark runner image mismatch",
       expect.stringContaining("dispersion"),
