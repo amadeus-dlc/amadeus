@@ -1649,23 +1649,5 @@
     "lines": "1091",
     "reason": "The blockStop call at the end of the spawn-only `if (import.meta.main)` block; changed to pass the resolved projectDir and state path into the reason (FR-2e). The reason builder itself is exported and driven in-process by t296 (C).",
     "expiry": "remove when the Stop hook body is extracted behind an argv/deps seam that tests can drive in-process"
-  },
-  {
-    "file": "dist/claude/.claude/tools/amadeus-mirror-state-codec.ts",
-    "lines": "1355-1356",
-    "reason": "Generated claude dist copy of the v1 issue-number read; the core rows are covered in-process (mirrorIssueNumberFromDocument by t300, the boundary hasMirrorIssue by t265's engine), but the shipped dist engine is only ever spawned, so these rows load as measurable-but-unhit under the parent Bun LCOV.",
-    "expiry": "remove when the v1 issue-number read is measured in-process from the dist engine"
-  },
-  {
-    "file": "dist/claude/.claude/tools/amadeus-orchestrate.ts",
-    "lines": "314",
-    "reason": "Generated claude dist copy of the v1 issue-number read; the core rows are covered in-process (mirrorIssueNumberFromDocument by t300, the boundary hasMirrorIssue by t265's engine), but the shipped dist engine is only ever spawned, so these rows load as measurable-but-unhit under the parent Bun LCOV.",
-    "expiry": "remove when the boundary v1 read is measured in-process from the dist engine"
-  },
-  {
-    "file": "dist/claude/.claude/tools/amadeus-orchestrate.ts",
-    "lines": "3521",
-    "reason": "Generated claude dist copy of the v1 issue-number read; the core rows are covered in-process (mirrorIssueNumberFromDocument by t300, the boundary hasMirrorIssue by t265's engine), but the shipped dist engine is only ever spawned, so these rows load as measurable-but-unhit under the parent Bun LCOV.",
-    "expiry": "remove when the report-path v1 read is measured in-process from the dist engine"
   }
 ]
