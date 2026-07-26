@@ -1,10 +1,10 @@
 // scripts/plugin-projection.ts — C5 Distribution Projection (U09, FR-6 item 19).
 //
 // Discovers authoring plugin sources under repo-root plugins/<name>/, projects
-// each into the six packaged harness trees (dist/<harness>/<harnessDir>/plugins/
+// each into the seven packaged harness trees (dist/<harness>/<harnessDir>/plugins/
 // <name>/) and a harness-neutral bundle (dist/plugins/<name>/), and derives
 // byte/orphan/unreferenced/collision drift. Self-install stays the existing
-// closed four faces (claude/codex/cursor/opencode) — kiro/kiro-ide are packaged
+// closed five faces (claude/codex/cursor/opencode/kimi) — kiro/kiro-ide are packaged
 // but never promoted to the project root.
 //
 // OWNERSHIP: plugins/<name>/ is hand-authored source (read-only here). Every
@@ -40,7 +40,7 @@ const HARNESS_ROOT = join(REPO_ROOT, "packages", "framework", "harness");
 // contract) is validated by C1/U10, not re-parsed here.
 export const PLUGIN_MANIFEST = "plugin.json";
 
-// The six faces the packager discovers from harness/<name>/manifest.ts. Named
+// The seven faces the packager discovers from harness/<name>/manifest.ts. Named
 // here for the closed-matrix verification; the packager's own default target
 // list stays manifest-DISCOVERED, not this constant.
 export const PACKAGE_HARNESSES = [
@@ -50,13 +50,14 @@ export const PACKAGE_HARNESSES = [
   "kiro",
   "kiro-ide",
   "opencode",
+  "kimi",
 ] as const;
 export type PackageHarness = (typeof PACKAGE_HARNESSES)[number];
 
-// The self-install closed union: the four faces promote-self.ts reflects into
-// the project root. Intentionally NOT the six package faces — a type + runtime
+// The self-install closed union: the five faces promote-self.ts reflects into
+// the project root. Intentionally NOT the seven package faces — a type + runtime
 // boundary that keeps kiro/kiro-ide out of the project-local install.
-export const SELF_INSTALL_HARNESSES = ["claude", "codex", "cursor", "opencode"] as const;
+export const SELF_INSTALL_HARNESSES = ["claude", "codex", "cursor", "opencode", "kimi"] as const;
 export type SelfInstallHarness = (typeof SELF_INSTALL_HARNESSES)[number];
 
 // Read-only filesystem seam so discovery is drivable by a fake in tests. Method
@@ -407,18 +408,18 @@ export function isSelfInstallHarness(name: string): name is SelfInstallHarness {
   return (SELF_INSTALL_HARNESSES as readonly string[]).includes(name);
 }
 
-// Assert a harness belongs to the self-install closed four. kiro/kiro-ide are
+// Assert a harness belongs to the self-install closed five. kiro/kiro-ide are
 // packaged but must never promote to the project root; a runtime reject backs
 // the compile-time SelfInstallHarness union.
 export function assertSelfInstallHarness(name: string): SelfInstallHarness {
   if (!isSelfInstallHarness(name))
-    throw new PluginValidationError([`SELF_INSTALL rejected: ${name} is not in the closed four`]);
+    throw new PluginValidationError([`SELF_INSTALL rejected: ${name} is not in the closed five`]);
   return name;
 }
 
-// C5 internal helper: the self-install projection is the closed four faces only.
+// C5 internal helper: the self-install projection is the closed five faces only.
 // Returns the (empty) BuildResult contract; the actual byte reflection stays in
-// promote-self.ts's existing four-face closed list — U09 does not widen it.
+// promote-self.ts's existing five-face closed list — U09 does not widen it.
 export function buildSelfInstallProjection(name: SelfInstallHarness): BuildResult {
   assertSelfInstallHarness(name);
   return { expectedPaths: new Set(), readSources: new Set(), outsideHarness: [] };

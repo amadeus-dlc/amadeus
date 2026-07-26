@@ -9,12 +9,14 @@ import { readFileSync, realpathSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { InstallInputs, ParsedCommand, UsageError } from "./domain/command.ts";
+import { engineDirNameFor } from "./domain/engine-layout.ts";
 import { Installation } from "./domain/installation.ts";
 import { Manifest } from "./domain/manifest.ts";
 import { Plan } from "./domain/plan.ts";
 import { UpgradeRefusal, UpgradeSource } from "./domain/upgrade.ts";
 import { NextSteps } from "./domain/verify-result.ts";
 import { Applier } from "./modules/applier.ts";
+import { type KimiHooksPorts, renderHooksError, runHooksMerge } from "./modules/kimi-hooks.ts";
 import { createManifestIo, type ManifestIo } from "./modules/manifest-io.ts";
 import * as reporter from "./modules/reporter.ts";
 import { createFetcher } from "./modules/fetcher.ts";
@@ -43,16 +45,28 @@ export type CliPorts = {
   readonly createTmpWrite: (prefix: string) => Promise<Result<TmpWrite, IoError>>;
   readonly applyWrite: ApplyWrite;
   readonly verifyRead: VerifyRead;
+  // FR-5a: the kimi flow's hook wiring (Bolt 3's runHooksMerge) takes its own
+  // port bag so tests fake the config fs/tty independently of the install's.
+  readonly kimiHooks: KimiHooksPorts;
 };
 
 export function createDefaultPorts(): CliPorts {
+  const tty = createTtyIO();
+  const applyWrite = createApplyWrite();
   return Object.freeze({
-    tty: createTtyIO(),
+    tty,
     manifestIo: createManifestIo(createFsRead(), createFsWrite()),
     http: createHttp({ apiTimeoutMs: API_TIMEOUT_MS, archiveTimeoutMs: ARCHIVE_TIMEOUT_MS }),
     createTmpWrite,
-    applyWrite: createApplyWrite(),
+    applyWrite,
     verifyRead: createVerifyRead(),
+    kimiHooks: {
+      tty,
+      fsRead: createFsRead(),
+      fsWrite: createFsWrite(),
+      applyWrite,
+      out: (message) => console.log(message),
+    },
   });
 }
 
@@ -140,6 +154,40 @@ async function withTmpWrite(ports: CliPorts, prefix: string, fn: (tmpWrite: TmpW
   }
 }
 
+const KIMI_SNIPPET_REL = join("hooks", "amadeus-hooks.snippet.toml");
+
+// FR-5a: the --harness kimi install/upgrade flow ends by wiring the
+// user-level hooks (Bolt 3's runHooksMerge contract) — read the snippet
+// master from the fetched payload, then report → confirm → backup → atomic
+// write into the user-level config. The BR-I11 stance holds here too: a
+// non-interactive run (--yes included — it is NOT consent) shows the report
+// and stops with the manual procedure, so anything but applied/noop exits 1
+// (a partially wired kimi setup is never reported as success). The snippet
+// bytes must be read from the payload now (its tmp tree is removed when the
+// flow returns); the manual procedure points at the installed copy, which
+// survives.
+async function wireKimiHooks(plan: Plan, inputs: InstallInputs, mode: Mode, ports: CliPorts): Promise<number> {
+  const payloadSnippetPath = join(plan.harnessRoot(), engineDirNameFor(inputs.harness), KIMI_SNIPPET_REL);
+  const read = await ports.kimiHooks.fsRead.readText(payloadSnippetPath);
+  if (read.type === "err") {
+    console.error(reporter.renderSnippetUnreadable(payloadSnippetPath, read.error.detail));
+    return 1;
+  }
+  const merged = await runHooksMerge(
+    {
+      snippet: read.value,
+      snippetSource: join(inputs.target, engineDirNameFor(inputs.harness), KIMI_SNIPPET_REL),
+      interactive: mode === "interactive",
+    },
+    ports.kimiHooks,
+  );
+  if (merged.type === "err") {
+    console.error(renderHooksError(merged.error));
+    return 1;
+  }
+  return merged.value.type === "not-applied" ? 1 : 0;
+}
+
 async function runInstall(parsed: ParsedCommand, ports: CliPorts): Promise<number> {
   const resolvedInputs = await resolveInputs(parsed, ports);
   if (resolvedInputs.type === "exit") return resolvedInputs.code;
@@ -225,6 +273,11 @@ async function runInstall(parsed: ParsedCommand, ports: CliPorts): Promise<numbe
     if (!verify.allPassed()) {
       console.error(reporter.renderVerifyFailure(verify));
       return 1;
+    }
+
+    if ((inputs.harness as string) === "kimi") {
+      const wired = await wireKimiHooks(plan, inputs, mode, ports);
+      if (wired !== 0) return wired;
     }
 
     console.log(reporter.renderSuccess(applied, verify, NextSteps.of(inputs.harness, resolved.value, inputs.target)));
@@ -326,6 +379,11 @@ async function runUpgrade(parsed: ParsedCommand, ports: CliPorts): Promise<numbe
     if (!verify.allPassed()) {
       console.error(reporter.renderVerifyFailure(verify));
       return 1;
+    }
+
+    if ((inputs.harness as string) === "kimi") {
+      const wired = await wireKimiHooks(plan, inputs, resolvedInputs.mode, ports);
+      if (wired !== 0) return wired;
     }
 
     console.log(reporter.renderSuccess(applied, verify, NextSteps.of(inputs.harness, resolved.value, inputs.target)));

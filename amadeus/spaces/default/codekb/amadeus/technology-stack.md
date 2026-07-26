@@ -1,9 +1,10 @@
 # 技術スタック
 
+> **2026-07-26（intent `260726-crossreviewed-bug-batch`、クロスレビュー済みバグ7件、amadeus-bugfix / Brownfield）: 技術スタックに変化なし（測定 ref: observed `1673c4332`、base `e12259ba7`、距離 2）。** 区間で `package.json` / `bun.lock` の変更はなく、ランタイム（Bun / TypeScript ESM）・lint（Biome）・型検査（`tsc --noEmit`）・テストランナー（`tests/run-tests.sh`）の構成はいずれも既報のまま。本 intent が交差するスタック面は (a) core 正本 8 ファイル × dist 6 + self-install 4 の増幅（6件が該当、`bun scripts/package.ts` / `bun run promote:self` の再生成が必須）(b) `scripts/` の CI ベンチマークスクリプトと `.github/workflows/ci.yml` の集約ジョブ配線（#1489 のみ、配布対象外）(c) `team-up.sh` の bash + 外部 seam（agmsg / codex、#1388）。詳細は上流入力 `inception/reverse-engineering/scan-notes.md`。
+
 > **2026-07-26（intent `260726-metrics-visualization`、amadeus-feature / Standard）: 変更なし、確認済み（測定 ref: observed `1c43438df`、base `11f1ad61f`、距離 5）。** 区間内でビルド／テスト構成・依存（`package.json` / `bun.lock` / `tsconfig` / `biome` / `scripts/` / `run-tests.sh` / `.github/`）の diff はいずれも空。交差要素は TypeScript/Bun（`scripts/metrics-*.ts` の3モジュール、Bun test の unit/integration 2層）+ GitHub Actions（`ci.yml` の `metrics-snapshot` job `:398-`）+ `gh` CLI（スナップショット公開 PR、`:470` / `:475`）で、いずれも既存スタック。
 >
 > **可視化の技術前提（本 scan で確定）**: (1) **依存追加ゼロ** — repo 内にチャートライブラリの前例は 0 件であり、`package.json` の全 15 scripts エントリにも metrics 系は 0。可視化は既存スタック（TypeScript + Bun、標準ライブラリのみ）で完結させる方向が既習様式と整合する。 (2) **inline SVG 方針** — repo 唯一の HTML 生成先例 `tests/run-tests.ts:573` `writeCoverageHtml` は「テンプレートリテラル直書きの自己完結 HTML + `coverageHtmlEscape` `:526` + 生成物を読み返す assert」であり、外部アセット・CDN 参照を持たない。inline SVG はこの様式の自然な延長で、新規ランタイム依存を持ち込まずに済む。
-
 > **2026-07-26（intent `260726-grant-scope-gate`、[#1497](https://github.com/amadeus-dlc/amadeus/issues/1497)、amadeus-bugfix / Brownfield）: 変更なし、確認済み（測定 ref: observed `e12259ba7`、base `11f1ad61f`、距離 4）。** 新規ランタイム依存なし。交差要素は TypeScript/Bun（`amadeus-lib.ts` / 新設 `amadeus-grant-authorization.ts` 876 行・`amadeus-presence-reservation.ts` 512 行、Bun test の unit / integration 層）+ JSON データファイル（`tools/data/stage-graph.json` 32 stages・`scope-grid.json` 15 scope キー、`scripts/package.ts:146` の `COMPILED_DATA`）+ 既存の配布同期機構（dist 6 面 / self-install 4 面、`dist:check` / `promote:self:check`）で、いずれも既存スタック。区間内で `package.json` / `bun.lock` / `tsconfig` / `biome` の diff は空。
 
 > **2026-07-26（intent `260725-worktree-ref-fixes`、[#1482](https://github.com/amadeus-dlc/amadeus/issues/1482) / [#1481](https://github.com/amadeus-dlc/amadeus/issues/1481) / [#1455](https://github.com/amadeus-dlc/amadeus/issues/1455)、amadeus-bugfix / Minimal）: 変更なし、確認済み（測定 ref: observed `11f1ad61f`、base `ec624022f`、距離 10）。** 交差要素は TypeScript/Bun（`amadeus-lib.ts` の解決関数、core hooks、Bun test の integration 層）+ git（worktree の `--git-dir` / `--git-common-dir`、loose ref / `packed-refs` レイアウト）+ Claude Code の hook 起動環境（`CLAUDE_PROJECT_DIR`、EnterWorktree の cwd 切替）で、いずれも既存スタック。新規ランタイム依存なし。**#1481 の修正は Node/Bun の FS API 直読から git サブプロセス呼び出しへの置換であり、これも既存様式（`amadeus-lib.ts:4131` `resolveMainCheckout`）の再利用に閉じる。** 区間内でビルド／テスト構成・依存（`package.json` / `bun.lock` / `tsconfig` / `biome` / `scripts/` / `run-tests.sh` / `.github/`）の diff はいずれも空。
@@ -35,6 +36,8 @@ route / commit race は file-backed TOCTOU として lock 内再検証と決定�
 - Distribution: `scripts/package.ts` と harness manifests により Claude、Codex、Kiro CLI、Kiro IDE、Cursor、OpenCode の6面へ投影。
 
 この intent に新規 production dependency は不要である。安全な config read は Node/Bun が提供する fd/open flags/fstat、codec は既存 custom parser、coverage は既存 mapping table の拡張で実装可能である。
+
+> **2026-07-25（intent `260725-kimi-harness`、amadeus-feature）: 変更なし、確認済み。** 区間変化は既存 TypeScript/Bun 資産内の再編（`amadeus-harness.ts` 新規分離、plugin 信頼層）で、新規ランタイム依存なし。plugin-composition の sha256 は `node:crypto` の stdlib 利用で依存追加ではない（base `6d4df9056` → observed `d31b8a5db`）。
 
 > **2026-07-24（intent `260724-watcher-timeout-fix`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み。** 交差要素は bash（`team-up.sh` 制御フロー）+ herdr（pane/agent 操作）+ agmsg（ready sentinel handshake、`spawn.sh`）で、いずれも既存スタック。新規ランタイム依存なし（base `a81c11dde` → observed `6d4df9056`）。
 
@@ -106,8 +109,6 @@ live proof は決定的 unit／integration suite と分離した opt-in e2e と�
 
 - **lizard 1.23.0(Python パッケージ、CI に pip 固定インストール予定)**: TS/多言語対応の CCN(cyclomatic complexity number)計測器。CI の `check` ジョブに typecheck/lint 直後のステップとして pip 固定バージョンで導入予定(E-CX1 Q3=A)。lizard 自体は純 Python 単一パッケージであり、最悪時は vendoring も選択肢(R3 代替緩和)。CCN の baseline ラチェット(現存 CCN>15 の42関数を grandfather、新規超過とラチェット悪化のみ赤)は、`tests/coverage-project-gate.ts` / `gen-coverage-registry.ts` と同型の「committed baseline JSON + env seam + --check 単調非減少 + --update 更新」テンプレートを踏襲する想定。
 - **Biome `noExcessiveCognitiveComplexity` の有効化予定**: Biome 2.4系標準の cognitive-complexity ルールを warn として有効化予定(現状 `biome.json` の linter.rules では未有効)。あわせて lint スコープを現行の `tests/ packages/setup/` から `packages/framework/core` + `scripts` へ拡大予定(E-CX1 Q2=A、既存6指摘の機械的修正を同一 PR に含む)。2層ゲート(Biome warn + lizard CCN ラチェット)の warn 層を担う。
-
-
 
 - **#685**: `amadeus-state.ts`/`amadeus-lib.ts`/`amadeus-audit.ts` はいずれも標準ライブラリ(`node:fs`、`node:path`)のみで構成される素朴な手続き型実装。#671 の `delegate-approval`/`humanActedSinceGate`/`verifyDelegatedApproval` と同型の機構(issuer coordinates を audit block に埋め込み、対象側が実 shard を読んで検証する)を REJECT 側に追加するのに新規の外部依存は不要。
 - **#670**: `amadeus-worktree.ts` は `child_process`(`runGit`)経由で git を直接呼ぶ実装で、外部 git ライブラリへの依存はない。`assertNotSiblingWorktree` の分岐追加(許可すべき sibling とブロックすべき sibling の区別)も既存の `runGit` 呼び出しの範囲で完結する見込み。

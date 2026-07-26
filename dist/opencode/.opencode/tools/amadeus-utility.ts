@@ -15,6 +15,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import type { Stats } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -503,6 +504,7 @@ export interface DoctorContext {
   readonly platform: NodeJS.Platform;
   readonly homeDir: string | undefined;
   readonly codexHomeDir: string;
+  readonly kimiHomeDir: string;
   readonly defaultScope: string;
   readonly migrationDoctor: boolean;
   readonly heartbeatSwapTarget: string | undefined;
@@ -588,6 +590,12 @@ export function resolveDoctorContext(projectDir: string): DoctorContext {
   const platform = process.platform;
   const homeDir = process.env.HOME;
   const codexHomeDir = process.env.CODEX_HOME ?? join(homeDir ?? "", ".codex");
+  // KimiHome resolution must match the installer's resolveKimiHome
+  // (packages/setup/src/modules/kimi-hooks.ts): $KIMI_CODE_HOME, else
+  // homedir()/.kimi-code. HOME can be unset (Windows) or differ from the OS
+  // home, which would point doctor at a different config.toml than the one the
+  // installer wired.
+  const kimiHomeDir = process.env.KIMI_CODE_HOME ?? join(homedir(), ".kimi-code");
   const defaultScope = (process.env.AMADEUS_DEFAULT_SCOPE ?? "").trim();
   const migrationDoctor = process.env.AMADEUS_MIGRATION_DOCTOR === "1";
   const testMode = process.env.NODE_ENV === "test";
@@ -614,6 +622,7 @@ export function resolveDoctorContext(projectDir: string): DoctorContext {
     platform,
     homeDir,
     codexHomeDir,
+    kimiHomeDir,
     defaultScope,
     migrationDoctor,
     heartbeatSwapTarget,
@@ -817,6 +826,235 @@ export function codexProjectTrustDoctorCheck(
     pass: projectTrusted,
     label: `project trust: ${projectTrustKey} present in ${codexConfig} (layer 1 — Codex skips all .codex hooks silently without it)`,
     fix: 're-run `bash <harness-dir>/tools/team-up.sh` (seeds both trust layers) or append the entry manually with `trust_level = "trusted"`',
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Kimi managed-block doctor checks (kimi-harness: core-harness-enums).
+//
+// Kimi Code has no project-level config file: the hook wiring lives in the
+// user-level KimiHome config.toml ($KIMI_CODE_HOME ?? ~/.kimi-code) as a
+// marker-fenced managed block the setup CLI merges from the shipped
+// .kimi-code/hooks/amadeus-hooks.snippet.toml. The detection contract below —
+// the marker constants, the adapter content signature, and the managed git
+// pre-allow patterns — is DUPLICATED from packages/setup/src/domain/
+// kimi-hooks.ts: the shipped framework must stay self-contained (no
+// packages/setup import, the same ADR-6 self-containment rule the elections
+// drift check documents above). The parity test pins these copies against the
+// setup domain so the two cannot silently drift. The dual identification
+// (marker lines first, the adapter command line when the markers are gone)
+// exists because the kimi CLI re-serializes config.toml and drops comments.
+// ---------------------------------------------------------------------------
+
+export const KIMI_MANAGED_BLOCK_BEGIN = "# >>> amadeus-kimi-hooks >>>";
+export const KIMI_MANAGED_BLOCK_END = "# <<< amadeus-kimi-hooks <<<";
+const KIMI_ADAPTER_SIGNATURE = ".kimi-code/hooks/amadeus-kimi-adapter.ts";
+const KIMI_MANAGED_GIT_PATTERNS = ["Bash(git worktree*)", "Bash(git commit*)", "Bash(git add*)"] as const;
+
+// The managed-block wiring procedure, shared by every missing/repair fix line.
+const KIMI_MANAGED_BLOCK_FIX =
+  're-run the installer (`bunx @amadeus-dlc/setup install --target <workspace>`) to merge the managed block, or wire it manually: copy everything between "# >>> amadeus-kimi-hooks >>>" and "# <<< amadeus-kimi-hooks <<<" (inclusive) from .kimi-code/hooks/amadeus-hooks.snippet.toml to the end of the config.toml';
+
+// A raw config table (header + unparsed body) — the minimal structural scan
+// the detection needs (no TOML parse, mirroring the setup domain's scanTables
+// contract: header lines normalize whitespace, bodies stay raw).
+interface KimiConfigTable {
+  readonly header: string; // normalized, e.g. "[[hooks]]"
+  readonly bodyText: string;
+}
+
+function scanKimiConfigTables(text: string): KimiConfigTable[] {
+  const tables: KimiConfigTable[] = [];
+  let header: string | null = null;
+  let body: string[] = [];
+  const flush = (): void => {
+    if (header !== null) tables.push({ header, bodyText: body.join("\n") });
+    header = null;
+    body = [];
+  };
+  for (const line of text.split("\n")) {
+    const match = /^\s*(\[\[[^\]]+\]\]|\[[^\]]+\])\s*(?:#.*)?$/.exec(line);
+    if (match !== null) {
+      flush();
+      header = (match[1] ?? "").replace(/\s+/g, "");
+    } else if (header !== null) {
+      body.push(line);
+    }
+  }
+  flush();
+  return tables;
+}
+
+// The dual managed-block detection: the marker pair wins; with no markers the
+// adapter command line inside a [[hooks]] table establishes the block's
+// presence (a user's own .kimi-code-flavoured entries never carry it).
+// Anomalies (duplicate/unpaired/reversed markers, duplicate adapter hook
+// tables) are reported distinctly so the check can fail LOUD — doctor never
+// auto-repairs.
+type KimiManagedBlockDetection =
+  | { readonly kind: "marker" }
+  | { readonly kind: "content" }
+  | { readonly kind: "none" }
+  | { readonly kind: "duplicate"; readonly detail: string }
+  | { readonly kind: "unpaired" }
+  | { readonly kind: "reversed" };
+
+function detectKimiManagedBlock(text: string): KimiManagedBlockDetection {
+  const lines = text.split("\n");
+  const begins = lines.filter((line) => line.trim() === KIMI_MANAGED_BLOCK_BEGIN).length;
+  const ends = lines.filter((line) => line.trim() === KIMI_MANAGED_BLOCK_END).length;
+  if (begins > 1 || ends > 1) {
+    return { kind: "duplicate", detail: "more than one amadeus managed-block marker pair" };
+  }
+  if (begins !== ends) return { kind: "unpaired" };
+  if (begins === 1) {
+    const start = lines.findIndex((line) => line.trim() === KIMI_MANAGED_BLOCK_BEGIN);
+    const end = lines.findIndex((line) => line.trim() === KIMI_MANAGED_BLOCK_END);
+    if (start >= end) return { kind: "reversed" };
+    // A markerless copy of the managed adapter hook alongside the fenced block
+    // is a mixed anomaly — matching the setup domain's detectManagedBlock, which
+    // loud-fails a duplicate rather than silently trusting the marker pair.
+    const outsideAdapterTables = scanKimiConfigTables(
+      [...lines.slice(0, start), ...lines.slice(end + 1)].join("\n"),
+    ).filter(
+      (table) => table.header === "[[hooks]]" && table.bodyText.includes(KIMI_ADAPTER_SIGNATURE),
+    ).length;
+    if (outsideAdapterTables > 0) {
+      return {
+        kind: "duplicate",
+        detail: "the managed adapter hook appears both inside the marker block and in a separate [[hooks]] table",
+      };
+    }
+    return { kind: "marker" };
+  }
+  const adapterTables = scanKimiConfigTables(text).filter(
+    (table) => table.header === "[[hooks]]" && table.bodyText.includes(KIMI_ADAPTER_SIGNATURE),
+  ).length;
+  if (adapterTables > 1) {
+    return { kind: "duplicate", detail: "the managed adapter hook appears in more than one [[hooks]] table" };
+  }
+  return adapterTables === 1 ? { kind: "content" } : { kind: "none" };
+}
+
+function readKimiConfig(kimiHomeDir: string): { readonly path: string; readonly text: string | null } {
+  const path = join(kimiHomeDir, "config.toml");
+  try {
+    return { path, text: readFileSync(path, "utf-8") };
+  } catch {
+    return { path, text: null }; // absent OR unreadable — both reported as missing below
+  }
+}
+
+// Managed-block presence check. Present by markers → PASS. Present by content
+// only (the kimi CLI stripped the marker comments) → advisory PASS with a
+// repair hint: the wiring fires, and the next install/upgrade re-wraps the
+// markers. Missing (no config.toml, or no block in it) → FAIL with the wiring
+// procedure; marker anomalies → loud FAIL with manual-fix guidance (never a
+// silent pick, matching the setup domain's loud-fail contract).
+export function kimiManagedBlockDoctorCheck(kimiHomeDir: string): DoctorCheck {
+  const { path, text } = readKimiConfig(kimiHomeDir);
+  if (text === null) {
+    return {
+      pass: false,
+      label: `kimi managed block: ${path} missing — hooks not wired`,
+      fix: KIMI_MANAGED_BLOCK_FIX,
+    };
+  }
+  const detection = detectKimiManagedBlock(text);
+  switch (detection.kind) {
+    case "marker":
+      return { pass: true, label: `kimi managed block: present in ${path}` };
+    case "content":
+      return {
+        pass: true,
+        label: `kimi managed block: present by content in ${path} but the markers are gone (the kimi CLI re-serializes config.toml and drops comments) — the next install/upgrade run re-wraps them`,
+      };
+    case "duplicate":
+      return {
+        pass: false,
+        label: `kimi managed block: ${detection.detail} in ${path}`,
+        fix: "remove the duplicates manually, then re-run the installer — doctor never auto-repairs",
+      };
+    case "unpaired":
+      return {
+        pass: false,
+        label: `kimi managed block: unpaired amadeus managed-block marker in ${path}`,
+        fix: "fix the marker pair manually (markers come in a begin/end pair)",
+      };
+    case "reversed":
+      return {
+        pass: false,
+        label: `kimi managed block: reversed amadeus managed-block markers in ${path}`,
+        fix: "fix the marker order manually",
+      };
+    case "none":
+      return {
+        pass: false,
+        label: `kimi managed block: not found in ${path} — hooks not wired`,
+        fix: KIMI_MANAGED_BLOCK_FIX,
+      };
+  }
+}
+
+// Git pre-allow residue check (advisory). The managed git rules carry no
+// .kimi-code signature, so a block removed while its markers were stripped
+// can leave them behind undetectably — when NO managed block is detected but
+// the managed git patterns are still present, warn (a user's own identical
+// rules cannot be told apart, hence advisory-only).
+export function kimiGitResidueDoctorCheck(kimiHomeDir: string): DoctorCheck {
+  const { path, text } = readKimiConfig(kimiHomeDir);
+  if (text === null || detectKimiManagedBlock(text).kind !== "none") {
+    return { pass: true, label: "kimi git pre-allows: no residue (advisory)" };
+  }
+  const residue = scanKimiConfigTables(text).filter(
+    (table) =>
+      table.header === "[[permission.rules]]" &&
+      KIMI_MANAGED_GIT_PATTERNS.some((pattern) => table.bodyText.includes(pattern)),
+  ).length;
+  if (residue === 0) {
+    return { pass: true, label: "kimi git pre-allows: no residue (advisory)" };
+  }
+  return {
+    pass: true,
+    label: `kimi git pre-allows: ${residue} managed-style git rule(s) in ${path} with no amadeus managed block detected — possible residue from an incompletely removed block; review manually (advisory)`,
+  };
+}
+
+// Minimum Kimi Code CLI version floor. The adapter's hook event/matcher payload
+// contract was measured live against 0.28.1; older versions are unverified.
+const MIN_KIMI_VERSION = [0, 28, 1] as const;
+
+// Pure over the resolved binary path (undefined ⇒ not on PATH) and the raw
+// `--version` output, so both fail branches are driven in-process while the
+// spawn stays in handleDoctor. Three outcomes are kept distinct so the label
+// never misleads: an absent binary is "not installed" (install), an on-PATH
+// binary whose --version is unparseable is a parse fault (not a missing
+// install), and a parseable version runs the floor compare.
+export function classifyKimiCliVersionCheck(kimiPath: string | undefined, versionText: string): DoctorCheck {
+  if (kimiPath === undefined) {
+    return {
+      pass: false,
+      label: "kimi CLI not installed (not on PATH)",
+      fix: "install Kimi Code CLI >= 0.28.1 (see docs/guide/harnesses/kimi-code.md)",
+    };
+  }
+  const match = versionText.match(/(\d+)\.(\d+)\.(\d+)/);
+  if (!match) {
+    return {
+      pass: false,
+      label: `kimi CLI on PATH (${kimiPath}) but its --version output is not parseable as a semver`,
+      fix: "ensure `kimi --version` prints a version >= 0.28.1, or upgrade Kimi Code CLI",
+    };
+  }
+  const v = [Number(match[1]), Number(match[2]), Number(match[3])];
+  const ok =
+    v[0] > MIN_KIMI_VERSION[0] ||
+    (v[0] === MIN_KIMI_VERSION[0] &&
+      (v[1] > MIN_KIMI_VERSION[1] || (v[1] === MIN_KIMI_VERSION[1] && v[2] >= MIN_KIMI_VERSION[2])));
+  return {
+    pass: ok,
+    label: `kimi CLI version ${match[0]} >= 0.28.1 (measured hook payload contract)`,
+    fix: "upgrade Kimi Code CLI to 0.28.1 or later",
   };
 }
 
@@ -1202,6 +1440,7 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
     platform,
     homeDir,
     codexHomeDir,
+    kimiHomeDir,
     defaultScope,
     migrationDoctor,
     heartbeatSwapTarget,
@@ -1349,6 +1588,7 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
     ];
     if (harness === ".kiro") tsHooks.push("amadeus-kiro-adapter");
     if (harness === ".codex") tsHooks.push("amadeus-codex-adapter");
+    if (harness === ".kimi-code") tsHooks.push("amadeus-kimi-adapter");
     for (const h of tsHooks) {
       const hookPath = join(projectDir, harness, "hooks", `${h}.ts`);
       results.push({
@@ -1431,6 +1671,47 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
       label:
         "hook trust: ensure [hooks.state] entries are pre-seeded in $CODEX_HOME/config.toml (layer 2 — `bun scripts/package.ts codex trust --project <dir>`) or run one TUI trust pass",
     });
+  } else if (harness === ".kimi-code") {
+    // Kimi Code: no project-level wiring config — the hook wiring lives in the
+    // user-level KimiHome config.toml ($KIMI_CODE_HOME ?? ~/.kimi-code) as a
+    // marker-fenced managed block, merged by the setup CLI. Judgment lives in
+    // the in-process-tested kimiManagedBlockDoctorCheck /
+    // kimiGitResidueDoctorCheck seams (the git pre-allow residue warning is
+    // advisory by contract).
+    results.push(kimiManagedBlockDoctorCheck(kimiHomeDir));
+    results.push(kimiGitResidueDoctorCheck(kimiHomeDir));
+    // Minimum Kimi Code version pin: the hook event/matcher payload contract
+    // the adapter translates was measured live against 0.28.1. The spawn stays
+    // here; the three-way classification (not installed / unparseable / floor
+    // compare) is the pure classifyKimiCliVersionCheck seam, driven in-process.
+    const kimiPath = Bun.which("kimi");
+    const kimiVerText = kimiPath
+      ? (Bun.spawnSync([kimiPath, "--version"], { stdout: "pipe", stderr: "ignore" }).stdout?.toString() ?? "").trim()
+      : "";
+    results.push(classifyKimiCliVersionCheck(kimiPath ?? undefined, kimiVerText));
+    // Function probe (advisory): fire the adapter once with a no-op target and
+    // an empty envelope. The adapter is fail-open by contract, so exit 0 means
+    // the shim runs under bun. Any failure is reported as UNVERIFIED, never a
+    // doctor failure — hooks are auxiliary and the workflow still runs.
+    const probeAdapter = join(projectDir, harness, "hooks", "amadeus-kimi-adapter.ts");
+    let probeOk = false;
+    try {
+      const probe = Bun.spawnSync(["bun", probeAdapter, "doctor-probe"], {
+        cwd: projectDir,
+        stdin: Buffer.from("{}"),
+        stdout: "ignore",
+        stderr: "ignore",
+      });
+      probeOk = probe.exitCode === 0;
+    } catch {
+      probeOk = false;
+    }
+    results.push({
+      pass: true,
+      label: probeOk
+        ? "kimi hook probe: adapter fired (advisory)"
+        : "kimi hook probe: unverified — the adapter did not exit 0 (advisory; hooks are auxiliary, the workflow still runs)",
+    });
   } else {
     const settingsPath = join(projectDir, harness, "settings.json");
     results.push({
@@ -1443,7 +1724,7 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
   // 4b. Dual-harness coexistence (D-11): another harness tree installed AND a
   // workflow active is supported-but-untested — warn (advisory pass with a
   // visible label), never block.
-  const otherTrees = [".claude", ".kiro", ".codex", ".opencode", ".cursor"].filter(
+  const otherTrees = [".claude", ".kiro", ".codex", ".opencode", ".cursor", ".kimi-code"].filter(
     (h) => h !== harness && existsSync(join(projectDir, h, "tools", "amadeus-lib.ts")),
   );
   if (

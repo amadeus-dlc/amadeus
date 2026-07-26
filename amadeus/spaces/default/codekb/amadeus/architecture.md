@@ -1,6 +1,35 @@
 # アーキテクチャ
 
-## metrics サブシステムの現況と可視化の挿入点（260726-metrics-visualization、現在）
+## クロスレビュー済みバグ7件の患部アーキテクチャ（260726-crossreviewed-bug-batch、現在、7 Issue）
+
+測定 ref: observed `1673c433209c74820881c75a0816bbce3fb2d512`（= 現 HEAD、`git rev-parse HEAD` 実測）。base `e12259ba7`（前 intent `260726-grant-scope-gate` の observed、`git merge-base --is-ancestor` exit 0 / 距離 2）。以下の file:line はすべて同 commit の実ファイル直読であり、上流の Developer スキャン結果（`inception/reverse-engineering/scan-notes.md`）を Architect 段で独立に再検証したうえで転記している。
+
+### 区間で変化したアーキテクチャ面
+
+区間2コミットのうち実装面は1件（`10d8bcfbb` = [PR #1499](https://github.com/amadeus-dlc/amadeus/pull/1499)、[Issue #1497](https://github.com/amadeus-dlc/amadeus/issues/1497)）。正本の変更は `packages/framework/core/tools/amadeus-lib.ts` の 35 insertions / 3 deletions のみで、`standingGrantSatisfiesGate` の scope 解決を stage frontmatter 直読から engine 正準の scope-grid 解決へ差し替えたもの。**本 intent の7件の患部はこの区間で一切変更されていない**（`git diff --stat e12259ba7 HEAD -- packages/framework/core/` が `amadeus-lib.ts` 1ファイルのみを返す）。したがって以下はいずれも区間より前から存在する構造欠陥である。
+
+### 支配的な構造パターン: 対操作の非対称
+
+7件のうち6件は、同族の対操作の片側だけが防御されている**非対称**として説明できる（cid:requirements-analysis:symmetric-pair-review の観点）。
+
+| Issue | 防御されている側（実在） | 欠けている側（患部） |
+| --- | --- | --- |
+| #1377 | `auditShardDir`（`amadeus-lib.ts:4126-4128`）は `recordDir` が null なら `return null` で fail-closed | `auditFilePath`（`:3326-3328`）と `stateFilePath`（`:3313-3316`）は `spaceRecordRoot`（= `intentsDir`）へフォールバックし、bare `intents/` 直下へ書く |
+| #1462 | stages ディレクトリ判定（`amadeus-graph.ts:1828`）は `!existsSync(stagesRoot) || !statSync(...)` の順で dangling symlink を安全に skip | plugin 名フィルタ（`:1823-1824`）は `statSync(...).isDirectory()` を無ガードで呼び raw ENOENT を throw |
+| #1459 | `voters` は `!isStringArray(r.voters) \|\| r.voters.length === 0` で空配列を拒否（`amadeus-election-model.ts:82`） | `choices` は `parseChoices` が空配列も重複 internalNo も通し、`:81` は null 判定のみ（重複 voter の一意性検査も不在） |
+| #1457 | 設計 doc（`amadeus-election-record.ts:182-185`）は「record を自分自身と比較しない（no verification-theatre self-reference）」と明言 | caller（`amadeus-election.ts:486, 494, 503`）が `resolved` 由来の値を `ledgerCount` と `ballots` の両方へ渡し、2分岐が恒久 false |
+| #1458 | 設計 doc（`amadeus-election-transport.ts:165-167`）は「conductor 報告後に `reportDelivery` が record を mint する」と明言 | その配線が CLI に存在せず（`amadeus-election.ts` からの `reportDelivery` hit は 0 件）、既定 subagent transport は `kind: "directive"` を返して `:326` の `delivered` 限定 booking に入らない |
+| #1489 | 判定は `min/max 比 > 2` と `絶対差 > noiseFloor` の AND（`scripts/mirror-distribution-benchmark-aggregate.ts:33-35`） | noise floor が予算比 0.005 固定（`:20`）で、`p95BudgetMs = 2_000` のワークロードでは **10ms**（= `2_000 × 0.005`、算出式併記）にしかならず、3 replica の min/max 比が単一外れ値で壊れる |
+
+### 例外: #1388 は既決設計との衝突
+
+`team-up.sh` の codex 経路（`packages/framework/core/tools/team-up.sh:998` の `prompt="\$agmsg actas $role"`、`:1061-1062` の一発供給）に watcher arming 検証が無いことは構造として現存する。しかしその除外は `watcher_verification_applies`（`:1116-1117` の `[ "$RUNTIME" = "claude" ] && [ "$MSG_BACKEND" = "agmsg" ] || return 1`）と直上コメント `:1098-1099`（"Codex is out of scope (FR-6)"）により、後続 intent で **FR-6 として明示的に決定された設計判断**である。加えて本ファイルは Issue 起票時点の `scripts/team-up.sh` から `packages/framework/core/tools/team-up.sh` へ移動し、**配布対象（正本 + 10 コピー）になっている**。すなわち #1388 は「バグの修正」ではなく「既決設計の変更（＝仕様変更）」に当たる可能性があり、性格判定が先決事項である。
+
+### 配布増幅の構造的含意
+
+`git ls-files "*/<file>" | grep -v '^packages/' | wc -l` の出力転記（測定 ref `1673c4332`）: `amadeus-election.ts` / `amadeus-election-record.ts` / `amadeus-election-model.ts` / `amadeus-election-transport.ts` / `amadeus-graph.ts` / `amadeus-lib.ts` / `amadeus-audit.ts` / `team-up.sh` はいずれも **10**（dist 6 + self-install 4）、`scripts/mirror-distribution-benchmark-aggregate.ts` は **1**（正本のみ、配布対象外）。したがって #1489 以外の6件はすべて `bun scripts/package.ts` + `bun run promote:self` の再生成と `dist:check` / `promote:self:check` を修正 PR の完成条件に含む。
+
+## metrics サブシステムの現況と可視化の挿入点（260726-metrics-visualization、履歴）
 
 測定 ref: observed `1c43438df`（base `11f1ad61f`、距離 5）。以下の file:line はすべて同 commit の実ファイル直読による。**metrics サブシステムは区間内で完全に無変更**（`git diff --name-only 11f1ad61f 1c43438df -- scripts/ .github/` の出力 0 行）であり、本節の現況は区間より前から安定している。
 
@@ -110,8 +139,7 @@ env seam は `defaultEnv` `:112`（`root = process.env.AMADEUS_METRICS_ROOT ?? R
 
 **metrics サブシステムはこの2系統から独立している**: `scripts/metrics-*.ts` の3ファイルはいずれも `amadeus-lib` を import しない（`grep -c 'amadeus-lib' scripts/metrics-*.ts` = 各 **0**）。したがって系統 B の hook 変更は可視化機能の設計前提に影響しない。
 
-## worktree でのパス／ref 解決の現況（260725-worktree-ref-fixes、履歴、Issue #1482 / #1481 / #1455）
-## solo standing grant 認可アーキテクチャと scope 解決の二重化（260726-grant-scope-gate、現在、Issue #1497）
+## solo standing grant 認可アーキテクチャと scope 解決の二重化（260726-grant-scope-gate、履歴、Issue #1497）
 
 測定 ref: observed `e12259ba78b8c56bf3572c9bfd44a7bdf84d681c`（= 現 HEAD、`git rev-parse HEAD` 実測）。base `11f1ad61f`（前 intent `260725-worktree-ref-fixes` の observed、`git merge-base --is-ancestor` exit 0 / 距離 4）。以下の file:line・件数はすべて同 commit の実ファイル直読および `grep -n` / `python3 -c json` 出力からの転記。
 
@@ -542,6 +570,38 @@ sequenceDiagram
 - prompt 回答 surface は `expectedPrompt.bindingId`、event、operation、answerId を一組で受け、coordinator の `approveMirrorPrompt` を binding まで照合する対称な approve/skip 判定へ拡張して接続する。
 - legacy mutation verb は lifecycle `manual` へ委譲するか明示拒否し、直接 GitHub mutation を廃止する。read-only `status` は診断面として分離可能。
 - config は open descriptor を信頼の起点とし、no-follow、fd identity、workspace containment を同じ検査鎖で確定する。codec は未エスケープ code point `< U+0020` を一律拒否する。coverage は全6 harness の正準→生成投影表を一か所で管理する。
+
+## plugin 中立バンドル出荷とハーネス移植面の 3 閉集合（260725-kimi-harness、2026-07-25、履歴）
+
+測定 ref: observed HEAD `d31b8a5db` 実ファイル直読 + `git log/diff 6d4df9056..HEAD`（624 files, +103965/−1957。非 record 295 files, +34617/−1957）。
+
+### 1. plugin 出荷モデルの変更 — harness 中立バンドルのみ（`47d5e3f9c`）
+
+区間内で plugin の出荷形態が「per-harness 投影」から「harness 中立バンドルのみ」へ変わった。plugin は `dist/plugins/<name>/` 配下のバンドルとしてのみ出荷され、従来の per-harness `<harnessDir>/plugins/` への投影は廃止。packager 側の `projectPluginsIntoHarnessTree`（`scripts/package.ts:316`、呼出 :505）は read-source 会計（#735 の未参照ソース scan に plugin 著作ファイルを参照済みとして計上する）だけを行う no-op へ縮退した。初のバンドルは `dist/plugins/formal-model-check/`（base では `dist/plugins/` ディレクトリ自体が非存在）。アーキテクチャ上の意味: plugin の配布面がハーネス行列（6 面）から直交化され、新ハーネス追加時に plugin 投影面を設計する必要がなくなった。
+
+### 2. plugin 信頼層（`f67b931c2` + `454194231`）
+
+`scripts/plugin-composition.ts`（1365 行、区間 +138/−15）に実行時信頼検証が入った。plugin・stage 単位の sha256 `contentDigest`（:128/:135/:191）、stage index の parse 検証（`parseStages` :293、呼出 :286）、journal 内の信頼付与（trust grant、`validJournal` :813、digest 形式検査 :826 `/^sha256:[0-9a-f]{64}$/`）、drop 時のドリフト拒否。信頼は内容ハッシュに接地し、drop は「ジャーナル上の付与と現行内容の digest 一致」でのみ許容される設計。
+
+### 3. ハーネス検出の `amadeus-harness.ts` 分離（`58053fa61`）
+
+ハーネス種別・検出の canonical 定義が `amadeus-lib.ts` から新規 `packages/framework/core/tools/amadeus-harness.ts`（137 行）へ移管された（`HarnessType` :5-12 / `HARNESS_DIR_TO_TYPE` :14-22 / `KNOWN_HARNESS_DIRS` :34-40 / `KNOWN_RULES_SUBDIR` :53-57）。lib は import + 型 re-export + compat facade（:7-18, :152-166）へ縮退（区間 +21/−99）し、呼び出し側は既存シンボルを変えない。新ハーネスの dir/type/rulesSubdir はこの 1 ファイルが正本登録面になった。
+
+### 4. 新ハーネス追加が触れる 3 閉集合の非対称（kimi 移植面の要点）
+
+kimi のような新ハーネスは、目的の異なる 3 つの閉集合それぞれへ**個別に**追加（または非追加を維持）する設計判断が要る:
+
+| 閉集合 | 場所 | 面数 | 意味 |
+| --- | --- | --- | --- |
+| `PACKAGE_HARNESSES` | `scripts/plugin-projection.ts:46-53` | 6（claude/codex/cursor/kiro/kiro-ide/opencode） | packager がビルドする全 harness 面（閉行列検証用。packager 本体の既定 target は manifest 自動発見 `scripts/package.ts:85-91` でこの定数に非依存） |
+| `SELF_INSTALL_HARNESSES` | `scripts/plugin-projection.ts:59`（membership :407）、`promote-self.ts:169` `PACKAGE_HARNESSES` | 4（claude/codex/cursor/opencode） | project root へ self-install される面。kiro/kiro-ide を意図的に外す型+実行時境界（コメント :56-58） |
+| swarm `HARNESS_VALUES` | `packages/framework/core/tools/amadeus-swarm.ts:100` | 4（claude/codex/kiro/kiro-ide） | swarm driver 選択を仲裁するハーネス。cursor/opencode を意図的除外。`resolveDriver`（:118-136）は未知値を fail-closed 拒否するため、kimi の swarm 参加は明示的 opt-in 追加が必要 |
+
+副次触点: `scripts/promote-self.ts:37-43` managedDirs（5 行）、`scripts/detect-ci-changes.sh:20` drift glob、`packages/setup/src/domain/harness.ts:9/:21-28/:33`、`engine-layout.ts:8-15`、`reporter.ts:24-25,:137`、`amadeus-utility.ts` doctor（:1196/:1275/:1350-1351/:1366/:1379/:1439/:1446）。`packages/framework/harness/` は base・HEAD とも同じ 6 dir で区間内に新ハーネス dir は未追加。kimi の雛形は cursor/manifest.ts（75 行、最小面）と codex/emit.ts（375 行、HOOK_WIRING :29-39 + trust pre-seed + agent TOML + `.agents/skills` のフル emit）。
+
+### 5. intent birth での harness provenance（`dc1eeba20`）
+
+どのハーネスが intent を実行したかを birth 時に state へ記録する機能が着地（`amadeus-lib.ts` +78/−9、`amadeus-utility.ts` +3/−0）。`harnessDir()`/`detectHarnessType()` の検出機構が provenance ソースとして本線に組み込まれた（検出実装は §3 の amadeus-harness.ts が正本）。新テスト t269（unit+cli）/t270/t271 + t144-harness-seam.cli がこれを固定。
 
 > **2026-07-24 更新（intent `260724-watcher-timeout-fix`、履歴）**: base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb` → observed HEAD `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`（distance 155）の differential refresh（amadeus-bugfix / Minimal、[Issue #1449](https://github.com/amadeus-dlc/amadeus/issues/1449)）。交差面は Team Mode ランチャー(`packages/framework/core/tools/team-up.sh`)の起動シーケンス上の agmsg watcher arming 検証の位置。下記「Team Mode ランチャーの watcher arming 検証と mux_attach ブロッキング」節は同 intent の履歴。以下の 260723 系・260722 系節も履歴。
 

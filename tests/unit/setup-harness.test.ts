@@ -8,9 +8,9 @@ import { describe, expect, test } from "bun:test";
 import { HarnessName } from "../../packages/setup/src/domain/harness.ts";
 
 describe("HarnessName.all", () => {
-  test("contains exactly the six known harnesses", () => {
+  test("contains exactly the seven known harnesses", () => {
     const names: string[] = HarnessName.all.map((h) => h);
-    expect(names.sort()).toEqual(["claude", "codex", "kiro", "kiro-ide", "opencode", "cursor"].sort());
+    expect(names.sort()).toEqual(["claude", "codex", "kiro", "kiro-ide", "opencode", "cursor", "kimi"].sort());
   });
 
   test("edge case: is frozen (cannot be mutated at runtime)", () => {

@@ -1,0 +1,1 @@
+{"hook_event_name":"PostToolUse","session_id":"session_7f4dffb9-0d84-44e6-b6fc-8528094a44d9","cwd":"/private/tmp/kimi-hook-capture/cwd-b","tool_name":"Bash","tool_input":{"command":"echo hello-from-kimi"},"tool_call_id":"tool_s962jHXj3YWbW9moN5RPSVsI","tool_output":"hello-from-kimi\n"}

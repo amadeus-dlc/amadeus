@@ -54,9 +54,15 @@ describe("t222 CI snapshot publication boundary", () => {
 
   test("repository workflow routes full and drift-only validation independently", () => {
     const yaml = readFileSync(join(import.meta.dir, "../../.github/workflows/ci.yml"), "utf8");
-    const changesJob = yaml.split("  changes:")[1]?.split("\n  check:")[0] ?? "";
-    const checkJob = yaml.split("  check:")[1]?.split("\n  drift-check:")[0] ?? "";
-    const driftJob = yaml.split("  drift-check:")[1]?.split("\n  coverage-head:")[0] ?? "";
+    const changesJob = yaml.split("  changes:")[1]?.split("\n  typecheck:")[0] ?? "";
+    const typecheckJob = yaml.split("  typecheck:")[1]?.split("\n  lint:")[0] ?? "";
+    const lintJob = yaml.split("  lint:")[1]?.split("\n  distribution-contract:")[0] ?? "";
+    const contractJob =
+      yaml.split("  distribution-contract:")[1]?.split("\n  tests:")[0] ?? "";
+    const testsJob = yaml.split("  tests:")[1]?.split("\n  drift-check:")[0] ?? "";
+    const driftJob = yaml.split("  drift-check:")[1]?.split("\n  distribution-benchmark:")[0] ?? "";
+    const releaseGateJob =
+      yaml.split("  distribution-release-gate:")[1]?.split("\n  coverage-head:")[0] ?? "";
 
     expect(changesJob).toContain(`full: \${{ steps.filter.outputs.full }}`);
     expect(changesJob).toContain(`drift: \${{ steps.filter.outputs.drift }}`);
@@ -66,20 +72,33 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(changesJob).toContain(`if [[ "\${EVENT_NAME}" == "pull_request" ]]`);
     expect(changesJob).toContain(`"\${BASE_SHA}...\${HEAD_SHA}"`);
     expect(changesJob).toContain("bash scripts/detect-ci-changes.sh");
-    expect(checkJob).toContain("needs: changes");
-    expect(checkJob).toContain(`if: \${{ needs.changes.outputs.full == 'true' }}`);
-    expect(checkJob).toContain("bun run test:ci -- -P 4");
+    for (const fullJob of [typecheckJob, lintJob, contractJob, testsJob]) {
+      expect(fullJob).toContain("needs: changes");
+      expect(fullJob).toContain(`if: \${{ needs.changes.outputs.full == 'true' }}`);
+    }
+    expect(typecheckJob).toContain("bun run typecheck");
+    expect(lintJob).toContain("bun run lint");
+    expect(lintJob).toContain("bun tests/complexity-gate.ts --check");
+    expect(contractJob).toContain("bun run distribution:check");
+    expect(testsJob).toContain("pip install lizard==1.23.0");
+    expect(testsJob).toContain("bun run test:ci -- -P 4");
     expect(driftJob).toContain("needs: changes");
     expect(driftJob).toContain(
-      `if: \${{ needs.changes.outputs.drift == 'true' && needs.changes.outputs.full != 'true' }}`,
+      `if: \${{ needs.changes.outputs.full == 'true' || needs.changes.outputs.drift == 'true' }}`,
     );
     expect(driftJob).toContain("bun run dist:check");
     expect(driftJob).toContain("bun run promote:self:check");
+    expect(releaseGateJob).toContain(
+      "needs: [changes, distribution-contract, distribution-benchmark-aggregate]",
+    );
+    expect(releaseGateJob).toContain(
+      `CONTRACT_RESULT: \${{ needs.distribution-contract.result }}`,
+    );
   });
 
   test("repository workflow change detector has valid Bash syntax", () => {
     const yaml = readFileSync(join(import.meta.dir, "../../.github/workflows/ci.yml"), "utf8");
-    const changesJob = yaml.split("  changes:")[1]?.split("\n  check:")[0] ?? "";
+    const changesJob = yaml.split("  changes:")[1]?.split("\n  typecheck:")[0] ?? "";
     const script =
       changesJob
         .split("        run: |\n")[1]
@@ -142,13 +161,20 @@ describe("t222 CI snapshot publication boundary", () => {
     const yaml = readFileSync(join(import.meta.dir, "../../.github/workflows/ci.yml"), "utf8");
     const ciSuccessJob = yaml.split("  ci-success:")[1] ?? "";
 
-    expect(ciSuccessJob).toContain("- changes\n      - check\n      - drift-check\n      - coverage");
+    expect(ciSuccessJob).toContain(
+      "- changes\n      - typecheck\n      - lint\n      - distribution-contract\n      - tests\n      - drift-check\n      - coverage",
+    );
     expect(ciSuccessJob).toContain(`require_result "changes" "\${{ needs.changes.result }}"`);
     expect(ciSuccessJob).toContain(`case "\${{ needs.changes.outputs.full }}" in`);
     expect(ciSuccessJob).toContain(`case "\${{ needs.changes.outputs.drift }}" in`);
     expect(ciSuccessJob).toContain(`case "\${{ needs.changes.outputs.coverage }}" in`);
     expect(ciSuccessJob).toContain("No CI-relevant changes; validation skipped");
-    expect(ciSuccessJob).toContain(`require_result "check" "\${{ needs.check.result }}"`);
+    expect(ciSuccessJob).toContain(`require_result "typecheck" "\${{ needs.typecheck.result }}"`);
+    expect(ciSuccessJob).toContain(`require_result "lint" "\${{ needs.lint.result }}"`);
+    expect(ciSuccessJob).toContain(
+      `require_result "distribution-contract" "\${{ needs.distribution-contract.result }}"`,
+    );
+    expect(ciSuccessJob).toContain(`require_result "tests" "\${{ needs.tests.result }}"`);
     expect(ciSuccessJob).toContain(`require_result "drift-check" "\${{ needs.drift-check.result }}"`);
     expect(ciSuccessJob).toContain(`require_result "coverage" "\${{ needs.coverage.result }}"`);
   });

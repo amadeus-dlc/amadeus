@@ -50,7 +50,7 @@
 //   .sh test 12 (WORKSPACE_SCANNED accepted)          -> "accepts the WORKSPACE_SCANNED initialization event"
 
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -64,13 +64,19 @@ const TOOL = fileURLToPath(
   new URL("../../dist/claude/.claude/tools/amadeus-audit.ts", import.meta.url),
 );
 
-// P9: the flat amadeus-docs/audit.md is retired. With no per-intent record seeded,
-// appendAuditEntry resolves the bare SPACE record root's per-clone shard
-// (auditFilePath, which ensureAuditFile mkdir -p's on first write). A bare temp
-// dir suffices — the shell is created lazily by the first append. Each test gets
-// a fresh dir and tears it down.
+// P9: the flat amadeus-docs/audit.md is retired. appendAuditEntry resolves the
+// RECORD's per-clone shard (auditFilePath, which ensureAuditFile mkdir -p's on
+// first write) — and refuses when no intent resolves (#1377), so the project
+// carries one record. A dir counts as a record once it holds amadeus-state.md,
+// the header-only stub production birthIntent() writes; the audit/ dir itself is
+// still created lazily by the first append. Each test gets a fresh project and
+// tears it down.
 function makeProject(): string {
-  return mkdtempSync(join(tmpdir(), "amadeus-t18-"));
+  const proj = mkdtempSync(join(tmpdir(), "amadeus-t18-"));
+  const record = join(proj, "amadeus", "spaces", "default", "intents", "t18-fixture-deadbeef");
+  mkdirSync(record, { recursive: true });
+  writeFileSync(join(record, "amadeus-state.md"), "# AI-DLC State Tracking\n", "utf-8");
+  return proj;
 }
 
 // The in-process clone-id is memoized in THIS process, so the shard

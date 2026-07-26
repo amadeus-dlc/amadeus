@@ -24,7 +24,7 @@ describe("t289 projection parity", () => {
   test("verifies every registered source, dist, and self payload digest", () => {
     const result = checkMirrorDistribution(process.cwd());
     expect(result.findings).toEqual([]);
-    expect(Object.keys(result.digests)).toHaveLength(195);
+    expect(Object.keys(result.digests)).toHaveLength(230);
     expect(result.registryDigest).toHaveLength(64);
   });
 

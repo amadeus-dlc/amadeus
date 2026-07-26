@@ -1,0 +1,1 @@
+{"hook_event_name":"PostToolUse","session_id":"session_1de38907-316e-4197-b9f7-59707d715ae8","cwd":"/private/tmp/kimi-hook-capture/cwd-f","tool_name":"Edit","tool_input":{"path":"edit-target.txt","old_string":"line-one","new_string":"line-two"},"tool_call_id":"tool_Ceb26gUsRIOgEQU3ngmnYBrO","tool_output":"Replaced 1 occurrence in edit-target.txt"}

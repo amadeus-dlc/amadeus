@@ -1,6 +1,35 @@
 # コンポーネント棚卸し
 
-## metrics サブシステムのコンポーネント（260726-metrics-visualization、現在）
+## クロスレビュー済みバグ7件の患部コンポーネント（260726-crossreviewed-bug-batch、現在、7 Issue）
+
+測定 ref: observed `1673c4332`（base `e12259ba7`、距離 2）。所在・コピー数は同 commit の `git ls-files` / `grep -n` 出力からの転記。上流入力は Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`。
+
+### 患部コンポーネント一覧
+
+| Issue | 主患部コンポーネント | 所在（observed `1673c4332`） | 配布コピー数 |
+| --- | --- | --- | --- |
+| #1489 | benchmark 集約ゲート | `scripts/mirror-distribution-benchmark-aggregate.ts:20, 32, 33-35, 61-62`（予算側は `scripts/mirror-distribution-benchmark.ts:18-19`） | 0（配布対象外） |
+| #1457 | 選挙 verify 配線 / 自己検証 | `packages/framework/core/tools/amadeus-election.ts:486, 494, 503` / `amadeus-election-record.ts:186, 193, 196` | 各 10 |
+| #1377 | audit パス構築 / シャード生成 | `amadeus-lib.ts:3313-3316, 3326-3328, 4126-4128` / `amadeus-audit.ts:258-262` / emitter 側 `amadeus-learnings.ts` | 各 10 |
+| #1459 | 選挙定義パーサ | `amadeus-election-model.ts:62, 81-82, 449, 456` | 10 |
+| #1462 | plugin ステージ探索 | `amadeus-graph.ts:1813, 1823-1824, 1828, 1837` | 10 |
+| #1458 | 選挙 transport / report | `amadeus-election.ts:293, 326, 582` / `amadeus-election-transport.ts:165-167, 173, 183` | 各 10 |
+| #1388 | team 起動スクリプト | `packages/framework/core/tools/team-up.sh:998, 1061-1062, 1098-1099, 1116-1117`（+ `team-up-codex-safety-wait.ts`） | 10 |
+
+コピー数は `git ls-files "*/<file>" | grep -v '^packages/' | wc -l` の出力からの転記。
+
+### コンポーネント境界の交差（着手順に影響）
+
+- **election サブシステムに3件が集中**: #1457（`amadeus-election.ts` + `amadeus-election-record.ts`）と #1458（`amadeus-election.ts` + `amadeus-election-transport.ts`）は **`amadeus-election.ts` で交差**する。直列化するか、caller 配線（#1457）と report 配線（#1458）でファイル内スコープを非交差に切り分ける判断が要る（cid:code-generation:c6 の非交差判定は静的目録でなく実 diff で行う）。#1459（`amadeus-election-model.ts`）は他2件と非交差。
+- **#1377 は `amadeus-lib.ts` に触れる**: 同ファイルは区間直前の #1497 修正で変更されたばかりであり、`.coverage-patch-allowlist.json` の行ピンを持つ（cid:code-generation:allowlist-line-pin-stale — 上方挿入時は台帳行番号の同一 PR 更新が要る）。
+- **#1462（`amadeus-graph.ts`）/ #1489（`scripts/`）/ #1388（`team-up.sh`）は相互に非交差**。
+- **`reportDelivery` の消費者は現在テストのみ**（`grep -rn "reportDelivery" packages/framework/core/tools/ tests/` の全 6 hit のうち、`amadeus-election.ts` からの hit は 0 件 — 定義 `amadeus-election-transport.ts:183`、コメント 2、テスト import/呼出 4）。#1458 の修正は「新しい消費者を CLI 側に足す」形になる。
+
+### コンポーネント所有の逸脱
+
+#1457 と #1458 はいずれも、**当該コンポーネントの doc コメントが宣言する責務と実際の配線が食い違っている**クラスである（`amadeus-election-record.ts:182-185` / `amadeus-election-transport.ts:165-167`）。すなわち原因の所在は設計ではなく実装（配線）であり、コンポーネント境界そのものの再設計は要求されない。
+
+## metrics サブシステムのコンポーネント（260726-metrics-visualization、履歴）
 
 測定 ref: observed `1c43438df`。所在はすべて同 commit の実ファイル直読による。
 
@@ -92,8 +121,7 @@ integration は `AMADEUS_METRICS_ROOT` seam で実 FS を差し替える。可�
 
 `scripts/metrics-*.ts` の3ファイルは `amadeus-lib` を import しない（各 `grep -c` = **0**）ため、上記いずれとも依存関係を持たない。
 
-## worktree パス／ref 解決コンポーネント（260725-worktree-ref-fixes、履歴、Issue #1482 / #1481 / #1455）
-## solo standing grant 認可コンポーネント（260726-grant-scope-gate、現在、Issue #1497）
+## solo standing grant 認可コンポーネント（260726-grant-scope-gate、履歴、Issue #1497）
 
 測定 ref: observed `e12259ba7`（base `11f1ad61f`、距離 4）。所在・行数はすべて同 commit の実ファイル直読（`wc -l` / `grep -n` 出力からの転記）。
 
@@ -310,6 +338,22 @@ team `DELEGATED_APPROVAL` は remote topology 固有、solo は local route / co
 | CI | typecheck、lint、distribution、tests、coverage | Bun、Biome、TypeScript、Codecov | coverage source 漏れの利用者であり回帰検査先 |
 
 所有境界は `lifecycle/coordinator/executor` が mutation、legacy CLI は互換入口または read-only 診断、config/codec は fail-closed input boundary、coverage normalizer は生成物→正本の計測 mapping とする。
+
+## ハーネス検出モジュール・plugin 信頼層・kimi 移植面コンポーネント（260725-kimi-harness、2026-07-25、履歴）
+
+差分リフレッシュ（base `6d4df9056` → observed HEAD `d31b8a5db`、距離 105、amadeus-feature）。測定 ref: observed HEAD `d31b8a5db` 実ファイル直読。区間はハーネス検出の新規分離・plugin 同梱/信頼層・intent birth provenance の 4 クラスタ。フレームワークバージョンは `packages/framework/core/tools/amadeus-version.ts:4` `AMADEUS_VERSION = "0.1.5"`。
+
+| コンポーネント | 場所（file:line） | 役割 / 区間での変化 |
+| --- | --- | --- |
+| `amadeus-harness.ts`（新規） | `packages/framework/core/tools/amadeus-harness.ts`（137 行、`58053fa61` で追加、base 非存在） | ハーネス種別・検出の canonical モジュール。`HarnessType` :5-12 / `HARNESS_DIR_TO_TYPE` :14-22 / `KNOWN_HARNESS_DIRS` :34-40 / `KNOWN_RULES_SUBDIR` :53-57 + `harnessDir()` :101 / `detectHarnessType()` :105 / `rulesSubdir()` :131。kimi 追加時の第 1 登録面 |
+| `amadeus-lib.ts` harness facade | `amadeus-lib.ts:7-18`（import + 型 re-export）、:152-166（facade）、:186/:229/:269（KNOWN_HARNESS_DIRS 利用） | 区間 +21/−99 で実装を amadeus-harness.ts へ移管し、後方互換の re-export のみ保持。呼び出し側契約不変 |
+| plugin 中立バンドル出荷 | `scripts/package.ts:316` `projectPluginsIntoHarnessTree`（no-op 化、呼出 :505）、`dist/plugins/formal-model-check/`（初のバンドル、base では `dist/plugins/` 非存在） | `47d5e3f9c` で plugin は `dist/plugins/<name>/` のみで出荷。per-harness `<harnessDir>/plugins/` 投影は廃止、関数は read-source 会計（#735 未参照ソース scan 用）のみの no-op |
+| plugin 信頼層 | `scripts/plugin-composition.ts`（1365 行、`f67b931c2` で +138/−15 + `454194231` テスト）: `contentDigest` フィールド :128/:135/:191、`parseStages` :293（呼出 :286）、`validJournal` :813（sha256 形式検査 :826 `/^sha256:[0-9a-f]{64}$/`） | sha256 contentDigest による内容検証、stage index 検証、journal 内の信頼付与（trust grant）、drop 時ドリフト拒否を追加 |
+| intent birth provenance | `dc1eeba20`: `amadeus-lib.ts` +78/−9、`amadeus-utility.ts` +3/−0 | intent birth 時に実行ハーネスを state へ記録（Issue #1452 系の着地） |
+| packager 自動発見 | `scripts/package.ts:85-91` `discoverHarnessNames`（コメント :80-84） | `harness/<name>/manifest.ts` 保持 scan。新ハーネス追加は 1 dir + manifest 行で packager 編集不要 |
+| 3 閉集合（非対称の要点） | `scripts/plugin-projection.ts:46-53` `PACKAGE_HARNESSES`（6 面）/ 同 :59 `SELF_INSTALL_HARNESSES`（4 面、membership :407）/ `promote-self.ts:169` `PACKAGE_HARNESSES`（4 面）/ `amadeus-swarm.ts:100` `HARNESS_VALUES`（4 面、cursor/opencode を意図的除外） | kimi は各集合へ**個別に判断して**追加（または非追加を維持）する。swarm は `resolveDriver` :118-136 が未知値を fail-closed 拒否するため opt-in 追加 |
+| その他の移植面触点 | `scripts/detect-ci-changes.sh:20`（drift glob）/ `packages/setup/src/domain/harness.ts:9,:21-28,:33` / `engine-layout.ts:8-15` / `reporter.ts:24-25,:137` / `promote-self.ts:37-43` managedDirs（5 行）/ `amadeus-utility.ts` doctor :1196,:1275,:1350-1351,:1366,:1379,:1439,:1446 | 新ハーネス touch list（HEAD 実測済み）。setup CLI・doctor・CI drift 検知の各閉集合 |
+| kimi の雛形 | `packages/framework/harness/cursor/manifest.ts`（75 行）/ `packages/framework/harness/codex/emit.ts`（375 行、HOOK_WIRING :29-39） | `packages/framework/harness/` は base・HEAD とも同じ 6 dir で新ハーネス dir は区間内未追加。最小面（cursor 型）とフル emit（codex 型）の 2 参照実装 |
 
 ## Team Mode watcher arming 検証コンポーネント（260724-watcher-timeout-fix、2026-07-24、履歴）
 

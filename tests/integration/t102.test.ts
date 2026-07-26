@@ -82,14 +82,15 @@ import {
   parseMemoryHeadings,
   readAllAuditShards,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
-import { toPortablePath } from "../harness/fixtures.ts";
+import { DEFAULT_RECORD_DIR, toPortablePath } from "../harness/fixtures.ts";
 
-// P9: with no intent cursor seeded, compile resolves the BARE space record root
-// (docsRoot -> spaceRecordRoot) at amadeus/spaces/default/intents/. State,
-// runtime-graph, the per-stage memory.md, and the per-clone audit SHARD all
-// live under it (the flat amadeus-docs/ root is retired — there is no fallback);
-// compile reads each stage's memory.md at the bare-space-prefixed memory_path.
-const RECORD_REL = join("amadeus", "spaces", "default", "intents");
+// P9: compile resolves the per-intent RECORD dir. State, runtime-graph, the
+// per-stage memory.md, and the per-clone audit SHARD all live under it (the flat
+// amadeus-docs/ root is retired — there is no fallback); compile reads each
+// stage's memory.md at the record-prefixed memory_path. The record is a dir
+// UNDER intents/, never the bare intents root: auditFilePath() refuses to
+// resolve a shard when no intent resolves (#1377).
+const RECORD_REL = join("amadeus", "spaces", "default", "intents", DEFAULT_RECORD_DIR);
 function recordRoot(proj: string): string {
   return join(proj, RECORD_REL);
 }
@@ -161,12 +162,15 @@ function makeProject(): string {
   const proj = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t102-")));
   tempDirs.push(proj);
   mkdirSync(recordRoot(proj), { recursive: true });
+  // State FIRST: a dir only counts as a record once it holds amadeus-state.md,
+  // and auditFilePath() refuses to resolve a shard until one does (#1377) — the
+  // same order production birthIntent() uses.
+  writeFileSync(join(recordRoot(proj), "amadeus-state.md"), STATE_FEATURE, "utf-8");
   // Seed the DETERMINISTIC audit shard the compile tool resolves (auditFilePath)
   // so readAllAuditShards() sees the WORKFLOW_STARTED trail.
   const shard = auditFilePath(proj);
   mkdirSync(dirname(shard), { recursive: true });
   writeFileSync(shard, AUDIT_APPROVED, "utf-8");
-  writeFileSync(join(recordRoot(proj), "amadeus-state.md"), STATE_FEATURE, "utf-8");
   return proj;
 }
 

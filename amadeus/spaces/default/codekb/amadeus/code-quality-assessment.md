@@ -1,6 +1,51 @@
 # コード品質評価
 
-## metrics サブシステムの品質評価と可視化のリスク面（260726-metrics-visualization、現在）
+## クロスレビュー済みバグ7件の品質評価（260726-crossreviewed-bug-batch、現在、7 Issue）
+
+測定 ref: observed `1673c4332`（base `e12259ba7`、距離 2）。file:line は同 commit の実ファイル直読。上流入力は Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`（Architect 段で独立再検証済み）。
+
+### 現存判定サマリ
+
+| Issue | P/S | 現存判定 | 品質欠陥のクラス |
+| --- | --- | --- | --- |
+| #1489 | P2/S3 | 現存 | 比較ゲートの偽赤（noise floor の過小） |
+| #1457 | P2/S3 | 現存 | **検証劇場**（org.md Forbidden 該当の自己参照比較） |
+| #1377 | P3/S3 | 現存 | fail-open フォールバック（不変条件違反のディレクトリ生成） |
+| #1459 | P3/S3 | 現存 | parse-don't-validate の不徹底（無効状態が表現可能） |
+| #1462 | P3/S4 | 現存（行シフト `:1795` → `:1823-1824`） | 契約違反の例外伝播（raw `Error` がスキーマ契約を破る） |
+| #1458 | P3/S4 | 現存 | dead export と観測不能な状態遷移 |
+| #1388 | P3/S4 | 要精査（構造は現存、ただし FR-6 で明示的スコープ外） | 設計既決との衝突（バグ／仕様の帰属が未確定） |
+
+### 最重要: #1457 は org.md Forbidden の「検証劇場」に該当
+
+`amadeus-election.ts:486, 494, 503` で `resolved` 由来の値が `verifySelf` の `ledgerCount` と `ballots`、`storedFreq` と再計算元の双方へ渡るため、ballot-count 分岐（`amadeus-election-record.ts:193` の `if (ledgerCount !== ballots.length)`）と freq 分岐（`:196` の `GoaFreq.fromVotes(ballots.map(...))`）は**恒久 false** である。これは org.md Forbidden の「自己参照比較（x === x）」に直接該当し、「偽の信頼を生む分だけゲート不在より悪い」クラスにあたる。
+
+ただし品質評価としては**限定が要る**: 同ファイルには実効カバーが併存しており（`amadeus-election.ts:495-496` の `checkGoaLine(document, freq)` = record.md の GoA 行との照合、`:487-490` の `tally` 再計算と `t.result` の比較）、timeline 単調性は `verifySelf` の第3クラスとして生きている。したがって**未ガードなのは「ledger.json 件数 vs materialize 済み集合の件数」の乖離のみ**であり、選挙記録全体が無検証というわけではない。
+
+### 設計と実装の乖離（原因の所在 = 実装）
+
+#1457 と #1458 はいずれも、**コード内 doc コメントが正しい設計を宣言しているのに配線がそれを実現していない**クラスである。
+
+- `amadeus-election-record.ts:182-185`: "The check recomputes from the ballots rather than comparing the record to itself (no verification-theatre self-reference)." — 設計は self-reference 回避を明言。逸脱は caller 側。
+- `amadeus-election-transport.ts:165-167`: "the tool cannot observe the spawn, so it emits a directive and lets reportDelivery mint the record after the conductor reports completion" — 設計は report 後 mint を明言。その配線が CLI に存在しない。
+
+すなわち両件とも原因の所在は「要件の見落とし」でも「設計の誤り」でもなく**実装（配線）の逸脱**であり、Issue の帰属と一致する（cid:requirements-analysis:bug-intent-linkage）。
+
+### fail-open / fail-closed の非対称（#1377・#1462・#1459）
+
+- #1377: `auditShardDir`（`amadeus-lib.ts:4126-4128`）が `return null` で fail-closed に倒れているのに対し、`auditFilePath`（`:3326-3328`）と `stateFilePath`（`:3313-3316`）は bare `intents/` 直下へフォールバックし、`ensureAuditFile`（`amadeus-audit.ts:258-262`）が `mkdirSync(dir, { recursive: true })` でそのディレクトリを**再帰生成する**。`amadeus-log.ts` 経由の emitter は既にガード（`resolveActiveProjectDir`）で封鎖済みで、`appendAuditEntry` を直接呼ぶ emitter に同ガードが無い — すなわち**部分封鎖の状態で非対称が残っている**。
+- #1462: `existsSync` ガード（`amadeus-graph.ts:1828`）と無ガード `statSync`（`:1823-1824`）の同一関数内での非対称。加えて `PluginStageError` へ変換する try/catch はファイル単位ループの内側（`:1837` 以降）にあり、列挙フィルタはその外側 — したがって raw `Error` がスキーマ契約 `amadeus.plugin-stage-error.v1` を破って伝播する。
+- #1459: `voters` の空検査（`:82`）に対する `choices` 側の欠落、および internalNo / voter の一意性検査の全面不在。汚染経路は `:449` の `election.choices.map` が重複 internalNo ごとに1エントリを作り、全会一致でも `:456` の `leaders.length !== 1` が成立して**誤 `tie` hold** を返すこと。
+
+### 品質面の残課題（後続ステージへ）
+
+1. **#1388 の性格判定が先決** — 構造は現存するが FR-6 既決。修正対象か、既決設計を根拠にクローズか。仕様変更に当たる可能性があり裁定が要る。
+2. **#1458 の方式選択が CLI 契約に触れうる** — `reportDelivery` 配線案と、既定 transport 廃止 + agmsg 必須化案の2案。後者はユーザー可視の挙動変更。
+3. **#1377 は3関数の同時棚卸しが本質**（`auditShardDir` / `auditFilePath` / `stateFilePath`）。`RULE_LEARNED` 経路での決定的再現は未実施であり、修正設計時に取ることを推奨する（scan-notes が仮説として明示）。
+4. **#1489 は検出力低下の評価が完成条件** — Issue の3案（中央値乖離・ワークロード別 noise floor・replica 増 + 外れ値棄却）はいずれも「どれだけの退行を検出できなくなるか」を伴う。
+5. **配布同期が6件で必須** — #1489 以外は core 正本を触るため、`dist:check` / `promote:self:check` を通さない修正は完了と見なせない。
+
+## metrics サブシステムの品質評価と可視化のリスク面（260726-metrics-visualization、履歴）
 
 測定 ref: observed `1c43438df`。件数はすべて `grep -c` / `ls \| wc -l` / `git diff --numstat` 出力からの転記。**本 intent は欠陥修正ではなく機能追加**であるため、本節は「既存 metrics コードの品質水準」と「可視化を足すときに壊しうる契約」の2面で記録する。
 
@@ -60,8 +105,7 @@
 
 系統 A（PR #1483）は新規2モジュール（合計 +1,388 行）を追加した大規模変更だが、**metrics サブシステムとは依存関係を持たない**（`scripts/metrics-*.ts` の `amadeus-lib` import が各 0 件）。可視化の設計前提に影響しない。
 
-## worktree 環境に起因する欠陥と技術的負債（260725-worktree-ref-fixes、履歴、Issue #1482 / #1481 / #1455）
-## standing grant の scope 解決欠陥と検出不能な fixture（260726-grant-scope-gate、現在、Issue #1497）
+## standing grant の scope 解決欠陥と検出不能な fixture（260726-grant-scope-gate、履歴、Issue #1497）
 
 測定 ref: observed `e12259ba7`（base `11f1ad61f`、距離 4）。判定はすべて再現プローブの実行結果および実ファイル直読からの転記。
 
@@ -304,6 +348,26 @@ package temp regex と generated prefix table の双方に Cursor/OpenCode が�
 
 Mirror の大型ファイル（lifecycle 909行、coordinator 708行、state codec 1,526行等）と gateway lexer 共通化は実在する技術的負債だが、本 bugfix と変更理由が異なるため別 `amadeus-refactor` intent に隔離する。今回の変更は6欠陥とその回帰テストに外科的に限定する。
 
+## ハーネス provenance・plugin 信頼層のテスト追加（260725-kimi-harness、2026-07-25、履歴）
+
+実測基準は base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba` → observed HEAD `d31b8a5db5798ef761f3871ca66824c87530afb4`、祖先性 exit 0、距離 105。本 intent はコード欠陥の修正ではなく移植面の再測定が目的のため、品質観測は**区間内のテスト資産変化**に限定する(測定 ref: observed HEAD `d31b8a5db` 実ファイル直読 + `git log 6d4df9056..HEAD`)。
+
+**区間内の新規テスト(harness provenance 系、`dc1eeba20` + `58053fa61`)**:
+- `tests/unit/t269-harness-provenance.test.ts` — canonical ハーネス写像契約の pure テスト(`HARNESS_DIR_TO_TYPE` / `detectHarnessType`、:1-2 covers 記載)。
+- `tests/integration/t269-harness-provenance.cli.test.ts` — resolver provenance・検出優先順位・legacy cache。
+- `tests/integration/t270-harness-provenance-birth.test.ts` — 全 packaged ハーネスでの実 intent birth(`Harness` フィールド、workflow:intent-birth)。
+- `tests/integration/t271-migration-harness-validation.cli.test.ts` — `amadeus-migrate` dry-run の harness 検証(CLI spawn)。
+- `tests/integration/t144-harness-seam.cli.test.ts` — `harnessDir()`/`resolveProjectDir()` の解決 ladder をハーネス dir 横断で固定(harness seam)。
+
+**plugin 信頼層のテスト更新(`f67b931c2` + `454194231`)**: `tests/unit/t252-plugin-composition.test.ts`(in-memory backend で全分岐を駆動する pure unit)が sha256 `contentDigest`・journal 信頼付与・drop 時ドリフト拒否に追随。`454194231`「cover runtime trust verification」は実行時信頼検証を被覆し、`t-formal-verif-plugin-lifecycle.integration.test.ts` にも +90 行の被覆追加(同コミット numstat)。
+
+**kimi 作業時に参照すべき既存ハーネステスト様式(HEAD 実測)**:
+- `tests/integration/t145-packaging-parity.test.ts` は `package.ts --check` を spawn する byte-parity の keystone。
+- `tests/integration/t-cursor-adapter.test.ts` は注入した spawn spy を使う in-process 型。
+- `tests/integration/t-opencode-emit.test.ts` は in-process の write⇔check ラウンドトリップ。
+- `tests/smoke/t149-opencode-cursor-dist-structure.test.ts` は module スコープのリテラル期待ファイル表(manifest 由来ではない)で dist 構造を固定。
+新ハーネス追加時はこれら 4 様式のどれに倣うかがテスト設計の分岐点(t149 型は期待表の手更新が必要)。
+
 > **以下は intent `260724-watcher-timeout-fix`（2026-07-24、amadeus-bugfix / Minimal）の履歴観測**。以下の過去 intent 節に残る「本 intent」「最新」「現在」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
 
 ## watcher arming 検証が mux_attach を最大 270 秒ブロック（260724-watcher-timeout-fix、履歴、Issue #1449）
@@ -507,8 +571,6 @@ EQUIVALENT 候補は、`amadeus-orchestrate.ts:1961-1972` の全 batch 走査と
 - **#764(S4/documentation)**: `amadeus-orchestrate next` の `--new-intent` フラグ(`amadeus-orchestrate.ts:321` 宣言、`:336` parseNextFlags、`:375` の `--new-intent` 分岐、`:1427` Branch 4a)が `docs/reference/` で未記載。`grep -rn -- --new-intent docs/reference/` = 0 件(実測)。姉妹フラグ `--resume`(`:371`)・`--single`(`:373`)も同 parser 内に実在。正準ページは `docs/reference/03-orchestrator.md`(Entry Points / Intent birth 節、`:115`)。
 - **#763(S4/documentation)**: `docs/reference/18-workspace-layout.md`(145行、ADR 体裁)に `.ja.md` ペアが欠落。`docs/reference/*.md` 全数走査で `.ja.md` ペア欠落は **18-workspace-layout.md のみ**(他19ファイル=00〜17・diagrams は全ペア有り、実測)。E-L56 の「ペア規約の唯一の欠落が 18 のまま」を再確認、新規欠落なし。
 - **#728(S4/documentation)**: `tests/` 配下13ファイル・14参照が旧名 `assertNotSiblingWorktree` を stale 参照。product は `resolveWorktreeAnchor` へ改名済み(`amadeus-worktree.ts:167` 定義、旧名は source に**不在**=`grep` 0 件、実測)。コメントは行番号(`:101` / `:101-121` / `:112` / `:459->101` / `:162`)も stale で、現定義 `:167` と不一致。`tests/harness/fixtures.ts` のみ2参照(`:283` `:542`)、他12ファイルは各1参照。
-
-
 
 ## docs-repair-batch9(2026-07-11)の観測面 — フォーカス5欠陥の現存確認(#812 #824 #680 #885 #886)
 
@@ -807,7 +869,6 @@ EQUIVALENT 候補は、`amadeus-orchestrate.ts:1961-1972` の全 batch 走査と
 - **#742**: 破損 manifest 存在時に absent と区別して表面化。**#743**: kill-mid-write シミュレーションで truncated JSON が残らない。**#747**: prerelease タグ fixture で正しい proceed/downgrade 判定。
 - **#741**: wallclock 依存の除去(決定化)。**#751**: 現行レイアウトで reconcile が発火し SESSION_ENDED を emit。**#786**: emitKey に NUL バイト不在(byte 走査)。
 
-
 ## 複雑度ゲート導入(intent 260710-complexity-gate、2026-07-10)
 
 現行 HEAD からの diff-refresh(フォーカス5面)で確定した、複雑度分布の実測とゲート計画。出典: lizard 実測 + scan-notes + initiative-brief。
@@ -826,8 +887,6 @@ EQUIVALENT 候補は、`amadeus-orchestrate.ts:1961-1972` の全 batch 走査と
 - **落ちる実証**: NEW_VIOLATION / RATCHET_REGRESSION / fail-closed 各系の注入テスト(team.md Mandated「落ちる実証」)。ゲート実装は `tests/coverage-project-gate.ts`(#762)の正準テンプレート(env seam・parse-don't-validate・fail-closed FailReason・`--check`/`--update`)を踏襲する(architecture.md / code-structure.md 参照)。
 - **業務根拠**: バグの原因所在分析(2026-07-10)で実装逸脱・非対称実装が上位原因であり、その温床の高複雑度関数がバグ多発ファイルに集中。人手レビューに頼らない決定的ラチェットで悪化を構造的に止める。
 - **残余リスク**: baseline キー(path+name)のリネーム摩擦(R2、頻発時は関数 fingerprint キーへ移行 Issue 化)、lizard の TS 新構文計測ゆらぎ(R1、計測補正で対応、誤検知の握りつぶしはしない)、CI の Python 供給変化(R3、バージョン固定・最悪時 vendoring)。
-
-
 
 ## mint-presence-vectors(履歴)の観測面 — #755 機械注入ターン分類器の単一プレフィックス欠陥
 
@@ -956,7 +1015,6 @@ EQUIVALENT 候補は、`amadeus-orchestrate.ts:1961-1972` の全 batch 走査と
 - **同型性(#701 との関係)**: 本欠陥は下記 #701(orphan スキャンの dist ルート盲点)と同種の drift-guard 穴。#701 が「dist ツリー内の検査対象集合の穴」だったのに対し、#719 は「そもそも source 側を検査する機構が無い」という一段上流の穴で、2層目の空振り exemption がそれを補助的に隠す二段構え。#701 の whole-tree 化(`:605-628`)は dist 側の穴を塞いだが、source 側の未参照ファイルは依然どの検査にも当たらない。
 - **テスト影響(削除の安全性)**: `tests/smoke/t148-kiro-file-structure.test.ts` は SHIPPED `dist/kiro` ツリーのみ(`hooks` の `.ts` ≥10 件を数える)、`tests/unit/t147-kiro-hook-adapter.test.ts` は `dist/kiro/.kiro/hooks/amadeus-kiro-adapter.ts` を subprocess 起動する。どちらも source の `.kiro.hook` を参照しない。リポ全体 grep でも source `harness/kiro/hooks/*.kiro.hook` を直接参照するテスト/スクリプトは皆無。→ 7 件の stale source `.kiro.hook` 削除は t147/t148 を含む既存テストを破壊しない(`bun test t148 t147` が exit 0 / 23 pass を実測)。
 - **修正境界の候補**: (a) source の 7 `.kiro.hook` を削除して dead を排す、(b) kiro CLI manifest の authoredExempt regex3(空振りマスク)を除去して 2 層目を閉じる、(c) source 側 manifest 未参照ファイルを検出する検査機構を `checkHarness` に追加して 1 層目を塞ぐ。設計判断は requirements-analysis で確定。「落ちる実証」は source に stale `.kiro.hook` を残したまま検査が赤くなること(1 層目を塞ぐ場合)で担保する。
-
 
 ## dynamic-test-size(intent、履歴)の観測面 — #684 Phase D 実装への含意
 

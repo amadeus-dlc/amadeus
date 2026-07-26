@@ -62,6 +62,13 @@ describe("renderHelp", () => {
     expect(text).toContain("install");
     expect(text).toContain("upgrade");
   });
+
+  test("lists every known harness in the usage grammar, kimi included (FR-5a)", () => {
+    const text = reporter.renderHelp();
+    for (const harness of HarnessName.all) {
+      expect(text).toContain(harness as string);
+    }
+  });
 });
 
 describe("renderPlanReport (FR-007)", () => {
@@ -168,6 +175,13 @@ describe("renderError (US-A7/FR-012)", () => {
     const text = reporter.renderError({ type: "invalid-harness", raw: "bogus" });
     expect(text).toContain("bogus");
     expect(text.toLowerCase()).toContain("harness");
+  });
+
+  test("an invalid-harness error enumerates every known harness, kimi included (FR-5a)", () => {
+    const text = reporter.renderError({ type: "invalid-harness", raw: "bogus" });
+    for (const harness of HarnessName.all) {
+      expect(text).toContain(harness as string);
+    }
   });
 
   test("a PlanRefusal renders a harness-not-in-payload message", () => {

@@ -184,9 +184,9 @@ describe("t254 reference-plugin-and-guides — U11 FR-6 items 21–22", () => {
     expect(existsSync(join(ws, "dist-empty", "plugins"))).toBe(false);
   });
 
-  test("every one of the six package faces projects exactly the declared set, deterministically", () => {
+  test("every one of the seven package faces projects exactly the declared set, deterministically", () => {
     const plugin = discoverCanonical();
-    expect([...PACKAGE_HARNESSES]).toHaveLength(6);
+    expect([...PACKAGE_HARNESSES]).toHaveLength(7);
     for (const harness of PACKAGE_HARNESSES) {
       const first = buildPluginProjection(plugin, harness);
       const second = buildPluginProjection(plugin, harness);
@@ -232,10 +232,10 @@ describe("t254 reference-plugin-and-guides — U11 FR-6 items 21–22", () => {
     TIMEOUT_MS,
   );
 
-  test("self-install stays the closed four faces (kiro/kiro-ide packaged, never promoted)", () => {
+  test("self-install stays the closed five faces (kiro/kiro-ide packaged, never promoted)", () => {
     const packageFaces = [...PACKAGE_HARNESSES] as string[];
     const selfInstallFaces = [...SELF_INSTALL_HARNESSES] as string[];
-    expect([...selfInstallFaces].sort()).toEqual(["claude", "codex", "cursor", "opencode"]);
+    expect([...selfInstallFaces].sort()).toEqual(["claude", "codex", "cursor", "kimi", "opencode"]);
     for (const f of selfInstallFaces) expect(packageFaces).toContain(f);
     expect(packageFaces).toContain("kiro");
     expect(selfInstallFaces).not.toContain("kiro");

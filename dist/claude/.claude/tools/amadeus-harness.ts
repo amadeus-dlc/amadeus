@@ -8,6 +8,7 @@ export type HarnessType =
   | "cursor"
   | "opencode"
   | "kiro"
+  | "kimi"
   | "unknown"
   | "manual";
 
@@ -17,6 +18,7 @@ export const HARNESS_DIR_TO_TYPE = {
   ".cursor": "cursor",
   ".opencode": "opencode",
   ".kiro": "kiro",
+  ".kimi-code": "kimi",
 } as const satisfies Readonly<
   Record<string, Exclude<HarnessType, "unknown" | "manual">>
 >;
@@ -37,6 +39,7 @@ export const KNOWN_HARNESS_DIRS = [
   ".codex",
   ".opencode",
   ".cursor",
+  ".kimi-code",
 ] as const;
 
 type HarnessDirSource = "env" | "script-path" | "cwd-probe" | "fallback";
@@ -54,6 +57,7 @@ const KNOWN_RULES_SUBDIR: Readonly<Record<string, string>> = {
   ".claude": "rules",
   ".kiro": "steering",
   ".codex": "amadeus-rules",
+  ".kimi-code": "rules",
 };
 
 export function isHarnessType(value: string): value is HarnessType {

@@ -3,7 +3,7 @@
 //
 // This is a project-local dogfood install, not a distributable build. The
 // packager still owns dist/; this script copies the generated Claude/Codex/
-// Cursor/OpenCode harness surfaces into the repository root so Amadeus can develop itself.
+// Cursor/OpenCode/Kimi harness surfaces into the repository root so Amadeus can develop itself.
 // Contributor-only skill runtime files under contrib/skills/ are projected
 // into both harness discovery trees without entering dist/. Authoring-only
 // eval assets remain at the canonical contributor path.
@@ -43,6 +43,7 @@ const managedDirs: ManagedDir[] = [
   { src: "dist/codex/.agents", dst: ".agents" },
   { src: "dist/cursor/.cursor", dst: ".cursor" },
   { src: "dist/opencode/.opencode", dst: ".opencode" },
+  { src: "dist/kimi/.kimi-code", dst: ".kimi-code" },
 ];
 
 const CONTRIBUTOR_SKILLS_ROOT = "contrib/skills";
@@ -151,7 +152,7 @@ function printUsage(): void {
       "usage: bun scripts/promote-self.ts [--check|--apply] [--no-build]",
       "",
       "  --check     verify project-local self install matches generated output (default)",
-      "  --apply     write .claude/, .codex/, .agents/, .cursor/, .opencode/, AGENTS.md, and CLAUDE.md",
+      "  --apply     write .claude/, .codex/, .agents/, .cursor/, .opencode/, .kimi-code/, AGENTS.md, and CLAUDE.md",
       "  --no-build  skip the package.ts freshness step",
     ].join("\n"),
   );
@@ -169,7 +170,7 @@ function run(cmd: string, args: string[]): void {
 // Harnesses whose dist trees feed the managedDirs self-install. Kept as data
 // so --apply/--check freshness can be asserted in-process without spawning
 // package.ts (bun --coverage cannot see spawned subprocesses).
-export const PACKAGE_HARNESSES = ["claude", "codex", "cursor", "opencode"] as const;
+export const PACKAGE_HARNESSES = ["claude", "codex", "cursor", "opencode", "kimi"] as const;
 
 export function packageFreshnessArgs(mode: Mode): string[][] {
   return PACKAGE_HARNESSES.map((harness) =>

@@ -29,12 +29,16 @@ afterAll(() => {
   for (const d of tempDirs) rmSync(d, { recursive: true, force: true });
 });
 
-// Mirror of t98's makeProjectWithAudit: bare space record root carrying the
-// shared construction state + the approved 2-instance learnings fixture.
+// Mirror of t98's makeProjectWithAudit: a per-intent record carrying the shared
+// construction state + the approved 2-instance learnings fixture. The record is
+// a dir UNDER intents/, never the bare intents root — auditFilePath() refuses to
+// resolve a shard when no intent resolves (#1377), and a dir only counts as a
+// record once it holds amadeus-state.md (written first, below).
+const RECORD_REL = join("amadeus", "spaces", "default", "intents", "t761s-fixture-deadbeef");
 function makeProject(): string {
   const proj = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t761s-")));
   tempDirs.push(proj);
-  const rec = join(proj, "amadeus", "spaces", "default", "intents");
+  const rec = join(proj, RECORD_REL);
   mkdirSync(rec, { recursive: true });
   writeFileSync(join(rec, "amadeus-state.md"), readFileSync(STATE_FIXTURE), "utf-8");
   const shard = auditFilePath(proj);
@@ -51,7 +55,7 @@ describe("t-runtime-learnings-seam (#761 in-process)", () => {
 
     const graph = JSON.parse(
       readFileSync(
-        join(proj, "amadeus", "spaces", "default", "intents", "runtime-graph.json"),
+        join(proj, RECORD_REL, "runtime-graph.json"),
         "utf-8",
       ),
     );
