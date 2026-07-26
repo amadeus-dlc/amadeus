@@ -63,11 +63,13 @@ function hasDuplicates<T>(values: T[]): boolean {
   return new Set(values).size !== values.length;
 }
 
-// #1459: the definition is the tally's only source of choices, so a duplicated
-// internalNo splits one choice into two ChoiceCount rows that count the same
-// ballots — a unanimous vote then degenerates into a tie hold. An empty choice
-// list degenerates the same way (top = 0, no leader). Both are rejected here so
-// no corrupt Election value can be built (parse-don't-validate).
+// #1459: the definition is the only source of choices and voters downstream, so
+// three shapes that used to pass are rejected at the parser (parse-don't-validate,
+// no corrupt Election value is constructible): a duplicated choice internalNo
+// splits one choice into two ChoiceCount rows counting the same ballots, turning
+// a unanimous vote into a tie hold; an empty choice list degenerates the same way
+// (top = 0, no leader); a duplicated voter inflates quorum (voters.length) and
+// leaves the pending set (voters.filter) permanently unsatisfiable.
 function parseChoices(raw: unknown): Choice[] | null {
   if (!Array.isArray(raw) || raw.length === 0) return null;
   const choices: Choice[] = [];
@@ -89,9 +91,6 @@ export const Election = {
     if (typeof r.kind !== "string" || typeof r.question !== "string") return err("parse-failure");
     const choices = parseChoices(r.choices);
     if (choices === null) return err("parse-failure");
-    // #1459: a duplicated voter inflates quorum (voters.length) and leaves the
-    // pending set (voters.filter) permanently unsatisfiable — rejected here for
-    // the same reason as duplicate choices.
     if (!isStringArray(r.voters) || r.voters.length === 0) return err("parse-failure");
     if (hasDuplicates(r.voters)) return err("parse-failure");
     return ok({
