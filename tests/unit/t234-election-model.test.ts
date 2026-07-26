@@ -421,6 +421,66 @@ describe("t234 election-model", () => {
     if (result.kind === "hold") expect(result.reason).toBe("tie");
   });
 
+  // #1459 regression: the definition validator used to check shapes only, so a
+  // malformed definition reached tally and corrupted it.
+  test("Election.parse rejects an empty choices array (fail-closed)", () => {
+    expect(Election.parse({ ...DEF, choices: [] }).ok).toBe(false);
+  });
+
+  test("Election.parse rejects duplicate choice internalNo (fail-closed)", () => {
+    const dup = Election.parse({
+      ...DEF,
+      choices: [
+        { internalNo: 1, label: "A" },
+        { internalNo: 1, label: "B" },
+      ],
+    });
+    expect(dup.ok).toBe(false);
+    if (!dup.ok) expect(dup.error).toBe("parse-failure");
+    // distinct internalNo with an identical label stays valid — uniqueness is
+    // an internalNo constraint, not a label constraint.
+    expect(
+      Election.parse({
+        ...DEF,
+        choices: [
+          { internalNo: 1, label: "A" },
+          { internalNo: 2, label: "A" },
+        ],
+      }).ok,
+    ).toBe(true);
+  });
+
+  test("Election.parse rejects duplicate voters (fail-closed)", () => {
+    const dup = Election.parse({ ...DEF, voters: ["alice", "alice", "bob"] });
+    expect(dup.ok).toBe(false);
+    if (!dup.ok) expect(dup.error).toBe("parse-failure");
+  });
+
+  // Pins the corruption the guard above exists to prevent: a duplicated
+  // internalNo splits one choice into two ChoiceCount rows that each count the
+  // same ballots, so a unanimous vote produces leaders.length === 2 -> tie
+  // hold. tally itself is unchanged; parse is the fail-closed entrance.
+  test("a duplicated internalNo would turn a unanimous vote into a tie hold", () => {
+    const clean = Election.parse(DEF);
+    if (!clean.ok) throw new Error("definition must parse");
+    const corrupted = {
+      ...clean.value,
+      choices: [
+        { internalNo: 1, label: "A" },
+        { internalNo: 1, label: "B" },
+      ],
+    };
+    const ballots = [
+      mustParseIn(corrupted, ballot("alice", 1, 1)),
+      mustParseIn(corrupted, ballot("bob", 1, 1)),
+    ];
+    const result = tally(corrupted, ballots);
+    expect(result.kind).toBe("hold");
+    if (result.kind === "hold") expect(result.reason).toBe("tie");
+    // and such a definition can no longer be built through the parser
+    expect(Election.parse({ ...DEF, choices: corrupted.choices }).ok).toBe(false);
+  });
+
   test("Ballot.parse rejects a choiceInternalNo not in the election (fail-closed)", () => {
     const e = Election.parse(DEF); // single choice {internalNo: 1}
     if (!e.ok) throw new Error("definition must parse");
