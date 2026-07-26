@@ -13,6 +13,8 @@
 - **BR-U5-5(型正本)**: DoctorLine の基底 3 フィールドは U2 正本の逐語継承で、U5 拡張は追加のみ(cross-unit-type-canonical-lift。検証: U2 domain-entities との文字列一致)
 - **BR-U5-6(既存テスト同期)**: 既存 doctor 期待出力テスト(t-print-*-doctor 系)の更新を同一変更で行い、全ハーネス dist / self-install の再生成と drift ガード green を伴う(project.md Mandated)
 
+- **BR-U5-8(未知状態 fail-closed — U5 ND レビュー是正の申告付き追加 2026-07-27)**: 写像に現れない状態値は DoctorLine.state = "unknown" の loud 行として表示し FAIL へ寄与する(無音読み飛ばし禁止。検証: 想定外値 fixture での行出現+exit assert)。分岐の正本は business-logic-model の分岐表(8 行)であり、nfr-design の射影表はそこからの転記
+
 ## 検証への trace
 
 BR-U5-1/5 は unit(純関数)、BR-U5-2/3/4/6 は integration(実 doctor 出力・exit・bytes 比較)。落ちる実証は degraded fixture の注入で FAIL 化を実測(corpus-sweep: 正当な既存構成で赤くならないことも両側実測)。

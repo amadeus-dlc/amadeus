@@ -19,7 +19,7 @@ requirements の FR-5(silent drop 不合格)を継承する。business-rules の
 
 business-rules の BR-U5-1(射影のみ)/ BR-U5-7(DropsRecord 分界)を継承する。business-logic-model のとおり分岐は diagnosePlugins・DropsRecord・U6 判定からの機械写像であり、doctor 側での再判定を禁止する。DropsRecord の書き手は compose 経路のみ(U2 骨格・U4 エントリ追加)で、doctor は読むだけである。これにより doctor 表示と実状態の乖離(独自判定による false 表示)という信頼性リスクを構造的に排除する。
 
-- 合否: DropsRecord 不在時は drops 由来行を出さず、未書込と空を区別する(fail-open にしない範囲での縮退 — BR-U5-7)
+- 合否: DropsRecord 不在時は drops 由来行を出さない — 不在と空は同一の縮退挙動(区別しない)とし、fail-open な行生成をしない(BR-U5-7 の verbatim 準拠 — U5 ND レビュー Major 是正 2026-07-27)
 - 合否(型正本): DoctorLine の基底 3 フィールドは U2 正本の逐語継承で、U5 拡張は追加のみ(BR-U5-5。検証: U2 domain-entities との文字列一致)
 
 ## 既存テスト同期と drift 防止

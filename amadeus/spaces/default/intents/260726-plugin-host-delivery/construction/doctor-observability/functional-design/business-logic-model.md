@@ -25,6 +25,7 @@
 | degraded drop あり(DropsRecord) | `[degraded: <surface>]` | **fail** |
 | advisory drop あり(DropsRecord) | `[advisory: <surface>]` | pass(PASS(advisory)) |
 | activation changed | `(activation) formal-model-check: spec-hash CHANGED` | pass(advisory 扱い) |
+| **写像外の未知状態値**(diag.status / DropsRecord.severity の想定外値) | `[unknown: <value>]` の loud 行(DoctorLine.state = "unknown") | **fail**(fail-closed — 無音読み飛ばし禁止。U5 ND レビュー Critical 是正の申告付き追加 2026-07-27) |
 
 分岐は diagnosePlugins の実戻り値(`composed | drift | recovery-pending` — scripts/plugin-composition.ts:224 実測)+DropsRecord(domain-entities 新設 — 書き手は compose 経路)+U6 判定からの機械写像であり、doctor 側での再判定・推測を禁止する。
 

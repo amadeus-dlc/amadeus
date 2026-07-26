@@ -15048,3 +15048,6322 @@
 **Stage**: nfr-requirements
 
 ---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:00:14Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/performance-design.md
+**Context**: construction > host-projection-all > nfr-design > performance-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:00:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: 95fbccc5
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:00:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: 95fbccc5
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/performance-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:00:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: ca71ad5a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/performance-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:00:14Z
+**Event**: SENSOR_FAILED
+**Fire id**: ca71ad5a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/performance-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-ca71ad5a.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:00:20Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/performance-design.md
+**Context**: construction > harness-capability-matrix > nfr-design > performance-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:00:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: ccff49d2
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:00:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: ccff49d2
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/performance-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:00:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4cbe9541
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/performance-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:00:20Z
+**Event**: SENSOR_FAILED
+**Fire id**: 4cbe9541
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/performance-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-4cbe9541.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:00:40Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/security-design.md
+**Context**: construction > host-projection-all > nfr-design > security-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:00:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: 318579e6
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:00:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: 318579e6
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/security-design.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:00:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0289236a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:00:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0289236a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/security-design.md
+**Duration ms**: 33
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:00:43Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/security-design.md
+**Context**: construction > harness-capability-matrix > nfr-design > security-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:00:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6317125b
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:00:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6317125b
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/security-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:00:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 59515944
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/security-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:00:43Z
+**Event**: SENSOR_FAILED
+**Fire id**: 59515944
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/security-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-59515944.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:00:58Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/scalability-design.md
+**Context**: construction > host-projection-all > nfr-design > scalability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:00:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: bee4c67d
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:00:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: bee4c67d
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/scalability-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:00:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5bf49d36
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/scalability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:00:58Z
+**Event**: SENSOR_FAILED
+**Fire id**: 5bf49d36
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/scalability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-5bf49d36.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:00:59Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/scalability-design.md
+**Context**: construction > harness-capability-matrix > nfr-design > scalability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:00:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: d41fe229
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:00:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: d41fe229
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/scalability-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:00:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 22bfe0e4
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/scalability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:00:59Z
+**Event**: SENSOR_FAILED
+**Fire id**: 22bfe0e4
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/scalability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-22bfe0e4.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:01:19Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/reliability-design.md
+**Context**: construction > harness-capability-matrix > nfr-design > reliability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:01:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7d9ed032
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:01:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7d9ed032
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/reliability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:01:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5b5cccc1
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:01:19Z
+**Event**: SENSOR_FAILED
+**Fire id**: 5b5cccc1
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-5b5cccc1.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:01:24Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/reliability-design.md
+**Context**: construction > host-projection-all > nfr-design > reliability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:01:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: d9b34c0c
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:01:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: d9b34c0c
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/reliability-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:01:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 981e74f5
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:01:24Z
+**Event**: SENSOR_FAILED
+**Fire id**: 981e74f5
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-981e74f5.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:01:36Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/logical-components.md
+**Context**: construction > harness-capability-matrix > nfr-design > logical-components.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:01:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 82e73a45
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:01:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 82e73a45
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/logical-components.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:01:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: e2776e26
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/logical-components.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:01:36Z
+**Event**: SENSOR_FAILED
+**Fire id**: e2776e26
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/logical-components.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-e2776e26.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:01:46Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/logical-components.md
+**Context**: construction > host-projection-all > nfr-design > logical-components.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:01:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9f8366c5
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:01:46Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9f8366c5
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/logical-components.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:01:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: 70413d4b
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/logical-components.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:01:46Z
+**Event**: SENSOR_FAILED
+**Fire id**: 70413d4b
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/logical-components.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-70413d4b.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:01:56Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/performance-design.md
+**Context**: construction > walking-skeleton-claude > nfr-design > performance-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:01:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6cc4c555
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:01:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6cc4c555
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/performance-design.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:01:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: db8e80d4
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/performance-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:01:56Z
+**Event**: SENSOR_FAILED
+**Fire id**: db8e80d4
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/performance-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-db8e80d4.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:02:05Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/performance-design.md
+**Context**: construction > hook-wiring-remaining > nfr-design > performance-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:02:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: 077f58c2
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:02:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: 077f58c2
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/performance-design.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:02:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: b9a4d930
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/performance-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:02:05Z
+**Event**: SENSOR_FAILED
+**Fire id**: b9a4d930
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/performance-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-b9a4d930.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:02:27Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/security-design.md
+**Context**: construction > walking-skeleton-claude > nfr-design > security-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:02:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: ebe99dbc
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:02:27Z
+**Event**: SENSOR_PASSED
+**Fire id**: ebe99dbc
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/security-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:02:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7577244f
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/security-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:02:27Z
+**Event**: SENSOR_FAILED
+**Fire id**: 7577244f
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/security-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-7577244f.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:02:33Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/security-design.md
+**Context**: construction > hook-wiring-remaining > nfr-design > security-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:02:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 46e5f6aa
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:02:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: 46e5f6aa
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/security-design.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:02:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: f6ab749b
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/security-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:02:33Z
+**Event**: SENSOR_FAILED
+**Fire id**: f6ab749b
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/security-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-f6ab749b.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:02:46Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/scalability-design.md
+**Context**: construction > walking-skeleton-claude > nfr-design > scalability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:02:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: 90231b44
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:02:46Z
+**Event**: SENSOR_PASSED
+**Fire id**: 90231b44
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/scalability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:02:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: 52bdb96e
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/scalability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:02:46Z
+**Event**: SENSOR_FAILED
+**Fire id**: 52bdb96e
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/scalability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-52bdb96e.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:02:48Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/scalability-design.md
+**Context**: construction > hook-wiring-remaining > nfr-design > scalability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:02:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 350d699e
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:02:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 350d699e
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/scalability-design.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:02:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 85a78f4a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/scalability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:02:48Z
+**Event**: SENSOR_FAILED
+**Fire id**: 85a78f4a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/scalability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-85a78f4a.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:03:09Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+**Context**: construction > walking-skeleton-claude > nfr-design > reliability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:03:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8a584145
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:03:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8a584145
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:03:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: d20e4014
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:03:09Z
+**Event**: SENSOR_FAILED
+**Fire id**: d20e4014
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-d20e4014.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:03:13Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/reliability-design.md
+**Context**: construction > hook-wiring-remaining > nfr-design > reliability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:03:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1bcce69f
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:03:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1bcce69f
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/reliability-design.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:03:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0d260a4d
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:03:13Z
+**Event**: SENSOR_FAILED
+**Fire id**: 0d260a4d
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-0d260a4d.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:03:36Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/logical-components.md
+**Context**: construction > hook-wiring-remaining > nfr-design > logical-components.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:03:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 907f92c1
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:03:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 907f92c1
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/logical-components.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:03:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8d13f2fb
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/logical-components.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:03:36Z
+**Event**: SENSOR_FAILED
+**Fire id**: 8d13f2fb
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/logical-components.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-8d13f2fb.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:03:42Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/logical-components.md
+**Context**: construction > walking-skeleton-claude > nfr-design > logical-components.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:03:42Z
+**Event**: SENSOR_FIRED
+**Fire id**: fe628c88
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:03:42Z
+**Event**: SENSOR_PASSED
+**Fire id**: fe628c88
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/logical-components.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:03:42Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5bd9a38c
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/logical-components.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:03:42Z
+**Event**: SENSOR_FAILED
+**Fire id**: 5bd9a38c
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/logical-components.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-5bd9a38c.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:03:56Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/performance-design.md
+**Context**: construction > conformance-suite > nfr-design > performance-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:03:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: da9dd582
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:03:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: da9dd582
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/performance-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:03:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0ff808bb
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/performance-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:03:56Z
+**Event**: SENSOR_FAILED
+**Fire id**: 0ff808bb
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/performance-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-0ff808bb.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:04:00Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/performance-design.md
+**Context**: construction > doctor-observability > nfr-design > performance-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:04:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 69dbec44
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:04:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 69dbec44
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/performance-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:04:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: cf902095
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/performance-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:04:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: cf902095
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/performance-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-cf902095.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:04:16Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/security-design.md
+**Context**: construction > conformance-suite > nfr-design > security-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:04:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5c272966
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:04:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5c272966
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/security-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:04:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 434ce7e2
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/security-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:04:16Z
+**Event**: SENSOR_FAILED
+**Fire id**: 434ce7e2
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/security-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-434ce7e2.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:04:20Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/security-design.md
+**Context**: construction > doctor-observability > nfr-design > security-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:04:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 31aa7f7e
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:04:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 31aa7f7e
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/security-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:04:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: f27cf733
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/security-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:04:20Z
+**Event**: SENSOR_FAILED
+**Fire id**: f27cf733
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/security-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-f27cf733.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:04:32Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/scalability-design.md
+**Context**: construction > conformance-suite > nfr-design > scalability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:04:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: d6954b60
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:04:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: d6954b60
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/scalability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:04:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: aa0e06fb
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/scalability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:04:32Z
+**Event**: SENSOR_FAILED
+**Fire id**: aa0e06fb
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/scalability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-aa0e06fb.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:04:35Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/scalability-design.md
+**Context**: construction > doctor-observability > nfr-design > scalability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:04:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 48cc8caa
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:04:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 48cc8caa
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/scalability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:04:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: b5813534
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/scalability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:04:35Z
+**Event**: SENSOR_FAILED
+**Fire id**: b5813534
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/scalability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-b5813534.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:04:54Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/reliability-design.md
+**Context**: construction > doctor-observability > nfr-design > reliability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:04:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 36d74e24
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:04:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 36d74e24
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/reliability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:04:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5a0659eb
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:04:54Z
+**Event**: SENSOR_FAILED
+**Fire id**: 5a0659eb
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-5a0659eb.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:05:00Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/reliability-design.md
+**Context**: construction > conformance-suite > nfr-design > reliability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:05:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: eaad3482
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:05:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: eaad3482
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/reliability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:05:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9378e678
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:05:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: 9378e678
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-9378e678.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:05:13Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/logical-components.md
+**Context**: construction > doctor-observability > nfr-design > logical-components.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:05:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9b3a0bb0
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:05:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9b3a0bb0
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/logical-components.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:05:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: d3deab93
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/logical-components.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:05:13Z
+**Event**: SENSOR_FAILED
+**Fire id**: d3deab93
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/logical-components.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-d3deab93.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:05:22Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/logical-components.md
+**Context**: construction > conformance-suite > nfr-design > logical-components.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:05:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: bfcbdacc
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:05:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: bfcbdacc
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/logical-components.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:05:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 99106293
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:05:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 99106293
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/logical-components.md
+**Duration ms**: 34
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:05:33Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/performance-design.md
+**Context**: construction > activation-policy > nfr-design > performance-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:05:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5596ce37
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:05:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5596ce37
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/performance-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:05:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: e9626bb8
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/performance-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:05:33Z
+**Event**: SENSOR_FAILED
+**Fire id**: e9626bb8
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/performance-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-e9626bb8.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:05:33Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/performance-design.md
+**Context**: construction > docs-sync > nfr-design > performance-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:05:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: d3ba41f7
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:05:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: d3ba41f7
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/performance-design.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:05:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 76ea5eaf
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/performance-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:05:33Z
+**Event**: SENSOR_FAILED
+**Fire id**: 76ea5eaf
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/performance-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-76ea5eaf.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:05:48Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/security-design.md
+**Context**: construction > docs-sync > nfr-design > security-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:05:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1dff80f2
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:05:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1dff80f2
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/security-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:05:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: de514fc6
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/security-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:05:48Z
+**Event**: SENSOR_FAILED
+**Fire id**: de514fc6
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/security-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-de514fc6.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:05:55Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/security-design.md
+**Context**: construction > activation-policy > nfr-design > security-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:05:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5f33f794
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:05:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5f33f794
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/security-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:05:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: dd0271b6
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/security-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:05:56Z
+**Event**: SENSOR_FAILED
+**Fire id**: dd0271b6
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/security-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-dd0271b6.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:06:01Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/scalability-design.md
+**Context**: construction > docs-sync > nfr-design > scalability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:06:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: ad7f2dcd
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:06:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: ad7f2dcd
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/scalability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:06:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: ee222873
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/scalability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:06:01Z
+**Event**: SENSOR_FAILED
+**Fire id**: ee222873
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/scalability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-ee222873.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:06:11Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/scalability-design.md
+**Context**: construction > activation-policy > nfr-design > scalability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:06:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: ea67184c
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:06:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: ea67184c
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/scalability-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:06:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1ae23f56
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/scalability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:06:11Z
+**Event**: SENSOR_FAILED
+**Fire id**: 1ae23f56
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/scalability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-1ae23f56.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:06:22Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/reliability-design.md
+**Context**: construction > docs-sync > nfr-design > reliability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:06:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8d73f22a
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:06:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8d73f22a
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/reliability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:06:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 71cf288e
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:06:22Z
+**Event**: SENSOR_FAILED
+**Fire id**: 71cf288e
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-71cf288e.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:06:38Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/logical-components.md
+**Context**: construction > docs-sync > nfr-design > logical-components.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:06:38Z
+**Event**: SENSOR_FIRED
+**Fire id**: f3a2b546
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:06:38Z
+**Event**: SENSOR_PASSED
+**Fire id**: f3a2b546
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/logical-components.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:06:38Z
+**Event**: SENSOR_FIRED
+**Fire id**: f65a0264
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:06:38Z
+**Event**: SENSOR_PASSED
+**Fire id**: f65a0264
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/logical-components.md
+**Duration ms**: 36
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:06:41Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/reliability-design.md
+**Context**: construction > activation-policy > nfr-design > reliability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:06:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: 911745fc
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:06:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: 911745fc
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/reliability-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:06:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: a5b55746
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:06:41Z
+**Event**: SENSOR_FAILED
+**Fire id**: a5b55746
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-a5b55746.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T17:07:05Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/logical-components.md
+**Context**: construction > activation-policy > nfr-design > logical-components.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:07:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: 14c34905
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:07:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: 14c34905
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/logical-components.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:07:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7225a960
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/logical-components.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:07:05Z
+**Event**: SENSOR_FAILED
+**Fire id**: 7225a960
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/logical-components.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-7225a960.md
+**Findings count**: 1
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:07:11Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/reliability-design.md
+**Context**: construction > hook-wiring-remaining > nfr-design > reliability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:07:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7a880669
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:07:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7a880669
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/reliability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:07:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: f2e621fb
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:07:11Z
+**Event**: SENSOR_FAILED
+**Fire id**: f2e621fb
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-f2e621fb.md
+**Findings count**: 1
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:07:15Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/reliability-design.md
+**Context**: construction > docs-sync > nfr-design > reliability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:07:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 809a0d4e
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:07:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 809a0d4e
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/reliability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:07:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: bfb58e05
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:07:15Z
+**Event**: SENSOR_FAILED
+**Fire id**: bfb58e05
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-bfb58e05.md
+**Findings count**: 1
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T17:07:37Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: general-purpose
+**Agent ID**: a3f53eef769891c67
+**Message**: 起草完了。commit は行っていません。最終報告:\n\n**nfr-design 起草完了 — 4 unit × 5 ファイル = 20 ファイル**(ベース: `amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/<unit>/nfr-design/`)\n\n- **host-projection-all:
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:07:51Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/reliability-design.md
+**Context**: construction > harness-capability-matrix > nfr-design > reliability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:07:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: f204acef
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:07:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: f204acef
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/reliability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:07:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9e362b32
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:07:51Z
+**Event**: SENSOR_FAILED
+**Fire id**: 9e362b32
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-9e362b32.md
+**Findings count**: 1
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:07:53Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/scalability-design.md
+**Context**: construction > harness-capability-matrix > nfr-design > scalability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:07:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: a5012359
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:07:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: a5012359
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/scalability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:07:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 64affb92
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/scalability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:07:54Z
+**Event**: SENSOR_FAILED
+**Fire id**: 64affb92
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/scalability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-64affb92.md
+**Findings count**: 1
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:07:57Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/logical-components.md
+**Context**: construction > harness-capability-matrix > nfr-design > logical-components.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:07:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4a5e0a84
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:07:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4a5e0a84
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/logical-components.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:07:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: d00ec044
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/logical-components.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:07:57Z
+**Event**: SENSOR_FAILED
+**Fire id**: d00ec044
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/logical-components.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-d00ec044.md
+**Findings count**: 1
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:08:03Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/security-design.md
+**Context**: construction > walking-skeleton-claude > nfr-design > security-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: e5b151ca
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:08:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: e5b151ca
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/security-design.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4cc62460
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/security-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:08:03Z
+**Event**: SENSOR_FAILED
+**Fire id**: 4cc62460
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/security-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-4cc62460.md
+**Findings count**: 1
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:08:06Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+**Context**: construction > walking-skeleton-claude > nfr-design > reliability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 073fabd7
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:08:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 073fabd7
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4e4c9ead
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:08:06Z
+**Event**: SENSOR_FAILED
+**Fire id**: 4e4c9ead
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-4e4c9ead.md
+**Findings count**: 1
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:08:09Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+**Context**: construction > walking-skeleton-claude > nfr-design > reliability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9d938e52
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:08:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9d938e52
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: bf5ad610
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:08:09Z
+**Event**: SENSOR_FAILED
+**Fire id**: bf5ad610
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-bf5ad610.md
+**Findings count**: 1
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:08:13Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+**Context**: construction > walking-skeleton-claude > nfr-design > reliability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: 712b77b7
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:08:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: 712b77b7
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: 150fb233
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:08:13Z
+**Event**: SENSOR_FAILED
+**Fire id**: 150fb233
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-150fb233.md
+**Findings count**: 1
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:08:18Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/logical-components.md
+**Context**: construction > walking-skeleton-claude > nfr-design > logical-components.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: a7ea6fe3
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:08:18Z
+**Event**: SENSOR_PASSED
+**Fire id**: a7ea6fe3
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/logical-components.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: 761753a7
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/logical-components.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:08:18Z
+**Event**: SENSOR_FAILED
+**Fire id**: 761753a7
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/logical-components.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-761753a7.md
+**Findings count**: 1
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:08:26Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/security-design.md
+**Context**: construction > doctor-observability > nfr-design > security-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:26Z
+**Event**: SENSOR_FIRED
+**Fire id**: 261a4459
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:08:26Z
+**Event**: SENSOR_PASSED
+**Fire id**: 261a4459
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/security-design.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:26Z
+**Event**: SENSOR_FIRED
+**Fire id**: 015287ac
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/security-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:08:26Z
+**Event**: SENSOR_FAILED
+**Fire id**: 015287ac
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/security-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-015287ac.md
+**Findings count**: 1
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:08:29Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/scalability-design.md
+**Context**: construction > doctor-observability > nfr-design > scalability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 23283832
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:08:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: 23283832
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/scalability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 69294455
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/scalability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:08:29Z
+**Event**: SENSOR_FAILED
+**Fire id**: 69294455
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/scalability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-69294455.md
+**Findings count**: 1
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:08:35Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/reliability-design.md
+**Context**: construction > doctor-observability > nfr-design > reliability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 80944950
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:08:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 80944950
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/reliability-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: ac9be8f4
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:08:35Z
+**Event**: SENSOR_FAILED
+**Fire id**: ac9be8f4
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-ac9be8f4.md
+**Findings count**: 1
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:08:39Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/logical-components.md
+**Context**: construction > doctor-observability > nfr-design > logical-components.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: aa1e47c0
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:08:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: aa1e47c0
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/logical-components.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2826d862
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/logical-components.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:08:39Z
+**Event**: SENSOR_FAILED
+**Fire id**: 2826d862
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/logical-components.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-2826d862.md
+**Findings count**: 1
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:08:45Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/security-design.md
+**Context**: construction > activation-policy > nfr-design > security-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5caba0c8
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:08:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5caba0c8
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/security-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1266053e
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/security-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:08:45Z
+**Event**: SENSOR_FAILED
+**Fire id**: 1266053e
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/security-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-1266053e.md
+**Findings count**: 1
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:08:48Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/security-design.md
+**Context**: construction > activation-policy > nfr-design > security-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2bd4605b
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:08:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2bd4605b
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/security-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 222b4d04
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/security-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:08:48Z
+**Event**: SENSOR_FAILED
+**Fire id**: 222b4d04
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/security-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-222b4d04.md
+**Findings count**: 1
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:08:50Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/reliability-design.md
+**Context**: construction > activation-policy > nfr-design > reliability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3114ff88
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:08:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3114ff88
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/reliability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3b68ff2c
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:08:51Z
+**Event**: SENSOR_FAILED
+**Fire id**: 3b68ff2c
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-3b68ff2c.md
+**Findings count**: 1
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:08:53Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/reliability-design.md
+**Context**: construction > activation-policy > nfr-design > reliability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: ba893efa
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:08:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: ba893efa
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/reliability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2445777e
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:08:53Z
+**Event**: SENSOR_FAILED
+**Fire id**: 2445777e
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-2445777e.md
+**Findings count**: 1
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:08:57Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/scalability-design.md
+**Context**: construction > activation-policy > nfr-design > scalability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: d751f990
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:08:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: d751f990
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/scalability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:08:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 383e7d4b
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/scalability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:08:57Z
+**Event**: SENSOR_FAILED
+**Fire id**: 383e7d4b
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/scalability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-383e7d4b.md
+**Findings count**: 1
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:09:02Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/logical-components.md
+**Context**: construction > activation-policy > nfr-design > logical-components.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: ab669365
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: ab669365
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/logical-components.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 72df1dee
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/logical-components.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: 72df1dee
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/logical-components.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-72df1dee.md
+**Findings count**: 1
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T17:09:38Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: general-purpose
+**Agent ID**: a5885cc755c7cd847
+**Message**: 完了。担当 4 unit × 5 ファイル = 20 ファイルを `construction/<unit>/nfr-design/` へ生成しました(commit なし・git 操作なし)。機械セルフチェック(全 20 ファイルで H2 ≥ 2、consumes 5 slug の本文実参照総当たり)は ALL PASS です。\n\n注記: nfr-requirements に PERF-U*-n 形
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: f3c17886
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: f3c17886
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/logical-components.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1f111862
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1f111862
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/performance-design.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 18bfea43
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 18bfea43
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/reliability-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 446af204
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 446af204
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/scalability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 92da2c06
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 92da2c06
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/security-design.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8777feb4
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/logical-components.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_FAILED
+**Fire id**: 8777feb4
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/logical-components.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-8777feb4.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9bba835a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/performance-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_FAILED
+**Fire id**: 9bba835a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/performance-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-9bba835a.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2cc8f6d0
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_FAILED
+**Fire id**: 2cc8f6d0
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-2cc8f6d0.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 82aec4f0
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/scalability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_FAILED
+**Fire id**: 82aec4f0
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/scalability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-82aec4f0.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 682e0287
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/security-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_FAILED
+**Fire id**: 682e0287
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/security-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-682e0287.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4544a816
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4544a816
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/logical-components.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 73f5763f
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 73f5763f
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/performance-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: c5cc944b
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: c5cc944b
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: b7ece607
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: b7ece607
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/scalability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: aba6205b
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: aba6205b
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/security-design.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: ce1ea9f5
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/logical-components.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_FAILED
+**Fire id**: ce1ea9f5
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/logical-components.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-ce1ea9f5.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3f789ff9
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/performance-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_FAILED
+**Fire id**: 3f789ff9
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/performance-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-3f789ff9.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 401a2065
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_FAILED
+**Fire id**: 401a2065
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-401a2065.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3f510594
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/scalability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_FAILED
+**Fire id**: 3f510594
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/scalability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-3f510594.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: bc91c7b6
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/security-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_FAILED
+**Fire id**: bc91c7b6
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/security-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-bc91c7b6.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 478c62ca
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: 478c62ca
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/logical-components.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7d5d0284
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7d5d0284
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/performance-design.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 93d01e0b
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: 93d01e0b
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/reliability-design.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: d8473e44
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: d8473e44
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/scalability-design.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: c65af0a4
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: c65af0a4
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/security-design.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5a78795d
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/logical-components.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_FAILED
+**Fire id**: 5a78795d
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/logical-components.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-5a78795d.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9fae9cdf
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/performance-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_FAILED
+**Fire id**: 9fae9cdf
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/performance-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-9fae9cdf.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: fe9fb00d
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:56Z
+**Event**: SENSOR_FAILED
+**Fire id**: fe9fb00d
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-fe9fb00d.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7aef6d5e
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/scalability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:56Z
+**Event**: SENSOR_FAILED
+**Fire id**: 7aef6d5e
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/scalability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-7aef6d5e.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6f13504a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6f13504a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/security-design.md
+**Duration ms**: 154
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4d432b30
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4d432b30
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/logical-components.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: f679a17f
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: f679a17f
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/performance-design.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 314ace7e
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 314ace7e
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/reliability-design.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0977d155
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0977d155
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/scalability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 77c8afe8
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 77c8afe8
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/security-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 41ecbc20
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/logical-components.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:56Z
+**Event**: SENSOR_FAILED
+**Fire id**: 41ecbc20
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/logical-components.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-41ecbc20.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 57c3f40f
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/performance-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:56Z
+**Event**: SENSOR_FAILED
+**Fire id**: 57c3f40f
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/performance-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-57c3f40f.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 90702989
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_FAILED
+**Fire id**: 90702989
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-90702989.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1d82ed62
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/scalability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_FAILED
+**Fire id**: 1d82ed62
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/scalability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-1d82ed62.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 71f23e97
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/security-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_FAILED
+**Fire id**: 71f23e97
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/security-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-71f23e97.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: ff1d4a37
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: ff1d4a37
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/logical-components.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 096f15d4
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: 096f15d4
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/performance-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9df58878
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9df58878
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/reliability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: f8fd536a
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: f8fd536a
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/scalability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 26af9573
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: 26af9573
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/security-design.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2536ebf9
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/logical-components.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_FAILED
+**Fire id**: 2536ebf9
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/logical-components.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-2536ebf9.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6afc52ec
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/performance-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_FAILED
+**Fire id**: 6afc52ec
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/performance-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-6afc52ec.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 10dfcf76
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_FAILED
+**Fire id**: 10dfcf76
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-10dfcf76.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 835aeda8
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/scalability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_FAILED
+**Fire id**: 835aeda8
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/scalability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-835aeda8.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: a49c2e0b
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/security-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:57Z
+**Event**: SENSOR_FAILED
+**Fire id**: a49c2e0b
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/security-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-a49c2e0b.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: e8424aa7
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: e8424aa7
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/logical-components.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 66018f23
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: 66018f23
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/performance-design.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 570b2216
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: 570b2216
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/reliability-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9f243c05
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9f243c05
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/scalability-design.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: e144edcc
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: e144edcc
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/security-design.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 23c1e8ac
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/logical-components.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_FAILED
+**Fire id**: 23c1e8ac
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/logical-components.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-23c1e8ac.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6312b106
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/performance-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_FAILED
+**Fire id**: 6312b106
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/performance-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-6312b106.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4c8e9a08
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_FAILED
+**Fire id**: 4c8e9a08
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-4c8e9a08.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: bfb17e8b
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/scalability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_FAILED
+**Fire id**: bfb17e8b
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/scalability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-bfb17e8b.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: c1b3218a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/security-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_FAILED
+**Fire id**: c1b3218a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/security-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-c1b3218a.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 466672b5
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: 466672b5
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/logical-components.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: bd677dbb
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: bd677dbb
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/performance-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 70a9b94b
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: 70a9b94b
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/reliability-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 41f1b709
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: 41f1b709
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/scalability-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1c569c97
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1c569c97
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/security-design.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 200feceb
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: 200feceb
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/logical-components.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 71b55741
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/performance-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_FAILED
+**Fire id**: 71b55741
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/performance-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-71b55741.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: caa76154
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_FAILED
+**Fire id**: caa76154
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-caa76154.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: c4baabd6
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/scalability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_FAILED
+**Fire id**: c4baabd6
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/scalability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-c4baabd6.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 80cf08c1
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/security-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_FAILED
+**Fire id**: 80cf08c1
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/security-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-80cf08c1.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: e0250d18
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: e0250d18
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/logical-components.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: a3ac42fe
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: a3ac42fe
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/performance-design.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1309f747
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1309f747
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/reliability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3e83c224
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3e83c224
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/scalability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: d5ad1470
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: d5ad1470
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/security-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:09:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: ece15823
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: ece15823
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/logical-components.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3f26af28
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/performance-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:10:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: 3f26af28
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/performance-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-3f26af28.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: cb716217
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/reliability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:10:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: cb716217
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/reliability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-cb716217.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 63d3ab0e
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/scalability-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:10:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: 63d3ab0e
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/scalability-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-63d3ab0e.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 86c1407a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/security-design.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T17:10:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: 86c1407a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/security-design.md
+**Detail path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/.amadeus-sensors/nfr-design/upstream-coverage-86c1407a.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: b5598dfb
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: b5598dfb
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/logical-components.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: 757b2138
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: 757b2138
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/performance-design.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5d44c4f5
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5d44c4f5
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/reliability-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: b0ffa82e
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: b0ffa82e
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/scalability-design.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: cab018d5
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: cab018d5
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/security-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 17562622
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 17562622
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/logical-components.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: b9f361a0
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: b9f361a0
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/performance-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: ade688c1
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: ade688c1
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/reliability-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 354eb8e3
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 354eb8e3
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/scalability-design.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: b3126564
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: b3126564
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/security-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 18d513d5
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 18d513d5
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/logical-components.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 12c58d31
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 12c58d31
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/performance-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5b909e8c
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5b909e8c
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/reliability-design.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: a3839b6a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: a3839b6a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/scalability-design.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: a96c77fe
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: a96c77fe
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/security-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: bbd9ff41
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: bbd9ff41
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/logical-components.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 10dc3c06
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 10dc3c06
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/performance-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 22de0fb1
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 22de0fb1
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/reliability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0e7ebf7e
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0e7ebf7e
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/scalability-design.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7ebff6e1
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7ebff6e1
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/security-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 60ca1353
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 60ca1353
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/logical-components.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: a7fa229a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: a7fa229a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/performance-design.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 09694912
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 09694912
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/reliability-design.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: d4a8c136
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: d4a8c136
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/scalability-design.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 517c9836
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 517c9836
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/security-design.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0de4a1b3
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0de4a1b3
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/logical-components.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: d0e10e73
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: d0e10e73
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/performance-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: be358091
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: be358091
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/reliability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: ee86c923
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: ee86c923
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/scalability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9aeb0369
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9aeb0369
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/security-design.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0b2462fa
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0b2462fa
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/logical-components.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 62cdaa76
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: 62cdaa76
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/performance-design.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4b6032b8
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4b6032b8
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/reliability-design.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7d8204cf
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7d8204cf
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/scalability-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: d6086a3c
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: d6086a3c
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/security-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3e672b8d
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3e672b8d
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/logical-components.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8668c661
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/performance-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8668c661
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/performance-design.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: ed87545b
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: ed87545b
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/reliability-design.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 21d1cc01
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/scalability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: 21d1cc01
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/scalability-design.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: f0598573
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:10:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: f0598573
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/security-design.md
+**Duration ms**: 36
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T17:12:23Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a6fa10df880b4cbaa
+**Message**: Reviewer: amadeus-architecture-reviewer-agent\nInvocationId: 8c1226eb-0ede-440d-8264-d2a898379280\nIteration: 1\nVerdict: READY\nScope decision: none\n\nSummary: nfr-design の5成果物(performance/security/scalab
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T17:13:19Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a7d26060e43fe24a7
+**Message**: Reviewer: amadeus-architecture-reviewer-agent\nInvocationId: 23f69820-7a1d-4a17-b432-c0ff374eead4\nIteration: 1\nVerdict: READY\nScope decision: none\n\nSummary:\n5 成果物の相互参照(write⇔check hash 共有、OutDirRefusal
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T17:13:48Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a99b55ecb4e100a7e
+**Message**: Requested reads: (none)
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T17:14:19Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a99b55ecb4e100a7e
+**Message**: Reviewer: amadeus-architecture-reviewer-agent\nInvocationId: a0a4da10-acc3-49dd-aa37-fff1e6ccde1b\nIteration: 1\nVerdict: NOT-READY\n\nScope decision: none\n\nSummary: security-design.md の NFR-1 全7項目は表で機構別に層
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T17:15:03Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: aba79d0ad99486e2c
+**Message**: Reviewer: amadeus-architecture-reviewer-agent\nInvocationId: f822d9df-879e-42b6-a1fa-da011bba0e63\nIteration: 1\nVerdict: READY\n\nScope decision: none\n\nSummary:\nnfr-design の5成果物(performance-design.md、secu
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:17:29Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/logical-components.md
+**Context**: construction > walking-skeleton-claude > nfr-design > logical-components.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:17:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 156b0b3c
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:17:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: 156b0b3c
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/logical-components.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:17:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1c5bba21
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:17:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1c5bba21
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/walking-skeleton-claude/nfr-design/logical-components.md
+**Duration ms**: 34
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:17:50Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/logical-components.md
+**Context**: construction > host-projection-all > nfr-design > logical-components.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:17:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 586c1a43
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:17:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 586c1a43
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/logical-components.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:17:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 75077b5a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:17:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 75077b5a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/logical-components.md
+**Duration ms**: 35
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:18:09Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/logical-components.md
+**Context**: construction > hook-wiring-remaining > nfr-design > logical-components.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:18:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4915853b
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:18:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4915853b
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/logical-components.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:18:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4acde38e
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:18:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4acde38e
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/hook-wiring-remaining/nfr-design/logical-components.md
+**Duration ms**: 36
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:18:30Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/logical-components.md
+**Context**: construction > doctor-observability > nfr-design > logical-components.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:18:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4d13996c
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:18:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4d13996c
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/logical-components.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:18:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 01474c50
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:18:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: 01474c50
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/doctor-observability/nfr-design/logical-components.md
+**Duration ms**: 34
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:18:53Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/logical-components.md
+**Context**: construction > activation-policy > nfr-design > logical-components.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:18:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 27a6ad32
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:18:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 27a6ad32
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/logical-components.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:18:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3bea59b6
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:18:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3bea59b6
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/activation-policy/nfr-design/logical-components.md
+**Duration ms**: 36
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:19:17Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/logical-components.md
+**Context**: construction > conformance-suite > nfr-design > logical-components.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:19:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: 675c2467
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:19:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: 675c2467
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/logical-components.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:19:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: cdf9d50a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:19:18Z
+**Event**: SENSOR_PASSED
+**Fire id**: cdf9d50a
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/nfr-design/logical-components.md
+**Duration ms**: 35
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:19:30Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/logical-components.md
+**Context**: construction > harness-capability-matrix > nfr-design > logical-components.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:19:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3a364b59
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:19:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3a364b59
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/logical-components.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:19:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 394a21c8
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:19:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: 394a21c8
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/harness-capability-matrix/nfr-design/logical-components.md
+**Duration ms**: 34
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:19:46Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/logical-components.md
+**Context**: construction > docs-sync > nfr-design > logical-components.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:19:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: b77cf3ff
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:19:46Z
+**Event**: SENSOR_PASSED
+**Fire id**: b77cf3ff
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/logical-components.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:19:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1a158cbb
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/logical-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:19:46Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1a158cbb
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/nfr-design/logical-components.md
+**Duration ms**: 34
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:19:53Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/security-design.md
+**Context**: construction > host-projection-all > nfr-design > security-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:19:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3765d7aa
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:19:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3765d7aa
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/security-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:19:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8dbf3d53
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/security-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:19:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8dbf3d53
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/security-design.md
+**Duration ms**: 35
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T17:19:56Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/reliability-design.md
+**Context**: construction > host-projection-all > nfr-design > reliability-design.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:19:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8cb24209
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:19:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8cb24209
+**Sensor ID**: required-sections
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/reliability-design.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T17:19:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: c16aca1d
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/reliability-design.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T17:19:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: c16aca1d
+**Sensor ID**: upstream-coverage
+**Stage slug**: nfr-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/host-projection-all/nfr-design/reliability-design.md
+**Duration ms**: 34
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T17:20:28Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: general-purpose
+**Agent ID**: a5570bebc066d0554
+**Message**: 是正完了です。全 10 ファイルの機械確認済み(H2 節 8/8、注記行 8/8、ヘッダー 6 点化、順序前提文 1 件)。commit は行っていません。\n\n## 是正ファイル一覧\n\n**是正 1 — 障害分離節の追記(8 unit の logical-components.md、各 unit の実設計から導出)**\n\n1. `walking-skeleton-claude/nfr-design
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T17:22:51Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: aeb0b1d33f0685b85
+**Message**: Reviewer: amadeus-architecture-reviewer-agent\nInvocationId: 647f709b-d7be-4dfb-b14c-e60f4b7fd266\nIteration: 2\nVerdict: READY\nScope decision: none\nSummary: logical-components.md now carries a "障害分離" se
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T17:24:28Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a0843fc2a873d2d4f
+**Message**: Reviewer: amadeus-architecture-reviewer-agent\nInvocationId: e9720765-d4ea-47a3-a5a2-29fe54688b39\nIteration: 1\nVerdict: READY\nScope decision: none\n\nSummary: docs-sync (U8) の nfr-design 5 成果物は、上流 nfr-re
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T17:24:29Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a7d8d2e58e4fc0539
+**Message**: Reviewer: amadeus-architecture-reviewer-agent\nInvocationId: f9ff24d2-584d-42d2-a5d9-84b2f42312c2\nIteration: 1\nVerdict: READY\nScope decision: none\n\nSummary: unit **activation-policy** の nfr-design 5 成果
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T17:24:40Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a57aaa16644b5145f
+**Message**: Reviewer: amadeus-architecture-reviewer-agent\nInvocationId: 4030d05f-4f7c-4d0e-b267-33fab23e6f12\nIteration: 1\nVerdict: READY\nScope decision: none\nSummary: unit conformance-suite の nfr-design 5成果物は、レビュ
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T17:25:16Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: ab607a09df463ebb2
+**Message**: Reviewer: amadeus-architecture-reviewer-agent\nInvocationId: 1f512e96-839d-4da1-8374-e0350cebc38e\nIteration: 1\nVerdict: NOT-READY\nScope decision: none\n\nSummary: nfr-design の5成果物は上流input(consumes 6点)の実参
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T17:29:43Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: af9264690eda91826
+**Message**: Requested reads: (none)
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T17:30:10Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: af9264690eda91826
+**Message**: Reviewer: amadeus-architecture-reviewer-agent\nInvocationId: 2d2fa3c5-698f-4d2c-89a0-fb1b5d64e6b3\nIteration: 2\nVerdict: REVISE\nScope decision: none\n\nSummary: BR-U5-7 の意味統一(M2)と分岐表の正本一元化(M1)は4か所(reliabi
+
+---

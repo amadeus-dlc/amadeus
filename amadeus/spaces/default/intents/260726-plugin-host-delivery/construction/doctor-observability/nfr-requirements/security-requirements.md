@@ -12,7 +12,7 @@ business-rules の BR-U5-3(読み取り専用)を継承する。business-logic-m
 
 business-logic-model の分岐表は「diagnosePlugins の実戻り値(composed | drift | recovery-pending)+DropsRecord+U6 判定からの機械写像であり、doctor 側での再判定・推測を禁止する」と規定する。business-rules の BR-U5-1(射影のみ)/ BR-U5-7(DropsRecord 分界 — doctor は読むだけ)のとおり、doctor は権威ある判定を持たず、認可・整合性に関わる判断を新設しない。これにより doctor が誤った安全表示(false green / false red)を独自に作る経路を排除する。
 
-- 合否: `buildDoctorPluginSection` が新 judgment・新走査を持たず、入力戻り値の射影に閉じる(BR-U5-1)。DropsRecord 不在時は drops 由来行を出さず、未書込と空を混同しない(BR-U5-7)
+- 合否: `buildDoctorPluginSection` が新 judgment・新走査を持たず、入力戻り値の射影に閉じる(BR-U5-1)。DropsRecord 不在時は drops 由来行を出さず、不在と空は同一の縮退挙動(drops 行なし — BR-U5-7 verbatim 準拠、fail-open な行生成をしない)(BR-U5-7)
 
 ## silent drop の禁止(degrade の可観測性)
 

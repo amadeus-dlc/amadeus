@@ -32,7 +32,7 @@ type PluginCliResult =
 | フィールド | 型 | 備考 |
 |---|---|---|
 | plugin | string | — |
-| state | `"ok" \| "drift" \| "degraded" \| "advisory" \| "recovery-pending"` | degraded / recovery-pending は doctor 全体 exit へ FAIL 伝播(component-methods.md C5)。recovery-pending は U5 FD レビュー指摘(diagnosePlugins 実戻り値 3 値の実測)を受けた申告付き追加 2026-07-27 |
+| state | `"ok" \| "drift" \| "degraded" \| "advisory" \| "recovery-pending" \| "unknown"` | degraded / recovery-pending は doctor 全体 exit へ FAIL 伝播(component-methods.md C5)。recovery-pending は U5 FD レビュー指摘(diagnosePlugins 実戻り値 3 値の実測)を受けた申告付き追加 2026-07-27。unknown は写像外の状態値(diag.status / DropsRecord.severity の想定外値)を受ける fail-closed 変種(FAIL 伝播)— U5 ND レビュー Critical 是正の申告付き追加 2026-07-27 |
 | detail | string | diagnosePlugins の既存戻り値からの射影のみ(新判定を作らない) |
 
 ## HookInvocation(claude SessionStart 配線の契約)

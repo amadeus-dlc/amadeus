@@ -5,7 +5,7 @@
 
 ## DoctorLine(U2 正本の拡張 — 追加フィールドのみ)
 
-U2 正本: `plugin: string` / `state: "ok"|"drift"|"degraded"|"advisory"` / `detail: string`。U5 は state へ **`"recovery-pending"`** を申告付きで追加拡張する(PluginDiagnostic.status の実測 3 値 `composed|drift|recovery-pending` — scripts/plugin-composition.ts:224 — のうち recovery-pending の写像先。U2 正本への追記は cross-unit-type-canonical-lift の申告付き整合として U2 側 domain-entities にも同時反映)。U5 で追加:
+U2 正本: `plugin: string` / `state: "ok"|"drift"|"degraded"|"advisory"|"recovery-pending"|"unknown"` / `detail: string`(unknown は写像外状態値の fail-closed 変種 — U5 ND レビュー it.2 是正 2026-07-27、U2 正本と文字列一致)。U5 は state へ **`"recovery-pending"`** を申告付きで追加拡張する(PluginDiagnostic.status の実測 3 値 `composed|drift|recovery-pending` — scripts/plugin-composition.ts:224 — のうち recovery-pending の写像先。U2 正本への追記は cross-unit-type-canonical-lift の申告付き整合として U2 側 domain-entities にも同時反映)。U5 で追加:
 
 | 追加フィールド | 型 | 制約 |
 |---|---|---|
