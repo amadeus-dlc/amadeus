@@ -16,10 +16,14 @@ import {
   isoTimestamp,
   normalizeAgentType,
   recordHookDrop,
+  readHookStdin,
   resolveProjectDirFromHook,
 } from "../tools/amadeus-lib.ts";
 
-const projectDir = resolveProjectDirFromHook(import.meta.url);
+// Drain stdin first: the payload's `cwd` is the top rung of project-dir
+// resolution (#1482), and the stream can only be read once.
+const hookStdin = await readHookStdin();
+const projectDir = resolveProjectDirFromHook(import.meta.url, hookStdin.cwd);
 
 // Write health heartbeat
 const healthDir = hooksHealthDir(projectDir);
@@ -30,7 +34,7 @@ writeFileSync(join(healthDir, "log-subagent.last"), isoTimestamp(), "utf-8");
 // coming) — avoids blocking on terminal read in test / debug-mode contexts.
 if (process.stdin.isTTY) process.exit(0);
 
-const input = await Bun.stdin.text();
+const input = hookStdin.text;
 let parsed: ClaudeCodeHookInput;
 try {
   const raw: unknown = JSON.parse(input);

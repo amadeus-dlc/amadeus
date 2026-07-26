@@ -12,12 +12,16 @@ import {
   hooksHealthDir,
   isClaudeCodeHookInput,
   isoTimestamp,
+  readHookStdin,
   recordHookDrop,
   resolveProjectDirFromHook,
   stateFilePath,
 } from "../tools/amadeus-lib.ts";
 
-const projectDir = resolveProjectDirFromHook(import.meta.url);
+// Drain stdin first: the payload's `cwd` is the top rung of project-dir
+// resolution (#1482), and the stream can only be read once.
+const hookStdin = await readHookStdin();
+const projectDir = resolveProjectDirFromHook(import.meta.url, hookStdin.cwd);
 
 // No workflow active — do nothing (consistent with session-start.ts)
 if (!existsSync(stateFilePath(projectDir))) process.exit(0);
@@ -27,22 +31,19 @@ const healthDir = hooksHealthDir(projectDir);
 mkdirSync(healthDir, { recursive: true });
 writeFileSync(join(healthDir, "session-end.last"), isoTimestamp(), "utf-8");
 
-// Read stdin for reason field (Claude Code may pass reason=logout|clear|prompt_input_exit etc.).
-// Guard on isTTY — if stdin is a terminal (test / direct-run / debug-mode pipeline
-// that inherits TTY), skip the read to avoid blocking forever.
+// Reason field from the already-read payload (Claude Code may pass
+// reason=logout|clear|prompt_input_exit etc.). Empty on a TTY, where
+// readHookStdin never blocks on a terminal read.
 let reason = "unknown";
-if (!process.stdin.isTTY) {
-  try {
-    const input = await Bun.stdin.text();
-    if (input) {
-      const raw: unknown = JSON.parse(input);
-      if (isClaudeCodeHookInput(raw) && raw.reason) {
-        reason = String(raw.reason);
-      }
+try {
+  if (hookStdin.text) {
+    const raw: unknown = JSON.parse(hookStdin.text);
+    if (isClaudeCodeHookInput(raw) && raw.reason) {
+      reason = String(raw.reason);
     }
-  } catch {
-    // Treat malformed/missing stdin as unknown
   }
+} catch {
+  // Treat malformed/missing stdin as unknown
 }
 
 try {

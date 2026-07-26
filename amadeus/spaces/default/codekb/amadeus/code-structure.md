@@ -1,6 +1,62 @@
 # コード構造
 
-## Team Mode 起動経路のコード配置（260725-teamup-launch-hardening、現在、Issue #1476 / #1478）
+## worktree パス／ref 解決面のコード配置（260725-worktree-ref-fixes、現在、Issue #1482 / #1481 / #1455）
+
+測定 ref: observed `11f1ad61f`。file:line はすべて同 commit の実ファイル直読、件数は grep / find 出力からの転記。
+
+### 患部シンボルの所在
+
+| シンボル | 正本の所在 | 役割 | 関連 Issue |
+| --- | --- | --- | --- |
+| `resolveProjectDirFromHook` | `packages/framework/core/tools/amadeus-lib.ts:247` | hook 用 project-dir 解決（4-rung ladder、export） | #1482 |
+| `hasWorkspaceMarker` | 同 `:227` | `amadeus/` + `<harness>/tools/` の両在判定（非 export） | #1482 |
+| `findWorkspaceMarkerAncestor` | 同 `:235` | cwd 起点の marker 上向き探索（非 export） | #1482 |
+| `resolveProjectDir` | 同 `:170` | engine 用 project-dir 解決（`:172` で明示引数が第1順位、export） | #1482 の対照 |
+| `resolveMainCheckout` | 同 `:4131` | git plumbing による main checkout 解決（worktree 安全な既習様式、export） | #1481 の参照実装 |
+| `currentGitSha` | `tests/integration/t257-status-registry-migration.test.ts:193` | FS 直読の SHA 解決（複製1） | #1481 / #1455 |
+| `currentGitSha` | `tests/integration/t258-lifecycle-transaction.test.ts:434` | 同（複製2） | #1481 |
+| `currentGitSha` | `tests/integration/t259-guard-integration.test.ts:77` | 同（複製3、`repositoryRoot` 引数版） | #1481 |
+
+### `resolveProjectDirFromHook` の 4-rung 配置
+
+`amadeus-lib.ts` 内の rung 別行: rung1 `:249`（env）→ rung2 `:258` / `:259`（marker）→ rung3 `:263-265`（スクリプトパス）→ rung4 `:268-273`（cwd の harness dir）→ fallback `:275`（cwd）。
+
+### 呼び出し側の配置（実呼び出し12箇所）
+
+`grep -rn 'resolveProjectDirFromHook' packages/ --include='*.ts'` 実測。import 行を除く実呼び出しのみ:
+
+`packages/framework/core/hooks/` 配下 11 ファイル — `amadeus-audit-logger.ts:23` / `amadeus-log-subagent.ts:22` / `amadeus-mint-presence.ts:72` / `amadeus-runtime-compile.ts:45` / `amadeus-sensor-fire.ts:40` / `amadeus-session-end.ts:20` / `amadeus-session-start.ts:46` / `amadeus-statusline.ts:32` / `amadeus-stop.ts:167` / `amadeus-sync-statusline.ts:25` / `amadeus-validate-state.ts:24`。
+
+harness 表層 1 ファイル — `packages/framework/harness/kiro-ide/hooks/amadeus-kiro-adapter.ts:64`。
+
+※ `packages/framework/harness/kiro/hooks/amadeus-kiro-adapter.ts:79` は当該シンボルへの**コメント参照のみ**で実呼び出しではない（`// resolveProjectDirFromHook resolves the SAME dir the engine wrote from (#822).`）。
+
+Stop hook 内の配置は `packages/framework/core/hooks/amadeus-stop.ts:118`（import）→ `:167`（解決）で、得られた `projectDir` は下流24箇所（state path `:880`、engine 呼び出し `:793` / `:802`、audit `:266`、stage dir `:455` ほか）へ流れる。
+
+### 起動設定の所在
+
+`.claude/settings.json:154` — Stop hook 起動行。verbatim `            "command": "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-stop.ts"`。この `$CLAUDE_PROJECT_DIR` 展開の成立が、`CLAUDE_PROJECT_DIR` が設定済みであることの一次証拠になる。
+
+### 配布面のコピー構成
+
+`amadeus-lib.ts` / `amadeus-stop.ts` はいずれも **11コピー**（正本 1 + harness 表層 4 + dist 6）。正本編集後は `bun scripts/package.ts` と `bun run promote:self` で同期し、`dist:check` / `promote:self:check` で検証する。
+
+### テスト面の配置
+
+- 患部の unit 正典: `tests/unit/t202-hook-project-dir-worktree-marker.test.ts`（`:1-3` に #641 の設計意図、`:105` に env 優越を固定する test 2）
+- integration: `tests/integration/t230-*`（`resolveProjectDirFromHook` に接触）
+- 該当シンボルに接触するテストは grep 実測 8 ファイル（t202 / t230 / t131 / t33 / t07 / t10 / t30 / t203）
+- ref 解決欠陥の現症状スイート: `tests/integration/t257-status-registry-migration.test.ts` / `t258-lifecycle-transaction.test.ts` / `t259-guard-integration.test.ts`
+
+### テスト番号の重複生態（引用時の注意）
+
+`find tests -name "tNNN-*" -type f` 実測: **t257 = 6 件、t258 = 8 件、t259 = 4 件**。同番号が複数ファイルに存在するため、本 codekb では患部を必ずフルパスで引用する（短形 `t257` は別ファイルへ誤解決されうる）。
+
+### worktree 実行時の git レイアウト（#1481 の前提）
+
+worktree `.claude/worktrees/bugfix-1482-1481-1455` での実測: `--git-dir` = `<main>/.git/worktrees/bugfix-1482-1481-1455`、`--git-common-dir` = `<main>/.git`、HEAD ref = `refs/heads/worktree-bugfix-1482-1481-1455`。ブランチの loose ref は **common dir 側にのみ実在**（41 バイト）し worktree gitDir 側は不在、`packed-refs` は総 733 行だが当該 ref のエントリは 0 件。
+
+## Team Mode 起動経路のコード配置（260725-teamup-launch-hardening、履歴、Issue #1476 / #1478）
 
 差分リフレッシュ（base `ec624022f` → observed HEAD `4a0f91ad07dbe17c6477b7fe9b52a0e9ab4532ba`、距離 **9**、amadeus-feature / Standard）。区間規模は `git diff --stat` で **65 files changed, 6516 insertions(+), 54 deletions(-)**。うち実装面は `team-up.sh` **11 面 × +31/-8** と tests 2件のみで、残り約 6,400 行は record / audit。測定 ref: observed HEAD 実ファイル直読。
 

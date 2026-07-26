@@ -22,11 +22,19 @@ interface HookSpec {
   path: string;
 }
 
+// The canonical shape of a Claude hook launch line. `:-.` is load-bearing:
+// Claude Code does not always export CLAUDE_PROJECT_DIR (a worktree session
+// launched outside the project root leaves it unset), and a bare
+// `bun $CLAUDE_PROJECT_DIR/...` then expands to an absolute-looking
+// `/.claude/hooks/...` and the hook never runs at all — silently, since a hook
+// that fails to launch produces no output anywhere (issue #1492). Defaulting to
+// `.` runs the hook relative to the session cwd instead; the script's own
+// project-dir ladder takes it from there.
 export function renderClaudeHookCommand(
-  projectDirVariable: "$CLAUDE_PROJECT_DIR",
+  projectDirVariable: "CLAUDE_PROJECT_DIR",
   hook: HookSpec,
 ): string {
-  return `bun "${projectDirVariable}/${hook.path}"`;
+  return `bun "\${${projectDirVariable}:-.}/${hook.path}"`;
 }
 
 const manifest: HarnessManifest = {

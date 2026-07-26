@@ -9,6 +9,7 @@ import {
   isClaudeCodeHookInput,
   isoTimestamp,
   recordHookDrop,
+  readHookStdin,
   resolveProjectDirFromHook,
   stateFilePath,
   harnessDir,
@@ -22,13 +23,16 @@ import {
 // second) rather than mint a new magic number.
 const SET_STATUS_TIMEOUT_MS = 10_000;
 
-const projectDir = resolveProjectDirFromHook(import.meta.url);
+// Drain stdin first: the payload's `cwd` is the top rung of project-dir
+// resolution (#1482), and the stream can only be read once.
+const hookStdin = await readHookStdin();
+const projectDir = resolveProjectDirFromHook(import.meta.url, hookStdin.cwd);
 
 // Read JSON from stdin. Exit cleanly if stdin is a TTY — no Claude Code JSON
 // coming in this scenario (test / direct-run / debug-mode inherited stdin).
 if (process.stdin.isTTY) process.exit(0);
 
-const input = await Bun.stdin.text();
+const input = hookStdin.text;
 let parsed: ClaudeCodeHookInput;
 try {
   const raw: unknown = JSON.parse(input);

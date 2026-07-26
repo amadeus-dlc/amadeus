@@ -215,7 +215,7 @@ Without this, Claude Code would prompt "Allow this tool?" on each first use, dis
 ```json
 "statusLine": {
   "type": "command",
-  "command": "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-statusline.ts"
+  "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-statusline.ts\""
 }
 ```
 
@@ -229,14 +229,14 @@ Runs periodically (not just on tool use) to keep the terminal status current.
     "matcher": "",
     "hooks": [{
       "type": "command",
-      "command": "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-session-start.ts"
+      "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-session-start.ts\""
     }]
   }],
   "SessionEnd": [{
     "matcher": "",
     "hooks": [{
       "type": "command",
-      "command": "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-session-end.ts"
+      "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-session-end.ts\""
     }]
   }]
 }

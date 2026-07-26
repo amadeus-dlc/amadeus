@@ -3,18 +3,17 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
-  existsSync,
   mkdirSync,
   readFileSync,
   readdirSync,
   rmSync,
-  statSync,
   symlinkSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { cpus } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
+import { currentGitSha } from "../harness/git-sha.ts";
 import {
   migrateClosedSwarmDriverRegistryLocked,
   readIntentRegistry,
@@ -188,31 +187,6 @@ function benchmarkChild(size: number, mode: "active" | "noop"): BenchmarkSample 
 function nearestRankP95(values: number[]): number {
   const sorted = [...values].sort((left, right) => left - right);
   return sorted[Math.ceil(sorted.length * 0.95) - 1] ?? Number.NaN;
-}
-
-function currentGitSha(): string {
-  const repositoryRoot = join(import.meta.dir, "..", "..");
-  const dotGit = join(repositoryRoot, ".git");
-  const dotGitText = statSync(dotGit).isDirectory()
-    ? ""
-    : readFileSync(dotGit, "utf-8").trim();
-  const gitDir = dotGitText.startsWith("gitdir:")
-    ? resolve(repositoryRoot, dotGitText.slice("gitdir:".length).trim())
-    : dotGit;
-  const head = readFileSync(join(gitDir, "HEAD"), "utf-8").trim();
-  if (!head.startsWith("ref:")) return head;
-  const ref = head.slice("ref:".length).trim();
-  const looseRef = join(gitDir, ref);
-  if (existsSync(looseRef)) return readFileSync(looseRef, "utf-8").trim();
-  const commonDirPath = join(gitDir, "commondir");
-  const commonDir = existsSync(commonDirPath)
-    ? join(gitDir, readFileSync(commonDirPath, "utf-8").trim())
-    : gitDir;
-  const packed = readFileSync(join(commonDir, "packed-refs"), "utf-8")
-    .split("\n")
-    .find((line) => line.endsWith(` ${ref}`));
-  if (!packed) throw new Error(`cannot resolve Git ref ${ref}`);
-  return packed.split(" ", 1)[0];
 }
 
 describe("t257 status registry performance contract", () => {

@@ -1,6 +1,47 @@
 # コード品質評価
 
-## 起動経路に残る欠陥と技術的負債（260725-teamup-launch-hardening、現在、Issue #1476 / #1478）
+## worktree 環境に起因する欠陥と技術的負債（260725-worktree-ref-fixes、現在、Issue #1482 / #1481 / #1455）
+
+測定 ref: observed `11f1ad61f`。件数はすべて grep / find / wc 出力からの転記。
+
+### Q-1. テスト helper `currentGitSha` の三重複製と FS 直読（#1481 / #1455、S3-MAJOR）
+
+**欠陥形状**: git の内部レイアウト（`.git` ファイル／ディレクトリ、`HEAD`、`commondir`、loose ref、`packed-refs`）を**ファイルシステム直読**で辿る helper が、共有されず3つの integration テストに複製されている。
+
+| ファイル | helper 定義 | throw |
+| --- | --- | --- |
+| `tests/integration/t257-status-registry-migration.test.ts` | `:193` | `:214` |
+| `tests/integration/t258-lifecycle-transaction.test.ts` | `:434` | `:455` |
+| `tests/integration/t259-guard-integration.test.ts` | `:77` | `:96` |
+
+**品質上の問題は2層ある。**
+
+1. **正しさ**: loose ref を worktree gitDir 配下でしか探さず、common dir へは `packed-refs` としてしか降りない。git worktree ではブランチ ref が common dir の loose ref に置かれるため、**worktree では必ず throw する**。本線チェックアウトでのみ緑になる環境依存の false red であり、`org.md` Forbidden の「既存テストの赤を無視して作業を続行しない」規律と正面から衝突する（worktree 作業者は毎回3スイートの赤を手作業で切り分ける負債を負う）。
+2. **重複**: 同型ロジックが3複製されているため、修正は3箇所に及ぶ。しかも3者はエラー文言（`cannot` / `Cannot` / `Unable`）と引数形（t259 のみ `repositoryRoot` を引数に取る）が微妙に食い違っており、**単一の canonical 定義から導出されていない**。`construction.md` の「複数箇所で消費されるリスト・コマンド列・定数を手書きで複製しない — canonical な1定義から導出する」に反する。
+
+**既習の正しい様式が同 repo に存在する**にもかかわらず採用されていない: `packages/framework/core/tools/amadeus-lib.ts:4131` `resolveMainCheckout` は `:4132` `rev-parse --show-toplevel` / `:4135` `rev-parse --git-common-dir` の git plumbing サブプロセスで解決し worktree 安全。同型前例に `codex/tools/amadeus-codex-hooks-migration.ts:590`。**同根棚卸しの結果、git 内部レイアウトを FS 直読するのはこの3ファイルのみ**で、他はすべてサブプロセス経由 — 修正対象は閉じている。
+
+**導入経緯と原因の所在**（cid:requirements-analysis:bug-intent-linkage）: 3ファイルとも導入コミットは `2e157d7fe`（2026-07-23、`archived intent statusと誤resume防止を導入 (#1424)`）。helper 全24行が単一コミット帰属で後続修正なし。原因の所在は **#1424 の実装判断** — 要件・設計は provenance に SHA を記録することを求めたが、その解決手段として git plumbing ではなく FS 直読を選び、かつ共有せず3複製したのは実装段の選択である。設計成果物が FS 直読を指示した形跡はない。
+
+**現症状の実測**（worktree、パイプなし exit 捕捉）: t257 exit 1（10 pass / 1 fail）、t258 exit 1（25 pass / 1 fail）、t259 exit 1（9 pass / 1 fail）。本 scan で t259 を再実行し追認（exit 1、`9 pass` / `1 fail`）。**各スイートで赤くなるのは helper を通る provenance 記録テスト1件のみ**であり、残りは緑 — 欠陥は局所的だが、スイート単位の exit code を汚染するため CI／ローカル双方でノイズになる。
+
+### Q-2. hook の project-dir 解決が worktree を貫通する（#1482）
+
+**欠陥形状**: `resolveProjectDirFromHook`（`packages/framework/core/tools/amadeus-lib.ts:247`）の rung1（`:249`、`CLAUDE_PROJECT_DIR` を無条件採用）が、EnterWorktree セッションで本線を指したままの env を採ってしまい、worktree を正しく返す rung2（`:258-259`）に到達しない。
+
+**品質観点で押さえるべき点**:
+
+- **単一箇所の欠陥が hook 一族12箇所へ一様に波及する**（core hooks 11 + kiro-ide adapter 1、実測列挙は `architecture.md` 同 intent 節）。裏返せば修正も解決関数1点で足りる。
+- **姉妹関数との非対称**: `resolveProjectDir`（`:170`）は `:172` で `--project-dir` 明示引数を第1順位に置くため engine 経路は救われている。hook 側だけがこの上位 rung を欠く — cid:requirements-analysis:symmetric-pair-review が対象とする「片側だけ実装された非対称」クラスタに該当する。
+- **テストが現状を意図的に固定している**: `tests/unit/t202-hook-project-dir-worktree-marker.test.ts:105` の test 2 が env の優越を assert しており、同ファイル `:1-3` が宣言する #641 の設計意図（worktree を返すこと）と矛盾する。**テストが欠陥を守っている**状態であり、修正には t202 の契約変更を伴う裁定が要る。この矛盾は本 scan で新たに可視化したもので、Issue 起票時の推定機序（env 未設定）とは異なる。
+
+**配布面の負債**: `amadeus-lib.ts` / `amadeus-stop.ts` はいずれも11コピー（正本 + harness 表層4 + dist 6）。1行の修正が11面の同期を要求する構造は既知の設計事実だが、`bun scripts/package.ts` + `bun run promote:self` + `dist:check` / `promote:self:check` の決定的ドリフトガードで担保されている。
+
+### Q-3. 本区間（base `ec624022f` → observed `11f1ad61f`）の品質変化
+
+`git diff --name-only ec624022f 11f1ad61f -- packages/framework/core/tools/amadeus-lib.ts packages/framework/core/hooks/amadeus-stop.ts tests/integration/t257-status-registry-migration.test.ts tests/integration/t258-lifecycle-transaction.test.ts tests/integration/t259-guard-integration.test.ts` の出力は**空**。すなわち上記3 Issue はいずれも**本区間の退行ではない**。区間の実装面は `team-up.sh` 系1系統に閉じており、ビルド／テスト構成・依存（`package.json` / `bun.lock` / `tsconfig` / `biome` / `scripts/` / `run-tests.sh` / `.github/`）の diff はいずれも空 — 品質ゲートの構成に変化はない。
+
+## 起動経路に残る欠陥と技術的負債（260725-teamup-launch-hardening、履歴、Issue #1476 / #1478）
 
 測定 ref: observed HEAD `4a0f91ad07dbe17c6477b7fe9b52a0e9ab4532ba` の実ファイル直読。外部スキル `~/.agents/skills/agmsg/` は読取 2026-07-25。
 

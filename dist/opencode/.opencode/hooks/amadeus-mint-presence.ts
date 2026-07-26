@@ -41,6 +41,7 @@ import { existsSync } from "node:fs";
 import {
   isClaudeCodeHookInput,
   isMachineInjectedTurnText,
+  readHookStdin,
   resolveProjectDirFromHook,
   stateFilePath,
 } from "../tools/amadeus-lib.ts";
@@ -57,43 +58,39 @@ import {
 type PromptContext = {
   readonly machineInjected: boolean;
   readonly sessionId: string | null;
+  readonly cwd: string | null;
 };
 
 async function readPromptContext(): Promise<PromptContext> {
-  // A TTY means the hook was invoked interactively (no JSON coming) — never
-  // block on a terminal read; treat as unclassifiable (fail-open -> mint).
-  if (process.stdin.isTTY) {
-    return { machineInjected: false, sessionId: null };
-  }
+  // A TTY yields empty text here (readHookStdin never blocks on a terminal) —
+  // treat as unclassifiable (fail-open -> mint).
+  const stdin = await readHookStdin();
+  const blank = { machineInjected: false, sessionId: null, cwd: stdin.cwd };
   try {
-    const input = await Bun.stdin.text();
-    if (input.length === 0) {
-      return { machineInjected: false, sessionId: null };
-    }
-    const raw: unknown = JSON.parse(input);
-    if (!isClaudeCodeHookInput(raw)) {
-      return { machineInjected: false, sessionId: null };
-    }
+    if (stdin.text.length === 0) return blank;
+    const raw: unknown = JSON.parse(stdin.text);
+    if (!isClaudeCodeHookInput(raw)) return blank;
     const prompt = raw.prompt;
     const sessionId =
       typeof raw.session_id === "string" && raw.session_id.length > 0
         ? raw.session_id
         : null;
     if (typeof prompt !== "string") {
-      return { machineInjected: false, sessionId };
+      return { machineInjected: false, sessionId, cwd: stdin.cwd };
     }
     return {
       machineInjected: isMachineInjectedTurnText(prompt),
       sessionId,
+      cwd: stdin.cwd,
     };
   } catch {
-    return { machineInjected: false, sessionId: null };
+    return blank;
   }
 }
 
 try {
-  const projectDir = resolveProjectDirFromHook(import.meta.url);
   const context = await readPromptContext();
+  const projectDir = resolveProjectDirFromHook(import.meta.url, context.cwd);
   if (existsSync(stateFilePath(projectDir)) && !context.machineInjected) {
     mintHumanPresence({
       projectDir,

@@ -135,7 +135,7 @@ The statusline is configured in `.claude/settings.json`:
 ```json
 "statusLine": {
   "type": "command",
-  "command": "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-statusline.ts"
+  "command": "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-statusline.ts\""
 }
 ```
 

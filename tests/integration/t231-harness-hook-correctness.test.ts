@@ -665,15 +665,15 @@ describe("FR-4.15 Claude hook command quoting", () => {
     );
     expect(commands).toHaveLength(11);
     for (const command of commands) {
-      const hookPath = command.match(/\$CLAUDE_PROJECT_DIR\/(\.claude\/hooks\/[a-z0-9-]+\.ts)/)?.[1];
+      const hookPath = command.match(/\$\{CLAUDE_PROJECT_DIR:-\.\}\/(\.claude\/hooks\/[a-z0-9-]+\.ts)/)?.[1];
       expect(hookPath).toBeDefined();
       expect(command).toBe(
-        renderClaudeHookCommand("$CLAUDE_PROJECT_DIR", { path: hookPath! }),
+        renderClaudeHookCommand("CLAUDE_PROJECT_DIR", { path: hookPath! }),
       );
     }
     expect(settings.statusLine).toEqual({
       type: "command",
-      command: "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-statusline.ts",
+      command: 'bun "${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-statusline.ts"',
     });
     expect(settings.permissions.allow).toContain(
       "Bash(bun $CLAUDE_PROJECT_DIR/.claude/tools/*)",
@@ -710,7 +710,7 @@ describe("FR-4.15 Claude hook command quoting", () => {
     const expectedBasenames: string[] = [];
     expect(commands).toHaveLength(11);
     for (const command of commands) {
-      const relativeHook = command.match(/\$CLAUDE_PROJECT_DIR\/(\.claude\/hooks\/[a-z0-9-]+\.ts)/)?.[1];
+      const relativeHook = command.match(/\$\{CLAUDE_PROJECT_DIR:-\.\}\/(\.claude\/hooks\/[a-z0-9-]+\.ts)/)?.[1];
       expect(relativeHook).toBeDefined();
       expect(existsSync(join(project, relativeHook!))).toBe(true);
       const hookBasename = basename(relativeHook!);
@@ -734,7 +734,7 @@ describe("FR-4.15 Claude hook command quoting", () => {
     }
     expect(readFileSync(trace, "utf8").trim().split("\n")).toEqual(expectedBasenames);
     expect(settings.statusLine.command).toBe(
-      "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-statusline.ts",
+      'bun "${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-statusline.ts"',
     );
     expect(settings.permissions.allow).toContain(
       "Bash(bun $CLAUDE_PROJECT_DIR/.claude/tools/*)",

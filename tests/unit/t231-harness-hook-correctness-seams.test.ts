@@ -64,11 +64,14 @@ describe("FR-4.14 parseKiroIdeHookContext", () => {
 });
 
 describe("FR-4.15 renderClaudeHookCommand", () => {
-  test("renders the canonical quoted project-variable command", () => {
+  // #1492: the launch line must survive an UNSET CLAUDE_PROJECT_DIR, so the
+  // canonical form carries the `:-.` shell default. Without it the hook never
+  // launches and the whole audit/gate surface goes silently dead.
+  test("renders the canonical quoted project-variable command with a cwd default", () => {
     expect(
-      renderClaudeHookCommand("$CLAUDE_PROJECT_DIR", {
+      renderClaudeHookCommand("CLAUDE_PROJECT_DIR", {
         path: ".claude/hooks/amadeus-stop.ts",
       }),
-    ).toBe('bun "$CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-stop.ts"');
+    ).toBe('bun "${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-stop.ts"');
   });
 });

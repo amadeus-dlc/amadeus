@@ -1,13 +1,13 @@
 [
   {
     "file": "packages/framework/core/tools/amadeus-lib.ts",
-    "lines": "2180-2181",
+    "lines": "2195-2196",
     "reason": "Generic callback parameter and conditional return type lines are runtime-erased; t257-t259 drive the locked registry callback in-process, but Bun stamps the multiline type declaration DA:0.",
     "expiry": "remove if the signatures are collapsed or Bun LCOV stops stamping erased type lines"
   },
   {
     "file": "packages/framework/core/tools/amadeus-lib.ts",
-    "lines": "2693-2695",
+    "lines": "2708-2710",
     "reason": "Generic callback parameter and conditional return type lines are runtime-erased; t258 drives the lifecycle preflight callback in-process, but Bun stamps the multiline type declaration DA:0.",
     "expiry": "remove if the signatures are collapsed or Bun LCOV stops stamping erased type lines"
   },
@@ -277,7 +277,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-lib.ts",
-    "lines": "3871-3872",
+    "lines": "3886-3887",
     "reason": "Defensive `catch {}` in findActiveStandingGrant that returns null so a verification defect can never wedge a gate (design contract E-SDG: throws collapse to per-gate approval, never fail-open at the check). No natural corpus input throws inside the scan (listIntentDirs / readAllAuditShards / StandingGrant.parse / verifyDelegatedProvenance all swallow their own IO errors), so the catch arm is unreachable by a black-box test; the happy scan and every classification branch are covered in-process by t-standing-grant.",
     "expiry": "remove if the scan grows a throw path a test can inject"
   },
@@ -457,7 +457,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-lib.ts",
-    "lines": "5432-5434",
+    "lines": "5491-5493",
     "reason": "Race-loser arm after a successful stale-mutex steal: the fresh mkdir fails only when a competitor re-created the mutex in the same sub-syscall window; unreachable deterministically without pausing mid-function. Fail-safe (returns false; the waiter retries).",
     "expiry": "remove if acquireReapMutex gains an injected fs port"
   },
@@ -1661,5 +1661,23 @@
     "lines": "3444-3445",
     "reason": "Unreachable defense-in-depth: an await-approval wire result can only be produced by amadeus-state.ts printAwaitApproval, which runs solely on the grant-backed arm and always prints the slug it was called with, so neither disjunct (non-grant authority, stage mismatch) can hold for a real state process. Every other arm of this dispatch (fatal-error, protocol-error, arm failures, done) is driven in-process by tests/integration/t-solo-gate-transaction.test.ts.",
     "expiry": "remove when the approval process runner becomes an injectable port that can return a mismatched await-approval result"
+  },
+  {
+    "file": "packages/framework/core/hooks/amadeus-stop.ts",
+    "lines": "874-875",
+    "reason": "Stop-hook top-level wiring inside `if (import.meta.main)`: draining stdin and re-resolving projectDir from the payload cwd (#1482). The block only executes in the spawned hook process, which Bun LCOV does not attribute to the parent; the in-process import used by t246/t296 deliberately does not enter it. The behaviour is covered end-to-end by t121 (spawned Stop hook) and the resolver itself by t202.",
+    "expiry": "remove when the Stop hook body is extracted behind an argv/deps seam that tests can drive in-process"
+  },
+  {
+    "file": "packages/framework/core/hooks/amadeus-stop.ts",
+    "lines": "879",
+    "reason": "Stop-hook payload parse inside `if (import.meta.main)` — same spawn-only block as 874-875; changed only because the text now comes from readHookStdin() instead of a second Bun.stdin.text() read.",
+    "expiry": "remove when the Stop hook body is extracted behind an argv/deps seam that tests can drive in-process"
+  },
+  {
+    "file": "packages/framework/core/hooks/amadeus-stop.ts",
+    "lines": "1091",
+    "reason": "The blockStop call at the end of the spawn-only `if (import.meta.main)` block; changed to pass the resolved projectDir and state path into the reason (FR-2e). The reason builder itself is exported and driven in-process by t296 (C).",
+    "expiry": "remove when the Stop hook body is extracted behind an argv/deps seam that tests can drive in-process"
   }
 ]
