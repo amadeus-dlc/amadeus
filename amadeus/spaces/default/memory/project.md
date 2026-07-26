@@ -108,7 +108,7 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - ALWAYS make mirror retries idempotent across partial GitHub success and local-state write failure. (affirmed 2026-07-24)
 - ALWAYS verify Amadeus ownership provenance and workflow landing before automatically closing a mirror Issue. (affirmed 2026-07-24)
 - ALWAYS continue the workflow after GitHub availability, authentication, permission, rate-limit, or command failures while recording a visible unsynchronized warning and retry state. (affirmed 2026-07-24)
-- ALWAYS update the framework source, all six harness distributions, self-install surfaces, tests, and paired English/Japanese documentation in the same change. (affirmed 2026-07-24)
+- ALWAYS update the framework source, all harness distributions, self-install surfaces, tests, and paired English/Japanese documentation in the same change. (affirmed 2026-07-24; count-free reword approved 2026-07-26 — "six" went stale when the Kimi harness landed, per cid:code-generation:count-comment-sync-on-catalog-change)
 - ALWAYS validate TypeScript with strict typecheck, Biome lint, relevant tests, coverage gates, complexity checks, and distribution drift checks required by the changed paths. (affirmed 2026-07-24)
 ## Corrections
 

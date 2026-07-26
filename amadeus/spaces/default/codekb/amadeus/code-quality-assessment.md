@@ -1,6 +1,17 @@
 # コード品質評価
 
-## mirror-gateway envelope 欠陥の品質評価（260726-mirror-envelope-lf、現在、Issue #1498）
+## 新規テスト面と perf ゲート再設計の品質評価（260726-plugin-host-delivery、現在、差分リフレッシュ）
+
+260726-plugin-host-delivery 差分リフレッシュ（2026-07-26、observed `0d83aa48b886fe85cd977569c0e7b3015b84d3e5`、base `1673c4332`、距離 43）。上流入力: Developer スキャン結果（実測済みスキャンノート）。
+
+- **新規テスト**: `tests/` 配下の新規ファイルは **29 件**（`git diff --name-only --diff-filter=A 1673c4332..HEAD -- tests/ | wc -l`）、うち `*.test.ts` は **15 本**（e2e 2 / integration 7 / smoke 1 / unit 5）。内訳は **kimi 群**（`t-print-kimi-doctor` / `t-print-kimi-status` / `t-kimi-adapter` / `t-kimi-cli-wiring` / `t-kimi-doctor-arm` / `t-kimi-hooks-merge` / `t-kimi-print-drive` / `t150-kimi-dist-structure` / `t-kimi-swarm-resolve` + fixtures 12 + `tests/harness/kimi-print-drive.ts`）、**metrics t298 群**（`t298-metrics-visualize` の unit/integration）、**setup 群**（`setup-engine-layout` / `setup-kimi-hooks-domain`）、および `plugin-discovery-overhead-gate` / `t-artifact-guard-harness-dirs`。
+- **plugin stage discovery perf ゲートの再設計**（[PR #1535](https://github.com/amadeus-dlc/amadeus/pull/1535)、`1edf2abfb`。注: ブリーフィングの #1525 は `git log` 実測で **#1535**）: 判定を**相対比 0.2（`tests/lib/plugin-discovery-overhead-gate.ts:15` `DISCOVERY_OVERHEAD_RATIO_LIMIT = 0.2`）と絶対 noise floor の AND** へ変更。ファイル冒頭コメント（`:10-11`）が「mirror benchmark dispersion gate と同じ構成」と明言しており、[PR #1507](https://github.com/amadeus-dlc/amadeus/pull/1507) の dispersion gate 是正と同族の「相対比単独判定はサブミリ秒帯で偽赤」クラスの解消である。
+- **CI 構成の変化**（`.github/workflows/ci.yml`、[PR #1528](https://github.com/amadeus-dlc/amadeus/pull/1528) ほか）: 検証ジョブが分割され（旧単一「typecheck - lint - drift - tests」→「Lint and complexity」等へ）、**lizard が `pip install lizard==1.23.0` で pin**、Complexity gate（CCN baseline ratchet）は分割後ジョブへ移設、metrics の **Render metrics dashboard** step と **drift-check** ジョブが追加された（diff 直読）。
+- 前節（260726-mirror-envelope-lf、履歴）が指摘した「fixture が自作 CRLF の検証劇場」クラスは、[PR #1537](https://github.com/amadeus-dlc/amadeus/pull/1537) の実 envelope 対応着地により解消方向へ動いた（患部の詳細断面は前節を参照 — 同節の file:line は測定 ref `e39402224` の断面）。
+
+測定 ref: observed `0d83aa48b`（cid:reverse-engineering:measurement-ref-in-artifacts）。
+
+## mirror-gateway envelope 欠陥の品質評価（260726-mirror-envelope-lf、履歴、Issue #1498）
 
 測定 ref: observed `e39402224`（base `1673c4332`、距離 27）。file:line は同 commit の実ファイル直読。上流入力は Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`（Architect 段で独立再検証、訂正 0 件）。
 

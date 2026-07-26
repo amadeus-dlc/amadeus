@@ -612,6 +612,13 @@
     "status": "complete"
   },
   {
+    "uuid": "019f9eae-1f81-77ee-947e-1034ae8c20f8",
+    "slug": "plugin-host-delivery",
+    "dirName": "260726-plugin-host-delivery",
+    "scope": "amadeus-feature",
+    "status": "in-flight"
+  },
+  {
     "uuid": "019f9e5f-bbb1-7c6e-b432-867eb8a9a560",
     "slug": "promote-self-hooks",
     "dirName": "260726-promote-self-hooks",

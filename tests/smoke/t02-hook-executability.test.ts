@@ -59,6 +59,8 @@ const HOOKS = [
   "amadeus-stop.ts",
   // Records a HUMAN_TURN on UserPromptSubmit.
   "amadeus-mint-presence.ts",
+  // Auto-composes opted-in plugins on SessionStart (C4 claude face, U2).
+  "amadeus-plugin-compose.ts",
 ] as const;
 
 describe("t02 hook presence — shipped dist/claude/.claude/hooks (migrated from t02-hook-executability.sh, plan 10)", () => {

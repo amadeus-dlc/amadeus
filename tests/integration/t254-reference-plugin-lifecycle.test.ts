@@ -1,5 +1,5 @@
 // covers: file:scripts/plugin-projection.ts
-// covers: file:scripts/plugin-composition.ts
+// covers: file:packages/framework/core/tools/amadeus-plugin-compose.ts
 // covers: file:scripts/package.ts
 // size: medium
 //
@@ -48,7 +48,7 @@ import {
   type ValidPlugin,
   type WorkspaceBackend,
   type WorkspaceTransaction,
-} from "../../scripts/plugin-composition.ts";
+} from "../../packages/framework/core/tools/amadeus-plugin-compose.ts";
 import {
   buildPluginProjection,
   discoverPluginSources,

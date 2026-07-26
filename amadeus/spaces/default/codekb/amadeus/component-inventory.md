@@ -1,6 +1,24 @@
 # コンポーネント棚卸し
 
-## mirror-gateway 患部コンポーネント（260726-mirror-envelope-lf、現在、Issue #1498）
+## kimi ハーネス面・metrics 可視化・plugin perf ゲートのコンポーネント（260726-plugin-host-delivery、現在、差分リフレッシュ）
+
+260726-plugin-host-delivery 差分リフレッシュ（2026-07-26、observed `0d83aa48b886fe85cd977569c0e7b3015b84d3e5`、base `1673c4332`、距離 43）。上流入力: Developer スキャン結果（実測済みスキャンノート）。
+
+| コンポーネント | 所在 | 責務（区間内の新規／変更） |
+|---|---|---|
+| kimi manifest | `packages/framework/harness/kimi/manifest.ts` | 第7ディストリ面の投影宣言。token = `.kimi-code`（`:10`）、hooks はユーザーレベル `~/.kimi-code/config.toml` の marker-fenced managed block（`:22`） |
+| kimi hooks | `packages/framework/harness/kimi/hooks/`（`amadeus-hooks.snippet.toml` = 単一ソース、`amadeus-kimi-adapter.ts`、`amadeus-kimi-lib.ts`） | Kimi Code CLI の hook イベントを framework hooks へ橋渡し |
+| kimi skills | `packages/framework/harness/kimi/skills/amadeus/`（`SKILL.md`、`question-rendering.md`） | Kimi 向けオーケストレーター表層 |
+| setup kimi-hooks | `packages/setup/src/domain/kimi-hooks.ts` / `src/modules/kimi-hooks.ts` | config.toml managed block の merge（domain 純関数 + I/O module の既存境界に準拠） |
+| metrics-visualize | `scripts/metrics-visualize.ts`（新規） | metrics スナップショットの自己完結 HTML ダッシュボード生成。`--write` / `--check`（drift guard）。CI render step 配線済み（[PR #1504](https://github.com/amadeus-dlc/amadeus/pull/1504)） |
+| plugin-discovery-overhead-gate | `tests/lib/plugin-discovery-overhead-gate.ts` + `tests/unit/plugin-discovery-overhead-gate.test.ts` | plugin stage discovery の perf ゲート再設計（[PR #1535](https://github.com/amadeus-dlc/amadeus/pull/1535) — `DISCOVERY_OVERHEAD_RATIO_LIMIT = 0.2`（`:15`）の相対比 + 絶対 noise floor の **AND** 判定。注: ブリーフィングの #1525 は `git log` 実測で **#1535**） |
+| plugin-projection | `scripts/plugin-projection.ts` | **self-install 面を「closed four → closed five」へ拡張** — `:60` `SELF_INSTALL_HARNESSES = ["claude", "codex", "cursor", "opencode", "kimi"]`。packaged 面は seven faces（kiro/kiro-ide は非昇格のまま） |
+
+**無変更の反証確認**: plugin-composition / formal-model-check / `dist/plugins` / トップレベル `plugins/` は区間内で変化なし（`git log --oneline 1673c4332..HEAD -- <各パス>` および `git diff --name-only … | grep -c` の出力 **0 件**）。
+
+測定 ref: observed `0d83aa48b`（cid:reverse-engineering:measurement-ref-in-artifacts）。
+
+## mirror-gateway 患部コンポーネント（260726-mirror-envelope-lf、履歴、Issue #1498）
 
 測定 ref: observed `e39402224`（base `1673c4332`、距離 27）。所在・コピー数は同 commit の `git ls-files` / `grep -n` / `wc -l` 出力からの転記。上流入力は Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`。
 

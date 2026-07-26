@@ -1,6 +1,19 @@
 # コード構造
 
-## mirror-gateway 患部の配置と増幅面（260726-mirror-envelope-lf、現在、Issue #1498）
+## kimi ハーネス面・metrics 可視化・opencode 再配置のコード配置（260726-plugin-host-delivery、現在、差分リフレッシュ）
+
+260726-plugin-host-delivery 差分リフレッシュ（2026-07-26、observed `0d83aa48b886fe85cd977569c0e7b3015b84d3e5`、base `1673c4332`、距離 43）。上流入力: Developer スキャン結果（実測済みスキャンノート）。区間の実装面変更ファイルは packages **33** / tests **86** / scripts **7** / .github **1**（`git diff --name-only 1673c4332..HEAD -- <dir> | wc -l` 転記）。
+
+- **`packages/framework/harness/kimi/` 新規 8 ファイル**（`git diff --name-only … -- packages/framework/harness/kimi/ | wc -l` = 8）: `manifest.ts` / `onboarding.fills.ts` / `dot-gitignore` / `hooks/amadeus-hooks.snippet.toml` / `hooks/amadeus-kimi-adapter.ts` / `hooks/amadeus-kimi-lib.ts` / `skills/amadeus/SKILL.md` / `skills/amadeus/question-rendering.md`。
+- **`packages/setup/` に kimi-hooks 2 ファイル追加**: `src/domain/kimi-hooks.ts` / `src/modules/kimi-hooks.ts`（`~/.kimi-code/config.toml` の marker-fenced managed block merge）。
+- **opencode の語彙モジュール再配置**: `packages/framework/harness/opencode/plugin/amadeus-opencode-vocab.ts` → **`lib/amadeus-opencode-vocab.ts`**（`git diff --name-status` で **R089** 検出。`manifest.ts` と `plugin/amadeus-opencode-plugin.ts` も同時変更）。
+- **`scripts/metrics-visualize.ts` 新規**（[PR #1500](https://github.com/amadeus-dlc/amadeus/pull/1500) / [PR #1504](https://github.com/amadeus-dlc/amadeus/pull/1504)）: import は `node:fs` / `node:path` / `node:url` + `./metrics-retention`（`METRICS_RETENTION_KEEP_LAST`）+ `./metrics-timeseries` に閉じる（`:15-19` 直読）。
+- **`scripts/plugin-projection.ts` の self-install 集合拡張**: `:60` `SELF_INSTALL_HARNESSES` に `"kimi"` 追加（closed four → closed five）、`:408` の membership 判定は同定数を参照するため無改修で kimi を受理。
+- **`tests/` 配下の新規ファイル 29 件**（`--diff-filter=A`、うち `*.test.ts` 15 本）: kimi 群（e2e 2・integration 5・smoke 1・unit 1 + fixtures 12 + `tests/harness/kimi-print-drive.ts`）、metrics t298 群（unit/integration 各 1）、setup 群（`setup-engine-layout` / `setup-kimi-hooks-domain`）、`tests/lib/plugin-discovery-overhead-gate.ts` + 同 unit テスト、`t-artifact-guard-harness-dirs`。
+
+測定 ref: observed `0d83aa48b`（cid:reverse-engineering:measurement-ref-in-artifacts）。
+
+## mirror-gateway 患部の配置と増幅面（260726-mirror-envelope-lf、履歴、Issue #1498）
 
 測定 ref: observed `e39402224`（base `1673c4332`、距離 27）。file:line は同 commit の実ファイル直読、件数は `git ls-files … | wc -l` / `grep -n` / `grep -c` / `wc -l` 出力からの転記。上流入力は Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`（Architect 段で全数再照合、訂正 0 件）。
 
