@@ -164,6 +164,22 @@ Before showing the completion message:
    - **Request Changes** → `bun .kimi-code/tools/amadeus-state.ts reject <slug> --feedback "<text>"`. The tool emits `GATE_REJECTED` + `STAGE_REVISING`, marks `[?]` → `[R]`, increments Revision Count. If gate-start was skipped (stage still `[-]`), reject backfills the missing `STAGE_AWAITING_APPROVAL` first — mirroring the approve-side backfill. After re-running the stage work, call `bun .kimi-code/tools/amadeus-state.ts revise <slug>` to re-enter the gate (emits a fresh `STAGE_AWAITING_APPROVAL`, marks `[R]` → `[?]`).
    - **Accept as-is** (after 3 rejection cycles) → same as Approve; include `--user-input "Accept as-is after N cycles"`.
 
+#### Part 0b: Solo standing grant — grant-backed report and typed fallback
+
+In solo mode a session that a real human turn already grounded may issue a time-boxed standing grant (`amadeus-state.ts grant-standing-delegation`) that covers stage gates for its TTL. When such a grant covers this gate, the engine ROUTES it: the `run-stage` directive carries the `standing_grant_id` + `standing_grant_route_id` carrier pair (all-or-none — never one without the other), recorded first as a `GATE_AUTHORIZATION_SELECTED` route receipt. Team mode keeps its existing leader / `DELEGATED_APPROVAL` path unchanged, and a gate with no carrier keeps the ordinary human path above.
+
+The routed sequence is identical on every harness — only the question rendering differs:
+
+1. Run the stage body, reviewer, sensors, and §13 learnings EXACTLY as on an ungranted gate. A carrier never shortens the stage's quality ritual.
+2. Do NOT present the approval question. Report once, forwarding the carrier verbatim: `bun .kimi-code/tools/amadeus-orchestrate.ts report --stage <slug> --result approved --standing-grant-id <id> --standing-grant-route-id <route-id>`.
+3. The engine re-verifies the SAME grant against the receipt owner inside the approval lock and answers with one typed outcome on stdout:
+   - `approved` → the gate committed (`GATE_APPROVED` + `STAGE_COMPLETED`); continue with Part 4 as usual.
+   - `await-approval` → the grant was expired, revoked, or otherwise not authoritative at commit time. Nothing mutated: no approval, no completion, no error row, no state advance.
+4. On `await-approval`, keep the returned `target_intent_id` and `presence_reservation_id` and present ONLY the ordinary human approval question for the SAME stage. Do NOT re-run the stage body, reviewer, sensors, or §13 learnings — that work already happened in step 1.
+5. After the human answers in this same session, report again with the opaque pair and WITHOUT any carrier: `report --stage <slug> --result approved --user-input "<exact choice>" --target-intent-id <target_intent_id> --presence-reservation-id <presence_reservation_id>`. The human turn is minted by the trusted prompt hook only; the conductor never mints presence.
+
+A carrier authorizes an approval only. Request Changes, reject, and halt-and-ask stay human decisions and are never automated by a grant.
+
 ### Part 1: Announcement (mandatory)
 ```markdown
 # [emoji] [Stage Name] Complete

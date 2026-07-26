@@ -1477,7 +1477,7 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
       const raw = readFileSync(settingsForHooks, "utf-8");
       // jq-free: collect every distinct amadeus-*.ts basename referenced anywhere
       // in settings.json (hook command paths like
-      // "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-audit-logger.ts" and the
+      // "bun \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-audit-logger.ts\"" and the
       // statusLine command). Basename, not path, so the probe is dir-relative.
       const refs = new Set<string>();
       for (const m of raw.matchAll(/amadeus-[A-Za-z0-9_-]+\.ts/g)) {

@@ -114,6 +114,7 @@ import {
   isMachineInjectedTurnText,
   isoTimestamp,
   parseCheckboxes,
+  readHookStdin,
   recordHookDrop,
   resolveProjectDirFromHook,
   stageDir,
@@ -164,7 +165,12 @@ const INTERACTIVE_BLOCK_CAP = 2;
 // OPEN (allows the stop).
 const ENGINE_TIMEOUT_MS = 10_000;
 
-const projectDir = resolveProjectDirFromHook(import.meta.url);
+// Resolved eagerly from the ladder so an `import` of this module (tests pull
+// isPendingComposeStop) still sees a real project dir, then RE-resolved in the
+// main body once stdin is drained — the payload's `cwd` is the top rung (#1482)
+// and the stream can only be read there. Readers must observe the binding, not
+// a snapshot of it (see the getter in realPendingComposeStopDeps).
+let projectDir = resolveProjectDirFromHook(import.meta.url);
 
 interface PendingComposeStopDeps {
   projectDir: string;
@@ -186,7 +192,11 @@ type JanitorDiagnostic = {
 };
 
 const realPendingComposeStopDeps: PendingComposeStopDeps = {
-  projectDir,
+  // Getter, not a snapshot: the main body re-resolves projectDir once the hook
+  // payload's cwd is known, and these deps must follow it.
+  get projectDir() {
+    return projectDir;
+  },
   nowMs: Date.now,
   stat(path) {
     try {
@@ -828,9 +838,18 @@ function runEngineNextKind(): string | null {
 // the engine emits, then report — and the directive kind / stage for context.
 // Deliberately phrased as continuation of sanctioned work, never as an
 // instruction to do something new or out-of-band (the security property).
-function continuationReason(kind: string, stage: string): string {
+// `resolvedProjectDir` / `resolvedStatePath` are echoed so a mis-resolved project
+// dir is diagnosable at a glance: a worktree session whose hook read the MAIN
+// checkout's state used to block on someone else's pending step with no way to
+// tell from the message (#1482).
+export function continuationReason(
+  kind: string,
+  stage: string,
+  resolvedProjectDir: string,
+  resolvedStatePath: string,
+): string {
   const where = stage.length > 0 ? ` for "${stage}"` : "";
-  return (
+  const body = (
     `The AIDLC workflow has a pending step (a ${kind} directive${where}). ` +
     "You haven't finished the forwarding loop yet. Run " +
     `\`bun ${harnessDir()}/tools/amadeus-orchestrate.ts next\`, act on the directive it ` +
@@ -840,6 +859,7 @@ function continuationReason(kind: string, stage: string): string {
     `session), run \`bun ${harnessDir()}/tools/amadeus-orchestrate.ts park\` to park it ` +
     "cleanly at this inter-stage boundary - never mark stages complete just to end the turn."
   );
+  return `${body} (Resolved project dir: ${resolvedProjectDir}; state read from: ${resolvedStatePath}.)`;
 }
 
 // --- Main ---------------------------------------------------------------------
@@ -851,11 +871,12 @@ function continuationReason(kind: string, stage: string): string {
 if (import.meta.main) {
 if (process.stdin.isTTY) allowStop();
 
-const input = await Bun.stdin.text();
+const hookStdin = await readHookStdin();
+projectDir = resolveProjectDirFromHook(import.meta.url, hookStdin.cwd);
 
 let stopInputObject: Record<string, unknown> | null = null;
 try {
-  const raw: unknown = JSON.parse(input);
+  const raw: unknown = JSON.parse(hookStdin.text);
   if (raw !== null && typeof raw === "object") {
     stopInputObject = raw as Record<string, unknown>;
   }
@@ -1067,5 +1088,5 @@ if (!shouldBlock) {
 }
 
 // Within budget — block the stop and re-feed the pending work.
-blockStop(continuationReason(kind, currentStageSlug(stateContent)));
+blockStop(continuationReason(kind, currentStageSlug(stateContent), projectDir, statePath));
 }
