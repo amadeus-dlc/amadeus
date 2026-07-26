@@ -466,6 +466,81 @@ describe("t236 election directive loop", () => {
     expect(JSON.parse(errs[errs.length - 1] ?? "{}").error).toContain("reservation");
   });
 
+  // Issue #1458: the default (subagent) transport returns directives only, so
+  // notify books nothing. The transport design comment says the record is
+  // "minted single-stage later by reportDelivery at U5 report time" — that
+  // wiring was missing, leaving the distributed events (and therefore the
+  // record.md 配信 segments) absent on every default-transport election.
+  test("#1458: the subagent-default loop books distributed events at report time", () => {
+    expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
+    expect(run(["notify", "--election", "E-LOOP1"])).toBe(0);
+    expect((lastJson().deliveries as Array<{ kind: string }>).every((d) => d.kind === "directive")).toBe(true);
+    // pre-fix: notify booked nothing because no outcome was "delivered"
+    const afterNotify = JSON.parse(readFileSync(electionPath("timeline.json"), "utf8"));
+    expect(afterNotify.filter((e: { kind: string }) => e.kind === "distributed").length).toBe(0);
+
+    // the conductor reports completion -> reportDelivery mints one record per voter
+    expect(run(["report", "--election", "E-LOOP1", "--result", "distributed"])).toBe(0);
+    const booked = (
+      JSON.parse(readFileSync(electionPath("timeline.json"), "utf8")) as Array<{
+        kind: string;
+        voter?: string;
+        detail: string;
+      }>
+    ).filter((e) => e.kind === "distributed");
+    expect(booked.map((e) => e.voter)).toEqual(["alice", "bob"]);
+    expect(booked.every((e) => e.detail.includes("reported-by-conductor"))).toBe(true);
+
+    // and the rendered record carries the 配信 segments on its timeline line
+    for (const [voter, at] of [
+      ["alice", "2026-07-19T00:01:00Z"],
+      ["bob", "2026-07-19T00:02:00Z"],
+    ]) {
+      const path = writeJson(`${voter}.json`, {
+        electionId: "E-LOOP1",
+        voter,
+        voterKind: "member",
+        choiceInternalNo: 1,
+        goa: 1,
+        submittedAt: at,
+      });
+      expect(run(["vote", "--election", "E-LOOP1", "--file", path])).toBe(0);
+    }
+    expect(run(["tally", "--election", "E-LOOP1"])).toBe(0);
+    expect(run(["report", "--election", "E-LOOP1", "--result", "tallied"])).toBe(0);
+    expect(run(["render", "--election", "E-LOOP1"])).toBe(0);
+    const doc = readFileSync(electionPath("record.md"), "utf8");
+    const timelineLine = doc.split("\n").find((l) => l.startsWith("票タイムライン:")) ?? "";
+    expect(timelineLine).toContain("配信 ");
+    expect(run(["verify", "--election", "E-LOOP1"])).toBe(0);
+  });
+
+  // A second distributed report cannot happen through the state machine (the
+  // transition demands state=open), but a re-notify after an agmsg send must
+  // not double-book: report only mints for voters with no distributed event.
+  test("#1458: report does not re-mint a distributed event an agmsg send already booked", () => {
+    expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
+    const fake = join(projectDir, "fake-send.sh");
+    writeFileSync(fake, "#!/bin/sh\nexit 0\n");
+    chmodSync(fake, 0o755);
+    expect(
+      run([
+        "notify", "--election", "E-LOOP1",
+        "--transport", "agmsg", "--team", "amadeus", "--from", "leader",
+        "--send-script", fake,
+      ]),
+    ).toBe(0);
+    expect(run(["report", "--election", "E-LOOP1", "--result", "distributed"])).toBe(0);
+    const booked = (
+      JSON.parse(readFileSync(electionPath("timeline.json"), "utf8")) as Array<{
+        kind: string;
+        detail: string;
+      }>
+    ).filter((e) => e.kind === "distributed");
+    expect(booked.length).toBe(2);
+    expect(booked.every((e) => e.detail.includes("agmsg"))).toBe(true);
+  });
+
   test("duplicate vote and unusable verbs fail loudly", () => {
     expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
     const b1 = writeJson("b1.json", {
