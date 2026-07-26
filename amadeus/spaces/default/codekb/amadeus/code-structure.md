@@ -1,6 +1,335 @@
 # コード構造
 
-## ハーネス検出クラスタの `amadeus-harness.ts` 分離と kimi 移植面（260725-kimi-harness、2026-07-25、現在）
+## クロスレビュー済みバグ7件の患部コード配置（260726-crossreviewed-bug-batch、現在、7 Issue）
+
+測定 ref: observed `1673c4332`（base `e12259ba7`、距離 2）。file:line は同 commit の実ファイル直読、件数は `git ls-files … | wc -l` / `grep -n` 出力からの転記。上流入力は Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`。
+
+### 区間の配置変化
+
+`git diff --stat e12259ba7 HEAD -- packages/framework/core/` = `amadeus-lib.ts` 1ファイル / 35 insertions / 3 deletions。区間で新規ファイルの追加・移動は無い。区間全体（`git diff --shortstat e12259ba7 HEAD`）は 52 files / +3024 / -48 だが、内訳は dist×6 + self-install×4 の増幅、テスト、record である。
+
+### 患部が置かれている層
+
+| 層 | 患部 | 該当 Issue |
+| --- | --- | --- |
+| core 中立層（`packages/framework/core/tools/`） | `amadeus-lib.ts` / `amadeus-audit.ts` / `amadeus-learnings.ts` / `amadeus-election*.ts` 4本 / `amadeus-graph.ts` / `team-up.sh` | #1377, #1457, #1458, #1459, #1462, #1388 |
+| repo ローカル CI スクリプト（`scripts/`） | `mirror-distribution-benchmark-aggregate.ts` / `mirror-distribution-benchmark.ts` | #1489 |
+| 生成物（`dist/<harness>/` × 6、self-install `.claude/` `.codex/` `.cursor/` `.opencode/` × 4） | 上記 core 8ファイルの各 10 コピー（手編集禁止・再生成） | #1489 以外の6件 |
+
+**#1388 の配置は Issue 起票時点から移動している**: `scripts/team-up.sh` は observed に存在せず、`packages/framework/core/tools/team-up.sh`（1615行）が正本。この移動により配布対象（+10 コピー）になった。Issue 本文のパス・行番号はいずれも失効しており、更新が要る。
+
+### 消費側テストの配置
+
+| Issue | 既存の消費側テスト（修正時に触る想定） |
+| --- | --- |
+| #1489 | `tests/integration/t292-mirror-distribution-performance.integration.test.ts` |
+| #1457 | `tests/unit/t238-election-record.test.ts` / `tests/integration/t236-election-loop.integration.test.ts` |
+| #1377 | `tests/e2e/t07-audit-fork-merge.test.ts` / `tests/e2e/t54-workflow-audit-completeness.test.ts` |
+| #1459 | `tests/unit/t234-election-model.test.ts` / `tests/unit/t244-election-choice-resolution.test.ts` / `tests/integration/t244-election-tie-choice.integration.test.ts` |
+| #1462 | `tests/integration/t-formal-verif-plugin-stage-discovery.integration.test.ts` / `tests/integration/t-plugin-stage-discovery-performance.integration.test.ts`（fixture 追加先候補 `tests/fixtures/plugins/test-pro/`） |
+| #1458 | `tests/unit/t239-election-transport.test.ts` / `tests/integration/t240-election-transport.integration.test.ts` / `tests/integration/t236-election-loop.integration.test.ts` / `tests/e2e/t237-election-walking-skeleton.test.ts` |
+| #1388 | `tests/integration/t294-team-up-watcher-applicability.test.ts` / `tests/integration/t-team-up-watcher-arming.test.ts` / `tests/integration/t-team-up-codex-resume.serial.test.ts` / `tests/unit/t-team-up-codex-safety-wait.test.ts` |
+
+### 落ちる実証の注入面
+
+- #1462 は **dangling symlink による ENOENT 注入**が正当な手段（不在パスは `readdirSync` の列挙に載らず到達不能。cid:code-generation:bun-readfilesync-dir-platform-divergence の追補が規定する形状に一致）。
+- #1489 は**両側実測**が完成条件（単一 replica スパイクで赤くならない／真の退行で赤くなる）。注入量は実測 delta からの機械計算で決める（cid:code-generation:comparative-gate-injection-sizing）。
+- #1457 / #1459 / #1458 は、いずれも「現行コードで赤くなる」テストを先に固定してから修正する形が Issue 側に明記されている。
+
+## metrics サブシステムのコード配置（260726-metrics-visualization、履歴）
+
+測定 ref: observed `1c43438df`。file:line はすべて同 commit の実ファイル直読、件数は `grep -n` / `ls | wc -l` / `git ls-files` 出力からの転記。
+
+### metrics 関連ファイルの所在
+
+| パス | 行数 / 件数 | 種別 | 可視化との関係 |
+| --- | --- | --- | --- |
+| `scripts/metrics-snapshot.ts` | 185 行 | writer CLI | 入力データの生成元。スキーマの発生源 |
+| `scripts/metrics-timeseries.ts` | 236 行 | reader ライブラリ + CLI | **再利用 seam の本体**（型5 + 関数8 を export）|
+| `scripts/metrics-retention.ts` | 129 行 | pruner CLI | 「reader を import する書き手」の同型先例 |
+| `metrics/*.json` | **123 件** | データ | 2026-07-12〜07-25、`schema_version` 1 で均一 |
+| `.github/workflows/ci.yml:398-` | — | CI job | 挿入位置の候補（`:449` の後・`:461` の前）|
+| `tests/run-tests.ts:526` / `:573` | — | HTML 生成先例 | `coverageHtmlEscape` / `writeCoverageHtml` |
+
+`metrics/` の最新スナップショットは `metrics/2026-07-25T23-15-54-977Z-77d871d574c4.json`。ファイル名は `writeSnapshotAtomic`（`metrics-snapshot.ts:153-163`）が `captured_at` の `:` `.` を `-` へ置換し、commit の先頭12桁を付す規則で生成する。JSON 本体には commit のフル40桁が格納される。
+
+### `scripts/metrics-timeseries.ts` のシンボル配置（HEAD 現行値）
+
+| 行 | シンボル | export |
+| --- | --- | --- |
+| `:3-4` | 冒頭契約コメント（「must not import any fs write API」）| — |
+| `:18-19` | `values` を `unknown` に留める理由の明文 | — |
+| `:20` | `CollectorEntry` | ✔ |
+| `:25` | `Snapshot` | ✔ |
+| `:32` | `ParseOutcome` | ✔ |
+| `:36` | `NonEmpty` | ✔ |
+| `:38` | `CollectorResolution` | ✔ |
+| `:50` | `parseSnapshot` | ✔ |
+| `:81` | `assertNonEmpty` | ✔ |
+| `:87` | `buildSeries` | ✔ |
+| `:95` | `discoverCollectors` | ✔ |
+| `:103` | `unionValueKeys` | ✔ |
+| `:113` | `resolveCollector` | ✔ |
+| `:117-119` | `formatValue` | **✘（非 export）** |
+| `:121` | `renderTable` | **✘（非 export）** |
+| `:131` | `renderDigest` | ✔ |
+| `:151` | `renderCollectorTable` | ✔ |
+| `:171` | `parseArgs`（`--collector` / `--last`）| ✔ |
+| `:188` | `main` | ✔ |
+
+exit コード規約: usage 誤り = 2 / 実行時失敗 = 1 / 成功 = 0。
+
+### `scripts/metrics-snapshot.ts` の collector 定義（実測 `grep -n 'name: "'`）
+
+| 行 | collector | 備考 |
+| --- | --- | --- |
+| `:72` | `ccn` | `../tests/complexity-gate.ts` の `runLizard` に依存 |
+| `:78` | `coverage` | — |
+| `:82` | `loc` | — |
+| `:93` | `tests` | — |
+| `:97` | `test_pyramid` | **キーが動的**（`:102` で `${tier}_${size}` を合成、実データ 11 キー）|
+| `:106` | `dist_size` | `../tests/lib/test-size.ts` に依存 |
+
+定義域は `:72-110`（上流スキャンの `:71-110` は本 scan で `:72-110` へ訂正）。
+
+### metrics テストの配置（8ファイル、`git ls-files` 実測）
+
+| 層 | ファイル | test 数 |
+| --- | --- | --- |
+| unit | `tests/unit/t221-metrics-snapshot-core.test.ts` | 6 |
+| unit | `tests/unit/t221-metrics-snapshot-cli.test.ts` | 7 |
+| unit | `tests/unit/t221-metrics-snapshot-collectors.test.ts` | 2 |
+| unit | `tests/unit/t230-metrics-timeseries.test.ts` | 17（no spawn / no fs）|
+| unit | `tests/unit/t231-metrics-retention.test.ts` | 9 |
+| integration | `tests/integration/t221-metrics-snapshot.integration.test.ts` | 9 |
+| integration | `tests/integration/t230-metrics-timeseries.integration.test.ts` | 9 |
+| integration | `tests/integration/t231-metrics-retention.integration.test.ts` | 10 |
+
+integration 層は `AMADEUS_METRICS_ROOT` seam で実 FS を差し替える（cid:code-generation:fs-tests-integration-first の既存実践）。落ちる実証パターンは「空ディレクトリ / 壊れたファイル / dangling symlink / ディレクトリ不在」の4類型。covers マーカーは `harness-instrument:metrics-timeseries` と `harness-instrument:metrics-retention` の2種で、4ファイルの1行目コメント（`tests/unit/t230-metrics-timeseries.test.ts:1` ほか）に置かれている。
+
+**上流主張の訂正**: これらのマーカーは `tests/.coverage-registry.json` には登録されていない（同ファイルの `grep -c 'harness-instrument'` = **0**、`metrics` を含む文字列は `amadeus-norm-metrics` 系の3件のみで別サブシステム）。すなわち covers マーカーはテストファイル側の自己申告に留まり、registry 側に対応エントリを持たない。**可視化が新規モジュールを足す場合、倣うべき既習様式は「covers マーカー + unit/integration 2層配置」であり、registry 登録は既存 metrics テストが行っていない**（registry 連携が要るかは設計段の判断事項）。
+
+### 未整備面（可視化が埋める必要のある配線）
+
+| 面 | 実測 | 含意 |
+| --- | --- | --- |
+| `package.json` の `scripts` | 全 **15** エントリ中 metrics 系 **0**（上流スキャンの「16 エントリ」は本 scan で 15 へ訂正）| 可視化 CLI の実行導線は `bun scripts/...` 直叩きになるか、新規 script エントリの追加を要する |
+| `docs/` の metrics 言及 | `grep -rl 'metrics-snapshot\|metrics-timeseries\|metrics-retention' docs/` = **0 ファイル** | 新規ドキュメント（日英ペア）が必要 |
+| lint / typecheck | `scripts/` は Biome lint と `tsc --noEmit` の対象 | 新規モジュールは追加配線不要 |
+
+### 区間の実装2系統の配置（参考）
+
+| 系統 | 新規ファイル | 既存ファイルの変更 |
+| --- | --- | --- |
+| A（PR #1483）| `packages/framework/core/tools/amadeus-grant-authorization.ts`（+876）、`packages/framework/core/tools/amadeus-presence-reservation.ts`（+512）| `amadeus-state.ts` +467 −73 / `amadeus-lib.ts` +202 −29 / `amadeus-orchestrate.ts` +184 −4 / `amadeus-directive.ts` +127 −41 |
+| B（PR #1493）| — | `packages/framework/core/hooks/` の全11ファイル。`amadeus-lib.ts` に `HookStdin` `:4773` / `hookPayloadCwd` `:4779` / `readHookStdin` `:4794` を新設 |
+
+**行番号シフトの注意**（cid:reverse-engineering:upstream-cite-reresolve-on-shift）: `resolveProjectDirFromHook` は前 intent 記録の `amadeus-lib.ts:247` から observed で **`:269`** へ移動している（+22）。以下の履歴節が引く `amadeus-lib.ts` の行番号は当該節の observed 断面で読むこと（cid:requirements-analysis:historical-section-cite-check-at-observed）。
+
+## solo standing grant 認可面のコード配置（260726-grant-scope-gate、履歴、Issue #1497）
+
+測定 ref: observed `e12259ba7`（base `11f1ad61f`、距離 4）。file:line は同 commit の実ファイル直読、件数は `grep -n` / `wc -l` / `python3 -c json` 出力からの転記。
+
+### 正本と生成物の対応
+
+患部の正本は `packages/framework/core/tools/amadeus-lib.ts` 1 ファイル（`standingGrantSatisfiesGate :3985-4017` / `evaluateStandingGrantGateEligibility :3951-3969`）。同ファイルの複製面は **10**（self-install 4 = `.claude/` / `.codex/` / `.cursor/` / `.opencode/`、dist 6 = `claude` / `codex` / `cursor` / `kiro` / `kiro-ide` / `opencode`）で、正本を含む `amadeus-lib.ts` の実ファイル総数は **11**（`find . -name amadeus-lib.ts -not -path "*/node_modules/*"` 実測、observed `e12259ba7`）。`kiro` / `kiro-ide` は dist のみで self-install 面を持たない。
+
+再生成コマンドは `bun scripts/package.ts` → `bun run promote:self`、検証は `bun run typecheck` / `bun run lint` / `bun run dist:check` / `bun run promote:self:check` / `bash tests/run-tests.sh --ci`。
+
+### データファイルの所在と write path
+
+| ファイル | 役割 | 備考 |
+| --- | --- | --- |
+| `tools/data/stage-graph.json` | 32 stages の graph（`stage.scopes` フロントマター由来） | `scripts/package.ts:146` の `COMPILED_DATA` |
+| `tools/data/scope-grid.json` | scope × stage の EXECUTE/SKIP グリッド（15 scope キー） | 同上。`promote-self.ts:104` が self-install 側 `scope-grid.json` を composed scope の sanctioned write path として扱う |
+
+`.claude/scopes/` には composed scope の定義ファイルが実在する（`amadeus-amadeus-bugfix.md` / `amadeus-amadeus-feature.md` / `amadeus-amadeus-refactor.md` / `amadeus-amadeus.md` / `amadeus-installer-distribution.md`）。`loadScopeMapping()`（`amadeus-lib.ts:6012-`）は grid と `.claude/scopes/*.md` frontmatter をマージする。
+
+### scope 解決の2系統（同じ問いに2つの実装）
+
+| 系統 | 入口 | 読む源 | 消費者 |
+| --- | --- | --- | --- |
+| grid 系（エンジン正規経路） | `nextInScopeStage`（`amadeus-lib.ts:6828-6866`）/ `firstInScopeStageOfPhase`（`:6891-6910`）/ `subgraphForScope`（`amadeus-graph.ts:959-974`） | `scope-grid.json` + `.claude/scopes/*.md` | engine のステージ進行全般 |
+| frontmatter 系 | `standingGrantSatisfiesGate`（`amadeus-lib.ts:3985-4017`）の `inScope` クロージャ | `stage.scopes` 直読 | **本関数のみ**（唯一の消費者） |
+
+`stage.scopes` を読む他の箇所は `transposeScopeGridForMapping`（`amadeus-lib.ts:5945-5959`、fallback 転置）と `amadeus-orchestrate.ts:2796`（plugin opt-in 判定 `(node.scopes ?? []).length === 0`）の 2 箇所のみで、いずれも scope 解決の意味では使っていない。
+
+`amadeus-graph.ts` は `amadeus-lib.ts` を import しているため、grid 経由へ寄せる修正では循環回避が要る。既習様式は lazy require で、`firstInScopeStageOfPhase` 内の `require("./amadeus-graph.ts")`（`amadeus-lib.ts:6898-6902`）が同手法である。
+
+### テストの配置
+
+グラント系スイートは integration 中心（`t-solo-gate-transaction{,-carrier,-prefix,-report,-seam}.test.ts` 計 2,272 行、`t-solo-standing-grant-{domain,harness,opencode-mint}.test.ts`）で、unit は `unit/t-solo-gate-transaction.test.ts` / `unit/t-solo-standing-grant-domain.test.ts`。実 stage-graph を読むのは `tests/harness/solo-gate-fixture.ts:50`（`.codex/tools/data/stage-graph.json` = self-install コピー）のみで、golden / fixture の生成源として配布面を読む既習形（cid:code-generation:golden-regen-from-shipped-surface）に沿う。
+
+## worktree パス／ref 解決面のコード配置（260725-worktree-ref-fixes、履歴: 2026-07-26、Issue #1482 / #1481 / #1455）
+
+測定 ref: observed `11f1ad61f`。file:line はすべて同 commit の実ファイル直読、件数は grep / find 出力からの転記。
+
+### 患部シンボルの所在
+
+| シンボル | 正本の所在 | 役割 | 関連 Issue |
+| --- | --- | --- | --- |
+| `resolveProjectDirFromHook` | `packages/framework/core/tools/amadeus-lib.ts:247` | hook 用 project-dir 解決（4-rung ladder、export） | #1482 |
+| `hasWorkspaceMarker` | 同 `:227` | `amadeus/` + `<harness>/tools/` の両在判定（非 export） | #1482 |
+| `findWorkspaceMarkerAncestor` | 同 `:235` | cwd 起点の marker 上向き探索（非 export） | #1482 |
+| `resolveProjectDir` | 同 `:170` | engine 用 project-dir 解決（`:172` で明示引数が第1順位、export） | #1482 の対照 |
+| `resolveMainCheckout` | 同 `:4131` | git plumbing による main checkout 解決（worktree 安全な既習様式、export） | #1481 の参照実装 |
+| `currentGitSha` | `tests/integration/t257-status-registry-migration.test.ts:193` | FS 直読の SHA 解決（複製1） | #1481 / #1455 |
+| `currentGitSha` | `tests/integration/t258-lifecycle-transaction.test.ts:434` | 同（複製2） | #1481 |
+| `currentGitSha` | `tests/integration/t259-guard-integration.test.ts:77` | 同（複製3、`repositoryRoot` 引数版） | #1481 |
+
+### `resolveProjectDirFromHook` の 4-rung 配置
+
+`amadeus-lib.ts` 内の rung 別行: rung1 `:249`（env）→ rung2 `:258` / `:259`（marker）→ rung3 `:263-265`（スクリプトパス）→ rung4 `:268-273`（cwd の harness dir）→ fallback `:275`（cwd）。
+
+### 呼び出し側の配置（実呼び出し12箇所）
+
+`grep -rn 'resolveProjectDirFromHook' packages/ --include='*.ts'` 実測。import 行を除く実呼び出しのみ:
+
+`packages/framework/core/hooks/` 配下 11 ファイル — `amadeus-audit-logger.ts:23` / `amadeus-log-subagent.ts:22` / `amadeus-mint-presence.ts:72` / `amadeus-runtime-compile.ts:45` / `amadeus-sensor-fire.ts:40` / `amadeus-session-end.ts:20` / `amadeus-session-start.ts:46` / `amadeus-statusline.ts:32` / `amadeus-stop.ts:167` / `amadeus-sync-statusline.ts:25` / `amadeus-validate-state.ts:24`。
+
+harness 表層 1 ファイル — `packages/framework/harness/kiro-ide/hooks/amadeus-kiro-adapter.ts:64`。
+
+※ `packages/framework/harness/kiro/hooks/amadeus-kiro-adapter.ts:79` は当該シンボルへの**コメント参照のみ**で実呼び出しではない（`// resolveProjectDirFromHook resolves the SAME dir the engine wrote from (#822).`）。
+
+Stop hook 内の配置は `packages/framework/core/hooks/amadeus-stop.ts:118`（import）→ `:167`（解決）で、得られた `projectDir` は下流24箇所（state path `:880`、engine 呼び出し `:793` / `:802`、audit `:266`、stage dir `:455` ほか）へ流れる。
+
+### 起動設定の所在
+
+`.claude/settings.json:154` — Stop hook 起動行。verbatim `            "command": "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-stop.ts"`。この `$CLAUDE_PROJECT_DIR` 展開の成立が、`CLAUDE_PROJECT_DIR` が設定済みであることの一次証拠になる。
+
+### 配布面のコピー構成
+
+`amadeus-lib.ts` / `amadeus-stop.ts` はいずれも **11コピー**（正本 1 + harness 表層 4 + dist 6）。正本編集後は `bun scripts/package.ts` と `bun run promote:self` で同期し、`dist:check` / `promote:self:check` で検証する。
+
+### テスト面の配置
+
+- 患部の unit 正典: `tests/unit/t202-hook-project-dir-worktree-marker.test.ts`（`:1-3` に #641 の設計意図、`:105` に env 優越を固定する test 2）
+- integration: `tests/integration/t230-*`（`resolveProjectDirFromHook` に接触）
+- 該当シンボルに接触するテストは grep 実測 8 ファイル（t202 / t230 / t131 / t33 / t07 / t10 / t30 / t203）
+- ref 解決欠陥の現症状スイート: `tests/integration/t257-status-registry-migration.test.ts` / `t258-lifecycle-transaction.test.ts` / `t259-guard-integration.test.ts`
+
+### テスト番号の重複生態（引用時の注意）
+
+`find tests -name "tNNN-*" -type f` 実測: **t257 = 6 件、t258 = 8 件、t259 = 4 件**。同番号が複数ファイルに存在するため、本 codekb では患部を必ずフルパスで引用する（短形 `t257` は別ファイルへ誤解決されうる）。
+
+### worktree 実行時の git レイアウト（#1481 の前提）
+
+worktree `.claude/worktrees/bugfix-1482-1481-1455` での実測: `--git-dir` = `<main>/.git/worktrees/bugfix-1482-1481-1455`、`--git-common-dir` = `<main>/.git`、HEAD ref = `refs/heads/worktree-bugfix-1482-1481-1455`。ブランチの loose ref は **common dir 側にのみ実在**（41 バイト）し worktree gitDir 側は不在、`packed-refs` は総 733 行だが当該 ref のエントリは 0 件。
+
+## Team Mode 起動経路のコード配置（260725-teamup-launch-hardening、履歴、Issue #1476 / #1478）
+
+差分リフレッシュ（base `ec624022f` → observed HEAD `4a0f91ad07dbe17c6477b7fe9b52a0e9ab4532ba`、距離 **9**、amadeus-feature / Standard）。区間規模は `git diff --stat` で **65 files changed, 6516 insertions(+), 54 deletions(-)**。うち実装面は `team-up.sh` **11 面 × +31/-8** と tests 2件のみで、残り約 6,400 行は record / audit。測定 ref: observed HEAD 実ファイル直読。
+
+### 区間で変化したファイル（実装面のみ）
+
+| ファイル | 変化 | 内容 |
+| --- | --- | --- |
+| `packages/framework/core/tools/team-up.sh` | +31/-8（1474 → **1497 行**、`wc -l` 実測） | 適用可否ガードの新設（PR #1477 / `294df1281`） |
+| `.claude` / `.codex` / `.cursor` / `.opencode` の `tools/team-up.sh`（self-install 4面） | 同一 +31/-8 | 正本からの伝播 |
+| `dist/{claude,codex,cursor,kiro,kiro-ide,opencode}/**/tools/team-up.sh`（dist 6面） | 同一 +31/-8 | 正本からの伝播 |
+| `tests/integration/t294-team-up-watcher-applicability.test.ts` | 新規 **113 行** | #1449 のリグレッション（7 test） |
+| `tests/integration/t-team-up-watcher-arming.test.ts` | +5/-2 | 既存 `watcher_verification_applies` テストの prompt 軸を actas 形にピン |
+
+配布同期は完了（`git ls-files '*tools/team-up.sh'` = **11 面**、全面で `WATCHER_SKIP_ANNOUNCED` が **3 出現**、`grep -c` 実測）。
+
+### PR #1477 で追加された記号
+
+| 記号 | 所在（正本） | 種別 | 役割 |
+| --- | --- | --- | --- |
+| `WATCHER_SKIP_ANNOUNCED` | `team-up.sh:1091` | shell 変数（初期値 `0`） | スキップ告知の one-shot ラッチ。launch 経路が `watcher_verification_applies` を2回呼ぶ（:1461 / :1478）ため advisory を run あたり1行に抑える |
+| `watcher_verification_applies` の prompt 軸 | `team-up.sh:1094-1096` | `case` 分岐 | `CLAUDE_MONITOR_PROMPT` が `*" actas "*` に一致するときのみ `return 0` |
+| スキップ告知 | `team-up.sh:1097-1101` | stderr 出力 | `#1449` / `#1476` を名指しする1行。stdout は非汚染 |
+
+既存記号の**削除・改名はゼロ**。`verify_watchers_armed`（:1174）、`ready_sentinel_path`（:1111）、`resend_monitor_prompt`（:1143）、`clear_stale_watcher_sentinels`（:1155）、`WATCHER_READY_TIMEOUT`（:108）、`WATCHER_RESEND_MAX`（:114）はすべて保持されており、t294 の FR-5 テスト（`:104`）がその実在をピンしている。
+
+### 本 intent が触る2面の行番号（HEAD 現行値）
+
+**U1（#1476）— actas 移行面**
+
+| 対象 | 行 | verbatim / 内容 |
+| --- | --- | --- |
+| `CLAUDE_MONITOR_PROMPT` 定義 | `:104` | `CLAUDE_MONITOR_PROMPT="/agmsg mode monitor"` |
+| 参照1: `claude_member_cmd` の `init_prompt` | `:861` | `  local m="$1" wt="${2:-$BASE/$1}" args="" init_prompt="$CLAUDE_MONITOR_PROMPT" interaction_args=""` |
+| 参照2: 適用可否ガードの case | `:1094` | `  case "$CLAUDE_MONITOR_PROMPT" in` |
+| 参照3: 再送の実引数 | `:1202` | `        resend_monitor_prompt "$S" "$pane" "$CLAUDE_MONITOR_PROMPT" \|\|` |
+| 参照4: 復旧ガイダンス文言 | `:1211` | `  echo "  Recover manually: focus each listed pane and run '$CLAUDE_MONITOR_PROMPT'." >&2` |
+| delivery mode 設定（前提充足） | `:876-878` | `      bash "$DELIVERY" set monitor claude-code "$wt" >/dev/null 2>&1 \|\|` |
+| 検証の同期実行位置 | `:1478-1480` | `mux_attach`（`:1483`）より**前** |
+
+**U2（#1478）— worktree 並列化面**
+
+| 対象 | 行 | 内容 |
+| --- | --- | --- |
+| `create_run()` 定義 | `:1267` | 唯一の呼出は `:1427` |
+| worktree 作成ループ | `:1302-1310` | 逐次 |
+| `git worktree add` | `:1305` | verbatim: `    git -C "$REPO" worktree add -q -b "$branch" "$wt" "$base_commit"` |
+| `CREATED_MEMBERS` 追記 | `:1306` | ロールバック対象の集約点 |
+| `CREATED_MEMBERS` 初期化 | `:1392` | |
+| ロールバック読み手 | `:1244` | `  for m in $CREATED_MEMBERS; do`（`rollback_prepared_run` `:1241-1251` 内。`handle_exit` `:1253` が `:1259` で呼ぶ） |
+| ロールバック除去側 | `:1247` | verbatim: `    git -C "$REPO" worktree remove --force "$wt" >/dev/null 2>&1 \|\| true` |
+
+**U1 と U2 の触るファイルは同一（`team-up.sh`）だが、行域が重ならない**（U1: 104 / 861 / 1094 / 1202 / 1211 / 1478-1480、U2: 1244 / 1302-1310 / 1392）。関数単位でも非交差（U1: `claude_member_cmd` `:860-894` + `watcher_verification_applies` `:1092-1102` + `verify_watchers_armed` `:1174-1213` / U2: `rollback_prepared_run` `:1241-1251` + `create_run` `:1267-1311`。関数境界は `grep -n` + 終端 `}` 走査で機械確認、測定 ref: `4a0f91ad0`）。cid:code-generation:c6 の非交差判定により、worktree 隔離の並行実装が可能。
+
+> **注意（行番号の陳腐化）**: 本 intent の ideation 成果物は `git worktree add` を `team-up.sh:1282` と引用しているが、これは **PR #1477 前（`ec624022f`）の行番号**である。observed HEAD `4a0f91ad0` では **`:1305`**（+23 行シフト）。同 PR は :1071 以降に 23 行を挿入したため、**1071 より下の全参照が +23 シフトしている**。
+
+## Team Mode 起動レイテンシ面のコード配置（260725-teamup-attach-latency、履歴、Issue #1449）
+
+測定 ref: observed HEAD `ec624022ff65cc8b3912001f768bd66ec41a0e39` の実ファイル直読。base `6d4df9056`..observed の区間規模は `git diff --stat` で **1018 files changed, 274683 insertions(+), 4573 deletions(-)**（大宗は Mirror lifecycle と elections record で、本 intent の欠陥面とは非交差）。
+
+### 正本（repo 内）
+
+| パス | 行数 | 本 intent での役割 |
+| --- | --- | --- |
+| `packages/framework/core/tools/team-up.sh` | 1474（`wc -l`） | 欠陥の所在。watcher 検証関数群 :1077-1190、launch シーケンス :1438-1474、worktree 直列作成 :1279-1283 |
+| `tests/integration/t-team-up-watcher-arming.test.ts` | 268（`wc -l`） | 検証のテスト。agmsg 側をスタブ化しており本欠陥を検出しない |
+
+配布投影（生成物、直接編集禁止）: `.claude/tools/team-up.sh`、`.codex/tools/team-up.sh`、`.cursor/tools/team-up.sh`、`.opencode/tools/team-up.sh` ほか（`git diff --name-only <base>..<observed> | grep team-up.sh` で区間内に投影面の変更を確認）。
+
+### 外部依存（repo 外・非バージョン管理）
+
+`~/.agents/skills/agmsg/`（読取 2026-07-25）。本欠陥の理解に必要な面:
+
+| パス:line | 内容 |
+| --- | --- |
+| `scripts/watch.sh:43` | `ACTIVE_NAME="${4:-}"` — sentinel 書込を制御する第4位置引数 |
+| `scripts/watch.sh:300-310` | `if [ -n "$ACTIVE_NAME" ]` ガード内でのみ ready sentinel を生成 |
+| `scripts/lib/actas-lock.sh:63-66` | sentinel の所有関係コメント（actas watcher 専用）と `agmsg_ready_path` |
+| `scripts/delivery.sh:259` | `emit_monitor_directive()` — monitor モードの起動経路 |
+| `scripts/delivery.sh:301` | 3 引数のみで `watch_command` を構築（`ACTIVE_NAME` 不在） |
+| `scripts/spawn.sh:358` | `ACTAS_PROMPT` — actas モード起動（sentinel が書かれる対照経路） |
+| `run/` | 251 エントリ中 `ready.*` **0 件**（sentinel が一度も生成されていない実測） |
+
+**構造上の注意**: 欠陥の片側（sentinel の書き手）が repo 外の外部スキルに存在するため、repo 内のテスト・センサー・lint のいずれも到達できない。この境界が検出不能性の構造的原因である。
+
+## Issue #1466 solo standing grant（260725-solo-standing-grants、2026-07-25、履歴）
+
+base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb404524ef30a7d8a0a3f68f73`。[Issue #1466](https://github.com/amadeus-dlc/amadeus/issues/1466)。[PR #1468](https://github.com/amadeus-dlc/amadeus/pull/1468) は凍結試作で参考のみ、実装前提にしない。
+
+主要 seam は grant 発行・取消（`amadeus-state.ts:3110-3226`）、audit-derived parse / 探索 / gate 判定（`amadeus-lib.ts:3772-3978`）、directive schema（`amadeus-directive.ts:59-90`）、route selection carrier / report transport（`amadeus-orchestrate.ts:1539-1578,3003-3045,3293-3297`）、lock 内 exact-ID lookup / 認可 / commit（`amadeus-state.ts:2644-2804`）である。現行探索は exact ID lookup でなく最大 expiry 候補を返すため、route / commit identity がなく、typed non-error fallback の戻り契約もない。
+
+## gate と per-unit の構造
+
+`functional-design`、`nfr-requirements`、`nfr-design`、`infrastructure-design`、`code-generation` は per-unit。未完 unit は `gate:false`、全 unit artifact 着地後だけ最終 gate を一度開き、early report を拒否する（`amadeus-orchestrate.ts:2456-2639,3503-3560`）。grant はこの最終 gate の認可源にだけなり、body / reviewer を再実行しない。exact ID、opaque claim、commit-only の構造案は未決定。team delegation path は変更しない。
+
+## PR #1469 レビュー修正面のコード配置（260725-mirror-review-fixes、履歴）
+
+観測 HEAD は `70336937529f5be31c011de5d368c0f03e534506`、差分 base は `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`。
+
+| 分類 | 正本ファイル | 責務 | 主な検証先 |
+|---|---|---|---|
+| CLI / adapter | `amadeus-mirror-lifecycle.ts` | boundary、manual、repair の parse、target 解決、exit 契約 | `t282-amadeus-mirror-lifecycle.integration.test.ts` |
+| Coordinator / service | `amadeus-mirror-coordinator.ts` | mode、prompt binding、reconciliation、operation 選択 | `t280-amadeus-mirror-coordinator.test.ts` |
+| Legacy CLI | `amadeus-mirror.ts` | 旧 create/sync/close/status。mutation handler が GitHub を直接呼ぶ | `t232-amadeus-mirror.integration.test.ts` |
+| Config / security utility | `amadeus-mirror-config.ts` | 3層 config の安全な読取、schema、precedence | `t257-*mirror-config*.test.ts` |
+| State codec / model | `amadeus-mirror-state-codec.ts` | bounded strict JSON、schema/invariant、Markdown splice | `t274-amadeus-mirror-state-codec.test.ts` |
+| Test utility | `tests/lib/coverage-source-path.ts` | 生成 harness の LCOV source を core 正本へ正規化 | `t05-run-tests-parallel.test.ts` |
+| Workflow adapter | `amadeus-orchestrate.ts` | stage commit 後の Mirror boundary 起動案内、phase receipt | orchestration integration tests |
+
+Mirror 実装は `amadeus-mirror-{types,capability,config,policy,coordinator,executor,gateway,runner,state-codec,state-reducer,state-store,provenance,repair,presentation,lifecycle}.ts` に分かれる。正本を `scripts/package.ts` が `.claude/.codex/.cursor/.opencode` と6種の `dist/*` へ投影するため、修正は `packages/framework/core/` と tests に限定し、生成コピーは packaging で同期する構造である。
+
+フォーカスのテスト空白は、CLI exit と回答 parse、保存済み `bindingId` と異なる approve/skip、legacy mutation 拒否/委譲、realpath→open 間の置換、CR/LF 以外の C0 制御文字、Cursor/OpenCode の root/dist/temp package source である。既存7ファイル127ケースは green だが、これらの欠陥条件を主張するケースがないため回帰を検出しない。
+
+## ハーネス検出クラスタの `amadeus-harness.ts` 分離と kimi 移植面（260725-kimi-harness、2026-07-25、履歴）
 
 差分リフレッシュ（base `6d4df9056` → observed HEAD `d31b8a5db`、distance 105、amadeus-feature）。測定 ref: observed HEAD `d31b8a5db` 実ファイル直読 + `git log/diff/numstat 6d4df9056..HEAD`。
 
@@ -228,7 +557,6 @@ size 分類機構は**3層の floor モデル**で設計されている。(1) **
 
 **large 初宣言の意味**: t224 は repo 初の `// size: large` 宣言（V2 反証 grep で 0件を確認済み）。これまで large は dynamic floor が実測から導く「発見される」size でしかなく、作者が意図として明示する経路は理論上存在しても未使用だった。t224 の宣言はこの権威層の large 分岐を初めて実行し、「重いテストは重いと宣言する」idiom を medium 既習例（t207/t209 :2）に続けて large へ拡張する。将来 large テストの標準アノテーション位置（`// covers:` 直後の :2）の初例にもなる。
 
-
 ## §13 learn-candidate label 面の観測（intent 260716-s13-label-clarity、2026-07-16、履歴）
 
 bugfix intent（Issue #609 — §13 learn candidates の選択肢が内部 ID 単独表示になる）の diff-refresh 観測面。フォーカスは **docs / プロトコル prose のみ**（コード欠陥ではない）。出典は本 intent の `inception/reverse-engineering/scan-notes.md`（Developer scan、observed HEAD `e97fdb6fc658d4cd36d4c30fc460c5b7e70e8c75` 直読の file:line）。手法は diff-refresh（base=`6495e03a12d9e7149c2e80b59f171a90607a2d2c`、祖先・距離28、observed=`e97fdb6fc658d4cd36d4c30fc460c5b7e70e8c75`）。**フォーカス3面は区間28コミットで無変更、§13 仕様は現行で正しく規定済み**。
@@ -259,7 +587,6 @@ bugfix intent（Issue #609 — §13 learn candidates の選択肢が内部 ID �
 - **欠陥クラスの所在**: この不具合は決定的機構の欠落ではなく、正の規定（L960「label = candidate `summary` verbatim」）が既にありながら orchestrator(LLM) がそれを逸脱した一事例。ツール層（`amadeus-learnings.ts` surface）は L958 で「surfaced verbatim — no paraphrase」の JSON を出し、ラベル材料（`summary`/`context`）を欠かさず供給しているため、逸脱点はレンダリング層（LLM が JSON→AskUserQuestion option へ写す一手）に限局する。修正の設計対象は「機構」ではなく「prose 契約の遵守可能性」。
 - **否定例の設計上の役割**: 修正方針(a) が L960 に足す `❌ Persist c5 only` は、正の規定を反復するのではなく **既知の逸脱形（ID 単独ラベル）を名指しで禁止**する契約強化である。正の指示のみでは逸脱形が指示空間の外側に残り LLM が再現しうるが、否定例は逸脱形を契約の内側へ取り込んで閉じる。docs-only 修正が「決定的ガード不在（grep 0件）でも本 Issue のクローズ条件になりうる」根拠はここにある。
 - **配置の一意性契約**: 否定例は §13 learn-candidate の option label を規定する唯一の行（L960）にのみ置く。L19/L577 は post-selection capture（ユーザー選択結果の verbatim 記録）の別クラスタで、候補ラベルの**構築**規定ではないため否定例を重複配置しない（enumeration-completeness の結論＝配置は L960 単独）。後続 design は「否定例の配置箇所」を受け入れ基準に固定する際、この一意性（L960 のみ・L19/L577 除外）を明示すること。
-
 
 ## t05 並列フレーク観測面 — 260716-github-issue-912(2026-07-16、履歴)
 
@@ -299,7 +626,6 @@ Issue #912(t05 planted-failure ケースが高負荷ホストで `--parallel 4` 
 
 - E-L71(team norm、`3392f962a`/#913 で persist)=「fan-out 直後のフルスイート統合検証はホスト負荷収束を待つか並列度を落とす」は**運用手順**であって、テストコード側に「負荷収束待ち/並列度低減」を強制する **seam は現状不在**(上記 NONE FOUND が裏付け)。構造化余地: (a) 内側ランナー呼び出しの `--parallel` を環境変数で上書き可能にする seam(run() 経由)、(b) run-tests.ts の spawn(L653)に timeout オプションを配線し子の暴走を loud に打ち切る seam。いずれも現状は配線ゼロからの新設。
 
-
 ## parser/checkbox 欠陥面の観測（intent 260715-parser-checkbox-fixes、2026-07-16、履歴）
 
 bugfix intent（#1013 / #1015）の diff-refresh 観測面。出典は本 intent の `inception/reverse-engineering/scan-notes.md`（Developer scan、observed HEAD `6495e03a12d9e7149c2e80b59f171a90607a2d2c` 直読の file:line）。手法は diff-refresh（base=`cf3dc88b46a2b23bcfd71b1136632d1739cdd7e5`、祖先・距離65、observed=`6495e03a12d9e7149c2e80b59f171a90607a2d2c`）。**区間65コミットにフォーカス欠陥の修正は存在せず、両欠陥は observed に現存**。編集正本は `packages/framework/core/tools/`（`.claude/tools/*` は byte 同一 self-install コピー、`dist/<harness>/…` は build 出力）。
@@ -336,7 +662,6 @@ state→marker 文字列を手書き構築するサイトは2箇所: `amadeus-ut
   - #1015 = **parse⇔rebuild の6状態対称**: 読み手 `parseCheckboxes`（`amadeus-lib.ts:3395`、6状態を全復元）と書き手の再構築三項（3状態のみ）が非対称。正準 `CHECKBOX_MAP`（:60-67、6状態1正本）を rebuild 側でも唯一の写像源とし、ヘッダ凡例も正本テンプレ（:2748、6状態）へ一致させて対称を回復する。requirements/design は「parse が受理する全状態を rebuild が保存する」を検証可能な受け入れ基準に固定すべき。
   - #1013 = **stage 契約⇔parser の検証対称**: 入力側の stage 契約（`practices-discovery.md:101`「ALWAYS … format / One rule per line」）が要求する書式を、書き手 `parseRules` が出力側で検証しない非対称。契約プレフィックス検証を `parseRules` 側に置き、契約非接頭行を拒否/隔離して対称を回復する。design は「契約違反行が memory 層に着地しない」を受け入れ基準に固定すべき。
 
-
 ## harness port 開放性の観測面(intent 260715-opencode-cursor-harness、2026-07-16、履歴)
 
 opencode / Cursor harness port(Issue #626)のフォーカス面。出典は本 intent の `inception/reverse-engineering/scan-notes.md` および `re-scans/260715-opencode-cursor-harness.md`(file:line は observed HEAD `6a23b0ec` 直読)。diff-refresh base `cf3dc88`→observed `6a23b0ec`(距離65、祖先性実測済み)でフォーカス面のハーネス開放性契約は全て不変(下記温存判定参照)。
@@ -355,7 +680,6 @@ manifest 契約は `scripts/manifest-types.ts:79-122`(HarnessManifest 全12フ�
 
 open-set の外で「ハーネス集合そのもの」を閉じた列挙として持つファイル。本 intent フォーカス面で編集が要りうるのは計9ファイル(installer 5 + runtime 2 + migrate 1 + self-install 1)。
 > 追補(2026-07-16、requirements-analysis reviewer 指摘): installer 契約テストは2本(setup-harness.test.ts / setup-harness-parse.test.ts)で installer 必須は実ファイル5個(harness.ts / engine-layout.ts / reporter.ts / 契約テスト2本 — 旧記載の「5」は harness.ts の2行参照込みの誤計上で、実体は4個だった)、台帳総計は9ファイル。あわせて非破壊の閉じ列挙(`tests/unit/t156-memory-relocation.test.ts:149`、`tests/unit/t199-grilling-distribution.test.ts:33-40` — 新ハーネスを検査しないだけで壊れない)を第3分類として記録する。
-
 
 **installer(packages/setup)— 5ファイル必須**(未対応だと `install --harness opencode` が弾かれる。正しさに必須):
 1. `packages/setup/src/domain/harness.ts:9` `HarnessName` union type(`"claude"|"codex"|"kiro"|"kiro-ide"`)
