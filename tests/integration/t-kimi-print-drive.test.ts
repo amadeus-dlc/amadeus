@@ -1,6 +1,7 @@
 // covers: file:tests/harness/kimi-print-drive.ts
 //
-// t-kimi-print-drive — deterministic unit checks for the kimi print driver's
+// size: medium
+// t-kimi-print-drive — deterministic checks (integration placement: fs-touching env prep) for the kimi print driver's
 // logic halves (Bolt 6, FR-9b Step 4): the skipReason gate branches, spawn
 // failure / timeout handling, and the prepareKimiHome auth-supply mechanism
 // (symlink, never a copy). No live kimi session anywhere in this file — the

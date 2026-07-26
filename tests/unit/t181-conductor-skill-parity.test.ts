@@ -21,7 +21,7 @@
 //       be PRESENT in every shipped conductor SKILL. Catches a future fork that
 //       drops `--init` yet still lacks the current conductor contract.
 //
-// All four authored SKILLs (claude, codex, kiro, kiro-ide) carry the full
+// All five authored SKILLs (claude, codex, kimi, kiro, kiro-ide) carry the full
 // vocabulary today and none carry a bare `--init`, so the POSITIVE set needs no
 // per-harness carve-out — codex included. The gate asserts the shipped AUTHORED
 // surface (harness/<h>/skills/amadeus/SKILL.md), the FIRST surface that defines a
@@ -91,6 +91,7 @@ describe("t181 per-harness conductor-SKILL freshness gate (P11 RESOLVE-2)", () =
     expect(skills).toEqual([
       "packages/framework/harness/claude/skills/amadeus/SKILL.md",
       "packages/framework/harness/codex/skills/amadeus/SKILL.md",
+      "packages/framework/harness/kimi/skills/amadeus/SKILL.md",
       "packages/framework/harness/kiro-ide/skills/amadeus/SKILL.md",
       "packages/framework/harness/kiro/skills/amadeus/SKILL.md",
     ]);
