@@ -6,6 +6,7 @@ export const MIRROR_SURFACE_IDS = [
   "claude",
   "codex",
   "cursor",
+  "kimi",
   "kiro",
   "kiro-ide",
   "opencode",
@@ -89,6 +90,14 @@ const roots: Record<MirrorSurfaceId, ProjectionRoots> = {
     selfRoot: ".cursor",
     selfSkillRoot: ".cursor",
     manifest: "packages/framework/harness/cursor/manifest.ts",
+  },
+  kimi: {
+    harnessDir: ".kimi-code",
+    distRoot: "dist/kimi/.kimi-code",
+    distSkillRoot: "dist/kimi/.kimi-code",
+    selfRoot: ".kimi-code",
+    selfSkillRoot: ".kimi-code",
+    manifest: "packages/framework/harness/kimi/manifest.ts",
   },
   kiro: {
     harnessDir: ".kiro",

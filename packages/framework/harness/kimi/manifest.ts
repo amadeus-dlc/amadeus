@@ -31,6 +31,7 @@ import onboardingFills from "./onboarding.fills.ts";
 
 const manifest: HarnessManifest = {
   name: "kimi",
+  mirrorSurface: "kimi",
   harnessDir: ".kimi-code",
 
   // core/<src> → <harnessDir>/<dst>. Same projection as claude (8 dirs,
