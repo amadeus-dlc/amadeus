@@ -1,4 +1,4 @@
-// covers: file:scripts/plugin-composition.ts
+// covers: file:packages/framework/core/tools/amadeus-plugin-compose.ts
 // size: medium
 //
 // U10 plugin-composition (FR-6 item 20) — integration proof that the C4
@@ -36,7 +36,7 @@ import {
   type ValidPlugin,
   type WorkspaceBackend,
   type WorkspaceTransaction,
-} from "../../scripts/plugin-composition.ts";
+} from "../../packages/framework/core/tools/amadeus-plugin-compose.ts";
 
 let root: string;
 let bundleRoot: string;

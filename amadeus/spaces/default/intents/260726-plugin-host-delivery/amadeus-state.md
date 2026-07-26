@@ -9,7 +9,7 @@
 - **Active Agent**: amadeus-developer-agent
 - **Harness**: claude-code
 - **Worktree Path**:
-- **Bolt Refs**:
+- **Bolt Refs**: [activation-policy, doctor-observability, host-projection-all]
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration
@@ -34,6 +34,9 @@
 
 - **Mirror Boundary Receipts**: {"ideation":"completed","inception":"completed"}
 - **Skeleton Stance**: on
+- **Construction Autonomy Mode**: gated
+- **Parked**: 2026-07-26T22:09:16Z
+- **Parked At Stage**: code-generation
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -94,7 +97,7 @@ Per unit: [TBD]
 - **Current Stage**: code-generation
 - **Next Stage**: build-and-test
 - **Status**: Running
-- **Last Updated**: 2026-07-26T17:31:38Z
+- **Last Updated**: 2026-07-26T22:09:16Z
 
 ## Session Resume Point
 - **Last Completed Stage**: nfr-design

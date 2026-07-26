@@ -12,7 +12,7 @@
 // residue advisory, the version floor, and the advisory probe all surface.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { cpSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -192,6 +192,34 @@ describe("kimiManagedBlockDoctorCheck", () => {
   });
 });
 
+describe("kimiManagedBlockDoctorCheck — repair wording branches on the workspace (FR-2)", () => {
+  test("a self-development workspace (scripts/promote-self.ts present) → promote-self repair wording", () => {
+    const home = kimiHomeWith(null);
+    const workspace = root("self-dev");
+    mkdirSync(join(workspace, "scripts"), { recursive: true });
+    writeFileSync(join(workspace, "scripts", "promote-self.ts"), "// fixture\n");
+    const result = kimiManagedBlockDoctorCheck(home, workspace);
+    expect(result.pass).toBe(false);
+    expect(result.fix).toContain("bun scripts/promote-self.ts --apply");
+    expect(result.fix).not.toContain("bunx @amadeus-dlc/setup");
+  });
+
+  test("a distribution workspace (no scripts/promote-self.ts) keeps the installer repair wording", () => {
+    const home = kimiHomeWith(null);
+    const workspace = root("dist-workspace");
+    const result = kimiManagedBlockDoctorCheck(home, workspace);
+    expect(result.pass).toBe(false);
+    expect(result.fix).toContain("bunx @amadeus-dlc/setup install");
+    expect(result.fix).not.toContain("promote-self");
+  });
+
+  test("workspace omitted → the installer repair wording (distribution default)", () => {
+    const home = kimiHomeWith(null);
+    const result = kimiManagedBlockDoctorCheck(home);
+    expect(result.fix).toContain("bunx @amadeus-dlc/setup install");
+  });
+});
+
 describe("kimiGitResidueDoctorCheck (advisory)", () => {
   test("config.toml absent → quiet pass", () => {
     expect(kimiGitResidueDoctorCheck(kimiHomeWith(null))).toEqual({
@@ -329,6 +357,9 @@ describe("handleDoctor — kimi arm wiring (real shipped .kimi-code tree)", () =
     );
 
     expect(result.output).toContain(`kimi managed block: ${join(kimiHome, "config.toml")} missing — hooks not wired`);
+    // The fixture project carries no scripts/promote-self.ts, so the arm's
+    // repair line is the distribution installer wording (FR-2 branch).
+    expect(result.output).toContain("bunx @amadeus-dlc/setup install");
     expect(result.output).toContain("kimi hook probe: adapter fired (advisory)");
     expect(result.exitCode).toBe(1);
   });

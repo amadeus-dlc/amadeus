@@ -23567,3 +23567,352 @@
 **Message**: Reviewer: amadeus-architecture-reviewer-agent\nInvocationId: dfdfce94-b182-4f93-bfed-c057bc5188b7\nIteration: 2\nVerdict: READY\nScope decision: none\n\nSummary: Both iteration-1 Major findings are genuinel
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T19:23:25Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: a2572c360b0d22147
+**Message**: That notification is just the CI-log monitor for `/tmp/citest4.log` timing out — it already served its purpose (the run reached `RESULT: PASS`, CI_EXIT=0, which I confirmed and reported). No action ne
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-26T20:26:55Z
+**Event**: HUMAN_TURN
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-26T20:27:27Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state set Construction Autonomy Mode autonomous
+**Error**: Invalid field=value pair: Construction Autonomy Mode
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-26T20:27:32Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state set Construction Autonomy Mode=autonomous
+**Error**: Field not found in state file: "Construction Autonomy Mode". Cannot update — refusing to silently no-op.
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-26T20:27:54Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-bolt
+**Command**: amadeus-bolt set-autonomy autonomous
+**Error**: Missing --mode <autonomous|gated>
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-26T20:28:01Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-bolt
+**Command**: amadeus-bolt set-autonomy --mode autonomous
+**Error**: State update failed: Field not found in state file: "Construction Autonomy Mode". Cannot update — refusing to silently no-op.
+
+---
+
+## Autonomy Mode Set
+**Timestamp**: 2026-07-26T20:28:16Z
+**Event**: AUTONOMY_MODE_SET
+**Mode**: autonomous
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-26T20:37:11Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state park --project-dir /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin
+**Error**: Refusing to park: Construction Autonomy Mode is autonomous. An unattended autonomous run has no human to resume it and must keep moving - do not park it.
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-26T20:37:11Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: park
+**Error**: Cannot park the workflow: {"error":"Refusing to park: Construction Autonomy Mode is autonomous. An unattended autonomous run has no human to resume it and must keep moving - do not park it."}
+
+---
+
+## Swarm Started
+**Timestamp**: 2026-07-26T20:38:05Z
+**Event**: SWARM_STARTED
+**Batch number**: 1
+**Unit names**: activation-policy,doctor-observability,host-projection-all
+**Concurrency cap**: 3
+
+---
+
+## Worktree Created
+**Timestamp**: 2026-07-26T20:38:05Z
+**Event**: WORKTREE_CREATED
+**Bolt slug**: activation-policy
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-activation-policy
+**Branch name**: bolt-activation-policy
+**Base branch**: fix/plugin
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-26T20:38:07Z
+**Event**: BOLT_STARTED
+**Bolt names**: activation-policy
+**Batch number**: 1
+**Walking skeleton**: false
+**Bolt slug**: activation-policy
+
+---
+
+## State Forked
+**Timestamp**: 2026-07-26T20:38:07Z
+**Event**: STATE_FORKED
+**Bolt slug**: activation-policy
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-activation-policy
+**Source state hash**: 41c7e7e09d5370c8e9f9780dfff120be363e5b35b466c955bd348b5c22c5cb3e
+**Target state hash**: 41c7e7e09d5370c8e9f9780dfff120be363e5b35b466c955bd348b5c22c5cb3e
+
+---
+
+## Audit Forked
+**Timestamp**: 2026-07-26T20:38:07Z
+**Event**: AUDIT_FORKED
+**Bolt slug**: activation-policy
+**Source Audit Hash**: a19c6cc29a165b6efe948ed36001737748dd4cc02d62ca57d4c8e02db1b32b73
+**Fork Boundary**: 759756
+**Reentrant**: true
+
+---
+
+## Worktree Created
+**Timestamp**: 2026-07-26T20:38:07Z
+**Event**: WORKTREE_CREATED
+**Bolt slug**: doctor-observability
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-doctor-observability
+**Branch name**: bolt-doctor-observability
+**Base branch**: fix/plugin
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-26T20:38:08Z
+**Event**: BOLT_STARTED
+**Bolt names**: doctor-observability
+**Batch number**: 1
+**Walking skeleton**: false
+**Bolt slug**: doctor-observability
+
+---
+
+## State Forked
+**Timestamp**: 2026-07-26T20:38:08Z
+**Event**: STATE_FORKED
+**Bolt slug**: doctor-observability
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-doctor-observability
+**Source state hash**: 4d508c47ea0e0a418d8a082083e0ccf84498f5e82eb4228bc12131f822abe77f
+**Target state hash**: 4d508c47ea0e0a418d8a082083e0ccf84498f5e82eb4228bc12131f822abe77f
+
+---
+
+## Audit Forked
+**Timestamp**: 2026-07-26T20:38:08Z
+**Event**: AUDIT_FORKED
+**Bolt slug**: doctor-observability
+**Source Audit Hash**: 29b6b98ead57cd19e8ffac1b54baa7726a655800aa14a51d6b8042f4779f3439
+**Fork Boundary**: 760947
+**Reentrant**: true
+
+---
+
+## Worktree Created
+**Timestamp**: 2026-07-26T20:38:08Z
+**Event**: WORKTREE_CREATED
+**Bolt slug**: host-projection-all
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all
+**Branch name**: bolt-host-projection-all
+**Base branch**: fix/plugin
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-26T20:38:09Z
+**Event**: BOLT_STARTED
+**Bolt names**: host-projection-all
+**Batch number**: 1
+**Walking skeleton**: false
+**Bolt slug**: host-projection-all
+
+---
+
+## State Forked
+**Timestamp**: 2026-07-26T20:38:09Z
+**Event**: STATE_FORKED
+**Bolt slug**: host-projection-all
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all
+**Source state hash**: 245d8af2f9fcc65e82c7549f97513c623c757c34f5bbb1ea9e5a17ca88d11caa
+**Target state hash**: 245d8af2f9fcc65e82c7549f97513c623c757c34f5bbb1ea9e5a17ca88d11caa
+
+---
+
+## Audit Forked
+**Timestamp**: 2026-07-26T20:38:10Z
+**Event**: AUDIT_FORKED
+**Bolt slug**: host-projection-all
+**Source Audit Hash**: e5c9b107329740b902de8fc394fea7f3354dba9fb601b6488d3856fd0077ee09
+**Fork Boundary**: 762134
+**Reentrant**: true
+
+---
+
+## Swarm Started
+**Timestamp**: 2026-07-26T20:38:16Z
+**Event**: SWARM_STARTED
+**Batch number**: 1
+**Unit names**: activation-policy,doctor-observability,host-projection-all
+**Concurrency cap**: 3
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-26T20:38:16Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-worktree
+**Command**: amadeus-worktree --project-dir /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin create --slug activation-policy --base fix/plugin
+**Error**: [slug=activation-policy] Worktree directory already exists: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-activation-policy
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-26T20:38:17Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-worktree
+**Command**: amadeus-worktree --project-dir /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin create --slug doctor-observability --base fix/plugin
+**Error**: [slug=doctor-observability] Worktree directory already exists: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-doctor-observability
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-26T20:38:17Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-worktree
+**Command**: amadeus-worktree --project-dir /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin create --slug host-projection-all --base fix/plugin
+**Error**: [slug=host-projection-all] Worktree directory already exists: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T20:40:32Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: a2572c360b0d22147
+**Message**: Lint gate passed (LINT=0). The full CI on the merged state is still running; I'll await its completion notification before the final report.\n\nCurrent status: the conductor's concern is **resolved** — 
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T20:44:29Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: a2572c360b0d22147
+**Message**: The merged-state CI is green and PR #1554 is unblocked. The conductor's concern is fully resolved.\n\n## PR #1554 CONFLICTING → resolved\n- **Root cause**: my Bolt branch carries the intent's fix/plugin 
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T20:49:24Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: a2572c360b0d22147
+**Message**: That notification is just the CI-log monitor for `/tmp/citest5.log` timing out — it already served its purpose (the run reached `RESULT: PASS`, CI_EXIT=0, which I confirmed and reported). No action ne
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T20:58:57Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: builder-u5
+**Agent ID**: abuilder-u5-8ea7e2c63ef7aa45
+**Message**: U5 の実装は開始できず、依存ブロッカーで停止し leader へ報告しました。要点は以下です。\n\n## 状況: U5 実装前ブロッカー(依存コード不在)\n\n割当 worktree `bolt-doctor-observability` に **U2 の依存コードが存在しません**。設計契約は U5 が U2 の成果物を射影する前提ですが、それらが worktree にも origin/main 
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T20:59:45Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: builder-u5
+**Agent ID**: abuilder-u5-8ea7e2c63ef7aa45
+**Message**: U2 依存の未解決ブロッカーについて leader へ再確認を送りました。\n\n## 現状まとめ\n\nタスク11(U5 doctor-observability)の割当は ack しましたが、**実装前ブロッカーは未解決**です。\n\n- U5 は U2 の成果物(`amadeus-plugin-compose.ts` の `DropsRecord`/`readDropsRecord`、DoctorLi
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-26T21:14:23Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-26T21:14:23Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-26T21:54:42Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-26T22:00:51Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-26T22:03:59Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-26T22:05:04Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-26T22:06:18Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-26T22:07:53Z
+**Event**: HUMAN_TURN
+
+---
+
+## Autonomy Mode Set
+**Timestamp**: 2026-07-26T22:09:16Z
+**Event**: AUTONOMY_MODE_SET
+**Mode**: gated
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-26T22:09:16Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-26T22:09:16Z
+
+---

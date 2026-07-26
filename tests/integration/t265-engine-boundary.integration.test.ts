@@ -14,6 +14,31 @@ import {
   seededStateFile,
   seedStateFile,
 } from "../harness/fixtures.ts";
+import {
+  EMPTY_MIRROR_STATE,
+  renderMirrorStateBlock,
+} from "../../packages/framework/core/tools/amadeus-mirror-state-codec.ts";
+
+// A recorded mirror lives in the v1 mirror-state block (issueNumber +
+// provenance), which is the authority the boundary decision reads — never the
+// legacy "Mirror Issue" field. Seed the block the way a real create writes it.
+const SEEDED_MIRROR_BLOCK = renderMirrorStateBlock({
+  ...EMPTY_MIRROR_STATE,
+  issueNumber: 123,
+  provenance: {
+    schema: 1,
+    createIdentity: {
+      schema: 1,
+      intentUuid: "019f7003-e273-7c0b-85ba-0a6c99d0aa9d",
+      intentDir: "amadeus/spaces/default/intents/seed",
+      repository: { owner: "acme", name: "app", canonical: "acme/app" },
+      operationId: "op-seed",
+      preparedAt: "2026-07-26T00:00:00Z",
+    },
+    issueNumber: 123,
+    createdAt: "2026-07-26T00:00:00Z",
+  },
+});
 
 const ROOT = join(import.meta.dir, "..", "..");
 const ENGINE = join(
@@ -111,10 +136,7 @@ function seedBoundary(
     );
   }
   if (options.mirror) {
-    state = state.replace(
-      "## Current Status",
-      "## Current Status\n- **Mirror Issue**: #123",
-    );
+    state = `${state.trimEnd()}\n\n${SEEDED_MIRROR_BLOCK}\n`;
   }
   if (options.receipts) {
     state = state.replace(
