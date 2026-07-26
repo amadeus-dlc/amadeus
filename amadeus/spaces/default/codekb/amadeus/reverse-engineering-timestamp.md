@@ -1,6 +1,20 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260726-mirror-envelope-lf）
+## 実行メタデータ（現在: 260726-plugin-host-delivery）
+
+- Date: `2026-07-26`
+- Base commit: `1673c433209c74820881c75a0816bbce3fb2d512`（`git merge-base --is-ancestor 1673c4332 HEAD` **exit 0 = 祖先**、`git rev-list --count 1673c4332..HEAD` = **43**。cid:reverse-engineering:rescan-base-ancestry。注: 前回 observed `e39402224` は現 HEAD の**非祖先**と実測した — `git merge-base --is-ancestor e3940222480b15d9cf10dd0a97df6a35a7ffb7d5 HEAD` **exit 1**。squash マージ運用では record の observed が現 HEAD の祖先でない場合があるため、祖先である `1673c4332` を base に採用した）
+- Observed commit: `0d83aa48b886fe85cd977569c0e7b3015b84d3e5`（= 現 HEAD、`git rev-parse HEAD` 実測。worktree `fix-plugin`、ブランチ `fix/plugin`）
+- 区間規模: `git diff --shortstat 1673c4332..HEAD` = **1239 files changed, 217578 insertions(+), 2683 deletions(-)**（測定 ref: observed `0d83aa48b`）。面別内訳は `git diff --name-only 1673c4332..HEAD | grep -c` 等の転記で packages **33** / tests **86** / scripts **7** / .github **1**。`tests/` 配下の新規ファイルは `git diff --name-only --diff-filter=A … -- tests/ | wc -l` = **29**（うち `*.test.ts` は **15** 本 — kimi 群・metrics t298 群・setup 群・plugin-discovery-overhead-gate）。
+- 区間の内訳（`git log --oneline 1673c4332..HEAD` 全43件の主系統）: (a) **Kimi Code CLI ハーネス追加** `a45b01bd3`（[PR #1522](https://github.com/amadeus-dlc/amadeus/pull/1522) — 第7ディストリ面・self-install 第5面） (b) **metrics 可視化** `aef8fad20` / `8fd9d4138`（[PR #1500](https://github.com/amadeus-dlc/amadeus/pull/1500) / [PR #1504](https://github.com/amadeus-dlc/amadeus/pull/1504) — `scripts/metrics-visualize.ts`、CI render+drift-check） (c) **mirror gateway envelope 修正** `3b87d1027`（[PR #1537](https://github.com/amadeus-dlc/amadeus/pull/1537) — `--paginate --slurp` 廃止・`FIND_PER_PAGE=100` の明示ページ walk・bare-LF ステータス行回収 = 前 intent `260726-mirror-envelope-lf` の Focus #1498 の解消） (d) **plugin discovery perf ゲート再設計** `1edf2abfb`（[PR #1535](https://github.com/amadeus-dlc/amadeus/pull/1535) — 相対比 0.2 + 絶対フロアの AND。注: ブリーフィングは #1525 としていたが、`git log` 実測は **#1535**） (e) CI 検証ジョブ分割 `4e95162e3`（[PR #1528](https://github.com/amadeus-dlc/amadeus/pull/1528)） (f) 前 intent のクロスレビュー済みバグ 6 修正の着地（#1516/#1517/#1518/#1521/#1523/#1524）+ benchmark dispersion gate 修正 `1886a2567`（[PR #1507](https://github.com/amadeus-dlc/amadeus/pull/1507)） (g) 残りは record 同期・metrics スナップショット・`origin/main` マージ。
+- Scope: `amadeus-feature`（intent `260726-plugin-host-delivery`）、Brownfield、単一 repo `amadeus`
+- Focus: **plugin 導入 UX**。`scripts/plugin-projection.ts` の self-install 面が「closed four → **closed five**」へ拡張された（`SELF_INSTALL_HARNESSES = ["claude", "codex", "cursor", "opencode", "kimi"]`、`:60`）一方、**plugin-composition / formal-model-check / `dist/plugins` / トップレベル `plugins/` は区間内で完全に無変更**（`git log --oneline 1673c4332..HEAD -- <各パス>` および `git diff --name-only … | grep -c` の**出力 0 件**で反証確認済み）。
+- 差分リフレッシュ（cid:reverse-engineering:c1）: フルスキャン不実施。上流入力は Developer スキャン結果（実測済みスキャンノート）。Architect 段で主要主張を独立再実測し、**1件の PR 番号訂正**（perf ゲート再設計 #1525 → 実測 **#1535**）を検出した。
+- 測定 ref: 本節および本 scan で更新した全成果物の数値・SHA は observed `0d83aa48b` での `git rev-parse` / `git rev-list --count` / `git diff --shortstat` / `git diff --name-only … | grep -c` / `git log --oneline` / `grep -n` 出力からの転記（cid:requirements-analysis:numbers-from-command-output-only、cid:reverse-engineering:measurement-ref-in-artifacts）。
+- 更新した成果物（8件）: `reverse-engineering-timestamp.md`（本ファイル）/ `architecture.md` / `code-structure.md` / `component-inventory.md` / `code-quality-assessment.md` / `technology-stack.md` / `dependencies.md` / `api-documentation.md`（区間の公開挙動変化の最小追記）。`business-overview.md` は区間内に業務境界の変化が該当しないため無変更。旧「現在」マーカー（`260726-mirror-envelope-lf`）は本ファイルおよび body 4 成果物の H2 見出しで履歴ラベルへ降格した（cid:reverse-engineering:c3-relabel。`grep -n "、現在、\|（現在:" *.md` の残存ヒットが本 intent `260726-plugin-host-delivery` の節のみであることを機械確認）。
+- Delivery boundary: 本 scan は codekb の差分更新のみを成果物とし、実装コード・intent record / state / audit・生成配布物への書込は一切行わない。
+
+## 実行メタデータ（履歴: 260726-mirror-envelope-lf）
 
 - Date: `2026-07-26`
 - Base commit: `1673c433209c74820881c75a0816bbce3fb2d512`（前 intent `260726-crossreviewed-bug-batch` の observed。`git merge-base --is-ancestor 1673c4332 HEAD` **exit 0 = 祖先**、`git rev-list --count 1673c4332..HEAD` = **27**。cid:reverse-engineering:rescan-base-ancestry）

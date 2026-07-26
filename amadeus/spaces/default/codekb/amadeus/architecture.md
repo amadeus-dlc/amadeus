@@ -1,6 +1,18 @@
 # アーキテクチャ
 
-## mirror-gateway の HTTP envelope パース機序（260726-mirror-envelope-lf、現在、Issue #1498）
+## plugin 導入 UX と第7ディストリ面の現況（260726-plugin-host-delivery、現在、差分リフレッシュ）
+
+260726-plugin-host-delivery 差分リフレッシュ（2026-07-26、observed `0d83aa48b886fe85cd977569c0e7b3015b84d3e5`、base `1673c4332`、距離 43）。上流入力: Developer スキャン結果（実測済みスキャンノート）。
+
+- **Kimi Code ハーネス追加**（[PR #1522](https://github.com/amadeus-dlc/amadeus/pull/1522)、`a45b01bd3`）: **第7ディストリ面・self-install 第5面**。`packages/framework/harness/kimi/manifest.ts` が token = **`.kimi-code`** を宣言し（`:10`）、hooks はユーザーレベル **`~/.kimi-code/config.toml` への marker-fenced managed block** として合流する（`:22`）。**`hooks/amadeus-hooks.snippet.toml` が hooks 配線の単一ソース**であり、`packages/setup/src/{domain,modules}/kimi-hooks.ts` の 2 ファイルが managed block の merge を担う。
+- **plugin 投影の self-install 面が「closed four → closed five」へ拡張**: `scripts/plugin-projection.ts:60` `SELF_INSTALL_HARNESSES = ["claude", "codex", "cursor", "opencode", "kimi"]`（旧: 4 面）。冒頭コメントも「six → **seven** packaged harness trees」「closed four → **closed five** faces」へ更新（`git diff 1673c4332..HEAD -- scripts/plugin-projection.ts` 直読）。kiro/kiro-ide は従来どおり packaged だが self-install へは昇格しない。
+- **plugin 基盤の他面は区間内で完全に無変更**: plugin-composition（`packages/framework/core/tools/plugin-composition.ts`）/ formal-model-check / `dist/plugins` / トップレベル `plugins/` は `git log --oneline 1673c4332..HEAD -- <各パス>` および `git diff --name-only … | grep -c` の**出力 0 件**で反証確認済み。区間の plugin 面変化は上記 projection の kimi 追加と、discovery の dangling symlink skip（[PR #1518](https://github.com/amadeus-dlc/amadeus/pull/1518)）・perf ゲート再設計（[PR #1535](https://github.com/amadeus-dlc/amadeus/pull/1535)）のみ。
+- **metrics 可視化**（[PR #1500](https://github.com/amadeus-dlc/amadeus/pull/1500) / [PR #1504](https://github.com/amadeus-dlc/amadeus/pull/1504)）: `scripts/metrics-visualize.ts` 新設（自己完結 HTML ダッシュボード、依存追加ゼロ）。CI に「Render metrics dashboard」step（`bun scripts/metrics-visualize.ts --write`）と drift-check ジョブが配線された（`.github/workflows/ci.yml` diff 直読）。
+- **mirror gateway の envelope 修正着地**（[PR #1537](https://github.com/amadeus-dlc/amadeus/pull/1537)、`3b87d1027`）: 前節（260726-mirror-envelope-lf、履歴）の Focus #1498 が解消された。`--paginate --slurp` を廃止し、`FIND_PER_PAGE = 100`（`amadeus-mirror-gateway.ts:120`）の**明示ページ walk**（`:695` `runApi(findArgv(repository, page), "paginated")`）へ移行、bare-LF ステータス行も回収される。次節の「CRLF 前提パーサ」「`--slurp` interleave 文法」の記述は履歴（修正前の断面）である。
+
+測定 ref: observed `0d83aa48b`（cid:reverse-engineering:measurement-ref-in-artifacts）。
+
+## mirror-gateway の HTTP envelope パース機序（260726-mirror-envelope-lf、履歴、Issue #1498）
 
 測定 ref: observed `e3940222480b15d9cf10dd0a97df6a35a7ffb7d5`（= 現 HEAD、`git rev-parse HEAD` 実測）。base `1673c4332`（前 intent `260726-crossreviewed-bug-batch` の observed、`git merge-base --is-ancestor` exit 0 / 距離 27）。以下の file:line はすべて同 commit の実ファイル直読であり、上流の Developer スキャン結果（`inception/reverse-engineering/scan-notes.md`）を Architect 段で独立に再検証したうえで転記している（訂正 0 件）。
 
