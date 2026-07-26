@@ -164,6 +164,16 @@ export const PHASE_NUMBERS: Record<string, Phase> = {
   "4": "operation",
 };
 
+// Canonicalise a phase name or number to its lowercase phase name, or null.
+// Object.hasOwn gates the PHASE_NUMBERS lookup so prototype-chain members
+// (`constructor`, `__proto__`) fall on the null path (#744). Lifted from the
+// three per-tool copies (#833).
+export function ownPhase(input: string): string | null {
+  const lower = input.toLowerCase();
+  if (Object.hasOwn(PHASE_NUMBERS, lower)) return PHASE_NUMBERS[lower];
+  return (PHASES as readonly string[]).includes(lower) ? lower : null;
+}
+
 // Compatibility facade: callers keep importing these established symbols from
 // amadeus-lib while their implementation remains isolated in amadeus-harness.
 export const HARNESS_DIR_TO_TYPE = CANONICAL_HARNESS_DIR_TO_TYPE;

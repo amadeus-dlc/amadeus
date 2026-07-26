@@ -117,6 +117,7 @@ import {
   normalizeUnitKind,
   parseCheckboxes,
   parseIntentStatus,
+  ownPhase,
   PHASE_NUMBERS,
   PHASES,
   READ_ONLY_FLAGS,
@@ -3011,21 +3012,8 @@ function checkboxStateOf(
 }
 
 // Canonicalise a phase token (name or number) to its canonical name, or null.
-// Composes the same PHASE_NUMBERS / PHASES tables the jump tool uses.
-//
-// A bare PHASE_NUMBERS[lower] walks the prototype chain, so all-lowercase
-// Object.prototype members (`constructor`, `__proto__`) resolve to truthy
-// non-string values and slip past the `!canonical` guard — downstream
-// phase.toLowerCase() then throws a TypeError. Object.hasOwn keeps those names
-// on the null path. Kept local to this tool rather than shared via
-// amadeus-lib.ts (E-L17: the PHASE_NUMBERS constant stays shared, but each site
-// carries its own guard to avoid cross-file churn; #833 tracks lifting the
-// three copies).
-export function ownPhase(input: string): string | null {
-  const lower = input.toLowerCase();
-  if (Object.hasOwn(PHASE_NUMBERS, lower)) return PHASE_NUMBERS[lower];
-  return (PHASES as readonly string[]).includes(lower) ? lower : null;
-}
+// Implemented in amadeus-lib.ts ownPhase (#744 / #833).
+export { ownPhase };
 
 const canonicalisePhase = (input: string): string | null => ownPhase(input);
 
