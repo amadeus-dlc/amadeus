@@ -289,14 +289,14 @@ type MirrorLifecycleRunner = (
   request: MirrorLifecycleRequest,
 ) => Promise<MirrorLifecycleAdapterOutcome>;
 
+// FR-3: create refuses a duplicate against the v1 authority BEFORE the lifecycle
+// runs, so re-create surfaces a clear message rather than a downstream
+// provenance rejection (#1547b); sync/close delegate straight to the lifecycle.
 async function runMirrorMutation(
   args: Extract<ArgsOutcome, { kind: "create" | "sync" | "close" }>,
   projectDir: string,
   runLifecycle: MirrorLifecycleRunner,
 ): Promise<number> {
-  // FR-3: refuse a duplicate create against the v1 authority BEFORE the
-  // lifecycle runs, so re-create surfaces a clear message rather than a
-  // downstream provenance rejection (#1547b).
   if (args.kind === "create") {
     const view = buildMirrorStatusRecordView({
       projectDir,

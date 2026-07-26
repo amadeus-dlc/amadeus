@@ -213,6 +213,27 @@ describe("t300 status reads the v1 authority (FR-1, #1547a)", () => {
     expect(cap.logs.join("\n")).not.toContain("mirror-missing");
     expect(cap.logs.join("\n")).toContain("in sync");
   });
+
+  test("a recorded issue that 404s on GitHub is reported as mirror-missing divergence", async () => {
+    const { root, ports } = makeWorkspace({ block: "empty" });
+    const gateway = new FakeGateway();
+    expect(await driveCreate(root, ports, gateway, "c1")).toBe(0);
+
+    const cap = capture();
+    let code: number;
+    try {
+      code = handleStatus(
+        root,
+        DIR,
+        statusGh({ "issue view": { kind: "error", exitCode: 1, stderr: "HTTP 404: Not Found" } }),
+      );
+    } finally {
+      cap.restore();
+    }
+    expect(code).toBe(1);
+    expect(cap.logs.join("\n")).toContain("mirror-missing");
+    expect(cap.logs.join("\n")).toContain(`#${ISSUE}`);
+  });
 });
 
 describe("t300 duplicate create is refused loud (FR-3, #1547b)", () => {

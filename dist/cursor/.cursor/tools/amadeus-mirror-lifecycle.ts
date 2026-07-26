@@ -50,11 +50,13 @@ import {
 } from "./amadeus-mirror-state-store.ts";
 import type {
   MirrorBoundary,
+  MirrorCreateIdentity,
   MirrorEventIdentity,
   MirrorGitHubGateway,
   MirrorOperation,
   MirrorOperationOutcome,
   MirrorProvenanceV2,
+  MirrorStateSnapshot,
   RepositoryIdentity,
 } from "./amadeus-mirror-types.ts";
 
@@ -296,19 +298,7 @@ export function buildMirrorStatusRecordView(
     return { kind: "error", message: `Mirror state is invalid: ${read.issues.join("; ")}` };
   const state = read.snapshot;
   const snapshot = lifecycleSnapshot(target, resolved.now);
-  // Marker provenance mirrors coordinator.markerFor: the create identity from
-  // provenance, else a receipt, else a synthetic identity for a linkless record.
-  const identity =
-    state.provenance?.createIdentity ??
-    Object.values(state.receipts).find((receipt) => receipt.createIdentity)
-      ?.createIdentity ?? {
-      schema: 1 as const,
-      intentUuid: target.intentUuid,
-      intentDir: target.intentDir,
-      repository: target.repository,
-      operationId: "-",
-      preparedAt: snapshot.updatedAt,
-    };
+  const identity = markerCreateIdentity(state, target, snapshot.updatedAt);
   const expectedBody = renderMirrorIssueContent({
     snapshot,
     marker: renderMirrorMarker(identity),
@@ -320,6 +310,27 @@ export function buildMirrorStatusRecordView(
     currentStatus: snapshot.status,
     expectedBody,
   };
+}
+
+// The marker create identity, mirroring coordinator.markerFor: provenance's
+// identity, else a receipt's, else a synthetic identity for a linkless record.
+function markerCreateIdentity(
+  state: MirrorStateSnapshot,
+  target: Extract<ResolvedLifecycleTarget, { kind: "ok" }>,
+  preparedAt: string,
+): MirrorCreateIdentity {
+  return (
+    state.provenance?.createIdentity ??
+    Object.values(state.receipts).find((receipt) => receipt.createIdentity)
+      ?.createIdentity ?? {
+      schema: 1,
+      intentUuid: target.intentUuid,
+      intentDir: target.intentDir,
+      repository: target.repository,
+      operationId: "-",
+      preparedAt,
+    }
+  );
 }
 
 export async function runMirrorLifecycleBoundary(
