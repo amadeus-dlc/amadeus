@@ -1,6 +1,42 @@
 # コード構造
 
-## metrics サブシステムのコード配置（260726-metrics-visualization、現在）
+## クロスレビュー済みバグ7件の患部コード配置（260726-crossreviewed-bug-batch、現在、7 Issue）
+
+測定 ref: observed `1673c4332`（base `e12259ba7`、距離 2）。file:line は同 commit の実ファイル直読、件数は `git ls-files … | wc -l` / `grep -n` 出力からの転記。上流入力は Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`。
+
+### 区間の配置変化
+
+`git diff --stat e12259ba7 HEAD -- packages/framework/core/` = `amadeus-lib.ts` 1ファイル / 35 insertions / 3 deletions。区間で新規ファイルの追加・移動は無い。区間全体（`git diff --shortstat e12259ba7 HEAD`）は 52 files / +3024 / -48 だが、内訳は dist×6 + self-install×4 の増幅、テスト、record である。
+
+### 患部が置かれている層
+
+| 層 | 患部 | 該当 Issue |
+| --- | --- | --- |
+| core 中立層（`packages/framework/core/tools/`） | `amadeus-lib.ts` / `amadeus-audit.ts` / `amadeus-learnings.ts` / `amadeus-election*.ts` 4本 / `amadeus-graph.ts` / `team-up.sh` | #1377, #1457, #1458, #1459, #1462, #1388 |
+| repo ローカル CI スクリプト（`scripts/`） | `mirror-distribution-benchmark-aggregate.ts` / `mirror-distribution-benchmark.ts` | #1489 |
+| 生成物（`dist/<harness>/` × 6、self-install `.claude/` `.codex/` `.cursor/` `.opencode/` × 4） | 上記 core 8ファイルの各 10 コピー（手編集禁止・再生成） | #1489 以外の6件 |
+
+**#1388 の配置は Issue 起票時点から移動している**: `scripts/team-up.sh` は observed に存在せず、`packages/framework/core/tools/team-up.sh`（1615行）が正本。この移動により配布対象（+10 コピー）になった。Issue 本文のパス・行番号はいずれも失効しており、更新が要る。
+
+### 消費側テストの配置
+
+| Issue | 既存の消費側テスト（修正時に触る想定） |
+| --- | --- |
+| #1489 | `tests/integration/t292-mirror-distribution-performance.integration.test.ts` |
+| #1457 | `tests/unit/t238-election-record.test.ts` / `tests/integration/t236-election-loop.integration.test.ts` |
+| #1377 | `tests/e2e/t07-audit-fork-merge.test.ts` / `tests/e2e/t54-workflow-audit-completeness.test.ts` |
+| #1459 | `tests/unit/t234-election-model.test.ts` / `tests/unit/t244-election-choice-resolution.test.ts` / `tests/integration/t244-election-tie-choice.integration.test.ts` |
+| #1462 | `tests/integration/t-formal-verif-plugin-stage-discovery.integration.test.ts` / `tests/integration/t-plugin-stage-discovery-performance.integration.test.ts`（fixture 追加先候補 `tests/fixtures/plugins/test-pro/`） |
+| #1458 | `tests/unit/t239-election-transport.test.ts` / `tests/integration/t240-election-transport.integration.test.ts` / `tests/integration/t236-election-loop.integration.test.ts` / `tests/e2e/t237-election-walking-skeleton.test.ts` |
+| #1388 | `tests/integration/t294-team-up-watcher-applicability.test.ts` / `tests/integration/t-team-up-watcher-arming.test.ts` / `tests/integration/t-team-up-codex-resume.serial.test.ts` / `tests/unit/t-team-up-codex-safety-wait.test.ts` |
+
+### 落ちる実証の注入面
+
+- #1462 は **dangling symlink による ENOENT 注入**が正当な手段（不在パスは `readdirSync` の列挙に載らず到達不能。cid:code-generation:bun-readfilesync-dir-platform-divergence の追補が規定する形状に一致）。
+- #1489 は**両側実測**が完成条件（単一 replica スパイクで赤くならない／真の退行で赤くなる）。注入量は実測 delta からの機械計算で決める（cid:code-generation:comparative-gate-injection-sizing）。
+- #1457 / #1459 / #1458 は、いずれも「現行コードで赤くなる」テストを先に固定してから修正する形が Issue 側に明記されている。
+
+## metrics サブシステムのコード配置（260726-metrics-visualization、履歴）
 
 測定 ref: observed `1c43438df`。file:line はすべて同 commit の実ファイル直読、件数は `grep -n` / `ls | wc -l` / `git ls-files` 出力からの転記。
 
@@ -90,8 +126,7 @@ integration 層は `AMADEUS_METRICS_ROOT` seam で実 FS を差し替える（ci
 
 **行番号シフトの注意**（cid:reverse-engineering:upstream-cite-reresolve-on-shift）: `resolveProjectDirFromHook` は前 intent 記録の `amadeus-lib.ts:247` から observed で **`:269`** へ移動している（+22）。以下の履歴節が引く `amadeus-lib.ts` の行番号は当該節の observed 断面で読むこと（cid:requirements-analysis:historical-section-cite-check-at-observed）。
 
-## worktree パス／ref 解決面のコード配置（260725-worktree-ref-fixes、履歴、Issue #1482 / #1481 / #1455）
-## solo standing grant 認可面のコード配置（260726-grant-scope-gate、現在、Issue #1497）
+## solo standing grant 認可面のコード配置（260726-grant-scope-gate、履歴、Issue #1497）
 
 測定 ref: observed `e12259ba7`（base `11f1ad61f`、距離 4）。file:line は同 commit の実ファイル直読、件数は `grep -n` / `wc -l` / `python3 -c json` 出力からの転記。
 
@@ -508,7 +543,6 @@ size 分類機構は**3層の floor モデル**で設計されている。(1) **
 
 **large 初宣言の意味**: t224 は repo 初の `// size: large` 宣言（V2 反証 grep で 0件を確認済み）。これまで large は dynamic floor が実測から導く「発見される」size でしかなく、作者が意図として明示する経路は理論上存在しても未使用だった。t224 の宣言はこの権威層の large 分岐を初めて実行し、「重いテストは重いと宣言する」idiom を medium 既習例（t207/t209 :2）に続けて large へ拡張する。将来 large テストの標準アノテーション位置（`// covers:` 直後の :2）の初例にもなる。
 
-
 ## §13 learn-candidate label 面の観測（intent 260716-s13-label-clarity、2026-07-16、履歴）
 
 bugfix intent（Issue #609 — §13 learn candidates の選択肢が内部 ID 単独表示になる）の diff-refresh 観測面。フォーカスは **docs / プロトコル prose のみ**（コード欠陥ではない）。出典は本 intent の `inception/reverse-engineering/scan-notes.md`（Developer scan、observed HEAD `e97fdb6fc658d4cd36d4c30fc460c5b7e70e8c75` 直読の file:line）。手法は diff-refresh（base=`6495e03a12d9e7149c2e80b59f171a90607a2d2c`、祖先・距離28、observed=`e97fdb6fc658d4cd36d4c30fc460c5b7e70e8c75`）。**フォーカス3面は区間28コミットで無変更、§13 仕様は現行で正しく規定済み**。
@@ -539,7 +573,6 @@ bugfix intent（Issue #609 — §13 learn candidates の選択肢が内部 ID �
 - **欠陥クラスの所在**: この不具合は決定的機構の欠落ではなく、正の規定（L960「label = candidate `summary` verbatim」）が既にありながら orchestrator(LLM) がそれを逸脱した一事例。ツール層（`amadeus-learnings.ts` surface）は L958 で「surfaced verbatim — no paraphrase」の JSON を出し、ラベル材料（`summary`/`context`）を欠かさず供給しているため、逸脱点はレンダリング層（LLM が JSON→AskUserQuestion option へ写す一手）に限局する。修正の設計対象は「機構」ではなく「prose 契約の遵守可能性」。
 - **否定例の設計上の役割**: 修正方針(a) が L960 に足す `❌ Persist c5 only` は、正の規定を反復するのではなく **既知の逸脱形（ID 単独ラベル）を名指しで禁止**する契約強化である。正の指示のみでは逸脱形が指示空間の外側に残り LLM が再現しうるが、否定例は逸脱形を契約の内側へ取り込んで閉じる。docs-only 修正が「決定的ガード不在（grep 0件）でも本 Issue のクローズ条件になりうる」根拠はここにある。
 - **配置の一意性契約**: 否定例は §13 learn-candidate の option label を規定する唯一の行（L960）にのみ置く。L19/L577 は post-selection capture（ユーザー選択結果の verbatim 記録）の別クラスタで、候補ラベルの**構築**規定ではないため否定例を重複配置しない（enumeration-completeness の結論＝配置は L960 単独）。後続 design は「否定例の配置箇所」を受け入れ基準に固定する際、この一意性（L960 のみ・L19/L577 除外）を明示すること。
-
 
 ## t05 並列フレーク観測面 — 260716-github-issue-912(2026-07-16、履歴)
 
@@ -579,7 +612,6 @@ Issue #912(t05 planted-failure ケースが高負荷ホストで `--parallel 4` 
 
 - E-L71(team norm、`3392f962a`/#913 で persist)=「fan-out 直後のフルスイート統合検証はホスト負荷収束を待つか並列度を落とす」は**運用手順**であって、テストコード側に「負荷収束待ち/並列度低減」を強制する **seam は現状不在**(上記 NONE FOUND が裏付け)。構造化余地: (a) 内側ランナー呼び出しの `--parallel` を環境変数で上書き可能にする seam(run() 経由)、(b) run-tests.ts の spawn(L653)に timeout オプションを配線し子の暴走を loud に打ち切る seam。いずれも現状は配線ゼロからの新設。
 
-
 ## parser/checkbox 欠陥面の観測（intent 260715-parser-checkbox-fixes、2026-07-16、履歴）
 
 bugfix intent（#1013 / #1015）の diff-refresh 観測面。出典は本 intent の `inception/reverse-engineering/scan-notes.md`（Developer scan、observed HEAD `6495e03a12d9e7149c2e80b59f171a90607a2d2c` 直読の file:line）。手法は diff-refresh（base=`cf3dc88b46a2b23bcfd71b1136632d1739cdd7e5`、祖先・距離65、observed=`6495e03a12d9e7149c2e80b59f171a90607a2d2c`）。**区間65コミットにフォーカス欠陥の修正は存在せず、両欠陥は observed に現存**。編集正本は `packages/framework/core/tools/`（`.claude/tools/*` は byte 同一 self-install コピー、`dist/<harness>/…` は build 出力）。
@@ -616,7 +648,6 @@ state→marker 文字列を手書き構築するサイトは2箇所: `amadeus-ut
   - #1015 = **parse⇔rebuild の6状態対称**: 読み手 `parseCheckboxes`（`amadeus-lib.ts:3395`、6状態を全復元）と書き手の再構築三項（3状態のみ）が非対称。正準 `CHECKBOX_MAP`（:60-67、6状態1正本）を rebuild 側でも唯一の写像源とし、ヘッダ凡例も正本テンプレ（:2748、6状態）へ一致させて対称を回復する。requirements/design は「parse が受理する全状態を rebuild が保存する」を検証可能な受け入れ基準に固定すべき。
   - #1013 = **stage 契約⇔parser の検証対称**: 入力側の stage 契約（`practices-discovery.md:101`「ALWAYS … format / One rule per line」）が要求する書式を、書き手 `parseRules` が出力側で検証しない非対称。契約プレフィックス検証を `parseRules` 側に置き、契約非接頭行を拒否/隔離して対称を回復する。design は「契約違反行が memory 層に着地しない」を受け入れ基準に固定すべき。
 
-
 ## harness port 開放性の観測面(intent 260715-opencode-cursor-harness、2026-07-16、履歴)
 
 opencode / Cursor harness port(Issue #626)のフォーカス面。出典は本 intent の `inception/reverse-engineering/scan-notes.md` および `re-scans/260715-opencode-cursor-harness.md`(file:line は observed HEAD `6a23b0ec` 直読)。diff-refresh base `cf3dc88`→observed `6a23b0ec`(距離65、祖先性実測済み)でフォーカス面のハーネス開放性契約は全て不変(下記温存判定参照)。
@@ -635,7 +666,6 @@ manifest 契約は `scripts/manifest-types.ts:79-122`(HarnessManifest 全12フ�
 
 open-set の外で「ハーネス集合そのもの」を閉じた列挙として持つファイル。本 intent フォーカス面で編集が要りうるのは計9ファイル(installer 5 + runtime 2 + migrate 1 + self-install 1)。
 > 追補(2026-07-16、requirements-analysis reviewer 指摘): installer 契約テストは2本(setup-harness.test.ts / setup-harness-parse.test.ts)で installer 必須は実ファイル5個(harness.ts / engine-layout.ts / reporter.ts / 契約テスト2本 — 旧記載の「5」は harness.ts の2行参照込みの誤計上で、実体は4個だった)、台帳総計は9ファイル。あわせて非破壊の閉じ列挙(`tests/unit/t156-memory-relocation.test.ts:149`、`tests/unit/t199-grilling-distribution.test.ts:33-40` — 新ハーネスを検査しないだけで壊れない)を第3分類として記録する。
-
 
 **installer(packages/setup)— 5ファイル必須**(未対応だと `install --harness opencode` が弾かれる。正しさに必須):
 1. `packages/setup/src/domain/harness.ts:9` `HarnessName` union type(`"claude"|"codex"|"kiro"|"kiro-ide"`)
