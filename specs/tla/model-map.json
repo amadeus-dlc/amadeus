@@ -15,7 +15,7 @@
     },
     {
       "implPath": "packages/framework/core/tools/amadeus-election-record.ts",
-      "sha256": "25ca91b8f7eee3b2131bb1752871dcade6b6a2af42a35c7add01ed542b6aa268"
+      "sha256": "0bcc5a15332d0beb915c87cf93b181739be8ec085de48a9ecd0b5b44907e5b3c"
     },
     {
       "implPath": "packages/framework/core/tools/amadeus-election-store.ts",
@@ -27,7 +27,7 @@
     },
     {
       "implPath": "packages/framework/core/tools/amadeus-election.ts",
-      "sha256": "158be024819e28036e5c18515be182232418fc4803e46c8143d6a3b0ddd1f2f3"
+      "sha256": "c1ee334eb6ae8f6668a437fc819bac8a7b48a006fe91d26d6dbd7de73f98c770"
     }
   ]
 }
