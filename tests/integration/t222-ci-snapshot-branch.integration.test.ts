@@ -80,6 +80,7 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(lintJob).toContain("bun run lint");
     expect(lintJob).toContain("bun tests/complexity-gate.ts --check");
     expect(contractJob).toContain("bun run distribution:check");
+    expect(testsJob).toContain("pip install lizard==1.23.0");
     expect(testsJob).toContain("bun run test:ci -- -P 4");
     expect(driftJob).toContain("needs: changes");
     expect(driftJob).toContain(
