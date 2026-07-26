@@ -22,9 +22,15 @@
 //   3. An older block present → replace: new block content lands, the user's
 //      own tables survive, and exactly one timestamped backup of the OLD
 //      bytes is made.
-//   4. dist/kimi absent → the merge step does not fire (mergeKimiHooks
-//      direct drive; through promoteSelfMain the branch is unreachable
-//      because buildExpected fails closed on a missing managed source dir).
+//   4. ATOMICITY: a malformed user config (unpaired managed-block marker)
+//      fails preflight BEFORE the repo transaction — exit 1, no repo file
+//      written, the malformed config left byte-identical. (Regression: the
+//      first cut ran the merge after the transaction committed, so this case
+//      left the repo promoted and the config broken — a partial apply.)
+//   5. A post-commit postApply failure keeps the repo promotion and reports
+//      the split precisely (orchestration contract, custom step drive).
+//   6. A post-commit kimi write failure (read-only home) exits 1 with the
+//      repo applied and the config byte-identical.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
@@ -38,7 +44,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { mergeKimiHooks, promoteSelfMain } from "../../scripts/promote-self.ts";
+import { promoteSelfMain } from "../../scripts/promote-self.ts";
 
 let root: string;
 let kimiHome: string;
@@ -145,13 +151,86 @@ describe("t299 promote-self kimi hooks merge (FR-1)", () => {
     expect(readFileSync(join(kimiHome, created[0] as string), "utf-8")).toBe(OLD_CONFIG);
   });
 
-  test("dist/kimi absent → the merge step does not fire", async () => {
-    const bare = mkdtempSync(join(tmpdir(), "t299-no-kimi-dist-"));
+  test("malformed config (unpaired marker) → preflight fails BEFORE the repo transaction: exit 1, repo untouched, config unchanged", async () => {
+    // Unpaired BEGIN marker — the domain's loud-fail class that must never be
+    // auto-repaired, and must never leave a half-applied promotion behind.
+    const malformed = '# >>> amadeus-kimi-hooks >>>\n[[hooks]]\nevent = "Stop"\n';
+    writeFileSync(configPath(), malformed);
+
+    expect(await promoteSelfMain(["--apply", "--no-build"], root)).toBe(1);
+    // Nothing was promoted: the repo transaction never ran.
+    expect(existsSync(join(root, ".claude/tools/a.txt"))).toBe(false);
+    expect(existsSync(join(root, ".kimi-code/f.txt"))).toBe(false);
+    // The malformed config is byte-identical — no repair, no backup.
+    expect(readFileSync(configPath(), "utf-8")).toBe(malformed);
+    expect(backups()).toEqual([]);
+  });
+
+  test("preflight loud-fail family: missing snippet / markerless snippet / unreadable config all abort BEFORE the repo transaction", async () => {
+    const assertAborted = async (): Promise<void> => {
+      expect(await promoteSelfMain(["--apply", "--no-build"], root)).toBe(1);
+      expect(existsSync(join(root, ".claude/tools/a.txt"))).toBe(false);
+    };
+
+    // (a) snippet master absent from the fixture
+    rmSync(join(root, "packages/framework/harness/kimi/hooks/amadeus-hooks.snippet.toml"));
+    await assertAborted();
+
+    // (b) snippet present but without the managed-block markers (corrupt distribution)
+    write("packages/framework/harness/kimi/hooks/amadeus-hooks.snippet.toml", "[[hooks]]\nevent = \"Stop\"\n");
+    await assertAborted();
+
+    // (c) config.toml exists as a DIRECTORY — readText fails with a
+    // non-notFound IoError (the loud-fail branch, distinct from absence).
+    // Restore the valid snippet first so the walk reaches the config read.
+    write("packages/framework/harness/kimi/hooks/amadeus-hooks.snippet.toml", SNIPPET);
+    mkdirSync(configPath(), { recursive: true });
+    await assertAborted();
+  });
+
+  test("post-commit step failure → exit 1 with the repo applied and a precise partial report (orchestration contract)", async () => {
+    // A postApply whose preflight passes but whose run fails must leave the
+    // repo promotion in place and surface exactly that split in the message.
+    const errors: string[] = [];
+    const originalError = console.error;
+    console.error = (msg: unknown) => {
+      errors.push(String(msg));
+    };
     try {
-      expect(await mergeKimiHooks(bare)).toBe(0);
-      expect(existsSync(configPath())).toBe(false);
+      const failingStep = {
+        name: "failing-step",
+        preflight: async () => 0,
+        run: async () => {
+          console.error(
+            "promote-self: repository update applied, but the failing-step merge failed: simulated",
+          );
+          return 1;
+        },
+      };
+      expect(await promoteSelfMain(["--apply", "--no-build"], root, undefined, failingStep)).toBe(1);
     } finally {
-      rmSync(bare, { recursive: true, force: true });
+      console.error = originalError;
     }
+    // The repo transaction DID commit — the failure is post-commit.
+    expect(existsSync(join(root, ".claude/tools/a.txt"))).toBe(true);
+    expect(errors.some((line) => line.includes("repository update applied"))).toBe(true);
+  });
+
+  test("kimi merge write failure after commit (read-only home) → exit 1, repo applied, config unchanged", async () => {
+    if (process.platform === "win32") return; // chmod 0555 does not make dirs read-only there
+    writeFileSync(configPath(), OLD_CONFIG);
+    const { chmodSync } = await import("node:fs");
+    // The writer is atomic temp+rename (directory-write bound), so the
+    // failure surface is the home DIRECTORY, not the file's mode bits.
+    chmodSync(kimiHome, 0o555);
+    try {
+      expect(await promoteSelfMain(["--apply", "--no-build"], root)).toBe(1);
+    } finally {
+      chmodSync(kimiHome, 0o755);
+    }
+    // Preflight passed (the config reads fine), the repo transaction
+    // committed, and only the post-commit write failed.
+    expect(existsSync(join(root, ".claude/tools/a.txt"))).toBe(true);
+    expect(readFileSync(configPath(), "utf-8")).toBe(OLD_CONFIG);
   });
 });

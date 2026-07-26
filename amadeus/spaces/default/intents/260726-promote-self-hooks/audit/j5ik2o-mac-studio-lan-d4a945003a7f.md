@@ -2178,3 +2178,12 @@
 **Details**: Scope: amadeus-bugfix, 7 stages completed
 
 ---
+
+## Worktree Discarded
+**Timestamp**: 2026-07-26T14:29:29Z
+**Event**: WORKTREE_DISCARDED
+**Bolt slug**: promote-self-hooks-wiring
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-promote-self-hooks-wiring
+**Reason**: agent-discard
+
+---
