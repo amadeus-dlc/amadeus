@@ -93,6 +93,49 @@ integration は `AMADEUS_METRICS_ROOT` seam で実 FS を差し替える。可�
 `scripts/metrics-*.ts` の3ファイルは `amadeus-lib` を import しない（各 `grep -c` = **0**）ため、上記いずれとも依存関係を持たない。
 
 ## worktree パス／ref 解決コンポーネント（260725-worktree-ref-fixes、履歴、Issue #1482 / #1481 / #1455）
+## solo standing grant 認可コンポーネント（260726-grant-scope-gate、現在、Issue #1497）
+
+測定 ref: observed `e12259ba7`（base `11f1ad61f`、距離 4）。所在・行数はすべて同 commit の実ファイル直読（`wc -l` / `grep -n` 出力からの転記）。
+
+### 新規コンポーネント（PR #1483 で導入）
+
+| コンポーネント | 所在 | 行数 | 責務 | 所有境界 |
+| --- | --- | --- | --- | --- |
+| `amadeus-grant-authorization` | `packages/framework/core/tools/amadeus-grant-authorization.ts` | 876 | solo モードの常任グラント台帳スキャン・検証・route receipt 発行・approval authority 分類 | core 中立層。`amadeus-lib.ts` から `standingGrantSatisfiesGate`（`:16`）等を import する消費側 |
+| `amadeus-presence-reservation` | `packages/framework/core/tools/amadeus-presence-reservation.ts` | 512 | presence 予約（人間承認の先取り確保）の管理 | core 中立層 |
+
+`amadeus-grant-authorization.ts` の主要関数（すべて同ファイル内、observed 直読）:
+
+| 関数 | 行 | 役割 |
+| --- | --- | --- |
+| `validateGrant` | `:318-340` | グラント単体の妥当性判定。`:336` で `standingGrantSatisfiesGate` を呼び、false なら `gate-out-of-scope` |
+| `selectBestGrant` | `:352-388` | 台帳から最適グラントを選択 |
+| `findSoloStandingGrant` | `:389-410` | solo 経路のグラント探索エントリ（export） |
+| `validateGrantById` | `:427-444` | ID 指定検証 |
+| `routeSoloStandingGrantDirective` | `:739-800` | directive 差し替えと `GATE_AUTHORIZATION_SELECTED` receipt append。`:762` で grant null なら directive 無変更返却、`:776` で receipt 発行 |
+
+### 既存コンポーネントの増分と患部
+
+| コンポーネント | 区間増分 | 本 intent での位置づけ |
+| --- | --- | --- |
+| `amadeus-lib.ts` | `+160` | **患部所有**。`standingGrantSatisfiesGate :3985-4017` / `evaluateStandingGrantGateEligibility :3951-3969` / `StandingGrant.parse :3774-3816` / `SKELETON_ON_SCOPES :3896-3904`（`amadeus-feature` は `:3900`）/ `getField :4903-4914` |
+| `amadeus-state.ts` | `+540` | 発行 verb `grant-standing-delegation` / `revoke-standing-delegation`（`:732-737`）、team mode 呼び出し元 `:2470`・`:3269`、approve 側 receipt 解決 `:2985-3040`、`printAwaitApproval :3198-3207` |
+| `amadeus-orchestrate.ts` | `+188` | `routeMainWorkflowDirective :1597`（solo route 入口）、受け側 `:3442-3478`、plugin opt-in 判定 `:2796` |
+| `amadeus-directive.ts` | `+168` | directive 契約面 |
+| `amadeus-audit.ts` | `+8` | `:850-854` が汎用 CLI からの `GRANT_ISSUED` 手動 mint を拒否 |
+
+### グラント系テストコンポーネント
+
+| ファイル | 位置づけ |
+| --- | --- |
+| `tests/harness/solo-gate-fixture.ts`（341 行） | `:50` で `.codex/tools/data/stage-graph.json`（self-install コピー = 実 graph）を読む唯一のグラント系ハーネス。ただし state fixture は `tests/fixtures/state-mid-inception.md:6` = `Scope: bugfix`（stock）、グラントは `Includes Phase Boundary: true`（`:116`）で、欠陥が現れない組合せ |
+| `tests/harness/git-sha.ts`（36 行） | PR #1493 で新設 |
+| `t-solo-gate-transaction{,-carrier,-prefix,-report,-seam}.test.ts` | integration 計 2,272 行 |
+| `t-solo-standing-grant-{domain,harness,opencode-mint}.test.ts` | domain / harness / mint 面 |
+| `unit/t-solo-gate-transaction.test.ts` / `unit/t-solo-standing-grant-domain.test.ts` | unit 面 |
+| `t-standing-grant.test.ts`（既存 `+135`） | `:221-253` がゲート分類を検証するが scope は `"feature"` 固定（`:222`）、`:889-923` の skeleton 面も feature / bugfix のみ |
+
+## worktree パス／ref 解決コンポーネント（260725-worktree-ref-fixes、履歴: 2026-07-26、Issue #1482 / #1481 / #1455）
 
 測定 ref: observed `11f1ad61f`。所在はすべて同 commit の実ファイル直読による。
 

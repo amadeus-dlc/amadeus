@@ -3968,8 +3968,27 @@ export function evaluateStandingGrantGateEligibility(
   return { kind: "eligible" };
 }
 
+// The EXECUTE/SKIP row a workflow scope claims, or null when the scope cannot
+// be resolved. Same source the engine's own walk uses (loadScopeMapping →
+// compiled scope-grid), so the grant classifier and `next`/`advance` can never
+// disagree about which stages a scope runs. Composed scopes (amadeus-feature,
+// amadeus-bugfix, …) live ONLY in the grid — stage frontmatter carries the
+// stock vocabulary — which is why stage.scopes must never be read here (#1497).
+// FAIL-CLOSED: an unreadable grid, a missing scopes dir or an unknown scope
+// yields null and the caller then refuses to cover the gate (the human-approval
+// fallback), never a fatal error path — a data outage must not auto-approve.
+function scopeStageActions(scope: string): Record<string, "EXECUTE" | "SKIP"> | null {
+  if (scope === "") return null;
+  try {
+    return loadScopeMapping()[scope]?.stages ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // Decide whether a valid standing grant covers THIS gate. Single classifying
-// function:
+// function. "In scope" is the scope's compiled EXECUTE row (scopeStageActions
+// above); an unresolvable scope is not covered at all.
 //   (a) phase-boundary gate — the slug's phase differs from the next in-scope
 //       stage's phase, OR there is no next stage (final) — is covered ONLY when
 //       the grant opted in via includesPhaseBoundary.
@@ -3980,6 +3999,18 @@ export function evaluateStandingGrantGateEligibility(
 //       scope. Only an explicit "off" clears the exclusion — a human must see
 //       the skeleton before the remaining Bolts run.
 //   (c) any other ordinary stage gate is covered (true).
+// The per-unit axis is pinned to false/false, and that is SAFE rather than
+// unexamined (#1497 FR-3, measured): an intermediate per-unit iteration never
+// reaches this predicate. emitPerUnitRunStage stamps gate:false on every
+// not-yet-covered unit and emits it directly, bypassing the grant router; the
+// router itself returns untouched directives when gate !== true, so no route
+// receipt is minted; the solo grant-backed approve path requires exactly that
+// receipt, and approveUnderLock additionally requires the stage checkbox to sit
+// at awaiting-approval, which only a gate:true directive's gate-start produces.
+// The single per-unit directive that DOES carry a gate is the all-covered final
+// one, and for a final gate false/false and true/true are equivalent by
+// construction of evaluateStandingGrantGateEligibility (the per-unit-incomplete
+// branch requires isPerUnitStage && !isPerUnitFinalGate).
 // stateContent supplies Scope + Skeleton Stance; `graph` is the loaded stage
 // graph, passed in so the caller controls the read.
 export function standingGrantSatisfiesGate(
@@ -3989,10 +4020,11 @@ export function standingGrantSatisfiesGate(
   graph: StageEntry[],
 ): boolean {
   const scope = getField(stateContent, "Scope") ?? "";
+  const actions = scopeStageActions(scope);
+  if (actions === null) return false;
   const currentIndex = graph.findIndex((stage) => stage.slug === slug);
   const current = currentIndex < 0 ? null : graph[currentIndex];
-  const inScope = (stage: StageEntry): boolean =>
-    stage.scopes === undefined || stage.scopes.includes(scope);
+  const inScope = (stage: StageEntry): boolean => actions[stage.slug] === "EXECUTE";
   const next = currentIndex < 0
     ? null
     : graph.slice(currentIndex + 1).find(inScope) ?? null;

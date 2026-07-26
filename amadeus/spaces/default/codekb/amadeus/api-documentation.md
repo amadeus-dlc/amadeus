@@ -2,6 +2,31 @@
 
 > **2026-07-26（intent `260726-metrics-visualization`、amadeus-feature / Standard）: 変更なし、確認済み（測定 ref: observed `1c43438df`、base `11f1ad61f`、距離 5）。** 区間内でユーザー可視の API/CLI 公開契約に変化なし（`scripts/` と `.github/` の diff は 0 ファイル）。**ただし本 intent は新規の公開契約を追加しうる**: (1) 可視化 CLI の引数体系 — 既存 `metrics-timeseries.ts` の `parseArgs` `:171`（`--collector` / `--last`）と `metrics-snapshot.ts:169`（`--write` / `--check`）、`metrics-retention.ts` の `--apply` が既習様式で、exit コード規約は usage=2 / 実行時失敗=1 / 成功=0 (2) `metrics-timeseries.ts` の module 公開面 — `formatValue` `:117-119` の export 昇格が設計判断点（cid:application-design:dual-key-consumer-inventory の対象）(3) `package.json` の `scripts` エントリ — 全 15 中 metrics 系 **0** のため、実行導線を足すなら新規公開契約になる。**なお `metrics-timeseries.ts:3-4` の「must not import any fs write API (AC-1c; grep-checkable)」は grep 検査可能な内部契約であり、可視化を同モジュールへ足す設計はこれを破る**（詳細は `architecture.md` / `code-quality-assessment.md` の同 intent 節）。
 
+> **2026-07-26（intent `260726-grant-scope-gate`、[#1497](https://github.com/amadeus-dlc/amadeus/issues/1497)、amadeus-bugfix / Brownfield）: 公開契約に追加あり（測定 ref: observed `e12259ba7`、base `11f1ad61f`、距離 4）。** 詳細は下の同 intent 節。
+
+## solo standing grant の公開契約（260726-grant-scope-gate、現在、Issue #1497）
+
+測定 ref: observed `e12259ba7`。file:line は同 commit の実ファイル直読。
+
+### 区間で追加された CLI verb
+
+[PR #1483](https://github.com/amadeus-dlc/amadeus/pull/1483) が `amadeus-state.ts` の subcommand 集合へ 2 verb を追加した（`:732-737`、有効一覧は `:782` のエラーメッセージが列挙）:
+
+| verb | 引数（`amadeus-state.ts:3490` の使用法コメント） |
+| --- | --- |
+| `grant-standing-delegation` | `[--scope stage-gates] [--ttl-ms <n>] [--include-phase-boundary] [--user-input <text>]` |
+| `revoke-standing-delegation` | — |
+
+`--scope` の値 `stage-gates` は **グラント自身の適用面を表す固定語彙**（`StandingGrant.parse`、`amadeus-lib.ts:3774-3816` の `:3790`）であり、**ワークフローの scope（`amadeus-bugfix` 等）とは別物**である。#1497 が扱うのは後者の解決であり、この CLI 引数ではない。
+
+### 監査イベント契約
+
+`core/knowledge/amadeus-shared/audit-format.md`（区間 `+13`）に 3 イベントが追加された: `GRANT_ISSUED` / `GRANT_REVOKED` / `GATE_AUTHORIZATION_SELECTED`。前 2 者は**汎用 audit CLI からの手動 mint が拒否される**（`amadeus-audit.ts:850-854`、コメント verbatim: 「a fabricated GRANT_ISSUED would open every stage gate for its TTL, so the general audit CLI must refuse to mint them」）。書けるのは実 HUMAN_TURN に裏付けられた `grant-standing-delegation` / `revoke-standing-delegation` のみである。
+
+### directive 契約への影響
+
+グラントがゲートを覆う場合、engine は directive を差し替えて `GATE_AUTHORIZATION_SELECTED` receipt（`Route Id` フィールド付き、`amadeus-grant-authorization.ts:776`）を append する。覆わない場合は **directive を無変更で返す**（`:762`）— すなわち directive 契約上は「グラントが存在しない場合」と区別がつかない。approve 側で受理できない場合は `printAwaitApproval`（`amadeus-state.ts:3198`）が `reason: "standing-grant-no-longer-authorizes"` を返す。**#1497 の修正はこの契約面（無変更返却 / await-approval reason）を変えず、`standingGrantSatisfiesGate` の内部解決方式のみを対象とする**のが現時点の観測に基づく境界である。
+
 > **2026-07-26（intent `260725-worktree-ref-fixes`、[#1482](https://github.com/amadeus-dlc/amadeus/issues/1482) / [#1481](https://github.com/amadeus-dlc/amadeus/issues/1481) / [#1455](https://github.com/amadeus-dlc/amadeus/issues/1455)、amadeus-bugfix / Minimal）: 変更なし、確認済み（測定 ref: observed `11f1ad61f`、base `ec624022f`、距離 10）。** ユーザー可視の API/CLI 公開契約に変化なし。患部はいずれも**内部解決関数とテストヘルパー**である — `resolveProjectDirFromHook`（`amadeus-lib.ts:247`）は export されているが framework 内部の hook 専用シームであり CLI 契約面には現れない。`currentGitSha` はテストファイル内のローカル関数で公開契約ではない。**ただし #1482 の修正が rung 順序に及ぶ場合、`tests/unit/t202-hook-project-dir-worktree-marker.test.ts:105` が固定する「`CLAUDE_PROJECT_DIR` が marker rung に優越する」という内部契約の変更を伴う** — 公開 API ではないが、テストで明文化された契約であるため要件段での裁定を要する。
 
 > **2026-07-25（intent `260725-teamup-launch-hardening`、[#1476](https://github.com/amadeus-dlc/amadeus/issues/1476) / [#1478](https://github.com/amadeus-dlc/amadeus/issues/1478)、amadeus-feature / Standard）: 変更なし、確認済み（測定 ref: observed `4a0f91ad0`、base `ec624022f`、距離 9）。** ユーザー可視の API/CLI 公開契約に変化なし。`team-up.sh` の CLI フラグ・exit code の意味づけは PR #1477 でも不変（`watcher_status` は検証がスキップされる場合 0 のまま）。関与するのは内部起動フロー（検証 → `mux_attach` の順序、worktree 作成ループ）と、repo 外の外部 agmsg CLI 契約（`watch.sh` の位置引数、ready sentinel path、`delivery.sh` の mode）の**消費**のみ。**なお #1476 は stderr へ出る advisory 文言（team-up.sh:1099）を消滅させるため、運用者可視の出力面には変化が生じる。**

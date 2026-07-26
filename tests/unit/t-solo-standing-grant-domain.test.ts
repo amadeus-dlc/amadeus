@@ -29,6 +29,9 @@ const ORDINARY_STAGE = "application-design";
 const HUMAN_TS = "2026-07-25T00:00:00.000Z";
 const SHARD = "fixture-clone.md";
 
+// Stage frontmatter carries the STOCK scope vocabulary only — composed scopes
+// (amadeus-feature, …) live in the compiled scope-grid — so the fixture graph
+// must not invent a composed name here (#1497 FR-4b).
 function stage(slug: string, number: string, phase: string): StageEntry {
   return {
     slug,
@@ -39,7 +42,7 @@ function stage(slug: string, number: string, phase: string): StageEntry {
     lead_agent: "test",
     support_agents: [],
     mode: "inline",
-    scopes: ["amadeus-feature"],
+    scopes: ["feature"],
   };
 }
 

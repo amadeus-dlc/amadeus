@@ -17,6 +17,23 @@
 - Delivery boundary: 本 scan は codekb の差分更新のみを成果物とし、実装コード・intent state・memory・`intents.json`・生成配布物には一切書き込まない。可視化機能の方式（挿入点、出力形式、CI 配線）は後続の requirements-analysis 以降で確定する。
 
 ## 実行メタデータ（履歴: 260725-worktree-ref-fixes）
+## 実行メタデータ（履歴: 260726-grant-scope-gate）
+
+- Date: `2026-07-26`
+- Base commit: `11f1ad61f5ea4942332da5bd6e3e433c44aa4cab`（前 intent `260725-worktree-ref-fixes` の observed。`git merge-base --is-ancestor 11f1ad61f e12259ba7` exit 0 = 祖先、`git rev-list --count 11f1ad61f..e12259ba7` = **4**。cid:reverse-engineering:rescan-base-ancestry）
+- Observed commit: `e12259ba78b8c56bf3572c9bfd44a7bdf84d681c`（= 現 HEAD、`git rev-parse HEAD` 実測。worktree `.claude/worktrees/1497-standing-grant-scope-gate`）
+- 区間規模: **452 files changed, +68,457 / -2,792**（測定 ref: observed `e12259ba7`）。大半は dist×6 + self-install×4 の生成物増幅で、正本の実装面は 2 コミットに閉じる。
+- 区間の内訳（`git log --reverse 11f1ad61f..e12259ba7` 全4件）: `bbd74a942`（record のみ）/ `77d871d57`（[PR #1483](https://github.com/amadeus-dlc/amadeus/pull/1483) solo standing grants）/ `272f4bd58`（record のみ）/ `e12259ba7`（[PR #1493](https://github.com/amadeus-dlc/amadeus/pull/1493) worktree パス／ref 修正）
+- Scope: `amadeus-bugfix`、Brownfield、単一 repo `amadeus`
+- Focus: [Issue #1497](https://github.com/amadeus-dlc/amadeus/issues/1497) — standing grant の scope 解決。`standingGrantSatisfiesGate`（`amadeus-lib.ts:3985-4017`）が composed scope（`amadeus-*`）を解決できない `stage.scopes` を直読する構造欠陥。
+- 差分リフレッシュ（cid:reverse-engineering:c1）: フルスキャン不実施。区間4コミットのうち実装面 2 件を直読し、患部機構は **PR #1483 で新規に持ち込まれた面**として精査した。
+- 主要な確定事項: (A) composed scope では `inScope()` が全 stage で false → `crossesPhaseBoundary` 恒真 → 既定グラントが全ゲート ineligible（#1497 本体、無音 no-op） (B) 同じ `inScope` により `isFirstConstructionGate` が恒偽 → **walking-skeleton 除外が無音不発**（未報告、project.md Forbidden / Mandated への現在進行の違反）。A と B は**単一の根本原因から出る 2 症状**。
+- 測定 ref: 本節および本 scan で更新した全成果物の file:line・件数は observed `e12259ba7` の実ファイル直読、`grep -n` / `wc -l` / `find` 出力、および `python3 -c json` による `stage-graph.json`（32 stages / `scopes` 語彙 10 / キー欠落 0）・`scope-grid.json`（15 scope キー）・`.coverage-patch-allowlist.json`（`amadeus-lib.ts` 行ピン 4 件）の直接読取からの転記（cid:requirements-analysis:numbers-from-command-output-only）。
+- 更新した成果物（9件）: `reverse-engineering-timestamp.md`（本ファイル）/ `architecture.md` / `component-inventory.md` / `code-structure.md` / `code-quality-assessment.md`（以上は本 intent の新節を追加）/ `api-documentation.md` / `dependencies.md`（区間の新規公開契約・新規エッジを最小追記）/ `business-overview.md` / `technology-stack.md`（冒頭ブロックのみ）。加えて per-intent 記録 `re-scans/260726-grant-scope-gate.md` を新規作成。旧「現在」マーカー（`260725-worktree-ref-fixes`）は本ファイルおよび body 4 成果物の H2 見出しで履歴ラベルへ降格した（cid:reverse-engineering:c3-relabel。`grep -rn "、現在、\|（現在:"` の残存ヒットが本 intent `260726-grant-scope-gate` の節のみであることを機械確認）。
+- Sensors: RE ステージが宣言する3センサー（required-sections / upstream-coverage / answer-evidence）は、codekb 出力パス `amadeus/spaces/default/codekb/amadeus/**` が各 manifest の filter（`**/{amadeus-docs,intents}/**` および `**/*-questions.md`）に**構造的に不適合**のため発火不能（cid:reverse-engineering:re-sensors-codekb-filter-mismatch、cid:reverse-engineering:c3-codekb-sensor）。**センサー成功として扱わず**、代替として (a) 更新9成果物すべてに `grep -c '^## '` を実行し H2 ≥ 2 を機械確認 (b) 上流入力（Developer スキャン結果）の参照を各成果物本文で直接検証 の2点を実施した。
+- Delivery boundary: 本 scan は codekb の差分更新と per-intent re-scan 記録のみを成果物とし、患部コードへの修正、intent record / state / audit / 生成配布物への書込は一切行わない。#1497 の修正方式（`inScope` の解決方式差し替え、fixture 是正、per-unit 軸の扱い）は後続の requirements-analysis 以降で確定する。
+
+## 実行メタデータ（履歴: 260725-worktree-ref-fixes）
 
 - Date: `2026-07-26`
 - Base commit: `ec624022ff65cc8b3912001f768bd66ec41a0e39`（前 intent `260725-teamup-attach-latency` の observed。`git merge-base --is-ancestor ec624022f 11f1ad61f` exit 0 = 祖先、`git rev-list --count ec624022f..11f1ad61f` = **10**。cid:reverse-engineering:rescan-base-ancestry）
