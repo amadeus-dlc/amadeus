@@ -1375,6 +1375,18 @@ export function relativeRecordDir(
   return `amadeus/spaces/${sp}/intents/${slug}`;
 }
 
+// The KNOWN SET of stages whose artifacts live in the durable, space-level
+// code knowledge base (`amadeus/spaces/<space>/codekb/<repo>/`) rather than under
+// a per-intent record dir. Keyed on the slug ALONE — deliberately NOT a stage
+// frontmatter marker: amadeus-stage-schema.ts OPTIONAL_FIELDS omits `codekb`, so a
+// `codekb: true` field would trip the schema's unknown-key rule and fail the
+// stage compile. reverse-engineering is the sole member today (it builds the
+// brownfield code understanding the whole space reuses); a future codekb stage
+// joins by adding its slug here, no schema change. Single source of truth for
+// amadeus-orchestrate (artifact placement), amadeus-state (artifact guard), and
+// amadeus-sensor (consumes resolution).
+export const KNOWN_CODEKB_STAGES: ReadonlySet<string> = new Set(["reverse-engineering"]);
+
 // `amadeus/spaces/<space>/codekb/<repo>/` — the durable per-repo code
 // knowledge base, a space-level sibling of memory/knowledge/intents (vision
 // §Spaces; committed glob amadeus/spaces/*/codekb/**). NOT per-intent: it is keyed

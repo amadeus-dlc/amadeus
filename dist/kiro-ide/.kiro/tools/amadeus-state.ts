@@ -39,6 +39,7 @@ import {
   humanPresenceGuardDisabled,
   isAutonomousMode,
   isoTimestamp,
+  KNOWN_CODEKB_STAGES,
   loadScopeMapping,
   listIntents,
   guardIntentOperation,
@@ -364,15 +365,6 @@ export function advanceDirectionCheck(
 // its temporal dead zone when an approve/advance dispatch calls the guard.
 const HARNESS_DOC_DIRS = new Set(["amadeus", ".git", ...KNOWN_HARNESS_DIRS]);
 
-// The codekb stages - their produces live in the space-level codekb dir, keyed
-// by repo, NOT under a per-intent record dir. Mirrors KNOWN_CODEKB_STAGES in
-// amadeus-orchestrate.ts (kept local because that set is not exported and the
-// guard has no engine context at approve/advance time). reverse-engineering is
-// the sole member; a future codekb stage joins both sets. Declared at module
-// top (not beside verifyStageArtifacts) for the same TDZ reason as
-// HARNESS_DOC_DIRS: the command dispatch runs at top level, so a const declared
-// lower in the file would be in its temporal dead zone when the guard runs.
-const KNOWN_CODEKB_STAGES: ReadonlySet<string> = new Set(["reverse-engineering"]);
 const REVISION_EVIDENCE_EVENTS = new Set<RevisionEvidenceEvent["kind"]>([
   "STAGE_STARTED",
   "STAGE_AWAITING_APPROVAL",
@@ -1225,8 +1217,6 @@ export function handleCount(args: string[]): void {
 //
 // Bypass: AMADEUS_SKIP_ARTIFACT_GUARD=1 (env, set by the test runner for synthetic
 // tiers that drive transitions against bare fixtures).
-// (KNOWN_CODEKB_STAGES is declared at module top alongside HARNESS_DOC_DIRS to
-// dodge the TDZ - the dispatch that calls this guard runs at module load.)
 
 function artifactGuardDisabled(): boolean {
   return process.env.AMADEUS_SKIP_ARTIFACT_GUARD === "1";

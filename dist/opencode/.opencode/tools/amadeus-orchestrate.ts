@@ -102,6 +102,7 @@ import {
   activeIntent,
   type CheckboxLine,
   codekbRepoName,
+  KNOWN_CODEKB_STAGES,
   classifyHelpIntent,
   classifyMigrationRequest,
   type MigrationRequest,
@@ -1288,19 +1289,10 @@ function isPerUnit(node: GraphStage): boolean {
   return node.for_each === PER_UNIT_FOR_EACH || KNOWN_PER_UNIT_STAGES.has(node.slug);
 }
 
-// The KNOWN SET of stages whose artifacts live in the durable, space-level
-// code knowledge base (`amadeus/spaces/<space>/codekb/<repo>/`) rather than under
-// a per-intent record dir. Keyed on the slug ALONE — deliberately NOT a stage
-// frontmatter marker: amadeus-stage-schema.ts OPTIONAL_FIELDS omits `codekb`, so a
-// `codekb: true` field would trip the schema's unknown-key rule and fail the
-// stage compile. reverse-engineering is the sole member today (it builds the
-// brownfield code understanding the whole space reuses); a future codekb stage
-// joins by adding its slug here, no schema change.
-const KNOWN_CODEKB_STAGES: ReadonlySet<string> = new Set(["reverse-engineering"]);
-
-// True when the node's artifacts belong in the space-level codekb (see set
-// above). Pure predicate over the slug — the per-repo/per-space placement is
-// resolved by the CodekbCtx threaded into resolveArtifactPath.
+// True when the node's artifacts belong in the space-level codekb (see
+// KNOWN_CODEKB_STAGES in amadeus-lib.ts). Pure predicate over the slug — the
+// per-repo/per-space placement is resolved by the CodekbCtx threaded into
+// resolveArtifactPath.
 function isCodekb(node: GraphStage): boolean {
   return KNOWN_CODEKB_STAGES.has(node.slug);
 }
