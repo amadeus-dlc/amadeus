@@ -58,6 +58,7 @@ import { renderOnboarding } from "./onboarding.ts";
 import { substituteToken, transform } from "./harness-transform.ts";
 import {
   buildPluginBundle,
+  claudeInstallArtifacts,
   discoverPluginSources,
   validatePluginSources,
 } from "./plugin-projection.ts";
@@ -790,8 +791,14 @@ export function checkHarness(name: string): string[] {
 // Expected bundle as dist-root-relative POSIX path → bytes.
 function neutralBundleExpected(): Map<string, Buffer> {
   const expected = new Map<string, Buffer>();
-  for (const plugin of repoPlugins())
+  for (const plugin of repoPlugins()) {
+    // Verbatim neutral bundle at plugins/<name>/.
     for (const a of buildPluginBundle(plugin)) expected.set(a.relativePath, a.bytes);
+    // Claude install bundle at plugins/<name>/claude/ (C3 claude face, U2). At
+    // zero plugins this loop never runs, so dist/plugins/ stays absent.
+    const prefix = `plugins/${plugin.directoryName}/claude`;
+    for (const a of claudeInstallArtifacts(plugin)) expected.set(`${prefix}/${a.relativePath}`, a.bytes);
+  }
   return expected;
 }
 

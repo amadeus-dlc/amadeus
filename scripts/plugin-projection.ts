@@ -21,6 +21,7 @@
 // in-memory maps, so a unit test drives every branch in-process (bun --coverage
 // does not instrument spawned children).
 
+import { existsSync, lstatSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, posix, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { HarnessManifest } from "./manifest-types.ts";
@@ -281,6 +282,91 @@ function loadHarnessManifest(harness: PackageHarness): HarnessManifest {
 export function buildPluginProjection(plugin: PluginSource, harness: PackageHarness): ProjectionResult {
   const m = loadHarnessManifest(harness);
   const artifacts = projectPluginArtifacts(plugin, harness, m.harnessDir, m.rulesRename);
+  return { harness, plugin: plugin.directoryName, artifacts };
+}
+
+// ---------------------------------------------------------------------------
+// Claude install bundle (C3 claude face, U2). The installable artifact a user
+// drops into a Claude Code host: a `.claude-plugin/plugin.json` marketplace
+// manifest, a `hooks/hooks.json` SessionStart snippet (auto-compose), and the
+// claude-transformed `plugins/<name>/` content. Placed in the neutral bundle at
+// dist/plugins/<name>/claude/ (kept out of the compile-visible harness tree so
+// the shipped 0-plugin stage graph stays byte-identical). Other harness faces
+// are U3 — only claude is implemented here.
+// ---------------------------------------------------------------------------
+
+// The Claude Code marketplace manifest. Deterministic and minimal — derived from
+// the plugin identity only (the amadeus authoring manifest carries no version or
+// description). Two-space-indented JSON with a trailing newline.
+export function claudeMarketplaceManifest(name: string): string {
+  return `${JSON.stringify({ name, version: "0.0.0", description: `Amadeus plugin: ${name}` }, null, 2)}\n`;
+}
+
+// The SessionStart hook snippet a user merges into their Claude Code settings to
+// auto-compose (C4). `|| true` keeps a hook failure a non-blocking stderr warning
+// (BR-U2-4 fail-loud/continue). Harness-dir substituted for claude (.claude).
+export function claudeHooksSnippet(): string {
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: shell variable in the hook command string, not a JS template.
+  const command =
+    'bun "${CLAUDE_PROJECT_DIR:-.}/.claude/tools/amadeus-plugin.ts" compose --if-stale || true';
+  const snippet = {
+    hooks: {
+      SessionStart: [{ matcher: "", hooks: [{ type: "command", command }] }],
+    },
+  };
+  return `${JSON.stringify(snippet, null, 2)}\n`;
+}
+
+// Pure builder: the claude install bundle artifacts, relative to the install
+// root. Sorted by path; deterministic given the source. Zero plugins → this is
+// simply never called (the caller iterates repoPlugins()).
+export function claudeInstallArtifacts(plugin: PluginSource): readonly ProjectedArtifact[] {
+  const manifestSource = join(plugin.sourceRoot, PLUGIN_MANIFEST);
+  const generated = (relativePath: string, text: string): ProjectedArtifact => ({
+    owner: plugin.directoryName,
+    harness: "claude",
+    relativePath,
+    bytes: Buffer.from(text, "utf-8"),
+    sourcePath: manifestSource,
+  });
+  const content = buildPluginProjection(plugin, "claude").artifacts; // plugins/<name>/<rel>, claude-transformed
+  return [
+    generated(".claude-plugin/plugin.json", claudeMarketplaceManifest(plugin.directoryName)),
+    generated("hooks/hooks.json", claudeHooksSnippet()),
+    ...content,
+  ].sort((x, y) => cmpStr(x.relativePath, y.relativePath));
+}
+
+// Reject an unsafe projection output dir before any write (ADR-5 claude minimal):
+// a symlink, a file, or a pre-existing NON-empty directory that is not a prior
+// projection of this bundle. The full rejection set (FOREIGN markers, per-harness
+// ownership) is U3.
+function assertSafeOutDir(outDir: string): void {
+  if (!existsSync(outDir)) return;
+  const st = lstatSync(outDir);
+  if (st.isSymbolicLink()) throw new Error(`unsafe projection outDir (symlink): ${outDir}`);
+  if (!st.isDirectory()) throw new Error(`unsafe projection outDir (not a directory): ${outDir}`);
+  if (readdirSync(outDir).length > 0) throw new Error(`unsafe projection outDir (non-empty): ${outDir}`);
+}
+
+// Public seam (C3): project one plugin for `harness` into `outDir`, writing the
+// install bundle after the plan-stage output-safety check. U2 implements claude
+// only; other faces are U3.
+export function projectPluginForHarness(
+  plugin: PluginSource,
+  harness: PackageHarness,
+  outDir: string,
+): ProjectionResult {
+  if (harness !== "claude") {
+    throw new Error(`projectPluginForHarness: only "claude" is implemented in U2 (got "${harness}"); other faces are U3`);
+  }
+  assertSafeOutDir(outDir);
+  const artifacts = claudeInstallArtifacts(plugin);
+  for (const a of artifacts) {
+    const dest = join(outDir, ...a.relativePath.split("/"));
+    mkdirSync(dirname(dest), { recursive: true });
+    writeFileSync(dest, a.bytes);
+  }
   return { harness, plugin: plugin.directoryName, artifacts };
 }
 
