@@ -1,6 +1,23 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260726-metrics-visualization）
+## 実行メタデータ（現在: 260726-crossreviewed-bug-batch）
+
+- Date: `2026-07-26`
+- Base commit: `e12259ba78b8c56bf3572c9bfd44a7bdf84d681c`（前 intent `260726-grant-scope-gate` の observed。`git merge-base --is-ancestor e12259ba7 HEAD` **exit 0 = 祖先**、`git rev-list --count e12259ba7..HEAD` = **2**。cid:reverse-engineering:rescan-base-ancestry）
+- Observed commit: `1673c433209c74820881c75a0816bbce3fb2d512`（= 現 HEAD、`git rev-parse HEAD` 実測。worktree ブランチ `worktree-bugfix`）
+- 区間規模: `git diff --shortstat e12259ba7 HEAD` = **52 files changed, 3024 insertions(+), 48 deletions(-)**（測定 ref: observed `1673c4332`）。うち正本（`packages/framework/core/`）の実装変更は `git diff --stat e12259ba7 HEAD -- packages/framework/core/` = **`amadeus-lib.ts` 1ファイル、35 insertions(+) / 3 deletions(-)** のみで、残りは dist×6 + self-install×4 の生成物増幅・テスト・record である。
+- 区間の内訳（`git log --oneline e12259ba7..HEAD` 全2件）: `10d8bcfbb`（[PR #1499](https://github.com/amadeus-dlc/amadeus/pull/1499) = [Issue #1497](https://github.com/amadeus-dlc/amadeus/issues/1497) standing grant の gate スコープ判定を scope-grid 由来解決へ修正）/ `1673c4332`（record snapshot のみ、コード面の変更なし）
+- Scope: `amadeus-bugfix`、Brownfield、単一 repo `amadeus`
+- Focus: **クロスレビュー済みバグ7件のバッチ** — [#1489](https://github.com/amadeus-dlc/amadeus/issues/1489) P2/S3（Intent Mirror benchmark 分散ゲートの偽赤）/ [#1457](https://github.com/amadeus-dlc/amadeus/issues/1457) P2/S3（`handleVerify` が `verifySelf` へ自己相関引数 = 検証劇場）/ [#1377](https://github.com/amadeus-dlc/amadeus/issues/1377) P3/S3（audit シャードが bare `intents/audit/` へ書かれる）/ [#1459](https://github.com/amadeus-dlc/amadeus/issues/1459) P3/S3（`Election.parse` が空 choices・重複 internalNo・重複 voter を無音受理）/ [#1462](https://github.com/amadeus-dlc/amadeus/issues/1462) P3/S4（`discoverPluginStageFiles` が dangling symlink で raw ENOENT）/ [#1458](https://github.com/amadeus-dlc/amadeus/issues/1458) P3/S4（既定 subagent 経路で distributed timeline 未記録・`reportDelivery` が dead export）/ [#1388](https://github.com/amadeus-dlc/amadeus/issues/1388) P3/S4（`team-up.sh` codex 経路の初期プロンプト一発供給・watcher arming 検証欠如 — **FR-6 既決との関係が要精査**）
+- 差分リフレッシュ（cid:reverse-engineering:c1）: フルスキャン不実施。区間2コミットのうち実装面1件を直読したうえで、**対象7件の患部は区間内で無変更**であること（区間の正本 diff が `amadeus-lib.ts` の #1497 修正のみ）を `git diff --stat` の出力で機械確認した。すなわち7件はいずれも区間の退行ではなく、区間より前から存在する欠陥である。
+- 主要な確定事項: 7件中6件は**対操作の非対称**（cid:requirements-analysis:symmetric-pair-review）に還元できる — #1377 は `auditShardDir` の fail-closed に対する `auditFilePath` / `stateFilePath` の bare-root フォールバック、#1462 は stages 判定の `existsSync` ガードに対する plugin 名フィルタの `statSync` 無ガード、#1459 は `voters` 側の `.length === 0` 検査に対する `choices` 側の欠落、#1457 は「self-reference 回避」を明言する doc コメントに対する caller 配線の逸脱、#1458 は「`reportDelivery` が mint する」設計意図に対する配線の不在（dead export）、#1489 は判定側 noise floor とワークロード別予算の不整合。#1388 のみ性格が異なり、検証除外が **FR-6 として明示的に既決**である（`team-up.sh:1098-1099` のコメント）。
+- 測定 ref: 本節および本 scan で更新した全成果物の file:line・件数は observed `1673c4332` の実ファイル直読、`git diff --shortstat` / `git diff --stat` / `git log --oneline` / `git ls-files … | wc -l` / `grep -n` / `grep -c` 出力からの転記（cid:requirements-analysis:numbers-from-command-output-only）。
+- 上流入力: Developer スキャン結果 `amadeus/spaces/default/intents/260726-crossreviewed-bug-batch/inception/reverse-engineering/scan-notes.md`（全文読了）。Architect 段の独立再検証で **1件の行番号訂正**を検出した — scan-notes が `mirror-distribution-benchmark-aggregate.ts:30` とした `if (minimum <= 0) return true;` は observed で **`:32`**（`grep -n "minimum <= 0"` 出力）。`:20` / `:33-35` / `:61-62` ほか他の file:line はすべて直読で一致を確認した（cid:reverse-engineering:cite-shift-vs-nonshift-separation）。
+- 更新した成果物（9件）: `reverse-engineering-timestamp.md`（本ファイル）/ `architecture.md` / `component-inventory.md` / `code-structure.md` / `code-quality-assessment.md`（以上は本 intent の新節を追加）/ `api-documentation.md` / `dependencies.md` / `business-overview.md` / `technology-stack.md`（以上は区間に新規公開契約・新規依存エッジが無い旨の最小追記）。加えて per-intent 記録 `re-scans/260726-crossreviewed-bug-batch.md` を新規作成。旧「現在」マーカー（`260726-grant-scope-gate`）は本ファイルおよび body 5 成果物の H2 見出しで履歴ラベルへ降格した（cid:reverse-engineering:c3-relabel。`grep -rn "、現在、\|（現在:" amadeus/spaces/default/codekb/amadeus/` の残存ヒットが本 intent `260726-crossreviewed-bug-batch` の節のみであることを機械確認）。
+- Sensors: RE ステージが宣言する3センサー（required-sections / upstream-coverage / answer-evidence）は、codekb 出力パス `amadeus/spaces/default/codekb/amadeus/**` が各 manifest の filter（`**/{amadeus-docs,intents}/**` および `**/*-questions.md`）に**構造的に不適合**のため発火不能（cid:reverse-engineering:re-sensors-codekb-filter-mismatch、cid:reverse-engineering:c3-codekb-sensor）。**センサー成功として扱わず**、代替として (a) 更新9成果物 + 新規 re-scan 記録に `grep -c '^## '` を実行し H2 ≥ 2 を機械確認（全件充足。内訳は `re-scans/260726-crossreviewed-bug-batch.md` の「センサー不適用と代替検証」節） (b) 上流入力（`scan-notes.md`）への実参照が各成果物本文に存在することを `grep -c 'scan-notes'` で機械確認 の2点を実施した。
+- Delivery boundary: 本 scan は codekb の差分更新と per-intent re-scan 記録のみを成果物とし、患部コードへの修正、Issue 操作、intent record / state / audit / 生成配布物への書込は一切行わない。7件の修正可否・方式（特に #1388 の性格判定と #1458 の2案）は後続の requirements-analysis 以降で確定する。
+
+## 実行メタデータ（履歴: 260726-metrics-visualization）
 
 - Date: `2026-07-26`
 - Base commit: `11f1ad61f5ea4942332da5bd6e3e433c44aa4cab`（前 intent `260725-worktree-ref-fixes` の observed。`git merge-base --is-ancestor 11f1ad61f 1c43438df` exit **0** = 祖先、`git rev-list --count 11f1ad61f..1c43438df` = **5**。いずれも本 scan で再実測。cid:reverse-engineering:rescan-base-ancestry）
@@ -16,7 +33,6 @@
 - Sensors: RE ステージが宣言する3センサー（required-sections / upstream-coverage / answer-evidence）は、codekb 出力パス `amadeus/spaces/default/codekb/amadeus/**` が各 manifest の filter（`**/{amadeus-docs,intents}/**` および `**/*-questions.md`）に**構造的に不適合**のため発火不能（cid:reverse-engineering:re-sensors-codekb-filter-mismatch、cid:reverse-engineering:c3-codekb-sensor）。**センサー成功として扱わず**、代替として (a) 更新9成果物すべてに `grep -c '^## '` を実行し H2 ≥ 2 を機械確認 (b) 上流入力（Developer スキャン結果）の参照を各成果物本文で直接検証（file:line のスポット再実測を含む）の2点を実施した。結果は `re-scans/260726-metrics-visualization.md` の「センサー不適用と代替検証」節。
 - Delivery boundary: 本 scan は codekb の差分更新のみを成果物とし、実装コード・intent state・memory・`intents.json`・生成配布物には一切書き込まない。可視化機能の方式（挿入点、出力形式、CI 配線）は後続の requirements-analysis 以降で確定する。
 
-## 実行メタデータ（履歴: 260725-worktree-ref-fixes）
 ## 実行メタデータ（履歴: 260726-grant-scope-gate）
 
 - Date: `2026-07-26`
@@ -471,7 +487,6 @@
 - 更新した成果物: `code-structure.md`(「t05 並列フレーク観測面 — 260716-github-issue-912」節を H1 直後に新設 = planted-failure 機序 / 並列制御の実態 / 先行修正3クラス / 修正3案評価。旧「最新」= parser/checkbox 欠陥面(260715-parser-checkbox-fixes)節見出しの「最新」→「履歴」降格(main 反映時点の最新節。harness port 節は既に履歴) cid:reverse-engineering:c3-relabel)、本ファイル(鮮度ポインタ + 旧「最新: 260715-parser-checkbox-fixes」→履歴ラベル化)、`re-scans/260716-github-issue-912-tests-s.md`(per-intent re-scan 記録)。他 body 成果物(architecture / business-overview / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment の7点)は base→observed でフォーカス面と無関係、かつ区間 diff 空で構造不変のため温存(churn 回避、cid:reverse-engineering:c1)。
 - Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。**本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。**
 
-
 ## 実行メタデータ（履歴: 260715-parser-checkbox-fixes）
 
 - Date: 2026-07-16
@@ -488,7 +503,6 @@
 - Per-intent record: `re-scans/260715-parser-checkbox-fixes.md`
 - 更新成果物: `code-structure.md`（「parser/checkbox 欠陥面の観測」節を先頭新設＋前「最新」= canonical-settings 節を履歴ラベル化 cid:reverse-engineering:c3-relabel）、本ファイル（鮮度ポインタ＋「最新: 260709-canonical-settings」→履歴ラベル化）、`re-scans/260715-parser-checkbox-fixes.md`（per-intent re-scan 記録）。他成果物（architecture / business-overview / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment）は両欠陥が挙動欠陥で構造変化を伴わず、base→observed でフォーカス面外に破壊的変化がないため温存（churn 回避、cid:reverse-engineering:c1）。
 - Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。**本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。**
-
 
 ## 実行メタデータ(履歴: 260715-opencode-cursor-harness)
 

@@ -1,6 +1,35 @@
 # コンポーネント棚卸し
 
-## metrics サブシステムのコンポーネント（260726-metrics-visualization、現在）
+## クロスレビュー済みバグ7件の患部コンポーネント（260726-crossreviewed-bug-batch、現在、7 Issue）
+
+測定 ref: observed `1673c4332`（base `e12259ba7`、距離 2）。所在・コピー数は同 commit の `git ls-files` / `grep -n` 出力からの転記。上流入力は Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`。
+
+### 患部コンポーネント一覧
+
+| Issue | 主患部コンポーネント | 所在（observed `1673c4332`） | 配布コピー数 |
+| --- | --- | --- | --- |
+| #1489 | benchmark 集約ゲート | `scripts/mirror-distribution-benchmark-aggregate.ts:20, 32, 33-35, 61-62`（予算側は `scripts/mirror-distribution-benchmark.ts:18-19`） | 0（配布対象外） |
+| #1457 | 選挙 verify 配線 / 自己検証 | `packages/framework/core/tools/amadeus-election.ts:486, 494, 503` / `amadeus-election-record.ts:186, 193, 196` | 各 10 |
+| #1377 | audit パス構築 / シャード生成 | `amadeus-lib.ts:3313-3316, 3326-3328, 4126-4128` / `amadeus-audit.ts:258-262` / emitter 側 `amadeus-learnings.ts` | 各 10 |
+| #1459 | 選挙定義パーサ | `amadeus-election-model.ts:62, 81-82, 449, 456` | 10 |
+| #1462 | plugin ステージ探索 | `amadeus-graph.ts:1813, 1823-1824, 1828, 1837` | 10 |
+| #1458 | 選挙 transport / report | `amadeus-election.ts:293, 326, 582` / `amadeus-election-transport.ts:165-167, 173, 183` | 各 10 |
+| #1388 | team 起動スクリプト | `packages/framework/core/tools/team-up.sh:998, 1061-1062, 1098-1099, 1116-1117`（+ `team-up-codex-safety-wait.ts`） | 10 |
+
+コピー数は `git ls-files "*/<file>" | grep -v '^packages/' | wc -l` の出力からの転記。
+
+### コンポーネント境界の交差（着手順に影響）
+
+- **election サブシステムに3件が集中**: #1457（`amadeus-election.ts` + `amadeus-election-record.ts`）と #1458（`amadeus-election.ts` + `amadeus-election-transport.ts`）は **`amadeus-election.ts` で交差**する。直列化するか、caller 配線（#1457）と report 配線（#1458）でファイル内スコープを非交差に切り分ける判断が要る（cid:code-generation:c6 の非交差判定は静的目録でなく実 diff で行う）。#1459（`amadeus-election-model.ts`）は他2件と非交差。
+- **#1377 は `amadeus-lib.ts` に触れる**: 同ファイルは区間直前の #1497 修正で変更されたばかりであり、`.coverage-patch-allowlist.json` の行ピンを持つ（cid:code-generation:allowlist-line-pin-stale — 上方挿入時は台帳行番号の同一 PR 更新が要る）。
+- **#1462（`amadeus-graph.ts`）/ #1489（`scripts/`）/ #1388（`team-up.sh`）は相互に非交差**。
+- **`reportDelivery` の消費者は現在テストのみ**（`grep -rn "reportDelivery" packages/framework/core/tools/ tests/` の全 6 hit のうち、`amadeus-election.ts` からの hit は 0 件 — 定義 `amadeus-election-transport.ts:183`、コメント 2、テスト import/呼出 4）。#1458 の修正は「新しい消費者を CLI 側に足す」形になる。
+
+### コンポーネント所有の逸脱
+
+#1457 と #1458 はいずれも、**当該コンポーネントの doc コメントが宣言する責務と実際の配線が食い違っている**クラスである（`amadeus-election-record.ts:182-185` / `amadeus-election-transport.ts:165-167`）。すなわち原因の所在は設計ではなく実装（配線）であり、コンポーネント境界そのものの再設計は要求されない。
+
+## metrics サブシステムのコンポーネント（260726-metrics-visualization、履歴）
 
 測定 ref: observed `1c43438df`。所在はすべて同 commit の実ファイル直読による。
 
@@ -92,8 +121,7 @@ integration は `AMADEUS_METRICS_ROOT` seam で実 FS を差し替える。可�
 
 `scripts/metrics-*.ts` の3ファイルは `amadeus-lib` を import しない（各 `grep -c` = **0**）ため、上記いずれとも依存関係を持たない。
 
-## worktree パス／ref 解決コンポーネント（260725-worktree-ref-fixes、履歴、Issue #1482 / #1481 / #1455）
-## solo standing grant 認可コンポーネント（260726-grant-scope-gate、現在、Issue #1497）
+## solo standing grant 認可コンポーネント（260726-grant-scope-gate、履歴、Issue #1497）
 
 測定 ref: observed `e12259ba7`（base `11f1ad61f`、距離 4）。所在・行数はすべて同 commit の実ファイル直読（`wc -l` / `grep -n` 出力からの転記）。
 

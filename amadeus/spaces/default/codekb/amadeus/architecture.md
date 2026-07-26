@@ -1,6 +1,35 @@
 # アーキテクチャ
 
-## metrics サブシステムの現況と可視化の挿入点（260726-metrics-visualization、現在）
+## クロスレビュー済みバグ7件の患部アーキテクチャ（260726-crossreviewed-bug-batch、現在、7 Issue）
+
+測定 ref: observed `1673c433209c74820881c75a0816bbce3fb2d512`（= 現 HEAD、`git rev-parse HEAD` 実測）。base `e12259ba7`（前 intent `260726-grant-scope-gate` の observed、`git merge-base --is-ancestor` exit 0 / 距離 2）。以下の file:line はすべて同 commit の実ファイル直読であり、上流の Developer スキャン結果（`inception/reverse-engineering/scan-notes.md`）を Architect 段で独立に再検証したうえで転記している。
+
+### 区間で変化したアーキテクチャ面
+
+区間2コミットのうち実装面は1件（`10d8bcfbb` = [PR #1499](https://github.com/amadeus-dlc/amadeus/pull/1499)、[Issue #1497](https://github.com/amadeus-dlc/amadeus/issues/1497)）。正本の変更は `packages/framework/core/tools/amadeus-lib.ts` の 35 insertions / 3 deletions のみで、`standingGrantSatisfiesGate` の scope 解決を stage frontmatter 直読から engine 正準の scope-grid 解決へ差し替えたもの。**本 intent の7件の患部はこの区間で一切変更されていない**（`git diff --stat e12259ba7 HEAD -- packages/framework/core/` が `amadeus-lib.ts` 1ファイルのみを返す）。したがって以下はいずれも区間より前から存在する構造欠陥である。
+
+### 支配的な構造パターン: 対操作の非対称
+
+7件のうち6件は、同族の対操作の片側だけが防御されている**非対称**として説明できる（cid:requirements-analysis:symmetric-pair-review の観点）。
+
+| Issue | 防御されている側（実在） | 欠けている側（患部） |
+| --- | --- | --- |
+| #1377 | `auditShardDir`（`amadeus-lib.ts:4126-4128`）は `recordDir` が null なら `return null` で fail-closed | `auditFilePath`（`:3326-3328`）と `stateFilePath`（`:3313-3316`）は `spaceRecordRoot`（= `intentsDir`）へフォールバックし、bare `intents/` 直下へ書く |
+| #1462 | stages ディレクトリ判定（`amadeus-graph.ts:1828`）は `!existsSync(stagesRoot) || !statSync(...)` の順で dangling symlink を安全に skip | plugin 名フィルタ（`:1823-1824`）は `statSync(...).isDirectory()` を無ガードで呼び raw ENOENT を throw |
+| #1459 | `voters` は `!isStringArray(r.voters) \|\| r.voters.length === 0` で空配列を拒否（`amadeus-election-model.ts:82`） | `choices` は `parseChoices` が空配列も重複 internalNo も通し、`:81` は null 判定のみ（重複 voter の一意性検査も不在） |
+| #1457 | 設計 doc（`amadeus-election-record.ts:182-185`）は「record を自分自身と比較しない（no verification-theatre self-reference）」と明言 | caller（`amadeus-election.ts:486, 494, 503`）が `resolved` 由来の値を `ledgerCount` と `ballots` の両方へ渡し、2分岐が恒久 false |
+| #1458 | 設計 doc（`amadeus-election-transport.ts:165-167`）は「conductor 報告後に `reportDelivery` が record を mint する」と明言 | その配線が CLI に存在せず（`amadeus-election.ts` からの `reportDelivery` hit は 0 件）、既定 subagent transport は `kind: "directive"` を返して `:326` の `delivered` 限定 booking に入らない |
+| #1489 | 判定は `min/max 比 > 2` と `絶対差 > noiseFloor` の AND（`scripts/mirror-distribution-benchmark-aggregate.ts:33-35`） | noise floor が予算比 0.005 固定（`:20`）で、`p95BudgetMs = 2_000` のワークロードでは **10ms**（= `2_000 × 0.005`、算出式併記）にしかならず、3 replica の min/max 比が単一外れ値で壊れる |
+
+### 例外: #1388 は既決設計との衝突
+
+`team-up.sh` の codex 経路（`packages/framework/core/tools/team-up.sh:998` の `prompt="\$agmsg actas $role"`、`:1061-1062` の一発供給）に watcher arming 検証が無いことは構造として現存する。しかしその除外は `watcher_verification_applies`（`:1116-1117` の `[ "$RUNTIME" = "claude" ] && [ "$MSG_BACKEND" = "agmsg" ] || return 1`）と直上コメント `:1098-1099`（"Codex is out of scope (FR-6)"）により、後続 intent で **FR-6 として明示的に決定された設計判断**である。加えて本ファイルは Issue 起票時点の `scripts/team-up.sh` から `packages/framework/core/tools/team-up.sh` へ移動し、**配布対象（正本 + 10 コピー）になっている**。すなわち #1388 は「バグの修正」ではなく「既決設計の変更（＝仕様変更）」に当たる可能性があり、性格判定が先決事項である。
+
+### 配布増幅の構造的含意
+
+`git ls-files "*/<file>" | grep -v '^packages/' | wc -l` の出力転記（測定 ref `1673c4332`）: `amadeus-election.ts` / `amadeus-election-record.ts` / `amadeus-election-model.ts` / `amadeus-election-transport.ts` / `amadeus-graph.ts` / `amadeus-lib.ts` / `amadeus-audit.ts` / `team-up.sh` はいずれも **10**（dist 6 + self-install 4）、`scripts/mirror-distribution-benchmark-aggregate.ts` は **1**（正本のみ、配布対象外）。したがって #1489 以外の6件はすべて `bun scripts/package.ts` + `bun run promote:self` の再生成と `dist:check` / `promote:self:check` を修正 PR の完成条件に含む。
+
+## metrics サブシステムの現況と可視化の挿入点（260726-metrics-visualization、履歴）
 
 測定 ref: observed `1c43438df`（base `11f1ad61f`、距離 5）。以下の file:line はすべて同 commit の実ファイル直読による。**metrics サブシステムは区間内で完全に無変更**（`git diff --name-only 11f1ad61f 1c43438df -- scripts/ .github/` の出力 0 行）であり、本節の現況は区間より前から安定している。
 
@@ -110,8 +139,7 @@ env seam は `defaultEnv` `:112`（`root = process.env.AMADEUS_METRICS_ROOT ?? R
 
 **metrics サブシステムはこの2系統から独立している**: `scripts/metrics-*.ts` の3ファイルはいずれも `amadeus-lib` を import しない（`grep -c 'amadeus-lib' scripts/metrics-*.ts` = 各 **0**）。したがって系統 B の hook 変更は可視化機能の設計前提に影響しない。
 
-## worktree でのパス／ref 解決の現況（260725-worktree-ref-fixes、履歴、Issue #1482 / #1481 / #1455）
-## solo standing grant 認可アーキテクチャと scope 解決の二重化（260726-grant-scope-gate、現在、Issue #1497）
+## solo standing grant 認可アーキテクチャと scope 解決の二重化（260726-grant-scope-gate、履歴、Issue #1497）
 
 測定 ref: observed `e12259ba78b8c56bf3572c9bfd44a7bdf84d681c`（= 現 HEAD、`git rev-parse HEAD` 実測）。base `11f1ad61f`（前 intent `260725-worktree-ref-fixes` の observed、`git merge-base --is-ancestor` exit 0 / 距離 4）。以下の file:line・件数はすべて同 commit の実ファイル直読および `grep -n` / `python3 -c json` 出力からの転記。
 

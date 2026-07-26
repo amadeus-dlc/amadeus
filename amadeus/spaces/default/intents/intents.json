@@ -589,5 +589,12 @@
     "dirName": "260726-metrics-visualization",
     "scope": "amadeus-feature",
     "status": "complete"
+  },
+  {
+    "uuid": "019f9d46-a826-701f-b3d3-cf1e49507cba",
+    "slug": "crossreviewed-bug-batch",
+    "dirName": "260726-crossreviewed-bug-batch",
+    "scope": "amadeus-bugfix",
+    "status": "complete"
   }
 ]
