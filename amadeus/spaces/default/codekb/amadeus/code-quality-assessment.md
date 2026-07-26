@@ -1,6 +1,71 @@
 # コード品質評価
 
-## worktree 環境に起因する欠陥と技術的負債（260725-worktree-ref-fixes、現在、Issue #1482 / #1481 / #1455）
+## standing grant の scope 解決欠陥と検出不能な fixture（260726-grant-scope-gate、現在、Issue #1497）
+
+測定 ref: observed `e12259ba7`（base `11f1ad61f`、距離 4）。判定はすべて再現プローブの実行結果および実ファイル直読からの転記。
+
+### 欠陥 A（#1497 本体）: composed scope で全ゲートが phase boundary と誤判定される
+
+`standingGrantSatisfiesGate`（`amadeus-lib.ts:3985-4017`）の `inScope` クロージャは `stage.scopes` を直読するが、composed scope（`amadeus-bugfix` / `amadeus-feature` 等）は stage frontmatter に**構造上決して現れない**（`stage.scopes` の語彙全数 = stock 10 個、`scopes` キー欠落 stage は 0 件 — observed `e12259ba7` の `stage-graph.json` 実測）。結果:
+
+1. すべての stage で `inScope()` が false
+2. `next === null`
+3. `crossesPhaseBoundary` が恒真
+4. 既定グラント（`includesPhaseBoundary: false`）は**全ゲートで ineligible**
+
+再現プローブ実測（各セル = `includesPhaseBoundary` false / true）:
+
+| scope | reverse-engineering | requirements-analysis | functional-design | code-generation | build-and-test |
+| --- | --- | --- | --- | --- | --- |
+| `bugfix`（stock） | true/true | false/true | true/true | true/true | false/true |
+| `amadeus-bugfix` | false/true | false/true | false/true | false/true | false/true |
+| `feature`（stock） | true/true | true/true | false/false（skeleton） | true/true | true/true |
+| `amadeus-feature` | false/true | false/true | true(!) | false/true | false/true |
+
+`amadeus-*` 行が opt-out 側で全面 false になっているのが欠陥 A の直接像である。
+
+**症状の性質**: fatal error ではなく**グラントの無音 no-op**。route receipt が発行されず（`amadeus-grant-authorization.ts:762` が directive を無変更で返す）、通常の human presence 経路へフォールバックする。ユーザーには「グラントを発行したのに効かない」としか見えない。この fail-soft 性は project.md Forbidden（想定内の scope 不一致 fallback を fatal error 経路へ流さない）の遵守形であり、**修正で壊してはならない性質**である。
+
+### 欠陥 B（未報告・より重大）: walking-skeleton 除外の無音不発
+
+同じ `inScope` が `firstConstruction` の探索にも使われるため、composed scope では `firstConstruction === undefined` → `isFirstConstructionGate`（`amadeus-lib.ts:4011`）が恒偽になる。すなわち **walking-skeleton ゲートの除外判定へ到達しない**。
+
+実測: `scope = amadeus-feature` + `stance = on` + opt-in グラントで `functional-design` が `covered = true`（= 認可されてしまう）。`SKELETON_ON_SCOPES`（`amadeus-lib.ts:3896-3904`）には `"amadeus-feature"` が `:3900` に登録済みであるにもかかわらず、判定がそこへ到達しない。
+
+これは project.md の以下2条の**現在進行の違反状態**である:
+
+- Forbidden: 「NEVER walking-skeleton stance が有効なとき、standing grant に walking-skeleton gate を認可させない」
+- Mandated: 「ALWAYS active scope が `amadeus-feature` なら、既存コードを変更する場合も最初の Construction Bolt に walking-skeleton gate を維持する」
+
+first construction stage の実測値（scope-grid 由来）: `feature` → `functional-design` / `amadeus-feature` → `functional-design` / `amadeus-bugfix` → `code-generation`。
+
+**A と B は単一の根本原因（`inScope` の解決方式）から出る2症状**であり、片方だけを直すと他方が残る。
+
+### 欠陥が検出されなかった構造的理由: fixture の語彙捏造
+
+`t-solo-standing-grant-domain.test.ts`（integration `:47-59`、unit `:33-44`）の fixture ヘルパー `stage()` は `scopes: ["amadeus-feature"]` を**捏造**している — この語彙は実 `stage-graph.json` に存在しない。`t-solo-gate-transaction-seam.test.ts:305-315` の `ROUTE_GRAPH` も同型。捏造 fixture の下では `inScope()` が真を返すため、**実運用で必ず false になる経路がテスト上は正常に見える**。これは「テストが検証したい当の性質をテスト側で作ってしまう」検証劇場クラスであり、欠陥非検出の直接原因である。
+
+実 graph を読む唯一のグラント系ハーネス `tests/harness/solo-gate-fixture.ts:50`（`.codex/tools/data/stage-graph.json`）も、state fixture が `tests/fixtures/state-mid-inception.md:6` = `Scope: bugfix`（stock）、グラントが `Includes Phase Boundary: true`（`:116`）という**欠陥が現れない組合せ**で固定されている。
+
+`t-standing-grant.test.ts` も scope は `"feature"` 固定（`:222`、ゲート分類 `:221-253`）、skeleton 面（`:889-923`）も feature / bugfix のみで、**カスタムスコープのケースはゼロ**である。
+
+### 欠けているテスト面（RED 候補）
+
+1. 実 graph × composed scope × opt-out グラントで ordinary gate が covered になること（#1497 の RED）
+2. 実 graph × `amadeus-feature` × skeleton on で first construction gate が **NOT covered** であること（欠陥 B の RED）
+3. 実 graph × composed scope × 真の phase boundary で opt-out が denied のままであること
+4. stock スコープの非退行 parity（team mode 呼び出し元 `amadeus-state.ts:2470` / `:3269` を含む）
+
+### coverage / allowlist 面のリスク
+
+- `tests/.coverage-registry.json:3509` の `function:standingGrantSatisfiesGate` は `coveredBy: []` / **`status: "UNCOVERED"`** — 患部関数は現在 in-process 計測されていない。修正時は seam 設計を実装時点で行う必要がある（cid:code-generation:bun-coverage-spawn-blindspot）。
+- `tests/.coverage-patch-allowlist.json` の `amadeus-lib.ts` 行ピンは 4 件（`2195-2196` / `2708-2710` / `3886-3887` / `5491-5493`、`python3 -c json` 実測）。**`3886-3887` は患部 `3985-4017` の直前**であり、患部より上方へ行を足す修正では stale 化・無音転位のいずれも起こりうる（cid:code-generation:allowlist-line-pin-stale とその追補）。修正 PR では全エントリの reason 記述と現行行内容の一致を直読照合する。
+
+### 別軸の未確認事項
+
+`isPerUnitStage: false` / `isPerUnitFinalGate: false` は `amadeus-lib.ts:4012-4013` でハードコードされている。per-unit 中間ゲートをグラントが覆う挙動は #1497 とは別軸であり、スコープに含めるかは要件段の裁定事項。
+
+## worktree 環境に起因する欠陥と技術的負債（260725-worktree-ref-fixes、履歴: 2026-07-26、Issue #1482 / #1481 / #1455）
 
 測定 ref: observed `11f1ad61f`。件数はすべて grep / find / wc 出力からの転記。
 
