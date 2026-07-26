@@ -171,3 +171,86 @@ describe("reader-module contract (AC-7 / AC-1c)", () => {
     }
   });
 });
+
+// --- U2 (visualize-hardening) additions -------------------------------------
+
+describe("--check drift guard", () => {
+  const { main } = require("../../scripts/metrics-visualize") as typeof import("../../scripts/metrics-visualize");
+
+  function withRoot<T>(root: string, fn: () => T): T {
+    const prev = process.env.AMADEUS_METRICS_ROOT;
+    process.env.AMADEUS_METRICS_ROOT = root;
+    try {
+      return fn();
+    } finally {
+      if (prev === undefined) delete process.env.AMADEUS_METRICS_ROOT;
+      else process.env.AMADEUS_METRICS_ROOT = prev;
+    }
+  }
+
+  function seeded(): string {
+    const root = tempRoot();
+    mkdirSync(join(root, "metrics"));
+    writeFileSync(join(root, "metrics", "a.json"), validSnapshot("2026-07-01T00:00:00.000Z", "a".repeat(40)));
+    return root;
+  }
+
+  test("matches after --write (exit 0)", () => {
+    const root = seeded();
+    expect(withRoot(root, () => main(["--write"]))).toBe(0);
+    expect(withRoot(root, () => main(["--check"]))).toBe(0);
+  });
+
+  test("a tampered index.html is stale (exit 1) — falling proof", () => {
+    const root = seeded();
+    expect(withRoot(root, () => main(["--write"]))).toBe(0);
+    writeFileSync(join(root, "metrics", "index.html"), "tampered");
+    expect(withRoot(root, () => main(["--check"]))).toBe(1);
+  });
+
+  test("a missing index.html is stale (exit 1)", () => {
+    const root = seeded();
+    expect(withRoot(root, () => main(["--check"]))).toBe(1);
+  });
+
+  test("spawned --check agrees with the in-process seam", () => {
+    const root = seeded();
+    expect(withRoot(root, () => main(["--write"]))).toBe(0);
+    const r = run(root, ["--check"]);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("up to date");
+  });
+});
+
+describe("size ceiling (FR-6)", () => {
+  const { MAX_HTML_BYTES, main } = require("../../scripts/metrics-visualize") as typeof import("../../scripts/metrics-visualize");
+
+  test("an over-ceiling render refuses both modes with a zero-write — falling proof", () => {
+    const root = tempRoot();
+    mkdirSync(join(root, "metrics"));
+    // One structurally valid snapshot whose values inflate the rendered HTML
+    // past MAX_HTML_BYTES (the reader enforces no per-file size cap; only the
+    // writer does, and fixtures do not go through the writer).
+    const values: Record<string, number> = {};
+    for (let i = 0; i < 3000; i++) values[`key_${"x".repeat(1500)}_${i}`] = i;
+    writeFileSync(
+      join(root, "metrics", "huge.json"),
+      JSON.stringify({
+        schema_version: 1,
+        captured_at: "2026-07-01T00:00:00.000Z",
+        commit: "a".repeat(40),
+        collectors: { pad: { tool: "t", tool_version: "1", values } },
+      }),
+    );
+    const prev = process.env.AMADEUS_METRICS_ROOT;
+    process.env.AMADEUS_METRICS_ROOT = root;
+    try {
+      expect(main(["--write"])).toBe(1);
+    } finally {
+      if (prev === undefined) delete process.env.AMADEUS_METRICS_ROOT;
+      else process.env.AMADEUS_METRICS_ROOT = prev;
+    }
+    expect(existsSync(join(root, "metrics", "index.html"))).toBe(false);
+    expect(MAX_HTML_BYTES).toBe(16_384 * 360 * 2);
+  });
+});

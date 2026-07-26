@@ -448,6 +448,13 @@ jobs:
       - name: Prune old snapshots
         run: bun scripts/metrics-retention.ts --apply
 
+      # After retention (so the dashboard reflects the pruned set) and before
+      # the commit step, whose `git add -A metrics/` picks index.html up into
+      # the same snapshot PR. No continue-on-error: a render failure must turn
+      # this job red (loud-fail; still outside the ci-success aggregation).
+      - name: Render metrics dashboard
+        run: bun scripts/metrics-visualize.ts --write
+
       - name: Get GitHub App user ID
         id: app-user
         env:
