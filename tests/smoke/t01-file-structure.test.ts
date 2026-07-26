@@ -257,26 +257,26 @@ describe("t01 — shipped-tree file-structure invariant (mechanism: none)", () =
   // the full path list from the same data the loops drove and pin its length,
   // so the migrated suite cannot silently shrink the structural surface the
   // .sh enforced.
-  test("asserts EXACTLY 67 shipped paths (TAP plan 63 + 2 reviewer agents + 1 presence hook + the composer) [.sh L9]", () => {
+  test("asserts EXACTLY 68 shipped paths (TAP plan 63 + 2 reviewer agents + 1 presence hook + the composer + the plugin-compose hook) [.sh L9]", () => {
     const paths: string[] = [
       at("skills", "amadeus", "SKILL.md"), // 1
       at("amadeus-common", "protocols", "stage-protocol.md"), // 2
       at("amadeus-common", "protocols", "stage-protocol-recovery.md"), // 3
       at("amadeus-common", "protocols", "stage-protocol-governance.md"), // 4
-      ...HOOKS.map((h) => at("hooks", h)), // 5-15 (11)
-      ...AGENTS.map((a) => at("agents", `amadeus-${a}-agent.md`)), // 16-29 (14)
+      ...HOOKS.map((h) => at("hooks", h)), // 5-16 (12)
+      ...AGENTS.map((a) => at("agents", `amadeus-${a}-agent.md`)), // 17-30 (14)
       ...Object.entries(STAGES).flatMap(([phase, stages]) =>
         stages.map((s) => at("amadeus-common", "stages", phase, `${s}.md`)),
-      ), // 30-61 (32)
-      at("settings.json.example"), // 62
-      at("settings.local.json.example"), // 63
-      at("knowledge", "amadeus-shared", "state-template.md"), // 64
-      mem("org.md"), // 65 — method relocated to amadeus/spaces/default/memory/
-      mem("project.md"), // 66
-      at("CLAUDE.md.example"), // 67
+      ), // 31-62 (32)
+      at("settings.json.example"), // 63
+      at("settings.local.json.example"), // 64
+      at("knowledge", "amadeus-shared", "state-template.md"), // 65
+      mem("org.md"), // 66 — method relocated to amadeus/spaces/default/memory/
+      mem("project.md"), // 67
+      at("CLAUDE.md.example"), // 68
     ];
-    expect(paths.length).toBe(67);
-    // Every one of the 67 must exist — the .sh's full TAP plan, re-proven as a
+    expect(paths.length).toBe(68);
+    // Every one of the 68 must exist — the .sh's full TAP plan, re-proven as a
     // single set so the count and the existence checks cannot drift apart.
     for (const p of paths) {
       expect(existsSync(p)).toBe(true);

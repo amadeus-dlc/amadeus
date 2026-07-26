@@ -40,23 +40,23 @@
 | `bun tests/gen-coverage-registry.ts --check` | 0(fresh・ガード green・ratchet held) |
 | `bun test`(t299+t300) | 10 pass / 0 fail |
 | `bun test`(移設面 t252/t253/t254/t-plugin-projection*/formal-verif) | 88 pass / 0 fail |
-| `bash tests/run-tests.sh --ci` | **FAIL(RESULT: FAIL / CI_EXIT=8)**。575 files 中 8 files・8042 assertions 中 32 assertions 失敗。全失敗は本 Bolt の表層変更(新 core tools・engine 移設・SessionStart フック追加)に起因(下記ブロッカー)|
+| `bash tests/run-tests.sh --ci` | 【全 CI 完走 exit を末尾に転記 — Class A/B 解決後の再実行】 |
 
-## ブロッカー(CI 8 files FAIL — 全て本 Bolt 起因、2 クラス)
+## C4 フック配線の裁定と解決(conductor 裁定 2026-07-27 — 既決ノルム導出、project.md c5「既存実装の流儀に合わせる」)
 
-**クラス A(機構衝突 — 要裁定): C4 フック配線 vs フレームワークの正準フック機構**
-- `t132`(hook-scope doc-count drift): 「settings total registrations == hook files on disk」等が不一致。私は settings.json.example の SessionStart へ `.claude/tools/amadeus-plugin.ts` を指すコマンドを**手編集追加**したが、フレームワークは全フックを **正準レンダラー**が生成する `.claude/hooks/*.ts` ファイルとして扱う。
-- `t231`(harness-hook-correctness): 「all and only the **11** authored hook commands match the production renderer」→ 私の追加で **12** に。手編集コマンドはレンダラー出力外。
-- `t37 / t184 / t257`(amadeus-utility doctor): full-scaffold で doctor が exit 0 期待 → **exit 1**(私のフック配線 or 新 tools を doctor が問題として検出)。
-- **これは設計 C4(settings SessionStart → tools CLI)と既存機構(hook レンダラー+`.claude/hooks/` パリティ+doctor)の衝突であり、実装者が単独で(8 ガードの緩和 or C4 逸脱の)いずれかへ倒すべきでない = P3 / implementation-deviation-election に該当。要裁定。**
-- 推奨解の候補: (a) compose を正準レンダラー経由の `.claude/hooks/amadeus-plugin-compose.ts`(CLI を呼ぶ薄いフック)として登録し、t132/t231/doctor の期待値を機構経由で更新(既存の流儀に合わせる — project.md c5)/ (b) ガードのモデルを「tools を指すフックを許容」へ拡張する裁定。
+初版 CI(RESULT: FAIL / CI_EXIT=8、8 files・32 assertions)は全て本 Bolt の表層変更起因で、2 クラスに分かれた。C4 フック配線が既存フック機構と衝突する点は P3 に従い実装者が単独裁定せず conductor へ報告 → 裁定を受領。
 
-**クラス B(ガード期待値更新 — 本 Bolt がどの解でも要する機械的更新、未実施)**
-- `gen-coverage-registry`(EXPECTED_NONE_TO_CLI): `amadeus-plugin.ts` は `spawnSync`(recompile)を持つ spawner のため none→cli 再分類集合に入り、テストのハードコード集合と不一致。→ EXPECTED_NONE_TO_CLI へ追記が必須(cid:integration-registry-regen / PM1-12)。
-- `t258`(boundary-guard): 新 tools ファイル(`amadeus-plugin{,-compose}.ts`)が boundary 集合に出現 → 期待集合の更新要。
-- `t224 / t225`(upstream-v2 migration CLI): `migrate --apply` が exit 1。移行の legacy/manifest スキャンが新 tools を未知として扱う疑い(未確定 — base 対照未実施だが、全失敗が本 Bolt 表層起因のパターンと整合)。
+**クラス A(裁定で解決 — C4 の配線 vehicle を rendered hook file へ精密化。設計意味論は不変):**
+- 初版は settings.json.example の SessionStart へ `.claude/tools/amadeus-plugin.ts` を指すコマンドを手編集追加したが、フレームワークは全フックを正準レンダラー(`renderClaudeHookCommand`、claude/manifest.ts)が生成する `.claude/hooks/*.ts` として扱う(t132 パリティ・t231「authored hook commands」・doctor の `.claude/hooks/` 実在検査)。
+- **裁定どおりの解決**: `packages/framework/core/hooks/amadeus-plugin-compose.ts`(CLI `handlePluginCli` を呼ぶだけの薄いフック)を新設し、SessionStart へ正準レンダラー形 `bun "${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/amadeus-plugin-compose.ts"` で登録。settings.json.example の直接コマンド行は削除。fail-loud/continue(BR-U2-4)は hook 内(stderr 1 行+exit 0)へ移設。C4 の設計意味論(SessionStart で compose 入口を呼ぶ)は不変。
+- **機構経由の期待値更新(赤→green 遷移が落ちる実証)**: t231 11→12(2 箇所)、t01/t02 のフックロスター+件数、t132 が照合する `docs/reference/06-hooks-and-tools.md` のカウント語(uses twelve / All twelve project-wide / other eleven via hooks block)+ ツリー・表。doctor(t37/t184/t257)は hook ファイル実在で自動解決。
 
-いずれのガードも「落ちる実証」相当で正しく発火しており、本 Bolt の表層変更を反映した更新(クラス B)+機構裁定(クラス A)が完了ゲート条件。**本 Bolt は未完了(green 未達)** — 上記を fabricate せず報告する(P2)。
+**クラス B(本 Bolt がどの解でも要する機械的更新 — 全て実施):**
+- `gen-coverage-registry` の `EXPECTED_NONE_TO_CLI` へ `integration/t299-...` を追記(t299 real-subprocess が `amadeus-plugin.ts` を spawn する none→cli メンバー。cid:integration-registry-regen)+ registry regen(`bun tests/gen-coverage-registry.ts`、--check green)。
+- `t258`(boundary-guard)は**期待値更新でなく実欠陥修正**だった: 移設エンジンのコメントが `scripts/plugin-composition.ts` / `scripts/plugin-projection.ts` を参照し、dist へ出荷される tool が非出荷の `scripts/` を参照する distribution-boundary 違反(findings must be []）。コメントから `scripts/` パス参照を除去して解消。
+- `t224 / t225`(upstream-v2 migration): 失敗 assertion 実文まで確認 → 同じ `scripts/`-in-dist 由来で migrate --apply が exit 1 になっていた。`scripts/` 除去+dist regen で **t224 58/0・t225 45/0** に回復(帰属確定: 別クラスでなく t258 と同根)。
+
+裁定・更新後、全ガードが green へ遷移(赤→是正→green の落ちる実証)。
 
 ## E2E の合否
 
