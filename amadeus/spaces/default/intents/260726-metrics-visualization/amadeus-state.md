@@ -9,7 +9,7 @@
 - **Active Agent**: amadeus-developer-agent
 - **Harness**: claude-code
 - **Worktree Path**:
-- **Bolt Refs**:
+- **Bolt Refs**: visualize-skeleton
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration
