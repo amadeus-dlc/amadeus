@@ -115,19 +115,37 @@ export function createArgv(
   return args;
 }
 
-export function findArgv(repo: RepositoryIdentity): readonly string[] {
+// Page size for the issue walk. One request fetches exactly one page: a short
+// page (fewer than this many elements, empty included) is the last one.
+export const FIND_PER_PAGE = 100;
+
+// `--paginate --slurp` was removed here: gh interleaves the HTTP blocks with the
+// per-page arrays inside one outer array, which is not a shape this gateway can
+// read back page-for-page. Asking for one explicit page keeps every response a
+// plain `<block><page array>` that the envelope parser already handles.
+//
+// The walk in findIssuesByMarker follows from that: the old
+// `outer.length === pageCount` invariant becomes per request — one request must
+// yield exactly one HTTP block and exactly one page array — and the walk stops
+// on a page shorter than FIND_PER_PAGE. That is the same end signal the slurped
+// form relied on (measured on gh 2.96.0: a page past the last one is `200` with
+// an empty array).
+export function findArgv(
+  repo: RepositoryIdentity,
+  page: number,
+): readonly string[] {
   return [
     "api",
     "--include",
     "--method",
     "GET",
-    "--paginate",
-    "--slurp",
     issuesPath(repo),
     "-f",
     "state=all",
     "-f",
-    "per_page=100",
+    `per_page=${FIND_PER_PAGE}`,
+    "-f",
+    `page=${page}`,
   ];
 }
 
@@ -178,12 +196,31 @@ export type EnvelopeParse =
 
 const STATUS_LINE_RE = /^HTTP\/[0-9.]+ (\d{3})(?: .*)?$/;
 
-// Grammar (per security-design): P HTTP blocks
-//   `HTTP/<ver> <3-digit> <reason> CRLF *(header CRLF) CRLF`
-// then a single slurped JSON body (object for a single op, P-length array for
-// pagination), an optional trailing LF, and EOF. Header bytes are consumed
-// raw; only the tail after the last blank line is JSON. Any non-2xx status
-// short-circuits to http-error so the failure normalizer can read the number.
+// End of the line starting at `pos`: `end` excludes the terminator, `next` is
+// the first byte after it. Both CRLF and a bare LF terminate a line.
+//
+// This is not a compatibility layer for an older gh — it is what gh actually
+// writes. Measured on `gh version 2.96.0`: the status line ends with a bare LF
+// while the header lines that follow end with CRLF, so a CRLF-only reader
+// swallowed the first header into the status line and rejected every response
+// (issue #1498, all five verbs). Accepting either terminator on either line is
+// the recovery; no other envelope semantics change.
+function findLineEnd(
+  bin: string,
+  pos: number,
+): { end: number; next: number } | null {
+  const lf = bin.indexOf("\n", pos);
+  if (lf < 0) return null;
+  const end = lf > pos && bin[lf - 1] === "\r" ? lf - 1 : lf;
+  return { end, next: lf + 1 };
+}
+
+// Grammar: P HTTP blocks
+//   `HTTP/<ver> <3-digit> <reason> EOL *(header EOL) EOL`   (EOL = LF or CRLF)
+// then a single JSON body (object for a single op, array for a page), an
+// optional trailing LF, and EOF. Header bytes are consumed raw; only the tail
+// after the last blank line is JSON. Any non-2xx status short-circuits to
+// http-error so the failure normalizer can read the number.
 export function parseHttpEnvelope(
   stdout: Buffer,
   mode: "single" | "array",
@@ -193,21 +230,21 @@ export function parseHttpEnvelope(
   const statuses: number[] = [];
 
   while (bin.startsWith("HTTP/", pos)) {
-    const eol = bin.indexOf("\r\n", pos);
-    if (eol < 0) return { kind: "malformed" };
-    const match = STATUS_LINE_RE.exec(bin.slice(pos, eol));
+    const statusEol = findLineEnd(bin, pos);
+    if (statusEol === null) return { kind: "malformed" };
+    const match = STATUS_LINE_RE.exec(bin.slice(pos, statusEol.end));
     if (match === null) return { kind: "malformed" };
     statuses.push(Number(match[1]));
 
-    let headerPos = eol + 2;
+    let headerPos = statusEol.next;
     for (;;) {
-      const headerEol = bin.indexOf("\r\n", headerPos);
-      if (headerEol < 0) return { kind: "malformed" };
-      if (headerEol === headerPos) {
-        headerPos += 2; // blank line terminates the header block
+      const headerEol = findLineEnd(bin, headerPos);
+      if (headerEol === null) return { kind: "malformed" };
+      if (headerEol.end === headerPos) {
+        headerPos = headerEol.next; // blank line terminates the header block
         break;
       }
-      headerPos = headerEol + 2;
+      headerPos = headerEol.next;
     }
     pos = headerPos;
   }
@@ -653,32 +690,31 @@ export function createMirrorGitHubGateway(
     },
 
     async findIssuesByMarker(repository, marker) {
-      const result = await runApi(findArgv(repository), "paginated");
-      const interp = interpretApiResult(result, "array", "read-only");
-      if (interp.kind === "failure") return interp.failure;
-
-      if (scanBodies(interp.jsonText) !== "ok") {
-        return invalidResponse("read-only");
-      }
-      let outer: unknown;
-      try {
-        outer = JSON.parse(interp.jsonText);
-      } catch {
-        return invalidResponse("read-only");
-      }
-      if (!Array.isArray(outer) || outer.length !== interp.pageCount) {
-        return invalidResponse("read-only");
-      }
-
       const issues: RemoteMirrorIssue[] = [];
-      for (const page of outer) {
-        if (!Array.isArray(page)) return invalidResponse("read-only");
-        for (const element of page) {
+      for (let page = 1; ; page++) {
+        const result = await runApi(findArgv(repository, page), "paginated");
+        const interp = interpretApiResult(result, "array", "read-only");
+        if (interp.kind === "failure") return interp.failure;
+        if (interp.pageCount !== 1) return invalidResponse("read-only");
+
+        if (scanBodies(interp.jsonText) !== "ok") {
+          return invalidResponse("read-only");
+        }
+        let elements: unknown;
+        try {
+          elements = JSON.parse(interp.jsonText);
+        } catch {
+          return invalidResponse("read-only");
+        }
+        if (!Array.isArray(elements)) return invalidResponse("read-only");
+
+        for (const element of elements) {
           if (isPullRequestEntry(element)) continue;
           const issue = parseIssueObject(element, repository);
           if (issue === null) return invalidResponse("read-only");
           issues.push(issue);
         }
+        if (elements.length < FIND_PER_PAGE) break;
       }
       const matches = issues.filter((issue) => issue.body.includes(marker));
       return ok<readonly RemoteMirrorIssue[]>(matches);
