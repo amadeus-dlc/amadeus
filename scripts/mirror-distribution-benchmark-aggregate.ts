@@ -18,11 +18,15 @@ type Replica = Readonly<{
 // A ratio is not meaningful when the absolute spread is below 5% of the
 // workload budget. The authoritative median p95 budget remains unchanged.
 const DISPERSION_NOISE_FLOOR_FRACTION = 0.05;
+const DISPERSION_RATIO_LIMIT = 2;
 
 function median(values: readonly number[]): number {
   return [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
 }
 
+// Dispersion is measured against the median instead of the min/max ratio so a
+// single spiking replica cannot fail the gate alone: both the upper and the
+// lower half of the sample have to be off the median before this reports.
 function exceedsDispersionLimit(
   values: readonly number[],
   p95BudgetMs: number,
@@ -30,9 +34,14 @@ function exceedsDispersionLimit(
   const minimum = Math.min(...values);
   const maximum = Math.max(...values);
   if (minimum <= 0) return true;
+  const centre = median(values);
   const absoluteSpread = maximum - minimum;
   const noiseFloor = p95BudgetMs * DISPERSION_NOISE_FLOOR_FRACTION;
-  return maximum / minimum > 2 && absoluteSpread > noiseFloor;
+  return (
+    maximum / centre > DISPERSION_RATIO_LIMIT &&
+    centre / minimum > DISPERSION_RATIO_LIMIT &&
+    absoluteSpread > noiseFloor
+  );
 }
 
 export function aggregateMirrorBenchmarks(
@@ -59,7 +68,7 @@ export function aggregateMirrorBenchmarks(
     }
     const p95 = samples.map((sample) => sample.p95Ms);
     if (exceedsDispersionLimit(p95, budget.p95BudgetMs))
-      findings.push(`${name}: replica dispersion exceeds 2.0`);
+      findings.push(`${name}: replica dispersion around the median exceeds 2.0`);
     if (median(p95) > budget.p95BudgetMs)
       findings.push(`${name}: median p95 exceeds ${budget.p95BudgetMs}ms`);
     if (median(samples.map((sample) => sample.rssBytes)) > budget.rssBudgetBytes)

@@ -1460,19 +1460,19 @@
   },
   {
     "file": "scripts/mirror-distribution-benchmark-aggregate.ts",
-    "lines": "72-74",
+    "lines": "81-83",
     "reason": "t292 exercises complete, missing, mismatched, dispersion, p95, and RSS aggregate outcomes in-process; the residual rows are spawned file-input and process-exit wrapper paths not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "scripts/mirror-distribution-benchmark-aggregate.ts",
-    "lines": "76-79",
+    "lines": "85-88",
     "reason": "t292 exercises complete, missing, mismatched, dispersion, p95, and RSS aggregate outcomes in-process; the residual rows are spawned file-input and process-exit wrapper paths not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "scripts/mirror-distribution-benchmark-aggregate.ts",
-    "lines": "81-84",
+    "lines": "90-93",
     "reason": "t292 exercises complete, missing, mismatched, dispersion, p95, and RSS aggregate outcomes in-process; the residual rows are spawned file-input and process-exit wrapper paths not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
