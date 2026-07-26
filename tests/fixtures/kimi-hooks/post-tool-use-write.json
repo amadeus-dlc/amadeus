@@ -1,0 +1,1 @@
+{"hook_event_name":"PostToolUse","session_id":"session_7f4dffb9-0d84-44e6-b6fc-8528094a44d9","cwd":"/private/tmp/kimi-hook-capture/cwd-b","tool_name":"Write","tool_input":{"path":"probe-target.txt","content":"x"},"tool_call_id":"tool_qC7jr6H5zOK40SpozloHYbnR","tool_output":"Wrote 1 bytes to probe-target.txt"}

@@ -21,8 +21,8 @@ export function renderHelp(): string {
     "amadeus-setup",
     "",
     "Usage:",
-    "  amadeus-setup install [--harness <claude|codex|kiro|kiro-ide|opencode|cursor>] [--target <path>] [--version <semver|tag>] [--yes] [--force]",
-    "  amadeus-setup upgrade [--harness <claude|codex|kiro|kiro-ide|opencode|cursor>] [--target <path>] [--version <semver|tag>] [--yes] [--force]",
+    "  amadeus-setup install [--harness <claude|codex|kiro|kiro-ide|opencode|cursor|kimi>] [--target <path>] [--version <semver|tag>] [--yes] [--force]",
+    "  amadeus-setup upgrade [--harness <claude|codex|kiro|kiro-ide|opencode|cursor|kimi>] [--target <path>] [--version <semver|tag>] [--yes] [--force]",
     "  amadeus-setup            # this help; install/upgrade are never run implicitly",
   ].join("\n");
 }
@@ -120,6 +120,13 @@ export function renderTmpDirFailure(detail: string): string {
   return `could not prepare a temp directory: ${detail}`;
 }
 
+// FR-5a decision tree (kimi): an unreadable hook snippet master in the
+// fetched payload is a broken distribution — loud fail, never silently skip
+// the hook wiring.
+export function renderSnippetUnreadable(path: string, detail: string): string {
+  return `could not read the Kimi hook snippet at ${path}: ${detail}. The distribution is broken; your Kimi config was not changed.`;
+}
+
 // US-A7/FR-012: classification line, detail, then retry guidance for network
 // failures; a dedicated message per UsageError/ResolveError/ManifestError/
 // PlanRefusal variant otherwise.
@@ -134,7 +141,7 @@ export function renderError(err: ClassifiedError): string {
     case "unknown-flag":
       return `Unknown option: ${err.raw}. Run \`amadeus-setup\` with no arguments for usage.`;
     case "invalid-harness":
-      return `Invalid --harness value: "${err.raw}". Expected one of claude, codex, kiro, kiro-ide, opencode, cursor.`;
+      return `Invalid --harness value: "${err.raw}". Expected one of claude, codex, kiro, kiro-ide, opencode, cursor, kimi.`;
     case "multiple-harnesses":
       return `Only one --harness is supported per run (got: ${err.raws.join(", ")}). Run once per harness.`;
     case "missing-required":

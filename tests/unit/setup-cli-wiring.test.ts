@@ -45,6 +45,23 @@ function fakePorts(overrides: Partial<CliPorts> = {}): CliPorts {
       fileExists: () => unreachable("verifyRead.fileExists"),
       dirExists: () => unreachable("verifyRead.dirExists"),
     },
+    kimiHooks: {
+      tty: {
+        isTTY: false,
+        select: () => unreachable("kimiHooks.tty.select"),
+        input: () => unreachable("kimiHooks.tty.input"),
+        confirm: () => unreachable("kimiHooks.tty.confirm"),
+      },
+      fsRead: { readText: () => unreachable("kimiHooks.fsRead.readText") },
+      fsWrite: { writeText: () => unreachable("kimiHooks.fsWrite.writeText") },
+      applyWrite: {
+        exists: () => unreachable("kimiHooks.applyWrite.exists"),
+        mkdir: () => unreachable("kimiHooks.applyWrite.mkdir"),
+        copyFile: () => unreachable("kimiHooks.applyWrite.copyFile"),
+        backup: () => unreachable("kimiHooks.applyWrite.backup"),
+      },
+      out: () => unreachable("kimiHooks.out"),
+    },
     ...overrides,
   };
 }

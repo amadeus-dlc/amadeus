@@ -77,6 +77,28 @@ function realPorts(archive: Buffer): CliPorts {
     createTmpWrite,
     applyWrite: createApplyWrite(),
     verifyRead: createVerifyRead(),
+    // These suites never install kimi, so the hook-wiring ports stay inert;
+    // any prompt or print from them fails loudly like the outer tty.
+    kimiHooks: {
+      tty: {
+        isTTY: false,
+        select: () => {
+          throw new Error("kimi hook wiring must not run in this suite");
+        },
+        input: () => {
+          throw new Error("kimi hook wiring must not run in this suite");
+        },
+        confirm: () => {
+          throw new Error("kimi hook wiring must not run in this suite");
+        },
+      },
+      fsRead: createFsRead(),
+      fsWrite: createFsWrite(),
+      applyWrite: createApplyWrite(),
+      out: () => {
+        throw new Error("kimi hook wiring must not run in this suite");
+      },
+    },
   };
 }
 
@@ -173,7 +195,7 @@ describe("install pipeline — opencode / cursor harnesses (Bolt 1, #1048)", () 
     }
   });
 
-  test("edge case: an unknown --harness value is a usage error (exit 2) listing all six harnesses", async () => {
+  test("edge case: an unknown --harness value is a usage error (exit 2) listing all seven harnesses", async () => {
     const target = mkdtempSync(join(tmpdir(), "amadeus-setup-install-flow-badharness-"));
     const errors: string[] = [];
     const originalError = console.error;
@@ -185,7 +207,7 @@ describe("install pipeline — opencode / cursor harnesses (Bolt 1, #1048)", () 
       const exitCode = await main(["install", "--harness", "foo", "--target", target, "--yes"], realPorts(archive));
       expect(exitCode).toBe(2);
       const message = errors.join("\n");
-      for (const name of ["claude", "codex", "kiro", "kiro-ide", "opencode", "cursor"]) {
+      for (const name of ["claude", "codex", "kiro", "kiro-ide", "opencode", "cursor", "kimi"]) {
         expect(message).toContain(name);
       }
     } finally {

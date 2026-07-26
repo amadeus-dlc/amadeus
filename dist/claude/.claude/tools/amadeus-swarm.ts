@@ -96,8 +96,8 @@ export const DRIVER_VALUES: readonly DriverName[] = ["subagent", "claude-ultra",
 // array (not a bare type union) so the `--harness` CLI check is a real array
 // membership test — a type-only union would erase at runtime and let an unknown
 // harness through.
-export type HarnessName = "claude" | "codex" | "kiro" | "kiro-ide";
-export const HARNESS_VALUES: readonly HarnessName[] = ["claude", "codex", "kiro", "kiro-ide"];
+export type HarnessName = "claude" | "codex" | "kiro" | "kiro-ide" | "kimi";
+export const HARNESS_VALUES: readonly HarnessName[] = ["claude", "codex", "kiro", "kiro-ide", "kimi"];
 
 // The static outcome of resolving AMADEUS_USE_SWARM against the running harness.
 // A discriminated union so the invalid state is unrepresentable: `rejected` keeps

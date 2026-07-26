@@ -8,13 +8,14 @@ import {
   type HarnessType,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
 
-test("canonical mapping contains exactly the five approved dot directories", () => {
+test("canonical mapping contains exactly the six approved dot directories", () => {
   expect(HARNESS_DIR_TO_TYPE).toEqual({
     ".claude": "claude-code",
     ".codex": "codex",
     ".cursor": "cursor",
     ".opencode": "opencode",
     ".kiro": "kiro",
+    ".kimi-code": "kimi",
   });
 });
 
@@ -27,6 +28,7 @@ test("explicit harness values are normalized in-process", () => {
       "cursor",
       "opencode",
       "kiro",
+      "kimi",
       "unknown",
       "manual",
     ];

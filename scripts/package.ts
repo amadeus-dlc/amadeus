@@ -533,11 +533,19 @@ function buildTree(m: HarnessManifest, outRoot: string, seedFrom: string): Build
 function runTool(treeRoot: string, args: string[], rulesDirAbs?: string | null): void {
   const toolPath = join(treeRoot, args[0]);
   const rest = args.slice(1);
+  // Explicit closed-set enumeration (the repo idiom), NOT basename(treeRoot):
+  // the .claude fallback is load-bearing byte-parity for the skipRunnerGen
+  // harnesses (cursor/opencode bake .claude sensor paths into their compiled
+  // data). .kiro covers kiro + kiro-ide (shared dir). .kimi-code must resolve
+  // itself — it ships runner-gen output, and the fallback would bake .claude
+  // prose into every generated runner and the compiled sensor paths.
   const harnessDir = treeRoot.endsWith(".kiro")
     ? ".kiro"
     : treeRoot.endsWith(".codex")
       ? ".codex"
-      : ".claude";
+      : treeRoot.endsWith(".kimi-code")
+        ? ".kimi-code"
+        : ".claude";
   const env: Record<string, string> = {
     ...process.env,
     AMADEUS_SRC: treeRoot,

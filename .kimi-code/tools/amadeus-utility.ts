@@ -1,0 +1,5947 @@
+import {
+  accessSync,
+  closeSync,
+  constants as fsConstants,
+  cpSync,
+  existsSync,
+  fstatSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import type { Stats } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+  appendAuditEntry,
+  appendAuditEntryUnlocked,
+  appendLifecycleAuditEntryUnlocked,
+} from "./amadeus-audit.ts";
+import {
+  findCycles,
+  frameworkMemorySeedDir,
+  loadGraph,
+  loadRules,
+  loadScopeGrid,
+  memoryDirFor,
+  previewScopeCost,
+  stageGraphDrift,
+  validateGrid,
+} from "./amadeus-graph.ts";
+import type { GraphStage, RuleFile } from "./amadeus-graph.ts";
+import { repointHarnessIncludes } from "./amadeus-includes.ts";
+import {
+  activeIntent,
+  activeSpace,
+  assertRecomposeAllowed,
+  AUTONOMY_MODE_FIELD,
+  auditFilePath,
+  auditShards,
+  birthIntent,
+  classifyHelpIntent,
+  COMPOSE_MARKER_RELATIVE_PATH,
+  COMPOSE_MARKER_TTL_MS,
+  type ConstructionAutonomy,
+  DEFAULT_SPACE,
+  detectHarnessType,
+  detectLeakedLocks,
+  docsDir,
+  knowledgeDir,
+  emitError,
+  errorMessage,
+  escapeRegex,
+  findAllEvents,
+  findStageBySlug,
+  getField,
+  holdsAuditLock,
+  hooksHealthDir,
+  intentsDir,
+  inspectComposeMarker,
+  isoTimestamp,
+  isPackageJson,
+  codekbRepoName,
+  relativeCodekbDir,
+  relativeCodekbReScanFile,
+  listIntents,
+  listSpaces,
+  loadAgents,
+  loadScopeMapping,
+  type AgentMetadata,
+  type MarkerObservation,
+  CHECKBOX_MAP,
+  STAGE_PROGRESS_HEADER_COMMENT,
+  loadStageGraph,
+  MERGE_SUCCEEDED_TAG_REGEX,
+  migrateFlatLayout,
+  nextInScopeStage,
+  PHASES,
+  parseArgs,
+  parseIntentStatus,
+  parseCheckboxes,
+  parseRefsList,
+  parseStageFrontmatter,
+  parseStateStageSuffixes,
+  readAllAuditShards,
+  readCurrentSessionId,
+  readStateFile,
+  resolveBirthRepoSet,
+  resolveProjectDir,
+  setActiveIntentCursor,
+  setActiveSpaceCursor,
+  slugify,
+  SLUG_TAG_REGEX,
+  spacesRoot,
+  type StageEntry,
+  setCheckbox,
+  setField,
+  setStageSuffix,
+  scopeGridPath,
+  scopesDir,
+  findActiveStandingGrant,
+  stagesInScope,
+  stateFilePath,
+  withAuditLock,
+  validateBoltSlug,
+  validScopes,
+  worktreeAuditFilePath,
+  worktreeBaseDir,
+  worktreeStateFilePath,
+  writeSessionIntentUuid,
+  writeStateFile,
+  harnessDir,
+  guardIntentOperation,
+  intentNotFoundRejection,
+  renderIntentOperationRejection,
+  resolveIntentOperationTargetLocked,
+  type IntentLifecycleAuditEvent,
+  withIntentLifecyclePreflight,
+  rulesSubdir,
+  type ScopeDefinition,
+} from "./amadeus-lib.ts";
+import { settingsDoctorCheck } from "./amadeus-settings.ts";
+import { validateStageFrontmatter } from "./amadeus-stage-schema.ts";
+import { PHASE_PROGRESS_FIELD } from "./amadeus-state.ts";
+import { AMADEUS_VERSION } from "./amadeus-version.ts";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const TOOLS_DIR = dirname(fileURLToPath(import.meta.url));
+
+const VALID_DEPTHS: Record<string, string> = {
+  minimal: "Minimal",
+  standard: "Standard",
+  comprehensive: "Comprehensive",
+};
+
+const VALID_TEST_STRATEGIES: Record<string, string> = {
+  minimal: "Minimal",
+  standard: "Standard",
+  comprehensive: "Comprehensive",
+};
+
+function die(msg: string): never {
+  // Parse --project-dir from argv so ERROR_LOGGED lands in the correct workflow
+  // even on errors raised BEFORE main() completes flag parsing. Fall back to
+  // default resolution (env var / cwd) if absent.
+  const args = process.argv.slice(2);
+  const pdIdx = args.indexOf("--project-dir");
+  const explicitPd = pdIdx !== -1 && pdIdx + 1 < args.length ? args[pdIdx + 1] : undefined;
+  const pd = resolveProjectDir(explicitPd);
+  const command = `amadeus-utility ${args.join(" ")}`.trim();
+  emitError(pd, "amadeus-utility", command, msg);
+}
+
+// Reserved-namespace and autonomy refusals must precede every workflow/audit
+// mutation. `die()` deliberately emits ERROR_LOGGED, so these guards use the
+// same loud non-zero CLI shape without touching the audit ledger.
+function refuseWithoutAudit(msg: string): never {
+  process.stderr.write(`${msg}\n`);
+  process.exit(1);
+}
+
+// Thin wrapper around the canonical appendAuditEntry. All events must be in
+// amadeus-audit.ts VALID_EVENT_TYPES. Throws on invalid event or audit failure —
+// caller is expected to let that propagate (birth failures should stop birth).
+//
+// Lock-aware (mirrors amadeus-state.ts emitAudit): handleIntentBirth wraps the
+// whole birth transaction in withAuditLock on the WORKSPACE sentinel bucket, so
+// this process already owns that OS lock. Routing through appendAuditEntry
+// (which calls the NON-reentrant acquireAuditLock keyed on the same sentinel
+// when intent is omitted) would self-deadlock and burn the 5s retry budget
+// before throwing — so detect the held lock and use the unlocked variant.
+// Outside a held lock (every other caller — status/doctor/etc.) it takes its
+// own lock as before.
+function appendAuditEvent(
+  projectDir: string,
+  event: string,
+  fields: Record<string, string>
+): void {
+  if (holdsAuditLock(projectDir)) {
+    appendAuditEntryUnlocked(event, fields, projectDir);
+  } else {
+    appendAuditEntry(event, fields, projectDir);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// help
+// ---------------------------------------------------------------------------
+//
+// HELP_TEXT is no longer a static constant — the scopes block renders
+// from loadScopeMapping() so stage counts stay fresh by construction.
+// Previously hardcoded counts drifted as scopes evolved; sourcing from
+// the live mapping makes that impossible.
+
+const HELP_TEXT_HEAD = `AI-DLC — AI-Driven Development Life Cycle
+
+Usage: /amadeus [command]
+
+Scopes (set depth, test strategy, and stage count):
+`;
+
+const HELP_TEXT_TAIL = `
+Utilities:
+  --status          Show current workflow progress (read-only)
+  --migrate [path]  Dry-run an upstream v2 workspace migration, then ask before apply
+  compose "<task>"  Propose a tailored EXECUTE/SKIP plan (mid-workflow: re-shape the pending stages)
+  compose --report <path>  Compose from a scan report (triage findings into a fix-and-ship run)
+  --new-scope "<task>"  Force the composer to synthesize a custom scope even when a stock scope matches
+  intent            List intents in the active space (read-only; --json for structured output)
+  intent <name>     Switch the active intent
+  space             List spaces (read-only; --json for structured output)
+  space <name>      Switch the active space (team)
+  space-create <name>  Create a new space (team) seeded from the framework baseline
+  codekb-path       Print the deterministic per-repo codekb directory (read-only)
+  --doctor          Run health check on hooks, settings, and directory structure
+  --stage <id>      Jump to a specific stage (by slug or number, e.g., code-generation or 3.5)
+  --phase <name>    Jump to the first in-scope stage of a phase (e.g., construction or 3)
+  --scope <scope>   Set or change scope (standalone or with --stage/--phase)
+  --depth <level>   Override depth (minimal, standard, comprehensive)
+  --test-strategy <level>  Override test strategy (minimal, standard, comprehensive)
+  --version         Show the framework version
+  --help            Show this help message
+
+Other:
+  <description>     Describe what to build — scope is auto-detected
+  (no arguments)    Resume existing workflow, or start fresh if none exists
+
+Examples:
+  /amadeus feature                                Start a feature workflow
+  /amadeus Fix the login timeout bug              Auto-detected as bugfix scope
+  /amadeus compose "harden the deploy pipeline"   Composer proposes a tailored plan
+  /amadeus --migrate                              Preview migration from the default upstream workspace
+  /amadeus                                        Resume or begin
+  /amadeus --stage code-generation                Jump to code-generation stage
+  /amadeus --phase construction --scope bugfix    Jump to construction with bugfix scope
+  /amadeus --scope bugfix --depth comprehensive  Bugfix with comprehensive depth
+  /amadeus --depth minimal                       Change depth of active workflow
+  /amadeus --depth standard --test-strategy minimal  Full artifacts, minimal tests`;
+
+/** Exported for t67 unit tests. */
+export function renderHelpText(): string {
+  const mapping = loadScopeMapping();
+  const scopeLines = [...validScopes()].map((name) => {
+    const def = mapping[name];
+    const execute = Object.values(def.stages).filter((v) => v === "EXECUTE")
+      .length;
+    const total = Object.keys(def.stages).length;
+    const depth = def.depth.toLowerCase();
+    const ts = def.testStrategy
+      ? `, ${def.testStrategy.toLowerCase()} test strategy`
+      : "";
+    const desc = def.description ? ` — ${def.description}` : "";
+    const defaultMarker = name === "feature" ? " (default)" : "";
+    const countStr =
+      execute === total ? `All ${total} stages` : `${execute} of ${total} stages`;
+    return `  ${name.padEnd(18)}${countStr}, ${depth} depth${ts}${defaultMarker}${desc}`;
+  });
+  // Blank line before HELP_TEXT_TAIL so the `Utilities:` header is visually
+  // separated from the scope list.
+  return `${HELP_TEXT_HEAD + scopeLines.join("\n")}\n${HELP_TEXT_TAIL}`;
+}
+
+function handleHelp(): void {
+  process.stdout.write(`${renderHelpText()}\n`);
+}
+
+// ---------------------------------------------------------------------------
+// version
+// ---------------------------------------------------------------------------
+
+function handleVersion(): void {
+  process.stdout.write(`amadeus ${AMADEUS_VERSION}\n`);
+}
+
+// ---------------------------------------------------------------------------
+// status
+// ---------------------------------------------------------------------------
+
+function handleStatus(projectDir: string, flags: Record<string, string>): void {
+  // --intent <record> / --space <name> target a specific intent's status
+  // (vision §5); omitted -> the active record.
+  const sp = stateFilePath(projectDir, flags.intent, flags.space);
+  if (!existsSync(sp)) {
+    process.stdout.write(
+      `No active AI-DLC workflow found.
+
+To get started:
+  /amadeus "build the auth service"   Describe what to build (auto-births an intent)
+  /amadeus <scope>      Start a workflow by scope (e.g., /amadeus feature)
+  /amadeus --help       Show all commands and scopes
+`
+    );
+    return;
+  }
+
+  const content = readFileSync(sp, "utf-8");
+  const graph = loadStageGraph();
+
+  // Extract key fields
+  const project = getField(content, "Project") || "Unknown";
+  const scope = getField(content, "Scope") || "Unknown";
+  const phase = getField(content, "Lifecycle Phase") || "Unknown";
+  const currentStage = getField(content, "Current Stage") || "Unknown";
+  const status = getField(content, "Status") || "Unknown";
+  const activeAgent = getField(content, "Active Agent") || "None";
+  const lastCompleted = getField(content, "Last Completed Stage") || "None";
+  const nextStage = getField(content, "Next Stage") || "None";
+
+  // Find current stage number
+  const currentEntry = graph.find((s) => s.slug === currentStage);
+  const stageDisplay = currentEntry
+    ? `${currentEntry.name} (${currentEntry.number})`
+    : currentStage;
+
+  // Gate awareness — when the current stage's checkbox is [?] or [R], the
+  // user (not the LLM) is the blocker. Surface this explicitly in Status so
+  // `/amadeus --status` answers "what's blocking this workflow?" correctly.
+  const checkboxesAll = parseCheckboxes(content);
+  const currentCheckbox = checkboxesAll.find((c) => c.slug === currentStage);
+  let statusLine = status;
+  if (currentCheckbox?.state === "awaiting-approval") {
+    const displayName = currentEntry?.name ?? currentStage;
+    statusLine = `Awaiting your approval on ${displayName}`;
+  } else if (currentCheckbox?.state === "revising") {
+    const displayName = currentEntry?.name ?? currentStage;
+    const revisionCount = getField(content, "Revision Count");
+    // If the Revision Count field is missing, omit the count rather than
+    // render a literal "?" — state files authored before the field existed
+    // would otherwise render "revision ? of 3".
+    statusLine = revisionCount
+      ? `Revising ${displayName} (revision ${revisionCount} of 3)`
+      : `Revising ${displayName}`;
+  } else if (currentCheckbox?.state === "completed" && status === "Running") {
+    // Post-approve window: the stage was approved (→ [x]) but the orchestrator
+    // hasn't called `advance` yet, so Current Stage still points here. Tell
+    // the user honestly rather than showing "Running" on a completed stage.
+    const displayName = currentEntry?.name ?? currentStage;
+    statusLine = `${displayName} approved — ready to advance`;
+  }
+
+  // Checkbox counts - filter to the EFFECTIVE plan when scope is known: the
+  // state file's per-stage EXECUTE/SKIP suffixes (a recomposed plan) override
+  // the static grid, so status counts against what the router will actually
+  // run, not the pre-recompose column.
+  const checkboxes = parseCheckboxes(content);
+  const suffixOverrides = parseStateStageSuffixes(content);
+  const inScopeInfo = stagesInScope(scope);
+  const inScopeSlugs = new Set(
+    inScopeInfo
+      .filter((s) => (suffixOverrides.get(s.slug) ?? s.action) === "EXECUTE")
+      .map((s) => s.slug)
+  );
+  const scopedCheckboxes =
+    scope !== "Unknown" && inScopeSlugs.size > 0
+      ? checkboxes.filter((c) => inScopeSlugs.has(c.slug))
+      : checkboxes;
+  const total = scopedCheckboxes.length;
+  const completed = scopedCheckboxes.filter((c) => c.state === "completed").length;
+  const skipped = scopedCheckboxes.filter((c) => c.state === "skipped").length;
+  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+  // Build phase progress bars
+  const phaseLabels: Record<string, string> = {
+    initialization: "INITIALIZATION",
+    ideation: "IDEATION",
+    inception: "INCEPTION",
+    construction: "CONSTRUCTION",
+    operation: "OPERATION",
+  };
+
+  let phaseProgress = "";
+  for (const p of PHASES) {
+    const phaseStages = graph.filter((s) => s.phase === p);
+    const phaseSlugs = new Set(phaseStages.map((s) => s.slug));
+    const phaseCheckboxes = scopedCheckboxes.filter((c) => phaseSlugs.has(c.slug));
+    if (phaseCheckboxes.length === 0) continue;
+
+    const bar = phaseCheckboxes
+      .map((c) => {
+        switch (c.state) {
+          case "completed":
+            return "\u2588";
+          case "in-progress":
+            return "\u2592";
+          case "awaiting-approval":
+            return "?";
+          case "revising":
+            return "R";
+          case "skipped":
+            return "S";
+          default:
+            return "\u2591";
+        }
+      })
+      .join("");
+
+    const done = phaseCheckboxes.filter(
+      (c) => c.state === "completed"
+    ).length;
+    phaseProgress += `  ${(phaseLabels[p] || p).padEnd(16)} ${bar} ${done}/${phaseCheckboxes.length}\n`;
+  }
+
+  const output = `AI-DLC Workflow Status
+==============================
+Project:        ${project}
+Scope:          ${scope}
+Phase:          ${phase}
+Current Stage:  ${stageDisplay}
+Status:         ${statusLine}
+Active Agent:   ${activeAgent}
+Completion:     ${completed}/${total} stages (${pct}%)${skipped > 0 ? ` — ${skipped} skipped` : ""}
+
+Phase Progress:
+${phaseProgress}
+Last Completed: ${lastCompleted}
+Next Stage:     ${nextStage}
+`;
+  process.stdout.write(output);
+}
+
+// ---------------------------------------------------------------------------
+// doctor
+// ---------------------------------------------------------------------------
+
+// Threshold (days) beyond which doctor flags practices as stale and prompts
+// re-affirmation.
+export const PRACTICES_STALENESS_DAYS = 90;
+
+// MERGE_DISPATCH INVOKED-orphan window for advisory reconciliation. Window
+// covers a generous LLM Task call budget (Haiku 30s + retry + parse).
+export const MERGE_DISPATCH_TIMEOUT_SEC = 60;
+
+// A single doctor health-check row (structurally the element of handleDoctor's
+// results array).
+export interface DoctorCheck {
+  pass: boolean;
+  label: string;
+  fix?: string;
+}
+
+export type PrereqTool = "herdr" | "agmsg";
+
+export type PrereqStatus =
+  | { readonly tool: PrereqTool; readonly found: true; readonly path: string }
+  | { readonly tool: PrereqTool; readonly found: false; readonly guidance: string };
+
+export type PathProbe = (command: string) => string | null;
+
+export const TEAM_PREREQUISITE_GUIDANCE: Readonly<Record<PrereqTool, string>> = {
+  herdr: "install from https://herdr.dev and see docs/guide/20-team-mode.md",
+  agmsg:
+    "install from https://github.com/j5ik2o/agmsg and see docs/guide/20-team-mode.md",
+};
+
+export function detectTeamPrerequisites(
+  env: Readonly<Record<string, string | undefined>>,
+  pathProbe: PathProbe,
+): PrereqStatus[] {
+  const homeDir = env.HOME ?? "";
+  const agmsgRoot = env.AGMSG_ROOT ?? join(homeDir, ".agents", "skills", "agmsg");
+  const commands: ReadonlyArray<readonly [PrereqTool, string]> = [
+    ["herdr", env.HERDR ?? "herdr"],
+    ["agmsg", env.AGMSG_SEND ?? join(agmsgRoot, "scripts", "send.sh")],
+  ];
+  return commands.map(([tool, command]) => {
+    const path = pathProbe(command);
+    return path === null
+      ? { tool, found: false, guidance: TEAM_PREREQUISITE_GUIDANCE[tool] }
+      : { tool, found: true, path };
+  });
+}
+
+function probeExecutable(command: string): string | null {
+  if (!command.includes("/") && !command.includes("\\")) return Bun.which(command);
+  try {
+    accessSync(command, fsConstants.X_OK);
+    return command;
+  } catch {
+    return null;
+  }
+}
+
+export type DeepReadonly<T> =
+  T extends (...args: never[]) => unknown ? T
+    : T extends Map<infer K, infer V> ? ReadonlyMap<DeepReadonly<K>, DeepReadonly<V>>
+    : T extends Set<infer U> ? ReadonlySet<DeepReadonly<U>>
+    : T extends readonly (infer U)[] ? readonly DeepReadonly<U>[]
+    : T extends object ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
+    : T;
+
+export interface DoctorContext {
+  readonly projectDir: string;
+  readonly harnessDir: string;
+  readonly rulesSubdir: string;
+  readonly worktreeBaseDir: string;
+  readonly platform: NodeJS.Platform;
+  readonly homeDir: string | undefined;
+  readonly codexHomeDir: string;
+  readonly kimiHomeDir: string;
+  readonly defaultScope: string;
+  readonly migrationDoctor: boolean;
+  readonly heartbeatSwapTarget: string | undefined;
+  readonly healthDirSwapTarget: string | undefined;
+  readonly nowMs: number;
+  readonly graph: DeepReadonly<GraphStage[]>;
+  readonly rules: DeepReadonly<RuleFile[]>;
+  readonly agents: DeepReadonly<AgentMetadata[]>;
+  readonly scopeMapping: DeepReadonly<Record<string, ScopeDefinition>>;
+  readonly artifactNames: readonly string[];
+  readonly teamPrerequisites: readonly PrereqStatus[];
+}
+
+export interface DoctorRunResult {
+  readonly exitCode: 0 | 1;
+  readonly output: string;
+}
+
+type DoctorCheckResult = DoctorCheck;
+
+class DoctorPostOutputError extends Error {
+  constructor(
+    readonly output: string,
+    readonly originalCause: unknown,
+  ) {
+    super("Doctor failed after completing its output");
+    this.name = "DoctorPostOutputError";
+  }
+}
+
+function freezeDoctorCollectionMethods(value: Map<unknown, unknown> | Set<unknown>): void {
+  const rejectMutation = (): never => {
+    throw new TypeError("Doctor context snapshots are immutable");
+  };
+  const descriptors: PropertyDescriptorMap = value instanceof Map
+    ? {
+        set: { value: rejectMutation },
+        delete: { value: rejectMutation },
+        clear: { value: rejectMutation },
+      }
+    : {
+        add: { value: rejectMutation },
+        delete: { value: rejectMutation },
+        clear: { value: rejectMutation },
+      };
+  Object.defineProperties(value, descriptors);
+}
+
+export function deepFreezeDoctorSnapshot<T>(value: T): DeepReadonly<T> {
+  if (value === null || typeof value !== "object" || Object.isFrozen(value)) {
+    return value as DeepReadonly<T>;
+  }
+  if (value instanceof Map) {
+    for (const [key, entry] of value) {
+      deepFreezeDoctorSnapshot(key);
+      deepFreezeDoctorSnapshot(entry);
+    }
+    freezeDoctorCollectionMethods(value);
+  } else if (value instanceof Set) {
+    for (const entry of value) deepFreezeDoctorSnapshot(entry);
+    freezeDoctorCollectionMethods(value);
+  } else {
+    for (const key of Reflect.ownKeys(value)) {
+      deepFreezeDoctorSnapshot((value as Record<PropertyKey, unknown>)[key]);
+    }
+  }
+  return Object.freeze(value) as DeepReadonly<T>;
+}
+
+function doctorArtifactNames(graph: readonly DeepReadonly<GraphStage>[]): string[] {
+  const names = new Set<string>();
+  for (const stage of graph) {
+    for (const name of stage.produces ?? []) names.add(name);
+    for (const name of stage.optional_produces ?? []) names.add(name);
+  }
+  return [...names].sort();
+}
+
+export function resolveDoctorContext(projectDir: string): DoctorContext {
+  const resolvedHarnessDir = harnessDir();
+  const resolvedRulesSubdir = rulesSubdir();
+  const resolvedWorktreeBaseDir = worktreeBaseDir(projectDir);
+  const platform = process.platform;
+  const homeDir = process.env.HOME;
+  const codexHomeDir = process.env.CODEX_HOME ?? join(homeDir ?? "", ".codex");
+  const kimiHomeDir = process.env.KIMI_CODE_HOME ?? join(homeDir ?? "", ".kimi-code");
+  const defaultScope = (process.env.AMADEUS_DEFAULT_SCOPE ?? "").trim();
+  const migrationDoctor = process.env.AMADEUS_MIGRATION_DOCTOR === "1";
+  const testMode = process.env.NODE_ENV === "test";
+  const heartbeatSwapTarget = testMode
+    ? process.env.AMADEUS_DOCTOR_TEST_SWAP_HEARTBEAT_TARGET
+    : undefined;
+  const healthDirSwapTarget = testMode
+    ? process.env.AMADEUS_DOCTOR_TEST_SWAP_HEALTH_DIR_TARGET
+    : undefined;
+  const nowMs = Date.now();
+  const graph = deepFreezeDoctorSnapshot(structuredClone(loadGraph()));
+  const rules = deepFreezeDoctorSnapshot(structuredClone(loadRules()));
+  const agents = deepFreezeDoctorSnapshot(structuredClone(loadAgents()));
+  const scopeMapping = deepFreezeDoctorSnapshot(structuredClone(loadScopeMapping()));
+  const artifactNames = deepFreezeDoctorSnapshot(doctorArtifactNames(graph));
+  const teamPrerequisites = deepFreezeDoctorSnapshot(
+    detectTeamPrerequisites(process.env, probeExecutable),
+  );
+  return Object.freeze({
+    projectDir,
+    harnessDir: resolvedHarnessDir,
+    rulesSubdir: resolvedRulesSubdir,
+    worktreeBaseDir: resolvedWorktreeBaseDir,
+    platform,
+    homeDir,
+    codexHomeDir,
+    kimiHomeDir,
+    defaultScope,
+    migrationDoctor,
+    heartbeatSwapTarget,
+    healthDirSwapTarget,
+    nowMs,
+    graph,
+    rules,
+    agents,
+    scopeMapping,
+    artifactNames,
+    teamPrerequisites,
+  });
+}
+
+interface HookHeartbeatInspection {
+  directoryExists: boolean;
+  entries: string[];
+}
+
+function sameFileIdentity(
+  left: Stats,
+  right: Stats,
+): boolean {
+  return left.dev === right.dev && left.ino === right.ino;
+}
+
+function lstatOrNull(path: string): Stats | null {
+  try {
+    return lstatSync(path);
+  } catch {
+    return null;
+  }
+}
+
+function closeHeartbeat(fd: number): void {
+  try { closeSync(fd); } catch { /* Best-effort cleanup after a rejected read. */ }
+}
+
+function injectHeartbeatSwapForTest(path: string, target: string | undefined): void {
+  if (!target) return;
+  rmSync(path, { force: true });
+  symlinkSync(target, path);
+}
+
+function injectHeartbeatDirectorySwapForTest(
+  path: string,
+  target: string | undefined,
+  platform: NodeJS.Platform,
+): void {
+  if (!target) return;
+  rmSync(path, { recursive: true, force: true });
+  symlinkSync(target, path, platform === "win32" ? "junction" : "dir");
+}
+
+function matchesRealDirectory(path: string, expected: Stats): boolean {
+  const current = lstatOrNull(path);
+  return current !== null &&
+    current.isDirectory() &&
+    !current.isSymbolicLink() &&
+    sameFileIdentity(current, expected);
+}
+
+function openHeartbeatNoFollow(path: string, swapTarget: string | undefined): number | null {
+  let fd: number | null = null;
+  try {
+    const before = lstatSync(path);
+    if (before.isSymbolicLink() || !before.isFile()) return null;
+    injectHeartbeatSwapForTest(path, swapTarget);
+    const noFollow = typeof fsConstants.O_NOFOLLOW === "number"
+      ? fsConstants.O_NOFOLLOW
+      : 0;
+    fd = openSync(path, fsConstants.O_RDONLY | noFollow);
+    const opened = fstatSync(fd);
+    const after = lstatSync(path);
+    const changed =
+      !opened.isFile() ||
+      after.isSymbolicLink() ||
+      !after.isFile() ||
+      !sameFileIdentity(before, opened) ||
+      !sameFileIdentity(opened, after);
+    if (changed) { closeHeartbeat(fd); fd = null; return null; }
+    return fd;
+  } catch {
+    if (fd !== null) closeHeartbeat(fd);
+    return null;
+  }
+}
+
+function readHeartbeatTimestamp(path: string, swapTarget: string | undefined): string | null {
+  const fd = openHeartbeatNoFollow(path, swapTarget);
+  if (fd === null) return null;
+  try {
+    return readFileSync(fd, "utf-8").trim();
+  } finally {
+    closeHeartbeat(fd);
+  }
+}
+
+function inspectHookHeartbeats(
+  healthDir: string,
+  options: Pick<
+    DoctorContext,
+    "platform" | "heartbeatSwapTarget" | "healthDirSwapTarget"
+  >,
+): HookHeartbeatInspection {
+  const directoryStat = lstatOrNull(healthDir);
+  if (directoryStat === null) return { directoryExists: false, entries: [] };
+  if (directoryStat.isSymbolicLink() || !directoryStat.isDirectory()) {
+    return { directoryExists: true, entries: [] };
+  }
+  injectHeartbeatDirectorySwapForTest(
+    healthDir,
+    options.healthDirSwapTarget,
+    options.platform,
+  );
+  if (!matchesRealDirectory(healthDir, directoryStat)) {
+    return { directoryExists: true, entries: [] };
+  }
+
+  const entries: string[] = [];
+  try {
+    const files = readdirSync(healthDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".last"))
+      .map((entry) => entry.name);
+    if (!matchesRealDirectory(healthDir, directoryStat)) return { directoryExists: true, entries: [] };
+    for (const file of files) {
+      if (!matchesRealDirectory(healthDir, directoryStat)) return { directoryExists: true, entries: [] };
+      const path = join(healthDir, file);
+      const timestamp = readHeartbeatTimestamp(path, options.heartbeatSwapTarget);
+      if (!matchesRealDirectory(healthDir, directoryStat)) return { directoryExists: true, entries: [] };
+      if (timestamp !== null) {
+        entries.push(`${file.slice(0, -".last".length)} ${timestamp}`);
+      }
+    }
+  } catch {
+    // An unreadable real directory is an existing but unhealthy heartbeat dir.
+  }
+  return { directoryExists: true, entries };
+}
+
+export function hookHeartbeatDoctorCheck(
+  projectDir: string,
+  options: Pick<
+    DoctorContext,
+    "migrationDoctor" | "platform" | "heartbeatSwapTarget" | "healthDirSwapTarget"
+  >,
+): DoctorCheck {
+  if (options.migrationDoctor) {
+    return {
+      pass: true,
+      label:
+        "Hook heartbeats: not inspected during migration (runtime scratch is intentionally discarded)",
+    };
+  }
+  const heartbeat = inspectHookHeartbeats(hooksHealthDir(projectDir), options);
+  if (heartbeat.entries.length > 0) {
+    return {
+      pass: true,
+      label: `Hooks last fired: ${heartbeat.entries.join(", ")}`,
+    };
+  }
+  if (!heartbeat.directoryExists) {
+    return {
+      pass: true,
+      label: "Hook heartbeats: not yet fired (first workflow stage will populate)",
+    };
+  }
+  return {
+    pass: false,
+    label: "Hook heartbeat data",
+    fix: "health dir exists but no hooks have fired — verify hooks are registered in settings.json",
+  };
+}
+
+// Codex layer-1 (project) trust doctor check. Codex trust is two layers, both
+// pre-seeded in $CODEX_HOME/config.toml; layer 1 is the gate — without a
+// [projects."<dir>"] entry Codex skips this project's whole .codex hook layer
+// with NO warning, so layer 2 (hook trust) never even runs. This function holds
+// every branch (migration carve-out + present/absent) so both this helper and
+// handleDoctor's check wiring are covered in-process. Separate CLI tests retain
+// the process-boundary stdout/exit contract.
+export function codexProjectTrustDoctorCheck(
+  projectDir: string,
+  options: Pick<DoctorContext, "migrationDoctor" | "codexHomeDir">,
+): DoctorCheck {
+  const projectTrustKey = `[projects."${projectDir}"]`;
+  // Project trust is seeded at team-up runtime (or manually), not by migration
+  // — same class as the hook-heartbeat scratch. A fresh migration has none yet,
+  // so the check is not inspected under AMADEUS_MIGRATION_DOCTOR (mirrors
+  // hookHeartbeatDoctorCheck) to keep the post-migration doctor gate green.
+  if (options.migrationDoctor) {
+    return {
+      pass: true,
+      label: "project trust: not inspected during migration (seeded at team-up runtime)",
+    };
+  }
+  const codexConfig = join(options.codexHomeDir, "config.toml");
+  const projectTrusted =
+    existsSync(codexConfig) && readFileSync(codexConfig, "utf-8").includes(projectTrustKey);
+  return {
+    pass: projectTrusted,
+    label: `project trust: ${projectTrustKey} present in ${codexConfig} (layer 1 — Codex skips all .codex hooks silently without it)`,
+    fix: 're-run `bash <harness-dir>/tools/team-up.sh` (seeds both trust layers) or append the entry manually with `trust_level = "trusted"`',
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Kimi managed-block doctor checks (kimi-harness: core-harness-enums).
+//
+// Kimi Code has no project-level config file: the hook wiring lives in the
+// user-level KimiHome config.toml ($KIMI_CODE_HOME ?? ~/.kimi-code) as a
+// marker-fenced managed block the setup CLI merges from the shipped
+// .kimi-code/hooks/amadeus-hooks.snippet.toml. The detection contract below —
+// the marker constants, the adapter content signature, and the managed git
+// pre-allow patterns — is DUPLICATED from packages/setup/src/domain/
+// kimi-hooks.ts: the shipped framework must stay self-contained (no
+// packages/setup import, the same ADR-6 self-containment rule the elections
+// drift check documents above). The parity test pins these copies against the
+// setup domain so the two cannot silently drift. The dual identification
+// (marker lines first, the adapter command line when the markers are gone)
+// exists because the kimi CLI re-serializes config.toml and drops comments.
+// ---------------------------------------------------------------------------
+
+export const KIMI_MANAGED_BLOCK_BEGIN = "# >>> amadeus-kimi-hooks >>>";
+export const KIMI_MANAGED_BLOCK_END = "# <<< amadeus-kimi-hooks <<<";
+const KIMI_ADAPTER_SIGNATURE = ".kimi-code/hooks/amadeus-kimi-adapter.ts";
+const KIMI_MANAGED_GIT_PATTERNS = ["Bash(git worktree*)", "Bash(git commit*)", "Bash(git add*)"] as const;
+
+// The managed-block wiring procedure, shared by every missing/repair fix line.
+const KIMI_MANAGED_BLOCK_FIX =
+  're-run the installer (`bunx @amadeus-dlc/setup install --target <workspace>`) to merge the managed block, or wire it manually: copy everything between "# >>> amadeus-kimi-hooks >>>" and "# <<< amadeus-kimi-hooks <<<" (inclusive) from .kimi-code/hooks/amadeus-hooks.snippet.toml to the end of the config.toml';
+
+// A raw config table (header + unparsed body) — the minimal structural scan
+// the detection needs (no TOML parse, mirroring the setup domain's scanTables
+// contract: header lines normalize whitespace, bodies stay raw).
+interface KimiConfigTable {
+  readonly header: string; // normalized, e.g. "[[hooks]]"
+  readonly bodyText: string;
+}
+
+function scanKimiConfigTables(text: string): KimiConfigTable[] {
+  const tables: KimiConfigTable[] = [];
+  let header: string | null = null;
+  let body: string[] = [];
+  const flush = (): void => {
+    if (header !== null) tables.push({ header, bodyText: body.join("\n") });
+    header = null;
+    body = [];
+  };
+  for (const line of text.split("\n")) {
+    const match = /^\s*(\[\[[^\]]+\]\]|\[[^\]]+\])\s*(?:#.*)?$/.exec(line);
+    if (match !== null) {
+      flush();
+      header = (match[1] ?? "").replace(/\s+/g, "");
+    } else if (header !== null) {
+      body.push(line);
+    }
+  }
+  flush();
+  return tables;
+}
+
+// The dual managed-block detection: the marker pair wins; with no markers the
+// adapter command line inside a [[hooks]] table establishes the block's
+// presence (a user's own .kimi-code-flavoured entries never carry it).
+// Anomalies (duplicate/unpaired/reversed markers, duplicate adapter hook
+// tables) are reported distinctly so the check can fail LOUD — doctor never
+// auto-repairs.
+type KimiManagedBlockDetection =
+  | { readonly kind: "marker" }
+  | { readonly kind: "content" }
+  | { readonly kind: "none" }
+  | { readonly kind: "duplicate"; readonly detail: string }
+  | { readonly kind: "unpaired" }
+  | { readonly kind: "reversed" };
+
+function detectKimiManagedBlock(text: string): KimiManagedBlockDetection {
+  const lines = text.split("\n");
+  const begins = lines.filter((line) => line.trim() === KIMI_MANAGED_BLOCK_BEGIN).length;
+  const ends = lines.filter((line) => line.trim() === KIMI_MANAGED_BLOCK_END).length;
+  if (begins > 1 || ends > 1) {
+    return { kind: "duplicate", detail: "more than one amadeus managed-block marker pair" };
+  }
+  if (begins !== ends) return { kind: "unpaired" };
+  if (begins === 1) {
+    const start = lines.findIndex((line) => line.trim() === KIMI_MANAGED_BLOCK_BEGIN);
+    const end = lines.findIndex((line) => line.trim() === KIMI_MANAGED_BLOCK_END);
+    return start < end ? { kind: "marker" } : { kind: "reversed" };
+  }
+  const adapterTables = scanKimiConfigTables(text).filter(
+    (table) => table.header === "[[hooks]]" && table.bodyText.includes(KIMI_ADAPTER_SIGNATURE),
+  ).length;
+  if (adapterTables > 1) {
+    return { kind: "duplicate", detail: "the managed adapter hook appears in more than one [[hooks]] table" };
+  }
+  return adapterTables === 1 ? { kind: "content" } : { kind: "none" };
+}
+
+function readKimiConfig(kimiHomeDir: string): { readonly path: string; readonly text: string | null } {
+  const path = join(kimiHomeDir, "config.toml");
+  try {
+    return { path, text: readFileSync(path, "utf-8") };
+  } catch {
+    return { path, text: null }; // absent OR unreadable — both reported as missing below
+  }
+}
+
+// Managed-block presence check. Present by markers → PASS. Present by content
+// only (the kimi CLI stripped the marker comments) → advisory PASS with a
+// repair hint: the wiring fires, and the next install/upgrade re-wraps the
+// markers. Missing (no config.toml, or no block in it) → FAIL with the wiring
+// procedure; marker anomalies → loud FAIL with manual-fix guidance (never a
+// silent pick, matching the setup domain's loud-fail contract).
+export function kimiManagedBlockDoctorCheck(kimiHomeDir: string): DoctorCheck {
+  const { path, text } = readKimiConfig(kimiHomeDir);
+  if (text === null) {
+    return {
+      pass: false,
+      label: `kimi managed block: ${path} missing — hooks not wired`,
+      fix: KIMI_MANAGED_BLOCK_FIX,
+    };
+  }
+  const detection = detectKimiManagedBlock(text);
+  switch (detection.kind) {
+    case "marker":
+      return { pass: true, label: `kimi managed block: present in ${path}` };
+    case "content":
+      return {
+        pass: true,
+        label: `kimi managed block: present by content in ${path} but the markers are gone (the kimi CLI re-serializes config.toml and drops comments) — the next install/upgrade run re-wraps them`,
+      };
+    case "duplicate":
+      return {
+        pass: false,
+        label: `kimi managed block: ${detection.detail} in ${path}`,
+        fix: "remove the duplicates manually, then re-run the installer — doctor never auto-repairs",
+      };
+    case "unpaired":
+      return {
+        pass: false,
+        label: `kimi managed block: unpaired amadeus managed-block marker in ${path}`,
+        fix: "fix the marker pair manually (markers come in a begin/end pair)",
+      };
+    case "reversed":
+      return {
+        pass: false,
+        label: `kimi managed block: reversed amadeus managed-block markers in ${path}`,
+        fix: "fix the marker order manually",
+      };
+    case "none":
+      return {
+        pass: false,
+        label: `kimi managed block: not found in ${path} — hooks not wired`,
+        fix: KIMI_MANAGED_BLOCK_FIX,
+      };
+  }
+}
+
+// Git pre-allow residue check (advisory). The managed git rules carry no
+// .kimi-code signature, so a block removed while its markers were stripped
+// can leave them behind undetectably — when NO managed block is detected but
+// the managed git patterns are still present, warn (a user's own identical
+// rules cannot be told apart, hence advisory-only).
+export function kimiGitResidueDoctorCheck(kimiHomeDir: string): DoctorCheck {
+  const { path, text } = readKimiConfig(kimiHomeDir);
+  if (text === null || detectKimiManagedBlock(text).kind !== "none") {
+    return { pass: true, label: "kimi git pre-allows: no residue (advisory)" };
+  }
+  const residue = scanKimiConfigTables(text).filter(
+    (table) =>
+      table.header === "[[permission.rules]]" &&
+      KIMI_MANAGED_GIT_PATTERNS.some((pattern) => table.bodyText.includes(pattern)),
+  ).length;
+  if (residue === 0) {
+    return { pass: true, label: "kimi git pre-allows: no residue (advisory)" };
+  }
+  return {
+    pass: true,
+    label: `kimi git pre-allows: ${residue} managed-style git rule(s) in ${path} with no amadeus managed block detected — possible residue from an incompletely removed block; review manually (advisory)`,
+  };
+}
+
+// Classify the workspace-shell readiness into the THREE states doctor reports
+// (#844), mirroring the hook-heartbeat fresh-install split further below:
+//   (a) harness engine dir missing -> a genuinely broken install. FAIL, and the
+//       fix must be executable: the shipped shell is no longer a dist/ tree the
+//       user hand-copies, so point at re-running the installer.
+//   (b) engine dir present but the default space's memory dir not yet seeded ->
+//       known-normal before the first intent birth (the memory shell lands with
+//       the installer, but a manual/partial harness-only copy leaves it absent
+//       until birth). Advisory PASS so a brand-new user is guided forward, not
+//       failed. The 2-state predicate this replaces failed here and mis-directed
+//       the user to copy from the retired dist/ tree.
+//   (c) both present -> ready. PASS with the canonical label (unchanged).
+// Pure over booleans (existence probed by the caller) + the harness dir name,
+// so the helper and handleDoctor wiring are driven in-process; t83 separately
+// protects the CLI process boundary.
+export function classifyWorkspaceShellState(
+  harnessExists: boolean,
+  memoryExists: boolean,
+  harnessName: string,
+): DoctorCheck {
+  const readyLabel = `workspace shell ready (${harnessName}/ + amadeus/spaces/default/memory/)`;
+  if (!harnessExists) {
+    return {
+      pass: false,
+      label: readyLabel,
+      fix: "re-run the installer: `bunx @amadeus-dlc/setup install --target <workspace>`",
+    };
+  }
+  if (!memoryExists) {
+    return {
+      pass: true,
+      label:
+        "workspace shell pending first workflow — seeded at first intent birth (run your first /amadeus workflow)",
+    };
+  }
+  return { pass: true, label: readyLabel };
+}
+
+// Check 8 (#882): a record whose Status has reached "Completed" while its
+// "## Phase Progress" roll-up still lists Pending/Active phases is internally
+// inconsistent — the phase-boundary Verified/Skipped flip never fired for those
+// phases. The three functions below split the check into pure judgment seams
+// (phaseProgressResidual, classifyPhaseProgressConsistency) plus the I/O
+// collector (checkPhaseProgressConsistency), so every branch is driven
+// in-process by unit/integration tests. CLI spawn tests independently protect
+// the stdout/exit boundary. Advisory PASS by design: the historical pre-#880
+// records all carry this residue, so a FAIL would make doctor exit 1 on every
+// existing workspace.
+
+// Residual phases for ONE intent. Empty ⇒ consistent. A non-Completed status is
+// never a residue (a Running intent's Active phase is normal), so the gate
+// returns [] before inspecting phases. Only Pending/Active count as residue;
+// Verified/Skipped are legitimate terminal phase states.
+export function phaseProgressResidual(
+  status: string,
+  phases: ReadonlyArray<{ phase: string; status: string }>,
+): string[] {
+  if (status !== "Completed") return [];
+  return phases
+    .filter((p) => p.status === "Pending" || p.status === "Active")
+    .map((p) => p.phase);
+}
+
+// Aggregate every intent's residue into ONE advisory DoctorCheck. Always
+// pass:true — the historical records that predate #880 all carry this residue,
+// so a FAIL would make doctor exit 1 on every existing workspace and break its
+// read-only-diagnostic contract (Cold-safe gate). Detection only.
+export function classifyPhaseProgressConsistency(
+  intents: ReadonlyArray<{ record: string; status: string; phases: ReadonlyArray<{ phase: string; status: string }> }>,
+): DoctorCheck {
+  const flagged = intents
+    .map((it) => ({ record: it.record, residue: phaseProgressResidual(it.status, it.phases) }))
+    .filter((r) => r.residue.length > 0);
+  if (flagged.length === 0) {
+    return {
+      pass: true,
+      label: "Phase Progress: all Completed intents reconciled (no Pending/Active residue)",
+    };
+  }
+  const detail = flagged.map((r) => `${r.record}: ${r.residue.join(", ")}`).join("; ");
+  return {
+    pass: true,
+    label: `Phase Progress: ${flagged.length} Completed intent(s) with Pending/Active phases (advisory — historical records predate #880): ${detail}`,
+  };
+}
+
+// I/O collector: read every space's every intent state file, parse Status +
+// each canonical phase status via getField (so a "Status: Completed" string in a
+// Project body never matches — only the `- **Status**:` line does), and classify.
+// Phase labels come from PHASE_PROGRESS_FIELD (no doctor-side hardcoded list);
+// flagged records are reported as <space>/<dirName>. dirName === null rows
+// (registry-only) and per-intent read failures are skipped so one unreadable
+// state never sinks the whole check. No outer catch: the query layer
+// (listSpaces/listIntents) swallows its own I/O errors and returns empty lists,
+// so nothing here can throw past the per-intent read guard. Runs across EVERY
+// space so a residue in a non-active space is still surfaced.
+export function checkPhaseProgressConsistency(projectDir: string): DoctorCheck {
+  const scanned: Array<{ record: string; status: string; phases: Array<{ phase: string; status: string }> }> = [];
+  for (const sp of listSpaces(projectDir)) {
+    for (const i of listIntents(projectDir, sp.name)) {
+      if (i.dirName === null) continue;
+      const statePath = join(intentsDir(projectDir, sp.name), i.dirName, "amadeus-state.md");
+      let content: string;
+      try {
+        content = readFileSync(statePath, "utf-8");
+      } catch {
+        continue;
+      }
+      const status = getField(content, "Status") ?? "";
+      const phases = Object.values(PHASE_PROGRESS_FIELD).map((label) => ({
+        phase: label,
+        status: getField(content, label) ?? "",
+      }));
+      scanned.push({ record: `${sp.name}/${i.dirName}`, status, phases });
+    }
+  }
+  return classifyPhaseProgressConsistency(scanned);
+}
+
+// Standing delegation grant status (#1125). Reports the newest currently-valid
+// standing grant (its scope, remaining TTL in minutes, phase-boundary opt-in, and
+// issuer intent) or "none" when per-gate approval is in force. Always pass:true —
+// the presence OR absence of a grant is a healthy state, this is informational.
+// `now` is a parameter so the in-process test drives it deterministically.
+export function standingGrantDoctorCheck(projectDir: string, now: number): DoctorCheck {
+  const grant = findActiveStandingGrant(projectDir, now);
+  if (grant === null) {
+    return { pass: true, label: "Standing delegation grant: none (per-gate approval required)" };
+  }
+  const remainingMin = Math.max(0, Math.round((grant.expiresAtMs - now) / 60000));
+  const phaseBoundary = grant.includesPhaseBoundary ? "INCLUDED" : "EXCLUDED";
+  return {
+    pass: true,
+    label:
+      `Standing delegation grant: ${grant.scope} / ${remainingMin}m left / ` +
+      `phase-boundary ${phaseBoundary} / issuer ${grant.issuerIntent}`,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Elections registry ⇄ directory drift (advisory) — U4 doctor-drift-check.
+//
+// The check compares the default space's elections.json registry against the
+// on-disk election directories and reports any bidirectional drift for a human
+// to investigate. It is ALWAYS advisory (pass:true; ruling E-SRCAD3): it never
+// flips doctor to exit 1, so an in-migration or drifted workspace still passes.
+//
+// ADR-6: this check is SELF-CONTAINED — the shipped framework MUST NOT import
+// from scripts/ (the election store). The 4-field row validator and the
+// exact-match dirName predicate are therefore duplicated here; the parity test
+// t261 pins the local predicate against scripts' electionDirMatches so the
+// duplication cannot silently drift.
+// ---------------------------------------------------------------------------
+
+// The seven known election states — duplicated from amadeus-election-store's
+// VALID_STATES per ADR-6 (self-contained, no scripts/ import).
+const ELECTION_REGISTRY_STATES: ReadonlySet<string> = new Set([
+  "draft",
+  "open",
+  "collecting",
+  "tallied",
+  "rendered",
+  "recorded",
+  "hold",
+]);
+
+interface ElectionsRegistryRow {
+  electionId: string;
+  dirName: string;
+  createdAt: string;
+  status: string;
+}
+
+// Pure 4-field row check (duplicated from isElectionRegistryEntry per ADR-6):
+// all four required fields are non-empty strings AND status is a known state.
+// Unknown extra fields are ignored (forward-compat); any missing/mistyped
+// required field or unknown status fails the row.
+export function isElectionsRegistryRow(v: unknown): v is ElectionsRegistryRow {
+  if (typeof v !== "object" || v === null) return false;
+  const r = v as Record<string, unknown>;
+  return (
+    typeof r.electionId === "string" && r.electionId.length > 0 &&
+    typeof r.dirName === "string" && r.dirName.length > 0 &&
+    typeof r.createdAt === "string" && r.createdAt.length > 0 &&
+    typeof r.status === "string" && ELECTION_REGISTRY_STATES.has(r.status)
+  );
+}
+
+// Exact-equality bind: does this row's dirName match the physical directory
+// name? Duplicated from scripts' electionDirMatches per ADR-6; t261 pins parity.
+export function electionRowMatchesDir(row: ElectionsRegistryRow, dirName: string): boolean {
+  return row.dirName === dirName;
+}
+
+export type ElectionsDriftFinding =
+  | { kind: "absent" }
+  | { kind: "corrupt" }
+  | { kind: "readdir-fail" }
+  | {
+      kind: "ok";
+      rows: number;
+      dirs: number;
+      rowsWithoutDir: string[];
+      dirsWithoutRow: string[];
+    };
+
+// Pure label composer (exported for t261). Enumerates ALL drifted names with no
+// silent cap so a large drift is never truncated in the doctor report.
+export function composeElectionsDriftLabel(finding: ElectionsDriftFinding): string {
+  switch (finding.kind) {
+    case "absent":
+      return "elections registry: elections.json 不在(移行前)";
+    case "corrupt":
+      return "elections registry: elections.json corrupt — 要調査";
+    case "readdir-fail":
+      return "elections registry: elections/ readdir 失敗 — 要調査";
+    case "ok": {
+      const { rows, dirs, rowsWithoutDir, dirsWithoutRow } = finding;
+      if (rowsWithoutDir.length === 0 && dirsWithoutRow.length === 0) {
+        return `elections registry: no drift (rows ${rows} / dirs ${dirs})`;
+      }
+      return (
+        `elections registry: rows ${rows} / dirs ${dirs} / ` +
+        `row→dir欠 ${rowsWithoutDir.length} [${rowsWithoutDir.join(",")}] / ` +
+        `dir→row欠 ${dirsWithoutRow.length} [${dirsWithoutRow.join(",")}]`
+      );
+    }
+  }
+}
+
+// FS collector: read the default space's elections registry, compare it against
+// the on-disk election directories, and return the drift finding. Kept as a
+// thin seam over the pure composer so the label logic is in-process testable
+// (handleDoctor itself is spawn-only — t83 header). Order of verdicts mirrors
+// the spec: absent (file or dir missing) → corrupt (unreadable/parse/bad-row) →
+// readdir-fail (permission etc.) → ok (bidirectional drift by exact dirName).
+function inspectElectionsDrift(projectDir: string): ElectionsDriftFinding {
+  const root = join(projectDir, "amadeus", "spaces", "default", "elections");
+  const registryPath = join(root, "elections.json");
+  if (!existsSync(registryPath) || !existsSync(root)) return { kind: "absent" };
+  let text: string;
+  try {
+    text = readFileSync(registryPath, "utf8");
+  } catch {
+    return { kind: "corrupt" };
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { kind: "corrupt" };
+  }
+  if (!Array.isArray(parsed)) return { kind: "corrupt" };
+  const rows: ElectionsRegistryRow[] = [];
+  for (const row of parsed) {
+    if (!isElectionsRegistryRow(row)) return { kind: "corrupt" };
+    rows.push(row);
+  }
+  let dirNames: string[];
+  try {
+    dirNames = readdirSync(root, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name);
+  } catch {
+    return { kind: "readdir-fail" };
+  }
+  const dirSet = new Set(dirNames);
+  // row→dir欠: a row whose dirName resolves to no on-disk directory (identified
+  // by its electionId). dir→row欠: a directory matching no row's dirName by
+  // exact equality (non-directories like elections.json are already excluded by
+  // the isDirectory filter above).
+  const rowsWithoutDir = rows
+    .filter((r) => !dirSet.has(r.dirName))
+    .map((r) => r.electionId);
+  const dirsWithoutRow = dirNames.filter(
+    (d) => !rows.some((r) => electionRowMatchesDir(r, d)),
+  );
+  return {
+    kind: "ok",
+    rows: rows.length,
+    dirs: dirNames.length,
+    rowsWithoutDir,
+    dirsWithoutRow,
+  };
+}
+
+export function electionsRegistryDriftDoctorCheck(projectDir: string): DoctorCheck {
+  return {
+    pass: true,
+    label: composeElectionsDriftLabel(inspectElectionsDrift(projectDir)),
+  };
+}
+
+const CODEX_HOOKS_DOCTOR_REASONS = new Set([
+  "OK",
+  "CANONICAL_MISSING",
+  "CANONICAL_JSON_INVALID",
+  "CANONICAL_STRUCTURE_INVALID",
+  "CANONICAL_TUPLES_MISSING",
+  "ACTIVE_MISSING",
+  "ACTIVE_JSON_INVALID",
+  "ACTIVE_STRUCTURE_INVALID",
+  "TUPLE_MISMATCH",
+]);
+const CODEX_HOOKS_DOCTOR_KEYS = new Set([
+  "schemaVersion",
+  "command",
+  "pass",
+  "reason",
+  "label",
+  "fix",
+]);
+
+function codexHooksProjectDoctorCheck(projectDir: string): DoctorCheck {
+  const helper = join(projectDir, ".codex", "tools", "amadeus-codex-hooks.ts");
+  if (!existsSync(helper)) {
+    return {
+      pass: false,
+      label: "Codex hooks contract: project-local helper is missing",
+      fix: "restore `.codex/tools/amadeus-codex-hooks.ts` from the installed distribution",
+    };
+  }
+  const result = Bun.spawnSync(
+    ["bun", helper, "doctor", "--json", "--project-dir", projectDir],
+    { cwd: projectDir, stdout: "pipe", stderr: "ignore" },
+  );
+  let payload: unknown;
+  try {
+    payload = JSON.parse(result.stdout.toString()) as unknown;
+  } catch {
+    return {
+      pass: false,
+      label: "Codex hooks contract: project-local doctor returned invalid JSON",
+      fix: "restore the Codex hooks helper modules from the installed distribution",
+    };
+  }
+  if (
+    payload === null ||
+    typeof payload !== "object" ||
+    Array.isArray(payload)
+  ) {
+    return {
+      pass: false,
+      label: "Codex hooks contract: project-local doctor returned an invalid schema",
+      fix: "restore the Codex hooks helper modules from the installed distribution",
+    };
+  }
+  const row = payload as Record<string, unknown>;
+  const keys = Object.keys(row);
+  const schemaValid =
+    keys.length === (row.fix === undefined ? 5 : 6) &&
+    keys.every((key) => CODEX_HOOKS_DOCTOR_KEYS.has(key)) &&
+    row.schemaVersion === 1 &&
+    row.command === "doctor" &&
+    typeof row.pass === "boolean" &&
+    typeof row.reason === "string" &&
+    CODEX_HOOKS_DOCTOR_REASONS.has(row.reason) &&
+    typeof row.label === "string" &&
+    (row.fix === undefined || typeof row.fix === "string");
+  if (!schemaValid || (row.pass === true) !== (result.exitCode === 0)) {
+    return {
+      pass: false,
+      label: "Codex hooks contract: project-local doctor returned an invalid schema",
+      fix: "restore the Codex hooks helper modules from the installed distribution",
+    };
+  }
+  return {
+    pass: row.pass as boolean,
+    label: row.label as string,
+    ...(typeof row.fix === "string" ? { fix: row.fix } : {}),
+  };
+}
+
+export function handleDoctor(context: DoctorContext): DoctorRunResult {
+  const {
+    projectDir,
+    harnessDir: harness,
+    rulesSubdir: resolvedRulesSubdir,
+    worktreeBaseDir: resolvedWorktreeBaseDir,
+    platform,
+    homeDir,
+    codexHomeDir,
+    kimiHomeDir,
+    defaultScope,
+    migrationDoctor,
+    heartbeatSwapTarget,
+    healthDirSwapTarget,
+    nowMs,
+    graph,
+    rules,
+    agents,
+    scopeMapping,
+    artifactNames,
+    teamPrerequisites,
+  } = context;
+  const results: DoctorCheckResult[] = [];
+  const isWindows = platform === "win32";
+
+  // 1. bun installed — check PATH (Bun.which handles Windows .exe suffix automatically)
+  const bunHome = homeDir ? join(homeDir, ".bun", "bin", "bun") : "";
+  const bunFound = Bun.which("bun") !== null || (bunHome !== "" && existsSync(bunHome));
+  results.push({
+    pass: bunFound,
+    label: "bun installed (required for CLI tools and hooks)",
+    fix: isWindows
+      ? "install via `npm install -g bun` or `powershell -c \"irm bun.sh/install.ps1 | iex\"`"
+      : "install via `curl -fsSL https://bun.sh/install | bash`",
+  });
+
+  // The compose marker uses the same pure freshness projection as the Stop
+  // hook. Doctor only observes it: stale or unreadable markers are reported
+  // loudly, but this read-only diagnostic never deletes or rewrites them.
+  const composeMarkerPath = join(projectDir, COMPOSE_MARKER_RELATIVE_PATH);
+  let composeMarkerObservation: MarkerObservation;
+  try {
+    composeMarkerObservation = {
+      kind: "present" as const,
+      path: composeMarkerPath,
+      mtimeMs: lstatSync(composeMarkerPath).mtimeMs,
+    };
+  } catch (e) {
+    composeMarkerObservation = (e as NodeJS.ErrnoException).code === "ENOENT"
+      ? { kind: "absent" as const, path: composeMarkerPath }
+      : { kind: "unreadable" as const, path: composeMarkerPath, reason: errorMessage(e) };
+  }
+  const composeMarker = inspectComposeMarker(
+    composeMarkerObservation,
+    nowMs,
+    COMPOSE_MARKER_TTL_MS,
+  );
+  if (composeMarker.kind === "fresh") {
+    results.push({
+      pass: true,
+      label: `Compose approval marker: fresh (${composeMarker.ageMs}ms old, advisory)`,
+    });
+  } else if (composeMarker.kind === "stale") {
+    results.push({
+      pass: false,
+      label: `Compose approval marker: stale (${composeMarker.ageMs}ms old)`,
+      fix: `remove ${composeMarker.path} after confirming no compose approval is pending`,
+    });
+  } else if (composeMarker.kind === "unreadable") {
+    results.push({
+      pass: false,
+      label: `Compose approval marker: unreadable (${composeMarker.reason})`,
+      fix: `restore read access to ${composeMarker.path} or remove it after confirming no compose approval is pending`,
+    });
+  }
+
+  // 2. Hook presence — every framework hook is TypeScript, run via bun (no
+  // executable bit needed). The core hook bodies ship in EVERY harness tree; the
+  // Kiro and Codex trees additionally carry an authored stdin adapter that wires
+  // them up.
+  if (harness === ".claude") {
+    // Claude Code: the EXPECTED roster is the set of amadeus-*.ts hooks that
+    // settings.json actually wires (its `hooks` event blocks + the `statusLine`
+    // command) — that is the CONTRACT Claude Code will try to run. Each
+    // expected hook's PRESENCE is then probed against the project's own
+    // .claude/hooks/ directory. A hook wired in settings.json but missing on
+    // disk is a real runtime breakage, and this surfaces it as a loud ✗.
+    //
+    // Why settings.json, not readdirSync of the hooks dir: doctor's normal
+    // invocation derives projectDir from the tool's OWN location
+    // (resolveProjectDir step 3), so the hooks dir IS the dir a roster would be
+    // enumerated from — probing an enumerated-from-itself roster is tautological
+    // (every hook trivially "present", a deleted hook silently absent from the
+    // roster). Sourcing the expectation from settings.json instead means the
+    // roster and the probe target genuinely diverge, so a missing hook is caught
+    // in the real single-install path. It is also self-maintaining: wire a new
+    // hook in settings.json and doctor checks it automatically (no hardcoded
+    // list to drift — the old list named only 7 of the 10 shipped hooks).
+    const settingsForHooks = join(projectDir, harness, "settings.json");
+    let expectedHooks: string[] = [];
+    let settingsReadable = true;
+    try {
+      const raw = readFileSync(settingsForHooks, "utf-8");
+      // jq-free: collect every distinct amadeus-*.ts basename referenced anywhere
+      // in settings.json (hook command paths like
+      // "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-audit-logger.ts" and the
+      // statusLine command). Basename, not path, so the probe is dir-relative.
+      const refs = new Set<string>();
+      for (const m of raw.matchAll(/amadeus-[A-Za-z0-9_-]+\.ts/g)) {
+        refs.add(m[0]);
+      }
+      expectedHooks = [...refs].sort();
+    } catch {
+      settingsReadable = false;
+    }
+    if (!settingsReadable) {
+      // settings.json missing/unreadable: fail LOUD (the wiring-config check
+      // below also flags its absence, but the hook contract genuinely cannot be
+      // verified, so say so rather than silently checking nothing).
+      results.push({
+        pass: false,
+        label: "Hook contract: settings.json unreadable — cannot verify wired hooks",
+        fix: "restore .claude/settings.json (copy from `dist/claude/.claude/settings.json.example`)",
+      });
+    } else if (expectedHooks.length === 0) {
+      // settings.json parsed but wires no amadeus hooks — also loud (a stripped
+      // settings.json that lost its hooks block is a real misconfiguration).
+      results.push({
+        pass: false,
+        label: "Hook contract: settings.json wires no amadeus-*.ts hooks",
+        fix: "restore the hooks block in .claude/settings.json (copy from `dist/claude/.claude/settings.json.example`)",
+      });
+    } else {
+      for (const h of expectedHooks) {
+        const hookPath = join(projectDir, harness, "hooks", h);
+        results.push({
+          pass: existsSync(hookPath),
+          label: `${h} present`,
+          fix: "verify file exists in .claude/hooks/",
+        });
+      }
+    }
+  } else {
+    // Kiro / Codex: the wiring config is not settings.json (it is
+    // agents/amadeus.json / hooks.json — checked below). The core hook bodies
+    // ship in every tree plus an authored adapter, so probe the explicit roster.
+    const tsHooks = [
+      "amadeus-audit-logger",
+      "amadeus-sync-statusline",
+      "amadeus-validate-state",
+      "amadeus-log-subagent",
+      "amadeus-session-start",
+      "amadeus-session-end",
+      "amadeus-statusline",
+    ];
+    if (harness === ".kiro") tsHooks.push("amadeus-kiro-adapter");
+    if (harness === ".codex") tsHooks.push("amadeus-codex-adapter");
+    if (harness === ".kimi-code") tsHooks.push("amadeus-kimi-adapter");
+    for (const h of tsHooks) {
+      const hookPath = join(projectDir, harness, "hooks", `${h}.ts`);
+      results.push({
+        pass: existsSync(hookPath),
+        label: `${h}.ts present`,
+        fix: `verify file exists in ${harness}/hooks/`,
+      });
+    }
+  }
+
+  // 4. Harness wiring config present. Claude Code: settings.json (hooks +
+  // permissions live there). Kiro CLI: the amadeus agent config (hooks +
+  // permissions live there) plus settings/cli.json (activation). Codex CLI:
+  // config.toml + hooks.json (the hook wiring) + rules/default.rules (permissions).
+  if (harness === ".kiro") {
+    const agentPath = join(projectDir, harness, "agents", "amadeus.json");
+    results.push({
+      pass: existsSync(agentPath),
+      label: "agents/amadeus.json present (hook + permission wiring)",
+      fix: "copy from `dist/kiro/.kiro/agents/amadeus.json`",
+    });
+    const cliSettingsPath = join(projectDir, harness, "settings", "cli.json");
+    results.push({
+      pass: existsSync(cliSettingsPath),
+      label: "settings/cli.json present (workspace default-agent activation)",
+      fix: "copy from `dist/kiro/.kiro/settings/cli.json` (or use `kiro-cli chat --agent amadeus`)",
+    });
+  } else if (harness === ".codex") {
+    for (const [file, what, from] of [
+      ["config.toml", "model/provider/sandbox config", "dist/codex/.codex/config.toml.example"],
+      ["rules/default.rules", "permission prefix rules", "dist/codex/.codex/rules/default.rules"],
+    ] as const) {
+      results.push({
+        pass: existsSync(join(projectDir, harness, file)),
+        label: `${file} present (${what})`,
+        fix: `copy from \`${from}\``,
+      });
+    }
+    results.push(codexHooksProjectDoctorCheck(projectDir));
+    // Minimum Codex version pin (G10): SubagentStart/Stop agent_type carries
+    // the real role name only from 0.139.0 (hyphenated agent TOMLs resolve
+    // without registration from the same release). Older versions degrade
+    // SUBAGENT_COMPLETED attribution and the agent transposition contract.
+    const MIN_CODEX = [0, 139, 0] as const;
+    const codexPath = Bun.which("codex");
+    const codexVer = codexPath
+      ? Bun.spawnSync([codexPath, "--version"], { stdout: "pipe", stderr: "ignore" })
+      : undefined;
+    const verText = (codexVer?.stdout?.toString() ?? "").trim();
+    const verMatch = verText.match(/(\d+)\.(\d+)\.(\d+)/);
+    if (!verMatch) {
+      results.push({
+        pass: false,
+        label: "codex CLI on PATH",
+        fix: "install Codex CLI >= 0.139.0 (https://developers.openai.com/codex)",
+      });
+    } else {
+      const v = [Number(verMatch[1]), Number(verMatch[2]), Number(verMatch[3])];
+      const ok =
+        v[0] > MIN_CODEX[0] ||
+        (v[0] === MIN_CODEX[0] &&
+          (v[1] > MIN_CODEX[1] || (v[1] === MIN_CODEX[1] && v[2] >= MIN_CODEX[2])));
+      results.push({
+        pass: ok,
+        label: `codex CLI version ${verMatch[0]} >= 0.139.0 (subagent attribution + agent TOML resolution)`,
+        fix: "upgrade Codex CLI to 0.139.0 or later",
+      });
+    }
+    // Codex trust is two layers, both pre-seeded in $CODEX_HOME/config.toml.
+    // Layer 1 (project trust) is the gate; the helper and this wiring are
+    // exercised in-process, while separate CLI tests retain stdout/exit parity.
+    results.push(codexProjectTrustDoctorCheck(projectDir, {
+      migrationDoctor,
+      codexHomeDir,
+    }));
+    // Hook trust pre-seed reminder (advisory pass-with-label): even with project
+    // trust, untrusted hooks never fire (the bypass flag does not run them).
+    results.push({
+      pass: true,
+      label:
+        "hook trust: ensure [hooks.state] entries are pre-seeded in $CODEX_HOME/config.toml (layer 2 — `bun scripts/package.ts codex trust --project <dir>`) or run one TUI trust pass",
+    });
+  } else if (harness === ".kimi-code") {
+    // Kimi Code: no project-level wiring config — the hook wiring lives in the
+    // user-level KimiHome config.toml ($KIMI_CODE_HOME ?? ~/.kimi-code) as a
+    // marker-fenced managed block, merged by the setup CLI. Judgment lives in
+    // the in-process-tested kimiManagedBlockDoctorCheck /
+    // kimiGitResidueDoctorCheck seams (the git pre-allow residue warning is
+    // advisory by contract).
+    results.push(kimiManagedBlockDoctorCheck(kimiHomeDir));
+    results.push(kimiGitResidueDoctorCheck(kimiHomeDir));
+    // Minimum Kimi Code version pin: the hook event/matcher payload contract
+    // the adapter translates was measured live against 0.28.1 (the floor this
+    // install was verified against). Older versions are unverified — same
+    // check-and-fail idiom as the codex arm's MIN_CODEX. A missing binary
+    // skips the comparison and reports "not installed" instead.
+    const MIN_KIMI = [0, 28, 1] as const;
+    const kimiPath = Bun.which("kimi");
+    const kimiVer = kimiPath
+      ? Bun.spawnSync([kimiPath, "--version"], { stdout: "pipe", stderr: "ignore" })
+      : undefined;
+    const kimiVerText = (kimiVer?.stdout?.toString() ?? "").trim();
+    const kimiVerMatch = kimiVerText.match(/(\d+)\.(\d+)\.(\d+)/);
+    if (!kimiVerMatch) {
+      results.push({
+        pass: false,
+        label: "kimi CLI on PATH",
+        fix: "install Kimi Code CLI >= 0.28.1 (see docs/guide/harnesses/kimi-code.md)",
+      });
+    } else {
+      const v = [Number(kimiVerMatch[1]), Number(kimiVerMatch[2]), Number(kimiVerMatch[3])];
+      const ok =
+        v[0] > MIN_KIMI[0] ||
+        (v[0] === MIN_KIMI[0] &&
+          (v[1] > MIN_KIMI[1] || (v[1] === MIN_KIMI[1] && v[2] >= MIN_KIMI[2])));
+      results.push({
+        pass: ok,
+        label: `kimi CLI version ${kimiVerMatch[0]} >= 0.28.1 (measured hook payload contract)`,
+        fix: "upgrade Kimi Code CLI to 0.28.1 or later",
+      });
+    }
+    // Function probe (advisory): fire the adapter once with a no-op target and
+    // an empty envelope. The adapter is fail-open by contract, so exit 0 means
+    // the shim runs under bun. Any failure is reported as UNVERIFIED, never a
+    // doctor failure — hooks are auxiliary and the workflow still runs.
+    const probeAdapter = join(projectDir, harness, "hooks", "amadeus-kimi-adapter.ts");
+    let probeOk = false;
+    try {
+      const probe = Bun.spawnSync(["bun", probeAdapter, "doctor-probe"], {
+        cwd: projectDir,
+        stdin: Buffer.from("{}"),
+        stdout: "ignore",
+        stderr: "ignore",
+      });
+      probeOk = probe.exitCode === 0;
+    } catch {
+      probeOk = false;
+    }
+    results.push({
+      pass: true,
+      label: probeOk
+        ? "kimi hook probe: adapter fired (advisory)"
+        : "kimi hook probe: unverified — the adapter did not exit 0 (advisory; hooks are auxiliary, the workflow still runs)",
+    });
+  } else {
+    const settingsPath = join(projectDir, harness, "settings.json");
+    results.push({
+      pass: existsSync(settingsPath),
+      label: "settings.json present",
+      fix: "copy from `dist/claude/.claude/settings.json.example`",
+    });
+  }
+
+  // 4b. Dual-harness coexistence (D-11): another harness tree installed AND a
+  // workflow active is supported-but-untested — warn (advisory pass with a
+  // visible label), never block.
+  const otherTrees = [".claude", ".kiro", ".codex", ".opencode", ".cursor", ".kimi-code"].filter(
+    (h) => h !== harness && existsSync(join(projectDir, h, "tools", "amadeus-lib.ts")),
+  );
+  if (
+    otherTrees.length > 0 &&
+    existsSync(join(projectDir, harness, "tools", "amadeus-lib.ts")) &&
+    existsSync(stateFilePath(projectDir))
+  ) {
+    results.push({
+      pass: true,
+      label: `Multi-harness install detected (${harness} + ${otherTrees.join(" + ")}) with an active workflow — supported but untested; keep all trees at the same framework version`,
+    });
+  }
+
+  // 4a. AMADEUS_DEFAULT_SCOPE env var — project-default scope from settings.json env.
+  // Only observable inside a Claude Code session (where settings.json env is exposed
+  // to Bash invocations). When doctor is invoked directly via bun, the env is unset
+  // and we report "unset — no project default" as a pass.
+  const envScope = defaultScope;
+  if (envScope === "") {
+    results.push({
+      pass: true,
+      label: "AMADEUS_DEFAULT_SCOPE (unset — no project default)",
+    });
+  } else if (Object.hasOwn(scopeMapping, envScope)) {
+    results.push({
+      pass: true,
+      label: `AMADEUS_DEFAULT_SCOPE=${envScope} (valid)`,
+    });
+  } else {
+    results.push({
+      pass: false,
+      label: `AMADEUS_DEFAULT_SCOPE=${envScope} (invalid)`,
+      fix: `valid values: ${Object.keys(scopeMapping).sort().join(", ")}`,
+    });
+  }
+
+  // 4b. Canonical settings.json (U3) — the judgment lives in the in-process-
+  // tested settingsDoctorCheck seam and handleDoctor wiring is covered by t257.
+  results.push(settingsDoctorCheck(projectDir));
+
+  // 4c. Standing delegation grant (#1125) — informational: is a team-mode
+  // standing grant currently opening stage gates, or is per-gate approval in
+  // force? Judgment lives in the in-process-tested standingGrantDoctorCheck seam.
+  results.push(standingGrantDoctorCheck(projectDir, nowMs));
+
+  // 4d. Elections registry ⇄ directory drift (advisory) — does the default
+  // space's elections.json agree with the on-disk election dirs? Always
+  // pass:true (ruling E-SRCAD3); judgment lives in the in-process-tested
+  // electionsRegistryDriftDoctorCheck / composeElectionsDriftLabel seam.
+  results.push(electionsRegistryDriftDoctorCheck(projectDir));
+
+  // 5. Workspace shell ready (P4: no --init artifact to check). Readiness is the
+  // SHIPPED SHELL: the harness engine dir (.claude/.kiro/.codex) present AND the
+  // default space's memory dir present (the source of truth the native include
+  // resolves). Three states — see classifyWorkspaceShellState (#844): engine dir
+  // missing = FAIL with an executable installer-rerun fix; memory not yet seeded
+  // = advisory PASS (known-normal before first intent birth); both present =
+  // PASS. Pin to the DEFAULT space explicitly: memoryDirFor() follows the
+  // active-space cursor, so pass DEFAULT_SPACE to keep this probe checking the
+  // always-shipped baseline rather than a (possibly absent) switched-to space.
+  // The harness includes are committed (generated-on-demand only for their
+  // pointer), so their presence is not part of shell-readiness.
+  const harnessEngineDir = join(projectDir, harness);
+  const defaultMemoryDir = memoryDirFor(projectDir, DEFAULT_SPACE);
+  results.push(classifyWorkspaceShellState(existsSync(harnessEngineDir), existsSync(defaultMemoryDir), harness));
+
+  // 6. Hook heartbeats
+  // Three states:
+  //   (a) .amadeus-hooks-health/ missing entirely → fresh install, hooks haven't
+  //       had a chance to fire yet. Pass with advisory label — not drift.
+  //   (b) Directory exists but no .last files → hooks registered but have
+  //       never fired. Genuine drift; fail.
+  //   (c) Directory has .last files → hooks are working; pass with timestamps.
+  results.push(hookHeartbeatDoctorCheck(projectDir, {
+    migrationDoctor,
+    platform,
+    heartbeatSwapTarget,
+    healthDirSwapTarget,
+  }));
+
+  // State / audit drift check — if latest audit event implies the state file
+  // should be in a certain shape (e.g., Status=Completed after WORKFLOW_COMPLETED),
+  // verify the state actually matches. Covers the rare case where audit-first
+  // succeeded but the state write failed (disk full, permission lost mid-run).
+  const stateMdPath = stateFilePath(projectDir);
+  // Read across every per-clone audit shard (single shard in the common case).
+  const auditAllShards = readAllAuditShards(projectDir);
+  if (existsSync(stateMdPath) && auditAllShards.length > 0) {
+    try {
+      const auditContent = auditAllShards;
+      const stateContent = readFileSync(stateMdPath, "utf-8");
+      // Find last WORKFLOW_COMPLETED event
+      const wcIdx = auditContent.lastIndexOf("**Event**: WORKFLOW_COMPLETED");
+      if (wcIdx !== -1) {
+        const status = stateContent.match(/^- \*\*Status\*\*:\s*(\S+)/m);
+        if (status && status[1] !== "Completed") {
+          results.push({
+            pass: false,
+            label: `State/audit drift: audit has WORKFLOW_COMPLETED but state Status=${status[1]}`,
+            fix: "manually set Status=Completed in amadeus-state.md or restart the workflow",
+          });
+        } else {
+          results.push({
+            pass: true,
+            label: "State matches last audit event (no drift)",
+          });
+        }
+      }
+    } catch {
+      // Drift-check failure is non-fatal for doctor report
+    }
+  }
+
+  // Leaked-lock probe (P3 reaper surface) — a wedged audit lock (owner process
+  // dead, or stamp over the stale threshold) blocks every writer on its bucket.
+  // Doctor detects it loudly and CLEARS it (clear=true) so a SIGKILL'd holder
+  // doesn't poison the next run; a live, fresh holder is left alone.
+  try {
+    const leaks = detectLeakedLocks(projectDir, true);
+    if (leaks.length === 0) {
+      results.push({ pass: true, label: "Audit locks: none leaked" });
+    } else {
+      for (const leak of leaks) {
+        results.push({
+          pass: false,
+          label: `Leaked audit lock on bucket "${leak.bucket}" (${leak.reason}${leak.ownerPid !== null ? `, pid ${leak.ownerPid}` : ""}) — cleared`,
+          fix: "the stale lock was cleared automatically; re-run your /amadeus command",
+        });
+      }
+    }
+  } catch {
+    // Lock-probe failure is non-fatal for the doctor report.
+  }
+
+  // State version check — current template adds Worktree Path, Bolt
+  // Refs, and Practices Affirmed Timestamp fields. Older v6 state
+  // files lack them, so setFieldStrict writes would throw at runtime.
+  // Fail loud here with archive-and-reinit guidance per the framework's
+  // pre-1.0 no-migration policy.
+  if (existsSync(stateMdPath)) {
+    try {
+      const stateContent = readFileSync(stateMdPath, "utf-8");
+      const versionMatch = stateContent.match(/^- \*\*State Version\*\*:\s*(\S+)/m);
+      if (versionMatch === null) {
+        results.push({
+          pass: false,
+          label: "state version readable",
+          fix: "State Version field missing or unparseable in amadeus-state.md. Archive your workspace ('mv amadeus-docs amadeus-docs.v6-archive') and start a fresh workflow (describe what to build).",
+        });
+      } else if (versionMatch[1] !== "7") {
+        results.push({
+          pass: false,
+          label: "state version current",
+          fix: `v${versionMatch[1]} state detected. The framework does not ship user-visible migration support pre-1.0. Archive your workspace ('mv amadeus-docs amadeus-docs.v${versionMatch[1]}-archive') and start a fresh workflow (describe what to build) to get a current-template workspace. The current template adds Worktree Path, Bolt Refs, and Practices Affirmed Timestamp fields used by Construction worktrees and practices-discovery.`,
+        });
+      } else {
+        results.push({
+          pass: true,
+          label: "State Version: 7",
+        });
+      }
+    } catch {
+      // State-version check failure is non-fatal for doctor report
+    }
+  }
+
+  // ===========================================================================
+  // Reconciliation checks
+  //
+  // Doctor's role: read-only reconciliation against on-disk state, audit, and
+  // git for the worktree / state-fork / audit-fork / practices surfaces. Each
+  // check anchors on a specific drift class:
+  //
+  //   Check 1 — orphan worktrees       (cleanup-orphan, BOLT_FAILED rows)
+  //   Check 2 — stale branches         (git branch -l 'bolt-*')
+  //   Check 3 — orphan state files     (STATE_FORKED slug-tag)
+  //   Check 4 — orphan audit drift     (AUDIT_FORKED, PRACTICES_OVERRIDE)
+  //   Check 5 — practices staleness    (Practices Affirmed Timestamp)
+  //   Check 6 — MERGE_DISPATCH advisory (LLM-dispatch reconciliation)
+  //
+  // Two surfaces deferred to a future release:
+  //   - orphan `Merge-Held: true` reconciliation (graph traversal, not a
+  //     check; needs workshop-resume false-positive guard)
+  //   - workshop `git ls-remote origin "bolt-*"` stale-claim detection
+  //     (remote-aware doctor, composes with future designer offline-mode)
+  // ===========================================================================
+
+  const auditMd = auditAllShards;
+  const stateMd = existsSync(stateMdPath) ? readFileSync(stateMdPath, "utf-8") : "";
+  const boltRefs = stateMd
+    ? parseRefsList(getField(stateMd, "Bolt Refs") ?? "")
+    : [];
+
+  // Helper: extract the Bolt slug from an audit block. Returns null if absent.
+  const blockBoltSlug = (block: string): string | null => {
+    const m = block.match(/^\*\*Bolt slug\*\*:\s*(\S+)/m);
+    return m ? m[1] : null;
+  };
+
+  // Helper: extract a named field value from an audit block.
+  const blockField = (block: string, field: string): string | null => {
+    const re = new RegExp(`^\\*\\*${escapeRegex(field)}\\*\\*:\\s*(.+)$`, "m");
+    const m = block.match(re);
+    return m ? m[1].trim() : null;
+  };
+
+  // Helper: was a slug terminated (worktree merged or discarded) in audit?
+  const slugTerminated = (slug: string): boolean => {
+    if (
+      findAllEvents(auditMd, "WORKTREE_MERGED", slug).length > 0 ||
+      findAllEvents(auditMd, "WORKTREE_DISCARDED", slug).length > 0
+    ) {
+      return true;
+    }
+    return false;
+  };
+
+  // ---------------------------------------------------------------------------
+  // Check 1 — Orphan worktrees
+  //
+  // Walk `.amadeus/worktrees/bolt-*/` directories on disk; cross-reference each
+  // against:
+  //   (a) main state's Bolt Refs (active fork → ✓)
+  //   (b) audit WORKTREE_DISCARDED / WORKTREE_MERGED (terminated → orphan dir)
+  //   (c) ERROR_LOGGED rows with [merge-succeeded:<sha>] tag (cleanup-orphan
+  //       after a successful merge)
+  //
+  // Reports `0 worktrees observed` with pass=true when the directory is empty
+  // or absent — the issue 75 line 215 "fail-clean on no-worktrees" guarantee.
+  // ---------------------------------------------------------------------------
+  try {
+    const worktreesDir = join(resolvedWorktreeBaseDir, ".amadeus", "worktrees");
+    let observed = 0;
+    let activeForks = 0;
+    let preservedByAbort = 0;
+    const orphanActive: string[] = []; // dir present but no audit/Bolt Refs trail
+    const cleanupOrphans: string[] = []; // dir present, merge succeeded, cleanup failed
+
+    // Helper: did this slug get aborted via `amadeus-bolt abort` (BOLT_FAILED
+    // with `Reason: aborted` from multi-failure halt-and-ask)?
+    // Default-path abort preserves the worktree, so the slug remains in
+    // Bolt Refs but it's not "in flight" — it's awaiting /amadeus --resume.
+    // Doctor output distinguishes "3 active forks (in flight)" from "3
+    // preserved-by-abort (awaiting resume)".
+    const isAbortedSlug = (slug: string): boolean => {
+      return findAllEvents(auditMd, "BOLT_FAILED", slug).some((b) => {
+        const reason = blockField(b.block, "Reason") ?? "";
+        return reason === "aborted";
+      });
+    };
+
+    if (existsSync(worktreesDir)) {
+      for (const entry of readdirSync(worktreesDir)) {
+        if (!entry.startsWith("bolt-")) continue;
+        const slug = entry.slice("bolt-".length);
+        if (validateBoltSlug(slug) !== null) continue;
+        observed++;
+
+        // Active fork — slug is in main state's Bolt Refs. Expected; not orphan.
+        // Sub-classify into "preserved-by-abort" (BOLT_FAILED Reason: aborted
+        // exists for the slug — the user aborted multi-failure AUQ at index k
+        // and these dirs are awaiting /amadeus --resume) vs "in flight".
+        if (boltRefs.includes(slug)) {
+          if (isAbortedSlug(slug)) {
+            preservedByAbort++;
+          } else {
+            activeForks++;
+          }
+          continue;
+        }
+
+        // Cleanup-orphan: a WORKTREE_MERGED landed (or ERROR_LOGGED carries
+        // [merge-succeeded:<sha>] on a post-merge cleanup failure) but the
+        // directory persists. The worktree primitive guarantees the tag.
+        const errBlocks = findAllEvents(auditMd, "ERROR_LOGGED");
+        const matchesMergeSucceeded = errBlocks.some((b) => {
+          const tag = b.block.match(MERGE_SUCCEEDED_TAG_REGEX);
+          if (!tag) return false;
+          const slugTag = b.block.match(SLUG_TAG_REGEX);
+          return slugTag !== null && slugTag[1] === slug;
+        });
+        if (matchesMergeSucceeded || findAllEvents(auditMd, "WORKTREE_MERGED", slug).length > 0) {
+          cleanupOrphans.push(slug);
+          continue;
+        }
+        if (findAllEvents(auditMd, "WORKTREE_DISCARDED", slug).length > 0) {
+          // Terminated explicitly via discard but directory persists — discard
+          // failed mid-cleanup. Surface so the operator can `rm -rf` manually.
+          cleanupOrphans.push(slug);
+          continue;
+        }
+        orphanActive.push(slug);
+      }
+    }
+
+    const pass = orphanActive.length === 0 && cleanupOrphans.length === 0;
+    let label: string;
+    let fix: string | undefined;
+    if (observed === 0) {
+      label = "Orphan worktrees: 0 observed";
+    } else if (pass) {
+      const segments: string[] = [];
+      if (activeForks > 0) segments.push(`${activeForks} active fork${activeForks === 1 ? "" : "s"}`);
+      if (preservedByAbort > 0) segments.push(`${preservedByAbort} preserved-by-abort (awaiting resume)`);
+      label = `Orphan worktrees: 0 (${segments.join(", ")})`;
+    } else {
+      const parts: string[] = [];
+      if (orphanActive.length > 0) {
+        parts.push(`${orphanActive.length} unmatched (no audit trail): ${orphanActive.join(", ")}`);
+      }
+      if (cleanupOrphans.length > 0) {
+        parts.push(
+          `${cleanupOrphans.length} cleanup-orphan${cleanupOrphans.length === 1 ? "" : "s"} (merge/discard landed, dir persists): ${cleanupOrphans.join(", ")}`,
+        );
+      }
+      label = `Orphan worktrees: ${orphanActive.length + cleanupOrphans.length} drift`;
+      fix = `${parts.join("; ")}. Inspect and remove via 'amadeus-worktree discard --slug <slug>' or 'rm -rf .amadeus/worktrees/bolt-<slug>'.`;
+    }
+    results.push({ pass, label, fix });
+  } catch (e) {
+    results.push({
+      pass: false,
+      label: "Orphan worktrees: check failed",
+      fix: errorMessage(e),
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Check 2 — Stale branches
+  //
+  // Walk `git branch --list 'bolt-*'`; flag any `bolt-<slug>` branch whose
+  // worktree directory is gone but no terminal WORKTREE_DISCARDED or
+  // WORKTREE_MERGED audit row landed for that slug.
+  //
+  // Skips branches that aren't valid Bolt slugs — e.g. user-created
+  // `bolt-experiment` outside the framework. Skips silently when not a git
+  // repo (smoke / fresh fixtures) so doctor remains usable in non-git contexts.
+  // ---------------------------------------------------------------------------
+  try {
+    const proc = Bun.spawnSync({
+      cmd: ["git", "-C", projectDir, "branch", "--list", "bolt-*"],
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    if (proc.exitCode !== 0) {
+      // Not a git repo or git failure — skip silently with informational pass.
+      results.push({ pass: true, label: "Stale branches: 0 observed (not a git repo)" });
+    } else {
+      const stdout = new TextDecoder().decode(proc.stdout);
+      const branchSlugs: string[] = [];
+      for (const line of stdout.split("\n")) {
+        const trimmed = line.replace(/^\*?\s+/, "").trim();
+        if (!trimmed.startsWith("bolt-")) continue;
+        const slug = trimmed.slice("bolt-".length);
+        if (validateBoltSlug(slug) !== null) continue;
+        branchSlugs.push(slug);
+      }
+
+      const stale: string[] = [];
+      for (const slug of branchSlugs) {
+        const wtDir = join(resolvedWorktreeBaseDir, ".amadeus", "worktrees", `bolt-${slug}`);
+        if (existsSync(wtDir)) continue; // worktree intact — branch is live
+        // Worktree gone — needs a terminal audit row to be legitimate.
+        if (slugTerminated(slug)) continue;
+        stale.push(slug);
+      }
+
+      if (stale.length === 0) {
+        results.push({
+          pass: true,
+          label: `Stale branches: 0 (${branchSlugs.length} bolt-* observed)`,
+        });
+      } else {
+        results.push({
+          pass: false,
+          label: `Stale branches: ${stale.length} drift`,
+          fix: `branches ${stale.join(", ")} have no worktree directory and no WORKTREE_MERGED/_DISCARDED audit row. Delete via 'git branch -D bolt-<slug>' if abandoned.`,
+        });
+      }
+    }
+  } catch (e) {
+    results.push({
+      pass: false,
+      label: "Stale branches: check failed",
+      fix: errorMessage(e),
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Check 3 — Orphan state files (paired with STATE_FORKED slug-tag)
+  //
+  // Walk `.amadeus/worktrees/*/amadeus-docs/amadeus-state.md`; each found state file
+  // must map to a slug in main's Bolt Refs (active fork) OR pair with a
+  // WORKTREE_DISCARDED audit row (pre-discard). Anything else is post-fork
+  // drift — STATE_FORKED emitted, slug added to Bolt Refs, but state-write or
+  // STATE_MERGED never landed.
+  // ---------------------------------------------------------------------------
+  try {
+    const worktreesDir = join(resolvedWorktreeBaseDir, ".amadeus", "worktrees");
+    const orphan: string[] = [];
+    let observed = 0;
+
+    if (existsSync(worktreesDir)) {
+      for (const entry of readdirSync(worktreesDir)) {
+        if (!entry.startsWith("bolt-")) continue;
+        const slug = entry.slice("bolt-".length);
+        if (validateBoltSlug(slug) !== null) continue;
+        const wtStatePath = worktreeStateFilePath(join(worktreesDir, entry));
+        if (!existsSync(wtStatePath)) continue;
+        observed++;
+        if (boltRefs.includes(slug)) continue;
+        if (findAllEvents(auditMd, "WORKTREE_DISCARDED", slug).length > 0) continue;
+        orphan.push(slug);
+      }
+    }
+
+    if (orphan.length === 0) {
+      results.push({
+        pass: true,
+        label: observed === 0
+          ? "Orphan state files: 0 observed"
+          : `Orphan state files: 0 (${observed} active)`,
+      });
+    } else {
+      results.push({
+        pass: false,
+        label: `Orphan state files: ${orphan.length} drift`,
+        fix: `state files for ${orphan.join(", ")} exist but slug not in Bolt Refs and no WORKTREE_DISCARDED row. Recover via 'amadeus-worktree discard --slug <slug>' (idempotent).`,
+      });
+    }
+  } catch (e) {
+    results.push({
+      pass: false,
+      label: "Orphan state files: check failed",
+      fix: errorMessage(e),
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Check 4 — Orphan audit drift (3 sub-cases)
+  //
+  // Sub-case (a): AUDIT_FORKED-without-disk-state — main has AUDIT_FORKED but
+  //   <wtPath>/amadeus-docs/audit.md is absent on disk.
+  // Sub-case (b): orphan-delta — main has AUDIT_FORKED but no matching
+  //   AUDIT_MERGED for an unterminated, non-active slug.
+  // Sub-case (c): PRACTICES_OVERRIDE Reason filter — write-failure-* rows
+  //   without a following PRACTICES_AFFIRMED are flagged as orphan; rows
+  //   carrying Reason: bolt-plan-marker-conflict are expected behaviour and
+  //   ignored. audit-format.md:138 anchors the discriminator routing.
+  //
+  // Sub-case (c) shares the orphan-audit umbrella because both classes ride
+  // the same audit-walker pass; per plan-v3 §51, this is one Check, not two.
+  // ---------------------------------------------------------------------------
+  try {
+    const forkedDriftDisk: string[] = []; // (a)
+    const forkedDriftMerge: string[] = []; // (b)
+    const overrideDrift: string[] = []; // (c)
+
+    const forks = findAllEvents(auditMd, "AUDIT_FORKED");
+    for (const fork of forks) {
+      const slug = blockBoltSlug(fork.block);
+      if (!slug) continue;
+      // Terminal short-circuits run BEFORE the disk check. A successfully
+      // merged-and-cleaned Bolt has AUDIT_MERGED + WORKTREE_MERGED in main
+      // audit and the worktree directory removed by `amadeus-worktree merge`'s
+      // cleanup — without the short-circuit, sub-case (a) would flag every
+      // healthy historical AUDIT_FORKED as drift forever. Same logic for
+      // active forks (still in flight) and explicit discards.
+      if (findAllEvents(auditMd, "AUDIT_MERGED", slug).length > 0) continue;
+      if (boltRefs.includes(slug)) continue;
+      if (findAllEvents(auditMd, "WORKTREE_DISCARDED", slug).length > 0) continue;
+      // Sub-case (a): no terminal pairing — is the worktree audit on disk?
+      // If yes, we're mid-fork (orphan-delta — sub-case b). If no, the fork
+      // emitted but disk copy never landed.
+      const wtPath = join(resolvedWorktreeBaseDir, ".amadeus", "worktrees", `bolt-${slug}`);
+      const wtAudit = worktreeAuditFilePath(wtPath);
+      if (!existsSync(wtAudit)) {
+        forkedDriftDisk.push(slug);
+        continue;
+      }
+      // Sub-case (b): disk audit landed but no AUDIT_MERGED — orphan-delta.
+      forkedDriftMerge.push(slug);
+    }
+
+    // Sub-case (c): PRACTICES_OVERRIDE Reason filter.
+    let unknownReasonCount = 0;
+    const overrides = findAllEvents(auditMd, "PRACTICES_OVERRIDE");
+    for (const o of overrides) {
+      const reason = blockField(o.block, "Reason") ?? "";
+      // bolt-plan-marker-conflict is expected behaviour (orchestrator override
+      // per team practices) — skip per audit-format.md routing.
+      if (reason.startsWith("bolt-plan-marker-conflict")) continue;
+      // write-failure-* rows are practices-promote failures. Orphan if no
+      // following PRACTICES_AFFIRMED row; matched-pair otherwise. Compare
+      // timestamps via Date.parse — ISO 8601 strings only sort lexicographically
+      // when in identical format, but `2026-05-19T11:00:00.123Z` sorts before
+      // `2026-05-19T11:00:00Z` (`.` 0x2E < `Z` 0x5A) and `Z` vs `+00:00` shapes
+      // also break naive string compare. Date.parse normalises both to ms.
+      if (reason.startsWith("write-failure")) {
+        const overrideMs = Date.parse(o.timestamp);
+        const affirmAfter = findAllEvents(auditMd, "PRACTICES_AFFIRMED").some(
+          (a) => {
+            const am = Date.parse(a.timestamp);
+            return Number.isFinite(am) && am > overrideMs;
+          },
+        );
+        if (!affirmAfter) {
+          overrideDrift.push(`${reason}@${o.timestamp}`);
+        }
+        continue;
+      }
+      // Reason value matched neither prefix — track for follow-up. Future
+      // PRACTICES_OVERRIDE Reason variants may need their own routing rule;
+      // doctor surfaces the count for later reconciliation.
+      unknownReasonCount++;
+    }
+
+    const total = forkedDriftDisk.length + forkedDriftMerge.length + overrideDrift.length;
+    if (total === 0) {
+      const reconciled = forks.length + overrides.length - unknownReasonCount;
+      let label: string;
+      if (reconciled === 0) {
+        label = "Orphan audit: 0 observed";
+      } else {
+        label = `Orphan audit: 0 (${reconciled} reconciled)`;
+      }
+      if (unknownReasonCount > 0) {
+        label += `; ${unknownReasonCount} PRACTICES_OVERRIDE row(s) with unknown Reason — track for follow-up`;
+      }
+      results.push({ pass: true, label });
+    } else {
+      const parts: string[] = [];
+      if (forkedDriftDisk.length > 0) parts.push(`${forkedDriftDisk.length} AUDIT_FORKED-without-disk: ${forkedDriftDisk.join(", ")}`);
+      if (forkedDriftMerge.length > 0) parts.push(`${forkedDriftMerge.length} orphan-delta (no AUDIT_MERGED): ${forkedDriftMerge.join(", ")}`);
+      if (overrideDrift.length > 0) parts.push(`${overrideDrift.length} PRACTICES_OVERRIDE write-failure(s) without follow-up PRACTICES_AFFIRMED`);
+      if (unknownReasonCount > 0) parts.push(`${unknownReasonCount} PRACTICES_OVERRIDE row(s) with unknown Reason`);
+      results.push({
+        pass: false,
+        label: `Orphan audit: ${total} drift`,
+        fix: parts.join("; "),
+      });
+    }
+  } catch (e) {
+    results.push({
+      pass: false,
+      label: "Orphan audit: check failed",
+      fix: errorMessage(e),
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Check 5 — Practices staleness
+  //
+  // Read `Practices Affirmed Timestamp` from main state. Compare to now.
+  // Empty / missing → informational pass (never affirmed). Within 90 days → ✓.
+  // Older → advisory pass=true (does NOT fail exit code; mirrors heartbeat
+  // and state/audit drift advisory pattern at amadeus-utility.ts:421-466).
+  // Invalid ISO timestamp → fail readable.
+  // ---------------------------------------------------------------------------
+  try {
+    if (!stateMd) {
+      results.push({ pass: true, label: "Practices staleness: state file absent (informational)" });
+    } else {
+      const value = (getField(stateMd, "Practices Affirmed Timestamp") ?? "").trim();
+      if (value === "" || value.startsWith("[")) {
+        // Empty placeholder OR `[ISO 8601 timestamp on affirmation]` template
+        // string that hasn't been replaced by practices-promote yet.
+        results.push({ pass: true, label: "Practices staleness: never affirmed (informational)" });
+      } else {
+        const affirmed = Date.parse(value);
+        if (Number.isNaN(affirmed)) {
+          results.push({
+            pass: false,
+            label: "Practices staleness: timestamp unreadable",
+            fix: `Practices Affirmed Timestamp value "${value}" is not a valid ISO 8601 datetime. Re-run practices-discovery (stage 2.2) to re-affirm.`,
+          });
+        } else {
+          const ageDays = Math.floor((nowMs - affirmed) / (1000 * 60 * 60 * 24));
+          if (ageDays < 0) {
+            // Future-dated timestamp — clock skew or hand-edit. Advisory pass
+            // so doctor doesn't fail loud, but surfaces the anomaly.
+            results.push({
+              pass: true,
+              label: `Practices staleness: affirmed in the future (clock skew or hand-edited timestamp ${Math.abs(ageDays)} day${Math.abs(ageDays) === 1 ? "" : "s"} ahead)`,
+            });
+          } else if (ageDays <= PRACTICES_STALENESS_DAYS) {
+            results.push({
+              pass: true,
+              label: `Practices staleness: affirmed ${ageDays} day${ageDays === 1 ? "" : "s"} ago`,
+            });
+          } else {
+            results.push({
+              pass: true,
+              label: `Practices staleness: affirmed ${ageDays} days ago (advisory — > ${PRACTICES_STALENESS_DAYS} days; consider re-running practices-discovery)`,
+            });
+          }
+        }
+      }
+    }
+  } catch {
+    // Practices-staleness check failure is non-fatal for doctor report
+  }
+
+  // ---------------------------------------------------------------------------
+  // Check 6 — MERGE_DISPATCH advisory
+  //
+  // Walk MERGE_DISPATCH_INVOKED rows; an INVOKED row should pair with either
+  // _RETURNED or _FALLBACK for the same slug within MERGE_DISPATCH_TIMEOUT_SEC.
+  // Orphan INVOKED rows are reported as advisory (pass=true) — observation-
+  // time drift on an in-memory LLM dispatch is not a fail-loud condition. A
+  // future observer layer may take over this reconciliation.
+  //
+  // No correlation tag — slug + timestamp window is sufficient for doctor
+  // reconciliation (the LLM call has no disk artifact to anchor against).
+  // ---------------------------------------------------------------------------
+  try {
+    const invokedRows = findAllEvents(auditMd, "MERGE_DISPATCH_INVOKED");
+    let orphans = 0;
+    const now = nowMs;
+    // Pair-match per slug: each terminal row (RETURNED or FALLBACK) consumed
+    // by at most one preceding INVOKED. Without consumption tracking, two
+    // consecutive INVOKED + 1 RETURNED for the same slug would report 0
+    // orphans because `.some(r >= invokedTs)` is satisfied by ANY later
+    // terminal, not the next-unmatched one.
+    const invokedBySlug = new Map<string, number[]>(); // slug → INVOKED timestamps (ms)
+    for (const inv of invokedRows) {
+      const slug = blockBoltSlug(inv.block);
+      if (!slug) continue;
+      const invokedMs = Date.parse(inv.timestamp);
+      if (Number.isNaN(invokedMs)) continue;
+      const list = invokedBySlug.get(slug) ?? [];
+      list.push(invokedMs);
+      invokedBySlug.set(slug, list);
+    }
+    for (const [slug, invokedList] of invokedBySlug) {
+      invokedList.sort((a, b) => a - b);
+      // Build a chronological list of terminal events (RETURNED + FALLBACK)
+      // for this slug, then consume each in pair order with the earliest
+      // not-yet-paired INVOKED that precedes it.
+      const terminals: number[] = [];
+      for (const r of findAllEvents(auditMd, "MERGE_DISPATCH_RETURNED", slug)) {
+        const ms = Date.parse(r.timestamp);
+        if (Number.isFinite(ms)) terminals.push(ms);
+      }
+      for (const f of findAllEvents(auditMd, "MERGE_DISPATCH_FALLBACK", slug)) {
+        const ms = Date.parse(f.timestamp);
+        if (Number.isFinite(ms)) terminals.push(ms);
+      }
+      terminals.sort((a, b) => a - b);
+      const consumed = new Array<boolean>(terminals.length).fill(false);
+      for (const invokedMs of invokedList) {
+        // Active session within the timeout window — still in flight, skip.
+        if (now - invokedMs < MERGE_DISPATCH_TIMEOUT_SEC * 1000) continue;
+        // Find the first not-yet-consumed terminal at or after invokedMs.
+        let matched = false;
+        for (let i = 0; i < terminals.length; i++) {
+          if (consumed[i]) continue;
+          if (terminals[i] < invokedMs) continue;
+          consumed[i] = true;
+          matched = true;
+          break;
+        }
+        if (!matched) orphans++;
+      }
+    }
+    results.push({
+      pass: true,
+      label: orphans === 0
+        ? `MERGE_DISPATCH: 0 orphan INVOKED (${invokedRows.length} bracketed)`
+        : `MERGE_DISPATCH: ${orphans} orphan INVOKED (advisory — LLM dispatch unmatched after ${MERGE_DISPATCH_TIMEOUT_SEC}s)`,
+    });
+  } catch {
+    // MERGE_DISPATCH check failure is non-fatal for doctor report
+  }
+
+  // --- Graph-level checks (library-direct, no subprocess) ---
+
+  // Cycle detection — findCycles returns [] on a healthy DAG
+  try {
+    const cycles = findCycles(graph as GraphStage[]);
+    results.push({
+      pass: cycles.length === 0,
+      label: cycles.length === 0
+        ? "Cycle detection: 0 cycles"
+        : `Cycle detection: ${cycles.length} cycle(s) found`,
+      fix: cycles.length > 0
+        ? `cycles: ${cycles.map((c) => c.join(" → ")).join("; ")}`
+        : undefined,
+    });
+  } catch (e) {
+    results.push({
+      pass: false,
+      label: "Cycle detection: graph load failed",
+      fix: errorMessage(e),
+    });
+  }
+
+  // Stage-graph <-> disk drift, both directions:
+  //   - graph->disk (missingFiles): a slug in stage-graph.json with no
+  //     <phase>/<slug>.md on disk. Real runtime breakage (conductor handed a
+  //     path to a missing file) -> hard FAIL.
+  //   - disk->graph (uncompiledStages): a <phase>/<slug>.md whose slug is absent
+  //     from the compiled graph. The runtime resolves stages from the compiled
+  //     graph only, so the file is silently never executed (issue #364). The
+  //     file is inert, not corrupt, and recompiling is a deliberate authoring
+  //     act -> ADVISORY (pass:true; does not fail the doctor exit code, mirroring
+  //     the rule-drift / MERGE_DISPATCH advisory rows).
+  try {
+    const { missingFiles, uncompiledStages, graphCount } = stageGraphDrift({
+      graph: graph as readonly GraphStage[],
+      stagesRoot: join(TOOLS_DIR, "..", "amadeus-common", "stages"),
+    });
+    results.push({
+      pass: missingFiles.length === 0,
+      label: missingFiles.length === 0
+        ? `Orphan stage files: ${graphCount} graph entries all have files`
+        : `Orphan stage files: ${missingFiles.length} graph entries have no file on disk`,
+      fix: missingFiles.length > 0 ? `missing files: ${missingFiles.join(", ")}` : undefined,
+    });
+    // Advisory row (pass:true), the detail must live in the LABEL, not the
+    // `fix` field: the report renderer only prints `fix` on a FAILED (pass:false)
+    // row (see the render loop below). Fold the slug list + the compile hint into
+    // the label so the operator can act on it, mirroring the MERGE_DISPATCH /
+    // rule-drift advisory rows that carry their detail inline.
+    results.push({
+      pass: true,
+      label: uncompiledStages.length === 0
+        ? "Uncompiled stage files: 0 stage files missing from the compiled graph"
+        : `Uncompiled stage files: ${uncompiledStages.length} stage file(s) not in the compiled graph (advisory, will not execute until recompiled): ${uncompiledStages.join(", ")} - run \`bun ${harness}/tools/amadeus-graph.ts compile\` to include them`,
+    });
+  } catch (e) {
+    results.push({
+      pass: false,
+      label: "Orphan stage files: check failed",
+      fix: errorMessage(e),
+    });
+  }
+
+  // Scope validation — validate every resolved scope, tally errors
+  // and advisories. Repo-level setup check, not workflow-state.
+  try {
+    const scopes = Object.keys(scopeMapping).sort();
+    let totalErrors = 0;
+    let totalAdvisories = 0;
+    const failingScopes: { scope: string; errors: string[] }[] = [];
+    for (const scope of scopes) {
+      const r = validateGrid(scopeMapping[scope].stages, {
+        label: scope,
+        graph: graph as readonly GraphStage[],
+      });
+      totalAdvisories += r.advisories.length;
+      if (r.errors.length > 0) {
+        totalErrors += r.errors.length;
+        failingScopes.push({ scope, errors: r.errors });
+      }
+    }
+    results.push({
+      pass: totalErrors === 0,
+      label: totalErrors === 0
+        ? `Scope validation: ${scopes.length} scopes valid (${totalAdvisories} advisories)`
+        : `Scope validation: ${failingScopes.length} of ${scopes.length} scopes have errors`,
+      fix: totalErrors > 0
+        ? failingScopes.map((f) => `${f.scope}: ${f.errors.join("; ")}`).join(" | ")
+        : undefined,
+    });
+  } catch (e) {
+    results.push({
+      pass: false,
+      label: "Scope validation: check failed",
+      fix: errorMessage(e),
+    });
+  }
+
+  // Schema validation — parse + validate every stage's YAML frontmatter.
+  // Uses the same library functions every other caller does; drift impossible.
+  // Tracks attempted vs valid separately so the label can't silently say
+  // "N/N valid" when files are missing (that's the orphan-files check's job).
+  try {
+    const stagesDir = join(TOOLS_DIR, "..", "amadeus-common", "stages");
+    const agentSlugs = agents.map((agent) => agent.slug);
+    const schemaFails: { slug: string; errors: string[] }[] = [];
+    let attempted = 0;
+    for (const stage of graph) {
+      const filePath = join(stagesDir, stage.phase, `${stage.slug}.md`);
+      if (!existsSync(filePath)) continue; // orphan-files check handles this
+      attempted++;
+      const raw = readFileSync(filePath, "utf-8");
+      try {
+        const parsed = parseStageFrontmatter(raw);
+        // Initialization stages lead with the orchestrator (SKILL.md itself),
+        // not a .claude/agents/ file — skip agent cross-reference there.
+        // Matches t65's convention. This phase-based skip agrees with the
+        // compile guard's RESERVED_AGENT_SLUG exemption on the shipped graph
+        // (the 3 orchestrator-led stages ARE the 3 initialization stages);
+        // the compile guard is slug-precise, this is phase-coarse — both
+        // correct for their purpose.
+        const ctx = stage.phase === "initialization" ? undefined : { agents: agentSlugs };
+        const vr = validateStageFrontmatter(parsed, ctx);
+        if (!vr.valid) schemaFails.push({ slug: stage.slug, errors: vr.errors });
+      } catch (parseErr) {
+        schemaFails.push({ slug: stage.slug, errors: [errorMessage(parseErr)] });
+      }
+    }
+    const valid = attempted - schemaFails.length;
+    results.push({
+      pass: schemaFails.length === 0,
+      label: schemaFails.length === 0
+        ? `Schema validation: ${valid}/${attempted} stages validated`
+        : `Schema validation: ${schemaFails.length} of ${attempted} stage(s) failed`,
+      fix: schemaFails.length > 0
+        ? schemaFails.map((f) => `${f.slug}: ${f.errors[0]}`).join("; ")
+        : undefined,
+    });
+  } catch (e) {
+    results.push({
+      pass: false,
+      label: "Schema validation: check failed",
+      fix: errorMessage(e),
+    });
+  }
+
+  // Graph references — every consumes[].artifact and requires_stage[] slug
+  // must resolve to something real. Catches typos that pure schema-lint
+  // and scope-walk both miss.
+  try {
+    const allSlugs = new Set(graph.map((s) => s.slug));
+    const allArtifacts = new Set(artifactNames);
+    const refFails: string[] = [];
+    for (const stage of graph) {
+      for (const c of stage.consumes ?? []) {
+        if (!allArtifacts.has(c.artifact)) {
+          refFails.push(`${stage.slug}: consumes unknown artifact "${c.artifact}"`);
+        }
+      }
+      for (const r of stage.requires_stage ?? []) {
+        if (!allSlugs.has(r)) {
+          refFails.push(`${stage.slug}: requires_stage unknown slug "${r}"`);
+        }
+      }
+    }
+    results.push({
+      pass: refFails.length === 0,
+      label: refFails.length === 0
+        ? `Graph references: ${allArtifacts.size} artifacts + edges resolved`
+        : `Graph references: ${refFails.length} broken reference(s)`,
+      fix: refFails.length > 0 ? refFails.join("; ") : undefined,
+    });
+  } catch (e) {
+    results.push({
+      pass: false,
+      label: "Graph references: check failed",
+      fix: errorMessage(e),
+    });
+  }
+
+  // Keyword overlap — no keyword should be claimed by >1 scope. A conflict
+  // means /amadeus "<freeform>" has ambiguous scope routing, which silently
+  // burns artifacts. findScopeByKeyword (exported from this file) resolves
+  // the other direction; this check inverts it to scan for collisions.
+  try {
+    const keywordToScopes = new Map<string, string[]>();
+    for (const [scope, def] of Object.entries(scopeMapping)) {
+      for (const kw of def.keywords ?? []) {
+        const list = keywordToScopes.get(kw) ?? [];
+        list.push(scope);
+        keywordToScopes.set(kw, list);
+      }
+    }
+    const conflicts = [...keywordToScopes.entries()].filter(
+      ([, scopes]) => scopes.length > 1
+    );
+    results.push({
+      pass: conflicts.length === 0,
+      label: conflicts.length === 0
+        ? "Keyword overlap: no conflicts"
+        : `Keyword overlap: ${conflicts.length} conflict(s)`,
+      fix: conflicts.length > 0
+        ? conflicts
+            .map(([kw, scopes]) => `"${kw}" claimed by ${scopes.join(", ")}`)
+            .join("; ")
+        : undefined,
+    });
+  } catch (e) {
+    results.push({
+      pass: false,
+      label: "Keyword overlap: check failed",
+      fix: errorMessage(e),
+    });
+  }
+
+  // Rule drift (advisory, always pass:true) — surface team/project rule files
+  // whose `##` headings overlap a POPULATED heading in the org layer
+  // (amadeus/spaces/default/memory/org.md), quoting the org sentence inline so
+  // the orchestrator-LLM can review for contradiction at observation time. A
+  // learning is a practice (vision §6) — it lands in team.md / project.md, so
+  // those two scopes are the whole team/project surface the walk reads.
+  //
+  // Three-concerns seam (T2): doctor is a deterministic tool — it detects
+  // same-heading structural overlap (byte-reproducible), NOT semantic
+  // contradiction. The contradiction VERDICT is the orchestrator-LLM's at
+  // observation time, non-blocking. The row never fails the health check.
+  //
+  // Read seam: heading bodies come from loadRules().headings (surfaced from
+  // the same `raw` loadRules reads under rulesDir(), honouring
+  // AMADEUS_RULES_DIR), never a second read from the relative .path.
+  try {
+    const org = rules.find(
+      (r) => r.scope === "org" && r.path.endsWith("org.md")
+    );
+    if (!org) {
+      results.push({
+        pass: true,
+        label: "Rule drift: org rules absent (informational)",
+      });
+    } else {
+      // Populated org headings only — multi-line-comment-only headings
+      // (e.g. ## Corrections) read as empty and are excluded.
+      const orgPopulated = new Map<string, string>();
+      for (const [h, text] of org.headings) {
+        if (text.trim() !== "") orgPopulated.set(h, text);
+      }
+      const drifts: Array<{ file: string; heading: string; orgSentence: string }> = [];
+      for (const rule of rules) {
+        if (rule.scope !== "team" && rule.scope !== "project") continue;
+        for (const [h, text] of rule.headings) {
+          if (text.trim() === "") continue;
+          const orgText = orgPopulated.get(h);
+          if (orgText === undefined) continue;
+          // First sentence of the org body under that heading, quoted
+          // verbatim. Split on the first sentence terminator; fall back to
+          // the whole first non-empty line when none is present.
+          const firstLine = orgText.split("\n")[0] ?? orgText;
+          const sentenceMatch = firstLine.match(/^.*?[.!?](?=\s|$)/);
+          const orgSentence = (sentenceMatch ? sentenceMatch[0] : firstLine).trim();
+          drifts.push({ file: rule.path, heading: h, orgSentence });
+        }
+      }
+      if (drifts.length === 0) {
+        results.push({
+          pass: true,
+          label: "Rule drift: no team/project rule overlaps org policy",
+        });
+      } else {
+        const detail = drifts
+          .map((d) => `${d.file} ## ${d.heading} ⇄ org "${d.orgSentence}"`)
+          .join("; ");
+        results.push({
+          pass: true,
+          label: `Rule drift: ${drifts.length} team/project rule(s) overlap org policy (review for contradiction): ${detail}`,
+        });
+      }
+    }
+  } catch (e) {
+    results.push({
+      pass: false,
+      label: "Rule drift: check failed",
+      fix: errorMessage(e),
+    });
+  }
+
+  // Paired sensor coverage (advisory, always pass:true) — for each rule
+  // carrying frontmatter.pairing, confirm the named sensor exists in some
+  // stage's resolved sensor set. File-existence check only (structural):
+  // it confirms the binding resolves, NOT that the sensor semantically
+  // fits the rule. feedforward-only rules never need a sensor.
+  //
+  // Read seams: pairing via loadRules().frontmatter (it is NOT on the
+  // graph node); sensor ids via loadGraph() -> sensors_applicable[].id.
+  // Manifest ids are bare ("required-sections"); a rule's pairing value is
+  // amadeus-prefixed — strip "amadeus-" before matching (milestone-7b-frozen join).
+  //
+  // Emits GUARDRAIL_LOADED once per doctor run — but ONLY when an audit trail
+  // already exists (cold-safe, see auditExists below); appendAuditEntry
+  // self-creates the audit shard/dir, so an unconditional emit on a pristine
+  // project would create a record as a side effect, making --doctor NOT
+  // read-only. Doctor runs on a fresh checkout before any workflow is born, so
+  // it must create nothing. On a project with a born intent the emit fires
+  // exactly as before (BARE appendAuditEvent — the only throw is a real write
+  // failure, which the rest of the codebase lets propagate).
+  const pairedRules = rules;
+  // sensors_applicable is REQUIRED on a compiled graph node, but a
+  // hand-rolled or pre-milestone-9 graph JSON can omit it; `?? []` keeps this
+  // advisory row from crashing doctor on a malformed/legacy graph (the
+  // same defensive posture the cycle/orphan/scope checks take above).
+  const sensorIds = new Set(
+    graph.flatMap((node) => (node.sensors_applicable ?? []).map((sensor) => sensor.id)),
+  );
+  let pairM = 0;
+  let pairX = 0;
+  let pairP = 0;
+  // unpaired holds the U set (sensor id named but absent anywhere);
+  // unpaired.length is U, so no separate counter is needed.
+  const unpaired: Array<{ file: string; sensor: string }> = [];
+  for (const rule of pairedRules) {
+    const pairing = rule.frontmatter.pairing;
+    if (pairing === undefined) continue;
+    pairM++;
+    if (pairing === "feedforward-only") {
+      pairX++;
+      continue;
+    }
+    const bareId = pairing.replace(/^amadeus-/, "");
+    if (sensorIds.has(bareId)) {
+      pairP++;
+    } else {
+      unpaired.push({ file: rule.path, sensor: pairing });
+    }
+  }
+  const needing = pairM - pairX;
+  let coverageLabel: string;
+  if (needing === 0) {
+    coverageLabel = `Paired sensor coverage: no sensor-bound rules (${pairX} feedforward-only)`;
+  } else {
+    coverageLabel = `Paired sensor coverage: ${pairP}/${needing} guardrails paired (${pairX} feedforward-only)`;
+  }
+  if (unpaired.length > 0) {
+    const unpairedDetail = unpaired
+      .map((u) => `unpaired: ${u.file} → ${u.sensor} (no stage binds it)`)
+      .join("; ");
+    coverageLabel = `${coverageLabel}; ${unpairedDetail}`;
+  }
+  results.push({ pass: true, label: coverageLabel });
+
+  // ---------------------------------------------------------------------------
+  // Check 7 — Intent registry ⇄ record-dir reconciliation
+  //
+  // The record dir name is the join key between a registry row and its on-disk
+  // dir; a HAND-RENAME of the dir (e.g. in a file tree) breaks that pairing in
+  // two directions, both of which listIntents() already surfaces:
+  //   (a) a registry row whose stored dirName no longer resolves on disk
+  //       (listIntents → dirName: null) — the intent's status/repos detach,
+  //       and in a multi-intent space its cursor can no longer resolve it.
+  //   (b) a record dir on disk with no registry row (listIntents → an orphan
+  //       row with empty uuid + status "unknown").
+  // Advisory (pass=true): a rename is a user action, not a framework fault, and
+  // the lone-intent fallback keeps a single renamed intent working. The fix
+  // names the editable repair: set the row's `dirName` (or rename the dir back).
+  // Runs across EVERY space so a rename in a non-active space is still surfaced.
+  // ---------------------------------------------------------------------------
+  try {
+    const danglingRows: string[] = []; // registry rows whose dir vanished
+    const orphanDirs: string[] = []; // on-disk dirs with no registry row
+    for (const sp of listSpaces(projectDir)) {
+      for (const i of listIntents(projectDir, sp.name)) {
+        if (i.uuid !== "" && i.dirName === null) {
+          danglingRows.push(`${sp.name}/${i.slug} (uuid ${i.uuid.slice(0, 8)}…)`);
+        } else if (i.uuid === "" && i.status === "unknown") {
+          orphanDirs.push(`${sp.name}/${i.dirName}`);
+        }
+      }
+    }
+    const total = danglingRows.length + orphanDirs.length;
+    if (total === 0) {
+      results.push({ pass: true, label: "Intent registry: all rows ⇄ record dirs reconciled" });
+    } else {
+      const detail = [
+        danglingRows.length > 0 ? `${danglingRows.length} row(s) with a missing dir [${danglingRows.join(", ")}]` : "",
+        orphanDirs.length > 0 ? `${orphanDirs.length} dir(s) with no row [${orphanDirs.join(", ")}]` : "",
+      ].filter(Boolean).join("; ");
+      results.push({
+        pass: true,
+        label: `Intent registry: ${total} record-dir mismatch (advisory — likely a hand-renamed intent dir): ${detail}. Fix: set the row's \`dirName\` in the space's intents.json to the on-disk dir name, or rename the dir back.`,
+      });
+    }
+  } catch (e) {
+    results.push({
+      pass: false,
+      label: "Intent registry: reconciliation check failed",
+      fix: errorMessage(e),
+    });
+  }
+
+  results.push(checkPhaseProgressConsistency(projectDir));
+
+  // Cold-safe gate: only emit audit when an audit trail already exists. On a
+  // pristine project (no audit shard / flat audit.md) doctor prints its health
+  // report and creates NOTHING — it stays a pure read-only diagnostic. On an
+  // initialized project both GUARDRAIL_LOADED and HEALTH_CHECKED emit as before.
+  const auditExists = auditShards(projectDir).length > 0;
+
+  if (auditExists) {
+    appendAuditEvent(projectDir, "GUARDRAIL_LOADED", {
+      Scope: "all",
+      Path: `${harness}/${resolvedRulesSubdir}/`,
+      "Rule count": String(pairedRules.length),
+    });
+  }
+
+  // Submodule health (FR-3 item 12). Only surfaces a row when .gitmodules is
+  // PRESENT \u2014 an ordinary workspace adds no row, keeping doctor byte-identical
+  // (NFR-3). An uninitialized submodule is advisory: pass:true so it never flips
+  // the doctor exit code (BR-U06-17). A present-but-unparseable .gitmodules is a
+  // real misconfiguration and fails loudly.
+  const submoduleInspection = inspectSubmodules(projectDir, nodeReadOnlyFs);
+  if (submoduleInspection.present) {
+    if (submoduleInspection.blocking) {
+      results.push({
+        pass: false,
+        label: `Submodules: .gitmodules present but unparseable (${submoduleInspection.blocking.message})`,
+        fix: "fix .gitmodules so every [submodule] section has a safe relative path",
+      });
+    } else {
+      const subs = submoduleInspection.submodules;
+      const uninitList = formatUninitializedSubmodules(subs);
+      if (uninitList === null) {
+        results.push({ pass: true, label: `Submodules: ${subs.length} present, all initialized` });
+      } else {
+        const uninitCount = subs.filter((s) => !s.initialized).length;
+        const advisory = `git submodule update --init --recursive \u2014 ${uninitList}`;
+        results.push({
+          pass: true,
+          label: `Submodules: ${subs.length} present, ${uninitCount} uninitialized (advisory: ${advisory})`,
+        });
+      }
+    }
+  }
+
+  // Print report
+  let output = "AI-DLC Health Check\n";
+  output += `${"\u2500".repeat(37)}\n`;
+  output += "Team Mode prerequisites:\n";
+  for (const prerequisite of teamPrerequisites) {
+    output += prerequisite.found
+      ? `  ${prerequisite.tool}: ${prerequisite.path}\n`
+      : `  ${prerequisite.tool}: not found (${prerequisite.guidance})\n`;
+  }
+  let passed = 0;
+  let failed = 0;
+  for (const r of results) {
+    if (r.pass) {
+      output += `\u2713  ${r.label}\n`;
+      passed++;
+    } else {
+      output += `\u2717  ${r.label}`;
+      if (r.fix) output += ` — ${r.fix}`;
+      output += "\n";
+      failed++;
+    }
+  }
+  output += `${"\u2500".repeat(37)}\n`;
+  output += `${passed} passed, ${failed} failed\n`;
+
+  // Audit only if audit.md already existed when doctor started (cold-safe —
+  // see auditExists above). A pristine project gets the stdout report and no
+  // file side effects; an initialized project records HEALTH_CHECKED as before.
+  if (auditExists) {
+    try {
+      appendAuditEvent(projectDir, "HEALTH_CHECKED", {
+        Request: `/amadeus --doctor`,
+        Details: `${passed} passed, ${failed} failed`,
+      });
+    } catch (error) {
+      throw new DoctorPostOutputError(output, error);
+    }
+  }
+
+  return Object.freeze({
+    exitCode: failed > 0 ? 1 : 0,
+    output,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// init (scaffold 0.2) — bootstrap state/audit files + scaffold amadeus-docs/
+// ---------------------------------------------------------------------------
+
+// Agent knowledge metadata (display name + example files) is now derived
+// from `.claude/agents/*.md` frontmatter via loadAgents() in lib.ts.
+
+// ---------------------------------------------------------------------------
+// Deterministic workspace scanner
+// ---------------------------------------------------------------------------
+
+interface ScanResult {
+  projectType: string;   // "Greenfield" | "Brownfield"
+  languages: string;     // e.g. "TypeScript, JavaScript"
+  frameworks: string;    // e.g. "React, Vite"
+  buildSystem: string;   // e.g. "npm (package.json)"
+}
+
+const LANG_BY_EXT: Record<string, string> = {
+  ".ts": "TypeScript",
+  ".tsx": "TypeScript",
+  ".js": "JavaScript",
+  ".jsx": "JavaScript",
+  ".mjs": "JavaScript",
+  ".cjs": "JavaScript",
+  ".py": "Python",
+  ".java": "Java",
+  ".kt": "Kotlin",
+  ".go": "Go",
+  ".rs": "Rust",
+  ".rb": "Ruby",
+  ".cs": "C#",
+  ".cpp": "C++",
+  ".c": "C",
+  ".h": "C",
+  ".hpp": "C++",
+  ".swift": "Swift",
+  ".php": "PHP",
+};
+
+const SCAN_SOURCE_DIRS = ["src", "app", "lib", "pages", "components", "tests"];
+const SCAN_EXCLUDE = new Set([
+  ".claude",
+  ".kiro",
+  ".codex",
+  "amadeus-docs",
+  "node_modules",
+  ".git",
+  "dist",
+  "build",
+  ".next",
+  "target",
+  "vendor",
+]);
+
+// Non-package.json manifests whose mere PRESENCE marks a brownfield project.
+// Extracted from detectWorkspace's inline list so the U06 signal evaluator and
+// the legacy classifier share ONE definition (avoids drift between the two).
+const OTHER_MANIFESTS = [
+  "requirements.txt",
+  "pyproject.toml",
+  "setup.py",
+  "Cargo.toml",
+  "go.mod",
+  "pom.xml",
+  "build.gradle",
+  "build.gradle.kts",
+  "composer.json",
+  "Gemfile",
+];
+
+function countFilesByLang(
+  dir: string,
+  counts: Record<string, number>,
+  maxDepth: number
+): void {
+  if (maxDepth < 0) return;
+  let entries: string[];
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    if (SCAN_EXCLUDE.has(entry)) continue;
+    const full = join(dir, entry);
+    let st: import("node:fs").Stats;
+    try {
+      st = lstatSync(full);
+    } catch {
+      continue;
+    }
+    // Don't follow symlinks — cycle protection.
+    if (st.isSymbolicLink()) continue;
+    if (st.isDirectory()) {
+      countFilesByLang(full, counts, maxDepth - 1);
+    } else if (st.isFile()) {
+      const dot = entry.lastIndexOf(".");
+      if (dot > 0) {
+        const ext = entry.slice(dot).toLowerCase();
+        const lang = LANG_BY_EXT[ext];
+        if (lang) counts[lang] = (counts[lang] || 0) + 1;
+      }
+    }
+  }
+}
+
+// Recurse language counts into every non-excluded, non-dot top-level directory
+// (capped depth). Issue #840: the old walk covered only SCAN_SOURCE_DIRS, so a
+// codebase whose sources live elsewhere (packages/, this very repo) counted zero
+// files and fell through to Greenfield / Unknown, downgrading bugfix
+// reverse-engineering to SKIP. Dot-directories stay excluded — they are
+// config/harness space, and counting them would flip a harness-only empty
+// project to Brownfield. `topSet` is already SCAN_EXCLUDE-filtered by the caller.
+// An entry can vanish between the caller's readdir and this lstat (TOCTOU), so
+// lstatSync is guarded; the single-line `catch { continue; }` keeps the guard on
+// executable lines (a bare `}` would be stamped DA:0 by bun --coverage's
+// load-only chunk and never re-stamped). Exported as an in-process seam so that
+// lstat-race branch is drivable without staging a real filesystem race.
+export function countLangsInTopDirs(
+  projectDir: string,
+  topSet: Set<string>,
+  langCounts: Record<string, number>
+): void {
+  for (const entry of topSet) {
+    if (entry.startsWith(".")) continue;
+    const full = join(projectDir, entry);
+    let st: import("node:fs").Stats;
+    try {
+      st = lstatSync(full);
+    } catch { continue; }
+    if (st.isSymbolicLink() || !st.isDirectory()) continue;
+    countFilesByLang(full, langCounts, 6);
+  }
+}
+
+function detectFrameworks(topEntries: Set<string>, projectDir: string): string[] {
+  const fws: string[] = [];
+  const has = (name: string) => topEntries.has(name);
+
+  if (["next.config.js", "next.config.ts", "next.config.mjs", "next.config.cjs"].some(has))
+    fws.push("Next.js");
+  if (["vite.config.js", "vite.config.ts", "vite.config.mjs"].some(has))
+    fws.push("Vite");
+  if (has("angular.json")) fws.push("Angular");
+  if (["nuxt.config.js", "nuxt.config.ts"].some(has)) fws.push("Nuxt");
+  if (has("remix.config.js")) fws.push("Remix");
+  if (has("gatsby-config.js")) fws.push("Gatsby");
+  if (["astro.config.mjs", "astro.config.js", "astro.config.ts"].some(has))
+    fws.push("Astro");
+  if (has("svelte.config.js")) fws.push("Svelte");
+  if (has("nest-cli.json")) fws.push("NestJS");
+
+  // React surfaces via package.json dependencies/peerDependencies
+  if (has("package.json")) {
+    try {
+      const raw: unknown = JSON.parse(
+        readFileSync(join(projectDir, "package.json"), "utf-8")
+      );
+      if (isPackageJson(raw)) {
+        const deps = {
+          ...(raw.dependencies ?? {}),
+          ...(raw.peerDependencies ?? {}),
+        };
+        if (deps.react && !fws.includes("React")) fws.push("React");
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }
+
+  if (has("manage.py")) fws.push("Django");
+
+  if (has("Gemfile")) {
+    try {
+      const gemfile = readFileSync(join(projectDir, "Gemfile"), "utf-8");
+      if (/^[^#]*\brails\b/m.test(gemfile)) fws.push("Rails");
+    } catch {
+      // ignore
+    }
+  }
+
+  if (has("pom.xml")) {
+    try {
+      const pom = readFileSync(join(projectDir, "pom.xml"), "utf-8");
+      if (/spring-boot/.test(pom)) fws.push("Spring Boot");
+    } catch {
+      // ignore
+    }
+  }
+
+  return fws;
+}
+
+function detectBuildSystem(topEntries: Set<string>, projectDir: string): string {
+  if (topEntries.has("package.json")) {
+    if (topEntries.has("pnpm-lock.yaml")) return "pnpm (package.json)";
+    if (topEntries.has("yarn.lock")) return "yarn (package.json)";
+    if (topEntries.has("bun.lockb") || topEntries.has("bun.lock"))
+      return "bun (package.json)";
+    return "npm (package.json)";
+  }
+  if (topEntries.has("pyproject.toml")) {
+    try {
+      const pp = readFileSync(join(projectDir, "pyproject.toml"), "utf-8");
+      if (/\[tool\.poetry\]/.test(pp)) return "poetry (pyproject.toml)";
+      if (/\[tool\.uv\]/.test(pp)) return "uv (pyproject.toml)";
+      if (/\[tool\.hatch\]/.test(pp)) return "hatch (pyproject.toml)";
+    } catch {
+      // ignore
+    }
+    return "python (pyproject.toml)";
+  }
+  if (topEntries.has("requirements.txt")) return "pip (requirements.txt)";
+  if (topEntries.has("setup.py")) return "setuptools (setup.py)";
+  if (topEntries.has("Cargo.toml")) return "cargo (Cargo.toml)";
+  if (topEntries.has("go.mod")) return "go modules (go.mod)";
+  if (topEntries.has("pom.xml")) return "maven (pom.xml)";
+  if (topEntries.has("build.gradle") || topEntries.has("build.gradle.kts"))
+    return "gradle (build.gradle)";
+  if (topEntries.has("composer.json")) return "composer (composer.json)";
+  if (topEntries.has("Gemfile")) return "bundler (Gemfile)";
+  return "Unknown";
+}
+
+function hasNonDevDeps(projectDir: string): boolean {
+  try {
+    const raw: unknown = JSON.parse(
+      readFileSync(join(projectDir, "package.json"), "utf-8")
+    );
+    if (!isPackageJson(raw)) return false;
+    const deps = raw.dependencies ?? {};
+    // peerDependencies declare what a consumer must provide, not what this
+    // project needs at runtime — exclude from the brownfield signal.
+    return Object.keys(deps).length > 0;
+  } catch {
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// U06 workspace inspection — fail-closed scan (FR-3 items 11-12)
+//
+// The canonical scan seam. `inspectWorkspace` returns a discriminated union so
+// an incomplete observation (permission failure, unparseable .gitmodules) can
+// never be silently read as Greenfield: the birth boundary rejects it before
+// any state/plan/graph/audit/workspace mutation. Classification-critical reads
+// flow through the ReadOnlyFs port so failure branches are drivable in-process
+// (no env-gated test mode). The default classified path reuses the existing
+// detectFrameworks / detectBuildSystem / countLangsInTopDirs helpers verbatim,
+// so a workspace with no nested root, no submodule, and no read failure yields
+// byte-identical output (NFR-3).
+// ---------------------------------------------------------------------------
+
+// NOTE: the ok/err arms are named (not an inline `{...} | {...}` union on one
+// line) because the complexity gate's lizard TS tokenizer mis-tracks braces
+// across a single-line union-of-object-types with generics, which merges the
+// following functions into one measurement.
+type ResultOk<T> = { ok: true; value: T };
+type ResultErr<E> = { ok: false; error: E };
+type Result<T, E> = ResultOk<T> | ResultErr<E>;
+
+type FsObservationError = {
+  kind: "not-found" | "unreadable";
+  path: string;
+  code?: string;
+  message: string;
+};
+
+// Only these distinctions matter to the scan: symlinks are skipped, directories
+// are walked/candidate, everything else is treated as a file (a rare socket/FIFO
+// at a workspace root carries no source extension, so counting it as a file is
+// harmless — and it keeps every branch reachable in-process).
+type EntryKind = "file" | "directory" | "symlink";
+
+interface DirectoryEntry {
+  name: string;
+  kind: EntryKind;
+}
+
+// Read-only filesystem port. Production wraps Node/Bun fs; fixtures inject
+// errors. NO write / mkdir / spawn / Git method — the scan never mutates.
+interface ReadOnlyFs {
+  readDirectory(path: string): Result<readonly DirectoryEntry[], FsObservationError>;
+  readTextFile(path: string): Result<string, FsObservationError>;
+  inspectEntry(path: string): Result<EntryKind, FsObservationError>;
+}
+
+type RootSignals = {
+  sourceCounts: Readonly<Record<string, number>>;
+  frameworks: readonly string[];
+  buildSystem?: string;
+  manifests: readonly string[];
+  sourceDirectories: readonly string[];
+};
+
+type ProjectCandidate = { path: string; signals: RootSignals };
+
+type SubmoduleObservation = {
+  name: string;
+  path: string;
+  url?: string;
+  initialized: boolean;
+};
+
+type WorkspaceAdvisoryCode =
+  | "MULTIPLE_NESTED_PROJECTS"
+  | "UNREADABLE_ENTRY"
+  | "UNPARSEABLE_GITMODULES"
+  | "UNINITIALIZED_SUBMODULES"
+  | "INCREMENTAL_SCOPE_GREENFIELD";
+
+type BlockingWorkspaceAdvisoryCode =
+  | "ROOT_UNREADABLE"
+  | "SIGNAL_METADATA_UNREADABLE"
+  | "CANDIDATE_UNREADABLE"
+  | "UNPARSEABLE_GITMODULES";
+
+type WorkspaceAdvisory = {
+  code: WorkspaceAdvisoryCode;
+  paths: readonly string[];
+  message: string;
+  remedy?: string;
+};
+
+type BlockingWorkspaceAdvisory = {
+  code: BlockingWorkspaceAdvisoryCode;
+  paths: readonly string[];
+  message: string;
+  remedy?: string;
+};
+
+type ClassifiedWorkspaceScan = {
+  root: string;
+  projectType: "Greenfield" | "Brownfield";
+  languages: readonly string[];
+  frameworks: readonly string[];
+  buildSystem?: string;
+  nestedRoot?: string;
+  nestedCandidates: readonly ProjectCandidate[];
+  submodules: readonly SubmoduleObservation[];
+  advisories: readonly WorkspaceAdvisory[];
+};
+
+type PartialWorkspaceObservations = {
+  languages: readonly string[];
+  frameworks: readonly string[];
+  buildSystem?: string;
+  nestedCandidates: readonly ProjectCandidate[];
+  submodules: readonly SubmoduleObservation[];
+};
+
+type InconclusiveWorkspaceScan = {
+  root: string;
+  partial: PartialWorkspaceObservations;
+  advisories: readonly BlockingWorkspaceAdvisory[];
+};
+
+type WorkspaceScanResult =
+  | { kind: "classified"; scan: ClassifiedWorkspaceScan }
+  | { kind: "inconclusive"; scan: InconclusiveWorkspaceScan };
+
+// Directory names never treated as a nested project root (docs/examples/etc.).
+const NESTED_EXCLUDE_DIRS = new Set([
+  "docs",
+  "doc",
+  "examples",
+  "example",
+  "samples",
+  "sample",
+  "demos",
+  "demo",
+  "reference",
+  "references",
+  "testdata",
+  "fixtures",
+  "templates",
+  "template",
+  "scripts",
+  "script",
+]);
+
+function toFsObservationError(path: string, e: unknown): FsObservationError {
+  const code = (e as NodeJS.ErrnoException | undefined)?.code;
+  const base: FsObservationError = {
+    kind: code === "ENOENT" ? "not-found" : "unreadable",
+    path,
+    message: errorMessage(e),
+  };
+  return code ? { ...base, code } : base;
+}
+
+function statToEntryKind(st: Stats): EntryKind {
+  if (st.isSymbolicLink()) return "symlink";
+  if (st.isDirectory()) return "directory";
+  return "file";
+}
+
+// One try/catch for all three adapter methods so the error mapping is written
+// (and measured) once, not three times.
+function fsResult<T>(path: string, op: () => T): Result<T, FsObservationError> {
+  try {
+    return { ok: true, value: op() };
+  } catch (e) {
+    return { ok: false, error: toFsObservationError(path, e) };
+  }
+}
+
+function direntEntryKind(d: import("node:fs").Dirent): EntryKind {
+  if (d.isSymbolicLink()) return "symlink";
+  if (d.isDirectory()) return "directory";
+  return "file";
+}
+
+// Production adapter: thin, read-only mapping onto Node/Bun fs. readDirectory
+// uses withFileTypes so a symlink reports kind "symlink" WITHOUT following it.
+const nodeReadOnlyFs: ReadOnlyFs = {
+  readDirectory(path) {
+    return fsResult(path, () =>
+      readdirSync(path, { withFileTypes: true }).map(
+        (d): DirectoryEntry => ({ name: d.name, kind: direntEntryKind(d) }),
+      ),
+    );
+  },
+  readTextFile(path) {
+    return fsResult(path, () => readFileSync(path, "utf-8"));
+  },
+  inspectEntry(path) {
+    return fsResult(path, () => statToEntryKind(lstatSync(path)));
+  },
+};
+
+type ParsedSubmodule = { name: string; path: string; url?: string };
+
+// Pure line-oriented .gitmodules parser. Accepts `[submodule "name"]` sections
+// and their `path` / optional `url`; ignores comments, unknown keys, and
+// non-submodule sections; never throws on malformed content. An entry with no
+// `path` (or empty path) is dropped.
+export function parseGitmodules(content: string): readonly ParsedSubmodule[] {
+  const out: ParsedSubmodule[] = [];
+  let current: { name: string; path?: string; url?: string } | null = null;
+  const flush = (): void => {
+    if (current && current.path) {
+      const entry: ParsedSubmodule = { name: current.name, path: current.path };
+      if (current.url !== undefined) entry.url = current.url;
+      out.push(entry);
+    }
+    current = null;
+  };
+  for (const rawLine of content.split("\n")) {
+    const line = rawLine.trim();
+    if (line === "" || line.startsWith("#") || line.startsWith(";")) continue;
+    if (line.startsWith("[")) {
+      // A section header. A submodule header starts a new block; any other
+      // section ends the current one.
+      flush();
+      const name = parseSubmoduleSectionName(line);
+      if (name !== null) current = { name };
+      continue;
+    }
+    if (!current) continue;
+    const eq = line.indexOf("=");
+    if (eq < 0) continue;
+    const key = line.slice(0, eq).trim().toLowerCase();
+    const val = line.slice(eq + 1).trim();
+    if (key === "path") current.path = val;
+    else if (key === "url") current.url = val;
+  }
+  flush();
+  return out;
+}
+
+// Extract the NAME from a `[submodule "name"]` section header, or null for any
+// other section. String-based (no regex) — keeps the .gitmodules parser simple
+// and deterministic.
+function parseSubmoduleSectionName(line: string): string | null {
+  if (!line.startsWith("[submodule") || !line.endsWith("]")) return null;
+  const firstQuote = line.indexOf('"');
+  const lastQuote = line.lastIndexOf('"');
+  if (firstQuote < 0 || lastQuote <= firstQuote) return null;
+  return line.slice(firstQuote + 1, lastQuote);
+}
+
+// A submodule path is safe to probe only if it is non-empty and strictly
+// contained in the workspace root: no POSIX/UNC absolute, no Windows drive
+// absolute, no `..` traversal segment.
+export function isSafeSubmodulePath(p: string): boolean {
+  if (p === "") return false;
+  if (p.startsWith("/") || p.startsWith("\\")) return false;
+  if (/^[A-Za-z]:/.test(p)) return false;
+  for (const seg of p.split(/[\\/]+/)) {
+    if (seg === "..") return false;
+  }
+  return true;
+}
+
+type SubmoduleInspection = {
+  present: boolean;
+  submodules: readonly SubmoduleObservation[];
+  blocking?: BlockingWorkspaceAdvisory;
+};
+
+// Reads ONLY the workspace root's .gitmodules. Absent => present:false. Present
+// but unreadable, containing an unsafe path, or yielding zero parseable-safe
+// entries => blocking UNPARSEABLE_GITMODULES (fail-closed; never degrades to
+// Greenfield). Otherwise returns safe submodule observations, `initialized`
+// determined solely by the existence of `root/path/.git` (never runs Git).
+export function inspectSubmodules(root: string, io: ReadOnlyFs): SubmoduleInspection {
+  const gitmodulesPath = join(root, ".gitmodules");
+  const read = io.readTextFile(gitmodulesPath);
+  if (!read.ok) {
+    if (read.error.kind === "not-found") {
+      return { present: false, submodules: [] };
+    }
+    return {
+      present: true,
+      submodules: [],
+      blocking: {
+        code: "UNPARSEABLE_GITMODULES",
+        paths: [gitmodulesPath],
+        message: `.gitmodules is present but could not be read (${read.error.message})`,
+      },
+    };
+  }
+  const parsed = parseGitmodules(read.value);
+  const safe: ParsedSubmodule[] = [];
+  let sawUnsafe = false;
+  for (const entry of parsed) {
+    if (isSafeSubmodulePath(entry.path)) safe.push(entry);
+    else sawUnsafe = true;
+  }
+  if (sawUnsafe || safe.length === 0) {
+    return {
+      present: true,
+      submodules: [],
+      blocking: {
+        code: "UNPARSEABLE_GITMODULES",
+        paths: [gitmodulesPath],
+        message: sawUnsafe
+          ? ".gitmodules contains an unsafe (absolute or traversing) submodule path"
+          : ".gitmodules is present but has no parseable, safe submodule entries",
+      },
+    };
+  }
+  const submodules = safe
+    .map((entry): SubmoduleObservation => {
+      const probe = io.inspectEntry(join(root, entry.path, ".git"));
+      const observation: SubmoduleObservation = {
+        name: entry.name,
+        path: entry.path,
+        initialized: probe.ok,
+      };
+      if (entry.url !== undefined) observation.url = entry.url;
+      return observation;
+    })
+    .sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  return { present: true, submodules };
+}
+
+// Aggregate language counts -> [primary, ...secondary] using the existing
+// primary = highest / secondary >= 20% of primary rule. Empty counts -> [].
+function projectLanguages(langCounts: Readonly<Record<string, number>>): string[] {
+  const sorted = Object.entries(langCounts).sort((a, b) => b[1] - a[1]);
+  if (sorted.length === 0) return [];
+  const primary = sorted[0][0];
+  const primaryCount = sorted[0][1];
+  const threshold = Math.max(1, Math.floor(primaryCount * 0.2));
+  const extras = sorted
+    .slice(1)
+    .filter(([, c]) => c >= threshold)
+    .map(([l]) => l);
+  return [primary, ...extras];
+}
+
+type SignalEvaluation = {
+  signals: RootSignals;
+  brownfield: boolean;
+  unreadable: readonly string[];
+};
+
+// Evaluate brownfield signals for one directory (root OR a depth-1 candidate),
+// reusing the exact language/framework/build helpers so the classified default
+// stays byte-identical. Classification-critical per-entry metadata reads flow
+// through io.inspectEntry; an unreadable entry surfaces in `unreadable` (the
+// caller turns it into a blocking advisory). Manifest CONTENT reads stay inside
+// detectFrameworks/detectBuildSystem (best-effort, error => signal absent):
+// classification depends on manifest PRESENCE, which is known from the listing.
+// Dirs whose deep-walked source never counts toward a directory's OWN brownfield
+// signal. For the root this is the set of depth-1 nested-project candidates: a
+// nested project's source belongs to that project, not to the root. Recursing
+// into it and letting it flip the root to Brownfield is the exact FR-3 item 11
+// defect (root signal must be first-class — root-level files/manifests or source
+// in non-candidate dirs — not a swallowed nested subtree). Empty for candidate
+// evaluations, so a candidate's own deep source still classifies it (BR-U06-06).
+const NO_EXCLUDED_SOURCE_DIRS: ReadonlySet<string> = new Set();
+
+// Deep-walk each top-level dir into `langCounts` (reporting — every dir enriches
+// the languages, #840) and report whether any NON-excluded dir carried source
+// (the "own signal" contribution). Excluded dirs are the depth-1 nested-project
+// candidates whose source belongs to that project, not the parent.
+function accumulateDeepLangs(
+  dirFull: string,
+  topSet: ReadonlySet<string>,
+  excludeSourceDirs: ReadonlySet<string>,
+  langCounts: Record<string, number>,
+): boolean {
+  let ownSource = false;
+  for (const entry of topSet) {
+    const perDir: Record<string, number> = {};
+    countLangsInTopDirs(dirFull, new Set([entry]), perDir);
+    const langs = Object.entries(perDir);
+    if (langs.length === 0) continue;
+    for (const [lang, c] of langs) langCounts[lang] = (langCounts[lang] || 0) + c;
+    if (!excludeSourceDirs.has(entry)) ownSource = true;
+  }
+  return ownSource;
+}
+
+// Scan the top-level entries: count root-level source files into `langCounts`
+// (always a first-class own signal), and surface genuinely unreadable entries
+// (a vanished TOCTOU entry is not a failure — fail-closed only on real errors).
+function scanTopLevelEntries(
+  dirFull: string,
+  filtered: readonly string[],
+  io: ReadOnlyFs,
+  langCounts: Record<string, number>,
+): { hasDirectSource: boolean; unreadable: string[] } {
+  const unreadable: string[] = [];
+  let hasDirectSource = false;
+  for (const entry of filtered) {
+    const full = join(dirFull, entry);
+    const probe = io.inspectEntry(full);
+    if (!probe.ok) {
+      if (probe.error.kind !== "not-found") unreadable.push(full);
+      continue;
+    }
+    if (probe.value !== "file") continue; // dirs counted below; symlinks skipped
+    const dot = entry.lastIndexOf(".");
+    if (dot <= 0) continue;
+    const lang = LANG_BY_EXT[entry.slice(dot).toLowerCase()];
+    if (!lang) continue;
+    langCounts[lang] = (langCounts[lang] || 0) + 1;
+    hasDirectSource = true;
+  }
+  return { hasDirectSource, unreadable };
+}
+
+function evaluateSignals(
+  dirFull: string,
+  names: readonly string[],
+  io: ReadOnlyFs,
+  excludeSourceDirs: ReadonlySet<string> = NO_EXCLUDED_SOURCE_DIRS,
+): SignalEvaluation {
+  const filtered = names.filter((n) => !SCAN_EXCLUDE.has(n));
+  const topSet = new Set(filtered);
+  const langCounts: Record<string, number> = {};
+
+  // Source that counts as THIS directory's own signal: root-level files always,
+  // plus deep source from any non-excluded top-level dir. Deep source inside an
+  // excluded (candidate) dir enriches the reported languages but is NOT an own
+  // signal (see NO_EXCLUDED_SOURCE_DIRS). Both walks fill `langCounts` (reporting).
+  const top = scanTopLevelEntries(dirFull, filtered, io, langCounts);
+  const deepOwnSource = accumulateDeepLangs(dirFull, topSet, excludeSourceDirs, langCounts);
+  const unreadable = top.unreadable;
+  const hasSourceFiles = top.hasDirectSource || deepOwnSource;
+
+  const frameworks = detectFrameworks(topSet, dirFull);
+  const buildSystemRaw = detectBuildSystem(topSet, dirFull);
+  const buildSystem = buildSystemRaw === "Unknown" ? undefined : buildSystemRaw;
+  const manifests = OTHER_MANIFESTS.filter((m) => topSet.has(m));
+  const sourceDirectories = SCAN_SOURCE_DIRS.filter((d) => topSet.has(d));
+
+  const hasFrameworkConfig = frameworks.length > 0;
+  const hasNonDev = topSet.has("package.json") && hasNonDevDeps(dirFull);
+  const hasOtherManifest = manifests.length > 0;
+  const hasAppSourceDir = sourceDirectories.length > 0;
+  const brownfield =
+    hasSourceFiles || hasFrameworkConfig || hasNonDev || hasOtherManifest || hasAppSourceDir;
+
+  const signals: RootSignals = {
+    sourceCounts: langCounts,
+    frameworks,
+    manifests,
+    sourceDirectories,
+  };
+  if (buildSystem !== undefined) signals.buildSystem = buildSystem;
+  return { signals, brownfield, unreadable };
+}
+
+// Depth-1 nested-root fallback: run ONLY when the root itself carries no signal
+// and no safe submodule. Canonical-sorted, excludes hidden/harness/build/known
+// source/docs-style dirs and symlinks, applies the SAME signal evaluator to
+// each candidate, and returns the hits. A candidate directory that cannot be
+// read yields a blocking CANDIDATE_UNREADABLE (never a silent Greenfield).
+// Depth-1 directories eligible to be a nested-project ROOT: real dirs, excluding
+// hidden, harness/build (SCAN_EXCLUDE), known source dirs (SCAN_SOURCE_DIRS —
+// part of the root project), and docs/utility dirs (NESTED_EXCLUDE_DIRS). ONE
+// definition shared by detectDepthOneProjects (which candidates to evaluate) and
+// inspectWorkspace (which dirs the root's own signal must NOT swallow), so the
+// two never drift. Canonical-sorted.
+function candidateEligibleDirNames(rootEntries: readonly DirectoryEntry[]): string[] {
+  return rootEntries
+    .filter((e) => e.kind === "directory")
+    .map((e) => e.name)
+    .filter((n) => !n.startsWith("."))
+    .filter((n) => !SCAN_EXCLUDE.has(n))
+    .filter((n) => !SCAN_SOURCE_DIRS.includes(n))
+    .filter((n) => !NESTED_EXCLUDE_DIRS.has(n))
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+}
+
+export function detectDepthOneProjects(
+  root: string,
+  rootEntries: readonly DirectoryEntry[],
+  io: ReadOnlyFs,
+): { candidates: readonly ProjectCandidate[]; blocking?: BlockingWorkspaceAdvisory } {
+  const names = candidateEligibleDirNames(rootEntries);
+
+  const candidates: ProjectCandidate[] = [];
+  const unreadable: string[] = [];
+  for (const name of names) {
+    const candFull = join(root, name);
+    const listing = io.readDirectory(candFull);
+    if (!listing.ok) {
+      if (listing.error.kind !== "not-found") unreadable.push(candFull);
+      continue;
+    }
+    const evald = evaluateSignals(
+      candFull,
+      listing.value.map((e) => e.name),
+      io,
+    );
+    if (evald.unreadable.length > 0) {
+      unreadable.push(...evald.unreadable);
+      continue;
+    }
+    if (evald.brownfield) {
+      candidates.push({ path: name, signals: evald.signals });
+    }
+  }
+
+  if (unreadable.length > 0) {
+    return {
+      candidates: [],
+      blocking: {
+        code: "CANDIDATE_UNREADABLE",
+        paths: [...unreadable].sort(),
+        message: `nested project candidate(s) could not be read: ${[...unreadable].sort().join(", ")}`,
+      },
+    };
+  }
+  return { candidates };
+}
+
+function emptyPartial(): PartialWorkspaceObservations {
+  return { languages: [], frameworks: [], nestedCandidates: [], submodules: [] };
+}
+
+function sortBlockingAdvisories(
+  advisories: readonly BlockingWorkspaceAdvisory[],
+): BlockingWorkspaceAdvisory[] {
+  return [...advisories].sort((x, y) => (x.code < y.code ? -1 : x.code > y.code ? 1 : 0));
+}
+
+// Declared at module scope so the type-only field lines carry no in-body
+// coverage records (they are erased at runtime).
+type ClassifiedResultArgs = {
+  root: string;
+  projectType: "Greenfield" | "Brownfield";
+  counts: Readonly<Record<string, number>>;
+  frameworks: readonly string[];
+  buildSystem?: string;
+  submodules: readonly SubmoduleObservation[];
+  advisories: readonly WorkspaceAdvisory[];
+  nestedCandidates?: readonly ProjectCandidate[];
+  nestedRoot?: string;
+};
+function classifiedResult(args: ClassifiedResultArgs): WorkspaceScanResult {
+  const scan: ClassifiedWorkspaceScan = {
+    root: args.root,
+    projectType: args.projectType,
+    languages: projectLanguages(args.counts),
+    frameworks: args.frameworks,
+    nestedCandidates: args.nestedCandidates ?? [],
+    submodules: args.submodules,
+    advisories: args.advisories,
+  };
+  if (args.buildSystem !== undefined) scan.buildSystem = args.buildSystem;
+  if (args.nestedRoot !== undefined) scan.nestedRoot = args.nestedRoot;
+  return { kind: "classified", scan };
+}
+
+// The canonical fail-closed workspace scan. See section header.
+export function inspectWorkspace(root: string, io: ReadOnlyFs): WorkspaceScanResult {
+  const rootListing = io.readDirectory(root);
+  let rootEntries: readonly DirectoryEntry[];
+  if (!rootListing.ok) {
+    if (rootListing.error.kind === "not-found") {
+      // Dir not yet scaffolded — the documented Greenfield "scaffold first"
+      // path (byte-identical to the old detectWorkspace's empty-listing branch).
+      rootEntries = [];
+    } else {
+      return {
+        kind: "inconclusive",
+        scan: {
+          root,
+          partial: emptyPartial(),
+          advisories: [
+            {
+              code: "ROOT_UNREADABLE",
+              paths: [root],
+              message: `workspace root could not be read (${rootListing.error.message})`,
+            },
+          ],
+        },
+      };
+    }
+  } else {
+    rootEntries = rootListing.value;
+  }
+
+  const names = rootEntries.map((e) => e.name);
+  const sub = inspectSubmodules(root, io);
+  // The root's OWN brownfield signal must not be manufactured by recursing into a
+  // depth-1 nested-project candidate: a single nested project with real source
+  // files must reach the depth-1 fallback and be attributed (FR-3 item 11), not
+  // flip the root to Brownfield via the deep walk. Excluding the candidate dirs
+  // from the root's own source signal leaves the reported languages unchanged
+  // (langCounts still walks them) and non-candidate dirs (scripts/, docs/, known
+  // source dirs) still count as the root's own signal (#840 preserved).
+  const rootExcluded = new Set(candidateEligibleDirNames(rootEntries));
+  const rootEval = evaluateSignals(root, names, io, rootExcluded);
+
+  // Fail-closed precedence: an unsafe/unparseable .gitmodules or an unreadable
+  // signal-metadata entry yields inconclusive BEFORE classification, regardless
+  // of root signals or safe submodules (safe+unsafe and root-signal+unsafe both
+  // resolve to inconclusive).
+  const blocking: BlockingWorkspaceAdvisory[] = [];
+  if (sub.blocking) blocking.push(sub.blocking);
+  if (rootEval.unreadable.length > 0) {
+    blocking.push({
+      code: "SIGNAL_METADATA_UNREADABLE",
+      paths: [...rootEval.unreadable].sort(),
+      message: `workspace signal metadata could not be read: ${[...rootEval.unreadable].sort().join(", ")}`,
+    });
+  }
+  if (blocking.length > 0) {
+    const partial: PartialWorkspaceObservations = {
+      languages: projectLanguages(rootEval.signals.sourceCounts),
+      frameworks: rootEval.signals.frameworks,
+      nestedCandidates: [],
+      submodules: sub.submodules,
+    };
+    if (rootEval.signals.buildSystem !== undefined) partial.buildSystem = rootEval.signals.buildSystem;
+    return {
+      kind: "inconclusive",
+      scan: { root, partial, advisories: sortBlockingAdvisories(blocking) },
+    };
+  }
+
+  const advisories: WorkspaceAdvisory[] = [];
+  const uninitialized = sub.submodules.filter((s) => !s.initialized).map((s) => s.path).sort();
+  if (uninitialized.length > 0) {
+    advisories.push({
+      code: "UNINITIALIZED_SUBMODULES",
+      paths: uninitialized,
+      message: `${uninitialized.length} submodule(s) not initialized`,
+      remedy: "git submodule update --init --recursive",
+    });
+  }
+
+  // Root signal OR safe submodule => Brownfield, no depth-1 fallback (BR-U06-02).
+  if (rootEval.brownfield || sub.submodules.length > 0) {
+    return classifiedResult({
+      root,
+      projectType: "Brownfield",
+      counts: rootEval.signals.sourceCounts,
+      frameworks: rootEval.signals.frameworks,
+      buildSystem: rootEval.signals.buildSystem,
+      submodules: sub.submodules,
+      advisories,
+    });
+  }
+
+  // No root signal, no submodule => depth-1 fallback.
+  const nested = detectDepthOneProjects(root, rootEntries, io);
+  if (nested.blocking) {
+    const partial: PartialWorkspaceObservations = {
+      languages: projectLanguages(rootEval.signals.sourceCounts),
+      frameworks: rootEval.signals.frameworks,
+      nestedCandidates: [],
+      submodules: sub.submodules,
+    };
+    if (rootEval.signals.buildSystem !== undefined) partial.buildSystem = rootEval.signals.buildSystem;
+    return { kind: "inconclusive", scan: { root, partial, advisories: [nested.blocking] } };
+  }
+
+  const hits = nested.candidates;
+  if (hits.length === 0) {
+    // Greenfield — existing output unchanged. Carry the root's own signals: a
+    // Greenfield project can still expose a Build System (e.g. a devDeps-only
+    // package.json), exactly as the legacy scanner reported it.
+    return classifiedResult({
+      root,
+      projectType: "Greenfield",
+      counts: rootEval.signals.sourceCounts,
+      frameworks: rootEval.signals.frameworks,
+      buildSystem: rootEval.signals.buildSystem,
+      submodules: sub.submodules,
+      advisories,
+    });
+  }
+
+  // Aggregate across hits in sorted-path order: sum language counts, first-seen
+  // framework dedup, first non-Unknown build system.
+  const aggCounts: Record<string, number> = {};
+  const aggFrameworks: string[] = [];
+  let aggBuild: string | undefined;
+  for (const h of hits) {
+    for (const [lang, c] of Object.entries(h.signals.sourceCounts)) {
+      aggCounts[lang] = (aggCounts[lang] || 0) + c;
+    }
+    for (const f of h.signals.frameworks) {
+      if (!aggFrameworks.includes(f)) aggFrameworks.push(f);
+    }
+    if (aggBuild === undefined && h.signals.buildSystem !== undefined) {
+      aggBuild = h.signals.buildSystem;
+    }
+  }
+  if (hits.length >= 2) {
+    advisories.push({
+      code: "MULTIPLE_NESTED_PROJECTS",
+      paths: hits.map((h) => h.path),
+      message: "multiple nested project roots detected; not auto-selecting",
+    });
+  }
+  return classifiedResult({
+    root,
+    projectType: "Brownfield",
+    counts: aggCounts,
+    frameworks: aggFrameworks,
+    buildSystem: aggBuild,
+    submodules: sub.submodules,
+    advisories,
+    nestedCandidates: hits,
+    nestedRoot: hits.length === 1 ? hits[0].path : undefined,
+  });
+}
+
+// Legacy string projection of a classified scan (Languages/Frameworks/Build
+// System collapse to "Unknown" when empty, exactly as before).
+function projectScanResult(scan: ClassifiedWorkspaceScan): ScanResult {
+  return {
+    projectType: scan.projectType,
+    languages: scan.languages.length ? scan.languages.join(", ") : "Unknown",
+    frameworks: scan.frameworks.length ? scan.frameworks.join(", ") : "Unknown",
+    buildSystem: scan.buildSystem ?? "Unknown",
+  };
+}
+
+// Back-compat string API over the fail-closed scan. Legacy callers (t20/t211)
+// pass readable dirs and only ever see the classified projection. The
+// fail-closed contract lives at the birth boundary (handleIntentBirth), which
+// calls inspectWorkspace directly and rejects `inconclusive` before mutating.
+export function detectWorkspace(projectDir: string): ScanResult {
+  const result = inspectWorkspace(projectDir, nodeReadOnlyFs);
+  if (result.kind === "classified") {
+    return projectScanResult(result.scan);
+  }
+  const p = result.scan.partial;
+  return {
+    projectType: "Greenfield",
+    languages: p.languages.length ? p.languages.join(", ") : "Unknown",
+    frameworks: p.frameworks.length ? p.frameworks.join(", ") : "Unknown",
+    buildSystem: p.buildSystem ?? "Unknown",
+  };
+}
+
+// Run the fail-closed workspace scan for intent birth: refuse loudly (no
+// mutation) on an inconclusive result, or return the classified snapshot. Kept
+// as its own function so the birth transaction's lock callback stays simple.
+function scanWorkspaceOrRefuse(projectDir: string): ClassifiedWorkspaceScan {
+  const result = inspectWorkspace(projectDir, nodeReadOnlyFs);
+  if (result.kind === "inconclusive") {
+    refuseWithoutAudit(formatInconclusiveRefusal(result.scan));
+  }
+  return result.scan;
+}
+
+// Human-readable refusal for an inconclusive birth (no mutation performed).
+function formatInconclusiveRefusal(scan: InconclusiveWorkspaceScan): string {
+  const lines = [
+    "Workspace inspection was inconclusive; refusing to birth an intent (no state, plan, graph, or audit was written).",
+  ];
+  for (const a of scan.advisories) {
+    lines.push(`  - [${a.code}] ${a.message}`);
+    if (a.remedy) lines.push(`    remedy: ${a.remedy}`);
+  }
+  lines.push("Resolve the read failure above and retry.");
+  return lines.join("\n");
+}
+
+// Bounded uninitialized-submodule display: sorted first 5 + `(+N more)`.
+function formatUninitializedSubmodules(submodules: readonly SubmoduleObservation[]): string | null {
+  const uninit = submodules
+    .filter((s) => !s.initialized)
+    .map((s) => s.path)
+    .sort();
+  if (uninit.length === 0) return null;
+  const shown = uninit.slice(0, 5);
+  const extra = uninit.length - shown.length;
+  return shown.join(", ") + (extra > 0 ? ` (+${extra} more)` : "");
+}
+
+// ---------------------------------------------------------------------------
+// intent-birth (0.1-0.3) — deterministic: mint intent + scan + state-init
+// ---------------------------------------------------------------------------
+
+// Deferred `git rm` of a migrated flat tree. migrateFlatLayout MOVED the data
+// (staged copy → per-intent record) and left the original amadeus-docs/ in place
+// for this untrack step (it never rmSync's the source). Best-effort: a non-git
+// project, or a tree git doesn't track, is a clean no-op — `git rm -r --cached`
+// untracks without touching the working tree, then we remove the now-moved
+// directory from disk. Resolved decision (3): migration git-rm's the tracked
+// flat amadeus-docs/ post-move.
+function gitRmFlatTree(projectDir: string, flatTree: string): void {
+  try {
+    if (!existsSync(flatTree)) return;
+    // Untrack (cached only — the data already moved). Ignore failure (non-git
+    // project, or already untracked) — the rmSync below still tidies disk.
+    Bun.spawnSync(["git", "-C", projectDir, "rm", "-r", "--cached", "--quiet", "--", flatTree], {
+      stdout: "ignore",
+      stderr: "ignore",
+    });
+    // Remove the moved-from directory from the working tree (the data lives in
+    // the per-intent record now; this is the empty husk).
+    rmSync(flatTree, { recursive: true, force: true });
+  } catch {
+    // best-effort untrack; the migration itself already succeeded
+  }
+}
+
+// Ensure the dirs a workflow writes into exist. Idempotent ensure-exists (NOT
+// the old data/scaffold copy — SEED ships the shell). Creates the active intent's
+// record dir plus its per-phase artifact dirs, AND the SPACE-level domain
+// knowledge/ dir (a sibling of intents, not a record subdir); all skipped if
+// already present. The active-intent cursor must be set (birthIntent/migration
+// did so) before this runs.
+function ensureWorkspaceDirs(projectDir: string): void {
+  // docsDir() default-resolves the active intent's record dir (or the flat
+  // fallback when no intent resolves) — the cursor set by birthIntent/migration
+  // points it at the born intent.
+  const record = docsDir(projectDir);
+  mkdirSync(record, { recursive: true });
+  // Lazy per-phase artifact dirs (the engine/stages write reports here).
+  for (const phase of PHASES) {
+    mkdirSync(join(record, phase), { recursive: true });
+  }
+  mkdirSync(join(record, "verification"), { recursive: true });
+  // SPACE-level domain knowledge dir (NOT per-intent): vision §"Spaces" makes
+  // knowledge a sibling of memory/codekb/intents under spaces/<space>/, so team
+  // domain knowledge accumulates across every intent in the space rather than
+  // being trapped in one intent's record. Free-form, empty at bootstrap. The
+  // engine's per-agent METHODOLOGY knowledge ships separately under
+  // <harness>/knowledge/ (untouched). Lazy ensure-exists — never SEED.
+  mkdirSync(knowledgeDir(projectDir), { recursive: true });
+  // Engine-only-install self-heal: recover an ENGINE-ONLY install. Normally the
+  // workspace shell (amadeus/spaces/default/memory/) ships as a SIBLING of the
+  // engine dir (the packager's emitMemory → MEMORY_DST), so a complete dist/
+  // copy already carries it and the lines below leave it untouched. But a user
+  // who copies ONLY the harness engine dir (e.g. dist/kiro/.kiro/) and NOT the
+  // sibling amadeus/ shell lands with NO default-space method tree → doctor's
+  // "workspace shell ready" check fails and the rule resolver loads zero rules.
+  // To recover, seed the default-space memory tree from the copy the packager
+  // bundled INSIDE the engine at tools/data/memory-seed/ (frameworkMemorySeedDir,
+  // mirroring the tools/data/templates pattern) — but ONLY if the default tree is
+  // ABSENT. The existsSync guard makes this strictly idempotent: a normal install
+  // that copied amadeus/ already has the dir, so the seed never fires and the
+  // committed default tree never churns (preserving the "default tree never
+  // churns" invariant). This is a deliberate, GUARDED exception to the
+  // "never SEED" rule the rest of this function follows.
+  const defaultMemory = memoryDirFor(projectDir, DEFAULT_SPACE);
+  if (!existsSync(defaultMemory)) {
+    const seed = frameworkMemorySeedDir();
+    if (existsSync(seed)) cpSync(seed, defaultMemory, { recursive: true });
+  }
+  // Align the harness-native includes with the active space at bootstrap (first
+  // /amadeus). A no-op when they already point there (the common default-cursor
+  // case) — so this never dirties a single-team committed tree; it self-heals a
+  // tree whose cursor and includes drifted out of sync.
+  repointHarnessIncludes(projectDir, activeSpace(projectDir));
+}
+
+// intent-birth — the deterministic mutation behind the engine's birth
+// directive (the engine NAMES the move read-only; this tool performs it).
+// Births the FIRST intent into the active space on a fresh workspace, OR a new
+// intent for new work alongside an active one. Crash-safe + concurrent-safe:
+// the WHOLE transaction (migration probe, intent mint, registry append,
+// active-intent cursor, state-build, audit emits) runs inside ONE withAuditLock
+// on the WORKSPACE sentinel bucket — every intents.json mutation takes that
+// bucket (invariant 2), so two concurrent first-runs are serialized and BOTH
+// births land distinct uuids/dirs/rows with no lost update.
+//
+// The data/scaffold dir-copy + knowledge READMEs that the old `--init` shipped
+// are gone: the workspace shell (spaces/default/memory, native includes) ships
+// in dist/ (SEED), and lazy per-intent/codekb/knowledge dirs are ensure-exists
+// (created on demand). What stays is the scope→stage state-build that routes
+// the workflow to its first post-init stage — relocated here, now writing into
+// the BORN intent's record (the active-intent cursor set first makes the
+// default-resolving state/audit helpers resolve there).
+function isReservedHelpRecordName(raw: string, maxLength: number): boolean {
+  const slug = slugify(raw, maxLength);
+  return classifyHelpIntent([raw]).kind === "help" || classifyHelpIntent([slug]).kind === "help";
+}
+
+export function handleIntentBirth(projectDir: string, flags: Record<string, string>): void {
+  // Default to poc when --scope is omitted. Matches the orchestrator's
+  // ultimate fallback in SKILL.md and makes direct tool invocations
+  // (`bun amadeus-utility.ts intent-birth`) work without extra flags.
+  const scope = flags.scope || "poc";
+  if (!validScopes().has(scope)) {
+    die(
+      `Unknown scope: "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`
+    );
+  }
+
+  const depthOverride = flags.depth;
+  if (depthOverride && !VALID_DEPTHS[depthOverride.toLowerCase()]) {
+    die(`Unknown depth: "${depthOverride}". Valid depths: minimal, standard, comprehensive.`);
+  }
+
+  const testStrategyOverride = flags["test-strategy"];
+  if (testStrategyOverride && !VALID_TEST_STRATEGIES[testStrategyOverride.toLowerCase()]) {
+    die(`Unknown test strategy: "${testStrategyOverride}". Valid: minimal, standard, comprehensive.`);
+  }
+
+  const description = flags.arguments?.trim();
+  const label = flags.label?.trim();
+  const slugSource = label || description || scope;
+  if (isReservedHelpRecordName(slugSource, 24)) {
+    refuseWithoutAudit(
+      `Reserved intent name "${slugSource}" cannot be created. Choose a non-help intent name.`,
+    );
+  }
+
+  // Resolve the repo set the intent touches (P7 multi-repo): an explicit
+  // `--repos a,b` wins; absent it, sibling auto-discovery scans the workspace
+  // root's immediate children for a `.git`. An empty result (legacy single-repo /
+  // fresh greenfield) records no repos row — the lone repo is inferred on the
+  // construction path. Validated up front so a bad name fails before any mutation.
+  let repos: string[];
+  try {
+    repos = resolveBirthRepoSet(projectDir, flags.repos);
+  } catch (e) {
+    die(errorMessage(e));
+  }
+
+  // The whole mutation runs under the WORKSPACE lock so a concurrent first-run
+  // is serialized — both births append distinct rows to intents.json without a
+  // lost update. The migration probe + the registry append are the reads/writes
+  // the hazard box demands be in ONE critical section on the sentinel bucket.
+  withAuditLock(projectDir, () => {
+    // (1) MIGRATION WIRING. A pre-workspace project still at the flat amadeus-docs/
+    // layout is migrated ONCE here (idempotent + crash-safe; no-op on a fresh
+    // SEED shell or an already-migrated project). migrateFlatLayout MOVES the
+    // existing flat state INTO a per-intent record (mints the intent, sets the
+    // cursor + registry row), so when it fires the migrated state is AUTHORITATIVE
+    // — we do NOT mint a second intent and do NOT rebuild state on top (that
+    // would clobber the moved workflow). We git-rm the moved flat tree and emit a
+    // migration acknowledgement, then return. The deferred `git rm` untracks the
+    // data that MOVED (the source is never rmSync'd; best-effort — a non-git
+    // project skips it).
+    const migration = migrateFlatLayout(projectDir);
+    if (migration) {
+      gitRmFlatTree(projectDir, migration.movedFrom);
+      // The migrated record carries its prior state + audit history. Record that
+      // the workspace was migrated into this intent (lands in the migrated
+      // intent's audit shard — the cursor points there now). No state rebuild.
+      appendAuditEvent(projectDir, "WORKSPACE_INITIALISED", {
+        Request: `/amadeus ${flags.arguments || scope}`,
+        Scope: scope,
+        Details: `Migrated flat amadeus-docs/ into ${migration.intentDirName}`,
+      });
+      process.stdout.write(
+        `Migrated flat workspace into intent: ${migration.intentDirName} (space: ${DEFAULT_SPACE})\n`,
+      );
+      return;
+    }
+
+    // (1.5) FAIL-CLOSED WORKSPACE SCAN. Run the read-only inspection BEFORE any
+    // mutation (mint, audit, state). An `inconclusive` result (permission
+    // failure, unparseable .gitmodules) refuses loudly — no intent is minted,
+    // nothing is written (BR-U06-22). Only a `classified` scan proceeds into the
+    // birth pipeline, and its exact strings/observations are threaded to
+    // handleIntentBirthStateBuild so the scan is projected once.
+    const classifiedScan = scanWorkspaceOrRefuse(projectDir);
+
+    // (2) MINT THE INTENT. SPIKE (date-prefix): the dir name is `<YYMMDD>-<label>`.
+    // TWO seams, by the three-concerns split:
+    //   • KNOWLEDGE→LLM: the conductor passes a short 2-3 word essence via --label
+    //     ("simple calc"). This is the dir-name label — the readable, condensed half
+    //     no deterministic tool can produce from a long sentence.
+    //   • DETERMINISM→TOOL: --label is slugified (cap 24), the date prefix + collision
+    //     counter are appended, the dirName is stored in the registry row.
+    // Fallback chain so a NON-LLM caller (direct tool invocation, scripts, or a
+    // conductor that omits --label) still births a sane name: --label, else the
+    // freeform --arguments (truncated — may cut mid-phrase, the pre-LLM behaviour),
+    // else the scope token. The full --arguments text still flows to the audit
+    // Request + state Project fields below (verbose prose belongs there, not the dir).
+    const slug = slugify(slugSource, 24);
+    birthIntent(projectDir, slug, activeSpace(projectDir), scope, repos);
+
+    const ts = isoTimestamp();
+
+    // ---- Audit bootstrap + birth events (relocated from the old --init) ----
+
+    // audit.md: header-only bootstrap if absent. WORKFLOW_STARTED is the birth
+    // event; SESSION_STARTED is owned by the SessionStart hook. This resolves to
+    // the born intent's per-clone audit shard (cursor set above).
+    const auditPath = auditFilePath(projectDir);
+    if (!existsSync(auditPath)) {
+      mkdirSync(dirname(auditPath), { recursive: true });
+      writeFileSync(auditPath, `# AI-DLC Audit Log\n`, "utf-8");
+    }
+
+    // WORKFLOW_STARTED — mandatory first event of any new workflow. Captures the
+    // birth timestamp so "when did this feature begin?" is answerable from the
+    // audit alone. Lands in the born intent's audit (relocated from --init).
+    appendAuditEvent(projectDir, "WORKFLOW_STARTED", {
+      Scope: scope,
+      Request: `/amadeus ${flags.arguments || scope}`,
+      // Record the intent's repo span at birth (P7). Omitted when no repos were
+      // captured (legacy single-repo / fresh greenfield → the lone repo is inferred).
+      ...(repos.length > 0 ? { Repos: repos.join(", ") } : {}),
+    });
+
+    // PHASE_STARTED for the Init phase — Init always runs. Other phases emit
+    // PHASE_STARTED at their boundary (via amadeus-state.ts advance) or
+    // PHASE_SKIPPED right now if the scope excludes them.
+    const initStageCount = stagesInScope(scope).filter(
+      (s) => s.phase === "initialization" && s.action === "EXECUTE"
+    ).length;
+    appendAuditEvent(projectDir, "PHASE_STARTED", {
+      Phase: "initialization",
+      "Stage count": String(initStageCount),
+      Scope: scope,
+    });
+
+    // PHASE_SKIPPED — one per phase the scope excludes entirely (no EXECUTE
+    // stages in that phase). Captures the scope decision at workflow birth so
+    // you don't have to derive it later by diffing the stage list.
+    for (const phase of PHASES) {
+      if (phase === "initialization") continue;
+      const inPhase = stagesInScope(scope).filter((s) => s.phase === phase);
+      const anyExecute = inPhase.some((s) => s.action === "EXECUTE");
+      if (!anyExecute && inPhase.length > 0) {
+        appendAuditEvent(projectDir, "PHASE_SKIPPED", {
+          Phase: phase,
+          Scope: scope,
+          Reason: `scope ${scope} excludes ${phase}`,
+        });
+      }
+    }
+
+    appendAuditEvent(projectDir, "STAGE_STARTED", {
+      Stage: "workspace-scaffold",
+      Agent: "orchestrator",
+    });
+
+    // ---- Ensure-exists scaffold (lazy; SEED ships the shell) ----
+    // The shipped shell already carries spaces/default/memory + native includes.
+    // Birth only ensures the per-intent artifact dirs + the space-level knowledge/
+    // dir the workflow will write into exist; it never re-copies the data/scaffold
+    // tree (SEED owns that). All idempotent — skip any dir that already exists.
+    ensureWorkspaceDirs(projectDir);
+
+    appendAuditEvent(projectDir, "WORKSPACE_SCAFFOLDED", {
+      Request: `/amadeus ${flags.arguments || scope}`,
+      Details: "Per-intent artifact dirs + space-level knowledge/ ensured (shell shipped by SEED)",
+    });
+    appendAuditEvent(projectDir, "STAGE_COMPLETED", {
+      Stage: "workspace-scaffold",
+      Details: "Per-intent artifact dirs + space-level knowledge/ ensured",
+    });
+
+    handleIntentBirthStateBuild(projectDir, flags, scope, ts, classifiedScan);
+  });
+}
+
+// Init-time Phase Progress status for one phase. Init PRE-CROSSES the
+// initialization → first-post-init boundary: when the first post-init stage
+// sits in a later phase, birth emits PHASE_COMPLETED/PHASE_VERIFIED/PHASE_STARTED
+// for that boundary and moves Current Stage/Lifecycle Phase into the post-init
+// phase (see the hand-off block in handleIntentBirthStateBuild). The roll-up
+// MUST mirror that emission or it desyncs from the ledger (#836's root symptom:
+// Initialization stayed Active forever because no later advance re-crosses that
+// boundary). So once crossed, initialization is Verified and the first post-init
+// phase is Active; every other phase is Pending (has EXECUTE work) or Skipped
+// (none). firstPostInitPhase is null only when birth does not cross out of
+// initialization, in which case initialization is still Active. Exported as a
+// pure seam so the branch logic is covered in-process (the birth handler itself
+// is spawn-driven — the coverage blindspot).
+export function initPhaseStatus(
+  phase: string,
+  firstPostInitPhase: string | null | undefined,
+  phaseHasExecute: boolean,
+): "Pending" | "Active" | "Verified" | "Skipped" {
+  const crossed =
+    !!firstPostInitPhase && firstPostInitPhase !== "initialization";
+  if (phase === "initialization") return crossed ? "Verified" : "Active";
+  if (crossed && phase === firstPostInitPhase) return "Active";
+  return phaseHasExecute ? "Pending" : "Skipped";
+}
+
+// The scope→stage state-build half of birth: the workspace detection + state
+// file authoring + routing audit emits the old --init ran after scaffolding.
+// Split out only so handleIntentBirth's lock body stays readable; it is called
+// from inside that lock (every write here resolves the born intent's record).
+function handleIntentBirthStateBuild(
+  projectDir: string,
+  flags: Record<string, string>,
+  scope: string,
+  ts: string,
+  classifiedScan: ClassifiedWorkspaceScan,
+): void {
+  const depthOverride = flags.depth;
+  const testStrategyOverride = flags["test-strategy"];
+  // ---- Workspace detection (stage 0.2) ----
+  // The scan already ran (fail-closed) at the birth boundary; project the SAME
+  // classified snapshot here so birth/detect/doctor/audit share one observation.
+
+  appendAuditEvent(projectDir, "STAGE_STARTED", {
+    Stage: "workspace-detection",
+    Agent: "orchestrator",
+  });
+
+  const scan = projectScanResult(classifiedScan);
+  const nestedCandidatePaths = classifiedScan.nestedCandidates.map((c) => c.path);
+  const submoduleCount = classifiedScan.submodules.length;
+  const uninitializedCount = classifiedScan.submodules.filter((s) => !s.initialized).length;
+  const submoduleAuditValue = `${submoduleCount} present, ${uninitializedCount} uninitialized`;
+
+  appendAuditEvent(projectDir, "WORKSPACE_SCANNED", {
+    "Project Type": scan.projectType,
+    Languages: scan.languages,
+    Frameworks: scan.frameworks,
+    "Build System": scan.buildSystem,
+    // Additive: emitted ONLY when observed, so a workspace with no nested root
+    // and no submodule keeps byte-identical audit Details (NFR-3 / BR-U06-18).
+    ...(classifiedScan.nestedRoot ? { "Nested Root": classifiedScan.nestedRoot } : {}),
+    ...(nestedCandidatePaths.length > 1
+      ? { "Nested Candidates": nestedCandidatePaths.join(", ") }
+      : {}),
+    ...(submoduleCount > 0 ? { Submodules: submoduleAuditValue } : {}),
+    Details: "Deterministic rule-based scan",
+  });
+  appendAuditEvent(projectDir, "STAGE_COMPLETED", {
+    Stage: "workspace-detection",
+    Details: `Classified ${scan.projectType}; languages=${scan.languages}; frameworks=${scan.frameworks}`,
+  });
+
+  // ---- State init (stage 0.3) ----
+
+  appendAuditEvent(projectDir, "STAGE_STARTED", {
+    Stage: "state-init",
+    Agent: "orchestrator",
+  });
+
+  const graph = loadStageGraph();
+  const scopeMapping = loadScopeMapping();
+  const scopeDef = scopeMapping[scope];
+  if (!scopeDef) die(`Unknown scope: ${scope}`);
+  const effectiveDepth = depthOverride
+    ? VALID_DEPTHS[depthOverride.toLowerCase()]
+    : scopeDef.depth;
+  const effectiveTestStrategy = testStrategyOverride
+    ? VALID_TEST_STRATEGIES[testStrategyOverride.toLowerCase()]
+    : (scopeDef.testStrategy ?? effectiveDepth);
+
+  // Compute stages to execute/skip
+  const executeStages: string[] = [];
+  const skipStages: string[] = [];
+  for (const stage of graph) {
+    const action = scopeDef.stages[stage.slug] || "SKIP";
+    if (action === "EXECUTE") {
+      executeStages.push(stage.number);
+    } else {
+      skipStages.push(`${stage.number} (${stage.slug})`);
+    }
+  }
+
+  // For greenfield, reverse-engineering becomes SKIP
+  const adjustedMapping = { ...scopeDef.stages };
+  if (scan.projectType.toLowerCase() === "greenfield") {
+    if (adjustedMapping["reverse-engineering"] === "EXECUTE") {
+      adjustedMapping["reverse-engineering"] = "SKIP";
+      const reStage = graph.find((s) => s.slug === "reverse-engineering");
+      if (reStage) {
+        const idx = executeStages.indexOf(reStage.number);
+        if (idx >= 0) executeStages.splice(idx, 1);
+        skipStages.push(`${reStage.number} (reverse-engineering — greenfield)`);
+      }
+    }
+  }
+
+  // Build stage progress checkboxes
+  let stageProgress = "";
+  const phaseMap: Record<string, typeof graph> = {};
+  for (const stage of graph) {
+    if (!phaseMap[stage.phase]) phaseMap[stage.phase] = [];
+    phaseMap[stage.phase].push(stage);
+  }
+
+  const phaseHeaders: Record<string, string> = {
+    initialization: "INITIALIZATION PHASE",
+    ideation: "IDEATION PHASE",
+    inception: "INCEPTION PHASE",
+    construction: "CONSTRUCTION PHASE",
+    operation: "OPERATION PHASE",
+  };
+
+  for (const phase of PHASES) {
+    const stages = phaseMap[phase] || [];
+    stageProgress += `\n### ${phaseHeaders[phase]}\n`;
+    if (phase === "construction") {
+      stageProgress += "Per unit: [TBD]\n";
+    }
+    for (const stage of stages) {
+      const action =
+        adjustedMapping[stage.slug] || scopeDef.stages[stage.slug] || "SKIP";
+      const isInit = phase === "initialization";
+      const marker = isInit ? "[x]" : "[ ]";
+      const suffix = action === "EXECUTE" ? "EXECUTE" : `SKIP`;
+      stageProgress += `- ${marker} ${stage.slug} — ${suffix}\n`;
+    }
+  }
+
+  const firstPostInit = determineFirstPostInitStage(adjustedMapping, graph);
+  stageProgress = stageProgress.replace(
+    `- [ ] ${firstPostInit}`,
+    `- [-] ${firstPostInit}`
+  );
+
+  const totalInScope = executeStages.length;
+  const completedInit = graph.filter((s) => s.phase === "initialization").length;
+
+  const firstPostInitEntry = graph.find((s) => s.slug === firstPostInit);
+  const firstPostInitPhase = firstPostInitEntry
+    ? firstPostInitEntry.phase.toUpperCase()
+    : "IDEATION";
+  const firstPostInitAgent = firstPostInitEntry
+    ? firstPostInitEntry.lead_agent
+    : "amadeus-product-agent";
+
+  const nextAfterFirst = nextInScopeStage(firstPostInit, scope);
+  const nextStageName = nextAfterFirst ? nextAfterFirst.slug : "none";
+
+  const projectDesc = flags.arguments || "[Project description]";
+  const harnessType = detectHarnessType();
+
+  // Phase Progress — per-phase status. Init pre-crosses the initialization →
+  // first-post-init boundary (the PHASE_VERIFIED/PHASE_STARTED hand-off below),
+  // so at init time initialization is Verified and the first post-init phase is
+  // Active — NOT Initialization=Active/first-phase=Pending, which desynced the
+  // roll-up from the ledger and left Initialization Active for the whole run
+  // (#836). Later Pending phases flip to Active on their boundary advance and to
+  // Verified at phase completion; a phase with zero EXECUTE stages is Skipped.
+  // firstPostInitEntry is computed above; initPhaseStatus treats its phase (or
+  // undefined / "initialization") as "not crossed" and keeps initialization
+  // Active in that case.
+  const phaseStatus = (phase: string): string => {
+    const stagesInPhase = graph.filter((s) => s.phase === phase);
+    const hasExecute = stagesInPhase.some(
+      (s) => (adjustedMapping[s.slug] || scopeDef.stages[s.slug] || "SKIP") === "EXECUTE"
+    );
+    return initPhaseStatus(phase, firstPostInitEntry?.phase, hasExecute);
+  };
+  const phaseProgressLines = [
+    `- **Initialization**: ${phaseStatus("initialization")}`,
+    `- **Ideation**: ${phaseStatus("ideation")}`,
+    `- **Inception**: ${phaseStatus("inception")}`,
+    `- **Construction**: ${phaseStatus("construction")}`,
+    `- **Operation**: ${phaseStatus("operation")}`,
+  ].join("\n");
+
+  const stateContent = `# AI-DLC State Tracking
+
+## Project Information
+- **Project**: ${projectDesc}
+- **Project Type**: ${scan.projectType}
+- **Scope**: ${scope}
+- **Start Date**: ${ts}
+- **State Version**: 7
+- **Active Agent**: ${firstPostInitAgent}
+- **Harness**: ${harnessType}
+- **Worktree Path**:
+- **Bolt Refs**:
+- **Practices Affirmed Timestamp**:
+
+## Scope Configuration
+- **Stages to Execute**: ${executeStages.join(", ")}
+- **Stages to Skip**: ${skipStages.length > 0 ? skipStages.join(", ") : "none"}
+- **Depth**: ${effectiveDepth}
+- **Test Strategy**: ${effectiveTestStrategy}
+
+## Workspace State
+- **Project Root**: ${projectDir}
+- **Languages**: ${scan.languages}
+- **Frameworks**: ${scan.frameworks}
+- **Build System**: ${scan.buildSystem}
+
+## Execution Plan Summary
+- **Total Stages**: ${totalInScope}
+- **Completed**: ${completedInit}
+- **In Progress**: ${firstPostInit}
+
+## Runtime State
+- **Revision Count**: 0
+
+## Phase Progress
+<!-- Status values: Pending, Active, Verified, Skipped -->
+
+${phaseProgressLines}
+
+## Stage Progress
+${STAGE_PROGRESS_HEADER_COMMENT}
+${stageProgress}
+## Current Status
+- **Lifecycle Phase**: ${firstPostInitPhase}
+- **Current Stage**: ${firstPostInit}
+- **Next Stage**: ${nextStageName}
+- **Status**: Running
+- **Last Updated**: ${ts}
+
+## Session Resume Point
+- **Last Completed Stage**: state-init
+- **Next Action**: Execute ${firstPostInit}
+- **Pending Artifacts**: none
+`;
+
+  writeStateFile(projectDir, stateContent);
+
+  appendAuditEvent(projectDir, "WORKSPACE_INITIALISED", {
+    Request: `/amadeus ${flags.arguments || scope}`,
+    "Project Type": scan.projectType,
+    Scope: scope,
+    Languages: scan.languages,
+    Frameworks: scan.frameworks,
+    "Build System": scan.buildSystem,
+    Details: `${totalInScope} stages in scope, routing to ${firstPostInit}`,
+  });
+  appendAuditEvent(projectDir, "STAGE_COMPLETED", {
+    Stage: "state-init",
+    Details: `State initialized: ${scope} scope, ${totalInScope} stages, routing to ${firstPostInit}`,
+  });
+
+  // Phase hand-off: initialization → first post-init phase. The state file
+  // advertises Current Stage = first post-init, so the audit must reflect
+  // the same transition (PHASE_COMPLETED + PHASE_VERIFIED + PHASE_STARTED +
+  // STAGE_STARTED) to keep the two streams coherent. Without these, the first
+  // subsequent `advance` call would appear to jump from workspace-scaffold
+  // directly into a fresh phase.
+  if (firstPostInitEntry && firstPostInitEntry.phase !== "initialization") {
+    appendAuditEvent(projectDir, "PHASE_COMPLETED", {
+      "From phase": "initialization",
+      "To phase": firstPostInitEntry.phase,
+      "Stages completed": String(completedInit),
+    });
+    appendAuditEvent(projectDir, "PHASE_VERIFIED", {
+      "Phase boundary": `initialization → ${firstPostInitEntry.phase}`,
+    });
+    appendAuditEvent(projectDir, "PHASE_STARTED", {
+      Phase: firstPostInitEntry.phase,
+      Scope: scope,
+    });
+    appendAuditEvent(projectDir, "STAGE_STARTED", {
+      Stage: firstPostInit,
+      Agent: firstPostInitAgent,
+    });
+  }
+
+  // Combined stdout summary (intent born + state-build). The active-intent
+  // cursor + the record dir were set by birthIntent above; the state file lives
+  // under the born intent's record (resolved by writeStateFile's default).
+  const bornDir = activeIntent(projectDir) ?? "(legacy flat record)";
+  // FR-2 item 9: display the scope cost (stage + gate count) from the compiled
+  // grid via the single count owner (previewScopeCost), so intent birth reports
+  // the same numbers as validate-grid/scope confirmation. Additive: a new
+  // trailing line, so the existing birth-summary anchors stay byte-identical.
+  const scopeCost = previewScopeCost(scope, loadScopeGrid());
+  process.stdout.write(
+    `Intent born: ${bornDir} (space: ${activeSpace(projectDir)})
+State initialized: ${scope} scope, ${totalInScope} stages, ${effectiveDepth} depth
+Project type: ${scan.projectType}
+Languages: ${scan.languages}
+Frameworks: ${scan.frameworks}
+Build System: ${scan.buildSystem}
+First post-init stage: ${firstPostInit} (${firstPostInitPhase})
+Scope cost: ${scopeCost.stageCount} stages, ${scopeCost.gateCount} approval gates
+`
+  );
+
+  // Additive advisories — printed ONLY when observed, so a plain workspace keeps
+  // byte-identical birth stdout (FR-3 items 11-12 birth advisory surface).
+  if (classifiedScan.nestedRoot) {
+    process.stdout.write(`Nested project root detected: ${classifiedScan.nestedRoot}\n`);
+  } else if (nestedCandidatePaths.length > 1) {
+    process.stdout.write(
+      `Multiple nested project roots detected (not auto-selected): ${nestedCandidatePaths.join(", ")}\n`,
+    );
+  }
+  const uninitList = formatUninitializedSubmodules(classifiedScan.submodules);
+  if (uninitList) {
+    process.stdout.write(
+      `Uninitialized submodule(s): ${uninitList}\n  remedy: git submodule update --init --recursive\n`,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// state-init / init — deprecated aliases, merged into intent-birth
+// ---------------------------------------------------------------------------
+
+function handleStateInit(_projectDir: string, _flags: Record<string, string>): void {
+  die(
+    "state-init is merged into intent-birth. A workflow starts by describing what to build (/amadeus \"build the auth service\"); the engine auto-births the intent."
+  );
+}
+
+// ---------------------------------------------------------------------------
+// intent / space — the verb families + the deterministic query layer
+// ---------------------------------------------------------------------------
+
+// Print an intent listing (the query layer's human OR --json mode). Both modes
+// read the SAME listSpaces/listIntents source so they never diverge. --json
+// shape: {active, spaces:[...], intents:[{uuid,slug,status,repos}]} — consumed
+// by the birth gate, resume-rebind, and statusline; human text is the bare
+// `/amadeus intent` rendering. Pure read.
+function printIntentListing(projectDir: string, asJson: boolean): void {
+  const space = activeSpace(projectDir);
+  const intents = listIntents(projectDir, space);
+  const active = intents.find((i) => i.active);
+  if (asJson) {
+    process.stdout.write(
+      `${JSON.stringify({
+        active: active ? active.dirName : null,
+        space,
+        intents: intents.map((i) => ({
+          uuid: i.uuid,
+          slug: i.slug,
+          status: i.status,
+          repos: i.repos ?? [],
+          dirName: i.dirName,
+          active: i.active,
+        })),
+      })}\n`
+    );
+    return;
+  }
+  if (intents.length === 0) {
+    process.stdout.write(
+      `No intents in space "${space}" yet. Start one by describing what to build: /amadeus "build the auth service"\n`
+    );
+    return;
+  }
+  let out = `Intents in space "${space}":\n`;
+  for (const i of intents) {
+    const marker = i.active ? "*" : " ";
+    out += `${marker} ${i.dirName ?? i.slug}  [${i.status}]\n`;
+  }
+  if (!active) {
+    out += `\n(no active intent — switch with /amadeus intent <name>)\n`;
+  }
+  process.stdout.write(out);
+}
+
+// Print a space listing (human OR --json). --json shape:
+// {active, spaces:[{name,active}]}. Pure read.
+function printSpaceListing(projectDir: string, asJson: boolean): void {
+  const spaces = listSpaces(projectDir);
+  const active = spaces.find((s) => s.active);
+  if (asJson) {
+    process.stdout.write(
+      `${JSON.stringify({
+        active: active ? active.name : DEFAULT_SPACE,
+        spaces: spaces.map((s) => ({ name: s.name, active: s.active })),
+      })}\n`
+    );
+    return;
+  }
+  let out = `Spaces:\n`;
+  for (const s of spaces) {
+    out += `${s.active ? "*" : " "} ${s.name}\n`;
+  }
+  process.stdout.write(out);
+}
+
+// `/amadeus intent` (list) · `/amadeus intent <name>` (switch the active-intent
+// cursor). Switching an intent is a PURE cursor write (an intent has no native
+// include — only a space does). The <name> matches a record dir name exactly,
+// or a slug (when unambiguous within the space). --json on the bare list emits
+// the structured query shape.
+function appendUtilityLifecycleEvent(
+  event: IntentLifecycleAuditEvent,
+  shard: string,
+  pd: string,
+  intentDir: string,
+  space: string,
+): void {
+  appendLifecycleAuditEntryUnlocked(event.eventType, {
+    Intent: event.intentDir,
+    "From Status": event.fromStatus,
+    "To Status": event.toStatus,
+    "Operation Id": event.operationId,
+    "User Input": event.userInput,
+    "Human Turn Timestamp": event.humanTurnTimestamp,
+  }, pd, intentDir, space, shard);
+}
+
+function resolveIntentSelector(projectDir: string, space: string, target: string) {
+  const intents = listIntents(projectDir, space);
+  const exact = intents.find((intent) => intent.dirName === target);
+  if (exact) return exact;
+  const bySlug = intents.filter((intent) => intent.slug === target && intent.dirName !== null);
+  if (bySlug.length === 1) return bySlug[0];
+  if (bySlug.length > 1) {
+    refuseWithoutAudit(
+      `Ambiguous intent "${target}" in space "${space}" (${bySlug.length} match). Use the full record-dir name: ${bySlug.map((intent) => intent.dirName).join(", ")}.`,
+    );
+  }
+  refuseWithoutAudit(renderIntentOperationRejection(intentNotFoundRejection(
+    target,
+    "select",
+    `No registry-backed record matched in space "${space}".`,
+  )));
+}
+
+function delegateIntentLifecycle(
+  projectDir: string,
+  verb: "archive" | "unarchive",
+  intentDir: string,
+): void {
+  const run = Bun.spawnSync({
+    cmd: [
+      "bun",
+      join(TOOLS_DIR, "amadeus-state.ts"),
+      verb,
+      intentDir,
+      "--user-input",
+      `intent ${verb} ${intentDir}`,
+      "--project-dir",
+      projectDir,
+    ],
+    cwd: projectDir,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  process.stdout.write(new TextDecoder().decode(run.stdout));
+  process.stderr.write(new TextDecoder().decode(run.stderr));
+  if (run.signalCode) process.kill(process.pid, run.signalCode as NodeJS.Signals);
+  if (run.exitCode !== 0) process.exit(run.exitCode);
+}
+
+function selectIntentLocked(
+  context: import("./amadeus-lib.ts").LockedIntentRegistryContext,
+  target: string,
+) {
+  const { projectDir, space } = context;
+  const selected = resolveIntentSelector(projectDir, space, target);
+  if (!selected.dirName) refuseWithoutAudit(`Intent "${target}" has no record directory.`);
+  const guard = guardIntentOperation(
+    resolveIntentOperationTargetLocked(context, selected),
+    "select",
+  );
+  if (guard.kind === "rejected") {
+    refuseWithoutAudit(renderIntentOperationRejection(guard.error));
+  }
+  setActiveIntentCursor(projectDir, selected.dirName, space);
+  return selected;
+}
+
+function handleIntent(projectDir: string, positional: string[], flags: Record<string, string>): void {
+  const asJson = flags.json === "true";
+  const target = positional[1];
+  if (!target) {
+    printIntentListing(projectDir, asJson);
+    return;
+  }
+  const space = activeSpace(projectDir);
+  if (target === "archive" || target === "unarchive") {
+    const selector = positional[2];
+    if (!selector) refuseWithoutAudit(`Usage: amadeus-utility.ts intent ${target} <intent>`);
+    const resolved = withIntentLifecyclePreflight(
+      projectDir,
+      space,
+      appendUtilityLifecycleEvent,
+      () => resolveIntentSelector(projectDir, space, selector).dirName,
+    );
+    if (!resolved) refuseWithoutAudit(`Intent "${selector}" has no record directory.`);
+    delegateIntentLifecycle(projectDir, target, resolved);
+    return;
+  }
+  const match = withIntentLifecyclePreflight(
+    projectDir,
+    space,
+    appendUtilityLifecycleEvent,
+    (context) => selectIntentLocked(context, target),
+  );
+  // Re-stamp the LIVE conversation's session→intent record to the switched-to
+  // intent. WHY: the resume-rebind stamp (session-start hook) is keyed by
+  // session_id, which this tool never sees; only the hook does. Without this, a
+  // deliberate in-conversation `/amadeus intent <slug>` switch leaves the session
+  // stamped at the OLD intent, so resuming THIS same conversation fires a FALSE
+  // rebind nag ("was working X, switch back?"). The hook records the live session
+  // in `.current-session` on every fire (it owns session-id capture); we read
+  // that marker here and re-stamp deterministically. Self-switch: the marker
+  // names THIS session → its stamp follows the cursor → no false nag. Foreign
+  // drift (a DIFFERENT session moved the cursor): the marker names that OTHER
+  // session → its stamp moves, not ours → a genuine resume of our session still
+  // offers the rebind. writeSessionIntentUuid no-ops on a blank uuid, so an
+  // orphan (registry-less) record is fail-safe. Best-effort throughout.
+  const sid = readCurrentSessionId(projectDir);
+  if (sid && match.uuid) writeSessionIntentUuid(projectDir, sid, match.uuid);
+  process.stdout.write(`Active intent → ${match.dirName} (space: ${space})\n`);
+}
+
+// `/amadeus space` (list) · `/amadeus space <name>` (switch the active-space
+// cursor). Switching a space does TWO per-user writes: move the gitignored
+// active-space cursor, then SURGICALLY repoint the harness-native rule includes
+// in place so the next turn loads the switched space's method (the ambient
+// channel — Claude @-stub / Kiro resources glob / Codex AMADEUS_RULES_DIR). Both
+// are per-user: the cursor is gitignored, and the include re-point is a no-op at
+// `default` (so a single-team user never dirties the committed tree). Switching
+// to a non-existent space errors (use space-create). --json on the bare list
+// emits the structured shape.
+function handleSpace(projectDir: string, positional: string[], flags: Record<string, string>): void {
+  const asJson = flags.json === "true";
+  const raw = positional[1];
+  if (!raw) {
+    printSpaceListing(projectDir, asJson);
+    return;
+  }
+  // Spaces are STORED under their slug (handleSpaceCreate writes slugify(raw)),
+  // so slugify the switch target before lookup AND before the cursor write —
+  // otherwise `/amadeus space "My Space"` (stored as my-space) would miss.
+  const target = slugify(raw);
+  const spaces = listSpaces(projectDir);
+  if (!spaces.some((s) => s.name === target)) {
+    refuseWithoutAudit(
+      `Unknown space "${target}". Existing: ${spaces.map((s) => s.name).join(", ")}. Run /amadeus space to list existing spaces.`
+    );
+  }
+  setActiveSpaceCursor(projectDir, target);
+  // Re-point the harness-native includes at the switched space so the NEXT turn
+  // loads its method into ambient context (the cursor alone only moves AIDLC's
+  // own resolver; the CLI-native include is the ambient channel). Surgical
+  // in-place rewrite of the pointer segment only — preserves all engine wiring.
+  const repointed = repointHarnessIncludes(projectDir, target);
+  process.stdout.write(`Active space → ${target}\n`);
+  if (repointed.length > 0) {
+    process.stdout.write(`  repointed ${repointed.length} harness include(s) → ${target}\n`);
+  }
+}
+
+// `/amadeus codekb-path [--repo <name>] [--re-scan] [--json]` — read-only. Prints
+// the deterministic space-level per-repo codekb directory (forward-slash,
+// workspace-relative) the reverse-engineering stage writes its 9 artifacts into.
+// With `--re-scan`, prints instead the PER-INTENT scan-record FILE
+// (`<codekb>/<repo>/re-scans/<intent-record>.md`) the RE stage writes this
+// intent's base/observed/focus point into, so concurrent intents never overwrite
+// one another's base point (#707). The repo is the caller-supplied --repo, else
+// the engine-resolved codekbRepoName (the lone recorded repo, or
+// basename(projectDir) when none is recorded). No mkdir, no state read, no audit —
+// mirrors the intent/space read-only query arms.
+export function handleCodekbPath(projectDir: string, flags: Record<string, string>): void {
+  const asJson = flags.json === "true";
+  const reScan = flags["re-scan"] === "true";
+  const space = activeSpace(projectDir);
+  const repo = flags.repo && flags.repo.length > 0 ? flags.repo : codekbRepoName(projectDir, space);
+  const dir = relativeCodekbDir(projectDir, repo, space);
+  if (reScan) {
+    const reScanFile = relativeCodekbReScanFile(projectDir, repo, space);
+    if (reScanFile === null) {
+      die("codekb-path --re-scan: no active intent resolves — a per-intent scan record needs an intent.");
+    }
+    if (asJson) {
+      process.stdout.write(`${JSON.stringify({ space, repo, dir, reScanFile })}\n`);
+      return;
+    }
+    process.stdout.write(`${reScanFile}\n`);
+    return;
+  }
+  if (asJson) {
+    process.stdout.write(`${JSON.stringify({ space, repo, dir })}\n`);
+    return;
+  }
+  process.stdout.write(`${dir}/\n`);
+}
+
+// `detect [--json]` - read-only. Runs the workspace scan (detectWorkspace) on
+// the bare project dir - it needs no amadeus/ workspace; it scans the app root -
+// and prints projectType (Greenfield/Brownfield), languages, frameworks, and
+// buildSystem. ALSO prints the resolved scope-registry paths (scopesDir +
+// scopeGridPath): those are module-relative to the installed tool, which a
+// prose agent cannot derive itself, so the composer agent is TOLD where the
+// runtime reads scope data (and therefore where an authored scope must land).
+// Writes nothing, no audit, no mkdir - mirrors codekb-path's read-only shape.
+// Exported so the projection (classified additive keys + inconclusive display)
+// is drivable in-process — detect writes nothing and never exits, so the
+// coverage seam is the handler itself (no spawn blind spot).
+export function handleDetect(projectDir: string, flags: Record<string, string>): void {
+  const result = inspectWorkspace(projectDir, nodeReadOnlyFs);
+  const scopeFields = {
+    scopesDir: scopesDir(),
+    scopeGridPath: scopeGridPath(),
+    scopes: [...validScopes()],
+  };
+
+  // Inconclusive: read-only display of the fail-closed result. Occurs only on a
+  // genuine read failure — never on the default path — so classified detect
+  // output stays byte-identical (NFR-3).
+  if (result.kind === "inconclusive") {
+    const payload = {
+      classification: "inconclusive" as const,
+      advisories: result.scan.advisories,
+      partial: result.scan.partial,
+      ...scopeFields,
+    };
+    if (flags.json === "true") {
+      process.stdout.write(`${JSON.stringify(payload)}\n`);
+      return;
+    }
+    let out = "Project type: inconclusive (workspace inspection could not complete)\n";
+    for (const a of result.scan.advisories) {
+      out += `  [${a.code}] ${a.message}\n`;
+    }
+    out +=
+      `Scopes dir: ${scopeFields.scopesDir}\n` +
+      `Scope grid: ${scopeFields.scopeGridPath}\n` +
+      `Valid scopes: ${scopeFields.scopes.join(", ")}\n`;
+    process.stdout.write(out);
+    return;
+  }
+
+  const classified = result.scan;
+  const scan = projectScanResult(classified);
+  const nestedCandidatePaths = classified.nestedCandidates.map((c) => c.path);
+  const payload = {
+    projectType: scan.projectType,
+    languages: scan.languages,
+    frameworks: scan.frameworks,
+    buildSystem: scan.buildSystem,
+    // Additive keys — present ONLY when observed. Empty spreads keep default
+    // key order (and thus JSON bytes) identical (BR-U06-19 / NFR-3).
+    ...(classified.nestedRoot ? { nestedRoot: classified.nestedRoot } : {}),
+    ...(nestedCandidatePaths.length > 0 ? { nestedCandidates: nestedCandidatePaths } : {}),
+    ...(classified.submodules.length > 0 ? { submodules: classified.submodules } : {}),
+    ...(classified.advisories.length > 0 ? { advisories: classified.advisories } : {}),
+    ...scopeFields,
+  };
+  if (flags.json === "true") {
+    process.stdout.write(`${JSON.stringify(payload)}\n`);
+    return;
+  }
+  let out =
+    `Project type: ${payload.projectType}\n` +
+    `Languages: ${payload.languages}\n` +
+    `Frameworks: ${payload.frameworks}\n` +
+    `Build system: ${payload.buildSystem}\n`;
+  if (classified.nestedRoot) {
+    out += `Nested root: ${classified.nestedRoot}\n`;
+  } else if (nestedCandidatePaths.length > 1) {
+    out += `Nested candidates (not auto-selected): ${nestedCandidatePaths.join(", ")}\n`;
+  }
+  const uninitList = formatUninitializedSubmodules(classified.submodules);
+  if (uninitList) {
+    out += `Uninitialized submodules: ${uninitList}\n`;
+  }
+  out +=
+    `Scopes dir: ${payload.scopesDir}\n` +
+    `Scope grid: ${payload.scopeGridPath}\n` +
+    `Valid scopes: ${payload.scopes.join(", ")}\n`;
+  process.stdout.write(out);
+}
+
+// `/amadeus space-create <name>` — seed a NEW space's memory. org.md is copied
+// from spaces/default/memory/org.md (the always-present SEED baseline), plus
+// fresh empty team.md/project.md/phases stubs + the templates/ floor. A new team
+// starts at the framework baseline and earns its OWN practices — it does NOT
+// inherit another space's learnings. (A new INTENT, by contrast, seeds nothing:
+// it reads its space's live memory — handled in birthIntent.)
+function handleSpaceCreate(projectDir: string, positional: string[], _flags: Record<string, string>): void {
+  const raw = positional[1];
+  if (!raw) die("Usage: amadeus-utility space-create <name>");
+  const name = slugify(raw);
+  if (isReservedHelpRecordName(raw, 48)) {
+    refuseWithoutAudit(
+      `Reserved space name "${raw}" cannot be created. Choose a non-help space name.`,
+    );
+  }
+  const dest = join(spacesRoot(projectDir), name);
+  if (existsSync(dest)) die(`Space "${name}" already exists at ${dest}.`);
+
+  const memoryDest = join(dest, "memory");
+  mkdirSync(memoryDest, { recursive: true });
+  mkdirSync(join(memoryDest, "phases"), { recursive: true });
+  mkdirSync(join(memoryDest, "templates"), { recursive: true });
+  mkdirSync(join(dest, "intents"), { recursive: true });
+  // #5 — a new space gets the FULL space shape so it matches default's
+  // committed layout (vision §11.2 "identical shape"): the space-level codekb/
+  // and knowledge/ siblings of memory/intents. Built as bare parents — the
+  // per-repo codekb/<repo>/ subdir is authored later by RE/codekb-path (no repo
+  // is recorded at create time, so codekbDir() can't be called here), and
+  // knowledge/ is free-form/empty at bootstrap. .gitkeep floors so the empty
+  // dirs track (codekb output is COMMITTED, so the floor is not gitignored).
+  mkdirSync(join(dest, "codekb"), { recursive: true });
+  mkdirSync(knowledgeDir(projectDir, name), { recursive: true });
+
+  // Copy the org.md baseline from the default space (the always-present SEED
+  // shell). If absent (a malformed shell), fall back to an empty stub rather
+  // than dying — the resolver tolerates an empty/absent rules dir.
+  const orgSrc = join(spacesRoot(projectDir), DEFAULT_SPACE, "memory", "org.md");
+  const orgDest = join(memoryDest, "org.md");
+  if (existsSync(orgSrc)) {
+    writeFileSync(orgDest, readFileSync(orgSrc, "utf-8"), "utf-8");
+  } else {
+    writeFileSync(orgDest, "# Organization defaults\n", "utf-8");
+  }
+  // Fresh empty team/project stubs (a new team earns its own practices).
+  if (!existsSync(join(memoryDest, "team.md"))) {
+    writeFileSync(join(memoryDest, "team.md"), "# Team practices\n", "utf-8");
+  }
+  if (!existsSync(join(memoryDest, "project.md"))) {
+    writeFileSync(join(memoryDest, "project.md"), "# Project overrides\n", "utf-8");
+  }
+  // templates/ floor marker so the empty dir is tracked (mirrors SEED's floor).
+  const floor = join(memoryDest, "templates", ".gitkeep");
+  if (!existsSync(floor)) writeFileSync(floor, "", "utf-8");
+  // codekb/ + knowledge/ floors so the empty siblings track (both committed).
+  const codekbFloor = join(dest, "codekb", ".gitkeep");
+  if (!existsSync(codekbFloor)) writeFileSync(codekbFloor, "", "utf-8");
+  const knowledgeFloor = join(knowledgeDir(projectDir, name), ".gitkeep");
+  if (!existsSync(knowledgeFloor)) writeFileSync(knowledgeFloor, "", "utf-8");
+
+  process.stdout.write(
+    `Space created: ${name}\n  memory/org.md (copied from default), team.md, project.md, phases/, templates/, codekb/, knowledge/\nSwitch to it with /amadeus space ${name}.\n`
+  );
+}
+
+
+// Caller is responsible for applying any scope- or project-type-specific
+// downgrades (e.g., reverse-engineering SKIP for greenfield) to the mapping
+// before calling this helper. Walks post-init stages and returns the slug of
+// the first EXECUTE entry.
+function determineFirstPostInitStage(
+  adjustedMapping: Record<string, string>,
+  graph: StageEntry[]
+): string {
+  for (const stage of graph) {
+    if (stage.phase === "initialization") continue;
+    const action = adjustedMapping[stage.slug] || "SKIP";
+    if (action === "EXECUTE") {
+      return stage.slug;
+    }
+  }
+  return "intent-capture"; // fallback
+}
+
+// ---------------------------------------------------------------------------
+// scope-change — atomically change scope on an existing workflow
+// ---------------------------------------------------------------------------
+
+export function handleScopeChange(projectDir: string, flags: Record<string, string>): void {
+  const newScope = flags.scope;
+  if (!newScope) die("--scope is required for scope-change");
+
+  const depthOverride = flags.depth;
+  if (depthOverride && !VALID_DEPTHS[depthOverride.toLowerCase()]) {
+    die(`Unknown depth: "${depthOverride}". Valid depths: minimal, standard, comprehensive.`);
+  }
+
+  const testStrategyOverride = flags["test-strategy"];
+  if (testStrategyOverride && !VALID_TEST_STRATEGIES[testStrategyOverride.toLowerCase()]) {
+    die(`Unknown test strategy: "${testStrategyOverride}". Valid: minimal, standard, comprehensive.`);
+  }
+
+  const sp = stateFilePath(projectDir, flags.intent, flags.space);
+  if (!existsSync(sp)) die("No state file found. Start a workflow first by describing what to build (/amadeus \"build the auth service\").");
+
+  const scopeMapping = loadScopeMapping();
+  const newScopeDef = scopeMapping[newScope];
+  if (!newScopeDef) die(`Unknown scope: ${newScope}. Valid scopes: ${Object.keys(scopeMapping).join(", ")}`);
+
+  let content = readStateFile(projectDir, flags.intent, flags.space);
+  const oldScope = getField(content, "Scope");
+  if (!oldScope) die("Cannot read current Scope from state file.");
+
+  if (oldScope === newScope) {
+    process.stdout.write(`Scope is already ${newScope}\n`);
+    return;
+  }
+
+  const graph = loadStageGraph();
+  const projectType = getField(content, "Project Type") || "Greenfield";
+
+  // Compute adjusted mapping (greenfield reverse-engineering adjustment)
+  const adjustedMapping = { ...newScopeDef.stages };
+  if (projectType.toLowerCase() === "greenfield") {
+    if (adjustedMapping["reverse-engineering"] === "EXECUTE") {
+      adjustedMapping["reverse-engineering"] = "SKIP";
+    }
+  }
+
+  // Compute new execute/skip lists
+  const executeStages: string[] = [];
+  const skipStages: string[] = [];
+  for (const stage of graph) {
+    const action = adjustedMapping[stage.slug] || "SKIP";
+    if (action === "EXECUTE") {
+      executeStages.push(stage.number);
+    } else {
+      let reason = stage.slug;
+      if (stage.slug === "reverse-engineering" && projectType.toLowerCase() === "greenfield" &&
+          newScopeDef.stages["reverse-engineering"] === "EXECUTE") {
+        reason += " — greenfield";
+      }
+      skipStages.push(`${stage.number} (${reason})`);
+    }
+  }
+
+  // Parse existing checkboxes to preserve states
+  const existingCheckboxes = parseCheckboxes(content);
+  const existingMap = new Map(existingCheckboxes.map(c => [c.slug, c]));
+
+  // Rebuild Stage Progress section
+  const phaseMap: Record<string, typeof graph> = {};
+  for (const stage of graph) {
+    if (!phaseMap[stage.phase]) phaseMap[stage.phase] = [];
+    phaseMap[stage.phase].push(stage);
+  }
+
+  const phaseHeaders: Record<string, string> = {
+    initialization: "INITIALIZATION PHASE",
+    ideation: "IDEATION PHASE",
+    inception: "INCEPTION PHASE",
+    construction: "CONSTRUCTION PHASE",
+    operation: "OPERATION PHASE",
+  };
+
+  let newStageProgress = "";
+  for (const phase of PHASES) {
+    const stages = phaseMap[phase] || [];
+    newStageProgress += `\n### ${phaseHeaders[phase]}\n`;
+    if (phase === "construction") {
+      // Preserve existing "Per unit:" line
+      const perUnitMatch = content.match(/^Per unit:.*$/m);
+      if (perUnitMatch) {
+        newStageProgress += `${perUnitMatch[0]}\n`;
+      }
+    }
+    for (const stage of stages) {
+      const action = adjustedMapping[stage.slug] || "SKIP";
+      const existing = existingMap.get(stage.slug);
+      // Preserve existing checkbox state via the canonical CHECKBOX_MAP (all six
+      // states round-trip); default to pending [ ] when the stage is not listed.
+      const marker = existing ? CHECKBOX_MAP[existing.state] : CHECKBOX_MAP.pending;
+      const suffix = action === "EXECUTE" ? "EXECUTE" : "SKIP";
+      newStageProgress += `- ${marker} ${stage.slug} \u2014 ${suffix}\n`;
+    }
+  }
+
+  // Replace Stage Progress section in content
+  const stageProgressRegex = /## Stage Progress\n<!-- [^\n]* -->\n([\s\S]*?)(?=\n## (?!Stage Progress))/;
+  const stageProgressHeader = `## Stage Progress\n${STAGE_PROGRESS_HEADER_COMMENT}\n`;
+  content = content.replace(stageProgressRegex, stageProgressHeader + newStageProgress);
+
+  // Update fields
+  content = setField(content, "Scope", newScope);
+  content = setField(content, "Stages to Execute", executeStages.join(", "));
+  content = setField(content, "Stages to Skip", skipStages.length > 0 ? skipStages.join(", ") : "none");
+  const effectiveDepth = depthOverride
+    ? VALID_DEPTHS[depthOverride.toLowerCase()]
+    : newScopeDef.depth;
+  content = setField(content, "Depth", effectiveDepth);
+  const effectiveTestStrategy = testStrategyOverride
+    ? VALID_TEST_STRATEGIES[testStrategyOverride.toLowerCase()]
+    : (newScopeDef.testStrategy ?? effectiveDepth);
+  content = setField(content, "Test Strategy", effectiveTestStrategy);
+  content = setField(content, "Total Stages", String(executeStages.length));
+
+  // Recount completed based on actual [x] count of in-scope EXECUTE stages
+  const updatedCheckboxes = parseCheckboxes(content);
+  const executeSlugs = new Set(
+    graph.filter(s => (adjustedMapping[s.slug] || "SKIP") === "EXECUTE").map(s => s.slug)
+  );
+  const completedCount = updatedCheckboxes.filter(
+    c => c.state === "completed" && executeSlugs.has(c.slug)
+  ).length;
+  content = setField(content, "Completed", String(completedCount));
+
+  // Update Last Updated timestamp
+  content = setField(content, "Last Updated", isoTimestamp());
+
+  writeStateFile(projectDir, content, flags.intent, flags.space);
+
+  // Append SCOPE_CHANGED audit event
+  const oldScopeDef = scopeMapping[oldScope];
+  const oldExecuteCount = oldScopeDef
+    ? graph.filter(s => (oldScopeDef.stages[s.slug] || "SKIP") === "EXECUTE").length
+    : 0;
+  const stageDelta = executeStages.length - oldExecuteCount;
+  const deltaStr = stageDelta >= 0 ? `+${stageDelta}` : String(stageDelta);
+
+  appendAuditEvent(projectDir, "SCOPE_CHANGED", {
+    "Old Scope": oldScope,
+    "New Scope": newScope,
+    "Stage Count Delta": deltaStr,
+    "Stages in Scope": String(executeStages.length),
+    Depth: effectiveDepth,
+  });
+
+  process.stdout.write(
+    `Scope changed: ${oldScope} → ${newScope}
+Stages in scope: ${executeStages.length} (${deltaStr})
+Depth: ${effectiveDepth}
+Completed: ${completedCount}/${executeStages.length}
+`
+  );
+}
+
+// ---------------------------------------------------------------------------
+// recompose - flip a PENDING stage's plan suffix on the live state file
+// (the adaptive composer's in-flight write). `--skip <slugs>` drops stages
+// from the plan; `--add <slugs>` promotes them back (comma-separated). The
+// whole mutation runs under withAuditLock; validation is STRICT (a starved
+// required input rejects, not advises); the derived state fields are rebuilt
+// the way scope-change rebuilds them; a RECOMPOSED audit event lands with the
+// flip lists. A run that never calls recompose is byte-identical to before -
+// the verb is inert when unused.
+// ---------------------------------------------------------------------------
+
+function assertRecomposeStateAllowed(content: string): void {
+  const rawAutonomy = getField(content, AUTONOMY_MODE_FIELD)?.trim();
+  const autonomy: ConstructionAutonomy = rawAutonomy === undefined || rawAutonomy === ""
+    ? "unset"
+    : rawAutonomy === "autonomous" || rawAutonomy === "gated" || rawAutonomy === "unset"
+      ? rawAutonomy
+      : refuseWithoutAudit(
+          `Unknown Construction Autonomy Mode: "${rawAutonomy}". Expected autonomous, gated, or unset.`,
+        );
+  const recomposeGuard = assertRecomposeAllowed(autonomy);
+  if (recomposeGuard.kind === "denied") {
+    refuseWithoutAudit(
+      "Cannot recompose during autonomous Construction: a human gate is required. Switch to gated mode or wait for the swarm to finish.",
+    );
+  }
+}
+
+function handleRecompose(projectDir: string, flags: Record<string, string>): void {
+  const skipList = (flags.skip ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const addList = (flags.add ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  if (skipList.length === 0 && addList.length === 0) {
+    die("Usage: recompose [--skip <slug,...>] [--add <slug,...>] - name at least one flip.");
+  }
+  const overlap = skipList.filter((s) => addList.includes(s));
+  if (overlap.length > 0) {
+    die(`Cannot both --skip and --add the same stage: ${overlap.join(", ")}.`);
+  }
+
+  const sp = stateFilePath(projectDir, flags.intent, flags.space);
+  if (!existsSync(sp)) {
+    die("No state file found. recompose re-shapes a RUNNING workflow; start one first.");
+  }
+
+  withAuditLock(projectDir, () => {
+    let content = readStateFile(projectDir, flags.intent, flags.space);
+    assertRecomposeStateAllowed(content);
+    // Only a RUNNING workflow has a live plan to re-shape. A Completed (or
+    // Parked/terminated) state file is a terminal record: flipping its rows
+    // would grow Total Stages under a summary computed at completion and
+    // leave no cursor to ever reach the added stage — a corrupted record,
+    // not a plan change. (With no cursor, the behind-cursor guard below is
+    // also inert, so this check is the only thing standing between recompose
+    // and a finished workflow.)
+    const wfStatus = getField(content, "Status") || "";
+    if (wfStatus !== "Running") {
+      die(
+        `Cannot recompose: workflow Status is "${wfStatus || "unknown"}", not Running. ` +
+          "Recompose re-shapes a LIVE plan; for finished work start a new workflow instead.",
+      );
+    }
+    const scope = getField(content, "Scope");
+    if (!scope) die("Cannot read current Scope from state file.");
+    const scopeDef = loadScopeMapping()[scope];
+    if (!scopeDef) die(`Unknown scope in state file: ${scope}.`);
+
+    const graph = loadStageGraph();
+    const knownSlugs = new Set(graph.map((s) => s.slug));
+    const checkboxes = parseCheckboxes(content);
+    const checkboxMap = new Map(checkboxes.map((c) => [c.slug, c.state]));
+    const suffixes = parseStateStageSuffixes(content);
+    const currentSlug = getField(content, "Current Stage") || "";
+    const currentIdx = graph.findIndex((s) => s.slug === currentSlug);
+
+    // The effective pre-flip plan (suffix override wins over the grid).
+    const effective = (slug: string): "EXECUTE" | "SKIP" => {
+      const v = suffixes.get(slug) ?? scopeDef.stages[slug];
+      return v === "EXECUTE" ? "EXECUTE" : "SKIP";
+    };
+
+    // --- Per-flip guards: pending-only, ahead-of-cursor, skeleton-gate ------
+    const reject = (slug: string, why: string): never =>
+      die(`Cannot recompose "${slug}": ${why}`);
+
+    for (const slug of [...skipList, ...addList]) {
+      if (!knownSlugs.has(slug)) {
+        reject(slug, "not a compiled stage.");
+      }
+      const state = checkboxMap.get(slug);
+      if (state === "completed" || state === "in-progress" || state === "skipped" ||
+          state === "awaiting-approval" || state === "revising") {
+        reject(slug, `its checkbox is not pending ([${state}]). Only a PENDING stage's plan can be re-shaped; completed/in-progress/skipped stages are frozen.`);
+      }
+      const idx = graph.findIndex((s) => s.slug === slug);
+      if (currentIdx !== -1 && idx !== -1 && idx <= currentIdx) {
+        reject(slug, `it is at or behind the current stage ("${currentSlug}"). In-flight recompose only reaches forward; re-running the past is out of scope.`);
+      }
+    }
+
+    // The walking-skeleton gate derivation keys off the FIRST construction
+    // EXECUTE stage (static). A flip that MOVES that anchor - skipping the
+    // current anchor, or adding a construction stage AHEAD of it - would
+    // silently relocate Bolt 1 and the skeleton stance round-trip. Compare
+    // the anchor before and after the proposed flips and reject any move
+    // (the cheapest sound answer; a suffix-aware gate derivation is a larger
+    // change this verb must not smuggle in).
+    const anchorOf = (plan: (slug: string) => "EXECUTE" | "SKIP"): string | undefined =>
+      graph.find((s) => s.phase === "construction" && plan(s.slug) === "EXECUTE")?.slug;
+    const anchorBefore = anchorOf(effective);
+    const anchorAfter = anchorOf((slug) => {
+      if (skipList.includes(slug)) return "SKIP";
+      if (addList.includes(slug)) return "EXECUTE";
+      return effective(slug);
+    });
+    if (anchorBefore !== anchorAfter) {
+      const mover =
+        anchorBefore && skipList.includes(anchorBefore) ? anchorBefore : (anchorAfter ?? anchorBefore ?? "construction");
+      reject(
+        mover,
+        `the flip moves the first EXECUTE stage of Construction (the walking-skeleton gate anchor) from "${anchorBefore ?? "none"}" to "${anchorAfter ?? "none"}". The skeleton gate must stay anchored; jump or change scope instead.`,
+      );
+    }
+
+    // --- Build the proposed effective grid and validate STRICT --------------
+    // Strictness is a DIFF against the pre-flip baseline: a stock scope may be
+    // BORN with structural advisories (e.g. bugfix's code-generation consumes
+    // unit-of-work from the skipped units-generation - the scope author owns
+    // that upstream work), and those must not veto an unrelated flip. What the
+    // recompose validator hard-rejects is NEW starvation the flips introduce:
+    // any strict error present post-flip that was absent pre-flip.
+    const baseGrid: Record<string, string> = {};
+    for (const s of graph) baseGrid[s.slug] = effective(s.slug);
+    const proposed: Record<string, string> = { ...baseGrid };
+    for (const slug of skipList) proposed[slug] = "SKIP";
+    for (const slug of addList) proposed[slug] = "EXECUTE";
+    // Stages already completed [x] satisfy their consumers even if the plan
+    // now skips them - mark them EXECUTE for the dependency walk (in BOTH
+    // grids) so a flip after a producer already ran is not falsely starved.
+    for (const c of checkboxes) {
+      if (c.state === "completed") {
+        baseGrid[c.slug] = "EXECUTE";
+        proposed[c.slug] = "EXECUTE";
+      }
+    }
+    const projectType = (getField(content, "Project Type") || "").toLowerCase();
+    const pt = projectType === "brownfield" || projectType === "greenfield"
+      ? (projectType as "brownfield" | "greenfield")
+      : undefined;
+    const label = `recomposed ${scope}`;
+    const baseErrors = new Set(
+      validateGrid(baseGrid, { strict: true, projectType: pt, label }).errors,
+    );
+    const validation = validateGrid(proposed, {
+      strict: true,
+      projectType: pt,
+      label,
+    });
+    const newErrors = validation.errors.filter((e) => !baseErrors.has(e));
+    if (newErrors.length > 0) {
+      die(
+        `Recompose rejected by the strict validator:\n${newErrors.map((e) => `  - ${e}`).join("\n")}`,
+      );
+    }
+
+    // --- Apply the suffix flips ---------------------------------------------
+    for (const slug of skipList) content = setStageSuffix(content, slug, "SKIP");
+    for (const slug of addList) content = setStageSuffix(content, slug, "EXECUTE");
+
+    // --- Rebuild the derived fields against the EFFECTIVE plan --------------
+    // (the scope-change set: Stages to Execute / to Skip / Total / Completed).
+    const postSuffixes = parseStateStageSuffixes(content);
+    const eff = (slug: string): "EXECUTE" | "SKIP" => {
+      const v = postSuffixes.get(slug) ?? scopeDef.stages[slug];
+      return v === "EXECUTE" ? "EXECUTE" : "SKIP";
+    };
+    // The Stages to Skip row carries birth/scope-change annotations (entry
+    // shape "<number> (<slug>)", e.g. "2.1 (reverse-engineering — greenfield)")
+    // that a bare-slug rebuild would destroy. Preserve each existing entry
+    // VERBATIM, in its existing position, when its stage is still skipped;
+    // drop entries whose stage was promoted; append newly-skipped stages in
+    // graph order, rendered the way scope-change renders them. A skip+add
+    // round trip therefore leaves the row byte-identical.
+    const priorSkipRow = getField(content, "Stages to Skip") || "";
+    const priorTokens =
+      priorSkipRow.trim() === "" || priorSkipRow.trim() === "none"
+        ? []
+        : priorSkipRow.split(", ");
+    const slugOfSkipToken = (token: string): string => {
+      const m = /^\S+ \((.+)\)$/.exec(token);
+      const inner = m ? m[1] : token;
+      return inner.split(" — ")[0];
+    };
+    const executeStages: string[] = [];
+    const skipStages: string[] = [];
+    const preservedSlugs = new Set<string>();
+    for (const token of priorTokens) {
+      const slug = slugOfSkipToken(token);
+      if (knownSlugs.has(slug) && eff(slug) === "SKIP") {
+        skipStages.push(token);
+        preservedSlugs.add(slug);
+      }
+    }
+    for (const s of graph) {
+      if (eff(s.slug) === "EXECUTE") executeStages.push(s.number);
+      else if (!preservedSlugs.has(s.slug)) skipStages.push(`${s.number} (${s.slug})`);
+    }
+    content = setField(content, "Stages to Execute", executeStages.join(", "));
+    content = setField(content, "Stages to Skip", skipStages.length > 0 ? skipStages.join(", ") : "none");
+    content = setField(content, "Total Stages", String(executeStages.length));
+    const completedCount = parseCheckboxes(content).filter(
+      (c) => c.state === "completed" && eff(c.slug) === "EXECUTE",
+    ).length;
+    content = setField(content, "Completed", String(completedCount));
+    // The Next Stage projection over the recomposed plan (override-aware).
+    if (currentSlug) {
+      const next = nextInScopeStage(currentSlug, scope, content);
+      content = setField(content, "Next Stage", next ? next.slug : "none");
+    }
+    content = setField(content, "Last Updated", isoTimestamp());
+
+    writeStateFile(projectDir, content, flags.intent, flags.space);
+
+    appendAuditEvent(projectDir, "RECOMPOSED", {
+      Scope: scope,
+      "Stages skipped": skipList.length > 0 ? skipList.join(", ") : "none",
+      "Stages added": addList.length > 0 ? addList.join(", ") : "none",
+      "Stages in Scope": String(executeStages.length),
+    });
+
+    process.stdout.write(
+      `Recomposed: ${skipList.length} skipped (${skipList.join(", ") || "none"}), ` +
+        `${addList.length} added (${addList.join(", ") || "none"})\n` +
+        `Stages in scope: ${executeStages.length}\n` +
+        `Completed: ${completedCount}/${executeStages.length}\n`,
+    );
+  });
+}
+
+// ---------------------------------------------------------------------------
+// config-change — update depth and/or test-strategy without changing scope
+// ---------------------------------------------------------------------------
+
+function handleConfigChange(projectDir: string, flags: Record<string, string>): void {
+  const rawDepth = flags.depth;
+  const rawStrategy = flags["test-strategy"];
+
+  if (!rawDepth && !rawStrategy) {
+    die("config-change requires --depth and/or --test-strategy");
+  }
+
+  let newDepth: string | undefined;
+  if (rawDepth) {
+    newDepth = VALID_DEPTHS[rawDepth.toLowerCase()];
+    if (!newDepth) die(`Unknown depth: "${rawDepth}". Valid depths: minimal, standard, comprehensive.`);
+  }
+
+  let newStrategy: string | undefined;
+  if (rawStrategy) {
+    newStrategy = VALID_TEST_STRATEGIES[rawStrategy.toLowerCase()];
+    if (!newStrategy) die(`Unknown test strategy: "${rawStrategy}". Valid: minimal, standard, comprehensive.`);
+  }
+
+  const sp = stateFilePath(projectDir, flags.intent, flags.space);
+  if (!existsSync(sp)) die("No state file found. Start a workflow first by describing what to build (/amadeus \"build the auth service\").");
+
+  let content = readStateFile(projectDir, flags.intent, flags.space);
+  const oldDepth = getField(content, "Depth");
+  const oldStrategy = getField(content, "Test Strategy");
+
+  // Inline existence checks (instead of caching to a boolean) so TS narrows
+  // newDepth / newStrategy at each use site — avoids non-null assertions.
+  if (newDepth !== undefined && newDepth !== oldDepth) {
+    content = setField(content, "Depth", newDepth);
+  }
+  if (newStrategy !== undefined && newStrategy !== oldStrategy) {
+    content = setField(content, "Test Strategy", newStrategy);
+  }
+  const depthChanging = newDepth !== undefined && newDepth !== oldDepth;
+  const strategyChanging =
+    newStrategy !== undefined && newStrategy !== oldStrategy;
+  if (depthChanging || strategyChanging) {
+    content = setField(content, "Last Updated", isoTimestamp());
+    writeStateFile(projectDir, content, flags.intent, flags.space);
+  }
+
+  if (newDepth !== undefined && newDepth !== oldDepth) {
+    appendAuditEvent(projectDir, "DEPTH_CHANGED", {
+      "Old Depth": oldDepth || "unknown",
+      "New Depth": newDepth,
+    });
+  }
+  if (newStrategy !== undefined && newStrategy !== oldStrategy) {
+    appendAuditEvent(projectDir, "TEST_STRATEGY_CHANGED", {
+      "Old Strategy": oldStrategy || "unknown",
+      "New Strategy": newStrategy,
+    });
+  }
+
+  if (newDepth !== undefined) {
+    process.stdout.write(
+      depthChanging
+        ? `Depth changed: ${oldDepth} → ${newDepth}\n`
+        : `Depth is already ${newDepth}\n`
+    );
+  }
+  if (newStrategy !== undefined) {
+    process.stdout.write(
+      strategyChanging
+        ? `Test strategy changed: ${oldStrategy} → ${newStrategy}\n`
+        : `Test strategy is already ${newStrategy}\n`
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// set-status — atomically update statusline fields at stage start
+// ---------------------------------------------------------------------------
+
+// Exported for in-process seam tests (t233): the retreat guard's read→compare→
+// write critical section is exercised directly rather than only via CLI spawn.
+// Not a stable public API.
+export function handleSetStatus(projectDir: string, flags: Record<string, string>): void {
+  const sp = stateFilePath(projectDir, flags.intent, flags.space);
+  if (!existsSync(sp)) die("No state file found. Start a workflow first by describing what to build (/amadeus \"build the auth service\").");
+
+  const stage = flags.stage;
+  if (!stage) die("--stage is required for set-status");
+
+  const entry = findStageBySlug(stage);
+  if (!entry) die(`Unknown stage: ${stage}`);
+
+  const phase = (flags.phase || entry.phase).toUpperCase();
+  const agent = flags.agent || entry.lead_agent;
+
+  // #1170 retreat guard: hold the audit lock across re-read → compare → write.
+  // When --intent is omitted (the sole caller, the sync-statusline hook, never
+  // passes it) both this lock and the engine's completion writers (advance/set/
+  // checkbox) key on the workspace sentinel bucket, so their RMW sections are
+  // mutually exclusive — LOCK == the active-intent state file both write. A
+  // set-status that arrives after a stage was completed or moved to
+  // awaiting-approval is a late statusline sync for a stage that has since moved
+  // forward; writing "in-progress" over it would retreat the run-state and drop
+  // the completion. Suppress the write entirely and leave the file byte-identical.
+  withAuditLock(projectDir, () => {
+    const content = readStateFile(projectDir, flags.intent, flags.space);
+    let currentBox = "";
+    for (const cb of parseCheckboxes(content)) {
+      if (cb.slug === stage) {
+        currentBox = cb.state;
+        break;
+      }
+    }
+    if (currentBox === "completed" || currentBox === "awaiting-approval") {
+      process.stderr.write(`set-status: retreat write suppressed for "${stage}" (checkbox=${currentBox})\n`);
+      return;
+    }
+
+    let next = setField(content, "Lifecycle Phase", phase);
+    next = setField(next, "Current Stage", stage);
+    next = setField(next, "Active Agent", agent);
+    next = setField(next, "In Progress", stage);
+    next = setField(next, "Status", "Running");
+    next = setField(next, "Last Updated", isoTimestamp());
+    next = setCheckbox(next, stage, "in-progress");
+    writeStateFile(projectDir, next, flags.intent, flags.space);
+
+    process.stdout.write(`${JSON.stringify({ updated: true, phase, stage, agent })}\n`);
+  }, flags.intent, flags.space);
+}
+
+// ---------------------------------------------------------------------------
+// Scope inference from freeform text
+//
+// The keyword sets live in each scope's `.claude/scopes/amadeus-<name>.md`
+// frontmatter `keywords` field; this
+// helper resolves the scope using word-boundary matching (so "debug"
+// does not match "bug"),
+// alphabetical iteration over scopes (so first-match-wins is
+// deterministic), and a ">5 word" heuristic that falls back to `feature`
+// when the input looks like a project description that happens to
+// contain a keyword.
+//
+// Exported for t67 unit tests; not a stable public API.
+
+export interface InferResult {
+  scope: string;
+  source: "keyword" | "freeform";
+  matches: Array<{ scope: string; keyword: string }>;
+}
+
+export function inferScopeFromText(input: string): InferResult {
+  const text = input.toLowerCase();
+  const trimmed = input.trim();
+  const wordCount = trimmed.length === 0 ? 0 : trimmed.split(/\s+/).length;
+  const mapping = loadScopeMapping();
+  const allMatches: Array<{ scope: string; keyword: string }> = [];
+
+  // Iterate in alphabetical order for determinism (not JSON insertion
+  // order). validScopes() already returns a sorted set. Multi-word
+  // keywords like "proof of concept" allow any whitespace run between
+  // tokens, so "proof  of  concept" (double-spaced) still matches.
+  for (const scope of [...validScopes()]) {
+    const keywords = mapping[scope]?.keywords ?? [];
+    for (const kw of keywords) {
+      const tokens = kw.toLowerCase().trim().split(/\s+/).map(escapeRegex);
+      const re = new RegExp(`\\b${tokens.join("\\s+")}\\b`, "i");
+      if (re.test(text)) {
+        allMatches.push({ scope, keyword: kw });
+        break; // One keyword per scope is enough to mark it matched.
+      }
+    }
+  }
+
+  // Disambiguation: keyword + >5 words → likely a project description
+  // containing the keyword incidentally. Default to feature. Also:
+  // no matches at all → feature as well.
+  if (allMatches.length === 0 || wordCount > 5) {
+    return { scope: "feature", source: "freeform", matches: allMatches };
+  }
+
+  // First alphabetical match wins (deterministic across calls).
+  return {
+    scope: allMatches[0].scope,
+    source: "keyword",
+    matches: allMatches,
+  };
+}
+
+/** Doctor uses this for keyword-overlap detection. */
+export function findScopeByKeyword(kw: string): string[] {
+  const mapping = loadScopeMapping();
+  const hits: string[] = [];
+  for (const scope of [...validScopes()]) {
+    if (
+      (mapping[scope]?.keywords ?? []).some(
+        (k) => k.toLowerCase() === kw.toLowerCase()
+      )
+    ) {
+      hits.push(scope);
+    }
+  }
+  return hits;
+}
+
+// ---------------------------------------------------------------------------
+// scope-table — compiled summary of the scope grid for SKILL.md
+//
+// Emits a Markdown table delimited by BEGIN/END HTML comments. SKILL.md
+// has a matching region that is regenerated via this tool. --check mode
+// byte-compares the current SKILL.md region against the rendered output
+// and exits 1 on drift. Mirrors amadeus-graph.ts compile / compile --check.
+//
+// AMADEUS_SKILL_MD_PATH env-seam lets t67 sandbox --check against a
+// fixture SKILL.md (so drift tests never mutate the real file).
+
+const SCOPE_TABLE_BEGIN =
+  "<!-- BEGIN: compiled scope grid via `bun amadeus-utility.ts scope-table` — do NOT hand-edit -->";
+const SCOPE_TABLE_END =
+  "<!-- END: compiled scope grid -->";
+
+/** Exported for t67 unit tests. */
+export function renderScopeTable(): string {
+  const mapping = loadScopeMapping();
+  const scopes = [...validScopes()]; // alphabetical
+  const lines = [
+    "| Scope          | Depth         | TestStrategy | EXECUTE / Total |",
+    "|----------------|---------------|--------------|-----------------|",
+  ];
+  for (const name of scopes) {
+    const def = mapping[name];
+    const stages = def.stages;
+    const total = Object.keys(stages).length;
+    const execute = Object.values(stages).filter((v) => v === "EXECUTE").length;
+    const depth = def.depth;
+    const ts = def.testStrategy ?? "(default)";
+    lines.push(
+      `| ${name.padEnd(14)} | ${depth.padEnd(13)} | ${ts.padEnd(12)} | ${`${execute} / ${total}`.padEnd(15)} |`
+    );
+  }
+  return lines.join("\n");
+}
+
+/** Canonical byte-shape: BEGIN\n\n<table>\n\nEND. */
+export function canonicalScopeTableRegion(table: string): string {
+  return `${SCOPE_TABLE_BEGIN}\n\n${table}\n\n${SCOPE_TABLE_END}`;
+}
+
+function skillMdPath(): string {
+  return (
+    process.env.AMADEUS_SKILL_MD_PATH ??
+    join(TOOLS_DIR, "..", "skills", "amadeus", "SKILL.md")
+  );
+}
+
+function handleScopeTable(
+  _projectDir: string,
+  _flags: Record<string, string>,
+  rawArgs: string[]
+): void {
+  const check = rawArgs.includes("--check");
+  const expectedRegion = canonicalScopeTableRegion(renderScopeTable());
+
+  if (!check) {
+    process.stdout.write(`${expectedRegion}\n`);
+    return;
+  }
+
+  const skillPath = skillMdPath();
+  let skillRaw: string;
+  try {
+    skillRaw = readFileSync(skillPath, "utf-8");
+  } catch (err) {
+    console.error(
+      `SKILL.md not readable at ${skillPath}: ${errorMessage(err)}`
+    );
+    process.exit(1);
+  }
+
+  // Normalize line endings before comparison so Windows CRLF files
+  // (core.autocrlf=true) don't false-positive as drifted.
+  skillRaw = skillRaw.replace(/\r\n/g, "\n");
+
+  const beginIdx = skillRaw.indexOf(SCOPE_TABLE_BEGIN);
+  const lastBeginIdx = skillRaw.lastIndexOf(SCOPE_TABLE_BEGIN);
+  const endIdx = skillRaw.indexOf(SCOPE_TABLE_END);
+  const lastEndIdx = skillRaw.lastIndexOf(SCOPE_TABLE_END);
+  if (beginIdx === -1 || endIdx === -1) {
+    console.error(
+      `SKILL.md at ${skillPath} is missing scope-table markers. Expected:\n  ${SCOPE_TABLE_BEGIN}\n  ${SCOPE_TABLE_END}`
+    );
+    process.exit(1);
+  }
+  if (beginIdx !== lastBeginIdx || endIdx !== lastEndIdx) {
+    console.error(
+      `SKILL.md at ${skillPath} has duplicate scope-table markers. Expected exactly one BEGIN and one END.`
+    );
+    process.exit(1);
+  }
+  if (endIdx < beginIdx) {
+    console.error(
+      `SKILL.md at ${skillPath} has scope-table markers out of order (END before BEGIN).`
+    );
+    process.exit(1);
+  }
+
+  const currentRegion = skillRaw.substring(
+    beginIdx,
+    endIdx + SCOPE_TABLE_END.length
+  );
+
+  if (currentRegion === expectedRegion) {
+    return; // exit 0 silent
+  }
+
+  console.error(
+    `SKILL.md scope-table region is out of date. Run \`bun ${harnessDir()}/tools/amadeus-utility.ts scope-table\` and paste the output between the BEGIN/END markers.`
+  );
+  process.exit(1);
+}
+
+// ---------------------------------------------------------------------------
+// detect-scope — record a scope-detection event
+//
+// Two modes:
+//   1. Explicit: `--scope <scope> --input <text> [--source ...]`.
+//      Recorded unchanged.
+//   2. Inference: `--from-text --input <text>`.
+//      Resolves the scope via inferScopeFromText and emits SCOPE_DETECTED
+//      with Source=keyword (match) or Source=freeform (default fallback).
+//
+// Passing both `--scope` and `--from-text` is an error — they are
+// mutually exclusive modes. Missing both is also an error.
+
+const VALID_SCOPE_SOURCES: ReadonlySet<string> = new Set([
+  "freeform",
+  "keyword",
+  "env",
+  "cli",
+]);
+
+function handleDetectScope(
+  projectDir: string,
+  flags: Record<string, string>
+): void {
+  const fromText = flags["from-text"] !== undefined;
+  const explicitScope = flags.scope;
+
+  if (fromText && explicitScope) {
+    die(
+      "Cannot combine --from-text and --scope. Use one or the other."
+    );
+  }
+  if (!fromText && !explicitScope) {
+    die(
+      "Missing --scope <scope> (or pass --from-text to infer from --input)."
+    );
+  }
+
+  // --input requirement differs by mode:
+  //   --scope mode: --input is required (audit event needs original text).
+  //   --from-text mode: --input may be empty string — inferScopeFromText
+  //     returns `feature` as the documented default. Missing --input
+  //     entirely is still an error; an empty string is fine.
+  const input = flags.input;
+  if (input === undefined) {
+    die("Missing --input <original-text>");
+  }
+  if (!fromText && input === "") {
+    die("--input cannot be empty under --scope mode.");
+  }
+
+  let scope: string;
+  let source: string;
+  let matchedKeywords: string[] = [];
+
+  if (fromText) {
+    const result = inferScopeFromText(input);
+    scope = result.scope;
+    source = result.source;
+    matchedKeywords = result.matches.map((m) => m.keyword);
+  } else {
+    scope = explicitScope;
+    source = flags.source || "freeform";
+    if (!VALID_SCOPE_SOURCES.has(source)) {
+      die(
+        `Unknown source: "${source}". Valid: ${[...VALID_SCOPE_SOURCES].join(", ")}.`
+      );
+    }
+  }
+
+  if (!validScopes().has(scope)) {
+    die(
+      `Unknown scope: "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`
+    );
+  }
+
+  const auditFields: Record<string, string> = {
+    "Detected scope": scope,
+    "Input text": input,
+    Source: source,
+  };
+  if (matchedKeywords.length > 0) {
+    auditFields["Matched keywords"] = matchedKeywords.join(", ");
+  }
+  appendAuditEvent(projectDir, "SCOPE_DETECTED", auditFields);
+
+  process.stdout.write(
+    `${JSON.stringify({
+      emitted: "SCOPE_DETECTED",
+      scope,
+      source,
+      matches: matchedKeywords,
+    })}\n`
+  );
+}
+
+// ---------------------------------------------------------------------------
+// resolve-env-scope — validate AMADEUS_DEFAULT_SCOPE and emit its value
+//
+// The orchestrator's step 0 in SKILL.md calls this to resolve the env default
+// deterministically. Behavior:
+//   - Env unset or empty: exit 0, no output. The orchestrator takes the
+//     non-env path (CLI flag, keyword detection, or hard-coded fallback).
+//   - Env set to a valid scope: exit 0, print `scope=<value>` to stdout.
+//     The orchestrator synthesizes `--scope <value>` into $ARGUMENTS.
+//   - Env set to an invalid value: exit 1, print the canonical error message
+//     to stderr. The orchestrator stops without mutating state.
+//
+// Centralising validation here (instead of leaving it to LLM prose) guarantees
+// the error message shape and guarantees invalid env never reaches scope-change
+// / state-init.
+// ---------------------------------------------------------------------------
+
+function handleResolveEnvScope(): void {
+  const envScope = (process.env.AMADEUS_DEFAULT_SCOPE || "").trim();
+  if (envScope === "") {
+    return; // unset — no output, exit 0
+  }
+  if (!validScopes().has(envScope)) {
+    die(
+      `Invalid AMADEUS_DEFAULT_SCOPE "${envScope}". Valid scopes: ${[...validScopes()].join(", ")}.`
+    );
+  }
+  process.stdout.write(`scope=${envScope}\n`);
+}
+
+// ---------------------------------------------------------------------------
+// migrate — thin adapter to the deterministic workspace migrator
+//
+// The public orchestrator owns the dry-run/approval/apply conversation. This
+// utility only maps its compact `migrate [path]` interface to the sibling
+// migrator's explicit argv contract and relays both streams and the exit code.
+// No shell is involved, so a user-supplied path is always one argv value.
+// ---------------------------------------------------------------------------
+
+const MIGRATE_FLAGS = new Set(["apply", "json", "project-dir"]);
+
+function unsupportedMigrateFlags(flags: Record<string, string>): string[] {
+  const unsupported: string[] = [];
+  for (const flag of Object.keys(flags)) {
+    if (!MIGRATE_FLAGS.has(flag)) unsupported.push(flag);
+  }
+  return unsupported.sort();
+}
+
+function valuedMigrateBooleanFlag(flags: Record<string, string>): string | null {
+  for (const flag of ["apply", "json"]) {
+    if (Object.hasOwn(flags, flag) && flags[flag] !== "true") return flag;
+  }
+  return null;
+}
+
+function migrateFlagList(flags: readonly string[]): string {
+  return flags.map((flag) => "--" + flag).join(", ");
+}
+
+function migrateToolArgs(
+  projectDir: string,
+  positional: readonly string[],
+  flags: Record<string, string>,
+): string[] {
+  const args = ["--from", positional[1] ?? "aidlc", "--project-dir", projectDir];
+  if (Object.hasOwn(flags, "apply")) args.push("--apply");
+  if (Object.hasOwn(flags, "json")) args.push("--json");
+  return args;
+}
+
+function handleMigrate(
+  projectDir: string,
+  positional: string[],
+  flags: Record<string, string>,
+): void {
+  const unsupported = unsupportedMigrateFlags(flags);
+  if (unsupported.length > 0) {
+    die("Unsupported migrate option(s): " + migrateFlagList(unsupported));
+  }
+  const valuedBoolean = valuedMigrateBooleanFlag(flags);
+  if (valuedBoolean !== null) {
+    die(
+      `--${valuedBoolean} does not accept a value. Put the optional source path before --apply/--json.`,
+    );
+  }
+  if (positional.length > 2) {
+    die("Usage: amadeus-utility migrate [path] [--apply] [--json] [--project-dir <path>]");
+  }
+
+  const absoluteProjectDir = resolve(projectDir);
+  const run = Bun.spawnSync({
+    cmd: ["bun", join(TOOLS_DIR, "amadeus-migrate.ts"), ...migrateToolArgs(absoluteProjectDir, positional, flags)],
+    cwd: absoluteProjectDir,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  process.stdout.write(new TextDecoder().decode(run.stdout));
+  process.stderr.write(new TextDecoder().decode(run.stderr));
+  if (run.exitCode !== 0) process.exit(run.exitCode);
+}
+
+// ---------------------------------------------------------------------------
+// CLI entry point
+// ---------------------------------------------------------------------------
+
+export function runUtilityMain(): void {
+  const rawArgs = process.argv.slice(2);
+  const { positional, flags } = parseArgs(rawArgs);
+  if (rawArgs.includes("--help") || classifyHelpIntent(positional).kind === "help") {
+    handleHelp();
+    return;
+  }
+  const subcommand = positional[0];
+  const projectDir = resolveProjectDir(flags["project-dir"]);
+
+  switch (subcommand) {
+    case "help":
+      handleHelp();
+      break;
+    case "version":
+      handleVersion();
+      break;
+    case "status":
+      handleStatus(projectDir, flags);
+      break;
+    case "doctor": {
+      try {
+        const result = handleDoctor(resolveDoctorContext(projectDir));
+        process.stdout.write(result.output);
+        process.exit(result.exitCode);
+      } catch (error) {
+        if (error instanceof DoctorPostOutputError) {
+          process.stdout.write(error.output);
+          throw error.originalCause;
+        }
+        throw error;
+      }
+      break;
+    }
+    case "migrate":
+      handleMigrate(projectDir, positional, flags);
+      break;
+    case "intent-birth":
+      handleIntentBirth(projectDir, flags);
+      break;
+    case "intent":
+      handleIntent(projectDir, positional, flags);
+      break;
+    case "space":
+      handleSpace(projectDir, positional, flags);
+      break;
+    case "space-create":
+      handleSpaceCreate(projectDir, positional, flags);
+      break;
+    // codekb-path — read-only query verb. Prints the deterministic
+    // space-level per-repo codekb dir the RE stage writes into. Mirrors the
+    // read-only intent/space query arms: no mutation, no audit, no mkdir.
+    case "codekb-path":
+      handleCodekbPath(projectDir, flags);
+      break;
+    // detect - read-only query verb. Prints the workspace scan
+    // (greenfield/brownfield, languages) + the resolved scope-registry paths so
+    // the composer agent is told where scope data lives. No mutation, no audit.
+    case "detect":
+      handleDetect(projectDir, flags);
+      break;
+    // init / state-init — deprecated aliases kept for back-compat only (not in
+    // usage/help). The user-facing `/amadeus --init` is retired in P4: the
+    // workspace shell ships in dist/ (SEED) and the engine auto-births the
+    // intent. `init` now routes to the birth handler so any stale caller still
+    // works; `state-init` dies with migration guidance.
+    case "init":
+      handleIntentBirth(projectDir, flags);
+      break;
+    case "state-init":
+      handleStateInit(projectDir, flags);
+      break;
+    case "scope-change":
+      handleScopeChange(projectDir, flags);
+      break;
+    // recompose - the adaptive composer's in-flight write: flip PENDING
+    // stages' plan suffixes (--skip/--add) under the audit lock, strict-
+    // validated, derived fields rebuilt, RECOMPOSED audited.
+    case "recompose":
+      handleRecompose(projectDir, flags);
+      break;
+    case "config-change":
+      handleConfigChange(projectDir, flags);
+      break;
+    case "set-status":
+      handleSetStatus(projectDir, flags);
+      break;
+    case "detect-scope":
+      handleDetectScope(projectDir, flags);
+      break;
+    case "resolve-env-scope":
+      handleResolveEnvScope();
+      break;
+    case "scope-table":
+      handleScopeTable(projectDir, flags, rawArgs);
+      break;
+    default:
+      die(
+        `Usage: amadeus-utility <help|version|status|doctor|migrate|intent-birth|intent|space|space-create|codekb-path|detect|recompose|scope-change|config-change|set-status|detect-scope|resolve-env-scope|scope-table> [--project-dir <path>] [--scope <scope>] [--json]`
+      );
+  }
+}
+
+if (import.meta.main) runUtilityMain();

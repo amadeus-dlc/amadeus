@@ -1,0 +1,88 @@
+# AI-DLC (amadeus) hook wiring for the Kimi Code harness — MANAGED BLOCK source.
+#
+# This snippet is the single source of truth (ADR-4) for the managed block the
+# setup CLI merges into the user-level ~/.kimi-code/config.toml (Kimi Code has
+# no project-level config file). The installer (merge), doctor (inspect), and
+# docs (manual procedure) all read THIS file; the merge step wraps everything
+# between the marker comments and edits only inside them. Keep the markers as
+# the first and last lines of the block.
+#
+# Every hook command routes through the Bolt 2 adapter
+# (.kimi-code/hooks/amadeus-kimi-adapter.ts <target>). Hook commands run with
+# the session's project directory as cwd, so the relative path resolves in an
+# installed project, and the adapter is fail-open where the project is not
+# installed. Event/matcher finalization against live payloads is a Bolt 2
+# concern (the 7 event kinds below wire the adapter's 9 targets; one event
+# kind may drive more than one target).
+
+# >>> amadeus-kimi-hooks >>>
+[[hooks]]
+event = "SessionStart"
+matcher = "startup|resume"
+command = "bun .kimi-code/hooks/amadeus-kimi-adapter.ts session-start"
+
+[[hooks]]
+event = "SessionEnd"
+matcher = "exit"
+command = "bun .kimi-code/hooks/amadeus-kimi-adapter.ts session-end"
+
+[[hooks]]
+event = "UserPromptSubmit"
+command = "bun .kimi-code/hooks/amadeus-kimi-adapter.ts mint"
+
+[[hooks]]
+event = "PostToolUse"
+matcher = "Write|Edit"
+command = "bun .kimi-code/hooks/amadeus-kimi-adapter.ts audit-and-sensors"
+
+[[hooks]]
+event = "PostToolUse"
+matcher = "AskUserQuestion"
+command = "bun .kimi-code/hooks/amadeus-kimi-adapter.ts mint"
+
+[[hooks]]
+event = "PostToolUse"
+matcher = "TodoList"
+command = "bun .kimi-code/hooks/amadeus-kimi-adapter.ts state-sync"
+
+[[hooks]]
+event = "PostToolUse"
+matcher = "Bash"
+command = "bun .kimi-code/hooks/amadeus-kimi-adapter.ts runtime-compile"
+
+[[hooks]]
+event = "PreCompact"
+matcher = "manual|auto"
+command = "bun .kimi-code/hooks/amadeus-kimi-adapter.ts validate-state"
+
+[[hooks]]
+event = "SubagentStop"
+command = "bun .kimi-code/hooks/amadeus-kimi-adapter.ts log-subagent"
+
+[[hooks]]
+event = "Stop"
+command = "bun .kimi-code/hooks/amadeus-kimi-adapter.ts stop"
+
+# Permission pre-allows (existing-harness idiom): the deterministic core runs
+# via these exact command prefixes, plus the git verbs the Bolt worktree flow
+# needs. First match wins, so these narrow allows stay ahead of any broad ask.
+[[permission.rules]]
+decision = "allow"
+pattern = "Bash(bun .kimi-code/tools/*)"
+
+[[permission.rules]]
+decision = "allow"
+pattern = "Bash(bun .kimi-code/hooks/*)"
+
+[[permission.rules]]
+decision = "allow"
+pattern = "Bash(git worktree*)"
+
+[[permission.rules]]
+decision = "allow"
+pattern = "Bash(git commit*)"
+
+[[permission.rules]]
+decision = "allow"
+pattern = "Bash(git add*)"
+# <<< amadeus-kimi-hooks <<<
