@@ -114,8 +114,18 @@ export function resolveCollector(arg: string, known: string[]): CollectorResolut
   return known.includes(arg) ? { kind: "ok", id: arg } : { kind: "unknown", known };
 }
 
-function formatValue(v: unknown): string {
+// Exported for the sibling visualizer (scripts/metrics-visualize.ts): the
+// formatting/extraction pair below is the single source of truth for how a
+// renderer interprets the unvalidated `values` entries (see the type comment
+// above — per-value number-ness is intentionally not validated at parse time).
+export function formatValue(v: unknown): string {
   return typeof v === "number" ? String(v) : v === undefined ? "" : "?";
+}
+
+// Numeric extraction for chart coordinates: only a finite number is a point;
+// NaN/Infinity/non-numbers become null (a gap), never a coordinate.
+export function numericValue(v: unknown): number | null {
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
 }
 
 function renderTable(rows: string[][]): string {
