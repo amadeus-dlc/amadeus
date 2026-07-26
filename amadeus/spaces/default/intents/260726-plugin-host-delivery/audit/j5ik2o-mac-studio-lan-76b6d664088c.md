@@ -24293,3 +24293,318 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Swarm Started
+**Timestamp**: 2026-07-26T23:20:08Z
+**Event**: SWARM_STARTED
+**Batch number**: 1
+**Unit names**: activation-policy,doctor-observability,host-projection-all
+**Concurrency cap**: 3
+
+---
+
+## Worktree Created
+**Timestamp**: 2026-07-26T23:20:08Z
+**Event**: WORKTREE_CREATED
+**Bolt slug**: activation-policy
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-activation-policy
+**Branch name**: bolt-activation-policy
+**Base branch**: fix/plugin
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-26T23:20:09Z
+**Event**: BOLT_STARTED
+**Bolt names**: activation-policy
+**Batch number**: 1
+**Walking skeleton**: false
+**Bolt slug**: activation-policy
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-26T23:20:09Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state --project-dir /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin fork --slug activation-policy
+**Error**: [slug=activation-policy] slug already in Bolt Refs (current: [activation-policy, doctor-observability, host-projection-all]). If a prior fork failed mid-operation, run 'amadeus-worktree discard --slug activation-policy' and 'amadeus-state.ts merge --slug activation-policy' (which will exit "already merged" cleanly) or remove the stale entry from main state, then retry.
+
+---
+
+## Bolt Failed
+**Timestamp**: 2026-07-26T23:20:09Z
+**Event**: BOLT_FAILED
+**Failed Bolt**: activation-policy
+**Bolt slug**: activation-policy
+**Error summary**: state-fork-failed: {"error":"[slug=activation-policy] slug already in Bolt Refs (current: [activation-policy, doctor-observability, host-projection-all]). If a prior fork failed mid-operation, run 'amadeus-worktree discard --slug activation-policy' and 'amadeus-state.ts merge --slug activation-policy' (which will exit \"already merged\" cleanly) or remove the stale entry from main state, then retry."}\n
+
+---
+
+## Worktree Created
+**Timestamp**: 2026-07-26T23:20:10Z
+**Event**: WORKTREE_CREATED
+**Bolt slug**: doctor-observability
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-doctor-observability
+**Branch name**: bolt-doctor-observability
+**Base branch**: fix/plugin
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-26T23:20:11Z
+**Event**: BOLT_STARTED
+**Bolt names**: doctor-observability
+**Batch number**: 1
+**Walking skeleton**: false
+**Bolt slug**: doctor-observability
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-26T23:20:11Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state --project-dir /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin fork --slug doctor-observability
+**Error**: [slug=doctor-observability] slug already in Bolt Refs (current: [activation-policy, doctor-observability, host-projection-all]). If a prior fork failed mid-operation, run 'amadeus-worktree discard --slug doctor-observability' and 'amadeus-state.ts merge --slug doctor-observability' (which will exit "already merged" cleanly) or remove the stale entry from main state, then retry.
+
+---
+
+## Bolt Failed
+**Timestamp**: 2026-07-26T23:20:11Z
+**Event**: BOLT_FAILED
+**Failed Bolt**: doctor-observability
+**Bolt slug**: doctor-observability
+**Error summary**: state-fork-failed: {"error":"[slug=doctor-observability] slug already in Bolt Refs (current: [activation-policy, doctor-observability, host-projection-all]). If a prior fork failed mid-operation, run 'amadeus-worktree discard --slug doctor-observability' and 'amadeus-state.ts merge --slug doctor-observability' (which will exit \"already merged\" cleanly) or remove the stale entry from main state, then retry."}\n
+
+---
+
+## Worktree Created
+**Timestamp**: 2026-07-26T23:20:11Z
+**Event**: WORKTREE_CREATED
+**Bolt slug**: host-projection-all
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all
+**Branch name**: bolt-host-projection-all
+**Base branch**: fix/plugin
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-26T23:20:12Z
+**Event**: BOLT_STARTED
+**Bolt names**: host-projection-all
+**Batch number**: 1
+**Walking skeleton**: false
+**Bolt slug**: host-projection-all
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-26T23:20:12Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state --project-dir /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin fork --slug host-projection-all
+**Error**: [slug=host-projection-all] slug already in Bolt Refs (current: [activation-policy, doctor-observability, host-projection-all]). If a prior fork failed mid-operation, run 'amadeus-worktree discard --slug host-projection-all' and 'amadeus-state.ts merge --slug host-projection-all' (which will exit "already merged" cleanly) or remove the stale entry from main state, then retry.
+
+---
+
+## Bolt Failed
+**Timestamp**: 2026-07-26T23:20:12Z
+**Event**: BOLT_FAILED
+**Failed Bolt**: host-projection-all
+**Bolt slug**: host-projection-all
+**Error summary**: state-fork-failed: {"error":"[slug=host-projection-all] slug already in Bolt Refs (current: [activation-policy, doctor-observability, host-projection-all]). If a prior fork failed mid-operation, run 'amadeus-worktree discard --slug host-projection-all' and 'amadeus-state.ts merge --slug host-projection-all' (which will exit \"already merged\" cleanly) or remove the stale entry from main state, then retry."}\n
+
+---
+
+## Worktree Discarded
+**Timestamp**: 2026-07-26T23:20:23Z
+**Event**: WORKTREE_DISCARDED
+**Bolt slug**: activation-policy
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-activation-policy
+**Reason**: agent-discard
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-26T23:20:24Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state merge --slug activation-policy
+**Error**: [slug=activation-policy] worktree directory does not exist: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-activation-policy.
+
+---
+
+## Worktree Discarded
+**Timestamp**: 2026-07-26T23:20:24Z
+**Event**: WORKTREE_DISCARDED
+**Bolt slug**: doctor-observability
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-doctor-observability
+**Reason**: agent-discard
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-26T23:20:25Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state merge --slug doctor-observability
+**Error**: [slug=doctor-observability] worktree directory does not exist: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-doctor-observability.
+
+---
+
+## Worktree Discarded
+**Timestamp**: 2026-07-26T23:20:25Z
+**Event**: WORKTREE_DISCARDED
+**Bolt slug**: host-projection-all
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all
+**Reason**: agent-discard
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-26T23:20:26Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state merge --slug host-projection-all
+**Error**: [slug=host-projection-all] worktree directory does not exist: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all.
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T23:20:43Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/amadeus-state.md
+**Context**: amadeus-state.md
+
+---
+
+## Swarm Started
+**Timestamp**: 2026-07-26T23:20:48Z
+**Event**: SWARM_STARTED
+**Batch number**: 1
+**Unit names**: activation-policy,doctor-observability,host-projection-all
+**Concurrency cap**: 3
+
+---
+
+## Worktree Created
+**Timestamp**: 2026-07-26T23:20:48Z
+**Event**: WORKTREE_CREATED
+**Bolt slug**: activation-policy
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-activation-policy
+**Branch name**: bolt-activation-policy
+**Base branch**: fix/plugin
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-26T23:20:49Z
+**Event**: BOLT_STARTED
+**Bolt names**: activation-policy
+**Batch number**: 1
+**Walking skeleton**: false
+**Bolt slug**: activation-policy
+
+---
+
+## State Forked
+**Timestamp**: 2026-07-26T23:20:49Z
+**Event**: STATE_FORKED
+**Bolt slug**: activation-policy
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-activation-policy
+**Source state hash**: 5ea7804b525d996f095c12f03e74b5cbbf794e555b47cb9b54d483619aebc132
+**Target state hash**: 5ea7804b525d996f095c12f03e74b5cbbf794e555b47cb9b54d483619aebc132
+
+---
+
+## Audit Forked
+**Timestamp**: 2026-07-26T23:20:49Z
+**Event**: AUDIT_FORKED
+**Bolt slug**: activation-policy
+**Source Audit Hash**: 0e08801b792fba82f6e8ec4ed894ec97ebcf617bd9bfed34e62323ab5bdf86f6
+**Fork Boundary**: 786527
+**Reentrant**: true
+
+---
+
+## Worktree Created
+**Timestamp**: 2026-07-26T23:20:50Z
+**Event**: WORKTREE_CREATED
+**Bolt slug**: doctor-observability
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-doctor-observability
+**Branch name**: bolt-doctor-observability
+**Base branch**: fix/plugin
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-26T23:20:51Z
+**Event**: BOLT_STARTED
+**Bolt names**: doctor-observability
+**Batch number**: 1
+**Walking skeleton**: false
+**Bolt slug**: doctor-observability
+
+---
+
+## State Forked
+**Timestamp**: 2026-07-26T23:20:51Z
+**Event**: STATE_FORKED
+**Bolt slug**: doctor-observability
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-doctor-observability
+**Source state hash**: 160e98233c73338ce995a84d923baf6ead552bc28ac92de0e0617daab62402ee
+**Target state hash**: 160e98233c73338ce995a84d923baf6ead552bc28ac92de0e0617daab62402ee
+
+---
+
+## Audit Forked
+**Timestamp**: 2026-07-26T23:20:51Z
+**Event**: AUDIT_FORKED
+**Bolt slug**: doctor-observability
+**Source Audit Hash**: 67e8d7f605fc79f5a82ae54d63b7562819ea712f32fd22b27838b7985dfb2a99
+**Fork Boundary**: 787718
+**Reentrant**: true
+
+---
+
+## Worktree Created
+**Timestamp**: 2026-07-26T23:20:51Z
+**Event**: WORKTREE_CREATED
+**Bolt slug**: host-projection-all
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all
+**Branch name**: bolt-host-projection-all
+**Base branch**: fix/plugin
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-26T23:20:52Z
+**Event**: BOLT_STARTED
+**Bolt names**: host-projection-all
+**Batch number**: 1
+**Walking skeleton**: false
+**Bolt slug**: host-projection-all
+
+---
+
+## State Forked
+**Timestamp**: 2026-07-26T23:20:52Z
+**Event**: STATE_FORKED
+**Bolt slug**: host-projection-all
+**Worktree path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.amadeus/worktrees/bolt-host-projection-all
+**Source state hash**: 5f29961c915d81722ffaff4935b991520336f13c4cf76e12cb61aadda8d27f1a
+**Target state hash**: 5f29961c915d81722ffaff4935b991520336f13c4cf76e12cb61aadda8d27f1a
+
+---
+
+## Audit Forked
+**Timestamp**: 2026-07-26T23:20:53Z
+**Event**: AUDIT_FORKED
+**Bolt slug**: host-projection-all
+**Source Audit Hash**: 3c45b6314044e41786249814db915d236eea42867c13223e994ec49d8a759a98
+**Fork Boundary**: 788905
+**Reentrant**: true
+
+---
