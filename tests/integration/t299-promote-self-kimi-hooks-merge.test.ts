@@ -166,6 +166,34 @@ describe("t299 promote-self kimi hooks merge (FR-1)", () => {
     expect(backups()).toEqual([]);
   });
 
+  test("normal --apply path (no --no-build): preflight failure aborts BEFORE freshness — the dist-regenerating step never runs", async () => {
+    // Regression: freshness() rewrites dist/ in place, so it must not run
+    // when the wiring preflight already knows the run will fail.
+    const malformed = '# >>> amadeus-kimi-hooks >>>\n[[hooks]]\nevent = "Stop"\n';
+    writeFileSync(configPath(), malformed);
+    const calls: string[] = [];
+    expect(
+      await promoteSelfMain(["--apply"], root, (mode) => {
+        calls.push(mode);
+      }),
+    ).toBe(1);
+    expect(calls).toEqual([]);
+    expect(existsSync(join(root, ".claude/tools/a.txt"))).toBe(false);
+    expect(readFileSync(configPath(), "utf-8")).toBe(malformed);
+  });
+
+  test("normal --apply path (no --no-build): preflight pass proceeds to freshness, then the transaction, then the merge", async () => {
+    const calls: string[] = [];
+    expect(
+      await promoteSelfMain(["--apply"], root, (mode) => {
+        calls.push(mode);
+      }),
+    ).toBe(0);
+    expect(calls).toEqual(["apply"]);
+    expect(existsSync(join(root, ".claude/tools/a.txt"))).toBe(true);
+    expect(readFileSync(configPath(), "utf-8")).toContain("# >>> amadeus-kimi-hooks >>>");
+  });
+
   test("preflight loud-fail family: missing snippet / markerless snippet / unreadable config all abort BEFORE the repo transaction", async () => {
     const assertAborted = async (): Promise<void> => {
       expect(await promoteSelfMain(["--apply", "--no-build"], root)).toBe(1);

@@ -161,7 +161,9 @@ function printUsage(): void {
       "usage: bun scripts/promote-self.ts [--check|--apply] [--no-build]",
       "",
       "  --check     verify project-local self install matches generated output (default)",
-      "  --apply     write .claude/, .codex/, .agents/, .cursor/, .opencode/, .kimi-code/, AGENTS.md, and CLAUDE.md",
+      "  --apply     write .claude/, .codex/, .agents/, .cursor/, .opencode/, .kimi-code/, AGENTS.md, and CLAUDE.md,",
+      "              then merge the amadeus hooks managed block into the user-level kimi config",
+      "              ($KIMI_CODE_HOME/config.toml, or ~/.kimi-code/config.toml when unset; a backup is made)",
       "  --no-build  skip the package.ts freshness step",
     ].join("\n"),
   );
@@ -455,6 +457,15 @@ export async function promoteSelfMain(
   const mode: Mode = argv.includes("--apply") ? "apply" : "check";
   const noBuild = argv.includes("--no-build");
 
+  // Validate the post-apply wiring before ANY mutation. freshness()
+  // regenerates dist/ in place, so a preflight failure must abort before
+  // freshness runs — otherwise a malformed user config would still leave
+  // the dist trees rewritten behind a failed run.
+  if (mode === "apply" && postApply !== null) {
+    const preflight = await postApply.preflight(repoRoot);
+    if (preflight !== 0) return preflight;
+  }
+
   if (!noBuild) {
     freshness(mode);
   }
@@ -477,10 +488,6 @@ export async function promoteSelfMain(
   }
 
   if (mode === "apply") {
-    if (postApply !== null) {
-      const preflight = await postApply.preflight(repoRoot);
-      if (preflight !== 0) return preflight;
-    }
     apply(expected, repoRoot);
     if (postApply !== null) {
       const ran = await postApply.run(repoRoot);
