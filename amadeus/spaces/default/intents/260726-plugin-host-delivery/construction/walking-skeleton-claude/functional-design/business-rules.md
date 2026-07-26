@@ -15,6 +15,8 @@
 - **BR-U2-10(claude 投影)**: claude 最小投影(business-logic-model フロー 5)は生成物の期待位置実在・トークン置換・0-plugin no-op(baseline hash 一致)をテストで固定する(requirements FR-2 の claude 面合否。outDir 拒否の全集合と --check 編入は U3 — 分担は unit-of-work.md U2/U3 行)
 - **BR-U2-9(dist 同期)**: 移設・CLI 新設・フック配線の正本変更は同一変更で dist / self-install を再生成し drift ガード green(project.md Mandated)
 
+- **BR-U2-11(DropsRecord 骨格 — U5 FD レビュー指摘の申告付き追加 2026-07-27)**: compose 適用経路は DropsRecord(composition record 隣接の drops 記録 — U5 domain-entities が形状の正本)を書く。claude 面では通常空、未解決 anchor 発生時に entries を記録(requirements FR-4(d) dropped-with-log の受け皿)。プラグイン別分離(他プラグインの drops を消さない)
+
 ## 検証への trace
 
 各 BR は U2 の統合テスト(story-map ジャーニー 1 の E2E)と既存 t252-254(移設面)へ割付け。詳細のテスト設計は nfr 系ステージと code-generation の plan で確定(先取りしない)。

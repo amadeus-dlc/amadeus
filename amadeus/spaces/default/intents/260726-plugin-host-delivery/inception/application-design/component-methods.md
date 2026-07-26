@@ -53,3 +53,4 @@ degraded 行があれば doctor 全体の exit へ FAIL として伝播(既存 d
 - `computeSpecHash(globs: readonly string[]): string`(決定的・ソート済みファイル列の内容ハッシュ)
 - `readActivationState / writeActivationState`(最終 verdict 時 hash を composition record 隣接ファイルへ永続化 — gitignore 対象)
 - engine 側: build-and-test 指令発行時に hash 差分があれば advisory 1 行(stdout directive を汚さない — stdout-directive-stderr-advisory 準拠で stderr へ)
+- `--single` 要求撤廃: compose 済み plugin stage への明示 `--stage <slug>` を `--single` なしで single-stage 実行として受理する(engine 側)。中立正本 `plugins/formal-model-check/stages/formal-model-check.md` の condition 文も同時更新(U6 FD レビュー指摘の上流伝播 2026-07-27 — 詳細は U6 functional-design フロー 3 が正)
