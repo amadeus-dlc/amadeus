@@ -1,6 +1,96 @@
 # コード構造
 
-## worktree パス／ref 解決面のコード配置（260725-worktree-ref-fixes、現在、Issue #1482 / #1481 / #1455）
+## metrics サブシステムのコード配置（260726-metrics-visualization、現在）
+
+測定 ref: observed `1c43438df`。file:line はすべて同 commit の実ファイル直読、件数は `grep -n` / `ls | wc -l` / `git ls-files` 出力からの転記。
+
+### metrics 関連ファイルの所在
+
+| パス | 行数 / 件数 | 種別 | 可視化との関係 |
+| --- | --- | --- | --- |
+| `scripts/metrics-snapshot.ts` | 185 行 | writer CLI | 入力データの生成元。スキーマの発生源 |
+| `scripts/metrics-timeseries.ts` | 236 行 | reader ライブラリ + CLI | **再利用 seam の本体**（型5 + 関数8 を export）|
+| `scripts/metrics-retention.ts` | 129 行 | pruner CLI | 「reader を import する書き手」の同型先例 |
+| `metrics/*.json` | **123 件** | データ | 2026-07-12〜07-25、`schema_version` 1 で均一 |
+| `.github/workflows/ci.yml:398-` | — | CI job | 挿入位置の候補（`:449` の後・`:461` の前）|
+| `tests/run-tests.ts:526` / `:573` | — | HTML 生成先例 | `coverageHtmlEscape` / `writeCoverageHtml` |
+
+`metrics/` の最新スナップショットは `metrics/2026-07-25T23-15-54-977Z-77d871d574c4.json`。ファイル名は `writeSnapshotAtomic`（`metrics-snapshot.ts:153-163`）が `captured_at` の `:` `.` を `-` へ置換し、commit の先頭12桁を付す規則で生成する。JSON 本体には commit のフル40桁が格納される。
+
+### `scripts/metrics-timeseries.ts` のシンボル配置（HEAD 現行値）
+
+| 行 | シンボル | export |
+| --- | --- | --- |
+| `:3-4` | 冒頭契約コメント（「must not import any fs write API」）| — |
+| `:18-19` | `values` を `unknown` に留める理由の明文 | — |
+| `:20` | `CollectorEntry` | ✔ |
+| `:25` | `Snapshot` | ✔ |
+| `:32` | `ParseOutcome` | ✔ |
+| `:36` | `NonEmpty` | ✔ |
+| `:38` | `CollectorResolution` | ✔ |
+| `:50` | `parseSnapshot` | ✔ |
+| `:81` | `assertNonEmpty` | ✔ |
+| `:87` | `buildSeries` | ✔ |
+| `:95` | `discoverCollectors` | ✔ |
+| `:103` | `unionValueKeys` | ✔ |
+| `:113` | `resolveCollector` | ✔ |
+| `:117-119` | `formatValue` | **✘（非 export）** |
+| `:121` | `renderTable` | **✘（非 export）** |
+| `:131` | `renderDigest` | ✔ |
+| `:151` | `renderCollectorTable` | ✔ |
+| `:171` | `parseArgs`（`--collector` / `--last`）| ✔ |
+| `:188` | `main` | ✔ |
+
+exit コード規約: usage 誤り = 2 / 実行時失敗 = 1 / 成功 = 0。
+
+### `scripts/metrics-snapshot.ts` の collector 定義（実測 `grep -n 'name: "'`）
+
+| 行 | collector | 備考 |
+| --- | --- | --- |
+| `:72` | `ccn` | `../tests/complexity-gate.ts` の `runLizard` に依存 |
+| `:78` | `coverage` | — |
+| `:82` | `loc` | — |
+| `:93` | `tests` | — |
+| `:97` | `test_pyramid` | **キーが動的**（`:102` で `${tier}_${size}` を合成、実データ 11 キー）|
+| `:106` | `dist_size` | `../tests/lib/test-size.ts` に依存 |
+
+定義域は `:72-110`（上流スキャンの `:71-110` は本 scan で `:72-110` へ訂正）。
+
+### metrics テストの配置（8ファイル、`git ls-files` 実測）
+
+| 層 | ファイル | test 数 |
+| --- | --- | --- |
+| unit | `tests/unit/t221-metrics-snapshot-core.test.ts` | 6 |
+| unit | `tests/unit/t221-metrics-snapshot-cli.test.ts` | 7 |
+| unit | `tests/unit/t221-metrics-snapshot-collectors.test.ts` | 2 |
+| unit | `tests/unit/t230-metrics-timeseries.test.ts` | 17（no spawn / no fs）|
+| unit | `tests/unit/t231-metrics-retention.test.ts` | 9 |
+| integration | `tests/integration/t221-metrics-snapshot.integration.test.ts` | 9 |
+| integration | `tests/integration/t230-metrics-timeseries.integration.test.ts` | 9 |
+| integration | `tests/integration/t231-metrics-retention.integration.test.ts` | 10 |
+
+integration 層は `AMADEUS_METRICS_ROOT` seam で実 FS を差し替える（cid:code-generation:fs-tests-integration-first の既存実践）。落ちる実証パターンは「空ディレクトリ / 壊れたファイル / dangling symlink / ディレクトリ不在」の4類型。covers マーカーは `harness-instrument:metrics-timeseries` と `harness-instrument:metrics-retention` の2種で、4ファイルの1行目コメント（`tests/unit/t230-metrics-timeseries.test.ts:1` ほか）に置かれている。
+
+**上流主張の訂正**: これらのマーカーは `tests/.coverage-registry.json` には登録されていない（同ファイルの `grep -c 'harness-instrument'` = **0**、`metrics` を含む文字列は `amadeus-norm-metrics` 系の3件のみで別サブシステム）。すなわち covers マーカーはテストファイル側の自己申告に留まり、registry 側に対応エントリを持たない。**可視化が新規モジュールを足す場合、倣うべき既習様式は「covers マーカー + unit/integration 2層配置」であり、registry 登録は既存 metrics テストが行っていない**（registry 連携が要るかは設計段の判断事項）。
+
+### 未整備面（可視化が埋める必要のある配線）
+
+| 面 | 実測 | 含意 |
+| --- | --- | --- |
+| `package.json` の `scripts` | 全 **15** エントリ中 metrics 系 **0**（上流スキャンの「16 エントリ」は本 scan で 15 へ訂正）| 可視化 CLI の実行導線は `bun scripts/...` 直叩きになるか、新規 script エントリの追加を要する |
+| `docs/` の metrics 言及 | `grep -rl 'metrics-snapshot\|metrics-timeseries\|metrics-retention' docs/` = **0 ファイル** | 新規ドキュメント（日英ペア）が必要 |
+| lint / typecheck | `scripts/` は Biome lint と `tsc --noEmit` の対象 | 新規モジュールは追加配線不要 |
+
+### 区間の実装2系統の配置（参考）
+
+| 系統 | 新規ファイル | 既存ファイルの変更 |
+| --- | --- | --- |
+| A（PR #1483）| `packages/framework/core/tools/amadeus-grant-authorization.ts`（+876）、`packages/framework/core/tools/amadeus-presence-reservation.ts`（+512）| `amadeus-state.ts` +467 −73 / `amadeus-lib.ts` +202 −29 / `amadeus-orchestrate.ts` +184 −4 / `amadeus-directive.ts` +127 −41 |
+| B（PR #1493）| — | `packages/framework/core/hooks/` の全11ファイル。`amadeus-lib.ts` に `HookStdin` `:4773` / `hookPayloadCwd` `:4779` / `readHookStdin` `:4794` を新設 |
+
+**行番号シフトの注意**（cid:reverse-engineering:upstream-cite-reresolve-on-shift）: `resolveProjectDirFromHook` は前 intent 記録の `amadeus-lib.ts:247` から observed で **`:269`** へ移動している（+22）。以下の履歴節が引く `amadeus-lib.ts` の行番号は当該節の observed 断面で読むこと（cid:requirements-analysis:historical-section-cite-check-at-observed）。
+
+## worktree パス／ref 解決面のコード配置（260725-worktree-ref-fixes、履歴、Issue #1482 / #1481 / #1455）
 
 測定 ref: observed `11f1ad61f`。file:line はすべて同 commit の実ファイル直読、件数は grep / find 出力からの転記。
 

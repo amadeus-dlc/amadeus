@@ -1,6 +1,98 @@
 # コンポーネント棚卸し
 
-## worktree パス／ref 解決コンポーネント（260725-worktree-ref-fixes、現在、Issue #1482 / #1481 / #1455）
+## metrics サブシステムのコンポーネント（260726-metrics-visualization、現在）
+
+測定 ref: observed `1c43438df`。所在はすべて同 commit の実ファイル直読による。
+
+### M-1. スナップショット writer（`scripts/metrics-snapshot.ts`）
+
+| 項目 | 内容 |
+| --- | --- |
+| 所在 | `scripts/metrics-snapshot.ts`（185 行）|
+| 責務 | 6 collector を実行し、単一 JSON スナップショットを `metrics/` へ原子的に書き出す |
+| 公開面 | `defaultEnv` `:112`（env seam）、`writeSnapshotAtomic` `:153-163`、`runCli` `:169`（`--write` / `--check`）|
+| 不変条件 | 値は有限数（`finite` `:26-29`）／シリアライズ後 16,384 バイト以下（`:150`）／既存ファイルへ上書きしない（`:158` throw）|
+| 失敗姿勢 | loud-fail。最初の collector 失敗で即 return（`:129`）— 部分スナップショットを作らない |
+| 外部依存 | `../tests/complexity-gate.ts`（`runLizard`）、`../tests/lib/test-size.ts` |
+| 可視化との関係 | **入力データの発生源**。スキーマ変更はここが起点になるが、可視化は読み取り専用で関与しない |
+
+### M-2. 時系列 reader（`scripts/metrics-timeseries.ts`）— 可視化の主再利用 seam
+
+| 項目 | 内容 |
+| --- | --- |
+| 所在 | `scripts/metrics-timeseries.ts`（236 行）|
+| 責務 | `metrics/*.json` をパースし、collector 別の時系列テーブルをプレーンテキストで描画する |
+| 契約 | **`:3-4` verbatim「must not import any fs write API (AC-1c; grep-checkable)」— 書き込み禁止**。grep で機械検査可能 |
+| 公開型 | `CollectorEntry` `:20` / `Snapshot` `:25` / `ParseOutcome` `:32` / `NonEmpty` `:36` / `CollectorResolution` `:38` |
+| 公開関数 | `parseSnapshot` `:50` / `assertNonEmpty` `:81` / `buildSeries` `:87` / `discoverCollectors` `:95` / `unionValueKeys` `:103` / `resolveCollector` `:113` / `renderDigest` `:131` / `renderCollectorTable` `:151` / `parseArgs` `:171` / `main` `:188` |
+| 非公開 | `formatValue` `:117-119`（`typeof` 分岐）、`renderTable` `:121` |
+| 型の緩さ | `values` の個値は `unknown` のまま（`:18-19` に明文）。描画側が `typeof` で分岐する責務を負う |
+| 可視化との関係 | **パース・系列化・キー集合解決をそのまま再利用できる**。ただし `--html` 等の出力フラグ追加は AC-1c 契約に抵触するため不可 |
+
+### M-3. 保持ポリシー pruner（`scripts/metrics-retention.ts`）— 同型先例
+
+| 項目 | 内容 |
+| --- | --- |
+| 所在 | `scripts/metrics-retention.ts`（129 行）|
+| 責務 | 最新 `METRICS_RETENTION_KEEP_LAST` 件を残して剪定する |
+| 定数 | `METRICS_RETENTION_KEEP_LAST = 360` `:25`（約 12/日 × 約 30 日、[Issue #1121](https://github.com/amadeus-dlc/amadeus/issues/1121) の E-1121-RA Q1 由来）|
+| 契約 | fail-closed `:6-9` — 1件でも不正なら削除 0 件で exit 1 |
+| 依存 | `parseSnapshot` を `:17` で import。**private parser を持たない**（writer / reader / pruner が妥当性定義を共有する明文契約）|
+| フィルタ | `:45` — `readdirSync(dir).filter((f) => f.endsWith(".json"))` |
+| 可視化との関係 | **「reader を import しつつ自身は書き手」という構造の唯一の先例**。新規可視化モジュールが倣うべき同型 |
+
+現データ量は `metrics/*.json` **123 件**（`ls metrics/*.json \| wc -l`）で、保持上限 360 の 1/3 弱。剪定は現時点で発動していない。
+
+### M-4. CI publication job（`.github/workflows/ci.yml:398-`）
+
+| 項目 | 内容 |
+| --- | --- |
+| job 名 | `metrics-snapshot` `:398` |
+| 発火 | `push` かつ `main` かつ `coverage` job 成功 |
+| 位置づけ | **`ci-success` 集約の外**（`:396-397` のコメントで意図を明文化）。PR をブロックしない |
+| 直列化 | concurrency group `metrics-snapshot-main`、`cancel-in-progress: false` |
+| 自己再帰の遮断 | `:12-13` `paths-ignore: metrics/**` |
+| 主要ステップ | snapshot `--write` `:446` → retention `--apply` `:449` → `git add -A metrics/` `:461` → `gh pr create` `:470` → `gh pr merge --auto --squash --delete-branch` `:475` |
+| 誤解の訂正 | **`main` 直 push ではない**。`GITHUB_RUN_ATTEMPT` 入りブランチ + PR auto-squash。260712 設計の「push 最大3回再試行」は現実装と不一致 |
+| 可視化との関係 | 挿入位置の候補は `:449` の後・`:461` の前。`metrics/` 配下へ出力すれば commit に自動で乗るが `paths-ignore` と retention の `*.json` フィルタ `:45` への影響を要設計 |
+
+### M-5. HTML 生成の既習コンポーネント（`tests/run-tests.ts`）
+
+| 項目 | 内容 |
+| --- | --- |
+| 所在 | `tests/run-tests.ts:573` `writeCoverageHtml` / `:526` `coverageHtmlEscape` |
+| 様式 | テンプレートリテラル直書きの自己完結 HTML。外部アセット・CDN 参照なし |
+| 検証 | 生成物を読み返す assert（`t05:582`）|
+| 位置づけ | **repo 内で唯一の HTML 生成器**。チャートライブラリの前例は 0 件 |
+| 可視化との関係 | inline SVG はこの様式の自然な延長。新規ランタイム依存を持ち込まない方向と整合する |
+
+### M-6. metrics テスト群（8ファイル）
+
+| 層 | ファイル | test 数 | covers マーカー |
+| --- | --- | --- | --- |
+| unit | `t221-metrics-snapshot-core` | 6 | — |
+| unit | `t221-metrics-snapshot-cli` | 7 | — |
+| unit | `t221-metrics-snapshot-collectors` | 2 | — |
+| unit | `t230-metrics-timeseries` | 17 | `harness-instrument:metrics-timeseries` |
+| unit | `t231-metrics-retention` | 9 | `harness-instrument:metrics-retention` |
+| integration | `t221-metrics-snapshot.integration` | 9 | — |
+| integration | `t230-metrics-timeseries.integration` | 9 | `harness-instrument:metrics-timeseries` |
+| integration | `t231-metrics-retention.integration` | 10 | `harness-instrument:metrics-retention` |
+
+integration は `AMADEUS_METRICS_ROOT` seam で実 FS を差し替える。可視化モジュールも同じ2層構成 + covers マーカーに倣う。**なお covers マーカーは `tests/.coverage-registry.json` には登録されていない**（同ファイルの `grep -c 'harness-instrument'` = **0**）— registry 連携は既存 metrics テストが行っていないため、要否は設計段の判断事項（詳細は `code-structure.md` の同 intent 節）。
+
+### 区間で新設されたコンポーネント（metrics 面には非交差）
+
+| コンポーネント | 所在 | 系統 |
+| --- | --- | --- |
+| grant authorization | `packages/framework/core/tools/amadeus-grant-authorization.ts`（+876、新規）| A（PR #1483）|
+| presence reservation | `packages/framework/core/tools/amadeus-presence-reservation.ts`（+512、新規）| A（PR #1483）|
+| `HookStdin` / `hookPayloadCwd` / `readHookStdin` | `amadeus-lib.ts:4773` / `:4779` / `:4794` | B（PR #1493）|
+| `resolveProjectDirFromHook`（シグネチャ変更）| `amadeus-lib.ts:269`（第2引数 `payloadCwd?: string \| null`）| B（PR #1493）|
+
+`scripts/metrics-*.ts` の3ファイルは `amadeus-lib` を import しない（各 `grep -c` = **0**）ため、上記いずれとも依存関係を持たない。
+
+## worktree パス／ref 解決コンポーネント（260725-worktree-ref-fixes、履歴、Issue #1482 / #1481 / #1455）
 
 測定 ref: observed `11f1ad61f`。所在はすべて同 commit の実ファイル直読による。
 
