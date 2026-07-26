@@ -1,4 +1,9 @@
-// scripts/plugin-composition.ts — C4 Plugin Composition (U10, FR-6 item 20).
+// packages/framework/core/tools/amadeus-plugin-compose.ts — C4 Plugin Composition
+// (U10, FR-6 item 20). Relocated from scripts/plugin-composition.ts into the
+// harness-neutral core so the amadeus-plugin.ts CLI can import the engine and
+// ship to every harness via coreDirs projection (U2 C2, harness-tools-placement).
+// Signatures are unchanged from the pre-move engine (BR-U2-1 single implementation,
+// BR-U2-7 no compatibility re-export at the old path).
 //
 // The host-side composition ENGINE (mechanism only): inspect a discovered plugin
 // against a host snapshot, plan a no-clobber composition, apply it as a single
@@ -34,11 +39,31 @@
 // against a real temp filesystem in the integration layer.
 
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, posix } from "node:path";
-import { parseStageFrontmatter } from "../packages/framework/core/tools/amadeus-lib.ts";
-import { validateStageFrontmatter } from "../packages/framework/core/tools/amadeus-stage-schema.ts";
-import { type ReadOnlyFs, nodeReadOnlyFs } from "./plugin-projection.ts";
+import { parseStageFrontmatter } from "./amadeus-lib.ts";
+import { validateStageFrontmatter } from "./amadeus-stage-schema.ts";
+
+// Read-only filesystem seam so discovery is drivable by a fake in tests. Method
+// names deliberately avoid the node:fs API names (existsSync/readFileSync/…) so
+// a pure consumer or fake stays free of filesystem *signals* — the node backend
+// below is the only place those names appear. Co-located here (was
+// scripts/plugin-projection.ts) so the moved engine carries no scripts/ import
+// and stays dist-shippable; plugin-projection.ts now imports it from here
+// (single definition — C2 "二重定義しない").
+export type ReadOnlyFs = {
+  exists(p: string): boolean;
+  list(p: string): readonly string[];
+  isDir(p: string): boolean;
+  read(p: string): Buffer;
+};
+
+export const nodeReadOnlyFs: ReadOnlyFs = {
+  exists: (p) => existsSync(p),
+  list: (p) => readdirSync(p),
+  isDir: (p) => statSync(p).isDirectory(),
+  read: (p) => readFileSync(p),
+};
 
 // The four host-stage seams a plugin may merge into. The canonical vocabulary is
 // StageFrontmatter's list fields (packages/framework/core/tools/

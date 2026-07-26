@@ -21,12 +21,6 @@
 // in-memory maps, so a unit test drives every branch in-process (bun --coverage
 // does not instrument spawned children).
 
-import {
-  existsSync,
-  readdirSync,
-  readFileSync,
-  statSync,
-} from "node:fs";
 import { dirname, join, posix, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { HarnessManifest } from "./manifest-types.ts";
@@ -60,23 +54,12 @@ export type PackageHarness = (typeof PACKAGE_HARNESSES)[number];
 export const SELF_INSTALL_HARNESSES = ["claude", "codex", "cursor", "opencode", "kimi"] as const;
 export type SelfInstallHarness = (typeof SELF_INSTALL_HARNESSES)[number];
 
-// Read-only filesystem seam so discovery is drivable by a fake in tests. Method
-// names deliberately avoid the node:fs API names (existsSync/readFileSync/…) so
-// a pure consumer or fake stays free of filesystem *signals* — the node backend
-// below is the only place those names appear.
-export type ReadOnlyFs = {
-  exists(p: string): boolean;
-  list(p: string): readonly string[];
-  isDir(p: string): boolean;
-  read(p: string): Buffer;
-};
-
-export const nodeReadOnlyFs: ReadOnlyFs = {
-  exists: (p) => existsSync(p),
-  list: (p) => readdirSync(p),
-  isDir: (p) => statSync(p).isDirectory(),
-  read: (p) => readFileSync(p),
-};
+// Read-only filesystem seam. Single definition lives in the core engine
+// (amadeus-plugin-compose.ts) so the dist-shipped engine carries no scripts/
+// import; imported for local use and re-exported for existing consumers of this
+// module (C2 relocation, single definition — no double-def).
+import { type ReadOnlyFs, nodeReadOnlyFs } from "../packages/framework/core/tools/amadeus-plugin-compose.ts";
+export { type ReadOnlyFs, nodeReadOnlyFs };
 
 export type SourceArtifact = {
   // Repo-neutral POSIX path relative to the plugin's source root.
