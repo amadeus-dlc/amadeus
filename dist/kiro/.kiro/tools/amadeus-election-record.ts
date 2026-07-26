@@ -178,20 +178,28 @@ export function verifyReservations(ballots: Ballot[], document: string): Result<
   return ok(undefined);
 }
 
+// The two ballot counts, each read from a SEPARATE file: `ledger` from
+// ledger.json (the append lane), `materialized` from tally.json (the frozen set
+// the record was rendered from). Naming them keeps the two sources apart at the
+// call site (Issue #1457: two positional numbers taken from one array made this
+// check `x === x`).
+export type BallotCounts = { readonly ledger: number; readonly materialized: number };
+
 // Self-check of a generated record against its own ballots (BR-R4, FR-6b) —
 // three classes, all findings enumerated: ballot count (ledger vs materialized),
 // GoA frequency (stored vs recomputed), timeline monotonicity (ISO strings sort
-// chronologically). The check recomputes from the ballots rather than comparing
-// the record to itself (no verification-theatre self-reference).
+// chronologically). Every class compares one value the caller read off disk
+// against one this function derives, never a value against itself (no
+// verification-theatre self-reference).
 export function verifySelf(
-  ledgerCount: number,
+  counts: BallotCounts,
   ballots: Ballot[],
   storedFreq: GoaFreq,
   timeline: TimelineEvent[],
 ): VerifyResult {
   const findings: VerifyFinding[] = [];
-  if (ledgerCount !== ballots.length) {
-    findings.push({ kind: "ballot-count", expected: ledgerCount, actual: ballots.length });
+  if (counts.ledger !== counts.materialized) {
+    findings.push({ kind: "ballot-count", expected: counts.ledger, actual: counts.materialized });
   }
   const recomputed = GoaFreq.fromVotes(ballots.map((b) => b.goa));
   if (!freqEqual(recomputed, storedFreq)) {

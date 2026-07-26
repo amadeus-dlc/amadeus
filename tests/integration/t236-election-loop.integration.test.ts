@@ -220,6 +220,70 @@ describe("t236 election directive loop", () => {
     expect(run(["verify", "--election", "E-LOOP1"])).toBe(1);
   });
 
+  // Issue #1457: verifySelf's ballot-count and freq classes must compare two
+  // INDEPENDENTLY read values. Both tests below tamper exactly one side and
+  // assert the named finding kind — they are red while the caller derives both
+  // sides from the materialized tally (the self-reference this fix removes).
+  test("#1457: a ledger that outgrows the materialized tally is a ballot-count finding", () => {
+    expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
+    expect(run(["report", "--election", "E-LOOP1", "--result", "distributed"])).toBe(0);
+    const b1 = writeJson("b1.json", {
+      electionId: "E-LOOP1",
+      voter: "alice",
+      voterKind: "member",
+      choiceInternalNo: 1,
+      goa: 1,
+      submittedAt: "2026-07-19T00:01:00Z",
+    });
+    expect(run(["vote", "--election", "E-LOOP1", "--file", b1])).toBe(0);
+    expect(run(["tally", "--election", "E-LOOP1"])).toBe(0);
+    expect(run(["render", "--election", "E-LOOP1"])).toBe(0);
+    expect(run(["verify", "--election", "E-LOOP1"])).toBe(0);
+
+    // A ballot lands on the ledger after materialization: ledger 2, tally 1.
+    const ledgerPath = electionPath("ledger.json");
+    const ledger = JSON.parse(readFileSync(ledgerPath, "utf8"));
+    ledger.ballots.push({
+      ...ledger.ballots[0],
+      voter: "bob",
+      submittedAt: "2026-07-19T00:03:00Z",
+    });
+    writeFileSync(ledgerPath, JSON.stringify(ledger, null, 2));
+    expect(run(["verify", "--election", "E-LOOP1"])).toBe(1);
+    const finding = JSON.parse(errs[errs.length - 1] ?? "{}").error as string;
+    expect(finding).toContain("ballot-count");
+    expect(finding).toContain('"expected":2');
+    expect(finding).toContain('"actual":1');
+  });
+
+  test("#1457: a tampered stored GoA frequency is a freq-mismatch finding", () => {
+    expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
+    expect(run(["report", "--election", "E-LOOP1", "--result", "distributed"])).toBe(0);
+    const b1 = writeJson("b1.json", {
+      electionId: "E-LOOP1",
+      voter: "alice",
+      voterKind: "member",
+      choiceInternalNo: 1,
+      goa: 1,
+      submittedAt: "2026-07-19T00:01:00Z",
+    });
+    expect(run(["vote", "--election", "E-LOOP1", "--file", b1])).toBe(0);
+    expect(run(["tally", "--election", "E-LOOP1"])).toBe(0);
+    expect(run(["render", "--election", "E-LOOP1"])).toBe(0);
+    expect(run(["verify", "--election", "E-LOOP1"])).toBe(0);
+
+    // The stored GoA line still parses — only its bins are wrong, so the
+    // frequency class (not the parse guard) is the branch under test.
+    const recordPath = electionPath("record.md");
+    const doc = readFileSync(recordPath, "utf8");
+    writeFileSync(recordPath, doc.replace("1x1 2x0", "1x0 2x1"));
+    expect(run(["verify", "--election", "E-LOOP1"])).toBe(1);
+    const finding = JSON.parse(errs[errs.length - 1] ?? "{}").error as string;
+    expect(finding).toContain("freq-mismatch");
+    expect(finding).toContain('"expected":"0,1,0,0,0,0,0,0"');
+    expect(finding).toContain('"actual":"1,0,0,0,0,0,0,0"');
+  });
+
   test("Bolt 4: hold-resolved resumes per the reason table and rejects invalid resolutions", () => {
     expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
     expect(run(["report", "--election", "E-LOOP1", "--result", "distributed"])).toBe(0);

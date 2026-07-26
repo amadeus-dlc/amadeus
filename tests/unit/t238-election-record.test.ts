@@ -165,15 +165,15 @@ describe("t238 election-record", () => {
       { kind: "tallied", at: "2026-07-19T00:02:00Z", detail: "" },
     ];
     // Happy path: consistent record verifies clean.
-    expect(verifySelf(2, ballots, goodFreq, goodTimeline).ok).toBe(true);
+    expect(verifySelf({ ledger: 2, materialized: 2 }, ballots, goodFreq, goodTimeline).ok).toBe(true);
 
     // Ballot-count injection: ledger says 3, materialized has 2.
-    const badCount = verifySelf(3, ballots, goodFreq, goodTimeline);
+    const badCount = verifySelf({ ledger: 3, materialized: 2 }, ballots, goodFreq, goodTimeline);
     expect(badCount.ok).toBe(false);
     if (!badCount.ok) expect(badCount.error.some((f) => f.kind === "ballot-count")).toBe(true);
 
     // Frequency injection: stored freq disagrees with recomputed.
-    const badFreq = verifySelf(2, ballots, [9, 0, 0, 0, 0, 0, 0, 0], goodTimeline);
+    const badFreq = verifySelf({ ledger: 2, materialized: 2 }, ballots, [9, 0, 0, 0, 0, 0, 0, 0], goodTimeline);
     expect(badFreq.ok).toBe(false);
     if (!badFreq.ok) expect(badFreq.error.some((f) => f.kind === "freq-mismatch")).toBe(true);
 
@@ -183,12 +183,12 @@ describe("t238 election-record", () => {
       { kind: "tallied", at: "2026-07-19T00:02:00Z", detail: "" },
       { kind: "ballot", at: "2026-07-19T00:01:00Z", detail: "", voter: "alice" },
     ];
-    const badOrder = verifySelf(2, ballots, goodFreq, badTimeline);
+    const badOrder = verifySelf({ ledger: 2, materialized: 2 }, ballots, goodFreq, badTimeline);
     expect(badOrder.ok).toBe(false);
     if (!badOrder.ok) expect(badOrder.error.some((f) => f.kind === "timeline-order")).toBe(true);
 
     // All findings enumerated at once (does not stop at the first).
-    const allBad = verifySelf(3, ballots, [9, 0, 0, 0, 0, 0, 0, 0], badTimeline);
+    const allBad = verifySelf({ ledger: 3, materialized: 2 }, ballots, [9, 0, 0, 0, 0, 0, 0, 0], badTimeline);
     expect(allBad.ok).toBe(false);
     if (!allBad.ok) expect(allBad.error.length).toBe(3);
   });
@@ -280,7 +280,7 @@ describe("t238 election-record", () => {
     const timeline = relayTimeline(true);
     // Pre-fix (submittedAt axis) this yields a timeline-order finding; post-fix
     // (receipt axis, monotonic receivedAt) it is green.
-    const result = verifySelf(ballots.length, ballots, freq, timeline);
+    const result = verifySelf({ ledger: ballots.length, materialized: ballots.length }, ballots, freq, timeline);
     expect(result.ok).toBe(true);
   });
 
@@ -291,7 +291,7 @@ describe("t238 election-record", () => {
     const ballots = [ballot("e1", 1), ballot("e4", 1), ballot("e3", 2)];
     const freq = GoaFreq.fromVotes(ballots.map((b) => b.goa));
     const legacy = relayTimeline(false);
-    const result = verifySelf(ballots.length, ballots, freq, legacy);
+    const result = verifySelf({ ledger: ballots.length, materialized: ballots.length }, ballots, freq, legacy);
     // Non-monotonic on `at` -> a timeline-order finding is expected (no crash,
     // no silent pass — the fallback preserves the old behavior for old records).
     expect(result.ok).toBe(false);
