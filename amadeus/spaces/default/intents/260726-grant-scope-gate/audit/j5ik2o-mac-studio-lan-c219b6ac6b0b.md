@@ -582,3 +582,35 @@
 **Message**: 検証を完了しました。要件・設計への逸脱なし、fail-closed契約維持、11面配布同期確認、AI slop残存なし、全数file:line引用の実測一致、そして修正実装の挙動を直接probe実行(evaluateStandingGrantGateEligibility の直接呼出し)で再確認し、テストの期待値と完全一致することを確認しました。\n\n```json\n{"invocationId":
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-26T06:27:47Z
+**Event**: HUMAN_TURN
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-26T06:27:53Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Recovered**: true
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-26T06:27:53Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state approve code-generation --project-dir /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/1497-standing-grant-scope-gate
+**Error**: Refusing to complete "code-generation": it is a code-producing stage (workspace_requires) but no source work is evident outside the amadeus/ workspace tree. In a git workspace this means no uncommitted change and no code in the last commit; otherwise no source file exists. Planning docs alone do not satisfy Code Generation - write the code to the workspace. If this Intent's produces are genuinely record-internal documents only, declare it first: amadeus-state.ts declare-docs-only --evidence "<approval reference>".
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-26T06:27:53Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --stage code-generation --result approved
+**Error**: Transition rejected by amadeus-state.ts approve for "code-generation": {"error":"Refusing to complete \"code-generation\": it is a code-producing stage (workspace_requires) but no source work is evident outside the amadeus/ workspace tree. In a git workspace this means no uncommitted change and no code in the last commit; otherwise no source file exists. Planning docs alone do not satisfy Code Generation - write the code to the workspace. If this Intent's produces are genuinely record-internal documents only, declare it first: amadeus-state.ts declare-docs-only --evidence \"<approval reference>\"."}
+
+---
