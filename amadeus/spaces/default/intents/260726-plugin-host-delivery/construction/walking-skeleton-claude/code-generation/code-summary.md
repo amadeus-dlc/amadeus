@@ -40,7 +40,7 @@
 | `bun tests/gen-coverage-registry.ts --check` | 0(fresh・ガード green・ratchet held) |
 | `bun test`(t299+t300) | 10 pass / 0 fail |
 | `bun test`(移設面 t252/t253/t254/t-plugin-projection*/formal-verif) | 88 pass / 0 fail |
-| `bash tests/run-tests.sh --ci` | **PASS(CI_EXIT=0)** — Test files: 575 / Failed files: 0 / Failed assertions: 0(Class A/B 解決後の再実行 /tmp/citest3.log)。以後の count-free doc reword は無テスト面で、dist:check + promote:self:check + onboarding/doc 依存テスト(t151/t174/t149/t150/t258/t01/t02/t132)を green 再確認 |
+| `bash tests/run-tests.sh --ci` | **PASS(CI_EXIT=0)** — Test files: 575 / Failed files: 0 / Failed assertions: 0(§12a it.1 Major 2 件是正後の最終再実行 /tmp/citest4.log。先行: Class A/B 解決 /tmp/citest3.log も PASS) |
 
 ## C4 フック配線の裁定と解決(conductor 裁定 2026-07-27 — 既決ノルム導出、project.md c5「既存実装の流儀に合わせる」)
 
@@ -72,3 +72,14 @@ walking-skeleton の合否そのもの(business-logic-model フロー 4)を t299
 4. **他ハーネス投影**: `projectPluginForHarness` は claude のみ実装、他面は throw で明示(U3 スコープ)。
 
 いずれも「実装前停止→選挙」を要する承認済み契約からの逸脱には当たらないと判断(実装詳細の確定)。判断の妥当性はレビューで検査されたい。
+
+## §12a reviewer iteration 1 Major 是正(2 件)
+
+**Major 1 — BR-U2-11 DropsRecord 骨格の実装(実装範囲限定を申告):**
+- 初版は DropsRecord を未実装だった(FD business-rules.md:18 / U5 domain-entities が形状の正本)。是正: engine(`amadeus-plugin-compose.ts`)へ `DropsRecord`(`{ plugins: Map<plugin, DropEntry[]> }`、`DropEntry = { surface; severity: "degraded"|"advisory"; reason }`)+ codec + fs helper(`recordPluginDrops` / `clearPluginDrops`、composition record 隣接 `.amadeus-plugin-drops.json`、plugin 別分離)を新設し、CLI の compose 適用経路で composed plugin ごとに書き、drop で除去(symmetric-pair-review)。
+- **実装範囲限定(ruling に従う骨格宣言)**: 現行 engine は未解決 anchor を drop でなく **reject**(unknown-seam)するため、engine に **drop-with-log 経路がまだ無い**。よって U2 が書く entries は**常に空**(claude 面 = formal-model-check は seam/anchor 無し)。本 Bolt の DropsRecord は「空 record の書出し+書式+plugin 別分離+冪等 byte 不変」の**骨格まで**。実 entries の生成(未対応 surface の degrade 記録)は U4、読取は U5(doctor)。
+- テスト(t299): 空 DropsRecord 書出し(plugin キー実在・entries=[])、plugin 別分離(他 plugin の seed drops 不変)、冪等 compose での drops byte-identical、drop での entry 除去。
+
+**Major 2 — BR-U2-6 hook 実起動テスト:**
+- 初版は BR-U2-6 を CLI subprocess の実起動で満たしていたが、正準 hook ファイル自体の実起動は未検証だった。是正: t299 に `packages/framework/core/hooks/amadeus-plugin-compose.ts` を実 spawn する2ケースを追加 — (a) 正常系: staged plugin 無し → `compose --if-stale` が no-op → **exit 0・stderr 警告なし**、(b) 失敗系: seam が host 不在 stage を指す plugin を staging に置き inspect 却下でエラー → hook が **stderr 1 行警告+exit 0**(セッション継続 = BR-U2-4 fail-loud/continue)。projectDir は `CLAUDE_PROJECT_DIR`(resolveProjectDirFromHook rung 2)で temp host へ誘導。
+- 副次: `hook:amadeus-plugin-compose` covers 主張を t299 へ追加 → coverage registry の hook 未カバー(11/12)解消(**12/12**、regen 済み)。
