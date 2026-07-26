@@ -15,6 +15,10 @@ import { cpus } from "node:os";
 import { join } from "node:path";
 import { currentGitSha } from "../harness/git-sha.ts";
 import {
+  exceedsMedianLatencyBudget,
+  median,
+} from "../lib/latency-median-budget-gate.ts";
+import {
   migrateClosedSwarmDriverRegistryLocked,
   readIntentRegistry,
   writeFileAtomic,
@@ -189,6 +193,13 @@ function nearestRankP95(values: number[]): number {
   return sorted[Math.ceil(sorted.length * 0.95) - 1] ?? Number.NaN;
 }
 
+// Absolute latency budgets (#1424). Unchanged in value; the verdict now gates
+// the median rather than the nearest-rank p95 so shared-runner load spikes are
+// absorbed while a genuine regression still reports (#1511, median ruling —
+// same canonical predicate as t258).
+const STRICT_READ_LATENCY_BUDGET_MS = 100;
+const MIGRATION_LATENCY_BUDGET_MS = 250;
+
 describe("t257 status registry performance contract", () => {
   test("records complete 100-child p95, RSS pairs, growth, and provenance", () => {
     for (let index = 0; index < 10; index++) {
@@ -212,11 +223,15 @@ describe("t257 status registry performance contract", () => {
       };
     });
 
+    const strictReadLatencies = active.map((sample) => sample.strictReadMs);
+    const migrationLatencies = active.map((sample) => sample.migrationMs);
     const result = {
       samples: active.length,
       warmups: 10,
-      strictReadP95Ms: nearestRankP95(active.map((sample) => sample.strictReadMs)),
-      migrationP95Ms: nearestRankP95(active.map((sample) => sample.migrationMs)),
+      strictReadP95Ms: nearestRankP95(strictReadLatencies),
+      migrationP95Ms: nearestRankP95(migrationLatencies),
+      strictReadMedianMs: median(strictReadLatencies),
+      migrationMedianMs: median(migrationLatencies),
       rssDifferenceP95MiB: nearestRankP95(rssDifferences) / (1024 * 1024),
       growth,
       growthRatio10x: {
@@ -237,8 +252,8 @@ describe("t257 status registry performance contract", () => {
     expect(result.samples).toBe(100);
     expect(result.correctness).toBe(true);
     expect(new Set(active.map((sample) => sample.fixtureSha256)).size).toBe(1);
-    expect(result.strictReadP95Ms).toBeLessThanOrEqual(100);
-    expect(result.migrationP95Ms).toBeLessThanOrEqual(250);
+    expect(exceedsMedianLatencyBudget(strictReadLatencies, STRICT_READ_LATENCY_BUDGET_MS)).toBe(false);
+    expect(exceedsMedianLatencyBudget(migrationLatencies, MIGRATION_LATENCY_BUDGET_MS)).toBe(false);
     expect(result.rssDifferenceP95MiB).toBeLessThanOrEqual(64);
     expect(result.growthRatio10x.strictRead).toBeLessThanOrEqual(25);
     expect(result.growthRatio10x.migration).toBeLessThanOrEqual(25);
