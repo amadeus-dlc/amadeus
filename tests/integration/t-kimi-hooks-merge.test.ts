@@ -33,8 +33,9 @@ import {
   runHooksRemoval,
 } from "../../packages/setup/src/modules/kimi-hooks.ts";
 import { createApplyWrite } from "../../packages/setup/src/ports/apply-write.ts";
-import { createFsRead, createFsWrite } from "../../packages/setup/src/ports/fsops.ts";
+import { createFsRead, createFsWrite, IoError } from "../../packages/setup/src/ports/fsops.ts";
 import type { TtyIO } from "../../packages/setup/src/ports/tty.ts";
+import { Result } from "../../packages/setup/src/shared/result.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SNIPPET_MASTER = join(HERE, "..", "..", "packages", "framework", "harness", "kimi", "hooks", "amadeus-hooks.snippet.toml");
@@ -348,6 +349,95 @@ describe("runHooksRemoval", () => {
     if (result.type !== "ok") return;
     expect(result.value).toEqual({ type: "noop" });
     expect(confirmPrompts.length).toBe(0);
+  });
+
+  test("a missing config.toml is a noop: no confirm, nothing to remove", async () => {
+    const home = freshHome(); // never populated — configPath does not exist
+    const { tty, confirmPrompts } = fakeTty(true);
+    const { ports, out } = fakePorts(tty);
+    const result = await runHooksRemoval({ ...baseArgs, interactive: true, kimiHome: home }, ports);
+    expect(result.type).toBe("ok");
+    if (result.type !== "ok") return;
+    expect(result.value).toEqual({ type: "noop" });
+    expect(confirmPrompts.length).toBe(0);
+    expect(out.join("\n")).toContain("does not exist; nothing to remove");
+  });
+
+  test("declining the removal confirm changes nothing (not-applied: declined)", async () => {
+    const home = freshHome();
+    const prior = `model = "kimi-k2"\n\n${block()}\n`;
+    writeFileSync(kimiConfigPath(home), prior);
+    const { ports } = fakePorts(fakeTty(false).tty);
+    const result = await runHooksRemoval({ ...baseArgs, interactive: true, kimiHome: home }, ports);
+    expect(result.type).toBe("ok");
+    if (result.type !== "ok") return;
+    expect(result.value).toEqual({ type: "not-applied", reason: "declined" });
+    expect(readFileSync(kimiConfigPath(home), "utf8")).toBe(prior); // untouched
+  });
+
+  test("non-interactive removal refuses to write (not-applied: non-interactive)", async () => {
+    const home = freshHome();
+    const prior = `model = "kimi-k2"\n\n${block()}\n`;
+    writeFileSync(kimiConfigPath(home), prior);
+    const { tty, confirmPrompts } = fakeTty(true);
+    const { ports } = fakePorts(tty);
+    const result = await runHooksRemoval({ ...baseArgs, interactive: false, kimiHome: home }, ports);
+    expect(result.type).toBe("ok");
+    if (result.type !== "ok") return;
+    expect(result.value).toEqual({ type: "not-applied", reason: "non-interactive" });
+    expect(confirmPrompts.length).toBe(0);
+    expect(readFileSync(kimiConfigPath(home), "utf8")).toBe(prior); // untouched
+  });
+
+  test("a write failure after a successful backup names the backup path in the loud fail (withBackupHint)", async () => {
+    const home = freshHome();
+    const prior = `model = "kimi-k2"\n\n${block()}\n`;
+    writeFileSync(kimiConfigPath(home), prior);
+    const { ports: realPorts } = fakePorts(fakeTty(true).tty);
+    const ports: KimiHooksPorts = {
+      ...realPorts,
+      fsWrite: { writeText: () => Promise.resolve(Result.err(IoError.of("disk full"))) },
+    };
+    const result = await runHooksRemoval({ ...baseArgs, interactive: true, kimiHome: home }, ports);
+    expect(result.type).toBe("err");
+    if (result.type !== "err") return;
+    const expectedBackupPath = join(home, "config.toml.amadeus-backup-20260725T120000000Z");
+    expect(result.error.detail).toContain("disk full");
+    expect(result.error.detail).toContain(`the pre-write backup remains at ${expectedBackupPath}`);
+    expect(readFileSync(expectedBackupPath, "utf8")).toBe(prior); // the backup landed for real (applyWrite ran unmocked)
+    expect(readFileSync(kimiConfigPath(home), "utf8")).toBe(prior); // untouched — only the temp-write side failed
+  });
+});
+
+describe("readConfig — a real (non-notFound) read failure loud-fails (FR-7c)", () => {
+  test("runHooksMerge surfaces the IoError with manual-fix guidance, never treats it as absent", async () => {
+    const home = freshHome();
+    const { ports: realPorts } = fakePorts(fakeTty(true).tty);
+    const ports: KimiHooksPorts = {
+      ...realPorts,
+      fsRead: { readText: () => Promise.resolve(Result.err(IoError.of("EACCES: permission denied", false))) },
+    };
+    const result = await runHooksMerge({ ...baseArgs, interactive: true, kimiHome: home }, ports);
+    expect(result.type).toBe("err");
+    if (result.type !== "err") return;
+    expect(result.error.type).toBe("io");
+    expect(result.error.detail).toContain("EACCES: permission denied");
+    expect(result.error.detail).toContain("fix or remove the file manually");
+    expect(renderHooksError(result.error)).toContain("EACCES: permission denied");
+  });
+
+  test("runHooksRemoval surfaces the same IoError (shared readConfig)", async () => {
+    const home = freshHome();
+    const { ports: realPorts } = fakePorts(fakeTty(true).tty);
+    const ports: KimiHooksPorts = {
+      ...realPorts,
+      fsRead: { readText: () => Promise.resolve(Result.err(IoError.of("EACCES: permission denied", false))) },
+    };
+    const result = await runHooksRemoval({ ...baseArgs, interactive: true, kimiHome: home }, ports);
+    expect(result.type).toBe("err");
+    if (result.type !== "err") return;
+    expect(result.error.type).toBe("io");
+    expect(result.error.detail).toContain("fix or remove the file manually");
   });
 });
 

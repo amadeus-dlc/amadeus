@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "bun:test";
 import type { CliPorts } from "../../packages/setup/src/cli.ts";
-import { main } from "../../packages/setup/src/cli.ts";
+import { main, createDefaultPorts } from "../../packages/setup/src/cli.ts";
 import type { Manifest } from "../../packages/setup/src/domain/manifest.ts";
 import { HarnessName } from "../../packages/setup/src/domain/harness.ts";
 import { SemVer } from "../../packages/setup/src/domain/semver.ts";
@@ -379,5 +379,17 @@ describe("main — install, interactive wizard abort (BR-I18)", () => {
 describe("main — HarnessName sanity", () => {
   test("fixture setup: 'claude' is a recognized harness", () => {
     expect(HarnessName.all.some((h) => (h as string) === "claude")).toBe(true);
+  });
+});
+
+describe("createDefaultPorts — the kimiHooks bag (cli.ts:54-68)", () => {
+  test("exposes a fully-wired kimiHooks port bag sharing the default tty", () => {
+    const ports = createDefaultPorts();
+    expect(ports.kimiHooks.tty).toBe(ports.tty);
+    expect(typeof ports.kimiHooks.fsRead.readText).toBe("function");
+    expect(typeof ports.kimiHooks.fsWrite.writeText).toBe("function");
+    expect(typeof ports.kimiHooks.applyWrite.copyFile).toBe("function");
+    expect(typeof ports.kimiHooks.applyWrite.backup).toBe("function");
+    expect(typeof ports.kimiHooks.out).toBe("function");
   });
 });

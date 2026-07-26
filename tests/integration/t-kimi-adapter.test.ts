@@ -327,6 +327,14 @@ describe("runAdapter — end-to-end with the spawn spy", () => {
     expect(res.exitCode).toBe(0);
   });
 
+  test("routeTarget throwing (malformed non-array todos) → outer catch fail-open exit 0", () => {
+    const raw = JSON.stringify({ hook_event_name: "PostToolUse", tool_name: "TodoList", tool_input: { todos: { status: "in_progress" } } }); // non-array todos makes .find() throw before spawn's own try
+    const spy = spySpawn();
+    const res = runAdapter("state-sync", raw, "/proj", spy.fn);
+    expect(res).toEqual({ stdout: "", exitCode: 0, stderr: "" });
+    expect(spy.calls.length).toBe(0); // routeTarget never returned a call list
+  });
+
   test("the payload cwd wins as the core hook's project dir", () => {
     const spy = spySpawn();
     const dirs: string[] = [];

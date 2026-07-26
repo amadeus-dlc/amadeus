@@ -12,7 +12,7 @@
 // covers: file:packages/setup/src/cli.ts
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,6 +26,7 @@ import { createFsRead, createFsWrite, createTmpWrite } from "../../packages/setu
 import { createVerifyRead } from "../../packages/setup/src/ports/verify-read.ts";
 import { createManifestIo } from "../../packages/setup/src/modules/manifest-io.ts";
 import { Result } from "../../packages/setup/src/shared/result.ts";
+import { IoError } from "../../packages/setup/src/ports/fsops.ts";
 import { buildCodeloadFixture } from "../lib/setup-codeload-fixture.ts";
 import type { TarFixtureEntry } from "../lib/setup-tar-fixture.ts";
 
@@ -156,6 +157,51 @@ function backupFiles(home: string): string[] {
   return readdirSync(home).filter((name) => name.includes("amadeus-backup"));
 }
 
+
+describe("install --harness kimi — wiring error paths (cli.ts:173-186)", () => {
+  test("an unreadable snippet payload exits 1 with the broken-distribution render (cli.ts:173-174)", async () => {
+    const target = mkTemp("amadeus-t-kimi-cli-target-");
+    const home = useFakeKimiHome();
+    const console_ = captureConsole();
+    const archive = buildCodeloadFixture("amadeus-1.2.3", kimiFixtureEntries("# org rules v1\n"));
+    const base = realPorts(archive, "v1.2.3", nonInteractiveTty(), () => {});
+    const ports: CliPorts = {
+      ...base,
+      kimiHooks: {
+        ...base.kimiHooks,
+        fsRead: { readText: async () => Result.err(IoError.of("simulated unreadable payload")) },
+      },
+    };
+    const exitCode = await main(
+      ["install", "--harness", "kimi", "--target", target, "--yes"],
+      ports,
+    );
+
+    expect(exitCode).toBe(1);
+    expect(console_.errors.join("\n")).toContain("The distribution is broken; your Kimi config was not changed");
+    expect(existsSync(join(home, "config.toml"))).toBe(false);
+  });
+
+  test("a merge failure exits 1 with the rendered hook error (cli.ts:185-186)", async () => {
+    const target = mkTemp("amadeus-t-kimi-cli-target-");
+    const home = useFakeKimiHome();
+    writeFileSync(join(home, "config.toml"), "not = [valid\n");
+    const console_ = captureConsole();
+    const prompts: string[] = [];
+    const archive = buildCodeloadFixture("amadeus-1.2.3", kimiFixtureEntries("# org rules v1\n"));
+    const exitCode = await main(
+      ["install", "--harness", "kimi", "--target", target],
+      realPorts(archive, "v1.2.3", interactiveTty(true, prompts), () => {}),
+    );
+
+    expect(exitCode).toBe(1);
+    // planMerge refuses a syntactically broken config BEFORE any prompt
+    // (BR-5: never guess-repair), so no confirm is ever shown.
+    expect(prompts.length).toBe(0);
+    expect(console_.errors.join("\n")).toContain("Kimi config merge failed");
+    expect(console_.errors.join("\n")).toContain("not valid TOML");
+  });
+});
 describe("install --harness kimi — hook wiring (FR-5a)", () => {
   test("non-interactive aborts after the report with the manual procedure, config untouched (BR-I11; --yes is not consent)", async () => {
     const target = mkTemp("amadeus-t-kimi-cli-target-");

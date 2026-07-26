@@ -13,6 +13,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   applyMerge,
+  checkTomlSyntax,
   MANAGED_BLOCK_BEGIN,
   MANAGED_BLOCK_END,
   planMerge,
@@ -73,6 +74,34 @@ function mustPlan(configText: string, block: string) {
   if (plan.type === "err") throw new Error(`planMerge must succeed: ${plan.error.detail}`);
   return plan.value;
 }
+
+describe("checkTomlSyntax — the Bun oracle guard", () => {
+  test("fails loudly with the bunx guidance when the Bun runtime is absent", () => {
+    const result = checkTomlSyntax("anything = 1\n", null);
+    expect(result.type).toBe("err");
+    if (result.type === "err") {
+      expect(result.error.detail).toContain("bunx");
+    }
+  });
+});
+
+describe("planMerge — marker anomalies", () => {
+  test("loud-fails when the managed-block markers are reversed", () => {
+    const reversed = [
+      "# <<< amadeus-kimi-hooks <<<",
+      "[[hooks]]",
+      "# >>> amadeus-kimi-hooks >>>",
+      "",
+    ].join("\n");
+    const block = renderManagedBlock(FAKE_SNIPPET);
+    if (block.type === "err") throw new Error("fixture must render");
+    const plan = planMerge(reversed, block.value);
+    expect(plan.type).toBe("err");
+    if (plan.type === "err") {
+      expect(plan.error.detail).toContain("reversed");
+    }
+  });
+});
 
 describe("renderManagedBlock", () => {
   test("extracts the marker-wrapped block and drops any preamble", () => {
