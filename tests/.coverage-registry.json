@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 146,
+      "function": 147,
       "audit": 32,
       "scope": 10,
       "stage": 8,
@@ -1625,6 +1625,10 @@
       "unitId": "function:evaluateStandingGrantGateEligibility",
       "minMechanism": "none",
       "coveredBy": [
+        {
+          "file": "tests/integration/t-standing-grant-composed-scope.test.ts",
+          "mechanism": "none"
+        },
         {
           "file": "tests/unit/t-solo-standing-grant-domain.test.ts",
           "mechanism": "none"
@@ -3508,8 +3512,13 @@
       "unitClass": "function",
       "unitId": "function:standingGrantSatisfiesGate",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-standing-grant-composed-scope.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",

@@ -6,7 +6,7 @@
 // they live in the integration layer (test-size purity). The pure directive and
 // classifier assertions stay in tests/unit/t-solo-gate-transaction.test.ts.
 
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -30,6 +30,7 @@ import {
   verifyMintedPresenceReservation,
   type VerifyReservationInput,
 } from "../../packages/framework/core/tools/amadeus-presence-reservation.ts";
+import { useRealScopeData } from "../harness/real-scope-data.ts";
 
 const GRANT_ID = "abcdef12";
 const ROUTE_ID = "12345678-1234-4abc-8def-1234567890ab";
@@ -37,8 +38,15 @@ const TARGET_INTENT_ID = "00000000-0000-7000-8000-000000000001";
 const RESERVATION_ID = "87654321-4321-4abc-8def-1234567890ab";
 const TEMP_ROOTS: string[] = [];
 
+let restoreScopeData: (() => void) | null = null;
+
+beforeAll(() => {
+  restoreScopeData = useRealScopeData();
+});
+
 afterAll(() => {
   for (const root of TEMP_ROOTS) rmSync(root, { recursive: true, force: true });
+  restoreScopeData?.();
 });
 
 function runStage(): RunStageDirective {
@@ -302,6 +310,9 @@ describe("presence reservation state machine", () => {
   });
 });
 
+// Stage frontmatter carries the STOCK scope vocabulary only; the composed
+// scope the fixture state declares (amadeus-feature) is resolved from the
+// compiled scope-grid via useRealScopeData above (#1497 FR-4b).
 const ROUTE_GRAPH: StageEntry[] = [
   {
     slug: "application-design",
@@ -312,7 +323,7 @@ const ROUTE_GRAPH: StageEntry[] = [
     lead_agent: "test",
     support_agents: [],
     mode: "inline",
-    scopes: ["amadeus-feature"],
+    scopes: ["feature"],
   },
 ];
 

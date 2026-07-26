@@ -8,7 +8,7 @@
 
 // covers: function:resolveOperatingMode, function:findSoloStandingGrant, function:validateSoloStandingGrantById
 
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import {
   mkdirSync,
   mkdtempSync,
@@ -31,6 +31,7 @@ import {
   findSoloStandingGrant,
   validateSoloStandingGrantById,
 } from "../../packages/framework/core/tools/amadeus-grant-authorization.ts";
+import { useRealScopeData } from "../harness/real-scope-data.ts";
 
 const tmpRoots: string[] = [];
 const GRAPH: StageEntry[] = [
@@ -44,6 +45,10 @@ const STATE = "# AI-DLC State\n\n- **Scope**: amadeus-feature\n- **Skeleton Stan
 const HUMAN_TS = "2026-07-25T00:00:00.000Z";
 const SHARD = "fixture-clone.md";
 
+// Stage frontmatter carries the STOCK scope vocabulary only — the composed
+// scope this fixture's state file declares (amadeus-feature) is resolved from
+// the compiled scope-grid instead, which is why the suite reads the real data
+// files below (#1497 FR-4b).
 function stage(slug: string, number: string, phase: string): StageEntry {
   return {
     slug,
@@ -54,12 +59,19 @@ function stage(slug: string, number: string, phase: string): StageEntry {
     lead_agent: "test",
     support_agents: [],
     mode: "inline",
-    scopes: ["amadeus-feature"],
+    scopes: ["feature"],
   };
 }
 
+let restoreScopeData: (() => void) | null = null;
+
+beforeAll(() => {
+  restoreScopeData = useRealScopeData();
+});
+
 afterAll(() => {
   for (const root of tmpRoots) rmSync(root, { recursive: true, force: true });
+  restoreScopeData?.();
 });
 
 function auditBlock(event: string, timestamp: string, fields: Record<string, string> = {}): string {

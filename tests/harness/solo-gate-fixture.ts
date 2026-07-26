@@ -28,6 +28,7 @@ import {
   seededStateFile,
   seedStateFile,
 } from "./fixtures.ts";
+import { useRealScopeData } from "./real-scope-data.ts";
 
 
 export const REPO_ROOT = join(import.meta.dir, "..", "..");
@@ -48,6 +49,11 @@ export const MINT = join(
   "amadeus-mint-presence.ts",
 );
 export const GRAPH_PATH = join(REPO_ROOT, ".codex", "tools", "data", "stage-graph.json");
+// The in-process half of these suites resolves the workflow scope through the
+// compiled scope-grid (standingGrantSatisfiesGate), so the same real data face
+// the spawned tools get via stateEnv must also be visible to this process.
+// Installed for the module's lifetime: every importer needs it for every test.
+useRealScopeData();
 export const GRAPH = JSON.parse(readFileSync(GRAPH_PATH, "utf-8")) as StageEntry[];
 export const STAGE = "requirements-analysis";
 export const GRANT_ID = "cafe0001";
