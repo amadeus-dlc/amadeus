@@ -27,7 +27,7 @@
 import { existsSync } from "node:fs";
 import { isMachineInjectedTurnText, stateFilePath } from "../tools/amadeus-lib.ts";
 import { hostSessionCapability, mintHumanPresence } from "../tools/amadeus-presence-reservation.ts";
-import { opencodeProjectDir, opencodePromptText } from "./amadeus-opencode-vocab.ts";
+import { opencodeProjectDir, opencodePromptText } from "../lib/amadeus-opencode-vocab.ts";
 
 type ChatMessageInput = { sessionID?: unknown };
 type ChatMessageOutput = { parts?: unknown };

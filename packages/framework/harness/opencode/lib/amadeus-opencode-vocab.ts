@@ -11,9 +11,10 @@
 //   - `TextPart` is `{type:"text";text:string;synthetic?:boolean}` — the
 //     runtime stamps `synthetic:!0` on the text parts it injects itself.
 //
-// Extracted as an importable module (not inline in the plugin) so the mapping
-// logic is drivable in-process by bun --coverage — a plugin module loaded by
-// the OpenCode host is invisible to it
+// Extracted as an importable module outside `.opencode/plugin/` so OpenCode
+// does not execute these helper exports as plugins, and the mapping logic stays
+// drivable in-process by bun --coverage — a plugin module loaded by the
+// OpenCode host is invisible to it
 // (cid:code-generation:bun-coverage-spawn-blindspot).
 
 /** The absolute project dir OpenCode hands the plugin, or null when neither

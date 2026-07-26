@@ -240,10 +240,10 @@ describe("opencode manifest — the distribution row", () => {
     expect(manifest.harnessFiles).toEqual([
       { src: "dot-gitignore", dst: ".gitignore", projectRoot: true },
       // OpenCode's extension surface is JS plugins loaded from
-      // `.opencode/plugin/` — the presence mint site and its measured payload
-      // vocabulary land there, inside the harness dir (no projectRoot).
+      // `.opencode/plugin/`; its non-plugin helper stays off that auto-load
+      // path under `.opencode/lib/` (both remain inside the harness dir).
       { src: "plugin/amadeus-opencode-plugin.ts", dst: "plugin/amadeus-opencode-plugin.ts" },
-      { src: "plugin/amadeus-opencode-vocab.ts", dst: "plugin/amadeus-opencode-vocab.ts" },
+      { src: "lib/amadeus-opencode-vocab.ts", dst: "lib/amadeus-opencode-vocab.ts" },
     ]);
   });
 });

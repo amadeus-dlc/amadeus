@@ -1,4 +1,4 @@
-// covers: file:harness/opencode/plugin/amadeus-opencode-plugin.ts, file:harness/opencode/plugin/amadeus-opencode-vocab.ts
+// covers: file:harness/opencode/plugin/amadeus-opencode-plugin.ts, file:harness/opencode/lib/amadeus-opencode-vocab.ts
 //
 // The OpenCode prompt-hook mint site, driven end-to-end against the SHIPPED
 // projection (dist/opencode/.opencode/plugin/) so the file OpenCode actually
@@ -21,7 +21,7 @@ import { join } from "node:path";
 import {
   opencodeProjectDir,
   opencodePromptText,
-} from "../../packages/framework/harness/opencode/plugin/amadeus-opencode-vocab.ts";
+} from "../../packages/framework/harness/opencode/lib/amadeus-opencode-vocab.ts";
 import { handleReport } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import { readPresenceReservation } from "../../packages/framework/core/tools/amadeus-presence-reservation.ts";
 import { REPO_ROOT } from "../harness/fixtures.ts";
