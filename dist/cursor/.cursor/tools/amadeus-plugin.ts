@@ -370,11 +370,16 @@ function handleDrop(cmd: Extract<PluginCliCommand, { kind: "drop" }>, deps: Plug
   return { kind: "dropped", plugin: cmd.name, baselineRestored, recompiled: true };
 }
 
+// Exhaustive over PluginDiagnostic["status"] (the three engine statuses), so no
+// unreachable default branch: the compiler proves the map total.
+const DOCTOR_STATE_OF: Record<PluginDiagnostic["status"], DoctorLineState> = {
+  composed: "ok",
+  drift: "drift",
+  "recovery-pending": "recovery-pending",
+};
+
 function diagStateOf(status: PluginDiagnostic["status"]): DoctorLineState {
-  if (status === "composed") return "ok";
-  if (status === "drift") return "drift";
-  if (status === "recovery-pending") return "recovery-pending";
-  return "unknown";
+  return DOCTOR_STATE_OF[status];
 }
 
 function handleDoctor(cmd: Extract<PluginCliCommand, { kind: "doctor" }>, deps: PluginCliDeps): PluginCliResult {
