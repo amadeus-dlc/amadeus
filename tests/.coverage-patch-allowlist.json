@@ -121,7 +121,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-election.ts",
-    "lines": "273",
+    "lines": "315",
     "reason": "Defensive views-directory mkdirSync catch immediately after Store.create minted and created a fresh election directory. Normal create and view-write failures are covered; reaching this row requires a permission or filesystem race between Store.create and the views mkdir, and the CLI has no injectable filesystem seam.",
     "expiry": "remove when handleOpen gains an injectable filesystem seam for post-create views-directory failure"
   },

@@ -45,6 +45,7 @@ import {
   createSubagentTransport,
   distribute,
   normalizeAt,
+  reportDelivery,
 } from "./amadeus-election-transport";
 import { resolveProjectDir } from "./amadeus-lib";
 import { parseGoaLine } from "./amadeus-norm-metrics";
@@ -53,6 +54,7 @@ import {
   resolveElectionDir,
   Store,
   type StoreError,
+  type TimelineEvent,
   writeStoreFile,
 } from "./amadeus-election-store";
 
@@ -194,10 +196,46 @@ export function handleReport(
     if (t === null) return fail("invalid-transition: tallied reported but tally.json missing");
     if (t.result.kind === "hold") to = "hold";
   }
+  // Issue #1458: the distributed report is where the subagent transport's
+  // deferred records land. notify only books the outcomes it could observe
+  // (agmsg spawn exits); the default subagent path returns directives, so the
+  // record is minted here — after the conductor reports completion, never
+  // before (the "reported-by-conductor" provenance the transport documents).
+  if (result === "distributed") {
+    const booked = bookReportedDeliveries(root, electionId, loaded.value.election.voters);
+    if (!booked.ok) return storeFail("appendTimeline", booked.error);
+  }
   const set = Store.setState(root, electionId, to);
   if (!set.ok) return storeFail("setState", set.error);
   out({ committed: result, state: to });
   return 0;
+}
+
+// Mint one conductor-reported DeliveryRecord per voter that notify could not
+// book itself, and enter it on the timeline. Voters already carrying a
+// distributed event (an agmsg send that exited 0) are skipped, so a mixed or
+// re-run distribution never double-books.
+function bookReportedDeliveries(
+  root: string,
+  electionId: string,
+  voters: readonly string[],
+): Result<void, StoreError> {
+  const timeline: unknown = readTimeline(root, electionId);
+  const events: TimelineEvent[] = Array.isArray(timeline) ? timeline : [];
+  const alreadyBooked = new Set(events.filter((e) => e.kind === "distributed").map((e) => e.voter));
+  const at = new Date().toISOString();
+  for (const voter of voters) {
+    if (alreadyBooked.has(voter)) continue;
+    const record = reportDelivery(voter, at);
+    const appended = Store.appendTimeline(root, electionId, {
+      kind: "distributed",
+      at: record.at,
+      detail: `delivered via ${record.transport}: ${record.voter} (${record.provenance})`,
+      voter: record.voter,
+    });
+    if (!appended.ok) return appended;
+  }
+  return ok(undefined);
 }
 
 // hold-resolved commits the human judgement: the reason (from the fixed tally)
