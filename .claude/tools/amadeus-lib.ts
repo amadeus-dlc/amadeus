@@ -164,6 +164,16 @@ export const PHASE_NUMBERS: Record<string, Phase> = {
   "4": "operation",
 };
 
+// Canonicalise a phase name or number to its lowercase phase name, or null.
+// Object.hasOwn gates the PHASE_NUMBERS lookup so prototype-chain members
+// (`constructor`, `__proto__`) fall on the null path (#744). Lifted from the
+// three per-tool copies (#833).
+export function ownPhase(input: string): string | null {
+  const lower = input.toLowerCase();
+  if (Object.hasOwn(PHASE_NUMBERS, lower)) return PHASE_NUMBERS[lower];
+  return (PHASES as readonly string[]).includes(lower) ? lower : null;
+}
+
 // Compatibility facade: callers keep importing these established symbols from
 // amadeus-lib while their implementation remains isolated in amadeus-harness.
 export const HARNESS_DIR_TO_TYPE = CANONICAL_HARNESS_DIR_TO_TYPE;
@@ -181,6 +191,27 @@ export function detectHarnessType(): import("./amadeus-harness.ts").HarnessType 
 }
 
 // --- Project dir resolution ---
+
+// Strip every `--project-dir <path>` pair from an argv slice, returning the
+// last value seen and the remaining args. Shared CLI contract for sibling tools
+// that amadeus-bolt.ts's spawnSibling invokes as
+//   bun run <tool> --project-dir <pd> <subcommand> ...
+export function stripProjectDir(argv: string[]): {
+  projectDirArg?: string;
+  rest: string[];
+} {
+  let projectDirArg: string | undefined;
+  const rest: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === "--project-dir" && i + 1 < argv.length) {
+      projectDirArg = argv[i + 1];
+      i++;
+    } else {
+      rest.push(argv[i]);
+    }
+  }
+  return { projectDirArg, rest };
+}
 
 export function resolveProjectDir(explicitDir?: string): string {
   // 1. Explicit --project-dir argument
@@ -1374,6 +1405,18 @@ export function relativeRecordDir(
   if (slug === null) return null;
   return `amadeus/spaces/${sp}/intents/${slug}`;
 }
+
+// The KNOWN SET of stages whose artifacts live in the durable, space-level
+// code knowledge base (`amadeus/spaces/<space>/codekb/<repo>/`) rather than under
+// a per-intent record dir. Keyed on the slug ALONE — deliberately NOT a stage
+// frontmatter marker: amadeus-stage-schema.ts OPTIONAL_FIELDS omits `codekb`, so a
+// `codekb: true` field would trip the schema's unknown-key rule and fail the
+// stage compile. reverse-engineering is the sole member today (it builds the
+// brownfield code understanding the whole space reuses); a future codekb stage
+// joins by adding its slug here, no schema change. Single source of truth for
+// amadeus-orchestrate (artifact placement), amadeus-state (artifact guard), and
+// amadeus-sensor (consumes resolution).
+export const KNOWN_CODEKB_STAGES: ReadonlySet<string> = new Set(["reverse-engineering"]);
 
 // `amadeus/spaces/<space>/codekb/<repo>/` — the durable per-repo code
 // knowledge base, a space-level sibling of memory/knowledge/intents (vision
