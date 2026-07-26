@@ -37,6 +37,8 @@ import {
   diagnosePlugins,
   discoverPlugins,
   type DropEntry,
+  type DropsRecord,
+  readDropsRecord,
   recordPluginDrops,
   type HostSnapshot,
   type HostStage,
@@ -402,6 +404,157 @@ function handleStatus(cmd: Extract<PluginCliCommand, { kind: "status" }>, deps: 
   const record = backend.readComposition();
   const installed = deps.discoverPlugins(pluginSourceRootOf(hostRoot)).filter((d) => d.manifest !== null).length;
   return { kind: "status", installed, composed: record.plugins.size, revision: backend.auditCount() };
+}
+
+// ---------------------------------------------------------------------------
+// U5 doctor-observability — the plugin section of `/amadeus --doctor`.
+//
+// A read-only PROJECTION of three existing engine reads (business-logic-model.md
+// branch table is the authoritative source — BR-U5-8): diagnosePlugins' return
+// value, the composition record's revision, and the DropsRecord. The doctor makes
+// NO new judgment and NO new scan (BR-U5-1): every line is a mechanical mapping,
+// and any state value outside the mapping is surfaced loudly as an `unknown` line
+// that fails the check (fail-closed — never a silent read-past, BR-U5-8).
+//
+// Design-signature reconciliation (declared): functional-design names the pure
+// projection `buildDoctorPluginSection(diag, record, judgment)`. The authoritative
+// 8-row branch table also requires the DropsRecord (the SOLE source of the
+// degraded/advisory states — domain-entities.md) and the record's revision (the
+// `composed@<rev>` line). Those two inputs cannot be realized from `record` alone,
+// so the observation bundles diag + drops + revision + activation. Bundling keeps
+// the function a pure port-free projection (performance-design's structural
+// acceptance — it reads nothing beyond its argument). The U6 ActivationJudgment is
+// display-only here (U5 owns no activation logic); until U6 lands the handler
+// passes `activation: null`.
+// ---------------------------------------------------------------------------
+
+// The U6 (activation-policy) judgment, reduced to the one fact this Unit displays.
+// U6 owns the judgment logic; U5 only renders whether the spec-hash changed.
+export type DoctorActivationInput = { readonly specHashChanged: boolean };
+
+// Read-only observation of the host's plugin state (the projection input). No
+// Buffers / composition ledger — only the fields the branch table maps.
+export type DoctorPluginObservation = {
+  readonly diagnostics: readonly PluginDiagnostic[];
+  readonly drops: DropsRecord;
+  readonly revision: number;
+  readonly activation: DoctorActivationInput | null;
+};
+
+// The projected --doctor plugin section. `installed` is the discovered-plugin
+// count (diagnosePlugins-derived — no invented count); `lines` is one DoctorLine
+// per plugin diagnostic plus one per DropsRecord entry; `activation` is the U6
+// display line (null when absent). The exit contribution is carried per row (a
+// failing DoctorLine state → a pass:false row that feeds the existing doctor
+// failed-count aggregate), so no separate exitContribution field is stored — an
+// unconsumed field would be documentation-fiction (construction.md).
+export type DoctorPluginSection = {
+  readonly installed: number;
+  readonly lines: readonly DoctorLine[];
+  readonly activation: string | null;
+};
+
+// A rendered doctor row (structurally the {pass,label} prefix of DoctorCheck).
+export type DoctorPluginRow = { readonly pass: boolean; readonly label: string };
+
+// The engine's real diagnostic statuses and drop severities. Membership is checked
+// at RUNTIME, not by the compile-time union: dropsFromJson casts on-disk JSON
+// without validating `severity`, and a future engine could add a status — either
+// path can carry a value outside the union, which must map to `unknown` (fail-
+// closed) rather than be trusted or silently dropped.
+const KNOWN_DIAG_STATUSES: ReadonlySet<string> = new Set(["composed", "drift", "recovery-pending"]);
+const KNOWN_DROP_SEVERITIES: ReadonlySet<string> = new Set(["degraded", "advisory"]);
+
+// A DoctorLine state fails the doctor check when it signals an unresolved or
+// unrecognized condition. drift and advisory are visible-but-passing; ok passes.
+function isFailingPluginState(state: DoctorLineState): boolean {
+  return state === "degraded" || state === "recovery-pending" || state === "unknown";
+}
+
+function diagnosticToDoctorLine(d: PluginDiagnostic, revision: number): DoctorLine {
+  if (!KNOWN_DIAG_STATUSES.has(d.status)) {
+    return { plugin: d.plugin, state: "unknown", detail: `status ${d.status}` };
+  }
+  if (d.status === "composed") return { plugin: d.plugin, state: "ok", detail: `composed@${revision}` };
+  if (d.status === "recovery-pending") {
+    return { plugin: d.plugin, state: "recovery-pending", detail: "run compose to recover" };
+  }
+  return { plugin: d.plugin, state: "drift", detail: d.observations.join("; ") };
+}
+
+function dropEntryToDoctorLine(plugin: string, entry: DropEntry): DoctorLine {
+  if (!KNOWN_DROP_SEVERITIES.has(entry.severity)) {
+    return { plugin, state: "unknown", detail: `severity ${entry.severity}: ${entry.surface}` };
+  }
+  return { plugin, state: entry.severity, detail: entry.surface };
+}
+
+// Pure projection: observation → doctor plugin section (business-logic-model
+// branch table). Reads nothing beyond its argument; the frozen observation is
+// never mutated (drop entries are copied into a fresh sorted array).
+export function buildDoctorPluginSection(obs: DoctorPluginObservation): DoctorPluginSection {
+  const lines: DoctorLine[] = [];
+  for (const d of obs.diagnostics) lines.push(diagnosticToDoctorLine(d, obs.revision));
+  const dropPlugins = [...obs.drops.plugins.entries()].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+  for (const [plugin, entries] of dropPlugins) {
+    for (const entry of entries) lines.push(dropEntryToDoctorLine(plugin, entry));
+  }
+  const activation = obs.activation?.specHashChanged ? "formal-model-check: spec-hash CHANGED" : null;
+  return { installed: obs.diagnostics.length, lines, activation };
+}
+
+// The display string for one plugin DoctorLine (branch table display forms).
+// Exhaustive over DoctorLineState — the compiler proves every state is rendered.
+export function formatDoctorPluginLine(line: DoctorLine): string {
+  switch (line.state) {
+    case "ok":
+      return `Plugin ${line.plugin}: ${line.detail} [ok]`;
+    case "drift":
+      return `Plugin ${line.plugin}: [drift: ${line.detail}]`;
+    case "recovery-pending":
+      return `Plugin ${line.plugin}: [recovery-pending: ${line.detail}]`;
+    case "degraded":
+      return `Plugin ${line.plugin}: [degraded: ${line.detail}]`;
+    case "advisory":
+      return `Plugin ${line.plugin}: [advisory: ${line.detail}]`;
+    case "unknown":
+      return `Plugin ${line.plugin}: [unknown: ${line.detail}]`;
+  }
+}
+
+// Pure render: section → doctor rows for the --doctor report. A 0-plugin host
+// (no diagnostics and no drops) degrades to a single passing line (BR-U5-4), so
+// the plugin section adds exactly one row and never flips a healthy exit.
+export function doctorPluginRows(section: DoctorPluginSection): readonly DoctorPluginRow[] {
+  if (section.lines.length === 0) {
+    return [{ pass: true, label: "Plugins: 0 installed" }];
+  }
+  const rows: DoctorPluginRow[] = section.lines.map((line) => ({
+    pass: !isFailingPluginState(line.state),
+    label: formatDoctorPluginLine(line),
+  }));
+  if (section.activation !== null) {
+    rows.push({ pass: true, label: `Plugins (activation) ${section.activation}` });
+  }
+  return rows;
+}
+
+// Read the plugin observation for a host root (read-only). The composition,
+// journal, and drops reads are all existsSync-guarded (createNodeBackend /
+// readDropsRecord), so a pristine project creates nothing. The full host walk
+// (buildHostSnapshot) is skipped unless a plugin is composed or a recovery
+// journal exists — the 0-plugin common case pays only three existsSync probes
+// (BR-U5-4 / performance-design). U6 activation is null until that Unit lands.
+export function readDoctorPluginObservation(hostRoot: string): DoctorPluginObservation {
+  const backend = createNodeBackend(hostRoot);
+  const record = backend.readComposition();
+  const journalPending = backend.readJournal() !== undefined;
+  const revision = backend.auditCount();
+  const drops = readDropsRecord(hostRoot);
+  const diagnostics = record.plugins.size > 0 || journalPending
+    ? diagnosePlugins(buildHostSnapshot(hostRoot, backend), journalPending)
+    : [];
+  return { diagnostics, drops, revision, activation: null };
 }
 
 // ---------------------------------------------------------------------------
