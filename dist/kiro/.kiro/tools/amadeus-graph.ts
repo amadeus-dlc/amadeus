@@ -1820,8 +1820,20 @@ function readPluginStageFiles(hostRoot: string): PluginStageRead[] {
   const pluginsRoot = join(hostReal, "plugins");
   const budget = { used: 0 };
   const reads: PluginStageRead[] = [];
-  const pluginNames = readdirSync(pluginsRoot)
-    .filter((n) => statSync(join(pluginsRoot, n)).isDirectory())
+  // Dirent-based enumeration: isDirectory() needs no extra stat syscall per
+  // name (the per-name existsSync+statSync variant regressed the discovery
+  // benchmark past its 20% budget under coverage instrumentation). Only a
+  // symlink needs the follow check, where existsSync-first keeps a dangling
+  // symlink from escaping as a raw ENOENT (#1462) while a symlink to a real
+  // plugin dir still resolves. Same guard shape the stages check uses.
+  const pluginNames = readdirSync(pluginsRoot, { withFileTypes: true })
+    .filter((entry) => {
+      if (entry.isDirectory()) return true;
+      if (!entry.isSymbolicLink()) return false;
+      const abs = join(pluginsRoot, entry.name);
+      return existsSync(abs) && statSync(abs).isDirectory();
+    })
+    .map((entry) => entry.name)
     .sort();
   for (const name of pluginNames) {
     const stagesRoot = join(pluginsRoot, name, "stages");
