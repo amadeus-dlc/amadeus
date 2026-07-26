@@ -172,7 +172,9 @@ describe("solo standing grant — six-harness contract projection", () => {
     // The forbidden degradations (HR-04e).
     expect(text).not.toContain("process.pid");
     expect(text).not.toContain("activeIntent");
-    // The plugin lands on OpenCode's own discovery path, next to its vocabulary.
-    expect(existsSync(join(dir, "plugin", "amadeus-opencode-vocab.ts"))).toBe(true);
+    // OpenCode executes every module on its plugin discovery path. Keep helper
+    // modules out of that directory so they are not invoked as plugins.
+    expect(existsSync(join(dir, "plugin", "amadeus-opencode-vocab.ts"))).toBe(false);
+    expect(existsSync(join(dir, "lib", "amadeus-opencode-vocab.ts"))).toBe(true);
   });
 });

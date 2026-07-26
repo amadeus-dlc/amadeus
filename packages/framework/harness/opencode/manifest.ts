@@ -54,13 +54,13 @@ const manifest: HarnessManifest = {
   // harness/opencode/. projectRoot routes it to dist/opencode/.gitignore + the
   // --check drift guard. Byte-identical to codex's dot-gitignore (workspace
   // layout is harness-neutral).
-  // (plus the .opencode/plugin/ prompt-hook mint site — OpenCode's extension
-  // surface is JS plugins loaded from `.opencode/plugin/`, so the authored
-  // plugin and its measured payload vocabulary ship there.)
+  // (plus the .opencode/plugin/ prompt-hook mint site and its helper under
+  // .opencode/lib/ — OpenCode executes every module under `.opencode/plugin/`,
+  // so only the actual plugin may ship on that discovery path.)
   harnessFiles: [
     { src: "dot-gitignore", dst: ".gitignore", projectRoot: true },
     { src: "plugin/amadeus-opencode-plugin.ts", dst: "plugin/amadeus-opencode-plugin.ts" },
-    { src: "plugin/amadeus-opencode-vocab.ts", dst: "plugin/amadeus-opencode-vocab.ts" },
+    { src: "lib/amadeus-opencode-vocab.ts", dst: "lib/amadeus-opencode-vocab.ts" },
   ],
 
   rulesRename: "amadeus-rules",
