@@ -6,11 +6,15 @@
 // Technique: example-based.
 //
 // Source (dist/claude/.claude/tools/amadeus-lib.ts), P9 end state — NO flat
-// amadeus-docs/ fallback. With no intent record on disk, both builders resolve
-// under the BARE SPACE record root (amadeus/spaces/<space>/intents/):
-//   stateFilePath(d) => join(d, "amadeus/spaces/default/intents", "amadeus-state.md")
-//   auditFilePath(d) => join(d, "amadeus/spaces/default/intents", "audit", "<host>-<clone>.md")
-// (audit is now a per-clone SHARD under audit/, not a single audit.md.)
+// amadeus-docs/ fallback. The two builders differ on the no-intent case:
+//   stateFilePath(d)         => join(d, "amadeus/spaces/default/intents", "amadeus-state.md")
+//                               (the bare space root — every hook probes its
+//                               existence to answer "is there a workflow?")
+//   auditFilePath(d, intent) => join(d, "amadeus/spaces/default/intents", intent,
+//                               "audit", "<host>-<clone>.md"), and with NO intent
+//                               resolved it REFUSES (#1377) rather than orphaning
+//                               a shard in the bare root.
+// (audit is a per-clone SHARD under audit/, not a single audit.md.)
 //
 // Why this file exists: both builders are one-character-typo-fragile. A silent
 // edit of "intents"->"intent", or "amadeus-state.md"->"state.md", or a dropped
@@ -41,8 +45,13 @@ const PROJ = IS_WINDOWS ? "C:\\Users\\amadeus\\myproject" : "/home/user/myprojec
 const INTENTS_ROOT = join(PROJ, "amadeus", "spaces", "default", "intents");
 const EXPECTED_STATE = join(INTENTS_ROOT, "amadeus-state.md");
 const EXPECTED_STATE_SUFFIX = `intents${SEP}amadeus-state.md`;
-const EXPECTED_AUDIT_DIR = join(INTENTS_ROOT, "audit");
 const EXPECTED_DATA_SENTINEL = `${SEP}intents${SEP}`;
+// An EXPLICIT intent selector short-circuits activeIntent()'s on-disk lookup, so
+// the audit builder stays a pure function on this synthetic dir. It needs one:
+// unlike stateFilePath it has no bare-root fallback and refuses an unresolved
+// intent (#1377).
+const INTENT = "auth-deadbeef";
+const EXPECTED_AUDIT_DIR = join(INTENTS_ROOT, INTENT, "audit");
 
 describe("stateFilePath()", () => {
   test("returns the exact full path for a known absolute projectDir", () => {
@@ -75,25 +84,32 @@ describe("stateFilePath()", () => {
 });
 
 describe("auditFilePath()", () => {
-  test("resolves a per-clone shard under the intents audit/ dir", () => {
+  test("resolves a per-clone shard under the record's audit/ dir", () => {
     // The audit leaf is the non-deterministic shard name (<host>-<clone>.md),
     // so pin the DIR + the .md extension rather than a fixed audit.md.
-    const audit = auditFilePath(PROJ);
+    const audit = auditFilePath(PROJ, INTENT);
     expect(audit.startsWith(`${EXPECTED_AUDIT_DIR}${SEP}`)).toBe(true);
     expect(audit.endsWith(".md")).toBe(true);
   });
 
   test("returns an absolute path when projectDir is absolute", () => {
-    expect(isAbsolute(auditFilePath(PROJ))).toBe(true);
+    expect(isAbsolute(auditFilePath(PROJ, INTENT))).toBe(true);
   });
 
   test("preserves the projectDir prefix verbatim", () => {
-    expect(auditFilePath(PROJ).startsWith(PROJ)).toBe(true);
+    expect(auditFilePath(PROJ, INTENT).startsWith(PROJ)).toBe(true);
   });
 
   test("never falls back to the flat amadeus-docs/audit.md (P9 end state)", () => {
-    expect(auditFilePath(PROJ)).not.toBe(join(PROJ, "amadeus-docs", "audit.md"));
-    expect(auditFilePath(PROJ).includes(`${SEP}amadeus-docs${SEP}`)).toBe(false);
+    expect(auditFilePath(PROJ, INTENT)).not.toBe(join(PROJ, "amadeus-docs", "audit.md"));
+    expect(auditFilePath(PROJ, INTENT).includes(`${SEP}amadeus-docs${SEP}`)).toBe(false);
+  });
+
+  // #1377: unlike stateFilePath, the audit builder has NO bare-root fallback —
+  // a shard written under the bare intents root orphans its events from the
+  // intent they belong to, so an unresolved intent is refused instead.
+  test("refuses when no intent resolves (never the bare intents root)", () => {
+    expect(() => auditFilePath(PROJ)).toThrow(/bare intents root/);
   });
 });
 
@@ -103,7 +119,7 @@ describe("stateFilePath() / auditFilePath() relationship", () => {
     // same file. They share the intents/ data root yet resolve to distinct
     // paths (state is a file directly under it; audit is a shard under audit/).
     const state = stateFilePath(PROJ);
-    const audit = auditFilePath(PROJ);
+    const audit = auditFilePath(PROJ, INTENT);
 
     expect(state).not.toBe(audit);
     expect(state.includes(EXPECTED_DATA_SENTINEL)).toBe(true);

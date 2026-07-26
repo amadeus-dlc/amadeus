@@ -291,8 +291,11 @@ describe("t33 start/complete: JSON ack + completion audit", () => {
   });
 
   // Test 7: complete emits BOLT_COMPLETED
+  // mkStartedProject, not mkProj: the audit shard only resolves inside a record,
+  // and a dir counts as one once it holds amadeus-state.md (#1377). Emitting
+  // BOLT_COMPLETED with no resolvable workflow is the #676 hazard, not a fixture.
   test("complete emits BOLT_COMPLETED", () => {
-    proj = mkProj();
+    proj = mkStartedProject();
     runBolt(proj, "complete", "--name", "auth-service", "--batch", "1");
     expect(readAudit(proj)).toMatch(/^\*\*Event\*\*: BOLT_COMPLETED/m);
   });
@@ -306,16 +309,18 @@ describe("t33 fail: BOLT_FAILED audit fields", () => {
     proj = "";
   });
 
-  // Test 8: fail emits BOLT_FAILED with error summary
+  // Test 8: fail emits BOLT_FAILED with error summary (mkStartedProject — see
+  // test 7: an audit shard resolves only inside a record, #1377)
   test("fail records Error summary", () => {
-    proj = mkProj();
+    proj = mkStartedProject();
     runBolt(proj, "fail", "--name", "auth-service", "--error", "Compilation failed");
     expect(readAudit(proj)).toContain("**Error summary**: Compilation failed");
   });
 
-  // Test 9: fail --succeeded-siblings records sibling bolts
+  // Test 9: fail --succeeded-siblings records sibling bolts (mkStartedProject —
+  // see test 7)
   test("fail records Succeeded siblings", () => {
-    proj = mkProj();
+    proj = mkStartedProject();
     runBolt(
       proj,
       "fail",

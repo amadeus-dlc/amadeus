@@ -70,24 +70,26 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import { toPortablePath } from "../harness/fixtures.ts";
+import { DEFAULT_RECORD_DIR, toPortablePath } from "../harness/fixtures.ts";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
-// P9: with no intent cursor seeded, the sensor dispatcher resolves the BARE
-// space record root (docsRoot -> spaceRecordRoot) at amadeus/spaces/default/
-// intents/ for BOTH the per-clone audit SHARD (audit/<host>-<clone>.md) and the
-// detail tree (.amadeus-sensors/<stage>/...) — the flat amadeus-docs/ root is retired.
+// P9: the sensor dispatcher resolves the per-intent RECORD dir under
+// amadeus/spaces/default/intents/ for BOTH the per-clone audit SHARD
+// (audit/<host>-<clone>.md) and the detail tree (.amadeus-sensors/<stage>/...)
+// — the flat amadeus-docs/ root is retired. The record is a dir UNDER intents/,
+// never the bare intents root: auditFilePath() refuses to resolve a shard when
+// no intent resolves (#1377), and a lone record needs no active-intent cursor.
 // The SENSED output files still live wherever the test writes them (e.g.
 // amadeus-docs/test.md), so the dispatcher's project-relative `Output path` field
 // is unchanged. Audit reads go through readAllAuditShards (the subprocess mints
 // its own clone-id, distinct from the test process's memoized one, so read the
 // whole audit/ dir rather than a single memoized shard path).
-const RECORD_REL = join("amadeus", "spaces", "default", "intents");
+const RECORD_REL = join("amadeus", "spaces", "default", "intents", DEFAULT_RECORD_DIR);
 function recordRoot(proj: string): string {
   return join(proj, RECORD_REL);
 }
 // Posix record prefix for the relative detail-path audit fields.
-const RP = "amadeus/spaces/default/intents";
+const RP = `amadeus/spaces/default/intents/${DEFAULT_RECORD_DIR}`;
 
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
@@ -216,6 +218,18 @@ function makeProj(): string {
   // though the fire succeeded. Mirrors createTestProject() (harness/fixtures.ts).
   const proj = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t92-proj-")));
   mkdirSync(join(proj, "amadeus-docs"), { recursive: true });
+  // The record the dispatcher resolves. A dir only counts as one once it holds
+  // amadeus-state.md (the header-only stub production birthIntent() writes), and
+  // the audit shard resolves nowhere until it does (#1377).
+  mkdirSync(recordRoot(proj), { recursive: true });
+  writeFileSync(join(recordRoot(proj), "amadeus-state.md"), "# AI-DLC State Tracking\n", "utf-8");
+  // The upstream artifact market-research consumes. presentConsumes() threads
+  // only consumes that EXIST under the producer's dir, so the consume-resolution
+  // and failing-market-research cases need it on disk; the intent-capture cases
+  // (consumes: []) are unaffected.
+  const producerDir = join(recordRoot(proj), "ideation", "intent-capture");
+  mkdirSync(producerDir, { recursive: true });
+  writeFileSync(join(producerDir, "intent-statement.md"), "# Intent Statement\n", "utf-8");
   tempDirs.push(proj);
   return proj;
 }

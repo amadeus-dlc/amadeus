@@ -277,7 +277,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-lib.ts",
-    "lines": "3926-3927",
+    "lines": "3944-3945",
     "reason": "Defensive `catch {}` in findActiveStandingGrant that returns null so a verification defect can never wedge a gate (design contract E-SDG: throws collapse to per-gate approval, never fail-open at the check). No natural corpus input throws inside the scan (listIntentDirs / readAllAuditShards / StandingGrant.parse / verifyDelegatedProvenance all swallow their own IO errors), so the catch arm is unreachable by a black-box test; the happy scan and every classification branch are covered in-process by t-standing-grant.",
     "expiry": "remove if the scan grows a throw path a test can inject"
   },
@@ -457,7 +457,7 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-lib.ts",
-    "lines": "5565-5567",
+    "lines": "5583-5585",
     "reason": "Race-loser arm after a successful stale-mutex steal: the fresh mkdir fails only when a competitor re-created the mutex in the same sub-syscall window; unreachable deterministically without pausing mid-function. Fail-safe (returns false; the waiter retries).",
     "expiry": "remove if acquireReapMutex gains an injected fs port"
   },

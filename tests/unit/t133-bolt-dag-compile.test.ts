@@ -65,7 +65,11 @@ import { auditFilePath } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 // record root (docsRoot -> spaceRecordRoot) at amadeus/spaces/default/intents/.
 // State, runtime-graph, the unit-dependency artefact, and the audit shard all
 // live under it (the flat amadeus-docs/ root is retired — there is no fallback).
-const RECORD_REL = join("amadeus", "spaces", "default", "intents");
+// The fixture's per-intent record. It must be a real intent dir, not the bare
+// intents root: no amadeus-state.md and no audit/ ever lives directly there, and
+// auditFilePath() refuses to resolve a shard for an unresolved intent (#1377).
+// A lone record resolves with no active-intent cursor (see activeIntent()).
+const RECORD_REL = join("amadeus", "spaces", "default", "intents", "t133-fixture-deadbeef");
 function recordRoot(proj: string): string {
   return join(proj, RECORD_REL);
 }
@@ -126,8 +130,8 @@ function makeProject(): string {
   mkdirSync(join(proj, "amadeus"), { recursive: true });
   writeFileSync(join(proj, "amadeus", ".amadeus-clone-id"), `${FIXTURE_CLONE_ID}\n`, "utf-8");
   // Seed the DETERMINISTIC audit shard the compile tool resolves
-  // (auditFilePath -> the bare space record root's audit/<host>-<clone>.md) so
-  // its readAllAuditShards() sees the WORKFLOW_STARTED header.
+  // (auditFilePath -> the record's audit/<host>-<clone>.md) so its
+  // readAllAuditShards() sees the WORKFLOW_STARTED header.
   const shard = auditFilePath(proj);
   mkdirSync(dirname(shard), { recursive: true });
   writeFileSync(shard, AUDIT_MD, "utf-8");

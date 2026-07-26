@@ -38,21 +38,39 @@ import {
 // --- Per-file temp roots, torn down in afterAll ---------------------------
 const tmpRoots: string[] = [];
 
-// Make a fresh project dir. The source's ensureAuditFile() will lazily create
-// the per-intent audit SHARD dir + shard (seeded "# AI-DLC Audit Log\n") on
-// first append, so a bare dir is a valid project. With no intent resolved the
-// shard lands under the bare space record root (amadeus/spaces/default/intents/
-// audit/<host>-<clone>.md — see auditFilePath). `seedAuditMd` lets a case
+// The lone intent record every fixture project carries. An audit shard only
+// resolves inside an intent's record (#1377 — auditFilePath refuses the bare
+// intents root), so a project with no intent is not a place audit can be
+// appended at all; that refusal has its own case below.
+const FIXTURE_INTENT = "t111-fixture-deadbeef";
+
+// Make a fresh project dir holding one intent record. The source's
+// ensureAuditFile() lazily creates that intent's audit SHARD dir + shard
+// (seeded "# AI-DLC Audit Log\n") on first append. `seedAuditMd` lets a case
 // pre-seed THAT shard the way the source expects when it wants to assert the
 // seed survives.
 function freshProject(seedAuditMd = false): string {
   const root = mkdtempSync(join(tmpdir(), "amadeus-t111-"));
   tmpRoots.push(root);
+  // A record dir is one holding amadeus-state.md; a lone record resolves with
+  // no active-intent cursor (see activeIntent()).
+  const record = join(root, "amadeus", "spaces", "default", "intents", FIXTURE_INTENT);
+  mkdirSync(record, { recursive: true });
+  writeFileSync(join(record, "amadeus-state.md"), "# AI-DLC Workflow State\n", "utf-8");
   if (seedAuditMd) {
     const shard = auditFilePath(root);
     mkdirSync(dirname(shard), { recursive: true });
     writeFileSync(shard, "# AI-DLC Audit Log\n", "utf-8");
   }
+  return root;
+}
+
+// A project with NO intent record — the #1377 shape (a cursor-less worktree, or
+// a shell before auto-birth).
+function projectWithoutIntent(): string {
+  const root = mkdtempSync(join(tmpdir(), "amadeus-t111-noint-"));
+  tmpRoots.push(root);
+  mkdirSync(join(root, "amadeus", "spaces", "default", "intents"), { recursive: true });
   return root;
 }
 
@@ -228,6 +246,43 @@ describe("appendAuditEntry — locked variant", () => {
     const proj = freshProject();
     expect(() => appendAuditEntry("bogus", {}, proj)).toThrow();
     expect(auditShardExists(proj)).toBe(false); // shard never created
+  });
+
+  // #1377 regression. Before the fix, an emitter that threads no --intent on a
+  // clone where none resolves (a fresh worktree with no active-intent cursor)
+  // reported {"appended":true} and dropped its shard into the BARE intents root
+  // — orphaning the events from any intent. Both variants must now refuse, and
+  // refuse BEFORE ensureAuditFile()'s recursive mkdir touches disk.
+  test("refuses to append when no intent resolves — never writes intents/audit/", () => {
+    const proj = projectWithoutIntent();
+    const bareAuditDir = join(proj, "amadeus", "spaces", "default", "intents", "audit");
+
+    expect(() => appendAuditEntry("RULE_LEARNED", { Stage: "x" }, proj)).toThrow(
+      /bare intents root/,
+    );
+    expect(existsSync(bareAuditDir)).toBe(false);
+
+    expect(() => appendAuditEntryUnlocked("RULE_LEARNED", { Stage: "x" }, proj)).toThrow(
+      /bare intents root/,
+    );
+    expect(existsSync(bareAuditDir)).toBe(false);
+  });
+
+  test("naming the intent explicitly still appends on a cursor-less project", () => {
+    // The refusal is about an UNRESOLVED intent, not about the cursor: an
+    // explicit selector is a resolution, so the append proceeds normally.
+    const proj = projectWithoutIntent();
+    const record = join(proj, "amadeus", "spaces", "default", "intents", "explicit-11111111");
+    mkdirSync(join(record, "sub"), { recursive: true });
+    writeFileSync(join(record, "amadeus-state.md"), "# AI-DLC Workflow State\n", "utf-8");
+    // A second record keeps lone-intent resolution from kicking in.
+    const other = join(proj, "amadeus", "spaces", "default", "intents", "other-22222222");
+    mkdirSync(other, { recursive: true });
+    writeFileSync(join(other, "amadeus-state.md"), "# AI-DLC Workflow State\n", "utf-8");
+
+    expect(() => appendAuditEntry("RULE_LEARNED", { Stage: "x" }, proj)).toThrow();
+    appendAuditEntry("RULE_LEARNED", { Stage: "x" }, proj, "explicit-11111111");
+    expect(readAllAuditShards(proj, "explicit-11111111")).toContain("**Event**: RULE_LEARNED\n");
   });
 });
 

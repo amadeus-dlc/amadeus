@@ -76,18 +76,19 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { toPortablePath } from "../harness/fixtures.ts";
+import { DEFAULT_RECORD_DIR, toPortablePath } from "../harness/fixtures.ts";
 import {
   auditFilePath,
   readAllAuditShards,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
-// P9: with no intent cursor seeded, doctor's appendAuditEvent resolves the BARE
-// space record root's per-clone audit SHARD (auditFilePath -> amadeus/spaces/
-// default/intents/audit/<host>-<clone>.md) — the flat amadeus-docs/audit.md is
-// retired. Seed + read THAT shard. The single-clone fixture means the shard is
-// the whole trail (no merge needed).
-const RECORD_REL = join("amadeus", "spaces", "default", "intents");
+// P9: doctor's appendAuditEvent resolves the RECORD's per-clone audit SHARD
+// (auditFilePath -> <record>/audit/<host>-<clone>.md) — the flat
+// amadeus-docs/audit.md is retired. Seed + read THAT shard. The single-clone
+// fixture means the shard is the whole trail (no merge needed). The record is a
+// dir UNDER intents/, never the bare intents root: auditFilePath() refuses to
+// resolve a shard when no intent resolves (#1377).
+const RECORD_REL = join("amadeus", "spaces", "default", "intents", DEFAULT_RECORD_DIR);
 function recordRoot(proj: string): string {
   return join(proj, RECORD_REL);
 }
@@ -123,6 +124,10 @@ function runDoctor(rulesDir: string): DoctorResult {
   const proj = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t105-proj-")));
   tempDirs.push(proj);
   mkdirSync(recordRoot(proj), { recursive: true });
+  // A dir counts as a record — and an audit shard resolves at all (#1377) — only
+  // once it holds amadeus-state.md, the header-only stub production birthIntent()
+  // writes at mint time.
+  writeFileSync(join(recordRoot(proj), "amadeus-state.md"), "# AI-DLC State Tracking\n", "utf-8");
   // Seed the per-clone audit shard so doctor's GUARDRAIL_LOADED / HEALTH_CHECKED
   // emits fire. As of v0.6.10 doctor is COLD-SAFE: on a project with no audit
   // shard it prints the health report and creates NOTHING (it no longer

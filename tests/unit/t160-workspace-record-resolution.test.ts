@@ -187,7 +187,30 @@ describe("t160 path re-root — per-intent layout vs bare space root (P9 end sta
     const intentsRoot = join(proj, "amadeus", "spaces", "default", "intents");
     expect(stateFilePath(proj)).toBe(join(intentsRoot, "amadeus-state.md"));
     expect(stateFilePath(proj)).not.toBe(join(proj, "amadeus-docs", "amadeus-state.md"));
-    expect(auditFilePath(proj)).toBe(join(intentsRoot, "audit", auditShardName(proj)));
+  });
+
+  // #1377 — the audit shard has NO bare-root fallback. stateFilePath keeps one
+  // (every hook probes `existsSync(stateFilePath(...))` to decide "is there a
+  // workflow?"), but a shard written under the bare intents root orphans its
+  // events from the intent they belong to, so the path helper refuses instead.
+  test("no intent resolves → auditFilePath refuses (never the bare intents root)", () => {
+    seedShell(proj); // a SEED shell, no intent born yet
+    const intentsRoot = join(proj, "amadeus", "spaces", "default", "intents");
+    expect(() => auditFilePath(proj)).toThrow(/bare intents root/);
+    // Fail-closed BEFORE any side-effect: no audit/ dir is left behind.
+    expect(existsSync(join(intentsRoot, "audit"))).toBe(false);
+  });
+
+  test("two intents with no cursor → auditFilePath refuses (ambiguous, not bare root)", () => {
+    seedShell(proj);
+    seedIntent(proj, "alpha-11111111");
+    seedIntent(proj, "beta-22222222");
+    expect(recordDir(proj)).toBeNull();
+    expect(() => auditFilePath(proj)).toThrow(/No intent resolved/);
+    // ...but naming one explicitly still resolves.
+    expect(auditFilePath(proj, "beta-22222222")).toBe(
+      join(proj, "amadeus", "spaces", "default", "intents", "beta-22222222", "audit", auditShardName(proj)),
+    );
   });
 
   test("new-layout intent (lone) → per-intent record dir", () => {
