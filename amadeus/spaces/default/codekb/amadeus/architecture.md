@@ -1,5 +1,116 @@
 # アーキテクチャ
 
+## metrics サブシステムの現況と可視化の挿入点（260726-metrics-visualization、現在）
+
+測定 ref: observed `1c43438df`（base `11f1ad61f`、距離 5）。以下の file:line はすべて同 commit の実ファイル直読による。**metrics サブシステムは区間内で完全に無変更**（`git diff --name-only 11f1ad61f 1c43438df -- scripts/ .github/` の出力 0 行）であり、本節の現況は区間より前から安定している。
+
+### 1. 3層パイプライン — writer / reader / pruner
+
+metrics サブシステムは `scripts/` 直下の3モジュール（合計 550 行）で構成され、**妥当性の定義を1箇所に集約**する設計になっている。
+
+| モジュール | 行数 | 役割 | 妥当性定義の所在 |
+| --- | --- | --- | --- |
+| `scripts/metrics-snapshot.ts` | 185 | writer — collectors 実行 → 原子的書き込み | `finite()` `:26-29`、16KB 上限 `:150` |
+| `scripts/metrics-timeseries.ts` | 236 | reader — parse → 系列構築 → プレーンテキスト描画 | `parseSnapshot` `:50`（7段 fail-closed）|
+| `scripts/metrics-retention.ts` | 129 | pruner — 古いスナップショットの剪定 | `parseSnapshot` を `:17` で **import**（private parser を持たない）|
+
+`metrics-retention.ts:6-9` の冒頭コメントがこの契約を明文化している — 「Validation reuses parseSnapshot from the sibling reader (no private parser), so writer, reader, and pruner agree on what a valid snapshot is.」。**可視化機能も同じ契約に従い、独自 parser を持たず `parseSnapshot` を import するのが既習様式**である。
+
+### 2. reader モジュールの「書かない」契約（AC-1c）
+
+`metrics-timeseries.ts:3-4` は verbatim で次を宣言する:
+
+> `// Prints per-collector timelines as plain-text tables. Never writes: this`
+> `// module must not import any fs write API (AC-1c; grep-checkable).`
+
+これは grep で機械検査可能な形の契約であり、**可視化を `--html` 等のフラグとして timeseries へ足す案はこの契約に正面から抵触する**。HTML/SVG は必ずファイルへ書き出されるためである。したがって出力を伴う可視化は別モジュール（`metrics-retention.ts` が reader を import しつつ自身は書き手である構図と同型）として置くのが構造的に自然な挿入点となる。
+
+### 3. reader が公開する再利用 seam
+
+`metrics-timeseries.ts` の export は可視化がそのまま消費できる。
+
+| 種別 | シンボル | 行 | 可視化での用途 |
+| --- | --- | --- | --- |
+| 型 | `CollectorEntry` | `:20` | collector 単位のエントリ |
+| 型 | `Snapshot` | `:25` | スナップショット1件 |
+| 型 | `ParseOutcome` | `:32` | parse の判別ユニオン |
+| 型 | `NonEmpty` | `:36` | 空集合の排除 |
+| 型 | `CollectorResolution` | `:38` | collector 名の解決結果 |
+| 関数 | `parseSnapshot` | `:50` | 7段 fail-closed パース |
+| 関数 | `assertNonEmpty` | `:81` | 入力ファイル集合の非空保証 |
+| 関数 | `buildSeries` | `:87` | `captured_at` 優先・commit タイブレークの時系列化 |
+| 関数 | `discoverCollectors` | `:95` | collector 名の発見 |
+| 関数 | `unionValueKeys` | `:103` | **可変キー collector に必須**（下記4参照）|
+| 関数 | `resolveCollector` | `:113` | CLI 引数からの collector 解決 |
+| 関数 | `renderDigest` | `:131` | 要約テーブル描画（プレーンテキスト）|
+| 関数 | `renderCollectorTable` | `:151` | collector 別テーブル描画（プレーンテキスト）|
+
+**非 export**: `formatValue` `:117-119`（`typeof v === "number"` 分岐）、`renderTable` `:121`。値の描画整形を可視化側で再利用したい場合、`formatValue` の export 昇格か同等関数の新設が設計判断点になる。
+
+### 4. `values` は `unknown` のまま — parse, don't validate の適用境界
+
+`metrics-timeseries.ts:18-19` の verbatim:
+
+> `// verifies (AC-1a): values entries stay unknown because per-value number-ness`
+> `// is not validated — renderers must branch on typeof (parse, don't validate).`
+
+すなわち**個々の値の数値性は型で保証されない**。描画側が `typeof` で分岐する責務を負う（`formatValue` がその実装）。可視化がチャートを描く場合、数値でない値をどう扱うか（欠測として穴を空ける／0 に潰す／描画対象から外す）は設計上の明示的判断を要する。
+
+さらに `metrics-snapshot.ts:102` の `values[`${tier}_${size}`] = ...` により **`test_pyramid` collector のキーは動的に生成される**（実データで 11 キー）。可視化側は collector のキー集合を静的に固定できず、`unionValueKeys` `:103` の利用が必須である。
+
+### 5. writer の loud-fail 姿勢
+
+`metrics-snapshot.ts` は部分的な成功を許さない。
+
+- `finite()` `:26-29` — 非有限値は throw
+- `collectSnapshot` `:129` — 最初の collector 失敗で即 return（`if (!result.ok) return result;`）
+- `serializeSnapshot` `:150` — 16,384 バイト超で throw
+- `runCli` `:169` — `--write` / `--check` 以外は usage で exit 1
+- `writeSnapshotAtomic` `:153-163` — `.tmp` + `flag: "wx"` → `renameSync`。既存衝突時は `:158` で throw
+
+env seam は `defaultEnv` `:112`（`root = process.env.AMADEUS_METRICS_ROOT ?? ROOT`）に集約されており、integration テストはこれを差し替えて実 FS 上で駆動する。
+
+### 6. CI 配線 — `metrics-snapshot` job
+
+`.github/workflows/ci.yml:398` の `metrics-snapshot` job。**PR クリティカルパス外**であることが `:396-397` のコメントで明示されている（「Main-only and intentionally outside ci-success: metrics publication must never extend the pull-request critical path.」）。
+
+| 要素 | 行 | 内容 |
+| --- | --- | --- |
+| 発火条件 | job 冒頭 `if:` | `push` かつ `refs/heads/main` かつ `coverage` job 成功 |
+| concurrency | `metrics-snapshot-main` | `cancel-in-progress: false`（直列化）|
+| push 除外 | `:12-13` | `paths-ignore: metrics/**`（自己再帰の遮断）|
+| snapshot 生成 | `:446` | `bun scripts/metrics-snapshot.ts --write` |
+| 剪定 | `:449` | `bun scripts/metrics-retention.ts --apply` |
+| commit | `:461` | `git add -A metrics/` → commit |
+| 公開 | `:470` / `:475` | `gh pr create` → `gh pr merge --auto --squash --delete-branch` |
+
+**重要な訂正**: `main` への**直 push ではない**。実装は `GITHUB_RUN_ATTEMPT` を含むブランチ名でスナップショット用ブランチを切り、PR 経由で auto-squash マージする。260712 設計記録の「push 最大3回再試行」という記述は現実装と一致しない（履歴節を参照する際の注意点）。`continue-on-error` は無く、任意ステップの失敗で job が赤くなる（ただし PR は非ブロック）。
+
+### 7. 可視化の挿入点（3案の構造評価）
+
+| 案 | 構造上の帰結 |
+| --- | --- |
+| (1) `metrics-timeseries.ts` へ `--html` を追加 | **AC-1c 契約に正面抵触**（fs write API の import が必要）。既存の grep 検査を壊す |
+| (2) 新規 `scripts/metrics-visualize.ts` | `metrics-retention.ts` と同型（reader を import する書き手）。既存契約を一切壊さない |
+| (3) CI 挿入位置 | `retention --apply` `:449` の後・`git add -A metrics/` `:461` の前。出力を `metrics/` 配下に置けば commit に自動で乗るが、`paths-ignore: metrics/**` `:12-13` と retention の `*.json` フィルタ `:45` への影響を設計で明示的に扱う必要がある |
+
+### 8. HTML 生成の既習様式（repo 内の唯一の先例）
+
+`tests/run-tests.ts:573` の `writeCoverageHtml` が repo 内で唯一の HTML 生成器である。様式は「テンプレートリテラル直書きの自己完結 HTML + `coverageHtmlEscape` `:526` によるエスケープ + 生成物を読み返す assert（`t05:582`）」。**チャートライブラリの前例は repo 内に存在しない**ため、inline SVG がこの既習様式の自然な延長になる。
+
+### 9. 区間の2系統と metrics サブシステムの独立性
+
+| 系統 | コミット / PR | 正本の変更（`git diff --numstat` 実測）|
+| --- | --- | --- |
+| A: solo standing grants | `77d871d57` / [PR #1483](https://github.com/amadeus-dlc/amadeus/pull/1483) | 新規 `amadeus-grant-authorization.ts` **+876**、新規 `amadeus-presence-reservation.ts` **+512**、`amadeus-state.ts` **+467 −73**、`amadeus-lib.ts` **+202 −29**、`amadeus-orchestrate.ts` **+184 −4**、`amadeus-directive.ts` **+127 −41** |
+| B: worktree hooks 修正 | `e12259ba7` / [PR #1493](https://github.com/amadeus-dlc/amadeus/pull/1493) | `packages/framework/core/hooks/` の **全11フック**が同型変更。中核は `resolveProjectDirFromHook` のシグネチャ変更（`amadeus-lib.ts:269`、第2引数 `payloadCwd?: string \| null` 追加）+ `HookStdin` `:4773` / `hookPayloadCwd` `:4779` / `readHookStdin` `:4794` の新設 |
+| C: metrics スナップショット | `bbd74a942` / `272f4bd58` | `metrics/*.json` の追加のみ（コード変更なし）|
+
+系統 B の `resolveProjectDirFromHook` は `:265-268` のコメントで機序を明文化している — 「It outranks CLAUDE_PROJECT_DIR because that env var is pinned to the launch directory (the main checkout) and does NOT follow a session into a git worktree」。すなわち **rung1 に「workspace marker を持つ hook payload cwd」が新設され、`CLAUDE_PROJECT_DIR` より優越する**形で #1482 が解決された。
+
+**metrics サブシステムはこの2系統から独立している**: `scripts/metrics-*.ts` の3ファイルはいずれも `amadeus-lib` を import しない（`grep -c 'amadeus-lib' scripts/metrics-*.ts` = 各 **0**）。したがって系統 B の hook 変更は可視化機能の設計前提に影響しない。
+
+## worktree でのパス／ref 解決の現況（260725-worktree-ref-fixes、履歴、Issue #1482 / #1481 / #1455）
 ## solo standing grant 認可アーキテクチャと scope 解決の二重化（260726-grant-scope-gate、現在、Issue #1497）
 
 測定 ref: observed `e12259ba78b8c56bf3572c9bfd44a7bdf84d681c`（= 現 HEAD、`git rev-parse HEAD` 実測）。base `11f1ad61f`（前 intent `260725-worktree-ref-fixes` の observed、`git merge-base --is-ancestor` exit 0 / 距離 4）。以下の file:line・件数はすべて同 commit の実ファイル直読および `grep -n` / `python3 -c json` 出力からの転記。

@@ -1,6 +1,23 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260726-grant-scope-gate）
+## 実行メタデータ（現在: 260726-metrics-visualization）
+
+- Date: `2026-07-26`
+- Base commit: `11f1ad61f5ea4942332da5bd6e3e433c44aa4cab`（前 intent `260725-worktree-ref-fixes` の observed。`git merge-base --is-ancestor 11f1ad61f 1c43438df` exit **0** = 祖先、`git rev-list --count 11f1ad61f..1c43438df` = **5**。いずれも本 scan で再実測。cid:reverse-engineering:rescan-base-ancestry）
+- Observed commit: `1c43438df0348fed63c5fe88af46c9417258d4e0`（= 現 HEAD、`git rev-parse HEAD` 実測。ブランチ `main`）
+- 区間規模: `git diff --shortstat 11f1ad61f 1c43438df` = **452 files changed, 68457 insertions(+), 2792 deletions(-)**（測定 ref: observed `1c43438df`）。実装面は2系統のみ（solo standing grants / worktree hooks 修正）で、残りは record・audit・生成配布物。
+- 区間の内訳（`git log --oneline 11f1ad61f..1c43438df` 全5件）: `bbd74a942`（chore(metrics): record snapshot、[PR #1490](https://github.com/amadeus-dlc/amadeus/pull/1490)）/ `77d871d57`（feat(grants): standing delegation grants を solo mode で利用可能にする、[PR #1483](https://github.com/amadeus-dlc/amadeus/pull/1483)）/ `272f4bd58`（chore(metrics): record snapshot、[PR #1491](https://github.com/amadeus-dlc/amadeus/pull/1491)）/ `e12259ba7`（fix(hooks,tests): worktree セッションのパス／ref 解決ファミリを修正、[PR #1493](https://github.com/amadeus-dlc/amadeus/pull/1493)、#1482 / #1481 / #1455、refs #1492）/ `1c43438df`（Merge branch 'main'）
+- Scope: `amadeus-feature`、Depth Standard、Brownfield、単一 repo `amadeus`
+- Focus: `metrics/` スナップショットの可視化機能。既存 metrics サブシステム（`scripts/metrics-snapshot.ts` / `metrics-timeseries.ts` / `metrics-retention.ts`、ci.yml `metrics-snapshot` job、`metrics/*.json` **123 件**）の現況把握と、可視化機能の再利用 seam・挿入点・既習様式の同定が本 scan の主眼。
+- 差分リフレッシュ（cid:reverse-engineering:c1）: フルスキャン不実施。区間5コミットの実装面を直読したうえで、**本 intent の重点である metrics サブシステムは区間内で完全に無変更**であることを `git diff --name-only 11f1ad61f 1c43438df -- scripts/ .github/` の**出力 0 行**で機械確認した。すなわち metrics 面の現況は区間より前から安定しており、可視化の挿入 seam は observed HEAD の直読で確定できる。
+- 測定 ref: 本節および本 scan で更新した全成果物の file:line・件数は observed `1c43438df` の実ファイル直読、および `git diff --numstat` / `grep -n` / `ls | wc -l` の出力からの転記による（cid:requirements-analysis:numbers-from-command-output-only、cid:reverse-engineering:measurement-ref-in-artifacts）。上流 Developer スキャン結果の file:line は本 Step 3 で全数スポット再実測し、不一致は下記および `re-scans/260726-metrics-visualization.md` に訂正として記録した。
+- 更新した成果物（9件）: `reverse-engineering-timestamp.md`（本ファイル）/ `architecture.md` / `code-structure.md` / `component-inventory.md` / `code-quality-assessment.md` / `business-overview.md` / `api-documentation.md` / `technology-stack.md` / `dependencies.md`。加えて per-intent 記録 `re-scans/260726-metrics-visualization.md` を新規作成。
+- 上流主張の訂正（本 scan で再実測）: (1) `resolveProjectDirFromHook` の所在は前 intent 記録の `amadeus-lib.ts:247` → observed で **`:269`**（PR #1483 / #1493 による +22 行シフト、cid:reverse-engineering:upstream-cite-reresolve-on-shift） (2) `package.json` の scripts エントリは 16 → 実測 **15**（うち metrics 系 **0**） (3) 正本 diff の行数はスキャン結果と numstat で乖離（`amadeus-state.ts` +540 → 実測 **+467 −73**、`amadeus-orchestrate.ts` +188 → **+184 −4**、`amadeus-directive.ts` +168 → **+127 −41**、`amadeus-lib.ts` +160 → **+202 −29**）。本 codekb は numstat 実測値を採る。 (4) snapshot collectors の定義行は `:71-110` → 実測 **`:72-110`**。
+- Sensors: RE ステージが宣言する3センサー（required-sections / upstream-coverage / answer-evidence）は、codekb 出力パス `amadeus/spaces/default/codekb/amadeus/**` が各 manifest の filter（`**/{amadeus-docs,intents}/**` および `**/*-questions.md`）に**構造的に不適合**のため発火不能（cid:reverse-engineering:re-sensors-codekb-filter-mismatch、cid:reverse-engineering:c3-codekb-sensor）。**センサー成功として扱わず**、代替として (a) 更新9成果物すべてに `grep -c '^## '` を実行し H2 ≥ 2 を機械確認 (b) 上流入力（Developer スキャン結果）の参照を各成果物本文で直接検証（file:line のスポット再実測を含む）の2点を実施した。結果は `re-scans/260726-metrics-visualization.md` の「センサー不適用と代替検証」節。
+- Delivery boundary: 本 scan は codekb の差分更新のみを成果物とし、実装コード・intent state・memory・`intents.json`・生成配布物には一切書き込まない。可視化機能の方式（挿入点、出力形式、CI 配線）は後続の requirements-analysis 以降で確定する。
+
+## 実行メタデータ（履歴: 260725-worktree-ref-fixes）
+## 実行メタデータ（履歴: 260726-grant-scope-gate）
 
 - Date: `2026-07-26`
 - Base commit: `11f1ad61f5ea4942332da5bd6e3e433c44aa4cab`（前 intent `260725-worktree-ref-fixes` の observed。`git merge-base --is-ancestor 11f1ad61f e12259ba7` exit 0 = 祖先、`git rev-list --count 11f1ad61f..e12259ba7` = **4**。cid:reverse-engineering:rescan-base-ancestry）

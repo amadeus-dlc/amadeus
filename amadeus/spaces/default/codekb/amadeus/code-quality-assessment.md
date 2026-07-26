@@ -1,5 +1,66 @@
 # コード品質評価
 
+## metrics サブシステムの品質評価と可視化のリスク面（260726-metrics-visualization、現在）
+
+測定 ref: observed `1c43438df`。件数はすべて `grep -c` / `ls \| wc -l` / `git diff --numstat` 出力からの転記。**本 intent は欠陥修正ではなく機能追加**であるため、本節は「既存 metrics コードの品質水準」と「可視化を足すときに壊しうる契約」の2面で記録する。
+
+### Q-M1. 既存 metrics コードの品質水準（高い — 倣うべき基準）
+
+| 観点 | 実測 | 評価 |
+| --- | --- | --- |
+| 妥当性定義の単一化 | `metrics-retention.ts:17` が `parseSnapshot` を import、private parser なし（`:6-9` に明文契約）| **良**。writer / reader / pruner が同一の妥当性定義を共有 |
+| fail-closed | retention `:6-9`（1件でも不正なら削除 0 件で exit 1）、snapshot `:129`（最初の失敗で即 return）| **良**。部分成功を作らない |
+| 検証可能な契約 | `metrics-timeseries.ts:3-4`「must not import any fs write API (AC-1c; **grep-checkable**)」| **良**。契約が機械検査可能な形で書かれている |
+| parse, don't validate | `:18-19` — `values` は `unknown` のまま、描画側が `typeof` 分岐 | **良**。検証したふりをしない。ただし下記 Q-M3 の負担を描画側へ移す |
+| 原子性 | `writeSnapshotAtomic` `:153-163`（`.tmp` + `flag: "wx"` → `renameSync`）| **良**。クラッシュ耐性あり |
+| テスト層の分離 | unit 5 / integration 3、integration は `AMADEUS_METRICS_ROOT` seam 経由 | **良**。cid:code-generation:fs-tests-integration-first に適合 |
+| 落ちる実証 | 空 dir / 壊れたファイル / dangling symlink / dir 不在 の4類型 | **良**。cid:code-generation:bun-readfilesync-dir-platform-divergence の dangling symlink 手法を採用済み |
+
+**総評**: metrics サブシステムは本リポジトリ内で契約明文化・fail-closed・テスト層分離のいずれも高い水準にある。可視化機能はこの水準を下回らないことが暗黙の受け入れ基準になる。
+
+### Q-M2. 可視化が壊しうる契約（S2 相当のリスク、未発生）
+
+**リスク形状**: `metrics-timeseries.ts` へ `--html` / `--svg` 等の出力フラグを足す設計は、`:3-4` の AC-1c 契約（fs write API を import しない）を必然的に破る。契約は grep で検査可能な形で書かれているため、破った時点で既存の検査が赤くなる（= 無音の劣化にはならない）が、**契約自体を緩める判断はモジュールの役割分離を失わせる**。
+
+**回避形**: `metrics-retention.ts` と同型（reader を import しつつ自身は書き手）の新規モジュールとして置く。この構図は既に repo 内で先例があり、レビューで新規性の説明を要さない。
+
+**判定**: 設計段で明示的に扱うべき論点。cid:application-design:citation-semantics-check（引用元の契約が自要件と一致するかを設計時に照合する）が該当する。
+
+### Q-M3. `values: unknown` が描画側へ移す負担（設計判断点）
+
+`metrics-timeseries.ts:18-19` の設計により、個々の値の数値性は型で保証されない。既存の描画側は `formatValue` `:117-119` が `typeof v === "number" ? String(v) : v === undefined ? "" : "?"` で吸収している。
+
+チャート描画では「`?` を表示する」で済まず、**非数値・欠測をどう扱うかの明示的な判断**が要る（穴を空ける／0 に潰す／系列から除外する）。無自覚に `Number(v)` すると `NaN` が座標に流れ込み、SVG が無音で壊れる（描画されないが例外も出ない）クラスの欠陥になりうる。
+
+さらに `formatValue` は**非 export** であるため、可視化側は (a) export 昇格 (b) 同等関数の新設 のいずれかを選ぶ必要がある。(b) は妥当性定義の二重化にあたり、Q-M1 で評価した「単一化」の美点を局所的に崩す — cid:construction:意図ベースの重複排除の観点では (a) が素直だが、`metrics-timeseries.ts` の公開面を広げる判断でもある。**設計段の裁定事項**。
+
+### Q-M4. `test_pyramid` のキー可変性（見落としやすい罠）
+
+`metrics-snapshot.ts:102` が `values[`${tier}_${size}`]` でキーを動的合成するため、`test_pyramid` collector のキー集合は**スナップショットごとに変わりうる**（実データで 11 キー）。可視化側が collector のキーを静的に列挙すると、キーの追加・削除が無音で描画から欠落する。
+
+`unionValueKeys` `:103` がこの目的の関数として既に存在するため、**利用は必須**。利用を怠っても例外は出ず、系列が1本静かに消えるだけであるため、テストで「キー集合が変化するスナップショット列」を fixture に含めないと検出できない。cid:code-generation:corpus-sweep-for-new-guards と同族の両側実測が要る面。
+
+### Q-M5. CI 配線に関する既存記録の失効（履歴読解時の注意）
+
+260712 の設計記録は metrics 公開を「`main` へ push、最大3回再試行」と記述しているが、**現実装は `GITHUB_RUN_ATTEMPT` 入りブランチ + `gh pr create` + `gh pr merge --auto --squash`**（ci.yml `:470` / `:475`）である。衝突回避の機構がリトライからブランチ名の一意化へ置き換わっている。
+
+**含意**: 可視化の CI 配線を設計する際、履歴節の push 記述を前提にすると誤った衝突対策を設計する。cid:reverse-engineering:comment-premise-verify-not-just-quote に該当 — 記録の前提が現行実装で成立するかを実測してから引く。
+
+### Q-M6. 未整備面（負債ではないが可視化が埋める必要がある）
+
+| 面 | 実測 | 影響 |
+| --- | --- | --- |
+| `package.json` の実行導線 | 全 15 scripts エントリ中 metrics 系 **0** | metrics CLI は現状 `bun scripts/...` 直叩きのみ。利用者可視の導線が無い |
+| ドキュメント | `docs/` の metrics 言及 **0 ファイル** | 可視化を出荷するなら日英ペアの新規ドキュメントが要る（project.md の言語規約）|
+| データ量 | `metrics/*.json` **123 件** / 保持上限 360 | 剪定は未発動。可視化の性能要件は 360 件を上限として設計できる |
+
+### 区間の実装2系統に関する品質所見
+
+系統 B（PR #1493、worktree hooks 修正）は `resolveProjectDirFromHook` `:269` の rung 順序を変更し、`:265-268` のコメントで**なぜ payload cwd が `CLAUDE_PROJECT_DIR` に優越するか**を明文化している（「that env var is pinned to the launch directory ... and does NOT follow a session into a git worktree」）。前 intent の codekb が Q-1 として記録した「テスト helper `currentGitSha` の三重複製」および #1482 の欠陥は、本区間で着地・解消された。**これらは履歴節として読むこと**（以下の 260725-worktree-ref-fixes 節）。
+
+系統 A（PR #1483）は新規2モジュール（合計 +1,388 行）を追加した大規模変更だが、**metrics サブシステムとは依存関係を持たない**（`scripts/metrics-*.ts` の `amadeus-lib` import が各 0 件）。可視化の設計前提に影響しない。
+
+## worktree 環境に起因する欠陥と技術的負債（260725-worktree-ref-fixes、履歴、Issue #1482 / #1481 / #1455）
 ## standing grant の scope 解決欠陥と検出不能な fixture（260726-grant-scope-gate、現在、Issue #1497）
 
 測定 ref: observed `e12259ba7`（base `11f1ad61f`、距離 4）。判定はすべて再現プローブの実行結果および実ファイル直読からの転記。

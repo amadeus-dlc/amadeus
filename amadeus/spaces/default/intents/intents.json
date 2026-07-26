@@ -582,5 +582,12 @@
     "dirName": "260726-grant-scope-gate",
     "scope": "amadeus-bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019f9cc2-67f1-7554-9455-dd8421cbd742",
+    "slug": "metrics-visualization",
+    "dirName": "260726-metrics-visualization",
+    "scope": "amadeus-feature",
+    "status": "in-flight"
   }
 ]
