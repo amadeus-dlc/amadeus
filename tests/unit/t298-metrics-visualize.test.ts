@@ -32,9 +32,12 @@ describe("parseArgs", () => {
     expect(out.kind).toBe("usage");
   });
   test("unknown flags are usage errors with the offending input named", () => {
-    const out = parseArgs(["--check"]);
+    const out = parseArgs(["--nonsense"]);
     if (out.kind !== "usage") throw new Error("expected usage");
-    expect(out.reason).toContain("--check");
+    expect(out.reason).toContain("--nonsense");
+  });
+  test("--check is accepted (U2)", () => {
+    expect(parseArgs(["--check"])).toEqual({ kind: "ok", mode: "check" });
   });
 });
 
@@ -115,5 +118,78 @@ describe("renderHtml", () => {
 describe("main usage path", () => {
   test("unknown argv returns 2 without touching the filesystem", () => {
     expect(main(["--nonsense"])).toBe(2);
+  });
+});
+
+// --- U2 (visualize-hardening) additions -------------------------------------
+
+import { METRICS_RETENTION_KEEP_LAST } from "../../scripts/metrics-retention";
+import { serializeSnapshot } from "../../scripts/metrics-snapshot";
+import { MAX_HTML_BYTES, regressionClass } from "../../scripts/metrics-visualize";
+
+function pair(collector: string, prevValues: Record<string, unknown>, currValues: Record<string, unknown>): Snapshot[] {
+  const mk = (capturedAt: string, commit: string, values: Record<string, unknown>): Snapshot => ({
+    schema_version: 1,
+    captured_at: capturedAt,
+    commit,
+    collectors: { [collector]: { tool: "t", tool_version: "1", values } },
+  });
+  return [mk("2026-07-01T00:00:00.000Z", "a".repeat(40), prevValues), mk("2026-07-02T00:00:00.000Z", "b".repeat(40), currValues)];
+}
+
+describe("regressionClass", () => {
+  test("worsening directions classify as regressed (both sides measured)", () => {
+    expect(regressionClass("ccn", "over_threshold", 10, 12)).toBe("regressed");
+    expect(regressionClass("ccn", "over_threshold", 12, 10)).toBe("");
+    expect(regressionClass("ccn", "max", 30, 35)).toBe("regressed");
+    expect(regressionClass("coverage", "percent", 81, 80)).toBe("regressed");
+    expect(regressionClass("coverage", "percent", 80, 81)).toBe("");
+    expect(regressionClass("dist_size", "bytes", 100, 200)).toBe("regressed");
+  });
+  test("failure counters are prev-agnostic: non-zero is always regressed", () => {
+    expect(regressionClass("tests", "failedFiles", undefined, 1)).toBe("regressed");
+    expect(regressionClass("tests", "failedAssertions", 0, 2)).toBe("regressed");
+    expect(regressionClass("tests", "failedFiles", 5, 0)).toBe("");
+  });
+  test("unknown collectors/keys and non-numeric values never classify", () => {
+    expect(regressionClass("unknown", "anything", 1, 2)).toBe("");
+    expect(regressionClass("ccn", "p50", 1, 2)).toBe("");
+    expect(regressionClass("ccn", "over_threshold", 10, "broken")).toBe("");
+    expect(regressionClass("ccn", "over_threshold", null, 12)).toBe("");
+  });
+});
+
+describe("renderHtml regression highlighting", () => {
+  test("a worsening latest value carries the regressed class (chart + table)", () => {
+    const html = renderHtml(pair("coverage", { percent: 81 }, { percent: 80 }));
+    expect(html).toContain('circle class="regressed"');
+    expect(html).toContain('td class="regressed"');
+  });
+  test("a non-worsening latest value carries no regressed class", () => {
+    const html = renderHtml(pair("coverage", { percent: 80 }, { percent: 81 }));
+    expect(html).not.toContain('class="regressed"');
+  });
+  test("the legend line is present and static", () => {
+    const html = renderHtml(pair("coverage", { percent: 80 }, { percent: 81 }));
+    expect(html).toContain("直前スナップショットからの劣化");
+  });
+});
+
+describe("MAX_HTML_BYTES", () => {
+  test("derives from the retention constant times the snapshot cap times 2", () => {
+    expect(MAX_HTML_BYTES).toBe(16_384 * METRICS_RETENTION_KEEP_LAST * 2);
+  });
+  test("the 16_384 mirror is pinned to the writer's real serialization cap", () => {
+    const big: Snapshot = {
+      schema_version: 1,
+      captured_at: "2026-07-01T00:00:00.000Z",
+      commit: "a".repeat(40),
+      collectors: {
+        pad: { tool: "t", tool_version: "1", values: { filler: 0, note: "x".repeat(17_000) } as Record<string, unknown> },
+      },
+    };
+    expect(() => serializeSnapshot(big)).toThrow("16384");
+    const small: Snapshot = { schema_version: 1, captured_at: "2026-07-01T00:00:00.000Z", commit: "a".repeat(40), collectors: {} };
+    expect(() => serializeSnapshot(small)).not.toThrow();
   });
 });

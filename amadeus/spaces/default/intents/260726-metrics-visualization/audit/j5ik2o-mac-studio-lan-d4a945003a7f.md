@@ -7990,6 +7990,547 @@
 
 ---
 
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:40:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: aa2037cf
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/metrics-timeseries.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:40:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: aa2037cf
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/metrics-timeseries.ts
+**Duration ms**: 1781
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:40:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: d67cb58c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/metrics-timeseries.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:40:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: d67cb58c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/metrics-timeseries.ts
+**Duration ms**: 1720
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:41:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 54213adb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/metrics-visualize.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:41:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: 54213adb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/metrics-visualize.ts
+**Duration ms**: 1394
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:41:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: d407a8b9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/metrics-visualize.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:41:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: d407a8b9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/metrics-visualize.ts
+**Duration ms**: 681
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:43:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: a6cb456e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/t298-metrics-visualize.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:43:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: a6cb456e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/t298-metrics-visualize.test.ts
+**Duration ms**: 1391
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:43:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1e9b2022
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/t298-metrics-visualize.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:43:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1e9b2022
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/t298-metrics-visualize.test.ts
+**Duration ms**: 606
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:43:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: eb41e07c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t298-metrics-visualize.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:43:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: eb41e07c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t298-metrics-visualize.integration.test.ts
+**Duration ms**: 1374
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:43:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: 15034626
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t298-metrics-visualize.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:43:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: 15034626
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t298-metrics-visualize.integration.test.ts
+**Duration ms**: 601
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:45:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: ad9c17c2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t298-metrics-visualize.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:45:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: ad9c17c2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t298-metrics-visualize.integration.test.ts
+**Duration ms**: 1397
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:45:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: aa2e9db0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t298-metrics-visualize.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:45:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: aa2e9db0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t298-metrics-visualize.integration.test.ts
+**Duration ms**: 614
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:45:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: d7b9f457
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t298-metrics-visualize.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:45:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: d7b9f457
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/t298-metrics-visualize.integration.test.ts
+**Duration ms**: 1409
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:45:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: bde92cd7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t298-metrics-visualize.integration.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:45:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: bde92cd7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/t298-metrics-visualize.integration.test.ts
+**Duration ms**: 598
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-26T06:49:46Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T06:53:35Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: abff0f4ecefff9af9
+**Message**: Good, working tree is clean again after the byte-identical re-render check. Final verdict.\n\nVERDICT: REVISE\n\n主な指摘(この1点で REVISE。他は健全):\n\n**未申告の設計逸脱: `svgLinePath` のシグネチャが inception ロック済み契約 `(points, w, 
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:54:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: de3acf8e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/metrics-visualize.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:54:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: de3acf8e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/metrics-visualize.ts
+**Duration ms**: 1363
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:54:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: e59202ea
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/metrics-visualize.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T06:54:35Z
+**Event**: SENSOR_FAILED
+**Fire id**: e59202ea
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/metrics-visualize.ts
+**Detail path**: amadeus/spaces/default/intents/260726-metrics-visualization/.amadeus-sensors/code-generation/type-check-e59202ea.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:54:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: d7ec32b0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/metrics-visualize.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:54:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: d7ec32b0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/metrics-visualize.ts
+**Duration ms**: 1378
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:54:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 275160a9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/metrics-visualize.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:54:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 275160a9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/metrics-visualize.ts
+**Duration ms**: 630
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T06:56:18Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: ac747089b6dc0b1fc
+**Message**: All required checks pass: correct signature, shared scale, tests green, typecheck clean, byte-identical regen, no old-signature residue. The audit/memory.md diffs are auto-appended by the framework's 
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-26T06:56:56Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state set Bolt Refs visualize-skeleton
+**Error**: Invalid field=value pair: Bolt Refs
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-26T06:56:56Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --stage code-generation --result completed
+**Error**: Stage "code-generation" is per-unit (for_each: unit-of-work) and 2 of 2 units are not yet complete (visualize-skeleton, visualize-hardening). Run `next` to continue the remaining units before approving.
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:57:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: b2c57eae
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260726-metrics-visualization/construction/visualize-skeleton/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T06:57:25Z
+**Event**: SENSOR_FAILED
+**Fire id**: b2c57eae
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260726-metrics-visualization/construction/visualize-skeleton/code-generation/code-generation-plan.md
+**Detail path**: amadeus/spaces/default/intents/260726-metrics-visualization/.amadeus-sensors/code-generation/required-sections-b2c57eae.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:57:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: fbc55232
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260726-metrics-visualization/construction/visualize-skeleton/code-generation/code-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:57:26Z
+**Event**: SENSOR_PASSED
+**Fire id**: fbc55232
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260726-metrics-visualization/construction/visualize-skeleton/code-generation/code-summary.md
+**Duration ms**: 51
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:57:26Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3b189ae7
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260726-metrics-visualization/construction/visualize-skeleton/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T06:57:26Z
+**Event**: SENSOR_FAILED
+**Fire id**: 3b189ae7
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260726-metrics-visualization/construction/visualize-skeleton/code-generation/code-generation-plan.md
+**Detail path**: amadeus/spaces/default/intents/260726-metrics-visualization/.amadeus-sensors/code-generation/upstream-coverage-3b189ae7.md
+**Findings count**: 5
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:57:26Z
+**Event**: SENSOR_FIRED
+**Fire id**: 38298b2c
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260726-metrics-visualization/construction/visualize-skeleton/code-generation/code-summary.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-26T06:57:26Z
+**Event**: SENSOR_FAILED
+**Fire id**: 38298b2c
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260726-metrics-visualization/construction/visualize-skeleton/code-generation/code-summary.md
+**Detail path**: amadeus/spaces/default/intents/260726-metrics-visualization/.amadeus-sensors/code-generation/upstream-coverage-38298b2c.md
+**Findings count**: 6
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-26T06:57:26Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --stage code-generation --result completed
+**Error**: Stage "code-generation" is per-unit (for_each: unit-of-work) and 1 of 2 units are not yet complete (visualize-hardening). Run `next` to continue the remaining units before approving.
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:58:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: ecaa39bf
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/metrics-visualize.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:58:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: ecaa39bf
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/metrics-visualize.ts
+**Duration ms**: 1477
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T06:58:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: c9228989
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/metrics-visualize.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T06:58:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: c9228989
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/metrics-visualize.ts
+**Duration ms**: 645
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-26T06:58:31Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-26T06:58:46Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-26T06:59:30Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-26T07:01:21Z
+**Event**: HUMAN_TURN
+
+---
+
 ## Human Turn
 **Timestamp**: 2026-07-26T07:02:07Z
 **Event**: HUMAN_TURN
