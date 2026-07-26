@@ -575,5 +575,12 @@
     "dirName": "260725-worktree-ref-fixes",
     "scope": "amadeus-bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019f9cdc-fb89-7a6d-85e5-ff3ed639378e",
+    "slug": "grant-scope-gate",
+    "dirName": "260726-grant-scope-gate",
+    "scope": "amadeus-bugfix",
+    "status": "in-flight"
   }
 ]

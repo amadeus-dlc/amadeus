@@ -1,6 +1,40 @@
 # コード構造
 
-## worktree パス／ref 解決面のコード配置（260725-worktree-ref-fixes、現在、Issue #1482 / #1481 / #1455）
+## solo standing grant 認可面のコード配置（260726-grant-scope-gate、現在、Issue #1497）
+
+測定 ref: observed `e12259ba7`（base `11f1ad61f`、距離 4）。file:line は同 commit の実ファイル直読、件数は `grep -n` / `wc -l` / `python3 -c json` 出力からの転記。
+
+### 正本と生成物の対応
+
+患部の正本は `packages/framework/core/tools/amadeus-lib.ts` 1 ファイル（`standingGrantSatisfiesGate :3985-4017` / `evaluateStandingGrantGateEligibility :3951-3969`）。同ファイルの複製面は **10**（self-install 4 = `.claude/` / `.codex/` / `.cursor/` / `.opencode/`、dist 6 = `claude` / `codex` / `cursor` / `kiro` / `kiro-ide` / `opencode`）で、正本を含む `amadeus-lib.ts` の実ファイル総数は **11**（`find . -name amadeus-lib.ts -not -path "*/node_modules/*"` 実測、observed `e12259ba7`）。`kiro` / `kiro-ide` は dist のみで self-install 面を持たない。
+
+再生成コマンドは `bun scripts/package.ts` → `bun run promote:self`、検証は `bun run typecheck` / `bun run lint` / `bun run dist:check` / `bun run promote:self:check` / `bash tests/run-tests.sh --ci`。
+
+### データファイルの所在と write path
+
+| ファイル | 役割 | 備考 |
+| --- | --- | --- |
+| `tools/data/stage-graph.json` | 32 stages の graph（`stage.scopes` フロントマター由来） | `scripts/package.ts:146` の `COMPILED_DATA` |
+| `tools/data/scope-grid.json` | scope × stage の EXECUTE/SKIP グリッド（15 scope キー） | 同上。`promote-self.ts:104` が self-install 側 `scope-grid.json` を composed scope の sanctioned write path として扱う |
+
+`.claude/scopes/` には composed scope の定義ファイルが実在する（`amadeus-amadeus-bugfix.md` / `amadeus-amadeus-feature.md` / `amadeus-amadeus-refactor.md` / `amadeus-amadeus.md` / `amadeus-installer-distribution.md`）。`loadScopeMapping()`（`amadeus-lib.ts:6012-`）は grid と `.claude/scopes/*.md` frontmatter をマージする。
+
+### scope 解決の2系統（同じ問いに2つの実装）
+
+| 系統 | 入口 | 読む源 | 消費者 |
+| --- | --- | --- | --- |
+| grid 系（エンジン正規経路） | `nextInScopeStage`（`amadeus-lib.ts:6828-6866`）/ `firstInScopeStageOfPhase`（`:6891-6910`）/ `subgraphForScope`（`amadeus-graph.ts:959-974`） | `scope-grid.json` + `.claude/scopes/*.md` | engine のステージ進行全般 |
+| frontmatter 系 | `standingGrantSatisfiesGate`（`amadeus-lib.ts:3985-4017`）の `inScope` クロージャ | `stage.scopes` 直読 | **本関数のみ**（唯一の消費者） |
+
+`stage.scopes` を読む他の箇所は `transposeScopeGridForMapping`（`amadeus-lib.ts:5945-5959`、fallback 転置）と `amadeus-orchestrate.ts:2796`（plugin opt-in 判定 `(node.scopes ?? []).length === 0`）の 2 箇所のみで、いずれも scope 解決の意味では使っていない。
+
+`amadeus-graph.ts` は `amadeus-lib.ts` を import しているため、grid 経由へ寄せる修正では循環回避が要る。既習様式は lazy require で、`firstInScopeStageOfPhase` 内の `require("./amadeus-graph.ts")`（`amadeus-lib.ts:6898-6902`）が同手法である。
+
+### テストの配置
+
+グラント系スイートは integration 中心（`t-solo-gate-transaction{,-carrier,-prefix,-report,-seam}.test.ts` 計 2,272 行、`t-solo-standing-grant-{domain,harness,opencode-mint}.test.ts`）で、unit は `unit/t-solo-gate-transaction.test.ts` / `unit/t-solo-standing-grant-domain.test.ts`。実 stage-graph を読むのは `tests/harness/solo-gate-fixture.ts:50`（`.codex/tools/data/stage-graph.json` = self-install コピー）のみで、golden / fixture の生成源として配布面を読む既習形（cid:code-generation:golden-regen-from-shipped-surface）に沿う。
+
+## worktree パス／ref 解決面のコード配置（260725-worktree-ref-fixes、履歴: 2026-07-26、Issue #1482 / #1481 / #1455）
 
 測定 ref: observed `11f1ad61f`。file:line はすべて同 commit の実ファイル直読、件数は grep / find 出力からの転記。
 

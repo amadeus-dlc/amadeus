@@ -1,6 +1,84 @@
 # アーキテクチャ
 
-## worktree でのパス／ref 解決の現況（260725-worktree-ref-fixes、現在、Issue #1482 / #1481 / #1455）
+## solo standing grant 認可アーキテクチャと scope 解決の二重化（260726-grant-scope-gate、現在、Issue #1497）
+
+測定 ref: observed `e12259ba78b8c56bf3572c9bfd44a7bdf84d681c`（= 現 HEAD、`git rev-parse HEAD` 実測）。base `11f1ad61f`（前 intent `260725-worktree-ref-fixes` の observed、`git merge-base --is-ancestor` exit 0 / 距離 4）。以下の file:line・件数はすべて同 commit の実ファイル直読および `grep -n` / `python3 -c json` 出力からの転記。
+
+### 区間で導入された認可レイヤ（PR #1483 solo standing grants）
+
+区間4コミットのうち実装面は2件（`77d871d57` = [PR #1483](https://github.com/amadeus-dlc/amadeus/pull/1483) solo standing grants、`e12259ba7` = [PR #1493](https://github.com/amadeus-dlc/amadeus/pull/1493) worktree パス／ref 修正）。区間全体は 452 files / `+68,457` / `-2,792` だが、大半は dist×6 + self-install×4 の生成物増幅である。
+
+PR #1483 は、従来ステージゲートごとに人間の presence を要していた solo モードの承認経路に、**常任グラント（standing grant）による事前認可レイヤ**を差し込んだ。新設された正本モジュールは2つ:
+
+| モジュール | 行数 | 責務 |
+| --- | --- | --- |
+| `packages/framework/core/tools/amadeus-grant-authorization.ts` | 876 | solo 用グラント台帳のスキャン・検証・route receipt 発行・approval authority 分類 |
+| `packages/framework/core/tools/amadeus-presence-reservation.ts` | 512 | presence 予約（人間承認の先取り確保）の管理 |
+
+既存正本への増分は `amadeus-state.ts` `+540` / `amadeus-orchestrate.ts` `+188` / `amadeus-directive.ts` `+168` / `amadeus-lib.ts` `+160` / `amadeus-audit.ts` `+8`。監査語彙は `core/knowledge/amadeus-shared/audit-format.md` `+13` で `GRANT_ISSUED` / `GRANT_REVOKED` / `GATE_AUTHORIZATION_SELECTED` の3イベントが追加された。
+
+### route receipt フロー（solo 消費経路）
+
+グラントがゲートを覆う場合、engine の directive 発行経路が directive を差し替え、`GATE_AUTHORIZATION_SELECTED` receipt を監査へ append する。覆わない場合は **directive を無変更で返す**（`amadeus-grant-authorization.ts:762`）— すなわち失敗は fatal error ではなく**無音の no-op**で、通常の human presence 経路へフォールバックする。この性質は project.md Forbidden「想定内の grant 失効・取消・scope 不一致 fallback を `ERROR_LOGGED` を発生させる fatal error 経路へ流さない」の遵守形であり、#1497 の修正でも壊してはならない。
+
+```mermaid
+flowchart TD
+  A["amadeus-orchestrate.ts:1597 routeMainWorkflowDirective"] --> B["amadeus-grant-authorization.ts:739 routeSoloStandingGrantDirective"]
+  B --> C["findSoloStandingGrant :389 / selectBestGrant :352"]
+  C --> D["validateGrant :318"]
+  D --> E["amadeus-lib.ts:3985 standingGrantSatisfiesGate"]
+  E -->|"false"| F["gate-out-of-scope / grant null"]
+  F --> G["directive 無変更で返却 :762 -- 通常の human presence 経路"]
+  E -->|"true"| H["GATE_AUTHORIZATION_SELECTED receipt append :776"]
+  H --> I["amadeus-state.ts:2985-3040 approve 側で receipt 再検証"]
+  I -->|"invalid"| J["printAwaitApproval :3198 reason standing-grant-no-longer-authorizes"]
+```
+
+テキストフォールバック（上図と同内容）: `routeMainWorkflowDirective`（`amadeus-orchestrate.ts:1597`）→ `routeSoloStandingGrantDirective`（`amadeus-grant-authorization.ts:739`）→ グラント探索（`findSoloStandingGrant :389` / `selectBestGrant :352`）→ `validateGrant :318` → `standingGrantSatisfiesGate`（`amadeus-lib.ts:3985`）。判定 false ならグラント null 扱いで directive 無変更返却（`:762`）＝通常の human presence 経路。true なら `GATE_AUTHORIZATION_SELECTED` receipt を append（`:776`）し、approve 側（`amadeus-state.ts:2985-3040`、`resolveStandingGrantRouteReceipt` による route receipt 解決）が再検証、無効なら `printAwaitApproval`（`:3198`、reason `standing-grant-no-longer-authorizes`）へ落ちる。
+
+### 中核述語 `standingGrantSatisfiesGate` と方式の二重化
+
+`standingGrantSatisfiesGate`（`amadeus-lib.ts:3985-4017`）は state の `Scope` フィールドを読み、**stage graph の `stage.scopes` フロントマター配列を直読**して「次の in-scope ステージ」と「最初の construction ステージ」を決める:
+
+```ts
+const inScope = (stage: StageEntry): boolean =>
+  stage.scopes === undefined || stage.scopes.includes(scope);
+```
+
+判定そのものは純関数 `evaluateStandingGrantGateEligibility`（`:3951-3969`）へ委譲され、`isPhaseBoundary` かつ `!grant.includesPhaseBoundary` なら `ineligible / phase-boundary` を返す。
+
+これに対し**エンジン本体の正規経路は `stage.scopes` を読まず、scope-grid 由来の mapping を読む**:
+
+| 関数 | 所在 | 解決源 |
+| --- | --- | --- |
+| `nextInScopeStage()` | `amadeus-lib.ts:6828-6866` | `loadScopeMapping()[scope]` → `mapping.stages[slug] === "EXECUTE"` |
+| `firstInScopeStageOfPhase()` | `amadeus-lib.ts:6891-6910` | `subgraphForScope(scope)` |
+| `subgraphForScope()` | `amadeus-graph.ts:959-974` | `loadScopeGrid()[scope]` の EXECUTE 集合 |
+
+`standingGrantSatisfiesGate` は `stage.scopes` を直読する**唯一の消費者**である（他の読者は `transposeScopeGridForMapping` の fallback 転置 `amadeus-lib.ts:5945-5959` と、`amadeus-orchestrate.ts:2796` の plugin opt-in 判定 `(node.scopes ?? []).length === 0` のみ）。**同一の「このステージはこの scope で実行されるか」という問いに対して、二つの独立した解決方式が併存している**のが本 intent の構造的論点である。
+
+### 非対称は設計上の意図であり語彙の追記漏れではない
+
+observed `e12259ba7` の実測:
+
+- `.claude/tools/data/stage-graph.json` の 32 stages のうち `scopes` キーを持たない stage は **0 件** → `stage.scopes === undefined` の緩和分岐は実運用で不発
+- `stage.scopes` の語彙全数 = **10 個**（`bugfix` / `chore` / `enterprise` / `feature` / `infra` / `mvp` / `poc` / `refactor` / `security-patch` / `workshop`）— すべて stock スコープ
+- `scope-grid.json` のキー = **15 個**（上記10 + `amadeus` / `amadeus-bugfix` / `amadeus-feature` / `amadeus-refactor` / `installer-distribution`）
+
+この非対称は `amadeus-graph.ts:1350-1359` の doc comment が明示する設計である（verbatim）: 「The transpose derives only the stock scopes (those a stage's `scopes:` frontmatter names); a composed scope's grid entry is appended at approval time by the composer and has no frontmatter producer」。composed scope（`amadeus-*` 系）は composer が承認時に scope-grid へ追記するものであり、**stage frontmatter の `scopes:` には構造上決して現れない**。したがって #1497 は「`amadeus-bugfix` を語彙へ足し忘れた」欠陥ではなく、**解決方式の選択そのものの誤り**である。
+
+### 共有述語であることの含意（team mode への波及）
+
+`standingGrantSatisfiesGate` の呼び出し元は全 4 箇所で、solo 専用ではない:
+
+1. `amadeus-grant-authorization.ts:336` — solo 経路中核（`validateGrant :318-340` 内、false で `gate-out-of-scope`）
+2. `amadeus-state.ts:2470` — team mode approve の presence 例外（`assertHumanPresentForGateResolution :2443-2477`）
+3. `amadeus-state.ts:3269` — `standingGrantForDelegation`
+4. `amadeus-lib.ts:3985` 自身の export（`amadeus-state.ts:80` / `amadeus-grant-authorization.ts:16` が import）
+
+解決方式を差し替える修正は team mode 経路へも波及するため、**stock スコープの現行挙動を parity として固定する回帰テストが不可欠**である。なお `amadeus-graph.ts` は `amadeus-lib.ts` を import しているため、grid 経由へ寄せる場合の循環回避には lazy require の既習様式がある（`firstInScopeStageOfPhase` / `stagesInScope` が同手法、`amadeus-lib.ts:6898-6902`）。
+
+## worktree でのパス／ref 解決の現況（260725-worktree-ref-fixes、履歴: 2026-07-26、Issue #1482 / #1481 / #1455）
 
 測定 ref: observed `11f1ad61f`。以下の file:line はすべて同 commit の実ファイル直読による。
 
