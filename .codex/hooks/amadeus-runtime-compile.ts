@@ -37,19 +37,23 @@ import {
   isRejectedMigrationDispatch,
   readAllAuditShards,
   recordHookDrop,
+  readHookStdin,
   resolveProjectDirFromHook,
   runtimeGraphPath,
   harnessDir,
 } from "../tools/amadeus-lib.ts";
 
-const projectDir = resolveProjectDirFromHook(import.meta.url);
+// Drain stdin first: the payload's `cwd` is the top rung of project-dir
+// resolution (#1482), and the stream can only be read once.
+const hookStdin = await readHookStdin();
+const projectDir = resolveProjectDirFromHook(import.meta.url, hookStdin.cwd);
 
 // 1. TTY guard — exit cleanly when invoked outside a piped stdin context
 //    (interactive shell, test harness running under `bash -x`).
 if (process.stdin.isTTY) process.exit(0);
 
 // 2. Stdin parse — read JSON payload from Claude Code; exit on malformed.
-const input = await Bun.stdin.text();
+const input = hookStdin.text;
 let parsed: ClaudeCodeHookInput;
 try {
   const raw: unknown = JSON.parse(input);

@@ -29,6 +29,7 @@ import {
   isoTimestamp,
   readStateFile,
   recordHookDrop,
+  readHookStdin,
   resolveProjectDirFromHook,
   sensorsDir,
   stateFilePath,
@@ -37,7 +38,10 @@ import {
 
 // Step 1 — Resolve project dir from import.meta.url. Mirrors
 // amadeus-audit-logger.ts and amadeus-runtime-compile.ts precedent.
-const projectDir = resolveProjectDirFromHook(import.meta.url);
+// Drain stdin first: the payload's `cwd` is the top rung of project-dir
+// resolution (#1482), and the stream can only be read once.
+const hookStdin = await readHookStdin();
+const projectDir = resolveProjectDirFromHook(import.meta.url, hookStdin.cwd);
 
 // Subprocess timeout. Defaults to 90s (covers tsc's 60s manifest cap +
 // dispatcher overhead). t95's timeout case overrides via env var to
@@ -59,7 +63,7 @@ if (process.stdin.isTTY) process.exit(0);
 // We use the central ClaudeCodeHookInput type guard from amadeus-lib.ts;
 // the SKILL.md frontmatter pins this hook to the Write|Edit matcher,
 // so we don't consult tool_name and only need tool_input.file_path.
-const input = await Bun.stdin.text();
+const input = hookStdin.text;
 let parsed: ClaudeCodeHookInput;
 try {
   const raw: unknown = JSON.parse(input);

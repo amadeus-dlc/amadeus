@@ -61,6 +61,13 @@ const target = process.argv[2] ?? "";
 const rawUserPrompt = process.env.USER_PROMPT;
 const parsedContext = parseKiroIdeHookContext(rawUserPrompt);
 const kiro = parsedContext.kind === "ok" ? parsedContext.value : {};
+// No payload-cwd rung here (unlike the core hooks, #1482). Kiro IDE delivers its
+// hook context in the USER_PROMPT env var, and the measured vocabulary of that
+// context is toolName / toolArgs / toolResult / toolSuccess only (see
+// amadeus-kiro-vocab.ts) — no cwd or workspace-root field, and the .kiro.hook
+// runCommand template exposes no such variable either. Passing a cwd we have not
+// measured would be an unverified claim, so this adapter keeps the existing
+// ladder until Kiro IDE is measured to supply one.
 const projectDir = resolveProjectDirFromHook(import.meta.url);
 
 function debugEnabled(): boolean {

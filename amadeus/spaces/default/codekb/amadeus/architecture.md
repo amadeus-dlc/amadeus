@@ -1,6 +1,73 @@
 # アーキテクチャ
 
-## Team Mode 起動経路の現況と actas 移行後の構造（260725-teamup-launch-hardening、現在、Issue #1476 / #1478）
+## worktree でのパス／ref 解決の現況（260725-worktree-ref-fixes、現在、Issue #1482 / #1481 / #1455）
+
+測定 ref: observed `11f1ad61f`。以下の file:line はすべて同 commit の実ファイル直読による。
+
+### 1. hook の project-dir 解決 — 4-rung ladder と rung1／rung2 の優先順位（#1482）
+
+正本 `packages/framework/core/tools/amadeus-lib.ts`（配布 `.claude/tools/amadeus-lib.ts` と同一行番号）。
+
+| rung | 行 | verbatim | 内容 |
+| --- | --- | --- | --- |
+| 1 | `:249` | `  if (process.env.CLAUDE_PROJECT_DIR) return process.env.CLAUDE_PROJECT_DIR;` | env を**無条件**採用 |
+| 2 | `:258` / `:259` | `  const markerDir = findWorkspaceMarkerAncestor(process.cwd());` / `  if (markerDir) return markerDir;` | cwd 起点で workspace marker を上向き探索（#641 で挿入） |
+| 3 | `:263-265` | `stripHarnessLeaf(scriptDir, "hooks")` | スクリプトパス由来 |
+| 4 | `:268-273` | cwd 直下の既知 harness dir | dev repo 向け |
+
+補助関数: `:227` `function hasWorkspaceMarker(dir: string): boolean {`（`amadeus/` と `<harness>/tools/` の**両在**で真）、`:235` `function findWorkspaceMarkerAncestor(startDir: string): string | null {`（非 export）。エントリは `:247` `export function resolveProjectDirFromHook(importMetaUrl: string): string {`。
+
+**機序（Issue 記載からの訂正）**: Issue の推定「`CLAUDE_PROJECT_DIR` 未設定 → rung2 が本線を解決」は誤り。Stop hook の起動行 `.claude/settings.json:154` は verbatim `            "command": "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-stop.ts"` であり、この `$CLAUDE_PROJECT_DIR` 展開が成立してフックが起動している以上 env は**設定済み**である。実際の機序は「EnterWorktree は cwd だけを worktree へ切り替え、env は本線に固定されたまま → rung1 が本線を無条件採用し、worktree を正しく返せる rung2 に到達しない」。rung2 自体は健全であり、cwd が worktree なら worktree を返す。
+
+**裁定点**: この優先順位は `tests/unit/t202-hook-project-dir-worktree-marker.test.ts:105` の test 2 verbatim `  test("2: CLAUDE_PROJECT_DIR env still outranks the marker rung", () => {`（`:113` で `expect(resolved).toBe("/from/env")`）として**意図的に固定**されている。一方 #641 の設計意図は同ファイル `:1-3` verbatim `// t202-hook-project-dir-worktree-marker: resolveProjectDirFromHook() must` / `// resolve to the WORKTREE, not the main checkout, when a session runs inside` / `// a Claude Code worktree.` である。env 経路が worktree を貫通する現状は、この意図と正面から矛盾する。rung 順序の変更は t202 test 2 の契約変更を伴うため、**要件段での明示的裁定を要する**（実装者の単独判断で反転させない）。
+
+### 2. 波及範囲 — Stop hook 固有ではなく hook 一族全体
+
+`resolveProjectDirFromHook` の呼び出し（import 行を除く実呼び出し）は `grep -rn 'resolveProjectDirFromHook' packages/ --include='*.ts'` 実測で **core hooks 11 ファイル × 各1 = 11 箇所 + kiro-ide adapter 1 箇所 = 計12箇所**:
+
+`amadeus-audit-logger.ts:23` / `amadeus-log-subagent.ts:22` / `amadeus-mint-presence.ts:72` / `amadeus-runtime-compile.ts:45` / `amadeus-sensor-fire.ts:40` / `amadeus-session-end.ts:20` / `amadeus-session-start.ts:46` / `amadeus-statusline.ts:32` / `amadeus-stop.ts:167` / `amadeus-sync-statusline.ts:25` / `amadeus-validate-state.ts:24`（以上 `packages/framework/core/hooks/`）+ `packages/framework/harness/kiro-ide/hooks/amadeus-kiro-adapter.ts:64`。
+
+したがって #1482 は Stop hook 単体の欠陥ではなく、**hook 一族全体が同一の誤解決を共有する**。Stop hook では `amadeus-stop.ts:118`（import）→ `:167`（解決）を経て `projectDir` が下流24箇所（state path、engine 呼び出し、audit、stage dir 等）へ流れるため症状が最も可視になっているにすぎない。修正は解決関数側の1点で全12箇所に及ぶ。
+
+**engine 経路が救われている理由**: 姉妹関数 `resolveProjectDir`（`:170` `export function resolveProjectDir(explicitDir?: string): string {`）は `:172` verbatim `  if (explicitDir) return explicitDir;` により **`--project-dir` 明示引数が第1順位**で、env より上位にある。engine 呼び出しは明示引数を渡すため worktree で正しく解決される。hook 側にはこの上位 rung が無い。
+
+**配布面**: `amadeus-lib.ts` / `amadeus-stop.ts` はいずれも**11コピー**（正本 + harness 表層4 + dist 6）。修正は正本編集 + `bun scripts/package.ts` + `bun run promote:self` の同期を要する。
+
+### 3. テストの git ref 解決 — `currentGitSha` の三重複製（#1481 / #1455）
+
+3つの integration テストが**共有されない同型 helper** を各自に持つ（`grep -n 'function currentGitSha'` 実測）:
+
+| ファイル | helper | throw 行 verbatim |
+| --- | --- | --- |
+| `tests/integration/t257-status-registry-migration.test.ts` | `:193` | `:214` `  if (!packed) throw new Error(\`cannot resolve Git ref ${ref}\`);` |
+| `tests/integration/t258-lifecycle-transaction.test.ts` | `:434` | `:455` `  if (!packed) throw new Error(\`Cannot resolve Git ref ${ref}\`);` |
+| `tests/integration/t259-guard-integration.test.ts` | `:77`（`repositoryRoot` 引数版） | `:96` `  if (!line) throw new Error(\`Unable to resolve Git ref ${ref}\`);` |
+
+**共通欠陥**（t257 の行で示す。3件とも同型）: loose ref の探索先が worktree の gitDir 配下に限られ（`:205-206`）、commondir 解決後（`:207-210`）は `packed-refs` しか読まない（`:211`）。worktree のブランチ ref は **common dir の loose ref** として存在するため、この経路は必ず throw に落ちる。
+
+**現場実測**（worktree `.claude/worktrees/bugfix-1482-1481-1455`、observed `11f1ad61f`）:
+
+- `git rev-parse --git-dir` = `<main>/.git/worktrees/bugfix-1482-1481-1455`、`--git-common-dir` = `<main>/.git`
+- HEAD ref = `refs/heads/worktree-bugfix-1482-1481-1455`
+- worktree gitDir 側の loose ref: **不在**（`ls` が ENOENT）
+- common dir 側の loose ref `<main>/.git/refs/heads/worktree-bugfix-1482-1481-1455`: **実在**（41 バイト）
+- `packed-refs`: 総 733 行（`wc -l`）だが、**当該 ref に一致するエントリは 0 件**（`grep -c " refs/heads/worktree-bugfix-1482-1481-1455$"` = 0）
+
+※ Developer スキャンの「packed-refs 0件」は「当該 ref のエントリが 0 件」の意であり、ファイル自体は 733 行存在する。本節はその精密化として両数値を記録する。
+
+**既習の正しい様式**: `amadeus-lib.ts:4131` `export function resolveMainCheckout(gitCwd?: string): MainCheckout | null {` は `:4132` の `rev-parse --show-toplevel` と `:4135` の `rev-parse --git-common-dir` という **git plumbing サブプロセス**で解決しており、worktree 安全である。同型の前例に `codex/tools/amadeus-codex-hooks-migration.ts:590`。
+
+**同根棚卸し**: git 内部レイアウトを FS 直読する箇所は上記3ファイルのみで、他はすべて git サブプロセス経由。すなわち修正対象は閉じている。
+
+**テスト番号の生態**: `find tests -name "t257-*" -type f` = 6 件、`t258-*` = 8 件、`t259-*` = 4 件。同一番号が複数ファイルに存在するため、**引用は必ずフルパスで行う**（cid:requirements-analysis:mechanism-cite-verify-at-draft 追補）。
+
+### 4. 導入経緯と現症状
+
+3 helper は同一コミット `2e157d7fe`（2026-07-23、`archived intent statusと誤resume防止を導入 (#1424)`）で導入され、後続修正はない。原因の所在は**実装判断**（git plumbing を使わず FS 直読を選び、かつ3複製した）にある。
+
+worktree での実測（パイプなし exit 捕捉）: t257 exit 1（10 pass / 1 fail）、t258 exit 1（25 pass / 1 fail）、t259 exit 1（9 pass / 1 fail）。本 scan で t259 を再実行して追認（exit 1、`9 pass` / `1 fail`、`error: Unable to resolve Git ref refs/heads/worktree-bugfix-1482-1481-1455`）。失敗するのは helper を通る provenance 記録テスト1件のみで、残りは緑。本線チェックアウトでは loose ref が gitDir 直下にあるため通る = **worktree 限定の false red**。
+
+## Team Mode 起動経路の現況と actas 移行後の構造（260725-teamup-launch-hardening、履歴、Issue #1476 / #1478）
 
 測定 ref: observed HEAD `4a0f91ad07dbe17c6477b7fe9b52a0e9ab4532ba` の実ファイル直読（`packages/framework/core/tools/team-up.sh` は **1497 行**、`wc -l` 実測。前 intent 観測時 `ec624022f` の 1474 行から +23）。外部スキル `~/.agents/skills/agmsg/` は repo 外・非バージョン管理（読取 2026-07-25）。
 

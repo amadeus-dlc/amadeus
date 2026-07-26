@@ -26,6 +26,7 @@
 - 既存 workflow へ新しいトリガーを追加する設計では、event 固有値の欠落を実行環境で再現し、既存ジョブのハード失敗と依存ジョブへの伝播を確認してから最小分岐を設計する (learned 2026-07-23) <!-- cid:functional-design:c1 -->
 - 6件を一括実装せず、各findingごとにRed確認後に最小実装してGreenへ戻し、最後に横断suiteとdistribution同期を行う。 (learned 2026-07-25) <!-- cid:code-generation:c2-2 -->
 - full CI再実行に加えて対象ファイルを再検証し、統合全体の信頼性とFR別の診断可能性を両立する。 (learned 2026-07-25) <!-- cid:build-and-test:c3-mirror-review-fixes -->
+- bun はルート形パス(/x/y.ts)引数を cwd 相対に解決する未文書 fallback を持つ(bun 1.3.13 実測: /.claude/hooks/x.ts が cwd 相対に実在すれば実行、不在なら exit 1)— env 変数展開で組むパスの「落ちる実証」の前提を机上で断定せず、env unset/空白パス等の条件別制御実測で赤の実在を確定してから要件・テストに固定する。実測: 260725-worktree-ref-fixes CG で FR-3d 前提(env unset→module not found)が cwd=ルートで不成立と判明→ユーザー裁定で要件を実測可能な赤(無引用×空白パス)へ改訂、#1492 は Refs 維持。bun-spawn-env-snapshot / bun-readfilesync-dir-platform-divergence と同じ bun 実装差ファミリ (learned 2026-07-26) <!-- cid:code-generation:bun-rootpath-cwd-fallback --> (learned 2026-07-26) <!-- cid:code-generation:c2-bun-rootpath-fallback -->
 ## Deployment
 
 デプロイ基盤は持たず、リリースは npm パッケージ配布と GitHub 上のタグ/PR 履歴で管理する。GitHub Actions は push と pull_request で typecheck、lint、dist/self-install drift guard、smoke+unit+integration tests を実行する。

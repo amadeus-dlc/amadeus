@@ -568,5 +568,12 @@
     "dirName": "260725-teamup-launch-hardening",
     "scope": "amadeus-feature",
     "status": "complete"
+  },
+  {
+    "uuid": "019f9b7f-7a9e-70df-95ae-9bff89799bcf",
+    "slug": "worktree-ref-fixes",
+    "dirName": "260725-worktree-ref-fixes",
+    "scope": "amadeus-bugfix",
+    "status": "complete"
   }
 ]
