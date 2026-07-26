@@ -193,6 +193,21 @@ describe("discoverPluginStageFiles (U2 plugin discovery)", () => {
     }
   });
 
+  // Regression (#1462): a dangling symlink directly under plugins/ used to reach
+  // the unguarded statSync in the plugin-name filter, which follows the link and
+  // throws a raw ENOENT Error — escaping the PluginStageError contract. The
+  // filter now carries the same existsSync guard as the stages check, so the
+  // broken entry is skipped and valid siblings still compile. Only a dangling
+  // symlink can reach this path: an absent path never shows up in readdir.
+  test("a dangling symlink under plugins/ is skipped, not thrown as raw ENOENT (#1462)", () => {
+    const host = freshHost();
+    writePluginStage(host, "alpha", "a-stage.md", stageMd("a-stage"));
+    symlinkSync(join(host, "plugins", "no-such-target"), join(host, "plugins", "dangling"));
+    expect(discoverPluginStageFiles(host)).toEqual([
+      { path: "plugins/alpha/stages/a-stage.md", slug: "a-stage" },
+    ]);
+  });
+
   test("schema-invalid frontmatter is rejected as SCHEMA_INVALID", () => {
     const host = freshHost();
     // Missing required fields (only slug present).
