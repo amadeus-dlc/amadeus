@@ -40,7 +40,7 @@
 | `bun tests/gen-coverage-registry.ts --check` | 0(fresh・ガード green・ratchet held) |
 | `bun test`(t299+t300) | 10 pass / 0 fail |
 | `bun test`(移設面 t252/t253/t254/t-plugin-projection*/formal-verif) | 88 pass / 0 fail |
-| `bash tests/run-tests.sh --ci` | 【全 CI 完走 exit を末尾に転記 — Class A/B 解決後の再実行】 |
+| `bash tests/run-tests.sh --ci` | **PASS(CI_EXIT=0)** — Test files: 575 / Failed files: 0 / Failed assertions: 0(Class A/B 解決後の再実行 /tmp/citest3.log)。以後の count-free doc reword は無テスト面で、dist:check + promote:self:check + onboarding/doc 依存テスト(t151/t174/t149/t150/t258/t01/t02/t132)を green 再確認 |
 
 ## C4 フック配線の裁定と解決(conductor 裁定 2026-07-27 — 既決ノルム導出、project.md c5「既存実装の流儀に合わせる」)
 
