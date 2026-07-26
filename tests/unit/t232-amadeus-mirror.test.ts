@@ -1,45 +1,53 @@
 // covers: harness-instrument:amadeus-mirror
 //
-// t232 — amadeus-mirror CLI pure functions (intent 260717-mirror-issue-tool).
+// t232 — amadeus-mirror CLI pure functions.
 //
 // Drives the exported pure functions in-process (no spawn, no fs): the args
-// parser's usage rejections (S-3 falling proofs), the Stage Progress checkbox
-// counter (ADR-3a, [S] excluded from the denominator), and the fixed
-// three-section template (FR-5: nothing but 概要/Record/状態; R-2 idempotence:
-// same snapshot -> byte-identical body). The fs/gh boundary lives in
-// tests/integration/t232-amadeus-mirror.integration.test.ts.
+// parser's usage rejections (S-3 falling proofs), core-root resolution across
+// path semantics, and the status comparison against the canonical record view
+// (StatusRecordView.expectedBody = renderMirrorIssueContent, the SAME body the
+// sync writer emits). The real fs/gh/lifecycle boundary and the v1 read
+// regression (#1547/#1534) live in the integration tests
+// (t232/t299-amadeus-mirror-*.integration.test.ts).
 
 import { describe, expect, test } from "bun:test";
 import { posix, win32 } from "node:path";
 import {
   compareMirrorStatus,
-  countStageProgress,
   exitOfStatus,
-  type MirrorSnapshot,
   parseArgs,
   projectDirFromToolsDir,
-  renderBody,
-  renderStatusLine,
-  renderTitle,
-} from "../../packages/framework/core/tools/amadeus-mirror";
+  sectionValue,
+  type StatusRecordView,
+} from "../../packages/framework/core/tools/amadeus-mirror.ts";
 
-function snapshot(over: Partial<MirrorSnapshot> = {}): MirrorSnapshot {
+// A canonical-shaped issue body (renderMirrorIssueContent format) is enough to
+// exercise the section-aware comparison without importing the presentation
+// renderer; the only load-bearing section for the status split is `## Status`.
+function body(status: string, summary = "s"): string {
+  return [
+    "## Intent UUID",
+    "u",
+    "",
+    "## Summary",
+    summary,
+    "",
+    "## Status",
+    status,
+    "",
+    "## Mirror Marker",
+    "m",
+  ].join("\n");
+}
+
+function view(over: Partial<StatusRecordView> = {}): StatusRecordView {
+  const currentStatus = over.currentStatus ?? "Running";
   return {
-    dirName: "260717-mirror-issue-tool",
-    slug: "mirror-issue-tool",
-    projectSummary: "amadeus-mirror ツール: ミラー Issue を作成・同期・クローズする CLI",
-    recordPath: "amadeus/spaces/default/intents/260717-mirror-issue-tool/",
-    phase: "INCEPTION",
-    stage: "reverse-engineering",
-    stagesApproved: 7,
-    stagesTotal: 18,
-    parked: false,
-    parkedAtStage: null,
-    workflowStatus: "Running",
-    intentStatus: "in-flight",
-    lastUpdated: "2026-07-17T13:23:34Z",
-    mirrorIssue: null,
-    ...over,
+    kind: "ok",
+    intentDir: over.intentDir ?? "260726-mirror-state-read-a1b2c3d4",
+    issueNumber: over.issueNumber === undefined ? 101 : over.issueNumber,
+    currentStatus,
+    expectedBody: over.expectedBody ?? body(currentStatus),
   };
 }
 
@@ -99,29 +107,39 @@ describe("t232 core tools project-root resolution (FR-1 platform parity)", () =>
   });
 });
 
-describe("t232 status comparison (U1 FR-2)", () => {
-  test("returns clean and exit 0 for the canonical body", () => {
-    const result = compareMirrorStatus(snapshot({ mirrorIssue: 1161 }), renderBody(
-      snapshot({ mirrorIssue: 1161 }),
-    ));
+describe("t232 sectionValue (canonical body section reader)", () => {
+  test("reads the value under a `## <heading>` up to the next heading", () => {
+    expect(sectionValue(body("Completed"), "Status")).toBe("Completed");
+    expect(sectionValue(body("Running"), "Summary")).toBe("s");
+  });
+
+  test("returns null when the section is absent", () => {
+    expect(sectionValue(body("Running"), "Nope")).toBeNull();
+  });
+});
+
+describe("t232 status comparison (against the canonical record view)", () => {
+  test("returns clean and exit 0 when the issue body matches the record body", () => {
+    const v = view();
+    const result = compareMirrorStatus(v, v.expectedBody);
     expect(result).toEqual({ kind: "clean" });
     expect(exitOfStatus(result)).toBe(0);
   });
 
-  test("reports only mirror-missing when no issue can be compared", () => {
-    const result = compareMirrorStatus(snapshot(), null);
+  test("reports mirror-missing when no issue is recorded (null body)", () => {
+    const result = compareMirrorStatus(view({ issueNumber: null }), null);
     expect(result).toEqual({
       kind: "diverged",
       findings: [{
         kind: "mirror-missing",
-        detail: expect.stringContaining("no Mirror Issue field"),
+        detail: expect.stringContaining("no mirror issue recorded"),
       }],
     });
     expect(exitOfStatus(result)).toBe(1);
   });
 
   test("reports an absent numbered issue as mirror-missing", () => {
-    const result = compareMirrorStatus(snapshot({ mirrorIssue: 1161 }), null);
+    const result = compareMirrorStatus(view({ issueNumber: 1161 }), null);
     expect(result).toEqual({
       kind: "diverged",
       findings: [{
@@ -132,9 +150,9 @@ describe("t232 status comparison (U1 FR-2)", () => {
   });
 
   test("reports stale status with the record-side status in detail", () => {
-    const current = snapshot({ mirrorIssue: 1161, workflowStatus: "Running" });
-    const stale = renderBody({ ...current, workflowStatus: "Completed" });
-    const result = compareMirrorStatus(current, stale);
+    const v = view({ currentStatus: "Running" });
+    const stale = body("Completed");
+    const result = compareMirrorStatus(v, stale);
     expect(result.kind).toBe("diverged");
     if (result.kind === "diverged") {
       expect(result.findings.map((finding) => finding.kind)).toContain(
@@ -144,10 +162,10 @@ describe("t232 status comparison (U1 FR-2)", () => {
     }
   });
 
-  test("reports body drift while preserving the canonical status line", () => {
-    const current = snapshot({ mirrorIssue: 1161 });
-    const drifted = renderBody(current).replace("## 概要", "## changed");
-    const result = compareMirrorStatus(current, drifted);
+  test("reports body drift alone when only a non-status section differs", () => {
+    const v = view({ currentStatus: "Running" });
+    const drifted = body("Running", "a different summary");
+    const result = compareMirrorStatus(v, drifted);
     expect(result).toEqual({
       kind: "diverged",
       findings: [{
@@ -158,8 +176,7 @@ describe("t232 status comparison (U1 FR-2)", () => {
   });
 
   test("lists stale-status-line and issue-drifted together in deterministic order", () => {
-    const current = snapshot({ mirrorIssue: 1161 });
-    const result = compareMirrorStatus(current, "manually replaced body");
+    const result = compareMirrorStatus(view(), "manually replaced body");
     expect(result.kind).toBe("diverged");
     if (result.kind === "diverged") {
       expect(result.findings.map((finding) => finding.kind)).toEqual([
@@ -171,147 +188,5 @@ describe("t232 status comparison (U1 FR-2)", () => {
 
   test("maps a precondition outcome to exit 2", () => {
     expect(exitOfStatus({ kind: "precondition", reason: "gh not ready" })).toBe(2);
-  });
-});
-
-describe("t232 countStageProgress (ADR-3a, #1172)", () => {
-  const state = [
-    "## Stage Progress",
-    "",
-    "### IDEATION PHASE",
-    "- [x] intent-capture — EXECUTE",
-    "- [x] feasibility — EXECUTE",
-    // scope-skipped rows keep a live checkbox but carry the ` — SKIP` suffix
-    // (real setStageSuffix format); they leave the denominator (#1172).
-    "- [ ] market-research — SKIP",
-    "- [-] scope-definition — EXECUTE",
-    "- [ ] approval-handoff — EXECUTE",
-    "- [?] team-formation — EXECUTE",
-    "",
-    "## Current Status",
-    "- [x] this checkbox is outside Stage Progress and must not count",
-  ].join("\n");
-
-  test("counts [x] as approved and excludes scope-SKIP rows from the denominator", () => {
-    expect(countStageProgress(state)).toEqual({ approved: 2, total: 5 });
-  });
-
-  test("excludes both skip forms: [S] jump-skip and ` — SKIP` scope-skip", () => {
-    // A jump-skipped stage that (unusually) carries an EXECUTE suffix is still
-    // excluded via the `[S]` mark; a scope-skipped stage that keeps a live
-    // checkbox is excluded via the ` — SKIP` suffix. Only the two EXECUTE rows
-    // with live checkboxes remain in the denominator.
-    const mixed = [
-      "## Stage Progress",
-      "",
-      "- [S] market-research — EXECUTE",
-      "- [ ] feasibility — SKIP",
-      "- [x] intent-capture — EXECUTE",
-      "- [ ] scope-definition — EXECUTE",
-    ].join("\n");
-    expect(countStageProgress(mixed)).toEqual({ approved: 1, total: 2 });
-  });
-
-  test("18 approved EXECUTE stages + 14 SKIP stages -> 18/18 (#1172)", () => {
-    // A synthetic full-workflow state: 18 in-scope stages all approved,
-    // 14 scope-skipped stages (real ` — SKIP` suffix). The template header and
-    // a phase comment row bracket them. SKIP rows must all leave the
-    // denominator so progress reads 18/18, not 18/32.
-    const executeStages = [
-      "workspace-scaffold",
-      "workspace-detection",
-      "state-init",
-      "intent-capture",
-      "scope-definition",
-      "reverse-engineering",
-      "requirements-analysis",
-      "practices-discovery",
-      "functional-design",
-      "nfr-requirements",
-      "nfr-design",
-      "infrastructure-design",
-      "units-generation",
-      "delivery-planning",
-      "code-generation",
-      "ci-pipeline",
-      "build-and-test",
-      "approval-handoff",
-    ];
-    const skipStages = [
-      "market-research",
-      "feasibility",
-      "team-formation",
-      "rough-mockups",
-      "refined-mockups",
-      "user-stories",
-      "application-design",
-      "deployment-pipeline",
-      "environment-provisioning",
-      "deployment-execution",
-      "observability-setup",
-      "incident-response",
-      "performance-validation",
-      "feedback-optimization",
-    ];
-    expect(executeStages.length).toBe(18);
-    expect(skipStages.length).toBe(14);
-    const lines = [
-      "## Stage Progress",
-      "",
-      "<!-- checkbox: [ ] pending, [x] approved, [S] skipped -->",
-      "### CONSTRUCTION PHASE",
-      ...executeStages.map((s) => `- [x] ${s} — EXECUTE`),
-      ...skipStages.map((s) => `- [ ] ${s} — SKIP`),
-    ];
-    expect(lines.length).toBe(4 + 18 + 14); // 36 total lines
-    expect(countStageProgress(lines.join("\n"))).toEqual({
-      approved: 18,
-      total: 18,
-    });
-  });
-
-  test("returns zeros for content without a Stage Progress section", () => {
-    expect(countStageProgress("# nothing here\n- [x] stray\n")).toEqual({
-      approved: 0,
-      total: 0,
-    });
-  });
-});
-
-describe("t232 template (C3, FR-5)", () => {
-  test("body contains exactly the three fixed sections and nothing more", () => {
-    const body = renderBody(snapshot());
-    const headings = body.split("\n").filter((l) => l.startsWith("## "));
-    expect(headings).toEqual(["## 概要", "## Record(正本)", "## 状態"]);
-    expect(body).toContain("amadeus/spaces/default/intents/260717-mirror-issue-tool/");
-  });
-
-  test("body is deterministic for the same snapshot (R-2 idempotence)", () => {
-    const s = snapshot();
-    expect(renderBody(s)).toBe(renderBody(s));
-  });
-
-  test("status line renders in-flight, parked, and complete states (ADR-3)", () => {
-    expect(renderStatusLine(snapshot())).toBe(
-      "**in-flight** — INCEPTION/reverse-engineering(approved 7/18)、更新 2026-07-17T13:23:34Z",
-    );
-    expect(
-      renderStatusLine(snapshot({ parked: true, parkedAtStage: "reverse-engineering" })),
-    ).toStartWith("**parked @ reverse-engineering**");
-    expect(renderStatusLine(snapshot({ workflowStatus: "Completed" }))).toStartWith(
-      "**complete**",
-    );
-  });
-
-  test("title carries slug and dirName", () => {
-    expect(renderTitle(snapshot())).toBe(
-      "intent: mirror-issue-tool(260717-mirror-issue-tool)",
-    );
-  });
-
-  test("overlong project summaries are truncated, keeping the card small", () => {
-    const body = renderBody(snapshot({ projectSummary: "あ".repeat(500) }));
-    expect(body).toContain("…");
-    expect(body.length).toBeLessThan(700);
   });
 });
