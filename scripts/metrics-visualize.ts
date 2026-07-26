@@ -32,8 +32,12 @@ const SCRIPTS_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(SCRIPTS_DIR, "..");
 
 const CHART_WIDTH = 720;
-const CHART_HEIGHT = 120;
+const CHART_HEIGHT = 160;
 const CHART_PAD = 8;
+const CHART_MARGIN = { top: 8, right: 12, bottom: 28, left: 52 } as const;
+const PLOT_WIDTH = CHART_WIDTH - CHART_MARGIN.left - CHART_MARGIN.right;
+const PLOT_HEIGHT = CHART_HEIGHT - CHART_MARGIN.top - CHART_MARGIN.bottom;
+const AXIS_TICK_COUNT = 5;
 
 // Snapshot serialization cap mirrored from scripts/metrics-snapshot.ts
 // serializeSnapshot (16_384-byte throw); the writer stays untouched (scope
@@ -95,6 +99,23 @@ function valueRange(points: Array<number | null>): { min: number; max: number } 
   return { min: Math.min(...numbers), max: Math.max(...numbers) };
 }
 
+export function axisTicks(min: number, max: number, count = AXIS_TICK_COUNT): number[] {
+  if (min === max || count <= 1) return [min];
+  return Array.from({ length: count }, (_, i) => min + ((max - min) * i) / (count - 1));
+}
+
+export function axisTickIndices(length: number, count = AXIS_TICK_COUNT): number[] {
+  if (length <= 0) return [];
+  if (length <= count) return Array.from({ length }, (_, i) => i);
+  return Array.from({ length: count }, (_, i) => Math.round((i * (length - 1)) / (count - 1)));
+}
+
+function formatAxisValue(value: number, step: number): string {
+  if (step === 0) return formatValue(value);
+  const decimals = Math.max(0, Math.min(6, Math.ceil(-Math.log10(Math.abs(step))) + 1));
+  return String(Number(value.toFixed(decimals)));
+}
+
 // Polyline path over the points within a w×h viewBox; null is a gap that
 // breaks the line into segments (a new M command) rather than interpolating
 // across missing data. The per-key min/max scale is derived from the points.
@@ -114,6 +135,38 @@ export function svgLinePath(points: Array<number | null>, w: number, h: number):
     penDown = true;
   });
   return parts.join(" ");
+}
+
+function renderChartAxes(series: Snapshot[], range: { min: number; max: number }): string {
+  const yTicks = axisTicks(range.min, range.max);
+  const yStep = yTicks.length > 1 ? yTicks[1] - yTicks[0] : 0;
+  const plotLeft = CHART_MARGIN.left + CHART_PAD;
+  const plotRight = CHART_MARGIN.left + PLOT_WIDTH - CHART_PAD;
+  const plotBottom = CHART_MARGIN.top + PLOT_HEIGHT - CHART_PAD;
+  const yAxis = yTicks
+    .map((value) => {
+      const y = CHART_MARGIN.top + chartY(value, range.min, range.max, PLOT_HEIGHT);
+      return [
+        `<line class="grid-line" x1="${plotLeft}" y1="${y.toFixed(1)}" x2="${plotRight}" y2="${y.toFixed(1)}"/>`,
+        `<text class="axis-label y-axis-label" x="${CHART_MARGIN.left - 6}" y="${(y + 3).toFixed(1)}" text-anchor="end">${escapeHtml(formatAxisValue(value, yStep))}</text>`,
+      ].join("");
+    })
+    .join("");
+  const xAxis = axisTickIndices(series.length)
+    .map((i) => {
+      const x = CHART_MARGIN.left + chartX(i, series.length, PLOT_WIDTH);
+      const label = series[i].captured_at.slice(0, 10);
+      return [
+        `<line class="axis-tick" x1="${x.toFixed(1)}" y1="${plotBottom.toFixed(1)}" x2="${x.toFixed(1)}" y2="${(plotBottom + 4).toFixed(1)}"/>`,
+        `<text class="axis-label x-axis-label" x="${x.toFixed(1)}" y="${CHART_HEIGHT - 6}" text-anchor="middle">${escapeHtml(label)}</text>`,
+      ].join("");
+    })
+    .join("");
+  return [
+    yAxis,
+    `<line class="axis-line" x1="${plotLeft}" y1="${plotBottom.toFixed(1)}" x2="${plotRight}" y2="${plotBottom.toFixed(1)}"/>`,
+    xAxis,
+  ].join("");
 }
 
 function renderKeyChart(series: Snapshot[], collector: string, key: string): string {
@@ -136,14 +189,17 @@ function renderKeyChart(series: Snapshot[], collector: string, key: string): str
       const s = series[i];
       const title = `${s.captured_at} / ${s.commit.slice(0, 12)} — ${key}=${formatValue(p)}`;
       const cls = i === lastPointIndex && latestClass !== "" ? ` class="${latestClass}"` : "";
-      return `<circle${cls} cx="${chartX(i, points.length, CHART_WIDTH).toFixed(1)}" cy="${chartY(p, range.min, range.max, CHART_HEIGHT).toFixed(1)}" r="2.5"><title>${escapeHtml(title)}</title></circle>`;
+      return `<circle${cls} cx="${chartX(i, points.length, PLOT_WIDTH).toFixed(1)}" cy="${chartY(p, range.min, range.max, PLOT_HEIGHT).toFixed(1)}" r="2.5"><title>${escapeHtml(title)}</title></circle>`;
     })
     .join("");
   return [
     `<div class="chart"><h3>${escapeHtml(key)} <span class="range">min ${formatValue(range.min)} / max ${formatValue(range.max)}</span></h3>`,
     `<svg viewBox="0 0 ${CHART_WIDTH} ${CHART_HEIGHT}" width="${CHART_WIDTH}" height="${CHART_HEIGHT}" role="img">`,
-    `<path d="${svgLinePath(points, CHART_WIDTH, CHART_HEIGHT)}" fill="none" stroke="currentColor" stroke-width="1.5"/>`,
+    renderChartAxes(series, range),
+    `<g transform="translate(${CHART_MARGIN.left} ${CHART_MARGIN.top})">`,
+    `<path d="${svgLinePath(points, PLOT_WIDTH, PLOT_HEIGHT)}" fill="none" stroke="currentColor" stroke-width="1.5"/>`,
     circles,
+    "</g>",
     "</svg></div>",
   ].join("");
 }
@@ -187,7 +243,9 @@ const STYLE = [
   "h3{font-size:.9rem;margin:.8rem 0 .2rem}",
   ".tool,.range{font-weight:normal;font-size:.75rem;color:#888}",
   ".meta{color:#555;font-size:.85rem}",
-  "svg{display:block;background:#fafafa;border:1px solid #eee}",
+  "svg{display:block;background:#fafafa;border:1px solid #eee;max-width:100%;height:auto}",
+  ".grid-line{stroke:#ddd;stroke-width:.5}.axis-line,.axis-tick{stroke:#999;stroke-width:.75}",
+  ".axis-label{fill:#666;font-size:9px;font-variant-numeric:tabular-nums}",
   ".empty{color:#999;font-size:.8rem}",
   "table{border-collapse:collapse;font-size:.75rem;font-variant-numeric:tabular-nums}",
   "th,td{border:1px solid #ddd;padding:.15rem .4rem;text-align:right}",
