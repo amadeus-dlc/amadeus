@@ -9919,3 +9919,1025 @@
 **Message**: Both fixes are consistent with upstream artifacts and close iteration 1's Major/Minor findings. The 2-axis closure (manual-only OR deferred) is now applied uniformly across business-rules.md BR-U4-4, 
 
 ---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T16:20:01Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/domain-entities.md
+**Context**: construction > conformance-suite > functional-design > domain-entities.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:20:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: e390049e
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:20:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: e390049e
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/domain-entities.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:20:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 08fdabc0
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:20:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: 08fdabc0
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/domain-entities.md
+**Duration ms**: 37
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T16:20:29Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-logic-model.md
+**Context**: construction > conformance-suite > functional-design > business-logic-model.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:20:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: d0616d27
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:20:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: d0616d27
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-logic-model.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:20:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7a0a2f44
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:20:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7a0a2f44
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-logic-model.md
+**Duration ms**: 35
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T16:20:48Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-rules.md
+**Context**: construction > conformance-suite > functional-design > business-rules.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:20:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 69b4b80d
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:20:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 69b4b80d
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-rules.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:20:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 92227c99
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:20:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 92227c99
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-rules.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:21:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5c01b27d
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:21:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5c01b27d
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-logic-model.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:21:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: e28f6ab5
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:21:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: e28f6ab5
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-rules.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:21:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 285652db
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:21:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 285652db
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/domain-entities.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:21:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: b746125e
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:21:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: b746125e
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-logic-model.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:21:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8d05d7e1
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:21:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8d05d7e1
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-rules.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:21:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9d2cc2dc
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:21:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9d2cc2dc
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/domain-entities.md
+**Duration ms**: 41
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T16:23:25Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a094fa49d3a6f94cf
+**Message**: Reviewer: amadeus-architecture-reviewer-agent\nInvocationId: a3a2fa62-4dcc-471e-a4f5-886ea1279f61\nIteration: 1\nVerdict: NOT-READY\nScope decision: none\nSummary: FR-8/FR-10 被覆・disposition 3値・検証劇場禁止・table
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T16:23:51Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-logic-model.md
+**Context**: construction > conformance-suite > functional-design > business-logic-model.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:23:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3a9764e9
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:23:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3a9764e9
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-logic-model.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:23:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: 27501b0f
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:23:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: 27501b0f
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-logic-model.md
+**Duration ms**: 37
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T16:23:56Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-rules.md
+**Context**: construction > conformance-suite > functional-design > business-rules.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:23:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 184ebd6a
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:23:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 184ebd6a
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-rules.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:23:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 95340280
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:23:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 95340280
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/business-rules.md
+**Duration ms**: 33
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T16:23:59Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/domain-entities.md
+**Context**: construction > conformance-suite > functional-design > domain-entities.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:23:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 926abc77
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:23:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: 926abc77
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/domain-entities.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:24:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 74aac906
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:24:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 74aac906
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/conformance-suite/functional-design/domain-entities.md
+**Duration ms**: 37
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T16:24:45Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a22d96e118a6a0362
+**Message**: Reviewer: amadeus-architecture-reviewer-agent\nInvocationId: c420f376-747e-4afc-a211-6b7b5c82edfd\nIteration: 2\nVerdict: READY\nScope decision: none\nSummary: iteration 1 の Major 1件(component-methods 装飾トー
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T16:25:22Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/domain-entities.md
+**Context**: construction > docs-sync > functional-design > domain-entities.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:25:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3b3a1588
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:25:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3b3a1588
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/domain-entities.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:25:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 658bc38d
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:25:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 658bc38d
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/domain-entities.md
+**Duration ms**: 34
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T16:25:39Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-logic-model.md
+**Context**: construction > docs-sync > functional-design > business-logic-model.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:25:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: 731aac3b
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:25:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: 731aac3b
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-logic-model.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:25:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: d26ec93a
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:25:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: d26ec93a
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-logic-model.md
+**Duration ms**: 36
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-26T16:26:00Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-rules.md
+**Context**: construction > docs-sync > functional-design > business-rules.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:26:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0e60be3a
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:26:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0e60be3a
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-rules.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:26:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: ad817c01
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:26:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: ad817c01
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-rules.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:26:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 331e7353
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:26:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 331e7353
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-logic-model.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:26:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: d4c501e7
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:26:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: d4c501e7
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-rules.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:26:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: f69397ed
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:26:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: f69397ed
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/domain-entities.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:26:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: fd008131
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:26:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: fd008131
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-logic-model.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:26:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 024e0023
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:26:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 024e0023
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-rules.md
+**Duration ms**: 36
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:26:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: cc7781d5
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:26:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: cc7781d5
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/domain-entities.md
+**Duration ms**: 34
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T16:28:23Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a2c1d99a34c3075fe
+**Message**: Reviewer: amadeus-architecture-reviewer-agent\nInvocationId: 44527571-d214-4db6-8961-ced583829c06\nIteration: 1\nVerdict: NOT-READY\nScope decision: none\nSummary: FR-9 被覆・転記のみ原則・語彙起点棚卸し・乖離の逸脱扱い・ADR-4 正準 l
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T16:28:46Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/domain-entities.md
+**Context**: construction > docs-sync > functional-design > domain-entities.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:28:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: 99b03875
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:28:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 99b03875
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/domain-entities.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:28:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: f7b9bb34
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:28:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: f7b9bb34
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/domain-entities.md
+**Duration ms**: 34
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T16:28:50Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/domain-entities.md
+**Context**: construction > docs-sync > functional-design > domain-entities.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:28:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: e61da183
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:28:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: e61da183
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/domain-entities.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:28:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: f1c5c372
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:28:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: f1c5c372
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/domain-entities.md
+**Duration ms**: 35
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T16:28:54Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-logic-model.md
+**Context**: construction > docs-sync > functional-design > business-logic-model.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:28:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9de2d85e
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:28:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9de2d85e
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-logic-model.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:28:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 60ba9676
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:28:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 60ba9676
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-logic-model.md
+**Duration ms**: 34
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-26T16:28:57Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin/amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-rules.md
+**Context**: construction > docs-sync > functional-design > business-rules.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:28:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 924fae62
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:28:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: 924fae62
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-rules.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-26T16:28:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8374a029
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-26T16:28:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8374a029
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260726-plugin-host-delivery/construction/docs-sync/functional-design/business-rules.md
+**Duration ms**: 35
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-26T16:30:34Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a9ef0e64aa027f98d
+**Message**: The BR-U8-6 literal citation matches the canonical ADR-4 definition exactly. Both iteration-1 findings are closed correctly, no regressions found, cross-references check out.\n\nReviewer: amadeus-archit
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-26T16:30:43Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: functional-design
+**Recovered**: true
+
+---
+
+## Gate Rejected
+**Timestamp**: 2026-07-26T16:30:44Z
+**Event**: GATE_REJECTED
+**Stage**: functional-design
+**Transaction Id**: f254dd0213f922fad2bb1f2c
+**Feedback**: Recovered from durable artifact evidence; original feedback was not recorded
+**Recovered**: true
+
+---
+
+## Stage Revising
+**Timestamp**: 2026-07-26T16:30:44Z
+**Event**: STAGE_REVISING
+**Stage**: functional-design
+**Transaction Id**: f254dd0213f922fad2bb1f2c
+**Revision count**: 2
+**Feedback**: Recovered from durable artifact evidence; original feedback was not recorded
+**Recovered**: true
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-26T16:30:44Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: functional-design
+**Transaction Id**: f254dd0213f922fad2bb1f2c
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-26T16:30:44Z
+**Event**: GATE_APPROVED
+**Stage**: functional-design
+**Transaction Id**: f254dd0213f922fad2bb1f2c
+**User Input**: 全 8 unit の FD 完了(各 reviewer READY)
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-26T16:30:44Z
+**Event**: STAGE_COMPLETED
+**Stage**: functional-design
+**Transaction Id**: f254dd0213f922fad2bb1f2c
+**Details**: Stage Functional Design approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-26T16:30:44Z
+**Event**: STAGE_STARTED
+**Stage**: nfr-requirements
+**Agent**: amadeus-architect-agent
+
+---
+
+## Memory Empty
+**Timestamp**: 2026-07-26T16:30:44Z
+**Event**: MEMORY_EMPTY
+**Stage**: functional-design
+
+---
