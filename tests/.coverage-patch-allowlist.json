@@ -794,31 +794,31 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-gateway.ts",
-    "lines": "447-448",
+    "lines": "484-485",
     "reason": "t272 exercises strict scanning, JSON parsing, pagination, readiness, process failure, and malformed response matrices in-process; these residual rows are multiline type/command construction and post-validation defensive guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-gateway.ts",
-    "lines": "602",
+    "lines": "639",
     "reason": "t272 exercises strict scanning, JSON parsing, pagination, readiness, process failure, and malformed response matrices in-process; these residual rows are multiline type/command construction and post-validation defensive guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-gateway.ts",
-    "lines": "615-620",
+    "lines": "652-657",
     "reason": "t272 exercises strict scanning, JSON parsing, pagination, readiness, process failure, and malformed response matrices in-process; these residual rows are multiline type/command construction and post-validation defensive guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-gateway.ts",
-    "lines": "702",
+    "lines": "738",
     "reason": "t272 exercises strict scanning, JSON parsing, pagination, readiness, process failure, and malformed response matrices in-process; these residual rows are multiline type/command construction and post-validation defensive guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-gateway.ts",
-    "lines": "716",
+    "lines": "752",
     "reason": "t272 exercises strict scanning, JSON parsing, pagination, readiness, process failure, and malformed response matrices in-process; these residual rows are multiline type/command construction and post-validation defensive guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
