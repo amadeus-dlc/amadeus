@@ -21,6 +21,15 @@ import {
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { mirrorProjectionRegistryDigest } from "../packages/framework/harness/projections.ts";
+import {
+  kimiConfigPath,
+  renderHooksError,
+  resolveKimiHome,
+  runHooksMerge,
+} from "../packages/setup/src/modules/kimi-hooks.ts";
+import { planMerge, renderManagedBlock } from "../packages/setup/src/domain/kimi-hooks.ts";
+import { createApplyWrite } from "../packages/setup/src/ports/apply-write.ts";
+import { createFsRead, createFsWrite } from "../packages/setup/src/ports/fsops.ts";
 import { DistributionTransactionCoordinator } from "./distribution-transaction.ts";
 
 type Mode = "check" | "apply";
@@ -152,7 +161,9 @@ function printUsage(): void {
       "usage: bun scripts/promote-self.ts [--check|--apply] [--no-build]",
       "",
       "  --check     verify project-local self install matches generated output (default)",
-      "  --apply     write .claude/, .codex/, .agents/, .cursor/, .opencode/, .kimi-code/, AGENTS.md, and CLAUDE.md",
+      "  --apply     write .claude/, .codex/, .agents/, .cursor/, .opencode/, .kimi-code/, AGENTS.md, and CLAUDE.md,",
+      "              then merge the amadeus hooks managed block into the user-level kimi config",
+      "              ($KIMI_CODE_HOME/config.toml, or ~/.kimi-code/config.toml when unset; a backup is made)",
       "  --no-build  skip the package.ts freshness step",
     ].join("\n"),
   );
@@ -331,15 +342,110 @@ function apply(expected: Map<string, Buffer>, repoRoot: string): void {
   ensureActiveSpaceCursor(repoRoot);
 }
 
+// Kimi Code has no project-level wiring config, so in the self-development
+// repo dogfood promotion takes the installer's role: the SAME setup module
+// merges the managed block into the user-level config.toml
+// ($KIMI_CODE_HOME ?? ~/.kimi-code, resolveKimiHome's rule), read from the
+// canonical snippet master. Approval is implicit — running --apply IS the
+// operator's consent — but the OC-1 contract still routes it through an
+// interactive confirm, so the tty port auto-confirms.
+//
+// The step is split to preserve the distribution transaction's atomic
+// boundary: preflight validates the merge (snippet render + config read +
+// plan) BEFORE any repo file is written, so a malformed user config fails
+// the run with nothing applied. run executes after the repo transaction
+// commits; a failure there is reported as exactly what it is — the repo was
+// updated, the user-level config was not.
+const KIMI_SNIPPET_MASTER_REL = join(
+  "packages",
+  "framework",
+  "harness",
+  "kimi",
+  "hooks",
+  "amadeus-hooks.snippet.toml",
+);
+
+export type PostApplyStep = {
+  readonly name: string;
+  // Validate before the repo transaction commits. Non-zero aborts the whole
+  // apply with nothing written.
+  readonly preflight: (repoRoot: string) => Promise<number>;
+  // Execute after the repo transaction commits. Non-zero means the repo was
+  // updated but this step was not — the message must say so precisely.
+  readonly run: (repoRoot: string) => Promise<number>;
+};
+
+const kimiHooksStep: PostApplyStep = {
+  name: "kimi-hooks",
+  preflight: async (repoRoot: string): Promise<number> => {
+    const snippetPath = join(repoRoot, KIMI_SNIPPET_MASTER_REL);
+    if (!existsSync(snippetPath)) {
+      console.error(`missing source file: ${KIMI_SNIPPET_MASTER_REL}`);
+      return 1;
+    }
+    const block = renderManagedBlock(readFileSync(snippetPath, "utf-8"));
+    if (block.type === "err") {
+      console.error(renderHooksError(block.error));
+      return 1;
+    }
+    const configPath = kimiConfigPath(resolveKimiHome());
+    const read = await createFsRead().readText(configPath);
+    if (read.type === "err" && read.error.notFound !== true) {
+      console.error(renderHooksError(read.error));
+      return 1;
+    }
+    const planned = planMerge(read.type === "ok" ? read.value : "", block.value);
+    if (planned.type === "err") {
+      console.error(renderHooksError(planned.error));
+      return 1;
+    }
+    return 0;
+  },
+  run: async (repoRoot: string): Promise<number> => {
+    const merged = await runHooksMerge(
+      {
+        snippet: readFileSync(join(repoRoot, KIMI_SNIPPET_MASTER_REL), "utf-8"),
+        snippetSource: ".kimi-code/hooks/amadeus-hooks.snippet.toml",
+        interactive: true,
+        kimiHome: resolveKimiHome(),
+      },
+      {
+        tty: {
+          isTTY: false,
+          select: async () => "",
+          input: async () => "",
+          confirm: async () => true,
+        },
+        fsRead: createFsRead(),
+        fsWrite: createFsWrite(),
+        applyWrite: createApplyWrite(),
+        out: (message) => console.log(message),
+      },
+    );
+    if (merged.type === "err") {
+      console.error(
+        `promote-self: repository update applied, but the kimi hooks merge failed: ${renderHooksError(merged.error)}`,
+      );
+      return 1;
+    }
+    return 0;
+  },
+};
+
 // Argv-parameterized handler exported as an in-process test seam. Returns the
 // process exit code instead of exiting so tests can drive check/apply against
 // a fixture repoRoot without spawning (spawned subprocesses are invisible to
-// bun --coverage).
-export function promoteSelfMain(
+// bun --coverage). Async because the --apply path's post-apply step awaits
+// the setup module's ports; the check path never awaits anything meaningful.
+// `postApply` is the wiring the apply path runs around the repo transaction
+// (default: the kimi hooks managed-block merge); pass null to test the bare
+// distribution mechanics without the user-level config side effect.
+export async function promoteSelfMain(
   argv: string[],
   repoRoot: string = REPO_ROOT,
   freshness: (mode: Mode) => void = runPackageFreshness,
-): number {
+  postApply: PostApplyStep | null = kimiHooksStep,
+): Promise<number> {
   if (argv.includes("--help") || argv.includes("-h")) {
     printUsage();
     return 2;
@@ -350,6 +456,15 @@ export function promoteSelfMain(
   }
   const mode: Mode = argv.includes("--apply") ? "apply" : "check";
   const noBuild = argv.includes("--no-build");
+
+  // Validate the post-apply wiring before ANY mutation. freshness()
+  // regenerates dist/ in place, so a preflight failure must abort before
+  // freshness runs — otherwise a malformed user config would still leave
+  // the dist trees rewritten behind a failed run.
+  if (mode === "apply" && postApply !== null) {
+    const preflight = await postApply.preflight(repoRoot);
+    if (preflight !== 0) return preflight;
+  }
 
   if (!noBuild) {
     freshness(mode);
@@ -374,6 +489,10 @@ export function promoteSelfMain(
 
   if (mode === "apply") {
     apply(expected, repoRoot);
+    if (postApply !== null) {
+      const ran = await postApply.run(repoRoot);
+      if (ran !== 0) return ran;
+    }
     console.log("promote-self: project-local self install updated");
     return 0;
   }
@@ -392,4 +511,4 @@ export function promoteSelfMain(
 
 // Main flow is guarded so the exported helpers can be imported by tests
 // without triggering a build or a check run.
-if (import.meta.main) process.exit(promoteSelfMain(process.argv.slice(2)));
+if (import.meta.main) process.exit(await promoteSelfMain(process.argv.slice(2)));

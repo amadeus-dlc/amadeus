@@ -127,43 +127,43 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "217-218",
+    "lines": "218-219",
     "reason": "Construction-boundary recognition is exercised through the generated Claude CLI by the 3-phase x 4-quadrant table in tests/integration/t265-engine-boundary.integration.test.ts. Bun does not merge spawned-child coverage into the parent LCOV report.",
     "expiry": "remove when mirror boundary routing has an in-process engine port or Bun merges child-process coverage"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "248-252",
+    "lines": "249-253",
     "reason": "Fixed auto-sync print construction is asserted through generated-CLI stdout and the restart journey in tests/integration/t265-engine-boundary.integration.test.ts and tests/e2e/t265-engine-boundary.test.ts; both are child-process boundaries invisible to parent LCOV.",
     "expiry": "remove when directive emission gains an injected in-process sink"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "264-266",
+    "lines": "265-267",
     "reason": "Malformed Receipt rejection is exercised through the generated CLI in tests/integration/t265-engine-boundary.integration.test.ts; the spawned error-directive branch is not attributed by Bun coverage.",
     "expiry": "remove when mirror boundary routing has an in-process engine port"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "301-310",
+    "lines": "302-311",
     "reason": "Canonical pending Receipt reissue is exercised through generated CLI and separate-process session restart tests in t265 integration/E2E; spawned execution is not LCOV-visible.",
     "expiry": "remove when mirror boundary routing has an in-process engine port"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "284-286",
+    "lines": "285-287",
     "reason": "The missing-active-intent fail-closed branch belongs to generated CLI orchestration. Neighboring boundary outcomes are exhaustively exercised by t265; Bun cannot attribute spawned CLI lines.",
     "expiry": "remove when active-intent resolution is injectable in-process"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "289-298",
+    "lines": "290-299",
     "reason": "Invalid layered configuration is asserted as one stdout error directive with empty stderr and byte-identical state by t265 integration. The tested generated CLI runs as a child process.",
     "expiry": "remove when mirror configuration resolution and directive emission are injectable in-process"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "300-338",
+    "lines": "301-338",
     "reason": "The auto-sync and ask branches, including create availability and fixed command prose, are covered by all 12 generated-CLI quadrant cells in t265 integration. Spawn-only routing is not parent-LCOV resident.",
     "expiry": "remove when boundary decision emission has an in-process port"
   },
@@ -187,19 +187,19 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "3513-3529",
+    "lines": "3513-3528",
     "reason": "Mirror report early returns, active-state resolution, and malformed Receipt handling are covered by generated-CLI report tests in t265 integration; spawned execution is not merged into LCOV.",
     "expiry": "remove when handleReport dependencies and directive sink are injectable"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "3531-3546",
+    "lines": "3530-3545",
     "reason": "Phase mismatch, already-processed/double answer, and unoffered create rejection are covered by generated-CLI t265 integration tests. These child-process branches are not parent-LCOV visible.",
     "expiry": "remove when handleReport dependencies and directive sink are injectable"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "3547-3559",
+    "lines": "3546-3558",
     "reason": "The absent-to-completed state subcommand, its failure handling, and successful run-then-continue directive are exercised by t265 integration and generated-CLI E2E journeys. Spawned subcommands are not LCOV-visible.",
     "expiry": "remove when spawnState and directive emission are injected in-process"
   },
@@ -824,145 +824,145 @@
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "100-104",
+    "lines": "107-111",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "109-111",
+    "lines": "116-118",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "365",
+    "lines": "448",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "389",
+    "lines": "472",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "479-482",
+    "lines": "562-565",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "578-580",
+    "lines": "661-663",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "584-587",
+    "lines": "667-670",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "643-651",
+    "lines": "726-734",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "657-671",
+    "lines": "740-754",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "673",
+    "lines": "756",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "677-682",
+    "lines": "760-765",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "712-714",
+    "lines": "795-797",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "738-740",
+    "lines": "821-823",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "745-747",
+    "lines": "828-830",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "749-756",
+    "lines": "832-839",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "767-768",
+    "lines": "850-851",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "786-788",
+    "lines": "869-871",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "851",
+    "lines": "934",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "866-868",
+    "lines": "949-951",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "939-941",
+    "lines": "1022-1024",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "954-959",
+    "lines": "1037-1042",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "998-1001",
+    "lines": "1081-1084",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "1003-1004",
+    "lines": "1086-1087",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-mirror-lifecycle.ts",
-    "lines": "1026",
+    "lines": "1109",
     "reason": "t282 through t284 exercise lifecycle routing, target failures, prompt answers, manual operations, repair flows, and CLI exit contracts; these residual rows are repair terminal composition or spawned main-path rows not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
@@ -1357,80 +1357,50 @@
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
-    "file": "packages/framework/core/tools/amadeus-mirror.ts",
-    "lines": "77",
-    "reason": "t232 and mirror CLI integration tests exercise parsing, status, dispatch, success, and failure through the shipped process boundary; these residual dispatch/main rows are not attributed to parent Bun LCOV.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror.ts",
-    "lines": "88",
-    "reason": "t232 and mirror CLI integration tests exercise parsing, status, dispatch, success, and failure through the shipped process boundary; these residual dispatch/main rows are not attributed to parent Bun LCOV.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror.ts",
-    "lines": "546",
-    "reason": "t232 and mirror CLI integration tests exercise parsing, status, dispatch, success, and failure through the shipped process boundary; these residual dispatch/main rows are not attributed to parent Bun LCOV.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror.ts",
-    "lines": "552-553",
-    "reason": "t232 and mirror CLI integration tests exercise parsing, status, dispatch, success, and failure through the shipped process boundary; these residual dispatch/main rows are not attributed to parent Bun LCOV.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror.ts",
-    "lines": "557",
-    "reason": "t232 and mirror CLI integration tests exercise parsing, status, dispatch, success, and failure through the shipped process boundary; these residual dispatch/main rows are not attributed to parent Bun LCOV.",
-    "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
-  },
-  {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "233-238",
+    "lines": "234-239",
     "reason": "t265 exercises all mirror boundary quadrants, pending receipt recovery, malformed state, prompts, and report outcomes through the generated orchestrator CLI; spawned routing rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "240-244",
+    "lines": "241-245",
     "reason": "t265 exercises all mirror boundary quadrants, pending receipt recovery, malformed state, prompts, and report outcomes through the generated orchestrator CLI; spawned routing rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "288",
+    "lines": "289",
     "reason": "t265 exercises all mirror boundary quadrants, pending receipt recovery, malformed state, prompts, and report outcomes through the generated orchestrator CLI; spawned routing rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "3876-3886",
+    "lines": "3875-3885",
     "reason": "t265 exercises all mirror boundary quadrants, pending receipt recovery, malformed state, prompts, and report outcomes through the generated orchestrator CLI; spawned routing rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "3888-3889",
+    "lines": "3887-3888",
     "reason": "t265 exercises all mirror boundary quadrants, pending receipt recovery, malformed state, prompts, and report outcomes through the generated orchestrator CLI; spawned routing rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "3894",
+    "lines": "3893",
     "reason": "t265 exercises all mirror boundary quadrants, pending receipt recovery, malformed state, prompts, and report outcomes through the generated orchestrator CLI; spawned routing rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "3918-3924",
+    "lines": "3917-3923",
     "reason": "t265 exercises all mirror boundary quadrants, pending receipt recovery, malformed state, prompts, and report outcomes through the generated orchestrator CLI; spawned routing rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "lines": "3926",
+    "lines": "3925",
     "reason": "t265 exercises all mirror boundary quadrants, pending receipt recovery, malformed state, prompts, and report outcomes through the generated orchestrator CLI; spawned routing rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },

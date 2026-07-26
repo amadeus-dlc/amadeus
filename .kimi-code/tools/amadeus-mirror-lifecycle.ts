@@ -27,9 +27,14 @@ import {
   parseIssueNumber,
   parseRepositoryIdentity,
 } from "./amadeus-mirror-gateway.ts";
-import { parseMirrorMarker, verifyOwnership } from "./amadeus-mirror-provenance.ts";
+import {
+  parseMirrorMarker,
+  renderMirrorMarker,
+  verifyOwnership,
+} from "./amadeus-mirror-provenance.ts";
 import {
   MIRROR_USER_CONTRACT,
+  renderMirrorIssueContent,
   renderMirrorLifecycleHelp,
 } from "./amadeus-mirror-presentation.ts";
 import {
@@ -45,11 +50,13 @@ import {
 } from "./amadeus-mirror-state-store.ts";
 import type {
   MirrorBoundary,
+  MirrorCreateIdentity,
   MirrorEventIdentity,
   MirrorGitHubGateway,
   MirrorOperation,
   MirrorOperationOutcome,
   MirrorProvenanceV2,
+  MirrorStateSnapshot,
   RepositoryIdentity,
 } from "./amadeus-mirror-types.ts";
 
@@ -248,6 +255,82 @@ function lifecycleSnapshot(
     registryStatus: target.registryStatus,
     updatedAt: getField(target.stateContent, "Last Updated") ?? now(),
   };
+}
+
+// The read-only record view the `status` verb diagnoses against. It reuses the
+// same resolution (resolveLifecycleTarget), the same v1 state read
+// (readMirrorState), the same record snapshot (lifecycleSnapshot), and the same
+// body renderers (renderMirrorIssueContent + renderMirrorMarker) that a real
+// sync uses, so the status comparison and the sync writer share ONE body
+// definition instead of a parallel one. `issueNumber` is the authoritative
+// "mirror recorded?" signal from the v1 block.
+export type MirrorStatusRecordView =
+  | { kind: "error"; message: string }
+  | {
+      kind: "ok";
+      intentDir: string;
+      issueNumber: number | null;
+      currentStatus: string;
+      expectedBody: string;
+    };
+
+export type MirrorStatusRecordRequest = Readonly<{
+  projectDir: string;
+  space?: string;
+  intentDir?: string;
+  repository?: RepositoryIdentity;
+}>;
+
+export function buildMirrorStatusRecordView(
+  request: MirrorStatusRecordRequest,
+  runtime: MirrorLifecycleRuntime = {},
+): MirrorStatusRecordView {
+  const fullRequest: MirrorLifecycleRequest = {
+    ...request,
+    boundary: { kind: "manual", instance: "status-view" },
+  };
+  const target = resolveLifecycleTarget(fullRequest);
+  if (target.kind === "error") return { kind: "error", message: target.message };
+  const resolved = lifecycleRuntime(fullRequest, target, runtime);
+  const read = readMirrorState(resolved.ports);
+  if (read.kind === "io-failure") return { kind: "error", message: read.summary };
+  if (read.kind === "invalid")
+    return { kind: "error", message: `Mirror state is invalid: ${read.issues.join("; ")}` };
+  const state = read.snapshot;
+  const snapshot = lifecycleSnapshot(target, resolved.now);
+  const identity = markerCreateIdentity(state, target, snapshot.updatedAt);
+  const expectedBody = renderMirrorIssueContent({
+    snapshot,
+    marker: renderMirrorMarker(identity),
+  }).body;
+  return {
+    kind: "ok",
+    intentDir: target.intentDir,
+    issueNumber: state.issueNumber,
+    currentStatus: snapshot.status,
+    expectedBody,
+  };
+}
+
+// The marker create identity, mirroring coordinator.markerFor: provenance's
+// identity, else a receipt's, else a synthetic identity for a linkless record.
+function markerCreateIdentity(
+  state: MirrorStateSnapshot,
+  target: Extract<ResolvedLifecycleTarget, { kind: "ok" }>,
+  preparedAt: string,
+): MirrorCreateIdentity {
+  return (
+    state.provenance?.createIdentity ??
+    Object.values(state.receipts).find((receipt) => receipt.createIdentity)
+      ?.createIdentity ?? {
+      schema: 1,
+      intentUuid: target.intentUuid,
+      intentDir: target.intentDir,
+      repository: target.repository,
+      operationId: "-",
+      preparedAt,
+    }
+  );
 }
 
 export async function runMirrorLifecycleBoundary(

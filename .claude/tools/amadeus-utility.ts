@@ -851,9 +851,26 @@ export const KIMI_MANAGED_BLOCK_END = "# <<< amadeus-kimi-hooks <<<";
 const KIMI_ADAPTER_SIGNATURE = ".kimi-code/hooks/amadeus-kimi-adapter.ts";
 const KIMI_MANAGED_GIT_PATTERNS = ["Bash(git worktree*)", "Bash(git commit*)", "Bash(git add*)"] as const;
 
-// The managed-block wiring procedure, shared by every missing/repair fix line.
+// The managed-block wiring procedure for distribution users, shared by every
+// missing/repair fix line.
 const KIMI_MANAGED_BLOCK_FIX =
   're-run the installer (`bunx @amadeus-dlc/setup install --target <workspace>`) to merge the managed block, or wire it manually: copy everything between "# >>> amadeus-kimi-hooks >>>" and "# <<< amadeus-kimi-hooks <<<" (inclusive) from .kimi-code/hooks/amadeus-hooks.snippet.toml to the end of the config.toml';
+
+// The same repair for the Amadeus self-development repo: there the installer
+// never ran — dogfood promotion owns the self-install tree, and promote-self
+// --apply merges the managed block into the user-level config.toml as its
+// final step, so that is the repair command to point at.
+const KIMI_MANAGED_BLOCK_FIX_SELF_DEV =
+  're-run `bun scripts/promote-self.ts --apply` to merge the managed block into the user-level config.toml, or wire it manually: copy everything between "# >>> amadeus-kimi-hooks >>>" and "# <<< amadeus-kimi-hooks <<<" (inclusive) from .kimi-code/hooks/amadeus-hooks.snippet.toml to the end of the config.toml';
+
+// Self-development repo detection: only the Amadeus repo itself carries
+// scripts/promote-self.ts at its workspace root. Pure over the workspace dir
+// (the caller passes the doctor context's projectDir) so tests can drive both
+// branches with fixture roots, mirroring resolveDoctorContext's injectable
+// resolution rule.
+export function isSelfDevWorkspace(workspaceDir: string): boolean {
+  return existsSync(join(workspaceDir, "scripts", "promote-self.ts"));
+}
 
 // A raw config table (header + unparsed body) — the minimal structural scan
 // the detection needs (no TOML parse, mirroring the setup domain's scanTables
@@ -950,14 +967,21 @@ function readKimiConfig(kimiHomeDir: string): { readonly path: string; readonly 
 // repair hint: the wiring fires, and the next install/upgrade re-wraps the
 // markers. Missing (no config.toml, or no block in it) → FAIL with the wiring
 // procedure; marker anomalies → loud FAIL with manual-fix guidance (never a
-// silent pick, matching the setup domain's loud-fail contract).
-export function kimiManagedBlockDoctorCheck(kimiHomeDir: string): DoctorCheck {
+// silent pick, matching the setup domain's loud-fail contract). The wiring
+// procedure branches on the workspace: in the self-development repo (pass the
+// doctor context's projectDir as workspaceDir) the repair is promote-self
+// --apply; anywhere else it is the distribution installer.
+export function kimiManagedBlockDoctorCheck(kimiHomeDir: string, workspaceDir?: string): DoctorCheck {
+  const fix =
+    workspaceDir !== undefined && isSelfDevWorkspace(workspaceDir)
+      ? KIMI_MANAGED_BLOCK_FIX_SELF_DEV
+      : KIMI_MANAGED_BLOCK_FIX;
   const { path, text } = readKimiConfig(kimiHomeDir);
   if (text === null) {
     return {
       pass: false,
       label: `kimi managed block: ${path} missing — hooks not wired`,
-      fix: KIMI_MANAGED_BLOCK_FIX,
+      fix,
     };
   }
   const detection = detectKimiManagedBlock(text);
@@ -991,7 +1015,7 @@ export function kimiManagedBlockDoctorCheck(kimiHomeDir: string): DoctorCheck {
       return {
         pass: false,
         label: `kimi managed block: not found in ${path} — hooks not wired`,
-        fix: KIMI_MANAGED_BLOCK_FIX,
+        fix,
       };
   }
 }
@@ -1678,7 +1702,7 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
     // the in-process-tested kimiManagedBlockDoctorCheck /
     // kimiGitResidueDoctorCheck seams (the git pre-allow residue warning is
     // advisory by contract).
-    results.push(kimiManagedBlockDoctorCheck(kimiHomeDir));
+    results.push(kimiManagedBlockDoctorCheck(kimiHomeDir, projectDir));
     results.push(kimiGitResidueDoctorCheck(kimiHomeDir));
     // Minimum Kimi Code version pin: the hook event/matcher payload contract
     // the adapter translates was measured live against 0.28.1. The spawn stays
