@@ -114,6 +114,7 @@ import {
   parseConstructionIteration,
   requiredArtifactsForUnit,
 } from "./amadeus-graph.ts";
+import { KNOWN_HARNESS_DIRS } from "./amadeus-harness.js";
 
 // All valid checkbox states (lib.ts adds [?] awaiting-approval and [R] revising)
 const VALID_CHECKBOX_STATES: CheckboxState[] = [
@@ -356,16 +357,12 @@ export function advanceDirectionCheck(
 // flat `amadeus-docs/` root is gone - every record lives under amadeus/spaces/...,
 // so skipping `amadeus` skips all planning docs.) Used by workspaceHasSourceFile
 // (the top-level dir skip) and isNonDocPath (the git first-segment skip).
+// Harness dir names are derived from KNOWN_HARNESS_DIRS in amadeus-harness.ts
+// (the single source of truth) so new harnesses cannot drift out of the guard.
 // Declared at module top (not beside verifyStageArtifacts) because the command
 // dispatch runs at top level: a const declared lower in the file would be in
 // its temporal dead zone when an approve/advance dispatch calls the guard.
-const HARNESS_DOC_DIRS = new Set([
-  "amadeus",
-  ".claude",
-  ".kiro",
-  ".codex",
-  ".git",
-]);
+const HARNESS_DOC_DIRS = new Set(["amadeus", ".git", ...KNOWN_HARNESS_DIRS]);
 
 // The codekb stages - their produces live in the space-level codekb dir, keyed
 // by repo, NOT under a per-intent record dir. Mirrors KNOWN_CODEKB_STAGES in
@@ -1451,7 +1448,8 @@ function dirHasFile(dir: string): boolean {
 // "source work" when its FIRST segment is not a harness/doc dir - i.e. it is a
 // real workspace file (src/..., a root file), not an amadeus/ planning doc or
 // framework file. Mirrors HARNESS_DOC_DIRS, the same set the FS walk skips.
-function isNonDocPath(p: string): boolean {
+// Exported as an in-process test seam (spawn-blindspot norm).
+export function isNonDocPath(p: string): boolean {
   const rel = p.trim().replace(/^"|"$/g, ""); // git -z not used; strip any quoting
   if (rel.length === 0) return false;
   const firstSeg = rel.split("/")[0];
