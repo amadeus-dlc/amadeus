@@ -603,5 +603,12 @@
     "dirName": "260726-crossreviewed-bug-batch",
     "scope": "amadeus-bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019f9eae-1f81-77ee-947e-1034ae8c20f8",
+    "slug": "plugin-host-delivery",
+    "dirName": "260726-plugin-host-delivery",
+    "scope": "amadeus-feature",
+    "status": "in-flight"
   }
 ]

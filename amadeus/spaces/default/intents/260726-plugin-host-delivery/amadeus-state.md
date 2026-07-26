@@ -1,0 +1,104 @@
+# AI-DLC State Tracking
+
+## Project Information
+- **Project**: Issue #1543: AI-DLC v2.3.0相当のプラグイン導入UX（ホストネイティブ成果物生成・SessionStart自動compose・通常scope実行への統合・formal-model-check activation policy・上流適合テスト）を全6ハーネスへ追従する
+- **Project Type**: Brownfield
+- **Scope**: amadeus-feature
+- **Start Date**: 2026-07-26T13:47:19Z
+- **State Version**: 7
+- **Active Agent**: amadeus-product-agent
+- **Harness**: claude-code
+- **Worktree Path**:
+- **Bolt Refs**:
+- **Practices Affirmed Timestamp**:
+
+## Scope Configuration
+- **Stages to Execute**: 0.1, 0.2, 0.3, 1.1, 1.3, 1.4, 1.7, 2.1, 2.2, 2.3, 2.6, 2.7, 2.8, 3.1, 3.2, 3.3, 3.5, 3.6
+- **Stages to Skip**: 1.2 (market-research), 1.5 (team-formation), 1.6 (rough-mockups), 2.4 (user-stories), 2.5 (refined-mockups), 3.4 (infrastructure-design), 3.7 (ci-pipeline), 4.1 (deployment-pipeline), 4.2 (environment-provisioning), 4.3 (deployment-execution), 4.4 (observability-setup), 4.5 (incident-response), 4.6 (performance-validation), 4.7 (feedback-optimization)
+- **Depth**: Standard
+- **Test Strategy**: Comprehensive
+
+## Workspace State
+- **Project Root**: /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin
+- **Languages**: TypeScript
+- **Frameworks**: Unknown
+- **Build System**: bun (package.json)
+
+## Execution Plan Summary
+- **Total Stages**: 18
+- **Completed**: 3
+- **In Progress**: intent-capture
+
+## Runtime State
+- **Revision Count**: 0
+
+## Phase Progress
+<!-- Status values: Pending, Active, Verified, Skipped -->
+
+- **Initialization**: Verified
+- **Ideation**: Active
+- **Inception**: Pending
+- **Construction**: Pending
+- **Operation**: Skipped
+
+## Stage Progress
+<!-- Checkbox states: [ ] not started, [-] in progress, [?] awaiting approval (gate open), [R] revising (user rejected gate), [x] completed, [S] skipped via --stage/--phase jump -->
+
+### INITIALIZATION PHASE
+- [x] workspace-scaffold — EXECUTE
+- [x] workspace-detection — EXECUTE
+- [x] state-init — EXECUTE
+
+### IDEATION PHASE
+- [?] intent-capture — EXECUTE
+- [ ] market-research — SKIP
+- [ ] feasibility — EXECUTE
+- [ ] scope-definition — EXECUTE
+- [ ] team-formation — SKIP
+- [ ] rough-mockups — SKIP
+- [ ] approval-handoff — EXECUTE
+
+### INCEPTION PHASE
+- [ ] reverse-engineering — EXECUTE
+- [ ] practices-discovery — EXECUTE
+- [ ] requirements-analysis — EXECUTE
+- [ ] user-stories — SKIP
+- [ ] refined-mockups — SKIP
+- [ ] application-design — EXECUTE
+- [ ] units-generation — EXECUTE
+- [ ] delivery-planning — EXECUTE
+
+### CONSTRUCTION PHASE
+Per unit: [TBD]
+- [ ] functional-design — EXECUTE
+- [ ] nfr-requirements — EXECUTE
+- [ ] nfr-design — EXECUTE
+- [ ] infrastructure-design — SKIP
+- [ ] code-generation — EXECUTE
+- [ ] build-and-test — EXECUTE
+- [ ] ci-pipeline — SKIP
+
+### OPERATION PHASE
+- [ ] deployment-pipeline — SKIP
+- [ ] environment-provisioning — SKIP
+- [ ] deployment-execution — SKIP
+- [ ] observability-setup — SKIP
+- [ ] incident-response — SKIP
+- [ ] performance-validation — SKIP
+- [ ] feedback-optimization — SKIP
+
+## Current Status
+- **Lifecycle Phase**: IDEATION
+- **Current Stage**: intent-capture
+- **Next Stage**: feasibility
+- **Status**: Running
+- **Last Updated**: 2026-07-26T13:58:13Z
+
+## Session Resume Point
+- **Last Completed Stage**: state-init
+- **Next Action**: Execute intent-capture
+- **Pending Artifacts**: none
+
+<!-- amadeus:mirror-state:v1:start -->
+{"schema":1,"revision":3,"issueNumber":null,"provenance":null,"receipts":{"mirror-event:v1:WyJtaXJyb3ItZXZlbnQiLDEsIjAxOWY5ZWFlLTFmODEtNzdlZS05NDdlLTEwMzRhZThjMjBmOCIsIm1hbnVhbCIsIm1hbnVhbC0yNjA3MjZULWludGVudC1jYXB0dXJlIiwiY3JlYXRlIl0":{"key":"mirror-event:v1:WyJtaXJyb3ItZXZlbnQiLDEsIjAxOWY5ZWFlLTFmODEtNzdlZS05NDdlLTEwMzRhZThjMjBmOCIsIm1hbnVhbCIsIm1hbnVhbC0yNjA3MjZULWludGVudC1jYXB0dXJlIiwiY3JlYXRlIl0","event":{"intentUuid":"019f9eae-1f81-77ee-947e-1034ae8c20f8","boundary":{"kind":"manual","instance":"manual-260726T-intent-capture"},"operation":"create"},"operationId":"15fe16c5-799b-4150-8432-f16714143220","status":"prepared","preparedAt":"2026-07-26T13:52:49.802Z","createIdentity":{"schema":1,"intentUuid":"019f9eae-1f81-77ee-947e-1034ae8c20f8","intentDir":"260726-plugin-host-delivery","repository":{"owner":"amadeus-dlc","name":"amadeus","canonical":"amadeus-dlc/amadeus"},"operationId":"15fe16c5-799b-4150-8432-f16714143220","preparedAt":"2026-07-26T13:52:49.802Z"},"authorization":{"kind":"manual","event":{"intentUuid":"019f9eae-1f81-77ee-947e-1034ae8c20f8","boundary":{"kind":"manual","instance":"manual-260726T-intent-capture"},"operation":"create"},"operation":"create","boundaryInstance":"manual-260726T-intent-capture","receiptRevision":1,"invocationId":"manual-260726T-intent-capture"}}},"warnings":[{"operationId":"15fe16c5-799b-4150-8432-f16714143220","operation":"create","classification":"invalid-response","summary":"GitHub unavailable (invalid-response; no-effect-confirmed; exit=0; http=none)","occurredAt":"2026-07-26T13:55:31.890Z","retryable":false,"effect":"not-started","source":"current-invocation"}],"repairChallenges":{},"expectedPrompt":null,"auditOutbox":null}
+<!-- amadeus:mirror-state:v1:end -->
