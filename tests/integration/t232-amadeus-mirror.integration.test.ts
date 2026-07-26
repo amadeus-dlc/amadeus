@@ -1,12 +1,11 @@
 // covers: harness-instrument:amadeus-mirror
 //
-// t232 (process/fs boundary) — drives the amadeus-mirror handlers against a
-// temp workspace fixture (real fs, hence integration) with a fake GhRunner
-// injected through the C4 port (ADR-4: no fixture branches in production
-// code). Falling proofs: duplicate create (FR-2.2), missing Mirror Issue
-// field (FR-3.3), landing check with one-sided/absent completion signals
-// (FR-4.1 AND, fail-closed), gh-unready (FR-1.3), and the R-3 partial-failure
-// path (issue created but the field write fails).
+// t232 (process/fs boundary) — drives the amadeus-mirror CLI seam against a
+// temp workspace fixture (real fs). Mutations delegate one-to-one to the v1
+// lifecycle through the injected runner (C6); status precondition/usage exits
+// and the real gh process boundary (C4, spawnGh) are exercised here. The v1
+// read regression (status recognises a recorded issue, duplicate-create guard)
+// lives in tests/integration/t300-amadeus-mirror-state-read.integration.test.ts.
 
 import { afterEach, describe, expect, test } from "bun:test";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -15,13 +14,10 @@ import { join } from "node:path";
 import {
   type GhResult,
   type GhRunner,
-  handleClose,
-  handleCreate,
   handleStatus,
-  handleSync,
   main,
   spawnGh,
-} from "../../packages/framework/core/tools/amadeus-mirror";
+} from "../../packages/framework/core/tools/amadeus-mirror.ts";
 
 const DIR = "260717-mirror-issue-tool";
 const roots: string[] = [];
@@ -30,12 +26,7 @@ afterEach(() => {
   for (const r of roots.splice(0)) rmSync(r, { recursive: true, force: true });
 });
 
-function makeWorkspace(over: {
-  status?: string;
-  intentStatus?: string;
-  mirrorIssue?: string | null;
-  parked?: boolean;
-}): string {
+function makeWorkspace(over: { status?: string; intentStatus?: string } = {}): string {
   const root = mkdtempSync(join(tmpdir(), "amadeus-mirror-t232-"));
   roots.push(root);
   const intents = join(root, "amadeus", "spaces", "default", "intents");
@@ -58,23 +49,12 @@ function makeWorkspace(over: {
     "## Project Information",
     "- **Project**: amadeus-mirror ツール(試運転)",
     "- **Scope**: amadeus",
-    ...(over.mirrorIssue ? [`- **Mirror Issue**: ${over.mirrorIssue}`] : []),
     "",
     "## Current Status",
     "- **Lifecycle Phase**: INCEPTION",
     "- **Current Stage**: reverse-engineering",
     `- **Status**: ${over.status ?? "Running"}`,
     "- **Last Updated**: 2026-07-17T13:23:34Z",
-    "",
-    "## Runtime State",
-    ...(over.parked
-      ? ["- **Parked**: 2026-07-17T13:23:34Z", "- **Parked At Stage**: reverse-engineering"]
-      : []),
-    "",
-    "## Stage Progress",
-    "- [x] intent-capture — EXECUTE",
-    "- [x] feasibility — EXECUTE",
-    "- [-] scope-definition — EXECUTE",
     "",
   ].join("\n");
   writeFileSync(join(intents, DIR, "amadeus-state.md"), state);
@@ -93,158 +73,9 @@ function fakeGh(
   return { run, calls };
 }
 
-const CREATED: GhResult = {
-  kind: "ok",
-  stdout: "https://github.com/amadeus-dlc/amadeus/issues/1161\n",
-};
-
-describe("t232 handleCreate", () => {
-  test("creates the issue, passes array args with both labels, records the field", () => {
-    const root = makeWorkspace({});
-    const gh = fakeGh({ "issue create": CREATED });
-    expect(handleCreate(root, DIR, gh.run)).toBe(0);
-    const createCall = gh.calls.find((c) => c[0] === "issue" && c[1] === "create");
-    expect(createCall).toContain("intent-mirror");
-    expect(createCall).toContain("enhancement");
-    const state = readFileSync(
-      join(root, "amadeus", "spaces", "default", "intents", DIR, "amadeus-state.md"),
-      "utf-8",
-    );
-    expect(state).toContain("- **Mirror Issue**: #1161");
-  });
-
-  test("duplicate create is refused loud (FR-2.2)", () => {
-    const root = makeWorkspace({ mirrorIssue: "#1161" });
-    const gh = fakeGh({});
-    expect(handleCreate(root, DIR, gh.run)).toBe(1);
-    expect(gh.calls.length).toBe(0);
-  });
-
-  test("gh-unready fails before any mutation (FR-1.3)", () => {
-    const root = makeWorkspace({});
-    const gh = fakeGh({
-      "auth status": { kind: "error", exitCode: 1, stderr: "not logged in" },
-    });
-    expect(handleCreate(root, DIR, gh.run)).toBe(1);
-    expect(gh.calls.filter((c) => c[0] === "issue").length).toBe(0);
-  });
-
-  test("unknown intent dir fails loud (SnapshotOutcome error path)", () => {
-    const root = makeWorkspace({});
-    expect(handleCreate(root, "no-such-intent", fakeGh({}).run)).toBe(1);
-  });
-
-  test("R-3: field write failure after creation surfaces the issue number", () => {
-    const root = makeWorkspace({});
-    const statePath = join(
-      root, "amadeus", "spaces", "default", "intents", DIR, "amadeus-state.md",
-    );
-    chmodSync(statePath, 0o444);
-    const gh = fakeGh({ "issue create": CREATED });
-    try {
-      expect(handleCreate(root, DIR, gh.run)).toBe(1);
-    } finally {
-      chmodSync(statePath, 0o644);
-    }
-  });
-});
-
-describe("t232 handleSync", () => {
-  test("rewrites the body idempotently (FR-3.2: same material, same body)", () => {
-    const root = makeWorkspace({ mirrorIssue: "#1161" });
-    const gh = fakeGh({});
-    expect(handleSync(root, DIR, gh.run)).toBe(0);
-    expect(handleSync(root, DIR, gh.run)).toBe(0);
-    const bodies = gh.calls
-      .filter((c) => c[0] === "issue" && c[1] === "edit")
-      .map((c) => c[c.indexOf("--body") + 1]);
-    expect(bodies.length).toBe(2);
-    expect(bodies[0]).toBe(bodies[1]);
-    expect(bodies[0]).toContain("## 状態");
-  });
-
-  test("missing Mirror Issue field fails loud (FR-3.3)", () => {
-    const root = makeWorkspace({});
-    expect(handleSync(root, DIR, fakeGh({}).run)).toBe(1);
-  });
-});
-
-describe("t232 handleClose (FR-4.1 AND landing check, fail-closed)", () => {
-  test("refuses while the intent is in-flight (both signals missing)", () => {
-    const root = makeWorkspace({ mirrorIssue: "#1161" });
-    const gh = fakeGh({});
-    expect(handleClose(root, DIR, gh.run)).toBe(1);
-    expect(gh.calls.filter((c) => c[1] === "close").length).toBe(0);
-  });
-
-  test("refuses one-sided completion: intents.json complete but state Running", () => {
-    const root = makeWorkspace({ mirrorIssue: "#1161", intentStatus: "complete" });
-    expect(handleClose(root, DIR, fakeGh({}).run)).toBe(1);
-  });
-
-  test("refuses one-sided completion: state Completed but intents.json in-flight", () => {
-    const root = makeWorkspace({ mirrorIssue: "#1161", status: "Completed" });
-    expect(handleClose(root, DIR, fakeGh({}).run)).toBe(1);
-  });
-
-  test("closes after a final sync when both signals hold", () => {
-    const root = makeWorkspace({
-      mirrorIssue: "#1161",
-      intentStatus: "complete",
-      status: "Completed",
-    });
-    const gh = fakeGh({});
-    expect(handleClose(root, DIR, gh.run)).toBe(0);
-    const verbs = gh.calls.map((c) => `${c[0]} ${c[1]}`);
-    expect(verbs).toContain("issue edit");
-    expect(verbs).toContain("issue close");
-    expect(verbs.indexOf("issue edit")).toBeLessThan(verbs.indexOf("issue close"));
-  });
-});
-
-describe("t232 parked state rendering through the real state file", () => {
-  test("sync body carries the parked status line", () => {
-    const root = makeWorkspace({ mirrorIssue: "#1161", parked: true });
-    const gh = fakeGh({});
-    expect(handleSync(root, DIR, gh.run)).toBe(0);
-    const body = gh.calls.at(-1)?.at(-1) ?? "";
-    expect(body).toContain("**parked @ reverse-engineering**");
-  });
-});
-
-describe("t232 snapshot error paths (C2 fail-closed)", () => {
-  test("no active intent and no --intent fails loud", () => {
-    // A barren workspace (no records at all) so activeIntent cannot fall back
-    // to a single-record resolution.
-    const root = mkdtempSync(join(tmpdir(), "amadeus-mirror-t232-empty-"));
-    roots.push(root);
-    mkdirSync(join(root, "amadeus", "spaces", "default", "intents"), { recursive: true });
-    expect(handleCreate(root, null, fakeGh({}).run)).toBe(1);
-  });
-
-  test("registry entry without a readable state file fails loud", () => {
-    const root = makeWorkspace({});
-    rmSync(
-      join(root, "amadeus", "spaces", "default", "intents", DIR, "amadeus-state.md"),
-    );
-    expect(handleSync(root, DIR, fakeGh({}).run)).toBe(1);
-  });
-
-  test("close without a Mirror Issue field fails loud", () => {
-    const root = makeWorkspace({});
-    expect(handleClose(root, DIR, fakeGh({}).run)).toBe(1);
-  });
-
-  test("unparseable gh create output fails loud (no field written)", () => {
-    const root = makeWorkspace({});
-    const gh = fakeGh({ "issue create": { kind: "ok", stdout: "something weird\n" } });
-    expect(handleCreate(root, DIR, gh.run)).toBe(1);
-  });
-});
-
-describe("t232 main dispatch through the injected seam (C6)", () => {
+describe("t232 main dispatch through the injected lifecycle seam (C6)", () => {
   test("mutations delegate one-to-one to lifecycle manual without direct gh calls", async () => {
-    const root = makeWorkspace({});
+    const root = makeWorkspace();
     const gh = fakeGh({});
     const lifecycleCalls: Array<{
       manualOperation?: string;
@@ -313,7 +144,7 @@ describe("t232 main dispatch through the injected seam (C6)", () => {
   });
 
   test("mutation without --instance is usage and has no side effects", async () => {
-    const root = makeWorkspace({});
+    const root = makeWorkspace();
     const gh = fakeGh({});
     const before = readFileSync(
       join(root, "amadeus", "spaces", "default", "intents", DIR, "amadeus-state.md"),
@@ -330,69 +161,7 @@ describe("t232 main dispatch through the injected seam (C6)", () => {
   });
 });
 
-describe("t232 status (U1 FR-2 read-only diagnosis)", () => {
-  function canonicalBody(root: string): string {
-    const gh = fakeGh({});
-    expect(handleSync(root, DIR, gh.run)).toBe(0);
-    const call = gh.calls.find((args) => args[0] === "issue" && args[1] === "edit");
-    return call?.at(call.indexOf("--body") + 1) ?? "";
-  }
-
-  test("returns 0 for a clean issue and performs read-only gh calls", () => {
-    const root = makeWorkspace({ mirrorIssue: "#1161" });
-    const body = canonicalBody(root);
-    const statePath = join(
-      root, "amadeus", "spaces", "default", "intents", DIR, "amadeus-state.md",
-    );
-    const before = readFileSync(statePath, "utf-8");
-    const gh = fakeGh({ "issue view": { kind: "ok", stdout: JSON.stringify({ body }) } });
-    expect(handleStatus(root, DIR, gh.run)).toBe(0);
-    expect(gh.calls).toEqual([
-      ["auth", "status"],
-      ["issue", "view", "1161", "--json", "body"],
-    ]);
-    expect(readFileSync(statePath, "utf-8")).toBe(before);
-  });
-
-  test("returns 1 and lists both stale and drifted findings", () => {
-    const root = makeWorkspace({ mirrorIssue: "#1161" });
-    const gh = fakeGh({
-      "issue view": { kind: "ok", stdout: JSON.stringify({ body: "manual body" }) },
-    });
-    expect(handleStatus(root, DIR, gh.run)).toBe(1);
-  });
-
-  test("returns 1 for a missing Mirror Issue field without issue mutation", () => {
-    const root = makeWorkspace({});
-    const gh = fakeGh({});
-    expect(handleStatus(root, DIR, gh.run)).toBe(1);
-    expect(gh.calls).toEqual([["auth", "status"]]);
-  });
-
-  test("classifies a confirmed missing issue as divergence", () => {
-    const root = makeWorkspace({ mirrorIssue: "#1161" });
-    const gh = fakeGh({
-      "issue view": { kind: "error", exitCode: 1, stderr: "HTTP 404: Not Found" },
-    });
-    expect(handleStatus(root, DIR, gh.run)).toBe(1);
-  });
-
-  test("classifies an indeterminate issue-view failure as precondition exit 2", () => {
-    const root = makeWorkspace({ mirrorIssue: "#1161" });
-    const gh = fakeGh({
-      "issue view": { kind: "error", exitCode: 1, stderr: "network unavailable" },
-    });
-    expect(handleStatus(root, DIR, gh.run)).toBe(2);
-  });
-
-  test("does not mistake gh's authentication exit code for a missing issue", () => {
-    const root = makeWorkspace({ mirrorIssue: "#1161" });
-    const gh = fakeGh({
-      "issue view": { kind: "error", exitCode: 4, stderr: "authentication required" },
-    });
-    expect(handleStatus(root, DIR, gh.run)).toBe(2);
-  });
-
+describe("t232 status precondition paths (C2 fail-closed)", () => {
   test("returns precondition exit 2 for gh-unready before reading the record", () => {
     const gh = fakeGh({
       "auth status": { kind: "error", exitCode: 127, stderr: "gh not runnable" },
@@ -401,27 +170,11 @@ describe("t232 status (U1 FR-2 read-only diagnosis)", () => {
     expect(gh.calls).toEqual([["auth", "status"]]);
   });
 
-  test("returns precondition exit 2 for a missing record after gh readiness", () => {
-    const root = mkdtempSync(join(tmpdir(), "amadeus-mirror-t232-status-empty-"));
+  test("returns precondition exit 2 when the record cannot be resolved", () => {
+    const root = mkdtempSync(join(tmpdir(), "amadeus-mirror-t232-empty-"));
     roots.push(root);
     mkdirSync(join(root, "amadeus", "spaces", "default", "intents"), { recursive: true });
     expect(handleStatus(root, null, fakeGh({}).run)).toBe(2);
-  });
-
-  test("rejects invalid or body-less issue JSON as precondition exit 2", () => {
-    const root = makeWorkspace({ mirrorIssue: "#1161" });
-    const invalid = fakeGh({ "issue view": { kind: "ok", stdout: "not-json" } });
-    expect(handleStatus(root, DIR, invalid.run)).toBe(2);
-    const bodyless = fakeGh({ "issue view": { kind: "ok", stdout: "{}" } });
-    expect(handleStatus(root, DIR, bodyless.run)).toBe(2);
-  });
-
-  test("main dispatches status with --intent and preserves usage exit 2", async () => {
-    const root = makeWorkspace({ mirrorIssue: "#1161" });
-    const body = canonicalBody(root);
-    const gh = fakeGh({ "issue view": { kind: "ok", stdout: JSON.stringify({ body }) } });
-    expect(await main(["status", "--intent", DIR], root, gh.run)).toBe(0);
-    expect(await main(["status", "--unknown"], root, gh.run)).toBe(2);
   });
 });
 

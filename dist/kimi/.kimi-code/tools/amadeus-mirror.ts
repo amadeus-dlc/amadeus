@@ -1,31 +1,23 @@
 // amadeus-mirror.ts — mirror-issue CLI for the intent-first filing practice
 // (team.md cid:intent-first-mirror-issue). Creates, syncs, and closes the
-// GitHub mirror issue of an amadeus intent. The record tree is the source of
-// truth; sync is strictly record -> issue (one-way). State is read only from
-// deterministic sources (intents.json + amadeus-state.md); the tool never
-// writes intents.json (the WORKSPACE-lock contract stays untouched) — its only
-// writes are gh calls and the `Mirror Issue` field in amadeus-state.md.
+// GitHub mirror issue of an amadeus intent through the guarded v1 lifecycle.
+// The record tree is the source of truth; sync is strictly record -> issue
+// (one-way). The tool never writes the legacy "Mirror Issue" state field; the
+// v1 mirror-state block (issueNumber + provenance) is the single authority for
+// whether a mirror exists, read through buildMirrorStatusRecordView.
 //
 // Subcommands: create | sync | close | status (see USAGE). Mutating verbs use
 // exit 0 for success, 1 for runtime faults, and 2 for usage. Status uses 0 for
 // clean, 1 for divergence, and 2 for precondition or usage errors.
 
-import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  activeIntent,
-  getField,
-  type IntentRegistryEntry,
-  intentsDir,
-  readIntentRegistry,
-  recordDirMatches,
-  setOrInsertField,
-} from "./amadeus-lib";
-import {
-  runMirrorLifecycleBoundary,
+  buildMirrorStatusRecordView,
   type MirrorLifecycleAdapterOutcome,
   type MirrorLifecycleRequest,
+  type MirrorStatusRecordView,
+  runMirrorLifecycleBoundary,
 } from "./amadeus-mirror-lifecycle.ts";
 import { renderMirrorLegacyHelp } from "./amadeus-mirror-presentation.ts";
 
@@ -92,140 +84,7 @@ export function parseArgs(argv: string[]): ArgsOutcome {
     : { kind: sub, intentDir, instance };
 }
 
-// --- C2: state-snapshot ----------------------------------------------------
-
-export type MirrorSnapshot = {
-  dirName: string;
-  slug: string;
-  projectSummary: string;
-  recordPath: string;
-  phase: string;
-  stage: string;
-  stagesApproved: number;
-  stagesTotal: number;
-  parked: boolean;
-  parkedAtStage: string | null;
-  workflowStatus: string;
-  intentStatus: string;
-  lastUpdated: string;
-  mirrorIssue: number | null;
-};
-
-export type SnapshotOutcome =
-  | { kind: "ok"; snapshot: MirrorSnapshot }
-  | { kind: "error"; message: string };
-
-// Count `- [x]` as approved. Two kinds of skipped stage leave the denominator,
-// mirroring the statusline convention: (1) jump-skipped rows carry the `[S]`
-// checkbox mark; (2) scope-skipped rows keep a live checkbox (`[ ]`, `[x]`, …)
-// but carry a ` — SKIP` action suffix (written by setStageSuffix). Both are
-// excluded from progress.
-// ADR-3a: counts come from the target intent's own state file, never from the
-// active intent's runtime-graph summary.
-export function countStageProgress(stateContent: string): {
-  approved: number;
-  total: number;
-} {
-  const lines = stateContent.split("\n");
-  let approved = 0;
-  let total = 0;
-  let inProgress = false;
-  for (const line of lines) {
-    if (line.startsWith("## ")) inProgress = line.startsWith("## Stage Progress");
-    if (!inProgress) continue;
-    const m = line.match(/^- \[(x|X| |-|\?|R|S)\] /);
-    if (!m) continue;
-    if (m[1] === "S") continue;
-    if (/ — SKIP\s*$/.test(line)) continue;
-    total++;
-    if (m[1].toLowerCase() === "x") approved++;
-  }
-  return { approved, total };
-}
-
-export function buildSnapshot(
-  projectDir: string,
-  explicitIntentDir: string | null,
-): SnapshotOutcome {
-  const dirName = activeIntent(projectDir, undefined, explicitIntentDir ?? undefined);
-  if (dirName === null) {
-    return { kind: "error", message: "no active intent (and no --intent given)" };
-  }
-  const registry = readIntentRegistry(projectDir);
-  const entry: IntentRegistryEntry | undefined = registry.find((e) =>
-    recordDirMatches(e, dirName),
-  );
-  if (entry === undefined) {
-    return { kind: "error", message: `intent "${dirName}" not found in intents.json` };
-  }
-  const recordDir = join(intentsDir(projectDir), dirName);
-  let stateContent: string;
-  try {
-    stateContent = readFileSync(join(recordDir, "amadeus-state.md"), "utf-8");
-  } catch {
-    return { kind: "error", message: `amadeus-state.md not readable under ${recordDir}` };
-  }
-  const { approved, total } = countStageProgress(stateContent);
-  const mirrorRaw = getField(stateContent, "Mirror Issue");
-  const mirrorMatch = mirrorRaw === null ? null : mirrorRaw.match(/#?(\d+)/);
-  const parkedField = getField(stateContent, "Parked");
-  return {
-    kind: "ok",
-    snapshot: {
-      dirName,
-      slug: entry.slug,
-      projectSummary: getField(stateContent, "Project") ?? entry.slug,
-      recordPath: `amadeus/spaces/default/intents/${dirName}/`,
-      phase: getField(stateContent, "Lifecycle Phase") ?? "?",
-      stage: getField(stateContent, "Current Stage") ?? "?",
-      stagesApproved: approved,
-      stagesTotal: total,
-      parked: parkedField !== null && parkedField !== "",
-      parkedAtStage: getField(stateContent, "Parked At Stage"),
-      workflowStatus: getField(stateContent, "Status") ?? "?",
-      intentStatus: entry.status,
-      lastUpdated: getField(stateContent, "Last Updated") ?? "?",
-      mirrorIssue: mirrorMatch === null ? null : Number.parseInt(mirrorMatch[1], 10),
-    },
-  };
-}
-
-// --- C3: mirror-template ---------------------------------------------------
-
-export function renderTitle(s: MirrorSnapshot): string {
-  return `intent: ${s.slug}(${s.dirName})`;
-}
-
-// ADR-3 status line: bold status first, then phase/stage, counts, timestamp.
-export function renderStatusLine(s: MirrorSnapshot): string {
-  let status: string;
-  if (s.workflowStatus === "Completed") status = "complete";
-  else if (s.parked) status = `parked @ ${s.parkedAtStage ?? s.stage}`;
-  else status = "in-flight";
-  return `**${status}** — ${s.phase}/${s.stage}(approved ${s.stagesApproved}/${s.stagesTotal})、更新 ${s.lastUpdated}`;
-}
-
-// The body is the fixed three-section template (FR-5) and nothing else — the
-// mirror structurally has no place for design detail.
-export function renderBody(s: MirrorSnapshot): string {
-  const summary = s.projectSummary.length > 400
-    ? `${s.projectSummary.slice(0, 400)}…`
-    : s.projectSummary;
-  return [
-    "## 概要",
-    "",
-    summary,
-    "",
-    "## Record(正本)",
-    "",
-    `→ \`${s.recordPath}\``,
-    "",
-    "## 状態",
-    "",
-    renderStatusLine(s),
-    "",
-  ].join("\n");
-}
+// --- C2: status comparison -------------------------------------------------
 
 export type StatusFindingKind =
   | "stale-status-line"
@@ -242,8 +101,29 @@ export type StatusOutcome =
   | { kind: "diverged"; findings: [StatusFinding, ...StatusFinding[]] }
   | { kind: "precondition"; reason: string };
 
+export type StatusRecordView = Extract<MirrorStatusRecordView, { kind: "ok" }>;
+
+// Read the value under a `## <heading>` section of a canonical issue body (from
+// the heading line to the next `## ` or EOF), trimmed. Returns null when the
+// section is absent. Used to distinguish a stale status value from a whole-body
+// drift against the SAME renderer the lifecycle writes with.
+export function sectionValue(body: string, heading: string): string | null {
+  const lines = body.split(/\r?\n/);
+  const start = lines.indexOf(`## ${heading}`);
+  if (start === -1) return null;
+  const rest: string[] = [];
+  for (let i = start + 1; i < lines.length; i++) {
+    if (lines[i].startsWith("## ")) break;
+    rest.push(lines[i]);
+  }
+  return rest.join("\n").trim();
+}
+
+// The issue body is compared against the canonical body the record would render
+// now (view.expectedBody = renderMirrorIssueContent, identical to sync). A null
+// body means the mirror is unrecorded or the recorded issue does not exist.
 export function compareMirrorStatus(
-  snapshot: MirrorSnapshot,
+  view: StatusRecordView,
   issueBody: string | null,
 ): StatusOutcome {
   if (issueBody === null) {
@@ -251,22 +131,21 @@ export function compareMirrorStatus(
       kind: "diverged",
       findings: [{
         kind: "mirror-missing",
-        detail: snapshot.mirrorIssue === null
-          ? `record ${snapshot.dirName} has no Mirror Issue field`
-          : `mirror issue #${snapshot.mirrorIssue} does not exist`,
+        detail: view.issueNumber === null
+          ? `record ${view.intentDir} has no mirror issue recorded`
+          : `mirror issue #${view.issueNumber} does not exist`,
       }],
     };
   }
 
   const findings: StatusFinding[] = [];
-  const expectedStatusLine = renderStatusLine(snapshot);
-  if (!issueBody.split(/\r?\n/).includes(expectedStatusLine)) {
+  if (sectionValue(issueBody, "Status") !== view.currentStatus) {
     findings.push({
       kind: "stale-status-line",
-      detail: `record Status="${snapshot.workflowStatus}" is not reflected in the mirror issue`,
+      detail: `record Status="${view.currentStatus}" is not reflected in the mirror issue`,
     });
   }
-  if (issueBody !== renderBody(snapshot)) {
+  if (issueBody !== view.expectedBody) {
     findings.push({
       kind: "issue-drifted",
       detail: "mirror issue body differs from the body rendered from the current record",
@@ -323,9 +202,9 @@ function isMissingIssueError(result: Extract<GhResult, { kind: "error" }>): bool
   return /\b404\b|not found|could not resolve to an issue/i.test(result.stderr);
 }
 
-function outcomeFromIssueView(snapshot: MirrorSnapshot, viewed: GhResult): StatusOutcome {
+function outcomeFromIssueView(view: StatusRecordView, viewed: GhResult): StatusOutcome {
   if (viewed.kind === "error") {
-    if (isMissingIssueError(viewed)) return compareMirrorStatus(snapshot, null);
+    if (isMissingIssueError(viewed)) return compareMirrorStatus(view, null);
     return {
       kind: "precondition",
       reason: `gh issue view failed: ${viewed.stderr.trim()}`,
@@ -344,7 +223,7 @@ function outcomeFromIssueView(snapshot: MirrorSnapshot, viewed: GhResult): Statu
         reason: "gh issue view returned JSON without a string body",
       };
     }
-    return compareMirrorStatus(snapshot, parsed.body);
+    return compareMirrorStatus(view, parsed.body);
   } catch {
     return {
       kind: "precondition",
@@ -358,124 +237,6 @@ function outcomeFromIssueView(snapshot: MirrorSnapshot, viewed: GhResult): Statu
 function fail(message: string): number {
   console.error(`amadeus-mirror: ${message}`);
   return 1;
-}
-
-function writeMirrorIssueField(
-  projectDir: string,
-  dirName: string,
-  issue: number,
-): void {
-  const statePath = join(intentsDir(projectDir), dirName, "amadeus-state.md");
-  const content = readFileSync(statePath, "utf-8");
-  const next = setOrInsertField(
-    content,
-    "## Project Information",
-    "Mirror Issue",
-    `#${issue}`,
-  );
-  writeFileSync(statePath, next);
-}
-
-export function handleCreate(
-  projectDir: string,
-  intentDir: string | null,
-  run: GhRunner,
-): number {
-  const outcome = buildSnapshot(projectDir, intentDir);
-  if (outcome.kind === "error") return fail(outcome.message);
-  const s = outcome.snapshot;
-  if (s.mirrorIssue !== null) {
-    return fail(
-      `mirror issue already exists: #${s.mirrorIssue} (duplicate create is refused; run sync instead)`,
-    );
-  }
-  const ready = ensureGhReady(run);
-  if (ready.kind === "error") return fail(`gh not ready: ${ready.stderr.trim()}`);
-  const created = run([
-    "issue",
-    "create",
-    "--title",
-    renderTitle(s),
-    "--body",
-    renderBody(s),
-    "--label",
-    "intent-mirror",
-    "--label",
-    "enhancement",
-  ]);
-  if (created.kind === "error") return fail(`gh issue create failed: ${created.stderr.trim()}`);
-  const num = created.stdout.match(/\/issues\/(\d+)/);
-  if (num === null) {
-    return fail(`could not parse issue number from gh output: ${created.stdout.trim()}`);
-  }
-  const issue = Number.parseInt(num[1], 10);
-  try {
-    writeMirrorIssueField(projectDir, s.dirName, issue);
-  } catch (e) {
-    // R-3: the issue exists but the field write failed — surface the number
-    // so a human can record it, and fail loud. Never auto-close the issue.
-    return fail(
-      `issue #${issue} was created but writing the Mirror Issue field failed (${String(e)}); record it manually`,
-    );
-  }
-  console.log(`created mirror issue #${issue} for ${s.dirName}`);
-  return 0;
-}
-
-export function handleSync(
-  projectDir: string,
-  intentDir: string | null,
-  run: GhRunner,
-): number {
-  const outcome = buildSnapshot(projectDir, intentDir);
-  if (outcome.kind === "error") return fail(outcome.message);
-  const s = outcome.snapshot;
-  if (s.mirrorIssue === null) {
-    return fail(`no Mirror Issue field for ${s.dirName} (run create first)`);
-  }
-  const ready = ensureGhReady(run);
-  if (ready.kind === "error") return fail(`gh not ready: ${ready.stderr.trim()}`);
-  const edited = run([
-    "issue",
-    "edit",
-    String(s.mirrorIssue),
-    "--body",
-    renderBody(s),
-  ]);
-  if (edited.kind === "error") return fail(`gh issue edit failed: ${edited.stderr.trim()}`);
-  console.log(`synced mirror issue #${s.mirrorIssue} for ${s.dirName}`);
-  return 0;
-}
-
-export function handleClose(
-  projectDir: string,
-  intentDir: string | null,
-  run: GhRunner,
-): number {
-  const outcome = buildSnapshot(projectDir, intentDir);
-  if (outcome.kind === "error") return fail(outcome.message);
-  const s = outcome.snapshot;
-  if (s.mirrorIssue === null) {
-    return fail(`no Mirror Issue field for ${s.dirName} (run create first)`);
-  }
-  const ready = ensureGhReady(run);
-  if (ready.kind === "error") return fail(`gh not ready: ${ready.stderr.trim()}`);
-  // FR-4.1 landing check: both completion signals must hold (they are written
-  // in one transaction by complete-workflow; one-sided state is an anomaly and
-  // the close stays shut — fail-closed).
-  const intentsComplete = s.intentStatus === "complete";
-  const stateCompleted = s.workflowStatus === "Completed";
-  if (!intentsComplete || !stateCompleted) {
-    return fail(
-      `landing check failed: intents.json status="${s.intentStatus}" (need "complete") AND state Status="${s.workflowStatus}" (need "Completed")`,
-    );
-  }
-  const synced = run(["issue", "edit", String(s.mirrorIssue), "--body", renderBody(s)]);
-  if (synced.kind === "error") return fail(`final sync failed: ${synced.stderr.trim()}`);
-  const closed = run(["issue", "close", String(s.mirrorIssue)]);
-  if (closed.kind === "error") return fail(`gh issue close failed: ${closed.stderr.trim()}`);
-  console.log(`closed mirror issue #${s.mirrorIssue} for ${s.dirName}`);
-  return 0;
 }
 
 export function handleStatus(
@@ -493,29 +254,27 @@ export function handleStatus(
     return exitOfStatus(outcome);
   }
 
-  const snapshotOutcome = buildSnapshot(projectDir, intentDir);
-  if (snapshotOutcome.kind === "error") {
-    const outcome: StatusOutcome = {
-      kind: "precondition",
-      reason: snapshotOutcome.message,
-    };
-    console.error(`amadeus-mirror: ${outcome.reason}`);
-    return exitOfStatus(outcome);
+  const view = buildMirrorStatusRecordView({
+    projectDir,
+    ...(intentDir ? { intentDir } : {}),
+  });
+  if (view.kind === "error") {
+    console.error(`amadeus-mirror: ${view.message}`);
+    return exitOfStatus({ kind: "precondition", reason: view.message });
   }
-  const snapshot = snapshotOutcome.snapshot;
 
   let outcome: StatusOutcome;
-  if (snapshot.mirrorIssue === null) {
-    outcome = compareMirrorStatus(snapshot, null);
+  if (view.issueNumber === null) {
+    outcome = compareMirrorStatus(view, null);
   } else {
-    const viewed = run(["issue", "view", String(snapshot.mirrorIssue), "--json", "body"]);
-    outcome = outcomeFromIssueView(snapshot, viewed);
+    const viewed = run(["issue", "view", String(view.issueNumber), "--json", "body"]);
+    outcome = outcomeFromIssueView(view, viewed);
   }
 
   if (outcome.kind === "precondition") {
     console.error(`amadeus-mirror: ${outcome.reason}`);
   } else if (outcome.kind === "clean") {
-    console.log(`mirror issue is in sync for ${snapshot.dirName}`);
+    console.log(`mirror issue is in sync for ${view.intentDir}`);
   } else {
     for (const finding of outcome.findings) {
       console.log(`${finding.kind}: ${finding.detail}`);
@@ -526,15 +285,29 @@ export function handleStatus(
 
 // --- C6: entry -------------------------------------------------------------
 
-type LegacyLifecycleRunner = (
+type MirrorLifecycleRunner = (
   request: MirrorLifecycleRequest,
 ) => Promise<MirrorLifecycleAdapterOutcome>;
 
-async function runLegacyMutation(
+async function runMirrorMutation(
   args: Extract<ArgsOutcome, { kind: "create" | "sync" | "close" }>,
   projectDir: string,
-  runLifecycle: LegacyLifecycleRunner,
+  runLifecycle: MirrorLifecycleRunner,
 ): Promise<number> {
+  // FR-3: refuse a duplicate create against the v1 authority BEFORE the
+  // lifecycle runs, so re-create surfaces a clear message rather than a
+  // downstream provenance rejection (#1547b).
+  if (args.kind === "create") {
+    const view = buildMirrorStatusRecordView({
+      projectDir,
+      ...(args.intentDir ? { intentDir: args.intentDir } : {}),
+    });
+    if (view.kind === "ok" && view.issueNumber !== null) {
+      return fail(
+        `mirror already exists: #${view.issueNumber} (duplicate create is refused; run sync instead)`,
+      );
+    }
+  }
   const result = await runLifecycle({
     projectDir,
     ...(args.intentDir ? { intentDir: args.intentDir } : {}),
@@ -556,22 +329,19 @@ async function runLegacyMutation(
   if (!outcome || outcome.kind !== "completed") {
     return fail("lifecycle completed without an operation outcome");
   }
-  const target = buildSnapshot(projectDir, args.intentDir);
-  const intentDir = target.kind === "ok" ? target.snapshot.dirName : args.intentDir;
   console.log(
-    `${args.kind === "create" ? "created" : args.kind === "sync" ? "synced" : "closed"} mirror issue #${outcome.issueNumber} for ${intentDir ?? "active intent"}`,
+    `${args.kind === "create" ? "created" : args.kind === "sync" ? "synced" : "closed"} mirror issue #${outcome.issueNumber} for ${args.intentDir ?? "active intent"}`,
   );
   return 0;
 }
 
 // Dependencies are injectable at the CLI boundaries. Mutation verbs use only
-// the lifecycle runner; the legacy gh runner remains confined to read-only
-// status.
+// the lifecycle runner; the gh runner remains confined to read-only status.
 export async function main(
   argv: string[],
   projectDir: string = PROJECT_DIR,
   run: GhRunner = spawnGh,
-  runLifecycle: LegacyLifecycleRunner = runMirrorLifecycleBoundary,
+  runLifecycle: MirrorLifecycleRunner = runMirrorLifecycleBoundary,
 ): Promise<number> {
   const args = parseArgs(argv);
   if (args.kind === "usage") {
@@ -579,7 +349,7 @@ export async function main(
     return 2;
   }
   if (args.kind !== "status") {
-    return runLegacyMutation(args, projectDir, runLifecycle);
+    return runMirrorMutation(args, projectDir, runLifecycle);
   }
   return handleStatus(projectDir, args.intentDir, run);
 }

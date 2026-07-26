@@ -164,6 +164,7 @@ import {
   subgraphForScope,
 } from "./amadeus-graph.ts";
 import { resolveMirrorConfig } from "./amadeus-mirror-config.ts";
+import { mirrorIssueNumberFromDocument } from "./amadeus-mirror-state-codec.ts";
 import type { MirrorMode } from "./amadeus-mirror-types.ts";
 import {
   MIRROR_BOUNDARY_PHASES,
@@ -310,8 +311,7 @@ function emitMirrorBoundaryIfNeeded(
     return true;
   }
   if (phase === null) return false;
-  const hasMirrorIssue =
-    (getField(stateContent, "Mirror Issue") ?? "").trim().length > 0;
+  const hasMirrorIssue = mirrorIssueNumberFromDocument(stateContent) !== null;
   const decision = decideMirrorBoundary(resolved.config.autoMirror, hasMirrorIssue);
   if (decision.kind === "suppress") return false;
   if (decision.kind === "auto-sync") {
@@ -3518,8 +3518,7 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
       return;
     }
     const expectedPhase = currentMirrorBoundaryPhase(stateContent);
-    const hasMirrorIssue =
-      (getField(stateContent, "Mirror Issue") ?? "").trim().length > 0;
+    const hasMirrorIssue = mirrorIssueNumberFromDocument(stateContent) !== null;
     let receipts: MirrorBoundaryReceipts;
     try {
       receipts = parseMirrorBoundaryReceipts(

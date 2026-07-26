@@ -1347,6 +1347,16 @@ export function parseMirrorStateDocument(document: string): MirrorStateParse {
   };
 }
 
+// The authoritative "is a mirror issue recorded?" derivation from a state
+// document: the v1 block's issueNumber. A missing block, a block whose
+// issueNumber is null (create not yet completed), and an unparseable block all
+// mean "no mirror recorded" (null). This is the single definition consumed by
+// the orchestrate boundary decision; it never re-parses the block itself.
+export function mirrorIssueNumberFromDocument(document: string): number | null {
+  const parsed = parseMirrorStateDocument(document);
+  return parsed.kind === "ok" ? parsed.snapshot.issueNumber : null;
+}
+
 // ---------------------------------------------------------------------------
 // Canonical rendering (ordered objects -> whitespace-free JSON).
 // ---------------------------------------------------------------------------
