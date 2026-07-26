@@ -27,6 +27,9 @@
 - 6件を一括実装せず、各findingごとにRed確認後に最小実装してGreenへ戻し、最後に横断suiteとdistribution同期を行う。 (learned 2026-07-25) <!-- cid:code-generation:c2-2 -->
 - full CI再実行に加えて対象ファイルを再検証し、統合全体の信頼性とFR別の診断可能性を両立する。 (learned 2026-07-25) <!-- cid:build-and-test:c3-mirror-review-fixes -->
 - bun はルート形パス(/x/y.ts)引数を cwd 相対に解決する未文書 fallback を持つ(bun 1.3.13 実測: /.claude/hooks/x.ts が cwd 相対に実在すれば実行、不在なら exit 1)— env 変数展開で組むパスの「落ちる実証」の前提を机上で断定せず、env unset/空白パス等の条件別制御実測で赤の実在を確定してから要件・テストに固定する。実測: 260725-worktree-ref-fixes CG で FR-3d 前提(env unset→module not found)が cwd=ルートで不成立と判明→ユーザー裁定で要件を実測可能な赤(無引用×空白パス)へ改訂、#1492 は Refs 維持。bun-spawn-env-snapshot / bun-readfilesync-dir-platform-divergence と同じ bun 実装差ファミリ (learned 2026-07-26) <!-- cid:code-generation:bun-rootpath-cwd-fallback --> (learned 2026-07-26) <!-- cid:code-generation:c2-bun-rootpath-fallback -->
+- ソロモードの Construction でも Bolt 実装は最初から git worktree 分離で行い、本線ツリーのブランチ切替で実装しない — 本線ツリーは並行セッション・ユーザー操作と共有され、ブランチ占有は WIP コミット・checkout 混線を実測で起こす(org.md Construction worktree 規範のソロ適用明文化。実測: 260726-metrics-visualization Bolt 2 で本線ツリー実装中に外部の WIP コミット+main checkout と衝突 → worktree 移行後は無事故) (learned 2026-07-26) <!-- cid:code-generation:solo-bolt-worktree-required -->
+- GitHub の pull_request CI は PR が CONFLICTING の間は発火しない(merge commit を構築できないため)— PR の CI 不発を見たら第一容疑は merge conflict とし、gh pr view --json mergeable と git merge-tree の非破壊プローブで確定してから解消する(実測: PR #1500 が codekb 並行更新の衝突中 CI 0 run → 解消 push 直後に発火。merge-tree-nondestructive-conflict-probe / closed-pr-state-first の PR-CI 面追補) (learned 2026-07-26) <!-- cid:code-generation:conflicting-pr-suppresses-ci -->
+
 ## Deployment
 
 デプロイ基盤は持たず、リリースは npm パッケージ配布と GitHub 上のタグ/PR 履歴で管理する。GitHub Actions は push と pull_request で typecheck、lint、dist/self-install drift guard、smoke+unit+integration tests を実行する。
