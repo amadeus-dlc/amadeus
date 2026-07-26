@@ -4,7 +4,7 @@
 
 | # | 項目 | 出典 | 備考 |
 |---|---|---|---|
-| B1 | 可視化(トレンドグラフ生成) | #921 論点欄 / scope Out 1 | snapshot が蓄積してから価値が出る。静的 HTML 生成等の軽量案から検討 |
+| B1 | 可視化(トレンドグラフ生成) | #921 論点欄 / scope Out 1 | snapshot が蓄積してから価値が出る。静的 HTML 生成等の軽量案から検討 → **後続 intent `260726-metrics-visualization` で着手・出荷済み**(2026-07-26、PR #1500/#1504 — `scripts/metrics-visualize.ts` と `metrics/index.html`、CI 自動更新) |
 | B2 | snapshot 間引き・保持ポリシー | RAID R2 | 肥大の顕在化がトリガー。E-L62 様式の留保 |
 | B3 | cron トリガーの追加 | market-trends §4 | マージ単位で不足する場合(環境変動の検出ニーズ)に |
 | B4 | メトリクス追加(例: 依存グラフ規模・doc カバレッジ) | スキーマの計測器疎結合(build-vs-buy) | スキーマが疎結合なら追加は独立 PR で可能 |
