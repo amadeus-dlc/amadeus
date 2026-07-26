@@ -40,6 +40,22 @@ function replica(
   };
 }
 
+function replicasFor(
+  name: MirrorBenchmarkWorkload,
+  p95Series: readonly number[],
+) {
+  return p95Series.map((p95Ms) => {
+    const base = replica(10);
+    return {
+      ...base,
+      workloads: {
+        ...base.workloads,
+        [name]: { ...base.workloads[name], p95Ms },
+      },
+    };
+  });
+}
+
 describe("t292 distribution performance protocol", () => {
   test("defines 3 warmups, 20 runs, and all PERF-DD-01 through 05 workloads", () => {
     expect(MIRROR_BENCHMARK_PROTOCOL.warmups).toBe(3);
@@ -123,8 +139,8 @@ describe("t292 distribution performance protocol", () => {
     ])).toContain("packageWrite: missing or incomplete workload");
     expect(aggregateMirrorBenchmarks([
       replica(10),
-      replica(11, "other"),
-      replica(300),
+      replica(40, "other"),
+      replica(200),
     ])).toEqual(expect.arrayContaining([
       "benchmark runner image mismatch",
       expect.stringContaining("dispersion"),
@@ -137,5 +153,38 @@ describe("t292 distribution performance protocol", () => {
       expect.stringContaining("docsParity: median p95"),
       expect.stringContaining("digestMatrix: median p95"),
     ]));
+  });
+
+  // Series measured on PR #1487, where one replica spiked and the other two
+  // stayed healthy. The min/max ratio failed every one of them; the median
+  // ratios must not (issue #1489).
+  test("keeps a single spiking replica green", () => {
+    for (
+      const [name, p95Series] of [
+        ["digestMatrix", [31.7, 33.2, 76.2]],
+        ["promote", [137.0, 18.6, 31.3]],
+        ["digestMatrix", [212.7, 36.4, 34.1]],
+        ["packageWrite", [246.0, 59.0, 115.0]],
+        ["packageWrite", [35.0, 542.5, 66.9]],
+      ] as [MirrorBenchmarkWorkload, number[]][]
+    ) {
+      expect(aggregateMirrorBenchmarks(replicasFor(name, p95Series))).toEqual(
+        [],
+      );
+    }
+  });
+
+  // 40/100/250 puts both median ratios at 2.5 and the spread at 210ms, which
+  // is 2.1x the 100ms digestMatrix noise floor — neither half can be dismissed
+  // as the single-replica jitter measured on PR #1487.
+  test("still reports dispersion and uniform degradation across every replica", () => {
+    expect(
+      aggregateMirrorBenchmarks(replicasFor("digestMatrix", [40, 100, 250])),
+    ).toContain("digestMatrix: replica dispersion around the median exceeds 2.0");
+    expect(
+      aggregateMirrorBenchmarks(
+        replicasFor("digestMatrix", [2_200, 2_400, 2_600]),
+      ),
+    ).toContain("digestMatrix: median p95 exceeds 2000ms");
   });
 });

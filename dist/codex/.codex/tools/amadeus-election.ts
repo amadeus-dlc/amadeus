@@ -24,14 +24,17 @@ import {
   Ballot,
   Election,
   type ElectionState,
+  err,
   type HoldReason,
+  ok,
   resolveBallots,
+  type Result,
   shuffleView,
   type TallyResult,
   tally,
 } from "./amadeus-election-model";
 import {
-  GoaFreq,
+  type GoaFreq,
   GoaLineCode,
   renderPersistDraft,
   verifyReservations,
@@ -42,6 +45,7 @@ import {
   createSubagentTransport,
   distribute,
   normalizeAt,
+  reportDelivery,
 } from "./amadeus-election-transport";
 import { resolveProjectDir } from "./amadeus-lib";
 import { parseGoaLine } from "./amadeus-norm-metrics";
@@ -50,6 +54,7 @@ import {
   resolveElectionDir,
   Store,
   type StoreError,
+  type TimelineEvent,
   writeStoreFile,
 } from "./amadeus-election-store";
 
@@ -191,10 +196,46 @@ export function handleReport(
     if (t === null) return fail("invalid-transition: tallied reported but tally.json missing");
     if (t.result.kind === "hold") to = "hold";
   }
+  // Issue #1458: the distributed report is where the subagent transport's
+  // deferred records land. notify only books the outcomes it could observe
+  // (agmsg spawn exits); the default subagent path returns directives, so the
+  // record is minted here — after the conductor reports completion, never
+  // before (the "reported-by-conductor" provenance the transport documents).
+  if (result === "distributed") {
+    const booked = bookReportedDeliveries(root, electionId, loaded.value.election.voters);
+    if (!booked.ok) return storeFail("appendTimeline", booked.error);
+  }
   const set = Store.setState(root, electionId, to);
   if (!set.ok) return storeFail("setState", set.error);
   out({ committed: result, state: to });
   return 0;
+}
+
+// Mint one conductor-reported DeliveryRecord per voter that notify could not
+// book itself, and enter it on the timeline. Voters already carrying a
+// distributed event (an agmsg send that exited 0) are skipped, so a mixed or
+// re-run distribution never double-books.
+function bookReportedDeliveries(
+  root: string,
+  electionId: string,
+  voters: readonly string[],
+): Result<void, StoreError> {
+  const timeline: unknown = readTimeline(root, electionId);
+  const events: TimelineEvent[] = Array.isArray(timeline) ? timeline : [];
+  const alreadyBooked = new Set(events.filter((e) => e.kind === "distributed").map((e) => e.voter));
+  const at = new Date().toISOString();
+  for (const voter of voters) {
+    if (alreadyBooked.has(voter)) continue;
+    const record = reportDelivery(voter, at);
+    const appended = Store.appendTimeline(root, electionId, {
+      kind: "distributed",
+      at: record.at,
+      detail: `delivered via ${record.transport}: ${record.voter} (${record.provenance})`,
+      voter: record.voter,
+    });
+    if (!appended.ok) return appended;
+  }
+  return ok(undefined);
 }
 
 // hold-resolved commits the human judgement: the reason (from the fixed tally)
@@ -446,18 +487,17 @@ export function handleRender(root: string, electionId: string): number {
   return 0;
 }
 
-// GoA-line half of verify: locate the line, round-trip it through the REAL
-// parseGoaLine, and compare against the recomputed frequency. Returns the
-// failure message or null.
-function checkGoaLine(document: string, freq: GoaFreq): string | null {
+// GoA-line half of verify: locate the line and round-trip it through the REAL
+// parseGoaLine. The parsed bins are the frequency the record actually stores —
+// the independent left-hand side verifySelf compares its recompute against, so
+// the equality lives in verifySelf's freq class alone (Issue #1457: a second
+// copy of that comparison here shadowed the class and left it unreachable).
+function readStoredGoaFreq(document: string): Result<GoaFreq, string> {
   const goaLine = document.split("\n").find((l) => l.startsWith("GoA["));
-  if (goaLine === undefined) return "verify: record.md has no GoA line";
+  if (goaLine === undefined) return err("verify: record.md has no GoA line");
   const parsedLine = parseGoaLine(goaLine);
-  if (!parsedLine.ok) return `verify: GoA line does not parse: ${parsedLine.error}`;
-  if (JSON.stringify(parsedLine.votes) !== JSON.stringify([...freq])) {
-    return "verify: GoA line does not match the recomputed frequency";
-  }
-  return null;
+  if (!parsedLine.ok) return err(`verify: GoA line does not parse: ${parsedLine.error}`);
+  return ok(parsedLine.votes);
 }
 
 function readTimeline(root: string, electionId: string) {
@@ -472,7 +512,10 @@ function readTimeline(root: string, electionId: string) {
 
 // verify is the full render<->verify symmetry check: tally recompute, GoA line
 // round-trip through the REAL parseGoaLine, reservation transcription count,
-// and the verifySelf 3-class sweep (FR-6a/6b).
+// and the verifySelf 3-class sweep (FR-6a/6b). Every self-check class pairs one
+// value read off disk with one recomputed here: ledger.json against tally.json
+// for the counts, record.md's GoA line against the frequency verifySelf derives
+// from the resolved ballots (Issue #1457 — neither side may share a source).
 export function handleVerify(root: string, electionId: string): number {
   const loaded = Store.load(root, electionId);
   if (!loaded.ok) return storeFail("load", loaded.error);
@@ -491,16 +534,18 @@ export function handleVerify(root: string, electionId: string): number {
   const recordPath = join(resolveElectionDir(root, electionId).dir, "record.md");
   if (!existsSync(recordPath)) return fail("verify: record.md missing");
   const document = readFileSync(recordPath, "utf8");
-  const freq = GoaFreq.fromVotes(resolved.map((b) => b.goa));
-  const goaCheck = checkGoaLine(document, freq);
-  if (goaCheck !== null) return fail(goaCheck);
+  const storedFreq = readStoredGoaFreq(document);
+  if (!storedFreq.ok) return fail(storedFreq.error);
   const reservations = verifyReservations(resolved, document);
   if (!reservations.ok) {
     return fail(`verify: reservation transcription mismatch (${JSON.stringify(reservations.error)})`);
   }
   const timeline = readTimeline(root, electionId);
   if (timeline === null) return fail("verify: timeline.json missing or unreadable");
-  const self = verifySelf(resolved.length, resolved, freq, timeline);
+  const ledger = Store.ledger(root, electionId);
+  if (!ledger.ok) return storeFail("verify", ledger.error);
+  const counts = { ledger: ledger.value.ballots.length, materialized: ballots.length };
+  const self = verifySelf(counts, resolved, storedFreq.value, timeline);
   if (!self.ok) return fail(`verify: self-check findings ${JSON.stringify(self.error)}`);
   out({ verified: electionId });
   return 0;

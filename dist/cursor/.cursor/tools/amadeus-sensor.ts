@@ -50,9 +50,11 @@ import {
 	errorMessage,
 	isoTimestamp,
 	isPlainObject,
+	KNOWN_CODEKB_STAGES,
 	recordDir,
 	resolveProjectDir,
 	sensorsDir,
+	stripProjectDir,
 	withAuditLock,
 } from "./amadeus-lib.ts";
 
@@ -121,28 +123,7 @@ function dispatchError(msg: string): never {
 	process.exit(1);
 }
 
-// Strip a `--project-dir <path>` flag from an argv slice, returning the value
-// and the remaining args. Sibling tools (amadeus-jump, amadeus-state) accept
-// the same flag; this dispatcher must honour it identically so a caller that
-// passes --project-dir sees the audit land under that root instead of silently
-// falling back to CLAUDE_PROJECT_DIR / cwd. Exported as a pure seam so the
-// contract is testable in-process.
-export function stripProjectDir(argv: string[]): {
-	projectDirArg?: string;
-	rest: string[];
-} {
-	let projectDirArg: string | undefined;
-	const rest: string[] = [];
-	for (let i = 0; i < argv.length; i++) {
-		if (argv[i] === "--project-dir" && i + 1 < argv.length) {
-			projectDirArg = argv[i + 1];
-			i++;
-		} else {
-			rest.push(argv[i]);
-		}
-	}
-	return { projectDirArg, rest };
-}
+export { stripProjectDir };
 
 // --- Sibling-script resolver ---
 //
@@ -246,10 +227,6 @@ function handleDescribe(args: string[]): void {
 // full list threads unchanged. An orphan consume (no producer anywhere in
 // the graph) also threads unchanged — that is a graph defect the doctor
 // surfaces; hiding it here would mask it.
-
-const KNOWN_CODEKB_STAGES: ReadonlySet<string> = new Set([
-	"reverse-engineering",
-]);
 
 function artifactDirsForProducer(
 	pd: string,

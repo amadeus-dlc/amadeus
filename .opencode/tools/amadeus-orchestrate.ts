@@ -102,6 +102,7 @@ import {
   activeIntent,
   type CheckboxLine,
   codekbRepoName,
+  KNOWN_CODEKB_STAGES,
   classifyHelpIntent,
   classifyMigrationRequest,
   type MigrationRequest,
@@ -116,7 +117,7 @@ import {
   normalizeUnitKind,
   parseCheckboxes,
   parseIntentStatus,
-  PHASE_NUMBERS,
+  ownPhase,
   PHASES,
   READ_ONLY_FLAGS,
   relativeCodekbDir,
@@ -1288,19 +1289,10 @@ function isPerUnit(node: GraphStage): boolean {
   return node.for_each === PER_UNIT_FOR_EACH || KNOWN_PER_UNIT_STAGES.has(node.slug);
 }
 
-// The KNOWN SET of stages whose artifacts live in the durable, space-level
-// code knowledge base (`amadeus/spaces/<space>/codekb/<repo>/`) rather than under
-// a per-intent record dir. Keyed on the slug ALONE — deliberately NOT a stage
-// frontmatter marker: amadeus-stage-schema.ts OPTIONAL_FIELDS omits `codekb`, so a
-// `codekb: true` field would trip the schema's unknown-key rule and fail the
-// stage compile. reverse-engineering is the sole member today (it builds the
-// brownfield code understanding the whole space reuses); a future codekb stage
-// joins by adding its slug here, no schema change.
-const KNOWN_CODEKB_STAGES: ReadonlySet<string> = new Set(["reverse-engineering"]);
-
-// True when the node's artifacts belong in the space-level codekb (see set
-// above). Pure predicate over the slug — the per-repo/per-space placement is
-// resolved by the CodekbCtx threaded into resolveArtifactPath.
+// True when the node's artifacts belong in the space-level codekb (see
+// KNOWN_CODEKB_STAGES in amadeus-lib.ts). Pure predicate over the slug — the
+// per-repo/per-space placement is resolved by the CodekbCtx threaded into
+// resolveArtifactPath.
 function isCodekb(node: GraphStage): boolean {
   return KNOWN_CODEKB_STAGES.has(node.slug);
 }
@@ -3019,21 +3011,8 @@ function checkboxStateOf(
 }
 
 // Canonicalise a phase token (name or number) to its canonical name, or null.
-// Composes the same PHASE_NUMBERS / PHASES tables the jump tool uses.
-//
-// A bare PHASE_NUMBERS[lower] walks the prototype chain, so all-lowercase
-// Object.prototype members (`constructor`, `__proto__`) resolve to truthy
-// non-string values and slip past the `!canonical` guard — downstream
-// phase.toLowerCase() then throws a TypeError. Object.hasOwn keeps those names
-// on the null path. Kept local to this tool rather than shared via
-// amadeus-lib.ts (E-L17: the PHASE_NUMBERS constant stays shared, but each site
-// carries its own guard to avoid cross-file churn; #833 tracks lifting the
-// three copies).
-export function ownPhase(input: string): string | null {
-  const lower = input.toLowerCase();
-  if (Object.hasOwn(PHASE_NUMBERS, lower)) return PHASE_NUMBERS[lower];
-  return (PHASES as readonly string[]).includes(lower) ? lower : null;
-}
+// Implemented in amadeus-lib.ts ownPhase (#744 / #833).
+export { ownPhase };
 
 const canonicalisePhase = (input: string): string | null => ownPhase(input);
 

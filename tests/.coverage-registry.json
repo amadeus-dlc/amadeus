@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 531,
+    "total": 534,
     "enumeratedByClass": {
-      "function": 295,
+      "function": 298,
       "audit": 78,
       "scope": 10,
       "stage": 32,
@@ -2196,6 +2196,13 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:KNOWN_CODEKB_STAGES",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:listField",
       "minMechanism": "none",
       "coveredBy": [],
@@ -2558,6 +2565,13 @@
     {
       "unitClass": "function",
       "unitId": "function:numericStageOrder",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:ownPhase",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -3539,6 +3553,13 @@
     {
       "unitClass": "function",
       "unitId": "function:stopHookDir",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:stripProjectDir",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
