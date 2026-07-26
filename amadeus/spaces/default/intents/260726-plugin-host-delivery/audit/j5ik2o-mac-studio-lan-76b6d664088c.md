@@ -21367,3 +21367,71 @@
 **Message**: Reviewer: amadeus-architecture-reviewer-agent\nInvocationId: 2d2fa3c5-698f-4d2c-89a0-fb1b5d64e6b3\nIteration: 2\nVerdict: REVISE\nScope decision: none\n\nSummary: BR-U5-7 の意味統一(M2)と分岐表の正本一元化(M1)は4か所(reliabi
 
 ---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-26T17:30:45Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: nfr-design
+**Recovered**: true
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-26T17:30:46Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state approve nfr-design --user-input 全 8 unit ND 完了(READY ×7、U5 は予算消費後の機械検証可能残余を E-LSSADS13 で受理) --project-dir /Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/fix-plugin
+**Error**: Refusing to approve "nfr-design": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then approve. (autonomous Construction is exempt)
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-26T17:30:46Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --stage nfr-design --result completed --user-input 全 8 unit ND 完了(READY ×7、U5 は予算消費後の機械検証可能残余を E-LSSADS13 で受理)
+**Error**: Transition rejected by amadeus-state.ts approve for "nfr-design": {"error":"Refusing to approve \"nfr-design\": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then approve. (autonomous Construction is exempt)"}
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-26T17:31:10Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state gate-start nfr-design
+**Error**: Stage nfr-design is in state 'awaiting-approval' but command requires one of: in-progress
+
+---
+
+## Gate Authorization Selected
+**Timestamp**: 2026-07-26T17:31:21Z
+**Event**: GATE_AUTHORIZATION_SELECTED
+**Route Id**: 18fb6d42-da64-477a-9625-5c061f21030b
+**Stage**: nfr-design
+**Grant Id**: 72d6961c
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-26T17:31:38Z
+**Event**: GATE_APPROVED
+**Stage**: nfr-design
+**Grant Id**: 72d6961c
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-26T17:31:38Z
+**Event**: STAGE_COMPLETED
+**Stage**: nfr-design
+**Details**: Stage Nfr Design approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-26T17:31:38Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Agent**: amadeus-developer-agent
+
+---
