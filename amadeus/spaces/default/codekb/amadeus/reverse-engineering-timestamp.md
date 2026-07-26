@@ -1,111 +1,24 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260726-metrics-visualization）
+## 実行メタデータ(現在: 260725-kimi-harness)
 
-- Date: `2026-07-26`
-- Base commit: `11f1ad61f5ea4942332da5bd6e3e433c44aa4cab`（前 intent `260725-worktree-ref-fixes` の observed。`git merge-base --is-ancestor 11f1ad61f 1c43438df` exit **0** = 祖先、`git rev-list --count 11f1ad61f..1c43438df` = **5**。いずれも本 scan で再実測。cid:reverse-engineering:rescan-base-ancestry）
-- Observed commit: `1c43438df0348fed63c5fe88af46c9417258d4e0`（= 現 HEAD、`git rev-parse HEAD` 実測。ブランチ `main`）
-- 区間規模: `git diff --shortstat 11f1ad61f 1c43438df` = **452 files changed, 68457 insertions(+), 2792 deletions(-)**（測定 ref: observed `1c43438df`）。実装面は2系統のみ（solo standing grants / worktree hooks 修正）で、残りは record・audit・生成配布物。
-- 区間の内訳（`git log --oneline 11f1ad61f..1c43438df` 全5件）: `bbd74a942`（chore(metrics): record snapshot、[PR #1490](https://github.com/amadeus-dlc/amadeus/pull/1490)）/ `77d871d57`（feat(grants): standing delegation grants を solo mode で利用可能にする、[PR #1483](https://github.com/amadeus-dlc/amadeus/pull/1483)）/ `272f4bd58`（chore(metrics): record snapshot、[PR #1491](https://github.com/amadeus-dlc/amadeus/pull/1491)）/ `e12259ba7`（fix(hooks,tests): worktree セッションのパス／ref 解決ファミリを修正、[PR #1493](https://github.com/amadeus-dlc/amadeus/pull/1493)、#1482 / #1481 / #1455、refs #1492）/ `1c43438df`（Merge branch 'main'）
-- Scope: `amadeus-feature`、Depth Standard、Brownfield、単一 repo `amadeus`
-- Focus: `metrics/` スナップショットの可視化機能。既存 metrics サブシステム（`scripts/metrics-snapshot.ts` / `metrics-timeseries.ts` / `metrics-retention.ts`、ci.yml `metrics-snapshot` job、`metrics/*.json` **123 件**）の現況把握と、可視化機能の再利用 seam・挿入点・既習様式の同定が本 scan の主眼。
-- 差分リフレッシュ（cid:reverse-engineering:c1）: フルスキャン不実施。区間5コミットの実装面を直読したうえで、**本 intent の重点である metrics サブシステムは区間内で完全に無変更**であることを `git diff --name-only 11f1ad61f 1c43438df -- scripts/ .github/` の**出力 0 行**で機械確認した。すなわち metrics 面の現況は区間より前から安定しており、可視化の挿入 seam は observed HEAD の直読で確定できる。
-- 測定 ref: 本節および本 scan で更新した全成果物の file:line・件数は observed `1c43438df` の実ファイル直読、および `git diff --numstat` / `grep -n` / `ls | wc -l` の出力からの転記による（cid:requirements-analysis:numbers-from-command-output-only、cid:reverse-engineering:measurement-ref-in-artifacts）。上流 Developer スキャン結果の file:line は本 Step 3 で全数スポット再実測し、不一致は下記および `re-scans/260726-metrics-visualization.md` に訂正として記録した。
-- 更新した成果物（9件）: `reverse-engineering-timestamp.md`（本ファイル）/ `architecture.md` / `code-structure.md` / `component-inventory.md` / `code-quality-assessment.md` / `business-overview.md` / `api-documentation.md` / `technology-stack.md` / `dependencies.md`。加えて per-intent 記録 `re-scans/260726-metrics-visualization.md` を新規作成。
-- 上流主張の訂正（本 scan で再実測）: (1) `resolveProjectDirFromHook` の所在は前 intent 記録の `amadeus-lib.ts:247` → observed で **`:269`**（PR #1483 / #1493 による +22 行シフト、cid:reverse-engineering:upstream-cite-reresolve-on-shift） (2) `package.json` の scripts エントリは 16 → 実測 **15**（うち metrics 系 **0**） (3) 正本 diff の行数はスキャン結果と numstat で乖離（`amadeus-state.ts` +540 → 実測 **+467 −73**、`amadeus-orchestrate.ts` +188 → **+184 −4**、`amadeus-directive.ts` +168 → **+127 −41**、`amadeus-lib.ts` +160 → **+202 −29**）。本 codekb は numstat 実測値を採る。 (4) snapshot collectors の定義行は `:71-110` → 実測 **`:72-110`**。
-- Sensors: RE ステージが宣言する3センサー（required-sections / upstream-coverage / answer-evidence）は、codekb 出力パス `amadeus/spaces/default/codekb/amadeus/**` が各 manifest の filter（`**/{amadeus-docs,intents}/**` および `**/*-questions.md`）に**構造的に不適合**のため発火不能（cid:reverse-engineering:re-sensors-codekb-filter-mismatch、cid:reverse-engineering:c3-codekb-sensor）。**センサー成功として扱わず**、代替として (a) 更新9成果物すべてに `grep -c '^## '` を実行し H2 ≥ 2 を機械確認 (b) 上流入力（Developer スキャン結果）の参照を各成果物本文で直接検証（file:line のスポット再実測を含む）の2点を実施した。結果は `re-scans/260726-metrics-visualization.md` の「センサー不適用と代替検証」節。
-- Delivery boundary: 本 scan は codekb の差分更新のみを成果物とし、実装コード・intent state・memory・`intents.json`・生成配布物には一切書き込まない。可視化機能の方式（挿入点、出力形式、CI 配線）は後続の requirements-analysis 以降で確定する。
+- Date: 2026-07-25
+- Observed at: `d31b8a5db5798ef761f3871ca66824c87530afb4`(現 HEAD `git rev-parse HEAD` 実測一致)
+- Intent: `260725-kimi-harness`(新ハーネス「kimi」/ `.kimi-code` を本 AI-DLC フレームワーク repo へ追加する intent)
+- Scope: `amadeus-feature`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering` (2.1)
+- Focus: differential refresh + kimi ハーネス追加に向けた移植面(harness-porting surface)の再測定
+- Method: differential refresh。base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`(前回 scan `260724-watcher-timeout-fix` の observed)、observed `d31b8a5db5798ef761f3871ca66824c87530afb4`、`git merge-base --is-ancestor 6d4df9056 HEAD` exit 0、distance `git rev-list --count 6d4df9056..HEAD`=105。`260724-harness-provenance` の observed `2d0da11d` は現 HEAD の**非祖先**(exit 1、squash マージ着地で観測点が HEAD 系統に無い)のため base 不適格。記録済み observed のうち祖先かつ距離最小の `6d4df9056` を採用(cid:reverse-engineering:rescan-base-ancestry)。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3)。
+- 測定 ref: 全 file:line は Observed=HEAD `d31b8a5db` のワークツリー実ファイル直読(cid:measurement-ref-in-artifacts)。区間件数(105)・diff 規模(624 files, +103965/−1957。非 record 295 files, +34617/−1957)はコマンド出力からの転記(numbers-from-command-output-only)。
+- 現行結論: 区間の構造変化はハーネス関連 4 クラスタに集中。(1) **ハーネス検出クラスタの新規分離**(`58053fa61`): 新規 `packages/framework/core/tools/amadeus-harness.ts`(137 行、base 非存在)へ `HarnessType`(:5-12)/`HARNESS_DIR_TO_TYPE`(:14-22)/`KNOWN_HARNESS_DIRS`(:34-40)/`KNOWN_RULES_SUBDIR`(:53-57)と検出手続き群が `amadeus-lib.ts` から移管。lib は import(:7-14)+型 re-export(:15-18)+compat facade(:152-166)へ縮退(区間 +21/−99)し、呼び出し側契約は不変。(2) **plugin 同梱モデル変更**(`47d5e3f9c`): plugin は harness 中立バンドル `dist/plugins/<name>/` のみで出荷、per-harness `<harnessDir>/plugins/` 投影は廃止(`scripts/package.ts:316` `projectPluginsIntoHarnessTree` は read-source 会計のみの no-op)。`dist/plugins/formal-model-check/` が初のバンドル(base では `dist/plugins/` 非存在)。(3) **plugin 信頼層**(`f67b931c2` + `454194231`): `scripts/plugin-composition.ts`(+138/−15)に sha256 `contentDigest`・stage index 検証(`parseStages` :293)・journal 信頼付与(`validJournal` :813、sha256 形式 :826)・drop 時ドリフト拒否。(4) **intent birth での harness provenance 記録**(`dc1eeba20`): `amadeus-lib.ts` +78/−9、`amadeus-utility.ts` +3/−0、新テスト t269(unit+cli)/t270/t271 + t144-harness-seam.cli。**kimi 移植面の要点は 3 つの閉集合の非対称**: `scripts/plugin-projection.ts:46-53` `PACKAGE_HARNESSES`(6 面)vs 同 :59 `SELF_INSTALL_HARNESSES`(4 面)vs `amadeus-swarm.ts:100` `HARNESS_VALUES`(4 面、cursor/opencode を意図的除外 — kimi 追加は opt-in で `resolveDriver` :118-136 が未知値を fail-closed 拒否)。packager 本体は manifest 自動発見(`scripts/package.ts:85-91`、コメント :80-84)で新ハーネス追加に編集不要。`packages/framework/harness/` は base・HEAD とも同じ 6 dir で新ハーネス dir は区間内未追加。kimi の雛形は cursor/manifest.ts(75 行)と codex/emit.ts(375 行)。バージョンは `amadeus-version.ts:4` AMADEUS_VERSION="0.1.5"。
+- Per-intent record: `re-scans/260725-kimi-harness.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「現在: 260724-watcher-timeout-fix」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、`code-structure.md`(amadeus-harness.ts 新規分離と lib facade 化 + kimi 移植面目録を先頭 current view に新設)、`component-inventory.md`(amadeus-harness.ts + plugin 信頼層コンポーネント登録 + 移植面を current view 化)、`architecture.md`(plugin 中立バンドル出荷モデル + 3 閉集合非対称を先頭 current view に新設)、`code-quality-assessment.md`(区間の新テスト t269/t270/t271/t144-harness-seam + t252 信頼層更新を current view に追記)、`re-scans/260725-kimi-harness.md`(新規)。他 body 4 成果物(business-overview / api-documentation / technology-stack / dependencies)は本文温存で「変更なし、確認済み」一行のみ追記(区間変化は 4 成果物のドメイン外。plugin-composition の node:crypto は stdlib で依存変化なし。cid:reverse-engineering:c1)。
+- Delivery boundary: 実装・修正コード、dist/self-install 再生成、commit、PR 操作は本 scan で未実施。kimi ハーネス本体の実装は未着手。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
 
-## 実行メタデータ（履歴: 260725-worktree-ref-fixes）
-## 実行メタデータ（履歴: 260726-grant-scope-gate）
-
-- Date: `2026-07-26`
-- Base commit: `11f1ad61f5ea4942332da5bd6e3e433c44aa4cab`（前 intent `260725-worktree-ref-fixes` の observed。`git merge-base --is-ancestor 11f1ad61f e12259ba7` exit 0 = 祖先、`git rev-list --count 11f1ad61f..e12259ba7` = **4**。cid:reverse-engineering:rescan-base-ancestry）
-- Observed commit: `e12259ba78b8c56bf3572c9bfd44a7bdf84d681c`（= 現 HEAD、`git rev-parse HEAD` 実測。worktree `.claude/worktrees/1497-standing-grant-scope-gate`）
-- 区間規模: **452 files changed, +68,457 / -2,792**（測定 ref: observed `e12259ba7`）。大半は dist×6 + self-install×4 の生成物増幅で、正本の実装面は 2 コミットに閉じる。
-- 区間の内訳（`git log --reverse 11f1ad61f..e12259ba7` 全4件）: `bbd74a942`（record のみ）/ `77d871d57`（[PR #1483](https://github.com/amadeus-dlc/amadeus/pull/1483) solo standing grants）/ `272f4bd58`（record のみ）/ `e12259ba7`（[PR #1493](https://github.com/amadeus-dlc/amadeus/pull/1493) worktree パス／ref 修正）
-- Scope: `amadeus-bugfix`、Brownfield、単一 repo `amadeus`
-- Focus: [Issue #1497](https://github.com/amadeus-dlc/amadeus/issues/1497) — standing grant の scope 解決。`standingGrantSatisfiesGate`（`amadeus-lib.ts:3985-4017`）が composed scope（`amadeus-*`）を解決できない `stage.scopes` を直読する構造欠陥。
-- 差分リフレッシュ（cid:reverse-engineering:c1）: フルスキャン不実施。区間4コミットのうち実装面 2 件を直読し、患部機構は **PR #1483 で新規に持ち込まれた面**として精査した。
-- 主要な確定事項: (A) composed scope では `inScope()` が全 stage で false → `crossesPhaseBoundary` 恒真 → 既定グラントが全ゲート ineligible（#1497 本体、無音 no-op） (B) 同じ `inScope` により `isFirstConstructionGate` が恒偽 → **walking-skeleton 除外が無音不発**（未報告、project.md Forbidden / Mandated への現在進行の違反）。A と B は**単一の根本原因から出る 2 症状**。
-- 測定 ref: 本節および本 scan で更新した全成果物の file:line・件数は observed `e12259ba7` の実ファイル直読、`grep -n` / `wc -l` / `find` 出力、および `python3 -c json` による `stage-graph.json`（32 stages / `scopes` 語彙 10 / キー欠落 0）・`scope-grid.json`（15 scope キー）・`.coverage-patch-allowlist.json`（`amadeus-lib.ts` 行ピン 4 件）の直接読取からの転記（cid:requirements-analysis:numbers-from-command-output-only）。
-- 更新した成果物（9件）: `reverse-engineering-timestamp.md`（本ファイル）/ `architecture.md` / `component-inventory.md` / `code-structure.md` / `code-quality-assessment.md`（以上は本 intent の新節を追加）/ `api-documentation.md` / `dependencies.md`（区間の新規公開契約・新規エッジを最小追記）/ `business-overview.md` / `technology-stack.md`（冒頭ブロックのみ）。加えて per-intent 記録 `re-scans/260726-grant-scope-gate.md` を新規作成。旧「現在」マーカー（`260725-worktree-ref-fixes`）は本ファイルおよび body 4 成果物の H2 見出しで履歴ラベルへ降格した（cid:reverse-engineering:c3-relabel。`grep -rn "、現在、\|（現在:"` の残存ヒットが本 intent `260726-grant-scope-gate` の節のみであることを機械確認）。
-- Sensors: RE ステージが宣言する3センサー（required-sections / upstream-coverage / answer-evidence）は、codekb 出力パス `amadeus/spaces/default/codekb/amadeus/**` が各 manifest の filter（`**/{amadeus-docs,intents}/**` および `**/*-questions.md`）に**構造的に不適合**のため発火不能（cid:reverse-engineering:re-sensors-codekb-filter-mismatch、cid:reverse-engineering:c3-codekb-sensor）。**センサー成功として扱わず**、代替として (a) 更新9成果物すべてに `grep -c '^## '` を実行し H2 ≥ 2 を機械確認 (b) 上流入力（Developer スキャン結果）の参照を各成果物本文で直接検証 の2点を実施した。
-- Delivery boundary: 本 scan は codekb の差分更新と per-intent re-scan 記録のみを成果物とし、患部コードへの修正、intent record / state / audit / 生成配布物への書込は一切行わない。#1497 の修正方式（`inScope` の解決方式差し替え、fixture 是正、per-unit 軸の扱い）は後続の requirements-analysis 以降で確定する。
-
-## 実行メタデータ（履歴: 260725-worktree-ref-fixes）
-
-- Date: `2026-07-26`
-- Base commit: `ec624022ff65cc8b3912001f768bd66ec41a0e39`（前 intent `260725-teamup-attach-latency` の observed。`git merge-base --is-ancestor ec624022f 11f1ad61f` exit 0 = 祖先、`git rev-list --count ec624022f..11f1ad61f` = **10**。cid:reverse-engineering:rescan-base-ancestry）
-- Observed commit: `11f1ad61f5ea4942332da5bd6e3e433c44aa4cab`（= 現 HEAD、`git rev-parse HEAD` 実測。worktree ブランチ `worktree-bugfix-1482-1481-1455`）
-- 区間規模: `git diff --shortstat ec624022f 11f1ad61f` = **143 files changed, 22167 insertions(+), 725 deletions(-)**（測定 ref: observed `11f1ad61f`）。実装面は `team-up.sh` 系1系統のみ（正本+harness 表層4+dist 6、tests 3件）で、残りは record/audit。
-- 区間の内訳（`git log --reverse ec624022f..11f1ad61f` 全10件）: `dcadcce17`（前 intent inception checkpoint）/ `294df1281`（watcher 検証の適用可否ガード）/ `22829d0b8` / `a0febedd2` / `872919958`（Merge [PR #1477](https://github.com/amadeus-dlc/amadeus/pull/1477)）/ `c4c9531ee` / `6248fdac4`（[PR #1484](https://github.com/amadeus-dlc/amadeus/pull/1484) actas 移行）/ `f54ce2b5e`（[PR #1486](https://github.com/amadeus-dlc/amadeus/pull/1486) record 同期）/ `8eeab33e5`（[PR #1488](https://github.com/amadeus-dlc/amadeus/pull/1488)）/ `11f1ad61f`（[PR #1487](https://github.com/amadeus-dlc/amadeus/pull/1487) worktree checkout 並列化）
-- Scope: `amadeus-bugfix`、Depth Minimal、Brownfield、単一 repo `amadeus`
-- Focus: [Issue #1482](https://github.com/amadeus-dlc/amadeus/issues/1482)（EnterWorktree セッションの Stop hook が本線 state を読む）+ [Issue #1481](https://github.com/amadeus-dlc/amadeus/issues/1481)（worktree で t257/t258/t259 が ref 解決失敗で常赤）+ [Issue #1455](https://github.com/amadeus-dlc/amadeus/issues/1455)（t257 `currentGitSha` の common-dir loose ref 未解決 — #1481 と同根）
-- 差分リフレッシュ（cid:reverse-engineering:c1）: フルスキャン不実施。区間10コミットの実装面を直読したうえで、**患部（`amadeus-lib.ts` / `amadeus-stop.ts` / t257 / t258 / t259）は区間内で無変更**であることを `git diff --name-only ec624022f 11f1ad61f -- <5パス>` の**空出力**で機械確認した。すなわち本 intent の3 Issue はいずれも区間の退行ではなく、区間より前から存在する欠陥である。
-- 測定 ref: 本節および本 scan で更新した全成果物の file:line・件数は observed `11f1ad61f` の実ファイル直読と、worktree `.claude/worktrees/bugfix-1482-1481-1455` 上での git plumbing 実測（`git rev-parse --git-dir` / `--git-common-dir`、`ls`、`grep -c`）による。件数はすべて grep/wc 出力からの転記（cid:requirements-analysis:numbers-from-command-output-only）。
-- 更新した成果物（9件）: `reverse-engineering-timestamp.md`（本ファイル）/ `architecture.md` / `code-quality-assessment.md` / `code-structure.md` / `component-inventory.md` / `business-overview.md` / `api-documentation.md` / `technology-stack.md` / `dependencies.md`。加えて per-intent 記録 `re-scans/260725-worktree-ref-fixes.md` を新規作成。
-- Sensors: RE ステージが宣言する3センサー（required-sections / upstream-coverage / answer-evidence）は、codekb 出力パス `amadeus/spaces/default/codekb/amadeus/**` が各 manifest の filter（`**/{amadeus-docs,intents}/**` および `**/*-questions.md`）に**構造的に不適合**のため発火不能（cid:reverse-engineering:re-sensors-codekb-filter-mismatch）。**センサー成功として扱わず**、代替として (a) 更新9成果物すべてに `grep -c '^## '` を実行し H2 ≥ 2 を機械確認 (b) 上流入力（Developer スキャン結果）の参照を各成果物本文で直接検証 の2点を実施した。詳細は `re-scans/260725-worktree-ref-fixes.md` の「センサー不適用と代替検証」節。
-- Delivery boundary: 本 scan は codekb の差分更新のみを成果物とし、患部コードへの修正は行わない。3 Issue の修正方針（rung 順序の裁定、helper の git plumbing 化と共有化）は後続の requirements-analysis 以降で確定する。
-
-## 実行メタデータ（履歴: 260725-teamup-launch-hardening）
-
-- Date: `2026-07-25`
-- Base commit: `ec624022ff65cc8b3912001f768bd66ec41a0e39`（前 intent `260725-teamup-attach-latency` の observed。`git merge-base --is-ancestor` exit 0、`git rev-list --count` = **9**。cid:reverse-engineering:rescan-base-ancestry）
-- Observed commit: `4a0f91ad07dbe17c6477b7fe9b52a0e9ab4532ba`（= 現 HEAD、`git rev-parse HEAD` 実測。ブランチ `feat/teamup-actas-migration-and-worktree-parallel`）
-- 区間規模: `git diff --stat ec624022f..4a0f91ad0` = **65 files changed, 6516 insertions(+), 54 deletions(-)**（測定 ref: observed `4a0f91ad0`）。実装面は `team-up.sh` 11 面 × `+31/-8` と tests 2 件のみで、残りは record/audit。
-- 区間の内訳: [PR #1477](https://github.com/amadeus-dlc/amadeus/pull/1477)（merge `872919958`、実装 `294df1281` = watcher 検証の適用可否ガード、Issue #1449）+ 本 intent の ideation 記録（`5219bbd54` / `a3ab8dff4` / `4a0f91ad0`）+ 前 intent の record checkpoint。
-- Scope: `amadeus-feature`、Depth Standard、Test Strategy Minimal、Brownfield、単一 repo `amadeus`
-- Focus: [Issue #1476](https://github.com/amadeus-dlc/amadeus/issues/1476)（bug / P1 / S2-CRITICAL — 初期プロンプトの actas 移行）+ [Issue #1478](https://github.com/amadeus-dlc/amadeus/issues/1478)（enhancement / P2 — `git worktree add` の並列化）の2ユニット同時対応。
-- 差分リフレッシュ（cid:reverse-engineering:c1）: フルスキャン不実施。区間9コミットの実装面（`team-up.sh` の diff 全文、tests 2件）を直読し、外部 agmsg スキル側の主張は前 intent の記録を**再実測して追認**した。
-- 測定 ref: 本ファイル記載の file:line・件数はすべて observed `4a0f91ad0` の実ファイル直読、および repo 外・非バージョン管理の外部スキル `~/.agents/skills/agmsg/`（読取 2026-07-25）による。`git worktree add` の並列度別実測値は本 intent の `ideation/feasibility/feasibility-assessment.md`（測定 ref: `c4c9531ee`、隔離環境、実施後完全撤去）からの引用であり、本 scan では再実行していない。
-- 更新した成果物: 本ファイル（鮮度ポインタ + 旧「現在: 260725-teamup-attach-latency」→履歴ラベル化、cid:reverse-engineering:c3-relabel）、`architecture.md`（PR #1477 の適用可否ガード現況、actas 移行後に検証が再発火する経路、`mux_attach` との順序関係、worktree 直列作成の位置づけ）、`code-quality-assessment.md`（#1384 の保護が現在不在、テストが sentinel を自前で書く構造、worktree 直列作成）、`code-structure.md` / `component-inventory.md`（`WATCHER_SKIP_ANNOUNCED` 等の追加と行番号の更新）、`re-scans/260725-teamup-launch-hardening.md`（新規）。`business-overview.md` / `api-documentation.md` / `technology-stack.md` / `dependencies.md` は本 intent 由来の構造変化なしのため「変更なし、確認済み」一行のみ追記。
-- Sensors: RE ステージの宣言センサー3種（required-sections / upstream-coverage / answer-evidence）は codekb 出力パスが sensor filter（`**/{amadeus-docs,intents}/**` と `**/*-questions.md`）に構造的に不適合で発火不能（cid:reverse-engineering:re-sensors-codekb-filter-mismatch、cid:reverse-engineering:c3-codekb-sensor）。**センサー成功として扱わない**。代替として (1) 更新した全成果物の `## ` 見出しが 2 以上あることを `grep -c '^## '` で機械確認、(2) 上流入力（`ideation/feasibility/feasibility-assessment.md`、Issue #1476 / #1478、実コード file:line）の本文実参照を直接検証した。
-- Delivery boundary: codekb 9成果物 + 本 intent の re-scan 記録のみ更新。実装・テスト・state・audit・生成配布物・commit・PR 操作は未実施。
-
-## 実行メタデータ（履歴: 260725-teamup-attach-latency）
-
-- Date: `2026-07-25`
-- Base commit: `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`（`re-scans/` の到達可能な observed のうち HEAD の祖先で距離最小。cid:reverse-engineering:rescan-base-ancestry）
-- Observed commit: `ec624022ff65cc8b3912001f768bd66ec41a0e39`（= 現 HEAD、`git rev-parse HEAD` 実測）
-- Base ancestry / distance: `git merge-base --is-ancestor <base> HEAD` exit 0、`git rev-list --count <base>..HEAD` = **125**
-- 区間規模: `git diff --stat <base>..<observed>` = **1018 files changed, 274683 insertions(+), 4573 deletions(-)**（測定 ref: observed `ec624022f`）
-- Scope: `amadeus-bugfix`、Depth Minimal、Test Strategy Minimal、Brownfield、単一 repo `amadeus`
-- Focus: [Issue #1449](https://github.com/amadeus-dlc/amadeus/issues/1449) — `team-up.sh` 起動が約200秒かかる問題。**起動レイテンシの解消のみ**がスコープ。
-- 症状（実 launch 実測、2026-07-25、3人構成 leader+engineer×2、隔離インスタンス `bench`）: `T+200.85s team-up.sh EXIT (rc=1)`、armed になったメンバー **0 / 3**、`ERROR: agmsg watcher never armed for: leader engineer-1 engineer-2 (after 1 re-send(s))`。Claude Code は3プロセスとも正常起動し `herdr agent list` 上 `agent_status: idle`。
-- 根本原因（本 scan で独立に裏取り）: `verify_watchers_armed` が待つ ready sentinel は **actas モードの watcher しか書かない**が、`team-up.sh` が投入する初期プロンプトは `/agmsg mode monitor`（monitor モード）である。モード不一致により sentinel は**構造的に一度も生成されない** → 検証は常に全員 unarmed でタイムアウトし、`mux_attach` を待ち budget 全量ぶんブロックする。
-- 測定 ref: 本ファイル記載の file:line・件数はすべて observed `ec624022f` の実ファイル直読、および外部 agmsg スキル `~/.agents/skills/agmsg/`（repo 外・非バージョン管理、読取時刻 2026-07-25）による。
-- 更新した成果物: 本ファイル（鮮度ポインタ + 旧「現在: 260725-mirror-review-fixes」→履歴ラベル化、cid:reverse-engineering:c3-relabel）、`architecture.md`（actas/monitor モード不一致の機序を新設、260724 節の失効数値を訂正）、`code-quality-assessment.md`（「常に失敗する検証ゲート」= 検証劇場クラス + テストスタブによる検出不能性）、`code-structure.md`・`component-inventory.md`（HEAD 行番号への更新と欠陥所在の登録）、`re-scans/260725-teamup-attach-latency.md`（新規）。`business-overview.md` / `api-documentation.md` / `technology-stack.md` / `dependencies.md` は本 intent 由来の構造変化なしのため「変更なし、確認済み」一行のみ追記（cid:reverse-engineering:c1）。
-- Sensors: RE ステージの宣言センサー3種（required-sections / upstream-coverage / answer-evidence）は codekb 出力パスが sensor filter に構造的に不適合で発火不能（cid:reverse-engineering:re-sensors-codekb-filter-mismatch、cid:reverse-engineering:c3-codekb-sensor）。**センサー成功として扱わず**、H2 構成（各成果物の `## ` 見出し ≥2、直読確認）と上流入力参照（Issue #1449 / 実 launch 実測ログ / 実コード file:line）を直接検証した。
-- Delivery boundary: codekb 9成果物 + 本 intent の re-scan 記録のみ更新。実装・テスト・state・audit・生成配布物・commit・PR 操作は未実施。
-
-## 実行メタデータ（履歴: 260725-solo-standing-grants）
-
-- Date: `2026-07-25`
-- Base: `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`
-- Observed: `4491310cc0b432eb404524ef30a7d8a0a3f68f73`
-- Focus: [Issue #1466](https://github.com/amadeus-dlc/amadeus/issues/1466)
-- Reference only: [PR #1468](https://github.com/amadeus-dlc/amadeus/pull/1468) は凍結試作で参考のみ、実装前提にしない。
-- Method: Developer scan の結論を Architect が canonical code と既存テストで照合し、shared CodeKB の先頭 current view と per-intent re-scan に合成。実装方式は確定していない。
-- Conclusion: standing grant は監査イベントのまま維持する。solo route / report に grant identity がなく route / commit race がある。commit 時不適格には mutation 前の typed non-error human-approval fallback が必要。具体方式は未決定。
-- Diff / verification: 373 files、`+71,339/-811`。grant core は base..observed で無変更、orchestrate plugin 系は `+109/-3` の同時編集面。関連178テスト、dist 6 harness check、promote 4面 check は成功。`bun run check` は `tsc: command not found`（exit 127）で未判定。
-- Delivery boundary: 実装コード、intent state、memory、`intents.json`、generated dist は変更していない。
-
-## 実行メタデータ（履歴: 260725-mirror-review-fixes）
-
-- Date: `2026-07-25T01:35:20Z`
-- Base commit: `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`（この intent に先行記録がないため、到達可能な `re-scans/` の observed commit のうち HEAD に最も近い `260724-watcher-timeout-fix` を採用）
-- Observed commit: `70336937529f5be31c011de5d368c0f03e534506`（[PR #1469](https://github.com/amadeus-dlc/amadeus/pull/1469) head、`git rev-parse HEAD` 実測）
-- Base ancestry / distance: `git merge-base --is-ancestor <base> HEAD` exit 0、`git rev-list --count <base>..HEAD` = 49
-- Scope: `amadeus-bugfix`、Depth Minimal、Test Strategy Comprehensive、Brownfield、単一 repo `amadeus`
-- Focus: PR #1469 の検証済みレビュー修正面。Mirror lifecycle の未完了 outcome exit、prompt 回答 CLI 欠落と binding 不一致、legacy mutation verb、config safe read TOCTOU、state codec の未エスケープ C0 制御文字、Cursor/OpenCode coverage source 正規化、関連 tests/CI。
-- Diff focus: `packages/framework/core/tools`、coverage helper/smoke test、`ci.yml` の23ファイル、`+10,319/-161`。正本コードの大宗は Mirror lifecycle 一式。
-- Findings: [review thread 1](https://github.com/amadeus-dlc/amadeus/pull/1469#discussion_r3648935678)、[review thread 2](https://github.com/amadeus-dlc/amadeus/pull/1469#discussion_r3648935682)、[review thread 3](https://github.com/amadeus-dlc/amadeus/pull/1469#discussion_r3648935684) のP1 3件に、config/codec/coverage の実測3件を加えた6クラスタ。詳細は `architecture.md` と `code-quality-assessment.md`。
-- Baseline: focused 7 test filesを `bun test` で実行し、127 pass / 0 fail / 274 expect()（16.68秒）。現行テストは green だが6欠陥条件を直接検証していない。
-- Per-intent record: `re-scans/260725-mirror-review-fixes.md`
-- Delivery boundary: codekb 9成果物とこの intent の re-scan 記録のみ更新。実装、tests、state、audit、生成配布物、commit、PR mutation は未実施。
-
-## 実行メタデータ（履歴: 260724-watcher-timeout-fix）
+## 実行メタデータ(履歴: 260724-watcher-timeout-fix)
 
 - Date: 2026-07-24
 - Observed at: `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`(現 HEAD `git rev-parse HEAD` 実測一致)

@@ -1,60 +1,10 @@
 # 依存関係
 
-> **2026-07-26（intent `260726-metrics-visualization`、amadeus-feature / Standard）: 変更なし、確認済み（測定 ref: observed `1c43438df`、base `11f1ad61f`、距離 5）。** 区間内で `package.json` / `bun.lock` の diff は空。**可視化の依存方針も追加ゼロ**（外部チャートライブラリの導入なし、inline SVG で完結 — 詳細は `technology-stack.md` の同 intent 節）。
->
-> **既存 metrics サブシステムの依存グラフ（observed 実測）**: `metrics-snapshot.ts → ../tests/complexity-gate.ts（runLizard）/ ../tests/lib/test-size.ts`、`metrics-retention.ts → metrics-timeseries.ts（parseSnapshot、:17）`。後者は「pruner が reader の妥当性定義を import する」明文契約（`metrics-retention.ts:6-9`）であり、**可視化も独自 parser を持たず同じエッジを張るのが既習様式**。追加されるエッジは `metrics-visualize（新規） → metrics-timeseries` の1本のみで足りる見込み。
->
-> **重要な独立性**: `scripts/metrics-*.ts` の3ファイルはいずれも `amadeus-lib` を import しない（`grep -c 'amadeus-lib' scripts/metrics-*.ts` = 各 **0**）。したがって区間の実装2系統（PR #1483 の grant/presence 新規2モジュール +1,388 行、PR #1493 の全11フック + `resolveProjectDirFromHook:269` シグネチャ変更）はいずれも可視化の依存前提に影響しない。**逆方向の注意**: 可視化が framework core（`packages/framework/core/`）へエッジを張ると、`dist/` 6ハーネス投影と self-install の同期対象になる。`scripts/` 直下に留める限りその負担は生じない（`scripts/*.ts` は dist・contrib いずれの投影対象でもない repo ローカル層。既存の `scripts/amadeus-election-migrate.ts` / `scripts/distribution-transaction.ts` / `scripts/formal-verif/*.ts` が同層の実例。**なお過去の codekb 節が「`scripts/amadeus-mirror.ts` 前例」と記す箇所があるが、本 scan の実測では `scripts/amadeus-mirror.ts` は存在せず、mirror 系は `packages/framework/core/tools/amadeus-mirror-*.ts`（配布 `.claude/tools/`）である — 履歴節の当該引用は失効している**）。
+> **2026-07-25（intent `260725-kimi-harness`、amadeus-feature）: 変更なし、確認済み。** 内部依存の交差は `amadeus-lib.ts` → 新規 `amadeus-harness.ts`（ハーネス検出の移管先、lib は compat facade）のみで、パッケージ依存に変化なし。plugin-composition の `node:crypto` は stdlib で依存追加ではない（base `6d4df9056` → observed `d31b8a5db`）。
 
-> **2026-07-26（intent `260726-grant-scope-gate`、[#1497](https://github.com/amadeus-dlc/amadeus/issues/1497)、amadeus-bugfix / Brownfield）: 最小追記（測定 ref: observed `e12259ba7`、base `11f1ad61f`、距離 4）。** 区間の [PR #1483](https://github.com/amadeus-dlc/amadeus/pull/1483) が **core 中立層に新規モジュール 2 本**（`amadeus-grant-authorization.ts` 876 行 / `amadeus-presence-reservation.ts` 512 行）を追加し、依存グラフに新規エッジが入った。外部パッケージ依存は追加されていない（`package.json` / `bun.lock` の区間 diff は空）。
+## 260724-watcher-timeout-fix の依存境界（履歴: 2026-07-24）
 
-> 新規エッジ（`grep -n` 実測、observed `e12259ba7`）: `amadeus-grant-authorization.ts:16` → `amadeus-lib.ts` の `standingGrantSatisfiesGate` ほか / `amadeus-orchestrate.ts:1597` `routeMainWorkflowDirective` → `amadeus-grant-authorization.ts:739` `routeSoloStandingGrantDirective` / `amadeus-state.ts:80` → `amadeus-lib.ts` の同述語。すなわち **`standingGrantSatisfiesGate` は solo 経路（`amadeus-grant-authorization.ts:336`）と team 経路（`amadeus-state.ts:2470` / `:3269`）の双方が扇状に依存する共有述語**であり、その解決方式を差し替える修正は両経路へ一様に波及する。
-
-> 既存の非対称エッジ（本 intent の論点）: 同述語だけが `stage-graph.json` の `stage.scopes` へ依存し、engine の他の scope 解決（`nextInScopeStage` `amadeus-lib.ts:6828` / `firstInScopeStageOfPhase` `:6891` / `subgraphForScope` `amadeus-graph.ts:959`）は `scope-grid.json` + `.claude/scopes/*.md` へ依存する。**同一の問いに対する依存源が二系統に分かれている**。grid 側へ寄せる修正は `amadeus-graph.ts` → `amadeus-lib.ts` の既存 import と循環するため、lazy require の既習様式（`amadeus-lib.ts:6898-6902`）を要する。
-
-> **2026-07-26（intent `260725-worktree-ref-fixes`、[#1482](https://github.com/amadeus-dlc/amadeus/issues/1482) / [#1481](https://github.com/amadeus-dlc/amadeus/issues/1481) / [#1455](https://github.com/amadeus-dlc/amadeus/issues/1455)、amadeus-bugfix / Minimal）: 変更なし、確認済み（測定 ref: observed `11f1ad61f`、base `ec624022f`、距離 10）。** 依存グラフに新規エッジなし。本 intent が扱う3欠陥はいずれも**既存エッジの性質**に起因する — #1482 は `core hooks → amadeus-lib.resolveProjectDirFromHook → process.env` のエッジが env の鮮度を検証せず無条件採用すること（実呼び出し12箇所が同一の解決関数に扇状依存するため、単一欠陥が一様に波及する）、#1481 / #1455 は `t257 / t258 / t259 → git 内部レイアウト（FS 直読）` という**3本の重複エッジ**が git worktree の ref 配置（loose ref が common dir 側にある）を織り込んでいないこと。**修正はいずれも依存を追加せず、#1482 は解決関数内の rung 順序、#1481 は FS 直読エッジを既存の git サブプロセス様式（`amadeus-lib.ts:4131` `resolveMainCheckout`）へ付け替えて3本を1本へ集約する方向に閉じる。** 区間内で `package.json` / `bun.lock` の diff は空。
-
-> **2026-07-25（intent `260725-teamup-launch-hardening`、[#1476](https://github.com/amadeus-dlc/amadeus/issues/1476) / [#1478](https://github.com/amadeus-dlc/amadeus/issues/1478)、amadeus-feature / Standard）: 変更なし、確認済み（測定 ref: observed `4a0f91ad0`、base `ec624022f`、距離 9）。** 依存グラフに新規エッジなし。本 intent が扱う2欠陥はいずれも**既存エッジの性質**に起因する — U1（#1476）は `team-up.sh → agmsg ready sentinel` の書き手側（actas モードの `watch.sh`）が repo 外にあり repo 内テスト・センサーから到達不能であること、U2（#1478）は `team-up.sh → git worktree` が同一 `.git` の内部ロックを共有すること（実測で失敗はゼロだが並列度7でスループット劣化）。**PR #1477 は依存を1本も追加せず、既存エッジの利用可否を判定するガードのみを足した。**
-
-> **2026-07-25（intent `260725-teamup-attach-latency`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み（測定 ref: observed `ec624022f`、base `6d4df9056`、距離 125）。** 依存グラフに新規エッジなし。ただし本 intent の欠陥は既存エッジ `team-up.sh → agmsg ready sentinel` の**片側（書き手 = actas モードの watch.sh）が repo 外**にあることに起因する。この境界は repo 内のテスト・センサーから到達不能である。
-
-## Issue #1466 solo standing grant（260725-solo-standing-grants、2026-07-25、履歴）
-
-base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb404524ef30a7d8a0a3f68f73`。[Issue #1466](https://github.com/amadeus-dlc/amadeus/issues/1466)。[PR #1468](https://github.com/amadeus-dlc/amadeus/pull/1468) は凍結試作で参考のみ、実装前提にしない。
-
-現行鎖は `HUMAN_TURN → GRANT_ISSUED → 全 intent audit 探索（失効 / 取消 / provenance）→ standingGrantSatisfiesGate → DELEGATED_APPROVAL（Grant Id）→ lock 内 approve authorization → GATE_APPROVED（Grant Id）→ STAGE_COMPLETED → state advance`。phase boundary は include flag が必要で、walking skeleton 有効時は対象外である。solo はこの remote delegation dependency を必要としない。
-
-## 欠落依存と候補
-
-route の `RunStageDirective` と commit の `report → approve` の間に Grant Id の依存辺がない。候補は exact ID transport、opaque claim resolver、commit-only 再探索。gate existence は graph / scope / skeleton / per-unit artifacts、authorization は presence / provenance / expiry / revoke に依存し、混同しない。fallback は audit / state / advance より前で、既存 `error() → ERROR_LOGGED` に依存しない。
-
-## Mirror レビュー修正の依存グラフ（260725-mirror-review-fixes、履歴）
-
-観測 HEAD は `70336937529f5be31c011de5d368c0f03e534506`、差分 base は `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`。
-
-```text
-amadeus-orchestrate.ts / amadeus-mirror-lifecycle.ts
-  -> amadeus-mirror-coordinator.ts
-     -> amadeus-mirror-policy.ts
-     -> amadeus-mirror-executor.ts
-        -> amadeus-mirror-gateway.ts -> gh / GitHub API
-        -> amadeus-mirror-state-store.ts
-           -> state-codec.ts -> state-reducer.ts -> provenance.ts
-
-amadeus-mirror.ts legacy mutation
-  -> gh direct + amadeus-state.md direct write  [正準鎖を迂回]
-
-tests/run-tests.ts
-  -> coverage-normalize.ts
-     -> coverage-source-path.ts
-        -> packages/framework/core/* canonical source
-```
-
-修正の依存方向は、legacy mutation を正準 lifecycle 鎖へ向け、coordinator から CLI 表現への逆依存を作らない。prompt binding の domain 判定は coordinator/policy に維持し、CLI は保存済み `bindingId` を含む回答の parse と exit/result 表現だけを所有する。現行の回答型には `bindingId` がなく、skip は policy 照合を迂回するため、表現層の追加だけでなく domain 境界の対称な照合が必要である。config reader と state codec は GitHub や workflow state に依存しない入力境界であり、独立 unit/integration test が可能である。
-
-配布依存は `packages/framework/core/` 正本→root harness (`.claude/.codex/.cursor/.opencode`)→`dist/{claude,codex,kiro,kiro-ide,cursor,opencode}` の一方向。coverage 正規化はこの6 harness mapping と同じ集合を共有すべきで、現行の Claude/Codex/Kiro だけの手書き部分集合が drift 原因である。
-
-> **2026-07-24（intent `260724-watcher-timeout-fix`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み。** 内部依存の交差は `team-up.sh` → agmsg `actas-lock.sh`（`agmsg_ready_path` を subshell source）と herdr CLI で、いずれも既存の外部スキル依存。パッケージ依存に変化なし（base `a81c11dde` → observed `6d4df9056`）。
+変更なし、確認済み。内部依存の交差は `team-up.sh` → agmsg `actas-lock.sh`（`agmsg_ready_path` を subshell source）と herdr CLI で、いずれも既存の外部スキル依存（[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）。パッケージ依存に変化なし（base `a81c11dde` → observed `6d4df9056`）。
 
 ## 260723-t241-ci-residency の依存境界（履歴: 2026-07-23）
 

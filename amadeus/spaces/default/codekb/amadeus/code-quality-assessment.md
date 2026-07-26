@@ -1,310 +1,26 @@
 # コード品質評価
 
-## metrics サブシステムの品質評価と可視化のリスク面（260726-metrics-visualization、現在）
-
-測定 ref: observed `1c43438df`。件数はすべて `grep -c` / `ls \| wc -l` / `git diff --numstat` 出力からの転記。**本 intent は欠陥修正ではなく機能追加**であるため、本節は「既存 metrics コードの品質水準」と「可視化を足すときに壊しうる契約」の2面で記録する。
-
-### Q-M1. 既存 metrics コードの品質水準（高い — 倣うべき基準）
-
-| 観点 | 実測 | 評価 |
-| --- | --- | --- |
-| 妥当性定義の単一化 | `metrics-retention.ts:17` が `parseSnapshot` を import、private parser なし（`:6-9` に明文契約）| **良**。writer / reader / pruner が同一の妥当性定義を共有 |
-| fail-closed | retention `:6-9`（1件でも不正なら削除 0 件で exit 1）、snapshot `:129`（最初の失敗で即 return）| **良**。部分成功を作らない |
-| 検証可能な契約 | `metrics-timeseries.ts:3-4`「must not import any fs write API (AC-1c; **grep-checkable**)」| **良**。契約が機械検査可能な形で書かれている |
-| parse, don't validate | `:18-19` — `values` は `unknown` のまま、描画側が `typeof` 分岐 | **良**。検証したふりをしない。ただし下記 Q-M3 の負担を描画側へ移す |
-| 原子性 | `writeSnapshotAtomic` `:153-163`（`.tmp` + `flag: "wx"` → `renameSync`）| **良**。クラッシュ耐性あり |
-| テスト層の分離 | unit 5 / integration 3、integration は `AMADEUS_METRICS_ROOT` seam 経由 | **良**。cid:code-generation:fs-tests-integration-first に適合 |
-| 落ちる実証 | 空 dir / 壊れたファイル / dangling symlink / dir 不在 の4類型 | **良**。cid:code-generation:bun-readfilesync-dir-platform-divergence の dangling symlink 手法を採用済み |
-
-**総評**: metrics サブシステムは本リポジトリ内で契約明文化・fail-closed・テスト層分離のいずれも高い水準にある。可視化機能はこの水準を下回らないことが暗黙の受け入れ基準になる。
-
-### Q-M2. 可視化が壊しうる契約（S2 相当のリスク、未発生）
-
-**リスク形状**: `metrics-timeseries.ts` へ `--html` / `--svg` 等の出力フラグを足す設計は、`:3-4` の AC-1c 契約（fs write API を import しない）を必然的に破る。契約は grep で検査可能な形で書かれているため、破った時点で既存の検査が赤くなる（= 無音の劣化にはならない）が、**契約自体を緩める判断はモジュールの役割分離を失わせる**。
-
-**回避形**: `metrics-retention.ts` と同型（reader を import しつつ自身は書き手）の新規モジュールとして置く。この構図は既に repo 内で先例があり、レビューで新規性の説明を要さない。
-
-**判定**: 設計段で明示的に扱うべき論点。cid:application-design:citation-semantics-check（引用元の契約が自要件と一致するかを設計時に照合する）が該当する。
-
-### Q-M3. `values: unknown` が描画側へ移す負担（設計判断点）
-
-`metrics-timeseries.ts:18-19` の設計により、個々の値の数値性は型で保証されない。既存の描画側は `formatValue` `:117-119` が `typeof v === "number" ? String(v) : v === undefined ? "" : "?"` で吸収している。
-
-チャート描画では「`?` を表示する」で済まず、**非数値・欠測をどう扱うかの明示的な判断**が要る（穴を空ける／0 に潰す／系列から除外する）。無自覚に `Number(v)` すると `NaN` が座標に流れ込み、SVG が無音で壊れる（描画されないが例外も出ない）クラスの欠陥になりうる。
-
-さらに `formatValue` は**非 export** であるため、可視化側は (a) export 昇格 (b) 同等関数の新設 のいずれかを選ぶ必要がある。(b) は妥当性定義の二重化にあたり、Q-M1 で評価した「単一化」の美点を局所的に崩す — cid:construction:意図ベースの重複排除の観点では (a) が素直だが、`metrics-timeseries.ts` の公開面を広げる判断でもある。**設計段の裁定事項**。
-
-### Q-M4. `test_pyramid` のキー可変性（見落としやすい罠）
-
-`metrics-snapshot.ts:102` が `values[`${tier}_${size}`]` でキーを動的合成するため、`test_pyramid` collector のキー集合は**スナップショットごとに変わりうる**（実データで 11 キー）。可視化側が collector のキーを静的に列挙すると、キーの追加・削除が無音で描画から欠落する。
-
-`unionValueKeys` `:103` がこの目的の関数として既に存在するため、**利用は必須**。利用を怠っても例外は出ず、系列が1本静かに消えるだけであるため、テストで「キー集合が変化するスナップショット列」を fixture に含めないと検出できない。cid:code-generation:corpus-sweep-for-new-guards と同族の両側実測が要る面。
-
-### Q-M5. CI 配線に関する既存記録の失効（履歴読解時の注意）
-
-260712 の設計記録は metrics 公開を「`main` へ push、最大3回再試行」と記述しているが、**現実装は `GITHUB_RUN_ATTEMPT` 入りブランチ + `gh pr create` + `gh pr merge --auto --squash`**（ci.yml `:470` / `:475`）である。衝突回避の機構がリトライからブランチ名の一意化へ置き換わっている。
-
-**含意**: 可視化の CI 配線を設計する際、履歴節の push 記述を前提にすると誤った衝突対策を設計する。cid:reverse-engineering:comment-premise-verify-not-just-quote に該当 — 記録の前提が現行実装で成立するかを実測してから引く。
-
-### Q-M6. 未整備面（負債ではないが可視化が埋める必要がある）
-
-| 面 | 実測 | 影響 |
-| --- | --- | --- |
-| `package.json` の実行導線 | 全 15 scripts エントリ中 metrics 系 **0** | metrics CLI は現状 `bun scripts/...` 直叩きのみ。利用者可視の導線が無い |
-| ドキュメント | `docs/` の metrics 言及 **0 ファイル** | 可視化を出荷するなら日英ペアの新規ドキュメントが要る（project.md の言語規約）|
-| データ量 | `metrics/*.json` **123 件** / 保持上限 360 | 剪定は未発動。可視化の性能要件は 360 件を上限として設計できる |
-
-### 区間の実装2系統に関する品質所見
-
-系統 B（PR #1493、worktree hooks 修正）は `resolveProjectDirFromHook` `:269` の rung 順序を変更し、`:265-268` のコメントで**なぜ payload cwd が `CLAUDE_PROJECT_DIR` に優越するか**を明文化している（「that env var is pinned to the launch directory ... and does NOT follow a session into a git worktree」）。前 intent の codekb が Q-1 として記録した「テスト helper `currentGitSha` の三重複製」および #1482 の欠陥は、本区間で着地・解消された。**これらは履歴節として読むこと**（以下の 260725-worktree-ref-fixes 節）。
-
-系統 A（PR #1483）は新規2モジュール（合計 +1,388 行）を追加した大規模変更だが、**metrics サブシステムとは依存関係を持たない**（`scripts/metrics-*.ts` の `amadeus-lib` import が各 0 件）。可視化の設計前提に影響しない。
-
-## worktree 環境に起因する欠陥と技術的負債（260725-worktree-ref-fixes、履歴、Issue #1482 / #1481 / #1455）
-## standing grant の scope 解決欠陥と検出不能な fixture（260726-grant-scope-gate、現在、Issue #1497）
-
-測定 ref: observed `e12259ba7`（base `11f1ad61f`、距離 4）。判定はすべて再現プローブの実行結果および実ファイル直読からの転記。
-
-### 欠陥 A（#1497 本体）: composed scope で全ゲートが phase boundary と誤判定される
-
-`standingGrantSatisfiesGate`（`amadeus-lib.ts:3985-4017`）の `inScope` クロージャは `stage.scopes` を直読するが、composed scope（`amadeus-bugfix` / `amadeus-feature` 等）は stage frontmatter に**構造上決して現れない**（`stage.scopes` の語彙全数 = stock 10 個、`scopes` キー欠落 stage は 0 件 — observed `e12259ba7` の `stage-graph.json` 実測）。結果:
-
-1. すべての stage で `inScope()` が false
-2. `next === null`
-3. `crossesPhaseBoundary` が恒真
-4. 既定グラント（`includesPhaseBoundary: false`）は**全ゲートで ineligible**
-
-再現プローブ実測（各セル = `includesPhaseBoundary` false / true）:
-
-| scope | reverse-engineering | requirements-analysis | functional-design | code-generation | build-and-test |
-| --- | --- | --- | --- | --- | --- |
-| `bugfix`（stock） | true/true | false/true | true/true | true/true | false/true |
-| `amadeus-bugfix` | false/true | false/true | false/true | false/true | false/true |
-| `feature`（stock） | true/true | true/true | false/false（skeleton） | true/true | true/true |
-| `amadeus-feature` | false/true | false/true | true(!) | false/true | false/true |
-
-`amadeus-*` 行が opt-out 側で全面 false になっているのが欠陥 A の直接像である。
-
-**症状の性質**: fatal error ではなく**グラントの無音 no-op**。route receipt が発行されず（`amadeus-grant-authorization.ts:762` が directive を無変更で返す）、通常の human presence 経路へフォールバックする。ユーザーには「グラントを発行したのに効かない」としか見えない。この fail-soft 性は project.md Forbidden（想定内の scope 不一致 fallback を fatal error 経路へ流さない）の遵守形であり、**修正で壊してはならない性質**である。
-
-### 欠陥 B（未報告・より重大）: walking-skeleton 除外の無音不発
-
-同じ `inScope` が `firstConstruction` の探索にも使われるため、composed scope では `firstConstruction === undefined` → `isFirstConstructionGate`（`amadeus-lib.ts:4011`）が恒偽になる。すなわち **walking-skeleton ゲートの除外判定へ到達しない**。
-
-実測: `scope = amadeus-feature` + `stance = on` + opt-in グラントで `functional-design` が `covered = true`（= 認可されてしまう）。`SKELETON_ON_SCOPES`（`amadeus-lib.ts:3896-3904`）には `"amadeus-feature"` が `:3900` に登録済みであるにもかかわらず、判定がそこへ到達しない。
-
-これは project.md の以下2条の**現在進行の違反状態**である:
-
-- Forbidden: 「NEVER walking-skeleton stance が有効なとき、standing grant に walking-skeleton gate を認可させない」
-- Mandated: 「ALWAYS active scope が `amadeus-feature` なら、既存コードを変更する場合も最初の Construction Bolt に walking-skeleton gate を維持する」
-
-first construction stage の実測値（scope-grid 由来）: `feature` → `functional-design` / `amadeus-feature` → `functional-design` / `amadeus-bugfix` → `code-generation`。
-
-**A と B は単一の根本原因（`inScope` の解決方式）から出る2症状**であり、片方だけを直すと他方が残る。
-
-### 欠陥が検出されなかった構造的理由: fixture の語彙捏造
-
-`t-solo-standing-grant-domain.test.ts`（integration `:47-59`、unit `:33-44`）の fixture ヘルパー `stage()` は `scopes: ["amadeus-feature"]` を**捏造**している — この語彙は実 `stage-graph.json` に存在しない。`t-solo-gate-transaction-seam.test.ts:305-315` の `ROUTE_GRAPH` も同型。捏造 fixture の下では `inScope()` が真を返すため、**実運用で必ず false になる経路がテスト上は正常に見える**。これは「テストが検証したい当の性質をテスト側で作ってしまう」検証劇場クラスであり、欠陥非検出の直接原因である。
-
-実 graph を読む唯一のグラント系ハーネス `tests/harness/solo-gate-fixture.ts:50`（`.codex/tools/data/stage-graph.json`）も、state fixture が `tests/fixtures/state-mid-inception.md:6` = `Scope: bugfix`（stock）、グラントが `Includes Phase Boundary: true`（`:116`）という**欠陥が現れない組合せ**で固定されている。
-
-`t-standing-grant.test.ts` も scope は `"feature"` 固定（`:222`、ゲート分類 `:221-253`）、skeleton 面（`:889-923`）も feature / bugfix のみで、**カスタムスコープのケースはゼロ**である。
-
-### 欠けているテスト面（RED 候補）
-
-1. 実 graph × composed scope × opt-out グラントで ordinary gate が covered になること（#1497 の RED）
-2. 実 graph × `amadeus-feature` × skeleton on で first construction gate が **NOT covered** であること（欠陥 B の RED）
-3. 実 graph × composed scope × 真の phase boundary で opt-out が denied のままであること
-4. stock スコープの非退行 parity（team mode 呼び出し元 `amadeus-state.ts:2470` / `:3269` を含む）
-
-### coverage / allowlist 面のリスク
-
-- `tests/.coverage-registry.json:3509` の `function:standingGrantSatisfiesGate` は `coveredBy: []` / **`status: "UNCOVERED"`** — 患部関数は現在 in-process 計測されていない。修正時は seam 設計を実装時点で行う必要がある（cid:code-generation:bun-coverage-spawn-blindspot）。
-- `tests/.coverage-patch-allowlist.json` の `amadeus-lib.ts` 行ピンは 4 件（`2195-2196` / `2708-2710` / `3886-3887` / `5491-5493`、`python3 -c json` 実測）。**`3886-3887` は患部 `3985-4017` の直前**であり、患部より上方へ行を足す修正では stale 化・無音転位のいずれも起こりうる（cid:code-generation:allowlist-line-pin-stale とその追補）。修正 PR では全エントリの reason 記述と現行行内容の一致を直読照合する。
-
-### 別軸の未確認事項
-
-`isPerUnitStage: false` / `isPerUnitFinalGate: false` は `amadeus-lib.ts:4012-4013` でハードコードされている。per-unit 中間ゲートをグラントが覆う挙動は #1497 とは別軸であり、スコープに含めるかは要件段の裁定事項。
-
-## worktree 環境に起因する欠陥と技術的負債（260725-worktree-ref-fixes、履歴: 2026-07-26、Issue #1482 / #1481 / #1455）
-
-測定 ref: observed `11f1ad61f`。件数はすべて grep / find / wc 出力からの転記。
-
-### Q-1. テスト helper `currentGitSha` の三重複製と FS 直読（#1481 / #1455、S3-MAJOR）
-
-**欠陥形状**: git の内部レイアウト（`.git` ファイル／ディレクトリ、`HEAD`、`commondir`、loose ref、`packed-refs`）を**ファイルシステム直読**で辿る helper が、共有されず3つの integration テストに複製されている。
-
-| ファイル | helper 定義 | throw |
-| --- | --- | --- |
-| `tests/integration/t257-status-registry-migration.test.ts` | `:193` | `:214` |
-| `tests/integration/t258-lifecycle-transaction.test.ts` | `:434` | `:455` |
-| `tests/integration/t259-guard-integration.test.ts` | `:77` | `:96` |
-
-**品質上の問題は2層ある。**
-
-1. **正しさ**: loose ref を worktree gitDir 配下でしか探さず、common dir へは `packed-refs` としてしか降りない。git worktree ではブランチ ref が common dir の loose ref に置かれるため、**worktree では必ず throw する**。本線チェックアウトでのみ緑になる環境依存の false red であり、`org.md` Forbidden の「既存テストの赤を無視して作業を続行しない」規律と正面から衝突する（worktree 作業者は毎回3スイートの赤を手作業で切り分ける負債を負う）。
-2. **重複**: 同型ロジックが3複製されているため、修正は3箇所に及ぶ。しかも3者はエラー文言（`cannot` / `Cannot` / `Unable`）と引数形（t259 のみ `repositoryRoot` を引数に取る）が微妙に食い違っており、**単一の canonical 定義から導出されていない**。`construction.md` の「複数箇所で消費されるリスト・コマンド列・定数を手書きで複製しない — canonical な1定義から導出する」に反する。
-
-**既習の正しい様式が同 repo に存在する**にもかかわらず採用されていない: `packages/framework/core/tools/amadeus-lib.ts:4131` `resolveMainCheckout` は `:4132` `rev-parse --show-toplevel` / `:4135` `rev-parse --git-common-dir` の git plumbing サブプロセスで解決し worktree 安全。同型前例に `codex/tools/amadeus-codex-hooks-migration.ts:590`。**同根棚卸しの結果、git 内部レイアウトを FS 直読するのはこの3ファイルのみ**で、他はすべてサブプロセス経由 — 修正対象は閉じている。
-
-**導入経緯と原因の所在**（cid:requirements-analysis:bug-intent-linkage）: 3ファイルとも導入コミットは `2e157d7fe`（2026-07-23、`archived intent statusと誤resume防止を導入 (#1424)`）。helper 全24行が単一コミット帰属で後続修正なし。原因の所在は **#1424 の実装判断** — 要件・設計は provenance に SHA を記録することを求めたが、その解決手段として git plumbing ではなく FS 直読を選び、かつ共有せず3複製したのは実装段の選択である。設計成果物が FS 直読を指示した形跡はない。
-
-**現症状の実測**（worktree、パイプなし exit 捕捉）: t257 exit 1（10 pass / 1 fail）、t258 exit 1（25 pass / 1 fail）、t259 exit 1（9 pass / 1 fail）。本 scan で t259 を再実行し追認（exit 1、`9 pass` / `1 fail`）。**各スイートで赤くなるのは helper を通る provenance 記録テスト1件のみ**であり、残りは緑 — 欠陥は局所的だが、スイート単位の exit code を汚染するため CI／ローカル双方でノイズになる。
-
-### Q-2. hook の project-dir 解決が worktree を貫通する（#1482）
-
-**欠陥形状**: `resolveProjectDirFromHook`（`packages/framework/core/tools/amadeus-lib.ts:247`）の rung1（`:249`、`CLAUDE_PROJECT_DIR` を無条件採用）が、EnterWorktree セッションで本線を指したままの env を採ってしまい、worktree を正しく返す rung2（`:258-259`）に到達しない。
-
-**品質観点で押さえるべき点**:
-
-- **単一箇所の欠陥が hook 一族12箇所へ一様に波及する**（core hooks 11 + kiro-ide adapter 1、実測列挙は `architecture.md` 同 intent 節）。裏返せば修正も解決関数1点で足りる。
-- **姉妹関数との非対称**: `resolveProjectDir`（`:170`）は `:172` で `--project-dir` 明示引数を第1順位に置くため engine 経路は救われている。hook 側だけがこの上位 rung を欠く — cid:requirements-analysis:symmetric-pair-review が対象とする「片側だけ実装された非対称」クラスタに該当する。
-- **テストが現状を意図的に固定している**: `tests/unit/t202-hook-project-dir-worktree-marker.test.ts:105` の test 2 が env の優越を assert しており、同ファイル `:1-3` が宣言する #641 の設計意図（worktree を返すこと）と矛盾する。**テストが欠陥を守っている**状態であり、修正には t202 の契約変更を伴う裁定が要る。この矛盾は本 scan で新たに可視化したもので、Issue 起票時の推定機序（env 未設定）とは異なる。
-
-**配布面の負債**: `amadeus-lib.ts` / `amadeus-stop.ts` はいずれも11コピー（正本 + harness 表層4 + dist 6）。1行の修正が11面の同期を要求する構造は既知の設計事実だが、`bun scripts/package.ts` + `bun run promote:self` + `dist:check` / `promote:self:check` の決定的ドリフトガードで担保されている。
-
-### Q-3. 本区間（base `ec624022f` → observed `11f1ad61f`）の品質変化
-
-`git diff --name-only ec624022f 11f1ad61f -- packages/framework/core/tools/amadeus-lib.ts packages/framework/core/hooks/amadeus-stop.ts tests/integration/t257-status-registry-migration.test.ts tests/integration/t258-lifecycle-transaction.test.ts tests/integration/t259-guard-integration.test.ts` の出力は**空**。すなわち上記3 Issue はいずれも**本区間の退行ではない**。区間の実装面は `team-up.sh` 系1系統に閉じており、ビルド／テスト構成・依存（`package.json` / `bun.lock` / `tsconfig` / `biome` / `scripts/` / `run-tests.sh` / `.github/`）の diff はいずれも空 — 品質ゲートの構成に変化はない。
-
-## 起動経路に残る欠陥と技術的負債（260725-teamup-launch-hardening、履歴、Issue #1476 / #1478）
-
-測定 ref: observed HEAD `4a0f91ad07dbe17c6477b7fe9b52a0e9ab4532ba` の実ファイル直読。外部スキル `~/.agents/skills/agmsg/` は読取 2026-07-25。
-
-### D-1: Issue #1384 の保護が現在まったく機能していない（負債、S2 相当）
-
-PR #1477 は「常に失敗する検証」を**ガードで迂回**して解消した。副作用として、Issue #1384 が導入した本来の保護 — TUI コールドスタートで初期プロンプトが取りこぼされた場合の検出と再送 — が**現在1度も発火しない**。
-
-- 出荷既定 `CLAUDE_MONITOR_PROMPT="/agmsg mode monitor"`（team-up.sh:104）は `watcher_verification_applies` の `*" actas "*` case（:1094-1096）に一致しない。
-- 結果、:1461 の stale sentinel 除去も :1479 の `verify_watchers_armed` も**両方スキップ**される。実 launch では stderr に1行の advisory が出るだけになる（:1099）。
-- したがって「メンバーの watcher が実は起動していない」状態は、**現行構成では検出手段がゼロ**。#1384 の症状（メッセージが誰にも届かないまま作業が進む）は再発しうるが無音である。
-
-これは PR #1477 の欠陥ではなく**意図された暫定状態**である（:1099 の告知文が `#1476` を名指しし、テスト t294 の FR-5 が「検証機構は #1476 がプロンプト変更だけで再有効化できるよう保持する」ことをピンしている）。ただし**負債であることの認識が必要**: #1476 が着地しない限り保護は不在のままで、その期間に制限はない。
-
-### D-2: テストが sentinel を自前で書くため、外部 seam の欠陥を構造的に検出できない
-
-`tests/integration/t-team-up-watcher-arming.test.ts` は agmsg を fixture でスタブし、**テスト自身が sentinel を作る**（測定 ref: `4a0f91ad0`）。
-
-- `:36-44` — `agmsg_ready_path` の自前スタブを書き出す（コメント verbatim: `  // Self-contained stub of agmsg's agmsg_ready_path — same contract team-up.sh`）。
-- `:87-92` — `sentinel()` / `armAll()` ヘルパーが `writeFileSync(sentinel(readyDir, role), "")` で全ロール分を直接生成する。
-- `:60` — fake herdr が `FAKE_RESEND_ARMS=1` のとき再送に応じて sentinel を touch する。
-
-すなわちテスト世界では **sentinel は常に「書かれうる」**。実世界で唯一の書き手である `watch.sh:307` が actas ガード（`:300`）配下にあり monitor モードでは発火しない、という**本番の非対称は fixture に写されていない**。前 intent（#1449）で 200.85 秒の実障害が出るまでこのスイートが green だったのはこの構造による。
-
-新設の `tests/integration/t294-team-up-watcher-applicability.test.ts` はこの盲点を**部分的に**埋める: `:44` が「出荷既定のプロンプトでは適用されない」、`:52` が「出荷定数が monitor 形であること」を、テスト側でピンせず実定数から読んで固定する。ただし依然として**外部 agmsg 側の契約（第4引数 → sentinel 書込）自体は検証していない**。この境界は repo 外・非バージョン管理であり、repo 内のテスト・センサーからは到達不能である（`dependencies.md` の同 intent 節を参照）。
-
-**#1476 の実装で追加すべき検証面**: プロンプトを actas 形へ変えたとき、検証が再び適用されること（ガードの正方向）と、その状態で `mux_attach` が不当にブロックされないこと（レイテンシ面）。前者は t294 の `:60` が既に forward path として持つ（テスト名 verbatim: `an actas bootstrap prompt applies (FR-1, #1476 forward path)`）。後者は未カバー。
-
-### D-3: `CLAUDE_MONITOR_PROMPT` が単一定数のまま4箇所に散在（#1476 の変更コスト）
-
-`:104` の定数は引数を持たず、4箇所が値そのものに依存する（`grep -n`、測定 ref: `4a0f91ad0`）。
-
-| 参照 | 用途 | actas 化で必要な変更 |
-| --- | --- | --- |
-| `:861` | `claude_member_cmd` の `init_prompt` 既定値 | **per-member 化**（ロール名 `$m` を埋める） |
-| `:1094` | 適用可否ガードの `case` | member 文脈を持たない。**「actas 形を使う構成か」の判定へ書き換え**が必要 |
-| `:1202` | `resend_monitor_prompt` への実引数 | per-member 化（対象ロールのプロンプトを再送する必要） |
-| `:1211` | 失敗時の手動復旧ガイダンス文言 | per-role 化しないと**誤った復旧手順を案内**する |
-
-「消費されるリスト・定数を canonical な1定義から導出する」（construction phase guardrail）を守るなら、`monitor_prompt_for <role>` のような1関数へ寄せるのが自然。単純な文字列置換で4箇所を個別に書き換えると、`:1211` のガイダンス退行を見落としやすい。
-
-### D-4: `git worktree add` の直列作成（#1478）
-
-`create_run()`（:1267）のループ（:1302-1310）が worktree を逐次作る。実測（feasibility、測定 ref: `c4c9531ee`）で7メンバー **7.39 秒**、並列度4なら **3.32 秒**（55% 短縮）。
-
-負債としての性質:
-
-- **失敗ゼロだが最適でもない**: 全並列度で成功 7/7・stderr 0 bytes。git が `.git` の設定ロックを内部で直列化するため、並列化はクラッシュリスクではなく**スループット最適化**の問題。
-- **無制限並列は退行**: 並列度7で 7.55 秒と直列（7.39 秒）より遅い。「素朴に全部同時に投げる」実装は改善にならない。**並列度の上限が実装要件**。
-- **ロールバック集約が未対応**: `CREATED_MEMBERS`（:1306）への逐次追記が `rollback_prepared_run`（:1241、読み手 :1244、`handle_exit` :1253 が :1259 で呼ぶ）のロールバック対象を決める。並列化すると成功集合の集約が必要で、**部分失敗時の挙動が現行と等価であることの検証が要る**。feasibility 実験では失敗が発生しなかったため、**失敗注入による検証が未実施**。
-- **エラー可視性**: 並列実行では stderr が交錯する。どのメンバーが失敗したかを特定する手段が現行にはない。
-- **測定環境の偏り**: 実測は macOS（APFS）のみ。Linux CI 上の並列度特性は未測定。
-
-### 直下の履歴節との関係
-
-前 intent（#1449）が記録した「常に失敗する検証ゲート = 検証劇場クラス」は、PR #1477 により**発火しない状態**へ移った。欠陥そのもの（sentinel を書かせる側を移植していない）は未解消で、#1476 の actas 移行がそれを埋める。本節の D-1 はその移行が完了するまでの中間状態を記録したものである。
-
-## 常に失敗する検証ゲートとテストスタブによる検出不能性（260725-teamup-attach-latency、履歴、Issue #1449）
-
-測定 ref: observed HEAD `ec624022ff65cc8b3912001f768bd66ec41a0e39` の実ファイル直読。
-
-### 欠陥クラス: 「常に失敗する検証ゲート」（検証劇場クラス）
-
-`verify_watchers_armed`（`packages/framework/core/tools/team-up.sh:1151-1190`）は、成功しうる条件を持たない検証である。待機対象の ready sentinel は actas モードの watcher しか書かないが（`~/.agents/skills/agmsg/scripts/watch.sh:300` の `if [ -n "$ACTIVE_NAME" ]` ガード）、`team-up.sh` が投入するのは monitor モードのプロンプト（:104 `CLAUDE_MONITOR_PROMPT="/agmsg mode monitor"`）で、その経路（`delivery.sh:259 emit_monitor_directive()` → `:301`）は `ACTIVE_NAME` を渡さない。詳細な機序は `architecture.md` の同 intent 節を参照。
-
-この形は org.md Forbidden の「検証劇場」と鏡像の関係にある。検証劇場が「**常に通る**ため偽の信頼を生む」のに対し、本欠陥は「**常に落ちる**ため実行時コストだけを課し、シグナルとしては無価値」である。実害は3つ:
-
-1. **性能**: 起動のたびに `WATCHER_READY_TIMEOUT`(90) × `(WATCHER_RESEND_MAX+1)`(2) = 180 秒、`mux_attach` が構造的にブロックされる。実 launch 実測（2026-07-25、3人構成）では `T+200.85s` で rc=1 終了、armed 0/3。
-2. **偽陽性アラート**: `:1186` のエラー文（verbatim: `  echo "ERROR: agmsg watcher never armed for: $remaining (after ${WATCHER_RESEND_MAX} re-send(s))" >&2`）と `:1187` の続く案内が原因を Issue #1384（TUI cold-start のプロンプト消失）と断定するが、実際には watcher は正常起動している（`herdr agent list` 上 `agent_status: idle`）。診断が構造的に誤誘導する。
-3. **非ゼロ exit の常態化**: `exit "$watcher_status"` により毎回 rc=1 が返り、exit code がシグナルとして機能しなくなる。
-
-### 検出不能性: テストが自分で sentinel を書いている
-
-`tests/integration/t-team-up-watcher-arming.test.ts`（**268 行**、`wc -l` 実測）は本欠陥を構造的に検出できない。
-
-| 箇所 | 内容 | 影響 |
-| --- | --- | --- |
-| :36-43 | agmsg の `agmsg_ready_path` を自前スタブに差し替え（verbatim :42 `agmsg_ready_path() { printf '%s/run/ready.%s__%s' "\${SKILL_DIR:?}" "$1" "$2"; }`） | 実 agmsg の path 解決は登場するが、**書き手**は登場しない |
-| :87-91 | `armAll()` がテスト自身で全 role の sentinel ファイルを直接生成 | 「armed になる」経路がテスト側の書込で代替される |
-| :60 | fake herdr が `FAKE_RESEND_ARMS=1` のとき send-text 時に sentinel を touch | 再送で arming する挙動もテスト側の擬似実装 |
-
-すなわちテストは「sentinel があれば 0 を返す / なければ再送してから非ゼロ」という **team-up.sh 内部の分岐だけ**を検証しており、「実運用で sentinel を書くのは誰か」という統合面をスタブで消している。本欠陥は導入（#1391、2026-07-23）以来 CI 上で常時グリーンだった。
-
-**教訓（テスト設計）**: 外部 seam の readiness 信号を待つコードのテストでは、信号の**書き手をスタブで代替した時点で、その検証は seam 契約の妥当性を一切保証しない**。少なくとも「実 agmsg 経路で sentinel が生成されること」を1本の統合テストで固定するか、書き手側のモード条件を明示的にアサートする必要がある。
-
-### 原因の所在
-
-設計段階の誤り（実装逸脱ではない）。`cid:application-design:external-seam-vocab-measurement`。根治は [Issue #1476](https://github.com/amadeus-dlc/amadeus/issues/1476)（actas 移行）で扱い、本 intent（#1449）は起動レイテンシの解消に限定する。
-
-> **訂正（260724-watcher-timeout-fix 節に対して）**: 下記「watcher arming 検証が mux_attach を最大 270 秒ブロック（260724…）」節は当該 intent の observed `6d4df9056` 時点の記述。`9b851c5ae` により worst-case は 180 秒へ短縮済みで、かつ本 scan により**タイムアウト長は症状であり原因ではない**ことが確定した（原因はモード不一致で、待ち時間をいくら延ばしても検証は成功しない）。
-
-## Issue #1466 solo standing grant（260725-solo-standing-grants、2026-07-25、履歴）
-
-base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb404524ef30a7d8a0a3f68f73`。[Issue #1466](https://github.com/amadeus-dlc/amadeus/issues/1466)。[PR #1468](https://github.com/amadeus-dlc/amadeus/pull/1468) は凍結試作で参考のみ、実装前提にしない。
-
-強みは human grounding、4時間既定 TTL、phase-boundary opt-in、walking-skeleton exclusion、issuer provenance、protected audit mint。負債は route / commit identity と carrier の欠如、`findActiveStandingGrant` の最大 expiry 選択・同値 tie-break 不在・broad catch、Grant Id parse shape 検証欠如、raw filesystem audit fabrication、二重 error aggregation である。
-
-## fallback・テスト・保守性
-
-認可拒否は現行 `error()` に直行し、state child と orchestrator の双方が `ERROR_LOGGED` を残し得るため、commit 時失効には使えない。fallback は `emitApprovalAudit` / state mutation 前で typed non-error とし、完了監査を残さない。関連178テスト、dist 6 harness check、promote 4面 check は成功。`bun run check` は `tsc: command not found`（exit 127）で未判定。巨大ファイル `amadeus-lib.ts` 約7,602行、`amadeus-state.ts` 約4,467行、`amadeus-orchestrate.ts` 約3,781行が変更 hotspot。base..HEAD の grant core は無変更だが、orchestrate plugin 系 `+109/-3` が同時編集面である。実装方式は後続設計で比較する。
-
-## PR #1469 レビュー findings（260725-mirror-review-fixes、履歴）
-
-### 基準実測
-
-- PR: [#1469](https://github.com/amadeus-dlc/amadeus/pull/1469)、review head/observed `70336937529f5be31c011de5d368c0f03e534506`、base point `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、49コミット。
-- focused baseline: `bun test` で config、codec、coordinator、lifecycle、legacy CLI、coverage normalizer の7ファイルを実行し、**127 pass / 0 fail / 274 expect()**（16.68秒）。
-- baseline が green でも、以下6欠陥条件のテストが不在のため品質保証にはならない。各修正は最初に red reproduction を追加する必要がある。
-
-### P1 — 未完了 lifecycle outcome が exit 0
-
-`runMirrorLifecycleMain` は top-level error だけを検査し、`pending`、`safety-blocked`、`suppressed` を JSON 出力して0を返す。orchestrator 側は子コマンド成功後に receipt を completed とするため、remote effect 不成立を完了扱いにできる。boundary/manual の要求 operation が `completed` でないケースを非0に固定する CLI-level regression が必要。
-
-### P1 — prompt 回答 surface と binding 照合の欠落
-
-coordinator unit と lifecycle integration は event/operation を再送した `answer` が state 内の `expectedPrompt` を消費することを検証するが、`MirrorPromptAnswer` と `ask` outcome は `bindingId` を持たず、保存済み binding と外部回答の一致を検証していない。approve は event/operation のみを照合し、skip はその照合も迂回する。実 CLI parser/entry からの回答経路に加え、default prompt で ask→正しい binding の approve/skip、binding/event/operation mismatch の拒否、同一回答 replay 拒否、次 boundary prompt 成功までの process/CLI integration が必要。
-
-### P1 — legacy mutation による安全境界迂回
-
-legacy t232 は create/sync/close の直接 GitHub mutation を成功契約として固定している。新しい lifecycle の permit、receipt、ownership marker、repair と矛盾する回帰テストである。mutation verb の委譲または拒否へ期待値を更新し、read-only status の互換性だけを維持する必要がある。
-
-### Security — config safe read の TOCTOU
-
-fd 内の start/end fstat は読取中の同一 inode 変化を検知するが、`realpathSync` containment 判定から `openSync(realPath)` までに path を置換する競合は検知しない。既存テストは absent、precedence、dangling symlink、directory、non-write を扱うが、symlink/path swap を再現しない。open descriptor を信頼起点にした fail-closed テストが必要。
-
-### Security — state codec の C0 制御文字
-
-custom strict parser は未エスケープ `\n` / `\r` のみ拒否し、NUL、TAB、BS、FF 等の U+0000–U+001F を受理する。標準 JSON 文法との差で、state の canonical render/parse と downstream Markdown/audit 処理に非正準 bytes を持ち込める。全C0 code point の table-driven rejection と escaped form の許可を対にする。
-
-### Coverage — Cursor/OpenCode source 正規化漏れ
-
-package temp regex と generated prefix table の双方に Cursor/OpenCode がない。`.cursor/tools/*`、`.opencode/tools/*`、`dist/cursor/.cursor/*`、`dist/opencode/.opencode/*` と temp package path が core source へ畳まれず、同じ正本が複数 SF として計測される。全6 harness、Windows separator、temp root containment、harness-dir mismatch の対称テストが必要。
-
-### 保守性所見
-
-Mirror の大型ファイル（lifecycle 909行、coordinator 708行、state codec 1,526行等）と gateway lexer 共通化は実在する技術的負債だが、本 bugfix と変更理由が異なるため別 `amadeus-refactor` intent に隔離する。今回の変更は6欠陥とその回帰テストに外科的に限定する。
-
-> **以下は intent `260724-watcher-timeout-fix`（2026-07-24、amadeus-bugfix / Minimal）の履歴観測**。以下の過去 intent 節に残る「本 intent」「最新」「現在」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
+> **現在の品質観測は intent `260725-kimi-harness`(2026-07-25、amadeus-feature、下記「ハーネス provenance・plugin 信頼層のテスト追加」節)**。以下の過去 intent 節に残る「本 intent」「最新」「現在」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
+
+## ハーネス provenance・plugin 信頼層のテスト追加（260725-kimi-harness、現在）
+
+実測基準は base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba` → observed HEAD `d31b8a5db5798ef761f3871ca66824c87530afb4`、祖先性 exit 0、距離 105。本 intent はコード欠陥の修正ではなく移植面の再測定が目的のため、品質観測は**区間内のテスト資産変化**に限定する(測定 ref: observed HEAD `d31b8a5db` 実ファイル直読 + `git log 6d4df9056..HEAD`)。
+
+**区間内の新規テスト(harness provenance 系、`dc1eeba20` + `58053fa61`)**:
+- `tests/unit/t269-harness-provenance.test.ts` — canonical ハーネス写像契約の pure テスト(`HARNESS_DIR_TO_TYPE` / `detectHarnessType`、:1-2 covers 記載)。
+- `tests/integration/t269-harness-provenance.cli.test.ts` — resolver provenance・検出優先順位・legacy cache。
+- `tests/integration/t270-harness-provenance-birth.test.ts` — 全 packaged ハーネスでの実 intent birth(`Harness` フィールド、workflow:intent-birth)。
+- `tests/integration/t271-migration-harness-validation.cli.test.ts` — `amadeus-migrate` dry-run の harness 検証(CLI spawn)。
+- `tests/integration/t144-harness-seam.cli.test.ts` — `harnessDir()`/`resolveProjectDir()` の解決 ladder をハーネス dir 横断で固定(harness seam)。
+
+**plugin 信頼層のテスト更新(`f67b931c2` + `454194231`)**: `tests/unit/t252-plugin-composition.test.ts`(in-memory backend で全分岐を駆動する pure unit)が sha256 `contentDigest`・journal 信頼付与・drop 時ドリフト拒否に追随。`454194231`「cover runtime trust verification」は実行時信頼検証を被覆し、`t-formal-verif-plugin-lifecycle.integration.test.ts` にも +90 行の被覆追加(同コミット numstat)。
+
+**kimi 作業時に参照すべき既存ハーネステスト様式(HEAD 実測)**:
+- `tests/integration/t145-packaging-parity.test.ts` は `package.ts --check` を spawn する byte-parity の keystone。
+- `tests/integration/t-cursor-adapter.test.ts` は注入した spawn spy を使う in-process 型。
+- `tests/integration/t-opencode-emit.test.ts` は in-process の write⇔check ラウンドトリップ。
+- `tests/smoke/t149-opencode-cursor-dist-structure.test.ts` は module スコープのリテラル期待ファイル表(manifest 由来ではない)で dist 構造を固定。
+新ハーネス追加時はこれら 4 様式のどれに倣うかがテスト設計の分岐点(t149 型は期待表の手更新が必要)。
 
 ## watcher arming 検証が mux_attach を最大 270 秒ブロック（260724-watcher-timeout-fix、履歴、Issue #1449）
 
@@ -497,7 +213,7 @@ EQUIVALENT 候補は、`amadeus-orchestrate.ts:1961-1972` の全 batch 走査と
 > 「docs-batch10(2026-07-12)の観測面」節は履歴 intent `260711-docs-batch10`(#765 #764 #763 #728、documentation)の候補記録。続く p3-cleanup-batch8 節(#843 #846 #850 #851 #876 #877 #878、intent `260711-p3-cleanup-batch8`)・p2-repair-batch7 節(#834 #839 #844 #845 #849、intent `260711-p2-repair-batch7`)・p3-cleanup-batch5 節(#811 #822 #830 #730 #819 #831、intent `260710-p3-cleanup-batch5`)・p3-cleanup-batch4 節(#757 #758 #753 #739 #740 #784 — 全6件 2026-07-10 修正着地済み、PR #823/#821/#817/#818/#814/#815)・core-repair-batch3 節(#746 ほか9件、2026-07-11)・複雑度ゲート導入節(intent 260710-complexity-gate)・ tools-dispatch-batch 節(#774 / #785 / #787 / #788 / #789)・ bughunt-fix-batch 節(#771/#773/#775/#776/#779)・swarm-worktree-batch 節(#738/#748/#746/#760)・learnings-audit-batch 節(#754 / #745 / #761)・mint-presence-vectors 節(#755)・packaging source-unreferenced 節(intent 260710、#735)・delegate-answer-consume 節(intent 260710、#736)・kiro-stale-hooks 節(#719 / P3 source hygiene)・dynamic-test-size 節(#699 / #684 Phase D)・t92-worktree-hermeticity 節(#709)・packaging-repair-batch 節(#701/#702 = PR #711/#712 解決済み)は過去 intent の記録で、参照用に温存する。以降の「アーキテクチャ横断パターン」以下は `260709-bug-zero-batch`(#674〜#678/#668)の記録。
 > 「docs-repair-batch9(2026-07-11)の観測面」節は履歴 intent `260711-docs-repair-batch9`(#812 #824 #680 #885 #886)の記録。続く p3-cleanup-batch5 節(#811 #822 #830 #730 #819 #831 — 候補記録)・p3-cleanup-batch4 節(#757 #758 #753 #739 #740 #784 — 全6件 2026-07-10 修正着地済み、PR #823/#821/#817/#818/#814/#815)・core-repair-batch3 節(#746 ほか9件、2026-07-11)・複雑度ゲート導入節(intent 260710-complexity-gate)・ tools-dispatch-batch 節(#774 / #785 / #787 / #788 / #789)・ bughunt-fix-batch 節(#771/#773/#775/#776/#779)・swarm-worktree-batch 節(#738/#748/#746/#760)・learnings-audit-batch 節(#754 / #745 / #761)・mint-presence-vectors 節(#755)・packaging source-unreferenced 節(intent 260710、#735)・delegate-answer-consume 節(intent 260710、#736)・kiro-stale-hooks 節(#719 / P3 source hygiene)・dynamic-test-size 節(#699 / #684 Phase D)・t92-worktree-hermeticity 節(#709)・packaging-repair-batch 節(#701/#702 = PR #711/#712 解決済み)は前 intent の記録で、参照用に温存する。以降の「アーキテクチャ横断パターン」以下は `260709-bug-zero-batch`(#674〜#678/#668)の記録。
 >
-> **履歴ラベルの読み方**: 本ページ以下および `architecture.md` / `business-overview.md` / `api-documentation.md` の「本 intent」は、各節見出しで明示した過去 intent 内の自己参照である。現行 view は各ファイル先頭の `260725-mirror-review-fixes` 節であり、ここから下は履歴として読む。
+> **履歴ラベルの読み方**: 本ページ以下および `architecture.md` / `business-overview.md` / `api-documentation.md` の「本 intent」は、各節見出しで明示した過去 intent 内の自己参照である。各ファイルの current view は先頭の `260720-upstream-sync-230` 節だけであり、それより下は履歴として読む。
 
 ## docs-batch10(2026-07-12)の観測面 — documentation 4欠陥の現物照合(#765 #764 #763 #728)
 

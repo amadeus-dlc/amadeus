@@ -1,42 +1,10 @@
 # 技術スタック
 
-> **2026-07-26（intent `260726-metrics-visualization`、amadeus-feature / Standard）: 変更なし、確認済み（測定 ref: observed `1c43438df`、base `11f1ad61f`、距離 5）。** 区間内でビルド／テスト構成・依存（`package.json` / `bun.lock` / `tsconfig` / `biome` / `scripts/` / `run-tests.sh` / `.github/`）の diff はいずれも空。交差要素は TypeScript/Bun（`scripts/metrics-*.ts` の3モジュール、Bun test の unit/integration 2層）+ GitHub Actions（`ci.yml` の `metrics-snapshot` job `:398-`）+ `gh` CLI（スナップショット公開 PR、`:470` / `:475`）で、いずれも既存スタック。
->
-> **可視化の技術前提（本 scan で確定）**: (1) **依存追加ゼロ** — repo 内にチャートライブラリの前例は 0 件であり、`package.json` の全 15 scripts エントリにも metrics 系は 0。可視化は既存スタック（TypeScript + Bun、標準ライブラリのみ）で完結させる方向が既習様式と整合する。 (2) **inline SVG 方針** — repo 唯一の HTML 生成先例 `tests/run-tests.ts:573` `writeCoverageHtml` は「テンプレートリテラル直書きの自己完結 HTML + `coverageHtmlEscape` `:526` + 生成物を読み返す assert」であり、外部アセット・CDN 参照を持たない。inline SVG はこの様式の自然な延長で、新規ランタイム依存を持ち込まずに済む。
+> **2026-07-25（intent `260725-kimi-harness`、amadeus-feature）: 変更なし、確認済み。** 区間変化は既存 TypeScript/Bun 資産内の再編（`amadeus-harness.ts` 新規分離、plugin 信頼層）で、新規ランタイム依存なし。plugin-composition の sha256 は `node:crypto` の stdlib 利用で依存追加ではない（base `6d4df9056` → observed `d31b8a5db`）。
 
-> **2026-07-26（intent `260726-grant-scope-gate`、[#1497](https://github.com/amadeus-dlc/amadeus/issues/1497)、amadeus-bugfix / Brownfield）: 変更なし、確認済み（測定 ref: observed `e12259ba7`、base `11f1ad61f`、距離 4）。** 新規ランタイム依存なし。交差要素は TypeScript/Bun（`amadeus-lib.ts` / 新設 `amadeus-grant-authorization.ts` 876 行・`amadeus-presence-reservation.ts` 512 行、Bun test の unit / integration 層）+ JSON データファイル（`tools/data/stage-graph.json` 32 stages・`scope-grid.json` 15 scope キー、`scripts/package.ts:146` の `COMPILED_DATA`）+ 既存の配布同期機構（dist 6 面 / self-install 4 面、`dist:check` / `promote:self:check`）で、いずれも既存スタック。区間内で `package.json` / `bun.lock` / `tsconfig` / `biome` の diff は空。
+## 260724-watcher-timeout-fix 交差スタック（履歴: 2026-07-24）
 
-> **2026-07-26（intent `260725-worktree-ref-fixes`、[#1482](https://github.com/amadeus-dlc/amadeus/issues/1482) / [#1481](https://github.com/amadeus-dlc/amadeus/issues/1481) / [#1455](https://github.com/amadeus-dlc/amadeus/issues/1455)、amadeus-bugfix / Minimal）: 変更なし、確認済み（測定 ref: observed `11f1ad61f`、base `ec624022f`、距離 10）。** 交差要素は TypeScript/Bun（`amadeus-lib.ts` の解決関数、core hooks、Bun test の integration 層）+ git（worktree の `--git-dir` / `--git-common-dir`、loose ref / `packed-refs` レイアウト）+ Claude Code の hook 起動環境（`CLAUDE_PROJECT_DIR`、EnterWorktree の cwd 切替）で、いずれも既存スタック。新規ランタイム依存なし。**#1481 の修正は Node/Bun の FS API 直読から git サブプロセス呼び出しへの置換であり、これも既存様式（`amadeus-lib.ts:4131` `resolveMainCheckout`）の再利用に閉じる。** 区間内でビルド／テスト構成・依存（`package.json` / `bun.lock` / `tsconfig` / `biome` / `scripts/` / `run-tests.sh` / `.github/`）の diff はいずれも空。
-
-> **2026-07-25（intent `260725-teamup-launch-hardening`、[#1476](https://github.com/amadeus-dlc/amadeus/issues/1476) / [#1478](https://github.com/amadeus-dlc/amadeus/issues/1478)、amadeus-feature / Standard）: 変更なし、確認済み（測定 ref: observed `4a0f91ad0`、base `ec624022f`、距離 9）。** 交差要素は bash（`team-up.sh` 制御フロー）+ git（`worktree add`）+ herdr（pane/agent 操作）+ 外部 agmsg スキル（watch / delivery / spawn / actas-lock / claude-code ドライバ）+ Bun test（integration 層）で、いずれも既存スタック。新規ランタイム依存なし。**U2 の並列化は bash のジョブ制御（`&` / `wait`）で賄える範囲**であり、外部の並列化ユーティリティ導入は要さない。
-
-> **2026-07-25（intent `260725-teamup-attach-latency`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み（測定 ref: observed `ec624022f`、base `6d4df9056`、距離 125）。** 交差要素は bash（`team-up.sh` 制御フロー）+ herdr（pane/agent 操作）+ 外部 agmsg スキル（watch / delivery / spawn / actas-lock）で、いずれも既存スタック。新規ランタイム依存なし。
-
-## Issue #1466 solo standing grant（260725-solo-standing-grants、2026-07-25、履歴）
-
-base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb404524ef30a7d8a0a3f68f73`。[Issue #1466](https://github.com/amadeus-dlc/amadeus/issues/1466)。[PR #1468](https://github.com/amadeus-dlc/amadeus/pull/1468) は凍結試作で参考のみ、実装前提にしない。
-
-現行は Bun / strict TypeScript ESM / Biome、CLI / JSON directive / Markdown state + append-only audit / filesystem lock が境界で、HTTP・DB はない。canonical core と6 harness overlay を `scripts/package.ts` が open-set discovery し、`--check` が `MISSING` / `DIFFERS` / `ORPHAN` を byte 比較する。standing grant は audit-derived のままとし、新規 storage / service / dependency は不要である。
-
-## 品質・配布への含意
-
-route / commit race は file-backed TOCTOU として lock 内再検証と決定的 ID 相関で扱う。規模は core 53 TypeScript / 48,990 LOC、tests 655 TypeScript。後続実装は canonical のみを編集して6 harness と self-install を再生成する。関連178テスト、dist 6 harness check、promote 4面 check は成功し、`bun run check` は `tsc: command not found`（exit 127）で未判定。API carrier の形は後続設計で裁定する。
-
-## Mirror レビュー修正の交差スタック（260725-mirror-review-fixes、履歴）
-
-観測 HEAD は `70336937529f5be31c011de5d368c0f03e534506`、差分 base は `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`。
-
-- Runtime / test runner: Bun `1.3.13`（実測 focused test 出力）。
-- Language / type system: TypeScript `^6.0.3`、Node 標準 `fs` / `path` / `readline` API。
-- Formatter / linter: Biome（`bun run lint` / `lint:check`）。
-- Testing: `bun test`、fast-check `^4.9.0`、smoke/unit/integration/e2e の repository-native tier。
-- GitHub integration: 外部 `gh` CLI を argument-array process runner と HTTP envelope gateway で利用。
-- Coverage: Bun LCOV、`tests/lib/coverage-normalize.ts`、`coverage-source-path.ts`、Codecov。
-- Distribution: `scripts/package.ts` と harness manifests により Claude、Codex、Kiro CLI、Kiro IDE、Cursor、OpenCode の6面へ投影。
-
-この intent に新規 production dependency は不要である。安全な config read は Node/Bun が提供する fd/open flags/fstat、codec は既存 custom parser、coverage は既存 mapping table の拡張で実装可能である。
-
-> **2026-07-24（intent `260724-watcher-timeout-fix`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み。** 交差要素は bash（`team-up.sh` 制御フロー）+ herdr（pane/agent 操作）+ agmsg（ready sentinel handshake、`spawn.sh`）で、いずれも既存スタック。新規ランタイム依存なし（base `a81c11dde` → observed `6d4df9056`）。
+変更なし、確認済み。交差要素は bash（`team-up.sh` 制御フロー）+ herdr（pane/agent 操作）+ agmsg（ready sentinel handshake、`spawn.sh`）で、いずれも既存スタック（[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）。新規ランタイム依存なし（base `a81c11dde` → observed `6d4df9056`）。
 
 ## 260723-t241-ci-residency 交差スタック（履歴: 2026-07-23）
 

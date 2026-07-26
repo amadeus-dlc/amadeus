@@ -1,39 +1,10 @@
 # ビジネス概要
 
-> **2026-07-26（intent `260726-metrics-visualization`、amadeus-feature / Standard）: 変更なし、確認済み（測定 ref: observed `1c43438df`、base `11f1ad61f`、距離 5）。** 業務ドメイン（AI-DLC 自己ホスト開発）に構造変化なし。本 intent は既存 `metrics/` スナップショット（**123 件**、2026-07-12〜07-25）の可視化機能の追加であり、利用者価値は「蓄積済みの品質メトリクス時系列を人が読める形で見られるようにする」という**開発者体験の内部品質**に閉じる。エンドユーザー向けの業務ドメイン・機能面には影響しない。**ただし現状 `docs/` に metrics 系の言及が 0 ファイルであるため、可視化を出荷する場合は利用者向けドキュメント（日英ペア）の新設が価値の一部になる。** 詳細は `architecture.md` / `code-structure.md` / `component-inventory.md` / `code-quality-assessment.md` の同 intent 節。
+> **2026-07-25（intent `260725-kimi-harness`、amadeus-feature）: 変更なし、確認済み。** 新ハーネス「kimi」追加に向けた差分リフレッシュ + 移植面再測定。区間変化（ハーネス検出の `amadeus-harness.ts` 分離、plugin 中立バンドル出荷・信頼層、intent birth provenance）はフレームワーク内部構造に閉じ、業務ドメイン（AI-DLC 自己ホスト開発）に構造変化なし（base `6d4df9056` → observed `d31b8a5db`）。
 
-> **2026-07-26（intent `260726-grant-scope-gate`、[#1497](https://github.com/amadeus-dlc/amadeus/issues/1497)、amadeus-bugfix / Brownfield）: 最小追記（測定 ref: observed `e12259ba7`、base `11f1ad61f`、距離 4）。** 業務ドメイン（AI-DLC 自己ホスト開発）の構造に変化はない。区間で導入された solo standing grant（[PR #1483](https://github.com/amadeus-dlc/amadeus/pull/1483)）は「ソロモードでもステージゲートごとの人間承認を、一定範囲・一定期間の常任グラントで事前に済ませられる」という**運用効率面の価値**を追加したが、本 intent の #1497 はその価値が **composed scope（`amadeus-*`）では一度も届いていない**ことを扱う。ユーザー可視の症状は「グラントを発行したのに毎ゲートで承認を求められる」であり、fatal error ではなく無音の no-op である。加えて未報告の欠陥 B（walking-skeleton ゲートまでグラントが覆う）は、**チームが明示的に守ると宣言した安全境界の無音喪失**という逆向きの業務影響を持つ。詳細は `architecture.md` / `code-quality-assessment.md` の同 intent 節。
+## 260724-watcher-timeout-fix の業務境界（履歴: 2026-07-24）
 
-> **2026-07-26（intent `260725-worktree-ref-fixes`、[#1482](https://github.com/amadeus-dlc/amadeus/issues/1482) / [#1481](https://github.com/amadeus-dlc/amadeus/issues/1481) / [#1455](https://github.com/amadeus-dlc/amadeus/issues/1455)、amadeus-bugfix / Minimal）: 変更なし、確認済み（測定 ref: observed `11f1ad61f`、base `ec624022f`、距離 10）。** 業務ドメイン（AI-DLC 自己ホスト開発）に構造変化なし。本 intent が扱う3欠陥はいずれも**開発者体験の内部品質**に閉じる — worktree セッションで hook が本線 state を読むこと（#1482）と、worktree で3 integration スイートが常時赤になること（#1481 / #1455）。エンドユーザー向けの業務価値・機能面には影響しない。詳細は `architecture.md` / `code-quality-assessment.md` の同 intent 節。
-
-> **2026-07-25（intent `260725-teamup-launch-hardening`、[#1476](https://github.com/amadeus-dlc/amadeus/issues/1476) / [#1478](https://github.com/amadeus-dlc/amadeus/issues/1478)、amadeus-feature / Standard）: 変更なし、確認済み（測定 ref: observed `4a0f91ad0`、base `ec624022f`、距離 9）。** 業務ドメイン（AI-DLC 自己ホスト開発）に構造変化なし。区間の実装面は既存 bash ツール `team-up.sh` の watcher 検証ガード（PR #1477）のみで、利用者価値は Team Mode 起動の信頼性と待ち時間に閉じる。本 intent も同ツール内の2改善（初期プロンプトの actas 移行 / worktree 並列作成）に閉じる。詳細は `architecture.md` / `code-quality-assessment.md` の同 intent 節。
-
-> **2026-07-25（intent `260725-teamup-attach-latency`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み（測定 ref: observed `ec624022f`、base `6d4df9056`、距離 125）。** 業務ドメイン（AI-DLC 自己ホスト開発）に構造変化なし。既存 bash ツール `team-up.sh` の起動レイテンシ（実測 200.85 秒）の解消に閉じ、利用者価値は Team Mode 起動の待ち時間短縮のみ。詳細は `architecture.md` / `code-quality-assessment.md` の同 intent 節。
-
-## Issue #1466 solo standing grant（260725-solo-standing-grants、2026-07-25、履歴）
-
-base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb404524ef30a7d8a0a3f68f73`。[Issue #1466](https://github.com/amadeus-dlc/amadeus/issues/1466) は、solo 運用でも期限付き standing grant を承認源として使い、route 後・commit 前に失効／取消された場合はエラーを残さず通常の人間承認へ戻す利用者体験を検討する。standing grant は設定値ではなく、引き続き `GRANT_ISSUED` / `GRANT_REVOKED` 監査イベントから導出する。[PR #1468](https://github.com/amadeus-dlc/amadeus/pull/1468) は凍結試作で参考のみ、実装前提にしない。
-
-現行 team flow は fresh `HUMAN_TURN` に基づく発行と `GRANT_ISSUED`、全 intent audit の失効・取消・provenance 探索、gate 適格性判定、必要時の `DELEGATED_APPROVAL`、lock 内認可、`GATE_APPROVED` / `STAGE_COMPLETED`、state advance から成る。solo は remote delegation を必要としないため、gate existence と authorization source を分離したまま route / commit 間の認可相関を追加することが課題である。exact Grant Id、opaque claim、commit-only 再探索、typed non-error fallback の選択は後続設計で裁定する。
-
-## Issue #1466 の成功境界
-
-commit 時不適格では `ERROR_LOGGED`、`GATE_APPROVED`、`STAGE_COMPLETED`、state advance を発生させない。phase boundary、walking skeleton、per-unit 最終 gate、issuer provenance、protected audit mint の既存不変条件と team delegation path は維持する。
-
-## PR #1469 レビュー修正の業務境界（260725-mirror-review-fixes、履歴）
-
-観測 HEAD は `70336937529f5be31c011de5d368c0f03e534506`、差分 base は `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`。
-
-Amadeus は Git 管理された Intent record を正本とし、その進行状況を GitHub Issue へ一方向に反映する Mirror 機能を持つ。[PR #1469](https://github.com/amadeus-dlc/amadeus/pull/1469) は `off | prompt | auto` の自動モード、永続 receipt、provenance、repair、完了時 close を追加したが、レビューで安全保証を迂回または完了扱いを誤る6面が確認された。
-
-- lifecycle の boundary/manual コマンドは、副作用が `pending`、`safety-blocked`、`suppressed` のままでも exit 0 を返す。呼出側が phase receipt を `completed` に進めるため、GitHub へ未反映の状態を完了済みにできる。
-- 既定 `prompt` モードは durable `expectedPrompt` を保存して `ask` を返す一方、公開 CLI に approve/skip 回答経路がない。さらに回答型と `ask` outcome は保存済み `bindingId` を運ばず、approve は event/operation だけを照合し、skip はその照合も迂回するため、保存済み prompt binding と回答の一致を外部契約として証明できない。
-- legacy `amadeus-mirror.ts create|sync|close` は lifecycle の permit、receipt、provenance、repair/close guard を通らず GitHub を直接変更する。
-- config、state codec、coverage source 正規化には、それぞれ TOCTOU、未エスケープ制御文字、Cursor/OpenCode 投影の正準化漏れがある。
-
-本 intent の成功条件は、上記6面を失敗する再現テストで固定し、外部契約を「未完了は非成功」「prompt 回答は保存済み binding と一致」「mutation は lifecycle 一経路」「読み取り・codec・coverage は fail-closed」に回復することである。巨大ファイル分割と gateway lexer 共通化は別の `amadeus-refactor` intent で扱う。
-
-> **2026-07-24（intent `260724-watcher-timeout-fix`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み。** Team Mode ランチャー `team-up.sh` の watcher arming 検証が mux_attach を最大 270 秒ブロックする性能問題で、業務ドメイン（AI-DLC 自己ホスト開発）に構造変化なし（base `a81c11dde` → observed `6d4df9056`）。
+変更なし、確認済み。Team Mode ランチャー `team-up.sh` の watcher arming 検証が mux_attach を最大 270 秒ブロックする性能問題（[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）で、業務ドメイン（AI-DLC 自己ホスト開発）に構造変化なし（base `a81c11dde` → observed `6d4df9056`）。
 
 ## 260723-t241-ci-residency の業務境界（履歴: 2026-07-23）
 
