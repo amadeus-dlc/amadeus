@@ -329,6 +329,20 @@ Mirror 実装は `amadeus-mirror-{types,capability,config,policy,coordinator,exe
 
 フォーカスのテスト空白は、CLI exit と回答 parse、保存済み `bindingId` と異なる approve/skip、legacy mutation 拒否/委譲、realpath→open 間の置換、CR/LF 以外の C0 制御文字、Cursor/OpenCode の root/dist/temp package source である。既存7ファイル127ケースは green だが、これらの欠陥条件を主張するケースがないため回帰を検出しない。
 
+## ハーネス検出クラスタの `amadeus-harness.ts` 分離と kimi 移植面（260725-kimi-harness、2026-07-25、履歴）
+
+差分リフレッシュ（base `6d4df9056` → observed HEAD `d31b8a5db`、distance 105、amadeus-feature）。測定 ref: observed HEAD `d31b8a5db` 実ファイル直読 + `git log/diff/numstat 6d4df9056..HEAD`。
+
+- **新規ファイル `packages/framework/core/tools/amadeus-harness.ts`**（137 行、区間内 `58053fa61` で +137/−0 の新規追加、base では非存在）: ハーネス種別・検出の canonical 定義を `amadeus-lib.ts` から分離したモジュール。
+  - `HarnessType`（:5-12）= `"claude-code" | "codex" | "cursor" | "opencode" | "kiro" | "unknown" | "manual"`。
+  - `HARNESS_DIR_TO_TYPE`（:14-22）= 5 dir → type 写像（`.claude`/`.codex`/`.cursor`/`.opencode`/`.kiro`）。
+  - `KNOWN_HARNESS_DIRS`（:34-40）= CWD probe 順（`.claude`, `.kiro`, `.codex`, `.opencode`, `.cursor`）。コメント :32-33 が probe 順を canonical 写像と意図的に分離している旨を明記。
+  - `KNOWN_RULES_SUBDIR`（:53-57）= `.claude`→`rules` / `.kiro`→`steering` / `.codex`→`amadeus-rules`。
+  - 手続き群: `harnessDir()`（:101-103）、`detectHarnessType()`（:105-115、`AMADEUS_HARNESS_TYPE` env → `CLAUDECODE=1` → dir 写像）、`rulesSubdir()`（:131-137、`AMADEUS_RULES_SUBDIR` env → shipped `data/harness.json` → `KNOWN_RULES_SUBDIR` → `"rules"` fallback）。
+- **`amadeus-lib.ts` は compat facade に縮退**（区間 +21/−99）: import（:7-14、`KNOWN_HARNESS_DIRS` は :12）+ 型 re-export（:15-18、`HarnessType` / `SupportedHarnessDir`）+ facade（:152-166、`HARNESS_DIR_TO_TYPE` const / `harnessDir()` / `rulesSubdir()` / `detectHarnessType()`）。コメント :151-152 verbatim「callers keep importing these established symbols from amadeus-lib while their implementation remains isolated in amadeus-harness」。lib 内の直接利用は `KNOWN_HARNESS_DIRS` の 3 箇所（:186/:229/:269、project dir 探索と workspace marker 検査）で、呼び出し側契約は不変。
+- **kimi 追加時の構造上の触点（新ハーネス touch list、全て HEAD 実測）**: `amadeus-harness.ts` の 4 定数/型（:5/:14/:34/:53）、packager 自動発見 `scripts/package.ts:85-91` `discoverHarnessNames`（`harness/<name>/manifest.ts` 保持 scan、コメント :80-84「zero edits here」）、`scripts/promote-self.ts` `managedDirs` :37-43（5 行）+ `PACKAGE_HARNESSES` :169（4 面）、`scripts/plugin-projection.ts` `PACKAGE_HARNESSES` :46-53（6 面）+ `SELF_INSTALL_HARNESSES` :59（4 面）+ membership 検査 :407、`scripts/detect-ci-changes.sh:20` の drift glob、`packages/setup/src/domain/harness.ts:9`（union）+ :21-28（`HarnessName.all`）+ :33（parse）、`packages/setup/src/domain/engine-layout.ts:8-15`（`ENGINE_DIR_BY_HARNESS`）、`packages/setup/src/modules/reporter.ts:24-25`（usage 行）+ :137（invalid-harness メッセージ）、`packages/framework/core/tools/amadeus-swarm.ts` `DRIVER_VALUES` :93 / `HARNESS_VALUES` :100、`packages/framework/core/tools/amadeus-utility.ts` doctor（`handleDoctor` :1196、`.claude` arm :1275、adapter hook 名 :1350-1351、`.kiro` arm :1366、`.codex` arm :1379、fix hint :1439、`otherTrees` :1446 の 5 dir）。
+- **区間内に新ハーネス dir 追加なし**: `packages/framework/harness/` = base・HEAD とも claude/codex/cursor/kiro/kiro-ide/opencode の 6 dir。kimi の雛形は cursor/manifest.ts（75 行: rules→amadeus-rules、adapter+lib harnessFiles、skipRunnerGen、emit）と codex/emit.ts（375 行: HOOK_WIRING :29-39、trust pre-seed、agent TOML、`.agents/skills`）。
+
 ## Team Mode ランチャーの packages 昇格と watcher 検証関数群（260724-watcher-timeout-fix、2026-07-24、履歴）
 
 差分リフレッシュ（base `a81c11dde` → observed HEAD `6d4df9056`、distance 155、amadeus-bugfix / Minimal、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)）。測定 ref: observed HEAD 実ファイル直読 + `git log/diff a81c11dde..HEAD`。

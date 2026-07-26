@@ -89,6 +89,28 @@ function realPorts(archive: Buffer, tag: string): CliPorts {
     createTmpWrite,
     applyWrite: createApplyWrite(),
     verifyRead: createVerifyRead(),
+    // These suites never install kimi, so the hook-wiring ports stay inert;
+    // any prompt or print from them fails loudly like the outer tty.
+    kimiHooks: {
+      tty: {
+        isTTY: false,
+        select: () => {
+          throw new Error("kimi hook wiring must not run in this suite");
+        },
+        input: () => {
+          throw new Error("kimi hook wiring must not run in this suite");
+        },
+        confirm: () => {
+          throw new Error("kimi hook wiring must not run in this suite");
+        },
+      },
+      fsRead: createFsRead(),
+      fsWrite: createFsWrite(),
+      applyWrite: createApplyWrite(),
+      out: () => {
+        throw new Error("kimi hook wiring must not run in this suite");
+      },
+    },
   };
 }
 

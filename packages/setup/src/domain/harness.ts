@@ -6,7 +6,7 @@ declare const harnessBrand: unique symbol;
 // checked harness name. Validation of arbitrary user input (`--harness` etc.)
 // is owned by U2's cli (component-methods.md); this file owns only the type
 // and the canonical harness-name list so U1 can be built and tested standalone.
-export type HarnessName = ("claude" | "codex" | "kiro" | "kiro-ide" | "opencode" | "cursor") & {
+export type HarnessName = ("claude" | "codex" | "kiro" | "kiro-ide" | "opencode" | "cursor" | "kimi") & {
   readonly [harnessBrand]: "HarnessName";
 };
 
@@ -25,6 +25,7 @@ export namespace HarnessName {
     "kiro-ide",
     "opencode",
     "cursor",
+    "kimi",
   ]) as readonly HarnessName[];
 
   // U2 install-flow's smart constructor for the raw `--harness` CLI value

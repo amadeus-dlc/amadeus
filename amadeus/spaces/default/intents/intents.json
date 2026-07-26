@@ -591,6 +591,13 @@
     "status": "complete"
   },
   {
+    "uuid": "019f97bf-a393-759e-8194-7029d5864fe8",
+    "slug": "kimi-harness",
+    "dirName": "260725-kimi-harness",
+    "scope": "amadeus-feature",
+    "status": "complete"
+  },
+  {
     "uuid": "019f9d46-a826-701f-b3d3-cf1e49507cba",
     "slug": "crossreviewed-bug-batch",
     "dirName": "260726-crossreviewed-bug-batch",

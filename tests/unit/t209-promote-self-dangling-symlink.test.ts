@@ -56,12 +56,13 @@ const write = (rel: string, content: string): void => {
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "t209-promote-self-"));
-  // Minimal dist fixture covering all managed dirs (claude/codex/agents/cursor/opencode).
+  // Minimal dist fixture covering all managed dirs (claude/codex/agents/cursor/opencode/kimi).
   write("dist/claude/.claude/tools/a.txt", "alpha\n");
   write("dist/codex/.codex/b.txt", "beta\n");
   write("dist/codex/.agents/c.txt", "gamma\n");
   write("dist/cursor/.cursor/d.txt", "delta\n");
   write("dist/opencode/.opencode/e.txt", "epsilon\n");
+  write("dist/kimi/.kimi-code/f.txt", "zeta\n");
   write("dist/codex/AGENTS.md", "@.agents/rules/amadeus.md\n\n# AI-DLC on Codex CLI\n\ngenerated\n");
   write(".claude/CLAUDE.md", "@.claude/rules/amadeus.md\n\n# Claude onboarding\n");
   write("AGENTS.md", "@.agents/rules/amadeus.md\n\n# Project rules\n");
@@ -145,8 +146,8 @@ describe("t209 promote-self dangling-symlink resilience", () => {
     expect(promoteSelfMain(["--no-build"], root)).toBe(0);
   });
 
-  test("PACKAGE_HARNESSES includes Cursor and OpenCode alongside Claude and Codex", () => {
-    expect([...PACKAGE_HARNESSES]).toEqual(["claude", "codex", "cursor", "opencode"]);
+  test("PACKAGE_HARNESSES includes Cursor, OpenCode, and Kimi alongside Claude and Codex", () => {
+    expect([...PACKAGE_HARNESSES]).toEqual(["claude", "codex", "cursor", "opencode", "kimi"]);
   });
 
   test("packageFreshnessArgs covers apply and check for every harness", () => {
@@ -155,12 +156,14 @@ describe("t209 promote-self dangling-symlink resilience", () => {
       ["scripts/package.ts", "codex"],
       ["scripts/package.ts", "cursor"],
       ["scripts/package.ts", "opencode"],
+      ["scripts/package.ts", "kimi"],
     ]);
     expect(packageFreshnessArgs("check")).toEqual([
       ["scripts/package.ts", "claude", "--check"],
       ["scripts/package.ts", "codex", "--check"],
       ["scripts/package.ts", "cursor", "--check"],
       ["scripts/package.ts", "opencode", "--check"],
+      ["scripts/package.ts", "kimi", "--check"],
     ]);
   });
 

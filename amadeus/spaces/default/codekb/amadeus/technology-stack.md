@@ -37,6 +37,8 @@ route / commit race は file-backed TOCTOU として lock 内再検証と決定�
 
 この intent に新規 production dependency は不要である。安全な config read は Node/Bun が提供する fd/open flags/fstat、codec は既存 custom parser、coverage は既存 mapping table の拡張で実装可能である。
 
+> **2026-07-25（intent `260725-kimi-harness`、amadeus-feature）: 変更なし、確認済み。** 区間変化は既存 TypeScript/Bun 資産内の再編（`amadeus-harness.ts` 新規分離、plugin 信頼層）で、新規ランタイム依存なし。plugin-composition の sha256 は `node:crypto` の stdlib 利用で依存追加ではない（base `6d4df9056` → observed `d31b8a5db`）。
+
 > **2026-07-24（intent `260724-watcher-timeout-fix`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み。** 交差要素は bash（`team-up.sh` 制御フロー）+ herdr（pane/agent 操作）+ agmsg（ready sentinel handshake、`spawn.sh`）で、いずれも既存スタック。新規ランタイム依存なし（base `a81c11dde` → observed `6d4df9056`）。
 
 ## 260723-t241-ci-residency 交差スタック（履歴: 2026-07-23）

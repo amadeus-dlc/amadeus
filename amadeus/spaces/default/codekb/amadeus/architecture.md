@@ -571,6 +571,38 @@ sequenceDiagram
 - legacy mutation verb は lifecycle `manual` へ委譲するか明示拒否し、直接 GitHub mutation を廃止する。read-only `status` は診断面として分離可能。
 - config は open descriptor を信頼の起点とし、no-follow、fd identity、workspace containment を同じ検査鎖で確定する。codec は未エスケープ code point `< U+0020` を一律拒否する。coverage は全6 harness の正準→生成投影表を一か所で管理する。
 
+## plugin 中立バンドル出荷とハーネス移植面の 3 閉集合（260725-kimi-harness、2026-07-25、履歴）
+
+測定 ref: observed HEAD `d31b8a5db` 実ファイル直読 + `git log/diff 6d4df9056..HEAD`（624 files, +103965/−1957。非 record 295 files, +34617/−1957）。
+
+### 1. plugin 出荷モデルの変更 — harness 中立バンドルのみ（`47d5e3f9c`）
+
+区間内で plugin の出荷形態が「per-harness 投影」から「harness 中立バンドルのみ」へ変わった。plugin は `dist/plugins/<name>/` 配下のバンドルとしてのみ出荷され、従来の per-harness `<harnessDir>/plugins/` への投影は廃止。packager 側の `projectPluginsIntoHarnessTree`（`scripts/package.ts:316`、呼出 :505）は read-source 会計（#735 の未参照ソース scan に plugin 著作ファイルを参照済みとして計上する）だけを行う no-op へ縮退した。初のバンドルは `dist/plugins/formal-model-check/`（base では `dist/plugins/` ディレクトリ自体が非存在）。アーキテクチャ上の意味: plugin の配布面がハーネス行列（6 面）から直交化され、新ハーネス追加時に plugin 投影面を設計する必要がなくなった。
+
+### 2. plugin 信頼層（`f67b931c2` + `454194231`）
+
+`scripts/plugin-composition.ts`（1365 行、区間 +138/−15）に実行時信頼検証が入った。plugin・stage 単位の sha256 `contentDigest`（:128/:135/:191）、stage index の parse 検証（`parseStages` :293、呼出 :286）、journal 内の信頼付与（trust grant、`validJournal` :813、digest 形式検査 :826 `/^sha256:[0-9a-f]{64}$/`）、drop 時のドリフト拒否。信頼は内容ハッシュに接地し、drop は「ジャーナル上の付与と現行内容の digest 一致」でのみ許容される設計。
+
+### 3. ハーネス検出の `amadeus-harness.ts` 分離（`58053fa61`）
+
+ハーネス種別・検出の canonical 定義が `amadeus-lib.ts` から新規 `packages/framework/core/tools/amadeus-harness.ts`（137 行）へ移管された（`HarnessType` :5-12 / `HARNESS_DIR_TO_TYPE` :14-22 / `KNOWN_HARNESS_DIRS` :34-40 / `KNOWN_RULES_SUBDIR` :53-57）。lib は import + 型 re-export + compat facade（:7-18, :152-166）へ縮退（区間 +21/−99）し、呼び出し側は既存シンボルを変えない。新ハーネスの dir/type/rulesSubdir はこの 1 ファイルが正本登録面になった。
+
+### 4. 新ハーネス追加が触れる 3 閉集合の非対称（kimi 移植面の要点）
+
+kimi のような新ハーネスは、目的の異なる 3 つの閉集合それぞれへ**個別に**追加（または非追加を維持）する設計判断が要る:
+
+| 閉集合 | 場所 | 面数 | 意味 |
+| --- | --- | --- | --- |
+| `PACKAGE_HARNESSES` | `scripts/plugin-projection.ts:46-53` | 6（claude/codex/cursor/kiro/kiro-ide/opencode） | packager がビルドする全 harness 面（閉行列検証用。packager 本体の既定 target は manifest 自動発見 `scripts/package.ts:85-91` でこの定数に非依存） |
+| `SELF_INSTALL_HARNESSES` | `scripts/plugin-projection.ts:59`（membership :407）、`promote-self.ts:169` `PACKAGE_HARNESSES` | 4（claude/codex/cursor/opencode） | project root へ self-install される面。kiro/kiro-ide を意図的に外す型+実行時境界（コメント :56-58） |
+| swarm `HARNESS_VALUES` | `packages/framework/core/tools/amadeus-swarm.ts:100` | 4（claude/codex/kiro/kiro-ide） | swarm driver 選択を仲裁するハーネス。cursor/opencode を意図的除外。`resolveDriver`（:118-136）は未知値を fail-closed 拒否するため、kimi の swarm 参加は明示的 opt-in 追加が必要 |
+
+副次触点: `scripts/promote-self.ts:37-43` managedDirs（5 行）、`scripts/detect-ci-changes.sh:20` drift glob、`packages/setup/src/domain/harness.ts:9/:21-28/:33`、`engine-layout.ts:8-15`、`reporter.ts:24-25,:137`、`amadeus-utility.ts` doctor（:1196/:1275/:1350-1351/:1366/:1379/:1439/:1446）。`packages/framework/harness/` は base・HEAD とも同じ 6 dir で区間内に新ハーネス dir は未追加。kimi の雛形は cursor/manifest.ts（75 行、最小面）と codex/emit.ts（375 行、HOOK_WIRING :29-39 + trust pre-seed + agent TOML + `.agents/skills` のフル emit）。
+
+### 5. intent birth での harness provenance（`dc1eeba20`）
+
+どのハーネスが intent を実行したかを birth 時に state へ記録する機能が着地（`amadeus-lib.ts` +78/−9、`amadeus-utility.ts` +3/−0）。`harnessDir()`/`detectHarnessType()` の検出機構が provenance ソースとして本線に組み込まれた（検出実装は §3 の amadeus-harness.ts が正本）。新テスト t269（unit+cli）/t270/t271 + t144-harness-seam.cli がこれを固定。
+
 > **2026-07-24 更新（intent `260724-watcher-timeout-fix`、履歴）**: base `a81c11dde83e0059c48ecc912d2d22dd6bca60eb` → observed HEAD `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`（distance 155）の differential refresh（amadeus-bugfix / Minimal、[Issue #1449](https://github.com/amadeus-dlc/amadeus/issues/1449)）。交差面は Team Mode ランチャー(`packages/framework/core/tools/team-up.sh`)の起動シーケンス上の agmsg watcher arming 検証の位置。下記「Team Mode ランチャーの watcher arming 検証と mux_attach ブロッキング」節は同 intent の履歴。以下の 260723 系・260722 系節も履歴。
 
 ## Team Mode ランチャーの watcher arming 検証と mux_attach ブロッキング（260724-watcher-timeout-fix、履歴、Issue #1449）

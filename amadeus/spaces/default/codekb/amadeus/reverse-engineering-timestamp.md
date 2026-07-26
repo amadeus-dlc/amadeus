@@ -121,6 +121,24 @@
 - Per-intent record: `re-scans/260725-mirror-review-fixes.md`
 - Delivery boundary: codekb 9成果物とこの intent の re-scan 記録のみ更新。実装、tests、state、audit、生成配布物、commit、PR mutation は未実施。
 
+## 実行メタデータ(履歴: 260725-kimi-harness)
+
+- Date: 2026-07-25
+- Observed at: `d31b8a5db5798ef761f3871ca66824c87530afb4`(現 HEAD `git rev-parse HEAD` 実測一致)
+- Intent: `260725-kimi-harness`(新ハーネス「kimi」/ `.kimi-code` を本 AI-DLC フレームワーク repo へ追加する intent)
+- Scope: `amadeus-feature`
+- Project type: Brownfield
+- Repository: `amadeus`
+- Stage: `reverse-engineering` (2.1)
+- Focus: differential refresh + kimi ハーネス追加に向けた移植面(harness-porting surface)の再測定
+- Method: differential refresh。base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`(前回 scan `260724-watcher-timeout-fix` の observed)、observed `d31b8a5db5798ef761f3871ca66824c87530afb4`、`git merge-base --is-ancestor 6d4df9056 HEAD` exit 0、distance `git rev-list --count 6d4df9056..HEAD`=105。`260724-harness-provenance` の observed `2d0da11d` は現 HEAD の**非祖先**(exit 1、squash マージ着地で観測点が HEAD 系統に無い)のため base 不適格。記録済み observed のうち祖先かつ距離最小の `6d4df9056` を採用(cid:reverse-engineering:rescan-base-ancestry)。Developer スキャン→Architect 合成の直列(cid:reverse-engineering:c3)。
+- 測定 ref: 全 file:line は Observed=HEAD `d31b8a5db` のワークツリー実ファイル直読(cid:measurement-ref-in-artifacts)。区間件数(105)・diff 規模(624 files, +103965/−1957。非 record 295 files, +34617/−1957)はコマンド出力からの転記(numbers-from-command-output-only)。
+- 現行結論: 区間の構造変化はハーネス関連 4 クラスタに集中。(1) **ハーネス検出クラスタの新規分離**(`58053fa61`): 新規 `packages/framework/core/tools/amadeus-harness.ts`(137 行、base 非存在)へ `HarnessType`(:5-12)/`HARNESS_DIR_TO_TYPE`(:14-22)/`KNOWN_HARNESS_DIRS`(:34-40)/`KNOWN_RULES_SUBDIR`(:53-57)と検出手続き群が `amadeus-lib.ts` から移管。lib は import(:7-14)+型 re-export(:15-18)+compat facade(:152-166)へ縮退(区間 +21/−99)し、呼び出し側契約は不変。(2) **plugin 同梱モデル変更**(`47d5e3f9c`): plugin は harness 中立バンドル `dist/plugins/<name>/` のみで出荷、per-harness `<harnessDir>/plugins/` 投影は廃止(`scripts/package.ts:316` `projectPluginsIntoHarnessTree` は read-source 会計のみの no-op)。`dist/plugins/formal-model-check/` が初のバンドル(base では `dist/plugins/` 非存在)。(3) **plugin 信頼層**(`f67b931c2` + `454194231`): `scripts/plugin-composition.ts`(+138/−15)に sha256 `contentDigest`・stage index 検証(`parseStages` :293)・journal 信頼付与(`validJournal` :813、sha256 形式 :826)・drop 時ドリフト拒否。(4) **intent birth での harness provenance 記録**(`dc1eeba20`): `amadeus-lib.ts` +78/−9、`amadeus-utility.ts` +3/−0、新テスト t269(unit+cli)/t270/t271 + t144-harness-seam.cli。**kimi 移植面の要点は 3 つの閉集合の非対称**: `scripts/plugin-projection.ts:46-53` `PACKAGE_HARNESSES`(6 面)vs 同 :59 `SELF_INSTALL_HARNESSES`(4 面)vs `amadeus-swarm.ts:100` `HARNESS_VALUES`(4 面、cursor/opencode を意図的除外 — kimi 追加は opt-in で `resolveDriver` :118-136 が未知値を fail-closed 拒否)。packager 本体は manifest 自動発見(`scripts/package.ts:85-91`、コメント :80-84)で新ハーネス追加に編集不要。`packages/framework/harness/` は base・HEAD とも同じ 6 dir で新ハーネス dir は区間内未追加。kimi の雛形は cursor/manifest.ts(75 行)と codex/emit.ts(375 行)。バージョンは `amadeus-version.ts:4` AMADEUS_VERSION="0.1.5"。
+- Per-intent record: `re-scans/260725-kimi-harness.md`
+- 更新した成果物: 本ファイル(鮮度ポインタ + 旧「現在: 260724-watcher-timeout-fix」→履歴ラベル化 cid:reverse-engineering:c3-relabel)、`code-structure.md`(amadeus-harness.ts 新規分離と lib facade 化 + kimi 移植面目録を先頭 current view に新設)、`component-inventory.md`(amadeus-harness.ts + plugin 信頼層コンポーネント登録 + 移植面を current view 化)、`architecture.md`(plugin 中立バンドル出荷モデル + 3 閉集合非対称を先頭 current view に新設)、`code-quality-assessment.md`(区間の新テスト t269/t270/t271/t144-harness-seam + t252 信頼層更新を current view に追記)、`re-scans/260725-kimi-harness.md`(新規)。他 body 4 成果物(business-overview / api-documentation / technology-stack / dependencies)は本文温存で「変更なし、確認済み」一行のみ追記(区間変化は 4 成果物のドメイン外。plugin-composition の node:crypto は stdlib で依存変化なし。cid:reverse-engineering:c1)。
+- Delivery boundary: 実装・修正コード、dist/self-install 再生成、commit、PR 操作は本 scan で未実施。kimi ハーネス本体の実装は未着手。
+- Base の真実源: per-intent `re-scans/*.md` の到達可能な Observed commit。本共有 timestamp は repo-level freshness pointer であり、次回差分 base の真実源にはしない。
+
 ## 実行メタデータ（履歴: 260724-watcher-timeout-fix）
 
 - Date: 2026-07-24

@@ -348,6 +348,26 @@ package temp regex と generated prefix table の双方に Cursor/OpenCode が�
 
 Mirror の大型ファイル（lifecycle 909行、coordinator 708行、state codec 1,526行等）と gateway lexer 共通化は実在する技術的負債だが、本 bugfix と変更理由が異なるため別 `amadeus-refactor` intent に隔離する。今回の変更は6欠陥とその回帰テストに外科的に限定する。
 
+## ハーネス provenance・plugin 信頼層のテスト追加（260725-kimi-harness、2026-07-25、履歴）
+
+実測基準は base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba` → observed HEAD `d31b8a5db5798ef761f3871ca66824c87530afb4`、祖先性 exit 0、距離 105。本 intent はコード欠陥の修正ではなく移植面の再測定が目的のため、品質観測は**区間内のテスト資産変化**に限定する(測定 ref: observed HEAD `d31b8a5db` 実ファイル直読 + `git log 6d4df9056..HEAD`)。
+
+**区間内の新規テスト(harness provenance 系、`dc1eeba20` + `58053fa61`)**:
+- `tests/unit/t269-harness-provenance.test.ts` — canonical ハーネス写像契約の pure テスト(`HARNESS_DIR_TO_TYPE` / `detectHarnessType`、:1-2 covers 記載)。
+- `tests/integration/t269-harness-provenance.cli.test.ts` — resolver provenance・検出優先順位・legacy cache。
+- `tests/integration/t270-harness-provenance-birth.test.ts` — 全 packaged ハーネスでの実 intent birth(`Harness` フィールド、workflow:intent-birth)。
+- `tests/integration/t271-migration-harness-validation.cli.test.ts` — `amadeus-migrate` dry-run の harness 検証(CLI spawn)。
+- `tests/integration/t144-harness-seam.cli.test.ts` — `harnessDir()`/`resolveProjectDir()` の解決 ladder をハーネス dir 横断で固定(harness seam)。
+
+**plugin 信頼層のテスト更新(`f67b931c2` + `454194231`)**: `tests/unit/t252-plugin-composition.test.ts`(in-memory backend で全分岐を駆動する pure unit)が sha256 `contentDigest`・journal 信頼付与・drop 時ドリフト拒否に追随。`454194231`「cover runtime trust verification」は実行時信頼検証を被覆し、`t-formal-verif-plugin-lifecycle.integration.test.ts` にも +90 行の被覆追加(同コミット numstat)。
+
+**kimi 作業時に参照すべき既存ハーネステスト様式(HEAD 実測)**:
+- `tests/integration/t145-packaging-parity.test.ts` は `package.ts --check` を spawn する byte-parity の keystone。
+- `tests/integration/t-cursor-adapter.test.ts` は注入した spawn spy を使う in-process 型。
+- `tests/integration/t-opencode-emit.test.ts` は in-process の write⇔check ラウンドトリップ。
+- `tests/smoke/t149-opencode-cursor-dist-structure.test.ts` は module スコープのリテラル期待ファイル表(manifest 由来ではない)で dist 構造を固定。
+新ハーネス追加時はこれら 4 様式のどれに倣うかがテスト設計の分岐点(t149 型は期待表の手更新が必要)。
+
 > **以下は intent `260724-watcher-timeout-fix`（2026-07-24、amadeus-bugfix / Minimal）の履歴観測**。以下の過去 intent 節に残る「本 intent」「最新」「現在」は各見出しで明示した履歴 intent を指し、今回 intent の current marker ではない。
 
 ## watcher arming 検証が mux_attach を最大 270 秒ブロック（260724-watcher-timeout-fix、履歴、Issue #1449）

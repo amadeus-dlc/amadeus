@@ -12,7 +12,7 @@
 //
 // Falling/passing evidence: validatePluginSources over a manifest-less source
 // throws (red-relevant), and over a well-formed set returns it (green); the
-// self-install guard rejects kiro/kiro-ide and accepts the closed four.
+// self-install guard rejects kiro/kiro-ide and accepts the closed five.
 
 import { describe, expect, test } from "bun:test";
 import {
@@ -302,14 +302,14 @@ describe("deriveUnreferenced", () => {
 });
 
 describe("self-install closed union", () => {
-  test("the four faces are a strict subset of the six package faces", () => {
+  test("the five faces are a strict subset of the seven package faces", () => {
     for (const h of SELF_INSTALL_HARNESSES) expect(PACKAGE_HARNESSES).toContain(h);
-    expect(SELF_INSTALL_HARNESSES).toHaveLength(4);
-    expect(PACKAGE_HARNESSES).toHaveLength(6);
+    expect(SELF_INSTALL_HARNESSES).toHaveLength(5);
+    expect(PACKAGE_HARNESSES).toHaveLength(7);
   });
 
-  test("isSelfInstallHarness accepts the four, rejects kiro/kiro-ide", () => {
-    for (const h of ["claude", "codex", "cursor", "opencode"]) expect(isSelfInstallHarness(h)).toBe(true);
+  test("isSelfInstallHarness accepts the five, rejects kiro/kiro-ide", () => {
+    for (const h of ["claude", "codex", "cursor", "opencode", "kimi"]) expect(isSelfInstallHarness(h)).toBe(true);
     for (const h of ["kiro", "kiro-ide", "unknown"]) expect(isSelfInstallHarness(h)).toBe(false);
   });
 

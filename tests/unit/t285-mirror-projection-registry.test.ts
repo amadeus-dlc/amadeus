@@ -12,21 +12,22 @@ import {
 } from "../../packages/framework/harness/projections.ts";
 
 describe("t285 projection registry", () => {
-  test("owns exactly six dist surfaces and four self-install surfaces", () => {
+  test("owns exactly seven dist surfaces and five self-install surfaces", () => {
     expect(MIRROR_SURFACE_IDS).toEqual([
       "claude",
       "codex",
       "cursor",
+      "kimi",
       "kiro",
       "kiro-ide",
       "opencode",
     ]);
-    expect(MIRROR_PROJECTIONS).toHaveLength(6);
+    expect(MIRROR_PROJECTIONS).toHaveLength(7);
     expect(
       MIRROR_PROJECTIONS.filter(
         (projection) => projection.selfTool && projection.selfSkill,
       ).map((projection) => projection.surface),
-    ).toEqual(["claude", "codex", "cursor", "opencode"]);
+    ).toEqual(["claude", "codex", "cursor", "kimi", "opencode"]);
   });
 
   test("paths are literal, confined, unique, and docs are a four-file pair set", () => {

@@ -55,6 +55,8 @@ tests/run-tests.ts
 
 配布依存は `packages/framework/core/` 正本→root harness (`.claude/.codex/.cursor/.opencode`)→`dist/{claude,codex,kiro,kiro-ide,cursor,opencode}` の一方向。coverage 正規化はこの6 harness mapping と同じ集合を共有すべきで、現行の Claude/Codex/Kiro だけの手書き部分集合が drift 原因である。
 
+> **2026-07-25（intent `260725-kimi-harness`、amadeus-feature）: 変更なし、確認済み。** 内部依存の交差は `amadeus-lib.ts` → 新規 `amadeus-harness.ts`（ハーネス検出の移管先、lib は compat facade）のみで、パッケージ依存に変化なし。plugin-composition の `node:crypto` は stdlib で依存追加ではない（base `6d4df9056` → observed `d31b8a5db`）。
+
 > **2026-07-24（intent `260724-watcher-timeout-fix`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み。** 内部依存の交差は `team-up.sh` → agmsg `actas-lock.sh`（`agmsg_ready_path` を subshell source）と herdr CLI で、いずれも既存の外部スキル依存。パッケージ依存に変化なし（base `a81c11dde` → observed `6d4df9056`）。
 
 ## 260723-t241-ci-residency の依存境界（履歴: 2026-07-23）

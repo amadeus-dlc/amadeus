@@ -34,6 +34,8 @@ Amadeus は Git 管理された Intent record を正本とし、その進行状�
 
 本 intent の成功条件は、上記6面を失敗する再現テストで固定し、外部契約を「未完了は非成功」「prompt 回答は保存済み binding と一致」「mutation は lifecycle 一経路」「読み取り・codec・coverage は fail-closed」に回復することである。巨大ファイル分割と gateway lexer 共通化は別の `amadeus-refactor` intent で扱う。
 
+> **2026-07-25（intent `260725-kimi-harness`、amadeus-feature）: 変更なし、確認済み。** 新ハーネス「kimi」追加に向けた差分リフレッシュ + 移植面再測定。区間変化（ハーネス検出の `amadeus-harness.ts` 分離、plugin 中立バンドル出荷・信頼層、intent birth provenance）はフレームワーク内部構造に閉じ、業務ドメイン（AI-DLC 自己ホスト開発）に構造変化なし（base `6d4df9056` → observed `d31b8a5db`）。
+
 > **2026-07-24（intent `260724-watcher-timeout-fix`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み。** Team Mode ランチャー `team-up.sh` の watcher arming 検証が mux_attach を最大 270 秒ブロックする性能問題で、業務ドメイン（AI-DLC 自己ホスト開発）に構造変化なし（base `a81c11dde` → observed `6d4df9056`）。
 
 ## 260723-t241-ci-residency の業務境界（履歴: 2026-07-23）

@@ -339,6 +339,22 @@ team `DELEGATED_APPROVAL` は remote topology 固有、solo は local route / co
 
 所有境界は `lifecycle/coordinator/executor` が mutation、legacy CLI は互換入口または read-only 診断、config/codec は fail-closed input boundary、coverage normalizer は生成物→正本の計測 mapping とする。
 
+## ハーネス検出モジュール・plugin 信頼層・kimi 移植面コンポーネント（260725-kimi-harness、2026-07-25、履歴）
+
+差分リフレッシュ（base `6d4df9056` → observed HEAD `d31b8a5db`、距離 105、amadeus-feature）。測定 ref: observed HEAD `d31b8a5db` 実ファイル直読。区間はハーネス検出の新規分離・plugin 同梱/信頼層・intent birth provenance の 4 クラスタ。フレームワークバージョンは `packages/framework/core/tools/amadeus-version.ts:4` `AMADEUS_VERSION = "0.1.5"`。
+
+| コンポーネント | 場所（file:line） | 役割 / 区間での変化 |
+| --- | --- | --- |
+| `amadeus-harness.ts`（新規） | `packages/framework/core/tools/amadeus-harness.ts`（137 行、`58053fa61` で追加、base 非存在） | ハーネス種別・検出の canonical モジュール。`HarnessType` :5-12 / `HARNESS_DIR_TO_TYPE` :14-22 / `KNOWN_HARNESS_DIRS` :34-40 / `KNOWN_RULES_SUBDIR` :53-57 + `harnessDir()` :101 / `detectHarnessType()` :105 / `rulesSubdir()` :131。kimi 追加時の第 1 登録面 |
+| `amadeus-lib.ts` harness facade | `amadeus-lib.ts:7-18`（import + 型 re-export）、:152-166（facade）、:186/:229/:269（KNOWN_HARNESS_DIRS 利用） | 区間 +21/−99 で実装を amadeus-harness.ts へ移管し、後方互換の re-export のみ保持。呼び出し側契約不変 |
+| plugin 中立バンドル出荷 | `scripts/package.ts:316` `projectPluginsIntoHarnessTree`（no-op 化、呼出 :505）、`dist/plugins/formal-model-check/`（初のバンドル、base では `dist/plugins/` 非存在） | `47d5e3f9c` で plugin は `dist/plugins/<name>/` のみで出荷。per-harness `<harnessDir>/plugins/` 投影は廃止、関数は read-source 会計（#735 未参照ソース scan 用）のみの no-op |
+| plugin 信頼層 | `scripts/plugin-composition.ts`（1365 行、`f67b931c2` で +138/−15 + `454194231` テスト）: `contentDigest` フィールド :128/:135/:191、`parseStages` :293（呼出 :286）、`validJournal` :813（sha256 形式検査 :826 `/^sha256:[0-9a-f]{64}$/`） | sha256 contentDigest による内容検証、stage index 検証、journal 内の信頼付与（trust grant）、drop 時ドリフト拒否を追加 |
+| intent birth provenance | `dc1eeba20`: `amadeus-lib.ts` +78/−9、`amadeus-utility.ts` +3/−0 | intent birth 時に実行ハーネスを state へ記録（Issue #1452 系の着地） |
+| packager 自動発見 | `scripts/package.ts:85-91` `discoverHarnessNames`（コメント :80-84） | `harness/<name>/manifest.ts` 保持 scan。新ハーネス追加は 1 dir + manifest 行で packager 編集不要 |
+| 3 閉集合（非対称の要点） | `scripts/plugin-projection.ts:46-53` `PACKAGE_HARNESSES`（6 面）/ 同 :59 `SELF_INSTALL_HARNESSES`（4 面、membership :407）/ `promote-self.ts:169` `PACKAGE_HARNESSES`（4 面）/ `amadeus-swarm.ts:100` `HARNESS_VALUES`（4 面、cursor/opencode を意図的除外） | kimi は各集合へ**個別に判断して**追加（または非追加を維持）する。swarm は `resolveDriver` :118-136 が未知値を fail-closed 拒否するため opt-in 追加 |
+| その他の移植面触点 | `scripts/detect-ci-changes.sh:20`（drift glob）/ `packages/setup/src/domain/harness.ts:9,:21-28,:33` / `engine-layout.ts:8-15` / `reporter.ts:24-25,:137` / `promote-self.ts:37-43` managedDirs（5 行）/ `amadeus-utility.ts` doctor :1196,:1275,:1350-1351,:1366,:1379,:1439,:1446 | 新ハーネス touch list（HEAD 実測済み）。setup CLI・doctor・CI drift 検知の各閉集合 |
+| kimi の雛形 | `packages/framework/harness/cursor/manifest.ts`（75 行）/ `packages/framework/harness/codex/emit.ts`（375 行、HOOK_WIRING :29-39） | `packages/framework/harness/` は base・HEAD とも同じ 6 dir で新ハーネス dir は区間内未追加。最小面（cursor 型）とフル emit（codex 型）の 2 参照実装 |
+
 ## Team Mode watcher arming 検証コンポーネント（260724-watcher-timeout-fix、2026-07-24、履歴）
 
 差分リフレッシュ（base `a81c11dde` → observed HEAD `6d4df9056`、距離 155、amadeus-bugfix / Minimal、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)）。測定 ref: observed HEAD `6d4df9056` 実ファイル直読。すべて `packages/framework/core/tools/team-up.sh` 内（区間内 #1391 で導入、#1421 で packages 昇格 + 配布 11 コピー）。

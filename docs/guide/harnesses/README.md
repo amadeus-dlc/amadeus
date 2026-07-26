@@ -21,6 +21,7 @@ Pick your harness:
 | **Codex CLI** (≥ 0.139.0) | `$amadeus` | [AI-DLC on Codex CLI](codex-cli.md) — prerequisites, trust pre-seed, provider config, the git-repo requirement. |
 | **OpenCode** | `$amadeus` | [AI-DLC on OpenCode](opencode.md) — prerequisites, manual install, session skills, why hooks aren't wired yet. |
 | **Cursor** | `/amadeus` | [AI-DLC on Cursor](cursor.md) — prerequisites, manual install, the 8-event hook wiring. |
+| **Kimi Code** (≥ 0.28.1) | `/skill:amadeus` | [AI-DLC on Kimi Code](kimi-code.md) — prerequisites, installer + user-level hook wiring, what's different on Kimi. |
 
 AI-DLC on Kiro (IDE or CLI) works best with **Claude Opus 4.8**, which requires a **paid Kiro plan**.
 

@@ -73,6 +73,8 @@ base `6d4df90566dcf7aa00980e5f9e85c831ca9108ba`、observed `4491310cc0b432eb4045
 - `resolveMirrorConfig` は `off | prompt | auto` のみ受理し、Global < Space < Intent の precedence、全層 fail-closed を維持する。
 - `parseMirrorState` は duplicate key、unknown field、depth/size、invariant に加え、JSON 文字列中の未エスケープ U+0000–U+001F をすべて拒否する契約へ揃える必要がある。
 
+> **2026-07-25（intent `260725-kimi-harness`、amadeus-feature）: 変更なし、確認済み。** 区間変化はフレームワーク内部構造（ハーネス検出モジュール分離、plugin の中立バンドル出荷・sha256 信頼層、intent birth の `Harness` フィールド記録）に閉じ、ユーザー可視 API/CLI/directive 契約の変更なし。`Harness` フィールドは state 生成ファイルの内部フィールド追加で公開契約面は不変（base `6d4df9056` → observed `d31b8a5db`）。
+
 > **2026-07-24（intent `260724-watcher-timeout-fix`、[#1449](https://github.com/amadeus-dlc/amadeus/issues/1449)、amadeus-bugfix / Minimal）: 変更なし、確認済み。** `team-up.sh` の内部制御フロー（watcher 検証 → mux_attach 順序、exit code 分岐 0=全 armed / 非ゼロ=未 armed）は既存契約のまま。ユーザー可視 API/CLI 契約に変化なし（base `a81c11dde` → observed `6d4df9056`）。
 
 ## 260723-t241-ci-residency の関連契約（履歴: 2026-07-23）

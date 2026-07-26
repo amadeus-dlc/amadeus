@@ -45,7 +45,7 @@ import { PACKAGE_HARNESSES as SELF_INSTALL_FACES } from "../../scripts/promote-s
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const FIXTURE = "zz-u09-fixture";
-const PACKAGE_HARNESSES_6 = ["claude", "codex", "cursor", "kiro", "kiro-ide", "opencode"];
+const PACKAGE_HARNESSES_7 = ["claude", "codex", "cursor", "kiro", "kiro-ide", "opencode", "kimi"];
 const TIMEOUT_MS = 120_000;
 
 let ws = "";
@@ -157,8 +157,8 @@ describe("t-plugin-projection-packaging — U09 FR-6 item 19", () => {
     expect(checkNeutralBundle()).toEqual([]);
   });
 
-  test("self-install stays the closed four faces (not widened to six)", () => {
-    expect([...SELF_INSTALL_FACES].sort()).toEqual(["claude", "codex", "cursor", "opencode"]);
-    for (const f of SELF_INSTALL_FACES) expect(PACKAGE_HARNESSES_6).toContain(f);
+  test("self-install stays the closed five faces (not widened to seven)", () => {
+    expect([...SELF_INSTALL_FACES].sort()).toEqual(["claude", "codex", "cursor", "kimi", "opencode"]);
+    for (const f of SELF_INSTALL_FACES) expect(PACKAGE_HARNESSES_7).toContain(f);
   });
 });
