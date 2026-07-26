@@ -15,6 +15,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import type { Stats } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -589,7 +590,12 @@ export function resolveDoctorContext(projectDir: string): DoctorContext {
   const platform = process.platform;
   const homeDir = process.env.HOME;
   const codexHomeDir = process.env.CODEX_HOME ?? join(homeDir ?? "", ".codex");
-  const kimiHomeDir = process.env.KIMI_CODE_HOME ?? join(homeDir ?? "", ".kimi-code");
+  // KimiHome resolution must match the installer's resolveKimiHome
+  // (packages/setup/src/modules/kimi-hooks.ts): $KIMI_CODE_HOME, else
+  // homedir()/.kimi-code. HOME can be unset (Windows) or differ from the OS
+  // home, which would point doctor at a different config.toml than the one the
+  // installer wired.
+  const kimiHomeDir = process.env.KIMI_CODE_HOME ?? join(homedir(), ".kimi-code");
   const defaultScope = (process.env.AMADEUS_DEFAULT_SCOPE ?? "").trim();
   const migrationDoctor = process.env.AMADEUS_MIGRATION_DOCTOR === "1";
   const testMode = process.env.NODE_ENV === "test";
@@ -904,7 +910,22 @@ function detectKimiManagedBlock(text: string): KimiManagedBlockDetection {
   if (begins === 1) {
     const start = lines.findIndex((line) => line.trim() === KIMI_MANAGED_BLOCK_BEGIN);
     const end = lines.findIndex((line) => line.trim() === KIMI_MANAGED_BLOCK_END);
-    return start < end ? { kind: "marker" } : { kind: "reversed" };
+    if (start >= end) return { kind: "reversed" };
+    // A markerless copy of the managed adapter hook alongside the fenced block
+    // is a mixed anomaly — matching the setup domain's detectManagedBlock, which
+    // loud-fails a duplicate rather than silently trusting the marker pair.
+    const outsideAdapterTables = scanKimiConfigTables(
+      [...lines.slice(0, start), ...lines.slice(end + 1)].join("\n"),
+    ).filter(
+      (table) => table.header === "[[hooks]]" && table.bodyText.includes(KIMI_ADAPTER_SIGNATURE),
+    ).length;
+    if (outsideAdapterTables > 0) {
+      return {
+        kind: "duplicate",
+        detail: "the managed adapter hook appears both inside the marker block and in a separate [[hooks]] table",
+      };
+    }
+    return { kind: "marker" };
   }
   const adapterTables = scanKimiConfigTables(text).filter(
     (table) => table.header === "[[hooks]]" && table.bodyText.includes(KIMI_ADAPTER_SIGNATURE),
@@ -996,6 +1017,44 @@ export function kimiGitResidueDoctorCheck(kimiHomeDir: string): DoctorCheck {
   return {
     pass: true,
     label: `kimi git pre-allows: ${residue} managed-style git rule(s) in ${path} with no amadeus managed block detected — possible residue from an incompletely removed block; review manually (advisory)`,
+  };
+}
+
+// Minimum Kimi Code CLI version floor. The adapter's hook event/matcher payload
+// contract was measured live against 0.28.1; older versions are unverified.
+const MIN_KIMI_VERSION = [0, 28, 1] as const;
+
+// Pure over the resolved binary path (undefined ⇒ not on PATH) and the raw
+// `--version` output, so both fail branches are driven in-process while the
+// spawn stays in handleDoctor. Three outcomes are kept distinct so the label
+// never misleads: an absent binary is "not installed" (install), an on-PATH
+// binary whose --version is unparseable is a parse fault (not a missing
+// install), and a parseable version runs the floor compare.
+export function classifyKimiCliVersionCheck(kimiPath: string | undefined, versionText: string): DoctorCheck {
+  if (kimiPath === undefined) {
+    return {
+      pass: false,
+      label: "kimi CLI not installed (not on PATH)",
+      fix: "install Kimi Code CLI >= 0.28.1 (see docs/guide/harnesses/kimi-code.md)",
+    };
+  }
+  const match = versionText.match(/(\d+)\.(\d+)\.(\d+)/);
+  if (!match) {
+    return {
+      pass: false,
+      label: `kimi CLI on PATH (${kimiPath}) but its --version output is not parseable as a semver`,
+      fix: "ensure `kimi --version` prints a version >= 0.28.1, or upgrade Kimi Code CLI",
+    };
+  }
+  const v = [Number(match[1]), Number(match[2]), Number(match[3])];
+  const ok =
+    v[0] > MIN_KIMI_VERSION[0] ||
+    (v[0] === MIN_KIMI_VERSION[0] &&
+      (v[1] > MIN_KIMI_VERSION[1] || (v[1] === MIN_KIMI_VERSION[1] && v[2] >= MIN_KIMI_VERSION[2])));
+  return {
+    pass: ok,
+    label: `kimi CLI version ${match[0]} >= 0.28.1 (measured hook payload contract)`,
+    fix: "upgrade Kimi Code CLI to 0.28.1 or later",
   };
 }
 
@@ -1622,35 +1681,14 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
     results.push(kimiManagedBlockDoctorCheck(kimiHomeDir));
     results.push(kimiGitResidueDoctorCheck(kimiHomeDir));
     // Minimum Kimi Code version pin: the hook event/matcher payload contract
-    // the adapter translates was measured live against 0.28.1 (the floor this
-    // install was verified against). Older versions are unverified — same
-    // check-and-fail idiom as the codex arm's MIN_CODEX. A missing binary
-    // skips the comparison and reports "not installed" instead.
-    const MIN_KIMI = [0, 28, 1] as const;
+    // the adapter translates was measured live against 0.28.1. The spawn stays
+    // here; the three-way classification (not installed / unparseable / floor
+    // compare) is the pure classifyKimiCliVersionCheck seam, driven in-process.
     const kimiPath = Bun.which("kimi");
-    const kimiVer = kimiPath
-      ? Bun.spawnSync([kimiPath, "--version"], { stdout: "pipe", stderr: "ignore" })
-      : undefined;
-    const kimiVerText = (kimiVer?.stdout?.toString() ?? "").trim();
-    const kimiVerMatch = kimiVerText.match(/(\d+)\.(\d+)\.(\d+)/);
-    if (!kimiVerMatch) {
-      results.push({
-        pass: false,
-        label: "kimi CLI on PATH",
-        fix: "install Kimi Code CLI >= 0.28.1 (see docs/guide/harnesses/kimi-code.md)",
-      });
-    } else {
-      const v = [Number(kimiVerMatch[1]), Number(kimiVerMatch[2]), Number(kimiVerMatch[3])];
-      const ok =
-        v[0] > MIN_KIMI[0] ||
-        (v[0] === MIN_KIMI[0] &&
-          (v[1] > MIN_KIMI[1] || (v[1] === MIN_KIMI[1] && v[2] >= MIN_KIMI[2])));
-      results.push({
-        pass: ok,
-        label: `kimi CLI version ${kimiVerMatch[0]} >= 0.28.1 (measured hook payload contract)`,
-        fix: "upgrade Kimi Code CLI to 0.28.1 or later",
-      });
-    }
+    const kimiVerText = kimiPath
+      ? (Bun.spawnSync([kimiPath, "--version"], { stdout: "pipe", stderr: "ignore" }).stdout?.toString() ?? "").trim()
+      : "";
+    results.push(classifyKimiCliVersionCheck(kimiPath ?? undefined, kimiVerText));
     // Function probe (advisory): fire the adapter once with a no-op target and
     // an empty envelope. The adapter is fail-open by contract, so exit 0 means
     // the shim runs under bun. Any failure is reported as UNVERIFIED, never a

@@ -13,13 +13,14 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { cpSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   MANAGED_BLOCK_BEGIN,
   MANAGED_BLOCK_END,
 } from "../../packages/setup/src/domain/kimi-hooks.ts";
 import {
+  classifyKimiCliVersionCheck,
   deepFreezeDoctorSnapshot,
   type DoctorContext,
   handleDoctor,
@@ -165,6 +166,16 @@ describe("kimiManagedBlockDoctorCheck", () => {
     expect(result.label).toContain("more than one [[hooks]] table");
   });
 
+  test("a fenced marker block PLUS an outside adapter table (mixed anomaly) → loud fail", () => {
+    // Symmetry with the setup domain's detectManagedBlock: a markerless copy of
+    // the managed adapter hook alongside the fenced block is a duplicate, never
+    // a silent pass on begin/end order alone.
+    const home = kimiHomeWith(`${MARKER_BLOCK}\n${CONTENT_ONLY_BLOCK}`);
+    const result = kimiManagedBlockDoctorCheck(home);
+    expect(result.pass).toBe(false);
+    expect(result.label).toContain("both inside the marker block and in a separate [[hooks]] table");
+  });
+
   test("a config with no managed block → fail with the wiring procedure hint", () => {
     const home = kimiHomeWith('[projects."/tmp/x"]\ntrust_level = "trusted"\n');
     const result = kimiManagedBlockDoctorCheck(home);
@@ -225,6 +236,67 @@ describe("kimiGitResidueDoctorCheck (advisory)", () => {
   });
 });
 
+describe("classifyKimiCliVersionCheck (pure version-floor seam)", () => {
+  test("binary not on PATH → fail labelled 'not installed', not a parse/version fault", () => {
+    const result = classifyKimiCliVersionCheck(undefined, "");
+    expect(result.pass).toBe(false);
+    expect(result.label).toBe("kimi CLI not installed (not on PATH)");
+    expect(result.label).not.toContain("on PATH (");
+    expect(result.fix).toContain("install Kimi Code CLI");
+  });
+
+  test("on PATH but --version output not parseable → fail distinguishes the parse fault", () => {
+    const result = classifyKimiCliVersionCheck("/usr/local/bin/kimi", "kimi — unknown build");
+    expect(result.pass).toBe(false);
+    expect(result.label).toContain("kimi CLI on PATH (/usr/local/bin/kimi)");
+    expect(result.label).toContain("not parseable");
+    expect(result.fix).not.toContain("install Kimi Code CLI");
+  });
+
+  test("version below the 0.28.1 floor → fail", () => {
+    const result = classifyKimiCliVersionCheck("/usr/local/bin/kimi", "kimi 0.27.9");
+    expect(result.pass).toBe(false);
+    expect(result.label).toContain("0.28.1");
+    expect(result.fix).toContain("upgrade");
+  });
+
+  test("version at or above the floor → pass", () => {
+    expect(classifyKimiCliVersionCheck("/usr/local/bin/kimi", "kimi version 0.28.1").pass).toBe(true);
+    expect(classifyKimiCliVersionCheck("/usr/local/bin/kimi", "0.29.0").pass).toBe(true);
+    expect(classifyKimiCliVersionCheck("/usr/local/bin/kimi", "1.0.0").pass).toBe(true);
+  });
+});
+
+describe("resolveDoctorContext — KimiHome resolution matches the installer", () => {
+  test("KIMI_CODE_HOME unset, HOME unset → absolute homedir()/.kimi-code, never a relative path", () => {
+    const projectDir = setupIntegrationProject({ withState: "state-mid-ideation.md" });
+    projects.push(projectDir);
+    delete process.env.KIMI_CODE_HOME;
+    const savedHome = process.env.HOME;
+    // With HOME unset the old `process.env.HOME ?? ""` rule produced the RELATIVE
+    // ".kimi-code" (join("", ".kimi-code")); homedir() falls back to the OS
+    // passwd home, so doctor now resolves the same absolute dir the installer's
+    // resolveKimiHome uses.
+    delete process.env.HOME;
+    try {
+      const context = resolveDoctorContext(projectDir);
+      expect(context.kimiHomeDir).toBe(join(homedir(), ".kimi-code"));
+      expect(context.kimiHomeDir).not.toBe(".kimi-code");
+    } finally {
+      restoreEnv("HOME", savedHome);
+    }
+  });
+
+  test("KIMI_CODE_HOME set → wins over homedir()", () => {
+    const projectDir = setupIntegrationProject({ withState: "state-mid-ideation.md" });
+    projects.push(projectDir);
+    const explicit = root("explicit-kimi-home");
+    process.env.KIMI_CODE_HOME = explicit;
+    const context = resolveDoctorContext(projectDir);
+    expect(context.kimiHomeDir).toBe(explicit);
+  });
+});
+
 describe("handleDoctor — kimi arm wiring (real shipped .kimi-code tree)", () => {
   test("the arm rows surface: roster adapter, managed block, residue, version floor, probe", () => {
     const projectDir = setupIntegrationProject({ withState: "state-mid-ideation.md" });
@@ -240,7 +312,9 @@ describe("handleDoctor — kimi arm wiring (real shipped .kimi-code tree)", () =
     expect(result.output).toContain("amadeus-kimi-adapter.ts present");
     expect(result.output).toContain(`kimi managed block: present in ${join(kimiHome, "config.toml")}`);
     expect(result.output).toContain("kimi git pre-allows: no residue (advisory)");
-    expect(result.output).toMatch(/kimi CLI (version \d+\.\d+\.\d+ >= 0\.28\.1|on PATH)/);
+    expect(result.output).toMatch(
+      /kimi CLI (version \d+\.\d+\.\d+ >= 0\.28\.1|not installed \(not on PATH\)|on PATH \()/,
+    );
     expect(result.output).toContain("kimi hook probe: adapter fired (advisory)");
   });
 
