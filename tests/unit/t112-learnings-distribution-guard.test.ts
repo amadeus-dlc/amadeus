@@ -82,6 +82,12 @@ afterEach(() => {
  */
 function seedProject(root: string): void {
   mkdirSync(join(root, "amadeus-docs", "inception", "user-stories"), { recursive: true });
+  // The record persist's RULE_LEARNED audit emit resolves. A dir counts as one —
+  // so a shard resolves at all (#1377) — once it holds amadeus-state.md, the
+  // header-only stub production birthIntent() writes.
+  const record = join(root, "amadeus", "spaces", "default", "intents", "t112-fixture-deadbeef");
+  mkdirSync(record, { recursive: true });
+  writeFileSync(join(record, "amadeus-state.md"), "# AI-DLC State Tracking\n", "utf-8");
   mkdirSync(join(root, ".claude", "rules"), { recursive: true });
   mkdirSync(join(root, ".claude", "amadeus-common", "stages", "inception"), { recursive: true });
   mkdirSync(join(root, ".claude", "sensors"), { recursive: true });

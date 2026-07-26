@@ -51,10 +51,16 @@ afterAll(() => {
   for (const d of tempDirs) rmSync(d, { recursive: true, force: true });
 });
 
-/** Fresh temp project with an amadeus-docs/ dir. */
+/** Fresh temp project with an amadeus-docs/ dir and one resolvable record. */
 function makeProj(): string {
   const proj = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-fireharden-proj-")));
   mkdirSync(join(proj, "amadeus-docs"), { recursive: true });
+  // The record the dispatcher's audit emit resolves. A dir counts as one — so a
+  // shard resolves at all (#1377) — once it holds amadeus-state.md, the
+  // header-only stub production birthIntent() writes.
+  const record = join(proj, "amadeus", "spaces", "default", "intents", "fireharden-fixture-deadbeef");
+  mkdirSync(record, { recursive: true });
+  writeFileSync(join(record, "amadeus-state.md"), "# AI-DLC State Tracking\n", "utf-8");
   tempDirs.push(proj);
   return proj;
 }

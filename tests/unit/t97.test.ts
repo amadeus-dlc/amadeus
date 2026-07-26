@@ -72,6 +72,7 @@ import {
   readAllAuditShards,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { memoryDirFor } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
+import { DEFAULT_RECORD_DIR } from "../harness/fixtures.ts";
 
 // P6: a confirmed learning IS a practice (vision §6) — persist appends it
 // under the routed heading in the relocated method files {project,team}.md
@@ -187,13 +188,15 @@ afterEach(() => {
   tmpRoot = "";
 });
 
-// P9: with no intent cursor seeded, the tool resolves the BARE space record
-// root (docsRoot -> spaceRecordRoot) at amadeus/spaces/default/intents/. State,
-// runtime-graph, audit, and the per-stage memory all live under it (the flat
-// amadeus-docs/ root is retired — there is no fallback). mkproj seeds that tree;
-// the runtime-graph memory_path is the record-relative path the tool resolves
-// via join(projectDir, memRel).
-const RECORD_REL = join("amadeus", "spaces", "default", "intents");
+// P9: the tool resolves the per-intent RECORD dir. State, runtime-graph, audit,
+// and the per-stage memory all live under it (the flat amadeus-docs/ root is
+// retired — there is no fallback). mkproj seeds that tree; the runtime-graph
+// memory_path is the record-relative path the tool resolves via
+// join(projectDir, memRel). The record is a dir UNDER intents/, never the bare
+// intents root: auditFilePath() refuses to resolve a shard when no intent
+// resolves (#1377), and a lone record needs no active-intent cursor.
+const RECORD_REL = join("amadeus", "spaces", "default", "intents", DEFAULT_RECORD_DIR);
+const RECORD_REL_POSIX = `amadeus/spaces/default/intents/${DEFAULT_RECORD_DIR}`;
 function recordRoot(pd: string): string {
   return join(pd, RECORD_REL);
 }
@@ -219,7 +222,7 @@ function mkproj(name: string): string {
   writeFileSync(
     join(recordRoot(pd), "runtime-graph.json"),
     `{ "workflow_id": "w1", "scope": "feature", "started_at": "2026-05-28T13:00:00Z",
-  "stages": [ { "stage_slug": "user-stories", "memory_path": "amadeus/spaces/default/intents/inception/user-stories/memory.md" } ] }
+  "stages": [ { "stage_slug": "user-stories", "memory_path": "${RECORD_REL_POSIX}/inception/user-stories/memory.md" } ] }
 `,
     "utf-8",
   );

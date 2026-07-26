@@ -52,17 +52,19 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { toPortablePath } from "../harness/fixtures.ts";
+import { DEFAULT_RECORD_DIR, toPortablePath } from "../harness/fixtures.ts";
 import {
   auditFilePath,
   readAllAuditShards,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
-// P9: with no intent cursor seeded, the compile tool resolves the BARE space
-// record root (docsRoot -> spaceRecordRoot) at amadeus/spaces/default/intents/.
-// State, runtime-graph, per-stage memory, and the per-clone audit SHARD all
-// live under it (the flat amadeus-docs/ root is retired — there is no fallback).
-const RECORD_REL = join("amadeus", "spaces", "default", "intents");
+// P9: the compile tool resolves the per-intent RECORD dir. State, runtime-graph,
+// per-stage memory, and the per-clone audit SHARD all live under it (the flat
+// amadeus-docs/ root is retired — there is no fallback). The record is a dir
+// UNDER intents/, never the bare intents root itself: nothing lives directly
+// there, and auditFilePath() refuses to resolve a shard when no intent resolves
+// (#1377). A lone record resolves with no active-intent cursor.
+const RECORD_REL = join("amadeus", "spaces", "default", "intents", DEFAULT_RECORD_DIR);
 function recordRoot(proj: string): string {
   return join(proj, RECORD_REL);
 }
@@ -117,13 +119,17 @@ function makeProject(audit: string, state: string): string {
   const proj = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t90-")));
   tempDirs.push(proj);
   mkdirSync(recordRoot(proj), { recursive: true });
+  // State FIRST: a dir only counts as a record once it holds amadeus-state.md,
+  // and auditFilePath() resolves nothing (and refuses) until one does — the same
+  // order production birthIntent() uses, writing its state stub before any audit
+  // write.
+  writeFileSync(join(recordRoot(proj), "amadeus-state.md"), state, "utf-8");
   // Seed the DETERMINISTIC audit shard the compile tool resolves
-  // (auditFilePath -> the bare space record root's audit/<host>-<clone>.md) so
-  // its readAllAuditShards() merge sees this trail.
+  // (auditFilePath -> the record's audit/<host>-<clone>.md) so its
+  // readAllAuditShards() merge sees this trail.
   const shard = auditFilePath(proj);
   mkdirSync(dirname(shard), { recursive: true });
   writeFileSync(shard, audit, "utf-8");
-  writeFileSync(join(recordRoot(proj), "amadeus-state.md"), state, "utf-8");
   return proj;
 }
 

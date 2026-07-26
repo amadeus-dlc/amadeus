@@ -164,6 +164,16 @@ export const PHASE_NUMBERS: Record<string, Phase> = {
   "4": "operation",
 };
 
+// Canonicalise a phase name or number to its lowercase phase name, or null.
+// Object.hasOwn gates the PHASE_NUMBERS lookup so prototype-chain members
+// (`constructor`, `__proto__`) fall on the null path (#744). Lifted from the
+// three per-tool copies (#833).
+export function ownPhase(input: string): string | null {
+  const lower = input.toLowerCase();
+  if (Object.hasOwn(PHASE_NUMBERS, lower)) return PHASE_NUMBERS[lower];
+  return (PHASES as readonly string[]).includes(lower) ? lower : null;
+}
+
 // Compatibility facade: callers keep importing these established symbols from
 // amadeus-lib while their implementation remains isolated in amadeus-harness.
 export const HARNESS_DIR_TO_TYPE = CANONICAL_HARNESS_DIR_TO_TYPE;
@@ -181,6 +191,24 @@ export function detectHarnessType(): import("./amadeus-harness.ts").HarnessType 
 }
 
 // --- Project dir resolution ---
+
+// Strip every `--project-dir <path>` pair from an argv slice, returning the
+// last value seen and the remaining args. Shared CLI contract for sibling tools
+// that amadeus-bolt.ts's spawnSibling invokes as
+//   bun run <tool> --project-dir <pd> <subcommand> ...
+export function stripProjectDir(argv: string[]): { projectDirArg?: string; rest: string[] } {
+  let projectDirArg: string | undefined;
+  const rest: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === "--project-dir" && i + 1 < argv.length) {
+      projectDirArg = argv[i + 1];
+      i++;
+    } else {
+      rest.push(argv[i]);
+    }
+  }
+  return { projectDirArg, rest };
+}
 
 export function resolveProjectDir(explicitDir?: string): string {
   // 1. Explicit --project-dir argument
@@ -1374,6 +1402,18 @@ export function relativeRecordDir(
   if (slug === null) return null;
   return `amadeus/spaces/${sp}/intents/${slug}`;
 }
+
+// The KNOWN SET of stages whose artifacts live in the durable, space-level
+// code knowledge base (`amadeus/spaces/<space>/codekb/<repo>/`) rather than under
+// a per-intent record dir. Keyed on the slug ALONE — deliberately NOT a stage
+// frontmatter marker: amadeus-stage-schema.ts OPTIONAL_FIELDS omits `codekb`, so a
+// `codekb: true` field would trip the schema's unknown-key rule and fail the
+// stage compile. reverse-engineering is the sole member today (it builds the
+// brownfield code understanding the whole space reuses); a future codekb stage
+// joins by adding its slug here, no schema change. Single source of truth for
+// amadeus-orchestrate (artifact placement), amadeus-state (artifact guard), and
+// amadeus-sensor (consumes resolution).
+export const KNOWN_CODEKB_STAGES: ReadonlySet<string> = new Set(["reverse-engineering"]);
 
 // `amadeus/spaces/<space>/codekb/<repo>/` — the durable per-repo code
 // knowledge base, a space-level sibling of memory/knowledge/intents (vision
@@ -3317,16 +3357,34 @@ export function stateFilePath(projectDir: string, intent?: string, space?: strin
   return join(dir, "amadeus-state.md");
 }
 
+// The remedy half of auditFilePath()'s no-intent refusal below. Module scope
+// keeps it one executed line instead of continuation lines a coverage merge can
+// leave unstamped.
+const NO_INTENT_AUDIT_REMEDY =
+  'Audit events must land in an intent\'s record. Start a workflow (/amadeus "build the auth service"), select one (/amadeus intent <name>) when several exist, or pass --intent explicitly.';
+
 // Per-clone audit SHARD path: `…/intents/<slug>-<id8>/audit/<host>-<clone>.md`.
 // The audit trail is committed (vision §5.1) but each clone writes its OWN
 // shard so git never merge-conflicts concurrent appends (merge=union was proven
 // to corrupt the multi-line blocks). Readers glob `audit/*.md` and merge-sort by
-// timestamp — see auditShards()/readAllAuditShards(). With no intent resolved the
-// shard lands under the bare space record root (no flat audit.md any more).
+// timestamp — see auditShards()/readAllAuditShards().
+//
+// FAIL-CLOSED when no intent resolves (#1377). The former fallback returned the
+// bare space record root's `audit/`, and the writer (amadeus-audit.ts
+// ensureAuditFile) mkdir -p'd it unconditionally — so an emitter that threads no
+// --intent on a cursor-less clone (a fresh worktree; a >1-intent workspace)
+// silently dropped a shard DIRECTLY into `intents/audit/`, breaking the "no
+// amadeus-state.md / no audit/ ever lives directly in the bare intents root"
+// invariant and orphaning the events from the intent they belong to. Symmetric
+// with auditShardDir(), which already refuses (returns null) in the same case;
+// here the return type is a plain path, so the refusal is a throw — loud, before
+// any disk side-effect. Callers on a resolved workflow are unaffected; callers
+// that probe opportunistically (e.g. the Stop hook's progress signature) already
+// guard with try/catch.
 export function auditFilePath(projectDir: string, intent?: string, space?: string): string {
-  const dir = recordDir(projectDir, intent, space);
-  if (dir === null) return join(spaceRecordRoot(projectDir, space), "audit", auditShardName(projectDir));
-  return join(dir, "audit", auditShardName(projectDir));
+  const dir = auditShardDir(projectDir, intent, space);
+  if (dir === null) throw new Error(`No intent resolved — refusing to write an audit shard into the bare intents root (${spaceRecordRoot(projectDir, space)}). ${NO_INTENT_AUDIT_REMEDY}`);
+  return join(dir, auditShardName(projectDir));
 }
 
 // The clone-id token file: `amadeus/.amadeus-clone-id`. Workspace-level,
