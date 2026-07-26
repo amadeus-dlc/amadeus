@@ -5,6 +5,10 @@
 // real zero-plugin compile and a fixed 100-plugin treatment in one process.
 // The capacity case compiles 1,000 stages whose aggregate fixture stays below
 // 64 MiB. Both use two warm-ups followed by ten measured runs.
+//
+// The verdict itself lives in tests/lib/plugin-discovery-overhead-gate.ts so it
+// can be driven from recorded samples instead of only whatever the host emits
+// today; see that file for how the noise floor was derived from #1525.
 
 import { afterAll, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
@@ -17,6 +21,12 @@ import {
   __resetGraphCache,
   main,
 } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
+import {
+  DISCOVERY_OVERHEAD_NOISE_FLOOR_MS,
+  DISCOVERY_OVERHEAD_RATIO_LIMIT,
+  exceedsDiscoveryOverhead,
+  median,
+} from "../lib/plugin-discovery-overhead-gate.ts";
 
 const STAGE_BYTES = 4 * 1024;
 const WARM_UP_RUNS = 2;
@@ -145,11 +155,6 @@ async function compileOnce(root: string): Promise<{ elapsedMs: number; stageCoun
   };
 }
 
-function median(values: readonly number[]): number {
-  const sorted = [...values].sort((a, b) => a - b);
-  return (sorted[4] + sorted[5]) / 2;
-}
-
 afterAll(() => {
   if (originalPluginRoot === undefined) delete process.env.AMADEUS_PLUGINS_HOST_ROOT;
   else process.env.AMADEUS_PLUGINS_HOST_ROOT = originalPluginRoot;
@@ -162,7 +167,7 @@ afterAll(() => {
 });
 
 describe("plugin stage discovery performance (U2)", () => {
-  test("100 plugins add no more than 20% to the zero-plugin median", async () => {
+  test("100 plugins stay inside the zero-plugin overhead gate", async () => {
     const baseline = pluginHost(0, 0);
     const treatment = pluginHost(100, 1);
 
@@ -179,7 +184,8 @@ describe("plugin stage discovery performance (U2)", () => {
     }
     const baselineMedianMs = median(baselineRuns.map((run) => run.elapsedMs));
     const treatmentMedianMs = median(treatmentRuns.map((run) => run.elapsedMs));
-    const additionalRatio = (treatmentMedianMs - baselineMedianMs) / baselineMedianMs;
+    const additionalMs = treatmentMedianMs - baselineMedianMs;
+    const additionalRatio = additionalMs / baselineMedianMs;
 
     console.log(JSON.stringify({
       schema: "amadeus.plugin-discovery-benchmark.v1",
@@ -197,13 +203,16 @@ describe("plugin stage discovery performance (U2)", () => {
       baselineMedianMs,
       treatmentMedianMs,
       additionalRatio,
+      additionalMs,
+      ratioLimit: DISCOVERY_OVERHEAD_RATIO_LIMIT,
+      noiseFloorMs: DISCOVERY_OVERHEAD_NOISE_FLOOR_MS,
       discoveredStages: treatmentRuns[0].stageCount - baselineRuns[0].stageCount,
       outputHash: treatmentRuns[0].outputHash,
     }));
 
     expect(treatmentRuns.every((run) => run.elapsedMs < COMPILE_LIMIT_MS)).toBe(true);
     expect(treatmentRuns[0].stageCount - baselineRuns[0].stageCount).toBe(100);
-    expect(additionalRatio).toBeLessThanOrEqual(0.2);
+    expect(exceedsDiscoveryOverhead(baselineMedianMs, treatmentMedianMs)).toBe(false);
   });
 
   test("1,000 stages stay below 64 MiB and every measured compile stays below 10 seconds", async () => {
