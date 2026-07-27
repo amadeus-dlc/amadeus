@@ -287,24 +287,55 @@ export function renderMirrorStatus(context: MirrorStatusContext): string {
   ].join("\n");
 }
 
+// The Project face of the operation being asked about, folded into the existing
+// per-operation binding rather than a second question: how many boards this one
+// approval would touch, and which column it would write (empty when it writes
+// none). Absent means the invocation syncs no board at all and the prompt says
+// nothing about Projects.
+export type MirrorPromptProjects = Readonly<{
+  count: number;
+  statusNames: readonly string[];
+}>;
+
 export type MirrorPromptInput = Readonly<{
   operation: MirrorOperation;
   event: MirrorEventIdentity;
   intentDir: string;
   repository: string;
   issueNumber: number | null;
+  projects?: MirrorPromptProjects;
 }>;
+
+function projectLine(
+  operation: MirrorOperation,
+  projects: MirrorPromptProjects,
+): string {
+  const boards =
+    operation === "create"
+      ? `${projects.count} board(s) to join`
+      : `${projects.count} board(s)`;
+  const status =
+    projects.statusNames.length === 0
+      ? "left unchanged"
+      : projects.statusNames.map((name) => `"${oneLine(name)}"`).join(" / ");
+  return `Projects: ${boards}; Status: ${status}`;
+}
 
 export function renderMirrorPrompt(input: MirrorPromptInput): string {
   if (!MIRROR_USER_CONTRACT.operations.includes(input.operation))
     throw new Error("unsupported Mirror operation");
   const issue =
     input.issueNumber === null ? "not linked" : `#${input.issueNumber}`;
+  const projects =
+    input.projects !== undefined && input.projects.count > 0
+      ? [projectLine(input.operation, input.projects)]
+      : [];
   return [
     `Mirror operation: ${input.operation}`,
     `Intent: ${oneLine(input.intentDir)}`,
     `Repository: ${oneLine(input.repository)}`,
     `Issue: ${issue}`,
+    ...projects,
     `Boundary: ${input.event.boundary.kind}:${oneLine(input.event.boundary.instance)}`,
     "Approve to run this one guarded operation.",
     "Skip to suppress only this event; later eligible events may ask again.",
