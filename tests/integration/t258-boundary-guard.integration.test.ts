@@ -77,6 +77,10 @@ const RAW_ALLOWLIST = [
   },
   { id: "team-session-launcher-script", fileGlob: "**", pattern: "scripts/team-up\\.sh" },
   { id: "forbid-lint-tool", fileGlob: "**", pattern: "scripts/forbid" },
+  // U7 conformance suite: the upstream-sync skill's report-section builder
+  // (scripts/conformance-report.ts) is referenced from the skill's
+  // artifact-contracts reference doc across the tracked distribution trees.
+  { id: "conformance-report-tooling", fileGlob: "**", pattern: "scripts/conformance-report\\.ts" },
   // bare `scripts/` (directory mentions in prose/comments/lint globs): `scripts/`
   // NOT immediately followed by a filename character.
   { id: "bare-scripts-directory-mention", fileGlob: "**", pattern: "scripts/(?![A-Za-z0-9])" },
