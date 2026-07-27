@@ -1,6 +1,43 @@
 # アーキテクチャ
 
-## plugin discovery 入力と compose 出力の分離モデル（260727-install-doc-mismatch、現在、差分リフレッシュ、Issue #1569）
+## plugin 面の現行アーキテクチャと 4 Issue の欠陥所在（260727-e2e-plugin-conformance、現在、差分リフレッシュ、observed `0c4709102`）
+
+260727-e2e-plugin-conformance 差分リフレッシュ（2026-07-27、observed `0c4709102cfa1d13e5aca6b49c65f31a903d72f2`、base `1673c433209c74820881c75a0816bbce3fb2d512`（`git merge-base --is-ancestor` **exit 0 = 祖先**）、距離 **60**、区間 `git diff --shortstat` = **1830 files changed, 316726 insertions(+), 7366 deletions(-)**）。上流入力: Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`（全文読了）。Architect 段で核心の file:line を observed `0c4709102` に対して独立再実測し **訂正 0 件**（`amadeus-plugin.ts:277`/`:377`/`:534-536`/`:591-593`、`amadeus-plugin-compose.ts:1150`/`:1154`、`promote-self.ts:184`、`plugin-projection.ts:42`/`:56`、`amadeus-orchestrate.ts:913`/`:1017-1019`/`:2289`、`amadeus-graph.ts:2011-2013`、`t299:94-97`/`:206`、`run-tests.ts:125-126`、`ci.yml:163`、行数 613/1469/295/23 をいずれも直読一致）。
+
+区間の大半は (a) intent record 639 (b) Kimi ハーネス着地（`dist/kimi` 301 + `.kimi-code` 296）(c) 全ハーネス dist 再生成であり、plugin 面の実装は `f8fe817c5`（#1554 walking skeleton）/ `a03944748`（#1568 全 7 面追従）/ `0e21b7c08`（#1569 INSTALL.md 整合）で着地した（面別内訳・コミット列はいずれも `git diff --name-only` / `git log --oneline` 出力の転記、測定 ref: observed `0c4709102`）。
+
+### 現行 plugin アーキテクチャ（projection → 配布 → discovery → compose → graph → orchestrate）
+
+正本モジュールは `packages/framework/core/tools/` の 3 本（測定 ref: observed `0c4709102`、`wc -l` 実測）:
+
+| モジュール | 行数 | 役割 |
+| --- | --- | --- |
+| `amadeus-plugin.ts` | 613 | ハーネス中立 CLI（compose / doctor / drop / status）+ 統合 doctor への投影 |
+| `amadeus-plugin-compose.ts` | 1469 | 合成エンジン（plan / apply / drop / journal / backend / DropsRecord） |
+| `amadeus-plugin-activation.ts` | 295 | activation policy（spec-hash advisory。TLC は起動しない） |
+
+配線は次の一方向連鎖である。
+
+1. **projection（パッケージャ側）**: `scripts/plugin-projection.ts` が authoring source `plugins/<name>/` から中立バンドル `dist/plugins/<name>/`（`plugin.json` / `README.md` / `stages/<slug>.md`）と **7 面の install バンドル**を生成する。7 面 install バンドルの実体は各 `<face>/INSTALL.md` 1 枚（`find dist/plugins -maxdepth 3 -type f` 実測 = claude / codex / cursor / kimi / kiro / kiro-ide / opencode の 7 枚 + 中立 3 ファイル）。`PACKAGE_HARNESSES`（7）の実消費点はここ。
+2. **discovery 入力**: ホストの staging root は `amadeus-plugin.ts:277` `export const PLUGIN_SOURCE_DIR_NAME = ".amadeus-plugin-src";`。ユーザーはここへプラグインを置く（前 intent `260727-install-doc-mismatch` で INSTALL.md/docs の案内先をこの定数へ整合済み）。
+3. **CLI**: `amadeus-plugin.ts` の 4 動詞。dispatch は `:569-577`、レンダリングは `renderPluginCliResult`（`:580-606`）、in-process エントリは `handlePluginCli(argv, deps)`（`:610-612`）、`:613` が `import.meta.main` 実行。post-apply の recompile は `spawnSync("bun", [amadeus-runtime.ts, "compile"], { cwd: projectRoot })`。
+4. **ホストスナップショット**: `buildHostSnapshot`（`:204-223`）は **ファイルのみ**を `paths`/`files` へ入れ、ディレクトリはスナップショットの語彙に存在しない（`:210-213` でディレクトリは `walk(abs); continue;`）。合成領域 `plugins/` は含み、staging の dot-dir は `isEngineDotfile`（`:191-193`）で除外される。
+5. **graph discovery**: `amadeus-graph.ts:2011-2013` `discoverPluginStageFiles(hostRoot)` → `readPluginStageFiles`。ホストルートは `pluginsHostRoot()`（`:2015-2023`、`AMADEUS_PLUGINS_HOST_ROOT` がテストシーム）。
+6. **orchestrate 消費**: composition record は `amadeus-orchestrate.ts:913` `join(hostRoot, ".amadeus-plugin-composition.json")` を読み、trust 検証（`:924-926`）で `grant.plugin` 一致と `plugins/<plugin>/stages/` 前置を要求する。`emitComposedPluginStageIfInstalled`（`:1017-1034`、呼び出し `:2289`）が **`--single` なしで compose 済み plugin stage へ到達する経路**を実装する（設計コメント `:1017-1021` verbatim「a compose-installed plugin stage is reachable via `--stage <slug>` WITHOUT `--single`」）。
+7. **SessionStart auto-compose hook**: 正本 `packages/framework/core/hooks/amadeus-plugin-compose.ts`（**23 行**、`wc -l` 実測）は `handlePluginCli(["compose", "--if-stale", "--project-root", projectDir])` を呼ぶだけの薄いラッパで合成ロジックを再実装しない。配布面の登録は `dist/claude/.claude/settings.json.example:34-46` の SessionStart 配列（`amadeus-session-start.ts` に続く 2 本目、実読確認）。**出荷面の保証は「設定例に配線が書かれている」ところまで**であり、出荷 dist を導入したホストで実発火して compose→recompile まで到達することは自動検証されていない。
+
+### 4 Issue の欠陥所在（確定、測定 ref: observed `0c4709102`）
+
+- **#1575 — 同名 export `PACKAGE_HARNESSES` の値衝突**: `scripts/promote-self.ts:184` が 5 値（`["claude","codex","cursor","opencode","kimi"]`）、`scripts/plugin-projection.ts:42-50` が 7 値で **同名 export を二重定義**している。値差の正体は「2 つの真実」ではなく **promote-self 側が誤った名前を使っていること** — 5 値集合の canonical は `plugin-projection.ts:56` `SELF_INSTALL_HARNESSES` であり、その直上コメント `:53-55` が verbatim で「the five faces promote-self.ts reflects into the project root. Intentionally NOT the seven package faces」と明言する。canonical-1定義原則（construction.md § Code Completeness）違反。
+- **#1585 — standalone doctor が 0-plugin ホストで無出力**: `amadeus-plugin.ts:591-593` の `case "doctor"` が `result.lines` を直接ループするため、0-plugin では **exit 0 / stdout 0 バイト / stderr 空**（scratch 実行の決定的再現、scan-notes §4.1）。0 件 degrade を持つ純関数 `doctorPluginRows`（`:534-536` `if (section.lines.length === 0) return [{ pass: true, label: "Plugins: 0 installed" }];`）を **standalone 経路が一切通らない**一方、統合 doctor は `amadeus-utility.ts:2890` でこれを通る。**同一契約に対する 2 つのレンダラの非対称**（cid:code-generation:c1-drift-canonical-renderer と同族）。なお `status` 動詞は 0-plugin でも出力する（`:594-596`）— doctor だけが黙る。
+- **#1586 — drop 後の `plugins/<name>/stages/` 空ディレクトリ残存**: `amadeus-plugin-compose.ts:1150` の `writeHost` が `mkdirSync(dirname(abs(p)), { recursive: true })` で親ディレクトリを再帰生成する一方、`:1154` の `removeHost` は `rmSync(abs(p))` で **ファイルのみ**削除し親を剪定しない（`mkdir(recursive)` ⇔ `rm(file only)` の非対称対、cid:requirements-analysis:symmetric-pair-review クラス）。剪定の機会が上位にも無い — `planPluginDrop`（`:703-730`）の `removals` は `record.ownedPaths`（ファイルパス集合）由来、`buildHostSnapshot`（`amadeus-plugin.ts:204-223`）もディレクトリを持たないため、計画層・検証層のどこにもディレクトリ語彙がない。さらに `baselineRestored`（`amadeus-plugin.ts:377` `backend.readComposition().plugins.size === 0`）は **composition record のみを根拠**とし FS 残渣を見ないため、CLI は残渣があっても `(baseline restored)` と宣言する（偽の成功宣言）。scratch 再現では `plugins/`, `plugins/<name>/`, `plugins/<name>/stages/` の 3 階層が残った（scan-notes §5.1）。
+- **#1589 — plugin の e2e 検証面が不在**: 欠陥は「所在」ではなく**不在**。`git ls-files tests/ | grep -c plugin` = **24**（全て unit / integration / fixtures）、`git ls-files tests/e2e/ | grep -c plugin` = **0**。区間で tests/e2e/ が変更されたのは `t-print-kimi-doctor.serial.test.ts` / `t-print-kimi-status.serial.test.ts` の 2 ファイルのみで、#1554/#1568 の plugin 二大着地は **e2e 層に一切テストを追加していない**。詳細な盲点構造は `code-quality-assessment.md` の同 intent 節。
+
+### 本 intent の含意（アーキテクチャ観点）
+
+#1585 / #1586 はいずれも `packages/framework/core/tools/` の変更となるため、**7 ハーネス dist の再生成が必須**（cid:build-and-test:bt-dist-regen-seven-harnesses）。#1575 は `scripts/` のみ。#1586 の修正は「除去側を対称化する」か「`baselineRestored` の判定基準を FS 実測へ寄せる」かの設計判断を要し、`.amadeus-plugin-drops.json` 等のエンジン dot-state を baseline 復元の境界に含めるか否かを要件で明示しないとスコープが発散する。
+
+## plugin discovery 入力と compose 出力の分離モデル（260727-install-doc-mismatch、履歴 2026-07-27、差分リフレッシュ、Issue #1569）
 
 260727-install-doc-mismatch 差分リフレッシュ（2026-07-27、observed `46a75f2e7c53aaa475a19cc217d10c9172ad4129`、base `0d83aa48b`、距離 70）。上流入力: Developer スキャン結果（実測済みスキャンノート）。本区間はほぼ全体が前 intent `260726-plugin-host-delivery` の Construction であり、plugin ホスト配信のアーキテクチャ（U2–U8）が実着地した断面である。
 

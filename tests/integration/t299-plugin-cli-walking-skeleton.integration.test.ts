@@ -192,7 +192,8 @@ describe("t299 plugin CLI walking skeleton (U2)", () => {
     expect(out.some((l) => l.includes("1 installed, 1 composed"))).toBe(true);
     out.length = 0;
     expect(handlePluginCli(["doctor", "--project-root", host], deps())).toBe(0);
-    expect(out.some((l) => l.includes(`${PLUGIN} [ok]`))).toBe(true);
+    // Canonical renderer wording (shared with the integrated doctor, #1585).
+    expect(out.some((l) => l.includes(`Plugin ${PLUGIN}: composed@`) && l.includes("[ok]"))).toBe(true);
   });
 
   // BR-U2-6: the auto-compose path is verified by REALLY starting the CLI as the

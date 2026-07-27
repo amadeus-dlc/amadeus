@@ -105,9 +105,13 @@ so on): `bun <harness-dir>/tools/amadeus-plugin.ts <verb>`. The verbs are:
 | `drop <plugin-name> [--project-root <dir>]` | Remove one plugin's owned files and rebuild the shared files from the remaining plugins. | `0` on success; `1` on a rejected or failed drop |
 | `status [--project-root <dir>]` | Print counts: installed, composed, and the audit revision. | `0` |
 
-`--project-root <dir>` targets a workspace other than the current directory — it
-is how you compose into a host that is not where the CLI lives (the `kiro` and
-`kiro-ide` faces, which are packaged but never self-installed, always need it).
+With no `--project-root`, the host root is the **harness directory the CLI itself
+is installed in** — `bun .codex/tools/amadeus-plugin.ts compose` composes into
+`.codex/` from anywhere. That is the same root the engine reads composed plugin
+stages back from, so install, compose, and discovery cannot drift apart.
+`--project-root <dir>` overrides it to target another host — it is how you compose
+into a host that is not where the CLI lives (the `kiro` and `kiro-ide` faces,
+which are packaged but never self-installed, always need it).
 
 Argument handling is fail-closed and happens **before** any mutation: an unknown
 verb, an unknown flag, or a surplus argument prints usage on stderr and exits `2`
@@ -180,8 +184,10 @@ class:
 - **`native-manifest`** (`claude`) — install through the host plugin marketplace
   using `.claude-plugin/plugin.json`; auto-compose runs from `hooks/hooks.json`.
 - **`folder-drop-auto`** (`codex`, `cursor`, `kimi`, `kiro`, `kiro-ide`) — copy the
-  bundle's `plugins/<name>/` into `.amadeus-plugin-src/<name>/` at your project root
-  (the directory `compose` scans); auto-compose is wired from
+  bundle's `plugins/<name>/` into `<harness-dir>/.amadeus-plugin-src/<name>/` under
+  your project root (`.codex/.amadeus-plugin-src/<name>/` for Codex, and so on) —
+  the harness-rooted directory `compose` scans, which is also the root the engine
+  reads composed plugin stages back from; auto-compose is wired from
   `hooks/auto-compose.snippet`.
 - **`manual-only`** (`opencode`) — copy the folder; there is no session hook, so
   run `compose` after install and after every plugin change.
@@ -213,6 +219,13 @@ These guarantees are user-visible and hold for every compose and drop:
 - **Record-owned drop.** A drop removes only what the composition record attributes
   to the plugin. If a shared file has drifted from the recorded composition, the
   drop is rejected rather than guessing — your edits are never silently discarded.
+- **Filesystem baseline restore.** A drop also prunes the directories the compose
+  created for the plugin once they are empty (`plugins/<name>/stages/` and its
+  parents), so the host tree returns to its pre-compose structure. A directory
+  that still holds anything is left untouched. The engine's dot-state at the
+  harness root — including `.amadeus-plugin-drops.json` — is audit data, not host
+  surface: it may survive a drop and its presence never denies a restored
+  baseline.
 
 ---
 
