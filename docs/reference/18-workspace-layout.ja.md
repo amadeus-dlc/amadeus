@@ -102,7 +102,7 @@ framework 側を `packages/framework/{core,harness,dist,scripts}` へすべて�
 ### ネガティブ
 
 - root `core` / `harness` の alias は移行期の互換サーフェスであり、第二の source of truth になってはなりません。
-- 一部の docs/tests はまだ root `core/` と `harness/` に言及します。これは互換 alias として有効ですが、source of truth を説明する文脈では段階的に `packages/framework/` 表記へ更新します。
+- 一部の docs/tests はまだ root `core/` と `harness/` に言及します。ディスク上に互換 alias は存在しない(root `core/`・`harness/` ディレクトリは無い)ため、これらは陳腐化した散文参照です。source of truth を説明する文脈では段階的に `packages/framework/` 表記へ更新します。
 - `scripts/` や `dist/` の完全な relocation は、将来望む場合でも専用の migration intent を依然として必要とします。
 
 ## 将来の移行トリガー
