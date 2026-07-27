@@ -213,6 +213,13 @@ These guarantees are user-visible and hold for every compose and drop:
 - **Record-owned drop.** A drop removes only what the composition record attributes
   to the plugin. If a shared file has drifted from the recorded composition, the
   drop is rejected rather than guessing — your edits are never silently discarded.
+- **Filesystem baseline restore.** A drop also prunes the directories the compose
+  created for the plugin once they are empty (`plugins/<name>/stages/` and its
+  parents), so the host tree returns to its pre-compose structure. A directory
+  that still holds anything is left untouched. The engine's dot-state at the
+  project root — including `.amadeus-plugin-drops.json` — is audit data, not host
+  surface: it may survive a drop and its presence never denies a restored
+  baseline.
 
 ---
 

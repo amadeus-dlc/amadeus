@@ -48,6 +48,7 @@ import {
   type PluginDescriptor,
   type PluginManifest,
   type PluginDiagnostic,
+  type PluginRecord,
   SEAM_NAMES,
   type SeamName,
   type StageSeams,
@@ -85,7 +86,7 @@ export type PluginCliResult =
   | { kind: "composed"; applied: number; recompiled: true }
   | { kind: "noop"; reason: "record-current" }
   | { kind: "dropped"; plugin: string; baselineRestored: boolean; recompiled: true }
-  | { kind: "doctor"; lines: readonly DoctorLine[]; degraded: boolean }
+  | { kind: "doctor"; section: DoctorPluginSection; degraded: boolean }
   | { kind: "status"; installed: number; composed: number; revision: number }
   | { kind: "usage-error"; message: string }
   | { kind: "failure"; stage: "discover" | "trust" | "plan" | "apply" | "recover"; message: string };
@@ -374,34 +375,54 @@ function handleDrop(cmd: Extract<PluginCliCommand, { kind: "drop" }>, deps: Plug
   if (!deps.recompile(hostRoot)) {
     return { kind: "failure", stage: "apply", message: "recompile failed after drop" };
   }
-  const baselineRestored = backend.readComposition().plugins.size === 0;
+  const baselineRestored = backend.readComposition().plugins.size === 0 && pluginArtifactsAbsent(hostRoot, record);
   return { kind: "dropped", plugin: cmd.name, baselineRestored, recompiled: true };
 }
 
-// Exhaustive over PluginDiagnostic["status"] (the three engine statuses), so no
-// unreachable default branch: the compiler proves the map total.
-const DOCTOR_STATE_OF: Record<PluginDiagnostic["status"], DoctorLineState> = {
-  composed: "ok",
-  drift: "drift",
-  "recovery-pending": "recovery-pending",
-};
-
-function diagStateOf(status: PluginDiagnostic["status"]): DoctorLineState {
-  return DOCTOR_STATE_OF[status];
+// FS-measured restore (#1586): the record no longer carries the plugin AND the
+// filesystem agrees — every owned path is gone and none of the directories that
+// carried them survives as an empty shell. A directory that still holds content
+// is NOT a restore failure (it carries something the plugin does not own), and
+// the .amadeus-plugin-drops.json audit file is deliberately out of scope: it is
+// engine dot-state, not host surface, and its survival never denies restore.
+function pluginArtifactsAbsent(hostRoot: string, record: PluginRecord): boolean {
+  for (const p of record.ownedPaths) {
+    const abs = join(hostRoot, p);
+    if (existsSync(abs)) return false;
+    if (hasEmptyAncestorDir(hostRoot, abs)) return false;
+  }
+  return true;
 }
 
+// True when any directory between `abs` and the host root still exists and is
+// empty — the observable residue of the mkdir⇔rm asymmetry.
+function hasEmptyAncestorDir(hostRoot: string, abs: string): boolean {
+  const stopAt = `${hostRoot}${sep}`;
+  let dir = dirname(abs);
+  while (dir !== hostRoot && dir.startsWith(stopAt)) {
+    if (existsSync(dir) && readdirSync(dir).length === 0) return true;
+    dir = dirname(dir);
+  }
+  return false;
+}
+
+// The standalone `doctor` verb projects the SAME observation the integrated
+// `/amadeus --doctor` reads and hands it to the SAME pure projection + renderer
+// (buildDoctorPluginSection → doctorPluginRows). One vocabulary, one 0-plugin
+// degrade: a pristine host reports "Plugins: 0 installed" here too (#1585).
 function handleDoctor(cmd: Extract<PluginCliCommand, { kind: "doctor" }>, deps: PluginCliDeps): PluginCliResult {
   const hostRoot = resolveProjectRoot(cmd);
   const backend = deps.makeBackend(hostRoot);
   const host = deps.buildHostSnapshot(hostRoot, backend);
   const journalPending = backend.readJournal() !== undefined;
-  const lines = deps.diagnosePlugins(host, journalPending).map((d): DoctorLine => ({
-    plugin: d.plugin,
-    state: diagStateOf(d.status),
-    detail: d.observations.join("; "),
-  }));
-  const degraded = lines.some((l) => l.state === "degraded" || l.state === "recovery-pending" || l.state === "unknown");
-  return { kind: "doctor", lines, degraded };
+  const section = buildDoctorPluginSection({
+    diagnostics: deps.diagnosePlugins(host, journalPending),
+    drops: readDropsRecord(hostRoot),
+    revision: backend.auditCount(),
+    activation: null,
+  });
+  const degraded = section.lines.some((l) => isFailingPluginState(l.state));
+  return { kind: "doctor", section, degraded };
 }
 
 function handleStatus(cmd: Extract<PluginCliCommand, { kind: "status" }>, deps: PluginCliDeps): PluginCliResult {
@@ -589,7 +610,7 @@ export function renderPluginCliResult(result: PluginCliResult, deps: PluginCliDe
       deps.out(`dropped ${result.plugin}${result.baselineRestored ? " (baseline restored)" : ""}, recompiled`);
       return 0;
     case "doctor":
-      for (const l of result.lines) deps.out(`  - ${l.plugin} [${l.state}]${l.detail ? `: ${l.detail}` : ""}`);
+      for (const row of doctorPluginRows(result.section)) deps.out(`  - ${row.label}`);
       return result.degraded ? 1 : 0;
     case "status":
       deps.out(`Plugins: ${result.installed} installed, ${result.composed} composed, revision ${result.revision}`);
