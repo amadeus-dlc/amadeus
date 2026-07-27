@@ -57,6 +57,7 @@ import { DistributionTransactionCoordinator } from "./distribution-transaction.t
 import { renderOnboarding } from "./onboarding.ts";
 import { substituteToken, transform } from "./harness-transform.ts";
 import {
+  assertInstallOutDirsSafe,
   checkPluginProjections,
   discoverPluginSources,
   pluginBundleExpected,
@@ -798,6 +799,10 @@ function neutralBundleExpected(): Map<string, Buffer> {
 export function writeNeutralBundle(): void {
   const expected = neutralBundleExpected();
   const distPlugins = join(distRoot(), "plugins");
+  // Plan-stage outDir safety (ADR-5 / t188 #27-32): refuse to project into a
+  // per-harness install outDir that is a symlink/file/broken symlink BEFORE the
+  // clean-sweep follows or clobbers it. Throws (write-0) on a tamper.
+  assertInstallOutDirsSafe(pluginsRoot(), distRoot());
   // Clean-sweep: the bundle is entirely generator-owned. Removing it first drops
   // any stale plugin/artifact before rewriting the current set (and, at zero
   // plugins, sweeps a leftover dir without recreating it).

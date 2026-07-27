@@ -30,12 +30,20 @@ beforeAll(() => {
 const rels = (h: Parameters<typeof installArtifacts>[1]) => installArtifacts(plugin, h).map((a) => a.relativePath);
 
 describe("t307 installArtifacts (class-driven layout)", () => {
-  test("native-manifest (claude) keeps the U2 bundle: marketplace manifest + hooks.json, no INSTALL.md", () => {
+  test("native-manifest (claude): marketplace manifest + hooks.json + INSTALL.md (matrix install_artifacts), no folder-drop snippet", () => {
     const r = rels("claude");
     expect(r).toContain(".claude-plugin/plugin.json");
     expect(r).toContain("hooks/hooks.json");
-    expect(r).not.toContain("INSTALL.md"); // claude projector unchanged (U2)
-    expect(r).not.toContain("hooks/auto-compose.snippet");
+    expect(r).toContain("INSTALL.md"); // BR-U1-7 matrix: claude install_artifacts includes INSTALL_doc
+    expect(r).not.toContain("hooks/auto-compose.snippet"); // that snippet is folder-drop-auto's
+  });
+
+  test("claude INSTALL.md is marketplace-flavored, not folder-drop", () => {
+    const doc = installArtifacts(plugin, "claude").find((a) => a.relativePath === "INSTALL.md");
+    expect(doc).toBeDefined();
+    const text = Buffer.from(doc!.bytes).toString("utf-8");
+    expect(text).toContain("marketplace");
+    expect(text).toContain(".claude-plugin/plugin.json");
   });
 
   test("folder-drop-auto (codex) ships content + INSTALL.md + auto-compose snippet, no marketplace manifest", () => {
