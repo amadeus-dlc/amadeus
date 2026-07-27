@@ -438,7 +438,6 @@ export type MirrorProjectDiagnostic = Readonly<{
   reason:
     | "membership-query-failed"
     | "project-unresolved"
-    | "field-missing"
     | "option-missing"
     | "add-failed"
     | "update-failed";

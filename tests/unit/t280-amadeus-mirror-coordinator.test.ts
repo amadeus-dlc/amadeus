@@ -109,7 +109,7 @@ function input(
     dependencies: {
       resolveConfig: () => ({
         kind: "resolved" as const,
-        config: { autoMirror: mode },
+        config: { autoMirror: mode, projects: [] },
         sources: ["/project/amadeus/config.json"],
       }),
     },

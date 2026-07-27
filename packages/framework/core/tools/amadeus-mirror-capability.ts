@@ -104,9 +104,14 @@ export type MirrorProjectPermitBinding = Readonly<{
   project: MirrorProjectRef;
 }>;
 
+// What the Gateway can independently prove about the Project call it is about to
+// make. Only the mutation kind qualifies: `projectId` / `itemId` / `issueNodeId`
+// are opaque GraphQL node ids with no derivable relation to the configured
+// owner/number, so the binding's `project` is retained for C6 and audit
+// correlation but is NOT re-compared here — comparing a value against itself
+// would be a check that cannot fail.
 export type MirrorProjectPermitExpectation = Readonly<{
   mutation: MirrorProjectMutation;
-  project: MirrorProjectRef;
 }>;
 
 const mintedProjectPermits = new WeakSet<object>();
@@ -124,17 +129,13 @@ export function createMirrorProjectMutationPermit(
   return permit as unknown as MirrorProjectMutationPermit;
 }
 
-// Rejects a non-member permit and any permit whose bound mutation or Project
-// reference does not match the call the Gateway is about to spawn.
+// Rejects a non-member permit, an Issue permit presented as a Project permit,
+// and a permit bound to the other Project mutation.
 export function validateMirrorProjectMutationPermit(
   permit: MirrorProjectMutationPermit,
   expected: MirrorProjectPermitExpectation,
 ): boolean {
   if (!mintedProjectPermits.has(permit as unknown as object)) return false;
   const bound = permit as unknown as MirrorProjectPermitBinding;
-  return (
-    bound.mutation === expected.mutation &&
-    bound.project.owner === expected.project.owner &&
-    bound.project.number === expected.project.number
-  );
+  return bound.mutation === expected.mutation;
 }

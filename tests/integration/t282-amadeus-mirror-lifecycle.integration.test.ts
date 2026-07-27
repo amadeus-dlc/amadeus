@@ -103,6 +103,30 @@ class LifecycleGateway implements MirrorGitHubGateway {
     };
     return ok(this.issues[0] as RemoteMirrorIssue);
   }
+
+  // Project sync is not wired in these contexts (no `projectSync` on the
+  // execution context), so any call here is a defect rather than a fixture gap:
+  // these four throw to prove the lifecycle boundaries under test issue no Project traffic.
+  async listProjectItems(
+    ..._args: Parameters<MirrorGitHubGateway["listProjectItems"]>
+  ): ReturnType<MirrorGitHubGateway["listProjectItems"]> {
+    throw new Error("LifecycleGateway must not query Project items");
+  }
+  async resolveProjectStatusField(
+    ..._args: Parameters<MirrorGitHubGateway["resolveProjectStatusField"]>
+  ): ReturnType<MirrorGitHubGateway["resolveProjectStatusField"]> {
+    throw new Error("LifecycleGateway must not resolve a Project Status field");
+  }
+  async addProjectItem(
+    ..._args: Parameters<MirrorGitHubGateway["addProjectItem"]>
+  ): ReturnType<MirrorGitHubGateway["addProjectItem"]> {
+    throw new Error("LifecycleGateway must not add a Project item");
+  }
+  async updateProjectItemStatus(
+    ..._args: Parameters<MirrorGitHubGateway["updateProjectItemStatus"]>
+  ): ReturnType<MirrorGitHubGateway["updateProjectItemStatus"]> {
+    throw new Error("LifecycleGateway must not update a Project item status");
+  }
 }
 
 class PendingLifecycleGateway extends LifecycleGateway {
@@ -271,7 +295,7 @@ function boundaryInput(
     dependencies: {
       resolveConfig: () => ({
         kind: "resolved" as const,
-        config: { autoMirror: mode },
+        config: { autoMirror: mode, projects: [] },
         sources: [],
       }),
     },

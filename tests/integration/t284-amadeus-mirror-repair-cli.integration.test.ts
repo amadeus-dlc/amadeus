@@ -95,6 +95,30 @@ class RepairGateway implements MirrorGitHubGateway {
     this.history.push("close");
     throw new Error("repair must not close");
   }
+
+  // Project sync is not wired in these contexts (no `projectSync` on the
+  // execution context), so any call here is a defect rather than a fixture gap:
+  // these four throw to prove repair issue no Project traffic.
+  async listProjectItems(
+    ..._args: Parameters<MirrorGitHubGateway["listProjectItems"]>
+  ): ReturnType<MirrorGitHubGateway["listProjectItems"]> {
+    throw new Error("RepairGateway must not query Project items");
+  }
+  async resolveProjectStatusField(
+    ..._args: Parameters<MirrorGitHubGateway["resolveProjectStatusField"]>
+  ): ReturnType<MirrorGitHubGateway["resolveProjectStatusField"]> {
+    throw new Error("RepairGateway must not resolve a Project Status field");
+  }
+  async addProjectItem(
+    ..._args: Parameters<MirrorGitHubGateway["addProjectItem"]>
+  ): ReturnType<MirrorGitHubGateway["addProjectItem"]> {
+    throw new Error("RepairGateway must not add a Project item");
+  }
+  async updateProjectItemStatus(
+    ..._args: Parameters<MirrorGitHubGateway["updateProjectItemStatus"]>
+  ): ReturnType<MirrorGitHubGateway["updateProjectItemStatus"]> {
+    throw new Error("RepairGateway must not update a Project item status");
+  }
 }
 
 function fixture(

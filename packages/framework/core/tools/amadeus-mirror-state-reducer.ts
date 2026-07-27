@@ -15,6 +15,7 @@ import type {
   MirrorFailureClass,
   MirrorMutationEffect,
   MirrorOperationReceipt,
+  MirrorProjectSyncEntry,
   MirrorProvenance,
   MirrorRepairChallenge,
   MirrorStateSnapshot,
@@ -91,7 +92,8 @@ export type MirrorTransition =
       provenance: MirrorProvenance;
       consume: ChallengeConsumeInput;
     }
-  | { kind: "issue-repair-challenge"; challenge: MirrorRepairChallenge; now: string };
+  | { kind: "issue-repair-challenge"; challenge: MirrorRepairChallenge; now: string }
+  | { kind: "upsert-project-entry"; entry: MirrorProjectSyncEntry };
 
 export type ReducerResult =
   | {
@@ -608,6 +610,43 @@ function reduceIssueChallenge(
   return changed(result.snapshot, facts);
 }
 
+function projectEntryEquals(
+  a: MirrorProjectSyncEntry,
+  b: MirrorProjectSyncEntry,
+): boolean {
+  return (
+    a.project === b.project &&
+    a.projectId === b.projectId &&
+    a.itemId === b.itemId &&
+    a.lastAppliedStatus === b.lastAppliedStatus &&
+    a.state === b.state &&
+    a.updatedAt === b.updatedAt
+  );
+}
+
+// Upsert one ledger row keyed by canonical "owner/number". Re-applying an
+// identical row is `unchanged`, so a converged re-run writes nothing and the
+// revision does not advance.
+function reduceUpsertProjectEntry(
+  snapshot: MirrorStateSnapshot,
+  t: Extract<MirrorTransition, { kind: "upsert-project-entry" }>,
+): ReducerResult {
+  if (t.entry.project.length === 0)
+    return invalid("upsert-project-entry: project must be non-empty");
+  if (t.entry.projectId.length === 0)
+    return invalid("upsert-project-entry: projectId must be non-empty");
+  const existing = snapshot.projectSync?.projects ?? [];
+  const at = existing.findIndex((entry) => entry.project === t.entry.project);
+  if (at >= 0 && projectEntryEquals(existing[at], t.entry)) {
+    return { kind: "unchanged" };
+  }
+  const projects =
+    at >= 0
+      ? existing.map((entry, index) => (index === at ? t.entry : entry))
+      : [...existing, t.entry];
+  return changed({ ...snapshot, projectSync: { projects } });
+}
+
 function guardMarkAttempted(r: MirrorOperationReceipt): string | null {
   return r.status === "prepared" || r.status === "attempted"
     ? null
@@ -714,6 +753,8 @@ function reduceAuxTransition(
       return reduceRepairLink(snapshot, transition, now);
     case "issue-repair-challenge":
       return reduceIssueChallenge(snapshot, transition);
+    case "upsert-project-entry":
+      return reduceUpsertProjectEntry(snapshot, transition);
     default:
       return invalid(`unknown transition ${(transition as { kind: string }).kind}`);
   }

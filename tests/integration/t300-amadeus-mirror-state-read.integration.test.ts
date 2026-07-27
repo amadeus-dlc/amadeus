@@ -93,6 +93,30 @@ class FakeGateway implements MirrorGitHubGateway {
     this.issue = { ...(this.issue as RemoteMirrorIssue), state: "CLOSED" };
     return ok(this.issue);
   }
+
+  // Project sync is not wired in these contexts (no `projectSync` on the
+  // execution context), so any call here is a defect rather than a fixture gap:
+  // these four throw to prove the read-only state view issue no Project traffic.
+  async listProjectItems(
+    ..._args: Parameters<MirrorGitHubGateway["listProjectItems"]>
+  ): ReturnType<MirrorGitHubGateway["listProjectItems"]> {
+    throw new Error("FakeGateway must not query Project items");
+  }
+  async resolveProjectStatusField(
+    ..._args: Parameters<MirrorGitHubGateway["resolveProjectStatusField"]>
+  ): ReturnType<MirrorGitHubGateway["resolveProjectStatusField"]> {
+    throw new Error("FakeGateway must not resolve a Project Status field");
+  }
+  async addProjectItem(
+    ..._args: Parameters<MirrorGitHubGateway["addProjectItem"]>
+  ): ReturnType<MirrorGitHubGateway["addProjectItem"]> {
+    throw new Error("FakeGateway must not add a Project item");
+  }
+  async updateProjectItemStatus(
+    ..._args: Parameters<MirrorGitHubGateway["updateProjectItemStatus"]>
+  ): ReturnType<MirrorGitHubGateway["updateProjectItemStatus"]> {
+    throw new Error("FakeGateway must not update a Project item status");
+  }
 }
 
 function makeWorkspace(opts: { block: "absent" | "empty" }): {
