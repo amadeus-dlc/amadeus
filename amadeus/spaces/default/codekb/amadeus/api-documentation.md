@@ -18,6 +18,34 @@
 > **2026-07-26（intent `260726-metrics-visualization`、amadeus-feature / Standard）: 変更なし、確認済み（測定 ref: observed `1c43438df`、base `11f1ad61f`、距離 5）。** 区間内でユーザー可視の API/CLI 公開契約に変化なし（`scripts/` と `.github/` の diff は 0 ファイル）。**ただし本 intent は新規の公開契約を追加しうる**: (1) 可視化 CLI の引数体系 — 既存 `metrics-timeseries.ts` の `parseArgs` `:171`（`--collector` / `--last`）と `metrics-snapshot.ts:169`（`--write` / `--check`）、`metrics-retention.ts` の `--apply` が既習様式で、exit コード規約は usage=2 / 実行時失敗=1 / 成功=0 (2) `metrics-timeseries.ts` の module 公開面 — `formatValue` `:117-119` の export 昇格が設計判断点（cid:application-design:dual-key-consumer-inventory の対象）(3) `package.json` の `scripts` エントリ — 全 15 中 metrics 系 **0** のため、実行導線を足すなら新規公開契約になる。**なお `metrics-timeseries.ts:3-4` の「must not import any fs write API (AC-1c; grep-checkable)」は grep 検査可能な内部契約であり、可視化を同モジュールへ足す設計はこれを破る**（詳細は `architecture.md` / `code-quality-assessment.md` の同 intent 節）。
 > **2026-07-26（intent `260726-grant-scope-gate`、[#1497](https://github.com/amadeus-dlc/amadeus/issues/1497)、amadeus-bugfix / Brownfield）: 公開契約に追加あり（測定 ref: observed `e12259ba7`、base `11f1ad61f`、距離 4）。** 詳細は下の同 intent 節。
 
+## 選挙 CLI（`amadeus-election.ts`）の公開契約 — 9 verb（260727-solo-election、現在、amadeus-feature）
+
+測定 ref: observed `3eba39a90fa76b9d52bfb3df749e2f211f6af36a`（base `1673c4332`、距離 63）。file:line は同 commit の実ファイル直読。上流入力: 本 intent の Developer スキャン結果。**本区間で verb 集合・引数体系・exit 規約に変化はない**（区間の選挙 canonical 変更 3 コミットはいずれも内部配線・検査強化）。以下は現行契約の明示化。
+
+**dispatch**: `const VERBS: Record<string, (root, args) => number>`（`packages/framework/core/tools/amadeus-election.ts:617-640`）。usage 文字列は `:62`。
+
+| verb | 必須引数 | 契約（`:618-639` 実文より） |
+| --- | --- | --- |
+| `open` | `--file <path>` | 選挙定義ファイルから選挙を開く。`--file` 欠落で usage fail |
+| `next` | `--election <id>` | 次の指令（directive JSON）を stdout へ 1 行返す。指令ループの駆動点 |
+| `report` | `--election <id>` + `--result <r>`（任意 `--resolution <r>`） | 指令の実行結果を報告し状態遷移させる。`--result distributed` が subagent DeliveryRecord の mint 契機（`bookReportedDeliveries` `:205`/`:218-239`、#1523） |
+| `notify` | `--election <id>`（任意 `--transport agmsg\|subagent` / `--team` / `--from` / `--send-script`） | 各投票者へ blind 配布。**`--transport` 既定は `subagent`**（`:627` `a.transport ?? "subagent"`）。subagent 経路は spawn せず `DeliveryDirective` を返す |
+| `vote` | `--election <id>` + `--file <path>` | 票ファイルを投じる。amend は `resolveBallots`（`amadeus-election-model.ts:443`）で原票を上書き |
+| `status` | `--election <id>` | 現在状態を返す |
+| `tally` | `--election <id>` | 集計結果（`established` / `hold`）を返す |
+| `render` | `--election <id>` | record.md をレンダリングする |
+| `verify` | `--election <id>` | 記録の自己検査（#1516 で独立読取へ配線済み） |
+
+共通オプション: `--project <dir>`（プロジェクトルート override、`:62` usage）。
+
+**exit / 出力規約**: stdout に directive / result の JSON を 1 行、stderr は advisory（cid:code-generation:stdout-directive-stderr-advisory と同じ役割分離 — 消費側は directive parse を stdout 限定にする）。usage 不備は `usageFail()` 経由で usage を stderr へ出して非 0 終了。
+
+**型で保証される blind 契約（ユーザー可視の不変量）**: 配布ペイロードは `ShortNotification = { electionId, viewPath }` の 2 フィールドのみ（`amadeus-election-transport.ts:45-47`）。設問・選択肢・推奨・先行票は**型が持てないため送信不能**（BR-T1 / FR-2a）。subagent 経路の戻り値 `DeliveryDirective = { voter, viewPath, spawnInstruction }`（`:52-55`）も同じく blind で、ballot / tally フィールドを持たない。
+
+**本 intent で契約変更の候補になりうる面**（本 RE では判定せず後続 requirements-analysis へ送る）: (1) `notify` の既定 transport（`subagent`）— [#1458](https://github.com/amadeus-dlc/amadeus/issues/1458) の「既定廃止 + agmsg 必須化」案は CLI 契約変更に当たる（前 intent 節で既報）。 (2) `tally` の hold reason 集合 — 2 名構成の定足数を表現するために新 reason を足す場合、`hold` の JSON 出力は消費側から見える公開面。 (3) SKILL.md の H2 構造 — `tests/integration/t242-election-skill-vocabulary.integration.test.ts:85-91` が `toEqual` で固定しており、節追加は契約変更として扱う必要がある。 (4) `VoterKind`（`amadeus-election-model.ts:126`）を判定に参加させる場合、現在 tally / CLI / transport から不読の記録専用フィールドが挙動に影響する公開面へ昇格する。
+
+詳細は `re-scans/260727-solo-election.md` および `architecture.md` / `component-inventory.md` の同 intent 節。
+
 ## solo standing grant の公開契約（260726-grant-scope-gate、履歴、Issue #1497）
 
 測定 ref: observed `e12259ba7`。file:line は同 commit の実ファイル直読。

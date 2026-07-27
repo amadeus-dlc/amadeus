@@ -659,5 +659,12 @@
     "dirName": "260727-install-doc-mismatch",
     "scope": "amadeus-bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fa398-b858-70d8-9fd9-ebc678ddb8c4",
+    "slug": "solo-election",
+    "dirName": "260727-solo-election",
+    "scope": "amadeus-feature",
+    "status": "in-flight"
   }
 ]

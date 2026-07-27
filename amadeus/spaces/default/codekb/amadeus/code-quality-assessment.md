@@ -1,6 +1,6 @@
 # コード品質評価
 
-## plugin installDoc/discovery 非対称の品質評価（260727-install-doc-mismatch、現在、差分リフレッシュ、Issue #1569）
+## plugin installDoc/discovery 非対称の品質評価（260727-install-doc-mismatch、履歴、差分リフレッシュ、Issue #1569）
 
 260727-install-doc-mismatch 差分リフレッシュ（2026-07-27、observed `46a75f2e7`、base `0d83aa48b`、距離 70）。上流入力: Developer スキャン結果。#1569 の欠陥は前 intent `260726-plugin-host-delivery` の U3 host-projection-all（`250265adb`）で導入された、以下の負債シグナルを持つ。
 

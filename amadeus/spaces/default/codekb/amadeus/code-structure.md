@@ -4,7 +4,7 @@
 
 > **2026-07-27（intent `260726-t258-p95-flake`、[Issue #1511](https://github.com/amadeus-dlc/amadeus/issues/1511) bug/P2/S3-MAJOR、amadeus-bugfix / Brownfield）: 本 intent 断面は対象外（変更なし）。** 測定 ref: observed `09c669901`、base `f9a0fb86a`、距離 2。区間 32 ファイルはすべて `amadeus/` record で **source/test/CI 変更ゼロ**（`git diff --name-only f9a0fb86a HEAD | grep -vc '^amadeus/'` = 0）。#1511 の患部の配置は既存で無変化 — `tests/integration/t258-lifecycle-transaction.test.ts`（絶対 p95 assert `:461-462`、`p95()` `:430-433`）/ `t257-status-registry-migration.test.ts:240-241`（same-root）/ `tests/helpers/lifecycle-transaction-benchmark-child.ts`（child benchmark）/ 被測定 `packages/framework/core/tools/amadeus-lib.ts`（`withIntentLifecyclePreflight`）/ CI `.github/workflows/ci.yml:162-163`。新規モジュール配置なし。詳細は上流入力 `re2-dev-scan-result.md` と本 scan の `code-quality-assessment.md` / `architecture.md` 新節、`re-scans/260726-t258-p95-flake.md`。
 
-## plugin ホスト配信のコード配置と #1569 対象ファイル（260727-install-doc-mismatch、現在、差分リフレッシュ）
+## plugin ホスト配信のコード配置と #1569 対象ファイル（260727-install-doc-mismatch、履歴、差分リフレッシュ）
 
 260727-install-doc-mismatch 差分リフレッシュ（2026-07-27、observed `46a75f2e7c53aaa475a19cc217d10c9172ad4129`、base `0d83aa48b`、距離 70、458 files）。上流入力: Developer スキャン結果。本区間で plugin ホスト配信の Construction（前 intent `260726-plugin-host-delivery` の U2–U8）が実着地し、以下の配置が新規に現れた。
 

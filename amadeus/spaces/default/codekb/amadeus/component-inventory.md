@@ -4,7 +4,28 @@
 
 > **2026-07-27（intent `260726-t258-p95-flake`、[Issue #1511](https://github.com/amadeus-dlc/amadeus/issues/1511) bug/P2/S3-MAJOR、amadeus-bugfix / Brownfield）: 本 intent 断面は対象外（変更なし）。** 測定 ref: observed `09c669901`、base `f9a0fb86a`、距離 2。区間 32 ファイルはすべて `amadeus/` record で **source/test/CI 変更ゼロ**。#1511 の患部コンポーネント（`p95()` 述語 `t258:430-433`、child benchmark helper `tests/helpers/lifecycle-transaction-benchmark-child.ts`、絶対 assert `t258:461-462` / `t257:240-241`、被測定 `withIntentLifecyclePreflight` / `runIntentLifecycleTransactionLocked`）はいずれも既存で、新規コンポーネント登録なし。詳細は上流入力 `re2-dev-scan-result.md` と本 scan の `code-quality-assessment.md` / `architecture.md` 新節、`re-scans/260726-t258-p95-flake.md`。
 
-## plugin ホスト配信のコンポーネント（260727-install-doc-mismatch、現在、差分リフレッシュ）
+## 選挙サブシステムのコンポーネント（260727-solo-election、現在、差分リフレッシュ、amadeus-feature）
+
+260727-solo-election 差分リフレッシュ（2026-07-27、observed `3eba39a90fa76b9d52bfb3df749e2f211f6af36a`、base `1673c4332`、距離 63）。上流入力: 本 intent の Developer スキャン結果。本区間で新規コンポーネントは追加されていない（区間の選挙 canonical 変更 3 コミットはすべて既存モジュール内の配線・検査強化）。以下は交差面の現況棚卸し。
+
+| コンポーネント | パス | 行数 | 責務 / 本 intent での交差点 |
+| --- | --- | --- | --- |
+| 選挙 CLI | `packages/framework/core/tools/amadeus-election.ts` | 665 | 9 verb dispatch（`VERBS` `:617-640`: open / next / report / notify / vote / status / tally / render / verify）。notify の既定 transport = subagent（`:627`）。subagent DeliveryRecord の唯一の mint 経路 `bookReportedDeliveries`（`:218-239`、呼び出し `:205` = `report --result distributed`、#1523） |
+| 配布ポート | `packages/framework/core/tools/amadeus-election-transport.ts` | 207 | `TransportKind = "agmsg" \| "subagent"`（`:31`）。**`createSubagentTransport`（`:160-176`）は spawn せず record も mint せず `DeliveryDirective`（`:52-55`）を返すのみ** — 起動主体・体数・並列性の規定を持たない。blind payload は `{electionId, viewPath}` の 2 フィールドのみ（`:45-47`）。`buildSpawnInstruction`（`:116-118`）が日本語 1 行の指令文を生成。`reportDelivery`（`:183`）が record を mint |
+| ドメイン / 集計 | `packages/framework/core/tools/amadeus-election-model.ts` | 477 | `tally`（`:440-477`）の first-match 判定順 block `:455` → discussion-needed `:456` → quorum-short `:457` → winner / tie `:469`。`FAVOR` `:433` / `AGAINST` `:434`。**定足数述語は `favor + against === 0` のみで人数非依存** — 2 名構成の 3 ギャップの発生源。`VoterKind`（`:126`）は本ファイル内 7 箇所のみに出現し **tally / CLI / transport から不読の記録専用** |
+| 永続化 | `packages/framework/core/tools/amadeus-election-store.ts` | 536 | elections ルート解決 `:52`、レジストリ読み書き `:149`/`:213`/`:228`、ディレクトリ解決 `:192`、`Store` ファサード `:323` |
+| レンダリング / 検証 | `packages/framework/core/tools/amadeus-election-record.ts` | 230 | GoA 行 `:75`、タイムライン `:82`、persist 草稿 `:147`、留保予約検査 `:169`、`VerifyFinding` `:62` |
+| SKILL | `packages/framework/core/skills/amadeus-election/SKILL.md` | 53 | H2 は 起動 `:16` / 転送 `:26` / 人間委譲 `:42` / 終了 `:51` の **4 節のみ**、solo・subagent 言及 0。`tests/integration/t242-election-skill-vocabulary.integration.test.ts:85-91`（BR-K3）が H2 配列を `toEqual` 完全一致固定 — **節追加不可** |
+
+**テストコンポーネント**: tally = `tests/unit/t234-election-model.test.ts` / `tests/unit/t244-election-choice-resolution.test.ts` / `tests/integration/t244-election-tie-choice.integration.test.ts`、transport = `tests/unit/t239-election-transport.test.ts` / `tests/integration/t240-election-transport.integration.test.ts`、指令ループ = `tests/integration/t236-election-loop.integration.test.ts`、機械実行器 = `tests/integration/t241-election-machine-executor.integration.test.ts`、SKILL 語彙 = `tests/integration/t242-election-skill-vocabulary.integration.test.ts`、e2e = `tests/e2e/t237-election-walking-skeleton.test.ts`。周辺に store = `tests/integration/t235-election-store.integration.test.ts`、record = `tests/unit/t238-election-record.test.ts`。
+
+**同期対象の投影面（非対称）**: CLI `amadeus-election.ts` = canonical 1 + self-install 5（`.claude` / `.codex` / `.cursor` / `.kimi-code` / `.opencode`）+ dist 7（claude / codex / cursor / kimi / kiro / kiro-ide / opencode）= **13**。`amadeus-election/SKILL.md` = canonical 1 + self-install 3（`.agents` / `.claude` / `.kimi-code`）+ dist 3（claude / codex / kimi）= **7**（cursor / opencode / kiro / kiro-ide に SKILL 面なし）。CLI を触る変更と SKILL を触る変更で同期面数が異なる点に注意。
+
+**ストア実データ**: `amadeus/spaces/default/elections/` 175 エントリ、ballots ディレクトリ 167、ballot ファイル **476**、`"voterKind"` 出現 **1461**（ストア全域）。`"voterKind": "subagent"` は **0 件** — subagent コンポーネントは実データ上未走行。
+
+詳細と再実測記録は `re-scans/260727-solo-election.md`。
+
+## plugin ホスト配信のコンポーネント（260727-install-doc-mismatch、履歴、差分リフレッシュ）
 
 260727-install-doc-mismatch 差分リフレッシュ（2026-07-27、observed `46a75f2e7`、base `0d83aa48b`、距離 70）。上流入力: Developer スキャン結果。本区間で plugin ホスト配信（前 intent `260726-plugin-host-delivery` の Construction U2–U8）が着地し、以下のコンポーネントが新規に現れた。
 

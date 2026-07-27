@@ -1,6 +1,34 @@
 # アーキテクチャ
 
-## plugin discovery 入力と compose 出力の分離モデル（260727-install-doc-mismatch、現在、差分リフレッシュ、Issue #1569）
+## 選挙サブシステム — 指令返却 transport・人数非依存 tally・機械固定 SKILL（260727-solo-election、現在、差分リフレッシュ、amadeus-feature）
+
+260727-solo-election 差分リフレッシュ（2026-07-27、observed `3eba39a90fa76b9d52bfb3df749e2f211f6af36a`、base `1673c4332`、距離 63）。上流入力: 本 intent の Developer スキャン結果。本 intent は **ソロモード 2 体 subagent 選挙**（D-12 裁定の残余実装）を扱い、交差面は選挙サブシステム canonical 5 ファイル（`packages/framework/core/tools/amadeus-election{,-model,-store,-record,-transport}.ts`、計 **2115 行**）に限定される。
+
+**層構成（observed `3eba39a90`）**
+
+| 層 | ファイル | 行数 | 責務 |
+| --- | --- | --- | --- |
+| CLI / 配線 | `amadeus-election.ts` | 665 | 9 verb dispatch（`VERBS` `:617-640`）、transport 選択、delivery 記帳 |
+| 永続化 | `amadeus-election-store.ts` | 536 | elections ルート・レジストリ・ディレクトリ解決・timeline/ballot 書込（`Store` `:323`） |
+| ドメイン | `amadeus-election-model.ts` | 477 | `Election` / `Ballot` / `VoterKind` / `TimelineEvent` と `tally` |
+| レンダリング | `amadeus-election-record.ts` | 230 | record.md（GoA 行・タイムライン・persist 草稿）と verify 判定 |
+| 配布ポート | `amadeus-election-transport.ts` | 207 | agmsg / subagent 2 実装、DeliveryRecord mint |
+
+**設計上の要点 1 — transport は「指令を返す」だけで副作用を持たない。** `createSubagentTransport`（`transport.ts:160-176`）は spawn を実行せず DeliveryRecord も mint しない。`voter-unknown` / `view-missing` の検査後に `DeliveryDirective = { voter, viewPath, spawnInstruction }`（`:52-55`）を返すのみで、`send-failed` は構造的に到達不能（error 表 `:36-39`）。根拠は「ツールは spawn を観測できないので、観測できない事実を記録しない」= 検証劇場の回避（E-ETF-FD2 Q1=B、org.md Forbidden と同族）。record は後段の `report --result distributed` 遷移で `bookReportedDeliveries`（`amadeus-election.ts:218-239`、呼び出し `:205`）が timeline の既存 `distributed` voter 集合で冪等に mint する（#1523、本区間内着地）。blind 性は型で保証される — `ShortNotification` は `{ electionId, viewPath }` の 2 フィールドのみ（`:45-47`）で、設問・選択肢・推奨・先行票を**構造的に運べない**（BR-T1 / FR-2a）。
+
+その帰結として、**起動主体・体数・並列性を規定する語彙が canonical に存在しない**。`spawnInstruction` の実体は `buildSpawnInstruction`（`:116-118`）が返す日本語 1 行「選挙 … の配布ビュー … を読み、vote verb で投票せよ」であり、「誰が」「何体」の情報を持たない。subagent 経路の実行主体は conductor 側の運用に委ねられている。notify の既定 transport は subagent（`amadeus-election.ts:627`）。
+
+**設計上の要点 2 — tally の定足数は人数に依存しない。** 判定順は first-match で block（`model.ts:455`）→ discussion-needed（`:456`）→ quorum-short（`:457`）→ choice winner / tie（`:469`、#1261）。`FAVOR = {1,2,3,6}`（`:433`）/ `AGAINST = {7,8}`（`:434`）。定足数の表現は `favor + against === 0` の 1 条件だけで、**投票者数に対する比率も最小人数も型・述語のどちらにも存在しない**。2 名構成ではこれが 3 つのギャップに現れる（本 intent の `feasibility-assessment.md` に固定済み）: (i) GoA 5 が 2 票で discussion-needed になる一方、GoA 1〜3・6 の 5 票は素通りする、(ii) 1 名が GoA 4 棄権すると eligible が 1 票となり単票で `established` が成立する、(iii) 同一選択肢へ賛成 1・反対 1 でも成立する。
+
+**設計上の要点 3 — VoterKind は記録専用。** `grep -rn 'VoterKind\|voterKind' packages/framework/core/tools/` = **7 箇所、すべて `amadeus-election-model.ts` 内**（型宣言 `:126`、フィールド 3 箇所 `:132`/`:145`/`:189`、parse 値域検査 `:224`、転記 `:232`/`:274`）。tally・CLI dispatch・transport のいずれからも読まれず、分岐に影響しない。ストア実データも `"voterKind": "subagent"` = **0 件**（ballot 実数 476 / ストア全域出現 1461、すべて `member`）で、subagent 経路は**未走行**である。
+
+**設計上の要点 4 — SKILL.md の構造は機械固定。** `packages/framework/core/skills/amadeus-election/SKILL.md` は **53 行**、H2 は `## 起動`（:16）/ `## 転送`（:26）/ `## 人間委譲`（:42）/ `## 終了`（:51）の **4 節のみ**で、solo・subagent への言及は `grep -cin` = **0**。`tests/integration/t242-election-skill-vocabulary.integration.test.ts` の BR-K3（`:85-91`）が H2 配列を `toEqual` で完全一致固定するため、**節の追加も順序変更も機械的に不可**（BR-K1 禁止語彙・BR-K4 人間委譲文言も同ファイルで固定）。subagent 起動手順を文書化する設計は、既存 4 節の本文へ収めるか t242 の `REQUIRED_SECTIONS` 契約自体を要件変更として扱うかの二択になる — 本 RE では判定せず後続 requirements-analysis へ送る。
+
+**投影面の非対称**: CLI `amadeus-election.ts` は canonical 1 + self-install 5 + dist 7 = **13 面**、`amadeus-election/SKILL.md` は canonical 1 + self-install 3（`.agents` / `.claude` / `.kimi-code`）+ dist 3（claude / codex / kimi）= **7 面**。cursor / opencode / kiro / kiro-ide には SKILL 面が存在しない。
+
+**区間内の選挙 canonical 変更は 3 コミット**（`2f76f79a4` #1523 / `6aa1eb3eb` #1517 / `da94f232c` #1516）で、いずれも既存モジュール内の配線・検査強化であり新規モジュール・新依存・層構成の変化はない。SKILL.md は区間内不変。詳細は `re-scans/260727-solo-election.md`。
+
+## plugin discovery 入力と compose 出力の分離モデル（260727-install-doc-mismatch、履歴、差分リフレッシュ、Issue #1569）
 
 260727-install-doc-mismatch 差分リフレッシュ（2026-07-27、observed `46a75f2e7c53aaa475a19cc217d10c9172ad4129`、base `0d83aa48b`、距離 70）。上流入力: Developer スキャン結果（実測済みスキャンノート）。本区間はほぼ全体が前 intent `260726-plugin-host-delivery` の Construction であり、plugin ホスト配信のアーキテクチャ（U2–U8）が実着地した断面である。
 
