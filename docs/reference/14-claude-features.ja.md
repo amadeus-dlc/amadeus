@@ -62,7 +62,7 @@ user-invocable: true
 ---
 ```
 
-オーケストレーターのフロントマターには `hooks:` ブロックがありません。v0.6.0 以降、すべてのフレームワークフックは `settings.json` 内でプロジェクト全体に登録されるため(hooks-move、Fork 2→B)、オーケストレーターおよびパッケージ済み・手書きのすべての runner は、runner ごとの `hooks:` ブロックをコピーすることなく決定論的なスパインを継承します。
+オーケストレーターのフロントマターには `hooks:` ブロックがありません。すべてのフレームワークフックは `settings.json` 内でプロジェクト全体に登録されるため、オーケストレーターおよびパッケージ済み・手書きのすべての runner は、runner ごとの `hooks:` ブロックをコピーすることなく決定論的なスパインを継承します。
 
 | フィールド | 目的 |
 |-------|---------|
@@ -109,7 +109,7 @@ SKILL.md は `.claude/skills/amadeus/` 内の2つのコンパニオンファイ�
 | 2.1 Reverse Engineering | `amadeus-developer-agent` then `amadeus-architect-agent`(2ステップ) | amadeus-developer-agent + amadeus-architect-agent | 深いコード分析は大きな中間出力を生成する |
 | 3.5 Code Generation | `amadeus-developer-agent` | amadeus-developer-agent | コード作成は unit 仕様に焦点を当てたクリーンなコンテキストの恩恵を受ける |
 
-ワークスペース検出(0.2)は以前はサブエージェントでしたが、現在は `amadeus-utility init` 内で決定論的に実行されます。
+ワークスペース検出(0.2)は `amadeus-utility init` 内で決定論的に実行されます。
 
 ### モデルの上書き
 
@@ -240,7 +240,7 @@ Gitignore:
 }
 ```
 
-`settings.json` に(プロジェクト全体で)登録されています — v0.6.0 の hooks-move 以降、すべてのフレームワークフックと同様です。セッションライフサイクルイベントは、`/amadeus` がアクティブ化される前に発火し、終了した後にも発火するため、いずれにせよプロジェクト全体でなければなりません: `session-start.ts` は再開コンテキストを注入し、`session-end.ts` は監査の完全性のために `SESSION_ENDED` を出力します。
+`settings.json` に(プロジェクト全体で)登録されています — すべてのフレームワークフックと同様です。セッションライフサイクルイベントは、`/amadeus` がアクティブ化される前に発火し、終了した後にも発火するため、いずれにせよプロジェクト全体でなければなりません: `session-start.ts` は再開コンテキストを注入し、`session-end.ts` は監査の完全性のために `SESSION_ENDED` を出力します。
 
 ### 個人設定の上書き
 

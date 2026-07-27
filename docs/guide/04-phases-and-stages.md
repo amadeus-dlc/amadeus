@@ -216,11 +216,7 @@ flowchart TD
 
 ### Why Construction works the way it does
 
-Construction used to run stage-by-stage per [unit of work](glossary.md), with an approval gate after every stage. A three-unit project meant fifteen gates before a single line of tested code shipped. Customers called it babysitting.
-
-The first fix batched all questions, all design artifacts, then all code generation across every unit — one review at the end. That swung the pendulum the other way. A 15-unit run could land 15,000 lines of code at the build-and-test gate. Too much to verify in a single review.
-
-The current shape is the middle path: Construction runs **Bolt by Bolt**. Each [Bolt](glossary.md) is one pass through stages 3.1–3.5 for a Unit (or small group of dependency-linked Units). The first Bolt is the **walking skeleton** — gated and interactive: the smallest end-to-end slice that proves the architecture. Once that ships, the **ladder prompt** fires exactly once: "continue autonomously, or gate every Bolt?" Your answer is recorded in state and governs every remaining Bolt in the workflow. Stages 3.6 (Build and Test) and 3.7 (CI Pipeline) run once at the end across everything.
+Construction runs **Bolt by Bolt** — the middle path between a gate after every stage per [unit of work](glossary.md) (fifteen gates for a three-unit project) and one review at the very end (15,000 lines landing at a single build-and-test gate). Each [Bolt](glossary.md) is one pass through stages 3.1–3.5 for a Unit (or small group of dependency-linked Units). The first Bolt is the **walking skeleton** — gated and interactive: the smallest end-to-end slice that proves the architecture. Once that ships, the **ladder prompt** fires exactly once: "continue autonomously, or gate every Bolt?" Your answer is recorded in state and governs every remaining Bolt in the workflow. Stages 3.6 (Build and Test) and 3.7 (CI Pipeline) run once at the end across everything.
 
 The shape gives you an early confidence checkpoint and a deliberate autonomy choice, with reviewable slices sized to the Bolts 2.8 already planned.
 

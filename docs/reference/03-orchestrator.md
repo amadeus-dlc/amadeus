@@ -394,7 +394,7 @@ Subagent stages delegate work to a separate Claude Code task via the Claude Code
 | 2.1 Reverse Engineering | `amadeus-developer-agent` then `amadeus-architect-agent` (two-step) | amadeus-developer-agent + amadeus-architect-agent | Deep code analysis produces large intermediate output |
 | 3.5 Code Generation | `amadeus-developer-agent` | amadeus-developer-agent | Code writing benefits from clean context focused on unit specification |
 
-Workspace detection (0.2) used to be a subagent. It is now a deterministic rule-based scanner inside `amadeus-utility init` — rules are documented in `amadeus-common/stages/initialization/workspace-detection.md`.
+Workspace detection (0.2) is a deterministic rule-based scanner inside `amadeus-utility init` — rules are documented in `amadeus-common/stages/initialization/workspace-detection.md`.
 
 The 6-step process:
 
@@ -711,7 +711,7 @@ Complete reference of all 32 stages with execution metadata. The welcome message
 
 ## Appendix B: Hook Reference
 
-The framework hooks are registered project-wide in `settings.json` (the v0.6.0 hooks-move; they self-gate when no workflow is active). Three of them are detailed below. The rest, including `amadeus-sensor-fire.ts`, `amadeus-sync-statusline.ts`, and `amadeus-runtime-compile.ts`, are covered in [Hooks and Tools](06-hooks-and-tools.md), which carries the authoritative hook list and full source-level documentation for all of them.
+The framework hooks are registered project-wide in `settings.json` (they self-gate when no workflow is active). Three of them are detailed below. The rest, including `amadeus-sensor-fire.ts`, `amadeus-sync-statusline.ts`, and `amadeus-runtime-compile.ts`, are covered in [Hooks and Tools](06-hooks-and-tools.md), which carries the authoritative hook list and full source-level documentation for all of them.
 
 ### PostToolUse: audit-logger.ts
 

@@ -112,7 +112,7 @@ checks have proven reliable.
 
 **resolve → dispatch。** `resolve` は1行の JSON 解決を出力し、コンダクターはそれで分岐します: `selected` はそのドライバをディスパッチ、`degrade` は subagent floor を実行しつつ `--degraded-from <requested>` を渡してレフェリーが `SWARM_DEGRADED` を発する(requested 値は監査に保存される)、`rejected` はバッチを即停止する — worktree なし、spawn なし、`SWARM_STARTED` なし。
 
-**破壊的変更。** 旧来の `AMADEUS_USE_SWARM=1` はもはやドライバを選択しません — 未知値であり **fail-closed** です。互換シムはありません: 実行中のハーネスがディスパッチできない値は、loud-degrade する(兄弟ハーネスの ultra)か rejected される(`1` およびその他すべての未認識文字列)かのいずれかです。
+**未知値は fail-closed。** `AMADEUS_USE_SWARM=1` はドライバを選択しません — 未知値であり **fail-closed** です。互換シムはありません: 実行中のハーネスがディスパッチできない値は、loud-degrade する(兄弟ハーネスの ultra)か rejected される(`1` およびその他すべての未認識文字列)かのいずれかです。
 
 **effort の証拠限界(C-15)。** `codex-ultra` の selected ケースでは、各 child を reasoning effort=ultra で spawn します: これは API に受理され child は完了まで走りますが、ultra が実適用されたことを示す telemetry はありません。
 

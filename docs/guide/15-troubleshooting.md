@@ -54,7 +54,7 @@ Ensure `bun` is on your PATH in `~/.zshenv` (zsh), `~/.bashrc` (bash / Git Bash 
 
 ### Hook not configured
 
-Hooks are registered project-wide in `.claude/settings.json` (as of v0.6.0; earlier versions declared the workflow-spine hooks in the SKILL.md frontmatter). Verify that `settings.json` contains a `hooks` block with `PostToolUse`, `PreCompact`, `SubagentStop`, and `Stop` entries (plus `SessionStart`/`SessionEnd`). If you took an upgrade that moved these and your on-disk `settings.json` predates it, re-copy the shipped `settings.json` hooks block.
+Hooks are registered project-wide in `.claude/settings.json`. Verify that `settings.json` contains a `hooks` block with `PostToolUse`, `PreCompact`, `SubagentStop`, and `Stop` entries (plus `SessionStart`/`SessionEnd`). If your on-disk `settings.json` is missing them, re-copy the shipped `settings.json` hooks block.
 
 ---
 

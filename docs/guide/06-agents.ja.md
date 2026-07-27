@@ -169,7 +169,7 @@ amadeus-developer-agent は、3 つのフェーズにまたがります — Ince
 - **リード:** reverse-engineering(コードスキャン), code-generation
 - **サポート:** practices-discovery, functional-design, deployment-execution
 
-ワークスペース検出(workspace-detection)は、かつて amadeus-developer-agent のサブエージェントでしたが、現在はルールベースのファイルおよびマニフェスト検出を用いて `amadeus-utility init` の内部で決定論的に実行されます。
+ワークスペース検出(workspace-detection)は、ルールベースのファイルおよびマニフェスト検出を用いて `amadeus-utility init` の内部で決定論的に実行されます。
 - **特別なツール:** Bash(ビルドおよび実行コマンド用)
 
 ### [amadeus-quality-agent](agents/quality-agent.ja.md)

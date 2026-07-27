@@ -169,7 +169,7 @@ The amadeus-developer-agent spans three phases — from reverse engineering in I
 - **Leads:** reverse-engineering (code scan), code-generation
 - **Supports:** practices-discovery, functional-design, deployment-execution
 
-Workspace detection (workspace-detection) used to be a subagent of the amadeus-developer-agent; it now runs deterministically inside `amadeus-utility init` using rule-based file and manifest detection.
+Workspace detection (workspace-detection) runs deterministically inside `amadeus-utility init` using rule-based file and manifest detection.
 - **Special tools:** Bash (for build and run commands)
 
 ### [amadeus-quality-agent](agents/quality-agent.md)

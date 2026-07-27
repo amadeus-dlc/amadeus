@@ -228,7 +228,7 @@ before matching against the manifest `id`.
 
 ## `default_severity`
 
-`advisory` is the only valid value in v0.5.0. An advisory sensor
+`advisory` is the only valid value. An advisory sensor
 failure produces an audit row + a detail file but does NOT block the
 stage's gate or the user's workflow.
 

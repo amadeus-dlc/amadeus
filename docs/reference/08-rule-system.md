@@ -22,7 +22,7 @@ amadeus/spaces/<space>/memory/
     └── operation.md
 ```
 
-The layout consolidates team-authored harness config (formerly in a separate practices namespace) and self-learning guardrails (formerly two-deep) into a single space memory directory at `amadeus/spaces/<space>/memory/`.
+The layout holds team-authored harness config and self-learning guardrails in a single space memory directory at `amadeus/spaces/<space>/memory/`.
 
 ## Filename-derived scope
 
@@ -55,7 +55,7 @@ Every applicable rule appears in `rules_in_context`. Org, team, and project rule
 
 Conflicts (a narrower scope contradicting broader policy) are rejected at the memory gate — the §13 Learnings Ritual's admission check — before a learning reaches the resolver. The check is section-level: when a proposed dated learning entry is about to be written to `memory/project.md` (or `memory/team.md`), the orchestrator compares it against `memory/org.md`'s matching heading via an LLM check; if a conflict is found, the user **revises, skips, or escalates** (there is no override path). Practices-discovery's affirmation gate is the other admission gate, but its promotion is a deterministic section-replace (`amadeus-state.ts practices-promote`) legitimised by the user's affirmation — it does not run the automated org-conflict check. Post-write drift between org and team/project content is surfaced separately by the doctor's rule-drift row (below).
 
-This design replaces the earlier `enforcement: enforced` keyword and `overrides:` block model. Both keywords are removed from the schema. Frontmatter parsing rejects them via the unknown-key tolerance policy below — they pass through silently rather than throwing, but the resolver ignores them.
+`enforcement:` and `overrides:` are not part of the schema; the resolver ignores them under the unknown-key tolerance policy below.
 
 The doctor rule-drift check surfaces post-write drift on demand: when org rules change after team or project content has already landed on disk, doctor deterministically finds `##` headings that the team/project practice files (`memory/team.md`, `memory/project.md`) share with a *populated* org heading and surfaces each overlap as an advisory candidate — file, section, and the quoted org sentence — rendered `Rule drift: N team/project rule(s) overlap org policy (review for contradiction)`. Doctor itself runs no LLM: detection is byte-reproducible heading/string work. The contradiction verdict — the same section-level LLM check the admission gates run — is the consuming orchestrator's at observation-time, non-blocking. The human then revises, escalates, or accepts the surfaced drift.
 
@@ -81,7 +81,7 @@ The doctor paired-coverage row counts paired-vs-feedforward-only rules and surfa
 
 ## Rule-drift detection
 
-`/amadeus --doctor` ships two advisory rows that observe rule/sensor state. Both are read-only and always pass — neither changes the health-check exit code. (As of v0.6.10 `--doctor` is cold-safe: the `GUARDRAIL_LOADED` audit row the paired-coverage check emits is written only when the active intent's `audit/` shard already exists. On a fresh shell with no intent yet, doctor prints the rows but emits nothing and creates no files.)
+`/amadeus --doctor` ships two advisory rows that observe rule/sensor state. Both are read-only and always pass — neither changes the health-check exit code. (`--doctor` is cold-safe: the `GUARDRAIL_LOADED` audit row the paired-coverage check emits is written only when the active intent's `audit/` shard already exists. On a fresh shell with no intent yet, doctor prints the rows but emits nothing and creates no files.)
 
 - **Rule drift** — for each team/project practice file (`memory/team.md`, `memory/project.md`), doctor finds `##` headings that also appear under a *populated* heading in `memory/org.md` and surfaces each overlap as a candidate pair: file, section, and the first org sentence quoted verbatim. Headings whose org body is empty (e.g. the framework-default `## Forbidden`, `## Mandated`, `## Corrections`, which hold only HTML comments) do not count — the overlap must carry content on both sides. The count N is the number of *structural* candidate pairs, not LLM-confirmed contradictions: doctor detects deterministically; the contradiction verdict is the orchestrator-LLM's at observation time (see the [strict-additive section](#strict-additive-runtime-model)).
 - **Paired sensor coverage** — for each rule carrying `pairing: <sensor-id>`, doctor strips the `amadeus-` prefix and confirms the named sensor exists in at least one stage's resolved sensor set (`sensors_applicable`). The row reads `Paired sensor coverage: P/(M-X) guardrails paired (X feedforward-only)`, where M is the rules carrying a `pairing:` value, X is the feedforward-only rules (which never need a sensor), and P is the rules whose named sensor resolves; unpaired rules (sensor id named but bound by no stage) are listed inline. This is a **file-existence check, not a semantic one** — it confirms the binding resolves, not that the sensor fits the rule. The row emits the `GUARDRAIL_LOADED` audit event once per run on an initialized project (the emit is suppressed on a pristine project with no `audit.md` — see the cold-safe note above).

@@ -27,7 +27,7 @@ stage in its YAML frontmatter: in `produces[]` for a required output, or in
 same identifier in `consumes[]` to declare a read dependency. The identifier
 is a short kebab-case string — no file extension, no folder prefix, no slash.
 
-Concrete example from milestone 4's worked example in
+Concrete example from the worked example in
 `dist/claude/.claude/amadeus-common/protocols/stage-definition.md`:
 
 ```yaml

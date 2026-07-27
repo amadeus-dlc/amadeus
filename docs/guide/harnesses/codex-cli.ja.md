@@ -377,8 +377,8 @@ bridge が実際に起動し、再起動後も動くことまでは証明しま�
   対して解決します: 未設定は subagent floor、`codex-ultra` は reasoning
   effort=ultra の native fan-out、`claude-ultra` は floor へ loud-degrade
   (`SWARM_DEGRADED` が監査される)、旧来の `1` やその他の値は fail-closed で
-  rejected です。**破壊的変更**: 旧来のヘッドレス `codex exec` per-unit ワーカー
-  フロアは撤去され、`codex exec` フォールバックはありません。`codex-ultra` の
+  rejected です。`codex exec` フォールバックはありません — per-unit ワーカー
+  フロアは subagent floor です。`codex-ultra` の
   ケースでは、reasoning effort=ultra は API に受理され child は完了まで走りますが、
   ultra が実適用されたことを示す telemetry はありません。
 - **セッションライフサイクル**: Codex には SessionEnd イベントがありません。

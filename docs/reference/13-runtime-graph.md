@@ -4,9 +4,8 @@
 
 > Audience: Tier 2/3 (team adopter, framework contributor).
 
-This chapter documents the per-workflow `runtime-graph.json` artefact
-introduced in v0.5.0 milestone 8 — the data-plane mirror of `stage-graph.json`,
-materialised from the audit log on every approval gate. Cross-link to
+This chapter documents the per-workflow `runtime-graph.json` artefact — the
+data-plane mirror of `stage-graph.json`, materialised from the audit log on every approval gate. Cross-link to
 [Plane Architecture](02-plane-architecture.md) (the control/data plane
 separation that motivates this artefact) and
 [State Machine](12-state-machine.md) (the lifecycle whose transitions
@@ -27,9 +26,8 @@ at `<record>/runtime-graph.json` — `<record>/` = the intent's record dir,
 `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`. Same node shape as
 `stage-graph.json`, populated with telemetry instead of structure.
 
-It exists so consumers (milestone 11's Bolt fork/merge, milestone 12's gate ritual,
-milestone 14's doctor, v0.10.0's cross-workflow observer) read one
-materialised view rather than re-walking the audit log on every query.
+It exists so consumers (Bolt fork/merge, the gate ritual, doctor, a future
+cross-workflow observer) read one materialised view rather than re-walking the audit log on every query.
 
 ---
 
@@ -65,13 +63,13 @@ interface RuntimeStage {
     tradeoffs: number;
     open_questions: number;
   } | null;
-  sensor_firings: SensorFiring[]; // empty array in milestone 8 (sensors fire in milestone 9 + milestone 10)
+  sensor_firings: SensorFiring[]; // populated by the sensor dispatcher
   outcome: "approved" | "failed" | "pending";
   learnings_captured: {           // null on pending rows; populated on transition to approved
-    from_orchestrator: number;    // zero in milestone 8 (gate ritual is milestone 12)
+    from_orchestrator: number;    // populated by the gate ritual
     from_user_addition: number;
   } | null;
-  instances?: BoltInstance[];     // present only when stage runs per-Bolt; milestone 11 populates
+  instances?: BoltInstance[];     // present only when the stage runs per-Bolt
 }
 
 interface BoltInstance {
@@ -88,8 +86,8 @@ interface BoltInstance {
 
 interface SensorFiring {
   id: string;
-  fire_id: string;                // 8-hex correlator emitted by the milestone 9 dispatcher on every row
-  result: "passed" | "failed" | "budget-override" | "incomplete"; // 4-state (milestone 12 Q10)
+  fire_id: string;                // 8-hex correlator emitted by the sensor dispatcher on every row
+  result: "passed" | "failed" | "budget-override" | "incomplete"; // 4-state
   ts: string;                     // FIRED row's timestamp
   detail_path?: string;
 }
@@ -231,7 +229,7 @@ Pending rows with zero entries do NOT emit. A stage still in flight
 may legitimately have zero entries because the conductor hasn't
 written to memory.md yet — emitting MEMORY_EMPTY mid-flight would
 generate noise that doesn't represent a real diary skip. The signal
-milestone 14's doctor wants is "stage approved with zero entries" — that
+doctor wants is "stage approved with zero entries" — that
 requires the stage to have approved.
 
 ### Idempotency — exactly once per (slug, gate-completion)
@@ -265,10 +263,10 @@ duplicate emits, no phantom artefacts.
 
 ---
 
-## 6. v0.4.0 backfill rule
+## 6. Backfill rule
 
-Stages that completed before milestone 13's memory.md lifecycle ships have
-no memory.md history. The backfill rule:
+Stages that completed without the memory.md lifecycle have no memory.md
+history. The backfill rule:
 
 - `memory_entries: null` ↔ `memory_breakdown: null` ↔ no MEMORY_EMPTY emit.
 - Both fields move together. The discriminator is "did
@@ -276,8 +274,8 @@ no memory.md history. The backfill rule:
   zero-byte), it executed and the keys are numbers; if memory.md is
   absent, both are `null`.
 
-Without this rule, every v0.4.x user upgrading to v0.5.0 would see a
-storm of MEMORY_EMPTY rows on the first post-upgrade workflow.
+Without this rule, a workflow carrying such stages would see a storm of
+MEMORY_EMPTY rows.
 
 ---
 
@@ -307,25 +305,15 @@ has written more entries since the last compile fired, the snapshot
 lags. Recovery consumers must re-parse memory.md at recovery time;
 they must NOT trust snapshotted counts for pending rows.
 
-v0.5.0 has no consumer that reads pending counts live. Documented for
-v0.6.0 `--resume`, which will need this carve-out.
+No consumer reads pending counts live; the carve-out is documented for a
+future `--resume`.
 
-### Parallel-Bolt mid-flight recovery (closed in v0.5.0)
+### Parallel-Bolt mid-flight recovery
 
-A workflow with parallel Bolts crashing mid-batch had no per-Bolt
-recovery seam in milestone 8 — the schema reserved `instances?` but compile
-only wrote single-instance rows on main, and worktrees never received
-a runtime-graph fragment. Closed in v0.5.0 by `amadeus-runtime.ts
-fragment-fork` (Bolt start) and `fragment-merge` (Bolt complete
---merge), and by the compile populator extension that emits
-`BoltInstance[]` when audit shows ≥ 2 distinct slugs in a
-Construction-phase stage's window.
-
-The per-Bolt fragment is dead-on-arrival in v0.5.0 (no v0.5.0 reader
-of the worktree's record-dir `runtime-graph.json`). v0.6.0 `--resume`
-should treat the fragment as a hint, with main's post-merge
-runtime-graph as canonical, and additionally check for orphaned
-worktrees per `amadeus-bolt.ts` to surface a recovery prompt for those.
+`amadeus-runtime.ts fragment-fork` (Bolt start) and `fragment-merge` (Bolt
+complete `--merge`) give parallel Bolts a per-Bolt recovery seam, and the
+compile populator emits `BoltInstance[]` when audit shows ≥ 2 distinct slugs
+in a Construction-phase stage's window.
 
 ---
 
@@ -392,27 +380,7 @@ the deterministic anchor.
 
 ---
 
-## 10. Known gaps closed by future PRs
-
-- **MEMORY_EMPTY-rate metric** — milestone 14 doctor surfaces the rate using
-  the `(Stage, ISO-second)` de-dup tuple frozen in §5.
-- **`learnings_captured` provenance counts** — milestone 12 gate ritual
-  populates `from_orchestrator` and `from_user_addition`.
-- **`sensor_firings` array** — milestone 9 + milestone 10 dispatch sensors and
-  populate this slot.
-- **Bolt fork/merge of runtime-graph.json** — closed in v0.5.0 by
-  `fragment-fork` (no new audit event; rides on STATE_FORKED +
-  AUDIT_FORKED) and `fragment-merge` (no new audit event; rides on
-  STATE_MERGED + AUDIT_MERGED). Compile populates `instances[]` from
-  audit's BOLT_*-tagged events when ≥ 2 distinct slugs sit inside a
-  Construction stage's window.
-- **CLI-mode dispatch for headless workflows** — v0.6.0+ may ship a
-  non-Claude-Code execution path; the hook only fires inside a Claude
-  Code session.
-
----
-
-## 11. Fragment lifecycle
+## 10. Fragment lifecycle
 
 The per-Bolt runtime-graph fragment file lives at
 `<worktree>/<record>/runtime-graph.json`, gitignored, mirroring

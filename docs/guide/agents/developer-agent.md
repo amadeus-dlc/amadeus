@@ -8,7 +8,7 @@ The amadeus-developer-agent is your senior software developer. It translates arc
 
 The amadeus-developer-agent leads two stages across Inception and Construction. One of its stages (Code Generation) runs as a subagent — an autonomous subprocess that operates without user interaction. It has Bash access for running build tools, package managers, and test commands.
 
-Workspace Detection (0.2) used to be led by the amadeus-developer-agent as a subagent; it now runs deterministically inside `amadeus-utility init` as a rule-based scanner. The amadeus-developer-agent is no longer involved in Initialization.
+Workspace Detection (0.2) runs deterministically inside `amadeus-utility init` as a rule-based scanner. The amadeus-developer-agent is not involved in Initialization.
 
 ## Stages Led
 

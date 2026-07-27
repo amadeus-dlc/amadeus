@@ -434,7 +434,7 @@ AUQ をすべて先に解決し、次に `amadeus-bolt release-merge --slug <slu
 2. **`/amadeus` はディスクから状態を再導出する。** エンジンは main 状態から `Bolt Refs` を読み、監査ログを歩き、どの Bolt がどのライフサイクルフェーズにあるかを再構築します。
 3. **`Bolt Refs` にあり `STATE_FORKED` 行はあるが `STATE_MERGED` がない Bolt**: オーケストレーターは Phase 3 に再突入します(コード生成の resume)。
 4. **`Bolt Refs` にありすでに `STATE_MERGED` を持つ Bolt**: スキップ — すでにマージ済み。
-5. **フォーク状態に `Merge-Held: true` を持つ生存者**: 未マージ。オーケストレーターは `amadeus-worktree info --slug <slug>` を実行して JSON エンベロープの `merge_held: boolean` フィールド(post-merge のマイルストーン 13 fold-in で設定される — オーケストレーターは状態ファイルを手動でパースする必要がない)をチェックすることで、これを決定論的に検出します。未解決の失敗 Bolt AUQ をまず再レンダリングし、`amadeus-bolt release-merge --slug <slug>` でクリアされると、保留されたマージを元のバッチ順でディスパッチします。
+5. **フォーク状態に `Merge-Held: true` を持つ生存者**: 未マージ。オーケストレーターは `amadeus-worktree info --slug <slug>` を実行して JSON エンベロープの `merge_held: boolean` フィールド(post-merge の fold-in で設定される — オーケストレーターは状態ファイルを手動でパースする必要がない)をチェックすることで、これを決定論的に検出します。未解決の失敗 Bolt AUQ をまず再レンダリングし、`amadeus-bolt release-merge --slug <slug>` でクリアされると、保留されたマージを元のバッチ順でディスパッチします。
 6. **Walking-skeleton ラダープロンプトが未設定**: resume するセッションが `Construction Autonomy Mode: unset` を見て skeleton がすでに `[x]` の場合、ラダープロンプトが resume するエンジニアに発火します。最初に resume した者がモードを設定し、後続の resume 者は `git pull` でそれを継承します。
 
 Practices と autonomy mode は共有リポジトリの明示的なコミット済み成果物です — マシン
@@ -445,7 +445,7 @@ Practices と autonomy mode は共有リポジトリの明示的なコミット�
 ## このレシピがカバーしないもの
 
 - **専用の `--claim-bolt` CLI ユーティリティ。** そのユーティリティは、実際のワークショップのドッグフーディングが具体的な要件(レースでのより良いエラーメッセージ、監査のみのオフラインモード、自動化された stale-claim 検出)を表面化させたら、将来のリリースで同梱されるかもしれません。それまでは、`amadeus-worktree create` + `git push` を使う上のレシピが契約です。
-- **Stale-claim 検出。** Bolt を claim してリリースせずに離脱した参加者は、origin に孤児 `bolt-<slug>` ブランチを残します。ファシリテーターが手動で削除します(`git push origin :bolt-<slug>`)。v0.4.0 マイルストーン 15 の将来の `--doctor` 拡張は stale ブランチを自動的にフラグするかもしれません。
+- **Stale-claim 検出。** Bolt を claim してリリースせずに離脱した参加者は、origin に孤児 `bolt-<slug>` ブランチを残します。ファシリテーターが手動で削除します(`git push origin :bolt-<slug>`)。将来の `--doctor` 拡張は stale ブランチを自動的にフラグするかもしれません。
 - **監査のみ / オフラインモード。** 共有リモートなしでは、claim の調整はファシリテーターと参加者間の口頭合意にフォールバックします。Workshop モードは根本的にマルチクローンのパターンです。workshop スコープの単一ラップトップ実行は可能ですが、並列 claim の利点を失います。
 - **マルチクローンワークショップ中の practices の新鮮さ。** Practices は **Construction 開始時に一度** 読まれます — コンダクターは `amadeus/spaces/<space>/memory/team.md` から `## Walking Skeleton` と `## Branching` を(`amadeus-lib.ts` の `extractMarkdownSection` 経由で)ロードし、その 1 回の読み取りがその参加者のセッションの Construction フェーズ全体をサービスします。ファシリテーターが参加者が Bolt を進行中に practices-discovery を再実行すると、進行中の参加者は `/amadeus` セッションを再起動する(そして新しい承認を `git pull` する)まで、ライブの `amadeus/spaces/<space>/memory/team.md` を再読しません。**ファシリテーターへのルール:** いずれかの Bolt が進行中の間に practices-discovery を再実行しないこと。すべての進行中の Bolt のゲートをまず終わらせること。**参加者へのルール:** セッションを resume する直前に必ず `git fetch --all && git pull` を実行すること — これは離れている間に着地した practices の変更を捕捉します。同じルールは参加者フローのステップ 2 の `--base` 値もカバーします: `amadeus/spaces/<space>/memory/team.md` からコピーする値は、最後の pull 時点でのみ新鮮です。
 
