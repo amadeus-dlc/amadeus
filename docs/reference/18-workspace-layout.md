@@ -18,15 +18,13 @@ Amadeus moves the framework's authored source into `packages/framework/`.
 - Root `scripts/` stays as repository-level packaging/self-promotion tooling.
 - Root `dist/<name>/` stays as the generated, committed public install contract.
 - Root `.claude/`, `.codex/`, `.agents` stay as dogfood self-install targets.
-- Root `core` and `harness` remain as aliases for existing docs/tests/import compatibility.
+- The repository root carries no `core` or `harness` entries; docs/tests/imports reference `packages/framework/core` and `packages/framework/harness` directly.
 - `packages/setup` is treated as a sibling package owned by a separate intent and is not an implementation target of this framework migration.
 
 ```text
 packages/framework/core/        # framework source of truth
 packages/framework/harness/     # harness-specific authored source
 packages/framework/package.json # framework package boundary
-core -> packages/framework/core       # compatibility alias
-harness -> packages/framework/harness # compatibility alias
 scripts/                       # repository-level packaging/self-promotion tooling
 dist/<name>/                    # public committed distribution output
 .claude/.codex/.agents          # dogfood runtime install targets
@@ -65,7 +63,7 @@ This carries the lowest implementation risk, but it falls short of the workspace
 | `dist/*` | generated, committed public install source | stays at the root |
 | `.claude/.codex/.agents` | repository dogfood runtime install target | stays at the root |
 | `tsconfig.json` | authored TypeScript source includes `packages/framework/core` and `packages/framework/harness` | update the include paths |
-| tests/docs | existing root `core` / `harness` references keep working through the alias | update to package-owned path wording incrementally |
+| tests/docs | reference `packages/framework/core` / `packages/framework/harness` directly | — |
 | `.github/workflows/ci.yml` | runs `dist:check` and `promote:self:check` | no change needed, since the root script contract is preserved |
 
 ## Guard Preservation
@@ -97,12 +95,9 @@ When shipping a change that touches this layout, confirm the following according
 - The framework source is collected under `packages/framework/`, sitting beside `packages/setup` as a sibling package.
 - The root `dist/` public install contract is preserved.
 - The root `scripts/` build/release workflow is preserved.
-- Existing docs/tests/imports keep working through the root `core` and `harness` aliases during the migration.
 
 ### Negative
 
-- root `core` / `harness` aliases are transitional compatibility surface and must not become a second source of truth.
-- Some docs/tests still mention root `core/` and `harness/`. No compatibility alias exists on disk (there is no root `core/` or `harness/` directory), so these are stale prose references; wording that explains the source of truth is updated to `packages/framework/` incrementally.
 - Full relocation of `scripts/` or `dist/`, if desired later, still requires a dedicated migration intent.
 
 ## Future Migration Trigger
@@ -111,37 +106,3 @@ Reconsider moving root `scripts/` only if framework packaging becomes independen
 
 Reconsider moving root `dist/` only if install commands and public distribution expectations can be changed deliberately across README, docs, tests, CI, and self-promotion.
 
-## Potential Follow-Up Slices
-
-### Documentation path cleanup
-
-Goal: incrementally update root `core/` / `harness/` prose references so that source-of-truth contexts read `packages/framework/core` / `packages/framework/harness`.
-
-Non-goal: do not change how runtime `.claude/.codex/.agents` or root `dist/` are described.
-
-Guard commands:
-
-- docs review
-- `bun tests/run-tests.ts --unit --filter t174-docs-legacy-refs-gate`
-
-### Alias retirement readiness
-
-Goal: inventory the tests/imports/docs that depend on the root `core` / `harness` aliases and decide whether the aliases can be removed later.
-
-Non-goal: do not remove the aliases in this issue.
-
-Guard commands:
-
-- `bun run typecheck`
-- relevant `tests/run-tests.sh` profile
-
-### Scripts package boundary
-
-Goal: re-evaluate whether `scripts/` stays at the root or moves to `packages/framework/scripts` later.
-
-Non-goal: do not move `dist/` at the same time.
-
-Guard commands:
-
-- `bun run dist:check`
-- `bun run promote:self:check`
