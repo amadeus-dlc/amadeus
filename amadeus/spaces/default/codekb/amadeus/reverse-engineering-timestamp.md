@@ -1,6 +1,20 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260726-answer-manual-binding）
+## 実行メタデータ（現在: 260727-install-doc-mismatch）
+
+- Date: `2026-07-27`
+- Base commit: `0d83aa48b886fe85cd977569c0e7b3015b84d3e5`（前 intent `260726-plugin-host-delivery` の observed。`git merge-base --is-ancestor 0d83aa48b886fe85cd977569c0e7b3015b84d3e5 HEAD` **exit 0 = 祖先**、`git rev-list --count 0d83aa48b..HEAD` = **70**。cid:reverse-engineering:rescan-base-ancestry）
+- Observed commit: `46a75f2e7c53aaa475a19cc217d10c9172ad4129`（= 現 HEAD、`git rev-parse HEAD` 実測。worktree `fix-plugin`、ブランチ `fix/plugin`）
+- 区間規模: `git diff --name-only 0d83aa48b..HEAD | wc -l` = **458 files**（測定 ref: observed `46a75f2e7`）。面別内訳は `git diff --name-only 0d83aa48b..HEAD | awk -F/ '{print $1"/"$2}' | sort | uniq -c` 出力の転記で amadeus/spaces **192** / dist **111**（うち `dist/plugins` **37**）/ tests **55**（integration 32 / unit 16 / smoke 2 / conformance 1 / harness 1）/ packages/framework **16**（core 10・harness 6）/ .kimi-code **16** / .claude **13** / docs **12** / .cursor **10** / .codex **10** / .opencode **9** / scripts **4** / plugins **2**。
+- 区間の内訳: **本区間はほぼ全体が前 intent `260726-plugin-host-delivery`（plugin ホスト配信）の Construction である。** 前回 RE（observed `0d83aa48b`）は同 intent の inception 段で実施されており、その時点では plugin-composition / `dist/plugins` / トップレベル `plugins/` は**未着地**（前節が「区間内で完全に無変更」と記録したとおり）だった。本区間 `0d83aa48b..46a75f2e7` はその Construction 本体（U2–U8）を含み、`dist/plugins`（7面 install bundle）・`plugins/`（authoring source）・composition engine の core 再配置がすべて**この区間で新規着地**した。主系統（`git log --oneline 0d83aa48b..HEAD` より）: U2 walking-skeleton + engine core 再配置（`f8fe817c5` / [PR #1554](https://github.com/amadeus-dlc/amadeus/pull/1554)）、U3 host-projection-all（`250265adb`、§12a 是正 `30b3afc99`）、U4 hook-wiring（`a6b20dfe4`）、U5 doctor（`a0b15e1ab`）、U6 activation-policy（`8ae1ef058`）、U7 conformance（`14b004f55`、t188）、U8 docs-sync（`60eb7517e` / `4858fb8d7`）。周辺: promote-self kimi 配線（`e688c9f79` / `f1905d7cd`）、mirror 非対称是正 [#1553](https://github.com/amadeus-dlc/amadeus/issues/1553)（`82df115ae`）、t177 flake 修正 [#1565](https://github.com/amadeus-dlc/amadeus/pull/1565)（`46a75f2e7`）。
+- Scope: `amadeus-bugfix`（intent `260727-install-doc-mismatch`）、Brownfield、単一 repo `amadeus`
+- Focus: [Issue #1569](https://github.com/amadeus-dlc/amadeus/issues/1569) — plugin の **INSTALL.md / docs が案内するコピー先** と **CLI discovery が実際に走査するステージング先** の不一致。ユーザー裁定 **A**（installDoc / docs を `.amadeus-plugin-src/<name>/` へ修正、**CLI discovery が正**）。欠陥は前 intent の U3 host-projection-all（`250265adb`）で導入された。対象面: discovery（正）`packages/framework/core/tools/amadeus-plugin.ts:278`、installDoc（誤）`scripts/plugin-projection.ts:593`、`dist/plugins/formal-model-check/<face>/INSTALL.md`（6面）、docs `docs/guide/19-plugins.md:183`（EN）+ `19-plugins.ja.md:175`（JA）、テスト棚卸し（t307 / t299 / t302 / t328 / t338 ほか）。
+- 差分リフレッシュ（cid:reverse-engineering:c1）: フルスキャン不実施。上流入力は Developer スキャン結果（実測済みスキャンノート）。Architect 段で #1569 対象面の全 file:line・件数を observed `46a75f2e7` で独立再実測し、**訂正 0 件**（`amadeus-plugin.ts:278` `pluginSourceRootOf` / 呼び出し 3 経路 `:288`/`:323`/`:405`、`plugin-projection.ts:593` `Copy this bundle's …` / SELF_INSTALL_HARNESSES `:56` = 5 面、docs `:183`/`:175`、dist 6 INSTALL.md、t307 `:53`/`:60` の非アサート、`.amadeus-plugin-src` の test 配置 6 箇所、`plugin-projection.ts` の `.amadeus-plugin-src` grep = **0 hit** をいずれも実測一致）。
+- 測定 ref: 本節および本 scan で更新した全成果物の数値・SHA・file:line は observed `46a75f2e7` での `git rev-parse` / `git rev-list --count` / `git diff --name-only` / `grep -n` / `grep -c` / `sed -n` / `wc -l` 出力からの転記（cid:requirements-analysis:numbers-from-command-output-only、cid:reverse-engineering:measurement-ref-in-artifacts）。
+- 更新した成果物（9件 + 新規 re-scan 記録）: `reverse-engineering-timestamp.md`（本ファイル）/ `architecture.md` / `code-structure.md` / `component-inventory.md` / `code-quality-assessment.md`（以上は本 intent の新節を追加）/ `dependencies.md` / `technology-stack.md` / `api-documentation.md` / `business-overview.md`（以上は区間の plugin 面変化と #1569 の最小追記）。加えて per-intent 記録 `re-scans/260727-install-doc-mismatch.md` を新規作成。旧「現在」マーカー（`260726-plugin-host-delivery`）は本ファイルおよび body 4 成果物（architecture / code-structure / component-inventory / code-quality-assessment）の H2 見出しで履歴ラベルへ降格した（cid:reverse-engineering:c3-relabel）。
+- Delivery boundary: 本 scan は codekb の差分更新と per-intent re-scan 記録のみを成果物とし、患部コード（`plugin-projection.ts` / docs / `dist/plugins`）・テスト・intent record / state / audit・生成配布物・GitHub Issue への書込は一切行わない。修正方式（共有定数化で discovery↔installDoc の一致を構造強制するか、文言のみ是正するか / docs 二重管理の扱い / 回帰テストの不変量固定先）は後続の requirements-analysis 以降で裁定する。
+
+## 実行メタデータ（履歴: 260726-answer-manual-binding）
 
 - Date: `2026-07-26`（intent slug 基準。RE 実行は `2026-07-27`）
 - Base commit: `09c669901385ad44e9a5b378b8d8903eebbc184c`（前 intent `260726-t258-p95-flake` の observed。`git merge-base --is-ancestor 09c669901 HEAD` **exit 0 = 祖先**、`git rev-list --count 09c669901..HEAD` = **2**。候補中で祖先かつ距離最小（`f9a0fb86a`=距離4 / `e39402224`=非祖先 / `1673c4332`=距離42）。cid:reverse-engineering:rescan-base-ancestry）
@@ -48,9 +62,8 @@
 - Sensors: RE ステージが宣言する3センサー（required-sections / upstream-coverage / answer-evidence）は、codekb 出力パス `amadeus/spaces/default/codekb/amadeus/**` が各 manifest の filter（`**/{amadeus-docs,intents}/**` および `**/*-questions.md`）に**構造的に不適合**のため発火不能（cid:reverse-engineering:re-sensors-codekb-filter-mismatch、cid:reverse-engineering:c3-codekb-sensor）。**センサー成功として扱わず**、代替として (a) 更新9成果物 + 新規 re-scan 記録に `grep -c '^## '` を実行し H2 ≥ 2 を機械確認 (b) 上流入力（`scan-notes.md`）への実参照を各成果物本文で `grep -c 'scan-notes'` により機械確認 の2点を実施した。結果表は `re-scans/260726-mirror-state-split.md` の「センサー不適用と代替検証」節。
 - Delivery boundary: 本 scan は codekb の差分更新と per-intent re-scan 記録のみを成果物とし、患部コード（mirror スタック）・テスト fixture・coverage allowlist・GitHub Issue・intent record / state / audit・生成配布物への書込は一切行わない。修正方式（read の v1 片寄せ vs write の legacy 二重化、dead legacy 群の扱い、legacy 10 record の in-tool 復旧設計、互換フォールバックの是非）は後続の requirements-analysis 以降で裁定する。
 
-## 実行メタデータ（履歴: 260726-mirror-envelope-lf）
 
-## 実行メタデータ（履歴: 260726-plugin-host-delivery、2026-07-26）
+## 実行メタデータ（履歴: 260726-plugin-host-delivery）
 
 - Date: `2026-07-26`
 - Base commit: `1673c433209c74820881c75a0816bbce3fb2d512`（`git merge-base --is-ancestor 1673c4332 HEAD` **exit 0 = 祖先**、`git rev-list --count 1673c4332..HEAD` = **43**。cid:reverse-engineering:rescan-base-ancestry。注: 前回 observed `e39402224` は現 HEAD の**非祖先**と実測した — `git merge-base --is-ancestor e3940222480b15d9cf10dd0a97df6a35a7ffb7d5 HEAD` **exit 1**。squash マージ運用では record の observed が現 HEAD の祖先でない場合があるため、祖先である `1673c4332` を base に採用した）
