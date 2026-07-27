@@ -647,6 +647,13 @@
     "status": "complete"
   },
   {
+    "uuid": "019fa23d-cbbb-70b2-9849-65deff83d20d",
+    "slug": "docs-impl-sync",
+    "dirName": "260727-docs-impl-sync",
+    "scope": "amadeus-document",
+    "status": "complete"
+  },
+  {
     "uuid": "019fa27a-2c73-7630-b7b0-f67b538b6970",
     "slug": "install-doc-mismatch",
     "dirName": "260727-install-doc-mismatch",

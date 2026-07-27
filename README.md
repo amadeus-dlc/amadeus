@@ -2,7 +2,7 @@
 
 > Languages: **English** | [日本語](README.ja.md)
 
-**Amadeus-DLC is a self-hosted AI development lifecycle: a deterministic workflow engine plus a gated, 32-stage methodology, authored once and running natively inside six coding-agent harnesses.** You describe what to build; eleven domain-expert agents carry it through ideation, inception, construction, and operation — and a state machine that is code, not prompts, holds every approval gate until *you* pass it.
+**Amadeus-DLC is a self-hosted AI development lifecycle: a deterministic workflow engine plus a gated, 32-stage methodology, authored once and running natively inside seven coding-agent harnesses.** You describe what to build; eleven domain-expert agents carry it through ideation, inception, construction, and operation — and a state machine that is code, not prompts, holds every approval gate until *you* pass it.
 
 ![version](https://img.shields.io/badge/version-0.1.5-blue)
 ![license](https://img.shields.io/badge/license-(MIT%20OR%20Apache--2.0)-green)
@@ -64,7 +64,7 @@ Amadeus-DLC implements the **AI-DLC methodology** — a structured, gated approa
 On top of that inheritance, this line develops its own additions. Among them:
 
 - the **installer** — `@amadeus-dlc/setup` installs and upgrades any harness distribution with one command, where upstream installs by manual copy;
-- **two additional harness surfaces** — OpenCode and Cursor — extending the four shipped upstream to six;
+- **three additional harness surfaces** — OpenCode, Cursor, and Kimi Code — extending the four shipped upstream to seven;
 - a **workspace migration tool** (`/amadeus --migrate`) that converts an upstream v2 `aidlc/` workspace in place, previews included;
 - the **grilling** session skill for read-only design interrogation, and **fully bilingual documentation** — every guide ships in English and Japanese;
 - and the discipline behind all of the above: Amadeus is developed *with* Amadeus, in this repository, through its own stages, gates, and audit trail.
@@ -81,6 +81,7 @@ The engine — state machine, audit log, referee — is byte-identical across ev
 | **OpenCode** | — | `bunx @amadeus-dlc/setup install --harness opencode` | `$amadeus` | [Running on OpenCode](docs/guide/harnesses/opencode.md) |
 | **Kiro IDE** | — | `bunx @amadeus-dlc/setup install --harness kiro-ide` | `/amadeus` | [Running on Kiro IDE](docs/guide/harnesses/kiro-ide.md) |
 | **Kiro CLI** | ≥ 2.6 | `bunx @amadeus-dlc/setup install --harness kiro` | `/amadeus` | [Running on Kiro CLI](docs/guide/harnesses/kiro-cli.md) |
+| **Kimi Code** | ≥ 0.28.1 | `bunx @amadeus-dlc/setup install --harness kimi` | `/skill:amadeus` | [Running on Kimi Code](docs/guide/harnesses/kimi-code.md) |
 
 > [!NOTE]
 > This release works best with **Claude Opus 4.8** (on Kiro, that requires a paid plan). On weaker models the conductor may skip optional stage steps or rush approval gates. We are sharpening behavior on other models.
@@ -120,7 +121,7 @@ bunx @amadeus-dlc/setup install     # bun
 npx @amadeus-dlc/setup install      # npm/node
 ```
 
-Run bare, `install` launches an interactive wizard: pick your harness (`claude` / `codex` / `kiro` / `kiro-ide` / `opencode` / `cursor`), then a target directory. For scripts and CI, skip the wizard with explicit flags:
+Run bare, `install` launches an interactive wizard: pick your harness (`claude` / `codex` / `kiro` / `kiro-ide` / `opencode` / `cursor` / `kimi`), then a target directory. For scripts and CI, skip the wizard with explicit flags:
 
 ```bash
 bunx @amadeus-dlc/setup install --harness claude --target your-project --yes
@@ -295,7 +296,7 @@ amadeus/
 │   │   │   ├── skills/         #   session skills
 │   │   │   └── templates/      #   onboarding skeleton → each harness's CLAUDE.md / AGENTS.md
 │   │   └── harness/            # thin per-harness authored surfaces — small, divergent by design
-│   │       ├── claude/  codex/  cursor/  kiro/  kiro-ide/  opencode/
+│   │       ├── claude/  codex/  cursor/  kimi/  kiro/  kiro-ide/  opencode/
 │   └── setup/                  # @amadeus-dlc/setup — the installer package
 │
 ├── scripts/
@@ -306,7 +307,7 @@ amadeus/
 │  ─────────── GENERATED, COMMITTED, DRIFT-GUARDED — never hand-edit ───────────
 ├── dist/
 │   ├── claude/    kiro-ide/    kiro/      # what users of each harness copy
-│   ├── codex/     opencode/    cursor/
+│   ├── codex/     opencode/    cursor/    kimi/
 │
 │  ─────────── SUPPORTING ───────────
 ├── tests/                      # all-TypeScript suite (t*.test.ts)

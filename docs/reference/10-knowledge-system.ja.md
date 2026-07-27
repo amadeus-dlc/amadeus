@@ -163,7 +163,7 @@ amadeus/knowledge/amadeus-quality-agent/company-testing-standards.md
 
 ### エージェント別ナレッジ
 
-> この表はスナップショットです。各エージェントの正となる `display_name` + `examples` は、`core/agents/<slug>-agent.md` にあるエージェントのフロントマターに存在し、`core/tools/amadeus-lib.ts` の `loadAgents()` を通じてプログラム的に公開されます。新しいエージェントはまずそこに追加し、この表は同じ PR で更新してください。
+> この表はスナップショットです。各エージェントの正となる `display_name` + `examples` は、`packages/framework/core/agents/<slug>-agent.md` にあるエージェントのフロントマターに存在し、`packages/framework/core/tools/amadeus-lib.ts` の `loadAgents()` を通じてプログラム的に公開されます。新しいエージェントはまずそこに追加し、この表は同じ PR で更新してください。
 
 | Directory | 目的 | Example Files |
 |-----------|---------|---------------|

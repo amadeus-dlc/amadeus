@@ -152,9 +152,9 @@ L = リード、S = サポート
 
 エージェントの表示名と例示ナレッジファイルは、各エージェントの `.md` フロントマターにある `display_name` と `examples` フィールドが正典です — TypeScriptの編集は不要です。完全なレシピ(必須フロントマターフィールド、検証手順、何が自動的に検証され何が手動かの区別)については、[コントリビュート: エージェントの追加](11-contributing.ja.md#adding-an-agent)を参照してください。手順の簡単なサマリーは以下のとおりです。
 
-1. 必須フロントマター(`name`、`display_name`、`examples`、`description`、`disallowedTools`(`Task` を含む)、`model`)を持つ `core/agents/{name}-agent.md` を作成する。オプションの `tools:` allowlist は継承ツールセットを絞り込む。省略するとセッションのツールセット全体を継承する。`core/tools/amadeus-lib.ts` の `loadAgents()` が次回の呼び出しでファイルを検出する。
-2. `core/knowledge/{name}-agent/` にナレッジファイルを追加する
-3. エージェントが参加するステージファイル(`core/amadeus-common/stages/`)にエージェントを追加する — 各ステージのフロントマターで `lead_agent` / `support_agents` を設定する。コンパイル済みの `tools/data/stage-graph.json` はそのフロントマターから `bun scripts/package.ts` によって生成される。手編集は絶対にしない(`package.ts --check` のドリフトガードが手編集されたdistでCIを失敗させる)。
+1. 必須フロントマター(`name`、`display_name`、`examples`、`description`、`disallowedTools`(`Task` を含む)、`model`)を持つ `packages/framework/core/agents/{name}-agent.md` を作成する。オプションの `tools:` allowlist は継承ツールセットを絞り込む。省略するとセッションのツールセット全体を継承する。`packages/framework/core/tools/amadeus-lib.ts` の `loadAgents()` が次回の呼び出しでファイルを検出する。
+2. `packages/framework/core/knowledge/{name}-agent/` にナレッジファイルを追加する
+3. エージェントが参加するステージファイル(`packages/framework/core/amadeus-common/stages/`)にエージェントを追加する — 各ステージのフロントマターで `lead_agent` / `support_agents` を設定する。コンパイル済みの `tools/data/stage-graph.json` はそのフロントマターから `bun scripts/package.ts` によって生成される。手編集は絶対にしない(`package.ts --check` のドリフトガードが手編集されたdistでCIを失敗させる)。
 4. ディストリビューションを再生成する: `bun scripts/package.ts`(その後 `--check` でドリフトがないことを確認)
 5. 手動保守のナレッジテーブルにエージェント→examplesの行を追加する(space レベルのチームナレッジディレクトリは `amadeus/knowledge/{name}-agent/` で、コンテンツがあるときにチームが作成する — エンジンはスキャフォールドしない)
 6. テストを更新する: ファイル存在のスモークテスト、ステージ-エージェント相互参照のフィーチャーテスト
@@ -165,7 +165,7 @@ L = リード、S = サポート
 - **ツールの変更**: フロントマターに `tools:` allowlist を追加または編集してエージェントを絞り込む。省略するとセッションのツールセット全体を継承する。`tools:` リストは、`mcp__<server>__<tool>` の id も列挙しない限り継承したMCPツールを失う。
 - **モデルの変更**: `model` を `opus` または `sonnet` に編集する。
 - **挙動の変更**: Markdown本文のセクション(責務、原則)を編集する。
-- **ステージ割り当ての変更**: エージェントファイル(Stages Owned セクション)と関連するステージファイル(`core/amadeus-common/stages/`)の両方を編集し、`bun scripts/package.ts` で再生成する — コンパイル済みのステージグラフはステージフロントマターから導出され、手編集されることはない。
+- **ステージ割り当ての変更**: エージェントファイル(Stages Owned セクション)と関連するステージファイル(`packages/framework/core/amadeus-common/stages/`)の両方を編集し、`bun scripts/package.ts` で再生成する — コンパイル済みのステージグラフはステージフロントマターから導出され、手編集されることはない。
 
 ---
 

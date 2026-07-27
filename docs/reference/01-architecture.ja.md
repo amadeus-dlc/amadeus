@@ -57,7 +57,7 @@ graph LR
 
 **Rules**(`rules/`)— 組織およびプロジェクトのガードレール。自己学習型: 人間による修正が永続的な振る舞いのルールになります。合計でわずか約35行 — 非 AI-DLC の会話でのコンテキスト肥大化を避けるため最小限に保たれています。
 
-**Agents**(`agents/*.md`)— 11個のフラットなエージェントファイル。それぞれがドメインエキスパートのペルソナを、ロール、責任、ステージ所有権、コラボレーションパターン、Claude Code ツール、知識のロード順序とともに定義します。すべて `disallowedTools: Task` を持ち — 委譲を行うのはコンダクターだけです。
+**Agents**(`agents/*.md`)— 14個のフラットなエージェントファイル(11個のドメインエキスパートに加え、2個のレビュアーと composer)。それぞれがペルソナを、ロール、責任、ステージ所有権、コラボレーションパターン、Claude Code ツール、知識のロード順序とともに定義します。すべて `disallowedTools: Task` を持ち — 委譲を行うのはコンダクターだけです。
 
 **Knowledge**(`knowledge/`)— 2層の方法論リファレンス:
 - `amadeus-shared/` — 原則、検証、ブラウンフィールドのセーフガード、**監査イベントタクソノミー**(正規のイベントレジストリ)、状態テンプレート
@@ -253,30 +253,30 @@ sequenceDiagram
 
 ## ソース vs 配布物(1つの core、多数のハーネス)
 
-フレームワークは **一度だけ作成され、ハーネスごとに生成されます** — 現在は Claude Code、Kiro CLI、Codex CLI、そして移植先となる任意の高機能 CLI。手作業で作成するソースは、ハーネス中立の `core/` に加え、CLI ごとの薄い `harness/<name>/` サーフェスです。`bun scripts/package.ts` は、コミット済みでドリフトガードされた `dist/<harness>/` ツリーを再生成します:
+フレームワークは **一度だけ作成され、ハーネスごとに生成されます** — 現在は Claude Code、Kiro CLI、Codex CLI、そして移植先となる任意の高機能 CLI。手作業で作成するソースは、ハーネス中立の `packages/framework/core/` に加え、CLI ごとの薄い `packages/framework/harness/<name>/` サーフェスです。`bun scripts/package.ts` は、コミット済みでドリフトガードされた `dist/<harness>/` ツリーを再生成します:
 
 ```
-core/                  # hand-authored, harness-neutral (tools, amadeus-common,
-                       #   agents, rules, scopes, sensors, knowledge, hooks,
-                       #   4 session skills); prose uses the {{HARNESS_DIR}} token
-harness/<name>/        # per-CLI surface: manifest.ts + orchestrator skill +
-                       #   harness files (+ emit.ts for codex)
-scripts/package.ts     # the build: copy core (token→.claude/.kiro/.codex) +
-                       #   harness, compile the graph, generate runners, emit;
-                       #   `--check` is the byte-parity drift guard
-dist/<harness>/        # GENERATED + committed: claude/.claude, kiro/.kiro,
-                       #   codex/{.codex,.agents} — never hand-edited
+packages/framework/core/           # hand-authored, harness-neutral (tools, amadeus-common,
+                                   #   agents, rules, scopes, sensors, knowledge, hooks,
+                                   #   4 session skills); prose uses the {{HARNESS_DIR}} token
+packages/framework/harness/<name>/ # per-CLI surface: manifest.ts + orchestrator skill +
+                                   #   harness files (+ emit.ts for codex)
+scripts/package.ts                 # the build: copy core (token→.claude/.kiro/.codex) +
+                                   #   harness, compile the graph, generate runners, emit;
+                                   #   `--check` is the byte-parity drift guard
+dist/<harness>/                    # GENERATED + committed: claude/.claude, kiro/.kiro,
+                                   #   codex/{.codex,.agents} — never hand-edited
 ```
 
-`core/` の `.ts` は変換なしでバイトコピーされます。ランタイムの `harnessDir()` シーム(`core/tools/amadeus-lib.ts`)は、実行時に出荷レイアウトからハーネスディレクトリを導出します — ハードコードされたリストではなく、ツール自身のパスからのオープンセットなので、新しいハーネスにここでの編集は不要です — そしてその rules-dir リネームは、`rulesSubdir()` シームが読む、生成された `tools/data/harness.json` にツリーごとに出荷されます。1セットのツールソースがすべてのハーネスで実行されます。[Porting to a New Harness](../harness-engineering/09-porting-to-a-new-harness.ja.md) を参照。
+`packages/framework/core/` の `.ts` は変換なしでバイトコピーされます。ランタイムの `harnessDir()` シーム(`packages/framework/core/tools/amadeus-lib.ts`)は、実行時に出荷レイアウトからハーネスディレクトリを導出します — ハードコードされたリストではなく、ツール自身のパスからのオープンセットなので、新しいハーネスにここでの編集は不要です — そしてその rules-dir リネームは、`rulesSubdir()` シームが読む、生成された `tools/data/harness.json` にツリーごとに出荷されます。1セットのツールソースがすべてのハーネスで実行されます。[Porting to a New Harness](../harness-engineering/09-porting-to-a-new-harness.ja.md) を参照。
 
 ## ディレクトリ構造
 
-出荷される Claude 配布物(`dist/claude/.claude/`、`core/` + `harness/claude/` からバイト単位で再生成):
+出荷される Claude 配布物(`dist/claude/.claude/`、`packages/framework/core/` + `packages/framework/harness/claude/` からバイト単位で再生成):
 
 ```
 dist/claude/.claude/
-+-- VERSION                       # plain-text framework version marker, emitted from core/tools/amadeus-version.ts
++-- VERSION                       # plain-text framework version marker, emitted from packages/framework/core/tools/amadeus-version.ts
 +-- CLAUDE.md
 +-- settings.json
 +-- hooks/
@@ -401,12 +401,12 @@ amadeus/                                    # neutral, harness-independent, comm
 
 **解決 (Resolution)。** 2つのユーザーごとのカーソルがコンテキストを選択します。どちらもエラーになりません(カーソルが欠けている場合はデフォルトにフォールバック):
 
-- **Space** — `amadeus/active-space`、優先順位 `explicit arg > cursor > "default"`(`DEFAULT_SPACE`、`core/tools/amadeus-lib.ts:285`。リゾルバ `activeSpace()`、`amadeus-lib.ts:354-366`)。`listSpaces()` はディスク上に何もなくても常に `default` を報告します(`amadeus-lib.ts:713-728`)。
+- **Space** — `amadeus/active-space`、優先順位 `explicit arg > cursor > "default"`(`DEFAULT_SPACE`、`packages/framework/core/tools/amadeus-lib.ts:285`。リゾルバ `activeSpace()`、`amadeus-lib.ts:354-366`)。`listSpaces()` はディスク上に何もなくても常に `default` を報告します(`amadeus-lib.ts:713-728`)。
 - **Intent** — `amadeus/spaces/<space>/intents/active-intent`、優先順位 `explicit arg > cursor(amadeus-state.md を保持する実在の record を指す場合)> lone-intent > null`(`activeIntent`、`amadeus-lib.ts:411-435`)。`null` の intent は「まだ record がない」を意味し — オーケストレーターが最初の intent を自動誕生させるために使うシグナルです。
 
 パスヘルパー — `intentsDir`、`knowledgeDir`、`codekbDir`(`amadeus-lib.ts`)、および `memoryDirFor`(`amadeus-graph.ts:234`)— はすべて space 引数を `activeSpace(projectDir)` にデフォルトするので、AI-DLC 自身のリゾルバはカーソルに従います。`/amadeus space <name>` で space を切り替えると、各ハーネスネイティブのルールインクルード(上述の Claude `@`-import スタブ、Kiro の resources glob、Codex の rules dir)も、切り替え先の space の `memory/` に再ポイントされます。`default` では、この再ポイントはバイト単位で同一の no-op なので、単一チームのコミット済みツリーは一切変化しません。
 
-**コミット対象 vs gitignore 対象。** `amadeus/` はチームが作業を共有できるようにチェックインされます。分割(`harness/claude/dot-gitignore:34-54`): 2つのカーソル(`active-space`、`active-intent`)、クローンごとのランタイム(`.amadeus-clone-id`、`.amadeus-sessions/`)、および派生状態(`runtime-graph.json`、record 下の `.amadeus-*`)は **gitignore 対象** です。メソッド(`memory/**`)、知識(`knowledge/**`、`codekb/**`)、`intents.json` レジストリ、各 record の `amadeus-state.md`、`audit/` シャード、成果物は **コミット対象** です。監査はクローンごとのシャード(`audit/<host>-<clone>.md`)としてコミットされます。これは、git が並行 append をマージする必要が決してないようにするためで — 意図的に `merge=union` 属性はありません。
+**コミット対象 vs gitignore 対象。** `amadeus/` はチームが作業を共有できるようにチェックインされます。分割(`packages/framework/harness/claude/dot-gitignore:34-54`): 2つのカーソル(`active-space`、`active-intent`)、クローンごとのランタイム(`.amadeus-clone-id`、`.amadeus-sessions/`)、および派生状態(`runtime-graph.json`、record 下の `.amadeus-*`)は **gitignore 対象** です。メソッド(`memory/**`)、知識(`knowledge/**`、`codekb/**`)、`intents.json` レジストリ、各 record の `amadeus-state.md`、`audit/` シャード、成果物は **コミット対象** です。監査はクローンごとのシャード(`audit/<host>-<clone>.md`)としてコミットされます。これは、git が並行 append をマージする必要が決してないようにするためで — 意図的に `merge=union` 属性はありません。
 
 ## 主要な設計上の決定
 
@@ -473,7 +473,7 @@ tests/
 | レベル | ディレクトリ | カバー範囲 |
 |-------|-----------|----------------|
 | **Smoke**(L1) | `tests/smoke/` | ファイルの存在、エージェント/ステージ/プロトコルの構造、SKILL.md グラフの一貫性、settings.json スキーマ。欠落または誤名のファイルを捕捉する高速な構造チェック。LLM なし。 |
-| **Unit**(L1) | `tests/unit/` | 11個のフック、CLI ツール、ステージ/エージェントのフロントマター、知識インベントリ、オーケストレーションエンジンのハンドラ、その他の単一コンポーネント契約。各テストは1つのコンポーネントを分離します。LLM なし。 |
+| **Unit**(L1) | `tests/unit/` | フレームワークのフック、CLI ツール、ステージ/エージェントのフロントマター、知識インベントリ、オーケストレーションエンジンのハンドラ、その他の単一コンポーネント契約。各テストは1つのコンポーネントを分離します。LLM なし。 |
 | **Integration**(L2) | `tests/integration/` | コンポーネント間契約(スコープからステージへのマッピング、ステージ-エージェント相互チェック、プロトコル準拠、監査/runtime-graph の end-to-end)と、`claude` CLI または SDK を通じて駆動されるライブステージ/CLI ユーティリティ。ライブファイルは `claude` が不在のときクリーンにスキップします。 |
 | **E2E**(L3) | `tests/e2e/` | フルライフサイクルと worktree プリミティブ、加えて、実際の AskUserQuestion ゲートへの回答がディスク状態を進めることを証明するレンダリングターミナル(`tui-drive.ts`)ジャーニー。ライブジャーニーは `claude` + Bedrock 認証情報を要し、`AMADEUS_TUI_LIVE=1` でゲートされます。 |
 

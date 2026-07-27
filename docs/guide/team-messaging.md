@@ -1,5 +1,7 @@
 # Team Messaging Backend
 
+> Languages: **English** | [日本語](team-messaging.ja.md)
+
 > Audience: maintainers running an agent team with
 > `{{HARNESS_DIR}}/tools/team-up.sh`.
 

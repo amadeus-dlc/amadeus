@@ -145,9 +145,9 @@ A sensor result is **advisory** in this release. A failing sensor produces an au
 
 Sensor activity shows up in the intent's `audit/` shards as `Sensor Fired`, `Sensor Passed`, and `Sensor Failed` rows. A failed row links to a detail file (for example `<record>/.amadeus-sensors/<stage-slug>/required-sections-<timestamp>.md`) that lists the specific gap — the missing headings, the unreferenced upstream artifact, the lint error. The audit log is covered in [State and Audit](10-state-and-audit.md).
 
-### The four framework sensors
+### The framework sensors
 
-Four sensors ship with the framework:
+These sensors ship with the framework:
 
 | Sensor | Fires on | Checks |
 |--------|----------|--------|
@@ -155,6 +155,8 @@ Four sensors ship with the framework:
 | `upstream-coverage` | Any record-dir markdown output | The output prose references each upstream artifact the stage declares it consumes |
 | `linter` | `.ts` / `.js` code outputs | Wraps your configured linter (ESLint by default) |
 | `type-check` | `.ts` / `.tsx` code outputs | Wraps your configured type-checker (`tsc` by default) |
+| `answer-evidence` | Any `*-questions.md` output | A filled `[Answer]` carries a ruling reference (E-code) or a leader-approval timestamp |
+| `model-completeness` | The TLA specs and the election tools they model | The FormalElection TLA model has not drifted from its canonical implementation files |
 
 Each stage declares which sensors fire on its outputs. You can add your own sensors — author a manifest under `.claude/sensors/`, then add its id to the stages that should run it. The learning loop can also install a sensor for you when you confirm one at a gate. The manifest format, the per-stage matrix, and the authoring walkthrough live in [Sensor System](../reference/07-sensor-system.md). For adding one to your own project, see [Customization](13-customization.md).
 

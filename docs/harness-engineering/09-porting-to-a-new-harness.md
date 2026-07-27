@@ -4,14 +4,14 @@
 
 AI-DLC ships from **one core, many harnesses** — today Claude Code, Kiro CLI, Kiro IDE,
 and Codex CLI, and the set is open. The hand-authored source is a
-harness-neutral `core/` plus a thin `harness/<name>/` surface per CLI; the
+harness-neutral `packages/framework/core/` plus a thin `packages/framework/harness/<name>/` surface per CLI; the
 packager (`scripts/package.ts`) regenerates each committed `dist/<harness>/`
 tree. Adding another harness is **one directory and one manifest row** — the
-engine, methodology, and harness-dir/rules resolution take no `core/` edits at
+engine, methodology, and harness-dir/rules resolution take no `packages/framework/core/` edits at
 all; the lone optional exception is a per-harness `--doctor` arm (see Step 2).
 This page walks the contract.
 
-> Three senses of "harness" in this repo: **`harness/`** (top-level — the
+> Three senses of "harness" in this repo: **`packages/framework/harness/`** (the
 > per-CLI distribution surfaces this page is about), **`docs/harness-engineering/`**
 > (this guide), and **`tests/harness/`** (the test-suite helper library).
 > Unrelated; only the first is a distribution.
@@ -19,8 +19,8 @@ This page walks the contract.
 ## The shape
 
 ```
-core/                      # harness-neutral source — not edited to add a harness (save the optional --doctor arm)
-harness/
+packages/framework/core/   # harness-neutral source — not edited to add a harness (save the optional --doctor arm)
+packages/framework/harness/
   claude/  manifest.ts · skills/amadeus/ · CLAUDE.md · settings.json
   kiro/    manifest.ts · skills/amadeus/ · agents/*.json · hooks/amadeus-kiro-adapter.ts · settings/cli.json · AGENTS.md
   codex/   manifest.ts · emit.ts · skills/amadeus/ · hooks/amadeus-codex-adapter.ts
@@ -30,32 +30,32 @@ scripts/
 dist/<name>/               # GENERATED, committed, drift-guarded
 ```
 
-`core/` prose names the harness directory with the `{{HARNESS_DIR}}` token; the
+`packages/framework/core/` prose names the harness directory with the `{{HARNESS_DIR}}` token; the
 packager substitutes whatever `harnessDir` the manifest declares (`.claude` /
 `.kiro` / `.codex` / your `.foo`). `.ts` is byte-copied untransformed — the
-runtime `harnessDir()` seam in `core/tools/amadeus-lib.ts` derives the directory
+runtime `harnessDir()` seam in `packages/framework/core/tools/amadeus-lib.ts` derives the directory
 from the shipped layout at execution time (open-set: it reads the dir name from
 the tool's own path, not a hardcoded list), so the same tool sources run in
 every tree. The acceptance gate is **byte-parity**: regenerating a harness must
 reproduce its committed dist exactly (`package.ts --check`).
 
-The packager **discovers** harnesses by scanning `harness/` for a `manifest.ts`,
+The packager **discovers** harnesses by scanning `packages/framework/harness/` for a `manifest.ts`,
 so a new dir is built by the default `bun scripts/package.ts` and `--check` with
 no edit to the packager itself — the literal meaning of "one directory and one
 manifest row, zero shared-code edits."
 
 ## Step 1 — the manifest (the declarative 80%)
 
-Create `harness/<name>/manifest.ts` exporting a `HarnessManifest`
+Create `packages/framework/harness/<name>/manifest.ts` exporting a `HarnessManifest`
 (`scripts/manifest-types.ts`). The fields:
 
 - `name` / `harnessDir` — the dir the token substitutes to (e.g. `.foo`).
-- `coreDirs: DirMap[]` — which `core/<src>` dirs project into `<harnessDir>/<dst>`.
+- `coreDirs: DirMap[]` — which `packages/framework/core/<src>` dirs project into `<harnessDir>/<dst>`.
   Rename or drop dirs here (Kiro `rules → steering`; Codex `rules → amadeus-rules`
   and drops `skills/` — see emit). The 4 session skills are core dirs for
   in-tree harnesses (claude, kiro); codex emits them instead.
 - `harnessFiles: FileMap[]` — authored surfaces copied verbatim from
-  `harness/<name>/<src>` into the dist (`.md` get token substitution).
+  `packages/framework/harness/<name>/<src>` into the dist (`.md` get token substitution).
   `projectRoot: true` lands a file beside the harness dir (e.g. `AGENTS.md`).
 - `frontmatterAdditions` (optional) - per-file YAML lines appended to a
   core-projected `.md`'s frontmatter during projection, for a harness-NATIVE
@@ -71,7 +71,7 @@ Create `harness/<name>/manifest.ts` exporting a `HarnessManifest`
   into a generated `tools/data/harness.json` that the runtime `rulesSubdir()`
   seam reads — so a real install resolves the renamed dir with no hardcoded map.
   This is the seam that makes `rulesRename` purely manifest data: set it here and
-  every layer (build prose, compiled paths, runtime) follows, with no `core/` edit.
+  every layer (build prose, compiled paths, runtime) follows, with no `packages/framework/core/` edit.
 - `authoredExempt: RegExp[]` — files inside core-copied dirs that are authored,
   not generated (skip the orphan scan), e.g. `^hooks/amadeus-<name>-adapter\.ts$`.
 - `skipRunnerGen` — set when the harness ships no `<harnessDir>/skills/` (Codex
@@ -85,24 +85,24 @@ rename + `harnessFiles` (agent JSONs, adapter, the project-root AGENTS.md).
 ## Step 2 — the hook adapter (the per-harness shim)
 
 Core hooks consume Claude-shaped stdin as the normal form. A new harness ships
-**one authored adapter** (`harness/<name>/hooks/amadeus-<name>-adapter.ts`,
+**one authored adapter** (`packages/framework/harness/<name>/hooks/amadeus-<name>-adapter.ts`,
 listed in `harnessFiles` + `authoredExempt`) that normalizes the harness's hook
 payloads into that contract and subprocess-pipes to the shared core hook.
 Never split a core hook into logic+adapter — the core bodies stay byte-shared
 across all harnesses (the `--check` proves it: every `.ts` in a dist is
-byte-identical to its `core/` source).
+byte-identical to its `packages/framework/core/` source).
 
 Wire the adapter to the harness's events the harness's own way: Kiro registers
 targets in `agents/amadeus.json`; Codex emits `hooks.json`. Register only events
 with a real core-hook consumer.
 
-> **The one sanctioned `core/` edit: the doctor arm.** `/amadeus --doctor`
-> (`core/tools/amadeus-utility.ts`) health-checks an installed tree, and a new
+> **The one sanctioned `packages/framework/core/` edit: the doctor arm.** `/amadeus --doctor`
+> (`packages/framework/core/tools/amadeus-utility.ts`) health-checks an installed tree, and a new
 > harness adds a per-harness arm there for its own install surfaces (adapter +
 > wiring files present, any binary-version floor). This is deliberate
 > per-harness *logic*, not data — a version check spawns the CLI and compares
 > semver, which no manifest row can express (the three-concerns rule: knowledge
-> lives in code) — so it is the blessed exception to "zero `core/` edits", not a
+> lives in code) — so it is the blessed exception to "zero `packages/framework/core/` edits", not a
 > violation (a deliberate design tradeoff). It degrades gracefully: a harness with no arm simply
 > gets the generic checks rather than failing. Everything else — dir resolution,
 > the rules-dir rename, packaging — stays pure manifest data.
@@ -115,7 +115,7 @@ the manifest references that the packager calls with an `EmitContext`
 `check`) and that returns the paths it wrote. Codex's is the worked example:
 `config.toml`, `hooks.json`, the hook-trust pre-seed, the `AGENTS.md` merge, the
 agent-TOML transpositions, and the `.agents/skills/` tree (composed from
-`core/tools/amadeus-runner-gen.ts`'s exported render functions under
+`packages/framework/core/tools/amadeus-runner-gen.ts`'s exported render functions under
 `AMADEUS_HARNESS_DIR`, never reimplemented). Harnesses whose surfaces are all
 authored files (Claude, Kiro) set `emit: null`.
 
@@ -127,7 +127,7 @@ live outside `<harnessDir>` (e.g. `.agents/skills/`, the root `AGENTS.md`).
 
 The only permitted text transform is the slash-anchored harness-dir family:
 `{{HARNESS_DIR}}` → the harness dir in `.md` prose, plus the rules-dir rename.
-No blind `sed`. Truthful harness-specific literals in `core/` (the
+No blind `sed`. Truthful harness-specific literals in `packages/framework/core/` (the
 `$CLAUDE_PROJECT_DIR` note, the harness-dir enumeration in workspace-detection)
 carry no token and pass through unchanged — the core-hygiene test
 (`t146-core-hygiene`) guards against a new raw path literal slipping in.

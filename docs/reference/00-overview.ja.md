@@ -9,11 +9,12 @@
 AI-DLC を **使って** ソフトウェアを構築する場合は、まず [ユーザーガイド](../guide/00-introduction.ja.md) から読んでください。設定を通じて **AI-DLC の振る舞いを作り変える** 場合 — ステージやエージェントの追加、スコープの定義、ルールやセンサーの作成、チーム知識の追加 — は、まず [ハーネスエンジニアガイド](../harness-engineering/00-overview.ja.md) から読んでください。これらはコード変更ではなくデータ変更であり、そこの各章はワークフローを解説した上で、網羅的なスキーマについては本リファレンスへ案内します。
 
 > **本リファレンスにおけるパス表記。** AI-DLC は一度だけ作成され、ハーネスごとに生成されます。そのため、ファイルは意図に応じて次の3つの命名規約のいずれかで表されます:
-> - **`core/…`** — 手作業で作成する、ハーネス中立の **信頼できる情報源 (source of truth)**(例 `core/tools/amadeus-orchestrate.ts`、`core/amadeus-common/stages/`)。ここを編集します。ファイルが *作成される* または *変更される* 場所を指すパスは `core/` パスです。
+> - **`packages/framework/core/…`** — 手作業で作成する、ハーネス中立の **信頼できる情報源 (source of truth)**(例 `packages/framework/core/tools/amadeus-orchestrate.ts`、`packages/framework/core/amadeus-common/stages/`)。ここを編集します。
+> - **`packages/framework/harness/<name>/…`** — 手作業で作成する、各ランタイム向けのハーネス固有サーフェス。
 > - **`dist/<harness>/…`** — **生成され、コミットされ、ドリフトガードされる** 配布物(`dist/claude/.claude/`、`dist/kiro/.kiro/`、`dist/codex/`)。手編集は禁止。`bun scripts/package.ts` によってバイト単位で再現されます。*出荷される* ものを説明する場合にのみ引用されます。
 > - **`<harness-dir>/…`**(例 `.claude/`、`.kiro/`、`.codex/`)— *インストール済み* プロジェクト内部の **ランタイム** ロケーション。コマンドが実行され、ワークフロー中にフレームワークが読み書きする場所です(`bun .claude/tools/amadeus-graph.ts compile`、`.claude/agents/` を読む `loadAgents()`)。このディレクトリはハーネスのパラメータです。
 >
-> 本リファレンスが素の `.claude/` パスを示している箇所は、Claude ハーネス固有のランタイムロケーションと読み替えてください。同じファイルは `core/` で作成され、各ハーネス固有のディレクトリへ出荷されます。
+> 本リファレンスが素の `.claude/` パスを示している箇所は、Claude ハーネス固有のランタイムロケーションと読み替えてください。同じファイルは `packages/framework/core/` または `packages/framework/harness/` で作成され、各ハーネス固有のディレクトリへ出荷されます。
 
 ## 本リファレンスの対象範囲
 
@@ -37,6 +38,7 @@ AI-DLC を **使って** ソフトウェアを構築する場合は、まず [�
 | [Stage Definition](15-stage-definition.ja.md) | YAML フロントマター契約、3区画ボディ、コンパイルパイプライン |
 | [Artifact Vocabulary](16-artifact-vocabulary.ja.md) | 命名ルール、衝突ポリシー、ファイルシステムマッピング、ライブレジストリの閲覧方法 |
 | [Engine and Skill System](17-skill-system.ja.md) | オーケストレーションエンジン(`next`/`report`)、型付きディレクティブ契約、コンダクター、複数スキル、スコープの形、スワームレフェリー |
+| [Workspace Layout Decision](18-workspace-layout.ja.md) | Issue #610 のリポジトリレイアウト決定: framework source を `packages/framework/` へ移し、root の `scripts/` と `dist/` は維持する |
 | [階層設定リゾルバー](19-layered-config.ja.md) | Global → Space → Intent の解決、スキーマ検証、フェーズ境界との統合 |
 | [Diagrams](diagrams.ja.md) | すべての Mermaid 図を一箇所に集約 |
 | [Agents](agents/) | 技術的なエージェントリファレンス(フロントマター、ツーリング、ステージ所有権) |

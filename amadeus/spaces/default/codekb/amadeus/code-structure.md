@@ -1,5 +1,9 @@
 # コード構造
 
+> **2026-07-27（intent `260726-answer-manual-binding`、[Issue #1548](https://github.com/amadeus-dlc/amadeus/issues/1548) bug、amadeus-bugfix / Brownfield）: 本 intent 断面は対象外（構造に変化なし）。** 測定 ref: observed `ad1ff5de9`、base `09c669901`、距離 2。区間 2 コミットは record-only で mirror answer/guard スタックの source 変更ゼロ。#1548 は mirror lifecycle 内の欠陥（`amadeus-mirror-lifecycle.ts:969-985` の `runMirrorLifecycleAnswer` が answer 転送時に `manualOperation`/`invocationId` を落とし、guard `:257-265` に弾かれる）で、モジュール境界・ファイル配置・依存方向は不変。修正は既存関数（answer 転送 or guard 条件）の局所変更で、新規モジュール・新ディレクトリは伴わない見込み。詳細は上流入力 `re3-dev-scan-result.md` と本 scan の `architecture.md` / `code-quality-assessment.md` 新節、`re-scans/260726-answer-manual-binding.md`。
+
+> **2026-07-27（intent `260726-t258-p95-flake`、[Issue #1511](https://github.com/amadeus-dlc/amadeus/issues/1511) bug/P2/S3-MAJOR、amadeus-bugfix / Brownfield）: 本 intent 断面は対象外（変更なし）。** 測定 ref: observed `09c669901`、base `f9a0fb86a`、距離 2。区間 32 ファイルはすべて `amadeus/` record で **source/test/CI 変更ゼロ**（`git diff --name-only f9a0fb86a HEAD | grep -vc '^amadeus/'` = 0）。#1511 の患部の配置は既存で無変化 — `tests/integration/t258-lifecycle-transaction.test.ts`（絶対 p95 assert `:461-462`、`p95()` `:430-433`）/ `t257-status-registry-migration.test.ts:240-241`（same-root）/ `tests/helpers/lifecycle-transaction-benchmark-child.ts`（child benchmark）/ 被測定 `packages/framework/core/tools/amadeus-lib.ts`（`withIntentLifecyclePreflight`）/ CI `.github/workflows/ci.yml:162-163`。新規モジュール配置なし。詳細は上流入力 `re2-dev-scan-result.md` と本 scan の `code-quality-assessment.md` / `architecture.md` 新節、`re-scans/260726-t258-p95-flake.md`。
+
 ## plugin ホスト配信のコード配置と #1569 対象ファイル（260727-install-doc-mismatch、現在、差分リフレッシュ）
 
 260727-install-doc-mismatch 差分リフレッシュ（2026-07-27、observed `46a75f2e7c53aaa475a19cc217d10c9172ad4129`、base `0d83aa48b`、距離 70、458 files）。上流入力: Developer スキャン結果。本区間で plugin ホスト配信の Construction（前 intent `260726-plugin-host-delivery` の U2–U8）が実着地し、以下の配置が新規に現れた。
@@ -44,7 +48,73 @@ plugin の compose エンジンは build-time モジュール `plugin-compositio
 
 測定 ref: observed `46a75f2e7`（cid:reverse-engineering:measurement-ref-in-artifacts）。
 
-## kimi ハーネス面・metrics 可視化・opencode 再配置のコード配置（履歴: 260726-plugin-host-delivery、2026-07-26、差分リフレッシュ）
+## docs ツリーと正本コードの対応関係（260727-docs-impl-sync、履歴、amadeus-document）
+
+測定 ref: observed `aabc0527d`、base `1673c4332`（祖先 exit 0 / 距離 47）。本 intent の患部は `docs/` であり、正本コードは参照側（真実源）として扱う。
+
+**docs ツリーのスナップショット（`find docs -name '*.md' | wc -l`）**: 総数 **197**（EN **100** / JA **97**）。ディレクトリ別は `docs` 4 / `docs/guide` 54 / `docs/guide/agents` 24 / `docs/guide/harnesses` 14 / `docs/harness-engineering` 20 / `docs/reference` 44 / `docs/reference/04-stages` 10 / `docs/reference/agents` 24 / `docs/research` 3。**対訳ペア規約**（EN `<name>.md` ↔ JA `<name>.ja.md`）に対し、非対訳 EN は **3 件**（`docs/guide/team-messaging.md` / `docs/guide/publishing-setup.md` / `docs/research/upstream-sync/reports/v2.2.0-to-v2.3.0-plan.md`）、**孤児 JA は 0 件**。research 配下が対訳対象外かは**仮説**であり後続で裁定する。
+
+**区間で変更された `docs/` は 18 ファイル**（`git diff --name-only 1673c4332..HEAD | grep -c '^docs/'`）。内訳は対訳同時着地 5 ペア相当（`docs/README.{md,ja.md}` / `docs/guide/23-metrics-dashboard.{md,ja.md}` / `docs/guide/harnesses/kimi-code.{md,ja.md}` / `docs/guide/harnesses/README.{md,ja.md}`）+ EN 専用 8 件 + `docs/research/upstream-sync/` 2 件。
+
+**患部となる docs ファイルと、その主張が参照する正本の対応**:
+
+| docs（患部） | 記述している数値・列挙 | 正本（真実源） | 実測 |
+| --- | --- | --- | --- |
+| `README.md:5` / `:67` / `:78-83`、`README.ja.md:5` / `:78-83` | ハーネス数 6・表 6 行 | `packages/framework/harness/*/` | **7** ディレクトリ |
+| `docs/guide/19-plugins.md:14-15` / `:70` / `:131` / `:148` / `:150-156`、同 `.ja.md` | パッケージ面 6 / セルフインストール面 4 | `scripts/plugin-projection.ts:41-49` / `:55` | **7** / **5** |
+| `docs/reference/06-hooks-and-tools.ja.md:5` / `:13` / `:15` / `:50` / `:496` | hook 数 11（7 出現 / 5 行） | `packages/framework/core/hooks/*.ts` | **12** |
+| `docs/guide/15-troubleshooting.ja.md:39` | hook 11 個 + 11 個の列挙 | 同上 | **12**（`amadeus-plugin-compose.ts` 欠落） |
+| `docs/guide/glossary.ja.md:45` | hook 11 個 | 同上 | **12** |
+| `docs/reference/01-architecture.ja.md:476` | hook 11 個 | 同上 | **12** |
+| `docs/reference/01-architecture.md:60` / `.ja.md:60` | flat agent files 11 | `packages/framework/core/agents/*.md` | **14**（pre-existing、区間外） |
+
+**区間で新設・移設された正本コードの配置**:
+
+- `packages/framework/core/tools/amadeus-plugin.ts`（**+454 新設**）— plugin CLI。`:95-101` USAGE、`:88` `usage-error` 判別 union、`:103-109` `takeProjectRoot`、`:111-` `parseCompose`、`:412-442` verb ディスパッチ。
+- `packages/framework/core/tools/amadeus-plugin-compose.ts`（**+111/-7、`scripts/plugin-composition.ts` からの移設**、現 **1469 行**）— 合成エンジン正本。dist 同梱面が `scripts/` を import しない境界を成立させる。
+- `packages/framework/core/hooks/amadeus-plugin-compose.ts`（**+23 新設**）— 12 番目の hook。`:8` で `amadeus-lib.ts` の `readHookStdin` / `resolveProjectDirFromHook` を、`:9` で `amadeus-plugin.ts` の `handlePluginCli` を import する薄いラッパ。
+- `scripts/plugin-projection.ts`（**+103/-33**）— `:38-40` コメントが「packager が manifest から discover する 7 面。閉行列検証のためにここで命名する（packager 自身の既定ターゲットは manifest-DISCOVERED のまま）」と設計意図を明示。`:477` が `SELF_INSTALL_HARNESSES` のランタイム判定。
+- `scripts/metrics-visualize.ts`（**+292 新設**）— `:1-13` に決定性契約と env seam（`AMADEUS_METRICS_ROOT`）を明記。`:15-20` で `node:fs` / `./metrics-retention` / `./metrics-timeseries` を import。
+- `packages/framework/harness/kimi/` — **8 ファイル**（上記 architecture 節の内訳）。ブリーフィングにあった `kimi-hooks.ts` は**実在せず**、実体は `hooks/amadeus-kimi-lib.ts`（+352）と `hooks/amadeus-kimi-adapter.ts`（+28）である（訂正、cid:requirements-analysis:mechanism-cite-verify-at-draft）。
+- `packages/framework/core/tools/amadeus-utility.ts`（+306/-1）/ `amadeus-lib.ts`（+63/-5）/ `amadeus-election.ts`（+61/-16）/ mirror 系（`-lifecycle` +92/-1 / `-gateway` +75/-39 / `-coordinator` +48/-11 / `amadeus-mirror.ts` +73/-303）/ `scripts/promote-self.ts`（+127/-7）。
+
+**生成物面の規模**: `dist` **444** ファイル + セルフインストール 5 面（`.kimi-code` **294** / `.claude` **25** / `.opencode` **24** / `.codex` **23** / `.cursor` **22**）= **832**。正本 49 に対し生成物 832 という増幅比が、docs の手書き数値を機械同期しづらくしている構造要因ではない点に注意 — docs は生成対象に含まれておらず、同期は現状 100% 手作業である。
+
+## mirror 状態表現分裂 患部の配置（260726-mirror-state-split、履歴、Issue #1547 + #1534）
+
+測定 ref: observed `f9a0fb86a`（base `1673c4332`、距離 38）。file:line は同 commit の実ファイル直読、件数は `git ls-files … | wc -l` / `grep -n` / `wc -l` / `python3 -c json` 出力からの転記。上流入力は Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`（Architect 段で全数再照合、訂正 2 件）。
+
+### 区間の配置変化
+
+区間全体は `git diff --shortstat 1673c4332 HEAD` = **1225 files changed, +215089 / -2682**。面別は record 333 / 実装正本 15 / harness 正本 12 / dist 389 / tests 86 / docs 10 / self-install 15 / その他 359。**mirror スタック 8 モジュールは 0 変更**（各 `git log --oneline 1673c4332..HEAD -- <path>` = 0 行）。区間で患部の所在・行番号は動いていない。`amadeus-orchestrate.ts` は #1521 dedup で区間変更されたが欠陥 reader 行（`:314` / `:3522`）はハンク外で不動（scan-notes §1 の精密化）。
+
+### 患部の所在（write⇔read 分裂の両側）
+
+| 側 | 対象 | パス | 位置 |
+| --- | --- | --- | --- |
+| Write（v1） | 書込オーケストレーション | `packages/framework/core/tools/amadeus-mirror-lifecycle.ts`（1027 行） | `:629` 書込呼出、`:775` `runRepairRelink`、`:785` marker 検査、`:788` message、`:925` 呼び出し |
+| Write（v1） | operation 実行者 | `amadeus-mirror-executor.ts`（1223 行） | `:71` `mutateMirrorStateAtomic` |
+| Write（v1） | atomic write | `amadeus-mirror-state-store.ts`（428 行） | `:91` `readMirrorState`、`:158` `mutateMirrorStateAtomic` |
+| Write（v1） | sentinel codec | `amadeus-mirror-state-codec.ts`（1526 行） | `:38-39` v1 start/end、`:1301-1302` `parseMirrorStateDocument` |
+| Write（v1） | snapshot 型 | `amadeus-mirror-types.ts`（403 行） | `:176` `issueNumber: number \| null` |
+| Read（legacy） | CLI 層 + status | `amadeus-mirror.ts`（587 行） | `:169` `getField("Mirror Issue")`、`:188` `mirrorIssue` 決定、`:249-258` `mirror-missing`、`:363` `writeMirrorIssueField`（dead）、`:379/:425/:450` `handleCreate/Sync/Close`（dead）、`:533` `runLegacyMutation`、`:570-585` `main` |
+| Read（legacy） | boundary 判定 | `amadeus-orchestrate.ts`（4001 行） | `:314` / `:3522` `hasMirrorIssue`（legacy field 読取） |
+| marker | provenance | `amadeus-mirror-provenance.ts`（246 行） | `:47` `renderMirrorMarker`（唯一の marker 書き手）、`:149` `verifyOwnership`、`:165` `missing-marker` |
+| テスト（偽 green） | status テスト | `tests/unit/t232-amadeus-mirror.test.ts` | `:104` / `:124` `snapshot({ mirrorIssue: 1161 })`（legacy field 直接シード） |
+| 投影宣言 | harness 投影 | `packages/framework/harness/projections.ts` | `:23-32` mirror 群（`:27` gateway、`:26` executor、`:28` lifecycle、`:31` provenance ほか） |
+| 台帳 | coverage allowlist | `tests/.coverage-patch-allowlist.json` | executor **35** / lifecycle **24** / state-store **14** / state-codec **4** / provenance **3** のピン（`python3 -c json` 集計。`amadeus-mirror.ts` 本体はピン 0） |
+
+### 配布増幅（コピー数の実測）
+
+mirror スタック各モジュールは `git ls-files "*<module>.ts"` = **13 パス**（正本 1 + self-install 5 + dist 7）。self-install は `.claude` / `.codex` / `.cursor` / `.kimi-code` / `.opencode` の 5 面（`ls -d` 実測、`.kimi-code` は [PR #1522](https://github.com/amadeus-dlc/amadeus/pull/1522) で追加）、dist は `claude` / `codex` / `cursor` / `kiro` / `kiro-ide` / `opencode` / `kimi` の 7 面。⇒ mirror スタックを触る修正は正本編集後に `bun run promote:self`（self-install 5 面）と `bun scripts/package.ts`（dist 7 面）の両再生成、および `dist:check` / `promote:self:check` が必須。read の v1 片寄せは `amadeus-mirror.ts` + `amadeus-orchestrate.ts`（各 13 コピー）を触るため、両モジュールの 12 配布コピー同期が伴う。
+
+### 修正時に触る想定ファイルの骨子
+
+read の v1 統一（最小修正）で触る面: 正本 `amadeus-mirror.ts`（status read）+ `amadeus-orchestrate.ts`（boundary read ×2）+ 両者の配布 12 コピー、regression-first の e2e/新規テスト、`amadeus-orchestrate.ts` を触るなら allowlist 行ピンの stale 化（cid:code-generation:allowlist-line-pin-stale）。#1534 の legacy 復旧を含める場合は provenance/lifecycle（marker adopt 経路）とその配布コピーも加わる。dead legacy 群（`handleCreate/Sync/Close` / `writeMirrorIssueField`）の撤去可否は requirements で裁定。
+
+## mirror-gateway 患部の配置と増幅面（260726-mirror-envelope-lf、履歴、Issue #1498）
+
+## kimi ハーネス面・metrics 可視化・opencode 再配置のコード配置（260726-plugin-host-delivery、履歴 2026-07-26、差分リフレッシュ）
 
 260726-plugin-host-delivery 差分リフレッシュ（2026-07-26、observed `0d83aa48b886fe85cd977569c0e7b3015b84d3e5`、base `1673c4332`、距離 43）。上流入力: Developer スキャン結果（実測済みスキャンノート）。区間の実装面変更ファイルは packages **33** / tests **86** / scripts **7** / .github **1**（`git diff --name-only 1673c4332..HEAD -- <dir> | wc -l` 転記）。
 

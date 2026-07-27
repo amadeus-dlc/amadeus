@@ -152,9 +152,9 @@ L = Lead, S = Support
 
 Agent display names and example knowledge files are authoritative in each agent's `.md` frontmatter via the `display_name` and `examples` fields — no TypeScript edits required. See [Contributing: Adding an Agent](11-contributing.md#adding-an-agent) for the full recipe (required frontmatter fields, verification steps, and what validates automatically vs. manually). Quick summary of the steps:
 
-1. Create `core/agents/{name}-agent.md` with the required frontmatter: `name`, `display_name`, `examples`, `description`, `disallowedTools` (including `Task`), `model`. An optional `tools:` allowlist narrows the inherited toolset; omit it to inherit the full session toolset. `loadAgents()` in `core/tools/amadeus-lib.ts` discovers the file on next invocation.
-2. Add knowledge files to `core/knowledge/{name}-agent/`
-3. Add the agent to the stage files (`core/amadeus-common/stages/`) where it participates — set `lead_agent` / `support_agents` in each stage's frontmatter. The compiled `tools/data/stage-graph.json` is GENERATED from that frontmatter by `bun scripts/package.ts`; never hand-edit it (the `package.ts --check` drift guard fails CI on a hand-edited dist).
+1. Create `packages/framework/core/agents/{name}-agent.md` with the required frontmatter: `name`, `display_name`, `examples`, `description`, `disallowedTools` (including `Task`), `model`. An optional `tools:` allowlist narrows the inherited toolset; omit it to inherit the full session toolset. `loadAgents()` in `packages/framework/core/tools/amadeus-lib.ts` discovers the file on next invocation.
+2. Add knowledge files to `packages/framework/core/knowledge/{name}-agent/`
+3. Add the agent to the stage files (`packages/framework/core/amadeus-common/stages/`) where it participates — set `lead_agent` / `support_agents` in each stage's frontmatter. The compiled `tools/data/stage-graph.json` is GENERATED from that frontmatter by `bun scripts/package.ts`; never hand-edit it (the `package.ts --check` drift guard fails CI on a hand-edited dist).
 4. Regenerate the distributions: `bun scripts/package.ts` (then `--check` to confirm no drift)
 5. Add the agent→examples row to the hand-maintained knowledge tables (the space-level team-knowledge dir is `amadeus/knowledge/{name}-agent/`, created by the team when it has content — the engine does not scaffold it)
 6. Update tests: smoke tests for file existence, feature tests for stage-agent cross-references
@@ -165,7 +165,7 @@ Agent display names and example knowledge files are authoritative in each agent'
 - **Change tools**: Add or edit a `tools:` allowlist in frontmatter to narrow the agent; omit it to inherit the full session toolset. A `tools:` list drops inherited MCP tools unless the `mcp__<server>__<tool>` ids are also listed.
 - **Change model**: Edit `model` to `opus` or `sonnet`.
 - **Change behavior**: Edit the markdown body sections (responsibilities, principles).
-- **Change stage assignments**: Edit both the agent file (Stages Owned section) and the relevant stage files (`core/amadeus-common/stages/`), then regenerate with `bun scripts/package.ts` — the compiled stage graph is derived from stage frontmatter, never hand-edited.
+- **Change stage assignments**: Edit both the agent file (Stages Owned section) and the relevant stage files (`packages/framework/core/amadeus-common/stages/`), then regenerate with `bun scripts/package.ts` — the compiled stage graph is derived from stage frontmatter, never hand-edited.
 
 ---
 

@@ -2,7 +2,7 @@
 
 > 言語: [English](03-adding-an-agent.md) | **日本語**
 
-エージェントはフレームワークの *誰* にあたります — ドメイン、ツールの許可リスト、モデルを持つペルソナです。出荷される11のエージェントは、プロダクト、デザイン、デリバリー、アーキテクチャ、AWS プラットフォーム、コンプライアンス、DevSecOps、開発、品質、パイプライン・デプロイ、オペレーションをカバーします。フレームワークがカバーしないドメイン(たとえばデータガバナンスのレビュアーやモバイルのスペシャリスト)がチームに必要になったら、`core/agents/` に単一の Markdown ファイルを置くことでペルソナを追加します。TypeScript は不要です。
+エージェントはフレームワークの *誰* にあたります — ドメイン、ツールの許可リスト、モデルを持つペルソナです。出荷される11のエージェントは、プロダクト、デザイン、デリバリー、アーキテクチャ、AWS プラットフォーム、コンプライアンス、DevSecOps、開発、品質、パイプライン・デプロイ、オペレーションをカバーします。フレームワークがカバーしないドメイン(たとえばデータガバナンスのレビュアーやモバイルのスペシャリスト)がチームに必要になったら、`packages/framework/core/agents/` に単一の Markdown ファイルを置くことでペルソナを追加します。TypeScript は不要です。
 
 この章ではワークフローを解説します。ペルソナファイルとは何か、そのフロントマターにおける判断のポイント、そして *可視* なエージェントがまだ *アクティブ* ではないという二段階の真実です。フィールドごとの契約については、Developer Reference へのリンクを張っています。ユーザーの席から見たこれらのエージェントについては [User Guide — Agents](../guide/06-agents.ja.md) を参照してください。
 
@@ -10,11 +10,11 @@
 
 ## ペルソナファイルとは何か、そしてどこに置かれるか
 
-各エージェントは `core/agents/<slug>-agent.md` にある1つのフラットなファイルです。上部に YAML フロントマター、その下に Markdown 本体があります。出荷されるファイルはすべて `amadeus-` プレフィックスを持ちます(`amadeus-architect-agent.md`、`amadeus-developer-agent.md`)。あなたが追加するファイルはあなたのものであり、そのプレフィックスを使う必要はありません。出荷される11をフレームワークファイルとして扱ってください — それらはアップグレード時に上書きされるので、ファイルを編集するのではなく、team knowledge を通じて *既存エージェントが知っていること* をカスタマイズしてください([Team knowledge](07-team-knowledge.ja.md) を参照)。真に新しいペルソナは別の動きです。あなたが所有し、アップグレードを生き延びる新しいファイルです。
+各エージェントは `packages/framework/core/agents/<slug>-agent.md` にある1つのフラットなファイルです。上部に YAML フロントマター、その下に Markdown 本体があります。出荷されるファイルはすべて `amadeus-` プレフィックスを持ちます(`amadeus-architect-agent.md`、`amadeus-developer-agent.md`)。あなたが追加するファイルはあなたのものであり、そのプレフィックスを使う必要はありません。出荷される11をフレームワークファイルとして扱ってください — それらはアップグレード時に上書きされるので、ファイルを編集するのではなく、team knowledge を通じて *既存エージェントが知っていること* をカスタマイズしてください([Team knowledge](07-team-knowledge.ja.md) を参照)。真に新しいペルソナは別の動きです。あなたが所有し、アップグレードを生き延びる新しいファイルです。
 
 フロントマターはフレームワークがパースする部分です。本体は、エージェントがアクティブになったときに自分自身について読む散文です — その責務、所有するステージ、知識の読み込み方、作業原則です。機械が読むのはフロントマターだけです。本体はエージェント自身のフレーミングのためのものであり、出荷されるファイルの構造にマッチするように書きます。
 
-以下は実在するエージェントのフロントマターで、`core/agents/amadeus-architect-agent.md` に作成されたものです:
+以下は実在するエージェントのフロントマターで、`packages/framework/core/agents/amadeus-architect-agent.md` に作成されたものです:
 
 ```yaml
 ---
@@ -62,7 +62,7 @@ model: opus
 
 これはフレームワークの中核的な非対称性を反映しています — ステージはそのエージェントを名指しし、エージェントは決してそのステージを名指ししません。したがってエージェントファイルだけでは、設計上、不活性です。新しいペルソナを働かせるには、それを使うべきステージを編集してください。バインディングの仕組みは [Adding a Stage](02-adding-a-stage.ja.md) にあります。
 
-各エージェントは、あなたが `core/knowledge/amadeus-<slug>-agent/`(フレームワークのメソドロジー)に作成する知識ディレクトリと、スペースレベルの任意のチームオーバーレイ `amadeus/knowledge/<slug>-agent/`(あなたの標準)ともペアになります。スペースレベルの `amadeus/knowledge/` ディレクトリはブートストラップ時には自由形式かつ空です。チームはコンテンツがあるときにエージェント単位のサブディレクトリを作成します — エンジンはそれをスキャフォールドしません。二層の知識ワークフローは [Team knowledge](07-team-knowledge.ja.md) で扱っています。
+各エージェントは、あなたが `packages/framework/core/knowledge/amadeus-<slug>-agent/`(フレームワークのメソドロジー)に作成する知識ディレクトリと、スペースレベルの任意のチームオーバーレイ `amadeus/knowledge/<slug>-agent/`(あなたの標準)ともペアになります。スペースレベルの `amadeus/knowledge/` ディレクトリはブートストラップ時には自由形式かつ空です。チームはコンテンツがあるときにエージェント単位のサブディレクトリを作成します — エンジンはそれをスキャフォールドしません。二層の知識ワークフローは [Team knowledge](07-team-knowledge.ja.md) で扱っています。
 
 ---
 
@@ -70,9 +70,9 @@ model: opus
 
 リファレンスのレシピを反映して、ワークフローをエンドツーエンドで示します。
 
-1. **エージェントファイルを作成する** — `core/agents/<slug>-agent.md` に、必須フロントマター(`name`、`display_name`、`examples`、`description`、`disallowedTools`(`Task` を含む)、`model`)を付けて。任意の `tools:` 許可リストはペルソナを絞り込みます。省略するとセッションの全ツールセットを継承します。本体は出荷されるファイルの構造(Core Responsibilities、Stages Owned、Collaboration、Knowledge Loading、Key Principles)にマッチするように書いてください。
-2. **知識ファイルを追加する** — ペルソナがアクティベーション時に読み込むべきメソドロジーのために、`core/knowledge/amadeus-<slug>-agent/` の下に。
-3. **ステージに配線する** — それがリードまたはサポートする各ステージファイル(`core/amadeus-common/stages/<phase>/<slug>.md`)の `lead_agent` / `support_agents` フロントマターに slug を追加し、その後 `stage-graph.json` が再生成されるように再コンパイル(`bun .claude/tools/amadeus-graph.ts compile`)します。`stage-graph.json` を手編集してはいけません — それはビルド成果物であり、次のコンパイルが手作業の変更を上書きします([Adding a Stage](02-adding-a-stage.ja.md#4-compile-so-stage-graphjson-regenerates) を参照)。これがそれをアクティブにするステップです。
+1. **エージェントファイルを作成する** — `packages/framework/core/agents/<slug>-agent.md` に、必須フロントマター(`name`、`display_name`、`examples`、`description`、`disallowedTools`(`Task` を含む)、`model`)を付けて。任意の `tools:` 許可リストはペルソナを絞り込みます。省略するとセッションの全ツールセットを継承します。本体は出荷されるファイルの構造(Core Responsibilities、Stages Owned、Collaboration、Knowledge Loading、Key Principles)にマッチするように書いてください。
+2. **知識ファイルを追加する** — ペルソナがアクティベーション時に読み込むべきメソドロジーのために、`packages/framework/core/knowledge/amadeus-<slug>-agent/` の下に。
+3. **ステージに配線する** — それがリードまたはサポートする各ステージファイル(`packages/framework/core/amadeus-common/stages/<phase>/<slug>.md`)の `lead_agent` / `support_agents` フロントマターに slug を追加し、その後 `stage-graph.json` が再生成されるように再コンパイル(`bun .claude/tools/amadeus-graph.ts compile`)します。`stage-graph.json` を手編集してはいけません — それはビルド成果物であり、次のコンパイルが手作業の変更を上書きします([Adding a Stage](02-adding-a-stage.ja.md#4-compile-so-stage-graphjson-regenerates) を参照)。これがそれをアクティブにするステップです。
 4. **team-knowledge ディレクトリを文書化する** — チームがスペースレベルの `amadeus/knowledge/<slug>-agent/` の下に標準を追加することを記します。エンジンはこのディレクトリを作成しません。チームはコンテンツがあるときにそれを作成します(スペースの `amadeus/knowledge/` はブートストラップ時には自由形式かつ空です)。
 5. **手作業でメンテナンスされるドキュメントのテーブルを更新する** — Phase Participation マトリクスと agent→examples テーブルは自身を再生成しません(下記の「自動で検証されないもの」を参照)。
 

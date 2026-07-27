@@ -47,7 +47,160 @@ flowchart TD
 
 測定 ref: observed `46a75f2e7`（cid:reverse-engineering:measurement-ref-in-artifacts）。
 
-## plugin 導入 UX と第7ディストリ面の現況（履歴: 260726-plugin-host-delivery、2026-07-26、差分リフレッシュ）
+## docs が追随できていない構造変化 — 第7ハーネス・plugin skeleton・12番目 hook（260727-docs-impl-sync、履歴、amadeus-document）
+
+測定 ref: observed `aabc0527d96344420cf8236967763b81ce82ac83`、base `1673c433209c74820881c75a0816bbce3fb2d512`（祖先 exit 0 / 距離 **47**）。本 intent は実装を変えず、**実装の現況と利用者向け docs の記述との乖離**を扱う。以下は乖離の対象となる区間内のアーキテクチャ差分と、docs 側の陳腐化面の対照である。
+
+**(1) ハーネス面が 6 → 7 に拡張された（Kimi Code、#1522 / #1549 / #1551）。** 正本は `packages/framework/harness/kimi/` の 8 ファイル（`manifest.ts` +98 / `onboarding.fills.ts` +45 / `hooks/amadeus-kimi-adapter.ts` +28 / `hooks/amadeus-kimi-lib.ts` +352 / `hooks/amadeus-hooks.snippet.toml` +88 / `skills/amadeus/SKILL.md` +238 / `skills/amadeus/question-rendering.md` +109 / `dot-gitignore` +64）。`ls -d packages/framework/harness/*/ | wc -l` = **7**。セルフインストール面は `.kimi-code/` **294 ファイル**として新規に投影された。既存アーキテクチャ境界（core 中立層 ↔ harness 表層）は不変で、Kimi は**表層の追加のみ**として着地している — アダプタが hook payload を core の中立 hook 契約へ写像する既習様式に従う。
+
+**(2) plugin が walking skeleton として着地し、エンジンが core へ移設された（#1554）。** 構造変化は 3 点。 (a) **新 CLI** `packages/framework/core/tools/amadeus-plugin.ts`（+454 新設、4 verb: `compose [--if-stale] [--project-root]` / `doctor` / `drop <plugin-name>` / `status`、USAGE は `:95-101`）。 (b) **合成エンジンの移設** `scripts/plugin-composition.ts` → `packages/framework/core/tools/amadeus-plugin-compose.ts`（+111/-7、現 **1469 行**）— これにより **dist に載るエンジンが `scripts/` へ import しない**境界が成立した（`scripts/plugin-projection.ts` は core 側の単一定義を re-export する消費者側に降格）。 (c) **12 番目の hook** `packages/framework/core/hooks/amadeus-plugin-compose.ts`（+23）— SessionStart で `handlePluginCli(["compose","--if-stale","--project-root",projectDir])` を呼ぶ**薄いラッパ**であり、合成ロジックを一切再実装しない（BR-U2-1）。失敗は stderr 1 行 + exit 0 の fail-loud/continue（BR-U2-4）で、他 11 hook が守る never-block 契約と整合する。`ls packages/framework/core/hooks/ | wc -l` = **12**。
+
+**(3) 投影行列が 6/4 → 7/5 に変わった。** `scripts/plugin-projection.ts:41-49` `PACKAGE_HARNESSES` = **7**（claude / codex / cursor / kiro / kiro-ide / opencode / kimi）、`:55` `SELF_INSTALL_HARNESSES` = **5**（kiro / kiro-ide を意図的に除外する型 + ランタイム境界）。base 断面（`git show 1673c4332:scripts/plugin-projection.ts:46-53` / `:59`）は 6 / 4 であり、**この遷移は本区間内**。この 2 定数は「パッケージ面」と「セルフインストール面」を型で分離する閉じた union であり、docs `19-plugins.{md,ja.md}` はこの分離を説明する章でありながら旧数値のまま（`grep -ci kimi` = **0**）。
+
+**(4) mirror の状態表現が v1 ブロック権威へ統一された（#1553 / #1559 / #1537）。** legacy「Mirror Issue」フィールドの読取経路が全廃され、`grep -rn 'Mirror Issue"' packages/framework/core/tools/*.ts` はコメント 1 行（`amadeus-mirror.ts:5`）のみを返す。`amadeus-mirror.ts` は +73/-303 で **357 行**へ縮小し、責務は mirror 系 **16 モジュール**（capability / config / coordinator / executor / gateway / lifecycle / policy / presentation / provenance / repair / runner / state-codec / state-reducer / state-store / types / 本体）へ分散した。前 intent 群が扱った write⇔read 非対称（`260726-mirror-state-split` 節）と manual ask→answer 貫通不成立（`260726-answer-manual-binding` 節）は本区間で解消済みである。
+
+**(5) 可視化面が追加された（metrics ダッシュボード、#1500 / #1504）。** `scripts/metrics-visualize.ts`（+292 新設）は `scripts/metrics-timeseries.ts` の**共有検証済みリーダ seam**を通して読み（writer/reader/pruner/renderer が「妥当なスナップショットとは何か」で合意し private parser を持たない）、自身の単一 fs 書込のみを所有してリーダの no-fs-write 契約（AC-1c）を保つ。**決定性契約** — 同一スナップショット集合が同一バイト列へレンダリングされる（wall clock / 乱数 / 環境値を埋め込まない）— が `--check` のバイト比較ドリフトガードを意味あるものにしている。`metrics/*.json` = **141 件**。この面は `docs/guide/23-metrics-dashboard.{md,ja.md}` が**対訳同時着地しており乖離なし**（正の対照例）。
+
+**(6) CI が job 分割された（#1528 / #1507 / #1508 / #1557）。** `.github/workflows/ci.yml` の job は changes / typecheck / lint / distribution-contract / tests / drift-check / distribution-benchmark / distribution-benchmark-aggregate / distribution-release-gate / coverage-head / coverage-base / coverage / metrics-snapshot / formal-model-check / ci-success。再実行効率のための分割であり、`changes` による変更検出ゲートが下流 job の実行可否を決める構造。
+
+**アーキテクチャ上の含意 — docs は「実装から導出されない第2の真実源」である。** 上記 (1)(3) の数値（ハーネス数・投影面数）と 12 hook の roster は、いずれも実装側に**単一の機械可読な正準定義**（`packages/framework/harness/*/`、`PACKAGE_HARNESSES` / `SELF_INSTALL_HARNESSES`、`core/hooks/*.ts`）を持つにもかかわらず、docs 側では**手書きの数値・列挙として複製**されている。construction.md § Code Completeness の「複数箇所で消費されるリスト・定数を手書きで複製しない — canonical な1定義から導出するか、ディスクから discover する」は現状 docs 面に及んでいない。これが本 intent の乖離 3 クラスタ（README / 19-plugins / EN-JA 対訳）の共通機序であり、是正方式（都度同期 vs count-free 化 vs 生成/ドリフトガード）は requirements-analysis 以降で裁定する。
+
+## mirror answer の manual-boundary guard 貫通不成立（260726-answer-manual-binding、履歴、Issue #1548）
+
+測定 ref: observed `ad1ff5de9785af38f3c845b64372b65e8b73bb4e`（= 現 HEAD、`git rev-parse HEAD` 実測）。base `09c669901`（前 intent `260726-t258-p95-flake` の observed、`git merge-base --is-ancestor` exit 0 / 距離 2）。**区間 2 コミットは record-only で mirror スタックの source 変更はゼロ**（`git diff --numstat 09c669901..HEAD | grep -v 'amadeus/spaces/' | wc -l` = 0、対象面交差 grep = 0 hit）。以下の file:line は同 commit の実ファイル直読で、上流 Developer スキャン結果 `re3-dev-scan-result.md` を Architect 段で spot-check 再検証（訂正 0 件）したうえで転記している。欠陥は区間の退行ではなく guard 導入コミット `2bb63f6b8`（automatic mirror modes 完成、2026-07-25）から現存する。
+
+### answer 経路の 2 層構造と guard の位置
+
+mirror lifecycle の answer は **adapter 層**（`amadeus-mirror-lifecycle.ts`）と **coordinator 層**（`amadeus-mirror-coordinator.ts`）の 2 段で処理される。adapter 冒頭の manual guard は coordinator 到達より前に置かれており、ここで弾かれると正規の answer 処理へ一切入れない。
+
+```
+runMirrorLifecycleAnswer(:938-)          — CLI answer verb のエントリ
+  └─ runMirrorLifecycleBoundary(:253-)   — adapter 共通境界
+        ├─ [guard :257-265] boundary.kind==="manual" && (!manualOperation || !invocationId) → error
+        └─ driveMirrorBoundary(coordinator :700-717)
+              ├─ if (input.answer) → handlePromptAnswer(:509-558)   ← answer は必ずここへ
+              │     └─ executeDecision → executionAuthorization
+              │           └─ [prompt-approved :292-303]  invocationId/manualOperation 不参照
+              └─ driveBoundaryDecisions(非 answer 経路)
+                    └─ executionAuthorization [manual :304-308] invocationId 必須 / [:573-577] manualOperation 参照
+```
+
+### 欠陥機序（manual ask が answer で貫通できない）
+
+1. **manual boundary が ask を生む経路 = reconciliation**。`decideMirrorAction`（policy）は `input.kind==="manual"` で常に `execute`（prompt を返さない）だが、先行の manual create が非終端 receipt（`prepared`/`attempted`/`pending`）を残すと、後続の **prompt モード** boundary が `selectBoundaryDecision` で `event = reconciliation.originalEvent`（= manual event）を採り、`set-expected-prompt` を `event: manualEvent` で永続する → `expectedPrompt.event.boundary.kind === "manual"`。
+2. **answer 転送の欠落（根本原因）**: `runMirrorLifecycleAnswer`（`amadeus-mirror-lifecycle.ts:969-985`）は永続 `expected` から `boundary: expected.event.boundary` を転送するが `manualOperation` / `invocationId` を渡さない。
+3. **guard が answer を免除しない**: `runMirrorLifecycleBoundary`（`:257-265`）は `boundary.kind === "manual"` かつ両フィールド欠落で `Manual Mirror lifecycle requires an operation and invocation ID.` を返し、manual ask への answer を常に弾く → `handlePromptAnswer` に到達不能。
+
+### 両修正案の到達可能性と安全性（RE は事実提示のみ）
+
+| 案 | 変更 | 到達可能性の根拠 |
+| --- | --- | --- |
+| (a) guard 免除 | guard 条件に `&& !request.answer` を追加（最小変更、guard 以外は不変） | answer 経路は `driveMirrorBoundary:713-714` で常に `handlePromptAnswer` へ分岐し、その先の `prompt-approved` 権限分岐（`:292-303`）は `invocationId`/`manualOperation` を**一切参照しない**。answer なし manual decision 経路には guard がそのまま残り、`invocationId` 必須（`:304-308`）/ `manualOperation` 参照（`:573-577`）は維持される |
+| (b) answer 側補填 | answer 転送時に `manualOperation = expected.operation`・`invocationId = expected.event.boundary.instance` を補填（guard 不変） | 永続 `MirrorExpectedPrompt`（types `:118-124`）+ manual boundary（`:28`）+ `MirrorEventIdentity`（`:30-34`）に全フィールドが揃う。manual 元値（`parseManualArgs:445-447`）は `invocationId === boundary.instance` かつ `manualOperation === operation` なので補填値が元値と一致し guard を字義充足 |
+
+両案とも到達可能で機能等価。`handlePromptAnswer`（`:509-558`）は manual boundary でも `input.context.boundary` から triggerEvent を再構成（`:543`）できるため、guard を越えれば正常に consume される。修正方式（(a)/(b) の選択、往復 regression テストの新設、配布 13 コピー同期）は requirements-analysis 以降の裁定事項。
+
+### stale expectedPrompt が全 sync を封鎖する連鎖（影響度の裏取り）
+
+consume は answer 経由のみ（reducer `consumeExpectedPrompt`、prompt-approved/skip transition からのみ発火）。repair verbs（status/relink/abandon）は expectedPrompt 非対象で **ツール内回復不能**。未 consume のまま次 boundary が prompt 化すると `reduceSetExpectedPrompt` が `set-expected-prompt: a different unconsumed prompt is pending` を返し、coordinator が `safety-blocked`「expected prompt could not be persisted」で **以後の create/sync/close prompt を全滅**させる。ただし committed record は全 `expectedPrompt:null`（下記 code-quality-assessment.md 参照）で、遡及回復は不要。
+
+## 性能ゲートの 2 様式: 絶対 ceiling vs 相対+noise floor（260726-t258-p95-flake、履歴、Issue #1511）
+
+測定 ref: observed `09c669901385ad44e9a5b378b8d8903eebbc184c`（= 現 HEAD、`git rev-parse HEAD` 実測）。base `f9a0fb86a`（前 intent `260726-mirror-state-split` の observed、`git merge-base --is-ancestor` exit 0 / 距離 2）。**区間 32 ファイルはすべて `amadeus/` record であり source/test/CI の変更はゼロ**（`git diff --name-only f9a0fb86a HEAD | grep -vc '^amadeus/'` = 0）。以下の file:line は同 commit の実ファイル直読で、上流 Developer スキャン結果 `re2-dev-scan-result.md` を Architect 段で spot-check 再検証（訂正 0 件）したうえで転記している。
+
+### 区間の不変性
+
+本 intent の患部 t258/t257 とその実装面（`tests/`, `packages/`, `.github/`）は区間内で無変更。したがって以下の性能ゲート構造は区間の退行ではなく `2e157d7fe`（#1424、t258 追加時）から現存する。
+
+### 性能契約テストの 2 つのアーキテクチャ様式
+
+このリポジトリの p95 系性能契約テストには**構造的に異なる 2 様式**が共存しており、フレーク耐性が両者で決定的に分かれる。
+
+**様式 A: 絶対 ceiling（脆弱、#1511 の欠陥クラス）** — 実測 p95 を固定の絶対しきい値と直接比較する。
+
+| テスト | assert（verbatim） | 予算の出所 |
+| --- | --- | --- |
+| `tests/integration/t258-lifecycle-transaction.test.ts:461` | `expect(result.archiveP95Ms).toBeLessThanOrEqual(500);` | #1424 のユーザー選択 round number（nfr-requirements Options A 案）。CI 実測 p95 = 41.177ms |
+| `t258-…:462` | `expect(result.recoveryP95Ms).toBeLessThanOrEqual(750);` | 同上。CI 実測 p95 = 29.314ms |
+| `tests/integration/t257-status-registry-migration.test.ts:240-241`（**same-root・未報告**） | `strictReadP95Ms <= 100` / `migrationP95Ms <= 250` | 同じ #1424 由来・同じ 10,000-entry child benchmark |
+
+被測定は child helper（`spawnSync` 1 プロセス、size=10000）の **10,000 行 registry/audit の実 FS transaction**（`withIntentLifecyclePreflight` / `runIntentLifecycleTransactionLocked`、`packages/framework/core/tools/amadeus-lib.ts`）で、CPU よりも **FS I/O 律速**。`p95()`（`t258:430-433`）は nearest-rank（`sorted[Math.ceil(100*0.95)-1]=sorted[94]`）で上位 5 サンプル超過は許容するが、`bun run test:ci -- -P 4`（`.github/workflows/ci.yml:162` name / `:163` run）の**並列度 4 integration tier**（負荷分離なし）での IO/CPU 競合スパイクが 6/100 を超えると絶対 ceiling を跨いで偽赤になる。noise floor から導出されていない裸マジックナンバーである点が脆弱性の核。
+
+**様式 B: 相対比 + 絶対 noise floor（堅牢、既確立の先例）** — スパイク耐性のある複合述語で、判定述語を計測ループから分離して in-process テスト可能にする。
+
+| 先例 | 述語 SHAPE |
+| --- | --- |
+| `tests/lib/plugin-discovery-overhead-gate.ts`（#1525） | `exceedsDiscoveryOverhead` = `additionalMs/baseline > 0.2`（相対比）**AND** `additionalMs > 10ms`（絶対 noise floor、worst jitter 実測から導出）+ fail-closed |
+| `scripts/mirror-distribution-benchmark-aggregate.ts`（#1507） | 権威判定 `median(p95) > budget`（median 基準でスパイク耐性）+ `absoluteSpread > p95Budget*0.05`（絶対 spread noise floor）の 3 条件 AND |
+| `tests/integration/t259-guard-integration.test.ts:209/211`（同ドメインの安全形） | `p95(archived)-p95(allowed) <= 100ms` / RSS `<= 16MiB` — **baseline 相対の差分**で #1511 クラス非該当 |
+
+両先例の共通原則は「**絶対 ceiling 単独をやめ、(median/baseline 基準) AND (絶対 noise floor) の複合述語にし、判定述語を計測ループから分離して fail-closed に**」。t258 は RSS 予算（`:463`）用に **noop baseline を既に測っており**（`:444-447` の `archive.rssDeltaBytes - noop.rssDeltaBytes`）、archive/recovery latency も noop 相対へ転用できる素材が既存。様式 A → 様式 B への移行が修正の設計方向だが、方式（noop 相対 + noise floor 複合述語 vs 予算緩和、t257 同根の同時修正、専用 perf ジョブ分離の是非）は requirements-analysis 以降の裁定事項。
+
+## mirror 状態表現の write⇔read 分裂（260726-mirror-state-split、履歴、Issue #1547 + #1534）
+
+測定 ref: observed `f9a0fb86abaa2450d559cd04b4ee889d2271fd71`（= 現 HEAD、`git rev-parse HEAD` 実測）。base `1673c4332`（前々 intent `260726-crossreviewed-bug-batch` の observed、`git merge-base --is-ancestor` exit 0 / 距離 38）。以下の file:line はすべて同 commit の実ファイル直読であり、上流の Developer スキャン結果（`inception/reverse-engineering/scan-notes.md`）を Architect 段で独立に再検証したうえで転記している（訂正は下記 2 件のみ）。
+
+### 区間で変化したアーキテクチャ面と、患部の不変性
+
+区間 38 コミットの実装面は主に mirror-gateway の envelope 修正（[PR #1537](https://github.com/amadeus-dlc/amadeus/pull/1537)、`amadeus-mirror-gateway.ts` のみ `+75/-39`）、core tools の共有知識 dedup（[PR #1521](https://github.com/amadeus-dlc/amadeus/pull/1521)）、Kimi Code ハーネス追加、metrics 面である。**本 intent の患部である mirror スタック 8 モジュール**（`amadeus-mirror.ts` / `-lifecycle` / `-executor` / `-state-store` / `-state-codec` / `-provenance` / `-coordinator` / `-state-reducer`）は区間内で**一切変更されていない** — 各 `git log --oneline 1673c4332..HEAD -- <path>` の出力は 0 行。したがって以下の状態表現分裂は区間の退行ではなく base 以前から継続して存在する。**補正**: scan-notes §1 は「`amadeus-orchestrate.ts` も区間内未変更」と読めるが、observed の実測では `amadeus-orchestrate.ts` は #1521 dedup（`8 insertions / 29 deletions`）で区間内変更されている。ただし変更ハンク（`:102` / `:116` / `:1288` / `:3019`）に欠陥 reader 行は含まれず、legacy field の 2 読み手は observed で `:314` / `:3522` に正しく解決する（`git show 071cb2f7b … | grep -c "hasMirrorIssue\|Mirror Issue"` = 0）。
+
+### アーキテクチャ上の主欠陥: Issue 番号の永続化が 2 系統に分裂
+
+mirror が Issue 番号を record（`amadeus-state.md`）へ残す経路が **write 側と read 側で別表現**になっている（対操作の非対称、cid:requirements-analysis:symmetric-pair-review）。
+
+**Write 経路（唯一 = v1 sentinel ブロック）**
+
+| 位置 | verbatim / 役割 |
+| --- | --- |
+| `amadeus-mirror.ts:582` | `runLegacyMutation` — CLI の create/sync/close はすべてここ経由（`main` `:570-585` が `args.kind !== "status"` を全転送） |
+| `amadeus-mirror-lifecycle.ts:629` | `return mutateMirrorStateAtomic(target.ports, {...})`（lifecycle 境界の書込呼出） |
+| `amadeus-mirror-executor.ts:71` | `mutateMirrorStateAtomic(ports, {...})`（operation 実行者） |
+| `amadeus-mirror-state-store.ts:158` | `export function mutateMirrorStateAtomic(...)` → `writeMirrorStateDocument`（v1 ブロック永続化） |
+| `amadeus-mirror-state-codec.ts:38-39` | `MIRROR_STATE_SENTINEL_START = "<!-- amadeus:mirror-state:v1:start -->"` / `..._END`（write が刻む sentinel） |
+| `amadeus-mirror-types.ts:176` | snapshot 型 `issueNumber: number \| null;` |
+
+**Read 経路（3 箇所 = legacy「Mirror Issue」フィールド、v1 ブロック非参照）**
+
+| 位置 | verbatim | 用途 |
+| --- | --- | --- |
+| `amadeus-mirror.ts:169` | `const mirrorRaw = getField(stateContent, "Mirror Issue");` | status の `buildSnapshot`（`:188` で `mirrorIssue` 決定） |
+| `amadeus-orchestrate.ts:314` | `(getField(stateContent, "Mirror Issue") ?? "").trim().length > 0;` | boundary auto-sync/suppress 判定（第 1 読み手） |
+| `amadeus-orchestrate.ts:3522` | 同型 | boundary report 経路（第 2 読み手） |
+
+**非対称の帰結（#1547 根因）**: write は v1 ブロックのみを刻み、read（status + orchestrate ×2）は legacy field を探す。lifecycle が Issue を作成しても legacy field は書かれない（legacy writer `writeMirrorIssueField` `:363` の唯一の呼び手 `:413` は `handleCreate` 内で main 不到達）ため、status は `mirror-missing`（`amadeus-mirror.ts:249-258` `compareMirrorStatus(snapshot, null)` → `detail: "record … has no Mirror Issue field"`）を報告し続け、orchestrate 境界は `hasMirrorIssue=false` として毎回 create を促す。
+
+### mirror の write⇔read 経路（Interaction）
+
+```mermaid
+sequenceDiagram
+    participant CLI as mirror CLI (main :570-585)
+    participant Life as lifecycle→executor
+    participant Store as state-store :158
+    participant Doc as amadeus-state.md
+    participant Read as status / orchestrate 読み手
+    Note over CLI,Doc: WRITE (create/sync/close)
+    CLI->>Life: runLegacyMutation :582 → boundary :629
+    Life->>Store: mutateMirrorStateAtomic :71
+    Store->>Doc: writeMirrorStateDocument (v1 sentinel :38-39)
+    Note over Read,Doc: READ (status :169 / orchestrate :314 / :3522)
+    Read->>Doc: getField("Mirror Issue")  【legacy field】
+    Doc-->>Read: null （field 不在 = v1 ブロックは読まない）
+    Read->>Read: mirror-missing 報告 :249-258 / hasMirrorIssue=false
+```
+
+テキストフォールバック: WRITE は `CLI main:582 → lifecycle boundary:629 → executor mutateMirrorStateAtomic:71 → state-store:158` が `amadeus-state.md` へ v1 sentinel ブロック（codec `:38-39`）だけを書く。READ は status（`:169`）と orchestrate 境界 2 箇所（`:314` / `:3522`）が同じ `amadeus-state.md` から `getField("Mirror Issue")` で legacy field を探すが、write が書いていないため `null` を得て `mirror-missing` / `hasMirrorIssue=false` を報告する。両経路が同じ record を触りながら別フィールドを見るのが分裂の本体。
+
+### #1534: marker 無き legacy Issue の in-tool 復旧不能
+
+repair relink は ownership marker を必須とする（`amadeus-mirror-lifecycle.ts:775` `runRepairRelink` → `:784` `parseMirrorMarker(viewed.value.body)` → `:785` `if (marker.kind !== "parsed")` → `:788` `message: "Repair relink requires one valid ownership marker."`）。marker の唯一の書き手は `renderMirrorMarker`（`amadeus-mirror-provenance.ts:47`）で legacy 経路はこれを呼ばない。`verifyOwnership`（`:149`）も `:165` `if (marker.kind === "missing") return { kind: "missing-marker", … }` で拒否する。⇒ **marker 無き legacy Issue は relink も adopt も fail-closed** で、legacy 生成 10 record は field-only・marker 無しのまま in-tool 復旧経路がゼロになる。
+
+### 修正の設計判断点
+
+修正の核は **read 経路 3 箇所を v1 ブロック権威へ寄せる write⇔read 統一**（read を `parseMirrorStateDocument`（`amadeus-mirror-state-codec.ts:1301`）由来へ切替）。3 read 面（status 1 + orchestrate 2）は同根全数として棚卸しする（cid:code-generation:same-root-inventory）— status のみ直すと orchestrate 境界が非対称のまま残る。#1534 の legacy 10 record 復旧（marker 無き Issue の in-tool adopt/relink 設計）と互換フォールバックの是非（legacy field への二重書き戻しは org.md Forbidden = 要求なき互換シム禁止と照合、read の v1 片寄せが既決ノルムと整合）は requirements-analysis 以降の裁定事項。
+
+## mirror-gateway の HTTP envelope パース機序（260726-mirror-envelope-lf、履歴、Issue #1498）
+
+## plugin 導入 UX と第7ディストリ面の現況（260726-plugin-host-delivery、履歴 2026-07-26、差分リフレッシュ）
 
 260726-plugin-host-delivery 差分リフレッシュ（2026-07-26、observed `0d83aa48b886fe85cd977569c0e7b3015b84d3e5`、base `1673c4332`、距離 43）。上流入力: Developer スキャン結果（実測済みスキャンノート）。
 

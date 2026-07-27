@@ -2,7 +2,7 @@
 
 > 言語: [English](06-hooks-and-tools.md) | **日本語**
 
-この章では、フックシステムのアーキテクチャ、11個すべてのフックスクリプト、監査イベントの分類体系、CLIツール設定、および決定論的なユーティリティツールを解説します。
+この章では、フックシステムのアーキテクチャ、すべてのフレームワークフックスクリプト、監査イベントの分類体系、CLIツール設定、および決定論的なユーティリティツールを解説します。
 
 > **パス規約。** 状態、監査、成果物は、アクティブなintentの**record dir** — `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/` — の配下に置かれ、本書では `<record>/` と表記します(record dir が時系列でソートされるよう、コンパクトなUTC日付プレフィックスに短いkebab-caseのラベルを付けたもの。正典のidは `intents.json` レジストリ行のUUIDv7)。監査証跡は単一ファイルではなく、`<record>/audit/` 配下のper-cloneシャードのディレクトリです。
 
@@ -10,44 +10,46 @@
 
 ## フックシステムのアーキテクチャ
 
-この実装は `.claude/hooks/` にある11個のフックスクリプトを使用します。11個すべてがTypeScript(`bun` 経由で実行)です。11個すべてが**プロジェクト全体**です — `settings.json` に登録され(ステータスラインはトップレベルの `statusLine` キー経由、他の10個は `hooks` ブロック経由)、どのスキルがアクティブかにかかわらず発火します。以前は分割されていました(6個は `amadeus/SKILL.md` フロントマターでスキルスコープとして宣言され、残りはプロジェクト全体)。v0.6.0 でスキルスコープの6個を `settings.json` に移し、すべてのエントリポイント — オーケストレーター、パッケージ化された各スコープ/ステージランナー、任意の手書きのカスタマーランナー — がper-runnerの `hooks:` ブロックなしに決定論的なスパインを継承するようにしました。これが安全なのは、すべてのフックが**セルフゲート**するからです。アクティブなワークフローがない場合(`amadeus-state.md` / アクティブintentの `audit/` シャードが存在しない場合)に早期終了するため、常時オンでもAI-DLCの外では無操作です。
+この実装は `.claude/hooks/` にあるフレームワークのフックスクリプトを使用します。そのすべてがTypeScript(`bun` 経由で実行)です。そのすべてが**プロジェクト全体**です — `settings.json` に登録され(ステータスラインはトップレベルの `statusLine` キー経由、残りは `hooks` ブロック経由)、どのスキルがアクティブかにかかわらず発火します。以前は分割されていました(6個は `amadeus/SKILL.md` フロントマターでスキルスコープとして宣言され、残りはプロジェクト全体)。v0.6.0 でスキルスコープの6個を `settings.json` に移し、すべてのエントリポイント — オーケストレーター、パッケージ化された各スコープ/ステージランナー、任意の手書きのカスタマーランナー — がper-runnerの `hooks:` ブロックなしに決定論的なスパインを継承するようにしました。これが安全なのは、すべてのフックが**セルフゲート**するからです。アクティブなワークフローがない場合(`amadeus-state.md` / アクティブintentの `audit/` シャードが存在しない場合)に早期終了するため、常時オンでもAI-DLCの外では無操作です。
 
-11個のうち10個は**非ブロッキング**です — 観測してexit 0し、制御フローを決して変更しません。1つ、`Stop` フック(`amadeus-stop.ts`)は**フロー変更**です。インタラクティブな転送ループを継続させるために `{"decision":"block"}` を返すことがあります。これはループ強制のための承認済みかつ意図的な契約であり、他のすべてのフックが守るアドバイザリーな `never-block` 契約とは区別されます(後述の「フロー変更する `Stop` フック」を参照)。
+1つを除くすべてが**非ブロッキング**です — 観測してexit 0し、制御フローを決して変更しません。1つ、`Stop` フック(`amadeus-stop.ts`)は**フロー変更**です。インタラクティブな転送ループを継続させるために `{"decision":"block"}` を返すことがあります。これはループ強制のための承認済みかつ意図的な契約であり、他のすべてのフックが守るアドバイザリーな `never-block` 契約とは区別されます(後述の「フロー変更する `Stop` フック」を参照)。
 
 ```
 .claude/hooks/
-+-- mint-presence.ts     # UserPromptSubmit + PostToolUse AskUserQuestion (project-wide, settings.json, TypeScript)
-+-- audit-logger.ts      # PostToolUse Write|Edit (project-wide, settings.json, TypeScript)
-+-- sensor-fire.ts       # PostToolUse Write|Edit (project-wide, settings.json, TypeScript)
-+-- sync-statusline.ts   # PostToolUse TaskUpdate (project-wide, settings.json, TypeScript)
-+-- runtime-compile.ts   # PostToolUse Bash (project-wide, settings.json, TypeScript)
-+-- validate-state.ts    # PreCompact (project-wide, settings.json, TypeScript)
-+-- log-subagent.ts      # SubagentStop (project-wide, settings.json, TypeScript)
-+-- amadeus-stop.ts        # Stop (project-wide, settings.json, TypeScript, flow-altering)
-+-- session-start.ts     # SessionStart (project-wide, settings.json, TypeScript)
-+-- session-end.ts       # SessionEnd (project-wide, settings.json, TypeScript)
-+-- amadeus-statusline.ts  # statusLine (project-wide, settings.json, TypeScript)
++-- amadeus-mint-presence.ts     # UserPromptSubmit + PostToolUse AskUserQuestion (project-wide, settings.json, TypeScript)
++-- amadeus-audit-logger.ts      # PostToolUse Write|Edit (project-wide, settings.json, TypeScript)
++-- amadeus-sensor-fire.ts       # PostToolUse Write|Edit (project-wide, settings.json, TypeScript)
++-- amadeus-sync-statusline.ts   # PostToolUse TaskUpdate (project-wide, settings.json, TypeScript)
++-- amadeus-runtime-compile.ts   # PostToolUse Bash (project-wide, settings.json, TypeScript)
++-- amadeus-validate-state.ts    # PreCompact (project-wide, settings.json, TypeScript)
++-- amadeus-log-subagent.ts      # SubagentStop (project-wide, settings.json, TypeScript)
++-- amadeus-stop.ts              # Stop (project-wide, settings.json, TypeScript, flow-altering)
++-- amadeus-session-start.ts     # SessionStart (project-wide, settings.json, TypeScript)
++-- amadeus-plugin-compose.ts    # SessionStart (project-wide, settings.json, TypeScript)
++-- amadeus-session-end.ts       # SessionEnd (project-wide, settings.json, TypeScript)
++-- amadeus-statusline.ts        # statusLine (project-wide, settings.json, TypeScript)
 ```
 
 ### フックの概要
 
 | フック | イベント | スコープ | マッチャー | 目的 |
 |------|-------|---------|---------|---------|
-| `mint-presence.ts` | UserPromptSubmit + PostToolUse | プロジェクト全体 (settings.json) | (空) / `AskUserQuestion` | 実際の人間のプロンプトごと、および回答済みの `AskUserQuestion` ウィジェットごとに `HUMAN_TURN` イベントを記録する(ゲート承認とインタビュー回答はタイプされたプロンプトではなくウィジェットのクリックである)。承認/インタビューのゲートはこの台帳を確認し、直近のゲート解決以降に1件を要求するため、オートパイロット下のモデルが人間の行動なしに承認を捏造できない |
-| `audit-logger.ts` | PostToolUse | プロジェクト全体 (settings.json) | `Write\|Edit` | 成果物の書き込みを `audit/` シャードに自動記録する |
-| `sensor-fire.ts` | PostToolUse | プロジェクト全体 (settings.json) | `Write\|Edit` | マッチする書き込みに対してアクティブなステージの解決済みSensorを発火する(アドバイザリー。決してブロックしない) |
-| `sync-statusline.ts` | PostToolUse | プロジェクト全体 (settings.json) | `TaskUpdate` | ステージタスクのアクティブ化時に状態ファイルを自動同期する |
-| `runtime-compile.ts` | PostToolUse | プロジェクト全体 (settings.json) | `Bash` | 遷移クラスの監査発行時に `runtime-graph.json` を再コンパイルする |
-| `validate-state.ts` | PreCompact | プロジェクト全体 (settings.json) | (空) | 状態ファイルを検証し、リカバリのパンくずを書き込む |
-| `log-subagent.ts` | SubagentStop | プロジェクト全体 (settings.json) | (空) | サブエージェント完了イベントを記録する |
+| `amadeus-mint-presence.ts` | UserPromptSubmit + PostToolUse | プロジェクト全体 (settings.json) | (空) / `AskUserQuestion` | 実際の人間のプロンプトごと、および回答済みの `AskUserQuestion` ウィジェットごとに `HUMAN_TURN` イベントを記録する(ゲート承認とインタビュー回答はタイプされたプロンプトではなくウィジェットのクリックである)。承認/インタビューのゲートはこの台帳を確認し、直近のゲート解決以降に1件を要求するため、オートパイロット下のモデルが人間の行動なしに承認を捏造できない |
+| `amadeus-audit-logger.ts` | PostToolUse | プロジェクト全体 (settings.json) | `Write\|Edit` | 成果物の書き込みを `audit/` シャードに自動記録する |
+| `amadeus-sensor-fire.ts` | PostToolUse | プロジェクト全体 (settings.json) | `Write\|Edit` | マッチする書き込みに対してアクティブなステージの解決済みSensorを発火する(アドバイザリー。決してブロックしない) |
+| `amadeus-sync-statusline.ts` | PostToolUse | プロジェクト全体 (settings.json) | `TaskUpdate` | ステージタスクのアクティブ化時に状態ファイルを自動同期する |
+| `amadeus-runtime-compile.ts` | PostToolUse | プロジェクト全体 (settings.json) | `Bash` | 遷移クラスの監査発行時に `runtime-graph.json` を再コンパイルする |
+| `amadeus-validate-state.ts` | PreCompact | プロジェクト全体 (settings.json) | (空) | 状態ファイルを検証し、リカバリのパンくずを書き込む |
+| `amadeus-log-subagent.ts` | SubagentStop | プロジェクト全体 (settings.json) | (空) | サブエージェント完了イベントを記録する |
 | `amadeus-stop.ts` | Stop | プロジェクト全体 (settings.json) | (空) | **フロー変更。** ターン終了時に転送ループを強制する。`amadeus-orchestrate next` を実行し、`done` または `parked` ではストップを許可し、保留中のディレクティブではストップをブロックして次の手を `reason` 経由で注入し戻す。現在のステージが承認待ち(`[?]`)、リビジョン中(`[R]`)、`<slug>-questions.md` に未回答の質問がある `[-]` 進行中、または終了するターンが会話的だった(人間の最後のプロンプトがワークフローエンジン呼び出しなしに回答された。ハーネスのトランスクリプトから読み取る)場合はストップを許可する(human-wait カーブアウト) — 後の2つは自律的Constructionでは抑制される。再帰境界あり(no-progress カウンター + `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` 下の `stop_hook_active`。デフォルトはインタラクティブ実行で2、自律的Constructionで8)。AI-DLCワークフローの外では無操作 |
-| `session-start.ts` | SessionStart | プロジェクト全体 (settings.json) | (空) | セッション再開時にワークフローコンテキストを注入する |
-| `session-end.ts` | SessionEnd | プロジェクト全体 (settings.json) | (空) | 正常終了時に `SESSION_ENDED` 監査イベントを発行する |
+| `amadeus-session-start.ts` | SessionStart | プロジェクト全体 (settings.json) | (空) | セッション再開時にワークフローコンテキストを注入する |
+| `amadeus-plugin-compose.ts` | SessionStart | プロジェクト全体 (settings.json) | (空) | オプトインされたプラグインをホストへ自動合成する(`amadeus-plugin.ts compose --if-stale`)。非ブロッキングで、合成レコードが最新の場合は無操作 |
+| `amadeus-session-end.ts` | SessionEnd | プロジェクト全体 (settings.json) | (空) | 正常終了時に `SESSION_ENDED` 監査イベントを発行する |
 | `amadeus-statusline.ts` | statusLine | プロジェクト全体 (settings.json) | -- | ターミナルでリアルタイムの進捗を表示する |
 
 ### 共通の特性
 
-11個すべてのTypeScriptフック:
+すべてのTypeScriptフック:
 
 - TypeScriptで記述され、`bun` 経由で実行される
 - 実行権限を必要としない — macOS、Linux、ネイティブWindows PowerShellで同一に動作する
@@ -62,11 +64,11 @@
 ```mermaid
 sequenceDiagram
     participant CC as Claude Code
-    participant AL as audit-logger.ts
-    participant VS as validate-state.ts
-    participant LS as log-subagent.ts
-    participant SS as session-start.ts
-    participant SE as session-end.ts
+    participant AL as amadeus-audit-logger.ts
+    participant VS as amadeus-validate-state.ts
+    participant LS as amadeus-log-subagent.ts
+    participant SS as amadeus-session-start.ts
+    participant SE as amadeus-session-end.ts
     participant AF as audit/ shard
     participant SF as amadeus-state.md
     participant RF as .amadeus-recovery.md
@@ -105,7 +107,7 @@ sequenceDiagram
 
 これら6個のフック(audit/sensor/statusline/runtime-compile/state-validation/subagent のスパイン)は `settings.json` にプロジェクト全体で登録されています。常時オンですが、各フックは**セルフゲート**します。アクティブなワークフローがない場合(`amadeus-state.md` / アクティブintentの `audit/` シャードが存在しない場合)に早期終了するため、監査ログと状態同期が非AI-DLCセッションを散らかすことは決してありません。v0.6.0 より前は `amadeus/SKILL.md` フロントマターで宣言されていました(スキルスコープ)。`settings.json` への移行により、すべてのエントリポイント — オーケストレーターとパッケージ化または手書きの各ランナー — が `hooks:` ブロックをコピーせずにスパインを継承できます。
 
-### PostToolUse: audit-logger.ts
+### PostToolUse: amadeus-audit-logger.ts
 
 **Source:** `.claude/hooks/amadeus-audit-logger.ts`
 **Trigger:** すべての `Write` または `Edit` Claude Code ツール呼び出しの後(マッチャー: `"Write|Edit"`)
@@ -122,7 +124,7 @@ sequenceDiagram
 7. **アトミックロック:** システムの一時ディレクトリ(`os.tmpdir()`)で `mkdir` ベースのロックを、3回リトライループ(100msディレイ)で使用する。ハッシュがプロジェクトごとにロックを分離する。
 8. **ログエントリ:** 正典の `ARTIFACT_CREATED`(まったく新しいパスへのWrite用)または `ARTIFACT_UPDATED`(Edit、または既存を上書きするWrite用)イベントを `appendAuditEntry` 経由で追記する。フィールド: Timestamp、Event、Tool、File、Context。
 
-### PostToolUse: sync-statusline.ts
+### PostToolUse: amadeus-sync-statusline.ts
 
 **Source:** `.claude/hooks/amadeus-sync-statusline.ts`
 **Trigger:** すべての `TaskUpdate` 呼び出しの後(マッチャー: `"TaskUpdate"`)
@@ -130,7 +132,7 @@ sequenceDiagram
 
 **処理ステップ:**
 
-1. **プロジェクトディレクトリ解決:** audit-logger.ts と同じマルチフォールバックパターン。
+1. **プロジェクトディレクトリ解決:** amadeus-audit-logger.ts と同じマルチフォールバックパターン。
 2. **ステータスフィルター:** `status` が `in_progress` のときのみ発火する。`completed`、`pending` などでは静かに終了する。
 3. **activeForm フィルター:** `activeForm` フィールドがない、または `[slug]` サフィックスパターンがない場合は静かに終了する。
 4. **状態ファイルガード:** `amadeus-state.md` が存在しない場合(初期化前)は静かに終了する。
@@ -141,7 +143,7 @@ sequenceDiagram
 - Stage Jump タスク(`[slug]` なし)と依存関係の配線 TaskUpdate(activeForm なし)は自然にフィルタで除外される。
 - このフックは既存の `set-status` サブコマンドを呼び出す — 新しいコードパスは不要。
 
-### PostToolUse: sensor-fire.ts
+### PostToolUse: amadeus-sensor-fire.ts
 
 **Source:** `.claude/hooks/amadeus-sensor-fire.ts`
 **Trigger:** すべての `Write` または `Edit` Claude Code ツール呼び出しの後(マッチャー: `"Write|Edit"`)
@@ -149,7 +151,7 @@ sequenceDiagram
 
 **処理ステップ:**
 
-1. **プロジェクトディレクトリ解決:** audit-logger.ts と同じマルチフォールバックパターン。
+1. **プロジェクトディレクトリ解決:** amadeus-audit-logger.ts と同じマルチフォールバックパターン。
 2. **監査 + 状態ガード:** `audit/` シャードまたは `amadeus-state.md` が存在しない場合(初期化前)は静かに終了する。
 3. **アクティブステージ読み取り:** アクティブステージの `sensors_applicable` 配列を `stage-graph.json` から読み取る — そのステージノード用のコンパイル解決済みセンサーリスト(workspace-scaffold のようなステージでは空)。
 4. **ディスパッチ:** 適用可能な各Sensorについて `amadeus-sensor.ts fire <id> --stage <slug> --output-path <path>` を起動する。ディスパッチャは各Sensorの `matches` globをフック側で適用する。マッチしない書き込みはスキップされる。結果はアドバイザリー — フックは書き込みを決してブロックしない。
@@ -157,7 +159,7 @@ sequenceDiagram
 
 マニフェストスキーマ、発火ライフサイクルについては[センサーシステム](07-sensor-system.ja.md)を参照してください。
 
-### PostToolUse: runtime-compile.ts
+### PostToolUse: amadeus-runtime-compile.ts
 
 **Source:** `.claude/hooks/amadeus-runtime-compile.ts`
 **Trigger:** すべての `Bash` Claude Code ツール呼び出しの後(マッチャー: `"Bash"`)
@@ -174,7 +176,7 @@ sequenceDiagram
 
 コンパイルライフサイクルとロックされたスキーマについては[ランタイムグラフ](13-runtime-graph.ja.md)を参照してください。
 
-### PreCompact: validate-state.ts
+### PreCompact: amadeus-validate-state.ts
 
 **Source:** `.claude/hooks/amadeus-validate-state.ts`
 **Trigger:** Claude Code が会話コンテキストをコンパクションする前(マッチャー: 空 = 常時)
@@ -191,7 +193,7 @@ sequenceDiagram
 
 **なぜこれが重要か:** コンテキストコンパクションは会話履歴を破棄する。コンパクションがステージの途中で起きると、モデルは何をしていたかの認識を失う。リカバリのパンくずは、コンパクションを生き延びる外部チェックポイントを提供する。
 
-### SubagentStop: log-subagent.ts
+### SubagentStop: amadeus-log-subagent.ts
 
 **Source:** `.claude/hooks/amadeus-log-subagent.ts`
 **Trigger:** 任意のサブエージェント(Claude Code Task ツール呼び出し)が完了したとき(マッチャー: 空 = 常時)
@@ -199,12 +201,12 @@ sequenceDiagram
 
 **処理ステップ:**
 
-1. **プロジェクトディレクトリ解決:** audit-logger.ts と同じマルチフォールバックパターン。
+1. **プロジェクトディレクトリ解決:** amadeus-audit-logger.ts と同じマルチフォールバックパターン。
 2. **ヘルスハートビート:** `.amadeus-hooks-health/log-subagent.last` に書き込む。
 3. **JSONパース:** `agent_type`(デフォルトは `"unknown"`)、`agent_id`、`last_assistant_message`(200文字に切り詰め)を抽出する。
 4. **監査ファイルガード:** `audit/` シャードが存在しない場合は静かに終了する。
 5. **エントリ組み立て:** 正典の `SUBAGENT_COMPLETED` イベントを `appendAuditEntry` 経由で発行する。フィールド: Timestamp、Event、Agent Type、および任意で Agent ID と切り詰めた Message。
-6. **アトミックロック:** audit-logger.ts と同じ `mkdir` ベースのパターン(`lib.ts` に統一)だが、競合を避けるため別のロック名を使う。
+6. **アトミックロック:** amadeus-audit-logger.ts と同じ `mkdir` ベースのパターン(`lib.ts` に統一)だが、競合を避けるため別のロック名を使う。
 
 **2つのサブエージェントステージで発火:**
 - ステージ2.1(Reverse Engineering) -- 2ステップの委譲(2回発火: `amadeus-developer-agent` のコードスキャン、次に `amadeus-architect-agent` の合成)
@@ -224,7 +226,7 @@ Workspace detection(0.2)は以前サブエージェントでしたが、現在�
 
 **処理ステップ:**
 
-1. **stdinのイディオム:** `log-subagent.ts` をミラーする — TTYはClaude CodeのJSONが来ないこと(テスト/デバッグ)を意味するのでストップを許可する。それ以外の場合はStopフックのJSONを読み、そこから必要なのは `stop_hook_active` のみ。
+1. **stdinのイディオム:** `amadeus-log-subagent.ts` をミラーする — TTYはClaude CodeのJSONが来ないこと(テスト/デバッグ)を意味するのでストップを許可する。それ以外の場合はStopフックのJSONを読み、そこから必要なのは `stop_hook_active` のみ。
 2. **AI-DLC外では無操作:** プロジェクトディレクトリ下にアクティブintentの `amadeus-state.md` がなければ強制すべきものは何もない — ストップを許可する。フロントマターの `Stop` マッチャーはすでにフックを `/amadeus` にスコープしている。これは非AI-DLCセッションが決してブロックされないための多層防御である。
 3. **エンジンをコンポーズ:** `bun .claude/tools/amadeus-orchestrate.ts next --project-dir <dir>` を実行し、ディレクティブの `kind` をパースする。状態を再導出はしない — エンジンをコンポーズする。
 4. **`done` → 許可:** ディレクティブが `done` ならワークフローは完了。フックは何も発行せず exit 0 し(先例の非ブロッキングパターン)、再帰カウンターをクリアする。
@@ -255,7 +257,7 @@ Workspace detection(0.2)は以前サブエージェントでしたが、現在�
 
 これら3つのフックは、`/amadeus` スキルがアクティブかどうかにかかわらず発火します。
 
-### SessionStart: session-start.ts
+### SessionStart: amadeus-session-start.ts
 
 **Source:** `.claude/hooks/amadeus-session-start.ts`
 **Registration:** `settings.json` の `hooks.SessionStart`
@@ -285,15 +287,15 @@ Last Completed: 2.3 Requirements Analysis
 Next Action: resume current stage
 ```
 
-### SessionEnd: session-end.ts
+### SessionEnd: amadeus-session-end.ts
 
 **Source:** `.claude/hooks/amadeus-session-end.ts`
 **Registration:** `settings.json` の `hooks.SessionEnd`
 **Purpose:** アクティブなAI-DLCワークフローが存在するとき、Claude Code のすべての正常終了で `SESSION_ENDED` 監査イベントを発行する。
 
 **ライフサイクル:**
-1. **ワークフローガード:** アクティブintentの `amadeus-state.md` が存在しない場合は静かに終了する(正典の「アクティブなワークフロー」マーカー — `session-start.ts` と同じガード)。intentが誕生していないワークスペースシェルは何も発行しない。
-2. **監査発行:** `amadeus-audit.ts` 経由で `SESSION_ENDED` を `audit/` シャードに追記する。セッションライフサイクルの可観測性のため `session-start.ts` の `SESSION_STARTED` と対になる。
+1. **ワークフローガード:** アクティブintentの `amadeus-state.md` が存在しない場合は静かに終了する(正典の「アクティブなワークフロー」マーカー — `amadeus-session-start.ts` と同じガード)。intentが誕生していないワークスペースシェルは何も発行しない。
+2. **監査発行:** `amadeus-audit.ts` 経由で `SESSION_ENDED` を `audit/` シャードに追記する。セッションライフサイクルの可観測性のため `amadeus-session-start.ts` の `SESSION_STARTED` と対になる。
 
 ### ステータスライン: amadeus-statusline.ts
 
@@ -369,11 +371,11 @@ Next Action: resume current stage
 
 | ソース | イベント | いつ |
 |--------|--------|------|
-| `audit-logger.ts` | `ARTIFACT_CREATED` / `ARTIFACT_UPDATED` | intentのrecord dirへのすべてのWrite/Edit(`audit/` シャードを除く) |
-| `log-subagent.ts` | `SUBAGENT_COMPLETED` | 任意のサブエージェント停止 |
-| `session-start.ts` | `SESSION_STARTED` / `SESSION_RESUMED` | Claude Code の SessionStart フック入力 `source` フィールドに応じて |
-| `session-end.ts` | `SESSION_ENDED` | Claude Code の SessionEnd フック |
-| `validate-state.ts` | `SESSION_COMPACTED` | Claude Code の PreCompact フック |
+| `amadeus-audit-logger.ts` | `ARTIFACT_CREATED` / `ARTIFACT_UPDATED` | intentのrecord dirへのすべてのWrite/Edit(`audit/` シャードを除く) |
+| `amadeus-log-subagent.ts` | `SUBAGENT_COMPLETED` | 任意のサブエージェント停止 |
+| `amadeus-session-start.ts` | `SESSION_STARTED` / `SESSION_RESUMED` | Claude Code の SessionStart フック入力 `source` フィールドに応じて |
+| `amadeus-session-end.ts` | `SESSION_ENDED` | Claude Code の SessionEnd フック |
+| `amadeus-validate-state.ts` | `SESSION_COMPACTED` | Claude Code の PreCompact フック |
 | CLIツール | その他すべてのイベント(ステージ/フェーズ/ワークフローのライフサイクル、ゲート、決定、bolt、センサー、学習、リカバリ、…) | コンダクターが呼び出すツールサブコマンド — `amadeus-state.ts`、`amadeus-log.ts`、`amadeus-bolt.ts`、`amadeus-learnings.ts`、`amadeus-utility.ts` — によって発行される。プロセスから手動で追記されることは決してない(`SKILL.md` の「Never emit audit events from prose」を参照)。 |
 
 ---
@@ -429,7 +431,7 @@ bun .claude/tools/amadeus-utility.ts <subcommand>
 | `init` | Initializationフェーズを実行する(ディレクトリのスキャフォールド、ワークスペース検出、状態初期化)。`--scope <scope>`(デフォルト `poc`)、`--depth`、`--test-strategy`、`--force` を受け付ける。 | `WORKFLOW_STARTED`, `PHASE_STARTED`, `PHASE_SKIPPED`, `STAGE_STARTED`, `STAGE_COMPLETED`, `WORKSPACE_*`、および init→初期化後最初のフェーズのハンドオフイベント |
 | `scope-change` | ワークフロー途中のアトミックなスコープ更新(ステージ包含を再計算)。どのステージがEXECUTE/SKIPかを再計画する。 | `SCOPE_CHANGED` |
 | `config-change` | アクティブなワークフローでの `--depth` / `--test-strategy` 更新 | `DEPTH_CHANGED`, `TEST_STRATEGY_CHANGED` |
-| `set-status` | 低レベルの状態フィールド同期(TaskUpdate時に `sync-statusline.ts` フックから呼ばれる) | — |
+| `set-status` | 低レベルの状態フィールド同期(TaskUpdate時に `amadeus-sync-statusline.ts` フックから呼ばれる) | — |
 | `detect-scope` | フリーフォーム処理中にスコープ検出イベントを記録する。2つのモード: `--scope <s> --input <text> [--source freeform\|keyword\|env\|cli]`(明示)、または `--from-text --input <text>`(`inferScopeFromText` による推論 — 各スコープの `keywords` を `.claude/scopes/*.md` フロントマターから単語境界マッチングで読み、アルファベット順のタイブレーク、`>5` 語で `feature` にフォールバック)。モードは相互排他。監査イベントにはキーワードが発火したときに任意の `Matched keywords` フィールドを含む。 | `SCOPE_DETECTED` |
 | `detect` | 読み取り専用のコンポーザースキャン(ディスパッチされたコンポーザーの最初の呼び出し): ストックのスコープレジストリ、コンパイル済みステージグラフのサマリー、コンポーズされたスコープの2ファイルが着地すべきパスをJSON(`--json`)で表示する。何も変更しない。 | — |
 | `recompose` | フライト中のプラン再形成: `--skip <slug,...>` / `--add <slug,...>` が、カーソル前方のPENDINGステージのプランサフィックスをライブの状態ファイル上で、監査ロック下で反転する。厳密に検証し(飢餓した必須入力、フリーズ済み/カーソル後方のステージ、walking-skeleton アンカーの移動、または非RunningのワークフローはすべてREJECT)、導出された状態フィールドを再構築する。 | `RECOMPOSED` |
@@ -441,7 +443,7 @@ bun .claude/tools/amadeus-utility.ts <subcommand>
 
 | 変数 | デフォルト | 契約 |
 |------|-----------|------|
-| `AMADEUS_HARNESS_TYPE` | 未設定 | intent birth の任意 provenance override。有効な値は厳密に `claude-code`、`codex`、`cursor`、`opencode`、`kiro`、`unknown`、`manual`。環境変数として存在すると `CLAUDECODE` およびハーネス dot-directory 検出より優先される。空文字または不正値はフォールスルーせず `unknown` に正規化し、正規化済み値だけを新規 state の optional V7 `Harness` フィールドへ1回記録する。 |
+| `AMADEUS_HARNESS_TYPE` | 未設定 | intent birth の任意 provenance override。有効な値は厳密に `claude-code`、`codex`、`cursor`、`opencode`、`kiro`、`kimi`、`unknown`、`manual`。環境変数として存在すると `CLAUDECODE` およびハーネス dot-directory 検出より優先される。空文字または不正値はフォールスルーせず `unknown` に正規化し、正規化済み値だけを新規 state の optional V7 `Harness` フィールドへ1回記録する。 |
 
 ### 設計根拠
 
@@ -493,7 +495,7 @@ intentの `runtime-graph.json`、すなわち `stage-graph.json` のデータプ
 
 ## 前提条件
 
-1. **bun** -- 11個すべてのフックとすべてのCLIツール(`amadeus-utility.ts`、`amadeus-state.ts`、`amadeus-jump.ts`、`amadeus-orchestrate.ts`、`amadeus-audit.ts`、`amadeus-validate.ts`、`amadeus-graph.ts`、`amadeus-sensor.ts`、`amadeus-learnings.ts`、`amadeus-runtime.ts`)に必須。`curl -fsSL https://bun.sh/install | bash` でインストール。Windowsでは: `npm install -g bun` または `powershell -c "irm bun.sh/install.ps1 | iex"`。非インタラクティブシェルではPATHに載っている必要がある。
+1. **bun** -- すべてのフレームワークフックとすべてのCLIツール(`amadeus-utility.ts`、`amadeus-state.ts`、`amadeus-jump.ts`、`amadeus-orchestrate.ts`、`amadeus-audit.ts`、`amadeus-validate.ts`、`amadeus-graph.ts`、`amadeus-sensor.ts`、`amadeus-learnings.ts`、`amadeus-runtime.ts`)に必須。`curl -fsSL https://bun.sh/install | bash` でインストール。Windowsでは: `npm install -g bun` または `powershell -c "irm bun.sh/install.ps1 | iex"`。非インタラクティブシェルではPATHに載っている必要がある。
 2. **$CLAUDE_PROJECT_DIR** -- Claude Code によってプロジェクトルートに設定される。すべてのフックが `amadeus/` ワークスペース(およびその中のアクティブintentのrecord dir)を特定するために使う。
 
 その他の前提条件はありません: すべてのフックとツールは bun 経由で実行されるTypeScriptなので、どのプラットフォームでも `jq`、`sed`、`awk`、Git Bash、WSLは不要です。

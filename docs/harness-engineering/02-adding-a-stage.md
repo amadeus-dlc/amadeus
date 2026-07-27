@@ -48,11 +48,11 @@ yet implemented means you've crossed the line into code.
 ### 1. Decide which phase the stage belongs to
 
 Stage files live under
-`core/amadeus-common/stages/<phase>/<slug>.md`. The phase is the directory.
+`packages/framework/core/amadeus-common/stages/<phase>/<slug>.md`. The phase is the directory.
 There are five:
 
 ```
-core/amadeus-common/stages/
+packages/framework/core/amadeus-common/stages/
 ├── initialization/
 ├── ideation/
 ├── inception/
@@ -122,12 +122,12 @@ covered in
 
 ### 4. Regenerate the harnesses, so `stage-graph.json` recompiles
 
-The YAML you just authored under `core/` is the authoritative source. Run the
-packager to regenerate every `dist/<harness>/` tree from `core/` — this copies
+The YAML you just authored under `packages/framework/core/` is the authoritative source. Run the
+packager to regenerate every `dist/<harness>/` tree from `packages/framework/core/` — this copies
 your new stage file in and recompiles the graph:
 
 ```bash
-bun scripts/package.ts            # regenerate every harness from core/ + harness/
+bun scripts/package.ts            # regenerate every harness from packages/framework/core/ + packages/framework/harness/
 bun scripts/package.ts --check    # the CI drift guard — run before committing
 ```
 
@@ -141,7 +141,7 @@ directly:
 bun .claude/tools/amadeus-graph.ts compile
 ```
 
-Either way the authoring flow is a one-way pipeline — edit YAML in `core/`, run
+Either way the authoring flow is a one-way pipeline — edit YAML in `packages/framework/core/`, run
 the packager (or `compile` against an installed tree), the JSON updates, and the
 runtime loader (`loadStageGraph()`) picks up the new node unchanged. Never edit
 `stage-graph.json` by hand; it is a build artifact, and a hand-edit will be

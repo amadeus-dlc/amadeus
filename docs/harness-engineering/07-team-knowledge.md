@@ -194,10 +194,10 @@ What this means for the knowledge and rules you author:
   space is seeded from the framework baseline — `org.md` copied in, fresh empty
   `team.md` / `project.md` — so a new team starts from the framework's defaults
   and earns its own practices rather than inheriting another team's.
-- **You don't author spaces in `core/`.** A space is runtime team data, created
+- **You don't author spaces in `packages/framework/core/`.** A space is runtime team data, created
   with `/amadeus space-create <name>` in an installed project — the same
   data-not-code line that separates team knowledge from framework source. There
-  is nothing to add to `core/` or regenerate to support multiple teams; the
+  is nothing to add to `packages/framework/core/` or regenerate to support multiple teams; the
   capability ships in the engine.
 
 The mental model from this chapter holds inside each space unchanged: the stage

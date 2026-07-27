@@ -58,7 +58,7 @@ To drop a server entirely, remove its entry from your project or user MCP config
 
 ## Installation
 
-AI-DLC installs by copying its distribution for your harness into your project. The steps below cover **Claude Code** (the `dist/claude/.claude/` tree). Running Kiro or Codex? Each ships its own distribution and install steps — see [Running on Kiro IDE](harnesses/kiro-ide.md) or [Running on Codex CLI](harnesses/codex-cli.md). The Claude Code implementation ships as a `.claude/` directory that you copy into your project.
+AI-DLC installs by copying its distribution for your harness into your project. The steps below cover **Claude Code** (the `dist/claude/.claude/` tree). Running another harness? Kiro IDE, Kiro CLI, Codex CLI, Cursor, OpenCode, and Kimi Code each ship their own distribution and install steps — see [Running on other harnesses](harnesses/README.md). The Claude Code implementation ships as a `.claude/` directory that you copy into your project.
 
 ### Step 1: Copy the implementation
 

@@ -13,7 +13,7 @@ line precisely, so you reach for the right surface and stop pushing on the ones
 that are not yours to push.
 
 The throughline is the same one the rest of this guide carries: you reshape
-Construction by editing **data** under `core/` — a rule, a stage, a sensor's
+Construction by editing **data** under `packages/framework/core/` — a rule, a stage, a sensor's
 check command — and never by editing code. The thing that makes Construction
 feel different is that two of its most visible behaviours (the autonomy grant,
 the swarm driver) are governed by concerns that are deliberately *not* data
@@ -31,7 +31,7 @@ worth holding the whole picture before you touch any one knob.
 
 | Concern in Construction | Owner | Where it lives |
 |---|---|---|
-| The team's autonomy **posture** (a standing default) | you, the harness engineer | a rule in `core/memory/{team,project}.md` (data) |
+| The team's autonomy **posture** (a standing default) | you, the harness engineer | a rule in `packages/framework/core/memory/{team,project}.md` (data) |
 | What Units **can** parallelise | you, the harness engineer | the `units-generation` stage and its dependency DAG (data) |
 | The **convergence check** the swarm trusts | you, the harness engineer | your project's own build/test command + a protected spec (data + project config) |
 | The actual autonomy **grant** for this project | the human | the ladder prompt at runtime |
@@ -48,7 +48,7 @@ author none of them.
 
 The first thing a team wants to control is how much hand-holding Construction
 demands. The shipped default lives in the org rule you author at
-`core/memory/org.md` under the `## Walking Skeleton` heading
+`packages/framework/core/memory/org.md` under the `## Walking Skeleton` heading
 (`org.md:28-42`). Read it as the framework's stance:
 
 - The **walking-skeleton Bolt runs first** for greenfield scopes — `mvp`,
@@ -80,7 +80,7 @@ decides (judgment).
 
 Suppose your team is new to autonomous Construction and wants the conservative
 posture: every Bolt reviewed, no hands-off runs, until trust is earned. You add a
-bullet under `## Walking Skeleton` in `core/memory/team.md`:
+bullet under `## Walking Skeleton` in `packages/framework/core/memory/team.md`:
 
 ```markdown
 ## Walking Skeleton
@@ -110,7 +110,7 @@ heading, opposite recommendation.
 The swarm fans work out across Units, so the question "what can run at once?"
 is decided upstream, in inception, by the `units-generation` stage. That stage
 produces `unit-of-work-dependency.md`
-(`core/amadeus-common/stages/inception/units-generation.md`
+(`packages/framework/core/amadeus-common/stages/inception/units-generation.md`
 declares `produces: unit-of-work-dependency`), and inside that artifact a
 required fenced `yaml` edge block lists every Unit with its `depends_on` list.
 
@@ -240,7 +240,7 @@ runs to completion — there is no telemetry that ultra was actually applied.
 All resolutions run the same five per-Unit stages and converge against the same
 project check; the difference is purely how the parallel work is dispatched. The
 runaway backstop lives in the harness's **Stop-hook ceiling**
-(`core/hooks/amadeus-stop.ts`, the `blockCap()` / `defaultBlockCap()` pair, exposed
+(`packages/framework/core/hooks/amadeus-stop.ts`, the `blockCap()` / `defaultBlockCap()` pair, exposed
 as `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`), outside the swarm tool itself. On this
 autonomous-Construction path the default ceiling is **8 blocks** (the interactive
 default is 2; an explicit `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` overrides both). The
@@ -260,7 +260,7 @@ the failure halt loud.
 
 The line is clean. Everything above — the autonomy posture rule, the Unit
 decomposition that produces the edge block, the project check command and
-protected spec, the complementary sensor — is data you author under `core/`
+protected spec, the complementary sensor — is data you author under `packages/framework/core/`
 or your project config. You shape Construction without touching code.
 
 The swarm's machinery is code, and shaping it is the Developer Reference's
@@ -292,8 +292,8 @@ in [State and Audit](../guide/10-state-and-audit.md).
 ## Next
 
 - **[Porting to a New Harness](09-porting-to-a-new-harness.md)** — the
-  culmination of this guide. You have shaped every data surface in `core/`; the
-  last step is rendering that core onto a *new* CLI: one `harness/<name>/`
+  culmination of this guide. You have shaped every data surface in `packages/framework/core/`; the
+  last step is rendering that core onto a *new* CLI: one `packages/framework/harness/<name>/`
   directory, a manifest row, a hook adapter, and the byte-parity gate.
 - Back to [the Harness Engineer Guide overview](00-overview.md) for the full map
   of data surfaces you shape.

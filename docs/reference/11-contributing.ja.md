@@ -13,7 +13,7 @@
 ## 前提条件
 
 - **Claude Code** -- ネイティブインストール(推奨、自動更新)。macOS/Linux/WSL は `curl -fsSL https://claude.ai/install.sh | bash`、Windows PowerShell は `irm https://claude.ai/install.ps1 | iex`。あるいは `brew install --cask claude-code`。([Claude Code docs](https://code.claude.com/docs/en/quickstart) を参照)
-- **bun** -- すべての CLI ツールと 11 個すべてのフックに必須。`curl -fsSL https://bun.sh/install | bash` でインストールします。Windows では `npm install -g bun` または `powershell -c "irm bun.sh/install.ps1 | iex"`。非対話シェルの PATH に含まれている必要があります(zsh は `~/.zshenv`、bash / Windows の Git Bash は `~/.bashrc`)。
+- **bun** -- すべての CLI ツールとすべてのフレームワークフックに必須。`curl -fsSL https://bun.sh/install | bash` でインストールします。Windows では `npm install -g bun` または `powershell -c "irm bun.sh/install.ps1 | iex"`。非対話シェルの PATH に含まれている必要があります(zsh は `~/.zshenv`、bash / Windows の Git Bash は `~/.bashrc`)。
 - **timeout**(GNU coreutils)-- テストスイートが LLM テストのタイムアウト(L2/L3)に使用するため必須。Linux にはプリインストールされています。macOS では `brew install coreutils` の後、gnubin を PATH に追加します: `export PATH="/opt/homebrew/opt/coreutils/libexec/gnubin:$PATH"`(`~/.zshenv` または `~/.zshrc` に記述)。
 - **Bash** -- POSIX 互換ラッパー(`tests/run-tests.sh`)向けの任意項目。主要なテストランナーは `bun tests/run-tests.ts` です。実行時には、配布可能なフックのいずれも Bash を必要としません。
 - **ライブなモデルプロバイダアクセス** -- ライブの統合テストと e2e テスト(L2/L3)の実行に必須。L1 プロトコルテストには不要です。
@@ -21,9 +21,9 @@
 ## リポジトリ構造
 
 ```
-core/                # 手書きの、ハーネス中立なソース(tools, stages, agents, rules, knowledge, hooks)
-harness/<name>/      # ハーネスごとに書かれた表層(manifest、オーケストレーター skill、settings/config; 例 claude/, kiro/, codex/)
-scripts/package.ts   # ビルド: core/ + harness/ から dist/<harness>/ を再生成(`bun run dist`、`--check` でドリフトガード)
+packages/framework/core/                # 手書きの、ハーネス中立なソース(tools, stages, agents, rules, knowledge, hooks)
+packages/framework/harness/<name>/      # ハーネスごとに書かれた表層(manifest、オーケストレーター skill、settings/config; 例 claude/, kiro/, codex/)
+scripts/package.ts   # ビルド: packages/framework/core/ + packages/framework/harness/ から dist/<harness>/ を再生成(`bun run dist`、`--check` でドリフトガード)
 scripts/promote-self.ts # プロジェクトローカルのドッグフーディングインストール: 生成された Claude/Codex 表層を .claude/.codex/.agents に昇格(ワークスペースの memory は決して上書きしない)
 dist/<harness>/      # 生成された配布物(claude/.claude/, kiro/.kiro/ + AGENTS.md, codex/)— 手編集禁止。packager を実行すること
 tests/               # すべて TypeScript のテストスイート(t*.test.ts、bun で実行)
@@ -39,9 +39,9 @@ docs/                # ドキュメント
 
 1. **`main` からフォークしてブランチを切る**
 2. **アーキテクチャを読む** -- [reference/01-architecture.md](01-architecture.ja.md) は実行モデル、エージェント委譲、フックシステムを説明します
-3. **エントリポイントを理解する** -- 決定論的エンジン `core/tools/amadeus-orchestrate.ts`(`next` / `report`)がルーティングを所有し、コンダクター `harness/claude/skills/amadeus/SKILL.md` はそのディレクティブに従って動作する薄い転送ループです。正となるエンジン / ディレクティブ / コンダクター / swarm の契約については [The Skill System](17-skill-system.ja.md) を参照してください
-4. **変更を加える** -- `core/` のハーネス中立ソース(tools, stages, agents, hooks, rules, knowledge)、または `harness/<name>/` のハーネス表層(オーケストレーター skill、settings)を編集します。その後 `bun run dist` を実行して `dist/` を再生成します — `dist/` を手編集してはいけません。ドリフトガード(`bun run dist:check` / `package.ts --check`)が CI を失敗させます
-5. **ドッグフーディング時はローカルに昇格する** -- `bun run promote:self` を実行して、生成されたハーネス出力からこのリポジトリのプロジェクトローカルな `.claude/`、`.codex/`、`.agents/`、`.cursor/`、`.opencode/`、`CLAUDE.md` をリフレッシュします。`bun run promote:self:check` がそのセルフインストールをドリフトガードします。`amadeus/spaces/default/memory/` は意図的に昇格されません — ワークスペースの memory は手編集される method ソース(practices-discovery と自己学習ループが実行時に書き込む)であり、promoter は決して上書きしません。composed-scope のランタイムデータも同様に保護されます: dist に存在しない `scopes/amadeus-<name>.md` は composer が作成した scope(保持され、orphan として削除されない)であり、`tools/data/scope-grid.json` はキーごとに比較・書き込みされるため、composed なエントリは残りつつ stock エントリのドリフトは引き続きチェックを失敗させます
+3. **エントリポイントを理解する** -- 決定論的エンジン `packages/framework/core/tools/amadeus-orchestrate.ts`(`next` / `report`)がルーティングを所有し、コンダクター `packages/framework/harness/claude/skills/amadeus/SKILL.md` はそのディレクティブに従って動作する薄い転送ループです。正となるエンジン / ディレクティブ / コンダクター / swarm の契約については [The Skill System](17-skill-system.ja.md) を参照してください
+4. **変更を加える** -- `packages/framework/core/` のハーネス中立ソース(tools, stages, agents, hooks, rules, knowledge)、または `packages/framework/harness/<name>/` のハーネス表層(オーケストレーター skill、settings)を編集します。その後 `bun run dist` を実行して `dist/` を再生成します — `dist/` を手編集してはいけません。ドリフトガード(`bun run dist:check` / `package.ts --check`)が CI を失敗させます
+5. **ドッグフーディング時はローカルに昇格する** -- `bun run promote:self` を実行して、生成されたハーネス出力からこのリポジトリのプロジェクトローカルな `.claude/`、`.codex/`、`.agents/`、`.cursor/`、`.opencode/`、`.kimi-code/`、`AGENTS.md`、`CLAUDE.md` をリフレッシュします。`bun run promote:self:check` がそのセルフインストールをドリフトガードします。`amadeus/spaces/default/memory/` は意図的に昇格されません — ワークスペースの memory は手編集される method ソース(practices-discovery と自己学習ループが実行時に書き込む)であり、promoter は決して上書きしません。composed-scope のランタイムデータも同様に保護されます: dist に存在しない `scopes/amadeus-<name>.md` は composer が作成した scope(保持され、orphan として削除されない)であり、`tools/data/scope-grid.json` はキーごとに比較・書き込みされるため、composed なエントリは残りつつ stock エントリのドリフトは引き続きチェックを失敗させます
 6. **テスト** -- 提出前に `bun tests/run-tests.ts` を実行します
 7. **提出** -- `main` に対して PR を開きます
 
@@ -81,7 +81,7 @@ bash tests/run-tests.sh --e2e          # ワークフロー、worktree、ター�
 
 ### 決定論的ハンドラ(推奨)
 LLM 推論を必要としないハンドラ(テキストの出力、ファイルの読み取り/整形、前提条件のチェック、ディレクトリの作成)向け:
-1. `core/tools/amadeus-utility.ts` にサブコマンドを追加する
+1. `packages/framework/core/tools/amadeus-utility.ts` にサブコマンドを追加する
 2. SKILL.md から単一の Bash 呼び出しでディスパッチする: `bun .claude/tools/amadeus-utility.ts <subcommand>`
 3. タスクトラッキングは不要 -- スクリプトは 1 秒未満で実行される
 4. 監査ログはスクリプト内で `amadeus-audit.ts` の `appendAuditEntry` を通じて処理する(`**Event**:` の markdown ブロックを手書きしない)
@@ -100,11 +100,11 @@ LLM 推論を必要としないハンドラ(テキストの出力、ファイル
 
 ## スコープの追加
 
-スコープはファイル(その identity)とステージごとのメンバーシップタグとして作成されます。identity は `core/scopes/amadeus-<name>.md` に存在し、メンバーシップは `core/amadeus-common/stages/` 配下の各ステージのフロントマター `scopes:` リストに存在します。`init`、`scope-change`、`resolve-env-scope`、`doctor`、および state ツールにまたがる検証ロジックは、実行時に `core/tools/amadeus-lib.ts` の `validScopes()` を通じて `.claude/scopes/*.md` ファイルから有効なスコープのリストを導出します。EXECUTE/SKIP グリッドはステージごとの `scopes:` リストの転置であり、`tools/data/scope-grid.json` にコンパイルされます。スコープの追加に TypeScript の編集は不要です。
+スコープはファイル(その identity)とステージごとのメンバーシップタグとして作成されます。identity は `packages/framework/core/scopes/amadeus-<name>.md` に存在し、メンバーシップは `packages/framework/core/amadeus-common/stages/` 配下の各ステージのフロントマター `scopes:` リストに存在します。`init`、`scope-change`、`resolve-env-scope`、`doctor`、および state ツールにまたがる検証ロジックは、実行時に `packages/framework/core/tools/amadeus-lib.ts` の `validScopes()` を通じて `.claude/scopes/*.md` ファイルから有効なスコープのリストを導出します。EXECUTE/SKIP グリッドはステージごとの `scopes:` リストの転置であり、`tools/data/scope-grid.json` にコンパイルされます。スコープの追加に TypeScript の編集は不要です。
 
 ### 手順
 
-1. **`core/scopes/amadeus-hotfix.md` を作成する** — スコープの identity です。フロントマター:
+1. **`packages/framework/core/scopes/amadeus-hotfix.md` を作成する** — スコープの identity です。フロントマター:
    - `name`(必須): スコープ名。ファイル名のステムと一致しなければなりません。
    - `depth`(必須): `Minimal` | `Standard` | `Comprehensive`。
    - `keywords`(任意): `/amadeus <freeform text>` 自動検出のための NL トリガー。単語境界でマッチし、アルファベット順のスコープでタイブレークします。空のリストは推論をオプトアウトします。
@@ -128,11 +128,11 @@ LLM 推論を必要としないハンドラ(テキストの出力、ファイル
    Lean path for the urgent production patch — regression test and deploy, nothing else.
    ```
 
-2. **メンバーとなるステージにタグを付ける** — `hotfix` で実行すべき各ステージ(`core/amadeus-common/stages/<phase>/` 配下)で、そのフロントマターの `scopes:` リストに `hotfix` を追加します。タグを付けなかったステージはそのスコープでは `SKIP` になります。3 つの initialization ステージ(`workspace-scaffold`、`workspace-detection`、`state-init`)は必ず含めなければなりません — 常に実行されるためです。
+2. **メンバーとなるステージにタグを付ける** — `hotfix` で実行すべき各ステージ(`packages/framework/core/amadeus-common/stages/<phase>/` 配下)で、そのフロントマターの `scopes:` リストに `hotfix` を追加します。タグを付けなかったステージはそのスコープでは `SKIP` になります。3 つの initialization ステージ(`workspace-scaffold`、`workspace-detection`、`state-init`)は必ず含めなければなりません — 常に実行されるためです。
 
-3. **再コンパイル + スコープテーブルの再生成** — `bun .claude/tools/amadeus-graph.ts compile` が `scopes:` タグを `tools/data/scope-grid.json` に転置します。次に `bun .claude/tools/amadeus-utility.ts scope-table` が正規の Markdown テーブルを出力するので、`harness/claude/skills/amadeus/SKILL.md` の `<!-- BEGIN: compiled ... -->` / `<!-- END: compiled ... -->` マーカーの間に貼り付けます。`bun .claude/tools/amadeus-graph.ts compile --check` と `bun .claude/tools/amadeus-utility.ts scope-table --check` を実行して終了コード 0(ドリフトなし)を確認します。
+3. **再コンパイル + スコープテーブルの再生成** — `bun .claude/tools/amadeus-graph.ts compile` が `scopes:` タグを `tools/data/scope-grid.json` に転置します。次に `bun .claude/tools/amadeus-utility.ts scope-table` が正規の Markdown テーブルを出力するので、`packages/framework/harness/claude/skills/amadeus/SKILL.md` の `<!-- BEGIN: compiled ... -->` / `<!-- END: compiled ... -->` マーカーの間に貼り付けます。`bun .claude/tools/amadeus-graph.ts compile --check` と `bun .claude/tools/amadeus-utility.ts scope-table --check` を実行して終了コード 0(ドリフトなし)を確認します。
 
-4. **スコープが解決されることを確認する** — `bun core/tools/amadeus-utility.ts init --scope hotfix --project-dir /tmp/scope-smoke` が成功し、`Scope: hotfix` を持つ state ファイルが生成されるはずです。
+4. **スコープが解決されることを確認する** — `bun packages/framework/core/tools/amadeus-utility.ts init --scope hotfix --project-dir /tmp/scope-smoke` が成功し、`Scope: hotfix` を持つ state ファイルが生成されるはずです。
 
 5. **`doctor` が env デフォルトとして受け入れることを確認する** — `AMADEUS_DEFAULT_SCOPE=hotfix bun amadeus-utility.ts doctor` が env 変数を有効として報告するはずです。
 
@@ -160,11 +160,11 @@ LLM 推論を必要としないハンドラ(テキストの出力、ファイル
 
 ## ステージの追加
 
-ステージは、`core/amadeus-common/stages/<phase>/<slug>.md` 配下の、YAML フロントマターを持つ Markdown ファイルとして作成されます。コンパイラはフロントマターを `tools/data/stage-graph.json` に読み込み、ランナージェネレーターはコンパイル済みのステージリストからタイプ可能な `/amadeus-<slug>` skill を出力します。拡張性の契約は「ステージを追加するには、ステージファイルを書く」です — エンジンはコンパイル済みグラフからルーティングするため、登録にエンジンの編集は不要です。(完全なフィールドリファレンスと 3 コンパートメントの本文フォーマットは、ハーネスエンジニアガイドの [Anatomy of a Stage](../harness-engineering/01-anatomy-of-a-stage.ja.md) と [Adding a Stage](../harness-engineering/02-adding-a-stage.ja.md) に存在します。スキーマは [Stage Definition](15-stage-definition.ja.md) です。)
+ステージは、`packages/framework/core/amadeus-common/stages/<phase>/<slug>.md` 配下の、YAML フロントマターを持つ Markdown ファイルとして作成されます。コンパイラはフロントマターを `tools/data/stage-graph.json` に読み込み、ランナージェネレーターはコンパイル済みのステージリストからタイプ可能な `/amadeus-<slug>` skill を出力します。拡張性の契約は「ステージを追加するには、ステージファイルを書く」です — エンジンはコンパイル済みグラフからルーティングするため、登録にエンジンの編集は不要です。(完全なフィールドリファレンスと 3 コンパートメントの本文フォーマットは、ハーネスエンジニアガイドの [Anatomy of a Stage](../harness-engineering/01-anatomy-of-a-stage.ja.md) と [Adding a Stage](../harness-engineering/02-adding-a-stage.ja.md) に存在します。スキーマは [Stage Definition](15-stage-definition.ja.md) です。)
 
 ### 手順
 
-1. **ステージファイルを書く** — `core/amadeus-common/stages/<phase>/<slug>.md` を作成します。フロントマターは `slug`、`phase`、`execution`/`condition`、`lead_agent` と任意の `support_agents`(エージェント slug で)、`mode`(`inline` または `subagent`)、`consumes` / `produces`(成果物ボキャブラリの名前)、`requires_stage`(順序付けのエッジ)、`scopes:` メンバーシップリスト、バインドする任意の `sensors:`、そして Unit ごとに反復する場合は `for_each` を宣言します。本文はステージの 3 コンパートメントを担います。完全なフィールド契約については [Stage Definition](15-stage-definition.ja.md) を参照してください。
+1. **ステージファイルを書く** — `packages/framework/core/amadeus-common/stages/<phase>/<slug>.md` を作成します。フロントマターは `slug`、`phase`、`execution`/`condition`、`lead_agent` と任意の `support_agents`(エージェント slug で)、`mode`(`inline` または `subagent`)、`consumes` / `produces`(成果物ボキャブラリの名前)、`requires_stage`(順序付けのエッジ)、`scopes:` メンバーシップリスト、バインドする任意の `sensors:`、そして Unit ごとに反復する場合は `for_each` を宣言します。本文はステージの 3 コンパートメントを担います。完全なフィールド契約については [Stage Definition](15-stage-definition.ja.md) を参照してください。
 
 2. **グラフを再コンパイルする** — `bun .claude/tools/amadeus-graph.ts compile` が新しいフロントマターを `tools/data/stage-graph.json` に読み込み、`scopes:` タグを `tools/data/scope-grid.json` に転置します。`bun .claude/tools/amadeus-graph.ts compile --check` を実行して終了コード 0(ドリフトなし)を確認します。ステージは `bun .claude/tools/amadeus-orchestrate.ts next --stage <slug> --single` で直ちに実行可能です。
 
@@ -189,11 +189,11 @@ LLM 推論を必要としないハンドラ(テキストの出力、ファイル
 
 ## エージェントの追加
 
-エージェントのメタデータ(表示名、サンプルナレッジファイル)は、`core/agents/` 配下の各エージェントの `.md` フロントマターから読み取られます。`core/tools/amadeus-lib.ts` の `loadAgents()` ヘルパーは、そのディレクトリ内のすべての `.md` ファイルを検出し、ステータスラインフックが(表示名をレンダリングするために)消費するメタデータマップを導出します。エージェントの追加に TypeScript の編集は不要です。
+エージェントのメタデータ(表示名、サンプルナレッジファイル)は、`packages/framework/core/agents/` 配下の各エージェントの `.md` フロントマターから読み取られます。`packages/framework/core/tools/amadeus-lib.ts` の `loadAgents()` ヘルパーは、そのディレクトリ内のすべての `.md` ファイルを検出し、ステータスラインフックが(表示名をレンダリングするために)消費するメタデータマップを導出します。エージェントの追加に TypeScript の編集は不要です。
 
 ### 手順
 
-1. **エージェントファイルを作成する** — 必須のフロントマターを持つ新しい `core/agents/<slug>-agent.md` を置きます:
+1. **エージェントファイルを作成する** — 必須のフロントマターを持つ新しい `packages/framework/core/agents/<slug>-agent.md` を置きます:
 
    ```yaml
    ---
@@ -211,13 +211,13 @@ LLM 推論を必要としないハンドラ(テキストの出力、ファイル
 
    `name` フィールドはファイル名のステムと正確に一致しなければなりません。`display_name` はステータスラインが使用する、人間向けのラベルです。`examples` はエージェント→examples テーブルにドキュメント化された、推奨ナレッジファイル名を列挙します — これらはユーザーへの提案であり、実行時にロードされず、ディスクにも書き込まれません。
 
-2. **エージェントが検出されることを確認する** — `bun -e "import { loadAgents } from 'core/tools/amadeus-lib.ts'; console.log(loadAgents().find(a => a.slug === '<slug>-agent'));"` が新しいエージェントのメタデータを出力するはずです。
+2. **エージェントが検出されることを確認する** — `bun -e "import { loadAgents } from 'packages/framework/core/tools/amadeus-lib.ts'; console.log(loadAgents().find(a => a.slug === '<slug>-agent'));"` が新しいエージェントのメタデータを出力するはずです。
 
-3. **intent birth が space ナレッジディレクトリを作成することを確認する** — `bun core/tools/amadeus-utility.ts intent-birth --scope poc --project-dir /tmp/agent-smoke` が空の space レベル `amadeus/knowledge/` ディレクトリ(space の `intents/` の兄弟)を作成するはずです。birth はエージェントごとのサブディレクトリや README をシードしません — チームがコンテンツを持つときに自分で `amadeus/knowledge/<slug>-agent/` を作成します。
+3. **intent birth が space ナレッジディレクトリを作成することを確認する** — `bun packages/framework/core/tools/amadeus-utility.ts intent-birth --scope poc --project-dir /tmp/agent-smoke` が空の space レベル `amadeus/knowledge/` ディレクトリ(space の `intents/` の兄弟)を作成するはずです。birth はエージェントごとのサブディレクトリや README をシードしません — チームがコンテンツを持つときに自分で `amadeus/knowledge/<slug>-agent/` を作成します。
 
 4. **ステータスラインがレンダリングされることを確認する** — `Active Agent: <slug>-agent` を持つ state ファイルをシードし、ステータスラインフックを呼び出します。出力は `--` セパレータの後に表示名を含むはずです。
 
-5. **エージェントをステージに組み込む** — ステージをリードまたはサポートすべき新しいエージェントは、`core/amadeus-common/stages/<phase>/` 配下のステージ `.md` ファイルの `lead_agent` / `support_agents` フィールドで、各ステージのフロントマターに指名されます。次に `bun .claude/tools/amadeus-graph.ts compile`(およびドリフトガードとしての `compile --check`)を実行して、そのフロントマターから `tools/data/stage-graph.json` を再生成します。`stage-graph.json` を手編集してはいけません — それはコンパイル済みの成果物であり、次の `compile` が手動の変更を上書きします。これは検出とは別です — `loadAgents()` はエージェントを可視にし、ステージフロントマター(グラフにコンパイルされる)はエージェントをアクティブにします。
+5. **エージェントをステージに組み込む** — ステージをリードまたはサポートすべき新しいエージェントは、`packages/framework/core/amadeus-common/stages/<phase>/` 配下のステージ `.md` ファイルの `lead_agent` / `support_agents` フィールドで、各ステージのフロントマターに指名されます。次に `bun .claude/tools/amadeus-graph.ts compile`(およびドリフトガードとしての `compile --check`)を実行して、そのフロントマターから `tools/data/stage-graph.json` を再生成します。`stage-graph.json` を手編集してはいけません — それはコンパイル済みの成果物であり、次の `compile` が手動の変更を上書きします。これは検出とは別です — `loadAgents()` はエージェントを可視にし、ステージフロントマター(グラフにコンパイルされる)はエージェントをアクティブにします。
 
 ### 自動的に検証されるもの
 
@@ -230,10 +230,10 @@ LLM 推論を必要としないハンドラ(テキストの出力、ファイル
 
 ### 自動的には検証されないもの
 
-- **ステージグラフへの参加**。ステージフロントマターは `lead_agent` / `support_agents` フィールドで slug によりエージェントを参照し、`amadeus-graph.ts compile` がそれらを `stage-graph.json` に取り込みます。新しいエージェントを追加してもどのステージのフロントマターでも指名しなければ、エージェントは存在するが決して実行されません。ステージグラフのスキーマ検証(`core/tools/amadeus-stage-schema.ts`)が組み込まれています: `amadeus-graph.ts compile` は各ステージのフロントマターを検証し(`compile --check` が CI のドリフトガード)、`/amadeus --doctor` は同じ `validateStageFrontmatter` に加えて、すべての `lead_agent` / `support_agents` slug が解決されることを確認する「Graph references」チェックを再実行します。
+- **ステージグラフへの参加**。ステージフロントマターは `lead_agent` / `support_agents` フィールドで slug によりエージェントを参照し、`amadeus-graph.ts compile` がそれらを `stage-graph.json` に取り込みます。新しいエージェントを追加してもどのステージのフロントマターでも指名しなければ、エージェントは存在するが決して実行されません。ステージグラフのスキーマ検証(`packages/framework/core/tools/amadeus-stage-schema.ts`)が組み込まれています: `amadeus-graph.ts compile` は各ステージのフロントマターを検証し(`compile --check` が CI のドリフトガード)、`/amadeus --doctor` は同じ `validateStageFrontmatter` に加えて、すべての `lead_agent` / `support_agents` slug が解決されることを確認する「Graph references」チェックを再実行します。
 - **ナレッジファイルの存在**。`examples` はエージェント→examples テーブルにドキュメント化された、推奨ファイル名のリストです — 作成も検証もされません。ユーザーは実際のコンテンツを `amadeus/knowledge/<agent>/`(space レベルのナレッジディレクトリ)に置きます。
-- **エージェントを列挙するドキュメントテーブル**。`docs/reference/05-agent-system.md:119-131` の Phase Participation マトリクスと、`core/knowledge/amadeus-shared/knowledge-readme-template.md:16-29` のエージェント→examples テーブルは手で保守されます。エージェントを追加する同じ PR で更新してください(以下のドキュメントポリシーを参照)。
-- **`.claude/agents/<new-agent>.md` の本文コンテンツ**。パースされるのはフロントマターだけです。本文のプロース(Core Responsibilities、Knowledge Loading シーケンスなど)は、アクティブ化されたときにエージェント自身が読み取ります — 他の 11 個のエージェントファイルの構造に合わせて書いてください。
+- **エージェントを列挙するドキュメントテーブル**。`docs/reference/05-agent-system.md:119-131` の Phase Participation マトリクスと、`packages/framework/core/knowledge/amadeus-shared/knowledge-readme-template.md:16-29` のエージェント→examples テーブルは手で保守されます。エージェントを追加する同じ PR で更新してください(以下のドキュメントポリシーを参照)。
+- **`.claude/agents/<new-agent>.md` の本文コンテンツ**。パースされるのはフロントマターだけです。本文のプロース(Core Responsibilities、Knowledge Loading シーケンスなど)は、アクティブ化されたときにエージェント自身が読み取ります — 他のエージェントファイルの構造に合わせて書いてください。
 
 ## ドキュメントポリシー
 

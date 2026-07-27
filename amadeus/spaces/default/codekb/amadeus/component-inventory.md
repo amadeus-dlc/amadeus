@@ -1,5 +1,9 @@
 # コンポーネント棚卸し
 
+> **2026-07-27（intent `260726-answer-manual-binding`、[Issue #1548](https://github.com/amadeus-dlc/amadeus/issues/1548) bug、amadeus-bugfix / Brownfield）: 本 intent 断面は対象外（コンポーネント面に変化なし）。** 測定 ref: observed `ad1ff5de9`、base `09c669901`、距離 2。区間 2 コミットは record-only で mirror answer/guard スタックの source 変更ゼロ。#1548 は既存 mirror コンポーネント（adapter `amadeus-mirror-lifecycle.ts` / coordinator `amadeus-mirror-coordinator.ts` / types `amadeus-mirror-types.ts`）間の**契約の欠落**（answer 転送 `:969-985` が guard `:257-265` の要求フィールドを渡さない）で、新規コンポーネントの追加はない。配布は `amadeus-mirror-lifecycle.ts` の **13 コピー**（canonical 1 + self-install 5 + dist 7）が同期対象。詳細は上流入力 `re3-dev-scan-result.md` と本 scan の `architecture.md` / `code-quality-assessment.md` 新節、`re-scans/260726-answer-manual-binding.md`。
+
+> **2026-07-27（intent `260726-t258-p95-flake`、[Issue #1511](https://github.com/amadeus-dlc/amadeus/issues/1511) bug/P2/S3-MAJOR、amadeus-bugfix / Brownfield）: 本 intent 断面は対象外（変更なし）。** 測定 ref: observed `09c669901`、base `f9a0fb86a`、距離 2。区間 32 ファイルはすべて `amadeus/` record で **source/test/CI 変更ゼロ**。#1511 の患部コンポーネント（`p95()` 述語 `t258:430-433`、child benchmark helper `tests/helpers/lifecycle-transaction-benchmark-child.ts`、絶対 assert `t258:461-462` / `t257:240-241`、被測定 `withIntentLifecyclePreflight` / `runIntentLifecycleTransactionLocked`）はいずれも既存で、新規コンポーネント登録なし。詳細は上流入力 `re2-dev-scan-result.md` と本 scan の `code-quality-assessment.md` / `architecture.md` 新節、`re-scans/260726-t258-p95-flake.md`。
+
 ## plugin ホスト配信のコンポーネント（260727-install-doc-mismatch、現在、差分リフレッシュ）
 
 260727-install-doc-mismatch 差分リフレッシュ（2026-07-27、observed `46a75f2e7`、base `0d83aa48b`、距離 70）。上流入力: Developer スキャン結果。本区間で plugin ホスト配信（前 intent `260726-plugin-host-delivery` の Construction U2–U8）が着地し、以下のコンポーネントが新規に現れた。
@@ -19,7 +23,76 @@ class 分類（`PLUGIN_HOST_CLASS`、ADR-4）: `native-manifest`（claude）/ `f
 
 測定 ref: observed `46a75f2e7`（cid:reverse-engineering:measurement-ref-in-artifacts）。
 
-## kimi ハーネス面・metrics 可視化・plugin perf ゲートのコンポーネント（履歴: 260726-plugin-host-delivery、2026-07-26、差分リフレッシュ）
+## docs 同期の対象コンポーネントと真実源インベントリ（260727-docs-impl-sync、履歴、amadeus-document）
+
+測定 ref: observed `aabc0527d`、base `1673c4332`（祖先 exit 0 / 距離 47）。
+
+**ハーネス面インベントリ（`ls -d packages/framework/harness/*/`、= 7）**
+
+| ハーネス | セルフインストール面 | パッケージ面 | 区間内変更 |
+| --- | --- | --- | --- |
+| claude | `.claude/`（25 ファイル変更） | ✅ | plugin hook 追加 |
+| codex | `.codex/`（23） | ✅ | — |
+| cursor | `.cursor/`（22） | ✅ | — |
+| opencode | `.opencode/`（24） | ✅ | 起動エラー修正 #1508 |
+| **kimi** | `.kimi-code/`（**294 = 新設**） | ✅ | **#1522 新規追加** |
+| kiro | なし（意図的除外） | ✅ | — |
+| kiro-ide | なし（意図的除外） | ✅ | — |
+
+`PACKAGE_HARNESSES` = 7（`scripts/plugin-projection.ts:41-49`）、`SELF_INSTALL_HARNESSES` = 5（`:55`）。
+
+**hook インベントリ（`ls packages/framework/core/hooks/`、= 12）**: `amadeus-audit-logger.ts` / `amadeus-log-subagent.ts` / `amadeus-mint-presence.ts` / **`amadeus-plugin-compose.ts`（区間内新設・12番目）** / `amadeus-runtime-compile.ts` / `amadeus-sensor-fire.ts` / `amadeus-session-end.ts` / `amadeus-session-start.ts` / `amadeus-statusline.ts` / `amadeus-stop.ts` / `amadeus-sync-statusline.ts` / `amadeus-validate-state.ts`。うち flow-altering は `amadeus-stop.ts` の 1 件のみで、残り 11 は non-blocking（新 hook もこの契約側に属する — 失敗時 stderr 1 行 + exit 0）。
+
+**agent インベントリ（`ls packages/framework/core/agents/*.md | wc -l` = 14）**: domain-expert **11**（architect / aws-platform / compliance / delivery / design / developer / devsecops / operations / pipeline-deploy / product / quality）+ reviewer **2**（architecture-reviewer / product-lead）+ composer **1**。docs の「11 domain-expert agents」表現は**正**、「Eleven flat agent files」（`docs/reference/01-architecture.md:60` / `.ja.md:60`）は**誤**（= 14）。この乖離は区間外の pre-existing。
+
+**区間で追加された CLI／ツールコンポーネント**
+
+| コンポーネント | 種別 | 規模 | 契約 |
+| --- | --- | --- | --- |
+| `core/tools/amadeus-plugin.ts` | CLI | +454 新設 | 4 verb（compose / doctor / drop / status）、usage-error は exit 2 |
+| `core/tools/amadeus-plugin-compose.ts` | エンジン | 移設 +111/-7、1469 行 | 合成の単一定義。dist 同梱面が `scripts/` を import しない |
+| `core/hooks/amadeus-plugin-compose.ts` | hook | +23 新設 | SessionStart、CLI の薄いラッパ、合成ロジック非再実装 |
+| `scripts/metrics-visualize.ts` | スクリプト | +292 新設 | 自己完結 HTML、決定的レンダリング、`--check` バイト比較 |
+| `harness/kimi/hooks/amadeus-kimi-lib.ts` | アダプタ lib | +352 新設 | Kimi hook payload → core 中立契約の写像 |
+| `harness/kimi/hooks/amadeus-kimi-adapter.ts` | アダプタ | +28 新設 | 同上のエントリ |
+| `harness/kimi/skills/amadeus/SKILL.md` | スキル | +238 新設 | Kimi 面のオーケストレーター |
+| `harness/kimi/skills/amadeus/question-rendering.md` | スキル補助 | +109 新設 | 質問レンダリング様式 |
+
+**mirror コンポーネント群（16 モジュール、区間内で v1 統一）**: `amadeus-mirror.ts`（357 行、+73/-303）/ `-capability` / `-config` / `-coordinator` / `-executor` / `-gateway` / `-lifecycle` / `-policy` / `-presentation` / `-provenance` / `-repair` / `-runner` / `-state-codec` / `-state-reducer` / `-state-store` / `-types`。legacy「Mirror Issue」フィールドの読取コンポーネントは全廃済み。
+
+**docs 側の消費コンポーネント（患部）**: 上記真実源を手書きで複製している docs は README 2 件 + `19-plugins` 2 件 + JA hook 記述 4 件 = **8 ファイル**（`01-architecture.{md,ja.md}:60` の agent 数を含めると 10）。いずれも実装からの導出機構を持たず、ドリフトガードも存在しない。
+
+## mirror 状態表現分裂 患部コンポーネント（260726-mirror-state-split、履歴、Issue #1547 + #1534）
+
+測定 ref: observed `f9a0fb86a`（base `1673c4332`、距離 38）。所在・コピー数は同 commit の `git ls-files` / `grep -n` / `wc -l` 出力からの転記。上流入力は Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`。
+
+### 患部コンポーネント一覧
+
+| コンポーネント | 所在 | 役割 | 系統 | 本 intent での位置づけ |
+| --- | --- | --- | --- | --- |
+| `mutateMirrorStateAtomic` | `amadeus-mirror-state-store.ts:158`（呼出 executor `:71` / lifecycle `:629`） | v1 sentinel ブロックの atomic write（唯一の書き手） | Write | 正しい権威。read はここが書いた表現に寄せる |
+| `MIRROR_STATE_SENTINEL_START/END` | `amadeus-mirror-state-codec.ts:38-39` | v1 ブロック境界。`parseMirrorStateDocument`（`:1301`）が読取 | Write | 修正後 read が参照すべき権威表現 |
+| `buildSnapshot` / status read | `amadeus-mirror.ts:169`（`:188` で `mirrorIssue` 決定） | status が `getField("Mirror Issue")` で legacy field を読む | Read | **主患部 A**（v1 非参照） |
+| `hasMirrorIssue` ×2 | `amadeus-orchestrate.ts:314` / `:3522` | boundary auto-sync/suppress・report 判定が legacy field を読む | Read | **主患部 B**（同根 2 箇所、同時修正必須） |
+| `compareMirrorStatus` | `amadeus-mirror.ts:249-258` | legacy field null → `mirror-missing` 報告（findings 型 `:231-233`） | Read | 症状の出所（create 後も missing） |
+| `writeMirrorIssueField` | `amadeus-mirror.ts:363`（呼び手 `:413` = `handleCreate` 内） | legacy field の唯一の writer | dead | **CLI 実行時不到達**（main 不到達）。撤去可否は要件裁定 |
+| `handleCreate` / `handleSync` / `handleClose` | `amadeus-mirror.ts:379` / `:425` / `:450` | 旧 CLI verb ハンドラ | dead | main（`:570-585`）不到達。t232 のみ参照。dead path が偽 green を生む |
+| `runLegacyMutation` | `amadeus-mirror.ts:533` | 名称に反し v1 lifecycle（`runMirrorLifecycleBoundary`）を呼ぶ | Write 経路 | 命名 misdirection。成功時 `issueNumber` echo のみで可視 field を残さない |
+| `renderMirrorMarker` | `amadeus-mirror-provenance.ts:47` | ownership marker の唯一の書き手 | marker | legacy 経路が呼ばず → #1534 の根 |
+| `runRepairRelink` / `verifyOwnership` | `amadeus-mirror-lifecycle.ts:775`（`:785` marker 検査 / `:788` message） / `amadeus-mirror-provenance.ts:149`（`:165` `missing-marker`） | marker 必須の復旧経路 | marker | marker 無き legacy Issue を fail-closed 拒否 → in-tool 復旧ゼロ |
+| status テスト | `tests/unit/t232-amadeus-mirror.test.ts:104` / `:124` | `snapshot({ mirrorIssue: 1161 })` で legacy field を直接シード | テスト | **偽 green の発生源**（v1 ブロックを書かず、real-create→status e2e が不在） |
+
+### 配布増幅
+
+mirror スタック各モジュールは `git ls-files "*<module>.ts"` = **13 パス**（正本 1 + self-install 5 = `.claude` `.codex` `.cursor` `.kimi-code` `.opencode` + dist 7 = `claude` `codex` `cursor` `kiro` `kiro-ide` `opencode` `kimi`）。投影宣言は `packages/framework/harness/projections.ts:23-32`（mirror 群 10 宣言）。
+
+### 区間での変化
+
+区間 38 コミットで**上記コンポーネントはいずれも無変更**（mirror スタック 8 モジュール各 `git log --oneline 1673c4332..HEAD -- <path>` = 0 行）。区間で変化したのは gateway envelope（#1537）/ core tools dedup（#1521、orchestrate.ts の非欠陥面）/ Kimi ハーネス / metrics 面であり、状態表現分裂の write/read 経路は非交差。
+
+## mirror-gateway 患部コンポーネント（260726-mirror-envelope-lf、履歴、Issue #1498）
+
+## kimi ハーネス面・metrics 可視化・plugin perf ゲートのコンポーネント（260726-plugin-host-delivery、履歴 2026-07-26、差分リフレッシュ）
 
 260726-plugin-host-delivery 差分リフレッシュ（2026-07-26、observed `0d83aa48b886fe85cd977569c0e7b3015b84d3e5`、base `1673c4332`、距離 43）。上流入力: Developer スキャン結果（実測済みスキャンノート）。
 

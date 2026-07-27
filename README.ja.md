@@ -2,7 +2,7 @@
 
 > 言語: [English](README.md) | **日本語**
 
-**Amadeus-DLC はセルフホスト型の AI 開発ライフサイクルです。決定的なワークフローエンジンと、ゲート付き32ステージのメソドロジーを一度だけ記述し、6つのコーディングエージェントハーネスの上でネイティブに動かします。** あなたは「何を作るか」を記述するだけ — 11のドメイン専門家エージェントが ideation・inception・construction・operation を進め、プロンプトではなく**コードとして実装された状態機械**が、あなたが通すまですべての承認ゲートを保持します。
+**Amadeus-DLC はセルフホスト型の AI 開発ライフサイクルです。決定的なワークフローエンジンと、ゲート付き32ステージのメソドロジーを一度だけ記述し、7つのコーディングエージェントハーネスの上でネイティブに動かします。** あなたは「何を作るか」を記述するだけ — 11のドメイン専門家エージェントが ideation・inception・construction・operation を進め、プロンプトではなく**コードとして実装された状態機械**が、あなたが通すまですべての承認ゲートを保持します。
 
 ![version](https://img.shields.io/badge/version-0.1.3-blue)
 ![license](https://img.shields.io/badge/license-(MIT%20OR%20Apache--2.0)-green)
@@ -64,7 +64,7 @@ Amadeus-DLC は AWS が定義した **AI-DLC メソドロジー**(段階的・�
 この継承の上に、この開発ラインは独自の追加を重ねています。その一部:
 
 - **インストーラ** — `@amadeus-dlc/setup` が任意のハーネス配布物をワンコマンドでインストール・アップグレード(本家は手動コピー)
-- **ハーネス2面の追加** — OpenCode と Cursor。本家出荷の4面を6面へ拡張
+- **ハーネス3面の追加** — OpenCode、Cursor、Kimi Code。本家出荷の4面を7面へ拡張
 - **ワークスペース移行ツール**(`/amadeus --migrate`)— 本家 v2 の `aidlc/` ワークスペースをプレビュー付きでその場変換
 - 読み取り専用の設計尋問スキル **grilling**、そして**全ガイドの日英二言語ドキュメント**
 - そしてこれらすべてを生み出す規律: Amadeus は Amadeus **で**、このリポジトリの中で、自身のステージ・ゲート・監査証跡を通して開発されている
@@ -75,12 +75,13 @@ Amadeus-DLC は AWS が定義した **AI-DLC メソドロジー**(段階的・�
 
 | ハーネス | バージョン | インストール(プロジェクトへ) | 起動 | ガイド |
 | --- | --- | --- | --- | --- |
-| **Kiro IDE** | — | `bunx @amadeus-dlc/setup install --harness kiro-ide` | `/amadeus` | [Kiro IDE で動かす](docs/guide/harnesses/kiro-ide.ja.md) |
-| **Kiro CLI** | ≥ 2.6 | `bunx @amadeus-dlc/setup install --harness kiro` | `/amadeus` | [Kiro CLI で動かす](docs/guide/harnesses/kiro-cli.ja.md) |
 | **Claude Code** | — | `bunx @amadeus-dlc/setup install --harness claude` | `/amadeus` | [はじめる](docs/guide/01-getting-started.ja.md) |
 | **Codex CLI** | ≥ 0.139.0 | `bunx @amadeus-dlc/setup install --harness codex` | `$amadeus` | [Codex CLI で動かす](docs/guide/harnesses/codex-cli.ja.md) |
-| **OpenCode** | — | `bunx @amadeus-dlc/setup install --harness opencode` | `$amadeus` | [OpenCode で動かす](docs/guide/harnesses/opencode.ja.md) |
 | **Cursor** | — | `bunx @amadeus-dlc/setup install --harness cursor` | `/amadeus` | [Cursor で動かす](docs/guide/harnesses/cursor.ja.md) |
+| **OpenCode** | — | `bunx @amadeus-dlc/setup install --harness opencode` | `$amadeus` | [OpenCode で動かす](docs/guide/harnesses/opencode.ja.md) |
+| **Kiro IDE** | — | `bunx @amadeus-dlc/setup install --harness kiro-ide` | `/amadeus` | [Kiro IDE で動かす](docs/guide/harnesses/kiro-ide.ja.md) |
+| **Kiro CLI** | ≥ 2.6 | `bunx @amadeus-dlc/setup install --harness kiro` | `/amadeus` | [Kiro CLI で動かす](docs/guide/harnesses/kiro-cli.ja.md) |
+| **Kimi Code** | ≥ 0.28.1 | `bunx @amadeus-dlc/setup install --harness kimi` | `/skill:amadeus` | [Kimi Code で動かす](docs/guide/harnesses/kimi-code.ja.md) |
 
 > [!NOTE]
 > 本リリースは **Claude Opus 4.8** で最もよく動作します(Kiro では有料プランが必要)。より弱いモデルでは、コンダクターが任意ステップ(レビュアーパス、学習リチュアル)を省略したり、承認ゲートを急いだりすることがあります。他モデルでの挙動は改善中です。
@@ -120,7 +121,7 @@ bunx @amadeus-dlc/setup install     # bun
 npx @amadeus-dlc/setup install      # npm/node
 ```
 
-引数なしの `install` は対話ウィザードを起動します: ハーネス(`claude` / `codex` / `kiro` / `kiro-ide` / `opencode` / `cursor`)とターゲットディレクトリを選ぶだけです。スクリプトや CI ではフラグで明示します:
+引数なしの `install` は対話ウィザードを起動します: ハーネス(`claude` / `codex` / `kiro` / `kiro-ide` / `opencode` / `cursor` / `kimi`)とターゲットディレクトリを選ぶだけです。スクリプトや CI ではフラグで明示します:
 
 ```bash
 bunx @amadeus-dlc/setup install --harness claude --target your-project --yes
@@ -295,7 +296,7 @@ amadeus/
 │   │   │   ├── skills/         #   セッションスキル
 │   │   │   └── templates/      #   オンボーディング雛形 → 各ハーネスの CLAUDE.md / AGENTS.md
 │   │   └── harness/            # ハーネスごとの薄い表層 — 小さく、意図的に分岐
-│   │       ├── claude/  codex/  cursor/  kiro/  kiro-ide/  opencode/
+│   │       ├── claude/  codex/  cursor/  kimi/  kiro/  kiro-ide/  opencode/
 │   └── setup/                  # @amadeus-dlc/setup — インストーラパッケージ
 │
 ├── scripts/
@@ -306,7 +307,7 @@ amadeus/
 │  ─────────── 生成物(コミット・ドリフトガード対象)— 手編集禁止 ───────────
 ├── dist/
 │   ├── claude/    kiro-ide/    kiro/      # 各ハーネスのユーザーがコピーするもの
-│   ├── codex/     opencode/    cursor/
+│   ├── codex/     opencode/    cursor/    kimi/
 │
 │  ─────────── 支援 ───────────
 ├── tests/                      # 全 TypeScript のテストスイート(t*.test.ts)

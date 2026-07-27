@@ -6,7 +6,7 @@
 OpenAI **Codex CLI** harness. One deterministic core, many harnesses: the
 engine, state machine, audit log, graph, swarm referee, and learnings gate are
 byte-identical across every distribution — only the shell differs. The
-tree is **generated** from `core/` + `harness/codex/` by `bun scripts/package.ts codex`;
+tree is **generated** from `packages/framework/core/` + `packages/framework/harness/codex/` by `bun scripts/package.ts codex`;
 never hand-edit it (the drift guard fails CI).
 
 ## Prerequisites
@@ -410,11 +410,11 @@ implicit skill matching so 37 runner descriptions don't pollute the index).
 ## Regenerating
 
 ```bash
-bun scripts/package.ts codex          # regenerate dist/codex from core/ + harness/codex/
+bun scripts/package.ts codex          # regenerate dist/codex from packages/framework/core/ + packages/framework/harness/codex/
 bun scripts/package.ts --check        # CI drift guard (every harness)
 ```
 
-Core `.ts` files are byte-identical to their `core/tools/` and `core/hooks/`
+Core `.ts` files are byte-identical to their `packages/framework/core/tools/` and `packages/framework/core/hooks/`
 sources (pinned by `tests/unit/t150-codex-packaging.test.ts`); prose carries the
 `{{HARNESS_DIR}}` token the packager substitutes to `.codex` (plus the
 `rules/` → `amadeus-rules/` rename), the one permitted transform class. The live
