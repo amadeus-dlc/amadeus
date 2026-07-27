@@ -721,15 +721,19 @@ function expectedPromptWasPersisted(
 // Persist the durable binding for one prompted operation and turn it into the
 // question the human answers. A binding that cannot be persisted is reported as
 // a blocked operation rather than an ask nobody could approve.
+// Module-scope alias: the runtime-erased type lines would otherwise be stamped
+// DA:0 by Bun inside the function body region.
+type PendingPromptStep = Readonly<{
+  decision: Extract<MirrorDecision, { kind: "prompt" }>;
+  triggerEvent: MirrorEventIdentity;
+  preceding: readonly MirrorOperationOutcome[];
+}>;
+
 function askOutcome(
   input: DriveMirrorBoundaryInput,
   snapshot: MirrorStateSnapshot,
   projects: readonly MirrorProjectTarget[],
-  pending: Readonly<{
-    decision: Extract<MirrorDecision, { kind: "prompt" }>;
-    triggerEvent: MirrorEventIdentity;
-    preceding: readonly MirrorOperationOutcome[];
-  }>,
+  pending: PendingPromptStep,
 ): MirrorBoundaryOutcome {
   const { decision, triggerEvent, preceding } = pending;
   const prompt = {

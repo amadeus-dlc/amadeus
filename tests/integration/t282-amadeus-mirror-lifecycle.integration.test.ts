@@ -1310,3 +1310,45 @@ describe("t282 awaitable production lifecycle adapter", () => {
     expect(gateway.issues[0]?.state).toBe("CLOSED");
   });
 });
+
+describe("t282 per-operation suppression", () => {
+  test("a skipped boundary event is suppressed by name on the next drive", async () => {
+    const fx = fixture();
+    const gateway = new LifecycleGateway();
+    // Link the mirror, then raise a prompt for one phase boundary and skip it.
+    await driveMirrorBoundary(boundaryInput(fx, gateway, "auto", "link-1", "completion"));
+    const promptInput = boundaryInput(fx, gateway, "prompt", "phase-skip");
+    const asked = await driveMirrorBoundary(promptInput);
+    expect(asked.kind).toBe("ask");
+    if (asked.kind !== "ask") throw new Error("expected an ask outcome");
+    const skipped = await driveMirrorBoundary({
+      ...promptInput,
+      answer: {
+        choice: "skip" as const,
+        bindingId: asked.bindingId,
+        answerId: "answer-skip-suppress-1",
+        operation: asked.operation,
+        event: asked.event,
+      },
+    });
+    expect(skipped.kind).toBe("continued");
+    if (skipped.kind === "continued") {
+      expect(skipped.outcomes[0]?.kind).toBe("skipped");
+    }
+    const before = gateway.history.length;
+
+    // Driving the same boundary again resolves the operation, sees the
+    // skipped-for-event receipt, and suppresses that operation by name.
+    const outcome = await driveMirrorBoundary(
+      boundaryInput(fx, gateway, "auto", "phase-skip"),
+    );
+
+    expect(outcome.kind).toBe("continued");
+    if (outcome.kind === "continued") {
+      expect(outcome.outcomes).toEqual([
+        { kind: "suppressed", operation: "sync", reason: "not-applicable" },
+      ]);
+    }
+    expect(gateway.history.length).toBe(before);
+  });
+});
