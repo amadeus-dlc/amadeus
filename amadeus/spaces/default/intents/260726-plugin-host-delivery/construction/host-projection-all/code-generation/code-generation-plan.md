@@ -26,7 +26,7 @@ harness-capability-matrix.md (e) `class_assignment` からの転記:
 
 `installArtifacts(plugin, harness)` は `clazz` の判別 union switch 1 箇所(scalability-design: 面数が増えても分岐数はクラス数 3 で一定):
 
-- **native-manifest(claude)**: 既存 `claudeInstallArtifacts` へ委譲し **不変**(business-logic-model「U2 の claude projector は変更せず」/ REL-U3-1 の U3 先行順序前提)。`.claude-plugin/plugin.json`(marketplace metadata)+ `hooks/hooks.json`(auto-compose snippet)+ `plugins/<name>/<rel>`(claude-transformed 内容)。
+- **native-manifest(claude)**: `claudeInstallArtifacts` が担う。`.claude-plugin/plugin.json`(marketplace metadata)+ `hooks/hooks.json`(auto-compose snippet)+ `plugins/<name>/<rel>`(claude-transformed 内容)+ **`INSTALL.md`(marketplace 様式 — マトリクス install_artifacts に忠実、§12a Major 2 是正)**。
 - **folder-drop-auto**: `plugins/<name>/<rel>`(harness-transformed 内容)+ `hooks/auto-compose.snippet`(harnessDir トークン置換済み compose recipe)+ `INSTALL.md`(手順書)。
 - **manual-only(opencode)**: `plugins/<name>/<rel>` + `INSTALL.md`(手動 compose 1 コマンド明記、hook snippet なし — silent skip 禁止だが投影ゼロにはしない: layout=手順書は生成)。
 
@@ -47,7 +47,8 @@ U4(hook-wiring-remaining)の FD で「投影(U3)がフック snippet を配布�
 - `OutDirProbe = { lstatKind: "missing"|"dir"|"file"|"symlink"|"broken-symlink"; isPriorProjection: boolean; isForeign: boolean; dirNonEmpty: boolean }`
 - 拒否: `non-projection-nonempty-dir`(#27)/ `foreign-projection`(#28)/ `file-outdir`(#29 生 ENOTDIR stack 抑止)/ `symlink-outdir`(#30)/ `broken-symlink-outdir`(#31)
 - ok: missing / 空 dir / 真正な先行投影(#32 — isPriorProjection=true)
-- `projectPluginForHarness` は lstat から `OutDirProbe` を構成し、`refused` なら 1 行 usage エラーで throw(生 stack 抑止)・書込ゼロ。`ok` なら install bundle + 先行投影マーカー(`.amadeus-plugin-projection.json` = `{plugin,harness}`、存在=isPriorProjection、plugin/harness 不一致=foreign)を書く。マーカーは **install 先ディレクトリにのみ**書き dist bundle には含めない(claude byte-identity と dist bundle marker-free を保つ)。
+- `projectPluginForHarness`(install flow)は lstat から `OutDirProbe` を構成し、`refused` なら 1 行 usage エラーで throw(生 stack 抑止)・書込ゼロ。`ok` なら install bundle + 先行投影マーカー(`.amadeus-plugin-projection.json` = `{plugin,harness}`、存在=isPriorProjection、plugin/harness 不一致=foreign)を書く。マーカーは **install 先ディレクトリにのみ**書き dist bundle には含めない(dist bundle marker-free)。
+- **本番書込経路の配線(§12a Major 1 是正)**: `scripts/package.ts` の `writeNeutralBundle` は clean-sweep 前に `assertInstallOutDirsSafe(pluginsRoot, distRoot)` を呼ぶ。dist/plugins/<name>/<harness>/ が symlink/file/broken-symlink のとき `classifyOutDir` 経由で write-0 拒否。dist は generator 所有のため plain dir=先行投影(上書き可)。落ちる実証は t312 で本番経路(writeNeutralBundle)に対して固定。
 
 ## 部分失敗 loud(REL-U3-3 / BR-U3-8)
 
@@ -55,14 +56,15 @@ U4(hook-wiring-remaining)の FD で「投影(U3)がフック snippet を配布�
 
 ## 変更ファイル(正本のみ — dist/self-install は生成物)
 
-- `scripts/plugin-projection.ts`: 型追加(`PluginHostClass`/`HarnessProjectionSpec`/`OutDirProbe`/`OutDirVerdict`/`OutDirRefusal`/`DriftEntry`)、`PLUGIN_HOST_CLASS` map、`installArtifacts`、`classifyOutDir`、`computeProjectionHash`、`checkPluginProjections`、`pluginBundleExpected`、`projectPluginForHarness` 一般化、marker helper、INSTALL/snippet builder。
+- `scripts/plugin-projection.ts`: 型追加(`PluginHostClass`/`HarnessProjectionSpec`/`OutDirProbe`/`OutDirVerdict`/`OutDirRefusal`/`DriftEntry`)、`PLUGIN_HOST_CLASS` map、`installArtifacts`、`classifyOutDir`、`assertInstallOutDirsSafe`(本番経路 guard)、`computeProjectionHash`、`checkPluginProjections`、`pluginBundleExpected`、`projectPluginForHarness` 一般化、`claudeInstallArtifacts` に INSTALL.md 追加、marker helper、INSTALL/snippet builder。
+- `scripts/package.ts`: `writeNeutralBundle` に `assertInstallOutDirsSafe` 配線、`neutralBundleExpected`/`checkNeutralBundle` の委譲。
 - `scripts/package.ts`: `neutralBundleExpected`→`pluginBundleExpected` 委譲、`checkNeutralBundle`→`checkPluginProjections` 委譲。
 - `dist/plugins/<name>/<harness>/`(生成物): `bun scripts/package.ts` で全 7 面 install bundle 再生成。
 
 ## テスト(t304-t312 予約枠、in-process seam 駆動 — spawn 盲点回避)
 
 - **unit(純関数)**: t304 `classifyOutDir` probe 全列挙(拒否 5 + ok 3 経路)、t305 `computeProjectionHash` 決定性、t306 `PLUGIN_HOST_CLASS` の U1 マトリクス転記照合(7 面クラス)。
-- **integration(実 FS)**: t307 `installArtifacts` の 3 クラス layout(marketplace は native-manifest のみ・folder-drop-auto に snippet・manual-only に snippet 無し・全クラスに INSTALL 内容)、t308 `projectPluginForHarness` 全 7 面 happy write + marker、t309 OutDirRefusal 全ケース fixture 対照(#27-32)+ 先行投影 re-project 許可(両側実測 — 正当な既存投影で赤くならない)、t310 `checkPluginProjections` stale/orphan 両側の落ちる実証、t311 0-plugin byte-identical(pluginBundleExpected 空)。
+- **integration(実 FS)**: t307 `installArtifacts` の 3 クラス layout(marketplace + INSTALL は native-manifest、folder-drop-auto に snippet、manual-only に snippet 無し、全クラスに INSTALL 内容)、t308 `projectPluginForHarness` 全 7 面 happy write + marker、t309 OutDirRefusal 全ケース fixture 対照(#27-32)+ 先行投影 re-project 許可(両側実測)、t310 `checkPluginProjections` stale/orphan 両側の落ちる実証、t311 0-plugin byte-identical、**t312 `writeNeutralBundle` 本番経路の OutDirRefusal 落ちる実証**。
 - **既存ゲート**: t303(U2 claude seam)を一般化に追随して更新(non-claude が throw しなくなるため該当 assert を全 7 面 happy へ)。dist:check / promote:self:check の drift ガード。
 
 ## 検証コマンド(全て同期・exit code 個別記録)

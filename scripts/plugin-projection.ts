@@ -335,9 +335,12 @@ export function claudeInstallArtifacts(plugin: PluginSource): readonly Projected
     sourcePath: manifestSource,
   });
   const content = buildPluginProjection(plugin, "claude").artifacts; // plugins/<name>/<rel>, claude-transformed
+  // native-manifest install_artifacts per the U1 matrix (BR-U1-7): marketplace
+  // metadata + hooks snippet + plugin content + INSTALL_doc (transcription only).
   return [
     generated(".claude-plugin/plugin.json", claudeMarketplaceManifest(plugin.directoryName)),
     generated("hooks/hooks.json", claudeHooksSnippet()),
+    generated("INSTALL.md", installDoc(plugin.directoryName, ".claude", "native-manifest")),
     ...content,
   ].sort((x, y) => cmpStr(x.relativePath, y.relativePath));
 }
@@ -439,9 +442,10 @@ function refusalMessage(reason: OutDirRefusal): string {
 }
 
 // The prior-projection marker: written into a real install outDir (NOT into the
-// dist bundle — dist stays marker-free so the claude bundle is byte-identical to
-// U2 and every dist bundle is generator-clean). Its presence is `isPriorProjection`;
-// a marker naming a different plugin/harness is `isForeign`.
+// dist bundle — dist stays marker-free; the packager instead treats a plain dir
+// under its own dist/plugins/ tree as a prior projection, see
+// assertInstallOutDirsSafe). Its presence is `isPriorProjection`; a marker naming
+// a different plugin/harness is `isForeign`.
 const PROJECTION_MARKER = ".amadeus-plugin-projection.json";
 type ProjectionMarker = { plugin: string; harness: PackageHarness };
 
@@ -455,28 +459,29 @@ function readProjectionMarker(outDir: string): ProjectionMarker | null {
   }
 }
 
-// Probe a real outDir into the pure OutDirProbe classifyOutDir consumes. Handles
-// the plain/dangling symlink split: existsSync follows links, so a broken symlink
-// is existsSync-false but has an lstat entry.
-function probeOutDir(outDir: string, plugin: string, harness: PackageHarness): OutDirProbe {
-  const inert = (lstatKind: OutDirProbe["lstatKind"]): OutDirProbe => ({
-    lstatKind,
-    isPriorProjection: false,
-    isForeign: false,
-    dirNonEmpty: false,
-  });
-  if (!existsSync(outDir)) {
-    let dangling = false;
+// Classify what is at `p` on disk. Handles the plain/dangling symlink split:
+// existsSync follows links, so a broken symlink is existsSync-false but has an
+// lstat entry.
+function lstatKindOf(p: string): OutDirProbe["lstatKind"] {
+  if (!existsSync(p)) {
     try {
-      dangling = lstatSync(outDir).isSymbolicLink();
+      return lstatSync(p).isSymbolicLink() ? "broken-symlink" : "missing";
     } catch {
-      return inert("missing");
+      return "missing";
     }
-    return inert(dangling ? "broken-symlink" : "missing");
   }
-  const st = lstatSync(outDir);
-  if (st.isSymbolicLink()) return inert("symlink");
-  if (!st.isDirectory()) return inert("file");
+  const st = lstatSync(p);
+  if (st.isSymbolicLink()) return "symlink";
+  if (!st.isDirectory()) return "file";
+  return "dir";
+}
+
+// Probe a real install outDir into the pure OutDirProbe classifyOutDir consumes.
+// A directory's prior-projection / foreign status comes from the marker.
+function probeOutDir(outDir: string, plugin: string, harness: PackageHarness): OutDirProbe {
+  const lstatKind = lstatKindOf(outDir);
+  if (lstatKind !== "dir")
+    return { lstatKind, isPriorProjection: false, isForeign: false, dirNonEmpty: false };
   const marker = readProjectionMarker(outDir);
   const isPrior = marker !== null && marker.plugin === plugin && marker.harness === harness;
   return {
@@ -514,15 +519,24 @@ function code(s: string): string {
   return bt + s + bt;
 }
 
-// The INSTALL doc every non-claude face ships (folder-drop-auto and manual-only).
-// manual-only says "run compose yourself"; folder-drop-auto points at the snippet.
+// The INSTALL doc every face ships. Its body is class-appropriate:
+//   native-manifest → marketplace install + the claude hooks.json auto-compose.
+//   folder-drop-auto → copy the folder + the auto-compose snippet.
+//   manual-only     → copy the folder + a manual compose step (no snippet).
 export function installDoc(name: string, harnessDir: string, clazz: PluginHostClass): string {
-  const lines = [
-    `# Install: ${name}`,
-    "",
-    `Copy this bundle's ${code(`plugins/${name}/`)} into ${code(`${harnessDir}/plugins/${name}/`)}.`,
-    "",
-  ];
+  const lines = [`# Install: ${name}`, ""];
+  if (clazz === "native-manifest") {
+    lines.push(
+      `Install through the host plugin marketplace using ${code(".claude-plugin/plugin.json")}.`,
+      "",
+      `Auto-compose runs from ${code("hooks/hooks.json")} on session start. To compose manually:`,
+      "",
+      `    ${manualComposeCommand(harnessDir)}`,
+      "",
+    );
+    return lines.join("\n");
+  }
+  lines.push(`Copy this bundle's ${code(`plugins/${name}/`)} into ${code(`${harnessDir}/plugins/${name}/`)}.`, "");
   if (clazz === "manual-only") {
     lines.push(
       "This harness has no auto-compose session hook. Run compose after install and after every plugin change:",
@@ -729,6 +743,32 @@ export function pluginBundleExpected(
     }
   }
   return expected;
+}
+
+// Plan-stage outDir safety for the PACKAGER write path (ADR-5 / t188 #27-32).
+// This is the production wiring of classifyOutDir: before writeNeutralBundle
+// clean-sweeps and rewrites dist/plugins/<name>/<harness>/, refuse any of those
+// per-harness install outDirs that is a symlink, a regular file, or a broken
+// symlink — a tamper the clean-sweep would otherwise follow out of the dist tree
+// or clobber. The packager OWNS dist/plugins/, so a plain directory there is by
+// definition a prior projection (safe to overwrite); marker-based foreign
+// detection is for the install flow (projectPluginForHarness), not here. Throws
+// PluginValidationError (write-0) listing every refusal.
+export function assertInstallOutDirsSafe(
+  root: string = join(REPO_ROOT, "plugins"),
+  distRoot: string = join(REPO_ROOT, "dist"),
+  io: ReadOnlyFs = nodeReadOnlyFs,
+): void {
+  const problems: string[] = [];
+  for (const plugin of validatePluginSources(discoverPluginSources(root, io))) {
+    for (const harness of PACKAGE_HARNESSES) {
+      const rel = posix.join("plugins", plugin.directoryName, harness);
+      const lstatKind = lstatKindOf(join(distRoot, "plugins", plugin.directoryName, harness));
+      const verdict = classifyOutDir({ lstatKind, isPriorProjection: lstatKind === "dir", isForeign: false, dirNonEmpty: false });
+      if (verdict.kind === "refused") problems.push(`UNSAFE outDir ${rel}: ${verdict.reason}`);
+    }
+  }
+  if (problems.length !== 0) throw new PluginValidationError(problems.sort());
 }
 
 // Public seam (C3 --check): drift of the committed dist neutral bundle vs the
