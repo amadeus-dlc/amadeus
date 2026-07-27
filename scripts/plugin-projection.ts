@@ -21,7 +21,8 @@
 // in-memory maps, so a unit test drives every branch in-process (bun --coverage
 // does not instrument spawned children).
 
-import { existsSync, lstatSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, posix, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { HarnessManifest } from "./manifest-types.ts";
@@ -299,7 +300,11 @@ export function buildPluginProjection(plugin: PluginSource, harness: PackageHarn
 // the plugin identity only (the amadeus authoring manifest carries no version or
 // description). Two-space-indented JSON with a trailing newline.
 export function claudeMarketplaceManifest(name: string): string {
-  return `${JSON.stringify({ name, version: "0.0.0", description: `Amadeus plugin: ${name}` }, null, 2)}\n`;
+  // Description built by concatenation, not a nested template literal: an inner
+  // backtick pair inside the outer `${…}` desyncs lizard's function-boundary
+  // scanner and merges every following function into this one (byte-identical).
+  const manifest = { name, version: "0.0.0", description: `Amadeus plugin: ${name}` };
+  return `${JSON.stringify(manifest, null, 2)}\n`;
 }
 
 // The SessionStart hook snippet a user merges into their Claude Code settings to
@@ -337,36 +342,253 @@ export function claudeInstallArtifacts(plugin: PluginSource): readonly Projected
   ].sort((x, y) => cmpStr(x.relativePath, y.relativePath));
 }
 
-// Reject an unsafe projection output dir before any write (ADR-5 claude minimal):
-// a symlink, a file, or a pre-existing NON-empty directory that is not a prior
-// projection of this bundle. The full rejection set (FOREIGN markers, per-harness
-// ownership) is U3.
-function assertSafeOutDir(outDir: string): void {
-  if (!existsSync(outDir)) return;
+// ---------------------------------------------------------------------------
+// U3 host-projection-all — install-bundle generalization to every packaged face.
+//
+// The three host-integration classes (ADR-4 canonical literals). TRANSCRIBED
+// from the U1 capability matrix's machine-readable class_assignment (BR-U1-7),
+// never inferred here: the matrix is the single source and downstream code reads
+// this map. Only claude is native-manifest today; the folder-drop-auto and
+// manual-only faces are what U3 adds on top of the U2 claude projector (which is
+// left byte-for-byte unchanged).
+// ---------------------------------------------------------------------------
+export type PluginHostClass = "native-manifest" | "folder-drop-auto" | "manual-only";
+
+export const PLUGIN_HOST_CLASS: Record<PackageHarness, PluginHostClass> = {
+  claude: "native-manifest",
+  codex: "folder-drop-auto",
+  cursor: "folder-drop-auto",
+  kimi: "folder-drop-auto",
+  kiro: "folder-drop-auto",
+  "kiro-ide": "folder-drop-auto",
+  opencode: "manual-only",
+};
+
+// One face's projection spec, derived from the U1 matrix. `clazz` drives the
+// install-bundle layout via a single 3-arm switch, so the face count and the
+// branch count are decoupled (SCALE-U3-1: 7 faces, 3 branches).
+export type HarnessProjectionSpec = {
+  harness: PackageHarness;
+  clazz: PluginHostClass;
+  harnessDir: string;
+};
+
+// Build the spec for one face by reading the U1 class map + the harness manifest
+// (BR-U3-2: the spec constructor takes the matrix enumeration as input).
+export function harnessProjectionSpec(harness: PackageHarness): HarnessProjectionSpec {
+  return { harness, clazz: PLUGIN_HOST_CLASS[harness], harnessDir: loadHarnessManifest(harness).harnessDir };
+}
+
+// The plan-stage outDir rejection set (ADR-5, upstream t188 #27-32, 1:1).
+export type OutDirRefusal =
+  | "non-projection-nonempty-dir" // #27 pre-existing non-empty dir that is not our prior projection
+  | "foreign-projection" // #28 a prior projection of a DIFFERENT plugin/harness
+  | "file-outdir" // #29 a regular file (no raw ENOTDIR stack)
+  | "symlink-outdir" // #30 a symlink (plain or dangling target)
+  | "broken-symlink-outdir"; // #31 a broken symlink (no raw EEXIST stack)
+
+export type OutDirVerdict = { kind: "ok" } | { kind: "refused"; reason: OutDirRefusal };
+
+// Everything classifyOutDir needs, as data — so the decision is a pure function
+// of an injected probe (parse-don't-validate; the lstat happens at the fs edge).
+export type OutDirProbe = {
+  lstatKind: "missing" | "dir" | "file" | "symlink" | "broken-symlink";
+  isPriorProjection: boolean; // our own prior projection (marker matches this plugin+harness)
+  isForeign: boolean; // a projection marker for a DIFFERENT plugin/harness
+  dirNonEmpty: boolean;
+};
+
+// Pure decision (SEC-U3-1 layer 1): fs-untouching classification of an outDir
+// from its probe. `missing`, an empty dir, and our own prior projection are ok;
+// everything else is refused with a 1:1 reason from the t188 set.
+export function classifyOutDir(probe: OutDirProbe): OutDirVerdict {
+  switch (probe.lstatKind) {
+    case "missing":
+      return { kind: "ok" };
+    case "file":
+      return { kind: "refused", reason: "file-outdir" };
+    case "symlink":
+      return { kind: "refused", reason: "symlink-outdir" };
+    case "broken-symlink":
+      return { kind: "refused", reason: "broken-symlink-outdir" };
+    case "dir": {
+      if (probe.isForeign) return { kind: "refused", reason: "foreign-projection" };
+      if (probe.isPriorProjection) return { kind: "ok" };
+      if (probe.dirNonEmpty) return { kind: "refused", reason: "non-projection-nonempty-dir" };
+      return { kind: "ok" };
+    }
+  }
+}
+
+// 1-line usage message per refusal — no raw ENOTDIR/EEXIST stack leaks
+// (business-logic-model エラー処理). Substrings kept stable so existing callers
+// and tests can match on them.
+function refusalMessage(reason: OutDirRefusal): string {
+  switch (reason) {
+    case "non-projection-nonempty-dir":
+      return "output directory is non-empty and is not a prior projection";
+    case "foreign-projection":
+      return "output directory is a projection of a different plugin/harness";
+    case "file-outdir":
+      return "output path is a file, not a directory";
+    case "symlink-outdir":
+      return "output path is a symlink";
+    case "broken-symlink-outdir":
+      return "output path is a broken symlink";
+  }
+}
+
+// The prior-projection marker: written into a real install outDir (NOT into the
+// dist bundle — dist stays marker-free so the claude bundle is byte-identical to
+// U2 and every dist bundle is generator-clean). Its presence is `isPriorProjection`;
+// a marker naming a different plugin/harness is `isForeign`.
+const PROJECTION_MARKER = ".amadeus-plugin-projection.json";
+type ProjectionMarker = { plugin: string; harness: PackageHarness };
+
+function readProjectionMarker(outDir: string): ProjectionMarker | null {
+  const p = join(outDir, PROJECTION_MARKER);
+  if (!existsSync(p)) return null;
+  try {
+    return JSON.parse(readFileSync(p, "utf-8")) as ProjectionMarker;
+  } catch {
+    return null;
+  }
+}
+
+// Probe a real outDir into the pure OutDirProbe classifyOutDir consumes. Handles
+// the plain/dangling symlink split: existsSync follows links, so a broken symlink
+// is existsSync-false but has an lstat entry.
+function probeOutDir(outDir: string, plugin: string, harness: PackageHarness): OutDirProbe {
+  const inert = (lstatKind: OutDirProbe["lstatKind"]): OutDirProbe => ({
+    lstatKind,
+    isPriorProjection: false,
+    isForeign: false,
+    dirNonEmpty: false,
+  });
+  if (!existsSync(outDir)) {
+    let dangling = false;
+    try {
+      dangling = lstatSync(outDir).isSymbolicLink();
+    } catch {
+      return inert("missing");
+    }
+    return inert(dangling ? "broken-symlink" : "missing");
+  }
   const st = lstatSync(outDir);
-  if (st.isSymbolicLink()) throw new Error(`unsafe projection outDir (symlink): ${outDir}`);
-  if (!st.isDirectory()) throw new Error(`unsafe projection outDir (not a directory): ${outDir}`);
-  if (readdirSync(outDir).length > 0) throw new Error(`unsafe projection outDir (non-empty): ${outDir}`);
+  if (st.isSymbolicLink()) return inert("symlink");
+  if (!st.isDirectory()) return inert("file");
+  const marker = readProjectionMarker(outDir);
+  const isPrior = marker !== null && marker.plugin === plugin && marker.harness === harness;
+  return {
+    lstatKind: "dir",
+    isPriorProjection: isPrior,
+    isForeign: marker !== null && !isPrior,
+    // `!== 0` (not `> 0`) keeps the complexity gate's naive TS parser balanced —
+    // a bare `>` reads as an unmatched generic close and desyncs its boundaries.
+    dirNonEmpty: readdirSync(outDir).length !== 0,
+  };
+}
+
+// The auto-compose command a session hook (folder-drop-auto) or a manual step
+// (manual-only) runs. `<harnessDir>/tools/amadeus-plugin.ts` is the installed CLI
+// (C1). U3 distributes this recipe; U4 wires it into each harness's native seam.
+function autoComposeCommand(harnessDir: string): string {
+  return `bun ${harnessDir}/tools/amadeus-plugin.ts compose --if-stale`;
+}
+function manualComposeCommand(harnessDir: string): string {
+  return `bun ${harnessDir}/tools/amadeus-plugin.ts compose`;
+}
+
+// The harness-neutral auto-compose snippet a folder-drop-auto face ships. Kept
+// format-neutral on purpose: the harness-native embedding (codex config.toml,
+// kiro agents.json, kimi .toml) is U4 hook-wiring, not U3 projection.
+export function autoComposeSnippet(harnessDir: string): string {
+  return `${autoComposeCommand(harnessDir)}\n`;
+}
+
+// A markdown inline-code span. The backtick is produced via fromCharCode so NO
+// literal backtick appears in source — a lone/escaped backtick desyncs lizard's
+// string scanner and merges this whole region into the prior function.
+function code(s: string): string {
+  const bt = String.fromCharCode(96);
+  return bt + s + bt;
+}
+
+// The INSTALL doc every non-claude face ships (folder-drop-auto and manual-only).
+// manual-only says "run compose yourself"; folder-drop-auto points at the snippet.
+export function installDoc(name: string, harnessDir: string, clazz: PluginHostClass): string {
+  const lines = [
+    `# Install: ${name}`,
+    "",
+    `Copy this bundle's ${code(`plugins/${name}/`)} into ${code(`${harnessDir}/plugins/${name}/`)}.`,
+    "",
+  ];
+  if (clazz === "manual-only") {
+    lines.push(
+      "This harness has no auto-compose session hook. Run compose after install and after every plugin change:",
+      "",
+      `    ${manualComposeCommand(harnessDir)}`,
+      "",
+    );
+  } else {
+    lines.push(
+      `Auto-compose is wired from ${code("hooks/auto-compose.snippet")} on session start. To compose manually:`,
+      "",
+      `    ${manualComposeCommand(harnessDir)}`,
+      "",
+    );
+  }
+  return lines.join("\n");
+}
+
+// The install bundle for one face, dispatched on the ADR-4 class (3 arms, C3):
+//   native-manifest (claude)  → the U2 claude bundle, UNCHANGED (marketplace
+//                               manifest + hooks.json + content).
+//   folder-drop-auto          → content + INSTALL.md + hooks/auto-compose.snippet.
+//   manual-only               → content + INSTALL.md (no snippet).
+// Relative to the install root; sorted by path; deterministic given the source.
+export function installArtifacts(plugin: PluginSource, harness: PackageHarness): readonly ProjectedArtifact[] {
+  const clazz = PLUGIN_HOST_CLASS[harness];
+  if (clazz === "native-manifest") return claudeInstallArtifacts(plugin);
+  const spec = harnessProjectionSpec(harness);
+  const manifestSource = join(plugin.sourceRoot, PLUGIN_MANIFEST);
+  const generated = (relativePath: string, text: string): ProjectedArtifact => ({
+    owner: plugin.directoryName,
+    harness,
+    relativePath,
+    bytes: Buffer.from(text, "utf-8"),
+    sourcePath: manifestSource,
+  });
+  const out: ProjectedArtifact[] = [
+    generated("INSTALL.md", installDoc(plugin.directoryName, spec.harnessDir, clazz)),
+    ...buildPluginProjection(plugin, harness).artifacts, // plugins/<name>/<rel>, harness-transformed
+  ];
+  if (clazz === "folder-drop-auto")
+    out.push(generated("hooks/auto-compose.snippet", autoComposeSnippet(spec.harnessDir)));
+  return out.sort((x, y) => cmpStr(x.relativePath, y.relativePath));
 }
 
 // Public seam (C3): project one plugin for `harness` into `outDir`, writing the
-// install bundle after the plan-stage output-safety check. U2 implements claude
-// only; other faces are U3.
+// install bundle after the plan-stage output-safety classification. Every face is
+// implemented (U3); the class-driven layout comes from installArtifacts. A prior-
+// projection marker is written last so a re-projection of the same plugin/harness
+// is accepted (#32) while a foreign or non-projection dir is refused (#27/#28).
 export function projectPluginForHarness(
   plugin: PluginSource,
   harness: PackageHarness,
   outDir: string,
 ): ProjectionResult {
-  if (harness !== "claude") {
-    throw new Error(`projectPluginForHarness: only "claude" is implemented in U2 (got "${harness}"); other faces are U3`);
-  }
-  assertSafeOutDir(outDir);
-  const artifacts = claudeInstallArtifacts(plugin);
+  const verdict = classifyOutDir(probeOutDir(outDir, plugin.directoryName, harness));
+  if (verdict.kind === "refused")
+    throw new Error(`refusing to project into ${outDir}: ${refusalMessage(verdict.reason)}`);
+  const artifacts = installArtifacts(plugin, harness);
   for (const a of artifacts) {
     const dest = join(outDir, ...a.relativePath.split("/"));
     mkdirSync(dirname(dest), { recursive: true });
     writeFileSync(dest, a.bytes);
   }
+  const marker: ProjectionMarker = { plugin: plugin.directoryName, harness };
+  writeFileSync(join(outDir, PROJECTION_MARKER), `${JSON.stringify(marker, null, 2)}\n`);
   return { harness, plugin: plugin.directoryName, artifacts };
 }
 
@@ -467,6 +689,72 @@ export function checkHarnessTree(
   for (const p of deriveUnreferenced(discovered, read))
     drift.push({ kind: "UNREFERENCED", harness: name, path: p });
   return drift.sort((a, b) => (a.kind !== b.kind ? cmpStr(a.kind, b.kind) : cmpStr(a.path, b.path)));
+}
+
+// ---------------------------------------------------------------------------
+// U3 neutral-bundle write⇔check (REL-U3-2: one hash function, shared by both
+// sides). The dist neutral bundle at dist/plugins/<name>/ carries the verbatim
+// source content AND one install bundle per packaged face at
+// dist/plugins/<name>/<harness>/. Write and check both derive from the single
+// `pluginBundleExpected` map, so the symmetry is structural, and the byte
+// comparison is `computeProjectionHash` — check re-projects and re-hashes.
+// ---------------------------------------------------------------------------
+
+// The one hash both sides use. sha256-hex over the file bytes; byte equality iff
+// hex equality. A single definition means check can never drift from write.
+export function computeProjectionHash(bytes: Uint8Array): string {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+// A drift in the neutral bundle: `stale` (expected but missing or byte-different
+// on disk — needs re-projection) or `orphan` (on disk with no source). The two
+// directions REL-U3-2 forces the type to enumerate.
+export type DriftEntry = { kind: "stale" | "orphan"; path: string };
+
+// The full expected neutral bundle as dist-root-relative POSIX path → bytes: the
+// verbatim source content once, plus every face's install bundle under
+// plugins/<name>/<harness>/. Zero plugins → empty map (the 0-plugin byte-identical
+// baseline: dist/plugins is never created — REL-U3-1). Single source for write
+// AND check.
+export function pluginBundleExpected(
+  root: string = join(REPO_ROOT, "plugins"),
+  io: ReadOnlyFs = nodeReadOnlyFs,
+): Map<string, Buffer> {
+  const expected = new Map<string, Buffer>();
+  for (const plugin of validatePluginSources(discoverPluginSources(root, io))) {
+    for (const a of buildPluginBundle(plugin)) expected.set(a.relativePath, a.bytes);
+    for (const harness of PACKAGE_HARNESSES) {
+      const prefix = posix.join("plugins", plugin.directoryName, harness);
+      for (const a of installArtifacts(plugin, harness)) expected.set(posix.join(prefix, a.relativePath), a.bytes);
+    }
+  }
+  return expected;
+}
+
+// Public seam (C3 --check): drift of the committed dist neutral bundle vs the
+// re-projected expected bundle. `stale` covers MISSING and DIFFERS (both need a
+// re-project); `orphan` is a committed file with no expected source. Sorted by
+// (kind, path). Empty when there are no plugins and no committed bundle.
+export function checkPluginProjections(
+  root: string = join(REPO_ROOT, "plugins"),
+  distRoot: string = join(REPO_ROOT, "dist"),
+  io: ReadOnlyFs = nodeReadOnlyFs,
+): DriftEntry[] {
+  const expected = pluginBundleExpected(root, io);
+  const out: DriftEntry[] = [];
+  for (const [rel, want] of expected) {
+    const abs = join(distRoot, ...rel.split("/"));
+    if (!io.exists(abs) || computeProjectionHash(io.read(abs)) !== computeProjectionHash(want))
+      out.push({ kind: "stale", path: rel });
+  }
+  const distPlugins = join(distRoot, "plugins");
+  if (io.exists(distPlugins)) {
+    for (const { rel } of walkFs(io, distPlugins, "")) {
+      const key = posix.join("plugins", rel);
+      if (!expected.has(key)) out.push({ kind: "orphan", path: key });
+    }
+  }
+  return out.sort((a, b) => (a.kind !== b.kind ? cmpStr(a.kind, b.kind) : cmpStr(a.path, b.path)));
 }
 
 // ---------------------------------------------------------------------------

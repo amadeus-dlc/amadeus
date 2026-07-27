@@ -57,9 +57,9 @@ import { DistributionTransactionCoordinator } from "./distribution-transaction.t
 import { renderOnboarding } from "./onboarding.ts";
 import { substituteToken, transform } from "./harness-transform.ts";
 import {
-  buildPluginBundle,
-  claudeInstallArtifacts,
+  checkPluginProjections,
   discoverPluginSources,
+  pluginBundleExpected,
   validatePluginSources,
 } from "./plugin-projection.ts";
 import { AMADEUS_VERSION } from "../packages/framework/core/tools/amadeus-version.ts";
@@ -788,18 +788,11 @@ export function checkHarness(name: string): string[] {
 // check flags any drift. With zero plugins the bundle dir is never created, so
 // dist/ stays byte-identical to a pre-plugin build.
 // ---------------------------------------------------------------------------
-// Expected bundle as dist-root-relative POSIX path → bytes.
+// Expected bundle as dist-root-relative POSIX path → bytes. Delegates to the
+// projector's single-source builder (verbatim content + one install bundle per
+// packaged face at plugins/<name>/<harness>/, U3). Write and --check share it.
 function neutralBundleExpected(): Map<string, Buffer> {
-  const expected = new Map<string, Buffer>();
-  for (const plugin of repoPlugins()) {
-    // Verbatim neutral bundle at plugins/<name>/.
-    for (const a of buildPluginBundle(plugin)) expected.set(a.relativePath, a.bytes);
-    // Claude install bundle at plugins/<name>/claude/ (C3 claude face, U2). At
-    // zero plugins this loop never runs, so dist/plugins/ stays absent.
-    const prefix = `plugins/${plugin.directoryName}/claude`;
-    for (const a of claudeInstallArtifacts(plugin)) expected.set(`${prefix}/${a.relativePath}`, a.bytes);
-  }
-  return expected;
+  return pluginBundleExpected(pluginsRoot());
 }
 
 export function writeNeutralBundle(): void {
@@ -817,21 +810,17 @@ export function writeNeutralBundle(): void {
 }
 
 export function checkNeutralBundle(): string[] {
-  const expected = neutralBundleExpected();
-  const distPlugins = join(distRoot(), "plugins");
-  const problems: string[] = [];
-  for (const [rel, want] of expected) {
-    const abs = join(distRoot(), ...rel.split("/"));
-    if (!existsSync(abs)) problems.push(`MISSING in dist: ${rel}`);
-    else if (!readFileSync(abs).equals(want)) problems.push(`DIFFERS: ${rel}`);
-  }
-  if (existsSync(distPlugins)) {
-    for (const f of walk(distPlugins)) {
-      const rel = relative(distRoot(), f).split(sep).join("/");
-      if (!expected.has(rel)) problems.push(`ORPHAN in dist: ${rel}`);
-    }
-  }
-  return problems.sort();
+  // Drift comes from the projector's single-source check (write⇔check symmetry,
+  // REL-U3-2). `orphan` maps to the packager's ORPHAN; `stale` is split back into
+  // the packager's existing MISSING/DIFFERS surface by whether the file is on disk.
+  const dist = distRoot();
+  return checkPluginProjections(pluginsRoot(), dist)
+    .map((d) => {
+      if (d.kind === "orphan") return `ORPHAN in dist: ${d.path}`;
+      const abs = join(dist, ...d.path.split("/"));
+      return existsSync(abs) ? `DIFFERS: ${d.path}` : `MISSING in dist: ${d.path}`;
+    })
+    .sort();
 }
 
 // ---------------------------------------------------------------------------

@@ -1,13 +1,14 @@
 // covers: file:scripts/plugin-projection.ts
 // size: medium
 //
-// U2 walking-skeleton-claude — projectPluginForHarness is the C3 public seam that
-// writes a claude install bundle into an outDir after a plan-stage output-safety
-// check (assertSafeOutDir). It touches a real temp filesystem (mkdtemp + writes),
-// so it lives in the integration tier (fs-tests-integration-first). Drives the
-// happy write path, the non-claude U2 guard, and every assertSafeOutDir rejection
-// (symlink / regular file / pre-existing non-empty directory) plus the non-existent
-// outDir early return.
+// projectPluginForHarness is the C3 public seam that writes an install bundle
+// into an outDir after a plan-stage output-safety check (classifyOutDir). It
+// touches a real temp filesystem (mkdtemp + writes), so it lives in the
+// integration tier (fs-tests-integration-first). Drives the claude happy write
+// path, a folder-drop-auto face (U3 generalized every face), and the outDir
+// rejections (symlink / regular file / pre-existing non-empty directory) plus the
+// non-existent outDir early return. The full refusal set + all faces live in
+// t308/t309.
 
 import { afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
@@ -64,10 +65,12 @@ describe("t303 projectPluginForHarness (C3 public seam)", () => {
     expect(existsSync(join(outDir, ".claude-plugin", "plugin.json"))).toBe(true);
   });
 
-  test("rejects a non-claude harness before any write (U2 guard)", () => {
+  test("writes a folder-drop-auto face (codex) — every packaged face is implemented (U3)", () => {
     const outDir = join(scratch, "codex");
-    expect(() => projectPluginForHarness(plugin, "codex", outDir)).toThrow(/only "claude" is implemented/);
-    expect(existsSync(outDir)).toBe(false);
+    const result = projectPluginForHarness(plugin, "codex", outDir);
+    expect(result.harness).toBe("codex");
+    expect(existsSync(join(outDir, "INSTALL.md"))).toBe(true);
+    expect(existsSync(join(outDir, "hooks", "auto-compose.snippet"))).toBe(true);
   });
 
   test("rejects a symlink outDir", () => {

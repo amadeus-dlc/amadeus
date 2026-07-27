@@ -1,0 +1,11 @@
+{
+  "name": "formal-model-check",
+  "stages": [
+    {
+      "slug": "formal-model-check",
+      "path": "stages/formal-model-check.md"
+    }
+  ],
+  "seams": [],
+  "fragments": []
+}
