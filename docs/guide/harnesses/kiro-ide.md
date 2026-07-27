@@ -108,16 +108,16 @@ workflow.
 
 ## For framework developers
 
-`dist/kiro-ide` is **generated** from `core/` + `harness/kiro-ide/` by
+`dist/kiro-ide` is **generated** from `packages/framework/core/` + `packages/framework/harness/kiro-ide/` by
 `bun scripts/package.ts kiro-ide` (core copy with the `{{HARNESS_DIR}}` token
 substituted to `.kiro` and the `rules/` → `steering/` rename). `bun
 scripts/package.ts --check` is the drift guard and runs in CI. The authored
-Kiro IDE surfaces live in `harness/kiro-ide/`: the orchestrator skill
+Kiro IDE surfaces live in `packages/framework/harness/kiro-ide/`: the orchestrator skill
 (`skills/amadeus/`), the agent JSONs (`agents/`), the hook adapter and
 `.kiro.hook` files (`hooks/`), `settings/cli.json`, and `AGENTS.md` — edit
-those (or `core/`), never the generated `dist/kiro-ide`.
+those (or `packages/framework/core/`), never the generated `dist/kiro-ide`.
 
-The IDE harness differs from the CLI harness (`harness/kiro/`) in three ways:
+The IDE harness differs from the CLI harness (`packages/framework/harness/kiro/`) in three ways:
 it ships `.kiro.hook` files (the CLI relies on the agent-JSON `hooks` block,
 which the IDE ignores); its `amadeus.json` omits that dead `hooks` block; and
 its manifest injects a `tools:` frontmatter grant into the delegation-target

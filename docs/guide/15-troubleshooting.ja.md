@@ -36,7 +36,7 @@
 
 ### `bun` がインストールされていないか PATH 上にない
 
-11 個すべての TypeScript フック(`amadeus-mint-presence.ts`、`amadeus-audit-logger.ts`、`amadeus-sensor-fire.ts`、`amadeus-runtime-compile.ts`、`amadeus-log-subagent.ts`、`amadeus-stop.ts`、`amadeus-validate-state.ts`、`amadeus-sync-statusline.ts`、`amadeus-session-start.ts`、`amadeus-session-end.ts`、`amadeus-statusline.ts`)は `bun` を必要とします。非インタラクティブシェルで `bun` が欠落しているか PATH 上にない場合、これらのフックは発火しません。
+すべてのフレームワーク TypeScript フック(`amadeus-mint-presence.ts`、`amadeus-audit-logger.ts`、`amadeus-sensor-fire.ts`、`amadeus-runtime-compile.ts`、`amadeus-log-subagent.ts`、`amadeus-stop.ts`、`amadeus-validate-state.ts`、`amadeus-sync-statusline.ts`、`amadeus-session-start.ts`、`amadeus-plugin-compose.ts`、`amadeus-session-end.ts`、`amadeus-statusline.ts`)は `bun` を必要とします。非インタラクティブシェルで `bun` が欠落しているか PATH 上にない場合、これらのフックは発火しません。
 
 ```bash
 # macOS / Linux
@@ -211,6 +211,42 @@ AI-DLC ワークフローがアクティブに実行されていないときは�
 
 ---
 
+## インストーラが使えない — 手動コピーによるフォールバック
+
+**症状**: `bunx @amadeus-dlc/setup install`(または `npx` 形式)が実行できない — GitHub へのネットワークアクセスがない、エアギャップ環境である、またはマシンから npm/bun レジストリへ到達できない。
+
+### 手動コピー
+
+必要なタグのリポジトリをクローンまたはダウンロードし、インストーラを実行する代わりにハーネスディレクトリを直接コピーします。
+
+```bash
+# Claude Code
+cp -r dist/claude/.claude/ your-project/.claude/
+cp -r dist/claude/amadeus/   your-project/amadeus/     # ワークスペースシェル — .claude/ の中ではなく兄弟として置く
+
+# Kiro IDE
+cp -r dist/kiro-ide/.kiro your-project/.kiro
+cp -r dist/kiro-ide/amadeus your-project/amadeus        # ワークスペースシェル — .kiro/ の中ではなく兄弟として置く
+cp dist/kiro-ide/AGENTS.md your-project/AGENTS.md   # 既にある場合はマージする
+
+# Kiro CLI
+cp -r dist/kiro/.kiro your-project/.kiro
+cp -r dist/kiro/amadeus your-project/amadeus       # ワークスペースシェル — .kiro/ の中ではなく兄弟として置く
+cp dist/kiro/AGENTS.md your-project/AGENTS.md   # 既にある場合はマージする
+
+# Codex CLI
+cp -r dist/codex/.codex/  your-project/.codex/
+cp -r dist/codex/.agents/ your-project/.agents/
+cp -r dist/codex/amadeus/   your-project/amadeus/      # ワークスペースシェル — .codex/ の中ではなく兄弟として置く
+cp dist/codex/AGENTS.md   your-project/AGENTS.md   # または自分のものへマージする
+```
+
+`amadeus/` シェルは、エンジンが読むビルド済みの `amadeus/spaces/default/memory/` メソッドツリーを同梱します。これがないと `/amadeus --doctor`(Codex では `$amadeus --doctor`)は「workspace shell ready」チェックで失敗します。
+
+これはインストーラが適用するのと同じファイルレイアウトを生成します — インストーラが代行するフェッチ、差分プラン、マニフェスト管理を省略するだけです。手動コピーには `amadeus/.installer/amadeus-setup-manifest.json` がないため、後から `amadeus-setup upgrade` を実行すると管理外インストールとして扱われます。拒否はされず(変更されるファイルをすべてバックアップする保守的な戦略で)適用されますが、既知の以前のバージョンとの差分は取れません。到達可能になったらインストーラの利用を優先してください。
+
+---
+
 ## `--doctor` の使用
 
 `--doctor` ユーティリティコマンドはセットアップを検証します。何かおかしいと思ったらいつでも実行してください。
@@ -219,7 +255,7 @@ AI-DLC ワークフローがアクティブに実行されていないときは�
 /amadeus --doctor
 ```
 
-以下をチェックします。前提条件(`bun`)、フックの利用可能性(`settings.json` が結線するすべてのフック — 11 個すべてのフレームワークフック — が `.claude/hooks/` に存在する必要があり、結線されているが欠落しているフックは明確に失敗する)、プロジェクト構造(`settings.json`)、ワークスペースシェルの準備状態(`.claude/` + `amadeus/spaces/default/memory/`)、状態/監査の一貫性、フックのハートビート、グラフの整合性(サイクルなし、すべてのグラフエントリがファイルを持つ)、10 個すべてのスコープにわたるスコープ検証、ステージスキーマ + グラフ参照、スコープ間のキーワード重複。また、常にパスする 2 つのアドバイザリ行(終了コードを決して変えない)も表面化します。**Rule drift**(populate された org ポリシー見出しと重なるチーム/プロジェクトルール。矛盾レビュー用にフラグ付け)と **Paired sensor coverage**(`pairing:` を持ち、その名指しセンサーがステージに解決するルール)です。完全にパスすると 0、いずれかが失敗すると 1 で終了します。どちらの場合もレポートは stdout に書き出されます。`--doctor` は**読み取り専用**です。intent がまだない新しいシェルでは何も作成しません — 最初の intent が生成される前に安全に実行でき、何かおかしいと思ったときに最初に試すべきものです。intent が存在すると `HEALTH_CHECKED`(および `GUARDRAIL_LOADED`)監査行を記録します。
+以下をチェックします。前提条件(`bun`)、フックの利用可能性(`settings.json` が結線するすべてのフック — すべてのフレームワークフック — が `.claude/hooks/` に存在する必要があり、結線されているが欠落しているフックは明確に失敗する)、プロジェクト構造(`settings.json`)、ワークスペースシェルの準備状態(`.claude/` + `amadeus/spaces/default/memory/`)、状態/監査の一貫性、フックのハートビート、グラフの整合性(サイクルなし、すべてのグラフエントリがファイルを持つ)、10 個すべてのスコープにわたるスコープ検証、ステージスキーマ + グラフ参照、スコープ間のキーワード重複。また、常にパスする 2 つのアドバイザリ行(終了コードを決して変えない)も表面化します。**Rule drift**(populate された org ポリシー見出しと重なるチーム/プロジェクトルール。矛盾レビュー用にフラグ付け)と **Paired sensor coverage**(`pairing:` を持ち、その名指しセンサーがステージに解決するルール)です。完全にパスすると 0、いずれかが失敗すると 1 で終了します。どちらの場合もレポートは stdout に書き出されます。`--doctor` は**読み取り専用**です。intent がまだない新しいシェルでは何も作成しません — 最初の intent が生成される前に安全に実行でき、何かおかしいと思ったときに最初に試すべきものです。intent が存在すると `HEALTH_CHECKED`(および `GUARDRAIL_LOADED`)監査行を記録します。
 
 各チェックが検証する内容と失敗の修正方法の完全な詳細については、[CLI Commands](12-cli-commands.ja.md#amadeus---doctor--health-check) を参照してください。
 

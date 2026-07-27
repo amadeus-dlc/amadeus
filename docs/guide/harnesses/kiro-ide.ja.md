@@ -55,6 +55,16 @@ cp dist/kiro-ide/AGENTS.md your-project/AGENTS.md   # 既にある場合はマ�
 チャットパネルで `/amadeus --doctor` を実行してセットアップを検証し、次に
 `/amadeus <description>` でワークフローを開始します。
 
+## 使い方
+
+Claude Code ハーネスと同一です: `/amadeus <description>` でワークフローを開始し、
+`/amadeus --status` が現在位置を報告し、`/amadeus --doctor`、`--stage`、`--phase`、
+`--depth`、`--test-strategy` はいずれも動作します。ステージごと
+(`/amadeus-application-design`)とスコープごと(`/amadeus-feature`)のランナー
+スキルもインストールされます。init コマンドはありません — 同梱のシェルが
+ワークスペースを足場として用意し、最初の intent は最初の `/amadeus` で
+自動的に生成されます。
+
 ## Kiro IDE でフックがどう動くか
 
 Kiro IDE は `.kiro/hooks/` 配下の `.kiro.hook` ファイルを通じてフックを登録します
@@ -101,16 +111,16 @@ Kiro IDE は `.kiro/hooks/` 配下の `.kiro.hook` ファイルを通じてフ�
 
 ## フレームワーク開発者向け
 
-`dist/kiro-ide` は `bun scripts/package.ts kiro-ide` によって `core/` +
-`harness/kiro-ide/` から **生成** されます(`{{HARNESS_DIR}}` トークンを `.kiro`
+`dist/kiro-ide` は `bun scripts/package.ts kiro-ide` によって `packages/framework/core/` +
+`packages/framework/harness/kiro-ide/` から **生成** されます(`{{HARNESS_DIR}}` トークンを `.kiro`
 に置換し、`rules/` → `steering/` をリネームしたコアコピー)。
 `bun scripts/package.ts --check` がドリフトガードで、CI で実行されます。作成された
-Kiro IDE サーフェスは `harness/kiro-ide/` にあります: オーケストレーター
+Kiro IDE サーフェスは `packages/framework/harness/kiro-ide/` にあります: オーケストレーター
 スキル(`skills/amadeus/`)、エージェント JSON(`agents/`)、フックアダプタと
 `.kiro.hook` ファイル(`hooks/`)、`settings/cli.json`、`AGENTS.md` — それら
-(または `core/`)を編集し、生成された `dist/kiro-ide` は決して編集しないでください。
+(または `packages/framework/core/`)を編集し、生成された `dist/kiro-ide` は決して編集しないでください。
 
-IDE ハーネスは CLI ハーネス(`harness/kiro/`)と 3 点で異なります: `.kiro.hook`
+IDE ハーネスは CLI ハーネス(`packages/framework/harness/kiro/`)と 3 点で異なります: `.kiro.hook`
 ファイルを同梱する(CLI はエージェント JSON の `hooks` ブロックに依存し、IDE は
 それを無視する)。`amadeus.json` はその死んだ `hooks` ブロックを省く。そして
 その manifest が委譲先のエージェント `.md` ファイルに `tools:` frontmatter 付与を

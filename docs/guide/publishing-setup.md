@@ -1,5 +1,7 @@
 # Publishing `@amadeus-dlc/setup`
 
+> Languages: **English** | [日本語](publishing-setup.ja.md)
+
 > Audience: maintainers releasing Amadeus-DLC. The primary path is the CI
 > release workflow (`.github/workflows/release.yml`) publishing with npm
 > provenance; the manual commands remain documented as a fallback. (The
