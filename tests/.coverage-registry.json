@@ -20,14 +20,14 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 535,
+    "total": 536,
     "enumeratedByClass": {
       "function": 298,
       "audit": 78,
       "scope": 10,
       "stage": 32,
       "hook": 12,
-      "subcommand": 98,
+      "subcommand": 99,
       "render-surface": 7
     },
     "coveredByClass": {
@@ -6119,6 +6119,13 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-utility plugin",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",

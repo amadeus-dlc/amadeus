@@ -226,6 +226,7 @@ Utilities:
   space <name>      Switch the active space (team)
   space-create <name>  Create a new space (team) seeded from the framework baseline
   codekb-path       Print the deterministic per-repo codekb directory (read-only)
+  plugin <verb>     Delegate to the plugin CLI (status, compose, drop, doctor)
   --doctor          Run health check on hooks, settings, and directory structure
   --stage <id>      Jump to a specific stage (by slug or number, e.g., code-generation or 3.5)
   --phase <name>    Jump to the first in-scope stage of a phase (e.g., construction or 3)
@@ -5929,6 +5930,34 @@ function handleMigrate(
 }
 
 // ---------------------------------------------------------------------------
+// plugin — thin delegation to the plugin CLI
+// ---------------------------------------------------------------------------
+//
+// `/amadeus plugin <verb>` is a pass-through: the verb and every remaining
+// argument reach amadeus-plugin.ts untouched, and its exit code is returned
+// verbatim. Verb validation, output shaping and retries belong to the plugin
+// CLI alone — this arm must never grow a second opinion about them.
+
+/** Injection seam for the delegated child process (unit tests pass a fake). */
+export type PluginDelegateDeps = {
+  spawn: (cmd: readonly string[]) => number;
+};
+
+/** Real spawn: stdout/stderr pass through untouched to this process. */
+export const defaultPluginDelegateDeps: PluginDelegateDeps = {
+  spawn: (cmd: readonly string[]): number =>
+    Bun.spawnSync({ cmd: [...cmd], stdout: "inherit", stderr: "inherit" }).exitCode ?? 1,
+};
+
+/** Delegate to the plugin CLI, returning its exit code unchanged. */
+export function handlePluginDelegate(
+  rest: readonly string[],
+  deps: PluginDelegateDeps = defaultPluginDelegateDeps,
+): number {
+  return deps.spawn(["bun", join(TOOLS_DIR, "amadeus-plugin.ts"), ...rest]);
+}
+
+// ---------------------------------------------------------------------------
 // CLI entry point
 // ---------------------------------------------------------------------------
 
@@ -6028,9 +6057,14 @@ export function runUtilityMain(): void {
     case "scope-table":
       handleScopeTable(projectDir, flags, rawArgs);
       break;
+    // plugin — verbatim delegation. Everything after the verb reaches the
+    // plugin CLI unparsed, so its own usage errors stay authoritative.
+    case "plugin":
+      process.exit(handlePluginDelegate(rawArgs.slice(rawArgs.indexOf("plugin") + 1)));
+      break;
     default:
       die(
-        `Usage: amadeus-utility <help|version|status|doctor|migrate|intent-birth|intent|space|space-create|codekb-path|detect|recompose|scope-change|config-change|set-status|detect-scope|resolve-env-scope|scope-table> [--project-dir <path>] [--scope <scope>] [--json]`
+        `Usage: amadeus-utility <help|version|status|doctor|migrate|intent-birth|intent|space|space-create|codekb-path|detect|recompose|scope-change|config-change|set-status|detect-scope|resolve-env-scope|scope-table|plugin> [--project-dir <path>] [--scope <scope>] [--json]`
       );
   }
 }
