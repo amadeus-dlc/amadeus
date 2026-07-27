@@ -430,6 +430,11 @@ export type MirrorRepairRequest = Readonly<{
 // `resolution` closes over the reachability of that column, and
 // `availableOptions` is present only for `option-missing`, where the board's own
 // vocabulary is what the reader needs to see.
+//
+// `summary` is the sentence a human acts on: what this row means and, when the
+// column is unreachable, which move fixes it. It is built from a fixed template
+// over names this tool already holds — a Project reference, a column name, a
+// scope name — so no credential and no raw API response can reach it.
 export type MirrorRepairProjectDiagnostic = Readonly<{
   project: string;
   membership: "member" | "not-member";
@@ -438,6 +443,7 @@ export type MirrorRepairProjectDiagnostic = Readonly<{
   drift: boolean;
   resolution: "resolved" | "field-missing" | "option-missing" | "permission-denied";
   availableOptions?: readonly string[];
+  summary: string;
 }>;
 
 export type MirrorRepairOutcome =
@@ -953,6 +959,63 @@ function unreachableResolution(
     : "field-missing";
 }
 
+// The GitHub token scope every Project read needs. Named once here so the
+// permission diagnostic and any future consumer say the same word.
+const PROJECT_SCOPE = "project";
+
+// The sentence for a board whose expected column is reachable. It reports the
+// observation only: `repair status` proposes nothing and changes nothing.
+function resolvedSummary(
+  row: Readonly<{
+    membership: "member" | "not-member";
+    currentStatus: string | null;
+    expectedStatus: string | null;
+    drift: boolean;
+  }>,
+): string {
+  if (row.expectedStatus === null) {
+    return "no column is expected right now, so this board is left exactly as it is.";
+  }
+  if (row.membership === "not-member") {
+    return `the Issue is not on this board; the column it would take is "${row.expectedStatus}".`;
+  }
+  if (!row.drift) return `this board is already in "${row.expectedStatus}".`;
+  return `this board is in ${
+    row.currentStatus === null ? "no column" : `"${row.currentStatus}"`
+  } but the workflow expects "${row.expectedStatus}".`;
+}
+
+// The two moves that resolve a column the board does not declare (BR-U4-6): put
+// the option on the board, or map the phase onto an option the board already
+// has. The board's own option names travel in `availableOptions`.
+function optionMissingSummary(project: string, expected: string): string {
+  return (
+    `${project} declares no Status option named exactly "${expected}" ` +
+    "(the match is exact — case and spacing included). Either add that option to " +
+    "the board, or map this phase onto one of the options it already has with a " +
+    "`status-names` override for this Project in `mirror-projects`."
+  );
+}
+
+// A permission diagnostic names the board and the scope it needs, and nothing
+// else (BR-U4-7): no token, no response body, and no attempt to change the
+// credential — re-authorizing is a human's move, made outside this tool.
+function permissionDeniedSummary(project: string): string {
+  return (
+    `the GitHub credential in use cannot read the Status field of ${project}; ` +
+    `reading and setting a Project column requires the \`${PROJECT_SCOPE}\` scope. ` +
+    "Grant that scope to the credential and run `repair status` again."
+  );
+}
+
+function fieldMissingSummary(project: string): string {
+  return (
+    `the Status field of ${project} could not be resolved, so no column can be ` +
+    "compared or applied. Confirm the Project exists and carries a single-select " +
+    "field named Status."
+  );
+}
+
 async function diagnoseProject(
   target: Extract<RepairTarget, { kind: "ok" }>,
   snapshot: MirrorSnapshot,
@@ -981,17 +1044,28 @@ async function diagnoseProject(
 
   const field = await target.gateway.resolveProjectStatusField(project.project);
   if (field.kind === "failure") {
-    return { ...base, resolution: unreachableResolution(field.classification) };
+    const resolution = unreachableResolution(field.classification);
+    return {
+      ...base,
+      resolution,
+      summary:
+        resolution === "permission-denied"
+          ? permissionDeniedSummary(canonical)
+          : fieldMissingSummary(canonical),
+    };
   }
-  if (expected.kind === "keep") return { ...base, resolution: "resolved" };
-  if (selectProjectStatusOption(field.value, expected.name) === null) {
+  if (
+    expected.kind === "status" &&
+    selectProjectStatusOption(field.value, expected.name) === null
+  ) {
     return {
       ...base,
       resolution: "option-missing",
       availableOptions: field.value.options.map((option) => option.name),
+      summary: optionMissingSummary(canonical, expected.name),
     };
   }
-  return { ...base, resolution: "resolved" };
+  return { ...base, resolution: "resolved", summary: resolvedSummary(base) };
 }
 
 async function projectDiagnostics(
@@ -1021,14 +1095,22 @@ async function projectDiagnostics(
     // Membership could not be read, so every row's membership is unknown rather
     // than absent. Reporting the read failure per Project keeps the diagnosis
     // loud without stopping the command.
-    return diagnosticTargets(configured, ledger, []).map((project) => ({
-      project: canonicalProjectRef(project.project),
-      membership: "not-member" as const,
-      currentStatus: null,
-      expectedStatus: null,
-      drift: false,
-      resolution: unreachableResolution(view.classification),
-    }));
+    const resolution = unreachableResolution(view.classification);
+    return diagnosticTargets(configured, ledger, []).map((project) => {
+      const canonical = canonicalProjectRef(project.project);
+      return {
+        project: canonical,
+        membership: "not-member" as const,
+        currentStatus: null,
+        expectedStatus: null,
+        drift: false,
+        resolution,
+        summary:
+          resolution === "permission-denied"
+            ? permissionDeniedSummary(canonical)
+            : `the Issue's Project memberships could not be read, so nothing about ${canonical} could be observed.`,
+      };
+    });
   }
 
   const rows: MirrorRepairProjectDiagnostic[] = [];

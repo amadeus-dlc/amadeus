@@ -317,6 +317,7 @@ describe("t349 drift", () => {
         expectedStatus: "Construction",
         drift: false,
         resolution: "resolved",
+        summary: 'this board is already in "Construction".',
       },
     ]);
   });
@@ -332,6 +333,8 @@ describe("t349 drift", () => {
         expectedStatus: "Construction",
         drift: true,
         resolution: "resolved",
+        summary:
+          'this board is in "Ideation" but the workflow expects "Construction".',
       },
     ]);
   });
@@ -358,6 +361,8 @@ describe("t349 drift", () => {
         expectedStatus: null,
         drift: false,
         resolution: "resolved",
+        summary:
+          "no column is expected right now, so this board is left exactly as it is.",
       },
     ]);
   });
@@ -406,6 +411,7 @@ describe("t349 unresolved boards", () => {
       drift: true,
       resolution: "option-missing",
       availableOptions: ["Ideation", "Construction", "Done"],
+      summary: expect.stringContaining("status-names"),
     });
   });
 
@@ -444,6 +450,7 @@ describe("t349 unresolved boards", () => {
         expectedStatus: null,
         drift: false,
         resolution: "permission-denied",
+        summary: expect.stringContaining("acme/5"),
       },
       {
         project: "acme/6",
@@ -452,6 +459,7 @@ describe("t349 unresolved boards", () => {
         expectedStatus: null,
         drift: false,
         resolution: "permission-denied",
+        summary: expect.stringContaining("acme/6"),
       },
     ]);
   });
@@ -479,6 +487,75 @@ describe("t349 partial success", () => {
       ["acme/5", false, "resolved"],
       ["acme/6", true, "option-missing"],
     ]);
+  });
+});
+
+describe("t349 summaries", () => {
+  test("a missing option names both moves that resolve it", async () => {
+    const fx = fixture({
+      boards: [{ project: BOARD_A, statusNames: { construction: "Building" } }],
+    });
+    fx.gateway.items = [memberItem(BOARD_A, "Ideation")];
+    const [row] = await diagnose(fx);
+    expect(row.resolution).toBe("option-missing");
+    // The board it is about, the column it lacks, and the two ways out: add the
+    // option to the board, or remap the phase through the configuration.
+    expect(row.summary).toContain("acme/5");
+    expect(row.summary).toContain('"Building"');
+    expect(row.summary).toContain("add that option to the board");
+    expect(row.summary).toContain("`status-names` override");
+    expect(row.summary).toContain("mirror-projects");
+  });
+
+  test("a permission failure names the board and the scope, and proposes no re-auth", async () => {
+    const fx = fixture();
+    fx.gateway.items = [memberItem(BOARD_A, "Ideation")];
+    fx.gateway.fieldFailures.set(BOARD_A.number, "permission");
+    const [row] = await diagnose(fx);
+    expect(row.resolution).toBe("permission-denied");
+    expect(row.summary).toContain("acme/5");
+    expect(row.summary).toContain("`project` scope");
+    // The tool never changes a credential on the reader's behalf.
+    expect(row.summary).toContain("Grant that scope");
+  });
+
+  test("a permission summary carries no option list and no field detail", async () => {
+    const fx = fixture();
+    fx.gateway.items = [memberItem(BOARD_A, "Ideation")];
+    fx.gateway.fieldFailures.set(BOARD_A.number, "unauthenticated");
+    const [row] = await diagnose(fx);
+    expect(row).not.toHaveProperty("availableOptions");
+    for (const option of OPTIONS) expect(row.summary).not.toContain(option.name);
+  });
+
+  test("an unreachable Status field says so without blaming permissions", async () => {
+    const fx = fixture();
+    fx.gateway.items = [memberItem(BOARD_A, "Ideation")];
+    fx.gateway.fieldFailures.set(BOARD_A.number, "api");
+    const [row] = await diagnose(fx);
+    expect(row.resolution).toBe("field-missing");
+    expect(row.summary).toContain("acme/5");
+    expect(row.summary).toContain("Status");
+    expect(row.summary).not.toContain("scope");
+  });
+
+  test("a board the Issue has not joined reports the column it would take", async () => {
+    const fx = fixture();
+    expect((await diagnose(fx))[0].summary).toBe(
+      'the Issue is not on this board; the column it would take is "Construction".',
+    );
+  });
+
+  test("every row carries a non-empty summary whatever its resolution", async () => {
+    const fx = fixture({
+      boards: [
+        { project: BOARD_A },
+        { project: BOARD_B, statusNames: { construction: "Building" } },
+      ],
+    });
+    fx.gateway.items = [memberItem(BOARD_A, "Construction"), memberItem(BOARD_B, "Ideation")];
+    fx.gateway.fieldFailures.set(BOARD_A.number, "permission");
+    for (const row of await diagnose(fx)) expect(row.summary.length).toBeGreaterThan(0);
   });
 });
 
