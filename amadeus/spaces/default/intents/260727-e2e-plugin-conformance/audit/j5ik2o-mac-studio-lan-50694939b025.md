@@ -800,3 +800,464 @@
 **Context**: construction > code-generation > memory.md
 
 ---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-27T13:48:31Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-27T13:49:15Z
+**Event**: HUMAN_TURN
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-27T13:49:29Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-27T13:49:29Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: Stage Code Generation approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-27T13:49:29Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Agent**: amadeus-quality-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:58:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8735f38e
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/build-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T13:58:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8735f38e
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/build-instructions.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:58:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6a51b489
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/build-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T13:58:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6a51b489
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/build-instructions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:58:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 760a00c7
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/unit-test-instructions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-27T13:58:01Z
+**Event**: SENSOR_FAILED
+**Fire id**: 760a00c7
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/unit-test-instructions.md
+**Detail path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/.amadeus-sensors/build-and-test/required-sections-760a00c7.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:58:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: de47eb02
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/unit-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T13:58:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: de47eb02
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/unit-test-instructions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:58:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: a36d47bd
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/integration-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T13:58:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: a36d47bd
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/integration-test-instructions.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:58:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 899eb46b
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/integration-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T13:58:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: 899eb46b
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/integration-test-instructions.md
+**Duration ms**: 45
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:58:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2de3004c
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/performance-test-instructions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-27T13:58:01Z
+**Event**: SENSOR_FAILED
+**Fire id**: 2de3004c
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/performance-test-instructions.md
+**Detail path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/.amadeus-sensors/build-and-test/required-sections-2de3004c.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:58:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: ce6d0881
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/performance-test-instructions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-27T13:58:01Z
+**Event**: SENSOR_FAILED
+**Fire id**: ce6d0881
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/performance-test-instructions.md
+**Detail path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/.amadeus-sensors/build-and-test/upstream-coverage-ce6d0881.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:58:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 123fb231
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/security-test-instructions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-27T13:58:01Z
+**Event**: SENSOR_FAILED
+**Fire id**: 123fb231
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/security-test-instructions.md
+**Detail path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/.amadeus-sensors/build-and-test/required-sections-123fb231.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:58:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 250c7159
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/security-test-instructions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-27T13:58:01Z
+**Event**: SENSOR_FAILED
+**Fire id**: 250c7159
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/security-test-instructions.md
+**Detail path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/.amadeus-sensors/build-and-test/upstream-coverage-250c7159.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:58:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: be0026c8
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/build-and-test-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T13:58:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: be0026c8
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/build-and-test-summary.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:58:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: ff9901d9
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/build-and-test-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T13:58:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: ff9901d9
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/build-and-test-summary.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:58:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7a1f68f8
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/build-test-results.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T13:58:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7a1f68f8
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/build-test-results.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:58:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: fbf78642
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/build-test-results.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T13:58:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: fbf78642
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/build-test-results.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:58:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 793dd228
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/performance-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T13:58:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 793dd228
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/performance-test-instructions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:58:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: f2d3bfb2
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/performance-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T13:58:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: f2d3bfb2
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/performance-test-instructions.md
+**Duration ms**: 38
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:58:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3efe0b08
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/security-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T13:58:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3efe0b08
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/security-test-instructions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:58:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4a45c386
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/security-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T13:58:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4a45c386
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/security-test-instructions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:58:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: a81360d0
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/unit-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T13:58:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: a81360d0
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/unit-test-instructions.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-27T13:58:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 88bfe2c5
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/unit-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-27T13:58:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 88bfe2c5
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260727-e2e-plugin-conformance/construction/build-and-test/unit-test-instructions.md
+**Duration ms**: 37
+
+---
