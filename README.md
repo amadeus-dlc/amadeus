@@ -73,14 +73,14 @@ On top of that inheritance, this line develops its own additions. Among them:
 
 The engine — state machine, audit log, referee — is byte-identical across every harness; only the shell differs.
 
-| Harness | Install (into your project) | Invoke | Guide |
-| --- | --- | --- | --- |
-| **Claude Code** | `bunx @amadeus-dlc/setup install --harness claude` | `/amadeus` | [Getting Started](docs/guide/01-getting-started.md) |
-| **Codex CLI** (≥ 0.139.0) | `bunx @amadeus-dlc/setup install --harness codex` | `$amadeus` | [Running on Codex CLI](docs/guide/harnesses/codex-cli.md) |
-| **Cursor** | `bunx @amadeus-dlc/setup install --harness cursor` | `/amadeus` | [Running on Cursor](docs/guide/harnesses/cursor.md) |
-| **OpenCode** | `bunx @amadeus-dlc/setup install --harness opencode` | `$amadeus` | [Running on OpenCode](docs/guide/harnesses/opencode.md) |
-| **Kiro IDE** | `bunx @amadeus-dlc/setup install --harness kiro-ide` | `/amadeus` | [Running on Kiro IDE](docs/guide/harnesses/kiro-ide.md) |
-| **Kiro CLI** (≥ 2.6) | `bunx @amadeus-dlc/setup install --harness kiro` | `/amadeus` | [Running on Kiro CLI](docs/guide/harnesses/kiro-cli.md) |
+| Harness | Version | Install (into your project) | Invoke | Guide |
+| --- | --- | --- | --- | --- |
+| **Claude Code** | — | `bunx @amadeus-dlc/setup install --harness claude` | `/amadeus` | [Getting Started](docs/guide/01-getting-started.md) |
+| **Codex CLI** | ≥ 0.139.0 | `bunx @amadeus-dlc/setup install --harness codex` | `$amadeus` | [Running on Codex CLI](docs/guide/harnesses/codex-cli.md) |
+| **Cursor** | — | `bunx @amadeus-dlc/setup install --harness cursor` | `/amadeus` | [Running on Cursor](docs/guide/harnesses/cursor.md) |
+| **OpenCode** | — | `bunx @amadeus-dlc/setup install --harness opencode` | `$amadeus` | [Running on OpenCode](docs/guide/harnesses/opencode.md) |
+| **Kiro IDE** | — | `bunx @amadeus-dlc/setup install --harness kiro-ide` | `/amadeus` | [Running on Kiro IDE](docs/guide/harnesses/kiro-ide.md) |
+| **Kiro CLI** | ≥ 2.6 | `bunx @amadeus-dlc/setup install --harness kiro` | `/amadeus` | [Running on Kiro CLI](docs/guide/harnesses/kiro-cli.md) |
 
 > [!NOTE]
 > This release works best with **Claude Opus 4.8** (on Kiro, that requires a paid plan). On weaker models the conductor may skip optional stage steps or rush approval gates. We are sharpening behavior on other models.

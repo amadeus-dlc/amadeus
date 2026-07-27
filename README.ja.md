@@ -73,14 +73,14 @@ Amadeus-DLC は AWS が定義した **AI-DLC メソドロジー**(段階的・�
 
 エンジン(状態機械・監査ログ・レフェリー)は全ハーネスでバイト単位に同一です。異なるのは外殻だけです。
 
-| ハーネス | インストール(プロジェクトへ) | 起動 | ガイド |
-| --- | --- | --- | --- |
-| **Kiro IDE** | `bunx @amadeus-dlc/setup install --harness kiro-ide` | `/amadeus` | [Kiro IDE で動かす](docs/guide/harnesses/kiro-ide.ja.md) |
-| **Kiro CLI**(≥ 2.6) | `bunx @amadeus-dlc/setup install --harness kiro` | `/amadeus` | [Kiro CLI で動かす](docs/guide/harnesses/kiro-cli.ja.md) |
-| **Claude Code** | `bunx @amadeus-dlc/setup install --harness claude` | `/amadeus` | [はじめる](docs/guide/01-getting-started.ja.md) |
-| **Codex CLI**(≥ 0.139.0) | `bunx @amadeus-dlc/setup install --harness codex` | `$amadeus` | [Codex CLI で動かす](docs/guide/harnesses/codex-cli.ja.md) |
-| **OpenCode** | `bunx @amadeus-dlc/setup install --harness opencode` | `$amadeus` | [OpenCode で動かす](docs/guide/harnesses/opencode.ja.md) |
-| **Cursor** | `bunx @amadeus-dlc/setup install --harness cursor` | `/amadeus` | [Cursor で動かす](docs/guide/harnesses/cursor.ja.md) |
+| ハーネス | バージョン | インストール(プロジェクトへ) | 起動 | ガイド |
+| --- | --- | --- | --- | --- |
+| **Kiro IDE** | — | `bunx @amadeus-dlc/setup install --harness kiro-ide` | `/amadeus` | [Kiro IDE で動かす](docs/guide/harnesses/kiro-ide.ja.md) |
+| **Kiro CLI** | ≥ 2.6 | `bunx @amadeus-dlc/setup install --harness kiro` | `/amadeus` | [Kiro CLI で動かす](docs/guide/harnesses/kiro-cli.ja.md) |
+| **Claude Code** | — | `bunx @amadeus-dlc/setup install --harness claude` | `/amadeus` | [はじめる](docs/guide/01-getting-started.ja.md) |
+| **Codex CLI** | ≥ 0.139.0 | `bunx @amadeus-dlc/setup install --harness codex` | `$amadeus` | [Codex CLI で動かす](docs/guide/harnesses/codex-cli.ja.md) |
+| **OpenCode** | — | `bunx @amadeus-dlc/setup install --harness opencode` | `$amadeus` | [OpenCode で動かす](docs/guide/harnesses/opencode.ja.md) |
+| **Cursor** | — | `bunx @amadeus-dlc/setup install --harness cursor` | `/amadeus` | [Cursor で動かす](docs/guide/harnesses/cursor.ja.md) |
 
 > [!NOTE]
 > 本リリースは **Claude Opus 4.8** で最もよく動作します(Kiro では有料プランが必要)。より弱いモデルでは、コンダクターが任意ステップ(レビュアーパス、学習リチュアル)を省略したり、承認ゲートを急いだりすることがあります。他モデルでの挙動は改善中です。
