@@ -84,6 +84,17 @@ export type MirrorOperationReceipt = Readonly<{
   lastEffect?: MirrorMutationEffect;
   createIdentity?: MirrorCreateIdentity;
   authorization?: MirrorExecutionAuthorization;
+  // Present only while the Issue mutation itself succeeded but the Project
+  // board did not converge (E-U2CG). It is the sole reason a receipt can sit at
+  // `pending` without a `failureClass` / `lastEffect`: those two describe the
+  // Issue mutation, and reusing them here would record a failure that did not
+  // happen. `completedAt` stays set, because the Issue side really did complete.
+  projectSyncHold?: MirrorProjectSyncHold;
+}>;
+
+export type MirrorProjectSyncHold = Readonly<{
+  reason: "project-sync-unsettled";
+  heldAt: string;
 }>;
 
 export type MirrorProvenanceV1 = Readonly<{
@@ -291,17 +302,26 @@ export type MirrorProjectTarget = Readonly<{
   statusNames: MirrorProjectStatusNames;
 }>;
 
-// One row of the `projectSync` ledger. The state union is three-valued so U2 can
-// add the pending / safety-blocked writes without a codec change; U1 only ever
-// writes `synced`.
+// One row of the `projectSync` ledger, keyed by the canonical "owner/number" in
+// `project`. `state` records the outcome of the most recent reconciliation of
+// that one Project: `synced` when the board matches the expected column,
+// `pending` when a retryable failure left it unknown, and `safety-blocked` when
+// the board's own shape (no Status field, no matching option) or our permissions
+// make it unreachable without a human.
+//
+// `projectId` is nullable because a Project whose Status field could not be
+// resolved has no node id to record; `lastAppliedStatus` is the last column this
+// tool actually applied, and a later failure does not erase that history.
 export type MirrorProjectSyncEntry = Readonly<{
   project: string; // canonical "owner/number"
-  projectId: string;
+  projectId: string | null;
   itemId: string | null;
   lastAppliedStatus: string | null;
-  state: "synced" | "pending" | "safety-blocked";
+  state: MirrorProjectSyncState;
   updatedAt: string;
 }>;
+
+export type MirrorProjectSyncState = "synced" | "pending" | "safety-blocked";
 
 export type MirrorProjectSyncLedger = Readonly<{
   projects: readonly MirrorProjectSyncEntry[];

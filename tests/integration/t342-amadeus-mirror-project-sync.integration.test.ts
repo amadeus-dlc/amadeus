@@ -505,7 +505,7 @@ describe("t342 no configuration", () => {
 });
 
 describe("t342 failure containment", () => {
-  test("a membership query failure keeps the Issue result and writes no ledger", async () => {
+  test("a membership query failure keeps the Issue link and marks every target pending", async () => {
     const store = fileStore(linkedState());
     const gateway = new ProjectGateway(markerBody());
     gateway.fixture.listResult = failure("network");
@@ -517,9 +517,20 @@ describe("t342 failure containment", () => {
       localState: store.state(),
     });
 
-    expect(outcome.kind).toBe("completed");
+    // The Issue side stands: the link survives and the operation is only parked.
+    expect(outcome.kind).toBe("pending");
     expect(gateway.issue.body).toContain("snapshot");
-    expect(store.state().projectSync).toBeNull();
+    expect(store.state().issueNumber).toBe(7);
+    expect(store.state().projectSync?.projects).toEqual([
+      {
+        project: "acme/5",
+        projectId: null,
+        itemId: null,
+        lastAppliedStatus: null,
+        state: "pending",
+        updatedAt: NOW,
+      },
+    ]);
     expect(projectCalls(gateway)).toEqual(["list-project-items"]);
     expect(diagnostics.map((d) => d.reason)).toEqual(["membership-query-failed"]);
   });
@@ -540,7 +551,7 @@ describe("t342 failure containment", () => {
     expect(warnings.some((w) => w.classification === "network")).toBe(true);
   });
 
-  test("an add failure stops that Project without writing a ledger row", async () => {
+  test("an add failure classifies that Project by its failure class", async () => {
     const store = fileStore(linkedState());
     const gateway = new ProjectGateway(markerBody());
     gateway.fixture.addResult = failure("permission");
@@ -552,13 +563,18 @@ describe("t342 failure containment", () => {
       localState: store.state(),
     });
 
-    expect(outcome.kind).toBe("completed");
-    expect(store.state().projectSync).toBeNull();
+    // `permission` is not retryable, so the row is safety-blocked — and that
+    // status never reaches the operation receipt.
+    expect(outcome.kind).toBe("pending");
+    expect(store.state().projectSync?.projects[0]).toMatchObject({
+      project: "acme/5",
+      state: "safety-blocked",
+    });
     expect(gateway.history).not.toContain("update-project-item-status");
     expect(diagnostics.map((d) => d.reason)).toEqual(["add-failed"]);
   });
 
-  test("an update failure records no row, so a retry re-applies", async () => {
+  test("an update failure leaves a pending row, so a retry re-applies", async () => {
     const store = fileStore(linkedState());
     const gateway = new ProjectGateway(markerBody());
     gateway.fixture.updateResult = failure("api", "outcome-unknown");
@@ -570,13 +586,16 @@ describe("t342 failure containment", () => {
       localState: store.state(),
     });
 
-    expect(store.state().projectSync).toBeNull();
+    expect(store.state().projectSync?.projects[0]).toMatchObject({
+      state: "pending",
+      lastAppliedStatus: null,
+    });
     expect(diagnostics.map((d) => d.reason)).toEqual(["update-failed"]);
   });
 });
 
 describe("t342 safety-blocked observations", () => {
-  test("an unresolved Project skips with a diagnostic and no mutation", async () => {
+  test("an unresolved Project is marked without any mutation", async () => {
     const store = fileStore(linkedState());
     const gateway = new ProjectGateway(markerBody());
     gateway.fixture.fieldResult = failure("api");
@@ -592,7 +611,10 @@ describe("t342 safety-blocked observations", () => {
       "list-project-items",
       "resolve-status-field",
     ]);
-    expect(store.state().projectSync).toBeNull();
+    expect(store.state().projectSync?.projects[0]).toMatchObject({
+      state: "pending",
+      projectId: null,
+    });
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0]).toMatchObject({
       project: "acme/5",
@@ -631,7 +653,10 @@ describe("t342 safety-blocked observations", () => {
       },
     ]);
     expect(gateway.history).not.toContain("update-project-item-status");
-    expect(store.state().projectSync).toBeNull();
+    // A column the board does not declare cannot be reached by retrying.
+    expect(store.state().projectSync?.projects[0]).toMatchObject({
+      state: "safety-blocked",
+    });
   });
 
   test("a case-only difference does not match, proving exact-match matching", async () => {
@@ -678,7 +703,9 @@ describe("t342 safety-blocked observations", () => {
       expectedStatus: "No Such Column",
       availableOptions: ["Ideation", "Done"],
     });
-    expect(store.state().projectSync).toBeNull();
+    expect(store.state().projectSync?.projects[0]).toMatchObject({
+      state: "safety-blocked",
+    });
   });
 
   test("no diagnostic ever carries a secret from the remote or the summary", async () => {
