@@ -26,6 +26,7 @@ import type {
   MirrorOperation,
   MirrorOperationReceipt,
   MirrorProjectSyncEntry,
+  MirrorProjectSyncHold,
   MirrorProjectSyncLedger,
   MirrorProvenance,
   MirrorReceiptStatus,
@@ -487,7 +488,11 @@ const RECEIPT_KEYS: ReadonlySet<string> = new Set([
   "lastEffect",
   "createIdentity",
   "authorization",
+  "projectSyncHold",
 ]);
+const PROJECT_SYNC_HOLD_KEYS: ReadonlySet<string> = new Set(["reason", "heldAt"]);
+const PROJECT_SYNC_HOLD_REASONS: ReadonlySet<MirrorProjectSyncHold["reason"]> =
+  new Set(["project-sync-unsettled"]);
 const WARNING_KEYS: ReadonlySet<string> = new Set([
   "operationId",
   "operation",
@@ -793,7 +798,33 @@ type ReceiptOptionals = {
   completedAt: string | undefined;
   failureClass: MirrorFailureClass | undefined;
   lastEffect: MirrorMutationEffect | undefined;
+  projectSyncHold: MirrorProjectSyncHold | null | undefined;
 };
+
+// The Project-sync hold that parks an otherwise-succeeded receipt at `pending`
+// (E-U2CG). `null` signals a malformed value, distinct from `undefined` = absent.
+function validateProjectSyncHold(
+  v: JsonValue,
+  path: string,
+  issues: string[],
+): MirrorProjectSyncHold | null {
+  if (!isObject(v)) {
+    issues.push(`${path}: projectSyncHold must be an object`);
+    return null;
+  }
+  checkUnknownKeys(v, PROJECT_SYNC_HOLD_KEYS, path, issues);
+  const reason = reqEnum(
+    v,
+    "reason",
+    PROJECT_SYNC_HOLD_REASONS,
+    "project sync hold reason",
+    path,
+    issues,
+  );
+  const heldAt = reqTimestamp(v, "heldAt", path, issues);
+  if (reason === undefined || heldAt === undefined) return null;
+  return { reason, heldAt };
+}
 
 function checkReceiptKey(
   event: MirrorEventIdentity | null,
@@ -823,10 +854,20 @@ function checkReceiptStatusInvariants(
     status === "succeeded" || status === "skipped-for-event" || status === "abandoned";
   if (needsCompleted && o.completedAt === undefined)
     issues.push(`${path}.completedAt: required for status '${status}'`);
-  if ((status === "pending" || status === "safety-blocked") && o.failureClass === undefined)
+  // A Project-sync hold is the one way a receipt reaches `pending` without a
+  // failed Issue mutation, so it stands in for the failure fields that describe
+  // one. It is meaningless on any other status.
+  const held = o.projectSyncHold !== undefined && o.projectSyncHold !== null;
+  if (
+    (status === "pending" || status === "safety-blocked") &&
+    o.failureClass === undefined &&
+    !(status === "pending" && held)
+  )
     issues.push(`${path}.failureClass: required for status '${status}'`);
-  if (status === "pending" && o.lastEffect === undefined)
+  if (status === "pending" && o.lastEffect === undefined && !held)
     issues.push(`${path}.lastEffect: required for status 'pending'`);
+  if (held && status !== "pending")
+    issues.push(`${path}.projectSyncHold: only allowed for status 'pending'`);
 }
 
 function validateReceipt(
@@ -851,6 +892,10 @@ function validateReceipt(
     completedAt: optTimestamp(v, "completedAt", path, issues),
     failureClass: optEnum(v, "failureClass", FAILURE_CLASSES, "failure class", path, issues),
     lastEffect: optEnum(v, "lastEffect", MUTATION_EFFECTS, "mutation effect", path, issues),
+    projectSyncHold:
+      "projectSyncHold" in v
+        ? validateProjectSyncHold(v.projectSyncHold, `${path}.projectSyncHold`, issues)
+        : undefined,
   };
   const createIdentity =
     "createIdentity" in v
@@ -869,7 +914,8 @@ function validateReceipt(
     preparedAt === undefined ||
     event === null ||
     createIdentity === null ||
-    authorization === null
+    authorization === null ||
+    o.projectSyncHold === null
   ) {
     return null;
   }
@@ -913,6 +959,9 @@ function buildReceipt(input: {
     ...(input.optionals.lastEffect === undefined
       ? {}
       : { lastEffect: input.optionals.lastEffect }),
+    ...(input.optionals.projectSyncHold
+      ? { projectSyncHold: input.optionals.projectSyncHold }
+      : {}),
     ...(input.createIdentity ? { createIdentity: input.createIdentity } : {}),
     ...(input.authorization ? { authorization: input.authorization } : {}),
   };
@@ -1106,7 +1155,7 @@ function validateAuditOutbox(
   return null;
 }
 
-// One projectSync ledger row. `itemId` and `lastAppliedStatus` are
+// One projectSync ledger row. `projectId`, `itemId` and `lastAppliedStatus` are
 // nullable-required: the key must be present and either a non-empty string or
 // null, so an absent key is a defect rather than an implied null.
 function validateProjectEntry(
@@ -1120,7 +1169,7 @@ function validateProjectEntry(
   }
   checkUnknownKeys(v, PROJECT_ENTRY_KEYS, path, issues);
   const project = reqNonEmptyString(v, "project", path, issues);
-  const projectId = reqNonEmptyString(v, "projectId", path, issues);
+  const projectId = nullableString(v.projectId, "projectId", path, issues);
   const state = reqEnum(v, "state", PROJECT_SYNC_STATES, "project sync state", path, issues);
   const updatedAt = reqTimestamp(v, "updatedAt", path, issues);
   const itemId = nullableString(v.itemId, "itemId", path, issues);
@@ -1507,6 +1556,7 @@ function renderReceipt(r: MirrorOperationReceipt): unknown {
   if (r.completedAt !== undefined) out.completedAt = r.completedAt;
   if (r.failureClass !== undefined) out.failureClass = r.failureClass;
   if (r.lastEffect !== undefined) out.lastEffect = r.lastEffect;
+  if (r.projectSyncHold !== undefined) out.projectSyncHold = r.projectSyncHold;
   if (r.createIdentity !== undefined)
     out.createIdentity = renderCreateIdentity(r.createIdentity);
   if (r.authorization !== undefined)

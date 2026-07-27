@@ -9,6 +9,7 @@ import {
   createMirrorProjectMutationPermit,
 } from "./amadeus-mirror-capability.ts";
 import {
+  classifyProjectFailure,
   expectedProjectStatus,
   mirrorEventKey,
   selectProjectStatusOption,
@@ -38,6 +39,7 @@ import type {
   MirrorProjectItemsView,
   MirrorProjectStatusField,
   MirrorProjectSyncEntry,
+  MirrorProjectSyncState,
   MirrorProjectTarget,
   MirrorSnapshot,
   MirrorStateSnapshot,
@@ -1213,14 +1215,25 @@ async function executeLinked(
   );
 }
 
-// --- Project status sync (U1 internal step) ----------------------------------
+// --- Project status reconciliation (internal step) ---------------------------
 //
 // Runs after the Issue body mutation has already succeeded, inside the same
-// chain. Every failure below is contained: the Issue outcome is never rolled
-// back and never downgraded, because the Project board is a second, independent
-// mutation target. U1 records only successful rows in the ledger — the pending
-// ledger and its reconciliation belong to U2 — so a failure leaves a visible
-// warning and a diagnostic and writes nothing.
+// chain. The Issue outcome is never rolled back: the remote Issue landed, and
+// `issueNumber` / `provenance` are recorded before this step runs, so a Project
+// failure can never strand a created Issue unlinked. The operation *receipt*,
+// however, is parked at `pending` while the board has not converged — a hold
+// with its own reason field, not a claim that the Issue mutation failed
+// (E-U2CG). That keeps the operation IN_PROGRESS so the next boundary retries
+// it, and deliberately never writes `safety-blocked` onto the receipt, since
+// that status is terminal in the completion policy and would stop the mirror
+// permanently over a board this tool cannot reach.
+//
+// The loop reconciles the union of the Projects the Issue already belongs to
+// and the Projects configuration targets. Membership is synced everywhere we
+// have access; only configured targets may have the Issue *added* to them.
+// Each Project is independent: one Project's failure classifies that row and
+// the loop moves on. Classification is unconditional — the next ledger state is
+// a function of this round's result alone, never of the row's current state.
 
 function projectDiagnostic(
   context: MirrorExecutionContext,
@@ -1271,16 +1284,52 @@ function upsertProjectEntry(
   context: MirrorExecutionContext,
   entry: MirrorProjectSyncEntry,
 ): void {
+  applyProjectTransition(ports, context, {
+    kind: "upsert-project-entry",
+    entry,
+  });
+}
+
+// Every ledger write re-reads the state first: the reconcile loop writes one row
+// per Project, so each write must build on the revision the previous one left.
+function applyProjectTransition(
+  ports: MirrorStateStorePorts,
+  context: MirrorExecutionContext,
+  transition: MirrorTransition,
+): void {
   const latest = readMirrorState(ports);
   if (latest.kind !== "ok") return;
-  applyTransition(
-    ports,
-    context,
-    latest.snapshot,
-    { kind: "upsert-project-entry", entry },
-    undefined,
-  );
+  applyTransition(ports, context, latest.snapshot, transition, undefined);
 }
+
+// Record the verdict for one Project that did not converge this round.
+function markProjectFailure(
+  ports: MirrorStateStorePorts,
+  context: MirrorExecutionContext,
+  project: string,
+  identity: Readonly<{ projectId: string | null; itemId: string | null }>,
+  classification: MirrorFailureClass,
+): ProjectVerdict {
+  const state = classifyProjectFailure(classification);
+  applyProjectTransition(ports, context, {
+    kind:
+      state === "pending" ? "mark-project-pending" : "mark-project-safety-blocked",
+    project,
+    projectId: identity.projectId,
+    itemId: identity.itemId,
+    updatedAt: context.now(),
+  });
+  return { state, classification };
+}
+
+// What one Project's reconciliation settled on. A non-synced verdict keeps the
+// classification that produced it so the caller can report the real failure.
+type ProjectVerdict =
+  | { state: Extract<MirrorProjectSyncState, "synced">; classification?: undefined }
+  | {
+      state: Extract<MirrorProjectSyncState, "pending" | "safety-blocked">;
+      classification: MirrorFailureClass;
+    };
 
 function findProjectItem(
   view: MirrorProjectItemsView,
@@ -1295,16 +1344,18 @@ function findProjectItem(
 
 type MembershipResolution =
   | { kind: "member"; itemId: string; currentStatus: string | null }
-  | { kind: "blocked" };
+  | { kind: "failed"; classification: MirrorFailureClass };
 
-// Resolve the Issue's item on this Project, adding it when absent. A freshly
-// added item has no Status yet, so its current value is null rather than
-// assumed.
+// Resolve the Issue's item on this Project, adding it when absent. Only a
+// configured target may be joined: a Project the Issue merely already belongs to
+// is synced where it sits and never recruited. A freshly added item has no
+// Status yet, so its current value is null rather than assumed.
 async function resolveMembership(
   context: MirrorExecutionContext,
   target: MirrorProjectTarget,
   view: MirrorProjectItemsView,
   field: MirrorProjectStatusField,
+  configured: boolean,
 ): Promise<MembershipResolution> {
   const existing = findProjectItem(view, target);
   if (existing) {
@@ -1313,6 +1364,20 @@ async function resolveMembership(
       itemId: existing.itemId,
       currentStatus: existing.currentStatus,
     };
+  }
+  if (!configured) {
+    // Unreachable in practice — a Project only enters the loop unconfigured
+    // because the Issue is already an item of it — but classified rather than
+    // assumed away.
+    projectDiagnostic(context, {
+      project: canonicalProject(target),
+      reason: "add-failed",
+      expectedStatus: null,
+      availableOptions: [],
+      summary:
+        "the Issue is not an item of this Project and the Project is not configured, so it is not joined",
+    });
+    return { kind: "failed", classification: "configuration" };
   }
   const permit = createMirrorProjectMutationPermit({
     event: context.event,
@@ -1333,7 +1398,7 @@ async function resolveMembership(
       availableOptions: [],
       summary: `could not add the Issue to the Project: ${added.summary}`,
     });
-    return { kind: "blocked" };
+    return { kind: "failed", classification: added.classification };
   }
   return { kind: "member", itemId: added.value.itemId, currentStatus: null };
 }
@@ -1344,8 +1409,17 @@ async function syncOneProject(
   target: MirrorProjectTarget,
   view: MirrorProjectItemsView,
   snapshot: MirrorSnapshot,
-): Promise<void> {
+  configured: boolean,
+): Promise<ProjectVerdict> {
   const project = canonicalProject(target);
+  const known = findProjectItem(view, target);
+  const identity = {
+    projectId: known?.projectId ?? null,
+    itemId: known?.itemId ?? null,
+  };
+  const fail = (classification: MirrorFailureClass): ProjectVerdict =>
+    markProjectFailure(ports, context, project, identity, classification);
+
   const resolved = await context.gateway.resolveProjectStatusField(target.project);
   if (resolved.kind === "failure") {
     projectDiagnostic(context, {
@@ -1355,11 +1429,19 @@ async function syncOneProject(
       availableOptions: [],
       summary: `the Project or its Status field could not be resolved: ${resolved.summary}`,
     });
-    return;
+    return fail(resolved.classification);
   }
   const field = resolved.value;
-  const membership = await resolveMembership(context, target, view, field);
-  if (membership.kind === "blocked") return;
+  identity.projectId = field.projectId;
+  const membership = await resolveMembership(
+    context,
+    target,
+    view,
+    field,
+    configured,
+  );
+  if (membership.kind === "failed") return fail(membership.classification);
+  identity.itemId = membership.itemId;
 
   const expected = expectedProjectStatus(
     snapshot,
@@ -1375,7 +1457,7 @@ async function syncOneProject(
       state: "synced",
       updatedAt: context.now(),
     });
-    return;
+    return { state: "synced" };
   }
 
   const option = selectProjectStatusOption(field, expected.name);
@@ -1387,7 +1469,9 @@ async function syncOneProject(
       availableOptions: field.options.map((each) => each.name),
       summary: `the Project has no Status option named exactly "${expected.name}"`,
     });
-    return;
+    // The board's own vocabulary does not contain the column: retrying the same
+    // call cannot change that, so this needs a human, not another attempt.
+    return fail("configuration");
   }
 
   if (membership.currentStatus !== expected.name) {
@@ -1412,7 +1496,7 @@ async function syncOneProject(
         availableOptions: [],
         summary: `could not set the Project Status: ${updated.summary}`,
       });
-      return;
+      return fail(updated.classification);
     }
   }
 
@@ -1424,15 +1508,49 @@ async function syncOneProject(
     state: "synced",
     updatedAt: context.now(),
   });
+  return { state: "synced" };
 }
 
+// The Projects to reconcile this round: everything the Issue already belongs to,
+// plus every configured target. A configured target supplies its own status
+// vocabulary; a Project known only from membership takes the defaults.
+function reconcileTargets(
+  configured: readonly MirrorProjectTarget[],
+  view: MirrorProjectItemsView,
+): Array<Readonly<{ target: MirrorProjectTarget; configured: boolean }>> {
+  const out = configured.map((target) => ({ target, configured: true }));
+  const seen = new Set(configured.map(canonicalProject));
+  for (const item of view.items) {
+    const target: MirrorProjectTarget = {
+      project: { owner: item.projectOwner, number: item.projectNumber },
+      statusNames: {},
+    };
+    const key = canonicalProject(target);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ target, configured: false });
+  }
+  return out;
+}
+
+// The board-wide verdict. `unsettled` carries the classification of the first
+// Project that did not converge, so the operation warning reports a failure that
+// actually happened rather than a synthesized one.
+export type ProjectReconcileResult =
+  | { kind: "converged" }
+  | { kind: "unsettled"; classification: MirrorFailureClass; unsettled: number };
+
+// Reconcile every in-scope Project and report whether the board as a whole
+// converged. `unsettled` means at least one row is pending or safety-blocked,
+// which is what parks the operation receipt.
 export async function syncProjects(
   ports: MirrorStateStorePorts,
   context: MirrorExecutionContext,
   issueNumber: number,
-): Promise<void> {
+): Promise<ProjectReconcileResult> {
   const config = context.projectSync;
-  if (config === undefined || config.targets.length === 0) return;
+  if (config === undefined || config.targets.length === 0)
+    return { kind: "converged" };
   const targets = config.targets;
   const view = await context.gateway.listProjectItems({
     repository: context.repository,
@@ -1452,11 +1570,40 @@ export async function syncProjects(
       view.classification,
       `Project status is unsynchronized: ${view.summary}`,
     );
-    return;
+    // Membership is the one read the whole loop depends on, so its failure
+    // classifies every configured Project at once.
+    for (const target of targets) {
+      markProjectFailure(
+        ports,
+        context,
+        canonicalProject(target),
+        { projectId: null, itemId: null },
+        view.classification,
+      );
+    }
+    return {
+      kind: "unsettled",
+      classification: view.classification,
+      unsettled: targets.length,
+    };
   }
-  for (const target of targets) {
-    await syncOneProject(ports, context, target, view.value, config.snapshot);
+  let first: MirrorFailureClass | null = null;
+  let unsettled = 0;
+  for (const each of reconcileTargets(targets, view.value)) {
+    const verdict = await syncOneProject(
+      ports,
+      context,
+      each.target,
+      view.value,
+      config.snapshot,
+      each.configured,
+    );
+    if (verdict.state === "synced") continue;
+    unsettled += 1;
+    first = first ?? verdict.classification;
   }
+  if (first === null) return { kind: "converged" };
+  return { kind: "unsettled", classification: first, unsettled };
 }
 
 export async function executeMirrorOperation(
@@ -1484,7 +1631,56 @@ export async function executeMirrorOperation(
   // edit, and the already-converged reconciliations): the Project step runs only
   // after the Issue body itself landed, and never for `close`.
   if (outcome.kind === "completed" && input.context.operation !== "close") {
-    await syncProjects(input.ports, input.context, outcome.issueNumber);
+    const projects = await syncProjects(
+      input.ports,
+      input.context,
+      outcome.issueNumber,
+    );
+    if (projects.kind === "unsettled") {
+      return holdForProjectSync(input, outcome, projects);
+    }
   }
   return outcome;
+}
+
+// Park the completed operation at `pending` so the next boundary retries it.
+// The completion itself already landed in state, so the Issue link is safe; if
+// the hold cannot be written the operation simply stays `completed` and the next
+// boundary's fresh receipts reconcile the board anyway.
+function holdForProjectSync(
+  input: ExecuteMirrorOperationInput,
+  outcome: Extract<MirrorOperationOutcome, { kind: "completed" }>,
+  projects: Extract<ProjectReconcileResult, { kind: "unsettled" }>,
+): MirrorOperationOutcome {
+  const { context, ports } = input;
+  const latest = readMirrorState(ports);
+  if (latest.kind !== "ok") return outcome;
+  const receipt = requireReceipt(latest.snapshot, context);
+  if (receipt === null || receipt.status !== "succeeded") return outcome;
+  const heldAt = context.now();
+  const result = applyTransition(
+    ports,
+    context,
+    latest.snapshot,
+    {
+      kind: "hold-for-project-sync",
+      event: context.event,
+      operationId: receipt.operationId,
+      heldAt,
+    },
+    receipt.operationId,
+  );
+  if (result.kind !== "ok") return outcome;
+  return {
+    kind: "pending",
+    operation: context.operation,
+    warning: warning(
+      context,
+      receipt.operationId,
+      projects.classification,
+      `the Issue is up to date but ${projects.unsettled} Project board(s) are unsynchronized; the next boundary reconciles them`,
+      true,
+      "outcome-unknown",
+    ),
+  };
 }
