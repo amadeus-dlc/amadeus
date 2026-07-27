@@ -29,7 +29,7 @@ Sources of truth: `amadeus-dlc/amadeus` v2 branch (commit `9b77786`, as of 2026-
 │       ├── inception/
 │       ├── construction/
 │       └── operation/
-├── hooks/                                                # Claude Code hook implementations (11 hooks)
+├── hooks/                                                # Claude Code hook implementations (framework hooks)
 │   ├── amadeus-audit-logger.ts
 │   ├── amadeus-log-subagent.ts
 │   ├── amadeus-mint-presence.ts

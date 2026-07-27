@@ -96,8 +96,11 @@ The kimi arm checks four things:
    `amadeus-kimi-adapter` entry of the hook roster.
 2. **Managed block** — the user-level config's wiring state. Missing entirely
    (or no config file) fails with the re-run-the-installer / manual-procedure
-   fix; present-by-content with the markers gone (the CLI's re-serialization)
-   is an advisory pass — the next install/upgrade re-wraps them; duplicated,
+   fix (in the Amadeus self-development repo the fix line instead points at
+   `bun scripts/promote-self.ts --apply`, whose apply path ends with the same
+   merge step); present-by-content with the markers gone (the CLI's
+   re-serialization) is an advisory pass — the next install/upgrade re-wraps
+   them; duplicated,
    unpaired, or reversed markers are a loud fail. A separate advisory scan
    flags managed-style git pre-allow rules left behind with no managed block
    detected (possible residue from an incompletely removed block — review

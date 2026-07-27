@@ -9,7 +9,7 @@ This project uses AI-DLC (AI-Driven Development Life Cycle) for structured devel
 - **Hook wiring**: Kimi Code has no project-level config file, so the `[[hooks]]` + `[[permission.rules]]` this install needs live in the user-level `~/.kimi-code/config.toml`. The setup CLI merges the shipped `.kimi-code/hooks/amadeus-hooks.snippet.toml` there as a marker-fenced managed block (`# >>> amadeus-kimi-hooks >>>`) with a diff preview, an explicit confirm, a backup, and an atomic write; your existing `[[hooks]]` are preserved and only the managed block is ever replaced or removed. Manual wiring (same snippet, paste between the markers) is documented for non-interactive environments.
 - **Permissions**: the managed block pre-allows ONLY `Bash(bun .kimi-code/tools/*)`, `Bash(bun .kimi-code/hooks/*)`, and `git worktree`/`git commit`/`git add` prefixes; everything else follows your normal permission mode. There is no blanket shell trust.
 - **Locking**: Audit log file locking is handled portably using mkdir-based locking in the system temp directory (no external dependencies).
-- **Hook permissions**: All 11 hooks are TypeScript (`.ts`) and run via `bun`. No executable bits required — works identically on macOS, Linux, and native Windows PowerShell.
+- **Hook permissions**: All framework hooks are TypeScript (`.ts`) and run via `bun`. No executable bits required — works identically on macOS, Linux, and native Windows PowerShell.
 
 ## AI-DLC Structure
 

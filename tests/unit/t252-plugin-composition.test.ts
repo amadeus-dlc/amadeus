@@ -1,4 +1,4 @@
-// covers: file:scripts/plugin-composition.ts
+// covers: file:packages/framework/core/tools/amadeus-plugin-compose.ts
 // size: small
 //
 // U10 plugin-composition (FR-6 item 20) — pure in-process unit tests for the C4
@@ -46,7 +46,7 @@ import {
   type WorkspaceBackend,
   type WorkspaceTransaction,
   type WriteSet,
-} from "../../scripts/plugin-composition.ts";
+} from "../../packages/framework/core/tools/amadeus-plugin-compose.ts";
 
 // ---------------------------------------------------------------------------
 // Fixtures

@@ -1,6 +1,87 @@
 # コンポーネント棚卸し
 
-## クロスレビュー済みバグ7件の患部コンポーネント（260726-crossreviewed-bug-batch、現在、7 Issue）
+> **2026-07-27（intent `260726-answer-manual-binding`、[Issue #1548](https://github.com/amadeus-dlc/amadeus/issues/1548) bug、amadeus-bugfix / Brownfield）: 本 intent 断面は対象外（コンポーネント面に変化なし）。** 測定 ref: observed `ad1ff5de9`、base `09c669901`、距離 2。区間 2 コミットは record-only で mirror answer/guard スタックの source 変更ゼロ。#1548 は既存 mirror コンポーネント（adapter `amadeus-mirror-lifecycle.ts` / coordinator `amadeus-mirror-coordinator.ts` / types `amadeus-mirror-types.ts`）間の**契約の欠落**（answer 転送 `:969-985` が guard `:257-265` の要求フィールドを渡さない）で、新規コンポーネントの追加はない。配布は `amadeus-mirror-lifecycle.ts` の **13 コピー**（canonical 1 + self-install 5 + dist 7）が同期対象。詳細は上流入力 `re3-dev-scan-result.md` と本 scan の `architecture.md` / `code-quality-assessment.md` 新節、`re-scans/260726-answer-manual-binding.md`。
+
+> **2026-07-27（intent `260726-t258-p95-flake`、[Issue #1511](https://github.com/amadeus-dlc/amadeus/issues/1511) bug/P2/S3-MAJOR、amadeus-bugfix / Brownfield）: 本 intent 断面は対象外（変更なし）。** 測定 ref: observed `09c669901`、base `f9a0fb86a`、距離 2。区間 32 ファイルはすべて `amadeus/` record で **source/test/CI 変更ゼロ**。#1511 の患部コンポーネント（`p95()` 述語 `t258:430-433`、child benchmark helper `tests/helpers/lifecycle-transaction-benchmark-child.ts`、絶対 assert `t258:461-462` / `t257:240-241`、被測定 `withIntentLifecyclePreflight` / `runIntentLifecycleTransactionLocked`）はいずれも既存で、新規コンポーネント登録なし。詳細は上流入力 `re2-dev-scan-result.md` と本 scan の `code-quality-assessment.md` / `architecture.md` 新節、`re-scans/260726-t258-p95-flake.md`。
+
+## mirror 状態表現分裂 患部コンポーネント（260726-mirror-state-split、履歴、Issue #1547 + #1534）
+
+測定 ref: observed `f9a0fb86a`（base `1673c4332`、距離 38）。所在・コピー数は同 commit の `git ls-files` / `grep -n` / `wc -l` 出力からの転記。上流入力は Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`。
+
+### 患部コンポーネント一覧
+
+| コンポーネント | 所在 | 役割 | 系統 | 本 intent での位置づけ |
+| --- | --- | --- | --- | --- |
+| `mutateMirrorStateAtomic` | `amadeus-mirror-state-store.ts:158`（呼出 executor `:71` / lifecycle `:629`） | v1 sentinel ブロックの atomic write（唯一の書き手） | Write | 正しい権威。read はここが書いた表現に寄せる |
+| `MIRROR_STATE_SENTINEL_START/END` | `amadeus-mirror-state-codec.ts:38-39` | v1 ブロック境界。`parseMirrorStateDocument`（`:1301`）が読取 | Write | 修正後 read が参照すべき権威表現 |
+| `buildSnapshot` / status read | `amadeus-mirror.ts:169`（`:188` で `mirrorIssue` 決定） | status が `getField("Mirror Issue")` で legacy field を読む | Read | **主患部 A**（v1 非参照） |
+| `hasMirrorIssue` ×2 | `amadeus-orchestrate.ts:314` / `:3522` | boundary auto-sync/suppress・report 判定が legacy field を読む | Read | **主患部 B**（同根 2 箇所、同時修正必須） |
+| `compareMirrorStatus` | `amadeus-mirror.ts:249-258` | legacy field null → `mirror-missing` 報告（findings 型 `:231-233`） | Read | 症状の出所（create 後も missing） |
+| `writeMirrorIssueField` | `amadeus-mirror.ts:363`（呼び手 `:413` = `handleCreate` 内） | legacy field の唯一の writer | dead | **CLI 実行時不到達**（main 不到達）。撤去可否は要件裁定 |
+| `handleCreate` / `handleSync` / `handleClose` | `amadeus-mirror.ts:379` / `:425` / `:450` | 旧 CLI verb ハンドラ | dead | main（`:570-585`）不到達。t232 のみ参照。dead path が偽 green を生む |
+| `runLegacyMutation` | `amadeus-mirror.ts:533` | 名称に反し v1 lifecycle（`runMirrorLifecycleBoundary`）を呼ぶ | Write 経路 | 命名 misdirection。成功時 `issueNumber` echo のみで可視 field を残さない |
+| `renderMirrorMarker` | `amadeus-mirror-provenance.ts:47` | ownership marker の唯一の書き手 | marker | legacy 経路が呼ばず → #1534 の根 |
+| `runRepairRelink` / `verifyOwnership` | `amadeus-mirror-lifecycle.ts:775`（`:785` marker 検査 / `:788` message） / `amadeus-mirror-provenance.ts:149`（`:165` `missing-marker`） | marker 必須の復旧経路 | marker | marker 無き legacy Issue を fail-closed 拒否 → in-tool 復旧ゼロ |
+| status テスト | `tests/unit/t232-amadeus-mirror.test.ts:104` / `:124` | `snapshot({ mirrorIssue: 1161 })` で legacy field を直接シード | テスト | **偽 green の発生源**（v1 ブロックを書かず、real-create→status e2e が不在） |
+
+### 配布増幅
+
+mirror スタック各モジュールは `git ls-files "*<module>.ts"` = **13 パス**（正本 1 + self-install 5 = `.claude` `.codex` `.cursor` `.kimi-code` `.opencode` + dist 7 = `claude` `codex` `cursor` `kiro` `kiro-ide` `opencode` `kimi`）。投影宣言は `packages/framework/harness/projections.ts:23-32`（mirror 群 10 宣言）。
+
+### 区間での変化
+
+区間 38 コミットで**上記コンポーネントはいずれも無変更**（mirror スタック 8 モジュール各 `git log --oneline 1673c4332..HEAD -- <path>` = 0 行）。区間で変化したのは gateway envelope（#1537）/ core tools dedup（#1521、orchestrate.ts の非欠陥面）/ Kimi ハーネス / metrics 面であり、状態表現分裂の write/read 経路は非交差。
+
+## mirror-gateway 患部コンポーネント（260726-mirror-envelope-lf、履歴、Issue #1498）
+
+## kimi ハーネス面・metrics 可視化・plugin perf ゲートのコンポーネント（260726-plugin-host-delivery、現在、差分リフレッシュ）
+
+260726-plugin-host-delivery 差分リフレッシュ（2026-07-26、observed `0d83aa48b886fe85cd977569c0e7b3015b84d3e5`、base `1673c4332`、距離 43）。上流入力: Developer スキャン結果（実測済みスキャンノート）。
+
+| コンポーネント | 所在 | 責務（区間内の新規／変更） |
+|---|---|---|
+| kimi manifest | `packages/framework/harness/kimi/manifest.ts` | 第7ディストリ面の投影宣言。token = `.kimi-code`（`:10`）、hooks はユーザーレベル `~/.kimi-code/config.toml` の marker-fenced managed block（`:22`） |
+| kimi hooks | `packages/framework/harness/kimi/hooks/`（`amadeus-hooks.snippet.toml` = 単一ソース、`amadeus-kimi-adapter.ts`、`amadeus-kimi-lib.ts`） | Kimi Code CLI の hook イベントを framework hooks へ橋渡し |
+| kimi skills | `packages/framework/harness/kimi/skills/amadeus/`（`SKILL.md`、`question-rendering.md`） | Kimi 向けオーケストレーター表層 |
+| setup kimi-hooks | `packages/setup/src/domain/kimi-hooks.ts` / `src/modules/kimi-hooks.ts` | config.toml managed block の merge（domain 純関数 + I/O module の既存境界に準拠） |
+| metrics-visualize | `scripts/metrics-visualize.ts`（新規） | metrics スナップショットの自己完結 HTML ダッシュボード生成。`--write` / `--check`（drift guard）。CI render step 配線済み（[PR #1504](https://github.com/amadeus-dlc/amadeus/pull/1504)） |
+| plugin-discovery-overhead-gate | `tests/lib/plugin-discovery-overhead-gate.ts` + `tests/unit/plugin-discovery-overhead-gate.test.ts` | plugin stage discovery の perf ゲート再設計（[PR #1535](https://github.com/amadeus-dlc/amadeus/pull/1535) — `DISCOVERY_OVERHEAD_RATIO_LIMIT = 0.2`（`:15`）の相対比 + 絶対 noise floor の **AND** 判定。注: ブリーフィングの #1525 は `git log` 実測で **#1535**） |
+| plugin-projection | `scripts/plugin-projection.ts` | **self-install 面を「closed four → closed five」へ拡張** — `:60` `SELF_INSTALL_HARNESSES = ["claude", "codex", "cursor", "opencode", "kimi"]`。packaged 面は seven faces（kiro/kiro-ide は非昇格のまま） |
+
+**無変更の反証確認**: plugin-composition / formal-model-check / `dist/plugins` / トップレベル `plugins/` は区間内で変化なし（`git log --oneline 1673c4332..HEAD -- <各パス>` および `git diff --name-only … | grep -c` の出力 **0 件**）。
+
+測定 ref: observed `0d83aa48b`（cid:reverse-engineering:measurement-ref-in-artifacts）。
+
+## mirror-gateway 患部コンポーネント（260726-mirror-envelope-lf、履歴、Issue #1498）
+
+測定 ref: observed `e39402224`（base `1673c4332`、距離 27）。所在・コピー数は同 commit の `git ls-files` / `grep -n` / `wc -l` 出力からの転記。上流入力は Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`。
+
+### 患部コンポーネント一覧
+
+| コンポーネント | 所在 | 役割 | コピー数 | 本 intent での位置づけ |
+| --- | --- | --- | --- | --- |
+| `parseHttpEnvelope` | `amadeus-mirror-gateway.ts:179-235` | `gh --include` stdout を statuses + JSON body へ分解 | 正本 1 + 配布 10 | **主患部**（`:196` の CRLF 前提終端探索） |
+| `interpretApiResult` | 同 `:483-553` | envelope の分類（`:495` パーサ呼び出し、`:509` malformed 分岐、`:525-534` `invalid-response`） | 同上 | 症状文字列の出所 |
+| `createArgv` / `findArgv` / `viewArgv` / `editArgv` / `closeArgv` | 同 `:97-116` / `:118-132` / `:134-139` / `:141-155` / `:157-170` | 5 verb の argv 構築。`findArgv` のみ `--paginate --slurp`（`:124-125`） | 同上 | 影響範囲の確定に使用 |
+| `findIssuesByMarker` | 同 `:655-685` | ページ統合。`:665` `JSON.parse` / `:669` `outer.length !== interp.pageCount` | 同上 | LF 対応後も残る二次患部 |
+| mirror lifecycle | `amadeus-mirror-lifecycle.ts:29` が gateway を import | gateway の唯一の内部消費側 | 正本 1 + 配布 10 | 返り値型不変なら無改修見込み（仮説） |
+| 投影宣言 | `packages/framework/harness/projections.ts:26` | `"amadeus-mirror-gateway.ts"` を harness 投影対象として宣言 | 1 | 配布同期の根拠 |
+| gateway テスト | `tests/unit/t272-amadeus-mirror-gateway.test.ts`（`:11` import、`:61` `block()`） | envelope の golden fixture を自作 | 1 | **偽 green の発生源**（`grep -c 'HTTP/'` = 1） |
+| repository テスト | `tests/unit/t270-amadeus-mirror-repository.test.ts:10` | gateway を import する第 2 のテスト | 1 | 修正時の影響確認対象 |
+| coverage allowlist | `tests/.coverage-patch-allowlist.json` | gateway の行ピン 5 件（`447-448` / `602` / `615-620` / `702` / `716`） | 1 | 行挿入で全件 stale 化 |
+| 過去 record の設計宣言 | `260724-mirror-auto-modes/…/nfr-design/security-design.md:37` | `--slurp` 文法の宣言（実出力と不一致） | 1 | 誤宣言の扱いは requirements で裁定 |
+
+### 配布増幅
+
+`git ls-files "*amadeus-mirror-gateway*"` = **12 パス**（正本 1 / self-install 4 = `.claude` `.codex` `.cursor` `.opencode` / dist 6 = `claude` `codex` `cursor` `kiro` `kiro-ide` `opencode` / テスト 1）。`cmp -s` で配布 10 コピーすべて正本とバイト一致を実測。self-install 側に `.kiro/tools` は存在しない。
+
+**HEAD 前進後の更新（HEAD = `ccdabd323`、Kimi Code CLI ハーネス追加 [PR #1522](https://github.com/amadeus-dlc/amadeus/pull/1522)）**: 同 `git ls-files` は **14 パス**（self-install **5** / dist **7**）。追加は `.kimi-code/tools/` と `dist/kimi/.kimi-code/tools/` の 2 パスで、`cmp -s` により配布 12 コピーすべて正本とバイト一致。**上表のコンポーネント構成・file:line は無変更**（正本ソースは `git log e39402224..HEAD -- '*amadeus-mirror-gateway*'` のヒットが新規コピー 2 パスのみで、`wc -l` = 724 も不変）。
+
+### 区間での変化
+
+区間 27 コミットで**上記コンポーネントはいずれも無変更**（`git log --oneline 1673c4332..HEAD -- '*amadeus-mirror-gateway*'` 出力 0 行）。区間で変化したのは election / audit / graph / benchmark / metrics / CI 面であり、mirror 面とは非交差。
+
+## クロスレビュー済みバグ7件の患部コンポーネント（260726-crossreviewed-bug-batch、履歴、7 Issue）
 
 測定 ref: observed `1673c4332`（base `e12259ba7`、距離 2）。所在・コピー数は同 commit の `git ls-files` / `grep -n` 出力からの転記。上流入力は Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`。
 

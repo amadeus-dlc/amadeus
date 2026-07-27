@@ -58,10 +58,10 @@ afterEach(() => {
 });
 
 describe("t227 contributor skill projection", () => {
-  test("--apply projects runtime files but keeps evals canonical", () => {
+  test("--apply projects runtime files but keeps evals canonical", async () => {
     write(".claude/skills/amadeus-upstream-sync/evals/evals.json", "stale\n");
     write(".agents/skills/amadeus-upstream-sync/evals/evals.json", "stale\n");
-    expect(promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
+    expect(await promoteSelfMain(["--apply", "--no-build"], root, undefined, null)).toBe(0);
 
     const source = readFileSync(
       join(root, "contrib/skills/amadeus-upstream-sync/SKILL.md"),
@@ -81,25 +81,25 @@ describe("t227 contributor skill projection", () => {
       .toBe(false);
     expect(existsSync(join(root, "dist/codex/.agents/skills/amadeus-upstream-sync")))
       .toBe(false);
-    expect(promoteSelfMain(["--no-build"], root)).toBe(0);
+    expect(await promoteSelfMain(["--no-build"], root)).toBe(0);
   });
 
-  test("--check detects projection drift and --apply repairs both copies", () => {
-    expect(promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
+  test("--check detects projection drift and --apply repairs both copies", async () => {
+    expect(await promoteSelfMain(["--apply", "--no-build"], root, undefined, null)).toBe(0);
     write(".claude/skills/amadeus-upstream-sync/SKILL.md", "drift\n");
-    expect(promoteSelfMain(["--no-build"], root)).toBe(1);
-    expect(promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
-    expect(promoteSelfMain(["--no-build"], root)).toBe(0);
+    expect(await promoteSelfMain(["--no-build"], root)).toBe(1);
+    expect(await promoteSelfMain(["--apply", "--no-build"], root, undefined, null)).toBe(0);
+    expect(await promoteSelfMain(["--no-build"], root)).toBe(0);
   });
 
-  test("removing canonical source removes both projected orphans", () => {
-    expect(promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
+  test("removing canonical source removes both projected orphans", async () => {
+    expect(await promoteSelfMain(["--apply", "--no-build"], root, undefined, null)).toBe(0);
     rmSync(join(root, "contrib/skills/amadeus-upstream-sync"), {
       recursive: true,
       force: true,
     });
-    expect(promoteSelfMain(["--no-build"], root)).toBe(1);
-    expect(promoteSelfMain(["--apply", "--no-build"], root)).toBe(0);
+    expect(await promoteSelfMain(["--no-build"], root)).toBe(1);
+    expect(await promoteSelfMain(["--apply", "--no-build"], root, undefined, null)).toBe(0);
     expect(existsSync(join(root, ".claude/skills/amadeus-upstream-sync/SKILL.md"))).toBe(false);
     expect(existsSync(join(root, ".agents/skills/amadeus-upstream-sync/SKILL.md"))).toBe(false);
   });

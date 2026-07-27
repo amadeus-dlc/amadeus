@@ -5,7 +5,7 @@
     "audit": 32,
     "scope": 10,
     "stage": 8,
-    "hook": 11,
+    "hook": 12,
     "subcommand": 80,
     "render-surface": 7
   }

@@ -1,6 +1,139 @@
 # コード品質評価
 
-## クロスレビュー済みバグ7件の品質評価（260726-crossreviewed-bug-batch、現在、7 Issue）
+## manual ask→answer 往復のテスト gap と guard 非対称の品質評価（260726-answer-manual-binding、現在、Issue #1548）
+
+測定 ref: observed `ad1ff5de9`（base `09c669901`、距離 2）。file:line は同 commit の実ファイル直読。上流入力は Developer コードスキャン結果 `re3-dev-scan-result.md`（Architect 段で核心 file:line を spot-check 再検証、訂正 0 件）。**区間 2 コミットは record-only で mirror スタックの source/test 変更ゼロ** — 欠陥は区間の退行でなく guard 導入コミット `2bb63f6b8` から現存。
+
+### 現存判定
+
+| Issue | 現存判定 | 主患部 |
+| --- | --- | --- |
+| [#1548](https://github.com/amadeus-dlc/amadeus/issues/1548) | **現存**（区間内で無変更） | `runMirrorLifecycleAnswer`（`amadeus-mirror-lifecycle.ts:969-985`）が answer 転送時に `manualOperation`/`invocationId` を渡さず、guard（`:257-265`）が manual ask への answer を常に error 終了させる。manual create（非終端 receipt）＋後続 prompt boundary の reconciliation で発生 |
+
+### 品質欠陥のクラス
+
+**(1) 対操作の非対称（cid:requirements-analysis:symmetric-pair-review）— 主欠陥** — guard（`:257-265`）が要求する `manualOperation`/`invocationId` を、answer 生成側（`runMirrorLifecycleAnswer:969-985`）が転送しない write⇔check 非対称。answer は永続 `expected` を全て持っている（types `MirrorExpectedPrompt:118-124`）にもかかわらず、boundary だけ転送し guard が要求する 2 フィールドを落とすため、字義どおり guard に弾かれる。
+
+**(2) guard の過剰適用（防御範囲の設計ミス）** — guard は本来 **manual decision 実行経路**（`invocationId` 消費 = `:304-308`、`manualOperation` 消費 = `:573-577`、いずれも非 answer 経路）を守るためのものだが、`request.answer` の有無を条件に含めないため answer 経路まで巻き込む。answer 経路の権限は `prompt-approved` 分岐（`:292-303`）が発行し両フィールドを参照しないため、guard の適用は防御目的に対して過剰。
+
+**(3) テスト gap（確定）— manual ask→answer 往復の不在** — t282（998 行）の構造:
+- answer 往復テスト（`:579` "answer approve binds to the persisted prompt"）は全て `intent-capture-approved` boundary の ask。
+- manual テスト（`:832` "manual create and sync use durable invocation identities"）は `runMirrorLifecycleBoundary({…, boundary:{kind:"manual"}, manualOperation, invocationId})` を**直接**呼び、ask→answer 往復を経ない。
+- guard の既存 negative テスト（`:435` "rejects incomplete manual lifecycle requests"）は manual+欠落で error を確認 = **バグの guard が正しく発火する側だけを固定**している。
+
+→ **manual boundary が ask を生成 → その ask を answer で貫通する往復テストが存在しない**。この gap が欠陥を CI 緑のまま生存させた。
+
+**(4) stale expectedPrompt が全 sync を封鎖する連鎖（影響度）** — consume は answer 経由のみで repair verbs は expectedPrompt 非対象（ツール内回復不能）。未 consume のまま次 boundary が prompt 化すると `reduceSetExpectedPrompt` が `a different unconsumed prompt is pending` を返し coordinator が `safety-blocked` で以後の create/sync/close prompt を全滅させる。ただし committed record の `amadeus-state.md` 5 件はすべて `"expectedPrompt":null`（`bindingId` 付き非 null 0 件）で、**修正後の遡及回復手順は不要**。
+
+### 修正時の品質リスク
+
+- **落ちる実証の設計**: regression-first は「先行 manual create（非終端 receipt）＋後続 prompt boundary で manual ask を生成 → answer で貫通」の往復テストを新設する。既存 answer テスト（`intent-capture-approved`）や manual 直接呼びテストの緑では欠陥に貫通しない（cid:requirements-analysis:fix-review-replays-origin-repro — 起票時再現手順の verbatim 再適用）。manual ask の再現シードは reconciliation 経由（`decideMirrorAction` は manual 単独では ask にならない）。
+- **修正案の選択**: (a) guard に `&& !request.answer`（最小変更、answer が両フィールド不使用の事実に依拠）vs (b) answer 側で永続値から補填（guard 不変、`invocationId = boundary.instance` / `manualOperation = operation`）。両案とも到達可能で機能等価。
+- **配布同期**: `amadeus-mirror-lifecycle.ts` は **13 コピー**（canonical 1 + self-install 5 + dist 7）。正本編集 → `bun scripts/package.ts`＋`bun run promote:self`、`dist:check`/`promote:self:check` で drift 検証（project.md Mandated）。coordinator/types を触る案なら同様に各 13 コピー同期対象。
+
+## 絶対 p95 予算の CI ジッタ偽赤の品質評価（260726-t258-p95-flake、履歴、Issue #1511）
+
+測定 ref: observed `09c669901`（base `f9a0fb86a`、距離 2）。file:line は同 commit の実ファイル直読。上流入力は Developer コードスキャン結果 `re2-dev-scan-result.md`（Architect 段で核心 file:line を spot-check 再検証、訂正 0 件）。**区間 32 ファイルはすべて `amadeus/` record で source/test 変更ゼロ** — 欠陥は区間の退行でなく `2e157d7fe`（#1424）から現存。
+
+### 現存判定
+
+| Issue | P/S | 現存判定 | 主患部 |
+| --- | --- | --- | --- |
+| [#1511](https://github.com/amadeus-dlc/amadeus/issues/1511) | P2 / S3-MAJOR | **現存**（区間内で無変更） | `t258:461-462` の絶対 latency ceiling 500/750ms を CI `-P 4` 並列負荷のスパイクが 6/100 超で跨ぐ偽赤。RSS `:463` は noop 差分ベースで該当外 |
+| same-root（未報告） | — | **現存**（同根） | `t257:240-241`（`strictReadP95Ms<=100` / `migrationP95Ms<=250`）が同じ #1424 由来・同じ 10,000-entry child benchmark の絶対 p95 契約 |
+
+### 品質欠陥のクラス
+
+**(1) 絶対 ceiling による負荷依存の偽赤（主欠陥）** — `t258:461-462` は実測 p95（`archiveP95Ms` / `recoveryP95Ms`）を固定値 500/750 と直接比較する。被測定は child helper（`spawnSync` 1 プロセス、size=10000）の 10,000 行 registry/audit の**実 FS transaction**で FS I/O 律速。`p95()`（`:430-433`）は nearest-rank（`sorted[94]`）で上位 5 サンプル超過を許容するが、`bun run test:ci -- -P 4`（`.github/workflows/ci.yml:162` name / `:163` run）の**並列度 4 integration tier**（専用 perf ジョブ・リトライ・負荷分離なし）での IO/CPU 競合が 6/100 超のサンプルを 500ms 超へ押し上げると偽赤になる（cid:code-generation:fanout-load-settle-before-integration / cid:code-generation:rerun-red-reattribution クラス、ラベル bug/P2/S3-MAJOR）。
+
+**(2) 裸マジックナンバー予算（rationale 不在）** — 500/750/96 は `2e157d7fe`（#1424、t258 追加と同一コミット）で導入されたユーザー選択 round number（intent `260723-archived-status-guard` の nfr-requirements で Options「500ms/750ms, 1s/2s, N/A, Other」から A 案選択）。**CI 実測 p95 = archive 41.177ms / recovery 29.314ms**（同 intent code-summary）で予算の約 12〜25 倍ヘッドルームがあるが、`:461-463` に導出 rationale コメントはなく、noise floor / CI ジッタ実測から導出されていない。ヘッドルームが広くても**絶対 ceiling ゆえ個別サンプルが容易に跨ぐ**構造が残る。
+
+**(3) タイミングシーム不在で決定化できない** — 予算はハードコード数値（named constant でも env でもない）で、child 内 elapsed も `performance.now()` 実測のみ。project.md `cid:build-and-test:bt-timeout-verification-shape` / `cid:build-and-test:wtfbt-c3`（タイミングシームでの決定的検証優先）が適用候補だが、latency は「10,000-entry O(n) を実時間で測る」構造で round 数のような離散量に置換しにくく、**baseline 相対（noop 比）+ noise floor 化**が同型先例に整合する方向。
+
+**(4) same-root 棚卸し漏れの潜在（t257）** — `t257:240-241` が #1511 と同一欠陥形状（絶対 p95 vs CI ジッタ、同じ #1424 由来）で未報告。cid:code-generation:same-root-inventory により修正時は t258 と同一 PR で修正するか Issue 化して同根全数を閉じる必要がある。`t259:209/211` は既に baseline 相対（差分ベース）の安全形で修正参照実装。
+
+### 修正時の品質リスク
+
+- **同型先例が確立済み**: `tests/lib/plugin-discovery-overhead-gate.ts`（#1525）= 「相対比 `>0.2` **AND** 絶対 noise floor `>10ms`」+ 判定述語の計測ループ分離 + fail-closed（`!(baseline>0) || !Number.isFinite(treatment)` → true）、`scripts/mirror-distribution-benchmark-aggregate.ts`（#1507）= median 基準 + 絶対 spread noise floor（予算の 5%）。t258 は RSS 用に **noop baseline を既に測っており**（`:444-447`）archive/recovery も noop 相対へ転用できる素材が既存。
+- **落ちる実証の設計**: 予算緩和のみだと欠陥（絶対 ceiling クラス）が残り再発する。regression-first は「CI ジッタ相当のスパイクを注入しても median/baseline 述語が緑を保ち、真の退行では赤」の複合述語テスト。判定述語を計測ループから分離して in-process 駆動する（cid:code-generation:injection-surface-verify — 注入面 = テストが読む面、cid:code-generation:corpus-sweep-for-new-guards — 両側実測）。
+- **予算緩和の誘惑**: 500→1000 等の単純緩和は「絶対 ceiling ゆえ負荷次第で跨ぐ」構造を温存し、フレークを先送りするだけ（先例が否定した方向）。
+- **配布同期**: 修正対象はテスト（`tests/`）と CI 設定であり mirror スタックのような dist/self-install 増幅面は無い見込み。ただし専用 perf ジョブ分離を採るなら `.github/workflows/ci.yml` を触るため既存 job との整合を確認。
+
+## mirror 状態表現分裂の品質評価（260726-mirror-state-split、履歴、Issue #1547 + #1534）
+
+測定 ref: observed `f9a0fb86a`（base `1673c4332`、距離 38）。file:line は同 commit の実ファイル直読。上流入力は Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`（Architect 段で独立再検証、訂正 2 件 = §6 repair relink 行番号 / §1 orchestrate.ts 区間変更の精密化）。
+
+### 現存判定
+
+| Issue | P/S | 現存判定 | 主患部 |
+| --- | --- | --- | --- |
+| [#1547](https://github.com/amadeus-dlc/amadeus/issues/1547) | — | **現存**（区間内で無変更） | write=v1 ブロック（`amadeus-mirror-state-store.ts:158`）⇔ read=legacy field（`amadeus-mirror.ts:169` + `amadeus-orchestrate.ts:314` / `:3522`）の非対称。create 後も status が `mirror-missing` |
+| [#1534](https://github.com/amadeus-dlc/amadeus/issues/1534) | — | **現存**（区間内で無変更） | marker 無き legacy Issue の in-tool 復旧経路ゼロ（`amadeus-mirror-lifecycle.ts:785` fail-closed / `amadeus-mirror-provenance.ts:165` `missing-marker`）。legacy 10 record が取り残し |
+
+### 品質欠陥のクラス
+
+**(1) 対操作の非対称（主欠陥、symmetric-pair-review 該当）** — Issue 番号の永続化で **write（v1 sentinel ブロック）と read（legacy「Mirror Issue」field）が別表現**を使う。write は `mutateMirrorStateAtomic`（`amadeus-mirror-state-store.ts:158`）が v1 ブロックだけを刻み、read は status（`amadeus-mirror.ts:169`）と orchestrate 境界 2 箇所（`amadeus-orchestrate.ts:314` / `:3522`）が `getField("Mirror Issue")` で legacy field を探す。両者が同じ record を触りながら別フィールドを見るため、create が成功しても read 側には永遠に「不在」に見える。cid:requirements-analysis:symmetric-pair-review が守ろうとした失敗モードそのもの（write⇔check の片側だけ実装/移行された非対称）。
+
+**(2) dead code が偽 green を保つ（org.md Forbidden = 検証劇場の同族）** — legacy field の writer `writeMirrorIssueField`（`amadeus-mirror.ts:363`）の唯一の呼び手 `:413` は `handleCreate` 内で、`main`（`:570-585`）が `args.kind !== "status"` を `runLegacyMutation`（`:533` = 実は v1 lifecycle）へ全転送するため **CLI 実行時に到達しない**。`handleCreate` / `handleSync` / `handleClose` も同様に main 不到達で、参照元は t232 のみ。status テストは `snapshot({ mirrorIssue: 1161 })`（`tests/unit/t232-amadeus-mirror.test.ts:104` / `:124`）で **legacy field を直接シード**し、create は lifecycle stub 化で実 lifecycle を走らせない。⇒ dead path（legacy field 経由）と stub 化 create が別世界で緑を保ち、生きた path（v1 write ⇔ legacy read）の非対称が全 mirror スイート（31 ファイル）で不可視。real-create → status の e2e が構造的に不在（cid:build-and-test:pbt-oracle-cancellation の同族）。
+
+**(3) 命名 misdirection** — `runLegacyMutation`（`:533`）は名称に反し v1 lifecycle（`runMirrorLifecycleBoundary`）を呼ぶ。「legacy」という語が実装と逆で、修正者を legacy field 経路へ誤誘導しうる。
+
+**(4) fail-closed の副作用が復旧経路を塞ぐ（#1534）** — marker 検証（`amadeus-mirror-lifecycle.ts:785` `marker.kind !== "parsed"` / `amadeus-mirror-provenance.ts:165` `missing-marker`）は健全な fail-closed だが、marker 唯一の書き手 `renderMirrorMarker`（`:47`）を legacy 経路が呼ばなかった結果、marker 無き legacy Issue が relink も adopt も拒否され in-tool 復旧経路がゼロになる。fail-closed 自体は正しく、欠けているのは marker 無き Issue の adopt/backfill 設計。
+
+### 修正時の品質リスク
+
+- **同根全数の棚卸し漏れ**: read 面は status 1 + orchestrate 2 の 3 箇所。status のみ直すと orchestrate 境界（`:314` / `:3522`）が非対称のまま残る（cid:code-generation:same-root-inventory）。3 箇所を同一 PR で v1 権威へ寄せる。
+- **allowlist 行ピンの stale 化**: `amadeus-orchestrate.ts` を触ると同ファイルの多数ピンが下方シフトし patch gate が赤になる（cid:code-generation:allowlist-line-pin-stale）。mirror スタックのピンは executor 35 / lifecycle 24 / state-store 14 / state-codec 4 / provenance 3（`amadeus-mirror.ts` 本体はピン 0）。同一 PR で更新。
+- **落ちる実証の設計**: regression-first の e2e = 「lifecycle create が永続化した v1 ブロックを status が読めるか」。修正前コードで赤（`mirror-missing`）、修正後に緑。既存 t232 の legacy-seed テストは残し、v1-seed / real-create の両経路を持たせて非対称の再発を封じる（cid:code-generation:injection-surface-verify — 注入面 = テストが読む面）。
+- **互換フォールバックの誘惑**: write を legacy field へも二重化する案は org.md Forbidden（要求なき互換シム禁止）に抵触。read の v1 片寄せ + legacy 10 record の一度きり adopt が既決ノルムと整合。
+- **配布同期**: mirror スタックは各 13 コピー（self-install 5 + dist 7）。触ったモジュールの `bun run promote:self` / `bun scripts/package.ts` + `dist:check` / `promote:self:check`。
+
+## mirror-gateway envelope 欠陥の品質評価（260726-mirror-envelope-lf、履歴、Issue #1498）
+
+## 新規テスト面と perf ゲート再設計の品質評価（260726-plugin-host-delivery、現在、差分リフレッシュ）
+
+260726-plugin-host-delivery 差分リフレッシュ（2026-07-26、observed `0d83aa48b886fe85cd977569c0e7b3015b84d3e5`、base `1673c4332`、距離 43）。上流入力: Developer スキャン結果（実測済みスキャンノート）。
+
+- **新規テスト**: `tests/` 配下の新規ファイルは **29 件**（`git diff --name-only --diff-filter=A 1673c4332..HEAD -- tests/ | wc -l`）、うち `*.test.ts` は **15 本**（e2e 2 / integration 7 / smoke 1 / unit 5）。内訳は **kimi 群**（`t-print-kimi-doctor` / `t-print-kimi-status` / `t-kimi-adapter` / `t-kimi-cli-wiring` / `t-kimi-doctor-arm` / `t-kimi-hooks-merge` / `t-kimi-print-drive` / `t150-kimi-dist-structure` / `t-kimi-swarm-resolve` + fixtures 12 + `tests/harness/kimi-print-drive.ts`）、**metrics t298 群**（`t298-metrics-visualize` の unit/integration）、**setup 群**（`setup-engine-layout` / `setup-kimi-hooks-domain`）、および `plugin-discovery-overhead-gate` / `t-artifact-guard-harness-dirs`。
+- **plugin stage discovery perf ゲートの再設計**（[PR #1535](https://github.com/amadeus-dlc/amadeus/pull/1535)、`1edf2abfb`。注: ブリーフィングの #1525 は `git log` 実測で **#1535**）: 判定を**相対比 0.2（`tests/lib/plugin-discovery-overhead-gate.ts:15` `DISCOVERY_OVERHEAD_RATIO_LIMIT = 0.2`）と絶対 noise floor の AND** へ変更。ファイル冒頭コメント（`:10-11`）が「mirror benchmark dispersion gate と同じ構成」と明言しており、[PR #1507](https://github.com/amadeus-dlc/amadeus/pull/1507) の dispersion gate 是正と同族の「相対比単独判定はサブミリ秒帯で偽赤」クラスの解消である。
+- **CI 構成の変化**（`.github/workflows/ci.yml`、[PR #1528](https://github.com/amadeus-dlc/amadeus/pull/1528) ほか）: 検証ジョブが分割され（旧単一「typecheck - lint - drift - tests」→「Lint and complexity」等へ）、**lizard が `pip install lizard==1.23.0` で pin**、Complexity gate（CCN baseline ratchet）は分割後ジョブへ移設、metrics の **Render metrics dashboard** step と **drift-check** ジョブが追加された（diff 直読）。
+- 前節（260726-mirror-envelope-lf、履歴）が指摘した「fixture が自作 CRLF の検証劇場」クラスは、[PR #1537](https://github.com/amadeus-dlc/amadeus/pull/1537) の実 envelope 対応着地により解消方向へ動いた（患部の詳細断面は前節を参照 — 同節の file:line は測定 ref `e39402224` の断面）。
+
+測定 ref: observed `0d83aa48b`（cid:reverse-engineering:measurement-ref-in-artifacts）。
+
+## mirror-gateway envelope 欠陥の品質評価（260726-mirror-envelope-lf、履歴、Issue #1498）
+
+測定 ref: observed `e39402224`（base `1673c4332`、距離 27）。file:line は同 commit の実ファイル直読。上流入力は Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`（Architect 段で独立再検証、訂正 0 件）。
+
+### 現存判定
+
+| Issue | P/S | 現存判定 | 主患部 |
+| --- | --- | --- | --- |
+| [#1498](https://github.com/amadeus-dlc/amadeus/issues/1498) | P1/S2 | **現存**（区間内で無変更） | `amadeus-mirror-gateway.ts:196`（CRLF 前提の終端探索）→ `:198-199` malformed。影響は 5 verb 全部 |
+
+### 品質欠陥のクラス
+
+**(1) 外部 seam の未実測仮定（主欠陥）** — `:179-215` のパーサは `gh --include` のステータス行終端を CRLF と仮定するが、実出力は LF 単独。設計宣言（`security-design.md:37`）・パーサ・fixture の 3 面に同一の未実測仮定が一貫して焼き込まれているため、内部整合は取れているのに実 seam と全面不一致になる。cid:application-design:external-seam-vocab-measurement（seam 語彙の実測）が守ろうとした失敗モードそのもの。
+
+**(2) 検証劇場クラスの偽 green（org.md Forbidden 該当）** — `tests/unit/t272-amadeus-mirror-gateway.test.ts:61` verbatim:
+
+```ts
+  return `HTTP/2 ${status} OK\r\ncontent-type: application/json\r\n\r\n`;
+```
+
+`grep -n 'HTTP/' tests/unit/t272-amadeus-mirror-gateway.test.ts` → **1 hit（`:61` のみ）**。`singleEnvelope`（`:63-65`）/ `paginatedEnvelope`（`:67-72`）はこの `block()` を連結して合成するため、paginated fixture も「P 個のブロック連続 + 単一 JSON 配列」= **設計宣言そのものを再現**する。fixture が被検実装と同じ誤仮定を共有しているため、実環境で全 verb が落ちていても CI は緑のまま。cid:build-and-test:pbt-oracle-cancellation の同族（オラクル側が被検側と同じ誤りを持つと欠陥が観測面に出ない）。
+
+**(3) 症状の可観測性は良好、帰属は誤誘導** — 失敗は `:525-534` で `invalid-response` / retryable=false として loud に分類され `GitHub unavailable (invalid-response; no-effect-confirmed; exit=0; http=none)` を出す。サイレント失敗ではない点は良い。一方 Issue 本文の機序記述（主因 = `--slurp` 先頭の `[`、影響 = create/sync）は**本 scan で否定済み** — 先頭 `[` を除去しても malformed のままで、`--slurp` を使わない view/edit/close も落ちる。誤った機序記述に従うと修正が的を外す。
+
+**(4) 副次的な不変条件の脆さ** — `:669` の `outer.length !== interp.pageCount` は「HTTP ブロック数 = ページ配列要素数」を前提とするが、実 `--slurp` 出力は interleave のため `statuses.length` が常に 1 になり、この不変条件は LF 対応後も find を落とす。すなわち **find の修正は単一系より 1 段深い**（パーサ文法の変更か `--slurp` 撤去）。
+
+### 修正時の品質リスク
+
+- **allowlist 行ピンの stale 化**: `:179-235` へ行を挿入すると gateway の 5 ピン（`447-448` / `602` / `615-620` / `702` / `716`）が全件下方シフトし patch gate が赤になる（cid:code-generation:allowlist-line-pin-stale）。同一 PR で更新する。
+- **落ちる実証の設計**: 実 `gh` 形式 fixture の追加それ自体が修正前コードで赤になる（cid:code-generation:injection-surface-verify — 注入面 = テストが読む面 = `t272:61`）。既存 CRLF ケースを残して両形式を持つことで、将来の seam 変化にも耐える。
+- **配布同期**: 10 コピーへの伝播が必須（`dist:check` / `promote:self:check`）。
+
+## クロスレビュー済みバグ7件の品質評価（260726-crossreviewed-bug-batch、履歴、7 Issue）
 
 測定 ref: observed `1673c4332`（base `e12259ba7`、距離 2）。file:line は同 commit の実ファイル直読。上流入力は Developer スキャン結果 `inception/reverse-engineering/scan-notes.md`（Architect 段で独立再検証済み）。
 

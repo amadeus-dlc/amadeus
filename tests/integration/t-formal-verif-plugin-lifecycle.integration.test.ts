@@ -44,7 +44,7 @@ import {
   planPluginDrop,
   type WorkspaceBackend,
   type WorkspaceTransaction,
-} from "../../scripts/plugin-composition.ts";
+} from "../../packages/framework/core/tools/amadeus-plugin-compose.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const BUNDLE_ROOT = join(REPO_ROOT, "dist", "plugins"); // the shipped neutral bundle registry

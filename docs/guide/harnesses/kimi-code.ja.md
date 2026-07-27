@@ -93,7 +93,9 @@ kimi アームは 4 つのことを検査します:
 1. **アダプタの存在** — プロジェクトの `.kimi-code/hooks/` にフック roster の
    `amadeus-kimi-adapter` エントリがあること。
 2. **Managed block** — ユーザーレベル config の配線状態。完全な欠落(config
-   ファイル不在を含む)は、インストーラ再実行/手動手順の fix 付きで失敗です。
+   ファイル不在を含む)は、インストーラ再実行/手動手順の fix 付きで失敗です
+   (Amadeus 自己開発リポジトリでは fix 行は `bun scripts/promote-self.ts --apply`
+   を指します — apply 経路の最後に同じマージステップが実行されます)。
    マーカーが剥がれて内容のみで検出される場合(CLI の再シリアライズによる)は
    advisory のパスで、次回の install/upgrade で再包装されます。重複・不対・逆転した
    マーカーは loud fail です。別の advisory スキャンは、managed block が検出

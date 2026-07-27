@@ -20,13 +20,13 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 534,
+    "total": 535,
     "enumeratedByClass": {
       "function": 298,
       "audit": 78,
       "scope": 10,
       "stage": 32,
-      "hook": 11,
+      "hook": 12,
       "subcommand": 98,
       "render-surface": 7
     },
@@ -35,7 +35,7 @@
       "audit": 32,
       "scope": 10,
       "stage": 8,
-      "hook": 11,
+      "hook": 12,
       "subcommand": 80,
       "render-surface": 7
     }
@@ -3987,6 +3987,18 @@
         },
         {
           "file": "tests/unit/t203-mint-presence-classify.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "hook",
+      "unitId": "amadeus-plugin-compose",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t299-plugin-cli-walking-skeleton.integration.test.ts",
           "mechanism": "cli"
         }
       ],
