@@ -19,7 +19,9 @@ import type {
   MirrorPhaseKey,
   MirrorProjectStatusField,
   MirrorProjectStatusNames,
+  MirrorProjectSyncEntry,
   MirrorProjectSyncState,
+  MirrorProjectTarget,
   MirrorReceiptStatus,
   MirrorSnapshot,
   MirrorStateSnapshot,
@@ -330,4 +332,59 @@ export function nextCompletionOperation(
   if (close === "in-progress") return "close";
   if (close === "terminal-block" || close === "succeeded") return null;
   return "close";
+}
+
+// --- Completion gate (U3) -----------------------------------------------------
+
+// The gate reads the Project ledger and nothing else: no board is re-queried, so
+// a completion evaluates the same way offline as online. `snapshot` and
+// `targets` are not a second source of truth — they are the two arguments
+// `expectedProjectStatus` needs to name the `done` column, which stays that
+// function's sole definition rather than a literal restated here.
+export type CompletionProjectGateInput = Readonly<{
+  state: MirrorStateSnapshot;
+  snapshot: MirrorSnapshot;
+  targets: readonly MirrorProjectTarget[];
+}>;
+
+export type CompletionProjectGate = Readonly<{
+  ready: boolean;
+  blocking: readonly string[];
+}>;
+
+function projectBlocker(
+  entry: MirrorProjectSyncEntry,
+  expected: ExpectedProjectStatus,
+): string | null {
+  if (expected.kind !== "status") return `${entry.project}: not-landed`;
+  if (entry.state !== "synced") return `${entry.project}: ${entry.state}`;
+  return entry.lastAppliedStatus === expected.name
+    ? null
+    : `${entry.project}: ${entry.lastAppliedStatus ?? "unapplied"}`;
+}
+
+// Is every Project this Intent syncs to actually sitting in the `done` column?
+// `blocking` names each row that is not, so a withheld close explains itself
+// instead of stalling silently. An Intent with no ledger row has no board to
+// wait for and is ready by definition.
+export function completionProjectGate(
+  input: CompletionProjectGateInput,
+): CompletionProjectGate {
+  const statusNamesOf = (project: string): MirrorProjectStatusNames =>
+    input.targets.find(
+      (target) => `${target.project.owner}/${target.project.number}` === project,
+    )?.statusNames ?? {};
+  const blocking = (input.state.projectSync?.projects ?? [])
+    .map((entry) =>
+      projectBlocker(
+        entry,
+        expectedProjectStatus(
+          input.snapshot,
+          "workflow-completed",
+          statusNamesOf(entry.project),
+        ),
+      ),
+    )
+    .filter((blocker): blocker is string => blocker !== null);
+  return { ready: blocking.length === 0, blocking };
 }
