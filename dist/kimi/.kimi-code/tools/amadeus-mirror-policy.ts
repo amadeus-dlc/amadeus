@@ -13,11 +13,13 @@ import type {
   MirrorDecision,
   MirrorEventIdentity,
   MirrorExpectedPrompt,
+  MirrorFailureClass,
   MirrorOperation,
   MirrorOperationReceipt,
   MirrorPhaseKey,
   MirrorProjectStatusField,
   MirrorProjectStatusNames,
+  MirrorProjectSyncState,
   MirrorReceiptStatus,
   MirrorSnapshot,
   MirrorStateSnapshot,
@@ -258,6 +260,37 @@ export function expectedProjectStatus(
   }
   const phase = phaseKeyOf(snapshot.lifecyclePhase);
   return phase === null ? KEEP : named(phase);
+}
+
+// Classify one Project reconciliation failure into the ledger state it earns.
+// `pending` means "the same call could succeed later" and keeps the Project in
+// the reconcile loop; `safety-blocked` means the board's own shape or our
+// permissions make it unreachable, so retrying is noise until a human acts.
+//
+// This is a total function over MirrorFailureClass rather than a list of
+// retryable classes, so a class added to that union is a compile error here
+// instead of a silent default.
+export function classifyProjectFailure(
+  classification: MirrorFailureClass,
+): Extract<MirrorProjectSyncState, "pending" | "safety-blocked"> {
+  switch (classification) {
+    case "rate-limit":
+    case "network":
+    case "api":
+    case "command":
+    case "state-write":
+      return "pending";
+    case "permission":
+    case "unauthenticated":
+    case "not-installed":
+    case "configuration":
+    case "invalid-response":
+    case "state-parse":
+    case "provenance":
+    case "landing":
+    case "ambiguous-create":
+      return "safety-blocked";
+  }
 }
 
 // Exact-match option lookup (BR-U1-4): no case folding, no trimming, no

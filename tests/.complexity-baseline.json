@@ -27,12 +27,6 @@
       "ccn": 23
     },
     {
-      "path": "packages/framework/core/tools/amadeus-directive.ts",
-      "name": "validateDirective",
-      "ordinal": 0,
-      "ccn": 19
-    },
-    {
       "path": "packages/framework/core/tools/amadeus-jump.ts",
       "name": "handleExecute",
       "ordinal": 0,
@@ -49,6 +43,12 @@
       "name": "(anonymous)",
       "ordinal": 4,
       "ccn": 22
+    },
+    {
+      "path": "packages/framework/core/tools/amadeus-mirror-executor.ts",
+      "name": "classifyCreateState",
+      "ordinal": 0,
+      "ccn": 21
     },
     {
       "path": "packages/framework/core/tools/amadeus-orchestrate.ts",
@@ -354,7 +354,7 @@
       "path": "scripts/package.ts",
       "name": "checkHarness",
       "ordinal": 0,
-      "ccn": 31
+      "ccn": 25
     }
   ]
 }

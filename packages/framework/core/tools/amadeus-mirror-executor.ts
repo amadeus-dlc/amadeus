@@ -891,21 +891,25 @@ function ensureReceipt(
       };
 }
 
-async function viewLinkedIssue(
-  ports: MirrorStateStorePorts,
-  context: MirrorExecutionContext,
-  snapshot: MirrorStateSnapshot,
-  receipt: MirrorOperationReceipt | null,
-  issueNumber: number,
-): Promise<
+// Named alias keeps the signature single-token for the complexity gate's
+// naive TS parser — a multiline object union inside Promise<> breaks its
+// function segmentation and aggregates every following function into one span.
+type LinkedIssueViewResult =
   | {
       kind: "viewed";
       issue: RemoteMirrorIssue;
       snapshot: MirrorStateSnapshot;
       receipt: MirrorOperationReceipt | null;
     }
-  | { kind: "outcome"; outcome: MirrorOperationOutcome }
-> {
+  | { kind: "outcome"; outcome: MirrorOperationOutcome };
+
+async function viewLinkedIssue(
+  ports: MirrorStateStorePorts,
+  context: MirrorExecutionContext,
+  snapshot: MirrorStateSnapshot,
+  receipt: MirrorOperationReceipt | null,
+  issueNumber: number,
+): Promise<LinkedIssueViewResult> {
   const viewed = await context.gateway.viewIssue(context.repository, issueNumber);
   if (viewed.kind === "ok") {
     return { kind: "viewed", issue: viewed.value, snapshot, receipt };
@@ -929,16 +933,15 @@ async function viewLinkedIssue(
     true,
     viewed.classification,
   );
+  if (persisted.kind === "failed") {
+    return {
+      kind: "outcome",
+      outcome: stateFailure(context, ensured.receipt.operationId, persisted.summary),
+    };
+  }
   return {
     kind: "outcome",
-    outcome:
-      persisted.kind === "failed"
-        ? stateFailure(
-            context,
-            ensured.receipt.operationId,
-            persisted.summary,
-          )
-        : { kind: "pending", operation: context.operation, warning: viewWarning },
+    outcome: { kind: "pending", operation: context.operation, warning: viewWarning },
   };
 }
 

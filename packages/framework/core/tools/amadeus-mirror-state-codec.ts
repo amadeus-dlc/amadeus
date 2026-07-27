@@ -841,7 +841,7 @@ function checkReceiptKey(
     issues.push(`${path}.key: does not match canonical event key`);
 }
 
-function checkReceiptStatusInvariants(
+function checkReceiptTimestampInvariants(
   status: MirrorReceiptStatus,
   o: ReceiptOptionals,
   path: string,
@@ -854,9 +854,17 @@ function checkReceiptStatusInvariants(
     status === "succeeded" || status === "skipped-for-event" || status === "abandoned";
   if (needsCompleted && o.completedAt === undefined)
     issues.push(`${path}.completedAt: required for status '${status}'`);
-  // A Project-sync hold is the one way a receipt reaches `pending` without a
-  // failed Issue mutation, so it stands in for the failure fields that describe
-  // one. It is meaningless on any other status.
+}
+
+// A Project-sync hold is the one way a receipt reaches `pending` without a
+// failed Issue mutation, so it stands in for the failure fields that describe
+// one. It is meaningless on any other status.
+function checkReceiptHoldInvariants(
+  status: MirrorReceiptStatus,
+  o: ReceiptOptionals,
+  path: string,
+  issues: string[],
+): void {
   const held = o.projectSyncHold !== undefined && o.projectSyncHold !== null;
   if (
     (status === "pending" || status === "safety-blocked") &&
@@ -868,6 +876,16 @@ function checkReceiptStatusInvariants(
     issues.push(`${path}.lastEffect: required for status 'pending'`);
   if (held && status !== "pending")
     issues.push(`${path}.projectSyncHold: only allowed for status 'pending'`);
+}
+
+function checkReceiptStatusInvariants(
+  status: MirrorReceiptStatus,
+  o: ReceiptOptionals,
+  path: string,
+  issues: string[],
+): void {
+  checkReceiptTimestampInvariants(status, o, path, issues);
+  checkReceiptHoldInvariants(status, o, path, issues);
 }
 
 function validateReceipt(
